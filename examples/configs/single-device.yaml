@@ -1,0 +1,29 @@
+# Single Device Configuration Example
+# Use this template for a single Cisco switch deployment
+
+nodeName: cisco-switch-01
+
+devices:
+  - name: c9k-switch
+    type: c9k
+    address: 192.168.1.100
+    port: 443
+    username: admin
+    password: cisco123
+    useHTTPS: true
+    verifyTLS: false
+
+networkConfig:
+  defaultGateway: "192.168.1.1"
+  subnetMask: "255.255.255.0"
+  ipPoolStart: "192.168.1.200"
+  ipPoolEnd: "192.168.1.210"
+  vlanID: 100
+  managementInterface: 0
+
+resourceDefaults:
+  cpuUnits: 1000
+  memoryMB: 512
+  diskMB: 1024
+  vcpu: 1
+  profile: "custom"
