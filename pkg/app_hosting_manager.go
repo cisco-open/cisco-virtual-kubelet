@@ -15,34 +15,34 @@ import (
 
 // AppHostingManager handles the complete app-hosting lifecycle
 type AppHostingManager struct {
-	client          *IOSXEClient
-	restconfClient  *RESTCONFAppHostingClient
-	monitor         *DeviceMonitor
-	lifecycle       *LifecycleManager
-	imageCache      string // Local cache directory for container images
-	scpEnabled      bool   // Whether SCP is available for file transfer
-	useRESTCONF     bool   // Whether to use RESTCONF API (preferred) or CLI fallback
+	client         *IOSXEClient
+	restconfClient *RESTCONFAppHostingClient
+	monitor        *DeviceMonitor
+	lifecycle      *LifecycleManager
+	imageCache     string // Local cache directory for container images
+	scpEnabled     bool   // Whether SCP is available for file transfer
+	useRESTCONF    bool   // Whether to use RESTCONF API (preferred) or CLI fallback
 }
 
 // NewAppHostingManager creates a new app-hosting manager
 func NewAppHostingManager(client *IOSXEClient) *AppHostingManager {
 	cacheDir := filepath.Join(os.TempDir(), "cisco-vk-images")
 	os.MkdirAll(cacheDir, 0755)
-	
+
 	restconfClient := NewRESTCONFAppHostingClient(client)
 	monitor := NewDeviceMonitor(client, restconfClient)
-	
+
 	manager := &AppHostingManager{
-		client:          client,
-		restconfClient:  restconfClient,
-		monitor:         monitor,
-		scpEnabled:      true,
-		useRESTCONF:     true, // Prefer RESTCONF over CLI
+		client:         client,
+		restconfClient: restconfClient,
+		monitor:        monitor,
+		scpEnabled:     true,
+		useRESTCONF:    true, // Prefer RESTCONF over CLI
 	}
-	
+
 	// Initialize lifecycle manager
 	manager.lifecycle = NewLifecycleManager(manager)
-	
+
 	return manager
 }
 
@@ -69,13 +69,13 @@ func generateUniqueAppID(namespace, containerName string) string {
 	// Sanitize inputs - IOS XE only allows alphanumeric and underscore
 	namespace = strings.ReplaceAll(namespace, "-", "")
 	containerName = strings.ReplaceAll(containerName, "-", "")
-	
+
 	// Use UnixNano and take last 10 digits for uniqueness (millisecond precision + some randomness)
 	nanoTime := time.Now().UnixNano()
 	uniquePart := nanoTime % 10000000000 // Last 10 digits
-	
+
 	appID := fmt.Sprintf("vk_%s_%s_%d", namespace, containerName, uniquePart)
-	
+
 	// Ensure it meets IOS XE naming requirements (alphanumeric and underscore only, max 32 chars)
 	appID = strings.ToLower(appID)
 	if len(appID) > 32 {
@@ -98,39 +98,40 @@ func (m *AppHostingManager) DeployApplication(ctx context.Context, spec Containe
 	// Generate unique app ID with namespace and timestamp to prevent conflicts
 	namespace := spec.Labels["io.kubernetes.pod.namespace"]
 	appID := generateUniqueAppID(namespace, spec.Name)
-	
+	// appID := "vk_default_nginx_7967113000"
+
 	log.G(ctx).Infof("🆔 Generated unique app ID: %s (namespace=%s, container=%s)", appID, namespace, spec.Name)
-	
+
 	// Store the app ID in container for tracking
 	container.ID = appID
-	
+
 	log.G(ctx).Infof("🚀 Starting full app-hosting deployment for %s", appID)
-	
+
 	// Step 0: Check capacity before attempting deployment
 	requiredMemMB := 256 // Default
 	requiredCPU := 1000  // Default
-	
+
 	// Extract memory from resource requests
 	if memReq, ok := spec.Resources.Requests[v1.ResourceMemory]; ok {
 		requiredMemMB = int(memReq.Value() / (1024 * 1024)) // Convert bytes to MB
 	}
-	
+
 	// Extract CPU from resource requests (in milli-CPU units)
 	if cpuReq, ok := spec.Resources.Requests[v1.ResourceCPU]; ok {
 		// Convert milli-CPU to CPU units for C9K
 		milliCPU := cpuReq.MilliValue()
 		requiredCPU = int(milliCPU) // C9K uses its own CPU unit system
 	}
-	
+
 	if canDeploy, reason := m.monitor.CanDeployApp(requiredMemMB, requiredCPU); !canDeploy {
 		return fmt.Errorf("insufficient capacity: %s", reason)
 	}
-	
+
 	// Step 1: Pre-deployment checks
 	if err := m.preDeploymentChecks(ctx, appID, spec); err != nil {
 		return fmt.Errorf("pre-deployment checks failed: %v", err)
 	}
-	
+
 	// Step 2: Handle container image
 	imagePath, isUserProvided, err := m.prepareContainerImage(ctx, spec.Image)
 	if err != nil {
@@ -140,20 +141,20 @@ func (m *AppHostingManager) DeployApplication(ctx context.Context, spec Containe
 	if !isUserProvided {
 		defer os.Remove(imagePath) // Cleanup after deployment
 	}
-	
+
 	// Step 3: Upload image to device
 	if err := m.uploadImageToDevice(ctx, appID, imagePath); err != nil {
 		return fmt.Errorf("failed to upload image to device: %v", err)
 	}
-	
+
 	// Build configuration
 	config := m.buildAppHostingConfig(spec, container)
-	
+
 	// Use RESTCONF for lifecycle operations (more reliable than CLI)
 	if m.useRESTCONF {
 		fmt.Printf("[CISCO-VK] 🔄 Using RESTCONF API for deployment lifecycle\n")
 		log.G(ctx).Infof("🔄 Using RESTCONF API for deployment lifecycle")
-		
+
 		// Step 4: Configure app-hosting appid FIRST (MUST be before install)
 		// This creates the app-hosting configuration with resources and networking
 		fmt.Printf("[CISCO-VK] ⚙️ Step 4: Creating app-hosting configuration for: %s\n", appID)
@@ -167,10 +168,10 @@ func (m *AppHostingManager) DeployApplication(ctx context.Context, spec Containe
 			}
 		}
 		fmt.Printf("[CISCO-VK] ✅ Configuration created successfully\n")
-		
+
 		// Small delay to let configuration apply
 		time.Sleep(2 * time.Second)
-		
+
 		// Step 5: Install via RESTCONF RPC (installs to the configured appid)
 		// Use the prepared image path - for device-local files it's already in correct format (flash:/nginx.tar)
 		remotePath := imagePath
@@ -196,7 +197,7 @@ func (m *AppHostingManager) DeployApplication(ctx context.Context, spec Containe
 			}
 			fmt.Printf("[CISCO-VK] ✅ Reached DEPLOYED state\n")
 		}
-		
+
 		// Step 6: Activate via RESTCONF RPC
 		fmt.Printf("[CISCO-VK] ⚡ Step 6: Activating application: %s\n", appID)
 		log.G(ctx).Infof("⚡ Step 6: Activating application: %s", appID)
@@ -213,7 +214,7 @@ func (m *AppHostingManager) DeployApplication(ctx context.Context, spec Containe
 				return fmt.Errorf("failed to reach ACTIVATED state: %v", err)
 			}
 		}
-		
+
 		// Step 7: Start via RESTCONF RPC
 		if err := m.restconfClient.Start(ctx, appID); err != nil {
 			log.G(ctx).Warnf("RESTCONF start failed: %v, falling back to CLI", err)
@@ -227,52 +228,52 @@ func (m *AppHostingManager) DeployApplication(ctx context.Context, spec Containe
 				return fmt.Errorf("failed to reach RUNNING state: %v", err)
 			}
 		}
-		
+
 	} else {
 		// CLI fallback path
 		log.G(ctx).Infof("🔄 Using CLI for deployment lifecycle")
-		
+
 		// Step 4: Install the application
 		if err := m.installApplication(ctx, appID); err != nil {
 			return fmt.Errorf("failed to install application: %v", err)
 		}
-		
+
 		// Step 5: Configure app-hosting (MUST be done before activation)
 		if err := m.configureAppHosting(ctx, config); err != nil {
 			return fmt.Errorf("failed to configure app-hosting: %v", err)
 		}
-		
+
 		// Step 6: Activate the application (unpacks and prepares)
 		if err := m.activateApplication(ctx, appID); err != nil {
 			return fmt.Errorf("failed to activate application: %v", err)
 		}
-		
+
 		// Step 7: Start the application (runs the container)
 		if err := m.startApplication(ctx, appID); err != nil {
 			return fmt.Errorf("failed to start application: %v", err)
 		}
 	}
-	
+
 	// Step 8: Verify deployment (check final state)
 	finalStatus, err := m.verifyDeployment(ctx, appID)
 	if err != nil {
 		// Log warning but don't fail if we at least reached RUNNING once
 		log.G(ctx).Warnf("⚠️  Final verification inconclusive for %s: %v", appID, err)
 	}
-	
+
 	if finalStatus != "" {
 		log.G(ctx).Infof("📊 Final application state: %s", finalStatus)
 	}
-	
+
 	log.G(ctx).Infof("✅ Successfully deployed application %s (reached RUNNING state)", appID)
-	
+
 	// Enhanced post-deployment verification
 	podName := spec.Labels["io.kubernetes.pod.name"]
 	if err := m.lifecycle.ComprehensivePostDeploymentVerification(ctx, appID, namespace, podName); err != nil {
 		log.G(ctx).Warnf("⚠️  Post-deployment verification had warnings: %v", err)
 		// Non-fatal - continue
 	}
-	
+
 	return nil
 }
 
@@ -282,7 +283,7 @@ func (m *AppHostingManager) preDeploymentChecks(ctx context.Context, appID strin
 	if err := m.lifecycle.ComprehensivePreDeploymentValidation(ctx, appID, spec); err != nil {
 		return err
 	}
-	
+
 	// Check 2: Check for naming conflicts
 	existingApps, err := m.listExistingApplications(ctx)
 	if err != nil {
@@ -294,18 +295,18 @@ func (m *AppHostingManager) preDeploymentChecks(ctx context.Context, appID strin
 			}
 		}
 	}
-	
+
 	// Check 3: Verify sufficient resources
 	if err := m.checkResourceAvailability(ctx, spec); err != nil {
 		return fmt.Errorf("insufficient resources: %v", err)
 	}
-	
+
 	// Check 4: Check IP address conflicts
 	proposedIP := m.generateContainerIP(spec.Name)
 	if err := m.checkIPConflict(ctx, proposedIP); err != nil {
 		return fmt.Errorf("IP conflict: %v", err)
 	}
-	
+
 	log.G(ctx).Infof("✅ Pre-deployment checks passed")
 	return nil
 }
@@ -315,21 +316,21 @@ func (m *AppHostingManager) preDeploymentChecks(ctx context.Context, appID strin
 func (m *AppHostingManager) prepareContainerImage(ctx context.Context, image string) (string, bool, error) {
 	fmt.Printf("[CISCO-VK] 📦 prepareContainerImage called with: '%s'\n", image)
 	log.G(ctx).Infof("📦 Preparing container image: %s", image)
-	
+
 	// Check if image is a device-local path (flash:, bootflash:, usbflash1:)
 	// These paths refer to files already on the Cisco device, not on the VK host
-	if strings.HasPrefix(image, "flash:") || strings.HasPrefix(image, "bootflash:") || 
-	   strings.HasPrefix(image, "usbflash1:") || strings.HasPrefix(image, "harddisk:") {
+	if strings.HasPrefix(image, "flash:") || strings.HasPrefix(image, "bootflash:") ||
+		strings.HasPrefix(image, "usbflash1:") || strings.HasPrefix(image, "harddisk:") {
 		fmt.Printf("[CISCO-VK] ✅ Detected device-local tar file: %s\n", image)
 		log.G(ctx).Infof("✅ Using device-local tar file: %s", image)
 		return image, true, nil
 	}
 	fmt.Printf("[CISCO-VK] ⚠️ Image '%s' not detected as device-local, will try docker pull\n", image)
-	
+
 	// Check if image is a local file path (file:// protocol or absolute path)
 	if strings.HasPrefix(image, "file://") {
 		localPath := strings.TrimPrefix(image, "file://")
-		
+
 		// Check if path refers to device-local storage (bootflash:, flash:, etc.)
 		// Convert Unix-style paths to IOS XE format
 		if strings.HasPrefix(localPath, "/bootflash/") {
@@ -339,7 +340,7 @@ func (m *AppHostingManager) prepareContainerImage(ctx context.Context, image str
 			log.G(ctx).Infof("✅ Using device-local tar file (IOS XE format): %s", localPath)
 			return localPath, true, nil
 		}
-		
+
 		if strings.HasPrefix(localPath, "/flash/") {
 			// Convert /flash/file.tar → flash:/file.tar
 			localPath = "flash:" + strings.TrimPrefix(localPath, "/flash")
@@ -347,16 +348,16 @@ func (m *AppHostingManager) prepareContainerImage(ctx context.Context, image str
 			log.G(ctx).Infof("✅ Using device-local tar file (IOS XE format): %s", localPath)
 			return localPath, true, nil
 		}
-		
+
 		if strings.HasPrefix(localPath, "bootflash:") || strings.HasPrefix(localPath, "flash:") {
 			fmt.Printf("[CISCO-VK] ✅ Using device-local tar file: %s\n", localPath)
 			log.G(ctx).Infof("✅ Using device-local tar file: %s", localPath)
 			// Already in correct format - don't verify on local filesystem
 			return localPath, true, nil
 		}
-		
+
 		log.G(ctx).Infof("✅ Using local tar file: %s", localPath)
-		
+
 		// Verify file exists on local filesystem
 		stat, err := os.Stat(localPath)
 		if err != nil {
@@ -365,7 +366,7 @@ func (m *AppHostingManager) prepareContainerImage(ctx context.Context, image str
 		log.G(ctx).Infof("✅ Local tar file verified: %.2f MB", float64(stat.Size())/(1024*1024))
 		return localPath, true, nil // User-provided file
 	}
-	
+
 	// If it's an absolute path with .tar extension, treat as local file
 	if strings.HasSuffix(image, ".tar") && filepath.IsAbs(image) {
 		log.G(ctx).Infof("✅ Using local tar file: %s", image)
@@ -376,7 +377,7 @@ func (m *AppHostingManager) prepareContainerImage(ctx context.Context, image str
 		log.G(ctx).Infof("✅ Local tar file verified: %.2f MB", float64(stat.Size())/(1024*1024))
 		return image, true, nil // User-provided file
 	}
-	
+
 	// Check if image is for amd64 architecture
 	arch, err := m.getImageArchitecture(ctx, image)
 	if err != nil {
@@ -386,12 +387,12 @@ func (m *AppHostingManager) prepareContainerImage(ctx context.Context, image str
 		// We'll proceed anyway since we force --platform linux/amd64 during pull
 		log.G(ctx).Warnf("⚠️  Image reports architecture %s (expected amd64). Proceeding with forced amd64 pull.", arch)
 	}
-	
+
 	// Generate unique filename
 	imageName := strings.ReplaceAll(image, "/", "_")
 	imageName = strings.ReplaceAll(imageName, ":", "_")
 	tarPath := filepath.Join(m.imageCache, imageName+".tar")
-	
+
 	// Check if already cached (only use cache if it exists and is valid)
 	if stat, err := os.Stat(tarPath); err == nil && stat.Size() > 1024 {
 		log.G(ctx).Infof("✅ Using cached image: %s (%.2f MB)", tarPath, float64(stat.Size())/(1024*1024))
@@ -401,57 +402,57 @@ func (m *AppHostingManager) prepareContainerImage(ctx context.Context, image str
 		os.Remove(tarPath)
 		log.G(ctx).Warnf("Removed invalid cache file: %s", tarPath)
 	}
-	
+
 	// Pull the image - force amd64 architecture for C9K compatibility
 	log.G(ctx).Infof("⬇️ Pulling container image: %s (platform: linux/amd64)", image)
 	pullCmd := exec.CommandContext(ctx, "docker", "pull", "--platform", "linux/amd64", image)
 	if output, err := pullCmd.CombinedOutput(); err != nil {
 		return "", false, fmt.Errorf("docker pull failed: %v, output: %s", err, string(output))
 	}
-	
+
 	// Ultimate workaround for Docker multi-arch manifest issues:
 	// Create a temporary container, export it, then convert to image tar
 	log.G(ctx).Infof("🔄 Creating temporary container for export...")
-	
+
 	// Create temp container (doesn't start it)
 	containerName := fmt.Sprintf("cisco-vk-temp-%d", time.Now().Unix())
 	createCmd := exec.CommandContext(ctx, "docker", "create", "--name", containerName, "--platform", "linux/amd64", image, "/bin/sh")
 	if output, err := createCmd.CombinedOutput(); err != nil {
 		return "", false, fmt.Errorf("docker create failed: %v, output: %s", err, string(output))
 	}
-	
+
 	// Ensure cleanup of temp container
 	defer func() {
 		cleanupCmd := exec.CommandContext(context.Background(), "docker", "rm", "-f", containerName)
 		cleanupCmd.Run() // Ignore errors
 	}()
-	
+
 	// Commit the container to a new image (this bakes in the platform)
 	localImage := fmt.Sprintf("localhost/cisco-vk-img:%d", time.Now().Unix())
 	commitCmd := exec.CommandContext(ctx, "docker", "commit", containerName, localImage)
 	if output, err := commitCmd.CombinedOutput(); err != nil {
 		return "", false, fmt.Errorf("docker commit failed: %v, output: %s", err, string(output))
 	}
-	
+
 	// Ensure cleanup of local image
 	defer func() {
 		cleanupCmd := exec.CommandContext(context.Background(), "docker", "rmi", "-f", localImage)
 		cleanupCmd.Run() // Ignore errors
 	}()
-	
+
 	// Now save the committed image (no manifest issues)
 	log.G(ctx).Infof("💾 Saving image as tar: %s", tarPath)
 	saveCmd := exec.CommandContext(ctx, "docker", "save", "-o", tarPath, localImage)
 	if output, err := saveCmd.CombinedOutput(); err != nil {
 		return "", false, fmt.Errorf("docker save failed: %v, output: %s", err, string(output))
 	}
-	
+
 	// Verify tar file
 	stat, err := os.Stat(tarPath)
 	if err != nil {
 		return "", false, fmt.Errorf("tar file not created: %v", err)
 	}
-	
+
 	log.G(ctx).Infof("✅ Image prepared: %s (%.2f MB)", tarPath, float64(stat.Size())/(1024*1024))
 	return tarPath, false, nil // Docker-generated file
 }
@@ -469,19 +470,19 @@ func (m *AppHostingManager) getImageArchitecture(ctx context.Context, image stri
 // uploadImageToDevice uploads the container tar to the C9K device
 func (m *AppHostingManager) uploadImageToDevice(ctx context.Context, appID string, imagePath string) error {
 	log.G(ctx).Infof("📤 Uploading image to device for %s", appID)
-	
+
 	// Construct remote path on device (use usbflash1 for C9K)
 	remotePath := fmt.Sprintf("usbflash1:/%s.tar", appID)
-	
+
 	// Try SCP first
 	if err := m.uploadViaSCP(ctx, imagePath, appID); err != nil {
 		log.G(ctx).Warnf("SCP upload failed: %v", err)
 		log.G(ctx).Infof("💡 Attempting alternative upload via RESTCONF file API...")
-		
+
 		// Try RESTCONF file upload as fallback
 		if err := m.uploadViaRESTCONF(ctx, imagePath, appID); err != nil {
 			log.G(ctx).Warnf("RESTCONF upload failed: %v", err)
-			
+
 			// For demo/testing: simulate successful upload
 			log.G(ctx).Warnf("⚠️  Both SCP and RESTCONF failed - using SIMULATION mode for testing")
 			log.G(ctx).Infof("📝 In production, configure SSH keys or enable RESTCONF file upload")
@@ -489,7 +490,7 @@ func (m *AppHostingManager) uploadImageToDevice(ctx context.Context, appID strin
 			return nil
 		}
 	}
-	
+
 	log.G(ctx).Infof("✅ Image uploaded to device: %s", remotePath)
 	return nil
 }
@@ -499,9 +500,9 @@ func (m *AppHostingManager) uploadViaSCP(ctx context.Context, imagePath string, 
 	deviceAddr := fmt.Sprintf("%s@%s", m.client.config.Username, m.client.config.Address)
 	// Use usbflash1 for C9K (instead of flash)
 	remotePath := fmt.Sprintf("usbflash1:/%s.tar", appID)
-	
+
 	// Try multiple SCP methods
-	
+
 	// Method 1: Try with sshpass using correct C9K-compatible syntax
 	log.G(ctx).Debugf("Attempting SCP upload with sshpass (C9K-compatible syntax)...")
 	scpCmd := exec.CommandContext(ctx,
@@ -515,21 +516,21 @@ func (m *AppHostingManager) uploadViaSCP(ctx context.Context, imagePath string, 
 		imagePath,
 		fmt.Sprintf("%s:%s", deviceAddr, remotePath),
 	)
-	
+
 	output, err := scpCmd.CombinedOutput()
 	if err == nil {
 		log.G(ctx).Infof("✅ SCP upload successful via sshpass")
 		return nil
 	}
-	
+
 	log.G(ctx).Debugf("sshpass failed: %v, output: %s", err, string(output))
-	
+
 	// Method 2: Try with expect script (if sshpass fails)
 	if err := m.uploadViaSCPExpect(ctx, imagePath, deviceAddr, remotePath); err == nil {
 		log.G(ctx).Infof("✅ SCP upload successful via expect")
 		return nil
 	}
-	
+
 	return fmt.Errorf("all SCP methods failed: %v, output: %s", err, string(output))
 }
 
@@ -551,24 +552,24 @@ expect {
     eof
 }
 `, imagePath, deviceAddr, remotePath, m.client.config.Password, m.client.config.Password)
-	
+
 	scriptPath := filepath.Join(os.TempDir(), fmt.Sprintf("scp-upload-%d.exp", time.Now().Unix()))
 	if err := os.WriteFile(scriptPath, []byte(expectScript), 0700); err != nil {
 		return fmt.Errorf("failed to create expect script: %v", err)
 	}
 	defer os.Remove(scriptPath)
-	
+
 	// Check if expect is available
 	if _, err := exec.LookPath("expect"); err != nil {
 		return fmt.Errorf("expect not available: %v", err)
 	}
-	
+
 	expectCmd := exec.CommandContext(ctx, "expect", scriptPath)
 	output, err := expectCmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("expect script failed: %v, output: %s", err, string(output))
 	}
-	
+
 	return nil
 }
 
@@ -584,7 +585,7 @@ func (m *AppHostingManager) uploadViaRESTCONF(ctx context.Context, imagePath str
 // installApplication installs the application via SSH CLI
 func (m *AppHostingManager) installApplication(ctx context.Context, appID string) error {
 	log.G(ctx).Infof("📦 Installing application %s", appID)
-	
+
 	// IOS XE 17.x doesn't support app-hosting via RESTCONF RPCs
 	// Use SSH CLI commands instead
 	// Use usbflash1 for C9K (where the file was uploaded)
@@ -592,15 +593,15 @@ func (m *AppHostingManager) installApplication(ctx context.Context, appID string
 	commands := []string{
 		fmt.Sprintf("app-hosting install appid %s package %s", appID, packagePath),
 	}
-	
+
 	if err := m.executeCLICommands(ctx, commands); err != nil {
 		return fmt.Errorf("failed to install via CLI: %v", err)
 	}
-	
+
 	// Wait for install to complete
 	log.G(ctx).Infof("⏳ Waiting for installation to complete...")
 	time.Sleep(10 * time.Second)
-	
+
 	log.G(ctx).Infof("✅ Application installed")
 	return nil
 }
@@ -608,20 +609,20 @@ func (m *AppHostingManager) installApplication(ctx context.Context, appID string
 // activateApplication activates the installed application
 func (m *AppHostingManager) activateApplication(ctx context.Context, appID string) error {
 	log.G(ctx).Infof("⚡ Activating application %s", appID)
-	
+
 	// Use CLI command
 	commands := []string{
 		fmt.Sprintf("app-hosting activate appid %s", appID),
 	}
-	
+
 	if err := m.executeCLICommands(ctx, commands); err != nil {
 		return fmt.Errorf("failed to activate via CLI: %v", err)
 	}
-	
+
 	// Wait for activation
 	log.G(ctx).Infof("⏳ Waiting for activation to complete...")
 	time.Sleep(5 * time.Second)
-	
+
 	log.G(ctx).Infof("✅ Application activated")
 	return nil
 }
@@ -629,7 +630,7 @@ func (m *AppHostingManager) activateApplication(ctx context.Context, appID strin
 // configureAppHosting configures the app-hosting instance
 func (m *AppHostingManager) configureAppHosting(ctx context.Context, config C9KAppHostingConfig) error {
 	log.G(ctx).Infof("⚙️ Configuring app-hosting for %s", config.AppID)
-	
+
 	// Use correct CLI commands for C9K (IOS XE 17.x)
 	// Important: Configuration must be done BEFORE activation
 	// Note: C9K does not require app-vnic configuration
@@ -642,17 +643,17 @@ func (m *AppHostingManager) configureAppHosting(ctx context.Context, config C9KA
 		fmt.Sprintf("  memory %d", config.AppResource.MemoryMB),
 		" exit",
 	}
-	
+
 	// Note: C9K does not support docker-resource/docker-opts CLI commands
 	// Container command/args must be specified at image build time or via package.yaml
 	// TODO: Investigate alternative methods for passing runtime commands to C9K containers
-	
+
 	commands = append(commands, "end")
-	
+
 	if err := m.executeCLICommands(ctx, commands); err != nil {
 		return fmt.Errorf("failed to configure via CLI: %v", err)
 	}
-	
+
 	log.G(ctx).Infof("✅ Application configured")
 	return nil
 }
@@ -660,16 +661,16 @@ func (m *AppHostingManager) configureAppHosting(ctx context.Context, config C9KA
 // startApplication starts the application
 func (m *AppHostingManager) startApplication(ctx context.Context, appID string) error {
 	log.G(ctx).Infof("▶️ Starting application %s", appID)
-	
+
 	// Use CLI command
 	commands := []string{
 		fmt.Sprintf("app-hosting start appid %s", appID),
 	}
-	
+
 	if err := m.executeCLICommands(ctx, commands); err != nil {
 		return fmt.Errorf("failed to start via CLI: %v", err)
 	}
-	
+
 	log.G(ctx).Infof("✅ Application started")
 	return nil
 }
@@ -683,17 +684,17 @@ func (m *AppHostingManager) verifyDeployment(ctx context.Context, appID string) 
 		if err != nil {
 			return "", fmt.Errorf("failed to get final status: %v", err)
 		}
-		
+
 		// Success conditions: RUNNING, ACTIVATED, or STOPPED (after running)
 		// STOPPED is OK if the container ran and exited (e.g., busybox with no command)
 		if status.Details.State == "RUNNING" || status.Details.State == "ACTIVATED" || status.Details.State == "STOPPED" {
 			log.G(ctx).Infof("✅ Application %s verification: state=%s", appID, status.Details.State)
 			return status.Details.State, nil
 		}
-		
+
 		return status.Details.State, fmt.Errorf("unexpected final state: %s", status.Details.State)
 	}
-	
+
 	// Fallback to old verification (CLI-based)
 	if err := m.client.verifyAppDeployment(ctx, appID); err != nil {
 		return "UNKNOWN", err
@@ -719,27 +720,27 @@ func (m *AppHostingManager) listExistingApplications(ctx context.Context) ([]App
 func (m *AppHostingManager) checkResourceAvailability(ctx context.Context, spec ContainerSpec) error {
 	// Get device capabilities
 	capacity := m.client.config.Capabilities
-	
+
 	// Check memory
 	if spec.Resources.Limits.Memory() != nil {
 		requestedMem := spec.Resources.Limits.Memory().Value()
 		availableMem := capacity.Memory.Value()
-		
+
 		if requestedMem > availableMem {
 			return fmt.Errorf("requested memory %d exceeds available %d", requestedMem, availableMem)
 		}
 	}
-	
+
 	// Check CPU
 	if spec.Resources.Limits.Cpu() != nil {
 		requestedCPU := spec.Resources.Limits.Cpu().MilliValue()
 		availableCPU := capacity.CPU.MilliValue()
-		
+
 		if requestedCPU > availableCPU {
 			return fmt.Errorf("requested CPU %dm exceeds available %dm", requestedCPU, availableCPU)
 		}
 	}
-	
+
 	log.G(ctx).Infof("✅ Sufficient resources available")
 	return nil
 }
@@ -764,13 +765,13 @@ func (m *AppHostingManager) checkIPConflict(ctx context.Context, ip string) erro
 		log.G(ctx).Warnf("Could not check IP conflicts: %v", err)
 		return nil
 	}
-	
+
 	for _, app := range existingApps {
 		if app.Details.IPAddress == ip {
 			return fmt.Errorf("IP address %s already in use by app %s", ip, app.AppID)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -778,9 +779,9 @@ func (m *AppHostingManager) checkIPConflict(ctx context.Context, ip string) erro
 func (m *AppHostingManager) UndeployApplication(ctx context.Context, appID string) error {
 	// Extract namespace and pod name from appID (format: vk_<namespace>_<container>_<timestamp>)
 	namespace, podName := extractPodInfoFromAppID(appID)
-	
+
 	log.G(ctx).Infof("🗑️ [POD:%s/%s] Starting comprehensive cleanup for %s", namespace, podName, appID)
-	
+
 	// Use RESTCONF client for all operations
 	if m.useRESTCONF && m.restconfClient != nil && m.lifecycle != nil {
 		// Use enhanced lifecycle manager for comprehensive cleanup
@@ -788,11 +789,11 @@ func (m *AppHostingManager) UndeployApplication(ctx context.Context, appID strin
 			log.G(ctx).Errorf("❌ [POD:%s/%s] Comprehensive cleanup failed: %v", namespace, podName, err)
 			return err
 		}
-		
+
 		log.G(ctx).Infof("✅ [POD:%s/%s] Successfully undeployed application %s via RESTCONF", namespace, podName, appID)
 		return nil
 	}
-	
+
 	// Fallback to CLI-based methods (should not be reached)
 	log.G(ctx).Warnf("⚠️  RESTCONF not available, attempting CLI fallback for %s", appID)
 	return fmt.Errorf("CLI-based undeployment not implemented - RESTCONF required")
@@ -804,12 +805,12 @@ func extractPodInfoFromAppID(appID string) (namespace, podName string) {
 	// Default values if parsing fails
 	namespace = "unknown"
 	podName = "unknown"
-	
+
 	// Parse appID format: vk_<namespace>_<container>_<timestamp>
 	if !strings.HasPrefix(appID, "vk_") {
 		return
 	}
-	
+
 	parts := strings.Split(appID, "_")
 	if len(parts) >= 3 {
 		namespace = parts[1]
@@ -819,33 +820,33 @@ func extractPodInfoFromAppID(appID string) (namespace, podName string) {
 			podName = strings.Join(parts[2:len(parts)-1], "_")
 		}
 	}
-	
+
 	return
 }
 
 // deactivateApplication deactivates the application
 func (m *AppHostingManager) deactivateApplication(ctx context.Context, appID string) error {
 	log.G(ctx).Infof("⚡ Deactivating application %s", appID)
-	
+
 	rpcPayload := map[string]interface{}{
 		"input": map[string]interface{}{
 			"appid": appID,
 		},
 	}
-	
+
 	return m.client.executeAppHostingRPC(ctx, "deactivate", rpcPayload)
 }
 
 // uninstallApplication uninstalls the application
 func (m *AppHostingManager) uninstallApplication(ctx context.Context, appID string) error {
 	log.G(ctx).Infof("📦 Uninstalling application %s", appID)
-	
+
 	rpcPayload := map[string]interface{}{
 		"input": map[string]interface{}{
 			"appid": appID,
 		},
 	}
-	
+
 	return m.client.executeAppHostingRPC(ctx, "uninstall", rpcPayload)
 }
 
@@ -877,34 +878,34 @@ expect "#"
 	for _, cmd := range commands {
 		scriptContent += fmt.Sprintf("send \"%s\\r\"\nexpect \"#\"\n", cmd)
 	}
-	
+
 	// Exit
 	scriptContent += "send \"exit\\r\"\nexpect eof\n"
-	
+
 	// Fill in connection details
-	script := fmt.Sprintf(scriptContent, 
-		m.client.config.Username, 
+	script := fmt.Sprintf(scriptContent,
+		m.client.config.Username,
 		m.client.config.Address,
 		m.client.config.Password,
 		m.client.config.Password)
-	
+
 	scriptPath := filepath.Join(os.TempDir(), fmt.Sprintf("cli-commands-%d.exp", time.Now().Unix()))
 	if err := os.WriteFile(scriptPath, []byte(script), 0700); err != nil {
 		return fmt.Errorf("failed to create expect script: %v", err)
 	}
 	defer os.Remove(scriptPath)
-	
+
 	// Check if expect is available
 	if _, err := exec.LookPath("expect"); err != nil {
 		return fmt.Errorf("expect not available: %v", err)
 	}
-	
+
 	expectCmd := exec.CommandContext(ctx, "expect", scriptPath)
 	output, err := expectCmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("CLI execution failed: %v, output: %s", err, string(output))
 	}
-	
+
 	log.G(ctx).Debugf("CLI commands executed successfully")
 	return nil
 }
@@ -946,13 +947,13 @@ func (m *AppHostingManager) ReconcileOrphanedApps(ctx context.Context, activePod
 	if !m.useRESTCONF || m.restconfClient == nil {
 		return nil, fmt.Errorf("RESTCONF not available for reconciliation")
 	}
-	
+
 	// List all apps on device
 	apps, err := m.restconfClient.ListApplications(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list applications: %v", err)
 	}
-	
+
 	orphanedApps := []string{}
 	for _, app := range apps {
 		// Skip system apps
@@ -963,7 +964,7 @@ func (m *AppHostingManager) ReconcileOrphanedApps(ctx context.Context, activePod
 		if systemApps[app.Name] {
 			continue
 		}
-		
+
 		// Check if app is VK-managed (starts with "vk_")
 		if strings.HasPrefix(app.Name, "vk_") {
 			// Check if it has a corresponding active pod
@@ -973,7 +974,7 @@ func (m *AppHostingManager) ReconcileOrphanedApps(ctx context.Context, activePod
 			}
 		}
 	}
-	
+
 	return orphanedApps, nil
 }
 
