@@ -1,0 +1,17 @@
+nodeName: cisco-switch-01
+
+devices:
+  - name: c8k-switch
+    type: c8k
+    address: localhost
+    port: 80
+    username: admin
+    password: admin
+    useHTTPS: false
+    verifyTLS: false
+
+networkConfig:
+  defaultGateway: "192.168.1.1"
+  subnetMask: "255.255.255.0"
+  ipPoolStart: "192.168.1.200"
+  ipPoolEnd: "192.168.1.210"

@@ -39,7 +39,7 @@ func (c *IOSXEClient) discoverSchema(ctx context.Context) error {
 		// Operational data endpoints
 		{"App-hosting Oper", "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data", &endpoints.AppHostingOperPath},
 		{"IOx Oper", "/restconf/data/Cisco-IOS-XE-iox-oper:iox-oper", &endpoints.IOxOperPath},
-		{"Virtual Service Oper", "/restconf/data/Cisco-IOS-XE-virtual-service-oper:virtual-service-oper", &endpoints.AppHostingOperPath},
+		// {"Virtual Service Oper", "/restconf/data/Cisco-IOS-XE-virtual-service-oper:virtual-service-oper", &endpoints.AppHostingOperPath},
 	}
 
 	// Test each candidate endpoint
@@ -76,7 +76,7 @@ func (c *IOSXEClient) discoverSchema(ctx context.Context) error {
 // testEndpoint tests if a specific RESTCONF endpoint exists
 func (c *IOSXEClient) testEndpoint(ctx context.Context, path string) bool {
 	url := c.baseURL + path
-
+	fmt.Printf("TEST ENDPOINT: %s\n", url)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return false
@@ -90,7 +90,7 @@ func (c *IOSXEClient) testEndpoint(ctx context.Context, path string) bool {
 		return false
 	}
 	defer resp.Body.Close()
-
+	fmt.Printf("STATUS: %d\n", resp.StatusCode)
 	// 200 = endpoint exists with data
 	// 204 = endpoint exists but no data
 	// 404 = endpoint doesn't exist
