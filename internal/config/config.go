@@ -11,7 +11,7 @@ import (
 
 var registerFlagsOnce sync.Once
 
-func Load(filePath ...string) (*CiscoConfig, error) {
+func Load(filePath ...string) (*Config, error) {
 
 	if len(filePath) > 0 && filePath[0] != "" {
 		viper.SetConfigFile(filePath[0])
@@ -28,7 +28,7 @@ func Load(filePath ...string) (*CiscoConfig, error) {
 
 	registerFlagsOnce.Do(func() {
 		// This doesn't actually work for the current schema
-		pflag.String("devices.name", "", "Device name")
+		pflag.String("device.name", "", "Device name")
 		// Add any other pflag definitions here
 	})
 
@@ -50,39 +50,38 @@ func Load(filePath ...string) (*CiscoConfig, error) {
 	}
 
 	// 5. Unmarshal into struct
-	var cfg CiscoConfig
+	var cfg Config
 	if err := viper.UnmarshalExact(&cfg); err != nil {
 		return nil, fmt.Errorf("unable to decode into struct: %w", err)
 	}
 
-	SetConfigDefault(&cfg)
+	// var cfg Config
+
+	// // Use a manual decoder configuration instead of UnmarshalExact
+	// // This allows us to provide "Hooks" that fix the map[string]interface{} issue
+	// err := viper.Unmarshal(&cfg, func(dc *mapstructure.DecoderConfig) {
+	// 	dc.TagName = "mapstructure"
+	// 	// This is the magic line for 2025:
+	// 	// It tells mapstructure how to convert weak types (interfaces) to strong types (strings)
+	// 	dc.DecodeHook = mapstructure.ComposeDecodeHookFunc(
+	// 		mapstructure.StringToTimeDurationHookFunc(),
+	// 		mapstructure.WeaklyTypedHook, // This specifically fixes the map[string]string error
+	// 	)
+	// 	// If you still want the "Exact" behavior to fail on unknown keys:
+	// 	dc.ErrorUnused = true
+	// })
+
+	// if err != nil {
+	// 	return nil, fmt.Errorf("unable to decode into struct: %w", err)
+	// }
+
+	SetDeviceDefaults(&cfg.Device)
 
 	return &cfg, nil
 }
 
-// GetDeviceByName returns a device configuration by name
-func (c *CiscoConfig) GetDeviceByName(name string) *DeviceConfig {
-	for _, device := range c.Devices {
-		if device.Name == name {
-			return &device
-		}
-	}
-	return nil
-}
-
-// GetDevicesByType returns all devices of a specific type
-func (c *CiscoConfig) GetDevicesByType(deviceType DeviceType) []DeviceConfig {
-	var devices []DeviceConfig
-	for _, device := range c.Devices {
-		if device.Type == deviceType {
-			devices = append(devices, device)
-		}
-	}
-	return devices
-}
-
 // GetAvailableVLAN returns an available VLAN ID from the configured range
-func (c *CiscoConfig) GetAvailableVLAN(usedVLANs map[int]bool) int {
+func (c *DeviceConfig) GetAvailableVLAN(usedVLANs map[int]bool) int {
 	for vlan := c.Networking.VLANRange.Start; vlan <= c.Networking.VLANRange.End; vlan++ {
 		if !usedVLANs[vlan] {
 			return vlan
@@ -91,18 +90,23 @@ func (c *CiscoConfig) GetAvailableVLAN(usedVLANs map[int]bool) int {
 	return -1 // No available VLAN
 }
 
-func SetConfigDefault(cfg *CiscoConfig) error {
-	for i := range cfg.Devices {
-		device := &cfg.Devices[i]
-
-		// Apply default if Port is not explicitly set (is 0)
-		if device.Port == 0 {
-			if device.TLSConfig == nil || !device.TLSConfig.Enabled {
-				device.Port = 80
-			} else {
-				device.TLSConfig.Enabled = true
-				device.Port = 443
+func SetDeviceDefaults(cfg *DeviceConfig) error {
+	// Apply default if Port is not explicitly set (is 0)
+	if cfg.Port == 0 {
+		if cfg.TLSConfig == nil || !cfg.TLSConfig.Enabled {
+			cfg.TLSConfig = &TLSConfig{
+				Enabled: false,
 			}
+			cfg.Port = 80
+		} else {
+			cfg.TLSConfig.Enabled = true
+			cfg.Port = 443
+		}
+	}
+
+	if cfg.TLSConfig == nil {
+		cfg.TLSConfig = &TLSConfig{
+			Enabled: false,
 		}
 	}
 

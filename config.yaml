@@ -1,6 +1,15 @@
-devices:
-  - name: c8k-switch
-    type: c8k
-    address: localhost
-    username: admin
-    password: admin
+# docker run -d --rm -p 830:830 -p 80:80 --name notconf-test -v ${PWD}/tests/yang:/yang-modules localhost/notconf:cunningr-debug
+# docker run -d --rm -p 831:830 -p 81:80 --name notconf-test-2 -v ${PWD}/tests/yang:/yang-modules localhost/notconf:cunningr-debug
+device:
+  name: c8k-switch
+  driver: XE
+  address: localhost
+  username: admin
+  password: admin
+
+kubelet:
+  node_name: "cheekycheek"
+  namespace: ""
+  update_interval: "30s"
+  os: "Linux"
+  node_internal_ip: "1.1.1.1"

@@ -7,30 +7,43 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-type DeviceType string
+type DeviceDriver string
 
-type CiscoConfig struct {
-	Devices        []DeviceConfig   `mapstructure:"devices"`
-	Authentication AuthConfig       `mapstructure:"authentication"`
-	ResourceLimits ResourceConfig   `mapstructure:"resourceLimits"`
-	Networking     NetworkConfig    `mapstructure:"networking"`
-	Monitoring     MonitoringConfig `mapstructure:"monitoring"`
+type Config struct {
+	// Kubelet tier: Standard Virtual Kubelet settings
+	Kubelet KubeletConfig `mapstructure:"kubelet"`
+
+	// Device tier: Abstracted Cisco-specific settings
+	Device DeviceConfig `mapstructure:"device"`
+}
+
+type KubeletConfig struct {
+	NodeName        string `mapstructure:"node_name"`
+	Namespace       string `mapstructure:"namespace"`
+	UpdateInterval  string `mapstructure:"update_interval"`
+	OperatingSystem string `mapstructure:"os"`
+	NodeInternalIP  string `mapstructure:"node_internal_ip"`
+	// NodeLabels      map[string]string `mapstructure:"node_labels"`
 }
 
 type DeviceConfig struct {
-	Name         string            `mapstructure:"name"`
-	Type         DeviceType        `mapstructure:"type"`
-	Address      string            `mapstructure:"address"`
-	Port         int               `mapstructure:"port"`
-	Username     string            `mapstructure:"username"`
-	Password     string            `mapstructure:"password"`
-	TLSConfig    *TLSConfig        `mapstructure:"tls,omitempty"`
-	Capabilities DeviceCapability  `mapstructure:"capabilities"`
-	Labels       map[string]string `mapstructure:"labels,omitempty"`
-	Taints       []v1.Taint        `mapstructure:"taints,omitempty"`
-	MaxPods      int32             `mapstructure:"maxPods"`
-	Region       string            `mapstructure:"region,omitempty"`
-	Zone         string            `mapstructure:"zone,omitempty"`
+	Name           string            `mapstructure:"name"`
+	Driver         DeviceDriver      `mapstructure:"driver"`
+	Address        string            `mapstructure:"address"`
+	Port           int               `mapstructure:"port"`
+	Username       string            `mapstructure:"username"`
+	Password       string            `mapstructure:"password"`
+	TLSConfig      *TLSConfig        `mapstructure:"tls,omitempty"`
+	Capabilities   DeviceCapability  `mapstructure:"capabilities"`
+	Labels         map[string]string `mapstructure:"labels,omitempty"`
+	Taints         []v1.Taint        `mapstructure:"taints,omitempty"`
+	MaxPods        int32             `mapstructure:"maxPods"`
+	Region         string            `mapstructure:"region,omitempty"`
+	Zone           string            `mapstructure:"zone,omitempty"`
+	Authentication AuthConfig        `mapstructure:"authentication"`
+	ResourceLimits ResourceConfig    `mapstructure:"resourceLimits"`
+	Networking     NetworkConfig     `mapstructure:"networking"`
+	Monitoring     MonitoringConfig  `mapstructure:"monitoring"`
 }
 
 // TLSConfig represents TLS configuration for device communication

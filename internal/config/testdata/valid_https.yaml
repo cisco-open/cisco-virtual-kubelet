@@ -1,9 +1,9 @@
-devices:
-  - name: c8k-switch
-    type: c8k
-    address: localhost
-    username: admin
-    password: admin
-    tls:
-      enabled: true
+device:
+  name: c8k-switch
+  driver: c8k
+  address: localhost
+  username: admin
+  password: admin
+  tls:
+    enabled: true
     

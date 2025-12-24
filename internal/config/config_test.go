@@ -47,11 +47,7 @@ func TestLoad_ConditionalDefaults(t *testing.T) {
 				t.Fatalf("Load() failed: %v", err)
 			}
 
-			if len(cfg.Devices) == 0 {
-				t.Fatal("No devices loaded")
-			}
-
-			actualPort := cfg.Devices[0].Port
+			actualPort := cfg.Device.Port
 			if actualPort != tt.expectedPort {
 				t.Errorf("Expected port %d, got %d", tt.expectedPort, actualPort)
 			}
@@ -77,13 +73,11 @@ func TestLoad_ExplicitPort(t *testing.T) {
 	tls := TLSConfig{
 		Enabled: false,
 	}
-	viper.Set("devices", []map[string]interface{}{
-		{
-			"name":    "manual-node",
-			"address": "1.1.1.1",
-			"port":    8080,
-			"tls":     tls,
-		},
+	viper.Set("device", map[string]interface{}{
+		"name":    "manual-node",
+		"address": "1.1.1.1",
+		"port":    8080,
+		"tls":     tls,
 	})
 
 	cfg, err := Load()
@@ -91,7 +85,7 @@ func TestLoad_ExplicitPort(t *testing.T) {
 		t.Fatalf("Load() failed: %v", err)
 	}
 
-	if cfg.Devices[0].Port != 8080 {
-		t.Errorf("Expected explicit port 8080 to be preserved, got %d", cfg.Devices[0].Port)
+	if cfg.Device.Port != 8080 {
+		t.Errorf("Expected explicit port 8080 to be preserved, got %d", cfg.Device.Port)
 	}
 }

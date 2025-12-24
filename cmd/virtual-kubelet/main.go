@@ -19,31 +19,50 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path"
+	"runtime"
 	"syscall"
 
-	cisco "github.com/cisco/virtual-kubelet-cisco/pkg"
+	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	logruslib "github.com/sirupsen/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/log/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/node"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-const (
-	providerName    = "cisco"
-	defaultNodeName = "cisco-virtual-node"
-)
+// Interface Guard
+var _ nodeutil.Provider = (*provider.AppHostingProvider)(nil)
+var _ node.NodeProvider = (*provider.AppHostingNode)(nil)
 
 func main() {
+
+	appCfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Setup logging
 	logrusLogger := logruslib.New()
+
+	// Set log formatting
+	logrusLogger.SetReportCaller(true)
+	logrusLogger.SetFormatter(&logruslib.TextFormatter{
+		FullTimestamp: true,
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			// Return empty for the function name to remove it entirely
+			// Use path.Base to show only the filename:line
+			return "", fmt.Sprintf("%s:%d", path.Base(f.File), f.Line)
+		},
+	})
 
 	// Set log level from environment
 	logLevel := os.Getenv("LOG_LEVEL")
@@ -70,85 +89,56 @@ func main() {
 		cancel()
 	}()
 
-	// Get configuration from environment
-	nodeName := os.Getenv("NODE_NAME")
-	if nodeName == "" {
-		nodeName = defaultNodeName
-	}
-
+	// TODO: Allow setting of kubeconfig path in config
 	kubeconfig := os.Getenv("KUBECONFIG")
 	if kubeconfig == "" {
 		kubeconfig = os.Getenv("HOME") + "/.kube/config"
 	}
 
-	log.G(ctx).WithFields(map[string]interface{}{
-		"provider":   providerName,
-		"nodeName":   nodeName,
-		"kubeconfig": kubeconfig,
-	}).Info("Starting Cisco Virtual Kubelet")
-
 	// Create Kubernetes client configuration
-	var config *rest.Config
-	var err error
+	var restconfig *rest.Config
 
 	if kubeconfig != "" {
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		restconfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 	} else {
-		config, err = rest.InClusterConfig()
+		restconfig, err = rest.InClusterConfig()
 	}
 	if err != nil {
 		log.G(ctx).WithError(err).Fatal("Failed to load kubeconfig")
 	}
 
 	// Create Kubernetes clientset
-	clientset, err := kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(restconfig)
 	if err != nil {
 		log.G(ctx).WithError(err).Fatal("Failed to create Kubernetes client")
 	}
 
-	// Create NewProviderFunc for virtual-kubelet
-	newProviderFunc := func(cfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
-		ciscoProvider, err := NewCiscoProvider(ctx)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		// CRITICAL: Set node capacity on the provided node object
-		// This is how virtual-kubelet v1.11.0 expects capacity to be configured
-		if cfg.Node != nil {
-			capacity := ciscoProvider.GetDeviceCapacity()
-
-			fmt.Printf("[CISCO-VK] Setting node capacity via ProviderConfig: CPU:%s Memory:%s Storage:%s Pods:%s\n",
-				capacity.CPU.String(),
-				capacity.Memory.String(),
-				capacity.Storage.String(),
-				capacity.Pods.String())
-
-			cfg.Node.Status.Capacity = v1.ResourceList{
-				v1.ResourceCPU:     capacity.CPU,
-				v1.ResourceMemory:  capacity.Memory,
-				v1.ResourceStorage: capacity.Storage,
-				v1.ResourcePods:    capacity.Pods,
-			}
-			cfg.Node.Status.Allocatable = cfg.Node.Status.Capacity
-
-			// Set node labels
-			if cfg.Node.Labels == nil {
-				cfg.Node.Labels = make(map[string]string)
-			}
-			cfg.Node.Labels["cisco.com/provider"] = "cisco"
-			cfg.Node.Labels["kubernetes.io/os"] = "Linux"
-		}
-
-		// Return provider as both Provider and NodeProvider
-		return ciscoProvider, ciscoProvider, nil
-	}
-
-	// Create node with proper configuration
+	// Values here should either be static or derive from appCfg
 	opts := []nodeutil.NodeOpt{
-		nodeutil.WithClient(clientset),
+		nodeutil.WithNodeConfig(nodeutil.NodeConfig{
+			Client:         clientset,
+			NodeSpec:       provider.GetInitialNodeSpec(appCfg), // Reduce scope of appCfg to appCfg.Kubelet?
+			HTTPListenAddr: ":10250",
+			NumWorkers:     5,
+		}),
 	}
 
+	newProviderFunc := func(vkCfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
+
+		PodHandler, err := provider.NewAppHostingProvider(ctx, appCfg, vkCfg)
+		if err != nil {
+			log.G(ctx).WithError(err).Fatal("Failed to initialise PodHandler")
+		}
+
+		nodeHandler, err := provider.NewAppHostingNode(ctx, appCfg, vkCfg)
+		if err != nil {
+			log.G(ctx).WithError(err).Fatal("Failed to initialise nodeHandler")
+		}
+
+		return PodHandler, nodeHandler, nil
+	}
+
+	nodeName := provider.GetNodeName(appCfg) // Reduce scope of appCfg to appCfg.Kubelet?
 	n, err := nodeutil.NewNode(nodeName, newProviderFunc, opts...)
 	if err != nil {
 		log.G(ctx).WithError(err).Fatal("Failed to create node")
@@ -160,29 +150,4 @@ func main() {
 	}
 
 	log.G(ctx).Info("Cisco Virtual Kubelet stopped")
-}
-
-// NewCiscoProvider creates a new Cisco provider instance
-func NewCiscoProvider(ctx context.Context) (*cisco.CiscoProvider, error) {
-	// Get configuration
-	configPath := os.Getenv("CISCO_CONFIG_PATH")
-	nodeName := os.Getenv("NODE_NAME")
-	if nodeName == "" {
-		nodeName = defaultNodeName
-	}
-
-	operatingSystem := "Linux"
-	internalIP := os.Getenv("VKUBELET_POD_IP")
-	if internalIP == "" {
-		internalIP = "127.0.0.1"
-	}
-
-	// Initialize actual Cisco provider
-	provider, err := cisco.NewCiscoProvider(configPath, nodeName, operatingSystem, internalIP, 10250)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Cisco provider: %w", err)
-	}
-
-	log.G(ctx).Info("Cisco provider initialization complete")
-	return provider, nil
 }
