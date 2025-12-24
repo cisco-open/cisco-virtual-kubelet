@@ -346,37 +346,6 @@ func validateNetworkConfig(config *NetworkConfig) error {
 	return nil
 }
 
-// GetDeviceByName returns a device configuration by name
-func (c *CiscoConfig) GetDeviceByName(name string) *DeviceConfig {
-	for _, device := range c.Devices {
-		if device.Name == name {
-			return &device
-		}
-	}
-	return nil
-}
-
-// GetDevicesByType returns all devices of a specific type
-func (c *CiscoConfig) GetDevicesByType(deviceType DeviceType) []DeviceConfig {
-	var devices []DeviceConfig
-	for _, device := range c.Devices {
-		if device.Type == deviceType {
-			devices = append(devices, device)
-		}
-	}
-	return devices
-}
-
-// GetAvailableVLAN returns an available VLAN ID from the configured range
-func (c *CiscoConfig) GetAvailableVLAN(usedVLANs map[int]bool) int {
-	for vlan := c.Networking.VLANRange.Start; vlan <= c.Networking.VLANRange.End; vlan++ {
-		if !usedVLANs[vlan] {
-			return vlan
-		}
-	}
-	return -1 // No available VLAN
-}
-
 // ValidateConfig performs comprehensive configuration validation
 func ValidateConfig(config *CiscoConfig) error {
 	return validateAndSetDefaults(config)

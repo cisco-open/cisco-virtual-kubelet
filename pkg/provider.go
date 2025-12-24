@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/config"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -19,24 +20,24 @@ import (
 
 // CiscoProvider implements the virtual-kubelet provider interface for Cisco devices
 type CiscoProvider struct {
-	nodeName       string
-	operatingSystem string
-	internalIP     string
+	nodeName           string
+	operatingSystem    string
+	internalIP         string
 	daemonEndpointPort int32
-	
+
 	config         *CiscoConfig
 	deviceManager  *DeviceManager
 	networkManager *NetworkManager
 	monitor        *ResourceMonitor
-	
-	pods           sync.Map // map[string]*v1.Pod (namespace/name -> pod)
-	containers     sync.Map // map[string]*Container (container ID -> container)
-	
+
+	pods       sync.Map // map[string]*v1.Pod (namespace/name -> pod)
+	containers sync.Map // map[string]*Container (container ID -> container)
+
 	startTime          time.Time
 	notifier           func(*v1.Pod)
 	nodeStatusCallback func(*v1.Node)
-	
-	mutex          sync.RWMutex
+
+	mutex sync.RWMutex
 }
 
 // getDeviceNames extracts device names from config for logging
@@ -51,7 +52,7 @@ func getDeviceNames(config *CiscoConfig) []string {
 // NewCiscoProvider creates a new Cisco provider
 func NewCiscoProvider(configPath, nodeName, operatingSystem, internalIP string, daemonEndpointPort int32) (*CiscoProvider, error) {
 	// Try environment-based configuration first, then fall back to file-based config
-	config, err := loadConfigFromEnvOrFile(configPath)
+	config, err := config.Load()
 	if err != nil {
 		fmt.Printf("[CISCO-VK] WARNING: Config loading failed: %v\n", err)
 		fmt.Printf("[CISCO-VK] Using default configuration (no devices configured)\n")
@@ -82,7 +83,7 @@ func NewCiscoProvider(configPath, nodeName, operatingSystem, internalIP string, 
 
 	// Initialize connections to devices
 	ctx := context.Background()
-	
+
 	// Print configuration for debugging (before logger is available)
 	fmt.Printf("[CISCO-VK] Provider configuration loaded: %d devices\n", len(provider.config.Devices))
 	for _, device := range provider.config.Devices {
@@ -93,13 +94,13 @@ func NewCiscoProvider(configPath, nodeName, operatingSystem, internalIP string, 
 			device.Capabilities.Storage.String(),
 			device.Capabilities.Pods.String())
 	}
-	
+
 	if err := deviceManager.Connect(ctx); err != nil {
 		fmt.Printf("[CISCO-VK] WARNING: Failed to connect to some devices: %v\n", err)
 	} else {
 		fmt.Printf("[CISCO-VK] Successfully connected to all devices\n")
 	}
-	
+
 	// Log initial capacity after connection
 	initialCapacity := deviceManager.GetCapacity()
 	fmt.Printf("[CISCO-VK] Initial node capacity - CPU:%s Memory:%s Storage:%s Pods:%s\n",
@@ -123,7 +124,7 @@ func (p *CiscoProvider) GetDeviceCapacity() *DeviceCapability {
 func (p *CiscoProvider) Capacity(ctx context.Context) v1.ResourceList {
 	// Get capacity from device manager (only includes ready devices)
 	capacity := p.deviceManager.GetCapacity()
-	
+
 	fmt.Printf("[CISCO-VK] Capacity() called - CPU:%s Memory:%s Storage:%s Pods:%s\n",
 		capacity.CPU.String(),
 		capacity.Memory.String(),
@@ -221,7 +222,7 @@ func (p *CiscoProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	key := getPodKey(pod)
 	fmt.Printf("[CISCO-VK] ✨ CreatePod() CALLED for pod: %s\n", key)
 	log.G(ctx).Infof("🚀 Creating pod %s", key)
-	
+
 	// Reject system namespace pods (kube-proxy, etc.) - C9K doesn't support Kubernetes infrastructure
 	systemNamespaces := []string{"kube-system", "kube-public", "kube-node-lease"}
 	for _, ns := range systemNamespaces {
@@ -280,7 +281,7 @@ func (p *CiscoProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 			p.rollbackContainerCreation(ctx, createdContainers)
 			return fmt.Errorf("failed to create container %s: %v", containerSpec.Name, err)
 		}
-		
+
 		createdContainers = append(createdContainers, container)
 		p.containers.Store(container.ID, container)
 	}
@@ -294,18 +295,18 @@ func (p *CiscoProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 		StartTime: &now,
 		Conditions: []v1.PodCondition{
 			{
-				Type:   v1.PodInitialized,
-				Status: v1.ConditionTrue,
+				Type:               v1.PodInitialized,
+				Status:             v1.ConditionTrue,
 				LastTransitionTime: now,
 			},
 			{
-				Type:   v1.PodReady,
-				Status: v1.ConditionTrue,
+				Type:               v1.PodReady,
+				Status:             v1.ConditionTrue,
 				LastTransitionTime: now,
 			},
 			{
-				Type:   v1.PodScheduled,
-				Status: v1.ConditionTrue,
+				Type:               v1.PodScheduled,
+				Status:             v1.ConditionTrue,
 				LastTransitionTime: now,
 			},
 		},
@@ -314,9 +315,9 @@ func (p *CiscoProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	// Set container statuses
 	for _, container := range createdContainers {
 		containerStatus := v1.ContainerStatus{
-			Name:    container.Name,
-			Image:   container.Image,
-			Ready:   container.State == ContainerStateRunning,
+			Name:  container.Name,
+			Image: container.Image,
+			Ready: container.State == ContainerStateRunning,
 			State: v1.ContainerState{
 				Running: &v1.ContainerStateRunning{
 					StartedAt: *container.StartedAt,
@@ -391,16 +392,16 @@ func (p *CiscoProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 
 	// Try to get existing pod from internal state
 	existingPodInterface, exists := p.pods.Load(key)
-	
+
 	var containerIDs []string
 	var existingPod *v1.Pod
-	
+
 	if exists {
 		// Pod found in internal state - use normal deletion path
 		existingPod = existingPodInterface.(*v1.Pod)
 		containerIDs = p.getContainerIDsForPod(existingPod)
 		log.G(ctx).Infof("  Found pod in internal state with %d container(s)", len(containerIDs))
-		
+
 		// FALLBACK: If no containers found but pod has annotations, use annotation-based deletion
 		// This handles reconciliation scenarios where pod was restored but containers weren't
 		if len(containerIDs) == 0 && existingPod.Annotations != nil {
@@ -408,35 +409,35 @@ func (p *CiscoProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 			exists = false // Force annotation-based path
 		}
 	}
-	
+
 	if !exists {
 		// Pod NOT found in internal state OR no containers found (VK restart/reconciliation scenario)
 		// Try to extract app IDs from pod annotations and delete via RESTCONF
 		log.G(ctx).Warnf("  Checking annotations for cleanup")
-		
+
 		if pod.Annotations != nil {
 			// Look for container annotations with app-id
 			for i := 0; ; i++ {
 				appIDKey := fmt.Sprintf("cisco.com/container-%d.app-id", i)
 				deviceIDKey := fmt.Sprintf("cisco.com/container-%d.device-id", i)
-				
+
 				appID, hasAppID := pod.Annotations[appIDKey]
 				deviceID, hasDeviceID := pod.Annotations[deviceIDKey]
-				
+
 				if !hasAppID {
 					break // No more containers
 				}
-				
+
 				if hasDeviceID {
 					log.G(ctx).Infof("  Found annotation: app-id=%s on device=%s", appID, deviceID)
-					
+
 					// Delete directly via device manager using app ID
 					device, err := p.deviceManager.GetDevice(deviceID)
 					if err != nil {
 						log.G(ctx).Warnf("  Device %s not found: %v", deviceID, err)
 						continue
 					}
-					
+
 					if device.AppHostingMgr != nil {
 						log.G(ctx).Infof("  Undeploying app %s via RESTCONF", appID)
 						if err := device.AppHostingMgr.UndeployApplication(ctx, appID); err != nil {
@@ -444,26 +445,26 @@ func (p *CiscoProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 						} else {
 							log.G(ctx).Infof("  ✅ Successfully undeployed app %s", appID)
 						}
-						
+
 						// Clean up device state
 						device.mutex.Lock()
 						delete(device.Containers, appID)
 						device.mutex.Unlock()
 					}
-					
+
 					// Add to container IDs for cleanup
 					containerIDs = append(containerIDs, appID)
 					p.containers.Delete(appID)
 				}
 			}
 		}
-		
+
 		if len(containerIDs) == 0 {
 			log.G(ctx).Warnf("  No containers found to delete (pod may have been deleted already)")
 			// Return success even if no containers found - pod is being deleted
 			return nil
 		}
-		
+
 		existingPod = pod // Use the pod from K8s
 	}
 
@@ -516,7 +517,7 @@ func (p *CiscoProvider) GetPod(ctx context.Context, namespace, name string) (*v1
 	defer span.End()
 
 	key := fmt.Sprintf("%s/%s", namespace, name)
-	
+
 	podInterface, exists := p.pods.Load(key)
 	if !exists {
 		return nil, errdefs.NotFoundf("pod \"%s\" is not known to the provider", key)
@@ -574,15 +575,15 @@ func (p *CiscoProvider) GetContainerLogs(ctx context.Context, namespace, podName
 	if !exists {
 		return nil, fmt.Errorf("container %s not found", containerID)
 	}
-	
+
 	container := containerObj.(*Container)
-	
+
 	// Get device to access RESTCONF
 	device, err := p.deviceManager.GetDevice(container.DeviceID)
 	if err != nil {
 		return nil, fmt.Errorf("device not found: %v", err)
 	}
-	
+
 	// Get RESTCONF client from app hosting manager
 	if device.AppHostingMgr == nil {
 		return nil, fmt.Errorf("app hosting manager not available for device %s", container.DeviceID)
@@ -590,16 +591,16 @@ func (p *CiscoProvider) GetContainerLogs(ctx context.Context, namespace, podName
 	if device.AppHostingMgr.restconfClient == nil {
 		return nil, fmt.Errorf("RESTCONF client not available for device %s", container.DeviceID)
 	}
-	
+
 	log.G(ctx).Infof("📊 Creating log stream for container %s, app ID: %s", container.Name, container.ID)
-	
+
 	// Create log streamer for health vitals
 	if opts.Follow {
 		log.G(ctx).Infof("📺 Following logs (streaming health vitals every 60s)")
 		streamer := NewLogStreamer(container.ID, container.ID, device.AppHostingMgr.restconfClient)
 		return streamer.Stream(ctx), nil
 	}
-	
+
 	// For non-follow mode, return single snapshot
 	log.G(ctx).Infof("📋 Snapshot mode (single health check)")
 	streamer := NewLogStreamer(container.ID, container.ID, device.AppHostingMgr.restconfClient)
@@ -639,13 +640,13 @@ func (p *CiscoProvider) RunInContainer(ctx context.Context, namespace, podName, 
 // AttachToContainer attaches to a running container
 func (p *CiscoProvider) AttachToContainer(ctx context.Context, namespace, podName, containerName string, attach api.AttachIO) error {
 	log.G(ctx).Infof("Attaching to container %s in pod %s/%s", containerName, namespace, podName)
-	
+
 	// For Cisco IOx containers, attachment is limited
 	// We can simulate it by providing a shell prompt
 	if attach.Stdout() != nil {
 		attach.Stdout().Write([]byte("Cisco IOx container attachment not fully supported\n"))
 	}
-	
+
 	return nil
 }
 
@@ -679,9 +680,9 @@ func (p *CiscoProvider) GetStatsSummary(ctx context.Context) (*statsv1alpha1.Sum
 			}(),
 		},
 		// Network: &statsv1alpha1.NetworkStats{
-			// Time:            metav1.NewTime(usage.Timestamp.Time),
-			// UsageBytes:      uint64ToPointer(uint64(usage.Memory.Value())),
-			// WorkingSetBytes: uint64ToPointer(uint64(usage.Memory.Value())),
+		// Time:            metav1.NewTime(usage.Timestamp.Time),
+		// UsageBytes:      uint64ToPointer(uint64(usage.Memory.Value())),
+		// WorkingSetBytes: uint64ToPointer(uint64(usage.Memory.Value())),
 		// },
 		// Network stats - fields may vary by Kubernetes version
 	}
@@ -713,7 +714,7 @@ func (p *CiscoProvider) GetMetricsResource(ctx context.Context) ([]*dto.MetricFa
 // PortForward forwards a port to a pod
 func (p *CiscoProvider) PortForward(ctx context.Context, namespace, pod string, port int32, stream io.ReadWriteCloser) error {
 	log.G(ctx).Infof("Port forward requested for pod %s/%s port %d", namespace, pod, port)
-	
+
 	// Port forwarding for IOx containers would require specific implementation
 	// For now, we'll return an error indicating it's not supported
 	return fmt.Errorf("port forwarding not currently supported for Cisco IOx containers")
@@ -723,7 +724,7 @@ func (p *CiscoProvider) PortForward(ctx context.Context, namespace, pod string, 
 func (p *CiscoProvider) NotifyPods(ctx context.Context, notifier func(*v1.Pod)) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	
+
 	p.notifier = notifier
 }
 
@@ -732,12 +733,12 @@ func (p *CiscoProvider) NotifyPods(ctx context.Context, notifier func(*v1.Pod)) 
 func (p *CiscoProvider) NotifyNodeStatus(ctx context.Context, notifier func(*v1.Node)) {
 	fmt.Printf("[CISCO-VK] NotifyNodeStatus callback registered - starting status update loop\n")
 	log.G(ctx).Info("NotifyNodeStatus callback registered")
-	
+
 	// Store the notifier
 	p.mutex.Lock()
 	p.nodeStatusCallback = notifier
 	p.mutex.Unlock()
-	
+
 	// Start periodic status update goroutine
 	go p.runNodeStatusUpdater(ctx)
 }
@@ -746,11 +747,11 @@ func (p *CiscoProvider) NotifyNodeStatus(ctx context.Context, notifier func(*v1.
 func (p *CiscoProvider) runNodeStatusUpdater(ctx context.Context) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	
+
 	// Initial update after short delay
 	time.Sleep(5 * time.Second)
 	p.updateNodeStatus(ctx)
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -767,16 +768,16 @@ func (p *CiscoProvider) updateNodeStatus(ctx context.Context) {
 	p.mutex.Lock()
 	callback := p.nodeStatusCallback
 	p.mutex.Unlock()
-	
+
 	if callback == nil {
 		return
 	}
-	
+
 	// Build node with current status
 	node := &v1.Node{}
 	node.Status.Conditions = p.NodeConditions(ctx)
 	node.Status.Addresses = p.NodeAddresses(ctx)
-	
+
 	// Get current capacity
 	capacity := p.deviceManager.GetCapacity()
 	node.Status.Capacity = v1.ResourceList{
@@ -786,7 +787,7 @@ func (p *CiscoProvider) updateNodeStatus(ctx context.Context) {
 		v1.ResourcePods:   capacity.Pods,
 	}
 	node.Status.Allocatable = node.Status.Capacity
-	
+
 	fmt.Printf("[CISCO-VK] 💓 Sending node status update (Ready=True)\n")
 	callback(node)
 }
@@ -805,43 +806,43 @@ func (p *CiscoProvider) Ping(ctx context.Context) error {
 // ConfigureNode configures the virtual kubelet node
 func (p *CiscoProvider) ConfigureNode(ctx context.Context, node *v1.Node) {
 	fmt.Printf("[CISCO-VK] *** ConfigureNode() CALLED ***\n")
-	
+
 	// Set node capacity based on aggregated device capabilities
 	capacity := p.deviceManager.GetCapacity()
-	
+
 	fmt.Printf("[CISCO-VK] ConfigureNode - Setting capacity: CPU:%s Memory:%s Storage:%s Pods:%s\n",
 		capacity.CPU.String(),
 		capacity.Memory.String(),
 		capacity.Storage.String(),
 		capacity.Pods.String())
-	
+
 	node.Status.Capacity = v1.ResourceList{
 		v1.ResourceCPU:    capacity.CPU,
 		v1.ResourceMemory: capacity.Memory,
 		"storage":         capacity.Storage,
 		v1.ResourcePods:   capacity.Pods,
 	}
-	
+
 	node.Status.Allocatable = node.Status.Capacity
 
 	// Set node labels - CRITICAL for pod scheduling
 	if node.Labels == nil {
 		node.Labels = make(map[string]string)
 	}
-	
+
 	// Required labels for pod scheduling
 	node.Labels["kubernetes.io/hostname"] = p.nodeName
 	node.Labels["kubernetes.io/os"] = p.operatingSystem
 	node.Labels["kubernetes.io/arch"] = "amd64"
 	node.Labels["kubernetes.io/role"] = "agent"
 	node.Labels["type"] = "virtual-kubelet"
-	
+
 	// Cisco-specific labels
 	node.Labels["cisco.com/provider"] = "cisco"
 	node.Labels["cisco.com/device-count"] = fmt.Sprintf("%d", len(p.config.Devices))
-	
+
 	fmt.Printf("[CISCO-VK] ConfigureNode - Setting labels: hostname=%s type=virtual-kubelet\n", p.nodeName)
-	
+
 	// Add taint to prevent DaemonSets from scheduling on this node
 	// Only pods with matching toleration will be scheduled
 	node.Spec.Taints = []v1.Taint{
@@ -851,12 +852,12 @@ func (p *CiscoProvider) ConfigureNode(ctx context.Context, node *v1.Node) {
 			Effect: v1.TaintEffectNoSchedule,
 		},
 	}
-	
+
 	// Set node annotations
 	if node.Annotations == nil {
 		node.Annotations = make(map[string]string)
 	}
-	
+
 	node.Annotations["cisco.com/provider-version"] = "1.0.0"
 	node.Annotations["cisco.com/supported-devices"] = "c9k,c8k,c8kv"
 
@@ -907,20 +908,20 @@ func (p *CiscoProvider) convertPodToContainers(pod *v1.Pod) ([]ContainerSpec, er
 
 	for _, container := range pod.Spec.Containers {
 		spec := ContainerSpec{
-			Name:         container.Name,
-			Image:        container.Image,
-			Command:      container.Command,
-			Args:         container.Args,
-			Env:          container.Env,
-			Resources:    container.Resources,
-			VolumeMounts: container.VolumeMounts,
-			Ports:        container.Ports,
+			Name:            container.Name,
+			Image:           container.Image,
+			Command:         container.Command,
+			Args:            container.Args,
+			Env:             container.Env,
+			Resources:       container.Resources,
+			VolumeMounts:    container.VolumeMounts,
+			Ports:           container.Ports,
 			SecurityContext: container.SecurityContext,
 			LivenessProbe:   container.LivenessProbe,
 			ReadinessProbe:  container.ReadinessProbe,
 			StartupProbe:    container.StartupProbe,
-			Labels:       make(map[string]string),
-			Annotations:  make(map[string]string),
+			Labels:          make(map[string]string),
+			Annotations:     make(map[string]string),
 		}
 
 		// Copy pod labels and annotations to container
@@ -962,51 +963,51 @@ func (p *CiscoProvider) allocatePodIP(pod *v1.Pod) string {
 
 func (p *CiscoProvider) getContainerIDsForPod(pod *v1.Pod) []string {
 	var containerIDs []string
-	
+
 	p.containers.Range(func(key, value interface{}) bool {
 		container := value.(*Container)
 		if container.Labels["io.kubernetes.pod.name"] == pod.Name &&
-		   container.Labels["io.kubernetes.pod.namespace"] == pod.Namespace {
+			container.Labels["io.kubernetes.pod.namespace"] == pod.Namespace {
 			containerIDs = append(containerIDs, container.ID)
 		}
 		return true
 	})
-	
+
 	return containerIDs
 }
 
 func (p *CiscoProvider) findContainerID(namespace, podName, containerName string) (string, error) {
 	var foundContainerID string
-	
+
 	p.containers.Range(func(key, value interface{}) bool {
 		container := value.(*Container)
 		if container.Labels["io.kubernetes.pod.name"] == podName &&
-		   container.Labels["io.kubernetes.pod.namespace"] == namespace &&
-		   container.Labels["io.kubernetes.container.name"] == containerName {
+			container.Labels["io.kubernetes.pod.namespace"] == namespace &&
+			container.Labels["io.kubernetes.container.name"] == containerName {
 			foundContainerID = container.ID
 			return false // Stop iteration
 		}
 		return true
 	})
-	
+
 	if foundContainerID == "" {
 		return "", fmt.Errorf("container %s not found in pod %s/%s", containerName, namespace, podName)
 	}
-	
+
 	return foundContainerID, nil
 }
 
 func (p *CiscoProvider) createPodStats(ctx context.Context, pod *v1.Pod) *statsv1alpha1.PodStats {
 	// Create basic pod statistics
 	// In production, this would gather real metrics from devices
-	
+
 	podStats := &statsv1alpha1.PodStats{
 		PodRef: statsv1alpha1.PodReference{
 			Name:      pod.Name,
 			Namespace: pod.Namespace,
 			UID:       string(pod.UID),
 		},
-		StartTime: pod.CreationTimestamp,
+		StartTime:  pod.CreationTimestamp,
 		Containers: []statsv1alpha1.ContainerStats{},
 	}
 
@@ -1028,7 +1029,7 @@ func (p *CiscoProvider) createPodStats(ctx context.Context, pod *v1.Pod) *statsv
 				WorkingSetBytes: uint64ToPointer(uint64(128 * 1024 * 1024)),
 			},
 		}
-		
+
 		podStats.Containers = append(podStats.Containers, containerStats)
 	}
 

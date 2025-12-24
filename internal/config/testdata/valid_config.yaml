@@ -1,0 +1,9 @@
+devices:
+  - name: c8k-switch
+    type: c8k
+    address: localhost
+    port: 80
+    username: admin
+    password: admin
+    tls:
+      enabled: false

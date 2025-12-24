@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -28,16 +29,23 @@ type IOSXEClient struct {
 
 // NewIOSXEClient creates a new IOS XE client
 func NewIOSXEClient(config DeviceConfig) *IOSXEClient {
-	baseURL := fmt.Sprintf("https://%s:%d", config.Address, config.Port)
-	
-	// Configure TLS
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true, // Default for lab environments
+
+	u := &url.URL{
+		Host: fmt.Sprintf("%s:%d", config.Address, config.Port),
 	}
-	
+
+	if config.TLSConfig.Enabled {
+		u.Scheme = "https"
+	} else {
+		u.Scheme = "http"
+	}
+
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: false,
+	}
+
 	if config.TLSConfig != nil {
 		tlsConfig.InsecureSkipVerify = config.TLSConfig.InsecureSkipVerify
-		// TODO: Add certificate loading logic
 	}
 
 	httpClient := &http.Client{
@@ -50,14 +58,14 @@ func NewIOSXEClient(config DeviceConfig) *IOSXEClient {
 	return &IOSXEClient{
 		config:     config,
 		httpClient: httpClient,
-		baseURL:    baseURL,
+		baseURL:    u.String(),
 	}
 }
 
 // Connect establishes connection to the IOS XE device
 func (c *IOSXEClient) Connect() error {
 	ctx := context.Background()
-	
+
 	// Step 1: Test basic connectivity with RESTCONF
 	req, err := http.NewRequest("GET", c.baseURL+"/restconf/data/ietf-yang-library:yang-library", nil)
 	if err != nil {
@@ -69,9 +77,9 @@ func (c *IOSXEClient) Connect() error {
 
 	connCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	
+
 	req = req.WithContext(connCtx)
-	
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to connect to device: %v", err)
@@ -85,14 +93,14 @@ func (c *IOSXEClient) Connect() error {
 
 	c.connected = true
 	log.G(ctx).Infof("✅ Successfully connected to IOS XE device %s", c.config.Name)
-	
+
 	// Step 2: Perform automatic schema discovery
 	log.G(ctx).Infof("🔍 Discovering RESTCONF schema for device %s...", c.config.Name)
 	if err := c.discoverSchema(ctx); err != nil {
 		log.G(ctx).Warnf("Schema discovery failed: %v (continuing with limited functionality)", err)
 		// Don't fail connection if schema discovery fails
 	}
-	
+
 	return nil
 }
 
@@ -115,25 +123,25 @@ func (c *IOSXEClient) GetSystemInfo() (*SystemInfo, error) {
 
 	// Get system information via RESTCONF
 	systemInfo := &SystemInfo{}
-	
+
 	// Get hostname
 	hostname, err := c.getHostname()
 	if err == nil {
 		systemInfo.Hostname = hostname
 	}
-	
+
 	// Get version information
 	version, err := c.getVersion()
 	if err == nil {
 		systemInfo.Version = version
 	}
-	
+
 	// Get memory information
 	memory, err := c.getMemoryInfo()
 	if err == nil {
 		systemInfo.MemoryTotal = memory
 	}
-	
+
 	// Get CPU information
 	cpuCount, err := c.getCPUInfo()
 	if err == nil {
@@ -177,19 +185,19 @@ func (c *IOSXEClient) GetResourceUsage() (*ResourceUsage, error) {
 // AppHostingResourceInfo represents the app-hosting resource information from device
 type AppHostingResourceInfo struct {
 	CPU struct {
-		Quota     int `json:"quota"`      // CPU percentage quota
-		Available int `json:"available"`  // Available CPU percentage
+		Quota     int `json:"quota"`     // CPU percentage quota
+		Available int `json:"available"` // Available CPU percentage
 	} `json:"cpu"`
 	VCPU struct {
 		Count int `json:"count"` // Number of VCPUs
 	} `json:"vcpu"`
 	Memory struct {
-		Quota     int `json:"quota"`      // Memory quota in MB
-		Available int `json:"available"`  // Available memory in MB
+		Quota     int `json:"quota"`     // Memory quota in MB
+		Available int `json:"available"` // Available memory in MB
 	} `json:"memory"`
 	Storage struct {
-		Total     int `json:"total"`      // Total storage in MB
-		Available int `json:"available"`  // Available storage in MB
+		Total     int `json:"total"`     // Total storage in MB
+		Available int `json:"available"` // Available storage in MB
 	} `json:"storage"`
 }
 
@@ -202,7 +210,7 @@ func (c *IOSXEClient) GetAppHostingResources(ctx context.Context) (*AppHostingRe
 
 	// Query app-hosting operational data via RESTCONF
 	path := "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/app-resource-utilization"
-	
+
 	data, err := c.restconfGet(path)
 	if err != nil {
 		// Fallback: Use default values based on device type
@@ -214,18 +222,18 @@ func (c *IOSXEClient) GetAppHostingResources(ctx context.Context) (*AppHostingRe
 	var response struct {
 		ResourceUtilization AppHostingResourceInfo `json:"app-resource-utilization"`
 	}
-	
+
 	if err := json.Unmarshal(data, &response); err != nil {
 		log.G(ctx).Warnf("Failed to parse resource data: %v", err)
 		return c.getAppHostingResourcesFallback(ctx)
 	}
 
 	log.G(ctx).WithFields(map[string]interface{}{
-		"vcpu":      response.ResourceUtilization.VCPU.Count,
-		"cpu_quota": response.ResourceUtilization.CPU.Quota,
-		"cpu_avail": response.ResourceUtilization.CPU.Available,
-		"mem_quota": response.ResourceUtilization.Memory.Quota,
-		"mem_avail": response.ResourceUtilization.Memory.Available,
+		"vcpu":       response.ResourceUtilization.VCPU.Count,
+		"cpu_quota":  response.ResourceUtilization.CPU.Quota,
+		"cpu_avail":  response.ResourceUtilization.CPU.Available,
+		"mem_quota":  response.ResourceUtilization.Memory.Quota,
+		"mem_avail":  response.ResourceUtilization.Memory.Available,
 		"stor_total": response.ResourceUtilization.Storage.Total,
 		"stor_avail": response.ResourceUtilization.Storage.Available,
 	}).Info("Retrieved app-hosting resources from device")
@@ -236,7 +244,7 @@ func (c *IOSXEClient) GetAppHostingResources(ctx context.Context) (*AppHostingRe
 // getAppHostingResourcesFallback provides default resource values based on device type
 func (c *IOSXEClient) getAppHostingResourcesFallback(ctx context.Context) (*AppHostingResourceInfo, error) {
 	log.G(ctx).Info("Using fallback resource values for device")
-	
+
 	// Conservative defaults for C9300 series
 	info := &AppHostingResourceInfo{}
 	info.CPU.Quota = 25
@@ -246,7 +254,7 @@ func (c *IOSXEClient) getAppHostingResourcesFallback(ctx context.Context) (*AppH
 	info.Memory.Available = 2048
 	info.Storage.Total = 112487
 	info.Storage.Available = 97533
-	
+
 	return info, nil
 }
 
@@ -268,8 +276,8 @@ func (c *IOSXEClient) ExecuteCommand(cmd string) (*ExecResult, error) {
 		return nil, fmt.Errorf("failed to marshal request: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", 
-		c.baseURL+"/restconf/operations/cisco-ia:save-config", 
+	req, err := http.NewRequest("POST",
+		c.baseURL+"/restconf/operations/cisco-ia:save-config",
 		bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
@@ -308,34 +316,34 @@ func (c *IOSXEClient) CreateContainer(ctx context.Context, spec ContainerSpec) (
 	if !c.connected {
 		return nil, fmt.Errorf("not connected to device")
 	}
-	
+
 	log.G(ctx).Infof("Creating container %s on device %s", spec.Name, c.config.Name)
-	
+
 	// Create a container object
 	container := &Container{
-		ID:        generateContainerID(),
-		Name:      spec.Name,
-		Image:     spec.Image,
-		State:     ContainerStateCreated,
-		DeviceID:  c.config.Name,
-		Labels:    spec.Labels,
+		ID:          generateContainerID(),
+		Name:        spec.Name,
+		Image:       spec.Image,
+		State:       ContainerStateCreated,
+		DeviceID:    c.config.Name,
+		Labels:      spec.Labels,
 		Annotations: spec.Annotations,
-		CreatedAt: metav1.Now(),
-		Resources: ResourceUsage{}, // Will be updated after deployment
+		CreatedAt:   metav1.Now(),
+		Resources:   ResourceUsage{}, // Will be updated after deployment
 	}
-	
+
 	// Use AppHostingManager for full deployment lifecycle
 	manager := NewAppHostingManager(c)
 	if err := manager.DeployApplication(ctx, spec, container); err != nil {
 		container.State = ContainerStateError
 		return container, fmt.Errorf("failed to deploy application: %v", err)
 	}
-	
+
 	// Update container state
 	container.State = ContainerStateRunning
 	now := metav1.Now()
 	container.StartedAt = &now
-	
+
 	log.G(ctx).Infof("✅ Container %s created successfully on device %s", spec.Name, c.config.Name)
 	return container, nil
 }
@@ -495,7 +503,7 @@ func (c *IOSXEClient) deployIOxApplication(ctx context.Context, spec ContainerSp
 
 	// Initialize RESTCONF client for lifecycle operations
 	restconfClient := NewRESTCONFAppHostingClient(c)
-	
+
 	// STEP 2: Configure app-hosting appid FIRST (MUST be before install)
 	// This creates the app-hosting configuration with resources and networking
 	// Command: app-hosting appid <name> ...
@@ -507,7 +515,7 @@ func (c *IOSXEClient) deployIOxApplication(ctx context.Context, spec ContainerSp
 		return fmt.Errorf("failed to configure app-hosting: %v", err)
 	}
 	fmt.Printf("[CISCO-VK] ✅ Configuration created successfully\n")
-	
+
 	// Small delay to let configuration apply
 	time.Sleep(2 * time.Second)
 
@@ -519,7 +527,7 @@ func (c *IOSXEClient) deployIOxApplication(ctx context.Context, spec ContainerSp
 	if err := restconfClient.Install(ctx, spec.Name, spec.Image); err != nil {
 		return fmt.Errorf("failed to install app-hosting package: %v", err)
 	}
-	
+
 	// WAIT for DEPLOYED state (can take up to 90s for large images)
 	log.G(ctx).Infof("⏳ Waiting for DEPLOYED state...")
 	if err := restconfClient.WaitForState(ctx, spec.Name, "DEPLOYED", 90*time.Second); err != nil {
@@ -533,7 +541,7 @@ func (c *IOSXEClient) deployIOxApplication(ctx context.Context, spec ContainerSp
 	if err := restconfClient.Activate(ctx, spec.Name); err != nil {
 		return fmt.Errorf("failed to activate app-hosting instance: %v", err)
 	}
-	
+
 	// WAIT for ACTIVATED state
 	log.G(ctx).Infof("⏳ Waiting for ACTIVATED state...")
 	if err := restconfClient.WaitForState(ctx, spec.Name, "ACTIVATED", 30*time.Second); err != nil {
@@ -547,7 +555,7 @@ func (c *IOSXEClient) deployIOxApplication(ctx context.Context, spec ContainerSp
 	if err := restconfClient.Start(ctx, spec.Name); err != nil {
 		return fmt.Errorf("failed to start app-hosting instance: %v", err)
 	}
-	
+
 	// WAIT for RUNNING state
 	log.G(ctx).Infof("⏳ Waiting for RUNNING state...")
 	if err := restconfClient.WaitForState(ctx, spec.Name, "RUNNING", 15*time.Second); err != nil {
@@ -571,35 +579,35 @@ func (c *IOSXEClient) verifyAppHostingEnabled(ctx context.Context) error {
 	if !c.HasAppHostingSupport() {
 		return fmt.Errorf("app-hosting endpoints not discovered - IOx may not be enabled on device (enable with 'iox' command)")
 	}
-	
+
 	// Try to query the IOx config endpoint if available
 	if c.schema.IOxConfigPath != "" {
 		url := c.baseURL + c.schema.IOxConfigPath
-		
+
 		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 		if err != nil {
 			return err
 		}
-		
+
 		req.SetBasicAuth(c.config.Username, c.config.Password)
 		req.Header.Set("Accept", "application/yang-data+json")
-		
+
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			return fmt.Errorf("failed to check IOx status: %v", err)
 		}
 		defer resp.Body.Close()
-		
+
 		if resp.StatusCode == 404 {
 			return fmt.Errorf("IOx not configured on device - please enable with 'iox' command")
 		}
-		
+
 		if resp.StatusCode >= 400 {
 			body, _ := io.ReadAll(resp.Body)
 			return fmt.Errorf("IOx check failed (status %d): %s", resp.StatusCode, string(body))
 		}
 	}
-	
+
 	log.G(ctx).Infof("✅ IOx/app-hosting is available on device %s", c.config.Name)
 	return nil
 }
@@ -619,19 +627,19 @@ type AppVnicConfig struct {
 }
 
 type GuestInterface struct {
-	GuestInterface   int    `json:"guest-interface"`
-	GuestIPAddress   string `json:"guest-ipaddress,omitempty"`
-	Netmask         string `json:"netmask,omitempty"`
-	AppDefaultGW    string `json:"app-default-gateway,omitempty"`
+	GuestInterface int    `json:"guest-interface"`
+	GuestIPAddress string `json:"guest-ipaddress,omitempty"`
+	Netmask        string `json:"netmask,omitempty"`
+	AppDefaultGW   string `json:"app-default-gateway,omitempty"`
 }
 
 type AppResourceConfig struct {
 	Docker      DockerConfig `json:"docker,omitempty"`
 	Profile     string       `json:"profile,omitempty"`
-	CPU         int          `json:"cpu,omitempty"`         // CPU units (e.g., 3000)
-	MemoryMB    int          `json:"memory,omitempty"`      // Memory in MB
+	CPU         int          `json:"cpu,omitempty"`          // CPU units (e.g., 3000)
+	MemoryMB    int          `json:"memory,omitempty"`       // Memory in MB
 	PersistDisk int          `json:"persist-disk,omitempty"` // Persistent disk in MB
-	VCPU        int          `json:"vcpu,omitempty"`        // Number of virtual CPUs
+	VCPU        int          `json:"vcpu,omitempty"`         // Number of virtual CPUs
 }
 
 type DockerConfig struct {
@@ -647,10 +655,10 @@ type AppHostingOperData struct {
 }
 
 type AppInfo struct {
-	AppID          string    `json:"application-name"`
-	State          string    `json:"state"`
-	ApplicationType string   `json:"application-type"`
-	Details        AppDetails `json:"details,omitempty"`
+	AppID           string     `json:"application-name"`
+	State           string     `json:"state"`
+	ApplicationType string     `json:"application-type"`
+	Details         AppDetails `json:"details,omitempty"`
 }
 
 type AppDetails struct {
@@ -664,14 +672,14 @@ type AppDetails struct {
 func (c *IOSXEClient) buildAppHostingConfig(spec ContainerSpec, container *Container) C9KAppHostingConfig {
 	// Generate unique IP for this container (basic IPAM)
 	containerIP := fmt.Sprintf("192.168.100.%d", 10+(len(container.ID)%240))
-	
+
 	config := C9KAppHostingConfig{
 		AppID: spec.Name,
 		Image: spec.Image,
 		AppVnic: AppVnicConfig{
 			Management: GuestInterface{
-				GuestInterface:  0,
-				GuestIPAddress:  containerIP,
+				GuestInterface: 0,
+				GuestIPAddress: containerIP,
 				Netmask:        "255.255.255.0",
 				AppDefaultGW:   "192.168.100.1",
 			},
@@ -684,14 +692,14 @@ func (c *IOSXEClient) buildAppHostingConfig(spec ContainerSpec, container *Conta
 				},
 			},
 			Profile:     "custom",
-			CPU:         1000,  // CPU units (default 1000 = 1 core)
-			MemoryMB:    512,   // Default memory allocation in MB
-			PersistDisk: 1024,  // Default persistent disk in MB
-			VCPU:        2,     // Number of virtual CPUs
+			CPU:         1000, // CPU units (default 1000 = 1 core)
+			MemoryMB:    512,  // Default memory allocation in MB
+			PersistDisk: 1024, // Default persistent disk in MB
+			VCPU:        2,    // Number of virtual CPUs
 		},
 		Start: true,
 	}
-	
+
 	// Apply resource limits from container spec
 	if spec.Resources.Limits.Memory() != nil {
 		memoryQuantity := spec.Resources.Limits.Memory()
@@ -702,7 +710,7 @@ func (c *IOSXEClient) buildAppHostingConfig(spec ContainerSpec, container *Conta
 			}
 		}
 	}
-	
+
 	// Apply CPU limits from container spec
 	if spec.Resources.Limits.Cpu() != nil {
 		cpuQuantity := spec.Resources.Limits.Cpu()
@@ -714,13 +722,13 @@ func (c *IOSXEClient) buildAppHostingConfig(spec ContainerSpec, container *Conta
 			}
 		}
 	}
-	
+
 	// Add port mappings
 	for _, port := range spec.Ports {
 		portMapping := fmt.Sprintf("-p %d:%d", port.HostPort, port.ContainerPort)
 		config.AppResource.Docker.RunOpts = append(config.AppResource.Docker.RunOpts, portMapping)
 	}
-	
+
 	// Build docker run options from Command and Args
 	if len(spec.Command) > 0 || len(spec.Args) > 0 {
 		var dockerOpts string
@@ -740,7 +748,7 @@ func (c *IOSXEClient) buildAppHostingConfig(spec ContainerSpec, container *Conta
 		}
 		config.DockerRunOpts = dockerOpts
 	}
-	
+
 	return config
 }
 
@@ -750,9 +758,9 @@ func (c *IOSXEClient) createAppHostingInstance(ctx context.Context, config C9KAp
 	if c.schema == nil || c.schema.AppHostingConfigPath == "" {
 		return fmt.Errorf("app-hosting config endpoint not available")
 	}
-	
+
 	url := c.baseURL + c.schema.AppHostingConfigPath
-	
+
 	// Prepare the YANG-compliant payload
 	payload := map[string]interface{}{
 		"Cisco-IOS-XE-native:app-hosting": map[string]interface{}{
@@ -761,9 +769,9 @@ func (c *IOSXEClient) createAppHostingInstance(ctx context.Context, config C9KAp
 					"appid": config.AppID,
 					"app-vnic": map[string]interface{}{
 						"management": map[string]interface{}{
-							"guest-interface": config.AppVnic.Management.GuestInterface,
-							"guest-ipaddress": config.AppVnic.Management.GuestIPAddress,
-							"netmask":        config.AppVnic.Management.Netmask,
+							"guest-interface":     config.AppVnic.Management.GuestInterface,
+							"guest-ipaddress":     config.AppVnic.Management.GuestIPAddress,
+							"netmask":             config.AppVnic.Management.Netmask,
 							"app-default-gateway": config.AppVnic.Management.AppDefaultGW,
 						},
 					},
@@ -771,43 +779,43 @@ func (c *IOSXEClient) createAppHostingInstance(ctx context.Context, config C9KAp
 						"docker": map[string]interface{}{
 							"run-opts": config.AppResource.Docker.RunOpts,
 						},
-						"profile":  config.AppResource.Profile,
-						"memory":   config.AppResource.MemoryMB,
-						"vcpu":     config.AppResource.VCPU,
+						"profile": config.AppResource.Profile,
+						"memory":  config.AppResource.MemoryMB,
+						"vcpu":    config.AppResource.VCPU,
 					},
 				},
 			},
 		},
 	}
-	
+
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal app-hosting config: %v", err)
 	}
-	
+
 	log.G(ctx).Infof("📤 Creating app-hosting instance: %s", string(jsonPayload))
-	
+
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return err
 	}
-	
+
 	req.SetBasicAuth(c.config.Username, c.config.Password)
 	req.Header.Set("Content-Type", "application/yang-data+json")
 	req.Header.Set("Accept", "application/yang-data+json")
-	
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to create app-hosting instance: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	body, _ := io.ReadAll(resp.Body)
-	
+
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("app-hosting creation failed (status %d): %s", resp.StatusCode, string(body))
 	}
-	
+
 	log.G(ctx).Infof("✅ App-hosting instance created successfully")
 	return nil
 }
@@ -818,35 +826,35 @@ func (c *IOSXEClient) startAppHostingInstance(ctx context.Context, appID string)
 	if c.schema == nil || c.schema.AppHostingConfigPath == "" {
 		return fmt.Errorf("app-hosting config endpoint not available")
 	}
-	
+
 	url := fmt.Sprintf("%s%s/appid=%s/start", c.baseURL, c.schema.AppHostingConfigPath, appID)
-	
+
 	req, err := http.NewRequestWithContext(ctx, "PUT", url, bytes.NewBuffer([]byte(`{}`)))
 	if err != nil {
 		return err
 	}
-	
+
 	req.SetBasicAuth(c.config.Username, c.config.Password)
 	req.Header.Set("Content-Type", "application/yang-data+json")
-	
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to start app-hosting instance: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("app-hosting start failed (status %d): %s", resp.StatusCode, string(body))
 	}
-	
+
 	log.G(ctx).Infof("✅ App-hosting instance %s started", appID)
 	return nil
 }
 
 // verifyAppDeployment verifies that the application is deployed and running
 func (c *IOSXEClient) verifyAppDeployment(ctx context.Context, appID string) error {
-	maxRetries := 20  // Increased timeout for slow device operations
+	maxRetries := 20 // Increased timeout for slow device operations
 	for i := 0; i < maxRetries; i++ {
 		status, err := c.getAppHostingStatus(ctx, appID)
 		if err != nil {
@@ -854,24 +862,24 @@ func (c *IOSXEClient) verifyAppDeployment(ctx context.Context, appID string) err
 			time.Sleep(3 * time.Second)
 			continue
 		}
-		
+
 		// Accept DEPLOYED, ACTIVATED, or RUNNING as success states
 		if status.State == "RUNNING" {
 			log.G(ctx).Infof("✅ Application %s is RUNNING with IP: %s", appID, status.Details.IPAddress)
 			return nil
 		}
-		
+
 		if status.State == "DEPLOYED" || status.State == "ACTIVATED" {
 			log.G(ctx).Infof("✅ Application %s is %s (container deployed successfully)", appID, status.State)
 			// For Docker containers, DEPLOYED state is sufficient
 			return nil
 		}
-		
-		log.G(ctx).Infof("⏳ Application %s state: %s (run-state: %s), waiting...", 
+
+		log.G(ctx).Infof("⏳ Application %s state: %s (run-state: %s), waiting...",
 			appID, status.State, status.Details.RunState)
 		time.Sleep(3 * time.Second)
 	}
-	
+
 	return fmt.Errorf("application %s failed to reach deployed/running state after %d attempts", appID, maxRetries)
 }
 
@@ -881,40 +889,40 @@ func (c *IOSXEClient) getAppHostingStatus(ctx context.Context, appID string) (*A
 	if c.schema == nil || c.schema.AppHostingOperPath == "" {
 		return nil, fmt.Errorf("app-hosting operational endpoint not available")
 	}
-	
+
 	url := c.baseURL + c.schema.AppHostingOperPath
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	req.SetBasicAuth(c.config.Username, c.config.Password)
 	req.Header.Set("Accept", "application/yang-data+json")
-	
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get app status: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("app status query failed (status %d): %s", resp.StatusCode, string(body))
 	}
-	
+
 	var operData AppHostingOperData
 	if err := json.NewDecoder(resp.Body).Decode(&operData); err != nil {
 		return nil, fmt.Errorf("failed to parse app status: %v", err)
 	}
-	
+
 	// Find our application
 	for _, app := range operData.AppHostingOperData.App {
 		if app.AppID == appID {
 			return &app, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("application %s not found in operational data", appID)
 }
 
@@ -941,28 +949,28 @@ func (c *IOSXEClient) stopAppHostingInstance(ctx context.Context, appID string) 
 	if c.schema == nil || c.schema.AppHostingConfigPath == "" {
 		return fmt.Errorf("app-hosting config endpoint not available")
 	}
-	
+
 	url := fmt.Sprintf("%s%s/appid=%s/stop", c.baseURL, c.schema.AppHostingConfigPath, appID)
-	
+
 	req, err := http.NewRequestWithContext(ctx, "PUT", url, bytes.NewBuffer([]byte(`{}`)))
 	if err != nil {
 		return err
 	}
-	
+
 	req.SetBasicAuth(c.config.Username, c.config.Password)
 	req.Header.Set("Content-Type", "application/yang-data+json")
-	
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to stop app-hosting instance: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("app-hosting stop failed (status %d): %s", resp.StatusCode, string(body))
 	}
-	
+
 	log.G(ctx).Infof("✅ App-hosting instance %s stopped", appID)
 	return nil
 }
@@ -973,28 +981,28 @@ func (c *IOSXEClient) removeAppHostingInstance(ctx context.Context, appID string
 	if c.schema == nil || c.schema.AppHostingConfigPath == "" {
 		return fmt.Errorf("app-hosting config endpoint not available")
 	}
-	
+
 	url := fmt.Sprintf("%s%s/appid=%s", c.baseURL, c.schema.AppHostingConfigPath, appID)
-	
+
 	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
 	if err != nil {
 		return err
 	}
-	
+
 	req.SetBasicAuth(c.config.Username, c.config.Password)
 	req.Header.Set("Accept", "application/yang-data+json")
-	
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to remove app-hosting instance: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode >= 400 && resp.StatusCode != 404 {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("app-hosting removal failed (status %d): %s", resp.StatusCode, string(body))
 	}
-	
+
 	log.G(ctx).Infof("✅ App-hosting instance %s removed", appID)
 	return nil
 }
@@ -1003,35 +1011,35 @@ func (c *IOSXEClient) removeAppHostingInstance(ctx context.Context, appID string
 func (c *IOSXEClient) executeAppHostingRPC(ctx context.Context, operation string, payload map[string]interface{}) error {
 	// RESTCONF RPC endpoint for app-hosting operations
 	url := fmt.Sprintf("%s/restconf/operations/Cisco-IOS-XE-app-hosting-rpc:app-hosting-%s", c.baseURL, operation)
-	
+
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal RPC payload: %v", err)
 	}
-	
+
 	log.G(ctx).Debugf("Executing app-hosting RPC %s: %s", operation, string(jsonPayload))
-	
+
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return err
 	}
-	
+
 	req.SetBasicAuth(c.config.Username, c.config.Password)
 	req.Header.Set("Content-Type", "application/yang-data+json")
 	req.Header.Set("Accept", "application/yang-data+json")
-	
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("RPC %s failed: %v", operation, err)
 	}
 	defer resp.Body.Close()
-	
+
 	body, _ := io.ReadAll(resp.Body)
-	
+
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("RPC %s failed (status %d): %s", operation, resp.StatusCode, string(body))
 	}
-	
+
 	log.G(ctx).Debugf("RPC %s completed successfully", operation)
 	return nil
 }
@@ -1042,49 +1050,49 @@ func (c *IOSXEClient) getAllAppHostingStatus(ctx context.Context) (*AppHostingOp
 	if c.schema == nil || c.schema.AppHostingOperPath == "" {
 		return nil, fmt.Errorf("app-hosting operational endpoint not available")
 	}
-	
+
 	url := c.baseURL + c.schema.AppHostingOperPath
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	req.SetBasicAuth(c.config.Username, c.config.Password)
 	req.Header.Set("Accept", "application/yang-data+json")
-	
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get app-hosting status: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("app-hosting status query failed (status %d): %s", resp.StatusCode, string(body))
 	}
-	
+
 	var operData AppHostingOperData
 	if err := json.NewDecoder(resp.Body).Decode(&operData); err != nil {
 		return nil, fmt.Errorf("failed to parse app-hosting status: %v", err)
 	}
-	
+
 	return &operData, nil
 }
 
 func (c *IOSXEClient) getIOxApplicationStatus(ctx context.Context, containerID string) (*Container, error) {
 	// Simulate getting application status
 	container := &Container{
-		ID:       containerID,
-		Name:     "app-" + containerID,
-		State:    ContainerStateRunning,
-		DeviceID: c.config.Name,
+		ID:        containerID,
+		Name:      "app-" + containerID,
+		State:     ContainerStateRunning,
+		DeviceID:  c.config.Name,
 		CreatedAt: metav1.NewTime(time.Now().Add(-5 * time.Minute)),
 	}
-	
+
 	startTime := metav1.NewTime(time.Now().Add(-5 * time.Minute))
 	container.StartedAt = &startTime
-	
+
 	return container, nil
 }
 

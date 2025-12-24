@@ -44,7 +44,7 @@ func main() {
 
 	// Setup logging
 	logrusLogger := logruslib.New()
-	
+
 	// Set log level from environment
 	logLevel := os.Getenv("LOG_LEVEL")
 	switch logLevel {
@@ -57,7 +57,7 @@ func main() {
 	default:
 		logrusLogger.SetLevel(logruslib.InfoLevel)
 	}
-	
+
 	logger := logrus.FromLogrus(logruslib.NewEntry(logrusLogger))
 	ctx = log.WithLogger(ctx, logger)
 
@@ -90,7 +90,7 @@ func main() {
 	// Create Kubernetes client configuration
 	var config *rest.Config
 	var err error
-	
+
 	if kubeconfig != "" {
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 	} else {
@@ -112,18 +112,18 @@ func main() {
 		if err != nil {
 			return nil, nil, err
 		}
-		
+
 		// CRITICAL: Set node capacity on the provided node object
 		// This is how virtual-kubelet v1.11.0 expects capacity to be configured
 		if cfg.Node != nil {
 			capacity := ciscoProvider.GetDeviceCapacity()
-			
+
 			fmt.Printf("[CISCO-VK] Setting node capacity via ProviderConfig: CPU:%s Memory:%s Storage:%s Pods:%s\n",
 				capacity.CPU.String(),
 				capacity.Memory.String(),
 				capacity.Storage.String(),
 				capacity.Pods.String())
-			
+
 			cfg.Node.Status.Capacity = v1.ResourceList{
 				v1.ResourceCPU:     capacity.CPU,
 				v1.ResourceMemory:  capacity.Memory,
@@ -131,7 +131,7 @@ func main() {
 				v1.ResourcePods:    capacity.Pods,
 			}
 			cfg.Node.Status.Allocatable = cfg.Node.Status.Capacity
-			
+
 			// Set node labels
 			if cfg.Node.Labels == nil {
 				cfg.Node.Labels = make(map[string]string)
@@ -139,7 +139,7 @@ func main() {
 			cfg.Node.Labels["cisco.com/provider"] = "cisco"
 			cfg.Node.Labels["kubernetes.io/os"] = "Linux"
 		}
-		
+
 		// Return provider as both Provider and NodeProvider
 		return ciscoProvider, ciscoProvider, nil
 	}
@@ -148,7 +148,7 @@ func main() {
 	opts := []nodeutil.NodeOpt{
 		nodeutil.WithClient(clientset),
 	}
-	
+
 	n, err := nodeutil.NewNode(nodeName, newProviderFunc, opts...)
 	if err != nil {
 		log.G(ctx).WithError(err).Fatal("Failed to create node")
@@ -170,13 +170,13 @@ func NewCiscoProvider(ctx context.Context) (*cisco.CiscoProvider, error) {
 	if nodeName == "" {
 		nodeName = defaultNodeName
 	}
-	
+
 	operatingSystem := "Linux"
 	internalIP := os.Getenv("VKUBELET_POD_IP")
 	if internalIP == "" {
 		internalIP = "127.0.0.1"
 	}
-	
+
 	// Initialize actual Cisco provider
 	provider, err := cisco.NewCiscoProvider(configPath, nodeName, operatingSystem, internalIP, 10250)
 	if err != nil {
