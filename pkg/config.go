@@ -18,7 +18,6 @@ func LoadConfig(configPath string) (*CiscoConfig, error) {
 		return getDefaultConfig(), nil
 	}
 
-	fmt.Printf("CONFIG PATH: %s", configPath)
 	// Check if file exists before trying to read
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("config file does not exist: %s", configPath)
@@ -44,7 +43,7 @@ func LoadConfig(configPath string) (*CiscoConfig, error) {
 			err = yaml.Unmarshal(data, &config)
 		}
 	}
-	// fmt.Printf("LOADED CONFIG: %s", config)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse config file %s: %v", configPath, err)
 	}
@@ -54,7 +53,6 @@ func LoadConfig(configPath string) (*CiscoConfig, error) {
 		return nil, fmt.Errorf("invalid configuration: %v", err)
 	}
 
-	// fmt.Printf("LOADED CONFIG: %s", config)
 	return &config, nil
 }
 
@@ -422,11 +420,11 @@ func loadConfigFromEnvOrFile(configPath string) (*CiscoConfig, error) {
 					Name:     "c9k-env-device",
 					Type:     DeviceTypeC9K,
 					Address:  deviceAddr,
-					Port:     80, // Default HTTPS port
+					Port:     443, // Default HTTPS port
 					Username: deviceUser,
 					Password: devicePass,
 					TLSConfig: &TLSConfig{
-						Enabled:            false,
+						Enabled:            true,
 						InsecureSkipVerify: true,
 					},
 					Capabilities: DeviceCapability{
@@ -495,7 +493,6 @@ func loadConfigFromEnvOrFile(configPath string) (*CiscoConfig, error) {
 	if configPath != "" {
 		// Try the specified config path first
 		config, err := LoadConfig(configPath)
-		fmt.Printf("Config loading error: %v", err)
 		if err == nil {
 			return config, nil
 		}

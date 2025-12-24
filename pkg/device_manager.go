@@ -16,12 +16,12 @@ import (
 
 // DeviceManager manages multiple Cisco devices and abstracts their operations
 type DeviceManager struct {
-	devices    map[string]*ManagedDevice
-	config     *CiscoConfig
-	mutex      sync.RWMutex
-	scheduler  *DeviceScheduler
-	networkMgr *NetworkManager
-	monitor    *ResourceMonitor
+	devices     map[string]*ManagedDevice
+	config      *CiscoConfig
+	mutex       sync.RWMutex
+	scheduler   *DeviceScheduler
+	networkMgr  *NetworkManager
+	monitor     *ResourceMonitor
 }
 
 // ManagedDevice represents a managed Cisco device with its client and state
@@ -166,8 +166,8 @@ func (dm *DeviceManager) Connect(ctx context.Context) error {
 
 	var lastError error
 	connectedCount := 0
+
 	for _, device := range devices {
-		fmt.Printf("DEBUG!! %s", device.Config)
 		if err := device.Client.Connect(); err != nil {
 			log.G(ctx).Errorf("Failed to connect to device %s: %v", device.Config.Name, err)
 			lastError = err
@@ -176,7 +176,7 @@ func (dm *DeviceManager) Connect(ctx context.Context) error {
 			log.G(ctx).Infof("Successfully connected to device %s", device.Config.Name)
 			device.updateStatus(DeviceStatusReady)
 			connectedCount++
-
+			
 			// Query actual resources from device and update capabilities
 			if err := device.updateCapacityFromDevice(ctx); err != nil {
 				log.G(ctx).Warnf("Failed to query device resources for %s: %v", device.Config.Name, err)
@@ -204,14 +204,14 @@ func (dm *DeviceManager) Disconnect() error {
 			device.updateStatus(DeviceStatusUnknown)
 		}
 	}
-
+	
 	return nil
 }
 
 // CreateContainer creates a container on the best available device
 func (dm *DeviceManager) CreateContainer(ctx context.Context, spec ContainerSpec) (*Container, error) {
 	fmt.Printf("[CISCO-VK] 🎯 DeviceManager.CreateContainer called for: %s\n", spec.Name)
-
+	
 	// Select the best device for this container
 	fmt.Printf("[CISCO-VK] 📋 Scheduling container on best device...\n")
 	deviceName, err := dm.scheduler.ScheduleContainer(spec)
@@ -265,7 +265,7 @@ func (dm *DeviceManager) CreateContainer(ctx context.Context, spec ContainerSpec
 // DeleteContainer removes a container from its device
 func (dm *DeviceManager) DeleteContainer(ctx context.Context, containerID string) error {
 	log.G(ctx).Infof("🗑️ Deleting container %s", containerID)
-
+	
 	// Find the device that has this container
 	var targetDevice *ManagedDevice
 	for _, device := range dm.devices {
@@ -290,7 +290,7 @@ func (dm *DeviceManager) DeleteContainer(ctx context.Context, containerID string
 	// RESTCONF-BASED CLEANUP: Use AppHostingMgr to undeploy via RESTCONF
 	if targetDevice.AppHostingMgr != nil {
 		log.G(ctx).Infof("  Using RESTCONF to undeploy app %s", containerID)
-
+		
 		// Undeploy application via RESTCONF (stop, deactivate, uninstall)
 		if err := targetDevice.AppHostingMgr.UndeployApplication(ctx, containerID); err != nil {
 			log.G(ctx).Errorf("  Failed to undeploy app via RESTCONF: %v", err)
@@ -316,7 +316,7 @@ func (dm *DeviceManager) DeleteContainer(ctx context.Context, containerID string
 	// Update device state
 	targetDevice.mutex.Lock()
 	delete(targetDevice.Containers, containerID)
-
+	
 	// Remove from containers slice
 	for i, c := range targetDevice.State.Containers {
 		if c.ID == containerID {
@@ -331,7 +331,7 @@ func (dm *DeviceManager) DeleteContainer(ctx context.Context, containerID string
 
 	// Update scheduler with freed resources
 	dm.scheduler.FreeResources(targetDevice.Config.Name, container.Resources.ToResourceRequirements())
-
+	
 	log.G(ctx).Infof("✅ Successfully deleted container %s from device %s", containerID, targetDevice.Config.Name)
 	return nil
 }
@@ -342,18 +342,18 @@ func (dm *DeviceManager) GetContainer(ctx context.Context, containerID string) (
 		device.mutex.RLock()
 		if container, exists := device.Containers[containerID]; exists {
 			device.mutex.RUnlock()
-
+			
 			// Get fresh status from device
 			freshContainer, err := device.Client.GetContainer(ctx, containerID)
 			if err != nil {
 				return container, nil // Return cached version on error
 			}
-
+			
 			// Update cached container
 			device.mutex.Lock()
 			device.Containers[containerID] = freshContainer
 			device.mutex.Unlock()
-
+			
 			return freshContainer, nil
 		}
 		device.mutex.RUnlock()
@@ -377,7 +377,7 @@ func (dm *DeviceManager) ListContainers(ctx context.Context) ([]*Container, erro
 		device.mutex.Lock()
 		device.Containers = make(map[string]*Container)
 		device.State.Containers = make([]Container, len(containers))
-
+		
 		for i, container := range containers {
 			device.Containers[container.ID] = container
 			device.State.Containers[i] = *container
@@ -481,10 +481,10 @@ func (dm *DeviceManager) HealthCheck(ctx context.Context) error {
 // GetCapacity returns total capacity across all devices
 func (dm *DeviceManager) GetCapacity() *DeviceCapability {
 	totalCapacity := &DeviceCapability{
-		CPU:     resource.Quantity{},
-		Memory:  resource.Quantity{},
-		Storage: resource.Quantity{},
-		Pods:    resource.Quantity{},
+		CPU:       resource.Quantity{},
+		Memory:    resource.Quantity{},
+		Storage:   resource.Quantity{},
+		Pods:      resource.Quantity{},
 	}
 
 	dm.mutex.RLock()
@@ -569,7 +569,7 @@ func (md *ManagedDevice) updateCapacityFromDevice(ctx context.Context) error {
 	md.Config.Capabilities.CPU = resource.MustParse(fmt.Sprintf("%d", resources.VCPU.Count))
 	md.Config.Capabilities.Memory = resource.MustParse(fmt.Sprintf("%dMi", resources.Memory.Available))
 	md.Config.Capabilities.Storage = resource.MustParse(fmt.Sprintf("%dMi", resources.Storage.Available))
-
+	
 	// Conservative pod limit based on memory (assume ~256MB per pod minimum)
 	maxPods := resources.Memory.Available / 256
 	if maxPods > 50 {
