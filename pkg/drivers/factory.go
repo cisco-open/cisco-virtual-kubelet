@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/config"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/fake"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe"
+	"github.com/cisco/virtual-kubelet-cisco/pkg/config"
+	"github.com/cisco/virtual-kubelet-cisco/pkg/drivers/fake"
+	"github.com/cisco/virtual-kubelet-cisco/pkg/drivers/iosxe"
 
 	v1 "k8s.io/api/core/v1"
 )

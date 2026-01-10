@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/config"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/cisco/virtual-kubelet-cisco/pkg/config"
+	"github.com/cisco/virtual-kubelet-cisco/pkg/drivers/common"
+	"github.com/virtual-kubelet/virtual-kubelet/log" // TODO - Do we need to use this logger?
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )

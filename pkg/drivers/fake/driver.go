@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/config"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
+	"github.com/cisco/virtual-kubelet-cisco/pkg/config"
+	"github.com/cisco/virtual-kubelet-cisco/pkg/drivers/common"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

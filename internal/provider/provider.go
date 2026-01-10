@@ -6,8 +6,8 @@ import (
 	"io"
 	"sync"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/config"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+	"github.com/cisco/virtual-kubelet-cisco/pkg/config"
+	"github.com/cisco/virtual-kubelet-cisco/pkg/drivers"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/node"
