@@ -41,7 +41,7 @@ var _ node.NodeProvider = (*provider.AppHostingNode)(nil)
 
 func main() {
 
-	appCfg, err := config.Load()
+	appCfg, err := config.Load("/etc/virtual-kubelet/config.yaml")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
@@ -91,9 +91,9 @@ func main() {
 
 	// TODO: Allow setting of kubeconfig path in config
 	kubeconfig := os.Getenv("KUBECONFIG")
-	if kubeconfig == "" {
-		kubeconfig = os.Getenv("HOME") + "/.kube/config"
-	}
+	// if kubeconfig == "" {
+	// 	kubeconfig = os.Getenv("HOME") + "/.kube/config"
+	// }
 
 	// Create Kubernetes client configuration
 	var restconfig *rest.Config

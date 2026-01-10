@@ -85,7 +85,7 @@ func (d *XEDriver) ConfigureAppContainer(ctx context.Context, pod *v1.Pod) error
 		return fmt.Errorf("AppHosting config failed: %w", err)
 	}
 
-	log.G(ctx).Infof("AppHosting app %s successfully configured", app.Name)
+	log.G(ctx).Infof("AppHosting app %s successfully configured", pod.Name)
 
 	return nil
 }
