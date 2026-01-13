@@ -41,8 +41,8 @@ func (d *FAKEDriver) GetDeviceResources(ctx context.Context) (*v1.ResourceList, 
 }
 
 func (d *FAKEDriver) DeployContainer(ctx context.Context, pod *v1.Pod) error {
-	// Convert K8s pod name to valid Cisco AppHosting name
-	appName := common.K8sToAppHostingName(pod.Namespace, pod.Name)
+	// HACK: Only create the first container n the pod
+	appName := common.GetAppHostingName(0)
 	log.G(ctx).WithFields(log.Fields{
 		"namespace":   pod.Namespace,
 		"pod":         pod.Name,
@@ -102,26 +102,26 @@ func (d *FAKEDriver) UpdateContainer(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
-func (d *FAKEDriver) StopAndRemoveContainer(ctx context.Context, pod *v1.Pod) error {
+func (d *FAKEDriver) StopAndRemovePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).WithFields(log.Fields{
 		"pod": pod.Name,
-	}).Info("Pod StopAndRemoveContainer request received")
+	}).Info("Pod StopAndRemovePod request received")
 	return nil
 }
 
-func (d *FAKEDriver) GetContainerStatus(ctx context.Context, namespace, name string) (*v1.Pod, error) {
+func (d *FAKEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
 	// TODO
 	log.G(ctx).WithFields(log.Fields{
-		"namespace": namespace,
-		"pod":       name,
+		"namespace": pod.Namespace,
+		"pod":       pod.Name,
 	}).Info("Looking for pod")
-	pod := common.FindPod(d.pods, namespace, name)
-	if pod != nil {
-		return pod, nil
+	statusPod := common.FindPod(d.pods, pod.Namespace, pod.Name)
+	if statusPod != nil {
+		return statusPod, nil
 	}
 
-	log.G(ctx).Info("FAKEDriver couldn't fnd pod")
-	return nil, fmt.Errorf("could not find pod: %s, %s", namespace, name)
+	log.G(ctx).Info("FAKEDriver couldn't find pod")
+	return nil, fmt.Errorf("could not find pod: %s, %s", pod.Namespace, pod.Name)
 }
 
 func (d *FAKEDriver) ListContainers(ctx context.Context) ([]*v1.Pod, error) {

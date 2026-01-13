@@ -2,135 +2,77 @@ package common
 
 import (
 	"testing"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
-func TestK8sToAppHostingName(t *testing.T) {
+func TestGetAppHostingName(t *testing.T) {
 	tests := []struct {
-		name      string
-		namespace string
-		podName   string
-		want      string
+		name string
+		pod  *v1.Pod
+		want string
 	}{
 		{
-			name:      "simple name with hyphen in default namespace",
-			namespace: "default",
-			podName:   "nginx-on-switch",
-			want:      "nginx_on_switch",
+			name: "generates name from UID",
+			pod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					UID: types.UID("a24a730b-8b13-4fd0-96ee-900f99d87670"),
+				},
+			},
+			want: "a24a730b8b134fd096ee900f99d87670",
 		},
 		{
-			name:      "simple name with hyphen in empty namespace",
-			namespace: "",
-			podName:   "nginx-on-switch",
-			want:      "nginx_on_switch",
-		},
-		{
-			name:      "name without hyphen",
-			namespace: "default",
-			podName:   "nginx",
-			want:      "nginx",
-		},
-		{
-			name:      "name with multiple hyphens",
-			namespace: "default",
-			podName:   "my-cool-app-v2",
-			want:      "my_cool_app_v2",
-		},
-		{
-			name:      "non-default namespace adds hash suffix",
-			namespace: "production",
-			podName:   "nginx",
-			want:      "nginx_ab8e18", // hash of "production"
-		},
-		{
-			name:      "non-default namespace with hyphen in pod name",
-			namespace: "prod",
-			podName:   "nginx-app",
-			want:      "nginx_app_6754af", // hash of "prod"
-		},
-		{
-			name:      "long name gets truncated in default namespace",
-			namespace: "default",
-			podName:   "this-is-a-very-long-pod-name-that-exceeds-forty-characters",
-			want:      "this_is_a_very_long_pod_name_that_exceed", // truncated to 40
-		},
-		{
-			name:      "long name with non-default namespace",
-			namespace: "production",
-			podName:   "this-is-a-very-long-pod-name-that-exceeds-forty",
-			want:      "this_is_a_very_long_pod_name_that_ab8e18", // truncated + hash
+			name: "returns existing label if set",
+			pod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					UID: types.UID("a24a730b-8b13-4fd0-96ee-900f99d87670"),
+					Labels: map[string]string{
+						AppHostingNameLabel: "existinglabel123",
+					},
+				},
+			},
+			want: "existinglabel123",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := K8sToAppHostingName(tt.namespace, tt.podName)
+			got := GetAppHostingName(1)
 			if got != tt.want {
-				t.Errorf("K8sToAppHostingName(%q, %q) = %q, want %q", tt.namespace, tt.podName, got, tt.want)
-			}
-			// Verify length constraint
-			if len(got) > MaxAppHostingNameLength {
-				t.Errorf("K8sToAppHostingName(%q, %q) length = %d, exceeds max %d", tt.namespace, tt.podName, len(got), MaxAppHostingNameLength)
+				t.Errorf("GetAppHostingName() = %q, want %q", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestAppHostingToK8sName(t *testing.T) {
-	tests := []struct {
-		name    string
-		appName string
-		want    string
-	}{
-		{
-			name:    "simple name with underscore",
-			appName: "nginx_on_switch",
-			want:    "nginx-on-switch",
-		},
-		{
-			name:    "name without underscore",
-			appName: "nginx",
-			want:    "nginx",
-		},
-		{
-			name:    "name with hash suffix removed",
-			appName: "nginx_app_6754af",
-			want:    "nginx-app",
-		},
-		{
-			name:    "name with multiple underscores",
-			appName: "my_cool_app_v2",
-			want:    "my-cool-app-v2",
-		},
+func TestGetAppHostingNameLength(t *testing.T) {
+	// UUID without hyphens is 32 chars, which fits in 40-char YANG constraint
+	// pod := &v1.Pod{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		UID: types.UID("a24a730b-8b13-4fd0-96ee-900f99d87670"),
+	// 	},
+	// }
+	got := GetAppHostingName(1)
+	if len(got) > 40 {
+		t.Errorf("GetAppHostingName() length = %d, exceeds max 40", len(got))
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := AppHostingToK8sName(tt.appName)
-			if got != tt.want {
-				t.Errorf("AppHostingToK8sName(%q) = %q, want %q", tt.appName, got, tt.want)
-			}
-		})
+	if len(got) != 32 {
+		t.Errorf("GetAppHostingName() length = %d, expected 32 (UUID without hyphens)", len(got))
 	}
 }
 
-func TestK8sToAppHostingNameValidCharacters(t *testing.T) {
-	// Test that output only contains valid AppHosting characters: [0-9a-zA-Z_]
-	testCases := []struct {
-		namespace string
-		podName   string
-	}{
-		{"default", "nginx-on-switch"},
-		{"prod", "my-app-v2"},
-		{"kube-system", "coredns-abc123"},
-		{"", "simple"},
-	}
-
-	for _, tc := range testCases {
-		result := K8sToAppHostingName(tc.namespace, tc.podName)
-		for _, c := range result {
-			if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
-				t.Errorf("K8sToAppHostingName(%q, %q) = %q contains invalid character %q", tc.namespace, tc.podName, result, string(c))
-			}
+func TestGetAppHostingNameValidCharacters(t *testing.T) {
+	// pod := &v1.Pod{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		UID: types.UID("a24a730b-8b13-4fd0-96ee-900f99d87670"),
+	// 	},
+	// }
+	result := GetAppHostingName(1)
+	for _, c := range result {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+			t.Errorf("GetAppHostingName() = %q contains invalid character %q (expected hex only)", result, string(c))
 		}
 	}
 }

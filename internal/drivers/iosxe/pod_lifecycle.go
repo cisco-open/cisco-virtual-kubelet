@@ -11,8 +11,7 @@ import (
 )
 
 func (d *XEDriver) ConfigureAppContainer(ctx context.Context, pod *v1.Pod) error {
-	// Convert K8s pod name to valid Cisco AppHosting name
-	appName := common.K8sToAppHostingName(pod.Namespace, pod.Name)
+	appName := common.GetAppHostingName(0)
 	log.G(ctx).Infof("Configuring AppHosting app: %s (k8s: %s/%s)", appName, pod.Namespace, pod.Name)
 
 	path := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
@@ -33,6 +32,23 @@ func (d *XEDriver) ConfigureAppContainer(ctx context.Context, pod *v1.Pod) error
 		VirtualportgroupGuestInterfaceDefaultGateway_1: ygot.Uint8(0),
 	}
 
+	gapp.RunOptss = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss{
+		RunOpts: map[uint16]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss_RunOpts{
+			1: {
+				LineIndex: ygot.Uint16(1),
+				// Persistent metadata for reverse lookup
+				LineRunOpts: ygot.String(fmt.Sprintf(
+					"--label io.kubernetes.pod.name=%s "+
+						"--label io.kubernetes.pod.namespace=%s "+
+						"--label io.kubernetes.pod.uid=%s",
+					pod.Name,
+					pod.Namespace,
+					pod.UID,
+				)),
+			},
+		},
+	}
+
 	gapp.ApplicationResourceProfile = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationResourceProfile{
 		ProfileName:      ygot.String("custom"),
 		CpuUnits:         ygot.Uint16(1000),
@@ -40,6 +56,8 @@ func (d *XEDriver) ConfigureAppContainer(ctx context.Context, pod *v1.Pod) error
 		DiskSizeMb:       ygot.Uint16(1024),
 		Vcpu:             ygot.Uint16(2),
 	}
+
+	gapp.Start = ygot.Bool(true)
 
 	err = d.client.Post(ctx, path, apps, d.marshaller)
 	if err != nil {

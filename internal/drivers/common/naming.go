@@ -1,67 +1,25 @@
 package common
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"fmt"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 const (
-	// MaxAppHostingNameLength is the maximum length allowed by Cisco AppHosting YANG model
-	MaxAppHostingNameLength = 40
+	// AppHostingNameLabel is the label key used to store the AppHosting name on a pod
+	AppHostingNameLabel = "cisco.com/apphosting-name"
 )
 
-// K8sToAppHostingName converts a Kubernetes pod identifier to a valid Cisco AppHosting name.
-// Kubernetes naming (RFC 1123): lowercase alphanumeric + hyphen, max 63 chars
-// Cisco AppHosting YANG: alphanumeric + underscore only, max 40 chars
-//
-// Format: {sanitized_name}_{short_namespace_hash} if namespace != "default"
-// Format: {sanitized_name} if namespace == "default" or empty
-func K8sToAppHostingName(namespace, name string) string {
-	// Replace hyphens with underscores (K8s uses -, Cisco allows _)
-	sanitized := strings.ReplaceAll(name, "-", "_")
+// GetAppHostingName returns the AppHosting name for a pod using its UID.
+// The UID is guaranteed unique and fits within the 40-char YANG constraint (32 chars without hyphens).
+// If the pod already has the label set, returns that value for idempotency.
+func GetAppHostingName(index int8) string {
 
-	// For non-default namespaces, add a short hash suffix for uniqueness
-	if namespace != "" && namespace != "default" {
-		hash := sha256.Sum256([]byte(namespace))
-		suffix := "_" + hex.EncodeToString(hash[:])[:6] // 6 char hash
+	cleanUUID := strings.ReplaceAll(uuid.New().String(), "-", "")
 
-		// Ensure total length <= 40
-		maxBase := MaxAppHostingNameLength - len(suffix)
-		if len(sanitized) > maxBase {
-			sanitized = sanitized[:maxBase]
-		}
-		return sanitized + suffix
-	}
+	appID := fmt.Sprintf("cvk000%01d_%s", index, cleanUUID)
 
-	// Truncate if needed for default namespace
-	if len(sanitized) > MaxAppHostingNameLength {
-		sanitized = sanitized[:MaxAppHostingNameLength]
-	}
-
-	return sanitized
-}
-
-// AppHostingToK8sName converts a Cisco AppHosting name back to a Kubernetes-style name.
-// This handles simple cases (default namespace). For namespaced lookups with hash suffixes,
-// the original pod name should be retrieved from the pod annotation or a mapping.
-func AppHostingToK8sName(appName string) string {
-	// Remove namespace hash suffix if present (last 7 chars: _XXXXXX where X is hex)
-	if len(appName) > 7 && appName[len(appName)-7] == '_' {
-		suffix := appName[len(appName)-6:]
-		if isHexString(suffix) {
-			appName = appName[:len(appName)-7]
-		}
-	}
-	return strings.ReplaceAll(appName, "_", "-")
-}
-
-// isHexString returns true if s contains only hexadecimal characters
-func isHexString(s string) bool {
-	for _, c := range s {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-			return false
-		}
-	}
-	return true
+	return appID
 }

@@ -29,7 +29,7 @@ type CiscoDeviceDriver interface {
 	GetDeviceResources(ctx context.Context) (*v1.ResourceList, error)
 	DeployContainer(ctx context.Context, pod *v1.Pod) error
 	UpdateContainer(ctx context.Context, pod *v1.Pod) error
-	StopAndRemoveContainer(ctx context.Context, pod *v1.Pod) error
-	GetContainerStatus(ctx context.Context, namespace, name string) (*v1.Pod, error)
+	StopAndRemovePod(ctx context.Context, pod *v1.Pod) error
+	GetContainerStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error)
 	ListContainers(ctx context.Context) ([]*v1.Pod, error)
 }

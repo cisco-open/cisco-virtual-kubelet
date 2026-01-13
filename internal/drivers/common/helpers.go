@@ -5,9 +5,8 @@ import (
 )
 
 func PodToContainer(pod *v1.Pod) (*Container, error) {
-	// Convert K8s pod name to valid Cisco AppHosting name
 	return &Container{
-		Name: K8sToAppHostingName(pod.Namespace, pod.Name),
+		Name: GetAppHostingName(1),
 	}, nil
 }
 

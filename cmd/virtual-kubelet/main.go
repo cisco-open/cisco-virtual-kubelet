@@ -41,7 +41,8 @@ var _ node.NodeProvider = (*provider.AppHostingNode)(nil)
 
 func main() {
 
-	appCfg, err := config.Load("/etc/virtual-kubelet/config.yaml")
+	appCfg, err := config.Load("./dev/config.yaml")
+	// appCfg, err := config.Load("/etc/virtual-kubelet/config.yaml")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

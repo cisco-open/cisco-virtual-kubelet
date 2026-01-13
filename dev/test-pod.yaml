@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: nginxonswitch
+  name: nginx-on-switch
 spec:
   nodeSelector:
     kubernetes.io/hostname: cvk-dev-node

@@ -20,25 +20,29 @@ import (
 type AppHostingProvider struct {
 	ctx    context.Context
 	appCfg *config.Config
-	driver drivers.CiscoDeviceDriver // Injected via factory
-	mutex  sync.RWMutex
+	driver drivers.CiscoDeviceDriver
+	// clientset kubernetes.Interface
+	mu       sync.RWMutex
+	podCache map[string]v1.Pod
 }
 
 func NewAppHostingProvider(
 	ctx context.Context,
 	appCfg *config.Config,
 	vkCfg nodeutil.ProviderConfig,
+	// clientset kubernetes.Interface,
 ) (*AppHostingProvider, error) {
 
-	// TODO: We should do auto-discovery (or config) in NewDriver
 	d, err := drivers.NewDriver(ctx, &appCfg.Device)
 	if err != nil {
 		return nil, fmt.Errorf("driver assignment failed: %v", err)
 	}
 	return &AppHostingProvider{
-		ctx:    ctx,
-		appCfg: appCfg,
-		driver: d,
+		ctx:      ctx,
+		appCfg:   appCfg,
+		driver:   d,
+		podCache: make(map[string]v1.Pod),
+		// clientset: clientset,
 	}, nil
 }
 
@@ -48,10 +52,23 @@ func (p *AppHostingProvider) GetCapacity(ctx context.Context) (v1.ResourceList, 
 }
 
 func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
+
+	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
+
+	// Ensure we make a copy if the pod doesn't exist
+	p.mu.Lock()
+	if _, exists := p.podCache[key]; !exists {
+		podCopy := pod.DeepCopy()
+		p.podCache[key] = *podCopy
+	}
+	p.mu.Unlock()
+
+	// Try to deploy the container.  This MUST be idempotent
+	// In future we can range over the pod.spec.containters
 	if err := p.driver.DeployContainer(p.ctx, pod); err != nil {
-		// Return wrapped errors from github.com/virtual-kubelet/virtual-kubelet/errdefs
 		return errdefs.AsInvalidInput(err)
 	}
+
 	return nil
 }
 
@@ -61,7 +78,7 @@ func (p *AppHostingProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 }
 
 func (p *AppHostingProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
-	return p.driver.StopAndRemoveContainer(p.ctx, pod)
+	return p.driver.StopAndRemovePod(p.ctx, pod)
 }
 
 func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
@@ -72,14 +89,19 @@ func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string)
 		"namespace": namespace,
 	}).Debug("Running GetPod:")
 
-	pod, err := p.driver.GetContainerStatus(p.ctx, namespace, name)
-	if err != nil {
-		return nil, errdefs.AsNotFound(err)
+	key := fmt.Sprintf("%s/%s", namespace, name)
+
+	p.mu.RLock() // Use RLock for reading
+	defer p.mu.RUnlock()
+
+	pod, exists := p.podCache[key]
+	if !exists {
+		// Defer ensures RUnlock happens here automatically
+		return nil, errdefs.NotFound(fmt.Sprintf("pod %s not found", key))
 	}
-	// We should probably expect an AppHosting container struct back here
-	// and do the mapping to a v1.Pod.  This way we can keep the driver 'native'
-	// and reuse it outside of the k8s context.
-	return pod, nil
+
+	return p.driver.GetContainerStatus(p.ctx, &pod)
+
 }
 
 func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
@@ -89,12 +111,23 @@ func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name s
 		"namespace": namespace,
 	}).Debug("Calling driver GetPodStatus:")
 
-	pod, err := p.driver.GetContainerStatus(p.ctx, namespace, name)
+	key := fmt.Sprintf("%s/%s", namespace, name)
+
+	p.mu.RLock() // Use RLock for reading
+	defer p.mu.RUnlock()
+
+	pod, exists := p.podCache[key]
+	if !exists {
+		// Defer ensures RUnlock happens here automatically
+		return nil, errdefs.NotFound(fmt.Sprintf("pod %s not found", key))
+	}
+
+	statusPod, err := p.driver.GetContainerStatus(p.ctx, &pod)
 	if err != nil {
 		return nil, errdefs.AsNotFound(err)
 	}
 
-	return &pod.Status, nil
+	return &statusPod.Status, nil
 }
 
 func (p *AppHostingProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {

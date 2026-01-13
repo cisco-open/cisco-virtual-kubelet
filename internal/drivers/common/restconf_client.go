@@ -27,8 +27,8 @@ func NewClientRestconfClient(baseURL string, auth *ClientAuth, tlsConfig *tls.Co
 	return &RestconfClient{
 		BaseURL:    baseURL,
 		HTTPClient: &http.Client{},
-		Username:   "admin",
-		Password:   "admin",
+		Username:   auth.Username,
+		Password:   auth.Password,
 	}
 }
 
