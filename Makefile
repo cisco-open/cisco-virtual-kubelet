@@ -50,30 +50,30 @@ build: deps ## Build the binary
 	$(GO_BIN) build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME) ./$(CMD_DIR)
 	@echo "Binary built: $(BIN_DIR)/$(BINARY_NAME)"
 
-build-linux: deps
+build-linux: deps ## Build for Linux (amd64)
 	@echo "Building $(BINARY_NAME) for Linux..."
 	@mkdir -p $(BIN_DIR)
 	GOOS=linux GOARCH=amd64 $(GO_BIN) build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME)-linux-amd64 ./$(CMD_DIR)
 
-build-all: build-linux
+build-all: build-linux ## Build for all platforms
 
 ## Installation targets
 
-install: build
+install: build ## Install the binary and create directories
 	@echo "Installing $(BINARY_NAME)..."
 	sudo install -m 755 $(BIN_DIR)/$(BINARY_NAME) $(INSTALL_DIR)/$(BINARY_NAME)
 	sudo mkdir -p $(CONFIG_DIR)/certs
 	sudo chmod 700 $(CONFIG_DIR)
 	@echo "Installed to $(INSTALL_DIR)/$(BINARY_NAME)"
 
-install-systemd:
+install-systemd: ## Install systemd service template
 	@echo "Installing systemd service template..."
 	sudo cp examples/systemd/cisco-vk@.service $(SYSTEMD_DIR)/
 	sudo systemctl daemon-reload
 	@echo "Systemd template installed. Create instances with:"
 	@echo "  sudo systemctl enable cisco-vk@<node-name>"
 
-uninstall:
+uninstall: ## Remove installed binary and configs
 	@echo "Uninstalling $(BINARY_NAME)..."
 	sudo rm -f $(INSTALL_DIR)/$(BINARY_NAME)
 	@echo "Note: Configuration files in $(CONFIG_DIR) were preserved"
