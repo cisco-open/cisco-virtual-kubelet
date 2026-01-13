@@ -16,7 +16,7 @@ import (
 
 type XEDriver struct {
 	config *config.DeviceConfig
-	Client *common.RESTClient
+	Client common.NetworkClient
 	// baseURL string
 	// token      string
 	// schema     *DiscoveredEndpoints // Dynamically discovered schema endpoints
@@ -43,7 +43,7 @@ func NewAppHostingDriver(ctx context.Context, config *config.DeviceConfig) (*XED
 
 	BaseUrl := u.String()
 	Timeout := 30 * time.Second
-	Client := common.NewClientRestClient(
+	Client, err := common.NewNetworkClient(
 		BaseUrl,
 		&common.ClientAuth{
 			Method:   "BasicAuth",
@@ -59,7 +59,7 @@ func NewAppHostingDriver(ctx context.Context, config *config.DeviceConfig) (*XED
 		Client: Client,
 	}
 
-	err := d.CheckConnection(ctx)
+	err = d.CheckConnection(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate device connection: %v", err)
 	}
@@ -73,10 +73,12 @@ func NewAppHostingDriver(ctx context.Context, config *config.DeviceConfig) (*XED
 
 func (d *XEDriver) CheckConnection(ctx context.Context) error {
 
-	_, err := d.Client.Get(ctx, "/.well-known/host-meta")
+	data := &common.HostMeta{}
+	err := d.Client.Get(ctx, "/.well-known/host-meta", data)
 	if err != nil {
 		return fmt.Errorf("connectivity check failed: %w", err)
 	}
+	fmt.Print(data.XMLName)
 	return nil
 }
 

@@ -15,34 +15,6 @@ func (d *XEDriver) ConfigureAppContainer(ctx context.Context, pod *v1.Pod) error
 	// POST to app-hosting-cfg-data using correct YANG schema from Cisco-IOS-XE-app-hosting-cfg.yang
 	path := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
 
-	// Use the correct YANG schema structure based on Cisco-IOS-XE-app-hosting-cfg.yang
-	// Management interface fields discovered from working device config query
-	// data := map[string]interface{}{
-	// 	"Cisco-IOS-XE-app-hosting-cfg:app": []map[string]interface{}{
-	// 		{
-	// 			"application-name": app.Name,
-	// 			// Network resource configuration - MUST include management interface for activation
-	// 			"application-network-resource": map[string]interface{}{
-	// 				// Management interface configuration (app-vnic management guest-interface)
-	// 				"management-interface-name":   "0",
-	// 				"management-guest-ip-address": "1.1.1.10",
-	// 				"management-guest-ip-netmask": "255.255.255.0",
-	// 				// Default gateway configuration
-	// 				"virtualportgroup-application-default-gateway-1":     "1.1.1.1",
-	// 				"virtualportgroup-guest-interface-default-gateway-1": 0,
-	// 			},
-	// 			// Resource profile configuration
-	// 			"application-resource-profile": map[string]interface{}{
-	// 				"cpu-units":          1000,
-	// 				"memory-capacity-mb": 512,
-	// 				"disk-size-mb":       1024,
-	// 				"vcpu":               2,
-	// 				"profile-name":       "custom",
-	// 			},
-	// 		},
-	// 	},
-	// }
-
 	apps := &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps{}
 
 	// 2. Create the new list entry (corresponds to app-id)
@@ -70,17 +42,17 @@ func (d *XEDriver) ConfigureAppContainer(ctx context.Context, pod *v1.Pod) error
 		Vcpu:             ygot.Uint16(2),
 	}
 
-	jsonPayload, err := ygot.EmitJSON(apps, &ygot.EmitJSONConfig{
-		Format: ygot.RFC7951,
-		RFC7951Config: &ygot.RFC7951JSONConfig{
-			AppendModuleName: true,
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to serialize YANG to JSON: %w", err)
-	}
+	// jsonPayload, err := ygot.EmitJSON(apps, &ygot.EmitJSONConfig{
+	// 	Format: ygot.RFC7951,
+	// 	RFC7951Config: &ygot.RFC7951JSONConfig{
+	// 		AppendModuleName: true,
+	// 	},
+	// })
+	// if err != nil {
+	// 	return fmt.Errorf("failed to serialize YANG to JSON: %w", err)
+	// }
 
-	err = d.Client.Post(ctx, path, jsonPayload)
+	err = d.Client.Post(ctx, path, apps)
 	if err != nil {
 		return fmt.Errorf("AppHosting config failed: %w", err)
 	}
