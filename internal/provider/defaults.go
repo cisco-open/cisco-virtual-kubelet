@@ -26,6 +26,7 @@ func GetInitialNodeSpec(config *config.Config) v1.Node {
 			},
 		},
 		Status: v1.NodeStatus{
+			Phase:      v1.NodeRunning,
 			Conditions: InitNodeConditions(),
 			NodeInfo:   InitNodeSystemInfo(config),
 			Capacity:   initNodeCapacity(),

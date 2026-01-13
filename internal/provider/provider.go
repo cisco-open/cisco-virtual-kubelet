@@ -10,7 +10,6 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/node"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
@@ -133,25 +132,30 @@ func (p *AppHostingProvider) RunInContainer(ctx context.Context, namespace strin
 	panic("unimplemented")
 }
 
-// Just return node.NewNaiveNodeProvider for now
+// AppHostingNode implements node.NodeProvider for proper heartbeat management.
+// This follows the NaiveNodeProvider pattern from virtual-kubelet.
+// The library's NodeController handles periodic heartbeat updates automatically.
+type AppHostingNode struct{}
+
+// NewAppHostingNode creates a new AppHostingNode
 func NewAppHostingNode(
 	ctx context.Context,
 	appCfg *config.Config,
 	vkCfg nodeutil.ProviderConfig,
-) (*node.NaiveNodeProviderV2, error) {
-	// TODO: Use the NaiveNodeProviderV2 for now
-	return node.NewNaiveNodeProvider(), nil
-}
-
-// PLACEHOLDER
-type AppHostingNode struct{}
-
-// NotifyNodeStatus implements node.NodeProvider.
-func (a *AppHostingNode) NotifyNodeStatus(ctx context.Context, cb func(*v1.Node)) {
-	panic("unimplemented")
+) (*AppHostingNode, error) {
+	return &AppHostingNode{}, nil
 }
 
 // Ping implements node.NodeProvider.
-func (a *AppHostingNode) Ping(context.Context) error {
-	panic("unimplemented")
+// Called periodically by the library's nodePingController.
+// Returning nil indicates the node is healthy.
+func (a *AppHostingNode) Ping(ctx context.Context) error {
+	return nil
+}
+
+// NotifyNodeStatus implements node.NodeProvider.
+// This is for async/event-driven status updates (e.g., device health changes).
+// The library's controlLoop handles periodic heartbeat updates automatically.
+func (a *AppHostingNode) NotifyNodeStatus(ctx context.Context, cb func(*v1.Node)) {
+	// No-op - library handles periodic updates via controlLoop and updateNodeStatusHeartbeat()
 }
