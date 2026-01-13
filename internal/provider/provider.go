@@ -10,6 +10,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
@@ -64,23 +65,35 @@ func (p *AppHostingProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 }
 
 func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
-	// Not fully implemented
-	// return p.driver.GetContainerAsPod(ctx, name)
+
+	// DEBUG
+	log.G(p.ctx).WithFields(log.Fields{
+		"name":      name,
+		"namespace": namespace,
+	}).Debug("Running GetPod:")
+
 	pod, err := p.driver.GetContainerStatus(p.ctx, namespace, name)
 	if err != nil {
 		return nil, errdefs.AsNotFound(err)
 	}
-	// Map Cisco container state back to a Kubernetes Pod object
-	// return mapCiscoToK8sPod(container)
+	// We should probably expect an AppHosting container struct back here
+	// and do the mapping to a v1.Pod.  This way we can keep the driver 'native'
+	// and reuse it outside of the k8s context.
 	return pod, nil
 }
 
 func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
-	pod, err := p.driver.GetContainerStatus(p.ctx, name, namespace)
+
+	log.G(p.ctx).WithFields(log.Fields{
+		"name":      name,
+		"namespace": namespace,
+	}).Debug("Calling driver GetPodStatus:")
+
+	pod, err := p.driver.GetContainerStatus(p.ctx, namespace, name)
 	if err != nil {
 		return nil, errdefs.AsNotFound(err)
 	}
-	// Map Cisco container state back to a Kubernetes Pod object
+
 	return &pod.Status, nil
 }
 

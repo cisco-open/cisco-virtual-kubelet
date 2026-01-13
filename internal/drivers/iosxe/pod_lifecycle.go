@@ -52,7 +52,7 @@ func (d *XEDriver) ConfigureAppContainer(ctx context.Context, pod *v1.Pod) error
 	// 	return fmt.Errorf("failed to serialize YANG to JSON: %w", err)
 	// }
 
-	err = d.Client.Post(ctx, path, apps)
+	err = d.Client.Post(ctx, path, apps, d.marshaller)
 	if err != nil {
 		return fmt.Errorf("AppHosting config failed: %w", err)
 	}

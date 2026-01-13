@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: nginx-on-switch
+  name: nginxonswitch
 spec:
   nodeSelector:
     kubernetes.io/hostname: cunningr-dev-node

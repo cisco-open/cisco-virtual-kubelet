@@ -8,7 +8,7 @@ device:
   password: admin
 
 kubelet:
-  node_name: "cheekycheek"
+  node_name: "cunningr-dev-node"
   namespace: ""
   update_interval: "30s"
   os: "Linux"

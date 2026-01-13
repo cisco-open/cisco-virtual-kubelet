@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"encoding/xml"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -47,6 +48,14 @@ type ResourceUsage struct {
 	NetworkRx int64             `json:"networkRx" yaml:"networkRx"`
 	NetworkTx int64             `json:"networkTx" yaml:"networkTx"`
 	Timestamp metav1.Time       `json:"timestamp" yaml:"timestamp"`
+}
+
+// NetworkClient defines the generic interface for any backend (RESTconf, Netconf, etc.)
+type NetworkClient interface {
+	Get(ctx context.Context, path string, result any, unmarshal func([]byte, any) error) error
+	Post(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error
+	Patch(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error
+	Delete(ctx context.Context, path string) error
 }
 
 type HostMeta struct {

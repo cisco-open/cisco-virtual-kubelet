@@ -4,22 +4,13 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
 
-	"github.com/openconfig/ygot/ygot"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
-
-// NetworkClient defines the generic interface for any backend (RESTconf, Netconf, etc.)
-type NetworkClient interface {
-	Get(ctx context.Context, path string, result ygot.GoStruct) error
-	Post(ctx context.Context, path string, payload ygot.GoStruct) error
-	Patch(ctx context.Context, path string, payload ygot.GoStruct) error
-	Delete(ctx context.Context, path string) error
-}
 
 func NewNetworkClient(baseURL string, auth *ClientAuth, tlsConfig *tls.Config, timeout time.Duration) (NetworkClient, error) {
 
@@ -49,41 +40,36 @@ type RestconfClient struct {
 	Password   string
 }
 
-// Post creates a new resource (201 Created on success)
-func (c *RestconfClient) Post(ctx context.Context, path string, payload ygot.GoStruct) error {
-	return c.doRequest(ctx, "POST", path, payload, nil)
+func (c *RestconfClient) Get(ctx context.Context, path string, result any, unmarshal func([]byte, any) error) error {
+	return c.doRequest(ctx, "GET", path, nil, result, nil, unmarshal)
 }
 
-// Patch updates/merges an existing resource (204 No Content on success)
-func (c *RestconfClient) Patch(ctx context.Context, path string, payload ygot.GoStruct) error {
-	return c.doRequest(ctx, "PATCH", path, payload, nil)
+func (c *RestconfClient) Post(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error {
+	return c.doRequest(ctx, "POST", path, payload, nil, marshal, nil)
 }
 
-// Delete removes a resource
+func (c *RestconfClient) Patch(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error {
+	return c.doRequest(ctx, "PATCH", path, payload, nil, marshal, nil)
+}
+
 func (c *RestconfClient) Delete(ctx context.Context, path string) error {
-	return c.doRequest(ctx, "DELETE", path, nil, nil)
+	return c.doRequest(ctx, "DELETE", path, nil, nil, nil, nil)
 }
 
-// Get retrieves data and unmarshals it into the provided result struct
-func (c *RestconfClient) Get(ctx context.Context, path string, result ygot.GoStruct) error {
-	return c.doRequest(ctx, "GET", path, nil, result)
-}
-
-// doRequest handles the underlying HTTP logic and ygot marshalling/unmarshalling
-func (c *RestconfClient) doRequest(ctx context.Context, method, path string, payload ygot.GoStruct, result ygot.GoStruct) error {
+func (c *RestconfClient) doRequest(ctx context.Context, method, path string, payload any, result any, marshal func(any) ([]byte, error), unmarshal func([]byte, any) error) error {
 	var body io.Reader
-	if payload != nil {
-		// Render ygot struct to RFC7951 JSON for RESTconf
-		jsonPayload, err := ygot.EmitJSON(payload, &ygot.EmitJSONConfig{
-			Format: ygot.RFC7951,
-			RFC7951Config: &ygot.RFC7951JSONConfig{
-				AppendModuleName: true,
-			},
-		})
+	if payload != nil && marshal != nil {
+		data, err := marshal(payload)
 		if err != nil {
-			return fmt.Errorf("failed to marshal payload: %w", err)
+			return fmt.Errorf("marshal failed: %w", err)
 		}
-		body = bytes.NewBufferString(jsonPayload)
+		body = bytes.NewBuffer(data)
+
+		// log.G(ctx).WithFields(log.Fields{
+		// 	"body": string(data),
+		// }).Info("Sending Body")
+		// fmt.Print(path)
+		// fmt.Print(string(data))
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+path, body)
@@ -91,7 +77,6 @@ func (c *RestconfClient) doRequest(ctx context.Context, method, path string, pay
 		return err
 	}
 
-	// RESTconf specific headers
 	req.Header.Set("Content-Type", "application/yang-data+json")
 	req.Header.Set("Accept", "application/yang-data+json")
 	req.SetBasicAuth(c.Username, c.Password)
@@ -106,29 +91,13 @@ func (c *RestconfClient) doRequest(ctx context.Context, method, path string, pay
 		return fmt.Errorf("request failed with status %s", resp.Status)
 	}
 
-	// For GET requests, unmarshal the response into the provided ygot struct
-	if result != nil && method == "GET" {
+	if result != nil && unmarshal != nil {
+		log.G(ctx).Info("Checking response ...")
 		data, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
-
-		if hm, ok := result.(*HostMeta); ok {
-			decoder := xml.NewDecoder(bytes.NewReader(data))
-			// Strict: false allows the parser to handle the namespace
-			// mismatch without crashing
-			decoder.Strict = false
-			if err := decoder.Decode(hm); err != nil {
-				return fmt.Errorf("failed to unmarshal host-meta: %w", err)
-			}
-			return nil
-		}
-
-		// 2. Otherwise, treat it as a ygot YANG struct
-		// Use the Unmarshal function generated from your YANG models
-		if err := Unmarshal(data, result); err != nil {
-			return fmt.Errorf("ygot unmarshal failed: %w", err)
-		}
+		return unmarshal(data, result)
 	}
 
 	return nil
