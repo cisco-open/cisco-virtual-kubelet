@@ -5,7 +5,7 @@ metadata:
   name: nginx-on-switch
 spec:
   nodeSelector:
-    kubernetes.io/hostname: cheekycheek
+    kubernetes.io/hostname: cunningr-dev-node
   containers:
   - name: nginx
     image: flash:/nginx.tar
