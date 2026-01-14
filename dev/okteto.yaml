@@ -6,7 +6,7 @@ dev:
     image: ghcr.io/okteto/golang:1
     command: bash
     sync:
-      - .:/usr/src/app
+      - ..:/usr/src/app
     # volumes:
     #   - /go
     #   - /root/.cache
