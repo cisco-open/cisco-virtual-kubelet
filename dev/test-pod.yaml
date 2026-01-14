@@ -5,7 +5,7 @@ metadata:
   name: nginxonswitch
 spec:
   nodeSelector:
-    kubernetes.io/hostname: cunningr-dev-node
+    kubernetes.io/hostname: cvk-dev-node
   containers:
   - name: nginx
     image: flash:/nginx.tar
