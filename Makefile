@@ -10,7 +10,7 @@ GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 SNAP_GO_PATH=/snap/go/current
 GO_SNAP_DETECTED=$(shell test -d $(SNAP_GO_PATH) && echo yes || echo no)
 
-# Begin the Snap validation
+# Begin Snap validation
 ifeq ($(GO_SNAP_DETECTED),yes)
 GOROOT=$(SNAP_GO_PATH)
 GO_BIN=$(SNAP_GO_PATH)/bin/go
