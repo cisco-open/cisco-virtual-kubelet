@@ -39,25 +39,25 @@ func TestK8sToAppHostingName(t *testing.T) {
 			name:      "non-default namespace adds hash suffix",
 			namespace: "production",
 			podName:   "nginx",
-			want:      "nginx_3e8ff8", // hash of "production"
+			want:      "nginx_ab8e18", // hash of "production"
 		},
 		{
 			name:      "non-default namespace with hyphen in pod name",
 			namespace: "prod",
 			podName:   "nginx-app",
-			want:      "nginx_app_37d7b3", // hash of "prod"
+			want:      "nginx_app_6754af", // hash of "prod"
 		},
 		{
 			name:      "long name gets truncated in default namespace",
 			namespace: "default",
 			podName:   "this-is-a-very-long-pod-name-that-exceeds-forty-characters",
-			want:      "this_is_a_very_long_pod_name_that_exceeds", // truncated to 40
+			want:      "this_is_a_very_long_pod_name_that_exceed", // truncated to 40
 		},
 		{
 			name:      "long name with non-default namespace",
 			namespace: "production",
 			podName:   "this-is-a-very-long-pod-name-that-exceeds-forty",
-			want:      "this_is_a_very_long_pod_name_tha_3e8ff8", // truncated + hash
+			want:      "this_is_a_very_long_pod_name_that_ab8e18", // truncated + hash
 		},
 	}
 
@@ -93,7 +93,7 @@ func TestAppHostingToK8sName(t *testing.T) {
 		},
 		{
 			name:    "name with hash suffix removed",
-			appName: "nginx_app_37d7b3",
+			appName: "nginx_app_6754af",
 			want:    "nginx-app",
 		},
 		{

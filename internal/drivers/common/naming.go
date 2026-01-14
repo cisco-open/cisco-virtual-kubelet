@@ -9,8 +9,6 @@ import (
 const (
 	// MaxAppHostingNameLength is the maximum length allowed by Cisco AppHosting YANG model
 	MaxAppHostingNameLength = 40
-	// AppHostingNameAnnotation is the annotation key used to store the AppHosting name on a pod
-	AppHostingNameAnnotation = "cisco.com/apphosting-name"
 )
 
 // K8sToAppHostingName converts a Kubernetes pod identifier to a valid Cisco AppHosting name.
@@ -48,9 +46,22 @@ func K8sToAppHostingName(namespace, name string) string {
 // This handles simple cases (default namespace). For namespaced lookups with hash suffixes,
 // the original pod name should be retrieved from the pod annotation or a mapping.
 func AppHostingToK8sName(appName string) string {
-	// Remove namespace hash suffix if present (last 7 chars: _XXXXXX)
+	// Remove namespace hash suffix if present (last 7 chars: _XXXXXX where X is hex)
 	if len(appName) > 7 && appName[len(appName)-7] == '_' {
-		appName = appName[:len(appName)-7]
+		suffix := appName[len(appName)-6:]
+		if isHexString(suffix) {
+			appName = appName[:len(appName)-7]
+		}
 	}
 	return strings.ReplaceAll(appName, "_", "-")
+}
+
+// isHexString returns true if s contains only hexadecimal characters
+func isHexString(s string) bool {
+	for _, c := range s {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
