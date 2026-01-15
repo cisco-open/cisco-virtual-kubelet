@@ -11,8 +11,7 @@ import (
 )
 
 func (d *XEDriver) ConfigureAppContainer(ctx context.Context, pod *v1.Pod) error {
-	// Convert K8s pod name to valid Cisco AppHosting name
-	appName := common.K8sToAppHostingName(pod.Namespace, pod.Name)
+	appName := common.GetAppHostingName(pod)
 	log.G(ctx).Infof("Configuring AppHosting app: %s (k8s: %s/%s)", appName, pod.Namespace, pod.Name)
 
 	// POST to app-hosting-cfg-data using correct YANG schema from Cisco-IOS-XE-app-hosting-cfg.yang

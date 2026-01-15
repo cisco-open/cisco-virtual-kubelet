@@ -41,8 +41,7 @@ func (d *FAKEDriver) GetDeviceResources(ctx context.Context) (*v1.ResourceList, 
 }
 
 func (d *FAKEDriver) DeployContainer(ctx context.Context, pod *v1.Pod) error {
-	// Convert K8s pod name to valid Cisco AppHosting name
-	appName := common.K8sToAppHostingName(pod.Namespace, pod.Name)
+	appName := common.GetAppHostingName(pod)
 	log.G(ctx).WithFields(log.Fields{
 		"namespace":   pod.Namespace,
 		"pod":         pod.Name,

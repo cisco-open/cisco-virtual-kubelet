@@ -125,7 +125,7 @@ func main() {
 
 	newProviderFunc := func(vkCfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
 
-		PodHandler, err := provider.NewAppHostingProvider(ctx, appCfg, vkCfg)
+		PodHandler, err := provider.NewAppHostingProvider(ctx, appCfg, vkCfg, clientset)
 		if err != nil {
 			log.G(ctx).WithError(err).Fatal("Failed to initialise PodHandler")
 		}

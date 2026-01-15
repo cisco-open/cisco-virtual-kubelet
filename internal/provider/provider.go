@@ -2,42 +2,49 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"sync"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 )
 
 type AppHostingProvider struct {
-	ctx    context.Context
-	appCfg *config.Config
-	driver drivers.CiscoDeviceDriver // Injected via factory
-	mutex  sync.RWMutex
+	ctx       context.Context
+	appCfg    *config.Config
+	driver    drivers.CiscoDeviceDriver
+	clientset kubernetes.Interface
+	mutex     sync.RWMutex
 }
 
 func NewAppHostingProvider(
 	ctx context.Context,
 	appCfg *config.Config,
 	vkCfg nodeutil.ProviderConfig,
+	clientset kubernetes.Interface,
 ) (*AppHostingProvider, error) {
 
-	// TODO: We should do auto-discovery (or config) in NewDriver
 	d, err := drivers.NewDriver(ctx, &appCfg.Device)
 	if err != nil {
 		return nil, fmt.Errorf("driver assignment failed: %v", err)
 	}
 	return &AppHostingProvider{
-		ctx:    ctx,
-		appCfg: appCfg,
-		driver: d,
+		ctx:       ctx,
+		appCfg:    appCfg,
+		driver:    d,
+		clientset: clientset,
 	}, nil
 }
 
@@ -47,8 +54,29 @@ func (p *AppHostingProvider) GetCapacity(ctx context.Context) (v1.ResourceList, 
 }
 
 func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
+	// Add AppHosting name label to pod for reverse lookup
+	appName := common.GetAppHostingName(pod)
+	if pod.Labels == nil {
+		pod.Labels = make(map[string]string)
+	}
+	if _, exists := pod.Labels[common.AppHostingNameLabel]; !exists {
+		pod.Labels[common.AppHostingNameLabel] = appName
+		// Use PATCH to only update metadata labels (Update fails due to spec immutability)
+		patch := map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"labels": map[string]string{
+					common.AppHostingNameLabel: appName,
+				},
+			},
+		}
+		patchBytes, _ := json.Marshal(patch)
+		_, err := p.clientset.CoreV1().Pods(pod.Namespace).Patch(ctx, pod.Name, types.MergePatchType, patchBytes, metav1.PatchOptions{})
+		if err != nil {
+			return errdefs.AsInvalidInput(fmt.Errorf("failed to add apphosting label: %w", err))
+		}
+	}
+
 	if err := p.driver.DeployContainer(p.ctx, pod); err != nil {
-		// Return wrapped errors from github.com/virtual-kubelet/virtual-kubelet/errdefs
 		return errdefs.AsInvalidInput(err)
 	}
 	return nil
