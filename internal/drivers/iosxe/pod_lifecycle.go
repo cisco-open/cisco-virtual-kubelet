@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/openconfig/ygot/ygot"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 )
 
 func (d *XEDriver) ConfigureAppContainer(ctx context.Context, pod *v1.Pod) error {
-	log.G(ctx).Infof("Configuring AppHosting app: %s", pod.Name)
+	// Convert K8s pod name to valid Cisco AppHosting name
+	appName := common.K8sToAppHostingName(pod.Namespace, pod.Name)
+	log.G(ctx).Infof("Configuring AppHosting app: %s (k8s: %s/%s)", appName, pod.Namespace, pod.Name)
 
 	// POST to app-hosting-cfg-data using correct YANG schema from Cisco-IOS-XE-app-hosting-cfg.yang
 	path := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
@@ -45,8 +48,8 @@ func (d *XEDriver) ConfigureAppContainer(ctx context.Context, pod *v1.Pod) error
 
 	apps := &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps{}
 
-	// 2. Create the new list entry (corresponds to app-id)
-	gapp, err := apps.NewApp(pod.Name)
+	// 2. Create the new list entry (corresponds to app-id) using sanitized name
+	gapp, err := apps.NewApp(appName)
 	if err != nil {
 		return fmt.Errorf("failed to create app struct: %w", err)
 	}
@@ -85,7 +88,7 @@ func (d *XEDriver) ConfigureAppContainer(ctx context.Context, pod *v1.Pod) error
 		return fmt.Errorf("AppHosting config failed: %w", err)
 	}
 
-	log.G(ctx).Infof("AppHosting app %s successfully configured", pod.Name)
+	log.G(ctx).Infof("AppHosting app %s successfully configured", appName)
 
 	return nil
 }

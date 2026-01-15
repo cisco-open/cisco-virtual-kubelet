@@ -76,7 +76,7 @@ func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string)
 }
 
 func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
-	pod, err := p.driver.GetContainerStatus(p.ctx, name, namespace)
+	pod, err := p.driver.GetContainerStatus(p.ctx, namespace, name)
 	if err != nil {
 		return nil, errdefs.AsNotFound(err)
 	}
