@@ -65,11 +65,9 @@ func (c *RestconfClient) doRequest(ctx context.Context, method, path string, pay
 		}
 		body = bytes.NewBuffer(data)
 
-		// log.G(ctx).WithFields(log.Fields{
-		// 	"body": string(data),
-		// }).Info("Sending Body")
-		// fmt.Print(path)
-		// fmt.Print(string(data))
+		log.G(ctx).WithFields(log.Fields{
+			"body": string(data),
+		}).Debug("Sending Body:")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+path, body)

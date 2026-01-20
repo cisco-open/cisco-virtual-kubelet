@@ -22,7 +22,7 @@ type UnmarshalFunc func([]byte, any) error
 
 type XEDriver struct {
 	config       *config.DeviceConfig
-	Client       common.NetworkClient
+	client       common.NetworkClient
 	marshaller   func(any) ([]byte, error)
 	unmarshaller UnmarshalFunc
 	// baseURL string
@@ -64,11 +64,15 @@ func NewAppHostingDriver(ctx context.Context, config *config.DeviceConfig) (*XED
 
 	d := &XEDriver{
 		config: config,
-		Client: Client,
+		client: Client,
 	}
 
-	d.marshaller = d.getRestconfMarshaller()
-	d.unmarshaller = d.getRestconfUnmarshaller()
+	// Signal future intent for client marshaller selection
+	protocol := "restconf"
+	if protocol == "restconf" {
+		d.marshaller = d.getRestconfMarshaller()
+		d.unmarshaller = d.getRestconfUnmarshaller()
+	}
 
 	err = d.CheckConnection(ctx)
 	if err != nil {
@@ -148,9 +152,9 @@ func (d *XEDriver) CheckConnection(ctx context.Context) error {
 	// where we can glean some device-info
 	res := &common.HostMeta{}
 
-	err := d.Client.Get(ctx, "/.well-known/host-meta", res, d.gethostMetaUnmarshaller())
+	err := d.client.Get(ctx, "/.well-known/host-meta", res, d.gethostMetaUnmarshaller())
 	if err != nil {
-		return err
+		return fmt.Errorf("connectivity check failed: %w", err)
 	}
 
 	log.G(ctx).Debugf("Restconf Root: %s\n", res.Links[0].Href)
@@ -199,7 +203,7 @@ func (d *XEDriver) StopAndRemoveContainer(ctx context.Context, pod *v1.Pod) erro
 
 	path := fmt.Sprintf("restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app=%s", pod.Name)
 
-	err := d.Client.Delete(ctx, path)
+	err := d.client.Delete(ctx, path)
 	if err != nil {
 		return fmt.Errorf("failed to delete app %s: %w", pod.Name, err)
 	}
@@ -217,7 +221,7 @@ func (d *XEDriver) GetContainerStatus(ctx context.Context, namespace, name strin
 
 	log.G(ctx).Debug("GetContainerStatus request received")
 
-	err := d.Client.Get(ctx, path, root, d.unmarshaller)
+	err := d.client.Get(ctx, path, root, d.unmarshaller)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch app oper data: %w", err)
 	}
@@ -242,7 +246,7 @@ func (d *XEDriver) ListContainers(ctx context.Context) ([]*v1.Pod, error) {
 
 	res := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
 
-	err := d.Client.Get(ctx, path, res, d.unmarshaller)
+	err := d.client.Get(ctx, path, res, d.unmarshaller)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch app oper data: %w", err)
 	}
