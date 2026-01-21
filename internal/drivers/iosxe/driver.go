@@ -201,7 +201,7 @@ func (d *XEDriver) StopAndRemoveContainer(ctx context.Context, pod *v1.Pod) erro
 		"pod": pod,
 	}).Debugf("Pod StopAndRemoveContainer request received for pod: %s", pod.Name)
 
-	path := fmt.Sprintf("restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app=%s", pod.Name)
+	path := fmt.Sprintf("/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app=%s", pod.Name)
 
 	err := d.client.Delete(ctx, path)
 	if err != nil {
