@@ -179,7 +179,7 @@ func (d *XEDriver) GetDeviceResources(ctx context.Context) (*v1.ResourceList, er
 	return &resources, nil
 }
 
-func (d *XEDriver) DeployContainer(ctx context.Context, pod *v1.Pod) error {
+func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 	// Check/Download container image
 	// Create continaer
 	// Start container
@@ -195,7 +195,7 @@ func (d *XEDriver) DeployContainer(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
-func (d *XEDriver) UpdateContainer(ctx context.Context, pod *v1.Pod) error {
+func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	// TODO
 	log.G(ctx).Info("Pod UpdateContainer request received")
 	return nil
@@ -245,7 +245,7 @@ func (d *XEDriver) StopAndRemoveContainer(ctx context.Context, appName string) e
 	return nil
 }
 
-func (d *XEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
+func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
 
 	log.G(ctx).Debug("GetContainerStatus request received")
 
@@ -293,7 +293,7 @@ func (d *XEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod
 
 }
 
-func (d *XEDriver) ListContainers(ctx context.Context) ([]*v1.Pod, error) {
+func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 
 	path := "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data?fields=app"
 

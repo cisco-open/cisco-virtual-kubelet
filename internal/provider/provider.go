@@ -20,7 +20,7 @@ import (
 type AppHostingProvider struct {
 	ctx    context.Context
 	appCfg *config.Config
-	driver drivers.CiscoDeviceDriver
+	driver drivers.CiscoKubernetesDeviceDriver
 	// clientset kubernetes.Interface
 	mu       sync.RWMutex
 	podCache map[string]v1.Pod
@@ -65,7 +65,7 @@ func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 
 	// Try to deploy the container.  This MUST be idempotent
 	// In future we can range over the pod.spec.containters
-	if err := p.driver.DeployContainer(p.ctx, pod); err != nil {
+	if err := p.driver.DeployPod(p.ctx, pod); err != nil {
 		return errdefs.AsInvalidInput(err)
 	}
 
@@ -74,7 +74,7 @@ func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 
 func (p *AppHostingProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	// IOS-XE/XR may have limited "Update" support (e.g., changing resources requires a restart)
-	return p.driver.UpdateContainer(p.ctx, pod)
+	return p.driver.UpdatePod(p.ctx, pod)
 }
 
 func (p *AppHostingProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
@@ -100,7 +100,7 @@ func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string)
 		return nil, errdefs.NotFound(fmt.Sprintf("pod %s not found", key))
 	}
 
-	return p.driver.GetContainerStatus(p.ctx, &pod)
+	return p.driver.GetPodStatus(p.ctx, &pod)
 
 }
 
@@ -122,7 +122,7 @@ func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name s
 		return nil, errdefs.NotFound(fmt.Sprintf("pod %s not found", key))
 	}
 
-	statusPod, err := p.driver.GetContainerStatus(p.ctx, &pod)
+	statusPod, err := p.driver.GetPodStatus(p.ctx, &pod)
 	if err != nil {
 		return nil, errdefs.AsNotFound(err)
 	}
@@ -131,7 +131,7 @@ func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name s
 }
 
 func (p *AppHostingProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
-	pods, err := p.driver.ListContainers(p.ctx)
+	pods, err := p.driver.ListPods(p.ctx)
 	if err != nil {
 		return nil, errdefs.AsNotFound(err)
 	}

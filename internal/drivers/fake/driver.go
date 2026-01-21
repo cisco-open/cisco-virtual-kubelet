@@ -40,7 +40,7 @@ func (d *FAKEDriver) GetDeviceResources(ctx context.Context) (*v1.ResourceList, 
 	return &resources, nil
 }
 
-func (d *FAKEDriver) DeployContainer(ctx context.Context, pod *v1.Pod) error {
+func (d *FAKEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 	// HACK: Only create the first container n the pod
 	appName := common.GetAppHostingName(0)
 	log.G(ctx).WithFields(log.Fields{
@@ -96,7 +96,7 @@ func (d *FAKEDriver) DeployContainer(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
-func (d *FAKEDriver) UpdateContainer(ctx context.Context, pod *v1.Pod) error {
+func (d *FAKEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	// TODO
 	log.G(ctx).Info("Pod UpdateContainer request received")
 	return nil
@@ -109,7 +109,7 @@ func (d *FAKEDriver) StopAndRemovePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
-func (d *FAKEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
+func (d *FAKEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
 	// TODO
 	log.G(ctx).WithFields(log.Fields{
 		"namespace": pod.Namespace,
@@ -124,7 +124,7 @@ func (d *FAKEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod) (*v1.P
 	return nil, fmt.Errorf("could not find pod: %s, %s", pod.Namespace, pod.Name)
 }
 
-func (d *FAKEDriver) ListContainers(ctx context.Context) ([]*v1.Pod, error) {
+func (d *FAKEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 	// TODO
 	log.G(ctx).Info("Pod ListContainers request received")
 	return nil, nil

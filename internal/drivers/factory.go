@@ -11,7 +11,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func NewDriver(ctx context.Context, config *config.DeviceConfig) (CiscoDeviceDriver, error) {
+func NewDriver(ctx context.Context, config *config.DeviceConfig) (CiscoKubernetesDeviceDriver, error) {
 
 	switch config.Driver {
 	case "FAKE":
@@ -25,11 +25,11 @@ func NewDriver(ctx context.Context, config *config.DeviceConfig) (CiscoDeviceDri
 	}
 }
 
-type CiscoDeviceDriver interface {
+type CiscoKubernetesDeviceDriver interface {
 	GetDeviceResources(ctx context.Context) (*v1.ResourceList, error)
-	DeployContainer(ctx context.Context, pod *v1.Pod) error
-	UpdateContainer(ctx context.Context, pod *v1.Pod) error
+	DeployPod(ctx context.Context, pod *v1.Pod) error
+	UpdatePod(ctx context.Context, pod *v1.Pod) error
 	StopAndRemovePod(ctx context.Context, pod *v1.Pod) error
-	GetContainerStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error)
-	ListContainers(ctx context.Context) ([]*v1.Pod, error)
+	GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error)
+	ListPods(ctx context.Context) ([]*v1.Pod, error)
 }
