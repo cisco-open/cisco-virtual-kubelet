@@ -1,6 +1,9 @@
 package common
 
 import (
+	"context"
+	"encoding/xml"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -32,6 +35,12 @@ const (
 	ContainerStateUnknown ContainerState = "unknown"
 )
 
+type ClientAuth struct {
+	Method   string
+	Username string
+	Password string
+}
+
 type ResourceUsage struct {
 	CPU       resource.Quantity `json:"cpu" yaml:"cpu"`
 	Memory    resource.Quantity `json:"memory" yaml:"memory"`
@@ -40,3 +49,24 @@ type ResourceUsage struct {
 	NetworkTx int64             `json:"networkTx" yaml:"networkTx"`
 	Timestamp metav1.Time       `json:"timestamp" yaml:"timestamp"`
 }
+
+// NetworkClient defines the generic interface for any backend (RESTconf, Netconf, etc.)
+type NetworkClient interface {
+	Get(ctx context.Context, path string, result any, unmarshal func([]byte, any) error) error
+	Post(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error
+	Patch(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error
+	Delete(ctx context.Context, path string) error
+}
+
+type HostMeta struct {
+	XMLName xml.Name `xml:"XRD"`
+	Links   []Link   `xml:"Link"`
+}
+
+type Link struct {
+	// Use ,attr to ensure it looks at the attributes of the current element
+	Rel  string `xml:"rel,attr"`
+	Href string `xml:"href,attr"`
+}
+
+func (*HostMeta) IsYANGGoStruct() {}
