@@ -5,7 +5,24 @@ BINARY_NAME=cisco-vk
 VERSION?=1.0.0
 BUILD_TIME=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-GO_VERSION=$(shell go version | awk '{print $$3}')
+
+# Detect Go installation method and set appropriate paths
+SNAP_GO_PATH=/snap/go/current
+GO_SNAP_DETECTED=$(shell test -d $(SNAP_GO_PATH) && echo yes || echo no)
+
+ifeq ($(GO_SNAP_DETECTED),yes)
+GOROOT=$(SNAP_GO_PATH)
+GO_BIN=$(SNAP_GO_PATH)/bin/go
+GO_INSTALL_TYPE=snap
+else
+GO_BIN=$(shell which go)
+GO_INSTALL_TYPE=apt
+endif
+
+export GOROOT
+export PATH:=$(GOROOT)/bin:$(PATH)
+
+GO_VERSION=$(shell $(GO_BIN) version 2>/dev/null | awk '{print $$3}' || echo "unknown")
 
 # Go build flags
 LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT)"
@@ -30,33 +47,33 @@ all: build
 build: deps ## Build the binary
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BIN_DIR)
-	go build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME) ./$(CMD_DIR)
+	$(GO_BIN) build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME) ./$(CMD_DIR)
 	@echo "Binary built: $(BIN_DIR)/$(BINARY_NAME)"
 
-build-linux: deps ## Build for Linux (amd64)
+build-linux: deps
 	@echo "Building $(BINARY_NAME) for Linux..."
 	@mkdir -p $(BIN_DIR)
-	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME)-linux-amd64 ./$(CMD_DIR)
+	GOOS=linux GOARCH=amd64 $(GO_BIN) build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME)-linux-amd64 ./$(CMD_DIR)
 
-build-all: build-linux ## Build for all platforms
+build-all: build-linux
 
 ## Installation targets
 
-install: build ## Install the binary and create directories
+install: build
 	@echo "Installing $(BINARY_NAME)..."
 	sudo install -m 755 $(BIN_DIR)/$(BINARY_NAME) $(INSTALL_DIR)/$(BINARY_NAME)
 	sudo mkdir -p $(CONFIG_DIR)/certs
 	sudo chmod 700 $(CONFIG_DIR)
 	@echo "Installed to $(INSTALL_DIR)/$(BINARY_NAME)"
 
-install-systemd: ## Install systemd service template
+install-systemd:
 	@echo "Installing systemd service template..."
 	sudo cp examples/systemd/cisco-vk@.service $(SYSTEMD_DIR)/
 	sudo systemctl daemon-reload
 	@echo "Systemd template installed. Create instances with:"
 	@echo "  sudo systemctl enable cisco-vk@<node-name>"
 
-uninstall: ## Remove installed binary and configs
+uninstall:
 	@echo "Uninstalling $(BINARY_NAME)..."
 	sudo rm -f $(INSTALL_DIR)/$(BINARY_NAME)
 	@echo "Note: Configuration files in $(CONFIG_DIR) were preserved"
@@ -64,29 +81,33 @@ uninstall: ## Remove installed binary and configs
 ## Development targets
 
 deps: ## Download dependencies
-	go mod download
-	go mod tidy
+	$(GO_BIN) mod download
+	$(GO_BIN) mod tidy
 
 test: ## Run tests
-	go test -v -race ./...
+	$(GO_BIN) test -v -race ./...
 
 test-coverage: ## Run tests with coverage
-	go test -v -race -coverprofile=coverage.out ./...
-	go tool cover -html=coverage.out -o coverage.html
+	$(GO_BIN) test -v -race -coverprofile=coverage.out ./...
+	$(GO_BIN) tool cover -html=coverage.out -o coverage.html
 
 lint: ## Run linter
 	@if command -v golangci-lint >/dev/null 2>&1; then \
 		golangci-lint run ./...; \
 	else \
-		echo "golangci-lint not installed. Run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
+		echo "golangci-lint not installed. Run: $(GO_BIN) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
 	fi
 
 fmt: ## Format code
-	go fmt ./...
-	goimports -w .
+	$(GO_BIN) fmt ./...
+	@if command -v goimports >/dev/null 2>&1; then \
+		goimports -w .; \
+	else \
+		echo "goimports not installed. Run: $(GO_BIN) install golang.org/x/tools/cmd/goimports@latest"; \
+	fi
 
 vet: ## Run go vet
-	go vet ./...
+	$(GO_BIN) vet ./...
 
 ## Utility targets
 
@@ -99,6 +120,11 @@ version: ## Show version info
 	@echo "Git Commit: $(GIT_COMMIT)"
 	@echo "Build Time: $(BUILD_TIME)"
 	@echo "Go Version: $(GO_VERSION)"
+	@echo "Go Installation: $(GO_INSTALL_TYPE)"
+	@echo "Go Binary: $(GO_BIN)"
+	@if [ "$(GO_INSTALL_TYPE)" = "snap" ]; then \
+		echo "GOROOT: $(GOROOT)"; \
+	fi
 
 ## Docker targets
 

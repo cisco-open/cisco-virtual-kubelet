@@ -41,9 +41,12 @@ func (d *FAKEDriver) GetDeviceResources(ctx context.Context) (*v1.ResourceList, 
 }
 
 func (d *FAKEDriver) DeployContainer(ctx context.Context, pod *v1.Pod) error {
+	// Convert K8s pod name to valid Cisco AppHosting name
+	appName := common.K8sToAppHostingName(pod.Namespace, pod.Name)
 	log.G(ctx).WithFields(log.Fields{
-		"namespace": pod.Namespace,
-		"pod":       pod.Name,
+		"namespace":   pod.Namespace,
+		"pod":         pod.Name,
+		"appHostName": appName,
 	}).Info("Pod DeployContainer request received")
 
 	// Update pod status
@@ -112,7 +115,7 @@ func (d *FAKEDriver) GetContainerStatus(ctx context.Context, namespace, name str
 		"namespace": namespace,
 		"pod":       name,
 	}).Info("Looking for pod")
-	pod := common.FindPod(d.pods, name, namespace)
+	pod := common.FindPod(d.pods, namespace, name)
 	if pod != nil {
 		return pod, nil
 	}
