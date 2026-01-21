@@ -3,16 +3,11 @@ package config
 import (
 	"fmt"
 	"strings"
-	"sync"
 
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
-var registerFlagsOnce sync.Once
-
 func Load(filePath ...string) (*Config, error) {
-
 	if len(filePath) > 0 && filePath[0] != "" {
 		viper.SetConfigFile(filePath[0])
 	} else {
@@ -26,22 +21,7 @@ func Load(filePath ...string) (*Config, error) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // allow SERVER_PORT for server.port
 	viper.AutomaticEnv()
 
-	registerFlagsOnce.Do(func() {
-		// This doesn't actually work for the current schema
-		pflag.String("device.name", "", "Device name")
-		// Add any other pflag definitions here
-	})
-
-	// Parse flags only if not already parsed (to avoid errors in tests)
-	if !pflag.Parsed() {
-		pflag.Parse()
-	}
-
-	if err := viper.BindPFlags(pflag.CommandLine); err != nil {
-		return nil, err
-	}
-
-	// 4. Read the file
+	// Read the config file
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return nil, fmt.Errorf("error reading config file: %w", err)
@@ -49,7 +29,7 @@ func Load(filePath ...string) (*Config, error) {
 		// It's okay if file is missing; we can rely on ENV or Flags
 	}
 
-	// 5. Unmarshal into struct
+	// Unmarshal into struct
 	var cfg Config
 	if err := viper.UnmarshalExact(&cfg); err != nil {
 		return nil, fmt.Errorf("unable to decode into struct: %w", err)

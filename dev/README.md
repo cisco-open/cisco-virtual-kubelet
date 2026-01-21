@@ -25,7 +25,7 @@ The `./dev/okteto.yaml` config should be pointing at the `okteto-dev` deployment
 This should launch an Okteto Golang development environment inside the k8s deployment and sync these local files.  From this shell you should be able to start the cisco-virtual-kubelet:
 
 ```
-go run ./cmd/cisco-virtual-kubelet
+go run ./cmd/virtual-kubelet
 ```
 
 In another terminal you should now have a new node registered with your K8s development environment.  Label the node so that you can target it for scheduling directly with a test pod:
@@ -37,7 +37,7 @@ kubectl label node cunningr-dev-node kubernetes.io/hostname=cunningr-dev-node
 You should now be able to create/delete the test pod in your dev k8s cluster:
 
 ```
-kubectl apply -f test-pod.yaml
+kubectl apply -f ./dev/test-pod.yaml
 ```
 
 As you update the code locally Okteto will sync everything to your k8s development containter environment. From the Okteto dev environment you can start/stop the application and watch the cisco-virtual-kubelet logs.  
