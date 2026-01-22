@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/uuid"
+	v1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -15,11 +15,24 @@ const (
 // GetAppHostingName returns the AppHosting name for a pod using its UID.
 // The UID is guaranteed unique and fits within the 40-char YANG constraint (32 chars without hyphens).
 // If the pod already has the label set, returns that value for idempotency.
-func GetAppHostingName(index int8) string {
+func GetAppHostingName(pod *v1.Pod, index int8) string {
 
-	cleanUUID := strings.ReplaceAll(uuid.New().String(), "-", "")
+	cleanUUID := strings.ReplaceAll(string(pod.UID), "-", "")
 
 	appID := fmt.Sprintf("cvk000%01d_%s", index, cleanUUID)
 
 	return appID
+}
+
+// GenerateContainerAppIDs generates an appID for each container in the pod.
+// Returns a map with container name as key and generated appID as value.
+func GenerateContainerAppIDs(pod *v1.Pod) map[string]string {
+	appIDs := make(map[string]string)
+
+	for i, container := range pod.Spec.Containers {
+		appID := GetAppHostingName(pod, int8(i))
+		appIDs[container.Name] = appID
+	}
+
+	return appIDs
 }

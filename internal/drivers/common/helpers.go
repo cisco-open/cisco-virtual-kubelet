@@ -6,7 +6,7 @@ import (
 
 func PodToContainer(pod *v1.Pod) (*Container, error) {
 	return &Container{
-		Name: GetAppHostingName(1),
+		Name: GetAppHostingName(pod, 1),
 	}, nil
 }
 
