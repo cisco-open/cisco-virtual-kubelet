@@ -19,7 +19,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
 type UnmarshalFunc func([]byte, any) error
@@ -206,29 +205,59 @@ func (d *XEDriver) StopAndRemovePod(ctx context.Context, pod *v1.Pod) error {
 		"pod": pod,
 	}).Debugf("Pod StopAndRemovePod request received for pod: %s", pod.Name)
 
-	apps, err := d.FindAppsByPodLabels(ctx, pod)
+	// Discover actual containers on the device for this pod
+	discoveredContainers, err := d.DiscoverPodContainersOnDevice(ctx, pod)
+	if err != nil {
+		log.G(ctx).Errorf("Failed to discover containers for pod %s/%s: %v", pod.Namespace, pod.Name, err)
+		return fmt.Errorf("failed to discover containers for pod: %w", err)
+	}
 
-	for _, app := range apps {
+	foundCount := len(discoveredContainers)
+	expectedCount := len(pod.Spec.Containers)
+	
+	log.G(ctx).Infof("Found %d containers on device for pod %s/%s (expected %d)", 
+		foundCount, pod.Namespace, pod.Name, expectedCount)
 
-		appName := ""
-		if app.ApplicationName != nil {
-			appName = *app.ApplicationName
-		} else {
-			continue
-		}
-
-		log.G(ctx).Infof("Stopping and removing container: %s", appName)
-
-		// 3. Perform the actual removal on the Cisco device
-		err = d.StopAndRemoveContainer(ctx, appName)
-		if err != nil {
-			// If one app fails, we log it but continue trying to delete others
-			log.G(ctx).Errorf("failed to delete app %s: %v", appName, err)
-			continue
+	// Check if we found all expected containers
+	if foundCount != expectedCount {
+		log.G(ctx).Errorf("Container count mismatch for pod %s/%s: expected %d, found %d", 
+			pod.Namespace, pod.Name, expectedCount, foundCount)
+		
+		// Log which containers are missing
+		for _, container := range pod.Spec.Containers {
+			if _, found := discoveredContainers[container.Name]; !found {
+				log.G(ctx).Errorf("Container %s not found on device", container.Name)
+			}
 		}
 	}
 
-	log.G(ctx).Infof("Pod %s cleanup successfully completed", pod.Name)
+	// Track deletion results
+	deletionErrors := []string{}
+
+	// Delete each discovered container
+	for containerName, appID := range discoveredContainers {
+		log.G(ctx).Infof("Stopping and removing container %s (app: %s)", containerName, appID)
+
+		// Perform the actual removal on the Cisco device
+		err = d.StopAndRemoveContainer(ctx, appID)
+		if err != nil {
+			// If one app fails, we log it but continue trying to delete others
+			errMsg := fmt.Sprintf("failed to delete container %s (app %s): %v", containerName, appID, err)
+			log.G(ctx).Error(errMsg)
+			deletionErrors = append(deletionErrors, errMsg)
+			continue
+		}
+		
+		log.G(ctx).Infof("Successfully deleted container %s (app: %s)", containerName, appID)
+	}
+
+	// Return error if there were any deletion failures
+	if len(deletionErrors) > 0 {
+		return fmt.Errorf("encountered %d errors during pod cleanup: %s", 
+			len(deletionErrors), strings.Join(deletionErrors, "; "))
+	}
+
+	log.G(ctx).Infof("Pod %s/%s cleanup successfully completed", pod.Namespace, pod.Name)
 	return nil
 }
 
@@ -247,14 +276,21 @@ func (d *XEDriver) StopAndRemoveContainer(ctx context.Context, appName string) e
 
 func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
 
-	log.G(ctx).Debug("GetContainerStatus request received")
+	log.G(ctx).Debug("GetPodStatus request received")
 
-	apps, err := d.FindAppsByPodLabels(ctx, pod)
+	// Discover containers on the device for this pod
+	discoveredContainers, err := d.DiscoverPodContainersOnDevice(ctx, pod)
 	if err != nil {
-		log.G(ctx).Debugf("failed to fetch app oper data", err)
+		log.G(ctx).Debugf("failed to discover containers: %v", err)
 		return nil, fmt.Errorf("apps for pod %s/%s not found on device", pod.Namespace, pod.Name)
 	}
 
+	if len(discoveredContainers) == 0 {
+		log.G(ctx).Warnf("No containers found on device for pod %s/%s", pod.Namespace, pod.Name)
+		return nil, fmt.Errorf("no containers found for pod %s/%s", pod.Namespace, pod.Name)
+	}
+
+	// Fetch all operational data from device
 	path := "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data?fields=app"
 
 	root := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
@@ -263,34 +299,166 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 		return nil, fmt.Errorf("bulk status fetch failed: %w", err)
 	}
 
-	var appStatuses []*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App
+	// Create a map of appName to operational data for quick lookup
+	appOperDataMap := make(map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App)
 
-	for _, appCfg := range apps {
-
-		appName := ""
-		if appCfg.ApplicationName != nil {
-			appName = *appCfg.ApplicationName
+	for _, appID := range discoveredContainers {
+		if operData, ok := root.App[appID]; ok {
+			appOperDataMap[appID] = operData
 		} else {
-			continue
-		}
-
-		if operData, ok := root.App[appName]; ok {
-			appStatuses = append(appStatuses, operData)
-		} else {
-			// Optional: log if an app is configured but the device has no oper data for it
-			log.G(ctx).Warnf("App %s configured but no operational data found", appName)
+			log.G(ctx).Warnf("App %s configured but no operational data found", appID)
 		}
 	}
 
 	d.debugLogJson(ctx, root)
 	statusPod := pod.DeepCopy()
-	d.FakeContainerStatus(ctx, statusPod, appStatuses)
 
-	// TODO We need some (hopefully) generic k8s-to-apphosting convertion funcs
-	// ../common/kubernetes seems to make sense?
-	// https://github.com/cisco-open/cisco-virtual-kubelet/issues/14
+	// Use the new GetContainerStatus function
+	err = d.GetContainerStatus(ctx, statusPod, discoveredContainers, appOperDataMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get container status: %w", err)
+	}
+
 	return statusPod, nil
+}
 
+// GetContainerStatus maps device app containers to Kubernetes container statuses
+func (d *XEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod,
+	discoveredContainers map[string]string,
+	appOperData map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App) error {
+
+	now := metav1.Now()
+
+	// Initialize pod status
+	pod.Status = v1.PodStatus{
+		Phase:     v1.PodPending,
+		HostIP:    "1.1.1.2",
+		PodIP:     "1.1.1.1",
+		StartTime: &now,
+		Conditions: []v1.PodCondition{
+			{
+				Type:               v1.PodInitialized,
+				Status:             v1.ConditionFalse,
+				LastTransitionTime: now,
+			},
+			{
+				Type:               v1.PodReady,
+				Status:             v1.ConditionFalse,
+				LastTransitionTime: now,
+			},
+			{
+				Type:               v1.PodScheduled,
+				Status:             v1.ConditionTrue,
+				LastTransitionTime: now,
+			},
+		},
+	}
+
+	allReady := true
+	anyRunning := false
+
+	// Process each discovered container
+	for containerName, appID := range discoveredContainers {
+		// Find matching container spec
+		var containerSpec *v1.Container
+		for i := range pod.Spec.Containers {
+			if pod.Spec.Containers[i].Name == containerName {
+				containerSpec = &pod.Spec.Containers[i]
+				break
+			}
+		}
+
+		if containerSpec == nil {
+			log.G(ctx).Warnf("Container spec not found for %s (appID: %s)", containerName, appID)
+			continue
+		}
+
+		// Get operational data for this app
+		operData := appOperData[appID]
+
+		containerStatus := v1.ContainerStatus{
+			Name:        containerName,
+			Image:       containerSpec.Image,
+			ImageID:     containerSpec.Image,
+			ContainerID: fmt.Sprintf("cisco://%s", appID),
+			Ready:       false,
+		}
+
+		// Map device state to Kubernetes state
+		if operData != nil && operData.Details != nil && operData.Details.State != nil {
+			state := *operData.Details.State
+
+			switch state {
+			case "RUNNING":
+				containerStatus.State = v1.ContainerState{
+					Running: &v1.ContainerStateRunning{
+						StartedAt: now,
+					},
+				}
+				containerStatus.Ready = true
+				anyRunning = true
+			case "DEPLOYED", "Activated":
+				containerStatus.State = v1.ContainerState{
+					Waiting: &v1.ContainerStateWaiting{
+						Reason:  "ContainerCreating",
+						Message: fmt.Sprintf("App state: %s", state),
+					},
+				}
+				allReady = false
+			case "STOPPED", "Uninstalled":
+				containerStatus.State = v1.ContainerState{
+					Terminated: &v1.ContainerStateTerminated{
+						ExitCode:   0,
+						Reason:     "Completed",
+						FinishedAt: now,
+					},
+				}
+				allReady = false
+			default:
+				containerStatus.State = v1.ContainerState{
+					Waiting: &v1.ContainerStateWaiting{
+						Reason:  "Unknown",
+						Message: fmt.Sprintf("App state: %s", state),
+					},
+				}
+				allReady = false
+			}
+
+			log.G(ctx).Infof("Container %s (app: %s) state: %s, ready: %v",
+				containerName, appID, state, containerStatus.Ready)
+		} else {
+			// No operational data - container is in unknown state
+			containerStatus.State = v1.ContainerState{
+				Waiting: &v1.ContainerStateWaiting{
+					Reason:  "ContainerCreating",
+					Message: "No operational data available",
+				},
+			}
+			allReady = false
+			log.G(ctx).Warnf("No operational data for container %s (app: %s)", containerName, appID)
+		}
+
+		pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses, containerStatus)
+	}
+
+	// Update pod-level status based on container statuses
+	if anyRunning && allReady {
+		pod.Status.Phase = v1.PodRunning
+		for i := range pod.Status.Conditions {
+			if pod.Status.Conditions[i].Type == v1.PodReady ||
+				pod.Status.Conditions[i].Type == v1.PodInitialized {
+				pod.Status.Conditions[i].Status = v1.ConditionTrue
+			}
+		}
+	} else if anyRunning {
+		pod.Status.Phase = v1.PodRunning
+	}
+
+	log.G(ctx).Infof("Pod %s/%s status: Phase=%s, Containers=%d/%d ready",
+		pod.Namespace, pod.Name, pod.Status.Phase,
+		len(pod.Status.ContainerStatuses), len(pod.Spec.Containers))
+
+	return nil
 }
 
 func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
@@ -372,51 +540,118 @@ func (d *XEDriver) FindAppsByPodLabels(ctx context.Context, pod *v1.Pod) ([]*Cis
 	return matchedApps, nil
 }
 
-func (d *XEDriver) FakeContainerStatus(ctx context.Context, pod *v1.Pod, appStatuses []*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App) error {
+// DiscoverPodContainersOnDevice queries the device for configured apps matching the pod UID,
+// then maps them back to container names using RunOpts labels.
+// Returns a map of containerName -> appID (similar to GenerateContainerAppIDs but from device state).
+func (d *XEDriver) DiscoverPodContainersOnDevice(ctx context.Context, pod *v1.Pod) (map[string]string, error) {
+	path := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
 
-	// Update pod status
-	now := metav1.Now()
-	pod.Status = v1.PodStatus{
-		Phase:     v1.PodRunning,
-		HostIP:    "1.1.1.2",
-		PodIP:     "1.1.1.1",
-		StartTime: &now,
-		Conditions: []v1.PodCondition{
-			{
-				Type:               v1.PodInitialized,
-				Status:             v1.ConditionTrue,
-				LastTransitionTime: now,
-			},
-			{
-				Type:               v1.PodReady,
-				Status:             v1.ConditionTrue,
-				LastTransitionTime: now,
-			},
-			{
-				Type:               v1.PodScheduled,
-				Status:             v1.ConditionTrue,
-				LastTransitionTime: now,
-			},
-		},
+	appsContainer := &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData{}
+
+	err := d.client.Get(ctx, path, appsContainer, d.getRestconfUnmarshaller())
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch app configs: %w", err)
 	}
 
-	for _, container := range pod.Spec.Containers {
-		fmt.Printf("DEBUG FOUND CONTAINER: %s\n\n", container.Name)
-		containerStatus := v1.ContainerStatus{
-			Name:  container.Name,
-			Image: container.Image,
-			Ready: true,
-			State: v1.ContainerState{
-				Running: &v1.ContainerStateRunning{
-					StartedAt: metav1.Now(),
-				},
-			},
-			ContainerID: string(uuid.NewUUID()),
+	// Clean the pod UID (remove hyphens) as that's how it appears in app names
+	cleanUID := strings.ReplaceAll(string(pod.UID), "-", "")
+	
+	containerToAppID := make(map[string]string)
+
+	for _, app := range appsContainer.Apps.App {
+		if app.ApplicationName == nil {
+			continue
 		}
-		pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses, containerStatus)
+
+		appName := *app.ApplicationName
+		
+		// Check if app name contains the cleaned pod UID
+		if !strings.Contains(appName, cleanUID) {
+			continue
+		}
+
+		log.G(ctx).Debugf("Found app %s with matching pod UID", appName)
+
+		// Extract container name from RunOpts labels
+		var containerName string
+		var runOptsLine string
+		
+		if app.RunOptss != nil {
+			for _, opt := range app.RunOptss.RunOpts {
+				if opt.LineRunOpts != nil {
+					line := *opt.LineRunOpts
+					runOptsLine = line
+					
+					log.G(ctx).Debugf("App %s RunOpts: %s", appName, line)
+					
+					// Verify this app belongs to our pod by checking all pod labels
+					if strings.Contains(line, fmt.Sprintf("io.kubernetes.pod.name=%s", pod.Name)) &&
+						strings.Contains(line, fmt.Sprintf("io.kubernetes.pod.namespace=%s", pod.Namespace)) &&
+						strings.Contains(line, fmt.Sprintf("io.kubernetes.pod.uid=%s", pod.UID)) {
+						
+						// Extract the container name from the label
+						containerName = common.ExtractContainerNameFromLabels(line)
+						
+						if containerName != "" {
+							log.G(ctx).Debugf("Extracted container name: %s from app %s", containerName, appName)
+						} else {
+							log.G(ctx).Warnf("App %s has pod labels but no container name label in line: %s", appName, line)
+						}
+						break
+					}
+				}
+			}
+		}
+
+		if containerName != "" {
+			containerToAppID[containerName] = appName
+			log.G(ctx).Infof("Discovered container %s -> app %s", containerName, appName)
+		} else {
+			log.G(ctx).Errorf("Found app %s with pod UID but couldn't extract container name from labels. RunOpts: %s", 
+				appName, runOptsLine)
+		}
 	}
 
-	return nil
+	return containerToAppID, nil
+}
+
+// FindAppsByPodUID searches for apps whose name contains the pod UID.
+// This uses a 'contains' search since app names have the format: cvk000{index}_{podUID}
+func (d *XEDriver) FindAppsByPodUID(ctx context.Context, pod *v1.Pod) ([]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App, error) {
+	path := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
+
+	appsContainer := &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData{}
+
+	err := d.client.Get(ctx, path, appsContainer, d.getRestconfUnmarshaller())
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch app configs: %w", err)
+	}
+
+	// Clean the pod UID (remove hyphens) as that's how it appears in app names
+	cleanUID := strings.ReplaceAll(string(pod.UID), "-", "")
+
+	var matchedApps []*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App
+
+	for _, app := range appsContainer.Apps.App {
+		if app.ApplicationName == nil {
+			continue
+		}
+
+		appName := *app.ApplicationName
+
+		// Check if app name contains the cleaned pod UID
+		if strings.Contains(appName, cleanUID) {
+			matchedApps = append(matchedApps, app)
+			log.G(ctx).Debugf("Found app %s matching pod UID %s", appName, pod.UID)
+		}
+	}
+
+	if len(matchedApps) == 0 {
+		return nil, fmt.Errorf("no Cisco apps found for pod %s/%s with UID %s", pod.Namespace, pod.Name, pod.UID)
+	}
+
+	log.G(ctx).Infof("Found %d app containers for pod %s/%s", len(matchedApps), pod.Namespace, pod.Name)
+	return matchedApps, nil
 }
 
 func GetSortedAppNames(appStatuses []*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App) []string {

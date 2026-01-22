@@ -41,13 +41,22 @@ func (d *FAKEDriver) GetDeviceResources(ctx context.Context) (*v1.ResourceList, 
 }
 
 func (d *FAKEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
-	// HACK: Only create the first container n the pod
-	appName := common.GetAppHostingName(0)
+	// Generate appIDs for all containers in the pod
+	containerAppIDs := common.GenerateContainerAppIDs(pod)
+	
 	log.G(ctx).WithFields(log.Fields{
 		"namespace":   pod.Namespace,
 		"pod":         pod.Name,
-		"appHostName": appName,
+		"containers":  len(containerAppIDs),
 	}).Info("Pod DeployContainer request received")
+	
+	// Log each container's appID
+	for containerName, appID := range containerAppIDs {
+		log.G(ctx).WithFields(log.Fields{
+			"container":   containerName,
+			"appHostName": appID,
+		}).Info("Generated appID for container")
+	}
 
 	// Update pod status
 	now := metav1.Now()

@@ -36,3 +36,27 @@ func GenerateContainerAppIDs(pod *v1.Pod) map[string]string {
 
 	return appIDs
 }
+
+// ExtractContainerNameFromLabels extracts the container name from RunOpts labels.
+// Returns the container name if found, empty string otherwise.
+func ExtractContainerNameFromLabels(runOptsLine string) string {
+	// Look for the label: io.kubernetes.container.name=<name>
+	prefix := "io.kubernetes.container.name="
+	
+	startIdx := strings.Index(runOptsLine, prefix)
+	if startIdx == -1 {
+		return ""
+	}
+	
+	// Move past the prefix
+	startIdx += len(prefix)
+	
+	// Find the end of the container name (space or end of string)
+	endIdx := strings.Index(runOptsLine[startIdx:], " ")
+	if endIdx == -1 {
+		// Container name is at the end of the line
+		return runOptsLine[startIdx:]
+	}
+	
+	return runOptsLine[startIdx : startIdx+endIdx]
+}

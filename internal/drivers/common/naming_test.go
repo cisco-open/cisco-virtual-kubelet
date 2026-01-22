@@ -149,3 +149,46 @@ func TestGenerateContainerAppIDs(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractContainerNameFromLabels(t *testing.T) {
+	tests := []struct {
+		name        string
+		runOptsLine string
+		want        string
+	}{
+		{
+			name:        "container name in middle",
+			runOptsLine: "--label io.kubernetes.pod.name=nginx --label io.kubernetes.container.name=nginx --label io.kubernetes.pod.namespace=default",
+			want:        "nginx",
+		},
+		{
+			name:        "container name at end",
+			runOptsLine: "--label io.kubernetes.pod.name=test-pod --label io.kubernetes.container.name=sidecar",
+			want:        "sidecar",
+		},
+		{
+			name:        "no container name label",
+			runOptsLine: "--label io.kubernetes.pod.name=test-pod --label io.kubernetes.pod.namespace=default",
+			want:        "",
+		},
+		{
+			name:        "container name with hyphens",
+			runOptsLine: "--label io.kubernetes.container.name=my-app-container --label foo=bar",
+			want:        "my-app-container",
+		},
+		{
+			name:        "empty string",
+			runOptsLine: "",
+			want:        "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractContainerNameFromLabels(tt.runOptsLine)
+			if got != tt.want {
+				t.Errorf("ExtractContainerNameFromLabels() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
