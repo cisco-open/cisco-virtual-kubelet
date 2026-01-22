@@ -4,12 +4,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func PodToContainer(pod *v1.Pod) (*Container, error) {
-	return &Container{
-		Name: GetAppHostingName(pod, 1),
-	}, nil
-}
-
 func FindPod(pods []v1.Pod, namespace, name string) *v1.Pod {
 	for _, pod := range pods {
 
