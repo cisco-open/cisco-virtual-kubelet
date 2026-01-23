@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -46,6 +48,26 @@ func NewAppHostingDriver(ctx context.Context, config *config.DeviceConfig) (*XED
 
 	if config.TLSConfig != nil {
 		tlsConfig.InsecureSkipVerify = config.TLSConfig.InsecureSkipVerify
+		
+		if config.TLSConfig.CertFile != "" && config.TLSConfig.KeyFile != "" {
+			cert, err := tls.LoadX509KeyPair(config.TLSConfig.CertFile, config.TLSConfig.KeyFile)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load client certificate: %v", err)
+			}
+			tlsConfig.Certificates = []tls.Certificate{cert}
+		}
+		
+		if config.TLSConfig.CAFile != "" {
+			caCert, err := os.ReadFile(config.TLSConfig.CAFile)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read CA certificate: %v", err)
+			}
+			caCertPool := x509.NewCertPool()
+			if !caCertPool.AppendCertsFromPEM(caCert) {
+				return nil, fmt.Errorf("failed to parse CA certificate")
+			}
+			tlsConfig.RootCAs = caCertPool
+		}
 	}
 
 	BaseUrl := u.String()

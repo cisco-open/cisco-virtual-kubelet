@@ -36,9 +36,16 @@ func NewClientRestconfClient(baseURL string, auth *ClientAuth, tlsConfig *tls.Co
 		}
 	}
 
+	httpClient := &http.Client{
+		Timeout: timeout,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+
 	return &RestconfClient{
 		BaseURL:    baseURL,
-		HTTPClient: &http.Client{},
+		HTTPClient: httpClient,
 		Username:   u,
 		Password:   p,
 	}
