@@ -114,6 +114,9 @@ func (c *RestconfClient) doRequest(ctx context.Context, method, path string, pay
 		if err != nil {
 			return err
 		}
+		log.G(ctx).WithFields(log.Fields{
+			"raw_json": string(data),
+		}).Debug("Raw JSON response before unmarshal")
 		return unmarshal(data, result)
 	}
 

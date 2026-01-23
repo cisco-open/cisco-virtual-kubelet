@@ -13,9 +13,9 @@ spec:
       requests:
         cpu: "500m"
         memory: "256Mi"
-  - name: donkey
-    image: flash:/nginx.tar
-    resources:
-      requests:
-        cpu: "500m"
-        memory: "256Mi"
+  # - name: donkey
+  #   image: flash:/nginx.tar
+  #   resources:
+  #     requests:
+  #       cpu: "500m"
+  #       memory: "256Mi"

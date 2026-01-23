@@ -78,7 +78,7 @@ func (p *AppHostingProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 }
 
 func (p *AppHostingProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
-	return p.driver.StopAndRemovePod(p.ctx, pod)
+	return p.driver.DeletePod(p.ctx, pod)
 }
 
 func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {

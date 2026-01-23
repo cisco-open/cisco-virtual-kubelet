@@ -108,11 +108,15 @@ func (d *FAKEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
-func (d *FAKEDriver) StopAndRemovePod(ctx context.Context, pod *v1.Pod) error {
+func (d *FAKEDriver) DeletePodApps(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).WithFields(log.Fields{
 		"pod": pod.Name,
-	}).Info("Pod StopAndRemovePod request received")
+	}).Info("Pod DeletePodApps request received")
 	return nil
+}
+
+func (d *FAKEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
+	return d.DeletePodApps(ctx, pod)
 }
 
 func (d *FAKEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {

@@ -184,7 +184,7 @@ func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 		"pod": pod,
 	}).Debug("Pod DeployContainer request received")
 
-	err := d.ConfigureAppContainer(ctx, pod)
+	err := d.CreatePodApps(ctx, pod)
 	if err != nil {
 		return fmt.Errorf("app deployment failed: %v", err)
 	}
@@ -197,10 +197,10 @@ func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
-func (d *XEDriver) StopAndRemovePod(ctx context.Context, pod *v1.Pod) error {
+func (d *XEDriver) DeletePodApps(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).WithFields(log.Fields{
 		"pod": pod,
-	}).Debugf("Pod StopAndRemovePod request received for pod: %s", pod.Name)
+	}).Debugf("DeletePodApps request received for pod: %s", pod.Name)
 
 	discoveredContainers, err := d.DiscoverPodContainersOnDevice(ctx, pod)
 	if err != nil {
@@ -228,9 +228,9 @@ func (d *XEDriver) StopAndRemovePod(ctx context.Context, pod *v1.Pod) error {
 	deletionErrors := []string{}
 
 	for containerName, appID := range discoveredContainers {
-		log.G(ctx).Infof("Stopping and removing container %s (app: %s)", containerName, appID)
+		log.G(ctx).Infof("Deleting container %s (app: %s)", containerName, appID)
 
-		err = d.StopAndRemoveContainer(ctx, appID)
+		err = d.DeleteApp(ctx, appID)
 		if err != nil {
 			errMsg := fmt.Sprintf("failed to delete container %s (app %s): %v", containerName, appID, err)
 			log.G(ctx).Error(errMsg)
@@ -250,15 +250,50 @@ func (d *XEDriver) StopAndRemovePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
-func (d *XEDriver) StopAndRemoveContainer(ctx context.Context, appName string) error {
-	path := fmt.Sprintf("/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app=%s", appName)
-
-	err := d.client.Delete(ctx, path)
-	if err != nil {
-		return fmt.Errorf("failed to delete app %s: %w", appName, err)
+func (d *XEDriver) DeleteApp(ctx context.Context, appID string) error {
+	log.G(ctx).Infof("Stopping app %s", appID)
+	if err := d.StopApp(ctx, appID); err != nil {
+		return fmt.Errorf("failed to stop app: %w", err)
+	}
+	if err := d.WaitForAppStatus(ctx, appID, "ACTIVATED", 30*time.Second); err != nil {
+		log.G(ctx).Warnf("App %s did not reach ACTIVATED status after stop: %v", appID, err)
 	}
 
-	log.G(ctx).Infof("Pod %s successfully deleted", appName)
+	log.G(ctx).Infof("Deactivating app %s", appID)
+	if err := d.DeactivateApp(ctx, appID); err != nil {
+		return fmt.Errorf("failed to deactivate app: %w", err)
+	}
+	if err := d.WaitForAppStatus(ctx, appID, "DEPLOYED", 30*time.Second); err != nil {
+		log.G(ctx).Warnf("App %s did not reach DEPLOYED status after deactivate: %v", appID, err)
+	}
+
+	log.G(ctx).Infof("Uninstalling app %s", appID)
+	if err := d.UninstallApp(ctx, appID); err != nil {
+		return fmt.Errorf("failed to uninstall app: %w", err)
+	}
+	if err := d.WaitForAppNotPresent(ctx, appID, 60*time.Second); err != nil {
+		log.G(ctx).Warnf("App %s still present in oper data after uninstall: %v", appID, err)
+	}
+
+	log.G(ctx).Infof("Removing app %s config", appID)
+	path := fmt.Sprintf("/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app=%s", appID)
+	if err := d.client.Delete(ctx, path); err != nil {
+		return fmt.Errorf("failed to delete app config: %w", err)
+	}
+
+	log.G(ctx).Infof("Successfully deleted app %s", appID)
+	return nil
+}
+
+func (d *XEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
+	log.G(ctx).WithFields(log.Fields{
+		"pod": pod,
+	}).Debug("Pod DeletePod request received")
+
+	err := d.DeletePodApps(ctx, pod)
+	if err != nil {
+		return fmt.Errorf("pod deletion failed: %v", err)
+	}
 
 	return nil
 }
@@ -477,7 +512,7 @@ func (d *XEDriver) debugLogJson(ctx context.Context, obj ygot.GoStruct) error {
 // then maps them back to container names using RunOpts labels.
 // Returns a map of containerName -> appID (similar to GenerateContainerAppIDs but from device state).
 func (d *XEDriver) DiscoverPodContainersOnDevice(ctx context.Context, pod *v1.Pod) (map[string]string, error) {
-	path := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
+	path := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data"
 
 	appsContainer := &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData{}
 
