@@ -48,7 +48,7 @@ func NewAppHostingDriver(ctx context.Context, config *config.DeviceConfig) (*XED
 
 	if config.TLSConfig != nil {
 		tlsConfig.InsecureSkipVerify = config.TLSConfig.InsecureSkipVerify
-		
+
 		if config.TLSConfig.CertFile != "" && config.TLSConfig.KeyFile != "" {
 			cert, err := tls.LoadX509KeyPair(config.TLSConfig.CertFile, config.TLSConfig.KeyFile)
 			if err != nil {
@@ -56,7 +56,7 @@ func NewAppHostingDriver(ctx context.Context, config *config.DeviceConfig) (*XED
 			}
 			tlsConfig.Certificates = []tls.Certificate{cert}
 		}
-		
+
 		if config.TLSConfig.CAFile != "" {
 			caCert, err := os.ReadFile(config.TLSConfig.CAFile)
 			if err != nil {
@@ -210,14 +210,14 @@ func (d *XEDriver) DeletePodApps(ctx context.Context, pod *v1.Pod) error {
 
 	foundCount := len(discoveredContainers)
 	expectedCount := len(pod.Spec.Containers)
-	
-	log.G(ctx).Infof("Found %d containers on device for pod %s/%s (expected %d)", 
+
+	log.G(ctx).Infof("Found %d containers on device for pod %s/%s (expected %d)",
 		foundCount, pod.Namespace, pod.Name, expectedCount)
 
 	if foundCount != expectedCount {
-		log.G(ctx).Errorf("Container count mismatch for pod %s/%s: expected %d, found %d", 
+		log.G(ctx).Errorf("Container count mismatch for pod %s/%s: expected %d, found %d",
 			pod.Namespace, pod.Name, expectedCount, foundCount)
-		
+
 		for _, container := range pod.Spec.Containers {
 			if _, found := discoveredContainers[container.Name]; !found {
 				log.G(ctx).Errorf("Container %s not found on device", container.Name)
@@ -237,12 +237,12 @@ func (d *XEDriver) DeletePodApps(ctx context.Context, pod *v1.Pod) error {
 			deletionErrors = append(deletionErrors, errMsg)
 			continue
 		}
-		
+
 		log.G(ctx).Infof("Successfully deleted container %s (app: %s)", containerName, appID)
 	}
 
 	if len(deletionErrors) > 0 {
-		return fmt.Errorf("encountered %d errors during pod cleanup: %s", 
+		return fmt.Errorf("encountered %d errors during pod cleanup: %s",
 			len(deletionErrors), strings.Join(deletionErrors, "; "))
 	}
 
@@ -523,7 +523,7 @@ func (d *XEDriver) DiscoverPodContainersOnDevice(ctx context.Context, pod *v1.Po
 
 	// Clean the pod UID (remove hyphens) as that's how it appears in app names
 	cleanUID := strings.ReplaceAll(string(pod.UID), "-", "")
-	
+
 	containerToAppID := make(map[string]string)
 
 	for _, app := range appsContainer.Apps.App {
@@ -532,7 +532,7 @@ func (d *XEDriver) DiscoverPodContainersOnDevice(ctx context.Context, pod *v1.Po
 		}
 
 		appName := *app.ApplicationName
-		
+
 		// Check if app name contains the cleaned pod UID
 		if !strings.Contains(appName, cleanUID) {
 			continue
@@ -543,23 +543,23 @@ func (d *XEDriver) DiscoverPodContainersOnDevice(ctx context.Context, pod *v1.Po
 		// Extract container name from RunOpts labels
 		var containerName string
 		var runOptsLine string
-		
+
 		if app.RunOptss != nil {
 			for _, opt := range app.RunOptss.RunOpts {
 				if opt.LineRunOpts != nil {
 					line := *opt.LineRunOpts
 					runOptsLine = line
-					
+
 					log.G(ctx).Debugf("App %s RunOpts: %s", appName, line)
-					
+
 					// Verify this app belongs to our pod by checking all pod labels
-					if strings.Contains(line, fmt.Sprintf("io.kubernetes.pod.name=%s", pod.Name)) &&
-						strings.Contains(line, fmt.Sprintf("io.kubernetes.pod.namespace=%s", pod.Namespace)) &&
-						strings.Contains(line, fmt.Sprintf("io.kubernetes.pod.uid=%s", pod.UID)) {
-						
+					if strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodName, pod.Name)) &&
+						strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodNamespace, pod.Namespace)) &&
+						strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodUID, pod.UID)) {
+
 						// Extract the container name from the label
 						containerName = common.ExtractContainerNameFromLabels(line)
-						
+
 						if containerName != "" {
 							log.G(ctx).Debugf("Extracted container name: %s from app %s", containerName, appName)
 						} else {
@@ -575,7 +575,7 @@ func (d *XEDriver) DiscoverPodContainersOnDevice(ctx context.Context, pod *v1.Po
 			containerToAppID[containerName] = appName
 			log.G(ctx).Infof("Discovered container %s -> app %s", containerName, appName)
 		} else {
-			log.G(ctx).Errorf("Found app %s with pod UID but couldn't extract container name from labels. RunOpts: %s", 
+			log.G(ctx).Errorf("Found app %s with pod UID but couldn't extract container name from labels. RunOpts: %s",
 				appName, runOptsLine)
 		}
 	}

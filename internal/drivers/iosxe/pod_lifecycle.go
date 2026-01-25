@@ -48,14 +48,14 @@ func (d *XEDriver) CreatePodApps(ctx context.Context, pod *v1.Pod) error {
 				1: {
 					LineIndex: ygot.Uint16(1),
 					LineRunOpts: ygot.String(fmt.Sprintf(
-						"--label io.kubernetes.pod.name=%s "+
-							"--label io.kubernetes.pod.namespace=%s "+
-							"--label io.kubernetes.pod.uid=%s "+
-							"--label io.kubernetes.container.name=%s",
-						pod.Name,
-						pod.Namespace,
-						pod.UID,
-						container.Name,
+						"--label %s=%s "+
+							"--label %s=%s "+
+							"--label %s=%s "+
+							"--label %s=%s",
+						common.LabelPodName, pod.Name,
+						common.LabelPodNamespace, pod.Namespace,
+						common.LabelPodUID, pod.UID,
+						common.LabelContainerName, container.Name,
 					)),
 				},
 			},
@@ -183,13 +183,13 @@ func (d *XEDriver) UninstallApp(ctx context.Context, appID string) error {
 
 func (d *XEDriver) WaitForAppStatus(ctx context.Context, appID string, expectedStatus string, maxWaitTime time.Duration) error {
 	log.G(ctx).Infof("Waiting for app %s to reach status: %s", appID, expectedStatus)
-	
+
 	pollInterval := 2 * time.Second
 	deadline := time.Now().Add(maxWaitTime)
-	
+
 	for time.Now().Before(deadline) {
 		path := "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data"
-		
+
 		root := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
 		err := d.client.Get(ctx, path, root, d.getRestconfUnmarshaller())
 		if err != nil {
@@ -197,16 +197,16 @@ func (d *XEDriver) WaitForAppStatus(ctx context.Context, appID string, expectedS
 			time.Sleep(pollInterval)
 			continue
 		}
-		
+
 		for _, app := range root.App {
 			if app.Name == nil || *app.Name != appID {
 				continue
 			}
-			
+
 			if app.Details != nil && app.Details.State != nil {
 				currentState := *app.Details.State
 				log.G(ctx).Debugf("App %s current state: %s (waiting for: %s)", appID, currentState, expectedStatus)
-				
+
 				if currentState == expectedStatus {
 					log.G(ctx).Infof("App %s reached expected status: %s", appID, expectedStatus)
 					return nil
@@ -214,26 +214,26 @@ func (d *XEDriver) WaitForAppStatus(ctx context.Context, appID string, expectedS
 			}
 			break
 		}
-		
+
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("context cancelled while waiting for app %s status", appID)
 		case <-time.After(pollInterval):
 		}
 	}
-	
+
 	return fmt.Errorf("timeout waiting for app %s to reach status %s after %v", appID, expectedStatus, maxWaitTime)
 }
 
 func (d *XEDriver) WaitForAppNotPresent(ctx context.Context, appID string, maxWaitTime time.Duration) error {
 	log.G(ctx).Infof("Waiting for app %s to be removed from oper data", appID)
-	
+
 	pollInterval := 2 * time.Second
 	deadline := time.Now().Add(maxWaitTime)
-	
+
 	for time.Now().Before(deadline) {
 		path := "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data"
-		
+
 		root := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
 		err := d.client.Get(ctx, path, root, d.getRestconfUnmarshaller())
 		if err != nil {
@@ -241,7 +241,7 @@ func (d *XEDriver) WaitForAppNotPresent(ctx context.Context, appID string, maxWa
 			time.Sleep(pollInterval)
 			continue
 		}
-		
+
 		found := false
 		for _, app := range root.App {
 			if app.Name != nil && *app.Name == appID {
@@ -249,21 +249,21 @@ func (d *XEDriver) WaitForAppNotPresent(ctx context.Context, appID string, maxWa
 				break
 			}
 		}
-		
+
 		if !found {
 			log.G(ctx).Infof("App %s no longer present in oper data", appID)
 			return nil
 		}
-		
+
 		log.G(ctx).Debugf("App %s still present in oper data, waiting...", appID)
-		
+
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("context cancelled while waiting for app %s to be removed", appID)
 		case <-time.After(pollInterval):
 		}
 	}
-	
+
 	return fmt.Errorf("timeout waiting for app %s to be removed from oper data after %v", appID, maxWaitTime)
 }
 
