@@ -197,10 +197,10 @@ func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
-func (d *XEDriver) DeletePodApps(ctx context.Context, pod *v1.Pod) error {
+func (d *XEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).WithFields(log.Fields{
 		"pod": pod,
-	}).Debugf("DeletePodApps request received for pod: %s", pod.Name)
+	}).Debugf("DeletePod request received for pod: %s", pod.Name)
 
 	discoveredContainers, err := d.DiscoverPodContainersOnDevice(ctx, pod)
 	if err != nil {
@@ -282,19 +282,6 @@ func (d *XEDriver) DeleteApp(ctx context.Context, appID string) error {
 	}
 
 	log.G(ctx).Infof("Successfully deleted app %s", appID)
-	return nil
-}
-
-func (d *XEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
-	log.G(ctx).WithFields(log.Fields{
-		"pod": pod,
-	}).Debug("Pod DeletePod request received")
-
-	err := d.DeletePodApps(ctx, pod)
-	if err != nil {
-		return fmt.Errorf("pod deletion failed: %v", err)
-	}
-
 	return nil
 }
 
