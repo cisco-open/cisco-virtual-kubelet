@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"sync"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
@@ -15,22 +14,23 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	v1 "k8s.io/api/core/v1"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 )
 
 type AppHostingProvider struct {
-	ctx    context.Context
-	appCfg *config.Config
-	driver drivers.CiscoKubernetesDeviceDriver
-	// clientset kubernetes.Interface
-	mu       sync.RWMutex
-	podCache map[string]v1.Pod
+	ctx             context.Context
+	appCfg          *config.Config
+	driver          drivers.CiscoKubernetesDeviceDriver
+	podsLister      corev1listers.PodLister
+	configMapLister corev1listers.ConfigMapLister
+	secretLister    corev1listers.SecretLister
+	serviceLister   corev1listers.ServiceLister
 }
 
 func NewAppHostingProvider(
 	ctx context.Context,
 	appCfg *config.Config,
 	vkCfg nodeutil.ProviderConfig,
-	// clientset kubernetes.Interface,
 ) (*AppHostingProvider, error) {
 
 	d, err := drivers.NewDriver(ctx, &appCfg.Device)
@@ -38,11 +38,13 @@ func NewAppHostingProvider(
 		return nil, fmt.Errorf("driver assignment failed: %v", err)
 	}
 	return &AppHostingProvider{
-		ctx:      ctx,
-		appCfg:   appCfg,
-		driver:   d,
-		podCache: make(map[string]v1.Pod),
-		// clientset: clientset,
+		ctx:             ctx,
+		appCfg:          appCfg,
+		driver:          d,
+		podsLister:      vkCfg.Pods,
+		configMapLister: vkCfg.ConfigMaps,
+		secretLister:    vkCfg.Secrets,
+		serviceLister:   vkCfg.Services,
 	}, nil
 }
 
@@ -52,19 +54,8 @@ func (p *AppHostingProvider) GetCapacity(ctx context.Context) (v1.ResourceList, 
 }
 
 func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
-
-	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
-
-	// Ensure we make a copy if the pod doesn't exist
-	p.mu.Lock()
-	if _, exists := p.podCache[key]; !exists {
-		podCopy := pod.DeepCopy()
-		p.podCache[key] = *podCopy
-	}
-	p.mu.Unlock()
-
-	// Try to deploy the container.  This MUST be idempotent
-	// In future we can range over the pod.spec.containters
+	// Deploy the container. This MUST be idempotent
+	// In future we can range over the pod.spec.containers
 	if err := p.driver.DeployPod(p.ctx, pod); err != nil {
 		return errdefs.AsInvalidInput(err)
 	}
@@ -83,25 +74,19 @@ func (p *AppHostingProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 
 func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
 
-	// DEBUG
 	log.G(p.ctx).WithFields(log.Fields{
 		"name":      name,
 		"namespace": namespace,
 	}).Debug("Running GetPod:")
 
-	key := fmt.Sprintf("%s/%s", namespace, name)
-
-	p.mu.RLock() // Use RLock for reading
-	defer p.mu.RUnlock()
-
-	pod, exists := p.podCache[key]
-	if !exists {
-		// Defer ensures RUnlock happens here automatically
-		return nil, errdefs.NotFound(fmt.Sprintf("pod %s not found", key))
+	// Fetch pod spec from informer cache (desired state)
+	pod, err := p.podsLister.Pods(namespace).Get(name)
+	if err != nil {
+		return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found: %v", namespace, name, err))
 	}
 
-	return p.driver.GetPodStatus(p.ctx, &pod)
-
+	// Get actual status from Cisco device
+	return p.driver.GetPodStatus(p.ctx, pod)
 }
 
 func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
@@ -111,18 +96,14 @@ func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name s
 		"namespace": namespace,
 	}).Debug("Calling driver GetPodStatus:")
 
-	key := fmt.Sprintf("%s/%s", namespace, name)
-
-	p.mu.RLock() // Use RLock for reading
-	defer p.mu.RUnlock()
-
-	pod, exists := p.podCache[key]
-	if !exists {
-		// Defer ensures RUnlock happens here automatically
-		return nil, errdefs.NotFound(fmt.Sprintf("pod %s not found", key))
+	// Fetch pod spec from informer cache (desired state)
+	pod, err := p.podsLister.Pods(namespace).Get(name)
+	if err != nil {
+		return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found: %v", namespace, name, err))
 	}
 
-	statusPod, err := p.driver.GetPodStatus(p.ctx, &pod)
+	// Get actual status from Cisco device
+	statusPod, err := p.driver.GetPodStatus(p.ctx, pod)
 	if err != nil {
 		return nil, errdefs.AsNotFound(err)
 	}
