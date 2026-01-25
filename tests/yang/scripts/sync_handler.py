@@ -24,7 +24,7 @@ def create_oper_xml(apps):
         etree.SubElement(app_node, "name").text = app_name
         
         details = etree.SubElement(app_node, "details")
-        etree.SubElement(details, "state").text = "RUNNING"
+        etree.SubElement(details, "state").text = "DEPLOYED"
         
         procs = etree.SubElement(app_node, "processes")
         proc = etree.SubElement(procs, "process")
