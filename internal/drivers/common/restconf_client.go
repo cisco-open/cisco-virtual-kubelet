@@ -24,15 +24,15 @@ func NewNetworkClient(baseURL string, auth *ClientAuth, tlsConfig *tls.Config, t
 }
 
 func NewClientRestconfClient(baseURL string, auth *ClientAuth, tlsConfig *tls.Config, timeout time.Duration) *RestconfClient {
-	u := ""
-	p := ""
+	username := ""
+	password := ""
 
 	if auth != nil {
 		if auth.Username != "" {
-			u = auth.Username
+			username = auth.Username
 		}
 		if auth.Password != "" {
-			p = auth.Password
+			password = auth.Password
 		}
 	}
 
@@ -46,8 +46,8 @@ func NewClientRestconfClient(baseURL string, auth *ClientAuth, tlsConfig *tls.Co
 	return &RestconfClient{
 		BaseURL:    baseURL,
 		HTTPClient: httpClient,
-		Username:   u,
-		Password:   p,
+		Username:   username,
+		Password:   password,
 	}
 }
 
