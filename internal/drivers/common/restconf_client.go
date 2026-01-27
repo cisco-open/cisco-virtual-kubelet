@@ -24,11 +24,30 @@ func NewNetworkClient(baseURL string, auth *ClientAuth, tlsConfig *tls.Config, t
 }
 
 func NewClientRestconfClient(baseURL string, auth *ClientAuth, tlsConfig *tls.Config, timeout time.Duration) *RestconfClient {
+	username := ""
+	password := ""
+
+	if auth != nil {
+		if auth.Username != "" {
+			username = auth.Username
+		}
+		if auth.Password != "" {
+			password = auth.Password
+		}
+	}
+
+	httpClient := &http.Client{
+		Timeout: timeout,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+
 	return &RestconfClient{
 		BaseURL:    baseURL,
-		HTTPClient: &http.Client{},
-		Username:   "admin",
-		Password:   "admin",
+		HTTPClient: httpClient,
+		Username:   username,
+		Password:   password,
 	}
 }
 
@@ -95,6 +114,9 @@ func (c *RestconfClient) doRequest(ctx context.Context, method, path string, pay
 		if err != nil {
 			return err
 		}
+		log.G(ctx).WithFields(log.Fields{
+			"raw_json": string(data),
+		}).Debug("Raw JSON response before unmarshal")
 		return unmarshal(data, result)
 	}
 

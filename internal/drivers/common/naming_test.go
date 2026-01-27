@@ -1,136 +1,194 @@
 package common
 
 import (
+	"strings"
 	"testing"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
-func TestK8sToAppHostingName(t *testing.T) {
+func TestGetAppHostingName(t *testing.T) {
 	tests := []struct {
-		name      string
-		namespace string
-		podName   string
-		want      string
+		name string
+		pod  *v1.Pod
+		want string
 	}{
 		{
-			name:      "simple name with hyphen in default namespace",
-			namespace: "default",
-			podName:   "nginx-on-switch",
-			want:      "nginx_on_switch",
-		},
-		{
-			name:      "simple name with hyphen in empty namespace",
-			namespace: "",
-			podName:   "nginx-on-switch",
-			want:      "nginx_on_switch",
-		},
-		{
-			name:      "name without hyphen",
-			namespace: "default",
-			podName:   "nginx",
-			want:      "nginx",
-		},
-		{
-			name:      "name with multiple hyphens",
-			namespace: "default",
-			podName:   "my-cool-app-v2",
-			want:      "my_cool_app_v2",
-		},
-		{
-			name:      "non-default namespace adds hash suffix",
-			namespace: "production",
-			podName:   "nginx",
-			want:      "nginx_ab8e18", // hash of "production"
-		},
-		{
-			name:      "non-default namespace with hyphen in pod name",
-			namespace: "prod",
-			podName:   "nginx-app",
-			want:      "nginx_app_6754af", // hash of "prod"
-		},
-		{
-			name:      "long name gets truncated in default namespace",
-			namespace: "default",
-			podName:   "this-is-a-very-long-pod-name-that-exceeds-forty-characters",
-			want:      "this_is_a_very_long_pod_name_that_exceed", // truncated to 40
-		},
-		{
-			name:      "long name with non-default namespace",
-			namespace: "production",
-			podName:   "this-is-a-very-long-pod-name-that-exceeds-forty",
-			want:      "this_is_a_very_long_pod_name_that_ab8e18", // truncated + hash
+			name: "generates name from UID",
+			pod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					UID: types.UID("a24a730b-8b13-4fd0-96ee-900f99d87670"),
+				},
+			},
+			want: "cvk0000_a24a730b8b134fd096ee900f99d87670",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := K8sToAppHostingName(tt.namespace, tt.podName)
+			got := GetAppHostingName(tt.pod, 0)
 			if got != tt.want {
-				t.Errorf("K8sToAppHostingName(%q, %q) = %q, want %q", tt.namespace, tt.podName, got, tt.want)
-			}
-			// Verify length constraint
-			if len(got) > MaxAppHostingNameLength {
-				t.Errorf("K8sToAppHostingName(%q, %q) length = %d, exceeds max %d", tt.namespace, tt.podName, len(got), MaxAppHostingNameLength)
+				t.Errorf("GetAppHostingName() = %q, want %q", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestAppHostingToK8sName(t *testing.T) {
-	tests := []struct {
-		name    string
-		appName string
-		want    string
-	}{
-		{
-			name:    "simple name with underscore",
-			appName: "nginx_on_switch",
-			want:    "nginx-on-switch",
-		},
-		{
-			name:    "name without underscore",
-			appName: "nginx",
-			want:    "nginx",
-		},
-		{
-			name:    "name with hash suffix removed",
-			appName: "nginx_app_6754af",
-			want:    "nginx-app",
-		},
-		{
-			name:    "name with multiple underscores",
-			appName: "my_cool_app_v2",
-			want:    "my-cool-app-v2",
+func TestGetAppHostingNameLength(t *testing.T) {
+	// Name format is cvkNNNN_<UID32> where UID is UID36 with _ stripped
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: types.UID("a24a730b-8b13-4fd0-96ee-900f99d87670"),
 		},
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := AppHostingToK8sName(tt.appName)
-			if got != tt.want {
-				t.Errorf("AppHostingToK8sName(%q) = %q, want %q", tt.appName, got, tt.want)
-			}
-		})
+	got := GetAppHostingName(pod, 1)
+	if len(got) > 40 {
+		t.Errorf("GetAppHostingName() length = %d, exceeds max 40", len(got))
+	}
+	if len(got) != 40 {
+		t.Errorf("GetAppHostingName() length = %d, expected 40.  Name should be padded to maxlen", len(got))
 	}
 }
 
-func TestK8sToAppHostingNameValidCharacters(t *testing.T) {
-	// Test that output only contains valid AppHosting characters: [0-9a-zA-Z_]
-	testCases := []struct {
-		namespace string
-		podName   string
-	}{
-		{"default", "nginx-on-switch"},
-		{"prod", "my-app-v2"},
-		{"kube-system", "coredns-abc123"},
-		{"", "simple"},
+func TestGetAppHostingNameValidCharacters(t *testing.T) {
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: types.UID("a24a730b-8b13-4fd0-96ee-900f99d87670"),
+		},
 	}
-
-	for _, tc := range testCases {
-		result := K8sToAppHostingName(tc.namespace, tc.podName)
-		for _, c := range result {
-			if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
-				t.Errorf("K8sToAppHostingName(%q, %q) = %q contains invalid character %q", tc.namespace, tc.podName, result, string(c))
-			}
+	result := GetAppHostingName(pod, 1)
+	for _, c := range result {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c == '_')) {
+			t.Errorf("GetAppHostingName() = %q contains invalid character %q (expected hex only)", result, string(c))
 		}
+	}
+}
+
+func TestGenerateContainerAppIDs(t *testing.T) {
+	tests := []struct {
+		name           string
+		pod            *v1.Pod
+		wantNumEntries int
+		checkKeys      []string
+	}{
+		{
+			name: "single container",
+			pod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "default",
+					UID:       types.UID("a24a730b-8b13-4fd0-96ee-900f99d87670"),
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{Name: "nginx"},
+					},
+				},
+			},
+			wantNumEntries: 1,
+			checkKeys:      []string{"nginx"},
+		},
+		{
+			name: "multiple containers",
+			pod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "default",
+					UID:       types.UID("b35b841c-9c24-5ge1-a7ff-a11g00e98781"),
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{Name: "nginx"},
+						{Name: "sidecar"},
+						{Name: "logging"},
+					},
+				},
+			},
+			wantNumEntries: 3,
+			checkKeys:      []string{"nginx", "sidecar", "logging"},
+		},
+		{
+			name: "empty pod",
+			pod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "empty-pod",
+					Namespace: "default",
+					UID:       types.UID("c46c952d-ad35-6hf2-b8gg-b22h11f09892"),
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{},
+				},
+			},
+			wantNumEntries: 0,
+			checkKeys:      []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GenerateContainerAppIDs(tt.pod)
+
+			if len(got) != tt.wantNumEntries {
+				t.Errorf("GenerateContainerAppIDs() returned %d entries, want %d", len(got), tt.wantNumEntries)
+			}
+
+			for _, key := range tt.checkKeys {
+				appID, exists := got[key]
+				if !exists {
+					t.Errorf("GenerateContainerAppIDs() missing key %q", key)
+				}
+				if len(appID) != 40 {
+					t.Errorf("GenerateContainerAppIDs() appID for %q has length %d, want 40", key, len(appID))
+				}
+				if !strings.HasPrefix(appID, "cvk000") {
+					t.Errorf("GenerateContainerAppIDs() appID for %q = %q, doesn't have expected prefix", key, appID)
+				}
+			}
+		})
+	}
+}
+
+func TestExtractContainerNameFromLabels(t *testing.T) {
+	tests := []struct {
+		name        string
+		runOptsLine string
+		want        string
+	}{
+		{
+			name:        "container name in middle",
+			runOptsLine: "--label io.kubernetes.pod.name=nginx --label io.kubernetes.container.name=nginx --label io.kubernetes.pod.namespace=default",
+			want:        "nginx",
+		},
+		{
+			name:        "container name at end",
+			runOptsLine: "--label io.kubernetes.pod.name=test-pod --label io.kubernetes.container.name=sidecar",
+			want:        "sidecar",
+		},
+		{
+			name:        "no container name label",
+			runOptsLine: "--label io.kubernetes.pod.name=test-pod --label io.kubernetes.pod.namespace=default",
+			want:        "",
+		},
+		{
+			name:        "container name with hyphens",
+			runOptsLine: "--label io.kubernetes.container.name=my-app-container --label foo=bar",
+			want:        "my-app-container",
+		},
+		{
+			name:        "empty string",
+			runOptsLine: "",
+			want:        "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractContainerNameFromLabels(tt.runOptsLine)
+			if got != tt.want {
+				t.Errorf("ExtractContainerNameFromLabels() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }

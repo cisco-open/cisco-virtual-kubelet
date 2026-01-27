@@ -6,6 +6,11 @@ device:
   address: localhost
   username: admin
   password: admin
+  # tls:
+  #   enabled: true
+  #   insecureSkipVerify: true
+  networking:
+    podCIDR: 192.168.100.0/24
 
 kubelet:
   node_name: "cvk-dev-node"

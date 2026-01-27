@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"sync"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
@@ -15,13 +14,17 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	v1 "k8s.io/api/core/v1"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 )
 
 type AppHostingProvider struct {
-	ctx    context.Context
-	appCfg *config.Config
-	driver drivers.CiscoDeviceDriver // Injected via factory
-	mutex  sync.RWMutex
+	ctx             context.Context
+	appCfg          *config.Config
+	driver          drivers.CiscoKubernetesDeviceDriver
+	podsLister      corev1listers.PodLister
+	configMapLister corev1listers.ConfigMapLister
+	secretLister    corev1listers.SecretLister
+	serviceLister   corev1listers.ServiceLister
 }
 
 func NewAppHostingProvider(
@@ -30,15 +33,18 @@ func NewAppHostingProvider(
 	vkCfg nodeutil.ProviderConfig,
 ) (*AppHostingProvider, error) {
 
-	// TODO: We should do auto-discovery (or config) in NewDriver
 	d, err := drivers.NewDriver(ctx, &appCfg.Device)
 	if err != nil {
 		return nil, fmt.Errorf("driver assignment failed: %v", err)
 	}
 	return &AppHostingProvider{
-		ctx:    ctx,
-		appCfg: appCfg,
-		driver: d,
+		ctx:             ctx,
+		appCfg:          appCfg,
+		driver:          d,
+		podsLister:      vkCfg.Pods,
+		configMapLister: vkCfg.ConfigMaps,
+		secretLister:    vkCfg.Secrets,
+		serviceLister:   vkCfg.Services,
 	}, nil
 }
 
@@ -48,38 +54,39 @@ func (p *AppHostingProvider) GetCapacity(ctx context.Context) (v1.ResourceList, 
 }
 
 func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
-	if err := p.driver.DeployContainer(p.ctx, pod); err != nil {
-		// Return wrapped errors from github.com/virtual-kubelet/virtual-kubelet/errdefs
+	// Deploy the container. This MUST be idempotent
+	// In future we can range over the pod.spec.containers
+	if err := p.driver.DeployPod(p.ctx, pod); err != nil {
 		return errdefs.AsInvalidInput(err)
 	}
+
 	return nil
 }
 
 func (p *AppHostingProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	// IOS-XE/XR may have limited "Update" support (e.g., changing resources requires a restart)
-	return p.driver.UpdateContainer(p.ctx, pod)
+	return p.driver.UpdatePod(p.ctx, pod)
 }
 
 func (p *AppHostingProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
-	return p.driver.StopAndRemoveContainer(p.ctx, pod)
+	return p.driver.DeletePod(p.ctx, pod)
 }
 
 func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
 
-	// DEBUG
 	log.G(p.ctx).WithFields(log.Fields{
 		"name":      name,
 		"namespace": namespace,
 	}).Debug("Running GetPod:")
 
-	pod, err := p.driver.GetContainerStatus(p.ctx, namespace, name)
+	// Fetch pod spec from informer cache (desired state)
+	pod, err := p.podsLister.Pods(namespace).Get(name)
 	if err != nil {
-		return nil, errdefs.AsNotFound(err)
+		return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found: %v", namespace, name, err))
 	}
-	// We should probably expect an AppHosting container struct back here
-	// and do the mapping to a v1.Pod.  This way we can keep the driver 'native'
-	// and reuse it outside of the k8s context.
-	return pod, nil
+
+	// Get actual status from Cisco device
+	return p.driver.GetPodStatus(p.ctx, pod)
 }
 
 func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
@@ -89,16 +96,23 @@ func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name s
 		"namespace": namespace,
 	}).Debug("Calling driver GetPodStatus:")
 
-	pod, err := p.driver.GetContainerStatus(p.ctx, namespace, name)
+	// Fetch pod spec from informer cache (desired state)
+	pod, err := p.podsLister.Pods(namespace).Get(name)
+	if err != nil {
+		return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found: %v", namespace, name, err))
+	}
+
+	// Get actual status from Cisco device
+	statusPod, err := p.driver.GetPodStatus(p.ctx, pod)
 	if err != nil {
 		return nil, errdefs.AsNotFound(err)
 	}
 
-	return &pod.Status, nil
+	return &statusPod.Status, nil
 }
 
 func (p *AppHostingProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
-	pods, err := p.driver.ListContainers(p.ctx)
+	pods, err := p.driver.ListPods(p.ctx)
 	if err != nil {
 		return nil, errdefs.AsNotFound(err)
 	}

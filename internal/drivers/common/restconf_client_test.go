@@ -40,7 +40,11 @@ func TestRestconfClient_Get(t *testing.T) {
 	defer server.Close()
 
 	// 2. Initialize Client
-	client := NewClientRestconfClient(server.URL, nil, nil, 5*time.Second)
+	auth := &ClientAuth{
+		Username: "admin",
+		Password: "admin",
+	}
+	client := NewClientRestconfClient(server.URL, auth, nil, 5*time.Second)
 
 	// 3. Define local unmarshaller logic
 	unmarshalFn := func(data []byte, v any) error {
@@ -72,7 +76,11 @@ func TestRestconfClient_Post(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClientRestconfClient(server.URL, nil, nil, 5*time.Second)
+	auth := &ClientAuth{
+		Username: "admin",
+		Password: "admin",
+	}
+	client := NewClientRestconfClient(server.URL, auth, nil, 5*time.Second)
 
 	marshalFn := func(v any) ([]byte, error) {
 		return json.Marshal(v)
@@ -95,7 +103,11 @@ func TestRestconfClient_Delete(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClientRestconfClient(server.URL, nil, nil, 5*time.Second)
+	auth := &ClientAuth{
+		Username: "admin",
+		Password: "admin",
+	}
+	client := NewClientRestconfClient(server.URL, auth, nil, 5*time.Second)
 
 	err := client.Delete(context.Background(), "/restconf/data/item")
 	if err != nil {
@@ -109,7 +121,11 @@ func TestRestconfClient_HttpError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClientRestconfClient(server.URL, nil, nil, 5*time.Second)
+	auth := &ClientAuth{
+		Username: "admin",
+		Password: "admin",
+	}
+	client := NewClientRestconfClient(server.URL, auth, nil, 5*time.Second)
 
 	err := client.Get(context.Background(), "/bad", nil, nil)
 	if err == nil {

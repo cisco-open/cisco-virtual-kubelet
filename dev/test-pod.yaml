@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: nginxonswitch
+  name: nginx-on-switch
 spec:
   nodeSelector:
     kubernetes.io/hostname: cvk-dev-node
@@ -13,18 +13,9 @@ spec:
       requests:
         cpu: "500m"
         memory: "256Mi"
-# ---
-# apiVersion: v1
-# kind: Pod
-# metadata:
-#   name: nginx-on-switch2
-# spec:
-#   nodeSelector:
-#     kubernetes.io/hostname: cheekycheek
-#   containers:
-#   - name: nginx
-#     image: flash:/nginx.tar
-#     resources:
-#       requests:
-#         cpu: "500m"
-#         memory: "256Mi"
+  # - name: donkey
+  #   image: flash:/nginx.tar
+  #   resources:
+  #     requests:
+  #       cpu: "500m"
+  #       memory: "256Mi"

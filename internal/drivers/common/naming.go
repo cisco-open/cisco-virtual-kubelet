@@ -1,67 +1,65 @@
 package common
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"fmt"
 	"strings"
+
+	v1 "k8s.io/api/core/v1"
 )
 
 const (
-	// MaxAppHostingNameLength is the maximum length allowed by Cisco AppHosting YANG model
-	MaxAppHostingNameLength = 40
+	// Kubernetes standard labels used for pod and container identification
+	LabelPodName       = "io.kubernetes.pod.name"
+	LabelPodNamespace  = "io.kubernetes.pod.namespace"
+	LabelPodUID        = "io.kubernetes.pod.uid"
+	LabelContainerName = "io.kubernetes.container.name"
 )
 
-// K8sToAppHostingName converts a Kubernetes pod identifier to a valid Cisco AppHosting name.
-// Kubernetes naming (RFC 1123): lowercase alphanumeric + hyphen, max 63 chars
-// Cisco AppHosting YANG: alphanumeric + underscore only, max 40 chars
-//
-// Format: {sanitized_name}_{short_namespace_hash} if namespace != "default"
-// Format: {sanitized_name} if namespace == "default" or empty
-func K8sToAppHostingName(namespace, name string) string {
-	// Replace hyphens with underscores (K8s uses -, Cisco allows _)
-	sanitized := strings.ReplaceAll(name, "-", "_")
+// GetAppHostingName returns the AppHosting name for a pod using its UID.
+// The UID is guaranteed unique and fits within the 40-char YANG constraint (32 chars without hyphens).
+// If the pod already has the label set, returns that value for idempotency.
+func GetAppHostingName(pod *v1.Pod, index int8) string {
 
-	// For non-default namespaces, add a short hash suffix for uniqueness
-	if namespace != "" && namespace != "default" {
-		hash := sha256.Sum256([]byte(namespace))
-		suffix := "_" + hex.EncodeToString(hash[:])[:6] // 6 char hash
+	cleanUUID := strings.ReplaceAll(string(pod.UID), "-", "")
 
-		// Ensure total length <= 40
-		maxBase := MaxAppHostingNameLength - len(suffix)
-		if len(sanitized) > maxBase {
-			sanitized = sanitized[:maxBase]
-		}
-		return sanitized + suffix
-	}
+	appID := fmt.Sprintf("cvk000%01d_%s", index, cleanUUID)
 
-	// Truncate if needed for default namespace
-	if len(sanitized) > MaxAppHostingNameLength {
-		sanitized = sanitized[:MaxAppHostingNameLength]
-	}
-
-	return sanitized
+	return appID
 }
 
-// AppHostingToK8sName converts a Cisco AppHosting name back to a Kubernetes-style name.
-// This handles simple cases (default namespace). For namespaced lookups with hash suffixes,
-// the original pod name should be retrieved from the pod annotation or a mapping.
-func AppHostingToK8sName(appName string) string {
-	// Remove namespace hash suffix if present (last 7 chars: _XXXXXX where X is hex)
-	if len(appName) > 7 && appName[len(appName)-7] == '_' {
-		suffix := appName[len(appName)-6:]
-		if isHexString(suffix) {
-			appName = appName[:len(appName)-7]
-		}
+// GenerateContainerAppIDs generates an appID for each container in the pod.
+// Returns a map with container name as key and generated appID as value.
+func GenerateContainerAppIDs(pod *v1.Pod) map[string]string {
+	appIDs := make(map[string]string)
+
+	for i, container := range pod.Spec.Containers {
+		appID := GetAppHostingName(pod, int8(i))
+		appIDs[container.Name] = appID
 	}
-	return strings.ReplaceAll(appName, "_", "-")
+
+	return appIDs
 }
 
-// isHexString returns true if s contains only hexadecimal characters
-func isHexString(s string) bool {
-	for _, c := range s {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-			return false
-		}
+// ExtractContainerNameFromLabels extracts the container name from RunOpts labels.
+// Returns the container name if found, empty string otherwise.
+func ExtractContainerNameFromLabels(runOptsLine string) string {
+	// Look for the label: io.kubernetes.container.name=<name>
+	prefix := LabelContainerName + "="
+
+	startIdx := strings.Index(runOptsLine, prefix)
+	if startIdx == -1 {
+		return ""
 	}
-	return true
+
+	// Move past the prefix
+	startIdx += len(prefix)
+
+	// Find the end of the container name (space or end of string)
+	endIdx := strings.Index(runOptsLine[startIdx:], " ")
+	if endIdx == -1 {
+		// Container name is at the end of the line
+		return runOptsLine[startIdx:]
+	}
+
+	return runOptsLine[startIdx : startIdx+endIdx]
 }

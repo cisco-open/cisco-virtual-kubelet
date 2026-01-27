@@ -3,50 +3,141 @@ package iosxe
 import (
 	"context"
 	"fmt"
+	"strings"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
-	"github.com/openconfig/ygot/ygot"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 )
 
-func (d *XEDriver) ConfigureAppContainer(ctx context.Context, pod *v1.Pod) error {
-	// Convert K8s pod name to valid Cisco AppHosting name
-	appName := common.K8sToAppHostingName(pod.Namespace, pod.Name)
-	log.G(ctx).Infof("Configuring AppHosting app: %s (k8s: %s/%s)", appName, pod.Namespace, pod.Name)
+// DeployPod creates and deploys all containers in a pod to the device
+func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
+	log.G(ctx).WithFields(log.Fields{
+		"pod": pod,
+	}).Debug("Pod DeployContainer request received")
 
-	path := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
-
-	apps := &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps{}
-
-	// 2. Create the new list entry (corresponds to app-id) using sanitized name
-	gapp, err := apps.NewApp(appName)
+	err := d.CreatePodApps(ctx, pod)
 	if err != nil {
-		return fmt.Errorf("failed to create app struct: %w", err)
+		return fmt.Errorf("app deployment failed: %v", err)
 	}
-
-	gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
-		ManagementInterfaceName:                        ygot.String("0"),
-		ManagementGuestIpAddress:                       ygot.String("1.1.1.10"),
-		ManagementGuestIpNetmask:                       ygot.String("255.255.255.0"),
-		VirtualportgroupApplicationDefaultGateway_1:    ygot.String("1.1.1.1"),
-		VirtualportgroupGuestInterfaceDefaultGateway_1: ygot.Uint8(0),
-	}
-
-	gapp.ApplicationResourceProfile = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationResourceProfile{
-		ProfileName:      ygot.String("custom"),
-		CpuUnits:         ygot.Uint16(1000),
-		MemoryCapacityMb: ygot.Uint16(512),
-		DiskSizeMb:       ygot.Uint16(1024),
-		Vcpu:             ygot.Uint16(2),
-	}
-
-	err = d.client.Post(ctx, path, apps, d.marshaller)
-	if err != nil {
-		return fmt.Errorf("AppHosting config failed: %w", err)
-	}
-
-	log.G(ctx).Infof("AppHosting app %s successfully configured", appName)
 
 	return nil
+}
+
+// UpdatePod handles pod update requests
+func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
+	log.G(ctx).Info("Pod UpdateContainer request received")
+	return nil
+}
+
+// DeletePod removes all containers in a pod from the device
+func (d *XEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
+	log.G(ctx).WithFields(log.Fields{
+		"pod": pod,
+	}).Debugf("DeletePod request received for pod: %s", pod.Name)
+
+	discoveredContainers, err := d.DiscoverPodContainersOnDevice(ctx, pod)
+	if err != nil {
+		log.G(ctx).Errorf("Failed to discover containers for pod %s/%s: %v", pod.Namespace, pod.Name, err)
+		return fmt.Errorf("failed to discover containers for pod: %w", err)
+	}
+
+	foundCount := len(discoveredContainers)
+	expectedCount := len(pod.Spec.Containers)
+
+	log.G(ctx).Infof("Found %d containers on device for pod %s/%s (expected %d)",
+		foundCount, pod.Namespace, pod.Name, expectedCount)
+
+	if foundCount != expectedCount {
+		log.G(ctx).Errorf("Container count mismatch for pod %s/%s: expected %d, found %d",
+			pod.Namespace, pod.Name, expectedCount, foundCount)
+
+		for _, container := range pod.Spec.Containers {
+			if _, found := discoveredContainers[container.Name]; !found {
+				log.G(ctx).Errorf("Container %s not found on device", container.Name)
+			}
+		}
+	}
+
+	deletionErrors := []string{}
+
+	for containerName, appID := range discoveredContainers {
+		log.G(ctx).Infof("Deleting container %s (app: %s)", containerName, appID)
+
+		err = d.DeleteApp(ctx, appID)
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to delete container %s (app %s): %v", containerName, appID, err)
+			log.G(ctx).Error(errMsg)
+			deletionErrors = append(deletionErrors, errMsg)
+			continue
+		}
+
+		log.G(ctx).Infof("Successfully deleted container %s (app: %s)", containerName, appID)
+	}
+
+	if len(deletionErrors) > 0 {
+		return fmt.Errorf("encountered %d errors during pod cleanup: %s",
+			len(deletionErrors), strings.Join(deletionErrors, "; "))
+	}
+
+	log.G(ctx).Infof("Pod %s/%s cleanup successfully completed", pod.Namespace, pod.Name)
+	return nil
+}
+
+// GetPodStatus retrieves the current status of a pod by querying the device
+func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
+	log.G(ctx).Debug("GetPodStatus request received")
+
+	discoveredContainers, err := d.DiscoverPodContainersOnDevice(ctx, pod)
+	if err != nil {
+		log.G(ctx).Debugf("failed to discover containers: %v", err)
+		return nil, fmt.Errorf("apps for pod %s/%s not found on device", pod.Namespace, pod.Name)
+	}
+
+	if len(discoveredContainers) == 0 {
+		log.G(ctx).Warnf("No containers found on device for pod %s/%s", pod.Namespace, pod.Name)
+		return nil, fmt.Errorf("no containers found for pod %s/%s", pod.Namespace, pod.Name)
+	}
+
+	path := "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data?fields=app"
+
+	root := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
+	err = d.client.Get(ctx, path, root, d.getRestconfUnmarshaller())
+	if err != nil {
+		return nil, fmt.Errorf("bulk status fetch failed: %w", err)
+	}
+
+	appOperDataMap := make(map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App)
+
+	for _, appID := range discoveredContainers {
+		if operData, ok := root.App[appID]; ok {
+			appOperDataMap[appID] = operData
+		} else {
+			log.G(ctx).Warnf("App %s configured but no operational data found", appID)
+		}
+	}
+
+	d.debugLogJson(ctx, root)
+	statusPod := pod.DeepCopy()
+
+	err = d.GetContainerStatus(ctx, statusPod, discoveredContainers, appOperDataMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get container status: %w", err)
+	}
+
+	return statusPod, nil
+}
+
+// ListPods returns all pods currently running on the device
+func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
+	path := "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data?fields=app"
+
+	res := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
+
+	err := d.client.Get(ctx, path, res, d.unmarshaller)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch app oper data: %w", err)
+	}
+
+	pods := []*v1.Pod{}
+	return pods, nil
 }
