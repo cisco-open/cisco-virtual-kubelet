@@ -376,7 +376,7 @@ func (d *XEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod,
 				}
 				containerStatus.Ready = true
 				anyRunning = true
-			case "DEPLOYED", "Activated":
+			case "DEPLOYED", "ACTIVATED", "Activated":
 				containerStatus.State = v1.ContainerState{
 					Waiting: &v1.ContainerStateWaiting{
 						Reason:  "ContainerCreating",
