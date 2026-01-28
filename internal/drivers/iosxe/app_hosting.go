@@ -37,13 +37,13 @@ func (d *XEDriver) CreatePodApps(ctx context.Context, pod *v1.Pod) error {
 		if netConfig.useDHCP {
 			// DHCP mode: only set interface name, omit static IP/gateway configuration
 			gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
-				VnicGateway_0:                        ygot.String("1"),
+				VnicGateway_0:                        ygot.String("0"),
 				VirtualportgroupGuestInterfaceName_1: ygot.String(netConfig.virtualPortgroupInterface),
 			}
 		} else {
 			// Static IP mode: configure IP address, netmask, and gateway
 			gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
-				VnicGateway_0:                                  ygot.String("1"),
+				VnicGateway_0:                                  ygot.String("0"),
 				VirtualportgroupGuestInterfaceName_1:           ygot.String(netConfig.virtualPortgroupInterface),
 				VirtualportgroupGuestIpAddress_1:               ygot.String(netConfig.virtualPortgroupIP),
 				VirtualportgroupGuestIpNetmask_1:               ygot.String(netConfig.virtualPortgroupNetmask),

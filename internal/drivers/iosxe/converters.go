@@ -31,11 +31,17 @@ type resourceConfig struct {
 
 // getNetworkConfig converts pod/container specs to IOS-XE network configuration
 func (d *XEDriver) getNetworkConfig(pod *v1.Pod, container *v1.Container) *networkConfig {
+	// Determine virtualportgroup interface (default to "0" for VirtualPortGroup0)
+	vpgInterface := d.config.Networking.VirtualPortGroup
+	if vpgInterface == "" {
+		vpgInterface = "0"
+	}
+
 	// If DHCP is enabled, return minimal config without static IP settings
 	if d.config.Networking.DHCPEnabled {
 		return &networkConfig{
 			useDHCP:                   true,
-			virtualPortgroupInterface: "0",
+			virtualPortgroupInterface: vpgInterface,
 		}
 	}
 
@@ -44,7 +50,7 @@ func (d *XEDriver) getNetworkConfig(pod *v1.Pod, container *v1.Container) *netwo
 
 	return &networkConfig{
 		useDHCP:                   false,
-		virtualPortgroupInterface: "0",
+		virtualPortgroupInterface: vpgInterface,
 		virtualPortgroupIP:        ip,
 		virtualPortgroupNetmask:   netmask,
 		defaultGateway:            gateway,
