@@ -2,7 +2,6 @@ package iosxe
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"strings"
@@ -12,25 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// ArpData represents the Cisco-IOS-XE-arp-oper:arp-data structure
-type ArpData struct {
-	ArpVrf []ArpVrf `json:"Cisco-IOS-XE-arp-oper:arp-vrf"`
-}
-
-// ArpVrf represents a VRF's ARP entries
-type ArpVrf struct {
-	Vrf      string     `json:"vrf"`
-	ArpEntry []ArpEntry `json:"arp-entry"`
-}
-
-// ArpEntry represents a single ARP table entry
-type ArpEntry struct {
-	Address   string `json:"address"`
-	Hardware  string `json:"hardware"`
-	Mode      string `json:"mode"`
-	Interface string `json:"interface"`
-}
 
 // networkConfig holds the network configuration for an app container
 type networkConfig struct {
@@ -235,15 +215,10 @@ func (d *XEDriver) lookupIPInArpTable(ctx context.Context, macAddresses []string
 		return "", fmt.Errorf("network client not initialized")
 	}
 
-	arpPath := "/restconf/data/Cisco-IOS-XE-arp-oper:arp-data/arp-vrf"
+	arpPath := "/restconf/data/Cisco-IOS-XE-arp-oper:arp-data"
 
-	// Use a simple JSON unmarshaller for ARP data (not ygot)
-	jsonUnmarshaller := func(data []byte, v any) error {
-		return json.Unmarshal(data, v)
-	}
-
-	arpData := &ArpData{}
-	err := d.client.Get(ctx, arpPath, arpData, jsonUnmarshaller)
+	arpData := &Cisco_IOS_XEArpOper_ArpData{}
+	err := d.client.Get(ctx, arpPath, arpData, d.getRestconfUnmarshaller())
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch ARP data: %w", err)
 	}
@@ -255,13 +230,23 @@ func (d *XEDriver) lookupIPInArpTable(ctx context.Context, macAddresses []string
 	}
 
 	// Search through all VRFs for matching MAC address
-	for _, vrf := range arpData.ArpVrf {
-		for _, entry := range vrf.ArpEntry {
-			normalizedArpMac := normalizeMacAddress(entry.Hardware)
+	for vrfName, vrf := range arpData.ArpVrf {
+		// Use ArpOper entries (keyed by address)
+		for _, entry := range vrf.ArpOper {
+			if entry.Hardware == nil {
+				continue
+			}
+			normalizedArpMac := normalizeMacAddress(*entry.Hardware)
 			if normalizedMacs[normalizedArpMac] {
-				log.G(ctx).Debugf("Found ARP entry: IP=%s, MAC=%s, VRF=%s, Interface=%s",
-					entry.Address, entry.Hardware, vrf.Vrf, entry.Interface)
-				return entry.Address, nil
+				if entry.Address != nil {
+					intfName := ""
+					if entry.Interface != nil {
+						intfName = *entry.Interface
+					}
+					log.G(ctx).Debugf("Found ARP entry: IP=%s, MAC=%s, VRF=%s, Interface=%s",
+						*entry.Address, *entry.Hardware, vrfName, intfName)
+					return *entry.Address, nil
+				}
 			}
 		}
 	}
