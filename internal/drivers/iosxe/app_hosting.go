@@ -34,13 +34,22 @@ func (d *XEDriver) CreatePodApps(ctx context.Context, pod *v1.Pod) error {
 		}
 
 		netConfig := d.getNetworkConfig(pod, &container)
-		gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
-			VnicGateway_0:                                  ygot.String("1"),
-			VirtualportgroupGuestInterfaceName_1:           ygot.String(netConfig.virtualPortgroupInterface),
-			VirtualportgroupGuestIpAddress_1:               ygot.String(netConfig.virtualPortgroupIP),
-			VirtualportgroupGuestIpNetmask_1:               ygot.String(netConfig.virtualPortgroupNetmask),
-			VirtualportgroupApplicationDefaultGateway_1:    ygot.String(netConfig.defaultGateway),
-			VirtualportgroupGuestInterfaceDefaultGateway_1: ygot.Uint8(netConfig.gatewayInterface),
+		if netConfig.useDHCP {
+			// DHCP mode: only set interface name, omit static IP/gateway configuration
+			gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
+				VnicGateway_0:                        ygot.String("1"),
+				VirtualportgroupGuestInterfaceName_1: ygot.String(netConfig.virtualPortgroupInterface),
+			}
+		} else {
+			// Static IP mode: configure IP address, netmask, and gateway
+			gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
+				VnicGateway_0:                                  ygot.String("1"),
+				VirtualportgroupGuestInterfaceName_1:           ygot.String(netConfig.virtualPortgroupInterface),
+				VirtualportgroupGuestIpAddress_1:               ygot.String(netConfig.virtualPortgroupIP),
+				VirtualportgroupGuestIpNetmask_1:               ygot.String(netConfig.virtualPortgroupNetmask),
+				VirtualportgroupApplicationDefaultGateway_1:    ygot.String(netConfig.defaultGateway),
+				VirtualportgroupGuestInterfaceDefaultGateway_1: ygot.Uint8(netConfig.gatewayInterface),
+			}
 		}
 
 		gapp.RunOptss = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss{

@@ -78,6 +78,7 @@ type ResourceConfig struct {
 type NetworkConfig struct {
 	DefaultVRF     string             `mapstructure:"defaultVRF"`
 	PodCIDR        string             `mapstructure:"podCIDR"`
+	DHCPEnabled    bool               `mapstructure:"dhcpEnabled"`
 	ServiceCIDR    string             `mapstructure:"serviceCIDR"`
 	DNSServers     []string           `mapstructure:"dnsServers"`
 	VLANRange      VLANRange          `mapstructure:"vlanRange"`

@@ -13,6 +13,7 @@ import (
 
 // networkConfig holds the network configuration for an app container
 type networkConfig struct {
+	useDHCP                   bool
 	virtualPortgroupInterface string
 	virtualPortgroupIP        string
 	virtualPortgroupNetmask   string
@@ -30,9 +31,19 @@ type resourceConfig struct {
 
 // getNetworkConfig converts pod/container specs to IOS-XE network configuration
 func (d *XEDriver) getNetworkConfig(pod *v1.Pod, container *v1.Container) *networkConfig {
+	// If DHCP is enabled, return minimal config without static IP settings
+	if d.config.Networking.DHCPEnabled {
+		return &networkConfig{
+			useDHCP:                   true,
+			virtualPortgroupInterface: "0",
+		}
+	}
+
+	// Static IP mode: allocate IP from PodCIDR or use defaults
 	ip, netmask, gateway := d.allocateIPForContainer(pod, container)
 
 	return &networkConfig{
+		useDHCP:                   false,
 		virtualPortgroupInterface: "0",
 		virtualPortgroupIP:        ip,
 		virtualPortgroupNetmask:   netmask,
