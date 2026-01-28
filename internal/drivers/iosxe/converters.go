@@ -197,7 +197,7 @@ func (d *XEDriver) discoverPodIP(ctx context.Context,
 		// Iterate through network interfaces to find an IPv4 address or MAC
 		for macAddr, netIf := range operData.NetworkInterfaces.NetworkInterface {
 			// First, try to get IP directly from app-hosting oper data
-			if netIf.Ipv4Address != nil && *netIf.Ipv4Address != "" {
+			if netIf.Ipv4Address != nil && *netIf.Ipv4Address != "" && isValidPodIP(*netIf.Ipv4Address) {
 				ipAddress := *netIf.Ipv4Address
 				log.G(ctx).Infof("Discovered Pod IP from app-hosting oper data - container %s (app: %s, MAC: %s): %s",
 					containerName, appID, macAddr, ipAddress)
@@ -267,6 +267,24 @@ func (d *XEDriver) lookupIPInArpTable(ctx context.Context, macAddresses []string
 	}
 
 	return "", fmt.Errorf("no ARP entry found for MAC addresses: %v", macAddresses)
+}
+
+// isValidPodIP checks if an IP address is valid for use as a Pod IP
+// Returns false for unassigned/invalid IPs like 0.0.0.0
+func isValidPodIP(ip string) bool {
+	if ip == "" || ip == "0.0.0.0" {
+		return false
+	}
+	// Parse and validate the IP
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return false
+	}
+	// Check for unspecified address (0.0.0.0 or ::)
+	if parsedIP.IsUnspecified() {
+		return false
+	}
+	return true
 }
 
 // normalizeMacAddress converts a MAC address to lowercase with colons for consistent comparison

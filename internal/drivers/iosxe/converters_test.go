@@ -280,6 +280,54 @@ func parseTestCIDR(cidr string) (string, *net.IPNet, error) {
 	return ip.String(), ipNet, err
 }
 
+func TestIsValidPodIP(t *testing.T) {
+	tests := []struct {
+		name     string
+		ip       string
+		expected bool
+	}{
+		{
+			name:     "valid IPv4",
+			ip:       "192.168.1.100",
+			expected: true,
+		},
+		{
+			name:     "valid IPv4 from DHCP",
+			ip:       "1.1.1.14",
+			expected: true,
+		},
+		{
+			name:     "unspecified 0.0.0.0",
+			ip:       "0.0.0.0",
+			expected: false,
+		},
+		{
+			name:     "empty string",
+			ip:       "",
+			expected: false,
+		},
+		{
+			name:     "invalid IP",
+			ip:       "not-an-ip",
+			expected: false,
+		},
+		{
+			name:     "loopback",
+			ip:       "127.0.0.1",
+			expected: true, // loopback is technically valid
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isValidPodIP(tt.ip)
+			if result != tt.expected {
+				t.Errorf("isValidPodIP(%q) = %v, expected %v", tt.ip, result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestNormalizeMacAddress(t *testing.T) {
 	tests := []struct {
 		name     string
