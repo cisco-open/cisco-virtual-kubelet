@@ -42,7 +42,7 @@ data:
       password: admin
 
     kubelet:
-      node_name: "cunningr-dev-node"
+      node_name: "okteto-dev-node"
       namespace: ""
       update_interval: "30s"
       os: "Linux"

@@ -1,284 +1,162 @@
 # Configuration Reference
 
-This document describes all configuration options for the Cisco Virtual Kubelet Provider.
+This document describes the configuration for the Cisco Virtual Kubelet Provider.
+
+## Supported Devices
+
+Currently supported:
+- **Cisco Catalyst 8000V** (cat8kv) virtual routers running IOS-XE 17.x+
+
+## Device Prerequisites
+
+The following IOS-XE configuration is required on the Catalyst 8000V:
+
+```
+! Enable IOx container platform
+iox
+
+! Enable RESTCONF API
+restconf
+
+! Disable app-hosting verification (required for unsigned containers)
+app-hosting verification disable
+no app-hosting signed-verification
+```
+
+### VirtualPortGroup and DHCP Configuration
+
+Configure a VirtualPortGroup interface to serve as the gateway for container networking, along with a DHCP pool:
+
+```
+! Configure VirtualPortGroup0 as the gateway for containers
+interface VirtualPortGroup0
+ ip address 192.168.1.254 255.255.255.0
+ ip nat inside
+!
+! Configure DHCP pool for app-hosting containers
+ip dhcp pool app-hosting
+ network 192.168.1.0 255.255.255.0
+ default-router 192.168.1.254
+ dns-server 192.168.8.8
+```
+
+The VirtualPortGroup IP address (192.168.1.254) becomes the default gateway for containers that receive DHCP addresses from this pool.
 
 ## Configuration File
 
-The provider uses a YAML configuration file. Default location: `/etc/cisco-vk/config.yaml`
+The provider uses a YAML configuration file with two sections:
+- **kubelet**: Virtual Kubelet node settings
+- **device**: Cisco device connection settings
 
-### Complete Configuration Example
+Default location: `/etc/cisco-vk/config.yaml`
 
-```yaml
-# Node name as it will appear in Kubernetes
-nodeName: cisco-switch-01
-
-# Device configurations (one or more devices per provider instance)
-devices:
-  - name: c9k-primary          # Unique identifier for this device
-    type: c9k                   # Device type: c9k, c8k, or c8kv
-    address: 192.168.1.100      # Device management IP or hostname
-    port: 443                   # RESTCONF port (default: 443)
-    username: admin             # Device username
-    password: cisco123          # Device password
-    useHTTPS: true              # Use HTTPS for RESTCONF (recommended)
-    verifyTLS: false            # Verify TLS certificates
-    timeout: 30                 # Connection timeout in seconds
-
-# Network configuration for containers
-networkConfig:
-  defaultGateway: "192.168.1.1"   # Default gateway for containers
-  subnetMask: "255.255.255.0"     # Subnet mask
-  ipPoolStart: "192.168.1.200"    # Start of IP pool for containers
-  ipPoolEnd: "192.168.1.210"      # End of IP pool
-  vlanID: 100                     # VLAN ID for container traffic
-  managementInterface: 0          # Management interface number
-
-# Default resource allocations for containers
-resourceDefaults:
-  cpuUnits: 1000                 # CPU units (1000 = 1 core)
-  memoryMB: 512                  # Memory in MB
-  diskMB: 1024                   # Persistent disk in MB
-  vcpu: 1                        # Number of vCPUs
-  profile: "custom"              # Resource profile name
-```
-
-## Environment Variables
-
-All settings can also be configured via environment variables:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CISCO_CONFIG_PATH` | Path to configuration file | `/etc/cisco-vk/config.yaml` |
-| `NODE_NAME` | Kubernetes node name | (required) |
-| `KUBECONFIG` | Path to kubeconfig | `~/.kube/config` |
-| `CISCO_DEVICE_ADDRESS` | Device IP address | (from config file) |
-| `CISCO_DEVICE_USERNAME` | Device username | (from config file) |
-| `CISCO_DEVICE_PASSWORD` | Device password | (from config file) |
-| `APISERVER_CERT_LOCATION` | TLS certificate path | (optional) |
-| `APISERVER_KEY_LOCATION` | TLS private key path | (optional) |
-| `VKUBELET_POD_IP` | Internal IP for the node | `127.0.0.1` |
-| `LOG_LEVEL` | Logging level | `info` |
-
-## Command-Line Flags
-
-```
-Usage: cisco-vk [flags]
-
-Flags:
-      --config string        Path to provider configuration file
-      --kubeconfig string    Path to kubeconfig file
-      --nodename string      Kubernetes node name (required)
-      --os string            Operating system (default "Linux")
-      --internal-ip string   Internal IP address (default "127.0.0.1")
-      --port int             Kubelet API server port (default 10250)
-      --cert string          Path to TLS certificate
-      --key string           Path to TLS private key
-      --log-level string     Log level: debug, info, warn, error (default "info")
-      --disable-tls          Disable TLS for API server
-      --version              Show version information
-```
-
-## Device Types
-
-### Catalyst 9000 Series (c9k)
+## Minimal Configuration Example
 
 ```yaml
-devices:
-  - name: c9k-switch
-    type: c9k
-    address: 192.168.1.100
-    port: 443
-    username: admin
-    password: cisco
-    useHTTPS: true
-    verifyTLS: false
+device:
+  name: cat8kv-router
+  driver: XE
+  address: "192.0.2.24"
+  port: 443
+  username: admin
+  password: cisco
+  tls:
+    enabled: true
+    insecureSkipVerify: true
+  networking:
+    dhcpEnabled: true
+    virtualPortGroup: "0"
+    defaultVRF: ""
+
+kubelet:
+  node_name: "cat8kv-node"
+  namespace: ""
+  update_interval: "30s"
+  os: "Linux"
+  node_internal_ip: "192.0.2.24"
 ```
 
-**Supported Models**: C9300, C9400, C9500, C9600
+## Configuration Fields
 
-**Requirements**:
-- IOS-XE 17.x or later
-- IOx enabled
-- Minimum 8GB flash storage
-- App-hosting license
+### Kubelet Section
 
-### Catalyst 8000 Series (c8k)
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `node_name` | string | Yes | - | Kubernetes node name |
+| `namespace` | string | No | "" | Namespace filter (empty = all) |
+| `update_interval` | string | No | "30s" | Node status update interval |
+| `os` | string | No | "Linux" | Operating system label |
+| `node_internal_ip` | string | No | - | Internal IP for the node |
 
-```yaml
-devices:
-  - name: c8k-router
-    type: c8k
-    address: 192.168.2.100
-    port: 443
-    username: admin
-    password: cisco
-    useHTTPS: true
-    verifyTLS: false
-```
+### Device Section
 
-**Supported Models**: C8200, C8300, C8500
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `name` | string | Yes | - | Device identifier |
+| `driver` | string | Yes | - | Driver type (use `XE` for cat8kv) |
+| `address` | string | Yes | - | Device management IP address |
+| `port` | int | No | 443 | RESTCONF API port |
+| `username` | string | Yes | - | Device username |
+| `password` | string | Yes | - | Device password |
 
-### Catalyst 8000V (c8kv)
+### TLS Section
 
-```yaml
-devices:
-  - name: c8kv-virtual
-    type: c8kv
-    address: 192.168.3.100
-    port: 443
-    username: admin
-    password: cisco
-    useHTTPS: true
-    verifyTLS: false
-```
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `enabled` | bool | No | true | Enable HTTPS |
+| `insecureSkipVerify` | bool | No | false | Skip certificate verification |
 
-## Network Configuration Options
+### Networking Section
 
-### Management Interface
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `dhcpEnabled` | bool | No | false | Use DHCP for container IPs |
+| `virtualPortGroup` | string | No | "0" | VirtualPortGroup interface number |
+| `defaultVRF` | string | No | "" | VRF for container traffic |
 
-The management interface connects the container to the network:
+## Example Pod Manifest
 
-```yaml
-networkConfig:
-  managementInterface: 0      # Interface 0 is typically AppGigabitEthernet
-```
-
-### IP Address Pool
-
-Define a range of IP addresses for containers:
-
-```yaml
-networkConfig:
-  ipPoolStart: "192.168.1.200"
-  ipPoolEnd: "192.168.1.210"
-```
-
-The provider automatically assigns IPs from this pool to new containers.
-
-### VLAN Configuration
-
-```yaml
-networkConfig:
-  vlanID: 100                 # VLAN for container traffic
-```
-
-## Resource Profiles
-
-### Default Resources
-
-```yaml
-resourceDefaults:
-  cpuUnits: 1000              # Equivalent to 1 CPU core
-  memoryMB: 512               # 512 MB RAM
-  diskMB: 1024                # 1 GB persistent storage
-  vcpu: 1                     # 1 virtual CPU
-  profile: "custom"           # Profile name
-```
-
-### Per-Pod Resource Requests
-
-Resources can be specified per-pod in the Kubernetes manifest:
+Deploy a container to the cat8kv node:
 
 ```yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  name: my-app
+  name: dhcp-test-pod
+  namespace: default
 spec:
+  nodeName: cat8kv-node
   containers:
-  - name: app
-    image: flash:/app.tar
+  - name: test-app
+    image: flash:/hello-app.iosxe.tar
     resources:
       requests:
-        cpu: "500m"           # 0.5 CPU cores
-        memory: "256Mi"       # 256 MB RAM
+        memory: "64Mi"
+        cpu: "250m"
       limits:
-        cpu: "1000m"          # 1 CPU core max
-        memory: "512Mi"       # 512 MB RAM max
+        memory: "128Mi"
+        cpu: "500m"
 ```
 
-## Multi-Device Configuration
+The container image must be pre-loaded onto the device flash storage.
 
-Run multiple devices under one provider instance:
+## Verifying Device Configuration
 
-```yaml
-nodeName: cisco-datacenter
-
-devices:
-  - name: switch-rack1
-    type: c9k
-    address: 192.168.1.100
-    username: admin
-    password: cisco
-    useHTTPS: true
-
-  - name: switch-rack2
-    type: c9k
-    address: 192.168.1.101
-    username: admin
-    password: cisco
-    useHTTPS: true
-
-  - name: router-edge
-    type: c8k
-    address: 192.168.2.100
-    username: admin
-    password: cisco
-    useHTTPS: true
-```
-
-## Security Recommendations
-
-### TLS Verification
-
-For production, enable TLS verification:
-
-```yaml
-devices:
-  - name: production-switch
-    verifyTLS: true           # Verify device certificates
-```
-
-### Credential Management
-
-Use environment variables or secrets management:
+Test RESTCONF connectivity:
 
 ```bash
-# Use environment variables instead of config file
-export CISCO_DEVICE_PASSWORD=$(vault read -field=password secret/cisco)
+curl -k -u admin:cisco \
+  https://192.0.2.24/restconf/data/Cisco-IOS-XE-native:native/hostname
 ```
 
-### Network Segmentation
+Verify IOx is running:
 
-- Place management traffic on a dedicated VLAN
-- Use ACLs to restrict RESTCONF access
-- Enable HTTPS only (disable HTTP)
-
-## Logging Configuration
-
-### Log Levels
-
-| Level | Description |
-|-------|-------------|
-| `debug` | Verbose debugging information |
-| `info` | General operational information |
-| `warn` | Warning messages |
-| `error` | Error messages only |
-
-### Example with Debug Logging
-
-```bash
-cisco-vk --config /etc/cisco-vk/config.yaml --log-level debug
+```
+cat8kv# show iox-service
 ```
 
-## Configuration Validation
+Check app-hosting status:
 
-Test your configuration before deployment:
-
-```bash
-# Validate YAML syntax
-yamllint /etc/cisco-vk/config.yaml
-
-# Test device connectivity
-curl -k -u admin:password https://192.168.1.100/restconf/data/Cisco-IOS-XE-native:native/hostname
+```
+cat8kv# show app-hosting list
 ```
