@@ -105,7 +105,7 @@ def update_xml_file_directly(app_name, new_status, file_path):
         root = tree.getroot()
 
         # 2. Wildcard search handles any existing prefix issues during lookup
-        xpath_query = f".#{{*}}app[{{*}}name='{app_name}']/{{*}}details/{{*}}state"
+        xpath_query = f".//{{*}}app[{{*}}name='{app_name}']/{{*}}details/{{*}}state"
         state_node = root.find(xpath_query)
 
         if state_node is not None:
