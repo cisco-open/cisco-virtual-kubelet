@@ -157,11 +157,9 @@ kubectl apply -f ./dev/test-pod-dhcp.yaml
 
 ## Documentation
 
-- [Installation Guide](docs/INSTALL.md) - Detailed installation instructions
-- [Configuration Reference](docs/CONFIGURATION.md) - All configuration options
-- [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment patterns
+- [Configuration Reference](docs/CONFIGURATION.md) - Configuration options and device setup
 - [Architecture](docs/ARCHITECTURE.md) - Technical architecture details
-- [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
+- [API Reference](docs/API.md) - RESTCONF API details
 - [API Reference](docs/API.md) - RESTCONF API details
 
 ## Project Structure
