@@ -34,13 +34,22 @@ func (d *XEDriver) CreatePodApps(ctx context.Context, pod *v1.Pod) error {
 		}
 
 		netConfig := d.getNetworkConfig(pod, &container)
-		gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
-			VnicGateway_0:                                  ygot.String("1"),
-			VirtualportgroupGuestInterfaceName_1:           ygot.String(netConfig.virtualPortgroupInterface),
-			VirtualportgroupGuestIpAddress_1:               ygot.String(netConfig.virtualPortgroupIP),
-			VirtualportgroupGuestIpNetmask_1:               ygot.String(netConfig.virtualPortgroupNetmask),
-			VirtualportgroupApplicationDefaultGateway_1:    ygot.String(netConfig.defaultGateway),
-			VirtualportgroupGuestInterfaceDefaultGateway_1: ygot.Uint8(netConfig.gatewayInterface),
+		if netConfig.useDHCP {
+			// DHCP mode: only set interface name, omit static IP/gateway configuration
+			gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
+				VnicGateway_0:                        ygot.String("0"),
+				VirtualportgroupGuestInterfaceName_1: ygot.String(netConfig.virtualPortgroupInterface),
+			}
+		} else {
+			// Static IP mode: configure IP address, netmask, and gateway
+			gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
+				VnicGateway_0:                                  ygot.String("0"),
+				VirtualportgroupGuestInterfaceName_1:           ygot.String(netConfig.virtualPortgroupInterface),
+				VirtualportgroupGuestIpAddress_1:               ygot.String(netConfig.virtualPortgroupIP),
+				VirtualportgroupGuestIpNetmask_1:               ygot.String(netConfig.virtualPortgroupNetmask),
+				VirtualportgroupApplicationDefaultGateway_1:    ygot.String(netConfig.defaultGateway),
+				VirtualportgroupGuestInterfaceDefaultGateway_1: ygot.Uint8(netConfig.gatewayInterface),
+			}
 		}
 
 		gapp.RunOptss = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss{
@@ -385,4 +394,47 @@ func (d *XEDriver) DiscoverPodContainersOnDevice(ctx context.Context, pod *v1.Po
 	}
 
 	return containerToAppID, nil
+}
+
+// DiscoverAppDHCPIP queries the device for the app's IP address from app-hosting-oper-data.
+// The NetworkInterface struct contains the IPv4 address directly, so no ARP lookup is needed.
+// Returns the discovered IP address, or an error if not found.
+// --- REQUIRES VERIFICATION IN NEW CODE, not working in current c8kv router code - "c9300 running 26.01 dev image seems to work for ipv4" ---
+func (d *XEDriver) DiscoverAppDHCPIP(ctx context.Context, appName string) (string, error) {
+	log.G(ctx).Debugf("Discovering DHCP IP for app: %s", appName)
+
+	// Query app-hosting-oper-data for the app's network interfaces
+	appOperPath := "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data"
+
+	root := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
+	err := d.client.Get(ctx, appOperPath, root, d.getRestconfUnmarshaller())
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch app oper data: %w", err)
+	}
+
+	// Find the specific app in the operational data
+	var appOperData *Cisco_IOS_XEAppHostingOper_AppHostingOperData_App
+	for _, app := range root.App {
+		if app.Name != nil && *app.Name == appName {
+			appOperData = app
+			break
+		}
+	}
+
+	if appOperData == nil {
+		return "", fmt.Errorf("app %s not found in operational data", appName)
+	}
+
+	// Extract IPv4 address from network interfaces
+	if appOperData.NetworkInterfaces != nil {
+		for macAddr, netIf := range appOperData.NetworkInterfaces.NetworkInterface {
+			if netIf.Ipv4Address != nil && *netIf.Ipv4Address != "" {
+				ipAddress := *netIf.Ipv4Address
+				log.G(ctx).Infof("Discovered DHCP IP for app %s (MAC: %s): %s", appName, macAddr, ipAddress)
+				return ipAddress, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no IPv4 address found for app %s", appName)
 }

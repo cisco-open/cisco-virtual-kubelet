@@ -76,9 +76,11 @@ type ResourceConfig struct {
 
 // NetworkConfig represents networking configuration
 type NetworkConfig struct {
-	DefaultVRF     string             `mapstructure:"defaultVRF"`
-	PodCIDR        string             `mapstructure:"podCIDR"`
-	ServiceCIDR    string             `mapstructure:"serviceCIDR"`
+	DefaultVRF       string             `mapstructure:"defaultVRF"`
+	PodCIDR          string             `mapstructure:"podCIDR"`
+	DHCPEnabled      bool               `mapstructure:"dhcpEnabled"`
+	VirtualPortGroup string             `mapstructure:"virtualPortGroup"`
+	ServiceCIDR      string             `mapstructure:"serviceCIDR"`
 	DNSServers     []string           `mapstructure:"dnsServers"`
 	VLANRange      VLANRange          `mapstructure:"vlanRange"`
 	SecurityGroups []string           `mapstructure:"securityGroups,omitempty"`
