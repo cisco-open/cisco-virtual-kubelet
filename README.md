@@ -65,8 +65,13 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 
 ```bash
 # Clone the repository
+cd
 git clone https://github.com/cisco-open/cisco-virtual-kubelet.git
 cd cisco-virtual-kubelet
+
+# Ensure that the correct version of go is exported
+sudo which go
+sudo go version
 
 # Build the provider
 make build
@@ -87,7 +92,7 @@ The provider uses a two-tier YAML configuration with `kubelet` and `device` sect
 device:
   name: cat8kv-router
   driver: XE
-  address: "192.0.2.24" # Router IP Address
+  address: "192.0.2.24" # Update with Router IP Address
   port: 443
   username: admin
   password: cisco
@@ -104,15 +109,23 @@ kubelet:
   namespace: ""
   update_interval: "30s"
   os: "Linux"
-  node_internal_ip: "192.0.2.24" # Router IP Address
+  node_internal_ip: "192.0.2.24" # Update with Router IP Address
 ```
 
 See [Configuration Reference](docs/CONFIGURATION.md) for all options.
 
+Ensure KUBECONFIG is exported: 
+
+```bash
+export KUBECONFIG=~/.kube/config    #location may vary based on installation
+```
+
+
 Start the provider:
 
 ```bash
-cisco-vk --config ./dev/config-dhcp-test.yaml
+cd ~/cisco-virtual-kubelet
+cisco-vk --config dev/config-dhcp-test.yaml
 ```
 
 Deploy a container:
@@ -139,7 +152,7 @@ spec:
 ```
 
 ```bash
-kubectl apply -f ./dev/config-dhcp-test.yaml
+kubectl apply -f ./dev/test-pod-dhcp.yaml
 ```
 
 ## Documentation
