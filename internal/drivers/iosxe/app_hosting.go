@@ -399,6 +399,7 @@ func (d *XEDriver) DiscoverPodContainersOnDevice(ctx context.Context, pod *v1.Po
 // DiscoverAppDHCPIP queries the device for the app's IP address from app-hosting-oper-data.
 // The NetworkInterface struct contains the IPv4 address directly, so no ARP lookup is needed.
 // Returns the discovered IP address, or an error if not found.
+// --- REQUIRES VERIFICATION IN NEW CODE, not working in current c8kv router code - "c9300 running 26.01 dev image seems to work for ipv4" ---
 func (d *XEDriver) DiscoverAppDHCPIP(ctx context.Context, appName string) (string, error) {
 	log.G(ctx).Debugf("Discovering DHCP IP for app: %s", appName)
 
