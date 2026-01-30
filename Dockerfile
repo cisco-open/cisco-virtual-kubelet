@@ -29,4 +29,5 @@ USER nonroot:nonroot
 # Define working dir
 WORKDIR /app
 
+# Add entrypoint
 ENTRYPOINT ["/usr/local/bin/cisco-vk"]
