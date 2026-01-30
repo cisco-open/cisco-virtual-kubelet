@@ -1,47 +1,56 @@
-# Multi-Device Configuration Example
-# Use this template when managing multiple Cisco devices from one provider
+# Multi-Device Deployment Note
+#
+# The current architecture supports one device per provider instance.
+# To manage multiple Catalyst 8000V devices, run separate provider instances,
+# each with its own configuration file and unique node_name.
+#
+# Example: Deploy three cat8kv devices as separate Kubernetes nodes
+#
+# Instance 1: cat8kv-node-1 -> 192.168.1.100
+# Instance 2: cat8kv-node-2 -> 192.168.1.101
+# Instance 3: cat8kv-node-3 -> 192.168.1.102
+#
+# Each instance runs independently and registers as a separate node.
 
-nodeName: cisco-datacenter-cluster
+# --- config-node-1.yaml ---
+device:
+  name: cat8kv-router-1
+  driver: XE
+  address: "192.168.1.100"
+  port: 443
+  username: admin
+  password: cisco123
+  tls:
+    enabled: true
+    insecureSkipVerify: true
+  networking:
+    dhcpEnabled: true
+    virtualPortGroup: "0"
+    defaultVRF: ""
 
-devices:
-  - name: c9k-switch-rack1
-    type: c9k
-    address: 192.168.1.100
-    port: 443
-    username: admin
-    password: cisco123
-    useHTTPS: true
-    verifyTLS: false
+kubelet:
+  node_name: "cat8kv-node-1"
+  namespace: ""
+  update_interval: "30s"
+  os: "Linux"
+  node_internal_ip: "192.168.1.100"
 
-  - name: c9k-switch-rack2
-    type: c9k
-    address: 192.168.1.101
-    port: 443
-    username: admin
-    password: cisco123
-    useHTTPS: true
-    verifyTLS: false
+# --- config-node-2.yaml (separate file) ---
+# device:
+#   name: cat8kv-router-2
+#   driver: XE
+#   address: "192.168.1.101"
+#   ...
+# kubelet:
+#   node_name: "cat8kv-node-2"
+#   ...
 
-  - name: c8k-edge-router
-    type: c8k
-    address: 192.168.2.100
-    port: 443
-    username: admin
-    password: cisco123
-    useHTTPS: true
-    verifyTLS: false
-
-networkConfig:
-  defaultGateway: "192.168.1.1"
-  subnetMask: "255.255.255.0"
-  ipPoolStart: "192.168.1.200"
-  ipPoolEnd: "192.168.1.250"
-  vlanID: 100
-  managementInterface: 0
-
-resourceDefaults:
-  cpuUnits: 1000
-  memoryMB: 512
-  diskMB: 1024
-  vcpu: 1
-  profile: "custom"
+# --- config-node-3.yaml (separate file) ---
+# device:
+#   name: cat8kv-router-3
+#   driver: XE
+#   address: "192.168.1.102"
+#   ...
+# kubelet:
+#   node_name: "cat8kv-node-3"
+#   ...

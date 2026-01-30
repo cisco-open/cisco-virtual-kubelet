@@ -26,8 +26,4 @@ COPY --from=builder /app/cisco-vk /usr/local/bin/cisco-vk
 # Use nonroot user
 USER nonroot:nonroot
 
-# Define working dir
-WORKDIR /app
-
-# Add Entrypoint
 ENTRYPOINT ["/usr/local/bin/cisco-vk"]
