@@ -1,0 +1,21 @@
+device:
+  name: cat8kv-router
+  driver: XE
+  address: "192.0.2.24"
+  port: 443
+  username: admin
+  password: cisco
+  tls:
+    enabled: true
+    insecureSkipVerify: true
+  networking:
+    dhcpEnabled: true
+    virtualPortGroup: "0"
+    defaultVRF: ""
+
+kubelet:
+  node_name: "cat8kv-node"
+  namespace: ""
+  update_interval: "30s"
+  os: "Linux"
+  node_internal_ip: "192.0.2.24"

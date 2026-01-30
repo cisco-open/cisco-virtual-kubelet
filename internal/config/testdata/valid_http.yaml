@@ -1,0 +1,6 @@
+device:
+  name: c8k-switch-2
+  driver: c8k
+  address: localhost
+  username: admin
+  password: admin

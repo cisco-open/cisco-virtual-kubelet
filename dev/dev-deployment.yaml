@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: okteto-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: okteto-dev
+  template:
+    metadata:
+      labels:
+        app: okteto-dev
+    spec:
+      serviceAccountName: sa-virtual-kubelet
+      containers:
+      - name: main
+        image: registry.k8s.io/pause:3.9
+        volumeMounts:
+        - name: config
+          mountPath: "/etc/virtual-kubelet"
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: cm-cisco-vk-config
+          items:
+          - key: "config.yaml"
+            path: "config.yaml"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-cisco-vk-config
+data:   
+  config.yaml: |
+    device:
+      name: c8k-switch
+      driver: FAKE
+      address: localhost
+      username: admin
+      password: admin
+
+    kubelet:
+      node_name: "okteto-dev-node"
+      namespace: ""
+      update_interval: "30s"
+      os: "Linux"
+      node_internal_ip: "1.1.1.1"
+ 
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-virtual-kubelet
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: virtual-kubelet-role
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/status"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/status", "pods/log"]
+    verbs: ["get", "list", "watch", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["services", "endpoints", "secrets", "configmaps", "events"]
+    verbs: ["get", "list", "watch", "create"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: virtual-kubelet-binding
+subjects:
+- kind: ServiceAccount
+  name: sa-virtual-kubelet
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: virtual-kubelet-role
+  apiGroup: rbac.authorization.k8s.io

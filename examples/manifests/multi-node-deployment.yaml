@@ -1,0 +1,56 @@
+# Example: Deploy to multiple Cisco switches
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-on-switch-101
+  namespace: default
+  labels:
+    app: myapp
+    node: switch-101
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: cisco-198-51-100-101
+  tolerations:
+  - key: "virtual-kubelet.io/provider"
+    operator: "Equal"
+    value: "cisco"
+    effect: "NoSchedule"
+  containers:
+  - name: app
+    image: flash:/myapp.tar
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "256Mi"
+      limits:
+        cpu: "1000m"
+        memory: "512Mi"
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-on-switch-102
+  namespace: default
+  labels:
+    app: myapp
+    node: switch-102
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: cisco-198-51-100-102
+  tolerations:
+  - key: "virtual-kubelet.io/provider"
+    operator: "Equal"
+    value: "cisco"
+    effect: "NoSchedule"
+  containers:
+  - name: app
+    image: flash:/myapp.tar
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "256Mi"
+      limits:
+        cpu: "1000m"
+        memory: "512Mi"
