@@ -1,0 +1,10 @@
+device:
+  name: c8k-switch
+  driver: c8k
+  address: localhost
+  port: 80
+  username: admin
+  password: admin
+  tls:
+    enabled: false
+  unknown_field: "this should fail"

@@ -1,0 +1,138 @@
+// Copyright © 2026 Cisco Systems Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package common
+
+import (
+	"bytes"
+	"context"
+	"crypto/tls"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+
+	"github.com/virtual-kubelet/virtual-kubelet/log"
+)
+
+func NewNetworkClient(baseURL string, auth *ClientAuth, tlsConfig *tls.Config, timeout time.Duration) (NetworkClient, error) {
+
+	ctype := "restconf"
+	switch ctype {
+	case "restconf":
+		return NewClientRestconfClient(baseURL, auth, tlsConfig, timeout), nil
+	default:
+		return nil, fmt.Errorf("unsupported device type")
+	}
+}
+
+func NewClientRestconfClient(baseURL string, auth *ClientAuth, tlsConfig *tls.Config, timeout time.Duration) *RestconfClient {
+	username := ""
+	password := ""
+
+	if auth != nil {
+		if auth.Username != "" {
+			username = auth.Username
+		}
+		if auth.Password != "" {
+			password = auth.Password
+		}
+	}
+
+	httpClient := &http.Client{
+		Timeout: timeout,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+
+	return &RestconfClient{
+		BaseURL:    baseURL,
+		HTTPClient: httpClient,
+		Username:   username,
+		Password:   password,
+	}
+}
+
+// RestconfClient implements the NetworkClient interface for RESTconf
+type RestconfClient struct {
+	BaseURL    string
+	HTTPClient *http.Client
+	Username   string
+	Password   string
+}
+
+func (c *RestconfClient) Get(ctx context.Context, path string, result any, unmarshal func([]byte, any) error) error {
+	return c.doRequest(ctx, "GET", path, nil, result, nil, unmarshal)
+}
+
+func (c *RestconfClient) Post(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error {
+	return c.doRequest(ctx, "POST", path, payload, nil, marshal, nil)
+}
+
+func (c *RestconfClient) Patch(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error {
+	return c.doRequest(ctx, "PATCH", path, payload, nil, marshal, nil)
+}
+
+func (c *RestconfClient) Delete(ctx context.Context, path string) error {
+	return c.doRequest(ctx, "DELETE", path, nil, nil, nil, nil)
+}
+
+func (c *RestconfClient) doRequest(ctx context.Context, method, path string, payload any, result any, marshal func(any) ([]byte, error), unmarshal func([]byte, any) error) error {
+	var body io.Reader
+	if payload != nil && marshal != nil {
+		data, err := marshal(payload)
+		if err != nil {
+			return fmt.Errorf("marshal failed: %w", err)
+		}
+		body = bytes.NewBuffer(data)
+
+		log.G(ctx).WithFields(log.Fields{
+			"body": string(data),
+		}).Debug("Sending Body:")
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+path, body)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/yang-data+json")
+	req.Header.Set("Accept", "application/yang-data+json")
+	req.SetBasicAuth(c.Username, c.Password)
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("request failed with status %s", resp.Status)
+	}
+
+	if result != nil && unmarshal != nil {
+		log.G(ctx).Info("Checking response ...")
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		log.G(ctx).WithFields(log.Fields{
+			"raw_json": string(data),
+		}).Debug("Raw JSON response before unmarshal")
+		return unmarshal(data, result)
+	}
+
+	return nil
+}

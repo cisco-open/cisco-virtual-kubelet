@@ -1,0 +1,18 @@
+# deploy:
+#   - kubectl apply -f dev-deployment.yaml
+
+dev:
+  okteto-dev:
+    image: ghcr.io/okteto/golang:1
+    command: bash
+    sync:
+      - ..:/usr/src/app
+    # volumes:
+    #   - /go
+    #   - /root/.cache
+    # securityContext:
+    #   capabilities:
+    #     add:
+    #       - SYS_PTRACE
+    forward:
+      - 2345:2345
