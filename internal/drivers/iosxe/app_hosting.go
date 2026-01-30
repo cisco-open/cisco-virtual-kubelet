@@ -300,6 +300,23 @@ func (d *XEDriver) ListAppHostingApps(ctx context.Context) ([]*Cisco_IOS_XEAppHo
 	return appsList, nil
 }
 
+// GetAppOperationalData queries the device for operational data of all AppHosting apps.
+// Returns a map of appName -> operational data.
+func (d *XEDriver) GetAppOperationalData(ctx context.Context) (map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App, error) {
+	path := "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data?fields=app"
+
+	root := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
+	err := d.client.Get(ctx, path, root, d.getRestconfUnmarshaller())
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch app operational data: %w", err)
+	}
+
+	log.G(ctx).Debugf("Fetched operational data for %d apps", len(root.App))
+	d.debugLogJson(ctx, root)
+
+	return root.App, nil
+}
+
 // DiscoverAppDHCPIP queries the device for the app's IP address from app-hosting-oper-data.
 // The NetworkInterface struct contains the IPv4 address directly, so no ARP lookup is needed.
 // Returns the discovered IP address, or an error if not found.

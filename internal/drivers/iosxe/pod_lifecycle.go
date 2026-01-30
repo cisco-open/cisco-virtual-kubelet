@@ -198,6 +198,7 @@ func (d *XEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
 	log.G(ctx).Debug("GetPodStatus request received")
 
+	// Get containers for this pod
 	discoveredContainers, err := d.GetPodContainers(ctx, pod)
 	if err != nil {
 		log.G(ctx).Debugf("failed to get pod containers: %v", err)
@@ -209,25 +210,23 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 		return nil, fmt.Errorf("no containers found for pod %s/%s", pod.Namespace, pod.Name)
 	}
 
-	path := "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data?fields=app"
-
-	root := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
-	err = d.client.Get(ctx, path, root, d.getRestconfUnmarshaller())
+	// Fetch operational data for all apps
+	allAppOperData, err := d.GetAppOperationalData(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("bulk status fetch failed: %w", err)
+		return nil, fmt.Errorf("failed to fetch app operational data: %w", err)
 	}
 
+	// Filter operational data to only the apps for this pod
 	appOperDataMap := make(map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App)
-
-	for _, appID := range discoveredContainers {
-		if operData, ok := root.App[appID]; ok {
+	for containerName, appID := range discoveredContainers {
+		if operData, ok := allAppOperData[appID]; ok {
 			appOperDataMap[appID] = operData
 		} else {
-			log.G(ctx).Warnf("App %s configured but no operational data found", appID)
+			log.G(ctx).Warnf("App %s for container %s configured but no operational data found", appID, containerName)
 		}
 	}
 
-	d.debugLogJson(ctx, root)
+	// Create a copy of the pod and update its status
 	statusPod := pod.DeepCopy()
 
 	err = d.GetContainerStatus(ctx, statusPod, discoveredContainers, appOperDataMap)
