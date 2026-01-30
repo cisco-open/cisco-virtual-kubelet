@@ -20,6 +20,8 @@ import (
 	"net"
 	"strings"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
+	"github.com/openconfig/ygot/ygot"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -42,6 +44,97 @@ type resourceConfig struct {
 	memoryMB uint16
 	diskMB   uint16
 	vcpu     uint16
+}
+
+// AppHostingConfig represents a complete IOS-XE AppHosting configuration for a single container
+type AppHostingConfig struct {
+	AppName       string
+	ContainerName string
+	ImagePath     string
+	Apps          *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps
+}
+
+// ConvertPodToAppConfigs converts a Kubernetes Pod spec into a slice of IOS-XE AppHosting configurations.
+// Each container in the pod is converted to a separate AppHosting app configuration.
+// Returns a slice of AppHostingConfig structs ready to be created on the device.
+func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, error) {
+	containerAppIDs := common.GenerateContainerAppIDs(pod)
+	configs := make([]AppHostingConfig, 0, len(pod.Spec.Containers))
+
+	for _, container := range pod.Spec.Containers {
+		appName := containerAppIDs[container.Name]
+
+		// Create the Apps container structure
+		apps := &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps{}
+
+		// Create new app entry
+		gapp, err := apps.NewApp(appName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create app struct for container %s: %w", container.Name, err)
+		}
+
+		// Configure network resources
+		netConfig := d.getNetworkConfig(pod, &container)
+		if netConfig.useDHCP {
+			// DHCP mode: only set interface name, omit static IP/gateway configuration
+			gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
+				VnicGateway_0:                        ygot.String("0"),
+				VirtualportgroupGuestInterfaceName_1: ygot.String(netConfig.virtualPortgroupInterface),
+			}
+		} else {
+			// Static IP mode: configure IP address, netmask, and gateway
+			gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
+				VnicGateway_0:                                  ygot.String("0"),
+				VirtualportgroupGuestInterfaceName_1:           ygot.String(netConfig.virtualPortgroupInterface),
+				VirtualportgroupGuestIpAddress_1:               ygot.String(netConfig.virtualPortgroupIP),
+				VirtualportgroupGuestIpNetmask_1:               ygot.String(netConfig.virtualPortgroupNetmask),
+				VirtualportgroupApplicationDefaultGateway_1:    ygot.String(netConfig.defaultGateway),
+				VirtualportgroupGuestInterfaceDefaultGateway_1: ygot.Uint8(netConfig.gatewayInterface),
+			}
+		}
+
+		// Configure run options with pod/container labels
+		gapp.RunOptss = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss{
+			RunOpts: map[uint16]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss_RunOpts{
+				1: {
+					LineIndex: ygot.Uint16(1),
+					LineRunOpts: ygot.String(fmt.Sprintf(
+						"--label %s=%s "+
+							"--label %s=%s "+
+							"--label %s=%s "+
+							"--label %s=%s",
+						common.LabelPodName, pod.Name,
+						common.LabelPodNamespace, pod.Namespace,
+						common.LabelPodUID, pod.UID,
+						common.LabelContainerName, container.Name,
+					)),
+				},
+			},
+		}
+
+		// Configure resource profile
+		resConfig := d.getResourceConfig(&container)
+		gapp.ApplicationResourceProfile = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationResourceProfile{
+			ProfileName:      ygot.String("custom"),
+			CpuUnits:         ygot.Uint16(resConfig.cpuUnits),
+			MemoryCapacityMb: ygot.Uint16(resConfig.memoryMB),
+			DiskSizeMb:       ygot.Uint16(resConfig.diskMB),
+			Vcpu:             ygot.Uint16(resConfig.vcpu),
+		}
+
+		// Set app to start automatically
+		gapp.Start = ygot.Bool(true)
+
+		// Add to configs slice
+		configs = append(configs, AppHostingConfig{
+			AppName:       appName,
+			ContainerName: container.Name,
+			ImagePath:     container.Image,
+			Apps:          apps,
+		})
+	}
+
+	return configs, nil
 }
 
 // getNetworkConfig converts pod/container specs to IOS-XE network configuration

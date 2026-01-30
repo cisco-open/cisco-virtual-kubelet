@@ -17,6 +17,7 @@ package iosxe
 import (
 	"context"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
@@ -509,5 +510,247 @@ func TestDiscoverPodIP_EmptyContainers(t *testing.T) {
 	// Should return default IP when no containers
 	if podIP != "0.0.0.0" {
 		t.Errorf("Expected default IP '0.0.0.0' when no containers, got %q", podIP)
+	}
+}
+
+func TestConvertPodToAppConfigs_SingleContainer_DHCP(t *testing.T) {
+	driver := &XEDriver{
+		config: &config.DeviceConfig{
+			Networking: config.NetworkConfig{
+				DHCPEnabled:      true,
+				VirtualPortGroup: "0",
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pod",
+			Namespace: "default",
+			UID:       "12345678-1234-1234-1234-123456789abc",
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Name:  "nginx",
+					Image: "nginx:latest",
+				},
+			},
+		},
+	}
+
+	configs, err := driver.ConvertPodToAppConfigs(pod)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(configs) != 1 {
+		t.Fatalf("Expected 1 config, got %d", len(configs))
+	}
+
+	config := configs[0]
+
+	// Verify basic fields
+	if config.ContainerName != "nginx" {
+		t.Errorf("Expected container name 'nginx', got %s", config.ContainerName)
+	}
+
+	if config.ImagePath != "nginx:latest" {
+		t.Errorf("Expected image path 'nginx:latest', got %s", config.ImagePath)
+	}
+
+	// Verify app name format (should contain cleaned UID)
+	expectedUIDPart := "123456781234123412"
+	if !strings.Contains(config.AppName, expectedUIDPart) {
+		t.Errorf("Expected app name to contain '%s', got %s", expectedUIDPart, config.AppName)
+	}
+
+	// Verify Apps struct is not nil
+	if config.Apps == nil {
+		t.Fatal("Expected Apps to be non-nil")
+	}
+
+	if config.Apps.App == nil || len(config.Apps.App) != 1 {
+		t.Fatal("Expected exactly one App entry")
+	}
+
+	// Get the app entry
+	var app *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App
+	for _, a := range config.Apps.App {
+		app = a
+		break
+	}
+
+	// Verify network configuration for DHCP
+	if app.ApplicationNetworkResource == nil {
+		t.Fatal("Expected ApplicationNetworkResource to be non-nil")
+	}
+
+	netRes := app.ApplicationNetworkResource
+	if netRes.VirtualportgroupGuestInterfaceName_1 == nil || *netRes.VirtualportgroupGuestInterfaceName_1 != "0" {
+		t.Error("Expected VirtualportgroupGuestInterfaceName_1 to be '0'")
+	}
+
+	// In DHCP mode, IP fields should be nil
+	if netRes.VirtualportgroupGuestIpAddress_1 != nil {
+		t.Error("Expected VirtualportgroupGuestIpAddress_1 to be nil in DHCP mode")
+	}
+
+	// Verify Run Options contain labels
+	if app.RunOptss == nil || len(app.RunOptss.RunOpts) != 1 {
+		t.Fatal("Expected RunOptss with one entry")
+	}
+
+	runOpts := app.RunOptss.RunOpts[1]
+	if runOpts.LineRunOpts == nil {
+		t.Fatal("Expected LineRunOpts to be non-nil")
+	}
+
+	optsStr := *runOpts.LineRunOpts
+	if !strings.Contains(optsStr, "pod.name=test-pod") {
+		t.Error("Expected run opts to contain pod name label")
+	}
+	if !strings.Contains(optsStr, "pod.namespace=default") {
+		t.Error("Expected run opts to contain namespace label")
+	}
+	if !strings.Contains(optsStr, "container.name=nginx") {
+		t.Error("Expected run opts to contain container name label")
+	}
+
+	// Verify resource profile
+	if app.ApplicationResourceProfile == nil {
+		t.Fatal("Expected ApplicationResourceProfile to be non-nil")
+	}
+
+	resProf := app.ApplicationResourceProfile
+	if resProf.ProfileName == nil || *resProf.ProfileName != "custom" {
+		t.Error("Expected ProfileName to be 'custom'")
+	}
+
+	// Verify Start flag
+	if app.Start == nil || !*app.Start {
+		t.Error("Expected Start to be true")
+	}
+}
+
+func TestConvertPodToAppConfigs_MultipleContainers_StaticIP(t *testing.T) {
+	driver := &XEDriver{
+		config: &config.DeviceConfig{
+			Networking: config.NetworkConfig{
+				DHCPEnabled:      false,
+				PodCIDR:          "10.0.0.0/24",
+				VirtualPortGroup: "1",
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "multi-pod",
+			Namespace: "default",
+			UID:       "abcdef12-3456-7890-abcd-ef1234567890",
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Name:  "web",
+					Image: "nginx:1.19",
+				},
+				{
+					Name:  "sidecar",
+					Image: "busybox:latest",
+				},
+			},
+		},
+	}
+
+	configs, err := driver.ConvertPodToAppConfigs(pod)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(configs) != 2 {
+		t.Fatalf("Expected 2 configs, got %d", len(configs))
+	}
+
+	// Verify first container config
+	config0 := configs[0]
+	if config0.ContainerName != "web" {
+		t.Errorf("Expected first container name 'web', got %s", config0.ContainerName)
+	}
+	if config0.ImagePath != "nginx:1.19" {
+		t.Errorf("Expected first image 'nginx:1.19', got %s", config0.ImagePath)
+	}
+
+	// Verify second container config
+	config1 := configs[1]
+	if config1.ContainerName != "sidecar" {
+		t.Errorf("Expected second container name 'sidecar', got %s", config1.ContainerName)
+	}
+	if config1.ImagePath != "busybox:latest" {
+		t.Errorf("Expected second image 'busybox:latest', got %s", config1.ImagePath)
+	}
+
+	// Verify app names are unique
+	if config0.AppName == config1.AppName {
+		t.Error("Expected unique app names for different containers")
+	}
+
+	// Verify static IP configuration for first container
+	var app0 *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App
+	for _, a := range config0.Apps.App {
+		app0 = a
+		break
+	}
+
+	if app0.ApplicationNetworkResource == nil {
+		t.Fatal("Expected ApplicationNetworkResource to be non-nil")
+	}
+
+	netRes := app0.ApplicationNetworkResource
+	if netRes.VirtualportgroupGuestIpAddress_1 == nil {
+		t.Error("Expected VirtualportgroupGuestIpAddress_1 to be set in static IP mode")
+	}
+
+	if netRes.VirtualportgroupGuestIpNetmask_1 == nil {
+		t.Error("Expected VirtualportgroupGuestIpNetmask_1 to be set in static IP mode")
+	}
+
+	if netRes.VirtualportgroupApplicationDefaultGateway_1 == nil {
+		t.Error("Expected VirtualportgroupApplicationDefaultGateway_1 to be set in static IP mode")
+	}
+
+	if netRes.VirtualportgroupGuestInterfaceName_1 == nil || *netRes.VirtualportgroupGuestInterfaceName_1 != "1" {
+		t.Error("Expected VirtualportgroupGuestInterfaceName_1 to be '1'")
+	}
+}
+
+func TestConvertPodToAppConfigs_EmptyPod(t *testing.T) {
+	driver := &XEDriver{
+		config: &config.DeviceConfig{
+			Networking: config.NetworkConfig{
+				DHCPEnabled: true,
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "empty-pod",
+			Namespace: "default",
+			UID:       "00000000-0000-0000-0000-000000000000",
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{},
+		},
+	}
+
+	configs, err := driver.ConvertPodToAppConfigs(pod)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(configs) != 0 {
+		t.Fatalf("Expected 0 configs for empty pod, got %d", len(configs))
 	}
 }
