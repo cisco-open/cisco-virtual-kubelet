@@ -23,91 +23,32 @@ import (
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
-	"github.com/openconfig/ygot/ygot"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 )
 
-// CreatePodApps creates IOS-XE AppHosting configurations for all containers in a pod
-func (d *XEDriver) CreatePodApps(ctx context.Context, pod *v1.Pod) error {
-	log.G(ctx).Infof("Configuring AppHosting apps for pod: %s/%s", pod.Namespace, pod.Name)
-
-	containerAppIDs := common.GenerateContainerAppIDs(pod)
+// CreateAppHostingApp creates a single IOS-XE AppHosting app from an AppHostingConfig.
+// This function configures the app on the device and initiates the installation process.
+func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig AppHostingConfig) error {
+	log.G(ctx).Infof("Creating AppHosting app: %s for container: %s", appConfig.AppName, appConfig.ContainerName)
 
 	path := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
 
-	for _, container := range pod.Spec.Containers {
-		appName := containerAppIDs[container.Name]
-		log.G(ctx).Infof("Configuring AppHosting app: %s for container: %s", appName, container.Name)
-
-		apps := &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps{}
-
-		gapp, err := apps.NewApp(appName)
-		if err != nil {
-			return fmt.Errorf("failed to create app struct for container %s: %w", container.Name, err)
-		}
-
-		netConfig := d.getNetworkConfig(pod, &container)
-		if netConfig.useDHCP {
-			// DHCP mode: only set interface name, omit static IP/gateway configuration
-			gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
-				VnicGateway_0:                        ygot.String("0"),
-				VirtualportgroupGuestInterfaceName_1: ygot.String(netConfig.virtualPortgroupInterface),
-			}
-		} else {
-			// Static IP mode: configure IP address, netmask, and gateway
-			gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
-				VnicGateway_0:                                  ygot.String("0"),
-				VirtualportgroupGuestInterfaceName_1:           ygot.String(netConfig.virtualPortgroupInterface),
-				VirtualportgroupGuestIpAddress_1:               ygot.String(netConfig.virtualPortgroupIP),
-				VirtualportgroupGuestIpNetmask_1:               ygot.String(netConfig.virtualPortgroupNetmask),
-				VirtualportgroupApplicationDefaultGateway_1:    ygot.String(netConfig.defaultGateway),
-				VirtualportgroupGuestInterfaceDefaultGateway_1: ygot.Uint8(netConfig.gatewayInterface),
-			}
-		}
-
-		gapp.RunOptss = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss{
-			RunOpts: map[uint16]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss_RunOpts{
-				1: {
-					LineIndex: ygot.Uint16(1),
-					LineRunOpts: ygot.String(fmt.Sprintf(
-						"--label %s=%s "+
-							"--label %s=%s "+
-							"--label %s=%s "+
-							"--label %s=%s",
-						common.LabelPodName, pod.Name,
-						common.LabelPodNamespace, pod.Namespace,
-						common.LabelPodUID, pod.UID,
-						common.LabelContainerName, container.Name,
-					)),
-				},
-			},
-		}
-
-		resConfig := d.getResourceConfig(&container)
-		gapp.ApplicationResourceProfile = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationResourceProfile{
-			ProfileName:      ygot.String("custom"),
-			CpuUnits:         ygot.Uint16(resConfig.cpuUnits),
-			MemoryCapacityMb: ygot.Uint16(resConfig.memoryMB),
-			DiskSizeMb:       ygot.Uint16(resConfig.diskMB),
-			Vcpu:             ygot.Uint16(resConfig.vcpu),
-		}
-
-		gapp.Start = ygot.Bool(true)
-
-		err = d.client.Post(ctx, path, apps, d.marshaller)
-		if err != nil {
-			return fmt.Errorf("AppHosting config failed for container %s: %w", container.Name, err)
-		}
-
-		log.G(ctx).Infof("AppHosting app %s successfully configured for container %s", appName, container.Name)
-
-		err = d.InstallApp(ctx, appName, container.Image)
-		if err != nil {
-			return fmt.Errorf("failed to install app for container %s: %w", container.Name, err)
-		}
+	// Post the app configuration to the device
+	err := d.client.Post(ctx, path, appConfig.Apps, d.marshaller)
+	if err != nil {
+		return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName, err)
 	}
 
+	log.G(ctx).Infof("AppHosting app %s successfully configured", appConfig.AppName)
+
+	// Install the app package
+	err = d.InstallApp(ctx, appConfig.AppName, appConfig.ImagePath)
+	if err != nil {
+		return fmt.Errorf("failed to install app %s: %w", appConfig.AppName, err)
+	}
+
+	log.G(ctx).Infof("Successfully created and installed app %s", appConfig.AppName)
 	return nil
 }
 

@@ -29,11 +29,27 @@ func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 		"pod": pod,
 	}).Debug("Pod DeployContainer request received")
 
-	err := d.CreatePodApps(ctx, pod)
+	log.G(ctx).Infof("Deploying pod: %s/%s", pod.Namespace, pod.Name)
+
+	// Convert pod spec to app hosting configurations
+	appConfigs, err := d.ConvertPodToAppConfigs(pod)
 	if err != nil {
-		return fmt.Errorf("app deployment failed: %v", err)
+		return fmt.Errorf("failed to convert pod to app configs: %w", err)
 	}
 
+	// Deploy each app configuration
+	for _, appConfig := range appConfigs {
+		log.G(ctx).Infof("Deploying app: %s for container: %s", appConfig.AppName, appConfig.ContainerName)
+
+		err = d.CreateAppHostingApp(ctx, appConfig)
+		if err != nil {
+			return fmt.Errorf("failed to deploy app for container %s: %w", appConfig.ContainerName, err)
+		}
+
+		log.G(ctx).Infof("Successfully deployed app %s for container %s", appConfig.AppName, appConfig.ContainerName)
+	}
+
+	log.G(ctx).Infof("Successfully deployed all apps for pod: %s/%s", pod.Namespace, pod.Name)
 	return nil
 }
 
