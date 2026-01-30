@@ -22,6 +22,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // DeployPod creates and deploys all containers in a pod to the device
@@ -237,17 +238,116 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 	return statusPod, nil
 }
 
-// ListPods returns all pods currently running on the device
+// ListPods discovers all pods currently running on the device by analyzing app configurations.
+// It reconstructs skeleton pods from the device state including namespace, name, UID, and container status.
 func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
-	path := "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data?fields=app"
+	log.G(ctx).Info("ListPods: discovering pods from device")
 
-	res := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
-
-	err := d.client.Get(ctx, path, res, d.unmarshaller)
+	// Get all apps from the device
+	apps, err := d.ListAppHostingApps(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch app oper data: %w", err)
+		return nil, fmt.Errorf("failed to list apps: %w", err)
 	}
 
-	pods := []*v1.Pod{}
+	if len(apps) == 0 {
+		log.G(ctx).Debug("No apps found on device")
+		return []*v1.Pod{}, nil
+	}
+
+	// Fetch operational data for all apps
+	allAppOperData, err := d.GetAppOperationalData(ctx)
+	if err != nil {
+		log.G(ctx).Warnf("Failed to fetch app operational data: %v", err)
+		// Continue without operational data
+		allAppOperData = make(map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App)
+	}
+
+	// Group apps by pod UID
+	podGroups := make(map[string]*podDiscoveryInfo)
+
+	for _, app := range apps {
+		if app.ApplicationName == nil {
+			continue
+		}
+
+		appName := *app.ApplicationName
+
+		// Extract pod metadata from RunOpts labels
+		var podNamespace, podName, podUID, containerName string
+
+		if app.RunOptss != nil {
+			for _, opt := range app.RunOptss.RunOpts {
+				if opt.LineRunOpts != nil {
+					line := *opt.LineRunOpts
+
+					// Extract pod labels
+					podNamespace = common.ExtractLabelValue(line, common.LabelPodNamespace)
+					podName = common.ExtractLabelValue(line, common.LabelPodName)
+					podUID = common.ExtractLabelValue(line, common.LabelPodUID)
+					containerName = common.ExtractContainerNameFromLabels(line)
+					break
+				}
+			}
+		}
+
+		// Skip apps that don't have pod metadata
+		if podUID == "" || podName == "" || containerName == "" {
+			log.G(ctx).Debugf("Skipping app %s: missing pod metadata", appName)
+			continue
+		}
+
+		// Group by pod UID
+		if _, exists := podGroups[podUID]; !exists {
+			podGroups[podUID] = &podDiscoveryInfo{
+				namespace:  podNamespace,
+				name:       podName,
+				uid:        podUID,
+				containers: make(map[string]string),
+			}
+		}
+
+		podGroups[podUID].containers[containerName] = appName
+	}
+
+	log.G(ctx).Infof("Discovered %d pods from %d apps", len(podGroups), len(apps))
+
+	// Build skeleton pods with container status
+	pods := make([]*v1.Pod, 0, len(podGroups))
+
+	for _, podInfo := range podGroups {
+		// Create skeleton pod
+		pod := &v1.Pod{}
+		pod.Namespace = podInfo.namespace
+		pod.Name = podInfo.name
+		pod.UID = types.UID(podInfo.uid)
+
+		// Filter operational data for this pod's apps
+		appOperDataMap := make(map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App)
+		for containerName, appID := range podInfo.containers {
+			if operData, ok := allAppOperData[appID]; ok {
+				appOperDataMap[appID] = operData
+			} else {
+				log.G(ctx).Debugf("App %s for container %s has no operational data", appID, containerName)
+			}
+		}
+
+		// Update container status
+		err = d.GetContainerStatus(ctx, pod, podInfo.containers, appOperDataMap)
+		if err != nil {
+			log.G(ctx).Warnf("Failed to get container status for pod %s/%s: %v", podInfo.namespace, podInfo.name, err)
+		}
+
+		pods = append(pods, pod)
+	}
+
+	log.G(ctx).Infof("Returning %d pods", len(pods))
 	return pods, nil
+}
+
+// podDiscoveryInfo holds information about a discovered pod
+type podDiscoveryInfo struct {
+	namespace  string
+	name       string
+	uid        string
+	containers map[string]string // containerName -> appID
 }
