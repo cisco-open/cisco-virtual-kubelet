@@ -19,12 +19,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
-	"strings"
 	"time"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	v1 "k8s.io/api/core/v1"
 )
 
 // CreateAppHostingApp creates a single IOS-XE AppHosting app from an AppHostingConfig.
@@ -276,10 +273,9 @@ func (d *XEDriver) WaitForAppNotPresent(ctx context.Context, appID string, maxWa
 	return fmt.Errorf("timeout waiting for app %s to be removed from oper data after %v", appID, maxWaitTime)
 }
 
-// DiscoverPodContainersOnDevice queries the device for configured apps matching the pod UID,
-// then maps them back to container names using RunOpts labels.
-// Returns a map of containerName -> appID.
-func (d *XEDriver) DiscoverPodContainersOnDevice(ctx context.Context, pod *v1.Pod) (map[string]string, error) {
+// ListAppHostingApps queries the device for all configured AppHosting apps.
+// Returns a slice of all app configurations found on the device.
+func (d *XEDriver) ListAppHostingApps(ctx context.Context) ([]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App, error) {
 	path := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data"
 
 	appsContainer := &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData{}
@@ -289,66 +285,19 @@ func (d *XEDriver) DiscoverPodContainersOnDevice(ctx context.Context, pod *v1.Po
 		return nil, fmt.Errorf("failed to fetch app configs: %w", err)
 	}
 
-	// Clean the pod UID (remove hyphens) as that's how it appears in app names
-	cleanUID := strings.ReplaceAll(string(pod.UID), "-", "")
-
-	containerToAppID := make(map[string]string)
-
-	for _, app := range appsContainer.Apps.App {
-		if app.ApplicationName == nil {
-			continue
-		}
-
-		appName := *app.ApplicationName
-
-		// Check if app name contains the cleaned pod UID
-		if !strings.Contains(appName, cleanUID) {
-			continue
-		}
-
-		log.G(ctx).Debugf("Found app %s with matching pod UID", appName)
-
-		// Extract container name from RunOpts labels
-		var containerName string
-		var runOptsLine string
-
-		if app.RunOptss != nil {
-			for _, opt := range app.RunOptss.RunOpts {
-				if opt.LineRunOpts != nil {
-					line := *opt.LineRunOpts
-					runOptsLine = line
-
-					log.G(ctx).Debugf("App %s RunOpts: %s", appName, line)
-
-					// Verify this app belongs to our pod by checking all pod labels
-					if strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodName, pod.Name)) &&
-						strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodNamespace, pod.Namespace)) &&
-						strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodUID, pod.UID)) {
-
-						// Extract the container name from the label
-						containerName = common.ExtractContainerNameFromLabels(line)
-
-						if containerName != "" {
-							log.G(ctx).Debugf("Extracted container name: %s from app %s", containerName, appName)
-						} else {
-							log.G(ctx).Warnf("App %s has pod labels but no container name label in line: %s", appName, line)
-						}
-						break
-					}
-				}
-			}
-		}
-
-		if containerName != "" {
-			containerToAppID[containerName] = appName
-			log.G(ctx).Infof("Discovered container %s -> app %s", containerName, appName)
-		} else {
-			log.G(ctx).Errorf("Found app %s with pod UID but couldn't extract container name from labels. RunOpts: %s",
-				appName, runOptsLine)
-		}
+	if appsContainer.Apps == nil || len(appsContainer.Apps.App) == 0 {
+		log.G(ctx).Debug("No apps found on device")
+		return []*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App{}, nil
 	}
 
-	return containerToAppID, nil
+	// Convert map to slice for easier iteration
+	appsList := make([]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App, 0, len(appsContainer.Apps.App))
+	for _, app := range appsContainer.Apps.App {
+		appsList = append(appsList, app)
+	}
+
+	log.G(ctx).Debugf("Found %d apps on device", len(appsList))
+	return appsList, nil
 }
 
 // DiscoverAppDHCPIP queries the device for the app's IP address from app-hosting-oper-data.

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 )
@@ -59,33 +60,113 @@ func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
+// GetPodContainers retrieves all containers belonging to a specific pod from the device.
+// It queries all apps on the device, filters them by pod UID and labels, and verifies
+// that all expected containers are found.
+// Returns a map of containerName -> appID and an error if verification fails.
+func (d *XEDriver) GetPodContainers(ctx context.Context, pod *v1.Pod) (map[string]string, error) {
+	log.G(ctx).Debugf("Getting containers for pod: %s/%s", pod.Namespace, pod.Name)
+
+	// Get all apps from the device
+	apps, err := d.ListAppHostingApps(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list apps: %w", err)
+	}
+
+	// Clean the pod UID (remove hyphens) as that's how it appears in app names
+	cleanUID := strings.ReplaceAll(string(pod.UID), "-", "")
+
+	containerToAppID := make(map[string]string)
+
+	// Filter apps by pod UID and extract container names
+	for _, app := range apps {
+		if app.ApplicationName == nil {
+			continue
+		}
+
+		appName := *app.ApplicationName
+
+		// Check if app name contains the cleaned pod UID
+		if !strings.Contains(appName, cleanUID) {
+			continue
+		}
+
+		log.G(ctx).Debugf("Found app %s with matching pod UID", appName)
+
+		// Extract container name from RunOpts labels
+		var containerName string
+		var runOptsLine string
+
+		if app.RunOptss != nil {
+			for _, opt := range app.RunOptss.RunOpts {
+				if opt.LineRunOpts != nil {
+					line := *opt.LineRunOpts
+					runOptsLine = line
+
+					log.G(ctx).Debugf("App %s RunOpts: %s", appName, line)
+
+					// Verify this app belongs to our pod by checking all pod labels
+					if strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodName, pod.Name)) &&
+						strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodNamespace, pod.Namespace)) &&
+						strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodUID, pod.UID)) {
+
+						// Extract the container name from the label
+						containerName = common.ExtractContainerNameFromLabels(line)
+
+						if containerName != "" {
+							log.G(ctx).Debugf("Extracted container name: %s from app %s", containerName, appName)
+						} else {
+							log.G(ctx).Warnf("App %s has pod labels but no container name label in line: %s", appName, line)
+						}
+						break
+					}
+				}
+			}
+		}
+
+		if containerName != "" {
+			containerToAppID[containerName] = appName
+			log.G(ctx).Infof("Found container %s -> app %s", containerName, appName)
+		} else {
+			log.G(ctx).Warnf("Found app %s with pod UID but couldn't extract container name from labels. RunOpts: %s",
+				appName, runOptsLine)
+		}
+	}
+
+	// Verify all expected containers are found
+	expectedCount := len(pod.Spec.Containers)
+	foundCount := len(containerToAppID)
+
+	if foundCount != expectedCount {
+		missingContainers := []string{}
+		for _, container := range pod.Spec.Containers {
+			if _, found := containerToAppID[container.Name]; !found {
+				missingContainers = append(missingContainers, container.Name)
+			}
+		}
+
+		if len(missingContainers) > 0 {
+			log.G(ctx).Warnf("Container count mismatch for pod %s/%s: expected %d, found %d. Missing: %v",
+				pod.Namespace, pod.Name, expectedCount, foundCount, missingContainers)
+			return containerToAppID, fmt.Errorf("missing containers: %v", missingContainers)
+		}
+	}
+
+	log.G(ctx).Infof("Found all %d expected containers for pod %s/%s", foundCount, pod.Namespace, pod.Name)
+	return containerToAppID, nil
+}
+
 // DeletePod removes all containers in a pod from the device
 func (d *XEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).WithFields(log.Fields{
 		"pod": pod,
 	}).Debugf("DeletePod request received for pod: %s", pod.Name)
 
-	discoveredContainers, err := d.DiscoverPodContainersOnDevice(ctx, pod)
+	// Get all containers for this pod
+	discoveredContainers, err := d.GetPodContainers(ctx, pod)
 	if err != nil {
-		log.G(ctx).Errorf("Failed to discover containers for pod %s/%s: %v", pod.Namespace, pod.Name, err)
-		return fmt.Errorf("failed to discover containers for pod: %w", err)
-	}
-
-	foundCount := len(discoveredContainers)
-	expectedCount := len(pod.Spec.Containers)
-
-	log.G(ctx).Infof("Found %d containers on device for pod %s/%s (expected %d)",
-		foundCount, pod.Namespace, pod.Name, expectedCount)
-
-	if foundCount != expectedCount {
-		log.G(ctx).Errorf("Container count mismatch for pod %s/%s: expected %d, found %d",
-			pod.Namespace, pod.Name, expectedCount, foundCount)
-
-		for _, container := range pod.Spec.Containers {
-			if _, found := discoveredContainers[container.Name]; !found {
-				log.G(ctx).Errorf("Container %s not found on device", container.Name)
-			}
-		}
+		log.G(ctx).Warnf("Failed to get all containers for pod %s/%s: %v. Continuing with partial deletion.", pod.Namespace, pod.Name, err)
+		// Don't return error here - we'll delete what we found
 	}
 
 	deletionErrors := []string{}
@@ -117,9 +198,9 @@ func (d *XEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
 	log.G(ctx).Debug("GetPodStatus request received")
 
-	discoveredContainers, err := d.DiscoverPodContainersOnDevice(ctx, pod)
+	discoveredContainers, err := d.GetPodContainers(ctx, pod)
 	if err != nil {
-		log.G(ctx).Debugf("failed to discover containers: %v", err)
+		log.G(ctx).Debugf("failed to get pod containers: %v", err)
 		return nil, fmt.Errorf("apps for pod %s/%s not found on device", pod.Namespace, pod.Name)
 	}
 
