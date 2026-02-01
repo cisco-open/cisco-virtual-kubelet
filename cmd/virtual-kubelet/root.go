@@ -82,15 +82,28 @@ func validateLogLevel(level string) error {
 	}
 }
 
-// validateKubeconfig checks if the kubeconfig file exists (when path is provided)
-func validateKubeconfig(kubeconfigPath string) error {
-	if kubeconfigPath == "" {
-		return nil // empty is valid - will fall back to env or in-cluster
+func GetKubeConfig(kubeconfigFlag string) (*rest.Config, error) {
+
+	if kubeconfigFlag != "" {
+		if _, err := os.Stat(kubeconfigFlag); os.IsNotExist(err) {
+			return nil, fmt.Errorf("kubeconfig file not found: %s", kubeconfigFlag)
+		}
+		return clientcmd.BuildConfigFromFlags("", kubeconfigFlag)
 	}
-	if _, err := os.Stat(kubeconfigPath); os.IsNotExist(err) {
-		return fmt.Errorf("kubeconfig file not found: %s\n\nSpecify a valid kubeconfig with --kubeconfig flag or KUBECONFIG environment variable", kubeconfigPath)
+
+	kubeconfigEnv := os.Getenv("KUBECONFIG")
+	if kubeconfigEnv != "" {
+		if _, err := os.Stat(kubeconfigEnv); os.IsNotExist(err) {
+			return nil, fmt.Errorf("kubeconfig file from KUBECONFIG env not found: %s", kubeconfigEnv)
+		}
+		return clientcmd.BuildConfigFromFlags("", kubeconfigEnv)
 	}
-	return nil
+
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load in-cluster config and no kubeconfig provided: %w", err)
+	}
+	return config, nil
 }
 
 func runVirtualKubelet(cmd *cobra.Command, args []string) error {
@@ -156,30 +169,12 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	}()
 
 	// Kubeconfig: flag > env > in-cluster
-	kubeconfigPath := kubeconfig
-	if kubeconfigPath == "" {
-		kubeconfigPath = os.Getenv("KUBECONFIG")
+	kubeconfigCfg, err := GetKubeConfig(kubeconfig)
+	if err != nil {
+		return fmt.Errorf("failed to load kubeconfig: %w", err)
 	}
 
-	// Validate kubeconfig if path provided
-	if err := validateKubeconfig(kubeconfigPath); err != nil {
-		return err
-	}
-
-	var restconfig *rest.Config
-	if kubeconfigPath != "" {
-		restconfig, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-		if err != nil {
-			return fmt.Errorf("failed to load kubeconfig from %s: %w", kubeconfigPath, err)
-		}
-	} else {
-		restconfig, err = rest.InClusterConfig()
-		if err != nil {
-			return fmt.Errorf("failed to load in-cluster kubeconfig (not running in a cluster?): %w\n\nSpecify a kubeconfig with --kubeconfig flag or KUBECONFIG environment variable", err)
-		}
-	}
-
-	clientset, err := kubernetes.NewForConfig(restconfig)
+	clientset, err := kubernetes.NewForConfig(kubeconfigCfg)
 	if err != nil {
 		return fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}

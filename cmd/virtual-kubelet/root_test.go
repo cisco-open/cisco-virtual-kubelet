@@ -21,53 +21,6 @@ import (
 	"testing"
 )
 
-func TestConfigFileValidation(t *testing.T) {
-	tests := []struct {
-		name        string
-		configPath  string
-		wantErr     bool
-		errContains string
-	}{
-		{
-			name:        "valid config file",
-			configPath:  "../../dev/config.yaml",
-			wantErr:     false,
-			errContains: "",
-		},
-		{
-			name:        "missing config file",
-			configPath:  "/nonexistent/config.yaml",
-			wantErr:     true,
-			errContains: "config file not found",
-		},
-		{
-			name:        "empty path uses default",
-			configPath:  "",
-			wantErr:     true, // default path won't exist in test environment
-			errContains: "config file not found",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			configPath := tt.configPath
-			if configPath == "" {
-				configPath = "/etc/virtual-kubelet/config.yaml"
-			}
-
-			_, err := os.Stat(configPath)
-			gotErr := os.IsNotExist(err)
-
-			if tt.wantErr && !gotErr {
-				t.Errorf("expected error for path %q, but file exists", configPath)
-			}
-			if !tt.wantErr && gotErr {
-				t.Errorf("expected file to exist at %q, but got error", configPath)
-			}
-		})
-	}
-}
-
 func TestLogLevelValidation(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -144,58 +97,14 @@ func TestLogLevelValidation(t *testing.T) {
 	}
 }
 
-func TestKubeconfigValidation(t *testing.T) {
-	// Create a temporary kubeconfig file for testing
-	tmpDir := t.TempDir()
-	validKubeconfig := filepath.Join(tmpDir, "kubeconfig")
-	if err := os.WriteFile(validKubeconfig, []byte("apiVersion: v1\nkind: Config"), 0644); err != nil {
-		t.Fatalf("failed to create test kubeconfig: %v", err)
-	}
-
-	tests := []struct {
-		name        string
-		kubeconfig  string
-		wantErr     bool
-		errContains string
-	}{
-		{
-			name:       "valid kubeconfig file",
-			kubeconfig: validKubeconfig,
-			wantErr:    false,
-		},
-		{
-			name:        "missing kubeconfig file",
-			kubeconfig:  "/nonexistent/kubeconfig",
-			wantErr:     true,
-			errContains: "kubeconfig file not found",
-		},
-		{
-			name:       "empty path (will try in-cluster or env)",
-			kubeconfig: "",
-			wantErr:    false, // empty is valid - will fall back to env or in-cluster
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateKubeconfig(tt.kubeconfig)
-
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("expected error for kubeconfig %q, got nil", tt.kubeconfig)
-				} else if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
-					t.Errorf("expected error containing %q, got %q", tt.errContains, err.Error())
-				}
-			} else {
-				if err != nil {
-					t.Errorf("unexpected error for kubeconfig %q: %v", tt.kubeconfig, err)
-				}
-			}
-		})
-	}
-}
-
 func TestValidateConfig(t *testing.T) {
+	// Create a temporary config file for testing
+	tmpDir := t.TempDir()
+	validConfigPath := filepath.Join(tmpDir, "config.yaml")
+	if err := os.WriteFile(validConfigPath, []byte("test: config"), 0644); err != nil {
+		t.Fatalf("failed to create test config: %v", err)
+	}
+
 	tests := []struct {
 		name        string
 		configPath  string
@@ -204,7 +113,7 @@ func TestValidateConfig(t *testing.T) {
 	}{
 		{
 			name:       "valid config",
-			configPath: "../../dev/config.yaml",
+			configPath: validConfigPath,
 			wantErr:    false,
 		},
 		{
@@ -228,6 +137,67 @@ func TestValidateConfig(t *testing.T) {
 			} else {
 				if err != nil {
 					t.Errorf("unexpected error for config %q: %v", tt.configPath, err)
+				}
+			}
+		})
+	}
+}
+
+func TestGetKubeConfig(t *testing.T) {
+	// Save original env and restore after test
+	originalKubeconfig := os.Getenv("KUBECONFIG")
+	defer os.Setenv("KUBECONFIG", originalKubeconfig)
+
+	tests := []struct {
+		name        string
+		flagValue   string
+		envValue    string
+		wantErr     bool
+		errContains string
+		setupEnv    bool
+	}{
+		{
+			name:        "flag provided with invalid path",
+			flagValue:   "/nonexistent/kubeconfig",
+			wantErr:     true,
+			errContains: "kubeconfig file not found",
+		},
+		{
+			name:        "no flag, env var with invalid path",
+			flagValue:   "",
+			envValue:    "/nonexistent/kubeconfig",
+			setupEnv:    true,
+			wantErr:     true,
+			errContains: "kubeconfig file from KUBECONFIG env not found",
+		},
+		{
+			name:        "no flag, no env - in-cluster expected",
+			flagValue:   "",
+			envValue:    "",
+			setupEnv:    true,
+			wantErr:     true, // Will fail in test environment without service account
+			errContains: "failed to load in-cluster config",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setupEnv {
+				os.Setenv("KUBECONFIG", tt.envValue)
+				defer os.Unsetenv("KUBECONFIG")
+			}
+
+			_, err := GetKubeConfig(tt.flagValue)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				} else if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("expected error containing %q, got %q", tt.errContains, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
 				}
 			}
 		})
