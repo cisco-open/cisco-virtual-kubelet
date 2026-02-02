@@ -49,39 +49,9 @@ func Load(filePath ...string) (*Config, error) {
 		return nil, fmt.Errorf("unable to decode into struct: %w", err)
 	}
 
-	// var cfg Config
-
-	// // Use a manual decoder configuration instead of UnmarshalExact
-	// // This allows us to provide "Hooks" that fix the map[string]interface{} issue
-	// err := viper.Unmarshal(&cfg, func(dc *mapstructure.DecoderConfig) {
-	// 	dc.TagName = "mapstructure"
-	// 	// This is the magic line for 2025:
-	// 	// It tells mapstructure how to convert weak types (interfaces) to strong types (strings)
-	// 	dc.DecodeHook = mapstructure.ComposeDecodeHookFunc(
-	// 		mapstructure.StringToTimeDurationHookFunc(),
-	// 		mapstructure.WeaklyTypedHook, // This specifically fixes the map[string]string error
-	// 	)
-	// 	// If you still want the "Exact" behavior to fail on unknown keys:
-	// 	dc.ErrorUnused = true
-	// })
-
-	// if err != nil {
-	// 	return nil, fmt.Errorf("unable to decode into struct: %w", err)
-	// }
-
 	SetDeviceDefaults(&cfg.Device)
 
 	return &cfg, nil
-}
-
-// GetAvailableVLAN returns an available VLAN ID from the configured range
-func (c *DeviceConfig) GetAvailableVLAN(usedVLANs map[int]bool) int {
-	for vlan := c.Networking.VLANRange.Start; vlan <= c.Networking.VLANRange.End; vlan++ {
-		if !usedVLANs[vlan] {
-			return vlan
-		}
-	}
-	return -1 // No available VLAN
 }
 
 func SetDeviceDefaults(cfg *DeviceConfig) error {

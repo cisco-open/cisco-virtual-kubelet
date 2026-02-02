@@ -129,12 +129,6 @@ func initNodeCapacity() v1.ResourceList {
 		"storage":         resource.MustParse("100Gi"),
 		v1.ResourcePods:   resource.MustParse("16"),
 	}
-	// defaultCapacity := v1.ResourceList{
-	// 	v1.ResourceCPU:    resource.MustParse("0"),
-	// 	v1.ResourceMemory: resource.MustParse("0"),
-	// 	"storage":         resource.MustParse("0"),
-	// 	v1.ResourcePods:   resource.MustParse("0"),
-	// }
 
 	return defaultCapacity
 }

@@ -15,7 +15,4 @@ device:
 
 kubelet:
   node_name: "cat8kv-node"
-  namespace: ""
-  update_interval: "30s"
-  os: "Linux"
   node_internal_ip: "192.0.2.24"
