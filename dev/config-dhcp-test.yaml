@@ -11,7 +11,6 @@ device:
   networking:
     dhcpEnabled: true
     virtualPortGroup: "0"
-    defaultVRF: ""
 
 kubelet:
   node_name: "cat8kv-node"

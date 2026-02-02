@@ -6,10 +6,12 @@ device:
   username: admin
   password: admin
   tls:
-    enabled: false
+    enabled: true
+    insecureSkipVerify: true
+  networking:
+    dhcpEnabled: true
+    virtualPortGroup: "0"
 
 kubelet:
   node_name: "cisco-virtual-kubelet"
-  namespace: ""
-  update_interval: "30s"
-  os: "Linux"
+  node_internal_ip: "10.0.0.1"
