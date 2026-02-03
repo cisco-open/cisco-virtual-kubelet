@@ -27,7 +27,7 @@ func TestLoad_FullSchema(t *testing.T) {
 
 	_, err := Load(fixturePath)
 	if err != nil {
-		t.Error("Error for loading full config schema")
+		t.Errorf("Error loading full config schema: %v", err)
 	}
 }
 
