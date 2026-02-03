@@ -3,11 +3,11 @@
 [![Go Version](https://img.shields.io/badge/Go-1.23+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-A [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider that enables Kubernetes to schedule container workloads on Cisco Catalyst 9000 series switches and other IOS-XE devices with app-hosting capabilities.
+A [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider that enables [Kubernetes](https://kubernetes.io/docs/home/) to schedule container workloads on Cisco Catalyst series switches and other IOS-XE devices with [App-Hosting](https://developer.cisco.com/docs/app-hosting/) capabilities.
 
 ## Overview
 
-This provider allows Kubernetes pods to be deployed as containers directly on Cisco network devices, enabling edge computing scenarios where compute workloads run on network infrastructure. The provider communicates with Cisco devices via RESTCONF APIs to manage the complete container lifecycle.
+This provider allows Kubernetes pods to be deployed as containers directly on Cisco devices, enabling edge computing scenarios where compute workloads run on network infrastructure. The provider communicates with Cisco devices via RESTCONF APIs to manage the container lifecycle.
 
 ### Key Features
 
@@ -53,8 +53,8 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 
 ### Prerequisites
 
-- Go 1.23 or later
-- Kubernetes cluster (k3s, k8s, or similar)
+- [Go](https://go.dev/doc/devel/release) 1.23 or later
+- A Kubernetes cluster
 - Cisco IOS-XE device with:
   - IOx enabled (`iox` configuration)
   - RESTCONF enabled
@@ -65,11 +65,10 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 
 ```bash
 # Clone the repository
-cd
 git clone https://github.com/cisco-open/cisco-virtual-kubelet.git
-cd cisco-virtual-kubelet
+cd cisco-virtual-kubelet/
 
-# Ensure that the correct version of go is exported
+# Ensure the correct Go version is available
 sudo which go
 sudo go version
 
@@ -82,13 +81,10 @@ sudo make install
 
 ### Configuration
 
-The provider uses a two-tier YAML configuration with `kubelet` and `device` sections:
+The provider uses a two-tier YAML configuration with `device` and `kubelet` sections:
 
 ```yaml
 # ./dev/config-dhcp-test.yaml
-
-# Kubelet tier: Virtual Kubelet settings
-#config-dhcp-test.yaml
 device:
   name: cat8kv-router
   driver: XE
@@ -114,21 +110,21 @@ kubelet:
 
 See [Configuration Reference](docs/CONFIGURATION.md) for all options.
 
-Ensure KUBECONFIG is exported: 
+**Export KUBECONFIG**
 
 ```bash
-export KUBECONFIG=~/.kube/config    #location may vary based on installation
+export KUBECONFIG=~/.kube/config # Location of the Kubernetes cluster kubeconfig
 ```
 
 
-Start the provider:
+**Start Provider**
 
 ```bash
 cd ~/cisco-virtual-kubelet
 cisco-vk --config dev/config-dhcp-test.yaml
 ```
 
-Deploy a container:
+**Deploy test Pod**
 
 ```yaml
 # ./dev/test-pod-dhcp.yaml
@@ -138,7 +134,7 @@ metadata:
   name: dhcp-test-pod
   namespace: default
 spec:
-  nodeName: cat8kv-node #virtual-kubelet node mapping
+  nodeName: cat8kv-node # Virtual Kubelet Kubernetes Node name
   containers:
   - name: test-app
     image: flash:/hello-app.iosxe.tar # Docker image on flash filesystem
@@ -204,7 +200,7 @@ cisco-virtual-kubelet/
 
 ## Integration with Virtual Kubelet
 
-This provider implements the Virtual Kubelet provider interface:
+The provider implements the Virtual Kubelet provider interface:
 
 ```go
 import (
