@@ -311,6 +311,11 @@ func (d *XEDriver) GetAppOperationalData(ctx context.Context) (map[string]*Cisco
 		return nil, fmt.Errorf("failed to fetch app operational data: %w", err)
 	}
 
+	if root.App == nil {
+		log.G(ctx).Debug("No operational data found on device")
+		return make(map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App), nil
+	}
+
 	log.G(ctx).Debugf("Fetched operational data for %d apps", len(root.App))
 	d.debugLogJson(ctx, root)
 
