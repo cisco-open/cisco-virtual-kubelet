@@ -23,7 +23,7 @@ kubelet:
   node_internal_ip: "192.168.1.100"
 
 ---
-# Example 2: VirtualPortGroup with static IP from podCIDR
+# Example 2: VirtualPortGroup with static IP from podPrefix
 device:
   name: cat8kv-router
   driver: XE
@@ -35,7 +35,7 @@ device:
     enabled: true
     insecureSkipVerify: true
   networking:
-    podCIDR: "10.0.0.0/24"
+    podPrefix: "10.0.0.0/24"
     interface:
       type: VirtualPortGroup
       virtualPortGroup:
@@ -50,7 +50,7 @@ kubelet:
 ---
 # Example 3: AppGigabitEthernet access with DHCP
 device:
-  name: cat9k
+  name: cat8kv-router
   driver: XE
   address: "192.168.1.100"
   port: 443
@@ -64,18 +64,18 @@ device:
       type: AppGigabitEthernet
       appGigabitEthernet:
         mode: access
-        dhcp: true
-        guestInterface: 0
-
+        vlanIf:
+          dhcp: true
+          guestInterface: 0
 
 kubelet:
-  node_name: "cat9k"
+  node_name: "cat8kv-node"
   node_internal_ip: "192.168.1.100"
 
 ---
-# Example 4: AppGigabitEthernet access with static IP from podCIDR
+# Example 4: AppGigabitEthernet access with static IP from podPrefix
 device:
-  name: cat9k
+  name: cat8kv-router
   driver: XE
   address: "192.168.1.100"
   port: 443
@@ -85,7 +85,7 @@ device:
     enabled: true
     insecureSkipVerify: true
   networking:
-    podCIDR: "10.0.0.0/24"
+    podPrefix: "10.0.0.0/24"
     interface:
       type: AppGigabitEthernet
       appGigabitEthernet:
@@ -96,13 +96,13 @@ device:
           guestInterface: 0
 
 kubelet:
-  node_name: "cat9k"
+  node_name: "cat8kv-node"
   node_internal_ip: "192.168.1.100"
 
 ---
 # Example 5: AppGigabitEthernet trunk with DHCP
 device:
-  name: cat9k
+  name: cat8kv-router
   driver: XE
   address: "192.168.1.100"
   port: 443
@@ -122,13 +122,13 @@ device:
           guestInterface: 0
 
 kubelet:
-  node_name: "cat9k"
+  node_name: "cat8kv-node"
   node_internal_ip: "192.168.1.100"
 
 ---
 # Example 6: Management with DHCP
 device:
-  name: cat9k
+  name: cat8kv-router
   driver: XE
   address: "192.168.1.100"
   port: 443
@@ -145,13 +145,13 @@ device:
         guestInterface: 0
 
 kubelet:
-  node_name: "cat9k"
+  node_name: "cat8kv-node"
   node_internal_ip: "192.168.1.100"
 
 ---
-# Example 7: Management with static IP from podCIDR
+# Example 7: Management with static IP from podPrefix
 device:
-  name: cat9k
+  name: cat8kv-router
   driver: XE
   address: "192.168.1.100"
   port: 443
@@ -161,7 +161,7 @@ device:
     enabled: true
     insecureSkipVerify: true
   networking:
-    podCIDR: "10.0.0.0/24"
+    podPrefix: "10.0.0.0/24"
     interface:
       type: Management
       management:
@@ -169,5 +169,5 @@ device:
         guestInterface: 0
 
 kubelet:
-  node_name: "cat9k"
+  node_name: "cat8kv-node"
   node_internal_ip: "192.168.1.100"

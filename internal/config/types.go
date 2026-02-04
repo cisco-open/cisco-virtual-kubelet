@@ -91,8 +91,8 @@ const (
 
 // NetworkConfig represents networking configuration
 type NetworkConfig struct {
-	// CIDR to use for pod network interfaces
-	PodCIDR string `mapstructure:"podCIDR"`
+	// Prefix to use for pod network interfaces
+	PodPrefix string `mapstructure:"podPrefix,omitempty"`
 
 	// Interface configuration
 	Interface *InterfaceConfig `mapstructure:"interface,omitempty"`
@@ -208,7 +208,4 @@ type AppGigabitEthernetConfig struct {
 
 	// GuestInterface number inside the container (optional, defaults to 0)
 	GuestInterface uint8 `mapstructure:"guestInterface,omitempty"`
-
-	// Enable DHCP when we have an access interface
-	Dhcp bool `mapstructure:"dhcp"`
 }
