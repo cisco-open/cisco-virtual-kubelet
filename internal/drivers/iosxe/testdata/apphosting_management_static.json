@@ -1,0 +1,31 @@
+{
+  "Cisco-IOS-XE-app-hosting-cfg:app": [
+    {
+      "appintf-mgmt": {
+        "access-if-num": 0
+      },
+      "application-name": "cvk0000_11111111111111111111111111111111",
+      "application-network-resource": {
+        "management-guest-ip-address": "198.51.100.10",
+        "management-guest-ip-netmask": "255.255.255.0",
+        "management-interface-name": "0"
+      },
+      "application-resource-profile": {
+        "cpu-units": 1000,
+        "disk-size-mb": 1024,
+        "memory-capacity-mb": 512,
+        "profile-name": "custom",
+        "vcpu": 1
+      },
+      "run-optss": {
+        "run-opts": [
+          {
+            "line-index": 1,
+            "line-run-opts": "--label io.kubernetes.pod.name=mgmt-pod --label io.kubernetes.pod.namespace=default --label io.kubernetes.pod.uid=11111111-1111-1111-1111-111111111111 --label io.kubernetes.container.name=mgmt-app"
+          }
+        ]
+      },
+      "start": true
+    }
+  ]
+}

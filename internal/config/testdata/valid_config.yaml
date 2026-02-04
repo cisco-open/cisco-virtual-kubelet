@@ -9,8 +9,12 @@ device:
     enabled: true
     insecureSkipVerify: true
   networking:
-    dhcpEnabled: true
-    virtualPortGroup: "0"
+    interface:
+      type: VirtualPortGroup
+      virtualPortGroup:
+        dhcp: true
+        interface: "0"
+        guestInterface: 0
 
 kubelet:
   node_name: "cisco-virtual-kubelet"
