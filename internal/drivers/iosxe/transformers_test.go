@@ -735,8 +735,8 @@ func TestConvertPodToAppConfigs_Golden_AppGigAccess(t *testing.T) {
 					Type: config.InterfaceTypeAppGigabitEthernet,
 					AppGigabitEthernet: &config.AppGigabitEthernetConfig{
 						Mode: config.AppGigabitEthernetModeAccess,
+						Dhcp: true,
 						VlanIf: config.VlanInterfaceConfig{
-							Dhcp:           true,
 							Vlan:           0,
 							GuestInterface: 0,
 						},
