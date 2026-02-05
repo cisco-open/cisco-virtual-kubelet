@@ -16,6 +16,7 @@ package provider
 
 import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +30,7 @@ func GetNodeName(config *config.Config) string {
 	return NodeName
 }
 
-func GetInitialNodeSpec(config *config.Config) v1.Node {
+func GetInitialNodeSpec(config *config.Config, deviceInfo *common.DeviceInfo) v1.Node {
 
 	return v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -42,7 +43,7 @@ func GetInitialNodeSpec(config *config.Config) v1.Node {
 		Status: v1.NodeStatus{
 			Phase:      v1.NodeRunning,
 			Conditions: InitNodeConditions(),
-			NodeInfo:   InitNodeSystemInfo(config),
+			NodeInfo:   InitNodeSystemInfo(deviceInfo),
 			Capacity:   initNodeCapacity(),
 			Addresses: []v1.NodeAddress{
 				{
@@ -112,14 +113,19 @@ func InitNodeConditions() []v1.NodeCondition {
 	}
 }
 
-func InitNodeSystemInfo(config *config.Config) v1.NodeSystemInfo {
-	// TODO Update this from driver information
-	return v1.NodeSystemInfo{
-		KubeletVersion:          "v2.00",
-		OSImage:                 "Cisco IOSXE",
-		KernelVersion:           "__cisco_ios__",
-		ContainerRuntimeVersion: "cisco.app.hosting",
+func InitNodeSystemInfo(deviceInfo *common.DeviceInfo) v1.NodeSystemInfo {
+	info := v1.NodeSystemInfo{
+		Architecture:            "amd64",
+		OperatingSystem:         "linux",
+		KubeletVersion:          "v1.0.0",
+		ContainerRuntimeVersion: "cisco.app.hosting://1.0",
+		OSImage:                 "Cisco IOS-XE",
 	}
+	if deviceInfo != nil && deviceInfo.SerialNumber != "" {
+		info.MachineID = deviceInfo.SerialNumber
+		info.SystemUUID = deviceInfo.SerialNumber
+	}
+	return info
 }
 
 func initNodeCapacity() v1.ResourceList {

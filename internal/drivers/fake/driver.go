@@ -54,15 +54,23 @@ func (d *FAKEDriver) GetDeviceResources(ctx context.Context) (*v1.ResourceList, 
 	return &resources, nil
 }
 
+func (d *FAKEDriver) GetDeviceInfo(ctx context.Context) (*common.DeviceInfo, error) {
+	return &common.DeviceInfo{
+		SerialNumber:    "FAKE123456",
+		SoftwareVersion: "Fake IOS-XE 17.0.0",
+		ProductID:       "FAKE-DEVICE",
+	}, nil
+}
+
 func (d *FAKEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 	containerAppIDs := common.GenerateContainerAppIDs(pod)
-	
+
 	log.G(ctx).WithFields(log.Fields{
-		"namespace":   pod.Namespace,
-		"pod":         pod.Name,
-		"containers":  len(containerAppIDs),
+		"namespace":  pod.Namespace,
+		"pod":        pod.Name,
+		"containers": len(containerAppIDs),
 	}).Info("Pod DeployContainer request received")
-	
+
 	for containerName, appID := range containerAppIDs {
 		log.G(ctx).WithFields(log.Fields{
 			"container":   containerName,
