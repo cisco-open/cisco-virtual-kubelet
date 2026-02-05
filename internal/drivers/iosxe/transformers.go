@@ -98,7 +98,7 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 			} else {
 				// Static IP mode: configure IP address and netmask (only for primary container)
 				if netConfig.isPrimaryContainer && (netConfig.virtualPortgroupIP == "" || netConfig.virtualPortgroupNetmask == "") {
-					return nil, fmt.Errorf("podPrefix is required to allocate IPs when dhcp=false")
+					return nil, fmt.Errorf("podCIDR is required to allocate IPs when dhcp=false")
 				}
 				netRes := &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
 					VnicGateway_0:                        ygot.String("0"),
@@ -135,7 +135,7 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 
 					if !netConfig.useDHCP {
 						if netConfig.isPrimaryContainer && (netConfig.virtualPortgroupIP == "" || netConfig.virtualPortgroupNetmask == "") {
-							return nil, fmt.Errorf("podPrefix is required to allocate IPs when dhcp=false")
+							return nil, fmt.Errorf("podCIDR is required to allocate IPs when dhcp=false")
 						}
 						if netConfig.virtualPortgroupIP != "" && netConfig.virtualPortgroupNetmask != "" {
 							vlanRule.GuestIp = ygot.String(netConfig.virtualPortgroupIP)
@@ -163,7 +163,7 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 
 					if !netConfig.useDHCP {
 						if netConfig.isPrimaryContainer && (netConfig.virtualPortgroupIP == "" || netConfig.virtualPortgroupNetmask == "") {
-							return nil, fmt.Errorf("podPrefix is required to allocate IPs when dhcp=false")
+							return nil, fmt.Errorf("podCIDR is required to allocate IPs when dhcp=false")
 						}
 						if netConfig.virtualPortgroupIP != "" && netConfig.virtualPortgroupNetmask != "" {
 							vlanRule.GuestIp = ygot.String(netConfig.virtualPortgroupIP)
@@ -184,7 +184,7 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 
 			if !netConfig.useDHCP {
 				if netConfig.isPrimaryContainer && (netConfig.mgmtGuestIPv4 == "" || netConfig.mgmtGuestIPv4Mask == "") {
-					return nil, fmt.Errorf("podPrefix is required to allocate IPs when dhcp=false")
+					return nil, fmt.Errorf("podCIDR is required to allocate IPs when dhcp=false")
 				}
 				if netConfig.mgmtGuestIPv4 != "" && netConfig.mgmtGuestIPv4Mask != "" {
 					gapp.ApplicationNetworkResource.ManagementGuestIpAddress = ygot.String(netConfig.mgmtGuestIPv4)
@@ -320,13 +320,13 @@ func (d *XEDriver) getInterfaceConfig(pod *v1.Pod, container *v1.Container, ifCo
 
 // allocateIPForContainer determines the IP address for a container based on pod prefix configuration
 func (d *XEDriver) allocateIPForContainer(pod *v1.Pod, container *v1.Container) (ip, netmask string, err error) {
-	if d.config.Networking.PodPrefix == "" {
-		return "", "", fmt.Errorf("podPrefix is empty")
+	if d.config.Networking.PodCIDR == "" {
+		return "", "", fmt.Errorf("podCIDR is empty")
 	}
 
-	_, ipNet, parseErr := net.ParseCIDR(d.config.Networking.PodPrefix)
+	_, ipNet, parseErr := net.ParseCIDR(d.config.Networking.PodCIDR)
 	if parseErr != nil {
-		return "", "", fmt.Errorf("invalid podPrefix: %w", parseErr)
+		return "", "", fmt.Errorf("invalid podCIDR: %w", parseErr)
 	}
 
 	netmask = net.IP(ipNet.Mask).String()

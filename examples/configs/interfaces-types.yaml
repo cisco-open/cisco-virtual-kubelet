@@ -64,9 +64,9 @@ device:
       type: AppGigabitEthernet
       appGigabitEthernet:
         mode: access
-        vlanIf:
-          dhcp: true
-          guestInterface: 0
+        dhcp: true
+        guestInterface: 0
+
 
 kubelet:
   node_name: "cat9k"
