@@ -43,6 +43,7 @@ type XEDriver struct {
 	client       common.NetworkClient
 	marshaller   func(any) ([]byte, error)
 	unmarshaller UnmarshalFunc
+	deviceInfo   *common.DeviceInfo
 }
 
 // NewAppHostingDriver creates a new IOS-XE AppHosting driver instance
@@ -174,7 +175,7 @@ func (d *XEDriver) getRestconfUnmarshaller() UnmarshalFunc {
 	}
 }
 
-// CheckConnection validates connectivity to the device
+// CheckConnection validates connectivity to the device and fetches device info
 func (d *XEDriver) CheckConnection(ctx context.Context) error {
 	res := &common.HostMeta{}
 
@@ -184,7 +185,47 @@ func (d *XEDriver) CheckConnection(ctx context.Context) error {
 	}
 
 	log.G(ctx).Debugf("Restconf Root: %s\n", res.Links[0].Href)
+
+	d.deviceInfo = d.fetchDeviceInfo(ctx)
 	return nil
+}
+
+func (d *XEDriver) fetchDeviceInfo(ctx context.Context) *common.DeviceInfo {
+	info := &common.DeviceInfo{}
+
+	var resp struct {
+		Component []struct {
+			State struct {
+				SerialNo        string `json:"serial-no"`
+				SoftwareVersion string `json:"software-version"`
+				PartNo          string `json:"part-no"`
+			} `json:"state"`
+		} `json:"openconfig-platform:component"`
+	}
+
+	err := d.client.Get(ctx, "/restconf/data/openconfig-platform:components", &resp, json.Unmarshal)
+	if err != nil {
+		log.G(ctx).WithError(err).Debug("Failed to fetch platform info")
+		return info
+	}
+
+	for _, c := range resp.Component {
+		if c.State.SerialNo != "" {
+			info.SerialNumber = c.State.SerialNo
+			info.SoftwareVersion = c.State.SoftwareVersion
+			info.ProductID = c.State.PartNo
+			break
+		}
+	}
+	return info
+}
+
+// GetDeviceInfo returns cached device information
+func (d *XEDriver) GetDeviceInfo(ctx context.Context) (*common.DeviceInfo, error) {
+	if d.deviceInfo == nil {
+		return &common.DeviceInfo{}, nil
+	}
+	return d.deviceInfo, nil
 }
 
 // GetDeviceResources returns the available resources on the device

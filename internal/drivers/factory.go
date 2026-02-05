@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/fake"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe"
 
@@ -41,6 +42,7 @@ func NewDriver(ctx context.Context, config *config.DeviceConfig) (CiscoKubernete
 
 type CiscoKubernetesDeviceDriver interface {
 	GetDeviceResources(ctx context.Context) (*v1.ResourceList, error)
+	GetDeviceInfo(ctx context.Context) (*common.DeviceInfo, error)
 	DeployPod(ctx context.Context, pod *v1.Pod) error
 	UpdatePod(ctx context.Context, pod *v1.Pod) error
 	DeletePod(ctx context.Context, pod *v1.Pod) error
