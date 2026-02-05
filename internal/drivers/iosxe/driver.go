@@ -194,13 +194,18 @@ func (d *XEDriver) fetchDeviceInfo(ctx context.Context) *common.DeviceInfo {
 	info := &common.DeviceInfo{}
 
 	var resp struct {
-		Component []struct {
-			State struct {
-				SerialNo        string `json:"serial-no"`
-				SoftwareVersion string `json:"software-version"`
-				PartNo          string `json:"part-no"`
-			} `json:"state"`
-		} `json:"openconfig-platform:component"`
+		Components struct {
+			Component []struct {
+				Name  string `json:"name"`
+				State struct {
+					Type            string `json:"type"`
+					Description     string `json:"description"`
+					SerialNo        string `json:"serial-no"`
+					SoftwareVersion string `json:"software-version"`
+					PartNo          string `json:"part-no"`
+				} `json:"state"`
+			} `json:"component"`
+		} `json:"openconfig-platform:components"`
 	}
 
 	err := d.client.Get(ctx, "/restconf/data/openconfig-platform:components", &resp, json.Unmarshal)
@@ -209,11 +214,13 @@ func (d *XEDriver) fetchDeviceInfo(ctx context.Context) *common.DeviceInfo {
 		return info
 	}
 
-	for _, c := range resp.Component {
-		if c.State.SerialNo != "" {
+	// Find the CHASSIS component which has the main device info
+	for _, c := range resp.Components.Component {
+		if c.State.Type == "openconfig-platform-types:CHASSIS" && c.State.SerialNo != "" {
 			info.SerialNumber = c.State.SerialNo
 			info.SoftwareVersion = c.State.SoftwareVersion
 			info.ProductID = c.State.PartNo
+			log.G(ctx).Infof("Device info: Serial=%s, Product=%s", info.SerialNumber, info.ProductID)
 			break
 		}
 	}

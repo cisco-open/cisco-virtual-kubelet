@@ -121,9 +121,17 @@ func InitNodeSystemInfo(deviceInfo *common.DeviceInfo) v1.NodeSystemInfo {
 		ContainerRuntimeVersion: "cisco.app.hosting://1.0",
 		OSImage:                 "Cisco IOS-XE",
 	}
-	if deviceInfo != nil && deviceInfo.SerialNumber != "" {
-		info.MachineID = deviceInfo.SerialNumber
-		info.SystemUUID = deviceInfo.SerialNumber
+	if deviceInfo != nil {
+		if deviceInfo.SerialNumber != "" {
+			info.MachineID = deviceInfo.SerialNumber
+			info.SystemUUID = deviceInfo.SerialNumber
+		}
+		if deviceInfo.SoftwareVersion != "" {
+			info.KernelVersion = deviceInfo.SoftwareVersion
+		}
+		if deviceInfo.ProductID != "" {
+			info.OSImage = "Cisco IOS-XE " + deviceInfo.ProductID
+		}
 	}
 	return info
 }
