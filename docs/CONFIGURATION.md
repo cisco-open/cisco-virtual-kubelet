@@ -5,10 +5,8 @@ This document describes the configuration for the Cisco Virtual Kubelet Provider
 ## Supported Devices
 
 Currently supported:
-- **Cisco Catalyst 8000V** (cat8kv) virtual routers running IOS-XE 17.15.4c
-- **Cisco Catalyst 9000** (cat9k) virtual routers running IOS-XE 17.18.2
-
-NOTE: Other versions that support Cisco App Hosting may work but have not been validated
+- **Cisco Catalyst 8000V** (cat8kv) virtual routers running IOS-XE 17.x+
+- **Cisco Catalyst 9000** (cat9k) virtual routers running IOS-XE 17.x+
 
 ## Device Prerequisites
 
