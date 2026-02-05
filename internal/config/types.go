@@ -91,8 +91,8 @@ const (
 
 // NetworkConfig represents networking configuration
 type NetworkConfig struct {
-	// Prefix to use for pod network interfaces
-	PodPrefix string `mapstructure:"podPrefix,omitempty"`
+	// CIDR to use for pod network interfaces
+	PodCIDR string `mapstructure:"podCIDR"`
 
 	// Interface configuration
 	Interface *InterfaceConfig `mapstructure:"interface,omitempty"`
