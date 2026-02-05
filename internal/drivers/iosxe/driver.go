@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
@@ -218,13 +219,25 @@ func (d *XEDriver) fetchDeviceInfo(ctx context.Context) *common.DeviceInfo {
 	for _, c := range resp.Components.Component {
 		if c.State.Type == "openconfig-platform-types:CHASSIS" && c.State.SerialNo != "" {
 			info.SerialNumber = c.State.SerialNo
-			info.SoftwareVersion = c.State.SoftwareVersion
+			info.SoftwareVersion = parseVersionNumber(c.State.SoftwareVersion)
 			info.ProductID = c.State.PartNo
-			log.G(ctx).Infof("Device info: Serial=%s, Product=%s", info.SerialNumber, info.ProductID)
+			log.G(ctx).Infof("Device info: Serial=%s, Version=%s, Product=%s",
+				info.SerialNumber, info.SoftwareVersion, info.ProductID)
 			break
 		}
 	}
 	return info
+}
+
+// parseVersionNumber extracts the version number (e.g., "17.18.2") from the full software-version string
+func parseVersionNumber(fullVersion string) string {
+	// Look for "Version X.X.X" pattern
+	re := regexp.MustCompile(`Version\s+(\d+\.\d+\.\d+)`)
+	matches := re.FindStringSubmatch(fullVersion)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return fullVersion
 }
 
 // GetDeviceInfo returns cached device information
