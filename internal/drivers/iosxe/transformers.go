@@ -289,7 +289,11 @@ func (d *XEDriver) getInterfaceConfig(pod *v1.Pod, container *v1.Container, ifCo
 			netConfig.appGigMode = ifConfig.AppGigabitEthernet.Mode
 			netConfig.appGigGuestInterface = ifConfig.AppGigabitEthernet.GuestInterface
 			netConfig.vlanIf = ifConfig.AppGigabitEthernet.VlanIf
-			netConfig.useDHCP = ifConfig.AppGigabitEthernet.VlanIf.Dhcp
+			if netConfig.appGigMode == config.AppGigabitEthernetModeAccess && netConfig.vlanIf.Vlan == 0 {
+				netConfig.useDHCP = ifConfig.AppGigabitEthernet.Dhcp
+			} else {
+				netConfig.useDHCP = ifConfig.AppGigabitEthernet.VlanIf.Dhcp
+			}
 			if !netConfig.useDHCP {
 				ip, netmask, err := d.allocateIPForContainer(pod, container)
 				netConfig.virtualPortgroupIP = ip

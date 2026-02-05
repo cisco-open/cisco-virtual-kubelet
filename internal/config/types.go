@@ -208,4 +208,7 @@ type AppGigabitEthernetConfig struct {
 
 	// GuestInterface number inside the container (optional, defaults to 0)
 	GuestInterface uint8 `mapstructure:"guestInterface,omitempty"`
+
+	// Enable DHCP when we have an access interface
+	Dhcp bool `mapstructure:"dhcp"`
 }
