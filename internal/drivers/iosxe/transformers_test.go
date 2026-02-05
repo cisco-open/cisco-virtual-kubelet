@@ -32,7 +32,7 @@ func TestGetNetworkConfig_VirtualPortGroup_DHCPEnabled(t *testing.T) {
 	driver := &XEDriver{
 		config: &config.DeviceConfig{
 			Networking: config.NetworkConfig{
-				PodPrefix: "10.0.0.0/24",
+				PodCIDR: "10.0.0.0/24",
 				Interface: &config.InterfaceConfig{
 					Type: config.InterfaceTypeVirtualPortGroup,
 					VirtualPortGroup: &config.VirtualPortGroupConfig{
@@ -81,7 +81,7 @@ func TestGetNetworkConfig_VirtualPortGroup_StaticIP(t *testing.T) {
 	driver := &XEDriver{
 		config: &config.DeviceConfig{
 			Networking: config.NetworkConfig{
-				PodPrefix: "10.0.0.0/24",
+				PodCIDR: "10.0.0.0/24",
 				Interface: &config.InterfaceConfig{
 					Type: config.InterfaceTypeVirtualPortGroup,
 					VirtualPortGroup: &config.VirtualPortGroupConfig{
@@ -344,7 +344,7 @@ func TestConvertPodToAppConfigs_SingleContainer_DHCP(t *testing.T) {
 	driver := &XEDriver{
 		config: &config.DeviceConfig{
 			Networking: config.NetworkConfig{
-				PodPrefix: "10.0.0.0/24",
+				PodCIDR: "10.0.0.0/24",
 				Interface: &config.InterfaceConfig{
 					Type: config.InterfaceTypeVirtualPortGroup,
 					VirtualPortGroup: &config.VirtualPortGroupConfig{
@@ -470,7 +470,7 @@ func TestConvertPodToAppConfigs_MultipleContainers_StaticIP(t *testing.T) {
 	driver := &XEDriver{
 		config: &config.DeviceConfig{
 			Networking: config.NetworkConfig{
-				PodPrefix: "10.0.0.0/24",
+				PodCIDR: "10.0.0.0/24",
 				Interface: &config.InterfaceConfig{
 					Type: config.InterfaceTypeVirtualPortGroup,
 					VirtualPortGroup: &config.VirtualPortGroupConfig{
@@ -580,7 +580,7 @@ func TestConvertPodToAppConfigs_EmptyPod(t *testing.T) {
 	driver := &XEDriver{
 		config: &config.DeviceConfig{
 			Networking: config.NetworkConfig{
-				PodPrefix: "10.0.0.0/24",
+				PodCIDR: "10.0.0.0/24",
 				Interface: &config.InterfaceConfig{
 					Type: config.InterfaceTypeVirtualPortGroup,
 					VirtualPortGroup: &config.VirtualPortGroupConfig{
@@ -617,7 +617,7 @@ func TestConvertPodToAppConfigs_Management_StaticIP(t *testing.T) {
 	driver := &XEDriver{
 		config: &config.DeviceConfig{
 			Networking: config.NetworkConfig{
-				PodPrefix: "198.51.100.0/24",
+				PodCIDR: "198.51.100.0/24",
 				Interface: &config.InterfaceConfig{
 					Type: config.InterfaceTypeManagement,
 					Management: &config.ManagementConfig{
@@ -677,7 +677,7 @@ func TestConvertPodToAppConfigs_Golden_ManagementStaticIP(t *testing.T) {
 	driver := &XEDriver{
 		config: &config.DeviceConfig{
 			Networking: config.NetworkConfig{
-				PodPrefix: "198.51.100.0/24",
+				PodCIDR: "198.51.100.0/24",
 				Interface: &config.InterfaceConfig{
 					Type: config.InterfaceTypeManagement,
 					Management: &config.ManagementConfig{
@@ -788,7 +788,7 @@ func TestConvertPodToAppConfigs_Golden_AppGigTrunk(t *testing.T) {
 	driver := &XEDriver{
 		config: &config.DeviceConfig{
 			Networking: config.NetworkConfig{
-				PodPrefix: "10.0.0.0/24",
+				PodCIDR: "10.0.0.0/24",
 				Interface: &config.InterfaceConfig{
 					Type: config.InterfaceTypeAppGigabitEthernet,
 					AppGigabitEthernet: &config.AppGigabitEthernetConfig{
