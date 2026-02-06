@@ -8,7 +8,7 @@ Currently supported:
 - **Cisco Catalyst 8000V** (cat8kv) virtual routers running IOS-XE 17.15.4c
 - **Cisco Catalyst 9000** (cat9k) virtual routers running IOS-XE 17.18.2
 
-**NOTE:** Other versions that support Cisco App Hosting may work but have not been validated
+NOTE: Other versions that support Cisco App Hosting may work but have not been validated
 
 ## Device Prerequisites
 
@@ -64,14 +64,17 @@ device:
   tls:
     enabled: true
     insecureSkipVerify: true
-  xe:
-    networking:
-      interface:
-        type: VirtualPortGroup
-        virtualPortGroup:
-          dhcp: true
-          interface: "0"
-          guestInterface: 0
+  networking:
+    interface:
+      type: VirtualPortGroup
+      virtualPortGroup:
+        dhcp: true
+        interface: "0"
+        guestInterface: 0
+
+kubelet:
+  node_name: "cat8kv-node"
+  node_internal_ip: "192.168.1.100"
 ```
 
 ## CLI Flags & Environment Variables
@@ -88,6 +91,13 @@ Runtime settings are **not** in the config file.  They are passed as flags or en
 Precedence: **flag → environment variable → default**.
 
 ## Configuration Fields
+
+### Kubelet Section
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `node_name` | string | Yes | - | Kubernetes node name |
+| `node_internal_ip` | string | No | - | Internal IP for the node |
 
 ### Device Section
 
@@ -113,33 +123,8 @@ Driver-specific networking lives under the driver key.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `interface.type` | string | Yes | - | `VirtualPortGroup`, `AppGigabitEthernet`, or `Management` |
-
-#### VirtualPortGroup (`device.xe.networking.interface.virtualPortGroup`)
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `dhcp` | bool | No | false | Use DHCP for container IPs |
-| `interface` | string | No | "0" | VirtualPortGroup interface number |
-| `guestInterface` | int | No | 0 | Guest interface number |
-
-#### AppGigabitEthernet (`device.xe.networking.interface.appGigabitEthernet`)
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `mode` | string | Yes | - | `access` or `trunk` |
-| `dhcp` | bool | No | false | DHCP (access mode only) |
-| `guestInterface` | int | No | 0 | Guest interface (access mode only) |
-| `vlanIf.vlan` | int | No | - | VLAN ID (trunk mode only) |
-| `vlanIf.dhcp` | bool | No | false | DHCP (trunk mode only) |
-| `vlanIf.guestInterface` | int | No | 0 | Guest interface (trunk mode only) |
-
-#### Management (`device.xe.networking.interface.management`)
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `dhcp` | bool | No | false | Use DHCP for container IPs |
-| `guestInterface` | int | No | 0 | Guest interface number |
+| `dhcpEnabled` | bool | No | false | Use DHCP for container IPs |
+| `virtualPortGroup` | string | No | "0" | VirtualPortGroup interface number |
 
 ## Example Pod Manifest
 

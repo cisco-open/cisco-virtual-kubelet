@@ -8,11 +8,14 @@ device:
   tls:
     enabled: true
     insecureSkipVerify: true
-  xe:
-    networking:
-      interface:
-        type: VirtualPortGroup
-        virtualPortGroup:
-          dhcp: true
-          interface: "0"
-          guestInterface: 0
+  networking:
+    interface:
+      type: VirtualPortGroup
+      virtualPortGroup:
+        dhcp: true
+        interface: "0"
+        guestInterface: 0
+
+kubelet:
+  node_name: "cisco-virtual-kubelet"
+  node_internal_ip: "10.0.0.1"

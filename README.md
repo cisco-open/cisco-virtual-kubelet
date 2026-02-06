@@ -102,12 +102,8 @@ helm install cvk ./charts/cisco-virtual-kubelet \
 Once the controller is running, create a `CiscoDevice` resource to provision a VK node:
 
 ```yaml
-apiVersion: cisco.vk/v1alpha1
-kind: CiscoDevice
-metadata:
-  name: cat9000-1
-  namespace: default
-spec:
+device:
+  name: cat8kv-router
   driver: XE
   address: "192.168.1.100"
   port: 443
@@ -116,17 +112,62 @@ spec:
   tls:
     enabled: true
     insecureSkipVerify: true
-  xe:
-    networking:
-      interface:
-        type: VirtualPortGroup
-        virtualPortGroup:
-          dhcp: true
-          interface: "0"
-          guestInterface: 0
+  networking:
+    interface:
+      type: VirtualPortGroup
+      virtualPortGroup:
+        dhcp: true
+        interface: "0"
+        guestInterface: 0
+
+kubelet:
+  node_name: "cat8kv-node"
+  node_internal_ip: "192.168.1.100"
 ```
 
-The controller will create a VK deployment and a matching Kubernetes node. Pods scheduled to that node are deployed to the device via AppHosting.
+See [exmaples](examples/configs/device-configs.yaml) for different options.
+
+**KUBECONFIG**
+
+For out-of-cluster you can provide the kubeconfig using the arg `--kubeconfig` or use the `KUBECONFIG` env variable.
+
+```bash
+export KUBECONFIG=~/.kube/config # Location of the Kubernetes cluster kubeconfig
+```
+
+
+**Start Provider**
+
+```bash
+go run ./cmd/virtual-kubelet --config dev/config-dhcp-test.yaml --kubeconfig ~/.kube/config
+```
+
+**Deploy test Pod**
+
+```yaml
+# ./dev/test-pod-dhcp.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dhcp-test-pod
+  namespace: default
+spec:
+  nodeName: cat8kv-node # Virtual Kubelet Kubernetes Node name
+  containers:
+  - name: test-app
+    image: flash:/hello-app.iosxe.tar # Docker image on flash filesystem
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+```
+
+```bash
+kubectl apply -f ./dev/test-pod-dhcp.yaml
+```
 
 ## Documentation
 
@@ -157,48 +198,12 @@ cisco-virtual-kubelet/
 │   ├── provider/               # Virtual Kubelet provider implementation
 │   └── drivers/                # Device driver implementations (XE, fake)
 ├── examples/
-├── dev/                        # Development configs and test resources
-├── docs/
-├── Makefile
-├── go.mod
+│   ├── configs/                # Example configuration files
+├── dev/                        # Development environment setup
+├── docs/                       # Documentation
+├── Makefile                    # Build automation
+├── go.mod                      # Go module definition (Go 1.23.4)
 └── README.md
-```
-
-## Development
-
-For local development and testing, the VK provider can be run directly against a cluster without deploying it to Kubernetes.
-
-### Prerequisites
-
-- [Go](https://go.dev/doc/devel/release) 1.23 or later
-
-### Build and run locally
-
-```bash
-make build
-
-cisco-vk run \
-  --config dev/deviceConfig.yaml \
-  --kubeconfig ~/.kube/config \
-  --nodename my-test-node
-```
-
-The device config file follows the same schema as the `CiscoDevice` CR `spec`. See [examples](examples/configs/device-configs.yaml) for interface/networking options.
-
-**Runtime flags:**
-
-| Flag | Env Var | Default | Description |
-|------|---------|---------|-------------|
-| `--nodename` | `VKUBELET_NODE_NAME` | `cisco-virtual-kubelet` | Kubernetes node name |
-| `--config` / `-c` | - | `/etc/virtual-kubelet/config.yaml` | Path to device config file |
-| `--kubeconfig` | `KUBECONFIG` | _(in-cluster)_ | Path to kubeconfig file |
-| `--log-level` | `LOG_LEVEL` | `info` | Log level: debug, info, warn, error |
-
-### Regenerate RBAC and CRDs
-
-```bash
-# Regenerates CRDs → config/crd, RBAC → chart templates, syncs CRDs into chart
-make generate
 ```
 
 ## Contributing
