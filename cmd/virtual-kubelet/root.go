@@ -24,7 +24,6 @@ import (
 	"syscall"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	logruslib "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -180,17 +179,10 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
 
-	driver, err := drivers.NewDriver(ctx, &appCfg.Device)
-	if err != nil {
-		return fmt.Errorf("failed to create driver: %w", err)
-	}
-
-	deviceInfo, _ := driver.GetDeviceInfo(ctx)
-
 	opts := []nodeutil.NodeOpt{
 		nodeutil.WithNodeConfig(nodeutil.NodeConfig{
 			Client:         clientset,
-			NodeSpec:       provider.GetInitialNodeSpec(appCfg, deviceInfo),
+			NodeSpec:       provider.GetInitialNodeSpec(appCfg),
 			HTTPListenAddr: ":10250",
 			NumWorkers:     5,
 		}),
@@ -201,7 +193,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise PodHandler: %w", err)
 		}
-		nodeHandler, err := provider.NewAppHostingNode(ctx, appCfg, vkCfg)
+		nodeHandler, err := provider.NewAppHostingNode(ctx, podHandler.GetDriver())
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise nodeHandler: %w", err)
 		}

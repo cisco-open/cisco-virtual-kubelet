@@ -67,6 +67,11 @@ func (p *AppHostingProvider) GetCapacity(ctx context.Context) (v1.ResourceList, 
 	return *resources, err
 }
 
+// GetDriver returns the driver for use by other components (e.g., AppHostingNode)
+func (p *AppHostingProvider) GetDriver() drivers.CiscoKubernetesDeviceDriver {
+	return p.driver
+}
+
 func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	// Deploy the container. This MUST be idempotent
 	// In future we can range over the pod.spec.containers
@@ -176,15 +181,18 @@ func (p *AppHostingProvider) RunInContainer(ctx context.Context, namespace strin
 // AppHostingNode implements node.NodeProvider for proper heartbeat management.
 // This follows the NaiveNodeProvider pattern from virtual-kubelet.
 // The library's NodeController handles periodic heartbeat updates automatically.
-type AppHostingNode struct{}
+type AppHostingNode struct {
+	driver drivers.CiscoKubernetesDeviceDriver
+}
 
-// NewAppHostingNode creates a new AppHostingNode
+// NewAppHostingNode creates a new AppHostingNode with a shared driver
 func NewAppHostingNode(
 	ctx context.Context,
-	appCfg *config.Config,
-	vkCfg nodeutil.ProviderConfig,
+	driver drivers.CiscoKubernetesDeviceDriver,
 ) (*AppHostingNode, error) {
-	return &AppHostingNode{}, nil
+	return &AppHostingNode{
+		driver: driver,
+	}, nil
 }
 
 // Ping implements node.NodeProvider.
@@ -195,8 +203,36 @@ func (a *AppHostingNode) Ping(ctx context.Context) error {
 }
 
 // NotifyNodeStatus implements node.NodeProvider.
-// This is for async/event-driven status updates (e.g., device health changes).
-// The library's controlLoop handles periodic heartbeat updates automatically.
+// Called once at startup to allow async node status updates.
+// We use this to update node info with device details after driver initialization.
 func (a *AppHostingNode) NotifyNodeStatus(ctx context.Context, cb func(*v1.Node)) {
-	// No-op - library handles periodic updates via controlLoop and updateNodeStatusHeartbeat()
+	if a.driver == nil {
+		return
+	}
+
+	deviceInfo, err := a.driver.GetDeviceInfo(ctx)
+	if err != nil || deviceInfo == nil {
+		return
+	}
+
+	// Only update if we have actual device info
+	if deviceInfo.SerialNumber == "" {
+		return
+	}
+
+	log.G(ctx).Info("Updating node status with device info")
+
+	// Create a node update with device info
+	cb(&v1.Node{
+		Status: v1.NodeStatus{
+			NodeInfo: v1.NodeSystemInfo{
+				MachineID:       deviceInfo.SerialNumber,
+				SystemUUID:      deviceInfo.SerialNumber,
+				KernelVersion:   deviceInfo.SoftwareVersion,
+				OSImage:         "Cisco IOS-XE " + deviceInfo.ProductID,
+				Architecture:    "amd64",
+				OperatingSystem: "linux",
+			},
+		},
+	})
 }
