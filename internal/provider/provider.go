@@ -223,7 +223,7 @@ func (a *AppHostingNode) NotifyNodeStatus(ctx context.Context, cb func(*v1.Node)
 		return
 	}
 
-	log.G(ctx).Info("Updating node status with device info")
+	log.G(ctx).Infof("Updating node status with device info, nodeInternalIP=%q", a.nodeInternalIP)
 
 	// Create a node update with device info and addresses
 	nodeUpdate := &v1.Node{

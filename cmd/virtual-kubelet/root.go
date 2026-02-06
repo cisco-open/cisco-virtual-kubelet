@@ -193,7 +193,12 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise PodHandler: %w", err)
 		}
-		nodeHandler, err := provider.NewAppHostingNode(ctx, podHandler.GetDriver(), appCfg.Kubelet.NodeInternalIP)
+		// Use node_internal_ip if configured, otherwise fall back to device address
+		nodeInternalIP := appCfg.Kubelet.NodeInternalIP
+		if nodeInternalIP == "" {
+			nodeInternalIP = appCfg.Device.Address
+		}
+		nodeHandler, err := provider.NewAppHostingNode(ctx, podHandler.GetDriver(), nodeInternalIP)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise nodeHandler: %w", err)
 		}
