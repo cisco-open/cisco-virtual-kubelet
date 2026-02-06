@@ -12,7 +12,7 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 ### Key Features
 
 - **Native Kubernetes Integration**: Deploy containers to Cisco devices using standard `kubectl` commands
-- **Driver-Based Architecture**: Extensible driver pattern currently supporting Catalyst 8Kv device type (IOS-XE)
+- **Driver-Based Architecture**: Extensible driver pattern currently supporting IOS-XE devices
 - **Full Lifecycle Management**: Create, monitor, and delete containers via RESTCONF
 - **Health Monitoring**: Continuous node health checks and status reporting
 - **Resource Management**: CPU, memory, and storage allocation per container
@@ -22,6 +22,7 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 ### Supported Devices
 
 - Cisco Catalyst 8000V virtual routers
+- Cisco Catalyst 9000 switches
 
 ## Architecture
 
@@ -42,7 +43,7 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
             │ RESTCONF          │ RESTCONF          │ RESTCONF
             ▼                   ▼                   ▼
     ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-    │  Cisco C8Kv1  │   │  Cisco C8Kv2  │   │  Cisco C8KvN  │
+    │  Cisco IOS-XE │   │  Cisco IOS-XE │   │  Cisco IOS-XE │
     │  ┌─────────┐  │   │  ┌─────────┐  │   │  ┌─────────┐  │
     │  │Container│  │   │  │Container│  │   │  │Container│  │
     │  └─────────┘  │   │  └─────────┘  │   │  └─────────┘  │
@@ -84,33 +85,34 @@ sudo make install
 The provider uses a two-tier YAML configuration with `device` and `kubelet` sections:
 
 ```yaml
-# ./dev/config-dhcp-test.yaml
 device:
   name: cat8kv-router
   driver: XE
-  address: "192.0.2.24" # Update with Router IP Address
+  address: "192.168.1.100"
   port: 443
   username: admin
-  password: cisco
+  password: cisco123
   tls:
     enabled: true
     insecureSkipVerify: true
   networking:
-    dhcpEnabled: true
-    virtualPortGroup: "0"
-    defaultVRF: ""
+    interface:
+      type: VirtualPortGroup
+      virtualPortGroup:
+        dhcp: true
+        interface: "0"
+        guestInterface: 0
 
 kubelet:
   node_name: "cat8kv-node"
-  namespace: ""
-  update_interval: "30s"
-  os: "Linux"
-  node_internal_ip: "192.0.2.24" # Update with Router IP Address
+  node_internal_ip: "192.168.1.100"
 ```
 
-See [Configuration Reference](docs/CONFIGURATION.md) for all options.
+See [exmaples](examples/configs/device-configs.yaml) for different options.
 
-**Export KUBECONFIG**
+**KUBECONFIG**
+
+For out-of-cluster you can provide the kubeconfig using the arg `--kubeconfig` or use the `KUBECONFIG` env variable.
 
 ```bash
 export KUBECONFIG=~/.kube/config # Location of the Kubernetes cluster kubeconfig
@@ -120,8 +122,7 @@ export KUBECONFIG=~/.kube/config # Location of the Kubernetes cluster kubeconfig
 **Start Provider**
 
 ```bash
-cd ~/cisco-virtual-kubelet
-cisco-vk --config dev/config-dhcp-test.yaml
+go run ./cmd/virtual-kubelet --config dev/config-dhcp-test.yaml --kubeconfig ~/.kube/config
 ```
 
 **Deploy test Pod**
@@ -190,44 +191,11 @@ cisco-virtual-kubelet/
 │           └── driver.go
 ├── examples/
 │   ├── configs/                # Example configuration files
-│   └── manifests/              # Example Kubernetes manifests
 ├── dev/                        # Development environment setup
 ├── docs/                       # Documentation
 ├── Makefile                    # Build automation
 ├── go.mod                      # Go module definition (Go 1.23.4)
 └── README.md
-```
-
-## Integration with Virtual Kubelet
-
-The provider implements the Virtual Kubelet provider interface:
-
-```go
-import (
-    "github.com/virtual-kubelet/virtual-kubelet/node"
-    "github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
-    "github.com/cisco/virtual-kubelet-cisco/internal/config"
-    "github.com/cisco/virtual-kubelet-cisco/internal/provider"
-)
-
-func main() {
-    // Load configuration
-    cfg, _ := config.LoadConfig(configPath)
-
-    // Create provider factory function
-    newProviderFunc := func(vkCfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
-        p, err := provider.NewAppHostingProvider(ctx, cfg, vkCfg)
-        if err != nil {
-            return nil, nil, err
-        }
-        n, _ := provider.NewAppHostingNode(ctx, cfg, vkCfg)
-        return p, n, nil
-    }
-
-    // Create and run node
-    n, _ := nodeutil.NewNode(nodeName, newProviderFunc, nodeutil.WithClient(clientset))
-    n.Run(ctx)
-}
 ```
 
 ## Contributing

@@ -103,3 +103,25 @@ func TestLoad_ExplicitPort(t *testing.T) {
 		t.Errorf("Expected explicit port 8080 to be preserved, got %d", cfg.Device.Port)
 	}
 }
+
+func TestLoad_InterfaceConfigValidation(t *testing.T) {
+	viper.Reset()
+
+	viper.Set("device", map[string]interface{}{
+		"name":    "iface-node",
+		"address": "1.2.3.4",
+		"networking": map[string]interface{}{
+			"interface": map[string]interface{}{
+				"type": "AppGigabitEthernet",
+				"virtualPortGroup": map[string]interface{}{
+					"interface": "0",
+				},
+			},
+		},
+	})
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for invalid interface config, got nil")
+	}
+}

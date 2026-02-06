@@ -4,7 +4,7 @@ This document describes the technical architecture of the Cisco Virtual Kubelet 
 
 ## Overview
 
-The Cisco Virtual Kubelet Provider implements the [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider interface, enabling Kubernetes to treat Cisco IOS-XE devices (specifically Catalyst 8000V) as compute nodes for container workloads.
+The Cisco Virtual Kubelet Provider implements the [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider interface, enabling Kubernetes to treat Cisco IOS-XE devices as compute nodes for container workloads.
 
 ## Component Architecture
 

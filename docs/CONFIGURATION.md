@@ -5,7 +5,10 @@ This document describes the configuration for the Cisco Virtual Kubelet Provider
 ## Supported Devices
 
 Currently supported:
-- **Cisco Catalyst 8000V** (cat8kv) virtual routers running IOS-XE 17.x+
+- **Cisco Catalyst 8000V** (cat8kv) virtual routers running IOS-XE 17.15.4c
+- **Cisco Catalyst 9000** (cat9k) virtual routers running IOS-XE 17.18.2
+
+NOTE: Other versions that support Cisco App Hosting may work but have not been validated
 
 ## Device Prerequisites
 
@@ -56,24 +59,24 @@ Default location: `/etc/cisco-vk/config.yaml`
 device:
   name: cat8kv-router
   driver: XE
-  address: "192.0.2.24"
+  address: "192.168.1.100"
   port: 443
   username: admin
-  password: cisco
+  password: cisco123
   tls:
     enabled: true
     insecureSkipVerify: true
   networking:
-    dhcpEnabled: true
-    virtualPortGroup: "0"
-    defaultVRF: ""
+    interface:
+      type: VirtualPortGroup
+      virtualPortGroup:
+        dhcp: true
+        interface: "0"
+        guestInterface: 0
 
 kubelet:
   node_name: "cat8kv-node"
-  namespace: ""
-  update_interval: "30s"
-  os: "Linux"
-  node_internal_ip: "192.0.2.24"
+  node_internal_ip: "192.168.1.100"
 ```
 
 ## Configuration Fields
@@ -83,9 +86,6 @@ kubelet:
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `node_name` | string | Yes | - | Kubernetes node name |
-| `namespace` | string | No | "" | Namespace filter (empty = all) |
-| `update_interval` | string | No | "30s" | Node status update interval |
-| `os` | string | No | "Linux" | Operating system label |
 | `node_internal_ip` | string | No | - | Internal IP for the node |
 
 ### Device Section
@@ -112,7 +112,6 @@ kubelet:
 |-------|------|----------|---------|-------------|
 | `dhcpEnabled` | bool | No | false | Use DHCP for container IPs |
 | `virtualPortGroup` | string | No | "0" | VirtualPortGroup interface number |
-| `defaultVRF` | string | No | "" | VRF for container traffic |
 
 ## Example Pod Manifest
 
@@ -138,7 +137,7 @@ spec:
         cpu: "500m"
 ```
 
-The container image must be pre-loaded onto the device flash storage.
+NOTE:  Currently the container image must be pre-loaded onto the device flash storage.
 
 ## Verifying Device Configuration
 
