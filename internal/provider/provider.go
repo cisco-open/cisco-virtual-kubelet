@@ -67,11 +67,6 @@ func (p *AppHostingProvider) GetCapacity(ctx context.Context) (v1.ResourceList, 
 	return *resources, err
 }
 
-// GetDriver returns the driver for use by other components (e.g., AppHostingNode)
-func (p *AppHostingProvider) GetDriver() drivers.CiscoKubernetesDeviceDriver {
-	return p.driver
-}
-
 func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	// Deploy the container. This MUST be idempotent
 	// In future we can range over the pod.spec.containers
@@ -182,16 +177,17 @@ func (p *AppHostingProvider) RunInContainer(ctx context.Context, namespace strin
 // This follows the NaiveNodeProvider pattern from virtual-kubelet.
 // The library's NodeController handles periodic heartbeat updates automatically.
 type AppHostingNode struct {
-	driver drivers.CiscoKubernetesDeviceDriver
+	appCfg *config.Config
 }
 
-// NewAppHostingNode creates a new AppHostingNode with a shared driver
+// NewAppHostingNode creates a new AppHostingNode
 func NewAppHostingNode(
 	ctx context.Context,
-	driver drivers.CiscoKubernetesDeviceDriver,
+	appCfg *config.Config,
+	vkCfg nodeutil.ProviderConfig,
 ) (*AppHostingNode, error) {
 	return &AppHostingNode{
-		driver: driver,
+		appCfg: appCfg,
 	}, nil
 }
 
@@ -206,11 +202,19 @@ func (a *AppHostingNode) Ping(ctx context.Context) error {
 // Called once at startup to allow async node status updates.
 // We use this to update node info with device details after driver initialization.
 func (a *AppHostingNode) NotifyNodeStatus(ctx context.Context, cb func(*v1.Node)) {
-	if a.driver == nil {
+	if a.appCfg == nil {
 		return
 	}
 
-	deviceInfo, err := a.driver.GetDeviceInfo(ctx)
+	// Create a temporary driver to fetch device info
+	// Note: NewDriver calls CheckConnection internally, which populates deviceInfo
+	driver, err := drivers.NewDriver(ctx, &a.appCfg.Device)
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("Failed to create driver for node status update")
+		return
+	}
+
+	deviceInfo, err := driver.GetDeviceInfo(ctx)
 	if err != nil || deviceInfo == nil {
 		return
 	}
@@ -220,19 +224,33 @@ func (a *AppHostingNode) NotifyNodeStatus(ctx context.Context, cb func(*v1.Node)
 		return
 	}
 
-	log.G(ctx).Info("Updating node status with device info")
+	// Determine node internal IP: config value or device address
+	nodeInternalIP := a.appCfg.Kubelet.NodeInternalIP
+	if nodeInternalIP == "" {
+		nodeInternalIP = a.appCfg.Device.Address
+	}
 
-	// Create a node update with device info
-	cb(&v1.Node{
+	log.G(ctx).Infof("Updating node status with device info, InternalIP=%s", nodeInternalIP)
+
+	// Create a node update with device info and addresses
+	nodeUpdate := &v1.Node{
 		Status: v1.NodeStatus{
 			NodeInfo: v1.NodeSystemInfo{
 				MachineID:       deviceInfo.SerialNumber,
 				SystemUUID:      deviceInfo.SerialNumber,
 				KernelVersion:   deviceInfo.SoftwareVersion,
-				OSImage:         "Cisco IOS-XE " + deviceInfo.ProductID,
-				Architecture:    "amd64",
-				OperatingSystem: "linux",
+				OSImage:         "IOS-XE",
+				Architecture:    deviceInfo.ProductID,
+				OperatingSystem: "Cisco",
+			},
+			Addresses: []v1.NodeAddress{
+				{
+					Type:    v1.NodeInternalIP,
+					Address: nodeInternalIP,
+				},
 			},
 		},
-	})
+	}
+
+	cb(nodeUpdate)
 }

@@ -193,7 +193,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise PodHandler: %w", err)
 		}
-		nodeHandler, err := provider.NewAppHostingNode(ctx, podHandler.GetDriver())
+		nodeHandler, err := provider.NewAppHostingNode(ctx, appCfg, vkCfg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise nodeHandler: %w", err)
 		}
