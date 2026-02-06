@@ -12,7 +12,7 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 ### Key Features
 
 - **Native Kubernetes Integration**: Deploy containers to Cisco devices using standard `kubectl` commands
-- **Driver-Based Architecture**: Extensible driver pattern currently supporting Catalyst 8Kv device type (IOS-XE)
+- **Driver-Based Architecture**: Extensible driver pattern currently supporting IOS-XE devices
 - **Full Lifecycle Management**: Create, monitor, and delete containers via RESTCONF
 - **Health Monitoring**: Continuous node health checks and status reporting
 - **Resource Management**: CPU, memory, and storage allocation per container
@@ -43,7 +43,7 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
             │ RESTCONF          │ RESTCONF          │ RESTCONF
             ▼                   ▼                   ▼
     ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-    │  Cisco C8Kv1  │   │  Cisco C8Kv2  │   │  Cisco C8KvN  │
+    │  Cisco IOS-XE │   │  Cisco IOS-XE │   │  Cisco IOS-XE │
     │  ┌─────────┐  │   │  ┌─────────┐  │   │  ┌─────────┐  │
     │  │Container│  │   │  │Container│  │   │  │Container│  │
     │  └─────────┘  │   │  └─────────┘  │   │  └─────────┘  │
