@@ -125,7 +125,7 @@ kubelet:
   node_internal_ip: "192.168.1.100"
 ```
 
-See [exmaples](examples/configs/device-configs.yaml) for different options.
+See [examples](examples/configs/device-configs.yaml) for different options.
 
 **KUBECONFIG**
 
