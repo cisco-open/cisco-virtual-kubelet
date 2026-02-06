@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"regexp"
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
@@ -195,49 +194,49 @@ func (d *XEDriver) fetchDeviceInfo(ctx context.Context) *common.DeviceInfo {
 	info := &common.DeviceInfo{}
 
 	var resp struct {
-		Components struct {
-			Component []struct {
-				Name  string `json:"name"`
-				State struct {
-					Type            string `json:"type"`
-					Description     string `json:"description"`
-					SerialNo        string `json:"serial-no"`
-					SoftwareVersion string `json:"software-version"`
-					PartNo          string `json:"part-no"`
-				} `json:"state"`
-			} `json:"component"`
-		} `json:"openconfig-platform:components"`
+		DeviceHardwareData struct {
+			DeviceHardware struct {
+				DeviceInventory []struct {
+					HwType       string `json:"hw-type"`
+					SerialNumber string `json:"serial-number"`
+					PartNumber   string `json:"part-number"`
+					HwDesc       string `json:"hw-description"`
+				} `json:"device-inventory"`
+				DeviceSystemData struct {
+					SoftwareVersion  string `json:"software-version"`
+					BootTime         string `json:"boot-time"`
+					LastRebootReason string `json:"last-reboot-reason"`
+				} `json:"device-system-data"`
+			} `json:"device-hardware"`
+		} `json:"Cisco-IOS-XE-device-hardware-oper:device-hardware-data"`
 	}
 
-	err := d.client.Get(ctx, "/restconf/data/openconfig-platform:components", &resp, json.Unmarshal)
+	err := d.client.Get(ctx, "/restconf/data/Cisco-IOS-XE-device-hardware-oper:device-hardware-data", &resp, json.Unmarshal)
 	if err != nil {
-		log.G(ctx).WithError(err).Debug("Failed to fetch platform info")
+		log.G(ctx).WithError(err).Debug("Failed to fetch device hardware info")
 		return info
 	}
 
-	// Find the CHASSIS component which has the main device info
-	for _, c := range resp.Components.Component {
-		if c.State.Type == "openconfig-platform-types:CHASSIS" && c.State.SerialNo != "" {
-			info.SerialNumber = c.State.SerialNo
-			info.SoftwareVersion = parseVersionNumber(c.State.SoftwareVersion)
-			info.ProductID = c.State.PartNo
-			log.G(ctx).Infof("Device info: Serial=%s, Version=%s, Product=%s",
-				info.SerialNumber, info.SoftwareVersion, info.ProductID)
+	// Get software version from device-system-data
+	if resp.DeviceHardwareData.DeviceHardware.DeviceSystemData.SoftwareVersion != "" {
+		info.SoftwareVersion = resp.DeviceHardwareData.DeviceHardware.DeviceSystemData.SoftwareVersion
+	}
+
+	// Find the chassis inventory entry for serial and part number
+	for _, inv := range resp.DeviceHardwareData.DeviceHardware.DeviceInventory {
+		if inv.HwType == "hw-type-chassis" && inv.SerialNumber != "" {
+			info.SerialNumber = inv.SerialNumber
+			info.ProductID = inv.PartNumber
 			break
 		}
 	}
-	return info
-}
 
-// parseVersionNumber extracts the version number (e.g., "17.18.2") from the full software-version string
-func parseVersionNumber(fullVersion string) string {
-	// Look for "Version X.X.X" pattern
-	re := regexp.MustCompile(`Version\s+(\d+\.\d+\.\d+)`)
-	matches := re.FindStringSubmatch(fullVersion)
-	if len(matches) > 1 {
-		return matches[1]
+	if info.SerialNumber != "" {
+		log.G(ctx).Infof("Device info: Serial=%s, Version=%s, Product=%s",
+			info.SerialNumber, info.SoftwareVersion, info.ProductID)
 	}
-	return fullVersion
+
+	return info
 }
 
 // GetDeviceInfo returns cached device information
