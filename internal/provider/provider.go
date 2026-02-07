@@ -239,6 +239,7 @@ func (a *AppHostingNode) NotifyNodeStatus(ctx context.Context, cb func(*v1.Node)
 				MachineID:       deviceInfo.SerialNumber,
 				SystemUUID:      deviceInfo.SerialNumber,
 				KernelVersion:   deviceInfo.SoftwareVersion,
+				KubeletVersion:  getVirtualKubeletVersion(),
 				OSImage:         "IOS-XE",
 				Architecture:    deviceInfo.ProductID,
 				OperatingSystem: "Cisco",
