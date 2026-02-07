@@ -15,10 +15,9 @@
 package provider
 
 import (
-	"fmt"
 	"runtime/debug"
-	"strings"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/config"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -135,7 +134,6 @@ func InitNodeConditions() []v1.NodeCondition {
 }
 
 func InitNodeSystemInfo() v1.NodeSystemInfo {
-	// TODO Update this from driver information
 	return v1.NodeSystemInfo{
 		Architecture:            "unknown",
 		OperatingSystem:         "unknown",

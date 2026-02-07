@@ -177,7 +177,7 @@ func (p *AppHostingProvider) RunInContainer(ctx context.Context, namespace strin
 // This follows the NaiveNodeProvider pattern from virtual-kubelet.
 // The library's NodeController handles periodic heartbeat updates automatically.
 type AppHostingNode struct {
-	deviceSpec *v1alpha1.DeviceSpec
+	appCfg *config.Config
 }
 
 // NewAppHostingNode creates a new AppHostingNode
@@ -187,7 +187,7 @@ func NewAppHostingNode(
 	vkCfg nodeutil.ProviderConfig,
 ) (*AppHostingNode, error) {
 	return &AppHostingNode{
-		deviceSpec: deviceSpec,
+		appCfg: appCfg,
 	}, nil
 }
 
@@ -202,13 +202,13 @@ func (a *AppHostingNode) Ping(ctx context.Context) error {
 // Called once at startup to allow async node status updates.
 // We use this to update node info with device details after driver initialization.
 func (a *AppHostingNode) NotifyNodeStatus(ctx context.Context, cb func(*v1.Node)) {
-	if a.deviceSpec == nil {
+	if a.appCfg == nil {
 		return
 	}
 
 	// Create a temporary driver to fetch device info
 	// Note: NewDriver calls CheckConnection internally, which populates deviceInfo
-	driver, err := drivers.NewDriver(ctx, a.deviceSpec)
+	driver, err := drivers.NewDriver(ctx, &a.appCfg.Device)
 	if err != nil {
 		log.G(ctx).WithError(err).Warn("Failed to create driver for node status update")
 		return
@@ -224,8 +224,11 @@ func (a *AppHostingNode) NotifyNodeStatus(ctx context.Context, cb func(*v1.Node)
 		return
 	}
 
-	// Determine node internal IP from device address
-	nodeInternalIP := a.deviceSpec.Address
+	// Determine node internal IP: config value or device address
+	nodeInternalIP := a.appCfg.Kubelet.NodeInternalIP
+	if nodeInternalIP == "" {
+		nodeInternalIP = a.appCfg.Device.Address
+	}
 
 	log.G(ctx).Infof("Updating node status with device info, InternalIP=%s", nodeInternalIP)
 
