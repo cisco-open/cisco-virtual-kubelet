@@ -53,7 +53,7 @@ func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*XEDri
 		Host: fmt.Sprintf("%s:%d", spec.Address, spec.Port),
 	}
 
-	if spec.TLS.Enabled {
+	if spec.TLS != nil && spec.TLS.Enabled {
 		u.Scheme = "https"
 	} else {
 		u.Scheme = "http"
