@@ -194,41 +194,30 @@ func (d *XEDriver) CheckConnection(ctx context.Context) error {
 func (d *XEDriver) fetchDeviceInfo(ctx context.Context) *common.DeviceInfo {
 	info := &common.DeviceInfo{}
 
-	var resp struct {
-		DeviceHardwareData struct {
-			DeviceHardware struct {
-				DeviceInventory []struct {
-					HwType       string `json:"hw-type"`
-					SerialNumber string `json:"serial-number"`
-					PartNumber   string `json:"part-number"`
-					HwDesc       string `json:"hw-description"`
-				} `json:"device-inventory"`
-				DeviceSystemData struct {
-					SoftwareVersion  string `json:"software-version"`
-					BootTime         string `json:"boot-time"`
-					LastRebootReason string `json:"last-reboot-reason"`
-				} `json:"device-system-data"`
-			} `json:"device-hardware"`
-		} `json:"Cisco-IOS-XE-device-hardware-oper:device-hardware-data"`
-	}
-
-	err := d.client.Get(ctx, "/restconf/data/Cisco-IOS-XE-device-hardware-oper:device-hardware-data", &resp, json.Unmarshal)
+	resp := &Cisco_IOS_XEDeviceHardwareOper_DeviceHardwareData{}
+	err := d.client.Get(ctx, "/restconf/data/Cisco-IOS-XE-device-hardware-oper:device-hardware-data", resp, d.unmarshaller)
 	if err != nil {
 		log.G(ctx).WithError(err).Debug("Failed to fetch device hardware info")
 		return info
 	}
 
 	// Get software version from device-system-data and extract just the version number
-	if resp.DeviceHardwareData.DeviceHardware.DeviceSystemData.SoftwareVersion != "" {
-		info.SoftwareVersion = parseVersionNumber(resp.DeviceHardwareData.DeviceHardware.DeviceSystemData.SoftwareVersion)
+	if resp.DeviceHardware != nil && resp.DeviceHardware.DeviceSystemData != nil {
+		if resp.DeviceHardware.DeviceSystemData.SoftwareVersion != nil {
+			info.SoftwareVersion = parseVersionNumber(*resp.DeviceHardware.DeviceSystemData.SoftwareVersion)
+		}
 	}
 
 	// Find the chassis inventory entry for serial and part number
-	for _, inv := range resp.DeviceHardwareData.DeviceHardware.DeviceInventory {
-		if inv.HwType == "hw-type-chassis" && inv.SerialNumber != "" {
-			info.SerialNumber = inv.SerialNumber
-			info.ProductID = inv.PartNumber
-			break
+	if resp.DeviceHardware != nil && resp.DeviceHardware.DeviceInventory != nil {
+		for _, inv := range resp.DeviceHardware.DeviceInventory {
+			if inv.HwType == Cisco_IOS_XEDeviceHardwareOper_HwType_hw_type_chassis && inv.SerialNumber != nil && *inv.SerialNumber != "" {
+				info.SerialNumber = *inv.SerialNumber
+				if inv.PartNumber != nil {
+					info.ProductID = *inv.PartNumber
+				}
+				break
+			}
 		}
 	}
 
