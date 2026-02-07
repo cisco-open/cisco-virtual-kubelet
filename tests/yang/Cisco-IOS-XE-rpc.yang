@@ -30,9 +30,16 @@ module Cisco-IOS-XE-rpc {
      Copyright (c) 2016-2020 by Cisco Systems, Inc.
      All rights reserved.";
 
-  revision 2024-07-10 {
+  revision 2025-07-10 {
     description
-      "- Added crashinfo option in pattern for delete exec command";
+      "- Added support for stack members delete command";
+    cisco-semver:module-version "3.8.0";
+  }
+  revision 2024-11-01 {
+    description
+      "- Added exec module for hw-module
+       - Added crashinfo option in pattern for delete exec command
+       - Added hw-module support for all Catalyst 9000 platforms";
     cisco-semver:module-version "3.7.0";
   }
   revision 2024-07-01 {
@@ -790,7 +797,7 @@ module Cisco-IOS-XE-rpc {
       leaf filename-drop-node-name {
         mandatory true;
         type string {
-          pattern '(((bootflash:)|(harddisk:)|(crashinfo:)|(flash:)|(nvram:)).*)';
+          pattern '((((stby-bootflash:)|(bootflash(-[1-9]){0,2}:))|((stby-harddisk:)|(harddisk(-[1-9]){0,2}:))|((stby-crashinfo:)|(crashinfo(-[1-9]){0,2}:))|((stby-flash:)|(flash(-[1-9]){0,2}:))|((stby-nvram:)|(nvram(-[1-9]){0,2}:))).*)';
         }
       }
     }
@@ -975,14 +982,71 @@ module Cisco-IOS-XE-rpc {
           description
             "Switch number in the Stack (Refer to show switch CLI)";
           type uint8 {
-            range "1..8";
+            range "1..16";
+          }
+        }
+        container subslot {
+          description
+            "<0-10>/<0-0>; Enter card slot/subslot number";
+          leaf subslot-drop-node-name {
+            type string {
+              pattern '[0-10/0]*';
+            }
+          }
+          choice oir-reload-start-stop {
+            case oir-case {
+              container oir {
+                description
+                  "Spa OIR";
+                container power-cycle {
+                  description
+                    "Power cycle the target subslot";
+                  presence "true";
+                  leaf force {
+                    description
+                      "Proceed without prompting for confirmation";
+                    type empty;
+                  }
+                }
+              }
+            }
+            case reload-case {
+              container reload {
+                description
+                  "Reload the target subslot";
+                presence "true";
+                leaf force {
+                  description
+                    "Proceed without prompting for confirmation";
+                  type empty;
+                }
+              }
+            }
+            case start-case {
+              leaf start {
+                description
+                  "Activate the target subslot";
+                type empty;
+              }
+            }
+            case stop-case {
+              container stop {
+                description
+                  "Deactivate the target subslot";
+                presence "true";
+                leaf force {
+                  description
+                    "Proceed without prompting for confirmation";
+                  type empty;
+                }
+              }
+            }
           }
         }
         container usbflash1 {
           description
             "USB SSD";
           choice umount-sec {
-            mandatory true;
             case unmount-case {
               leaf unmount {
                 description
@@ -995,7 +1059,6 @@ module Cisco-IOS-XE-rpc {
                 description
                   "Security on usbflash1";
                 choice security-choice {
-                  mandatory true;
                   case enable-case {
                     container enable {
                       description
@@ -1033,6 +1096,502 @@ module Cisco-IOS-XE-rpc {
                     }
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+      container beacon {
+        description
+          "Control Blue Beacon LED in a FRU";
+        choice slot-sw-rp-ssd-ps-ft {
+          case slot-case {
+            container slot {
+              description
+                "Switch in the system";
+              leaf slot-number-drop-node-name {
+                description
+                  "Switch number 1..16 in the Stack or word active or standby (Refer to show switch CLI)";
+                type string {
+                  pattern '(([0-9]|1[0-6])|(active)|(standby))';
+                }
+              }
+              choice on-off-status-port {
+                case on-case {
+                  leaf on {
+                    description
+                      "Turn on";
+                    type empty;
+                  }
+                }
+                case off-case {
+                  leaf off {
+                    description
+                      "Turn off";
+                    type empty;
+                  }
+                }
+                case status-case {
+                  leaf status {
+                    type empty;
+                  }
+                }
+                case fast-case {
+                  leaf blink-fast {
+                    type empty;
+                  }
+                }
+                case slow-case {
+                  leaf blink-slow {
+                    type empty;
+                  }
+                }
+                case port-case {
+                  container port {
+                    leaf port-number-drop-node-name {
+                      type uint8 {
+                        range "1..255";
+                      }
+                    }
+                    choice fast-off-slow-status {
+                      case fast-case {
+                        leaf blink-fast {
+                          type empty;
+                        }
+                      }
+                      case off-case {
+                        leaf blink-off {
+                          type empty;
+                        }
+                      }
+                      case slow-case {
+                        leaf blink-slow {
+                          type empty;
+                        }
+                      }
+                      case status-case {
+                        leaf status {
+                          type empty;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          case switch-case {
+            container switch {
+              description
+                "Switch Number";
+              leaf switch-drop-node-name {
+                description
+                  "Switch number in the Stack (Refer to show switch CLI)";
+                type string {
+                  pattern '(([1-2])|(active)|(standby))';
+                }
+              }
+              choice RP-fan-ps-slot {
+                case RP-case {
+                  container RP {
+                    choice active-standby {
+                      case active-case {
+                        container active {
+                          choice on-off-status {
+                            case on-case {
+                              leaf on {
+                                type empty;
+                              }
+                            }
+                            case off-case {
+                              leaf off {
+                                type empty;
+                              }
+                            }
+                            case status-case {
+                              leaf status {
+                                type empty;
+                              }
+                            }
+                          }
+                        }
+                      }
+                      case standby-case {
+                        container standby {
+                          choice on-off-status {
+                            case on-case {
+                              leaf on {
+                                type empty;
+                              }
+                            }
+                            case off-case {
+                              leaf off {
+                                type empty;
+                              }
+                            }
+                            case status-case {
+                              leaf status {
+                                type empty;
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                case fan-case {
+                  container fan-tray {
+                    choice on-off-status {
+                      case on-case {
+                        leaf on {
+                          type empty;
+                        }
+                      }
+                      case off-case {
+                        leaf off {
+                          type empty;
+                        }
+                      }
+                      case status-case {
+                        leaf status {
+                          type empty;
+                        }
+                      }
+                    }
+                  }
+                }
+                case ps-case {
+                  container power-supply {
+                    leaf ps-drop-node-name {
+                      description
+                        "Power Supply slot number";
+                      type uint8 {
+                        range "1..16";
+                      }
+                    }
+                    choice on-off-status {
+                      case on-case {
+                        leaf on {
+                          type empty;
+                        }
+                      }
+                      case off-case {
+                        leaf off {
+                          type empty;
+                        }
+                      }
+                      case status-case {
+                        leaf status {
+                          type empty;
+                        }
+                      }
+                    }
+                  }
+                }
+                case slot-case {
+                  container slot {
+                    leaf slot-drop-node-name {
+                      description
+                        "slot number";
+                      type uint8 {
+                        range "1..10";
+                      }
+                    }
+                    choice on-off-status {
+                      case on-case {
+                        leaf on {
+                          type empty;
+                        }
+                      }
+                      case off-case {
+                        leaf off {
+                          type empty;
+                        }
+                      }
+                      case status-case {
+                        leaf status {
+                          type empty;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          case RP-case {
+            container rp {
+              container active {
+                choice on-off-status {
+                  case on-case {
+                    leaf on {
+                      type empty;
+                    }
+                  }
+                  case off-case {
+                    leaf off {
+                      type empty;
+                    }
+                  }
+                  case status-case {
+                    leaf status {
+                      type empty;
+                    }
+                  }
+                }
+              }
+              container standby {
+                choice on-off-status {
+                  case on-case {
+                    leaf on {
+                      type empty;
+                    }
+                  }
+                  case off-case {
+                    leaf off {
+                      type empty;
+                    }
+                  }
+                  case status-case {
+                    leaf status {
+                      type empty;
+                    }
+                  }
+                }
+              }
+            }
+          }
+          case ssd-case {
+            container ssd {
+              choice on-off-status {
+                case on-case {
+                  leaf on {
+                    type empty;
+                  }
+                }
+                case off-case {
+                  leaf off {
+                    type empty;
+                  }
+                }
+                case status-case {
+                  leaf status {
+                    type empty;
+                  }
+                }
+              }
+            }
+          }
+          case ps-case {
+            container power-supply {
+              description
+                "Power Supply in the system";
+              leaf ps-number-drop-node-name {
+                type uint8 {
+                  range "1..2";
+                }
+              }
+              choice on-off-status {
+                case on-case {
+                  leaf on {
+                    description
+                      "Turn on";
+                    type empty;
+                  }
+                }
+                case off-case {
+                  leaf off {
+                    description
+                      "Turn off";
+                    type empty;
+                  }
+                }
+                case status-case {
+                  leaf status {
+                    type empty;
+                  }
+                }
+              }
+            }
+          }
+          case fantray-case {
+            container fan-tray {
+              choice on-off-status {
+                case on-case {
+                  leaf on {
+                    type empty;
+                  }
+                }
+                case off-case {
+                  leaf off {
+                    type empty;
+                  }
+                }
+                case status-case {
+                  leaf status {
+                    type empty;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      container mcu {
+        description
+          "multipoint control units firmware updates";
+        leaf rollback {
+          description
+            "roll back to previous multipoint control units version";
+          type empty;
+        }
+      }
+      container led {
+        container switch {
+          description
+            "Switch number";
+          leaf switch-number-drop-node-name {
+            type uint8 {
+              range "1..2";
+            }
+          }
+          container slot {
+            leaf slot-drop-node-name {
+              description
+                "slot number";
+              type uint8 {
+                range "1..10";
+              }
+            }
+            leaf status {
+              type empty;
+            }
+          }
+        }
+        container slot {
+          leaf slot-drop-node-name {
+            description
+              "slot number";
+            type uint8 {
+              range "1..10";
+            }
+          }
+          leaf status {
+            type empty;
+          }
+        }
+      }
+      container usbflash1 {
+        description
+          "USB SSD";
+        choice umount-sec {
+          case unmount-case {
+            leaf unmount {
+              description
+                "unmount on usbflash1";
+              type empty;
+            }
+          }
+          case security-case {
+            container security {
+              description
+                "Security on usbflash1";
+              choice security-choice {
+                case enable-case {
+                  container enable {
+                    description
+                      "Enable security on usbflash1";
+                    presence "true";
+                    leaf password {
+                      description
+                        "Enter password for enabling security on usbflash1";
+                      type string;
+                    }
+                  }
+                }
+                case disable-case {
+                  container disable {
+                    description
+                      "Disable security on usbflash1";
+                    presence "true";
+                    leaf password {
+                      description
+                        "Enter password for Disabling security on usbflash1";
+                      type string;
+                    }
+                  }
+                }
+                case unlock-case {
+                  container unlock {
+                    description
+                      "Unlock security on usbflash1";
+                    presence "true";
+                    leaf password {
+                      description
+                        "Enter password for unlock security on usbflash1";
+                      type string;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      container subslot {
+        description
+          "<0-10>/<0-0>; Enter card slot/subslot number";
+        leaf subslot-drop-node-name {
+          type string {
+            pattern '[0-10/0]*';
+          }
+        }
+        choice oir-reload-start-stop {
+          case oir-case {
+            container oir {
+              description
+                "Spa OIR";
+              container power-cycle {
+                description
+                  "Power cycle the target subslot";
+                presence "true";
+                leaf force {
+                  description
+                    "Proceed without prompting for confirmation";
+                  type empty;
+                }
+              }
+            }
+          }
+          case reload-case {
+            container reload {
+              description
+                "Reload the target subslot";
+              presence "true";
+              leaf force {
+                description
+                  "Proceed without prompting for confirmation";
+                type empty;
+              }
+            }
+          }
+          case start-case {
+            leaf start {
+              description
+                "Activate the target subslot";
+              type empty;
+            }
+          }
+          case stop-case {
+            container stop {
+              description
+                "Deactivate the target subslot";
+              presence "true";
+              leaf force {
+                description
+                  "Proceed without prompting for confirmation";
+                type empty;
               }
             }
           }

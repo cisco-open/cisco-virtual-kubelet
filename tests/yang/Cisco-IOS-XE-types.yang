@@ -27,6 +27,16 @@ module Cisco-IOS-XE-types {
      Copyright (c) 2016-2023 by Cisco Systems, Inc.
      All rights reserved.";
 
+  revision 2025-07-01 {
+    description
+      "- Added FiftyGigabitEthernet interface support";
+    cisco-semver:module-version "1.10.1";
+  }
+  revision 2025-03-01 {
+    description
+      "- Add fnf punt cause";
+    cisco-semver:module-version "1.10.0";
+  }
   revision 2024-03-01 {
     description
       "- Add voice port number type
@@ -1753,6 +1763,9 @@ module Cisco-IOS-XE-types {
       }
       enum cable-pnm-mer-pkt {
         value 167;
+      }
+      enum lfts-fnf {
+        value 173;
       }
     }
   }
