@@ -40,6 +40,7 @@ var (
 	cfgFile    string
 	kubeconfig string
 	logLevel   string
+	nodeName   string
 )
 
 var rootCmd = &cobra.Command{
@@ -57,6 +58,8 @@ func init() {
 		"path to kubeconfig file (default: $KUBECONFIG or in-cluster)")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "",
 		"log level: debug, info, warn, error (default: $LOG_LEVEL or info)")
+	rootCmd.PersistentFlags().StringVar(&nodeName, "nodename", "",
+		"kubernetes node name (default: $VKUBELET_NODE_NAME or 'cisco-virtual-kubelet')")
 }
 
 // Execute runs the root command
@@ -179,29 +182,34 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
 
+	// Resolve runtime flags: flag > env > default
+	effectiveNodeName := nodeName
+	if effectiveNodeName == "" {
+		effectiveNodeName = os.Getenv("VKUBELET_NODE_NAME")
+	}
+	effectiveNodeName = provider.GetNodeName(effectiveNodeName, appCfg.Device.Address)
+
 	opts := []nodeutil.NodeOpt{
 		nodeutil.WithNodeConfig(nodeutil.NodeConfig{
 			Client:         clientset,
-			NodeSpec:       provider.GetInitialNodeSpec(appCfg),
+			NodeSpec:       provider.GetInitialNodeSpec(effectiveNodeName, appCfg.Device.Address),
 			HTTPListenAddr: ":10250",
 			NumWorkers:     5,
 		}),
 	}
 
 	newProviderFunc := func(vkCfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
-		podHandler, err := provider.NewAppHostingProvider(ctx, appCfg, vkCfg)
+		podHandler, err := provider.NewAppHostingProvider(ctx, &appCfg.Device, vkCfg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise PodHandler: %w", err)
 		}
-		nodeHandler, err := provider.NewAppHostingNode(ctx, appCfg, vkCfg)
+		nodeHandler, err := provider.NewAppHostingNode(ctx, &appCfg.Device, vkCfg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise nodeHandler: %w", err)
 		}
 		return podHandler, nodeHandler, nil
 	}
-
-	nodeName := provider.GetNodeName(appCfg)
-	n, err := nodeutil.NewNode(nodeName, newProviderFunc, opts...)
+	n, err := nodeutil.NewNode(effectiveNodeName, newProviderFunc, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to create node: %w", err)
 	}

@@ -16,6 +16,9 @@ spec:
       containers:
       - name: main
         image: registry.k8s.io/pause:3.9
+        env:
+        - name: VKUBELET_NODE_NAME
+          value: "okteto-dev-node"
         volumeMounts:
         - name: config
           mountPath: "/etc/virtual-kubelet"
@@ -35,18 +38,10 @@ metadata:
 data:   
   config.yaml: |
     device:
-      name: c8k-switch
       driver: FAKE
       address: localhost
       username: admin
       password: admin
-
-    kubelet:
-      node_name: "okteto-dev-node"
-      namespace: ""
-      update_interval: "30s"
-      os: "Linux"
-      node_internal_ip: "1.1.1.1"
  
 ---
 apiVersion: v1

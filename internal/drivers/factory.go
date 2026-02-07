@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/fake"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe"
@@ -26,17 +26,17 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func NewDriver(ctx context.Context, config *config.DeviceConfig) (CiscoKubernetesDeviceDriver, error) {
+func NewDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (CiscoKubernetesDeviceDriver, error) {
 
-	switch config.Driver {
-	case "FAKE":
-		return fake.NewAppHostingDriver(ctx, config)
-	case "XE":
-		return iosxe.NewAppHostingDriver(ctx, config)
-	case "XR":
+	switch spec.Driver {
+	case v1alpha1.DeviceDriverFAKE:
+		return fake.NewAppHostingDriver(ctx, spec)
+	case v1alpha1.DeviceDriverXE:
+		return iosxe.NewAppHostingDriver(ctx, spec)
+	case v1alpha1.DeviceDriverXR:
 		return nil, fmt.Errorf("unsupported device type")
 	default:
-		return nil, fmt.Errorf("unsupported device type")
+		return nil, fmt.Errorf("unsupported device type: %s", spec.Driver)
 	}
 }
 

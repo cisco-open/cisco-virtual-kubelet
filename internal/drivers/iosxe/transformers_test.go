@@ -23,21 +23,23 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestGetNetworkConfig_VirtualPortGroup_DHCPEnabled(t *testing.T) {
 	driver := &XEDriver{
-		config: &config.DeviceConfig{
-			Networking: config.NetworkConfig{
-				PodCIDR: "10.0.0.0/24",
-				Interface: &config.InterfaceConfig{
-					Type: config.InterfaceTypeVirtualPortGroup,
-					VirtualPortGroup: &config.VirtualPortGroupConfig{
-						Dhcp:      true,
-						Interface: "0",
+		config: &v1alpha1.DeviceSpec{
+			PodCIDR: "10.0.0.0/24",
+			XE: &v1alpha1.XEConfig{
+				Networking: v1alpha1.XENetworkConfig{
+					Interface: &v1alpha1.XEInterfaceConfig{
+						Type: v1alpha1.XEInterfaceTypeVirtualPortGroup,
+						VirtualPortGroup: &v1alpha1.XEVirtualPortGroupConfig{
+							Dhcp:      true,
+							Interface: "0",
+						},
 					},
 				},
 			},
@@ -79,14 +81,16 @@ func TestGetNetworkConfig_VirtualPortGroup_DHCPEnabled(t *testing.T) {
 
 func TestGetNetworkConfig_VirtualPortGroup_StaticIP(t *testing.T) {
 	driver := &XEDriver{
-		config: &config.DeviceConfig{
-			Networking: config.NetworkConfig{
-				PodCIDR: "10.0.0.0/24",
-				Interface: &config.InterfaceConfig{
-					Type: config.InterfaceTypeVirtualPortGroup,
-					VirtualPortGroup: &config.VirtualPortGroupConfig{
-						Dhcp:      false,
-						Interface: "0",
+		config: &v1alpha1.DeviceSpec{
+			PodCIDR: "10.0.0.0/24",
+			XE: &v1alpha1.XEConfig{
+				Networking: v1alpha1.XENetworkConfig{
+					Interface: &v1alpha1.XEInterfaceConfig{
+						Type: v1alpha1.XEInterfaceTypeVirtualPortGroup,
+						VirtualPortGroup: &v1alpha1.XEVirtualPortGroupConfig{
+							Dhcp:      false,
+							Interface: "0",
+						},
 					},
 				},
 			},
@@ -220,7 +224,7 @@ func TestNormalizeMacAddress(t *testing.T) {
 
 func TestDiscoverPodIP_FromAppHostingOperData(t *testing.T) {
 	driver := &XEDriver{
-		config: &config.DeviceConfig{
+		config: &v1alpha1.DeviceSpec{
 			Address: "192.168.1.1",
 		},
 	}
@@ -257,7 +261,7 @@ func TestDiscoverPodIP_FromAppHostingOperData(t *testing.T) {
 
 func TestDiscoverPodIP_NoIPInOperData(t *testing.T) {
 	driver := &XEDriver{
-		config: &config.DeviceConfig{
+		config: &v1alpha1.DeviceSpec{
 			Address: "192.168.1.1",
 		},
 	}
@@ -296,7 +300,7 @@ func TestDiscoverPodIP_NoIPInOperData(t *testing.T) {
 
 func TestDiscoverPodIP_NoNetworkInterfaces(t *testing.T) {
 	driver := &XEDriver{
-		config: &config.DeviceConfig{
+		config: &v1alpha1.DeviceSpec{
 			Address: "192.168.1.1",
 		},
 	}
@@ -323,7 +327,7 @@ func TestDiscoverPodIP_NoNetworkInterfaces(t *testing.T) {
 
 func TestDiscoverPodIP_EmptyContainers(t *testing.T) {
 	driver := &XEDriver{
-		config: &config.DeviceConfig{
+		config: &v1alpha1.DeviceSpec{
 			Address: "192.168.1.1",
 		},
 	}
@@ -342,14 +346,16 @@ func TestDiscoverPodIP_EmptyContainers(t *testing.T) {
 
 func TestConvertPodToAppConfigs_SingleContainer_DHCP(t *testing.T) {
 	driver := &XEDriver{
-		config: &config.DeviceConfig{
-			Networking: config.NetworkConfig{
-				PodCIDR: "10.0.0.0/24",
-				Interface: &config.InterfaceConfig{
-					Type: config.InterfaceTypeVirtualPortGroup,
-					VirtualPortGroup: &config.VirtualPortGroupConfig{
-						Dhcp:      true,
-						Interface: "0",
+		config: &v1alpha1.DeviceSpec{
+			PodCIDR: "10.0.0.0/24",
+			XE: &v1alpha1.XEConfig{
+				Networking: v1alpha1.XENetworkConfig{
+					Interface: &v1alpha1.XEInterfaceConfig{
+						Type: v1alpha1.XEInterfaceTypeVirtualPortGroup,
+						VirtualPortGroup: &v1alpha1.XEVirtualPortGroupConfig{
+							Dhcp:      true,
+							Interface: "0",
+						},
 					},
 				},
 			},
@@ -468,14 +474,16 @@ func TestConvertPodToAppConfigs_SingleContainer_DHCP(t *testing.T) {
 
 func TestConvertPodToAppConfigs_MultipleContainers_StaticIP(t *testing.T) {
 	driver := &XEDriver{
-		config: &config.DeviceConfig{
-			Networking: config.NetworkConfig{
-				PodCIDR: "10.0.0.0/24",
-				Interface: &config.InterfaceConfig{
-					Type: config.InterfaceTypeVirtualPortGroup,
-					VirtualPortGroup: &config.VirtualPortGroupConfig{
-						Dhcp:      false,
-						Interface: "1",
+		config: &v1alpha1.DeviceSpec{
+			PodCIDR: "10.0.0.0/24",
+			XE: &v1alpha1.XEConfig{
+				Networking: v1alpha1.XENetworkConfig{
+					Interface: &v1alpha1.XEInterfaceConfig{
+						Type: v1alpha1.XEInterfaceTypeVirtualPortGroup,
+						VirtualPortGroup: &v1alpha1.XEVirtualPortGroupConfig{
+							Dhcp:      false,
+							Interface: "1",
+						},
 					},
 				},
 			},
@@ -578,14 +586,16 @@ func TestConvertPodToAppConfigs_MultipleContainers_StaticIP(t *testing.T) {
 
 func TestConvertPodToAppConfigs_EmptyPod(t *testing.T) {
 	driver := &XEDriver{
-		config: &config.DeviceConfig{
-			Networking: config.NetworkConfig{
-				PodCIDR: "10.0.0.0/24",
-				Interface: &config.InterfaceConfig{
-					Type: config.InterfaceTypeVirtualPortGroup,
-					VirtualPortGroup: &config.VirtualPortGroupConfig{
-						Dhcp:      true,
-						Interface: "0",
+		config: &v1alpha1.DeviceSpec{
+			PodCIDR: "10.0.0.0/24",
+			XE: &v1alpha1.XEConfig{
+				Networking: v1alpha1.XENetworkConfig{
+					Interface: &v1alpha1.XEInterfaceConfig{
+						Type: v1alpha1.XEInterfaceTypeVirtualPortGroup,
+						VirtualPortGroup: &v1alpha1.XEVirtualPortGroupConfig{
+							Dhcp:      true,
+							Interface: "0",
+						},
 					},
 				},
 			},
@@ -615,14 +625,16 @@ func TestConvertPodToAppConfigs_EmptyPod(t *testing.T) {
 
 func TestConvertPodToAppConfigs_Management_StaticIP(t *testing.T) {
 	driver := &XEDriver{
-		config: &config.DeviceConfig{
-			Networking: config.NetworkConfig{
-				PodCIDR: "198.51.100.0/24",
-				Interface: &config.InterfaceConfig{
-					Type: config.InterfaceTypeManagement,
-					Management: &config.ManagementConfig{
-						Dhcp:           false,
-						GuestInterface: 0,
+		config: &v1alpha1.DeviceSpec{
+			PodCIDR: "198.51.100.0/24",
+			XE: &v1alpha1.XEConfig{
+				Networking: v1alpha1.XENetworkConfig{
+					Interface: &v1alpha1.XEInterfaceConfig{
+						Type: v1alpha1.XEInterfaceTypeManagement,
+						Management: &v1alpha1.XEManagementConfig{
+							Dhcp:           false,
+							GuestInterface: 0,
+						},
 					},
 				},
 			},
@@ -675,14 +687,16 @@ func TestConvertPodToAppConfigs_Management_StaticIP(t *testing.T) {
 
 func TestConvertPodToAppConfigs_Golden_ManagementStaticIP(t *testing.T) {
 	driver := &XEDriver{
-		config: &config.DeviceConfig{
-			Networking: config.NetworkConfig{
-				PodCIDR: "198.51.100.0/24",
-				Interface: &config.InterfaceConfig{
-					Type: config.InterfaceTypeManagement,
-					Management: &config.ManagementConfig{
-						Dhcp:           false,
-						GuestInterface: 0,
+		config: &v1alpha1.DeviceSpec{
+			PodCIDR: "198.51.100.0/24",
+			XE: &v1alpha1.XEConfig{
+				Networking: v1alpha1.XENetworkConfig{
+					Interface: &v1alpha1.XEInterfaceConfig{
+						Type: v1alpha1.XEInterfaceTypeManagement,
+						Management: &v1alpha1.XEManagementConfig{
+							Dhcp:           false,
+							GuestInterface: 0,
+						},
 					},
 				},
 			},
@@ -729,16 +743,18 @@ func TestConvertPodToAppConfigs_Golden_ManagementStaticIP(t *testing.T) {
 
 func TestConvertPodToAppConfigs_Golden_AppGigAccess(t *testing.T) {
 	driver := &XEDriver{
-		config: &config.DeviceConfig{
-			Networking: config.NetworkConfig{
-				Interface: &config.InterfaceConfig{
-					Type: config.InterfaceTypeAppGigabitEthernet,
-					AppGigabitEthernet: &config.AppGigabitEthernetConfig{
-						Mode: config.AppGigabitEthernetModeAccess,
-						Dhcp: true,
-						VlanIf: config.VlanInterfaceConfig{
-							Vlan:           0,
-							GuestInterface: 0,
+		config: &v1alpha1.DeviceSpec{
+			XE: &v1alpha1.XEConfig{
+				Networking: v1alpha1.XENetworkConfig{
+					Interface: &v1alpha1.XEInterfaceConfig{
+						Type: v1alpha1.XEInterfaceTypeAppGigabitEthernet,
+						AppGigabitEthernet: &v1alpha1.XEAppGigabitEthernetConfig{
+							Mode: v1alpha1.XEAppGigabitEthernetModeAccess,
+							Dhcp: true,
+							VlanIf: v1alpha1.XEVlanInterfaceConfig{
+								Vlan:           0,
+								GuestInterface: 0,
+							},
 						},
 					},
 				},
@@ -786,20 +802,22 @@ func TestConvertPodToAppConfigs_Golden_AppGigAccess(t *testing.T) {
 
 func TestConvertPodToAppConfigs_Golden_AppGigTrunk(t *testing.T) {
 	driver := &XEDriver{
-		config: &config.DeviceConfig{
-			Networking: config.NetworkConfig{
-				PodCIDR: "10.0.0.0/24",
-				Interface: &config.InterfaceConfig{
-					Type: config.InterfaceTypeAppGigabitEthernet,
-					AppGigabitEthernet: &config.AppGigabitEthernetConfig{
-						Mode: config.AppGigabitEthernetModeTrunk,
-						VlanIf: config.VlanInterfaceConfig{
-							Dhcp:                 false,
-							Vlan:                 100,
-							GuestInterface:       0,
-							MacForwardingEnabled: true,
-							MulticastEnabled:     true,
-							MirrorEnabled:        true,
+		config: &v1alpha1.DeviceSpec{
+			PodCIDR: "10.0.0.0/24",
+			XE: &v1alpha1.XEConfig{
+				Networking: v1alpha1.XENetworkConfig{
+					Interface: &v1alpha1.XEInterfaceConfig{
+						Type: v1alpha1.XEInterfaceTypeAppGigabitEthernet,
+						AppGigabitEthernet: &v1alpha1.XEAppGigabitEthernetConfig{
+							Mode: v1alpha1.XEAppGigabitEthernetModeTrunk,
+							VlanIf: v1alpha1.XEVlanInterfaceConfig{
+								Dhcp:                 false,
+								Vlan:                 100,
+								GuestInterface:       0,
+								MacForwardingEnabled: true,
+								MulticastEnabled:     true,
+								MirrorEnabled:        true,
+							},
 						},
 					},
 				},

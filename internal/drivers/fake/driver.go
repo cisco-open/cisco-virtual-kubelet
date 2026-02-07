@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
@@ -28,14 +28,14 @@ import (
 )
 
 type FAKEDriver struct {
-	config *config.DeviceConfig
+	config *v1alpha1.DeviceSpec
 	pods   []v1.Pod
 }
 
-func NewAppHostingDriver(ctx context.Context, config *config.DeviceConfig) (*FAKEDriver, error) {
+func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*FAKEDriver, error) {
 	log.G(ctx).Info("Initialise new FAKE driver")
 	return &FAKEDriver{
-		config: config,
+		config: spec,
 		pods:   []v1.Pod{},
 	}, nil
 

@@ -20,7 +20,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/openconfig/ygot/ygot"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -31,16 +31,16 @@ import (
 
 // networkConfig holds the network configuration for an app container
 type networkConfig struct {
-	interfaceType             config.InterfaceType
+	interfaceType             v1alpha1.XEInterfaceType
 	virtualPortgroupInterface string
 	virtualPortgroupIP        string
 	virtualPortgroupNetmask   string
 	guestInterface            uint8
 	isPrimaryContainer        bool
 	// AppGigabitEthernet specific
-	appGigMode           config.AppGigabitEthernetMode
+	appGigMode           v1alpha1.XEAppGigabitEthernetMode
 	appGigGuestInterface uint8
-	vlanIf               config.VlanInterfaceConfig
+	vlanIf               v1alpha1.XEVlanInterfaceConfig
 	useDHCP              bool
 	ipAllocationErr      error
 	// Management specific
@@ -88,7 +88,7 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 		netConfig := d.getNetworkConfig(pod, &container)
 
 		switch netConfig.interfaceType {
-		case config.InterfaceTypeVirtualPortGroup:
+		case v1alpha1.XEInterfaceTypeVirtualPortGroup:
 			if netConfig.useDHCP {
 				// DHCP mode: only set interface name, omit static IP configuration
 				gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{
@@ -111,14 +111,14 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 				gapp.ApplicationNetworkResource = netRes
 			}
 
-		case config.InterfaceTypeAppGigabitEthernet:
+		case v1alpha1.XEInterfaceTypeAppGigabitEthernet:
 			guestIf := netConfig.vlanIf.GuestInterface
 			if guestIf == 0 && netConfig.appGigGuestInterface != 0 {
 				guestIf = netConfig.appGigGuestInterface
 			}
 
 			switch netConfig.appGigMode {
-			case config.AppGigabitEthernetModeAccess:
+			case v1alpha1.XEAppGigabitEthernetModeAccess:
 				if gapp.ApplicationNetworkResource == nil {
 					gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{}
 				}
@@ -144,7 +144,7 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 					}
 				}
 
-			case config.AppGigabitEthernetModeTrunk:
+			case v1alpha1.XEAppGigabitEthernetModeTrunk:
 				if gapp.ApplicationNetworkResource == nil {
 					gapp.ApplicationNetworkResource = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationNetworkResource{}
 				}
@@ -175,7 +175,7 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 				return nil, fmt.Errorf("unsupported AppGigabitEthernet mode: %s", netConfig.appGigMode)
 			}
 
-		case config.InterfaceTypeManagement:
+		case v1alpha1.XEInterfaceTypeManagement:
 			gapp.AppintfMgmt = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_AppintfMgmt{
 				AccessIfNum: ygot.Uint8(netConfig.mgmtGuestInterface),
 			}
@@ -242,16 +242,16 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 
 // getNetworkConfig converts pod/container specs to IOS-XE network configuration
 func (d *XEDriver) getNetworkConfig(pod *v1.Pod, container *v1.Container) *networkConfig {
-	// Check if new interface configuration is present
-	if d.config.Networking.Interface != nil {
-		cfg := d.getInterfaceConfig(pod, container, d.config.Networking.Interface)
+	// Check if XE-specific interface configuration is present
+	if d.config.XE != nil && d.config.XE.Networking.Interface != nil {
+		cfg := d.getInterfaceConfig(pod, container, d.config.XE.Networking.Interface)
 		cfg.isPrimaryContainer = d.getContainerIndex(pod, container) == 0
 		return cfg
 	}
 
 	// Default to VirtualPortGroup interface with DHCP implied
 	return &networkConfig{
-		interfaceType:             config.InterfaceTypeVirtualPortGroup,
+		interfaceType:             v1alpha1.XEInterfaceTypeVirtualPortGroup,
 		useDHCP:                   true,
 		virtualPortgroupInterface: "0",
 		guestInterface:            0,
@@ -260,14 +260,14 @@ func (d *XEDriver) getNetworkConfig(pod *v1.Pod, container *v1.Container) *netwo
 }
 
 // getInterfaceConfig creates network configuration based on the new interface configuration model
-func (d *XEDriver) getInterfaceConfig(pod *v1.Pod, container *v1.Container, ifConfig *config.InterfaceConfig) *networkConfig {
+func (d *XEDriver) getInterfaceConfig(pod *v1.Pod, container *v1.Container, ifConfig *v1alpha1.XEInterfaceConfig) *networkConfig {
 	netConfig := &networkConfig{
 		interfaceType: ifConfig.Type,
 		useDHCP:       true,
 	}
 
 	switch ifConfig.Type {
-	case config.InterfaceTypeVirtualPortGroup:
+	case v1alpha1.XEInterfaceTypeVirtualPortGroup:
 		if ifConfig.VirtualPortGroup != nil {
 			vpgInterface := ifConfig.VirtualPortGroup.Interface
 			if vpgInterface == "" {
@@ -284,12 +284,12 @@ func (d *XEDriver) getInterfaceConfig(pod *v1.Pod, container *v1.Container, ifCo
 			}
 		}
 
-	case config.InterfaceTypeAppGigabitEthernet:
+	case v1alpha1.XEInterfaceTypeAppGigabitEthernet:
 		if ifConfig.AppGigabitEthernet != nil {
 			netConfig.appGigMode = ifConfig.AppGigabitEthernet.Mode
 			netConfig.appGigGuestInterface = ifConfig.AppGigabitEthernet.GuestInterface
 			netConfig.vlanIf = ifConfig.AppGigabitEthernet.VlanIf
-			if netConfig.appGigMode == config.AppGigabitEthernetModeAccess && netConfig.vlanIf.Vlan == 0 {
+			if netConfig.appGigMode == v1alpha1.XEAppGigabitEthernetModeAccess && netConfig.vlanIf.Vlan == 0 {
 				netConfig.useDHCP = ifConfig.AppGigabitEthernet.Dhcp
 			} else {
 				netConfig.useDHCP = ifConfig.AppGigabitEthernet.VlanIf.Dhcp
@@ -302,7 +302,7 @@ func (d *XEDriver) getInterfaceConfig(pod *v1.Pod, container *v1.Container, ifCo
 			}
 		}
 
-	case config.InterfaceTypeManagement:
+	case v1alpha1.XEInterfaceTypeManagement:
 		if ifConfig.Management != nil {
 			netConfig.mgmtGuestInterface = ifConfig.Management.GuestInterface
 			netConfig.useDHCP = ifConfig.Management.Dhcp
@@ -320,11 +320,12 @@ func (d *XEDriver) getInterfaceConfig(pod *v1.Pod, container *v1.Container, ifCo
 
 // allocateIPForContainer determines the IP address for a container based on pod prefix configuration
 func (d *XEDriver) allocateIPForContainer(pod *v1.Pod, container *v1.Container) (ip, netmask string, err error) {
-	if d.config.Networking.PodCIDR == "" {
+	podCIDR := d.config.PodCIDR
+	if podCIDR == "" {
 		return "", "", fmt.Errorf("podCIDR is empty")
 	}
 
-	_, ipNet, parseErr := net.ParseCIDR(d.config.Networking.PodCIDR)
+	_, ipNet, parseErr := net.ParseCIDR(podCIDR)
 	if parseErr != nil {
 		return "", "", fmt.Errorf("invalid podCIDR: %w", parseErr)
 	}

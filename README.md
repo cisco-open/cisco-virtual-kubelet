@@ -82,11 +82,11 @@ sudo make install
 
 ### Configuration
 
-The provider uses a two-tier YAML configuration with `device` and `kubelet` sections:
+The provider uses a YAML configuration file for **device settings** and CLI flags / environment variables for **runtime settings**:
 
+**Device config** (`config.yaml`):
 ```yaml
 device:
-  name: cat8kv-router
   driver: XE
   address: "192.168.1.100"
   port: 443
@@ -95,34 +95,35 @@ device:
   tls:
     enabled: true
     insecureSkipVerify: true
-  networking:
-    interface:
-      type: VirtualPortGroup
-      virtualPortGroup:
-        dhcp: true
-        interface: "0"
-        guestInterface: 0
-
-kubelet:
-  node_name: "cat8kv-node"
-  node_internal_ip: "192.168.1.100"
+  xe:
+    networking:
+      interface:
+        type: VirtualPortGroup
+        virtualPortGroup:
+          dhcp: true
+          interface: "0"
+          guestInterface: 0
 ```
 
-See [examples](examples/configs/device-configs.yaml) for different options.
+**Runtime flags:**
 
-**KUBECONFIG**
+| Flag | Env Var | Default | Description |
+|------|---------|---------|-------------|
+| `--nodename` | `VKUBELET_NODE_NAME` | `cisco-vk-<device-address>` | Kubernetes node name |
+| `--config` / `-c` | - | `/etc/virtual-kubelet/config.yaml` | Path to device config file |
+| `--kubeconfig` | `KUBECONFIG` | _(in-cluster)_ | Path to kubeconfig file |
+| `--log-level` | `LOG_LEVEL` | `info` | Log level: debug, info, warn, error |
 
-For out-of-cluster you can provide the kubeconfig using the arg `--kubeconfig` or use the `KUBECONFIG` env variable.
-
-```bash
-export KUBECONFIG=~/.kube/config # Location of the Kubernetes cluster kubeconfig
-```
+See [examples](examples/configs/device-configs.yaml) for different interface/networking options.
 
 
 **Start Provider**
 
 ```bash
-go run ./cmd/virtual-kubelet --config dev/config-dhcp-test.yaml --kubeconfig ~/.kube/config
+go run ./cmd/virtual-kubelet \
+  --config dev/config-dhcp-test.yaml \
+  --kubeconfig ~/.kube/config \
+  --nodename cat8kv-node
 ```
 
 **Deploy test Pod**
@@ -163,14 +164,19 @@ kubectl apply -f ./dev/test-pod-dhcp.yaml
 
 ```
 cisco-virtual-kubelet/
+├── api/
+│   └── v1alpha1/               # CRD-ready API types (shared with config)
+│       ├── doc.go
+│       ├── groupversion_info.go
+│       ├── types.go            # DeviceSpec, CiscoDevice CRD, shared types
+│       └── xe_types.go         # IOS-XE driver-specific types
 ├── cmd/
 │   └── virtual-kubelet/        # Main entry point
 │       ├── main.go
-│       └── root.go             # CLI command setup
+│       └── root.go             # CLI command setup & flags
 ├── internal/                   # Internal packages
-│   ├── config/                 # Configuration loading and types
-│   │   ├── config.go           # Config loading logic
-│   │   └── types.go            # Config struct definitions
+│   ├── config/                 # Configuration loading
+│   │   └── config.go           # YAML/viper loader → DeviceSpec
 │   ├── provider/               # Virtual Kubelet provider
 │   │   ├── provider.go         # AppHostingProvider implementation
 │   │   └── defaults.go         # Default node configuration
@@ -185,7 +191,7 @@ cisco-virtual-kubelet/
 │       │   ├── driver.go       # XEDriver implementation
 │       │   ├── app_hosting.go  # App lifecycle operations
 │       │   ├── pod_lifecycle.go # Pod CRUD operations
-│       │   ├── converters.go   # K8s to IOS-XE conversion
+│       │   ├── transformers.go # K8s to IOS-XE conversion
 │       │   └── models.go       # YANG model structs
 │       └── fake/               # Fake driver for testing
 │           └── driver.go
@@ -194,7 +200,7 @@ cisco-virtual-kubelet/
 ├── dev/                        # Development environment setup
 ├── docs/                       # Documentation
 ├── Makefile                    # Build automation
-├── go.mod                      # Go module definition (Go 1.23.4)
+├── go.mod                      # Go module definition
 └── README.md
 ```
 

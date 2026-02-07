@@ -12,7 +12,8 @@ For a quickstart workflow you can:
 Deploy the `./dev/dev-deployment.yaml` manifest to your dev k8s environment.  This will create:
 
 * A deployment with one pod with a 'placeholder' container to-be-replaced with an Okteto dev container
-* A configmap mounted in said deployment pod with the virtual-kubelet configuration loading a FAKE driver
+* A configmap mounted in said deployment pod with the virtual-kubelet device configuration
+* Environment variables `VKUBELET_NODE_NAME` and `NODE_INTERNAL_IP` for runtime settings
 * A service-account
 * Role and rolebindings for the service-account
 

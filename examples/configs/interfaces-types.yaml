@@ -1,7 +1,6 @@
 ---
 # Example 1: VirtualPortGroup with DHCP
 device:
-  name: cat8kv-router
   driver: XE
   address: "192.168.1.100"
   port: 443
@@ -10,22 +9,18 @@ device:
   tls:
     enabled: true
     insecureSkipVerify: true
-  networking:
-    interface:
-      type: VirtualPortGroup
-      virtualPortGroup:
-        dhcp: true
-        interface: "0"
-        guestInterface: 0
-
-kubelet:
-  node_name: "cat8kv-node"
-  node_internal_ip: "192.168.1.100"
+  xe:
+    networking:
+      interface:
+        type: VirtualPortGroup
+        virtualPortGroup:
+          dhcp: true
+          interface: "0"
+          guestInterface: 0
 
 ---
 # Example 2: VirtualPortGroup with static IP from podCIDR
 device:
-  name: cat8kv-router
   driver: XE
   address: "192.168.1.100"
   port: 443
@@ -34,23 +29,19 @@ device:
   tls:
     enabled: true
     insecureSkipVerify: true
-  networking:
-    podCIDR: "10.0.0.0/24"
-    interface:
-      type: VirtualPortGroup
-      virtualPortGroup:
-        dhcp: false
-        interface: "0"
-        guestInterface: 0
-
-kubelet:
-  node_name: "cat8kv-node"
-  node_internal_ip: "192.168.1.100"
+  podCIDR: "10.0.0.0/24"
+  xe:
+    networking:
+      interface:
+        type: VirtualPortGroup
+        virtualPortGroup:
+          dhcp: false
+          interface: "0"
+          guestInterface: 0
 
 ---
 # Example 3: AppGigabitEthernet access with DHCP
 device:
-  name: cat9k
   driver: XE
   address: "192.168.1.100"
   port: 443
@@ -59,50 +50,41 @@ device:
   tls:
     enabled: true
     insecureSkipVerify: true
-  networking:
-    interface:
-      type: AppGigabitEthernet
-      appGigabitEthernet:
-        mode: access
-        dhcp: true
-        guestInterface: 0
-
-
-kubelet:
-  node_name: "cat9k"
-  node_internal_ip: "192.168.1.100"
-
----
-# Example 4: AppGigabitEthernet access with static IP from podCIDR
-device:
-  name: cat9k
-  driver: XE
-  address: "192.168.1.100"
-  port: 443
-  username: admin
-  password: cisco123
-  tls:
-    enabled: true
-    insecureSkipVerify: true
-  networking:
-    podCIDR: "10.0.0.0/24"
-    interface:
-      type: AppGigabitEthernet
-      appGigabitEthernet:
-        mode: trunk
-        vlanIf:
-          dhcp: false
-          vlan: 200
+  xe:
+    networking:
+      interface:
+        type: AppGigabitEthernet
+        appGigabitEthernet:
+          mode: access
+          dhcp: true
           guestInterface: 0
 
-kubelet:
-  node_name: "cat9k"
-  node_internal_ip: "192.168.1.100"
+---
+# Example 4: AppGigabitEthernet trunk with static IP from podCIDR
+device:
+  driver: XE
+  address: "192.168.1.100"
+  port: 443
+  username: admin
+  password: cisco123
+  tls:
+    enabled: true
+    insecureSkipVerify: true
+  podCIDR: "10.0.0.0/24"
+  xe:
+    networking:
+      interface:
+        type: AppGigabitEthernet
+        appGigabitEthernet:
+          mode: trunk
+          vlanIf:
+            dhcp: false
+            vlan: 200
+            guestInterface: 0
 
 ---
 # Example 5: AppGigabitEthernet trunk with DHCP
 device:
-  name: cat9k
   driver: XE
   address: "192.168.1.100"
   port: 443
@@ -111,24 +93,20 @@ device:
   tls:
     enabled: true
     insecureSkipVerify: true
-  networking:
-    interface:
-      type: AppGigabitEthernet
-      appGigabitEthernet:
-        mode: trunk
-        vlanIf:
-          dhcp: true
-          vlan: 200
-          guestInterface: 0
-
-kubelet:
-  node_name: "cat9k"
-  node_internal_ip: "192.168.1.100"
+  xe:
+    networking:
+      interface:
+        type: AppGigabitEthernet
+        appGigabitEthernet:
+          mode: trunk
+          vlanIf:
+            dhcp: true
+            vlan: 200
+            guestInterface: 0
 
 ---
 # Example 6: Management with DHCP
 device:
-  name: cat9k
   driver: XE
   address: "192.168.1.100"
   port: 443
@@ -137,21 +115,17 @@ device:
   tls:
     enabled: true
     insecureSkipVerify: true
-  networking:
-    interface:
-      type: Management
-      management:
-        dhcp: true
-        guestInterface: 0
-
-kubelet:
-  node_name: "cat9k"
-  node_internal_ip: "192.168.1.100"
+  xe:
+    networking:
+      interface:
+        type: Management
+        management:
+          dhcp: true
+          guestInterface: 0
 
 ---
 # Example 7: Management with static IP from podCIDR
 device:
-  name: cat9k
   driver: XE
   address: "192.168.1.100"
   port: 443
@@ -160,14 +134,11 @@ device:
   tls:
     enabled: true
     insecureSkipVerify: true
-  networking:
-    podCIDR: "10.0.0.0/24"
-    interface:
-      type: Management
-      management:
-        dhcp: false
-        guestInterface: 0
-
-kubelet:
-  node_name: "cat9k"
-  node_internal_ip: "192.168.1.100"
+  podCIDR: "10.0.0.0/24"
+  xe:
+    networking:
+      interface:
+        type: Management
+        management:
+          dhcp: false
+          guestInterface: 0
