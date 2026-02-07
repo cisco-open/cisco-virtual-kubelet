@@ -63,7 +63,7 @@ The main provider struct that implements the Virtual Kubelet `nodeutil.Provider`
 // internal/provider/provider.go
 type AppHostingProvider struct {
     ctx             context.Context
-    appCfg          *config.Config
+    deviceSpec      *v1alpha1.DeviceSpec
     driver          drivers.CiscoKubernetesDeviceDriver
     podsLister      corev1listers.PodLister
     configMapLister corev1listers.ConfigMapLister
@@ -98,13 +98,13 @@ The driver factory pattern allows extensible device support:
 
 ```go
 // internal/drivers/factory.go
-func NewDriver(ctx context.Context, config *config.DeviceConfig) (CiscoKubernetesDeviceDriver, error) {
-    switch config.Driver {
-    case "FAKE":
-        return fake.NewAppHostingDriver(ctx, config)
-    case "XE":
-        return iosxe.NewAppHostingDriver(ctx, config)
-    case "XR":
+func NewDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (CiscoKubernetesDeviceDriver, error) {
+    switch spec.Driver {
+    case v1alpha1.DeviceDriverFAKE:
+        return fake.NewAppHostingDriver(ctx, spec)
+    case v1alpha1.DeviceDriverXE:
+        return iosxe.NewAppHostingDriver(ctx, spec)
+    case v1alpha1.DeviceDriverXR:
         return nil, fmt.Errorf("unsupported device type")
     default:
         return nil, fmt.Errorf("unsupported device type")
@@ -128,7 +128,7 @@ Implements the device driver for Cisco IOS-XE app-hosting:
 ```go
 // internal/drivers/iosxe/driver.go
 type XEDriver struct {
-    config       *config.DeviceConfig
+    config       *v1alpha1.DeviceSpec
     client       common.NetworkClient
     marshaller   func(any) ([]byte, error)
     unmarshaller UnmarshalFunc
@@ -327,13 +327,17 @@ When `dhcpEnabled: true`:
 
 ```
 cisco-virtual-kubelet/
+├── api/v1alpha1/                 # CRD-ready API types
+│   ├── doc.go
+│   ├── groupversion_info.go
+│   ├── types.go                  # DeviceSpec, CiscoDevice, shared types
+│   └── xe_types.go               # IOS-XE driver-specific types
 ├── cmd/virtual-kubelet/          # Entry point
 │   ├── main.go                   # Main function
 │   └── root.go                   # CLI setup with cobra
 ├── internal/
 │   ├── config/                   # Configuration
-│   │   ├── config.go             # Config loading
-│   │   └── types.go              # Config structs
+│   │   └── config.go             # YAML/viper loader → DeviceSpec
 │   ├── provider/                 # VK Provider
 │   │   ├── provider.go           # AppHostingProvider
 │   │   └── defaults.go           # Node defaults
@@ -348,7 +352,7 @@ cisco-virtual-kubelet/
 │       │   ├── driver.go         # XEDriver
 │       │   ├── app_hosting.go    # App lifecycle
 │       │   ├── pod_lifecycle.go  # Pod CRUD
-│       │   ├── converters.go     # K8s ↔ IOS-XE
+│       │   ├── transformers.go   # K8s ↔ IOS-XE
 │       │   └── models.go         # YANG structs
 │       └── fake/                 # Test driver
 │           └── driver.go

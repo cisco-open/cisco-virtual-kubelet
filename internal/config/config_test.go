@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/spf13/viper"
 )
 
@@ -84,11 +85,10 @@ func TestLoad_ExplicitPort(t *testing.T) {
 	viper.Reset()
 
 	// We can set values directly in Viper to simulate env/args
-	tls := TLSConfig{
+	tls := v1alpha1.TLSConfig{
 		Enabled: false,
 	}
 	viper.Set("device", map[string]interface{}{
-		"name":    "manual-node",
 		"address": "1.1.1.1",
 		"port":    8080,
 		"tls":     tls,
@@ -108,13 +108,15 @@ func TestLoad_InterfaceConfigValidation(t *testing.T) {
 	viper.Reset()
 
 	viper.Set("device", map[string]interface{}{
-		"name":    "iface-node",
 		"address": "1.2.3.4",
-		"networking": map[string]interface{}{
-			"interface": map[string]interface{}{
-				"type": "AppGigabitEthernet",
-				"virtualPortGroup": map[string]interface{}{
-					"interface": "0",
+		"driver":  "XE",
+		"xe": map[string]interface{}{
+			"networking": map[string]interface{}{
+				"interface": map[string]interface{}{
+					"type": "AppGigabitEthernet",
+					"virtualPortGroup": map[string]interface{}{
+						"interface": "0",
+					},
 				},
 			},
 		},

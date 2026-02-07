@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/spf13/viper"
 )
 
@@ -49,10 +50,9 @@ func Load(filePath ...string) (*Config, error) {
 		return nil, fmt.Errorf("unable to decode into struct: %w", err)
 	}
 
-	if cfg.Device.Networking.Interface != nil {
-		if err := cfg.Device.Networking.Interface.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid interface config: %w", err)
-		}
+	// Validate driver-specific config
+	if err := validateDeviceSpec(&cfg.Device); err != nil {
+		return nil, err
 	}
 
 	SetDeviceDefaults(&cfg.Device)
@@ -60,22 +60,42 @@ func Load(filePath ...string) (*Config, error) {
 	return &cfg, nil
 }
 
-func SetDeviceDefaults(cfg *DeviceConfig) error {
+// validateDeviceSpec validates the driver-specific sections of a DeviceSpec.
+func validateDeviceSpec(spec *v1alpha1.DeviceSpec) error {
+	switch spec.Driver {
+	case v1alpha1.DeviceDriverXE:
+		if spec.XE == nil {
+			return fmt.Errorf("driver XE requires xe config section")
+		}
+		if spec.XE.Networking.Interface != nil {
+			if err := spec.XE.Networking.Interface.Validate(); err != nil {
+				return fmt.Errorf("invalid XE interface config: %w", err)
+			}
+		}
+	case v1alpha1.DeviceDriverFAKE:
+		// No extra validation needed
+	default:
+		// Future drivers: XR, NXOS
+	}
+	return nil
+}
+
+func SetDeviceDefaults(spec *v1alpha1.DeviceSpec) error {
 	// Apply default if Port is not explicitly set (is 0)
-	if cfg.Port == 0 {
-		if cfg.TLSConfig == nil || !cfg.TLSConfig.Enabled {
-			cfg.TLSConfig = &TLSConfig{
+	if spec.Port == 0 {
+		if spec.TLS == nil || !spec.TLS.Enabled {
+			spec.TLS = &v1alpha1.TLSConfig{
 				Enabled: false,
 			}
-			cfg.Port = 80
+			spec.Port = 80
 		} else {
-			cfg.TLSConfig.Enabled = true
-			cfg.Port = 443
+			spec.TLS.Enabled = true
+			spec.Port = 443
 		}
 	}
 
-	if cfg.TLSConfig == nil {
-		cfg.TLSConfig = &TLSConfig{
+	if spec.TLS == nil {
+		spec.TLS = &v1alpha1.TLSConfig{
 			Enabled: false,
 		}
 	}

@@ -1,6 +1,5 @@
 device:
-  name: c8k-switch
-  driver: c8k
+  driver: FAKE
   address: localhost
   username: admin
   password: admin

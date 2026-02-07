@@ -1,6 +1,5 @@
 device:
-  name: c8k-switch
-  driver: c8k
+  driver: XE
   address: localhost
   port: 80
   username: admin
@@ -8,14 +7,11 @@ device:
   tls:
     enabled: true
     insecureSkipVerify: true
-  networking:
-    interface:
-      type: VirtualPortGroup
-      virtualPortGroup:
-        dhcp: true
-        interface: "0"
-        guestInterface: 0
-
-kubelet:
-  node_name: "cisco-virtual-kubelet"
-  node_internal_ip: "10.0.0.1"
+  xe:
+    networking:
+      interface:
+        type: VirtualPortGroup
+        virtualPortGroup:
+          dhcp: true
+          interface: "0"
+          guestInterface: 0

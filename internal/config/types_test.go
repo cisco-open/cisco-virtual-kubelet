@@ -17,36 +17,38 @@ package config
 import (
 	"strings"
 	"testing"
+
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
 
 func TestInterfaceConfigValidate(t *testing.T) {
 	tests := []struct {
 		name        string
-		cfg         *InterfaceConfig
+		cfg         *v1alpha1.XEInterfaceConfig
 		wantErr     bool
 		errContains string
 	}{
 		{
 			name: "valid VirtualPortGroup",
-			cfg: &InterfaceConfig{
-				Type:             InterfaceTypeVirtualPortGroup,
-				VirtualPortGroup: &VirtualPortGroupConfig{},
+			cfg: &v1alpha1.XEInterfaceConfig{
+				Type:             v1alpha1.XEInterfaceTypeVirtualPortGroup,
+				VirtualPortGroup: &v1alpha1.XEVirtualPortGroupConfig{},
 			},
 			wantErr: false,
 		},
 		{
 			name: "valid AppGigabitEthernet",
-			cfg: &InterfaceConfig{
-				Type:               InterfaceTypeAppGigabitEthernet,
-				AppGigabitEthernet: &AppGigabitEthernetConfig{},
+			cfg: &v1alpha1.XEInterfaceConfig{
+				Type:               v1alpha1.XEInterfaceTypeAppGigabitEthernet,
+				AppGigabitEthernet: &v1alpha1.XEAppGigabitEthernetConfig{},
 			},
 			wantErr: false,
 		},
 		{
 			name: "valid Management",
-			cfg: &InterfaceConfig{
-				Type:       InterfaceTypeManagement,
-				Management: &ManagementConfig{},
+			cfg: &v1alpha1.XEInterfaceConfig{
+				Type:       v1alpha1.XEInterfaceTypeManagement,
+				Management: &v1alpha1.XEManagementConfig{},
 			},
 			wantErr: false,
 		},
@@ -58,36 +60,36 @@ func TestInterfaceConfigValidate(t *testing.T) {
 		},
 		{
 			name: "no interface config set",
-			cfg: &InterfaceConfig{
-				Type: InterfaceTypeVirtualPortGroup,
+			cfg: &v1alpha1.XEInterfaceConfig{
+				Type: v1alpha1.XEInterfaceTypeVirtualPortGroup,
 			},
 			wantErr:     true,
 			errContains: "one interface config must be set",
 		},
 		{
 			name: "multiple interface configs set",
-			cfg: &InterfaceConfig{
-				Type:             InterfaceTypeVirtualPortGroup,
-				VirtualPortGroup: &VirtualPortGroupConfig{},
-				Management:       &ManagementConfig{},
+			cfg: &v1alpha1.XEInterfaceConfig{
+				Type:             v1alpha1.XEInterfaceTypeVirtualPortGroup,
+				VirtualPortGroup: &v1alpha1.XEVirtualPortGroupConfig{},
+				Management:       &v1alpha1.XEManagementConfig{},
 			},
 			wantErr:     true,
 			errContains: "only one interface config may be set",
 		},
 		{
 			name: "type mismatch",
-			cfg: &InterfaceConfig{
-				Type:             InterfaceTypeAppGigabitEthernet,
-				VirtualPortGroup: &VirtualPortGroupConfig{},
+			cfg: &v1alpha1.XEInterfaceConfig{
+				Type:             v1alpha1.XEInterfaceTypeAppGigabitEthernet,
+				VirtualPortGroup: &v1alpha1.XEVirtualPortGroupConfig{},
 			},
 			wantErr:     true,
 			errContains: "requires appGigabitEthernet config",
 		},
 		{
 			name: "unsupported type",
-			cfg: &InterfaceConfig{
-				Type:             InterfaceType("Other"),
-				VirtualPortGroup: &VirtualPortGroupConfig{},
+			cfg: &v1alpha1.XEInterfaceConfig{
+				Type:             v1alpha1.XEInterfaceType("Other"),
+				VirtualPortGroup: &v1alpha1.XEVirtualPortGroupConfig{},
 			},
 			wantErr:     true,
 			errContains: "unsupported interface type",

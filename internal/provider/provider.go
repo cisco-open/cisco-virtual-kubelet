@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
@@ -33,7 +33,7 @@ import (
 
 type AppHostingProvider struct {
 	ctx             context.Context
-	appCfg          *config.Config
+	deviceSpec      *v1alpha1.DeviceSpec
 	driver          drivers.CiscoKubernetesDeviceDriver
 	podsLister      corev1listers.PodLister
 	configMapLister corev1listers.ConfigMapLister
@@ -43,17 +43,17 @@ type AppHostingProvider struct {
 
 func NewAppHostingProvider(
 	ctx context.Context,
-	appCfg *config.Config,
+	deviceSpec *v1alpha1.DeviceSpec,
 	vkCfg nodeutil.ProviderConfig,
 ) (*AppHostingProvider, error) {
 
-	d, err := drivers.NewDriver(ctx, &appCfg.Device)
+	d, err := drivers.NewDriver(ctx, deviceSpec)
 	if err != nil {
 		return nil, fmt.Errorf("driver assignment failed: %v", err)
 	}
 	return &AppHostingProvider{
 		ctx:             ctx,
-		appCfg:          appCfg,
+		deviceSpec:      deviceSpec,
 		driver:          d,
 		podsLister:      vkCfg.Pods,
 		configMapLister: vkCfg.ConfigMaps,
@@ -177,17 +177,17 @@ func (p *AppHostingProvider) RunInContainer(ctx context.Context, namespace strin
 // This follows the NaiveNodeProvider pattern from virtual-kubelet.
 // The library's NodeController handles periodic heartbeat updates automatically.
 type AppHostingNode struct {
-	appCfg *config.Config
+	deviceSpec *v1alpha1.DeviceSpec
 }
 
 // NewAppHostingNode creates a new AppHostingNode
 func NewAppHostingNode(
 	ctx context.Context,
-	appCfg *config.Config,
+	deviceSpec *v1alpha1.DeviceSpec,
 	vkCfg nodeutil.ProviderConfig,
 ) (*AppHostingNode, error) {
 	return &AppHostingNode{
-		appCfg: appCfg,
+		deviceSpec: deviceSpec,
 	}, nil
 }
 
@@ -202,13 +202,13 @@ func (a *AppHostingNode) Ping(ctx context.Context) error {
 // Called once at startup to allow async node status updates.
 // We use this to update node info with device details after driver initialization.
 func (a *AppHostingNode) NotifyNodeStatus(ctx context.Context, cb func(*v1.Node)) {
-	if a.appCfg == nil {
+	if a.deviceSpec == nil {
 		return
 	}
 
 	// Create a temporary driver to fetch device info
 	// Note: NewDriver calls CheckConnection internally, which populates deviceInfo
-	driver, err := drivers.NewDriver(ctx, &a.appCfg.Device)
+	driver, err := drivers.NewDriver(ctx, a.deviceSpec)
 	if err != nil {
 		log.G(ctx).WithError(err).Warn("Failed to create driver for node status update")
 		return
@@ -224,11 +224,8 @@ func (a *AppHostingNode) NotifyNodeStatus(ctx context.Context, cb func(*v1.Node)
 		return
 	}
 
-	// Determine node internal IP: config value or device address
-	nodeInternalIP := a.appCfg.Kubelet.NodeInternalIP
-	if nodeInternalIP == "" {
-		nodeInternalIP = a.appCfg.Device.Address
-	}
+	// Determine node internal IP from device address
+	nodeInternalIP := a.deviceSpec.Address
 
 	log.G(ctx).Infof("Updating node status with device info, InternalIP=%s", nodeInternalIP)
 
