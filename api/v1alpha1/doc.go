@@ -19,6 +19,5 @@
 //   - Kubernetes CRDs (generated via controller-gen from kubebuilder markers)
 //   - Device drivers (consume DeviceSpec to configure physical devices)
 //
-// +kubebuilder:object:generate=true
 // +groupName=cisco.vk
 package v1alpha1

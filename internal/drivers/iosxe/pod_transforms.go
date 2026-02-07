@@ -25,6 +25,42 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+// networkConfig holds the network configuration for an app container
+type networkConfig struct {
+	interfaceType             v1alpha1.XEInterfaceType
+	virtualPortgroupInterface string
+	virtualPortgroupIP        string
+	virtualPortgroupNetmask   string
+	guestInterface            uint8
+	isPrimaryContainer        bool
+	// AppGigabitEthernet specific
+	appGigMode           v1alpha1.XEAppGigabitEthernetMode
+	appGigGuestInterface uint8
+	vlanIf               v1alpha1.XEVlanInterfaceConfig
+	useDHCP              bool
+	ipAllocationErr      error
+	// Management specific
+	mgmtGuestInterface uint8
+	mgmtGuestIPv4      string
+	mgmtGuestIPv4Mask  string
+}
+
+// resourceConfig holds the resource allocation for an app container
+type resourceConfig struct {
+	cpuUnits uint16
+	memoryMB uint16
+	diskMB   uint16
+	vcpu     uint16
+}
+
+// AppHostingConfig represents a complete IOS-XE AppHosting configuration for a single container
+type AppHostingConfig struct {
+	AppName       string
+	ContainerName string
+	ImagePath     string
+	Apps          *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps
+}
+
 // ConvertPodToAppConfigs converts a Kubernetes Pod spec into a slice of IOS-XE AppHosting configurations.
 // Each container in the pod is converted to a separate AppHosting app configuration.
 // Returns a slice of AppHostingConfig structs ready to be created on the device.

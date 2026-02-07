@@ -50,10 +50,9 @@ func Load(filePath ...string) (*Config, error) {
 		return nil, fmt.Errorf("unable to decode into struct: %w", err)
 	}
 
-	if cfg.Device.Networking.Interface != nil {
-		if err := cfg.Device.Networking.Interface.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid interface config: %w", err)
-		}
+	// Validate driver-specific config
+	if err := validateDeviceSpec(&cfg.Device); err != nil {
+		return nil, err
 	}
 
 	SetDeviceDefaults(&cfg.Device)

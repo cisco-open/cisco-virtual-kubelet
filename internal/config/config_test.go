@@ -108,13 +108,15 @@ func TestLoad_InterfaceConfigValidation(t *testing.T) {
 	viper.Reset()
 
 	viper.Set("device", map[string]interface{}{
-		"name":    "iface-node",
 		"address": "1.2.3.4",
-		"networking": map[string]interface{}{
-			"interface": map[string]interface{}{
-				"type": "AppGigabitEthernet",
-				"virtualPortGroup": map[string]interface{}{
-					"interface": "0",
+		"driver":  "XE",
+		"xe": map[string]interface{}{
+			"networking": map[string]interface{}{
+				"interface": map[string]interface{}{
+					"type": "AppGigabitEthernet",
+					"virtualPortGroup": map[string]interface{}{
+						"interface": "0",
+					},
 				},
 			},
 		},
