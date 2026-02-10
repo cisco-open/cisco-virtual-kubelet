@@ -38,7 +38,7 @@ INSTALL_DIR=$(PREFIX)/bin
 CONFIG_DIR=/etc/cisco-vk
 SYSTEMD_DIR=/etc/systemd/system
 
-.PHONY: all build clean install uninstall test lint fmt deps help
+.PHONY: all build clean install uninstall test lint fmt deps help crd-gen
 
 all: build
 
@@ -108,6 +108,23 @@ fmt: ## Format code
 
 vet: ## Run go vet
 	$(GO_BIN) vet ./...
+
+## Code generation targets
+
+generate: crd-gen deepcopy-gen ## Run all code generators
+
+crd-gen: ## Generate CRDs from ./api (controller-gen)
+	@echo "Generating CRDs from ./api..."
+	$(GO_BIN) run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.5 \
+		crd:crdVersions=v1 \
+		paths=./api/... \
+		output:crd:dir=./config/crd
+
+deepcopy-gen: ## Generate DeepCopy methods for API types
+	@echo "Generating DeepCopy methods..."
+	$(GO_BIN) run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.5 \
+		object \
+		paths=./api/...
 
 ## Utility targets
 
