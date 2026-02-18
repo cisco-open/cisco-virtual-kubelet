@@ -27,7 +27,6 @@ permissions:
   contents: write
 
 jobs:
-  if: false
   build-and-deploy:
     runs-on: ubuntu-latest
     
