@@ -181,10 +181,10 @@ export default function Architecture() {
           className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8"
         >
           <div className="relative">
-            <div className="text-6xl font-bold text-primary/10 absolute -top-4 -left-2">
+            <div className="text-6xl font-bold text-primary/10 absolute -top-6 -left-2">
               01
             </div>
-            <div className="relative pt-8">
+            <div className="relative pt-12">
               <h3 className="text-xl font-semibold mb-3 text-foreground">
                 Schedule with kubectl
               </h3>
@@ -196,10 +196,10 @@ export default function Architecture() {
             </div>
           </div>
           <div className="relative">
-            <div className="text-6xl font-bold text-accent/10 absolute -top-4 -left-2">
+            <div className="text-6xl font-bold text-primary/10 absolute -top-6 -left-2">
               02
             </div>
-            <div className="relative pt-8">
+            <div className="relative pt-12">
               <h3 className="text-xl font-semibold mb-3 text-foreground">
                 RESTCONF Translation
               </h3>
@@ -210,10 +210,10 @@ export default function Architecture() {
             </div>
           </div>
           <div className="relative">
-            <div className="text-6xl font-bold text-success/10 absolute -top-4 -left-2">
+            <div className="text-6xl font-bold text-primary/10 absolute -top-6 -left-2">
               03
             </div>
-            <div className="relative pt-8">
+            <div className="relative pt-12">
               <h3 className="text-xl font-semibold mb-3 text-foreground">
                 Edge Deployment
               </h3>

@@ -99,11 +99,7 @@ spec:
         cpu: "250m"
       limits:
         memory: "128Mi"
-        cpu: "500m"
-
-# Deploy with kubectl
-# kubectl apply -f test-pod.yaml
-# kubectl get pods -o wide`,
+        cpu: "500m"`,
   },
 };
 
