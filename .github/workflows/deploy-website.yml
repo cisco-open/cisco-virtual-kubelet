@@ -20,7 +20,7 @@ on:
       - main
       - develop
     paths:
-      - 'website/**'
+      - 'docs/website/**'
   workflow_dispatch:
 
 permissions:
@@ -39,20 +39,20 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: website/package-lock.json
+          cache-dependency-path: docs/website/package-lock.json
 
       - name: Install dependencies
-        working-directory: website
+        working-directory: docs/website
         run: npm ci
 
       - name: Build static site
-        working-directory: website
+        working-directory: docs/website
         run: npm run build
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./website/out
+          publish_dir: ./docs/website/out
           publish_branch: gh-pages
           force_orphan: true
