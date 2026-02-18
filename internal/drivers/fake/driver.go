@@ -17,6 +17,7 @@ package fake
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
@@ -156,4 +157,59 @@ func (d *FAKEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 	// TODO
 	log.G(ctx).Info("Pod ListContainers request received")
 	return nil, nil
+}
+
+func (d *FAKEDriver) GetNodeStats(ctx context.Context) (*common.NodeResourceStats, error) {
+	log.G(ctx).Info("GetNodeStats request received")
+	now := time.Now()
+
+	return &common.NodeResourceStats{
+		Timestamp:             now,
+		CPUUsageNanoCores:     2000000000,
+		MemoryUsageBytes:      4 * 1024 * 1024 * 1024,
+		MemoryAvailableBytes:  12 * 1024 * 1024 * 1024,
+		MemoryWorkingSetBytes: 3 * 1024 * 1024 * 1024,
+		FsUsedBytes:           20 * 1024 * 1024 * 1024,
+		FsCapacityBytes:       100 * 1024 * 1024 * 1024,
+		FsAvailableBytes:      80 * 1024 * 1024 * 1024,
+		NetworkRxBytes:        1024 * 1024 * 100,
+		NetworkTxBytes:        1024 * 1024 * 50,
+	}, nil
+}
+
+func (d *FAKEDriver) GetPodStats(ctx context.Context, pod *v1.Pod) (*common.PodResourceStats, error) {
+	log.G(ctx).WithFields(log.Fields{
+		"namespace": pod.Namespace,
+		"pod":       pod.Name,
+	}).Info("GetPodStats request received")
+
+	now := time.Now()
+
+	containerStats := make([]common.ContainerResourceStats, 0, len(pod.Spec.Containers))
+	for _, container := range pod.Spec.Containers {
+		containerStats = append(containerStats, common.ContainerResourceStats{
+			Name:                  container.Name,
+			Timestamp:             now,
+			CPUUsageNanoCores:     500000000,
+			MemoryUsageBytes:      256 * 1024 * 1024,
+			MemoryWorkingSetBytes: 200 * 1024 * 1024,
+			FsUsedBytes:           100 * 1024 * 1024,
+			FsCapacityBytes:       1024 * 1024 * 1024,
+			NetworkRxBytes:        1024 * 1024,
+			NetworkTxBytes:        512 * 1024,
+		})
+	}
+
+	return &common.PodResourceStats{
+		Namespace:             pod.Namespace,
+		Name:                  pod.Name,
+		UID:                   string(pod.UID),
+		Timestamp:             now,
+		Containers:            containerStats,
+		CPUUsageNanoCores:     500000000 * uint64(len(pod.Spec.Containers)),
+		MemoryUsageBytes:      256 * 1024 * 1024 * uint64(len(pod.Spec.Containers)),
+		MemoryWorkingSetBytes: 200 * 1024 * 1024 * uint64(len(pod.Spec.Containers)),
+		NetworkRxBytes:        1024 * 1024 * uint64(len(pod.Spec.Containers)),
+		NetworkTxBytes:        512 * 1024 * uint64(len(pod.Spec.Containers)),
+	}, nil
 }

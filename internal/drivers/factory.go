@@ -48,4 +48,6 @@ type CiscoKubernetesDeviceDriver interface {
 	DeletePod(ctx context.Context, pod *v1.Pod) error
 	GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error)
 	ListPods(ctx context.Context) ([]*v1.Pod, error)
+	GetNodeStats(ctx context.Context) (*common.NodeResourceStats, error)
+	GetPodStats(ctx context.Context, pod *v1.Pod) (*common.PodResourceStats, error)
 }

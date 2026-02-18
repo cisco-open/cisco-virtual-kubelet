@@ -27,6 +27,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	statsv1alpha1 "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
@@ -159,8 +160,191 @@ func (p *AppHostingProvider) GetMetricsResource(context.Context) ([]*io_promethe
 }
 
 // GetStatsSummary implements nodeutil.Provider.
-func (p *AppHostingProvider) GetStatsSummary(context.Context) (*statsv1alpha1.Summary, error) {
-	panic("unimplemented")
+// Returns node and pod resource usage statistics for observability tools like Splunk.
+func (p *AppHostingProvider) GetStatsSummary(ctx context.Context) (*statsv1alpha1.Summary, error) {
+	log.G(ctx).Debug("GetStatsSummary called")
+
+	nodeStats, err := p.buildNodeStats(ctx)
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("Failed to build node stats")
+	}
+
+	podStatsList, err := p.buildPodStats(ctx)
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("Failed to build pod stats")
+	}
+
+	return &statsv1alpha1.Summary{
+		Node: nodeStats,
+		Pods: podStatsList,
+	}, nil
+}
+
+// buildNodeStats creates NodeStats from driver data
+func (p *AppHostingProvider) buildNodeStats(ctx context.Context) (statsv1alpha1.NodeStats, error) {
+	nodeName := GetNodeName("", p.deviceSpec.Address)
+	now := metav1.Now()
+
+	nodeStats := statsv1alpha1.NodeStats{
+		NodeName:  nodeName,
+		StartTime: now,
+	}
+
+	driverStats, err := p.driver.GetNodeStats(ctx)
+	if err != nil {
+		return nodeStats, err
+	}
+
+	if driverStats != nil {
+		nodeStats.StartTime = metav1.NewTime(driverStats.Timestamp)
+
+		if driverStats.CPUUsageNanoCores > 0 {
+			cpuNano := driverStats.CPUUsageNanoCores
+			nodeStats.CPU = &statsv1alpha1.CPUStats{
+				Time:           now,
+				UsageNanoCores: &cpuNano,
+			}
+		}
+
+		if driverStats.MemoryUsageBytes > 0 || driverStats.MemoryAvailableBytes > 0 {
+			nodeStats.Memory = &statsv1alpha1.MemoryStats{
+				Time:            now,
+				UsageBytes:      &driverStats.MemoryUsageBytes,
+				AvailableBytes:  &driverStats.MemoryAvailableBytes,
+				WorkingSetBytes: &driverStats.MemoryWorkingSetBytes,
+			}
+		}
+
+		if driverStats.FsCapacityBytes > 0 {
+			nodeStats.Fs = &statsv1alpha1.FsStats{
+				Time:           now,
+				CapacityBytes:  &driverStats.FsCapacityBytes,
+				UsedBytes:      &driverStats.FsUsedBytes,
+				AvailableBytes: &driverStats.FsAvailableBytes,
+			}
+		}
+
+		if driverStats.NetworkRxBytes > 0 || driverStats.NetworkTxBytes > 0 {
+			nodeStats.Network = &statsv1alpha1.NetworkStats{
+				Time: now,
+				InterfaceStats: statsv1alpha1.InterfaceStats{
+					Name:    "eth0",
+					RxBytes: &driverStats.NetworkRxBytes,
+					TxBytes: &driverStats.NetworkTxBytes,
+				},
+			}
+		}
+	}
+
+	return nodeStats, nil
+}
+
+// buildPodStats creates PodStats for all pods managed by this provider
+func (p *AppHostingProvider) buildPodStats(ctx context.Context) ([]statsv1alpha1.PodStats, error) {
+	pods, err := p.GetPods(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	podStatsList := make([]statsv1alpha1.PodStats, 0, len(pods))
+
+	for _, pod := range pods {
+		podStats, err := p.buildSinglePodStats(ctx, pod)
+		if err != nil {
+			log.G(ctx).WithError(err).WithField("pod", pod.Name).Warn("Failed to build pod stats")
+			continue
+		}
+		podStatsList = append(podStatsList, podStats)
+	}
+
+	return podStatsList, nil
+}
+
+// buildSinglePodStats creates PodStats for a single pod
+func (p *AppHostingProvider) buildSinglePodStats(ctx context.Context, pod *v1.Pod) (statsv1alpha1.PodStats, error) {
+	now := metav1.Now()
+
+	podStats := statsv1alpha1.PodStats{
+		PodRef: statsv1alpha1.PodReference{
+			Name:      pod.Name,
+			Namespace: pod.Namespace,
+			UID:       string(pod.UID),
+		},
+		StartTime: now,
+	}
+
+	driverStats, err := p.driver.GetPodStats(ctx, pod)
+	if err != nil {
+		return podStats, err
+	}
+
+	if driverStats != nil {
+		podStats.StartTime = metav1.NewTime(driverStats.Timestamp)
+
+		if driverStats.CPUUsageNanoCores > 0 {
+			cpuNano := driverStats.CPUUsageNanoCores
+			podStats.CPU = &statsv1alpha1.CPUStats{
+				Time:           now,
+				UsageNanoCores: &cpuNano,
+			}
+		}
+
+		if driverStats.MemoryUsageBytes > 0 {
+			podStats.Memory = &statsv1alpha1.MemoryStats{
+				Time:            now,
+				UsageBytes:      &driverStats.MemoryUsageBytes,
+				WorkingSetBytes: &driverStats.MemoryWorkingSetBytes,
+			}
+		}
+
+		if driverStats.NetworkRxBytes > 0 || driverStats.NetworkTxBytes > 0 {
+			podStats.Network = &statsv1alpha1.NetworkStats{
+				Time: now,
+				InterfaceStats: statsv1alpha1.InterfaceStats{
+					Name:    "eth0",
+					RxBytes: &driverStats.NetworkRxBytes,
+					TxBytes: &driverStats.NetworkTxBytes,
+				},
+			}
+		}
+
+		containerStatsList := make([]statsv1alpha1.ContainerStats, 0, len(driverStats.Containers))
+		for _, cs := range driverStats.Containers {
+			containerStats := statsv1alpha1.ContainerStats{
+				Name:      cs.Name,
+				StartTime: metav1.NewTime(cs.Timestamp),
+			}
+
+			if cs.CPUUsageNanoCores > 0 {
+				cpuNano := cs.CPUUsageNanoCores
+				containerStats.CPU = &statsv1alpha1.CPUStats{
+					Time:           now,
+					UsageNanoCores: &cpuNano,
+				}
+			}
+
+			if cs.MemoryUsageBytes > 0 {
+				containerStats.Memory = &statsv1alpha1.MemoryStats{
+					Time:            now,
+					UsageBytes:      &cs.MemoryUsageBytes,
+					WorkingSetBytes: &cs.MemoryWorkingSetBytes,
+				}
+			}
+
+			if cs.FsCapacityBytes > 0 || cs.FsUsedBytes > 0 {
+				containerStats.Rootfs = &statsv1alpha1.FsStats{
+					Time:          now,
+					CapacityBytes: &cs.FsCapacityBytes,
+					UsedBytes:     &cs.FsUsedBytes,
+				}
+			}
+
+			containerStatsList = append(containerStatsList, containerStats)
+		}
+		podStats.Containers = containerStatsList
+	}
+
+	return podStats, nil
 }
 
 // PortForward implements nodeutil.Provider.

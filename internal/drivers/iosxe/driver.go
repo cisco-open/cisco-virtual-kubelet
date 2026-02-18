@@ -275,3 +275,116 @@ func (d *XEDriver) debugLogJson(ctx context.Context, obj ygot.GoStruct) error {
 	log.G(ctx).Debug(jsonStr)
 	return nil
 }
+
+// GetNodeStats returns resource usage statistics for the device node
+func (d *XEDriver) GetNodeStats(ctx context.Context) (*common.NodeResourceStats, error) {
+	log.G(ctx).Debug("Fetching node stats from device")
+	now := time.Now()
+
+	stats := &common.NodeResourceStats{
+		Timestamp: now,
+	}
+
+	return stats, nil
+}
+
+// GetPodStats returns resource usage statistics for a specific pod/container
+func (d *XEDriver) GetPodStats(ctx context.Context, pod *v1.Pod) (*common.PodResourceStats, error) {
+	log.G(ctx).WithFields(log.Fields{
+		"namespace": pod.Namespace,
+		"pod":       pod.Name,
+	}).Debug("Fetching pod stats from device")
+
+	now := time.Now()
+	containerAppIDs := common.GenerateContainerAppIDs(pod)
+
+	containerStats := make([]common.ContainerResourceStats, 0, len(pod.Spec.Containers))
+	var totalCPU, totalMem, totalMemWS uint64
+
+	for _, container := range pod.Spec.Containers {
+		appID := containerAppIDs[container.Name]
+		cStats, err := d.fetchAppStats(ctx, appID)
+		if err != nil {
+			log.G(ctx).WithError(err).WithField("app", appID).Warn("Failed to fetch app stats")
+			containerStats = append(containerStats, common.ContainerResourceStats{
+				Name:      container.Name,
+				Timestamp: now,
+			})
+			continue
+		}
+
+		containerStats = append(containerStats, common.ContainerResourceStats{
+			Name:                  container.Name,
+			Timestamp:             now,
+			CPUUsageNanoCores:     cStats.CPUUsageNanoCores,
+			MemoryUsageBytes:      cStats.MemoryUsageBytes,
+			MemoryWorkingSetBytes: cStats.MemoryUsageBytes,
+		})
+
+		totalCPU += cStats.CPUUsageNanoCores
+		totalMem += cStats.MemoryUsageBytes
+		totalMemWS += cStats.MemoryUsageBytes
+	}
+
+	return &common.PodResourceStats{
+		Namespace:             pod.Namespace,
+		Name:                  pod.Name,
+		UID:                   string(pod.UID),
+		Timestamp:             now,
+		Containers:            containerStats,
+		CPUUsageNanoCores:     totalCPU,
+		MemoryUsageBytes:      totalMem,
+		MemoryWorkingSetBytes: totalMemWS,
+	}, nil
+}
+
+type appStats struct {
+	CPUUsageNanoCores uint64
+	MemoryUsageBytes  uint64
+}
+
+// fetchAppStats retrieves stats for a specific AppHosting application
+func (d *XEDriver) fetchAppStats(ctx context.Context, appID string) (*appStats, error) {
+	path := fmt.Sprintf("/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/app=%s", url.PathEscape(appID))
+	resp := &Cisco_IOS_XEAppHostingOper_AppHostingOperData_App{}
+	err := d.client.Get(ctx, path, resp, d.unmarshaller)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch app stats for %s: %w", appID, err)
+	}
+
+	stats := &appStats{}
+
+	if resp.Utilization != nil {
+		if resp.Utilization.CpuUtil != nil && resp.Utilization.CpuUtil.ActualApplicationUtil != nil {
+			cpuPercent := *resp.Utilization.CpuUtil.ActualApplicationUtil
+			stats.CPUUsageNanoCores = cpuPercent * 10000000
+		}
+		if resp.Utilization.MemoryUtil != nil && resp.Utilization.MemoryUtil.MemoryUsed != nil {
+			memStr := *resp.Utilization.MemoryUtil.MemoryUsed
+			stats.MemoryUsageBytes = parseMemoryString(memStr)
+		}
+	}
+
+	return stats, nil
+}
+
+// parseMemoryString parses memory strings like "256MB" or "1GB" to bytes
+func parseMemoryString(memStr string) uint64 {
+	var value uint64
+	var unit string
+	_, err := fmt.Sscanf(memStr, "%d%s", &value, &unit)
+	if err != nil {
+		return 0
+	}
+
+	switch unit {
+	case "KB", "K":
+		return value * 1024
+	case "MB", "M":
+		return value * 1024 * 1024
+	case "GB", "G":
+		return value * 1024 * 1024 * 1024
+	default:
+		return value
+	}
+}
