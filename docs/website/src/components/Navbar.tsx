@@ -89,7 +89,7 @@ export default function Navbar() {
           {/* Desktop actions */}
           <div className="hidden md:flex items-center gap-3">
             <a
-              href="https://github.com/cisco-open/cisco-virtual-kubelet/tree/main/docs"
+              href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2 text-sm text-text-muted hover:text-foreground transition-colors rounded-lg hover:bg-surface-light"

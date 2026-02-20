@@ -24,7 +24,7 @@ const footerLinks = {
     },
     {
       name: "Documentation",
-      href: "https://github.com/cisco-open/cisco-virtual-kubelet/tree/main/docs",
+      href: "https://cisco-open.github.io/cisco-virtual-kubelet/docs/",
     },
     {
       name: "Releases",
