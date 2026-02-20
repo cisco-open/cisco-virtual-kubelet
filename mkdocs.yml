@@ -1,0 +1,55 @@
+site_name: Cisco Virtual Kubelet
+copyright: Copyright © 2025-2026 Cisco Open. All Rights Reserved.
+site_url: https://cisco-open.github.io/cisco-virtual-kubelet/docs
+site_description: 'A Virtual Kubelet provider that enables Kubernetes to schedule container workloads on Cisco Catalyst series switches and IOS-XE devices with App-Hosting capabilities.'
+
+repo_name: cisco-open/cisco-virtual-kubelet
+repo_url: https://github.com/cisco-open/cisco-virtual-kubelet
+edit_uri: ""
+
+markdown_extensions:
+- admonition
+- pymdownx.details
+- pymdownx.superfences
+- attr_list
+- md_in_html
+- footnotes
+- pymdownx.critic
+- pymdownx.highlight:
+    anchor_linenums: true
+    line_spans: __span
+    pygments_lang_class: true
+- pymdownx.superfences:
+    custom_fences:
+    - name: mermaid
+      class: mermaid
+      format: !!python/name:pymdownx.superfences.fence_code_format ""
+- pymdownx.tabbed:
+    alternate_style: true
+- pymdownx.inlinehilite
+- pymdownx.snippets
+- pymdownx.emoji:
+    emoji_index: !!python/name:material.extensions.emoji.twemoji ""
+    emoji_generator: !!python/name:material.extensions.emoji.to_svg ""
+nav:
+- Welcome: 'index.md'
+- Architecture: 'architecture.md'
+- Configuration: 'configuration.md'
+- API Reference: 'api.md'
+theme:
+  name: material
+  features:
+  - content.code.copy
+  - search.share
+  - navigation.footer
+  - navigation.instant.progress
+  - content.code.annotate
+extra:
+  homepage: /cisco-virtual-kubelet/
+plugins:
+- search
+docs_dir: docs
+site_dir: site
+exclude_docs: |
+  website/
+use_directory_urls: true
