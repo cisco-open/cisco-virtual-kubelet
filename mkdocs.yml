@@ -33,9 +33,9 @@ markdown_extensions:
     emoji_generator: !!python/name:material.extensions.emoji.to_svg ""
 nav:
 - Welcome: 'index.md'
-- Architecture: 'architecture.md'
-- Configuration: 'configuration.md'
-- API Reference: 'api.md'
+- Architecture: 'ARCHITECTURE.md'
+- Configuration: 'CONFIGURATION.md'
+- API Reference: 'API.md'
 theme:
   name: material
   features:

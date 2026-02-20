@@ -5,7 +5,8 @@ This document details the RESTCONF APIs used by the Cisco Virtual Kubelet Provid
 ## RESTCONF Endpoints
 
 ### Base URL
-```
+
+```bash
 https://<device-ip>/restconf
 ```
 

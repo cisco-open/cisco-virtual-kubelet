@@ -73,6 +73,7 @@ type AppHostingProvider struct {
 ```
 
 **Implemented Interface Methods**:
+
 - `CreatePod(ctx, pod)` - Deploy container to device
 - `UpdatePod(ctx, pod)` - Update container configuration
 - `DeletePod(ctx, pod)` - Remove container from device
