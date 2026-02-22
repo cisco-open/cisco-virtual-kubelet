@@ -99,8 +99,14 @@ func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string)
 		return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found: %v", namespace, name, err))
 	}
 
-	// Get actual status from Cisco device
-	return p.driver.GetPodStatus(p.ctx, pod)
+	// Get actual status from Cisco device.
+	// Errors must be wrapped as NotFound so the framework routes to CreatePod
+	// instead of treating it as a generic reconciliation error.
+	statusPod, err := p.driver.GetPodStatus(p.ctx, pod)
+	if err != nil {
+		return nil, errdefs.AsNotFound(err)
+	}
+	return statusPod, nil
 }
 
 func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
