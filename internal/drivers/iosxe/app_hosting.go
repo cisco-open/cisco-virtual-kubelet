@@ -217,6 +217,19 @@ func (d *XEDriver) DeleteApp(ctx context.Context, appID string) error {
 	return nil
 }
 
+// deleteAppConfig removes only the RESTCONF configuration entry for an app,
+// without attempting stop/deactivate/uninstall. This is used for orphaned configs
+// where the app was never installed (no operational data exists).
+func (d *XEDriver) deleteAppConfig(ctx context.Context, appID string) error {
+	log.G(ctx).Infof("Removing orphaned config for app %s", appID)
+	path := fmt.Sprintf("/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app=%s", appID)
+	if err := d.client.Delete(ctx, path); err != nil {
+		return fmt.Errorf("failed to delete app config for %s: %w", appID, err)
+	}
+	log.G(ctx).Infof("Successfully removed orphaned config for app %s", appID)
+	return nil
+}
+
 // WaitForAppStatus polls the device until the app reaches the expected status or times out
 func (d *XEDriver) WaitForAppStatus(ctx context.Context, appID string, expectedStatus string, maxWaitTime time.Duration) error {
 	log.G(ctx).Infof("Waiting for app %s to reach status: %s", appID, expectedStatus)
