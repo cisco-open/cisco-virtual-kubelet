@@ -100,8 +100,9 @@ func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string)
 	}
 
 	// Get actual status from Cisco device.
-	// Errors must be wrapped as NotFound so the framework routes to CreatePod
-	// instead of treating it as a generic reconciliation error.
+	// The framework ignores the error and only checks if the returned pod is
+	// nil. Returning nil signals "pod doesn't exist" and routes to CreatePod.
+	// We wrap as NotFound for consistency with GetPodStatus.
 	statusPod, err := p.driver.GetPodStatus(p.ctx, pod)
 	if err != nil {
 		return nil, errdefs.AsNotFound(err)

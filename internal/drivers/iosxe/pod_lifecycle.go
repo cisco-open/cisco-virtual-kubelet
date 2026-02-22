@@ -224,10 +224,34 @@ func (d *XEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 		// Don't return error here - we'll delete what we found
 	}
 
+	if len(discoveredContainers) == 0 {
+		log.G(ctx).Infof("No containers found on device for pod %s/%s, nothing to delete", pod.Namespace, pod.Name)
+		return nil
+	}
+
+	// Fetch operational data to determine cleanup strategy per container
+	allAppOperData, err := d.GetAppOperationalData(ctx)
+	if err != nil {
+		log.G(ctx).Warnf("Failed to fetch app operational data for deletion: %v. Falling back to full DeleteApp for all containers.", err)
+		allAppOperData = make(map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App)
+	}
+
 	deletionErrors := []string{}
 
 	for containerName, appID := range discoveredContainers {
 		log.G(ctx).Infof("Deleting container %s (app: %s)", containerName, appID)
+
+		_, hasOperData := allAppOperData[appID]
+		if !hasOperData {
+			// Config-only orphan — just delete the config entry
+			log.G(ctx).Infof("Container %s (app %s) has no operational data, removing config only", containerName, appID)
+			if err := d.deleteAppConfig(ctx, appID); err != nil {
+				errMsg := fmt.Sprintf("failed to delete config for container %s (app %s): %v", containerName, appID, err)
+				log.G(ctx).Error(errMsg)
+				deletionErrors = append(deletionErrors, errMsg)
+			}
+			continue
+		}
 
 		err = d.DeleteApp(ctx, appID)
 		if err != nil {
