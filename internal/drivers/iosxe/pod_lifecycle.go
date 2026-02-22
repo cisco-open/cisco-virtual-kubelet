@@ -81,9 +81,22 @@ func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
+// isTransitionalState returns true for app states that indicate normal startup
+// progression. These states should not trigger recovery — the app is still
+// working its way to RUNNING through the lifecycle:
+// DEPLOYED → ACTIVATED → RUNNING.
+func isTransitionalState(state string) bool {
+	switch state {
+	case "DEPLOYED", "ACTIVATED":
+		return true
+	default:
+		return false
+	}
+}
+
 // UpdatePod reconciles an existing pod on the device. It checks each container's
-// state and recovers any that are not RUNNING by cleaning them up and redeploying.
-// If all containers are already RUNNING, it returns early as a no-op.
+// state and recovers any that are broken (STOPPED, failed) or orphaned (config-only).
+// Containers that are RUNNING or still transitioning (DEPLOYED, ACTIVATED) are left alone.
 func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).Infof("Updating pod: %s/%s (waiting for device lock)", pod.Namespace, pod.Name)
 
@@ -107,25 +120,37 @@ func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 		return fmt.Errorf("failed to fetch app operational data: %w", err)
 	}
 
-	allRunning := true
+	needsRecovery := false
 	for containerName, appID := range existingContainers {
 		operData, hasOperData := allAppOperData[appID]
 
-		if hasOperData && operData.Details != nil && operData.Details.State != nil && *operData.Details.State == "RUNNING" {
-			log.G(ctx).Infof("Container %s (app %s) is RUNNING, skipping", containerName, appID)
-			continue
-		}
+		if hasOperData && operData.Details != nil && operData.Details.State != nil {
+			state := *operData.Details.State
+			if state == "RUNNING" {
+				log.G(ctx).Infof("Container %s (app %s) is RUNNING, skipping", containerName, appID)
+				continue
+			}
+			if isTransitionalState(state) {
+				log.G(ctx).Infof("Container %s (app %s) is in transitional state %s, skipping", containerName, appID, state)
+				continue
+			}
 
-		allRunning = false
-
-		if hasOperData {
-			// Has oper data but not RUNNING — full cleanup
-			log.G(ctx).Infof("Container %s (app %s) has oper data but is not RUNNING, performing full cleanup", containerName, appID)
+			// Broken state (STOPPED, etc.) — full cleanup
+			needsRecovery = true
+			log.G(ctx).Infof("Container %s (app %s) is in state %s, performing full cleanup", containerName, appID, state)
+			if err := d.DeleteApp(ctx, appID); err != nil {
+				log.G(ctx).Warnf("Failed to clean up broken app %s: %v", appID, err)
+			}
+		} else if hasOperData {
+			// Has oper data but no details/state — treat as broken
+			needsRecovery = true
+			log.G(ctx).Infof("Container %s (app %s) has oper data but no state, performing full cleanup", containerName, appID)
 			if err := d.DeleteApp(ctx, appID); err != nil {
 				log.G(ctx).Warnf("Failed to clean up broken app %s: %v", appID, err)
 			}
 		} else {
 			// Config orphan — just delete the config entry
+			needsRecovery = true
 			log.G(ctx).Infof("Container %s (app %s) is a config orphan (no oper data), removing config", containerName, appID)
 			if err := d.deleteAppConfig(ctx, appID); err != nil {
 				log.G(ctx).Warnf("Failed to delete orphaned config for app %s: %v", appID, err)
@@ -133,8 +158,8 @@ func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 		}
 	}
 
-	if allRunning {
-		log.G(ctx).Infof("All containers for pod %s/%s are RUNNING, nothing to update", pod.Namespace, pod.Name)
+	if !needsRecovery {
+		log.G(ctx).Infof("All containers for pod %s/%s are healthy or transitioning, nothing to update", pod.Namespace, pod.Name)
 		return nil
 	}
 
