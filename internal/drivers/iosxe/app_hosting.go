@@ -181,30 +181,55 @@ func (d *XEDriver) UninstallApp(ctx context.Context, appID string) error {
 	return nil
 }
 
-// DeleteApp orchestrates the full app deletion lifecycle: stop → deactivate → uninstall → delete config
+// DeleteApp orchestrates the full app deletion lifecycle: stop → deactivate → uninstall → delete config.
+// It is state-aware so that retries work correctly: if a previous attempt was interrupted
+// mid-lifecycle (e.g., app left in STOPPED state), the function skips already-completed
+// steps instead of failing on an inapplicable RPC.
 func (d *XEDriver) DeleteApp(ctx context.Context, appID string) error {
-	log.G(ctx).Infof("Stopping app %s", appID)
-	if err := d.StopApp(ctx, appID); err != nil {
-		return fmt.Errorf("failed to stop app: %w", err)
-	}
-	if err := d.WaitForAppStatus(ctx, appID, "ACTIVATED", 30*time.Second); err != nil {
-		log.G(ctx).Warnf("App %s did not reach ACTIVATED status after stop: %v", appID, err)
+	// Determine the app's current state so we can resume from the right point.
+	currentState, err := d.getAppState(ctx, appID)
+	if err != nil {
+		return fmt.Errorf("failed to query app state for %s: %w", appID, err)
 	}
 
-	log.G(ctx).Infof("Deactivating app %s", appID)
-	if err := d.DeactivateApp(ctx, appID); err != nil {
-		return fmt.Errorf("failed to deactivate app: %w", err)
-	}
-	if err := d.WaitForAppStatus(ctx, appID, "DEPLOYED", 30*time.Second); err != nil {
-		log.G(ctx).Warnf("App %s did not reach DEPLOYED status after deactivate: %v", appID, err)
+	log.G(ctx).Infof("DeleteApp %s: current state is %s", appID, currentState)
+
+	// State machine for teardown (reverse of create):
+	//   RUNNING  → stop  → ACTIVATED
+	//   STOPPED  →       → (treat as ACTIVATED, skip stop)
+	//   ACTIVATED→ deactivate → DEPLOYED
+	//   DEPLOYED → uninstall  → (removed)
+	//
+	// Fall through each phase so we always reach config deletion.
+
+	if currentState == "RUNNING" {
+		log.G(ctx).Infof("Stopping app %s", appID)
+		if err := d.StopApp(ctx, appID); err != nil {
+			return fmt.Errorf("failed to stop app: %w", err)
+		}
+		if err := d.WaitForAppStatus(ctx, appID, "ACTIVATED", 30*time.Second); err != nil {
+			log.G(ctx).Warnf("App %s did not reach ACTIVATED status after stop: %v", appID, err)
+		}
 	}
 
-	log.G(ctx).Infof("Uninstalling app %s", appID)
-	if err := d.UninstallApp(ctx, appID); err != nil {
-		return fmt.Errorf("failed to uninstall app: %w", err)
+	if currentState == "RUNNING" || currentState == "STOPPED" || currentState == "ACTIVATED" {
+		log.G(ctx).Infof("Deactivating app %s", appID)
+		if err := d.DeactivateApp(ctx, appID); err != nil {
+			return fmt.Errorf("failed to deactivate app: %w", err)
+		}
+		if err := d.WaitForAppStatus(ctx, appID, "DEPLOYED", 30*time.Second); err != nil {
+			log.G(ctx).Warnf("App %s did not reach DEPLOYED status after deactivate: %v", appID, err)
+		}
 	}
-	if err := d.WaitForAppNotPresent(ctx, appID, 60*time.Second); err != nil {
-		log.G(ctx).Warnf("App %s still present in oper data after uninstall: %v", appID, err)
+
+	if currentState == "RUNNING" || currentState == "STOPPED" || currentState == "ACTIVATED" || currentState == "DEPLOYED" {
+		log.G(ctx).Infof("Uninstalling app %s", appID)
+		if err := d.UninstallApp(ctx, appID); err != nil {
+			return fmt.Errorf("failed to uninstall app: %w", err)
+		}
+		if err := d.WaitForAppNotPresent(ctx, appID, 60*time.Second); err != nil {
+			log.G(ctx).Warnf("App %s still present in oper data after uninstall: %v", appID, err)
+		}
 	}
 
 	log.G(ctx).Infof("Removing app %s config", appID)
@@ -215,6 +240,23 @@ func (d *XEDriver) DeleteApp(ctx context.Context, appID string) error {
 
 	log.G(ctx).Infof("Successfully deleted app %s", appID)
 	return nil
+}
+
+// getAppState returns the current operational state of an app (e.g., "RUNNING",
+// "STOPPED", "ACTIVATED", "DEPLOYED"), or empty string if the app has no
+// operational data.
+func (d *XEDriver) getAppState(ctx context.Context, appID string) (string, error) {
+	allAppOperData, err := d.GetAppOperationalData(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	app, ok := allAppOperData[appID]
+	if !ok || app.Details == nil || app.Details.State == nil {
+		return "", nil
+	}
+
+	return *app.Details.State, nil
 }
 
 // deleteAppConfig removes only the RESTCONF configuration entry for an app,
