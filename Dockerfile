@@ -13,8 +13,8 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o cisco-vk ./cmd/virtual-kubelet
+# Build the unified binary (supports 'run' and 'manager' subcommands)
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o cisco-vk ./cmd/cisco-vk
 
 FROM gcr.io/distroless/static-debian12
 COPY --from=builder /app/cisco-vk /usr/local/bin/cisco-vk

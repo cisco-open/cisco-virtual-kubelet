@@ -1,4 +1,4 @@
-// Copyright © 2026 Cisco Systems Inc.
+// Copyright © 2026 Cisco Systems, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 package main
 
 import (
-	"flag"
 	"os"
 
+	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -34,39 +34,48 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
+var (
+	metricsAddr       string
+	enableLeaderElect bool
+	probeAddr         string
+	vkImage           string
+	vkServiceAccount  string
+)
+
+var managerCmd = &cobra.Command{
+	Use:   "manager",
+	Short: "Start the CRD controller manager",
+	Long: `Start the Kubernetes controller manager that watches CiscoDevice
+custom resources and manages Virtual Kubelet deployments.`,
+	RunE: runManager,
+}
+
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(ciskov1.AddToScheme(scheme))
-}
 
-func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	var probeAddr string
-	var vkImage string
-	var vkServiceAccount string
-
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
+	managerCmd.Flags().StringVar(&metricsAddr, "metrics-bind-address", ":8080",
+		"The address the metric endpoint binds to.")
+	managerCmd.Flags().StringVar(&probeAddr, "health-probe-bind-address", ":8081",
+		"The address the probe endpoint binds to.")
+	managerCmd.Flags().BoolVar(&enableLeaderElect, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&vkImage, "vk-image", controller.DefaultImage,
+	managerCmd.Flags().StringVar(&vkImage, "vk-image", controller.DefaultImage,
 		"Container image to use for Virtual Kubelet deployments.")
-	flag.StringVar(&vkServiceAccount, "vk-service-account", controller.DefaultServiceAccount,
+	managerCmd.Flags().StringVar(&vkServiceAccount, "vk-service-account", controller.DefaultServiceAccount,
 		"Service account name for Virtual Kubelet pods.")
+}
 
+func runManager(cmd *cobra.Command, args []string) error {
 	opts := zap.Options{
 		Development: true,
 	}
-	opts.BindFlags(flag.CommandLine)
-	flag.Parse()
-
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:           scheme,
-		LeaderElection:   enableLeaderElection,
+		LeaderElection:   enableLeaderElect,
 		LeaderElectionID: "ciscodevice.cisco.vk",
 	})
 	if err != nil {
@@ -98,4 +107,6 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+
+	return nil
 }

@@ -30,7 +30,7 @@ LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X 
 # Directories
 BIN_DIR=bin
 PKG_DIR=pkg
-CMD_DIR=cmd/virtual-kubelet
+CMD_DIR=cmd/cisco-vk
 
 # Installation directories
 PREFIX?=/usr/local

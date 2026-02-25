@@ -98,7 +98,6 @@ func TestLogLevelValidation(t *testing.T) {
 }
 
 func TestValidateConfig(t *testing.T) {
-	// Create a temporary config file for testing
 	tmpDir := t.TempDir()
 	validConfigPath := filepath.Join(tmpDir, "config.yaml")
 	if err := os.WriteFile(validConfigPath, []byte("test: config"), 0644); err != nil {
@@ -144,7 +143,6 @@ func TestValidateConfig(t *testing.T) {
 }
 
 func TestGetKubeConfig(t *testing.T) {
-	// Save original env and restore after test
 	originalKubeconfig := os.Getenv("KUBECONFIG")
 	defer os.Setenv("KUBECONFIG", originalKubeconfig)
 
@@ -175,7 +173,7 @@ func TestGetKubeConfig(t *testing.T) {
 			flagValue:   "",
 			envValue:    "",
 			setupEnv:    true,
-			wantErr:     true, // Will fail in test environment without service account
+			wantErr:     true,
 			errContains: "failed to load in-cluster config",
 		},
 	}

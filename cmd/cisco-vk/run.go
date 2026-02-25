@@ -36,6 +36,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// Interface Guards
+var _ nodeutil.Provider = (*provider.AppHostingProvider)(nil)
+var _ node.NodeProvider = (*provider.AppHostingNode)(nil)
+
 var (
 	cfgFile    string
 	kubeconfig string
@@ -43,28 +47,23 @@ var (
 	nodeName   string
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "virtual-kubelet",
-	Short: "Cisco Virtual Kubelet for AppHosting",
-	Long: `Cisco Virtual Kubelet implements the Kubelet interface to deploy
-containers on Cisco devices using AppHosting.`,
+var runCmd = &cobra.Command{
+	Use:   "run",
+	Short: "Start the Virtual Kubelet provider",
+	Long: `Start the Cisco Virtual Kubelet provider which registers a virtual
+node in Kubernetes and manages pods on Cisco devices via AppHosting.`,
 	RunE: runVirtualKubelet,
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "",
+	runCmd.Flags().StringVarP(&cfgFile, "config", "c", "",
 		"config file (default: /etc/virtual-kubelet/config.yaml)")
-	rootCmd.PersistentFlags().StringVar(&kubeconfig, "kubeconfig", "",
+	runCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "",
 		"path to kubeconfig file (default: $KUBECONFIG or in-cluster)")
-	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "",
+	runCmd.Flags().StringVar(&logLevel, "log-level", "",
 		"log level: debug, info, warn, error (default: $LOG_LEVEL or info)")
-	rootCmd.PersistentFlags().StringVar(&nodeName, "nodename", "",
+	runCmd.Flags().StringVar(&nodeName, "nodename", "",
 		"kubernetes node name (default: $VKUBELET_NODE_NAME or 'cisco-virtual-kubelet')")
-}
-
-// Execute runs the root command
-func Execute() error {
-	return rootCmd.Execute()
 }
 
 // validateConfig checks if the config file exists at the given path

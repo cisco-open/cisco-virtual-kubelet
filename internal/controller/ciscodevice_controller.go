@@ -151,6 +151,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					Name:  "cisco-vk",
 					Image: image,
 					Args: []string{
+						"run",
 						"--config", configMountPath + "/" + configFileName,
 						"--nodename", device.Name,
 					},

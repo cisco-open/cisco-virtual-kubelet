@@ -18,17 +18,28 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
-	"github.com/virtual-kubelet/virtual-kubelet/node"
-	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
+	"github.com/spf13/cobra"
 )
 
-// Interface Guard
-var _ nodeutil.Provider = (*provider.AppHostingProvider)(nil)
-var _ node.NodeProvider = (*provider.AppHostingNode)(nil)
+var rootCmd = &cobra.Command{
+	Use:   "cisco-vk",
+	Short: "Cisco Virtual Kubelet",
+	Long: `Cisco Virtual Kubelet provides a Kubelet implementation backed by
+Cisco AppHosting, along with a Kubernetes controller manager for
+CiscoDevice custom resources.
+
+Available subcommands:
+  run       Start the Virtual Kubelet provider
+  manager   Start the CRD controller manager`,
+}
+
+func init() {
+	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(managerCmd)
+}
 
 func main() {
-	if err := Execute(); err != nil {
+	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
