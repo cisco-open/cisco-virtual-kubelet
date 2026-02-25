@@ -24,6 +24,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/controller"
@@ -74,9 +75,13 @@ func runManager(cmd *cobra.Command, args []string) error {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:           scheme,
-		LeaderElection:   enableLeaderElect,
-		LeaderElectionID: "ciscodevice.cisco.vk",
+		Scheme:                 scheme,
+		LeaderElection:         enableLeaderElect,
+		LeaderElectionID:       "ciscodevice.cisco.vk",
+		HealthProbeBindAddress: probeAddr,
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

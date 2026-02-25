@@ -5,7 +5,7 @@
 image:
   repository: cunningr/cisco-vk
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 # controllerImage overrides the image used for the controller Deployment.
 # When not set (repository: ""), the shared `image` above is used.

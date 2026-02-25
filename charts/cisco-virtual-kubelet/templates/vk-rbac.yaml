@@ -55,6 +55,10 @@ rules:
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["create", "patch"]
+  # Node leases (required for node heartbeat in kube-node-lease namespace)
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 # ClusterRoleBinding for the VK service account.
 apiVersion: rbac.authorization.k8s.io/v1

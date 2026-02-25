@@ -68,7 +68,7 @@ type CiscoDeviceReconciler struct {
 // +kubebuilder:rbac:groups=cisco.vk,resources=ciscodevices/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=nodes,verbs=get;delete
+// +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;delete
 
 // Reconcile ensures a ConfigMap and Deployment exist for each CiscoDevice.
 func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

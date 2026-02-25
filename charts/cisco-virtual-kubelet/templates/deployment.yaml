@@ -31,7 +31,7 @@ spec:
           image: {{ include "cisco-virtual-kubelet.controllerImage" . }}
           imagePullPolicy: {{ include "cisco-virtual-kubelet.controllerImagePullPolicy" . }}
           command:
-            - /cisco-vk
+            - cisco-vk
             - manager
             - --vk-image={{ include "cisco-virtual-kubelet.vkImage" . }}
             - --vk-service-account={{ include "cisco-virtual-kubelet.vkServiceAccountName" . }}
