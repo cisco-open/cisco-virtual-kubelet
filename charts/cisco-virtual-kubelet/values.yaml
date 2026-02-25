@@ -1,0 +1,63 @@
+# Default values for cisco-virtual-kubelet.
+
+# image is the shared default image for both the controller and VK pods.
+# Individual overrides (controllerImage / vkImage) take precedence when set.
+image:
+  repository: cunningr/cisco-vk
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# controllerImage overrides the image used for the controller Deployment.
+# When not set (repository: ""), the shared `image` above is used.
+controllerImage:
+  repository: ""
+  tag: ""
+  pullPolicy: ""
+
+# vkImage overrides the image passed to the controller via --vk-image,
+# used when it spawns VK Deployments for each CiscoDevice.
+# When not set (repository: ""), the shared `image` above is used.
+vkImage:
+  repository: ""
+  tag: ""
+  pullPolicy: ""
+
+# replicaCount is fixed at 1; the controller uses leader election for HA.
+replicaCount: 1
+
+# nameOverride / fullnameOverride follow standard Helm conventions.
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Name of the controller ServiceAccount created by this chart.
+  controllerName: cisco-virtual-kubelet-controller
+  # Name of the VK ServiceAccount created by this chart (used by VK pods).
+  vkName: cisco-virtual-kubelet
+
+controller:
+  # leaderElect enables leader election (recommended for multi-replica, keep
+  # false for single replica).
+  leaderElect: false
+  # metricsBindAddress is the address the metrics endpoint binds to.
+  metricsBindAddress: ":8080"
+  # healthProbeBindAddress is the address the probe endpoint binds to.
+  healthProbeBindAddress: ":8081"
+
+resources: {}
+#  limits:
+#    cpu: 200m
+#    memory: 128Mi
+#  requests:
+#    cpu: 100m
+#    memory: 64Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+podAnnotations: {}
+
+podLabels: {}
