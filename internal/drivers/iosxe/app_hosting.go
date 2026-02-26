@@ -457,21 +457,30 @@ func (d *XEDriver) WaitForAppStatus(ctx context.Context, appID string, expectedS
 			continue
 		}
 
+		// Check if the app exists in operational data at all
+		found := false
 		for _, app := range root.App {
 			if app.Name == nil || *app.Name != appID {
 				continue
 			}
 
+			found = true
 			if app.Details != nil && app.Details.State != nil {
 				currentState := *app.Details.State
-				log.G(ctx).Debugf("App %s current state: %s (waiting for: %s)", appID, currentState, expectedStatus)
+				log.G(ctx).Infof("App %s current state: %s (waiting for: %s)", appID, currentState, expectedStatus)
 
 				if currentState == expectedStatus {
 					log.G(ctx).Infof("App %s reached expected status: %s", appID, expectedStatus)
 					return nil
 				}
+			} else {
+				log.G(ctx).Warnf("App %s found in oper data but has no state details yet", appID)
 			}
 			break
+		}
+
+		if !found {
+			log.G(ctx).Warnf("App %s not yet present in operational data (will retry until timeout)", appID)
 		}
 
 		select {
