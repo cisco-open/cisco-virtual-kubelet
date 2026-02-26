@@ -58,9 +58,90 @@ func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister core
 	return nil
 }
 
-// UpdatePod handles pod update requests
+// UpdatePod handles pod update requests.
+// When the VK framework requeues a failed pod, it calls UpdatePod (not CreatePod)
+// because the app config already exists on the device. This method detects apps that
+// are not in the RUNNING state and re-deploys them by cleaning up the stale config
+// and re-creating the app.
 func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
-	log.G(ctx).Info("Pod UpdateContainer request received")
+	log.G(ctx).Infof("UpdatePod request received for pod %s/%s", pod.Namespace, pod.Name)
+
+	// Discover which apps are already on the device for this pod
+	discoveredContainers, err := d.GetPodContainers(ctx, pod)
+	if err != nil {
+		log.G(ctx).Warnf("Failed to get containers for pod %s/%s during update: %v", pod.Namespace, pod.Name, err)
+	}
+
+	// Fetch operational data to check app health
+	allAppOperData, err := d.GetAppOperationalData(ctx)
+	if err != nil {
+		log.G(ctx).Warnf("Failed to fetch oper data during update: %v", err)
+		allAppOperData = make(map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App)
+	}
+
+	// Check each discovered container's operational state
+	appsNeedingRedeploy := make(map[string]string) // containerName -> appID
+	for containerName, appID := range discoveredContainers {
+		operData, hasOper := allAppOperData[appID]
+		if !hasOper {
+			log.G(ctx).Warnf("App %s for container %s has no operational data, needs redeploy", appID, containerName)
+			appsNeedingRedeploy[containerName] = appID
+			continue
+		}
+		if operData.Details == nil || operData.Details.State == nil {
+			log.G(ctx).Warnf("App %s for container %s has no state details, needs redeploy", appID, containerName)
+			appsNeedingRedeploy[containerName] = appID
+			continue
+		}
+		state := *operData.Details.State
+		if state == "RUNNING" {
+			log.G(ctx).Infof("App %s for container %s is RUNNING, no action needed", appID, containerName)
+			continue
+		}
+		log.G(ctx).Warnf("App %s for container %s is in state %s (not RUNNING), needs redeploy", appID, containerName, state)
+		appsNeedingRedeploy[containerName] = appID
+	}
+
+	if len(appsNeedingRedeploy) == 0 {
+		log.G(ctx).Infof("All apps for pod %s/%s are healthy, no action needed", pod.Namespace, pod.Name)
+		return nil
+	}
+
+	log.G(ctx).Infof("Pod %s/%s has %d app(s) needing redeploy: %v", pod.Namespace, pod.Name, len(appsNeedingRedeploy), appsNeedingRedeploy)
+
+	// Clean up the stale apps before re-deploying
+	for containerName, appID := range appsNeedingRedeploy {
+		log.G(ctx).Infof("Cleaning up stale app %s for container %s before redeploy", appID, containerName)
+		if err := d.DeleteApp(ctx, appID); err != nil {
+			log.G(ctx).Warnf("Failed to clean up stale app %s: %v (will attempt config-only delete)", appID, err)
+			// If full lifecycle delete fails (e.g., app never installed), try removing just the config
+			path := fmt.Sprintf("/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app=%s", appID)
+			if err := d.client.Delete(ctx, path); err != nil {
+				log.G(ctx).Errorf("Failed to delete config for stale app %s: %v", appID, err)
+				return fmt.Errorf("failed to clean up stale app %s for container %s: %w", appID, containerName, err)
+			}
+		}
+	}
+
+	// Re-convert the pod to get fresh app configs
+	appConfigs, err := d.ConvertPodToAppConfigs(pod)
+	if err != nil {
+		return fmt.Errorf("failed to convert pod to app configs during redeploy: %w", err)
+	}
+
+	// Re-deploy only the apps that needed it
+	for _, appConfig := range appConfigs {
+		if _, needsRedeploy := appsNeedingRedeploy[appConfig.ContainerName]; !needsRedeploy {
+			continue
+		}
+		log.G(ctx).Infof("Re-deploying app %s for container %s", appConfig.AppName, appConfig.ContainerName)
+		if err := d.CreateAppHostingApp(ctx, appConfig); err != nil {
+			return fmt.Errorf("failed to redeploy app for container %s: %w", appConfig.ContainerName, err)
+		}
+		log.G(ctx).Infof("Successfully re-deployed app %s for container %s", appConfig.AppName, appConfig.ContainerName)
+	}
+
+	log.G(ctx).Infof("UpdatePod completed for pod %s/%s", pod.Namespace, pod.Name)
 	return nil
 }
 

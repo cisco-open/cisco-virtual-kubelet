@@ -5,11 +5,16 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -37,8 +42,9 @@ func (f *fakeSecretNamespaceLister) Get(name string) (*v1.Secret, error) {
 var _ corev1listers.SecretNamespaceLister = (*fakeSecretNamespaceLister)(nil)
 
 type fakeNetworkClient struct {
-	postHook func(path string, payload any) error
-	getHook  func(path string, result any) error
+	postHook   func(path string, payload any) error
+	getHook    func(path string, result any) error
+	deleteHook func(path string) error
 }
 
 func (f *fakeNetworkClient) Get(ctx context.Context, path string, result any, unmarshal func([]byte, any) error) error {
@@ -59,7 +65,12 @@ func (f *fakeNetworkClient) Patch(ctx context.Context, path string, payload any,
 	return nil
 }
 
-func (f *fakeNetworkClient) Delete(ctx context.Context, path string) error { return nil }
+func (f *fakeNetworkClient) Delete(ctx context.Context, path string) error {
+	if f.deleteHook != nil {
+		return f.deleteHook(path)
+	}
+	return nil
+}
 
 func TestAuthFromSecret_Token(t *testing.T) {
 	sec := &v1.Secret{Data: map[string][]byte{"token": []byte("abc")}}
@@ -398,5 +409,259 @@ func TestGetIOSXEAppHostPackageTimeout_NilPod(t *testing.T) {
 	got := getIOSXEAppHostPackageTimeout(nil)
 	if got != 180*time.Second {
 		t.Errorf("expected default 180s for nil pod, got %v", got)
+	}
+}
+
+// makeCfgData builds fake device config data that GetPodContainers can match
+// against the given pod. It creates an app with RunOpts labels containing the
+// pod name, namespace, UID, and container name.
+func makeCfgData(appName, containerName string, pod *v1.Pod) *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData {
+	lineIdx := uint16(1)
+	labelsLine := fmt.Sprintf("--label %s=%s --label %s=%s --label %s=%s --label %s=%s",
+		common.LabelPodName, pod.Name,
+		common.LabelPodNamespace, pod.Namespace,
+		common.LabelPodUID, pod.UID,
+		common.LabelContainerName, containerName,
+	)
+	return &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData{
+		Apps: &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps{
+			App: map[string]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App{
+				appName: {
+					ApplicationName: &appName,
+					RunOptss: &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss{
+						RunOpts: map[uint16]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss_RunOpts{
+							lineIdx: {
+								LineIndex:   &lineIdx,
+								LineRunOpts: &labelsLine,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// testPod creates a pod for use in UpdatePod tests.
+func testPod() *v1.Pod {
+	return &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pod",
+			Namespace: "default",
+			UID:       types.UID("aaaabbbb-cccc-dddd-eeee-ffffffffffff"),
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Name:  "test-container",
+					Image: "http://example.com/app.tar",
+				},
+			},
+		},
+	}
+}
+
+func TestUpdatePod_NoActionWhenRunning(t *testing.T) {
+	pod := testPod()
+	cleanUID := strings.ReplaceAll(string(pod.UID), "-", "")
+	appName := fmt.Sprintf("cvk0000_%s", cleanUID)
+
+	cfgData := makeCfgData(appName, "test-container", pod)
+
+	client := &fakeNetworkClient{
+		getHook: func(path string, result any) error {
+			if strings.Contains(path, "app-hosting-cfg") {
+				cfg, ok := result.(*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData)
+				if ok {
+					*cfg = *cfgData
+				}
+			}
+			if strings.Contains(path, "app-hosting-oper") {
+				root, ok := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData)
+				if ok {
+					oper := makeOperData(appName, "RUNNING")
+					*root = *oper
+				}
+			}
+			return nil
+		},
+	}
+
+	d := &XEDriver{client: client, config: &v1alpha1.DeviceSpec{}, secretLister: &fakeSecretNamespaceLister{secrets: map[string]*v1.Secret{}}}
+
+	err := d.UpdatePod(context.Background(), pod)
+	if err != nil {
+		t.Fatalf("expected no error when app is RUNNING, got: %v", err)
+	}
+}
+
+func TestUpdatePod_RedeploysWhenNoOperData(t *testing.T) {
+	pod := testPod()
+	// Set a short package timeout so CreateAppHostingApp wait is fast
+	pod.Annotations = map[string]string{
+		podAnnotationIOSXEAppHostPackageTimeout: "5s",
+	}
+	cleanUID := strings.ReplaceAll(string(pod.UID), "-", "")
+	appName := fmt.Sprintf("cvk0000_%s", cleanUID)
+
+	cfgData := makeCfgData(appName, "test-container", pod)
+	deleteCount := 0
+	postCount := 0
+
+	// Track phases of the UpdatePod lifecycle:
+	//   initial: UpdatePod checks oper data, finds none → triggers redeploy
+	//   stopping: DeleteApp called StopApp RPC → return ACTIVATED for the wait
+	//   deactivating: DeleteApp called DeactivateApp RPC → return DEPLOYED for the wait
+	//   uninstalling: DeleteApp called UninstallApp RPC → return no oper for WaitForAppNotPresent
+	//   redeploying: CreateAppHostingApp config POST → return RUNNING for the wait
+	phase := "initial"
+
+	client := &fakeNetworkClient{
+		getHook: func(path string, result any) error {
+			if strings.Contains(path, "app-hosting-cfg") {
+				cfg, ok := result.(*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData)
+				if ok {
+					*cfg = *cfgData
+				}
+			}
+			if strings.Contains(path, "app-hosting-oper") {
+				root, ok := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData)
+				if ok {
+					switch phase {
+					case "stopping":
+						oper := makeOperData(appName, "ACTIVATED")
+						*root = *oper
+					case "deactivating":
+						oper := makeOperData(appName, "DEPLOYED")
+						*root = *oper
+					case "uninstalling":
+						root.App = nil // app gone
+					case "redeploying":
+						oper := makeOperData(appName, "RUNNING")
+						*root = *oper
+					default:
+						root.App = nil // initial: no oper data
+					}
+				}
+			}
+			return nil
+		},
+		postHook: func(path string, payload any) error {
+			postCount++
+			// Detect which RPC is being called by inspecting the payload
+			if strings.Contains(path, "app-hosting-cfg") {
+				// Config POST during CreateAppHostingApp
+				phase = "redeploying"
+				return nil
+			}
+			if strings.Contains(path, "Cisco-IOS-XE-rpc:app-hosting") {
+				// RPC calls during DeleteApp or install
+				payloadMap, ok := payload.(map[string]interface{})
+				if ok {
+					if _, has := payloadMap["stop"]; has {
+						phase = "stopping"
+					} else if _, has := payloadMap["deactivate"]; has {
+						phase = "deactivating"
+					} else if _, has := payloadMap["uninstall"]; has {
+						phase = "uninstalling"
+					}
+				}
+			}
+			return nil
+		},
+		deleteHook: func(path string) error {
+			deleteCount++
+			return nil
+		},
+	}
+
+	d := &XEDriver{client: client, config: &v1alpha1.DeviceSpec{}, secretLister: &fakeSecretNamespaceLister{secrets: map[string]*v1.Secret{}}}
+
+	err := d.UpdatePod(context.Background(), pod)
+	if err != nil {
+		t.Fatalf("expected successful redeploy, got: %v", err)
+	}
+
+	if deleteCount == 0 {
+		t.Error("expected at least one delete call to clean up stale app")
+	}
+	if postCount == 0 {
+		t.Error("expected post calls for app redeploy")
+	}
+}
+
+func TestUpdatePod_RedeploysWhenStuckState(t *testing.T) {
+	pod := testPod()
+	// Set a short package timeout so CreateAppHostingApp wait is fast
+	pod.Annotations = map[string]string{
+		podAnnotationIOSXEAppHostPackageTimeout: "5s",
+	}
+	cleanUID := strings.ReplaceAll(string(pod.UID), "-", "")
+	appName := fmt.Sprintf("cvk0000_%s", cleanUID)
+
+	cfgData := makeCfgData(appName, "test-container", pod)
+	phase := "initial"
+
+	client := &fakeNetworkClient{
+		getHook: func(path string, result any) error {
+			if strings.Contains(path, "app-hosting-cfg") {
+				cfg, ok := result.(*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData)
+				if ok {
+					*cfg = *cfgData
+				}
+			}
+			if strings.Contains(path, "app-hosting-oper") {
+				root, ok := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData)
+				if ok {
+					switch phase {
+					case "stopping":
+						oper := makeOperData(appName, "ACTIVATED")
+						*root = *oper
+					case "deactivating":
+						oper := makeOperData(appName, "DEPLOYED")
+						*root = *oper
+					case "uninstalling":
+						root.App = nil
+					case "redeploying":
+						oper := makeOperData(appName, "RUNNING")
+						*root = *oper
+					default:
+						// Stuck at DEPLOYED
+						oper := makeOperData(appName, "DEPLOYED")
+						*root = *oper
+					}
+				}
+			}
+			return nil
+		},
+		postHook: func(path string, payload any) error {
+			if strings.Contains(path, "app-hosting-cfg") {
+				phase = "redeploying"
+				return nil
+			}
+			if strings.Contains(path, "Cisco-IOS-XE-rpc:app-hosting") {
+				payloadMap, ok := payload.(map[string]interface{})
+				if ok {
+					if _, has := payloadMap["stop"]; has {
+						phase = "stopping"
+					} else if _, has := payloadMap["deactivate"]; has {
+						phase = "deactivating"
+					} else if _, has := payloadMap["uninstall"]; has {
+						phase = "uninstalling"
+					}
+				}
+			}
+			return nil
+		},
+		deleteHook: func(path string) error {
+			return nil
+		},
+	}
+
+	d := &XEDriver{client: client, config: &v1alpha1.DeviceSpec{}, secretLister: &fakeSecretNamespaceLister{secrets: map[string]*v1.Secret{}}}
+
+	err := d.UpdatePod(context.Background(), pod)
+	if err != nil {
+		t.Fatalf("expected successful redeploy of stuck app, got: %v", err)
 	}
 }
