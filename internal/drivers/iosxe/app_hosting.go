@@ -49,6 +49,19 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig AppHosting
 		return fmt.Errorf("failed to install app %s: %w", appConfig.AppName, err)
 	}
 
+	// Wait for the app to reach RUNNING state on the device.
+	// The install RPC may return success before the device has actually pulled and started the app.
+	// Without this wait, we can report success even though the image was never fetched,
+	// resulting in pods that never come up and no retry being triggered.
+	timeout := appConfig.PackageTimeout
+	if timeout == 0 {
+		timeout = 180 * time.Second
+	}
+	log.G(ctx).Infof("Waiting for app %s to reach RUNNING state (timeout: %v)", appConfig.AppName, timeout)
+	if err := d.WaitForAppStatus(ctx, appConfig.AppName, "RUNNING", timeout); err != nil {
+		return fmt.Errorf("app %s did not reach RUNNING state after install: %w", appConfig.AppName, err)
+	}
+
 	log.G(ctx).Infof("Successfully created and installed app %s", appConfig.AppName)
 	return nil
 }
@@ -179,7 +192,8 @@ func (d *XEDriver) installWithRecovery(ctx context.Context, appConfig AppHosting
 }
 
 const (
-	podAnnotationIOSXEAppHostPackageDest = "virtual-kubelet.cisco.com/iosxe-apphost-package-dest"
+	podAnnotationIOSXEAppHostPackageDest    = "virtual-kubelet.cisco.com/iosxe-apphost-package-dest"
+	podAnnotationIOSXEAppHostPackageTimeout = "virtual-kubelet.cisco.com/iosxe-apphost-package-timeout"
 )
 
 func isHTTPURL(s string) bool {

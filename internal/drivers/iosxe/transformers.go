@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
@@ -65,6 +67,7 @@ type AppHostingConfig struct {
 	ImagePath        string
 	ImagePullPolicy  v1.PullPolicy
 	PackageDest      string
+	PackageTimeout   time.Duration
 	ImagePullSecrets []v1.LocalObjectReference
 	Apps             *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps
 }
@@ -80,6 +83,8 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 	if err != nil {
 		return nil, err
 	}
+
+	packageTimeout := getIOSXEAppHostPackageTimeout(pod)
 
 	for _, container := range pod.Spec.Containers {
 		appName := containerAppIDs[container.Name]
@@ -244,6 +249,7 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 			ImagePath:        container.Image,
 			ImagePullPolicy:  container.ImagePullPolicy,
 			PackageDest:      packageDest,
+			PackageTimeout:   packageTimeout,
 			ImagePullSecrets: pod.Spec.ImagePullSecrets,
 			Apps:             apps,
 		})
@@ -282,6 +288,56 @@ func getIOSXEAppHostPackageDest(pod *v1.Pod) (string, error) {
 	}
 
 	return dest, nil
+}
+
+const (
+	// defaultPackageTimeout is the default time to wait for an app to reach RUNNING after install.
+	defaultPackageTimeout = 180 * time.Second
+	// minPackageTimeout is the minimum allowed package timeout to prevent unreasonably short waits.
+	minPackageTimeout = 10 * time.Second
+	// maxPackageTimeout is the maximum allowed package timeout to prevent unreasonably long waits.
+	maxPackageTimeout = 30 * time.Minute
+)
+
+// getIOSXEAppHostPackageTimeout reads the package timeout annotation from the pod.
+// It returns the configured timeout duration, or the default (180s) if unset.
+// Accepts Go duration strings (e.g. "180s", "3m") and bare integer seconds (e.g. "180").
+// The result is clamped to [minPackageTimeout, maxPackageTimeout].
+func getIOSXEAppHostPackageTimeout(pod *v1.Pod) time.Duration {
+	if pod == nil || pod.Annotations == nil {
+		return defaultPackageTimeout
+	}
+
+	raw, ok := pod.Annotations[podAnnotationIOSXEAppHostPackageTimeout]
+	if !ok {
+		return defaultPackageTimeout
+	}
+
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return defaultPackageTimeout
+	}
+
+	// Try Go duration first (e.g. "180s", "3m", "2m30s").
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		// Fall back to bare integer seconds (e.g. "180").
+		secs, err2 := strconv.Atoi(raw)
+		if err2 != nil {
+			return defaultPackageTimeout
+		}
+		d = time.Duration(secs) * time.Second
+	}
+
+	// Clamp to sane bounds.
+	if d < minPackageTimeout {
+		d = minPackageTimeout
+	}
+	if d > maxPackageTimeout {
+		d = maxPackageTimeout
+	}
+
+	return d
 }
 
 // getNetworkConfig converts pod/container specs to IOS-XE network configuration
