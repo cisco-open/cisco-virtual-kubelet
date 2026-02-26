@@ -223,8 +223,11 @@ func (d *XEDriver) copyRPC(ctx context.Context, source string, destination strin
 
 // fileExists checks if a file exists on the device using the dir CLI command via exec RPC
 func (d *XEDriver) fileExists(ctx context.Context, filePath string) (bool, error) {
+	log.G(ctx).Infof("Checking if file exists on device: %s", filePath)
+
 	// Safety check: if config is not available (e.g., in tests), assume file doesn't exist
 	if d.config == nil {
+		log.G(ctx).Warn("Driver config not available, assuming file doesn't exist")
 		return false, fmt.Errorf("driver config not available")
 	}
 
@@ -238,6 +241,7 @@ func (d *XEDriver) fileExists(ctx context.Context, filePath string) (bool, error
 
 	data, err := json.Marshal(payload)
 	if err != nil {
+		log.G(ctx).Warnf("Failed to marshal exec payload for file check: %v", err)
 		return false, fmt.Errorf("failed to marshal exec payload: %w", err)
 	}
 
@@ -254,8 +258,11 @@ func (d *XEDriver) fileExists(ctx context.Context, filePath string) (bool, error
 	path := "/restconf/operations/Cisco-IOS-XE-rpc:exec"
 	url := baseURL + path
 
+	log.G(ctx).Debugf("Executing 'dir %s' via RESTCONF exec RPC", filePath)
+
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(data))
 	if err != nil {
+		log.G(ctx).Warnf("Failed to create exec request for file check: %v", err)
 		return false, fmt.Errorf("failed to create exec request: %w", err)
 	}
 
@@ -281,6 +288,7 @@ func (d *XEDriver) fileExists(ctx context.Context, filePath string) (bool, error
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
+		log.G(ctx).Warnf("Exec operation failed for file check: %v", err)
 		return false, fmt.Errorf("exec operation failed: %w", err)
 	}
 	defer resp.Body.Close()
@@ -289,11 +297,13 @@ func (d *XEDriver) fileExists(ctx context.Context, filePath string) (bool, error
 	// If status is 200 and output doesn't contain "No such file", file exists
 	if resp.StatusCode >= 300 {
 		// File doesn't exist or command failed
+		log.G(ctx).Infof("File %s does not exist on device (HTTP status: %d)", filePath, resp.StatusCode)
 		return false, nil
 	}
 
 	// File existence is determined by successful command execution
 	// If dir command succeeds, file exists
+	log.G(ctx).Infof("File %s exists on device (confirmed via dir command)", filePath)
 	return true, nil
 }
 
