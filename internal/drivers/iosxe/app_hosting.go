@@ -168,32 +168,22 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig AppHosting
 			return fmt.Errorf("app %s did not reach DEPLOYED state after recovery install: %w", appConfig.AppName, err)
 		}
 
-		// Activate the app
-		log.G(ctx).Infof("Activating app %s after recovery install", appConfig.AppName)
-		if err := d.ActivateApp(ctx, appConfig.AppName); err != nil {
+		// IOS-XE doesn't reliably respond to activate RPC for flash-installed apps
+		// Instead, update the config to set Start: true and let the device auto-activate
+		log.G(ctx).Infof("Enabling auto-start for app %s to trigger activation", appConfig.AppName)
+		app.Start = ygot.Bool(true)
+
+		configPath = "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
+		if err := d.client.Post(ctx, configPath, appConfig.Apps, d.marshaller); err != nil {
 			d.clearPodRecovering(appConfig.PodUID)
-			return fmt.Errorf("failed to activate app %s after recovery install: %w", appConfig.AppName, err)
+			return fmt.Errorf("failed to update config for app %s to enable auto-start: %w", appConfig.AppName, err)
 		}
 
-		// Wait for app to reach ACTIVATED state
-		log.G(ctx).Infof("Waiting for app %s to reach ACTIVATED state after recovery activation", appConfig.AppName)
-		if err := d.WaitForAppStatus(ctx, appConfig.AppName, "ACTIVATED", 30*time.Second); err != nil {
-			d.clearPodRecovering(appConfig.PodUID)
-			return fmt.Errorf("app %s did not reach ACTIVATED state after recovery activation: %w", appConfig.AppName, err)
-		}
-
-		// Start the app
-		log.G(ctx).Infof("Starting app %s after recovery activation", appConfig.AppName)
-		if err := d.StartApp(ctx, appConfig.AppName); err != nil {
-			d.clearPodRecovering(appConfig.PodUID)
-			return fmt.Errorf("failed to start app %s after recovery activation: %w", appConfig.AppName, err)
-		}
-
-		// Wait for app to reach RUNNING state
-		log.G(ctx).Infof("Waiting for app %s to reach RUNNING state after recovery start (timeout: %v)", appConfig.AppName, timeout)
+		// Wait for the app to auto-activate and reach RUNNING state
+		log.G(ctx).Infof("Waiting for app %s to auto-activate and reach RUNNING state (timeout: %v)", appConfig.AppName, timeout)
 		if err := d.WaitForAppStatus(ctx, appConfig.AppName, "RUNNING", timeout); err != nil {
 			d.clearPodRecovering(appConfig.PodUID)
-			return fmt.Errorf("app %s did not reach RUNNING state after recovery start: %w", appConfig.AppName, err)
+			return fmt.Errorf("app %s did not reach RUNNING state after enabling auto-start: %w", appConfig.AppName, err)
 		}
 
 		// Recovery completed successfully - clear the recovery flag now that app is RUNNING
