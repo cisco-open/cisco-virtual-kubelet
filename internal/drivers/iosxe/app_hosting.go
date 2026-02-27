@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/openconfig/ygot/ygot"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 )
@@ -119,12 +120,28 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig AppHosting
 		}
 
 		// Re-post the config (DeleteApp removes it)
-		log.G(ctx).Infof("Re-posting config for app %s before recovery", appConfig.AppName)
+		// Important: Temporarily disable auto-start to prevent conflicts with manual activate/start sequence
+		log.G(ctx).Infof("Re-posting config for app %s before recovery (with auto-start disabled)", appConfig.AppName)
+
+		// Save original Start value and temporarily set to false
+		app, exists := appConfig.Apps.App[appConfig.AppName]
+		if !exists {
+			d.clearPodRecovering(appConfig.PodUID)
+			return fmt.Errorf("app %s not found in config structure", appConfig.AppName)
+		}
+		originalStartValue := app.Start
+		app.Start = ygot.Bool(false)
+
 		configPath := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
 		if err := d.client.Post(ctx, configPath, appConfig.Apps, d.marshaller); err != nil {
+			// Restore original value before returning
+			app.Start = originalStartValue
 			d.clearPodRecovering(appConfig.PodUID)
 			return fmt.Errorf("failed to re-post config for app %s during recovery: %w", appConfig.AppName, err)
 		}
+
+		// Restore original value after successful post
+		app.Start = originalStartValue
 
 		// Attempt device-side copy
 		// Note: We don't check if file exists first because the IOS-XE exec RPC for file checking
