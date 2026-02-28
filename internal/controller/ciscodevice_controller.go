@@ -178,7 +178,11 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				{
 					Name:  "cisco-vk",
 					Image: image,
-					Args:  vkContainerArgs(device.Name, device.Spec.LogLevel),
+					Args: []string{
+						"run",
+						"--config", configMountPath + "/" + configFileName,
+						"--nodename", device.Name,
+					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "device-config",
@@ -249,20 +253,6 @@ func renderDeviceConfig(spec *ciskov1.DeviceSpec) (string, error) {
 		return "", fmt.Errorf("yaml marshal: %w", err)
 	}
 	return string(out), nil
-}
-
-// vkContainerArgs builds the argument list for the VK container.
-// If logLevel is set on the CiscoDevice spec it is forwarded via --log-level.
-func vkContainerArgs(deviceName, logLevel string) []string {
-	args := []string{
-		"run",
-		"--config", configMountPath + "/" + configFileName,
-		"--nodename", deviceName,
-	}
-	if logLevel != "" {
-		args = append(args, "--log-level", logLevel)
-	}
-	return args
 }
 
 // shortHash returns the first 8 hex chars of an FNV-1a hash of s.

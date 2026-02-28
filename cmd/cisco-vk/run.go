@@ -62,13 +62,8 @@ func init() {
 		"path to kubeconfig file (default: $KUBECONFIG or in-cluster)")
 	runCmd.Flags().StringVar(&logLevel, "log-level", "",
 		"log level: debug, info, warn, error (default: $LOG_LEVEL or info)")
-	rootCmd.PersistentFlags().StringVar(&nodeName, "nodename", "",
+	runCmd.Flags().StringVar(&nodeName, "nodename", "",
 		"kubernetes node name (default: $VKUBELET_NODE_NAME or 'cisco-virtual-kubelet')")
-}
-
-// Execute runs the root command
-func Execute() error {
-	return rootCmd.Execute()
 }
 
 // validateConfig checks if the config file exists at the given path
