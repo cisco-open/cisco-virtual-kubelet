@@ -186,36 +186,102 @@ func containerImagePath(pod *v1.Pod, containerName string) string {
 	return ""
 }
 
-// DeleteApp orchestrates the full app deletion lifecycle: stop → deactivate → uninstall → delete config
+// getAppState returns the current operational state string for appID, or ""
+// if the app has no oper data or the state cannot be determined.
+func (d *XEDriver) getAppState(ctx context.Context, appID string) string {
+	allOper, err := d.GetAppOperationalData(ctx)
+	if err != nil {
+		log.G(ctx).Warnf("Could not fetch oper data to check state of app %s: %v", appID, err)
+		return ""
+	}
+	operData, ok := allOper[appID]
+	if !ok || operData == nil || operData.Details == nil || operData.Details.State == nil {
+		return ""
+	}
+	return *operData.Details.State
+}
+
+// DeleteApp orchestrates a best-effort teardown of the app lifecycle before
+// removing the config entry.
+//
+// State is re-read before each RPC so we only issue operations that are valid
+// for the device's *actual* current state.  Each step waits for the expected
+// intermediate state before proceeding to the next, ensuring we never send an
+// RPC the device will reject (e.g. deactivate while still RUNNING).
+//
+// The config entry is NOT deleted until the app is confirmed absent from oper
+// data, preventing orphaned apps (still running, no config, unmanageable).
+//
+//	RUNNING  → stop → ACTIVATED → deactivate → DEPLOYED → uninstall → (absent)
+//	ACTIVATED/STOPPED            → deactivate → DEPLOYED → uninstall → (absent)
+//	DEPLOYED                                             → uninstall → (absent)
+//	"" / Uninstalled             → skip teardown, proceed to config delete
 func (d *XEDriver) DeleteApp(ctx context.Context, appID string) error {
-	log.G(ctx).Infof("Stopping app %s", appID)
-	if err := d.StopApp(ctx, appID); err != nil {
-		return fmt.Errorf("failed to stop app: %w", err)
-	}
-	if err := d.WaitForAppStatus(ctx, appID, "ACTIVATED", 30*time.Second); err != nil {
-		log.G(ctx).Warnf("App %s did not reach ACTIVATED status after stop: %v", appID, err)
+	state := d.getAppState(ctx, appID)
+	log.G(ctx).Infof("Deleting app %s (current state: %q)", appID, state)
+
+	// Step 1: RUNNING → stop → wait for ACTIVATED.
+	if state == "RUNNING" {
+		log.G(ctx).Infof("Stopping app %s", appID)
+		if err := d.StopApp(ctx, appID); err != nil {
+			log.G(ctx).Warnf("Stop app %s failed: %v", appID, err)
+		} else if err := d.WaitForAppStatus(ctx, appID, "ACTIVATED", 30*time.Second); err != nil {
+			log.G(ctx).Warnf("App %s did not reach ACTIVATED after stop: %v", appID, err)
+		}
+		// Re-read; only continue to deactivate if we actually reached ACTIVATED.
+		state = d.getAppState(ctx, appID)
+		log.G(ctx).Debugf("App %s state after stop: %q", appID, state)
 	}
 
-	log.G(ctx).Infof("Deactivating app %s", appID)
-	if err := d.DeactivateApp(ctx, appID); err != nil {
-		return fmt.Errorf("failed to deactivate app: %w", err)
-	}
-	if err := d.WaitForAppStatus(ctx, appID, "DEPLOYED", 30*time.Second); err != nil {
-		log.G(ctx).Warnf("App %s did not reach DEPLOYED status after deactivate: %v", appID, err)
-	}
-
-	log.G(ctx).Infof("Uninstalling app %s", appID)
-	if err := d.UninstallApp(ctx, appID); err != nil {
-		return fmt.Errorf("failed to uninstall app: %w", err)
-	}
-	if err := d.WaitForAppNotPresent(ctx, appID, 60*time.Second); err != nil {
-		log.G(ctx).Warnf("App %s still present in oper data after uninstall: %v", appID, err)
+	// Step 2: ACTIVATED or STOPPED → deactivate → wait for DEPLOYED.
+	if state == "ACTIVATED" || state == "STOPPED" {
+		log.G(ctx).Infof("Deactivating app %s", appID)
+		if err := d.DeactivateApp(ctx, appID); err != nil {
+			log.G(ctx).Warnf("Deactivate app %s failed: %v", appID, err)
+		} else if err := d.WaitForAppStatus(ctx, appID, "DEPLOYED", 30*time.Second); err != nil {
+			log.G(ctx).Warnf("App %s did not reach DEPLOYED after deactivate: %v", appID, err)
+		}
+		// Re-read; only continue to uninstall if we actually reached DEPLOYED.
+		state = d.getAppState(ctx, appID)
+		log.G(ctx).Debugf("App %s state after deactivate: %q", appID, state)
 	}
 
+	// Step 3: DEPLOYED → uninstall → wait for absent from oper data.
+	// Gate the config delete on oper data being cleared to prevent orphaning.
+	// The device can take a long time, or the RPC may silently fail, so we
+	// retry the uninstall RPC up to maxUninstallAttempts times, waiting
+	// between each attempt.  Only if the app is still present after all
+	// attempts do we return an error.
+	if state == "DEPLOYED" {
+		const maxUninstallAttempts = 3
+		const uninstallWait = 60 * time.Second
+
+		var uninstallErr error
+		for attempt := 1; attempt <= maxUninstallAttempts; attempt++ {
+			log.G(ctx).Infof("Uninstalling app %s (attempt %d/%d)", appID, attempt, maxUninstallAttempts)
+			if err := d.UninstallApp(ctx, appID); err != nil {
+				log.G(ctx).Warnf("Uninstall app %s attempt %d failed: %v", appID, attempt, err)
+			}
+			if err := d.WaitForAppNotPresent(ctx, appID, uninstallWait); err != nil {
+				log.G(ctx).Warnf("App %s still present after uninstall attempt %d: %v", appID, attempt, err)
+				uninstallErr = err
+				continue
+			}
+			// App is gone — proceed to config delete.
+			uninstallErr = nil
+			break
+		}
+		if uninstallErr != nil {
+			return fmt.Errorf("app %s still present in oper data after %d uninstall attempts; deferring config delete to avoid orphan: %w",
+				appID, maxUninstallAttempts, uninstallErr)
+		}
+	}
+
+	// Config delete — only reached once oper data is clean (or was never present).
 	log.G(ctx).Infof("Removing app %s config", appID)
 	path := fmt.Sprintf("/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app=%s", appID)
 	if err := d.client.Delete(ctx, path); err != nil {
-		return fmt.Errorf("failed to delete app config: %w", err)
+		return fmt.Errorf("failed to delete app config for %s: %w", appID, err)
 	}
 
 	log.G(ctx).Infof("Successfully deleted app %s", appID)
