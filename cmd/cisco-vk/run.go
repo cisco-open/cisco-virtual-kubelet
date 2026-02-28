@@ -139,10 +139,13 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		},
 	})
 
-	// Log level: flag > env > default
+	// Log level: flag > env > config > default
 	lvl := logLevel
 	if lvl == "" {
 		lvl = os.Getenv("LOG_LEVEL")
+	}
+	if lvl == "" {
+		lvl = appCfg.Device.LogLevel
 	}
 	if err := validateLogLevel(lvl); err != nil {
 		return err

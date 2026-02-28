@@ -4,6 +4,7 @@ device:
   port: 80
   username: admin
   password: admin
+  logLevel: debug
   tls:
     enabled: true
     insecureSkipVerify: true
