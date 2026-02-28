@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	v1 "k8s.io/api/core/v1"
 )
 
 // CreateAppHostingApp creates a single IOS-XE AppHosting app from an AppHostingConfig.
@@ -147,6 +148,42 @@ func (d *XEDriver) UninstallApp(ctx context.Context, appID string) error {
 
 	log.G(ctx).Infof("Successfully uninstalled app %s", appID)
 	return nil
+}
+
+// ensureAppRunning checks whether an app has operational data after install.
+// The device is expected to auto-advance the app to RUNNING via the config-level
+// `start: true` flag, so this function only handles the silent install failure
+// case where no operational data is present at all.
+// This is a best-effort remediation: errors are logged but not propagated,
+// because the next status poll will retry.
+func (d *XEDriver) ensureAppRunning(ctx context.Context, appID string,
+	operData *Cisco_IOS_XEAppHostingOper_AppHostingOperData_App, imagePath string) {
+
+	// If there is any operational data, the device has accepted the install and
+	// is driving the lifecycle via start:true — don't interfere.
+	if operData != nil && operData.Details != nil && operData.Details.State != nil {
+		return
+	}
+
+	// No operational data at all — the install likely failed silently.
+	if imagePath == "" {
+		log.G(ctx).Warnf("App %s has no oper data and no image path; cannot re-install", appID)
+		return
+	}
+	log.G(ctx).Warnf("App %s has no oper data; re-issuing install (image: %s)", appID, imagePath)
+	if err := d.InstallApp(ctx, appID, imagePath); err != nil {
+		log.G(ctx).Warnf("Re-install of app %s failed: %v", appID, err)
+	}
+}
+
+// containerImagePath returns the image path for a named container in a pod spec.
+func containerImagePath(pod *v1.Pod, containerName string) string {
+	for i := range pod.Spec.Containers {
+		if pod.Spec.Containers[i].Name == containerName {
+			return pod.Spec.Containers[i].Image
+		}
+	}
+	return ""
 }
 
 // DeleteApp orchestrates the full app deletion lifecycle: stop → deactivate → uninstall → delete config
