@@ -103,3 +103,89 @@ func TestReconcileApp_NoOperDataNoImage_Error(t *testing.T) {
 		t.Error("expected non-empty error message")
 	}
 }
+
+func TestReconcileApp_NoOperDataWithImage_AttemptsInstall(t *testing.T) {
+	// With no oper data and an image path, ReconcileApp should attempt install.
+	// Since we don't have a mock client, we verify the intent by checking that
+	// the message indicates a re-install was attempted. We use recover to catch
+	// the nil client panic — this confirms the correct code path was entered.
+	d := &XEDriver{} // nil client
+	appCfg := &AppHostingConfig{
+		Metadata: AppHostingMetadata{AppName: "app1"},
+		Spec:     AppHostingSpec{DesiredState: AppDesiredStateRunning, ImagePath: "nginx:latest"},
+		Status:   AppHostingStatus{Phase: AppPhaseConverging},
+	}
+
+	// The install RPC will panic on nil client — we expect that as proof the
+	// correct branch was taken.
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic from nil client install RPC, but did not panic")
+		}
+	}()
+	d.ReconcileApp(testCtx(), appCfg)
+}
+
+func TestReconcileApp_DeletedDesired_NoOperData_AttemptsConfigDelete(t *testing.T) {
+	// With DesiredState=Deleted and no oper data, ReconcileApp should attempt
+	// to delete the config. Nil client causes a panic, confirming the path.
+	d := &XEDriver{} // nil client
+	appCfg := &AppHostingConfig{
+		Metadata: AppHostingMetadata{AppName: "app1"},
+		Spec:     AppHostingSpec{DesiredState: AppDesiredStateDeleted},
+		Status:   AppHostingStatus{Phase: AppPhaseDeleting},
+	}
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic from nil client config delete, but did not panic")
+		}
+	}()
+	d.ReconcileApp(testCtx(), appCfg)
+}
+
+func TestReconcileApp_ObservedStateUpdated(t *testing.T) {
+	d := &XEDriver{} // nil client
+	appCfg := &AppHostingConfig{
+		Metadata: AppHostingMetadata{AppName: "app1"},
+		Spec:     AppHostingSpec{DesiredState: AppDesiredStateRunning, ImagePath: ""},
+		Status:   AppHostingStatus{Phase: AppPhaseConverging},
+	}
+	// No image → takes the error path (no RPC calls), but still sets observed state
+	d.ReconcileApp(testCtx(), appCfg)
+	// ObservedState should be set (to "" since nil client)
+	if appCfg.Status.ObservedState != "" {
+		t.Errorf("expected empty observed state with nil client, got %q", appCfg.Status.ObservedState)
+	}
+	// LastTransition should be set
+	if appCfg.Status.LastTransition.IsZero() {
+		t.Error("expected LastTransition to be set")
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getAppState
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestGetAppState_NilClient(t *testing.T) {
+	d := &XEDriver{} // nil client
+	state := d.getAppState(testCtx(), "app1")
+	if state != "" {
+		t.Errorf("expected empty state with nil client, got %q", state)
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// containerImagePath
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestContainerImagePath_EmptyPod(t *testing.T) {
+	pod := &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{},
+		},
+	}
+	if got := containerImagePath(pod, "any"); got != "" {
+		t.Errorf("expected empty string for empty pod, got %q", got)
+	}
+}

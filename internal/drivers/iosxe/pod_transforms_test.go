@@ -17,6 +17,7 @@ package iosxe
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -880,4 +882,267 @@ func mustUnmarshalJSON(t *testing.T, data []byte) any {
 		t.Fatalf("Failed to unmarshal JSON: %v", err)
 	}
 	return v
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getContainerIndex
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestGetContainerIndex(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
+	pod := &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{Name: "first"},
+				{Name: "second"},
+				{Name: "third"},
+			},
+		},
+	}
+
+	tests := []struct {
+		containerName string
+		expected      int
+	}{
+		{"first", 0},
+		{"second", 1},
+		{"third", 2},
+		{"missing", 0}, // fallback to 0
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.containerName, func(t *testing.T) {
+			c := &v1.Container{Name: tt.containerName}
+			got := d.getContainerIndex(pod, c)
+			if got != tt.expected {
+				t.Errorf("getContainerIndex(%q) = %d, want %d", tt.containerName, got, tt.expected)
+			}
+		})
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getIPForContainer
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestGetIPForContainer(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
+
+	tests := []struct {
+		name           string
+		cidr           string
+		containerIndex int
+		expected       string
+	}{
+		{
+			name:           "first container in /24",
+			cidr:           "10.0.0.0/24",
+			containerIndex: 0,
+			expected:       "10.0.0.10",
+		},
+		{
+			name:           "second container in /24",
+			cidr:           "10.0.0.0/24",
+			containerIndex: 1,
+			expected:       "10.0.0.11",
+		},
+		{
+			name:           "first container in different subnet",
+			cidr:           "192.168.1.0/24",
+			containerIndex: 0,
+			expected:       "192.168.1.10",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, ipNet, _ := net.ParseCIDR(tt.cidr)
+			got := d.getIPForContainer(ipNet, tt.containerIndex)
+			if got != tt.expected {
+				t.Errorf("getIPForContainer(%s, %d) = %q, want %q", tt.cidr, tt.containerIndex, got, tt.expected)
+			}
+		})
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getResourceConfig
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestGetResourceConfig_Defaults(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
+	container := &v1.Container{Name: "app"}
+	cfg := d.getResourceConfig(container)
+
+	if cfg.cpuUnits != 1000 {
+		t.Errorf("cpuUnits = %d, want 1000", cfg.cpuUnits)
+	}
+	if cfg.memoryMB != 512 {
+		t.Errorf("memoryMB = %d, want 512", cfg.memoryMB)
+	}
+	if cfg.diskMB != 1024 {
+		t.Errorf("diskMB = %d, want 1024", cfg.diskMB)
+	}
+	if cfg.vcpu != 1 {
+		t.Errorf("vcpu = %d, want 1", cfg.vcpu)
+	}
+}
+
+func TestGetResourceConfig_FromRequests(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
+	container := &v1.Container{
+		Name: "app",
+		Resources: v1.ResourceRequirements{
+			Requests: v1.ResourceList{
+				v1.ResourceCPU:     resource.MustParse("500m"),
+				v1.ResourceMemory:  resource.MustParse("256Mi"),
+				v1.ResourceStorage: resource.MustParse("2Gi"),
+			},
+		},
+	}
+	cfg := d.getResourceConfig(container)
+
+	if cfg.cpuUnits != 500 {
+		t.Errorf("cpuUnits = %d, want 500", cfg.cpuUnits)
+	}
+	if cfg.memoryMB != 256 {
+		t.Errorf("memoryMB = %d, want 256", cfg.memoryMB)
+	}
+	if cfg.diskMB != 2048 {
+		t.Errorf("diskMB = %d, want 2048", cfg.diskMB)
+	}
+}
+
+func TestGetResourceConfig_VcpuFromLimits(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
+	container := &v1.Container{
+		Name: "app",
+		Resources: v1.ResourceRequirements{
+			Limits: v1.ResourceList{
+				v1.ResourceCPU: resource.MustParse("3500m"),
+			},
+		},
+	}
+	cfg := d.getResourceConfig(container)
+
+	// 3500m → ceil(3500/1000) = 4 vCPUs
+	if cfg.vcpu != 4 {
+		t.Errorf("vcpu = %d, want 4 (ceil of 3.5)", cfg.vcpu)
+	}
+}
+
+func TestGetResourceConfig_VcpuRoundsUp(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
+	container := &v1.Container{
+		Name: "app",
+		Resources: v1.ResourceRequirements{
+			Limits: v1.ResourceList{
+				v1.ResourceCPU: resource.MustParse("100m"),
+			},
+		},
+	}
+	cfg := d.getResourceConfig(container)
+
+	// 100m → ceil(100/1000) = 1 vCPU
+	if cfg.vcpu != 1 {
+		t.Errorf("vcpu = %d, want 1 (minimum)", cfg.vcpu)
+	}
+}
+
+func TestGetResourceConfig_DefaultOverrides(t *testing.T) {
+	d := &XEDriver{
+		config: &v1alpha1.DeviceSpec{
+			ResourceLimits: v1alpha1.ResourceConfig{
+				DefaultCPU:     "2000m",
+				DefaultMemory:  "1Gi",
+				DefaultStorage: "4Gi",
+			},
+		},
+	}
+	container := &v1.Container{Name: "app"}
+	cfg := d.getResourceConfig(container)
+
+	if cfg.cpuUnits != 2000 {
+		t.Errorf("cpuUnits = %d, want 2000 (from DefaultCPU override)", cfg.cpuUnits)
+	}
+	if cfg.memoryMB != 1024 {
+		t.Errorf("memoryMB = %d, want 1024 (from DefaultMemory override)", cfg.memoryMB)
+	}
+	if cfg.diskMB != 4096 {
+		t.Errorf("diskMB = %d, want 4096 (from DefaultStorage override)", cfg.diskMB)
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getNetworkConfig — default (no XE config)
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestGetNetworkConfig_NoXEConfig(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
+	pod := &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{Name: "app"}},
+		},
+	}
+
+	netCfg := d.getNetworkConfig(pod, &pod.Spec.Containers[0])
+
+	if netCfg.interfaceType != v1alpha1.XEInterfaceTypeVirtualPortGroup {
+		t.Errorf("interfaceType = %v, want VirtualPortGroup", netCfg.interfaceType)
+	}
+	if !netCfg.useDHCP {
+		t.Error("expected useDHCP=true when no XE config")
+	}
+	if netCfg.virtualPortgroupInterface != "0" {
+		t.Errorf("virtualPortgroupInterface = %q, want 0", netCfg.virtualPortgroupInterface)
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// allocateIPForContainer
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestAllocateIPForContainer_EmptyPodCIDR(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{PodCIDR: ""}}
+	pod := &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{Name: "app"}},
+		},
+	}
+	ip, mask, err := d.allocateIPForContainer(pod, &pod.Spec.Containers[0])
+	if err == nil {
+		t.Fatal("expected error for empty podCIDR")
+	}
+	if ip != "" || mask != "" {
+		t.Errorf("expected empty ip/mask, got %q/%q", ip, mask)
+	}
+}
+
+func TestAllocateIPForContainer_InvalidCIDR(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{PodCIDR: "not-a-cidr"}}
+	pod := &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{Name: "app"}},
+		},
+	}
+	_, _, err := d.allocateIPForContainer(pod, &pod.Spec.Containers[0])
+	if err == nil {
+		t.Fatal("expected error for invalid CIDR")
+	}
+}
+
+func TestAllocateIPForContainer_NonPrimary_NoIP(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{PodCIDR: "10.0.0.0/24"}}
+	pod := &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{{Name: "first"}, {Name: "second"}},
+		},
+	}
+	ip, _, err := d.allocateIPForContainer(pod, &pod.Spec.Containers[1])
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ip != "" {
+		t.Errorf("non-primary container should get empty IP, got %q", ip)
+	}
 }
