@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
@@ -57,13 +58,68 @@ type resourceConfig struct {
 	vcpu     uint16
 }
 
-// AppHostingConfig represents a complete IOS-XE AppHosting configuration for a single container
-type AppHostingConfig struct {
+// AppDesiredState represents the desired lifecycle state of an app on the device.
+type AppDesiredState string
+
+const (
+	// AppDesiredStateRunning means the app should be fully deployed and running.
+	AppDesiredStateRunning AppDesiredState = "Running"
+	// AppDesiredStateDeleted means the app should be fully removed from the device.
+	AppDesiredStateDeleted AppDesiredState = "Deleted"
+)
+
+// AppPhase summarises where the reconciler is in converging an app toward its desired state.
+type AppPhase string
+
+const (
+	AppPhaseConverging AppPhase = "Converging"
+	AppPhaseReady      AppPhase = "Ready"
+	AppPhaseDeleting   AppPhase = "Deleting"
+	AppPhaseDeleted    AppPhase = "Deleted"
+	AppPhaseError      AppPhase = "Error"
+)
+
+// AppHostingMetadata identifies the app and the Kubernetes objects it belongs to.
+type AppHostingMetadata struct {
 	AppName       string
 	ContainerName string
-	ImagePath     string
-	Apps          *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps
+	PodName       string
+	PodNamespace  string
+	PodUID        string
 }
+
+// AppHostingSpec declares the desired state and the device configuration payload.
+type AppHostingSpec struct {
+	ImagePath    string
+	DesiredState AppDesiredState
+	DeviceConfig *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps // YANG config payload
+}
+
+// AppHostingStatus captures the last-observed device state and reconciler phase.
+type AppHostingStatus struct {
+	ObservedState  string    // Device oper state: "", "DEPLOYED", "ACTIVATED", "RUNNING", etc.
+	ConfigPresent  bool      // Whether config exists on the device
+	Phase          AppPhase  // Reconciler phase
+	Message        string    // Human-readable message for last transition
+	LastTransition time.Time // Timestamp of the last status change
+}
+
+// AppHostingConfig represents a complete IOS-XE AppHosting configuration for a single container,
+// modelled after the Kubernetes resource pattern (metadata + spec + status).
+type AppHostingConfig struct {
+	Metadata AppHostingMetadata
+	Spec     AppHostingSpec
+	Status   AppHostingStatus
+}
+
+// AppName is a convenience accessor.
+func (c *AppHostingConfig) AppName() string { return c.Metadata.AppName }
+
+// ContainerName is a convenience accessor.
+func (c *AppHostingConfig) ContainerName() string { return c.Metadata.ContainerName }
+
+// ImagePath is a convenience accessor.
+func (c *AppHostingConfig) ImagePath() string { return c.Spec.ImagePath }
 
 // ConvertPodToAppConfigs converts a Kubernetes Pod spec into a slice of IOS-XE AppHosting configurations.
 // Each container in the pod is converted to a separate AppHosting app configuration.
@@ -230,10 +286,21 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 
 		// Add to configs slice
 		configs = append(configs, AppHostingConfig{
-			AppName:       appName,
-			ContainerName: container.Name,
-			ImagePath:     container.Image,
-			Apps:          apps,
+			Metadata: AppHostingMetadata{
+				AppName:       appName,
+				ContainerName: container.Name,
+				PodName:       pod.Name,
+				PodNamespace:  pod.Namespace,
+				PodUID:        string(pod.UID),
+			},
+			Spec: AppHostingSpec{
+				ImagePath:    container.Image,
+				DesiredState: AppDesiredStateRunning,
+				DeviceConfig: apps,
+			},
+			Status: AppHostingStatus{
+				Phase: AppPhaseConverging,
+			},
 		})
 	}
 

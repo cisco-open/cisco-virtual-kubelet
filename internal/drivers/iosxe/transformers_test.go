@@ -390,32 +390,32 @@ func TestConvertPodToAppConfigs_SingleContainer_DHCP(t *testing.T) {
 	config := configs[0]
 
 	// Verify basic fields
-	if config.ContainerName != "nginx" {
-		t.Errorf("Expected container name 'nginx', got %s", config.ContainerName)
+	if config.ContainerName() != "nginx" {
+		t.Errorf("Expected container name 'nginx', got %s", config.ContainerName())
 	}
 
-	if config.ImagePath != "nginx:latest" {
-		t.Errorf("Expected image path 'nginx:latest', got %s", config.ImagePath)
+	if config.ImagePath() != "nginx:latest" {
+		t.Errorf("Expected image path 'nginx:latest', got %s", config.ImagePath())
 	}
 
 	// Verify app name format (should contain cleaned UID)
 	expectedUIDPart := "123456781234123412"
-	if !strings.Contains(config.AppName, expectedUIDPart) {
-		t.Errorf("Expected app name to contain '%s', got %s", expectedUIDPart, config.AppName)
+	if !strings.Contains(config.AppName(), expectedUIDPart) {
+		t.Errorf("Expected app name to contain '%s', got %s", expectedUIDPart, config.AppName())
 	}
 
-	// Verify Apps struct is not nil
-	if config.Apps == nil {
-		t.Fatal("Expected Apps to be non-nil")
+	// Verify DeviceConfig struct is not nil
+	if config.Spec.DeviceConfig == nil {
+		t.Fatal("Expected Spec.DeviceConfig to be non-nil")
 	}
 
-	if config.Apps.App == nil || len(config.Apps.App) != 1 {
+	if config.Spec.DeviceConfig.App == nil || len(config.Spec.DeviceConfig.App) != 1 {
 		t.Fatal("Expected exactly one App entry")
 	}
 
 	// Get the app entry
 	var app *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App
-	for _, a := range config.Apps.App {
+	for _, a := range config.Spec.DeviceConfig.App {
 		app = a
 		break
 	}
@@ -521,30 +521,30 @@ func TestConvertPodToAppConfigs_MultipleContainers_StaticIP(t *testing.T) {
 
 	// Verify first container config
 	config0 := configs[0]
-	if config0.ContainerName != "web" {
-		t.Errorf("Expected first container name 'web', got %s", config0.ContainerName)
+	if config0.ContainerName() != "web" {
+		t.Errorf("Expected first container name 'web', got %s", config0.ContainerName())
 	}
-	if config0.ImagePath != "nginx:1.19" {
-		t.Errorf("Expected first image 'nginx:1.19', got %s", config0.ImagePath)
+	if config0.ImagePath() != "nginx:1.19" {
+		t.Errorf("Expected first image 'nginx:1.19', got %s", config0.ImagePath())
 	}
 
 	// Verify second container config
 	config1 := configs[1]
-	if config1.ContainerName != "sidecar" {
-		t.Errorf("Expected second container name 'sidecar', got %s", config1.ContainerName)
+	if config1.ContainerName() != "sidecar" {
+		t.Errorf("Expected second container name 'sidecar', got %s", config1.ContainerName())
 	}
-	if config1.ImagePath != "busybox:latest" {
-		t.Errorf("Expected second image 'busybox:latest', got %s", config1.ImagePath)
+	if config1.ImagePath() != "busybox:latest" {
+		t.Errorf("Expected second image 'busybox:latest', got %s", config1.ImagePath())
 	}
 
 	// Verify app names are unique
-	if config0.AppName == config1.AppName {
+	if config0.AppName() == config1.AppName() {
 		t.Error("Expected unique app names for different containers")
 	}
 
 	// Verify static IP configuration for first container
 	var app0 *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App
-	for _, a := range config0.Apps.App {
+	for _, a := range config0.Spec.DeviceConfig.App {
 		app0 = a
 		break
 	}
@@ -572,7 +572,7 @@ func TestConvertPodToAppConfigs_MultipleContainers_StaticIP(t *testing.T) {
 
 	// Verify second container does not get a static IP
 	var app1 *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App
-	for _, a := range config1.Apps.App {
+	for _, a := range config1.Spec.DeviceConfig.App {
 		app1 = a
 		break
 	}
@@ -666,7 +666,7 @@ func TestConvertPodToAppConfigs_Management_StaticIP(t *testing.T) {
 	}
 
 	var app *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App
-	for _, a := range configs[0].Apps.App {
+	for _, a := range configs[0].Spec.DeviceConfig.App {
 		app = a
 		break
 	}
@@ -728,7 +728,7 @@ func TestConvertPodToAppConfigs_Golden_ManagementStaticIP(t *testing.T) {
 	}
 
 	marshaller := driver.getRestconfMarshaller()
-	payload, err := marshaller(configs[0].Apps)
+	payload, err := marshaller(configs[0].Spec.DeviceConfig)
 	if err != nil {
 		t.Fatalf("Failed to marshal payload: %v", err)
 	}
@@ -787,7 +787,7 @@ func TestConvertPodToAppConfigs_Golden_AppGigAccess(t *testing.T) {
 	}
 
 	marshaller := driver.getRestconfMarshaller()
-	payload, err := marshaller(configs[0].Apps)
+	payload, err := marshaller(configs[0].Spec.DeviceConfig)
 	if err != nil {
 		t.Fatalf("Failed to marshal payload: %v", err)
 	}
@@ -850,7 +850,7 @@ func TestConvertPodToAppConfigs_Golden_AppGigTrunk(t *testing.T) {
 	}
 
 	marshaller := driver.getRestconfMarshaller()
-	payload, err := marshaller(configs[0].Apps)
+	payload, err := marshaller(configs[0].Spec.DeviceConfig)
 	if err != nil {
 		t.Fatalf("Failed to marshal payload: %v", err)
 	}
