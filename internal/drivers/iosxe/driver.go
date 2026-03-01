@@ -26,12 +26,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/openconfig/ygot/ygot"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // UnmarshalFunc defines a function signature for unmarshalling data
@@ -39,19 +37,20 @@ type UnmarshalFunc func([]byte, any) error
 
 // XEDriver implements the device driver for Cisco IOS-XE AppHosting
 type XEDriver struct {
-	config       *config.DeviceConfig
+	config       *v1alpha1.DeviceSpec
 	client       common.NetworkClient
 	marshaller   func(any) ([]byte, error)
 	unmarshaller UnmarshalFunc
+	deviceInfo   *common.DeviceInfo
 }
 
 // NewAppHostingDriver creates a new IOS-XE AppHosting driver instance
-func NewAppHostingDriver(ctx context.Context, config *config.DeviceConfig) (*XEDriver, error) {
+func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*XEDriver, error) {
 	u := &url.URL{
-		Host: fmt.Sprintf("%s:%d", config.Address, config.Port),
+		Host: fmt.Sprintf("%s:%d", spec.Address, spec.Port),
 	}
 
-	if config.TLSConfig.Enabled {
+	if spec.TLS != nil && spec.TLS.Enabled {
 		u.Scheme = "https"
 	} else {
 		u.Scheme = "http"
@@ -61,19 +60,19 @@ func NewAppHostingDriver(ctx context.Context, config *config.DeviceConfig) (*XED
 		InsecureSkipVerify: false,
 	}
 
-	if config.TLSConfig != nil {
-		tlsConfig.InsecureSkipVerify = config.TLSConfig.InsecureSkipVerify
+	if spec.TLS != nil {
+		tlsConfig.InsecureSkipVerify = spec.TLS.InsecureSkipVerify
 
-		if config.TLSConfig.CertFile != "" && config.TLSConfig.KeyFile != "" {
-			cert, err := tls.LoadX509KeyPair(config.TLSConfig.CertFile, config.TLSConfig.KeyFile)
+		if spec.TLS.CertFile != "" && spec.TLS.KeyFile != "" {
+			cert, err := tls.LoadX509KeyPair(spec.TLS.CertFile, spec.TLS.KeyFile)
 			if err != nil {
 				return nil, fmt.Errorf("failed to load client certificate: %v", err)
 			}
 			tlsConfig.Certificates = []tls.Certificate{cert}
 		}
 
-		if config.TLSConfig.CAFile != "" {
-			caCert, err := os.ReadFile(config.TLSConfig.CAFile)
+		if spec.TLS.CAFile != "" {
+			caCert, err := os.ReadFile(spec.TLS.CAFile)
 			if err != nil {
 				return nil, fmt.Errorf("failed to read CA certificate: %v", err)
 			}
@@ -91,15 +90,15 @@ func NewAppHostingDriver(ctx context.Context, config *config.DeviceConfig) (*XED
 		BaseUrl,
 		&common.ClientAuth{
 			Method:   "BasicAuth",
-			Username: config.Username,
-			Password: config.Password,
+			Username: spec.Username,
+			Password: spec.Password,
 		},
 		tlsConfig,
 		Timeout,
 	)
 
 	d := &XEDriver{
-		config: config,
+		config: spec,
 		client: Client,
 	}
 
@@ -172,31 +171,6 @@ func (d *XEDriver) getRestconfUnmarshaller() UnmarshalFunc {
 
 		return Unmarshal(innerData, gs)
 	}
-}
-
-// CheckConnection validates connectivity to the device
-func (d *XEDriver) CheckConnection(ctx context.Context) error {
-	res := &common.HostMeta{}
-
-	err := d.client.Get(ctx, "/.well-known/host-meta", res, d.gethostMetaUnmarshaller())
-	if err != nil {
-		return fmt.Errorf("connectivity check failed: %w", err)
-	}
-
-	log.G(ctx).Debugf("Restconf Root: %s\n", res.Links[0].Href)
-	return nil
-}
-
-// GetDeviceResources returns the available resources on the device
-func (d *XEDriver) GetDeviceResources(ctx context.Context) (*v1.ResourceList, error) {
-	resources := v1.ResourceList{
-		v1.ResourceCPU:     resource.MustParse("8"),
-		v1.ResourceMemory:  resource.MustParse("16Gi"),
-		v1.ResourceStorage: resource.MustParse("100Gi"),
-		v1.ResourcePods:    resource.MustParse("16"),
-	}
-
-	return &resources, nil
 }
 
 // debugLogJson logs a ygot struct as formatted JSON for debugging

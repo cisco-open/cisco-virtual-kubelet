@@ -84,3 +84,10 @@ type Link struct {
 }
 
 func (*HostMeta) IsYANGGoStruct() {}
+
+// DeviceInfo contains device information fetched from the network device
+type DeviceInfo struct {
+	SerialNumber    string
+	SoftwareVersion string
+	ProductID       string
+}

@@ -5,7 +5,10 @@ This document describes the configuration for the Cisco Virtual Kubelet Provider
 ## Supported Devices
 
 Currently supported:
-- **Cisco Catalyst 8000V** (cat8kv) virtual routers running IOS-XE 17.x+
+- **Cisco Catalyst 8000V** (cat8kv) virtual routers running IOS-XE 17.15.4c
+- **Cisco Catalyst 9000** (cat9k) virtual routers running IOS-XE 17.18.2
+
+**NOTE:** Other versions that support Cisco App Hosting may work but have not been validated
 
 ## Device Prerequisites
 
@@ -44,75 +47,99 @@ The VirtualPortGroup IP address (192.168.1.254) becomes the default gateway for 
 
 ## Configuration File
 
-The provider uses a YAML configuration file with two sections:
-- **kubelet**: Virtual Kubelet node settings
-- **device**: Cisco device connection settings
+The configuration file describes the **device** only.  Runtime settings (node name,
+node IP, log level, etc.) are supplied via CLI flags or environment variables.
 
-Default location: `/etc/cisco-vk/config.yaml`
+Default location: `/etc/virtual-kubelet/config.yaml`
 
 ## Minimal Configuration Example
 
 ```yaml
 device:
-  name: cat8kv-router
   driver: XE
-  address: "192.0.2.24"
+  address: "192.168.1.100"
   port: 443
   username: admin
-  password: cisco
+  password: cisco123
   tls:
     enabled: true
     insecureSkipVerify: true
-  networking:
-    dhcpEnabled: true
-    virtualPortGroup: "0"
-    defaultVRF: ""
-
-kubelet:
-  node_name: "cat8kv-node"
-  namespace: ""
-  update_interval: "30s"
-  os: "Linux"
-  node_internal_ip: "192.0.2.24"
+  xe:
+    networking:
+      interface:
+        type: VirtualPortGroup
+        virtualPortGroup:
+          dhcp: true
+          interface: "0"
+          guestInterface: 0
 ```
 
+## CLI Flags & Environment Variables
+
+Runtime settings are **not** in the config file.  They are passed as flags or env vars:
+
+| Flag | Env Var | Default | Description |
+|------|---------|---------|-------------|
+| `--nodename` | `VKUBELET_NODE_NAME` | `cisco-vk-<device-address>` | Kubernetes node name |
+| `--config` / `-c` | - | `/etc/virtual-kubelet/config.yaml` | Path to device config file |
+| `--kubeconfig` | `KUBECONFIG` | _(in-cluster)_ | Path to kubeconfig file |
+| `--log-level` | `LOG_LEVEL` | `info` | Log level: debug, info, warn, error |
+
+Precedence: **flag → environment variable → default**.
+
 ## Configuration Fields
-
-### Kubelet Section
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `node_name` | string | Yes | - | Kubernetes node name |
-| `namespace` | string | No | "" | Namespace filter (empty = all) |
-| `update_interval` | string | No | "30s" | Node status update interval |
-| `os` | string | No | "Linux" | Operating system label |
-| `node_internal_ip` | string | No | - | Internal IP for the node |
 
 ### Device Section
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `name` | string | Yes | - | Device identifier |
-| `driver` | string | Yes | - | Driver type (use `XE` for cat8kv) |
+| `driver` | string | Yes | - | Driver type: `XE`, `XR`, `NXOS`, `FAKE` |
 | `address` | string | Yes | - | Device management IP address |
-| `port` | int | No | 443 | RESTCONF API port |
+| `port` | int | No | 443 (TLS) / 80 | RESTCONF API port |
 | `username` | string | Yes | - | Device username |
 | `password` | string | Yes | - | Device password |
+| `podCIDR` | string | No | - | CIDR for static IP allocation |
 
-### TLS Section
+### TLS Section (`device.tls`)
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `enabled` | bool | No | true | Enable HTTPS |
+| `enabled` | bool | No | false | Enable HTTPS |
 | `insecureSkipVerify` | bool | No | false | Skip certificate verification |
 
-### Networking Section
+### IOS-XE Networking Section (`device.xe.networking`)
+
+Driver-specific networking lives under the driver key.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `dhcpEnabled` | bool | No | false | Use DHCP for container IPs |
-| `virtualPortGroup` | string | No | "0" | VirtualPortGroup interface number |
-| `defaultVRF` | string | No | "" | VRF for container traffic |
+| `interface.type` | string | Yes | - | `VirtualPortGroup`, `AppGigabitEthernet`, or `Management` |
+
+#### VirtualPortGroup (`device.xe.networking.interface.virtualPortGroup`)
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `dhcp` | bool | No | false | Use DHCP for container IPs |
+| `interface` | string | No | "0" | VirtualPortGroup interface number |
+| `guestInterface` | int | No | 0 | Guest interface number |
+
+#### AppGigabitEthernet (`device.xe.networking.interface.appGigabitEthernet`)
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `mode` | string | Yes | - | `access` or `trunk` |
+| `dhcp` | bool | No | false | DHCP (access mode only) |
+| `guestInterface` | int | No | 0 | Guest interface (access mode only) |
+| `vlanIf.vlan` | int | No | - | VLAN ID (trunk mode only) |
+| `vlanIf.dhcp` | bool | No | false | DHCP (trunk mode only) |
+| `vlanIf.guestInterface` | int | No | 0 | Guest interface (trunk mode only) |
+
+#### Management (`device.xe.networking.interface.management`)
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `dhcp` | bool | No | false | Use DHCP for container IPs |
+| `guestInterface` | int | No | 0 | Guest interface number |
 
 ## Example Pod Manifest
 
@@ -138,7 +165,7 @@ spec:
         cpu: "500m"
 ```
 
-The container image must be pre-loaded onto the device flash storage.
+NOTE:  Currently the container image must be pre-loaded onto the device flash storage.
 
 ## Verifying Device Configuration
 

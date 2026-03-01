@@ -19,21 +19,21 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
-	"github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	v1 "k8s.io/api/core/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	statsv1alpha1 "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
 
 type AppHostingProvider struct {
 	ctx             context.Context
-	appCfg          *config.Config
+	deviceSpec      *v1alpha1.DeviceSpec
 	driver          drivers.CiscoKubernetesDeviceDriver
 	podsLister      corev1listers.PodLister
 	configMapLister corev1listers.ConfigMapLister
@@ -43,17 +43,17 @@ type AppHostingProvider struct {
 
 func NewAppHostingProvider(
 	ctx context.Context,
-	appCfg *config.Config,
+	deviceSpec *v1alpha1.DeviceSpec,
 	vkCfg nodeutil.ProviderConfig,
 ) (*AppHostingProvider, error) {
 
-	d, err := drivers.NewDriver(ctx, &appCfg.Device)
+	d, err := drivers.NewDriver(ctx, deviceSpec)
 	if err != nil {
 		return nil, fmt.Errorf("driver assignment failed: %v", err)
 	}
 	return &AppHostingProvider{
 		ctx:             ctx,
-		appCfg:          appCfg,
+		deviceSpec:      deviceSpec,
 		driver:          d,
 		podsLister:      vkCfg.Pods,
 		configMapLister: vkCfg.ConfigMaps,
@@ -176,15 +176,19 @@ func (p *AppHostingProvider) RunInContainer(ctx context.Context, namespace strin
 // AppHostingNode implements node.NodeProvider for proper heartbeat management.
 // This follows the NaiveNodeProvider pattern from virtual-kubelet.
 // The library's NodeController handles periodic heartbeat updates automatically.
-type AppHostingNode struct{}
+type AppHostingNode struct {
+	deviceSpec *v1alpha1.DeviceSpec
+}
 
 // NewAppHostingNode creates a new AppHostingNode
 func NewAppHostingNode(
 	ctx context.Context,
-	appCfg *config.Config,
+	deviceSpec *v1alpha1.DeviceSpec,
 	vkCfg nodeutil.ProviderConfig,
 ) (*AppHostingNode, error) {
-	return &AppHostingNode{}, nil
+	return &AppHostingNode{
+		deviceSpec: deviceSpec,
+	}, nil
 }
 
 // Ping implements node.NodeProvider.
@@ -195,8 +199,56 @@ func (a *AppHostingNode) Ping(ctx context.Context) error {
 }
 
 // NotifyNodeStatus implements node.NodeProvider.
-// This is for async/event-driven status updates (e.g., device health changes).
-// The library's controlLoop handles periodic heartbeat updates automatically.
+// Called once at startup to allow async node status updates.
+// We use this to update node info with device details after driver initialization.
 func (a *AppHostingNode) NotifyNodeStatus(ctx context.Context, cb func(*v1.Node)) {
-	// No-op - library handles periodic updates via controlLoop and updateNodeStatusHeartbeat()
+	if a.deviceSpec == nil {
+		return
+	}
+
+	// Create a temporary driver to fetch device info
+	// Note: NewDriver calls CheckConnection internally, which populates deviceInfo
+	driver, err := drivers.NewDriver(ctx, a.deviceSpec)
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("Failed to create driver for node status update")
+		return
+	}
+
+	deviceInfo, err := driver.GetDeviceInfo(ctx)
+	if err != nil || deviceInfo == nil {
+		return
+	}
+
+	// Only update if we have actual device info
+	if deviceInfo.SerialNumber == "" {
+		return
+	}
+
+	// Determine node internal IP from device address
+	nodeInternalIP := a.deviceSpec.Address
+
+	log.G(ctx).Infof("Updating node status with device info, InternalIP=%s", nodeInternalIP)
+
+	// Create a node update with device info and addresses
+	nodeUpdate := &v1.Node{
+		Status: v1.NodeStatus{
+			NodeInfo: v1.NodeSystemInfo{
+				MachineID:       deviceInfo.SerialNumber,
+				SystemUUID:      deviceInfo.SerialNumber,
+				KernelVersion:   deviceInfo.SoftwareVersion,
+				KubeletVersion:  getVirtualKubeletVersion(),
+				OSImage:         "IOS-XE",
+				Architecture:    deviceInfo.ProductID,
+				OperatingSystem: "Cisco",
+			},
+			Addresses: []v1.NodeAddress{
+				{
+					Type:    v1.NodeInternalIP,
+					Address: nodeInternalIP,
+				},
+			},
+		},
+	}
+
+	cb(nodeUpdate)
 }

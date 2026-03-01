@@ -1,0 +1,51 @@
+Cisco Virtual Kubelet Website
+Copyright 2026 Cisco Systems, Inc.
+
+This product is licensed under the Apache License, Version 2.0.
+See the LICENSE file for the full license text.
+
+================================================================================
+Third-Party Dependencies
+================================================================================
+
+This project uses the following third-party open source software:
+
+Next.js (https://nextjs.org/)
+  License: MIT
+  Copyright (c) 2024 Vercel, Inc.
+
+React (https://reactjs.org/)
+  License: MIT
+  Copyright (c) Meta Platforms, Inc. and affiliates.
+
+React DOM (https://reactjs.org/)
+  License: MIT
+  Copyright (c) Meta Platforms, Inc. and affiliates.
+
+Tailwind CSS (https://tailwindcss.com/)
+  License: MIT
+  Copyright (c) Tailwind Labs, Inc.
+
+Framer Motion (https://www.framer.com/motion/)
+  License: MIT
+  Copyright (c) 2018 Framer B.V.
+
+Lucide React (https://lucide.dev/)
+  License: ISC
+  Copyright (c) 2020 Lucide Contributors
+
+Heroicons (https://heroicons.com/)
+  License: MIT
+  Copyright (c) 2024 Tailwind Labs, Inc.
+
+TypeScript (https://www.typescriptlang.org/)
+  License: Apache-2.0
+  Copyright (c) Microsoft Corporation.
+
+ESLint (https://eslint.org/)
+  License: MIT
+  Copyright OpenJS Foundation and other contributors.
+
+PostCSS (https://postcss.org/)
+  License: MIT
+  Copyright (c) 2013 Andrey Sitnik.

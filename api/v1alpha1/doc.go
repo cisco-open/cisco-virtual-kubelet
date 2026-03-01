@@ -1,4 +1,4 @@
-// Copyright © 2026 Cisco Systems, Inc.
+// Copyright © 2026 Cisco Systems Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,24 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
-
-import (
-	"fmt"
-	"os"
-
-	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
-	"github.com/virtual-kubelet/virtual-kubelet/node"
-	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
-)
-
-// Interface Guard
-var _ nodeutil.Provider = (*provider.AppHostingProvider)(nil)
-var _ node.NodeProvider = (*provider.AppHostingNode)(nil)
-
-func main() {
-	if err := Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-}
+// Package v1alpha1 contains the CiscoDevice API types for the cisco.vk group.
+//
+// These types define the canonical device configuration schema used by:
+//   - YAML config files (read by the VK binary via mapstructure)
+//   - Kubernetes CRDs (generated via controller-gen from kubebuilder markers)
+//   - Device drivers (consume DeviceSpec to configure physical devices)
+//
+// +kubebuilder:object:generate=true
+// +groupName=cisco.vk
+package v1alpha1

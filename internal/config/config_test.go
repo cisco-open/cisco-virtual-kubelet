@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/spf13/viper"
 )
 
@@ -84,11 +85,10 @@ func TestLoad_ExplicitPort(t *testing.T) {
 	viper.Reset()
 
 	// We can set values directly in Viper to simulate env/args
-	tls := TLSConfig{
+	tls := v1alpha1.TLSConfig{
 		Enabled: false,
 	}
 	viper.Set("device", map[string]interface{}{
-		"name":    "manual-node",
 		"address": "1.1.1.1",
 		"port":    8080,
 		"tls":     tls,
@@ -101,5 +101,29 @@ func TestLoad_ExplicitPort(t *testing.T) {
 
 	if cfg.Device.Port != 8080 {
 		t.Errorf("Expected explicit port 8080 to be preserved, got %d", cfg.Device.Port)
+	}
+}
+
+func TestLoad_InterfaceConfigValidation(t *testing.T) {
+	viper.Reset()
+
+	viper.Set("device", map[string]interface{}{
+		"address": "1.2.3.4",
+		"driver":  "XE",
+		"xe": map[string]interface{}{
+			"networking": map[string]interface{}{
+				"interface": map[string]interface{}{
+					"type": "AppGigabitEthernet",
+					"virtualPortGroup": map[string]interface{}{
+						"interface": "0",
+					},
+				},
+			},
+		},
+	})
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for invalid interface config, got nil")
 	}
 }

@@ -1,0 +1,39 @@
+{
+  "Cisco-IOS-XE-app-hosting-cfg:app": [
+    {
+      "application-name": "cvk0000_33333333333333333333333333333333",
+      "application-network-resource": {
+        "appintf-vlan-mode": "appintf-trunk"
+      },
+      "appintf-vlan-rules": {
+        "appintf-vlan-rule": [
+          {
+            "guest-interface": 0,
+            "guest-ip": "10.0.0.10",
+            "guest-ipnetmask": "255.255.255.0",
+            "mac-forward-enable": true,
+            "mcast-enable": true,
+            "mirror-enable": true,
+            "vlan-id": 100
+          }
+        ]
+      },
+      "application-resource-profile": {
+        "cpu-units": 1000,
+        "disk-size-mb": 1024,
+        "memory-capacity-mb": 512,
+        "profile-name": "custom",
+        "vcpu": 1
+      },
+      "run-optss": {
+        "run-opts": [
+          {
+            "line-index": 1,
+            "line-run-opts": "--label io.kubernetes.pod.name=appgig-trunk-pod --label io.kubernetes.pod.namespace=default --label io.kubernetes.pod.uid=33333333-3333-3333-3333-333333333333 --label io.kubernetes.container.name=appgig-trunk-app"
+          }
+        ]
+      },
+      "start": true
+    }
+  ]
+}

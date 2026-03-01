@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
@@ -28,14 +28,14 @@ import (
 )
 
 type FAKEDriver struct {
-	config *config.DeviceConfig
+	config *v1alpha1.DeviceSpec
 	pods   []v1.Pod
 }
 
-func NewAppHostingDriver(ctx context.Context, config *config.DeviceConfig) (*FAKEDriver, error) {
+func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*FAKEDriver, error) {
 	log.G(ctx).Info("Initialise new FAKE driver")
 	return &FAKEDriver{
-		config: config,
+		config: spec,
 		pods:   []v1.Pod{},
 	}, nil
 
@@ -54,15 +54,23 @@ func (d *FAKEDriver) GetDeviceResources(ctx context.Context) (*v1.ResourceList, 
 	return &resources, nil
 }
 
+func (d *FAKEDriver) GetDeviceInfo(ctx context.Context) (*common.DeviceInfo, error) {
+	return &common.DeviceInfo{
+		SerialNumber:    "FAKE123456",
+		SoftwareVersion: "Fake IOS-XE 17.0.0",
+		ProductID:       "FAKE-DEVICE",
+	}, nil
+}
+
 func (d *FAKEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 	containerAppIDs := common.GenerateContainerAppIDs(pod)
-	
+
 	log.G(ctx).WithFields(log.Fields{
-		"namespace":   pod.Namespace,
-		"pod":         pod.Name,
-		"containers":  len(containerAppIDs),
+		"namespace":  pod.Namespace,
+		"pod":        pod.Name,
+		"containers": len(containerAppIDs),
 	}).Info("Pod DeployContainer request received")
-	
+
 	for containerName, appID := range containerAppIDs {
 		log.G(ctx).WithFields(log.Fields{
 			"container":   containerName,

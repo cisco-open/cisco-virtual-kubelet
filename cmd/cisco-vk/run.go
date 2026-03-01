@@ -36,32 +36,34 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// Interface Guards
+var _ nodeutil.Provider = (*provider.AppHostingProvider)(nil)
+var _ node.NodeProvider = (*provider.AppHostingNode)(nil)
+
 var (
 	cfgFile    string
 	kubeconfig string
 	logLevel   string
+	nodeName   string
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "virtual-kubelet",
-	Short: "Cisco Virtual Kubelet for AppHosting",
-	Long: `Cisco Virtual Kubelet implements the Kubelet interface to deploy
-containers on Cisco devices using AppHosting.`,
+var runCmd = &cobra.Command{
+	Use:   "run",
+	Short: "Start the Virtual Kubelet provider",
+	Long: `Start the Cisco Virtual Kubelet provider which registers a virtual
+node in Kubernetes and manages pods on Cisco devices via AppHosting.`,
 	RunE: runVirtualKubelet,
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "",
+	runCmd.Flags().StringVarP(&cfgFile, "config", "c", "",
 		"config file (default: /etc/virtual-kubelet/config.yaml)")
-	rootCmd.PersistentFlags().StringVar(&kubeconfig, "kubeconfig", "",
+	runCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "",
 		"path to kubeconfig file (default: $KUBECONFIG or in-cluster)")
-	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "",
+	runCmd.Flags().StringVar(&logLevel, "log-level", "",
 		"log level: debug, info, warn, error (default: $LOG_LEVEL or info)")
-}
-
-// Execute runs the root command
-func Execute() error {
-	return rootCmd.Execute()
+	runCmd.Flags().StringVar(&nodeName, "nodename", "",
+		"kubernetes node name (default: $VKUBELET_NODE_NAME or 'cisco-virtual-kubelet')")
 }
 
 // validateConfig checks if the config file exists at the given path
@@ -137,10 +139,13 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		},
 	})
 
-	// Log level: flag > env > default
+	// Log level: flag > env > config > default
 	lvl := logLevel
 	if lvl == "" {
 		lvl = os.Getenv("LOG_LEVEL")
+	}
+	if lvl == "" {
+		lvl = appCfg.Device.LogLevel
 	}
 	if err := validateLogLevel(lvl); err != nil {
 		return err
@@ -179,29 +184,34 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
 
+	// Resolve runtime flags: flag > env > default
+	effectiveNodeName := nodeName
+	if effectiveNodeName == "" {
+		effectiveNodeName = os.Getenv("VKUBELET_NODE_NAME")
+	}
+	effectiveNodeName = provider.GetNodeName(effectiveNodeName, appCfg.Device.Address)
+
 	opts := []nodeutil.NodeOpt{
 		nodeutil.WithNodeConfig(nodeutil.NodeConfig{
 			Client:         clientset,
-			NodeSpec:       provider.GetInitialNodeSpec(appCfg),
+			NodeSpec:       provider.GetInitialNodeSpec(effectiveNodeName, appCfg.Device.Address),
 			HTTPListenAddr: ":10250",
 			NumWorkers:     5,
 		}),
 	}
 
 	newProviderFunc := func(vkCfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
-		podHandler, err := provider.NewAppHostingProvider(ctx, appCfg, vkCfg)
+		podHandler, err := provider.NewAppHostingProvider(ctx, &appCfg.Device, vkCfg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise PodHandler: %w", err)
 		}
-		nodeHandler, err := provider.NewAppHostingNode(ctx, appCfg, vkCfg)
+		nodeHandler, err := provider.NewAppHostingNode(ctx, &appCfg.Device, vkCfg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise nodeHandler: %w", err)
 		}
 		return podHandler, nodeHandler, nil
 	}
-
-	nodeName := provider.GetNodeName(appCfg)
-	n, err := nodeutil.NewNode(nodeName, newProviderFunc, opts...)
+	n, err := nodeutil.NewNode(effectiveNodeName, newProviderFunc, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to create node: %w", err)
 	}

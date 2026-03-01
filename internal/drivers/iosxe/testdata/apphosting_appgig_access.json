@@ -1,0 +1,27 @@
+{
+  "Cisco-IOS-XE-app-hosting-cfg:app": [
+    {
+      "application-name": "cvk0000_22222222222222222222222222222222",
+      "application-network-resource": {
+        "appintf-access-interface-number": 0,
+        "appintf-vlan-mode": "appintf-access"
+      },
+      "application-resource-profile": {
+        "cpu-units": 1000,
+        "disk-size-mb": 1024,
+        "memory-capacity-mb": 512,
+        "profile-name": "custom",
+        "vcpu": 1
+      },
+      "run-optss": {
+        "run-opts": [
+          {
+            "line-index": 1,
+            "line-run-opts": "--label io.kubernetes.pod.name=appgig-access-pod --label io.kubernetes.pod.namespace=default --label io.kubernetes.pod.uid=22222222-2222-2222-2222-222222222222 --label io.kubernetes.container.name=appgig-access-app"
+          }
+        ]
+      },
+      "start": true
+    }
+  ]
+}

@@ -26,26 +26,26 @@ import (
 
 // CreateAppHostingApp creates a single IOS-XE AppHosting app from an AppHostingConfig.
 // This function configures the app on the device and initiates the installation process.
-func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig AppHostingConfig) error {
-	log.G(ctx).Infof("Creating AppHosting app: %s for container: %s", appConfig.AppName, appConfig.ContainerName)
+func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostingConfig) error {
+	log.G(ctx).Infof("Creating AppHosting app: %s for container: %s", appConfig.AppName(), appConfig.ContainerName())
 
 	path := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
 
 	// Post the app configuration to the device
-	err := d.client.Post(ctx, path, appConfig.Apps, d.marshaller)
+	err := d.client.Post(ctx, path, appConfig.Spec.DeviceConfig, d.marshaller)
 	if err != nil {
-		return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName, err)
+		return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName(), err)
 	}
 
-	log.G(ctx).Infof("AppHosting app %s successfully configured", appConfig.AppName)
+	log.G(ctx).Infof("AppHosting app %s successfully configured", appConfig.AppName())
 
 	// Install the app package
-	err = d.InstallApp(ctx, appConfig.AppName, appConfig.ImagePath)
+	err = d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath())
 	if err != nil {
-		return fmt.Errorf("failed to install app %s: %w", appConfig.AppName, err)
+		return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
 	}
 
-	log.G(ctx).Infof("Successfully created and installed app %s", appConfig.AppName)
+	log.G(ctx).Infof("Successfully created and installed app %s", appConfig.AppName())
 	return nil
 }
 
@@ -146,42 +146,6 @@ func (d *XEDriver) UninstallApp(ctx context.Context, appID string) error {
 	}
 
 	log.G(ctx).Infof("Successfully uninstalled app %s", appID)
-	return nil
-}
-
-// DeleteApp orchestrates the full app deletion lifecycle: stop → deactivate → uninstall → delete config
-func (d *XEDriver) DeleteApp(ctx context.Context, appID string) error {
-	log.G(ctx).Infof("Stopping app %s", appID)
-	if err := d.StopApp(ctx, appID); err != nil {
-		return fmt.Errorf("failed to stop app: %w", err)
-	}
-	if err := d.WaitForAppStatus(ctx, appID, "ACTIVATED", 30*time.Second); err != nil {
-		log.G(ctx).Warnf("App %s did not reach ACTIVATED status after stop: %v", appID, err)
-	}
-
-	log.G(ctx).Infof("Deactivating app %s", appID)
-	if err := d.DeactivateApp(ctx, appID); err != nil {
-		return fmt.Errorf("failed to deactivate app: %w", err)
-	}
-	if err := d.WaitForAppStatus(ctx, appID, "DEPLOYED", 30*time.Second); err != nil {
-		log.G(ctx).Warnf("App %s did not reach DEPLOYED status after deactivate: %v", appID, err)
-	}
-
-	log.G(ctx).Infof("Uninstalling app %s", appID)
-	if err := d.UninstallApp(ctx, appID); err != nil {
-		return fmt.Errorf("failed to uninstall app: %w", err)
-	}
-	if err := d.WaitForAppNotPresent(ctx, appID, 60*time.Second); err != nil {
-		log.G(ctx).Warnf("App %s still present in oper data after uninstall: %v", appID, err)
-	}
-
-	log.G(ctx).Infof("Removing app %s config", appID)
-	path := fmt.Sprintf("/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app=%s", appID)
-	if err := d.client.Delete(ctx, path); err != nil {
-		return fmt.Errorf("failed to delete app config: %w", err)
-	}
-
-	log.G(ctx).Infof("Successfully deleted app %s", appID)
 	return nil
 }
 

@@ -12,16 +12,17 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 ### Key Features
 
 - **Native Kubernetes Integration**: Deploy containers to Cisco devices using standard `kubectl` commands
-- **Driver-Based Architecture**: Extensible driver pattern currently supporting Catalyst 8Kv device type (IOS-XE)
+- **Driver-Based Architecture**: Extensible driver pattern currently supporting IOS-XE devices
 - **Full Lifecycle Management**: Create, monitor, and delete containers via RESTCONF
 - **Health Monitoring**: Continuous node health checks and status reporting
 - **Resource Management**: CPU, memory, and storage allocation per container
-- **Flexible Networking**: Support both DHCP IP allocation via Virtual Port Groups
+- **Flexible Networking**: Support both DHCP IP allocation via Virtual Port Groups or AppGigabitEthernet
 - **DHCP Integration**: Automatic IP discovery from device operational data or ARP tables
 
 ### Supported Devices
 
 - Cisco Catalyst 8000V virtual routers
+- Cisco Catalyst 9000 switches
 
 ## Architecture
 
@@ -42,7 +43,7 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
             │ RESTCONF          │ RESTCONF          │ RESTCONF
             ▼                   ▼                   ▼
     ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-    │  Cisco C8Kv1  │   │  Cisco C8Kv2  │   │  Cisco C8KvN  │
+    │  Cisco IOS-XE │   │  Cisco IOS-XE │   │  Cisco IOS-XE │
     │  ┌─────────┐  │   │  ┌─────────┐  │   │  ┌─────────┐  │
     │  │Container│  │   │  │Container│  │   │  │Container│  │
     │  └─────────┘  │   │  └─────────┘  │   │  └─────────┘  │
@@ -53,181 +54,151 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 
 ### Prerequisites
 
-- [Go](https://go.dev/doc/devel/release) 1.23 or later
 - A Kubernetes cluster
+- `helm` v3
 - Cisco IOS-XE device with:
   - IOx enabled (`iox` configuration)
   - RESTCONF enabled
   - App-hosting support
   - Container image (tar file) on device flash
 
-### Installation
+## Controller Deployment (Kubernetes)
+
+The controller watches `CiscoDevice` CRs and automatically creates a VK pod per device. Deploy it via the included Helm chart.
+
+### Build and push a custom image
 
 ```bash
-# Clone the repository
-git clone https://github.com/cisco-open/cisco-virtual-kubelet.git
-cd cisco-virtual-kubelet/
+# Build
+docker build -t <your-registry>/cisco-vk:latest .
 
-# Ensure the correct Go version is available
-sudo which go
-sudo go version
-
-# Build the provider
-make build
-
-# Install the binary
-sudo make install
+# Push
+docker push <your-registry>/cisco-vk:latest
 ```
 
-### Configuration
+### Install the Helm chart
 
-The provider uses a two-tier YAML configuration with `device` and `kubelet` sections:
+```bash
+# Install CRDs and the controller into the cvk-system namespace
+helm install cvk ./charts/cisco-virtual-kubelet \
+  --namespace cvk-system --create-namespace \
+  --set image.repository=<your-registry>/cisco-vk \
+  --set image.tag=latest
+```
+
+Both the controller pod and the VK pods it spawns use the same image by default. To use different images:
+
+```bash
+helm install cvk ./charts/cisco-virtual-kubelet \
+  --namespace cvk-system --create-namespace \
+  --set controllerImage.repository=<your-registry>/cisco-vk-controller \
+  --set controllerImage.tag=latest \
+  --set vkImage.repository=<your-registry>/cisco-vk \
+  --set vkImage.tag=latest
+```
+
+### Create a CiscoDevice CR
+
+Once the controller is running, create a `CiscoDevice` resource to provision a VK node:
 
 ```yaml
-# ./dev/config-dhcp-test.yaml
-device:
-  name: cat8kv-router
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: cat9000-1
+  namespace: default
+spec:
   driver: XE
-  address: "192.0.2.24" # Update with Router IP Address
+  address: "192.168.1.100"
   port: 443
   username: admin
-  password: cisco
+  password: cisco123
   tls:
     enabled: true
     insecureSkipVerify: true
-  networking:
-    dhcpEnabled: true
-    virtualPortGroup: "0"
-    defaultVRF: ""
-
-kubelet:
-  node_name: "cat8kv-node"
-  namespace: ""
-  update_interval: "30s"
-  os: "Linux"
-  node_internal_ip: "192.0.2.24" # Update with Router IP Address
+  xe:
+    networking:
+      interface:
+        type: VirtualPortGroup
+        virtualPortGroup:
+          dhcp: true
+          interface: "0"
+          guestInterface: 0
 ```
 
-See [Configuration Reference](docs/CONFIGURATION.md) for all options.
-
-**Export KUBECONFIG**
-
-```bash
-export KUBECONFIG=~/.kube/config # Location of the Kubernetes cluster kubeconfig
-```
-
-
-**Start Provider**
-
-```bash
-cd ~/cisco-virtual-kubelet
-cisco-vk --config dev/config-dhcp-test.yaml
-```
-
-**Deploy test Pod**
-
-```yaml
-# ./dev/test-pod-dhcp.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: dhcp-test-pod
-  namespace: default
-spec:
-  nodeName: cat8kv-node # Virtual Kubelet Kubernetes Node name
-  containers:
-  - name: test-app
-    image: flash:/hello-app.iosxe.tar # Docker image on flash filesystem
-    resources:
-      requests:
-        memory: "64Mi"
-        cpu: "250m"
-      limits:
-        memory: "128Mi"
-        cpu: "500m"
-```
-
-```bash
-kubectl apply -f ./dev/test-pod-dhcp.yaml
-```
+The controller will create a VK deployment and a matching Kubernetes node. Pods scheduled to that node are deployed to the device via AppHosting.
 
 ## Documentation
 
 - [Configuration Reference](docs/CONFIGURATION.md) - Configuration options and device setup
 - [Architecture](docs/ARCHITECTURE.md) - Technical architecture details
 - [API Reference](docs/API.md) - RESTCONF API details
-- [API Reference](docs/API.md) - RESTCONF API details
 
 ## Project Structure
 
 ```
 cisco-virtual-kubelet/
+├── api/
+│   └── v1alpha1/               # CRD API types (DeviceSpec, CiscoDevice)
 ├── cmd/
-│   └── virtual-kubelet/        # Main entry point
-│       ├── main.go
-│       └── root.go             # CLI command setup
-├── internal/                   # Internal packages
-│   ├── config/                 # Configuration loading and types
-│   │   ├── config.go           # Config loading logic
-│   │   └── types.go            # Config struct definitions
-│   ├── provider/               # Virtual Kubelet provider
-│   │   ├── provider.go         # AppHostingProvider implementation
-│   │   └── defaults.go         # Default node configuration
-│   └── drivers/                # Device driver implementations
-│       ├── factory.go          # Driver factory pattern
-│       ├── common/             # Shared driver utilities
-│       │   ├── restconf_client.go  # RESTCONF HTTP client
-│       │   ├── types.go        # Common types
-│       │   ├── naming.go       # App naming conventions
-│       │   └── helpers.go      # Utility functions
-│       ├── iosxe/              # IOS-XE driver
-│       │   ├── driver.go       # XEDriver implementation
-│       │   ├── app_hosting.go  # App lifecycle operations
-│       │   ├── pod_lifecycle.go # Pod CRUD operations
-│       │   ├── converters.go   # K8s to IOS-XE conversion
-│       │   └── models.go       # YANG model structs
-│       └── fake/               # Fake driver for testing
-│           └── driver.go
+│   └── cisco-vk/               # Unified binary entry point
+│       ├── main.go             # cobra root command
+│       ├── run.go              # 'run' subcommand — standalone VK provider
+│       └── manager.go          # 'manager' subcommand — CRD controller manager
+├── charts/
+│   └── cisco-virtual-kubelet/  # Helm chart for controller deployment
+│       ├── crds/               # CRD (synced from config/crd by make generate)
+│       └── templates/          # RBAC, Deployment (role.yaml auto-generated)
+├── config/
+│   └── crd/                    # Generated CRDs (source of truth for make generate)
+├── internal/
+│   ├── config/                 # YAML/viper config loader
+│   ├── controller/             # CiscoDevice reconciler (+kubebuilder:rbac markers)
+│   ├── provider/               # Virtual Kubelet provider implementation
+│   └── drivers/                # Device driver implementations (XE, fake)
 ├── examples/
-│   ├── configs/                # Example configuration files
-│   └── manifests/              # Example Kubernetes manifests
-├── dev/                        # Development environment setup
-├── docs/                       # Documentation
-├── Makefile                    # Build automation
-├── go.mod                      # Go module definition (Go 1.23.4)
+├── dev/                        # Development configs and test resources
+├── docs/
+├── Makefile
+├── go.mod
 └── README.md
 ```
 
-## Integration with Virtual Kubelet
+## Development
 
-The provider implements the Virtual Kubelet provider interface:
+For local development and testing, the VK provider can be run directly against a cluster without deploying it to Kubernetes.
 
-```go
-import (
-    "github.com/virtual-kubelet/virtual-kubelet/node"
-    "github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
-    "github.com/cisco/virtual-kubelet-cisco/internal/config"
-    "github.com/cisco/virtual-kubelet-cisco/internal/provider"
-)
+### Prerequisites
 
-func main() {
-    // Load configuration
-    cfg, _ := config.LoadConfig(configPath)
+- [Go](https://go.dev/doc/devel/release) 1.23 or later
 
-    // Create provider factory function
-    newProviderFunc := func(vkCfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
-        p, err := provider.NewAppHostingProvider(ctx, cfg, vkCfg)
-        if err != nil {
-            return nil, nil, err
-        }
-        n, _ := provider.NewAppHostingNode(ctx, cfg, vkCfg)
-        return p, n, nil
-    }
+### Build and run locally
 
-    // Create and run node
-    n, _ := nodeutil.NewNode(nodeName, newProviderFunc, nodeutil.WithClient(clientset))
-    n.Run(ctx)
-}
+```bash
+make build
+
+cisco-vk run \
+  --config dev/deviceConfig.yaml \
+  --kubeconfig ~/.kube/config \
+  --nodename my-test-node
+```
+
+The device config file follows the same schema as the `CiscoDevice` CR `spec`. See [examples](examples/configs/device-configs.yaml) for interface/networking options.
+
+**Runtime flags:**
+
+| Flag | Env Var | Default | Description |
+|------|---------|---------|-------------|
+| `--nodename` | `VKUBELET_NODE_NAME` | `cisco-virtual-kubelet` | Kubernetes node name |
+| `--config` / `-c` | - | `/etc/virtual-kubelet/config.yaml` | Path to device config file |
+| `--kubeconfig` | `KUBECONFIG` | _(in-cluster)_ | Path to kubeconfig file |
+| `--log-level` | `LOG_LEVEL` | `info` | Log level: debug, info, warn, error |
+
+### Regenerate RBAC and CRDs
+
+```bash
+# Regenerates CRDs → config/crd, RBAC → chart templates, syncs CRDs into chart
+make generate
 ```
 
 ## Contributing

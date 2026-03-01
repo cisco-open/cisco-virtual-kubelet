@@ -1,0 +1,15 @@
+apiVersion: v2
+name: cisco-virtual-kubelet
+description: Helm chart for the Cisco Virtual Kubelet controller manager
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - cisco
+  - virtual-kubelet
+  - operator
+home: https://github.com/cisco/virtual-kubelet-cisco
+sources:
+  - https://github.com/cisco/virtual-kubelet-cisco
+maintainers:
+  - name: Cisco Systems

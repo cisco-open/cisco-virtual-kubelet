@@ -15,25 +15,47 @@
 package provider
 
 import (
-	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"fmt"
+	"runtime/debug"
+	"strings"
+
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func GetNodeName(config *config.Config) string {
-	NodeName := "cisco-virtual-kubelet"
-	if config.Kubelet.NodeName != "" {
-		NodeName = config.Kubelet.NodeName
+// DefaultNodeName is used when no --nodename flag or VKUBELET_NODE_NAME env is set.
+const DefaultNodeName = "cisco-virtual-kubelet"
+
+// GetNodeName returns the supplied nodeName, or derives one from the device address.
+// If neither is available, it falls back to DefaultNodeName.
+func GetNodeName(nodeName, deviceAddress string) string {
+	if nodeName != "" {
+		return nodeName
 	}
-	return NodeName
+	if deviceAddress != "" {
+		sanitized := sanitizeNodeName(deviceAddress)
+		return fmt.Sprintf("cisco-vk-%s", sanitized)
+	}
+	return DefaultNodeName
 }
 
-func GetInitialNodeSpec(config *config.Config) v1.Node {
+func sanitizeNodeName(value string) string {
+	replacer := strings.NewReplacer(
+		":", "-",
+		".", "-",
+		"/", "-",
+		" ", "-",
+	)
+	return replacer.Replace(strings.TrimSpace(value))
+}
+
+// GetInitialNodeSpec builds the initial v1.Node using runtime parameters.
+func GetInitialNodeSpec(nodeName, deviceAddress string) v1.Node {
 
 	return v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: GetNodeName(config),
+			Name: GetNodeName(nodeName, deviceAddress),
 			Labels: map[string]string{
 				"platform": "cisco-ios-xe",
 				"provider": "cisco-apphosting",
@@ -42,12 +64,12 @@ func GetInitialNodeSpec(config *config.Config) v1.Node {
 		Status: v1.NodeStatus{
 			Phase:      v1.NodeRunning,
 			Conditions: InitNodeConditions(),
-			NodeInfo:   InitNodeSystemInfo(config),
+			NodeInfo:   InitNodeSystemInfo(),
 			Capacity:   initNodeCapacity(),
 			Addresses: []v1.NodeAddress{
 				{
 					Type:    v1.NodeInternalIP,
-					Address: config.Kubelet.NodeInternalIP,
+					Address: deviceAddress,
 				},
 			},
 			DaemonEndpoints: v1.NodeDaemonEndpoints{
@@ -112,14 +134,28 @@ func InitNodeConditions() []v1.NodeCondition {
 	}
 }
 
-func InitNodeSystemInfo(config *config.Config) v1.NodeSystemInfo {
+func InitNodeSystemInfo() v1.NodeSystemInfo {
 	// TODO Update this from driver information
 	return v1.NodeSystemInfo{
-		KubeletVersion:          "v2.00",
-		OSImage:                 "Cisco IOSXE",
-		KernelVersion:           "__cisco_ios__",
-		ContainerRuntimeVersion: "cisco.app.hosting",
+		Architecture:            "unknown",
+		OperatingSystem:         "unknown",
+		KubeletVersion:          getVirtualKubeletVersion(),
+		ContainerRuntimeVersion: "unknown",
+		OSImage:                 "unknown",
 	}
+}
+
+func getVirtualKubeletVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "unknown"
+	}
+	for _, dep := range info.Deps {
+		if dep.Path == "github.com/virtual-kubelet/virtual-kubelet" {
+			return dep.Version
+		}
+	}
+	return "unknown"
 }
 
 func initNodeCapacity() v1.ResourceList {
