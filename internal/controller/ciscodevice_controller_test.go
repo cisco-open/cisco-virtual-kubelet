@@ -327,6 +327,63 @@ func TestReconcile_OwnerReferenceSet(t *testing.T) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// vkContainerArgs helper
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestVkContainerArgs_NoLogLevel(t *testing.T) {
+	args := vkContainerArgs("router-x", "")
+	for _, a := range args {
+		if a == "--log-level" {
+			t.Fatal("--log-level should not be present when logLevel is empty")
+		}
+	}
+	if args[0] != "run" {
+		t.Errorf("expected first arg 'run', got %q", args[0])
+	}
+}
+
+func TestVkContainerArgs_WithLogLevel(t *testing.T) {
+	args := vkContainerArgs("router-x", "debug")
+	found := false
+	for i, a := range args {
+		if a == "--log-level" && i+1 < len(args) && args[i+1] == "debug" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected --log-level debug in args, got %v", args)
+	}
+}
+
+func TestReconcile_LogLevelPassedToDeployment(t *testing.T) {
+	device := newDevice("router-ll", "default")
+	device.Spec.LogLevel = "debug"
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-ll")); err != nil {
+		t.Fatalf("Reconcile error: %v", err)
+	}
+
+	var deploy appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-ll" + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("Deployment not found: %v", err)
+	}
+	args := deploy.Spec.Template.Spec.Containers[0].Args
+	found := false
+	for i, a := range args {
+		if a == "--log-level" && i+1 < len(args) && args[i+1] == "debug" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected --log-level debug in container args, got %v", args)
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Pure helper: renderDeviceConfig
 // ─────────────────────────────────────────────────────────────────────────────
 
