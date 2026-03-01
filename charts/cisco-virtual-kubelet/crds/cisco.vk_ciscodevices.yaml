@@ -96,6 +96,17 @@ spec:
                   type: string
                 description: Labels to apply to the virtual kubelet node.
                 type: object
+              logLevel:
+                default: info
+                description: |-
+                  LogLevel sets the logging verbosity for the VK instance.
+                  Valid values are: debug, info, warn, error.
+                enum:
+                - debug
+                - info
+                - warn
+                - error
+                type: string
               maxPods:
                 default: 16
                 description: MaxPods is the maximum number of pods the device can

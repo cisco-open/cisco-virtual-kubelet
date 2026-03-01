@@ -117,6 +117,13 @@ type DeviceSpec struct {
 	// +kubebuilder:validation:Optional
 	Zone string `json:"zone,omitempty" mapstructure:"zone,omitempty"`
 
+	// LogLevel sets the logging verbosity for the VK instance.
+	// Valid values are: debug, info, warn, error.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=debug;info;warn;error
+	// +kubebuilder:default=info
+	LogLevel string `json:"logLevel,omitempty" mapstructure:"logLevel"`
+
 	// ResourceLimits defines default and maximum resource allocations.
 	// +kubebuilder:validation:Optional
 	ResourceLimits ResourceConfig `json:"resourceLimits,omitempty" mapstructure:"resourceLimits"`
