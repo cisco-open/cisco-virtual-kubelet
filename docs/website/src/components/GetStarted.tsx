@@ -21,12 +21,12 @@ import { Terminal, FileCode, Rocket, Copy, Check } from "lucide-react";
 const tabs = [
   {
     id: "install",
-    label: "Installation",
+    label: "Install",
     icon: Terminal,
   },
   {
     id: "config",
-    label: "Configuration",
+    label: "CiscoDevice CR",
     icon: FileCode,
   },
   {
@@ -39,46 +39,41 @@ const tabs = [
 const codeBlocks: Record<string, { language: string; code: string }> = {
   install: {
     language: "bash",
-    code: `# Clone the repository
-git clone https://github.com/cisco-open/cisco-virtual-kubelet.git
-cd cisco-virtual-kubelet/
+    code: `# Install the CRD
+kubectl apply -f config/crd/cisco.vk_ciscodevices.yaml
 
-# Build the provider
-make build
+# Install the controller via Helm
+helm install cisco-vk charts/cisco-virtual-kubelet \\
+  --namespace cisco-vk-system --create-namespace
 
-# Install the binary
-sudo make install
-
-# Export kubeconfig
-export KUBECONFIG=~/.kube/config
-
-# Start the provider
-cisco-vk --config dev/config-dhcp-test.yaml`,
+# Verify the controller is running
+kubectl get pods -n cisco-vk-system`,
   },
   config: {
     language: "yaml",
-    code: `# config.yaml
-device:
+    code: `# ciscodevice.yaml
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
   name: cat8kv-router
+  namespace: cisco-vk-system
+spec:
   driver: XE
-  address: "192.0.2.24"    # Router IP Address
+  address: "192.0.2.24"
   port: 443
   username: admin
-  password: cisco
+  password: cisco123
   tls:
     enabled: true
     insecureSkipVerify: true
-  networking:
-    dhcpEnabled: true
-    virtualPortGroup: "0"
-    defaultVRF: ""
-
-kubelet:
-  node_name: "cat8kv-node"
-  namespace: ""
-  update_interval: "30s"
-  os: "Linux"
-  node_internal_ip: "192.0.2.24"`,
+  xe:
+    networking:
+      interface:
+        type: VirtualPortGroup
+        virtualPortGroup:
+          dhcp: true
+          interface: "0"
+          guestInterface: 0`,
   },
   deploy: {
     language: "yaml",
@@ -89,7 +84,7 @@ metadata:
   name: dhcp-test-pod
   namespace: default
 spec:
-  nodeName: cat8kv-node       # Virtual Kubelet node
+  nodeName: cat8kv-router    # Matches CiscoDevice name
   containers:
   - name: test-app
     image: flash:/hello-app.iosxe.tar
@@ -130,8 +125,8 @@ export default function GetStarted() {
             Get <span className="gradient-text">Started</span>
           </h2>
           <p className="text-lg text-text-muted max-w-2xl mx-auto">
-            Deploy your first container to a Cisco device in minutes. Follow
-            these steps to set up the Cisco Virtual Kubelet provider.
+            Deploy your first container to a Cisco device in minutes using
+            Helm and CiscoDevice custom resources.
           </p>
         </motion.div>
 
@@ -148,7 +143,7 @@ export default function GetStarted() {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: "Go 1.23+", desc: "Build toolchain" },
+              { label: "Helm 3", desc: "Package manager for K8s" },
               { label: "Kubernetes Cluster", desc: "Any K8s distribution" },
               { label: "Cisco IOS-XE Device", desc: "With IOx & RESTCONF" },
               { label: "Container Image", desc: "Tar file on device flash" },
@@ -256,6 +251,11 @@ function highlightCode(line: string, language: string): React.ReactNode {
           "export",
           "cisco-vk",
           "clone",
+          "helm",
+          "kubectl",
+          "apply",
+          "install",
+          "get",
         ].includes(word)
       ) {
         return (

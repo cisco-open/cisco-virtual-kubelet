@@ -19,9 +19,9 @@ import {
   Box,
   Cpu,
   Network,
-  Shield,
   Activity,
   Layers,
+  Settings,
 } from "lucide-react";
 
 const features = [
@@ -66,10 +66,10 @@ const features = [
     glowColor: "accent",
   },
   {
-    icon: Shield,
-    title: "Health Monitoring",
+    icon: Settings,
+    title: "Helm & CRD Operator",
     description:
-      "Continuous node health checks and status reporting. Keep your edge infrastructure visible and manageable from Kubernetes.",
+      "Deploy via Helm and manage devices as CiscoDevice custom resources. The controller automatically provisions VK nodes and keeps them in sync.",
     color: "from-success to-teal-400",
     glowColor: "success",
   },

@@ -15,7 +15,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Server, Cloud, Container, ArrowDown } from "lucide-react";
+import { Server, Cloud, Container, ArrowDown, Settings } from "lucide-react";
 
 // Material Design style router icon: flat box with straight antennas, no RF signals
 function RouterIcon({ className }: { className?: string }) {
@@ -61,8 +61,9 @@ export default function Architecture() {
             How It <span className="gradient-text">Works</span>
           </h2>
           <p className="text-lg text-text-muted max-w-2xl mx-auto">
-            The provider bridges Kubernetes and Cisco network devices, enabling
-            seamless container deployment via RESTCONF APIs.
+            A Kubernetes controller watches CiscoDevice custom resources and
+            automatically deploys Virtual Kubelet providers that bridge your
+            cluster to Cisco network devices via RESTCONF.
           </p>
         </motion.div>
 
@@ -94,6 +95,27 @@ export default function Architecture() {
               <div className="flex flex-col items-center">
                 <div className="w-px h-8 bg-gradient-to-b from-primary to-accent" />
                 <ArrowDown className="w-5 h-5 text-primary -mt-1" />
+              </div>
+            </div>
+
+            {/* Controller Manager */}
+            <div className="arch-box flex items-center justify-center gap-3 py-4 mb-2 bg-gradient-to-r from-surface to-surface-light border-accent/30">
+              <Settings className="w-5 h-5 text-accent" />
+              <div>
+                <div className="text-base font-semibold text-foreground">
+                  Controller Manager
+                </div>
+                <div className="text-xs text-text-muted">
+                  Watches CiscoDevice CRDs &mdash; creates VK Deployments + ConfigMaps
+                </div>
+              </div>
+            </div>
+
+            {/* Connector */}
+            <div className="flex justify-center py-2">
+              <div className="flex flex-col items-center">
+                <div className="w-px h-8 bg-gradient-to-b from-accent to-accent" />
+                <ArrowDown className="w-5 h-5 text-accent -mt-1" />
               </div>
             </div>
 
@@ -186,12 +208,12 @@ export default function Architecture() {
             </div>
             <div className="relative pt-12">
               <h3 className="text-xl font-semibold mb-3 text-foreground">
-                Schedule with kubectl
+                Define a CiscoDevice
               </h3>
               <p className="text-text-muted leading-relaxed">
-                Use standard kubectl commands to create pods. The Virtual
-                Kubelet node accepts pod assignments just like any Kubernetes
-                node.
+                Create a CiscoDevice custom resource for each network device.
+                The controller automatically provisions a Virtual Kubelet node
+                that registers with the cluster.
               </p>
             </div>
           </div>
@@ -201,11 +223,12 @@ export default function Architecture() {
             </div>
             <div className="relative pt-12">
               <h3 className="text-xl font-semibold mb-3 text-foreground">
-                RESTCONF Translation
+                Schedule with kubectl
               </h3>
               <p className="text-text-muted leading-relaxed">
-                The provider translates Kubernetes pod specs into RESTCONF API
-                calls compatible with Cisco IOS-XE App-Hosting configuration.
+                Use standard kubectl commands to schedule pods. The VK node
+                translates pod specs into RESTCONF API calls for Cisco IOS-XE
+                App-Hosting.
               </p>
             </div>
           </div>
@@ -218,9 +241,9 @@ export default function Architecture() {
                 Edge Deployment
               </h3>
               <p className="text-text-muted leading-relaxed">
-                Containers are deployed directly on Cisco Catalyst devices,
-                enabling compute at the network edge with full lifecycle
-                management.
+                Containers are deployed directly on Cisco Catalyst devices.
+                The reconciler manages the full app-hosting lifecycle with
+                automatic IP discovery and status reporting.
               </p>
             </div>
           </div>

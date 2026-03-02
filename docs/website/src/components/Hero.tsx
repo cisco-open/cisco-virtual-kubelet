@@ -114,24 +114,20 @@ export default function Hero() {
               <pre className="text-left">
                 <code className="font-mono text-sm">
                   <span className="text-text-muted">$</span>{" "}
-                  <span className="text-primary">git clone</span>{" "}
+                  <span className="text-primary">helm install</span>{" "}
                   <span className="text-foreground">
-                    https://github.com/cisco-open/cisco-virtual-kubelet.git
+                    cisco-vk
+                  </span>{" "}
+                  <span className="text-accent-light">
+                    charts/cisco-virtual-kubelet
                   </span>
                   {"\n"}
                   <span className="text-text-muted">$</span>{" "}
-                  <span className="text-primary">cd</span>{" "}
+                  <span className="text-primary">kubectl apply</span>{" "}
+                  <span className="text-accent-light">-f</span>{" "}
                   <span className="text-foreground">
-                    cisco-virtual-kubelet
+                    ciscodevice.yaml
                   </span>
-                  {"\n"}
-                  <span className="text-text-muted">$</span>{" "}
-                  <span className="text-primary">make</span>{" "}
-                  <span className="text-accent-light">build</span>
-                  {"\n"}
-                  <span className="text-text-muted">$</span>{" "}
-                  <span className="text-primary">sudo make</span>{" "}
-                  <span className="text-accent-light">install</span>
                 </code>
               </pre>
             </div>

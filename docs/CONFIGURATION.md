@@ -45,14 +45,64 @@ ip dhcp pool app-hosting
 
 The VirtualPortGroup IP address (192.168.1.254) becomes the default gateway for containers that receive DHCP addresses from this pool.
 
-## Configuration File
+## Deployment via Helm + CiscoDevice CRD
 
-The configuration file describes the **device** only.  Runtime settings (node name,
-node IP, log level, etc.) are supplied via CLI flags or environment variables.
+The recommended way to deploy the Virtual Kubelet is via the Helm chart, which
+installs a Controller Manager that watches `CiscoDevice` custom resources.
+
+### Install
+
+```bash
+# Install the CRD (also bundled inside the Helm chart crds/ directory)
+kubectl apply -f config/crd/cisco.vk_ciscodevices.yaml
+
+# Install the controller
+helm install cisco-vk charts/cisco-virtual-kubelet \
+  --namespace cisco-vk-system --create-namespace
+```
+
+### CiscoDevice Custom Resource
+
+Each device is represented by a `CiscoDevice` CR.  The controller reconciles
+each CR into a Deployment + ConfigMap that runs the VK provider for that device.
+
+```yaml
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: cat8kv-router
+  namespace: cisco-vk-system
+spec:
+  driver: XE
+  address: "192.168.1.100"
+  port: 443
+  username: admin
+  password: cisco123
+  tls:
+    enabled: true
+    insecureSkipVerify: true
+  xe:
+    networking:
+      interface:
+        type: VirtualPortGroup
+        virtualPortGroup:
+          dhcp: true
+          interface: "0"
+          guestInterface: 0
+```
+
+Applying this CR will cause the controller to create a VK pod that registers a
+Kubernetes node named `cat8kv-router`.
+
+## Standalone Configuration File
+
+When running the VK binary directly (`cisco-vk run`), a YAML configuration file
+describes the **device** only.  Runtime settings (node name, node IP, log level,
+etc.) are supplied via CLI flags or environment variables.
 
 Default location: `/etc/virtual-kubelet/config.yaml`
 
-## Minimal Configuration Example
+### Minimal Configuration Example
 
 ```yaml
 device:
@@ -143,7 +193,7 @@ Driver-specific networking lives under the driver key.
 
 ## Example Pod Manifest
 
-Deploy a container to the cat8kv node:
+Deploy a container to a device managed by a CiscoDevice CR:
 
 ```yaml
 apiVersion: v1
@@ -152,7 +202,7 @@ metadata:
   name: dhcp-test-pod
   namespace: default
 spec:
-  nodeName: cat8kv-node
+  nodeName: cat8kv-router    # Must match the CiscoDevice metadata.name
   containers:
   - name: test-app
     image: flash:/hello-app.iosxe.tar

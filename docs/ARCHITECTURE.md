@@ -9,48 +9,55 @@ The Cisco Virtual Kubelet Provider implements the [Virtual Kubelet](https://gith
 ## Component Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────-─────┐
-│                         Kubernetes Cluster                            │
-│  ┌────────────────────────────────────────────────────────────────┐   │
-│  │                      API Server                                │   │
-│  └─────────────────────────────┬──────────────────────────────────┘   │
-│                                │                                      │
-│  ┌─────────────────────────────┴──────────────────────────────────┐   │
-│  │                    Virtual Kubelet Library                     │   │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │   │
-│  │  │    Node      │  │     Pod      │  │   AppHostingProvider │  │   │
-│  │  │  Controller  │  │  Controller  │  │   AppHostingNode     │  │   │
-│  │  └──────────────┘  └──────────────┘  └──────────┬───────────┘  │   │
-│  │                                                  │             │   │
-│  │  ┌───────────────────────────────────────────────┴───────────┐ │   │
-│  │  │                    Driver Layer                           │ │   │
-│  │  │  ┌─────────────────────────────────────────────────────┐  │ │   │
-│  │  │  │              XEDriver (IOS-XE)                      │  │ │   │
-│  │  │  │  ┌─────────────┐ ┌─────────────┐ ┌───────────────┐  │  │ │   │
-│  │  │  │  │ App Hosting │ │    Pod      │ │   RESTCONF    │  │  │  │  │
-│  │  │  │  │  Lifecycle  │ │  Lifecycle  │ │    Client     │  │  │  │  │
-│  │  │  │  └─────────────┘ └─────────────┘ └───────────────┘  │  │  │  │
-│  │  │  └─────────────────────────────────────────────────────┘  │  │  │
-│  │  └───────────────────────────────────────────────────────────┘  │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                         Kubernetes Cluster                           │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │                      API Server                                │  │
+│  │           CiscoDevice CRD   +   core/v1 resources              │  │
+│  └──────────────────────┬─────────────────────────────────────────┘  │
+│                         │                                            │
+│  ┌──────────────────────┴─────────────────────────────────────────┐  │
+│  │             Controller Manager  (cisco-vk manager)             │  │
+│  │  Watches CiscoDevice CRs → creates VK Deployment + ConfigMap   │  │
+│  └──────────────────────┬─────────────────────────────────────────┘  │
+│                         │  (one VK pod per CiscoDevice)              │
+│                         ▼                                            │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │             Virtual Kubelet Pod  (cisco-vk run)              │    │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐  │    │
+│  │  │    Node      │  │     Pod      │  │ AppHostingProvider │  │    │
+│  │  │  Controller  │  │  Controller  │  │ AppHostingNode     │  │    │
+│  │  └──────────────┘  └──────────────┘  └────────┬───────────┘  │    │
+│  │                                               │              │    │
+│  │  ┌────────────────────────────────────────────┴───────────┐  │    │
+│  │  │                    Driver Layer                        │  │    │
+│  │  │  ┌──────────────────────────────────────────────────┐  │  │    │
+│  │  │  │            XEDriver (IOS-XE)                     │  │  │    │
+│  │  │  │  ┌────────────┐ ┌────────────┐ ┌─────────────┐   │  │  │    │
+│  │  │  │  │ Reconciler │ │    Pod     │ │  RESTCONF   │   │  │  │    │
+│  │  │  │  │ + Device   │ │  Lifecycle │ │   Client    │   │  │  │    │
+│  │  │  │  └────────────┘ └────────────┘ └─────────────┘   │  │  │    │
+│  │  │  └──────────────────────────────────────────────────┘  │  │    │
+│  │  └────────────────────────────────────────────────────────┘  │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────────┘
                                     │
                                     │ RESTCONF/HTTPS
                                     ▼
-┌───────────────────────────────────────────────────────────────────────┐
-│                     Cisco Catalyst 8000V (IOS-XE)                     │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │                       IOx Platform                              │  │
-│  │  ┌───────────────┐  ┌───────────────┐  ┌───────────────────┐    │  │
-│  │  │  Container 1  │  │  Container 2  │  │   Container N     │    │  │
-│  │  │   (app)       │  │   (app)       │  │   (app)           │    │  │
-│  │  └───────────────┘  └───────────────┘  └───────────────────┘    │  │
-│  │                           │                                     │  │
-│  │  ┌────────────────────────┴─────────────────────────────────-─┐ │  │
-│  │  │              VirtualPortGroup0 + DHCP Pool                 │ │  │
-│  │  └────────────────────────────────────────────────────────────┘ │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                   Cisco Catalyst 8000V (IOS-XE)                      │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │                       IOx Platform                             │  │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐      │  │
+│  │  │  Container 1 │  │  Container 2 │  │   Container N    │      │  │
+│  │  │   (app)      │  │   (app)      │  │   (app)          │      │  │
+│  │  └──────────────┘  └──────────────┘  └──────────────────┘      │  │
+│  │                           │                                    │  │
+│  │  ┌────────────────────────┴──────────────────────────────────┐ │  │
+│  │  │          VirtualPortGroup / AppGigEth / Mgmt + DHCP       │ │  │
+│  │  └───────────────────────────────────────────────────────────┘ │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Core Components
@@ -312,35 +319,58 @@ When `dhcpEnabled: true`:
 ### Network Configuration Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────────┐
 │                    Catalyst 8000V                                │
 │                                                                  │
-│  ┌────────────┐    ┌─────────────────┐    ┌─────────────────┐  │
-│  │ Container  │───►│ VirtualPortGroup0│───►│   DHCP Pool     │  │
-│  │ (eth0)     │    │  192.168.1.254        │   192.168.1.0/24│  │
-│  │            │◄───│  (gateway)      │◄───│   assigns IP    │  │
-│  └────────────┘    └─────────────────┘    └─────────────────┘  │
+│  ┌────────────┐    ┌───────────────────┐    ┌─────────────────┐  │
+│  │ Container  │───►│ VirtualPortGroup0 │───►│   DHCP Pool     │  │
+│  │ (eth0)     │    │  192.168.1.254    │    │   192.168.1.0/24│  │
+│  │            │◄───│  (gateway)        │◄───│   assigns IP    │  │
+│  └────────────┘    └───────────────────┘    └─────────────────┘  │
 │                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────────────┘
 ```
+
+## Deployment Model
+
+The project uses a **Helm chart** to deploy a Controller Manager into the cluster.
+For each `CiscoDevice` custom resource the controller creates:
+
+1. A **ConfigMap** containing the device configuration YAML.
+2. A **Deployment** running the `cisco-vk run` binary, which registers a
+   Virtual Kubelet node for that device.
+
+This means adding a new device is as simple as `kubectl apply -f ciscodevice.yaml`.
 
 ## Project Structure
 
 ```
 cisco-virtual-kubelet/
-├── api/v1alpha1/                 # CRD-ready API types
+├── api/v1alpha1/                 # CRD API types
 │   ├── doc.go
 │   ├── groupversion_info.go
 │   ├── types.go                  # DeviceSpec, CiscoDevice, shared types
-│   └── xe_types.go               # IOS-XE driver-specific types
-├── cmd/virtual-kubelet/          # Entry point
-│   ├── main.go                   # Main function
-│   └── root.go                   # CLI setup with cobra
+│   ├── xe_types.go               # IOS-XE driver-specific types
+│   └── zz_generated.deepcopy.go  # Generated DeepCopy methods
+├── charts/cisco-virtual-kubelet/ # Helm chart
+│   ├── Chart.yaml
+│   ├── values.yaml
+│   ├── crds/                     # CRD installed by Helm
+│   └── templates/                # Deployment, RBAC, ServiceAccount
+├── cmd/cisco-vk/                 # Binary entry point
+│   ├── main.go                   # Cobra root command
+│   ├── manager.go                # "manager" subcommand (controller)
+│   └── run.go                    # "run" subcommand (VK provider)
+├── config/crd/                   # Standalone CRD YAML
+│   └── cisco.vk_ciscodevices.yaml
+├── examples/configs/             # Example device configurations
 ├── internal/
-│   ├── config/                   # Configuration
+│   ├── config/                   # Configuration loader
 │   │   └── config.go             # YAML/viper loader → DeviceSpec
+│   ├── controller/               # Kubernetes controller
+│   │   └── ciscodevice_controller.go  # CiscoDevice reconciler
 │   ├── provider/                 # VK Provider
-│   │   ├── provider.go           # AppHostingProvider
+│   │   ├── provider.go           # AppHostingProvider + AppHostingNode
 │   │   └── defaults.go           # Node defaults
 │   └── drivers/                  # Device drivers
 │       ├── factory.go            # Driver factory
@@ -350,12 +380,17 @@ cisco-virtual-kubelet/
 │       │   ├── naming.go
 │       │   └── helpers.go
 │       ├── iosxe/                # IOS-XE driver
-│       │   ├── driver.go         # XEDriver
-│       │   ├── app_hosting.go    # App lifecycle
-│       │   ├── pod_lifecycle.go  # Pod CRUD
-│       │   ├── transformers.go   # K8s ↔ IOS-XE
+│       │   ├── driver.go         # XEDriver + factory
+│       │   ├── client.go         # RESTCONF client wrapper
+│       │   ├── device.go         # Device info queries
+│       │   ├── reconciler.go     # App-hosting reconciler
+│       │   ├── pod_lifecycle.go  # Pod deploy / delete
+│       │   ├── pod_transforms.go # K8s pod → IOS-XE config
+│       │   ├── status_transforms.go # IOS-XE state → K8s status
+│       │   ├── ip_discovery.go   # IP lookup (oper-data + ARP)
+│       │   ├── types.go          # Driver-internal types
 │       │   └── models.go         # YANG structs
 │       └── fake/                 # Test driver
 │           └── driver.go
-└── dev/                          # Development files
+└── docs/                         # Documentation + website
 ```
