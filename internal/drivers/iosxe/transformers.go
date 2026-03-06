@@ -377,7 +377,7 @@ func (d *XEDriver) getResourceConfig(container *v1.Container) *resourceConfig {
 		if mem := container.Resources.Requests.Memory(); mem != nil && !mem.IsZero() {
 			config.memoryMB = uint16(mem.Value() / (1024 * 1024))
 		}
-		if storage := container.Resources.Requests.Storage(); storage != nil && !storage.IsZero() {
+		if storage, ok := container.Resources.Requests[v1.ResourceEphemeralStorage]; ok && !storage.IsZero() {
 			config.diskMB = uint16(storage.Value() / (1024 * 1024))
 		}
 	}
