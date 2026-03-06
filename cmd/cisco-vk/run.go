@@ -24,6 +24,7 @@ import (
 	"syscall"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	logruslib "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -201,13 +202,17 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	}
 
 	newProviderFunc := func(vkCfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
-		podHandler, err := provider.NewAppHostingProvider(ctx, &appCfg.Device, vkCfg)
+		// Create a single shared driver for both node and pod handlers
+		sharedDriver, err := drivers.NewDriver(ctx, &appCfg.Device)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to create device driver: %w", err)
+		}
+
+		nodeHandler := provider.NewAppHostingNode(&appCfg.Device, sharedDriver)
+
+		podHandler, err := provider.NewAppHostingProvider(ctx, &appCfg.Device, vkCfg, sharedDriver, nodeHandler)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise PodHandler: %w", err)
-		}
-		nodeHandler, err := provider.NewAppHostingNode(ctx, &appCfg.Device, vkCfg)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to initialise nodeHandler: %w", err)
 		}
 		return podHandler, nodeHandler, nil
 	}

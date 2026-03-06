@@ -91,3 +91,25 @@ type DeviceInfo struct {
 	SoftwareVersion string
 	ProductID       string
 }
+
+// AppHostingOperData contains global operational data including resources and notifications
+type AppHostingOperData struct {
+	IoxEnabled    bool
+	SystemCPU     AppResource
+	Memory        AppResource
+	Storage       AppResource
+	Notifications []AppNotification
+}
+
+type AppResource struct {
+	Quota     int64
+	Available int64
+	Unit      string
+}
+
+type AppNotification struct {
+	AppID     string
+	Severity  string
+	Message   string
+	Timestamp string
+}
