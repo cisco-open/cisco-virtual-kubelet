@@ -157,3 +157,24 @@ func (d *FAKEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 	log.G(ctx).Info("Pod ListContainers request received")
 	return nil, nil
 }
+
+func (d *FAKEDriver) GetGlobalOperationalData(ctx context.Context) (*common.AppHostingOperData, error) {
+	return &common.AppHostingOperData{
+		IoxEnabled: true,
+		SystemCPU: common.AppResource{
+			Available: 50,
+			Quota:     100,
+			Unit:      "percent",
+		},
+		Memory: common.AppResource{
+			Available: 2048,
+			Quota:     4096,
+			Unit:      "MB",
+		},
+		Storage: common.AppResource{
+			Available: 10000,
+			Quota:     20000,
+			Unit:      "MB",
+		},
+	}, nil
+}
