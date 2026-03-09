@@ -150,27 +150,27 @@ func (p *AppHostingProvider) AttachToContainer(ctx context.Context, namespace, p
 
 // GetContainerLogs implements nodeutil.Provider.
 func (p *AppHostingProvider) GetContainerLogs(ctx context.Context, namespace string, podName string, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
-	panic("unimplemented")
+	return nil, fmt.Errorf("GetContainerLogs is not supported by the Cisco Virtual Kubelet")
 }
 
 // GetMetricsResource implements nodeutil.Provider.
 func (p *AppHostingProvider) GetMetricsResource(context.Context) ([]*io_prometheus_client.MetricFamily, error) {
-	panic("unimplemented")
+	return nil, fmt.Errorf("GetMetricsResource is not supported by the Cisco Virtual Kubelet")
 }
 
 // GetStatsSummary implements nodeutil.Provider.
 func (p *AppHostingProvider) GetStatsSummary(context.Context) (*statsv1alpha1.Summary, error) {
-	panic("unimplemented")
+	return nil, fmt.Errorf("GetStatsSummary is not supported by the Cisco Virtual Kubelet")
 }
 
 // PortForward implements nodeutil.Provider.
 func (p *AppHostingProvider) PortForward(ctx context.Context, namespace string, pod string, port int32, stream io.ReadWriteCloser) error {
-	panic("unimplemented")
+	return fmt.Errorf("PortForward is not supported by the Cisco Virtual Kubelet")
 }
 
 // RunInContainer implements nodeutil.Provider.
 func (p *AppHostingProvider) RunInContainer(ctx context.Context, namespace string, podName string, containerName string, cmd []string, attach api.AttachIO) error {
-	panic("unimplemented")
+	return fmt.Errorf("RunInContainer is not supported by the Cisco Virtual Kubelet")
 }
 
 // AppHostingNode implements node.NodeProvider for proper heartbeat management.
