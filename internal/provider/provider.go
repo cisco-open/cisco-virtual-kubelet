@@ -23,7 +23,6 @@ import (
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
-	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
@@ -32,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
-	statsv1alpha1 "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
 
 type AppHostingProvider struct {
@@ -168,15 +166,7 @@ func (p *AppHostingProvider) GetContainerLogs(ctx context.Context, namespace str
 	return nil, fmt.Errorf("GetContainerLogs is not supported by the Cisco Virtual Kubelet")
 }
 
-// GetMetricsResource implements nodeutil.Provider.
-func (p *AppHostingProvider) GetMetricsResource(context.Context) ([]*io_prometheus_client.MetricFamily, error) {
-	return nil, fmt.Errorf("GetMetricsResource is not supported by the Cisco Virtual Kubelet")
-}
-
-// GetStatsSummary implements nodeutil.Provider.
-func (p *AppHostingProvider) GetStatsSummary(context.Context) (*statsv1alpha1.Summary, error) {
-	return nil, fmt.Errorf("GetStatsSummary is not supported by the Cisco Virtual Kubelet")
-}
+// GetMetricsResource and GetStatsSummary are implemented in metrics.go
 
 // PortForward implements nodeutil.Provider.
 func (p *AppHostingProvider) PortForward(ctx context.Context, namespace string, pod string, port int32, stream io.ReadWriteCloser) error {
@@ -430,13 +420,15 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 		},
 		Status: v1.NodeStatus{
 			NodeInfo: v1.NodeSystemInfo{
-				MachineID:       deviceInfo.SerialNumber,
-				SystemUUID:      deviceInfo.SerialNumber,
-				KernelVersion:   deviceInfo.SoftwareVersion,
-				KubeletVersion:  getVirtualKubeletVersion(),
-				OSImage:         "IOS-XE",
-				Architecture:    deviceInfo.ProductID,
-				OperatingSystem: "Cisco",
+				MachineID:               deviceInfo.SerialNumber,
+				SystemUUID:              deviceInfo.SerialNumber,
+				BootID:                  deviceInfo.SerialNumber,
+				KernelVersion:           deviceInfo.SoftwareVersion,
+				KubeletVersion:          getVirtualKubeletVersion(),
+				ContainerRuntimeVersion: fmt.Sprintf("iosxe-apphosting://%s", deviceInfo.SoftwareVersion),
+				OSImage:                 "IOS-XE",
+				Architecture:            deviceInfo.ProductID,
+				OperatingSystem:         "Cisco",
 			},
 			Addresses: []v1.NodeAddress{
 				{
