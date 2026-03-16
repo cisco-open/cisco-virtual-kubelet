@@ -24,6 +24,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// KUBELET_IP_ENV is the environment variable name used to inject the VK pod's IP
+// via the Kubernetes downward API. This IP is advertised as the node's InternalIP
+// so the API server can proxy kubelet requests to the VK's :10250 listener.
+const KUBELET_IP_ENV = "POD_IP"
+
 // DefaultNodeName is used when no --nodename flag or VKUBELET_NODE_NAME env is set.
 const DefaultNodeName = "cisco-virtual-kubelet"
 
@@ -69,7 +74,7 @@ func GetInitialNodeSpec(nodeName, deviceAddress string) v1.Node {
 			Addresses: []v1.NodeAddress{
 				{
 					Type:    v1.NodeInternalIP,
-					Address: deviceAddress,
+					Address: getKubeletIP(deviceAddress),
 				},
 			},
 			DaemonEndpoints: v1.NodeDaemonEndpoints{

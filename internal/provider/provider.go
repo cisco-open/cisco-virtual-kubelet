@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -294,8 +296,10 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 		// We continue with basic device info, but conditions may be incomplete
 	}
 
-	// Determine node internal IP from device address
-	nodeInternalIP := a.deviceSpec.Address
+	// Determine node internal IP: use the VK pod's own IP so the API server
+	// can proxy kubelet requests (e.g. /stats/summary) to our :10250 listener.
+	// The device address is used only for RESTCONF communication with the device.
+	nodeInternalIP := getKubeletIP(a.deviceSpec.Address)
 
 	log.G(ctx).Debugf("Updating node status with device info, InternalIP=%s", nodeInternalIP)
 
@@ -443,4 +447,30 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 	}
 
 	cb(nodeUpdate)
+}
+
+// getKubeletIP returns the IP address where the VK's kubelet API server (:10250) is reachable.
+// The Kubernetes API server proxies requests like /stats/summary to InternalIP:10250,
+// so this must be the VK pod's IP, not the managed device's IP.
+//
+// Resolution order:
+//  1. POD_IP env var (set via Kubernetes downward API)
+//  2. Auto-detected outbound IP of the host
+//  3. Fallback to deviceAddress (original behavior, may not be routable to :10250)
+func getKubeletIP(deviceAddress string) string {
+	// Prefer POD_IP from the downward API
+	if podIP := os.Getenv("POD_IP"); podIP != "" {
+		return podIP
+	}
+
+	// Auto-detect: open a UDP "connection" to determine which local IP the OS would use
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err == nil {
+		defer conn.Close()
+		if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
+			return addr.IP.String()
+		}
+	}
+
+	return deviceAddress
 }

@@ -179,6 +179,23 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					Name:  "cisco-vk",
 					Image: image,
 					Args:  vkContainerArgs(device.Name, device.Spec.LogLevel),
+					Env: []corev1.EnvVar{
+						{
+							Name: "POD_IP",
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									FieldPath: "status.podIP",
+								},
+							},
+						},
+					},
+					Ports: []corev1.ContainerPort{
+						{
+							Name:          "kubelet-api",
+							ContainerPort: 10250,
+							Protocol:      corev1.ProtocolTCP,
+						},
+					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "device-config",
