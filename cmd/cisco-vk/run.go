@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"path"
@@ -192,13 +193,17 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	}
 	effectiveNodeName = provider.GetNodeName(effectiveNodeName, appCfg.Device.Address)
 
+	mux := http.NewServeMux()
+
 	opts := []nodeutil.NodeOpt{
 		nodeutil.WithNodeConfig(nodeutil.NodeConfig{
 			Client:         clientset,
 			NodeSpec:       provider.GetInitialNodeSpec(effectiveNodeName, appCfg.Device.Address),
 			HTTPListenAddr: ":10250",
 			NumWorkers:     5,
+			Handler:        mux,
 		}),
+		nodeutil.AttachProviderRoutes(mux),
 	}
 
 	newProviderFunc := func(vkCfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
