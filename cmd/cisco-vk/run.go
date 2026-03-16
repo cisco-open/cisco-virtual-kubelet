@@ -219,6 +219,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 			TLSConfig: &tls.Config{
 				MinVersion:   tls.VersionTLS12,
 				Certificates: []tls.Certificate{tlsCert},
+				ClientAuth:   tls.NoClientCert,
 			},
 		}),
 		nodeutil.AttachProviderRoutes(mux),
