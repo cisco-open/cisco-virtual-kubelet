@@ -16,13 +16,22 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
+	"math/big"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"path"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
@@ -195,6 +204,11 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 
 	mux := http.NewServeMux()
 
+	tlsCert, err := generateSelfSignedCert(effectiveNodeName, appCfg.Device.Address)
+	if err != nil {
+		return fmt.Errorf("failed to generate self-signed TLS cert: %w", err)
+	}
+
 	opts := []nodeutil.NodeOpt{
 		nodeutil.WithNodeConfig(nodeutil.NodeConfig{
 			Client:         clientset,
@@ -202,6 +216,10 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 			HTTPListenAddr: ":10250",
 			NumWorkers:     5,
 			Handler:        mux,
+			TLSConfig: &tls.Config{
+				MinVersion:   tls.VersionTLS12,
+				Certificates: []tls.Certificate{tlsCert},
+			},
 		}),
 		nodeutil.AttachProviderRoutes(mux),
 	}
@@ -232,4 +250,51 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 
 	log.G(ctx).Info("Cisco Virtual Kubelet stopped")
 	return nil
+}
+
+// generateSelfSignedCert creates a self-signed TLS certificate for the kubelet API server.
+// The certificate includes the node name and device address as SANs so that the
+// Kubernetes API server can proxy requests to the VK's :10250 endpoint.
+func generateSelfSignedCert(nodeName, deviceAddr string) (tls.Certificate, error) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to generate private key: %w", err)
+	}
+
+	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to generate serial number: %w", err)
+	}
+
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			CommonName:   nodeName,
+			Organization: []string{"Cisco Virtual Kubelet"},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(365 * 24 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		DNSNames:              []string{nodeName, "localhost"},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+	}
+
+	// Add device address as a SAN (could be IP or hostname)
+	if ip := net.ParseIP(deviceAddr); ip != nil {
+		template.IPAddresses = append(template.IPAddresses, ip)
+	} else if deviceAddr != "" {
+		template.DNSNames = append(template.DNSNames, deviceAddr)
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to create certificate: %w", err)
+	}
+
+	return tls.Certificate{
+		Certificate: [][]byte{certDER},
+		PrivateKey:  key,
+	}, nil
 }
