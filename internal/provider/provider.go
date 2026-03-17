@@ -150,15 +150,7 @@ func (p *AppHostingProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 }
 
 func (p *AppHostingProvider) AttachToContainer(ctx context.Context, namespace, podName, containerName string, attach api.AttachIO) error {
-	// log.G(ctx).Infof("Attaching to container %s in pod %s/%s", containerName, namespace, podName)
-
-	// For Cisco IOx containers, attachment is limited
-	// We can simulate it by providing a shell prompt
-	if attach.Stdout() != nil {
-		attach.Stdout().Write([]byte("Cisco IOx container attachment not fully supported\n"))
-	}
-
-	return nil
+	return fmt.Errorf("AttachToContainer is not supported by the Cisco Virtual Kubelet")
 }
 
 // NOT YET IMPLEMENTED
