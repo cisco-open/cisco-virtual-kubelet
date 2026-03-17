@@ -64,10 +64,20 @@ func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
-// UpdatePod handles pod update requests
+// UpdatePod handles pod update requests by performing a delete-and-redeploy cycle.
+// IOS-XE AppHosting does not support in-place updates to running applications;
+// changes to image, resources, or environment require a full teardown and reinstall.
 func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
-	log.G(ctx).Info("Pod UpdateContainer request received")
-	return nil
+	log.G(ctx).Infof("UpdatePod: delete-and-redeploy for pod %s/%s", pod.Namespace, pod.Name)
+
+	if err := d.DeletePod(ctx, pod); err != nil {
+		// Log but don't block — partial cleanup is acceptable.
+		// DeployPod's CreateAppHostingApp will fail on conflict if
+		// any app still exists, which is a clearer error than aborting here.
+		log.G(ctx).Warnf("UpdatePod: cleanup had errors (will attempt redeploy): %v", err)
+	}
+
+	return d.DeployPod(ctx, pod)
 }
 
 // GetPodContainers retrieves all containers belonging to a specific pod from the device.
