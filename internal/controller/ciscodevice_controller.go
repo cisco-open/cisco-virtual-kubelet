@@ -46,6 +46,10 @@ const (
 	configMountPath = "/etc/virtual-kubelet"
 	// configFileName is the key used inside the ConfigMap.
 	configFileName = "config.yaml"
+	// tlsGenMountPath is the writable directory where the VK process writes
+	// its self-signed TLS certificate when no Secret-provided cert is found.
+	// An emptyDir is mounted here so the path is writable even on a RORFS.
+	varLibMountPath = "/var/lib/virtual-kubelet"
 	// DefaultImage is the default container image for the VK deployment.
 	DefaultImage = "ghcr.io/cisco/virtual-kubelet-cisco:latest"
 	// DefaultServiceAccount is the shared service account used by all VK deployments.
@@ -182,8 +186,13 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "device-config",
-							MountPath: configMountPath,
+							MountPath: configMountPath + "/" + configFileName,
+							SubPath:   configFileName,
 							ReadOnly:  true,
+						},
+						{
+							Name:      "tls-gen",
+							MountPath: varLibMountPath,
 						},
 					},
 				},
@@ -197,6 +206,15 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 								Name: cm.Name,
 							},
 						},
+					},
+				},
+				{
+					// emptyDir provides a writable scratch space for the
+					// self-signed TLS cert generated at startup. Using an
+					// explicit emptyDir ensures this works on a RORFS.
+					Name: "tls-gen",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
 					},
 				},
 			},
