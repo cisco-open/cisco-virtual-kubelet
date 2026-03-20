@@ -45,7 +45,7 @@ func TestEnsureTLSConfig_Generate(t *testing.T) {
 	certFile := filepath.Join(dir, "tls.crt")
 	keyFile := filepath.Join(dir, "tls.key")
 
-	cfg, err := EnsureTLSConfig(certFile, keyFile, "")
+	cfg, err := EnsureTLSConfig(certFile, keyFile, certFile, keyFile, "")
 	if err != nil {
 		t.Fatalf("EnsureTLSConfig() error = %v", err)
 	}
@@ -64,6 +64,8 @@ func TestEnsureTLSConfig_Generate(t *testing.T) {
 func TestEnsureTLSConfig_IPAddressSAN(t *testing.T) {
 	dir := t.TempDir()
 	cfg, err := EnsureTLSConfig(
+		filepath.Join(dir, "tls.crt"),
+		filepath.Join(dir, "tls.key"),
 		filepath.Join(dir, "tls.crt"),
 		filepath.Join(dir, "tls.key"),
 		"192.168.1.1",
@@ -91,6 +93,8 @@ func TestEnsureTLSConfig_IPAddressSAN(t *testing.T) {
 func TestEnsureTLSConfig_DNSSANHostname(t *testing.T) {
 	dir := t.TempDir()
 	cfg, err := EnsureTLSConfig(
+		filepath.Join(dir, "tls.crt"),
+		filepath.Join(dir, "tls.key"),
 		filepath.Join(dir, "tls.crt"),
 		filepath.Join(dir, "tls.key"),
 		"device.example.com",
@@ -121,13 +125,13 @@ func TestEnsureTLSConfig_LoadFromDisk(t *testing.T) {
 	keyFile := filepath.Join(dir, "tls.key")
 
 	// First call generates and writes the files.
-	first, err := EnsureTLSConfig(certFile, keyFile, "")
+	first, err := EnsureTLSConfig(certFile, keyFile, certFile, keyFile, "")
 	if err != nil {
 		t.Fatalf("first EnsureTLSConfig() error = %v", err)
 	}
 
 	// Second call must load from disk — same cert bytes.
-	second, err := EnsureTLSConfig(certFile, keyFile, "")
+	second, err := EnsureTLSConfig(certFile, keyFile, certFile, keyFile, "")
 	if err != nil {
 		t.Fatalf("second EnsureTLSConfig() error = %v", err)
 	}
@@ -152,7 +156,7 @@ func TestEnsureTLSConfig_MisconfigOnlyOneFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := EnsureTLSConfig(certFile, keyFile, "")
+	_, err := EnsureTLSConfig(certFile, keyFile, certFile, keyFile, "")
 	if err == nil {
 		t.Fatal("expected an error, got nil")
 	}

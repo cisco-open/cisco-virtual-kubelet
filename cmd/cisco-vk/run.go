@@ -211,7 +211,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	if keyFile == "" {
 		keyFile = tlsutil.DefaultKeyFile
 	}
-	tlsCfg, err := tlsutil.EnsureTLSConfig(certFile, keyFile, appCfg.Device.Address)
+	tlsCfg, err := tlsutil.EnsureTLSConfig(certFile, keyFile, tlsutil.DefaultGenCertFile, tlsutil.DefaultGenKeyFile, appCfg.Device.Address)
 	if err != nil {
 		return fmt.Errorf("failed to configure kubelet TLS: %w", err)
 	}

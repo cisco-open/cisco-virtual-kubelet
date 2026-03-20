@@ -32,32 +32,41 @@ import (
 )
 
 const (
-	// DefaultCertFile is the default path for the kubelet TLS certificate.
-	// A Kubernetes Secret of type kubernetes.io/tls mounted at
-	// /etc/virtual-kubelet/tls/ will populate this path automatically,
-	// allowing Secret-provided certs to take precedence over generated ones.
+	// DefaultCertFile is the preferred path for the kubelet TLS certificate.
+	// Mount a Kubernetes Secret of type kubernetes.io/tls here to have it
+	// take precedence over any generated certificate.
 	DefaultCertFile = "/etc/virtual-kubelet/tls/tls.crt"
 
-	// DefaultKeyFile is the default path for the kubelet TLS private key.
+	// DefaultKeyFile is the preferred path for the kubelet TLS private key.
 	DefaultKeyFile = "/etc/virtual-kubelet/tls/tls.key"
+
+	// DefaultGenCertFile is the writable fallback path where a self-signed
+	// certificate is written when the preferred path does not exist.
+	// /var/lib is writable in containers even when /etc is read-only.
+	DefaultGenCertFile = "/var/lib/virtual-kubelet/tls/tls.crt"
+
+	// DefaultGenKeyFile is the writable fallback path for the generated key.
+	DefaultGenKeyFile = "/var/lib/virtual-kubelet/tls/tls.key"
 )
 
 // EnsureTLSConfig returns a *tls.Config for the kubelet HTTPS listener.
 //
 // Behaviour:
 //   - If both certFile and keyFile exist on disk, they are loaded and returned.
-//     This lets credentials provisioned via a Kubernetes Secret mount take
-//     precedence automatically -- no restart or reconfiguration required.
-//   - If neither file exists, a self-signed ECDSA certificate is generated,
-//     written to certFile/keyFile (parent directories are created as needed),
-//     and returned. Persisting the files keeps the TLS fingerprint stable
-//     across restarts.
-//   - If exactly one file is present, an error is returned; this typically
-//     indicates a partial or misconfigured Secret mount.
+//     This is the expected path when a Kubernetes Secret of type
+//     kubernetes.io/tls is mounted at the certFile/keyFile location.
+//   - If neither certFile nor keyFile exists, a self-signed ECDSA certificate
+//     is generated and written to genCertFile/genKeyFile (parent directories
+//     are created as needed). Using a separate writable path for generation
+//     allows certFile/keyFile to live under a read-only ConfigMap mount.
+//     Persisting the generated files keeps the fingerprint stable across
+//     restarts.
+//   - If exactly one of certFile/keyFile is present, an error is returned;
+//     this typically indicates a partial or misconfigured Secret mount.
 //
 // deviceAddr is added as a Subject Alternative Name when generating a
 // self-signed certificate so that both local and remote health checks pass.
-func EnsureTLSConfig(certFile, keyFile, deviceAddr string) (*tls.Config, error) {
+func EnsureTLSConfig(certFile, keyFile, genCertFile, genKeyFile, deviceAddr string) (*tls.Config, error) {
 	certExists := fileExists(certFile)
 	keyExists := fileExists(keyFile)
 
@@ -65,7 +74,7 @@ func EnsureTLSConfig(certFile, keyFile, deviceAddr string) (*tls.Config, error) 
 	case certExists && keyExists:
 		return loadTLSConfig(certFile, keyFile)
 	case !certExists && !keyExists:
-		return generateAndWrite(certFile, keyFile, deviceAddr)
+		return generateAndWrite(genCertFile, genKeyFile, deviceAddr)
 	default:
 		return nil, fmt.Errorf(
 			"tls misconfiguration: only one of %q / %q is present; provide both or neither",
