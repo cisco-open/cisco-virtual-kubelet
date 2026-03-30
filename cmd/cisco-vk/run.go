@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"path"
@@ -26,12 +27,16 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	"github.com/cisco/virtual-kubelet-cisco/internal/tlsutil"
 	logruslib "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/log/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/node"
+	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -42,10 +47,12 @@ var _ nodeutil.Provider = (*provider.AppHostingProvider)(nil)
 var _ node.NodeProvider = (*provider.AppHostingNode)(nil)
 
 var (
-	cfgFile    string
-	kubeconfig string
-	logLevel   string
-	nodeName   string
+	cfgFile     string
+	kubeconfig  string
+	logLevel    string
+	nodeName    string
+	tlsCertFile string
+	tlsKeyFile  string
 )
 
 var runCmd = &cobra.Command{
@@ -65,6 +72,10 @@ func init() {
 		"log level: debug, info, warn, error (default: $LOG_LEVEL or info)")
 	runCmd.Flags().StringVar(&nodeName, "nodename", "",
 		"kubernetes node name (default: $VKUBELET_NODE_NAME or 'cisco-virtual-kubelet')")
+	runCmd.Flags().StringVar(&tlsCertFile, "tls-cert-file", "",
+		fmt.Sprintf("path to TLS certificate for the kubelet HTTPS listener (default: %s)", tlsutil.DefaultCertFile))
+	runCmd.Flags().StringVar(&tlsKeyFile, "tls-key-file", "",
+		fmt.Sprintf("path to TLS private key for the kubelet HTTPS listener (default: %s)", tlsutil.DefaultKeyFile))
 }
 
 // validateConfig checks if the config file exists at the given path
@@ -192,12 +203,41 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	}
 	effectiveNodeName = provider.GetNodeName(effectiveNodeName, appCfg.Device.Address)
 
+	certFile := tlsCertFile
+	if certFile == "" {
+		certFile = tlsutil.DefaultCertFile
+	}
+	keyFile := tlsKeyFile
+	if keyFile == "" {
+		keyFile = tlsutil.DefaultKeyFile
+	}
+	tlsCfg, err := tlsutil.EnsureTLSConfig(certFile, keyFile, tlsutil.DefaultGenCertFile, tlsutil.DefaultGenKeyFile, appCfg.Device.Address)
+	if err != nil {
+		return fmt.Errorf("failed to configure kubelet TLS: %w", err)
+	}
+
+	// innerHandler is set inside newProviderFunc (after the provider is created) and
+	// read by the handlerWrapper below. This closure pattern lets us satisfy the
+	// NodeConfig.Handler requirement before the provider exists, while still wiring
+	// the real mux once the provider is available.
+	var innerHandler http.Handler
+
+	handlerWrapper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if innerHandler != nil {
+			innerHandler.ServeHTTP(w, r)
+			return
+		}
+		http.Error(w, "provider not yet initialised", http.StatusServiceUnavailable)
+	})
+
 	opts := []nodeutil.NodeOpt{
 		nodeutil.WithNodeConfig(nodeutil.NodeConfig{
 			Client:         clientset,
 			NodeSpec:       provider.GetInitialNodeSpec(effectiveNodeName, appCfg.Device.Address),
 			HTTPListenAddr: ":10250",
 			NumWorkers:     5,
+			TLSConfig:      tlsCfg,
+			Handler:        handlerWrapper,
 		}),
 	}
 
@@ -214,6 +254,29 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise PodHandler: %w", err)
 		}
+
+		// Build a custom PodHandlerConfig that only wires supported operations.
+		// Unsupported methods are left nil so the VK library returns HTTP 501
+		// automatically via its built-in NotImplemented handler, rather than
+		// calling through to the provider stub and returning HTTP 500.
+		mux := http.NewServeMux()
+		mux.Handle("/", api.PodHandler(api.PodHandlerConfig{
+			GetPods: podHandler.GetPods,
+			GetPodsFromKubernetes: func(ctx context.Context) ([]*v1.Pod, error) {
+				return vkCfg.Pods.List(labels.Everything())
+			},
+			StreamIdleTimeout:     0,
+			StreamCreationTimeout: 0,
+			// Explicitly nil — library returns HTTP 501 for each of these:
+			RunInContainer:     nil,
+			AttachToContainer:  nil,
+			GetContainerLogs:   nil,
+			PortForward:        nil,
+			GetStatsSummary:    nil,
+			GetMetricsResource: nil,
+		}, true))
+		innerHandler = mux
+
 		return podHandler, nodeHandler, nil
 	}
 	n, err := nodeutil.NewNode(effectiveNodeName, newProviderFunc, opts...)
