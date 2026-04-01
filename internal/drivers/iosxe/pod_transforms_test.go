@@ -994,9 +994,9 @@ func TestGetResourceConfig_FromRequests(t *testing.T) {
 		Name: "app",
 		Resources: v1.ResourceRequirements{
 			Requests: v1.ResourceList{
-				v1.ResourceCPU:     resource.MustParse("500m"),
-				v1.ResourceMemory:  resource.MustParse("256Mi"),
-				v1.ResourceStorage: resource.MustParse("2Gi"),
+				v1.ResourceCPU:              resource.MustParse("500m"),
+				v1.ResourceMemory:           resource.MustParse("256Mi"),
+				v1.ResourceEphemeralStorage: resource.MustParse("2Gi"),
 			},
 		},
 	}

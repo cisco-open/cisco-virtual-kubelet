@@ -107,3 +107,95 @@ func (d *XEDriver) GetDeviceResources(ctx context.Context) (*v1.ResourceList, er
 
 	return &resources, nil
 }
+
+// GetGlobalOperationalData queries the device for global AppHosting operational data.
+// Returns a common.AppHostingOperData struct with resource usage and notifications.
+func (d *XEDriver) GetGlobalOperationalData(ctx context.Context) (*common.AppHostingOperData, error) {
+	path := "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data"
+
+	// The root structure matches the YANG model
+	root := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
+	err := d.client.Get(ctx, path, root, d.getRestconfUnmarshaller())
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch global oper data: %w", err)
+	}
+
+	result := &common.AppHostingOperData{}
+
+	// 1. Check IOx Enabled Status (from AppGlobals)
+	if root.AppGlobals != nil && root.AppGlobals.IoxEnabled != nil {
+		result.IoxEnabled = *root.AppGlobals.IoxEnabled
+	}
+
+	// 2. Parse Resources
+	// The YANG model defines lists for cpu, memory, etc. which ygot maps to Go maps.
+	// We need to iterate or look up specific keys ("system CPU", "memory", "IOx persist-disk").
+
+	if root.AppResources != nil {
+		// Iterate over the "global" resource entry if it exists, or verify structure
+		// Based on the XML, <app-resources> has a name. The generated struct uses a map keyed by Name.
+		if globalStats, ok := root.AppResources["global"]; ok {
+
+			// CPU
+			if globalStats.Cpu != nil {
+				if cpu, ok := globalStats.Cpu["system CPU"]; ok {
+					if cpu.Quota != nil {
+						result.SystemCPU.Quota = int64(*cpu.Quota)
+					}
+					if cpu.Available != nil {
+						result.SystemCPU.Available = int64(*cpu.Available)
+					}
+					if cpu.QuotaUnit != nil {
+						result.SystemCPU.Unit = fmt.Sprintf("%d", *cpu.QuotaUnit)
+					}
+				}
+			}
+
+			// Memory
+			if globalStats.Memory != nil {
+				if mem, ok := globalStats.Memory["memory"]; ok {
+					if mem.Quota != nil {
+						result.Memory.Quota = int64(*mem.Quota)
+					}
+					if mem.Available != nil {
+						result.Memory.Available = int64(*mem.Available)
+					}
+				}
+			}
+
+			// Storage
+			if globalStats.StorageDevice != nil {
+				if disk, ok := globalStats.StorageDevice["IOx persist-disk"]; ok {
+					if disk.Quota != nil {
+						result.Storage.Quota = int64(*disk.Quota)
+					}
+					if disk.Available != nil {
+						result.Storage.Available = int64(*disk.Available)
+					}
+				}
+			}
+		}
+	}
+
+	// 3. Parse Notifications
+	if root.AppNotifications != nil {
+		for _, note := range root.AppNotifications {
+			n := common.AppNotification{}
+			if note.AppId != nil {
+				n.AppID = *note.AppId
+			}
+			if note.Message != nil {
+				n.Message = *note.Message
+			}
+			if note.Timestamp != nil {
+				n.Timestamp = *note.Timestamp
+			}
+			// Severity is an enum, we might want the string representation
+			// result.Notifications = append(result.Notifications, n)
+			// (For now just capturing basics)
+			result.Notifications = append(result.Notifications, n)
+		}
+	}
+
+	return result, nil
+}
