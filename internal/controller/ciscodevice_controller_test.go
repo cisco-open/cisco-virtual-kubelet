@@ -149,8 +149,8 @@ func TestReconcile_CreatesDeployment(t *testing.T) {
 	if !found {
 		t.Errorf("expected --nodename router-b in container args, got %v", args)
 	}
-	if len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts) != 1 {
-		t.Errorf("expected 1 volume mount, got %d", len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts))
+	if len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts) != 2 {
+		t.Errorf("expected 2 volume mounts (device-config, tls-gen), got %d", len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts))
 	}
 }
 
