@@ -54,7 +54,7 @@ func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 
 		// Wait for the device to finish installing before submitting the next app.
 		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", 120*time.Second); err != nil {
-			log.G(ctx).Warnf("App %s did not reach DEPLOYED within timeout: %v (will continue)", appConfig.AppName(), err)
+			return fmt.Errorf("app %s did not reach DEPLOYED status: %w", appConfig.AppName(), err)
 		}
 
 		log.G(ctx).Infof("Successfully deployed app %s for container %s", appConfig.AppName(), appConfig.ContainerName())
