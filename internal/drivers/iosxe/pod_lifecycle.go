@@ -87,7 +87,7 @@ func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 func (d *XEDriver) GetPodContainers(ctx context.Context, pod *v1.Pod) (map[string]string, error) {
 	log.G(ctx).Debugf("Getting containers for pod: %s/%s", pod.Namespace, pod.Name)
 
-	// Get all apps from the device
+	// Get all apps from the device (config endpoint)
 	apps, err := d.ListAppHostingApps(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list apps: %w", err)
@@ -95,6 +95,31 @@ func (d *XEDriver) GetPodContainers(ctx context.Context, pod *v1.Pod) (map[strin
 
 	// Clean the pod UID (remove hyphens) as that's how it appears in app names
 	cleanUID := strings.ReplaceAll(string(pod.UID), "-", "")
+
+	// If no config-endpoint apps match our UID, check oper data as well.
+	// Apps in DEPLOYED state may not appear in the config endpoint but
+	// are still visible in oper data.
+	hasMatch := false
+	for _, app := range apps {
+		if app.ApplicationName != nil && strings.Contains(*app.ApplicationName, cleanUID) {
+			hasMatch = true
+			break
+		}
+	}
+	if !hasMatch {
+		allAppOperData, operErr := d.GetAppOperationalData(ctx)
+		if operErr == nil {
+			for appName := range allAppOperData {
+				if strings.Contains(appName, cleanUID) && common.IsCVKManagedApp(appName) {
+					log.G(ctx).Infof("GetPodContainers: app %s found in oper data but not config; adding for cleanup", appName)
+					name := appName
+					apps = append(apps, &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App{
+						ApplicationName: &name,
+					})
+				}
+			}
+		}
+	}
 
 	containerToAppID := make(map[string]string)
 
@@ -311,15 +336,10 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 	log.G(ctx).Info("ListPods: discovering pods from device")
 
-	// Get all apps from the device
+	// Get all apps from the device (config endpoint)
 	apps, err := d.ListAppHostingApps(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list apps: %w", err)
-	}
-
-	if len(apps) == 0 {
-		log.G(ctx).Debug("No apps found on device")
-		return []*v1.Pod{}, nil
 	}
 
 	// Fetch operational data for all apps
@@ -328,6 +348,37 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 		log.G(ctx).Warnf("Failed to fetch app operational data: %v", err)
 		// Continue without operational data
 		allAppOperData = make(map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App)
+	}
+
+	// Build a set of app names already known from the config endpoint
+	configAppNames := make(map[string]bool, len(apps))
+	for _, app := range apps {
+		if app.ApplicationName != nil {
+			configAppNames[*app.ApplicationName] = true
+		}
+	}
+
+	// Check for CVK-managed apps visible only in oper data (e.g. apps in
+	// DEPLOYED state where the config endpoint returns an empty body).
+	// These apps must still be discoverable so deleteDanglingPods can
+	// clean them up.
+	for appName := range allAppOperData {
+		if configAppNames[appName] {
+			continue // already discovered via config
+		}
+		if !common.IsCVKManagedApp(appName) {
+			continue // not a CVK-managed app
+		}
+		log.G(ctx).Infof("App %s found in oper data but not config data; adding to discovery", appName)
+		name := appName
+		apps = append(apps, &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App{
+			ApplicationName: &name,
+		})
+	}
+
+	if len(apps) == 0 {
+		log.G(ctx).Debug("No apps found on device")
+		return []*v1.Pod{}, nil
 	}
 
 	// Group apps by pod UID
