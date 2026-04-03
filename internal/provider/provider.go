@@ -108,14 +108,37 @@ func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string)
 		"namespace": namespace,
 	}).Debug("Running GetPod:")
 
-	// Fetch pod spec from informer cache (desired state)
+	// Fast path: fetch pod spec from informer cache (desired state)
 	pod, err := p.podsLister.Pods(namespace).Get(name)
-	if err != nil {
-		return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found: %v", namespace, name, err))
+	if err == nil {
+		// Pod exists in K8s — get live status from device
+		return p.driver.GetPodStatus(p.ctx, pod)
 	}
 
-	// Get actual status from Cisco device
-	return p.driver.GetPodStatus(p.ctx, pod)
+	// Pod not in K8s — check if it still exists on the device.
+	// This is the delete path: the upstream VK pod controller calls GetPod
+	// after a pod is removed from the API server to determine whether the
+	// provider still needs to clean up the app on the device (see
+	// syncPodFromKubernetesHandler in podcontroller.go). Only CVK-managed
+	// apps (those with RunOpts labels) are discovered by ListPods, so
+	// ad-hoc admin-deployed apps are never affected.
+	log.G(p.ctx).WithFields(log.Fields{
+		"name":      name,
+		"namespace": namespace,
+	}).Debug("GetPod: pod not in K8s lister, checking device")
+
+	devicePods, listErr := p.driver.ListPods(p.ctx)
+	if listErr != nil {
+		log.G(p.ctx).WithError(listErr).Warn("GetPod: failed to list pods from device")
+		return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found", namespace, name))
+	}
+	for _, dp := range devicePods {
+		if dp.Namespace == namespace && dp.Name == name {
+			return dp, nil
+		}
+	}
+
+	return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found on device", namespace, name))
 }
 
 func (p *AppHostingProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
