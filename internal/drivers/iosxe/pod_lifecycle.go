@@ -377,6 +377,18 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 		pod.Name = podInfo.name
 		pod.UID = types.UID(podInfo.uid)
 
+		// Populate Spec.Containers so that GetContainerStatus can match
+		// discovered containers against the spec and produce ContainerStatuses.
+		// Without this, ContainerStatuses stays empty and the upstream VK
+		// considers the pod "not running", causing it to skip DeletePod and
+		// force-remove the pod from the API server without cleaning up the
+		// app on the device.
+		for containerName := range podInfo.containers {
+			pod.Spec.Containers = append(pod.Spec.Containers, v1.Container{
+				Name: containerName,
+			})
+		}
+
 		// Filter operational data for this pod's apps
 		appOperDataMap := make(map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App)
 		for containerName, appID := range podInfo.containers {
