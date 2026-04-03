@@ -150,6 +150,14 @@ func (d *XEDriver) getRestconfMarshaller() func(any) ([]byte, error) {
 // getRestconfUnmarshaller returns an unmarshaller for RESTCONF JSON responses using ygot
 func (d *XEDriver) getRestconfUnmarshaller() UnmarshalFunc {
 	return func(data []byte, v any) error {
+		// An empty or whitespace-only body is valid for RESTCONF — it means
+		// the resource exists but has no data (e.g. no app configs when the
+		// only app is in DEPLOYED state).  Return nil so the caller sees a
+		// zero-value struct and can handle it normally.
+		if len(bytes.TrimSpace(data)) == 0 {
+			return nil
+		}
+
 		var wrapper map[string]json.RawMessage
 		if err := json.Unmarshal(data, &wrapper); err != nil {
 			return fmt.Errorf("failed to parse JSON wrapper: %w", err)
