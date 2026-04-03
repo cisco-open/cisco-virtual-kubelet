@@ -54,6 +54,41 @@ func GenerateContainerAppIDs(pod *v1.Pod) map[string]string {
 	return appIDs
 }
 
+const (
+	// CVKAppNamePrefix is the prefix used for all CVK-managed app names on the device.
+	CVKAppNamePrefix = "cvk"
+)
+
+// ParseCVKAppName checks whether an app name matches the CVK naming convention
+// (cvkNNNN_<uid32>) and returns the container index and clean UID if so.
+// Returns (index, uid, true) on success or (0, "", false) if the name does not match.
+func ParseCVKAppName(appName string) (index int8, uid string, ok bool) {
+	// Format: "cvk" + 4-digit index + "_" + 32-char hex UID = 40 chars total
+	if len(appName) != 40 {
+		return 0, "", false
+	}
+	if !strings.HasPrefix(appName, CVKAppNamePrefix) {
+		return 0, "", false
+	}
+	// Position 7 must be '_'
+	if appName[7] != '_' {
+		return 0, "", false
+	}
+	// Parse the single-digit container index at position 6
+	idx := int8(appName[6] - '0')
+	if idx < 0 || idx > 9 {
+		return 0, "", false
+	}
+	uid = appName[8:]
+	return idx, uid, true
+}
+
+// IsCVKManagedApp returns true if the app name matches the CVK naming convention.
+func IsCVKManagedApp(appName string) bool {
+	_, _, ok := ParseCVKAppName(appName)
+	return ok
+}
+
 // ExtractContainerNameFromLabels extracts the container name from RunOpts labels.
 // Returns the container name if found, empty string otherwise.
 func ExtractContainerNameFromLabels(runOptsLine string) string {

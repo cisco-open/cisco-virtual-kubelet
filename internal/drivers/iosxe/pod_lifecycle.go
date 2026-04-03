@@ -144,6 +144,18 @@ func (d *XEDriver) GetPodContainers(ctx context.Context, pod *v1.Pod) (map[strin
 			}
 		}
 
+		// If RunOpts labels are missing but the app name matches the CVK
+		// naming convention with this pod's UID, use the container index
+		// from the app name as a synthetic container name.  This handles
+		// apps stuck in DEPLOYED/ACTIVATED states where RunOpts haven't
+		// materialised yet.
+		if containerName == "" {
+			if idx, _, isCVK := common.ParseCVKAppName(appName); isCVK {
+				containerName = fmt.Sprintf("container-%d", idx)
+				log.G(ctx).Infof("App %s has no RunOpts labels; derived synthetic container name %s from CVK naming convention", appName, containerName)
+			}
+		}
+
 		if containerName != "" {
 			containerToAppID[containerName] = appName
 			log.G(ctx).Infof("Found container %s -> app %s", containerName, appName)
@@ -346,10 +358,23 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 			}
 		}
 
-		// Skip apps that don't have pod metadata
+		// If RunOpts labels are missing (e.g. app is in DEPLOYED state and
+		// runtime labels haven't materialised yet), fall back to parsing the
+		// CVK naming convention to identify CVK-managed apps.  This ensures
+		// orphaned apps stuck mid-lifecycle are still discovered and cleaned up.
 		if podUID == "" || podName == "" || containerName == "" {
-			log.G(ctx).Debugf("Skipping app %s: missing pod metadata", appName)
-			continue
+			idx, uid, isCVK := common.ParseCVKAppName(appName)
+			if !isCVK {
+				log.G(ctx).Debugf("Skipping app %s: not CVK-managed and missing pod metadata", appName)
+				continue
+			}
+			log.G(ctx).Infof("App %s matches CVK naming convention but has no RunOpts labels; using app name to derive metadata", appName)
+			podUID = uid
+			podName = appName // use the app name as a synthetic pod name
+			if podNamespace == "" {
+				podNamespace = "default"
+			}
+			containerName = fmt.Sprintf("container-%d", idx)
 		}
 
 		// Group by pod UID
