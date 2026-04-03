@@ -206,3 +206,84 @@ func TestExtractContainerNameFromLabels(t *testing.T) {
 		})
 	}
 }
+
+func TestParseCVKAppName(t *testing.T) {
+	tests := []struct {
+		name      string
+		appName   string
+		wantIdx   int8
+		wantUID   string
+		wantMatch bool
+	}{
+		{
+			name:      "valid CVK app name index 0",
+			appName:   "cvk0000_a24a730b8b134fd096ee900f99d87670",
+			wantIdx:   0,
+			wantUID:   "a24a730b8b134fd096ee900f99d87670",
+			wantMatch: true,
+		},
+		{
+			name:      "valid CVK app name index 1",
+			appName:   "cvk0001_a24a730b8b134fd096ee900f99d87670",
+			wantIdx:   1,
+			wantUID:   "a24a730b8b134fd096ee900f99d87670",
+			wantMatch: true,
+		},
+		{
+			name:      "non-CVK app name",
+			appName:   "my-custom-app",
+			wantMatch: false,
+		},
+		{
+			name:      "wrong prefix",
+			appName:   "xyz0000_a24a730b8b134fd096ee900f99d87670",
+			wantMatch: false,
+		},
+		{
+			name:      "too short",
+			appName:   "cvk0000_abc",
+			wantMatch: false,
+		},
+		{
+			name:      "too long",
+			appName:   "cvk0000_a24a730b8b134fd096ee900f99d87670extra",
+			wantMatch: false,
+		},
+		{
+			name:      "missing underscore",
+			appName:   "cvk00000a24a730b8b134fd096ee900f99d87670",
+			wantMatch: false,
+		},
+		{
+			name:      "empty string",
+			appName:   "",
+			wantMatch: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			idx, uid, ok := ParseCVKAppName(tt.appName)
+			if ok != tt.wantMatch {
+				t.Errorf("ParseCVKAppName(%q) match = %v, want %v", tt.appName, ok, tt.wantMatch)
+			}
+			if ok {
+				if idx != tt.wantIdx {
+					t.Errorf("ParseCVKAppName(%q) index = %d, want %d", tt.appName, idx, tt.wantIdx)
+				}
+				if uid != tt.wantUID {
+					t.Errorf("ParseCVKAppName(%q) uid = %q, want %q", tt.appName, uid, tt.wantUID)
+				}
+			}
+		})
+	}
+}
+
+func TestIsCVKManagedApp(t *testing.T) {
+	if !IsCVKManagedApp("cvk0000_a24a730b8b134fd096ee900f99d87670") {
+		t.Error("IsCVKManagedApp should return true for valid CVK app name")
+	}
+	if IsCVKManagedApp("my-custom-app") {
+		t.Error("IsCVKManagedApp should return false for non-CVK app name")
+	}
+}

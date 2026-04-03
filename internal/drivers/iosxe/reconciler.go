@@ -17,6 +17,7 @@ package iosxe
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -143,6 +144,16 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 			appConfig.Status.Message = "Removing config"
 			path := fmt.Sprintf("/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app=%s", appID)
 			if err := d.client.Delete(ctx, path); err != nil {
+				// A 404 means the config entry doesn't exist (e.g. the app
+				// was only visible via oper data and had no config).  Since
+				// the app is already absent from both oper and config, treat
+				// this as a successful deletion.
+				if strings.Contains(err.Error(), "404") {
+					log.G(ctx).Infof("ReconcileApp %s: config already absent (404), treating as deleted", appID)
+					appConfig.Status.Phase = AppPhaseDeleted
+					appConfig.Status.Message = "App fully removed (config was absent)"
+					return
+				}
 				log.G(ctx).Warnf("ReconcileApp %s: config delete failed: %v", appID, err)
 				appConfig.Status.Phase = AppPhaseError
 				appConfig.Status.Message = fmt.Sprintf("config delete failed: %v", err)
