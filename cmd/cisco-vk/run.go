@@ -294,8 +294,8 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 			AttachToContainer:  nil,
 			GetContainerLogs:   nil,
 			PortForward:        nil,
-			GetStatsSummary:    nil,
-			GetMetricsResource: nil,
+			GetStatsSummary:    podHandler.GetStatsSummary,
+			GetMetricsResource: podHandler.GetMetricsResource,
 		}, true))
 		innerHandler = mux
 
