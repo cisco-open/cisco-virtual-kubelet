@@ -128,6 +128,12 @@ type DeviceSpec struct {
 	// +kubebuilder:validation:Optional
 	ResourceLimits ResourceConfig `json:"resourceLimits,omitempty" mapstructure:"resourceLimits"`
 
+	// OTEL holds OpenTelemetry topology export configuration.
+	// When enabled, the VK emits OTLP traces representing the device's
+	// network topology (neighbors, links) to the configured collector endpoint.
+	// +kubebuilder:validation:Optional
+	OTEL *OTELConfig `json:"otel,omitempty" mapstructure:"otel,omitempty"`
+
 	// --- Driver-specific networking configuration (union) ---
 	// Only the section matching Driver should be set.
 
@@ -176,6 +182,33 @@ type TLSConfig struct {
 	// CAFile is the path to the CA certificate file.
 	// +kubebuilder:validation:Optional
 	CAFile string `json:"caFile,omitempty" mapstructure:"caFile,omitempty"`
+}
+
+// OTELConfig holds OpenTelemetry topology export configuration.
+type OTELConfig struct {
+	// Enabled toggles OTEL topology trace emission.
+	Enabled bool `json:"enabled" mapstructure:"enabled"`
+
+	// Endpoint is the OTLP gRPC collector endpoint (e.g. "otel-collector:4317").
+	// +kubebuilder:validation:Optional
+	Endpoint string `json:"endpoint,omitempty" mapstructure:"endpoint"`
+
+	// Insecure disables TLS for the gRPC connection to the OTLP endpoint.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=true
+	Insecure bool `json:"insecure,omitempty" mapstructure:"insecure"`
+
+	// ServiceName is the base service name used in OTEL resource attributes.
+	// The device hostname is appended: "<serviceName>.<hostname>".
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="cisco-network"
+	ServiceName string `json:"serviceName,omitempty" mapstructure:"serviceName"`
+
+	// IntervalSecs is the interval in seconds between topology trace emissions.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=10
+	// +kubebuilder:default=60
+	IntervalSecs int `json:"intervalSecs,omitempty" mapstructure:"intervalSecs"`
 }
 
 // ResourceConfig represents resource limits and defaults for container workloads.

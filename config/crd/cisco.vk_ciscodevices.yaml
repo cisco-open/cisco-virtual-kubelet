@@ -113,6 +113,39 @@ spec:
                   host.
                 format: int32
                 type: integer
+              otel:
+                description: |-
+                  OTEL holds OpenTelemetry topology export configuration.
+                  When enabled, the VK emits OTLP traces representing the device's
+                  network topology (neighbors, links) to the configured collector endpoint.
+                properties:
+                  enabled:
+                    description: Enabled toggles OTEL topology trace emission.
+                    type: boolean
+                  endpoint:
+                    description: Endpoint is the OTLP gRPC collector endpoint (e.g.
+                      "otel-collector:4317").
+                    type: string
+                  insecure:
+                    default: true
+                    description: Insecure disables TLS for the gRPC connection to
+                      the OTLP endpoint.
+                    type: boolean
+                  intervalSecs:
+                    default: 60
+                    description: IntervalSecs is the interval in seconds between topology
+                      trace emissions.
+                    minimum: 10
+                    type: integer
+                  serviceName:
+                    default: cisco-network
+                    description: |-
+                      ServiceName is the base service name used in OTEL resource attributes.
+                      The device hostname is appended: "<serviceName>.<hostname>".
+                    type: string
+                required:
+                - enabled
+                type: object
               password:
                 description: |-
                   Password for device authentication.
