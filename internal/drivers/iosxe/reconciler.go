@@ -31,6 +31,7 @@ import (
 //
 //	"" (no config)  → POST config + install RPC  → Converging
 //	"" (config, no oper) → re-issue install RPC   → Converging
+//	"STOPPED"       → start RPC                  → Converging
 //	"DEPLOYED"      → activate RPC               → Converging
 //	"ACTIVATED"     → start RPC                  → Converging
 //	"RUNNING"       → no-op                      → Ready
@@ -65,6 +66,17 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 			// ACTIVATED → start
 			appConfig.Status.Phase = AppPhaseConverging
 			appConfig.Status.Message = "Starting app"
+			if err := d.StartApp(ctx, appID); err != nil {
+				log.G(ctx).Warnf("ReconcileApp %s: start failed: %v", appID, err)
+				appConfig.Status.Phase = AppPhaseError
+				appConfig.Status.Message = fmt.Sprintf("start failed: %v", err)
+			}
+			return
+
+		case "STOPPED":
+			// STOPPED → start (can restart directly without re-activate)
+			appConfig.Status.Phase = AppPhaseConverging
+			appConfig.Status.Message = "Restarting stopped app"
 			if err := d.StartApp(ctx, appID); err != nil {
 				log.G(ctx).Warnf("ReconcileApp %s: start failed: %v", appID, err)
 				appConfig.Status.Phase = AppPhaseError
