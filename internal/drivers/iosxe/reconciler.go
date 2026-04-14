@@ -31,6 +31,7 @@ import (
 //
 //	"" (no config)  → POST config + install RPC  → Converging
 //	"" (config, no oper) → re-issue install RPC   → Converging
+//	"INSTALLING"    → no-op (wait)               → Converging
 //	"STOPPED"       → start RPC                  → Converging
 //	"DEPLOYED"      → activate RPC               → Converging
 //	"ACTIVATED"     → start RPC                  → Converging
@@ -93,6 +94,15 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 				appConfig.Status.Phase = AppPhaseError
 				appConfig.Status.Message = fmt.Sprintf("activate failed: %v", err)
 			}
+			return
+
+		case "INSTALLING":
+			// Install is in progress on the device — wait for it to finish.
+			// Re-issuing the install RPC would restart the tar extraction
+			// and prevent the install from ever completing on slow devices.
+			appConfig.Status.Phase = AppPhaseConverging
+			appConfig.Status.Message = "Install in progress, waiting"
+			log.G(ctx).Infof("ReconcileApp %s: install in progress, waiting for DEPLOYED", appID)
 			return
 
 		default:
