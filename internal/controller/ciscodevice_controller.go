@@ -177,12 +177,36 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			},
 		}
 
+		// Build credential env vars. When a Secret reference is provided,
+		// use valueFrom so the kubelet resolves the password at pod startup
+		// (the controller never reads the Secret itself). Otherwise fall back
+		// to injecting the plaintext password as a direct env var for backward
+		// compatibility with CRDs that set spec.password directly.
+		var credEnv []corev1.EnvVar
+		if device.Spec.CredentialSecretRef != nil {
+			credEnv = append(credEnv, corev1.EnvVar{
+				Name: "VK_DEVICE_PASSWORD",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: *device.Spec.CredentialSecretRef,
+						Key:                  "password",
+					},
+				},
+			})
+		} else if device.Spec.Password != "" {
+			credEnv = append(credEnv, corev1.EnvVar{
+				Name:  "VK_DEVICE_PASSWORD",
+				Value: device.Spec.Password,
+			})
+		}
+
 		deploy.Spec.Template.Spec = corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
 					Name:  "cisco-vk",
 					Image: image,
 					Args:  vkContainerArgs(device.Name, device.Spec.LogLevel),
+					Env:   credEnv,
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "device-config",
@@ -252,15 +276,25 @@ func (r *CiscoDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // renderDeviceConfig marshals the DeviceSpec into the YAML format expected
 // by the VK binary (wrapped under a "device:" key).
+// Credentials are stripped from the output so they never appear in the
+// ConfigMap (and therefore etcd). The controller injects them separately
+// via environment variables on the VK Deployment.
 func renderDeviceConfig(spec *ciskov1.DeviceSpec) (string, error) {
 	// The VK config loader expects:
 	//   device:
 	//     driver: ...
 	//     address: ...
+
+	// Copy the spec so we don't mutate the caller's object, then redact
+	// fields that must not be persisted in a ConfigMap.
+	sanitized := *spec
+	sanitized.Password = ""
+	sanitized.CredentialSecretRef = nil
+
 	wrapper := struct {
 		Device ciskov1.DeviceSpec `json:"device"`
 	}{
-		Device: *spec,
+		Device: sanitized,
 	}
 	out, err := yaml.Marshal(wrapper)
 	if err != nil {
