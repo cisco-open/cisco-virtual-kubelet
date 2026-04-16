@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -433,6 +434,46 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 	}
 	allocatable[v1.ResourcePods] = *resource.NewQuantity(availablePods, resource.DecimalSI)
 
+	// --- Fetch topology data for node annotations ---
+	annotations := map[string]string{}
+
+	if deviceInfo.RouterID != "" {
+		annotations["cisco.io/router-id"] = deviceInfo.RouterID
+	}
+	if deviceInfo.Hostname != "" {
+		annotations["cisco.io/hostname"] = deviceInfo.Hostname
+	}
+
+	// Topology neighbor counts (only if driver supports TopologyProvider)
+	if topo, ok := a.driver.(drivers.TopologyProvider); ok {
+		var activeProtocols []string
+
+		cdpNeighbors, cdpErr := topo.GetCDPNeighbors(ctx)
+		if cdpErr != nil {
+			log.G(ctx).WithError(cdpErr).Debug("Failed to fetch CDP neighbors during node status sync")
+		} else if len(cdpNeighbors) > 0 {
+			activeProtocols = append(activeProtocols, "cdp")
+			annotations["cisco.io/cdp-neighbor-count"] = fmt.Sprintf("%d", len(cdpNeighbors))
+		}
+
+		ospfNeighbors, ospfErr := topo.GetOSPFNeighbors(ctx)
+		if ospfErr != nil {
+			log.G(ctx).WithError(ospfErr).Debug("Failed to fetch OSPF neighbors during node status sync")
+		} else if len(ospfNeighbors) > 0 {
+			activeProtocols = append(activeProtocols, "ospf")
+			annotations["cisco.io/ospf-neighbor-count"] = fmt.Sprintf("%d", len(ospfNeighbors))
+		}
+
+		// Re-read router ID after OSPF query may have populated it
+		if deviceInfo.RouterID != "" {
+			annotations["cisco.io/router-id"] = deviceInfo.RouterID
+		}
+
+		if len(activeProtocols) > 0 {
+			annotations["cisco.io/protocols"] = strings.Join(activeProtocols, ",")
+		}
+	}
+
 	// Create a node update with device info and addresses
 	nodeUpdate := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -442,6 +483,7 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 				"topology.kubernetes.io/zone":   "cisco-iosxe",
 				"topology.kubernetes.io/region": "cisco-iosxe",
 			},
+			Annotations: annotations,
 		},
 		Status: v1.NodeStatus{
 			NodeInfo: v1.NodeSystemInfo{
