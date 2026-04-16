@@ -59,6 +59,7 @@ func (d *XEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod,
 
 	allReady := true
 	anyRunning := false
+	anyFailed := false
 
 	for containerName, appID := range discoveredContainers {
 		var containerSpec *v1.Container
@@ -104,6 +105,26 @@ func (d *XEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod,
 					},
 				}
 				allReady = false
+			case "INSTALLING":
+				if operData.PkgPolicy == Cisco_IOS_XEAppHostingOper_IoxPkgPolicy_iox_pkg_policy_invalid {
+					containerStatus.State = v1.ContainerState{
+						Terminated: &v1.ContainerStateTerminated{
+							ExitCode:   1,
+							Reason:     "PackagePolicyInvalid",
+							Message:    "Install blocked: unsigned package on a device requiring signed packages",
+							FinishedAt: now,
+						},
+					}
+					anyFailed = true
+				} else {
+					containerStatus.State = v1.ContainerState{
+						Waiting: &v1.ContainerStateWaiting{
+							Reason:  "ContainerCreating",
+							Message: fmt.Sprintf("App state: %s", state),
+						},
+					}
+				}
+				allReady = false
 			case "STOPPED", "Uninstalled":
 				containerStatus.State = v1.ContainerState{
 					Terminated: &v1.ContainerStateTerminated{
@@ -139,7 +160,11 @@ func (d *XEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod,
 		pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses, containerStatus)
 	}
 
-	if anyRunning && allReady {
+	if anyFailed && !anyRunning {
+		pod.Status.Phase = v1.PodFailed
+		pod.Status.Reason = "PackagePolicyInvalid"
+		pod.Status.Message = "Install blocked: unsigned package on a device requiring signed packages"
+	} else if anyRunning && allReady {
 		pod.Status.Phase = v1.PodRunning
 		for i := range pod.Status.Conditions {
 			if pod.Status.Conditions[i].Type == v1.PodReady ||

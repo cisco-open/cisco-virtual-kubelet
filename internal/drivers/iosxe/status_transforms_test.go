@@ -166,7 +166,7 @@ func TestGetContainerStatus_UnknownState(t *testing.T) {
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
 	operData := map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App{
-		"app-id": operDataWithState("INSTALLING"),
+		"app-id": operDataWithState("MYSTERIOUS"),
 	}
 
 	if err := d.GetContainerStatus(testCtx(), pod, containers, operData); err != nil {
@@ -176,6 +176,50 @@ func TestGetContainerStatus_UnknownState(t *testing.T) {
 	cs := pod.Status.ContainerStatuses[0]
 	if cs.State.Waiting == nil || cs.State.Waiting.Reason != "Unknown" {
 		t.Error("expected Waiting/Unknown for unrecognised state")
+	}
+}
+
+func TestGetContainerStatus_Installing(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
+	pod := statusTestPod("app")
+	containers := map[string]string{"app": "app-id"}
+	operData := map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App{
+		"app-id": operDataWithState("INSTALLING"),
+	}
+
+	if err := d.GetContainerStatus(testCtx(), pod, containers, operData); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	cs := pod.Status.ContainerStatuses[0]
+	if cs.State.Waiting == nil || cs.State.Waiting.Reason != "ContainerCreating" {
+		t.Error("expected Waiting/ContainerCreating for INSTALLING state")
+	}
+	if pod.Status.Phase != v1.PodPending {
+		t.Errorf("expected PodPending, got %s", pod.Status.Phase)
+	}
+}
+
+func TestGetContainerStatus_InstallingPkgPolicyInvalid(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
+	pod := statusTestPod("app")
+	containers := map[string]string{"app": "app-id"}
+	od := operDataWithState("INSTALLING")
+	od.PkgPolicy = Cisco_IOS_XEAppHostingOper_IoxPkgPolicy_iox_pkg_policy_invalid
+	operData := map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App{
+		"app-id": od,
+	}
+
+	if err := d.GetContainerStatus(testCtx(), pod, containers, operData); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	cs := pod.Status.ContainerStatuses[0]
+	if cs.State.Terminated == nil || cs.State.Terminated.Reason != "PackagePolicyInvalid" {
+		t.Error("expected Terminated/PackagePolicyInvalid for invalid pkg-policy")
+	}
+	if pod.Status.Phase != v1.PodFailed {
+		t.Errorf("expected PodFailed, got %s", pod.Status.Phase)
 	}
 }
 
