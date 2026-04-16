@@ -63,11 +63,11 @@ func TestContainerImagePath_NotFound(t *testing.T) {
 //
 // ReconcileApp — declarative reconciler tests.
 //
-// ReconcileApp reads device state via getAppState (which calls
+// ReconcileApp reads device state via getAppObservation (which calls
 // GetAppOperationalData).  These tests validate the status updates
 // without a real device by using a nil client: since ReconcileApp
-// reads state first, and getAppState returns "" when the client
-// fails, the reconciler enters the "no oper data" path.
+// reads state first, and getAppObservation returns an empty observation
+// when the client is nil, the reconciler enters the "no oper data" path.
 // ─────────────────────────────────────────────────────────────────────────────
 
 func makeOperData(state string) *Cisco_IOS_XEAppHostingOper_AppHostingOperData_App {
@@ -84,7 +84,7 @@ func makeOperData(state string) *Cisco_IOS_XEAppHostingOper_AppHostingOperData_A
 
 // TestReconcileApp_RunningDesiredRunning_IsReady verifies that an app already
 // in RUNNING state with desired=Running is marked Ready with no RPCs issued.
-// (We can't easily inject a fake getAppState here without a mock client, so
+// (We can't easily inject a fake getAppObservation here without a mock client, so
 // this test validates the "no oper data + no image" error path instead.)
 func TestReconcileApp_NoOperDataNoImage_Error(t *testing.T) {
 	d := &XEDriver{}
@@ -93,7 +93,7 @@ func TestReconcileApp_NoOperDataNoImage_Error(t *testing.T) {
 		Spec:     AppHostingSpec{DesiredState: AppDesiredStateRunning, ImagePath: ""},
 		Status:   AppHostingStatus{Phase: AppPhaseConverging},
 	}
-	// nil client means getAppState returns "" (no oper data).
+	// nil client means getAppObservation returns empty observation (no oper data).
 	// No image path → should set Phase=Error.
 	d.ReconcileApp(testCtx(), appCfg)
 	if appCfg.Status.Phase != AppPhaseError {
@@ -164,14 +164,17 @@ func TestReconcileApp_ObservedStateUpdated(t *testing.T) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// getAppState
+// getAppObservation
 // ─────────────────────────────────────────────────────────────────────────────
 
-func TestGetAppState_NilClient(t *testing.T) {
+func TestGetAppObservation_NilClient(t *testing.T) {
 	d := &XEDriver{} // nil client
-	state := d.getAppState(testCtx(), "app1")
-	if state != "" {
-		t.Errorf("expected empty state with nil client, got %q", state)
+	obs := d.getAppObservation(testCtx(), "app1")
+	if obs.State != "" {
+		t.Errorf("expected empty state with nil client, got %q", obs.State)
+	}
+	if obs.PkgPolicy != Cisco_IOS_XEAppHostingOper_IoxPkgPolicy_UNSET {
+		t.Errorf("expected UNSET pkg policy with nil client, got %v", obs.PkgPolicy)
 	}
 }
 

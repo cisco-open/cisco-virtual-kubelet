@@ -23,6 +23,7 @@ import (
 	"path"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
@@ -36,6 +37,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -279,10 +281,20 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 
 		return podHandler, nodeHandler, nil
 	}
+	// Recover pods that were marked Failed/NotFound during a previous VK restart.
+	// The upstream VK pod controller permanently ignores pods in Failed phase, so
+	// we must reset them to Pending before the pod controller starts syncing.
+	recoverStaleFailedPods(ctx, clientset, effectiveNodeName)
+
 	n, err := nodeutil.NewNode(effectiveNodeName, newProviderFunc, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to create node: %w", err)
 	}
+
+	// Run a background recovery loop that resets Failed/NotFound pods.
+	// Uses exponential backoff: 15s → 30s → 60s → 5min cap. Resets to 15s
+	// when a recovery actually occurs.
+	go runPodRecoveryLoop(ctx, clientset, effectiveNodeName)
 
 	if err := n.Run(ctx); err != nil {
 		return fmt.Errorf("node run failed: %w", err)
@@ -290,4 +302,70 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 
 	log.G(ctx).Info("Cisco Virtual Kubelet stopped")
 	return nil
+}
+
+// runPodRecoveryLoop periodically checks for Failed/NotFound pods and resets
+// them to Pending. Uses exponential backoff to reduce API server load once
+// all pods are healthy.
+func runPodRecoveryLoop(ctx context.Context, clientset kubernetes.Interface, nodeName string) {
+	const (
+		minInterval = 15 * time.Second
+		maxInterval = 5 * time.Minute
+	)
+	interval := minInterval
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(interval):
+			recovered := recoverStaleFailedPods(ctx, clientset, nodeName)
+			if recovered > 0 {
+				interval = minInterval // reset on activity
+			} else if interval < maxInterval {
+				interval = interval * 2
+				if interval > maxInterval {
+					interval = maxInterval
+				}
+			}
+		}
+	}
+}
+
+// recoverStaleFailedPods resets pods on our node that are stuck in Failed phase
+// with reason NotFound (or ProviderFailed) back to Pending so the VK pod
+// controller will pick them up again. Returns the number of pods recovered.
+func recoverStaleFailedPods(ctx context.Context, clientset kubernetes.Interface, nodeName string) int {
+	pods, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
+		FieldSelector: "spec.nodeName=" + nodeName + ",status.phase=Failed",
+	})
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("Failed to list failed pods for recovery")
+		return 0
+	}
+
+	recovered := 0
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+		if pod.Status.Reason != "NotFound" && pod.Status.Reason != "ProviderFailed" {
+			continue
+		}
+		if pod.DeletionTimestamp != nil {
+			continue
+		}
+
+		log.G(ctx).Infof("Recovering stuck pod %s/%s (reason=%s) → resetting to Pending",
+			pod.Namespace, pod.Name, pod.Status.Reason)
+
+		pod.Status.Phase = v1.PodPending
+		pod.Status.Reason = ""
+		pod.Status.Message = ""
+
+		if _, err := clientset.CoreV1().Pods(pod.Namespace).UpdateStatus(ctx, pod, metav1.UpdateOptions{}); err != nil {
+			log.G(ctx).WithError(err).Warnf("Failed to recover pod %s/%s", pod.Namespace, pod.Name)
+		} else {
+			recovered++
+		}
+	}
+	return recovered
 }

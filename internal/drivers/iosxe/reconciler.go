@@ -31,6 +31,8 @@ import (
 //
 //	"" (no config)  → POST config + install RPC  → Converging
 //	"" (config, no oper) → re-issue install RPC   → Converging
+//	"INSTALLING"    → no-op (wait) or fail-fast   → Converging / Error
+//	"STOPPED"       → start RPC                  → Converging
 //	"DEPLOYED"      → activate RPC               → Converging
 //	"ACTIVATED"     → start RPC                  → Converging
 //	"RUNNING"       → no-op                      → Ready
@@ -46,7 +48,8 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 	desired := appConfig.Spec.DesiredState
 
 	// 1. Observe current device state.
-	state := d.getAppState(ctx, appID)
+	obs := d.getAppObservation(ctx, appID)
+	state := obs.State
 	appConfig.Status.ObservedState = state
 	appConfig.Status.LastTransition = time.Now()
 
@@ -72,6 +75,17 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 			}
 			return
 
+		case "STOPPED":
+			// STOPPED → start (can restart directly without re-activate)
+			appConfig.Status.Phase = AppPhaseConverging
+			appConfig.Status.Message = "Restarting stopped app"
+			if err := d.StartApp(ctx, appID); err != nil {
+				log.G(ctx).Warnf("ReconcileApp %s: start failed: %v", appID, err)
+				appConfig.Status.Phase = AppPhaseError
+				appConfig.Status.Message = fmt.Sprintf("start failed: %v", err)
+			}
+			return
+
 		case "DEPLOYED":
 			// DEPLOYED → activate
 			appConfig.Status.Phase = AppPhaseConverging
@@ -81,6 +95,31 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 				appConfig.Status.Phase = AppPhaseError
 				appConfig.Status.Message = fmt.Sprintf("activate failed: %v", err)
 			}
+			return
+
+		case "INSTALLING":
+			// Install is in progress on the device — wait for it to finish.
+			// Re-issuing the install RPC would restart the tar extraction
+			// and prevent the install from ever completing on slow devices.
+
+			// Detect signature-validation failures: when the device requires
+			// signed packages but the tar is unsigned, the install gets stuck
+			// in INSTALLING with pkg-policy "invalid". Fail fast instead of
+			// waiting forever.
+			if obs.PkgPolicy == Cisco_IOS_XEAppHostingOper_IoxPkgPolicy_iox_pkg_policy_invalid {
+				msg := "app package policy is invalid (possible unsigned package on a device requiring signed packages)"
+				if notif := d.getAppInstallNotification(ctx, appID); notif != "" {
+					msg = strings.TrimSpace(notif)
+				}
+				log.G(ctx).Errorf("ReconcileApp %s: install blocked: %s", appID, msg)
+				appConfig.Status.Phase = AppPhaseError
+				appConfig.Status.Message = fmt.Sprintf("install blocked: %s", msg)
+				return
+			}
+
+			appConfig.Status.Phase = AppPhaseConverging
+			appConfig.Status.Message = "Install in progress, waiting"
+			log.G(ctx).Infof("ReconcileApp %s: install in progress, waiting for DEPLOYED", appID)
 			return
 
 		default:
@@ -167,22 +206,53 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 	}
 }
 
-// getAppState returns the current operational state string for appID, or ""
-// if the app has no oper data or the state cannot be determined.
-func (d *XEDriver) getAppState(ctx context.Context, appID string) string {
+// appObservation holds the observed state and metadata for an app, collected
+// from device operational data during a reconciliation step.
+type appObservation struct {
+	State     string
+	PkgPolicy E_Cisco_IOS_XEAppHostingOper_IoxPkgPolicy
+}
+
+// getAppObservation returns the current operational state and package policy
+// for appID.  If the app has no oper data the returned State is "".
+func (d *XEDriver) getAppObservation(ctx context.Context, appID string) appObservation {
 	if d.client == nil {
-		return ""
+		return appObservation{}
 	}
 	allOper, err := d.GetAppOperationalData(ctx)
 	if err != nil {
 		log.G(ctx).Warnf("Could not fetch oper data to check state of app %s: %v", appID, err)
-		return ""
+		return appObservation{}
 	}
 	operData, ok := allOper[appID]
-	if !ok || operData == nil || operData.Details == nil || operData.Details.State == nil {
+	if !ok || operData == nil {
+		return appObservation{}
+	}
+	obs := appObservation{PkgPolicy: operData.PkgPolicy}
+	if operData.Details != nil && operData.Details.State != nil {
+		obs.State = *operData.Details.State
+	}
+	return obs
+}
+
+// getAppInstallNotification returns the most recent install notification
+// message for appID, or "" if none found.
+func (d *XEDriver) getAppInstallNotification(ctx context.Context, appID string) string {
+	if d.client == nil {
 		return ""
 	}
-	return *operData.Details.State
+	path := "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data?fields=app-notifications"
+	root := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
+	if err := d.client.Get(ctx, path, root, d.getRestconfUnmarshaller()); err != nil {
+		log.G(ctx).Debugf("Could not fetch app notifications: %v", err)
+		return ""
+	}
+	for _, n := range root.AppNotifications {
+		if n.AppId != nil && *n.AppId == appID && n.Message != nil {
+			return *n.Message
+		}
+	}
+	return ""
 }
 
 // DeleteApp orchestrates a reconciler-driven teardown of the app lifecycle.

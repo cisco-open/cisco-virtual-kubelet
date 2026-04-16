@@ -64,16 +64,35 @@ func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
-// UpdatePod handles pod update requests by performing a delete-and-redeploy cycle.
+// UpdatePod handles pod update requests.
 // IOS-XE AppHosting does not support in-place updates to running applications;
-// changes to image, resources, or environment require a full teardown and reinstall.
+// changes to image require a full teardown and reinstall. If the app already
+// exists on the device and no container images have changed, the update is a
+// no-op — the reconciliation loop inside GetPodStatus already handles
+// advancing apps to RUNNING state.
+//
+// The upstream VK pod controller calls UpdatePod whenever its podsEqual check
+// fails, which can happen for benign metadata/annotation/toleration changes.
+// A blind delete-and-redeploy would tear down RUNNING apps and create a
+// destructive cycle, so we guard against that here.
 func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
+	// If the app already exists on the device, skip the destructive
+	// delete-and-redeploy. The upstream VK pod controller calls UpdatePod
+	// whenever its podsEqual check fails (benign metadata/annotation
+	// changes). IOS-XE does not support in-place image updates anyway;
+	// a true image change requires the user to delete and re-create the pod.
+	// The reconciliation loop in GetPodStatus handles advancing apps
+	// that are stuck in intermediate states (DEPLOYED, ACTIVATED).
+	discoveredContainers, err := d.GetPodContainers(ctx, pod)
+	if err == nil && len(discoveredContainers) > 0 {
+		log.G(ctx).Debugf("UpdatePod: app already exists on device for pod %s/%s, skipping delete-and-redeploy",
+			pod.Namespace, pod.Name)
+		return nil
+	}
+
 	log.G(ctx).Infof("UpdatePod: delete-and-redeploy for pod %s/%s", pod.Namespace, pod.Name)
 
 	if err := d.DeletePod(ctx, pod); err != nil {
-		// Log but don't block — partial cleanup is acceptable.
-		// DeployPod's CreateAppHostingApp will fail on conflict if
-		// any app still exists, which is a clearer error than aborting here.
 		log.G(ctx).Warnf("UpdatePod: cleanup had errors (will attempt redeploy): %v", err)
 	}
 
