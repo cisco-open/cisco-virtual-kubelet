@@ -36,6 +36,9 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/node"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
+	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
+	vkotel "github.com/virtual-kubelet/virtual-kubelet/trace/opentelemetry"
+	"go.opentelemetry.io/otel"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -251,6 +254,23 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		}
 
 		nodeHandler := provider.NewAppHostingNode(ctx, effectiveNodeName, &appCfg.Device, sharedDriver)
+
+		// Start OTEL topology exporter if configured and the driver supports topology
+		if appCfg.Device.OTEL != nil && appCfg.Device.OTEL.Enabled && appCfg.Device.OTEL.Endpoint != "" {
+			if topo, ok := sharedDriver.(drivers.TopologyProvider); ok {
+				otelExporter, otelErr := provider.NewOTELTopologyExporter(ctx, sharedDriver, topo, appCfg.Device.OTEL, effectiveNodeName, appCfg.Device.Address)
+				if otelErr != nil {
+					log.G(ctx).WithError(otelErr).Warn("Failed to initialise OTEL topology exporter, continuing without it")
+				} else {
+					// Wire global OTEL trace provider so VK internal operations are also traced
+					otel.SetTracerProvider(otelExporter.TracerProvider())
+					vktrace.T = vkotel.Adapter{}
+					go otelExporter.Run(ctx)
+				}
+			} else {
+				log.G(ctx).Warn("OTEL topology enabled but driver does not support TopologyProvider interface")
+			}
+		}
 
 		podHandler, err := provider.NewAppHostingProvider(ctx, &appCfg.Device, vkCfg, sharedDriver, nodeHandler)
 		if err != nil {

@@ -90,6 +90,60 @@ type DeviceInfo struct {
 	SerialNumber    string
 	SoftwareVersion string
 	ProductID       string
+	Hostname        string
+	RouterID        string // OSPF/BGP router ID
+}
+
+// CDPNeighbor represents a CDP-discovered neighbor device
+type CDPNeighbor struct {
+	DeviceID        string
+	IP              string
+	LocalInterface  string
+	RemoteInterface string
+	Platform        string
+	Capabilities    string
+}
+
+// OSPFNeighbor represents an OSPF adjacency
+type OSPFNeighbor struct {
+	NeighborID string
+	State      string // e.g. "full", "2way", "init"
+	Address    string
+	Interface  string
+	Area       string
+}
+
+// InterfaceStats contains operational statistics for a device interface
+type InterfaceStats struct {
+	Name          string
+	OperStatus    string
+	InOctets      uint64
+	OutOctets     uint64
+	InBitsPerSec  uint64
+	OutBitsPerSec uint64
+	Speed         uint64
+	IPv4Address   string
+}
+
+// InterfaceIP represents an interface with its IPv4 address and operational status
+type InterfaceIP struct {
+	Interface string
+	IPv4      string
+	Status    string // "up" or "down"
+}
+
+// HostedApp represents a container application hosted on the device, with
+// enough metadata for topology emission and service-map correlation.
+type HostedApp struct {
+	AppID             string // CVK app name on the device (e.g. cvk0000_<uid>)
+	State             string // device lifecycle state (RUNNING, DEPLOYED, etc.)
+	PodName           string // K8s pod name (from RunOpts labels, if available)
+	PodNamespace      string // K8s pod namespace
+	PodUID            string // K8s pod UID (hyphen-stripped)
+	ContainerName     string // K8s container name
+	IPv4Address       string // container IP (if available)
+	MACAddress        string // container MAC (if available)
+	AttachedInterface string // host-side interface (e.g. AppGigabitEthernet1/0/1)
 }
 
 // AppHostingOperData contains global operational data including resources and notifications

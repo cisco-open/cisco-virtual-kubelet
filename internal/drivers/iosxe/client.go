@@ -21,6 +21,7 @@ import (
 	"maps"
 	"time"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
@@ -327,4 +328,74 @@ func (d *XEDriver) DiscoverAppDHCPIP(ctx context.Context, appName string) (strin
 	}
 
 	return "", fmt.Errorf("no IPv4 address found for app %s", appName)
+}
+
+// GetHostedApps returns a lightweight summary of all app-hosting containers
+// on the device, suitable for topology emission.  It merges config (RunOpts
+// labels) and oper data (state, network interfaces) into common.HostedApp
+// structs.
+func (d *XEDriver) GetHostedApps(ctx context.Context) ([]common.HostedApp, error) {
+	operMap, err := d.GetAppOperationalData(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch oper data for hosted apps: %w", err)
+	}
+
+	var apps []common.HostedApp
+	for appName, oper := range operMap {
+		ha := common.HostedApp{AppID: appName}
+
+		// State
+		if oper.Details != nil && oper.Details.State != nil {
+			ha.State = *oper.Details.State
+		}
+
+		// K8s metadata from RunOpts labels (oper data mirrors the configured RunOpts)
+		if oper.Details != nil && oper.Details.DockerRunOpts != nil {
+			line := *oper.Details.DockerRunOpts
+			ha.PodName = common.ExtractLabelValue(line, common.LabelPodName)
+			ha.PodNamespace = common.ExtractLabelValue(line, common.LabelPodNamespace)
+			ha.PodUID = common.ExtractLabelValue(line, common.LabelPodUID)
+			ha.ContainerName = common.ExtractContainerNameFromLabels(line)
+		}
+
+		// Fallback: derive metadata from CVK naming convention
+		if ha.PodUID == "" || ha.ContainerName == "" {
+			if idx, uid, ok := common.ParseCVKAppName(appName); ok {
+				if ha.PodUID == "" {
+					ha.PodUID = uid
+				}
+				if ha.ContainerName == "" {
+					ha.ContainerName = fmt.Sprintf("container-%d", idx)
+				}
+				if ha.PodName == "" {
+					ha.PodName = appName
+				}
+				if ha.PodNamespace == "" {
+					ha.PodNamespace = "default"
+				}
+			}
+		}
+
+		// Network info from the first interface with an IP
+		if oper.NetworkInterfaces != nil {
+			for mac, netIf := range oper.NetworkInterfaces.NetworkInterface {
+				if netIf == nil {
+					continue
+				}
+				ha.MACAddress = mac
+				if netIf.AttachedInterface != nil {
+					ha.AttachedInterface = *netIf.AttachedInterface
+				}
+				if netIf.Ipv4Address != nil && *netIf.Ipv4Address != "" {
+					ha.IPv4Address = *netIf.Ipv4Address
+					break // prefer the interface that has an IP
+				}
+			}
+		}
+
+		apps = append(apps, ha)
+	}
+
+	log.G(ctx).Debugf("GetHostedApps: found %d hosted apps", len(apps))
+	return apps, nil
 }

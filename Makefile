@@ -111,7 +111,7 @@ vet: ## Run go vet
 
 ## Code generation targets
 
-generate: crd-gen deepcopy-gen rbac-gen helm-sync-crds ## Run all code generators
+generate: crd-gen deepcopy-gen rbac-gen helm-sync-crds ygot-gen ## Run all code generators
 
 crd-gen: ## Generate CRDs from ./api (controller-gen)
 	@echo "Generating CRDs from ./api..."
@@ -143,6 +143,26 @@ helm-sync-crds: crd-gen ## Copy generated CRDs into the Helm chart crds/ directo
 	@echo "Syncing CRDs to Helm chart..."
 	@mkdir -p ./charts/cisco-virtual-kubelet/crds
 	cp ./config/crd/*.yaml ./charts/cisco-virtual-kubelet/crds/
+
+ygot-gen: ## Regenerate ygot Go structs from YANG models
+	@echo "Regenerating ygot models from tests/yang/..."
+	$(GO_BIN) install github.com/openconfig/ygot/generator@v0.34.0
+	$(shell $(GO_BIN) env GOPATH)/bin/generator \
+		-path=tests/yang \
+		-output_file=internal/drivers/iosxe/models.go \
+		-package_name=iosxe \
+		-generate_fakeroot \
+		-fakeroot_name=Device \
+		-compress_paths=false \
+		-exclude_modules=ietf-inet-types,ietf-yang-types,cisco-semver,Cisco-IOS-XE-types,Cisco-IOS-XE-ios-common-oper,Cisco-IOS-XE-ospf-common \
+		tests/yang/Cisco-IOS-XE-app-hosting-cfg.yang \
+		tests/yang/Cisco-IOS-XE-app-hosting-oper.yang \
+		tests/yang/Cisco-IOS-XE-rpc.yang \
+		tests/yang/Cisco-IOS-XE-arp-oper.yang \
+		tests/yang/Cisco-IOS-XE-device-hardware-oper.yang \
+		tests/yang/Cisco-IOS-XE-cdp-oper.yang \
+		tests/yang/Cisco-IOS-XE-ospf-oper.yang \
+		tests/yang/Cisco-IOS-XE-interfaces-oper.yang
 
 ## Utility targets
 

@@ -50,3 +50,15 @@ type CiscoKubernetesDeviceDriver interface {
 	ListPods(ctx context.Context) ([]*v1.Pod, error)
 	GetGlobalOperationalData(ctx context.Context) (*common.AppHostingOperData, error)
 }
+
+// TopologyProvider is an optional interface that drivers may implement to
+// expose network topology and hosted-app data for observability features
+// (OTEL traces, node annotations, metrics). Consumers should use a type
+// assertion to check whether the driver supports it.
+type TopologyProvider interface {
+	GetCDPNeighbors(ctx context.Context) ([]common.CDPNeighbor, error)
+	GetOSPFNeighbors(ctx context.Context) ([]common.OSPFNeighbor, error)
+	GetInterfaceStats(ctx context.Context) ([]common.InterfaceStats, error)
+	GetInterfaceIPs(ctx context.Context) ([]common.InterfaceIP, error)
+	GetHostedApps(ctx context.Context) ([]common.HostedApp, error)
+}
