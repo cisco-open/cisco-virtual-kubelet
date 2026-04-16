@@ -184,13 +184,13 @@ func (p *AppHostingProvider) GetContainerLogs(ctx context.Context, namespace str
 }
 
 // GetMetricsResource implements nodeutil.Provider.
-func (p *AppHostingProvider) GetMetricsResource(context.Context) ([]*io_prometheus_client.MetricFamily, error) {
-	return nil, fmt.Errorf("GetMetricsResource is not supported by the Cisco Virtual Kubelet")
+func (p *AppHostingProvider) GetMetricsResource(ctx context.Context) ([]*io_prometheus_client.MetricFamily, error) {
+	return p.buildMetricsResource(ctx)
 }
 
 // GetStatsSummary implements nodeutil.Provider.
-func (p *AppHostingProvider) GetStatsSummary(context.Context) (*statsv1alpha1.Summary, error) {
-	return nil, fmt.Errorf("GetStatsSummary is not supported by the Cisco Virtual Kubelet")
+func (p *AppHostingProvider) GetStatsSummary(ctx context.Context) (*statsv1alpha1.Summary, error) {
+	return p.buildStatsSummary(ctx)
 }
 
 // PortForward implements nodeutil.Provider.
