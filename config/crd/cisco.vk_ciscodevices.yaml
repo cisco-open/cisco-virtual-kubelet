@@ -62,6 +62,16 @@ spec:
               address:
                 description: Address is the management IP or hostname of the device.
                 type: string
+              allowUnsignedApps:
+                default: false
+                description: |-
+                  AllowUnsignedApps indicates the device permits unsigned application packages.
+                  When true, the reconciler will not fail pods based on a transient
+                  iox-pkg-policy-invalid value during the INSTALLING state.
+                  When false (default), the reconciler treats iox-pkg-policy-invalid during
+                  INSTALLING as a terminal failure only when confirmed by an install
+                  notification from the device.
+                type: boolean
               credentialSecretRef:
                 description: |-
                   CredentialSecretRef references a Secret containing device credentials.

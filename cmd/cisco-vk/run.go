@@ -374,7 +374,7 @@ func recoverStaleFailedPods(ctx context.Context, clientset kubernetes.Interface,
 	recovered := 0
 	for i := range pods.Items {
 		pod := &pods.Items[i]
-		if pod.Status.Reason != "NotFound" && pod.Status.Reason != "ProviderFailed" {
+		if pod.Status.Reason != "NotFound" && pod.Status.Reason != "ProviderFailed" && pod.Status.Reason != "PackagePolicyInvalid" {
 			continue
 		}
 		if pod.DeletionTimestamp != nil {

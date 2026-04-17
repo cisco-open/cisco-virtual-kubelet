@@ -102,19 +102,24 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 			// Re-issuing the install RPC would restart the tar extraction
 			// and prevent the install from ever completing on slow devices.
 
-			// Detect signature-validation failures: when the device requires
-			// signed packages but the tar is unsigned, the install gets stuck
-			// in INSTALLING with pkg-policy "invalid". Fail fast instead of
-			// waiting forever.
+			// pkg-policy starts as "invalid" (YANG default) during the first
+			// seconds of every install and resolves once validation completes.
+			// Only treat it as a terminal failure when:
+			//  1. The device does NOT allow unsigned apps, AND
+			//  2. A confirming install notification exists (device has actually
+			//     evaluated and rejected the package).
 			if obs.PkgPolicy == Cisco_IOS_XEAppHostingOper_IoxPkgPolicy_iox_pkg_policy_invalid {
-				msg := "app package policy is invalid (possible unsigned package on a device requiring signed packages)"
-				if notif := d.getAppInstallNotification(ctx, appID); notif != "" {
-					msg = strings.TrimSpace(notif)
+				if d.config.AllowUnsignedApps {
+					log.G(ctx).Debugf("ReconcileApp %s: pkg-policy invalid (transient, allowUnsignedApps=true), waiting", appID)
+				} else if notif := d.getAppInstallNotification(ctx, appID); notif != "" {
+					msg := strings.TrimSpace(notif)
+					log.G(ctx).Errorf("ReconcileApp %s: install blocked: %s", appID, msg)
+					appConfig.Status.Phase = AppPhaseError
+					appConfig.Status.Message = fmt.Sprintf("install blocked: %s", msg)
+					return
+				} else {
+					log.G(ctx).Warnf("ReconcileApp %s: pkg-policy invalid but no confirming notification yet, waiting", appID)
 				}
-				log.G(ctx).Errorf("ReconcileApp %s: install blocked: %s", appID, msg)
-				appConfig.Status.Phase = AppPhaseError
-				appConfig.Status.Message = fmt.Sprintf("install blocked: %s", msg)
-				return
 			}
 
 			appConfig.Status.Phase = AppPhaseConverging
