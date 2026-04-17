@@ -409,6 +409,32 @@ func TestRenderDeviceConfig_ContainsExpectedFields(t *testing.T) {
 	}
 }
 
+func TestRenderDeviceConfig_StripsPassword(t *testing.T) {
+	spec := &ciskov1.DeviceSpec{
+		Driver:   ciskov1.DeviceDriverXE,
+		Address:  "10.0.0.1",
+		Username: "admin",
+		Password: "supersecret",
+		CredentialSecretRef: &corev1.LocalObjectReference{
+			Name: "my-creds",
+		},
+	}
+	out, err := renderDeviceConfig(spec)
+	if err != nil {
+		t.Fatalf("renderDeviceConfig error: %v", err)
+	}
+	if strings.Contains(out, "supersecret") {
+		t.Errorf("password should be stripped from ConfigMap output; got:\n%s", out)
+	}
+	if strings.Contains(out, "my-creds") {
+		t.Errorf("credentialSecretRef should be stripped from ConfigMap output; got:\n%s", out)
+	}
+	// Original spec must not be mutated.
+	if spec.Password != "supersecret" {
+		t.Errorf("renderDeviceConfig mutated the original spec password")
+	}
+}
+
 func TestRenderDeviceConfig_ZeroValueSpec(t *testing.T) {
 	_, err := renderDeviceConfig(&ciskov1.DeviceSpec{})
 	if err != nil {
@@ -419,6 +445,109 @@ func TestRenderDeviceConfig_ZeroValueSpec(t *testing.T) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Pure helper: shortHash
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reconcile - credential injection
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestReconcile_SecretRefInjectsEnvFromSecret(t *testing.T) {
+	device := newDevice("router-sec", "default")
+	device.Spec.Password = ""
+	device.Spec.CredentialSecretRef = &corev1.LocalObjectReference{Name: "device-creds"}
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-sec")); err != nil {
+		t.Fatalf("Reconcile error: %v", err)
+	}
+
+	var deploy appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-sec" + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("Deployment not found: %v", err)
+	}
+
+	env := deploy.Spec.Template.Spec.Containers[0].Env
+	if len(env) != 1 || env[0].Name != "VK_DEVICE_PASSWORD" {
+		t.Fatalf("expected VK_DEVICE_PASSWORD env var, got %v", env)
+	}
+	if env[0].ValueFrom == nil || env[0].ValueFrom.SecretKeyRef == nil {
+		t.Fatal("expected VK_DEVICE_PASSWORD to use valueFrom.secretKeyRef")
+	}
+	if env[0].ValueFrom.SecretKeyRef.Name != "device-creds" {
+		t.Errorf("expected secretKeyRef name 'device-creds', got %q", env[0].ValueFrom.SecretKeyRef.Name)
+	}
+	if env[0].ValueFrom.SecretKeyRef.Key != "password" {
+		t.Errorf("expected secretKeyRef key 'password', got %q", env[0].ValueFrom.SecretKeyRef.Key)
+	}
+}
+
+func TestReconcile_DirectPasswordInjectsEnvValue(t *testing.T) {
+	device := newDevice("router-pw", "default")
+	device.Spec.Password = "directpass"
+	device.Spec.CredentialSecretRef = nil
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-pw")); err != nil {
+		t.Fatalf("Reconcile error: %v", err)
+	}
+
+	var deploy appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-pw" + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("Deployment not found: %v", err)
+	}
+
+	env := deploy.Spec.Template.Spec.Containers[0].Env
+	if len(env) != 1 || env[0].Name != "VK_DEVICE_PASSWORD" {
+		t.Fatalf("expected VK_DEVICE_PASSWORD env var, got %v", env)
+	}
+	if env[0].Value != "directpass" {
+		t.Errorf("expected direct password value 'directpass', got %q", env[0].Value)
+	}
+}
+
+func TestReconcile_NoPasswordNoSecretRef_NoEnvVars(t *testing.T) {
+	device := newDevice("router-nopass", "default")
+	device.Spec.Password = ""
+	device.Spec.CredentialSecretRef = nil
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-nopass")); err != nil {
+		t.Fatalf("Reconcile error: %v", err)
+	}
+
+	var deploy appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-nopass" + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("Deployment not found: %v", err)
+	}
+
+	env := deploy.Spec.Template.Spec.Containers[0].Env
+	if len(env) != 0 {
+		t.Errorf("expected no env vars when neither password nor secretRef is set, got %v", env)
+	}
+}
+
+func TestReconcile_PasswordStrippedFromConfigMap(t *testing.T) {
+	device := newDevice("router-strip", "default")
+	device.Spec.Password = "shouldnotappear"
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-strip")); err != nil {
+		t.Fatalf("Reconcile error: %v", err)
+	}
+
+	var cm corev1.ConfigMap
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-strip" + configMapSuffix}, &cm); err != nil {
+		t.Fatalf("ConfigMap not found: %v", err)
+	}
+
+	data := cm.Data[configFileName]
+	if strings.Contains(data, "shouldnotappear") {
+		t.Errorf("password should not appear in ConfigMap data; got:\n%s", data)
+	}
+}
 
 func TestShortHash_Deterministic(t *testing.T) {
 	if h1, h2 := shortHash("hello world"), shortHash("hello world"); h1 != h2 {

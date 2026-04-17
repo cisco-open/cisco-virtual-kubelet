@@ -143,6 +143,13 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config from %s: %w", configPath, err)
 	}
 
+	// Resolve device password from environment variable when the controller
+	// injects it via a Kubernetes Secret (VK_DEVICE_PASSWORD). This keeps
+	// credentials out of the ConfigMap.
+	if envPass := os.Getenv("VK_DEVICE_PASSWORD"); envPass != "" {
+		appCfg.Device.Password = envPass
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
