@@ -3,4 +3,5 @@ bin
 .stignore
 .env
 .venv/
+.claude/
 site/
