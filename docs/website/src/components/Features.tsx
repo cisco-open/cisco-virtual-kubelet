@@ -17,11 +17,11 @@
 import { motion } from "framer-motion";
 import {
   Box,
-  Cpu,
   Network,
   Shield,
   Activity,
   Layers,
+  LineChart,
 } from "lucide-react";
 
 const features = [
@@ -37,23 +37,23 @@ const features = [
     icon: Layers,
     title: "Driver-Based Architecture",
     description:
-      "Extensible driver pattern supporting Catalyst 8Kv device types (IOS-XE). Easily add support for new device types through the driver interface.",
+      "Extensible driver pattern with IOS-XE (Catalyst 8000V, Catalyst 9000) available today. Add new device types through a clean driver interface.",
     color: "from-accent to-accent-light",
     glowColor: "accent",
   },
   {
     icon: Activity,
-    title: "Full Lifecycle Management",
+    title: "Lifecycle & Recovery",
     description:
-      "Create, monitor, and delete containers via RESTCONF APIs. Complete pod lifecycle management with real-time status updates.",
+      "Full pod lifecycle via RESTCONF with an automatic recovery loop that reprocesses stuck pods using exponential backoff.",
     color: "from-success to-emerald-400",
     glowColor: "success",
   },
   {
-    icon: Cpu,
-    title: "Resource Management",
+    icon: LineChart,
+    title: "Observability & Topology",
     description:
-      "Precise CPU, memory, and storage allocation per container. Ensure your workloads get exactly the resources they need on the edge.",
+      "Prometheus metrics for device and interface health, plus OpenTelemetry topology traces with CDP/OSPF neighbors and hosted apps.",
     color: "from-primary-light to-primary",
     glowColor: "primary",
   },
@@ -61,15 +61,15 @@ const features = [
     icon: Network,
     title: "Flexible Networking",
     description:
-      "Support for DHCP IP allocation via Virtual Port Groups. Automatic IP discovery from device operational data or ARP tables.",
+      "DHCP or static allocation across VirtualPortGroup, AppGigabitEthernet (access and trunk with VLAN), and Management interfaces.",
     color: "from-accent-light to-accent",
     glowColor: "accent",
   },
   {
     icon: Shield,
-    title: "Health Monitoring",
+    title: "Secure by Design",
     description:
-      "Continuous node health checks and status reporting. Keep your edge infrastructure visible and manageable from Kubernetes.",
+      "Device credentials injected from Kubernetes Secrets via secretKeyRef. Passwords never touch ConfigMaps or etcd in plaintext.",
     color: "from-success to-teal-400",
     glowColor: "success",
   },
@@ -152,7 +152,8 @@ export default function Features() {
 
               {/* Hover glow */}
               <div
-                className={`absolute -inset-px rounded-2xl bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity blur-xl`}
+                aria-hidden
+                className={`pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity blur-xl`}
               />
             </motion.div>
           ))}

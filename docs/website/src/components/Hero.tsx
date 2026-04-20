@@ -120,18 +120,19 @@ export default function Hero() {
                   </span>
                   {"\n"}
                   <span className="text-text-muted">$</span>{" "}
-                  <span className="text-primary">cd</span>{" "}
+                  <span className="text-primary">docker build</span>{" "}
+                  <span className="text-accent-light">-t</span>{" "}
                   <span className="text-foreground">
-                    cisco-virtual-kubelet
+                    &lt;registry&gt;/cisco-vk:dev
+                  </span>{" "}
+                  <span className="text-accent-light">.</span>
+                  {"\n"}
+                  <span className="text-text-muted">$</span>{" "}
+                  <span className="text-primary">helm install</span>{" "}
+                  <span className="text-foreground">cvk</span>{" "}
+                  <span className="text-accent-light">
+                    ./charts/cisco-virtual-kubelet
                   </span>
-                  {"\n"}
-                  <span className="text-text-muted">$</span>{" "}
-                  <span className="text-primary">make</span>{" "}
-                  <span className="text-accent-light">build</span>
-                  {"\n"}
-                  <span className="text-text-muted">$</span>{" "}
-                  <span className="text-primary">sudo make</span>{" "}
-                  <span className="text-accent-light">install</span>
                 </code>
               </pre>
             </div>

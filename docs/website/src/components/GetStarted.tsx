@@ -39,67 +39,81 @@ const tabs = [
 const codeBlocks: Record<string, { language: string; code: string }> = {
   install: {
     language: "bash",
-    code: `# Clone the repository
+    code: `# The image isn't on a public registry yet — build it locally.
 git clone https://github.com/cisco-open/cisco-virtual-kubelet.git
-cd cisco-virtual-kubelet/
+cd cisco-virtual-kubelet
 
-# Build the provider
-make build
+docker build -t <your-registry>/cisco-vk:dev .
+docker push <your-registry>/cisco-vk:dev
 
-# Install the binary
-sudo make install
+# Install the controller with Helm (chart lives in-repo)
+helm install cvk ./charts/cisco-virtual-kubelet \\
+  --namespace cvk-system --create-namespace \\
+  --set image.repository=<your-registry>/cisco-vk \\
+  --set image.tag=dev
 
-# Export kubeconfig
-export KUBECONFIG=~/.kube/config
-
-# Start the provider
-cisco-vk --config dev/config-dhcp-test.yaml`,
+# Verify the CRD and controller are up
+kubectl get crd ciscodevices.cisco.vk
+kubectl -n cvk-system get pods`,
   },
   config: {
     language: "yaml",
-    code: `# config.yaml
-device:
-  name: cat8kv-router
+    code: `# 1. Secret — device password, never in etcd plaintext
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cat9000-1-creds
+  namespace: default
+type: Opaque
+stringData:
+  password: <device-password>
+---
+# 2. CiscoDevice — references the Secret via secretKeyRef
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: cat9000-1
+  namespace: default
+spec:
   driver: XE
-  address: "192.0.2.24"    # Router IP Address
+  address: "192.168.1.100"
   port: 443
   username: admin
-  password: cisco
+  credentialSecretRef:
+    name: cat9000-1-creds
   tls:
     enabled: true
     insecureSkipVerify: true
-  networking:
-    dhcpEnabled: true
-    virtualPortGroup: "0"
-    defaultVRF: ""
-
-kubelet:
-  node_name: "cat8kv-node"
-  namespace: ""
-  update_interval: "30s"
-  os: "Linux"
-  node_internal_ip: "192.0.2.24"`,
+  xe:
+    networking:
+      interface:
+        type: VirtualPortGroup
+        virtualPortGroup:
+          dhcp: true
+          interface: "0"
+          guestInterface: 0`,
   },
   deploy: {
     language: "yaml",
-    code: `# test-pod.yaml
-apiVersion: v1
+    code: `apiVersion: v1
 kind: Pod
 metadata:
-  name: dhcp-test-pod
-  namespace: default
+  name: hello-app
 spec:
-  nodeName: cat8kv-node       # Virtual Kubelet node
+  nodeName: cat9000-1
+  tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
   containers:
-  - name: test-app
+  - name: hello
     image: flash:/hello-app.iosxe.tar
     resources:
       requests:
-        memory: "64Mi"
-        cpu: "250m"
+        memory: "256Mi"
+        cpu: "500m"
       limits:
-        memory: "128Mi"
-        cpu: "500m"`,
+        memory: "512Mi"
+        cpu: "1000m"`,
   },
 };
 
@@ -148,10 +162,10 @@ export default function GetStarted() {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: "Go 1.23+", desc: "Build toolchain" },
-              { label: "Kubernetes Cluster", desc: "Any K8s distribution" },
-              { label: "Cisco IOS-XE Device", desc: "With IOx & RESTCONF" },
-              { label: "Container Image", desc: "Tar file on device flash" },
+              { label: "Kubernetes 1.28+", desc: "Any distribution" },
+              { label: "Helm v3 + Docker", desc: "To install the chart and build the image" },
+              { label: "Container Registry", desc: "Reachable from the cluster" },
+              { label: "Cisco IOS-XE Device", desc: "Cat 8000V or Cat 9000" },
             ].map((req) => (
               <div
                 key={req.label}
@@ -256,6 +270,13 @@ function highlightCode(line: string, language: string): React.ReactNode {
           "export",
           "cisco-vk",
           "clone",
+          "helm",
+          "kubectl",
+          "install",
+          "get",
+          "docker",
+          "build",
+          "push",
         ].includes(word)
       ) {
         return (

@@ -139,9 +139,9 @@ export default function Architecture() {
             {/* Cisco Devices row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { name: "Cisco C8Kv1", ip: "192.0.2.24" },
-                { name: "Cisco C8Kv2", ip: "192.0.2.25" },
-                { name: "Cisco C8KvN", ip: "192.0.2.x" },
+                { name: "Catalyst 8000V", ip: "192.0.2.24" },
+                { name: "Catalyst 9000", ip: "192.0.2.25" },
+                { name: "IOS-XE Device", ip: "192.0.2.x" },
               ].map((device, i) => (
                 <motion.div
                   key={device.name}
@@ -189,9 +189,9 @@ export default function Architecture() {
                 Schedule with kubectl
               </h3>
               <p className="text-text-muted leading-relaxed">
-                Use standard kubectl commands to create pods. The Virtual
-                Kubelet node accepts pod assignments just like any Kubernetes
-                node.
+                A CiscoDevice custom resource registers each device as a virtual
+                node. Pods are scheduled there using standard kubectl — no
+                new tools or workflows.
               </p>
             </div>
           </div>
@@ -201,11 +201,12 @@ export default function Architecture() {
             </div>
             <div className="relative pt-12">
               <h3 className="text-xl font-semibold mb-3 text-foreground">
-                RESTCONF Translation
+                RESTCONF Reconciliation
               </h3>
               <p className="text-text-muted leading-relaxed">
-                The provider translates Kubernetes pod specs into RESTCONF API
-                calls compatible with Cisco IOS-XE App-Hosting configuration.
+                The driver translates pod specs into IOS-XE app-hosting config
+                and reconciles state via RESTCONF. A recovery loop reprocesses
+                stuck pods automatically.
               </p>
             </div>
           </div>
@@ -215,12 +216,12 @@ export default function Architecture() {
             </div>
             <div className="relative pt-12">
               <h3 className="text-xl font-semibold mb-3 text-foreground">
-                Edge Deployment
+                Observe at the Edge
               </h3>
               <p className="text-text-muted leading-relaxed">
-                Containers are deployed directly on Cisco Catalyst devices,
-                enabling compute at the network edge with full lifecycle
-                management.
+                Prometheus metrics, OpenTelemetry topology traces, and
+                cisco.io/* node annotations surface device health, CDP/OSPF
+                neighbors, and hosted apps.
               </p>
             </div>
           </div>
