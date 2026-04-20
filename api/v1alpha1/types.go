@@ -134,6 +134,16 @@ type DeviceSpec struct {
 	// +kubebuilder:validation:Optional
 	OTEL *OTELConfig `json:"otel,omitempty" mapstructure:"otel,omitempty"`
 
+	// AllowUnsignedApps indicates the device permits unsigned application packages.
+	// When true, the reconciler will not fail pods based on a transient
+	// iox-pkg-policy-invalid value during the INSTALLING state.
+	// When false (default), the reconciler treats iox-pkg-policy-invalid during
+	// INSTALLING as a terminal failure only when confirmed by an install
+	// notification from the device.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=false
+	AllowUnsignedApps bool `json:"allowUnsignedApps,omitempty" mapstructure:"allowUnsignedApps"`
+
 	// --- Driver-specific networking configuration (union) ---
 	// Only the section matching Driver should be set.
 

@@ -106,7 +106,8 @@ func (d *XEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod,
 				}
 				allReady = false
 			case "INSTALLING":
-				if operData.PkgPolicy == Cisco_IOS_XEAppHostingOper_IoxPkgPolicy_iox_pkg_policy_invalid {
+				if operData.PkgPolicy == Cisco_IOS_XEAppHostingOper_IoxPkgPolicy_iox_pkg_policy_invalid &&
+					!d.config.AllowUnsignedApps {
 					containerStatus.State = v1.ContainerState{
 						Terminated: &v1.ContainerStateTerminated{
 							ExitCode:   1,

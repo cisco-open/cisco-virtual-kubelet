@@ -200,8 +200,8 @@ func TestGetContainerStatus_Installing(t *testing.T) {
 	}
 }
 
-func TestGetContainerStatus_InstallingPkgPolicyInvalid(t *testing.T) {
-	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
+func TestGetContainerStatus_InstallingPkgPolicyInvalid_SigningRequired(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1", AllowUnsignedApps: false}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
 	od := operDataWithState("INSTALLING")
@@ -216,10 +216,33 @@ func TestGetContainerStatus_InstallingPkgPolicyInvalid(t *testing.T) {
 
 	cs := pod.Status.ContainerStatuses[0]
 	if cs.State.Terminated == nil || cs.State.Terminated.Reason != "PackagePolicyInvalid" {
-		t.Error("expected Terminated/PackagePolicyInvalid for invalid pkg-policy")
+		t.Error("expected Terminated/PackagePolicyInvalid for invalid pkg-policy when signing required")
 	}
 	if pod.Status.Phase != v1.PodFailed {
 		t.Errorf("expected PodFailed, got %s", pod.Status.Phase)
+	}
+}
+
+func TestGetContainerStatus_InstallingPkgPolicyInvalid_UnsignedAllowed(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1", AllowUnsignedApps: true}}
+	pod := statusTestPod("app")
+	containers := map[string]string{"app": "app-id"}
+	od := operDataWithState("INSTALLING")
+	od.PkgPolicy = Cisco_IOS_XEAppHostingOper_IoxPkgPolicy_iox_pkg_policy_invalid
+	operData := map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App{
+		"app-id": od,
+	}
+
+	if err := d.GetContainerStatus(testCtx(), pod, containers, operData); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	cs := pod.Status.ContainerStatuses[0]
+	if cs.State.Waiting == nil || cs.State.Waiting.Reason != "ContainerCreating" {
+		t.Error("expected Waiting/ContainerCreating when allowUnsignedApps=true (transient invalid)")
+	}
+	if pod.Status.Phase != v1.PodPending {
+		t.Errorf("expected PodPending, got %s", pod.Status.Phase)
 	}
 }
 
