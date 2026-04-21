@@ -2,3 +2,6 @@ bin
 .DS_Store
 .stignore
 .env
+.venv/
+.claude/
+site/

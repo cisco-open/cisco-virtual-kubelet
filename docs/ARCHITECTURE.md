@@ -1,361 +1,356 @@
 # Architecture
 
-This document describes the technical architecture of the Cisco Virtual Kubelet Provider.
+This document describes the technical architecture of Cisco Virtual Kubelet.
 
 ## Overview
 
-The Cisco Virtual Kubelet Provider implements the [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider interface, enabling Kubernetes to treat Cisco IOS-XE devices as compute nodes for container workloads.
+Cisco Virtual Kubelet implements the [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider interface so Kubernetes can treat Cisco IOS-XE devices as compute nodes. Each device appears as a node in the cluster; pods scheduled to that node are deployed as IOx App-Hosting containers on the device over RESTCONF.
 
-## Component Architecture
+### The two-binary split
 
-```
-┌─────────────────────────────────────────────────────────────────-─────┐
-│                         Kubernetes Cluster                            │
-│  ┌────────────────────────────────────────────────────────────────┐   │
-│  │                      API Server                                │   │
-│  └─────────────────────────────┬──────────────────────────────────┘   │
-│                                │                                      │
-│  ┌─────────────────────────────┴──────────────────────────────────┐   │
-│  │                    Virtual Kubelet Library                     │   │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │   │
-│  │  │    Node      │  │     Pod      │  │   AppHostingProvider │  │   │
-│  │  │  Controller  │  │  Controller  │  │   AppHostingNode     │  │   │
-│  │  └──────────────┘  └──────────────┘  └──────────┬───────────┘  │   │
-│  │                                                  │             │   │
-│  │  ┌───────────────────────────────────────────────┴───────────┐ │   │
-│  │  │                    Driver Layer                           │ │   │
-│  │  │  ┌─────────────────────────────────────────────────────┐  │ │   │
-│  │  │  │              XEDriver (IOS-XE)                      │  │ │   │
-│  │  │  │  ┌─────────────┐ ┌─────────────┐ ┌───────────────┐  │  │ │   │
-│  │  │  │  │ App Hosting │ │    Pod      │ │   RESTCONF    │  │  │  │  │
-│  │  │  │  │  Lifecycle  │ │  Lifecycle  │ │    Client     │  │  │  │  │
-│  │  │  │  └─────────────┘ └─────────────┘ └───────────────┘  │  │  │  │
-│  │  │  └─────────────────────────────────────────────────────┘  │  │  │
-│  │  └───────────────────────────────────────────────────────────┘  │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    │ RESTCONF/HTTPS
-                                    ▼
-┌───────────────────────────────────────────────────────────────────────┐
-│                     Cisco Catalyst 8000V (IOS-XE)                     │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │                       IOx Platform                              │  │
-│  │  ┌───────────────┐  ┌───────────────┐  ┌───────────────────┐    │  │
-│  │  │  Container 1  │  │  Container 2  │  │   Container N     │    │  │
-│  │  │   (app)       │  │   (app)       │  │   (app)           │    │  │
-│  │  └───────────────┘  └───────────────┘  └───────────────────┘    │  │
-│  │                           │                                     │  │
-│  │  ┌────────────────────────┴─────────────────────────────────-─┐ │  │
-│  │  │              VirtualPortGroup0 + DHCP Pool                 │ │  │
-│  │  └────────────────────────────────────────────────────────────┘ │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────────────────┘
+Everything the project does comes out of a single `cisco-vk` CLI with two subcommands:
+
+- **`cisco-vk manager`** — the Kubernetes controller. Watches `CiscoDevice` custom resources and, for each one, creates a ConfigMap + Deployment. It knows nothing about individual devices; it just reconciles CR state into Kubernetes resources.
+- **`cisco-vk run`** — the Virtual Kubelet provider. One process per device. Reads its config, registers a virtual node in the cluster, and drives the device via RESTCONF when pods come and go.
+
+This split keeps device credentials and per-device logic out of the controller. The controller holds minimal cluster-level RBAC; each VK pod holds only the credentials for its one device.
+
+## Component architecture
+
+```mermaid
+graph TB
+    subgraph Cluster["Kubernetes Cluster"]
+        API[API Server]
+        CRD[CiscoDevice CR]
+        Controller[CiscoDevice Controller<br/>cisco-vk manager]
+        CM[ConfigMap<br/>device-config]
+        Dep[Deployment<br/>device-vk]
+        VK[VK Pod<br/>cisco-vk run]
+        Node[Virtual Node]
+        Pod[User Pod]
+    end
+
+    subgraph Device["Cisco IOS-XE Device"]
+        IOx[IOx Platform]
+        Container[App-Hosting Container]
+    end
+
+    API --> CRD
+    CRD --> Controller
+    Controller --> CM
+    Controller --> Dep
+    Dep --> VK
+    VK --> Node
+    Pod -.scheduled to.-> Node
+    VK -->|RESTCONF/HTTPS| IOx
+    IOx --> Container
+
+    style Controller fill:#6b5ce7,stroke:#333,color:#fff
+    style VK fill:#00bceb,stroke:#333,color:#fff
+    style Device fill:#1a2332,stroke:#333,color:#fff
 ```
 
-## Core Components
+## Core components
 
 ### AppHostingProvider
 
-The main provider struct that implements the Virtual Kubelet `nodeutil.Provider` interface:
+Implements the Virtual Kubelet `nodeutil.Provider` interface — the main entry point for pod operations.
 
-```go
-// internal/provider/provider.go
-type AppHostingProvider struct {
-    ctx             context.Context
-    deviceSpec      *v1alpha1.DeviceSpec
-    driver          drivers.CiscoKubernetesDeviceDriver
-    podsLister      corev1listers.PodLister
-    configMapLister corev1listers.ConfigMapLister
-    secretLister    corev1listers.SecretLister
-    serviceLister   corev1listers.ServiceLister
-}
-```
+| Method | Purpose |
+|---|---|
+| `CreatePod(ctx, pod)` | Delegates to `driver.DeployPod`, then forces a node status update |
+| `UpdatePod(ctx, pod)` | Guards against no-op churn; if the app already exists, does nothing |
+| `DeletePod(ctx, pod)` | Delegates to `driver.DeletePod` then forces a node status update |
+| `GetPod(ctx, ns, name)` | Fast path: informer cache. Fallback: device query for cleanup |
+| `GetPodStatus(ctx, ns, name)` | Queries live pod status from the device |
+| `GetPods(ctx)` | Lists all managed pods discovered on the device |
+| `GetStatsSummary(ctx)` | Returns Kubernetes stats/summary data (see [Observability](observability.md)) |
+| `GetMetricsResource(ctx)` | Returns Prometheus metrics (see [Observability](observability.md)) |
 
-**Implemented Interface Methods**:
-
-- `CreatePod(ctx, pod)` - Deploy container to device
-- `UpdatePod(ctx, pod)` - Update container configuration
-- `DeletePod(ctx, pod)` - Remove container from device
-- `GetPod(ctx, namespace, name)` - Get pod with status
-- `GetPodStatus(ctx, namespace, name)` - Get pod status only
-- `GetPods(ctx)` - List all pods on device
+Operations that don't make sense for app-hosting — `RunInContainer`, `AttachToContainer`, `GetContainerLogs`, `PortForward` — return HTTP 501.
 
 ### AppHostingNode
 
-Implements the `node.NodeProvider` interface for node heartbeat management:
+Implements `node.NodeProvider` for node registration, heartbeat, and status.
+
+- `Ping()` — throttled to a 30-second minimum; triggers `syncNodeStatus` asynchronously
+- `NotifyNodeStatus(cb)` — fires the callback whenever node status changes (labels, annotations, capacity, conditions)
+- `ForceStatusUpdate()` — called after every pod lifecycle event so resource accounting stays fresh
+
+The node's `Labels` include standard topology (`topology.kubernetes.io/zone=cisco-iosxe`, `region=cisco-iosxe`) plus `type=virtual-kubelet`. Node **annotations** are populated dynamically on every status sync from the driver's `TopologyProvider` data — see [Observability → Node annotations](observability.md#node-annotations).
+
+Conditions published:
+
+- `Ready` — true when IOx is enabled on the device
+- `DiskPressure` — true when device storage < 5% available
+
+### Driver factory
 
 ```go
-// internal/provider/provider.go
-type AppHostingNode struct{}
-
-func (a *AppHostingNode) Ping(ctx context.Context) error
-func (a *AppHostingNode) NotifyNodeStatus(ctx context.Context, cb func(*v1.Node))
+func NewDriver(ctx, spec) (CiscoKubernetesDeviceDriver, error)
 ```
 
-### Driver Factory
+Selects a driver based on `spec.Driver`:
 
-The driver factory pattern allows extensible device support:
+- `XE` → IOS-XE driver (production)
+- `FAKE` → mock driver for testing
+- `XR`, `NXOS` → placeholders, currently unsupported
+
+### Driver interfaces
+
+Every driver must implement `CiscoKubernetesDeviceDriver`:
 
 ```go
-// internal/drivers/factory.go
-func NewDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (CiscoKubernetesDeviceDriver, error) {
-    switch spec.Driver {
-    case v1alpha1.DeviceDriverFAKE:
-        return fake.NewAppHostingDriver(ctx, spec)
-    case v1alpha1.DeviceDriverXE:
-        return iosxe.NewAppHostingDriver(ctx, spec)
-    case v1alpha1.DeviceDriverXR:
-        return nil, fmt.Errorf("unsupported device type")
-    default:
-        return nil, fmt.Errorf("unsupported device type")
-    }
-}
-
 type CiscoKubernetesDeviceDriver interface {
-    GetDeviceResources(ctx context.Context) (*v1.ResourceList, error)
-    DeployPod(ctx context.Context, pod *v1.Pod) error
-    UpdatePod(ctx context.Context, pod *v1.Pod) error
-    DeletePod(ctx context.Context, pod *v1.Pod) error
-    GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error)
-    ListPods(ctx context.Context) ([]*v1.Pod, error)
+    GetDeviceResources(ctx) (*v1.ResourceList, error)
+    GetDeviceInfo(ctx) (*common.DeviceInfo, error)
+    DeployPod(ctx, pod)
+    UpdatePod(ctx, pod)
+    DeletePod(ctx, pod)
+    GetPodStatus(ctx, pod) (*v1.Pod, error)
+    ListPods(ctx) ([]*v1.Pod, error)
+    GetGlobalOperationalData(ctx) (*common.AppHostingOperData, error)
 }
 ```
 
-### XEDriver (IOS-XE Driver)
-
-Implements the device driver for Cisco IOS-XE app-hosting:
+Drivers may additionally implement the **optional** `TopologyProvider` interface — this is what enables OTEL topology export, the `cisco_device_cdp_*`/`ospf_*`/`interface_*` metrics, and the `cisco.io/*` node annotations.
 
 ```go
-// internal/drivers/iosxe/driver.go
-type XEDriver struct {
-    config       *v1alpha1.DeviceSpec
-    client       common.NetworkClient
-    marshaller   func(any) ([]byte, error)
-    unmarshaller UnmarshalFunc
+type TopologyProvider interface {
+    GetCDPNeighbors(ctx) ([]common.CDPNeighbor, error)
+    GetOSPFNeighbors(ctx) ([]common.OSPFNeighbor, error)
+    GetInterfaceStats(ctx) ([]common.InterfaceStats, error)
+    GetInterfaceIPs(ctx) ([]common.InterfaceIP, error)
+    GetHostedApps(ctx) ([]common.HostedApp, error)
 }
 ```
 
-**Key Methods**:
-- `CheckConnection(ctx)` - Validate device connectivity
-- `GetDeviceResources(ctx)` - Report available resources
-- `DeployPod(ctx, pod)` - Full pod deployment lifecycle
-- `DeletePod(ctx, pod)` - Full pod deletion lifecycle
+The IOS-XE driver implements it. Drivers without topology support still work — their VKs just skip the optional metrics/traces/annotations.
 
-### RestconfClient
+### IOS-XE driver — internal layering
 
-HTTP client for RESTCONF API communication:
+`internal/drivers/iosxe/` is organised by responsibility. Each layer is independently testable.
 
-```go
-// internal/drivers/common/restconf_client.go
-type RestconfClient struct {
-    BaseURL    string
-    HTTPClient *http.Client
-    Username   string
-    Password   string
-}
+| File | Responsibility |
+|---|---|
+| `driver.go` | Driver construction, marshallers, config hooks |
+| `device.go` | Device-level queries (connectivity, resources, device info) |
+| `client.go` | Transport abstraction — currently RESTCONF, designed to accommodate NETCONF later |
+| `reconciler.go` | App lifecycle state machine (see below) |
+| `pod_lifecycle.go` | `DeployPod` / `DeletePod` / `GetPodStatus` / `ListPods` |
+| `pod_transforms.go` | Pod.Spec → IOS-XE `AppHostingConfig` |
+| `status_transforms.go` | Device oper-data → Pod.Status |
+| `ip_discovery.go` | Pod IP discovery (oper-data first, ARP table fallback) |
+| `topology.go` | `TopologyProvider` implementation — CDP, OSPF, interfaces |
+| `models.go` | YANG structs, auto-generated via [ygot](https://github.com/openconfig/ygot) |
 
-func (c *RestconfClient) Get(ctx, path, result, unmarshal) error
-func (c *RestconfClient) Post(ctx, path, payload, marshal) error
-func (c *RestconfClient) Patch(ctx, path, payload, marshal) error
-func (c *RestconfClient) Delete(ctx, path) error
+## Data flow
+
+### Controller reconciliation
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant API as K8s API
+    participant Ctrl as CiscoDevice Controller
+    participant CM as ConfigMap
+    participant Dep as Deployment
+    participant VK as VK Pod
+
+    User->>API: kubectl apply ciscodevice.yaml
+    API->>Ctrl: Reconcile event
+    Ctrl->>Ctrl: Render device config (strip password + secretRef)
+    Ctrl->>CM: Create/Update {name}-config
+    Ctrl->>Dep: Create/Update {name}-vk<br/>(env: VK_DEVICE_PASSWORD from Secret)
+    Dep->>VK: Start pod
+    VK->>API: Register virtual node
 ```
 
-## API Communication
+The controller **never persists credentials**. `password` and `credentialSecretRef` are both stripped from the `DeviceSpec` before it is marshalled into the ConfigMap. Credentials reach the VK pod via a `valueFrom.secretKeyRef` env var injected into the Deployment spec. See [Security](security.md).
 
-### RESTCONF Endpoints
+### Pod creation flow
 
-| Operation | Method | Endpoint |
-|-----------|--------|----------|
-| Configure App | POST | `/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps` |
-| Install | POST | `/restconf/operations/Cisco-IOS-XE-rpc:app-hosting` |
-| Activate | POST | `/restconf/operations/Cisco-IOS-XE-rpc:app-hosting` |
-| Start | POST | `/restconf/operations/Cisco-IOS-XE-rpc:app-hosting` |
-| Stop | POST | `/restconf/operations/Cisco-IOS-XE-rpc:app-hosting` |
-| Deactivate | POST | `/restconf/operations/Cisco-IOS-XE-rpc:app-hosting` |
-| Uninstall | POST | `/restconf/operations/Cisco-IOS-XE-rpc:app-hosting` |
-| Delete Config | DELETE | `/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app={appID}` |
-| Get State | GET | `/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data` |
-| Get ARP | GET | `/restconf/data/Cisco-IOS-XE-arp-oper:arp-data` |
+```mermaid
+sequenceDiagram
+    actor User
+    participant VK as AppHostingProvider
+    participant Drv as XEDriver
+    participant Dev as IOS-XE Device
 
-### YANG Models Used
-
-- `Cisco-IOS-XE-app-hosting-cfg.yang` - App-hosting configuration
-- `Cisco-IOS-XE-app-hosting-oper.yang` - App-hosting operational state
-- `Cisco-IOS-XE-rpc.yang` - RPC operations (install, activate, start, etc.)
-- `Cisco-IOS-XE-arp-oper.yang` - ARP table for IP discovery
-
-## Data Flow
-
-### Pod Creation Flow
-
-```
-1. kubectl apply -f pod.yaml
-         │
-         ▼
-2. Kubernetes API Server
-         │
-         ▼
-3. Virtual Kubelet Pod Controller
-         │
-         ▼
-4. AppHostingProvider.CreatePod()
-         │
-         ▼
-5. XEDriver.DeployPod()
-         │
-         ▼
-6. XEDriver.CreatePodApps()
-         │
-         ├─► Configure app-hosting (RESTCONF POST)
-         │   - Set VirtualPortGroup interface
-         │   - Set resource profile (CPU, memory, disk)
-         │   - Set container labels for discovery
-         │
-         ├─► InstallApp (RESTCONF RPC: install)
-         │
-         ├─► WaitForAppStatus("DEPLOYED")
-         │
-         ├─► ActivateApp (RESTCONF RPC: activate)
-         │
-         ├─► WaitForAppStatus("ACTIVATED")
-         │
-         └─► Start is automatic (start: true in config)
-         │
-         ▼
-7. Container receives DHCP IP from device pool
-         │
-         ▼
-8. Pod status updated via GetPodStatus()
-   - IP discovered from oper-data or ARP table
+    User->>VK: CreatePod
+    VK->>Drv: DeployPod
+    Drv->>Dev: POST app-hosting-cfg (RESTCONF)
+    Drv->>Dev: RPC install
+    Note over Drv,Dev: Reconciler takes over<br/>(state machine below)
+    Dev-->>Drv: DEPLOYED
+    Drv->>Dev: RPC activate → ACTIVATED
+    Drv->>Dev: RPC start → RUNNING
+    Drv->>Dev: Query oper-data for pod IP
+    alt IP in oper-data
+        Dev-->>Drv: IPv4
+    else fallback
+        Drv->>Dev: Query ARP for container MAC
+        Dev-->>Drv: IPv4
+    end
+    Drv-->>VK: Pod ready
 ```
 
-### Pod Deletion Flow
+### Pod deletion flow
 
-```
-1. kubectl delete pod <name>
-         │
-         ▼
-2. AppHostingProvider.DeletePod()
-         │
-         ▼
-3. XEDriver.DeletePod()
-         │
-         ▼
-4. For each container:
-         │
-         ├─► StopApp (RESTCONF RPC: stop)
-         │
-         ├─► WaitForAppStatus("ACTIVATED")
-         │
-         ├─► DeactivateApp (RESTCONF RPC: deactivate)
-         │
-         ├─► WaitForAppStatus("DEPLOYED")
-         │
-         ├─► UninstallApp (RESTCONF RPC: uninstall)
-         │
-         ├─► WaitForAppNotPresent()
-         │
-         └─► Delete config (RESTCONF DELETE)
+Reverse of creation: `RUNNING → stop → ACTIVATED → deactivate → DEPLOYED → uninstall → config DELETE`. If a state is skipped (e.g. app already stopped), the reconciler picks up from wherever the observed state actually is.
+
+## App lifecycle state machine
+
+The IOS-XE driver's reconciler (`reconciler.go`) drives each app toward its desired state by observing live state and issuing a single RPC per pass.
+
+```mermaid
+stateDiagram-v2
+    [*] --> NoConfig
+    NoConfig --> INSTALLING: POST config + install RPC
+    INSTALLING --> DEPLOYED: validation passes
+    INSTALLING --> Error: pkg-policy invalid + notification
+    DEPLOYED --> ACTIVATED: activate RPC
+    ACTIVATED --> RUNNING: start RPC
+    STOPPED --> RUNNING: start RPC
+    RUNNING --> [*]
+    Error --> [*]
+
+    RUNNING --> STOPPED: stop RPC (reverse)
+    STOPPED --> DEPLOYED: deactivate RPC
+    DEPLOYED --> NoConfig: uninstall + DELETE config
 ```
 
-### Pod Status Discovery
+**Key behaviours:**
 
-The provider discovers pod status by:
+- **`INSTALLING`** — normally transient. The reconciler waits unless `pkg-policy = iox-pkg-policy-invalid` **and** a confirming install notification has been received from the device. During the first few seconds of every install the device reports `pkg-policy = invalid` as a YANG default; waiting for the notification prevents this transient value from being treated as a fatal error. If `spec.allowUnsignedApps = true`, the check is skipped entirely — use this when you're running unsigned packages (e.g. your own custom application builds, or devices not enforcing signed-verification).
+- **`STOPPED`** — restartable directly via `start` (no re-activate needed).
+- **No oper data** with config present — reconciler re-issues the install RPC.
+- **Error** — surfaces as Pod `Failed` with reason `PackagePolicyInvalid` and a message from the device's notification.
 
-1. **Container Discovery**: Query app-hosting config for apps with matching pod UID labels
-2. **State Mapping**: Map IOS-XE app states to Kubernetes container states
-3. **IP Discovery**:
-   - First, check `app-hosting-oper-data` for IPv4 address
-   - Fallback: Look up container MAC address in ARP table
+### Reverse path (desired = Deleted)
 
-## State Management
+| Observed state | Action |
+|---|---|
+| `RUNNING` | `stop` |
+| `ACTIVATED` or `STOPPED` | `deactivate` |
+| `DEPLOYED` | `uninstall` |
+| No oper data | `DELETE` config |
 
-### Pod State Mapping
+## Pod status and discovery
 
-| Kubernetes Phase | IOS-XE App State |
-|-----------------|------------------|
-| Pending | INSTALLING, DEPLOYED, ACTIVATED |
-| Running | RUNNING |
-| Succeeded | STOPPED |
-| Failed | ERROR |
+### Pod-to-app naming
 
-### Container Labels
+App IDs follow `cvk{index}_{podUID}` where the UID has hyphens stripped. Up to 10 containers per pod (index `0-9`). Example: `cvk00000_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4`.
 
-Containers are tagged with labels in the `--run-opts` for discovery:
+This lets the driver rebuild pod identity when listing apps from the device — the UID is embedded in the app ID, and pod metadata (name, namespace, container name) is stored as key-value labels in the app's `--run-opts`:
 
 ```
---label cisco.vk/pod-name=<pod-name>
---label cisco.vk/pod-namespace=<namespace>
---label cisco.vk/pod-uid=<uid>
---label cisco.vk/container-name=<container-name>
+io.kubernetes.pod.name=<name>
+io.kubernetes.pod.namespace=<namespace>
+io.kubernetes.pod.uid=<uid>
+io.kubernetes.container.name=<container>
 ```
 
-### App Naming Convention
+### Container state mapping
 
-App IDs are generated from pod metadata:
-```
-{pod-uid-without-hyphens}-{container-name-hash}
-```
+| IOS-XE state | Container state | Ready |
+|---|---|---|
+| `RUNNING` | Running | `true` |
+| `DEPLOYED`, `ACTIVATED`, `INSTALLING` | Pending | `false` |
+| `STOPPED` | Terminated (exit 0) | `false` |
+| Error / `pkg-policy-invalid` confirmed | Terminated with exit code + reason | `false` |
+
+### IP discovery
+
+1. Query app-hosting oper-data for `ipv4-addr`
+2. Fallback: ARP table lookup by the container's MAC address
+3. Default: `0.0.0.0` (no IP yet)
+
+## Pod recovery loop
+
+A background goroutine in `cisco-vk run` periodically lists all pods on this node in `Failed` phase and resets them to `Pending` if their `status.Reason` is one of:
+
+- `NotFound`
+- `ProviderFailed`
+- `PackagePolicyInvalid`
+
+This lets the VK controller reprocess the pod without manual `kubectl delete/apply`. The recovery loop uses exponential backoff: **15 s → 30 s → 60 s → 120 s → 240 s → 300 s** (5 min cap). On any successful recovery the interval resets to 15 s.
+
+Pods with a `DeletionTimestamp` are skipped — the normal deletion path owns those.
 
 ## Networking
 
-### DHCP Mode
+Three interface modes are supported (see [Configuration](CONFIGURATION.md#xeconfig-ios-xe-networking) for field reference, and the platform-specific pages [Catalyst 8000V](configuration-cat8000v.md) / [Catalyst 9000](configuration-cat9000.md) for device-side setup):
 
-When `dhcpEnabled: true`:
-1. App-hosting is configured with only the VirtualPortGroup interface number
-2. Container requests IP from device DHCP pool
-3. Provider discovers IP from:
-   - `app-hosting-oper-data` network interfaces (preferred)
-   - ARP table lookup using container MAC address (fallback)
+| Mode | IP source | Use case |
+|---|---|---|
+| **VirtualPortGroup** | DHCP pool on VPG or static from `podCIDR` | Catalyst 8000V; containers share a private L3 to the device |
+| **AppGigabitEthernet** | DHCP (access) or DHCP in VLAN (trunk) | Catalyst 9000; containers on a dedicated front-panel interface with optional VLAN tagging |
+| **Management** | DHCP or static on the management interface | Containers sharing the device management network |
 
-### Network Configuration Flow
+### DHCP flow (VirtualPortGroup example)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Catalyst 8000V                                │
-│                                                                  │
-│  ┌────────────┐    ┌─────────────────┐    ┌─────────────────┐  │
-│  │ Container  │───►│ VirtualPortGroup0│───►│   DHCP Pool     │  │
-│  │ (eth0)     │    │  192.168.1.254        │   192.168.1.0/24│  │
-│  │            │◄───│  (gateway)      │◄───│   assigns IP    │  │
-│  └────────────┘    └─────────────────┘    └─────────────────┘  │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+┌────────────┐    ┌──────────────────┐    ┌──────────────────┐
+│ Container  │───▶│ VirtualPortGroup0│───▶│   DHCP Pool      │
+│ (eth0)     │    │  gateway .254    │    │   /24 subnet     │
+│            │◀───│                  │◀───│   assigns IP     │
+└────────────┘    └──────────────────┘    └──────────────────┘
 ```
 
-## Project Structure
+Provider-side IP discovery always happens **after** deploy completes — it polls oper-data first, then falls back to ARP, then retries on the next reconcile.
+
+## Observability
+
+See [Observability](observability.md) for the full reference. At a high level:
+
+- **Prometheus metrics** are served on the standard kubelet `/metrics/resource` endpoint and cover device CPU, memory, storage, per-interface rates/state, and CDP/OSPF neighbor counts.
+- **Kubernetes stats/summary** is served on `/stats/summary`, enabling `kubectl top node`.
+- **OpenTelemetry topology traces** are emitted on a configurable interval (default 60 s) and include a device root span with child link spans (one per CDP/OSPF neighbor) and app spans (one per hosted container).
+- **Node annotations** (`cisco.io/router-id`, `cisco.io/hostname`, `cisco.io/cdp-neighbor-count`, `cisco.io/ospf-neighbor-count`, `cisco.io/protocols`) make topology context queryable via `kubectl describe node`.
+
+## RESTCONF endpoints
+
+| Operation | Method | Endpoint |
+|-----------|--------|----------|
+| App config (create/list) | POST/GET | `/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps` |
+| App config (delete) | DELETE | `/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app={id}` |
+| App oper-data | GET | `/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/app` |
+| Lifecycle RPCs (install/activate/start/stop/deactivate/uninstall) | POST | `/restconf/operations/Cisco-IOS-XE-app-hosting-rpcs:app-*` |
+| Device version | GET | `/restconf/data/Cisco-IOS-XE-native:native/version` |
+| CDP neighbors | GET | `/restconf/data/Cisco-IOS-XE-cdp-oper:cdp-neighbor-details` |
+| OSPF neighbors | GET | `/restconf/data/Cisco-IOS-XE-ospf-oper:ospf-oper-data` |
+| Interfaces | GET | `/restconf/data/ietf-interfaces:interfaces` |
+| ARP table | GET | `/restconf/data/Cisco-IOS-XE-arp-oper:arp-data` |
+
+### YANG models
+
+- `Cisco-IOS-XE-app-hosting-cfg` — app config
+- `Cisco-IOS-XE-app-hosting-oper` — app runtime state
+- `Cisco-IOS-XE-app-hosting-rpcs` — lifecycle RPCs
+- `Cisco-IOS-XE-cdp-oper` — CDP neighbor discovery
+- `Cisco-IOS-XE-ospf-oper` — OSPF neighbor state
+- `Cisco-IOS-XE-arp-oper` — ARP-based IP discovery
+
+## Project layout
 
 ```
 cisco-virtual-kubelet/
-├── api/v1alpha1/                 # CRD-ready API types
-│   ├── doc.go
-│   ├── groupversion_info.go
-│   ├── types.go                  # DeviceSpec, CiscoDevice, shared types
-│   └── xe_types.go               # IOS-XE driver-specific types
-├── cmd/virtual-kubelet/          # Entry point
-│   ├── main.go                   # Main function
-│   └── root.go                   # CLI setup with cobra
+├── api/v1alpha1/              # CRD-ready API types (DeviceSpec, XEConfig, OTELConfig)
+├── cmd/cisco-vk/              # Unified binary
+│   ├── main.go                # cobra root
+│   ├── run.go                 # 'run' subcommand — the VK provider
+│   └── manager.go             # 'manager' subcommand — the controller
+├── charts/cisco-virtual-kubelet/  # Helm chart (controller + RBAC + CRDs)
+├── config/crd/                # Generated CRD manifests
 ├── internal/
-│   ├── config/                   # Configuration
-│   │   └── config.go             # YAML/viper loader → DeviceSpec
-│   ├── provider/                 # VK Provider
-│   │   ├── provider.go           # AppHostingProvider
-│   │   └── defaults.go           # Node defaults
-│   └── drivers/                  # Device drivers
-│       ├── factory.go            # Driver factory
-│       ├── common/               # Shared code
-│       │   ├── restconf_client.go
-│       │   ├── types.go
-│       │   ├── naming.go
-│       │   └── helpers.go
-│       ├── iosxe/                # IOS-XE driver
-│       │   ├── driver.go         # XEDriver
-│       │   ├── app_hosting.go    # App lifecycle
-│       │   ├── pod_lifecycle.go  # Pod CRUD
-│       │   ├── transformers.go   # K8s ↔ IOS-XE
-│       │   └── models.go         # YANG structs
-│       └── fake/                 # Test driver
-│           └── driver.go
-└── dev/                          # Development files
+│   ├── config/                # YAML/viper loader
+│   ├── controller/            # CiscoDevice reconciler
+│   ├── provider/              # AppHostingProvider, metrics, OTEL topology
+│   └── drivers/               # Driver implementations
+│       ├── common/            # Shared types (DeviceInfo, CDPNeighbor, etc.)
+│       ├── iosxe/             # IOS-XE driver (see layering table above)
+│       └── fake/              # Mock driver for tests
+├── examples/                  # Example device configs and pod manifests
+└── docs/                      # This documentation
 ```

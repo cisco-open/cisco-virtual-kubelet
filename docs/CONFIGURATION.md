@@ -1,69 +1,35 @@
 # Configuration Reference
 
-This document describes the configuration for the Cisco Virtual Kubelet Provider.
+Every field accepted by a `CiscoDevice` custom resource.
 
-## Supported Devices
+All fields documented below live under `spec` on the CR. The controller reads the CR, strips credentials, and materializes the rest into a ConfigMap that the VK pod reads — you do not edit the ConfigMap directly.
 
-Currently supported:
-- **Cisco Catalyst 8000V** (cat8kv) virtual routers running IOS-XE 17.15.4c
-- **Cisco Catalyst 9000** (cat9k) virtual routers running IOS-XE 17.18.2
+For device-side prerequisites (IOS-XE CLI config, DHCP pools, VLANs, etc.) and per-platform networking examples, see:
 
-**NOTE:** Other versions that support Cisco App Hosting may work but have not been validated
+- [Catalyst 8000V](configuration-cat8000v.md) — VirtualPortGroup install
+- [Catalyst 9000](configuration-cat9000.md) — AppGigabitEthernet install (access and trunk)
 
-## Device Prerequisites
-
-The following IOS-XE configuration is required on the Catalyst 8000V:
-
-```
-! Enable IOx container platform
-iox
-
-! Enable RESTCONF API
-restconf
-
-! Disable app-hosting verification (required for unsigned containers)
-app-hosting verification disable
-no app-hosting signed-verification
-```
-
-### VirtualPortGroup and DHCP Configuration
-
-Configure a VirtualPortGroup interface to serve as the gateway for container networking, along with a DHCP pool:
-
-```
-! Configure VirtualPortGroup0 as the gateway for containers
-interface VirtualPortGroup0
- ip address 192.168.1.254 255.255.255.0
- ip nat inside
-!
-! Configure DHCP pool for app-hosting containers
-ip dhcp pool app-hosting
- network 192.168.1.0 255.255.255.0
- default-router 192.168.1.254
- dns-server 192.168.8.8
-```
-
-The VirtualPortGroup IP address (192.168.1.254) becomes the default gateway for containers that receive DHCP addresses from this pool.
-
-## Configuration File
-
-The configuration file describes the **device** only.  Runtime settings (node name,
-node IP, log level, etc.) are supplied via CLI flags or environment variables.
-
-Default location: `/etc/virtual-kubelet/config.yaml`
-
-## Minimal Configuration Example
+## Minimal spec
 
 ```yaml
-device:
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: cat9000-1
+  namespace: default
+spec:
   driver: XE
   address: "192.168.1.100"
   port: 443
   username: admin
-  password: cisco123
+  credentialSecretRef:
+    name: cat9000-1-creds       # Secret with key: password
   tls:
     enabled: true
     insecureSkipVerify: true
+  # allowUnsignedApps: true      # enable when running unsigned packages
+                                  # (your own builds, or devices without
+                                  # signed-verification enforcement)
   xe:
     networking:
       interface:
@@ -74,116 +40,198 @@ device:
           guestInterface: 0
 ```
 
-## CLI Flags & Environment Variables
+## CLI flags & environment variables
 
-Runtime settings are **not** in the config file.  They are passed as flags or env vars:
+Runtime settings are **not** in the config file — they are passed as flags or env vars. Precedence: **flag → environment variable → default**.
 
-| Flag | Env Var | Default | Description |
-|------|---------|---------|-------------|
+| Flag | Env var | Default | Description |
+|---|---|---|---|
 | `--nodename` | `VKUBELET_NODE_NAME` | `cisco-vk-<device-address>` | Kubernetes node name |
-| `--config` / `-c` | - | `/etc/virtual-kubelet/config.yaml` | Path to device config file |
-| `--kubeconfig` | `KUBECONFIG` | _(in-cluster)_ | Path to kubeconfig file |
-| `--log-level` | `LOG_LEVEL` | `info` | Log level: debug, info, warn, error |
+| `--config` / `-c` | — | `/etc/virtual-kubelet/config.yaml` | Device config path |
+| `--kubeconfig` | `KUBECONFIG` | in-cluster | kubeconfig path |
+| `--log-level` | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `--tls-cert-file` | — | auto-generated | Kubelet HTTPS listener certificate |
+| `--tls-key-file` | — | auto-generated | Kubelet HTTPS listener key |
+| — | `VK_DEVICE_PASSWORD` | — | Device password. Overrides `device.password` from the config file. Set by the controller when `credentialSecretRef` is used. |
 
-Precedence: **flag → environment variable → default**.
+## Configuration fields
 
-## Configuration Fields
+### Core
 
-### Device Section
+| Field | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `driver` | enum | yes | — | `XE`, `XR`, `NXOS`, `FAKE`. Only `XE` and `FAKE` are production-usable today. |
+| `address` | string | yes | — | Management IP or hostname |
+| `port` | int (1–65535) | no | 443 (TLS) / 80 | RESTCONF port |
+| `username` | string | yes | — | Device username |
+| `password` | string | no | — | Device password. **Do not set in controller mode** — use `credentialSecretRef` instead. |
+| `credentialSecretRef` | LocalObjectReference | no | — | Reference to a `Secret` in the same namespace containing key `password`. See [Security](security.md#credential-injection). |
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `driver` | string | Yes | - | Driver type: `XE`, `XR`, `NXOS`, `FAKE` |
-| `address` | string | Yes | - | Device management IP address |
-| `port` | int | No | 443 (TLS) / 80 | RESTCONF API port |
-| `username` | string | Yes | - | Device username |
-| `password` | string | Yes | - | Device password |
-| `podCIDR` | string | No | - | CIDR for static IP allocation |
+### TLS
 
-### TLS Section (`device.tls`)
+```yaml
+tls:
+  enabled: true
+  insecureSkipVerify: true
+  certFile: /path/to/client.crt
+  keyFile: /path/to/client.key
+  caFile:  /path/to/ca.crt
+```
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `enabled` | bool | No | false | Enable HTTPS |
-| `insecureSkipVerify` | bool | No | false | Skip certificate verification |
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `tls.enabled` | bool | `false` | Enable HTTPS to the device |
+| `tls.insecureSkipVerify` | bool | `false` | Skip certificate verification |
+| `tls.certFile` | string | — | Client certificate path |
+| `tls.keyFile` | string | — | Client key path |
+| `tls.caFile` | string | — | CA bundle path |
 
-### IOS-XE Networking Section (`device.xe.networking`)
+### Node and pod topology
 
-Driver-specific networking lives under the driver key.
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `podCIDR` | string | — | CIDR range the VK allocates from when DHCP is off. The VK hands out addresses sequentially from this range to each new container. |
+| `labels` | map[string]string | `{}` | Extra labels applied to the virtual node |
+| `taints` | []v1.Taint | `[]` | Extra taints applied to the virtual node |
+| `maxPods` | int32 | `16` | Maximum pods the device can host |
+| `region` | string | — | Populates `topology.kubernetes.io/region` on the node |
+| `zone` | string | — | Populates `topology.kubernetes.io/zone` on the node |
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `interface.type` | string | Yes | - | `VirtualPortGroup`, `AppGigabitEthernet`, or `Management` |
+### Resource limits
 
-#### VirtualPortGroup (`device.xe.networking.interface.virtualPortGroup`)
+Default and maximum resource bounds reported as node capacity/allocatable and used when a pod omits requests.
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `dhcp` | bool | No | false | Use DHCP for container IPs |
-| `interface` | string | No | "0" | VirtualPortGroup interface number |
-| `guestInterface` | int | No | 0 | Guest interface number |
+```yaml
+resourceLimits:
+  defaultCPU: "500m"
+  defaultMemory: "512Mi"
+  defaultStorage: "500Mi"
+  maxCPU: "2000m"
+  maxMemory: "4Gi"
+  maxStorage: "2Gi"
+  others:
+    gpu: "1"
+```
 
-#### AppGigabitEthernet (`device.xe.networking.interface.appGigabitEthernet`)
+| Field | Type | Notes |
+|---|---|---|
+| `resourceLimits.defaultCPU` | string | Default CPU if pod omits requests |
+| `resourceLimits.defaultMemory` | string | Default memory if pod omits requests |
+| `resourceLimits.defaultStorage` | string | Default ephemeral storage |
+| `resourceLimits.maxCPU` | string | Upper limit per container |
+| `resourceLimits.maxMemory` | string | Upper limit per container |
+| `resourceLimits.maxStorage` | string | Upper limit per container |
+| `resourceLimits.others` | map[string]string | Arbitrary custom resources |
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `mode` | string | Yes | - | `access` or `trunk` |
-| `dhcp` | bool | No | false | DHCP (access mode only) |
-| `guestInterface` | int | No | 0 | Guest interface (access mode only) |
-| `vlanIf.vlan` | int | No | - | VLAN ID (trunk mode only) |
-| `vlanIf.dhcp` | bool | No | false | DHCP (trunk mode only) |
-| `vlanIf.guestInterface` | int | No | 0 | Guest interface (trunk mode only) |
+### Logging
 
-#### Management (`device.xe.networking.interface.management`)
+```yaml
+logLevel: info   # debug | info | warn | error
+```
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `dhcp` | bool | No | false | Use DHCP for container IPs |
-| `guestInterface` | int | No | 0 | Guest interface number |
+The `logLevel` field is passed to the VK pod as the `--log-level` flag on the container.
 
-## Example Pod Manifest
+### App packaging
 
-Deploy a container to the cat8kv node:
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `allowUnsignedApps` | bool | `false` | When `true`, the reconciler skips the `pkg-policy-invalid` guard and treats the transient YANG default as an install-in-progress signal. Enable this when you're running unsigned container packages — most commonly your own custom application builds, or on devices where signed-verification is not enforced. See [Troubleshooting → PackagePolicyInvalid](troubleshooting.md#packagepolicyinvalid-false-positives). |
+
+### OpenTelemetry topology
+
+```yaml
+otel:
+  enabled: true
+  endpoint: "otel-collector.observability.svc:4317"
+  insecure: true
+  serviceName: "cisco-network"
+  intervalSecs: 60
+```
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `otel.enabled` | bool | `false` | Toggle topology trace emission |
+| `otel.endpoint` | string | — | OTLP gRPC collector endpoint. **Required** when `enabled: true`. |
+| `otel.insecure` | bool | `true` | Skip TLS on the gRPC connection |
+| `otel.serviceName` | string | `"cisco-network"` | Base service name. The device hostname is appended → `"cisco-network.<hostname>"`. |
+| `otel.intervalSecs` | int (min 10) | `60` | Interval between trace emissions |
+
+OTEL export only happens when the driver implements `TopologyProvider` (the IOS-XE driver does). See [Observability → OpenTelemetry](observability.md#opentelemetry-topology-export).
+
+### XEConfig — IOS-XE networking
+
+Required when `driver: XE`. The `type` field selects which mode is in use; exactly one of the mode-specific blocks must be set to match.
+
+```yaml
+xe:
+  networking:
+    interface:
+      type: VirtualPortGroup      # | AppGigabitEthernet | Management
+      virtualPortGroup: { ... }
+      appGigabitEthernet: { ... }
+      management: { ... }
+```
+
+| `type` | Typical platform | Details |
+|---|---|---|
+| `VirtualPortGroup` | Catalyst 8000V | [configuration-cat8000v.md](configuration-cat8000v.md) |
+| `AppGigabitEthernet` | Catalyst 9000 | [configuration-cat9000.md](configuration-cat9000.md) |
+| `Management` | Either (containers on management network) | [Below](#management-interface-both-platforms) |
+
+## Management interface (both platforms)
+
+The Management interface mode places containers on the device's management network rather than on a dedicated App Hosting interface. It is supported on both Catalyst 8000V and Catalyst 9000.
+
+```yaml
+xe:
+  networking:
+    interface:
+      type: Management
+      management:
+        dhcp: true
+        guestInterface: 0
+```
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `dhcp` | bool | `false` | DHCP on the management interface. If `false`, allocate from `podCIDR`. |
+| `guestInterface` | uint8 (0–3) | `0` | Container-side interface index (0 = eth0). |
+
+Note that putting containers on the management network exposes them directly to management traffic and any ACLs in place there. For workload isolation, prefer VirtualPortGroup (on Catalyst 8000V) or AppGigabitEthernet (on Catalyst 9000).
+
+## Example pod manifest
 
 ```yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  name: dhcp-test-pod
+  name: hello-app
   namespace: default
 spec:
-  nodeName: cat8kv-node
+  nodeName: cat9000-1
+  tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
   containers:
-  - name: test-app
+  - name: hello
     image: flash:/hello-app.iosxe.tar
     resources:
       requests:
-        memory: "64Mi"
-        cpu: "250m"
-      limits:
-        memory: "128Mi"
+        memory: "256Mi"
         cpu: "500m"
+      limits:
+        memory: "512Mi"
+        cpu: "1000m"
 ```
 
-NOTE:  Currently the container image must be pre-loaded onto the device flash storage.
+!!! note
+    The container image reference is a path on the device's flash storage (`flash:/...`), not a container registry. The tar must be pre-loaded on the device. Package policy (signed vs unsigned) is controlled by the device config (`no app-hosting signed-verification`) or by the CRD (`spec.allowUnsignedApps: true`).
 
-## Verifying Device Configuration
+## See also
 
-Test RESTCONF connectivity:
-
-```bash
-curl -k -u admin:cisco \
-  https://192.0.2.24/restconf/data/Cisco-IOS-XE-native:native/hostname
-```
-
-Verify IOx is running:
-
-```
-cat8kv# show iox-service
-```
-
-Check app-hosting status:
-
-```
-cat8kv# show app-hosting list
-```
+- [Catalyst 8000V](configuration-cat8000v.md) — VirtualPortGroup install walkthrough
+- [Catalyst 9000](configuration-cat9000.md) — AppGigabitEthernet install walkthrough
+- [Examples](https://github.com/cisco-open/cisco-virtual-kubelet/tree/main/examples/configs) — full working configs for every interface mode
+- [Security](security.md) — credential injection via Secrets
+- [Observability](observability.md) — OTEL and metrics configuration in detail
+- [Troubleshooting](troubleshooting.md) — common configuration issues

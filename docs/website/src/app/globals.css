@@ -154,11 +154,10 @@ body {
 
 /* Card hover effect */
 .card-hover {
-  transition: all 0.3s ease;
+  transition: box-shadow 0.25s ease;
 }
 
 .card-hover:hover {
-  transform: translateY(-4px);
   box-shadow: 0 12px 40px rgba(0, 188, 235, 0.15);
   border-color: var(--primary);
 }
@@ -170,7 +169,7 @@ body {
   border-radius: 12px;
   padding: 1rem 1.5rem;
   text-align: center;
-  transition: all 0.3s ease;
+  transition: box-shadow 0.25s ease;
 }
 
 .arch-box:hover {

@@ -1,0 +1,33 @@
+# Example pod scheduled on a CiscoDevice's virtual node.
+#
+# Prerequisites:
+#   - The controller is deployed (see README for Helm install)
+#   - A CiscoDevice named "cat9000-1" exists and is Ready
+#     (see ciscodevice-crs.yaml)
+#   - The container tar (flash:/hello-app.iosxe.tar) is on the device
+#
+# Apply with:
+#   kubectl apply -f example-pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-app
+  namespace: default
+spec:
+  nodeName: cat9000-1
+  # Tolerate the VK provider taint — VK nodes carry this so that workloads
+  # not explicitly targeted at them are never scheduled there.
+  tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
+  containers:
+  - name: hello
+    image: flash:/hello-app.iosxe.tar
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu:    "500m"
+      limits:
+        memory: "512Mi"
+        cpu:    "1000m"

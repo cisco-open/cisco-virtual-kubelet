@@ -1,0 +1,134 @@
+# CiscoDevice custom resource examples (controller-managed mode).
+#
+# When the Helm chart is installed, the controller watches CiscoDevice CRs and
+# creates one Virtual Kubelet Deployment per CR. Each CR should reference a
+# Secret containing the device password — the controller never persists
+# credentials to etcd.
+#
+# Apply with:
+#   kubectl apply -f ciscodevice-crs.yaml
+#
+# See examples/configs/device-configs.yaml for the equivalent local / dev
+# config file format.
+
+---
+# ─── Secret ──────────────────────────────────────────────────────────────────
+# One Secret per device (or shared across devices if they use the same
+# credentials). Must be in the same namespace as the CiscoDevice and have
+# a key named exactly "password".
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cat9000-1-creds
+  namespace: default
+type: Opaque
+stringData:
+  password: <device-password>
+
+---
+# Example 1: Catalyst 9000 — AppGigabitEthernet trunk on VLAN 200, DHCP
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: cat9000-1
+  namespace: default
+spec:
+  driver: XE
+  address: "192.168.1.100"
+  port: 443
+  username: admin
+  credentialSecretRef:
+    name: cat9000-1-creds
+  tls:
+    enabled: true
+    insecureSkipVerify: true
+  xe:
+    networking:
+      interface:
+        type: AppGigabitEthernet
+        appGigabitEthernet:
+          mode: trunk
+          vlanIf:
+            dhcp: true
+            vlan: 200
+            guestInterface: 0
+
+---
+# Example 2: Catalyst 8000V — VirtualPortGroup with DHCP, labels/taints,
+# resource limits, and OpenTelemetry topology export enabled
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: cat8kv-edge-1
+  namespace: default
+spec:
+  driver: XE
+  address: "192.0.2.24"
+  port: 443
+  username: admin
+  credentialSecretRef:
+    name: cat9000-1-creds   # shared credentials Secret
+  tls:
+    enabled: true
+    insecureSkipVerify: true
+  region: edge-east
+  zone:   edge-east-1
+  labels:
+    environment: production
+    hw.type: catalyst-8000v
+  taints:
+  - key: workload
+    value: edge
+    effect: NoSchedule
+  maxPods: 16
+  logLevel: info
+  resourceLimits:
+    defaultCPU:     "500m"
+    defaultMemory:  "512Mi"
+    defaultStorage: "500Mi"
+    maxCPU:         "2000m"
+    maxMemory:      "4Gi"
+    maxStorage:     "2Gi"
+  otel:
+    enabled: true
+    endpoint: "otel-collector.observability.svc:4317"
+    insecure: true
+    serviceName: "cisco-network"
+    intervalSecs: 60
+  xe:
+    networking:
+      interface:
+        type: VirtualPortGroup
+        virtualPortGroup:
+          dhcp: true
+          interface: "0"
+          guestInterface: 0
+
+---
+# Example 3: Device running unsigned packages (e.g. custom application builds),
+# Management interface, static IP from podCIDR.
+# allowUnsignedApps bypasses the pkg-policy-invalid install guard.
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: cat8kv-lab
+  namespace: default
+spec:
+  driver: XE
+  address: "192.0.2.99"
+  port: 443
+  username: admin
+  credentialSecretRef:
+    name: cat9000-1-creds
+  tls:
+    enabled: true
+    insecureSkipVerify: true
+  podCIDR: "10.0.0.0/24"
+  allowUnsignedApps: true    # skip pkg-policy-invalid guard
+  xe:
+    networking:
+      interface:
+        type: Management
+        management:
+          dhcp: false
+          guestInterface: 0
