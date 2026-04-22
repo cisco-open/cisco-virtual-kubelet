@@ -17,6 +17,10 @@ package iosxe
 import (
 	"fmt"
 	"net"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
@@ -25,12 +29,86 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+const (
+	annotationPackageDest    = "cisco.io/apphost-package-dest"
+	annotationPackageTimeout = "cisco.io/apphost-package-timeout"
+)
+
+const (
+	defaultPackageTimeout = 180 * time.Second
+	minPackageTimeout     = 10 * time.Second
+	maxPackageTimeout     = 30 * time.Minute
+)
+
+// getPackageDest reads the on-device flash destination path from a pod annotation.
+// Accepts paths with or without a leading slash after the filesystem prefix,
+// e.g. both "flash:app.tar" and "flash:/dir/app.tar" are valid.
+func getPackageDest(pod *v1.Pod) (string, error) {
+	if pod == nil || pod.Annotations == nil {
+		return "", nil
+	}
+	dest, ok := pod.Annotations[annotationPackageDest]
+	if !ok {
+		return "", nil
+	}
+	dest = strings.TrimSpace(dest)
+	if dest == "" {
+		return "", nil
+	}
+	valid := regexp.MustCompile(`^(bootflash:|harddisk:|flash:|nvram:|usb:)/?(.+)`)
+	if !valid.MatchString(dest) {
+		return "", fmt.Errorf(
+			"invalid %s annotation %q: expected e.g. flash:app.tar or flash:/virtual-kubelet/app.tar",
+			annotationPackageDest, dest,
+		)
+	}
+	return dest, nil
+}
+
+// getPackageTimeout reads the RUNNING-wait timeout from a pod annotation.
+// Accepts Go duration strings (e.g. "3m", "180s") and bare integer seconds (e.g. "180").
+// Returns defaultPackageTimeout on any parse failure; clamps to [min, max].
+func getPackageTimeout(pod *v1.Pod) time.Duration {
+	if pod == nil || pod.Annotations == nil {
+		return defaultPackageTimeout
+	}
+	raw, ok := pod.Annotations[annotationPackageTimeout]
+	if !ok {
+		return defaultPackageTimeout
+	}
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return defaultPackageTimeout
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		secs, err2 := strconv.Atoi(raw)
+		if err2 != nil {
+			return defaultPackageTimeout
+		}
+		d = time.Duration(secs) * time.Second
+	}
+	if d < minPackageTimeout {
+		d = minPackageTimeout
+	}
+	if d > maxPackageTimeout {
+		d = maxPackageTimeout
+	}
+	return d
+}
+
 // ConvertPodToAppConfigs converts a Kubernetes Pod spec into a slice of IOS-XE AppHosting configurations.
 // Each container in the pod is converted to a separate AppHosting app configuration.
 // Returns a slice of AppHostingConfig structs ready to be created on the device.
 func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, error) {
 	containerAppIDs := common.GenerateContainerAppIDs(pod)
 	configs := make([]AppHostingConfig, 0, len(pod.Spec.Containers))
+
+	packageDest, err := getPackageDest(pod)
+	if err != nil {
+		return nil, err
+	}
+	packageTimeout := getPackageTimeout(pod)
 
 	for _, container := range pod.Spec.Containers {
 		appName := containerAppIDs[container.Name]
@@ -198,9 +276,13 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 				PodUID:        string(pod.UID),
 			},
 			Spec: AppHostingSpec{
-				ImagePath:    container.Image,
-				DesiredState: AppDesiredStateRunning,
-				DeviceConfig: apps,
+				ImagePath:        container.Image,
+				DesiredState:     AppDesiredStateRunning,
+				DeviceConfig:     apps,
+				ImagePullPolicy:  container.ImagePullPolicy,
+				PackageDest:      packageDest,
+				PackageTimeout:   packageTimeout,
+				ImagePullSecrets: pod.Spec.ImagePullSecrets,
 			},
 			Status: AppHostingStatus{
 				Phase: AppPhaseConverging,

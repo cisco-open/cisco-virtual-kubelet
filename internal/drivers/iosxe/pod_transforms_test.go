@@ -23,6 +23,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
@@ -1144,5 +1145,74 @@ func TestAllocateIPForContainer_NonPrimary_NoIP(t *testing.T) {
 	}
 	if ip != "" {
 		t.Errorf("non-primary container should get empty IP, got %q", ip)
+	}
+}
+
+func TestGetPackageDest(t *testing.T) {
+	cases := []struct {
+		name        string
+		annotation  string
+		wantDest    string
+		wantErr     bool
+	}{
+		{name: "not set", annotation: "", wantDest: ""},
+		{name: "flash with path", annotation: "flash:/virtual-kubelet/app.tar", wantDest: "flash:/virtual-kubelet/app.tar"},
+		{name: "flash bare", annotation: "flash:nginx.tar", wantDest: "flash:nginx.tar"},
+		{name: "bootflash", annotation: "bootflash:/apps/app.tar", wantDest: "bootflash:/apps/app.tar"},
+		{name: "flash empty value", annotation: "flash:", wantErr: true},
+		{name: "http url", annotation: "http://example.com/app.tar", wantErr: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			pod := &v1.Pod{}
+			if tc.annotation != "" {
+				pod.Annotations = map[string]string{annotationPackageDest: tc.annotation}
+			}
+			got, err := getPackageDest(pod)
+			if tc.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got nil (dest=%q)", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+			if got != tc.wantDest {
+				t.Errorf("got %q, want %q", got, tc.wantDest)
+			}
+		})
+	}
+}
+
+func TestGetPackageTimeout(t *testing.T) {
+	cases := []struct {
+		name       string
+		annotation string
+		want       time.Duration
+	}{
+		{name: "not set", annotation: "", want: defaultPackageTimeout},
+		{name: "3m duration", annotation: "3m", want: 3 * time.Minute},
+		{name: "180s duration", annotation: "180s", want: 180 * time.Second},
+		{name: "bare int 180", annotation: "180", want: 180 * time.Second},
+		{name: "bare int too small clamp", annotation: "5", want: minPackageTimeout},
+		{name: "2h clamp to max", annotation: "2h", want: maxPackageTimeout},
+		{name: "invalid string", annotation: "notanumber", want: defaultPackageTimeout},
+		{name: "empty annotation", annotation: " ", want: defaultPackageTimeout},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			pod := &v1.Pod{}
+			if tc.annotation != "" {
+				pod.Annotations = map[string]string{annotationPackageTimeout: tc.annotation}
+			}
+			got := getPackageTimeout(pod)
+			if got != tc.want {
+				t.Errorf("got %v, want %v", got, tc.want)
+			}
+		})
 	}
 }

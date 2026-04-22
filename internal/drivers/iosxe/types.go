@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	v1 "k8s.io/api/core/v1"
 )
 
 // networkConfig holds the network configuration for an app container
@@ -80,9 +81,13 @@ type AppHostingMetadata struct {
 
 // AppHostingSpec declares the desired state and the device configuration payload.
 type AppHostingSpec struct {
-	ImagePath    string
-	DesiredState AppDesiredState
-	DeviceConfig *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps // YANG config payload
+	ImagePath        string
+	DesiredState     AppDesiredState
+	DeviceConfig     *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps // YANG config payload
+	ImagePullPolicy  v1.PullPolicy
+	PackageDest      string                    // on-device flash path (from annotation); empty = use default
+	PackageTimeout   time.Duration             // 0 = use default (180s)
+	ImagePullSecrets []v1.LocalObjectReference // from pod.Spec.ImagePullSecrets
 }
 
 // AppHostingStatus captures the last-observed device state and reconciler phase.
@@ -110,3 +115,20 @@ func (c *AppHostingConfig) ContainerName() string { return c.Metadata.ContainerN
 
 // ImagePath is a convenience accessor.
 func (c *AppHostingConfig) ImagePath() string { return c.Spec.ImagePath }
+
+// PodUID is a convenience accessor.
+func (c *AppHostingConfig) PodUID() string { return c.Metadata.PodUID }
+
+// ImagePullPolicy is a convenience accessor.
+func (c *AppHostingConfig) ImagePullPolicy() v1.PullPolicy { return c.Spec.ImagePullPolicy }
+
+// PackageDest is a convenience accessor.
+func (c *AppHostingConfig) PackageDest() string { return c.Spec.PackageDest }
+
+// PackageTimeout is a convenience accessor.
+func (c *AppHostingConfig) PackageTimeout() time.Duration { return c.Spec.PackageTimeout }
+
+// ImagePullSecrets is a convenience accessor.
+func (c *AppHostingConfig) ImagePullSecrets() []v1.LocalObjectReference {
+	return c.Spec.ImagePullSecrets
+}
