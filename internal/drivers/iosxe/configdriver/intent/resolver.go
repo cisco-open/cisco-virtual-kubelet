@@ -129,8 +129,30 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 		configuration = asMap(MergeWithRules(configuration, block, r.KeyRules))
 	}
 
-	// 3) Templates, expanded with the caller-supplied values, merged in
-	//    the order they appear on the CR.
+	// 3a) Interface groups, expanded per (device, interface) pair and
+	//     merged before templates. Membership is the intersection of
+	//     DeviceRefs / DeviceSelector and the device's InterfaceSelector
+	//     match; only matching interfaces are projected.
+	for _, groupName := range cr.Spec.InterfaceGroups {
+		group, err := r.loadInterfaceGroup(ctx, cr.Namespace, groupName)
+		if err != nil {
+			return nil, err
+		}
+		if !r.interfaceGroupAppliesToDevice(device_, group) {
+			// Device not a member: this is not an error (operators
+			// commonly list a group on several CRs; non-matching devices
+			// simply skip it).
+			continue
+		}
+		expanded, err := r.expandInterfaceGroupForDevice(device_, group)
+		if err != nil {
+			return nil, fmt.Errorf("IOSXEInterfaceGroupConfig/%s: %w", group.Name, err)
+		}
+		configuration = asMap(MergeWithRules(configuration, expanded, r.KeyRules))
+	}
+
+	// 3b) Templates, expanded with the caller-supplied values, merged in
+	//     the order they appear on the CR.
 	for _, ref := range cr.Spec.TemplateRefs {
 		tpl, err := r.loadTemplate(ctx, cr.Namespace, ref.Name)
 		if err != nil {
@@ -201,6 +223,124 @@ func (r *Resolver) loadTemplate(ctx context.Context, ns, name string) (*configv1
 		return nil, fmt.Errorf("get IOSXETemplate %s/%s: %w", ns, name, err)
 	}
 	return &tpl, nil
+}
+
+func (r *Resolver) loadInterfaceGroup(ctx context.Context, ns, name string) (*configv1alpha1.IOSXEInterfaceGroupConfig, error) {
+	var group configv1alpha1.IOSXEInterfaceGroupConfig
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, &group); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("IOSXEInterfaceGroupConfig %s/%s not found", ns, name)
+		}
+		return nil, fmt.Errorf("get IOSXEInterfaceGroupConfig %s/%s: %w", ns, name, err)
+	}
+	return &group, nil
+}
+
+// interfaceGroupAppliesToDevice checks the device-level membership
+// filter (explicit refs and/or label selector). Interface-level
+// filtering happens separately in expandInterfaceGroupForDevice —
+// a device may match at the device level but have no interfaces that
+// match at the interface level, in which case the group contributes
+// nothing rather than failing resolution.
+func (r *Resolver) interfaceGroupAppliesToDevice(device *ciskov1.CiscoDevice, group *configv1alpha1.IOSXEInterfaceGroupConfig) bool {
+	if device == nil || group == nil {
+		return false
+	}
+	// No device filter at all means "no members" per the
+	// interface-group contract (documented on the CRD).
+	explicit := len(group.Spec.DeviceRefs) > 0
+	selector := group.Spec.DeviceSelector != nil
+	if !explicit && !selector {
+		return false
+	}
+	for _, ref := range group.Spec.DeviceRefs {
+		if ref.Name == device.Name {
+			return true
+		}
+	}
+	if selector {
+		sel, err := metav1.LabelSelectorAsSelector(group.Spec.DeviceSelector)
+		if err == nil && sel.Matches(labels.Set(device.Labels)) {
+			return true
+		}
+	}
+	return false
+}
+
+// expandInterfaceGroupForDevice projects a group's Configuration body
+// onto every (type, name) in InterfaceSelector that resolves to a
+// real interface for this device (Phase-3 optimistically projects
+// every selector entry; per-device interface enumeration against the
+// device itself is a Phase-4 follow-up that requires operational-YANG
+// reads).
+//
+// The projection replicates the group's configuration body for each
+// matched interface, injecting the selector's (type, name) as the
+// entry's key fields. Families that don't already carry a "type"/
+// "name" key at the top level are left alone (rare in practice — the
+// whole point of interface_groups is interface-keyed families).
+func (r *Resolver) expandInterfaceGroupForDevice(device *ciskov1.CiscoDevice, group *configv1alpha1.IOSXEInterfaceGroupConfig) (map[string]any, error) {
+	var body map[string]any
+	if err := yaml.Unmarshal(group.Spec.Configuration.Raw, &body); err != nil {
+		return nil, fmt.Errorf("decode configuration: %w", err)
+	}
+	if len(body) == 0 {
+		return map[string]any{}, nil
+	}
+
+	out := map[string]any{}
+	for _, match := range group.Spec.InterfaceSelector {
+		projected := projectInterfaceEntry(body, match)
+		out = asMap(MergeWithRules(out, projected, r.KeyRules))
+	}
+	return out, nil
+}
+
+// projectInterfaceEntry replicates a family block with the
+// (type, name) key fields injected on every list element. The Phase-3
+// contract: the group's Configuration body declares one or more
+// interface families; each family's entries inherit the selector's
+// type+name so operators don't repeat them per-entry.
+func projectInterfaceEntry(body map[string]any, match configv1alpha1.InterfaceMatch) map[string]any {
+	out := make(map[string]any, len(body))
+	for famKey, famVal := range body {
+		fam, ok := famVal.(map[string]any)
+		if !ok {
+			// Preserve non-family leaves verbatim.
+			out[famKey] = famVal
+			continue
+		}
+		newFam := make(map[string]any, len(fam))
+		for k, v := range fam {
+			list, isList := v.([]any)
+			if !isList {
+				newFam[k] = v
+				continue
+			}
+			newList := make([]any, 0, len(list))
+			for _, el := range list {
+				m, ok := el.(map[string]any)
+				if !ok {
+					newList = append(newList, el)
+					continue
+				}
+				entry := make(map[string]any, len(m)+2)
+				for ek, ev := range m {
+					entry[ek] = ev
+				}
+				if match.Type != "" {
+					entry["type"] = match.Type
+				}
+				if match.Name != "" {
+					entry["name"] = match.Name
+				}
+				newList = append(newList, entry)
+			}
+			newFam[k] = newList
+		}
+		out[famKey] = newFam
+	}
+	return out
 }
 
 // deviceMatchesGroup reports whether the named device satisfies the

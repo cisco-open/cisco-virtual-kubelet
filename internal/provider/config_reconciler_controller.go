@@ -158,6 +158,7 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&configv1alpha1.IOSXEConfig{}, builder.WithPredicates(devicePredicate)).
 		Watches(&configv1alpha1.IOSXEConfigDefaults{}, mapAll).
 		Watches(&configv1alpha1.IOSXEDeviceGroupConfig{}, mapAll).
+		Watches(&configv1alpha1.IOSXEInterfaceGroupConfig{}, mapAll).
 		Watches(&configv1alpha1.IOSXETemplate{}, mapAll).
 		Watches(&corev1.ConfigMap{}, mapAll).
 		Complete(r)

@@ -204,3 +204,91 @@ func TestResolveWithTemplateExpansion(t *testing.T) {
 	}
 }
 
+
+func TestResolveInterfaceGroupExpansion(t *testing.T) {
+	device := mkDevice("edge-01", map[string]string{"role": "access-switch"})
+	group := &configv1alpha1.IOSXEInterfaceGroupConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "access-uplinks", Namespace: "network"},
+		Spec: configv1alpha1.IOSXEInterfaceGroupConfigSpec{
+			DeviceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"role": "access-switch"},
+			},
+			InterfaceSelector: []configv1alpha1.InterfaceMatch{
+				{Type: "GigabitEthernet", Name: "0/0/0"},
+				{Type: "GigabitEthernet", Name: "0/0/1"},
+			},
+			Configuration: runtime.RawExtension{Raw: []byte(
+				`{"interface_ethernet":{"interfaces":[{"description":"uplink","shutdown":false}]}}`,
+			)},
+		},
+	}
+	cr := mkCR("edge-01", "edge-01", []string{"interface_ethernet"}, `{}`)
+	cr.Spec.InterfaceGroups = []string{"access-uplinks"}
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, group, cr).
+		Build()
+	r := &Resolver{Client: c}
+
+	got, err := r.Resolve(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	ifaces := got.Configuration["interface_ethernet"].(map[string]any)["interfaces"].([]any)
+	if len(ifaces) != 2 {
+		t.Fatalf("got %d projected interfaces, want 2:\n%#v", len(ifaces), ifaces)
+	}
+	// Every projected entry must carry both type and name from the
+	// selector.
+	seen := map[string]bool{}
+	for _, e := range ifaces {
+		m := e.(map[string]any)
+		key := m["type"].(string) + "/" + m["name"].(string)
+		seen[key] = true
+		if m["description"] != "uplink" {
+			t.Errorf("entry %s missing inherited description: %#v", key, m)
+		}
+	}
+	if !seen["GigabitEthernet/0/0/0"] || !seen["GigabitEthernet/0/0/1"] {
+		t.Errorf("missing expected projections: %v", seen)
+	}
+}
+
+func TestResolveInterfaceGroupSkipsNonMemberDevice(t *testing.T) {
+	// Device doesn't match the selector — group should be silently
+	// skipped, not fail resolution.
+	device := mkDevice("core-01", map[string]string{"role": "core"})
+	group := &configv1alpha1.IOSXEInterfaceGroupConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "access-uplinks", Namespace: "network"},
+		Spec: configv1alpha1.IOSXEInterfaceGroupConfigSpec{
+			DeviceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"role": "access-switch"},
+			},
+			InterfaceSelector: []configv1alpha1.InterfaceMatch{
+				{Type: "GigabitEthernet", Name: "0/0/0"},
+			},
+			Configuration: runtime.RawExtension{Raw: []byte(`{}`)},
+		},
+	}
+	cr := mkCR("core-01", "core-01", []string{"interface_ethernet"}, `{}`)
+	cr.Spec.InterfaceGroups = []string{"access-uplinks"}
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, group, cr).
+		Build()
+	r := &Resolver{Client: c}
+
+	// Should resolve without error; no interface_ethernet entries
+	// contributed by the group.
+	got, err := r.Resolve(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	if fam, ok := got.Configuration["interface_ethernet"].(map[string]any); ok {
+		if ifs, ok := fam["interfaces"].([]any); ok && len(ifs) > 0 {
+			t.Fatalf("non-member device received projections: %#v", ifs)
+		}
+	}
+}

@@ -65,8 +65,8 @@ spec:
                 description: |-
                   DeviceGroups names the IOSXEDeviceGroupConfig CRs whose configuration
                   is merged into the resolved intent before this CR's source.
-                  Merge order follows netascode semantics: defaults → groups → templates
-                  → per-device, rightmost wins.
+                  Merge order follows netascode semantics: defaults → device groups →
+                  interface groups → templates → per-device, rightmost wins.
                 items:
                   type: string
                 type: array
@@ -97,6 +97,15 @@ spec:
                 - report
                 - pause
                 type: string
+              interfaceGroups:
+                description: |-
+                  InterfaceGroups names the IOSXEInterfaceGroupConfig CRs whose
+                  per-interface configuration is expanded and merged into the
+                  resolved intent. Each named group must be in the same namespace
+                  as the CR. Matches netascode's `interface_groups[]`.
+                items:
+                  type: string
+                type: array
               managedFamilies:
                 description: |-
                   ManagedFamilies is the closed list of netascode families this CR owns.

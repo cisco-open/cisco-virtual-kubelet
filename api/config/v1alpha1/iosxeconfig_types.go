@@ -29,10 +29,17 @@ type IOSXEConfigSpec struct {
 
 	// DeviceGroups names the IOSXEDeviceGroupConfig CRs whose configuration
 	// is merged into the resolved intent before this CR's source.
-	// Merge order follows netascode semantics: defaults → groups → templates
-	// → per-device, rightmost wins.
+	// Merge order follows netascode semantics: defaults → device groups →
+	// interface groups → templates → per-device, rightmost wins.
 	// +optional
 	DeviceGroups []string `json:"deviceGroups,omitempty"`
+
+	// InterfaceGroups names the IOSXEInterfaceGroupConfig CRs whose
+	// per-interface configuration is expanded and merged into the
+	// resolved intent. Each named group must be in the same namespace
+	// as the CR. Matches netascode's `interface_groups[]`.
+	// +optional
+	InterfaceGroups []string `json:"interfaceGroups,omitempty"`
 
 	// TemplateRefs names IOSXETemplate CRs to expand and merge before the
 	// per-device source.

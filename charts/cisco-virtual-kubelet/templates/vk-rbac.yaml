@@ -63,7 +63,12 @@ rules:
   # ConfigReconciler running inside cisco-vk run reads and updates
   # status on CRs targeting its device.
   - apiGroups: ["config.cisco.vk"]
-    resources: ["iosxeconfigs", "iosxeconfigdefaults", "iosxedevicegroupconfigs", "iosxetemplates"]
+    resources:
+      - iosxeconfigs
+      - iosxeconfigdefaults
+      - iosxedevicegroupconfigs
+      - iosxeinterfacegroupconfigs
+      - iosxetemplates
     verbs: ["get", "list", "watch"]
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigs/status"]
