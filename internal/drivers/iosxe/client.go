@@ -38,9 +38,21 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 
 	cfgPath := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
 
+	// For flash/local images, suppress auto-start during install so the
+	// reconciler's activate RPC cannot race with the device's own activation
+	// sequence. We re-enable Start after DEPLOYED and wait for RUNNING ourselves.
+	gapp := appConfig.Spec.DeviceConfig.App[appConfig.AppName()]
+	origStart := gapp.Start
+	if !isHTTPURL(appConfig.ImagePath()) {
+		falseVal := false
+		gapp.Start = &falseVal
+	}
+
 	if err := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller); err != nil {
+		gapp.Start = origStart
 		return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName(), err)
 	}
+	gapp.Start = origStart
 
 	timeout := appConfig.PackageTimeout()
 	if timeout == 0 {
@@ -52,17 +64,25 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
 	}
 
-	// For non-HTTP image paths (flash, bootflash, etc.) the device does not
-	// auto-advance to RUNNING — it stops at DEPLOYED and needs explicit
-	// activate + start RPCs. Those are driven by the ReconcileApp loop in
-	// GetPodStatus. Wait for DEPLOYED (matching the original behaviour) then
-	// return so the reconciler can advance the app to RUNNING without
-	// interference.
+	// For non-HTTP image paths (flash, bootflash, etc.) the activate RPC is
+	// unreliable — the device ignores it and stays in DEPLOYED. Trigger the
+	// device's own auto-start mechanism by re-POSTing config with Start=true
+	// after the install lands at DEPLOYED, then wait for RUNNING.
 	if !isHTTPURL(appConfig.ImagePath()) {
 		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
 			return fmt.Errorf("app %s did not reach DEPLOYED after install: %w", appConfig.AppName(), err)
 		}
-		log.G(ctx).Infof("Successfully installed app %s (local path; reconciler will advance to RUNNING)", appConfig.AppName())
+		trueVal := true
+		gapp.Start = &trueVal
+		postErr := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller)
+		gapp.Start = origStart
+		if postErr != nil {
+			return fmt.Errorf("failed to re-post config (Start=true) for app %s: %w", appConfig.AppName(), postErr)
+		}
+		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
+			return fmt.Errorf("app %s did not reach RUNNING after flash install: %w", appConfig.AppName(), err)
+		}
+		log.G(ctx).Infof("Successfully installed app %s (local path)", appConfig.AppName())
 		return nil
 	}
 
@@ -103,8 +123,6 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 	}
 
 	// Re-POST config with Start=false to prevent premature auto-start during copy.
-	gapp := appConfig.Spec.DeviceConfig.App[appConfig.AppName()]
-	origStart := gapp.Start
 	falseVal := false
 	gapp.Start = &falseVal
 	postErr := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller)
