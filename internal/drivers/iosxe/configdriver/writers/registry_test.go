@@ -58,6 +58,45 @@ var phase2Families = []string{
 	"static_route",
 }
 
+// phase3Families complete the netascode IOS-XE family set: management
+// plane (users, DNS, SSH, HTTP, AAA servers), security (IPv6 ACLs,
+// community/as-path lists, crypto), additional interfaces (VLAN SVI,
+// Port-channel, Tunnel), additional routing (EIGRP, IS-IS), QoS
+// (class-map, policy-map), NAT, tracking/EEM, and L2 globals.
+var phase3Families = []string{
+	"clock",
+	"class_map",
+	"crypto_ikev2_profile",
+	"crypto_ipsec_profile",
+	"crypto_ipsec_transform_set",
+	"crypto_map",
+	"crypto_pki_trustpoint",
+	"eigrp",
+	"errdisable",
+	"event_manager",
+	"interface_port_channel",
+	"interface_tunnel",
+	"interface_vlan",
+	"ip_as_path_access_list",
+	"ip_community_list",
+	"ip_domain",
+	"ip_http",
+	"ip_name_server",
+	"ip_nat_inside_source",
+	"ip_nat_pool",
+	"ip_ssh",
+	"ipv6_access_list_extended",
+	"ipv6_access_list_standard",
+	"ipv6_prefix_list",
+	"isis",
+	"policy_map",
+	"radius_server",
+	"spanning_tree",
+	"tacacs_server",
+	"track",
+	"username",
+}
+
 func TestPhase1FamiliesRegistered(t *testing.T) {
 	got := Families()
 	for _, fam := range phase1Families {
@@ -70,8 +109,14 @@ func TestPhase1FamiliesRegistered(t *testing.T) {
 			t.Errorf("Phase-2 family %q not registered", fam)
 		}
 	}
-	if Len() != len(phase1Families)+len(phase2Families) {
-		t.Errorf("Len()=%d, want %d", Len(), len(phase1Families)+len(phase2Families))
+	for _, fam := range phase3Families {
+		if !contains(got, fam) {
+			t.Errorf("Phase-3 family %q not registered", fam)
+		}
+	}
+	want := len(phase1Families) + len(phase2Families) + len(phase3Families)
+	if Len() != want {
+		t.Errorf("Len()=%d, want %d", Len(), want)
 	}
 }
 

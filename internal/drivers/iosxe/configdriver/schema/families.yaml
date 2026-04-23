@@ -209,3 +209,239 @@ interface_switchport:
   key_fields: [type, name]
   depends_on: [interface_ethernet, vlan]
   portal: https://netascode.cisco.com/docs/data_models/iosxe/interface/switchport/
+
+# ---------------------------------------------------------------------------
+# Phase-3 families — management plane, security, crypto, QoS, NAT,
+# additional interfaces, additional routing protocols, tracking/EEM,
+# and L2 globals. This completes the netascode IOS-XE family set so
+# every entry on the portal has a CVK writer.
+# ---------------------------------------------------------------------------
+
+# --- Management plane ---
+
+username:
+  yang_paths: [/Cisco-IOS-XE-native:native/username]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/username/
+
+clock:
+  yang_paths: [/Cisco-IOS-XE-native:native/clock]
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/clock/
+
+ip_http:
+  yang_paths: [/Cisco-IOS-XE-native:native/ip/http]
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/ip_http/
+
+ip_ssh:
+  yang_paths: [/Cisco-IOS-XE-native:native/ip/ssh]
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/ip_ssh/
+
+ip_domain:
+  yang_paths: [/Cisco-IOS-XE-native:native/ip/domain]
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/ip_domain/
+
+ip_name_server:
+  yang_paths: [/Cisco-IOS-XE-native:native/ip/name-server]
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/ip_name_server/
+
+tacacs_server:
+  yang_paths: [/Cisco-IOS-XE-native:native/tacacs/server]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: [aaa]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/tacacs_server/
+
+radius_server:
+  yang_paths: [/Cisco-IOS-XE-native:native/radius/server]
+  shape: keyed_list
+  key_fields: [id]
+  depends_on: [aaa]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/radius_server/
+
+# --- IPv6 security ---
+
+ipv6_access_list_standard:
+  yang_paths: [/Cisco-IOS-XE-native:native/ipv6/access-list]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/access_list/
+
+ipv6_access_list_extended:
+  yang_paths: [/Cisco-IOS-XE-native:native/ipv6/access-list]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/access_list/
+
+ipv6_prefix_list:
+  yang_paths: [/Cisco-IOS-XE-native:native/ipv6/prefix-list/prefixes]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/prefix_list/
+
+ip_community_list:
+  yang_paths: [/Cisco-IOS-XE-native:native/ip/community-list]
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/community_list/
+
+ip_as_path_access_list:
+  yang_paths: [/Cisco-IOS-XE-native:native/ip/as-path/access-list]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/as_path_access_list/
+
+# --- Crypto / VPN ---
+
+crypto_pki_trustpoint:
+  yang_paths: [/Cisco-IOS-XE-native:native/crypto/pki/trustpoint]
+  shape: keyed_list
+  key_fields: [id]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/crypto_pki_trustpoint/
+
+crypto_ikev2_profile:
+  yang_paths: [/Cisco-IOS-XE-native:native/crypto/ikev2/profile]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: [crypto_pki_trustpoint]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/crypto_ikev2_profile/
+
+crypto_ipsec_transform_set:
+  yang_paths: [/Cisco-IOS-XE-native:native/crypto/ipsec/transform-set]
+  shape: keyed_list
+  key_fields: [tag]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/crypto_ipsec_transform_set/
+
+crypto_ipsec_profile:
+  yang_paths: [/Cisco-IOS-XE-native:native/crypto/ipsec/profile]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: [crypto_ipsec_transform_set, crypto_ikev2_profile]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/crypto_ipsec_profile/
+
+crypto_map:
+  yang_paths: [/Cisco-IOS-XE-native:native/crypto/map]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: [crypto_ipsec_transform_set]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/crypto_map/
+
+# --- Additional interfaces ---
+
+interface_vlan:
+  # SVI (switched virtual interface) — L3 interface attached to a VLAN.
+  yang_paths: [/Cisco-IOS-XE-native:native/interface/Vlan]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: [vlan, vrf]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/interface/vlan/
+
+interface_port_channel:
+  yang_paths: [/Cisco-IOS-XE-native:native/interface/Port-channel]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: [vrf]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/interface/port_channel/
+
+interface_tunnel:
+  yang_paths: [/Cisco-IOS-XE-native:native/interface/Tunnel]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: [vrf, crypto_ipsec_profile]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/interface/tunnel/
+
+# --- Additional routing protocols ---
+
+eigrp:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-eigrp:router-eigrp
+  shape: keyed_list
+  key_fields: [id]
+  depends_on: [vrf, interface_ethernet, interface_loopback]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/eigrp/
+
+isis:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-isis:router-isis
+  shape: keyed_list
+  key_fields: [tag]
+  depends_on: [interface_ethernet, interface_loopback]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/isis/
+
+# --- QoS ---
+
+class_map:
+  yang_paths: [/Cisco-IOS-XE-native:native/policy/Cisco-IOS-XE-policy:class-map]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: [access_list_extended, access_list_standard]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/class_map/
+
+policy_map:
+  yang_paths: [/Cisco-IOS-XE-native:native/policy/Cisco-IOS-XE-policy:policy-map]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: [class_map]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/policy_map/
+
+# --- NAT ---
+
+ip_nat_inside_source:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/ip/nat/inside/source
+  shape: singleton
+  depends_on: [access_list_extended, ip_nat_pool]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/ip_nat/
+
+ip_nat_pool:
+  yang_paths: [/Cisco-IOS-XE-native:native/ip/nat/pool]
+  shape: keyed_list
+  key_fields: [id]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/ip_nat/
+
+# --- Object tracking / EEM ---
+
+track:
+  yang_paths: [/Cisco-IOS-XE-native:native/track]
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/track/
+
+event_manager:
+  yang_paths: [/Cisco-IOS-XE-native:native/event/manager]
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/event_manager/
+
+# --- L2 globals ---
+
+spanning_tree:
+  yang_paths: [/Cisco-IOS-XE-native:native/spanning-tree]
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/spanning_tree/
+
+errdisable:
+  yang_paths: [/Cisco-IOS-XE-native:native/errdisable]
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/errdisable/

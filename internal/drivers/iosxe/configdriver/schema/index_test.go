@@ -56,6 +56,42 @@ var phase2Families = []string{
 	"static_route",
 }
 
+// phase3Families complete the netascode IOS-XE family set. See
+// families.yaml for the full list; this slice is the test-time pin.
+var phase3Families = []string{
+	"clock",
+	"class_map",
+	"crypto_ikev2_profile",
+	"crypto_ipsec_profile",
+	"crypto_ipsec_transform_set",
+	"crypto_map",
+	"crypto_pki_trustpoint",
+	"eigrp",
+	"errdisable",
+	"event_manager",
+	"interface_port_channel",
+	"interface_tunnel",
+	"interface_vlan",
+	"ip_as_path_access_list",
+	"ip_community_list",
+	"ip_domain",
+	"ip_http",
+	"ip_name_server",
+	"ip_nat_inside_source",
+	"ip_nat_pool",
+	"ip_ssh",
+	"ipv6_access_list_extended",
+	"ipv6_access_list_standard",
+	"ipv6_prefix_list",
+	"isis",
+	"policy_map",
+	"radius_server",
+	"spanning_tree",
+	"tacacs_server",
+	"track",
+	"username",
+}
+
 // TestFamiliesIndexConsistent pins both phase sets and checks every
 // entry declares the leaves the engine expects. Drift between the
 // index and the writers package is caught at unit-test time rather
@@ -76,10 +112,15 @@ func TestFamiliesIndexConsistent(t *testing.T) {
 			t.Errorf("Phase-2 family missing from index: %q", name)
 		}
 	}
+	for _, name := range phase3Families {
+		if _, ok := fam[name]; !ok {
+			t.Errorf("Phase-3 family missing from index: %q", name)
+		}
+	}
 
 	// Total must match the union — extra unknown entries are a review
 	// signal (someone added a family without updating the test).
-	expected := len(phase1Families) + len(phase2Families)
+	expected := len(phase1Families) + len(phase2Families) + len(phase3Families)
 	if len(fam) != expected {
 		got := make([]string, 0, len(fam))
 		for k := range fam {
