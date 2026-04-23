@@ -38,23 +38,34 @@ func (d *XEDriver) emitEvent(appConfig *AppHostingConfig, eventType, reason, mes
 }
 
 // CreateAppHostingApp creates a single IOS-XE AppHosting app from an AppHostingConfig.
-// Primary path: installs the image URL directly and waits for RUNNING.
-// Fallback path: if the device does not reach RUNNING (platform cannot pull from HTTP),
-// downloads the image to device flash via the copy RPC and reinstalls from the local path.
+//
+// Pull policy is honoured as follows:
+//
+//	Never           – image must already be on flash; HTTP URLs are rejected before any RPC.
+//	IfNotPresent    – primary device-native pull attempted first; on timeout, tries to install
+//	                  from the cached flash destination before downloading again.
+//	Always (default)– primary device-native pull attempted first; on timeout, always re-downloads
+//	                  via the copy RPC regardless of what is on flash.
 func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostingConfig) error {
 	log.G(ctx).Infof("Creating AppHosting app: %s for container: %s", appConfig.AppName(), appConfig.ContainerName())
-
-	cfgPath := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
-
-	if err := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller); err != nil {
-		return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName(), err)
-	}
 
 	timeout := appConfig.PackageTimeout()
 	if timeout == 0 {
 		timeout = defaultPackageTimeout
 	}
 	policy := appConfig.ImagePullPolicy()
+
+	// Never + HTTP URL: the image must already be on flash. Fail before touching the device.
+	if policy == v1.PullNever && isHTTPURL(appConfig.ImagePath()) {
+		return fmt.Errorf("app %s: imagePullPolicy is Never but image is an HTTP URL %q — image must be pre-loaded on flash",
+			appConfig.AppName(), appConfig.ImagePath())
+	}
+
+	cfgPath := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
+
+	if err := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller); err != nil {
+		return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName(), err)
+	}
 
 	if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
 		return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
@@ -84,13 +95,6 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 	d.emitEvent(appConfig, v1.EventTypeWarning, "ImagePullFallback", "Device-native pull timed out after %s; falling back to copy-then-install", timeout)
 
 	// ── FALLBACK PATH (copy-then-install) ─────────────────────────────────────
-	if policy == v1.PullNever {
-		return fmt.Errorf("app %s did not reach RUNNING and imagePullPolicy is Never: %w", appConfig.AppName(), waitErr)
-	}
-	if !isHTTPURL(appConfig.ImagePath()) {
-		return fmt.Errorf("app %s did not reach RUNNING and image path is not an HTTP URL (no copy fallback): %w", appConfig.AppName(), waitErr)
-	}
-
 	dest := appConfig.PackageDest()
 	if dest == "" {
 		dest = fmt.Sprintf("flash:/virtual-kubelet/%s.tar", appConfig.AppName())
@@ -121,21 +125,54 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		return fmt.Errorf("failed to re-post config (Start=false) for app %s: %w", appConfig.AppName(), postErr)
 	}
 
-	d.emitEvent(appConfig, v1.EventTypeNormal, "Copying", "Copying image %s to %s (may take several minutes)", appConfig.ImagePath(), dest)
-	if err := d.copyRPC(ctx, src, dest); err != nil {
-		d.clearPodRecovering(appConfig.PodUID())
-		return fmt.Errorf("copy failed for app %s: %w", appConfig.AppName(), err)
+	// IfNotPresent: try installing from the cached flash path before re-downloading.
+	// If the image is already on flash from a previous copy, this avoids a multi-minute
+	// download on every restart.
+	installedFromCache := false
+	if policy == v1.PullIfNotPresent {
+		log.G(ctx).Infof("imagePullPolicy=IfNotPresent: checking for cached image at %s", dest)
+		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Checking for cached image at %s", dest)
+		if installErr := d.InstallApp(ctx, appConfig.AppName(), dest); installErr == nil {
+			if cacheWaitErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", 30*time.Second); cacheWaitErr == nil {
+				installedFromCache = true
+				log.G(ctx).Infof("App %s: using cached image at %s (skipping download)", appConfig.AppName(), dest)
+				d.emitEvent(appConfig, v1.EventTypeNormal, "Pulled", "Using cached image from %s", dest)
+			}
+		}
+		if !installedFromCache {
+			log.G(ctx).Infof("App %s: no usable cached image at %s, downloading", appConfig.AppName(), dest)
+			// Clean up the potentially partial install before the copy path re-installs.
+			if delErr := d.DeleteApp(ctx, appConfig.AppName()); delErr != nil {
+				log.G(ctx).Warnf("Failed to delete app %s after failed cache attempt (continuing): %v", appConfig.AppName(), delErr)
+			}
+			// Re-POST config with Start=false again after the cleanup.
+			gapp.Start = &falseVal
+			if repostErr := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller); repostErr != nil {
+				gapp.Start = origStart
+				d.clearPodRecovering(appConfig.PodUID())
+				return fmt.Errorf("failed to re-post config after cache miss for app %s: %w", appConfig.AppName(), repostErr)
+			}
+			gapp.Start = origStart
+		}
 	}
-	d.emitEvent(appConfig, v1.EventTypeNormal, "Pulled", "Image successfully copied to %s", dest)
 
-	if err := d.InstallApp(ctx, appConfig.AppName(), dest); err != nil {
-		d.clearPodRecovering(appConfig.PodUID())
-		return fmt.Errorf("failed to reinstall app %s from flash: %w", appConfig.AppName(), err)
-	}
+	if !installedFromCache {
+		d.emitEvent(appConfig, v1.EventTypeNormal, "Copying", "Copying image %s to %s (may take several minutes)", appConfig.ImagePath(), dest)
+		if err := d.copyRPC(ctx, src, dest); err != nil {
+			d.clearPodRecovering(appConfig.PodUID())
+			return fmt.Errorf("copy failed for app %s: %w", appConfig.AppName(), err)
+		}
+		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulled", "Image successfully copied to %s", dest)
 
-	if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", 30*time.Second); err != nil {
-		d.clearPodRecovering(appConfig.PodUID())
-		return fmt.Errorf("app %s did not reach DEPLOYED after flash install: %w", appConfig.AppName(), err)
+		if err := d.InstallApp(ctx, appConfig.AppName(), dest); err != nil {
+			d.clearPodRecovering(appConfig.PodUID())
+			return fmt.Errorf("failed to reinstall app %s from flash: %w", appConfig.AppName(), err)
+		}
+
+		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", 30*time.Second); err != nil {
+			d.clearPodRecovering(appConfig.PodUID())
+			return fmt.Errorf("app %s did not reach DEPLOYED after flash install: %w", appConfig.AppName(), err)
+		}
 	}
 
 	// Set Start=true and re-POST to trigger device native auto-start.
