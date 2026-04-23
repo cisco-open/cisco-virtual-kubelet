@@ -176,3 +176,76 @@ func TestLintRejectsUnreadablePath(t *testing.T) {
 		t.Fatalf("exit=%d, want exitBadInput", code)
 	}
 }
+
+const unknownInlineFamily = `
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata: {name: edge-01, namespace: network}
+spec:
+  deviceRef: {name: edge-01}
+  managedFamilies: [vlan]
+  source:
+    inline:
+      vlan: {vlans: [{id: 10, name: users}]}
+      no_such_family: {foo: bar}
+`
+
+const missingKeyField = `
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata: {name: edge-01, namespace: network}
+spec:
+  deviceRef: {name: edge-01}
+  managedFamilies: [vlan]
+  source:
+    inline:
+      vlan: {vlans: [{name: users_only, description: "no id"}]}
+`
+
+const wrongInnerShape = `
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata: {name: edge-01, namespace: network}
+spec:
+  deviceRef: {name: edge-01}
+  managedFamilies: [vlan]
+  source:
+    inline:
+      vlan: {vlans: "not a list"}
+`
+
+func TestLintInlineUnknownFamily(t *testing.T) {
+	p := writeTemp(t, unknownInlineFamily)
+	var out, errBuf bytes.Buffer
+	code := run([]string{p}, &out, &errBuf)
+	if code != exitViolation {
+		t.Fatalf("exit=%d, want exitViolation", code)
+	}
+	if !strings.Contains(errBuf.String(), "no_such_family") {
+		t.Errorf("stderr missing family name:\n%s", errBuf.String())
+	}
+}
+
+func TestLintInlineMissingKeyField(t *testing.T) {
+	p := writeTemp(t, missingKeyField)
+	var out, errBuf bytes.Buffer
+	code := run([]string{p}, &out, &errBuf)
+	if code != exitViolation {
+		t.Fatalf("exit=%d, want exitViolation", code)
+	}
+	if !strings.Contains(errBuf.String(), `missing key field "id"`) {
+		t.Errorf("stderr missing key-field diagnostic:\n%s", errBuf.String())
+	}
+}
+
+func TestLintInlineWrongInnerShape(t *testing.T) {
+	p := writeTemp(t, wrongInnerShape)
+	var out, errBuf bytes.Buffer
+	code := run([]string{p}, &out, &errBuf)
+	if code != exitViolation {
+		t.Fatalf("exit=%d, want exitViolation", code)
+	}
+	if !strings.Contains(errBuf.String(), "expected list") {
+		t.Errorf("stderr missing shape diagnostic:\n%s", errBuf.String())
+	}
+}

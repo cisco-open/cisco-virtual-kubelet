@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/schema"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 )
 
 type exitCode int
@@ -298,8 +299,10 @@ func lintDoc(path string, index int, doc []byte, families map[string]schema.Fami
 //   - managedFamilies non-empty; every family is in families.yaml.
 //   - exactly one of source.inline / source.configMapRef.
 //   - driftPolicy, when set, is one of the accepted values.
-//   - configuration block only contains known families at top level
-//     (warning, not error, so forward-compat is friction-free).
+//   - inline configuration top-level keys are registered families,
+//     and each family's keyed-list entries expose the declared
+//     keyField — a shape check derived from the writers' own
+//     FamilySchema so the lint stays in lock-step with the driver.
 func lintIOSXEConfig(path string, d docShape, families map[string]schema.Family) []violation {
 	var out []violation
 	name := d.Metadata.Name
@@ -329,7 +332,7 @@ func lintIOSXEConfig(path string, d docShape, families map[string]schema.Family)
 	}
 
 	src, _ := d.Spec["source"].(map[string]any)
-	_, hasInline := src["inline"]
+	inline, hasInline := src["inline"].(map[string]any)
 	cm, _ := src["configMapRef"].(map[string]any)
 	hasCMR := cm != nil && cm["name"] != nil && cm["name"] != ""
 	switch {
@@ -353,6 +356,76 @@ func lintIOSXEConfig(path string, d docShape, families map[string]schema.Family)
 		}
 	}
 
+	if hasInline {
+		out = append(out, lintInlineBody(tag, inline, families)...)
+	}
+
+	return out
+}
+
+// lintInlineBody walks the inline netascode body and checks each
+// top-level family key against the registered FamilySchema.
+//
+// Rules (narrow by design — deep leaf validation is the device's
+// job, and Yamale-style per-leaf schemas live in YANG):
+//   - Every top-level key must be a family registered in families.yaml.
+//   - For keyed_list families, the body must contain the declared
+//     InnerKey and each entry must supply the declared KeyField.
+//   - Unknown leaves on a singleton family are reported as INFO (not
+//     violation) so operators can layer leaves the writer doesn't
+//     manage without the lint failing.
+func lintInlineBody(tag func(string) violation, body map[string]any, families map[string]schema.Family) []violation {
+	var out []violation
+	for famName, famVal := range body {
+		if _, known := families[famName]; !known {
+			out = append(out, tag(fmt.Sprintf(
+				"spec.source.inline.%s: family not in families.yaml", famName)))
+			continue
+		}
+		s, ok := writers.Schema(famName)
+		if !ok {
+			// Registered family without a Schema — likely a skeleton.
+			// Not an error at lint time; the engine will report
+			// Unsupported at reconcile.
+			continue
+		}
+		if s.Shape != "keyed_list" || s.InnerKey == "" || s.KeyField == "" {
+			continue
+		}
+		famMap, ok := famVal.(map[string]any)
+		if !ok {
+			out = append(out, tag(fmt.Sprintf(
+				"spec.source.inline.%s: expected object, got %T", famName, famVal)))
+			continue
+		}
+		inner, present := famMap[s.InnerKey]
+		if !present {
+			// Missing inner key is acceptable — the family's body may
+			// be empty in this intent fragment.
+			continue
+		}
+		list, ok := inner.([]any)
+		if !ok {
+			out = append(out, tag(fmt.Sprintf(
+				"spec.source.inline.%s.%s: expected list, got %T",
+				famName, s.InnerKey, inner)))
+			continue
+		}
+		for i, el := range list {
+			entry, ok := el.(map[string]any)
+			if !ok {
+				out = append(out, tag(fmt.Sprintf(
+					"spec.source.inline.%s.%s[%d]: expected object, got %T",
+					famName, s.InnerKey, i, el)))
+				continue
+			}
+			if _, hasKey := entry[s.KeyField]; !hasKey {
+				out = append(out, tag(fmt.Sprintf(
+					"spec.source.inline.%s.%s[%d]: missing key field %q",
+					famName, s.InnerKey, i, s.KeyField)))
+			}
+		}
+	}
 	return out
 }
 
