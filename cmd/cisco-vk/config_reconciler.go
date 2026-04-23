@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -26,8 +27,11 @@ import (
 	"k8s.io/client-go/rest"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	coordv1 "k8s.io/api/coordination/v1"
+
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
@@ -64,6 +68,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(configv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(ciskov1.AddToScheme(scheme))
+	utilruntime.Must(coordv1.AddToScheme(scheme))
 
 	c, err := ctrlclient.New(cfg, ctrlclient.Options{Scheme: scheme})
 	if err != nil {
@@ -79,11 +84,24 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		log.G(ctx).WithError(tErr).Warn("IOSXEConfig transport unavailable; driver will report Pending")
 	}
 
+	// Lease namespace tracks the cisco-vk run pod's namespace so the
+	// leases land alongside the process that owns them. In-cluster
+	// deployments always have POD_NAMESPACE; out-of-cluster dev falls
+	// back to "default".
+	leaseNamespace := os.Getenv("POD_NAMESPACE")
+	if leaseNamespace == "" {
+		leaseNamespace = "default"
+	}
+
 	r := &provider.ConfigReconciler{
 		Client:     c,
 		DeviceName: deviceName,
 		Transport:  t, // may be nil
 		KeyRules:   keyRulesForPhase1(),
+		Leaser: &engine.FamilyLeaser{
+			Client:    c,
+			Namespace: leaseNamespace,
+		},
 	}
 
 	go func() {

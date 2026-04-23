@@ -64,6 +64,11 @@ type ConfigReconciler struct {
 	// Lookup overrides the writer lookup for tests. Nil means the
 	// process-global writers registry.
 	Lookup func(family string) writers.SectionWriter
+
+	// Leaser serialises per-family writes across IOSXEConfig CRs
+	// targeting the same device. Nil means advisory-only conflict
+	// reporting (the Phase-1 default behaviour).
+	Leaser *engine.FamilyLeaser
 }
 
 // Run blocks until ctx is cancelled. It returns ctx.Err() on exit.
@@ -175,8 +180,57 @@ func (r *ConfigReconciler) reconcileOne(
 		return r.recordPending(ctx, cr)
 	}
 
-	result := eng.Reconcile(ctx, resolved)
+	// Acquire per-family leases before running the engine. Families we
+	// fail to lock are dropped from the intent's ManagedFamilies and
+	// recorded as Conflict in the per-family status so the operator
+	// sees the contention immediately.
+	leasedIntent, leaseConflicts := r.acquireLeases(ctx, resolved, cr)
+	result := eng.Reconcile(ctx, leasedIntent)
+	for family, holder := range leaseConflicts {
+		result.FamilyStatuses = append(result.FamilyStatuses, engine.FamilyStatus{
+			Name:    family,
+			State:   "Skipped",
+			Message: fmt.Sprintf("family leased by %q", holder),
+		})
+	}
 	return r.recordResult(ctx, cr, result, h, conflicts)
+}
+
+// acquireLeases filters resolved.ManagedFamilies to the ones this CR
+// owns the lease for. When Leaser is nil the filter is pass-through —
+// the advisory ConflictCheck on status still surfaces overlap.
+func (r *ConfigReconciler) acquireLeases(
+	ctx context.Context,
+	resolved *intent.ResolvedIntent,
+	cr *configv1alpha1.IOSXEConfig,
+) (*intent.ResolvedIntent, map[string]string) {
+	if r.Leaser == nil {
+		return resolved, nil
+	}
+
+	identity := cr.Namespace + "/" + cr.Name
+	owned := make([]string, 0, len(resolved.ManagedFamilies))
+	conflicts := map[string]string{}
+	for _, family := range resolved.ManagedFamilies {
+		res, err := r.Leaser.Acquire(ctx, r.DeviceName, family, identity)
+		if err != nil {
+			// Lease backend error — treat as not-owned so we do not
+			// interleave with another holder. Will retry next tick.
+			conflicts[family] = fmt.Sprintf("lease error: %v", err)
+			continue
+		}
+		if !res.Owned {
+			conflicts[family] = res.Holder
+			continue
+		}
+		owned = append(owned, family)
+	}
+
+	// Shallow copy so we do not mutate the resolver's output, which a
+	// caller might cache.
+	filtered := *resolved
+	filtered.ManagedFamilies = owned
+	return &filtered, conflicts
 }
 
 // recordPending is the Phase-0 fallback when no transport is wired.

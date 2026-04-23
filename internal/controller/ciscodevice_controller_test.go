@@ -467,17 +467,21 @@ func TestReconcile_SecretRefInjectsEnvFromSecret(t *testing.T) {
 	}
 
 	env := deploy.Spec.Template.Spec.Containers[0].Env
-	if len(env) != 1 || env[0].Name != "VK_DEVICE_PASSWORD" {
-		t.Fatalf("expected VK_DEVICE_PASSWORD env var, got %v", env)
+	pw := envByName(env, "VK_DEVICE_PASSWORD")
+	if pw == nil {
+		t.Fatalf("VK_DEVICE_PASSWORD env var missing, got %v", env)
 	}
-	if env[0].ValueFrom == nil || env[0].ValueFrom.SecretKeyRef == nil {
+	if pw.ValueFrom == nil || pw.ValueFrom.SecretKeyRef == nil {
 		t.Fatal("expected VK_DEVICE_PASSWORD to use valueFrom.secretKeyRef")
 	}
-	if env[0].ValueFrom.SecretKeyRef.Name != "device-creds" {
-		t.Errorf("expected secretKeyRef name 'device-creds', got %q", env[0].ValueFrom.SecretKeyRef.Name)
+	if pw.ValueFrom.SecretKeyRef.Name != "device-creds" {
+		t.Errorf("expected secretKeyRef name 'device-creds', got %q", pw.ValueFrom.SecretKeyRef.Name)
 	}
-	if env[0].ValueFrom.SecretKeyRef.Key != "password" {
-		t.Errorf("expected secretKeyRef key 'password', got %q", env[0].ValueFrom.SecretKeyRef.Key)
+	if pw.ValueFrom.SecretKeyRef.Key != "password" {
+		t.Errorf("expected secretKeyRef key 'password', got %q", pw.ValueFrom.SecretKeyRef.Key)
+	}
+	if envByName(env, "POD_NAMESPACE") == nil {
+		t.Error("POD_NAMESPACE env var missing")
 	}
 }
 
@@ -498,11 +502,15 @@ func TestReconcile_DirectPasswordInjectsEnvValue(t *testing.T) {
 	}
 
 	env := deploy.Spec.Template.Spec.Containers[0].Env
-	if len(env) != 1 || env[0].Name != "VK_DEVICE_PASSWORD" {
-		t.Fatalf("expected VK_DEVICE_PASSWORD env var, got %v", env)
+	pw := envByName(env, "VK_DEVICE_PASSWORD")
+	if pw == nil {
+		t.Fatalf("VK_DEVICE_PASSWORD env var missing, got %v", env)
 	}
-	if env[0].Value != "directpass" {
-		t.Errorf("expected direct password value 'directpass', got %q", env[0].Value)
+	if pw.Value != "directpass" {
+		t.Errorf("expected direct password value 'directpass', got %q", pw.Value)
+	}
+	if envByName(env, "POD_NAMESPACE") == nil {
+		t.Error("POD_NAMESPACE env var missing")
 	}
 }
 
@@ -523,9 +531,24 @@ func TestReconcile_NoPasswordNoSecretRef_NoEnvVars(t *testing.T) {
 	}
 
 	env := deploy.Spec.Template.Spec.Containers[0].Env
-	if len(env) != 0 {
-		t.Errorf("expected no env vars when neither password nor secretRef is set, got %v", env)
+	if envByName(env, "VK_DEVICE_PASSWORD") != nil {
+		t.Errorf("expected no VK_DEVICE_PASSWORD env var, got %v", env)
 	}
+	if envByName(env, "POD_NAMESPACE") == nil {
+		t.Error("POD_NAMESPACE env var missing")
+	}
+}
+
+// envByName returns the first EnvVar with the supplied name, or nil
+// when absent. Kept here rather than in production code because it's
+// only an assertion helper.
+func envByName(env []corev1.EnvVar, name string) *corev1.EnvVar {
+	for i := range env {
+		if env[i].Name == name {
+			return &env[i]
+		}
+	}
+	return nil
 }
 
 func TestReconcile_PasswordStrippedFromConfigMap(t *testing.T) {

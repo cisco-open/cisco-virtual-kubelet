@@ -200,6 +200,16 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			})
 		}
 
+		// Expose POD_NAMESPACE via the downward API so the config
+		// reconciler can scope its coordination.k8s.io/v1 Leases
+		// alongside the running pod.
+		credEnv = append(credEnv, corev1.EnvVar{
+			Name: "POD_NAMESPACE",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
+			},
+		})
+
 		deploy.Spec.Template.Spec = corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
