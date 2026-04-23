@@ -14,8 +14,36 @@
 
 package writers
 
+// Extended access-list Phase-1 writer.
+//
+// netascode shape:
+//
+//   access_list_extended:
+//     extended:
+//       - name: IOX-INGRESS
+//         rules:
+//           - sequence: 10
+//             action: permit
+//             protocol: ip
+//             src_any: true
+//             dst_any: true
+//
+// YANG path: /Cisco-IOS-XE-native:native/ip/access-list/extended
+// Key: name. The rule list nested inside each entry is managed as
+// an opaque blob by Phase-1 (equality-compare the entire rules list).
+// Phase-2 introduces per-rule diffing keyed by sequence.
+
 func init() {
-	registerSkeleton("access_list_extended",
-		"/Cisco-IOS-XE-native:native/ip/access-list/extended",
-	)
+	Override(keyedListWriter{
+		family:      "access_list_extended",
+		yangPath:    "/Cisco-IOS-XE-native:native/ip/access-list/extended",
+		envelopeKey: "Cisco-IOS-XE-acl:extended",
+		innerKey:    "extended",
+		keyField:    "name",
+		// "rules" is treated as a managed leaf — if the slice differs, a
+		// merge op replaces the ACL body. The engine's additive-only
+		// semantics still apply: ACLs on the device that are not in the
+		// intent are not touched.
+		managedLeaves: []string{"rules"},
+	})
 }

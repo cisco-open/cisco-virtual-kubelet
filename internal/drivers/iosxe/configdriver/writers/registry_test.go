@@ -73,12 +73,23 @@ func TestGetReturnsNilForUnknown(t *testing.T) {
 // TestSkeletonWritePathReturnsSentinel pins the contract that every
 // skeleton error is errors.Is-matchable against configdriver.ErrNotImplemented
 // so provider status code can distinguish scaffold from live device failures.
-// Uses dhcp because it is still a skeleton in Phase 1; switch to a family
-// that remains unimplemented as each family's real writer lands.
+// Every Phase-1 family now ships a real writer; this test pulls a
+// Phase-2 family that is still a skeleton and exercises its skeleton
+// stub. Switch to a family that remains unimplemented as each family's
+// real writer lands.
 func TestSkeletonWritePathReturnsSentinel(t *testing.T) {
-	w := Get("dhcp")
+	// Register a skeleton explicitly so the test is stable against
+	// Phase-2 writers landing in any order and replacing entries.
+	skelName := "_test_skeleton_family_"
+	registerSkeleton(skelName, "/Cisco-IOS-XE-native:native/test-only")
+	t.Cleanup(func() {
+		mu.Lock()
+		delete(registry, skelName)
+		mu.Unlock()
+	})
+	w := Get(skelName)
 	if w == nil {
-		t.Fatal("dhcp writer unexpectedly unregistered")
+		t.Fatal("skeleton writer unexpectedly unregistered")
 	}
 	if _, err := w.Fetch(context.Background(), nil); !errors.Is(err, configdriver.ErrNotImplemented) {
 		t.Fatalf("Fetch: got %v, want configdriver.ErrNotImplemented", err)

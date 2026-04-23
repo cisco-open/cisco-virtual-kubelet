@@ -14,8 +14,26 @@
 
 package writers
 
+// VRF Phase-1 writer.
+//
+// netascode shape:
+//
+//   vrf:
+//     vrfs:
+//       - name: MGMT
+//         rd: "65000:1"
+//         description: out-of-band
+//
+// YANG path: /Cisco-IOS-XE-native:native/vrf/definition
+// Key: name. Managed leaves: rd, description.
+
 func init() {
-	registerSkeleton("vrf",
-		"/Cisco-IOS-XE-native:native/vrf/definition",
-	)
+	Override(keyedListWriter{
+		family:        "vrf",
+		yangPath:      "/Cisco-IOS-XE-native:native/vrf/definition",
+		envelopeKey:   "Cisco-IOS-XE-native:definition",
+		innerKey:      "vrfs",
+		keyField:      "name",
+		managedLeaves: []string{"rd", "description"},
+	})
 }

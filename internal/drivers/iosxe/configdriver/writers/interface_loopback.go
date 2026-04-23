@@ -14,8 +14,36 @@
 
 package writers
 
+// Loopback interface Phase-1 writer.
+//
+// netascode shape:
+//
+//   interface_loopback:
+//     interfaces:
+//       - name: 0
+//         description: router-id
+//         ipv4_address: 10.255.255.1
+//         ipv4_address_mask: 255.255.255.255
+//         vrf: MGMT
+//         shutdown: false
+//
+// YANG path: /Cisco-IOS-XE-native:native/interface/Loopback
+// Key: name (string-rendered integer). Managed leaves: description,
+// ipv4_address, ipv4_address_mask, vrf, shutdown.
+
 func init() {
-	registerSkeleton("interface_loopback",
-		"/Cisco-IOS-XE-native:native/interface/Loopback",
-	)
+	Override(keyedListWriter{
+		family:      "interface_loopback",
+		yangPath:    "/Cisco-IOS-XE-native:native/interface/Loopback",
+		envelopeKey: "Cisco-IOS-XE-native:Loopback",
+		innerKey:    "interfaces",
+		keyField:    "name",
+		managedLeaves: []string{
+			"description",
+			"ipv4_address",
+			"ipv4_address_mask",
+			"vrf",
+			"shutdown",
+		},
+	})
 }

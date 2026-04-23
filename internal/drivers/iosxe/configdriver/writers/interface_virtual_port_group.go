@@ -14,8 +14,36 @@
 
 package writers
 
+// VirtualPortGroup Phase-1 writer. This is the interface type that
+// carries IOx app-hosting traffic on IOS-XE, so it is one of the
+// apphosting-prerequisite families CVK can auto-own.
+//
+// netascode shape:
+//
+//   interface_virtual_port_group:
+//     interfaces:
+//       - id: 0
+//         description: iox-app-hosting
+//         ipv4_address: 192.168.10.1
+//         ipv4_address_mask: 255.255.255.0
+//         shutdown: false
+//
+// YANG path: /Cisco-IOS-XE-native:native/interface/VirtualPortGroup
+// Key: id. Managed leaves: description, ipv4_address,
+// ipv4_address_mask, shutdown.
+
 func init() {
-	registerSkeleton("interface_virtual_port_group",
-		"/Cisco-IOS-XE-native:native/interface/VirtualPortGroup",
-	)
+	Override(keyedListWriter{
+		family:      "interface_virtual_port_group",
+		yangPath:    "/Cisco-IOS-XE-native:native/interface/VirtualPortGroup",
+		envelopeKey: "Cisco-IOS-XE-native:VirtualPortGroup",
+		innerKey:    "interfaces",
+		keyField:    "id",
+		managedLeaves: []string{
+			"description",
+			"ipv4_address",
+			"ipv4_address_mask",
+			"shutdown",
+		},
+	})
 }
