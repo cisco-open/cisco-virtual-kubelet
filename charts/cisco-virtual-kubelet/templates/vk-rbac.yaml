@@ -59,6 +59,15 @@ rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # IOSXEConfig CRDs (config.cisco.vk/v1alpha1) — the per-device
+  # ConfigReconciler running inside cisco-vk run reads and updates
+  # status on CRs targeting its device.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigs", "iosxeconfigdefaults", "iosxedevicegroupconfigs", "iosxetemplates"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigs/status"]
+    verbs: ["get", "update", "patch"]
 ---
 # ClusterRoleBinding for the VK service account.
 apiVersion: rbac.authorization.k8s.io/v1
