@@ -323,6 +323,14 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	// when a recovery actually occurs.
 	go runPodRecoveryLoop(ctx, clientset, effectiveNodeName)
 
+	// Start the Phase-0 IOS-XE config reconciler. It watches IOSXEConfig CRs
+	// that target this device and drives the (stub) configdriver.Driver.
+	// Failure to build the controller-runtime client is not fatal — apphosting
+	// continues to work; the operator sees the warning and addresses RBAC.
+	if err := startConfigReconciler(ctx, kubeconfigCfg, effectiveNodeName); err != nil {
+		log.G(ctx).WithError(err).Warn("IOSXEConfig reconciler not started; continuing without declarative config")
+	}
+
 	if err := n.Run(ctx); err != nil {
 		return fmt.Errorf("node run failed: %w", err)
 	}
