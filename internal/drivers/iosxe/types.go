@@ -77,6 +77,7 @@ type AppHostingMetadata struct {
 	PodName       string
 	PodNamespace  string
 	PodUID        string
+	Pod           *v1.Pod // set by ConvertPodToAppConfigs; used for event recording
 }
 
 // AppHostingSpec declares the desired state and the device configuration payload.

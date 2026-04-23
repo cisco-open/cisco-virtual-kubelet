@@ -53,7 +53,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 	appConfig.Status.ObservedState = state
 	appConfig.Status.LastTransition = time.Now()
 
-	log.G(ctx).Infof("ReconcileApp %s: observed=%q desired=%s phase=%s",
+	log.G(ctx).Debugf("ReconcileApp %s: observed=%q desired=%s phase=%s",
 		appID, state, desired, appConfig.Status.Phase)
 
 	// ── Forward path: drive toward RUNNING ────────────────────────────
@@ -124,7 +124,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 
 			appConfig.Status.Phase = AppPhaseConverging
 			appConfig.Status.Message = "Install in progress, waiting"
-			log.G(ctx).Infof("ReconcileApp %s: install in progress, waiting for DEPLOYED", appID)
+			log.G(ctx).Debugf("ReconcileApp %s: install in progress, waiting for DEPLOYED", appID)
 			return
 
 		default:
@@ -139,7 +139,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 			}
 			appConfig.Status.Phase = AppPhaseConverging
 			appConfig.Status.Message = "Re-issuing install"
-			log.G(ctx).Warnf("ReconcileApp %s: no oper data; re-issuing install (image: %s)", appID, imagePath)
+			log.G(ctx).Debugf("ReconcileApp %s: no oper data; re-issuing install (image: %s)", appID, imagePath)
 			if err := d.InstallApp(ctx, appID, imagePath); err != nil {
 				log.G(ctx).Warnf("ReconcileApp %s: install failed: %v", appID, err)
 				appConfig.Status.Phase = AppPhaseError

@@ -32,6 +32,7 @@ import (
 	"github.com/openconfig/ygot/ygot"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/record"
 )
 
 // UnmarshalFunc defines a function signature for unmarshalling data
@@ -48,6 +49,7 @@ type XEDriver struct {
 	secretLister   corev1listers.SecretNamespaceLister
 	recoveryMu     sync.RWMutex
 	recoveringPods map[string]bool // keyed by pod UID
+	eventRecorder  record.EventRecorder
 }
 
 // NewAppHostingDriver creates a new IOS-XE AppHosting driver instance
@@ -224,4 +226,10 @@ func (d *XEDriver) isPodRecovering(podUID string) bool {
 	d.recoveryMu.RLock()
 	defer d.recoveryMu.RUnlock()
 	return d.recoveringPods[podUID]
+}
+
+// SetEventRecorder wires a Kubernetes event recorder into the driver so it can
+// emit pod-scoped events visible via kubectl describe pod.
+func (d *XEDriver) SetEventRecorder(r record.EventRecorder) {
+	d.eventRecorder = r
 }

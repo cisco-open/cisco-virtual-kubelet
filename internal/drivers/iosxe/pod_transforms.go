@@ -274,6 +274,7 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 				PodName:       pod.Name,
 				PodNamespace:  pod.Namespace,
 				PodUID:        string(pod.UID),
+				Pod:           pod,
 			},
 			Spec: AppHostingSpec{
 				ImagePath:        container.Image,

@@ -123,7 +123,7 @@ func (c *RestconfClient) doRequest(ctx context.Context, method, path string, pay
 	}
 
 	if result != nil && unmarshal != nil {
-		log.G(ctx).Info("Checking response ...")
+		log.G(ctx).Debug("Checking response ...")
 		data, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return err

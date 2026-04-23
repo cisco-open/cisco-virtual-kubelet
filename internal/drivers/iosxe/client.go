@@ -29,6 +29,14 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+// emitEvent records a Kubernetes event on the pod if an event recorder is wired in.
+func (d *XEDriver) emitEvent(appConfig *AppHostingConfig, eventType, reason, messageFmt string, args ...interface{}) {
+	if d.eventRecorder == nil || appConfig.Metadata.Pod == nil {
+		return
+	}
+	d.eventRecorder.Eventf(appConfig.Metadata.Pod, eventType, reason, messageFmt, args...)
+}
+
 // CreateAppHostingApp creates a single IOS-XE AppHosting app from an AppHostingConfig.
 // Primary path: installs the image URL directly and waits for RUNNING.
 // Fallback path: if the device does not reach RUNNING (platform cannot pull from HTTP),
@@ -65,6 +73,7 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 
 	// ── PRIMARY PATH (HTTP image) ─────────────────────────────────────────────
 	// The device can pull and activate the image itself. Wait for RUNNING.
+	d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", appConfig.ImagePath())
 	waitErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout)
 	if waitErr == nil {
 		log.G(ctx).Infof("Successfully created and installed app %s", appConfig.AppName())
@@ -72,6 +81,7 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 	}
 
 	log.G(ctx).Warnf("App %s did not reach RUNNING state after install: %v", appConfig.AppName(), waitErr)
+	d.emitEvent(appConfig, v1.EventTypeWarning, "ImagePullFallback", "Device-native pull timed out after %s; falling back to copy-then-install", timeout)
 
 	// ── FALLBACK PATH (copy-then-install) ─────────────────────────────────────
 	if policy == v1.PullNever {
@@ -111,10 +121,12 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		return fmt.Errorf("failed to re-post config (Start=false) for app %s: %w", appConfig.AppName(), postErr)
 	}
 
+	d.emitEvent(appConfig, v1.EventTypeNormal, "Copying", "Copying image %s to %s (may take several minutes)", appConfig.ImagePath(), dest)
 	if err := d.copyRPC(ctx, src, dest); err != nil {
 		d.clearPodRecovering(appConfig.PodUID())
 		return fmt.Errorf("copy failed for app %s: %w", appConfig.AppName(), err)
 	}
+	d.emitEvent(appConfig, v1.EventTypeNormal, "Pulled", "Image successfully copied to %s", dest)
 
 	if err := d.InstallApp(ctx, appConfig.AppName(), dest); err != nil {
 		d.clearPodRecovering(appConfig.PodUID())
@@ -142,6 +154,7 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 	}
 
 	d.clearPodRecovering(appConfig.PodUID())
+	d.emitEvent(appConfig, v1.EventTypeNormal, "Started", "App %s is running", appConfig.AppName())
 	log.G(ctx).Infof("Successfully installed app %s via copy fallback", appConfig.AppName())
 	return nil
 }
@@ -248,7 +261,7 @@ func (d *XEDriver) UninstallApp(ctx context.Context, appID string) error {
 
 // WaitForAppStatus polls the device until the app reaches the expected status or times out
 func (d *XEDriver) WaitForAppStatus(ctx context.Context, appID string, expectedStatus string, maxWaitTime time.Duration) error {
-	log.G(ctx).Infof("Waiting for app %s to reach status: %s", appID, expectedStatus)
+	log.G(ctx).Debugf("Waiting for app %s to reach status: %s", appID, expectedStatus)
 
 	pollInterval := 2 * time.Second
 	deadline := time.Now().Add(maxWaitTime)
@@ -259,7 +272,7 @@ func (d *XEDriver) WaitForAppStatus(ctx context.Context, appID string, expectedS
 		root := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
 		err := d.client.Get(ctx, path, root, d.getRestconfUnmarshaller())
 		if err != nil {
-			log.G(ctx).Warnf("Failed to fetch oper data: %v", err)
+			log.G(ctx).Debugf("Failed to fetch oper data: %v", err)
 			time.Sleep(pollInterval)
 			continue
 		}
@@ -304,7 +317,7 @@ func (d *XEDriver) WaitForAppNotPresent(ctx context.Context, appID string, maxWa
 		root := &Cisco_IOS_XEAppHostingOper_AppHostingOperData{}
 		err := d.client.Get(ctx, path, root, d.getRestconfUnmarshaller())
 		if err != nil {
-			log.G(ctx).Warnf("Failed to fetch oper data: %v", err)
+			log.G(ctx).Debugf("Failed to fetch oper data: %v", err)
 			time.Sleep(pollInterval)
 			continue
 		}

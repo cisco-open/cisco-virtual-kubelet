@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/record"
 	statsv1alpha1 "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
 
@@ -53,7 +54,17 @@ func NewAppHostingProvider(
 	vkCfg nodeutil.ProviderConfig,
 	driver drivers.CiscoKubernetesDeviceDriver,
 	nodeProvider *AppHostingNode,
+	eventRecorder record.EventRecorder,
 ) (*AppHostingProvider, error) {
+	// Wire the event recorder into the driver if it supports it.
+	if eventRecorder != nil {
+		type eventRecorderSetter interface {
+			SetEventRecorder(record.EventRecorder)
+		}
+		if setter, ok := driver.(eventRecorderSetter); ok {
+			setter.SetEventRecorder(eventRecorder)
+		}
+	}
 	return &AppHostingProvider{
 		ctx:             ctx,
 		deviceSpec:      deviceSpec,

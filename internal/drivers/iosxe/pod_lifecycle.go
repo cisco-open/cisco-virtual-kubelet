@@ -323,7 +323,10 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 	if d.isPodRecovering(string(pod.UID)) {
 		statusPod := pod.DeepCopy()
 		waiting := v1.ContainerState{
-			Waiting: &v1.ContainerStateWaiting{Reason: "Recovering"},
+			Waiting: &v1.ContainerStateWaiting{
+				Reason:  "PullingImage",
+				Message: "Copying image to device flash; this may take several minutes",
+			},
 		}
 		for i := range statusPod.Status.ContainerStatuses {
 			statusPod.Status.ContainerStatuses[i].State = waiting
