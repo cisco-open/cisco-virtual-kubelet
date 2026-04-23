@@ -221,6 +221,80 @@ You should see one of:
 
 ---
 
+## Pod stuck in `PullingImage` waiting state
+
+### Symptom
+
+`kubectl describe pod <name>` shows the container in a waiting state:
+
+```
+State:          Waiting
+  Reason:       PullingImage
+  Message:      Copying image to device flash; this may take several minutes
+```
+
+### What is happening
+
+The VK attempted a device-native HTTP pull that timed out (default 3 minutes), and is now running the copy fallback: it downloads the image tar from the HTTP URL and copies it to device flash via RESTCONF, then reinstalls from that local path. The copy RPC is synchronous and can take several minutes depending on image size and network speed.
+
+You can monitor progress via pod events:
+
+```bash
+kubectl describe pod <name>
+# Look for the Events section at the bottom:
+#
+#   Normal  Pulling          <time>   cisco-virtual-kubelet  Pulling image https://...
+#   Warning ImagePullFallback <time>  cisco-virtual-kubelet  Device-native pull timed out...
+#   Normal  Copying          <time>   cisco-virtual-kubelet  Copying image ... to flash:/...
+#   Normal  Pulled           <time>   cisco-virtual-kubelet  Image successfully copied to ...
+#   Normal  Started          <time>   cisco-virtual-kubelet  App ... is running
+```
+
+### Wait times
+
+- A 500 MB image over a 100 Mb/s management link takes roughly 40 seconds for the copy alone, plus 30 seconds for app activation. Allow 3–5 minutes total.
+- If the pod does not transition to `Running` after 10 minutes, check VK logs for errors:
+
+```bash
+kubectl -n <device-namespace> logs deploy/<device-name>-vk | grep -E "copy|fallback|error|Error"
+```
+
+### Avoiding the copy fallback
+
+To use the copy path intentionally and skip the device-native pull attempt entirely, set `imagePullPolicy: Never` and pre-copy the tar to flash yourself. Then reference the flash path directly in the pod spec:
+
+```yaml
+image: flash:/virtual-kubelet/my-app.tar
+imagePullPolicy: Never
+```
+
+---
+
+## `imagePullPolicy: Never` with HTTP image URL
+
+### Symptom
+
+Pod immediately goes to `Failed` with:
+
+```
+status:
+  phase: Failed
+  message: "app ...: imagePullPolicy is Never but image is an HTTP URL ..."
+```
+
+### Why
+
+`imagePullPolicy: Never` means the image must already exist on device flash and no download of any kind will be attempted. Using an HTTP or HTTPS URL with this policy is invalid.
+
+### Fix
+
+Either:
+
+1. Change the image reference to a flash path: `flash:/virtual-kubelet/my-app.tar`
+2. Or change the `imagePullPolicy` to `IfNotPresent` or `Always` to allow the VK to download it.
+
+---
+
 ## Pod stuck `Failed` forever
 
 Usually one of:

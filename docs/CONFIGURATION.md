@@ -225,7 +225,71 @@ spec:
 ```
 
 !!! note
-    The container image reference is a path on the device's flash storage (`flash:/...`), not a container registry. The tar must be pre-loaded on the device. Package policy (signed vs unsigned) is controlled by the device config (`no app-hosting signed-verification`) or by the CRD (`spec.allowUnsignedApps: true`).
+    The container image reference can be either:
+
+    - **A flash path** (`flash:/...`, `bootflash:/...`) — image tar must be pre-loaded on the device.
+    - **An HTTP(S) URL** — the VK attempts a device-native pull first; if the platform cannot pull, it downloads the image itself and installs from flash (see [Image delivery](#image-delivery) below).
+
+    Package policy (signed vs unsigned) is controlled by the device config (`no app-hosting signed-verification`) or by the CRD (`spec.allowUnsignedApps: true`).
+
+## Image delivery
+
+By default the VK passes the container image URL directly to the IOS-XE install RPC and waits for the app to reach `RUNNING`. On platforms that support device-native HTTP pulls, no extra steps are needed.
+
+On platforms that cannot pull from HTTP URLs, the VK automatically falls back to a **copy-then-install** path: it downloads the image to device flash via the `copy` RESTCONF RPC, then reinstalls from the local flash path. This fallback can take several minutes (the copy RPC is synchronous and blocks until the device finishes downloading).
+
+### `imagePullPolicy`
+
+Behaves analogously to the Kubernetes `imagePullPolicy` field:
+
+| Value | Behaviour |
+|---|---|
+| `Always` | Always attempt device-native pull; if that times out, always re-download via copy RPC. The flash cache is never reused. |
+| `IfNotPresent` (default) | Always attempt device-native pull first; if that times out, try installing from the cached flash destination before re-downloading. If a previously copied tar exists at the destination, the copy step is skipped. |
+| `Never` | Image must already exist on flash. HTTP URLs are rejected immediately — no install RPC is issued. |
+
+### `imagePullSecrets`
+
+When the image is served from a registry that requires authentication, provide credentials via a Kubernetes `Secret` and reference it from `spec.imagePullSecrets`. The VK embeds the credentials as HTTP basic auth in the copy RPC URL.
+
+```yaml
+spec:
+  imagePullSecrets:
+  - name: registry-credentials
+```
+
+The referenced Secret should be of type `kubernetes.io/dockerconfigjson` or contain a `token` key. The VK tries the following fields in priority order: `token` key → `.dockerconfigjson` `identitytoken` → `.dockerconfigjson` `registrytoken` → `.dockerconfigjson` `username`/`password` → `.dockerconfigjson` `auth` (base64 `user:pass`).
+
+!!! note
+    Authentication is applied only to the copy RPC (device-initiated download). The device-native pull path does not support credential injection via this mechanism.
+
+### Pod annotations for the copy path
+
+Two optional annotations tune the copy fallback behaviour:
+
+| Annotation | Default | Description |
+|---|---|---|
+| `cisco.io/apphost-package-dest` | `flash:/virtual-kubelet/<app-id>.tar` | On-device flash path where the image is copied. Must use an IOS-XE filesystem prefix (`flash:`, `bootflash:`, `harddisk:`, `usb:`, `nvram:`). |
+| `cisco.io/apphost-package-timeout` | `180s` (3 min) | How long to wait for the app to reach `RUNNING`. Accepts Go duration strings (`3m`, `300s`) or bare seconds (`180`). Clamped to [10s, 30m]. |
+
+```yaml
+metadata:
+  annotations:
+    cisco.io/apphost-package-dest:    "flash:/virtual-kubelet/my-app.tar"
+    cisco.io/apphost-package-timeout: "5m"
+```
+
+### Kubernetes pod events
+
+During image delivery the VK emits pod events visible in `kubectl describe pod`:
+
+| Event | Reason | When |
+|---|---|---|
+| Normal | `Pulling` | Device-native HTTP pull started |
+| Warning | `ImagePullFallback` | Device-native pull timed out; copy fallback begins |
+| Normal | `Copying` | Copy RPC started (shows source URL and destination path) |
+| Normal | `Pulled` | Image successfully copied to device flash |
+| Normal | `Started` | App reached RUNNING via copy fallback |
 
 ## See also
 

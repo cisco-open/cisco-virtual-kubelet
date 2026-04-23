@@ -1,29 +1,33 @@
-# Example pod scheduled on a CiscoDevice's virtual node.
+# Example pods scheduled on a CiscoDevice's virtual node.
 #
 # Prerequisites:
 #   - The controller is deployed (see README for Helm install)
 #   - A CiscoDevice named "cat9000-1" exists and is Ready
 #     (see ciscodevice-crs.yaml)
-#   - The container tar (flash:/hello-app.iosxe.tar) is on the device
 #
 # Apply with:
 #   kubectl apply -f example-pod.yaml
 
+# -------------------------------------------------------------------
+# Example 1: Flash image (pre-loaded on device)
+#
+# The image tar must already exist on device flash before this pod is
+# created. No network download is performed.
+# -------------------------------------------------------------------
 apiVersion: v1
 kind: Pod
 metadata:
-  name: hello-app
+  name: hello-app-flash
   namespace: default
 spec:
   nodeName: cat9000-1
-  # Tolerate the VK provider taint — VK nodes carry this so that workloads
-  # not explicitly targeted at them are never scheduled there.
   tolerations:
   - key: virtual-kubelet.io/provider
     operator: Exists
   containers:
   - name: hello
     image: flash:/hello-app.iosxe.tar
+    imagePullPolicy: Never   # flash path — image must already be on the device
     resources:
       requests:
         memory: "256Mi"
@@ -31,3 +35,138 @@ spec:
       limits:
         memory: "512Mi"
         cpu:    "1000m"
+
+---
+# -------------------------------------------------------------------
+# Example 2: HTTP image — IfNotPresent (default)
+#
+# The VK first attempts a device-native pull. If that times out it
+# copies the tar to flash and installs from there. On subsequent
+# deploys the cached flash copy is reused (no re-download).
+# -------------------------------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-app-http
+  namespace: default
+spec:
+  nodeName: cat9000-1
+  tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
+  containers:
+  - name: hello
+    image: https://registry.example.com/hello-app.iosxe.tar
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu:    "500m"
+      limits:
+        memory: "512Mi"
+        cpu:    "1000m"
+
+---
+# -------------------------------------------------------------------
+# Example 3: HTTP image — Always
+#
+# Always attempts a fresh device-native pull. If that times out the
+# image is re-downloaded via the copy fallback on every deploy (the
+# flash cache is never reused).
+# -------------------------------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-app-always-pull
+  namespace: default
+spec:
+  nodeName: cat9000-1
+  tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
+  containers:
+  - name: hello
+    image: https://registry.example.com/hello-app.iosxe.tar
+    imagePullPolicy: Always
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu:    "500m"
+      limits:
+        memory: "512Mi"
+        cpu:    "1000m"
+
+---
+# -------------------------------------------------------------------
+# Example 4: HTTP image with authentication (imagePullSecrets)
+#
+# The Secret must be of type kubernetes.io/dockerconfigjson, or
+# contain a "token" key. Credentials are applied to the copy RPC
+# (device-initiated download path).
+#
+# Create the secret:
+#   kubectl create secret docker-registry registry-creds \
+#     --docker-server=registry.example.com \
+#     --docker-username=<user> \
+#     --docker-password=<pass>
+# -------------------------------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-app-private-registry
+  namespace: default
+spec:
+  nodeName: cat9000-1
+  tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
+  imagePullSecrets:
+  - name: registry-creds
+  containers:
+  - name: hello
+    image: https://registry.example.com/hello-app.iosxe.tar
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu:    "500m"
+      limits:
+        memory: "512Mi"
+        cpu:    "1000m"
+
+---
+# -------------------------------------------------------------------
+# Example 5: HTTP image with custom destination path and timeout
+#
+# cisco.io/apphost-package-dest  — where the tar is stored on flash.
+#   Must use a valid IOS-XE filesystem prefix (flash:, bootflash:,
+#   harddisk:, usb:, nvram:).
+#
+# cisco.io/apphost-package-timeout — how long to wait for RUNNING.
+#   Accepts Go duration strings (5m, 300s) or bare seconds. Clamped
+#   to [10s, 30m].
+# -------------------------------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-app-custom-dest
+  namespace: default
+  annotations:
+    cisco.io/apphost-package-dest:    "flash:/virtual-kubelet/hello-app-v2.tar"
+    cisco.io/apphost-package-timeout: "10m"
+spec:
+  nodeName: cat9000-1
+  tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
+  containers:
+  - name: hello
+    image: https://registry.example.com/hello-app-v2.iosxe.tar
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu:    "1000m"
+      limits:
+        memory: "1Gi"
+        cpu:    "2000m"
