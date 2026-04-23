@@ -15,10 +15,10 @@
 package configdriver
 
 import (
-	"context"
 	"errors"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 )
 
 // ErrNotImplemented marks methods that are still stubbed in the Phase-0
@@ -83,24 +83,10 @@ type Plan struct {
 	// Family is the netascode family the plan acts on.
 	Family string
 	// Operations are executed in order; a failure short-circuits the plan.
-	Operations []Operation
+	Operations []transport.Op
 	// PreImage is opaque family payload captured before the apply; used by
 	// Rollback on RESTCONF where no candidate datastore exists.
 	PreImage map[string][]byte
-}
-
-// Operation is a single transport-level request. Method and Path are chosen
-// to be equally meaningful for RESTCONF HTTP verbs and for NETCONF
-// edit-config operations (NETCONF translates DELETE to nc:operation="remove").
-type Operation struct {
-	// Method is one of GET, PUT, PATCH, DELETE. Other values are rejected
-	// by the transport layer.
-	Method string
-	// Path is the YANG xpath (NETCONF) or RESTCONF URI path the operation
-	// targets. Must be absolute; writers are responsible for escaping.
-	Path string
-	// Body is the JSON-encoded payload. Nil for GET and DELETE.
-	Body []byte
 }
 
 // ApplyResult summarises the outcome of a Plan execution.
@@ -124,22 +110,8 @@ type FamilyError struct {
 // is driver-implementation-specific.
 type RollbackToken string
 
-// TransportClient abstracts the RESTCONF (Phase-1) / NETCONF (Phase-2)
-// channel both the apphosting driver and this config driver share. The
-// contract is intentionally minimal: family writers compose the higher-level
-// operations they need from these verbs.
-//
-// Implementations MUST serialise requests against the shared underlying
-// session so a concurrent apphosting write cannot interleave with a
-// configuration write and corrupt the device's transaction state.
-type TransportClient interface {
-	// GET retrieves the RESTCONF payload at path. path must be absolute.
-	GET(ctx context.Context, path string) ([]byte, error)
-	// PUT replaces the resource at path with body.
-	PUT(ctx context.Context, path string, body []byte) error
-	// PATCH merges body into the resource at path (RESTCONF yang-patch or
-	// NETCONF merge operation).
-	PATCH(ctx context.Context, path string, body []byte) error
-	// DELETE removes the resource at path.
-	DELETE(ctx context.Context, path string) error
-}
+// TransportClient is a type alias kept for source-compatibility in the
+// configdriver package surface. New code should import
+// "internal/drivers/iosxe/configdriver/transport" and use
+// transport.Interface directly.
+type TransportClient = transport.Interface

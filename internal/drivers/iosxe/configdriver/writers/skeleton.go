@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 )
 
 // skeleton is the Phase-0 stand-in for a real SectionWriter. It satisfies
@@ -41,11 +42,11 @@ func (s skeleton) Fetch(context.Context, configdriver.TransportClient) (any, err
 	return nil, ErrNotImplemented
 }
 
-func (s skeleton) Diff(desired, observed any) ([]configdriver.Operation, error) {
+func (s skeleton) Diff(desired, observed any) ([]transport.Op, error) {
 	return nil, ErrNotImplemented
 }
 
-func (s skeleton) Apply(context.Context, configdriver.TransportClient, []configdriver.Operation) error {
+func (s skeleton) Apply(context.Context, configdriver.TransportClient, []transport.Op) error {
 	return ErrNotImplemented
 }
 

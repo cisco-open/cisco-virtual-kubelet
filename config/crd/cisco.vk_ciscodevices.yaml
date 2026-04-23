@@ -244,6 +244,20 @@ spec:
                 required:
                 - enabled
                 type: object
+              transport:
+                default: restconf
+                description: |-
+                  Transport selects the device channel used by the IOSXEConfig config
+                  driver. "restconf" is the default and the only fully-supported
+                  option in Phase 1. "netconf" and "gnmi" are reserved — the factory
+                  rejects them with a clear error until their transports land.
+                  Apphosting operations always use RESTCONF regardless of this
+                  field; it only affects declarative configuration.
+                enum:
+                - restconf
+                - netconf
+                - gnmi
+                type: string
               username:
                 description: Username for device authentication.
                 type: string

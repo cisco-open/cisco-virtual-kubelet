@@ -19,6 +19,7 @@ import (
 	"errors"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 )
 
 // ErrNotImplemented is returned by Phase-0 writer skeletons. It wraps the
@@ -53,10 +54,10 @@ type SectionWriter interface {
 	// Diff computes the operations required to move observed → desired.
 	// Returning an empty slice signals no change. Neither argument is
 	// retained by the writer after the call.
-	Diff(desired, observed any) ([]configdriver.Operation, error)
+	Diff(desired, observed any) ([]transport.Op, error)
 
 	// Apply executes the operations produced by Diff in order. A non-nil
 	// error short-circuits the family's portion of the plan; the driver
 	// core then invokes Rollback with the PreImage captured earlier.
-	Apply(ctx context.Context, c configdriver.TransportClient, ops []configdriver.Operation) error
+	Apply(ctx context.Context, c configdriver.TransportClient, ops []transport.Op) error
 }
