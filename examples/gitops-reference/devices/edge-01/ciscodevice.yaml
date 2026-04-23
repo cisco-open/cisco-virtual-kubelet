@@ -1,0 +1,21 @@
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: edge-01
+  namespace: network
+  labels:
+    role: access-switch
+spec:
+  driver: XE
+  # RFC 5737 documentation address — replace with your device IP before use.
+  address: 192.0.2.10
+  port: 443
+  username: cisco-vk
+  credentialSecretRef:
+    name: edge-01-creds
+  tls:
+    enabled: true
+    insecureSkipVerify: false
+  maxPods: 4
+  region: lab
+  zone: rack-01

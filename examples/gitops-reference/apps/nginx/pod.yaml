@@ -1,0 +1,26 @@
+# Illustrative IOx-hostable pod, scheduled onto the virtual node that
+# corresponds to the CiscoDevice registered by edge-01's cisco-vk run.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  namespace: network
+  labels:
+    app: nginx
+spec:
+  nodeSelector:
+    cisco.vk/device: edge-01
+  tolerations:
+    - key: cisco.vk/virtual-kubelet
+      operator: Exists
+      effect: NoSchedule
+  containers:
+    - name: nginx
+      image: ghcr.io/example/iox-nginx:1.25
+      resources:
+        requests:
+          cpu: "250m"
+          memory: "128Mi"
+        limits:
+          cpu: "500m"
+          memory: "256Mi"
