@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
@@ -108,16 +109,23 @@ type DriftEntry struct {
 // flight at once would complicate rollback semantics with no real gain
 // on a single device.
 func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Result {
+	start := time.Now()
 	if res == nil {
-		return Result{Phase: PhaseFailed, Err: errors.New("engine.Reconcile: nil intent")}
+		r := Result{Phase: PhaseFailed, Err: errors.New("engine.Reconcile: nil intent")}
+		recordResult("", r, time.Since(start).Seconds())
+		return r
 	}
 
 	if res.DriftPolicy == configv1alpha1.DriftPolicyPause {
-		return Result{Phase: PhasePaused}
+		r := Result{Phase: PhasePaused}
+		recordResult(res.DeviceName, r, time.Since(start).Seconds())
+		return r
 	}
 
 	if err := e.validate(res); err != nil {
-		return Result{Phase: PhaseFailed, Err: fmt.Errorf("Validating: %w", err)}
+		r := Result{Phase: PhaseFailed, Err: fmt.Errorf("Validating: %w", err)}
+		recordResult(res.DeviceName, r, time.Since(start).Seconds())
+		return r
 	}
 
 	result := Result{
@@ -155,6 +163,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	default:
 		result.Phase = PhaseInSync
 	}
+	recordResult(res.DeviceName, result, time.Since(start).Seconds())
 	return result
 }
 
@@ -225,12 +234,19 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		}
 	}
 
+	applyStart := time.Now()
 	if err := w.Apply(ctx, e.Transport, ops); err != nil {
+		if applyDuration != nil {
+			applyDuration.WithLabelValues(res.DeviceName, family).Observe(time.Since(applyStart).Seconds())
+		}
 		return FamilyStatus{
 			Name: family, State: "ApplyError",
 			OpCount: len(ops),
 			Message: fmt.Sprintf("Apply: %v", err),
 		}
+	}
+	if applyDuration != nil {
+		applyDuration.WithLabelValues(res.DeviceName, family).Observe(time.Since(applyStart).Seconds())
 	}
 
 	// Verify: re-fetch and re-diff. If the device reports drift still

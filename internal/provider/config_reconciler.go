@@ -21,8 +21,10 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
@@ -69,6 +71,12 @@ type ConfigReconciler struct {
 	// targeting the same device. Nil means advisory-only conflict
 	// reporting (the Phase-1 default behaviour).
 	Leaser *engine.FamilyLeaser
+
+	// Recorder emits Kubernetes events on the reconciled IOSXEConfig.
+	// Nil is allowed — the reconciler silently skips event emission so
+	// tests and in-process reconcilers that do not have an event
+	// broadcaster continue to work.
+	Recorder record.EventRecorder
 }
 
 // Run blocks until ctx is cancelled. It returns ctx.Err() on exit.
@@ -238,6 +246,11 @@ func (r *ConfigReconciler) recordPending(ctx context.Context, cr *configv1alpha1
 	if cr.Status.Phase == engine.PhasePending && cr.Status.ObservedGeneration == cr.Generation {
 		return nil
 	}
+	if r.Recorder != nil {
+		// Emit once per transition, not every tick.
+		r.Recorder.Eventf(cr, corev1.EventTypeWarning, "NoTransport",
+			"config driver has no device transport configured (scaffold)")
+	}
 	updated := cr.DeepCopy()
 	updated.Status.Phase = engine.PhasePending
 	updated.Status.ObservedGeneration = cr.Generation
@@ -265,9 +278,10 @@ func (r *ConfigReconciler) recordFailure(ctx context.Context, cr *configv1alpha1
 	return ignoreConflict(r.Client.Status().Update(ctx, updated))
 }
 
-// recordResult serialises an engine.Result into the CR's status. It
-// also writes the per-family list, current drift, the hash, and a
-// Conflict condition if the CR shares a family with another CR.
+// recordResult serialises an engine.Result into the CR's status and
+// emits Kubernetes events describing the tick. It also writes the
+// per-family list, current drift, the hash, and a Conflict condition
+// if the CR shares a family with another CR.
 func (r *ConfigReconciler) recordResult(
 	ctx context.Context,
 	cr *configv1alpha1.IOSXEConfig,
@@ -275,6 +289,7 @@ func (r *ConfigReconciler) recordResult(
 	hash string,
 	conflicts map[string][]string,
 ) error {
+	r.emitEvents(cr, result)
 	updated := cr.DeepCopy()
 	updated.Status.Phase = result.Phase
 	updated.Status.ObservedGeneration = cr.Generation
@@ -379,4 +394,66 @@ func ignoreConflict(err error) error {
 		return nil
 	}
 	return err
+}
+
+// emitEvents produces the per-tick Kubernetes event stream. Emission
+// order:
+//   1. A per-family event for every non-InSync family (Warning if
+//      ApplyError / Unsupported, Normal for Drifted / Skipped).
+//   2. A terminal Normal/Warning event describing the overall phase.
+//
+// Event reason strings are drawn from a closed set so operators can
+// filter deterministically: AppliedSuccess, ApplyFailed, DriftDetected,
+// FamilyUnsupported, FamilySkipped, Paused, NoTransport, ReconcileFailed.
+//
+// The recorder is nil-tolerant: tests and callers that don't attach a
+// broadcaster see a no-op.
+func (r *ConfigReconciler) emitEvents(cr *configv1alpha1.IOSXEConfig, result engine.Result) {
+	if r.Recorder == nil {
+		return
+	}
+	for _, fs := range result.FamilyStatuses {
+		switch fs.State {
+		case "InSync":
+			// No per-family event for the steady-state case; the
+			// terminal event below captures a clean tick.
+		case "Drifted":
+			r.Recorder.Eventf(cr, corev1.EventTypeNormal, "DriftDetected",
+				"family %q drifted: %s", fs.Name, fs.Message)
+		case "ApplyError":
+			r.Recorder.Eventf(cr, corev1.EventTypeWarning, "ApplyFailed",
+				"family %q: %s", fs.Name, fs.Message)
+		case "Unsupported":
+			r.Recorder.Eventf(cr, corev1.EventTypeWarning, "FamilyUnsupported",
+				"family %q: %s", fs.Name, fs.Message)
+		case "Skipped":
+			r.Recorder.Eventf(cr, corev1.EventTypeNormal, "FamilySkipped",
+				"family %q: %s", fs.Name, fs.Message)
+		}
+	}
+
+	switch result.Phase {
+	case engine.PhaseInSync:
+		// Only emit a success event when work was done, to avoid
+		// filling the event stream with no-op ticks.
+		var applied int
+		for _, fs := range result.FamilyStatuses {
+			if fs.OpCount > 0 {
+				applied++
+			}
+		}
+		if applied > 0 {
+			r.Recorder.Eventf(cr, corev1.EventTypeNormal, "AppliedSuccess",
+				"applied %d family change(s) successfully", applied)
+		}
+	case engine.PhaseFailed:
+		msg := "reconcile failed"
+		if result.Err != nil {
+			msg = result.Err.Error()
+		}
+		r.Recorder.Eventf(cr, corev1.EventTypeWarning, "ReconcileFailed", "%s", msg)
+	case engine.PhasePaused:
+		r.Recorder.Eventf(cr, corev1.EventTypeNormal, "Paused",
+			"driftPolicy=pause; reconcile suspended")
+	}
 }

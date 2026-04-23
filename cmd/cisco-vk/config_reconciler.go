@@ -20,14 +20,19 @@ import (
 	"os"
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	coordv1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
@@ -70,6 +75,30 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	utilruntime.Must(ciskov1.AddToScheme(scheme))
 	utilruntime.Must(coordv1.AddToScheme(scheme))
 
+	// Register engine metrics on the default Prometheus registry so the
+	// existing /metrics endpoint scrapes them. Idempotent.
+	engine.RegisterMetrics(prometheus.DefaultRegisterer)
+
+	// Event recorder: the reconciler emits one event per non-trivial
+	// per-family outcome and a terminal event per tick. The broadcaster
+	// is tied to ctx so the goroutine exits cleanly at shutdown.
+	k8sClient, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return fmt.Errorf("build typed client for events: %w", err)
+	}
+	broadcaster := record.NewBroadcaster()
+	broadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{
+		Interface: k8sClient.CoreV1().Events(""),
+	})
+	go func() {
+		<-ctx.Done()
+		broadcaster.Shutdown()
+	}()
+	recorder := broadcaster.NewRecorder(scheme, corev1.EventSource{
+		Component: "cisco-vk-config-reconciler",
+		Host:      deviceName,
+	})
+
 	c, err := ctrlclient.New(cfg, ctrlclient.Options{Scheme: scheme})
 	if err != nil {
 		return fmt.Errorf("build controller-runtime client: %w", err)
@@ -102,6 +131,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 			Client:    c,
 			Namespace: leaseNamespace,
 		},
+		Recorder: recorder,
 	}
 
 	go func() {
