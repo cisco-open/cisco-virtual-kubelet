@@ -84,10 +84,22 @@ func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	for _, appID := range discoveredContainers {
 		operData, exists := allOperData[appID]
 		if !exists {
-			appsNeedingRedeploy = append(appsNeedingRedeploy, appID)
+			// App is in config but not yet in oper data — normal during
+			// INSTALLING/DEPLOYED. The reconciler handles this case.
 			continue
 		}
-		if operData.Details == nil || operData.Details.State == nil || *operData.Details.State != "RUNNING" {
+		if operData.Details == nil || operData.Details.State == nil {
+			continue
+		}
+		// Leave the app alone if it is making normal forward progress.
+		// The reconciler in GetPodStatus advances DEPLOYED → ACTIVATED → RUNNING.
+		// Only trigger a redeploy for states the reconciler cannot recover from.
+		state := *operData.Details.State
+		switch state {
+		case "RUNNING", "ACTIVATED", "DEPLOYED", "INSTALLING":
+			continue
+		default:
+			log.G(ctx).Infof("UpdatePod: app %s is in state %q (not a healthy transitional state), scheduling redeploy", appID, state)
 			appsNeedingRedeploy = append(appsNeedingRedeploy, appID)
 		}
 	}

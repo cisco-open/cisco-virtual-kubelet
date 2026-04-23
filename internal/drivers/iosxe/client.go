@@ -48,11 +48,26 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 	}
 	policy := appConfig.ImagePullPolicy()
 
-	// ── PRIMARY PATH ──────────────────────────────────────────────────────────
 	if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
 		return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
 	}
 
+	// For non-HTTP image paths (flash, bootflash, etc.) the device does not
+	// auto-advance to RUNNING — it stops at DEPLOYED and needs explicit
+	// activate + start RPCs. Those are driven by the ReconcileApp loop in
+	// GetPodStatus. Wait for DEPLOYED (matching the original behaviour) then
+	// return so the reconciler can advance the app to RUNNING without
+	// interference.
+	if !isHTTPURL(appConfig.ImagePath()) {
+		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
+			return fmt.Errorf("app %s did not reach DEPLOYED after install: %w", appConfig.AppName(), err)
+		}
+		log.G(ctx).Infof("Successfully installed app %s (local path; reconciler will advance to RUNNING)", appConfig.AppName())
+		return nil
+	}
+
+	// ── PRIMARY PATH (HTTP image) ─────────────────────────────────────────────
+	// The device can pull and activate the image itself. Wait for RUNNING.
 	waitErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout)
 	if waitErr == nil {
 		log.G(ctx).Infof("Successfully created and installed app %s", appConfig.AppName())
