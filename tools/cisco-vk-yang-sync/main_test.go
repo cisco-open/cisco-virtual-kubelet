@@ -199,3 +199,71 @@ func TestEmptyFamilyIndexRejected(t *testing.T) {
 		t.Errorf("stderr missing 'empty':\n%s", errBuf.String())
 	}
 }
+
+func TestBuildYgotArgsIncludesAllYangFiles(t *testing.T) {
+	dir := t.TempDir()
+	for _, f := range []string{"a.yang", "b.yang"} {
+		if err := os.WriteFile(filepath.Join(dir, f), []byte("module "+f+" { yang-version 1.1; }\n"), 0o600); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+	}
+	// A non-.yang file should be skipped.
+	if err := os.WriteFile(filepath.Join(dir, "readme.md"), []byte("doc"), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	got, err := buildYgotArgs(flags{yangDir: dir, outTypes: "out"}, nil)
+	if err != nil {
+		t.Fatalf("buildYgotArgs: %v", err)
+	}
+	if got.bin != "go" {
+		t.Errorf("bin=%q, want 'go'", got.bin)
+	}
+	joined := strings.Join(got.args, " ")
+	if !strings.Contains(joined, "github.com/openconfig/ygot/generator") {
+		t.Errorf("missing ygot dep in args: %v", got.args)
+	}
+	if !strings.Contains(joined, "-package_name=generated") {
+		t.Errorf("missing package flag: %v", got.args)
+	}
+	if !strings.Contains(joined, filepath.Join(dir, "a.yang")) {
+		t.Errorf("a.yang missing from args: %v", got.args)
+	}
+	if !strings.Contains(joined, filepath.Join(dir, "b.yang")) {
+		t.Errorf("b.yang missing from args: %v", got.args)
+	}
+	if strings.Contains(joined, "readme.md") {
+		t.Errorf("non-.yang file leaked into args: %v", got.args)
+	}
+}
+
+func TestBuildYgotArgsRespectsYgotBinOverride(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "x.yang"), []byte("module x { yang-version 1.1; }\n"), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	got, err := buildYgotArgs(flags{yangDir: dir, outTypes: "out", ygotBin: "/usr/local/bin/generator"}, nil)
+	if err != nil {
+		t.Fatalf("buildYgotArgs: %v", err)
+	}
+	if got.bin != "/usr/local/bin/generator" {
+		t.Errorf("bin=%q, want override", got.bin)
+	}
+	// When ygotBin is set we must NOT prepend 'go run ...'.
+	if len(got.args) > 0 && got.args[0] == "run" {
+		t.Errorf("args leaked 'run': %v", got.args)
+	}
+}
+
+func TestRunSkipsYgotWhenYangDirUnset(t *testing.T) {
+	idx := writeTempIndex(t, sampleFamilies)
+	var out, errBuf bytes.Buffer
+	code := run([]string{"--family-index", idx, "--dry-run=false",
+		"--out-writers", t.TempDir()}, &out, &errBuf)
+	if code != exitOK {
+		t.Fatalf("exit=%d", code)
+	}
+	if !strings.Contains(out.String(), "skipping ygot") {
+		t.Errorf("expected skip notice, got:\n%s", out.String())
+	}
+}

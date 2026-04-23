@@ -5,3 +5,5 @@ bin
 .venv/
 .claude/
 site/
+cisco-vk-yang-sync
+cisco-vk-config-lint

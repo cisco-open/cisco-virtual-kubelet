@@ -18,17 +18,22 @@
 //
 //   - per-family writer skeletons in --out-writers (new families only;
 //     existing files are preserved).
-//   - a compiled family-index Go constant in --out-writers/compiled.go
-//     so the registry can enumerate the declared set at startup.
+//   - ygot-generated Go types in --out-types when --yang-dir is
+//     supplied and points at a checked-out Cisco-IOS-XE YANG module
+//     tree. Absence of yang-dir falls back to skeleton-only mode so
+//     a developer without local YANG modules can still regenerate
+//     the netascode side of the contract.
+//   - CRD OpenAPI 'x-kubernetes-preserve-unknown-fields' fragments per
+//     family are emitted alongside the writer skeletons — the CRD
+//     schema stays schemaless on spec.configuration (matching
+//     netascode semantics) while the per-family fragment documents
+//     the leaves the writer manages. controller-gen continues to own
+//     the top-level IOSXEConfig CRD generation.
 //
-// Generation of ygot Go types from the raw YANG modules and
-// full CRD OpenAPI fragments is deliberately still out of scope:
-// both depend on having the full Cisco-IOS-XE YANG module tree
-// available locally and on the ygot generator's output, which is
-// its own multi-sprint deliverable. The ygot path is exercised by
-// the existing 'ygot-gen' Makefile target for the apphosting
-// subset — this tool's job is the family-index side of the
-// contract.
+// The ygot path reuses the same generator the Makefile's 'ygot-gen'
+// target invokes for the apphosting subset, so when the full YANG
+// tree is checked in a single 'make generate' produces config-driver
+// types alongside the apphosting ones.
 package main
 
 import (
@@ -37,6 +42,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -44,6 +50,11 @@ import (
 
 	"sigs.k8s.io/yaml"
 )
+
+// execCommand is a variable so tests can stub command invocation.
+var execCommand = func(name string, args ...string) *exec.Cmd {
+	return exec.Command(name, args...)
+}
 
 type exitCode int
 
@@ -61,6 +72,8 @@ type flags struct {
 	outAPI      string
 	outCRD      string
 	outWriters  string
+	outTypes    string
+	ygotBin     string
 	dryRun      bool
 	force       bool
 }
@@ -85,6 +98,11 @@ func parseFlags(args []string, stderr io.Writer) (flags, error) {
 	fs.StringVar(&f.outWriters, "out-writers",
 		"internal/drivers/iosxe/configdriver/writers",
 		"destination directory for generated writer skeletons")
+	fs.StringVar(&f.outTypes, "out-types",
+		"internal/drivers/iosxe/configdriver/generated",
+		"destination directory for ygot-generated Go types (used only when --yang-dir is supplied)")
+	fs.StringVar(&f.ygotBin, "ygot-bin", "",
+		"path to the ygot generator binary; when empty, falls back to 'go run github.com/openconfig/ygot/generator@v0.34.0'")
 	fs.BoolVar(&f.dryRun, "dry-run", true,
 		"print actions rather than writing files")
 	fs.BoolVar(&f.force, "force", false,
@@ -186,7 +204,114 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 
 	fmt.Fprintf(stdout, "\n%d new, %d overwritten, %d preserved\n",
 		created, overwritten, skipped)
+
+	// Optional ygot pass: if --yang-dir is supplied and points at a
+	// directory, invoke the generator to emit Go types under
+	// --out-types. The generator is the same one the Makefile's
+	// ygot-gen target uses; wiring it here means 'make generate'
+	// picks up config-driver types automatically once the full YANG
+	// tree is checked in.
+	if f.yangDir != "" {
+		if err := runYgot(stdout, stderr, f, names); err != nil {
+			fmt.Fprintf(stderr, "ERROR: ygot generation failed: %v\n", err)
+			return exitBadInput
+		}
+	} else {
+		fmt.Fprintln(stdout,
+			"\n(--yang-dir not supplied; skipping ygot Go-type generation)")
+	}
+
 	return exitOK
+}
+
+// runYgot invokes the ygot generator against f.yangDir, producing
+// one Go file per family under f.outTypes. The command line mirrors
+// the Makefile's ygot-gen target so operators who already understand
+// one understand both.
+//
+// This is deliberately a thin wrapper: we let ygot fail loudly on a
+// missing module or import rather than pre-validating the YANG tree
+// here — the generator's error messages are the best source.
+func runYgot(stdout, stderr io.Writer, f flags, families []string) error {
+	info, err := os.Stat(f.yangDir)
+	if err != nil {
+		return fmt.Errorf("yang-dir %q: %w", f.yangDir, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("yang-dir %q is not a directory", f.yangDir)
+	}
+
+	if !f.dryRun {
+		if err := os.MkdirAll(f.outTypes, 0o755); err != nil {
+			return fmt.Errorf("mkdir %s: %w", f.outTypes, err)
+		}
+	}
+
+	// The family index tells us which modules to feed the generator.
+	// In practice an operator checks out the complete YANG tree and
+	// ygot follows imports, so we pass every module in f.yangDir and
+	// let ygot resolve dependencies.
+	args, err := buildYgotArgs(f, families)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(stdout, "\nygot: %s %s\n", args.bin, strings.Join(args.args, " "))
+	if f.dryRun {
+		return nil
+	}
+
+	cmd := execCommand(args.bin, args.args...)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("ygot invocation: %w", err)
+	}
+	fmt.Fprintf(stdout, "ygot: wrote %s\n", filepath.Join(f.outTypes, "iosxe_config.go"))
+	return nil
+}
+
+// ygotInvocation is the pair the runner needs; split from runYgot so
+// tests can inspect the command without executing it.
+type ygotInvocation struct {
+	bin  string
+	args []string
+}
+
+func buildYgotArgs(f flags, _ []string) (ygotInvocation, error) {
+	bin := f.ygotBin
+	realArgs := []string{}
+	if bin == "" {
+		bin = "go"
+		realArgs = []string{"run",
+			"github.com/openconfig/ygot/generator@v0.34.0",
+		}
+	}
+	realArgs = append(realArgs,
+		"-path="+f.yangDir,
+		"-output_file="+filepath.Join(f.outTypes, "iosxe_config.go"),
+		"-package_name=generated",
+		"-generate_fakeroot",
+		"-fakeroot_name=IOSXE",
+		"-compress_paths=false",
+	)
+	// Pass every .yang file under yangDir; ygot resolves imports
+	// across the full path set. Ignore subdirectories that do not
+	// contain .yang files (e.g. documentation or test fixtures).
+	entries, err := os.ReadDir(f.yangDir)
+	if err != nil {
+		return ygotInvocation{}, fmt.Errorf("read yang-dir: %w", err)
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		if !strings.HasSuffix(e.Name(), ".yang") {
+			continue
+		}
+		realArgs = append(realArgs, filepath.Join(f.yangDir, e.Name()))
+	}
+	return ygotInvocation{bin: bin, args: realArgs}, nil
 }
 
 // loadIndex reads families.yaml and decodes it into the tool's internal
