@@ -52,6 +52,23 @@ func Register(w SectionWriter) {
 	registry[name] = w
 }
 
+// Override replaces the current registration for w.Family() — used by
+// families whose real implementation lands in a separate file from the
+// skeleton. Unlike Register, a missing prior registration is NOT an
+// error: a fresh family may register without a skeleton first.
+func Override(w SectionWriter) {
+	if w == nil {
+		panic("writers.Override: nil SectionWriter")
+	}
+	name := w.Family()
+	if name == "" {
+		panic("writers.Override: SectionWriter.Family() returned empty string")
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	registry[name] = w
+}
+
 // Get returns the writer registered for family or nil when none is
 // registered. A nil return is not an error — it indicates a family the
 // driver has not yet been taught; the caller reports it as Unsupported

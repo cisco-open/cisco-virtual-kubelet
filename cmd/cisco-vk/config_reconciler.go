@@ -17,49 +17,73 @@ package main
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/rest"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver"
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 )
 
-// startConfigReconciler wires a Phase-0 IOSXEConfig reconciler onto the
-// running cisco-vk process. The reconciler runs as a goroutine tied to ctx;
-// the caller retains ownership of ctx's lifecycle so shutting the provider
-// down also stops the reconciler.
-//
-// The function returns an error only when the pre-requisites — scheme,
-// client, non-empty device identity — cannot be established. A started
-// reconciler that subsequently fails is handled inside the goroutine so
-// apphosting is not brought down by a transient API-server issue.
-func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName string) error {
+// configReconcilerOptions is what startConfigReconciler needs from the
+// surrounding cisco-vk-run setup: device spec (for transport build) and
+// resolved password. Kept as a struct so signatures don't grow.
+type configReconcilerOptions struct {
+	Spec     *ciskov1.DeviceSpec
+	Password string
+	// SessionLock optionally serialises config-driver RESTCONF traffic
+	// against the apphosting driver. Recommended in production.
+	SessionLock *sync.Mutex
+}
+
+// startConfigReconciler builds a controller-runtime client, assembles a
+// transport according to CiscoDevice.spec.transport, and starts the
+// IOSXEConfig reconciler goroutine tied to ctx. Failure to build any
+// piece is returned to the caller — apphosting continues without the
+// config driver rather than taking the process down.
+func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName string, opts configReconcilerOptions) error {
 	if cfg == nil {
 		return fmt.Errorf("nil rest.Config")
 	}
 	if deviceName == "" {
 		return fmt.Errorf("empty device name")
 	}
+	if opts.Spec == nil {
+		return fmt.Errorf("nil DeviceSpec")
+	}
 
 	scheme := k8sruntime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(configv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(ciskov1.AddToScheme(scheme))
 
 	c, err := ctrlclient.New(cfg, ctrlclient.Options{Scheme: scheme})
 	if err != nil {
 		return fmt.Errorf("build controller-runtime client: %w", err)
 	}
 
+	// Transport construction failure is not fatal: the reconciler can
+	// still run in scaffold mode (status=Pending, condition NoTransport).
+	t, tErr := transport.For(opts.Spec, opts.Password, transport.FactoryOptions{
+		SessionLock: opts.SessionLock,
+	})
+	if tErr != nil {
+		log.G(ctx).WithError(tErr).Warn("IOSXEConfig transport unavailable; driver will report Pending")
+	}
+
 	r := &provider.ConfigReconciler{
 		Client:     c,
 		DeviceName: deviceName,
-		Driver:     configdriver.NewStubDriver(),
+		Transport:  t, // may be nil
+		KeyRules:   keyRulesForPhase1(),
 	}
 
 	go func() {
@@ -67,6 +91,20 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 			log.G(ctx).WithError(runErr).Warn("IOSXEConfig reconciler exited with error")
 		}
 	}()
-
 	return nil
+}
+
+// keyRulesForPhase1 returns the path → key-field rules the merger uses
+// for YANG-keyed lists in the Phase-1 families. Phase-4 replaces this
+// with a rule set derived from schema/families.yaml.
+func keyRulesForPhase1() intent.KeyRules {
+	return intent.KeyRules{
+		"vlan.vlans":                      "id",
+		"vrf.vrfs":                        "name",
+		"interface_ethernet.interfaces":   "name",
+		"interface_loopback.interfaces":   "name",
+		"interface_virtual_port_group.interfaces": "id",
+		"dhcp.pools":                      "name",
+		"access_list_extended.extended":   "name",
+	}
 }

@@ -20,21 +20,28 @@ import (
 	"testing"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver"
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 )
 
 func newTestScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	s := runtime.NewScheme()
 	if err := configv1alpha1.AddToScheme(s); err != nil {
-		t.Fatalf("AddToScheme: %v", err)
+		t.Fatalf("config AddToScheme: %v", err)
+	}
+	if err := ciskov1.AddToScheme(s); err != nil {
+		t.Fatalf("cisko AddToScheme: %v", err)
+	}
+	if err := corev1.AddToScheme(s); err != nil {
+		t.Fatalf("core AddToScheme: %v", err)
 	}
 	return s
 }
@@ -42,23 +49,28 @@ func newTestScheme(t *testing.T) *runtime.Scheme {
 func newCR(name, device string) *configv1alpha1.IOSXEConfig {
 	return &configv1alpha1.IOSXEConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       name,
-			Namespace:  "network",
-			Generation: 1,
+			Name: name, Namespace: "network", Generation: 1,
 		},
 		Spec: configv1alpha1.IOSXEConfigSpec{
 			DeviceRef:       configv1alpha1.DeviceRef{Name: device},
 			ManagedFamilies: []string{"vlan"},
 			Source: configv1alpha1.ConfigurationSource{
-				ConfigMapRef: &configv1alpha1.ConfigMapKeyRef{Name: "cm", Key: "data.yaml"},
+				Inline: &runtime.RawExtension{Raw: []byte(`{}`)},
 			},
 		},
 	}
 }
 
-// TestRunExitsOnContextCancel verifies the loop honours context cancellation
-// and returns the ctx.Err(), so callers running it in an errgroup observe
-// the cause.
+func newDevice(name string) *ciskov1.CiscoDevice {
+	return &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "network"},
+		Spec: ciskov1.DeviceSpec{
+			Driver: ciskov1.DeviceDriverXE, Address: "10.0.0.1", Username: "u",
+		},
+	}
+}
+
+// TestRunExitsOnContextCancel verifies the loop honours context cancellation.
 func TestRunExitsOnContextCancel(t *testing.T) {
 	scheme := newTestScheme(t)
 	c := fake.NewClientBuilder().
@@ -69,7 +81,6 @@ func TestRunExitsOnContextCancel(t *testing.T) {
 	r := &ConfigReconciler{
 		Client:     c,
 		DeviceName: "edge-01",
-		Driver:     configdriver.NewStubDriver(),
 		Interval:   50 * time.Millisecond,
 	}
 
@@ -77,7 +88,6 @@ func TestRunExitsOnContextCancel(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- r.Run(ctx) }()
 
-	// Give the loop one tick, then cancel.
 	time.Sleep(75 * time.Millisecond)
 	cancel()
 
@@ -91,60 +101,57 @@ func TestRunExitsOnContextCancel(t *testing.T) {
 	}
 }
 
-// TestMatchingCRGetsPending verifies a CR targeting this device ends up
-// Phase=Pending after one pass, and a CR targeting a different device is
-// left untouched.
-func TestMatchingCRGetsPending(t *testing.T) {
+// With no transport wired (scaffold path), matched CRs land in Pending
+// with a Ready=False / NoTransport condition rather than Failed. This
+// is the contract that keeps apphosting unaffected when the config
+// driver hasn't been provisioned with a transport yet.
+func TestMatchingCRGetsPendingWhenNoTransport(t *testing.T) {
 	scheme := newTestScheme(t)
 	matching := newCR("edge-01", "edge-01")
 	other := newCR("core-01", "core-01")
 
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(matching, other).
+		WithObjects(newDevice("edge-01"), matching, other).
 		WithStatusSubresource(&configv1alpha1.IOSXEConfig{}).
 		Build()
 
 	r := &ConfigReconciler{
-		Client:     c,
-		DeviceName: "edge-01",
-		Driver:     configdriver.NewStubDriver(),
-		Interval:   time.Hour, // never ticks; rely on the initial immediate pass
+		Client: c, DeviceName: "edge-01", Interval: time.Hour,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() { _ = r.Run(ctx) }()
 
-	// Poll for the Pending phase; give the initial immediate pass time to run.
 	deadline := time.Now().Add(500 * time.Millisecond)
 	for time.Now().Before(deadline) {
 		got := &configv1alpha1.IOSXEConfig{}
 		if err := c.Get(ctx, types.NamespacedName{Namespace: "network", Name: "edge-01"}, got); err == nil {
-			if got.Status.Phase == "Pending" && got.Status.ObservedGeneration == 1 {
+			if got.Status.Phase == engine.PhasePending && got.Status.ObservedGeneration == 1 {
 				break
 			}
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	gotMatch := &configv1alpha1.IOSXEConfig{}
-	if err := c.Get(ctx, types.NamespacedName{Namespace: "network", Name: "edge-01"}, gotMatch); err != nil {
+	matched := &configv1alpha1.IOSXEConfig{}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: "network", Name: "edge-01"}, matched); err != nil {
 		t.Fatalf("get matching CR: %v", err)
 	}
-	if gotMatch.Status.Phase != "Pending" {
-		t.Fatalf("matching CR phase = %q, want Pending", gotMatch.Status.Phase)
+	if matched.Status.Phase != engine.PhasePending {
+		t.Fatalf("matching CR phase=%q, want Pending", matched.Status.Phase)
 	}
-	if gotMatch.Status.ObservedGeneration != 1 {
-		t.Fatalf("matching CR observedGeneration = %d, want 1", gotMatch.Status.ObservedGeneration)
+	if !conditionIs(matched.Status.Conditions, "Ready", metav1.ConditionFalse, "NoTransport") {
+		t.Fatalf("Ready condition missing/NoTransport:\n%#v", matched.Status.Conditions)
 	}
 
-	gotOther := &configv1alpha1.IOSXEConfig{}
-	if err := c.Get(ctx, types.NamespacedName{Namespace: "network", Name: "core-01"}, gotOther); err != nil {
+	otherCR := &configv1alpha1.IOSXEConfig{}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: "network", Name: "core-01"}, otherCR); err != nil {
 		t.Fatalf("get other CR: %v", err)
 	}
-	if gotOther.Status.Phase != "" {
-		t.Fatalf("non-matching CR was touched: phase = %q", gotOther.Status.Phase)
+	if otherCR.Status.Phase != "" {
+		t.Fatalf("non-matching CR was touched: phase=%q", otherCR.Status.Phase)
 	}
 }
 
@@ -157,9 +164,8 @@ func TestRunRejectsNilDependencies(t *testing.T) {
 		name string
 		r    *ConfigReconciler
 	}{
-		{"nil client", &ConfigReconciler{DeviceName: "d", Driver: configdriver.NewStubDriver()}},
-		{"empty device", &ConfigReconciler{Client: c, Driver: configdriver.NewStubDriver()}},
-		{"nil driver", &ConfigReconciler{Client: c, DeviceName: "d"}},
+		{"nil client", &ConfigReconciler{DeviceName: "d"}},
+		{"empty device", &ConfigReconciler{Client: c}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -170,6 +176,11 @@ func TestRunRejectsNilDependencies(t *testing.T) {
 	}
 }
 
-// Compile-time check — the controller-runtime client matches the expected
-// interface shape we exercise in the reconciler. Keeps refactors honest.
-var _ client.Client = (client.Client)(nil)
+func conditionIs(conds []metav1.Condition, t string, s metav1.ConditionStatus, reason string) bool {
+	for _, c := range conds {
+		if c.Type == t && c.Status == s && c.Reason == reason {
+			return true
+		}
+	}
+	return false
+}

@@ -327,7 +327,10 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	// that target this device and drives the (stub) configdriver.Driver.
 	// Failure to build the controller-runtime client is not fatal — apphosting
 	// continues to work; the operator sees the warning and addresses RBAC.
-	if err := startConfigReconciler(ctx, kubeconfigCfg, effectiveNodeName); err != nil {
+	if err := startConfigReconciler(ctx, kubeconfigCfg, effectiveNodeName, configReconcilerOptions{
+		Spec:     &appCfg.Device,
+		Password: appCfg.Device.Password,
+	}); err != nil {
 		log.G(ctx).WithError(err).Warn("IOSXEConfig reconciler not started; continuing without declarative config")
 	}
 
