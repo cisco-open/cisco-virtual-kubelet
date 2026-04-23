@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/yaml"
 
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
 
@@ -73,6 +74,9 @@ type CiscoDeviceReconciler struct {
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;delete
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs/status,verbs=get
+// +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile ensures a ConfigMap and Deployment exist for each CiscoDevice.
 func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -263,6 +267,11 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 	logger.Info("Deployment reconciled", "name", deploy.Name, "operation", op)
 
+	// ── 6b. Reconcile the owned IOSXEConfig (configPrereqs) ─────────────
+	if err := r.reconcileConfigPrereqs(ctx, &device); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to reconcile configPrereqs: %w", err)
+	}
+
 	// ── 7. Update CiscoDevice status ────────────────────────────────────
 	if err := r.updateStatus(ctx, &device, deploy); err != nil {
 		return ctrl.Result{}, err
@@ -271,12 +280,90 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return ctrl.Result{}, nil
 }
 
+// apphostingPrereqFamilies is the closed set of IOSXEConfig families
+// the controller permits on a controller-owned configPrereqs CR. Any
+// family outside this set in the inline body is silently dropped from
+// ManagedFamilies so the operator cannot accidentally widen the
+// controller's scope past the apphosting prerequisites.
+var apphostingPrereqFamilies = []string{
+	"interface_virtual_port_group",
+	"dhcp",
+	"access_list_extended",
+}
+
+// ownedIOSXEConfigName returns the deterministic name of the
+// configPrereqs-owned IOSXEConfig CR; one per CiscoDevice.
+func ownedIOSXEConfigName(deviceName string) string {
+	return deviceName + "-prereqs"
+}
+
+// reconcileConfigPrereqs creates, updates, or deletes an owned
+// IOSXEConfig CR that mirrors CiscoDevice.spec.configPrereqs. Behaviour:
+//
+//   - spec.configPrereqs == nil → delete any existing owned CR (covers
+//     the "operator removed prereqs" case without a second finalizer).
+//   - spec.configPrereqs != nil → upsert an IOSXEConfig with
+//     ManagedFamilies filtered to the prereq set and
+//     spec.source.inline set to the provided configuration.
+//
+// The owned CR's owner reference is the CiscoDevice, so deleting the
+// device garbage-collects the CR, and the config-driver reverts
+// those families on the device per netascode scope semantics.
+func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, device *ciskov1.CiscoDevice) error {
+	name := ownedIOSXEConfigName(device.Name)
+	key := types.NamespacedName{Namespace: device.Namespace, Name: name}
+
+	var existing configv1alpha1.IOSXEConfig
+	getErr := r.Get(ctx, key, &existing)
+	found := getErr == nil
+	if getErr != nil && !errors.IsNotFound(getErr) {
+		return fmt.Errorf("get owned IOSXEConfig: %w", getErr)
+	}
+
+	// Removal path.
+	if device.Spec.ConfigPrereqs == nil {
+		if !found {
+			return nil
+		}
+		if err := r.Delete(ctx, &existing); err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("delete owned IOSXEConfig: %w", err)
+		}
+		return nil
+	}
+
+	// Upsert path.
+	desired := &configv1alpha1.IOSXEConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: device.Namespace},
+	}
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, desired, func() error {
+		desired.Spec = configv1alpha1.IOSXEConfigSpec{
+			DeviceRef:       configv1alpha1.DeviceRef{Name: device.Name},
+			ManagedFamilies: apphostingPrereqFamilies,
+			Source: configv1alpha1.ConfigurationSource{
+				Inline: &device.Spec.ConfigPrereqs.Configuration,
+			},
+			// Prereqs default to revert so the device stays in the shape
+			// apphosting needs; operators can still opt a separate
+			// IOSXEConfig into report/pause for wider declarative config.
+			DriftPolicy: configv1alpha1.DriftPolicyRevert,
+		}
+		return controllerutil.SetControllerReference(device, desired, r.Scheme)
+	})
+	if err != nil {
+		return fmt.Errorf("upsert owned IOSXEConfig: %w", err)
+	}
+	log.FromContext(ctx).Info("configPrereqs reconciled",
+		"iosxeconfig", name, "operation", op)
+	return nil
+}
+
 // SetupWithManager registers the controller with the manager.
 func (r *CiscoDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ciskov1.CiscoDevice{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&configv1alpha1.IOSXEConfig{}).
 		Complete(r)
 }
 

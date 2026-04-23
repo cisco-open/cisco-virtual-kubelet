@@ -29,6 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
 
@@ -38,6 +39,7 @@ func newTestScheme(t *testing.T) *runtime.Scheme {
 	s := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(s))
 	utilruntime.Must(ciskov1.AddToScheme(s))
+	utilruntime.Must(configv1alpha1.AddToScheme(s))
 	return s
 }
 
@@ -593,5 +595,82 @@ func TestShortHash_Length(t *testing.T) {
 func TestShortHash_EmptyString(t *testing.T) {
 	if got := len(shortHash("")); got != 8 {
 		t.Errorf("expected 8-char hash for empty string, got length %d", got)
+	}
+}
+
+func TestReconcile_ConfigPrereqsCreatesOwnedIOSXEConfig(t *testing.T) {
+	device := newDevice("router-p", "default")
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		Configuration: runtime.RawExtension{Raw: []byte(
+			`{"interface_virtual_port_group":{"interfaces":[{"id":0,"ipv4_address":"192.168.10.1","ipv4_address_mask":"255.255.255.0"}]}}`,
+		)},
+	}
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-p")); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	var owned configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-p-prereqs"}, &owned); err != nil {
+		t.Fatalf("expected owned IOSXEConfig: %v", err)
+	}
+	if owned.Spec.DeviceRef.Name != "router-p" {
+		t.Errorf("deviceRef=%q", owned.Spec.DeviceRef.Name)
+	}
+	if len(owned.OwnerReferences) != 1 || owned.OwnerReferences[0].Name != "router-p" {
+		t.Errorf("owner references = %+v", owned.OwnerReferences)
+	}
+	// ManagedFamilies must be pinned to the apphosting-prereq set,
+	// regardless of what extra families appear in the inline body.
+	want := map[string]struct{}{
+		"interface_virtual_port_group": {},
+		"dhcp":                         {},
+		"access_list_extended":         {},
+	}
+	for _, f := range owned.Spec.ManagedFamilies {
+		if _, ok := want[f]; !ok {
+			t.Errorf("unexpected managed family %q on owned CR", f)
+		}
+	}
+	if len(owned.Spec.ManagedFamilies) != len(want) {
+		t.Errorf("ManagedFamilies=%v, want the 3-family prereq set", owned.Spec.ManagedFamilies)
+	}
+}
+
+func TestReconcile_ConfigPrereqsRemovedDeletesOwnedCR(t *testing.T) {
+	device := newDevice("router-d", "default")
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		Configuration: runtime.RawExtension{Raw: []byte(`{"dhcp":{}}`)},
+	}
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	// First pass creates the owned CR.
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-d")); err != nil {
+		t.Fatalf("Reconcile (create): %v", err)
+	}
+	var owned configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-d-prereqs"}, &owned); err != nil {
+		t.Fatalf("expected owned CR: %v", err)
+	}
+
+	// Operator removes prereqs; next reconcile must delete the owned CR.
+	var updated ciskov1.CiscoDevice
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-d"}, &updated); err != nil {
+		t.Fatalf("get device: %v", err)
+	}
+	updated.Spec.ConfigPrereqs = nil
+	if err := r.Update(ctx, &updated); err != nil {
+		t.Fatalf("update device: %v", err)
+	}
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-d")); err != nil {
+		t.Fatalf("Reconcile (remove): %v", err)
+	}
+
+	var stale configv1alpha1.IOSXEConfig
+	err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-d-prereqs"}, &stale)
+	if err == nil {
+		t.Fatalf("owned CR was not deleted: %+v", stale)
 	}
 }

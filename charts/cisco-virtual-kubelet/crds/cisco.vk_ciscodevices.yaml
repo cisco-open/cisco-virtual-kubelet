@@ -72,6 +72,32 @@ spec:
                   INSTALLING as a terminal failure only when confirmed by an install
                   notification from the device.
                 type: boolean
+              configPrereqs:
+                description: |-
+                  ConfigPrereqs declares the network configuration this device
+                  requires before pods can be hosted on it (e.g. a VirtualPortGroup
+                  interface, a DHCP pool for app-hosting, an ACL that permits
+                  app egress). When set, the controller auto-creates an owned
+                  IOSXEConfig CR whose ManagedFamilies are limited to the
+                  apphosting-prereq set (interface_virtual_port_group, dhcp,
+                  access_list_extended). Deleting the CiscoDevice garbage-collects
+                  the owned IOSXEConfig, which reverts those families on the
+                  device per netascode scope semantics.
+
+                  The payload carries the same netascode-shaped YAML as
+                  IOSXEConfig.spec.source.inline. A separate IOSXEConfig for the
+                  operator's own declarative config may coexist with the
+                  controller-owned prereq CR as long as they do not claim the
+                  same families.
+                properties:
+                  configuration:
+                    description: |-
+                      Configuration is the netascode-shaped fragment. Same shape as
+                      IOSXEConfig.spec.source.inline.
+                    x-kubernetes-preserve-unknown-fields: true
+                required:
+                - configuration
+                type: object
               credentialSecretRef:
                 description: |-
                   CredentialSecretRef references a Secret containing device credentials.

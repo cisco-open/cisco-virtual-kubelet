@@ -17,6 +17,7 @@ package v1alpha1
 import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +kubebuilder:validation:Enum=XE;XR;NXOS;FAKE
@@ -155,6 +156,24 @@ type DeviceSpec struct {
 	// +kubebuilder:default=restconf
 	Transport string `json:"transport,omitempty" mapstructure:"transport"`
 
+	// ConfigPrereqs declares the network configuration this device
+	// requires before pods can be hosted on it (e.g. a VirtualPortGroup
+	// interface, a DHCP pool for app-hosting, an ACL that permits
+	// app egress). When set, the controller auto-creates an owned
+	// IOSXEConfig CR whose ManagedFamilies are limited to the
+	// apphosting-prereq set (interface_virtual_port_group, dhcp,
+	// access_list_extended). Deleting the CiscoDevice garbage-collects
+	// the owned IOSXEConfig, which reverts those families on the
+	// device per netascode scope semantics.
+	//
+	// The payload carries the same netascode-shaped YAML as
+	// IOSXEConfig.spec.source.inline. A separate IOSXEConfig for the
+	// operator's own declarative config may coexist with the
+	// controller-owned prereq CR as long as they do not claim the
+	// same families.
+	// +kubebuilder:validation:Optional
+	ConfigPrereqs *ConfigPrereqs `json:"configPrereqs,omitempty" mapstructure:"configPrereqs,omitempty"`
+
 	// --- Driver-specific networking configuration (union) ---
 	// Only the section matching Driver should be set.
 
@@ -170,6 +189,21 @@ type DeviceSpec struct {
 	// NXOS holds NX-OS specific networking configuration (future).
 	// +kubebuilder:validation:Optional
 	// NXOS *NXOSConfig `json:"nxos,omitempty" mapstructure:"nxos,omitempty"`
+}
+
+// ConfigPrereqs is the inline netascode-shaped configuration block
+// the controller uses to auto-create an owned IOSXEConfig for a
+// device. The payload's top-level keys must be families in the
+// apphosting-prereq set; the controller rejects families outside
+// that set at admission-style validation during reconcile.
+type ConfigPrereqs struct {
+	// Configuration is the netascode-shaped fragment. Same shape as
+	// IOSXEConfig.spec.source.inline.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Configuration runtime.RawExtension `json:"configuration"`
 }
 
 // DeviceStatus defines the observed state of a CiscoDevice.
