@@ -201,6 +201,42 @@ The device config file follows the same schema as the `CiscoDevice` CR `spec`. S
 make generate
 ```
 
+## IOS-XE Configuration Driver (Phase-0 scaffold)
+
+The repository now ships the scaffolding for declarative IOS-XE device
+configuration managed alongside IOx application hosting. Phase-0 is
+structural: the CRD surface is stable, the per-device reconciler records
+`status.phase: Pending` on matching CRs, and every code path that would
+touch a device returns `configdriver.ErrNotImplemented`. Phase-1 lights
+up real RESTCONF writes family-by-family.
+
+**New CRDs** (`config.cisco.vk/v1alpha1`):
+
+- `IOSXEConfig` — per-device desired state, referencing a `CiscoDevice`.
+- `IOSXEConfigDefaults` — cluster-scoped baseline.
+- `IOSXEDeviceGroupConfig` — shared config for a selector-matched set.
+- `IOSXETemplate` — parameterised reusable fragments.
+
+`spec.configuration` on each CR is schemaless so netascode YAML
+(`iosxe.devices[*].configuration`) can be pasted verbatim.
+
+**What's in the tree today:**
+
+- `api/config/v1alpha1/` — Go types and generated deepcopy.
+- `config/crd/` and `charts/cisco-virtual-kubelet/crds/` — CRD manifests.
+- `internal/drivers/iosxe/configdriver/` — `Driver` interface + stub.
+- `internal/drivers/iosxe/configdriver/writers/` — per-family skeletons
+  for the Phase-1 set (system, vlan, vrf, interface_ethernet,
+  interface_loopback, interface_virtual_port_group, dhcp,
+  access_list_extended).
+- `internal/drivers/iosxe/configdriver/schema/` — embedded family index
+  (`families.yaml`) and YANG-release pin (`yang-versions.yaml`).
+- `internal/provider/config_reconciler.go` — polling reconciler started
+  by `cisco-vk run` alongside the apphosting driver.
+- `tools/cisco-vk-yang-sync/` — Phase-0 stub of the code generator.
+- `examples/gitops-reference/` — runnable Flux + Kustomize fragment
+  showing the port from a netascode + Terraform repository.
+
 ## Contributing
 
 Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
