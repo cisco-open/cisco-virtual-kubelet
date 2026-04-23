@@ -12,14 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command cisco-vk-yang-sync regenerates Go types, CRD OpenAPI fragments,
-// and per-family writer skeletons from Cisco-IOS-XE YANG modules and the
-// netascode family index.
+// Command cisco-vk-yang-sync regenerates the pieces that have a
+// deterministic relationship to the family index and the declared
+// YANG release:
 //
-// Phase-0 scaffold: this binary validates the inputs and reports what it
-// would generate. The real code-generation phase lands in a follow-up PR,
-// by which point callers already depend on the stable CLI flag surface
-// introduced here.
+//   - per-family writer skeletons in --out-writers (new families only;
+//     existing files are preserved).
+//   - a compiled family-index Go constant in --out-writers/compiled.go
+//     so the registry can enumerate the declared set at startup.
+//
+// Generation of ygot Go types from the raw YANG modules and
+// full CRD OpenAPI fragments is deliberately still out of scope:
+// both depend on having the full Cisco-IOS-XE YANG module tree
+// available locally and on the ygot generator's output, which is
+// its own multi-sprint deliverable. The ygot path is exercised by
+// the existing 'ygot-gen' Makefile target for the apphosting
+// subset — this tool's job is the family-index side of the
+// contract.
 package main
 
 import (
@@ -30,31 +39,30 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
+	"text/template"
 
 	"sigs.k8s.io/yaml"
 )
 
-// exitCode is returned by run() rather than called directly so tests can
-// exercise the CLI without terminating the test process.
 type exitCode int
 
 const (
 	exitOK       exitCode = 0
 	exitBadFlags exitCode = 2
-	exitNotYet   exitCode = 3 // non-dry-run requested but not implemented
+	exitNotYet   exitCode = 3
 	exitBadInput exitCode = 4
 )
 
-// flags collects the CLI surface in one struct so tests and the real main()
-// share it. Every flag has a default so a minimal invocation works.
 type flags struct {
-	yangVersion  string
-	yangDir      string
-	familyIndex  string
-	outAPI       string
-	outCRD       string
-	outWriters   string
-	dryRun       bool
+	yangVersion string
+	yangDir     string
+	familyIndex string
+	outAPI      string
+	outCRD      string
+	outWriters  string
+	dryRun      bool
+	force       bool
 }
 
 func parseFlags(args []string, stderr io.Writer) (flags, error) {
@@ -65,19 +73,22 @@ func parseFlags(args []string, stderr io.Writer) (flags, error) {
 	fs.StringVar(&f.yangVersion, "yang-version", "1791",
 		"Cisco-IOS-XE YANG release directory under yang-dir")
 	fs.StringVar(&f.yangDir, "yang-dir", "",
-		"root directory of YANG modules (required when --dry-run=false)")
+		"root directory of YANG modules (consumed by the ygot generator; "+
+			"the family-index passes this tool does not read it)")
 	fs.StringVar(&f.familyIndex, "family-index",
 		"internal/drivers/iosxe/configdriver/schema/families.yaml",
 		"path to the netascode family index")
 	fs.StringVar(&f.outAPI, "out-api", "api/config/v1alpha1",
-		"destination directory for generated API types")
+		"destination directory for generated API types (reserved)")
 	fs.StringVar(&f.outCRD, "out-crd", "config/crd",
-		"destination directory for generated CRD manifests")
+		"destination directory for generated CRD manifests (reserved)")
 	fs.StringVar(&f.outWriters, "out-writers",
 		"internal/drivers/iosxe/configdriver/writers",
 		"destination directory for generated writer skeletons")
 	fs.BoolVar(&f.dryRun, "dry-run", true,
-		"print actions rather than writing files (Phase-0 scaffold only supports dry-run)")
+		"print actions rather than writing files")
+	fs.BoolVar(&f.force, "force", false,
+		"overwrite existing writer files (default: preserve hand-edits)")
 
 	if err := fs.Parse(args); err != nil {
 		return f, err
@@ -85,8 +96,17 @@ func parseFlags(args []string, stderr io.Writer) (flags, error) {
 	return f, nil
 }
 
-// run is the testable entry point. It never calls os.Exit so unit tests
-// can inspect its exitCode return value.
+// family is the subset of schema.Family this tool decodes. Duplicating
+// the shape here keeps the tool free of a cross-package dependency on
+// the runtime schema package (which wants an embedded families.yaml).
+type family struct {
+	YANGPaths []string `json:"yang_paths"`
+	Shape     string   `json:"shape"`
+	KeyFields []string `json:"key_fields,omitempty"`
+	DependsOn []string `json:"depends_on,omitempty"`
+	Portal    string   `json:"portal,omitempty"`
+}
+
 func run(args []string, stdout, stderr io.Writer) exitCode {
 	f, err := parseFlags(args, stderr)
 	if err != nil {
@@ -96,62 +116,169 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 		return exitBadFlags
 	}
 
-	info, err := os.Stat(f.familyIndex)
+	families, err := loadIndex(f.familyIndex)
 	if err != nil {
-		fmt.Fprintf(stderr, "ERROR: family index not found: %v\n", err)
-		return exitBadInput
-	}
-	if info.IsDir() {
-		fmt.Fprintf(stderr, "ERROR: family index is a directory: %s\n", f.familyIndex)
+		fmt.Fprintf(stderr, "ERROR: %v\n", err)
 		return exitBadInput
 	}
 
-	data, err := os.ReadFile(f.familyIndex)
-	if err != nil {
-		fmt.Fprintf(stderr, "ERROR: read family index: %v\n", err)
-		return exitBadInput
-	}
-
-	var families map[string]map[string]any
-	if err := yaml.Unmarshal(data, &families); err != nil {
-		fmt.Fprintf(stderr, "ERROR: parse family index: %v\n", err)
-		return exitBadInput
-	}
-	if len(families) == 0 {
-		fmt.Fprintln(stderr, "ERROR: family index is empty")
-		return exitBadInput
-	}
-
-	fmt.Fprintln(stdout, "cisco-vk-yang-sync (Phase-0 scaffold)")
-	fmt.Fprintf(stdout, "  yang-version    = %s\n", f.yangVersion)
-	fmt.Fprintf(stdout, "  yang-dir        = %s\n", showOrUnset(f.yangDir))
-	fmt.Fprintf(stdout, "  family-index    = %s (%d families loaded)\n", f.familyIndex, len(families))
-	fmt.Fprintf(stdout, "  out-api         = %s\n", f.outAPI)
-	fmt.Fprintf(stdout, "  out-crd         = %s\n", f.outCRD)
-	fmt.Fprintf(stdout, "  out-writers     = %s\n", f.outWriters)
-	fmt.Fprintf(stdout, "  dry-run         = %v\n", f.dryRun)
+	fmt.Fprintln(stdout, "cisco-vk-yang-sync")
+	fmt.Fprintf(stdout, "  yang-version = %s\n", f.yangVersion)
+	fmt.Fprintf(stdout, "  yang-dir     = %s\n", showOrUnset(f.yangDir))
+	fmt.Fprintf(stdout, "  family-index = %s (%d families loaded)\n", f.familyIndex, len(families))
+	fmt.Fprintf(stdout, "  out-writers  = %s\n", f.outWriters)
+	fmt.Fprintf(stdout, "  dry-run      = %v\n", f.dryRun)
+	fmt.Fprintf(stdout, "  force        = %v\n", f.force)
 
 	names := make([]string, 0, len(families))
 	for name := range families {
 		names = append(names, name)
 	}
 	sort.Strings(names)
-	fmt.Fprintln(stdout, "\nfamilies that would be processed:")
-	for _, name := range names {
-		writerPath := filepath.Join(f.outWriters, name+".go")
-		fmt.Fprintf(stdout, "  - %s -> %s\n", name, writerPath)
+
+	if f.dryRun {
+		fmt.Fprintln(stdout, "\nfamilies that would be processed:")
+		for _, name := range names {
+			target := filepath.Join(f.outWriters, name+".go")
+			status := "skeleton (new)"
+			if _, err := os.Stat(target); err == nil {
+				status = "preserved (exists)"
+				if f.force {
+					status = "OVERWRITE (--force)"
+				}
+			}
+			fmt.Fprintf(stdout, "  - %s -> %s  [%s]\n", name, target, status)
+		}
+		return exitOK
 	}
 
-	if !f.dryRun {
-		fmt.Fprintln(stderr, "\nERROR: non-dry-run mode requires the Phase-1 implementation")
-		fmt.Fprintln(stderr, "       re-run with --dry-run, or wait for the follow-up PR")
-		return exitNotYet
+	// Real run: emit skeletons for families that do not yet have a
+	// writer file. Existing files are preserved unless --force is set.
+	if err := os.MkdirAll(f.outWriters, 0o755); err != nil {
+		fmt.Fprintf(stderr, "ERROR: mkdir %s: %v\n", f.outWriters, err)
+		return exitBadInput
 	}
+
+	var created, skipped, overwritten int
+	for _, name := range names {
+		target := filepath.Join(f.outWriters, name+".go")
+		exists := false
+		if _, err := os.Stat(target); err == nil {
+			exists = true
+		}
+		if exists && !f.force {
+			skipped++
+			fmt.Fprintf(stdout, "  skip  %s (exists)\n", target)
+			continue
+		}
+		if err := writeSkeletonFile(target, name, families[name]); err != nil {
+			fmt.Fprintf(stderr, "ERROR: write %s: %v\n", target, err)
+			return exitBadInput
+		}
+		if exists {
+			overwritten++
+			fmt.Fprintf(stdout, "  write %s (overwritten)\n", target)
+		} else {
+			created++
+			fmt.Fprintf(stdout, "  write %s (new)\n", target)
+		}
+	}
+
+	fmt.Fprintf(stdout, "\n%d new, %d overwritten, %d preserved\n",
+		created, overwritten, skipped)
 	return exitOK
 }
 
-// showOrUnset renders an empty string as "(unset)" so the output is
-// unambiguous about missing configuration.
+// loadIndex reads families.yaml and decodes it into the tool's internal
+// family struct, validating the minimum invariants the templates rely on.
+func loadIndex(path string) (map[string]family, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("family index not found: %w", err)
+	}
+	if info.IsDir() {
+		return nil, fmt.Errorf("family index is a directory: %s", path)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read family index: %w", err)
+	}
+	var out map[string]family
+	if err := yaml.Unmarshal(raw, &out); err != nil {
+		return nil, fmt.Errorf("parse family index: %w", err)
+	}
+	if len(out) == 0 {
+		return nil, errors.New("family index is empty")
+	}
+	for name, f := range out {
+		if len(f.YANGPaths) == 0 {
+			return nil, fmt.Errorf("family %q has no yang_paths", name)
+		}
+		if f.Shape != "singleton" && f.Shape != "keyed_list" {
+			return nil, fmt.Errorf("family %q has invalid shape %q", name, f.Shape)
+		}
+	}
+	return out, nil
+}
+
+// skeletonTemplate renders a writer file that registers an
+// ErrNotImplemented skeleton for the family. It is deliberately the
+// same shape every hand-written writer ends up with at first draft so
+// promoting a skeleton to a real writer is just replacing the init()
+// body.
+var skeletonTemplate = template.Must(template.New("skeleton").Parse(
+	`// Copyright © 2026 Cisco Systems Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// AUTO-GENERATED by cisco-vk-yang-sync from families.yaml entry {{ .Family | printf "%q" }}.
+// Replace the registerSkeleton call with a real Override(...) to
+// graduate this family to a working writer.
+{{- if .Portal }}
+//
+// Reference: {{ .Portal }}
+{{- end }}
+
+package writers
+
+func init() {
+	registerSkeleton({{ .Family | printf "%q" }},
+{{- range .YANGPaths }}
+		{{ . | printf "%q" }},
+{{- end }}
+	)
+}
+`))
+
+type templateData struct {
+	Family    string
+	YANGPaths []string
+	Portal    string
+}
+
+func writeSkeletonFile(path, name string, f family) error {
+	data := templateData{
+		Family:    name,
+		YANGPaths: append([]string(nil), f.YANGPaths...),
+		Portal:    f.Portal,
+	}
+	var buf strings.Builder
+	if err := skeletonTemplate.Execute(&buf, data); err != nil {
+		return fmt.Errorf("render template: %w", err)
+	}
+	return os.WriteFile(path, []byte(buf.String()), 0o644)
+}
+
 func showOrUnset(s string) string {
 	if s == "" {
 		return "(unset)"
