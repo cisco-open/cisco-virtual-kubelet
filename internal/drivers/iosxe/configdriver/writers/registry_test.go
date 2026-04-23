@@ -17,15 +17,14 @@ package writers
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver"
 )
 
-// phase1Families enumerates the family set promised for Phase 1. The test
-// guards against silent drift: adding a family without updating this list
-// (or removing one without a matching code change) fails.
+// phase1Families enumerates the set originally promised for Phase 1.
+// Every entry here must remain registered; the Phase-2 set is checked
+// separately so removing either set fails distinctly.
 var phase1Families = []string{
 	"access_list_extended",
 	"dhcp",
@@ -37,14 +36,52 @@ var phase1Families = []string{
 	"vrf",
 }
 
+// phase2Families are the additional entries introduced with the
+// Phase-2 family set. Writers may start out as skeletons and be
+// replaced via Override as real implementations land; what this test
+// pins is that the registration itself is present.
+var phase2Families = []string{
+	"aaa",
+	"access_list_standard",
+	"banner",
+	"bgp",
+	"cdp",
+	"interface_switchport",
+	"line",
+	"lldp",
+	"logging",
+	"ntp",
+	"ospf",
+	"prefix_list",
+	"route_map",
+	"snmp_server",
+	"static_route",
+}
+
 func TestPhase1FamiliesRegistered(t *testing.T) {
 	got := Families()
-	if !reflect.DeepEqual(got, phase1Families) {
-		t.Fatalf("registered families = %v, want %v", got, phase1Families)
+	for _, fam := range phase1Families {
+		if !contains(got, fam) {
+			t.Errorf("Phase-1 family %q not registered", fam)
+		}
 	}
-	if Len() != len(phase1Families) {
-		t.Fatalf("Len() = %d, want %d", Len(), len(phase1Families))
+	for _, fam := range phase2Families {
+		if !contains(got, fam) {
+			t.Errorf("Phase-2 family %q not registered", fam)
+		}
 	}
+	if Len() != len(phase1Families)+len(phase2Families) {
+		t.Errorf("Len()=%d, want %d", Len(), len(phase1Families)+len(phase2Families))
+	}
+}
+
+func contains(haystack []string, needle string) bool {
+	for _, s := range haystack {
+		if s == needle {
+			return true
+		}
+	}
+	return false
 }
 
 func TestGetReturnsRegisteredWriter(t *testing.T) {
