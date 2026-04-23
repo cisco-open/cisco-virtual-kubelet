@@ -29,7 +29,10 @@ import (
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	ctrl "sigs.k8s.io/controller-runtime"
+	crlog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -99,9 +102,21 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		Host:      deviceName,
 	})
 
-	c, err := ctrlclient.New(cfg, ctrlclient.Options{Scheme: scheme})
+	// Controller-runtime manager: owns an informer-backed cache, the
+	// controller's work queue, and a short-circuited /metrics server.
+	// We disable the manager's own metrics server (MetricsBindAddress
+	// = "0") because the VK process already exposes /metrics on
+	// :10250 via the apphosting path; registering twice would fight
+	// over the port.
+	crlog.SetLogger(zap.New(zap.UseDevMode(true)))
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme:                 scheme,
+		Metrics:                metricsserver.Options{BindAddress: "0"},
+		HealthProbeBindAddress: "0",
+		LeaderElection:         false,
+	})
 	if err != nil {
-		return fmt.Errorf("build controller-runtime client: %w", err)
+		return fmt.Errorf("build manager: %w", err)
 	}
 
 	// Transport construction failure is not fatal: the reconciler can
@@ -123,20 +138,26 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	}
 
 	r := &provider.ConfigReconciler{
-		Client:     c,
+		Client:     mgr.GetClient(),
 		DeviceName: deviceName,
 		Transport:  t, // may be nil
 		KeyRules:   keyRulesForPhase1(),
 		Leaser: &engine.FamilyLeaser{
-			Client:    c,
+			Client:    mgr.GetClient(),
 			Namespace: leaseNamespace,
 		},
 		Recorder: recorder,
 	}
 
+	if err := r.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("SetupWithManager: %w", err)
+	}
+
+	// Start the manager on a goroutine bound to ctx. When ctx cancels,
+	// Start returns and the reconciler's informers shut down cleanly.
 	go func() {
-		if runErr := r.Run(ctx); runErr != nil && runErr != context.Canceled {
-			log.G(ctx).WithError(runErr).Warn("IOSXEConfig reconciler exited with error")
+		if runErr := mgr.Start(ctx); runErr != nil && runErr != context.Canceled {
+			log.G(ctx).WithError(runErr).Warn("IOSXEConfig manager exited with error")
 		}
 	}()
 	return nil
