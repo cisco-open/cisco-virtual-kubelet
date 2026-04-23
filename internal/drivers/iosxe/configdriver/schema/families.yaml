@@ -86,3 +86,126 @@ access_list_extended:
   key_fields: [name]
   depends_on: []
   portal: https://netascode.cisco.com/docs/data_models/iosxe/device/access_list/
+
+# ---------------------------------------------------------------------------
+# Phase-2 families (routing / services). The entries below describe the
+# contract the writers will implement in subsequent PRs. Until a concrete
+# writer replaces the skeleton via writers.Override(), the engine will
+# report family status as Unsupported for these — intentionally: a CR
+# listing a not-yet-implemented family fails loudly rather than silently
+# skipping the family.
+# ---------------------------------------------------------------------------
+
+access_list_standard:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/ip/access-list/standard
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/access_list/
+
+static_route:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/ip/route
+  shape: keyed_list
+  key_fields: [prefix]
+  depends_on: [vrf]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/static_route/
+
+ospf:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-ospf:router-ospf
+  shape: keyed_list
+  key_fields: [id]
+  depends_on: [vrf, interface_ethernet, interface_loopback]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/ospf/
+
+bgp:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-bgp:router-bgp
+  shape: singleton
+  depends_on: [vrf, interface_ethernet, interface_loopback]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/bgp/
+
+ntp:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/ntp
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/ntp/
+
+logging:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/logging
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/logging/
+
+snmp_server:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/snmp-server
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/snmp_server/
+
+aaa:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/aaa
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/aaa/
+
+banner:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/banner
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/banner/
+
+line:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/line
+  shape: singleton
+  depends_on: [aaa]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/line/
+
+cdp:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/cdp
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/cdp/
+
+lldp:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/lldp
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/lldp/
+
+prefix_list:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/ip/prefix-list
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/prefix_list/
+
+route_map:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/route-map
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: [prefix_list, access_list_standard, access_list_extended]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/route_map/
+
+interface_switchport:
+  # Layer-2 switchport configuration overlays onto existing ethernet
+  # interfaces; it does not own its own YANG list but modifies the
+  # switchport container within each interface entry.
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/interface/GigabitEthernet/switchport
+  shape: keyed_list
+  key_fields: [type, name]
+  depends_on: [interface_ethernet, vlan]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/interface/switchport/

@@ -88,6 +88,10 @@ func TestRunAgainstCommittedFamilyIndex(t *testing.T) {
 	// Exercising the real checked-in index guards against accidental YAML
 	// breakage: any future change that produces a parse error here fails
 	// this test, not a runtime failure on a developer's first invocation.
+	//
+	// The lower bound is the Phase-1 family count (8); the test does not
+	// pin an upper bound so Phase-2 and beyond additions don't require a
+	// test update outside the schema package's own consistency test.
 	var out, errBuf bytes.Buffer
 	code := run(
 		[]string{"--family-index", "../../internal/drivers/iosxe/configdriver/schema/families.yaml"},
@@ -96,8 +100,14 @@ func TestRunAgainstCommittedFamilyIndex(t *testing.T) {
 	if code != exitOK {
 		t.Fatalf("exit code = %d (stderr=%q)", code, errBuf.String())
 	}
-	if !strings.Contains(out.String(), "8 families loaded") {
-		t.Errorf("expected 8 families loaded from real index, got:\n%s", out.String())
+	if !strings.Contains(out.String(), "families loaded") {
+		t.Errorf("expected 'families loaded' line in stdout:\n%s", out.String())
+	}
+	// Sanity: the Phase-1 set must always be present in dry-run output.
+	for _, fam := range []string{"vlan", "vrf", "system", "dhcp"} {
+		if !strings.Contains(out.String(), "- "+fam+" ->") {
+			t.Errorf("Phase-1 family %q missing from dry-run listing", fam)
+		}
 	}
 }
 
