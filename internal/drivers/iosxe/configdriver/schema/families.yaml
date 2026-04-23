@@ -1,0 +1,88 @@
+# Phase-1 netascode family index for the IOS-XE config driver.
+#
+# Each entry describes one netascode family
+# (https://netascode.cisco.com/docs/data_models/iosxe/) and maps it to the
+# Cisco-IOS-XE YANG xpath(s) the writer reads and writes.
+#
+# Fields:
+#   yang_paths  - one or more absolute YANG xpaths the family touches.
+#   shape       - "singleton" (single container) or "keyed_list" (list keyed
+#                 by one or more leaves).
+#   key_fields  - for shape=keyed_list, the leaf names that form the key.
+#   depends_on  - families that must be applied before this one during a
+#                 fresh bring-up (writers use it to pick an apply order).
+#   portal      - canonical netascode documentation URL (for tooling).
+#
+# The driver consumes a compiled form of this file at startup; add or
+# remove a family here before adding the corresponding writer so the
+# registry and index stay in lock-step.
+
+system:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/system/
+
+vlan:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/vlan/Cisco-IOS-XE-vlan:vlan-list
+  shape: keyed_list
+  key_fields: [id]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/vlan/
+
+vrf:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/vrf/definition
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/vrf/
+
+interface_ethernet:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/interface/GigabitEthernet
+    - /Cisco-IOS-XE-native:native/interface/TwoGigabitEthernet
+    - /Cisco-IOS-XE-native:native/interface/FiveGigabitEthernet
+    - /Cisco-IOS-XE-native:native/interface/TenGigabitEthernet
+    - /Cisco-IOS-XE-native:native/interface/TwentyFiveGigE
+    - /Cisco-IOS-XE-native:native/interface/FortyGigabitEthernet
+    - /Cisco-IOS-XE-native:native/interface/HundredGigE
+    - /Cisco-IOS-XE-native:native/interface/TwoHundredGigE
+    - /Cisco-IOS-XE-native:native/interface/FourHundredGigE
+  shape: keyed_list
+  key_fields: [type, name]
+  depends_on: [vrf, access_list_extended]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/interface/ethernet/
+
+interface_loopback:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/interface/Loopback
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: [vrf]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/interface/loopback/
+
+interface_virtual_port_group:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/interface/VirtualPortGroup
+  shape: keyed_list
+  key_fields: [id]
+  depends_on: [vrf]
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/interface/virtual_port_group/
+
+dhcp:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/ip/dhcp
+  shape: singleton
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/dhcp/
+
+access_list_extended:
+  yang_paths:
+    - /Cisco-IOS-XE-native:native/ip/access-list/extended
+  shape: keyed_list
+  key_fields: [name]
+  depends_on: []
+  portal: https://netascode.cisco.com/docs/data_models/iosxe/device/access_list/
