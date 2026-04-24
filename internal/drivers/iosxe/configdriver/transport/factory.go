@@ -65,10 +65,37 @@ func For(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (Interface,
 	case KindNETCONF:
 		return buildNETCONF(spec, pass, opts)
 	case KindGNMI:
-		return nil, fmt.Errorf("transport.For: gNMI transport is reserved; not yet scheduled")
+		return buildGNMI(spec, pass, opts)
 	default:
 		return nil, fmt.Errorf("transport.For: unknown transport %q", spec.Transport)
 	}
+}
+
+// buildGNMI constructs a gNMI (gRPC) transport. Port defaults to
+// 6030 (OpenConfig gNMI default; IOS-XE listens here too). TLS
+// honours DeviceSpec.TLS just like RESTCONF — gNMI runs over TLS
+// in production. The factory does not load client certs; operators
+// who need them inject a pre-built grpc.ClientConn via
+// GNMIConfig.Conn (mirrors the FactoryOptions.HTTPClient pattern
+// for RESTCONF).
+func buildGNMI(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (Interface, error) {
+	if spec.Address == "" {
+		return nil, fmt.Errorf("transport.For: CiscoDevice.spec.address empty")
+	}
+	port := spec.Port
+	if port == 0 {
+		port = 6030
+	}
+	cfg := GNMIConfig{
+		Address:  spec.Address,
+		Port:     port,
+		Username: spec.Username,
+		Password: pass,
+	}
+	if spec.TLS != nil && spec.TLS.Enabled {
+		cfg.TLSConfig = buildTLSFromSpec(spec)
+	}
+	return NewGNMI(cfg)
 }
 
 // buildNETCONF constructs a NETCONF-over-SSH transport. Port

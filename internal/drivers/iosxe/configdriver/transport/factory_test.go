@@ -60,11 +60,18 @@ func TestForNETCONFDialFailsGracefully(t *testing.T) {
 	}
 }
 
-func TestForGNMIReserved(t *testing.T) {
+func TestForGNMIBuildsTransport(t *testing.T) {
+	// gNMI is no longer reserved — the factory now builds a real
+	// transport. Construction must succeed without dialling, since
+	// dialling is lazy. A bad address surfaces on first RPC, not
+	// at NewGNMI time, matching every other transport's contract.
 	spec := &ciskov1.DeviceSpec{Address: "10.0.0.1", Transport: "gnmi"}
-	_, err := For(spec, "pw", FactoryOptions{})
-	if err == nil || !strings.Contains(err.Error(), "gNMI") {
-		t.Fatalf("got %v, want gNMI-reserved error", err)
+	got, err := For(spec, "pw", FactoryOptions{})
+	if err != nil {
+		t.Fatalf("For(gnmi) errored: %v", err)
+	}
+	if got.Capabilities().Kind != KindGNMI {
+		t.Errorf("Kind=%v, want gnmi", got.Capabilities().Kind)
 	}
 }
 
