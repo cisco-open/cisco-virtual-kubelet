@@ -468,44 +468,478 @@ portal; the point is that CVK-specific reference (managed leaves,
 implementation status, YANG paths) stays in lock-step with the
 driver because both read the same sources.
 
-## 10. What's deliberately deferred
+## 10. Limitations vs netascode
 
-1. **NETCONF transport.** The transport interface carries
-   transaction verbs for this. Adding NETCONF:
-   - new dependency (likely `scrapli/scrapligo` or
-     `damianoneill/net`);
-   - candidate-datastore + edit-config XML; maps
-     `VerbReplace/VerbMerge/VerbDelete` to the `operation` attribute;
-   - honours `spec.transactional: true` (today a no-op);
-   - enables cross-family atomic apply.
-   Rough estimate: ~2 weeks plus lab integration.
+This is the honest, consolidated gap analysis — the part a netascode
+expert is best placed to audit. Every limitation here is real today
+on this branch. Most are scheduled for a concrete phase (§11);
+reviewer input on the priority order is the primary ask.
 
-2. **gNMI transport.** Larger shape mismatch — `gnmi.TypedValue`
-   protobuf, `gnmi.Path` vs xpath strings, per-family path dialects
-   in `families.yaml`. Rough estimate: ~3 weeks.
+### 10.1 Model depth — narrow `managedLeaves`, opaque nested lists
 
-3. **YANG tree check-in.** `cisco-vk-yang-sync --yang-dir` drives
-   ygot when given a directory, but the full Cisco-IOS-XE YANG
-   module tree (thousands of files, licensed Cisco IP) is not
-   checked in. The Makefile's existing `ygot-gen` target covers
-   apphosting YANG; extending it for the config-driver set is a
-   separate licensing + CI decision.
+The largest practical gap. Each writer declares a closed set of
+leaves it owns on the device (§8.3). That set was chosen per the
+netascode portal's commonly-configured subset, not the full YANG
+model. Concrete consequences:
 
-4. **Per-rule diffing inside list leaves.** ACLs, prefix-lists,
-   route-maps, OSPF network/redistribute lists, BGP neighbor/AF
-   lists. Current: entire nested list is an opaque managed leaf.
-   Phase-4: keyed by `sequence` / name / address.
+- **BGP.** Managed leaves on `router-bgp`: `id`, `bgp`, `neighbor`,
+  `address-family`, `redistribute`. Each of those is treated as an
+  opaque managed leaf — a change to the `neighbor` list re-sends
+  the whole list. netascode's Terraform provider models
+  per-neighbor shape, per-address-family shape, per-policy shape,
+  and diffs at each level. A CR with 30 neighbours behaves
+  correctly but every neighbour-level change transits the whole
+  body.
+- **OSPF.** Per-process managed leaves: `router-id`, `network`,
+  `redistribute`, `area`, `auto-cost`, `passive-interface`. Same
+  opaque-blob issue — `network` is a list of prefixes, changing
+  one rewrites all of them.
+- **EIGRP / IS-IS.** Same pattern.
+- **ACLs (`access_list_extended` / `_standard` /
+  `ipv6_access_list_*`).** Rules are an opaque managed leaf.
+  Editing rule 35 of an ACL with 200 rules sends all 200.
+- **QoS (`class_map` / `policy_map`).** Match lists / class action
+  lists are opaque.
+- **Crypto (`crypto_map`, `crypto_ikev2_profile`).** Same.
 
-5. **Credentials round-trip.** `cisco-vk-config-collect` does not
-   attempt to exfiltrate PSKs, enable secrets, or TACACS/RADIUS
-   keys into the emitted YAML — same policy as `nac-collect`.
+Operational impact: **correct**, but an O(N) payload on every
+change. Device-side idempotency (RESTCONF merge) prevents
+corruption, but the write is noisy and some devices rate-limit
+large yang-data+json bodies.
 
-6. **Yamale-style per-family schema.** Not written. The
-   `FamilySchema` registry exposes managed-leaf names but no type
-   information. A Yamale schema per family would be ~300 lines and
-   is tractable — flagged as a review decision.
+Fix: Phase-4 per-rule diffing (§11.1). `writers.keyedListWriter`
+already exposes an inner-key; extending the diff to descend into
+nested keyed lists is mechanical per family but has to be done
+per family.
 
-## 11. Concrete operator workflow today
+### 10.2 Apply semantics — no cross-family atomic commit
+
+RESTCONF has no candidate datastore. A multi-family apply is a
+sequence of independent HTTP PATCHes. If the fifth fails after the
+first four succeeded:
+
+- The four that landed are live on the device.
+- The engine's verify-diff pass (§8.8) surfaces the residual drift
+  and marks the family `Drifted` → `Failed` on the next tick.
+- A subsequent reconcile retries only the failed families (the
+  hash short-circuit skips the already-applied ones).
+
+netascode's Terraform module with `device_transaction=true` uses
+NETCONF candidate+commit to get true atomic behaviour per device.
+Cross-device atomicity isn't offered by either tool.
+
+Fix: Phase-5 NETCONF (§11.2). `spec.transactional: true` is a
+first-class CR field today but quietly ignored under RESTCONF.
+
+### 10.3 Convergence over multiple ticks, not one `apply`
+
+netascode runs one `terraform apply`: everything in the YAML hits
+the device in a single, logged operation. CVK:
+
+- An informer event (ConfigMap edit, CR update, scope object
+  change) enqueues a reconcile.
+- The reconcile runs resolver → engine → writers.
+- `engine.Result` writes status + emits events.
+- The next tick sees `Phase: InSync` and short-circuits.
+
+In steady state this is a win — drift is corrected continuously.
+During a large change it's slower per-device than Terraform's
+sequential batch, because each reconcile fetches-diffs-applies
+rather than batching multiple scoped changes. A CR with 500
+VLANs + 200 ACL rules converges in 1–3 ticks rather than one
+atomic operation.
+
+Reviewer question (one of the ten in §13): is the trade worth it?
+We argue yes for the GitOps operator; possibly no for a
+"scheduled maintenance window" shop.
+
+### 10.4 Schema validation — no per-leaf types
+
+netascode's `.schema.yaml` is a Yamale document: every leaf has a
+type (`int`, `str`, `ipv4`, `ipv4_prefix`, regex `/pattern/`),
+range, enum, required/optional. `nac-validate` runs this before
+the YAML reaches Terraform.
+
+CVK's `cisco-vk-config-lint` checks:
+- family membership in `families.yaml`;
+- `spec.source` exactly-one invariants;
+- `driftPolicy` enum;
+- for keyed-list families: inner-key presence, key-field presence
+  per entry.
+
+It does **not** check:
+- leaf types (e.g. "`vlan.vlans[].id` is an int in [1, 4094]");
+- leaf ranges;
+- cross-leaf relationships (e.g. "when `shutdown: true`,
+  `ip_address` is pointless");
+- pattern validation (IPv4 addresses, MAC addresses);
+- required-leaf presence per family.
+
+The machinery to add this exists — `writers.FamilySchema` could
+carry per-leaf type metadata — but the hand-authoring cost is
+non-trivial (~300 lines of Yamale per family × 54 families =
+~16k lines of schema). The ygot pipeline (§10.9) could derive
+this from YANG automatically if the YANG tree were checked in.
+
+Fix: Phase-4 adds per-family Yamale schemas; Phase-6 reads them
+from ygot output.
+
+### 10.5 Offline workflows — no device-free plan
+
+netascode can do `terraform plan -refresh=false` to preview
+intent changes without touching the device. `cisco-vk-config-lint`
+validates the YAML offline but doesn't compute a diff against a
+hypothetical device state. Even `driftPolicy: report` fetches from
+the device (that's what makes it a drift report, not a plan).
+
+Consequence: a PR reviewer can't see "this change would flip 47
+leaves on edge-01" purely from Git review; they have to wait for
+the reconciler to run and look at status.
+
+Fix: Phase-4 adds an offline `plan` subcommand to
+`cisco-vk-config-lint` that uses cached last-applied state on
+the CR's `status.lastAppliedHash` + the writer's Diff to
+compute a preview.
+
+### 10.6 Collector fidelity — `cisco-vk-config-collect` is narrower than `nac-collect`
+
+`cisco-vk-config-collect` emits exactly what the writers' `Fetch`
+methods can decode — their managed-leaf set. A brownfield device
+will have leaves the writer doesn't model. The collector:
+
+- silently drops those leaves;
+- produces YAML that round-trips through CVK's apply cleanly, but
+- loses fidelity against what's actually on the device.
+
+`nac-collect` has years of cumulative schema coverage and
+preserves leaves the operator hasn't managed yet. A brownfield-
+onboarding pipeline should probably use `nac-collect` first to
+capture the full state, then run `cisco-vk-config-lint` to
+identify what CVK will manage vs preserve-in-place.
+
+Fix: Phase-4 extends `Fetch` + collector to emit unmanaged leaves
+under an `_unmanaged:` key so the operator sees what's preserved.
+
+### 10.7 Secrets & credentials — split Secret/ConfigMap model
+
+netascode's YAML can embed SOPS-encrypted secrets (PSKs, RADIUS
+shared secrets, BGP passwords) inline with the configuration.
+Terraform decrypts at apply time; the operator reviews the
+encrypted YAML in Git.
+
+CVK requires a structural split: the Secret object carries
+credentials, the ConfigMap carries everything else. The writer's
+additive-merge means a device-side PSK that's not in the intent
+is preserved — but an intent that needs to set a PSK has to route
+through the Secret, which the writer does not currently read.
+PSK-setting is effectively out-of-band today.
+
+`cisco-vk-config-collect` does not attempt to round-trip PSKs or
+enable-secrets into the emitted YAML — same policy as `nac-collect`.
+
+Fix: Phase-4 introduces per-family `secretRefs` on IOSXEConfig
+that the writer reads into the merge step before apply.
+
+### 10.8 Audit & history — Kubernetes events are ephemeral
+
+netascode's Terraform state file is a durable ledger: every apply
+is recorded, who ran it, when, against what plan. CVK has:
+
+- `status.lastAppliedHash` + `status.lastAppliedTime` on the CR —
+  latest apply, no history.
+- Kubernetes events with `reason: AppliedSuccess` etc — retained
+  per the cluster's event retention (usually 1 hour default).
+- Prometheus counters — aggregated, not per-apply.
+
+Git history gives the intent lineage but not the resolved-intent
+lineage or the per-family outcome lineage. A post-mortem on
+"when did VLAN 30 disappear?" is harder on CVK than on
+Terraform-with-state.
+
+Fix: Phase-7 adds an `IOSXEConfigApplyLog` CR with a circular-
+buffer of recent applies + per-family outcomes. Or external:
+ship events to a persistent sink via the broadcaster.
+
+### 10.9 YANG source-of-truth story — hand-maintained vs generated
+
+netascode's Terraform provider generates Go types and resource
+definitions from YANG. The provider is re-generated whenever a
+new YANG release drops; the data model evolves automatically.
+
+CVK's `managedLeaves` per writer is hand-maintained. A new
+Cisco-IOS-XE YANG release that adds leaves does not propagate
+into CVK without manual edits. The `cisco-vk-yang-sync
+--yang-dir` pipeline has the hooks for this — it invokes ygot
+when given a YANG tree — but we don't check in the YANG tree
+(licensing + repo-size considerations).
+
+Fix: Phase-5 makes a licensing + CI decision to vendor the YANG
+tree under `schema/yang/1791/` and wires `make generate` to run
+the full pipeline. The managed-leaf sets can then be generated
+rather than maintained.
+
+### 10.10 Scope primitives — `interface_groups` semantics
+
+We added `IOSXEInterfaceGroupConfig` as a netascode parity move
+(§6). netascode's `interface_groups` has an additional dimension
+we don't model: selector by interface-type-role (e.g. "all
+uplinks", "all access ports") rather than by explicit
+`(type, name)` pairs. CVK's `InterfaceSelector` is
+`[]InterfaceMatch` with concrete names. For a site with N access
+switches × 48 ports, the operator writes 48N entries; netascode
+lets them write one `role: access-port` filter.
+
+Fix: Phase-4 extends `InterfaceMatch` with a `labels` field on
+ethernet interfaces (requires a new writer extension) OR
+introduces a pattern-match mode on the `name` field.
+
+### 10.11 Multi-tenancy / namespace scoping
+
+The per-family lease is scoped to a single namespace (the
+`cisco-vk run` pod's namespace, via `POD_NAMESPACE`). CRs in
+namespace `team-a` and `team-b` that target the same device
+**do not arbitrate** — both write, last-write-wins. This is a
+safety property to audit.
+
+Fix: Phase-4 moves the lease namespace to the manager's
+namespace regardless of CR namespace, OR promotes leases to
+cluster-scoped. The latter is the right long-term move; it
+needs a new RBAC rule.
+
+### 10.12 CR status size
+
+Kubernetes has a soft 1.5 MiB limit per-object. A device with
+hundreds of Drifted families (unlikely but possible during a
+bad change) could overflow. The engine caps
+`status.familyStatus` to the managed-family count, but
+`status.drift[]` is uncapped today.
+
+Fix: Phase-4 caps `status.drift[]` at 50 entries and exposes
+totals via metrics. A 1-line change; flagged for completeness.
+
+### 10.13 Per-CR convergence not cluster-convergence
+
+One CR per device is the current model. A cluster-wide change
+(e.g. "rotate SNMP community across every device") requires
+editing every IOSXEConfig, or one IOSXEConfigDefaults (which
+reconciles all devices but only within the managed-leaf set
+of each). netascode's single-repo model gives cluster-wide
+awareness naturally; CVK's per-device reconciler does not.
+
+Fix: Phase-7 introduces aggregation CRs that produce
+per-device IOSXEConfigs via a controller-side expansion.
+
+### 10.14 Tooling maturity gaps
+
+- `cisco-vk-config-lint` has no pre-commit packaging (install via
+  `go install ./tools/cisco-vk-config-lint`); `nac-validate`
+  has a pip install, a pre-commit hook entry, and a Docker image.
+- `cisco-vk-config-docs` emits markdown; the netascode portal is
+  generated with MkDocs + sidebar navigation + versioning.
+- No OCI image for any of the tools yet.
+- No policy-engine integration (OPA, conftest).
+
+Fix: Phase-4 adds release automation for the tools; Phase-6
+adds OPA/conftest rule packs.
+
+### 10.15 Protocol gaps (transport)
+
+Short list, since §11.2–11.3 cover it in depth:
+- **NETCONF:** reserved, not implemented — no atomic apply, no
+  candidate datastore, no commit-confirmed rollback.
+- **gNMI:** reserved, not implemented — no subscribe-based drift
+  detection, no OpenConfig path model.
+- **RESTCONF** is the only Phase-1/2/3 wire protocol.
+
+---
+
+## 11. Phased roadmap
+
+The Phase labels used throughout this document are concrete.
+What's shipped vs planned, with scope boundaries.
+
+### Phase 0 — scaffold (✅ shipped)
+
+CRD types registered, stub `ConfigDriver`, 5-second polling
+reconciler that stamps `Pending`, `families.yaml` + YANG version
+pin, family-index stub of `cisco-vk-yang-sync`, GitOps reference
+fragment. No device writes; structural only.
+
+### Phase 1 — MVP reconciler (✅ shipped)
+
+- `configdriver/intent/` — scope resolver (defaults → device
+  groups → templates → per-device), source loader (inline +
+  ConfigMap), template expander, canonical hash.
+- `configdriver/transport/` — capability-aware interface,
+  RESTCONF implementation, factory; NETCONF/gNMI reserved.
+- `configdriver/engine/` — state machine (Validating → Planning
+  → Applying → Verifying → InSync/Drifted/Failed/Paused), drift
+  policies, hash short-circuit.
+- 8 Phase-1 family writers (apphosting-prereq + baseline):
+  `system`, `vlan`, `vrf`, `interface_ethernet`,
+  `interface_loopback`, `interface_virtual_port_group`, `dhcp`,
+  `access_list_extended`.
+- Lease-based per-family arbitration.
+- Prometheus metrics + Kubernetes events.
+- `cisco-vk-config-lint` Phase-1.
+- `CiscoDevice.spec.configPrereqs` + owned IOSXEConfig.
+
+### Phase 2 — routing & services (✅ shipped)
+
+- 15 family writers: `access_list_standard`, `aaa`, `banner`,
+  `bgp`, `cdp`, `interface_switchport`, `line`, `lldp`,
+  `logging`, `ntp`, `ospf`, `prefix_list`, `route_map`,
+  `snmp_server`, `static_route`.
+- Informer-backed controller-runtime Reconciler.
+- `cisco-vk-yang-sync` emits writer skeletons from
+  `families.yaml`.
+
+### Phase 3 — portal completeness (✅ shipped)
+
+- 31 additional writers covering every entry on the netascode
+  IOS-XE portal (management plane, IPv6, crypto, additional
+  interfaces, EIGRP/IS-IS, QoS, NAT, tracking/EEM, L2
+  globals).
+- `IOSXEInterfaceGroupConfig` scope CRD (netascode
+  `interface_groups[]` parity).
+- `cisco-vk-yang-sync --yang-dir` invokes ygot when a YANG
+  tree is supplied.
+- `writers.FamilySchema` registry (reflected metadata for
+  external tooling).
+- `cisco-vk-config-lint` per-family shape validation using the
+  FamilySchema registry.
+- `cisco-vk-config-collect` (nac-collect equivalent).
+- `cisco-vk-config-docs` (per-family markdown reference
+  generator).
+
+### Phase 4 — depth & polish (⏳ planned, ~6–8 weeks)
+
+Closes the netascode-parity depth gaps identified in §10.
+
+- **Per-rule diffing** inside nested list leaves: ACL rules
+  keyed by `sequence`, prefix-list sequences, route-map entries,
+  OSPF networks, BGP neighbours, EIGRP networks, policy-map
+  class actions. One writer refactor per family, mechanical —
+  the helper pattern extracts cleanly from what
+  `keyedListWriter` already does.
+- **`spec.pruneOnRelinquish: true` actual behaviour.** Field
+  already present; wire the writer to emit DELETE ops for
+  leaves dropped between reconciles when set.
+- **Yamale-style per-family schemas.** Hand-authored until
+  Phase 5 YANG derivation lands. Wired into `cisco-vk-config-lint`
+  for leaf-type, range, enum, and pattern validation.
+- **Strict-mode lint.** Unknown inline leaves become errors
+  under `--strict`.
+- **Offline `plan` subcommand** on `cisco-vk-config-lint`:
+  diff against last-applied state cached on the CR's status,
+  no device access required.
+- **`cisco-vk-config-collect` fidelity.** Emit unmanaged
+  leaves under `_unmanaged:` so brownfield devices round-trip
+  cleanly.
+- **Per-family `secretRefs`** on IOSXEConfig so writers can
+  merge credentials from a Secret into the intent before
+  apply. Closes the PSK / enable-secret gap (§10.7).
+- **Interface selector by pattern** — regex / glob on
+  `name`, plus label-match on ethernet interfaces. Closes
+  §10.10.
+- **Cluster-scoped family leases** (or manager-namespace-only)
+  so cross-namespace CRs arbitrate. Closes §10.11.
+- **`status.drift[]` capping** + overflow reporting via
+  metrics. Closes §10.12.
+- **Pre-commit packaging** for `cisco-vk-config-lint`:
+  container image, pre-commit hook entry, version tag.
+
+### Phase 5 — NETCONF transport (⏳ planned, ~2–3 weeks after Phase 4)
+
+- `transport/netconf.go` — SSH/NETCONF client (likely
+  `scrapli/scrapligo` or `damianoneill/net`), candidate
+  datastore, `<edit-config>` XML generation mapping
+  `VerbReplace/VerbMerge/VerbDelete` to the NETCONF
+  `operation` attribute.
+- `spec.transactional: true` honoured: the engine opens a
+  candidate datastore once per reconcile and commits the
+  combined edit for every managed family.
+- `Rollback` via `<cancel-commit>` / `confirmed-commit`.
+- Per-family `Fetch` switches to `<get-config>` with subtree
+  filter; response is XML, writers need an envelope unwrap
+  for NETCONF just as they have one for RESTCONF today.
+- CRD: `CiscoDevice.spec.transport: netconf` unblocks; factory
+  removes the reserved-error branch.
+- Integration tests need a NETCONF-capable device (Cat 8000V
+  17.9 or Sysrepo / ConfD simulator).
+
+### Phase 6 — gNMI + OpenConfig (⏳ planned, ~3–4 weeks after Phase 5)
+
+- `transport/gnmi.go` — gRPC + mTLS, `SetRequest` replace/
+  update/delete, `GetRequest` subtree fetch.
+- Writers gain a path dialect per transport: the managed-leaf
+  set stays the same, the YANG path changes between
+  Cisco-IOS-XE-native and OpenConfig where the family has an
+  OpenConfig equivalent. Path dialect entries go in
+  `families.yaml` alongside the existing `yang_paths`.
+- `Subscribe`-based drift detection — push-driven rather than
+  polled. `spec.driftDetectInterval` repurposed as a
+  max-staleness bound.
+- CRD: `CiscoDevice.spec.transport: gnmi` unblocks.
+- Multi-vendor families are the next natural move: the same
+  OpenConfig family definition works on Juniper / Arista; not
+  a Phase-6 promise, but the shape supports it.
+
+### Phase 7 — scale & operability (⏳ planned, timing TBD)
+
+- **Apply-log CR.** `IOSXEConfigApplyLog` circular buffer of
+  recent applies per device, persistent across controller
+  restarts. Closes the audit/history gap (§10.8).
+- **Single-manager topology option.** Currently: one pod per
+  device. Alternative: one controller-runtime manager handles
+  all devices in-process; the `cisco-vk run` provider becomes
+  a sub-controller rather than its own pod. Trade-off is
+  blast radius vs resource footprint at scale; operator
+  choice via a Helm values flag.
+- **Aggregation CRs.** `IOSXEConfigBundle` or similar — a
+  controller expands one bundle into many per-device
+  IOSXEConfigs. Closes §10.13.
+- **Time-travel / snapshot.** Given the apply-log, rewind a
+  CR to a previous `status.lastAppliedHash` (requires retaining
+  the body, not just the hash).
+- **Multi-version YANG support.** `spec.targetYangVersion` on
+  IOSXEConfig selects a writer set compiled against a specific
+  release; the driver picks the release matching the device's
+  `status.softwareVersion` when the CR doesn't pin one.
+
+### Phase 8 — ecosystem (⏳ planned, timing TBD)
+
+- **Terraform provider for IOSXEConfig.** Reverse-direction
+  integration: operators who prefer Terraform as their
+  authoring surface can drive CVK CRs from it. Does not
+  reintroduce Terraform to the runtime — Terraform becomes
+  one of several CR authors.
+- **ArgoCD health-check plugins** tuned for IOSXEConfig
+  status (the standard Flux/ArgoCD health probes work today;
+  Phase 8 adds richer status interpretation).
+- **OPA / conftest rule packs** shipped alongside
+  `cisco-vk-config-lint` for compliance guardrails.
+- **netascode portal compat.** A dialect in
+  `cisco-vk-config-docs` that emits MkDocs-compatible pages
+  mirroring the netascode portal's layout.
+
+### Summary timeline
+
+```
+  shipped            Phase-4       Phase-5      Phase-6     Phase-7     Phase-8
+ ├──────────┤        ├───────┤     ├─────┤      ├──────┤    ├──────┤    ├──────┤
+ Phase 0/1/2/3       depth &       NETCONF +    gNMI +      scale /     ecosystem
+ now                 polish        atomic       OpenConfig  operability integrations
+                     ~6–8w         ~2–3w        ~3–4w       TBD         TBD
+```
+
+Phase 4 is the one that closes the largest practical gap (§10.1 –
+§10.6, §10.10 – §10.14). Phase 5 closes the "Terraform parity for
+atomic apply" gap (§10.2). Phase 6 unlocks multi-vendor / push
+drift; it is not on the netascode critical path. Phase 7 and 8 are
+operator-demand-driven.
+
+## 12. Concrete operator workflow today
 
 1. **Day 0.** Install the CVK Helm chart. CRDs land. Controller
    manager boots. No devices yet.
@@ -529,7 +963,7 @@ driver because both read the same sources.
 A full example is at `examples/gitops-reference/`; it is directly
 `kubectl apply -k .`-able.
 
-## 12. Open questions for the reviewer
+## 13. Open questions for the reviewer
 
 Concrete items where netascode expertise would change the answer:
 
@@ -566,7 +1000,7 @@ Concrete items where netascode expertise would change the answer:
     the licensing / repo-size cost of checking YANG in worth the
     automation benefit?
 
-## 13. File-tree diff
+## 14. File-tree diff
 
 New top-level directories:
 
@@ -604,7 +1038,7 @@ README.md                                       — Phase-0 section added
 CHANGELOG.md                                    — n/a (repo had none)
 ```
 
-## 14. Commit progression (chronological)
+## 15. Commit progression (chronological)
 
 | commit | summary |
 |---|---|
@@ -633,7 +1067,7 @@ CHANGELOG.md                                    — n/a (repo had none)
 | `88bd7dc` | yang-sync invokes ygot when --yang-dir supplied |
 | `7285c27` | managed-leaf registry + per-family lint + collect + docs generator |
 
-## 15. What would change the verdict
+## 16. What would change the verdict
 
 Signals that would make us reconsider the architecture:
 
