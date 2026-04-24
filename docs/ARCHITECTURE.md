@@ -59,10 +59,10 @@ Implements the Virtual Kubelet `nodeutil.Provider` interface — the main entry 
 | Method | Purpose |
 |---|---|
 | `CreatePod(ctx, pod)` | Delegates to `driver.DeployPod`, then forces a node status update |
-| `UpdatePod(ctx, pod)` | Guards against no-op churn; if the app already exists, does nothing |
+| `UpdatePod(ctx, pod)` | Oper-state-aware redeploy: skips apps already RUNNING; reinstalls apps that are stuck in unexpected states |
 | `DeletePod(ctx, pod)` | Delegates to `driver.DeletePod` then forces a node status update |
 | `GetPod(ctx, ns, name)` | Fast path: informer cache. Fallback: device query for cleanup |
-| `GetPodStatus(ctx, ns, name)` | Queries live pod status from the device |
+| `GetPodStatus(ctx, ns, name)` | Queries live pod status from the device; returns `PullingImage` waiting state while a copy-then-install fallback is in progress |
 | `GetPods(ctx)` | Lists all managed pods discovered on the device |
 | `GetStatsSummary(ctx)` | Returns Kubernetes stats/summary data (see [Observability](observability.md)) |
 | `GetMetricsResource(ctx)` | Returns Prometheus metrics (see [Observability](observability.md)) |
@@ -133,9 +133,9 @@ The IOS-XE driver implements it. Drivers without topology support still work —
 
 | File | Responsibility |
 |---|---|
-| `driver.go` | Driver construction, marshallers, config hooks |
+| `driver.go` | Driver construction, marshallers, config hooks, recovery state helpers |
 | `device.go` | Device-level queries (connectivity, resources, device info) |
-| `client.go` | Transport abstraction — currently RESTCONF, designed to accommodate NETCONF later |
+| `client.go` | App-hosting RPCs, image delivery (device-native HTTP pull + copy-then-install fallback), Kubernetes event emission |
 | `reconciler.go` | App lifecycle state machine (see below) |
 | `pod_lifecycle.go` | `DeployPod` / `DeletePod` / `GetPodStatus` / `ListPods` |
 | `pod_transforms.go` | Pod.Spec → IOS-XE `AppHostingConfig` |
@@ -180,11 +180,24 @@ sequenceDiagram
     User->>VK: CreatePod
     VK->>Drv: DeployPod
     Drv->>Dev: POST app-hosting-cfg (RESTCONF)
-    Drv->>Dev: RPC install
-    Note over Drv,Dev: Reconciler takes over<br/>(state machine below)
-    Dev-->>Drv: DEPLOYED
-    Drv->>Dev: RPC activate → ACTIVATED
-    Drv->>Dev: RPC start → RUNNING
+    Drv->>Dev: RPC install (image path or HTTP URL)
+
+    alt Flash path (image: flash:/...)
+        Note over Drv,Dev: Device auto-advances DEPLOYED→RUNNING<br/>via Start=true in config
+        Dev-->>Drv: RUNNING
+    else HTTP primary path (device-native pull)
+        Note over Drv,Dev: Device pulls image itself<br/>(platforms that support it)
+        Dev-->>Drv: DEPLOYED → ACTIVATED → RUNNING
+    else HTTP fallback path (copy-then-install)
+        Note over Drv,Dev: Device cannot pull; VK downloads image
+        Drv->>Dev: copy RPC — downloads image to flash<br/>(synchronous, may take minutes)
+        Note over Drv: GetPodStatus returns Waiting{PullingImage}<br/>during this period
+        Drv->>Dev: RPC install from flash path
+        Dev-->>Drv: DEPLOYED
+        Drv->>Dev: POST config Start=true (native auto-start)
+        Dev-->>Drv: RUNNING
+    end
+
     Drv->>Dev: Query oper-data for pod IP
     alt IP in oper-data
         Dev-->>Drv: IPv4
