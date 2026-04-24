@@ -63,6 +63,16 @@ type ConfigReconciler struct {
 	// assembled at startup from schema/families.yaml.
 	KeyRules intent.KeyRules
 
+	// SupportedYANGVersions is the closed set of release tags
+	// `spec.targetYangVersion` may name. Empty disables validation.
+	// Wired from `schema/yang-versions.yaml` at process start.
+	SupportedYANGVersions map[string]struct{}
+
+	// DefaultYANGVersion is what the resolver assigns when the CR
+	// doesn't pin one. Empty leaves status.sourceYangVersion empty
+	// — the same shape it had pre-Phase-7.
+	DefaultYANGVersion string
+
 	// Lookup overrides the writer lookup for tests. Nil means the
 	// process-global writers registry.
 	Lookup func(family string) writers.SectionWriter
@@ -133,7 +143,12 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger) 
 	}
 	conflicts := engine.ConflictCheck(r.DeviceName, forDevice)
 
-	resolver := &intent.Resolver{Client: r.Client, KeyRules: r.KeyRules}
+	resolver := &intent.Resolver{
+		Client:                r.Client,
+		KeyRules:              r.KeyRules,
+		SupportedYANGVersions: r.SupportedYANGVersions,
+		DefaultYANGVersion:    r.DefaultYANGVersion,
+	}
 	lookup := r.Lookup
 	if lookup == nil {
 		lookup = writers.Get
@@ -297,6 +312,9 @@ func (r *ConfigReconciler) recordResult(
 		now := metav1.Now()
 		updated.Status.LastAppliedHash = hash
 		updated.Status.LastAppliedTime = &now
+		if result.YangVersion != "" {
+			updated.Status.SourceYangVersion = result.YangVersion
+		}
 	}
 
 	updated.Status.FamilyStatus = updated.Status.FamilyStatus[:0]

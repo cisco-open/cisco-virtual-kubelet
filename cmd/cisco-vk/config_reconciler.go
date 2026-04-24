@@ -41,6 +41,7 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/schema"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 )
@@ -152,11 +153,15 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		leaseNamespace = "default"
 	}
 
+	supportedYANG, defaultYANG := loadYANGReleaseTags(ctx)
+
 	r := &provider.ConfigReconciler{
-		Client:     mgr.GetClient(),
-		DeviceName: deviceName,
-		Transport:  t, // may be nil
-		KeyRules:   keyRulesForPhase1(),
+		Client:                mgr.GetClient(),
+		DeviceName:            deviceName,
+		Transport:             t, // may be nil
+		KeyRules:              keyRulesForPhase1(),
+		SupportedYANGVersions: supportedYANG,
+		DefaultYANGVersion:    defaultYANG,
 		Leaser: &engine.FamilyLeaser{
 			Client:    mgr.GetClient(),
 			Namespace: leaseNamespace,
@@ -191,4 +196,27 @@ func keyRulesForPhase1() intent.KeyRules {
 		"dhcp.pools":                      "name",
 		"access_list_extended.extended":   "name",
 	}
+}
+
+// loadYANGReleaseTags reads schema/yang-versions.yaml and returns
+// the set of release tags as a closed validator (set semantics) plus
+// the default tag. A failure to load is non-fatal — we log and
+// continue without validation, since YANG-version pinning is
+// optional and a malformed file shouldn't take the controller down.
+func loadYANGReleaseTags(ctx context.Context) (map[string]struct{}, string) {
+	logger := log.G(ctx).WithField("component", "config-reconciler")
+	releases, err := schema.LoadYANGReleases()
+	if err != nil {
+		logger.WithError(err).Warn("could not load yang-versions.yaml; spec.targetYangVersion validation disabled")
+		return nil, ""
+	}
+	supported := make(map[string]struct{}, len(releases))
+	var def string
+	for _, r := range releases {
+		supported[r.Version] = struct{}{}
+		if r.Default {
+			def = r.Version
+		}
+	}
+	return supported, def
 }

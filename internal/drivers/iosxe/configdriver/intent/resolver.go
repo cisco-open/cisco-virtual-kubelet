@@ -56,6 +56,19 @@ type Resolver struct {
 	// families.yaml schema. Empty is valid — the merger falls back to
 	// the name>id heuristic.
 	KeyRules KeyRules
+
+	// SupportedYANGVersions is the set of release strings declared
+	// in schema/yang-versions.yaml. When non-empty and the CR sets
+	// spec.targetYangVersion to a value not in the set, resolution
+	// fails loudly. Empty (the legacy default) skips validation.
+	SupportedYANGVersions map[string]struct{}
+
+	// DefaultYANGVersion is the release tag the resolver assigns
+	// to ResolvedIntent.TargetYangVersion when the CR doesn't pin
+	// one. Empty means "leave it empty"; the audit log will still
+	// record an empty source-YANG version, which is the same shape
+	// it had before this field existed.
+	DefaultYANGVersion string
 }
 
 // CLIBlock is a rendered CLI template output plus the name of the
@@ -102,6 +115,13 @@ type ResolvedIntent struct {
 	// pruning are silently skipped, matching the same writer-by-
 	// writer rollout pattern the rest of the engine uses.
 	PruneOnRelinquish bool
+
+	// TargetYangVersion is the IOS-XE YANG release the resolver
+	// resolved this intent against. Set from spec.targetYangVersion
+	// when supplied, otherwise the driver default. The engine
+	// records this on the CR's status.sourceYangVersion after a
+	// successful apply so the audit log and the CR status agree.
+	TargetYangVersion string
 
 	// CLIBlocks carries CLI-type template expansions that do not
 	// merge into Configuration. Populated by the resolver when
@@ -294,6 +314,18 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 		policy = configv1alpha1.DriftPolicyRevert
 	}
 
+	yangVersion := cr.Spec.TargetYangVersion
+	if yangVersion != "" && len(r.SupportedYANGVersions) > 0 {
+		if _, ok := r.SupportedYANGVersions[yangVersion]; !ok {
+			return nil, fmt.Errorf(
+				"IOSXEConfig %s/%s: spec.targetYangVersion %q is not in the supported set",
+				cr.Namespace, cr.Name, yangVersion)
+		}
+	}
+	if yangVersion == "" {
+		yangVersion = r.DefaultYANGVersion
+	}
+
 	return &ResolvedIntent{
 		DeviceName:        device,
 		ManagedFamilies:   append([]string(nil), cr.Spec.ManagedFamilies...),
@@ -302,6 +334,7 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 		DriftPolicy:       policy,
 		WriteStartup:      cr.Spec.WriteStartup,
 		PruneOnRelinquish: cr.Spec.PruneOnRelinquish,
+		TargetYangVersion: yangVersion,
 		CLIBlocks:         cliBlocks,
 		SourceCR:          cr.DeepCopy(),
 	}, nil

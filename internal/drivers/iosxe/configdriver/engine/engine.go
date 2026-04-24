@@ -80,6 +80,13 @@ type Result struct {
 	// chance to run. Per-family errors are also surfaced on the
 	// FamilyStatuses entry; Err is the engine-level top-line failure.
 	Err error
+
+	// YangVersion is the YANG release the resolver pinned for this
+	// reconcile (ResolvedIntent.TargetYangVersion). Surfaced on the
+	// CR's status.sourceYangVersion after a successful apply so the
+	// audit log and the per-CR status agree on what release drove
+	// the device write.
+	YangVersion string
 }
 
 // FamilyStatus is the per-family outcome of a tick.
@@ -131,6 +138,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 
 	result := Result{
 		FamilyStatuses: make([]FamilyStatus, 0, len(res.ManagedFamilies)),
+		YangVersion:    res.TargetYangVersion,
 	}
 	anyDrift := false
 	anyFailure := false

@@ -93,6 +93,21 @@ type IOSXEConfigSpec struct {
 	// +optional
 	PruneOnRelinquish bool `json:"pruneOnRelinquish,omitempty"`
 
+	// TargetYangVersion pins the IOS-XE YANG release the writers
+	// should compile their managed-leaf set against. When set, the
+	// resolver validates the value is in `schema/yang-versions.yaml`
+	// and the engine records it on `status.sourceYangVersion` after
+	// every successful apply so an operator can correlate device
+	// state with the release that drove it.
+	//
+	// Empty (the common case) means the driver picks the default
+	// release. Multi-release writer sets are not yet shipped — every
+	// release currently maps to the same writer set — but the field
+	// is here so operators don't need a schema migration when they
+	// do.
+	// +optional
+	TargetYangVersion string `json:"targetYangVersion,omitempty"`
+
 	// SecretRefs lets the resolver merge sensitive configuration
 	// (BGP MD5 keys, IPSec PSKs, SNMPv3 auth/priv passphrases,
 	// enable secrets, RADIUS shared keys) into the resolved intent
