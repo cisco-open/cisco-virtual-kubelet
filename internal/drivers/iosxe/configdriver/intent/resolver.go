@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -157,10 +158,12 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 		configuration = asMap(MergeWithRules(configuration, block, r.KeyRules))
 	}
 
-	// 3a) Interface groups, expanded per (device, interface) pair and
-	//     merged before templates. Membership is the intersection of
-	//     DeviceRefs / DeviceSelector and the device's InterfaceSelector
-	//     match; only matching interfaces are projected.
+	// 3a) Interface groups whose members are declared with explicit
+	//     Name entries are expanded here, in their normal precedence
+	//     slot (after device groups, before templates). Pattern-based
+	//     matches are deferred until after the per-device source so
+	//     they can see every declared interface — see 4a below.
+	var deferredPatternGroups []*configv1alpha1.IOSXEInterfaceGroupConfig
 	for _, groupName := range cr.Spec.InterfaceGroups {
 		group, err := r.loadInterfaceGroup(ctx, cr.Namespace, groupName)
 		if err != nil {
@@ -172,7 +175,11 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 			// simply skip it).
 			continue
 		}
-		expanded, err := r.expandInterfaceGroupForDevice(device_, group)
+		if groupHasPatternMatch(group) {
+			deferredPatternGroups = append(deferredPatternGroups, group)
+			continue
+		}
+		expanded, err := r.expandInterfaceGroupForDevice(device_, group, nil)
 		if err != nil {
 			return nil, fmt.Errorf("IOSXEInterfaceGroupConfig/%s: %w", group.Name, err)
 		}
@@ -225,6 +232,21 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 		return nil, fmt.Errorf("IOSXEConfig %s/%s: %w", cr.Namespace, cr.Name, err)
 	}
 	configuration = asMap(MergeWithRules(configuration, source, r.KeyRules))
+
+	// 4a) Interface groups with NamePattern matches expand here, after
+	// every other scope has merged. Pattern matching is intentionally
+	// "broadcast policy applied to every matching interface in the
+	// resolved intent": once an interface is declared anywhere upstream,
+	// a pattern can apply policy to it. Operators who need policy on an
+	// interface that isn't otherwise declared must add it to defaults
+	// or to the per-device source first.
+	for _, group := range deferredPatternGroups {
+		expanded, err := r.expandInterfaceGroupForDevice(device_, group, configuration)
+		if err != nil {
+			return nil, fmt.Errorf("IOSXEInterfaceGroupConfig/%s: %w", group.Name, err)
+		}
+		configuration = asMap(MergeWithRules(configuration, expanded, r.KeyRules))
+	}
 
 	policy := cr.Spec.DriftPolicy
 	if policy == "" {
@@ -318,19 +340,34 @@ func (r *Resolver) interfaceGroupAppliesToDevice(device *ciskov1.CiscoDevice, gr
 	return false
 }
 
+// groupHasPatternMatch reports whether any selector entry in the
+// group uses NamePattern. Pattern matches need to see the resolved
+// configuration (to know what interface names exist), so they are
+// processed in a separate pass after the per-device source merges in.
+func groupHasPatternMatch(g *configv1alpha1.IOSXEInterfaceGroupConfig) bool {
+	for _, m := range g.Spec.InterfaceSelector {
+		if m.NamePattern != "" {
+			return true
+		}
+	}
+	return false
+}
+
 // expandInterfaceGroupForDevice projects a group's Configuration body
-// onto every (type, name) in InterfaceSelector that resolves to a
-// real interface for this device (Phase-3 optimistically projects
-// every selector entry; per-device interface enumeration against the
-// device itself is a Phase-4 follow-up that requires operational-YANG
-// reads).
+// onto every (type, name) selected by InterfaceSelector. Each match
+// is one of three shapes:
 //
-// The projection replicates the group's configuration body for each
-// matched interface, injecting the selector's (type, name) as the
-// entry's key fields. Families that don't already carry a "type"/
-// "name" key at the top level are left alone (rare in practice — the
-// whole point of interface_groups is interface-keyed families).
-func (r *Resolver) expandInterfaceGroupForDevice(device *ciskov1.CiscoDevice, group *configv1alpha1.IOSXEInterfaceGroupConfig) (map[string]any, error) {
+//   - explicit Name: project onto that single (type, name) pair;
+//   - NamePattern (Go-syntax regex): project onto every interface of
+//     the matching Type already declared in declared, where declared
+//     is the resolved configuration accumulated so far;
+//   - neither set: project onto every interface of the matching Type
+//     in declared, equivalent to NamePattern=".*".
+//
+// declared may be nil for the explicit-Name pass (no pattern matches
+// to expand). It must be non-nil when groupHasPatternMatch reports
+// true — callers schedule the deferred pattern pass for that case.
+func (r *Resolver) expandInterfaceGroupForDevice(device *ciskov1.CiscoDevice, group *configv1alpha1.IOSXEInterfaceGroupConfig, declared map[string]any) (map[string]any, error) {
 	var body map[string]any
 	if err := yaml.Unmarshal(group.Spec.Configuration.Raw, &body); err != nil {
 		return nil, fmt.Errorf("decode configuration: %w", err)
@@ -341,10 +378,94 @@ func (r *Resolver) expandInterfaceGroupForDevice(device *ciskov1.CiscoDevice, gr
 
 	out := map[string]any{}
 	for _, match := range group.Spec.InterfaceSelector {
-		projected := projectInterfaceEntry(body, match)
-		out = asMap(MergeWithRules(out, projected, r.KeyRules))
+		concretes, err := concreteMatches(match, declared)
+		if err != nil {
+			return nil, err
+		}
+		for _, c := range concretes {
+			out = asMap(MergeWithRules(out, projectInterfaceEntry(body, c), r.KeyRules))
+		}
 	}
 	return out, nil
+}
+
+// concreteMatches fans a single InterfaceMatch out into one or more
+// concrete (Type, Name) projections, depending on whether the match
+// uses Name (exactly one), NamePattern (zero-or-more, regex over
+// names declared in the resolved intent), or neither.
+func concreteMatches(match configv1alpha1.InterfaceMatch, declared map[string]any) ([]configv1alpha1.InterfaceMatch, error) {
+	if match.Name != "" {
+		return []configv1alpha1.InterfaceMatch{match}, nil
+	}
+	if match.NamePattern == "" && declared == nil {
+		// Type-wildcard with no declared map at hand: project the
+		// body verbatim with Type only. Phase-3 behaviour.
+		return []configv1alpha1.InterfaceMatch{match}, nil
+	}
+	// Anchor the operator's pattern on both ends so "0/0/.*" doesn't
+	// accidentally hit "Foo0/0/0Bar" inside another field.
+	pattern := match.NamePattern
+	if pattern == "" {
+		pattern = ".*"
+	}
+	re, err := regexp.Compile("^(?:" + pattern + ")$")
+	if err != nil {
+		return nil, fmt.Errorf("compile NamePattern %q: %w", match.NamePattern, err)
+	}
+	names := interfaceNamesByType(declared, match.Type)
+	out := make([]configv1alpha1.InterfaceMatch, 0, len(names))
+	for _, n := range names {
+		if !re.MatchString(n) {
+			continue
+		}
+		out = append(out, configv1alpha1.InterfaceMatch{Type: match.Type, Name: n})
+	}
+	return out, nil
+}
+
+// interfaceNamesByType walks the configuration tree looking for
+// interface-family blocks whose entries have a `type` matching t,
+// and returns the deduplicated, sorted set of names. Families are
+// recognised by the "interfaces" sub-list shape that every
+// interface_* family uses; non-interface families are ignored.
+func interfaceNamesByType(cfg map[string]any, t string) []string {
+	if cfg == nil {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	for famKey, famVal := range cfg {
+		fam, ok := famVal.(map[string]any)
+		if !ok {
+			continue
+		}
+		// Conventional shape: family.{interfaces,members,…}[]: each
+		// entry has type and name. Walk every list-valued child.
+		_ = famKey
+		for _, listVal := range fam {
+			list, ok := listVal.([]any)
+			if !ok {
+				continue
+			}
+			for _, el := range list {
+				m, ok := el.(map[string]any)
+				if !ok {
+					continue
+				}
+				if et, _ := m["type"].(string); et != t {
+					continue
+				}
+				if name, _ := m["name"].(string); name != "" {
+					seen[name] = struct{}{}
+				}
+			}
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for n := range seen {
+		out = append(out, n)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // projectInterfaceEntry replicates a family block with the

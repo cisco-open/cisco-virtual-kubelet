@@ -21,8 +21,14 @@ import (
 
 // InterfaceMatch identifies the set of interfaces on a CiscoDevice an
 // InterfaceGroupConfig applies to. Mirror of netascode's interface-group
-// membership rules: either an explicit list of (type, name) pairs, or
-// a type filter that applies to every interface of that YANG subtype.
+// membership rules: either an explicit list of (type, name) pairs, a
+// type filter that applies to every interface of that YANG subtype, or
+// a regex pattern that selects every matching interface name within
+// the resolved intent.
+//
+// At most one of Name and NamePattern may be set.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.name) && has(self.namePattern))",message="at most one of name and namePattern may be set"
 type InterfaceMatch struct {
 	// Type is the YANG interface subtree name (GigabitEthernet,
 	// TenGigabitEthernet, Loopback, VirtualPortGroup, Vlan,
@@ -32,10 +38,29 @@ type InterfaceMatch struct {
 	Type string `json:"type"`
 
 	// Name is the interface instance name ("0/0/0", "0", "10"). When
-	// empty, the group applies to every interface of the given Type on
-	// every matched device.
+	// empty (and NamePattern is also empty), the group applies to every
+	// interface of the given Type on every matched device.
 	// +optional
 	Name string `json:"name,omitempty"`
+
+	// NamePattern is a Go-syntax regular expression matched against
+	// the `name` field of every interface entry of the matching Type
+	// already declared in the resolved intent (defaults + device groups
+	// + templates + per-device source). The group's Configuration is
+	// projected onto each matched entry. The pattern is anchored —
+	// callers do not need to write ^…$ explicitly.
+	//
+	// Mutually exclusive with Name. When neither is set the group
+	// applies to every interface of the given Type that resolution
+	// surfaces.
+	//
+	// Pattern expansion only matches interfaces already in the resolved
+	// intent; it does not query the device. Operators who need to
+	// apply policy to interfaces that aren't otherwise declared should
+	// add explicit entries (commonly via a defaults block) so the
+	// pattern has something to match.
+	// +optional
+	NamePattern string `json:"namePattern,omitempty"`
 }
 
 // IOSXEInterfaceGroupConfigSpec carries a configuration block that

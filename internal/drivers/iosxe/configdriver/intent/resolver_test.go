@@ -255,6 +255,151 @@ func TestResolveInterfaceGroupExpansion(t *testing.T) {
 	}
 }
 
+func TestResolveInterfaceGroupNamePatternMatchesDeclared(t *testing.T) {
+	// The CR declares three GigabitEthernet interfaces (0/0/0, 0/0/1,
+	// 0/0/2). A pattern-based group targets "0/0/[01]" — it should
+	// project onto the first two and leave the third alone, *and*
+	// preserve any per-interface attributes from the source body
+	// (description on 0/0/2 must survive).
+	device := mkDevice("edge-01", map[string]string{"role": "access-switch"})
+	group := &configv1alpha1.IOSXEInterfaceGroupConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "uplinks-pattern", Namespace: "network"},
+		Spec: configv1alpha1.IOSXEInterfaceGroupConfigSpec{
+			DeviceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"role": "access-switch"},
+			},
+			InterfaceSelector: []configv1alpha1.InterfaceMatch{
+				{Type: "GigabitEthernet", NamePattern: "0/0/[01]"},
+			},
+			Configuration: runtime.RawExtension{Raw: []byte(
+				`{"interface_ethernet":{"interfaces":[{"description":"uplink"}]}}`,
+			)},
+		},
+	}
+	source := `{"interface_ethernet":{"interfaces":[
+		{"type":"GigabitEthernet","name":"0/0/0"},
+		{"type":"GigabitEthernet","name":"0/0/1"},
+		{"type":"GigabitEthernet","name":"0/0/2","description":"server"}
+	]}}`
+	cr := mkCR("edge-01", "edge-01", []string{"interface_ethernet"}, source)
+	cr.Spec.InterfaceGroups = []string{"uplinks-pattern"}
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, group, cr).
+		Build()
+	r := &Resolver{Client: c}
+
+	got, err := r.Resolve(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	ifaces := got.Configuration["interface_ethernet"].(map[string]any)["interfaces"].([]any)
+	if len(ifaces) != 3 {
+		t.Fatalf("got %d interfaces, want 3 (the declared set):\n%#v", len(ifaces), ifaces)
+	}
+	desc := map[string]string{}
+	for _, e := range ifaces {
+		m := e.(map[string]any)
+		name := m["name"].(string)
+		if d, ok := m["description"].(string); ok {
+			desc[name] = d
+		}
+	}
+	if desc["0/0/0"] != "uplink" || desc["0/0/1"] != "uplink" {
+		t.Errorf("pattern projection missing on matched interfaces: %#v", desc)
+	}
+	if desc["0/0/2"] != "server" {
+		t.Errorf("non-matching interface lost its source description: %#v", desc)
+	}
+}
+
+func TestResolveInterfaceGroupNamePatternNoMatchesIsNoOp(t *testing.T) {
+	// Pattern that matches nothing in the resolved intent must not
+	// fail — operators commonly target a regex hopeful no-op-it
+	// before adding interfaces. Resolution stays clean.
+	device := mkDevice("edge-01", map[string]string{"role": "access-switch"})
+	group := &configv1alpha1.IOSXEInterfaceGroupConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "no-matches", Namespace: "network"},
+		Spec: configv1alpha1.IOSXEInterfaceGroupConfigSpec{
+			DeviceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"role": "access-switch"},
+			},
+			InterfaceSelector: []configv1alpha1.InterfaceMatch{
+				{Type: "GigabitEthernet", NamePattern: "9/9/.*"},
+			},
+			Configuration: runtime.RawExtension{Raw: []byte(
+				`{"interface_ethernet":{"interfaces":[{"description":"never"}]}}`,
+			)},
+		},
+	}
+	source := `{"interface_ethernet":{"interfaces":[
+		{"type":"GigabitEthernet","name":"0/0/0"}
+	]}}`
+	cr := mkCR("edge-01", "edge-01", []string{"interface_ethernet"}, source)
+	cr.Spec.InterfaceGroups = []string{"no-matches"}
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, group, cr).
+		Build()
+	r := &Resolver{Client: c}
+	got, err := r.Resolve(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	ifaces := got.Configuration["interface_ethernet"].(map[string]any)["interfaces"].([]any)
+	for _, e := range ifaces {
+		if e.(map[string]any)["description"] == "never" {
+			t.Fatalf("pattern projected onto unintended interface: %#v", e)
+		}
+	}
+}
+
+func TestResolveInterfaceGroupNamePatternAnchoredOnBothEnds(t *testing.T) {
+	// "0/0/0" must not match "0/0/0Bar" or "X0/0/0" — the resolver
+	// anchors the operator's pattern with ^…$ so accidental
+	// substring matches don't sneak past.
+	device := mkDevice("edge-01", map[string]string{"role": "access-switch"})
+	group := &configv1alpha1.IOSXEInterfaceGroupConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "anchor-test", Namespace: "network"},
+		Spec: configv1alpha1.IOSXEInterfaceGroupConfigSpec{
+			DeviceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"role": "access-switch"},
+			},
+			InterfaceSelector: []configv1alpha1.InterfaceMatch{
+				{Type: "GigabitEthernet", NamePattern: "0/0/0"},
+			},
+			Configuration: runtime.RawExtension{Raw: []byte(
+				`{"interface_ethernet":{"interfaces":[{"description":"uplink"}]}}`,
+			)},
+		},
+	}
+	source := `{"interface_ethernet":{"interfaces":[
+		{"type":"GigabitEthernet","name":"0/0/0"},
+		{"type":"GigabitEthernet","name":"0/0/0Bar"}
+	]}}`
+	cr := mkCR("edge-01", "edge-01", []string{"interface_ethernet"}, source)
+	cr.Spec.InterfaceGroups = []string{"anchor-test"}
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, group, cr).
+		Build()
+	r := &Resolver{Client: c}
+	got, err := r.Resolve(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	ifaces := got.Configuration["interface_ethernet"].(map[string]any)["interfaces"].([]any)
+	for _, e := range ifaces {
+		m := e.(map[string]any)
+		if m["name"] == "0/0/0Bar" && m["description"] == "uplink" {
+			t.Fatalf("unanchored pattern leaked onto sibling: %#v", m)
+		}
+	}
+}
+
 func TestResolveInterfaceGroupSkipsNonMemberDevice(t *testing.T) {
 	// Device doesn't match the selector — group should be silently
 	// skipped, not fail resolution.

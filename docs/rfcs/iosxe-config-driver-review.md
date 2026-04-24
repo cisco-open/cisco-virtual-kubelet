@@ -740,9 +740,24 @@ uplinks", "all access ports") rather than by explicit
 switches × 48 ports, the operator writes 48N entries; netascode
 lets them write one `role: access-port` filter.
 
-Fix: Phase-4 extends `InterfaceMatch` with a `labels` field on
-ethernet interfaces (requires a new writer extension) OR
-introduces a pattern-match mode on the `name` field.
+Fix: Phase-4 introduces `InterfaceMatch.NamePattern` — a Go-syntax
+regex that the resolver expands against every interface of the
+matching `Type` already declared in the resolved intent (defaults +
+device groups + templates + per-device source). One match `{Type:
+GigabitEthernet, NamePattern: "0/0/[0-9]+"}` covers an arbitrary
+number of ports on every member device. The pattern is anchored
+(`^…$`) so substring leaks don't sneak past, and pattern-based
+matches expand in a deferred pass after the per-device source so
+they see every declared interface. Patterns only match interfaces
+already in the resolved intent — operators who need to apply policy
+to interfaces that aren't otherwise declared still add an explicit
+entry (typically in defaults).
+
+Label-based selection — i.e. an `InterfaceMatch.LabelSelector` that
+filters by per-interface metadata — is deferred. It would require a
+netascode-shape extension to carry a `labels:` map on each
+interface entry plus writer-side stripping, and that's a bigger
+footprint than NamePattern justifies for the same use case.
 
 ### 10.10 Multi-tenancy / namespace scoping
 
@@ -939,9 +954,13 @@ Closes the netascode-parity depth gaps identified in §10.
 - **Per-family `secretRefs`** on IOSXEConfig so writers can
   merge credentials from a Secret into the intent before
   apply. Closes the PSK / enable-secret gap (§10.6).
-- **Interface selector by pattern** — regex / glob on
-  `name`, plus label-match on ethernet interfaces. Closes
-  §10.9.
+- **Interface selector by pattern** — regex on
+  `InterfaceMatch.NamePattern`. ✅ Shipped: pattern matches expand
+  against every interface of the matching `Type` declared in the
+  resolved intent, in a deferred pass after the per-device source
+  merges. Patterns are anchored on both ends. Label-based selection
+  is deferred (would need a netascode-shape extension to carry
+  per-interface labels). Closes §10.9 except for that label item.
 - **Cluster-scoped family leases** (or manager-namespace-only)
   so cross-namespace CRs arbitrate. Closes §10.10.
 - **`status.drift[]` capping** + overflow reporting via
