@@ -356,7 +356,26 @@ func (r *ConfigReconciler) recordResult(
 		})
 	}
 
-	return ignoreConflict(r.Client.Status().Update(ctx, updated))
+	if err := ignoreConflict(r.Client.Status().Update(ctx, updated)); err != nil {
+		return err
+	}
+
+	// Audit log: append a row to any IOSXEConfigApplyLog CR that
+	// targets this device. The lookup is by spec.deviceRef.name; if
+	// no log exists, we silently skip — auditing is opt-in to keep
+	// the controller's blast radius narrow.
+	if err := r.appendApplyLog(ctx, cr, result, hash); err != nil {
+		// Don't fail the reconcile when the log update fails — the
+		// device-side state is authoritative, and a transient log
+		// CR conflict (status race, intermittent etcd) shouldn't
+		// take the device's apply down with it. Surface the error
+		// as an event instead.
+		if r.Recorder != nil {
+			r.Recorder.Eventf(cr, "Warning", "ApplyLogUpdateFailed",
+				"could not append apply-log entry: %v", err)
+		}
+	}
+	return nil
 }
 
 // familiesKey returns a value usable to look up this CR in a conflict
@@ -460,4 +479,80 @@ func (r *ConfigReconciler) emitEvents(cr *configv1alpha1.IOSXEConfig, result eng
 		r.Recorder.Eventf(cr, corev1.EventTypeNormal, "Paused",
 			"driftPolicy=pause; reconcile suspended")
 	}
+}
+
+// appendApplyLog appends a row to every IOSXEConfigApplyLog CR
+// targeting cr.Spec.DeviceRef.Name in the same namespace as the
+// IOSXEConfig. Auditing is opt-in: a device with no log CR sees
+// the function return nil after a list that found nothing. The
+// circular-buffer trim happens here, capped at spec.maxEntries.
+func (r *ConfigReconciler) appendApplyLog(
+	ctx context.Context,
+	cr *configv1alpha1.IOSXEConfig,
+	result engine.Result,
+	hash string,
+) error {
+	var logs configv1alpha1.IOSXEConfigApplyLogList
+	if err := r.Client.List(ctx, &logs, client.InNamespace(cr.Namespace)); err != nil {
+		return fmt.Errorf("list apply logs: %w", err)
+	}
+	entry := buildApplyLogEntry(cr, result, hash)
+	for i := range logs.Items {
+		log := &logs.Items[i]
+		if log.Spec.DeviceRef.Name != cr.Spec.DeviceRef.Name {
+			continue
+		}
+		updated := log.DeepCopy()
+		max := int(updated.Spec.MaxEntries)
+		if max <= 0 {
+			max = 50
+		}
+		updated.Status.Entries = append(updated.Status.Entries, entry)
+		if len(updated.Status.Entries) > max {
+			over := len(updated.Status.Entries) - max
+			updated.Status.Entries = updated.Status.Entries[over:]
+			updated.Status.TruncatedTotal += int64(over)
+		}
+		if len(updated.Status.Entries) > 0 {
+			oldest := updated.Status.Entries[0].Time
+			updated.Status.OldestRetainedAt = &oldest
+		}
+		if err := r.Client.Status().Update(ctx, updated); err != nil {
+			return fmt.Errorf("update apply log %s/%s: %w",
+				updated.Namespace, updated.Name, err)
+		}
+	}
+	return nil
+}
+
+// buildApplyLogEntry compresses an engine.Result into the
+// audit-friendly ApplyLogEntry shape. Hash is only set when the
+// reconcile reached InSync — a failed apply doesn't pin a new
+// intent, and storing the would-be hash there would be misleading.
+func buildApplyLogEntry(
+	cr *configv1alpha1.IOSXEConfig,
+	result engine.Result,
+	hash string,
+) configv1alpha1.ApplyLogEntry {
+	families := make([]configv1alpha1.FamilyApplyOutcome, 0, len(result.FamilyStatuses))
+	for _, fs := range result.FamilyStatuses {
+		families = append(families, configv1alpha1.FamilyApplyOutcome{
+			Family:  fs.Name,
+			State:   fs.State,
+			OpCount: int32(fs.OpCount),
+		})
+	}
+	entry := configv1alpha1.ApplyLogEntry{
+		Time:     metav1.Now(),
+		Phase:    result.Phase,
+		SourceCR: fmt.Sprintf("%s/%s@%d", cr.Namespace, cr.Name, cr.Generation),
+		Families: families,
+	}
+	if result.Phase == engine.PhaseInSync {
+		entry.Hash = hash
+	}
+	if result.Err != nil {
+		entry.Message = result.Err.Error()
+	}
+	return entry
 }
