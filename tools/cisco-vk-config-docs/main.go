@@ -50,8 +50,9 @@ const (
 )
 
 type flags struct {
-	outDir string
-	dryRun bool
+	outDir  string
+	dryRun  bool
+	dialect string
 }
 
 func parseFlags(args []string, stderr io.Writer) (flags, error) {
@@ -63,9 +64,14 @@ func parseFlags(args []string, stderr io.Writer) (flags, error) {
 		"destination directory; one <family>.md per family plus a README.md index")
 	fs.BoolVar(&f.dryRun, "dry-run", false,
 		"print what would be written without touching the filesystem")
+	fs.StringVar(&f.dialect, "dialect", "cvk",
+		"output dialect: 'cvk' (flat per-family pages, the default) or 'portal' (MkDocs-compatible directory tree mirroring netascode.cisco.com/docs/data_models/iosxe/)")
 
 	if err := fs.Parse(args); err != nil {
 		return f, err
+	}
+	if f.dialect != "cvk" && f.dialect != "portal" {
+		return f, fmt.Errorf("invalid --dialect %q (want cvk|portal)", f.dialect)
 	}
 	return f, nil
 }
@@ -98,11 +104,15 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 	}
 
 	for _, name := range names {
-		body := renderFamily(name, fams[name])
-		target := filepath.Join(f.outDir, name+".md")
+		body := renderFamily(name, fams[name], f.dialect)
+		target := familyTargetPath(f.outDir, name, f.dialect)
 		if f.dryRun {
 			fmt.Fprintf(stdout, "would write %s (%d bytes)\n", target, len(body))
 			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			fmt.Fprintf(stderr, "ERROR: mkdir %s: %v\n", filepath.Dir(target), err)
+			return exitGenerate
 		}
 		if err := os.WriteFile(target, []byte(body), 0o644); err != nil {
 			fmt.Fprintf(stderr, "ERROR: write %s: %v\n", target, err)
@@ -111,8 +121,8 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 		fmt.Fprintf(stdout, "wrote %s\n", target)
 	}
 
-	indexBody := renderIndex(names, fams)
-	target := filepath.Join(f.outDir, "README.md")
+	indexBody := renderIndex(names, fams, f.dialect)
+	target := indexTargetPath(f.outDir, f.dialect)
 	if f.dryRun {
 		fmt.Fprintf(stdout, "would write %s (%d bytes)\n", target, len(indexBody))
 		return exitOK
@@ -139,14 +149,26 @@ type familyDoc struct {
 	Implemented   bool
 }
 
-func renderFamily(name string, f schema.Family) string {
-	doc := familyDoc{
-		Name:      name,
-		Shape:     f.Shape,
-		KeyFields: append([]string(nil), f.KeyFields...),
-		DependsOn: append([]string(nil), f.DependsOn...),
-		Portal:    f.Portal,
-		YANGPaths: append([]string(nil), f.YANGPaths...),
+// familyDocV2 carries the same fields as familyDoc plus the
+// OpenConfig path slice. The portal-dialect template renders both
+// dialects; the cvk-dialect template only references the native
+// path slice for backward compatibility.
+type familyDocV2 struct {
+	familyDoc
+	OpenConfigPaths []string
+}
+
+func renderFamily(name string, f schema.Family, dialect string) string {
+	doc := familyDocV2{
+		familyDoc: familyDoc{
+			Name:      name,
+			Shape:     f.Shape,
+			KeyFields: append([]string(nil), f.KeyFields...),
+			DependsOn: append([]string(nil), f.DependsOn...),
+			Portal:    f.Portal,
+			YANGPaths: append([]string(nil), f.YANGPaths...),
+		},
+		OpenConfigPaths: append([]string(nil), f.OpenConfigPaths...),
 	}
 	if s, ok := writers.Schema(name); ok {
 		doc.ManagedLeaves = append([]string(nil), s.ManagedLeaves...)
@@ -157,13 +179,35 @@ func renderFamily(name string, f schema.Family) string {
 	}
 
 	var buf strings.Builder
-	if err := familyTemplate.Execute(&buf, doc); err != nil {
+	tpl := familyTemplate
+	if dialect == "portal" {
+		tpl = portalFamilyTemplate
+	}
+	if err := tpl.Execute(&buf, doc); err != nil {
 		return fmt.Sprintf("template error for %s: %v", name, err)
 	}
 	return buf.String()
 }
 
-func renderIndex(names []string, fams map[string]schema.Family) string {
+// familyTargetPath chooses the per-family file path. cvk dialect
+// flattens to <out>/<family>.md; portal dialect mirrors the
+// netascode.cisco.com URL shape under data_models/iosxe/<family>/
+// index.md so MkDocs picks each family up as its own section page.
+func familyTargetPath(outDir, name, dialect string) string {
+	if dialect == "portal" {
+		return filepath.Join(outDir, "data_models", "iosxe", name, "index.md")
+	}
+	return filepath.Join(outDir, name+".md")
+}
+
+func indexTargetPath(outDir, dialect string) string {
+	if dialect == "portal" {
+		return filepath.Join(outDir, "data_models", "iosxe", "index.md")
+	}
+	return filepath.Join(outDir, "README.md")
+}
+
+func renderIndex(names []string, fams map[string]schema.Family, dialect string) string {
 	type indexRow struct {
 		Name        string
 		Shape       string
@@ -181,7 +225,11 @@ func renderIndex(names []string, fams map[string]schema.Family) string {
 		})
 	}
 	var buf strings.Builder
-	if err := indexTemplate.Execute(&buf, rows); err != nil {
+	tpl := indexTemplate
+	if dialect == "portal" {
+		tpl = portalIndexTemplate
+	}
+	if err := tpl.Execute(&buf, rows); err != nil {
 		return fmt.Sprintf("index template error: %v", err)
 	}
 	return buf.String()
@@ -239,6 +287,94 @@ writers registry. Do not edit by hand; re-run the generator.
 |---|---|---|---|
 {{ range . -}}
 | [{{ .Name }}]({{ .Name }}.md) | {{ .Shape }} | {{ if .Implemented }}implemented{{ else }}skeleton{{ end }} | {{ if .Portal }}[↗]({{ .Portal }}){{ end }} |
+{{ end }}
+`))
+
+// portalFamilyTemplate emits a per-family page in MkDocs-style
+// netascode-portal layout. Pages live under
+// data_models/iosxe/<family>/index.md so the URL shape mirrors
+// netascode.cisco.com/docs/data_models/iosxe/<family>/. Front
+// matter (title, parent) lets MkDocs build a navigation tree
+// without an extra mkdocs.yml entry per family.
+var portalFamilyTemplate = template.Must(template.New("portal-family").Parse(
+	`---
+title: {{ .Name }}
+parent: IOS-XE
+---
+
+# {{ .Name }}
+
+{{ if .Implemented -}}
+**Status:** implemented in cisco-virtual-kubelet.
+{{- else -}}
+**Status:** registered as a skeleton; the writer returns ErrNotImplemented.
+{{- end }}
+
+## Overview
+
+- Shape: ` + "`" + `{{ .Shape }}` + "`" + `
+{{- if .KeyFields }}
+- Key field(s): ` + "`" + `{{ range $i, $k := .KeyFields }}{{ if $i }}, {{ end }}{{ $k }}{{ end }}` + "`" + `
+{{- end }}
+{{- if .InnerKey }}
+- Inner key: ` + "`" + `{{ .InnerKey }}` + "`" + `
+{{- end }}
+{{- if .DependsOn }}
+- Depends on: {{ range $i, $d := .DependsOn }}{{ if $i }}, {{ end }}[{{ $d }}](../{{ $d }}/){{ end }}
+{{- end }}
+{{- if .Portal }}
+- Upstream netascode page: [{{ .Portal }}]({{ .Portal }})
+{{- end }}
+
+## YANG paths
+
+### Cisco-IOS-XE-native
+
+{{ range .YANGPaths }}- ` + "`" + `{{ . }}` + "`" + `
+{{ end }}
+
+{{ if .OpenConfigPaths -}}
+### OpenConfig
+
+{{ range .OpenConfigPaths }}- ` + "`" + `{{ . }}` + "`" + `
+{{ end }}
+{{- end }}
+
+## Managed leaves
+
+{{ if .ManagedLeaves -}}
+The writer reads and writes the following leaves; everything outside
+this set is preserved as-is on the device.
+{{ range .ManagedLeaves }}
+- ` + "`" + `{{ . }}` + "`" + `
+{{- end }}
+{{ else -}}
+_No managed leaves reported (skeleton family)._
+{{ end }}
+`))
+
+// portalIndexTemplate is the MkDocs landing page that lives at
+// data_models/iosxe/index.md. The generated table links to each
+// family's directory rather than a flat .md so the URLs mirror the
+// netascode portal one-for-one.
+var portalIndexTemplate = template.Must(template.New("portal-index").Parse(
+	`---
+title: IOS-XE
+nav_order: 1
+has_children: true
+---
+
+# IOS-XE family reference
+
+Auto-generated. Layout mirrors the upstream netascode portal
+(https://netascode.cisco.com/docs/data_models/iosxe/) so an
+operator's muscle memory transfers. Do not edit by hand; re-run
+` + "`" + `cisco-vk-config-docs --dialect=portal` + "`" + `.
+
+| family | shape | status | upstream |
+|---|---|---|---|
+{{ range . -}}
+| [{{ .Name }}]({{ .Name }}/) | {{ .Shape }} | {{ if .Implemented }}implemented{{ else }}skeleton{{ end }} | {{ if .Portal }}[↗]({{ .Portal }}){{ end }} |
 {{ end }}
 `))
 

@@ -81,6 +81,47 @@ func TestDryRunTouchesNothing(t *testing.T) {
 	}
 }
 
+func TestRunPortalDialectMirrorsNetascodeLayout(t *testing.T) {
+	// Portal dialect must:
+	//   - write each family under data_models/iosxe/<name>/index.md
+	//   - emit MkDocs front matter on each page
+	//   - cross-link family deps via "../<name>/" relative URLs
+	//   - surface OpenConfig paths when the family has them
+	outDir := t.TempDir()
+	var out, errBuf bytes.Buffer
+	code := run([]string{"--out", outDir, "--dialect", "portal"}, &out, &errBuf)
+	if code != exitOK {
+		t.Fatalf("exit=%d stderr=%q", code, errBuf.String())
+	}
+	body, err := os.ReadFile(filepath.Join(outDir, "data_models", "iosxe", "vlan", "index.md"))
+	if err != nil {
+		t.Fatalf("read vlan index: %v", err)
+	}
+	if !strings.Contains(string(body), "title: vlan") {
+		t.Errorf("MkDocs front matter missing on vlan: %s", body)
+	}
+	if !strings.Contains(string(body), "OpenConfig") {
+		t.Errorf("OpenConfig section missing on vlan (the family has openconfig_paths):\n%s", body)
+	}
+
+	idx, err := os.ReadFile(filepath.Join(outDir, "data_models", "iosxe", "index.md"))
+	if err != nil {
+		t.Fatalf("read portal index: %v", err)
+	}
+	if !strings.Contains(string(idx), "title: IOS-XE") {
+		t.Errorf("portal index missing front matter:\n%s", idx)
+	}
+}
+
+func TestRunPortalDialectInvalidValueRejected(t *testing.T) {
+	outDir := t.TempDir()
+	var out, errBuf bytes.Buffer
+	code := run([]string{"--out", outDir, "--dialect", "weird"}, &out, &errBuf)
+	if code != exitBadFlags {
+		t.Fatalf("exit=%d, want exitBadFlags=%d. stderr=%s", code, exitBadFlags, errBuf.String())
+	}
+}
+
 func TestSkeletonFamilyMarkedAsSuch(t *testing.T) {
 	// There are no skeleton families in the committed tree at this
 	// point (every family has a writer). So this test verifies that a
