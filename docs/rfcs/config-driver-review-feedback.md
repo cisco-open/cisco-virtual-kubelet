@@ -1,0 +1,171 @@
+# IOS-XE Configuration Driver — review feedback & action plan
+
+**Branch:** `pr/johalley/ciscoconfig_xe`
+**Date:** 2026-04-24
+**Status:** feedback received, actions pending
+
+This document captures the reviewer's feedback on the
+[design review RFC](iosxe-config-driver-review.md) and the agreed
+action plan for each item. Items are numbered for cross-referencing in
+PRs and commit messages (e.g. "Addresses feedback-2").
+
+---
+
+## Feedback 1 — Drop `cisco-vk-config-collect`
+
+**Reviewer position:** Brownfield conversion is a one-time activity.
+After the initial onboard the NAC data model is the sole source of
+truth. There is no ongoing need for a VK-side `nac-collect` equivalent;
+operators should use the existing `nac-collect` tool directly.
+
+**Analysis:** The current `tools/cisco-vk-config-collect/` is a faithful
+port of `nac-collect` semantics — it calls every writer's `Fetch`, maps
+back to netascode shape, and emits YAML. Since onboarding is one-shot
+per device, maintaining a parallel tool in the VK repo adds code surface
+with no ongoing runtime value. The output YAML shape is already
+identical, so `nac-collect` output is directly usable as
+`IOSXEConfig.spec.source.inline` or as a ConfigMap.
+
+### Action
+
+| Step | Description | Priority |
+|------|-------------|----------|
+| 1a | Remove `tools/cisco-vk-config-collect/` from the branch. | Immediate |
+| 1b | Remove the committed binary `cisco-vk-config-collect` from tracking and add it to `.gitignore`. | Immediate |
+| 1c | Update the RFC (§5, §9) to reference `nac-collect` as the brownfield onboarding path, noting that its output is directly consumable by IOSXEConfig CRs. | Immediate |
+
+---
+
+## Feedback 2 — Refocus `cisco-vk-config-lint` on drift detection
+
+**Reviewer position:** Do not try to achieve feature parity with
+`nac-validate` for static schema validation. Instead, focus
+`cisco-vk-config-lint` on detecting configuration drift — both objects
+defined in the data model that have drifted on the device, and
+objects/config existing on the device that are not defined in the model.
+
+**Analysis:** The current `tools/cisco-vk-config-lint/` is an offline
+static validator (YAML parse, kind recognition, family-set check,
+per-family semantic rules). This substantially overlaps `nac-validate`.
+
+The reviewer wants two drift dimensions:
+
+1. **Model → device drift:** families/leaves declared in the IOSXEConfig
+   whose device state has diverged from the declared intent.
+2. **Device → model gaps:** config present on the device that no
+   IOSXEConfig CR claims (unmanaged config detection).
+
+Dimension 1 is partially covered by the engine's Fetch → Diff cycle and
+`driftPolicy: report` status output. Dimension 2 (orphan detection) is
+genuinely new — the engine only operates on `ManagedFamilies`, so device
+config outside those families is invisible today.
+
+### Action
+
+| Step | Description | Priority |
+|------|-------------|----------|
+| 2a | Strip the static schema validation from `cisco-vk-config-lint` (point operators to `nac-validate` for that). | Next iteration |
+| 2b | Repurpose the tool as a live drift reporter that connects to a device (or reads from IOSXEConfig CR status) and reports per-family drift for managed families (the Diff ops that would be applied). | Next iteration |
+| 2c | Add unmanaged-config detection: fetch the full device config, compare against the union of all IOSXEConfig CRs' `ManagedFamilies`, and report device-present families/objects that no CR claims. | Next iteration |
+| 2d | Support use as a CI tool in `driftPolicy: report` mode — "show me what would change before I switch to revert." | Next iteration |
+
+---
+
+## Feedback 3 — Template support: data-model YAML *and* CLI/Jinja style
+
+**Reviewer position:** NAC templates can be expressed in two styles:
+
+1. **Data-model style** — parameterised netascode YAML (structured).
+2. **CLI/Jinja style** — IOS-XE CLI snippets rendered via Jinja or HCL
+   templates (text-based).
+
+The VK implementation should ideally support both.
+
+**Analysis:** The current `IOSXETemplate` only supports data-model style:
+a YAML body with Go `text/template` `{{ .Param }}` substitution,
+producing a netascode fragment that merges into the intent tree
+(`internal/drivers/iosxe/configdriver/intent/template.go`).
+
+The CLI/Jinja style is fundamentally different — it produces IOS-XE CLI
+text, not structured YAML. Supporting it requires:
+
+- A type discriminator on `IOSXETemplate` (`spec.type: data-model | cli`).
+- For `cli` templates: render the template to CLI text, then push via a
+  CLI-capable transport (SSH exec, NETCONF `edit-config` with CLI
+  payload, or a RESTCONF CLI-passthrough if available).
+- Consider switching the template engine from Go `text/template` to HCL
+  template evaluation (`hashicorp/hcl/v2/hclsyntax`) to achieve parity
+  with the function set in `terraform-provider-utils`
+  (`hcl_template.go`): `format`, `join`, `replace`, `try/can`,
+  `regex`, `split`, etc. The HCL evaluator is pure Go with no Terraform
+  runtime dependency.
+
+### Action
+
+| Step | Description | Priority |
+|------|-------------|----------|
+| 3a | Add `spec.type` field to the `IOSXETemplate` CRD with values `data-model` (default, current behaviour) and `cli`. | CRD change now |
+| 3b | Defer CLI template rendering and transport to Phase 2 (when NETCONF lands). The CRD field should be present now so early adopters don't need a schema migration later. | Implementation deferred |
+| 3c | Evaluate migrating the data-model template engine from Go `text/template` to HCL template evaluation for function-set parity with `terraform-provider-utils`. | Next iteration |
+
+---
+
+## Feedback 4 — Share YAML merge logic with `terraform-provider-utils`
+
+**Reviewer position:** The YAML merge logic in
+[`netascode/terraform-provider-utils`](https://github.com/netascode/terraform-provider-utils)
+(`internal/provider/merge.go`) is the canonical implementation used by
+all NAC modules today. CVK should use the same code rather than
+reimplementing it. If the merge logic has not been broken out into its
+own Go module, that is something to pursue to avoid code duplication.
+
+**Analysis — implementation differences:**
+
+| Aspect | `terraform-provider-utils` | CVK `intent/merge.go` |
+|--------|----------------------------|-----------------------|
+| Map merge | `MergeMaps` — recursive, supports `*OrderedMap` and `map[string]any` | `mergeMaps` — recursive, `map[string]any` only |
+| List merge | All-matching-primitive-fields heuristic (`itemsWouldMerge`) | Named key-field candidates `name > id > sequence > type` + explicit `KeyRules` from `families.yaml` |
+| List identity | Any shared primitive key-value match | Single declared key field |
+| Duplicate detection | `hasDuplicatesInList` with inverted index | Not handled |
+| Key order | `OrderedMap` preserves YAML source key order | Standard `map[string]any` (no order guarantee) |
+| Mutation | Mutates `dst` in place | Returns deep-copied output; neither input mutated |
+
+The list-merge semantics are **materially different**. The key-field
+approach in CVK is more deterministic (uses family metadata from
+`families.yaml`), but the primitive-match heuristic in
+`terraform-provider-utils` may handle edge cases CVK misses — and
+crucially, it is the heuristic operators already rely on in production
+NAC deployments.
+
+**Licensing note:** `terraform-provider-utils` is MPL-2.0; CVK is
+Apache-2.0. MPL-2.0 is file-level copyleft, so importing as a Go module
+dependency is fine, but the shared module's own license should be
+confirmed with legal.
+
+**Practical note:** The core merge logic (`MergeMaps`, `OrderedMap`,
+`itemsWouldMerge`, `mergeListItemsIndexed`) has no Terraform framework
+dependency and is cleanly separable from the `terraform-plugin-framework`
+function wrappers.
+
+### Action
+
+| Step | Description | Priority |
+|------|-------------|----------|
+| 4a | Add cross-validation tests: run the same family YAML corpus through both CVK's `MergeWithRules` and `terraform-provider-utils`'s `MergeMaps` and assert identical output for all 54 families. | Immediate |
+| 4b | Open a discussion/issue with `terraform-provider-utils` maintainers proposing extraction of the core merge + YAML utilities into a standalone Go module (e.g. `github.com/netascode/nac-utils-go`) containing: `OrderedMap`, `MergeMaps`, `yamlDecode`/`yamlEncode`, `resolveYamlTags`, and the HCL template evaluator. | Medium term |
+| 4c | Once the shared module exists, replace CVK's `intent/merge.go` with an import of the shared module, adapting the `KeyRules` layer as a CVK-local wrapper. | Medium term |
+| 4d | Confirm MPL-2.0 / Apache-2.0 compatibility with legal for the shared module approach. | Medium term |
+
+---
+
+## Summary — priority matrix
+
+| # | Action | Priority | Blocks |
+|---|--------|----------|--------|
+| 1a–1c | Remove `cisco-vk-config-collect`, update RFC | Immediate | — |
+| 3a | Add `spec.type` to `IOSXETemplate` CRD | Immediate | — |
+| 4a | Cross-validation tests for merge logic | Immediate | — |
+| 2a–2d | Repurpose `cisco-vk-config-lint` as drift reporter | Next iteration | — |
+| 3c | Evaluate HCL template engine migration | Next iteration | — |
+| 3b | CLI template rendering + transport | Deferred (Phase 2 / NETCONF) | 3a |
+| 4b–4d | Shared merge module with `terraform-provider-utils` | Medium term | 4a |
