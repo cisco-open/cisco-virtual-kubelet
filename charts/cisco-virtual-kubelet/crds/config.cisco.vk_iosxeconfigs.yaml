@@ -125,6 +125,62 @@ spec:
                   reconcile. Default is to leave previously-written configuration in
                   place, matching operator intuition during migrations.
                 type: boolean
+              secretRefs:
+                description: |-
+                  SecretRefs lets the resolver merge sensitive configuration
+                  (BGP MD5 keys, IPSec PSKs, SNMPv3 auth/priv passphrases,
+                  enable secrets, RADIUS shared keys) into the resolved intent
+                  from Kubernetes Secrets, so secret material never lives in a
+                  ConfigMap or git-tracked YAML.
+
+                  Each entry names a family and a Secret-key whose value is a
+                  YAML/JSON snippet that deep-merges into the family's intent
+                  block. Snippets are merged after defaults, device groups,
+                  interface groups, templates, and the per-device source —
+                  secret material wins on overlap so a placeholder value in
+                  the source can never leak past resolution.
+
+                  The cisco-vk pod's ServiceAccount must have get/watch
+                  permission on the referenced Secrets in their namespace; the
+                  shipped Helm RBAC already covers this for the pod's own
+                  namespace.
+                items:
+                  description: |-
+                    FamilySecretRef binds a Kubernetes Secret to a family's intent
+                    block. The named Secret is read from the same namespace as the
+                    IOSXEConfig CR; cross-namespace references are deliberately
+                    disallowed to keep RBAC trivial. Shape mirrors ConfigMapKeyRef
+                    so operators have one mental model for both kinds of external
+                    payload.
+                  properties:
+                    family:
+                      description: |-
+                        Family is the netascode family the snippet merges into. Must
+                        be one of the names in ManagedFamilies; resolution fails if
+                        it isn't, so a typo doesn't quietly produce a no-op.
+                      minLength: 1
+                      type: string
+                    key:
+                      description: |-
+                        Key is the entry inside Secret.Data whose value is parsed as
+                        a YAML/JSON snippet and merged into the family's intent. The
+                        snippet must shape itself to fit under the family root —
+                        `{"neighbors":[...]}` for bgp, `{"communities":[...]}` for
+                        snmp_server — exactly as it would appear in a per-device
+                        source.
+                      minLength: 1
+                      type: string
+                    name:
+                      description: Name of the Secret in the same namespace as the
+                        CR.
+                      minLength: 1
+                      type: string
+                  required:
+                  - family
+                  - key
+                  - name
+                  type: object
+                type: array
               source:
                 description: Source carries the per-device netascode configuration
                   payload.

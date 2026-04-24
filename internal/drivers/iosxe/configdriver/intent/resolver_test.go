@@ -400,6 +400,109 @@ func TestResolveInterfaceGroupNamePatternAnchoredOnBothEnds(t *testing.T) {
 	}
 }
 
+func TestResolveSecretRefMergesIntoFamily(t *testing.T) {
+	// SecretRefs are the path for credentials that must not live
+	// in a ConfigMap or git-tracked YAML. The resolver loads the
+	// Secret, parses the named key as a YAML/JSON snippet, and
+	// merges it under the family root. Secret material must win
+	// against any placeholder in the per-device source — that's
+	// the whole point of the feature.
+	device := mkDevice("edge-01", nil)
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "bgp-creds", Namespace: "network"},
+		Data: map[string][]byte{
+			"bgp.yaml": []byte(`{"neighbors":[{"asn":65001,"password":"realsecret"}]}`),
+		},
+	}
+	source := `{"bgp":{"neighbors":[{"asn":65001,"password":"placeholder"}]}}`
+	cr := mkCR("edge-01", "edge-01", []string{"bgp"}, source)
+	cr.Spec.SecretRefs = []configv1alpha1.FamilySecretRef{{
+		Family: "bgp",
+		Name:   "bgp-creds",
+		Key:    "bgp.yaml",
+	}}
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, secret, cr).
+		Build()
+	r := &Resolver{Client: c, KeyRules: KeyRules{}}
+
+	got, err := r.Resolve(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	bgp, ok := got.Configuration["bgp"].(map[string]any)
+	if !ok {
+		t.Fatalf("no bgp family: %#v", got.Configuration)
+	}
+	neighbors, ok := bgp["neighbors"].([]any)
+	if !ok || len(neighbors) == 0 {
+		t.Fatalf("no neighbors: %#v", bgp)
+	}
+	first := neighbors[0].(map[string]any)
+	if pw, _ := first["password"].(string); pw != "realsecret" {
+		t.Errorf("secret value did not win against placeholder: password=%q", pw)
+	}
+}
+
+func TestResolveSecretRefRejectsUnmanagedFamily(t *testing.T) {
+	// A typo in spec.secretRefs[].family must fail loud — silent
+	// no-ops would leave credentials out of the apply and the
+	// operator would get an unauthenticated session that's not
+	// obviously the result of a typo.
+	device := mkDevice("edge-01", nil)
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "creds", Namespace: "network"},
+		Data:       map[string][]byte{"x.yaml": []byte(`{}`)},
+	}
+	cr := mkCR("edge-01", "edge-01", []string{"bgp"}, `{}`)
+	cr.Spec.SecretRefs = []configv1alpha1.FamilySecretRef{{
+		Family: "snmp_server", // not in managedFamilies
+		Name:   "creds",
+		Key:    "x.yaml",
+	}}
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, secret, cr).
+		Build()
+	r := &Resolver{Client: c}
+
+	_, err := r.Resolve(context.Background(), cr)
+	if err == nil || !strings.Contains(err.Error(), "not in managedFamilies") {
+		t.Fatalf("got %v, want managed-families rejection", err)
+	}
+}
+
+func TestResolveSecretRefMissingKeyFailsLoud(t *testing.T) {
+	// Missing key inside the Secret must error — better to halt
+	// the reconcile than apply a config that's quietly missing
+	// the credential it referenced.
+	device := mkDevice("edge-01", nil)
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "creds", Namespace: "network"},
+		Data:       map[string][]byte{"other": []byte(`{}`)},
+	}
+	cr := mkCR("edge-01", "edge-01", []string{"bgp"}, `{}`)
+	cr.Spec.SecretRefs = []configv1alpha1.FamilySecretRef{{
+		Family: "bgp",
+		Name:   "creds",
+		Key:    "missing",
+	}}
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, secret, cr).
+		Build()
+	r := &Resolver{Client: c}
+
+	_, err := r.Resolve(context.Background(), cr)
+	if err == nil || !strings.Contains(err.Error(), `key "missing"`) {
+		t.Fatalf("got %v, want missing-key error", err)
+	}
+}
+
 func TestResolveInterfaceGroupSkipsNonMemberDevice(t *testing.T) {
 	// Device doesn't match the selector — group should be silently
 	// skipped, not fail resolution.

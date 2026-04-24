@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"sort"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -261,6 +262,33 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 		configuration = asMap(MergeWithRules(configuration, expanded, r.KeyRules))
 	}
 
+	// 4b) SecretRefs — last in, so secret material always wins
+	// against any placeholder value an operator might leave in a
+	// ConfigMap or git-tracked source. Fail closed on missing
+	// Secret / missing key / non-managed family so a typo doesn't
+	// silently leave credentials out of the apply.
+	managedSet := map[string]struct{}{}
+	for _, fam := range cr.Spec.ManagedFamilies {
+		managedSet[fam] = struct{}{}
+	}
+	for i, sr := range cr.Spec.SecretRefs {
+		if _, ok := managedSet[sr.Family]; !ok {
+			return nil, fmt.Errorf(
+				"IOSXEConfig %s/%s: secretRefs[%d]: family %q not in managedFamilies",
+				cr.Namespace, cr.Name, i, sr.Family)
+		}
+		snippet, err := r.loadSecretSnippet(ctx, cr.Namespace, sr)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"IOSXEConfig %s/%s: secretRefs[%d]: %w",
+				cr.Namespace, cr.Name, i, err)
+		}
+		// Merge under the family key so the snippet shape mirrors a
+		// per-device source fragment for that family.
+		wrapped := map[string]any{sr.Family: snippet}
+		configuration = asMap(MergeWithRules(configuration, wrapped, r.KeyRules))
+	}
+
 	policy := cr.Spec.DriftPolicy
 	if policy == "" {
 		policy = configv1alpha1.DriftPolicyRevert
@@ -310,6 +338,31 @@ func (r *Resolver) loadTemplate(ctx context.Context, ns, name string) (*configv1
 		return nil, fmt.Errorf("get IOSXETemplate %s/%s: %w", ns, name, err)
 	}
 	return &tpl, nil
+}
+
+// loadSecretSnippet reads the named Secret in ns, decodes the
+// requested key as YAML/JSON, and returns the decoded snippet ready
+// to merge under the family key. Returns a clear error for the
+// three failure modes operators actually hit: missing Secret,
+// missing key inside the Secret, malformed payload. None of those
+// should ever land silently at the device.
+func (r *Resolver) loadSecretSnippet(ctx context.Context, ns string, ref configv1alpha1.FamilySecretRef) (any, error) {
+	var secret corev1.Secret
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: ns, Name: ref.Name}, &secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("Secret %s/%s not found", ns, ref.Name)
+		}
+		return nil, fmt.Errorf("get Secret %s/%s: %w", ns, ref.Name, err)
+	}
+	raw, ok := secret.Data[ref.Key]
+	if !ok {
+		return nil, fmt.Errorf("Secret %s/%s has no key %q", ns, ref.Name, ref.Key)
+	}
+	var snippet any
+	if err := yaml.Unmarshal(raw, &snippet); err != nil {
+		return nil, fmt.Errorf("Secret %s/%s key %q: parse YAML: %w", ns, ref.Name, ref.Key, err)
+	}
+	return snippet, nil
 }
 
 func (r *Resolver) loadInterfaceGroup(ctx context.Context, ns, name string) (*configv1alpha1.IOSXEInterfaceGroupConfig, error) {

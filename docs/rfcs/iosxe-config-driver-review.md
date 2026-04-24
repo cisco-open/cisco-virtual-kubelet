@@ -963,9 +963,19 @@ Closes the netascode-parity depth gaps identified in §10.
 - **Offline `plan` subcommand** on `cisco-vk-config-lint`:
   diff against last-applied state cached on the CR's status,
   no device access required. Closes §10.5 for regulated envs.
-- **Per-family `secretRefs`** on IOSXEConfig so writers can
-  merge credentials from a Secret into the intent before
-  apply. Closes the PSK / enable-secret gap (§10.6).
+- **Per-family `secretRefs`** on IOSXEConfig. ✅ Shipped:
+  `IOSXEConfigSpec.SecretRefs` is a list of
+  `{family, name, key}` entries. The resolver loads each
+  Secret from the CR's namespace, parses the named key as a
+  YAML/JSON snippet, and deep-merges it under the family
+  root. Slot is **after** the per-device source so secret
+  material always wins against any placeholder a ConfigMap
+  or git-tracked YAML might hold. Failure modes — missing
+  Secret, missing key, family not in `managedFamilies` — are
+  loud errors so a typo never silently leaves credentials out
+  of the apply. Operators put BGP MD5, IPSec PSK, SNMPv3
+  passphrases, enable secrets, RADIUS shared keys here.
+  Closes the §10.6 PSK / enable-secret gap.
 - **Interface selector by pattern** — regex on
   `InterfaceMatch.NamePattern`. ✅ Shipped: pattern matches expand
   against every interface of the matching `Type` declared in the
