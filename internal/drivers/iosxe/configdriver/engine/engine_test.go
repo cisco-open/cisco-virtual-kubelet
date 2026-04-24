@@ -67,6 +67,7 @@ type fakeWriter struct {
 	applyErr  error
 	ops       []transport.Op
 	residual  []transport.Op
+	appliedOps []transport.Op
 	fetches   int
 	applies   int
 	diffCalls int
@@ -89,9 +90,29 @@ func (w *fakeWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	}
 	return w.ops, nil
 }
-func (w *fakeWriter) Apply(context.Context, transport.Interface, []transport.Op) error {
+func (w *fakeWriter) Apply(_ context.Context, _ transport.Interface, ops []transport.Op) error {
 	w.applies++
+	w.appliedOps = append(w.appliedOps, ops...)
 	return w.applyErr
+}
+
+// fakePruneWriter wraps fakeWriter with PruneCapable behaviour. The
+// engine's PruneOnRelinquish path is opt-in via this interface check,
+// so the test fixture has to be a distinct type — fakeWriter without
+// PruneDiff is the negative case.
+type fakePruneWriter struct {
+	*fakeWriter
+	pruneOps   []transport.Op
+	pruneErr   error
+	pruneCalls int
+}
+
+func (w *fakePruneWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
+	w.pruneCalls++
+	if w.pruneErr != nil {
+		return nil, w.pruneErr
+	}
+	return w.pruneOps, nil
 }
 
 func mkCR(name, device string, families ...string) *configv1alpha1.IOSXEConfig {
@@ -179,6 +200,66 @@ func TestReconcileReportPolicyDoesNotApply(t *testing.T) {
 	}
 	if w.applies != 0 {
 		t.Fatal("Apply called under report policy")
+	}
+}
+
+func TestReconcilePruneOnRelinquishCallsPruneDiff(t *testing.T) {
+	// PruneOnRelinquish: true + writer implements PruneCapable ⇒ the
+	// engine appends prune ops to the additive ones. Two Apply calls
+	// overall — the additive op and the prune op land via the same
+	// Mutate (Apply is called once, batching the ops).
+	pw := &fakePruneWriter{
+		fakeWriter: &fakeWriter{
+			family: "vlan",
+			ops:    []transport.Op{{Verb: transport.VerbMerge, Path: "/want"}},
+		},
+		pruneOps: []transport.Op{{Verb: transport.VerbDelete, Path: "/orphan"}},
+	}
+	e := &Engine{
+		Transport: &stubTransport{},
+		Lookup:    func(f string) writers.SectionWriter { return pw },
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName: "edge-01", ManagedFamilies: []string{"vlan"},
+		Configuration:     map[string]any{"vlan": map[string]any{}},
+		DriftPolicy:       configv1alpha1.DriftPolicyRevert,
+		PruneOnRelinquish: true,
+	}
+	_ = e.Reconcile(context.Background(), res)
+	if pw.pruneCalls < 1 {
+		t.Fatalf("PruneDiff calls=%d, want at least 1", pw.pruneCalls)
+	}
+	// Verify the additive op precedes the prune op — engine must
+	// concatenate Diff first, PruneDiff second.
+	if len(pw.appliedOps) < 2 {
+		t.Fatalf("got %d applied ops, want at least 2: %#v", len(pw.appliedOps), pw.appliedOps)
+	}
+	if pw.appliedOps[0].Verb != transport.VerbMerge || pw.appliedOps[1].Verb != transport.VerbDelete {
+		t.Errorf("op order wrong: %#v", pw.appliedOps)
+	}
+}
+
+func TestReconcilePruneOnRelinquishSkippedWhenWriterNotCapable(t *testing.T) {
+	// fakeWriter does NOT implement PruneCapable. Engine must
+	// silently skip the prune step rather than erroring — that's
+	// how families roll out support one at a time.
+	w := &fakeWriter{
+		family: "vlan",
+		ops:    []transport.Op{{Verb: transport.VerbMerge, Path: "/x"}},
+	}
+	e := &Engine{
+		Transport: &stubTransport{},
+		Lookup:    func(f string) writers.SectionWriter { return w },
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName: "edge-01", ManagedFamilies: []string{"vlan"},
+		Configuration:     map[string]any{"vlan": map[string]any{}},
+		DriftPolicy:       configv1alpha1.DriftPolicyRevert,
+		PruneOnRelinquish: true,
+	}
+	r := e.Reconcile(context.Background(), res)
+	if r.Phase != PhaseInSync {
+		t.Fatalf("Phase=%s, want InSync (writer is not prune-capable, so flag is a no-op)", r.Phase)
 	}
 }
 

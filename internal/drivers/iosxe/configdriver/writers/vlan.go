@@ -134,6 +134,49 @@ func (vlanWriter) Apply(ctx context.Context, c transport.Interface, ops []transp
 	return c.Mutate(ctx, "", ops)
 }
 
+// PruneDiff emits a VerbDelete op for each VLAN id present on the
+// device but absent from desired. Implements PruneCapable; the
+// engine consults this only when the CR opts in via
+// spec.pruneOnRelinquish: true.
+func (vlanWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
+	desiredList, err := coerceVLANBlock(desired, "desired")
+	if err != nil {
+		return nil, err
+	}
+	observedList, err := coerceList(observed, "observed")
+	if err != nil {
+		return nil, err
+	}
+	want := map[int]struct{}{}
+	for _, v := range desiredList {
+		id, err := vlanID(v)
+		if err != nil {
+			return nil, fmt.Errorf("desired: %w", err)
+		}
+		want[id] = struct{}{}
+	}
+	var orphans []int
+	for _, v := range observedList {
+		id, err := vlanID(v)
+		if err != nil {
+			return nil, fmt.Errorf("observed: %w", err)
+		}
+		if _, kept := want[id]; kept {
+			continue
+		}
+		orphans = append(orphans, id)
+	}
+	sort.Ints(orphans)
+	ops := make([]transport.Op, 0, len(orphans))
+	for _, id := range orphans {
+		ops = append(ops, transport.Op{
+			Verb: transport.VerbDelete,
+			Path: fmt.Sprintf("%s=%d", vlanListPath, id),
+		})
+	}
+	return ops, nil
+}
+
 // coerceVLANBlock accepts either the bare vlan-list slice or the
 // nested netascode shape `{"vlans":[...]}`. The resolver produces the
 // nested shape; inline CR test fixtures often use the bare slice.

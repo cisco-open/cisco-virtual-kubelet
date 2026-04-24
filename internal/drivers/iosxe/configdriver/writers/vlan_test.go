@@ -105,6 +105,48 @@ func TestVLANDiffIgnoresExtraObservedVLANs(t *testing.T) {
 	}
 }
 
+func TestVLANPruneDiffEmitsDeletesForObservedNotInDesired(t *testing.T) {
+	// PruneDiff is the opt-in counterpart to Diff: when the CR sets
+	// spec.pruneOnRelinquish: true, the engine consults this to learn
+	// which device entries no longer have a home in the intent. We
+	// must emit one VerbDelete per orphan, in deterministic id order
+	// so equivalent diffs are byte-equal.
+	w := vlanWriter{}
+	desired := []map[string]any{mkVLAN(10, "users")}
+	observed := []map[string]any{mkVLAN(10, "users"), mkVLAN(99, "stray"), mkVLAN(50, "old")}
+	ops, err := w.PruneDiff(desired, observed)
+	if err != nil {
+		t.Fatalf("PruneDiff: %v", err)
+	}
+	if len(ops) != 2 {
+		t.Fatalf("got %d ops, want 2", len(ops))
+	}
+	for _, op := range ops {
+		if op.Verb != transport.VerbDelete {
+			t.Errorf("op verb=%q, want VerbDelete", op.Verb)
+		}
+	}
+	if !strings.HasSuffix(ops[0].Path, "=50") || !strings.HasSuffix(ops[1].Path, "=99") {
+		t.Errorf("paths not in id order: %s, %s", ops[0].Path, ops[1].Path)
+	}
+}
+
+func TestVLANPruneDiffEmptyWhenObservedIsSubset(t *testing.T) {
+	// Observed is a subset of desired ⇒ nothing to prune. Important:
+	// PruneDiff must not emit ops simply because the device is
+	// missing entries — that's Diff's job (additive).
+	w := vlanWriter{}
+	desired := []map[string]any{mkVLAN(10, "users"), mkVLAN(20, "voip")}
+	observed := []map[string]any{mkVLAN(10, "users")}
+	ops, err := w.PruneDiff(desired, observed)
+	if err != nil {
+		t.Fatalf("PruneDiff: %v", err)
+	}
+	if len(ops) != 0 {
+		t.Fatalf("got %d ops, want 0", len(ops))
+	}
+}
+
 func TestVLANDiffIgnoresUnmanagedLeavesOnObserved(t *testing.T) {
 	// Device returns extra leaves (e.g. remote-span, device-tracking)
 	// that the Phase-1 writer does not model. It must NOT treat them as

@@ -61,3 +61,19 @@ type SectionWriter interface {
 	// core then invokes Rollback with the PreImage captured earlier.
 	Apply(ctx context.Context, c configdriver.TransportClient, ops []transport.Op) error
 }
+
+// PruneCapable is an optional interface a writer implements when it
+// can safely emit DELETE ops for entries present on the device but
+// absent from the resolved intent. The engine consults this only
+// when the IOSXEConfig CR sets spec.pruneOnRelinquish: true, so
+// writers can roll out support family-by-family without the engine
+// or the CR vocabulary growing per-family flags.
+//
+// The contract for PruneDiff matches Diff except that the returned
+// ops describe deletions only — additive ops are still produced by
+// Diff, and the engine concatenates the two slices in order
+// (additive first, prune second). Returning an empty slice means
+// "nothing to prune".
+type PruneCapable interface {
+	PruneDiff(desired, observed any) ([]transport.Op, error)
+}

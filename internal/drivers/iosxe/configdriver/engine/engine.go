@@ -253,6 +253,23 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 			Message: fmt.Sprintf("Diff: %v", err),
 		}
 	}
+	// PruneOnRelinquish: opt-in DELETE ops for entries on the device
+	// that the resolved intent no longer contains. Pruning runs only
+	// when the CR opts in *and* the writer implements PruneCapable.
+	// Writers that don't implement it are silently passed through —
+	// every family will fail-closed by default until rolled out.
+	if res.PruneOnRelinquish {
+		if pc, ok := w.(writers.PruneCapable); ok {
+			pruneOps, err := pc.PruneDiff(desired, observed)
+			if err != nil {
+				return FamilyStatus{
+					Name: family, State: "ApplyError",
+					Message: fmt.Sprintf("PruneDiff: %v", err),
+				}
+			}
+			ops = append(ops, pruneOps...)
+		}
+	}
 
 	// No-op: nothing to apply, nothing to verify. Family is InSync by
 	// the writer's own definition of equivalence.
@@ -302,6 +319,22 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 			Name: family, State: "ApplyError",
 			OpCount: len(ops),
 			Message: fmt.Sprintf("Verify: re-diff failed: %v", err),
+		}
+	}
+	// Verify against prune too — otherwise a pruned entry that the
+	// device retained (e.g. a stale ACL the device kept around)
+	// would slip past as InSync.
+	if res.PruneOnRelinquish {
+		if pc, ok := w.(writers.PruneCapable); ok {
+			residualPrune, err := pc.PruneDiff(desired, verify)
+			if err != nil {
+				return FamilyStatus{
+					Name: family, State: "ApplyError",
+					OpCount: len(ops),
+					Message: fmt.Sprintf("Verify: prune re-diff failed: %v", err),
+				}
+			}
+			residual = append(residual, residualPrune...)
 		}
 	}
 	if len(residual) > 0 {

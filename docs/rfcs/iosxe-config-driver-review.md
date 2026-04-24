@@ -937,9 +937,17 @@ Closes the netascode-parity depth gaps identified in §10.
   class actions. One writer refactor per family, mechanical —
   the helper pattern extracts cleanly from what
   `keyedListWriter` already does.
-- **`spec.pruneOnRelinquish: true` actual behaviour.** Field
-  already present; wire the writer to emit DELETE ops for
-  leaves dropped between reconciles when set.
+- **`spec.pruneOnRelinquish: true` actual behaviour.** ✅
+  Shipped: `ResolvedIntent.PruneOnRelinquish` carries the flag
+  through; writers that can safely prune implement the optional
+  `writers.PruneCapable` interface and the engine concatenates
+  their `PruneDiff` ops after `Diff`. Both keyedListWriter (the
+  shared helper that 50+ families use) and the bespoke
+  vlanWriter implement it; remaining bespoke writers (system,
+  interface_switchport, etc.) are passed through as a no-op
+  until they opt in. Verify pass also re-runs `PruneDiff` so a
+  pruned entry that the device retained surfaces as residual
+  drift rather than slipping through as InSync.
 - **Cluster-mode CR loader for `cisco-vk-config-lint`.** ✅
   Shipped: `--from-cluster` switches the loader to read
   IOSXEConfig CRs via the dynamic client. `--kubeconfig`,

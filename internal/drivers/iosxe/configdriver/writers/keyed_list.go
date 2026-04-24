@@ -141,6 +141,56 @@ func (w keyedListWriter) Apply(ctx context.Context, c transport.Interface, ops [
 	return c.Mutate(ctx, "", ops)
 }
 
+// PruneDiff emits a VerbDelete op for every entry present on the
+// device but absent from the desired intent. Implements PruneCapable
+// — the engine calls this only when spec.pruneOnRelinquish: true on
+// the IOSXEConfig.
+//
+// Path shape mirrors the merge ops produced by Diff: keyedListPath +
+// "=" + key. Body is empty because RESTCONF DELETE on a list-entry
+// path needs no payload. NETCONF maps VerbDelete to operation=
+// "delete" via its edit-config builder, and the path-to-subtree-
+// filter conversion handles the per-entry shape.
+func (w keyedListWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
+	desiredList, err := w.coerceBlock(desired, "desired")
+	if err != nil {
+		return nil, err
+	}
+	observedList, err := coerceList(observed, "observed")
+	if err != nil {
+		return nil, err
+	}
+	want := map[string]struct{}{}
+	for _, e := range desiredList {
+		k, err := entryKey(e, w.keyField)
+		if err != nil {
+			return nil, fmt.Errorf("%s: desired: %w", w.family, err)
+		}
+		want[k] = struct{}{}
+	}
+	var orphans []string
+	for _, e := range observedList {
+		k, err := entryKey(e, w.keyField)
+		if err != nil {
+			return nil, fmt.Errorf("%s: observed: %w", w.family, err)
+		}
+		if _, kept := want[k]; kept {
+			continue
+		}
+		orphans = append(orphans, k)
+	}
+	sort.Strings(orphans)
+
+	ops := make([]transport.Op, 0, len(orphans))
+	for _, k := range orphans {
+		ops = append(ops, transport.Op{
+			Verb: transport.VerbDelete,
+			Path: w.yangPath + "=" + k,
+		})
+	}
+	return ops, nil
+}
+
 // coerceBlock accepts the family-level container (resolver shape) or a
 // bare list. The resolver emits configuration[family] which is
 // typically a map with innerKey → list; tests sometimes hand in the

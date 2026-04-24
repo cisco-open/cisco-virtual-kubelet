@@ -89,6 +89,19 @@ type ResolvedIntent struct {
 	DriftPolicy     configv1alpha1.DriftPolicy
 	WriteStartup    bool
 
+	// PruneOnRelinquish, when true, asks the engine to issue DELETE
+	// ops for entries the device has but the resolved intent does
+	// not — i.e. opt into "if it's not in my CR, take it off the
+	// device" semantics. Default false matches the additive
+	// semantics CVK has historically promised: writers only touch
+	// entries the operator named.
+	//
+	// Only writers that implement the optional PruneCapable
+	// interface participate; families whose writer doesn't expose
+	// pruning are silently skipped, matching the same writer-by-
+	// writer rollout pattern the rest of the engine uses.
+	PruneOnRelinquish bool
+
 	// CLIBlocks carries CLI-type template expansions that do not
 	// merge into Configuration. Populated by the resolver when
 	// spec.templateRefs reference an IOSXETemplate with
@@ -254,14 +267,15 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 	}
 
 	return &ResolvedIntent{
-		DeviceName:      device,
-		ManagedFamilies: append([]string(nil), cr.Spec.ManagedFamilies...),
-		Configuration:   configuration,
-		Transactional:   cr.Spec.Transactional,
-		DriftPolicy:     policy,
-		WriteStartup:    cr.Spec.WriteStartup,
-		CLIBlocks:       cliBlocks,
-		SourceCR:        cr.DeepCopy(),
+		DeviceName:        device,
+		ManagedFamilies:   append([]string(nil), cr.Spec.ManagedFamilies...),
+		Configuration:     configuration,
+		Transactional:     cr.Spec.Transactional,
+		DriftPolicy:       policy,
+		WriteStartup:      cr.Spec.WriteStartup,
+		PruneOnRelinquish: cr.Spec.PruneOnRelinquish,
+		CLIBlocks:         cliBlocks,
+		SourceCR:          cr.DeepCopy(),
 	}, nil
 }
 
