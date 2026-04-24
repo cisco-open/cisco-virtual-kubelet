@@ -12,59 +12,97 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command cisco-vk-config-lint validates IOSXEConfig CRs (and
-// supporting scope objects) offline, before they reach the cluster.
-// It is the pre-commit / CI gate referenced by the RFC:
+// Command cisco-vk-config-lint is a live drift reporter. It
+// connects to an IOS-XE device, reads every family the driver
+// knows, and compares against the IOSXEConfig CRs the caller
+// supplies. Two dimensions are reported:
 //
-//   - YAML parses.
-//   - `kind` is a recognised IOSXEConfig family.
-//   - Every ManagedFamily is listed in schema/families.yaml.
-//   - Per-family semantic rules (VLAN ID range, VRF name shape, etc.).
+//   - Managed drift: families claimed by a CR whose device state
+//     has diverged from the declared intent — "what CVK would
+//     change on the next reconcile".
 //
-// Non-zero exit on any failure; problems are reported with file:line
-// context. A clean run is silent unless --verbose is set.
+//   - Device orphans: registered families with non-empty device
+//     state that no CR claims — "what is on the device that CVK
+//     will not touch".
+//
+// This replaces the tool's earlier role as an offline YAML
+// validator. Static schema validation (YAML shape, family-set
+// membership, per-leaf type checks) is deliberately delegated to
+// upstream nac-validate; see docs/rfcs/config-driver-review-feedback.md
+// feedback item 2 for the rationale.
+//
+// Typical usage:
+//
+//	# CI gate: exit non-zero if anything would change on next reconcile
+//	cisco-vk-config-lint \
+//	  --address 192.0.2.10 --username cisco-vk --password-env DEV_PASSWORD \
+//	  --device-name edge-01 \
+//	  --exit-on-drift \
+//	  ./manifests/edge-01/
+//
+//	# Ad-hoc orphan hunt before switching driftPolicy=revert
+//	cisco-vk-config-lint \
+//	  --address 192.0.2.10 --username cisco-vk --password-env DEV_PASSWORD \
+//	  --device-name edge-01 \
+//	  --mode=orphans \
+//	  ./manifests/edge-01/
 package main
 
 import (
+	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"io/fs"
+	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
+	"time"
 
-	"sigs.k8s.io/yaml"
-
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/schema"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 )
 
 type exitCode int
 
 const (
-	exitOK        exitCode = 0
-	exitBadFlags  exitCode = 2
-	exitBadInput  exitCode = 3
-	exitViolation exitCode = 4
+	exitOK       exitCode = 0
+	exitBadFlags exitCode = 2
+	exitBadInput exitCode = 3
+	exitFindings exitCode = 4 // drift or orphans when --exit-on-drift is set
+	exitInternal exitCode = 5
 )
 
-// recognised kinds. The lint rules for non-IOSXEConfig kinds are
-// lightweight (parse-only); IOSXEConfig gets the full rule set.
-var recognisedKinds = map[string]bool{
-	"IOSXEConfig":            true,
-	"IOSXEConfigDefaults":    true,
-	"IOSXEDeviceGroupConfig": true,
-	"IOSXETemplate":          true,
-}
+type reportMode string
 
-// flags captures the CLI surface so tests can drive run() directly
-// without going through os.Args.
+const (
+	modeFull    reportMode = "full"
+	modeDrift   reportMode = "drift"
+	modeOrphans reportMode = "orphans"
+)
+
 type flags struct {
-	paths   []string
-	verbose bool
-	strict  bool
+	// Device connection.
+	address     string
+	port        int
+	username    string
+	password    string
+	passwordEnv string
+	scheme      string
+	insecure    bool
+	timeout     time.Duration
+
+	// Target CR set.
+	deviceName string
+	crPaths    []string
+
+	// What to report.
+	mode    reportMode
+	ignored string
+
+	// Output.
+	output      string // "human" | "json"
+	exitOnDrift bool
 }
 
 func parseFlags(args []string, stderr io.Writer) (flags, error) {
@@ -72,40 +110,48 @@ func parseFlags(args []string, stderr io.Writer) (flags, error) {
 	fs.SetOutput(stderr)
 
 	var f flags
-	fs.BoolVar(&f.verbose, "verbose", false,
-		"print a line per passing file too; clean runs are silent without this flag")
-	fs.BoolVar(&f.strict, "strict", false,
-		"fail when a file contains a YAML document whose kind is not recognised "+
-			"(default: skip unrecognised kinds silently, matching a mixed-repo layout)")
+	fs.StringVar(&f.address, "address", "", "device management IP or hostname (required)")
+	fs.IntVar(&f.port, "port", 443, "RESTCONF port")
+	fs.StringVar(&f.username, "username", "", "RESTCONF username (required)")
+	fs.StringVar(&f.password, "password", "",
+		"RESTCONF password; prefer --password-env to keep secrets out of process-listings")
+	fs.StringVar(&f.passwordEnv, "password-env", "CVK_CONFIG_LINT_PASSWORD",
+		"environment variable holding the RESTCONF password when --password is not set")
+	fs.StringVar(&f.scheme, "scheme", "https",
+		"URL scheme; 'http' disables TLS entirely (for test fixtures only)")
+	fs.BoolVar(&f.insecure, "insecure", false, "skip TLS certificate verification")
+	fs.DurationVar(&f.timeout, "timeout", 30*time.Second, "per-family RESTCONF timeout")
+
+	fs.StringVar(&f.deviceName, "device-name", "",
+		"CiscoDevice name the loaded IOSXEConfig CRs must target (required)")
+	var modeStr string
+	fs.StringVar(&modeStr, "mode", "full",
+		"report dimensions: 'drift' (managed only), 'orphans' (unmanaged only), or 'full'")
+	fs.StringVar(&f.ignored, "ignore-families", "",
+		"comma-separated family names to skip (useful when a family is intentionally out of CVK scope on this device)")
+
+	fs.StringVar(&f.output, "output", "human", "'human' or 'json'")
+	fs.BoolVar(&f.exitOnDrift, "exit-on-drift", false,
+		"exit with code 4 when any managed drift or orphans are found — for CI gating")
 
 	if err := fs.Parse(args); err != nil {
 		return f, err
 	}
-	f.paths = fs.Args()
-	if len(f.paths) == 0 {
-		f.paths = []string{"."}
+	f.crPaths = fs.Args()
+
+	switch reportMode(modeStr) {
+	case modeFull, modeDrift, modeOrphans:
+		f.mode = reportMode(modeStr)
+	default:
+		return f, fmt.Errorf("invalid --mode %q (want drift|orphans|full)", modeStr)
+	}
+	if f.output != "human" && f.output != "json" {
+		return f, fmt.Errorf("invalid --output %q (want human|json)", f.output)
+	}
+	if f.password == "" {
+		f.password = os.Getenv(f.passwordEnv)
 	}
 	return f, nil
-}
-
-// violation is a single rule failure with enough context for CI logs
-// to surface it clearly.
-type violation struct {
-	file string
-	kind string
-	name string
-	msg  string
-}
-
-func (v violation) String() string {
-	head := v.file
-	if v.kind != "" {
-		head += ": " + v.kind
-	}
-	if v.name != "" {
-		head += "/" + v.name
-	}
-	return head + ": " + v.msg
 }
 
 func run(args []string, stdout, stderr io.Writer) exitCode {
@@ -114,317 +160,125 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 		if errors.Is(err, flag.ErrHelp) {
 			return exitOK
 		}
+		fmt.Fprintf(stderr, "ERROR: %v\n", err)
 		return exitBadFlags
 	}
 
-	families, err := schema.LoadFamilies()
+	if f.address == "" || f.username == "" || f.deviceName == "" {
+		fmt.Fprintln(stderr, "ERROR: --address, --username, and --device-name are required")
+		return exitBadFlags
+	}
+	if len(f.crPaths) == 0 {
+		fmt.Fprintln(stderr, "ERROR: supply at least one IOSXEConfig YAML path or directory")
+		return exitBadFlags
+	}
+
+	// Discover and load CRs. An empty match set is not an error —
+	// it means every non-empty family on the device will appear as
+	// an orphan, which is exactly what an operator asking "what am
+	// I about to manage?" wants to see.
+	files, err := discoverCRFiles(f.crPaths)
 	if err != nil {
-		fmt.Fprintf(stderr, "ERROR: load families.yaml: %v\n", err)
+		fmt.Fprintf(stderr, "ERROR: walk CR paths: %v\n", err)
 		return exitBadInput
 	}
-
-	files, err := discoverFiles(f.paths)
+	crs, err := loadCRsFromFiles(files, f.deviceName)
 	if err != nil {
-		fmt.Fprintf(stderr, "ERROR: walk: %v\n", err)
-		return exitBadInput
-	}
-	if len(files) == 0 {
-		fmt.Fprintf(stderr, "ERROR: no YAML files under %v\n", f.paths)
+		fmt.Fprintf(stderr, "ERROR: load CRs: %v\n", err)
 		return exitBadInput
 	}
 
-	var violations []violation
-	for _, path := range files {
-		vs, err := lintFile(path, families, f.strict)
-		if err != nil {
-			violations = append(violations, violation{file: path, msg: err.Error()})
-			continue
-		}
-		violations = append(violations, vs...)
-		if f.verbose && len(vs) == 0 {
-			fmt.Fprintf(stdout, "ok %s\n", path)
-		}
+	inputs := buildDriftInputs(f.deviceName, crs)
+
+	t, err := buildTransport(f)
+	if err != nil {
+		fmt.Fprintf(stderr, "ERROR: build transport: %v\n", err)
+		return exitInternal
 	}
 
-	if len(violations) > 0 {
-		for _, v := range violations {
-			fmt.Fprintln(stderr, v.String())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ignored := parseIgnored(f.ignored)
+	report := computeReport(ctx, t, inputs, ignored)
+
+	// Filter by mode — --mode is purely presentational, not
+	// computational. Every dimension is still checked; the filter
+	// only decides what the operator sees. This keeps an
+	// --exit-on-drift gate consistent regardless of --mode.
+	presented := filterReport(report, f.mode)
+
+	switch f.output {
+	case "json":
+		if err := renderJSON(stdout, presented); err != nil {
+			fmt.Fprintf(stderr, "ERROR: render json: %v\n", err)
+			return exitInternal
 		}
-		fmt.Fprintf(stderr, "\n%d violation(s) in %d file(s)\n",
-			len(violations), len(files))
-		return exitViolation
+	default:
+		renderHuman(stdout, presented)
+	}
+
+	if f.exitOnDrift && report.HasFindings() {
+		return exitFindings
 	}
 	return exitOK
 }
 
-// discoverFiles expands each path argument: a directory is walked
-// recursively for .yaml/.yml, a file is included verbatim. Symlinks
-// are followed by filepath.WalkDir's default behaviour — callers can
-// feed an explicit file list to bypass directory expansion.
-func discoverFiles(paths []string) ([]string, error) {
-	var out []string
-	seen := map[string]struct{}{}
-	for _, p := range paths {
-		info, err := os.Stat(p)
-		if err != nil {
-			return nil, fmt.Errorf("stat %q: %w", p, err)
-		}
-		if !info.IsDir() {
-			if _, dup := seen[p]; !dup {
-				out = append(out, p)
-				seen[p] = struct{}{}
-			}
-			continue
-		}
-		err = filepath.WalkDir(p, func(sub string, d fs.DirEntry, werr error) error {
-			if werr != nil {
-				return werr
-			}
-			if d.IsDir() {
-				return nil
-			}
-			ext := strings.ToLower(filepath.Ext(sub))
-			if ext != ".yaml" && ext != ".yml" {
-				return nil
-			}
-			if _, dup := seen[sub]; !dup {
-				out = append(out, sub)
-				seen[sub] = struct{}{}
-			}
-			return nil
-		})
-		if err != nil {
-			return nil, err
+// buildTransport composes the RESTCONF transport. A lint run is a
+// one-shot so no session lock is needed; apphosting isn't competing
+// for the device.
+func buildTransport(f flags) (transport.Interface, error) {
+	scheme := f.scheme
+	if scheme == "" {
+		scheme = "https"
+	}
+	httpClient := &http.Client{Timeout: f.timeout}
+	if scheme == "https" && f.insecure {
+		httpClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 	}
-	return out, nil
+	baseURL := fmt.Sprintf("%s://%s:%d/restconf/data", scheme, f.address, f.port)
+	return transport.NewRESTCONF(transport.RESTCONFConfig{
+		BaseURL:    baseURL,
+		HTTPClient: httpClient,
+		Username:   f.username,
+		Password:   f.password,
+	})
 }
 
-// lintFile splits a multi-document YAML file and runs kind-specific
-// checks per document.
-func lintFile(path string, families map[string]schema.Family, strict bool) ([]violation, error) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read %q: %w", path, err)
-	}
-	docs := splitYAMLDocs(raw)
-
-	var out []violation
-	for i, doc := range docs {
-		if len(strings.TrimSpace(string(doc))) == 0 {
+// parseIgnored splits a comma-separated list into a lookup set.
+// Whitespace-only entries and duplicates are tolerated.
+func parseIgnored(csv string) map[string]struct{} {
+	out := map[string]struct{}{}
+	for _, part := range strings.Split(csv, ",") {
+		p := strings.TrimSpace(part)
+		if p == "" {
 			continue
 		}
-		vs, err := lintDoc(path, i, doc, families, strict)
-		if err != nil {
-			out = append(out, violation{
-				file: fmt.Sprintf("%s#%d", path, i),
-				msg:  err.Error(),
-			})
-			continue
-		}
-		out = append(out, vs...)
-	}
-	return out, nil
-}
-
-// splitYAMLDocs performs a minimal "---" split. Lines inside folded
-// strings that contain "---" at column zero are vanishingly rare in
-// netascode YAML; callers that do need strict parsing can hand each
-// document to a real YAML splitter.
-func splitYAMLDocs(raw []byte) [][]byte {
-	// Normalise line endings then split on a "\n---" marker at the
-	// start of a line.
-	s := strings.ReplaceAll(string(raw), "\r\n", "\n")
-	parts := strings.Split(s, "\n---")
-	out := make([][]byte, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimPrefix(p, "---")
-		out = append(out, []byte(p))
+		out[p] = struct{}{}
 	}
 	return out
 }
 
-// docShape is the minimum unmarshal target that surfaces the
-// identifying fields. Further fields are extracted via generic maps
-// so we don't depend on the full API types at lint time.
-type docShape struct {
-	APIVersion string `json:"apiVersion"`
-	Kind       string `json:"kind"`
-	Metadata   struct {
-		Name      string `json:"name"`
-		Namespace string `json:"namespace"`
-	} `json:"metadata"`
-	Spec map[string]any `json:"spec"`
-}
-
-func lintDoc(path string, index int, doc []byte, families map[string]schema.Family, strict bool) ([]violation, error) {
-	var head docShape
-	if err := yaml.Unmarshal(doc, &head); err != nil {
-		return nil, fmt.Errorf("parse YAML doc #%d: %w", index, err)
+// filterReport returns a copy of r with the sections relevant to mode.
+// Errors are retained in every mode — a Fetch failure is always worth
+// surfacing. Summary / device / managedFamilies are preserved so JSON
+// consumers see a consistent envelope shape.
+func filterReport(r Report, mode reportMode) Report {
+	out := Report{
+		Device:          r.Device,
+		ManagedFamilies: r.ManagedFamilies,
+		Errors:          r.Errors,
 	}
-	if head.Kind == "" {
-		// A YAML file with no `kind` at all is probably not a CR; skip.
-		return nil, nil
-	}
-	if !recognisedKinds[head.Kind] {
-		if strict {
-			return []violation{{file: path, kind: head.Kind, msg: "unrecognised kind in strict mode"}}, nil
-		}
-		return nil, nil
-	}
-	if head.APIVersion != "config.cisco.vk/v1alpha1" {
-		return []violation{{
-			file: path, kind: head.Kind, name: head.Metadata.Name,
-			msg: fmt.Sprintf("apiVersion %q, want config.cisco.vk/v1alpha1", head.APIVersion),
-		}}, nil
-	}
-
-	switch head.Kind {
-	case "IOSXEConfig":
-		return lintIOSXEConfig(path, head, families), nil
-	case "IOSXEConfigDefaults", "IOSXEDeviceGroupConfig", "IOSXETemplate":
-		// These only need schema presence checks at lint time — the
-		// real shape is validated at CRD admission by the API server.
-		if head.Spec == nil {
-			return []violation{{file: path, kind: head.Kind, name: head.Metadata.Name,
-				msg: "spec missing"}}, nil
-		}
-		return nil, nil
-	}
-	return nil, nil
-}
-
-// lintIOSXEConfig applies the rule set specific to IOSXEConfig:
-//   - deviceRef.name non-empty.
-//   - managedFamilies non-empty; every family is in families.yaml.
-//   - exactly one of source.inline / source.configMapRef.
-//   - driftPolicy, when set, is one of the accepted values.
-//   - inline configuration top-level keys are registered families,
-//     and each family's keyed-list entries expose the declared
-//     keyField — a shape check derived from the writers' own
-//     FamilySchema so the lint stays in lock-step with the driver.
-func lintIOSXEConfig(path string, d docShape, families map[string]schema.Family) []violation {
-	var out []violation
-	name := d.Metadata.Name
-	tag := func(msg string) violation {
-		return violation{file: path, kind: d.Kind, name: name, msg: msg}
-	}
-
-	ref, _ := d.Spec["deviceRef"].(map[string]any)
-	if refName, _ := ref["name"].(string); refName == "" {
-		out = append(out, tag("spec.deviceRef.name is empty"))
-	}
-
-	mf, _ := d.Spec["managedFamilies"].([]any)
-	if len(mf) == 0 {
-		out = append(out, tag("spec.managedFamilies is empty (MinItems=1)"))
-	}
-	for i, f := range mf {
-		fs, ok := f.(string)
-		if !ok {
-			out = append(out, tag(fmt.Sprintf("spec.managedFamilies[%d] is not a string", i)))
-			continue
-		}
-		if _, known := families[fs]; !known {
-			out = append(out, tag(fmt.Sprintf(
-				"spec.managedFamilies[%d]=%q not in families.yaml", i, fs)))
-		}
-	}
-
-	src, _ := d.Spec["source"].(map[string]any)
-	inline, hasInline := src["inline"].(map[string]any)
-	cm, _ := src["configMapRef"].(map[string]any)
-	hasCMR := cm != nil && cm["name"] != nil && cm["name"] != ""
-	switch {
-	case hasInline && hasCMR:
-		out = append(out, tag("spec.source: both inline and configMapRef set; exactly one allowed"))
-	case !hasInline && !hasCMR:
-		out = append(out, tag("spec.source: neither inline nor configMapRef set"))
-	}
-	if hasCMR {
-		if key, _ := cm["key"].(string); key == "" {
-			out = append(out, tag("spec.source.configMapRef.key is empty"))
-		}
-	}
-
-	if dp, ok := d.Spec["driftPolicy"].(string); ok && dp != "" {
-		switch dp {
-		case "revert", "report", "pause":
-		default:
-			out = append(out, tag(fmt.Sprintf(
-				"spec.driftPolicy=%q; want one of revert|report|pause", dp)))
-		}
-	}
-
-	if hasInline {
-		out = append(out, lintInlineBody(tag, inline, families)...)
-	}
-
-	return out
-}
-
-// lintInlineBody walks the inline netascode body and checks each
-// top-level family key against the registered FamilySchema.
-//
-// Rules (narrow by design — deep leaf validation is the device's
-// job, and Yamale-style per-leaf schemas live in YANG):
-//   - Every top-level key must be a family registered in families.yaml.
-//   - For keyed_list families, the body must contain the declared
-//     InnerKey and each entry must supply the declared KeyField.
-//   - Unknown leaves on a singleton family are reported as INFO (not
-//     violation) so operators can layer leaves the writer doesn't
-//     manage without the lint failing.
-func lintInlineBody(tag func(string) violation, body map[string]any, families map[string]schema.Family) []violation {
-	var out []violation
-	for famName, famVal := range body {
-		if _, known := families[famName]; !known {
-			out = append(out, tag(fmt.Sprintf(
-				"spec.source.inline.%s: family not in families.yaml", famName)))
-			continue
-		}
-		s, ok := writers.Schema(famName)
-		if !ok {
-			// Registered family without a Schema — likely a skeleton.
-			// Not an error at lint time; the engine will report
-			// Unsupported at reconcile.
-			continue
-		}
-		if s.Shape != "keyed_list" || s.InnerKey == "" || s.KeyField == "" {
-			continue
-		}
-		famMap, ok := famVal.(map[string]any)
-		if !ok {
-			out = append(out, tag(fmt.Sprintf(
-				"spec.source.inline.%s: expected object, got %T", famName, famVal)))
-			continue
-		}
-		inner, present := famMap[s.InnerKey]
-		if !present {
-			// Missing inner key is acceptable — the family's body may
-			// be empty in this intent fragment.
-			continue
-		}
-		list, ok := inner.([]any)
-		if !ok {
-			out = append(out, tag(fmt.Sprintf(
-				"spec.source.inline.%s.%s: expected list, got %T",
-				famName, s.InnerKey, inner)))
-			continue
-		}
-		for i, el := range list {
-			entry, ok := el.(map[string]any)
-			if !ok {
-				out = append(out, tag(fmt.Sprintf(
-					"spec.source.inline.%s.%s[%d]: expected object, got %T",
-					famName, s.InnerKey, i, el)))
-				continue
-			}
-			if _, hasKey := entry[s.KeyField]; !hasKey {
-				out = append(out, tag(fmt.Sprintf(
-					"spec.source.inline.%s.%s[%d]: missing key field %q",
-					famName, s.InnerKey, i, s.KeyField)))
-			}
-		}
+	switch mode {
+	case modeDrift:
+		out.ManagedDrift = r.ManagedDrift
+	case modeOrphans:
+		out.Orphans = r.Orphans
+	default: // modeFull
+		out.ManagedDrift = r.ManagedDrift
+		out.Orphans = r.Orphans
 	}
 	return out
 }

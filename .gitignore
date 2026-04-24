@@ -5,7 +5,10 @@ bin
 .venv/
 .claude/
 site/
-cisco-vk-yang-sync
-cisco-vk-config-lint
-cisco-vk-config-collect
-cisco-vk-config-docs
+# Built tool binaries at repo root. Leading '/' anchors to repo
+# root so the unanchored names don't collide with tools/*/ package
+# paths (tools/cisco-vk-config-lint/ contains source, not binary).
+/cisco-vk-yang-sync
+/cisco-vk-config-lint
+/cisco-vk-config-collect
+/cisco-vk-config-docs

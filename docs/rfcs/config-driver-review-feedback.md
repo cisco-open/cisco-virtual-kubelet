@@ -62,12 +62,16 @@ config outside those families is invisible today.
 
 ### Action
 
-| Step | Description | Priority |
-|------|-------------|----------|
-| 2a | Strip the static schema validation from `cisco-vk-config-lint` (point operators to `nac-validate` for that). | Next iteration |
-| 2b | Repurpose the tool as a live drift reporter that connects to a device (or reads from IOSXEConfig CR status) and reports per-family drift for managed families (the Diff ops that would be applied). | Next iteration |
-| 2c | Add unmanaged-config detection: fetch the full device config, compare against the union of all IOSXEConfig CRs' `ManagedFamilies`, and report device-present families/objects that no CR claims. | Next iteration |
-| 2d | Support use as a CI tool in `driftPolicy: report` mode — "show me what would change before I switch to revert." | Next iteration |
+| Step | Description | Priority | Status |
+|------|-------------|----------|--------|
+| 2a | Strip the static schema validation from `cisco-vk-config-lint` (point operators to `nac-validate` for that). | Next iteration | ✅ Shipped. `tools/cisco-vk-config-lint/main.go` rewritten; old `lintIOSXEConfig` / `lintInlineBody` static-validation paths removed. |
+| 2b | Repurpose the tool as a live drift reporter that connects to a device (or reads from IOSXEConfig CR status) and reports per-family drift for managed families (the Diff ops that would be applied). | Next iteration | ✅ Shipped. `drift.go:computeReport` runs each writer's `Fetch` + `Diff` against a live device for every family listed in the union of loaded CRs' `managedFamilies`. Non-empty ops are surfaced as `FamilyDrift` with op-count and verb histogram. |
+| 2c | Add unmanaged-config detection: fetch the full device config, compare against the union of all IOSXEConfig CRs' `ManagedFamilies`, and report device-present families/objects that no CR claims. | Next iteration | ✅ Shipped. Orphan detection implemented in the same pass: every registered writer's `Fetch` runs; families with non-empty device state but no CR claim land in `Report.Orphans` with their YANG paths. |
+| 2d | Support use as a CI tool in `driftPolicy: report` mode — "show me what would change before I switch to revert." | Next iteration | ✅ Shipped. `--exit-on-drift` returns exit code 4 when findings exist; `--output=json` emits a machine-readable report; `--mode={full,drift,orphans}` filters presentation without changing what's computed; `--ignore-families` skips out-of-scope families. |
+
+Cluster-mode loader (read IOSXEConfigs from a running cluster
+rather than local YAML paths) is tracked as a Phase-4 follow-up
+in `iosxe-config-driver-review.md` §11.
 
 ---
 
@@ -160,12 +164,12 @@ function wrappers.
 
 ## Summary — priority matrix
 
-| # | Action | Priority | Blocks |
+| # | Action | Priority | Status |
 |---|--------|----------|--------|
-| 1a–1c | Remove `cisco-vk-config-collect`, update RFC | Immediate | — |
-| 3a | Add `spec.type` to `IOSXETemplate` CRD | Immediate | — |
-| 4a | Cross-validation tests for merge logic | Immediate | — |
-| 2a–2d | Repurpose `cisco-vk-config-lint` as drift reporter | Next iteration | — |
-| 3c | Evaluate HCL template engine migration | Next iteration | — |
-| 3b | CLI template rendering + transport | Deferred (Phase 2 / NETCONF) | 3a |
-| 4b–4d | Shared merge module with `terraform-provider-utils` | Medium term | 4a |
+| 1a–1c | Remove `cisco-vk-config-collect`, update RFC | Immediate | ✅ Shipped (commit `cf032b7`) |
+| 3a | Add `spec.type` to `IOSXETemplate` CRD | Immediate | ✅ Shipped (commit `1c82a28`) |
+| 4a | Cross-validation tests for merge logic | Immediate | ✅ Shipped (commit `1c82a28`) |
+| 2a–2d | Repurpose `cisco-vk-config-lint` as drift reporter | Next iteration | ✅ Shipped (this iteration) |
+| 3c | Evaluate HCL template engine migration | Next iteration | ⏳ Pending |
+| 3b | CLI template rendering + transport | Deferred (Phase 2 / NETCONF) | ⏳ Pending — CRD field in place, render+transport await NETCONF |
+| 4b–4d | Shared merge module with `terraform-provider-utils` | Medium term | ⏳ Pending; cross-validation corpus (4a) is ready to swap expected outputs for shared-library calls once the module extraction lands |

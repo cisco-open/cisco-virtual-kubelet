@@ -75,10 +75,13 @@ you paste it into a `ConfigMap` instead of feeding it to Terraform.
                               │ push / PR → CI
                               ▼
               ┌────────────────────────────────────────┐
-              │ cisco-vk-config-lint  (pre-commit / CI)│
-              │   — per-family shape validation        │
-              │   — managed-leaf check from writers    │
-              │   — nac-validate equivalent            │
+              │ nac-validate      (pre-commit — schema)│
+              │   upstream tool; no CVK port.          │
+              ├────────────────────────────────────────┤
+              │ cisco-vk-config-lint (CI — live drift) │
+              │   connects to the target device        │
+              │   reports managed drift + orphans      │
+              │   gates the PR with --exit-on-drift    │
               └────────────────────┬───────────────────┘
                               Flux / ArgoCD
                               ▼
@@ -147,7 +150,8 @@ identical internals.
 | envelope vs fragment YAML | both accepted (`iosxe.devices[].configuration` extracted for target device) | ✅ |
 | family index | `schema/families.yaml` (hand-maintained, 54 entries) | ✅ |
 | YANG release pin | `schema/yang-versions.yaml` (17.9.1 = release 1791) | ✅ |
-| `nac-validate` | `cisco-vk-config-lint` | ✅ (see §9) |
+| `nac-validate` (static schema) | upstream `nac-validate` reused directly | ✅ (see §9) |
+| live device drift check | no direct netascode equivalent | ✅ `cisco-vk-config-lint` (see §9) |
 | `nac-collect` | upstream `nac-collect` reused as-is | ✅ (see §9) |
 | portal-generated family docs | `cisco-vk-config-docs` | ✅ |
 | YANG → ygot Go types | `cisco-vk-yang-sync --yang-dir` | 🟡 wiring present; YANG tree not checked in |
@@ -427,32 +431,61 @@ map ordering. Worth cross-checking.
 |---|---|---|
 | data model | netascode YAML | **same** (byte-for-byte via ConfigMap) |
 | schema file | `.schema.yaml` (Yamale) | `families.yaml` + `writers.FamilySchema` |
-| offline validator | `nac-validate` | `cisco-vk-config-lint` |
+| offline schema validator | `nac-validate` | **same** — upstream `nac-validate` reused directly |
+| live drift reporter | no direct equivalent | `cisco-vk-config-lint` (device-connected, see below) |
 | brownfield collector | `nac-collect` | **same** — upstream `nac-collect` reused directly (see below) |
 | reference docs | portal (generated from schema) | `cisco-vk-config-docs` (md reference) |
 | Go types from YANG | ygot (via module generators) | `cisco-vk-yang-sync --yang-dir` (ygot pipeline) |
-| CI hook | pre-commit nac-validate | pre-commit `cisco-vk-config-lint` |
+| CI hook | pre-commit nac-validate | nac-validate pre-commit + `cisco-vk-config-lint --exit-on-drift` in the PR pipeline |
 | pipeline | Terraform plan/apply | Flux/ArgoCD → controller reconcile |
 
-### What `cisco-vk-config-lint` does today and doesn't
+### `cisco-vk-config-lint` — live drift reporter (not a static validator)
 
-Does:
-- YAML parses and splits multi-document.
-- `kind` is recognised (IOSXEConfig family).
-- `apiVersion` matches.
-- `managedFamilies` is non-empty and every family is in
-  `families.yaml`.
-- `spec.source` has exactly one of inline / configMapRef.
-- `driftPolicy` value is closed-enum.
-- For keyed-list families in an inline body: expected inner key
-  present, each entry has the declared key field.
+An earlier iteration of this tool was an offline YAML schema
+validator (YAML shape, family-set membership, per-family semantic
+rules). That overlapped `nac-validate` without adding value. Per
+review feedback item 2 in
+`docs/rfcs/config-driver-review-feedback.md`, the tool was
+repurposed:
 
-Does not (yet):
-- Yamale-style per-leaf type validation (e.g. "VLAN id is 1-4094").
-  This is the netascode reviewer's most likely callout.
-- Unknown-leaf warnings.
-- Cross-CR family overlap detection at lint time (the engine does
-  it at runtime via Lease).
+- **Static YAML schema validation** is delegated to upstream
+  `nac-validate` (run it in pre-commit; same hook netascode users
+  already have).
+- **CVK's `cisco-vk-config-lint`** connects to an IOS-XE device
+  and reports two drift dimensions against the IOSXEConfig CRs
+  the operator supplies:
+
+  1. **Managed drift.** For each family claimed by a CR, the tool
+     invokes the writer's `Fetch` and `Diff` against the live
+     device. Any non-empty op slice is a "what CVK would change
+     on the next reconcile" entry — op count + verbs histogram +
+     the list of CRs that claim the family.
+  2. **Device orphans.** For each registered family the operator
+     does NOT claim, the tool checks whether the device has
+     non-empty state. Present-but-unclaimed families surface as
+     orphans with their YANG paths — typically legitimate
+     (system.hostname on brownfield) but sometimes a cutover gap.
+
+  `--exit-on-drift` returns exit code 4 when either dimension has
+  findings, so a PR pipeline can gate merges on "would change
+  nothing on the device". `--output=json` emits a machine-
+  readable report; `jq` filters like
+  `'.managedDrift[] | select(.verbs.DELETE)'` let operators
+  tighten guards per-verb.
+
+  `--mode={full,drift,orphans}` picks the presentation subset —
+  both dimensions are always computed so `--exit-on-drift` stays
+  consistent regardless of `--mode`.
+
+  `--ignore-families=a,b,c` skips families the operator
+  intentionally leaves outside CVK scope on this device (common
+  for `system` on multi-tenant edge boxes).
+
+Implementation detail: the tool loads IOSXEConfig YAMLs from
+files / directories (the `kubectl apply -f`-style path list).
+Cluster-mode loading (reading CRs from a running cluster) is a
+Phase-4 follow-up; the in-file path is sufficient for the
+primary use case of pre-merge PR validation.
 
 ### Brownfield onboarding — `nac-collect` used directly, no VK-side tool
 
@@ -572,50 +605,55 @@ Reviewer question (one of the ten in §13): is the trade worth it?
 We argue yes for the GitOps operator; possibly no for a
 "scheduled maintenance window" shop.
 
-### 10.4 Schema validation — no per-leaf types
+### 10.4 Schema validation — delegated to upstream nac-validate
 
 netascode's `.schema.yaml` is a Yamale document: every leaf has a
 type (`int`, `str`, `ipv4`, `ipv4_prefix`, regex `/pattern/`),
 range, enum, required/optional. `nac-validate` runs this before
 the YAML reaches Terraform.
 
-CVK's `cisco-vk-config-lint` checks:
-- family membership in `families.yaml`;
-- `spec.source` exactly-one invariants;
-- `driftPolicy` enum;
-- for keyed-list families: inner-key presence, key-field presence
-  per entry.
+CVK does not duplicate that. Per review feedback (item 2 in
+`docs/rfcs/config-driver-review-feedback.md`), static schema
+validation is delegated entirely to `nac-validate` — operators
+run it in pre-commit the same way they do today for netascode
+workflows. `cisco-vk-config-lint` was repurposed from an offline
+validator into a live drift reporter (see §9).
 
-It does **not** check:
-- leaf types (e.g. "`vlan.vlans[].id` is an int in [1, 4094]");
-- leaf ranges;
-- cross-leaf relationships (e.g. "when `shutdown: true`,
-  `ip_address` is pointless");
-- pattern validation (IPv4 addresses, MAC addresses);
-- required-leaf presence per family.
+Consequences for CVK:
+- no per-leaf type / range / pattern checks from any CVK-owned
+  tool;
+- no Yamale-equivalent schema file in the repo — `families.yaml`
+  + `writers.FamilySchema` drives driver behaviour, not
+  authoring-time validation;
+- the machinery to add leaf-level validation still exists
+  (`FamilySchema` could carry type metadata) but is not on the
+  roadmap — the upstream tool covers it.
 
-The machinery to add this exists — `writers.FamilySchema` could
-carry per-leaf type metadata — but the hand-authoring cost is
-non-trivial (~300 lines of Yamale per family × 54 families =
-~16k lines of schema). The ygot pipeline (§10.8) could derive
-this from YANG automatically if the YANG tree were checked in.
-
-Fix: Phase-4 adds per-family Yamale schemas; Phase-6 reads them
-from ygot output.
+This is a deliberate boundary: CVK's lint tool says "does the
+device match the intent right now?", `nac-validate` says "is the
+intent a valid netascode YAML document?". They compose.
 
 ### 10.5 Offline workflows — no device-free plan
 
 netascode can do `terraform plan -refresh=false` to preview
-intent changes without touching the device. `cisco-vk-config-lint`
-validates the YAML offline but doesn't compute a diff against a
-hypothetical device state. Even `driftPolicy: report` fetches from
-the device (that's what makes it a drift report, not a plan).
+intent changes without touching the device. CVK requires a live
+device for every preview: `cisco-vk-config-lint` is explicitly
+device-connected (that's its job post-repurpose), and
+`driftPolicy: report` inside the controller fetches from the
+device too.
 
-Consequence: a PR reviewer can't see "this change would flip 47
-leaves on edge-01" purely from Git review; they have to wait for
-the reconciler to run and look at status.
+Consequence: a PR reviewer in a regulated environment that
+forbids CI from reaching production devices can't see "this
+change would flip 47 leaves on edge-01" purely from Git review.
+Two mitigations exist today:
 
-Fix: Phase-4 adds an offline `plan` subcommand to
+- Run `cisco-vk-config-lint` against a staging or canary
+  device (the CI target need not be production).
+- Run `cisco-vk-config-lint --output=json` against production and
+  attach the JSON to the PR as an artefact, so a reviewer sees
+  the same report CI saw without re-running it.
+
+Fix (Phase-4): add an offline `plan` subcommand to
 `cisco-vk-config-lint` that uses cached last-applied state on
 the CR's `status.lastAppliedHash` + the writer's Diff to
 compute a preview.
@@ -732,16 +770,21 @@ per-device IOSXEConfigs via a controller-side expansion.
 
 ### 10.13 Tooling maturity gaps
 
-- `cisco-vk-config-lint` has no pre-commit packaging (install via
-  `go install ./tools/cisco-vk-config-lint`); `nac-validate`
-  has a pip install, a pre-commit hook entry, and a Docker image.
-- `cisco-vk-config-docs` emits markdown; the netascode portal is
-  generated with MkDocs + sidebar navigation + versioning.
-- No OCI image for any of the tools yet.
-- No policy-engine integration (OPA, conftest).
+- `cisco-vk-config-lint` ships `go install`-only — no OCI image,
+  no `--version` flag, no release automation. Useful as a CI
+  binary today but not a drop-in replacement for `nac-validate`'s
+  pip + pre-commit + Docker packaging. The tool was repurposed
+  into a live drift reporter (feedback item 2); the packaging gap
+  is orthogonal and remains.
+- `cisco-vk-config-docs` emits flat markdown; the netascode portal
+  is MkDocs-built with sidebar navigation + versioning.
+- No policy-engine integration (OPA, conftest). A natural
+  composition: `cisco-vk-config-lint --output=json | conftest
+  test -`.
+- No cluster-mode CR loader for the lint tool (Phase-4 below).
 
-Fix: Phase-4 adds release automation for the tools; Phase-6
-adds OPA/conftest rule packs.
+Fix: Phase-4 adds release automation + cluster-mode loader;
+Phase-6 adds OPA/conftest rule packs.
 
 ### 10.14 Protocol gaps (transport)
 
@@ -807,17 +850,41 @@ fragment. No device writes; structural only.
   tree is supplied.
 - `writers.FamilySchema` registry (reflected metadata for
   external tooling).
-- `cisco-vk-config-lint` per-family shape validation using the
-  FamilySchema registry.
+- `cisco-vk-config-lint` — initially shipped as a per-family
+  shape validator using the FamilySchema registry; subsequently
+  repurposed (see "Review feedback response" below) as a live
+  drift reporter that connects to a device and reports managed
+  drift + orphans, with `--exit-on-drift` for CI gating.
 - `cisco-vk-config-docs` (per-family markdown reference
   generator).
 
-Note on brownfield onboarding: this branch briefly shipped a
-`cisco-vk-config-collect` tool that mirrored `nac-collect`.
-Per review feedback (item 1 in
-`docs/rfcs/config-driver-review-feedback.md`) it was removed —
-operators run upstream `nac-collect` directly and the output YAML
-is a drop-in `ConfigMap.data` value. See §9 for the workflow.
+### Phase 3 — review feedback response (✅ shipped)
+
+Addresses the four-item review feedback in
+`docs/rfcs/config-driver-review-feedback.md` that landed after
+Phase 3:
+
+- **Item 1 (collector removal).** `tools/cisco-vk-config-collect`
+  removed. Brownfield onboarding uses upstream `nac-collect`
+  directly; the output YAML drops into a `ConfigMap.data` value
+  the IOSXEConfig CR references. See §9.
+- **Item 2 (lint repurpose).** `cisco-vk-config-lint` rewritten
+  from an offline YAML validator into a device-connected drift
+  reporter (managed drift + device orphans + `--exit-on-drift`
+  for CI). Static schema validation is delegated to `nac-validate`.
+  See §9 and §10.4.
+- **Item 3a (template type field).** `IOSXETemplate.spec.type`
+  enum (`data-model` | `cli`) added now so operators can author
+  CLI templates without a later schema migration. `cli`
+  rejected at resolve time with a pointer to the deferred
+  implementation.
+- **Item 4a (merge cross-validation).** Full 30-case corpus in
+  `internal/drivers/iosxe/configdriver/intent/merge_cross_validation_test.go`
+  covering every Phase-1/2/3 family's keyed-list merge against
+  `terraform-provider-utils`'s `MergeMaps` / `itemsWouldMerge`
+  semantics. Exposed one real divergence (nested lists keyed by
+  `seq` / `tag`) — fixed by extending the merger's candidate
+  key list.
 
 ### Phase 4 — depth & polish (⏳ planned, ~6–8 weeks)
 
@@ -832,20 +899,13 @@ Closes the netascode-parity depth gaps identified in §10.
 - **`spec.pruneOnRelinquish: true` actual behaviour.** Field
   already present; wire the writer to emit DELETE ops for
   leaves dropped between reconciles when set.
-- **Yamale-style per-family schemas.** Hand-authored until
-  Phase 5 YANG derivation lands. Wired into `cisco-vk-config-lint`
-  for leaf-type, range, enum, and pattern validation.
-- **Strict-mode lint.** Unknown inline leaves become errors
-  under `--strict`.
+- **Cluster-mode CR loader for `cisco-vk-config-lint`.** Today
+  the tool reads CRs from local YAML paths; Phase 4 adds
+  `--kubeconfig` + `--namespace` support so the same binary can
+  report drift for a running cluster without a git-checkout.
 - **Offline `plan` subcommand** on `cisco-vk-config-lint`:
   diff against last-applied state cached on the CR's status,
-  no device access required.
-- **Repurpose `cisco-vk-config-lint` as a drift reporter**
-  (per review feedback item 2): detect both model→device drift
-  (declared leaves that have diverged on the device) and
-  device→model gaps (config present on the device that no
-  IOSXEConfig CR claims). Replaces the static-schema-validation
-  overlap with `nac-validate`.
+  no device access required. Closes §10.5 for regulated envs.
 - **Per-family `secretRefs`** on IOSXEConfig so writers can
   merge credentials from a Secret into the intent before
   apply. Closes the PSK / enable-secret gap (§10.6).
