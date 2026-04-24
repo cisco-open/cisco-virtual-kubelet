@@ -992,8 +992,18 @@ Closes the netascode-parity depth gaps identified in §10.
   for the dropped count; the API field is annotated
   `+kubebuilder:validation:MaxItems=50` so the OpenAPI schema
   enforces the same cap on external writers. Closes §10.11.
-- **Pre-commit packaging** for `cisco-vk-config-lint`:
-  container image, pre-commit hook entry, version tag.
+- **Pre-commit packaging** for `cisco-vk-config-lint`. ✅
+  Shipped: `.pre-commit-hooks.yaml` at the repo root declares
+  the `cisco-vk-config-lint` and `cisco-vk-config-lint-cluster`
+  hook ids. Consumers reference them via
+  `repo: https://github.com/cisco-open/cisco-virtual-kubelet`
+  with `language: golang` so pre-commit builds the binary on
+  first run; no separate publish step is required for the file-
+  mode hook. `Dockerfile.config-lint` builds a distroless image
+  for operators who want the `language: docker_image` shape or
+  to run the tool from CI without a Go toolchain. The release
+  tag that consumers pin via `rev:` is the same git tag the
+  Helm chart is released on.
 
 ### Phase 5 — NETCONF transport + CLI templates (✅ shipped)
 
