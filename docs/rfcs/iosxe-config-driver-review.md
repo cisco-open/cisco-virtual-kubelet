@@ -925,10 +925,14 @@ Closes the netascode-parity depth gaps identified in §10.
 - **`spec.pruneOnRelinquish: true` actual behaviour.** Field
   already present; wire the writer to emit DELETE ops for
   leaves dropped between reconciles when set.
-- **Cluster-mode CR loader for `cisco-vk-config-lint`.** Today
-  the tool reads CRs from local YAML paths; Phase 4 adds
-  `--kubeconfig` + `--namespace` support so the same binary can
-  report drift for a running cluster without a git-checkout.
+- **Cluster-mode CR loader for `cisco-vk-config-lint`.** ✅
+  Shipped: `--from-cluster` switches the loader to read
+  IOSXEConfig CRs via the dynamic client. `--kubeconfig`,
+  `--namespace`, and `--all-namespaces` shape what's read; the
+  same `tryDecodeIOSXEConfig` shape detector the file loader
+  uses runs on the JSON-marshalled unstructured objects, so the
+  two loaders agree on apiVersion / deviceName filtering. The
+  same `--exit-on-drift` and `--mode` flags work in both modes.
 - **Offline `plan` subcommand** on `cisco-vk-config-lint`:
   diff against last-applied state cached on the CR's status,
   no device access required. Closes §10.5 for regulated envs.

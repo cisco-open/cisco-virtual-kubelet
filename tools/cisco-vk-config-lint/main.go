@@ -92,9 +92,15 @@ type flags struct {
 	insecure    bool
 	timeout     time.Duration
 
-	// Target CR set.
+	// Target CR set — file mode.
 	deviceName string
 	crPaths    []string
+
+	// Target CR set — cluster mode.
+	fromCluster   bool
+	kubeconfig    string
+	namespace     string
+	allNamespaces bool
 
 	// What to report.
 	mode    reportMode
@@ -124,6 +130,16 @@ func parseFlags(args []string, stderr io.Writer) (flags, error) {
 
 	fs.StringVar(&f.deviceName, "device-name", "",
 		"CiscoDevice name the loaded IOSXEConfig CRs must target (required)")
+
+	fs.BoolVar(&f.fromCluster, "from-cluster", false,
+		"read IOSXEConfig CRs from a Kubernetes cluster instead of local YAML paths")
+	fs.StringVar(&f.kubeconfig, "kubeconfig", "",
+		"path to kubeconfig (cluster mode only; falls back to $KUBECONFIG, in-cluster, then $HOME/.kube/config)")
+	fs.StringVar(&f.namespace, "namespace", "",
+		"namespace to read IOSXEConfigs from in cluster mode; defaults to the kubeconfig context's namespace")
+	fs.BoolVar(&f.allNamespaces, "all-namespaces", false,
+		"read IOSXEConfigs across every namespace in cluster mode; overrides --namespace")
+
 	var modeStr string
 	fs.StringVar(&modeStr, "mode", "full",
 		"report dimensions: 'drift' (managed only), 'orphans' (unmanaged only), or 'full'")
@@ -168,24 +184,45 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 		fmt.Fprintln(stderr, "ERROR: --address, --username, and --device-name are required")
 		return exitBadFlags
 	}
-	if len(f.crPaths) == 0 {
-		fmt.Fprintln(stderr, "ERROR: supply at least one IOSXEConfig YAML path or directory")
+	if f.fromCluster && len(f.crPaths) > 0 {
+		fmt.Fprintln(stderr, "ERROR: positional CR paths and --from-cluster are mutually exclusive")
 		return exitBadFlags
 	}
+	if !f.fromCluster && len(f.crPaths) == 0 {
+		fmt.Fprintln(stderr, "ERROR: supply at least one IOSXEConfig YAML path or directory, or pass --from-cluster")
+		return exitBadFlags
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// Discover and load CRs. An empty match set is not an error —
 	// it means every non-empty family on the device will appear as
 	// an orphan, which is exactly what an operator asking "what am
 	// I about to manage?" wants to see.
-	files, err := discoverCRFiles(f.crPaths)
-	if err != nil {
-		fmt.Fprintf(stderr, "ERROR: walk CR paths: %v\n", err)
-		return exitBadInput
-	}
-	crs, err := loadCRsFromFiles(files, f.deviceName)
-	if err != nil {
-		fmt.Fprintf(stderr, "ERROR: load CRs: %v\n", err)
-		return exitBadInput
+	var crs []loadedCR
+	if f.fromCluster {
+		cfg, err := resolveKubeconfig(f.kubeconfig)
+		if err != nil {
+			fmt.Fprintf(stderr, "ERROR: kubeconfig: %v\n", err)
+			return exitBadInput
+		}
+		crs, err = loadCRsFromCluster(ctx, cfg, f.namespace, f.allNamespaces, f.deviceName, nil)
+		if err != nil {
+			fmt.Fprintf(stderr, "ERROR: load CRs from cluster: %v\n", err)
+			return exitBadInput
+		}
+	} else {
+		files, err := discoverCRFiles(f.crPaths)
+		if err != nil {
+			fmt.Fprintf(stderr, "ERROR: walk CR paths: %v\n", err)
+			return exitBadInput
+		}
+		crs, err = loadCRsFromFiles(files, f.deviceName)
+		if err != nil {
+			fmt.Fprintf(stderr, "ERROR: load CRs: %v\n", err)
+			return exitBadInput
+		}
 	}
 
 	inputs := buildDriftInputs(f.deviceName, crs)
@@ -195,9 +232,6 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 		fmt.Fprintf(stderr, "ERROR: build transport: %v\n", err)
 		return exitInternal
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	ignored := parseIgnored(f.ignored)
 	report := computeReport(ctx, t, inputs, ignored)
