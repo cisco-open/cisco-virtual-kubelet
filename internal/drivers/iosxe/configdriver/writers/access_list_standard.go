@@ -14,10 +14,8 @@
 
 package writers
 
-// Standard access-list Phase-2 writer. Shape mirrors
-// access_list_extended: keyed by name, rules held as an opaque
-// managed leaf in Phase-2; per-rule sequence-keyed diffing is a
-// Phase-3 enhancement.
+// Standard access-list writer with per-rule sequence-keyed diffing.
+// Shares the nested-keyed-list machinery with access_list_extended.
 //
 // netascode:
 //   access_list_standard:
@@ -29,12 +27,17 @@ package writers
 //             source_any: true
 
 func init() {
-	Override(keyedListWriter{
-		family:        "access_list_standard",
-		yangPath:      "/Cisco-IOS-XE-native:native/ip/access-list/standard",
-		envelopeKey:   "Cisco-IOS-XE-acl:standard",
-		innerKey:      "standard",
-		keyField:      "name",
-		managedLeaves: []string{"rules"},
+	Override(nestedKeyedListWriter{
+		base: keyedListWriter{
+			family:        "access_list_standard",
+			yangPath:      "/Cisco-IOS-XE-native:native/ip/access-list/standard",
+			envelopeKey:   "Cisco-IOS-XE-acl:standard",
+			innerKey:      "standard",
+			keyField:      "name",
+			managedLeaves: []string{"rules"},
+		},
+		nestedLeaf:      "rules",
+		nestedKeyField:  "sequence",
+		nestedYANGInner: "access-list-seq-rule",
 	})
 }

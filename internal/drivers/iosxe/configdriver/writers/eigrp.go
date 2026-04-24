@@ -14,22 +14,30 @@
 
 package writers
 
-// EIGRP Phase-3 writer. Each EIGRP instance is a deep subtree; we
-// manage the commonly-configured subset per process.
+// EIGRP writer. Each EIGRP instance is a deep subtree; we manage
+// the commonly-configured subset per process and per-network /
+// per-address-family inner-key diffing so a single network edit
+// doesn't re-push the whole list.
 
 func init() {
-	Override(keyedListWriter{
-		family:      "eigrp",
-		yangPath:    "/Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-eigrp:router-eigrp",
-		envelopeKey: "Cisco-IOS-XE-eigrp:router-eigrp",
-		innerKey:    "processes",
-		keyField:    "id",
-		managedLeaves: []string{
-			"address-family",
-			"network",
-			"router-id",
-			"metric",
-			"eigrp-instance",
+	Override(nestedKeyedListWriter{
+		base: keyedListWriter{
+			family:      "eigrp",
+			yangPath:    "/Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-eigrp:router-eigrp",
+			envelopeKey: "Cisco-IOS-XE-eigrp:router-eigrp",
+			innerKey:    "processes",
+			keyField:    "id",
+			managedLeaves: []string{
+				"address-family",
+				"network",
+				"router-id",
+				"metric",
+				"eigrp-instance",
+			},
+		},
+		nested: []nestedListSpec{
+			{Leaf: "network", KeyField: "prefix"},
+			{Leaf: "address-family", KeyField: "afi"},
 		},
 	})
 }

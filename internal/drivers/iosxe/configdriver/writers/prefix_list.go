@@ -14,7 +14,9 @@
 
 package writers
 
-// Prefix-list Phase-2 writer.
+// Prefix-list writer with per-sequence diffing. Shares the nested-
+// keyed-list machinery with the ACL writers; only the family-
+// specific binding lives here.
 //
 // netascode:
 //   prefix_list:
@@ -26,19 +28,25 @@ package writers
 //             action: permit
 //             ip: 0.0.0.0/0
 //
-// YANG: /Cisco-IOS-XE-native:native/ip/prefix-list/prefixes.
-// Phase-2 treats the sequence list as an opaque managed leaf.
+// YANG: /Cisco-IOS-XE-native:native/ip/prefix-list/prefixes. The
+// inner list's YANG name is "seq" rather than "sequences"; we
+// configure it explicitly so the device-decoded shape resolves.
 
 func init() {
-	Override(keyedListWriter{
-		family:      "prefix_list",
-		yangPath:    "/Cisco-IOS-XE-native:native/ip/prefix-list/prefixes",
-		envelopeKey: "Cisco-IOS-XE-native:prefixes",
-		innerKey:    "prefixes",
-		keyField:    "name",
-		managedLeaves: []string{
-			"description",
-			"sequences",
+	Override(nestedKeyedListWriter{
+		base: keyedListWriter{
+			family:      "prefix_list",
+			yangPath:    "/Cisco-IOS-XE-native:native/ip/prefix-list/prefixes",
+			envelopeKey: "Cisco-IOS-XE-native:prefixes",
+			innerKey:    "prefixes",
+			keyField:    "name",
+			managedLeaves: []string{
+				"description",
+				"sequences",
+			},
 		},
+		nestedLeaf:      "sequences",
+		nestedKeyField:  "no",
+		nestedYANGInner: "seq",
 	})
 }

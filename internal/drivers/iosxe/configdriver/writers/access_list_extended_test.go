@@ -43,11 +43,16 @@ func extACLDesired(rules ...any) map[string]any {
 }
 
 func TestACLExtendedDiffNoChangeWhenRulesEqual(t *testing.T) {
-	w := extendedACLWriter{base: keyedListWriter{
-		family: aclExtFamily, yangPath: aclExtPath,
-		envelopeKey: aclExtEnvelopeKey, innerKey: aclExtInnerKey,
-		keyField: aclExtKeyField, managedLeaves: []string{"rules"},
-	}}
+	w := nestedKeyedListWriter{
+		base: keyedListWriter{
+			family: aclExtFamily, yangPath: aclExtPath,
+			envelopeKey: aclExtEnvelopeKey, innerKey: aclExtInnerKey,
+			keyField: aclExtKeyField, managedLeaves: []string{"rules"},
+		},
+		nestedLeaf:      "rules",
+		nestedKeyField:  "sequence",
+		nestedYANGInner: "access-list-seq-rule",
+	}
 	desired := extACLDesired(
 		mkRule(10, map[string]any{"action": "permit"}),
 		mkRule(20, map[string]any{"action": "deny"}),
@@ -72,11 +77,16 @@ func TestACLExtendedDiffEmitsOnlyChangedRule(t *testing.T) {
 	// 100-rule ACL with a single ACE edited at sequence 50. The
 	// merge body must contain only sequence 50, not all 100 — that's
 	// the whole point of per-rule diffing.
-	w := extendedACLWriter{base: keyedListWriter{
-		family: aclExtFamily, yangPath: aclExtPath,
-		envelopeKey: aclExtEnvelopeKey, innerKey: aclExtInnerKey,
-		keyField: aclExtKeyField, managedLeaves: []string{"rules"},
-	}}
+	w := nestedKeyedListWriter{
+		base: keyedListWriter{
+			family: aclExtFamily, yangPath: aclExtPath,
+			envelopeKey: aclExtEnvelopeKey, innerKey: aclExtInnerKey,
+			keyField: aclExtKeyField, managedLeaves: []string{"rules"},
+		},
+		nestedLeaf:      "rules",
+		nestedKeyField:  "sequence",
+		nestedYANGInner: "access-list-seq-rule",
+	}
 	const total = 100
 	desiredRules := make([]any, 0, total)
 	observedRules := make([]any, 0, total)
@@ -117,11 +127,16 @@ func TestACLExtendedDiffRulesEqualOrderless(t *testing.T) {
 	// hand-written intent in author-order (10, 30, 20) must compare
 	// as equal — without per-rule keying, the byte-level compare in
 	// the old leavesEqual would have flagged this as drift.
-	w := extendedACLWriter{base: keyedListWriter{
-		family: aclExtFamily, yangPath: aclExtPath,
-		envelopeKey: aclExtEnvelopeKey, innerKey: aclExtInnerKey,
-		keyField: aclExtKeyField, managedLeaves: []string{"rules"},
-	}}
+	w := nestedKeyedListWriter{
+		base: keyedListWriter{
+			family: aclExtFamily, yangPath: aclExtPath,
+			envelopeKey: aclExtEnvelopeKey, innerKey: aclExtInnerKey,
+			keyField: aclExtKeyField, managedLeaves: []string{"rules"},
+		},
+		nestedLeaf:      "rules",
+		nestedKeyField:  "sequence",
+		nestedYANGInner: "access-list-seq-rule",
+	}
 	desired := extACLDesired(
 		mkRule(10, nil), mkRule(30, nil), mkRule(20, nil),
 	)
@@ -143,11 +158,16 @@ func TestACLExtendedDiffRulesEqualOrderless(t *testing.T) {
 func TestACLExtendedDiffNewACLEmitsAllRules(t *testing.T) {
 	// A brand-new ACL on the device side — every desired rule
 	// counts as changed because there's no observed rule to match.
-	w := extendedACLWriter{base: keyedListWriter{
-		family: aclExtFamily, yangPath: aclExtPath,
-		envelopeKey: aclExtEnvelopeKey, innerKey: aclExtInnerKey,
-		keyField: aclExtKeyField, managedLeaves: []string{"rules"},
-	}}
+	w := nestedKeyedListWriter{
+		base: keyedListWriter{
+			family: aclExtFamily, yangPath: aclExtPath,
+			envelopeKey: aclExtEnvelopeKey, innerKey: aclExtInnerKey,
+			keyField: aclExtKeyField, managedLeaves: []string{"rules"},
+		},
+		nestedLeaf:      "rules",
+		nestedKeyField:  "sequence",
+		nestedYANGInner: "access-list-seq-rule",
+	}
 	desired := extACLDesired(mkRule(10, nil), mkRule(20, nil))
 	ops, err := w.Diff(desired, nil)
 	if err != nil {

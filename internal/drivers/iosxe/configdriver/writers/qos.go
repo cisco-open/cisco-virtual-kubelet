@@ -33,16 +33,24 @@ func init() {
 		},
 	})
 
-	Override(keyedListWriter{
-		family:      "policy_map",
-		yangPath:    "/Cisco-IOS-XE-native:native/policy/Cisco-IOS-XE-policy:policy-map",
-		envelopeKey: "Cisco-IOS-XE-policy:policy-map",
-		innerKey:    "policy_maps",
-		keyField:    "name",
-		managedLeaves: []string{
-			"description",
-			"class",
-			"type",
+	// policy-map: per-class action diffing so an edit to one
+	// class's actions doesn't re-push the whole policy-map's
+	// class list.
+	Override(nestedKeyedListWriter{
+		base: keyedListWriter{
+			family:      "policy_map",
+			yangPath:    "/Cisco-IOS-XE-native:native/policy/Cisco-IOS-XE-policy:policy-map",
+			envelopeKey: "Cisco-IOS-XE-policy:policy-map",
+			innerKey:    "policy_maps",
+			keyField:    "name",
+			managedLeaves: []string{
+				"description",
+				"class",
+				"type",
+			},
+		},
+		nested: []nestedListSpec{
+			{Leaf: "class", KeyField: "name"},
 		},
 	})
 }

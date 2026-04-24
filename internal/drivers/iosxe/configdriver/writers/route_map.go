@@ -14,7 +14,7 @@
 
 package writers
 
-// Route-map Phase-2 writer.
+// Route-map writer with per-entry sequence diffing.
 //
 // netascode:
 //   route_map:
@@ -28,21 +28,26 @@ package writers
 //             set:
 //               local_preference: 200
 //
-// YANG: /Cisco-IOS-XE-native:native/route-map. The entries list is
-// an opaque managed leaf in Phase-2; per-sequence diffing is
-// follow-up.
+// YANG: /Cisco-IOS-XE-native:native/route-map. Per-sequence diffing
+// matters here too — a single match/set tweak on entry 10 must not
+// rewrite a 200-entry route-map.
 
 func init() {
-	Override(keyedListWriter{
-		family:      "route_map",
-		yangPath:    "/Cisco-IOS-XE-native:native/route-map",
-		envelopeKey: "Cisco-IOS-XE-native:route-map",
-		innerKey:    "route_maps",
-		keyField:    "name",
-		managedLeaves: []string{
-			"description",
-			"entries",
-			"route-map-without-order-seq",
+	Override(nestedKeyedListWriter{
+		base: keyedListWriter{
+			family:      "route_map",
+			yangPath:    "/Cisco-IOS-XE-native:native/route-map",
+			envelopeKey: "Cisco-IOS-XE-native:route-map",
+			innerKey:    "route_maps",
+			keyField:    "name",
+			managedLeaves: []string{
+				"description",
+				"entries",
+				"route-map-without-order-seq",
+			},
 		},
+		nestedLeaf:      "entries",
+		nestedKeyField:  "seq",
+		nestedYANGInner: "route-map-without-order-seq",
 	})
 }

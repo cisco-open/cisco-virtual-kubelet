@@ -14,7 +14,7 @@
 
 package writers
 
-// OSPF Phase-2 writer.
+// OSPF writer with per-network and per-area diffing.
 //
 // netascode (Phase-2 subset):
 //
@@ -31,27 +31,29 @@ package writers
 //             enabled: true
 //
 // YANG: /Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-ospf:router-ospf/ospf
-// Key: id (process number).
-//
-// Each OSPF process is a deep subtree; Phase-2 treats the per-process
-// network/redistribute/area lists as opaque managed leaves, so
-// changes to those lists still trigger a merge, but per-entry
-// diffing is a Phase-3 deliverable.
+// Outer key: id (process number).
+// Inner keyed lists: `network` keyed by prefix, `area` keyed by id.
 
 func init() {
-	Override(keyedListWriter{
-		family:      "ospf",
-		yangPath:    "/Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-ospf:router-ospf/ospf/process-id",
-		envelopeKey: "Cisco-IOS-XE-ospf:process-id",
-		innerKey:    "processes",
-		keyField:    "id",
-		managedLeaves: []string{
-			"router-id",
-			"network",
-			"redistribute",
-			"area",
-			"auto-cost",
-			"passive-interface",
+	Override(nestedKeyedListWriter{
+		base: keyedListWriter{
+			family:      "ospf",
+			yangPath:    "/Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-ospf:router-ospf/ospf/process-id",
+			envelopeKey: "Cisco-IOS-XE-ospf:process-id",
+			innerKey:    "processes",
+			keyField:    "id",
+			managedLeaves: []string{
+				"router-id",
+				"network",
+				"redistribute",
+				"area",
+				"auto-cost",
+				"passive-interface",
+			},
+		},
+		nested: []nestedListSpec{
+			{Leaf: "network", KeyField: "prefix"},
+			{Leaf: "area", KeyField: "id"},
 		},
 	})
 }

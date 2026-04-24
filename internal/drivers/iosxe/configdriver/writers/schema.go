@@ -108,6 +108,42 @@ var handWrittenSchemas = map[string]FamilySchema{
 		ManagedLeaves: []string{"rules"},
 		InnerKey:      aclExtInnerKey, KeyField: aclExtKeyField,
 	},
+	"access_list_standard": {
+		Family: "access_list_standard", Shape: "keyed_list",
+		ManagedLeaves: []string{"rules"},
+		InnerKey:      "standard", KeyField: "name",
+	},
+	"prefix_list": {
+		Family: "prefix_list", Shape: "keyed_list",
+		ManagedLeaves: []string{"description", "sequences"},
+		InnerKey:      "prefixes", KeyField: "name",
+	},
+	"route_map": {
+		Family: "route_map", Shape: "keyed_list",
+		ManagedLeaves: []string{"description", "entries", "route-map-without-order-seq"},
+		InnerKey:      "route_maps", KeyField: "name",
+	},
+	"ospf": {
+		Family: "ospf", Shape: "keyed_list",
+		ManagedLeaves: []string{
+			"router-id", "network", "redistribute",
+			"area", "auto-cost", "passive-interface",
+		},
+		InnerKey: "processes", KeyField: "id",
+	},
+	"eigrp": {
+		Family: "eigrp", Shape: "keyed_list",
+		ManagedLeaves: []string{
+			"address-family", "network", "router-id",
+			"metric", "eigrp-instance",
+		},
+		InnerKey: "processes", KeyField: "id",
+	},
+	"policy_map": {
+		Family: "policy_map", Shape: "keyed_list",
+		ManagedLeaves: []string{"description", "class", "type"},
+		InnerKey:      "policy_maps", KeyField: "name",
+	},
 }
 
 // systemManagedLeaves is a helper that returns the system writer's
