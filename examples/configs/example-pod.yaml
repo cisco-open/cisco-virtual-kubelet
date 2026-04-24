@@ -40,9 +40,15 @@ spec:
 # -------------------------------------------------------------------
 # Example 2: HTTP image — IfNotPresent (default)
 #
-# The VK first attempts a device-native pull. If that times out it
-# copies the tar to flash and installs from there. On subsequent
-# deploys the cached flash copy is reused (no re-download).
+# The VK first attempts a device-native pull. If that succeeds the
+# image is NOT cached on flash — IfNotPresent and Always are identical
+# on the device-native pull path (IOS-XE App Hosting does not persist
+# the image to flash after a native install).
+#
+# If the device-native pull times out the VK falls back to copying the
+# tar to flash. On subsequent deploys with a timeout fallback, the
+# cached flash copy IS reused (no re-download). Use Always to force
+# re-download even in the fallback path.
 # -------------------------------------------------------------------
 apiVersion: v1
 kind: Pod

@@ -270,6 +270,27 @@ imagePullPolicy: Never
 
 ---
 
+## `imagePullPolicy: IfNotPresent` still re-downloads the image every time
+
+### Symptom
+
+You set `imagePullPolicy: IfNotPresent` expecting the image to be reused from a local cache, but each pod creation issues a fresh download. `dir flash:` shows no cached tar.
+
+### Why
+
+IOS-XE App Hosting does not leave a copy of the image on flash when using the device-native install path (`app-hosting install appid ... package <url>`). The device fetches and loads the image directly into the container runtime without writing it to flash. Since no flash copy is ever created, there is nothing for `IfNotPresent` to reuse — it behaves identically to `Always` on the device-native pull path.
+
+The `IfNotPresent` flash-cache optimization only activates when the VK's **copy fallback path** has run at least once (i.e., the device-native pull timed out and the VK copied the tar to flash itself). After that first copy, subsequent deploys with `IfNotPresent` will reuse the cached tar.
+
+### Workaround
+
+To reliably benefit from local caching, force the copy path by one of the following:
+
+- Pre-copy the image to flash manually on the device, then use `imagePullPolicy: Never` with a flash path (`flash:/virtual-kubelet/my-app.tar`).
+- Accept that on platforms where the device-native pull succeeds quickly, re-downloading from the registry on each deploy is the expected behaviour.
+
+---
+
 ## `imagePullPolicy: Never` with HTTP image URL
 
 ### Symptom

@@ -240,13 +240,19 @@ On platforms that cannot pull from HTTP URLs, the VK automatically falls back to
 
 ### `imagePullPolicy`
 
-Behaves analogously to the Kubernetes `imagePullPolicy` field:
+Behaves analogously to the Kubernetes `imagePullPolicy` field, with one important platform constraint:
+
+**IOS-XE App Hosting does not cache images on flash when using the device-native pull path.** When the device installs an app directly from an HTTP URL (`app-hosting install appid ... package <url>`), the image is fetched and loaded into the container runtime without leaving a copy on flash. This means `IfNotPresent` and `Always` are **functionally identical on the device-native pull path** — the image is always re-downloaded from the URL on each deploy.
+
+The `IfNotPresent` flash-cache optimization only applies to the **copy fallback path**: if the VK previously copied a tar to flash (because the device-native pull timed out), that cached copy is reused on subsequent deploys.
 
 | Value | Behaviour |
 |---|---|
 | `Always` | Always attempt device-native pull; if that times out, always re-download via copy RPC. The flash cache is never reused. |
-| `IfNotPresent` (default) | Always attempt device-native pull first; if that times out, try installing from the cached flash destination before re-downloading. If a previously copied tar exists at the destination, the copy step is skipped. |
+| `IfNotPresent` (default) | Always attempt device-native pull first. If that times out, try installing from a previously cached flash tar before re-downloading. **If the device-native pull succeeds, no flash cache is created and no difference from `Always` is observable.** |
 | `Never` | Image must already exist on flash. HTTP URLs are rejected immediately — no install RPC is issued. |
+
+To reliably benefit from `IfNotPresent` caching, deliberately use the copy path: either configure a short `imagePullPolicy` timeout so the device-native pull always times out quickly (triggering copy fallback), or pre-stage the image using `imagePullPolicy: Never` with a flash path after a first manual copy.
 
 ### `imagePullSecrets`
 
