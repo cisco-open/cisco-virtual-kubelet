@@ -80,37 +80,41 @@ in `iosxe-config-driver-review.md` §11.
 **Reviewer position:** NAC templates can be expressed in two styles:
 
 1. **Data-model style** — parameterised netascode YAML (structured).
-2. **CLI/Jinja style** — IOS-XE CLI snippets rendered via Jinja or HCL
+2. **CLI/Jinja style** — IOS-XE CLI snippets rendered via Jinja
    templates (text-based).
 
-The VK implementation should ideally support both.
+The VK implementation should ideally support both. Jinja is the
+canonical syntax NAC operators already author CLI templates in; VK
+should consume those same templates without a dialect rewrite.
 
 **Analysis:** The current `IOSXETemplate` only supports data-model style:
 a YAML body with Go `text/template` `{{ .Param }}` substitution,
 producing a netascode fragment that merges into the intent tree
 (`internal/drivers/iosxe/configdriver/intent/template.go`).
 
-The CLI/Jinja style is fundamentally different — it produces IOS-XE CLI
-text, not structured YAML. Supporting it requires:
+Supporting CLI/Jinja templates requires three things:
 
-- A type discriminator on `IOSXETemplate` (`spec.type: data-model | cli`).
-- For `cli` templates: render the template to CLI text, then push via a
-  CLI-capable transport (SSH exec, NETCONF `edit-config` with CLI
-  payload, or a RESTCONF CLI-passthrough if available).
-- Consider switching the template engine from Go `text/template` to HCL
-  template evaluation (`hashicorp/hcl/v2/hclsyntax`) to achieve parity
-  with the function set in `terraform-provider-utils`
-  (`hcl_template.go`): `format`, `join`, `replace`, `try/can`,
-  `regex`, `split`, etc. The HCL evaluator is pure Go with no Terraform
-  runtime dependency.
+- A type discriminator on `IOSXETemplate` (`spec.type: data-model | cli`)
+  so the resolver routes CLI bodies to a text renderer instead of the
+  YAML merger.
+- A CLI-capable transport path — either NETCONF `edit-config` with a
+  CLI payload (Cisco-IA `cli-config-data`) or the equivalent RESTCONF
+  `operations` endpoint.
+- A Jinja-compatible template engine so NAC-authored CLI templates
+  (`{{ var }}`, `{% for … %}`, `{% if … %}`, filters like `default`,
+  `join`, `upper`, `lower`) render unchanged in VK. Pure-Go Jinja
+  engines exist (`flosch/pongo2`, `noirbizarre/gonja`); neither depends
+  on a Terraform runtime or on HCL. Go `text/template` is *not* a
+  drop-in replacement — the delimiter and control-flow syntax differ
+  enough that NAC templates would need hand-porting.
 
 ### Action
 
 | Step | Description | Priority | Status |
 |------|-------------|----------|--------|
 | 3a | Add `spec.type` field to the `IOSXETemplate` CRD with values `data-model` (default, current behaviour) and `cli`. | CRD change now | ✅ Shipped |
-| 3b | CLI template rendering + NETCONF transport. | Phase 2 | ✅ Shipped. `intent.ExpandCLITemplate` renders CLI text with `text/template`; `ResolvedIntent.CLIBlocks` carries the output as a side-channel (not merged into the data-model tree). The engine emits one `transport.Op{Verb:VerbCLI}` per block after family writes, so CLI changes run in the same apply phase without polluting the structural merge. Both transports push via Cisco-IA `cli-config-data`: RESTCONF POSTs `/operations/cisco-ia:cli-config-data` with a JSON envelope; NETCONF wraps CLI lines in `<cli-config-data xmlns="http://cisco.com/yang/cisco-ia">`. NETCONF adapter itself is shipped — hand-rolled minimal client over `golang.org/x/crypto/ssh` with both 1.0 (`]]>]]>`) and 1.1 chunked framing (RFC 6242), hello-based capability detection (base:1.1, candidate, confirmed-commit), and `lock`/`edit-config`/`commit`/`discard-changes`/`unlock` wired to the transport's transactional surface. Under `driftPolicy: report`, CLI blocks surface as `cli:<templateName>` drift entries rather than being applied. |
-| 3c | Evaluate migrating the data-model template engine from Go `text/template` to HCL template evaluation for function-set parity with `terraform-provider-utils`. | Next iteration | ⏳ Pending |
+| 3b | CLI template rendering plumbing + NETCONF transport so CLI bodies can be pushed to a device. | Phase 2 | ✅ Shipped (render + transport path). `intent.ExpandCLITemplate` renders CLI text; `ResolvedIntent.CLIBlocks` carries the output as a side-channel (not merged into the data-model tree). The engine emits one `transport.Op{Verb:VerbCLI}` per block after family writes. Both transports push via Cisco-IA `cli-config-data`: RESTCONF POSTs `/operations/cisco-ia:cli-config-data` with a JSON envelope; NETCONF wraps CLI lines in `<cli-config-data xmlns="http://cisco.com/yang/cisco-ia">`. NETCONF adapter is hand-rolled over `golang.org/x/crypto/ssh` with both 1.0 (`]]>]]>`) and 1.1 chunked framing (RFC 6242), hello-based capability detection (base:1.1, candidate, confirmed-commit), and `lock`/`edit-config`/`commit`/`discard-changes`/`unlock` wired to the transport's transactional surface. Under `driftPolicy: report`, CLI blocks surface as `cli:<templateName>` drift entries rather than being applied. **Template-engine gap:** the CLI renderer currently uses Go `text/template`, which is syntactically incompatible with Jinja — NAC CLI templates need hand-porting until 3c lands. |
+| 3c | Swap the CLI template renderer from Go `text/template` to a pure-Go Jinja engine (`flosch/pongo2` or `noirbizarre/gonja`) so NAC-authored CLI templates consume unchanged. Data-model templates stay on `text/template` — they are structured YAML, not CLI text, and Jinja's text-oriented control flow buys nothing there. | Next iteration | ⏳ Pending |
 
 ---
 
@@ -156,7 +160,7 @@ function wrappers.
 | Step | Description | Priority |
 |------|-------------|----------|
 | 4a | Add cross-validation tests: run the same family YAML corpus through both CVK's `MergeWithRules` and `terraform-provider-utils`'s `MergeMaps` and assert identical output for all 54 families. | Immediate |
-| 4b | Open a discussion/issue with `terraform-provider-utils` maintainers proposing extraction of the core merge + YAML utilities into a standalone Go module (e.g. `github.com/netascode/nac-utils-go`) containing: `OrderedMap`, `MergeMaps`, `yamlDecode`/`yamlEncode`, `resolveYamlTags`, and the HCL template evaluator. | Medium term |
+| 4b | Open a discussion/issue with `terraform-provider-utils` maintainers proposing extraction of the core merge + YAML utilities into a standalone Go module (e.g. `github.com/netascode/nac-utils-go`) containing `OrderedMap`, `MergeMaps`, `yamlDecode`/`yamlEncode`, and `resolveYamlTags`. The HCL template evaluator stays out of scope — VK targets Jinja for CLI templates (see 3c) and has no Terraform surface. | Medium term |
 | 4c | Once the shared module exists, replace CVK's `intent/merge.go` with an import of the shared module, adapting the `KeyRules` layer as a CVK-local wrapper. | Medium term |
 | 4d | Confirm MPL-2.0 / Apache-2.0 compatibility with legal for the shared module approach. | Medium term |
 
@@ -171,5 +175,5 @@ function wrappers.
 | 4a | Cross-validation tests for merge logic | Immediate | ✅ Shipped (commit `1c82a28`) |
 | 2a–2d | Repurpose `cisco-vk-config-lint` as drift reporter | Next iteration | ✅ Shipped |
 | 3b | CLI template rendering + NETCONF transport | Phase 2 | ✅ Shipped (this iteration) |
-| 3c | Evaluate HCL template engine migration | Next iteration | ⏳ Pending |
+| 3c | Migrate CLI template renderer from Go `text/template` to a pure-Go Jinja engine (pongo2/gonja) for NAC CLI-template parity | Next iteration | ⏳ Pending |
 | 4b–4d | Shared merge module with `terraform-provider-utils` | Medium term | ⏳ Pending; cross-validation corpus (4a) is ready to swap expected outputs for shared-library calls once the module extraction lands |
