@@ -5,13 +5,19 @@
 # Cisco-IOS-XE YANG xpath(s) the writer reads and writes.
 #
 # Fields:
-#   yang_paths  - one or more absolute YANG xpaths the family touches.
-#   shape       - "singleton" (single container) or "keyed_list" (list keyed
-#                 by one or more leaves).
-#   key_fields  - for shape=keyed_list, the leaf names that form the key.
-#   depends_on  - families that must be applied before this one during a
-#                 fresh bring-up (writers use it to pick an apply order).
-#   portal      - canonical netascode documentation URL (for tooling).
+#   yang_paths       - native Cisco-IOS-XE xpaths the family reads/writes.
+#   openconfig_paths - optional OpenConfig xpaths modelling the same
+#                      family. Used by gNMI transports (Phase 6 path
+#                      dialect) and external tooling. Leave empty when
+#                      the family is Cisco-IA-only or has no clean
+#                      OpenConfig analog.
+#   shape            - "singleton" (single container) or "keyed_list"
+#                      (list keyed by one or more leaves).
+#   key_fields       - for shape=keyed_list, the leaf names that form
+#                      the key.
+#   depends_on       - families that must be applied before this one
+#                      during a fresh bring-up.
+#   portal           - canonical netascode documentation URL.
 #
 # The driver consumes a compiled form of this file at startup; add or
 # remove a family here before adding the corresponding writer so the
@@ -20,6 +26,8 @@
 system:
   yang_paths:
     - /Cisco-IOS-XE-native:native
+  openconfig_paths:
+    - /openconfig-system:system
   shape: singleton
   depends_on: []
   portal: https://netascode.cisco.com/docs/data_models/iosxe/device/system/
@@ -27,6 +35,8 @@ system:
 vlan:
   yang_paths:
     - /Cisco-IOS-XE-native:native/vlan/Cisco-IOS-XE-vlan:vlan-list
+  openconfig_paths:
+    - /openconfig-network-instance:network-instances/network-instance/vlans
   shape: keyed_list
   key_fields: [id]
   depends_on: []
@@ -35,6 +45,8 @@ vlan:
 vrf:
   yang_paths:
     - /Cisco-IOS-XE-native:native/vrf/definition
+  openconfig_paths:
+    - /openconfig-network-instance:network-instances/network-instance
   shape: keyed_list
   key_fields: [name]
   depends_on: []
@@ -51,6 +63,8 @@ interface_ethernet:
     - /Cisco-IOS-XE-native:native/interface/HundredGigE
     - /Cisco-IOS-XE-native:native/interface/TwoHundredGigE
     - /Cisco-IOS-XE-native:native/interface/FourHundredGigE
+  openconfig_paths:
+    - /openconfig-interfaces:interfaces/interface
   shape: keyed_list
   key_fields: [type, name]
   depends_on: [vrf, access_list_extended]
@@ -59,6 +73,8 @@ interface_ethernet:
 interface_loopback:
   yang_paths:
     - /Cisco-IOS-XE-native:native/interface/Loopback
+  openconfig_paths:
+    - /openconfig-interfaces:interfaces/interface
   shape: keyed_list
   key_fields: [name]
   depends_on: [vrf]
@@ -115,6 +131,8 @@ static_route:
 ospf:
   yang_paths:
     - /Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-ospf:router-ospf
+  openconfig_paths:
+    - /openconfig-network-instance:network-instances/network-instance/protocols/protocol
   shape: keyed_list
   key_fields: [id]
   depends_on: [vrf, interface_ethernet, interface_loopback]
@@ -123,6 +141,8 @@ ospf:
 bgp:
   yang_paths:
     - /Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-bgp:router-bgp
+  openconfig_paths:
+    - /openconfig-network-instance:network-instances/network-instance/protocols/protocol
   shape: singleton
   depends_on: [vrf, interface_ethernet, interface_loopback]
   portal: https://netascode.cisco.com/docs/data_models/iosxe/device/bgp/

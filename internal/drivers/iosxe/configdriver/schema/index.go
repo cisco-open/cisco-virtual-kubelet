@@ -32,11 +32,37 @@ var yangVersionsYAML []byte
 // requires adding it here in the same change so decoding fails loudly
 // rather than silently dropping data.
 type Family struct {
-	YANGPaths  []string `json:"yang_paths"`
-	Shape      string   `json:"shape"`
-	KeyFields  []string `json:"key_fields,omitempty"`
-	DependsOn  []string `json:"depends_on,omitempty"`
-	Portal     string   `json:"portal,omitempty"`
+	// YANGPaths lists the Cisco-IOS-XE-native YANG xpaths the family
+	// reads and writes. This is the default dialect; every family
+	// has a value here.
+	YANGPaths []string `json:"yang_paths"`
+
+	// OpenConfigPaths optionally lists the OpenConfig YANG xpaths
+	// that model the same family. When set, gNMI transports can
+	// switch to OpenConfig dialect by family (Phase 6 follow-up
+	// per-writer migration), and external tooling
+	// (`cisco-vk-config-docs`, the lint tool) can show a multi-
+	// vendor target. Empty when no clean OpenConfig analog exists
+	// (Cisco-IA RPCs, vendor-specific knobs).
+	OpenConfigPaths []string `json:"openconfig_paths,omitempty"`
+
+	Shape     string   `json:"shape"`
+	KeyFields []string `json:"key_fields,omitempty"`
+	DependsOn []string `json:"depends_on,omitempty"`
+	Portal    string   `json:"portal,omitempty"`
+}
+
+// PathsForDialect returns the YANG xpaths for the family, falling
+// back to native paths when the requested dialect has no entries.
+// dialect is "native" or "openconfig"; anything else is treated as
+// native. The fallback is intentional: a writer keyed off a family
+// without OpenConfig coverage stays functional, just on the native
+// path.
+func (f Family) PathsForDialect(dialect string) []string {
+	if dialect == "openconfig" && len(f.OpenConfigPaths) > 0 {
+		return f.OpenConfigPaths
+	}
+	return f.YANGPaths
 }
 
 // YANGRelease describes one supported Cisco-IOS-XE YANG release.

@@ -143,6 +143,51 @@ func TestFamiliesIndexConsistent(t *testing.T) {
 	}
 }
 
+func TestPathsForDialectFallsBackToNative(t *testing.T) {
+	// A family without an OpenConfig mapping must still produce
+	// usable paths under the openconfig dialect — fall back to
+	// native rather than empty so writers don't fail closed when
+	// migration hasn't reached them yet.
+	f := Family{YANGPaths: []string{"/native/path"}}
+	got := f.PathsForDialect("openconfig")
+	if len(got) != 1 || got[0] != "/native/path" {
+		t.Errorf("got %v, want native fallback", got)
+	}
+}
+
+func TestPathsForDialectPrefersOpenConfigWhenSet(t *testing.T) {
+	f := Family{
+		YANGPaths:       []string{"/native/path"},
+		OpenConfigPaths: []string{"/openconfig/path"},
+	}
+	if got := f.PathsForDialect("openconfig"); got[0] != "/openconfig/path" {
+		t.Errorf("got %v, want openconfig", got)
+	}
+	if got := f.PathsForDialect("native"); got[0] != "/native/path" {
+		t.Errorf("native dialect: got %v", got)
+	}
+}
+
+func TestFamiliesYAMLOpenConfigPathsParse(t *testing.T) {
+	// At least one family ships with openconfig_paths populated
+	// — exercise the loader so a malformed addition is caught.
+	families, err := LoadFamilies()
+	if err != nil {
+		t.Fatalf("LoadFamilies: %v", err)
+	}
+	want := []string{"system", "interface_ethernet", "vlan", "vrf", "ospf", "bgp"}
+	for _, name := range want {
+		f, ok := families[name]
+		if !ok {
+			t.Errorf("family %q missing", name)
+			continue
+		}
+		if len(f.OpenConfigPaths) == 0 {
+			t.Errorf("family %q has no openconfig_paths", name)
+		}
+	}
+}
+
 func TestDefaultYANGReleaseResolves(t *testing.T) {
 	r, err := DefaultYANGRelease()
 	if err != nil {
