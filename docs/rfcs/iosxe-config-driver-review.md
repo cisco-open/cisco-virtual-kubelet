@@ -762,11 +762,14 @@ needs a new RBAC rule.
 Kubernetes has a soft 1.5 MiB limit per-object. A device with
 hundreds of Drifted families (unlikely but possible during a
 bad change) could overflow. The engine caps
-`status.familyStatus` to the managed-family count, but
-`status.drift[]` is uncapped today.
-
-Fix: Phase-4 caps `status.drift[]` at 50 entries and exposes
-totals via metrics. A 1-line change; flagged for completeness.
+`status.familyStatus` to the managed-family count, and as of
+Phase 4 also caps `status.drift[]` at `engine.MaxDriftEntries`
+(50). Overflow surfaces as
+`cisco_vk_config_drift_entries_truncated_total{device}` so an
+operator can alert on chronic truncation rather than discover
+it by reading the CR. The limit is also enforced as
+`maxItems: 50` on the OpenAPI schema, so external writes that
+try to set more than 50 are rejected at the API server.
 
 ### 10.12 Per-CR convergence not cluster-convergence
 
@@ -938,7 +941,12 @@ Closes the netascode-parity depth gaps identified in §10.
 - **Cluster-scoped family leases** (or manager-namespace-only)
   so cross-namespace CRs arbitrate. Closes §10.10.
 - **`status.drift[]` capping** + overflow reporting via
-  metrics. Closes §10.11.
+  metrics. ✅ Shipped: `engine.CapDrift` truncates to
+  `engine.MaxDriftEntries` (50); the `recordResult` boundary
+  bumps `cisco_vk_config_drift_entries_truncated_total{device}`
+  for the dropped count; the API field is annotated
+  `+kubebuilder:validation:MaxItems=50` so the OpenAPI schema
+  enforces the same cap on external writers. Closes §10.11.
 - **Pre-commit packaging** for `cisco-vk-config-lint`:
   container image, pre-commit hook entry, version tag.
 

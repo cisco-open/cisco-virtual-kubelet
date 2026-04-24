@@ -28,13 +28,44 @@ import (
 var (
 	metricsOnce sync.Once
 
-	reconcileDuration *prometheus.HistogramVec
-	applyDuration     *prometheus.HistogramVec
-	driftDetected     *prometheus.CounterVec
-	driftCorrected    *prometheus.CounterVec
-	applyErrors       *prometheus.CounterVec
-	familyState       *prometheus.GaugeVec
+	reconcileDuration     *prometheus.HistogramVec
+	applyDuration         *prometheus.HistogramVec
+	driftDetected         *prometheus.CounterVec
+	driftCorrected        *prometheus.CounterVec
+	driftEntriesTruncated *prometheus.CounterVec
+	applyErrors           *prometheus.CounterVec
+	familyState           *prometheus.GaugeVec
 )
+
+// MaxDriftEntries caps status.drift[] on each IOSXEConfig CR. Drift
+// is fundamentally unbounded — a brand-new device pointed at a
+// detailed CR could surface thousands of leaves on the first tick —
+// and an unbounded slice on a status subresource bloats etcd writes
+// and informer cache memory linearly. Truncation surfaces in the
+// cisco_vk_config_drift_entries_truncated_total counter so operators
+// can alert on it without inspecting every CR.
+const MaxDriftEntries = 50
+
+// CapDrift returns the slice trimmed to MaxDriftEntries plus the
+// number of entries that didn't make the cut. The retained slice is
+// the head of the input — callers that want a different selection
+// (e.g. priority-ranked) should sort before calling.
+func CapDrift(in []DriftEntry) (out []DriftEntry, dropped int) {
+	if len(in) <= MaxDriftEntries {
+		return in, 0
+	}
+	return in[:MaxDriftEntries], len(in) - MaxDriftEntries
+}
+
+// RecordDriftTruncated bumps the truncation counter by dropped. A
+// no-op when metrics aren't registered (unit tests, in-process
+// callers).
+func RecordDriftTruncated(device string, dropped int) {
+	if driftEntriesTruncated == nil || dropped <= 0 {
+		return
+	}
+	driftEntriesTruncated.WithLabelValues(device).Add(float64(dropped))
+}
 
 // RegisterMetrics registers the engine's metric set on reg. It is
 // idempotent — repeated calls are safe — because controller-runtime's
@@ -71,6 +102,13 @@ func RegisterMetrics(reg prometheus.Registerer) {
 			},
 			[]string{"device", "family"},
 		)
+		driftEntriesTruncated = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "cisco_vk_config_drift_entries_truncated_total",
+				Help: "Number of drift entries dropped when status.drift[] was capped at MaxDriftEntries on the CR.",
+			},
+			[]string{"device"},
+		)
 		applyErrors = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "cisco_vk_config_apply_errors_total",
@@ -91,6 +129,7 @@ func RegisterMetrics(reg prometheus.Registerer) {
 			applyDuration,
 			driftDetected,
 			driftCorrected,
+			driftEntriesTruncated,
 			applyErrors,
 			familyState,
 		)

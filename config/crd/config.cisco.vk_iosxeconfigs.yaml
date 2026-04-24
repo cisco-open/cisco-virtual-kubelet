@@ -268,7 +268,8 @@ spec:
               drift:
                 description: |-
                   Drift lists the currently known divergences between intent and device.
-                  Capped at 50 entries; additional drift is reflected in counters only.
+                  Capped at 50 entries; additional drift is reflected in the
+                  cisco_vk_config_drift_entries_truncated_total counter only.
                 items:
                   description: |-
                     DriftEntry records a single observed-vs-desired divergence. Paths are YANG
@@ -299,6 +300,7 @@ spec:
                   - family
                   - path
                   type: object
+                maxItems: 50
                 type: array
               familyStatus:
                 description: FamilyStatus reports per-family state for each family

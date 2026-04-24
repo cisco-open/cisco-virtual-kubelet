@@ -128,8 +128,10 @@ type IOSXEConfigStatus struct {
 	FamilyStatus []FamilyStatus `json:"familyStatus,omitempty"`
 
 	// Drift lists the currently known divergences between intent and device.
-	// Capped at 50 entries; additional drift is reflected in counters only.
+	// Capped at 50 entries; additional drift is reflected in the
+	// cisco_vk_config_drift_entries_truncated_total counter only.
 	// +optional
+	// +kubebuilder:validation:MaxItems=50
 	Drift []DriftEntry `json:"drift,omitempty"`
 
 	// Conditions follows the standard Kubernetes conditions shape. The

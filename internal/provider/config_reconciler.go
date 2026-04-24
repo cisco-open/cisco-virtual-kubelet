@@ -311,7 +311,8 @@ func (r *ConfigReconciler) recordResult(
 	}
 
 	updated.Status.Drift = updated.Status.Drift[:0]
-	for _, d := range result.Drift {
+	capped, dropped := engine.CapDrift(result.Drift)
+	for _, d := range capped {
 		updated.Status.Drift = append(updated.Status.Drift, configv1alpha1.DriftEntry{
 			Family:   d.Family,
 			Path:     d.Path,
@@ -319,6 +320,9 @@ func (r *ConfigReconciler) recordResult(
 			Observed: d.Observed,
 			Detected: metav1.Now(),
 		})
+	}
+	if dropped > 0 {
+		engine.RecordDriftTruncated(cr.Spec.DeviceRef.Name, dropped)
 	}
 
 	readyStatus := metav1.ConditionTrue
