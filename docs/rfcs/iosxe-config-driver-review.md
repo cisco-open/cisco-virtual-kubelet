@@ -767,10 +767,14 @@ namespace `team-a` and `team-b` that target the same device
 **do not arbitrate** — both write, last-write-wins. This is a
 safety property to audit.
 
-Fix: Phase-4 moves the lease namespace to the manager's
-namespace regardless of CR namespace, OR promotes leases to
-cluster-scoped. The latter is the right long-term move; it
-needs a new RBAC rule.
+Fix: Phase-4 added `CONFIG_LEASE_NAMESPACE` so an operator can
+point every cisco-vk pod at one shared namespace
+(`config.leaseNamespace` Helm value). Cross-namespace CRs
+acquire the same lease, last-write-wins is gone. The cluster-
+scoped lease RBAC was already in place from the Phase-1
+node-heartbeat work, so no new RBAC rule was needed. When the
+env is unset the historical per-pod-namespace behaviour is
+preserved unchanged.
 
 ### 10.11 CR status size
 
@@ -969,8 +973,18 @@ Closes the netascode-parity depth gaps identified in §10.
   merges. Patterns are anchored on both ends. Label-based selection
   is deferred (would need a netascode-shape extension to carry
   per-interface labels). Closes §10.9 except for that label item.
-- **Cluster-scoped family leases** (or manager-namespace-only)
-  so cross-namespace CRs arbitrate. Closes §10.10.
+- **Shared lease namespace** so cross-namespace CRs arbitrate. ✅
+  Shipped: `CONFIG_LEASE_NAMESPACE` env on the controller (set
+  via the Helm `config.leaseNamespace` value) propagates to every
+  cisco-vk pod the controller spawns. Each pod's
+  `FamilyLeaser.Namespace` consults `CONFIG_LEASE_NAMESPACE` →
+  `POD_NAMESPACE` → `"default"` in that order. Operators who set
+  the value to a single shared namespace (e.g. `cvk-leases`) get
+  cross-namespace arbitration without per-CR config or new RBAC
+  (the existing cluster-scoped `coordination.k8s.io/v1.leases`
+  ClusterRole already covers any namespace). Leaving the value
+  unset preserves historical per-pod-namespace behaviour.
+  Closes §10.10.
 - **`status.drift[]` capping** + overflow reporting via
   metrics. ✅ Shipped: `engine.CapDrift` truncates to
   `engine.MaxDriftEntries` (50); the `recordResult` boundary

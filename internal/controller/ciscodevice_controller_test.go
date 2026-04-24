@@ -516,6 +516,60 @@ func TestReconcile_DirectPasswordInjectsEnvValue(t *testing.T) {
 	}
 }
 
+func TestReconcile_PropagatesConfigLeaseNamespace(t *testing.T) {
+	// When CONFIG_LEASE_NAMESPACE is set on the controller, every
+	// cisco-vk pod the controller spawns must inherit it. That is
+	// what gives operators a single dial for cross-namespace lease
+	// arbitration (Phase 4 / §10.10). When the env is unset the
+	// pod spec must NOT carry the var — the cisco-vk side falls
+	// back to POD_NAMESPACE in that case.
+	t.Setenv("CONFIG_LEASE_NAMESPACE", "cvk-leases")
+
+	device := newDevice("router-lease", "default")
+	device.Spec.Password = "x"
+	device.Spec.CredentialSecretRef = nil
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-lease")); err != nil {
+		t.Fatalf("Reconcile error: %v", err)
+	}
+
+	var deploy appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-lease" + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("Deployment not found: %v", err)
+	}
+	env := deploy.Spec.Template.Spec.Containers[0].Env
+	if got := envByName(env, "CONFIG_LEASE_NAMESPACE"); got == nil || got.Value != "cvk-leases" {
+		t.Errorf("CONFIG_LEASE_NAMESPACE env missing or wrong: %v", got)
+	}
+}
+
+func TestReconcile_OmitsConfigLeaseNamespaceWhenUnset(t *testing.T) {
+	// Default behaviour — no env on controller ⇒ no env on pod. We
+	// must not invent a value here; the cisco-vk side relies on
+	// the absence of CONFIG_LEASE_NAMESPACE to fall back to
+	// POD_NAMESPACE.
+	t.Setenv("CONFIG_LEASE_NAMESPACE", "")
+
+	device := newDevice("router-no-lease", "default")
+	device.Spec.Password = "x"
+	device.Spec.CredentialSecretRef = nil
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-no-lease")); err != nil {
+		t.Fatalf("Reconcile error: %v", err)
+	}
+	var deploy appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-no-lease" + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("Deployment not found: %v", err)
+	}
+	env := deploy.Spec.Template.Spec.Containers[0].Env
+	if got := envByName(env, "CONFIG_LEASE_NAMESPACE"); got != nil {
+		t.Errorf("CONFIG_LEASE_NAMESPACE leaked into pod spec when controller env was empty: %#v", got)
+	}
+}
+
 func TestReconcile_NoPasswordNoSecretRef_NoEnvVars(t *testing.T) {
 	device := newDevice("router-nopass", "default")
 	device.Spec.Password = ""

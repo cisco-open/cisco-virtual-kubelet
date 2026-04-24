@@ -128,11 +128,26 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		log.G(ctx).WithError(tErr).Warn("IOSXEConfig transport unavailable; driver will report Pending")
 	}
 
-	// Lease namespace tracks the cisco-vk run pod's namespace so the
-	// leases land alongside the process that owns them. In-cluster
-	// deployments always have POD_NAMESPACE; out-of-cluster dev falls
-	// back to "default".
-	leaseNamespace := os.Getenv("POD_NAMESPACE")
+	// Lease namespace selection — three-tier precedence:
+	//   1. CONFIG_LEASE_NAMESPACE env (operator opt-in to a shared
+	//      cluster namespace so IOSXEConfig CRs in different
+	//      tenant namespaces actually arbitrate against each other,
+	//      §10.10).
+	//   2. POD_NAMESPACE — historical default; cross-namespace CRs
+	//      that share the same device do *not* arbitrate under
+	//      this setting because they each acquire a same-named
+	//      lease in their own pod's namespace.
+	//   3. "default" — out-of-cluster dev fallback when neither
+	//      env is set.
+	//
+	// The Helm chart and the CiscoDevice controller surface the
+	// shared-namespace value to every cisco-vk pod; operators who
+	// want the historical (per-pod-namespace) behaviour leave
+	// CONFIG_LEASE_NAMESPACE unset.
+	leaseNamespace := os.Getenv("CONFIG_LEASE_NAMESPACE")
+	if leaseNamespace == "" {
+		leaseNamespace = os.Getenv("POD_NAMESPACE")
+	}
 	if leaseNamespace == "" {
 		leaseNamespace = "default"
 	}

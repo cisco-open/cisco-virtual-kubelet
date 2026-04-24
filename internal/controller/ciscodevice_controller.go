@@ -17,6 +17,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -213,6 +214,21 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
 			},
 		})
+
+		// Propagate CONFIG_LEASE_NAMESPACE from the controller's own
+		// environment so every cisco-vk pod arbitrates against the
+		// same shared namespace. When unset, each pod falls back to
+		// its own POD_NAMESPACE — historical per-pod-namespace
+		// behaviour. The controller's env is fed by the Helm values
+		// (configLeaseNamespace) so an operator who needs cross-
+		// namespace arbitration sets it once cluster-wide rather
+		// than per-device.
+		if v := os.Getenv("CONFIG_LEASE_NAMESPACE"); v != "" {
+			credEnv = append(credEnv, corev1.EnvVar{
+				Name:  "CONFIG_LEASE_NAMESPACE",
+				Value: v,
+			})
+		}
 
 		deploy.Spec.Template.Spec = corev1.PodSpec{
 			Containers: []corev1.Container{

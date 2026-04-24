@@ -44,6 +44,18 @@ controller:
   # healthProbeBindAddress is the address the probe endpoint binds to.
   healthProbeBindAddress: ":8081"
 
+config:
+  # leaseNamespace is the shared namespace for per-(device, family)
+  # arbitration leases. Set this when IOSXEConfig CRs in different
+  # tenant namespaces target the same device — they will arbitrate
+  # against the same lease and avoid the last-write-wins race the
+  # default per-pod-namespace setup leaves open. The cisco-vk
+  # ServiceAccount already has cluster-scoped lease RBAC (see
+  # vk-rbac.yaml), so no additional bindings are required.
+  #
+  # Leave empty to keep the historical per-pod-namespace behaviour.
+  leaseNamespace: ""
+
 resources: {}
 #  limits:
 #    cpu: 200m
