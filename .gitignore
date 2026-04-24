@@ -7,3 +7,5 @@ bin
 site/
 cisco-vk-yang-sync
 cisco-vk-config-lint
+cisco-vk-config-collect
+cisco-vk-config-docs

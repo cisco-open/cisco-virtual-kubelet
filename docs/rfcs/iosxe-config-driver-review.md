@@ -29,14 +29,16 @@ control surface.
 
 ## 2. Numbers
 
-- 24 commits on the branch (see §13 for the commit progression).
-- 206 files changed, ~18.9k insertions.
-- 54 netascode families with real writers; every entry on the netascode
-  IOS-XE portal has a CVK writer.
+- Branch history: 28 commits on top of main (including the
+  review-feedback response commits, see §15).
+- 54 netascode families with real writers; every entry on the
+  netascode IOS-XE portal has a CVK writer.
 - 5 scope CRDs (IOSXEConfig, IOSXEConfigDefaults, IOSXEDeviceGroupConfig,
   IOSXEInterfaceGroupConfig, IOSXETemplate).
-- 4 new tools: `cisco-vk-config-lint`, `cisco-vk-config-collect`,
-  `cisco-vk-config-docs`, `cisco-vk-yang-sync`.
+- 3 new tools: `cisco-vk-config-lint`, `cisco-vk-config-docs`,
+  `cisco-vk-yang-sync`. Brownfield onboarding uses the upstream
+  `nac-collect` directly — its output YAML is a drop-in
+  `ConfigMap.data[key]` value.
 - `go build ./...`, `go vet ./...`, `go test ./... -count=1`, and
   `make generate` all green on the tip.
 
@@ -146,7 +148,7 @@ identical internals.
 | family index | `schema/families.yaml` (hand-maintained, 54 entries) | ✅ |
 | YANG release pin | `schema/yang-versions.yaml` (17.9.1 = release 1791) | ✅ |
 | `nac-validate` | `cisco-vk-config-lint` | ✅ (see §9) |
-| `nac-collect` | `cisco-vk-config-collect` | ✅ |
+| `nac-collect` | upstream `nac-collect` reused as-is | ✅ (see §9) |
 | portal-generated family docs | `cisco-vk-config-docs` | ✅ |
 | YANG → ygot Go types | `cisco-vk-yang-sync --yang-dir` | 🟡 wiring present; YANG tree not checked in |
 | Terraform-style transactional apply | absent (RESTCONF) | 🟡 deferred to NETCONF in a later phase |
@@ -160,7 +162,7 @@ identical internals.
 | canonical-hash short-circuit | `intent.CanonicalHash` in `ConfigReconciler` | ✅ new — saves Fetch/Diff on quiescent CRs |
 | runtime | Kubernetes controller | different — Terraform replaced |
 | state store | Kubernetes etcd + device | different — no Terraform state |
-| brownfield onboarding | `cisco-vk-config-collect` → netascode YAML | ✅ mirrors `nac-collect` |
+| brownfield onboarding | upstream `nac-collect` → netascode YAML → `ConfigMap.data` | ✅ one-shot; no VK-side tool duplication |
 
 Two things worth flagging up-front:
 
@@ -426,7 +428,7 @@ map ordering. Worth cross-checking.
 | data model | netascode YAML | **same** (byte-for-byte via ConfigMap) |
 | schema file | `.schema.yaml` (Yamale) | `families.yaml` + `writers.FamilySchema` |
 | offline validator | `nac-validate` | `cisco-vk-config-lint` |
-| brownfield collector | `nac-collect` | `cisco-vk-config-collect` |
+| brownfield collector | `nac-collect` | **same** — upstream `nac-collect` reused directly (see below) |
 | reference docs | portal (generated from schema) | `cisco-vk-config-docs` (md reference) |
 | Go types from YANG | ygot (via module generators) | `cisco-vk-yang-sync --yang-dir` (ygot pipeline) |
 | CI hook | pre-commit nac-validate | pre-commit `cisco-vk-config-lint` |
@@ -452,13 +454,30 @@ Does not (yet):
 - Cross-CR family overlap detection at lint time (the engine does
   it at runtime via Lease).
 
-### What `cisco-vk-config-collect` does
+### Brownfield onboarding — `nac-collect` used directly, no VK-side tool
 
-Thin mirror of `nac-collect`: invokes every selected family's
-`Fetch` method over RESTCONF, reshapes the result back into
-netascode envelope shape (`iosxe.devices[].configuration`), emits
-YAML. Useful for brownfield onboarding; output is directly usable
-as a `ConfigMap.data[key]` value.
+An earlier iteration of this branch shipped a
+`cisco-vk-config-collect` binary that mirrored `nac-collect`
+semantics. Per review feedback (item 1 in
+`docs/rfcs/config-driver-review-feedback.md`), that tool was
+removed: brownfield conversion is a one-shot activity, the
+netascode data model is the sole source of truth after onboard,
+and maintaining a parallel collector in the VK repo adds surface
+area with no ongoing value.
+
+The workflow is:
+
+1. Run upstream `nac-collect` against the device (netascode's
+   mature, years-of-coverage implementation).
+2. Its output YAML is in the netascode
+   `iosxe.devices[].configuration` envelope shape.
+3. That file drops straight into a Kubernetes `ConfigMap` under
+   `data.<key>`.
+4. `IOSXEConfig.spec.source.configMapRef` points at it.
+5. `cisco-vk-config-lint` validates the ConfigMap content against
+   the CR's `managedFamilies`.
+
+No CVK code duplicates, extends, or replaces `nac-collect`.
 
 ### What `cisco-vk-config-docs` does
 
@@ -578,7 +597,7 @@ It does **not** check:
 The machinery to add this exists — `writers.FamilySchema` could
 carry per-leaf type metadata — but the hand-authoring cost is
 non-trivial (~300 lines of Yamale per family × 54 families =
-~16k lines of schema). The ygot pipeline (§10.9) could derive
+~16k lines of schema). The ygot pipeline (§10.8) could derive
 this from YANG automatically if the YANG tree were checked in.
 
 Fix: Phase-4 adds per-family Yamale schemas; Phase-6 reads them
@@ -601,26 +620,7 @@ Fix: Phase-4 adds an offline `plan` subcommand to
 the CR's `status.lastAppliedHash` + the writer's Diff to
 compute a preview.
 
-### 10.6 Collector fidelity — `cisco-vk-config-collect` is narrower than `nac-collect`
-
-`cisco-vk-config-collect` emits exactly what the writers' `Fetch`
-methods can decode — their managed-leaf set. A brownfield device
-will have leaves the writer doesn't model. The collector:
-
-- silently drops those leaves;
-- produces YAML that round-trips through CVK's apply cleanly, but
-- loses fidelity against what's actually on the device.
-
-`nac-collect` has years of cumulative schema coverage and
-preserves leaves the operator hasn't managed yet. A brownfield-
-onboarding pipeline should probably use `nac-collect` first to
-capture the full state, then run `cisco-vk-config-lint` to
-identify what CVK will manage vs preserve-in-place.
-
-Fix: Phase-4 extends `Fetch` + collector to emit unmanaged leaves
-under an `_unmanaged:` key so the operator sees what's preserved.
-
-### 10.7 Secrets & credentials — split Secret/ConfigMap model
+### 10.6 Secrets & credentials — split Secret/ConfigMap model
 
 netascode's YAML can embed SOPS-encrypted secrets (PSKs, RADIUS
 shared secrets, BGP passwords) inline with the configuration.
@@ -634,13 +634,14 @@ is preserved — but an intent that needs to set a PSK has to route
 through the Secret, which the writer does not currently read.
 PSK-setting is effectively out-of-band today.
 
-`cisco-vk-config-collect` does not attempt to round-trip PSKs or
-enable-secrets into the emitted YAML — same policy as `nac-collect`.
+`nac-collect` (the upstream collector CVK reuses) does not attempt
+to round-trip PSKs or enable-secrets into the emitted YAML by
+policy. CVK inherits that policy by reusing `nac-collect` directly.
 
 Fix: Phase-4 introduces per-family `secretRefs` on IOSXEConfig
 that the writer reads into the merge step before apply.
 
-### 10.8 Audit & history — Kubernetes events are ephemeral
+### 10.7 Audit & history — Kubernetes events are ephemeral
 
 netascode's Terraform state file is a durable ledger: every apply
 is recorded, who ran it, when, against what plan. CVK has:
@@ -660,7 +661,7 @@ Fix: Phase-7 adds an `IOSXEConfigApplyLog` CR with a circular-
 buffer of recent applies + per-family outcomes. Or external:
 ship events to a persistent sink via the broadcaster.
 
-### 10.9 YANG source-of-truth story — hand-maintained vs generated
+### 10.8 YANG source-of-truth story — hand-maintained vs generated
 
 netascode's Terraform provider generates Go types and resource
 definitions from YANG. The provider is re-generated whenever a
@@ -678,7 +679,7 @@ tree under `schema/yang/1791/` and wires `make generate` to run
 the full pipeline. The managed-leaf sets can then be generated
 rather than maintained.
 
-### 10.10 Scope primitives — `interface_groups` semantics
+### 10.9 Scope primitives — `interface_groups` semantics
 
 We added `IOSXEInterfaceGroupConfig` as a netascode parity move
 (§6). netascode's `interface_groups` has an additional dimension
@@ -693,7 +694,7 @@ Fix: Phase-4 extends `InterfaceMatch` with a `labels` field on
 ethernet interfaces (requires a new writer extension) OR
 introduces a pattern-match mode on the `name` field.
 
-### 10.11 Multi-tenancy / namespace scoping
+### 10.10 Multi-tenancy / namespace scoping
 
 The per-family lease is scoped to a single namespace (the
 `cisco-vk run` pod's namespace, via `POD_NAMESPACE`). CRs in
@@ -706,7 +707,7 @@ namespace regardless of CR namespace, OR promotes leases to
 cluster-scoped. The latter is the right long-term move; it
 needs a new RBAC rule.
 
-### 10.12 CR status size
+### 10.11 CR status size
 
 Kubernetes has a soft 1.5 MiB limit per-object. A device with
 hundreds of Drifted families (unlikely but possible during a
@@ -717,7 +718,7 @@ bad change) could overflow. The engine caps
 Fix: Phase-4 caps `status.drift[]` at 50 entries and exposes
 totals via metrics. A 1-line change; flagged for completeness.
 
-### 10.13 Per-CR convergence not cluster-convergence
+### 10.12 Per-CR convergence not cluster-convergence
 
 One CR per device is the current model. A cluster-wide change
 (e.g. "rotate SNMP community across every device") requires
@@ -729,7 +730,7 @@ awareness naturally; CVK's per-device reconciler does not.
 Fix: Phase-7 introduces aggregation CRs that produce
 per-device IOSXEConfigs via a controller-side expansion.
 
-### 10.14 Tooling maturity gaps
+### 10.13 Tooling maturity gaps
 
 - `cisco-vk-config-lint` has no pre-commit packaging (install via
   `go install ./tools/cisco-vk-config-lint`); `nac-validate`
@@ -742,7 +743,7 @@ per-device IOSXEConfigs via a controller-side expansion.
 Fix: Phase-4 adds release automation for the tools; Phase-6
 adds OPA/conftest rule packs.
 
-### 10.15 Protocol gaps (transport)
+### 10.14 Protocol gaps (transport)
 
 Short list, since §11.2–11.3 cover it in depth:
 - **NETCONF:** reserved, not implemented — no atomic apply, no
@@ -808,9 +809,15 @@ fragment. No device writes; structural only.
   external tooling).
 - `cisco-vk-config-lint` per-family shape validation using the
   FamilySchema registry.
-- `cisco-vk-config-collect` (nac-collect equivalent).
 - `cisco-vk-config-docs` (per-family markdown reference
   generator).
+
+Note on brownfield onboarding: this branch briefly shipped a
+`cisco-vk-config-collect` tool that mirrored `nac-collect`.
+Per review feedback (item 1 in
+`docs/rfcs/config-driver-review-feedback.md`) it was removed —
+operators run upstream `nac-collect` directly and the output YAML
+is a drop-in `ConfigMap.data` value. See §9 for the workflow.
 
 ### Phase 4 — depth & polish (⏳ planned, ~6–8 weeks)
 
@@ -833,19 +840,22 @@ Closes the netascode-parity depth gaps identified in §10.
 - **Offline `plan` subcommand** on `cisco-vk-config-lint`:
   diff against last-applied state cached on the CR's status,
   no device access required.
-- **`cisco-vk-config-collect` fidelity.** Emit unmanaged
-  leaves under `_unmanaged:` so brownfield devices round-trip
-  cleanly.
+- **Repurpose `cisco-vk-config-lint` as a drift reporter**
+  (per review feedback item 2): detect both model→device drift
+  (declared leaves that have diverged on the device) and
+  device→model gaps (config present on the device that no
+  IOSXEConfig CR claims). Replaces the static-schema-validation
+  overlap with `nac-validate`.
 - **Per-family `secretRefs`** on IOSXEConfig so writers can
   merge credentials from a Secret into the intent before
-  apply. Closes the PSK / enable-secret gap (§10.7).
+  apply. Closes the PSK / enable-secret gap (§10.6).
 - **Interface selector by pattern** — regex / glob on
   `name`, plus label-match on ethernet interfaces. Closes
-  §10.10.
+  §10.9.
 - **Cluster-scoped family leases** (or manager-namespace-only)
-  so cross-namespace CRs arbitrate. Closes §10.11.
+  so cross-namespace CRs arbitrate. Closes §10.10.
 - **`status.drift[]` capping** + overflow reporting via
-  metrics. Closes §10.12.
+  metrics. Closes §10.11.
 - **Pre-commit packaging** for `cisco-vk-config-lint`:
   container image, pre-commit hook entry, version tag.
 
@@ -889,7 +899,7 @@ Closes the netascode-parity depth gaps identified in §10.
 
 - **Apply-log CR.** `IOSXEConfigApplyLog` circular buffer of
   recent applies per device, persistent across controller
-  restarts. Closes the audit/history gap (§10.8).
+  restarts. Closes the audit/history gap (§10.7).
 - **Single-manager topology option.** Currently: one pod per
   device. Alternative: one controller-runtime manager handles
   all devices in-process; the `cisco-vk run` provider becomes
@@ -898,7 +908,7 @@ Closes the netascode-parity depth gaps identified in §10.
   choice via a Helm values flag.
 - **Aggregation CRs.** `IOSXEConfigBundle` or similar — a
   controller expands one bundle into many per-device
-  IOSXEConfigs. Closes §10.13.
+  IOSXEConfigs. Closes §10.12.
 - **Time-travel / snapshot.** Given the apply-log, rewind a
   CR to a previous `status.lastAppliedHash` (requires retaining
   the body, not just the hash).
@@ -933,11 +943,11 @@ Closes the netascode-parity depth gaps identified in §10.
                      ~6–8w         ~2–3w        ~3–4w       TBD         TBD
 ```
 
-Phase 4 is the one that closes the largest practical gap (§10.1 –
-§10.6, §10.10 – §10.14). Phase 5 closes the "Terraform parity for
-atomic apply" gap (§10.2). Phase 6 unlocks multi-vendor / push
-drift; it is not on the netascode critical path. Phase 7 and 8 are
-operator-demand-driven.
+Phase 4 is the one that closes the largest practical gap
+(§10.1, §10.4 – §10.6, §10.9 – §10.11, §10.13). Phase 5 closes
+the "Terraform parity for atomic apply" gap (§10.2). Phase 6
+unlocks multi-vendor / push drift; it is not on the netascode
+critical path. Phase 7 and 8 are operator-demand-driven.
 
 ## 12. Concrete operator workflow today
 
@@ -988,8 +998,10 @@ Concrete items where netascode expertise would change the answer:
    schema now, or wait for operator requests? The machinery to
    consume it exists.
 8. **Crypto/secrets handling.** Current: additive merge, no
-   round-trip of secrets in `cisco-vk-config-collect`. Does this
-   match netascode's posture?
+   round-trip of secrets. CVK inherits `nac-collect`'s
+   posture (PSKs / enable-secrets not emitted) by reusing it
+   directly for brownfield onboarding. Does this match what
+   NAC modules assume today?
 9. **Per-rule diffing.** Deferred to Phase-4. Is this a day-one
    requirement for the netascode operator or an acceptable phase-2
    follow-up?
@@ -1017,7 +1029,6 @@ internal/provider/
   ├── config_reconciler.go                     — polling entrypoint (test surface)
   └── config_reconciler_controller.go          — ctrl-runtime Reconcile + SetupWithManager
 tools/cisco-vk-config-lint/                    — offline validator
-tools/cisco-vk-config-collect/                 — nac-collect equivalent
 tools/cisco-vk-config-docs/                    — per-family markdown reference generator
 tools/cisco-vk-yang-sync/                      — writer skeleton + ygot driver
 docs/reference/families/                       — generated reference tree (55 pages)
