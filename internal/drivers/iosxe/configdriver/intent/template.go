@@ -26,20 +26,20 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 )
 
-// ExpandTemplate renders an IOSXETemplate with the supplied values and
-// returns the netascode fragment the result represents. The rendering is
-// restricted to parameter substitution via the Go text/template engine —
-// no function calls, no nested template includes, no file access. Every
-// declared parameter is validated against its type before substitution;
-// undeclared values in the caller-supplied map are an error so a typo
-// does not silently produce an empty interpolation.
+// ExpandTemplate renders a data-model IOSXETemplate with the
+// supplied values and returns the netascode fragment the result
+// represents. CLI-type templates go through ExpandCLITemplate
+// instead — a separate entry point because the output shape is a
+// CLI text block rather than a merged netascode map.
 //
-// Only spec.type=data-model templates are processed today. spec.type=cli
-// templates are rejected with an explicit error so operators see the
-// gap at resolve time rather than a silent no-op. The CRD admits the
-// body so early adopters can author CLI templates without a schema
-// migration once the CLI render path lands (docs/rfcs/config-driver-
-// review-feedback.md, feedback 3b).
+// Both entry points:
+//   - validate every declared parameter against its type before
+//     substitution;
+//   - reject values supplied for parameters not in the template's
+//     declared set, so a typo produces an error rather than a
+//     silent empty interpolation;
+//   - use text/template with missingkey=error so a stray
+//     {{ .unknown }} fails loudly.
 func ExpandTemplate(tpl *configv1alpha1.IOSXETemplate, values map[string]string) (map[string]any, error) {
 	if tpl == nil {
 		return nil, fmt.Errorf("ExpandTemplate: nil template")
@@ -55,8 +55,7 @@ func ExpandTemplate(tpl *configv1alpha1.IOSXETemplate, values map[string]string)
 	}
 	if kind == configv1alpha1.CLITemplate {
 		return nil, fmt.Errorf(
-			"template %s: spec.type=cli is not yet supported; CLI render and "+
-				"transport land in a subsequent phase (see feedback 3b)",
+			"template %s: spec.type=cli — use ExpandCLITemplate for CLI templates",
 			tpl.Name)
 	}
 	if kind != configv1alpha1.DataModelTemplate {
@@ -204,4 +203,76 @@ func renderLeaf(s string, values map[string]string) (string, error) {
 		return "", fmt.Errorf("execute leaf: %w", err)
 	}
 	return buf.String(), nil
+}
+
+// ExpandCLITemplate renders a CLI-type IOSXETemplate to a CLI text
+// block suitable for push via the Cisco-IA cli-config-data RPC.
+// The template body is treated as a whole-file text template:
+// parameters substitute into a multi-line CLI string; each
+// non-empty line becomes one <cmd> at transport time. Callers
+// hold the returned string on ResolvedIntent.CLIBlocks; the
+// engine builds a single transport.Op with VerbCLI per block
+// and hands it to the transport.
+//
+// Why a separate entry point from ExpandTemplate:
+//   - The output is a string, not a map — CLI blocks do not
+//     merge into the netascode intent tree.
+//   - Parameter validation and the missingkey=error contract
+//     are shared with the data-model path, so the helper
+//     functions are reused via package-internal calls.
+func ExpandCLITemplate(tpl *configv1alpha1.IOSXETemplate, values map[string]string) (string, error) {
+	if tpl == nil {
+		return "", fmt.Errorf("ExpandCLITemplate: nil template")
+	}
+	kind := tpl.Spec.Type
+	if kind != configv1alpha1.CLITemplate {
+		return "", fmt.Errorf(
+			"template %s: spec.type=%q — expected cli", tpl.Name, kind)
+	}
+
+	resolved, err := resolveParameters(tpl.Spec.Parameters, values)
+	if err != nil {
+		return "", fmt.Errorf("template %s: %w", tpl.Name, err)
+	}
+
+	// CLI template bodies are stored on the RawExtension as JSON.
+	// We accept two shapes to keep operator ergonomics sensible:
+	//
+	//   1. A JSON string: "interface Loopback0\n ip address ..."
+	//      — the raw CLI as a quoted YAML string.
+	//   2. A mapping with a "cli" key: {"cli": "interface ..."}
+	//      — useful when the operator wants structured metadata
+	//      alongside the CLI (the mapping shape lets future
+	//      fields grow without a breaking change).
+	body, err := decodeCLIBody(tpl.Spec.Configuration.Raw, tpl.Name)
+	if err != nil {
+		return "", err
+	}
+	rendered, err := renderLeaf(body, resolved)
+	if err != nil {
+		return "", fmt.Errorf("template %s: render cli: %w", tpl.Name, err)
+	}
+	return rendered, nil
+}
+
+// decodeCLIBody extracts the CLI text from either a JSON string or
+// a {"cli": "..."} mapping. Anything else fails with a clear
+// diagnostic — we don't silently stringify arbitrary structures.
+func decodeCLIBody(raw []byte, tplName string) (string, error) {
+	if len(raw) == 0 {
+		return "", fmt.Errorf("template %s: empty configuration body", tplName)
+	}
+	var asString string
+	if err := yaml.Unmarshal(raw, &asString); err == nil && asString != "" {
+		return asString, nil
+	}
+	var asMap map[string]any
+	if err := yaml.Unmarshal(raw, &asMap); err == nil {
+		if cli, ok := asMap["cli"].(string); ok && cli != "" {
+			return cli, nil
+		}
+	}
+	return "", fmt.Errorf(
+		"template %s: CLI body must be a string or {\"cli\": \"...\"} mapping",
+		tplName)
 }

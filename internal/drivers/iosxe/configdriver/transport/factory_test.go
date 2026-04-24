@@ -36,11 +36,27 @@ func TestForDefaultsToRESTCONF(t *testing.T) {
 	}
 }
 
-func TestForNETCONFReserved(t *testing.T) {
-	spec := &ciskov1.DeviceSpec{Address: "10.0.0.1", Transport: "netconf"}
+// TestForNETCONFDialFailsGracefully pins the factory's NETCONF
+// path now that it dials SSH. We can't stand up a real SSH
+// server here; the address points at a local port with no
+// listener so ssh.Dial returns an error. The test shape is
+// "factory returned the NETCONF build path's error, not the
+// 'reserved' placeholder".
+func TestForNETCONFDialFailsGracefully(t *testing.T) {
+	spec := &ciskov1.DeviceSpec{
+		Address:  "127.0.0.1",
+		Port:     1, // guaranteed-no-listener
+		Username: "x",
+		Transport: "netconf",
+	}
 	_, err := For(spec, "pw", FactoryOptions{})
-	if err == nil || !strings.Contains(err.Error(), "NETCONF") {
-		t.Fatalf("got %v, want NETCONF-reserved error", err)
+	if err == nil {
+		t.Fatal("expected dial error, got nil")
+	}
+	// A 'reserved' placeholder would have literally contained
+	// the word 'reserved'; a real dial error won't.
+	if strings.Contains(err.Error(), "reserved") {
+		t.Fatalf("factory still returns reserved placeholder: %v", err)
 	}
 }
 

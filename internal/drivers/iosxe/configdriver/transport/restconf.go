@@ -17,6 +17,7 @@ package transport
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -116,9 +117,98 @@ func (r *restconfTransport) mutate(ctx context.Context, op Op) error {
 	case VerbDelete:
 		_, err := r.do(ctx, http.MethodDelete, op.Path, nil)
 		return err
+	case VerbCLI:
+		return r.pushCLI(ctx, op.Body)
 	default:
 		return fmt.Errorf("unknown verb %q", op.Verb)
 	}
+}
+
+// pushCLI invokes the Cisco-IA cli-config-data RPC over RESTCONF.
+// The endpoint lives at /operations/cisco-ia:cli-config-data and
+// accepts a body of the shape:
+//
+//	{"cisco-ia:input": {"cli-config-data": {"cmd": ["...", "..."]}}}
+//
+// Body is a newline-delimited CLI-text payload, optionally JSON-
+// wrapped. splitCLILines normalises either shape into []string.
+func (r *restconfTransport) pushCLI(ctx context.Context, body []byte) error {
+	if len(body) == 0 {
+		return nil
+	}
+	var text string
+	if err := json.Unmarshal(body, &text); err != nil {
+		text = string(body)
+	}
+	lines := splitCLILines(text)
+	if len(lines) == 0 {
+		return nil
+	}
+	payload, err := json.Marshal(map[string]any{
+		"cisco-ia:input": map[string]any{
+			"cli-config-data": map[string]any{"cmd": lines},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("RESTCONF pushCLI: marshal: %w", err)
+	}
+	// The operations endpoint lives outside the /data tree used
+	// by the rest of the transport. We compute the parent from
+	// the configured BaseURL by swapping /data for /operations.
+	opsPath := "/operations/cisco-ia:cli-config-data"
+	raw, err := r.doOps(ctx, http.MethodPost, opsPath, payload)
+	if err != nil {
+		return fmt.Errorf("RESTCONF pushCLI: %w", err)
+	}
+	_ = raw // response body is empty on success; keep for debugging
+	return nil
+}
+
+// doOps POSTs to an /operations-rooted RPC endpoint. The normal
+// do() method composes against BaseURL which points at /data; an
+// RPC invocation needs the sibling /operations root.
+func (r *restconfTransport) doOps(ctx context.Context, method, path string, body []byte) ([]byte, error) {
+	if r.cfg.SessionLock != nil {
+		r.cfg.SessionLock.Lock()
+		defer r.cfg.SessionLock.Unlock()
+	}
+	// BaseURL is .../restconf/data; strip the trailing /data and
+	// append the ops path.
+	root := r.cfg.BaseURL
+	if strings.HasSuffix(root, "/data") {
+		root = root[:len(root)-len("/data")]
+	}
+	url := root + path
+
+	var reader io.Reader
+	if body != nil {
+		reader = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, url, reader)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Accept", "application/yang-data+json")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/yang-data+json")
+	}
+	if r.cfg.Username != "" || r.cfg.Password != "" {
+		req.SetBasicAuth(r.cfg.Username, r.cfg.Password)
+	}
+	resp, err := r.cfg.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("transport: %w", err)
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+	if resp.StatusCode >= 300 {
+		return respBody, fmt.Errorf("RESTCONF %s %s: %s: %s",
+			method, path, resp.Status, snippet(respBody, 512))
+	}
+	return respBody, nil
 }
 
 func (r *restconfTransport) Commit(context.Context, TxHandle) error {

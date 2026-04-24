@@ -106,11 +106,11 @@ text, not structured YAML. Supporting it requires:
 
 ### Action
 
-| Step | Description | Priority |
-|------|-------------|----------|
-| 3a | Add `spec.type` field to the `IOSXETemplate` CRD with values `data-model` (default, current behaviour) and `cli`. | CRD change now |
-| 3b | Defer CLI template rendering and transport to Phase 2 (when NETCONF lands). The CRD field should be present now so early adopters don't need a schema migration later. | Implementation deferred |
-| 3c | Evaluate migrating the data-model template engine from Go `text/template` to HCL template evaluation for function-set parity with `terraform-provider-utils`. | Next iteration |
+| Step | Description | Priority | Status |
+|------|-------------|----------|--------|
+| 3a | Add `spec.type` field to the `IOSXETemplate` CRD with values `data-model` (default, current behaviour) and `cli`. | CRD change now | ✅ Shipped |
+| 3b | CLI template rendering + NETCONF transport. | Phase 2 | ✅ Shipped. `intent.ExpandCLITemplate` renders CLI text with `text/template`; `ResolvedIntent.CLIBlocks` carries the output as a side-channel (not merged into the data-model tree). The engine emits one `transport.Op{Verb:VerbCLI}` per block after family writes, so CLI changes run in the same apply phase without polluting the structural merge. Both transports push via Cisco-IA `cli-config-data`: RESTCONF POSTs `/operations/cisco-ia:cli-config-data` with a JSON envelope; NETCONF wraps CLI lines in `<cli-config-data xmlns="http://cisco.com/yang/cisco-ia">`. NETCONF adapter itself is shipped — hand-rolled minimal client over `golang.org/x/crypto/ssh` with both 1.0 (`]]>]]>`) and 1.1 chunked framing (RFC 6242), hello-based capability detection (base:1.1, candidate, confirmed-commit), and `lock`/`edit-config`/`commit`/`discard-changes`/`unlock` wired to the transport's transactional surface. Under `driftPolicy: report`, CLI blocks surface as `cli:<templateName>` drift entries rather than being applied. |
+| 3c | Evaluate migrating the data-model template engine from Go `text/template` to HCL template evaluation for function-set parity with `terraform-provider-utils`. | Next iteration | ⏳ Pending |
 
 ---
 
@@ -169,7 +169,7 @@ function wrappers.
 | 1a–1c | Remove `cisco-vk-config-collect`, update RFC | Immediate | ✅ Shipped (commit `cf032b7`) |
 | 3a | Add `spec.type` to `IOSXETemplate` CRD | Immediate | ✅ Shipped (commit `1c82a28`) |
 | 4a | Cross-validation tests for merge logic | Immediate | ✅ Shipped (commit `1c82a28`) |
-| 2a–2d | Repurpose `cisco-vk-config-lint` as drift reporter | Next iteration | ✅ Shipped (this iteration) |
+| 2a–2d | Repurpose `cisco-vk-config-lint` as drift reporter | Next iteration | ✅ Shipped |
+| 3b | CLI template rendering + NETCONF transport | Phase 2 | ✅ Shipped (this iteration) |
 | 3c | Evaluate HCL template engine migration | Next iteration | ⏳ Pending |
-| 3b | CLI template rendering + transport | Deferred (Phase 2 / NETCONF) | ⏳ Pending — CRD field in place, render+transport await NETCONF |
 | 4b–4d | Shared merge module with `terraform-provider-utils` | Medium term | ⏳ Pending; cross-validation corpus (4a) is ready to swap expected outputs for shared-library calls once the module extraction lands |

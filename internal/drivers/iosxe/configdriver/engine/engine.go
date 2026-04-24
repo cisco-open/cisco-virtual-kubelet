@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
@@ -145,6 +146,41 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 			})
 		case "ApplyError", "Unsupported":
 			anyFailure = true
+		}
+	}
+
+	// Apply CLI-template blocks after every family has converged.
+	// CLI runs last because netascode CLI templates typically
+	// reference structured entities the family writers just
+	// created (e.g. "interface VirtualPortGroup0 / ip address
+	// ...") — pushing them before the families land would race.
+	//
+	// In driftPolicy=report mode CLI blocks are surfaced as drift
+	// entries but not applied, matching the read-only semantics
+	// the whole policy enforces.
+	if !anyFailure && res.DriftPolicy != configv1alpha1.DriftPolicyReport {
+		for _, block := range res.CLIBlocks {
+			fs := e.applyCLIBlock(ctx, block, res)
+			result.FamilyStatuses = append(result.FamilyStatuses, fs)
+			if fs.State == "ApplyError" {
+				anyFailure = true
+			}
+		}
+	} else if len(res.CLIBlocks) > 0 && res.DriftPolicy == configv1alpha1.DriftPolicyReport {
+		// Report mode: CLI blocks surface as drift, not apply.
+		for _, block := range res.CLIBlocks {
+			anyDrift = true
+			result.FamilyStatuses = append(result.FamilyStatuses, FamilyStatus{
+				Name:    "cli:" + block.TemplateName,
+				State:   "Drifted",
+				OpCount: countCLILines(block.CLI),
+				Message: "CLI block withheld under driftPolicy=report",
+			})
+			result.Drift = append(result.Drift, DriftEntry{
+				Family:  "cli:" + block.TemplateName,
+				Path:    "(cli block)",
+				Desired: "cli template output",
+			})
 		}
 	}
 
@@ -300,4 +336,54 @@ func ConflictCheck(deviceName string, allForDevice []*configv1alpha1.IOSXEConfig
 		}
 	}
 	return out
+}
+
+// applyCLIBlock pushes one rendered CLI template to the device via
+// the transport's VerbCLI op. One transport.Op per block so a
+// single block's failure is attributed to that block in
+// FamilyStatus without rolling back the preceding successful
+// blocks — CLI templates are often idempotent CLI fragments, and
+// "fix and retry this one" is the typical operator response.
+//
+// The FamilyStatus uses a "cli:<template>" namespace for the Name
+// so external tooling (metrics, status consumers) can tell CLI
+// blocks apart from netascode families in a single flat status
+// list without adding another CR field.
+func (e *Engine) applyCLIBlock(ctx context.Context, block intent.CLIBlock, res *intent.ResolvedIntent) FamilyStatus {
+	famName := "cli:" + block.TemplateName
+	op := transport.Op{
+		Verb: transport.VerbCLI,
+		Body: []byte(block.CLI),
+	}
+	applyStart := time.Now()
+	err := e.Transport.Mutate(ctx, "", []transport.Op{op})
+	if applyDuration != nil {
+		applyDuration.WithLabelValues(res.DeviceName, famName).Observe(time.Since(applyStart).Seconds())
+	}
+	if err != nil {
+		return FamilyStatus{
+			Name: famName, State: "ApplyError",
+			OpCount: countCLILines(block.CLI),
+			Message: fmt.Sprintf("Apply: %v", err),
+		}
+	}
+	return FamilyStatus{
+		Name:    famName,
+		State:   "InSync",
+		OpCount: countCLILines(block.CLI),
+	}
+}
+
+// countCLILines returns the number of non-empty trimmed lines in
+// a CLI block. Used for FamilyStatus.OpCount so the status UI
+// shows a meaningful "blast radius" for CLI pushes even though
+// each block is structurally a single transport.Op.
+func countCLILines(cli string) int {
+	n := 0
+	for _, line := range strings.Split(cli, "\n") {
+		if strings.TrimSpace(line) != "" {
+			n++
+		}
+	}
+	return n
 }

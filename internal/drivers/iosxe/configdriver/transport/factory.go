@@ -63,12 +63,36 @@ func For(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (Interface,
 	case KindRESTCONF:
 		return buildRESTCONF(spec, pass, opts)
 	case KindNETCONF:
-		return nil, fmt.Errorf("transport.For: NETCONF transport is reserved; Phase-2 deliverable")
+		return buildNETCONF(spec, pass, opts)
 	case KindGNMI:
 		return nil, fmt.Errorf("transport.For: gNMI transport is reserved; not yet scheduled")
 	default:
 		return nil, fmt.Errorf("transport.For: unknown transport %q", spec.Transport)
 	}
+}
+
+// buildNETCONF constructs a NETCONF-over-SSH transport. Port
+// defaults to 830 (IANA NETCONF-over-SSH). TLS configuration on
+// DeviceSpec is ignored because NETCONF is transported over SSH,
+// not TLS; operators who want to pin the SSH host key set
+// NETCONFConfig.HostKeyCallback directly when wiring the factory
+// in cisco-vk-run.
+func buildNETCONF(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (Interface, error) {
+	if spec.Address == "" {
+		return nil, fmt.Errorf("transport.For: CiscoDevice.spec.address empty")
+	}
+	port := spec.Port
+	if port == 0 {
+		port = 830
+	}
+	timeout := opts.DefaultTimeout
+	return NewNETCONF(NETCONFConfig{
+		Address:  spec.Address,
+		Port:     port,
+		Username: spec.Username,
+		Password: pass,
+		Timeout:  timeout,
+	})
 }
 
 func buildRESTCONF(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (Interface, error) {

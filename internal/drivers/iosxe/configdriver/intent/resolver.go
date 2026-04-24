@@ -56,6 +56,28 @@ type Resolver struct {
 	KeyRules KeyRules
 }
 
+// CLIBlock is a rendered CLI template output plus the name of the
+// template it came from. The engine emits one transport.Op with
+// VerbCLI per block during Apply; the transport pushes via the
+// device's Cisco-IA cli-config-data RPC.
+//
+// Ordering is the operator-visible order of spec.templateRefs on
+// the IOSXEConfig CR, preserved across the resolver so CLI blocks
+// that depend on each other (e.g. "interface + ip address under
+// it") land on the device in the declared order.
+type CLIBlock struct {
+	// TemplateName is the name of the IOSXETemplate the block
+	// came from. Carried for status reporting and for distinct
+	// transport.Op grouping — each block is its own op so a
+	// single block's failure does not roll back the others.
+	TemplateName string
+
+	// CLI is the rendered body: multi-line IOS-XE CLI text. Each
+	// non-empty, trimmed line becomes one <cmd> when the
+	// transport marshals it for Cisco-IA cli-config-data.
+	CLI string
+}
+
 // ResolvedIntent is the output of Resolve. It is a plain-data value
 // suitable for hashing, logging, or sending to a family writer.
 type ResolvedIntent struct {
@@ -65,6 +87,12 @@ type ResolvedIntent struct {
 	Transactional   bool
 	DriftPolicy     configv1alpha1.DriftPolicy
 	WriteStartup    bool
+
+	// CLIBlocks carries CLI-type template expansions that do not
+	// merge into Configuration. Populated by the resolver when
+	// spec.templateRefs reference an IOSXETemplate with
+	// spec.type=cli; consumed by the engine after family writes.
+	CLIBlocks []CLIBlock
 
 	// SourceCR is a deep-copy of the per-device CR the intent was
 	// resolved from, for status writes and event recording.
@@ -151,8 +179,15 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 		configuration = asMap(MergeWithRules(configuration, expanded, r.KeyRules))
 	}
 
-	// 3b) Templates, expanded with the caller-supplied values, merged in
-	//     the order they appear on the CR.
+	// 3b) Templates. Two types:
+	//     - data-model templates render into a netascode fragment
+	//       and merge into `configuration` like every other scope.
+	//     - cli templates render into a plain text block that is
+	//       carried separately on CLIBlocks and pushed via the
+	//       Cisco-IA RPC at apply time. CLI blocks do not merge
+	//       into the netascode tree because their output is text,
+	//       not structured data.
+	var cliBlocks []CLIBlock
 	for _, ref := range cr.Spec.TemplateRefs {
 		tpl, err := r.loadTemplate(ctx, cr.Namespace, ref.Name)
 		if err != nil {
@@ -162,11 +197,26 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 		if err != nil {
 			return nil, fmt.Errorf("templateRefs[%s]: %w", ref.Name, err)
 		}
-		expanded, err := ExpandTemplate(tpl, values)
-		if err != nil {
-			return nil, err
+		switch tpl.Spec.Type {
+		case configv1alpha1.CLITemplate:
+			cli, err := ExpandCLITemplate(tpl, values)
+			if err != nil {
+				return nil, err
+			}
+			cliBlocks = append(cliBlocks, CLIBlock{
+				TemplateName: tpl.Name,
+				CLI:          cli,
+			})
+		case "", configv1alpha1.DataModelTemplate:
+			expanded, err := ExpandTemplate(tpl, values)
+			if err != nil {
+				return nil, err
+			}
+			configuration = asMap(MergeWithRules(configuration, expanded, r.KeyRules))
+		default:
+			return nil, fmt.Errorf(
+				"templateRefs[%s]: unknown spec.type %q", ref.Name, tpl.Spec.Type)
 		}
-		configuration = asMap(MergeWithRules(configuration, expanded, r.KeyRules))
 	}
 
 	// 4) Per-device source — either inline or ConfigMap-borne.
@@ -188,6 +238,7 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 		Transactional:   cr.Spec.Transactional,
 		DriftPolicy:     policy,
 		WriteStartup:    cr.Spec.WriteStartup,
+		CLIBlocks:       cliBlocks,
 		SourceCR:        cr.DeepCopy(),
 	}, nil
 }

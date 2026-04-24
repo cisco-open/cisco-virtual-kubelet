@@ -84,6 +84,14 @@ const (
 	VerbReplace Verb = "REPLACE"
 	VerbMerge   Verb = "MERGE"
 	VerbDelete  Verb = "DELETE"
+	// VerbCLI pushes an IOS-XE CLI block through the device's
+	// Cisco-IA cli-config-data RPC. Body is a newline-delimited
+	// CLI-text payload (or a JSON string of that payload); Path is
+	// ignored by the transport — the RPC endpoint is fixed. CLI
+	// templates (IOSXETemplate.spec.type=cli) produce ops with
+	// this verb during resolution. Both RESTCONF and NETCONF
+	// transports implement it.
+	VerbCLI Verb = "CLI"
 )
 
 // TxHandle is an opaque per-transaction value returned by

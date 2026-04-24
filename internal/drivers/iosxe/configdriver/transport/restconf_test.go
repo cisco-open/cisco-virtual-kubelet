@@ -228,3 +228,53 @@ func stringSliceEqual(a, b []string) bool {
 	}
 	return true
 }
+
+func TestRESTCONFCLIVerbHitsCiscoIAEndpoint(t *testing.T) {
+	var (
+		gotMethod string
+		gotPath   string
+		gotBody   []byte
+	)
+	h := func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		gotBody, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusNoContent)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(h))
+	defer srv.Close()
+
+	cli, err := NewRESTCONF(RESTCONFConfig{
+		BaseURL: srv.URL + "/restconf/data",
+		HTTPClient: srv.Client(),
+	})
+	if err != nil {
+		t.Fatalf("NewRESTCONF: %v", err)
+	}
+
+	// Multi-line CLI body; splitCLILines should trim empty lines.
+	body := []byte("interface Loopback100\n\n ip address 1.1.1.1 255.255.255.255\n no shutdown\n")
+	err = cli.Mutate(context.Background(), "",
+		[]Op{{Verb: VerbCLI, Body: body}})
+	if err != nil {
+		t.Fatalf("Mutate: %v", err)
+	}
+
+	if gotMethod != "POST" {
+		t.Errorf("method=%q, want POST", gotMethod)
+	}
+	if !strings.HasSuffix(gotPath, "/operations/cisco-ia:cli-config-data") {
+		t.Errorf("path=%q, want .../operations/cisco-ia:cli-config-data", gotPath)
+	}
+	// Body should be JSON wrapping the CLI lines under cisco-ia:input.
+	if !strings.Contains(string(gotBody), "cisco-ia:input") {
+		t.Errorf("body missing cisco-ia:input envelope:\n%s", gotBody)
+	}
+	if !strings.Contains(string(gotBody), "interface Loopback100") {
+		t.Errorf("body missing CLI command:\n%s", gotBody)
+	}
+	// Empty line must not leak into the cmd array.
+	if strings.Contains(string(gotBody), `""`) {
+		t.Errorf("empty line leaked into cmd array:\n%s", gotBody)
+	}
+}

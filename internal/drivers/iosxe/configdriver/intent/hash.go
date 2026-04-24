@@ -37,6 +37,16 @@ func CanonicalHash(intent *ResolvedIntent) (string, error) {
 	}
 
 	// Build a stable representation as a sorted JSON-compatible tree.
+	// CLIBlocks are included so a change to a cli template invalidates
+	// the reconciler's hash short-circuit even when the structured
+	// configuration map is unchanged.
+	cliBlocksPayload := make([]map[string]any, 0, len(intent.CLIBlocks))
+	for _, b := range intent.CLIBlocks {
+		cliBlocksPayload = append(cliBlocksPayload, map[string]any{
+			"name": b.TemplateName,
+			"cli":  b.CLI,
+		})
+	}
 	payload := map[string]any{
 		"deviceName":      intent.DeviceName,
 		"managedFamilies": append([]string(nil), intent.ManagedFamilies...),
@@ -44,6 +54,7 @@ func CanonicalHash(intent *ResolvedIntent) (string, error) {
 		"writeStartup":    intent.WriteStartup,
 		"driftPolicy":     string(intent.DriftPolicy),
 		"configuration":   intent.Configuration,
+		"cliBlocks":       cliBlocksPayload,
 	}
 	canonical, err := canonicalJSON(payload)
 	if err != nil {

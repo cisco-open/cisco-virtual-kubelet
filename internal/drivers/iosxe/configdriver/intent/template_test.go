@@ -147,20 +147,19 @@ func TestExpandTemplateDefaultsToDataModel(t *testing.T) {
 	}
 }
 
-func TestExpandTemplateCLITypeRejected(t *testing.T) {
+// TestExpandTemplateRoutesCLIToOtherEntrypoint verifies the data-model
+// entrypoint refuses CLI-type templates with a clear pointer to
+// the CLI entrypoint. Replaces an earlier test that asserted "cli
+// not yet supported" — CLI is now supported, via ExpandCLITemplate.
+func TestExpandTemplateRoutesCLIToOtherEntrypoint(t *testing.T) {
 	tpl := mkTemplate("t", `hostname {{ .hostname }}`,
 		configv1alpha1.TemplateParameter{Name: "hostname", Type: configv1alpha1.TemplateParameterString, Required: true},
 	)
 	tpl.Spec.Type = configv1alpha1.CLITemplate
 
 	_, err := ExpandTemplate(tpl, map[string]string{"hostname": "edge-01"})
-	if err == nil || !strings.Contains(err.Error(), "spec.type=cli is not yet supported") {
-		t.Fatalf("got %v, want cli-not-supported error", err)
-	}
-	// Make sure the error points operators at the feedback doc so the
-	// gap is discoverable without grepping source.
-	if !strings.Contains(err.Error(), "feedback 3b") {
-		t.Errorf("error message should reference feedback 3b for findability:\n%s", err.Error())
+	if err == nil || !strings.Contains(err.Error(), "use ExpandCLITemplate") {
+		t.Fatalf("got %v, want 'use ExpandCLITemplate' pointer", err)
 	}
 }
 
@@ -189,5 +188,92 @@ func TestExpandTemplateUnknownTypeRejected(t *testing.T) {
 	_, err := ExpandTemplate(tpl, nil)
 	if err == nil || !strings.Contains(err.Error(), "unknown spec.type") {
 		t.Fatalf("got %v, want unknown-type error", err)
+	}
+}
+
+// ----- CLI template render tests (ExpandCLITemplate) -----
+
+func TestExpandCLITemplateRendersParams(t *testing.T) {
+	tpl := &configv1alpha1.IOSXETemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "lo", Namespace: "network"},
+		Spec: configv1alpha1.IOSXETemplateSpec{
+			Type: configv1alpha1.CLITemplate,
+			Parameters: []configv1alpha1.TemplateParameter{
+				{Name: "id", Type: configv1alpha1.TemplateParameterInt, Required: true},
+				{Name: "ip", Type: configv1alpha1.TemplateParameterIPv4, Required: true},
+			},
+			// Body is a YAML string — the RawExtension
+			// decoding accepts plain JSON string literals too;
+			// we use the YAML literal block shape here for
+			// readability.
+			Configuration: runtime.RawExtension{Raw: []byte(
+				`"interface Loopback{{ .id }}\n ip address {{ .ip }} 255.255.255.255\n no shutdown"`)},
+		},
+	}
+	got, err := ExpandCLITemplate(tpl, map[string]string{"id": "100", "ip": "10.0.0.1"})
+	if err != nil {
+		t.Fatalf("ExpandCLITemplate: %v", err)
+	}
+	want := "interface Loopback100\n ip address 10.0.0.1 255.255.255.255\n no shutdown"
+	if got != want {
+		t.Fatalf("got %q\nwant %q", got, want)
+	}
+}
+
+func TestExpandCLITemplateRejectsDataModelType(t *testing.T) {
+	tpl := mkTemplate("t", `{"k":"v"}`)
+	// spec.type unset — defaults to data-model.
+	_, err := ExpandCLITemplate(tpl, nil)
+	if err == nil || !strings.Contains(err.Error(), "expected cli") {
+		t.Fatalf("got %v, want expected-cli error", err)
+	}
+}
+
+func TestExpandCLITemplateMappingShape(t *testing.T) {
+	// {"cli": "..."} body is the structured alternative to a
+	// bare string; useful when operators want metadata alongside
+	// the CLI without a breaking change later.
+	tpl := &configv1alpha1.IOSXETemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "lo", Namespace: "network"},
+		Spec: configv1alpha1.IOSXETemplateSpec{
+			Type: configv1alpha1.CLITemplate,
+			Configuration: runtime.RawExtension{Raw: []byte(
+				`{"cli": "hostname edge-01"}`)},
+		},
+	}
+	got, err := ExpandCLITemplate(tpl, nil)
+	if err != nil {
+		t.Fatalf("ExpandCLITemplate: %v", err)
+	}
+	if got != "hostname edge-01" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestExpandCLITemplateEmptyBodyRejected(t *testing.T) {
+	tpl := &configv1alpha1.IOSXETemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "empty", Namespace: "network"},
+		Spec: configv1alpha1.IOSXETemplateSpec{
+			Type:          configv1alpha1.CLITemplate,
+			Configuration: runtime.RawExtension{},
+		},
+	}
+	_, err := ExpandCLITemplate(tpl, nil)
+	if err == nil || !strings.Contains(err.Error(), "empty configuration body") {
+		t.Fatalf("got %v", err)
+	}
+}
+
+// The original "cli rejected as not yet supported" test is
+// obsolete now that CLI templates work. Replace with a test that
+// pins the correct handoff between ExpandTemplate (data-model)
+// and ExpandCLITemplate (cli).
+func TestExpandTemplateCLITypeRoutesToCLIExpander(t *testing.T) {
+	tpl := mkTemplate("t", `{"k":"v"}`)
+	tpl.Spec.Type = configv1alpha1.CLITemplate
+
+	_, err := ExpandTemplate(tpl, nil)
+	if err == nil || !strings.Contains(err.Error(), "use ExpandCLITemplate") {
+		t.Fatalf("got %v, want 'use ExpandCLITemplate' pointer", err)
 	}
 }

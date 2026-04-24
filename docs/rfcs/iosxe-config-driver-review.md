@@ -2,7 +2,7 @@
 
 **Branch:** `pr/johalley/ciscoconfig_xe`
 **Against:** `main`
-**Status:** functional end-to-end for RESTCONF; NETCONF/gNMI reserved
+**Status:** functional end-to-end for RESTCONF *and* NETCONF (transactional candidate+commit, confirmed-commit, CLI push via Cisco-IA); gNMI reserved
 **Reviewer context:** familiarity with
 [netascode](https://netascode.cisco.com/docs/data_models/iosxe/overview/),
 the `netascode/terraform-iosxe-nac-iosxe` Terraform module, and the
@@ -155,8 +155,10 @@ identical internals.
 | `nac-collect` | upstream `nac-collect` reused as-is | ✅ (see §9) |
 | portal-generated family docs | `cisco-vk-config-docs` | ✅ |
 | YANG → ygot Go types | `cisco-vk-yang-sync --yang-dir` | 🟡 wiring present; YANG tree not checked in |
-| Terraform-style transactional apply | absent (RESTCONF) | 🟡 deferred to NETCONF in a later phase |
-| NETCONF candidate datastore | reserved, factory fails fast | ⏳ deferred |
+| Terraform-style transactional apply | `spec.transactional: true` under NETCONF uses `lock` → `edit-config` (candidate) → `commit` → `unlock`; RESTCONF still per-op | ✅ (NETCONF) |
+| NETCONF candidate datastore | `transport.NETCONF` — RFC 6241 over SSH, RFC 6242 chunked framing, hello-driven capability detection | ✅ |
+| NETCONF `cli-config-data` RPC | Cisco-IA CLI push wired to `VerbCLI`; CLI templates render → side-channel `ResolvedIntent.CLIBlocks` → engine emits one CLI op per block after family writes | ✅ |
+| CLI / Jinja-style templates | `IOSXETemplate.spec.type: cli` with `intent.ExpandCLITemplate`; rendered text pushed via `cisco-ia:cli-config-data` on both transports | ✅ |
 | gNMI | reserved, factory fails fast | ⏳ deferred |
 | RESTCONF transport | `transport.RESTCONF` | ✅ |
 | device credentials flow | Kubernetes `Secret` via `CredentialSecretRef` | ✅ |
@@ -359,18 +361,23 @@ path immediately when the hash + generation + phase all match.
 Reviewer question: does netascode have an equivalent, or does
 Terraform's plan compute avoid the problem structurally?
 
-### 8.7 Transport abstraction — even with only RESTCONF today
+### 8.7 Transport abstraction — RESTCONF and NETCONF behind the same surface
 
 `transport.Interface` has `Capabilities()`, `StartTransaction` /
-`Commit` / `Discard`, `SaveStartup`, and a small `{Verb, Path, Body}`
-mutation vocabulary. RESTCONF implements it; NETCONF and gNMI
-return `ErrUnsupported` at the factory.
+`Commit` / `Discard`, `SaveStartup`, and a small
+`{Verb, Path, Body}` mutation vocabulary
+(`Replace`/`Merge`/`Delete`/`CLI`). RESTCONF and NETCONF both
+implement it; gNMI still returns `ErrUnsupported` at the factory.
 
-Why design the interface before implementing NETCONF: the writers are
-transport-agnostic as a direct consequence. When NETCONF lands, a
-single adapter change promotes every writer; no writer refactor
-needed. Reviewer input on whether the `Verb: Replace/Merge/Delete`
-vocabulary covers what netascode's NETCONF code actually does.
+Designing the interface before implementing NETCONF paid off —
+the engine and every writer dispatched unchanged when the NETCONF
+adapter landed. Capabilities is the only place transport
+differences leak: `SupportsTransactions` is `true` under NETCONF
+when the server advertises `candidate:1.0` and `false` under
+RESTCONF, which the engine consults when deciding whether to
+honour `spec.transactional: true`. The new `VerbCLI` covers the
+CLI/Jinja-style template path (§11 Phase 5) and is pushed via
+`cli-config-data` on both transports.
 
 ### 8.8 Resolver split into three layers
 
@@ -564,7 +571,7 @@ already exposes an inner-key; extending the diff to descend into
 nested keyed lists is mechanical per family but has to be done
 per family.
 
-### 10.2 Apply semantics — no cross-family atomic commit
+### 10.2 Apply semantics — cross-family atomicity available under NETCONF
 
 RESTCONF has no candidate datastore. A multi-family apply is a
 sequence of independent HTTP PATCHes. If the fifth fails after the
@@ -576,12 +583,15 @@ first four succeeded:
 - A subsequent reconcile retries only the failed families (the
   hash short-circuit skips the already-applied ones).
 
-netascode's Terraform module with `device_transaction=true` uses
-NETCONF candidate+commit to get true atomic behaviour per device.
+Under NETCONF with `spec.transactional: true`, the transport
+drives `lock → edit-config (candidate) → commit → unlock` around
+the whole apply: if any edit-config errors, the engine calls
+`Discard` and nothing lands on the device. This matches
+netascode's Terraform module with `device_transaction=true`.
 Cross-device atomicity isn't offered by either tool.
 
-Fix: Phase-5 NETCONF (§11.2). `spec.transactional: true` is a
-first-class CR field today but quietly ignored under RESTCONF.
+`spec.transactional: true` is honoured by NETCONF today; RESTCONF
+still applies per-op and the field is a no-op under that transport.
 
 ### 10.3 Convergence over multiple ticks, not one `apply`
 
@@ -789,11 +799,18 @@ Phase-6 adds OPA/conftest rule packs.
 ### 10.14 Protocol gaps (transport)
 
 Short list, since §11.2–11.3 cover it in depth:
-- **NETCONF:** reserved, not implemented — no atomic apply, no
-  candidate datastore, no commit-confirmed rollback.
+- **NETCONF:** shipped. Hand-rolled minimal client over
+  `golang.org/x/crypto/ssh`, both 1.0 (`]]>]]>`) and 1.1 chunked
+  framing per RFC 6242, capability-driven upgrade after hello.
+  Transactional candidate+commit honoured when the server
+  advertises `candidate:1.0`; `SaveStartup` via Cisco-IA RPC.
+  CLI push via `cli-config-data` (same Cisco-IA RPC RESTCONF
+  uses). Confirmed-commit advertisement parsed but not yet
+  consumed — rollback-on-timeout is a Phase 6 polish item.
 - **gNMI:** reserved, not implemented — no subscribe-based drift
   detection, no OpenConfig path model.
-- **RESTCONF** is the only Phase-1/2/3 wire protocol.
+- **RESTCONF** remains the default transport; NETCONF selected
+  per-device by `CiscoDevice.spec.config.transport: netconf`.
 
 ---
 
@@ -874,10 +891,14 @@ Phase 3:
   for CI). Static schema validation is delegated to `nac-validate`.
   See §9 and §10.4.
 - **Item 3a (template type field).** `IOSXETemplate.spec.type`
-  enum (`data-model` | `cli`) added now so operators can author
-  CLI templates without a later schema migration. `cli`
-  rejected at resolve time with a pointer to the deferred
-  implementation.
+  enum (`data-model` | `cli`) added so operators can author CLI
+  templates without a later schema migration.
+- **Item 3b (CLI template rendering + NETCONF transport).**
+  `ExpandCLITemplate` renders CLI text; engine emits
+  `VerbCLI` ops after family writes; both transports push via
+  `cisco-ia:cli-config-data`. NETCONF adapter shipped with
+  transactional candidate+commit. Full detail in the Phase-5
+  entry below.
 - **Item 4a (merge cross-validation).** Full 30-case corpus in
   `internal/drivers/iosxe/configdriver/intent/merge_cross_validation_test.go`
   covering every Phase-1/2/3 family's keyed-list merge against
@@ -919,24 +940,47 @@ Closes the netascode-parity depth gaps identified in §10.
 - **Pre-commit packaging** for `cisco-vk-config-lint`:
   container image, pre-commit hook entry, version tag.
 
-### Phase 5 — NETCONF transport (⏳ planned, ~2–3 weeks after Phase 4)
+### Phase 5 — NETCONF transport + CLI templates (✅ shipped)
 
-- `transport/netconf.go` — SSH/NETCONF client (likely
-  `scrapli/scrapligo` or `damianoneill/net`), candidate
-  datastore, `<edit-config>` XML generation mapping
-  `VerbReplace/VerbMerge/VerbDelete` to the NETCONF
-  `operation` attribute.
-- `spec.transactional: true` honoured: the engine opens a
-  candidate datastore once per reconcile and commits the
-  combined edit for every managed family.
-- `Rollback` via `<cancel-commit>` / `confirmed-commit`.
-- Per-family `Fetch` switches to `<get-config>` with subtree
-  filter; response is XML, writers need an envelope unwrap
-  for NETCONF just as they have one for RESTCONF today.
-- CRD: `CiscoDevice.spec.transport: netconf` unblocks; factory
-  removes the reserved-error branch.
-- Integration tests need a NETCONF-capable device (Cat 8000V
-  17.9 or Sysrepo / ConfD simulator).
+- `transport/netconf_framing.go` — NETCONF 1.0 (`]]>]]>`) and
+  1.1 chunked framing per RFC 6242, with a 4 MiB per-chunk cap
+  to bound worst-case allocation.
+- `transport/netconf_rpc.go` — session-level `netconfSession`
+  owning the `io.ReadWriteCloser`, monotonic message-id,
+  hello-driven capability detection (base:1.0 / base:1.1 /
+  candidate:1.0 / confirmed-commit:1.0). Chunked framing kicks
+  in only when both peers advertise base:1.1. Time-bounded
+  `close-session` so a cranky device can't block teardown.
+- `transport/netconf.go` — SSH dialer (`golang.org/x/crypto/ssh`,
+  port 830 default), `netconfTransport` implementing the same
+  `transport.Interface` surface as RESTCONF. Maps verbs to the
+  NETCONF `operation` attribute on `<edit-config>`; path →
+  subtree filter for `<get-config>`.
+- `transport/netconf_xml2json.go` — RFC 7951–shaped JSON from
+  `<get-config>` responses so writers don't need a per-transport
+  envelope.
+- `spec.transactional: true` honoured: transport drives
+  `lock` → `edit-config (candidate)` → `commit` → `unlock`; on
+  error the engine calls `Discard` and nothing lands.
+- `SaveStartup` via the Cisco-IA RPC (same one RESTCONF uses).
+- **CLI templates end-to-end.** `IOSXETemplate.spec.type: cli`
+  renders through `intent.ExpandCLITemplate`; rendered text
+  travels on `ResolvedIntent.CLIBlocks` as a side-channel (not
+  merged into the data-model tree). The engine emits one
+  `transport.Op{Verb: VerbCLI}` per block after family writes,
+  with per-block failure attribution. Both transports push via
+  `cisco-ia:cli-config-data` — RESTCONF to
+  `/operations/cisco-ia:cli-config-data`, NETCONF wraps CLI
+  lines in `<cli-config-data xmlns="http://cisco.com/yang/cisco-ia">`.
+  Under `driftPolicy: report`, CLI blocks surface as
+  `cli:<templateName>` drift entries rather than being applied.
+- `CiscoDevice.spec.config.transport: netconf` unblocked; the
+  transport factory's reserved-error branch is gone.
+- Deferred: commit-confirmed rollback polish (Phase 6) —
+  capability is parsed but not yet consumed as a timeout guard.
+  Live device integration against a Cat 8000V / Sysrepo is a
+  Phase-5.5 follow-up; unit coverage today uses a scripted
+  `mockDevice` over `io.Pipe`.
 
 ### Phase 6 — gNMI + OpenConfig (⏳ planned, ~3–4 weeks after Phase 5)
 
@@ -996,16 +1040,17 @@ Closes the netascode-parity depth gaps identified in §10.
 ### Summary timeline
 
 ```
-  shipped            Phase-4       Phase-5      Phase-6     Phase-7     Phase-8
- ├──────────┤        ├───────┤     ├─────┤      ├──────┤    ├──────┤    ├──────┤
- Phase 0/1/2/3       depth &       NETCONF +    gNMI +      scale /     ecosystem
- now                 polish        atomic       OpenConfig  operability integrations
-                     ~6–8w         ~2–3w        ~3–4w       TBD         TBD
+  shipped                       Phase-4       Phase-6     Phase-7     Phase-8
+ ├──────────────────────┤       ├───────┤     ├──────┤    ├──────┤    ├──────┤
+ Phase 0/1/2/3 + Phase-5        depth &       gNMI +      scale /     ecosystem
+ (NETCONF + CLI templates)      polish        OpenConfig  operability integrations
+                                ~6–8w         ~3–4w       TBD         TBD
 ```
 
 Phase 4 is the one that closes the largest practical gap
-(§10.1, §10.4 – §10.6, §10.9 – §10.11, §10.13). Phase 5 closes
-the "Terraform parity for atomic apply" gap (§10.2). Phase 6
+(§10.1, §10.4 – §10.6, §10.9 – §10.11, §10.13). Phase 5 shipped
+with this iteration and closes the "Terraform parity for atomic
+apply" gap (§10.2) plus the CLI/Jinja template gap. Phase 6
 unlocks multi-vendor / push drift; it is not on the netascode
 critical path. Phase 7 and 8 are operator-demand-driven.
 

@@ -15,8 +15,10 @@
 package engine
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -302,5 +304,164 @@ func TestReconcileValidationRejectsEmptyTransport(t *testing.T) {
 	r := e.Reconcile(context.Background(), res)
 	if r.Phase != PhaseFailed {
 		t.Fatalf("expected Failed; got %+v", r)
+	}
+}
+
+// TestCLIBlocksAppliedAfterFamilies verifies the engine runs the
+// family writers first, then pushes CLI blocks. One transport.Op
+// with VerbCLI per block.
+func TestCLIBlocksAppliedAfterFamilies(t *testing.T) {
+	// fakeWriter for a single in-sync family so families land
+	// clean; engine should proceed to CLI.
+	w := &fakeWriter{family: "vlan"} // no ops → InSync
+
+	var (
+		cliCount   int
+		cliBodies  [][]byte
+	)
+	mock := &stubTransport{
+		mutateFn: func(tx transport.TxHandle, ops []transport.Op) error {
+			for _, op := range ops {
+				if op.Verb == transport.VerbCLI {
+					cliCount++
+					cliBodies = append(cliBodies, append([]byte(nil), op.Body...))
+				}
+			}
+			return nil
+		},
+	}
+
+	e := &Engine{
+		Transport: mock,
+		Lookup:    func(string) writers.SectionWriter { return w },
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "edge-01",
+		ManagedFamilies: []string{"vlan"},
+		Configuration:   map[string]any{"vlan": map[string]any{}},
+		DriftPolicy:     configv1alpha1.DriftPolicyRevert,
+		CLIBlocks: []intent.CLIBlock{
+			{TemplateName: "hostname", CLI: "hostname edge-01"},
+			{TemplateName: "banner", CLI: "banner motd\nCompany policy applies\n^"},
+		},
+	}
+
+	result := e.Reconcile(context.Background(), res)
+	if result.Phase != PhaseInSync {
+		t.Fatalf("phase=%s, want InSync", result.Phase)
+	}
+	if cliCount != 2 {
+		t.Fatalf("VerbCLI ops seen=%d, want 2", cliCount)
+	}
+
+	// Both bodies should round-trip verbatim — engine passes the
+	// CLI text through without reshaping.
+	wantBodies := []string{"hostname edge-01", "banner motd"}
+	for _, want := range wantBodies {
+		found := false
+		for _, body := range cliBodies {
+			if bytes.Contains(body, []byte(want)) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("no CLI body contained %q; bodies=%q", want, cliBodies)
+		}
+	}
+
+	// Status list should carry both netascode-family entry + CLI
+	// entries, distinguishable by the "cli:" prefix.
+	foundCLI := 0
+	for _, fs := range result.FamilyStatuses {
+		if strings.HasPrefix(fs.Name, "cli:") {
+			foundCLI++
+		}
+	}
+	if foundCLI != 2 {
+		t.Errorf("CLI FamilyStatuses=%d, want 2", foundCLI)
+	}
+}
+
+func TestCLIBlocksSkippedUnderReportPolicy(t *testing.T) {
+	// Under driftPolicy=report CLI blocks must surface as drift,
+	// not be applied — matching the read-only semantics applied
+	// to family writers.
+	w := &fakeWriter{family: "vlan"}
+	var cliCount int
+	mock := &stubTransport{
+		mutateFn: func(tx transport.TxHandle, ops []transport.Op) error {
+			for _, op := range ops {
+				if op.Verb == transport.VerbCLI {
+					cliCount++
+				}
+			}
+			return nil
+		},
+	}
+	e := &Engine{Transport: mock, Lookup: func(string) writers.SectionWriter { return w }}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "edge-01",
+		ManagedFamilies: []string{"vlan"},
+		Configuration:   map[string]any{"vlan": map[string]any{}},
+		DriftPolicy:     configv1alpha1.DriftPolicyReport,
+		CLIBlocks:       []intent.CLIBlock{{TemplateName: "hostname", CLI: "hostname x"}},
+	}
+
+	result := e.Reconcile(context.Background(), res)
+	if cliCount != 0 {
+		t.Fatalf("CLI op ran under report policy (cliCount=%d)", cliCount)
+	}
+	if result.Phase != PhaseDrifted {
+		t.Fatalf("phase=%s, want Drifted", result.Phase)
+	}
+
+	// Expect a drift entry + a Drifted FamilyStatus for the
+	// CLI block.
+	foundDrift := 0
+	for _, d := range result.Drift {
+		if strings.HasPrefix(d.Family, "cli:") {
+			foundDrift++
+		}
+	}
+	if foundDrift != 1 {
+		t.Errorf("CLI drift entries=%d, want 1", foundDrift)
+	}
+}
+
+func TestCLIBlocksSkippedWhenFamiliesFailed(t *testing.T) {
+	// When a family-writer apply errors, CLI blocks should NOT
+	// run — they typically depend on structural state the
+	// family writer was supposed to create.
+	w := &fakeWriter{
+		family:   "vlan",
+		ops:      []transport.Op{{Verb: transport.VerbMerge, Path: "/v"}},
+		applyErr: errors.New("device 503"),
+	}
+	var cliCount int
+	mock := &stubTransport{
+		mutateFn: func(tx transport.TxHandle, ops []transport.Op) error {
+			for _, op := range ops {
+				if op.Verb == transport.VerbCLI {
+					cliCount++
+				}
+			}
+			return nil
+		},
+	}
+	e := &Engine{Transport: mock, Lookup: func(string) writers.SectionWriter { return w }}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "edge-01",
+		ManagedFamilies: []string{"vlan"},
+		DriftPolicy:     configv1alpha1.DriftPolicyRevert,
+		CLIBlocks:       []intent.CLIBlock{{TemplateName: "hostname", CLI: "hostname x"}},
+	}
+
+	result := e.Reconcile(context.Background(), res)
+	if result.Phase != PhaseFailed {
+		t.Fatalf("phase=%s, want Failed", result.Phase)
+	}
+	if cliCount != 0 {
+		t.Errorf("CLI op ran after family-apply failure (cliCount=%d)", cliCount)
 	}
 }
