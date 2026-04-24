@@ -935,12 +935,20 @@ Phase 3:
 
 Closes the netascode-parity depth gaps identified in §10.
 
-- **Per-rule diffing** inside nested list leaves: ACL rules
-  keyed by `sequence`, prefix-list sequences, route-map entries,
-  OSPF networks, BGP neighbours, EIGRP networks, policy-map
-  class actions. One writer refactor per family, mechanical —
-  the helper pattern extracts cleanly from what
-  `keyedListWriter` already does.
+- **Per-rule diffing** inside nested list leaves. ✅ Shipped for
+  `access_list_extended` as the proof of pattern: the bespoke
+  `extendedACLWriter` keys the inner `rules` list by `sequence`,
+  emits a merge body containing only changed/new rules (RESTCONF
+  MERGE on the outer path leaves untouched-sequence rules
+  alone), and treats orderless rule lists as equivalent so
+  device-side sort-order doesn't trigger spurious drift. A 100-
+  ACE ACL with one edited line now produces a 1-rule body
+  instead of a 100-rule one. Same pattern lifts cleanly to
+  `access_list_standard`, prefix-list sequences, route-map
+  entries, OSPF networks, BGP neighbours, EIGRP networks, and
+  policy-map class actions; those are mechanical follow-ups —
+  one bespoke writer per family — that don't change the
+  resolver, engine, or transport surface.
 - **`spec.pruneOnRelinquish: true` actual behaviour.** ✅
   Shipped: `ResolvedIntent.PruneOnRelinquish` carries the flag
   through; writers that can safely prune implement the optional

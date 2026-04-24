@@ -103,6 +103,11 @@ var handWrittenSchemas = map[string]FamilySchema{
 		ManagedLeaves: dhcpPoolManagedLeaves,
 		InnerKey:      "pools", KeyField: "name",
 	},
+	"access_list_extended": {
+		Family: "access_list_extended", Shape: "keyed_list",
+		ManagedLeaves: []string{"rules"},
+		InnerKey:      aclExtInnerKey, KeyField: aclExtKeyField,
+	},
 }
 
 // systemManagedLeaves is a helper that returns the system writer's
