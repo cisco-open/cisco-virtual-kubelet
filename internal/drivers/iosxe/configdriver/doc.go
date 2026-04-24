@@ -20,8 +20,9 @@
 // session, credential scope, and cancel context with that process. There is
 // no second control-plane binary.
 //
-// This package defines the Driver interface, a stub implementation used
-// during Phase-0 scaffolding, and the intent/plan/observation value types.
-// Per-family diff and apply logic lives in the writers subpackage so a
-// family can evolve without touching the driver contract.
+// This package defines the Driver interface, the stub implementation
+// used by tests and by any runtime path that has not yet constructed
+// a live transport, and the intent/plan/observation value types.
+// Per-family diff and apply logic lives in the writers subpackage so
+// a family can evolve without touching the driver contract.
 package configdriver

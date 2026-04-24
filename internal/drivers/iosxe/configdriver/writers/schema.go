@@ -15,9 +15,9 @@
 package writers
 
 // FamilySchema is the reflected metadata every writer exposes so that
-// external tooling (cisco-vk-config-lint, cisco-vk-config-collect,
-// docs generator) can operate without a cross-package import cycle
-// and without duplicating the writer's own source of truth.
+// external tooling (cisco-vk-config-lint, cisco-vk-config-docs) can
+// operate without a cross-package import cycle and without
+// duplicating the writer's own source of truth.
 //
 // ManagedLeaves is the closed set of leaves the writer controls on
 // the device; a CR that sets leaves outside this set is not in

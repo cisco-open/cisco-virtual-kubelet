@@ -12,11 +12,23 @@ primary purpose is to show the porting shape from an existing
 - Flux reconciles both the CR and the ConfigMap together, so a change
   to the YAML becomes a change on the device without a Terraform plan.
 
-**Phase-0 note.** The shipped config driver is a stub: the reconciler
-records `status.phase: Pending` on each matched CR but does not write
-to the device. This fragment exists so the CR shape is exercised
-end-to-end — CI validates it, the schema admits it, the reconciler
-picks it up — before Phase-1 adds the live write path.
+**CI wiring.** Two stages compose cleanly:
+
+1. Pre-commit / PR lint — run upstream
+   [`nac-validate`](https://github.com/netascode/nac-validate)
+   against the netascode YAML under `devices/*/data.nac.yaml`.
+   Schema, leaf types, ranges.
+2. PR gate — run `cisco-vk-config-lint --exit-on-drift` against
+   the target device (staging or production) with the
+   IOSXEConfig manifests as arguments. Exit code 4 if anything
+   on the device would change on the next reconcile, or if the
+   device has non-empty state in families no CR claims. Emits
+   JSON with `--output=json` for post-processing.
+
+The live controller's `driftPolicy: report` (set on the
+`IOSXEConfig` below) keeps CVK read-only during cutover from an
+existing pipeline. Switch to `revert` after a parallel-run is
+clean.
 
 ## Layout
 

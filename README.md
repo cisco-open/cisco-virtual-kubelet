@@ -201,41 +201,71 @@ The device config file follows the same schema as the `CiscoDevice` CR `spec`. S
 make generate
 ```
 
-## IOS-XE Configuration Driver (Phase-0 scaffold)
+## IOS-XE Configuration Driver
 
-The repository now ships the scaffolding for declarative IOS-XE device
-configuration managed alongside IOx application hosting. Phase-0 is
-structural: the CRD surface is stable, the per-device reconciler records
-`status.phase: Pending` on matching CRs, and every code path that would
-touch a device returns `configdriver.ErrNotImplemented`. Phase-1 lights
-up real RESTCONF writes family-by-family.
+The repository ships a Kubernetes-native declarative configuration
+driver that consumes netascode-shaped YAML and reconciles it
+against IOS-XE over RESTCONF, inside the same per-device
+`cisco-vk run` process that already hosts IOx apps. Every netascode
+IOS-XE portal family has a writer.
 
-**New CRDs** (`config.cisco.vk/v1alpha1`):
+**CRDs** (`config.cisco.vk/v1alpha1`):
 
 - `IOSXEConfig` — per-device desired state, referencing a `CiscoDevice`.
 - `IOSXEConfigDefaults` — cluster-scoped baseline.
-- `IOSXEDeviceGroupConfig` — shared config for a selector-matched set.
-- `IOSXETemplate` — parameterised reusable fragments.
+- `IOSXEDeviceGroupConfig` — shared config for a selector-matched
+  set of devices.
+- `IOSXEInterfaceGroupConfig` — shared config for a selector-matched
+  set of interfaces (parity with netascode's `interface_groups[]`).
+- `IOSXETemplate` — parameterised reusable fragments; `spec.type`
+  selects `data-model` (default, netascode YAML) or `cli` (CRD
+  field present; render path deferred alongside NETCONF).
 
-`spec.configuration` on each CR is schemaless so netascode YAML
-(`iosxe.devices[*].configuration`) can be pasted verbatim.
+`spec.configuration` / `spec.source.inline` on each CR is schemaless
+so netascode YAML (`iosxe.devices[*].configuration`) can be pasted
+verbatim. `spec.source.configMapRef` consumes `nac-collect` output
+as a drop-in `ConfigMap.data[key]` value.
 
-**What's in the tree today:**
+**Tooling:**
 
-- `api/config/v1alpha1/` — Go types and generated deepcopy.
-- `config/crd/` and `charts/cisco-virtual-kubelet/crds/` — CRD manifests.
-- `internal/drivers/iosxe/configdriver/` — `Driver` interface + stub.
-- `internal/drivers/iosxe/configdriver/writers/` — per-family skeletons
-  for the Phase-1 set (system, vlan, vrf, interface_ethernet,
-  interface_loopback, interface_virtual_port_group, dhcp,
-  access_list_extended).
-- `internal/drivers/iosxe/configdriver/schema/` — embedded family index
-  (`families.yaml`) and YANG-release pin (`yang-versions.yaml`).
-- `internal/provider/config_reconciler.go` — polling reconciler started
-  by `cisco-vk run` alongside the apphosting driver.
-- `tools/cisco-vk-yang-sync/` — Phase-0 stub of the code generator.
-- `examples/gitops-reference/` — runnable Flux + Kustomize fragment
-  showing the port from a netascode + Terraform repository.
+- `tools/cisco-vk-config-lint/` — live drift reporter. Connects to
+  a device, runs every family's `Fetch` + `Diff` against the
+  supplied IOSXEConfig CRs, and reports: (1) managed drift — what
+  CVK would change on the next reconcile; (2) device orphans —
+  registered families with non-empty device state that no CR
+  claims. `--exit-on-drift` returns exit code 4 for CI gating;
+  `--output=json` emits machine-readable results. Static schema
+  validation is delegated to upstream
+  [`nac-validate`](https://github.com/netascode/nac-validate).
+- `tools/cisco-vk-yang-sync/` — writer-skeleton generator driven
+  by `families.yaml`; invokes ygot against a Cisco-IOS-XE YANG
+  tree when `--yang-dir` is supplied.
+- `tools/cisco-vk-config-docs/` — per-family markdown reference
+  generator.
+
+**Operator workflow:**
+
+1. Upstream `nac-collect` against a brownfield device → netascode
+   YAML.
+2. `nac-validate` in pre-commit → schema check on the YAML.
+3. `kubectl apply` a `ConfigMap` holding the YAML + an
+   `IOSXEConfig` CR referencing it.
+4. `cisco-vk-config-lint --exit-on-drift` in CI → gate PRs on
+   "would change nothing on the device".
+5. Flux / ArgoCD reconciles the CR; the per-device `cisco-vk run`
+   picks it up, runs the engine, writes status back.
+
+**Design review:**
+`docs/rfcs/iosxe-config-driver-review.md` is the architectural
+writeup — comparison with netascode, scope model, 54-family
+coverage, drift policies, limitations, and the phased roadmap.
+`docs/rfcs/config-driver-review-feedback.md` tracks the reviewer's
+feedback and status of each action item.
+
+**Runnable example:**
+`examples/gitops-reference/` — `kubectl apply -k .`-able Flux +
+Kustomize fragment showing the port from a netascode + Terraform
+repository.
 
 ## Contributing
 
