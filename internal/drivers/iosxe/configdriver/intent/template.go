@@ -16,11 +16,16 @@ package intent
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"net"
 	"strconv"
 	"text/template"
 
+	gonja "github.com/nikolalohinski/gonja/v2"
+	gonjaconfig "github.com/nikolalohinski/gonja/v2/config"
+	"github.com/nikolalohinski/gonja/v2/exec"
+	"github.com/nikolalohinski/gonja/v2/loaders"
 	"sigs.k8s.io/yaml"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
@@ -207,19 +212,25 @@ func renderLeaf(s string, values map[string]string) (string, error) {
 
 // ExpandCLITemplate renders a CLI-type IOSXETemplate to a CLI text
 // block suitable for push via the Cisco-IA cli-config-data RPC.
-// The template body is treated as a whole-file text template:
+// The template body is treated as a whole-file Jinja template:
 // parameters substitute into a multi-line CLI string; each
 // non-empty line becomes one <cmd> at transport time. Callers
 // hold the returned string on ResolvedIntent.CLIBlocks; the
 // engine builds a single transport.Op with VerbCLI per block
 // and hands it to the transport.
 //
+// Why Jinja for CLI (and not for data-model): NAC operators author
+// CLI templates in Jinja today (Ansible/Nornir/Nautobot ecosystem).
+// The engine is pongo2 (pure-Go Jinja2-compatible). Data-model
+// templates stay on Go text/template because they render into
+// structured YAML and don't benefit from Jinja's text-oriented
+// control flow.
+//
 // Why a separate entry point from ExpandTemplate:
 //   - The output is a string, not a map — CLI blocks do not
 //     merge into the netascode intent tree.
-//   - Parameter validation and the missingkey=error contract
-//     are shared with the data-model path, so the helper
-//     functions are reused via package-internal calls.
+//   - The render engines differ. Parameter resolution and type
+//     validation are still shared via resolveParameters.
 func ExpandCLITemplate(tpl *configv1alpha1.IOSXETemplate, values map[string]string) (string, error) {
 	if tpl == nil {
 		return "", fmt.Errorf("ExpandCLITemplate: nil template")
@@ -248,11 +259,78 @@ func ExpandCLITemplate(tpl *configv1alpha1.IOSXETemplate, values map[string]stri
 	if err != nil {
 		return "", err
 	}
-	rendered, err := renderLeaf(body, resolved)
+
+	rendered, err := renderJinjaCLI(body, coerceForJinja(tpl.Spec.Parameters, resolved))
 	if err != nil {
 		return "", fmt.Errorf("template %s: render cli: %w", tpl.Name, err)
 	}
 	return rendered, nil
+}
+
+// cliJinjaConfig is a per-package gonja config with StrictUndefined
+// turned on so a stray `{{ unknown }}` in a CLI body errors out
+// instead of silently rendering as the empty string. We deliberately
+// don't mutate gonja.DefaultConfig — that's a process-global and we
+// have no business reaching across packages to flip it.
+var cliJinjaConfig = func() *gonjaconfig.Config {
+	c := gonjaconfig.New()
+	c.StrictUndefined = true
+	return c
+}()
+
+// coerceForJinja upgrades the string-valued parameter map into a
+// typed map so `{% if enabled %}` and arithmetic on int parameters
+// behave as operators expect when the parameter is declared bool or
+// int. Strings (the default) and network-address types pass through
+// untouched — gonja treats them as regular strings.
+func coerceForJinja(declared []configv1alpha1.TemplateParameter, values map[string]string) map[string]any {
+	typed := make(map[string]configv1alpha1.TemplateParameterType, len(declared))
+	for _, p := range declared {
+		typed[p.Name] = p.Type
+	}
+	ctx := make(map[string]any, len(values))
+	for k, v := range values {
+		switch typed[k] {
+		case configv1alpha1.TemplateParameterInt:
+			if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+				ctx[k] = n
+				continue
+			}
+		case configv1alpha1.TemplateParameterBool:
+			if b, err := strconv.ParseBool(v); err == nil {
+				ctx[k] = b
+				continue
+			}
+		}
+		ctx[k] = v
+	}
+	return ctx
+}
+
+// renderJinjaCLI is the gonja entry point for CLI templates.
+// We construct the template against cliJinjaConfig (strict-undefined)
+// rather than calling gonja.FromString, which would pick up
+// gonja.DefaultConfig and lose the strictness guarantee.
+func renderJinjaCLI(body string, values map[string]any) (string, error) {
+	rootID := fmt.Sprintf("cli-template-%x",
+		sha256.Sum256([]byte(body)))
+	fsLoader, err := loaders.NewFileSystemLoader("")
+	if err != nil {
+		return "", fmt.Errorf("jinja loader: %w", err)
+	}
+	loader, err := loaders.NewShiftedLoader(rootID, bytes.NewReader([]byte(body)), fsLoader)
+	if err != nil {
+		return "", fmt.Errorf("jinja loader: %w", err)
+	}
+	tpl, err := exec.NewTemplate(rootID, cliJinjaConfig, loader, gonja.DefaultEnvironment)
+	if err != nil {
+		return "", fmt.Errorf("parse jinja: %w", err)
+	}
+	out, err := tpl.ExecuteToString(exec.NewContext(values))
+	if err != nil {
+		return "", fmt.Errorf("execute jinja: %w", err)
+	}
+	return out, nil
 }
 
 // decodeCLIBody extracts the CLI text from either a JSON string or

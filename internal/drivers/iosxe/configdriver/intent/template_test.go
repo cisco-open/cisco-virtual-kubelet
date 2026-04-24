@@ -202,12 +202,10 @@ func TestExpandCLITemplateRendersParams(t *testing.T) {
 				{Name: "id", Type: configv1alpha1.TemplateParameterInt, Required: true},
 				{Name: "ip", Type: configv1alpha1.TemplateParameterIPv4, Required: true},
 			},
-			// Body is a YAML string — the RawExtension
-			// decoding accepts plain JSON string literals too;
-			// we use the YAML literal block shape here for
-			// readability.
+			// Jinja syntax — no leading dot on variable refs.
+			// NAC CLI templates use this dialect directly.
 			Configuration: runtime.RawExtension{Raw: []byte(
-				`"interface Loopback{{ .id }}\n ip address {{ .ip }} 255.255.255.255\n no shutdown"`)},
+				`"interface Loopback{{ id }}\n ip address {{ ip }} 255.255.255.255\n no shutdown"`)},
 		},
 	}
 	got, err := ExpandCLITemplate(tpl, map[string]string{"id": "100", "ip": "10.0.0.1"})
@@ -217,6 +215,85 @@ func TestExpandCLITemplateRendersParams(t *testing.T) {
 	want := "interface Loopback100\n ip address 10.0.0.1 255.255.255.255\n no shutdown"
 	if got != want {
 		t.Fatalf("got %q\nwant %q", got, want)
+	}
+}
+
+func TestExpandCLITemplateJinjaFilters(t *testing.T) {
+	// Filter pipelines are the core ergonomic Jinja buys over
+	// text/template. Cover the common ones (default, upper).
+	tpl := &configv1alpha1.IOSXETemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "desc", Namespace: "network"},
+		Spec: configv1alpha1.IOSXETemplateSpec{
+			Type: configv1alpha1.CLITemplate,
+			Parameters: []configv1alpha1.TemplateParameter{
+				{Name: "name", Type: configv1alpha1.TemplateParameterString, Default: "uplink"},
+				{Name: "role", Type: configv1alpha1.TemplateParameterString, Default: "core"},
+			},
+			Configuration: runtime.RawExtension{Raw: []byte(
+				`"description {{ name|upper }}-{{ role|default(\"spine\") }}"`)},
+		},
+	}
+	got, err := ExpandCLITemplate(tpl, map[string]string{"name": "lo0"})
+	if err != nil {
+		t.Fatalf("ExpandCLITemplate: %v", err)
+	}
+	if got != "description LO0-core" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestExpandCLITemplateJinjaConditional(t *testing.T) {
+	// Bool-typed parameters are coerced so {% if %} sees a real
+	// bool, not the string "false". Otherwise Jinja treats any
+	// non-empty string as truthy and "false" would emit the
+	// shutdown-skip branch in both cases.
+	tpl := &configv1alpha1.IOSXETemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "lo", Namespace: "network"},
+		Spec: configv1alpha1.IOSXETemplateSpec{
+			Type: configv1alpha1.CLITemplate,
+			Parameters: []configv1alpha1.TemplateParameter{
+				{Name: "id", Type: configv1alpha1.TemplateParameterInt, Required: true},
+				{Name: "enabled", Type: configv1alpha1.TemplateParameterBool, Default: "true"},
+			},
+			Configuration: runtime.RawExtension{Raw: []byte(
+				`"interface Loopback{{ id }}\n{% if enabled %} no shutdown{% else %} shutdown{% endif %}"`)},
+		},
+	}
+	enabled, err := ExpandCLITemplate(tpl, map[string]string{"id": "0", "enabled": "true"})
+	if err != nil {
+		t.Fatalf("ExpandCLITemplate enabled: %v", err)
+	}
+	if !strings.Contains(enabled, " no shutdown") || strings.Contains(enabled, " shutdown\n") {
+		t.Fatalf("enabled branch wrong: %q", enabled)
+	}
+	disabled, err := ExpandCLITemplate(tpl, map[string]string{"id": "0", "enabled": "false"})
+	if err != nil {
+		t.Fatalf("ExpandCLITemplate disabled: %v", err)
+	}
+	if !strings.Contains(disabled, " shutdown") || strings.Contains(disabled, " no shutdown") {
+		t.Fatalf("disabled branch wrong: %q", disabled)
+	}
+}
+
+func TestExpandCLITemplateUndeclaredRefFailsLoud(t *testing.T) {
+	// pongo2's default behaviour for undefined variables is to
+	// render them as empty strings, which would silently push
+	// broken CLI to the device. The static ref check must reject
+	// the template up-front with the offending name in the error.
+	tpl := &configv1alpha1.IOSXETemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "typo", Namespace: "network"},
+		Spec: configv1alpha1.IOSXETemplateSpec{
+			Type: configv1alpha1.CLITemplate,
+			Parameters: []configv1alpha1.TemplateParameter{
+				{Name: "hostname", Type: configv1alpha1.TemplateParameterString, Required: true},
+			},
+			Configuration: runtime.RawExtension{Raw: []byte(
+				`"hostname {{ hostnmae }}"`)}, // typo
+		},
+	}
+	_, err := ExpandCLITemplate(tpl, map[string]string{"hostname": "edge-01"})
+	if err == nil || !strings.Contains(err.Error(), "hostnmae") {
+		t.Fatalf("got %v, want error mentioning 'hostnmae'", err)
 	}
 }
 

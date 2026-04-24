@@ -158,7 +158,7 @@ identical internals.
 | Terraform-style transactional apply | `spec.transactional: true` under NETCONF uses `lock` → `edit-config` (candidate) → `commit` → `unlock`; RESTCONF still per-op | ✅ (NETCONF) |
 | NETCONF candidate datastore | `transport.NETCONF` — RFC 6241 over SSH, RFC 6242 chunked framing, hello-driven capability detection | ✅ |
 | NETCONF `cli-config-data` RPC | Cisco-IA CLI push wired to `VerbCLI`; CLI templates render → side-channel `ResolvedIntent.CLIBlocks` → engine emits one CLI op per block after family writes | ✅ |
-| CLI / Jinja-style templates | `IOSXETemplate.spec.type: cli` with `intent.ExpandCLITemplate`; rendered text pushed via `cisco-ia:cli-config-data` on both transports | 🟡 render + transport path shipped; currently uses Go `text/template` (Jinja engine swap tracked as feedback 3c) |
+| CLI / Jinja-style templates | `IOSXETemplate.spec.type: cli` with `intent.ExpandCLITemplate` (gonja/Jinja2, strict-undefined); rendered text pushed via `cisco-ia:cli-config-data` on both transports | ✅ |
 | gNMI | reserved, factory fails fast | ⏳ deferred |
 | RESTCONF transport | `transport.RESTCONF` | ✅ |
 | device credentials flow | Kubernetes `Secret` via `CredentialSecretRef` | ✅ |
@@ -377,9 +377,9 @@ when the server advertises `candidate:1.0` and `false` under
 RESTCONF, which the engine consults when deciding whether to
 honour `spec.transactional: true`. The new `VerbCLI` covers the
 CLI-template push path (§11 Phase 5) and is carried via
-`cli-config-data` on both transports. (NAC CLI templates are
-authored in Jinja; the current renderer is Go `text/template` and
-a Jinja-engine swap is tracked in the feedback doc as 3c.)
+`cli-config-data` on both transports. CLI bodies render through
+`nikolalohinski/gonja/v2` (pure-Go Jinja2) with strict-undefined
+on, so NAC-authored CLI templates consume unchanged.
 
 ### 8.8 Resolver split into three layers
 
@@ -979,12 +979,14 @@ Closes the netascode-parity depth gaps identified in §10.
   `cli:<templateName>` drift entries rather than being applied.
 - `CiscoDevice.spec.config.transport: netconf` unblocked; the
   transport factory's reserved-error branch is gone.
-- **Deferred — Jinja engine.** NAC CLI templates are authored in
-  Jinja; the renderer that shipped with Phase 5 uses Go
-  `text/template`, so NAC-authored CLI templates need
-  hand-porting until the engine swap lands. Pure-Go Jinja
-  engines (`flosch/pongo2`, `noirbizarre/gonja`) are the
-  intended replacement. Tracked as feedback 3c.
+- **CLI templates are Jinja2.** Renderer is
+  `nikolalohinski/gonja/v2` with `StrictUndefined: true` so
+  `{{ unknown }}` errors loudly. Bool/int parameters are
+  coerced from their CRD string form to typed values before
+  Jinja sees them, so `{% if enabled %}` and arithmetic on
+  int parameters behave as authors expect. Filter pipelines
+  and conditionals work; loops are deferred until template
+  parameters can carry list/map types.
 - **Deferred — commit-confirmed rollback polish** (Phase 6):
   the `confirmed-commit:1.0` capability is parsed but not yet
   consumed as a timeout guard. Live device integration against
@@ -1058,11 +1060,10 @@ Closes the netascode-parity depth gaps identified in §10.
 
 Phase 4 is the one that closes the largest practical gap
 (§10.1, §10.4 – §10.6, §10.9 – §10.11, §10.13). Phase 5 shipped
-with this iteration and closes the atomic-apply gap (§10.2),
-plus the CLI-template render + push path end-to-end; NAC Jinja
-CLI-template syntax parity is the one residual item (feedback 3c).
-Phase 6 unlocks multi-vendor / push drift; it is not on the
-netascode critical path. Phase 7 and 8 are operator-demand-driven.
+and closes the atomic-apply gap (§10.2) plus the CLI/Jinja
+template gap end-to-end (rendering on gonja/Jinja2). Phase 6
+unlocks multi-vendor / push drift; it is not on the netascode
+critical path. Phase 7 and 8 are operator-demand-driven.
 
 ## 12. Concrete operator workflow today
 
