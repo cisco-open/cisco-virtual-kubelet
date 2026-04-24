@@ -155,6 +155,77 @@ func TestACLExtendedDiffRulesEqualOrderless(t *testing.T) {
 	}
 }
 
+func TestACLExtendedPruneDiffEmitsReplaceForInnerOrphan(t *testing.T) {
+	// pruneOnRelinquish=true semantics for nested keyed lists:
+	// the engine asks PruneDiff for orphans on both axes. The
+	// outer ACL is in both intent and device, but the device has
+	// an extra rule (sequence 30) the intent dropped. Without
+	// per-rule prune the rule lives forever; with it, we emit a
+	// REPLACE on the outer ACL whose body is the desired-only
+	// rule list.
+	w := nestedKeyedListWriter{
+		base: keyedListWriter{
+			family: aclExtFamily, yangPath: aclExtPath,
+			envelopeKey: aclExtEnvelopeKey, innerKey: aclExtInnerKey,
+			keyField: aclExtKeyField, managedLeaves: []string{"rules"},
+		},
+		nestedLeaf:      "rules",
+		nestedKeyField:  "sequence",
+		nestedYANGInner: "access-list-seq-rule",
+	}
+	desired := extACLDesired(mkRule(10, nil), mkRule(20, nil))
+	observed := []map[string]any{{
+		"name": "INGRESS",
+		"rules": []any{
+			mkRule(10, nil), mkRule(20, nil), mkRule(30, nil),
+		},
+	}}
+	ops, err := w.PruneDiff(desired, observed)
+	if err != nil {
+		t.Fatalf("PruneDiff: %v", err)
+	}
+	if len(ops) != 1 {
+		t.Fatalf("got %d ops, want 1 (one REPLACE for the inner-orphan ACL)", len(ops))
+	}
+	if ops[0].Verb != "REPLACE" {
+		t.Errorf("verb=%q, want REPLACE (inner-prune is authoritative)", ops[0].Verb)
+	}
+	rules := pickRules(t, decodeBody(t, ops[0].Body))
+	if len(rules) != 2 {
+		t.Errorf("REPLACE body carried %d rules, want 2 (the desired set without sequence 30)", len(rules))
+	}
+}
+
+func TestACLExtendedPruneDiffNoOpWhenNoOrphans(t *testing.T) {
+	// Inner sets are equivalent ⇒ no inner-prune op. The base
+	// keyedListWriter still emits whole-ACL prune for outer
+	// orphans; that's covered by the keyed-list tests.
+	w := nestedKeyedListWriter{
+		base: keyedListWriter{
+			family: aclExtFamily, yangPath: aclExtPath,
+			envelopeKey: aclExtEnvelopeKey, innerKey: aclExtInnerKey,
+			keyField: aclExtKeyField, managedLeaves: []string{"rules"},
+		},
+		nestedLeaf:      "rules",
+		nestedKeyField:  "sequence",
+		nestedYANGInner: "access-list-seq-rule",
+	}
+	desired := extACLDesired(mkRule(10, nil), mkRule(20, nil))
+	observed := []map[string]any{{
+		"name": "INGRESS",
+		"rules": []any{
+			mkRule(10, nil), mkRule(20, nil),
+		},
+	}}
+	ops, err := w.PruneDiff(desired, observed)
+	if err != nil {
+		t.Fatalf("PruneDiff: %v", err)
+	}
+	if len(ops) != 0 {
+		t.Fatalf("got %d ops, want 0 (no orphans)", len(ops))
+	}
+}
+
 func TestACLExtendedDiffNewACLEmitsAllRules(t *testing.T) {
 	// A brand-new ACL on the device side — every desired rule
 	// counts as changed because there's no observed rule to match.

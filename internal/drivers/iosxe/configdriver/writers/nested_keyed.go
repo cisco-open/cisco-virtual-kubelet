@@ -116,12 +116,134 @@ func (w nestedKeyedListWriter) Apply(ctx context.Context, c transport.Interface,
 	return w.base.Apply(ctx, c, ops)
 }
 
-// PruneDiff delegates to the keyed-list base. Outer-entry pruning
-// (whole-ACL, whole-prefix-list, whole-route-map deletes) is what
-// pruneOnRelinquish: true currently buys; per-inner-key pruning is
-// a follow-up that would extend this writer rather than the base.
+// PruneDiff covers both axes of pruning for a nested-keyed family:
+//
+//   - outer-key prune: whole entries (ACL by name, route-map by
+//     name, OSPF process by id) the device has but the intent
+//     doesn't. Same shape the keyedListWriter base produces; we
+//     reuse that exact code path so the op format matches.
+//
+//   - inner-key prune: rules / sequences / networks present on a
+//     device-side outer entry that the intent's same outer entry
+//     no longer references. These can't always be expressed as
+//     standalone DELETE ops because YANG container shapes vary
+//     per family — instead we emit a REPLACE op containing the
+//     full desired inner list. RESTCONF PUT (VerbReplace) on the
+//     outer-entry path replaces the inner list verbatim, so the
+//     orphan rules drop. The body is the desired inner list, not
+//     a partial one, because a REPLACE is by definition the new
+//     authoritative state.
+//
+// REPLACE-on-outer-entry has higher blast radius than the per-rule
+// MERGE Diff produces, so we only emit it under spec.pruneOn-
+// Relinquish: true and only for entries where there's actually an
+// inner-orphan to drop. Equivalent (no-orphan) entries pass
+// through untouched.
 func (w nestedKeyedListWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
-	return w.base.PruneDiff(desired, observed)
+	specs := w.specs()
+	if len(specs) == 0 {
+		return w.base.PruneDiff(desired, observed)
+	}
+
+	outerOps, err := w.base.PruneDiff(desired, observed)
+	if err != nil {
+		return nil, err
+	}
+
+	desiredList, err := w.base.coerceBlock(desired, "desired")
+	if err != nil {
+		return nil, err
+	}
+	observedList, err := coerceList(observed, "observed")
+	if err != nil {
+		return nil, err
+	}
+
+	want := map[string]map[string]any{}
+	for _, e := range desiredList {
+		k, err := entryKey(e, w.base.keyField)
+		if err != nil {
+			return nil, fmt.Errorf("%s: desired: %w", w.base.family, err)
+		}
+		want[k] = e
+	}
+	got := map[string]map[string]any{}
+	keyOrder := []string{}
+	for _, e := range observedList {
+		k, err := entryKey(e, w.base.keyField)
+		if err != nil {
+			return nil, fmt.Errorf("%s: observed: %w", w.base.family, err)
+		}
+		if _, dup := got[k]; !dup {
+			keyOrder = append(keyOrder, k)
+		}
+		got[k] = e
+	}
+	sort.Strings(keyOrder)
+
+	var innerOps []transport.Op
+	for _, k := range keyOrder {
+		desiredEntry, kept := want[k]
+		if !kept {
+			// Whole outer entry is being pruned — outerOps already
+			// covers it.
+			continue
+		}
+		observedEntry := got[k]
+		hasOrphan := false
+		body := projectManagedLeavesExcept(desiredEntry, w.base.managedLeaves)
+		if kv, ok := desiredEntry[w.base.keyField]; ok {
+			body[w.base.keyField] = kv
+		}
+		for _, spec := range specs {
+			desiredInner := indexNested(desiredEntry[spec.Leaf], spec)
+			observedInner := indexNested(observedEntry[spec.Leaf], spec)
+			if !innerHasOrphans(desiredInner, observedInner) {
+				continue
+			}
+			hasOrphan = true
+			// Body carries the full desired inner list — REPLACE
+			// is authoritative.
+			body[spec.Leaf] = desiredInnerSlice(desiredInner)
+		}
+		if !hasOrphan {
+			continue
+		}
+		payload, err := wrapYANGPayload(w.base.envelopeKey, []any{body})
+		if err != nil {
+			return nil, err
+		}
+		innerOps = append(innerOps, transport.Op{
+			Verb: transport.VerbReplace,
+			Path: w.base.yangPath + "=" + k,
+			Body: payload,
+		})
+	}
+	return append(outerOps, innerOps...), nil
+}
+
+func innerHasOrphans(want, have map[string]map[string]any) bool {
+	for k := range have {
+		if _, kept := want[k]; !kept {
+			return true
+		}
+	}
+	return false
+}
+
+// desiredInnerSlice serialises the desired inner map back to a
+// stable, key-sorted list — the shape REPLACE expects.
+func desiredInnerSlice(m map[string]map[string]any) []any {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := make([]any, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, m[k])
+	}
+	return out
 }
 
 func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, error) {
