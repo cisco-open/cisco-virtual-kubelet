@@ -109,6 +109,10 @@ type flags struct {
 	// Output.
 	output      string // "human" | "json"
 	exitOnDrift bool
+
+	// Offline plan — no device contact. Mutually exclusive with the
+	// connected modes' --address/--username/etc. requirements.
+	offline bool
 }
 
 func parseFlags(args []string, stderr io.Writer) (flags, error) {
@@ -149,6 +153,8 @@ func parseFlags(args []string, stderr io.Writer) (flags, error) {
 	fs.StringVar(&f.output, "output", "human", "'human' or 'json'")
 	fs.BoolVar(&f.exitOnDrift, "exit-on-drift", false,
 		"exit with code 4 when any managed drift or orphans are found — for CI gating")
+	fs.BoolVar(&f.offline, "offline", false,
+		"skip device contact; emit the ops the engine would push if the device were empty (orphan detection is unavailable in this mode)")
 
 	if err := fs.Parse(args); err != nil {
 		return f, err
@@ -180,7 +186,18 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 		return exitBadFlags
 	}
 
-	if f.address == "" || f.username == "" || f.deviceName == "" {
+	if f.offline {
+		// Offline plan needs a device-name (so we know which CRs
+		// to load) but skips the connection bits entirely.
+		if f.deviceName == "" {
+			fmt.Fprintln(stderr, "ERROR: --device-name is required in --offline mode")
+			return exitBadFlags
+		}
+		if f.mode == modeOrphans {
+			fmt.Fprintln(stderr, "ERROR: --mode=orphans requires a device read; remove --offline or change mode")
+			return exitBadFlags
+		}
+	} else if f.address == "" || f.username == "" || f.deviceName == "" {
 		fmt.Fprintln(stderr, "ERROR: --address, --username, and --device-name are required")
 		return exitBadFlags
 	}
@@ -226,15 +243,19 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 	}
 
 	inputs := buildDriftInputs(f.deviceName, crs)
-
-	t, err := buildTransport(f)
-	if err != nil {
-		fmt.Fprintf(stderr, "ERROR: build transport: %v\n", err)
-		return exitInternal
-	}
-
 	ignored := parseIgnored(f.ignored)
-	report := computeReport(ctx, t, inputs, ignored)
+
+	var report Report
+	if f.offline {
+		report = computeOfflinePlan(inputs, ignored)
+	} else {
+		t, err := buildTransport(f)
+		if err != nil {
+			fmt.Fprintf(stderr, "ERROR: build transport: %v\n", err)
+			return exitInternal
+		}
+		report = computeReport(ctx, t, inputs, ignored)
+	}
 
 	// Filter by mode — --mode is purely presentational, not
 	// computational. Every dimension is still checked; the filter

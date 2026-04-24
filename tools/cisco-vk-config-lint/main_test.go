@@ -253,6 +253,71 @@ func atoi(s string) int {
 	return n
 }
 
+func TestComputeOfflinePlanRendersFullIntentAsOps(t *testing.T) {
+	// Offline mode is "everything the engine would push if the
+	// device were empty". The matching CR declares two VLANs, so
+	// the plan must emit 2 vlan ops — no transport needed, and no
+	// orphan section because that requires a device read.
+	p := writeTemp(t, matchingCR)
+	files, _ := discoverCRFiles([]string{p})
+	crs, _ := loadCRsFromFiles(files, "edge-01")
+	inputs := buildDriftInputs("edge-01", crs)
+
+	r := computeOfflinePlan(inputs, nil)
+
+	if len(r.ManagedDrift) != 1 || r.ManagedDrift[0].Family != "vlan" {
+		t.Fatalf("ManagedDrift=%+v, want one entry for vlan", r.ManagedDrift)
+	}
+	if r.ManagedDrift[0].OpCount != 2 {
+		t.Errorf("opCount=%d, want 2 (both VLANs)", r.ManagedDrift[0].OpCount)
+	}
+	if len(r.Orphans) != 0 {
+		t.Errorf("Orphans should be empty in offline mode, got %#v", r.Orphans)
+	}
+}
+
+func TestRunOfflineFlagSkipsTransport(t *testing.T) {
+	// End-to-end: run() with --offline must not hit any network.
+	// We don't even spin up an httptest server — if the tool is
+	// trying to dial in offline mode, this test will hang or DNS-
+	// fail rather than passing on a stub. --address is intentionally
+	// left unset; --offline must accept that.
+	p := writeTemp(t, matchingCR)
+	args := []string{
+		"--device-name", "edge-01",
+		"--offline",
+		"--output", "json",
+		p,
+	}
+	var stdout, stderr strings.Builder
+	if got := run(args, &stdout, &stderr); got != exitOK {
+		t.Fatalf("run() = %d, want %d. stderr=%s", got, exitOK, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"managedDrift"`) {
+		t.Errorf("offline run did not emit a managedDrift section: %s", stdout.String())
+	}
+}
+
+func TestRunOfflineRejectsOrphansMode(t *testing.T) {
+	// --mode=orphans cannot be served offline (no device to enumerate
+	// against). Reject up-front rather than producing an empty
+	// orphan list that misleads the operator.
+	p := writeTemp(t, matchingCR)
+	args := []string{
+		"--device-name", "edge-01",
+		"--offline",
+		"--mode", "orphans",
+		p,
+	}
+	var stdout, stderr strings.Builder
+	if got := run(args, &stdout, &stderr); got != exitBadFlags {
+		t.Fatalf("run() = %d, want exitBadFlags=%d. stderr=%s", got, exitBadFlags, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "orphans") {
+		t.Errorf("error message should mention orphans: %s", stderr.String())
+	}
+}
+
 func TestComputeReportEmitsOrphanWhenDeviceHasUnclaimedFamily(t *testing.T) {
 	srv := newMockDevice(t, map[string]string{
 		// Device has vrf configured; no CR claims it.

@@ -960,9 +960,15 @@ Closes the netascode-parity depth gaps identified in §10.
   uses runs on the JSON-marshalled unstructured objects, so the
   two loaders agree on apiVersion / deviceName filtering. The
   same `--exit-on-drift` and `--mode` flags work in both modes.
-- **Offline `plan` subcommand** on `cisco-vk-config-lint`:
-  diff against last-applied state cached on the CR's status,
-  no device access required. Closes §10.5 for regulated envs.
+- **Offline plan mode** on `cisco-vk-config-lint`. ✅ Shipped:
+  `--offline` skips the device contact entirely. The lint tool
+  runs every claimed family's writer against `observed=nil`,
+  surfacing the full op vocabulary the engine would push if the
+  device were empty. Useful as a greenfield review tool and as
+  a CI gate when the runner has no device access. Orphan
+  detection is unavailable in this mode (it requires a device
+  read) and `--mode=orphans + --offline` is rejected up-front.
+  Closes §10.5 for regulated envs.
 - **Per-family `secretRefs`** on IOSXEConfig. ✅ Shipped:
   `IOSXEConfigSpec.SecretRefs` is a list of
   `{family, name, key}` entries. The resolver loads each

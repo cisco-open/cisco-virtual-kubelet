@@ -214,6 +214,55 @@ func (r *Report) HasFindings() bool {
 	return len(r.ManagedDrift) > 0 || len(r.Orphans) > 0
 }
 
+// computeOfflinePlan is the no-device counterpart of computeReport.
+// Each managed family's writer is invoked with observed=nil, so the
+// returned ops are "everything the engine would push if the device
+// were empty". Useful in two regulated-environment workflows:
+//
+//   - Greenfield review: confirm an IOSXEConfig CR resolves to the
+//     expected vocabulary of ops before any device write.
+//   - GitOps gating: a PR pipeline that has no device access can
+//     still rule on whether a manifest change is non-trivial.
+//
+// Orphan detection requires a device read and is therefore omitted.
+// Operators who need orphans run the connected report; the lint
+// flag layer enforces this combination at parse time.
+func computeOfflinePlan(inputs driftInputs, ignored map[string]struct{}) Report {
+	report := Report{
+		Device:          inputs.device,
+		ManagedFamilies: sortedKeys(inputs.claimers),
+	}
+	for _, family := range writers.Families() {
+		if _, skip := ignored[family]; skip {
+			continue
+		}
+		claimers, claimed := inputs.claimers[family]
+		if !claimed {
+			continue
+		}
+		w := writers.Get(family)
+		if w == nil {
+			continue
+		}
+		ops, err := w.Diff(inputs.intents[family], nil)
+		if err != nil {
+			report.Errors = append(report.Errors, FamilyError{
+				Family: family, Stage: "diff", Err: err.Error(),
+			})
+			continue
+		}
+		if len(ops) > 0 {
+			report.ManagedDrift = append(report.ManagedDrift, FamilyDrift{
+				Family:   family,
+				OpCount:  len(ops),
+				Verbs:    countVerbs(ops),
+				Claimers: append([]string(nil), claimers...),
+			})
+		}
+	}
+	return report
+}
+
 // Summary is a compact one-line rendering suited to CI log tails.
 func (r *Report) Summary() string {
 	return fmt.Sprintf(
