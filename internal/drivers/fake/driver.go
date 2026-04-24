@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 )
 
 type FAKEDriver struct {
@@ -62,7 +63,7 @@ func (d *FAKEDriver) GetDeviceInfo(ctx context.Context) (*common.DeviceInfo, err
 	}, nil
 }
 
-func (d *FAKEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
+func (d *FAKEDriver) DeployPod(ctx context.Context, pod *v1.Pod, _ corev1listers.SecretNamespaceLister) error {
 	containerAppIDs := common.GenerateContainerAppIDs(pod)
 
 	log.G(ctx).WithFields(log.Fields{

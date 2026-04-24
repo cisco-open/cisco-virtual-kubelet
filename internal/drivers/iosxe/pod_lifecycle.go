@@ -18,21 +18,23 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 // DeployPod creates and deploys all containers in a pod to the device
-func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
+func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister corev1listers.SecretNamespaceLister) error {
 	log.G(ctx).WithFields(log.Fields{
 		"pod": pod,
 	}).Debug("Pod DeployContainer request received")
 
 	log.G(ctx).Infof("Deploying pod: %s/%s", pod.Namespace, pod.Name)
+
+	d.secretLister = secretLister
 
 	// Convert pod spec to app hosting configurations
 	appConfigs, err := d.ConvertPodToAppConfigs(pod)
@@ -40,9 +42,9 @@ func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 		return fmt.Errorf("failed to convert pod to app configs: %w", err)
 	}
 
-	// Deploy each app configuration sequentially, waiting for each to reach
-	// DEPLOYED before starting the next.  IOS-XE cannot reliably handle
-	// concurrent install operations and may silently fail.
+	// Deploy each app configuration sequentially. CreateAppHostingApp owns the
+	// full lifecycle through to RUNNING (or fallback copy recovery), so no
+	// separate DEPLOYED wait is needed here.
 	for i := range appConfigs {
 		appConfig := &appConfigs[i]
 		log.G(ctx).Infof("Deploying app: %s for container: %s", appConfig.AppName(), appConfig.ContainerName())
@@ -50,11 +52,6 @@ func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 		err = d.CreateAppHostingApp(ctx, appConfig)
 		if err != nil {
 			return fmt.Errorf("failed to deploy app for container %s: %w", appConfig.ContainerName(), err)
-		}
-
-		// Wait for the device to finish installing before submitting the next app.
-		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", 120*time.Second); err != nil {
-			return fmt.Errorf("app %s did not reach DEPLOYED status: %w", appConfig.AppName(), err)
 		}
 
 		log.G(ctx).Infof("Successfully deployed app %s for container %s", appConfig.AppName(), appConfig.ContainerName())
@@ -65,38 +62,84 @@ func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 }
 
 // UpdatePod handles pod update requests.
-// IOS-XE AppHosting does not support in-place updates to running applications;
-// changes to image require a full teardown and reinstall. If the app already
-// exists on the device and no container images have changed, the update is a
-// no-op — the reconciliation loop inside GetPodStatus already handles
-// advancing apps to RUNNING state.
-//
-// The upstream VK pod controller calls UpdatePod whenever its podsEqual check
-// fails, which can happen for benign metadata/annotation/toleration changes.
-// A blind delete-and-redeploy would tear down RUNNING apps and create a
-// destructive cycle, so we guard against that here.
+// Apps that are already RUNNING are left untouched (benign metadata-only change).
+// Apps in any other state (or missing) are deleted and redeployed.
 func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
-	// If the app already exists on the device, skip the destructive
-	// delete-and-redeploy. The upstream VK pod controller calls UpdatePod
-	// whenever its podsEqual check fails (benign metadata/annotation
-	// changes). IOS-XE does not support in-place image updates anyway;
-	// a true image change requires the user to delete and re-create the pod.
-	// The reconciliation loop in GetPodStatus handles advancing apps
-	// that are stuck in intermediate states (DEPLOYED, ACTIVATED).
 	discoveredContainers, err := d.GetPodContainers(ctx, pod)
-	if err == nil && len(discoveredContainers) > 0 {
-		log.G(ctx).Debugf("UpdatePod: app already exists on device for pod %s/%s, skipping delete-and-redeploy",
-			pod.Namespace, pod.Name)
+	if err != nil || len(discoveredContainers) == 0 {
+		log.G(ctx).Infof("UpdatePod: no existing apps found for pod %s/%s, deploying fresh", pod.Namespace, pod.Name)
+		if err := d.DeletePod(ctx, pod); err != nil {
+			log.G(ctx).Warnf("UpdatePod: cleanup had errors (will attempt redeploy): %v", err)
+		}
+		return d.DeployPod(ctx, pod, d.secretLister)
+	}
+
+	allOperData, operErr := d.GetAppOperationalData(ctx)
+	if operErr != nil {
+		log.G(ctx).Warnf("UpdatePod: failed to fetch oper data for pod %s/%s: %v", pod.Namespace, pod.Name, operErr)
+		allOperData = make(map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App)
+	}
+
+	var appsNeedingRedeploy []string
+	for _, appID := range discoveredContainers {
+		operData, exists := allOperData[appID]
+		if !exists {
+			// App is in config but not yet in oper data — normal during
+			// INSTALLING/DEPLOYED. The reconciler handles this case.
+			continue
+		}
+		if operData.Details == nil || operData.Details.State == nil {
+			continue
+		}
+		// Leave the app alone if it is making normal forward progress.
+		// The reconciler in GetPodStatus advances DEPLOYED → ACTIVATED → RUNNING.
+		// Only trigger a redeploy for states the reconciler cannot recover from.
+		state := *operData.Details.State
+		switch state {
+		case "RUNNING", "ACTIVATED", "DEPLOYED", "INSTALLING":
+			continue
+		default:
+			log.G(ctx).Infof("UpdatePod: app %s is in state %q (not a healthy transitional state), scheduling redeploy", appID, state)
+			appsNeedingRedeploy = append(appsNeedingRedeploy, appID)
+		}
+	}
+
+	if len(appsNeedingRedeploy) == 0 {
+		log.G(ctx).Debugf("UpdatePod: all apps RUNNING for pod %s/%s, skipping redeploy", pod.Namespace, pod.Name)
 		return nil
 	}
 
-	log.G(ctx).Infof("UpdatePod: delete-and-redeploy for pod %s/%s", pod.Namespace, pod.Name)
+	log.G(ctx).Infof("UpdatePod: %d app(s) not RUNNING for pod %s/%s, redeploying", len(appsNeedingRedeploy), pod.Namespace, pod.Name)
 
-	if err := d.DeletePod(ctx, pod); err != nil {
-		log.G(ctx).Warnf("UpdatePod: cleanup had errors (will attempt redeploy): %v", err)
+	for _, appID := range appsNeedingRedeploy {
+		if err := d.DeleteApp(ctx, appID); err != nil {
+			log.G(ctx).Warnf("UpdatePod: failed to delete app %s (will attempt redeploy anyway): %v", appID, err)
+		}
 	}
 
-	return d.DeployPod(ctx, pod)
+	appConfigs, err := d.ConvertPodToAppConfigs(pod)
+	if err != nil {
+		return fmt.Errorf("failed to convert pod to app configs: %w", err)
+	}
+
+	needsRedeploy := make(map[string]bool, len(appsNeedingRedeploy))
+	for _, id := range appsNeedingRedeploy {
+		needsRedeploy[id] = true
+	}
+
+	containerAppIDs := common.GenerateContainerAppIDs(pod)
+	for i := range appConfigs {
+		appConfig := &appConfigs[i]
+		appID := containerAppIDs[appConfig.ContainerName()]
+		if !needsRedeploy[appID] {
+			continue
+		}
+		if err := d.CreateAppHostingApp(ctx, appConfig); err != nil {
+			return fmt.Errorf("UpdatePod: failed to redeploy app %s: %w", appConfig.AppName(), err)
+		}
+	}
+
+	return nil
 }
 
 // GetPodContainers retrieves all containers belonging to a specific pod from the device.
@@ -273,6 +316,23 @@ func (d *XEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 // GetPodStatus retrieves the current status of a pod by querying the device
 func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
 	log.G(ctx).Debug("GetPodStatus request received")
+
+	// While copy-recovery is in progress, return a Waiting status so the VK
+	// framework does not interpret the intermediate state as a missing pod and
+	// trigger pod deletion.
+	if d.isPodRecovering(string(pod.UID)) {
+		statusPod := pod.DeepCopy()
+		waiting := v1.ContainerState{
+			Waiting: &v1.ContainerStateWaiting{
+				Reason:  "PullingImage",
+				Message: "Copying image to device flash; this may take several minutes",
+			},
+		}
+		for i := range statusPod.Status.ContainerStatuses {
+			statusPod.Status.ContainerStatuses[i].State = waiting
+		}
+		return statusPod, nil
+	}
 
 	// Get containers for this pod
 	discoveredContainers, err := d.GetPodContainers(ctx, pod)
