@@ -132,3 +132,62 @@ func TestExpandTemplateNoDelimsIsIdentity(t *testing.T) {
 		t.Fatalf("got %v", got)
 	}
 }
+
+func TestExpandTemplateDefaultsToDataModel(t *testing.T) {
+	// spec.type unset should behave as data-model (backward compat;
+	// existing templates authored before the field was introduced
+	// keep working without a CR edit).
+	tpl := mkTemplate("t", `{"k":"literal"}`)
+	got, err := ExpandTemplate(tpl, nil)
+	if err != nil {
+		t.Fatalf("ExpandTemplate: %v", err)
+	}
+	if got["k"] != "literal" {
+		t.Fatalf("got %v", got)
+	}
+}
+
+func TestExpandTemplateCLITypeRejected(t *testing.T) {
+	tpl := mkTemplate("t", `hostname {{ .hostname }}`,
+		configv1alpha1.TemplateParameter{Name: "hostname", Type: configv1alpha1.TemplateParameterString, Required: true},
+	)
+	tpl.Spec.Type = configv1alpha1.CLITemplate
+
+	_, err := ExpandTemplate(tpl, map[string]string{"hostname": "edge-01"})
+	if err == nil || !strings.Contains(err.Error(), "spec.type=cli is not yet supported") {
+		t.Fatalf("got %v, want cli-not-supported error", err)
+	}
+	// Make sure the error points operators at the feedback doc so the
+	// gap is discoverable without grepping source.
+	if !strings.Contains(err.Error(), "feedback 3b") {
+		t.Errorf("error message should reference feedback 3b for findability:\n%s", err.Error())
+	}
+}
+
+func TestExpandTemplateExplicitDataModelType(t *testing.T) {
+	// Explicit spec.type=data-model must behave identically to the
+	// default empty value.
+	tpl := mkTemplate("t", `{"k":"literal"}`)
+	tpl.Spec.Type = configv1alpha1.DataModelTemplate
+
+	got, err := ExpandTemplate(tpl, nil)
+	if err != nil {
+		t.Fatalf("ExpandTemplate: %v", err)
+	}
+	if got["k"] != "literal" {
+		t.Fatalf("got %v", got)
+	}
+}
+
+func TestExpandTemplateUnknownTypeRejected(t *testing.T) {
+	// kubebuilder enum validation catches this at the API server, but
+	// the expander's defence-in-depth check keeps unit tests and
+	// in-process callers honest.
+	tpl := mkTemplate("t", `{"k":"v"}`)
+	tpl.Spec.Type = configv1alpha1.TemplateKind("nonsense")
+
+	_, err := ExpandTemplate(tpl, nil)
+	if err == nil || !strings.Contains(err.Error(), "unknown spec.type") {
+		t.Fatalf("got %v, want unknown-type error", err)
+	}
+}

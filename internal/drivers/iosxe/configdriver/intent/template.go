@@ -33,9 +33,35 @@ import (
 // declared parameter is validated against its type before substitution;
 // undeclared values in the caller-supplied map are an error so a typo
 // does not silently produce an empty interpolation.
+//
+// Only spec.type=data-model templates are processed today. spec.type=cli
+// templates are rejected with an explicit error so operators see the
+// gap at resolve time rather than a silent no-op. The CRD admits the
+// body so early adopters can author CLI templates without a schema
+// migration once the CLI render path lands (docs/rfcs/config-driver-
+// review-feedback.md, feedback 3b).
 func ExpandTemplate(tpl *configv1alpha1.IOSXETemplate, values map[string]string) (map[string]any, error) {
 	if tpl == nil {
 		return nil, fmt.Errorf("ExpandTemplate: nil template")
+	}
+
+	// Type is an optional field defaulted to "data-model" at the API
+	// server (kubebuilder default); defaulting here too covers the
+	// in-process path where the defaulter has not been applied (unit
+	// tests, fake clients).
+	kind := tpl.Spec.Type
+	if kind == "" {
+		kind = configv1alpha1.DataModelTemplate
+	}
+	if kind == configv1alpha1.CLITemplate {
+		return nil, fmt.Errorf(
+			"template %s: spec.type=cli is not yet supported; CLI render and "+
+				"transport land in a subsequent phase (see feedback 3b)",
+			tpl.Name)
+	}
+	if kind != configv1alpha1.DataModelTemplate {
+		return nil, fmt.Errorf(
+			"template %s: unknown spec.type %q", tpl.Name, kind)
 	}
 
 	resolved, err := resolveParameters(tpl.Spec.Parameters, values)

@@ -68,15 +68,57 @@ type TemplateParameter struct {
 	Description string `json:"description,omitempty"`
 }
 
+// TemplateKind distinguishes the two netascode template styles:
+//
+//   - DataModelTemplate ("data-model"): the template body is a
+//     parameterised netascode YAML fragment; expansion substitutes
+//     parameters and the result is deep-merged into the resolved
+//     intent alongside other scope objects. This is the shape the
+//     Phase-1 resolver handles and matches the structured-YAML
+//     templates netascode modules use.
+//
+//   - CLITemplate ("cli"): the template body is an IOS-XE CLI snippet
+//     (typically Jinja/HCL-shaped) that is rendered to device-native
+//     CLI text and pushed through a CLI-capable transport. The CRD
+//     surface for this value is present now so operators can author
+//     CLI templates without a later schema migration; the render and
+//     transport path lands in a subsequent phase alongside NETCONF
+//     (see docs/rfcs/config-driver-review-feedback.md, feedback 3b).
+//
+// +kubebuilder:validation:Enum=data-model;cli
+type TemplateKind string
+
+// Supported template kinds.
+const (
+	DataModelTemplate TemplateKind = "data-model"
+	CLITemplate       TemplateKind = "cli"
+)
+
 // IOSXETemplateSpec declares a parameterised configuration fragment.
 type IOSXETemplateSpec struct {
+	// Type selects between the two netascode template styles. Default
+	// is "data-model" so existing templates keep working without any
+	// CR change.
+	// +kubebuilder:default=data-model
+	// +optional
+	Type TemplateKind `json:"type,omitempty"`
+
 	// Parameters is the contract the referring CR supplies values for.
 	// +optional
 	Parameters []TemplateParameter `json:"parameters,omitempty"`
 
-	// Configuration is the templated netascode fragment. The expander
-	// substitutes {{ .Name }} references using the Go text/template engine
-	// restricted to parameter lookups — no function calls, no file access.
+	// Configuration is the template body. Shape depends on Type:
+	//
+	//   - For Type=data-model: a parameterised netascode YAML fragment.
+	//     The expander substitutes {{ .Name }} references using the Go
+	//     text/template engine restricted to parameter lookups (no
+	//     function calls, no file access), and the result merges into
+	//     the resolved intent tree.
+	//
+	//   - For Type=cli: an IOS-XE CLI snippet. The CRD admits the body
+	//     today; render and transport are deferred — a Type=cli
+	//     template is rejected at resolve time with a clear error so
+	//     operators see the gap at admission, not at silent skip.
 	//
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Schemaless

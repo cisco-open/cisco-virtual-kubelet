@@ -146,9 +146,23 @@ func joinPath(path []string) string {
 }
 
 // keyFieldCandidates is the fallback ordered list used when no rule
-// matches the current path. Chosen to align with netascode's own merge
-// tool: name > id > sequence > type.
-var keyFieldCandidates = []string{"name", "id", "sequence", "type"}
+// matches the current path. Chosen to align with netascode's own
+// merge tooling — the first candidate that is present on every
+// element of both sides is taken as the list's identity leaf.
+//
+// Beyond the obvious netascode shapes (name, id), the list includes:
+//
+//   - sequence / seq: ACLs, prefix-lists, route-maps, AS-path lists
+//     commonly key nested entries this way. Both spellings appear in
+//     the wild — families.yaml does not always normalise them.
+//   - tag: IS-IS process, IPsec transform-set identity.
+//   - type: used in composite keys where the declared key is 'name'
+//     but ties exist on 'type' (e.g. interface_ethernet's
+//     (type, name) composite shape).
+//
+// Ordering matters: 'name' wins over 'id' on families that carry both,
+// matching netascode's documented precedence.
+var keyFieldCandidates = []string{"name", "id", "sequence", "seq", "tag", "type"}
 
 func detectKeyField(dst, src []any) (string, bool) {
 	if len(dst) == 0 || len(src) == 0 {

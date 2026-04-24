@@ -51,9 +51,18 @@ spec:
             properties:
               configuration:
                 description: |-
-                  Configuration is the templated netascode fragment. The expander
-                  substitutes {{ .Name }} references using the Go text/template engine
-                  restricted to parameter lookups — no function calls, no file access.
+                  Configuration is the template body. Shape depends on Type:
+
+                    - For Type=data-model: a parameterised netascode YAML fragment.
+                      The expander substitutes {{ .Name }} references using the Go
+                      text/template engine restricted to parameter lookups (no
+                      function calls, no file access), and the result merges into
+                      the resolved intent tree.
+
+                    - For Type=cli: an IOS-XE CLI snippet. The CRD admits the body
+                      today; render and transport are deferred — a Type=cli
+                      template is rejected at resolve time with a clear error so
+                      operators see the gap at admission, not at silent skip.
                 x-kubernetes-preserve-unknown-fields: true
               parameters:
                 description: Parameters is the contract the referring CR supplies
@@ -103,6 +112,16 @@ spec:
                   - type
                   type: object
                 type: array
+              type:
+                default: data-model
+                description: |-
+                  Type selects between the two netascode template styles. Default
+                  is "data-model" so existing templates keep working without any
+                  CR change.
+                enum:
+                - data-model
+                - cli
+                type: string
             required:
             - configuration
             type: object
