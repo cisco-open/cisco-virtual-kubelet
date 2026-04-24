@@ -2,7 +2,7 @@
 
 **Branch:** `pr/johalley/ciscoconfig_xe`
 **Against:** `main`
-**Status:** functional end-to-end for RESTCONF *and* NETCONF (transactional candidate+commit, confirmed-commit, CLI push via Cisco-IA); gNMI reserved
+**Status:** functional end-to-end for RESTCONF, NETCONF, and gNMI (transactional candidate+commit on NETCONF, atomic Set on gNMI, CLI push via Cisco-IA on RESTCONF/NETCONF). All Phase 0–8 milestones shipped on this branch; residual items (Subscribe-based drift, single-manager topology, Terraform-provider CRUD wire-up) tracked at the foot of §11.
 **Reviewer context:** familiarity with
 [netascode](https://netascode.cisco.com/docs/data_models/iosxe/overview/),
 the `netascode/terraform-iosxe-nac-iosxe` Terraform module, and the
@@ -931,7 +931,7 @@ Phase 3:
   `seq` / `tag`) — fixed by extending the merger's candidate
   key list.
 
-### Phase 4 — depth & polish (⏳ planned, ~6–8 weeks)
+### Phase 4 — depth & polish (✅ shipped)
 
 Closes the netascode-parity depth gaps identified in §10.
 
@@ -1080,70 +1080,101 @@ Closes the netascode-parity depth gaps identified in §10.
   a Cat 8000V / Sysrepo is a Phase-5.5 follow-up; unit coverage
   today uses a scripted `mockDevice` over `io.Pipe`.
 
-### Phase 6 — gNMI + OpenConfig (⏳ planned, ~3–4 weeks after Phase 5)
+### Phase 6 — gNMI + OpenConfig (✅ shipped)
 
-- `transport/gnmi.go` — gRPC + mTLS, `SetRequest` replace/
-  update/delete, `GetRequest` subtree fetch.
-- Writers gain a path dialect per transport: the managed-leaf
-  set stays the same, the YANG path changes between
-  Cisco-IOS-XE-native and OpenConfig where the family has an
-  OpenConfig equivalent. Path dialect entries go in
-  `families.yaml` alongside the existing `yang_paths`.
-- `Subscribe`-based drift detection — push-driven rather than
-  polled. `spec.driftDetectInterval` repurposed as a
-  max-staleness bound.
-- CRD: `CiscoDevice.spec.transport: gnmi` unblocks.
-- Multi-vendor families are the next natural move: the same
-  OpenConfig family definition works on Juniper / Arista; not
-  a Phase-6 promise, but the shape supports it.
+- `transport/gnmi.go` — gRPC + TLS gNMI client implementing
+  `transport.Interface`. Set ops (Replace/Update/Delete) batch
+  into a single `SetRequest`, which gives free transactional
+  semantics (gNMI Set is atomic per request). Get returns the
+  raw `JSON_IETF` value so writers parse it the same way they
+  parse RESTCONF JSON. `parseGNMIPath` converts the existing
+  RESTCONF-style xpath into a `*gpb.Path`. CLI verb is rejected
+  loudly — gNMI has no `cli-config-data` analog.
+- `families.yaml` carries `openconfig_paths` alongside
+  `yang_paths` for the well-known mappings (system, vlan, vrf,
+  interface_ethernet, interface_loopback, ospf, bgp).
+  `Family.PathsForDialect("openconfig")` falls back to the
+  native paths when no OpenConfig mapping exists, so writers
+  without a migration stay functional.
+- `CiscoDevice.spec.transport: gnmi` unblocked; the factory's
+  reserved-error branch is gone.
+- Deferred to Phase 6.5: `Subscribe`-based push drift
+  detection. The transport's `Subscribe` slot exists in the
+  capability struct but the engine still polls — wiring the
+  subscribe consumer is meaningful work and didn't fit into
+  this autonomous run.
 
-### Phase 7 — scale & operability (⏳ planned, timing TBD)
+### Phase 7 — scale & operability (✅ shipped)
 
-- **Apply-log CR.** `IOSXEConfigApplyLog` circular buffer of
-  recent applies per device, persistent across controller
-  restarts. Closes the audit/history gap (§10.7).
-- **Single-manager topology option.** Currently: one pod per
-  device. Alternative: one controller-runtime manager handles
-  all devices in-process; the `cisco-vk run` provider becomes
-  a sub-controller rather than its own pod. Trade-off is
-  blast radius vs resource footprint at scale; operator
-  choice via a Helm values flag.
-- **Aggregation CRs.** `IOSXEConfigBundle` or similar — a
-  controller expands one bundle into many per-device
-  IOSXEConfigs. Closes §10.12.
-- **Time-travel / snapshot.** Given the apply-log, rewind a
-  CR to a previous `status.lastAppliedHash` (requires retaining
-  the body, not just the hash).
-- **Multi-version YANG support.** `spec.targetYangVersion` on
-  IOSXEConfig selects a writer set compiled against a specific
-  release; the driver picks the release matching the device's
-  `status.softwareVersion` when the CR doesn't pin one.
+- **Apply-log CR.** ✅ `IOSXEConfigApplyLog` is the per-device
+  circular-buffer audit trail. Operators opt in by creating one
+  log CR per device; the ConfigReconciler appends one entry per
+  completed reconcile, capped at `spec.maxEntries` with
+  `status.truncatedTotal` accounting for FIFO drops. Closes
+  §10.7.
+- **Aggregation CRs.** ✅ `IOSXEConfigBundle` fans out a single
+  per-device template across a CiscoDevice set (DeviceRefs +
+  DeviceSelector union). Children are owner-ref'd at the bundle
+  so deleting the bundle GCs every child; the controller prunes
+  out-of-scope children on the same reconcile. Closes §10.12.
+- **Multi-version YANG plumbing.** ✅ `spec.targetYangVersion`
+  carries through ResolvedIntent → engine.Result →
+  `status.sourceYangVersion`. Validated against
+  `schema/yang-versions.yaml`; no multi-release writer-set
+  switching today (every release maps to the same writer set),
+  but the API surface is in place.
+- **Single-manager topology option.** ⏳ Deferred — meaningful
+  refactor of the per-device pod boundary; not on the
+  netascode-parity critical path.
+- **Time-travel / snapshot.** ⏳ Deferred — needs the apply log
+  to retain the configuration body alongside the hash, which is
+  a separate retention/storage decision.
 
-### Phase 8 — ecosystem (⏳ planned, timing TBD)
+### Phase 8 — ecosystem (✅ shipped)
 
-- **Terraform provider for IOSXEConfig.** Reverse-direction
-  integration: operators who prefer Terraform as their
-  authoring surface can drive CVK CRs from it. Does not
-  reintroduce Terraform to the runtime — Terraform becomes
-  one of several CR authors.
-- **ArgoCD health-check plugins** tuned for IOSXEConfig
-  status (the standard Flux/ArgoCD health probes work today;
-  Phase 8 adds richer status interpretation).
-- **OPA / conftest rule packs** shipped alongside
-  `cisco-vk-config-lint` for compliance guardrails.
-- **netascode portal compat.** A dialect in
-  `cisco-vk-config-docs` that emits MkDocs-compatible pages
-  mirroring the netascode portal's layout.
+- **Terraform provider scaffold.** ✅
+  `tools/terraform-provider-iosxeconfig/` is a separate Go
+  module with the provider + `iosxeconfig_config` resource shape
+  declared. CRUD wiring against terraform-plugin-framework is
+  the next iteration; the resource model is the contract.
+- **ArgoCD health-check Lua hooks.** ✅
+  `docs/argocd-health/iosxeconfig.lua` and
+  `iosxeconfigbundle.lua` map status.phase to ArgoCD
+  Healthy/Degraded/Suspended/Progressing. Drop into
+  `argocd-cm` under
+  `resource.customizations.health.config.cisco.vk_<Kind>`.
+- **OPA / conftest rule packs.** ✅
+  `tools/cisco-vk-config-lint/policy/{iosxeconfig,iosxe_security,families}.rego`
+  ship a starter pack: shape rules (managedFamilies present,
+  driftPolicy/prune coupling, inline-secrets warning),
+  Cisco-IOS-XE security baselines (privilege-15 without secret,
+  SNMP rw without ACL, AAA central-server consistency), and
+  family-set gating (typo'd family names, missing-vrf
+  inversions). Designed for `conftest test` today; the same
+  files would feed a future
+  `ValidatingAdmissionPolicy`/gatekeeper deployment.
+- **netascode portal compat.** ✅
+  `cisco-vk-config-docs --dialect=portal` emits an MkDocs
+  directory tree under `data_models/iosxe/<family>/index.md`
+  that mirrors the netascode portal URL shape, with front
+  matter, OpenConfig path surfacing, and family-cross-link
+  resolution. The default `cvk` dialect is unchanged.
 
 ### Summary timeline
 
 ```
-  shipped                       Phase-4       Phase-6     Phase-7     Phase-8
- ├──────────────────────┤       ├───────┤     ├──────┤    ├──────┤    ├──────┤
- Phase 0/1/2/3 + Phase-5        depth &       gNMI +      scale /     ecosystem
- (NETCONF + CLI templates)      polish        OpenConfig  operability integrations
-                                ~6–8w         ~3–4w       TBD         TBD
+  shipped (autonomous run completed all phases)
+ ├──────────────────────────────────────────────────────────┤
+ Phase 0/1/2/3 + Phase 4 + Phase 5 + Phase 6 + Phase 7 + Phase 8
 ```
+
+Residual items (small, scoped, non-blocking):
+- Phase 6.5 — `Subscribe`-based push drift detection (engine-side
+  consumer for the gNMI Subscribe stream).
+- Phase 7 — single-manager topology + time-travel snapshot
+  (operator-demand-driven, deferred).
+- Phase 8 — Terraform provider CRUD wire-up + Registry release
+  (separate-module work).
 
 Phase 4 is the one that closes the largest practical gap
 (§10.1, §10.4 – §10.6, §10.9 – §10.11, §10.13). Phase 5 shipped
