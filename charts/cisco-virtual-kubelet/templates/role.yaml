@@ -44,6 +44,17 @@ rules:
   - list
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - apps
   resources:
   - deployments
@@ -109,3 +120,22 @@ rules:
   - iosxeconfigs/status
   verbs:
   - get
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resourceNames:
+  - cisco-virtual-kubelet
+  resources:
+  - clusterroles
+  verbs:
+  - bind
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
