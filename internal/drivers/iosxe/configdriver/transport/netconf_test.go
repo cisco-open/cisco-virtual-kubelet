@@ -236,6 +236,48 @@ func TestNETCONFFetchRoundTrip(t *testing.T) {
 	m.assertNoFailures()
 }
 
+// TestNETCONFFetchTxReadsCandidate is the Wave 1A-fu regression
+// against follow-up Finding #1: NETCONF must implement TxFetcher
+// and route candidate-handle reads to <get-config><source><candidate/>>
+// so the engine's verify-Fetch sees the in-flight transaction's
+// writes. Pre-fix, FetchTx didn't exist and the engine read
+// running mid-transaction, missing every pending edit.
+func TestNETCONFFetchTxReadsCandidate(t *testing.T) {
+	m := newMockDevice(t, []scriptStep{
+		{
+			expect: "<source><candidate/></source>",
+			reply: `<rpc-reply message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <data>
+    <native xmlns="http://cisco.com/ns/yang/Cisco-IOS-XE-native">
+      <hostname>candidate-host</hostname>
+    </native>
+  </data>
+</rpc-reply>`,
+		},
+	})
+	defer m.close()
+
+	ti, err := NewNETCONF(NETCONFConfig{Conn: m.cli})
+	if err != nil {
+		t.Fatalf("NewNETCONF: %v", err)
+	}
+	defer ti.Close()
+
+	tf, ok := ti.(TxFetcher)
+	if !ok {
+		t.Fatalf("netconfTransport must implement TxFetcher")
+	}
+	body, err := tf.FetchTx(context.Background(), TxHandle("candidate"),
+		"/Cisco-IOS-XE-native:native/hostname")
+	if err != nil {
+		t.Fatalf("FetchTx: %v", err)
+	}
+	if !strings.Contains(string(body), "candidate-host") {
+		t.Errorf("expected candidate-shaped response, got %s", body)
+	}
+	m.assertNoFailures()
+}
+
 func TestNETCONFTransactionalApply(t *testing.T) {
 	// The sequence the engine produces under
 	// spec.transactional: true is lock → edit-config → commit →

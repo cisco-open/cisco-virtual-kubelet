@@ -60,7 +60,23 @@ func (v *transactionalView) Capabilities() transport.Capabilities {
 	return v.inner.Capabilities()
 }
 
+// Fetch reads through the transaction's working datastore when the
+// inner transport advertises the TxFetcher capability (NETCONF
+// candidate today; gNMI staged-buffer when that lands). Transports
+// without a working-datastore concept (RESTCONF — running is the
+// only surface) fall through to plain Fetch and the engine's
+// verify-Diff reads running.
+//
+// Wave 1A-fu (external-review-followup Finding #1). Before this
+// the verify-Fetch always read running, missed the writes still
+// pending in candidate, reported residual drift, and Discard'd the
+// candidate — transactional applies could not reliably reach
+// Commit even when the writes themselves would have committed
+// cleanly.
 func (v *transactionalView) Fetch(ctx context.Context, path string) ([]byte, error) {
+	if tf, ok := v.inner.(transport.TxFetcher); ok {
+		return tf.FetchTx(ctx, v.tx, path)
+	}
 	return v.inner.Fetch(ctx, path)
 }
 

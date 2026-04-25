@@ -133,13 +133,39 @@ func (t *netconfTransport) Capabilities() Capabilities {
 // (e.g. /Cisco-IOS-XE-native:native/vlan/Cisco-IOS-XE-vlan:vlan-list);
 // pathToSubtreeFilter converts it to the NETCONF subtree form.
 func (t *netconfTransport) Fetch(ctx context.Context, path string) ([]byte, error) {
+	return t.fetchFromSource(path, "running")
+}
+
+// FetchTx implements TxFetcher: read the candidate datastore so
+// the engine's verify-Fetch sees the writes the in-flight
+// transaction just made. The handle is "candidate" today; any
+// other value falls back to running so a stray nil-handle Fetch
+// does the safe thing.
+//
+// Wave 1A-fu: this is the load-bearing wiring for transactional
+// commit correctness. Without it the verify-Diff reads stale
+// running and reports drift, the engine Discard's the candidate,
+// and the apply that would have committed cleanly never does.
+func (t *netconfTransport) FetchTx(ctx context.Context, tx TxHandle, path string) ([]byte, error) {
+	source := "running"
+	if tx == "candidate" {
+		source = "candidate"
+	}
+	return t.fetchFromSource(path, source)
+}
+
+// fetchFromSource is the shared Fetch implementation parameterised
+// on the NETCONF datastore source ("running" or "candidate").
+// Splitting Fetch out this way keeps the legacy contract intact for
+// non-transactional callers while letting FetchTx target candidate.
+func (t *netconfTransport) fetchFromSource(path, source string) ([]byte, error) {
 	filter, err := pathToSubtreeFilter(path)
 	if err != nil {
 		return nil, fmt.Errorf("NETCONF Fetch: %w", err)
 	}
 	inner := fmt.Sprintf(
-		`<get-config><source><running/></source><filter type="subtree">%s</filter></get-config>`,
-		filter)
+		`<get-config><source><%s/></source><filter type="subtree">%s</filter></get-config>`,
+		source, filter)
 	reply, err := t.session.rpc(inner)
 	if err != nil {
 		return nil, err

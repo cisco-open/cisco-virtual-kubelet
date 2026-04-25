@@ -44,6 +44,9 @@ type txTransport struct {
 	discardCalls      atomic.Int32
 	mutateCalls       atomic.Int32
 	saveStartupCalls  atomic.Int32
+	fetchCalls        atomic.Int32
+	fetchTxCalls      atomic.Int32
+	fetchTxHandles    []transport.TxHandle
 	mutateHandlesSeen []transport.TxHandle
 	startErr          error
 	commitErr         error
@@ -54,6 +57,17 @@ const fakeHandle transport.TxHandle = "candidate-1"
 
 func (t *txTransport) Capabilities() transport.Capabilities { return t.caps }
 func (t *txTransport) Fetch(context.Context, string) ([]byte, error) {
+	t.fetchCalls.Add(1)
+	return nil, nil
+}
+
+// FetchTx records the handle the engine passed for the verify-Fetch
+// path. Wave 1A-fu's correctness relies on the transactionalView
+// preferring this method over Fetch when an inner transport
+// implements TxFetcher.
+func (t *txTransport) FetchTx(_ context.Context, tx transport.TxHandle, _ string) ([]byte, error) {
+	t.fetchTxCalls.Add(1)
+	t.fetchTxHandles = append(t.fetchTxHandles, tx)
 	return nil, nil
 }
 func (t *txTransport) StartTransaction(context.Context) (transport.TxHandle, error) {
@@ -92,9 +106,16 @@ type txWriter struct {
 	diffCalls atomic.Int32
 }
 
-func (*txWriter) Family() string                                    { return "system" }
-func (*txWriter) YANGPaths() []string                               { return []string{"/system"} }
-func (*txWriter) Fetch(context.Context, transport.Interface) (any, error) {
+func (*txWriter) Family() string      { return "system" }
+func (*txWriter) YANGPaths() []string { return []string{"/system"} }
+func (*txWriter) Fetch(ctx context.Context, t transport.Interface) (any, error) {
+	// Drive the transport's Fetch so the test exercises the
+	// transactionalView's TxFetcher dispatch. A no-op implementation
+	// would skip the verify-path entirely and the FetchTx assertion
+	// would always pass vacuously.
+	if _, err := t.Fetch(ctx, "/system"); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 func (w *txWriter) Diff(desired, _ any) ([]transport.Op, error) {
@@ -282,5 +303,70 @@ func TestSaveStartupFailureIsNonFatal(t *testing.T) {
 	}
 	if r.SaveStartupOK {
 		t.Error("Result.SaveStartupOK = true, want false on failure")
+	}
+}
+
+// TestTransactionalVerifyReadsCandidate is the Wave 1A-fu regression
+// for follow-up Finding #1. Under transactional apply, the verify-
+// Fetch path must read through the TxFetcher interface so it sees
+// the candidate datastore (not the stale running config). Before
+// this wiring the engine Discard'd successful applies because the
+// verify-Diff against running showed unchanged state.
+func TestTransactionalVerifyReadsCandidate(t *testing.T) {
+	t.Parallel()
+	e, tt, res := newTxFixture(true, false, false, true)
+
+	r := e.Reconcile(context.Background(), res)
+
+	if r.Phase != PhaseInSync {
+		t.Fatalf("phase = %q, want InSync", r.Phase)
+	}
+	// Engine performs at least one Fetch (initial state) + one
+	// post-apply verify Fetch. Both must go through FetchTx because
+	// the txTransport implements TxFetcher; reads of candidate
+	// during the transaction window are the entire point.
+	if got := tt.fetchTxCalls.Load(); got == 0 {
+		t.Errorf("FetchTx calls = 0; verify path must consult TxFetcher when transport implements it")
+	}
+	for i, h := range tt.fetchTxHandles {
+		if h != fakeHandle {
+			t.Errorf("FetchTx[%d] handle = %q, want %q", i, h, fakeHandle)
+		}
+	}
+}
+
+// TestCLIBlockUsesTransactionalView is the second half of Wave 1A-fu.
+// applyCLIBlock previously called e.Transport.Mutate directly — CLI
+// ops always wrote running config, even mid-transaction. Wave 1A-fu
+// routes them through e.applyTransport so CLI participates in the
+// candidate datastore alongside structured family ops.
+func TestCLIBlockUsesTransactionalView(t *testing.T) {
+	t.Parallel()
+	e, tt, res := newTxFixture(true, false, false, true)
+	res.CLIBlocks = []intent.CLIBlock{{
+		TemplateName: "test-cli",
+		CLI:          "interface Loopback0\n description test\n",
+	}}
+
+	r := e.Reconcile(context.Background(), res)
+
+	if r.Phase != PhaseInSync {
+		t.Fatalf("phase = %q, want InSync; err=%v", r.Phase, r.Err)
+	}
+	// Every Mutate the engine emitted — family writes plus the CLI
+	// block — must carry the captured candidate handle. A direct
+	// e.Transport.Mutate call would record the empty handle here.
+	if len(tt.mutateHandlesSeen) == 0 {
+		t.Fatal("expected at least one Mutate call (family + CLI)")
+	}
+	cliMutateCount := 0
+	for i, h := range tt.mutateHandlesSeen {
+		if h != fakeHandle {
+			t.Errorf("Mutate[%d] handle = %q, want %q (CLI must use the tx view)", i, h, fakeHandle)
+		}
+		cliMutateCount++
+	}
+	if cliMutateCount < 2 {
+		t.Errorf("expected >=2 Mutate calls (family + CLI), got %d", cliMutateCount)
 	}
 }

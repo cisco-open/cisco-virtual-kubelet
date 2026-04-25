@@ -141,6 +141,31 @@ type SubscribeCapable interface {
 	Subscribe(ctx context.Context, paths []string, mode SubscribeMode) (<-chan SubscribeEvent, error)
 }
 
+// TxFetcher is the optional interface a transport implements when
+// it can read from a specific transaction's working datastore
+// (NETCONF candidate, gNMI staged buffer, etc.) rather than the
+// committed running config. The engine's verify-Fetch path consults
+// this when a transaction is open: reading from the candidate sees
+// the writes the transaction just made, so the verify-Diff
+// correctly reports "applied as intended". Transports without a
+// working-datastore concept (RESTCONF — running is the only
+// surface) simply don't implement this and the engine falls back
+// to plain Fetch.
+//
+// Wave 1A-fu (external-review-followup Finding #1). Before this
+// interface existed, the transactionalView wrapper called
+// Fetch(running) during verify, saw the pre-write state, reported
+// residual drift, and Discard'd the candidate — transactional
+// applies could not reliably reach Commit even when the writes
+// would have committed cleanly.
+type TxFetcher interface {
+	// FetchTx returns the raw response at path read from the
+	// transaction's working datastore identified by tx. tx is the
+	// handle returned by StartTransaction. Encoding is protocol-
+	// specific (XML for NETCONF) — same contract as Fetch.
+	FetchTx(ctx context.Context, tx TxHandle, path string) ([]byte, error)
+}
+
 // TxHandle is an opaque per-transaction value returned by
 // StartTransaction. Transports that do not support transactions return
 // a zero-valued handle.

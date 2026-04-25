@@ -503,7 +503,19 @@ func (e *Engine) applyCLIBlock(ctx context.Context, block intent.CLIBlock, res *
 		Body: []byte(block.CLI),
 	}
 	applyStart := time.Now()
-	err := e.Transport.Mutate(ctx, "", []transport.Op{op})
+	// Wave 1A-fu (external-review-followup Finding #1): route CLI
+	// ops through the engine's per-tick view of the transport so
+	// they participate in the active transaction. Previously this
+	// called e.Transport.Mutate directly, which always wrote
+	// running config — bypassing the candidate datastore and
+	// breaking the atomicity guarantee the transaction was
+	// supposed to provide. The same applyTransport-or-Transport
+	// fallback used in reconcileFamily applies here.
+	at := e.applyTransport
+	if at == nil {
+		at = e.Transport
+	}
+	err := at.Mutate(ctx, "", []transport.Op{op})
 	if applyDuration != nil {
 		applyDuration.WithLabelValues(res.DeviceName, famName).Observe(time.Since(applyStart).Seconds())
 	}
