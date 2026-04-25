@@ -53,8 +53,13 @@ func TestAllSchemasPopulatedForEveryFamily(t *testing.T) {
 // 'family unknown' and 'family registered with a real writer': a
 // skeleton is registered in the registry but has no schema to
 // expose, and Schema() must reflect that.
+//
+// MUST NOT be t.Parallel(): registerSkeleton mutates the
+// package-global registry and races
+// TestPhase1FamiliesRegistered's Len() count under
+// `go test -race -count=N` for N>1. Same flake pattern Wave 5B
+// fixed in internal/drivers/registry_test.go.
 func TestSchemaSkeletonReportsNotFound(t *testing.T) {
-	t.Parallel()
 	name := "_schema_skeleton_probe_"
 	registerSkeleton(name, "/Cisco-IOS-XE-native:native/test")
 	t.Cleanup(func() {

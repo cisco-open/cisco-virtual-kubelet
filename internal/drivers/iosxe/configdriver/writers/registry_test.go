@@ -162,8 +162,15 @@ func TestGetReturnsNilForUnknown(t *testing.T) {
 // Phase-2 family that is still a skeleton and exercises its skeleton
 // stub. Switch to a family that remains unimplemented as each family's
 // real writer lands.
+// TestSkeletonWritePathReturnsSentinel mutates the package-global
+// writers registry via registerSkeleton. It MUST NOT be parallel
+// with TestPhase1FamiliesRegistered (which counts Len()): under
+// `go test -race -count=5+` the parallel scheduler interleaves the
+// two tests and the family-count assertion observes the in-flight
+// skeleton, failing intermittently. Same flake pattern Wave 5B
+// fixed in internal/drivers/registry_test.go — the lesson reapplies
+// here.
 func TestSkeletonWritePathReturnsSentinel(t *testing.T) {
-	t.Parallel()
 	// Register a skeleton explicitly so the test is stable against
 	// Phase-2 writers landing in any order and replacing entries.
 	skelName := "_test_skeleton_family_"
