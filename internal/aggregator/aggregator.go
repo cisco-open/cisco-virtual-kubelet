@@ -73,9 +73,9 @@ type AggregatedReconciler struct {
 	// per-pod topology uses; loaded once and shared.
 	KeyRules intent.KeyRules
 
-	mu       sync.Mutex
-	managed  map[string]*deviceWorker // key: namespace/name
-	rootCtx  context.Context
+	mu      sync.Mutex
+	managed map[string]*deviceWorker // key: namespace/name
+	rootCtx context.Context
 }
 
 // deviceWorker owns one device's reconciler goroutine. Cancel

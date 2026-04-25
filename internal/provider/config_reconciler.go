@@ -497,9 +497,9 @@ func ignoreConflict(err error) error {
 
 // emitEvents produces the per-tick Kubernetes event stream. Emission
 // order:
-//   1. A per-family event for every non-InSync family (Warning if
-//      ApplyError / Unsupported, Normal for Drifted / Skipped).
-//   2. A terminal Normal/Warning event describing the overall phase.
+//  1. A per-family event for every non-InSync family (Warning if
+//     ApplyError / Unsupported, Normal for Drifted / Skipped).
+//  2. A terminal Normal/Warning event describing the overall phase.
 //
 // Event reason strings are drawn from a closed set so operators can
 // filter deterministically: AppliedSuccess, ApplyFailed, DriftDetected,
@@ -619,9 +619,9 @@ func (r *ConfigReconciler) appendApplyLog(
 // Versioned so a future field addition doesn't break old entries
 // the controller has to read post-upgrade.
 type replayBody struct {
-	Version       int                `json:"v"`
-	Configuration map[string]any     `json:"configuration"`
-	CLIBlocks     []intent.CLIBlock  `json:"cliBlocks,omitempty"`
+	Version       int               `json:"v"`
+	Configuration map[string]any    `json:"configuration"`
+	CLIBlocks     []intent.CLIBlock `json:"cliBlocks,omitempty"`
 }
 
 func encodeReplayBody(resolved *intent.ResolvedIntent) (string, error) {
@@ -686,8 +686,9 @@ func buildApplyLogEntry(
 // value is "<log-cr-name>:<entry-index-or-hash>".
 //
 // Examples:
-//   config.cisco.vk/replay-from-log: edge-01-log:42
-//   config.cisco.vk/replay-from-log: edge-01-log:sha256:abc123…
+//
+//	config.cisco.vk/replay-from-log: edge-01-log:42
+//	config.cisco.vk/replay-from-log: edge-01-log:sha256:abc123…
 //
 // Numeric values index into Status.Entries (oldest=0, newest=len-1).
 // Non-numeric values are matched against ApplyLogEntry.Hash. The

@@ -73,7 +73,7 @@ type InterfaceMatch struct {
 // Mirrors netascode's `interface_groups` scope. Order of precedence
 // slots between IOSXEDeviceGroupConfig and IOSXETemplate:
 //
-//   defaults → device groups → interface groups → templates → per-device
+//	defaults → device groups → interface groups → templates → per-device
 //
 // Scope precedence matches netascode; rightmost wins on overlap.
 type IOSXEInterfaceGroupConfigSpec struct {

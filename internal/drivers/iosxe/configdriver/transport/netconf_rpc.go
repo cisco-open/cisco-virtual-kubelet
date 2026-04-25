@@ -222,8 +222,8 @@ func parseHello(raw []byte) (map[string]struct{}, int, error) {
 
 type rpcReply struct {
 	MessageID string
-	Data      []byte       // innerXML of <data>, if present
-	OKOnly    bool         // true when the reply was <ok/>
+	Data      []byte // innerXML of <data>, if present
+	OKOnly    bool   // true when the reply was <ok/>
 	Errors    []rpcError
 }
 

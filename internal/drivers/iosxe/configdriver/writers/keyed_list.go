@@ -38,13 +38,13 @@ import (
 // Diff semantics match vlanWriter: additive (no auto-delete), keyed
 // lookup by keyField, leaf-equal comparison over `managedLeaves`.
 type keyedListWriter struct {
-	family         string
-	yangPath       string // RESTCONF path of the list
-	envelopeKey    string // "<module>:<list-name>"
-	innerKey       string // e.g. "vrfs", "interfaces" in netascode nested shape
-	keyField       string // element leaf used as identity
-	managedLeaves  []string
-	extraDesired   func(entry map[string]any) error // optional per-entry validation
+	family        string
+	yangPath      string // RESTCONF path of the list
+	envelopeKey   string // "<module>:<list-name>"
+	innerKey      string // e.g. "vrfs", "interfaces" in netascode nested shape
+	keyField      string // element leaf used as identity
+	managedLeaves []string
+	extraDesired  func(entry map[string]any) error // optional per-entry validation
 }
 
 func (w keyedListWriter) Family() string      { return w.family }

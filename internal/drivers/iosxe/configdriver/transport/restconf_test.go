@@ -245,7 +245,7 @@ func TestRESTCONFCLIVerbHitsCiscoIAEndpoint(t *testing.T) {
 	defer srv.Close()
 
 	cli, err := NewRESTCONF(RESTCONFConfig{
-		BaseURL: srv.URL + "/restconf/data",
+		BaseURL:    srv.URL + "/restconf/data",
 		HTTPClient: srv.Client(),
 	})
 	if err != nil {

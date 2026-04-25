@@ -61,16 +61,16 @@ func (s *stubTransport) SaveStartup(context.Context) error                 { ret
 func (s *stubTransport) Close() error                                      { return nil }
 
 type fakeWriter struct {
-	family    string
-	fetchErr  error
-	diffErr   error
-	applyErr  error
-	ops       []transport.Op
-	residual  []transport.Op
+	family     string
+	fetchErr   error
+	diffErr    error
+	applyErr   error
+	ops        []transport.Op
+	residual   []transport.Op
 	appliedOps []transport.Op
-	fetches   int
-	applies   int
-	diffCalls int
+	fetches    int
+	applies    int
+	diffCalls  int
 }
 
 func (w *fakeWriter) Family() string      { return w.family }
@@ -397,8 +397,8 @@ func TestCLIBlocksAppliedAfterFamilies(t *testing.T) {
 	w := &fakeWriter{family: "vlan"} // no ops → InSync
 
 	var (
-		cliCount   int
-		cliBodies  [][]byte
+		cliCount  int
+		cliBodies [][]byte
 	)
 	mock := &stubTransport{
 		mutateFn: func(tx transport.TxHandle, ops []transport.Op) error {

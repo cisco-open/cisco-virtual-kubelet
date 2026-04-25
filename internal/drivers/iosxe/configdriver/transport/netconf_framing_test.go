@@ -27,7 +27,7 @@ func TestFrame10RoundTrip(t *testing.T) {
 		payload string
 	}{
 		{"hello", `<hello><capabilities><capability>urn:ietf:params:netconf:base:1.0</capability></capabilities></hello>`},
-		{"rpc",   `<rpc message-id="101"><get-config><source><running/></source></get-config></rpc>`},
+		{"rpc", `<rpc message-id="101"><get-config><source><running/></source></get-config></rpc>`},
 		{"multi-line", "line1\nline2\nline3"},
 		{"contains-closing-bracket", "] and ]] but not the marker"},
 	}

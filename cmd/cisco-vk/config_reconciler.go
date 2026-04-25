@@ -200,13 +200,13 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 // with a rule set derived from schema/families.yaml.
 func keyRulesForPhase1() intent.KeyRules {
 	return intent.KeyRules{
-		"vlan.vlans":                      "id",
-		"vrf.vrfs":                        "name",
-		"interface_ethernet.interfaces":   "name",
-		"interface_loopback.interfaces":   "name",
+		"vlan.vlans":                              "id",
+		"vrf.vrfs":                                "name",
+		"interface_ethernet.interfaces":           "name",
+		"interface_loopback.interfaces":           "name",
 		"interface_virtual_port_group.interfaces": "id",
-		"dhcp.pools":                      "name",
-		"access_list_extended.extended":   "name",
+		"dhcp.pools":                              "name",
+		"access_list_extended.extended":           "name",
 	}
 }
 

@@ -86,15 +86,16 @@ func LoadSource(ctx context.Context, r ConfigMapReader, ns, deviceName string, s
 // are accepted:
 //
 //   - Envelope shape (full netascode file):
-//       iosxe:
-//         devices:
-//           - name: <deviceName>
-//             configuration: {...}
+//     iosxe:
+//     devices:
+//
+//   - name: <deviceName>
+//     configuration: {...}
 //     → returns the matching devices[].configuration block.
 //
 //   - Fragment shape (already a configuration block):
-//       system: {...}
-//       vlan: {...}
+//     system: {...}
+//     vlan: {...}
 //     → returned verbatim.
 //
 // A fragment that happens to contain only the key "iosxe" is treated as

@@ -44,9 +44,9 @@ func TestForDefaultsToRESTCONF(t *testing.T) {
 // 'reserved' placeholder".
 func TestForNETCONFDialFailsGracefully(t *testing.T) {
 	spec := &ciskov1.DeviceSpec{
-		Address:  "127.0.0.1",
-		Port:     1, // guaranteed-no-listener
-		Username: "x",
+		Address:   "127.0.0.1",
+		Port:      1, // guaranteed-no-listener
+		Username:  "x",
 		Transport: "netconf",
 	}
 	_, err := For(spec, "pw", FactoryOptions{})

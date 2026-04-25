@@ -40,8 +40,8 @@ import (
 // Key: id. Managed leaves: name, shutdown.
 
 const (
-	vlanListPath      = "/Cisco-IOS-XE-native:native/vlan/Cisco-IOS-XE-vlan:vlan-list"
-	vlanEnvelopeKey   = "Cisco-IOS-XE-vlan:vlan-list"
+	vlanListPath    = "/Cisco-IOS-XE-native:native/vlan/Cisco-IOS-XE-vlan:vlan-list"
+	vlanEnvelopeKey = "Cisco-IOS-XE-vlan:vlan-list"
 )
 
 var vlanManagedLeaves = []string{"name", "shutdown"}

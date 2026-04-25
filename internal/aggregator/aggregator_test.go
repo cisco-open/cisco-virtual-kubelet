@@ -111,7 +111,7 @@ func TestSpecHashChangesOnTransportEdit(t *testing.T) {
 	dev := &ciskov1.CiscoDevice{
 		ObjectMeta: metav1.ObjectMeta{Name: "edge-01", Namespace: "network"},
 		Spec: ciskov1.DeviceSpec{
-			Driver: ciskov1.DeviceDriverXE,
+			Driver:  ciskov1.DeviceDriverXE,
 			Address: "10.0.0.1", Port: 443,
 			Username: "u",
 		},

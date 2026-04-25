@@ -150,9 +150,9 @@ func (m *mockDevice) close() {
 // pipeConn turns a paired io.PipeReader + io.PipeWriter into a
 // ReadWriteCloser suitable for NewNETCONF.
 type pipeConn struct {
-	r     *io.PipeReader
-	w     *io.PipeWriter
-	mu    sync.Mutex
+	r      *io.PipeReader
+	w      *io.PipeWriter
+	mu     sync.Mutex
 	closed bool
 }
 

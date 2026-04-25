@@ -204,7 +204,6 @@ func TestResolveWithTemplateExpansion(t *testing.T) {
 	}
 }
 
-
 func TestResolveInterfaceGroupExpansion(t *testing.T) {
 	device := mkDevice("edge-01", map[string]string{"role": "access-switch"})
 	group := &configv1alpha1.IOSXEInterfaceGroupConfig{

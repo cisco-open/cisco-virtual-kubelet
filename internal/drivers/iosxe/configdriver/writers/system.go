@@ -30,12 +30,12 @@ import (
 //
 // netascode shape (relevant keys only):
 //
-//   system:
-//     hostname: edge-01
-//     mtu: 1500
-//     ip_routing: true
-//     login_on_failure: true
-//     ipv6_unicast_routing: false
+//	system:
+//	  hostname: edge-01
+//	  mtu: 1500
+//	  ip_routing: true
+//	  login_on_failure: true
+//	  ipv6_unicast_routing: false
 //
 // YANG mapping: each managed leaf is a leaf or small container under
 // /Cisco-IOS-XE-native:native. The writer addresses them individually

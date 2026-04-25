@@ -110,7 +110,7 @@ type DriftEntry struct {
 // Reconcile executes one tick of the state machine against intent.
 // The flow is:
 //
-//   Validating → Planning → Applying → Verifying → InSync / Drifted / Failed
+//	Validating → Planning → Applying → Verifying → InSync / Drifted / Failed
 //
 // Per-family execution is linear (no parallel writes); the transport's
 // SessionLock handles coexistence with apphosting, but two families in
