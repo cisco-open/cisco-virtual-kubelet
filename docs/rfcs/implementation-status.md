@@ -13,19 +13,29 @@ If anything in this file disagrees with another RFC in this directory, **this fi
 
 ## 1. Bottom line
 
-**The branch is shippable for day-0 AND day-2 under the per-pod topology, and the aggregator topology is now exclusive-and-correct.** End-to-end live reconcile against a real Catalyst 9300 (IOS-XE 17.18.1) was previously verified for day-0; the day-2 surfaces (continuous drift, transactional apply, `writeStartup`, aggregator-mode coexistence, configPrereqs deletion semantics) are now wired in code per the response RFC's Waves 1–5 and verified by 6 new test files / 23 new test cases.
+**The branch is shippable for day-0 under the per-pod topology with `driftPolicy: report`. Day-2 is NOT yet shippable** — the follow-up review at [`external-review-followup.md`](external-review-followup.md) (Codex, post-fix) surfaced two P1 + three P2 gaps where Wave-1..Wave-5 fixes were either too shallow, made via a code path production never executes, or in one case (configPrereqs) both schema- and engine-rejected. Walking back the previous "shippable for day-2" claim — it was wrong.
 
-The external review at [`external-review.md`](external-review.md) (Codex, 2026-04-25) surfaced 4 P1 + 8 P2 + 1 P3 findings. Every finding has been remediated in code; the response RFC at [`external-review-response.md`](external-review-response.md) §3 enumerates the per-finding fix and §6 the acceptance criteria for re-claiming day-2 readiness.
+The follow-up's most consequential findings:
 
-Phase 0–9 remain complete in code; the API now genuinely behaves as advertised — `spec.transactional` opens NETCONF candidate+commit, `spec.writeStartup` calls SaveStartup post-success, `spec.driftDetectInterval` is honoured by the controller-runtime requeue path, `aggregator.enabled` is mutually exclusive with the per-pod ConfigReconciler, `configPrereqs` deletion drives an empty-intent reconcile + prune before deleting the owned CR.
+1. **NETCONF transactional verify reads `running` instead of `candidate`** (`transactional_view.go:63-65` delegates `Fetch` unchanged; NETCONF's `Fetch` is hard-coded to `<source><running/>`). After editing candidate, verify-Fetch reads stale running, sees residual drift, marks the tick failed, and discards. Transactional commits do not reliably succeed. CLI template ops bypass the transaction wrapper entirely (`engine.go:506` calls `e.Transport.Mutate` directly).
+2. **configPrereqs teardown is rejected by both the CRD schema and the engine.** Wave 4A set `ManagedFamilies=nil`; the CRD has `+kubebuilder:validation:MinItems=1` on managedFamilies and `engine.validate()` returns `errors.New("ManagedFamilies is empty")` for empty lists. The Wave 4A unit test passed only because `fake.Client` skips CRD schema validation. Against a real API server the teardown path never worked.
+3. **gNMI Subscribe fast-path is unconsumed in the default per-pod topology.** `SetupWithManager`/`Reconcile` (the controller-runtime path) never reads `r.SubscribeNotify`; only the legacy polling `Run` consumes it.
+4. **gNMI keyed-path registry never fires in production.** Wave 5A populated it as a side-effect of `schema.LoadFamilies`. Production startup uses `iosxebuilder.KeyRulesForXE()` and `LoadYANGReleaseTags`; only `tools/cisco-vk-config-docs` calls `LoadFamilies`. The cisco-vk binary never sees the registered keys. Plus `parseGNMIPath` splits on `/` before parsing keyed values, so interface paths like `GigabitEthernet=0/0/0` are mis-parsed.
+5. **CiscoDevice credential Secret rotation is not reconciled.** Per-pod injects via `valueFrom` env (Kubernetes does not restart pods on Secret-backed env-var changes); aggregator's `specHash` records existence not value. Rotating a device password requires an unrelated event or manual restart.
+
+Every finding is verified at the cited file:line. Nothing is contested. Triage and remediation plan are at [`external-review-followup-response.md`](external-review-followup-response.md). Five follow-up waves, ~12–17 engineer-days; `implementation-status.md` §1 will re-claim day-2 only when those close.
+
+Two architectural lessons from this round:
+- **Fake-client tests are not a substitute for envtest** when CRD schema validation is part of the contract under test (FU-2).
+- **Side-effect-driven registries are fragile** when the side-effect lives in a code path the production binary doesn't execute (FU-4).
 
 Pending work that remains:
 
-1. **External — Phase-8 residuals** (Terraform Registry release, netascode example corpus) tracked in [`phase-8-residuals.md`](phase-8-residuals.md). These do not block day-2 readiness; they involve infrastructure outside the Git repository.
-2. **Live retest of the Wave-1A/4A device-write paths against the lab Cat9K** — the unit suite covers the controller and engine state machines; live retest of `spec.transactional=true` (NETCONF, port 830, separately enabled) and `configPrereqs` deletion-driven device cleanup is the operator's call to schedule since both modify running device state.
-3. **Architectural watch-items #4 (Phase-10 cosmetic relocation), #9 (log unification implementation), #10 (CRD v1 promotion implementation)** remain plan-level deliverables in their own RFCs. None block day-2 readiness.
+1. **Internal — follow-up remediation** tracked in [`external-review-followup-response.md`](external-review-followup-response.md). This is the gating set for re-claiming day-2 readiness.
+2. **External — Phase-8 residuals** (Terraform Registry release, netascode example corpus) tracked in [`phase-8-residuals.md`](phase-8-residuals.md). These do not block day-2 readiness; they involve infrastructure outside the Git repository.
+3. **Architectural watch-items #4 (Phase-10 cosmetic relocation), #9 (log unification implementation), #10 (CRD v1 promotion implementation)** remain plan-level deliverables in their own RFCs.
 
-The architectural review's twelve watch-items remain closed (eight in code, three in plan, one deliberately deferred). The external review's twelve findings are now closed in code (eleven of twelve as full implementations, the gNMI composite-key lists tracked as a follow-up — single-key correctness landed and is sufficient for the entire current netascode family set).
+The architectural review's twelve watch-items remain closed. The first external review's twelve findings remain closed in code as previously stated; the follow-up review identifies five *new* gaps that Wave-1..Wave-5 missed or addressed too shallowly. Phases 0–9 are still complete in code at the structural level; the issue is depth of the integration.
 
 ---
 
