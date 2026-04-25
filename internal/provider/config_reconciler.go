@@ -630,6 +630,20 @@ func (r *ConfigReconciler) emitEvents(cr *configv1alpha1.IOSXEConfig, result eng
 		r.Recorder.Eventf(cr, corev1.EventTypeNormal, "Paused",
 			"driftPolicy=pause; reconcile suspended")
 	}
+
+	// SaveStartup outcome (Wave 1A): a non-fatal warning when
+	// requested-but-failed; a normal note when requested and saved.
+	// The success event is gated on actually having saved (i.e.
+	// SaveStartupOK true) so a CR with writeStartup=false stays
+	// quiet on the event stream.
+	switch {
+	case result.SaveStartupErr != nil:
+		r.Recorder.Eventf(cr, corev1.EventTypeWarning, "SaveStartupFailed",
+			"startup-config save failed (apply itself succeeded): %v", result.SaveStartupErr)
+	case result.SaveStartupOK:
+		r.Recorder.Eventf(cr, corev1.EventTypeNormal, "SaveStartupOK",
+			"startup-config saved")
+	}
 }
 
 // appendApplyLog appends a row to every IOSXEConfigApplyLog CR

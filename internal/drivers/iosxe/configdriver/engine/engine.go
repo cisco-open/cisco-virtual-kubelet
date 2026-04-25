@@ -54,6 +54,15 @@ type Engine struct {
 	// none is registered. Injected (rather than calling writers.Get
 	// directly) so tests can supply a fake writer set.
 	Lookup func(family string) writers.SectionWriter
+
+	// applyTransport is the transport handed to writers during the
+	// apply loop. When the tick is non-transactional it equals
+	// Transport. When the tick opens a transaction (NETCONF + spec
+	// asks for it), apply-loop callsites swap in a transactionalView
+	// so writers' Mutate calls land in the candidate datastore
+	// instead of the running config. Reset before/after each tick;
+	// not part of the public API.
+	applyTransport transport.Interface
 }
 
 // Result is the full summary of a reconcile tick. It is intentionally
@@ -87,6 +96,16 @@ type Result struct {
 	// audit log and the per-CR status agree on what release drove
 	// the device write.
 	YangVersion string
+
+	// SaveStartupOK is true when spec.writeStartup was requested,
+	// the transport supports it, AND the post-apply SaveStartup call
+	// succeeded. False otherwise (including the no-op case).
+	SaveStartupOK bool
+
+	// SaveStartupErr is non-nil when SaveStartup was attempted and
+	// failed. The apply itself is already committed by then; the
+	// outer reconciler treats this as a non-fatal warning.
+	SaveStartupErr error
 }
 
 // FamilyStatus is the per-family outcome of a tick.
@@ -142,6 +161,48 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	}
 	anyDrift := false
 	anyFailure := false
+
+	// Transaction orchestration. When the CR asks for transactional
+	// apply AND the transport advertises support, open one
+	// transaction per tick and bind it to a transactionalView that
+	// writers see in place of the raw transport. The handle scope is
+	// the entire family loop and the post-loop CLI block; commit
+	// happens on full success, discard on any failure or panic.
+	//
+	// External-review Finding #1: prior to this wiring, spec.transactional
+	// was inert because the engine handed writers e.Transport directly
+	// regardless. NETCONF therefore wrote running on every Mutate call.
+	caps := e.Transport.Capabilities()
+	transactional := res.Transactional && caps.SupportsTransactions
+	var (
+		txHandle    transport.TxHandle
+		txCommitted bool
+	)
+	if transactional {
+		h, err := e.Transport.StartTransaction(ctx)
+		if err != nil {
+			r := Result{Phase: PhaseFailed, Err: fmt.Errorf("StartTransaction: %w", err)}
+			recordResult(res.DeviceName, r, time.Since(start).Seconds())
+			return r
+		}
+		txHandle = h
+		e.applyTransport = newTransactionalView(e.Transport, txHandle)
+		defer func() {
+			// Rollback on any path that didn't reach Commit. Commit
+			// flips txCommitted true; absent that flag, Discard.
+			// Discard errors are logged via the result-level Err
+			// when applicable but otherwise ignored — at this point
+			// the apply already failed, the transport's own state
+			// recovery is the operator's lever.
+			if !txCommitted {
+				_ = e.Transport.Discard(ctx, txHandle)
+			}
+			e.applyTransport = nil
+		}()
+	} else {
+		e.applyTransport = e.Transport
+		defer func() { e.applyTransport = nil }()
+	}
 
 	for _, family := range res.ManagedFamilies {
 		fs := e.reconcileFamily(ctx, family, res)
@@ -207,6 +268,33 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	default:
 		result.Phase = PhaseInSync
 	}
+
+	// Commit only if the apply path reached the end without failure.
+	// Any earlier error or drift-after-revert path falls through to the
+	// deferred Discard in the transaction-open block above.
+	if transactional && result.Phase == PhaseInSync {
+		if err := e.Transport.Commit(ctx, txHandle); err != nil {
+			result.Phase = PhaseFailed
+			result.Err = fmt.Errorf("Commit: %w", err)
+		} else {
+			txCommitted = true
+		}
+	}
+
+	// SaveStartup: only after a fully-clean apply (no failures, fully
+	// committed, every family InSync). Failure to save startup-config
+	// is non-fatal — running-config has already been written and
+	// persisted; the operator gets a Warning event and an explicit
+	// SaveStartupFailed surface, but the apply itself remains green.
+	// External-review Finding #1: previously inert.
+	if result.Phase == PhaseInSync && res.WriteStartup && caps.SupportsSaveStartup {
+		if err := e.Transport.SaveStartup(ctx); err != nil {
+			result.SaveStartupErr = err
+		} else {
+			result.SaveStartupOK = true
+		}
+	}
+
 	recordResult(res.DeviceName, result, time.Since(start).Seconds())
 	return result
 }
@@ -296,7 +384,18 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	}
 
 	applyStart := time.Now()
-	if err := w.Apply(ctx, e.Transport, ops); err != nil {
+	// Apply through the engine's per-tick view of the transport. When
+	// the tick is transactional this is the transactionalView wrapper
+	// (writes go to the candidate datastore); otherwise it's the raw
+	// transport. Falling back to e.Transport when applyTransport is
+	// nil keeps direct callers of Engine.Reconcile that haven't gone
+	// through Reconcile's setup (none in production, but unit tests
+	// that wire reconcileFamily directly) working.
+	at := e.applyTransport
+	if at == nil {
+		at = e.Transport
+	}
+	if err := w.Apply(ctx, at, ops); err != nil {
 		if applyDuration != nil {
 			applyDuration.WithLabelValues(res.DeviceName, family).Observe(time.Since(applyStart).Seconds())
 		}
@@ -310,10 +409,17 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		applyDuration.WithLabelValues(res.DeviceName, family).Observe(time.Since(applyStart).Seconds())
 	}
 
-	// Verify: re-fetch and re-diff. If the device reports drift still
-	// after a successful apply, something blocked the write (commit
-	// rollback, policy block, race) — surface it.
-	verify, err := w.Fetch(ctx, e.Transport)
+	// Verify: re-fetch and re-diff. Reads through the same view we
+	// applied through (raw transport for non-transactional ticks,
+	// candidate-bound view for transactional ticks). For NETCONF
+	// candidate semantics this is the correct check: the candidate
+	// reflects everything we just wrote, so the verify-diff exercises
+	// the writer's own equivalence rules (idempotent diff) rather
+	// than racing the device's running state. Post-commit drift —
+	// where the device rejects part of the candidate at commit time
+	// — surfaces on the NEXT reconcile tick because Commit's error
+	// (caught at the engine level) flips Phase to Failed.
+	verify, err := w.Fetch(ctx, at)
 	if err != nil {
 		return FamilyStatus{
 			Name: family, State: "ApplyError",
