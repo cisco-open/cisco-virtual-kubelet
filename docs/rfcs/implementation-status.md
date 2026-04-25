@@ -13,7 +13,9 @@ If anything in this file disagrees with another RFC in this directory, **this fi
 
 ## 1. Bottom line
 
-**The branch is shippable for day-0 AND day-2 under the per-pod topology, with the aggregator topology exclusive-and-correct.** Three rounds of external review (the original [`external-review.md`](external-review.md), the post-Wave-5 [`external-review-followup.md`](external-review-followup.md), and the post-`latest-update.md` [`external-review-next-actions.md`](external-review-next-actions.md)) have all closed in code with focused test coverage.
+**The branch is close to day-2 readiness, pending lease-arbitration hardening for DNS-safe lease names and first-class lease-blocked status.** A fourth review round ([`external-review-wave7-residuals.md`](external-review-wave7-residuals.md), Codex post-Wave-7) found two lease-arbitration gaps the post-Wave-7 verification missed: lease names containing `_` (every IOS-XE family except `vlan`/`vrf`/`dhcp`) violate DNS-1123 subdomain rules — `fake.Client` skips name validation, so existing tests pass but a real apiserver rejects every such lease; and lease-blocked reconciles route through `engine.Reconcile` and produce misleading `Phase=Failed` (all-blocked case) or `Phase=InSync` (partial-block case) instead of a first-class lease-blocked state. Wave 7A.3's runtime-suffixed identity made the contention window normal during rollouts, so the misleading-status path is now hit on every credential rotation. Walking back the prior "shippable for day-2" claim until these close per [`external-review-wave7-residuals-response.md`](external-review-wave7-residuals-response.md).
+
+The first three rounds of external review (the original [`external-review.md`](external-review.md), the post-Wave-5 [`external-review-followup.md`](external-review-followup.md), and the post-`latest-update.md` [`external-review-next-actions.md`](external-review-next-actions.md)) have all closed in code with focused test coverage. The fourth round identifies two *new* gaps that the prior verification missed.
 
 The next-actions review's five findings closed in this round:
 
