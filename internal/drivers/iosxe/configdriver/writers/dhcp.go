@@ -139,6 +139,54 @@ func (dhcpWriter) Apply(ctx context.Context, c transport.Interface, ops []transp
 	return c.Mutate(ctx, "", ops)
 }
 
+// PruneDiff implements PruneCapable: a VerbDelete op for every
+// pool present on the device but absent from the desired intent.
+// Required because dhcp is one of the apphosting-prerequisite
+// families (interface_virtual_port_group, dhcp, access_list_extended)
+// and Wave 4A-fu's teardown semantics depend on every prereq family
+// being prunable. The non-prune fast-path stays via Diff for the
+// normal apply loop.
+//
+// The implementation mirrors keyedListWriter.PruneDiff: build the
+// set of desired names, walk observed, emit VerbDelete for each
+// entry not in the desired set. dhcp pools are keyed by `name`,
+// matching the families.yaml entry.
+func (dhcpWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
+	desiredPools, err := coerceDHCPBlock(desired, "desired")
+	if err != nil {
+		return nil, err
+	}
+	observedPools, err := coerceList(observed, "observed")
+	if err != nil {
+		return nil, err
+	}
+	want := map[string]struct{}{}
+	for _, p := range desiredPools {
+		if name, ok := p["name"].(string); ok && name != "" {
+			want[name] = struct{}{}
+		}
+	}
+	// Sort observed names so the resulting op list is deterministic
+	// — the engine's status writes are easier to diff under that.
+	names := make([]string, 0, len(observedPools))
+	for _, p := range observedPools {
+		if name, ok := p["name"].(string); ok && name != "" {
+			if _, kept := want[name]; !kept {
+				names = append(names, name)
+			}
+		}
+	}
+	sort.Strings(names)
+	ops := make([]transport.Op, 0, len(names))
+	for _, name := range names {
+		ops = append(ops, transport.Op{
+			Verb: transport.VerbDelete,
+			Path: dhcpPoolListPath + "=" + name,
+		})
+	}
+	return ops, nil
+}
+
 // coerceDHCPBlock accepts either the nested netascode shape
 // {"pools":[...]} or a bare list (e.g. from a narrow test fixture).
 func coerceDHCPBlock(v any, origin string) ([]map[string]any, error) {

@@ -549,6 +549,48 @@ func ownedIOSXEConfigName(deviceName string) string {
 	return deviceName + "-prereqs"
 }
 
+// emptyPrereqInline returns a netascode-shaped empty-body
+// runtime.RawExtension. Each prereq family is mapped to an empty
+// object so the engine's per-family Diff sees "no entries desired"
+// and the writer's PruneDiff returns DELETE ops for every entry
+// observed on the device.
+//
+// Wave 4A-fu (external-review-followup Finding #2): the previous
+// teardown set ManagedFamilies=nil + source=nil, which was rejected
+// at admission (CRD MinItems=1 on managedFamilies) AND by the
+// engine (validate() rejects empty ManagedFamilies). Keeping the
+// families and emptying the source is the schema-valid + engine-
+// accepted path that actually drives the prune.
+func emptyPrereqInline() runtime.RawExtension {
+	// Build a JSON object mapping each prereq family to an empty
+	// object. Equivalent in netascode YAML:
+	//   interface_virtual_port_group: {}
+	//   dhcp: {}
+	//   access_list_extended: {}
+	body := []byte(`{"interface_virtual_port_group":{},"dhcp":{},"access_list_extended":{}}`)
+	return runtime.RawExtension{Raw: body}
+}
+
+// isPrereqTearingDown reports whether the owned IOSXEConfig has
+// already been driven into the teardown shape (Wave 4A-fu): the
+// prereq family list intact, source.inline set to empty, and
+// pruneOnRelinquish=true. The teardown step that mutates the CR
+// runs once; subsequent ticks observe this predicate true and
+// transition to step 2 (await InSync).
+func isPrereqTearingDown(cr *configv1alpha1.IOSXEConfig) bool {
+	if !cr.Spec.PruneOnRelinquish {
+		return false
+	}
+	if cr.Spec.Source.Inline == nil {
+		return false
+	}
+	// "Empty" for our purposes means the inline body is the
+	// empty-prereq object literal we wrote in step 1. We compare
+	// raw bytes — the body is generated, not operator-authored,
+	// so a byte-equal check is sufficient and stable.
+	return string(cr.Spec.Source.Inline.Raw) == string(emptyPrereqInline().Raw)
+}
+
 // reconcileConfigPrereqs creates, updates, or tears down an owned
 // IOSXEConfig CR that mirrors CiscoDevice.spec.configPrereqs.
 // Behaviour:
@@ -560,18 +602,21 @@ func ownedIOSXEConfigName(deviceName string) string {
 //     or deletes the CiscoDevice) actually reverts those families on
 //     the device.
 //
-//   - spec.configPrereqs == nil → drive a teardown sequence (Wave 4A,
-//     external-review Finding #8). The previous behaviour was to
-//     delete the owned CR immediately, which orphaned the device-side
-//     config because the engine never got to run with empty intent.
+//   - spec.configPrereqs == nil → drive a teardown sequence
+//     (Wave 4A-fu, external-review-followup Finding #2; Wave 4A's
+//     original take cleared ManagedFamilies and was rejected by
+//     both the CRD's MinItems=1 and the engine's empty-list check).
 //     Now:
-//       1. Mutate the CR to empty ManagedFamilies + empty source.
-//          With pruneOnRelinquish=true the per-device reconciler
-//          deletes those families on the device on its next tick.
-//       2. Wait for status.phase == InSync (the per-device reconciler
-//          has driven the empty intent fully). This may take 1-2
-//          reconcile ticks; the controller-runtime requeue path
-//          handles the wait without busy-looping.
+//       1. KEEP the prereq family list (apphostingPrereqFamilies)
+//          on the owned CR. Set spec.source.inline to an empty
+//          netascode body. The engine then iterates each family
+//          with empty desired and PruneOnRelinquish=true, so each
+//          family's PruneCapable.PruneDiff returns DELETE ops for
+//          every entry currently on the device.
+//       2. Wait for status.phase == InSync (the per-device
+//          reconciler has driven the empty intent fully). May take
+//          1-2 reconcile ticks; the controller-runtime requeue
+//          path handles the wait without busy-looping.
 //       3. Once InSync, delete the owned CR.
 //
 // The owned CR's owner reference is still the CiscoDevice for safety,
@@ -602,13 +647,17 @@ func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, devi
 			// (or the operator never authored prereqs).
 			return true, nil
 		}
-		// Step 1: drive the CR to empty intent if it isn't already.
-		// The engine reads `pruneOnRelinquish` and emits DELETE ops
-		// for the families that just left ManagedFamilies.
-		if len(existing.Spec.ManagedFamilies) > 0 || existing.Spec.Source.Inline != nil {
+		// Step 1: drive the CR to empty source (NOT empty
+		// ManagedFamilies — see Wave 4A-fu rationale above). The
+		// engine then runs each family's PruneCapable.PruneDiff
+		// against (empty desired, full observed), producing
+		// VerbDelete ops for every entry the controller previously
+		// wrote.
+		if !isPrereqTearingDown(&existing) {
 			updated := existing.DeepCopy()
-			updated.Spec.ManagedFamilies = nil
-			updated.Spec.Source = configv1alpha1.ConfigurationSource{}
+			updated.Spec.ManagedFamilies = append([]string(nil), apphostingPrereqFamilies...)
+			emptyInline := emptyPrereqInline()
+			updated.Spec.Source = configv1alpha1.ConfigurationSource{Inline: &emptyInline}
 			updated.Spec.PruneOnRelinquish = true
 			if err := r.Update(ctx, updated); err != nil {
 				return false, fmt.Errorf("drive owned IOSXEConfig to empty intent: %w", err)
@@ -620,11 +669,10 @@ func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, devi
 			// InSync and the next reconcile will hit step 2.
 			return false, nil
 		}
-		// Step 2: wait for the per-device reconciler to converge. We
-		// look for status.phase == InSync, which the engine writes
-		// only after a clean apply. PhaseInSync alongside an empty
-		// ManagedFamilies set means "every previously-claimed family
-		// has been pruned on the device".
+		// Step 2: wait for the per-device reconciler to converge.
+		// status.phase == InSync alongside our empty-source teardown
+		// shape means "every previously-claimed family has been
+		// pruned on the device".
 		if existing.Status.Phase != "InSync" {
 			log.FromContext(ctx).V(1).Info("configPrereqs teardown: awaiting InSync",
 				"iosxeconfig", name, "phase", existing.Status.Phase)

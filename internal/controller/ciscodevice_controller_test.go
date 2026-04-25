@@ -733,8 +733,13 @@ func TestReconcile_ConfigPrereqsRemovedDrivesEmptyIntentThenDeletes(t *testing.T
 		t.Fatalf("update device: %v", err)
 	}
 
-	// Tick 1: the controller drives the owned CR to empty intent;
-	// the CR is NOT yet deleted (the engine hasn't run InSync).
+	// Tick 1: the controller drives the owned CR to the teardown
+	// shape (Wave 4A-fu): KEEP the prereq families intact, replace
+	// source.inline with the empty-prereq object. The CR is NOT
+	// yet deleted (the engine hasn't run InSync). This is the
+	// schema-valid + engine-accepted path. Pre-fix, Wave 4A had
+	// set ManagedFamilies=nil — rejected by both CRD MinItems=1
+	// and the engine's empty-list check.
 	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-d")); err != nil {
 		t.Fatalf("Reconcile (remove tick 1): %v", err)
 	}
@@ -742,11 +747,14 @@ func TestReconcile_ConfigPrereqsRemovedDrivesEmptyIntentThenDeletes(t *testing.T
 	if err := r.Get(ctx, ownedKey, &afterTick1); err != nil {
 		t.Fatalf("owned CR must still exist after empty-intent step: %v", err)
 	}
-	if len(afterTick1.Spec.ManagedFamilies) != 0 {
-		t.Errorf("owned CR ManagedFamilies should be empty after teardown step 1, got %v", afterTick1.Spec.ManagedFamilies)
+	if len(afterTick1.Spec.ManagedFamilies) == 0 {
+		t.Errorf("owned CR ManagedFamilies must remain non-empty during teardown (CRD MinItems=1)")
 	}
-	if afterTick1.Spec.Source.Inline != nil {
-		t.Errorf("owned CR Source.Inline should be nil after teardown step 1")
+	if afterTick1.Spec.Source.Inline == nil {
+		t.Errorf("owned CR Source.Inline must be set to an empty body during teardown, got nil")
+	}
+	if !afterTick1.Spec.PruneOnRelinquish {
+		t.Errorf("owned CR PruneOnRelinquish must remain true during teardown")
 	}
 
 	// Simulate the per-device reconciler reaching InSync on the empty
