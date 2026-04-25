@@ -27,6 +27,21 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 )
 
+// ErrTransactionalCLIUnsupported is returned when the resolved
+// intent combines spec.transactional=true with one or more CLI
+// template blocks. NETCONF's Cisco-IA cli-config-data RPC operates
+// on running config directly — there is no candidate-bound CLI
+// path today, so the engine cannot guarantee atomicity across the
+// structured-ops + CLI mix. Reject before any mutation; operator
+// drops spec.transactional OR removes the CLI templates from the
+// resolved intent and re-applies.
+//
+// Wave 7A.1 (external-review-next-actions Finding #1).
+var ErrTransactionalCLIUnsupported = errors.New(
+	"transactional NETCONF apply does not support CLI template blocks: " +
+		"Cisco-IA cli-config-data writes directly to running and cannot be " +
+		"rolled back via candidate-datastore Discard")
+
 // Phase labels the reconciler writes to status.phase. The set is closed;
 // any other string in status.phase is a bug.
 const (
@@ -174,6 +189,31 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	// regardless. NETCONF therefore wrote running on every Mutate call.
 	caps := e.Transport.Capabilities()
 	transactional := res.Transactional && caps.SupportsTransactions
+
+	// Wave 7A.1 (external-review-next-actions Finding #1): reject
+	// transactional + CLI template combination at the engine level
+	// before any mutation runs. The NETCONF transport's pushCLI uses
+	// Cisco-IA cli-config-data, an RPC that operates directly on
+	// running config by design — there is no candidate-bound variant
+	// today. Allowing the combination would let CLI ops land in
+	// running while structured ops sit in candidate; a later
+	// Discard would NOT roll back the CLI changes. Failing closed
+	// at the engine boundary is the safe contract.
+	//
+	// Operators see a clear Phase=Failed with a stable Reason
+	// (TransactionalCLIUnsupported) on the Ready condition. The
+	// CR's spec must drop spec.transactional or remove the CLI
+	// templates from the resolved intent before the next reconcile
+	// can run.
+	if transactional && len(res.CLIBlocks) > 0 {
+		r := Result{
+			Phase: PhaseFailed,
+			Err:   ErrTransactionalCLIUnsupported,
+		}
+		recordResult(res.DeviceName, r, time.Since(start).Seconds())
+		return r
+	}
+
 	var (
 		txHandle    transport.TxHandle
 		txCommitted bool

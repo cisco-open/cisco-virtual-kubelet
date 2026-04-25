@@ -335,14 +335,63 @@ func TestTransactionalVerifyReadsCandidate(t *testing.T) {
 	}
 }
 
-// TestCLIBlockUsesTransactionalView is the second half of Wave 1A-fu.
-// applyCLIBlock previously called e.Transport.Mutate directly — CLI
-// ops always wrote running config, even mid-transaction. Wave 1A-fu
-// routes them through e.applyTransport so CLI participates in the
-// candidate datastore alongside structured family ops.
-func TestCLIBlockUsesTransactionalView(t *testing.T) {
+// TestTransactionalCLIRejected is the Wave 7A.1 regression for
+// external-review-next-actions Finding #1: when the resolved
+// intent has spec.transactional=true AND any CLI template block,
+// the engine MUST reject before any device-side mutation runs.
+//
+// Replaces the prior Wave 1A-fu TestCLIBlockUsesTransactionalView,
+// which asserted CLI ops route through the transactional view.
+// That contract was wrong on inspection: Cisco-IA cli-config-data
+// writes directly to running config; there is no candidate-bound
+// CLI path. Letting the engine apply CLI mid-transaction would
+// produce out-of-tx writes that Discard cannot roll back. Wave 7A.1
+// fails closed.
+//
+// Non-transactional CLI ticks still apply CLI normally — the
+// applyTransport fallback to e.Transport handles it. That path is
+// covered by the existing engine reconcile tests with
+// res.Transactional=false; this test covers only the new rejection.
+func TestTransactionalCLIRejected(t *testing.T) {
 	t.Parallel()
 	e, tt, res := newTxFixture(true, false, false, true)
+	res.CLIBlocks = []intent.CLIBlock{{
+		TemplateName: "test-cli",
+		CLI:          "interface Loopback0\n description test\n",
+	}}
+
+	r := e.Reconcile(context.Background(), res)
+
+	if r.Phase != PhaseFailed {
+		t.Fatalf("phase = %q, want Failed; expected fail-closed rejection", r.Phase)
+	}
+	if !errors.Is(r.Err, ErrTransactionalCLIUnsupported) {
+		t.Errorf("Result.Err = %v, want ErrTransactionalCLIUnsupported", r.Err)
+	}
+	// No Mutate calls — the rejection must happen BEFORE any
+	// transport-side write. StartTransaction also must not have run
+	// because the rejection is checked before transaction setup.
+	if got := tt.mutateCalls.Load(); got != 0 {
+		t.Errorf("Mutate calls = %d, want 0 — rejection must precede any device mutation", got)
+	}
+	if got := tt.startCalls.Load(); got != 0 {
+		t.Errorf("StartTransaction calls = %d, want 0", got)
+	}
+	if got := tt.commitCalls.Load(); got != 0 {
+		t.Errorf("Commit calls = %d, want 0", got)
+	}
+	if got := tt.discardCalls.Load(); got != 0 {
+		t.Errorf("Discard calls = %d, want 0 — no transaction was opened", got)
+	}
+}
+
+// TestNonTransactionalCLISucceeds pins the negative case: a
+// non-transactional reconcile with CLI blocks runs normally. CLI
+// ops use the applyTransport fallback (which is e.Transport when
+// no transaction is open).
+func TestNonTransactionalCLISucceeds(t *testing.T) {
+	t.Parallel()
+	e, tt, res := newTxFixture(true, false, false, false /*transactional=false*/)
 	res.CLIBlocks = []intent.CLIBlock{{
 		TemplateName: "test-cli",
 		CLI:          "interface Loopback0\n description test\n",
@@ -353,20 +402,9 @@ func TestCLIBlockUsesTransactionalView(t *testing.T) {
 	if r.Phase != PhaseInSync {
 		t.Fatalf("phase = %q, want InSync; err=%v", r.Phase, r.Err)
 	}
-	// Every Mutate the engine emitted — family writes plus the CLI
-	// block — must carry the captured candidate handle. A direct
-	// e.Transport.Mutate call would record the empty handle here.
-	if len(tt.mutateHandlesSeen) == 0 {
-		t.Fatal("expected at least one Mutate call (family + CLI)")
-	}
-	cliMutateCount := 0
-	for i, h := range tt.mutateHandlesSeen {
-		if h != fakeHandle {
-			t.Errorf("Mutate[%d] handle = %q, want %q (CLI must use the tx view)", i, h, fakeHandle)
-		}
-		cliMutateCount++
-	}
-	if cliMutateCount < 2 {
-		t.Errorf("expected >=2 Mutate calls (family + CLI), got %d", cliMutateCount)
+	// At least one Mutate (CLI block). Non-transactional callers
+	// pass the empty handle.
+	if got := tt.mutateCalls.Load(); got == 0 {
+		t.Errorf("Mutate calls = 0; CLI block should have been pushed")
 	}
 }
