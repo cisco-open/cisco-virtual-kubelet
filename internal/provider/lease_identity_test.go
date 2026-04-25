@@ -202,17 +202,18 @@ func TestAcquireLeases_EmptyRuntimeIDPreservesLegacyBehaviour(t *testing.T) {
 		t.Errorf("empty RuntimeID: legacy behaviour broken; leased=%v conflicts=%v",
 			leased.ManagedFamilies, conflicts)
 	}
-	// Verify the lease is keyed without a '#' suffix.
-	var lease coordv1.Lease
-	if err := c.Get(context.Background(),
-		client.ObjectKey{Namespace: "lease-ns", Name: "iosxecfg-dev-1-vlan"},
-		&lease); err != nil {
-		// Don't fail — the lease name format is internal; just skip
-		// if the key shape changes.
+	// Verify the lease is keyed without a '#' suffix. List all
+	// leases in the namespace so the test stays stable against the
+	// internal lease-name format (Wave 8.1's sanitised+hashed form).
+	var leases coordv1.LeaseList
+	if err := c.List(context.Background(), &leases, client.InNamespace("lease-ns")); err != nil {
+		// Listing failures are unrelated to what we're checking.
 		return
 	}
-	if lease.Spec.HolderIdentity != nil && strings.Contains(*lease.Spec.HolderIdentity, "#") {
-		t.Errorf("empty RuntimeID should produce un-suffixed lease holder, got %q",
-			*lease.Spec.HolderIdentity)
+	for i := range leases.Items {
+		h := leases.Items[i].Spec.HolderIdentity
+		if h != nil && strings.Contains(*h, "#") {
+			t.Errorf("empty RuntimeID should produce un-suffixed lease holder, got %q", *h)
+		}
 	}
 }

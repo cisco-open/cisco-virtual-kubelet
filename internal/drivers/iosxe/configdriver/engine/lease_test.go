@@ -50,7 +50,7 @@ func TestLeaseAcquireCreatesNew(t *testing.T) {
 
 	var got coordv1.Lease
 	if err := c.Get(context.Background(),
-		types.NamespacedName{Namespace: "cisco-vk", Name: "cvk-edge-01-vlan"},
+		types.NamespacedName{Namespace: "cisco-vk", Name: leaseName("edge-01", "vlan")},
 		&got); err != nil {
 		t.Fatalf("Get lease: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestLeaseAcquireTakesOverExpired(t *testing.T) {
 	renewed := metav1.NewMicroTime(time.Now().Add(-1 * time.Hour))
 	ttl := int32(30)
 	seed := &coordv1.Lease{
-		ObjectMeta: metav1.ObjectMeta{Name: "cvk-edge-01-vlan", Namespace: "cisco-vk"},
+		ObjectMeta: metav1.ObjectMeta{Name: leaseName("edge-01", "vlan"), Namespace: "cisco-vk"},
 		Spec: coordv1.LeaseSpec{
 			HolderIdentity:       strPtr("owner-1"),
 			LeaseDurationSeconds: &ttl,
@@ -125,7 +125,7 @@ func TestLeaseAcquireTakesOverExpired(t *testing.T) {
 	}
 	var got coordv1.Lease
 	if err := c.Get(context.Background(),
-		types.NamespacedName{Namespace: "cisco-vk", Name: "cvk-edge-01-vlan"},
+		types.NamespacedName{Namespace: "cisco-vk", Name: leaseName("edge-01", "vlan")},
 		&got); err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestLeaseReleaseClearsOwnLease(t *testing.T) {
 	}
 	var got coordv1.Lease
 	err := c.Get(context.Background(),
-		types.NamespacedName{Namespace: "cisco-vk", Name: "cvk-edge-01-vlan"},
+		types.NamespacedName{Namespace: "cisco-vk", Name: leaseName("edge-01", "vlan")},
 		&got)
 	if err == nil {
 		t.Fatalf("lease still exists after Release: %+v", got)
@@ -167,7 +167,7 @@ func TestLeaseReleaseByNonOwnerIsNoop(t *testing.T) {
 	}
 	var got coordv1.Lease
 	if err := c.Get(context.Background(),
-		types.NamespacedName{Namespace: "cisco-vk", Name: "cvk-edge-01-vlan"},
+		types.NamespacedName{Namespace: "cisco-vk", Name: leaseName("edge-01", "vlan")},
 		&got); err != nil {
 		t.Fatalf("lease was deleted by non-owner Release: %v", err)
 	}

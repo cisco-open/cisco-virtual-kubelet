@@ -16,7 +16,10 @@ package engine
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	coordv1 "k8s.io/api/coordination/v1"
@@ -207,8 +210,114 @@ func leaseExpired(lease *coordv1.Lease, now time.Time) bool {
 	return now.After(expiry)
 }
 
+// leaseName composes a stable, DNS-1123-subdomain-safe Lease name.
+//
+// Wave 8.1 (external-review-wave7-residuals Finding #1). The
+// previous implementation produced literal "cvk-<device>-<family>".
+// Underscore-bearing family names — interface_ethernet,
+// access_list_extended, interface_switchport, ip_name_server, and
+// most of the shipped IOS-XE family set — violate DNS-1123 subdomain
+// rules ([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*).
+// Real apiserver rejects every such Lease.create. fake.Client
+// skipped name validation so existing tests passed; the failure
+// only surfaced in a live cluster.
+//
+// The sanitised composition has three parts:
+//
+//   - "cvk-" prefix (stable, identifies these leases as ours).
+//   - Sanitised device + sanitised family. Each is lowercased and
+//     non-DNS-1123 characters are replaced with '-'; runs of '-'
+//     collapse and leading/trailing '-' is trimmed. The original
+//     unsanitised values are still preserved on the lease's labels
+//     ("cisco.vk/device", "cisco.vk/family") so operators can
+//     filter with kubectl get leases -l cisco.vk/family=<orig>.
+//   - 8-char SHA-256 prefix of the original "<device>/<family>"
+//     pair. Two distinct inputs that fold to the same sanitised
+//     prefix (e.g. "interface_ethernet" and "interface-ethernet")
+//     get distinct leases.
+//
+// The result fits well under the 253-byte K8s name limit even with
+// long family names — typical lengths are around 50-70 chars.
 func leaseName(device, family string) string {
-	return fmt.Sprintf("cvk-%s-%s", device, family)
+	d := sanitiseLeaseSegment(device)
+	f := sanitiseLeaseSegment(family)
+	hash := shortLeaseHash(device + "/" + family)
+	name := fmt.Sprintf("cvk-%s-%s-%s", d, f, hash)
+	// Defence in depth: K8s names cap at 253 bytes. Even pathological
+	// inputs (very long device names) are unlikely to overrun, but
+	// truncate at 253 by trimming the human-readable middle while
+	// keeping prefix + hash intact.
+	const maxNameLen = 253
+	if len(name) > maxNameLen {
+		// Reserve "cvk-" (4) + "-" + hash (8) = 13; leave the rest
+		// for the device/family combo and truncate it.
+		head := "cvk-"
+		tail := "-" + hash
+		room := maxNameLen - len(head) - len(tail)
+		middle := d + "-" + f
+		if len(middle) > room {
+			middle = middle[:room]
+		}
+		// Trim a possible trailing '-' left after slicing.
+		middle = strings.TrimRight(middle, "-")
+		name = head + middle + tail
+	}
+	return name
+}
+
+// sanitiseLeaseSegment maps an arbitrary identifier into the
+// DNS-1123 subdomain alphabet. Lowercases ASCII letters, passes
+// digits and '-' through, replaces every other byte with '-', then
+// folds runs of '-' and trims leading/trailing '-'. An empty result
+// (input was all-disallowed bytes) returns "x" so the composed
+// name still has a non-empty middle segment.
+func sanitiseLeaseSegment(s string) string {
+	out := make([]byte, 0, len(s))
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c >= 'a' && c <= 'z':
+			out = append(out, c)
+		case c >= 'A' && c <= 'Z':
+			out = append(out, c+('a'-'A'))
+		case c >= '0' && c <= '9':
+			out = append(out, c)
+		default:
+			// Includes '_', '/', '.', whitespace, and any other byte
+			// outside the DNS-1123 label alphabet. We use '-' as the
+			// universal replacement so the dedup pass below collapses
+			// runs cleanly.
+			out = append(out, '-')
+		}
+	}
+	// Collapse runs of '-' so "_a__b_" → "-a--b-" → "-a-b-".
+	collapsed := make([]byte, 0, len(out))
+	prevDash := false
+	for _, c := range out {
+		if c == '-' {
+			if prevDash {
+				continue
+			}
+			prevDash = true
+		} else {
+			prevDash = false
+		}
+		collapsed = append(collapsed, c)
+	}
+	result := strings.Trim(string(collapsed), "-")
+	if result == "" {
+		return "x"
+	}
+	return result
+}
+
+// shortLeaseHash returns the first 8 hex chars of the SHA-256 of
+// the input. 8 hex chars (4 bytes / 32 bits) gives a collision
+// probability negligible for the per-(device, family) cardinality
+// realistic CVK fleets see.
+func shortLeaseHash(s string) string {
+	sum := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(sum[:4])
 }
 
 func strPtr(s string) *string { return &s }
