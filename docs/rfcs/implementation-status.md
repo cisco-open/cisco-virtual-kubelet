@@ -13,9 +13,24 @@ If anything in this file disagrees with another RFC in this directory, **this fi
 
 ## 1. Bottom line
 
-**The branch is close to day-2 readiness, pending final semantic hardening for transaction atomicity, teardown freshness, lease identity during restarts, prune ownership semantics, and gNMI interface path coverage.** The next-actions review at [`external-review-next-actions.md`](external-review-next-actions.md) (Codex, post-`latest-update.md`) identified five remaining gaps that the post-FU verification missed — two of them subtle race/lifecycle hazards (configPrereqs teardown freshness, lease identity during pod rollouts) and three correctness gaps (NETCONF CLI bypassing transactions, `pruneOnRelinquish` triggering authoritative pruning on every steady-state reconcile, handwritten interface writers missing structured `PathSpec`). Walking back the prior "shippable for day-2" claim until these close per [`external-review-next-actions-response.md`](external-review-next-actions-response.md).
+**The branch is shippable for day-0 AND day-2 under the per-pod topology, with the aggregator topology exclusive-and-correct.** Three rounds of external review (the original [`external-review.md`](external-review.md), the post-Wave-5 [`external-review-followup.md`](external-review-followup.md), and the post-`latest-update.md` [`external-review-next-actions.md`](external-review-next-actions.md)) have all closed in code with focused test coverage.
 
-The follow-up review at [`external-review-followup.md`](external-review-followup.md) identified two P1 + three P2 gaps where Wave-1..Wave-5 was too shallow, made via a code path production didn't execute, or schema/engine-rejected. **All five FU remediation waves shipped** (commits `c30cbbc` through `eab4175`). Module-wide `go test -race -count=5 ./...` clean; previously-flaky `internal/drivers/iosxe/configdriver/writers` stable across `count=20` after Wave-FU registry-test fix. The next-actions review identified five *new* gaps the FU round missed.
+The next-actions review's five findings closed in this round:
+
+1. **Lease identity during rollouts** — runtime-suffixed identity (`<ns>/<name>#<podUID|workerUUID>`); two reconcilers with the same CR identity but different runtime IDs cannot both renew the same lease. Operator-visible Conflict messages strip the suffix. Anchor: `c2315b6`.
+2. **NETCONF transactional + CLI** — engine fail-fast at the boundary: `Phase=Failed` with `ErrTransactionalCLIUnsupported` when both are set; no transport-side mutation runs. Anchor: `71f5505`.
+3. **configPrereqs teardown freshness** — gate now requires `Status.ObservedGeneration == Generation` AND `Status.Phase == InSync`; stale-status from a prior generation cannot trigger premature CR deletion. Anchor: `0ac63c3`.
+4. **`pruneOnRelinquish` semantics** — steady-state configPrereqs upsert sets it `false` (additive day-0 reconcile). Teardown step 1 sets it `true` (authoritative prune of the empty-source intent only). API docstring rewritten to be honest about what the flag does. Anchor: `965f80a`.
+5. **PathSpec on handwritten interface writers** — `interface_ethernet`, `interface_switchport`, and `nestedKeyedListWriter` all populate `transport.Op.PathSpec`; the lab case `GigabitEthernet=0/0/0` now produces a gNMI Path with the slash preserved verbatim. Anchor: `3388628`.
+
+Module-wide `go test -race -count=5 ./...` clean; `count=20` stable across the previously-flaky packages.
+
+Two architectural lessons from this round, in commit messages and inline comments so they don't re-recur:
+
+- **Async status subresources** mean `Status.X` and `Spec.Y` can disagree during a reconcile cycle. Gates that read both must explicitly verify they refer to the same generation.
+- **A lease that protects in-process duplicate writers does NOT protect cross-process overlap** during pod/worker rollouts unless the holder identity is process-unique.
+
+The first external review's twelve findings remain closed. The follow-up review's five findings (Wave 1A-fu through 6B) remain closed. The next-actions review's five findings (Wave 7A.1 through 7B) close in this commit set.
 
 Closing the follow-up's findings:
 
