@@ -67,7 +67,16 @@ Terraform's `apply` writes the IOSXEConfig CR; the per-device
 
 ## Status
 
-The skeleton compiles in isolation but the provider is not yet
-published to the Terraform Registry. CRUD methods on the
-`iosxeconfig_config` resource currently return `not implemented`
-and serve as the contract surface for the next iteration.
+The provider compiles, passes its unit tests against a fake
+dynamic client, and serves over the
+`registry.terraform.io/cisco-open/iosxeconfig` address. Local
+testing works via `terraform plan -plugin-dir=` against a binary
+built with `go build .` in this directory. The Terraform Registry
+release (signed binaries, GPG keys, registry metadata) is the
+remaining handoff to publishing infrastructure.
+
+CRUD: Create / Read / Update / Delete + ImportState are all
+wired against a `dynamic.Interface` built at provider Configure
+time. Updates carry the existing resourceVersion forward so
+concurrent edits surface as a clean Conflict instead of
+overwriting.

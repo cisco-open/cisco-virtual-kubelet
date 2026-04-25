@@ -15,14 +15,29 @@
 // creates / updates / deletes IOSXEConfig CRs against a target
 // cluster. The controller-side driver continues to do the device
 // work; this provider is only an authoring surface.
-//
-// Phase-8 scaffold — see README.md.
 package main
 
-import "fmt"
+import (
+	"context"
+	"flag"
+	"log"
+
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+
+	provider "github.com/cisco-open/terraform-provider-iosxeconfig/internal/provider"
+)
 
 const providerAddress = "registry.terraform.io/cisco-open/iosxeconfig"
 
 func main() {
-	fmt.Printf("terraform-provider-iosxeconfig (%s) — scaffold; serve via providerserver.Serve in a future iteration\n", providerAddress)
+	debug := flag.Bool("debug", false,
+		"set to true to run the provider with support for debuggers like delve")
+	flag.Parse()
+
+	if err := providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{
+		Address: providerAddress,
+		Debug:   *debug,
+	}); err != nil {
+		log.Fatalf("serve provider: %v", err)
+	}
 }
