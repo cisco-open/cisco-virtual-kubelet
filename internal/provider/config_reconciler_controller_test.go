@@ -53,8 +53,10 @@ func TestReconcileIgnoresForeignDevice(t *testing.T) {
 	cr := &configv1alpha1.IOSXEConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: "stray", Namespace: "network", Generation: 1},
 		Spec: configv1alpha1.IOSXEConfigSpec{
-			DeviceRef:       configv1alpha1.DeviceRef{Name: "other-device"},
-			ManagedFamilies: []string{"vlan"},
+			DeviceRef: configv1alpha1.DeviceRef{Name: "other-device"},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies: []string{"vlan"},
+			},
 		},
 	}
 	c := fake.NewClientBuilder().

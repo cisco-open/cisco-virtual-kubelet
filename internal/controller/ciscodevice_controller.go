@@ -551,15 +551,17 @@ func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, devi
 	}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, desired, func() error {
 		desired.Spec = configv1alpha1.IOSXEConfigSpec{
-			DeviceRef:       configv1alpha1.DeviceRef{Name: device.Name},
-			ManagedFamilies: apphostingPrereqFamilies,
-			Source: configv1alpha1.ConfigurationSource{
-				Inline: &device.Spec.ConfigPrereqs.Configuration,
+			DeviceRef: configv1alpha1.DeviceRef{Name: device.Name},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies: apphostingPrereqFamilies,
+				Source: configv1alpha1.ConfigurationSource{
+					Inline: &device.Spec.ConfigPrereqs.Configuration,
+				},
+				// Prereqs default to revert so the device stays in the shape
+				// apphosting needs; operators can still opt a separate
+				// IOSXEConfig into report/pause for wider declarative config.
+				DriftPolicy: configv1alpha1.DriftPolicyRevert,
 			},
-			// Prereqs default to revert so the device stays in the shape
-			// apphosting needs; operators can still opt a separate
-			// IOSXEConfig into report/pause for wider declarative config.
-			DriftPolicy: configv1alpha1.DriftPolicyRevert,
 		}
 		return controllerutil.SetControllerReference(device, desired, r.Scheme)
 	})

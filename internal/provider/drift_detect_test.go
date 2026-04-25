@@ -46,7 +46,11 @@ func TestDriftDetectInterval_Defaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			cr := &configv1alpha1.IOSXEConfig{
-				Spec: configv1alpha1.IOSXEConfigSpec{DriftDetectInterval: tc.spec},
+				Spec: configv1alpha1.IOSXEConfigSpec{
+					IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+						DriftDetectInterval: tc.spec,
+					},
+				},
 			}
 			if got := driftDetectInterval(cr); got != tc.want {
 				t.Errorf("driftDetectInterval(%q) = %v, want %v", tc.spec, got, tc.want)
@@ -74,7 +78,11 @@ func TestDueForDriftCheck(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			cr := &configv1alpha1.IOSXEConfig{
-				Spec:   configv1alpha1.IOSXEConfigSpec{DriftDetectInterval: tc.intervalStr},
+				Spec: configv1alpha1.IOSXEConfigSpec{
+					IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+						DriftDetectInterval: tc.intervalStr,
+					},
+				},
 				Status: configv1alpha1.IOSXEConfigStatus{LastDeviceCheck: tc.lastCheck},
 			}
 			if got := dueForDriftCheck(cr); got != tc.want {
@@ -102,7 +110,9 @@ func TestShortCircuitHonoursDriftDetectInterval(t *testing.T) {
 		return &configv1alpha1.IOSXEConfig{
 			ObjectMeta: metav1.ObjectMeta{Generation: 7},
 			Spec: configv1alpha1.IOSXEConfigSpec{
-				DriftDetectInterval: "5m",
+				IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+					DriftDetectInterval: "5m",
+				},
 			},
 			Status: configv1alpha1.IOSXEConfigStatus{
 				ObservedGeneration: 7,

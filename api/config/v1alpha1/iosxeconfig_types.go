@@ -27,6 +27,30 @@ type IOSXEConfigSpec struct {
 	// +kubebuilder:validation:Required
 	DeviceRef DeviceRef `json:"deviceRef"`
 
+	// IOSXEConfigTemplateSpec holds every per-device knob that is
+	// also valid inside an IOSXEConfigBundle template. It's embedded
+	// inline so existing call sites that read e.g. spec.ManagedFamilies
+	// keep working unchanged. Wave 3B (external-review Finding #10):
+	// hoisting the shared fields lets the bundle's template field be
+	// typed as IOSXEConfigTemplateSpec — which doesn't carry DeviceRef
+	// — so a selector-based bundle manifest no longer has to write a
+	// dummy deviceRef just to clear admission.
+	IOSXEConfigTemplateSpec `json:",inline"`
+}
+
+// IOSXEConfigTemplateSpec is the per-device configuration shape with
+// DeviceRef removed. Used in two places:
+//
+//   - Embedded into IOSXEConfigSpec, where the operator also writes
+//     a deviceRef (the standalone CR shape).
+//   - Used directly as IOSXEConfigBundle.spec.template, where the
+//     controller fills DeviceRef per device during fan-out.
+//
+// Splitting the struct (rather than relaxing IOSXEConfigSpec.DeviceRef
+// to optional) keeps the standalone CR's required-field guarantee at
+// the schema level, while letting the bundle template skip the field
+// without needing CEL or schemaless escape hatches.
+type IOSXEConfigTemplateSpec struct {
 	// DeviceGroups names the IOSXEDeviceGroupConfig CRs whose configuration
 	// is merged into the resolved intent before this CR's source.
 	// Merge order follows netascode semantics: defaults → device groups →

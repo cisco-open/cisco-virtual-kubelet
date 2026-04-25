@@ -128,9 +128,12 @@ spec:
                 x-kubernetes-map-type: atomic
               template:
                 description: |-
-                  Template is the IOSXEConfigSpec that gets stamped onto every
-                  generated child. The controller fills DeviceRef.Name per
-                  device; the rest of the spec passes through verbatim.
+                  Template is the per-device spec the controller stamps onto
+                  every generated child IOSXEConfig. The controller fills
+                  DeviceRef per device during fan-out, so the template type
+                  here deliberately omits DeviceRef — operators don't write
+                  a dummy value just to clear admission. Wave 3B
+                  (external-review Finding #10).
                 properties:
                   deviceGroups:
                     description: |-
@@ -141,17 +144,6 @@ spec:
                     items:
                       type: string
                     type: array
-                  deviceRef:
-                    description: DeviceRef targets the CiscoDevice this configuration
-                      applies to.
-                    properties:
-                      name:
-                        description: Name of the CiscoDevice the CR targets.
-                        minLength: 1
-                        type: string
-                    required:
-                    - name
-                    type: object
                   driftDetectInterval:
                     default: 5m
                     description: |-
@@ -336,7 +328,6 @@ spec:
                       expected to reboot without a config-save orchestrator.
                     type: boolean
                 required:
-                - deviceRef
                 - managedFamilies
                 - source
                 type: object

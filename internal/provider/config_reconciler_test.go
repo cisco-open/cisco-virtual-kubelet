@@ -52,10 +52,12 @@ func newCR(name, device string) *configv1alpha1.IOSXEConfig {
 			Name: name, Namespace: "network", Generation: 1,
 		},
 		Spec: configv1alpha1.IOSXEConfigSpec{
-			DeviceRef:       configv1alpha1.DeviceRef{Name: device},
-			ManagedFamilies: []string{"vlan"},
-			Source: configv1alpha1.ConfigurationSource{
-				Inline: &runtime.RawExtension{Raw: []byte(`{}`)},
+			DeviceRef: configv1alpha1.DeviceRef{Name: device},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies: []string{"vlan"},
+				Source: configv1alpha1.ConfigurationSource{
+					Inline: &runtime.RawExtension{Raw: []byte(`{}`)},
+				},
 			},
 		},
 	}

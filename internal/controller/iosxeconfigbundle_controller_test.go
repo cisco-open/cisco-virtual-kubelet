@@ -40,7 +40,7 @@ func mkBundle(name, ns string, sel map[string]string, refs ...string) *configv1a
 	b := &configv1alpha1.IOSXEConfigBundle{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns, Generation: 1},
 		Spec: configv1alpha1.IOSXEConfigBundleSpec{
-			Template: configv1alpha1.IOSXEConfigSpec{
+			Template: configv1alpha1.IOSXEConfigTemplateSpec{
 				ManagedFamilies: []string{"vlan"},
 				Source: configv1alpha1.ConfigurationSource{
 					Inline: &runtime.RawExtension{Raw: []byte(`{}`)},
@@ -113,10 +113,12 @@ func TestBundleReconcilePrunesOrphans(t *testing.T) {
 			Labels: map[string]string{"config.cisco.vk/bundle": "edges"},
 		},
 		Spec: configv1alpha1.IOSXEConfigSpec{
-			DeviceRef:       configv1alpha1.DeviceRef{Name: "edge-01"},
-			ManagedFamilies: []string{"vlan"},
-			Source: configv1alpha1.ConfigurationSource{
-				Inline: &runtime.RawExtension{Raw: []byte(`{}`)},
+			DeviceRef: configv1alpha1.DeviceRef{Name: "edge-01"},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies: []string{"vlan"},
+				Source: configv1alpha1.ConfigurationSource{
+					Inline: &runtime.RawExtension{Raw: []byte(`{}`)},
+				},
 			},
 		},
 	}

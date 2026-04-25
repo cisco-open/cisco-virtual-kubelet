@@ -119,8 +119,10 @@ func mkCR(name, device string, families ...string) *configv1alpha1.IOSXEConfig {
 	return &configv1alpha1.IOSXEConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "network"},
 		Spec: configv1alpha1.IOSXEConfigSpec{
-			DeviceRef:       configv1alpha1.DeviceRef{Name: device},
-			ManagedFamilies: families,
+			DeviceRef: configv1alpha1.DeviceRef{Name: device},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies: families,
+			},
 		},
 	}
 }

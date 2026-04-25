@@ -27,6 +27,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	crlog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
@@ -173,8 +176,10 @@ func (r *IOSXEConfigBundleReconciler) upsertChild(
 		if err := controllerutil.SetControllerReference(b, child, r.Scheme); err != nil {
 			return err
 		}
-		child.Spec = b.Spec.Template
-		child.Spec.DeviceRef = configv1alpha1.DeviceRef{Name: dev.Name}
+		child.Spec = configv1alpha1.IOSXEConfigSpec{
+			DeviceRef:               configv1alpha1.DeviceRef{Name: dev.Name},
+			IOSXEConfigTemplateSpec: b.Spec.Template,
+		}
 		// Carry the bundle name as a label so an operator can
 		// `kubectl get iosxeconfigs -l config.cisco.vk/bundle=<name>`
 		// without inspecting ownerRefs by hand.
@@ -249,14 +254,58 @@ func setBundleReady(b *configv1alpha1.IOSXEConfigBundle, deviceCount int) {
 	b.Status.Conditions = append(b.Status.Conditions, cond)
 }
 
-// SetupWithManager wires the bundle reconciler. Watching
-// IOSXEConfig children with EnqueueRequestForOwner keeps the
-// bundle's status fresh when a child's phase changes; watching
-// CiscoDevice with a label-event handler picks up devices that
-// joined the selector mid-flight.
+// SetupWithManager wires the bundle reconciler. Three watches:
+//
+//   1. IOSXEConfigBundle — primary CR.
+//   2. IOSXEConfig children (Owns) — keeps bundle status fresh when
+//      a child's phase or status changes.
+//   3. CiscoDevice (Wave 3A — external-review Finding #9) — selector
+//      membership is dynamic. A new CiscoDevice that matches a
+//      bundle's selector, or a label-change that moves a device in
+//      or out of selector membership, must trigger fan-out / prune.
+//      Without this watch the bundle's children list goes stale
+//      until some other event requeues the bundle.
 func (r *IOSXEConfigBundleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&configv1alpha1.IOSXEConfigBundle{}).
 		Owns(&configv1alpha1.IOSXEConfig{}).
+		Watches(&ciskov1.CiscoDevice{}, handler.EnqueueRequestsFromMapFunc(r.mapDeviceToBundles)).
 		Complete(r)
+}
+
+// mapDeviceToBundles fans a CiscoDevice event out to every
+// IOSXEConfigBundle in the same namespace. The reconciler then
+// re-evaluates each bundle's selector + deviceRefs against the
+// current device set; bundles whose membership genuinely changed
+// produce work, the rest no-op via the upsert path's hash check.
+//
+// Why broad (every bundle in the namespace) rather than indexed:
+// IOSXEConfigBundle.spec.deviceSelector is a label selector, not a
+// label match — building an indexer that maps a single device's
+// labels to the matching bundles requires evaluating every bundle's
+// selector against the device anyway. The broad mapper is simpler,
+// correct, and — given a typical fleet has tens of bundles, not
+// thousands — cheap. If that ratio inverts later, swap in
+// fieldindexer-backed lookup.
+func (r *IOSXEConfigBundleReconciler) mapDeviceToBundles(ctx context.Context, obj client.Object) []reconcile.Request {
+	dev, ok := obj.(*ciskov1.CiscoDevice)
+	if !ok {
+		return nil
+	}
+	var bundles configv1alpha1.IOSXEConfigBundleList
+	if err := r.List(ctx, &bundles, client.InNamespace(dev.Namespace)); err != nil {
+		crlog.FromContext(ctx).Error(err, "list IOSXEConfigBundles for device-event mapping",
+			"device", dev.Name, "namespace", dev.Namespace)
+		return nil
+	}
+	out := make([]reconcile.Request, 0, len(bundles.Items))
+	for i := range bundles.Items {
+		out = append(out, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: bundles.Items[i].Namespace,
+				Name:      bundles.Items[i].Name,
+			},
+		})
+	}
+	return out
 }

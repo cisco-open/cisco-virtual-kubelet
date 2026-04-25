@@ -32,7 +32,9 @@ func TestBuildConflictMessage_NoOverlap(t *testing.T) {
 	cr := &configv1alpha1.IOSXEConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: "cr-a", Namespace: "n"},
 		Spec: configv1alpha1.IOSXEConfigSpec{
-			ManagedFamilies: []string{"system", "vlan"},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies: []string{"system", "vlan"},
+			},
 		},
 	}
 	got := buildConflictMessage(cr, map[string][]string{})
@@ -44,7 +46,11 @@ func TestBuildConflictMessage_NoOverlap(t *testing.T) {
 func TestBuildConflictMessage_OverlapOnFirstFamily(t *testing.T) {
 	t.Parallel()
 	cr := &configv1alpha1.IOSXEConfig{
-		Spec: configv1alpha1.IOSXEConfigSpec{ManagedFamilies: []string{"system", "vlan"}},
+		Spec: configv1alpha1.IOSXEConfigSpec{
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies: []string{"system", "vlan"},
+			},
+		},
 	}
 	got := buildConflictMessage(cr, map[string][]string{
 		"system": {"n/other-cr"},
@@ -59,7 +65,11 @@ func TestBuildConflictMessage_OverlapOnFirstFamily(t *testing.T) {
 func TestBuildConflictMessage_OverlapOnSecondFamily(t *testing.T) {
 	t.Parallel()
 	cr := &configv1alpha1.IOSXEConfig{
-		Spec: configv1alpha1.IOSXEConfigSpec{ManagedFamilies: []string{"system", "vlan"}},
+		Spec: configv1alpha1.IOSXEConfigSpec{
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies: []string{"system", "vlan"},
+			},
+		},
 	}
 	got := buildConflictMessage(cr, map[string][]string{
 		"vlan": {"n/other-cr"},
@@ -75,7 +85,11 @@ func TestBuildConflictMessage_OverlapOnSecondFamily(t *testing.T) {
 func TestBuildConflictMessage_AggregatesAcrossFamilies(t *testing.T) {
 	t.Parallel()
 	cr := &configv1alpha1.IOSXEConfig{
-		Spec: configv1alpha1.IOSXEConfigSpec{ManagedFamilies: []string{"system", "vlan", "vrf"}},
+		Spec: configv1alpha1.IOSXEConfigSpec{
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies: []string{"system", "vlan", "vrf"},
+			},
+		},
 	}
 	// Two different owners, three overlap families.
 	got := buildConflictMessage(cr, map[string][]string{
@@ -112,7 +126,11 @@ func TestBuildConflictMessage_Deterministic(t *testing.T) {
 	// determinism, every reconcile tick churns the status condition
 	// even when nothing changed.
 	cr := &configv1alpha1.IOSXEConfig{
-		Spec: configv1alpha1.IOSXEConfigSpec{ManagedFamilies: []string{"a", "b", "c"}},
+		Spec: configv1alpha1.IOSXEConfigSpec{
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies: []string{"a", "b", "c"},
+			},
+		},
 	}
 	conflicts := map[string][]string{
 		"a": {"z/cr-2", "y/cr-1"},
