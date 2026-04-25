@@ -120,6 +120,30 @@ type ConfigReconciler struct {
 	// notifications.
 	SubscribeEvents <-chan event.GenericEvent
 
+	// RuntimeID disambiguates the lease holder across two
+	// reconciler instances that share the same CR identity but run
+	// in different processes (old + new pod during a Deployment
+	// rollout, two aggregator workers during a manager restart).
+	//
+	// Combined with the CR's namespace/name, the lease holder
+	// becomes "<ns>/<name>#<RuntimeID>". Two reconcilers with
+	// distinct RuntimeID values cannot both renew the same lease,
+	// so the cross-process duplicate-writer hazard the lease was
+	// meant to protect against actually closes.
+	//
+	// Per-pod: the downward API injects metadata.uid as POD_UID;
+	// cmd/cisco-vk passes it here.
+	// Aggregator: a uuid.NewString() generated at worker start.
+	// Empty (the test/polling-Run defaults): identity falls back
+	// to "<ns>/<name>" only — preserves existing behaviour.
+	//
+	// Wave 7A.3 (external-review-next-actions Finding #3). The
+	// pre-fix identity was "<ns>/<name>" only — Wave 6B's credential
+	// rotation rollout produces routine overlap windows where two
+	// pods would both renew the same lease and both write the
+	// device.
+	RuntimeID string
+
 	// subscribeNotifyTime records the wall-clock time of the most
 	// recent Subscribe notification. Reconcile compares it against
 	// cr.Status.LastDeviceCheck to decide whether THIS reconcile is
@@ -397,7 +421,18 @@ func (r *ConfigReconciler) acquireLeases(
 		return resolved, nil
 	}
 
-	identity := cr.Namespace + "/" + cr.Name
+	// Wave 7A.3 — runtime-identity-suffixed lease holder. Two
+	// reconcilers with the same CR identity but different
+	// RuntimeID values get distinct lease holders, so during a
+	// Deployment rollout (old pod + new pod) the lease cannot be
+	// concurrently renewed by both. Empty RuntimeID falls back to
+	// the CR-only identity — existing tests and the polling Run
+	// path continue to work without injecting a runtime suffix.
+	crIdentity := cr.Namespace + "/" + cr.Name
+	identity := crIdentity
+	if r.RuntimeID != "" {
+		identity = crIdentity + "#" + r.RuntimeID
+	}
 	owned := make([]string, 0, len(resolved.ManagedFamilies))
 	conflicts := map[string]string{}
 	for _, family := range resolved.ManagedFamilies {
@@ -409,7 +444,12 @@ func (r *ConfigReconciler) acquireLeases(
 			continue
 		}
 		if !res.Owned {
-			conflicts[family] = res.Holder
+			// Strip the runtime-ID suffix from the reported holder
+			// so the operator's Conflict condition message names
+			// the CR (the meaningful identity for status), not the
+			// pod UID. The full identity is still what's stored in
+			// the lease for arbitration.
+			conflicts[family] = stripRuntimeIDSuffix(res.Holder)
 			continue
 		}
 		owned = append(owned, family)
@@ -597,6 +637,23 @@ func (r *ConfigReconciler) recordResult(
 		}
 	}
 	return nil
+}
+
+// stripRuntimeIDSuffix removes the "#<runtime-id>" tail from a
+// lease holder identity so status/Conflict messages name the
+// owning CR rather than the pod or worker that happens to hold
+// the lease. The full identity is what's stored in the lease for
+// arbitration; the operator-visible string is the CR identity.
+//
+// Wave 7A.3: paired with the runtime-suffixed identity in
+// acquireLeases. A holder string with no '#' separator (legacy
+// callers that don't set RuntimeID, foreign reconcilers that
+// don't follow this convention) passes through unchanged.
+func stripRuntimeIDSuffix(holder string) string {
+	if i := strings.Index(holder, "#"); i >= 0 {
+		return holder[:i]
+	}
+	return holder
 }
 
 // familiesKey returns a value usable to look up this CR in a conflict

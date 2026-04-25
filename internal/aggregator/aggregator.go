@@ -30,10 +30,12 @@ package aggregator
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"sync"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -226,6 +228,11 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 		Leaser:                leaser,
 		Recorder:              r.Recorder,
 		SubscribeNotify:       notify,
+		// Wave 7A.3 — unique runtime identity per worker start.
+		// Two aggregator workers reconciling the same CR (manager
+		// restart, sequenced rollout) get distinct lease holders
+		// and cannot both renew the same lease.
+		RuntimeID: newWorkerRuntimeID(),
 	}
 
 	r.mu.Lock()
@@ -317,6 +324,27 @@ func specHash(dev *ciskov1.CiscoDevice, password string) string {
 		dev.Spec.TLS != nil && dev.Spec.TLS.Enabled,
 		passwordDigest(password),
 	)
+}
+
+// newWorkerRuntimeID returns a fresh hex-encoded random identifier
+// for an aggregator worker instance. Used as the RuntimeID suffix
+// in the worker's lease holder string so two workers reconciling
+// the same CR (manager restart with overlap, sequenced rollout)
+// cannot both renew the same lease. 16 bytes of crypto-rand entropy
+// is plenty — collisions across the lifetime of a fleet are
+// astronomically unlikely.
+//
+// Wave 7A.3 — paired with the per-pod POD_UID injection so both
+// topologies build process-unique lease holders.
+func newWorkerRuntimeID() string {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		// crypto/rand should never fail on supported platforms;
+		// the time-based fallback is just defence in depth so a
+		// degenerate environment doesn't produce duplicate IDs.
+		return fmt.Sprintf("worker-%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(b[:])
 }
 
 // passwordDigest returns a stable, non-reversible identifier of a

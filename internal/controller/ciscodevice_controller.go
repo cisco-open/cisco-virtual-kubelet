@@ -350,6 +350,19 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
 			},
 		})
+		// Wave 7A.3 — inject the pod's UID so the in-pod
+		// ConfigReconciler can build a runtime-suffixed lease
+		// holder identity ("<ns>/<name>#<podUID>"). Two pods
+		// running the same CR identity during a Deployment
+		// rollout (e.g. credential-secret rotation, image bump)
+		// then have distinct lease holders and cannot both
+		// renew the same lease.
+		credEnv = append(credEnv, corev1.EnvVar{
+			Name: "POD_UID",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.uid"},
+			},
+		})
 
 		// Propagate CONFIG_LEASE_NAMESPACE from the controller's own
 		// environment so every cisco-vk pod arbitrates against the

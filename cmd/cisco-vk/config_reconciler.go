@@ -184,6 +184,15 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		}
 	}
 
+	// Wave 7A.3 — runtime-identity-suffixed lease holder. The
+	// per-pod path uses the pod UID injected by the controller via
+	// the downward API (POD_UID env var). Two pods running the
+	// same CR identity (old + new during a Deployment rollout)
+	// then have distinct lease holders and cannot both renew the
+	// same lease. Empty POD_UID falls back to the CR-only identity
+	// (preserves test/local-run behaviour).
+	runtimeID := os.Getenv("POD_UID")
+
 	// Wave 6A — bridge the notify channel into a controller-runtime
 	// event stream. The Reconciler's SetupWithManager registers a
 	// source.Channel against this; each delivered GenericEvent
@@ -206,6 +215,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		},
 		Recorder:        recorder,
 		SubscribeNotify: notify,
+		RuntimeID:       runtimeID,
 	}
 	if notify != nil {
 		// Buffer of 1 — the watcher coalesces events into "fire
