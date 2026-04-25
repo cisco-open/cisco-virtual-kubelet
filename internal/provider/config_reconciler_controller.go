@@ -17,6 +17,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
 	"go.opentelemetry.io/otel"
@@ -184,7 +185,31 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	// External-review Finding #2: without RequeueAfter, the controller-
 	// runtime path never re-enters Reconcile until something else
 	// (event, scope-object change) wakes it.
-	return reconcile.Result{RequeueAfter: driftDetectInterval(&cr)}, nil
+	//
+	// Wave 8.2: sub-TTL requeue under PhaseLeaseBlocked so the next
+	// tick has a fair chance to find the lease available. Default
+	// driftDetectInterval (5m) is far longer than the 30s lease TTL;
+	// using it for a lease-blocked CR would freeze the reconciler
+	// for minutes while the contention window is seconds long.
+	return reconcile.Result{RequeueAfter: requeueIntervalFor(&cr)}, nil
+}
+
+// requeueIntervalFor returns the controller-runtime RequeueAfter
+// to use after a Reconcile call. Default is the spec'd
+// driftDetectInterval; lease-blocked ticks use a sub-TTL value so
+// the next tick re-checks while contention is still likely
+// resolving. Bounded above 1s so the reconciler never busy-loops.
+func requeueIntervalFor(cr *configv1alpha1.IOSXEConfig) time.Duration {
+	full := driftDetectInterval(cr)
+	if cr.Status.Phase == engine.PhaseLeaseBlocked {
+		// Half the default lease TTL (30s) → 15s. Adjust if the
+		// engine's FamilyLeaser default TTL changes.
+		const leaseBlockedRequeue = 15 * time.Second
+		if leaseBlockedRequeue < full {
+			return leaseBlockedRequeue
+		}
+	}
+	return full
 }
 
 // SetupWithManager wires the reconciler into mgr with device-scoped

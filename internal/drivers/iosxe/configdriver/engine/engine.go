@@ -54,6 +54,21 @@ const (
 	PhaseDrifted    = "Drifted"
 	PhaseFailed     = "Failed"
 	PhasePaused     = "Paused"
+	// PhaseLeaseBlocked is the transient state when one or more
+	// requested families is currently leased by another reconciler
+	// (a different IOSXEConfig CR claiming the same family, or the
+	// other side of a Wave 7A.3 runtime-suffixed-identity rollout
+	// overlap). The engine did NOT touch the device on this tick;
+	// the next tick should requeue at sub-TTL cadence so the
+	// blocking holder has a chance to release/expire.
+	//
+	// Wave 8.2 (external-review-wave7-residuals Finding #2). The
+	// previous behaviour routed lease conflicts through the engine
+	// as PhaseFailed (all-blocked: empty ManagedFamilies trips
+	// validate()) or PhaseInSync (partial-block: the engine reports
+	// the subset it owned as in-sync, masking the missed families).
+	// Both lied to operators about what happened on the device.
+	PhaseLeaseBlocked = "LeaseBlocked"
 )
 
 // Engine reconciles one ResolvedIntent against one device. It owns the
@@ -121,6 +136,20 @@ type Result struct {
 	// failed. The apply itself is already committed by then; the
 	// outer reconciler treats this as a non-fatal warning.
 	SaveStartupErr error
+
+	// DeviceTouched is true when the engine's reconcileFamily loop
+	// actually called Fetch / Diff / Apply on the device for at
+	// least one family. Reconciler.recordResult uses this to decide
+	// whether to bump status.lastDeviceCheck — Wave 1B's
+	// "device freshness" timestamp.
+	//
+	// Wave 8.2 (external-review-wave7-residuals Finding #2). Pre-fix
+	// recordResult unconditionally bumped LastDeviceCheck on every
+	// reconcile call, even when every family was lease-blocked and
+	// no device-side work happened. That stale freshness timestamp
+	// then short-circuited subsequent ticks via Wave 1B's
+	// dueForDriftCheck logic, hiding the missed reconciles.
+	DeviceTouched bool
 }
 
 // FamilyStatus is the per-family outcome of a tick.
@@ -244,6 +273,14 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 		defer func() { e.applyTransport = nil }()
 	}
 
+	// Wave 8.2: any iteration of the family loop means the engine
+	// at least attempted Fetch on the device. Set DeviceTouched
+	// here (before the per-family work) so even a Fetch error
+	// counts as "we contacted the device" — that's the contract
+	// LastDeviceCheck records.
+	if len(res.ManagedFamilies) > 0 {
+		result.DeviceTouched = true
+	}
 	for _, family := range res.ManagedFamilies {
 		fs := e.reconcileFamily(ctx, family, res)
 		result.FamilyStatuses = append(result.FamilyStatuses, fs)

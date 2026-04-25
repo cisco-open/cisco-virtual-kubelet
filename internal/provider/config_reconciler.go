@@ -398,7 +398,42 @@ func (r *ConfigReconciler) reconcileOne(
 	// recorded as Conflict in the per-family status so the operator
 	// sees the contention immediately.
 	leasedIntent, leaseConflicts := r.acquireLeases(ctx, resolved, cr)
-	result := eng.Reconcile(ctx, leasedIntent)
+
+	// Wave 8.2 (external-review-wave7-residuals Finding #2): lease
+	// conflicts are a first-class arbitration state, not an engine
+	// outcome. Three branches:
+	//
+	//   - All families blocked → SHORT-CIRCUIT before the engine.
+	//     Empty leasedIntent.ManagedFamilies would otherwise trip
+	//     engine.validate's "empty" check and produce a misleading
+	//     Phase=Failed, plus recordResult would bump
+	//     LastDeviceCheck even though no device-side work happened.
+	//   - Some families blocked, others reconciled → run engine on
+	//     the owned subset. After the engine returns, downgrade
+	//     Phase from InSync to LeaseBlocked if any family was
+	//     skipped — InSync would mask the missed families.
+	//   - No families blocked → existing behaviour.
+	allBlocked := len(leaseConflicts) > 0 && len(leasedIntent.ManagedFamilies) == 0
+	var result engine.Result
+	if allBlocked {
+		// Synthesise a result without calling the engine. Per-family
+		// Skipped statuses are added below; DeviceTouched stays
+		// false so recordResult doesn't bump LastDeviceCheck.
+		result = engine.Result{
+			Phase:       engine.PhaseLeaseBlocked,
+			YangVersion: leasedIntent.TargetYangVersion,
+		}
+	} else {
+		result = eng.Reconcile(ctx, leasedIntent)
+		// Partial-block downgrade: any lease conflict means the CR
+		// is not fully reconciled. PhaseInSync would lie. Keep an
+		// engine-reported Failed/Drifted phase as-is — those carry
+		// their own meaning. PhaseLeaseBlocked overrides only the
+		// otherwise-clean case.
+		if len(leaseConflicts) > 0 && result.Phase == engine.PhaseInSync {
+			result.Phase = engine.PhaseLeaseBlocked
+		}
+	}
 	for family, holder := range leaseConflicts {
 		result.FamilyStatuses = append(result.FamilyStatuses, engine.FamilyStatus{
 			Name:    family,
@@ -515,14 +550,18 @@ func (r *ConfigReconciler) recordResult(
 	updated := cr.DeepCopy()
 	updated.Status.Phase = result.Phase
 	updated.Status.ObservedGeneration = cr.Generation
-	// LastDeviceCheck is bumped on every recordResult call because by
-	// definition we only get here after the engine ran (i.e., after
-	// Fetch+Diff+optionally Apply happened against the device). This
-	// is the "device freshness" timestamp distinct from
-	// LastAppliedTime — the latter only updates on a successful apply,
-	// the former on every reconcile that touched the device.
+	// LastDeviceCheck records "device freshness" — the timestamp
+	// of the last reconcile that actually touched the device.
+	// Wave 8.2: gated on result.DeviceTouched so a lease-blocked
+	// tick (no Fetch/Diff/Apply ran) does NOT bump the timestamp.
+	// Pre-fix, recordResult unconditionally bumped this; the stale
+	// freshness timestamp then short-circuited subsequent ticks via
+	// Wave 1B's dueForDriftCheck logic, hiding the missed
+	// reconciles.
 	deviceCheck := metav1.Now()
-	updated.Status.LastDeviceCheck = &deviceCheck
+	if result.DeviceTouched {
+		updated.Status.LastDeviceCheck = &deviceCheck
+	}
 	if result.Phase == engine.PhaseInSync {
 		updated.Status.LastAppliedHash = hash
 		updated.Status.LastAppliedTime = &deviceCheck
