@@ -59,6 +59,12 @@ rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # CiscoDevice CR (cisco.vk/v1alpha1) — the cisco-vk run loop
+  # watches CiscoDevice cluster-wide so the in-pod controller-runtime
+  # cache can resolve the device-spec lookup.
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices"]
+    verbs: ["get", "list", "watch"]
   # IOSXEConfig CRDs (config.cisco.vk/v1alpha1) — the per-device
   # ConfigReconciler running inside cisco-vk run reads and updates
   # status on CRs targeting its device.
@@ -72,6 +78,16 @@ rules:
     verbs: ["get", "list", "watch"]
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigs/status"]
+    verbs: ["get", "update", "patch"]
+  # IOSXEConfigApplyLog CRD — Phase 7 audit log; the reconciler appends
+  # ApplyLogEntry objects after every apply pass and reads back during
+  # the time-travel replay path. List/watch needed for the in-pod
+  # informer cache.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigapplylogs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigapplylogs/status"]
     verbs: ["get", "update", "patch"]
 ---
 # ClusterRoleBinding for the VK service account.
