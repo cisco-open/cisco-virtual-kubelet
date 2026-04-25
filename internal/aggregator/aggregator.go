@@ -74,6 +74,26 @@ type deviceWorker struct {
 
 // +kubebuilder:rbac:groups=cisco.vk,resources=ciscodevices,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
+// Wave 1D — when running in aggregator mode, the controller's own
+// service account drives the in-process per-device ConfigReconciler.
+// That reconciler reads the scope-resolution chain (defaults, device
+// groups, interface groups, templates), reads/writes per-device
+// IOSXEConfig CRs and their status subresource, appends to apply-log
+// CRs, and acquires per-(device, family) coordination.k8s.io leases.
+// All of these were previously absent from the controller ClusterRole
+// (only the VK pod's ClusterRole carried them), so enabling the
+// aggregator caused permission failures on realistic CR shapes.
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigdefaults,verbs=get;list;watch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxedevicegroupconfigs,verbs=get;list;watch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeinterfacegroupconfigs,verbs=get;list;watch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxetemplates,verbs=get;list;watch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigapplylogs,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigapplylogs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 func (r *AggregatedReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	r.rootCtx = ctx

@@ -87,6 +87,27 @@ rules:
 - apiGroups:
   - config.cisco.vk
   resources:
+  - iosxeconfigapplylogs
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - config.cisco.vk
+  resources:
+  - iosxeconfigapplylogs/status
+  - iosxeconfigbundles/status
+  - iosxeconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - config.cisco.vk
+  resources:
   - iosxeconfigbundles
   verbs:
   - get
@@ -97,11 +118,14 @@ rules:
 - apiGroups:
   - config.cisco.vk
   resources:
-  - iosxeconfigbundles/status
+  - iosxeconfigdefaults
+  - iosxedevicegroupconfigs
+  - iosxeinterfacegroupconfigs
+  - iosxetemplates
   verbs:
   - get
-  - patch
-  - update
+  - list
+  - watch
 - apiGroups:
   - config.cisco.vk
   resources:
@@ -115,11 +139,17 @@ rules:
   - update
   - watch
 - apiGroups:
-  - config.cisco.vk
+  - coordination.k8s.io
   resources:
-  - iosxeconfigs/status
+  - leases
   verbs:
+  - create
+  - delete
   - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:

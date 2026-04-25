@@ -66,16 +66,24 @@ rules:
     resources: ["ciscodevices"]
     verbs: ["get", "list", "watch"]
   # IOSXEConfig CRDs (config.cisco.vk/v1alpha1) — the per-device
-  # ConfigReconciler running inside cisco-vk run reads and updates
-  # status on CRs targeting its device.
+  # ConfigReconciler running inside cisco-vk run reads scope objects
+  # (defaults, device groups, interface groups, templates) and reads
+  # the IOSXEConfig CRs targeting its device.
   - apiGroups: ["config.cisco.vk"]
     resources:
-      - iosxeconfigs
       - iosxeconfigdefaults
       - iosxedevicegroupconfigs
       - iosxeinterfacegroupconfigs
       - iosxetemplates
     verbs: ["get", "list", "watch"]
+  # IOSXEConfig itself needs patch/update in addition to read/watch:
+  # after a successful Phase-7 replay, recordResult clears the
+  # config.cisco.vk/replay-from-log annotation by patching the parent
+  # CR. Without this verb the annotation stays put and the replay
+  # repeats on every tick. (Wave 2A — external-review Finding #5.)
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigs"]
+    verbs: ["get", "list", "watch", "patch", "update"]
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigs/status"]
     verbs: ["get", "update", "patch"]
