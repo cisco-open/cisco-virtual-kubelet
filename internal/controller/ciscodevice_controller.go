@@ -30,6 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/yaml"
 
@@ -293,12 +294,28 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			MatchLabels: labels,
 		}
 
+		// Wave 6B (external-review-followup Finding #5): record
+		// the referenced credential Secret's resourceVersion as a
+		// pod-template annotation. Kubernetes does NOT restart pods
+		// when a Secret-backed env var rotates (env values are
+		// resolved at pod start), so without an explicit rollout
+		// signal a credentialSecretRef rotation has no effect on
+		// running pods until something else triggers a restart.
+		// The annotation flips on every Secret update; controller-
+		// runtime rolls the Deployment naturally because the pod
+		// template has changed.
+		credAnno := r.lookupCredentialResourceVersion(ctx, &device)
+
+		annos := map[string]string{
+			// Force a rollout whenever the ConfigMap content changes.
+			"cisco.vk/config-hash": shortHash(configData),
+		}
+		if credAnno != "" {
+			annos["cisco.vk/credential-resource-version"] = credAnno
+		}
 		deploy.Spec.Template.ObjectMeta = metav1.ObjectMeta{
-			Labels: labels,
-			Annotations: map[string]string{
-				// Force a rollout whenever the ConfigMap content changes.
-				"cisco.vk/config-hash": shortHash(configData),
-			},
+			Labels:      labels,
+			Annotations: annos,
 		}
 
 		// Build credential env vars. When a Secret reference is provided,
@@ -728,7 +745,77 @@ func (r *CiscoDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&configv1alpha1.IOSXEConfig{}).
+		// Wave 6B: watch credential Secrets so a rotation of
+		// CiscoDevice.spec.credentialSecretRef triggers a
+		// reconcile that rolls the per-device pod via a fresh
+		// pod-template annotation. Without this watch, K8s
+		// silently keeps the pod running with the old credential
+		// because env-var Secret values are resolved at pod start
+		// — they don't auto-update on Secret rotation.
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.mapSecretToCiscoDevices)).
 		Complete(r)
+}
+
+// mapSecretToCiscoDevices fans a Secret event out to every
+// CiscoDevice in the same namespace whose
+// spec.credentialSecretRef.name matches the Secret's name. Same
+// pattern as the IOSXEConfig controller's secretRefs mapping but
+// scoped to credential Secrets only.
+func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj client.Object) []ctrl.Request {
+	secret, ok := obj.(*corev1.Secret)
+	if !ok {
+		return nil
+	}
+	var devices ciskov1.CiscoDeviceList
+	if err := r.List(ctx, &devices, client.InNamespace(secret.Namespace)); err != nil {
+		log.FromContext(ctx).Error(err, "list CiscoDevices for credential-secret mapping",
+			"secret", secret.Name, "namespace", secret.Namespace)
+		return nil
+	}
+	out := make([]ctrl.Request, 0)
+	for i := range devices.Items {
+		dev := &devices.Items[i]
+		if dev.Spec.CredentialSecretRef == nil {
+			continue
+		}
+		if dev.Spec.CredentialSecretRef.Name != secret.Name {
+			continue
+		}
+		out = append(out, ctrl.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: dev.Namespace,
+				Name:      dev.Name,
+			},
+		})
+	}
+	return out
+}
+
+// lookupCredentialResourceVersion returns the resourceVersion of
+// the Secret named by device.Spec.CredentialSecretRef. Used as a
+// pod-template annotation value so a Secret rotation rolls the
+// Deployment naturally — the annotation changes ⇒ pod template
+// changes ⇒ ReplicaSet rolls. Returns "" when no Secret reference
+// is set or the Secret cannot be read; in that case the
+// annotation is omitted (no rotation signal needed).
+//
+// Reading the Secret here is safe under the existing chart RBAC:
+// the controller already has secrets get/list/watch via the
+// chart's controller ClusterRole. We never read the Secret's
+// data — only its metadata.resourceVersion — so no credential
+// material is touched by the controller itself.
+func (r *CiscoDeviceReconciler) lookupCredentialResourceVersion(ctx context.Context, device *ciskov1.CiscoDevice) string {
+	if device.Spec.CredentialSecretRef == nil {
+		return ""
+	}
+	var sec corev1.Secret
+	if err := r.Get(ctx, types.NamespacedName{
+		Namespace: device.Namespace,
+		Name:      device.Spec.CredentialSecretRef.Name,
+	}, &sec); err != nil {
+		return ""
+	}
+	return sec.ResourceVersion
 }
 
 // ──────────────────────────────────────────────────────────────────────────

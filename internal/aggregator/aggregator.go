@@ -30,6 +30,8 @@ package aggregator
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"sync"
 
@@ -40,6 +42,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
@@ -102,7 +105,46 @@ func (r *AggregatedReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ciskov1.CiscoDevice{}).
+		// Wave 6B (external-review-followup Finding #5): watch
+		// credential Secrets so a rotation re-enters Reconcile,
+		// resolvePassword reads the new value, specHash changes
+		// (passwordDigest now includes the SHA-256 of the
+		// password), and the worker restarts.
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.mapSecretToCiscoDevices)).
 		Complete(r)
+}
+
+// mapSecretToCiscoDevices fans a credential-Secret event out to
+// every CiscoDevice in the same namespace whose
+// spec.credentialSecretRef.name matches. The Reconcile callback
+// then re-resolves the password and (if it changed) restarts the
+// affected worker.
+func (r *AggregatedReconciler) mapSecretToCiscoDevices(ctx context.Context, obj client.Object) []ctrl.Request {
+	secret, ok := obj.(*corev1.Secret)
+	if !ok {
+		return nil
+	}
+	var devices ciskov1.CiscoDeviceList
+	if err := r.List(ctx, &devices, client.InNamespace(secret.Namespace)); err != nil {
+		return nil
+	}
+	out := make([]ctrl.Request, 0)
+	for i := range devices.Items {
+		dev := &devices.Items[i]
+		if dev.Spec.CredentialSecretRef == nil {
+			continue
+		}
+		if dev.Spec.CredentialSecretRef.Name != secret.Name {
+			continue
+		}
+		out = append(out, ctrl.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: dev.Namespace,
+				Name:      dev.Name,
+			},
+		})
+	}
+	return out
 }
 
 func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -255,16 +297,38 @@ func devKey(dev *ciskov1.CiscoDevice) string {
 // stable string. The aggregator restarts a worker only when this
 // changes; non-transport edits (labels, taints, log level) pass
 // through to the running ConfigReconciler unchanged.
+//
+// Wave 6B (external-review-followup Finding #5): the password
+// itself is folded into the hash via a SHA-256 digest so a
+// credentialSecretRef rotation actually changes the hash and
+// triggers a worker restart. Pre-fix the hash recorded only
+// "password is non-empty" (a bool), so a password change went
+// undetected and the worker kept using the stale credential
+// indefinitely. Hashing rather than embedding the raw password
+// keeps the secret out of the in-memory deviceWorker struct's
+// observable state (tests, logs, debug dumps).
 func specHash(dev *ciskov1.CiscoDevice, password string) string {
-	return fmt.Sprintf("%s|%s|%s|%d|%s|%t|%v",
+	return fmt.Sprintf("%s|%s|%s|%d|%s|%t|%s",
 		dev.Spec.Driver,
 		dev.Spec.Address,
 		dev.Spec.Username,
 		dev.Spec.Port,
 		dev.Spec.Transport,
 		dev.Spec.TLS != nil && dev.Spec.TLS.Enabled,
-		password != "",
+		passwordDigest(password),
 	)
+}
+
+// passwordDigest returns a stable, non-reversible identifier of a
+// password value. Used by specHash so credential rotation produces
+// a different hash without persisting the cleartext anywhere on
+// the aggregator's state.
+func passwordDigest(password string) string {
+	if password == "" {
+		return "empty"
+	}
+	sum := sha256.Sum256([]byte(password))
+	return hex.EncodeToString(sum[:])
 }
 
 // startSubscribeWatcher wires the gNMI Subscribe drift watcher
