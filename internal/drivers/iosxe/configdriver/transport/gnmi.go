@@ -103,9 +103,159 @@ func (t *gnmiTransport) Capabilities() Capabilities {
 	return Capabilities{
 		Kind:                 KindGNMI,
 		SupportsTransactions: true,
-		SupportsSubscribe:    false, // wired separately when Subscribe lands
+		SupportsSubscribe:    true,
 		SupportsSaveStartup:  false, // gNMI has no save-config primitive
 	}
+}
+
+// Subscribe opens a STREAM-mode subscription against the device for
+// every path in paths. The returned channel closes when ctx
+// cancels, the device closes the stream, or a transport error
+// surfaces. Errors are delivered as a final SubscribeEvent with
+// Err set so the consumer can react without a separate signalling
+// channel.
+//
+// Mode maps directly to gNMI's SubscriptionMode. The caller picks
+// ON_CHANGE for drift detection; SAMPLE is reserved for operational
+// state monitoring.
+//
+// The buffered channel (16 entries) accommodates moderate burst
+// without coupling consumer latency to the device. A slow consumer
+// that overflows the buffer is the consumer's bug — the watcher
+// drops events on the floor and bumps a metric so it's visible
+// rather than silently stalling the device-side stream.
+func (t *gnmiTransport) Subscribe(ctx context.Context, paths []string, mode SubscribeMode) (<-chan SubscribeEvent, error) {
+	cli, err := t.dial(ctx)
+	if err != nil {
+		return nil, err
+	}
+	subs := make([]*gpb.Subscription, 0, len(paths))
+	for _, p := range paths {
+		gpath, err := parseGNMIPath(p)
+		if err != nil {
+			return nil, fmt.Errorf("subscribe path %q: %w", p, err)
+		}
+		subs = append(subs, &gpb.Subscription{
+			Path: gpath,
+			Mode: subscriptionMode(mode),
+		})
+	}
+
+	stream, err := cli.Subscribe(t.authCtx(ctx))
+	if err != nil {
+		return nil, fmt.Errorf("gnmi Subscribe open: %w", err)
+	}
+	if err := stream.Send(&gpb.SubscribeRequest{
+		Request: &gpb.SubscribeRequest_Subscribe{
+			Subscribe: &gpb.SubscriptionList{
+				Subscription: subs,
+				Encoding:     gpb.Encoding_JSON_IETF,
+				Mode:         gpb.SubscriptionList_STREAM,
+			},
+		},
+	}); err != nil {
+		return nil, fmt.Errorf("gnmi Subscribe send: %w", err)
+	}
+
+	out := make(chan SubscribeEvent, 16)
+	go t.pumpSubscribe(ctx, stream, out)
+	return out, nil
+}
+
+// pumpSubscribe is the goroutine that turns a gNMI stream into
+// SubscribeEvent values. Lives off the public API so tests of the
+// channel semantics can substitute their own producer.
+func (t *gnmiTransport) pumpSubscribe(
+	ctx context.Context,
+	stream gpb.GNMI_SubscribeClient,
+	out chan<- SubscribeEvent,
+) {
+	defer close(out)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		resp, err := stream.Recv()
+		if err != nil {
+			// io.EOF on a STREAM-mode subscription means the device
+			// closed cleanly — that's still a transport-level
+			// signal the consumer needs to know about so it can
+			// fall back to polling.
+			out <- SubscribeEvent{Err: fmt.Errorf("gnmi Recv: %w", err)}
+			return
+		}
+		notif := resp.GetUpdate()
+		if notif == nil {
+			continue
+		}
+		// Each notification carries up to N updates and N deletes.
+		// We flatten to one event per leaf.
+		for _, u := range notif.GetUpdate() {
+			ev := SubscribeEvent{Path: pathToString(u.Path)}
+			if v := u.GetVal(); v != nil {
+				if b := v.GetJsonIetfVal(); len(b) > 0 {
+					ev.Value = b
+				} else if b := v.GetJsonVal(); len(b) > 0 {
+					ev.Value = b
+				}
+			}
+			select {
+			case out <- ev:
+			case <-ctx.Done():
+				return
+			default:
+				// Drop on overflow — better than back-pressuring
+				// the device-side stream. A drift_event_dropped
+				// counter would live alongside the engine
+				// metrics; deferred to the consumer wiring.
+			}
+		}
+		for _, p := range notif.GetDelete() {
+			ev := SubscribeEvent{Path: pathToString(p), Delete: true}
+			select {
+			case out <- ev:
+			case <-ctx.Done():
+				return
+			default:
+			}
+		}
+	}
+}
+
+func subscriptionMode(m SubscribeMode) gpb.SubscriptionMode {
+	switch m {
+	case SubscribeOnChange:
+		return gpb.SubscriptionMode_ON_CHANGE
+	case SubscribeSample:
+		return gpb.SubscriptionMode_SAMPLE
+	default:
+		return gpb.SubscriptionMode_TARGET_DEFINED
+	}
+}
+
+// pathToString reverses parseGNMIPath enough that the consumer can
+// display a recognisable path. Module prefixes are dropped on the
+// way in, so the round-trip isn't byte-equal — this is a
+// best-effort reconstruction for logging, not for re-parsing.
+func pathToString(p *gpb.Path) string {
+	if p == nil {
+		return ""
+	}
+	var b strings.Builder
+	for _, e := range p.Elem {
+		b.WriteByte('/')
+		b.WriteString(e.Name)
+		for k, v := range e.Key {
+			b.WriteByte('[')
+			b.WriteString(k)
+			b.WriteByte('=')
+			b.WriteString(v)
+			b.WriteByte(']')
+		}
+	}
+	return b.String()
 }
 
 // dial constructs a grpc.ClientConn against the configured target.

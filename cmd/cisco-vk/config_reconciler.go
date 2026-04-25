@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -43,6 +44,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/schema"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 )
 
@@ -155,6 +157,15 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 
 	supportedYANG, defaultYANG := loadYANGReleaseTags(ctx)
 
+	// Subscribe-based drift detection (Phase 6.5): if the
+	// transport advertises SubscribeCapable (gNMI today), open a
+	// stream against the union of YANG paths every registered
+	// writer touches. The watcher pushes to a notify channel the
+	// reconciler reads alongside its periodic ticker, so a write
+	// outside CVK's apply path is detected within the coalesce
+	// window (100 ms) instead of at the next 5 s tick.
+	notify := startDriftSubscribe(ctx, t)
+
 	r := &provider.ConfigReconciler{
 		Client:                mgr.GetClient(),
 		DeviceName:            deviceName,
@@ -166,7 +177,8 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 			Client:    mgr.GetClient(),
 			Namespace: leaseNamespace,
 		},
-		Recorder: recorder,
+		Recorder:        recorder,
+		SubscribeNotify: notify,
 	}
 
 	if err := r.SetupWithManager(mgr); err != nil {
@@ -219,4 +231,54 @@ func loadYANGReleaseTags(ctx context.Context) (map[string]struct{}, string) {
 		}
 	}
 	return supported, def
+}
+
+// startDriftSubscribe wires the per-pod gNMI Subscribe-based drift
+// fast-path. Transports without SubscribeCapable return nil and
+// the reconciler stays on its periodic ticker; that's the
+// transport rollout pattern (RESTCONF + NETCONF have no Subscribe
+// today and are not expected to gain one).
+//
+// The watch path set is the union of writer YANGPaths so a write
+// to any leaf the engine cares about triggers a fast reconcile.
+// 100 ms coalesce keeps a multi-leaf SetRequest from triggering N
+// separate reconciles.
+func startDriftSubscribe(ctx context.Context, t transport.Interface) <-chan struct{} {
+	if t == nil {
+		return nil
+	}
+	if !t.Capabilities().SupportsSubscribe {
+		return nil
+	}
+	paths := unionWriterPaths()
+	if len(paths) == 0 {
+		return nil
+	}
+	notify, err := provider.StartSubscribeWatcher(ctx, t, paths, 100*time.Millisecond)
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("subscribe watcher unavailable; falling back to polling")
+		return nil
+	}
+	return notify
+}
+
+// unionWriterPaths gathers every YANG path advertised by the
+// registered writers. Sorted output keeps gRPC-side request order
+// stable across restarts.
+func unionWriterPaths() []string {
+	seen := map[string]struct{}{}
+	for _, fam := range writers.Families() {
+		w := writers.Get(fam)
+		if w == nil {
+			continue
+		}
+		for _, p := range w.YANGPaths() {
+			seen[p] = struct{}{}
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for p := range seen {
+		out = append(out, p)
+	}
+	return out
 }

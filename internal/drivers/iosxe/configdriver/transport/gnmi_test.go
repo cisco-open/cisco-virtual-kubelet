@@ -19,6 +19,7 @@ import (
 	"net"
 	"sync"
 	"testing"
+	"time"
 
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
 	"google.golang.org/grpc"
@@ -32,9 +33,10 @@ import (
 // Capabilities and Subscribe deliberately remain stubs.
 type fakeGNMIServer struct {
 	gpb.UnimplementedGNMIServer
-	mu          sync.Mutex
-	lastSet     *gpb.SetRequest
-	getResponse []byte
+	mu                     sync.Mutex
+	lastSet                *gpb.SetRequest
+	getResponse            []byte
+	subscribeNotifications []*gpb.Notification
 }
 
 func (s *fakeGNMIServer) Set(ctx context.Context, req *gpb.SetRequest) (*gpb.SetResponse, error) {
@@ -42,6 +44,28 @@ func (s *fakeGNMIServer) Set(ctx context.Context, req *gpb.SetRequest) (*gpb.Set
 	defer s.mu.Unlock()
 	s.lastSet = req
 	return &gpb.SetResponse{}, nil
+}
+
+// Subscribe is a streaming RPC; we simulate the stream by pushing
+// canned notifications onto the server-side stream and closing it.
+// The fixture is small on purpose — it covers the happy path and
+// the close path; richer behaviour belongs in dedicated tests if
+// that surface grows.
+func (s *fakeGNMIServer) Subscribe(stream gpb.GNMI_SubscribeServer) error {
+	// Read the first SubscribeRequest so we know the client is
+	// connected, then ignore its content — the test fixture
+	// drives the response side directly.
+	if _, err := stream.Recv(); err != nil {
+		return err
+	}
+	for _, n := range s.subscribeNotifications {
+		if err := stream.Send(&gpb.SubscribeResponse{
+			Response: &gpb.SubscribeResponse_Update{Update: n},
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *fakeGNMIServer) Get(ctx context.Context, req *gpb.GetRequest) (*gpb.GetResponse, error) {
@@ -205,6 +229,58 @@ func TestGNMICLIVerbRejected(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error for CLI verb on gNMI transport")
+	}
+}
+
+func TestGNMISubscribeFlattensNotificationsToEvents(t *testing.T) {
+	// Two updates and one delete in one notification must surface
+	// as three SubscribeEvent values in stream order. JSON_IETF
+	// payloads round-trip verbatim.
+	fake, conn := newFakeGNMI(t)
+	fake.subscribeNotifications = []*gpb.Notification{{
+		Update: []*gpb.Update{
+			{Path: &gpb.Path{Elem: []*gpb.PathElem{{Name: "vlan-list"}}},
+				Val: &gpb.TypedValue{Value: &gpb.TypedValue_JsonIetfVal{JsonIetfVal: []byte(`{"id":10}`)}}},
+			{Path: &gpb.Path{Elem: []*gpb.PathElem{{Name: "vlan-list"}}},
+				Val: &gpb.TypedValue{Value: &gpb.TypedValue_JsonIetfVal{JsonIetfVal: []byte(`{"id":20}`)}}},
+		},
+		Delete: []*gpb.Path{{Elem: []*gpb.PathElem{{Name: "vlan-list"}}}},
+	}}
+	cli, _ := NewGNMI(GNMIConfig{Conn: conn})
+	subscriber, ok := cli.(SubscribeCapable)
+	if !ok {
+		t.Fatal("gnmi transport does not advertise SubscribeCapable")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	stream, err := subscriber.Subscribe(ctx, []string{"/Cisco-IOS-XE-native:native/vlan/Cisco-IOS-XE-vlan:vlan-list"}, SubscribeOnChange)
+	if err != nil {
+		t.Fatalf("Subscribe: %v", err)
+	}
+	got := []SubscribeEvent{}
+	deadline := time.After(2 * time.Second)
+	for {
+		select {
+		case ev, ok := <-stream:
+			if !ok {
+				goto done
+			}
+			got = append(got, ev)
+		case <-deadline:
+			goto done
+		}
+	}
+done:
+	// Three real events plus one terminal Err event when the
+	// server closes the stream.
+	if len(got) < 3 {
+		t.Fatalf("got %d events, want at least 3: %#v", len(got), got)
+	}
+	if got[0].Delete || got[1].Delete {
+		t.Errorf("update events misclassified as delete: %#v", got[:2])
+	}
+	if !got[2].Delete {
+		t.Errorf("delete event not flagged: %#v", got[2])
 	}
 }
 

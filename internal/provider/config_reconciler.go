@@ -87,6 +87,14 @@ type ConfigReconciler struct {
 	// tests and in-process reconcilers that do not have an event
 	// broadcaster continue to work.
 	Recorder record.EventRecorder
+
+	// SubscribeNotify is an optional fast-path drift signal. When the
+	// transport implements transport.SubscribeCapable (gNMI today),
+	// the device-side change watcher writes to this channel; the
+	// reconciler picks it up alongside the periodic ticker so an
+	// out-of-band write is detected within milliseconds rather than
+	// at the next tick. Nil means polling-only behaviour.
+	SubscribeNotify <-chan struct{}
 }
 
 // Run blocks until ctx is cancelled. It returns ctx.Err() on exit.
@@ -114,12 +122,19 @@ func (r *ConfigReconciler) Run(ctx context.Context) error {
 	// Run one pass immediately so status appears before the first tick.
 	r.reconcileAll(ctx, logger)
 
+	// Subscribe-driven fast path. Pulling the channel into a local
+	// nil-able value lets the select compile cleanly even when no
+	// watcher is configured.
+	notify := r.SubscribeNotify
 	for {
 		select {
 		case <-ctx.Done():
 			logger.Info("stopping IOSXEConfig reconcile loop")
 			return ctx.Err()
 		case <-ticker.C:
+			r.reconcileAll(ctx, logger)
+		case <-notify:
+			logger.Debug("subscribe-notify fired; running off-cycle reconcile")
 			r.reconcileAll(ctx, logger)
 		}
 	}

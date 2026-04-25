@@ -94,6 +94,53 @@ const (
 	VerbCLI Verb = "CLI"
 )
 
+// SubscribeMode picks the cadence the device reports updates at.
+// gNMI maps these directly to its SAMPLE / ON_CHANGE submodes;
+// other protocols translate at the adapter layer (NETCONF YANG-Push
+// is a future Phase-6.5 add).
+type SubscribeMode string
+
+const (
+	// SubscribeOnChange asks the device to emit one notification per
+	// path mutation. The natural choice for drift detection: a write
+	// outside CVK's apply path triggers an event the engine can use
+	// to fast-path a reconcile.
+	SubscribeOnChange SubscribeMode = "ON_CHANGE"
+
+	// SubscribeSample asks the device to emit periodic snapshots of
+	// the path value, regardless of whether it changed. Useful when
+	// the underlying YANG element doesn't support change notifications
+	// (operational state, counters); rarely the right pick for drift.
+	SubscribeSample SubscribeMode = "SAMPLE"
+)
+
+// SubscribeEvent is one notification from the device about a path
+// the consumer is watching. Path and Value are the wire shape of
+// gNMI Update; Delete is true when the device reported the path
+// being removed. Err carries any stream-level transport failure —
+// the consumer treats a non-nil Err as the end of the stream and
+// must fall back to polling.
+type SubscribeEvent struct {
+	Path   string
+	Value  []byte // JSON_IETF for gNMI; protocol-specific bytes otherwise
+	Delete bool
+	Err    error
+}
+
+// SubscribeCapable is the optional interface a transport
+// implements when it can stream change notifications. The engine
+// consults this from a separate drift-watcher goroutine; transports
+// that don't implement it stay on the existing periodic
+// Fetch-diff loop. Mirrors the PruneCapable pattern.
+type SubscribeCapable interface {
+	// Subscribe opens a stream of SubscribeEvent values for paths
+	// and mode. The returned channel is closed when ctx cancels or
+	// the device-side stream ends. Implementations buffer modestly
+	// (16 entries today) so a slow consumer doesn't propagate
+	// back-pressure to the device.
+	Subscribe(ctx context.Context, paths []string, mode SubscribeMode) (<-chan SubscribeEvent, error)
+}
+
 // TxHandle is an opaque per-transaction value returned by
 // StartTransaction. Transports that do not support transactions return
 // a zero-valued handle.
