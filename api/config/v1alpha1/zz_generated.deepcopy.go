@@ -588,6 +588,10 @@ func (in *IOSXEConfigStatus) DeepCopyInto(out *IOSXEConfigStatus) {
 		in, out := &in.LastAppliedTime, &out.LastAppliedTime
 		*out = (*in).DeepCopy()
 	}
+	if in.LastDeviceCheck != nil {
+		in, out := &in.LastDeviceCheck, &out.LastDeviceCheck
+		*out = (*in).DeepCopy()
+	}
 	if in.FamilyStatus != nil {
 		in, out := &in.FamilyStatus, &out.FamilyStatus
 		*out = make([]FamilyStatus, len(*in))

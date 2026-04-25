@@ -181,6 +181,15 @@ type IOSXEConfigStatus struct {
 	// +optional
 	LastAppliedTime *metav1.Time `json:"lastAppliedTime,omitempty"`
 
+	// LastDeviceCheck records the most recent reconcile tick that
+	// actually fetched device state and ran the diff (i.e., the
+	// hash short-circuit was bypassed). Used to honour
+	// spec.driftDetectInterval — the next reconcile fetches when
+	// LastDeviceCheck + interval has elapsed, even if intent and
+	// generation are unchanged.
+	// +optional
+	LastDeviceCheck *metav1.Time `json:"lastDeviceCheck,omitempty"`
+
 	// SourceYangVersion is the YANG release the driver used to translate
 	// the intent on the last successful apply.
 	// +optional

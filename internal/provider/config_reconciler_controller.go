@@ -141,7 +141,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		attribute.Int("cisco.vk.managed_families.count", len(cr.Spec.ManagedFamilies)),
 		attribute.String("cisco.vk.drift_policy", string(cr.Spec.DriftPolicy)),
 	)
-	if err := r.reconcileOne(ctx, vkLogger, resolver, eng, &cr, conflicts); err != nil {
+	if err := r.reconcileOne(ctx, vkLogger, resolver, eng, &cr, conflicts, triggerEvent); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "reconcileOne")
 		span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "error"))
@@ -156,7 +156,13 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		attribute.String("cisco.vk.iosxeconfig.phase", cr.Status.Phase),
 		attribute.Int("cisco.vk.drift.count", len(cr.Status.Drift)),
 	)
-	return reconcile.Result{}, nil
+	// Steady-state drift detection: requeue at the spec'd interval so
+	// even an InSync CR is re-checked against the device. controller-
+	// runtime's existing on-error backoff still applies on top.
+	// External-review Finding #2: without RequeueAfter, the controller-
+	// runtime path never re-enters Reconcile until something else
+	// (event, scope-object change) wakes it.
+	return reconcile.Result{RequeueAfter: driftDetectInterval(&cr)}, nil
 }
 
 // SetupWithManager wires the reconciler into mgr with device-scoped

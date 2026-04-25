@@ -422,6 +422,16 @@ spec:
                 description: LastAppliedTime records the most recent successful apply.
                 format: date-time
                 type: string
+              lastDeviceCheck:
+                description: |-
+                  LastDeviceCheck records the most recent reconcile tick that
+                  actually fetched device state and ran the diff (i.e., the
+                  hash short-circuit was bypassed). Used to honour
+                  spec.driftDetectInterval — the next reconcile fetches when
+                  LastDeviceCheck + interval has elapsed, even if intent and
+                  generation are unchanged.
+                format: date-time
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the .metadata.generation the driver
                   last acted on.

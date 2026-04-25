@@ -121,7 +121,7 @@ func (r *ConfigReconciler) Run(ctx context.Context) error {
 	defer ticker.Stop()
 
 	// Run one pass immediately so status appears before the first tick.
-	r.reconcileAll(ctx, logger)
+	r.reconcileAll(ctx, logger, triggerPoll)
 
 	// Subscribe-driven fast path. Pulling the channel into a local
 	// nil-able value lets the select compile cleanly even when no
@@ -133,18 +133,20 @@ func (r *ConfigReconciler) Run(ctx context.Context) error {
 			logger.Info("stopping IOSXEConfig reconcile loop")
 			return ctx.Err()
 		case <-ticker.C:
-			r.reconcileAll(ctx, logger)
+			r.reconcileAll(ctx, logger, triggerPoll)
 		case <-notify:
 			logger.Debug("subscribe-notify fired; running off-cycle reconcile")
-			r.reconcileAll(ctx, logger)
+			r.reconcileAll(ctx, logger, triggerSubscribe)
 		}
 	}
 }
 
 // reconcileAll lists every IOSXEConfig in the cluster, filters to this
 // device, reports family-overlap conflicts on status, and dispatches
-// each matching CR through the resolver + engine.
-func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger) {
+// each matching CR through the resolver + engine. The trigger is
+// forwarded to reconcileOne so a subscribe-driven tick bypasses the
+// hash short-circuit; a periodic tick respects it.
+func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, trigger reconcileTrigger) {
 	var list configv1alpha1.IOSXEConfigList
 	if err := r.Client.List(ctx, &list); err != nil {
 		logger.WithError(err).Warn("list IOSXEConfig failed; skipping tick")
@@ -172,13 +174,68 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger) 
 	eng := &engine.Engine{Transport: r.Transport, Lookup: lookup}
 
 	for _, cr := range forDevice {
-		if err := r.reconcileOne(ctx, logger, resolver, eng, cr, conflicts); err != nil {
+		if err := r.reconcileOne(ctx, logger, resolver, eng, cr, conflicts, trigger); err != nil {
 			logger.WithError(err).
 				WithField("name", cr.Name).
 				WithField("namespace", cr.Namespace).
 				Warn("reconcile IOSXEConfig failed")
 		}
 	}
+}
+
+// reconcileTrigger conveys to reconcileOne why this tick is running:
+// a normal periodic poll, a subscribe-driven fast-path notification, or
+// a controller-runtime CR event. The trigger participates in the hash
+// short-circuit decision — a subscribe trigger always bypasses the
+// short-circuit because the device just told us something changed.
+type reconcileTrigger uint8
+
+const (
+	triggerEvent     reconcileTrigger = iota // CR Create/Update/Delete or scope-object event
+	triggerPoll                              // periodic ticker (Run() polling path)
+	triggerSubscribe                         // gNMI Subscribe / equivalent fast-path
+)
+
+// minDriftDetectInterval is the floor for spec.driftDetectInterval. A
+// CR that asks for less is clamped silently — we don't want a
+// misconfigured CR to hammer the device every second. A 30s floor is
+// short enough for any realistic drift-correction SLO and long enough
+// that the device's RESTCONF/NETCONF stack is comfortable.
+const minDriftDetectInterval = 30 * time.Second
+
+// defaultDriftDetectInterval is the fallback when spec.driftDetectInterval
+// is empty or unparseable. Matches the kubebuilder default in the CRD.
+const defaultDriftDetectInterval = 5 * time.Minute
+
+// driftDetectInterval parses the CR's spec.driftDetectInterval into a
+// Go duration, clamping below the floor and falling back to the
+// default on parse error. Centralised so the reconciler and the
+// controller-runtime requeue path agree on the interval for one CR.
+func driftDetectInterval(cr *configv1alpha1.IOSXEConfig) time.Duration {
+	if cr.Spec.DriftDetectInterval == "" {
+		return defaultDriftDetectInterval
+	}
+	d, err := time.ParseDuration(cr.Spec.DriftDetectInterval)
+	if err != nil {
+		return defaultDriftDetectInterval
+	}
+	if d < minDriftDetectInterval {
+		return minDriftDetectInterval
+	}
+	return d
+}
+
+// dueForDriftCheck reports whether the CR's status.lastDeviceCheck is
+// older than spec.driftDetectInterval, which means the next reconcile
+// must bypass the hash short-circuit and actually fetch from the
+// device. A nil LastDeviceCheck (never reconciled, or migration from
+// a pre-LastDeviceCheck status) returns true so the first tick after
+// upgrade always reads the device.
+func dueForDriftCheck(cr *configv1alpha1.IOSXEConfig) bool {
+	if cr.Status.LastDeviceCheck == nil {
+		return true
+	}
+	return time.Since(cr.Status.LastDeviceCheck.Time) >= driftDetectInterval(cr)
 }
 
 // reconcileOne executes one CR's tick: resolve intent → run engine →
@@ -191,6 +248,7 @@ func (r *ConfigReconciler) reconcileOne(
 	eng *engine.Engine,
 	cr *configv1alpha1.IOSXEConfig,
 	conflicts map[string][]string,
+	trigger reconcileTrigger,
 ) error {
 	resolved, err := resolver.Resolve(ctx, cr)
 	if err != nil {
@@ -221,13 +279,23 @@ func (r *ConfigReconciler) reconcileOne(
 	if err != nil {
 		return r.recordFailure(ctx, cr, fmt.Sprintf("hash: %v", err))
 	}
+	// The hash short-circuit fires only when ALL of these hold:
+	//   - the operator did NOT request a replay,
+	//   - generation + hash + InSync match (intent unchanged), AND
+	//   - we are NOT due for a periodic drift check, AND
+	//   - this tick was not triggered by a subscribe notification.
+	//
+	// External-review Finding #2: the previous condition omitted the
+	// last two clauses, so steady-state drift detection was bypassed
+	// after the first clean apply and Subscribe events re-entered the
+	// short-circuit. Splitting "intent freshness" (hash) from "device
+	// freshness" (LastDeviceCheck) is the fix.
 	if !applied &&
+		trigger != triggerSubscribe &&
 		cr.Status.ObservedGeneration == cr.Generation &&
 		cr.Status.LastAppliedHash == h &&
-		cr.Status.Phase == engine.PhaseInSync {
-		// Optimise the hot path: nothing to do. Replay paths bypass
-		// this — the operator asked for the work even when the
-		// resulting intent hash matches the last-applied one.
+		cr.Status.Phase == engine.PhaseInSync &&
+		!dueForDriftCheck(cr) {
 		return nil
 	}
 
@@ -345,10 +413,17 @@ func (r *ConfigReconciler) recordResult(
 	updated := cr.DeepCopy()
 	updated.Status.Phase = result.Phase
 	updated.Status.ObservedGeneration = cr.Generation
+	// LastDeviceCheck is bumped on every recordResult call because by
+	// definition we only get here after the engine ran (i.e., after
+	// Fetch+Diff+optionally Apply happened against the device). This
+	// is the "device freshness" timestamp distinct from
+	// LastAppliedTime — the latter only updates on a successful apply,
+	// the former on every reconcile that touched the device.
+	deviceCheck := metav1.Now()
+	updated.Status.LastDeviceCheck = &deviceCheck
 	if result.Phase == engine.PhaseInSync {
-		now := metav1.Now()
 		updated.Status.LastAppliedHash = hash
-		updated.Status.LastAppliedTime = &now
+		updated.Status.LastAppliedTime = &deviceCheck
 		if result.YangVersion != "" {
 			updated.Status.SourceYangVersion = result.YangVersion
 		}
