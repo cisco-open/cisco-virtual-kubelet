@@ -759,23 +759,44 @@ func TestReconcile_ConfigPrereqsRemovedDrivesEmptyIntentThenDeletes(t *testing.T
 
 	// Simulate the per-device reconciler reaching InSync on the empty
 	// intent (in production this is the engine's apply-and-prune path).
-	// Use a plain Update — the fake client used by reconcilerFor does
-	// not register a status subresource for IOSXEConfig, so
-	// Status().Update returns NotFound. The whole-object Update is
-	// equivalent for the purposes of this test (reading status.phase
-	// in the next reconcile tick).
+	// Wave 7A.2: simulate stale "InSync" from a prior generation
+	// FIRST. The controller must NOT treat this as teardown-complete
+	// because the per-device reconciler hasn't observed the post-
+	// teardown spec yet. Pre-fix the controller deleted the CR
+	// based on phase alone; the fix requires
+	// observedGeneration == generation.
 	afterTick1.Status.Phase = "InSync"
+	afterTick1.Status.ObservedGeneration = afterTick1.Generation - 1 // stale
 	if err := r.Update(ctx, &afterTick1); err != nil {
+		t.Fatalf("update simulating stale-status convergence: %v", err)
+	}
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-d")); err != nil {
+		t.Fatalf("Reconcile (stale-status tick): %v", err)
+	}
+	var stillThere configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, ownedKey, &stillThere); err != nil {
+		t.Fatalf("owned CR was prematurely deleted on stale InSync: %v", err)
+	}
+
+	// Now simulate the per-device reconciler ACTING on the post-
+	// teardown spec: observedGeneration catches up. Use a plain
+	// Update — the fake client doesn't register a status
+	// subresource for IOSXEConfig, so Status().Update returns
+	// NotFound. The whole-object Update is equivalent for the
+	// purposes of this test (reading status.phase + status.
+	// observedGeneration in the next reconcile tick).
+	stillThere.Status.Phase = "InSync"
+	stillThere.Status.ObservedGeneration = stillThere.Generation
+	if err := r.Update(ctx, &stillThere); err != nil {
 		t.Fatalf("update simulating engine convergence: %v", err)
 	}
 
-	// Tick 2: the controller observes InSync + empty intent and
-	// deletes the CR.
+	// Tick 2: matching observedGeneration + InSync → delete.
 	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-d")); err != nil {
 		t.Fatalf("Reconcile (remove tick 2): %v", err)
 	}
 	var stale configv1alpha1.IOSXEConfig
 	if err := r.Get(ctx, ownedKey, &stale); err == nil {
-		t.Fatalf("owned CR must be deleted after teardown InSync: %+v", stale)
+		t.Fatalf("owned CR must be deleted after teardown InSync + matching observedGeneration: %+v", stale)
 	}
 }

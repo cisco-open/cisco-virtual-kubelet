@@ -700,9 +700,31 @@ func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, devi
 			return false, nil
 		}
 		// Step 2: wait for the per-device reconciler to converge.
-		// status.phase == InSync alongside our empty-source teardown
-		// shape means "every previously-claimed family has been
-		// pruned on the device".
+		// Two conditions, both required:
+		//
+		//   - status.observedGeneration == metadata.generation:
+		//     the per-device reconciler has SEEN and ACTED on the
+		//     post-teardown spec, not a prior generation. Without
+		//     this gate the previous reconcile's stale "InSync"
+		//     could pass before the teardown intent was even
+		//     observed, so the controller would delete the CR
+		//     before any prune ran on the device.
+		//   - status.phase == "InSync": the engine wrote it after
+		//     a clean apply against the empty intent.
+		//
+		// Wave 7A.2 (external-review-next-actions Finding #2). The
+		// pre-fix gate checked Phase only; Wave 4A-fu's unit test
+		// passed because it set Phase=InSync directly via r.Update
+		// — which is fine for the test, but a real per-device
+		// reconciler updates status asynchronously and Phase can
+		// be stale.
+		if existing.Status.ObservedGeneration != existing.Generation {
+			log.FromContext(ctx).V(1).Info("configPrereqs teardown: awaiting per-device reconciler to observe post-teardown generation",
+				"iosxeconfig", name,
+				"observedGeneration", existing.Status.ObservedGeneration,
+				"generation", existing.Generation)
+			return false, nil
+		}
 		if existing.Status.Phase != "InSync" {
 			log.FromContext(ctx).V(1).Info("configPrereqs teardown: awaiting InSync",
 				"iosxeconfig", name, "phase", existing.Status.Phase)
