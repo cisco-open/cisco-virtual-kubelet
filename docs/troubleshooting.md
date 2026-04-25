@@ -274,6 +274,53 @@ kubectl -n <ns> rollout restart deploy/<device-name>-vk
 
 ---
 
+## kind on Docker Desktop (macOS / Windows) — pods see RST/timeout to LAN devices
+
+On Linux, `kind` containers SNAT outbound traffic through the host's primary interface, so pods reach LAN devices automatically. On Docker Desktop the daemon runs in a Linux VM with no route to the Mac/PC's physical LAN, and pods see `connection refused` or `i/o timeout` on every LAN target — including a Cisco device that the host can reach directly.
+
+Symptoms (from inside a pod):
+
+```
+$ kubectl run probe --image=curlimages/curl -it --rm -- \
+    curl -k --connect-timeout 5 https://<device-ip>:443/
+curl: (7) Failed to connect to <device-ip> port 443
+```
+
+…even though `curl https://<device-ip>:443/` from your host succeeds.
+
+Workaround — use `scripts/dev/kind-lan-bridge.sh`:
+
+```bash
+# Bring up the bridge for one (device-ip, port) pair
+./scripts/dev/kind-lan-bridge.sh up 192.168.129.1 443
+
+# Pods can now reach 192.168.129.1:443 transparently
+kubectl run probe --image=curlimages/curl -it --rm -- \
+    curl -k -u cisco:cisco https://192.168.129.1/restconf/data/Cisco-IOS-XE-native:native/hostname
+
+# Tear down when finished
+./scripts/dev/kind-lan-bridge.sh down 192.168.129.1 443
+```
+
+What it does: starts a small Python TCP forwarder on `127.0.0.1:18443` of the Mac/PC and adds an `iptables` DNAT rule inside the kind node container that rewrites traffic destined for `192.168.129.1:443` to `host.docker.internal:18443`. Pods think they're reaching the device on the LAN; the kernel transparently retargets the connection through the host. No CRD changes; no pod-spec changes.
+
+Limitations:
+
+- **One mapping per host port.** Set `KIND_LAN_BRIDGE_HOST_PORT` to a different value if you need to bridge a second device or port simultaneously.
+- **Outbound only.** Connections initiated by the device (e.g. unsolicited gNMI Subscribe streams) are not bridged in the reverse direction. RESTCONF/NETCONF and Subscribe streams that the cisco-vk pod *initiates* work fine; this is the common case.
+- **Production not recommended.** This is a developer convenience for kind-on-macOS; CI runs kind on Linux where the workaround is unnecessary.
+
+If you also see `connection refused` from your host (not just from pods), the issue is device-side, not network-side. Verify:
+
+```
+device# show ip http server status | include status|port
+device# show running-config | include http
+```
+
+You typically need both `ip http secure-server` (to open the HTTPS listener) and `restconf` (to enable the RESTCONF data plane).
+
+---
+
 ## Where to look next
 
 - [Architecture](ARCHITECTURE.md) — internal state machines and data flow
