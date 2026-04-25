@@ -183,10 +183,27 @@ spec:
                   pruneOnRelinquish:
                     default: false
                     description: |-
-                      PruneOnRelinquish, when true, causes families removed from
-                      ManagedFamilies to be explicitly deleted from the device on the next
-                      reconcile. Default is to leave previously-written configuration in
-                      place, matching operator intuition during migrations.
+                      PruneOnRelinquish, when true, makes this CR AUTHORITATIVE over
+                      every entry in every still-managed family on every reconcile:
+                      the engine emits VerbDelete ops for any device-side entry that
+                      is not in the resolved intent for those families. The flag's
+                      effect is continuous, not just at relinquishment — operators
+                      who add entries out-of-band in the same families will see
+                      them deleted on the next reconcile.
+
+                      Wave 7A.4 (external-review-next-actions Finding #4): the
+                      docstring previously said "families *removed from
+                      ManagedFamilies*" — that was the original design intent but
+                      the engine implementation treats the flag as continuous
+                      authoritative pruning. The CiscoDevice controller's
+                      configPrereqs CR therefore sets this flag only during
+                      teardown, never on steady-state, so day-0 prereqs apply is
+                      additive. User-authored IOSXEConfig CRs may set it
+                      explicitly to opt into authoritative pruning.
+
+                      A future v1 cut may rename this to authoritativePrune (or
+                      split it from a relinquish-only flag) — tracked in
+                      crd-v1-promotion-plan.md.
                     type: boolean
                   secretRefs:
                     description: |-

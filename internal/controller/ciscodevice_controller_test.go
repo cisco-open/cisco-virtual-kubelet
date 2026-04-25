@@ -692,6 +692,50 @@ func TestReconcile_ConfigPrereqsCreatesOwnedIOSXEConfig(t *testing.T) {
 	}
 }
 
+// TestReconcile_ConfigPrereqsSteadyStateIsAdditive pins the
+// Wave 7A.4 contract: the controller-owned configPrereqs CR's
+// upsert path produces a non-authoritative ("additive") spec —
+// PruneOnRelinquish=false. This means a normal day-0 prereqs
+// reconcile does NOT delete unrelated entries operators may have
+// added out-of-band in the same families.
+//
+// External-review-next-actions Finding #4: pre-fix the upsert
+// always set PruneOnRelinquish=true, so the engine's per-family
+// PruneDiff ran on every reconcile and silently deleted
+// operator-added entries. This regression test would have failed
+// before Wave 7A.4 and pins the corrected contract.
+func TestReconcile_ConfigPrereqsSteadyStateIsAdditive(t *testing.T) {
+	device := newDevice("router-additive", "default")
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		Configuration: runtime.RawExtension{Raw: []byte(`{"dhcp":{}}`)},
+	}
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-additive")); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	var owned configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-additive-prereqs"}, &owned); err != nil {
+		t.Fatalf("expected owned CR: %v", err)
+	}
+	if owned.Spec.PruneOnRelinquish {
+		t.Errorf("steady-state configPrereqs CR must NOT set PruneOnRelinquish=true; it would silently delete operator-added entries on every reconcile")
+	}
+	// Re-reconcile (no spec change) — flag must stay false. Pinning
+	// idempotence so a future change to the upsert path can't
+	// quietly toggle the flag back.
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-additive")); err != nil {
+		t.Fatalf("Reconcile #2: %v", err)
+	}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-additive-prereqs"}, &owned); err != nil {
+		t.Fatalf("expected owned CR: %v", err)
+	}
+	if owned.Spec.PruneOnRelinquish {
+		t.Errorf("idempotent re-reconcile must keep PruneOnRelinquish=false")
+	}
+}
+
 // TestReconcile_ConfigPrereqsRemovedDrivesEmptyIntentThenDeletes is the
 // Wave 4A regression test for external-review Finding #8. Removing
 // spec.configPrereqs no longer immediately deletes the owned CR (which
@@ -706,8 +750,12 @@ func TestReconcile_ConfigPrereqsRemovedDrivesEmptyIntentThenDeletes(t *testing.T
 	r := reconcilerFor(t, device)
 	ctx := context.Background()
 
-	// First pass creates the owned CR with managed families set and
-	// pruneOnRelinquish=true (the load-bearing flag for Wave 4A).
+	// Wave 7A.4: steady-state configPrereqs is ADDITIVE.
+	// PruneOnRelinquish=false on the upsert path so a normal day-0
+	// reconcile does NOT delete unrelated device-side entries the
+	// operator may have added out-of-band in the same families.
+	// The teardown path (Wave 4A-fu step 1) flips it to true only
+	// when driving the empty-source intent.
 	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-d")); err != nil {
 		t.Fatalf("Reconcile (create): %v", err)
 	}
@@ -716,8 +764,8 @@ func TestReconcile_ConfigPrereqsRemovedDrivesEmptyIntentThenDeletes(t *testing.T
 	if err := r.Get(ctx, ownedKey, &owned); err != nil {
 		t.Fatalf("expected owned CR: %v", err)
 	}
-	if !owned.Spec.PruneOnRelinquish {
-		t.Errorf("owned CR must have pruneOnRelinquish=true so a later relinquishment reverts device state")
+	if owned.Spec.PruneOnRelinquish {
+		t.Errorf("owned CR steady-state must have pruneOnRelinquish=false (Wave 7A.4); teardown sets it to true on relinquish")
 	}
 	if len(owned.Spec.ManagedFamilies) == 0 {
 		t.Fatal("owned CR should have non-empty ManagedFamilies after upsert")

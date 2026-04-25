@@ -754,13 +754,24 @@ func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, devi
 				// apphosting needs; operators can still opt a separate
 				// IOSXEConfig into report/pause for wider declarative config.
 				DriftPolicy: configv1alpha1.DriftPolicyRevert,
-				// Wave 4A: pruneOnRelinquish=true is the load-bearing
-				// flag for honest teardown semantics. When the operator
-				// later removes spec.configPrereqs, the teardown path
-				// above empties ManagedFamilies; the engine then emits
-				// DELETE ops for the previously-managed families ONLY
-				// because this flag is set.
-				PruneOnRelinquish: true,
+				// Wave 7A.4 (external-review-next-actions Finding #4):
+				// Steady-state configPrereqs is ADDITIVE — the engine
+				// merges the prereq source into the device but does NOT
+				// prune unrelated entries operators may have added
+				// out-of-band in the same families.
+				//
+				// pruneOnRelinquish triggers PruneCapable.PruneDiff
+				// every reconcile while families are managed (engine
+				// runs PruneDiff inside the per-family loop), which
+				// would silently delete operator-added device-side
+				// entries. That breaks operator trust and the
+				// "configPrereqs is just bring-up" mental model.
+				//
+				// The teardown path (above) sets pruneOnRelinquish=true
+				// only when driving the empty-source intent — the only
+				// situation where the controller WANTS authoritative
+				// pruning of the prereq family set.
+				PruneOnRelinquish: false,
 			},
 		}
 		return controllerutil.SetControllerReference(device, desired, r.Scheme)
