@@ -33,6 +33,7 @@ import (
 	crlog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
@@ -152,7 +153,17 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		attribute.Int("cisco.vk.managed_families.count", len(cr.Spec.ManagedFamilies)),
 		attribute.String("cisco.vk.drift_policy", string(cr.Spec.DriftPolicy)),
 	)
-	if err := r.reconcileOne(ctx, vkLogger, resolver, eng, &cr, conflicts, triggerEvent); err != nil {
+	// Wave 6A — pick the right trigger. If a Subscribe notification
+	// fired since this CR's last device-check, the controller-runtime
+	// reconcile is in fact a subscribe-driven tick and must bypass
+	// the hash short-circuit (so the device-side change is detected
+	// even when intent + generation are unchanged). Otherwise this
+	// is a normal CR/scope-object event.
+	trigger := triggerEvent
+	if r.subscribeFiredSince(cr.Status.LastDeviceCheck) {
+		trigger = triggerSubscribe
+	}
+	if err := r.reconcileOne(ctx, vkLogger, resolver, eng, &cr, conflicts, trigger); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "reconcileOne")
 		span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "error"))
@@ -220,7 +231,7 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return out
 	})
 
-	return ctrl.NewControllerManagedBy(mgr).
+	b := ctrl.NewControllerManagedBy(mgr).
 		Named("iosxeconfig-"+r.DeviceName).
 		For(&configv1alpha1.IOSXEConfig{}, builder.WithPredicates(devicePredicate)).
 		Watches(&configv1alpha1.IOSXEConfigDefaults{}, mapAll).
@@ -234,8 +245,48 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// IOSXEConfig in the cluster that targets this device is
 		// requeued. The hash short-circuit dedupes ticks where the
 		// rotation didn't actually change resolved intent.
-		Watches(&corev1.Secret{}, mapAll).
-		Complete(r)
+		Watches(&corev1.Secret{}, mapAll)
+
+	// Wave 6A (external-review-followup Finding #3): Subscribe
+	// fast-path. The cmd/cisco-vk wiring bridges the transport's
+	// notify channel into per-CR GenericEvents and hands them to
+	// us via SubscribeEvents. Register a source.Channel that
+	// enqueues a reconcile request for every event it sees. Reconcile
+	// distinguishes subscribe vs CR-event by reading
+	// r.subscribeNotifyTime against cr.Status.LastDeviceCheck.
+	//
+	// Without this watch the per-pod controller-runtime topology
+	// (the production default) saw subscribe notifications go
+	// nowhere — only the polling Run loop and the aggregator
+	// consumed them.
+	if r.SubscribeEvents != nil {
+		b = b.WatchesRawSource(source.Channel(r.SubscribeEvents,
+			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
+				// The bridge fires events without populating the
+				// object reference (the Subscribe stream isn't
+				// per-CR). Re-use mapAll's broad enumeration:
+				// requeue every IOSXEConfig that targets this
+				// device. This matches the polling Run loop's
+				// behaviour, which also re-enumerates on each
+				// notify rather than carrying a CR-specific signal.
+				var list configv1alpha1.IOSXEConfigList
+				if err := r.Client.List(context.Background(), &list); err != nil {
+					return nil
+				}
+				out := make([]reconcile.Request, 0, len(list.Items))
+				for _, cr := range list.Items {
+					if cr.Spec.DeviceRef.Name != r.DeviceName {
+						continue
+					}
+					out = append(out, reconcile.Request{
+						NamespacedName: client.ObjectKey{Namespace: cr.Namespace, Name: cr.Name},
+					})
+				}
+				return out
+			})))
+	}
+
+	return b.Complete(r)
 }
 
 // crTargetsDevice returns true when obj is an IOSXEConfig whose

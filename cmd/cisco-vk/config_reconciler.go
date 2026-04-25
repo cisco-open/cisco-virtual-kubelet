@@ -35,6 +35,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -43,6 +44,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	crlog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -182,6 +184,14 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		}
 	}
 
+	// Wave 6A — bridge the notify channel into a controller-runtime
+	// event stream. The Reconciler's SetupWithManager registers a
+	// source.Channel against this; each delivered GenericEvent
+	// triggers a Reconcile for every IOSXEConfig targeting this
+	// device. NotifySubscribeFired records the timestamp Reconcile
+	// uses to differentiate subscribe-driven ticks (bypass hash
+	// short-circuit) from normal CR/scope-object events.
+	var subscribeEvents chan event.GenericEvent
 	r := &provider.ConfigReconciler{
 		Client:                mgr.GetClient(),
 		DeviceName:            deviceName,
@@ -196,6 +206,44 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		},
 		Recorder:        recorder,
 		SubscribeNotify: notify,
+	}
+	if notify != nil {
+		// Buffer of 1 — the watcher coalesces events into "fire
+		// at most once per tick", so a single-slot buffer is
+		// sufficient and the bridge's send below uses a
+		// non-blocking select to drop on full.
+		subscribeEvents = make(chan event.GenericEvent, 1)
+		r.SubscribeEvents = subscribeEvents
+		go func() {
+			defer close(subscribeEvents)
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case _, ok := <-notify:
+					if !ok {
+						return
+					}
+					r.NotifySubscribeFired()
+					// Single anonymous-CR event; the
+					// SetupWithManager mapper enumerates every
+					// IOSXEConfig targeting this device and
+					// enqueues their reconciles. The carrier
+					// object is intentionally minimal — its only
+					// job is to wake the source.Channel.
+					select {
+					case subscribeEvents <- event.GenericEvent{
+						Object: &configv1alpha1.IOSXEConfig{
+							ObjectMeta: metav1.ObjectMeta{Namespace: "", Name: deviceName},
+						},
+					}:
+					default:
+						// channel full; the next reconcile cycle
+						// will already pick up the in-flight event
+					}
+				}
+			}
+		}()
 	}
 
 	if err := r.SetupWithManager(mgr); err != nil {

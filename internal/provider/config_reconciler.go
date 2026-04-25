@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -29,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
@@ -97,7 +99,65 @@ type ConfigReconciler struct {
 	// reconciler picks it up alongside the periodic ticker so an
 	// out-of-band write is detected within milliseconds rather than
 	// at the next tick. Nil means polling-only behaviour.
+	//
+	// Consumed by the polling Run() loop. The controller-runtime
+	// SetupWithManager path uses SubscribeEvents (below) instead so
+	// notifications enqueue Reconcile requests via a source.Channel.
 	SubscribeNotify <-chan struct{}
+
+	// SubscribeEvents is the controller-runtime fast-path equivalent
+	// of SubscribeNotify. When non-nil, SetupWithManager registers a
+	// source.Channel that turns each delivered event.GenericEvent
+	// into a reconcile.Request for the targeted CR. The cmd/cisco-vk
+	// wiring bridges the underlying notify channel into this
+	// per-CR event stream so the per-pod controller-runtime topology
+	// (the production default) sees Subscribe events instead of
+	// waiting for the next driftDetectInterval tick.
+	//
+	// Wave 6A (external-review-followup Finding #3). Pre-fix the
+	// per-pod path created SubscribeNotify but never read it —
+	// only the polling Run() and aggregator paths consumed
+	// notifications.
+	SubscribeEvents <-chan event.GenericEvent
+
+	// subscribeNotifyTime records the wall-clock time of the most
+	// recent Subscribe notification. Reconcile compares it against
+	// cr.Status.LastDeviceCheck to decide whether THIS reconcile is
+	// a subscribe-driven tick (bypass hash short-circuit) versus a
+	// normal CR/scope-object event. Updated by NotifySubscribeFired,
+	// read by Reconcile via Load. UnixNano so a zero value is
+	// "never fired" and any later time is strictly greater.
+	subscribeNotifyTime atomic.Int64
+}
+
+// NotifySubscribeFired is called by the bridge that converts the
+// transport's Subscribe stream into controller-runtime GenericEvents.
+// It records the notification time so Reconcile can detect a
+// subscribe-driven tick when the per-CR LastDeviceCheck is older
+// than this timestamp. Safe for concurrent calls.
+//
+// Wave 6A — together with the SubscribeEvents source.Channel
+// registered in SetupWithManager, this restores the advertised
+// gNMI on-change fast path in the per-pod default topology.
+func (r *ConfigReconciler) NotifySubscribeFired() {
+	r.subscribeNotifyTime.Store(time.Now().UnixNano())
+}
+
+// subscribeFiredSince reports whether a Subscribe notification has
+// arrived since the CR's last device-check. Reconcile uses this to
+// decide between triggerEvent and triggerSubscribe. A nil
+// LastDeviceCheck means "first reconcile" — we don't claim subscribe
+// for that case so the initial reconcile follows normal trigger
+// rules.
+func (r *ConfigReconciler) subscribeFiredSince(lastDeviceCheck *metav1.Time) bool {
+	if lastDeviceCheck == nil {
+		return false
+	}
+	notifyT := r.subscribeNotifyTime.Load()
+	if notifyT == 0 {
+		return false
+	}
+	return notifyT > lastDeviceCheck.UnixNano()
 }
 
 // Run blocks until ctx is cancelled. It returns ctx.Err() on exit.
