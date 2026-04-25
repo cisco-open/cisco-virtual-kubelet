@@ -19,6 +19,8 @@ import (
 	"fmt"
 
 	"sigs.k8s.io/yaml"
+
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 )
 
 //go:embed families.yaml
@@ -81,12 +83,40 @@ type yangVersionsFile struct {
 // The embed guarantees the file is present at build time; a decode error
 // means the file is malformed and is a programming error, not a runtime
 // condition — callers should surface it as such.
+//
+// Wave 5A: as a side effect of decoding, this function registers each
+// keyed_list family's key field(s) with the transport package so
+// parseGNMIPath produces correct gNMI keyed paths even for families
+// whose key isn't `name` or `id`. The registration is idempotent so
+// re-loading families (tests, multi-binary processes) is safe.
 func LoadFamilies() (map[string]Family, error) {
 	var out map[string]Family
 	if err := yaml.Unmarshal(familiesYAML, &out); err != nil {
 		return nil, fmt.Errorf("parse families.yaml: %w", err)
 	}
+	registerKeyFields(out)
 	return out, nil
+}
+
+// registerKeyFields walks every keyed_list family and registers its
+// key field(s) under the last segment of every YANG path it claims.
+// Multi-path families (interface_ethernet covers GigabitEthernet,
+// TwoGigabitEthernet, etc.) get one registration per concrete path;
+// the registry is keyed on segment so they share the same key field
+// without overwriting.
+func registerKeyFields(families map[string]Family) {
+	for _, fam := range families {
+		if fam.Shape != "keyed_list" || len(fam.KeyFields) == 0 {
+			continue
+		}
+		for _, p := range fam.YANGPaths {
+			seg := transport.LastPathSegment(p)
+			if seg == "" {
+				continue
+			}
+			transport.RegisterPathKey(seg, fam.KeyFields...)
+		}
+	}
 }
 
 // LoadYANGReleases decodes yang-versions.yaml.

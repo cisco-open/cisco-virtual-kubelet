@@ -495,14 +495,22 @@ func parseGNMIPath(p string) (*gpb.Path, error) {
 		}
 		elem := &gpb.PathElem{Name: seg}
 		if key != "" {
-			// Single-key list; the YANG schema decides which leaf is
-			// the key. We surface it under "name" with a numeric
-			// fallback — RESTCONF list-keys are textual, but YANG
-			// list-keys can be either, and "name" is by far the most
-			// common in IOS-XE schemas.
-			keyName := "name"
-			if _, err := strconv.Atoi(key); err == nil {
-				keyName = "id"
+			// Wave 5A: prefer the schema-registered key field over
+			// the value-type heuristic. RegisterPathKey is called by
+			// the schema layer at startup, once per keyed-list family
+			// in families.yaml. Lists keyed by `tag`, `seq`, `prefix`,
+			// `sequence`, etc. (and not by `name` or `id`) now produce
+			// gNMI Set/Delete paths that actually match a list entry
+			// on the device. When the registry has no entry — lint-
+			// tool offline mode, or a family the schema layer hasn't
+			// initialised — we fall back to the historical name/id
+			// heuristic so legacy callers stay correct.
+			keyName := pathKeyFor(seg)
+			if keyName == "" {
+				keyName = "name"
+				if _, err := strconv.Atoi(key); err == nil {
+					keyName = "id"
+				}
 			}
 			elem.Key = map[string]string{keyName: key}
 		}
