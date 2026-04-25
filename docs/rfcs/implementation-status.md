@@ -13,9 +13,18 @@ If anything in this file disagrees with another RFC in this directory, **this fi
 
 ## 1. Bottom line
 
-The branch is shippable today under the per-pod topology. End-to-end live reconcile against a real Catalyst 9300 (IOS-XE 17.18.1) has been verified with operator-grade outputs (drift detection, family-level diff, status reporting). Phase 0–9 are complete in code; the architectural review's twelve watch-items are closed in code (eight of twelve), in plan (three of twelve), or deliberately deferred (one of twelve, with rationale on file).
+The branch is shippable today for **day-0 apply + report-mode drift detection** under the per-pod topology. End-to-end live reconcile against a real Catalyst 9300 (IOS-XE 17.18.1) has been verified for that scope: initial apply, family-level diff, status reporting, report-mode drift identification.
 
-Pending work is bounded and named. Two external residuals (Terraform Registry release, netascode example corpus) are scoped out of this branch by design — they involve infrastructure outside the Git repository (publisher accounts, signing keys, content authoring).
+**Day-2 continuous-reconcile, transactional apply, `writeStartup`, the aggregator topology, and several fleet-construct semantics are not yet ready.** The external review at [`external-review.md`](external-review.md) (Codex, 2026-04-25) surfaced four P1 semantic gaps and eight P2 inconsistencies between the API/RFC promises and the production code paths. Every finding I spot-checked (P1: 1, 2, 3, 4; P2: 5, 7, 11; P3: 13) verified at the cited file:line. Nothing is contested. The remediation is sequenced as Waves 1–5 in [`external-review-response.md`](external-review-response.md), totalling ~25 engineer-days; this status document re-claims "shippable for day-2" only when those waves close.
+
+Phase 0–9 remain complete *in code*; the issue is that the code paths the API exposes (`spec.transactional`, `spec.writeStartup`, `spec.driftDetectInterval`, `aggregator.enabled`, `configPrereqs` deletion) do not yet behave as advertised.
+
+Pending work falls in two categories:
+
+1. **Internal — semantic gaps and consistency issues** identified by the external review and tracked in [`external-review-response.md`](external-review-response.md). This is the gating set.
+2. **External — Phase-8 residuals** (Terraform Registry release, netascode example corpus) tracked in [`phase-8-residuals.md`](phase-8-residuals.md). These do not block day-2 readiness; they involve infrastructure outside the Git repository.
+
+The architectural review's twelve watch-items remain closed (eight in code, three in plan, one deliberately deferred); those are at a different level — architectural posture — than the new findings, which are semantic API/code mismatches.
 
 ---
 
@@ -86,15 +95,20 @@ What has actually been exercised against a real device:
 | Surface | Status | Evidence |
 |---|---|---|
 | Unit suite (`go test -count=1 ./...`) | ✅ green | 18 packages, 373 test functions |
-| Race-detector suite (`go test -race -count=1 ./...`) | ✅ green | post-#1 fix, holds across the parallelised test set |
+| Race-detector suite (`go test -race -count=1 ./...`) | ⚠ green for one run, **flaky** under `-count=20` | reproduced in external review §13; remediation tracked as [`external-review-response.md`](external-review-response.md) Wave 5B |
 | Helm chart install on kind | ✅ green | chart REVISION 6, controller `Ready` |
-| CRDs apply, RBAC sufficient | ✅ green | no `forbidden` errors in steady state |
+| CRDs apply, RBAC sufficient (per-pod topology, day-0 path) | ✅ green | no `forbidden` errors on the day-0 apply path; replay-cleanup RBAC gap remains (Wave 2A) |
 | `cisco-vk-config-lint` against live Cat9K from host | ✅ green | drift detected: 1 family managed, 1 op rendered, 25 orphan families surfaced |
 | `cisco-vk` pod inside kind talking to real Cat9K via the bridge (`https://10.1.1.1:443` RESTCONF) | ✅ green | `Connected to IOSXE device, Serial=FCW2247C1AJ, Version=17.18.1, Product=C9300-24UX` |
-| `IOSXEConfig.status` populated by live reconciler | ✅ green | `phase: Drifted`, `system + vlan` family-level drift, `1 op(s) would be applied under driftPolicy=revert` |
+| `IOSXEConfig.status` populated by live reconciler (initial apply tick) | ✅ green | `phase: Drifted`, `system + vlan` family-level drift, `1 op(s) would be applied under driftPolicy=revert` |
+| **Steady-state drift detection after `InSync`** | ❌ **does not work** — short-circuits on hash match before reaching the device | external review Finding 2; remediation Wave 1B |
+| **Transactional apply (`spec.transactional=true`)** | ❌ **inert** — engine never opens a transaction | external review Finding 1; remediation Wave 1A |
+| **`writeStartup`** | ❌ **inert** — `SaveStartup` never called | external review Finding 1; remediation Wave 1A |
+| **Aggregator topology (`aggregator.enabled=true`)** | ❌ **duplicate-writer hazard** — runs concurrently with the per-device VK pod | external review Finding 3; remediation Wave 1C |
+| **Aggregator chart RBAC** | ❌ missing leases + scope CRDs | external review Finding 4; remediation Wave 1D |
 | `driftPolicy: revert` live write to device | ❌ **not run** — only `report` exercised |
 
-The single missing live verification is the live-write path. The reconciler reports "would apply N ops" but no actual write has been pushed to the device. Worth doing once before claiming end-to-end write parity, but it requires explicit device-side confirmation since it modifies running config. Tracked in §7.C as a finishing test, not a deliverable.
+The live-verification log is honest about what works (day-0 initial apply + report-mode drift) and what doesn't (everything advertised by the day-2 surface). The reconciler reports "would apply N ops" against report-mode CRs, but the surrounding day-2 machinery (continuous drift, transactional apply, aggregator) needs Wave 1 of the response RFC before the system is honestly day-2 capable.
 
 ---
 
@@ -116,6 +130,29 @@ These four findings are the strongest argument for the CI smoke gate (#3) — no
 ## 7. Pending work
 
 Pending work, organised by category. Each item lists what closes it.
+
+### 7.0 — External-review remediation (gating for "day-2 ready")
+
+Tracked in detail in [`external-review-response.md`](external-review-response.md). Five waves, ~25 engineer-days total. Until these close, the day-2 surface advertised by the API is not honest.
+
+| Wave | Scope | Status |
+|---|---|---|
+| 0 | Status walk-back (this commit) | ⏳ in flight |
+| 5B | Registry test reliability — restore race-detector evidence | ⏳ next |
+| 1A | Transactional apply + `SaveStartup` plumb | ⏳ pending |
+| 1B | Steady-state drift detection (don't short-circuit when due) | ⏳ pending |
+| 1C | Aggregator/per-pod topology exclusivity | ⏳ pending |
+| 1D | Aggregator Helm RBAC | ⏳ pending |
+| 2A | Replay annotation cleanup RBAC | ⏳ pending |
+| 2B | YANG defaulting in production reconciler | ⏳ pending |
+| 2C | Multi-family conflict status | ⏳ pending |
+| 2D | Secret watch in `SetupWithManager` | ⏳ pending |
+| 3A | Bundle selector membership watch | ⏳ pending |
+| 3B | Bundle template CRD schema relaxation | ⏳ pending |
+| 4A | `configPrereqs` deletion reverts device state | ⏳ pending |
+| 5A | Schema-aware gNMI keyed paths | ⏳ pending |
+
+This table replaces the previous `7.A`/`7.B` separation as the canonical pending-work register. The previous categories (in-branch deferrals, external Phase-8 residuals) are still tracked below, but the gating set for day-2 readiness is the table above.
 
 ### 7.A — In-branch deferrals (deliberate)
 
@@ -213,6 +250,8 @@ These items have shipped *as code* but require infrastructure outside the Git re
 | [`iosxe-config-driver-appraisal.md`](iosxe-config-driver-appraisal.md) | Quality / composition snapshot | Snapshot context |
 | [`config-driver-review-feedback.md`](config-driver-review-feedback.md) | Phase-3 review feedback + action plan | The 3-feedback row in §3 |
 | [`architectural-review.md`](architectural-review.md) | Architecture review against the standard canon (Bass/Kleppmann/Martin/etc.) | The 12 watch-items in §4 |
+| [`external-review.md`](external-review.md) | External implementation review (Codex, 2026-04-25) — semantic API/code mismatches | Day-2 readiness findings |
+| [`external-review-response.md`](external-review-response.md) | Triage + remediation plan for the external review | §7.0 wave register |
 | [`driver-extension-guide.md`](driver-extension-guide.md) | How to add a new platform driver | Phase-9 plug-in pattern |
 | [`crd-v1-promotion-plan.md`](crd-v1-promotion-plan.md) | v1alpha1 → v1 cut plan | Watch-item #10 (impl path) |
 | [`log-unification-plan.md`](log-unification-plan.md) | Slog backend + logrus/zap shim plan | Watch-item #9 (impl path) |
