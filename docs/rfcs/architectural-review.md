@@ -558,55 +558,99 @@ opening a log file.
 ## 6. Specific watch-items, ranked
 
 Numbered for convenience; ordering is operational consequence.
+Status column reflects the post-review push; ten of the twelve
+items have shipped or have a written plan; only #4 stays as a
+deliberately-deferred Phase-10 placeholder.
 
-1. **NETCONF close-time data race — FIXED IN THIS REVIEW.** Was
+1. **NETCONF close-time data race — ✅ FIXED IN THIS REVIEW.** Was
    the only substantive defect surfaced by `go test -race`. Now
    pinned by the race-detector run.
+   Anchor: commit `2912b02`.
 
-2. **Helm `values.schema.json` missing.** Operators silently no-op
-   on typo'd values. 30-min add.
+2. **Helm `values.schema.json` missing — ✅ shipped.** Operators
+   no longer silently no-op on typo'd values; `helm install`
+   rejects unknown keys at the chart-validation gate.
+   Anchor: commit `6631914`.
 
-3. **No CI smoke against a kind cluster.** Unit suite is
-   excellent; deployment surface is unverified. Medium-priority.
+3. **No CI smoke against a kind cluster — ✅ shipped.** A push/PR
+   workflow now exercises the full deployment surface up to the
+   transport-call boundary in a clean kind cluster.
+   Anchor: `.github/workflows/smoke.yml`, commit `9366061`.
 
 4. **Platform-agnostic core lives under
-   `internal/drivers/iosxe/configdriver/...`.** Cosmetic;
-   structural correctness is fine. Phase-10 mechanical
-   relocation to `internal/configdriver/`. Doc'd in the driver-
-   extension guide §7.
+   `internal/drivers/iosxe/configdriver/...` — ⏸ deferred to
+   Phase-10.** Cosmetic; structural correctness is fine. The
+   relocation to `internal/configdriver/` is a mechanical move
+   covering many import paths and many touched files. Tackling it
+   on this branch would conflict noisily with the v1 promotion
+   work (which moves API paths) and the example-corpus PR set
+   (which touches `tools/cisco-vk-config-docs`). Phase-10 is
+   the right window.
+   Anchor: tracked in [`driver-extension-guide.md`](driver-extension-guide.md) §7.
 
 5. **`internal/aggregator` (10.9 %) and `internal/provider`
-   (25.7 %) coverage.** Wiring-heavy; logic is exercised through
-   composed packages. Adding envtest-driven aggregator
-   start/stop/spec-change tests would close the honest gap.
+   (25.7 %) coverage — ✅ shipped (aggregator).** New lifecycle
+   tests register a stub config-driver factory and exercise
+   start/stop/spec-change/credential-fallthrough through the
+   real `Reconcile()` entrypoint. Aggregator coverage rose to
+   74.1 %. `internal/provider` coverage remains tracked as
+   follow-up — its uncovered code is the controller-runtime
+   wiring layer that would need envtest to exercise honestly.
+   Anchor: `internal/aggregator/lifecycle_test.go`.
 
-6. **No fuzzing.** `parseGNMIPath`, `splitYAMLDocs`,
-   `parseHello`, `parseRPCReply`, `splitReplayAnnotation` are
-   all candidates. ~30 LOC each.
+6. **No fuzzing — ✅ shipped.** Five fuzz targets covering the
+   parsers that consume device-supplied or operator-supplied
+   bytes (`parseGNMIPath`, `splitYAMLDocs`, `parseHello`,
+   `parseRPCReply`, `splitReplayAnnotation`). All five run clean
+   for 4 s on local hardware and grow coverage on every run.
+   Anchor: commit `2221f14`.
 
-7. **No `t.Parallel()` in the test suite.** Free latency win and
-   strengthens the race-detector posture.
+7. **No `t.Parallel()` in the test suite — ✅ shipped.** 189
+   `t.Parallel()` calls landed across 21 pure-unit test files
+   (intent, writers, schema, engine/lease, transport framing,
+   common, registry, tlsutil, iosxe transforms). Race-detector
+   stays clean.
 
-8. **Subscribe overflow drop counter missing.** A
-   `cisco_vk_config_subscribe_events_dropped_total{device}` makes
-   the silent loss observable.
+8. **Subscribe overflow drop counter missing — ✅ shipped.**
+   `cisco_vk_config_subscribe_events_dropped_total{device}` is
+   bumped on every dropped event in `pumpSubscribe`'s default
+   branches.
+   Anchor: commit `6631914`.
 
-9. **Two logging configs in one process** (logrus from VK +
-   zap from controller-runtime). Cosmetic; cleanup unifies.
+9. **Two logging configs in one process — ✅ plan authored.**
+   Implementation deferred to a focused PR; the plan recommends
+   `slog` as the single backend with thin shims for both logrus
+   and controller-runtime.
+   Anchor: [`log-unification-plan.md`](log-unification-plan.md).
 
-10. **No CRD v1 promotion plan / conversion webhook.** The branch
-    is `v1alpha1`; pre-1.0 migration story isn't yet authored.
+10. **No CRD v1 promotion plan / conversion webhook — ✅ plan
+    authored.** Field-by-field shape changes, conversion-webhook
+    mechanism, three-release phasing, and acceptance criteria
+    are now on file.
+    Anchor: [`crd-v1-promotion-plan.md`](crd-v1-promotion-plan.md).
 
-11. **No SBOM / SLSA provenance in CI.** Standard for an
-    in-flight branch; lands before external release.
+11. **No SBOM / SLSA provenance in CI — ✅ shipped.** The release
+    workflow produces multi-arch images, runs Trivy with HIGH/
+    CRITICAL fail-build, generates a CycloneDX SBOM, and signs
+    the image keylessly via cosign + Sigstore Fulcio. The SBOM is
+    re-attached as a cosign attestation.
+    Anchor: `.github/workflows/release.yml`, commit `2a9f605`.
 
-12. **Reconciler-level OTel span absent.** Apply-time and per-
-    family attribution would be cleaner via spans than via the
-    existing histogram + event pair.
+12. **Reconciler-level OTel span absent — ✅ shipped.** The
+    `ConfigReconciler.Reconcile` entrypoint now opens a
+    `cisco-virtual-kubelet/config-reconciler` span with full
+    apply-time attribution: device name, CR identity, cohort
+    size, managed-family count, drift policy, post-reconcile
+    phase, and drift count. No-op when no TracerProvider is
+    wired.
+    Anchor: `internal/provider/config_reconciler_controller.go`.
 
-None of these are blockers for a per-pod-topology rollout under
-the existing security posture. Items 2, 3, 5, 11 are the natural
-pre-1.0 list.
+None of these were blockers for a per-pod-topology rollout. The
+post-review push closed every item that could be closed within
+the branch's scope without inviting the v1-promotion conflict
+(that's #4) or pre-empting an architectural decision worth
+running past a wider review (that's the implementation of #9 and
+#10, both of which now have plans on file).
 
 ---
 
