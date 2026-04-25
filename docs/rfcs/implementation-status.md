@@ -13,9 +13,20 @@ If anything in this file disagrees with another RFC in this directory, **this fi
 
 ## 1. Bottom line
 
-**The branch is close to day-2 readiness, pending lease-arbitration hardening for DNS-safe lease names and first-class lease-blocked status.** A fourth review round ([`external-review-wave7-residuals.md`](external-review-wave7-residuals.md), Codex post-Wave-7) found two lease-arbitration gaps the post-Wave-7 verification missed: lease names containing `_` (every IOS-XE family except `vlan`/`vrf`/`dhcp`) violate DNS-1123 subdomain rules — `fake.Client` skips name validation, so existing tests pass but a real apiserver rejects every such lease; and lease-blocked reconciles route through `engine.Reconcile` and produce misleading `Phase=Failed` (all-blocked case) or `Phase=InSync` (partial-block case) instead of a first-class lease-blocked state. Wave 7A.3's runtime-suffixed identity made the contention window normal during rollouts, so the misleading-status path is now hit on every credential rotation. Walking back the prior "shippable for day-2" claim until these close per [`external-review-wave7-residuals-response.md`](external-review-wave7-residuals-response.md).
+**The branch is shippable for day-0 AND day-2 under the per-pod topology, with the aggregator topology exclusive-and-correct.** Four rounds of external review (the original [`external-review.md`](external-review.md), the post-Wave-5 [`external-review-followup.md`](external-review-followup.md), the post-`latest-update.md` [`external-review-next-actions.md`](external-review-next-actions.md), and the Wave-7 residuals [`external-review-wave7-residuals.md`](external-review-wave7-residuals.md)) have all closed in code with focused test coverage.
 
-The first three rounds of external review (the original [`external-review.md`](external-review.md), the post-Wave-5 [`external-review-followup.md`](external-review-followup.md), and the post-`latest-update.md` [`external-review-next-actions.md`](external-review-next-actions.md)) have all closed in code with focused test coverage. The fourth round identifies two *new* gaps that the prior verification missed.
+The Wave-7 residuals round's two findings closed in this commit set:
+
+1. **DNS-safe lease names** (P1) — `leaseName(device, family)` previously emitted literal `cvk-<device>-<family>`. Underscore-bearing family names (most of the shipped IOS-XE family set) violated DNS-1123 subdomain rules; `fake.Client` skipped name validation so tests passed but a real apiserver rejected every such lease. The replacement sanitises both segments, appends a SHA-256-based hash for collision resistance, and is validated against `k8s.io/apimachinery/pkg/util/validation.IsDNS1123Subdomain` for every family in the shipped registry. Anchor: `5879a89`.
+2. **Lease conflicts as first-class arbitration state** (P2) — `reconcileOne` previously routed lease conflicts through `engine.Reconcile`, producing misleading `Phase=Failed` (all-blocked) or `Phase=InSync` (partial-block) and bumping `LastDeviceCheck` even when no device-side work happened. The fix introduces `PhaseLeaseBlocked`, short-circuits before the engine when all families are blocked, downgrades a clean `InSync` to `LeaseBlocked` when any family was skipped, gates the `LastDeviceCheck` bump on a new `Result.DeviceTouched` field, and uses a sub-TTL (15s) requeue under `LeaseBlocked` so the contention window resolves quickly. Anchor: `ec79777`.
+
+Module-wide `go test -race -count=5 ./...` clean. `count=20` stable across all hot packages.
+
+One architectural lesson from this round, in commit messages and inline comments so it doesn't recur:
+
+- **`fake.Client` does not enforce Kubernetes object-name validation.** When a name is composed from arbitrary strings, the test must explicitly validate the result against `k8s.io/apimachinery/pkg/util/validation`. Otherwise tests pass, the apiserver rejects, and the failure surfaces only in a live cluster. (Closely related to the FU-2 lesson — that one was field validation; this one is name validation.)
+
+The first three review rounds' findings remain closed. The fourth round's two findings close in this commit set.
 
 The next-actions review's five findings closed in this round:
 
