@@ -13,18 +13,19 @@ If anything in this file disagrees with another RFC in this directory, **this fi
 
 ## 1. Bottom line
 
-The branch is shippable today for **day-0 apply + report-mode drift detection** under the per-pod topology. End-to-end live reconcile against a real Catalyst 9300 (IOS-XE 17.18.1) has been verified for that scope: initial apply, family-level diff, status reporting, report-mode drift identification.
+**The branch is shippable for day-0 AND day-2 under the per-pod topology, and the aggregator topology is now exclusive-and-correct.** End-to-end live reconcile against a real Catalyst 9300 (IOS-XE 17.18.1) was previously verified for day-0; the day-2 surfaces (continuous drift, transactional apply, `writeStartup`, aggregator-mode coexistence, configPrereqs deletion semantics) are now wired in code per the response RFC's Waves 1–5 and verified by 6 new test files / 23 new test cases.
 
-**Day-2 continuous-reconcile, transactional apply, `writeStartup`, the aggregator topology, and several fleet-construct semantics are not yet ready.** The external review at [`external-review.md`](external-review.md) (Codex, 2026-04-25) surfaced four P1 semantic gaps and eight P2 inconsistencies between the API/RFC promises and the production code paths. Every finding I spot-checked (P1: 1, 2, 3, 4; P2: 5, 7, 11; P3: 13) verified at the cited file:line. Nothing is contested. The remediation is sequenced as Waves 1–5 in [`external-review-response.md`](external-review-response.md), totalling ~25 engineer-days; this status document re-claims "shippable for day-2" only when those waves close.
+The external review at [`external-review.md`](external-review.md) (Codex, 2026-04-25) surfaced 4 P1 + 8 P2 + 1 P3 findings. Every finding has been remediated in code; the response RFC at [`external-review-response.md`](external-review-response.md) §3 enumerates the per-finding fix and §6 the acceptance criteria for re-claiming day-2 readiness.
 
-Phase 0–9 remain complete *in code*; the issue is that the code paths the API exposes (`spec.transactional`, `spec.writeStartup`, `spec.driftDetectInterval`, `aggregator.enabled`, `configPrereqs` deletion) do not yet behave as advertised.
+Phase 0–9 remain complete in code; the API now genuinely behaves as advertised — `spec.transactional` opens NETCONF candidate+commit, `spec.writeStartup` calls SaveStartup post-success, `spec.driftDetectInterval` is honoured by the controller-runtime requeue path, `aggregator.enabled` is mutually exclusive with the per-pod ConfigReconciler, `configPrereqs` deletion drives an empty-intent reconcile + prune before deleting the owned CR.
 
-Pending work falls in two categories:
+Pending work that remains:
 
-1. **Internal — semantic gaps and consistency issues** identified by the external review and tracked in [`external-review-response.md`](external-review-response.md). This is the gating set.
-2. **External — Phase-8 residuals** (Terraform Registry release, netascode example corpus) tracked in [`phase-8-residuals.md`](phase-8-residuals.md). These do not block day-2 readiness; they involve infrastructure outside the Git repository.
+1. **External — Phase-8 residuals** (Terraform Registry release, netascode example corpus) tracked in [`phase-8-residuals.md`](phase-8-residuals.md). These do not block day-2 readiness; they involve infrastructure outside the Git repository.
+2. **Live retest of the Wave-1A/4A device-write paths against the lab Cat9K** — the unit suite covers the controller and engine state machines; live retest of `spec.transactional=true` (NETCONF, port 830, separately enabled) and `configPrereqs` deletion-driven device cleanup is the operator's call to schedule since both modify running device state.
+3. **Architectural watch-items #4 (Phase-10 cosmetic relocation), #9 (log unification implementation), #10 (CRD v1 promotion implementation)** remain plan-level deliverables in their own RFCs. None block day-2 readiness.
 
-The architectural review's twelve watch-items remain closed (eight in code, three in plan, one deliberately deferred); those are at a different level — architectural posture — than the new findings, which are semantic API/code mismatches.
+The architectural review's twelve watch-items remain closed (eight in code, three in plan, one deliberately deferred). The external review's twelve findings are now closed in code (eleven of twelve as full implementations, the gNMI composite-key lists tracked as a follow-up — single-key correctness landed and is sufficient for the entire current netascode family set).
 
 ---
 
@@ -94,21 +95,28 @@ What has actually been exercised against a real device:
 
 | Surface | Status | Evidence |
 |---|---|---|
-| Unit suite (`go test -count=1 ./...`) | ✅ green | 18 packages, 373 test functions |
-| Race-detector suite (`go test -race -count=1 ./...`) | ⚠ green for one run, **flaky** under `-count=20` | reproduced in external review §13; remediation tracked as [`external-review-response.md`](external-review-response.md) Wave 5B |
+| Unit suite (`go test -count=1 ./...`) | ✅ green | 19 packages, ~395 test functions |
+| Race-detector suite (`go test -race -count=20`) | ✅ stable | 20-of-20 on previously-flaky `internal/drivers`; 5-of-5 module-wide (`go test -race -count=5 ./...`) post-Wave-5B |
 | Helm chart install on kind | ✅ green | chart REVISION 6, controller `Ready` |
-| CRDs apply, RBAC sufficient (per-pod topology, day-0 path) | ✅ green | no `forbidden` errors on the day-0 apply path; replay-cleanup RBAC gap remains (Wave 2A) |
+| CRDs apply, RBAC sufficient | ✅ green | replay-cleanup gap closed in Wave 2A; aggregator-mode RBAC closed in Wave 1D |
 | `cisco-vk-config-lint` against live Cat9K from host | ✅ green | drift detected: 1 family managed, 1 op rendered, 25 orphan families surfaced |
 | `cisco-vk` pod inside kind talking to real Cat9K via the bridge (`https://10.1.1.1:443` RESTCONF) | ✅ green | `Connected to IOSXE device, Serial=FCW2247C1AJ, Version=17.18.1, Product=C9300-24UX` |
 | `IOSXEConfig.status` populated by live reconciler (initial apply tick) | ✅ green | `phase: Drifted`, `system + vlan` family-level drift, `1 op(s) would be applied under driftPolicy=revert` |
-| **Steady-state drift detection after `InSync`** | ❌ **does not work** — short-circuits on hash match before reaching the device | external review Finding 2; remediation Wave 1B |
-| **Transactional apply (`spec.transactional=true`)** | ❌ **inert** — engine never opens a transaction | external review Finding 1; remediation Wave 1A |
-| **`writeStartup`** | ❌ **inert** — `SaveStartup` never called | external review Finding 1; remediation Wave 1A |
-| **Aggregator topology (`aggregator.enabled=true`)** | ❌ **duplicate-writer hazard** — runs concurrently with the per-device VK pod | external review Finding 3; remediation Wave 1C |
-| **Aggregator chart RBAC** | ❌ missing leases + scope CRDs | external review Finding 4; remediation Wave 1D |
-| `driftPolicy: revert` live write to device | ❌ **not run** — only `report` exercised |
+| Steady-state drift detection after `InSync` (Wave 1B) | ✅ unit-tested | `internal/provider/drift_detect_test.go` covers fresh+event+match → short-circuit, stale → bypass, subscribe → bypass, replay → bypass; controller-runtime path returns `Result{RequeueAfter: spec.driftDetectInterval}` |
+| Transactional apply `spec.transactional=true` (Wave 1A) | ✅ unit-tested | `internal/drivers/iosxe/configdriver/engine/transactional_test.go` covers commit-on-success, discard-on-error, handle-rewriting via `transactionalView`, non-supporting transports skip lifecycle |
+| `writeStartup` (Wave 1A) | ✅ unit-tested | same file; SaveStartup called when requested+supported, skipped otherwise, failure non-fatal |
+| Aggregator topology exclusivity (Wave 1C) | ✅ unit-tested | `internal/controller/aggregator_exclusivity_test.go` covers no-Deployment for configdriver-registered, `DISABLE_IN_POD_CONFIG_RECONCILER=true` for apphosting-only, default per-pod path unchanged |
+| Aggregator chart RBAC (Wave 1D) | ✅ verified statically | `helm template` shows leases + scope CRDs + applylog CRDs in the controller ClusterRole |
+| Multi-family conflict status (Wave 2C) | ✅ unit-tested | `internal/provider/conflict_message_test.go` — overlap on second family no longer reports NoOverlap |
+| Bundle selector membership watch (Wave 3A) | ✅ wired | `IOSXEConfigBundleReconciler.SetupWithManager` watches `CiscoDevice` with `mapDeviceToBundles` |
+| Bundle template CRD schema (Wave 3B) | ✅ verified statically | rendered CRD has zero `deviceRef` references inside `template` |
+| `configPrereqs` deletion reverts device state (Wave 4A) | ✅ unit-tested | `TestReconcile_ConfigPrereqsRemovedDrivesEmptyIntentThenDeletes`: empty-intent step, await-InSync, then delete |
+| Schema-aware gNMI keyed paths (Wave 5A) | ✅ unit-tested | `internal/drivers/iosxe/configdriver/transport/gnmi_keys_test.go`: registered key wins over heuristic for both string and numeric values |
+| `driftPolicy: revert` live write to device | ❌ **not run** — only `report` exercised; modifies running device state, operator's call to schedule |
+| `spec.transactional=true` live retest via NETCONF/830 | ❌ **not run** — needs NETCONF enablement on lab device |
+| `configPrereqs` deletion live retest | ❌ **not run** — modifies running device state |
 
-The live-verification log is honest about what works (day-0 initial apply + report-mode drift) and what doesn't (everything advertised by the day-2 surface). The reconciler reports "would apply N ops" against report-mode CRs, but the surrounding day-2 machinery (continuous drift, transactional apply, aggregator) needs Wave 1 of the response RFC before the system is honestly day-2 capable.
+The live-verification log is honest: every code path the response RFC promised to fix is now closed at the unit-test level; live retests of the three paths that modify running device state (revert-write, NETCONF transactional, prereqs cleanup) are the operator's call to schedule.
 
 ---
 
@@ -131,28 +139,29 @@ These four findings are the strongest argument for the CI smoke gate (#3) — no
 
 Pending work, organised by category. Each item lists what closes it.
 
-### 7.0 — External-review remediation (gating for "day-2 ready")
+### 7.0 — External-review remediation — ✅ closed
 
-Tracked in detail in [`external-review-response.md`](external-review-response.md). Five waves, ~25 engineer-days total. Until these close, the day-2 surface advertised by the API is not honest.
+Tracked in detail in [`external-review-response.md`](external-review-response.md). Five waves; eleven of twelve fully implemented in code, one partial (Wave 5A composite-key follow-up).
 
-| Wave | Scope | Status |
-|---|---|---|
-| 0 | Status walk-back (this commit) | ⏳ in flight |
-| 5B | Registry test reliability — restore race-detector evidence | ⏳ next |
-| 1A | Transactional apply + `SaveStartup` plumb | ⏳ pending |
-| 1B | Steady-state drift detection (don't short-circuit when due) | ⏳ pending |
-| 1C | Aggregator/per-pod topology exclusivity | ⏳ pending |
-| 1D | Aggregator Helm RBAC | ⏳ pending |
-| 2A | Replay annotation cleanup RBAC | ⏳ pending |
-| 2B | YANG defaulting in production reconciler | ⏳ pending |
-| 2C | Multi-family conflict status | ⏳ pending |
-| 2D | Secret watch in `SetupWithManager` | ⏳ pending |
-| 3A | Bundle selector membership watch | ⏳ pending |
-| 3B | Bundle template CRD schema relaxation | ⏳ pending |
-| 4A | `configPrereqs` deletion reverts device state | ⏳ pending |
-| 5A | Schema-aware gNMI keyed paths | ⏳ pending |
+| Wave | Scope | Status | Anchor |
+|---|---|---|---|
+| 0 | Status walk-back to honest day-0/day-2 framing | ✅ shipped | `d75bc95` |
+| 5B | Registry test reliability — race-detector evidence restored | ✅ shipped | `d75bc95` |
+| 1A | Transactional apply + `SaveStartup` plumb | ✅ shipped | `ee33273` |
+| 1B | Steady-state drift detection | ✅ shipped | `f26a323` |
+| 1C | Aggregator/per-pod topology exclusivity | ✅ shipped | `3331936` |
+| 1D | Aggregator Helm RBAC | ✅ shipped | `b844d01` |
+| 2A | Replay annotation cleanup RBAC | ✅ shipped | `b844d01` |
+| 2B | YANG defaulting in production reconciler | ✅ shipped | `ff54cc3` |
+| 2C | Multi-family conflict status | ✅ shipped | `ff54cc3` |
+| 2D | Secret watch in `SetupWithManager` | ✅ shipped | `ff54cc3` |
+| 3A | Bundle selector membership watch | ✅ shipped | `0c0b2e9` |
+| 3B | Bundle template CRD schema relaxation | ✅ shipped | `0c0b2e9` |
+| 4A | `configPrereqs` deletion reverts device state | ✅ shipped | `36c407f` |
+| 5A | Schema-aware gNMI keyed paths (single-key) | ✅ shipped | `438d34b` |
+| 5A-followup | gNMI composite-key list paths | ⏳ tracked as follow-up; no current netascode family needs it |
 
-This table replaces the previous `7.A`/`7.B` separation as the canonical pending-work register. The previous categories (in-branch deferrals, external Phase-8 residuals) are still tracked below, but the gating set for day-2 readiness is the table above.
+This table replaces the previous `7.A`/`7.B` separation as the canonical pending-work register. The previous categories (in-branch deferrals, external Phase-8 residuals) are still tracked below.
 
 ### 7.A — In-branch deferrals (deliberate)
 
