@@ -157,8 +157,21 @@ func (s *netconfSession) readFrame() ([]byte, error) {
 // The close-session RPC is best-effort and time-bounded: a cranky
 // device that stops servicing RPCs must not block teardown
 // indefinitely. Hard-close of the underlying conn always happens.
+//
+// Concurrency contract: the goroutine that runs the close-session
+// RPC and the parent goroutine that nils out s.rw after the timeout
+// must not race. The race detector flagged the obvious bug — parent
+// writes s.rw=nil while the spawned goroutine reads s.rw inside
+// rpc()/writeFrame(). Fix is to capture the conn locally,
+// hard-close that local copy after waiting (which unblocks any in-
+// flight write/read in the spawned goroutine), and then atomically
+// reassign s.rw under s.mu so subsequent reads see the same value
+// the goroutine saw — no torn read.
 func (s *netconfSession) close() error {
-	if s.rw == nil {
+	s.mu.Lock()
+	rw := s.rw
+	s.mu.Unlock()
+	if rw == nil {
 		return nil
 	}
 	done := make(chan struct{})
@@ -172,8 +185,15 @@ func (s *netconfSession) close() error {
 		// Device isn't responding; the hard-close below will
 		// unblock the goroutine by tearing down the conn.
 	}
-	err := s.rw.Close()
+	// Hard-close the local rw first; that unblocks any I/O the
+	// spawned goroutine still holds. THEN take the mutex (which
+	// the goroutine has by now released — its rpc() unlocks on
+	// return, closed-conn or not) and nil out s.rw so a second
+	// close() is a no-op.
+	err := rw.Close()
+	s.mu.Lock()
 	s.rw = nil
+	s.mu.Unlock()
 	return err
 }
 
