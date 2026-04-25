@@ -16,6 +16,7 @@ package provider
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +25,7 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 )
 
 func TestBuildApplyLogEntryHashOnlyOnInSync(t *testing.T) {
@@ -77,10 +79,10 @@ func TestAppendApplyLogTrimsToMaxEntries(t *testing.T) {
 	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
 
 	res := engine.Result{Phase: engine.PhaseInSync}
-	if err := r.appendApplyLog(context.Background(), cr, res, "sha256:1"); err != nil {
+	if err := r.appendApplyLog(context.Background(), cr, res, "sha256:1", nil); err != nil {
 		t.Fatalf("first append: %v", err)
 	}
-	if err := r.appendApplyLog(context.Background(), cr, res, "sha256:2"); err != nil {
+	if err := r.appendApplyLog(context.Background(), cr, res, "sha256:2", nil); err != nil {
 		t.Fatalf("second append: %v", err)
 	}
 
@@ -100,6 +102,86 @@ func TestAppendApplyLogTrimsToMaxEntries(t *testing.T) {
 	}
 }
 
+func TestAppendApplyLogStoresBodyOnlyWhenRetainBodyTrue(t *testing.T) {
+	// RetainBody=false ⇒ entries carry no body even when the
+	// reconciler hands a non-nil resolved intent. Cap-aware
+	// behaviour stays unchanged.
+	scheme := newTestScheme(t)
+	logCR := &configv1alpha1.IOSXEConfigApplyLog{
+		ObjectMeta: metav1.ObjectMeta{Name: "edge-01", Namespace: "network"},
+		Spec: configv1alpha1.IOSXEConfigApplyLogSpec{
+			DeviceRef:  configv1alpha1.DeviceRef{Name: "edge-01"},
+			MaxEntries: 5,
+			// RetainBody defaults to false.
+		},
+	}
+	cr := newCR("edge-01", "edge-01")
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(logCR).
+		WithStatusSubresource(&configv1alpha1.IOSXEConfigApplyLog{}).
+		Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+	resolved := &intent.ResolvedIntent{
+		Configuration: map[string]any{"vlan": map[string]any{"vlans": []any{
+			map[string]any{"id": float64(10), "name": "users"},
+		}}},
+	}
+	if err := r.appendApplyLog(context.Background(), cr,
+		engine.Result{Phase: engine.PhaseInSync}, "sha256:abc", resolved); err != nil {
+		t.Fatalf("appendApplyLog: %v", err)
+	}
+	var got configv1alpha1.IOSXEConfigApplyLog
+	if err := c.Get(context.Background(),
+		types.NamespacedName{Namespace: "network", Name: "edge-01"}, &got); err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if len(got.Status.Entries) != 1 {
+		t.Fatalf("entries=%d", len(got.Status.Entries))
+	}
+	if got.Status.Entries[0].Body != "" {
+		t.Errorf("body should be empty when RetainBody=false: %q", got.Status.Entries[0].Body)
+	}
+}
+
+func TestAppendApplyLogStoresBodyWhenRetainBodyTrue(t *testing.T) {
+	scheme := newTestScheme(t)
+	logCR := &configv1alpha1.IOSXEConfigApplyLog{
+		ObjectMeta: metav1.ObjectMeta{Name: "edge-01", Namespace: "network"},
+		Spec: configv1alpha1.IOSXEConfigApplyLogSpec{
+			DeviceRef:  configv1alpha1.DeviceRef{Name: "edge-01"},
+			MaxEntries: 5,
+			RetainBody: true,
+		},
+	}
+	cr := newCR("edge-01", "edge-01")
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(logCR).
+		WithStatusSubresource(&configv1alpha1.IOSXEConfigApplyLog{}).
+		Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+	resolved := &intent.ResolvedIntent{
+		Configuration: map[string]any{"vlan": map[string]any{"vlans": []any{
+			map[string]any{"id": float64(10), "name": "users"},
+		}}},
+	}
+	if err := r.appendApplyLog(context.Background(), cr,
+		engine.Result{Phase: engine.PhaseInSync}, "sha256:abc", resolved); err != nil {
+		t.Fatalf("appendApplyLog: %v", err)
+	}
+	var got configv1alpha1.IOSXEConfigApplyLog
+	if err := c.Get(context.Background(),
+		types.NamespacedName{Namespace: "network", Name: "edge-01"}, &got); err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	body := got.Status.Entries[0].Body
+	if body == "" {
+		t.Fatal("RetainBody=true should populate Body")
+	}
+	if !strings.Contains(body, `"vlan"`) || !strings.Contains(body, `"id":10`) {
+		t.Errorf("body missing expected fields: %s", body)
+	}
+}
+
 func TestAppendApplyLogIsNoopWhenNoLogCR(t *testing.T) {
 	// Auditing is opt-in: a device with no IOSXEConfigApplyLog CR
 	// is silently skipped. The reconciler must not error.
@@ -107,7 +189,7 @@ func TestAppendApplyLogIsNoopWhenNoLogCR(t *testing.T) {
 	cr := newCR("edge-01", "edge-01")
 	c := fake.NewClientBuilder().WithScheme(scheme).Build()
 	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
-	if err := r.appendApplyLog(context.Background(), cr, engine.Result{Phase: engine.PhaseInSync}, "sha256:x"); err != nil {
+	if err := r.appendApplyLog(context.Background(), cr, engine.Result{Phase: engine.PhaseInSync}, "sha256:x", nil); err != nil {
 		t.Fatalf("appendApplyLog: %v", err)
 	}
 }
@@ -129,7 +211,7 @@ func TestAppendApplyLogSkipsOtherDevicesLogs(t *testing.T) {
 		WithStatusSubresource(&configv1alpha1.IOSXEConfigApplyLog{}).
 		Build()
 	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
-	if err := r.appendApplyLog(context.Background(), cr, engine.Result{Phase: engine.PhaseInSync}, "sha256:x"); err != nil {
+	if err := r.appendApplyLog(context.Background(), cr, engine.Result{Phase: engine.PhaseInSync}, "sha256:x", nil); err != nil {
 		t.Fatalf("appendApplyLog: %v", err)
 	}
 	var got configv1alpha1.IOSXEConfigApplyLog

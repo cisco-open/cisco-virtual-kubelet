@@ -42,6 +42,21 @@ type IOSXEConfigApplyLogSpec struct {
 	// +kubebuilder:validation:Maximum=500
 	// +optional
 	MaxEntries int32 `json:"maxEntries,omitempty"`
+
+	// RetainBody, when true, stores the JSON-serialised resolved
+	// intent (configuration tree + CLI blocks) on each ApplyLogEntry.
+	// The body is what enables annotation-driven time-travel
+	// replay (config.cisco.vk/replay-from-log) — without it the
+	// log preserves the hash and family outcomes only.
+	//
+	// Off by default because every entry can be ~10 KB; an
+	// operator who wants 50 entries but only some-of-the-time
+	// replay capability should keep it off and use shorter MaxEntries
+	// when they need it on. Cap-aware: the entry size is still
+	// bounded by Kubernetes' object size limit.
+	// +kubebuilder:default=false
+	// +optional
+	RetainBody bool `json:"retainBody,omitempty"`
 }
 
 // IOSXEConfigApplyLogStatus carries the audit trail.
@@ -106,6 +121,18 @@ type ApplyLogEntry struct {
 	// Phase != InSync. Empty on the happy path.
 	// +optional
 	Message string `json:"message,omitempty"`
+
+	// Body is the JSON-serialised resolved intent (configuration +
+	// cliBlocks) at apply time. Populated only when the log CR
+	// sets spec.retainBody=true. Used by the annotation-driven
+	// replay flow on IOSXEConfig (Phase 7 time-travel) — an
+	// operator restores a prior known-good shape by setting
+	// `config.cisco.vk/replay-from-log: <log-name>:<entry-index>`
+	// on the CR and the reconciler picks up the annotation, takes
+	// the body verbatim as the resolved intent, and applies it.
+	// Empty when RetainBody is false (the historical default).
+	// +optional
+	Body string `json:"body,omitempty"`
 }
 
 // FamilyApplyOutcome compresses an engine.FamilyStatus down to the

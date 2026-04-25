@@ -16,6 +16,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -196,17 +197,37 @@ func (r *ConfigReconciler) reconcileOne(
 		return r.recordFailure(ctx, cr, fmt.Sprintf("resolve: %v", err))
 	}
 
+	// Replay annotation (Phase 7 time-travel): when the CR carries
+	// `config.cisco.vk/replay-from-log: <log-name>:<index-or-hash>`,
+	// the resolver's normal output is overridden by the body stored
+	// on the named ApplyLogEntry. The reconcile then runs as if the
+	// operator had authored the historical intent, the device
+	// converges, and the annotation is removed by the same status
+	// update that records the apply.
+	replayed, applied, err := r.applyReplayAnnotation(ctx, cr, resolved)
+	if err != nil {
+		return r.recordFailure(ctx, cr, fmt.Sprintf("replay: %v", err))
+	}
+	if applied {
+		resolved = replayed
+	}
+
 	// Hash-based short-circuit: if the CR's generation matches what the
 	// driver last acted on AND the canonical intent hash is unchanged,
 	// there is nothing to do. This keeps steady-state cost near zero.
+	// Replay paths skip the short-circuit unconditionally — the
+	// operator asked for the work even when the hash matches.
 	h, err := intent.CanonicalHash(resolved)
 	if err != nil {
 		return r.recordFailure(ctx, cr, fmt.Sprintf("hash: %v", err))
 	}
-	if cr.Status.ObservedGeneration == cr.Generation &&
+	if !applied &&
+		cr.Status.ObservedGeneration == cr.Generation &&
 		cr.Status.LastAppliedHash == h &&
 		cr.Status.Phase == engine.PhaseInSync {
-		// Optimise the hot path: nothing to do.
+		// Optimise the hot path: nothing to do. Replay paths bypass
+		// this — the operator asked for the work even when the
+		// resulting intent hash matches the last-applied one.
 		return nil
 	}
 
@@ -231,7 +252,7 @@ func (r *ConfigReconciler) reconcileOne(
 			Message: fmt.Sprintf("family leased by %q", holder),
 		})
 	}
-	return r.recordResult(ctx, cr, result, h, conflicts)
+	return r.recordResult(ctx, cr, result, h, conflicts, resolved)
 }
 
 // acquireLeases filters resolved.ManagedFamilies to the ones this CR
@@ -318,6 +339,7 @@ func (r *ConfigReconciler) recordResult(
 	result engine.Result,
 	hash string,
 	conflicts map[string][]string,
+	resolved *intent.ResolvedIntent,
 ) error {
 	r.emitEvents(cr, result)
 	updated := cr.DeepCopy()
@@ -393,11 +415,32 @@ func (r *ConfigReconciler) recordResult(
 		return err
 	}
 
+	// Clear the replay annotation on a successful replay apply
+	// so the reconciler doesn't keep re-doing the work every
+	// tick. Any phase other than InSync leaves the annotation
+	// in place — the next reconcile retries the replay.
+	if result.Phase == engine.PhaseInSync {
+		if _, ok := cr.Annotations[ReplayAnnotation]; ok {
+			patched := cr.DeepCopy()
+			delete(patched.Annotations, ReplayAnnotation)
+			if err := r.Client.Patch(ctx, patched, client.MergeFrom(cr)); err != nil {
+				// Non-fatal: another reconcile will pick the
+				// annotation up; the worst case is a single
+				// duplicate apply, which is idempotent.
+				if r.Recorder != nil {
+					r.Recorder.Eventf(cr, "Warning", "ReplayAnnotationClearFailed",
+						"could not clear %s after successful replay: %v",
+						ReplayAnnotation, err)
+				}
+			}
+		}
+	}
+
 	// Audit log: append a row to any IOSXEConfigApplyLog CR that
 	// targets this device. The lookup is by spec.deviceRef.name; if
 	// no log exists, we silently skip — auditing is opt-in to keep
 	// the controller's blast radius narrow.
-	if err := r.appendApplyLog(ctx, cr, result, hash); err != nil {
+	if err := r.appendApplyLog(ctx, cr, result, hash, resolved); err != nil {
 		// Don't fail the reconcile when the log update fails — the
 		// device-side state is authoritative, and a transient log
 		// CR conflict (status race, intermittent etcd) shouldn't
@@ -519,21 +562,35 @@ func (r *ConfigReconciler) emitEvents(cr *configv1alpha1.IOSXEConfig, result eng
 // IOSXEConfig. Auditing is opt-in: a device with no log CR sees
 // the function return nil after a list that found nothing. The
 // circular-buffer trim happens here, capped at spec.maxEntries.
+//
+// resolved, when non-nil, is the resolved intent for the apply.
+// It is captured into the ApplyLogEntry.Body field only on logs
+// with spec.retainBody=true — necessary for annotation-driven
+// time-travel replay (Phase 7).
 func (r *ConfigReconciler) appendApplyLog(
 	ctx context.Context,
 	cr *configv1alpha1.IOSXEConfig,
 	result engine.Result,
 	hash string,
+	resolved *intent.ResolvedIntent,
 ) error {
 	var logs configv1alpha1.IOSXEConfigApplyLogList
 	if err := r.Client.List(ctx, &logs, client.InNamespace(cr.Namespace)); err != nil {
 		return fmt.Errorf("list apply logs: %w", err)
 	}
-	entry := buildApplyLogEntry(cr, result, hash)
 	for i := range logs.Items {
 		log := &logs.Items[i]
 		if log.Spec.DeviceRef.Name != cr.Spec.DeviceRef.Name {
 			continue
+		}
+		entry := buildApplyLogEntry(cr, result, hash)
+		if log.Spec.RetainBody && resolved != nil && result.Phase == engine.PhaseInSync {
+			body, err := encodeReplayBody(resolved)
+			if err != nil {
+				return fmt.Errorf("encode replay body for %s/%s: %w",
+					log.Namespace, log.Name, err)
+			}
+			entry.Body = body
 		}
 		updated := log.DeepCopy()
 		max := int(updated.Spec.MaxEntries)
@@ -556,6 +613,39 @@ func (r *ConfigReconciler) appendApplyLog(
 		}
 	}
 	return nil
+}
+
+// replayBody is the on-disk shape stored on ApplyLogEntry.Body.
+// Versioned so a future field addition doesn't break old entries
+// the controller has to read post-upgrade.
+type replayBody struct {
+	Version       int                `json:"v"`
+	Configuration map[string]any     `json:"configuration"`
+	CLIBlocks     []intent.CLIBlock  `json:"cliBlocks,omitempty"`
+}
+
+func encodeReplayBody(resolved *intent.ResolvedIntent) (string, error) {
+	b := replayBody{
+		Version:       1,
+		Configuration: resolved.Configuration,
+		CLIBlocks:     resolved.CLIBlocks,
+	}
+	raw, err := json.Marshal(b)
+	if err != nil {
+		return "", err
+	}
+	return string(raw), nil
+}
+
+func decodeReplayBody(raw string) (*replayBody, error) {
+	var b replayBody
+	if err := json.Unmarshal([]byte(raw), &b); err != nil {
+		return nil, err
+	}
+	if b.Version != 1 {
+		return nil, fmt.Errorf("unsupported replay body version %d", b.Version)
+	}
+	return &b, nil
 }
 
 // buildApplyLogEntry compresses an engine.Result into the
@@ -588,4 +678,133 @@ func buildApplyLogEntry(
 		entry.Message = result.Err.Error()
 	}
 	return entry
+}
+
+// ReplayAnnotation is the annotation an operator sets on an
+// IOSXEConfig CR to ask the controller to re-apply a historical
+// resolved-intent body from an IOSXEConfigApplyLog entry. The
+// value is "<log-cr-name>:<entry-index-or-hash>".
+//
+// Examples:
+//   config.cisco.vk/replay-from-log: edge-01-log:42
+//   config.cisco.vk/replay-from-log: edge-01-log:sha256:abc123…
+//
+// Numeric values index into Status.Entries (oldest=0, newest=len-1).
+// Non-numeric values are matched against ApplyLogEntry.Hash. The
+// reconciler clears the annotation on a successful apply so
+// repeated reconciles don't keep re-doing the work.
+const ReplayAnnotation = "config.cisco.vk/replay-from-log"
+
+// applyReplayAnnotation looks for ReplayAnnotation on cr; when
+// present, it loads the named log entry's body, decodes it, and
+// returns a ResolvedIntent that overrides the supplied resolved.
+// applied is true iff the override happened; callers use that to
+// bypass the hash short-circuit.
+//
+// The annotation value's format is intentionally narrow ("<log>:
+// <index-or-hash>") so a typo never silently no-ops — anything
+// that doesn't parse, or names a log that doesn't exist, returns
+// an error and the reconciler records it as a failure on the CR.
+func (r *ConfigReconciler) applyReplayAnnotation(
+	ctx context.Context,
+	cr *configv1alpha1.IOSXEConfig,
+	resolved *intent.ResolvedIntent,
+) (*intent.ResolvedIntent, bool, error) {
+	raw, ok := cr.Annotations[ReplayAnnotation]
+	if !ok || raw == "" {
+		return resolved, false, nil
+	}
+	parts := splitReplayAnnotation(raw)
+	if parts == nil {
+		return resolved, false, fmt.Errorf(
+			"%s=%q: expected '<log-name>:<index|hash>'",
+			ReplayAnnotation, raw)
+	}
+	logName, selector := parts[0], parts[1]
+
+	var log configv1alpha1.IOSXEConfigApplyLog
+	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: cr.Namespace, Name: logName}, &log); err != nil {
+		return resolved, false, fmt.Errorf("get log %s/%s: %w", cr.Namespace, logName, err)
+	}
+	entry, err := pickReplayEntry(log.Status.Entries, selector)
+	if err != nil {
+		return resolved, false, err
+	}
+	if entry.Body == "" {
+		return resolved, false, fmt.Errorf(
+			"%s/%s entry %s has no retained body — set spec.retainBody=true on the log before relying on replay",
+			cr.Namespace, logName, selector)
+	}
+	body, err := decodeReplayBody(entry.Body)
+	if err != nil {
+		return resolved, false, fmt.Errorf("decode replay body: %w", err)
+	}
+	// Override only the Configuration + CLIBlocks. Carry the rest
+	// of the resolved intent (managed families, drift policy,
+	// transactional flag, etc.) verbatim — the operator asked for
+	// historical content, not historical CR shape.
+	out := *resolved
+	out.Configuration = body.Configuration
+	out.CLIBlocks = body.CLIBlocks
+	return &out, true, nil
+}
+
+// splitReplayAnnotation returns the [logName, selector] pair for a
+// well-formed annotation value, or nil for any other shape.
+// "edge-01-log:sha256:abc" splits as ["edge-01-log", "sha256:abc"];
+// the colon-in-selector case (the canonical hash carries one)
+// matters because a naive split-by-":" would mangle it.
+func splitReplayAnnotation(raw string) []string {
+	idx := -1
+	for i := 0; i < len(raw); i++ {
+		if raw[i] == ':' {
+			idx = i
+			break
+		}
+	}
+	if idx <= 0 || idx == len(raw)-1 {
+		return nil
+	}
+	return []string{raw[:idx], raw[idx+1:]}
+}
+
+// pickReplayEntry resolves selector against the entries slice.
+// Numeric selectors index into the slice (negative not supported);
+// otherwise the selector matches against ApplyLogEntry.Hash. A
+// nil entry pointer is never returned — every error path is
+// explicit.
+func pickReplayEntry(entries []configv1alpha1.ApplyLogEntry, selector string) (configv1alpha1.ApplyLogEntry, error) {
+	if len(entries) == 0 {
+		return configv1alpha1.ApplyLogEntry{}, fmt.Errorf("log has no entries")
+	}
+	if i, err := strconvIndex(selector); err == nil {
+		if i < 0 || i >= len(entries) {
+			return configv1alpha1.ApplyLogEntry{}, fmt.Errorf(
+				"index %d out of range [0, %d)", i, len(entries))
+		}
+		return entries[i], nil
+	}
+	for _, e := range entries {
+		if e.Hash == selector {
+			return e, nil
+		}
+	}
+	return configv1alpha1.ApplyLogEntry{}, fmt.Errorf("no entry with hash %q", selector)
+}
+
+// strconvIndex avoids the strconv import for one tiny helper. Only
+// non-negative integers are accepted; anything else surfaces as
+// "not a number" and the caller falls back to hash matching.
+func strconvIndex(s string) (int, error) {
+	if s == "" {
+		return 0, fmt.Errorf("empty")
+	}
+	n := 0
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return 0, fmt.Errorf("non-numeric")
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n, nil
 }
