@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -471,12 +473,20 @@ func (r *ConfigReconciler) recordResult(
 		Type: "Ready", Status: readyStatus, Reason: readyReason, Message: readyMsg,
 	})
 
-	if owners, overlaps := conflicts[familiesKey(cr)]; overlaps {
+	// Wave 2C (external-review Finding #7): probe every managed
+	// family against the conflict map, not just the first. The map
+	// is keyed by family, so a CR claiming [system, vlan] that
+	// overlaps another CR on `vlan` would previously report
+	// `NoOverlap` because only ManagedFamilies[0] (system) was
+	// checked. Aggregate all overlapping owners across all families
+	// into the condition message; deduplicate so the same owner
+	// doesn't appear twice when overlap is on multiple families.
+	if overlapMsg := buildConflictMessage(cr, conflicts); overlapMsg != "" {
 		setCondition(&updated.Status, metav1.Condition{
 			Type:    "Conflict",
 			Status:  metav1.ConditionTrue,
 			Reason:  "FamilyOverlap",
-			Message: fmt.Sprintf("overlaps with %v", owners),
+			Message: overlapMsg,
 		})
 	} else {
 		setCondition(&updated.Status, metav1.Condition{
@@ -533,11 +543,64 @@ func (r *ConfigReconciler) recordResult(
 // map. The map in engine.ConflictCheck is keyed by family, so we use
 // the first family as a quick probe — a CR that overlaps on any family
 // still shows up as "conflicted" through the detailed condition message.
+//
+// Note: prefer buildConflictMessage for status reporting; familiesKey is
+// retained for tests and existing one-shot lookups but is incomplete on
+// its own for multi-family overlap detection.
 func familiesKey(cr *configv1alpha1.IOSXEConfig) string {
 	if len(cr.Spec.ManagedFamilies) == 0 {
 		return ""
 	}
 	return cr.Spec.ManagedFamilies[0]
+}
+
+// buildConflictMessage walks every family in cr.Spec.ManagedFamilies
+// and aggregates the conflict-map owners across all of them. Returns
+// an empty string when there is no overlap on any family. The returned
+// message is deterministic — owners are deduplicated and sorted —
+// so two reconcile ticks with the same input produce the same message,
+// avoiding noisy status churn.
+//
+// Wave 2C (external-review Finding #7): the previous lookup only
+// checked ManagedFamilies[0]. A CR claiming [system, vlan] that
+// overlapped another CR on `vlan` reported NoOverlap incorrectly.
+func buildConflictMessage(cr *configv1alpha1.IOSXEConfig, conflicts map[string][]string) string {
+	if len(cr.Spec.ManagedFamilies) == 0 {
+		return ""
+	}
+	// owner → set of families on which we overlap that owner.
+	byOwner := map[string]map[string]struct{}{}
+	for _, fam := range cr.Spec.ManagedFamilies {
+		owners, ok := conflicts[fam]
+		if !ok {
+			continue
+		}
+		for _, o := range owners {
+			if _, seen := byOwner[o]; !seen {
+				byOwner[o] = map[string]struct{}{}
+			}
+			byOwner[o][fam] = struct{}{}
+		}
+	}
+	if len(byOwner) == 0 {
+		return ""
+	}
+	// Render: "overlaps with <owner1> on [fam,fam]; <owner2> on [fam]".
+	owners := make([]string, 0, len(byOwner))
+	for o := range byOwner {
+		owners = append(owners, o)
+	}
+	sort.Strings(owners)
+	parts := make([]string, 0, len(owners))
+	for _, o := range owners {
+		fams := make([]string, 0, len(byOwner[o]))
+		for f := range byOwner[o] {
+			fams = append(fams, f)
+		}
+		sort.Strings(fams)
+		parts = append(parts, fmt.Sprintf("%s on [%s]", o, strings.Join(fams, ",")))
+	}
+	return "overlaps with " + strings.Join(parts, "; ")
 }
 
 // setCondition is a tiny, allocation-light upsert: the API server's

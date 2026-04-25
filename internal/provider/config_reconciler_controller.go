@@ -106,7 +106,18 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 
 	// Build the same resolver + engine the polling path uses so
 	// behaviour stays identical regardless of how we were triggered.
-	resolver := &intent.Resolver{Client: r.Client, KeyRules: r.KeyRules}
+	// Wave 2B (external-review Finding #6): pass SupportedYANGVersions
+	// and DefaultYANGVersion through to the resolver. Without these
+	// the production controller-runtime path silently accepted any
+	// spec.targetYangVersion value and never recorded
+	// status.sourceYangVersion, while the polling/aggregator paths
+	// did both. The two topologies must agree.
+	resolver := &intent.Resolver{
+		Client:                r.Client,
+		KeyRules:              r.KeyRules,
+		SupportedYANGVersions: r.SupportedYANGVersions,
+		DefaultYANGVersion:    r.DefaultYANGVersion,
+	}
 	lookup := r.Lookup
 	if lookup == nil {
 		lookup = writers.Get
@@ -217,6 +228,13 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&configv1alpha1.IOSXEInterfaceGroupConfig{}, mapAll).
 		Watches(&configv1alpha1.IOSXETemplate{}, mapAll).
 		Watches(&corev1.ConfigMap{}, mapAll).
+		// Wave 2D (external-review Finding #11): Secret rotations that
+		// back spec.secretRefs[] must enqueue a reconcile. The mapper
+		// is the same broad mapAll the ConfigMap watch uses — every
+		// IOSXEConfig in the cluster that targets this device is
+		// requeued. The hash short-circuit dedupes ticks where the
+		// rotation didn't actually change resolved intent.
+		Watches(&corev1.Secret{}, mapAll).
 		Complete(r)
 }
 
