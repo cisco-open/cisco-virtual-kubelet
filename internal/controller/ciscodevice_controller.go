@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -59,6 +60,13 @@ const (
 	// DefaultServiceAccount is the shared service account used by all VK deployments.
 	DefaultServiceAccount = "cisco-virtual-kubelet"
 )
+
+// configPrereqsTeardownPollInterval is how often the deletion-finalizer
+// path requeues itself while waiting for the per-device reconciler to
+// converge the empty-intent reconcile. Short enough that an operator
+// kubectl-deleting a CiscoDevice doesn't perceive a stall, long enough
+// that the controller doesn't spin while the engine is mid-tick.
+const configPrereqsTeardownPollInterval = 5 * time.Second
 
 // CiscoDeviceReconciler reconciles a CiscoDevice object.
 // It creates (or updates) a ConfigMap containing the device spec and
@@ -132,6 +140,32 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if !device.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(&device, ciscoDeviceFinalizer) {
 			logger.Info("CiscoDevice deleted – cleaning up VK node", "node", device.Name)
+
+			// Wave 4A — drive prereq teardown BEFORE removing the
+			// finalizer. Treat the device as if spec.configPrereqs
+			// had been cleared: the empty-intent reconcile, prune,
+			// and then CR delete play out the same way a deliberate
+			// removal does. teardownComplete=false means the per-
+			// device reconciler hasn't yet driven the empty intent
+			// to InSync; we requeue without removing the finalizer
+			// so the CiscoDevice (and its owned IOSXEConfig) stay
+			// alive long enough for device-side cleanup to land.
+			deviceCopy := device.DeepCopy()
+			deviceCopy.Spec.ConfigPrereqs = nil
+			done, err := r.reconcileConfigPrereqs(ctx, deviceCopy)
+			if err != nil {
+				return ctrl.Result{}, fmt.Errorf("prereq teardown during deletion: %w", err)
+			}
+			if !done {
+				logger.Info("CiscoDevice deletion: awaiting prereq teardown",
+					"device", device.Name)
+				// Requeue: the per-device reconciler emits the empty
+				// intent to the device, then flips status.phase to
+				// InSync; the next finalizer pass picks that up and
+				// completes the cleanup.
+				return ctrl.Result{RequeueAfter: configPrereqsTeardownPollInterval}, nil
+			}
+
 			if err := r.deleteNode(ctx, device.Name); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -214,8 +248,10 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 		logger.Info("aggregator owns this device; skipping per-device Deployment",
 			"device", device.Name, "driver", device.Spec.Driver)
-		// Still reconcile configPrereqs and update status.
-		if err := r.reconcileConfigPrereqs(ctx, &device); err != nil {
+		// Still reconcile configPrereqs and update status. Teardown
+		// completion is irrelevant on the upsert path — only the
+		// finalizer cares about it.
+		if _, err := r.reconcileConfigPrereqs(ctx, &device); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to reconcile configPrereqs: %w", err)
 		}
 		if err := r.updateStatus(ctx, &device, nil); err != nil {
@@ -383,7 +419,9 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	logger.Info("Deployment reconciled", "name", deploy.Name, "operation", op)
 
 	// ── 6b. Reconcile the owned IOSXEConfig (configPrereqs) ─────────────
-	if err := r.reconcileConfigPrereqs(ctx, &device); err != nil {
+	// Teardown completion is irrelevant on the upsert path — only the
+	// deletion path's finalizer waits on it. Wave 4A.
+	if _, err := r.reconcileConfigPrereqs(ctx, &device); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reconcile configPrereqs: %w", err)
 	}
 
@@ -511,19 +549,40 @@ func ownedIOSXEConfigName(deviceName string) string {
 	return deviceName + "-prereqs"
 }
 
-// reconcileConfigPrereqs creates, updates, or deletes an owned
-// IOSXEConfig CR that mirrors CiscoDevice.spec.configPrereqs. Behaviour:
+// reconcileConfigPrereqs creates, updates, or tears down an owned
+// IOSXEConfig CR that mirrors CiscoDevice.spec.configPrereqs.
+// Behaviour:
 //
-//   - spec.configPrereqs == nil → delete any existing owned CR (covers
-//     the "operator removed prereqs" case without a second finalizer).
 //   - spec.configPrereqs != nil → upsert an IOSXEConfig with
-//     ManagedFamilies filtered to the prereq set and
-//     spec.source.inline set to the provided configuration.
+//     ManagedFamilies filtered to the prereq set, spec.source.inline
+//     set to the provided configuration, AND pruneOnRelinquish=true
+//     so a later relinquishment (operator removes spec.configPrereqs
+//     or deletes the CiscoDevice) actually reverts those families on
+//     the device.
 //
-// The owned CR's owner reference is the CiscoDevice, so deleting the
-// device garbage-collects the CR, and the config-driver reverts
-// those families on the device per netascode scope semantics.
-func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, device *ciskov1.CiscoDevice) error {
+//   - spec.configPrereqs == nil → drive a teardown sequence (Wave 4A,
+//     external-review Finding #8). The previous behaviour was to
+//     delete the owned CR immediately, which orphaned the device-side
+//     config because the engine never got to run with empty intent.
+//     Now:
+//       1. Mutate the CR to empty ManagedFamilies + empty source.
+//          With pruneOnRelinquish=true the per-device reconciler
+//          deletes those families on the device on its next tick.
+//       2. Wait for status.phase == InSync (the per-device reconciler
+//          has driven the empty intent fully). This may take 1-2
+//          reconcile ticks; the controller-runtime requeue path
+//          handles the wait without busy-looping.
+//       3. Once InSync, delete the owned CR.
+//
+// The owned CR's owner reference is still the CiscoDevice for safety,
+// so a forced kubectl delete --cascade=foreground on the CiscoDevice
+// still GC's the CR — but the *normal* path runs through teardown so
+// the device state is reverted before the CR vanishes.
+//
+// teardownComplete reports whether the prereq cleanup finished: the
+// caller can then either skip waiting (caller is in non-deletion path)
+// or remove its finalizer (caller is in deletion path).
+func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, device *ciskov1.CiscoDevice) (teardownComplete bool, err error) {
 	name := ownedIOSXEConfigName(device.Name)
 	key := types.NamespacedName{Namespace: device.Namespace, Name: name}
 
@@ -531,18 +590,52 @@ func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, devi
 	getErr := r.Get(ctx, key, &existing)
 	found := getErr == nil
 	if getErr != nil && !errors.IsNotFound(getErr) {
-		return fmt.Errorf("get owned IOSXEConfig: %w", getErr)
+		return false, fmt.Errorf("get owned IOSXEConfig: %w", getErr)
 	}
 
-	// Removal path.
+	// Teardown path: configPrereqs removed (or device being deleted —
+	// the deletion path also calls us with configPrereqs effectively
+	// "should be nil").
 	if device.Spec.ConfigPrereqs == nil {
 		if !found {
-			return nil
+			// Nothing to tear down; the cleanup completed previously
+			// (or the operator never authored prereqs).
+			return true, nil
 		}
+		// Step 1: drive the CR to empty intent if it isn't already.
+		// The engine reads `pruneOnRelinquish` and emits DELETE ops
+		// for the families that just left ManagedFamilies.
+		if len(existing.Spec.ManagedFamilies) > 0 || existing.Spec.Source.Inline != nil {
+			updated := existing.DeepCopy()
+			updated.Spec.ManagedFamilies = nil
+			updated.Spec.Source = configv1alpha1.ConfigurationSource{}
+			updated.Spec.PruneOnRelinquish = true
+			if err := r.Update(ctx, updated); err != nil {
+				return false, fmt.Errorf("drive owned IOSXEConfig to empty intent: %w", err)
+			}
+			log.FromContext(ctx).Info("configPrereqs teardown: empty-intent applied; awaiting InSync",
+				"iosxeconfig", name)
+			// Not yet complete; re-queue via the controller-runtime
+			// path. The owned CR's status will eventually flip to
+			// InSync and the next reconcile will hit step 2.
+			return false, nil
+		}
+		// Step 2: wait for the per-device reconciler to converge. We
+		// look for status.phase == InSync, which the engine writes
+		// only after a clean apply. PhaseInSync alongside an empty
+		// ManagedFamilies set means "every previously-claimed family
+		// has been pruned on the device".
+		if existing.Status.Phase != "InSync" {
+			log.FromContext(ctx).V(1).Info("configPrereqs teardown: awaiting InSync",
+				"iosxeconfig", name, "phase", existing.Status.Phase)
+			return false, nil
+		}
+		// Step 3: prune complete; delete the CR.
 		if err := r.Delete(ctx, &existing); err != nil && !errors.IsNotFound(err) {
-			return fmt.Errorf("delete owned IOSXEConfig: %w", err)
+			return false, fmt.Errorf("delete owned IOSXEConfig after teardown: %w", err)
 		}
-		return nil
+		log.FromContext(ctx).Info("configPrereqs teardown: complete", "iosxeconfig", name)
+		return true, nil
 	}
 
 	// Upsert path.
@@ -561,16 +654,23 @@ func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, devi
 				// apphosting needs; operators can still opt a separate
 				// IOSXEConfig into report/pause for wider declarative config.
 				DriftPolicy: configv1alpha1.DriftPolicyRevert,
+				// Wave 4A: pruneOnRelinquish=true is the load-bearing
+				// flag for honest teardown semantics. When the operator
+				// later removes spec.configPrereqs, the teardown path
+				// above empties ManagedFamilies; the engine then emits
+				// DELETE ops for the previously-managed families ONLY
+				// because this flag is set.
+				PruneOnRelinquish: true,
 			},
 		}
 		return controllerutil.SetControllerReference(device, desired, r.Scheme)
 	})
 	if err != nil {
-		return fmt.Errorf("upsert owned IOSXEConfig: %w", err)
+		return false, fmt.Errorf("upsert owned IOSXEConfig: %w", err)
 	}
 	log.FromContext(ctx).Info("configPrereqs reconciled",
 		"iosxeconfig", name, "operation", op)
-	return nil
+	return true, nil
 }
 
 // SetupWithManager registers the controller with the manager.

@@ -692,7 +692,13 @@ func TestReconcile_ConfigPrereqsCreatesOwnedIOSXEConfig(t *testing.T) {
 	}
 }
 
-func TestReconcile_ConfigPrereqsRemovedDeletesOwnedCR(t *testing.T) {
+// TestReconcile_ConfigPrereqsRemovedDrivesEmptyIntentThenDeletes is the
+// Wave 4A regression test for external-review Finding #8. Removing
+// spec.configPrereqs no longer immediately deletes the owned CR (which
+// orphaned device-side config because the engine never got to run an
+// empty-intent reconcile). The controller now drives a teardown
+// sequence: empty intent first, wait for InSync, then delete.
+func TestReconcile_ConfigPrereqsRemovedDrivesEmptyIntentThenDeletes(t *testing.T) {
 	device := newDevice("router-d", "default")
 	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
 		Configuration: runtime.RawExtension{Raw: []byte(`{"dhcp":{}}`)},
@@ -700,16 +706,24 @@ func TestReconcile_ConfigPrereqsRemovedDeletesOwnedCR(t *testing.T) {
 	r := reconcilerFor(t, device)
 	ctx := context.Background()
 
-	// First pass creates the owned CR.
+	// First pass creates the owned CR with managed families set and
+	// pruneOnRelinquish=true (the load-bearing flag for Wave 4A).
 	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-d")); err != nil {
 		t.Fatalf("Reconcile (create): %v", err)
 	}
 	var owned configv1alpha1.IOSXEConfig
-	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-d-prereqs"}, &owned); err != nil {
+	ownedKey := types.NamespacedName{Namespace: "default", Name: "router-d-prereqs"}
+	if err := r.Get(ctx, ownedKey, &owned); err != nil {
 		t.Fatalf("expected owned CR: %v", err)
 	}
+	if !owned.Spec.PruneOnRelinquish {
+		t.Errorf("owned CR must have pruneOnRelinquish=true so a later relinquishment reverts device state")
+	}
+	if len(owned.Spec.ManagedFamilies) == 0 {
+		t.Fatal("owned CR should have non-empty ManagedFamilies after upsert")
+	}
 
-	// Operator removes prereqs; next reconcile must delete the owned CR.
+	// Operator removes prereqs.
 	var updated ciskov1.CiscoDevice
 	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-d"}, &updated); err != nil {
 		t.Fatalf("get device: %v", err)
@@ -718,13 +732,42 @@ func TestReconcile_ConfigPrereqsRemovedDeletesOwnedCR(t *testing.T) {
 	if err := r.Update(ctx, &updated); err != nil {
 		t.Fatalf("update device: %v", err)
 	}
+
+	// Tick 1: the controller drives the owned CR to empty intent;
+	// the CR is NOT yet deleted (the engine hasn't run InSync).
 	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-d")); err != nil {
-		t.Fatalf("Reconcile (remove): %v", err)
+		t.Fatalf("Reconcile (remove tick 1): %v", err)
+	}
+	var afterTick1 configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, ownedKey, &afterTick1); err != nil {
+		t.Fatalf("owned CR must still exist after empty-intent step: %v", err)
+	}
+	if len(afterTick1.Spec.ManagedFamilies) != 0 {
+		t.Errorf("owned CR ManagedFamilies should be empty after teardown step 1, got %v", afterTick1.Spec.ManagedFamilies)
+	}
+	if afterTick1.Spec.Source.Inline != nil {
+		t.Errorf("owned CR Source.Inline should be nil after teardown step 1")
 	}
 
+	// Simulate the per-device reconciler reaching InSync on the empty
+	// intent (in production this is the engine's apply-and-prune path).
+	// Use a plain Update — the fake client used by reconcilerFor does
+	// not register a status subresource for IOSXEConfig, so
+	// Status().Update returns NotFound. The whole-object Update is
+	// equivalent for the purposes of this test (reading status.phase
+	// in the next reconcile tick).
+	afterTick1.Status.Phase = "InSync"
+	if err := r.Update(ctx, &afterTick1); err != nil {
+		t.Fatalf("update simulating engine convergence: %v", err)
+	}
+
+	// Tick 2: the controller observes InSync + empty intent and
+	// deletes the CR.
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-d")); err != nil {
+		t.Fatalf("Reconcile (remove tick 2): %v", err)
+	}
 	var stale configv1alpha1.IOSXEConfig
-	err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-d-prereqs"}, &stale)
-	if err == nil {
-		t.Fatalf("owned CR was not deleted: %+v", stale)
+	if err := r.Get(ctx, ownedKey, &stale); err == nil {
+		t.Fatalf("owned CR must be deleted after teardown InSync: %+v", stale)
 	}
 }
