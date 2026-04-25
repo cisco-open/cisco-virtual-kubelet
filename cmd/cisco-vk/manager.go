@@ -28,6 +28,7 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/aggregator"
 	"github.com/cisco/virtual-kubelet-cisco/internal/controller"
 )
 
@@ -42,6 +43,7 @@ var (
 	probeAddr         string
 	vkImage           string
 	vkServiceAccount  string
+	enableAggregator  bool
 )
 
 var managerCmd = &cobra.Command{
@@ -68,6 +70,12 @@ func init() {
 		"Container image to use for Virtual Kubelet deployments.")
 	managerCmd.Flags().StringVar(&vkServiceAccount, "vk-service-account", controller.DefaultServiceAccount,
 		"Service account name for Virtual Kubelet pods.")
+	managerCmd.Flags().BoolVar(&enableAggregator, "enable-config-aggregator", false,
+		"Run an in-process per-device ConfigReconciler instead of "+
+			"spawning one cisco-vk pod per CiscoDevice. Trades the "+
+			"per-pod isolation for one /metrics + one log stream + "+
+			"lower per-fleet overhead. The cisco-vk pod-spawning "+
+			"flow continues to operate alongside this for non-IOSXE devices.")
 }
 
 func runManager(cmd *cobra.Command, args []string) error {
@@ -108,6 +116,20 @@ func runManager(cmd *cobra.Command, args []string) error {
 		os.Exit(1)
 	}
 
+	signalCtx := ctrl.SetupSignalHandler()
+
+	if enableAggregator {
+		if err = (&aggregator.AggregatedReconciler{
+			Client:   mgr.GetClient(),
+			Scheme:   mgr.GetScheme(),
+			Recorder: mgr.GetEventRecorderFor("config-aggregator"),
+			KeyRules: keyRulesForPhase1(),
+		}).SetupWithManager(signalCtx, mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ConfigAggregator")
+			os.Exit(1)
+		}
+	}
+
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
@@ -118,7 +140,7 @@ func runManager(cmd *cobra.Command, args []string) error {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(signalCtx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}

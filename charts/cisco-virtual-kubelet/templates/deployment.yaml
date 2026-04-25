@@ -40,6 +40,9 @@ spec:
             {{- if .Values.controller.leaderElect }}
             - --leader-elect
             {{- end }}
+            {{- if .Values.aggregator.enabled }}
+            - --enable-config-aggregator
+            {{- end }}
           env:
             {{- if .Values.config.leaseNamespace }}
             # Shared cluster namespace for the per-(device,family)

@@ -44,6 +44,18 @@ controller:
   # healthProbeBindAddress is the address the probe endpoint binds to.
   healthProbeBindAddress: ":8081"
 
+aggregator:
+  # When true, the controller manager runs an in-process per-device
+  # ConfigReconciler instead of spawning one cisco-vk pod per
+  # CiscoDevice. Picks the single-manager topology — one /metrics,
+  # one log stream, lower per-fleet overhead. Trades that ergonomic
+  # win for shared blast radius: a manager-pod restart pauses
+  # reconcile for every device.
+  #
+  # The default (false) preserves the per-pod behaviour Phase 0/1
+  # has shipped since day one.
+  enabled: false
+
 config:
   # leaseNamespace is the shared namespace for per-(device, family)
   # arbitration leases. Set this when IOSXEConfig CRs in different
