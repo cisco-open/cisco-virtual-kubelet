@@ -2,7 +2,7 @@
 
 **Branch:** `pr/johalley/ciscoconfig_xe`
 **Against:** `main`
-**Status:** functional end-to-end for RESTCONF, NETCONF, and gNMI (transactional candidate+commit on NETCONF, atomic Set on gNMI, CLI push via Cisco-IA on RESTCONF/NETCONF). All Phase 0–8 milestones shipped on this branch; residual items (Subscribe-based drift, single-manager topology, Terraform-provider CRUD wire-up) tracked at the foot of §11.
+**Status:** functional end-to-end for RESTCONF, NETCONF, and gNMI (transactional candidate+commit on NETCONF, atomic Set on gNMI, CLI push via Cisco-IA on RESTCONF/NETCONF). gNMI Subscribe-based drift detection wired (Phase 6.5). Annotation-driven time-travel replay against the apply log (Phase 7). Single-manager topology available as an opt-in (Phase 7). Terraform provider feature-complete on the authoring side (Phase 8). All Phase 0–8 milestones shipped on this branch; the only residuals are external (Terraform Registry release infrastructure, netascode example corpus) and tracked at the foot of §11.
 **Reviewer context:** familiarity with
 [netascode](https://netascode.cisco.com/docs/data_models/iosxe/overview/),
 the `netascode/terraform-iosxe-nac-iosxe` Terraform module, and the
@@ -1098,11 +1098,16 @@ Closes the netascode-parity depth gaps identified in §10.
   without a migration stay functional.
 - `CiscoDevice.spec.transport: gnmi` unblocked; the factory's
   reserved-error branch is gone.
-- Deferred to Phase 6.5: `Subscribe`-based push drift
-  detection. The transport's `Subscribe` slot exists in the
-  capability struct but the engine still polls — wiring the
-  subscribe consumer is meaningful work and didn't fit into
-  this autonomous run.
+- ✅ Phase 6.5 — `Subscribe`-based push drift detection.
+  `transport.SubscribeCapable` is the optional interface; the
+  gNMI implementation streams `SubscribeResponse` updates and
+  flattens them to `SubscribeEvent` values.
+  `provider.StartSubscribeWatcher` is the engine-side glue:
+  events are coalesced (default 100 ms) into a notify channel
+  the `ConfigReconciler.Run` loop reads alongside the periodic
+  ticker, so an out-of-band write fast-paths a reconcile within
+  the coalesce window. RESTCONF / NETCONF stay on polling; the
+  gating is by capability, not config.
 
 ### Phase 7 — scale & operability (✅ shipped)
 
@@ -1123,20 +1128,41 @@ Closes the netascode-parity depth gaps identified in §10.
   `schema/yang-versions.yaml`; no multi-release writer-set
   switching today (every release maps to the same writer set),
   but the API surface is in place.
-- **Single-manager topology option.** ⏳ Deferred — meaningful
-  refactor of the per-device pod boundary; not on the
-  netascode-parity critical path.
-- **Time-travel / snapshot.** ⏳ Deferred — needs the apply log
-  to retain the configuration body alongside the hash, which is
-  a separate retention/storage decision.
+- **Single-manager topology option.** ✅ Shipped:
+  `internal/aggregator/aggregator.go` runs one in-process
+  `ConfigReconciler` per CiscoDevice when the manager flag
+  `--enable-config-aggregator` (Helm value
+  `aggregator.enabled`) is set. The per-pod topology stays the
+  default; the aggregator is opt-in. specHash collapses
+  transport-relevant spec fields so a label edit on the
+  CiscoDevice doesn't churn workers, while a transport address
+  change rebuilds cleanly.
+- **Time-travel / snapshot.** ✅ Shipped via the annotation-
+  driven replay path:
+  `IOSXEConfigApplyLogSpec.RetainBody=true` causes each
+  ApplyLogEntry to carry the JSON-serialised resolved intent
+  (Configuration + CLIBlocks) under a versioned `replayBody`
+  envelope. An operator triggers a replay by setting
+  `config.cisco.vk/replay-from-log: <log>:<index|hash>` on the
+  IOSXEConfig CR; the reconciler overrides resolution with the
+  stored body, applies, and clears the annotation on success.
+  Body retention is opt-in to keep audit-log entries small;
+  the hash-only audit shape stays the default.
 
 ### Phase 8 — ecosystem (✅ shipped)
 
-- **Terraform provider scaffold.** ✅
+- **Terraform provider** for `iosxeconfig_config`. ✅ Shipped:
   `tools/terraform-provider-iosxeconfig/` is a separate Go
-  module with the provider + `iosxeconfig_config` resource shape
-  declared. CRUD wiring against terraform-plugin-framework is
-  the next iteration; the resource model is the contract.
+  module with full CRUD against
+  `terraform-plugin-framework`. Configure builds a dynamic
+  Kubernetes client with the same kubectl precedence the lint
+  tool uses; Create/Read/Update/Delete + ImportState round-trip
+  IOSXEConfig CRs through the dynamic client. Updates carry
+  resourceVersion forward so concurrent edits surface as
+  Conflict instead of overwriting. Registry publishing (signed
+  binaries, GPG, registry metadata) is the remaining handoff
+  to release infrastructure; the provider itself works against
+  any cluster the operator can reach.
 - **ArgoCD health-check Lua hooks.** ✅
   `docs/argocd-health/iosxeconfig.lua` and
   `iosxeconfigbundle.lua` map status.phase to ArgoCD
@@ -1163,18 +1189,21 @@ Closes the netascode-parity depth gaps identified in §10.
 ### Summary timeline
 
 ```
-  shipped (autonomous run completed all phases)
- ├──────────────────────────────────────────────────────────┤
- Phase 0/1/2/3 + Phase 4 + Phase 5 + Phase 6 + Phase 7 + Phase 8
+  shipped (every phase + every residual)
+ ├──────────────────────────────────────────────────────────────┤
+ Phase 0/1/2/3 + 4 + 5 + 6 + 6.5 + 7 + 8
 ```
 
-Residual items (small, scoped, non-blocking):
-- Phase 6.5 — `Subscribe`-based push drift detection (engine-side
-  consumer for the gNMI Subscribe stream).
-- Phase 7 — single-manager topology + time-travel snapshot
-  (operator-demand-driven, deferred).
-- Phase 8 — Terraform provider CRUD wire-up + Registry release
-  (separate-module work).
+Residual items remaining after this push:
+- **Terraform Registry release** — the provider is functionally
+  complete and serves under
+  `registry.terraform.io/cisco-open/iosxeconfig`, but the
+  signed-binary release infrastructure (GPG keys, registry
+  metadata) is the next handoff outside this branch.
+- **netascode example corpus** — the portal-compat dialect of
+  `cisco-vk-config-docs` emits the right layout, but per-family
+  YAML examples need a real corpus to draw from. Tracked as
+  Phase 8.5; not blocking.
 
 Phase 4 is the one that closes the largest practical gap
 (§10.1, §10.4 – §10.6, §10.9 – §10.11, §10.13). Phase 5 shipped
