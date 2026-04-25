@@ -34,6 +34,7 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 )
 
 const (
@@ -69,6 +70,25 @@ type CiscoDeviceReconciler struct {
 	Image string
 	// ServiceAccount is the name of the service account for VK pods (defaults to DefaultServiceAccount).
 	ServiceAccount string
+
+	// AggregatorEnabled mirrors the manager's --enable-config-aggregator
+	// flag. Wave 1C: when true, the in-process aggregator owns the
+	// per-device config-reconcile loop, so the controller must NOT
+	// also spin up a per-device cisco-vk pod that runs its own
+	// ConfigReconciler — that would produce a duplicate-writer hazard
+	// against the same (device, family) lease scope.
+	//
+	// The behaviour split:
+	//   - device.Spec.Driver has a registered config driver → no
+	//     Deployment is created (aggregator owns the device).
+	//   - device.Spec.Driver registered for apphosting only (no
+	//     configdriver) → Deployment is still created, but with
+	//     DISABLE_IN_POD_CONFIG_RECONCILER=true env so the cisco-vk
+	//     binary skips its own ConfigReconciler.
+	//
+	// AggregatorEnabled=false (the default) keeps the historical
+	// per-pod-per-device topology unchanged.
+	AggregatorEnabled bool
 }
 
 // +kubebuilder:rbac:groups=cisco.vk,resources=ciscodevices,verbs=get;list;watch;update;patch
@@ -171,6 +191,39 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, fmt.Errorf("failed to ensure VK access: %w", err)
 	}
 
+	// Wave 1C — aggregator/per-pod exclusivity. When the aggregator
+	// owns this device (it has a registered configdriver factory),
+	// skip Deployment creation entirely. Devices with apphosting only
+	// (no configdriver) still get a pod, but with the in-pod
+	// ConfigReconciler disabled via env so the aggregator and the
+	// pod do not concurrently write the same (device, family).
+	configDriverRegistered := drivers.ConfigDriverRegistered(device.Spec.Driver)
+	if r.AggregatorEnabled && configDriverRegistered {
+		// Garbage-collect any pre-existing Deployment from a previous
+		// non-aggregator install. Owner-ref'd to the CiscoDevice, so
+		// delete is safe and operator-visible via standard kubectl
+		// describe / events on the device.
+		stale := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      device.Name + deploymentSuffix,
+				Namespace: device.Namespace,
+			},
+		}
+		if err := r.Delete(ctx, stale); err != nil && !errors.IsNotFound(err) {
+			return ctrl.Result{}, fmt.Errorf("delete stale per-device Deployment under aggregator mode: %w", err)
+		}
+		logger.Info("aggregator owns this device; skipping per-device Deployment",
+			"device", device.Name, "driver", device.Spec.Driver)
+		// Still reconcile configPrereqs and update status.
+		if err := r.reconcileConfigPrereqs(ctx, &device); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to reconcile configPrereqs: %w", err)
+		}
+		if err := r.updateStatus(ctx, &device, nil); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
 	// ── 6. Reconcile the Deployment ─────────────────────────────────────
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -257,6 +310,22 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			credEnv = append(credEnv, corev1.EnvVar{
 				Name:  "CONFIG_LEASE_NAMESPACE",
 				Value: v,
+			})
+		}
+
+		// Wave 1C — aggregator/per-pod exclusivity. When the controller
+		// is in aggregator mode AND this device's apphosting pod still
+		// gets created (apphosting-only platforms whose configdriver
+		// isn't registered), tell the cisco-vk binary to skip its own
+		// in-pod ConfigReconciler. The aggregator owns the config
+		// loop; the pod is here only to host apphosting workloads.
+		// Devices whose driver IS configdriver-registered never
+		// reach this code path (the §6 short-circuit above deletes
+		// the Deployment).
+		if r.AggregatorEnabled {
+			credEnv = append(credEnv, corev1.EnvVar{
+				Name:  "DISABLE_IN_POD_CONFIG_RECONCILER",
+				Value: "true",
 			})
 		}
 
@@ -591,16 +660,29 @@ func (r *CiscoDeviceReconciler) deleteNode(ctx context.Context, name string) err
 }
 
 // updateStatus patches the CiscoDevice status based on the Deployment state.
+// A nil deploy means "no per-device Deployment exists for this device"
+// (Wave 1C aggregator-mode path for configdriver-registered drivers);
+// status reflects the aggregator-managed phase instead of polling a
+// non-existent Deployment.
 func (r *CiscoDeviceReconciler) updateStatus(ctx context.Context, device *ciskov1.CiscoDevice, deploy *appsv1.Deployment) error {
-	// Re-fetch deployment to get latest status.
-	var current appsv1.Deployment
-	if err := r.Get(ctx, types.NamespacedName{Name: deploy.Name, Namespace: deploy.Namespace}, &current); err != nil {
-		return fmt.Errorf("failed to fetch deployment for status: %w", err)
-	}
-
-	phase := "Provisioning"
-	if current.Status.ReadyReplicas > 0 {
+	var phase string
+	if deploy == nil {
+		// Aggregator-managed device: liveness signal is the aggregator
+		// worker's continued existence, not a Deployment's
+		// ReadyReplicas count. Surface "Ready" since the device is
+		// owned by the in-process worker; readiness probes on the
+		// aggregator pod cover the worker's health.
 		phase = "Ready"
+	} else {
+		// Re-fetch deployment to get latest status.
+		var current appsv1.Deployment
+		if err := r.Get(ctx, types.NamespacedName{Name: deploy.Name, Namespace: deploy.Namespace}, &current); err != nil {
+			return fmt.Errorf("failed to fetch deployment for status: %w", err)
+		}
+		phase = "Provisioning"
+		if current.Status.ReadyReplicas > 0 {
+			phase = "Ready"
+		}
 	}
 
 	if device.Status.Phase != phase {

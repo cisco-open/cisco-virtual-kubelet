@@ -99,10 +99,11 @@ func runManager(cmd *cobra.Command, args []string) error {
 	}
 
 	if err = (&controller.CiscoDeviceReconciler{
-		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
-		Image:          vkImage,
-		ServiceAccount: vkServiceAccount,
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		Image:             vkImage,
+		ServiceAccount:    vkServiceAccount,
+		AggregatorEnabled: enableAggregator,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CiscoDevice")
 		os.Exit(1)

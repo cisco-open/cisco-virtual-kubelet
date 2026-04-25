@@ -327,7 +327,17 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	// that target this device and drives the (stub) configdriver.Driver.
 	// Failure to build the controller-runtime client is not fatal — apphosting
 	// continues to work; the operator sees the warning and addresses RBAC.
-	if err := startConfigReconciler(ctx, kubeconfigCfg, effectiveNodeName, configReconcilerOptions{
+	//
+	// External-review Finding #3 (Wave 1C): when the controller manager
+	// is running in aggregator mode, it sets DISABLE_IN_POD_CONFIG_RECONCILER=true
+	// on the per-device pod's env. The cisco-vk binary must then NOT
+	// start its own in-pod ConfigReconciler — otherwise the aggregator
+	// and the in-pod reconciler both write the same (device, family)
+	// concurrently, defeating the whole point of single-manager
+	// topology and producing a duplicate-writer hazard.
+	if v := os.Getenv("DISABLE_IN_POD_CONFIG_RECONCILER"); v == "true" || v == "1" {
+		log.G(ctx).Info("DISABLE_IN_POD_CONFIG_RECONCILER set; skipping in-pod ConfigReconciler (aggregator-mode topology)")
+	} else if err := startConfigReconciler(ctx, kubeconfigCfg, effectiveNodeName, configReconcilerOptions{
 		Spec:     &appCfg.Device,
 		Password: appCfg.Device.Password,
 	}); err != nil {
