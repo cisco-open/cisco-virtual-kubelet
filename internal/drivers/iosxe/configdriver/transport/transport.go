@@ -69,10 +69,44 @@ type Op struct {
 	Verb Verb
 	// Path is a YANG xpath addressing the resource being mutated. The
 	// transport adapter converts to protocol-specific path representation.
+	//
+	// For RESTCONF and NETCONF transports the string Path is the
+	// canonical form. For gNMI a structured PathSpec (below) is
+	// preferred — it carries explicit list-key information that a
+	// string xpath has to encode and re-parse, which fails for key
+	// values containing '/'. When PathSpec is non-empty, the gNMI
+	// transport uses it and ignores Path.
 	Path string
+	// PathSpec is the structured representation of Path for
+	// transports that benefit from typed list keys. Wave 5A-fu
+	// (external-review-followup Finding #4): the previous
+	// parseGNMIPath split string paths on '/' before parsing keyed
+	// values, so e.g. `GigabitEthernet=0/0/0` was wrongly split
+	// into multiple path elements. Writers that produce gNMI-bound
+	// ops now populate PathSpec directly so the transport never
+	// has to parse-and-guess.
+	//
+	// Optional: callers (lint tool offline mode, RESTCONF and
+	// NETCONF transports, legacy writers) leave it nil and rely on
+	// the string Path. The gNMI transport falls back to
+	// parseGNMIPath when PathSpec is nil — back-compat preserved.
+	PathSpec []PathElement
 	// Body is the JSON (RESTCONF) or gNMI.TypedValue-serialised (gNMI)
 	// payload. Nil for Delete.
 	Body []byte
+}
+
+// PathElement is one segment of a structured device path. The Name
+// is the YANG container/list name (without any "module:" prefix —
+// the transport carries module separately). Keys is the list-key
+// map for keyed-list segments; nil/empty for container segments.
+//
+// Multi-key composite lists are supported by populating Keys with
+// every key field. Single-key lists carry one entry whose key is
+// the YANG list-key leaf name (e.g. "name", "id", "tag").
+type PathElement struct {
+	Name string
+	Keys map[string]string
 }
 
 // Verb enumerates the small set of mutation shapes every transport must

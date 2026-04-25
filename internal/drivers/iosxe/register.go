@@ -42,6 +42,14 @@ func init() {
 		})
 
 	drivers.RegisterConfigDriver(v1alpha1.DeviceDriverXE, buildXEConfigDriverContext)
+
+	// Wave 5A-fu (external-review-followup Finding #4): wire the
+	// gNMI keyed-list registry through the production startup path
+	// instead of relying on a side-effect of schema.LoadFamilies
+	// (which only the docs-generator binary calls). RegisterPathKey
+	// is idempotent; calling from init means every binary that
+	// blank-imports the iosxe driver gets the registrations.
+	iosxebuilder.RegisterGNMIPathKeysForXE()
 }
 
 // buildXEConfigDriverContext is the IOS-XE ConfigDriverFactory.

@@ -108,6 +108,76 @@ func TestRegisterPathKey_EmptyInputsAreNoOp(t *testing.T) {
 	}
 }
 
+// Wave 5A-fu — structured PathSpec wins over the legacy string Path.
+// The headline test: a key value containing '/' (interface name
+// "0/0/0") would be mangled by parseGNMIPath's string-splitting,
+// but PathSpec carries it verbatim and produces the right gNMI
+// path.
+func TestOpToGNMIPath_PathSpecHandlesSlashInKey(t *testing.T) {
+	op := Op{
+		PathSpec: []PathElement{
+			{Name: "native"},
+			{Name: "interface"},
+			{
+				Name: "GigabitEthernet",
+				Keys: map[string]string{"name": "0/0/0"},
+			},
+		},
+	}
+	path, err := opToGNMIPath(op)
+	if err != nil {
+		t.Fatalf("opToGNMIPath: %v", err)
+	}
+	if len(path.Elem) != 3 {
+		t.Fatalf("expected 3 elems, got %d", len(path.Elem))
+	}
+	last := path.Elem[2]
+	if last.Name != "GigabitEthernet" {
+		t.Errorf("expected last elem name=GigabitEthernet, got %q", last.Name)
+	}
+	if last.Key["name"] != "0/0/0" {
+		t.Errorf("expected key[name]=0/0/0 (slash preserved), got %v", last.Key)
+	}
+}
+
+// PathSpec is preferred when set; the string Path is ignored. Pre-fix
+// (parseGNMIPath only) the string path was the source of truth and
+// got mis-split for keys with '/'.
+func TestOpToGNMIPath_PathSpecPreferredOverString(t *testing.T) {
+	op := Op{
+		Path: "/native/interface/GigabitEthernet=ignored",
+		PathSpec: []PathElement{
+			{Name: "native"},
+			{Name: "interface"},
+			{Name: "GigabitEthernet", Keys: map[string]string{"name": "10/0/1"}},
+		},
+	}
+	path, err := opToGNMIPath(op)
+	if err != nil {
+		t.Fatalf("opToGNMIPath: %v", err)
+	}
+	if len(path.Elem) != 3 {
+		t.Fatalf("expected 3 elems from PathSpec; got %d (string Path took over?)", len(path.Elem))
+	}
+	if path.Elem[2].Key["name"] != "10/0/1" {
+		t.Errorf("PathSpec should win; got %v", path.Elem[2].Key)
+	}
+}
+
+// Empty PathSpec falls back to parseGNMIPath against string Path.
+// This is the back-compat path for callers that haven't migrated
+// to PathSpec (lint tool offline mode, legacy writers).
+func TestOpToGNMIPath_FallsBackToStringWhenNoPathSpec(t *testing.T) {
+	op := Op{Path: "/native/vlan/vlan-list=10"}
+	path, err := opToGNMIPath(op)
+	if err != nil {
+		t.Fatalf("opToGNMIPath: %v", err)
+	}
+	if len(path.Elem) == 0 {
+		t.Fatal("expected at least one elem from fallback parseGNMIPath")
+	}
+}
+
 func TestLastPathSegment(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

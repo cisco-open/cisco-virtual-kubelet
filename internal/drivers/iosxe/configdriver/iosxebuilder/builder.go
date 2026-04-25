@@ -42,6 +42,7 @@ import (
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/schema"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 )
 
@@ -58,6 +59,64 @@ func KeyRulesForXE() intent.KeyRules {
 		"interface_virtual_port_group.interfaces": "id",
 		"dhcp.pools":                              "name",
 		"access_list_extended.extended":           "name",
+	}
+}
+
+// xeGNMIPathKeys is the path-segment → list-key mapping the gNMI
+// transport uses to disambiguate keyed paths under parseGNMIPath's
+// fallback. Authored alongside KeyRulesForXE so adding a new
+// keyed-list family touches one place per concern. Each entry
+// matches LastPathSegment(yangPath).
+//
+// Wave 5A-fu (external-review-followup Finding #4): Wave 5A
+// populated this registry as a side effect of schema.LoadFamilies.
+// Production startup never calls LoadFamilies — only the docs
+// generator does — so the Wave 5A registry was a no-op in the
+// running cisco-vk binary. The fix wires registration through
+// iosxebuilder which IS on the production startup path
+// (KeyRulesForXE is consumed by every binary that builds the
+// IOS-XE config-driver context, both per-pod and aggregator).
+var xeGNMIPathKeys = map[string][]string{
+	// /Cisco-IOS-XE-native:native/vlan/Cisco-IOS-XE-vlan:vlan-list
+	"vlan-list": {"id"},
+	// /Cisco-IOS-XE-native:native/vrf/definition
+	"definition": {"name"},
+	// Concrete interface paths each carry the type as a path
+	// segment, so the gNMI list key is just `name`.
+	"GigabitEthernet":      {"name"},
+	"TwoGigabitEthernet":   {"name"},
+	"FiveGigabitEthernet":  {"name"},
+	"TenGigabitEthernet":   {"name"},
+	"TwentyFiveGigE":       {"name"},
+	"FortyGigabitEthernet": {"name"},
+	"HundredGigE":          {"name"},
+	"TwoHundredGigE":       {"name"},
+	"FourHundredGigE":      {"name"},
+	"Loopback":             {"name"},
+	"VirtualPortGroup":     {"name"},
+	"Tunnel":               {"name"},
+	"Vlan":                 {"name"},
+	"Port-channel":         {"name"},
+	// /Cisco-IOS-XE-native:native/ip/dhcp/pool
+	"pool": {"name"},
+	// /Cisco-IOS-XE-native:native/ip/access-list/extended
+	"extended": {"name"},
+	"standard": {"name"},
+}
+
+// RegisterGNMIPathKeysForXE wires the IOS-XE keyed-list registry
+// into the transport package. Called from
+// internal/drivers/iosxe/register.go's init or the platform
+// builder so every binary linking the iosxe driver gets the
+// registrations — production cisco-vk, the aggregator, and the
+// lint tool when it links against this package.
+//
+// Idempotent. Calling it from multiple sites (init + explicit
+// startup) is safe; transport.RegisterPathKey is a sync.Once-style
+// upsert.
+func RegisterGNMIPathKeysForXE() {
+	for seg, keys := range xeGNMIPathKeys {
+		transport.RegisterPathKey(seg, keys...)
 	}
 }
 

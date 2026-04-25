@@ -430,7 +430,7 @@ func (t *gnmiTransport) flush(ctx context.Context, ops []Op) error {
 	}
 	req := &gpb.SetRequest{}
 	for i, op := range ops {
-		gpath, err := parseGNMIPath(op.Path)
+		gpath, err := opToGNMIPath(op)
 		if err != nil {
 			return fmt.Errorf("op[%d]: %w", i, err)
 		}

@@ -126,9 +126,10 @@ func (w keyedListWriter) Diff(desired, observed any) ([]transport.Op, error) {
 			return nil, err
 		}
 		ops = append(ops, transport.Op{
-			Verb: transport.VerbMerge,
-			Path: w.yangPath + "=" + k,
-			Body: body,
+			Verb:     transport.VerbMerge,
+			Path:     w.yangPath + "=" + k,
+			PathSpec: pathSpecForKeyedListEntry(w.yangPath, w.keyField, k),
+			Body:     body,
 		})
 	}
 	return ops, nil
@@ -184,11 +185,90 @@ func (w keyedListWriter) PruneDiff(desired, observed any) ([]transport.Op, error
 	ops := make([]transport.Op, 0, len(orphans))
 	for _, k := range orphans {
 		ops = append(ops, transport.Op{
-			Verb: transport.VerbDelete,
-			Path: w.yangPath + "=" + k,
+			Verb:     transport.VerbDelete,
+			Path:     w.yangPath + "=" + k,
+			PathSpec: pathSpecForKeyedListEntry(w.yangPath, w.keyField, k),
 		})
 	}
 	return ops, nil
+}
+
+// pathSpecForKeyedListEntry builds a structured PathSpec for a
+// single keyed-list-entry op (e.g. /native/vlan/vlan-list=10).
+// Walks the YANG xpath, strips any "module:" prefix per segment,
+// and attaches the typed key on the LAST segment with the writer's
+// configured keyField name.
+//
+// Wave 5A-fu (external-review-followup Finding #4): with the typed
+// PathSpec on every keyed-list op, gNMI Set/Delete works correctly
+// for keys whose values contain '/' (interface names like
+// "GigabitEthernet 0/0/0"). The legacy string Path is preserved
+// for RESTCONF and NETCONF; only gNMI consults PathSpec.
+func pathSpecForKeyedListEntry(yangPath, keyField, keyValue string) []transport.PathElement {
+	segments := splitYANGPathSegments(yangPath)
+	if len(segments) == 0 {
+		return nil
+	}
+	out := make([]transport.PathElement, len(segments))
+	for i, seg := range segments {
+		out[i] = transport.PathElement{Name: seg}
+	}
+	out[len(out)-1].Keys = map[string]string{keyField: keyValue}
+	return out
+}
+
+// splitYANGPathSegments splits a YANG xpath into its segments,
+// stripping any "module:" prefix per segment. Mirrors the
+// normalisation transport.LastPathSegment applies but keeps the
+// full segment list. Empty paths and pure-/ paths return nil.
+func splitYANGPathSegments(p string) []string {
+	if p == "" || p == "/" {
+		return nil
+	}
+	// Trim a single leading slash; preserve internal "//" as
+	// empty segments (defensive — netascode paths shouldn't
+	// produce them, but if they do the caller sees the original
+	// shape).
+	if p[0] == '/' {
+		p = p[1:]
+	}
+	out := make([]string, 0, 4)
+	for _, raw := range splitPath(p) {
+		if raw == "" {
+			continue
+		}
+		seg := raw
+		if i := indexByte(seg, ':'); i > 0 {
+			seg = seg[i+1:]
+		}
+		out = append(out, seg)
+	}
+	return out
+}
+
+// splitPath splits on '/' without involving the strings package
+// import — the writers package keeps its dependencies tight.
+func splitPath(s string) []string {
+	out := make([]string, 0, 4)
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '/' {
+			out = append(out, s[start:i])
+			start = i + 1
+		}
+	}
+	out = append(out, s[start:])
+	return out
+}
+
+// indexByte locates b in s; returns -1 if absent.
+func indexByte(s string, b byte) int {
+	for i := 0; i < len(s); i++ {
+		if s[i] == b {
+			return i
+		}
+	}
+	return -1
 }
 
 // coerceBlock accepts the family-level container (resolver shape) or a

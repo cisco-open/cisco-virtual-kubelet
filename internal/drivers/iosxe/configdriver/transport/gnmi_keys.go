@@ -45,6 +45,8 @@ package transport
 import (
 	"strings"
 	"sync"
+
+	gpb "github.com/openconfig/gnmi/proto/gnmi"
 )
 
 var (
@@ -107,4 +109,36 @@ func LastPathSegment(p string) string {
 		last = last[i+1:]
 	}
 	return last
+}
+
+// opToGNMIPath converts a transport.Op to a gNMI Path. Wave 5A-fu:
+// when op.PathSpec is non-empty we use it directly — keys are typed
+// and unambiguous, key values containing '/' work correctly.
+// Otherwise (legacy callers, lint tool offline mode) we fall back
+// to parseGNMIPath against op.Path; the documented limitation
+// around '/' in key values applies to the fallback only.
+func opToGNMIPath(op Op) (*gpb.Path, error) {
+	if len(op.PathSpec) > 0 {
+		return pathSpecToGNMI(op.PathSpec), nil
+	}
+	return parseGNMIPath(op.Path)
+}
+
+// pathSpecToGNMI maps the structured PathSpec representation onto
+// gNMI's wire shape. Each PathElement becomes one PathElem; Keys
+// passes through verbatim — multi-key composite lists are supported
+// natively because the structure carries every key explicitly.
+func pathSpecToGNMI(spec []PathElement) *gpb.Path {
+	out := &gpb.Path{Elem: make([]*gpb.PathElem, 0, len(spec))}
+	for _, e := range spec {
+		elem := &gpb.PathElem{Name: e.Name}
+		if len(e.Keys) > 0 {
+			elem.Key = make(map[string]string, len(e.Keys))
+			for k, v := range e.Keys {
+				elem.Key[k] = v
+			}
+		}
+		out.Elem = append(out.Elem, elem)
+	}
+	return out
 }

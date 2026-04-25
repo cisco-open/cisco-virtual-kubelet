@@ -124,9 +124,10 @@ func (dhcpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 			return nil, err
 		}
 		ops = append(ops, transport.Op{
-			Verb: transport.VerbMerge,
-			Path: dhcpPoolListPath + "=" + name,
-			Body: body,
+			Verb:     transport.VerbMerge,
+			Path:     dhcpPoolListPath + "=" + name,
+			PathSpec: pathSpecForKeyedListEntry(dhcpPoolListPath, "name", name),
+			Body:     body,
 		})
 	}
 	return ops, nil
@@ -180,8 +181,9 @@ func (dhcpWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
 	ops := make([]transport.Op, 0, len(names))
 	for _, name := range names {
 		ops = append(ops, transport.Op{
-			Verb: transport.VerbDelete,
-			Path: dhcpPoolListPath + "=" + name,
+			Verb:     transport.VerbDelete,
+			Path:     dhcpPoolListPath + "=" + name,
+			PathSpec: pathSpecForKeyedListEntry(dhcpPoolListPath, "name", name),
 		})
 	}
 	return ops, nil
