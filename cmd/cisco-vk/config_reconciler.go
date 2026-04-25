@@ -14,6 +14,18 @@
 
 package main
 
+// startConfigReconciler is the cisco-vk run-side entrypoint that
+// stands up a per-device ConfigReconciler. After Phase 9 it has no
+// platform-specific code: the per-platform `ConfigDriverFactory`
+// registered in `internal/drivers/<platform>/register.go` returns
+// the platform-specific transport, key rules, writer lookup, and
+// Subscribe-watch paths. The cisco-vk binary just composes those
+// with the platform-agnostic provider.ConfigReconciler.
+//
+// Adding a new platform never edits this file. The cost of a new
+// platform is one register.go in the new package + the blank
+// import in cmd/cisco-vk/drivers_register.go.
+
 import (
 	"context"
 	"fmt"
@@ -40,30 +52,29 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/schema"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 )
 
 // configReconcilerOptions is what startConfigReconciler needs from the
 // surrounding cisco-vk-run setup: device spec (for transport build) and
-// resolved password. Kept as a struct so signatures don't grow.
+// resolved password.
 type configReconcilerOptions struct {
 	Spec     *ciskov1.DeviceSpec
 	Password string
-	// SessionLock optionally serialises config-driver RESTCONF traffic
+	// SessionLock optionally serialises config-driver traffic
 	// against the apphosting driver. Recommended in production.
 	SessionLock *sync.Mutex
 }
 
-// startConfigReconciler builds a controller-runtime client, assembles a
-// transport according to CiscoDevice.spec.transport, and starts the
-// IOSXEConfig reconciler goroutine tied to ctx. Failure to build any
-// piece is returned to the caller — apphosting continues without the
-// config driver rather than taking the process down.
+// startConfigReconciler builds a controller-runtime client, asks
+// the platform-agnostic registry for a ConfigDriverContext that
+// matches CiscoDevice.spec.driver, and starts the reconciler
+// goroutine tied to ctx. Failures are non-fatal: a platform that
+// is not registered, or whose context construction fails,
+// silently leaves the device's config plane unmanaged. The
+// apphosting side continues to run.
 func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName string, opts configReconcilerOptions) error {
 	if cfg == nil {
 		return fmt.Errorf("nil rest.Config")
@@ -73,6 +84,12 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	}
 	if opts.Spec == nil {
 		return fmt.Errorf("nil DeviceSpec")
+	}
+
+	if !drivers.ConfigDriverRegistered(opts.Spec.Driver) {
+		log.G(ctx).WithField("driver", opts.Spec.Driver).
+			Debug("no config driver registered for this device kind; skipping config reconciler")
+		return nil
 	}
 
 	scheme := k8sruntime.NewScheme()
@@ -105,12 +122,6 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		Host:      deviceName,
 	})
 
-	// Controller-runtime manager: owns an informer-backed cache, the
-	// controller's work queue, and a short-circuited /metrics server.
-	// We disable the manager's own metrics server (MetricsBindAddress
-	// = "0") because the VK process already exposes /metrics on
-	// :10250 via the apphosting path; registering twice would fight
-	// over the port.
 	crlog.SetLogger(zap.New(zap.UseDevMode(true)))
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                 scheme,
@@ -122,31 +133,29 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		return fmt.Errorf("build manager: %w", err)
 	}
 
-	// Transport construction failure is not fatal: the reconciler can
-	// still run in scaffold mode (status=Pending, condition NoTransport).
-	t, tErr := transport.For(opts.Spec, opts.Password, transport.FactoryOptions{
+	// Per-platform ConfigDriverContext via the registry. Transport
+	// build failure is non-fatal: the per-driver factory returns
+	// the partial context with Transport=nil and a wrapped error.
+	// We log it and proceed in scaffold mode.
+	dctx, dErr := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, drivers.ConfigDriverOptions{
 		SessionLock: opts.SessionLock,
 	})
-	if tErr != nil {
-		log.G(ctx).WithError(tErr).Warn("IOSXEConfig transport unavailable; driver will report Pending")
+	if dErr != nil {
+		log.G(ctx).WithError(dErr).Warn("config driver context error; reconciler will run in scaffold mode")
+	}
+	if dctx == nil {
+		// Defensive: NewConfigDriver should always return a context
+		// even on partial failure, but if a future driver doesn't,
+		// the reconciler still needs a non-nil context.
+		dctx = &drivers.ConfigDriverContext{}
 	}
 
 	// Lease namespace selection — three-tier precedence:
 	//   1. CONFIG_LEASE_NAMESPACE env (operator opt-in to a shared
 	//      cluster namespace so IOSXEConfig CRs in different
-	//      tenant namespaces actually arbitrate against each other,
-	//      §10.10).
-	//   2. POD_NAMESPACE — historical default; cross-namespace CRs
-	//      that share the same device do *not* arbitrate under
-	//      this setting because they each acquire a same-named
-	//      lease in their own pod's namespace.
-	//   3. "default" — out-of-cluster dev fallback when neither
-	//      env is set.
-	//
-	// The Helm chart and the CiscoDevice controller surface the
-	// shared-namespace value to every cisco-vk pod; operators who
-	// want the historical (per-pod-namespace) behaviour leave
-	// CONFIG_LEASE_NAMESPACE unset.
+	//      tenant namespaces actually arbitrate against each other).
+	//   2. POD_NAMESPACE — historical default.
+	//   3. "default" — out-of-cluster dev fallback.
 	leaseNamespace := os.Getenv("CONFIG_LEASE_NAMESPACE")
 	if leaseNamespace == "" {
 		leaseNamespace = os.Getenv("POD_NAMESPACE")
@@ -155,24 +164,27 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		leaseNamespace = "default"
 	}
 
-	supportedYANG, defaultYANG := loadYANGReleaseTags(ctx)
-
-	// Subscribe-based drift detection (Phase 6.5): if the
-	// transport advertises SubscribeCapable (gNMI today), open a
-	// stream against the union of YANG paths every registered
-	// writer touches. The watcher pushes to a notify channel the
-	// reconciler reads alongside its periodic ticker, so a write
-	// outside CVK's apply path is detected within the coalesce
-	// window (100 ms) instead of at the next 5 s tick.
-	notify := startDriftSubscribe(ctx, t)
+	// Subscribe-based drift fast path: gNMI today; per-driver
+	// factory provides the path set so other drivers can attach
+	// their own without changing this code.
+	var notify <-chan struct{}
+	if dctx.Transport != nil && dctx.Transport.Capabilities().SupportsSubscribe && len(dctx.SubscribePaths) > 0 {
+		n, err := provider.StartSubscribeWatcher(ctx, dctx.Transport, dctx.SubscribePaths, 100*time.Millisecond)
+		if err != nil {
+			log.G(ctx).WithError(err).Warn("subscribe watcher unavailable; falling back to polling")
+		} else {
+			notify = n
+		}
+	}
 
 	r := &provider.ConfigReconciler{
 		Client:                mgr.GetClient(),
 		DeviceName:            deviceName,
-		Transport:             t, // may be nil
-		KeyRules:              keyRulesForPhase1(),
-		SupportedYANGVersions: supportedYANG,
-		DefaultYANGVersion:    defaultYANG,
+		Transport:             dctx.Transport,
+		KeyRules:              dctx.KeyRules,
+		SupportedYANGVersions: dctx.SupportedYANGVersions,
+		DefaultYANGVersion:    dctx.DefaultYANGVersion,
+		Lookup:                dctx.LookupWriter,
 		Leaser: &engine.FamilyLeaser{
 			Client:    mgr.GetClient(),
 			Namespace: leaseNamespace,
@@ -185,100 +197,10 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		return fmt.Errorf("SetupWithManager: %w", err)
 	}
 
-	// Start the manager on a goroutine bound to ctx. When ctx cancels,
-	// Start returns and the reconciler's informers shut down cleanly.
 	go func() {
 		if runErr := mgr.Start(ctx); runErr != nil && runErr != context.Canceled {
-			log.G(ctx).WithError(runErr).Warn("IOSXEConfig manager exited with error")
+			log.G(ctx).WithError(runErr).Warn("config-reconciler manager exited with error")
 		}
 	}()
 	return nil
-}
-
-// keyRulesForPhase1 returns the path → key-field rules the merger uses
-// for YANG-keyed lists in the Phase-1 families. Phase-4 replaces this
-// with a rule set derived from schema/families.yaml.
-func keyRulesForPhase1() intent.KeyRules {
-	return intent.KeyRules{
-		"vlan.vlans":                              "id",
-		"vrf.vrfs":                                "name",
-		"interface_ethernet.interfaces":           "name",
-		"interface_loopback.interfaces":           "name",
-		"interface_virtual_port_group.interfaces": "id",
-		"dhcp.pools":                              "name",
-		"access_list_extended.extended":           "name",
-	}
-}
-
-// loadYANGReleaseTags reads schema/yang-versions.yaml and returns
-// the set of release tags as a closed validator (set semantics) plus
-// the default tag. A failure to load is non-fatal — we log and
-// continue without validation, since YANG-version pinning is
-// optional and a malformed file shouldn't take the controller down.
-func loadYANGReleaseTags(ctx context.Context) (map[string]struct{}, string) {
-	logger := log.G(ctx).WithField("component", "config-reconciler")
-	releases, err := schema.LoadYANGReleases()
-	if err != nil {
-		logger.WithError(err).Warn("could not load yang-versions.yaml; spec.targetYangVersion validation disabled")
-		return nil, ""
-	}
-	supported := make(map[string]struct{}, len(releases))
-	var def string
-	for _, r := range releases {
-		supported[r.Version] = struct{}{}
-		if r.Default {
-			def = r.Version
-		}
-	}
-	return supported, def
-}
-
-// startDriftSubscribe wires the per-pod gNMI Subscribe-based drift
-// fast-path. Transports without SubscribeCapable return nil and
-// the reconciler stays on its periodic ticker; that's the
-// transport rollout pattern (RESTCONF + NETCONF have no Subscribe
-// today and are not expected to gain one).
-//
-// The watch path set is the union of writer YANGPaths so a write
-// to any leaf the engine cares about triggers a fast reconcile.
-// 100 ms coalesce keeps a multi-leaf SetRequest from triggering N
-// separate reconciles.
-func startDriftSubscribe(ctx context.Context, t transport.Interface) <-chan struct{} {
-	if t == nil {
-		return nil
-	}
-	if !t.Capabilities().SupportsSubscribe {
-		return nil
-	}
-	paths := unionWriterPaths()
-	if len(paths) == 0 {
-		return nil
-	}
-	notify, err := provider.StartSubscribeWatcher(ctx, t, paths, 100*time.Millisecond)
-	if err != nil {
-		log.G(ctx).WithError(err).Warn("subscribe watcher unavailable; falling back to polling")
-		return nil
-	}
-	return notify
-}
-
-// unionWriterPaths gathers every YANG path advertised by the
-// registered writers. Sorted output keeps gRPC-side request order
-// stable across restarts.
-func unionWriterPaths() []string {
-	seen := map[string]struct{}{}
-	for _, fam := range writers.Families() {
-		w := writers.Get(fam)
-		if w == nil {
-			continue
-		}
-		for _, p := range w.YANGPaths() {
-			seen[p] = struct{}{}
-		}
-	}
-	out := make([]string, 0, len(seen))
-	for p := range seen {
-		out = append(out, p)
-	}
-	return out
 }

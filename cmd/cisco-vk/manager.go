@@ -119,11 +119,16 @@ func runManager(cmd *cobra.Command, args []string) error {
 	signalCtx := ctrl.SetupSignalHandler()
 
 	if enableAggregator {
+		// The aggregator is platform-agnostic post-Phase-9: it
+		// pulls the per-device ConfigDriverContext (transport,
+		// key rules, writer lookup, subscribe paths) from the
+		// platform registry. New platforms become aggregator-
+		// addressable by registering — no edit here.
 		if err = (&aggregator.AggregatedReconciler{
-			Client:   mgr.GetClient(),
-			Scheme:   mgr.GetScheme(),
-			Recorder: mgr.GetEventRecorderFor("config-aggregator"),
-			KeyRules: keyRulesForPhase1(),
+			Client:         mgr.GetClient(),
+			Scheme:         mgr.GetScheme(),
+			Recorder:       mgr.GetEventRecorderFor("config-aggregator"),
+			LeaseNamespace: os.Getenv("CONFIG_LEASE_NAMESPACE"),
 		}).SetupWithManager(signalCtx, mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ConfigAggregator")
 			os.Exit(1)

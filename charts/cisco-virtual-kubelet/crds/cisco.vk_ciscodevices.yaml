@@ -120,12 +120,25 @@ spec:
                   - XE
                   - XR
                   - NXOS
+                  - JUNOS
                   - FAKE
                 - enum:
                   - XE
                   - XR
                   - NXOS
                   - FAKE
+                description: |-
+                  DeviceDriver enumerates the platforms cisco-virtual-kubelet
+                  can target. The runtime registry under
+                  `internal/drivers/registry.go` decides at process-start time
+                  which of these are actually wired in (via blank imports in
+                  `cmd/cisco-vk/drivers_register.go`); the enum here is the
+                  admission-time validator that matches the registry's universe.
+
+                  Adding a new platform: append a constant here, regenerate the
+                  CRD enum, and ship a `register.go` in the corresponding
+                  `internal/drivers/<platform>/` package. No other foundation
+                  edits.
                 type: string
               labels:
                 additionalProperties:

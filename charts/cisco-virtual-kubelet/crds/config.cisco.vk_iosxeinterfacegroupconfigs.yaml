@@ -49,20 +49,16 @@ spec:
           metadata:
             type: object
           spec:
-            description: |-
-              IOSXEInterfaceGroupConfigSpec carries a configuration block that
-              applies to a set of interfaces across a set of devices. The merge
-              layer expands each member interface into the resolved intent's
-              interface-family block (interface_ethernet, interface_loopback,
-              interface_vlan, etc. — chosen by InterfaceMatch.Type) as if the
-              operator had written the same entry in a per-device source.
-
-              Mirrors netascode's `interface_groups` scope. Order of precedence
-              slots between IOSXEDeviceGroupConfig and IOSXETemplate:
-
-                defaults → device groups → interface groups → templates → per-device
-
-              Scope precedence matches netascode; rightmost wins on overlap.
+            description: "IOSXEInterfaceGroupConfigSpec carries a configuration block
+              that\napplies to a set of interfaces across a set of devices. The merge\nlayer
+              expands each member interface into the resolved intent's\ninterface-family
+              block (interface_ethernet, interface_loopback,\ninterface_vlan, etc.
+              — chosen by InterfaceMatch.Type) as if the\noperator had written the
+              same entry in a per-device source.\n\nMirrors netascode's `interface_groups`
+              scope. Order of precedence\nslots between IOSXEDeviceGroupConfig and
+              IOSXETemplate:\n\n\tdefaults → device groups → interface groups → templates
+              → per-device\n\nScope precedence matches netascode; rightmost wins on
+              overlap."
             properties:
               configuration:
                 description: |-

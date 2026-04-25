@@ -12,21 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package aggregator hosts the single-manager topology option
-// (Phase 7): a controller-runtime reconciler that watches
-// CiscoDevices and runs an in-process ConfigReconciler per device,
-// instead of spawning one cisco-vk pod per device. Two trade-offs:
+// Package aggregator hosts the single-manager topology option:
+// a controller-runtime reconciler that watches CiscoDevices and
+// runs an in-process ConfigReconciler per device, instead of
+// spawning one cisco-vk pod per device.
 //
-//   - Pro: one process means one /metrics, one log stream, one
-//     pull on cluster resources. Better operational ergonomics
-//     for fleets in the hundreds.
-//   - Con: blast radius — if the aggregator pod crashes, every
-//     device's reconcile pauses until restart. The per-pod
-//     topology distributes that.
+// After Phase 9 the aggregator is fully platform-agnostic. The
+// per-device worker pulls a `drivers.ConfigDriverContext` from the
+// platform registry; transport, key rules, writer lookup, and
+// Subscribe-watch paths all come from there. The aggregator never
+// imports any platform-specific package.
 //
-// Operators choose via the Helm `aggregator.enabled` value. The
-// per-pod topology stays the default; this package is the opt-in
-// path.
+// Adding a new platform never edits this file. Drop a register.go
+// in the new platform package, blank-import it from cmd/cisco-vk/
+// drivers_register.go, and the aggregator picks it up.
 package aggregator
 
 import (
@@ -42,57 +41,40 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 )
 
 // AggregatedReconciler watches CiscoDevices and runs one in-process
-// ConfigReconciler per matched device. It owns the device→reconciler
-// registry and the per-device goroutine lifecycle.
+// ConfigReconciler per device that has a registered config driver
+// in the platform registry. Devices whose Driver kind isn't
+// registered are silently skipped — that's how the per-pod
+// topology coexists with this one for unsupported platforms.
 type AggregatedReconciler struct {
 	client.Client
 	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
 
 	// LeaseNamespace is the shared namespace family leases land
-	// in. Empty falls back to each device's own namespace —
-	// matches the per-pod default (CONFIG_LEASE_NAMESPACE unset).
+	// in. Empty falls back to each device's own namespace.
 	LeaseNamespace string
 
-	// SupportedYANGVersions / DefaultYANGVersion are wired from
-	// schema/yang-versions.yaml at startup.
-	SupportedYANGVersions map[string]struct{}
-	DefaultYANGVersion    string
-
-	// KeyRules is the per-family path → key map. Same value the
-	// per-pod topology uses; loaded once and shared.
-	KeyRules intent.KeyRules
-
 	mu      sync.Mutex
-	managed map[string]*deviceWorker // key: namespace/name
+	managed map[string]*deviceWorker
 	rootCtx context.Context
 }
 
-// deviceWorker owns one device's reconciler goroutine. Cancel
-// closes the context bound to the goroutine; the reconciler exits
-// cleanly and any in-flight RPCs honour the cancel.
+// deviceWorker owns one device's reconciler goroutine.
 type deviceWorker struct {
-	cancel    context.CancelFunc
-	transport transport.Interface
-	specHash  string // detect spec edits that need a transport rebuild
+	cancel   context.CancelFunc
+	specHash string
 }
 
 // +kubebuilder:rbac:groups=cisco.vk,resources=ciscodevices,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 
-// SetupWithManager wires the aggregator. The root context (used to
-// derive per-device contexts) is captured here so a manager
-// shutdown propagates to every per-device worker.
 func (r *AggregatedReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	r.rootCtx = ctx
 	if r.managed == nil {
@@ -113,20 +95,17 @@ func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	// IOS-XE only — every other driver type stays per-pod for
-	// now. The aggregator's scope is deliberately narrow.
-	if dev.Spec.Driver != ciskov1.DeviceDriverXE {
+	// Platforms without a registered config driver: silent skip.
+	// Operators see the device through the existing per-pod flow
+	// (or no flow at all if the platform isn't registered for
+	// apphosting either).
+	if !drivers.ConfigDriverRegistered(dev.Spec.Driver) {
 		r.stopWorker(req.String())
 		return ctrl.Result{}, nil
 	}
 
 	pwd, err := r.resolvePassword(ctx, &dev)
 	if err != nil {
-		// Without a credential we can't dial the device. Log via
-		// event and back off — a Secret update will trigger a
-		// fresh reconcile via the watched Secret informer (a
-		// Phase-7.5 nicety; for now we wait for the next
-		// CiscoDevice event).
 		if r.Recorder != nil {
 			r.Recorder.Eventf(&dev, corev1.EventTypeWarning, "AggregatorCredentialFailed",
 				"could not resolve credential: %v", err)
@@ -139,12 +118,8 @@ func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	existing, ok := r.managed[req.String()]
 	r.mu.Unlock()
 	if ok && existing.specHash == hash {
-		// No-op: worker already running with this exact
-		// transport-relevant spec. The per-device reconciler
-		// runs its own loop independent of CiscoDevice events.
 		return ctrl.Result{}, nil
 	}
-	// Spec changed (or no worker yet) — rebuild.
 	r.stopWorker(req.String())
 	if err := r.startWorker(&dev, pwd, hash); err != nil {
 		if r.Recorder != nil {
@@ -156,30 +131,36 @@ func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return ctrl.Result{}, nil
 }
 
-// startWorker builds the device's Transport and launches the
-// ConfigReconciler.Run goroutine. The goroutine closes its own
-// transport on exit.
+// startWorker asks the platform registry for a
+// `drivers.ConfigDriverContext` matching dev.Spec.Driver, then
+// spins a `provider.ConfigReconciler.Run` goroutine bound to a
+// per-device context derived from rootCtx.
 func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, hash string) error {
-	t, err := transport.For(&dev.Spec, password, transport.FactoryOptions{})
-	if err != nil {
-		return fmt.Errorf("build transport: %w", err)
+	dctx, err := drivers.NewConfigDriver(r.rootCtx, &dev.Spec, password, drivers.ConfigDriverOptions{})
+	if err != nil && (dctx == nil || dctx.Transport == nil) {
+		return fmt.Errorf("config driver context: %w", err)
 	}
+	if dctx == nil {
+		return fmt.Errorf("config driver context: returned nil for kind %q", dev.Spec.Driver)
+	}
+
 	leaseNs := r.LeaseNamespace
 	if leaseNs == "" {
 		leaseNs = dev.Namespace
 	}
 	leaser := &engine.FamilyLeaser{Client: r.Client, Namespace: leaseNs}
 
-	notify := startSubscribeFor(r.rootCtx, t)
+	notify := startSubscribeWatcher(r.rootCtx, dctx)
 
 	devCtx, cancel := context.WithCancel(r.rootCtx)
 	rec := &provider.ConfigReconciler{
 		Client:                r.Client,
 		DeviceName:            dev.Name,
-		Transport:             t,
-		KeyRules:              r.KeyRules,
-		SupportedYANGVersions: r.SupportedYANGVersions,
-		DefaultYANGVersion:    r.DefaultYANGVersion,
+		Transport:             dctx.Transport,
+		KeyRules:              dctx.KeyRules,
+		SupportedYANGVersions: dctx.SupportedYANGVersions,
+		DefaultYANGVersion:    dctx.DefaultYANGVersion,
+		Lookup:                dctx.LookupWriter,
 		Leaser:                leaser,
 		Recorder:              r.Recorder,
 		SubscribeNotify:       notify,
@@ -187,16 +168,16 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 
 	r.mu.Lock()
 	r.managed[devKey(dev)] = &deviceWorker{
-		cancel:    cancel,
-		transport: t,
-		specHash:  hash,
+		cancel:   cancel,
+		specHash: hash,
 	}
 	r.mu.Unlock()
 
+	transport := dctx.Transport
 	go func() {
 		defer func() {
-			if t != nil {
-				_ = t.Close()
+			if transport != nil {
+				_ = transport.Close()
 			}
 		}()
 		if err := rec.Run(devCtx); err != nil && err != context.Canceled {
@@ -223,9 +204,8 @@ func (r *AggregatedReconciler) stopWorker(key string) {
 }
 
 // resolvePassword reads the CiscoDevice's credential — either an
-// inline password (dev/test) or a SecretKeyRef. Mirrors the
-// per-pod path's behaviour so a CR works identically under either
-// topology.
+// inline password (dev/test) or a CredentialSecretRef. Mirrors the
+// per-pod path so a CR works identically under either topology.
 func (r *AggregatedReconciler) resolvePassword(ctx context.Context, dev *ciskov1.CiscoDevice) (string, error) {
 	if dev.Spec.Password != "" {
 		return dev.Spec.Password, nil
@@ -247,19 +227,17 @@ func (r *AggregatedReconciler) resolvePassword(ctx context.Context, dev *ciskov1
 	return string(pwd), nil
 }
 
-// devKey is the registry key for a CiscoDevice. Namespace-scoped
-// so two devices with the same name in different namespaces are
-// distinct workers.
 func devKey(dev *ciskov1.CiscoDevice) string {
 	return dev.Namespace + "/" + dev.Name
 }
 
 // specHash compresses the transport-relevant spec fields into a
 // stable string. The aggregator restarts a worker only when this
-// changes — every other spec edit (labels, taints, log level)
-// passes through to the running ConfigReconciler unchanged.
+// changes; non-transport edits (labels, taints, log level) pass
+// through to the running ConfigReconciler unchanged.
 func specHash(dev *ciskov1.CiscoDevice, password string) string {
-	return fmt.Sprintf("%s|%s|%d|%s|%t|%v",
+	return fmt.Sprintf("%s|%s|%s|%d|%s|%t|%v",
+		dev.Spec.Driver,
 		dev.Spec.Address,
 		dev.Spec.Username,
 		dev.Spec.Port,
@@ -269,43 +247,23 @@ func specHash(dev *ciskov1.CiscoDevice, password string) string {
 	)
 }
 
-// startSubscribeFor wires the gNMI Subscribe drift watcher when
-// the transport supports it; returns nil otherwise so the
-// reconciler stays on its periodic ticker.
-func startSubscribeFor(ctx context.Context, t transport.Interface) <-chan struct{} {
-	if t == nil || !t.Capabilities().SupportsSubscribe {
+// startSubscribeWatcher wires the gNMI Subscribe drift watcher
+// when the per-driver context advertises it. Platform-agnostic:
+// the path set comes from the registered ConfigDriverContext, not
+// from a writers package directly.
+func startSubscribeWatcher(ctx context.Context, dctx *drivers.ConfigDriverContext) <-chan struct{} {
+	if dctx == nil || dctx.Transport == nil {
 		return nil
 	}
-	paths := unionWriterPaths()
-	if len(paths) == 0 {
+	if !dctx.Transport.Capabilities().SupportsSubscribe {
 		return nil
 	}
-	notify, err := provider.StartSubscribeWatcher(ctx, t, paths, 0)
+	if len(dctx.SubscribePaths) == 0 {
+		return nil
+	}
+	notify, err := provider.StartSubscribeWatcher(ctx, dctx.Transport, dctx.SubscribePaths, 0)
 	if err != nil {
 		return nil
 	}
 	return notify
 }
-
-func unionWriterPaths() []string {
-	seen := map[string]struct{}{}
-	for _, fam := range writers.Families() {
-		w := writers.Get(fam)
-		if w == nil {
-			continue
-		}
-		for _, p := range w.YANGPaths() {
-			seen[p] = struct{}{}
-		}
-	}
-	out := make([]string, 0, len(seen))
-	for p := range seen {
-		out = append(out, p)
-	}
-	return out
-}
-
-// scheme imports just to make goimports happy when this file is
-// added in isolation. The aggregator participates in the controller
-// manager's shared scheme; references here keep the imports honest.
-var _ configv1alpha1.IOSXEConfigList // ensure the API types compile in

@@ -20,14 +20,27 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// +kubebuilder:validation:Enum=XE;XR;NXOS;FAKE
+// DeviceDriver enumerates the platforms cisco-virtual-kubelet
+// can target. The runtime registry under
+// `internal/drivers/registry.go` decides at process-start time
+// which of these are actually wired in (via blank imports in
+// `cmd/cisco-vk/drivers_register.go`); the enum here is the
+// admission-time validator that matches the registry's universe.
+//
+// Adding a new platform: append a constant here, regenerate the
+// CRD enum, and ship a `register.go` in the corresponding
+// `internal/drivers/<platform>/` package. No other foundation
+// edits.
+//
+// +kubebuilder:validation:Enum=XE;XR;NXOS;JUNOS;FAKE
 type DeviceDriver string
 
 const (
-	DeviceDriverXE   DeviceDriver = "XE"
-	DeviceDriverXR   DeviceDriver = "XR"
-	DeviceDriverNXOS DeviceDriver = "NXOS"
-	DeviceDriverFAKE DeviceDriver = "FAKE"
+	DeviceDriverXE    DeviceDriver = "XE"    // IOS-XE (shipped, full apphosting + configdriver)
+	DeviceDriverXR    DeviceDriver = "XR"    // IOS-XR (placeholder package; drivers/iosxr/)
+	DeviceDriverNXOS  DeviceDriver = "NXOS"  // NX-OS  (placeholder package; drivers/nxos/)
+	DeviceDriverJUNOS DeviceDriver = "JUNOS" // Junos  (placeholder package; drivers/junos/)
+	DeviceDriverFAKE  DeviceDriver = "FAKE"  // in-memory test driver
 )
 
 // CiscoDevice is the Schema for the ciscodevices API.
