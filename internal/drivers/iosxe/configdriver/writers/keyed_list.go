@@ -271,6 +271,39 @@ func indexByte(s string, b byte) int {
 	return -1
 }
 
+// pathSpecForInterface builds a structured PathSpec for an
+// interface keyed by name. Walks "/Cisco-IOS-XE-native:native/
+// interface/<Type>" and attaches Keys{"name": name} on the final
+// segment. Used by handwritten interface writers
+// (interface_ethernet, interface_loopback, interface_tunnel,
+// interface_port_channel, interface_vlan, interface_virtual_port_group)
+// so gNMI Set/Delete preserves the interface name verbatim — even
+// when it contains '/' (e.g. "0/0/0").
+//
+// Wave 7B (external-review-next-actions Finding #5). Pre-fix the
+// handwritten writers emitted only string Path; the gNMI fallback
+// parseGNMIPath split the path on '/' and the lab case
+// GigabitEthernet=0/0/0 produced wrong gNMI elements.
+func pathSpecForInterface(ifaceType, name string) []transport.PathElement {
+	return []transport.PathElement{
+		{Name: "native"},
+		{Name: "interface"},
+		{Name: ifaceType, Keys: map[string]string{"name": name}},
+	}
+}
+
+// pathSpecForInterfaceChild adds a trailing child container after
+// the keyed interface segment — the shape used by
+// interface_switchport (".../interface/<Type>=<name>/switchport").
+func pathSpecForInterfaceChild(ifaceType, name, child string) []transport.PathElement {
+	return []transport.PathElement{
+		{Name: "native"},
+		{Name: "interface"},
+		{Name: ifaceType, Keys: map[string]string{"name": name}},
+		{Name: child},
+	}
+}
+
 // coerceBlock accepts the family-level container (resolver shape) or a
 // bare list. The resolver emits configuration[family] which is
 // typically a map with innerKey → list; tests sometimes hand in the

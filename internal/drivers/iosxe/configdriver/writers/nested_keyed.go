@@ -214,9 +214,10 @@ func (w nestedKeyedListWriter) PruneDiff(desired, observed any) ([]transport.Op,
 			return nil, err
 		}
 		innerOps = append(innerOps, transport.Op{
-			Verb: transport.VerbReplace,
-			Path: w.base.yangPath + "=" + k,
-			Body: payload,
+			Verb:     transport.VerbReplace,
+			Path:     w.base.yangPath + "=" + k,
+			PathSpec: pathSpecForKeyedListEntry(w.base.yangPath, w.base.keyField, k),
+			Body:     payload,
 		})
 	}
 	return append(outerOps, innerOps...), nil
@@ -329,9 +330,10 @@ func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, erro
 			return nil, err
 		}
 		ops = append(ops, transport.Op{
-			Verb: transport.VerbMerge,
-			Path: w.base.yangPath + "=" + k,
-			Body: payload,
+			Verb:     transport.VerbMerge,
+			Path:     w.base.yangPath + "=" + k,
+			PathSpec: pathSpecForKeyedListEntry(w.base.yangPath, w.base.keyField, k),
+			Body:     payload,
 		})
 	}
 	return ops, nil
