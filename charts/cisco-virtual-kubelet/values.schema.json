@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "cisco-virtual-kubelet Helm values",
+  "description": "Validates `helm install --set` and `-f values.yaml` invocations so a typo'd key name fails fast at install time instead of silently no-op'ing. Every field listed in values.yaml has a schema entry here; additionalProperties=false enforces that.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["image", "serviceAccount", "controller"],
+  "properties": {
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "tag", "pullPolicy"],
+      "properties": {
+        "repository": { "type": "string" },
+        "tag":        { "type": "string" },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"]
+        }
+      }
+    },
+    "controllerImage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repository": { "type": "string" },
+        "tag":        { "type": "string" },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["", "Always", "IfNotPresent", "Never"]
+        }
+      }
+    },
+    "vkImage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repository": { "type": "string" },
+        "tag":        { "type": "string" },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["", "Always", "IfNotPresent", "Never"]
+        }
+      }
+    },
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "description": "Controller replicas; leader election arbitrates if >1."
+    },
+    "nameOverride":     { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+    "serviceAccount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["controllerName", "vkName"],
+      "properties": {
+        "controllerName": { "type": "string", "minLength": 1 },
+        "vkName":         { "type": "string", "minLength": 1 }
+      }
+    },
+    "controller": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["leaderElect", "metricsBindAddress", "healthProbeBindAddress"],
+      "properties": {
+        "leaderElect":            { "type": "boolean" },
+        "metricsBindAddress":     {
+          "type": "string",
+          "pattern": "^([a-zA-Z0-9.-]*):[0-9]+$",
+          "description": "host:port — empty host means all interfaces"
+        },
+        "healthProbeBindAddress": {
+          "type": "string",
+          "pattern": "^([a-zA-Z0-9.-]*):[0-9]+$"
+        }
+      }
+    },
+    "aggregator": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Run in-process per-device ConfigReconcilers instead of spawning one cisco-vk pod per CiscoDevice. Default false preserves the per-pod topology."
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "leaseNamespace": {
+          "type": "string",
+          "description": "Shared namespace for per-(device, family) arbitration leases. Empty falls back to per-pod-namespace behaviour."
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "limits":   { "type": "object" },
+        "requests": { "type": "object" }
+      }
+    },
+    "nodeSelector":   { "type": "object" },
+    "tolerations":    { "type": "array" },
+    "affinity":       { "type": "object" },
+    "podAnnotations": { "type": "object" },
+    "podLabels":      { "type": "object" }
+  }
+}

@@ -54,6 +54,7 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 )
 
@@ -98,9 +99,13 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	utilruntime.Must(ciskov1.AddToScheme(scheme))
 	utilruntime.Must(coordv1.AddToScheme(scheme))
 
-	// Register engine metrics on the default Prometheus registry so the
-	// existing /metrics endpoint scrapes them. Idempotent.
+	// Register engine + transport metrics on the default Prometheus
+	// registry so the existing /metrics endpoint scrapes them. Both
+	// calls are idempotent: a second cisco-vk pod sharing the same
+	// process (test fixtures, in-process callers) won't double-
+	// register.
 	engine.RegisterMetrics(prometheus.DefaultRegisterer)
+	transport.RegisterTransportMetrics(prometheus.DefaultRegisterer)
 
 	// Event recorder: the reconciler emits one event per non-trivial
 	// per-family outcome and a terminal event per tick. The broadcaster

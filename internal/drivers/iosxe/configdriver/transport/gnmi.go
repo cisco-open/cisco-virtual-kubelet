@@ -207,9 +207,10 @@ func (t *gnmiTransport) pumpSubscribe(
 				return
 			default:
 				// Drop on overflow — better than back-pressuring
-				// the device-side stream. A drift_event_dropped
-				// counter would live alongside the engine
-				// metrics; deferred to the consumer wiring.
+				// the device-side stream. The drop is observable
+				// via cisco_vk_config_subscribe_events_dropped_total;
+				// alert on rate, not absolute value.
+				recordSubscribeDropped(t.cfg.Address)
 			}
 		}
 		for _, p := range notif.GetDelete() {
@@ -219,6 +220,7 @@ func (t *gnmiTransport) pumpSubscribe(
 			case <-ctx.Done():
 				return
 			default:
+				recordSubscribeDropped(t.cfg.Address)
 			}
 		}
 	}
