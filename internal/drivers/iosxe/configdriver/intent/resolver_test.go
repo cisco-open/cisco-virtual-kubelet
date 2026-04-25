@@ -92,6 +92,7 @@ func mkCR(name, device string, managed []string, inline string) *configv1alpha1.
 }
 
 func TestResolveScopePrecedence(t *testing.T) {
+	t.Parallel()
 	device := mkDevice("edge-01", map[string]string{"role": "access-switch"})
 	defaults := mkDefaults("default",
 		`{"system":{"login_on_failure":true,"mtu":1500}}`)
@@ -135,6 +136,7 @@ func TestResolveScopePrecedence(t *testing.T) {
 }
 
 func TestResolveRejectsDeviceNotInGroup(t *testing.T) {
+	t.Parallel()
 	device := mkDevice("core-01", map[string]string{"role": "core"})
 	group := mkGroup("access-switches",
 		&metav1.LabelSelector{MatchLabels: map[string]string{"role": "access-switch"}},
@@ -155,6 +157,7 @@ func TestResolveRejectsDeviceNotInGroup(t *testing.T) {
 }
 
 func TestResolveMissingDevice(t *testing.T) {
+	t.Parallel()
 	cr := mkCR("x", "does-not-exist", []string{"system"}, `{}`)
 	c := fake.NewClientBuilder().
 		WithScheme(resolverScheme(t)).
@@ -169,6 +172,7 @@ func TestResolveMissingDevice(t *testing.T) {
 }
 
 func TestResolveWithTemplateExpansion(t *testing.T) {
+	t.Parallel()
 	device := mkDevice("edge-01", nil)
 	tpl := &configv1alpha1.IOSXETemplate{
 		ObjectMeta: metav1.ObjectMeta{Name: "uplink", Namespace: "network"},
@@ -205,6 +209,7 @@ func TestResolveWithTemplateExpansion(t *testing.T) {
 }
 
 func TestResolveInterfaceGroupExpansion(t *testing.T) {
+	t.Parallel()
 	device := mkDevice("edge-01", map[string]string{"role": "access-switch"})
 	group := &configv1alpha1.IOSXEInterfaceGroupConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: "access-uplinks", Namespace: "network"},
@@ -255,6 +260,7 @@ func TestResolveInterfaceGroupExpansion(t *testing.T) {
 }
 
 func TestResolveInterfaceGroupNamePatternMatchesDeclared(t *testing.T) {
+	t.Parallel()
 	// The CR declares three GigabitEthernet interfaces (0/0/0, 0/0/1,
 	// 0/0/2). A pattern-based group targets "0/0/[01]" — it should
 	// project onto the first two and leave the third alone, *and*
@@ -314,6 +320,7 @@ func TestResolveInterfaceGroupNamePatternMatchesDeclared(t *testing.T) {
 }
 
 func TestResolveInterfaceGroupNamePatternNoMatchesIsNoOp(t *testing.T) {
+	t.Parallel()
 	// Pattern that matches nothing in the resolved intent must not
 	// fail — operators commonly target a regex hopeful no-op-it
 	// before adding interfaces. Resolution stays clean.
@@ -356,6 +363,7 @@ func TestResolveInterfaceGroupNamePatternNoMatchesIsNoOp(t *testing.T) {
 }
 
 func TestResolveInterfaceGroupNamePatternAnchoredOnBothEnds(t *testing.T) {
+	t.Parallel()
 	// "0/0/0" must not match "0/0/0Bar" or "X0/0/0" — the resolver
 	// anchors the operator's pattern with ^…$ so accidental
 	// substring matches don't sneak past.
@@ -400,6 +408,7 @@ func TestResolveInterfaceGroupNamePatternAnchoredOnBothEnds(t *testing.T) {
 }
 
 func TestResolveSecretRefMergesIntoFamily(t *testing.T) {
+	t.Parallel()
 	// SecretRefs are the path for credentials that must not live
 	// in a ConfigMap or git-tracked YAML. The resolver loads the
 	// Secret, parses the named key as a YAML/JSON snippet, and
@@ -446,6 +455,7 @@ func TestResolveSecretRefMergesIntoFamily(t *testing.T) {
 }
 
 func TestResolveSecretRefRejectsUnmanagedFamily(t *testing.T) {
+	t.Parallel()
 	// A typo in spec.secretRefs[].family must fail loud — silent
 	// no-ops would leave credentials out of the apply and the
 	// operator would get an unauthenticated session that's not
@@ -475,6 +485,7 @@ func TestResolveSecretRefRejectsUnmanagedFamily(t *testing.T) {
 }
 
 func TestResolveSecretRefMissingKeyFailsLoud(t *testing.T) {
+	t.Parallel()
 	// Missing key inside the Secret must error — better to halt
 	// the reconcile than apply a config that's quietly missing
 	// the credential it referenced.
@@ -503,6 +514,7 @@ func TestResolveSecretRefMissingKeyFailsLoud(t *testing.T) {
 }
 
 func TestResolveInterfaceGroupSkipsNonMemberDevice(t *testing.T) {
+	t.Parallel()
 	// Device doesn't match the selector — group should be silently
 	// skipped, not fail resolution.
 	device := mkDevice("core-01", map[string]string{"role": "core"})

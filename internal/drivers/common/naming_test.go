@@ -24,6 +24,7 @@ import (
 )
 
 func TestGetAppHostingName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		pod  *v1.Pod
@@ -51,6 +52,7 @@ func TestGetAppHostingName(t *testing.T) {
 }
 
 func TestGetAppHostingNameLength(t *testing.T) {
+	t.Parallel()
 	// Name format is cvkNNNN_<UID32> where UID is UID36 with _ stripped
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -67,6 +69,7 @@ func TestGetAppHostingNameLength(t *testing.T) {
 }
 
 func TestGetAppHostingNameValidCharacters(t *testing.T) {
+	t.Parallel()
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			UID: types.UID("a24a730b-8b13-4fd0-96ee-900f99d87670"),
@@ -81,6 +84,7 @@ func TestGetAppHostingNameValidCharacters(t *testing.T) {
 }
 
 func TestGenerateContainerAppIDs(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name           string
 		pod            *v1.Pod
@@ -165,6 +169,7 @@ func TestGenerateContainerAppIDs(t *testing.T) {
 }
 
 func TestExtractContainerNameFromLabels(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		runOptsLine string
@@ -208,6 +213,7 @@ func TestExtractContainerNameFromLabels(t *testing.T) {
 }
 
 func TestParseCVKAppName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		appName   string
@@ -280,6 +286,7 @@ func TestParseCVKAppName(t *testing.T) {
 }
 
 func TestIsCVKManagedApp(t *testing.T) {
+	t.Parallel()
 	if !IsCVKManagedApp("cvk0000_a24a730b8b134fd096ee900f99d87670") {
 		t.Error("IsCVKManagedApp should return true for valid CVK app name")
 	}

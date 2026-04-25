@@ -36,6 +36,7 @@ func newLeaseScheme(t *testing.T) *runtime.Scheme {
 }
 
 func TestLeaseAcquireCreatesNew(t *testing.T) {
+	t.Parallel()
 	c := fake.NewClientBuilder().WithScheme(newLeaseScheme(t)).Build()
 	l := &FamilyLeaser{Client: c, Namespace: "cisco-vk"}
 
@@ -62,6 +63,7 @@ func TestLeaseAcquireCreatesNew(t *testing.T) {
 }
 
 func TestLeaseAcquireRenewsSelf(t *testing.T) {
+	t.Parallel()
 	c := fake.NewClientBuilder().WithScheme(newLeaseScheme(t)).Build()
 	l := &FamilyLeaser{Client: c, Namespace: "cisco-vk"}
 
@@ -79,6 +81,7 @@ func TestLeaseAcquireRenewsSelf(t *testing.T) {
 }
 
 func TestLeaseAcquireReportsForeignHolder(t *testing.T) {
+	t.Parallel()
 	c := fake.NewClientBuilder().WithScheme(newLeaseScheme(t)).Build()
 	l := &FamilyLeaser{Client: c, Namespace: "cisco-vk"}
 
@@ -95,6 +98,7 @@ func TestLeaseAcquireReportsForeignHolder(t *testing.T) {
 }
 
 func TestLeaseAcquireTakesOverExpired(t *testing.T) {
+	t.Parallel()
 	scheme := newLeaseScheme(t)
 	// Pre-create an expired lease held by owner-1.
 	renewed := metav1.NewMicroTime(time.Now().Add(-1 * time.Hour))
@@ -131,6 +135,7 @@ func TestLeaseAcquireTakesOverExpired(t *testing.T) {
 }
 
 func TestLeaseReleaseClearsOwnLease(t *testing.T) {
+	t.Parallel()
 	c := fake.NewClientBuilder().WithScheme(newLeaseScheme(t)).Build()
 	l := &FamilyLeaser{Client: c, Namespace: "cisco-vk"}
 
@@ -150,6 +155,7 @@ func TestLeaseReleaseClearsOwnLease(t *testing.T) {
 }
 
 func TestLeaseReleaseByNonOwnerIsNoop(t *testing.T) {
+	t.Parallel()
 	c := fake.NewClientBuilder().WithScheme(newLeaseScheme(t)).Build()
 	l := &FamilyLeaser{Client: c, Namespace: "cisco-vk"}
 
@@ -171,6 +177,7 @@ func TestLeaseReleaseByNonOwnerIsNoop(t *testing.T) {
 }
 
 func TestLeaseReleaseOnMissingIsNoop(t *testing.T) {
+	t.Parallel()
 	c := fake.NewClientBuilder().WithScheme(newLeaseScheme(t)).Build()
 	l := &FamilyLeaser{Client: c, Namespace: "cisco-vk"}
 	if err := l.Release(context.Background(), "edge-01", "vlan", "any"); err != nil {

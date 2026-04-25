@@ -41,6 +41,7 @@ func resetRegistry(t *testing.T) func() {
 }
 
 func TestRegisterAndNewDriverHappyPath(t *testing.T) {
+	t.Parallel()
 	defer resetRegistry(t)()
 
 	called := false
@@ -59,6 +60,7 @@ func TestRegisterAndNewDriverHappyPath(t *testing.T) {
 }
 
 func TestNewDriverUnknownKindEnumeratesRegistered(t *testing.T) {
+	t.Parallel()
 	// Operators reading the error need to see what platforms are
 	// loaded — that's how they figure out a typo (kind "xe"
 	// instead of "XE") vs a missing blank-import in the binary.
@@ -81,6 +83,7 @@ func TestNewDriverUnknownKindEnumeratesRegistered(t *testing.T) {
 }
 
 func TestRegisterDuplicatePanics(t *testing.T) {
+	t.Parallel()
 	// Duplicate registration is almost certainly a build-time bug
 	// — two platforms claiming the same DeviceDriver constant.
 	// Silently overwriting would mask it; we panic instead.
@@ -101,6 +104,7 @@ func TestRegisterDuplicatePanics(t *testing.T) {
 }
 
 func TestRegisterNilFactoryPanics(t *testing.T) {
+	t.Parallel()
 	defer resetRegistry(t)()
 	defer func() {
 		if r := recover(); r == nil {
@@ -111,6 +115,7 @@ func TestRegisterNilFactoryPanics(t *testing.T) {
 }
 
 func TestRegisteredAndRegisteredKinds(t *testing.T) {
+	t.Parallel()
 	defer resetRegistry(t)()
 	Register("B-platform", func(ctx context.Context, spec *v1alpha1.DeviceSpec) (CiscoKubernetesDeviceDriver, error) {
 		return nil, nil
@@ -132,6 +137,7 @@ func TestRegisteredAndRegisteredKinds(t *testing.T) {
 }
 
 func TestRegistryConcurrentAccess(t *testing.T) {
+	t.Parallel()
 	// Hammer Register/NewDriver/Registered concurrently to flush
 	// out lock-ordering bugs. The point isn't perf — it's that the
 	// race detector finds nothing.
@@ -160,6 +166,7 @@ func TestRegistryConcurrentAccess(t *testing.T) {
 }
 
 func TestNewDriverNilSpec(t *testing.T) {
+	t.Parallel()
 	defer resetRegistry(t)()
 	if _, err := NewDriver(context.Background(), nil); err == nil {
 		t.Fatal("expected nil-spec error")

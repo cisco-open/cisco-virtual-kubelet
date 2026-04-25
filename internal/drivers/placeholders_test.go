@@ -34,6 +34,7 @@ import (
 // placeholders blank-imported still sees only what was actually
 // implemented (XE + FAKE in the cisco-vk binary today).
 func TestPlaceholderPackagesDoNotRegister(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []v1alpha1.DeviceDriver{
 		v1alpha1.DeviceDriverNXOS,
 		v1alpha1.DeviceDriverXR,
@@ -61,6 +62,7 @@ func TestPlaceholderPackagesDoNotRegister(t *testing.T) {
 // does not panic". The cmd/cisco-vk binary's own tests cover the
 // "iosxe + fake are present" assertion.
 func TestRegistryEnumeratesOnlyRealDrivers(t *testing.T) {
+	t.Parallel()
 	got := drivers.RegisteredKinds()
 	for _, k := range got {
 		switch k {

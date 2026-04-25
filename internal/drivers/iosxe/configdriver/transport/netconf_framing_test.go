@@ -22,6 +22,7 @@ import (
 )
 
 func TestFrame10RoundTrip(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name    string
 		payload string
@@ -50,6 +51,7 @@ func TestFrame10RoundTrip(t *testing.T) {
 }
 
 func TestFrame10ReaderDrainsSingleStream(t *testing.T) {
+	t.Parallel()
 	// Two frames back-to-back: reader must return each payload
 	// individually without bleeding into the next.
 	var buf bytes.Buffer
@@ -74,6 +76,7 @@ func TestFrame10ReaderDrainsSingleStream(t *testing.T) {
 }
 
 func TestFrame11RoundTrip(t *testing.T) {
+	t.Parallel()
 	cases := []string{
 		"small payload",
 		strings.Repeat("a", 10000), // mid-sized
@@ -96,6 +99,7 @@ func TestFrame11RoundTrip(t *testing.T) {
 }
 
 func TestFrame11RejectsHugeChunks(t *testing.T) {
+	t.Parallel()
 	// Oversized chunk size would let a malicious server pin the
 	// reader's memory. 4 MiB is the enforced cap; verify a
 	// larger size is rejected before allocation.

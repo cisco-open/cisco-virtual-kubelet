@@ -31,6 +31,7 @@ import (
 )
 
 func TestGetNetworkConfig_VirtualPortGroup_DHCPEnabled(t *testing.T) {
+	t.Parallel()
 	driver := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			PodCIDR: "10.0.0.0/24",
@@ -82,6 +83,7 @@ func TestGetNetworkConfig_VirtualPortGroup_DHCPEnabled(t *testing.T) {
 }
 
 func TestGetNetworkConfig_VirtualPortGroup_StaticIP(t *testing.T) {
+	t.Parallel()
 	driver := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			PodCIDR: "10.0.0.0/24",
@@ -129,6 +131,7 @@ func TestGetNetworkConfig_VirtualPortGroup_StaticIP(t *testing.T) {
 }
 
 func TestIsValidPodIP(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		ip       string
@@ -177,6 +180,7 @@ func TestIsValidPodIP(t *testing.T) {
 }
 
 func TestNormalizeMacAddress(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    string
@@ -225,6 +229,7 @@ func TestNormalizeMacAddress(t *testing.T) {
 }
 
 func TestDiscoverPodIP_FromAppHostingOperData(t *testing.T) {
+	t.Parallel()
 	driver := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			Address: "192.168.1.1",
@@ -262,6 +267,7 @@ func TestDiscoverPodIP_FromAppHostingOperData(t *testing.T) {
 }
 
 func TestDiscoverPodIP_NoIPInOperData(t *testing.T) {
+	t.Parallel()
 	driver := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			Address: "192.168.1.1",
@@ -301,6 +307,7 @@ func TestDiscoverPodIP_NoIPInOperData(t *testing.T) {
 }
 
 func TestDiscoverPodIP_NoNetworkInterfaces(t *testing.T) {
+	t.Parallel()
 	driver := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			Address: "192.168.1.1",
@@ -328,6 +335,7 @@ func TestDiscoverPodIP_NoNetworkInterfaces(t *testing.T) {
 }
 
 func TestDiscoverPodIP_EmptyContainers(t *testing.T) {
+	t.Parallel()
 	driver := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			Address: "192.168.1.1",
@@ -347,6 +355,7 @@ func TestDiscoverPodIP_EmptyContainers(t *testing.T) {
 }
 
 func TestConvertPodToAppConfigs_SingleContainer_DHCP(t *testing.T) {
+	t.Parallel()
 	driver := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			PodCIDR: "10.0.0.0/24",
@@ -475,6 +484,7 @@ func TestConvertPodToAppConfigs_SingleContainer_DHCP(t *testing.T) {
 }
 
 func TestConvertPodToAppConfigs_MultipleContainers_StaticIP(t *testing.T) {
+	t.Parallel()
 	driver := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			PodCIDR: "10.0.0.0/24",
@@ -587,6 +597,7 @@ func TestConvertPodToAppConfigs_MultipleContainers_StaticIP(t *testing.T) {
 }
 
 func TestConvertPodToAppConfigs_EmptyPod(t *testing.T) {
+	t.Parallel()
 	driver := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			PodCIDR: "10.0.0.0/24",
@@ -626,6 +637,7 @@ func TestConvertPodToAppConfigs_EmptyPod(t *testing.T) {
 }
 
 func TestConvertPodToAppConfigs_Management_StaticIP(t *testing.T) {
+	t.Parallel()
 	driver := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			PodCIDR: "198.51.100.0/24",
@@ -688,6 +700,7 @@ func TestConvertPodToAppConfigs_Management_StaticIP(t *testing.T) {
 }
 
 func TestConvertPodToAppConfigs_Golden_ManagementStaticIP(t *testing.T) {
+	t.Parallel()
 	driver := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			PodCIDR: "198.51.100.0/24",
@@ -744,6 +757,7 @@ func TestConvertPodToAppConfigs_Golden_ManagementStaticIP(t *testing.T) {
 }
 
 func TestConvertPodToAppConfigs_Golden_AppGigAccess(t *testing.T) {
+	t.Parallel()
 	driver := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			XE: &v1alpha1.XEConfig{
@@ -803,6 +817,7 @@ func TestConvertPodToAppConfigs_Golden_AppGigAccess(t *testing.T) {
 }
 
 func TestConvertPodToAppConfigs_Golden_AppGigTrunk(t *testing.T) {
+	t.Parallel()
 	driver := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			PodCIDR: "10.0.0.0/24",
@@ -889,6 +904,7 @@ func mustUnmarshalJSON(t *testing.T, data []byte) any {
 // ─────────────────────────────────────────────────────────────────────────────
 
 func TestGetContainerIndex(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
 	pod := &v1.Pod{
 		Spec: v1.PodSpec{
@@ -926,6 +942,7 @@ func TestGetContainerIndex(t *testing.T) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 func TestGetIPForContainer(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
 
 	tests := []struct {
@@ -970,6 +987,7 @@ func TestGetIPForContainer(t *testing.T) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 func TestGetResourceConfig_Defaults(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
 	container := &v1.Container{Name: "app"}
 	cfg := d.getResourceConfig(container)
@@ -989,6 +1007,7 @@ func TestGetResourceConfig_Defaults(t *testing.T) {
 }
 
 func TestGetResourceConfig_FromRequests(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
 	container := &v1.Container{
 		Name: "app",
@@ -1014,6 +1033,7 @@ func TestGetResourceConfig_FromRequests(t *testing.T) {
 }
 
 func TestGetResourceConfig_VcpuFromLimits(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
 	container := &v1.Container{
 		Name: "app",
@@ -1032,6 +1052,7 @@ func TestGetResourceConfig_VcpuFromLimits(t *testing.T) {
 }
 
 func TestGetResourceConfig_VcpuRoundsUp(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
 	container := &v1.Container{
 		Name: "app",
@@ -1050,6 +1071,7 @@ func TestGetResourceConfig_VcpuRoundsUp(t *testing.T) {
 }
 
 func TestGetResourceConfig_DefaultOverrides(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{
 		config: &v1alpha1.DeviceSpec{
 			ResourceLimits: v1alpha1.ResourceConfig{
@@ -1078,6 +1100,7 @@ func TestGetResourceConfig_DefaultOverrides(t *testing.T) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 func TestGetNetworkConfig_NoXEConfig(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{}}
 	pod := &v1.Pod{
 		Spec: v1.PodSpec{
@@ -1103,6 +1126,7 @@ func TestGetNetworkConfig_NoXEConfig(t *testing.T) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 func TestAllocateIPForContainer_EmptyPodCIDR(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{PodCIDR: ""}}
 	pod := &v1.Pod{
 		Spec: v1.PodSpec{
@@ -1119,6 +1143,7 @@ func TestAllocateIPForContainer_EmptyPodCIDR(t *testing.T) {
 }
 
 func TestAllocateIPForContainer_InvalidCIDR(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{PodCIDR: "not-a-cidr"}}
 	pod := &v1.Pod{
 		Spec: v1.PodSpec{
@@ -1132,6 +1157,7 @@ func TestAllocateIPForContainer_InvalidCIDR(t *testing.T) {
 }
 
 func TestAllocateIPForContainer_NonPrimary_NoIP(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{PodCIDR: "10.0.0.0/24"}}
 	pod := &v1.Pod{
 		Spec: v1.PodSpec{

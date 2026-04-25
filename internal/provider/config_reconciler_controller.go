@@ -19,6 +19,10 @@ import (
 	"fmt"
 
 	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -36,6 +40,12 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 )
 
+// reconcileTracerName is the instrumentation name used for the root
+// per-tick span. Kept here so all spans emitted by the config
+// reconciler share one name and downstream OTel collectors can route
+// them by instrumentation library.
+const reconcileTracerName = "cisco-virtual-kubelet/config-reconciler"
+
 // Reconcile implements reconcile.Reconciler. It is the hot-path entry
 // for the controller-runtime-driven path (see SetupWithManager); the
 // legacy polling entry in Run() uses the same inner reconcileOne so
@@ -48,6 +58,25 @@ import (
 //     IOSXEConfigs they influence, so a scope-object mutation triggers
 //     targeted re-reconciles rather than a full resync.
 func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	// Per-tick reconcile span. When no OTel TracerProvider is wired
+	// (the unit-test default), this resolves to a no-op tracer and
+	// adds zero overhead. When the topology exporter is configured,
+	// the span lands on the same OTLP collector with full apply-time
+	// attribution and per-CR identity attributes — strictly better
+	// than the existing histogram + event pair for tracing single
+	// reconcile attempts end to end.
+	ctx, span := otel.Tracer(reconcileTracerName).Start(
+		ctx,
+		"ConfigReconciler.Reconcile",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.String("cisco.vk.device.name", r.DeviceName),
+			attribute.String("cisco.vk.iosxeconfig.namespace", req.Namespace),
+			attribute.String("cisco.vk.iosxeconfig.name", req.Name),
+		),
+	)
+	defer span.End()
+
 	logger := crlog.FromContext(ctx).
 		WithValues("component", "config-reconciler", "device", r.DeviceName)
 
@@ -58,8 +87,11 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 			// window; treating NotFound as a no-op is correct because
 			// owner-ref cleanup (if any) is handled elsewhere and our
 			// status writes are unreachable anyway.
+			span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "not-found"))
 			return reconcile.Result{}, nil
 		}
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "get IOSXEConfig")
 		return reconcile.Result{}, fmt.Errorf("get IOSXEConfig: %w", err)
 	}
 
@@ -68,6 +100,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	// prevents this entirely; the check stays because the polling
 	// Run() path does not install a predicate.
 	if cr.Spec.DeviceRef.Name != r.DeviceName {
+		span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "wrong-device"))
 		return reconcile.Result{}, nil
 	}
 
@@ -103,9 +136,26 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		WithField("component", "config-reconciler").
 		WithField("device", r.DeviceName)
 	_ = logger // silence unused when VK logging is the chosen path
+	span.SetAttributes(
+		attribute.Int("cisco.vk.iosxeconfig.cohort_size", len(forDevice)),
+		attribute.Int("cisco.vk.managed_families.count", len(cr.Spec.ManagedFamilies)),
+		attribute.String("cisco.vk.drift_policy", string(cr.Spec.DriftPolicy)),
+	)
 	if err := r.reconcileOne(ctx, vkLogger, resolver, eng, &cr, conflicts); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "reconcileOne")
+		span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "error"))
 		return reconcile.Result{}, err
 	}
+	// Post-reconcile status fields are written into cr.Status during
+	// reconcileOne; surface the rolled-up phase as a span attribute so
+	// trace consumers can pivot on it without having to also pull the
+	// status subresource.
+	span.SetAttributes(
+		attribute.String("cisco.vk.reconcile.outcome", "ok"),
+		attribute.String("cisco.vk.iosxeconfig.phase", cr.Status.Phase),
+		attribute.Int("cisco.vk.drift.count", len(cr.Status.Drift)),
+	)
 	return reconcile.Result{}, nil
 }
 

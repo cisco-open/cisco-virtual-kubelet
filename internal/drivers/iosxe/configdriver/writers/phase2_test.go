@@ -27,6 +27,7 @@ import (
 // --- Singleton writers (cdp, lldp, banner, logging, snmp, aaa, bgp) --------
 
 func TestCDPDiffOnTransition(t *testing.T) {
+	t.Parallel()
 	w := Get("cdp")
 	desired := map[string]any{"run": true}
 	observed := map[string]any{"run": false}
@@ -43,6 +44,7 @@ func TestCDPDiffOnTransition(t *testing.T) {
 }
 
 func TestLLDPDiffNoChangeOnEqual(t *testing.T) {
+	t.Parallel()
 	w := Get("lldp")
 	same := map[string]any{"run": true, "timer": float64(30)}
 	if ops, err := w.Diff(same, same); err != nil || len(ops) != 0 {
@@ -51,6 +53,7 @@ func TestLLDPDiffNoChangeOnEqual(t *testing.T) {
 }
 
 func TestBannerDiffChangesSelectedLeaf(t *testing.T) {
+	t.Parallel()
 	w := Get("banner")
 	desired := map[string]any{"login": "new", "motd": "same"}
 	observed := map[string]any{"login": "old", "motd": "same"}
@@ -64,6 +67,7 @@ func TestBannerDiffChangesSelectedLeaf(t *testing.T) {
 }
 
 func TestLoggingDiffIgnoresUnmanagedLeaves(t *testing.T) {
+	t.Parallel()
 	// Device returns leaves we don't model; writer must not treat them
 	// as drift.
 	w := Get("logging")
@@ -75,6 +79,7 @@ func TestLoggingDiffIgnoresUnmanagedLeaves(t *testing.T) {
 }
 
 func TestSNMPServerFetchEmptyOn404(t *testing.T) {
+	t.Parallel()
 	w := Get("snmp_server")
 	cli, _ := newTestTransport(t, func(wt http.ResponseWriter, r *http.Request) {
 		http.Error(wt, "not found", http.StatusNotFound)
@@ -90,6 +95,7 @@ func TestSNMPServerFetchEmptyOn404(t *testing.T) {
 }
 
 func TestAAADiffOnChangedLeaf(t *testing.T) {
+	t.Parallel()
 	w := Get("aaa")
 	desired := map[string]any{"new-model": true}
 	observed := map[string]any{"new-model": false}
@@ -103,6 +109,7 @@ func TestAAADiffOnChangedLeaf(t *testing.T) {
 }
 
 func TestBGPDiffOnManagedSubtree(t *testing.T) {
+	t.Parallel()
 	w := Get("bgp")
 	desired := map[string]any{"id": "65000", "bgp": map[string]any{"log-neighbor-changes": true}}
 	observed := map[string]any{"id": "65000"}
@@ -118,6 +125,7 @@ func TestBGPDiffOnManagedSubtree(t *testing.T) {
 // --- Keyed-list writers (ntp, access_list_standard, static_route, etc.) ---
 
 func TestNTPServersDiffCreatesMissing(t *testing.T) {
+	t.Parallel()
 	w := Get("ntp")
 	desired := map[string]any{"servers": []any{
 		map[string]any{"name": "192.0.2.1", "prefer": true},
@@ -132,6 +140,7 @@ func TestNTPServersDiffCreatesMissing(t *testing.T) {
 }
 
 func TestStaticRouteDiffByPrefix(t *testing.T) {
+	t.Parallel()
 	w := Get("static_route")
 	desired := map[string]any{"routes": []any{
 		map[string]any{"prefix": "0.0.0.0", "mask": "0.0.0.0", "distance": 1},
@@ -146,6 +155,7 @@ func TestStaticRouteDiffByPrefix(t *testing.T) {
 }
 
 func TestPrefixListDiffByName(t *testing.T) {
+	t.Parallel()
 	w := Get("prefix_list")
 	desired := map[string]any{"prefixes": []any{
 		map[string]any{"name": "ONLY-DEFAULT"},
@@ -160,6 +170,7 @@ func TestPrefixListDiffByName(t *testing.T) {
 }
 
 func TestRouteMapDiffByName(t *testing.T) {
+	t.Parallel()
 	w := Get("route_map")
 	desired := map[string]any{"route_maps": []any{
 		map[string]any{"name": "IN", "description": "customer"},
@@ -174,6 +185,7 @@ func TestRouteMapDiffByName(t *testing.T) {
 }
 
 func TestLineDiffByFirst(t *testing.T) {
+	t.Parallel()
 	w := Get("line")
 	desired := map[string]any{"vty": []any{
 		map[string]any{"first": 0, "last": 4, "login": "authentication default"},
@@ -188,6 +200,7 @@ func TestLineDiffByFirst(t *testing.T) {
 }
 
 func TestACLStandardDiff(t *testing.T) {
+	t.Parallel()
 	w := Get("access_list_standard")
 	desired := map[string]any{"standard": []any{
 		map[string]any{"name": "MGMT", "rules": []any{}},
@@ -202,6 +215,7 @@ func TestACLStandardDiff(t *testing.T) {
 }
 
 func TestOSPFDiffByProcessID(t *testing.T) {
+	t.Parallel()
 	w := Get("ospf")
 	desired := map[string]any{"processes": []any{
 		map[string]any{"id": 1, "router-id": "10.255.255.1"},
@@ -218,6 +232,7 @@ func TestOSPFDiffByProcessID(t *testing.T) {
 // --- interface_switchport (composite-key overlay) -------------------------
 
 func TestSwitchportDiffOnCreate(t *testing.T) {
+	t.Parallel()
 	w := Get("interface_switchport")
 	desired := map[string]any{"interfaces": []any{
 		map[string]any{"type": "GigabitEthernet", "name": "0/0/1", "mode": "access"},
@@ -235,6 +250,7 @@ func TestSwitchportDiffOnCreate(t *testing.T) {
 }
 
 func TestSwitchportFetchProjectsSubContainer(t *testing.T) {
+	t.Parallel()
 	w := Get("interface_switchport")
 	// Serve one ethernet subtree with a single interface carrying a
 	// switchport block; all other types return 404.
@@ -260,6 +276,7 @@ func TestSwitchportFetchProjectsSubContainer(t *testing.T) {
 }
 
 func TestSwitchportRejectsUnknownType(t *testing.T) {
+	t.Parallel()
 	w := Get("interface_switchport")
 	desired := map[string]any{"interfaces": []any{
 		map[string]any{"type": "CopperBus", "name": "0/0/1"},

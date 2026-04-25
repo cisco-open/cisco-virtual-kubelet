@@ -43,6 +43,7 @@ func extACLDesired(rules ...any) map[string]any {
 }
 
 func TestACLExtendedDiffNoChangeWhenRulesEqual(t *testing.T) {
+	t.Parallel()
 	w := nestedKeyedListWriter{
 		base: keyedListWriter{
 			family: aclExtFamily, yangPath: aclExtPath,
@@ -74,6 +75,7 @@ func TestACLExtendedDiffNoChangeWhenRulesEqual(t *testing.T) {
 }
 
 func TestACLExtendedDiffEmitsOnlyChangedRule(t *testing.T) {
+	t.Parallel()
 	// 100-rule ACL with a single ACE edited at sequence 50. The
 	// merge body must contain only sequence 50, not all 100 — that's
 	// the whole point of per-rule diffing.
@@ -123,6 +125,7 @@ func TestACLExtendedDiffEmitsOnlyChangedRule(t *testing.T) {
 }
 
 func TestACLExtendedDiffRulesEqualOrderless(t *testing.T) {
+	t.Parallel()
 	// A device that returns rules in sequence-sorted order and a
 	// hand-written intent in author-order (10, 30, 20) must compare
 	// as equal — without per-rule keying, the byte-level compare in
@@ -156,6 +159,7 @@ func TestACLExtendedDiffRulesEqualOrderless(t *testing.T) {
 }
 
 func TestACLExtendedPruneDiffEmitsReplaceForInnerOrphan(t *testing.T) {
+	t.Parallel()
 	// pruneOnRelinquish=true semantics for nested keyed lists:
 	// the engine asks PruneDiff for orphans on both axes. The
 	// outer ACL is in both intent and device, but the device has
@@ -197,6 +201,7 @@ func TestACLExtendedPruneDiffEmitsReplaceForInnerOrphan(t *testing.T) {
 }
 
 func TestACLExtendedPruneDiffNoOpWhenNoOrphans(t *testing.T) {
+	t.Parallel()
 	// Inner sets are equivalent ⇒ no inner-prune op. The base
 	// keyedListWriter still emits whole-ACL prune for outer
 	// orphans; that's covered by the keyed-list tests.
@@ -227,6 +232,7 @@ func TestACLExtendedPruneDiffNoOpWhenNoOrphans(t *testing.T) {
 }
 
 func TestACLExtendedDiffNewACLEmitsAllRules(t *testing.T) {
+	t.Parallel()
 	// A brand-new ACL on the device side — every desired rule
 	// counts as changed because there's no observed rule to match.
 	w := nestedKeyedListWriter{

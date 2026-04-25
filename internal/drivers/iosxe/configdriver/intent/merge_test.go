@@ -28,6 +28,7 @@ func m(pairs ...any) map[string]any {
 }
 
 func TestMergeScalarRightmostWins(t *testing.T) {
+	t.Parallel()
 	got := Merge("left", "right")
 	if got != "right" {
 		t.Fatalf("got %v, want right", got)
@@ -35,6 +36,7 @@ func TestMergeScalarRightmostWins(t *testing.T) {
 }
 
 func TestMergeNilDefers(t *testing.T) {
+	t.Parallel()
 	if got := Merge(nil, "x"); got != "x" {
 		t.Fatalf("nil dst: got %v, want x", got)
 	}
@@ -44,6 +46,7 @@ func TestMergeNilDefers(t *testing.T) {
 }
 
 func TestMergeObjectRecurses(t *testing.T) {
+	t.Parallel()
 	dst := m("a", 1, "b", m("x", 10, "y", 20))
 	src := m("b", m("y", 99, "z", 30), "c", 3)
 	got := Merge(dst, src).(map[string]any)
@@ -59,6 +62,7 @@ func TestMergeObjectRecurses(t *testing.T) {
 }
 
 func TestMergeKeyedListByName(t *testing.T) {
+	t.Parallel()
 	dst := []any{
 		m("name", "A", "val", 1),
 		m("name", "B", "val", 2),
@@ -81,6 +85,7 @@ func TestMergeKeyedListByName(t *testing.T) {
 
 // When elements carry only id (no name), the fallback heuristic keys by id.
 func TestMergeKeyedListByIdFallback(t *testing.T) {
+	t.Parallel()
 	dst := []any{m("id", 10, "val", 1), m("id", 20, "val", 2)}
 	src := []any{m("id", 20, "val", 22)}
 	got := Merge(dst, src).([]any)
@@ -94,6 +99,7 @@ func TestMergeKeyedListByIdFallback(t *testing.T) {
 // when name is also present — this is the path the IntentResolver takes
 // for YANG-keyed lists like vlan.vlans (key=id).
 func TestMergeWithRulesOverridesHeuristic(t *testing.T) {
+	t.Parallel()
 	dst := []any{m("id", 10, "name", "users"), m("id", 20, "name", "voice")}
 	src := []any{m("id", 20, "name", "voice-v2")}
 	rules := KeyRules{"vlan.vlans": "id"}
@@ -111,6 +117,7 @@ func TestMergeWithRulesOverridesHeuristic(t *testing.T) {
 }
 
 func TestMergeScalarListReplaces(t *testing.T) {
+	t.Parallel()
 	dst := []any{"a", "b", "c"}
 	src := []any{"x", "y"}
 	got := Merge(dst, src).([]any)
@@ -122,6 +129,7 @@ func TestMergeScalarListReplaces(t *testing.T) {
 // Mixed (objects-without-shared-key) lists fall back to scalar-list
 // replacement because netascode has no defined union semantics for them.
 func TestMergeMixedObjectListReplaces(t *testing.T) {
+	t.Parallel()
 	dst := []any{m("foo", 1), m("bar", 2)}
 	src := []any{m("baz", 3)}
 	got := Merge(dst, src).([]any)
@@ -131,6 +139,7 @@ func TestMergeMixedObjectListReplaces(t *testing.T) {
 }
 
 func TestMergeDoesNotMutateInputs(t *testing.T) {
+	t.Parallel()
 	dst := m("a", m("x", 1))
 	src := m("a", m("x", 2, "y", 3))
 
@@ -148,6 +157,7 @@ func TestMergeDoesNotMutateInputs(t *testing.T) {
 }
 
 func TestMergeTypeMismatchRightmostWins(t *testing.T) {
+	t.Parallel()
 	// Left is a map, right is a scalar — netascode says rightmost wins
 	// rather than erroring; the semantics are "operator typed it, trust them".
 	got := Merge(m("k", 1), "replaced")
@@ -157,6 +167,7 @@ func TestMergeTypeMismatchRightmostWins(t *testing.T) {
 }
 
 func TestEqual(t *testing.T) {
+	t.Parallel()
 	a := m("x", m("y", []any{1, 2, 3}))
 	b := m("x", m("y", []any{1, 2, 3}))
 	c := m("x", m("y", []any{1, 2, 4}))
@@ -173,6 +184,7 @@ func TestEqual(t *testing.T) {
 // rules for YANG-keyed lists (vlan.vlans keyed by id) as the resolver
 // will in production.
 func TestNetascodeScopePrecedence(t *testing.T) {
+	t.Parallel()
 	rules := KeyRules{"vlan.vlans": "id"}
 
 	defaults := m("system", m("login_on_failure", true, "mtu", 1500))

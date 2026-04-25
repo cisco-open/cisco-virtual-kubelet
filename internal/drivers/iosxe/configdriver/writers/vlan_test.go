@@ -45,6 +45,7 @@ func mkVLAN(id int, name string) map[string]any {
 }
 
 func TestVLANDiffCreatesMissing(t *testing.T) {
+	t.Parallel()
 	w := vlanWriter{}
 	desired := []map[string]any{mkVLAN(10, "users"), mkVLAN(20, "voice")}
 	observed := []map[string]any{}
@@ -63,6 +64,7 @@ func TestVLANDiffCreatesMissing(t *testing.T) {
 }
 
 func TestVLANDiffNoChangeOnEqual(t *testing.T) {
+	t.Parallel()
 	w := vlanWriter{}
 	list := []map[string]any{mkVLAN(10, "users"), mkVLAN(20, "voice")}
 	ops, err := w.Diff(list, list)
@@ -75,6 +77,7 @@ func TestVLANDiffNoChangeOnEqual(t *testing.T) {
 }
 
 func TestVLANDiffUpdatesChangedLeaf(t *testing.T) {
+	t.Parallel()
 	w := vlanWriter{}
 	desired := []map[string]any{mkVLAN(10, "users"), {"id": 20, "name": "VOICE"}}
 	observed := []map[string]any{mkVLAN(10, "users"), mkVLAN(20, "voice")}
@@ -91,6 +94,7 @@ func TestVLANDiffUpdatesChangedLeaf(t *testing.T) {
 }
 
 func TestVLANDiffIgnoresExtraObservedVLANs(t *testing.T) {
+	t.Parallel()
 	// A VLAN on the device that is not in the intent must NOT be deleted.
 	// Pruning is a whole-family-level decision (spec.pruneOnRelinquish).
 	w := vlanWriter{}
@@ -106,6 +110,7 @@ func TestVLANDiffIgnoresExtraObservedVLANs(t *testing.T) {
 }
 
 func TestVLANPruneDiffEmitsDeletesForObservedNotInDesired(t *testing.T) {
+	t.Parallel()
 	// PruneDiff is the opt-in counterpart to Diff: when the CR sets
 	// spec.pruneOnRelinquish: true, the engine consults this to learn
 	// which device entries no longer have a home in the intent. We
@@ -132,6 +137,7 @@ func TestVLANPruneDiffEmitsDeletesForObservedNotInDesired(t *testing.T) {
 }
 
 func TestVLANPruneDiffEmptyWhenObservedIsSubset(t *testing.T) {
+	t.Parallel()
 	// Observed is a subset of desired ⇒ nothing to prune. Important:
 	// PruneDiff must not emit ops simply because the device is
 	// missing entries — that's Diff's job (additive).
@@ -148,6 +154,7 @@ func TestVLANPruneDiffEmptyWhenObservedIsSubset(t *testing.T) {
 }
 
 func TestVLANDiffIgnoresUnmanagedLeavesOnObserved(t *testing.T) {
+	t.Parallel()
 	// Device returns extra leaves (e.g. remote-span, device-tracking)
 	// that the Phase-1 writer does not model. It must NOT treat them as
 	// drift — otherwise the family would read as perpetually Drifted.
@@ -166,6 +173,7 @@ func TestVLANDiffIgnoresUnmanagedLeavesOnObserved(t *testing.T) {
 }
 
 func TestVLANDiffDeterministicOrdering(t *testing.T) {
+	t.Parallel()
 	w := vlanWriter{}
 	desired := []map[string]any{mkVLAN(30, "c"), mkVLAN(10, "a"), mkVLAN(20, "b")}
 	ops, err := w.Diff(desired, nil)
@@ -184,6 +192,7 @@ func TestVLANDiffDeterministicOrdering(t *testing.T) {
 }
 
 func TestVLANDiffInvalidIdFails(t *testing.T) {
+	t.Parallel()
 	w := vlanWriter{}
 	_, err := w.Diff([]map[string]any{{"name": "nokey"}}, nil)
 	if err == nil || !strings.Contains(err.Error(), "missing 'id'") {
@@ -192,6 +201,7 @@ func TestVLANDiffInvalidIdFails(t *testing.T) {
 }
 
 func TestVLANDiffSupportsYAMLDecodedShape(t *testing.T) {
+	t.Parallel()
 	// YAML decoders typically produce []any with map[string]any elements
 	// and float64 numbers. The writer must accept that shape without a
 	// pre-normalisation step at the engine.
@@ -209,6 +219,7 @@ func TestVLANDiffSupportsYAMLDecodedShape(t *testing.T) {
 }
 
 func TestVLANFetchStripsYANGWrapper(t *testing.T) {
+	t.Parallel()
 	cli, _ := newTestTransport(t, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, `{"Cisco-IOS-XE-vlan:vlan-list":[{"id":10,"name":"users"}]}`)
 	})
@@ -223,6 +234,7 @@ func TestVLANFetchStripsYANGWrapper(t *testing.T) {
 }
 
 func TestVLANFetchEmptyOn404(t *testing.T) {
+	t.Parallel()
 	cli, _ := newTestTransport(t, func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"errors":{"error":[]}}`, http.StatusNotFound)
 	})
@@ -237,6 +249,7 @@ func TestVLANFetchEmptyOn404(t *testing.T) {
 }
 
 func TestVLANApplyRoundTrip(t *testing.T) {
+	t.Parallel()
 	var received []string
 	cli, _ := newTestTransport(t, func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
@@ -271,6 +284,7 @@ func TestVLANApplyRoundTrip(t *testing.T) {
 }
 
 func TestVLANApplyNoopOnEmptyOps(t *testing.T) {
+	t.Parallel()
 	// A Diff that returns zero ops must produce zero HTTP traffic on
 	// Apply; important for the hash-short-circuit story.
 	var requests int

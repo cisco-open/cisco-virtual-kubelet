@@ -98,6 +98,7 @@ var phase3Families = []string{
 }
 
 func TestPhase1FamiliesRegistered(t *testing.T) {
+	t.Parallel()
 	got := Families()
 	for _, fam := range phase1Families {
 		if !contains(got, fam) {
@@ -130,6 +131,7 @@ func contains(haystack []string, needle string) bool {
 }
 
 func TestGetReturnsRegisteredWriter(t *testing.T) {
+	t.Parallel()
 	for _, fam := range phase1Families {
 		t.Run(fam, func(t *testing.T) {
 			w := Get(fam)
@@ -147,6 +149,7 @@ func TestGetReturnsRegisteredWriter(t *testing.T) {
 }
 
 func TestGetReturnsNilForUnknown(t *testing.T) {
+	t.Parallel()
 	if w := Get("not-a-real-family"); w != nil {
 		t.Fatalf("Get(unknown) = %v, want nil", w)
 	}
@@ -160,6 +163,7 @@ func TestGetReturnsNilForUnknown(t *testing.T) {
 // stub. Switch to a family that remains unimplemented as each family's
 // real writer lands.
 func TestSkeletonWritePathReturnsSentinel(t *testing.T) {
+	t.Parallel()
 	// Register a skeleton explicitly so the test is stable against
 	// Phase-2 writers landing in any order and replacing entries.
 	skelName := "_test_skeleton_family_"
@@ -185,6 +189,7 @@ func TestSkeletonWritePathReturnsSentinel(t *testing.T) {
 }
 
 func TestRegisterNilPanics(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatal("Register(nil): expected panic")

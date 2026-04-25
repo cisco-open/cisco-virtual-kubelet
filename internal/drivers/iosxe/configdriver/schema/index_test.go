@@ -97,6 +97,7 @@ var phase3Families = []string{
 // index and the writers package is caught at unit-test time rather
 // than at runtime when a writer asks for a missing entry.
 func TestFamiliesIndexConsistent(t *testing.T) {
+	t.Parallel()
 	fam, err := LoadFamilies()
 	if err != nil {
 		t.Fatalf("LoadFamilies: %v", err)
@@ -144,6 +145,7 @@ func TestFamiliesIndexConsistent(t *testing.T) {
 }
 
 func TestPathsForDialectFallsBackToNative(t *testing.T) {
+	t.Parallel()
 	// A family without an OpenConfig mapping must still produce
 	// usable paths under the openconfig dialect — fall back to
 	// native rather than empty so writers don't fail closed when
@@ -156,6 +158,7 @@ func TestPathsForDialectFallsBackToNative(t *testing.T) {
 }
 
 func TestPathsForDialectPrefersOpenConfigWhenSet(t *testing.T) {
+	t.Parallel()
 	f := Family{
 		YANGPaths:       []string{"/native/path"},
 		OpenConfigPaths: []string{"/openconfig/path"},
@@ -169,6 +172,7 @@ func TestPathsForDialectPrefersOpenConfigWhenSet(t *testing.T) {
 }
 
 func TestFamiliesYAMLOpenConfigPathsParse(t *testing.T) {
+	t.Parallel()
 	// At least one family ships with openconfig_paths populated
 	// — exercise the loader so a malformed addition is caught.
 	families, err := LoadFamilies()
@@ -189,6 +193,7 @@ func TestFamiliesYAMLOpenConfigPathsParse(t *testing.T) {
 }
 
 func TestDefaultYANGReleaseResolves(t *testing.T) {
+	t.Parallel()
 	r, err := DefaultYANGRelease()
 	if err != nil {
 		t.Fatalf("DefaultYANGRelease: %v", err)

@@ -28,6 +28,7 @@ import (
 // --- vrf -------------------------------------------------------------------
 
 func TestVRFDiffCreatesMissing(t *testing.T) {
+	t.Parallel()
 	w := Get("vrf")
 	desired := map[string]any{"vrfs": []any{
 		map[string]any{"name": "MGMT", "rd": "65000:1"},
@@ -45,6 +46,7 @@ func TestVRFDiffCreatesMissing(t *testing.T) {
 }
 
 func TestVRFDiffNoChangeWhenEqual(t *testing.T) {
+	t.Parallel()
 	w := Get("vrf")
 	same := map[string]any{"vrfs": []any{
 		map[string]any{"name": "MGMT", "rd": "65000:1"},
@@ -62,6 +64,7 @@ func TestVRFDiffNoChangeWhenEqual(t *testing.T) {
 // --- interface_loopback ----------------------------------------------------
 
 func TestLoopbackDiffCreatesMissing(t *testing.T) {
+	t.Parallel()
 	w := Get("interface_loopback")
 	desired := map[string]any{"interfaces": []any{
 		map[string]any{
@@ -81,6 +84,7 @@ func TestLoopbackDiffCreatesMissing(t *testing.T) {
 // --- interface_virtual_port_group -----------------------------------------
 
 func TestVPGDiffSortsByID(t *testing.T) {
+	t.Parallel()
 	w := Get("interface_virtual_port_group")
 	desired := map[string]any{"interfaces": []any{
 		map[string]any{"id": "2", "description": "z"},
@@ -102,6 +106,7 @@ func TestVPGDiffSortsByID(t *testing.T) {
 // --- dhcp ------------------------------------------------------------------
 
 func TestDHCPDiffCreatesMissing(t *testing.T) {
+	t.Parallel()
 	w := Get("dhcp")
 	desired := map[string]any{"pools": []any{
 		map[string]any{
@@ -118,6 +123,7 @@ func TestDHCPDiffCreatesMissing(t *testing.T) {
 }
 
 func TestDHCPDiffPreservesDeviceOnlyPools(t *testing.T) {
+	t.Parallel()
 	w := Get("dhcp")
 	desired := map[string]any{"pools": []any{
 		map[string]any{"name": "A", "network": "10.0.0.0", "prefix_length": 24, "default_router": "10.0.0.1"},
@@ -138,6 +144,7 @@ func TestDHCPDiffPreservesDeviceOnlyPools(t *testing.T) {
 // --- access_list_extended --------------------------------------------------
 
 func TestACLExtendedDiffOnAddedACL(t *testing.T) {
+	t.Parallel()
 	w := Get("access_list_extended")
 	desired := map[string]any{"extended": []any{
 		map[string]any{"name": "IOX-IN", "rules": []any{
@@ -156,6 +163,7 @@ func TestACLExtendedDiffOnAddedACL(t *testing.T) {
 // --- system ----------------------------------------------------------------
 
 func TestSystemDiffOnChangedHostname(t *testing.T) {
+	t.Parallel()
 	w := Get("system")
 	desired := map[string]any{"hostname": "edge-01"}
 	observed := map[string]any{"hostname": "old"}
@@ -179,6 +187,7 @@ func TestSystemDiffOnChangedHostname(t *testing.T) {
 }
 
 func TestSystemDiffNoChangeOnEqual(t *testing.T) {
+	t.Parallel()
 	w := Get("system")
 	desired := map[string]any{"hostname": "edge-01"}
 	observed := map[string]any{"hostname": "edge-01"}
@@ -194,6 +203,7 @@ func TestSystemDiffNoChangeOnEqual(t *testing.T) {
 // --- interface_ethernet ----------------------------------------------------
 
 func TestEthernetDiffOnCreate(t *testing.T) {
+	t.Parallel()
 	w := Get("interface_ethernet")
 	desired := map[string]any{"interfaces": []any{
 		map[string]any{"type": "GigabitEthernet", "name": "0/0/0", "description": "Uplink"},
@@ -211,6 +221,7 @@ func TestEthernetDiffOnCreate(t *testing.T) {
 }
 
 func TestEthernetRejectsUnknownType(t *testing.T) {
+	t.Parallel()
 	w := Get("interface_ethernet")
 	desired := map[string]any{"interfaces": []any{
 		map[string]any{"type": "CopperBus", "name": "0/0/0"},
@@ -224,6 +235,7 @@ func TestEthernetRejectsUnknownType(t *testing.T) {
 // --- FetchOver httptest (integration smoke for keyed_list helper) ----------
 
 func TestVRFFetchOverHTTPTest(t *testing.T) {
+	t.Parallel()
 	w := Get("vrf")
 	cli, _ := newTestTransport(t, func(wt http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(wt,

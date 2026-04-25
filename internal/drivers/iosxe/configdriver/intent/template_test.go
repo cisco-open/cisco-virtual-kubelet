@@ -36,6 +36,7 @@ func mkTemplate(name, body string, params ...configv1alpha1.TemplateParameter) *
 }
 
 func TestExpandTemplateHappyPath(t *testing.T) {
+	t.Parallel()
 	tpl := mkTemplate("uplink",
 		`{"interface_ethernet":{"interfaces":[{"name":"{{ .interface }}","description":"{{ .description }}"}]}}`,
 		configv1alpha1.TemplateParameter{Name: "interface", Type: configv1alpha1.TemplateParameterString, Required: true},
@@ -58,6 +59,7 @@ func TestExpandTemplateHappyPath(t *testing.T) {
 }
 
 func TestExpandTemplateMissingRequired(t *testing.T) {
+	t.Parallel()
 	tpl := mkTemplate("uplink",
 		`{"x":"{{ .interface }}"}`,
 		configv1alpha1.TemplateParameter{Name: "interface", Type: configv1alpha1.TemplateParameterString, Required: true},
@@ -69,6 +71,7 @@ func TestExpandTemplateMissingRequired(t *testing.T) {
 }
 
 func TestExpandTemplateTypeValidation(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name  string
 		pType configv1alpha1.TemplateParameterType
@@ -100,6 +103,7 @@ func TestExpandTemplateTypeValidation(t *testing.T) {
 }
 
 func TestExpandTemplateUnknownParameter(t *testing.T) {
+	t.Parallel()
 	tpl := mkTemplate("t", `{"k":"v"}`)
 	_, err := ExpandTemplate(tpl, map[string]string{"extra": "1"})
 	if err == nil || !strings.Contains(err.Error(), "undeclared parameter") {
@@ -108,6 +112,7 @@ func TestExpandTemplateUnknownParameter(t *testing.T) {
 }
 
 func TestExpandTemplateMissingKeyFailsLoud(t *testing.T) {
+	t.Parallel()
 	// A leaf referring to a parameter the declared-and-resolved map
 	// doesn't contain must error. Without missingkey=error, text/template
 	// would silently substitute "<no value>", which is a worst-case
@@ -123,6 +128,7 @@ func TestExpandTemplateMissingKeyFailsLoud(t *testing.T) {
 }
 
 func TestExpandTemplateNoDelimsIsIdentity(t *testing.T) {
+	t.Parallel()
 	tpl := mkTemplate("t", `{"k":"literal"}`)
 	got, err := ExpandTemplate(tpl, nil)
 	if err != nil {
@@ -134,6 +140,7 @@ func TestExpandTemplateNoDelimsIsIdentity(t *testing.T) {
 }
 
 func TestExpandTemplateDefaultsToDataModel(t *testing.T) {
+	t.Parallel()
 	// spec.type unset should behave as data-model (backward compat;
 	// existing templates authored before the field was introduced
 	// keep working without a CR edit).
@@ -152,6 +159,7 @@ func TestExpandTemplateDefaultsToDataModel(t *testing.T) {
 // the CLI entrypoint. Replaces an earlier test that asserted "cli
 // not yet supported" — CLI is now supported, via ExpandCLITemplate.
 func TestExpandTemplateRoutesCLIToOtherEntrypoint(t *testing.T) {
+	t.Parallel()
 	tpl := mkTemplate("t", `hostname {{ .hostname }}`,
 		configv1alpha1.TemplateParameter{Name: "hostname", Type: configv1alpha1.TemplateParameterString, Required: true},
 	)
@@ -164,6 +172,7 @@ func TestExpandTemplateRoutesCLIToOtherEntrypoint(t *testing.T) {
 }
 
 func TestExpandTemplateExplicitDataModelType(t *testing.T) {
+	t.Parallel()
 	// Explicit spec.type=data-model must behave identically to the
 	// default empty value.
 	tpl := mkTemplate("t", `{"k":"literal"}`)
@@ -179,6 +188,7 @@ func TestExpandTemplateExplicitDataModelType(t *testing.T) {
 }
 
 func TestExpandTemplateUnknownTypeRejected(t *testing.T) {
+	t.Parallel()
 	// kubebuilder enum validation catches this at the API server, but
 	// the expander's defence-in-depth check keeps unit tests and
 	// in-process callers honest.
@@ -194,6 +204,7 @@ func TestExpandTemplateUnknownTypeRejected(t *testing.T) {
 // ----- CLI template render tests (ExpandCLITemplate) -----
 
 func TestExpandCLITemplateRendersParams(t *testing.T) {
+	t.Parallel()
 	tpl := &configv1alpha1.IOSXETemplate{
 		ObjectMeta: metav1.ObjectMeta{Name: "lo", Namespace: "network"},
 		Spec: configv1alpha1.IOSXETemplateSpec{
@@ -219,6 +230,7 @@ func TestExpandCLITemplateRendersParams(t *testing.T) {
 }
 
 func TestExpandCLITemplateJinjaFilters(t *testing.T) {
+	t.Parallel()
 	// Filter pipelines are the core ergonomic Jinja buys over
 	// text/template. Cover the common ones (default, upper).
 	tpl := &configv1alpha1.IOSXETemplate{
@@ -243,6 +255,7 @@ func TestExpandCLITemplateJinjaFilters(t *testing.T) {
 }
 
 func TestExpandCLITemplateJinjaConditional(t *testing.T) {
+	t.Parallel()
 	// Bool-typed parameters are coerced so {% if %} sees a real
 	// bool, not the string "false". Otherwise Jinja treats any
 	// non-empty string as truthy and "false" would emit the
@@ -276,6 +289,7 @@ func TestExpandCLITemplateJinjaConditional(t *testing.T) {
 }
 
 func TestExpandCLITemplateUndeclaredRefFailsLoud(t *testing.T) {
+	t.Parallel()
 	// pongo2's default behaviour for undefined variables is to
 	// render them as empty strings, which would silently push
 	// broken CLI to the device. The static ref check must reject
@@ -298,6 +312,7 @@ func TestExpandCLITemplateUndeclaredRefFailsLoud(t *testing.T) {
 }
 
 func TestExpandCLITemplateRejectsDataModelType(t *testing.T) {
+	t.Parallel()
 	tpl := mkTemplate("t", `{"k":"v"}`)
 	// spec.type unset — defaults to data-model.
 	_, err := ExpandCLITemplate(tpl, nil)
@@ -307,6 +322,7 @@ func TestExpandCLITemplateRejectsDataModelType(t *testing.T) {
 }
 
 func TestExpandCLITemplateMappingShape(t *testing.T) {
+	t.Parallel()
 	// {"cli": "..."} body is the structured alternative to a
 	// bare string; useful when operators want metadata alongside
 	// the CLI without a breaking change later.
@@ -328,6 +344,7 @@ func TestExpandCLITemplateMappingShape(t *testing.T) {
 }
 
 func TestExpandCLITemplateEmptyBodyRejected(t *testing.T) {
+	t.Parallel()
 	tpl := &configv1alpha1.IOSXETemplate{
 		ObjectMeta: metav1.ObjectMeta{Name: "empty", Namespace: "network"},
 		Spec: configv1alpha1.IOSXETemplateSpec{
@@ -346,6 +363,7 @@ func TestExpandCLITemplateEmptyBodyRejected(t *testing.T) {
 // pins the correct handoff between ExpandTemplate (data-model)
 // and ExpandCLITemplate (cli).
 func TestExpandTemplateCLITypeRoutesToCLIExpander(t *testing.T) {
+	t.Parallel()
 	tpl := mkTemplate("t", `{"k":"v"}`)
 	tpl.Spec.Type = configv1alpha1.CLITemplate
 

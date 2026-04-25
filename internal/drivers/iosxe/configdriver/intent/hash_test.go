@@ -36,6 +36,7 @@ func mkIntent(cfg map[string]any, families ...string) *ResolvedIntent {
 }
 
 func TestCanonicalHashStable(t *testing.T) {
+	t.Parallel()
 	a := mkIntent(m("vlan", m("vlans", []any{m("id", 10, "name", "users")})), "vlan")
 	b := mkIntent(m("vlan", m("vlans", []any{m("id", 10, "name", "users")})), "vlan")
 
@@ -58,6 +59,7 @@ func TestCanonicalHashStable(t *testing.T) {
 // A semantic change to the configuration must flip the hash even when
 // only a nested leaf differs.
 func TestCanonicalHashChangesWithConfiguration(t *testing.T) {
+	t.Parallel()
 	a := mkIntent(m("vlan", m("vlans", []any{m("id", 10, "name", "users")})), "vlan")
 	b := mkIntent(m("vlan", m("vlans", []any{m("id", 10, "name", "USERS")})), "vlan")
 
@@ -72,6 +74,7 @@ func TestCanonicalHashChangesWithConfiguration(t *testing.T) {
 // NOT invalidate the hash — the reconciler short-circuit depends on this
 // property.
 func TestCanonicalHashIgnoresSourceCRMetadata(t *testing.T) {
+	t.Parallel()
 	a := mkIntent(m("system", m("hostname", "edge-01")), "system")
 	b := mkIntent(m("system", m("hostname", "edge-01")), "system")
 	a.SourceCR.Generation = 5
@@ -89,6 +92,7 @@ func TestCanonicalHashIgnoresSourceCRMetadata(t *testing.T) {
 // Reordering map keys at authoring time (YAML allows any order) must not
 // change the hash — that is the entire point of "canonical".
 func TestCanonicalHashMapOrderIndependent(t *testing.T) {
+	t.Parallel()
 	a := mkIntent(m("a", 1, "b", 2, "c", 3), "x")
 	b := mkIntent(m("c", 3, "a", 1, "b", 2), "x")
 
@@ -103,6 +107,7 @@ func TestCanonicalHashMapOrderIndependent(t *testing.T) {
 // (order influences things like ACL sequence numbers), so it must affect
 // the hash.
 func TestCanonicalHashListOrderSignificant(t *testing.T) {
+	t.Parallel()
 	a := mkIntent(m("xs", []any{1, 2, 3}), "x")
 	b := mkIntent(m("xs", []any{3, 2, 1}), "x")
 

@@ -475,6 +475,7 @@ var crossValidationCorpus = []crossCase{
 }
 
 func TestCrossValidationCorpus(t *testing.T) {
+	t.Parallel()
 	for _, tc := range crossValidationCorpus {
 		t.Run(tc.name, func(t *testing.T) {
 			got := MergeWithRules(tc.left, tc.right, crossValidationKeyRules)
@@ -496,6 +497,7 @@ func TestCrossValidationCorpus(t *testing.T) {
 // must be exercised by at least one case — otherwise adding a family
 // to families.yaml could silently escape cross-validation coverage.
 func TestCrossValidationCorpusCoversEveryKeyedFamily(t *testing.T) {
+	t.Parallel()
 	covered := map[string]struct{}{}
 	for _, tc := range crossValidationCorpus {
 		for ruleKey := range crossValidationKeyRules {

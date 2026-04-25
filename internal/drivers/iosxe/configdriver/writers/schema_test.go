@@ -23,6 +23,7 @@ import (
 // A family registered with real code but no schema entry is a bug the
 // lint and docs tools should not silently ignore.
 func TestAllSchemasPopulatedForEveryFamily(t *testing.T) {
+	t.Parallel()
 	schemas := AllSchemas()
 
 	// Combined Phase-1/2/3 list from registry_test.
@@ -53,6 +54,7 @@ func TestAllSchemasPopulatedForEveryFamily(t *testing.T) {
 // skeleton is registered in the registry but has no schema to
 // expose, and Schema() must reflect that.
 func TestSchemaSkeletonReportsNotFound(t *testing.T) {
+	t.Parallel()
 	name := "_schema_skeleton_probe_"
 	registerSkeleton(name, "/Cisco-IOS-XE-native:native/test")
 	t.Cleanup(func() {
@@ -68,6 +70,7 @@ func TestSchemaSkeletonReportsNotFound(t *testing.T) {
 // TestSchemaUnknownFamilyReportsNotFound confirms the zero-value
 // fallback path.
 func TestSchemaUnknownFamilyReportsNotFound(t *testing.T) {
+	t.Parallel()
 	if _, ok := Schema("not-a-registered-family"); ok {
 		t.Errorf("Schema(unknown) returned ok=true")
 	}

@@ -41,6 +41,7 @@ func tlsConfigValid(t *testing.T, cfg *tls.Config) {
 // self-signed cert is generated, the PEM files are written to disk, and the
 // returned TLS config is fully valid.
 func TestEnsureTLSConfig_Generate(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	certFile := filepath.Join(dir, "tls.crt")
 	keyFile := filepath.Join(dir, "tls.key")
@@ -62,6 +63,7 @@ func TestEnsureTLSConfig_Generate(t *testing.T) {
 // TestEnsureTLSConfig_IPAddressSAN verifies that when the device address is an
 // IP it is included in the certificate's IPAddresses SANs.
 func TestEnsureTLSConfig_IPAddressSAN(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	cfg, err := EnsureTLSConfig(
 		filepath.Join(dir, "tls.crt"),
@@ -91,6 +93,7 @@ func TestEnsureTLSConfig_IPAddressSAN(t *testing.T) {
 // TestEnsureTLSConfig_DNSSANHostname verifies that a non-IP device address is
 // added to the certificate's DNSNames SANs.
 func TestEnsureTLSConfig_DNSSANHostname(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	cfg, err := EnsureTLSConfig(
 		filepath.Join(dir, "tls.crt"),
@@ -120,6 +123,7 @@ func TestEnsureTLSConfig_DNSSANHostname(t *testing.T) {
 // exist on disk EnsureTLSConfig loads them (the load path) and returns a valid
 // config. Calling it twice also proves that generated certs survive a restart.
 func TestEnsureTLSConfig_LoadFromDisk(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	certFile := filepath.Join(dir, "tls.crt")
 	keyFile := filepath.Join(dir, "tls.key")
@@ -147,6 +151,7 @@ func TestEnsureTLSConfig_LoadFromDisk(t *testing.T) {
 // TestEnsureTLSConfig_MisconfigOnlyOnefile verifies that having exactly one of
 // the two files present returns an actionable error.
 func TestEnsureTLSConfig_MisconfigOnlyOneFile(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	certFile := filepath.Join(dir, "tls.crt")
 	keyFile := filepath.Join(dir, "tls.key")

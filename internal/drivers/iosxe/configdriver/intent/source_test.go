@@ -45,6 +45,7 @@ func newConfigMap(name, ns, key, body string) *corev1.ConfigMap {
 }
 
 func TestLoadSourceInlineFragment(t *testing.T) {
+	t.Parallel()
 	src := configv1alpha1.ConfigurationSource{
 		Inline: &runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"edge-01"}}`)},
 	}
@@ -59,6 +60,7 @@ func TestLoadSourceInlineFragment(t *testing.T) {
 }
 
 func TestLoadSourceConfigMapEnvelope(t *testing.T) {
+	t.Parallel()
 	body := `
 iosxe:
   devices:
@@ -86,6 +88,7 @@ iosxe:
 }
 
 func TestLoadSourceEnvelopeMissingDevice(t *testing.T) {
+	t.Parallel()
 	body := `
 iosxe:
   devices:
@@ -106,6 +109,7 @@ iosxe:
 }
 
 func TestLoadSourceConfigMapMissing(t *testing.T) {
+	t.Parallel()
 	c := fake.NewClientBuilder().WithScheme(sourceScheme(t)).Build()
 	src := configv1alpha1.ConfigurationSource{
 		ConfigMapRef: &configv1alpha1.ConfigMapKeyRef{Name: "missing", Key: "k"},
@@ -116,6 +120,7 @@ func TestLoadSourceConfigMapMissing(t *testing.T) {
 }
 
 func TestLoadSourceRejectsBothOrNeither(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name string
 		src  configv1alpha1.ConfigurationSource
@@ -137,6 +142,7 @@ func TestLoadSourceRejectsBothOrNeither(t *testing.T) {
 }
 
 func TestLoadSourceBinaryKeyRejected(t *testing.T) {
+	t.Parallel()
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "data", Namespace: "network"},
 		BinaryData: map[string][]byte{"k": {0xde, 0xad}},

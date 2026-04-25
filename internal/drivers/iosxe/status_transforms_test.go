@@ -51,6 +51,7 @@ func statusTestPod(containers ...string) *v1.Pod {
 // ─────────────────────────────────────────────────────────────────────────────
 
 func TestGetContainerStatus_Running(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
@@ -90,6 +91,7 @@ func TestGetContainerStatus_Running(t *testing.T) {
 }
 
 func TestGetContainerStatus_Deployed(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
@@ -117,6 +119,7 @@ func TestGetContainerStatus_Deployed(t *testing.T) {
 }
 
 func TestGetContainerStatus_Activated(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
@@ -138,6 +141,7 @@ func TestGetContainerStatus_Activated(t *testing.T) {
 }
 
 func TestGetContainerStatus_Stopped(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
@@ -162,6 +166,7 @@ func TestGetContainerStatus_Stopped(t *testing.T) {
 }
 
 func TestGetContainerStatus_UnknownState(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
@@ -180,6 +185,7 @@ func TestGetContainerStatus_UnknownState(t *testing.T) {
 }
 
 func TestGetContainerStatus_Installing(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
@@ -201,6 +207,7 @@ func TestGetContainerStatus_Installing(t *testing.T) {
 }
 
 func TestGetContainerStatus_InstallingPkgPolicyInvalid_SigningRequired(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1", AllowUnsignedApps: false}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
@@ -224,6 +231,7 @@ func TestGetContainerStatus_InstallingPkgPolicyInvalid_SigningRequired(t *testin
 }
 
 func TestGetContainerStatus_InstallingPkgPolicyInvalid_UnsignedAllowed(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1", AllowUnsignedApps: true}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
@@ -247,6 +255,7 @@ func TestGetContainerStatus_InstallingPkgPolicyInvalid_UnsignedAllowed(t *testin
 }
 
 func TestGetContainerStatus_NilOperData(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
@@ -270,6 +279,7 @@ func TestGetContainerStatus_NilOperData(t *testing.T) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 func TestGetContainerStatus_AllRunning(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
 	pod := statusTestPod("web", "sidecar")
 	containers := map[string]string{"web": "web-id", "sidecar": "sidecar-id"}
@@ -293,6 +303,7 @@ func TestGetContainerStatus_AllRunning(t *testing.T) {
 }
 
 func TestGetContainerStatus_MixedStates(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
 	pod := statusTestPod("web", "sidecar")
 	containers := map[string]string{"web": "web-id", "sidecar": "sidecar-id"}
@@ -319,6 +330,7 @@ func TestGetContainerStatus_MixedStates(t *testing.T) {
 }
 
 func TestGetContainerStatus_HostIP(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "192.168.1.50"}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
@@ -336,6 +348,7 @@ func TestGetContainerStatus_HostIP(t *testing.T) {
 }
 
 func TestGetContainerStatus_StartTimeSet(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
@@ -353,6 +366,7 @@ func TestGetContainerStatus_StartTimeSet(t *testing.T) {
 }
 
 func TestGetContainerStatus_ScheduledConditionTrue(t *testing.T) {
+	t.Parallel()
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
