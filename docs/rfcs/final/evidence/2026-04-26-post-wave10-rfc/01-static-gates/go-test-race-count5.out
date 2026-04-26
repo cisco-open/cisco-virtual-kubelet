@@ -1,0 +1,27 @@
+?   	github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1	[no test files]
+?   	github.com/cisco/virtual-kubelet-cisco/api/v1alpha1	[no test files]
+ok  	github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk	2.753s
+?   	github.com/cisco/virtual-kubelet-cisco/docs/website/node_modules/flatted/golang/pkg/flatted	[no test files]
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/aggregator	3.787s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/config	1.896s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controller	8.674s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers	4.782s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers/common	4.370s
+?   	github.com/cisco/virtual-kubelet-cisco/internal/drivers/fake	[no test files]
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe	3.540s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver	3.591s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine	6.060s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent	5.767s
+?   	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/iosxebuilder	[no test files]
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/schema	4.083s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport	21.583s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers	3.161s
+?   	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxr	[no test files]
+?   	github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos	[no test files]
+?   	github.com/cisco/virtual-kubelet-cisco/internal/drivers/openconfig	[no test files]
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider	6.008s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/tlsutil	3.689s
+ok  	github.com/cisco/virtual-kubelet-cisco/tools/cisco-vk-config-docs	3.821s
+ok  	github.com/cisco/virtual-kubelet-cisco/tools/cisco-vk-config-lint	3.784s
+ok  	github.com/cisco/virtual-kubelet-cisco/tools/cisco-vk-yang-sync	2.900s
+exit=0

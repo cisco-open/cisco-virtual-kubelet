@@ -1,0 +1,8 @@
+OK: cisco.vk_ciscodevices.yaml
+OK: config.cisco.vk_iosxeconfigapplylogs.yaml
+OK: config.cisco.vk_iosxeconfigbundles.yaml
+OK: config.cisco.vk_iosxeconfigdefaults.yaml
+OK: config.cisco.vk_iosxeconfigs.yaml
+OK: config.cisco.vk_iosxedevicegroupconfigs.yaml
+OK: config.cisco.vk_iosxeinterfacegroupconfigs.yaml
+OK: config.cisco.vk_iosxetemplates.yaml
