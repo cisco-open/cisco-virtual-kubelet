@@ -1,0 +1,49 @@
+# Test 01 — NETCONF transactional commit, structured-only intent
+#
+# Adds Loopback9999 with description + IP, exercises the Wave 1A-fu
+# candidate-aware Fetch / Commit path. Loopback 9999 is chosen
+# because the typical lab range is 0-100; confirm it is unused
+# before applying.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-01-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            interface_loopback:
+              interfaces:
+                - name: 9999
+                  description: "cisco-vk release-blocker test 01 — wave 1A-fu"
+                  ipv4_address: 10.255.255.99
+                  ipv4_address_mask: 255.255.255.255
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: test-01-netconf-transactional
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "01-netconf-transactional"
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - interface_loopback
+  # Headline: transactional must drive StartTransaction → Mutate →
+  # candidate-aware Fetch (verify) → Commit.
+  transactional: true
+  writeStartup: false
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: test-01-data
+      key: data.nac.yaml

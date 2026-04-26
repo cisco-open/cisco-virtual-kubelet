@@ -1,0 +1,49 @@
+# Test 02 — NETCONF transactional + CLI block, engine fail-fast rejection
+#
+# Combining `spec.transactional: true` with a CLI-template family must
+# be rejected by the engine BEFORE any RPC is sent to the device.
+# Pre-Wave-7A.1 the rejection happened at the transport layer (after
+# an edit-config had already been issued). This manifest exercises the
+# engine boundary; the device should never see a mutation.
+#
+# CLI-template-bearing families today include the inline CLI block path
+# below (a small banner change), which the engine routes as a CLI
+# template op rather than a structured RESTCONF/NETCONF write.
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXETemplate
+metadata:
+  name: test-02-banner-cli
+  namespace: cisco-vk-smoke
+spec:
+  type: cli
+  parameters: []
+  configuration: |
+    banner motd ^
+    cisco-vk release-blocker test 02 — should never reach device
+    ^
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: test-02-cli-rejection
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "02-netconf-transactional-cli-rejection"
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - banner
+  # Transactional + CLI is the rejected combination. Wave 7A.1 fail-fasts
+  # at engine.validate() with ErrTransactionalCLIUnsupported.
+  transactional: true
+  driftPolicy: report   # belt-and-suspenders: even if the guard regresses
+                        # we don't want a runaway revert
+  driftDetectInterval: 30s
+  templateRefs:
+    - name: test-02-banner-cli
+  source:
+    inline: {}

@@ -1,0 +1,57 @@
+# Test 03 — configPrereqs deletion-driven cleanup
+#
+# Creates a synthetic CiscoDevice that points at the same physical
+# 10.1.1.1 device as cat9k-smoke, but carries spec.configPrereqs.
+# The CiscoDeviceReconciler materialises those prereqs into a
+# synthetic IOSXEConfig that day-0 reconciles. Deleting this
+# CiscoDevice triggers the cleanup path under test.
+#
+# We REUSE the existing cat9k-creds Secret (same physical device,
+# same credentials).
+#
+# IMPORTANT: this test does NOT spawn a per-device cisco-vk-run pod.
+# The synthetic IOSXEConfig reconciles via the existing cat9k-smoke
+# pod's reconciler (it targets the same physical address).
+
+---
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: test-03-prereq-device
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "03-configprereqs-cleanup"
+spec:
+  driver: XE
+  address: "10.1.1.1"   # same physical device as cat9k-smoke
+  port: 443
+  username: admin
+  credentialSecretRef:
+    name: cat9k-creds
+  tls:
+    enabled: true
+    insecureSkipVerify: true
+  # configPrereqs is the test's payload. The reconciler creates a
+  # synthetic IOSXEConfig from this template; on CiscoDevice delete,
+  # the finalizer empties the source + flips pruneOnRelinquish=true
+  # to drive the cleanup path under test.
+  configPrereqs:
+    managedFamilies:
+      - vlan
+      - interface_loopback
+    source:
+      inline:
+        iosxe:
+          devices:
+            - name: test-03-prereq-device
+              configuration:
+                vlan:
+                  vlans:
+                    - id: 999
+                      name: cisco-vk-test-03
+                interface_loopback:
+                  interfaces:
+                    - name: 9998
+                      description: "cisco-vk release-blocker test 03"
+                      ipv4_address: 10.255.255.98
+                      ipv4_address_mask: 255.255.255.255

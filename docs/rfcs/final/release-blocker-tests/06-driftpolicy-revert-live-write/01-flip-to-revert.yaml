@@ -1,0 +1,28 @@
+# Test 06 phase 2 — flip driftPolicy from report to revert.
+#
+# Applying this manifest causes the next reconcile to write the
+# banner change to the device. Confirm phase=Drifted under the
+# `report` policy (phase 1) before applying this.
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: test-06-driftpolicy-revert
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "06-driftpolicy-revert-live-write"
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - banner
+  transactional: false
+  writeStartup: false
+  # Phase 2: revert. Next reconcile applies the diff.
+  driftPolicy: revert
+  driftDetectInterval: 30s
+  source:
+    configMapRef:
+      name: test-06-data
+      key: data.nac.yaml

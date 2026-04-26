@@ -1,0 +1,45 @@
+# Test 06 phase 1 — apply with driftPolicy: report.
+#
+# Confirms the engine sees drift but does NOT write to the device.
+# Once phase=Drifted is reported, apply 01-flip-to-revert.yaml to
+# trigger the actual revert.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-06-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            banner:
+              motd:
+                banner: "cisco-vk release-blocker test 06 — wave drift-detect"
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: test-06-driftpolicy-revert
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "06-driftpolicy-revert-live-write"
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - banner
+  transactional: false
+  writeStartup: false
+  # Phase 1: report-only. Engine should detect drift and report it,
+  # NOT apply.
+  driftPolicy: report
+  driftDetectInterval: 30s
+  source:
+    configMapRef:
+      name: test-06-data
+      key: data.nac.yaml

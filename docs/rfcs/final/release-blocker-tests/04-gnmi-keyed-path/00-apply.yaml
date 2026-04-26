@@ -1,0 +1,50 @@
+# Test 04 — gNMI keyed-path PathSpec
+#
+# Sets a description on a single ethernet interface to prove that
+# structured PathSpec survives the gNMI Set wire encoding intact (the
+# `0/0/0` slashes in the keyed-list value must not be interpreted as
+# additional path segments).
+#
+# Before applying, confirm the targeted interface is unused. The
+# default GigabitEthernet0/0/0 is the closing-wave reference; change
+# the `name` field below to a known-spare port if 0/0/0 is in use.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-04-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            interface_ethernet:
+              interfaces:
+                - type: GigabitEthernet
+                  name: "0/0/0"   # change if 0/0/0 is in production use
+                  description: "cisco-vk release-blocker test 04 — wave 5A-fu/7B"
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: test-04-gnmi-keyed-path
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "04-gnmi-keyed-path"
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - interface_ethernet
+  transactional: false   # gNMI / RESTCONF non-transactional path
+  writeStartup: false
+  driftPolicy: revert    # the test wants the description to be applied
+  driftDetectInterval: 30s
+  source:
+    configMapRef:
+      name: test-04-data
+      key: data.nac.yaml

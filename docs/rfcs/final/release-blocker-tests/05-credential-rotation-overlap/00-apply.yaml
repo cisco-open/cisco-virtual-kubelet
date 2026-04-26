@@ -1,0 +1,27 @@
+# Test 05 — Credential Secret rotation with overlap window
+#
+# This manifest is INTENTIONALLY a placeholder. Editing the existing
+# Secret in place from a static manifest would either overwrite the
+# real password (breaking auth) or carry a placeholder that breaks
+# auth equally. The runbook's safe pattern is a `kubectl patch` that
+# preserves the password value while bumping resourceVersion via an
+# annotation flip.
+#
+# This file is here to keep the per-test directory layout consistent.
+# Operators should NOT `kubectl apply -f 00-apply.yaml` for this test.
+# Instead, run:
+#
+#   # Bump the Secret's resourceVersion without changing the password.
+#   # This is what the controller's watch/annotation-stamp path keys off.
+#   kubectl annotate secret cat9k-creds -n cisco-vk-smoke \
+#     cisco.vk/release-blocker-test-05="$(date +%s)" --overwrite
+#
+# That single annotation change flips metadata.resourceVersion, which
+# the CiscoDeviceReconciler's Wave-6B Secret watch picks up and
+# stamps onto the per-device Deployment's pod-template annotation
+# `cisco.vk/credential-resource-version`. The Deployment then rolls.
+#
+# rollback.sh removes the annotation, which causes one more roll
+# to settle the pod template back to its pre-test shape.
+
+# (intentionally empty — operator runs the kubectl annotate above)
