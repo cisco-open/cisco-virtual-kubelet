@@ -250,6 +250,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	if transactional {
 		h, err := e.Transport.StartTransaction(ctx)
 		if err != nil {
+			recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "start_failed")
 			r := Result{Phase: PhaseFailed, Err: fmt.Errorf("StartTransaction: %w", err)}
 			recordResult(res.DeviceName, r, time.Since(start).Seconds())
 			return r
@@ -265,6 +266,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 			// recovery is the operator's lever.
 			if !txCommitted {
 				_ = e.Transport.Discard(ctx, txHandle)
+				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "discard")
 			}
 			e.applyTransport = nil
 		}()
@@ -353,8 +355,10 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 		if err := e.Transport.Commit(ctx, txHandle); err != nil {
 			result.Phase = PhaseFailed
 			result.Err = fmt.Errorf("Commit: %w", err)
+			recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "commit_failed")
 		} else {
 			txCommitted = true
+			recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "commit")
 		}
 	}
 
@@ -367,8 +371,10 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	if result.Phase == PhaseInSync && res.WriteStartup && caps.SupportsSaveStartup {
 		if err := e.Transport.SaveStartup(ctx); err != nil {
 			result.SaveStartupErr = err
+			recordSaveStartup(res.DeviceName, transportKindLabel(e.Transport), "failed")
 		} else {
 			result.SaveStartupOK = true
+			recordSaveStartup(res.DeviceName, transportKindLabel(e.Transport), "ok")
 		}
 	}
 
@@ -472,6 +478,16 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	if at == nil {
 		at = e.Transport
 	}
+	// Bump per-verb mutation-ops counter labelled by transport kind
+	// before Apply runs. The intent is to attribute attempted ops to
+	// the wire format the engine *intended* to use; Apply errors
+	// then surface separately on cisco_vk_config_apply_errors_total
+	// so live tests can distinguish "tried and failed" from "never
+	// attempted." The transport label is the underlying e.Transport
+	// kind (RESTCONF / NETCONF / gNMI), not the transactionalView
+	// wrapper, so the counter still labels the wire correctly under
+	// transactional reconciles.
+	recordMutateOps(res.DeviceName, transportKindLabel(e.Transport), ops)
 	if err := w.Apply(ctx, at, ops); err != nil {
 		if applyDuration != nil {
 			applyDuration.WithLabelValues(res.DeviceName, family).Observe(time.Since(applyStart).Seconds())
@@ -592,6 +608,11 @@ func (e *Engine) applyCLIBlock(ctx context.Context, block intent.CLIBlock, res *
 	if at == nil {
 		at = e.Transport
 	}
+	// Bump CLI-verb mutation counter labelled by transport kind
+	// before issuing the wire call. CLI is a distinct verb from
+	// the structured REPLACE/MERGE/DELETE so live tests can
+	// detect whether a CLI block actually fired.
+	recordMutateOps(res.DeviceName, transportKindLabel(e.Transport), []transport.Op{op})
 	err := at.Mutate(ctx, "", []transport.Op{op})
 	if applyDuration != nil {
 		applyDuration.WithLabelValues(res.DeviceName, famName).Observe(time.Since(applyStart).Seconds())

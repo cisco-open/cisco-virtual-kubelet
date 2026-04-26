@@ -18,6 +18,8 @@ import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 )
 
 // Metrics are registered exactly once and exposed via the shared
@@ -35,6 +37,16 @@ var (
 	driftEntriesTruncated *prometheus.CounterVec
 	applyErrors           *prometheus.CounterVec
 	familyState           *prometheus.GaugeVec
+
+	// Transport-aware counters added per the pre-PR test enrichment
+	// plan §3 — production-readiness live tests must be able to
+	// assert that the *intended* transport performed the work, not
+	// just that the device ended up with the right state. The three
+	// counters below give live tests hard evidence labelled by
+	// transport kind.
+	transactionsTotal *prometheus.CounterVec // outcome ∈ {commit, discard, start_failed, commit_failed}
+	saveStartupTotal  *prometheus.CounterVec // outcome ∈ {ok, failed}
+	mutateOpsTotal    *prometheus.CounterVec // verb ∈ {REPLACE, MERGE, DELETE, CLI}
 )
 
 // MaxDriftEntries caps status.drift[] on each IOSXEConfig CR. Drift
@@ -123,6 +135,27 @@ func RegisterMetrics(reg prometheus.Registerer) {
 			},
 			[]string{"device", "family"},
 		)
+		transactionsTotal = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "cisco_vk_config_transactions_total",
+				Help: "Transactional reconcile lifecycle outcomes. outcome=commit when the engine successfully committed a candidate datastore; discard when the deferred cleanup ran (apply failure or non-clean phase); start_failed / commit_failed for the corresponding RPC errors. Live tests use this to prove the NETCONF candidate path actually ran instead of the engine silently degrading to a non-transactional apply.",
+			},
+			[]string{"device", "transport", "outcome"},
+		)
+		saveStartupTotal = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "cisco_vk_config_save_startup_total",
+				Help: "Outcomes of the post-apply running-to-startup copy. Only fires when spec.writeStartup is true AND the transport reports SupportsSaveStartup AND the apply phase reached InSync. outcome=ok or failed.",
+			},
+			[]string{"device", "transport", "outcome"},
+		)
+		mutateOpsTotal = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "cisco_vk_config_mutate_ops_total",
+				Help: "Per-verb count of mutation ops the engine emitted into the transport (REPLACE, MERGE, DELETE, CLI). Labelled by transport kind so live tests can assert the verbs landed on the intended wire format. Pure-read reconciles (Phase=InSync with no drift) increment nothing.",
+			},
+			[]string{"device", "transport", "verb"},
+		)
 
 		reg.MustRegister(
 			reconcileDuration,
@@ -132,8 +165,51 @@ func RegisterMetrics(reg prometheus.Registerer) {
 			driftEntriesTruncated,
 			applyErrors,
 			familyState,
+			transactionsTotal,
+			saveStartupTotal,
+			mutateOpsTotal,
 		)
 	})
+}
+
+// recordTransaction bumps the transactional-lifecycle counter. No-op
+// when metrics are unregistered (unit tests).
+func recordTransaction(device, transportKind, outcome string) {
+	if transactionsTotal == nil {
+		return
+	}
+	transactionsTotal.WithLabelValues(device, transportKind, outcome).Inc()
+}
+
+// recordSaveStartup bumps the save-startup counter. No-op when
+// metrics are unregistered.
+func recordSaveStartup(device, transportKind, outcome string) {
+	if saveStartupTotal == nil {
+		return
+	}
+	saveStartupTotal.WithLabelValues(device, transportKind, outcome).Inc()
+}
+
+// recordMutateOps bumps the per-verb mutation-ops counter once per
+// op in the slice. No-op when metrics are unregistered.
+func recordMutateOps(device, transportKind string, ops []transport.Op) {
+	if mutateOpsTotal == nil {
+		return
+	}
+	for _, op := range ops {
+		mutateOpsTotal.WithLabelValues(device, transportKind, string(op.Verb)).Inc()
+	}
+}
+
+// transportKindLabel pulls the transport's Kind for use as a metric
+// label. Returns "unknown" when the engine's Transport is nil
+// (defensive — production code paths always set it; some unit tests
+// drive reconcileFamily without a transport).
+func transportKindLabel(t transport.Interface) string {
+	if t == nil {
+		return "unknown"
+	}
+	return string(t.Capabilities().Kind)
 }
 
 // recordResult folds a Result into the registered metric set. It is a
