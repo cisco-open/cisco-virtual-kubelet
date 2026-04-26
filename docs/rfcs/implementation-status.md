@@ -3,7 +3,7 @@
 **Branch:** `pr/johalley/ciscoconfig_xe`
 **Base:** `main`
 **Author:** Josh Halley
-**Last updated:** 2026-04-25
+**Last updated:** 2026-04-26
 
 This document is the canonical, single-source-of-truth status for the branch. It exists so any reviewer, operator, or future contributor can answer "what's done, what's pending, where's the evidence" in under a minute.
 
@@ -13,20 +13,22 @@ If anything in this file disagrees with another RFC in this directory, **this fi
 
 ## 1. Bottom line
 
-**The branch is shippable for day-0 AND day-2 under the per-pod topology, with the aggregator topology exclusive-and-correct.** Four rounds of external review (the original [`external-review.md`](external-review.md), the post-Wave-5 [`external-review-followup.md`](external-review-followup.md), the post-`latest-update.md` [`external-review-next-actions.md`](external-review-next-actions.md), and the Wave-7 residuals [`external-review-wave7-residuals.md`](external-review-wave7-residuals.md)) have all closed in code with focused test coverage.
+**The branch is shippable for day-0 AND day-2 under the per-pod topology, with the aggregator topology exclusive-and-correct.** Five rounds of external review (the original [`external-review.md`](external-review.md), the post-Wave-5 [`external-review-followup.md`](external-review-followup.md), the post-`latest-update.md` [`external-review-next-actions.md`](external-review-next-actions.md), the Wave-7 residuals [`external-review-wave7-residuals.md`](external-review-wave7-residuals.md), and the Wave-8 follow-up [`external-review-wave8-followup.md`](external-review-wave8-followup.md)) have all closed in code with focused test coverage.
 
-The Wave-7 residuals round's two findings closed in this commit set:
+The Wave-8 follow-up round's two findings closed in this commit set:
 
-1. **DNS-safe lease names** (P1) — `leaseName(device, family)` previously emitted literal `cvk-<device>-<family>`. Underscore-bearing family names (most of the shipped IOS-XE family set) violated DNS-1123 subdomain rules; `fake.Client` skipped name validation so tests passed but a real apiserver rejected every such lease. The replacement sanitises both segments, appends a SHA-256-based hash for collision resistance, and is validated against `k8s.io/apimachinery/pkg/util/validation.IsDNS1123Subdomain` for every family in the shipped registry. Anchor: `5879a89`.
-2. **Lease conflicts as first-class arbitration state** (P2) — `reconcileOne` previously routed lease conflicts through `engine.Reconcile`, producing misleading `Phase=Failed` (all-blocked) or `Phase=InSync` (partial-block) and bumping `LastDeviceCheck` even when no device-side work happened. The fix introduces `PhaseLeaseBlocked`, short-circuits before the engine when all families are blocked, downgrades a clean `InSync` to `LeaseBlocked` when any family was skipped, gates the `LastDeviceCheck` bump on a new `Result.DeviceTouched` field, and uses a sub-TTL (15s) requeue under `LeaseBlocked` so the contention window resolves quickly. Anchor: `ec79777`.
+1. **`LeaseBlocked` admission in the IOSXEConfig CRD** (P1) — Wave 8.2 added `engine.PhaseLeaseBlocked` and wrote it to `IOSXEConfig.status.phase`, but the kubebuilder `+kubebuilder:validation:Enum` marker still listed only the original nine phases. A real apiserver would have rejected every lease-blocked status update; `fake.Client` skipped enum validation so unit suites passed. The fix extends the marker, regenerates the CRD and the Helm chart copy, and adds a schema-aware unit test that parses the generated CRD YAML and verifies every status-bound engine phase is enumerated. Closing Wave: 9.1.
+2. **Post-reconcile requeue plumbing** (P2) — `reconcileOne` wrote status via a deep copy in `recordResult`; the original `cr` passed in was never mutated. The controller-runtime `Reconcile` then read `cr.Status.Phase` to compute `RequeueAfter`, seeing the previous tick's value. A tick that just wrote `LeaseBlocked` requeued at the normal 5m drift interval instead of the intended 15s sub-TTL — defeating Wave 8.2's contention-aware behaviour on the production-default per-pod topology. The fix changes `reconcileOne` to return `(engine.Result, error)`, makes `requeueIntervalFor` take phase as an explicit argument, and routes both the requeue decision and the OTel span attribution through the engine result. Headline regression test seeds a foreign lease and asserts sub-TTL requeue + `LeaseBlocked` phase + `LastDeviceCheck` unchanged + engine never called, all in one tick. Closing Wave: 9.2.
 
-Module-wide `go test -race -count=5 ./...` clean. `count=20` stable across all hot packages.
+Module-wide `go test -race -count=5 ./...` clean.
 
 One architectural lesson from this round, in commit messages and inline comments so it doesn't recur:
 
-- **`fake.Client` does not enforce Kubernetes object-name validation.** When a name is composed from arbitrary strings, the test must explicitly validate the result against `k8s.io/apimachinery/pkg/util/validation`. Otherwise tests pass, the apiserver rejects, and the failure surfaces only in a live cluster. (Closely related to the FU-2 lesson — that one was field validation; this one is name validation.)
+- **Status writes via DeepCopy do not mutate the caller's CR.** When a function writes status through `cr.DeepCopy()` and the caller needs the post-write phase (controller-runtime requeue, span attribution, follow-on conditional writes), the function must return that phase explicitly. Reading the caller's still-stale CR is silent: no error, no warning, just stale-data behaviour fake-client tests don't catch because they don't traverse the multi-tick state machine the production controller-runtime path traverses.
 
-The first three review rounds' findings remain closed. The fourth round's two findings close in this commit set.
+The previous round's two findings (W7R-1, W7R-2) and architectural lesson (`fake.Client` does not enforce Kubernetes object-name validation) remain closed.
+
+The first four review rounds' findings remain closed. The fifth round's two findings close in this commit set.
 
 The next-actions review's five findings closed in this round:
 
@@ -199,6 +201,10 @@ Tracked in detail in [`external-review-response.md`](external-review-response.md
 | 4A | `configPrereqs` deletion reverts device state | ✅ shipped | `36c407f` |
 | 5A | Schema-aware gNMI keyed paths (single-key) | ✅ shipped | `438d34b` |
 | 5A-followup | gNMI composite-key list paths | ⏳ tracked as follow-up; no current netascode family needs it |
+| 8.1 | DNS-1123-safe lease names | ✅ shipped | `5879a89` |
+| 8.2 | Lease conflicts as first-class arbitration state | ✅ shipped | `ec79777` |
+| 9.1 | `LeaseBlocked` admission in the IOSXEConfig CRD enum | ✅ shipped | this branch |
+| 9.2 | Post-reconcile requeue plumbing — `reconcileOne` returns `engine.Result` | ✅ shipped | this branch |
 
 This table replaces the previous `7.A`/`7.B` separation as the canonical pending-work register. The previous categories (in-branch deferrals, external Phase-8 residuals) are still tracked below.
 
