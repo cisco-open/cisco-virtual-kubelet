@@ -20,7 +20,7 @@ The Wave-8 follow-up round identified two integration gaps around the new `Lease
 - **`LeaseBlocked` not in the IOSXEConfig CRD enum** — Wave 8.2 added `engine.PhaseLeaseBlocked` and wrote it to `IOSXEConfig.status.phase`, but the kubebuilder `+kubebuilder:validation:Enum` marker still listed only the original nine phases. A real apiserver would have rejected every lease-blocked status update; `fake.Client` skips enum validation, so unit suites passed. Same family of "fake-client doesn't validate" hazard as W7R-1 (object names) and FU-2 (MinItems) — that's three flavours of the same lesson now.
 - **Stale `cr.Status.Phase` on the controller-runtime requeue path** — `reconcileOne` wrote status via a deep copy in `recordResult`; the original `cr` passed in was never mutated. The caller in `Reconcile` then read `cr.Status.Phase` to compute `RequeueAfter`, seeing the previous tick's phase. Result: a tick that just wrote `LeaseBlocked` requeued at the normal 5m drift interval instead of the intended 15s sub-TTL — defeating Wave 8.2's contention-aware behaviour exactly on the production-default per-pod topology.
 
-**Both gaps are closed in code** with focused test coverage. Module-wide `go test -race -count=5 ./...` clean.
+**Both gaps are closed in code** with focused test coverage. Module-wide `go test -race -count=5 ./...` clean. The follow-up review round ([`external-review-wave9-status.md`](external-review-wave9-status.md), Codex post-Wave-9) recorded **no new blocking findings** and accepted the day-0/day-2 claim subject to operator-scheduled live validation.
 
 [`implementation-status.md`](implementation-status.md) §1 has re-claimed day-2 readiness with a per-finding closure table.
 
@@ -111,6 +111,7 @@ Wave 9.2's `reconcileOne` now returns `(engine.Result, error)`; the controller-r
 | [`external-review-wave7-residuals-response.md`](external-review-wave7-residuals-response.md) | Wave 8 remediation plan |
 | [`external-review-wave8-followup.md`](external-review-wave8-followup.md) | Wave-8 follow-up review (this round's source) |
 | [`external-review-wave8-followup-response.md`](external-review-wave8-followup-response.md) | Wave 9 remediation plan |
+| [`external-review-wave9-status.md`](external-review-wave9-status.md) | Wave-9 status review (Codex acceptance — no new blocking findings) |
 | [`implementation-status.md`](implementation-status.md) | Single-source-of-truth status sweep |
 | [`architectural-review.md`](architectural-review.md) | Architectural watch-items |
 | [`crd-v1-promotion-plan.md`](crd-v1-promotion-plan.md) | v1alpha1 → v1 cut plan |
@@ -132,6 +133,7 @@ Wave 9.2's `reconcileOne` now returns `(engine.Result, error)`; the controller-r
 | `go vet ./...` | clean |
 | `helm lint charts/cisco-virtual-kubelet` | clean |
 | External-review findings closed across five rounds | 26 of 26 |
+| Wave-9 status review outcome (Codex) | accepted — no new blocking findings |
 
 ---
 

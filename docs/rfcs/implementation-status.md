@@ -13,60 +13,54 @@ If anything in this file disagrees with another RFC in this directory, **this fi
 
 ## 1. Bottom line
 
-**The branch is shippable for day-0 AND day-2 under the per-pod topology, with the aggregator topology exclusive-and-correct.** Five rounds of external review (the original [`external-review.md`](external-review.md), the post-Wave-5 [`external-review-followup.md`](external-review-followup.md), the post-`latest-update.md` [`external-review-next-actions.md`](external-review-next-actions.md), the Wave-7 residuals [`external-review-wave7-residuals.md`](external-review-wave7-residuals.md), and the Wave-8 follow-up [`external-review-wave8-followup.md`](external-review-wave8-followup.md)) have all closed in code with focused test coverage.
+**The branch is shippable for day-0 AND day-2 under the per-pod topology, with the aggregator topology exclusive-and-correct.** Phases 0–9 are complete in code; the API behaves as advertised across both lifecycle windows.
 
-The Wave-8 follow-up round's two findings closed in this commit set:
+Five rounds of external review have all closed in code with focused test coverage. Twenty-six findings closed across the five rounds; nothing was contested. The most recent round ([`external-review-wave9-status.md`](external-review-wave9-status.md), Codex post-Wave-9) recorded **no new blocking findings** and accepted the day-0/day-2 claim subject to operator-scheduled live validation.
 
-1. **`LeaseBlocked` admission in the IOSXEConfig CRD** (P1) — Wave 8.2 added `engine.PhaseLeaseBlocked` and wrote it to `IOSXEConfig.status.phase`, but the kubebuilder `+kubebuilder:validation:Enum` marker still listed only the original nine phases. A real apiserver would have rejected every lease-blocked status update; `fake.Client` skipped enum validation so unit suites passed. The fix extends the marker, regenerates the CRD and the Helm chart copy, and adds a schema-aware unit test that parses the generated CRD YAML and verifies every status-bound engine phase is enumerated. Closing Wave: 9.1.
-2. **Post-reconcile requeue plumbing** (P2) — `reconcileOne` wrote status via a deep copy in `recordResult`; the original `cr` passed in was never mutated. The controller-runtime `Reconcile` then read `cr.Status.Phase` to compute `RequeueAfter`, seeing the previous tick's value. A tick that just wrote `LeaseBlocked` requeued at the normal 5m drift interval instead of the intended 15s sub-TTL — defeating Wave 8.2's contention-aware behaviour on the production-default per-pod topology. The fix changes `reconcileOne` to return `(engine.Result, error)`, makes `requeueIntervalFor` take phase as an explicit argument, and routes both the requeue decision and the OTel span attribution through the engine result. Headline regression test seeds a foreign lease and asserts sub-TTL requeue + `LeaseBlocked` phase + `LastDeviceCheck` unchanged + engine never called, all in one tick. Closing Wave: 9.2.
+Verification gates: `go test ./...` green module-wide, `go test -race -count=5 ./...` clean, `count=20` stable across hot packages, `go vet ./...` clean, `helm lint charts/cisco-virtual-kubelet` clean, generated CRD and the Helm chart copy in sync.
 
-Module-wide `go test -race -count=5 ./...` clean.
+### 1.1 Review-round closure summary
 
-One architectural lesson from this round, in commit messages and inline comments so it doesn't recur:
+| Round | Source RFC | Findings closed | Closing waves |
+|---|---|---|---|
+| Original | [`external-review.md`](external-review.md) | 12 | Waves 1A–5A (see §7.0) |
+| Follow-up | [`external-review-followup.md`](external-review-followup.md) | 5 | Waves 1A-fu, 4A-fu, 5A-fu, 6A, 6B |
+| Next-actions | [`external-review-next-actions.md`](external-review-next-actions.md) | 5 | Waves 7A.1, 7A.2, 7A.3, 7A.4, 7B |
+| Wave-7 residuals | [`external-review-wave7-residuals.md`](external-review-wave7-residuals.md) | 2 | Waves 8.1, 8.2 |
+| Wave-8 follow-up | [`external-review-wave8-followup.md`](external-review-wave8-followup.md) | 2 | Waves 9.1, 9.2 |
+| Wave-9 status | [`external-review-wave9-status.md`](external-review-wave9-status.md) | 0 (acceptance) | n/a |
 
-- **Status writes via DeepCopy do not mutate the caller's CR.** When a function writes status through `cr.DeepCopy()` and the caller needs the post-write phase (controller-runtime requeue, span attribution, follow-on conditional writes), the function must return that phase explicitly. Reading the caller's still-stale CR is silent: no error, no warning, just stale-data behaviour fake-client tests don't catch because they don't traverse the multi-tick state machine the production controller-runtime path traverses.
+Closing-wave anchors live in §7.0's wave register. Headline closures, organised by review round:
 
-The previous round's two findings (W7R-1, W7R-2) and architectural lesson (`fake.Client` does not enforce Kubernetes object-name validation) remain closed.
+- **Original review (Waves 1A–5A).** Transactional apply + `SaveStartup` plumb (1A), steady-state drift detection (1B), aggregator/per-pod topology exclusivity (1C), aggregator Helm RBAC (1D), replay annotation cleanup RBAC (2A), YANG defaulting (2B), multi-family conflict status (2C), Secret watch wiring (2D), bundle selector watch (3A), bundle template CRD relaxation (3B), `configPrereqs` deletion path (4A), schema-aware gNMI keyed paths (5A).
+- **Follow-up review (Waves 1A-fu through 6B).** NETCONF transactional verify via candidate-aware Fetch (1A-fu), `configPrereqs` teardown that keeps the family list and empties `source.inline` (4A-fu), structured `PathSpec` on gNMI ops with production-bound registration (5A-fu), gNMI Subscribe in the per-pod controller-runtime (6A), credential Secret rotation across both topologies (6B).
+- **Next-actions review (Waves 7A.1 through 7B).** NETCONF transactional + CLI engine-side fail-fast (7A.1), `configPrereqs` teardown freshness gate on `ObservedGeneration + Phase` (7A.2), runtime-suffixed lease identity for cross-process arbitration (7A.3), `pruneOnRelinquish` set only on teardown step (7A.4), `PathSpec` on handwritten interface writers (7B).
+- **Wave-7 residuals (Waves 8.1, 8.2).** DNS-1123-safe `leaseName` with sanitisation + SHA-256 hash, validated against `IsDNS1123Subdomain` for every shipped family (8.1). `PhaseLeaseBlocked` as a first-class arbitration state with all-blocked short-circuit before the engine, partial-block downgrade from `InSync`, `Result.DeviceTouched` gating `LastDeviceCheck`, and sub-TTL requeue (8.2).
+- **Wave-8 follow-up (Waves 9.1, 9.2).** `LeaseBlocked` admission in the IOSXEConfig CRD enum with a schema-aware test that parses the generated CRD (9.1). `reconcileOne` returns `(engine.Result, error)` so the controller-runtime caller and OTel span attribution source the phase from the engine result rather than the deep-copied pre-update CR (9.2).
 
-The first four review rounds' findings remain closed. The fifth round's two findings close in this commit set.
+### 1.2 Architectural lessons internalised across the chain
 
-The next-actions review's five findings closed in this round:
+These six lessons live in commit messages and inline comments so they do not recur. They form the durable testing-discipline closure for this branch:
 
-1. **Lease identity during rollouts** — runtime-suffixed identity (`<ns>/<name>#<podUID|workerUUID>`); two reconcilers with the same CR identity but different runtime IDs cannot both renew the same lease. Operator-visible Conflict messages strip the suffix. Anchor: `c2315b6`.
-2. **NETCONF transactional + CLI** — engine fail-fast at the boundary: `Phase=Failed` with `ErrTransactionalCLIUnsupported` when both are set; no transport-side mutation runs. Anchor: `71f5505`.
-3. **configPrereqs teardown freshness** — gate now requires `Status.ObservedGeneration == Generation` AND `Status.Phase == InSync`; stale-status from a prior generation cannot trigger premature CR deletion. Anchor: `0ac63c3`.
-4. **`pruneOnRelinquish` semantics** — steady-state configPrereqs upsert sets it `false` (additive day-0 reconcile). Teardown step 1 sets it `true` (authoritative prune of the empty-source intent only). API docstring rewritten to be honest about what the flag does. Anchor: `965f80a`.
-5. **PathSpec on handwritten interface writers** — `interface_ethernet`, `interface_switchport`, and `nestedKeyedListWriter` all populate `transport.Op.PathSpec`; the lab case `GigabitEthernet=0/0/0` now produces a gNMI Path with the slash preserved verbatim. Anchor: `3388628`.
+1. **Fake-client tests are not a substitute for envtest** when CRD schema validation (`MinItems`, required) is part of the contract under test. (Lesson source: FU-2.)
+2. **Side-effect-driven registries are fragile** when the side-effect lives in a code path the production binary does not execute. (Lesson source: FU-4 — gNMI registry was populated via `schema.LoadFamilies`, which only the docs generator called.)
+3. **Async status subresources** mean `Status.X` and `Spec.Y` can disagree during a reconcile cycle. Gates that read both must explicitly verify they refer to the same generation. (Lesson source: Wave 7A.2 configPrereqs teardown freshness.)
+4. **A lease that protects in-process duplicate writers does NOT protect cross-process overlap** during pod/worker rollouts unless the holder identity is process-unique. (Lesson source: Wave 7A.3 lease identity.)
+5. **`fake.Client` does not enforce Kubernetes object-name or field-enum validation.** When a name is composed from arbitrary strings or a status field is constrained by enum, the test must explicitly validate against `k8s.io/apimachinery/pkg/util/validation` or against the generated CRD schema. (Lesson source: W7R-1 name validation, W8FU-1 enum validation.)
+6. **Status writes via DeepCopy do not mutate the caller's CR.** When a function writes status through `cr.DeepCopy()` and the caller needs the post-write phase (controller-runtime requeue, span attribution, follow-on conditional writes), the function must return that phase explicitly. Reading the caller's still-stale CR is silent: no error, no warning, just stale-data behaviour fake-client tests do not catch because they do not traverse the multi-tick state machine the production controller-runtime path traverses. (Lesson source: W8FU-2.)
 
-Module-wide `go test -race -count=5 ./...` clean; `count=20` stable across the previously-flaky packages.
+The shared subtext across lessons 1, 2, and 5 — `fake.Client` is not an apiserver — is the case for envtest infrastructure as the durable closure (tracked in §7.A.2).
 
-Two architectural lessons from this round, in commit messages and inline comments so they don't re-recur:
+### 1.3 Pending work
 
-- **Async status subresources** mean `Status.X` and `Spec.Y` can disagree during a reconcile cycle. Gates that read both must explicitly verify they refer to the same generation.
-- **A lease that protects in-process duplicate writers does NOT protect cross-process overlap** during pod/worker rollouts unless the holder identity is process-unique.
+None of the items below block day-2 readiness. Each is reachable in its own RFC or PR window.
 
-The first external review's twelve findings remain closed. The follow-up review's five findings (Wave 1A-fu through 6B) remain closed. The next-actions review's five findings (Wave 7A.1 through 7B) close in this commit set.
+1. **External — Phase-8 residuals** (Terraform Registry release, netascode example corpus). Tracked in [`phase-8-residuals.md`](phase-8-residuals.md).
+2. **Live retest of the device-write paths against the lab Cat9K** — operator-scheduled because each path modifies running device state. Coverage: `spec.transactional=true` (NETCONF/830, separately enabled), `spec.transactional + CLI` rejection path (Wave 7A.1), `configPrereqs` deletion-driven cleanup (Waves 4A-fu + 7A.2 + 7A.4), gNMI Set against `interface_ethernet[GigabitEthernet=0/0/0]` (Waves 5A-fu + 7B), credential rotation with overlap window (Waves 6B + 7A.3 + 8.2 + 9.2), real-apiserver Lease creation for any underscore family (Wave 8.1), real-apiserver acceptance of `status.phase=LeaseBlocked` (Wave 9.1). Detailed list in [`latest-update.md`](latest-update.md) §5.
+3. **Architectural watch-items #4 (Phase-10 cosmetic relocation), #9 (log unification implementation), #10 (CRD v1 promotion implementation)** — plan-level deliverables in their own RFCs ([`architectural-review.md`](architectural-review.md), [`log-unification-plan.md`](log-unification-plan.md), [`crd-v1-promotion-plan.md`](crd-v1-promotion-plan.md)).
+4. **envtest infrastructure** — durable closure for the recurring fake-client-doesn't-validate gap (FU-2 + W7R-1 + W8FU-1). Tracked under §7.A.2 with rationale for deferring to the conversion-webhook PR rather than landing it stand-alone.
 
-Closing the follow-up's findings:
-
-1. **NETCONF transactional verify** — fixed in Wave 1A-fu via the new `TxFetcher` optional interface. `transactionalView.Fetch` now prefers candidate-aware `FetchTx` when the inner transport implements it; NETCONF reads `<source><candidate/>` mid-transaction so verify-Fetch sees the in-flight writes. CLI template ops route through `e.applyTransport` and participate in the transaction. Anchor: commit `c30cbbc`.
-2. **configPrereqs teardown** — fixed in Wave 4A-fu by keeping the family list intact and emptying `source.inline` instead of clearing `ManagedFamilies`. The engine then runs each family with empty desired + `pruneOnRelinquish=true` and per-family `PruneCapable.PruneDiff` deletes device state. `dhcp` writer gained PruneDiff (only prereq family that lacked it). Anchor: commit `d7ce3c6`.
-3. **gNMI Subscribe in per-pod controller-runtime** — fixed in Wave 6A. `ConfigReconciler.SubscribeEvents` is a `<-chan event.GenericEvent` consumed via `source.Channel` in `SetupWithManager`. `cmd/cisco-vk` bridges the existing notify channel into per-CR GenericEvents; `subscribeNotifyTime` is checked against `cr.Status.LastDeviceCheck` to mark the reconcile as `triggerSubscribe` (bypass hash short-circuit). Anchor: commit `c916e17`.
-4. **gNMI keyed paths** — fixed in Wave 5A-fu by adding structured `transport.Op.PathSpec []PathElement`. Writers populate it on every keyed-list op via a new `pathSpecForKeyedListEntry` helper; the gNMI transport prefers `PathSpec` over the string `Path`. Production registration moved from `schema.LoadFamilies` side-effect to `iosxebuilder.RegisterGNMIPathKeysForXE()` called from the iosxe driver's `init()` so every binary that links the IOS-XE driver registers correctly. Composite-key shape (`[type, name]`) handled by registering only `name` per concrete interface segment. Anchor: commit `c414a51`.
-5. **Credential Secret rotation** — fixed in Wave 6B. Per-pod: `CiscoDeviceReconciler` watches Secrets and stamps the per-device Deployment's pod-template annotation `cisco.vk/credential-resource-version` with the Secret's `metadata.resourceVersion`; rotation rolls the ReplicaSet naturally. Aggregator: `specHash` now embeds a SHA-256 digest of the resolved password (cleartext never enters the deviceWorker struct's observable state); a Secret watch fans out per-CiscoDevice. Anchor: commit `eab4175`.
-
-Two architectural lessons internalised this round (called out in commit messages so they don't re-recur):
-- **Fake-client tests are not a substitute for envtest** when CRD schema validation is part of the contract under test (FU-2 — Wave 4A's unit test passed against `fake.Client` because schema validation was skipped).
-- **Side-effect-driven registries are fragile** when the side-effect lives in a code path the production binary doesn't execute (FU-4 — Wave 5A's gNMI registry was populated via `schema.LoadFamilies`, which only the docs generator called).
-
-Pending work that remains:
-
-1. **External — Phase-8 residuals** (Terraform Registry release, netascode example corpus) tracked in [`phase-8-residuals.md`](phase-8-residuals.md). These do not block day-2 readiness; they involve infrastructure outside the Git repository.
-2. **Live retest of the device-write paths against the lab Cat9K** — the unit suite covers every Wave's state machine. Live retests of `spec.transactional=true` (NETCONF/830, separately enabled), `configPrereqs` deletion, gNMI Set against `interface_ethernet`, and credential rotation all modify running device state and are operator-scheduled.
-3. **Architectural watch-items #4 (Phase-10 cosmetic relocation), #9 (log unification implementation), #10 (CRD v1 promotion implementation)** remain plan-level deliverables in their own RFCs.
-4. **envtest infrastructure for schema-validating teardown tests** — the FU-2 lesson said fake-client tests miss CRD-MinItems. The Wave 4A-fu fix is engine-and-controller correct; an envtest-style test that exercises the CRD admission path is tracked as a follow-up.
-
-The architectural review's twelve watch-items remain closed. The first external review's twelve findings remain closed in code. The follow-up review's five findings are **all closed in code** with focused tests for each. Phases 0–9 are complete in code; the API now genuinely behaves as advertised across day-0 AND day-2.
+The architectural review's twelve watch-items remain closed (eight shipped end-to-end, three with written plans, one deliberately deferred to Phase-10 with rationale on file).
 
 ---
 
@@ -304,8 +298,18 @@ These items have shipped *as code* but require infrastructure outside the Git re
 | [`iosxe-config-driver-appraisal.md`](iosxe-config-driver-appraisal.md) | Quality / composition snapshot | Snapshot context |
 | [`config-driver-review-feedback.md`](config-driver-review-feedback.md) | Phase-3 review feedback + action plan | The 3-feedback row in §3 |
 | [`architectural-review.md`](architectural-review.md) | Architecture review against the standard canon (Bass/Kleppmann/Martin/etc.) | The 12 watch-items in §4 |
-| [`external-review.md`](external-review.md) | External implementation review (Codex, 2026-04-25) — semantic API/code mismatches | Day-2 readiness findings |
+| [`external-review.md`](external-review.md) | External implementation review (Codex) — semantic API/code mismatches | Original-round findings |
 | [`external-review-response.md`](external-review-response.md) | Triage + remediation plan for the external review | §7.0 wave register |
+| [`external-review-followup.md`](external-review-followup.md) | Follow-up review (Codex, post-Wave-5) | Follow-up-round findings |
+| [`external-review-followup-response.md`](external-review-followup-response.md) | Triage + remediation plan for the follow-up review | Waves 1A-fu through 6B |
+| [`external-review-next-actions.md`](external-review-next-actions.md) | Next-actions review (Codex, post-`latest-update.md`) | Next-actions-round findings |
+| [`external-review-next-actions-response.md`](external-review-next-actions-response.md) | Triage + remediation plan for the next-actions review | Waves 7A.1 through 7B |
+| [`external-review-wave7-residuals.md`](external-review-wave7-residuals.md) | Wave-7 residuals review (Codex, post-Wave-7) | W7R-1, W7R-2 findings |
+| [`external-review-wave7-residuals-response.md`](external-review-wave7-residuals-response.md) | Triage + remediation plan for the Wave-7 residuals | Waves 8.1, 8.2 |
+| [`external-review-wave8-followup.md`](external-review-wave8-followup.md) | Wave-8 follow-up review (Codex, post-Wave-8) | W8FU-1, W8FU-2 findings |
+| [`external-review-wave8-followup-response.md`](external-review-wave8-followup-response.md) | Triage + remediation plan for the Wave-8 follow-up | Waves 9.1, 9.2 |
+| [`external-review-wave9-status.md`](external-review-wave9-status.md) | Wave-9 status review (Codex, post-Wave-9) | Acceptance — no new findings |
+| [`latest-update.md`](latest-update.md) | "What just changed" pointer for the most recent round | Most-recent-round narrative |
 | [`driver-extension-guide.md`](driver-extension-guide.md) | How to add a new platform driver | Phase-9 plug-in pattern |
 | [`crd-v1-promotion-plan.md`](crd-v1-promotion-plan.md) | v1alpha1 → v1 cut plan | Watch-item #10 (impl path) |
 | [`log-unification-plan.md`](log-unification-plan.md) | Slog backend + logrus/zap shim plan | Watch-item #9 (impl path) |
