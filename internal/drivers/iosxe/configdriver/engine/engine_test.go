@@ -548,3 +548,120 @@ func TestCLIBlocksSkippedWhenFamiliesFailed(t *testing.T) {
 		t.Errorf("CLI op ran after family-apply failure (cliCount=%d)", cliCount)
 	}
 }
+
+// ─── Wave 10.3 — atomic replace ─────────────────────────────────────
+
+// TestReconcileAtomicReplaceImpliesPrune pins the engine-boundary
+// coupling: AtomicReplace=true MUST drive the per-family
+// PruneCapable.PruneDiff path even when the operator did not set
+// PruneOnRelinquish=true explicitly. This is what makes atomic
+// replace strictly stronger than pruneOnRelinquish — same
+// per-family delete-set, plus the cross-family ordering applied
+// elsewhere.
+func TestReconcileAtomicReplaceImpliesPrune(t *testing.T) {
+	pw := &fakePruneWriter{
+		fakeWriter: &fakeWriter{
+			family: "vlan",
+			ops:    []transport.Op{{Verb: transport.VerbMerge, Path: "/intent"}},
+		},
+		pruneOps: []transport.Op{{Verb: transport.VerbDelete, Path: "/orphan"}},
+	}
+	e := &Engine{
+		Transport: &stubTransport{},
+		Lookup:    func(string) writers.SectionWriter { return pw },
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "edge-01",
+		ManagedFamilies: []string{"vlan"},
+		Configuration:   map[string]any{"vlan": map[string]any{}},
+		DriftPolicy:     configv1alpha1.DriftPolicyRevert,
+		// Critical: AtomicReplace=true, PruneOnRelinquish=false. The
+		// engine must derive prune behavior from AtomicReplace alone.
+		AtomicReplace:     true,
+		PruneOnRelinquish: false,
+	}
+	_ = e.Reconcile(context.Background(), res)
+	if pw.pruneCalls < 1 {
+		t.Fatalf("PruneDiff calls=%d, want >= 1 (AtomicReplace=true should imply prune behaviour)", pw.pruneCalls)
+	}
+}
+
+// TestReconcileFamilyOrderHookIsApplied pins the cross-family
+// ordering wiring. The engine MUST consult Engine.FamilyOrder
+// (when non-nil) and process families in the order it returns —
+// not the order in res.ManagedFamilies. iosxebuilder will populate
+// this with a topo-sort over schema/families.yaml's depends_on,
+// but the engine doesn't care about the source; it cares that the
+// hook is honored.
+func TestReconcileFamilyOrderHookIsApplied(t *testing.T) {
+	var seen []string
+	w := func(family string) writers.SectionWriter {
+		return &fakeWriter{
+			family: family,
+			// Record processing order via a closure on `seen`.
+			// fakeWriter doesn't expose a hook, so use a wrapper
+			// that captures family on Apply.
+			ops: []transport.Op{{Verb: transport.VerbMerge, Path: "/" + family}},
+		}
+	}
+	// Wrap Lookup to record the order it's called in. The engine
+	// calls Lookup once per family per tick; recording on Lookup
+	// gives us the exact iteration order.
+	e := &Engine{
+		Transport: &stubTransport{},
+		Lookup: func(family string) writers.SectionWriter {
+			seen = append(seen, family)
+			return w(family)
+		},
+		// Reverse the operator-given order — exposes whether the
+		// hook is applied.
+		FamilyOrder: func(in []string) []string {
+			out := make([]string, len(in))
+			for i, f := range in {
+				out[len(in)-1-i] = f
+			}
+			return out
+		},
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "edge-01",
+		ManagedFamilies: []string{"a", "b", "c"},
+		Configuration:   map[string]any{"a": map[string]any{}, "b": map[string]any{}, "c": map[string]any{}},
+		DriftPolicy:     configv1alpha1.DriftPolicyRevert,
+	}
+	_ = e.Reconcile(context.Background(), res)
+	// Expect reverse-of-input order: c, b, a.
+	if len(seen) != 3 || seen[0] != "c" || seen[1] != "b" || seen[2] != "a" {
+		t.Fatalf("family iteration order = %v, want [c b a]", seen)
+	}
+}
+
+// TestReconcileFamilyOrderHookNilPreservesInputOrder is the
+// backward-compat regression for the new Engine.FamilyOrder field.
+// Existing engines that don't set the hook MUST process families
+// in res.ManagedFamilies order — same as the pre-Wave-10
+// behaviour.
+func TestReconcileFamilyOrderHookNilPreservesInputOrder(t *testing.T) {
+	var seen []string
+	e := &Engine{
+		Transport: &stubTransport{},
+		Lookup: func(family string) writers.SectionWriter {
+			seen = append(seen, family)
+			return &fakeWriter{
+				family: family,
+				ops:    []transport.Op{{Verb: transport.VerbMerge, Path: "/" + family}},
+			}
+		},
+		// FamilyOrder is nil — engine must use res.ManagedFamilies as-is.
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "edge-01",
+		ManagedFamilies: []string{"a", "b", "c"},
+		Configuration:   map[string]any{"a": map[string]any{}, "b": map[string]any{}, "c": map[string]any{}},
+		DriftPolicy:     configv1alpha1.DriftPolicyRevert,
+	}
+	_ = e.Reconcile(context.Background(), res)
+	if len(seen) != 3 || seen[0] != "a" || seen[1] != "b" || seen[2] != "c" {
+		t.Fatalf("family iteration order = %v, want [a b c] (nil FamilyOrder = input order)", seen)
+	}
+}

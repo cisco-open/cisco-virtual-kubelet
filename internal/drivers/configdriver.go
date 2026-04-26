@@ -85,6 +85,17 @@ type ConfigDriverContext struct {
 	// disables the subscribe fast path; the reconciler stays on
 	// its periodic ticker.
 	SubscribePaths []string
+
+	// FamilyOrder is the optional cross-family ordering hook the
+	// engine consults during Wave 10.3 atomic-replace reconciles.
+	// Platforms that ship a topo-sortable schema (IOS-XE families.yaml
+	// declares depends_on for cross-family dependencies like
+	// interface_ethernet → vrf) provide a closure that returns the
+	// input families in dependency order so adds run parent-first.
+	// Nil means "operator-determined order" (the pre-Wave-10
+	// default) and is the safe fallback when a platform's schema
+	// doesn't declare dependencies.
+	FamilyOrder func([]string) []string
 }
 
 // ConfigDriverFactory is the per-platform constructor signature.

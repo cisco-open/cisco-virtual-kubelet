@@ -93,6 +93,18 @@ type Engine struct {
 	// instead of the running config. Reset before/after each tick;
 	// not part of the public API.
 	applyTransport transport.Interface
+
+	// FamilyOrder is the optional ordering hook the engine applies
+	// to res.ManagedFamilies before iterating per-family work. When
+	// nil (the default), families are processed in the order the
+	// resolver delivered them. When non-nil, it MUST return a
+	// permutation of the input slice.
+	//
+	// Wave 10.3 — populated by iosxebuilder to a topological sort
+	// over the schema's depends_on declarations, so atomic-replace
+	// reconciles process parent families before dependent ones.
+	// Tests pass an explicit ordering to assert the wiring.
+	FamilyOrder func([]string) []string
 }
 
 // Result is the full summary of a reconcile tick. It is intentionally
@@ -317,7 +329,35 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	if len(res.ManagedFamilies) > 0 {
 		result.DeviceTouched = true
 	}
-	for _, family := range res.ManagedFamilies {
+
+	// Wave 10.3 — AtomicReplace=true treats the resolved intent as
+	// the AUTHORITATIVE state for the managed families: device-side
+	// entries not in the intent are deleted in the same transaction.
+	// We achieve that by reusing the existing per-family
+	// PruneOnRelinquish path (the writer's PruneCapable.PruneDiff
+	// computes the delete-set), so atomic replace is strictly
+	// stronger than pruneOnRelinquish — same per-family pruning,
+	// PLUS the cross-family ordering applied below.
+	//
+	// Mutating the local res pointer is safe; ResolvedIntent is
+	// constructed fresh per-tick by the resolver and the engine's
+	// reconcile is the only caller that touches it.
+	if res.AtomicReplace {
+		res.PruneOnRelinquish = true
+	}
+
+	// Wave 10.3 — apply the cross-family ordering hook before the
+	// per-family loop. iosxebuilder populates FamilyOrder with a
+	// topological sort over schema/families.yaml's depends_on
+	// declarations so adds run parent-first (e.g. VRF before any
+	// interface that binds to it). Tests inject explicit ordering.
+	// nil hook = identity (operator-determined order, the
+	// pre-Wave-10 behaviour).
+	families := res.ManagedFamilies
+	if e.FamilyOrder != nil {
+		families = e.FamilyOrder(families)
+	}
+	for _, family := range families {
 		fs := e.reconcileFamily(ctx, family, res)
 		result.FamilyStatuses = append(result.FamilyStatuses, fs)
 		switch fs.State {

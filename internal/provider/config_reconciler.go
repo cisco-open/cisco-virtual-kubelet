@@ -82,6 +82,12 @@ type ConfigReconciler struct {
 	// process-global writers registry.
 	Lookup func(family string) writers.SectionWriter
 
+	// FamilyOrder is the optional cross-family ordering hook
+	// forwarded to engine.Engine.FamilyOrder for Wave 10.3 atomic
+	// replace. Nil means operator-determined ordering — the
+	// pre-Wave-10 default.
+	FamilyOrder func([]string) []string
+
 	// Leaser serialises per-family writes across IOSXEConfig CRs
 	// targeting the same device. Nil means advisory-only conflict
 	// reporting (the Phase-1 default behaviour).
@@ -257,7 +263,11 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, 
 	if lookup == nil {
 		lookup = writers.Get
 	}
-	eng := &engine.Engine{Transport: r.Transport, Lookup: lookup}
+	eng := &engine.Engine{
+		Transport:   r.Transport,
+		Lookup:      lookup,
+		FamilyOrder: r.FamilyOrder,
+	}
 
 	for _, cr := range forDevice {
 		// Polling-path callers don't need the engine.Result; controller-

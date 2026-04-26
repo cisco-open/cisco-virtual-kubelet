@@ -124,7 +124,11 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	if lookup == nil {
 		lookup = writers.Get
 	}
-	eng := &engine.Engine{Transport: r.Transport, Lookup: lookup}
+	eng := &engine.Engine{
+		Transport:   r.Transport,
+		Lookup:      lookup,
+		FamilyOrder: r.FamilyOrder,
+	}
 
 	// Compute conflicts across every CR targeting this device. Listing
 	// is cheap when backed by an informer cache.

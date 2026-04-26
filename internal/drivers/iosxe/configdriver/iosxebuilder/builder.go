@@ -151,6 +151,101 @@ func LookupWriter(family string) writers.SectionWriter {
 	return writers.Get(family)
 }
 
+// FamilyOrderForXE returns a function suitable for
+// engine.Engine.FamilyOrder: a topological sort of any input
+// family slice using the schema's depends_on declarations as the
+// dependency edges. Parents come before dependents so add-set
+// operations are sequenced correctly during atomic replace
+// (Wave 10.3) — e.g. a VRF write runs before any interface_*
+// write that binds to it.
+//
+// Behaviour with cycles, missing-from-schema entries, or unknown
+// families: the function falls back to lexicographic order over
+// the original input so reconcile remains deterministic. Cycles
+// in the schema are a static-validation bug (covered separately
+// by schema/index_test.go) and should never reach this code in
+// production.
+//
+// Returns nil if schema.LoadFamilies fails — the caller (the
+// engine) treats nil as identity ordering, preserving the
+// pre-Wave-10 behaviour. This is the safe failure mode: a
+// schema-load problem should not break reconciles, just fall back
+// to operator-given ordering with no atomic-replace
+// cross-family ordering benefit.
+func FamilyOrderForXE() func([]string) []string {
+	families, err := schema.LoadFamilies()
+	if err != nil {
+		return nil
+	}
+	return func(in []string) []string {
+		// Bucketize: families known to the schema get topo-sorted;
+		// unknown families append at the end in input order.
+		known := make(map[string]bool, len(in))
+		for _, f := range in {
+			if _, ok := families[f]; ok {
+				known[f] = true
+			}
+		}
+		// Topo sort with deterministic tie-breaking on lexicographic
+		// order. Kahn's algorithm; cycle detection falls through to
+		// lex-order over the original input (defensive — the schema
+		// should be cycle-free per its own validation).
+		indeg := make(map[string]int, len(known))
+		for f := range known {
+			indeg[f] = 0
+		}
+		for f := range known {
+			for _, dep := range families[f].DependsOn {
+				if known[dep] {
+					indeg[f]++
+				}
+			}
+		}
+		var ready []string
+		for f, d := range indeg {
+			if d == 0 {
+				ready = append(ready, f)
+			}
+		}
+		sort.Strings(ready)
+		out := make([]string, 0, len(in))
+		for len(ready) > 0 {
+			next := ready[0]
+			ready = ready[1:]
+			out = append(out, next)
+			// Visit families that depend on `next` and decrement.
+			for f := range known {
+				for _, dep := range families[f].DependsOn {
+					if dep == next {
+						indeg[f]--
+						if indeg[f] == 0 {
+							ready = append(ready, f)
+						}
+					}
+				}
+			}
+			sort.Strings(ready)
+		}
+		// Cycle detection: if any indeg > 0 remain, fall back to
+		// lex order over the original input slice.
+		for _, d := range indeg {
+			if d > 0 {
+				lex := append([]string(nil), in...)
+				sort.Strings(lex)
+				return lex
+			}
+		}
+		// Append unknown-to-schema families in input order so the
+		// engine still processes them.
+		for _, f := range in {
+			if !known[f] {
+				out = append(out, f)
+			}
+		}
+		return out
+	}
+}
+
 // UnionWriterPaths returns the sorted union of YANG paths every
 // registered IOS-XE writer touches. The gNMI Subscribe watcher
 // uses this set so an out-of-band write to any leaf the engine

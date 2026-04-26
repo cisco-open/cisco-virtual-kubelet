@@ -76,6 +76,7 @@ func buildXEConfigDriverContext(
 		DefaultYANGVersion:    defaultVer,
 		LookupWriter:          iosxebuilder.LookupWriter,
 		SubscribePaths:        iosxebuilder.UnionWriterPaths(),
+		FamilyOrder:           iosxebuilder.FamilyOrderForXE(),
 	}
 	// Surface transport-build failure but keep going — historical
 	// behaviour is "scaffold mode": the reconciler runs, marks CRs

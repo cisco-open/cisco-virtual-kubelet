@@ -225,6 +225,7 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 		SupportedYANGVersions: dctx.SupportedYANGVersions,
 		DefaultYANGVersion:    dctx.DefaultYANGVersion,
 		Lookup:                dctx.LookupWriter,
+		FamilyOrder:           dctx.FamilyOrder,
 		Leaser:                leaser,
 		Recorder:              r.Recorder,
 		SubscribeNotify:       notify,
