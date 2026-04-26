@@ -260,7 +260,10 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, 
 	eng := &engine.Engine{Transport: r.Transport, Lookup: lookup}
 
 	for _, cr := range forDevice {
-		if err := r.reconcileOne(ctx, logger, resolver, eng, cr, conflicts, trigger); err != nil {
+		// Polling-path callers don't need the engine.Result; controller-
+		// runtime's Reconcile uses it to derive a phase-aware
+		// RequeueAfter and span attributes. Discarded here.
+		if _, err := r.reconcileOne(ctx, logger, resolver, eng, cr, conflicts, trigger); err != nil {
 			logger.WithError(err).
 				WithField("name", cr.Name).
 				WithField("namespace", cr.Namespace).
@@ -327,6 +330,14 @@ func dueForDriftCheck(cr *configv1alpha1.IOSXEConfig) bool {
 // reconcileOne executes one CR's tick: resolve intent → run engine →
 // write status. Any transient failure (resource-conflict, list failure)
 // is logged and swallowed; the next tick retries.
+//
+// Returns the terminal engine.Result so the controller-runtime path
+// can derive a phase-aware RequeueAfter and trace attributes from the
+// just-written outcome rather than the stale pre-update CR object.
+// Wave 9.2 (external-review-wave8-followup Finding #2): pre-fix, the
+// caller read cr.Status.Phase after this returned, but recordResult
+// writes via a deep copy so cr was unchanged — the requeue and span
+// phase always reflected the previous tick.
 func (r *ConfigReconciler) reconcileOne(
 	ctx context.Context,
 	logger log.Logger,
@@ -335,10 +346,11 @@ func (r *ConfigReconciler) reconcileOne(
 	cr *configv1alpha1.IOSXEConfig,
 	conflicts map[string][]string,
 	trigger reconcileTrigger,
-) error {
+) (engine.Result, error) {
 	resolved, err := resolver.Resolve(ctx, cr)
 	if err != nil {
-		return r.recordFailure(ctx, cr, fmt.Sprintf("resolve: %v", err))
+		return engine.Result{Phase: engine.PhaseFailed, Err: err},
+			r.recordFailure(ctx, cr, fmt.Sprintf("resolve: %v", err))
 	}
 
 	// Replay annotation (Phase 7 time-travel): when the CR carries
@@ -350,7 +362,8 @@ func (r *ConfigReconciler) reconcileOne(
 	// update that records the apply.
 	replayed, applied, err := r.applyReplayAnnotation(ctx, cr, resolved)
 	if err != nil {
-		return r.recordFailure(ctx, cr, fmt.Sprintf("replay: %v", err))
+		return engine.Result{Phase: engine.PhaseFailed, Err: err},
+			r.recordFailure(ctx, cr, fmt.Sprintf("replay: %v", err))
 	}
 	if applied {
 		resolved = replayed
@@ -363,7 +376,8 @@ func (r *ConfigReconciler) reconcileOne(
 	// operator asked for the work even when the hash matches.
 	h, err := intent.CanonicalHash(resolved)
 	if err != nil {
-		return r.recordFailure(ctx, cr, fmt.Sprintf("hash: %v", err))
+		return engine.Result{Phase: engine.PhaseFailed, Err: err},
+			r.recordFailure(ctx, cr, fmt.Sprintf("hash: %v", err))
 	}
 	// The hash short-circuit fires only when ALL of these hold:
 	//   - the operator did NOT request a replay,
@@ -382,7 +396,11 @@ func (r *ConfigReconciler) reconcileOne(
 		cr.Status.LastAppliedHash == h &&
 		cr.Status.Phase == engine.PhaseInSync &&
 		!dueForDriftCheck(cr) {
-		return nil
+		// Steady-state short-circuit: nothing was rewritten, so the
+		// authoritative phase is whatever was already on the CR.
+		// Carrying it through lets the controller-runtime caller
+		// requeue at the normal drift interval.
+		return engine.Result{Phase: cr.Status.Phase}, nil
 	}
 
 	// If the transport is not yet wired (scaffold / stub path), record
@@ -390,7 +408,7 @@ func (r *ConfigReconciler) reconcileOne(
 	// prefer a clear "waiting for transport" state over a spurious
 	// Failed.
 	if r.Transport == nil {
-		return r.recordPending(ctx, cr)
+		return engine.Result{Phase: engine.PhasePending}, r.recordPending(ctx, cr)
 	}
 
 	// Acquire per-family leases before running the engine. Families we
@@ -441,7 +459,7 @@ func (r *ConfigReconciler) reconcileOne(
 			Message: fmt.Sprintf("family leased by %q", holder),
 		})
 	}
-	return r.recordResult(ctx, cr, result, h, conflicts, resolved)
+	return result, r.recordResult(ctx, cr, result, h, conflicts, resolved)
 }
 
 // acquireLeases filters resolved.ManagedFamilies to the ones this CR

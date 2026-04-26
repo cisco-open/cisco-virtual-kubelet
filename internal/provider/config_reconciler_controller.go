@@ -164,20 +164,23 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	if r.subscribeFiredSince(cr.Status.LastDeviceCheck) {
 		trigger = triggerSubscribe
 	}
-	if err := r.reconcileOne(ctx, vkLogger, resolver, eng, &cr, conflicts, trigger); err != nil {
+	result, err := r.reconcileOne(ctx, vkLogger, resolver, eng, &cr, conflicts, trigger)
+	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "reconcileOne")
 		span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "error"))
 		return reconcile.Result{}, err
 	}
-	// Post-reconcile status fields are written into cr.Status during
-	// reconcileOne; surface the rolled-up phase as a span attribute so
-	// trace consumers can pivot on it without having to also pull the
-	// status subresource.
+	// Phase + drift attribution sourced from the engine result rather
+	// than the stale pre-update CR. recordResult writes status via a
+	// deep copy and never mutates `cr`, so reading cr.Status here would
+	// see the previous tick's phase and miss e.g. PhaseLeaseBlocked
+	// just written by this tick. Wave 9.2
+	// (external-review-wave8-followup Finding #2).
 	span.SetAttributes(
 		attribute.String("cisco.vk.reconcile.outcome", "ok"),
-		attribute.String("cisco.vk.iosxeconfig.phase", cr.Status.Phase),
-		attribute.Int("cisco.vk.drift.count", len(cr.Status.Drift)),
+		attribute.String("cisco.vk.iosxeconfig.phase", result.Phase),
+		attribute.Int("cisco.vk.drift.count", len(result.Drift)),
 	)
 	// Steady-state drift detection: requeue at the spec'd interval so
 	// even an InSync CR is re-checked against the device. controller-
@@ -191,7 +194,12 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	// driftDetectInterval (5m) is far longer than the 30s lease TTL;
 	// using it for a lease-blocked CR would freeze the reconciler
 	// for minutes while the contention window is seconds long.
-	return reconcile.Result{RequeueAfter: requeueIntervalFor(&cr)}, nil
+	//
+	// Wave 9.2: phase argument is the just-written result.Phase, not
+	// cr.Status.Phase. Pre-fix the requeue read the stale CR copy and
+	// used the normal drift interval even on a tick that just wrote
+	// LeaseBlocked, defeating Wave 8.2's contention-aware requeue.
+	return reconcile.Result{RequeueAfter: requeueIntervalFor(&cr, result.Phase)}, nil
 }
 
 // requeueIntervalFor returns the controller-runtime RequeueAfter
@@ -199,9 +207,14 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 // driftDetectInterval; lease-blocked ticks use a sub-TTL value so
 // the next tick re-checks while contention is still likely
 // resolving. Bounded above 1s so the reconciler never busy-loops.
-func requeueIntervalFor(cr *configv1alpha1.IOSXEConfig) time.Duration {
+//
+// phase is the just-written result.Phase from reconcileOne, NOT
+// cr.Status.Phase — recordResult writes status via a deep copy and
+// never mutates the caller's CR object, so reading cr.Status.Phase
+// here would see the stale pre-update value.
+func requeueIntervalFor(cr *configv1alpha1.IOSXEConfig, phase string) time.Duration {
 	full := driftDetectInterval(cr)
-	if cr.Status.Phase == engine.PhaseLeaseBlocked {
+	if phase == engine.PhaseLeaseBlocked {
 		// Half the default lease TTL (30s) → 15s. Adjust if the
 		// engine's FamilyLeaser default TTL changes.
 		const leaseBlockedRequeue = 15 * time.Second
