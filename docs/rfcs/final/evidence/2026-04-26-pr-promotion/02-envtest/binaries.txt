@@ -1,0 +1,8 @@
+# envtest binary versions
+kubebuilder-envtest path: /Users/johalley/Library/Application Support/io.kubebuilder.envtest/k8s/1.30.3-darwin-arm64
+total 372048
+dr-xr-xr-x@ 5 johalley  staff        160 Apr 26 08:22 .
+drwxr-xr-x@ 3 johalley  staff         96 Apr 26 08:22 ..
+-r-xr-xr-x@ 1 johalley  staff   26294882 Apr 26 08:22 etcd
+-r-xr-xr-x@ 1 johalley  staff  112793762 Apr 26 08:22 kube-apiserver
+-r-xr-xr-x@ 1 johalley  staff   51395378 Apr 26 08:22 kubectl

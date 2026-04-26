@@ -59,8 +59,60 @@ jobs:
       - name: Build
         run: go build ./...
 
+      - name: go vet
+        # Static analysis gate per pre-pr-test-enrichment-plan §6.
+        # A separate step from the test gate so a vet failure is
+        # diagnosed without waiting for the test suite.
+        run: go vet ./...
+
       - name: Unit tests
         run: go test -race -count=1 ./...
+
+      - name: Generated artefact drift check
+        # Per pre-pr-test-enrichment-plan §6: regenerate the CRDs
+        # and DeepCopy methods, then assert no drift. A non-empty
+        # `git status` here means the source-of-truth markers and
+        # the committed artefacts have diverged. The ygot regen
+        # is deliberately excluded because its drift is currently
+        # owned as a separate apphosting cleanup item.
+        run: |
+          make crd-gen deepcopy-gen rbac-gen helm-sync-crds
+          if ! git diff --quiet -- api/ config/crd/ charts/cisco-virtual-kubelet/; then
+            echo "Generated CRDs / DeepCopy / RBAC drifted from sources:"
+            git diff --stat -- api/ config/crd/ charts/cisco-virtual-kubelet/
+            git diff -- api/ config/crd/ charts/cisco-virtual-kubelet/ | head -200
+            exit 1
+          fi
+          echo "Generated artefacts in sync with sources."
+
+      - name: CRD / Helm chart sync check
+        # Belt-and-suspenders for the diff above: explicitly enumerate
+        # each CRD file and confirm config/crd/ matches charts/.../crds/.
+        run: |
+          for f in config/crd/*.yaml; do
+            base="$(basename "$f")"
+            if ! diff -q "$f" "charts/cisco-virtual-kubelet/crds/${base}" > /dev/null; then
+              echo "CRD/chart sync drift on ${base}"
+              diff -u "$f" "charts/cisco-virtual-kubelet/crds/${base}" | head -100
+              exit 1
+            fi
+          done
+          echo "CRD/chart sync clean (8 of 8)."
+
+      - name: setup-envtest binaries
+        # Pinned version per pre-pr-test-enrichment-plan §6 — never
+        # @latest in CI. Bump deliberately and run the suite to
+        # validate any apiserver/etcd-version-specific behaviour
+        # before locking in.
+        run: |
+          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.19.7
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Real-apiserver smoke (envtest)
+        # Closes the recurring fake-client-doesn't-validate gap at
+        # the apiserver-admission level (LeaseBlocked enum, DNS-1123
+        # Lease names, future schema additions).
+        run: make test-envtest
 
       - name: Install kind
         uses: helm/kind-action@v1
@@ -73,6 +125,13 @@ jobs:
         uses: azure/setup-helm@v4
         with:
           version: v3.15.4
+
+      - name: helm lint
+        # Lint the chart with the regenerated CRDs in place. Runs
+        # after Helm install (which is what brings the binary onto
+        # the runner) but before the chart is templated against
+        # the kind cluster — the lint is a static check.
+        run: helm lint charts/cisco-virtual-kubelet
 
       - name: Build controller image
         run: docker build -t cisco-vk:smoke .

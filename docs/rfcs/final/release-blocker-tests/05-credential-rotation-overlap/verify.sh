@@ -64,4 +64,17 @@ if (( saw_recovery == 0 )); then
   fail=1
 fi
 
+# §5 baseline: no stale LeaseBlocked at end. The transient
+# LeaseBlocked tick is the test's success condition; the CR being
+# stuck in LeaseBlocked is a regression. The waited-for `phase`
+# transition above already covers this, but the explicit baseline
+# check guards against the operator skipping the watcher.
+. "$(dirname "$0")/../lib/baseline.sh"
+baseline_namespace="${NAMESPACE}"
+baseline_cr="${DEVICE_NAME}"
+baseline_assert_no_stale_lease_blocked
+baseline_assert_observed_generation_synced
+fail=$(( fail + baseline_failures ))
+
+baseline_summary
 exit "${fail}"

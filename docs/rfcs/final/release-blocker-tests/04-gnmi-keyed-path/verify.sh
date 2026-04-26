@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-# Test 04 verify. Asserts:
-#   1. status.phase == InSync
-#   2. interface_ethernet family is InSync with opCount >= 1
-#   3. device-side description on the targeted interface matches the
-#      string in the ConfigMap.
+# Test 04 verify. Asserts the §5 baseline plus the test-specific
+# device-side description and the gNMI transport-proof metric.
 
 set -euo pipefail
 
@@ -14,25 +11,36 @@ TEST_INTF_TYPE="${TEST_INTF_TYPE:-GigabitEthernet}"
 TEST_INTF_NAME="${TEST_INTF_NAME:-0/0/0}"
 EXPECTED_DESC="cisco-vk release-blocker test 04 — wave 5A-fu/7B"
 
-fail=0
+# Source the §5 baseline helpers and wire the test identifiers.
+. "$(dirname "$0")/../lib/baseline.sh"
+baseline_namespace="${NAMESPACE}"
+baseline_cr="${TEST_CR}"
 
-phase="$(kubectl get iosxeconfig "${TEST_CR}" -n "${NAMESPACE}" \
-  -o jsonpath='{.status.phase}')"
-if [[ "${phase}" != "InSync" ]]; then
-  echo "FAIL: phase=${phase}, want InSync"
-  fail=1
-else
-  echo "OK:   phase=InSync"
-fi
+baseline_assert_observed_generation_synced
+baseline_assert_phase_is InSync
+baseline_assert_ready_condition_matches True Succeeded
+baseline_assert_family_state interface_ethernet InSync 1
+baseline_assert_no_unexpected_apply_errors
+baseline_assert_no_unexpected_drift
 
-family_state="$(kubectl get iosxeconfig "${TEST_CR}" -n "${NAMESPACE}" \
-  -o jsonpath='{.status.familyStatus[?(@.name=="interface_ethernet")].state}')"
-if [[ "${family_state}" != "InSync" ]]; then
-  echo "FAIL: interface_ethernet family state=${family_state}, want InSync"
-  fail=1
-else
-  echo "OK:   interface_ethernet family=InSync"
-fi
+# Transport proof per §3.2 of the enrichment plan: the
+# mutate_ops_total counter must show at least one Replace/Merge op
+# attributed to transport=gnmi. Pre-fix, a silent fallback to
+# RESTCONF could land the description on the device too — only the
+# transport-labelled metric distinguishes the two.
+baseline_assert_metric_counter \
+  cisco_vk_config_mutate_ops_total \
+  'device="'"${DEVICE_NAME}"'",transport="gnmi",verb="REPLACE"' \
+  1 || \
+  baseline_assert_metric_counter \
+    cisco_vk_config_mutate_ops_total \
+    'device="'"${DEVICE_NAME}"'",transport="gnmi",verb="MERGE"' \
+    1
+
+# Backward-compatible single-value tally retained for older shells
+# that source this script and read $fail. The baseline_failures
+# counter is the source of truth.
+fail="${baseline_failures}"
 
 # Device-side check.
 ADDR="$(kubectl get ciscodevice "${DEVICE_NAME}" -n "${NAMESPACE}" \
@@ -49,11 +57,10 @@ actual_desc="$(curl --silent --insecure --user "${USER}:${CVK_CONFIG_LINT_PASSWO
   | jq -r '.["Cisco-IOS-XE-native:description"] // "<unset>"')"
 
 if [[ "${actual_desc}" != "${EXPECTED_DESC}" ]]; then
-  echo "FAIL: device description=${actual_desc}, want ${EXPECTED_DESC}"
-  echo "      (this could mean the keyed-path was malformed and the description landed elsewhere)"
-  fail=1
+  baseline_fail "device description=${actual_desc}, want ${EXPECTED_DESC} (keyed-path may be malformed and the description may have landed on a different interface)"
 else
-  echo "OK:   device description matches (PathSpec carried 0/0/0 through)"
+  baseline_ok "device description matches (PathSpec carried ${TEST_INTF_NAME} through)"
 fi
 
-exit "${fail}"
+baseline_summary
+exit "${baseline_failures}"

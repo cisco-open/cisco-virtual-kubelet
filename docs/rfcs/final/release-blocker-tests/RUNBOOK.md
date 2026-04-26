@@ -23,12 +23,24 @@ Before starting the maintenance window, confirm:
 
 ---
 
-## 2. Capture the pre-test baseline
+## 2. Preflight gate (mandatory before any device touch)
 
-Run once at the start of the window. The snapshot is the diff baseline every test rolls back against.
+Before running the snapshot or any per-test apply, run the preflight gate. It fails fast if `kubectl` is on the wrong context, the device is not Ready, the cisco-vk pod is not Ready, the device password is unset, the required transports (RESTCONF/NETCONF/gNMI) aren't reachable, or the test 04 target interface hasn't been explicitly approved.
 
 ```sh
 cd docs/rfcs/final/release-blocker-tests
+./preflight.sh --intf-approved=GigabitEthernet0/0/0   # confirm the test 04 port
+```
+
+Save the preflight output as the first artefact in your evidence bundle (see §6).
+
+---
+
+## 3. Capture the pre-test baseline
+
+Run once at the start of the window, **after preflight passes**. The snapshot is the diff baseline every test rolls back against.
+
+```sh
 mkdir -p _snapshots/window-$(date +%Y%m%d-%H%M)
 ./fetch-running-config.sh _snapshots/window-$(date +%Y%m%d-%H%M)
 ```
@@ -37,24 +49,25 @@ Output goes into a timestamped directory. Keep it for the duration of the window
 
 ---
 
-## 3. Execution order
+## 4. Execution order
 
 Ordered least-disruptive to most-disruptive. **Stop and investigate** at the first test whose verify step fails — do not push through to the next test until the current one is back to baseline.
 
 | Order | Test | What it touches | Why ordered here |
 |---|---|---|---|
 | 1 | [`02-netconf-transactional-cli-rejection/`](./02-netconf-transactional-cli-rejection/) | Engine boundary check; **the engine should reject before any device write** | Safest — by design no device-side change occurs. Confirms the Wave 7A.1 fail-fast guard. |
-| 2 | [`04-gnmi-keyed-path/`](./04-gnmi-keyed-path/) | Adds/removes a description on a chosen interface | Cosmetic; one-line revert; proves Wave 5A-fu + 7B PathSpec on the wire. |
+| 2 | [`04-gnmi-keyed-path/`](./04-gnmi-keyed-path/) | Adds/removes a description on a chosen interface | Cosmetic; one-line revert; proves Wave 5A-fu + 7B PathSpec on the wire and `cisco_vk_config_mutate_ops_total{transport=gnmi}` >= 1. |
 | 3 | [`05-credential-rotation-overlap/`](./05-credential-rotation-overlap/) | Rolls the cisco-vk Deployment ReplicaSet | No device-side write; tests pod-side lease handover and sub-TTL requeue (Waves 6B + 7A.3 + 8.2 + 9.2). |
-| 4 | [`01-netconf-transactional/`](./01-netconf-transactional/) | Adds a benign Loopback interface via NETCONF candidate + commit | Clean rollback (delete the loopback); proves Wave 1A-fu transactional path. |
-| 5 | [`06-driftpolicy-revert-live-write/`](./06-driftpolicy-revert-live-write/) | Flips a managed family from `report` to `revert`, then back | Visible but reversible; the live-revert only touches the family the test names. |
-| 6 | [`03-configprereqs-cleanup/`](./03-configprereqs-cleanup/) | Most invasive: removes device-side configPrereqs state on CiscoDevice deletion | Last because it exercises the deletion finalizer end-to-end (Waves 4A-fu + 7A.2 + 7A.4); only run after the other tests pass. |
+| 4 | [`01-netconf-transactional/`](./01-netconf-transactional/) | Adds a benign Loopback interface via NETCONF candidate + commit | Clean rollback (delete the loopback); proves Wave 1A-fu transactional path and `cisco_vk_config_transactions_total{transport=netconf,outcome=commit}` >= 1. |
+| 5 | [`07-write-startup-save-config/`](./07-write-startup-save-config/) | Adds Loopback9997 then persists to startup-config via `writeStartup=true` | Last test that adds device state; runs before the deletion-finalizer test. Proves the Wave 1A `writeStartup` plumb live-end-to-end via `SaveStartupOK` event + `cisco_vk_config_save_startup_total{outcome=ok}` >= 1. **Modifies startup-config** — needs explicit operator approval. |
+| 6 | [`06-driftpolicy-revert-live-write/`](./06-driftpolicy-revert-live-write/) | Flips a managed family from `report` to `revert`, then back | Visible but reversible; the live-revert only touches the family the test names. |
+| 7 | [`03-configprereqs-cleanup/`](./03-configprereqs-cleanup/) | Most invasive: removes device-side configPrereqs state on CiscoDevice deletion | Last because it exercises the deletion finalizer end-to-end (Waves 4A-fu + 7A.2 + 7A.4); only run after the other tests pass. |
 
-Each subdirectory has its own `README.md` with the closing-wave anchors, exact device surface used, and pre-state/run/verify/rollback steps.
+Each subdirectory has its own `README.md` with the closing-wave anchors, exact device surface used, and pre-state/run/verify/rollback steps. Each test's `verify.sh` sources [`lib/baseline.sh`](./lib/baseline.sh) for the §5-stricter assertions (observedGeneration matches generation, no ApplyError, no stale LeaseBlocked, transport-aware metric proofs).
 
 ---
 
-## 4. Per-test execution template
+## 5. Per-test execution template
 
 Every test follows the same six-step pattern. The per-test `README.md` may add specifics on top of this template.
 
@@ -96,7 +109,7 @@ If `verify.sh` fails:
 
 ---
 
-## 5. End-of-window close
+## 6. End-of-window close
 
 After the last test:
 
@@ -114,7 +127,7 @@ Then update [`../architectural-review-final.md`](../architectural-review-final.m
 
 ---
 
-## 6. Failure modes worth pre-thinking
+## 7. Failure modes worth pre-thinking
 
 | Failure | Likely cause | Recovery |
 |---|---|---|
@@ -126,7 +139,7 @@ Then update [`../architectural-review-final.md`](../architectural-review-final.m
 
 ---
 
-## 7. Source authority
+## 8. Source authority
 
 This runbook is derived from:
 

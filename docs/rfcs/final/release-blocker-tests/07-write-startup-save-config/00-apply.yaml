@@ -1,0 +1,50 @@
+# Test 07 — writeStartup live save-config coverage
+#
+# Adds Loopback9997 with description + IP and persists the change
+# to startup-config via writeStartup=true. Loopback 9997 is chosen
+# distinct from tests 01 (Loopback9999) and 03 (Loopback9998) so the
+# loopback tests don't collide if the operator runs them in parallel.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-07-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            interface_loopback:
+              interfaces:
+                - name: 9997
+                  description: "cisco-vk release-blocker test 07 — writeStartup"
+                  ipv4_address: 10.255.255.97
+                  ipv4_address_mask: 255.255.255.255
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: test-07-write-startup
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "07-write-startup-save-config"
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - interface_loopback
+  # Headline: writeStartup must drive transport.SaveStartup AFTER
+  # running-config converges, increment the save_startup_total
+  # metric, and emit a SaveStartupOK event.
+  transactional: true
+  writeStartup: true
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: test-07-data
+      key: data.nac.yaml

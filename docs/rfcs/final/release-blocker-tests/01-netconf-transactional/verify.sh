@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
-# Test 01 verify. Asserts:
-#   1. status.phase == InSync
-#   2. interface_loopback family is InSync
-#   3. device-side: Loopback9999 exists with the test description + IP
-#   4. (optional, log-based) transactional sequence ran cleanly: warn
-#      if Discard appears; fail-soft if logs unavailable.
+# Test 01 verify. Asserts the §5 baseline plus the test-specific
+# device-side Loopback9999 surface and the NETCONF transactional
+# transport-proof metric.
 
 set -euo pipefail
 
@@ -14,25 +11,33 @@ TEST_CR="test-01-netconf-transactional"
 EXPECTED_DESC="cisco-vk release-blocker test 01 — wave 1A-fu"
 EXPECTED_IP="10.255.255.99"
 
-fail=0
+. "$(dirname "$0")/../lib/baseline.sh"
+baseline_namespace="${NAMESPACE}"
+baseline_cr="${TEST_CR}"
 
-phase="$(kubectl get iosxeconfig "${TEST_CR}" -n "${NAMESPACE}" \
-  -o jsonpath='{.status.phase}')"
-if [[ "${phase}" != "InSync" ]]; then
-  echo "FAIL: phase=${phase}, want InSync"
-  fail=1
-else
-  echo "OK:   phase=InSync"
-fi
+baseline_assert_observed_generation_synced
+baseline_assert_phase_is InSync
+baseline_assert_ready_condition_matches True Succeeded
+baseline_assert_family_state interface_loopback InSync 1
+baseline_assert_no_unexpected_apply_errors
+baseline_assert_no_unexpected_drift
 
-family_state="$(kubectl get iosxeconfig "${TEST_CR}" -n "${NAMESPACE}" \
-  -o jsonpath='{.status.familyStatus[?(@.name=="interface_loopback")].state}')"
-if [[ "${family_state}" != "InSync" ]]; then
-  echo "FAIL: interface_loopback family state=${family_state}, want InSync"
-  fail=1
-else
-  echo "OK:   interface_loopback family=InSync"
-fi
+# Transport proof per §3.1: the transactional commit counter must
+# show at least one outcome=commit attributed to transport=netconf.
+# Pre-fix this counter did not exist; the only check was "the
+# Loopback exists", which a non-transactional write would also
+# satisfy. The new metric is the production-confidence signal.
+baseline_assert_metric_counter \
+  cisco_vk_config_transactions_total \
+  'device="'"${DEVICE_NAME}"'",transport="netconf",outcome="commit"' \
+  1
+# A discarded transaction is failure for this test; the counter
+# value at outcome=discard must be exactly zero.
+baseline_assert_metric_counter \
+  cisco_vk_config_transactions_total \
+  'device="'"${DEVICE_NAME}"'",transport="netconf",outcome="discard"' \
+  0
+fail="${baseline_failures}"
 
 # Device-side check.
 ADDR="$(kubectl get ciscodevice "${DEVICE_NAME}" -n "${NAMESPACE}" \
@@ -49,17 +54,15 @@ actual_desc="$(echo "${body}" | jq -r '.["Cisco-IOS-XE-native:Loopback"].descrip
 actual_ip="$(echo "${body}" | jq -r '.["Cisco-IOS-XE-native:Loopback"].ip.address.primary.address // ""')"
 
 if [[ "${actual_desc}" != "${EXPECTED_DESC}" ]]; then
-  echo "FAIL: device description=${actual_desc}, want ${EXPECTED_DESC}"
-  fail=1
+  baseline_fail "device description=${actual_desc}, want ${EXPECTED_DESC}"
 else
-  echo "OK:   device description matches"
+  baseline_ok "device description matches"
 fi
 
 if [[ "${actual_ip}" != "${EXPECTED_IP}" ]]; then
-  echo "FAIL: device IP=${actual_ip}, want ${EXPECTED_IP}"
-  fail=1
+  baseline_fail "device IP=${actual_ip}, want ${EXPECTED_IP}"
 else
-  echo "OK:   device IP matches"
+  baseline_ok "device IP matches"
 fi
 
 # Optional: surface any Discard call from the cisco-vk pod logs.
@@ -72,4 +75,5 @@ if [[ -n "${pod}" ]]; then
   fi
 fi
 
-exit "${fail}"
+baseline_summary
+exit "${baseline_failures}"
