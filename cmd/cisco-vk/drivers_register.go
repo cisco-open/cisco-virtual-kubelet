@@ -15,10 +15,10 @@
 package main
 
 // This file is the cisco-vk binary's platform-registration hub.
-// Adding a new platform (NX-OS, IOSXR, Junos, …) is a one-line
-// change here — drop a blank import for the new platform package
-// and the driver registry picks it up via init() side effect. No
-// other source file in the binary needs to change.
+// Adding a new platform (NX-OS, IOS-XR, OpenConfig, …) is a
+// one-line change here — drop a blank import for the new platform
+// package and the driver registry picks it up via init() side
+// effect. No other source file in the binary needs to change.
 //
 // See docs/rfcs/driver-extension-guide.md for the end-to-end
 // "how to add a platform" walk-through.
@@ -33,11 +33,12 @@ import (
 	// CiscoDevice.
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/fake"
 	// Future platforms: the intent of Phase 9 is that adding NX-OS,
-	// IOSXR, or Junos here is the only edit needed in the binary.
-	// Placeholder packages exist under internal/drivers/<name>/ but
-	// stay un-imported until a real implementation lands.
+	// IOS-XR, or the cross-vendor OpenConfig driver here is the only
+	// edit needed in the binary. Placeholder packages exist under
+	// internal/drivers/<name>/ but stay un-imported until a real
+	// implementation lands.
 	//
 	// _ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos"
 	// _ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxr"
-	// _ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/junos"
+	// _ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/openconfig"
 )

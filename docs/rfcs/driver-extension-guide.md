@@ -1,8 +1,8 @@
 # How to add a new platform driver (Phase 9)
 
 **Branch:** `pr/johalley/ciscoconfig_xe`
-**Audience:** anyone bringing up an NX-OS, IOS-XR, Junos, or other
-platform driver against the cisco-virtual-kubelet foundation
+**Audience:** anyone bringing up an NX-OS, IOS-XR, OpenConfig, or
+other platform driver against the cisco-virtual-kubelet foundation
 **Companion docs:**
 [`iosxe-config-driver-review.md`](iosxe-config-driver-review.md) (design)
 and [`iosxe-config-driver-appraisal.md`](iosxe-config-driver-appraisal.md)
@@ -58,14 +58,19 @@ internal/drivers/<platform>/
     ├── intent/         # platform-specific resolver hooks (rare)
     ├── schema/         # families.yaml + yang-versions.yaml
     ├── transport/      # platform-specific transport extensions
-    │                   # (Cisco-IA RPC name, NXAPI, Junos exec)
+    │                   # (Cisco-IA RPC name, NXAPI, vendor-native RPCs)
     └── writers/        # one .go per netascode family
 ```
 
 For a new platform, the existing `internal/drivers/iosxe/`
-directory is the reference implementation. The four
-placeholders — `nxos/`, `iosxr/`, `junos/` — show the
+directory is the reference implementation. The placeholder
+packages — `nxos/`, `iosxr/`, `openconfig/` — show the
 zero-implementation shape: just `doc.go` + an empty `register.go`.
+The `openconfig/` placeholder is intentionally vendor-neutral —
+it targets devices via the OpenConfig YANG models over NETCONF or
+gNMI, so any vendor that implements OpenConfig (Cisco, Juniper,
+Arista, Nokia, …) can be reconciled by one driver rather than one
+per vendor.
 
 ---
 
@@ -76,7 +81,7 @@ zero-implementation shape: just `doc.go` + an empty `register.go`.
 Edit [`api/v1alpha1/types.go`](../../api/v1alpha1/types.go):
 
 ```go
-// +kubebuilder:validation:Enum=XE;XR;NXOS;JUNOS;<NEW_KIND>;FAKE
+// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;<NEW_KIND>;FAKE
 type DeviceDriver string
 
 const (
@@ -131,7 +136,7 @@ internal/drivers/<platform>/configdriver/
   schema/yang-versions.yaml
   schema/index.go        # mirror iosxe schema/index.go
   transport/             # platform-specific transport bits
-                         # (Cisco-IA → NXAPI, Junos exec, etc.)
+                         # (Cisco-IA → NXAPI, vendor-native RPCs, etc.)
                          # Reuse iosxe RESTCONF/NETCONF/gNMI as base
   writers/               # per-family writers
     registry.go          # platform-scoped writer registry (writers.Get)
@@ -290,7 +295,7 @@ Phase 9 makes these guarantees explicit:
 6. **The placeholder packages
    ([`nxos/`](../../internal/drivers/nxos/),
    [`iosxr/`](../../internal/drivers/iosxr/),
-   [`junos/`](../../internal/drivers/junos/)) are pinned by
+   [`openconfig/`](../../internal/drivers/openconfig/)) are pinned by
    `placeholders_test.go`** to not register. A future PR that
    accidentally adds a `Register` call to one of them fires the
    test, so the placeholder discipline doesn't drift.
@@ -324,7 +329,7 @@ sibling `internal/drivers/iosxe/configdriver/` retaining only
 iosxe-specific writers + schema + transport overrides) would
 remove the import-path quirk without changing semantics.
 
-That refactor isn't necessary for adding NX-OS / IOSXR / Junos —
+That refactor isn't necessary for adding NX-OS / IOSXR / OpenConfig —
 the contracts are already platform-agnostic — but it would clean
 up the appearance. Tracked as a Phase-10 cosmetic item; doesn't
 block any platform ship.

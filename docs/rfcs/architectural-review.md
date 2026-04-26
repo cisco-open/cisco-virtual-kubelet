@@ -260,7 +260,7 @@ registry is the explicit ports surface; everything else either
 sits behind a stable interface (transport, writers, intent) or is
 a leaf concern (CRDs, RBAC, Helm values). The
 `internal/drivers/<platform>/` directory layout is uniform across
-the established `iosxe`, the placeholder `nxos`/`iosxr`/`junos`,
+the established `iosxe`, the placeholder `nxos`/`iosxr`/`openconfig`,
 and the test `fake`. A new platform's footprint is bounded by its
 own package + two foundation lines (enum constant + blank import).
 
@@ -716,7 +716,7 @@ significant move on the branch — it's what turns "an IOS-XE
 controller that happens to have good separation" into "a
 foundation that other platforms slot into without modifying its
 core". The shape is right and the contract is enforced by tests.
-A second platform (NX-OS, Junos) is what tests whether the
+A second platform (NX-OS, OpenConfig) is what tests whether the
 contract survives contact with reality; until that lands the
 contract is theoretical, but the theory is sound.
 

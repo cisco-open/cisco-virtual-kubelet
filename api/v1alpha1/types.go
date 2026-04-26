@@ -32,15 +32,15 @@ import (
 // `internal/drivers/<platform>/` package. No other foundation
 // edits.
 //
-// +kubebuilder:validation:Enum=XE;XR;NXOS;JUNOS;FAKE
+// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE
 type DeviceDriver string
 
 const (
-	DeviceDriverXE    DeviceDriver = "XE"    // IOS-XE (shipped, full apphosting + configdriver)
-	DeviceDriverXR    DeviceDriver = "XR"    // IOS-XR (placeholder package; drivers/iosxr/)
-	DeviceDriverNXOS  DeviceDriver = "NXOS"  // NX-OS  (placeholder package; drivers/nxos/)
-	DeviceDriverJUNOS DeviceDriver = "JUNOS" // Junos  (placeholder package; drivers/junos/)
-	DeviceDriverFAKE  DeviceDriver = "FAKE"  // in-memory test driver
+	DeviceDriverXE         DeviceDriver = "XE"         // IOS-XE (shipped, full apphosting + configdriver)
+	DeviceDriverXR         DeviceDriver = "XR"         // IOS-XR (placeholder package; drivers/iosxr/)
+	DeviceDriverNXOS       DeviceDriver = "NXOS"       // NX-OS  (placeholder package; drivers/nxos/)
+	DeviceDriverOPENCONFIG DeviceDriver = "OPENCONFIG" // OpenConfig YANG over NETCONF/gNMI — cross-vendor (placeholder package; drivers/openconfig/)
+	DeviceDriverFAKE       DeviceDriver = "FAKE"       // in-memory test driver
 )
 
 // CiscoDevice is the Schema for the ciscodevices API.
@@ -75,7 +75,7 @@ type CiscoDeviceList struct {
 // configuration lives under the corresponding driver section (XE, XR, etc.).
 type DeviceSpec struct {
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=XE;XR;NXOS;FAKE
+	// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE
 	Driver DeviceDriver `json:"driver" mapstructure:"driver"`
 
 	// Address is the management IP or hostname of the device.

@@ -16,8 +16,8 @@
 // plus a registry that platform packages populate via init() side
 // effects. The registry is the foundation's only knowledge of
 // which platforms exist; concrete platforms (iosxe, nxos, iosxr,
-// junos, …) live under sibling packages and self-register without
-// the foundation needing to import them.
+// openconfig, …) live under sibling packages and self-register
+// without the foundation needing to import them.
 //
 // The standard pattern, mirroring database/sql and image/png:
 //

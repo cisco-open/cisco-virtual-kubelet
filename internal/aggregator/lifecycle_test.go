@@ -204,17 +204,17 @@ func TestAggregatorLifecycle(t *testing.T) {
 
 // TestAggregatorSkipsUnregisteredDriver pins the contract that an
 // unregistered driver kind is silently ignored. The cisco-vk-foundry
-// model relies on this: a binary built without (say) Junos blank-
-// imported sees Junos CiscoDevice CRs and just does nothing rather
-// than crash.
+// model relies on this: a binary built without (say) the OpenConfig
+// driver blank-imported sees OPENCONFIG CiscoDevice CRs and just
+// does nothing rather than crash.
 func TestAggregatorSkipsUnregisteredDriver(t *testing.T) {
 	scheme := aggScheme(t)
-	// JUNOS is a placeholder driver kind that ships with no
+	// OPENCONFIG is a placeholder driver kind that ships with no
 	// configdriver factory registration today.
 	dev := &ciskov1.CiscoDevice{
-		ObjectMeta: metav1.ObjectMeta{Name: "j-01", Namespace: "agg-test"},
+		ObjectMeta: metav1.ObjectMeta{Name: "oc-01", Namespace: "agg-test"},
 		Spec: ciskov1.DeviceSpec{
-			Driver:   ciskov1.DeviceDriverJUNOS,
+			Driver:   ciskov1.DeviceDriverOPENCONFIG,
 			Address:  "10.0.0.5",
 			Username: "u",
 			Password: "p",

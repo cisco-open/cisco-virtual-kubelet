@@ -120,12 +120,13 @@ spec:
                   - XE
                   - XR
                   - NXOS
-                  - JUNOS
+                  - OPENCONFIG
                   - FAKE
                 - enum:
                   - XE
                   - XR
                   - NXOS
+                  - OPENCONFIG
                   - FAKE
                 description: |-
                   DeviceDriver enumerates the platforms cisco-virtual-kubelet

@@ -24,8 +24,8 @@ import (
 	// them — that's the contract. If a future change accidentally
 	// adds a Register call to one of these, this test fires.
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxr"
-	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/junos"
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos"
+	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/openconfig"
 )
 
 // TestPlaceholderPackagesDoNotRegister pins the Phase-9 contract:
@@ -38,7 +38,7 @@ func TestPlaceholderPackagesDoNotRegister(t *testing.T) {
 	for _, kind := range []v1alpha1.DeviceDriver{
 		v1alpha1.DeviceDriverNXOS,
 		v1alpha1.DeviceDriverXR,
-		v1alpha1.DeviceDriverJUNOS,
+		v1alpha1.DeviceDriverOPENCONFIG,
 	} {
 		if drivers.Registered(kind) {
 			t.Errorf("placeholder driver %q is registered; the placeholder must NOT register until a real implementation lands", kind)
@@ -68,7 +68,7 @@ func TestRegistryEnumeratesOnlyRealDrivers(t *testing.T) {
 		switch k {
 		case v1alpha1.DeviceDriverNXOS,
 			v1alpha1.DeviceDriverXR,
-			v1alpha1.DeviceDriverJUNOS:
+			v1alpha1.DeviceDriverOPENCONFIG:
 			t.Errorf("placeholder kind %q appears in RegisteredKinds()=%v", k, got)
 		}
 	}

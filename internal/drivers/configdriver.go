@@ -145,8 +145,8 @@ func NewConfigDriver(ctx context.Context, spec *v1alpha1.DeviceSpec, password st
 
 // ConfigDriverRegistered reports whether kind has a ConfigDriverFactory
 // available. Aggregator + cisco-vk run consult this before building
-// a worker; an unregistered kind silently skips, so a binary
-// without (say) a Junos blank import doesn't crash on Junos
+// a worker; an unregistered kind silently skips, so a binary without
+// (say) the OpenConfig blank import doesn't crash on OPENCONFIG
 // CiscoDevices, it just leaves them un-config-managed.
 func ConfigDriverRegistered(kind v1alpha1.DeviceDriver) bool {
 	configDriverRegistryMu.RLock()
