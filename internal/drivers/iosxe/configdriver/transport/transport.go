@@ -25,6 +25,7 @@ package transport
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 // Kind identifies a transport flavour. The enum is closed so the factory
@@ -55,6 +56,23 @@ type Capabilities struct {
 	SupportsTransactions bool
 	SupportsSubscribe    bool
 	SupportsSaveStartup  bool
+
+	// SupportsConfirmedCommit is true when the transport advertises
+	// RFC 6241 §8.4 confirmed-commit semantics (capability URN
+	// urn:ietf:params:netconf:capability:confirmed-commit:1.0 or
+	// :1.1). Wave 10 — the engine reads this AND type-asserts the
+	// transport against ConfirmedCommitter to decide whether to use
+	// the auto-revert flow or fall back to plain Commit.
+	//
+	// RESTCONF transports always report false (no protocol
+	// equivalent). gNMI transports report false today even though
+	// gNMI defines optional confirmed-commit semantics, because
+	// shipped Cisco devices do not implement them yet. Operators
+	// running these transports who set spec.confirmTimeoutSeconds
+	// see a one-time Warning event explaining the fallback; the
+	// reconcile proceeds with plain Commit semantics, preserving
+	// the pre-Wave-10 behaviour.
+	SupportsConfirmedCommit bool
 }
 
 // Op describes a single device-facing mutation at the transport layer.
@@ -204,6 +222,60 @@ type TxFetcher interface {
 // StartTransaction. Transports that do not support transactions return
 // a zero-valued handle.
 type TxHandle string
+
+// ConfirmedCommitter is the optional interface a transport
+// implements when it can commit a candidate datastore tentatively
+// with an auto-revert timer (RFC 6241 §8.4 confirmed-commit). The
+// engine's Wave-10 risk-reduction path uses this in place of plain
+// Commit when:
+//
+//   - the resolved IOSXEConfig sets spec.confirmTimeoutSeconds > 0,
+//   - the transport's Capabilities reports
+//     SupportsConfirmedCommit == true (the device advertised the
+//     RFC 6241 §8.4 capability in its hello), AND
+//   - the transport implements this interface.
+//
+// All three conditions must hold; otherwise the engine emits a
+// one-time Warning event on the CR explaining the fallback and
+// reverts to plain Commit semantics. This is the backward-compat
+// path: existing CRs (confirmTimeoutSeconds=0) and transports
+// without confirmed-commit support (RESTCONF, gNMI on devices
+// that haven't implemented the gNMI confirmed-commit extension)
+// see no behavioural change.
+//
+// Wire-level (NETCONF):
+//
+//   CommitConfirmed:  <commit><confirmed/><confirm-timeout>N</confirm-timeout></commit>
+//   ConfirmCommit:    <commit/>
+//   Auto-revert:      device's own timer; no client RPC required
+//
+// The auto-revert path is exactly the failure mode this interface
+// exists to enable — when the engine's running-Verify (post
+// confirmed-commit) detects that the change broke a managed
+// family OR the controller's session was dropped before
+// ConfirmCommit could fire, the engine deliberately does NOT call
+// ConfirmCommit and lets the device's own timer revert running to
+// its pre-commit state.
+type ConfirmedCommitter interface {
+	// CommitConfirmed issues a tentative commit with an auto-revert
+	// timer. The candidate datastore is merged into running, but
+	// the server starts the timer; if ConfirmCommit is not called
+	// within timeout the server reverts running to its pre-commit
+	// state. Implementations MUST validate timeout >= 1 second and
+	// SHOULD clamp implausibly large values (e.g. > 600s) at the
+	// transport level to protect operators from typos that would
+	// leave a tentative commit pending for an entire maintenance
+	// window.
+	CommitConfirmed(ctx context.Context, tx TxHandle, timeout time.Duration) error
+
+	// ConfirmCommit cancels the auto-revert timer and makes the
+	// tentative commit permanent. Idempotent — re-confirming an
+	// already-confirmed commit is a no-op on most implementations.
+	// Implementations also release the candidate-datastore lock
+	// that StartTransaction acquired, mirroring plain Commit's
+	// post-RPC unlock semantics.
+	ConfirmCommit(ctx context.Context) error
+}
 
 // Interface is the capability-aware transport contract. Methods that
 // are not supported by a concrete implementation must return

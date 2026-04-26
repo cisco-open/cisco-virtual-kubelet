@@ -429,3 +429,183 @@ func TestNETCONFStartTransactionNotSupportedRejects(t *testing.T) {
 		t.Fatal("StartTransaction: expected ErrUnsupported")
 	}
 }
+
+// TestNETCONFCapabilitiesReportConfirmedCommit pins the Wave 10
+// capability surface: when the server advertises
+// urn:ietf:params:netconf:capability:confirmed-commit:1.0 in
+// hello (the mock does), Capabilities.SupportsConfirmedCommit
+// must be true. The engine consults this flag before dispatching
+// the auto-revert flow; a regression here silently degrades every
+// confirmed-commit-enabled CR to plain Commit.
+func TestNETCONFCapabilitiesReportConfirmedCommit(t *testing.T) {
+	m := newMockDevice(t, nil)
+	defer m.close()
+
+	ti, err := NewNETCONF(NETCONFConfig{Conn: m.cli})
+	if err != nil {
+		t.Fatalf("NewNETCONF: %v", err)
+	}
+	defer ti.Close()
+
+	caps := ti.Capabilities()
+	if !caps.SupportsConfirmedCommit {
+		t.Fatal("SupportsConfirmedCommit=false; mock advertised confirmed-commit:1.0")
+	}
+	// Type assertion: the netconf transport MUST implement the
+	// optional ConfirmedCommitter interface so the engine's
+	// runtime type-assertion finds it.
+	if _, ok := ti.(ConfirmedCommitter); !ok {
+		t.Fatal("netconf transport does not satisfy ConfirmedCommitter")
+	}
+	m.assertNoFailures()
+}
+
+// TestNETCONFCommitConfirmedRoundTrip pins the wire-level shape
+// of the CommitConfirmed → ConfirmCommit sequence: a tentative
+// <commit><confirmed/><confirm-timeout>...</confirm-timeout></commit>
+// followed by a plain <commit/> followed by an unlock. This is
+// the happy-path flow the engine drives after a successful
+// running-Verify.
+func TestNETCONFCommitConfirmedRoundTrip(t *testing.T) {
+	m := newMockDevice(t, []scriptStep{
+		{expect: "<lock>", reply: `<rpc-reply message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><ok/></rpc-reply>`},
+		{
+			expect: "<confirm-timeout>30</confirm-timeout>",
+			reply:  `<rpc-reply message-id="102" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><ok/></rpc-reply>`,
+		},
+		{expect: "<commit/>", reply: `<rpc-reply message-id="103" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><ok/></rpc-reply>`},
+		{expect: "<unlock>", reply: `<rpc-reply message-id="104" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><ok/></rpc-reply>`},
+	})
+	defer m.close()
+
+	ti, err := NewNETCONF(NETCONFConfig{Conn: m.cli})
+	if err != nil {
+		t.Fatalf("NewNETCONF: %v", err)
+	}
+	defer ti.Close()
+
+	tx, err := ti.StartTransaction(context.Background())
+	if err != nil {
+		t.Fatalf("StartTransaction: %v", err)
+	}
+	cc, ok := ti.(ConfirmedCommitter)
+	if !ok {
+		t.Fatalf("transport does not satisfy ConfirmedCommitter")
+	}
+	if err := cc.CommitConfirmed(context.Background(), tx, 30*time.Second); err != nil {
+		t.Fatalf("CommitConfirmed: %v", err)
+	}
+	if err := cc.ConfirmCommit(context.Background()); err != nil {
+		t.Fatalf("ConfirmCommit: %v", err)
+	}
+	m.assertNoFailures()
+}
+
+// TestNETCONFCommitConfirmedClampsTimeout pins the defensive
+// transport-level clamp: a 0-second or negative timeout becomes
+// 1s; a 1000s timeout becomes 600s. The engine's per-CR knob is
+// already capped at 300 by kubebuilder, but the transport guard
+// is defense-in-depth against future callers that bypass the
+// schema (e.g. a stand-alone integration test or a future driver
+// that sets the timeout directly).
+func TestNETCONFCommitConfirmedClampsTimeout(t *testing.T) {
+	m := newMockDevice(t, []scriptStep{
+		{expect: "<lock>", reply: `<rpc-reply message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><ok/></rpc-reply>`},
+		{
+			expect: "<confirm-timeout>1</confirm-timeout>",
+			reply:  `<rpc-reply message-id="102" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><ok/></rpc-reply>`,
+		},
+		{expect: "<lock>", reply: `<rpc-reply message-id="103" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><ok/></rpc-reply>`},
+		{
+			expect: "<confirm-timeout>600</confirm-timeout>",
+			reply:  `<rpc-reply message-id="104" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><ok/></rpc-reply>`,
+		},
+	})
+	defer m.close()
+
+	ti, err := NewNETCONF(NETCONFConfig{Conn: m.cli})
+	if err != nil {
+		t.Fatalf("NewNETCONF: %v", err)
+	}
+	defer ti.Close()
+
+	cc, ok := ti.(ConfirmedCommitter)
+	if !ok {
+		t.Fatalf("transport does not satisfy ConfirmedCommitter")
+	}
+
+	// Below-clamp: 0s should become 1s.
+	tx, err := ti.StartTransaction(context.Background())
+	if err != nil {
+		t.Fatalf("StartTransaction (low): %v", err)
+	}
+	if err := cc.CommitConfirmed(context.Background(), tx, 0); err != nil {
+		t.Fatalf("CommitConfirmed (low): %v", err)
+	}
+	// Above-clamp: 1000s should become 600s.
+	tx, err = ti.StartTransaction(context.Background())
+	if err != nil {
+		t.Fatalf("StartTransaction (high): %v", err)
+	}
+	if err := cc.CommitConfirmed(context.Background(), tx, 1000*time.Second); err != nil {
+		t.Fatalf("CommitConfirmed (high): %v", err)
+	}
+	m.assertNoFailures()
+}
+
+// TestNETCONFCommitConfirmedRejectedWhenServerLacksCapability is
+// the backward-compat regression: when the server did NOT
+// advertise confirmed-commit:1.0 in hello, the transport-level
+// CommitConfirmed must refuse rather than emit a malformed RPC
+// the device might error-respond to in unpredictable ways. The
+// engine's primary guard is the SupportsConfirmedCommit flag, but
+// this transport-side check is defense-in-depth.
+func TestNETCONFCommitConfirmedRejectedWhenServerLacksCapability(t *testing.T) {
+	clientR, serverW := io.Pipe()
+	serverR, clientW := io.Pipe()
+	cli := &pipeConn{r: clientR, w: clientW}
+	defer cli.Close()
+	defer serverR.Close()
+	defer serverW.Close()
+
+	go func() {
+		br := bufio.NewReader(serverR)
+
+		// Server hello WITHOUT confirmed-commit capability — only
+		// base + candidate.
+		noConfirm := `<?xml version="1.0" encoding="UTF-8"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <capabilities>
+    <capability>urn:ietf:params:netconf:base:1.0</capability>
+    <capability>urn:ietf:params:netconf:capability:candidate:1.0</capability>
+  </capabilities>
+  <session-id>42</session-id>
+</hello>`
+		done := make(chan struct{})
+		go func() {
+			_ = writeFrame10(serverW, []byte(noConfirm))
+			close(done)
+		}()
+		_, _ = readFrame10(br) // discard client hello
+		<-done
+		// We don't expect any RPC after this — the test asserts
+		// CommitConfirmed errors before sending.
+	}()
+
+	ti, err := NewNETCONF(NETCONFConfig{Conn: cli})
+	if err != nil {
+		t.Fatalf("NewNETCONF: %v", err)
+	}
+	defer ti.Close()
+
+	if ti.Capabilities().SupportsConfirmedCommit {
+		t.Fatal("SupportsConfirmedCommit=true when server did not advertise the capability")
+	}
+	cc, ok := ti.(ConfirmedCommitter)
+	if !ok {
+		t.Fatal("transport does not satisfy ConfirmedCommitter (interface should still be implementable; the runtime check is on Capabilities)")
+	}
+	if err := cc.CommitConfirmed(context.Background(), "candidate", 30*time.Second); err == nil {
+		t.Fatal("CommitConfirmed: expected error when server lacks the capability")
+	}
+}

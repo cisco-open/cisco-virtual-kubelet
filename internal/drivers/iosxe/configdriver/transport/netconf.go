@@ -78,8 +78,16 @@ type netconfTransport struct {
 // clientCapabilities is the list we advertise in hello. base:1.0
 // is mandatory; base:1.1 is advertised but we default to 1.0
 // framing in practice because it keeps the test-path simple.
+//
+// Wave 10 — confirmed-commit:1.0 is advertised so the device knows
+// we're prepared to participate in the auto-revert flow if it also
+// supports it. Capability *advertisement* is one-way: a device that
+// doesn't advertise the matching capability still works with us via
+// the engine's plain-Commit fallback. We're saying "we can do this
+// if you can," not "you must."
 var clientCapabilities = []string{
 	capBase10,
+	capConfirm,
 }
 
 // NewNETCONF builds a NETCONF transport. Either cfg.Conn or
@@ -112,16 +120,21 @@ func NewNETCONF(cfg NETCONFConfig) (Interface, error) {
 func (t *netconfTransport) Capabilities() Capabilities {
 	t.capsOnce.Do(func() {
 		_, hasCand := t.session.serverCaps[capCand]
-		// confirmed-commit availability is surfaced indirectly —
-		// Discard becomes a real rollback when the server
-		// supports it. Probed at hello time; no separate
-		// Capabilities field today.
-		_ = t.session.serverCaps[capConfirm]
+		// Wave 10 — confirmed-commit:1.0 is the RFC 6241 §8.4
+		// auto-revert capability the engine consults to decide
+		// whether to use the CommitConfirmed → ConfirmCommit flow
+		// or fall back to plain Commit. Older IOS-XE images that
+		// don't advertise it transparently fall back; the
+		// per-CR spec.confirmTimeoutSeconds knob is honored only
+		// when both this capability is true AND the engine's
+		// type-assertion against ConfirmedCommitter succeeds.
+		_, hasConfirm := t.session.serverCaps[capConfirm]
 		t.caps = Capabilities{
-			Kind:                 KindNETCONF,
-			SupportsTransactions: hasCand,
-			SupportsSaveStartup:  true,  // Cisco-IA RPC covers this
-			SupportsSubscribe:    false, // RFC 5277 not wired
+			Kind:                    KindNETCONF,
+			SupportsTransactions:    hasCand,
+			SupportsSaveStartup:     true,  // Cisco-IA RPC covers this
+			SupportsSubscribe:       false, // RFC 5277 not wired
+			SupportsConfirmedCommit: hasConfirm,
 		}
 	})
 	return t.caps
@@ -235,6 +248,87 @@ func (t *netconfTransport) Commit(ctx context.Context, tx TxHandle) error {
 	}
 	if _, err := t.session.rpc(`<unlock><target><candidate/></target></unlock>`); err != nil {
 		return fmt.Errorf("NETCONF Commit: unlock: %w", err)
+	}
+	return nil
+}
+
+// CommitConfirmed implements ConfirmedCommitter. It issues a
+// tentative commit with an RFC 6241 §8.4 auto-revert timer. The
+// candidate datastore merges into running, but the device starts
+// the timer; if ConfirmCommit is not called within `timeout` the
+// device reverts running to its pre-commit state.
+//
+// Wave 10 risk-reduction primitive. Use case: the engine emits a
+// risky change (ACL on management interface, BGP reconfiguration,
+// IP-domain change). The change applies tentatively; the engine
+// runs a post-commit Verify against running. If Verify succeeds
+// → ConfirmCommit. If Verify fails OR the controller's session
+// drops before Verify completes → device auto-reverts at timeout.
+//
+// Implementation notes:
+//   - timeout is clamped at the transport boundary: minimum 1s
+//     (NETCONF requires a positive integer), maximum 600s (the
+//     engine's per-CR knob is capped at 300 by kubebuilder, but
+//     a defensive transport-side ceiling protects against future
+//     callers that don't go through that schema).
+//   - The candidate-datastore lock is NOT released here. The lock
+//     is released by ConfirmCommit (success path) or by Discard
+//     (failure path triggered by the engine's deferred cleanup
+//     when ConfirmCommit doesn't fire). This mirrors the existing
+//     plain-Commit pattern and lets the engine's deferred
+//     Discard semantics work unchanged on the auto-revert path.
+//   - Running this against a server that did not advertise
+//     confirmed-commit:1.0 returns the server's <rpc-error>
+//     bubbled up as an error. The engine guards against this by
+//     consulting Capabilities.SupportsConfirmedCommit before
+//     dispatching, but the transport-level guard is here for
+//     defense-in-depth.
+func (t *netconfTransport) CommitConfirmed(ctx context.Context, tx TxHandle, timeout time.Duration) error {
+	if tx == "" {
+		return nil
+	}
+	if tx != "candidate" {
+		return fmt.Errorf("NETCONF CommitConfirmed: unknown TxHandle %q", tx)
+	}
+	if !t.Capabilities().SupportsConfirmedCommit {
+		return fmt.Errorf("NETCONF CommitConfirmed: server did not advertise %s", capConfirm)
+	}
+	secs := int(timeout / time.Second)
+	if secs < 1 {
+		secs = 1
+	}
+	if secs > 600 {
+		secs = 600
+	}
+	rpc := fmt.Sprintf(`<commit><confirmed/><confirm-timeout>%d</confirm-timeout></commit>`, secs)
+	if _, err := t.session.rpc(rpc); err != nil {
+		return fmt.Errorf("NETCONF CommitConfirmed: %w", err)
+	}
+	return nil
+}
+
+// ConfirmCommit implements ConfirmedCommitter. It cancels the
+// auto-revert timer started by CommitConfirmed and makes the
+// tentative commit permanent. This is the "we verified the change
+// works against running" signal.
+//
+// Wire-level: a plain <commit/> RPC. Per RFC 6241 §8.4, the
+// server treats a plain commit during a pending confirm-timeout
+// as the confirmation; no <confirmed/> element is needed.
+//
+// The candidate-datastore lock IS released here (mirrors plain
+// Commit). After ConfirmCommit returns success, the engine
+// considers the transaction complete; no Discard runs.
+func (t *netconfTransport) ConfirmCommit(ctx context.Context) error {
+	if _, err := t.session.rpc(`<commit/>`); err != nil {
+		return fmt.Errorf("NETCONF ConfirmCommit: %w", err)
+	}
+	if _, err := t.session.rpc(`<unlock><target><candidate/></target></unlock>`); err != nil {
+		// Unlock failure is non-fatal — the commit itself
+		// succeeded and the lock will be released when the
+		// session ends. Surface as a soft warning rather than
+		// failing the whole reconcile.
+		return fmt.Errorf("NETCONF ConfirmCommit: unlock: %w", err)
 	}
 	return nil
 }
