@@ -457,7 +457,11 @@ spec:
               phase:
                 description: |-
                   Phase is a coarse state summary: Pending, Validating, Planning,
-                  Applying, Verifying, InSync, Drifted, Failed, or Paused.
+                  Applying, Verifying, InSync, Drifted, Failed, Paused, or
+                  LeaseBlocked. LeaseBlocked is the transient state when a
+                  foreign holder owns one or more managed-family leases and this
+                  CR's reconcile cannot run them yet; the controller requeues at
+                  a sub-TTL interval until the contention clears.
                 enum:
                 - Pending
                 - Validating
@@ -468,6 +472,7 @@ spec:
                 - Drifted
                 - Failed
                 - Paused
+                - LeaseBlocked
                 type: string
               sourceYangVersion:
                 description: |-

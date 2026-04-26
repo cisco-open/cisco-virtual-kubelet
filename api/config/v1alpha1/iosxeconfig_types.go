@@ -204,8 +204,12 @@ type FamilySecretRef struct {
 // IOSXEConfigStatus reports reconciliation state to users and GitOps agents.
 type IOSXEConfigStatus struct {
 	// Phase is a coarse state summary: Pending, Validating, Planning,
-	// Applying, Verifying, InSync, Drifted, Failed, or Paused.
-	// +kubebuilder:validation:Enum=Pending;Validating;Planning;Applying;Verifying;InSync;Drifted;Failed;Paused
+	// Applying, Verifying, InSync, Drifted, Failed, Paused, or
+	// LeaseBlocked. LeaseBlocked is the transient state when a
+	// foreign holder owns one or more managed-family leases and this
+	// CR's reconcile cannot run them yet; the controller requeues at
+	// a sub-TTL interval until the contention clears.
+	// +kubebuilder:validation:Enum=Pending;Validating;Planning;Applying;Verifying;InSync;Drifted;Failed;Paused;LeaseBlocked
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
