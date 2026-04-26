@@ -150,6 +150,40 @@ type Result struct {
 	// then short-circuited subsequent ticks via Wave 1B's
 	// dueForDriftCheck logic, hiding the missed reconciles.
 	DeviceTouched bool
+
+	// ConfirmedCommitFallback carries a human-readable reason when
+	// the CR requested confirmed-commit (spec.confirmTimeoutSeconds >
+	// 0) but the engine could not use it and fell back to plain
+	// Commit. Empty in three cases: (a) confirmed-commit was
+	// requested AND used; (b) confirmed-commit was not requested;
+	// (c) no transactional path was taken at all.
+	//
+	// The reconciler emits a one-time Warning event on the CR
+	// surfacing this reason so operators know why their auto-revert
+	// safety net didn't engage. Common values:
+	//
+	//   "transport does not implement ConfirmedCommitter"
+	//     RESTCONF or gNMI transport in use; no protocol equivalent
+	//     (RESTCONF) or Cisco devices haven't shipped the gNMI
+	//     extension yet (gNMI).
+	//   "device did not advertise confirmed-commit:1.0"
+	//     NETCONF transport but an older IOS-XE image without the
+	//     RFC 6241 §8.4 capability.
+	//   "non-transactional reconcile"
+	//     spec.transactional=false; confirmed-commit needs a
+	//     candidate datastore.
+	//
+	// Wave 10.
+	ConfirmedCommitFallback string
+
+	// ConfirmedCommitUsed is true iff the engine took the auto-revert
+	// path: CommitConfirmed succeeded, running-Verify passed, and
+	// ConfirmCommit fired. False on every other path including the
+	// successful plain-Commit path. Useful for the reconciler's
+	// status-condition emission and for the architecture's "did we
+	// actually exercise the safety net" assertion in live tests.
+	// Wave 10.
+	ConfirmedCommitUsed bool
 }
 
 // FamilyStatus is the per-family outcome of a tick.
@@ -351,15 +385,73 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	// Commit only if the apply path reached the end without failure.
 	// Any earlier error or drift-after-revert path falls through to the
 	// deferred Discard in the transaction-open block above.
+	//
+	// Wave 10 — when the CR opts in to confirmed-commit AND the
+	// transport supports it AND the device advertised the capability,
+	// take the auto-revert path: CommitConfirmed → running-Verify →
+	// ConfirmCommit. Any failure on the running-Verify path leaves
+	// the device's auto-revert timer running; the deferred Discard
+	// releases the candidate lock without a confirmed commit, the
+	// device reverts running to its pre-commit state at the timeout,
+	// and we surface Phase=Failed with a clear "auto-reverted" Err.
+	//
+	// Backward-compat guarantees the caller depends on:
+	//   - confirmTimeoutSeconds == 0 → plain Commit (existing path).
+	//   - confirmTimeoutSeconds > 0 + transport doesn't implement
+	//     ConfirmedCommitter → plain Commit + Result.ConfirmedCommitFallback
+	//     surfaces the reason for the reconciler to event-warn the operator.
+	//   - confirmTimeoutSeconds > 0 + capability not advertised →
+	//     plain Commit + Result.ConfirmedCommitFallback as above.
+	//   - non-transactional + confirmTimeoutSeconds > 0 → no commit at
+	//     all (writes already happened via Mutate); ConfirmedCommitFallback
+	//     surfaces the "non-transactional reconcile" reason.
 	if transactional && result.Phase == PhaseInSync {
-		if err := e.Transport.Commit(ctx, txHandle); err != nil {
-			result.Phase = PhaseFailed
-			result.Err = fmt.Errorf("Commit: %w", err)
-			recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "commit_failed")
+		useConfirmed, cc, fallbackReason := e.confirmedCommitDecision(res, caps)
+		if useConfirmed {
+			timeout := time.Duration(res.ConfirmTimeoutSeconds) * time.Second
+			if err := cc.CommitConfirmed(ctx, txHandle, timeout); err != nil {
+				result.Phase = PhaseFailed
+				result.Err = fmt.Errorf("CommitConfirmed: %w", err)
+				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "commit_failed")
+			} else if !e.runningVerify(ctx, res) {
+				// running-Verify failed: do NOT call ConfirmCommit.
+				// Deferred Discard cleans up the candidate lock; the
+				// device's confirm-timeout timer fires and reverts
+				// running to pre-commit. txCommitted stays false so
+				// the deferred Discard runs.
+				result.Phase = PhaseFailed
+				result.Err = errors.New("running-verify failed after CommitConfirmed; device will auto-revert at confirm-timeout")
+				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "auto_reverted")
+			} else if err := cc.ConfirmCommit(ctx); err != nil {
+				// CommitConfirmed succeeded but the follow-up
+				// confirm RPC failed. The device will auto-revert
+				// at the timeout — this is the safe failure mode.
+				result.Phase = PhaseFailed
+				result.Err = fmt.Errorf("ConfirmCommit: %w", err)
+				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "auto_reverted")
+			} else {
+				txCommitted = true
+				result.ConfirmedCommitUsed = true
+				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "confirmed")
+			}
 		} else {
-			txCommitted = true
-			recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "commit")
+			result.ConfirmedCommitFallback = fallbackReason
+			if err := e.Transport.Commit(ctx, txHandle); err != nil {
+				result.Phase = PhaseFailed
+				result.Err = fmt.Errorf("Commit: %w", err)
+				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "commit_failed")
+			} else {
+				txCommitted = true
+				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "commit")
+			}
 		}
+	} else if !transactional && res.ConfirmTimeoutSeconds > 0 {
+		// Non-transactional CR opted in to confirmed-commit. The
+		// transport already wrote the changes via per-family Mutate;
+		// there's no commit to confirm. Surface the fallback
+		// without altering Phase — the reconcile may still be
+		// successful at the family level.
+		result.ConfirmedCommitFallback = "non-transactional reconcile"
 	}
 
 	// SaveStartup: only after a fully-clean apply (no failures, fully
@@ -380,6 +472,98 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 
 	recordResult(res.DeviceName, result, time.Since(start).Seconds())
 	return result
+}
+
+// confirmedCommitDecision tells the Reconcile path whether to take
+// the auto-revert flow or fall back to plain Commit. Returns
+// (useConfirmed, ConfirmedCommitter, fallback-reason). When
+// useConfirmed is true, the second return is the asserted interface
+// and fallback-reason is empty. When useConfirmed is false because
+// of a missing prerequisite, the third return carries a
+// human-readable reason the reconciler surfaces to operators via
+// Result.ConfirmedCommitFallback.
+//
+// Three checks, in increasing specificity:
+//
+//  1. CR opted in (ConfirmTimeoutSeconds > 0)? If not, return
+//     useConfirmed=false with empty reason — no fallback to surface,
+//     plain Commit is the operator's chosen path.
+//  2. Transport implements ConfirmedCommitter? RESTCONF doesn't
+//     (no protocol equivalent). gNMI doesn't yet on Cisco devices
+//     (the open-standard extension exists but ships unimplemented).
+//     Future-proof: when gNMI gains it, the gNMI transport just
+//     needs to satisfy the interface and capability flag; no
+//     change here.
+//  3. Device advertised the capability in NETCONF hello? Older
+//     IOS-XE images may not.
+func (e *Engine) confirmedCommitDecision(res *intent.ResolvedIntent, caps transport.Capabilities) (bool, transport.ConfirmedCommitter, string) {
+	if res.ConfirmTimeoutSeconds <= 0 {
+		return false, nil, ""
+	}
+	cc, ok := e.Transport.(transport.ConfirmedCommitter)
+	if !ok {
+		return false, nil, "transport does not implement ConfirmedCommitter"
+	}
+	if !caps.SupportsConfirmedCommit {
+		return false, nil, "device did not advertise confirmed-commit:1.0"
+	}
+	return true, cc, ""
+}
+
+// runningVerify is the post-CommitConfirmed assertion that the
+// change actually took on running and the controller can still
+// reach the device. Walks the resolved intent's managed families,
+// re-Fetches each from the *raw* transport (NOT the
+// transactionalView wrapper — at this point the candidate has
+// merged into running, and we want to read running directly to
+// detect operational regressions that the candidate-side verify
+// could not see).
+//
+// Returns true iff every family's writer reports zero drift
+// against the desired intent. Any error during Fetch (e.g. the
+// device dropped the controller's session because the change broke
+// management connectivity) returns false; the engine then declines
+// to call ConfirmCommit and the device's auto-revert timer fires.
+//
+// Wave 10. Skips families whose writer is unregistered (no-op
+// gracefully, mirroring reconcileFamily's writer-not-found path).
+func (e *Engine) runningVerify(ctx context.Context, res *intent.ResolvedIntent) bool {
+	for _, family := range res.ManagedFamilies {
+		if e.Lookup == nil {
+			return false
+		}
+		w := e.Lookup(family)
+		if w == nil {
+			// Writer not shipped for this family — skip,
+			// mirroring reconcileFamily's behaviour.
+			continue
+		}
+		observed, err := w.Fetch(ctx, e.Transport)
+		if err != nil {
+			// Cannot read from running — assume change broke
+			// connectivity. Decline to confirm.
+			return false
+		}
+		desired, hasDesired := res.Configuration[family]
+		if !hasDesired {
+			// Family in ManagedFamilies but absent from
+			// Configuration: the writer would have nothing to
+			// assert against. Treat as clean.
+			continue
+		}
+		ops, err := w.Diff(desired, observed)
+		if err != nil {
+			return false
+		}
+		if len(ops) > 0 {
+			// Drift between intent and running after a
+			// committed merge — the device-side state diverged
+			// from what we wrote, OR a side-effect rewrote part
+			// of it. Either way, decline to confirm.
+			return false
+		}
+	}
+	return true
 }
 
 func (e *Engine) validate(res *intent.ResolvedIntent) error {

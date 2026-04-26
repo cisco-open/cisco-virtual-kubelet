@@ -257,3 +257,122 @@ func TestEnvtest_LeaseCreationForUnderscoreFamily(t *testing.T) {
 		t.Errorf("lease name %q lost the cvk-<device>-<family> prefix", name)
 	}
 }
+
+// ─── Wave 10.2 + 10.3 — confirmTimeoutSeconds + atomicReplace admission ──
+//
+// Three tests pinning the kubebuilder-generated CRD validation for
+// the new spec fields. Equivalent to the existing LeaseBlocked enum
+// admission tests above but for the Wave 10 CRD additions.
+
+// TestEnvtest_ConfirmTimeoutSecondsAdmittedByApiserver pins that
+// the new spec.confirmTimeoutSeconds field round-trips a valid
+// value (within the kubebuilder Min=0/Max=300 range) through a
+// real apiserver.
+func TestEnvtest_ConfirmTimeoutSecondsAdmittedByApiserver(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-cct")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cr := &configv1alpha1.IOSXEConfig{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "envtest-cct", Name: "edge-01"},
+		Spec: configv1alpha1.IOSXEConfigSpec{
+			DeviceRef: configv1alpha1.DeviceRef{Name: "edge-01"},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies:       []string{"vlan"},
+				Transactional:         true,
+				ConfirmTimeoutSeconds: 30,
+				Source: configv1alpha1.ConfigurationSource{
+					Inline: &runtime.RawExtension{Raw: []byte("{}")},
+				},
+			},
+		},
+	}
+	if err := c.Create(ctx, cr); err != nil {
+		t.Fatalf("create CR with confirmTimeoutSeconds=30: %v", err)
+	}
+	var got configv1alpha1.IOSXEConfig
+	if err := c.Get(ctx,
+		types.NamespacedName{Namespace: "envtest-cct", Name: "edge-01"}, &got); err != nil {
+		t.Fatalf("re-fetch: %v", err)
+	}
+	if got.Spec.ConfirmTimeoutSeconds != 30 {
+		t.Errorf("confirmTimeoutSeconds did not round-trip: got %d, want 30", got.Spec.ConfirmTimeoutSeconds)
+	}
+}
+
+// TestEnvtest_ConfirmTimeoutSecondsMaximumEnforced is the negative
+// control for the max=300 kubebuilder bound. Setting 301 should be
+// rejected by apiserver admission.
+func TestEnvtest_ConfirmTimeoutSecondsMaximumEnforced(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-cct-max")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cr := &configv1alpha1.IOSXEConfig{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "envtest-cct-max", Name: "edge-01"},
+		Spec: configv1alpha1.IOSXEConfigSpec{
+			DeviceRef: configv1alpha1.DeviceRef{Name: "edge-01"},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies:       []string{"vlan"},
+				Transactional:         true,
+				ConfirmTimeoutSeconds: 301, // out of bounds — kubebuilder Maximum=300
+				Source: configv1alpha1.ConfigurationSource{
+					Inline: &runtime.RawExtension{Raw: []byte("{}")},
+				},
+			},
+		},
+	}
+	err := c.Create(ctx, cr)
+	if err == nil {
+		t.Fatalf("apiserver accepted confirmTimeoutSeconds=301 — Maximum=300 not enforced")
+	}
+	if !strings.Contains(err.Error(), "confirmTimeoutSeconds") &&
+		!strings.Contains(err.Error(), "should be less than or equal to 300") {
+		t.Errorf("unexpected error shape: %v", err)
+	}
+}
+
+// TestEnvtest_AtomicReplaceFieldAdmitted pins that the new
+// spec.atomicReplace boolean round-trips through the apiserver.
+// Cheap admission sanity: kubebuilder defaults to false; the test
+// sets true explicitly and asserts the value persists.
+func TestEnvtest_AtomicReplaceFieldAdmitted(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-atomic")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cr := &configv1alpha1.IOSXEConfig{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "envtest-atomic", Name: "edge-01"},
+		Spec: configv1alpha1.IOSXEConfigSpec{
+			DeviceRef: configv1alpha1.DeviceRef{Name: "edge-01"},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies: []string{"vlan"},
+				Transactional:   true,
+				AtomicReplace:   true,
+				Source: configv1alpha1.ConfigurationSource{
+					Inline: &runtime.RawExtension{Raw: []byte("{}")},
+				},
+			},
+		},
+	}
+	if err := c.Create(ctx, cr); err != nil {
+		t.Fatalf("create CR with atomicReplace=true: %v", err)
+	}
+	var got configv1alpha1.IOSXEConfig
+	if err := c.Get(ctx,
+		types.NamespacedName{Namespace: "envtest-atomic", Name: "edge-01"}, &got); err != nil {
+		t.Fatalf("re-fetch: %v", err)
+	}
+	if !got.Spec.AtomicReplace {
+		t.Errorf("atomicReplace did not round-trip: got false, want true")
+	}
+}

@@ -123,6 +123,30 @@ type ResolvedIntent struct {
 	// successful apply so the audit log and the CR status agree.
 	TargetYangVersion string
 
+	// ConfirmTimeoutSeconds enables RFC 6241 §8.4 confirmed-commit
+	// in the engine's transactional path. When > 0 AND
+	// Transactional == true AND the transport's Capabilities reports
+	// SupportsConfirmedCommit AND the transport implements
+	// transport.ConfirmedCommitter, the engine commits tentatively,
+	// runs a post-commit verify against running, and only confirms
+	// if the verify clean. If any of those four conditions is false
+	// (the most common backward-compat case is the third — older
+	// IOS-XE images that don't advertise confirmed-commit:1.0, or
+	// RESTCONF / gNMI transports that don't implement the
+	// auto-revert primitive), the engine emits a one-time Warning
+	// event and falls back to plain Commit. Wave 10.
+	ConfirmTimeoutSeconds int32
+
+	// AtomicReplace opts into all-or-nothing replacement semantics
+	// for the resolved intent's managed families. When true AND
+	// Transactional == true, the engine composes per-family Replace
+	// ops (transport.VerbReplace) that bring the device-side state
+	// into exact agreement with the intent — adding what's missing
+	// AND deleting what's extra — as one transaction. Cross-family
+	// ordering is taken from schema/families.yaml's depends_on
+	// declarations. Wave 10.
+	AtomicReplace bool
+
 	// CLIBlocks carries CLI-type template expansions that do not
 	// merge into Configuration. Populated by the resolver when
 	// spec.templateRefs reference an IOSXETemplate with
@@ -328,15 +352,17 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 
 	return &ResolvedIntent{
 		DeviceName:        device,
-		ManagedFamilies:   append([]string(nil), cr.Spec.ManagedFamilies...),
-		Configuration:     configuration,
-		Transactional:     cr.Spec.Transactional,
-		DriftPolicy:       policy,
-		WriteStartup:      cr.Spec.WriteStartup,
-		PruneOnRelinquish: cr.Spec.PruneOnRelinquish,
-		TargetYangVersion: yangVersion,
-		CLIBlocks:         cliBlocks,
-		SourceCR:          cr.DeepCopy(),
+		ManagedFamilies:       append([]string(nil), cr.Spec.ManagedFamilies...),
+		Configuration:         configuration,
+		Transactional:         cr.Spec.Transactional,
+		DriftPolicy:           policy,
+		WriteStartup:          cr.Spec.WriteStartup,
+		PruneOnRelinquish:     cr.Spec.PruneOnRelinquish,
+		TargetYangVersion:     yangVersion,
+		ConfirmTimeoutSeconds: cr.Spec.ConfirmTimeoutSeconds,
+		AtomicReplace:         cr.Spec.AtomicReplace,
+		CLIBlocks:             cliBlocks,
+		SourceCR:              cr.DeepCopy(),
 	}, nil
 }
 

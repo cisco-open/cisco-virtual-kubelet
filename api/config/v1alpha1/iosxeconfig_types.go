@@ -109,6 +109,70 @@ type IOSXEConfigTemplateSpec struct {
 	// +optional
 	DriftPolicy DriftPolicy `json:"driftPolicy,omitempty"`
 
+	// ConfirmTimeoutSeconds enables RFC 6241 §8.4 confirmed-commit
+	// auto-revert. When non-zero (and transactional=true) the engine
+	// commits tentatively, runs the verify phase against running,
+	// and only sends the follow-up confirm if running matches the
+	// resolved intent. If verify fails OR the controller's session
+	// drops before the follow-up commit fires, the device's own
+	// timer reverts running to its pre-commit state — derisking
+	// changes that could otherwise lock the controller out of the
+	// device (ACL on management interface, BGP reconfiguration,
+	// IP-domain change).
+	//
+	// Defaults to 0 (off) for backward compatibility — existing
+	// CRs see no behavioural change. The kubebuilder maximum is
+	// 300s (5 minutes); operators who need longer should
+	// re-architect the change rather than extend the window.
+	//
+	// Capability requirements:
+	//   - The transport must advertise the RFC 6241 :confirmed-commit:1.0
+	//     capability AND implement the ConfirmedCommitter interface.
+	//   - NETCONF supports this on modern IOS-XE images.
+	//   - RESTCONF has no protocol-equivalent; CRs that opt in on a
+	//     RESTCONF transport see a one-time Warning event and the
+	//     engine falls back to plain commit.
+	//   - gNMI defines an open-standard equivalent but Cisco devices
+	//     do not implement it yet (as of writing); same fallback as
+	//     RESTCONF.
+	//
+	// Wave 10. Recommended values: 30 for ACL or management-plane
+	// changes; 60-120 for BGP / routing-protocol changes that need
+	// adjacency re-establishment time before the controller can
+	// verify reachability.
+	// +kubebuilder:default=0
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=300
+	// +optional
+	ConfirmTimeoutSeconds int32 `json:"confirmTimeoutSeconds,omitempty"`
+
+	// AtomicReplace opts into all-or-nothing replacement semantics
+	// for this CR's managed families. When true AND transactional=true
+	// the engine treats the resolved intent as the COMPLETE
+	// device-side state for those families: device-side entries not
+	// in the intent are deleted in the same transaction that adds
+	// the new entries. Cross-family ordering is taken from the
+	// schema's depends_on declarations.
+	//
+	// Mutually compatible with — and stronger than —
+	// pruneOnRelinquish: pruneOnRelinquish does per-family
+	// authoritative pruning continuously; atomicReplace also enforces
+	// cross-family ordering inside the transaction (e.g. removing a
+	// VRF that's bound to an interface that's also being removed
+	// runs in the right order).
+	//
+	// Defaults to false to preserve the existing additive day-0
+	// behaviour. Operators flip to true on CRs whose intent is the
+	// authoritative source for those families' device-side state —
+	// typically a single per-device CR that owns interface_ethernet,
+	// vlan, vrf, and routing protocols.
+	//
+	// Wave 10. Requires transactional=true; ignored on
+	// non-transactional reconciles with a one-time Warning event.
+	// +kubebuilder:default=false
+	// +optional
+	AtomicReplace bool `json:"atomicReplace,omitempty"`
+
 	// PruneOnRelinquish, when true, makes this CR AUTHORITATIVE over
 	// every entry in every still-managed family on every reconcile:
 	// the engine emits VerbDelete ops for any device-side entry that
