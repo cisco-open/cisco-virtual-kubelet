@@ -13,13 +13,13 @@ This document is the single architectural overview for the configuration-managem
 
 ## 1. Executive summary
 
-**Numerical baseline.** 115 commits diverged from `main`. 321 files changed, +51,811 lines added, −4,299 deleted. The bulk of the addition is the configuration-management subsystem (`internal/drivers/iosxe/configdriver/...`, 8 new CRDs, 4 new controllers, ~52 per-family writers, multi-protocol transport stack), the documentation and RFC chain that grew alongside it (~7,168 doc lines under `docs/rfcs/` alone), and four new in-tree tools (`cisco-vk-config-lint`, `cisco-vk-config-docs`, `cisco-vk-yang-sync`, `terraform-provider-iosxeconfig`).
+**Numerical baseline.** 115 commits diverged from `main`. 321 files changed, +51,811 lines added, −4,299 deleted. The bulk of the addition is the configuration-management subsystem (`internal/drivers/iosxe/configdriver/...`, 7 new CRDs in the `config.cisco.vk/v1alpha1` API group, 4 new controllers, ~52 per-family writers, multi-protocol transport stack), the documentation and RFC chain that grew alongside it (~7,168 doc lines under `docs/rfcs/` alone), and four new in-tree tools (`cisco-vk-config-lint`, `cisco-vk-config-docs`, `cisco-vk-yang-sync`, `terraform-provider-iosxeconfig`).
 
 **Review chain.** Five external review rounds (Codex), 26 of 26 findings closed in code with focused tests. The latest round ([`../external-review-wave9-status.md`](../external-review-wave9-status.md)) accepted both Wave 9 closures and recorded no new blocking findings.
 
 **Architectural verdict.** **No structural change is required before merge.** The branch is shippable for day-0 and day-2 under the per-pod topology, with the aggregator topology exclusive-and-correct. The pre-existing container-deployment architecture (apphosting on Cat9k via virtual-kubelet) and the new configuration-management subsystem coexist cleanly inside the same `cisco-vk` pod, sharing only the `CiscoDevice` CR and the OTel exporter — neither side mutates state that the other depends on.
 
-The follow-up work that remains is a mix of (a) external infrastructure (Terraform Registry publish, netascode example corpus), (b) deliberate deferrals to dedicated PRs (CRD v1 promotion, log unification, cosmetic relocation), (c) test-discipline closure (envtest), and (d) operator-scheduled live retests against the lab Cat9K. None block merge. The §6.E code-level TODOs and the §6.F.3 documentation cleanup were the only items that were both reasonable and in-scope for this branch; both have closed (commits `2e73766` and `5487dc0`).
+The follow-up work that remains is a mix of (a) external infrastructure (Terraform Registry publish, netascode example corpus), (b) deliberate deferrals to dedicated PRs (CRD v1 promotion, log unification, cosmetic relocation), (c) broader envtest infrastructure landing with the conversion-webhook PR, and (d) live-device retests against the lab Cat9K. None block merge. Eleven items closed on this branch: the §6.E code-level TODOs (commit `2e73766`), the §6.F.3 documentation cleanup (commit `5487dc0`), the two §6.D.i real-apiserver smokes that the post-Wave-9-status reviewer round flagged as "before merge if at all possible" (closed via the focused envtest added in this commit set, runnable via `make test-envtest`), and four post-review correctness/inventory items (CRD-count wording, CI-grade gate, merge-style note, aggregator-opt-in confirmation). The six remaining live-device retests (§6.D.ii) are framed as **release-tag blockers**, not merge blockers, per the reviewer's explicit framing.
 
 §5 of this document elaborates the two architectural tensions that *are* worth naming — both are watch-items with plans on file, not pre-merge blockers.
 
@@ -65,7 +65,7 @@ The design follows the **netascode** project's family/scope shape (IOS-XE-as-dat
 
 ### 3.2 New CRD surface — `config.cisco.vk/v1alpha1`
 
-Eight new CRDs ([`api/config/v1alpha1/`](../../../api/config/v1alpha1/)):
+Seven new CRDs ([`api/config/v1alpha1/`](../../../api/config/v1alpha1/)), one of which (`IOSXEConfig`) carries a status subresource called out below for completeness:
 
 | CRD | Purpose | Key fields |
 |---|---|---|
@@ -76,7 +76,8 @@ Eight new CRDs ([`api/config/v1alpha1/`](../../../api/config/v1alpha1/)):
 | `IOSXEInterfaceGroupConfig` | Interface-group-scoped configuration shared across devices | per-interface YAML body |
 | `IOSXETemplate` | Reusable parameterised configuration fragment | `spec.parameters[]` (typed: string/int/bool/ipv4/ipv6/cidr), `spec.configuration` (Go text/template) |
 | `IOSXEConfigApplyLog` | Per-device circular audit log of apply outcomes | `spec.maxEntries`, `spec.retainBody`; entries carry `phase`, `hash`, source CR, family outcomes; powers Phase-7 time-travel replay |
-| `IOSXEConfigStatus` (subresource of `IOSXEConfig`) | Phase, observed generation, last-applied-hash, drift entries, family statuses, conditions | `phase` enum: `Pending,Validating,Planning,Applying,Verifying,InSync,Drifted,Failed,Paused,LeaseBlocked` |
+
+**Status subresource on `IOSXEConfig`** — not a separate CRD, but worth naming because the `phase` enum is the authoritative definition the engine produces and the controller-runtime requeue path consumes: `phase` enum is `Pending,Validating,Planning,Applying,Verifying,InSync,Drifted,Failed,Paused,LeaseBlocked` (Wave 9.1 added the last); status also carries `observedGeneration`, `lastAppliedHash`, `lastAppliedTime`, `lastDeviceCheck`, per-family `familyStatus[]`, drift entries, and standard `conditions[]`.
 
 **Resolution chain.** When a per-device tick runs, the [`Resolver`](../../../internal/drivers/iosxe/configdriver/intent/resolver.go) deep-merges in this fixed order: defaults → device groups → interface groups → templates → per-device source → per-family secret refs. Rightmost wins. The result is a `ResolvedIntent` that carries the deep-merged `Configuration map[string]any`, the closed `ManagedFamilies` list, and the per-CR knobs (`Transactional`, `DriftPolicy`, etc.).
 
@@ -182,6 +183,8 @@ Wave 1C added the [topology-exclusivity test](../../../internal/controller/aggre
 
 The choice between topologies is a deployment-time decision driven by `helm upgrade --set aggregator.enabled=...`. The per-pod default scales linearly with fleet size; the aggregator scales constant-pod but is a single point of failure. Most operators should stay on per-pod unless the per-pod resource overhead is measurably uncomfortable.
 
+**Recommendation: keep aggregator opt-in and per-pod the documented default until aggregator has more soak time.** The Helm chart's default is `aggregator.enabled=false` ([`charts/cisco-virtual-kubelet/values.yaml`](../../../charts/cisco-virtual-kubelet/values.yaml)); this should not change in the Wave-9 release, even though the topology-exclusivity test pins the contract correctness-wise. Aggregator's blast-radius profile (one process for all devices) and the live-retest gap on credential-rotation overlap during aggregator restarts ([§6.D.ii row 5](#6d-real-apiserver-and-live-device-retests)) both warrant additional production miles before flipping the default.
+
 ### 4.5 RBAC and lease scope
 
 Apphosting requires the per-device ServiceAccount to read its own pod and Secret references. Configuration requires it to read all `IOSXEConfig`-family CRs cluster-wide (it filters by `DeviceRef.Name` after listing) and to read/write `coordination.k8s.io/v1.Leases` in the configured lease namespace (default: per-pod namespace; overridable to a fleet-wide namespace via `CONFIG_LEASE_NAMESPACE`). The Helm chart's [`role.yaml`](../../../charts/cisco-virtual-kubelet/templates/role.yaml) was extended to cover both (Wave 1D + 2D).
@@ -208,7 +211,7 @@ Two real tensions, both already on the roadmap with plans:
 
 The cosmetic relocation to `internal/configdriver/` (architectural watch-item #4) is the planned closure. It is deferred to Phase 10 ([`../implementation-status.md`](../implementation-status.md) §7.A.1) because the move conflicts noisily with two other in-flight workstreams (the v1 CRD cut and the netascode example corpus), and forcing three rebases on every collaborator is worse than the current mild-confusion cost. **No pre-merge change recommended;** track the relocation against the Phase-10 PR.
 
-**Tension B — the CRD surface area at v1alpha1 is large.** Eight new CRDs, plus three nested type families (`IOSXEConfigTemplateSpec`, `ConfigurationSource`, `FamilyStatus[]`/`DriftEntry[]`/`Conditions[]`). The merge precedence chain has five layers (defaults → device groups → interface groups → templates → per-device). This is a feature: it's exactly the netascode shape operators want. But it is a lot of surface area to commit to without a v1 cut.
+**Tension B — the CRD surface area at v1alpha1 is large.** Seven new CRDs, plus three nested type families (`IOSXEConfigTemplateSpec`, `ConfigurationSource`, `FamilyStatus[]`/`DriftEntry[]`/`Conditions[]`). The merge precedence chain has five layers (defaults → device groups → interface groups → templates → per-device). This is a feature: it's exactly the netascode shape operators want. But it is a lot of surface area to commit to without a v1 cut.
 
 The CRD v1 promotion plan ([`../crd-v1-promotion-plan.md`](../crd-v1-promotion-plan.md)) addresses this with a conversion webhook, three-release phasing, and an explicit list of breaking changes (e.g. enum tightening, field renames). This is the right shape for the change. **No pre-merge change recommended;** keep the v1alpha1 surface as it is, land the v1 cut on a release-cut branch with the wider team's review.
 
@@ -260,20 +263,29 @@ All three are explicitly deferred per §5.4 of this document. Pulling any into t
 | ⏸ | envtest infrastructure | [`../implementation-status.md`](../implementation-status.md) §1.2 (Lesson 1, 2, 5), §7.A.2 | Lands with the conversion-webhook PR (6.B item 10) | Durable closure for the recurring `fake.Client`-doesn't-validate gap (FU-2 / W7R-1 / W8FU-1). Right place to pay the etcd + apiserver binary dependency cost. |
 | ⏸ | `internal/provider` package coverage (currently 25.7 %) | [`../architectural-review.md`](../architectural-review.md) §2.5; [`../implementation-status.md`](../implementation-status.md) §7.A.2 | Lands with envtest | The uncovered code is controller-runtime wiring (predicates, handler.Funcs, watch establishment) — needs envtest to exercise honestly. |
 
-### 6.D Live retests against the lab Cat9K (8 paths, all 🔒)
+### 6.D Real-apiserver and live-device retests
 
-Each modifies running device state and is the operator's call to schedule. Detailed in [`../latest-update.md`](../latest-update.md) §5; summary:
+This section split into two halves after the Wave-9-status reviewer round:
+
+- **6.D.i — real-apiserver smokes (2 paths, both ✅).** Closed by the focused envtest in [`internal/provider/envtest_apiserver_smoke_test.go`](../../../internal/provider/envtest_apiserver_smoke_test.go), runnable via `make test-envtest`. These were the two recurring fake-client blind spots (W7R-1 name validation, W8FU-1 enum validation) that did not require lab device access — only a real kube-apiserver + etcd, which `sigs.k8s.io/controller-runtime/pkg/envtest` provides.
+
+| Disposition | Path | Closing test |
+|---|---|---|
+| ✅ | Real-apiserver acceptance of `status.phase=LeaseBlocked` → CRD enum admits the value | `TestEnvtest_StatusPhaseLeaseBlockedAccepted` + the negative control `TestEnvtest_StatusPhaseEnumRejectsBogusValue` (proves enforcement, not just presence) |
+| ✅ | Real-apiserver Lease creation for an underscore family (e.g. `interface_ethernet`) → DNS-1123 sanitisation works end-to-end | `TestEnvtest_LeaseCreationForUnderscoreFamily` (asserts no underscore in stored name + `cvk-edge-01-` prefix retained) |
+
+The envtest infrastructure introduced here is intentionally narrow — three tests, one build tag, one Makefile target — sized to close the two specific reviewer asks rather than to substitute for the broader §6.C envtest follow-up that lands with the conversion-webhook PR.
+
+- **6.D.ii — live-device retests against the lab Cat9K (6 paths, 🔒, treated as release-tag blockers per the Wave-9-status review).** Each modifies running device state and requires lab access. The reviewer's framing is that these may not all run before merge, but they MUST be captured before a release tag — *"I would not let 'mergeable' quietly become 'release-certified' until the real-apiserver and live-device checks are captured."* Detailed in [`../latest-update.md`](../latest-update.md) §5.
 
 | Disposition | Path | Closing waves |
 |---|---|---|
-| 🔒 | NETCONF transactional commit, structured-only intent → `Phase=InSync` end-to-end | 1A-fu |
-| 🔒 | NETCONF transactional + CLI block rejection → `Phase=Failed`, `ErrTransactionalCLIUnsupported`, no transport-side mutation | 7A.1 |
-| 🔒 | `configPrereqs` deletion-driven cleanup → device clean of any prereq state created by the controller | 4A-fu + 7A.2 + 7A.4 |
-| 🔒 | gNMI Set against `interface_ethernet[GigabitEthernet=0/0/0]` → keyed-path PathSpec preserved verbatim on the wire | 5A-fu + 7B |
-| 🔒 | Credential Secret rotation with overlap window → new pod takes the lease cleanly, transient `LeaseBlocked` with sub-TTL requeue, no concurrent writes | 6B + 7A.3 + 8.2 + 9.2 |
-| 🔒 | Real-apiserver Lease creation for an underscore family (e.g. `interface_ethernet`) → DNS-1123 sanitisation works end-to-end | 8.1 |
-| 🔒 | Real-apiserver acceptance of `status.phase=LeaseBlocked` → CRD enum admits the value | 9.1 |
-| 🔒 | `driftPolicy: revert` live write → flip a CR from `report` to `revert` for one family, watch the device-side change, flip back | per §5 |
+| 🔒 release blocker | NETCONF transactional commit, structured-only intent → `Phase=InSync` end-to-end | 1A-fu |
+| 🔒 release blocker | NETCONF transactional + CLI block rejection → `Phase=Failed`, `ErrTransactionalCLIUnsupported`, no transport-side mutation | 7A.1 |
+| 🔒 release blocker | `configPrereqs` deletion-driven cleanup → device clean of any prereq state created by the controller | 4A-fu + 7A.2 + 7A.4 |
+| 🔒 release blocker | gNMI Set against `interface_ethernet[GigabitEthernet=0/0/0]` → keyed-path PathSpec preserved verbatim on the wire | 5A-fu + 7B |
+| 🔒 release blocker | Credential Secret rotation with overlap window → new pod takes the lease cleanly, transient `LeaseBlocked` with sub-TTL requeue, no concurrent writes | 6B + 7A.3 + 8.2 + 9.2 |
+| 🔒 release blocker | `driftPolicy: revert` live write → flip a CR from `report` to `revert` for one family, watch the device-side change, flip back | per §5 |
 
 ### 6.E Code-level TODOs (4 items, all ✅ closed in commit `2e73766`)
 
@@ -284,29 +296,42 @@ Each modifies running device state and is the operator's call to schedule. Detai
 | ✅ | [`internal/drivers/fake/driver.go`](../../../internal/drivers/fake/driver.go) — `ListPods` | Was returning `nil, nil` | Now returns a `[]*v1.Pod` over `d.pods` so consumers iterating the list see the seeded pods. |
 | ✅ | [`internal/provider/defaults.go`](../../../internal/provider/defaults.go) — `InitNodeSystemInfo` | Returned every field as `"unknown"`, briefly visible in `kubectl get nodes -o wide` between pod start and the first heartbeat | Replaced with values consistent with what `AppHostingNode.syncNodeStatus` writes once the driver responds: `OperatingSystem="Cisco"`, `OSImage="IOS-XE"`, `ContainerRuntimeVersion="ios-xe-iox"`. `Architecture` stays empty (post-sync value is the device ProductID, not knowable until the driver's `GetDeviceInfo` is called). |
 
-### 6.F Reviewer recommendations from the most recent round (3 items)
+### 6.F Reviewer recommendations from the most recent rounds
 
-Per [`../external-review-wave9-status.md`](../external-review-wave9-status.md) §6 — no blocking findings, three "before release tag" recommendations:
+Per [`../external-review-wave9-status.md`](../external-review-wave9-status.md) §6 (Codex post-Wave-9) and the post-Wave-9D appraisal:
 
 | Disposition | Item | Notes |
 |---|---|---|
-| 🔒 | Live apiserver validation of `status.phase=LeaseBlocked` | Same as §6.D row 7. Operator-scheduled. |
-| 🔒 | Live apiserver Lease creation for an underscore family | Same as §6.D row 6. Operator-scheduled. |
+| ✅ | Real-apiserver validation of `status.phase=LeaseBlocked` | Closed via envtest; see §6.D.i. |
+| ✅ | Real-apiserver Lease creation for an underscore family | Closed via envtest; see §6.D.i. |
 | ✅ | Documentation cleanup of `implementation-status.md` §1 | Closed by Wave 9D in commit `5487dc0`. |
+| ✅ | Final-RFC CRD-count wording (`8` → `7` new CRDs in §1, §3.2, §5.2) | Closed in this commit. |
+| ✅ | Full CI-grade gate run (`go test -race -count=5`, `go vet`, `helm lint`, generated-manifest sync) | Run from this checkout; all green. ygot regen produces a 754-line drift in `internal/drivers/iosxe/models.go` that is unrelated to this branch's config work — reverted locally; tracked as a separate cleanup against the apphosting subsystem. |
+| 🔒 release blocker | Minimum live-device smoke (5 paths) before release tag | See §6.D.ii. |
+| ℹ️ confirmed | Aggregator stays opt-in; per-pod is the recommended/default topology | Confirmed in §4.4 of this document; no change needed (default `aggregator.enabled=false` in the Helm chart's [`values.yaml`](../../../charts/cisco-virtual-kubelet/values.yaml)). |
+| ℹ️ recommendation forwarded | Squash-merge with a high-quality PR body, retain RFC trail in-tree | See §8 below; this is a maintainer call, not a code change. |
 
 ### 6.G Aggregate
 
-| Category | Count | ✅ closed on this branch | ⏸ deferred (with plans) | 🔒 needs lab device | Approximate effort for the remainder |
+| Category | Count | ✅ closed on this branch | ⏸ deferred (with plans) | 🔒 release blocker (lab device) | Approximate effort for the remainder |
 |---|---:|---:|---:|---:|---|
 | External infrastructure | 2 | 0 | 2 | 0 | ~2 eng-days + paperwork + ~80 eng-hours content |
 | Watch-items | 3 | 0 | 3 | 0 | ~3 days + ~3 weeks + mechanical |
 | Test/CI | 2 | 0 | 2 | 0 | ~2 weeks (lands with conversion-webhook PR) |
-| Live retests | 8 | 0 | 0 | 8 | operator-scheduled |
+| §6.D.i real-apiserver smokes | 2 | **2** | 0 | 0 | — (closed via envtest) |
+| §6.D.ii live-device retests | 6 | 0 | 0 | 6 | operator-scheduled before release tag |
 | Code TODOs | 4 | **4** | 0 | 0 | — (closed) |
-| Reviewer recommendations | 3 | **1** | 0 | 2 | operator-scheduled |
-| **Total** | **22** | **5** | **7** | **10** | — |
+| Reviewer recommendations | 5 | **5** | 0 | 0 | — (closed; §6.D.ii surfaces the live-device residual) |
+| **Total** | **24** | **11** | **7** | **6** | — |
 
-Five of the twenty-two items closed on this branch (4 × §6.E TODOs in `2e73766`, plus §6.F.3 docs cleanup in `5487dc0`). Seven remain ⏸-deferred to dedicated PRs by explicit plan; ten are 🔒-blocked on operator-scheduled lab access. **No item that is reasonable to action on this branch is still open.**
+Eleven of the twenty-four items closed on this branch:
+
+- 4 × §6.E code-level TODOs in `2e73766`,
+- 1 × §6.F documentation cleanup in `5487dc0`,
+- 2 × §6.D.i real-apiserver smokes via the envtest added in this commit set (`make test-envtest`),
+- 4 × §6.F items added by the post-Wave-9-status reviewer round (CRD-count wording, CI-grade gate, the merge-style note in §8, and the aggregator-opt-in confirmation).
+
+Seven remain ⏸-deferred to dedicated PRs by explicit plan; six are 🔒-marked as release blockers (live-device retests requiring lab access). **The branch can merge; the six remaining 🔒 items must be captured before any release tag, per the Wave-9-status reviewer's framing.**
 
 ---
 
@@ -316,9 +341,24 @@ The branch is architecturally ready to merge. The pre-existing apphosting contai
 
 The two architectural tensions worth naming — the platform-agnostic code living under `internal/drivers/iosxe/configdriver/...`, and the v1alpha1 CRD surface area — both have written plans on file and are deliberately deferred to dedicated PRs (Phase 10 cosmetic relocation; v1 promotion on a release-cut branch). Pulling either into this branch would worsen the review surface; deferring is the correct architectural call.
 
-Twenty-two follow-up items were enumerated; five closed on this branch (the four §6.E code-level TODOs in commit `2e73766` and the §6.F.3 documentation cleanup in commit `5487dc0`). The remaining seventeen are either ⏸-deferred to dedicated PRs by explicit plan (Phase-10 cosmetic relocation, log unification, v1 CRD cut + envtest, Terraform Registry publishing, netascode example corpus) or 🔒-blocked on operator-scheduled lab access (eight live retests, two reviewer-recommended live validations). No item that was reasonable to action on this branch is still open. The envtest follow-up is the durable closure for the recurring `fake.Client`-doesn't-validate lesson and is correctly scoped to land with the conversion-webhook PR rather than as a stand-alone effort.
+Twenty-four follow-up items were enumerated across the chain; eleven closed on this branch (4 × §6.E TODOs in `2e73766`, 1 × docs cleanup in `5487dc0`, 2 × §6.D.i envtest real-apiserver smokes, 4 × post-Wave-9-status reviewer asks: CRD-count wording, CI-grade gate, merge-style note, aggregator-opt-in confirmation). Seven remain ⏸-deferred to dedicated PRs by explicit plan (Phase-10 cosmetic relocation, log unification, v1 CRD cut, broader envtest infrastructure, Terraform Registry publishing, netascode example corpus, provider package coverage). Six are 🔒-marked as **release-tag blockers** — live-device retests against the lab Cat9K that modify running device state and must be captured before a release tag is cut, per the Wave-9-status reviewer's framing of *"I would not let 'mergeable' quietly become 'release-certified' until the real-apiserver and live-device checks are captured."*
+
+No item that is reasonable to action on this branch is still open. The post-merge envtest follow-up is the durable closure for the broader `fake.Client`-doesn't-validate lesson and is correctly scoped to land with the conversion-webhook PR. The narrow envtest added in this commit set covers the two specific blind spots (LeaseBlocked enum admission + DNS-1123 Lease-name validation) that the reviewer asked be closed before merge — a focused real-apiserver smoke, not the broader infrastructure.
 
 **Recommendation: merge.** The architectural adjustments worth making are already scheduled as separate PRs; making them on this branch would defeat the purpose of the planned phasing.
+
+---
+
+## 8. Merge-style note
+
+The Wave-9-status reviewer round recommended squash-merging this branch with a high-quality PR body, while keeping the RFC trail in-tree. The recommendation is sound and forwarded here for the maintainer call:
+
+- **Squash rationale.** 52+ iterative commits, several walk-back/re-claim docs, multiple deliberate "filed the review, then triaged it, then closed it" sequences. As individual commits these are meaningful while the work is in flight; on `main` the noise outweighs the signal — a single squash carries the closure narrative without each tactical step.
+- **PR-body content.** The squash commit message should include: scope ("adds the IOSXEConfig configuration-management subsystem alongside the existing apphosting provider"), the five closed external-review rounds (cite the source RFC for each), the architectural lessons collected in [§1.2 of `../implementation-status.md`](../implementation-status.md), and an explicit pointer at this document for the architectural overview.
+- **In-tree RFC trail.** The wave-by-wave RFCs under [`../`](../) and the synthesis under [`./`](.) stay in-tree as the durable record. The squash collapses commit history, not documentation history.
+- **What stays separate.** The architectural tensions deferred to dedicated PRs (Phase-10 cosmetic relocation, log unification, v1 CRD cut) should NOT be folded into a Wave-9 squash; each is a separate review surface and warrants its own PR-body narrative when its time comes.
+
+This is a maintainer decision, not a code change. Surfaced here so it has a captured home rather than living only in review chat.
 
 ---
 
