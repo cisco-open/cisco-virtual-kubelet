@@ -1,0 +1,58 @@
+# Test 11 — confirmed-commit fallback over RESTCONF
+#
+# CR opts in to confirmed-commit (confirmTimeoutSeconds=30) but
+# spec.transactional=false because the RESTCONF transport has no
+# candidate datastore. The engine must:
+#   - take the non-transactional reconcile path,
+#   - surface Result.ConfirmedCommitFallback="non-transactional reconcile",
+#   - emit a Warning event the operator can see via kubectl events,
+#   - NOT engage the auto-revert safety net (there's no commit to confirm).
+#
+# Backward compatibility check: existing RESTCONF-based deployments
+# that one day add confirmTimeoutSeconds to a CR don't break — they
+# get a clear signal that the safety net isn't active.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-11-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            interface_loopback:
+              interfaces:
+                - name: 9994
+                  description: "cisco-vk release-blocker test 11 — RESTCONF fallback"
+                  ipv4_address: 10.255.255.94
+                  ipv4_address_mask: 255.255.255.255
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: test-11-restconf-fallback
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "11-confirmed-commit-restconf-fallback"
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - interface_loopback
+  # transactional=false is required for RESTCONF (no candidate
+  # datastore). With confirmTimeoutSeconds set anyway, the engine
+  # must surface the "non-transactional reconcile" fallback and
+  # emit a Warning event.
+  transactional: false
+  confirmTimeoutSeconds: 30
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: test-11-data
+      key: data.nac.yaml

@@ -1,0 +1,41 @@
+=== RUN   TestEnvtest_StatusPhaseLeaseBlockedAccepted
+--- PASS: TestEnvtest_StatusPhaseLeaseBlockedAccepted (5.41s)
+=== RUN   TestEnvtest_StatusPhaseEnumRejectsBogusValue
+--- PASS: TestEnvtest_StatusPhaseEnumRejectsBogusValue (6.00s)
+=== RUN   TestEnvtest_LeaseCreationForUnderscoreFamily
+--- PASS: TestEnvtest_LeaseCreationForUnderscoreFamily (3.60s)
+=== RUN   TestEnvtest_ConfirmTimeoutSecondsAdmittedByApiserver
+--- PASS: TestEnvtest_ConfirmTimeoutSecondsAdmittedByApiserver (5.80s)
+=== RUN   TestEnvtest_ConfirmTimeoutSecondsMaximumEnforced
+--- PASS: TestEnvtest_ConfirmTimeoutSecondsMaximumEnforced (5.43s)
+=== RUN   TestEnvtest_AtomicReplaceFieldAdmitted
+--- PASS: TestEnvtest_AtomicReplaceFieldAdmitted (5.23s)
+=== RUN   TestEnvtest_ConfirmTimeoutSecondsBoundaryValues
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 749 [running]:
+	>  runtime/debug.Stack()
+	>  	/opt/homebrew/Cellar/go/1.26.2/libexec/src/runtime/debug/stack.go:26 +0x64
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/log/log.go:60 +0xe8
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0x6d5f892885c0, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x103de2350?, 0x6d5f892885c0?}, 0x0?}, {0x1022e0a9a, 0x16}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.3/logr.go:276 +0x5c
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0x6d5f8908c848)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/envtest/server.go:303 +0x368
+	>  github.com/cisco/virtual-kubelet-cisco/internal/provider.startEnvtest(0x6d5f8919c008)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/provider/envtest_apiserver_smoke_test.go:92 +0xb0
+	>  github.com/cisco/virtual-kubelet-cisco/internal/provider.TestEnvtest_ConfirmTimeoutSecondsBoundaryValues(0x6d5f8919c008)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/provider/envtest_apiserver_smoke_test.go:392 +0x2c
+	>  testing.tRunner(0x6d5f8919c008, 0x103db14c8)
+	>  	/opt/homebrew/Cellar/go/1.26.2/libexec/src/testing/testing.go:2036 +0xc4
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/opt/homebrew/Cellar/go/1.26.2/libexec/src/testing/testing.go:2101 +0x3a8
+--- PASS: TestEnvtest_ConfirmTimeoutSecondsBoundaryValues (4.96s)
+=== RUN   TestEnvtest_AtomicReplaceWithConfirmedCommitCombined
+--- PASS: TestEnvtest_AtomicReplaceWithConfirmedCommitCombined (5.85s)
+=== RUN   TestEnvtest_NonTransactionalCRWithConfirmTimeoutAdmissible
+--- PASS: TestEnvtest_NonTransactionalCRWithConfirmTimeoutAdmissible (5.42s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider	48.591s

@@ -1,0 +1,58 @@
+# Test 13 phase 1 — establish device state with BOTH safety nets
+# enabled (atomicReplace=true, confirmTimeoutSeconds=30). Adds
+# VLAN 997, VRF TEST-13-VRF, Loopback 9993 (bound to the VRF) in
+# one auto-reverting transaction.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-13-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            vlan:
+              vlans:
+                - id: 997
+                  name: cisco-vk-test-13
+            vrf:
+              vrfs:
+                - name: TEST-13-VRF
+                  rd: "65013:1"
+            interface_loopback:
+              interfaces:
+                - name: 9993
+                  description: "cisco-vk release-blocker test 13"
+                  vrf: TEST-13-VRF
+                  ipv4_address: 10.255.255.93
+                  ipv4_address_mask: 255.255.255.255
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: test-13-combined
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "13-atomic-replace-with-confirmed-commit"
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - vlan
+    - vrf
+    - interface_loopback
+  transactional: true
+  # BOTH safety nets engaged simultaneously.
+  atomicReplace: true
+  confirmTimeoutSeconds: 30
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: test-13-data
+      key: data.nac.yaml

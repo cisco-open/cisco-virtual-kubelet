@@ -376,3 +376,138 @@ func TestEnvtest_AtomicReplaceFieldAdmitted(t *testing.T) {
 		t.Errorf("atomicReplace did not round-trip: got false, want true")
 	}
 }
+
+// ─── Wave 10 variation matrix — option C playbook coverage ──────────
+//
+// Five additional admission cases that pin the corners of the
+// kubebuilder validation surface for the new fields. Complement the
+// happy-path tests above without re-running the engine logic
+// (which is unit-tested in transactional_test.go).
+
+// TestEnvtest_ConfirmTimeoutSecondsBoundaryValues pins both ends
+// of the kubebuilder Min=0/Max=300 constraint with admission tests.
+// Min=0 (default-equivalent) and Max=300 (upper boundary) MUST be
+// accepted; -1 and 301 MUST be rejected.
+func TestEnvtest_ConfirmTimeoutSecondsBoundaryValues(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-cct-bounds")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	mk := func(name string, secs int32) *configv1alpha1.IOSXEConfig {
+		return &configv1alpha1.IOSXEConfig{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "envtest-cct-bounds", Name: name},
+			Spec: configv1alpha1.IOSXEConfigSpec{
+				DeviceRef: configv1alpha1.DeviceRef{Name: "edge-01"},
+				IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+					ManagedFamilies:       []string{"vlan"},
+					Transactional:         true,
+					ConfirmTimeoutSeconds: secs,
+					Source: configv1alpha1.ConfigurationSource{
+						Inline: &runtime.RawExtension{Raw: []byte("{}")},
+					},
+				},
+			},
+		}
+	}
+
+	// Min boundary: 0 must be accepted.
+	if err := c.Create(ctx, mk("at-zero", 0)); err != nil {
+		t.Errorf("confirmTimeoutSeconds=0 rejected: %v", err)
+	}
+	// Max boundary: 300 must be accepted.
+	if err := c.Create(ctx, mk("at-max", 300)); err != nil {
+		t.Errorf("confirmTimeoutSeconds=300 rejected: %v", err)
+	}
+	// Negative: -1 must be rejected (Min=0).
+	if err := c.Create(ctx, mk("below-min", -1)); err == nil {
+		t.Errorf("confirmTimeoutSeconds=-1 was accepted; Min=0 not enforced")
+	}
+	// Note: the >300 case is already covered by
+	// TestEnvtest_ConfirmTimeoutSecondsMaximumEnforced above.
+}
+
+// TestEnvtest_AtomicReplaceWithConfirmedCommitCombined is the
+// admission counterpart to live test 13 — proves the apiserver
+// accepts a CR that opts in to BOTH safety nets. There is no
+// kubebuilder rule that forbids this combination (and there
+// shouldn't be — the user explicitly framed Wave 10 as a
+// combined primitive), but a future schema change could
+// accidentally introduce one. The test pins that the combination
+// stays admissible.
+func TestEnvtest_AtomicReplaceWithConfirmedCommitCombined(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-w10-combined")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cr := &configv1alpha1.IOSXEConfig{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "envtest-w10-combined", Name: "edge-01"},
+		Spec: configv1alpha1.IOSXEConfigSpec{
+			DeviceRef: configv1alpha1.DeviceRef{Name: "edge-01"},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies:       []string{"vlan", "vrf", "interface_loopback"},
+				Transactional:         true,
+				AtomicReplace:         true,
+				ConfirmTimeoutSeconds: 30,
+				Source: configv1alpha1.ConfigurationSource{
+					Inline: &runtime.RawExtension{Raw: []byte("{}")},
+				},
+			},
+		},
+	}
+	if err := c.Create(ctx, cr); err != nil {
+		t.Fatalf("CR with both safety nets rejected: %v", err)
+	}
+	var got configv1alpha1.IOSXEConfig
+	if err := c.Get(ctx,
+		types.NamespacedName{Namespace: "envtest-w10-combined", Name: "edge-01"}, &got); err != nil {
+		t.Fatalf("re-fetch: %v", err)
+	}
+	if got.Spec.ConfirmTimeoutSeconds != 30 {
+		t.Errorf("confirmTimeoutSeconds did not round-trip: %d", got.Spec.ConfirmTimeoutSeconds)
+	}
+	if !got.Spec.AtomicReplace {
+		t.Errorf("atomicReplace did not round-trip: got false")
+	}
+}
+
+// TestEnvtest_NonTransactionalCRWithConfirmTimeoutAdmissible
+// pins the admission case for live test 11: a CR that opts in to
+// confirmed-commit BUT sets transactional=false (the RESTCONF
+// fallback shape) MUST be admissible. The "you can't have
+// confirmTimeoutSeconds without transactional" check happens in
+// the engine at runtime (it surfaces via Result.ConfirmedCommit
+// Fallback), not at admission. A future kubebuilder CEL rule
+// that forbids this combination would break the documented
+// fallback contract; this test catches that regression.
+func TestEnvtest_NonTransactionalCRWithConfirmTimeoutAdmissible(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-non-tx-cct")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cr := &configv1alpha1.IOSXEConfig{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "envtest-non-tx-cct", Name: "edge-01"},
+		Spec: configv1alpha1.IOSXEConfigSpec{
+			DeviceRef: configv1alpha1.DeviceRef{Name: "edge-01"},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies:       []string{"vlan"},
+				Transactional:         false, // RESTCONF shape
+				ConfirmTimeoutSeconds: 30,    // operator-error case the engine surfaces as fallback
+				Source: configv1alpha1.ConfigurationSource{
+					Inline: &runtime.RawExtension{Raw: []byte("{}")},
+				},
+			},
+		},
+	}
+	if err := c.Create(ctx, cr); err != nil {
+		t.Fatalf("non-transactional + confirmTimeoutSeconds CR rejected by apiserver: %v (this combination must be admissible — the engine surfaces it via Result.ConfirmedCommitFallback)", err)
+	}
+}

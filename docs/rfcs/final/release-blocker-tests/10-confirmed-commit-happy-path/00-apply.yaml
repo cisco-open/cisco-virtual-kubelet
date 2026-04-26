@@ -1,0 +1,53 @@
+# Test 10 — confirmed-commit happy path
+#
+# A clean Loopback addition with confirmTimeoutSeconds=30 against
+# a NETCONF transport that advertises :confirmed-commit:1.0. The
+# engine should take the auto-revert path: CommitConfirmed →
+# runningVerify (clean) → ConfirmCommit → InSync, with
+# Result.ConfirmedCommitUsed=true and outcome=confirmed metric
+# increment.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-10-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            interface_loopback:
+              interfaces:
+                - name: 9995
+                  description: "cisco-vk release-blocker test 10 — confirmed-commit happy path"
+                  ipv4_address: 10.255.255.95
+                  ipv4_address_mask: 255.255.255.255
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: test-10-confirmed-commit-happy
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "10-confirmed-commit-happy-path"
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - interface_loopback
+  # Headline: transactional + confirmTimeoutSeconds=30 against
+  # NETCONF must drive CommitConfirmed → runningVerify clean →
+  # ConfirmCommit. No mgmt-plane breakage; the change is benign
+  # so running-verify passes and confirm fires.
+  transactional: true
+  confirmTimeoutSeconds: 30
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: test-10-data
+      key: data.nac.yaml

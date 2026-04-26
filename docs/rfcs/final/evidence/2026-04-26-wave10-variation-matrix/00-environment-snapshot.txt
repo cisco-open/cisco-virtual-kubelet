@@ -1,0 +1,18 @@
+# Wave 10 variation matrix — environment snapshot
+
+## git
+## pr/johalley/ciscoconfig_xe...origin/pr/johalley/ciscoconfig_xe [ahead 65]
+ M docs/rfcs/final/release-blocker-tests/RUNBOOK.md
+ M docs/rfcs/final/test_overview.md
+ M internal/provider/envtest_apiserver_smoke_test.go
+?? docs/rfcs/final/evidence/2026-04-26-wave10-variation-matrix/
+?? docs/rfcs/final/pre-pr-test-enrichment-plan.md
+?? docs/rfcs/final/release-blocker-tests/10-confirmed-commit-happy-path/
+?? docs/rfcs/final/release-blocker-tests/11-confirmed-commit-restconf-fallback/
+?? docs/rfcs/final/release-blocker-tests/13-atomic-replace-with-confirmed-commit/
+
+commits ahead of main: 131
+head SHA: e1499d9c430b98f37feb941567cca247ceb868f1
+
+## go
+go version go1.26.2 darwin/arm64

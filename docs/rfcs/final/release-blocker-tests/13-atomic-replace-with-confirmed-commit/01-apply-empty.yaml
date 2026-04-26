@@ -1,0 +1,44 @@
+# Test 13 phase 2 — empty source, atomicReplace=true,
+# confirmTimeoutSeconds=30. Engine must remove VLAN 997 + VRF
+# TEST-13-VRF + Loopback 9993 in one transaction with auto-revert
+# protection. If running-verify after CommitConfirmed sees any of
+# the three still on the device, ConfirmCommit is NOT called and
+# the device's timer reverts the (failed) atomic removal.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-13-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration: {}
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: test-13-combined
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "13-atomic-replace-with-confirmed-commit"
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - vlan
+    - vrf
+    - interface_loopback
+  transactional: true
+  atomicReplace: true
+  confirmTimeoutSeconds: 30
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: test-13-data
+      key: data.nac.yaml
