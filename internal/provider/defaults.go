@@ -134,14 +134,22 @@ func InitNodeConditions() []v1.NodeCondition {
 	}
 }
 
+// InitNodeSystemInfo returns the placeholder NodeSystemInfo used at
+// startup, before the driver's GetDeviceInfo has been called for the
+// first time. The values mirror what AppHostingNode.syncNodeStatus
+// will overwrite on its first heartbeat: OperatingSystem="Cisco",
+// OSImage="IOS-XE", ContainerRuntimeVersion="ios-xe-iox". Architecture
+// is left empty because it is the device's product ID (e.g. "C9300")
+// and not knowable until the driver responds. Using consistent
+// post-sync defaults keeps `kubectl get nodes -o wide` stable across
+// the brief startup window.
 func InitNodeSystemInfo() v1.NodeSystemInfo {
-	// TODO Update this from driver information
 	return v1.NodeSystemInfo{
-		Architecture:            "unknown",
-		OperatingSystem:         "unknown",
+		Architecture:            "",
+		OperatingSystem:         "Cisco",
 		KubeletVersion:          getVirtualKubeletVersion(),
-		ContainerRuntimeVersion: "unknown",
-		OSImage:                 "unknown",
+		ContainerRuntimeVersion: "ios-xe-iox",
+		OSImage:                 "IOS-XE",
 	}
 }
 

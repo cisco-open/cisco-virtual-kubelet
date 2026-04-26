@@ -125,9 +125,16 @@ func (d *FAKEDriver) DeployPod(ctx context.Context, pod *v1.Pod) error {
 }
 
 func (d *FAKEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
-	// TODO
-	log.G(ctx).Info("Pod UpdateContainer request received")
-	return nil
+	log.G(ctx).WithFields(log.Fields{
+		"pod": pod.Name,
+	}).Info("Pod UpdateContainer request received")
+	for i := range d.pods {
+		if d.pods[i].Namespace == pod.Namespace && d.pods[i].Name == pod.Name {
+			d.pods[i] = *pod
+			return nil
+		}
+	}
+	return fmt.Errorf("could not find pod to update: %s/%s", pod.Namespace, pod.Name)
 }
 
 func (d *FAKEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
@@ -138,7 +145,6 @@ func (d *FAKEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 }
 
 func (d *FAKEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
-	// TODO
 	log.G(ctx).WithFields(log.Fields{
 		"namespace": pod.Namespace,
 		"pod":       pod.Name,
@@ -153,9 +159,12 @@ func (d *FAKEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, er
 }
 
 func (d *FAKEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
-	// TODO
 	log.G(ctx).Info("Pod ListContainers request received")
-	return nil, nil
+	out := make([]*v1.Pod, 0, len(d.pods))
+	for i := range d.pods {
+		out = append(out, &d.pods[i])
+	}
+	return out, nil
 }
 
 func (d *FAKEDriver) GetGlobalOperationalData(ctx context.Context) (*common.AppHostingOperData, error) {
