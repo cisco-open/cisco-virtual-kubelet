@@ -57,7 +57,7 @@ None of the items below block day-2 readiness. Each is reachable in its own RFC 
 
 1. **External — Phase-8 residuals** (Terraform Registry release, netascode example corpus). Tracked in [`phase-8-residuals.md`](phase-8-residuals.md).
 2. **Live retest of the device-write paths against the lab Cat9K** — operator-scheduled because each path modifies running device state. Coverage: `spec.transactional=true` (NETCONF/830, separately enabled), `spec.transactional + CLI` rejection path (Wave 7A.1), `configPrereqs` deletion-driven cleanup (Waves 4A-fu + 7A.2 + 7A.4), gNMI Set against `interface_ethernet[GigabitEthernet=0/0/0]` (Waves 5A-fu + 7B), credential rotation with overlap window (Waves 6B + 7A.3 + 8.2 + 9.2), real-apiserver Lease creation for any underscore family (Wave 8.1), real-apiserver acceptance of `status.phase=LeaseBlocked` (Wave 9.1). Detailed list in [`latest-update.md`](latest-update.md) §5.
-3. **Architectural watch-items #4 (Phase-10 cosmetic relocation), #9 (log unification implementation), #10 (CRD v1 promotion implementation)** — plan-level deliverables in their own RFCs ([`architectural-review.md`](architectural-review.md), [`log-unification-plan.md`](log-unification-plan.md), [`crd-v1-promotion-plan.md`](crd-v1-promotion-plan.md)).
+3. **Architectural watch-items #4 (Phase-10 cosmetic relocation), #9 (log unification implementation), #10 (CRD v1 promotion implementation), and Wave 10 (confirmed-commit + atomic replace)** — plan-level deliverables in their own RFCs ([`architectural-review.md`](architectural-review.md), [`log-unification-plan.md`](log-unification-plan.md), [`crd-v1-promotion-plan.md`](crd-v1-promotion-plan.md), [`wave10-confirmed-commit-and-atomic-replace.md`](wave10-confirmed-commit-and-atomic-replace.md)).
 4. **envtest infrastructure** — durable closure for the recurring fake-client-doesn't-validate gap (FU-2 + W7R-1 + W8FU-1). Tracked under §7.A.2 with rationale for deferring to the conversion-webhook PR rather than landing it stand-alone.
 
 The architectural review's twelve watch-items remain closed (eight shipped end-to-end, three with written plans, one deliberately deferred to Phase-10 with rationale on file).
@@ -313,6 +313,7 @@ These items have shipped *as code* but require infrastructure outside the Git re
 | [`driver-extension-guide.md`](driver-extension-guide.md) | How to add a new platform driver | Phase-9 plug-in pattern |
 | [`crd-v1-promotion-plan.md`](crd-v1-promotion-plan.md) | v1alpha1 → v1 cut plan | Watch-item #10 (impl path) |
 | [`log-unification-plan.md`](log-unification-plan.md) | Slog backend + logrus/zap shim plan | Watch-item #9 (impl path) |
+| [`wave10-confirmed-commit-and-atomic-replace.md`](wave10-confirmed-commit-and-atomic-replace.md) | Confirmed-commit (RFC 6241 §8.4) + atomic replace risk-reduction primitive | Wave 10 (deferred PR plan) |
 | [`phase-8-residuals.md`](phase-8-residuals.md) | External-infrastructure residuals | §7.B above |
 | **`implementation-status.md`** (this file) | Status sweep across all of the above | Single-source-of-truth pointer |
 

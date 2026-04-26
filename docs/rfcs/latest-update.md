@@ -76,7 +76,7 @@ None of these block day-2 readiness.
   - Credential rotation against a CiscoDevice with `credentialSecretRef` → new pod takes the lease cleanly without overlap; status surfaces `PhaseLeaseBlocked` during the contention window with a sub-TTL requeue against a real apiserver (Wave 6B + Wave 7A.3 + Wave 8.2 + Wave 9.2).
   - Lease creation against a real apiserver for any underscore family (e.g. `interface_ethernet`) — confirms the sanitisation works end-to-end (Wave 8.1).
   - Real-apiserver acceptance of `status.phase=LeaseBlocked` writes — confirms Wave 9.1's enum admission end-to-end (Wave 9.1).
-- **Architectural watch-items #4/#9/#10** remain plan-level deliverables in their own RFCs ([`architectural-review.md`](architectural-review.md), [`log-unification-plan.md`](log-unification-plan.md), [`crd-v1-promotion-plan.md`](crd-v1-promotion-plan.md)).
+- **Architectural watch-items #4/#9/#10 and Wave 10** remain plan-level deliverables in their own RFCs ([`architectural-review.md`](architectural-review.md), [`log-unification-plan.md`](log-unification-plan.md), [`crd-v1-promotion-plan.md`](crd-v1-promotion-plan.md), [`wave10-confirmed-commit-and-atomic-replace.md`](wave10-confirmed-commit-and-atomic-replace.md)).
 - **envtest infrastructure for schema-validating + name-validating tests** — the recurring follow-up. Wave 9.1's CRD-parse test is the lighter form of envtest's enum-validation check; an envtest is the durable closure across name validation (W7R-1), MinItems/required validation (FU-2), and field-enum validation (W8FU-1).
 
 ---
@@ -116,6 +116,7 @@ Wave 9.2's `reconcileOne` now returns `(engine.Result, error)`; the controller-r
 | [`architectural-review.md`](architectural-review.md) | Architectural watch-items |
 | [`crd-v1-promotion-plan.md`](crd-v1-promotion-plan.md) | v1alpha1 → v1 cut plan |
 | [`log-unification-plan.md`](log-unification-plan.md) | Slog backend plan |
+| [`wave10-confirmed-commit-and-atomic-replace.md`](wave10-confirmed-commit-and-atomic-replace.md) | Wave 10 — confirmed-commit + atomic replace risk-reduction primitive |
 | [`phase-8-residuals.md`](phase-8-residuals.md) | External Phase-8 residuals |
 
 ---

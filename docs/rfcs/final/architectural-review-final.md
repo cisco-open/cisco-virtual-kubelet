@@ -246,15 +246,16 @@ Eighteen open non-blocking items, none of which gate merge, after the §6.E code
 | ⏸ | Terraform Registry publish for `cisco-open/iosxeconfig` | [`../phase-8-residuals.md`](../phase-8-residuals.md) §2 | ~2 eng-days technical + paperwork | Provider account (Cisco/HashiCorp), GPG key in corporate KMS, signing workflow, Hashicorp-layout docs. Out of scope for this branch — depends on external paperwork. |
 | ⏸ | netascode example corpus (~54 family pages) | [`../phase-8-residuals.md`](../phase-8-residuals.md) §3 | ~80 eng-hours | Author + lint each example; live-validate ~10 representative families on Cat9k under `driftPolicy=revert`. Includes lab access (see 6.D). |
 
-### 6.B Architectural watch-items deferred with plans (3 items, all ⏸)
+### 6.B Architectural watch-items deferred with plans (4 items, all ⏸)
 
-All three are explicitly deferred per §5.4 of this document. Pulling any into this branch would worsen the review surface and contradict the merge-readiness verdict.
+All four are explicitly deferred per §5.4 of this document. Pulling any into this branch would worsen the review surface and contradict the merge-readiness verdict.
 
 | # | Disposition | Item | Plan RFC | Target landing | Effort |
 |---|---|---|---|---|---|
 | 4 | ⏸ | Cosmetic relocation `internal/drivers/iosxe/configdriver/...` → `internal/configdriver/` | [`../driver-extension-guide.md`](../driver-extension-guide.md) §7 | Phase 10 single PR | mechanical (touches every import path; conflicts with v1 CRD cut + netascode corpus if attempted now) |
 | 9 | ⏸ | Log unification: logrus + zap → `slog` shims | [`../log-unification-plan.md`](../log-unification-plan.md) | Standalone PR | ~3 eng-days |
 | 10 | ⏸ | CRD v1alpha1 → v1 promotion + conversion webhook | [`../crd-v1-promotion-plan.md`](../crd-v1-promotion-plan.md) | Release-cut branch (wider-team review window) | ~2 eng-weeks |
+| W10 | ⏸ | Confirmed-commit (RFC 6241 §8.4) + atomic replace — risk-reduction primitive for risky configurations (ACLs, BGP, management plane). Confirmed-commit closes loss-of-management; atomic replace closes partial-drift; together they enable "all-or-nothing with auto-revert on connectivity loss." | [`../wave10-confirmed-commit-and-atomic-replace.md`](../wave10-confirmed-commit-and-atomic-replace.md) | Standalone PR after the current branch merges; should land in v1alpha1 first then propagate to v1 via the CRD-v1 promotion PR | ~3 eng-days |
 
 ### 6.C Test / CI infrastructure (2 items, both ⏸)
 
@@ -316,22 +317,22 @@ Per [`../external-review-wave9-status.md`](../external-review-wave9-status.md) �
 | Category | Count | ✅ closed on this branch | ⏸ deferred (with plans) | 🔒 release blocker (lab device) | Approximate effort for the remainder |
 |---|---:|---:|---:|---:|---|
 | External infrastructure | 2 | 0 | 2 | 0 | ~2 eng-days + paperwork + ~80 eng-hours content |
-| Watch-items | 3 | 0 | 3 | 0 | ~3 days + ~3 weeks + mechanical |
+| Watch-items | 4 | 0 | 4 | 0 | ~3 days + ~3 weeks + mechanical + ~3 days (Wave 10) |
 | Test/CI | 2 | 0 | 2 | 0 | ~2 weeks (lands with conversion-webhook PR) |
 | §6.D.i real-apiserver smokes | 2 | **2** | 0 | 0 | — (closed via envtest) |
 | §6.D.ii live-device retests | 6 | 0 | 0 | 6 | operator-scheduled before release tag |
 | Code TODOs | 4 | **4** | 0 | 0 | — (closed) |
 | Reviewer recommendations | 5 | **5** | 0 | 0 | — (closed; §6.D.ii surfaces the live-device residual) |
-| **Total** | **24** | **11** | **7** | **6** | — |
+| **Total** | **25** | **11** | **8** | **6** | — |
 
-Eleven of the twenty-four items closed on this branch:
+Eleven of the twenty-five items closed on this branch:
 
 - 4 × §6.E code-level TODOs in `2e73766`,
 - 1 × §6.F documentation cleanup in `5487dc0`,
 - 2 × §6.D.i real-apiserver smokes via the envtest added in this commit set (`make test-envtest`),
 - 4 × §6.F items added by the post-Wave-9-status reviewer round (CRD-count wording, CI-grade gate, the merge-style note in §8, and the aggregator-opt-in confirmation).
 
-Seven remain ⏸-deferred to dedicated PRs by explicit plan; six are 🔒-marked as release blockers (live-device retests requiring lab access). **The branch can merge; the six remaining 🔒 items must be captured before any release tag, per the Wave-9-status reviewer's framing.**
+Eight remain ⏸-deferred to dedicated PRs by explicit plan (the three pre-existing watch-items, four §6.A/§6.C deferrals, and the new Wave 10 confirmed-commit + atomic-replace plan filed in [`../wave10-confirmed-commit-and-atomic-replace.md`](../wave10-confirmed-commit-and-atomic-replace.md)); six are 🔒-marked as release blockers (live-device retests requiring lab access). **The branch can merge; the six remaining 🔒 items must be captured before any release tag, per the Wave-9-status reviewer's framing.**
 
 ---
 
@@ -341,7 +342,7 @@ The branch is architecturally ready to merge. The pre-existing apphosting contai
 
 The two architectural tensions worth naming — the platform-agnostic code living under `internal/drivers/iosxe/configdriver/...`, and the v1alpha1 CRD surface area — both have written plans on file and are deliberately deferred to dedicated PRs (Phase 10 cosmetic relocation; v1 promotion on a release-cut branch). Pulling either into this branch would worsen the review surface; deferring is the correct architectural call.
 
-Twenty-four follow-up items were enumerated across the chain; eleven closed on this branch (4 × §6.E TODOs in `2e73766`, 1 × docs cleanup in `5487dc0`, 2 × §6.D.i envtest real-apiserver smokes, 4 × post-Wave-9-status reviewer asks: CRD-count wording, CI-grade gate, merge-style note, aggregator-opt-in confirmation). Seven remain ⏸-deferred to dedicated PRs by explicit plan (Phase-10 cosmetic relocation, log unification, v1 CRD cut, broader envtest infrastructure, Terraform Registry publishing, netascode example corpus, provider package coverage). Six are 🔒-marked as **release-tag blockers** — live-device retests against the lab Cat9K that modify running device state and must be captured before a release tag is cut, per the Wave-9-status reviewer's framing of *"I would not let 'mergeable' quietly become 'release-certified' until the real-apiserver and live-device checks are captured."*
+Twenty-five follow-up items were enumerated across the chain; eleven closed on this branch (4 × §6.E TODOs in `2e73766`, 1 × docs cleanup in `5487dc0`, 2 × §6.D.i envtest real-apiserver smokes, 4 × post-Wave-9-status reviewer asks: CRD-count wording, CI-grade gate, merge-style note, aggregator-opt-in confirmation). Eight remain ⏸-deferred to dedicated PRs by explicit plan (Phase-10 cosmetic relocation, log unification, v1 CRD cut, broader envtest infrastructure, Terraform Registry publishing, netascode example corpus, provider package coverage, and Wave 10 confirmed-commit + atomic replace). Six are 🔒-marked as **release-tag blockers** — live-device retests against the lab Cat9K that modify running device state and must be captured before a release tag is cut, per the Wave-9-status reviewer's framing of *"I would not let 'mergeable' quietly become 'release-certified' until the real-apiserver and live-device checks are captured."*
 
 No item that is reasonable to action on this branch is still open. The post-merge envtest follow-up is the durable closure for the broader `fake.Client`-doesn't-validate lesson and is correctly scoped to land with the conversion-webhook PR. The narrow envtest added in this commit set covers the two specific blind spots (LeaseBlocked enum admission + DNS-1123 Lease-name validation) that the reviewer asked be closed before merge — a focused real-apiserver smoke, not the broader infrastructure.
 
@@ -375,5 +376,6 @@ This document is a synthesis. The authoritative RFCs for each topic remain:
 | Five external review rounds + responses | `../external-review*.md` (10 files) |
 | v1 CRD promotion plan | [`../crd-v1-promotion-plan.md`](../crd-v1-promotion-plan.md) |
 | slog backend plan | [`../log-unification-plan.md`](../log-unification-plan.md) |
+| Wave 10 — confirmed-commit + atomic replace risk-reduction primitive | [`../wave10-confirmed-commit-and-atomic-replace.md`](../wave10-confirmed-commit-and-atomic-replace.md) |
 | External Phase-8 residuals | [`../phase-8-residuals.md`](../phase-8-residuals.md) |
 | Driver extension contract (for new platform additions) | [`../driver-extension-guide.md`](../driver-extension-guide.md) |
