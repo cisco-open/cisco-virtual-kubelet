@@ -19,7 +19,7 @@ This document is the single architectural overview for the configuration-managem
 
 **Architectural verdict.** **No structural change is required before merge.** The branch is shippable for day-0 and day-2 under the per-pod topology, with the aggregator topology exclusive-and-correct. The pre-existing container-deployment architecture (apphosting on Cat9k via virtual-kubelet) and the new configuration-management subsystem coexist cleanly inside the same `cisco-vk` pod, sharing only the `CiscoDevice` CR and the OTel exporter — neither side mutates state that the other depends on.
 
-The follow-up work that remains is a mix of (a) external infrastructure (Terraform Registry publish, netascode example corpus), (b) deliberate deferrals to dedicated PRs (CRD v1 promotion, log unification, cosmetic relocation), (c) test-discipline closure (envtest), and (d) operator-scheduled live retests against the lab Cat9K. None block merge.
+The follow-up work that remains is a mix of (a) external infrastructure (Terraform Registry publish, netascode example corpus), (b) deliberate deferrals to dedicated PRs (CRD v1 promotion, log unification, cosmetic relocation), (c) test-discipline closure (envtest), and (d) operator-scheduled live retests against the lab Cat9K. None block merge. The §6.E code-level TODOs and the §6.F.3 documentation cleanup were the only items that were both reasonable and in-scope for this branch; both have closed (commits `2e73766` and `5487dc0`).
 
 §5 of this document elaborates the two architectural tensions that *are* worth naming — both are watch-items with plans on file, not pre-merge blockers.
 
@@ -232,69 +232,81 @@ The non-architectural follow-ups (envtest, live retests, Terraform Registry publ
 
 ## 6. Pending roadmap
 
-Twenty-two non-blocking items, none of which gate merge. Grouped by category:
+Eighteen open non-blocking items, none of which gate merge, after the §6.E code-level TODOs closed in commit `2e73766` and the §6.F.3 documentation cleanup closed in commit `5487dc0` (Wave 9D). Grouped by category, with a disposition column showing what's been actioned on this branch versus what is deferred to dedicated PRs or operator schedules:
 
-### 6.A External infrastructure (2 items)
+**Disposition legend.** ✅ closed on this branch · ⏸ held per the §5 architectural recommendation (deferred to dedicated PR) · 🔒 requires lab device access (operator-scheduled).
 
-| Item | Owner / source | Effort | Notes |
-|---|---|---|---|
-| Terraform Registry publish for `cisco-open/iosxeconfig` | [`../phase-8-residuals.md`](../phase-8-residuals.md) §2 | ~2 eng-days technical + paperwork | Provider account (Cisco/HashiCorp), GPG key in corporate KMS, signing workflow, Hashicorp-layout docs. |
-| netascode example corpus (~54 family pages) | [`../phase-8-residuals.md`](../phase-8-residuals.md) §3 | ~80 eng-hours | Author + lint each example; live-validate ~10 representative families on Cat9k under `driftPolicy=revert`. |
+### 6.A External infrastructure (2 items, both ⏸)
 
-### 6.B Architectural watch-items deferred with plans (3 items)
-
-| # | Item | Plan RFC | Status | Effort |
+| Disposition | Item | Owner / source | Effort | Notes |
 |---|---|---|---|---|
-| 4 | Cosmetic relocation `internal/drivers/iosxe/configdriver/...` → `internal/configdriver/` | [`../driver-extension-guide.md`](../driver-extension-guide.md) §7 | Phase 10 single PR | mechanical |
-| 9 | Log unification: logrus + zap → `slog` shims | [`../log-unification-plan.md`](../log-unification-plan.md) | Standalone PR | ~3 eng-days |
-| 10 | CRD v1alpha1 → v1 promotion + conversion webhook | [`../crd-v1-promotion-plan.md`](../crd-v1-promotion-plan.md) | Release-cut branch | ~2 eng-weeks |
+| ⏸ | Terraform Registry publish for `cisco-open/iosxeconfig` | [`../phase-8-residuals.md`](../phase-8-residuals.md) §2 | ~2 eng-days technical + paperwork | Provider account (Cisco/HashiCorp), GPG key in corporate KMS, signing workflow, Hashicorp-layout docs. Out of scope for this branch — depends on external paperwork. |
+| ⏸ | netascode example corpus (~54 family pages) | [`../phase-8-residuals.md`](../phase-8-residuals.md) §3 | ~80 eng-hours | Author + lint each example; live-validate ~10 representative families on Cat9k under `driftPolicy=revert`. Includes lab access (see 6.D). |
 
-### 6.C Test / CI infrastructure (2 items)
+### 6.B Architectural watch-items deferred with plans (3 items, all ⏸)
 
-| Item | Source | Status | Notes |
-|---|---|---|---|
-| envtest infrastructure | [`../implementation-status.md`](../implementation-status.md) §1.2 (Lesson 1, 2, 5), §7.A.2 | Lands with the conversion-webhook PR | Durable closure for the recurring `fake.Client`-doesn't-validate gap (FU-2 / W7R-1 / W8FU-1). Right place to pay the etcd + apiserver binary dependency cost. |
-| `internal/provider` package coverage (currently 25.7 %) | [`../architectural-review.md`](../architectural-review.md) §2.5; [`../implementation-status.md`](../implementation-status.md) §7.A.2 | Lands with envtest | The uncovered code is controller-runtime wiring (predicates, handler.Funcs, watch establishment) — needs envtest to exercise honestly. |
+All three are explicitly deferred per §5.4 of this document. Pulling any into this branch would worsen the review surface and contradict the merge-readiness verdict.
 
-### 6.D Live retests against the lab Cat9K (8 paths, all operator-scheduled)
+| # | Disposition | Item | Plan RFC | Target landing | Effort |
+|---|---|---|---|---|---|
+| 4 | ⏸ | Cosmetic relocation `internal/drivers/iosxe/configdriver/...` → `internal/configdriver/` | [`../driver-extension-guide.md`](../driver-extension-guide.md) §7 | Phase 10 single PR | mechanical (touches every import path; conflicts with v1 CRD cut + netascode corpus if attempted now) |
+| 9 | ⏸ | Log unification: logrus + zap → `slog` shims | [`../log-unification-plan.md`](../log-unification-plan.md) | Standalone PR | ~3 eng-days |
+| 10 | ⏸ | CRD v1alpha1 → v1 promotion + conversion webhook | [`../crd-v1-promotion-plan.md`](../crd-v1-promotion-plan.md) | Release-cut branch (wider-team review window) | ~2 eng-weeks |
+
+### 6.C Test / CI infrastructure (2 items, both ⏸)
+
+| Disposition | Item | Source | Target landing | Notes |
+|---|---|---|---|---|
+| ⏸ | envtest infrastructure | [`../implementation-status.md`](../implementation-status.md) §1.2 (Lesson 1, 2, 5), §7.A.2 | Lands with the conversion-webhook PR (6.B item 10) | Durable closure for the recurring `fake.Client`-doesn't-validate gap (FU-2 / W7R-1 / W8FU-1). Right place to pay the etcd + apiserver binary dependency cost. |
+| ⏸ | `internal/provider` package coverage (currently 25.7 %) | [`../architectural-review.md`](../architectural-review.md) §2.5; [`../implementation-status.md`](../implementation-status.md) §7.A.2 | Lands with envtest | The uncovered code is controller-runtime wiring (predicates, handler.Funcs, watch establishment) — needs envtest to exercise honestly. |
+
+### 6.D Live retests against the lab Cat9K (8 paths, all 🔒)
 
 Each modifies running device state and is the operator's call to schedule. Detailed in [`../latest-update.md`](../latest-update.md) §5; summary:
 
-1. NETCONF transactional commit, structured-only intent → `Phase=InSync` end-to-end (Wave 1A-fu).
-2. NETCONF transactional + CLI block rejection → `Phase=Failed`, `ErrTransactionalCLIUnsupported`, no transport-side mutation (Wave 7A.1).
-3. `configPrereqs` deletion-driven cleanup → device clean of any prereq state created by the controller (Waves 4A-fu + 7A.2 + 7A.4).
-4. gNMI Set against `interface_ethernet[GigabitEthernet=0/0/0]` → keyed-path PathSpec preserved verbatim on the wire (Waves 5A-fu + 7B).
-5. Credential Secret rotation with overlap window → new pod takes the lease cleanly, transient `LeaseBlocked` with sub-TTL requeue, no concurrent writes (Waves 6B + 7A.3 + 8.2 + 9.2).
-6. Real-apiserver Lease creation for an underscore family (e.g. `interface_ethernet`) → DNS-1123 sanitisation works end-to-end (Wave 8.1).
-7. Real-apiserver acceptance of `status.phase=LeaseBlocked` → CRD enum admits the value (Wave 9.1).
-8. `driftPolicy: revert` live write → flip a CR from `report` to `revert` for one family, watch the device-side change, flip back.
-
-### 6.E Code-level TODOs (4 items, all non-blocking)
-
-| Location | Topic | Category |
+| Disposition | Path | Closing waves |
 |---|---|---|
-| [`internal/drivers/fake/driver.go:128,141,156`](../../../internal/drivers/fake/driver.go) | Fake driver scaffold's `UpdatePod` / `GetPodStatus` / `ListPods` stubs (apphosting side, not configuration) | Apphosting feature scaffold; orthogonal to this branch. |
-| [`internal/provider/defaults.go:138`](../../../internal/provider/defaults.go) | `InitNodeSystemInfo` returns `unknown` arch/OS; should pull from device driver | Cosmetic — affects `kubectl get nodes -o wide`. |
+| 🔒 | NETCONF transactional commit, structured-only intent → `Phase=InSync` end-to-end | 1A-fu |
+| 🔒 | NETCONF transactional + CLI block rejection → `Phase=Failed`, `ErrTransactionalCLIUnsupported`, no transport-side mutation | 7A.1 |
+| 🔒 | `configPrereqs` deletion-driven cleanup → device clean of any prereq state created by the controller | 4A-fu + 7A.2 + 7A.4 |
+| 🔒 | gNMI Set against `interface_ethernet[GigabitEthernet=0/0/0]` → keyed-path PathSpec preserved verbatim on the wire | 5A-fu + 7B |
+| 🔒 | Credential Secret rotation with overlap window → new pod takes the lease cleanly, transient `LeaseBlocked` with sub-TTL requeue, no concurrent writes | 6B + 7A.3 + 8.2 + 9.2 |
+| 🔒 | Real-apiserver Lease creation for an underscore family (e.g. `interface_ethernet`) → DNS-1123 sanitisation works end-to-end | 8.1 |
+| 🔒 | Real-apiserver acceptance of `status.phase=LeaseBlocked` → CRD enum admits the value | 9.1 |
+| 🔒 | `driftPolicy: revert` live write → flip a CR from `report` to `revert` for one family, watch the device-side change, flip back | per §5 |
+
+### 6.E Code-level TODOs (4 items, all ✅ closed in commit `2e73766`)
+
+| Disposition | Location | Topic | What changed |
+|---|---|---|---|
+| ✅ | [`internal/drivers/fake/driver.go`](../../../internal/drivers/fake/driver.go) — `UpdatePod` | Was a no-op log + TODO | Now finds the pod by namespace/name in `d.pods` and replaces it; returns an explicit "could not find pod to update" error when no match exists, mirroring `DeletePod`'s surface. |
+| ✅ | [`internal/drivers/fake/driver.go`](../../../internal/drivers/fake/driver.go) — `GetPodStatus` | Stale TODO comment from the pre-storage scaffold state | Comment removed; the actual implementation already used `common.FindPod` against `d.pods`. |
+| ✅ | [`internal/drivers/fake/driver.go`](../../../internal/drivers/fake/driver.go) — `ListPods` | Was returning `nil, nil` | Now returns a `[]*v1.Pod` over `d.pods` so consumers iterating the list see the seeded pods. |
+| ✅ | [`internal/provider/defaults.go`](../../../internal/provider/defaults.go) — `InitNodeSystemInfo` | Returned every field as `"unknown"`, briefly visible in `kubectl get nodes -o wide` between pod start and the first heartbeat | Replaced with values consistent with what `AppHostingNode.syncNodeStatus` writes once the driver responds: `OperatingSystem="Cisco"`, `OSImage="IOS-XE"`, `ContainerRuntimeVersion="ios-xe-iox"`. `Architecture` stays empty (post-sync value is the device ProductID, not knowable until the driver's `GetDeviceInfo` is called). |
 
 ### 6.F Reviewer recommendations from the most recent round (3 items)
 
 Per [`../external-review-wave9-status.md`](../external-review-wave9-status.md) §6 — no blocking findings, three "before release tag" recommendations:
 
-1. Live apiserver validation of `status.phase=LeaseBlocked`. (Same as §6.D item 7.)
-2. Live apiserver Lease creation for an underscore family. (Same as §6.D item 6.)
-3. Documentation cleanup of `implementation-status.md` §1. (Closed by Wave 9D.)
+| Disposition | Item | Notes |
+|---|---|---|
+| 🔒 | Live apiserver validation of `status.phase=LeaseBlocked` | Same as §6.D row 7. Operator-scheduled. |
+| 🔒 | Live apiserver Lease creation for an underscore family | Same as §6.D row 6. Operator-scheduled. |
+| ✅ | Documentation cleanup of `implementation-status.md` §1 | Closed by Wave 9D in commit `5487dc0`. |
 
 ### 6.G Aggregate
 
-| Category | Count | Blocking? | Approximate aggregate effort |
-|---|---:|---|---|
-| External infrastructure | 2 | No | ~2 eng-days + paperwork + ~80 eng-hours content |
-| Watch-items (deferred) | 3 | No | ~3 days + ~3 weeks + mechanical |
-| Test/CI | 2 | No | ~2 weeks (lands with conversion-webhook PR) |
-| Live retests | 8 | No | operator-scheduled |
-| Code TODOs | 4 | No | ~1 day total |
-| Reviewer recommendations | 3 | No | ~4 hours |
-| **Total open items** | **22** | **0** | — |
+| Category | Count | ✅ closed on this branch | ⏸ deferred (with plans) | 🔒 needs lab device | Approximate effort for the remainder |
+|---|---:|---:|---:|---:|---|
+| External infrastructure | 2 | 0 | 2 | 0 | ~2 eng-days + paperwork + ~80 eng-hours content |
+| Watch-items | 3 | 0 | 3 | 0 | ~3 days + ~3 weeks + mechanical |
+| Test/CI | 2 | 0 | 2 | 0 | ~2 weeks (lands with conversion-webhook PR) |
+| Live retests | 8 | 0 | 0 | 8 | operator-scheduled |
+| Code TODOs | 4 | **4** | 0 | 0 | — (closed) |
+| Reviewer recommendations | 3 | **1** | 0 | 2 | operator-scheduled |
+| **Total** | **22** | **5** | **7** | **10** | — |
+
+Five of the twenty-two items closed on this branch (4 × §6.E TODOs in `2e73766`, plus §6.F.3 docs cleanup in `5487dc0`). Seven remain ⏸-deferred to dedicated PRs by explicit plan; ten are 🔒-blocked on operator-scheduled lab access. **No item that is reasonable to action on this branch is still open.**
 
 ---
 
@@ -304,7 +316,7 @@ The branch is architecturally ready to merge. The pre-existing apphosting contai
 
 The two architectural tensions worth naming — the platform-agnostic code living under `internal/drivers/iosxe/configdriver/...`, and the v1alpha1 CRD surface area — both have written plans on file and are deliberately deferred to dedicated PRs (Phase 10 cosmetic relocation; v1 promotion on a release-cut branch). Pulling either into this branch would worsen the review surface; deferring is the correct architectural call.
 
-Twenty-two follow-up items remain, none blocking merge. The longest poles are external infrastructure (Terraform Registry publishing paperwork) and operator-scheduled live retests against the lab Cat9K. The envtest follow-up is the durable closure for the recurring `fake.Client`-doesn't-validate lesson and is correctly scoped to land with the conversion-webhook PR rather than as a stand-alone effort.
+Twenty-two follow-up items were enumerated; five closed on this branch (the four §6.E code-level TODOs in commit `2e73766` and the §6.F.3 documentation cleanup in commit `5487dc0`). The remaining seventeen are either ⏸-deferred to dedicated PRs by explicit plan (Phase-10 cosmetic relocation, log unification, v1 CRD cut + envtest, Terraform Registry publishing, netascode example corpus) or 🔒-blocked on operator-scheduled lab access (eight live retests, two reviewer-recommended live validations). No item that was reasonable to action on this branch is still open. The envtest follow-up is the durable closure for the recurring `fake.Client`-doesn't-validate lesson and is correctly scoped to land with the conversion-webhook PR rather than as a stand-alone effort.
 
 **Recommendation: merge.** The architectural adjustments worth making are already scheduled as separate PRs; making them on this branch would defeat the purpose of the planned phasing.
 
