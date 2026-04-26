@@ -91,6 +91,22 @@ test-coverage: ## Run tests with coverage
 	$(GO_BIN) test -v -race -coverprofile=coverage.out ./...
 	$(GO_BIN) tool cover -html=coverage.out -o coverage.html
 
+# Real-apiserver smoke tests for the recurring fake-client blind spots
+# (CRD enum admission, DNS-1123 Lease-name validation). Build-tagged
+# `envtest` so they are excluded from `make test`. Requires the
+# kube-apiserver + etcd binaries downloaded by `setup-envtest`; the
+# target runs `setup-envtest use 1.30 -p path` automatically and
+# threads the result through KUBEBUILDER_ASSETS, so a one-shot
+# invocation is `make test-envtest`.
+test-envtest: ## Run envtest real-apiserver smoke tests (requires sigs.k8s.io/controller-runtime/tools/setup-envtest in PATH)
+	@command -v setup-envtest >/dev/null 2>&1 || { \
+		echo "setup-envtest not found. Install with:"; \
+		echo "  $(GO_BIN) install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest"; \
+		exit 1; \
+	}
+	@KUBEBUILDER_ASSETS="$$(setup-envtest use 1.30 -p path)" \
+		$(GO_BIN) test -tags envtest -count=1 -v ./internal/provider/ -run TestEnvtest_
+
 lint: ## Run linter
 	@if command -v golangci-lint >/dev/null 2>&1; then \
 		golangci-lint run ./...; \
