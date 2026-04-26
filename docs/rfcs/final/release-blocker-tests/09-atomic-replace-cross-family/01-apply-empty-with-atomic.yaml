@@ -1,0 +1,45 @@
+# Test 09 phase 2 — flip atomicReplace=true and empty the source.
+# The engine must remove all three test entities (VLAN 998, VRF
+# TEST-09-VRF, Loopback 9996) in one transaction, in dependency
+# order: Loopback's VRF binding before the VRF; VRF, VLAN free
+# to remove in either order.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-09-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration: {}
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: test-09-atomic-replace
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "09-atomic-replace-cross-family"
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - vlan
+    - vrf
+    - interface_loopback
+  transactional: true
+  # Phase 2: atomicReplace=true. The empty source above means
+  # device-side entries that exist (the three from phase 1) are
+  # deleted in this transaction.
+  atomicReplace: true
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: test-09-data
+      key: data.nac.yaml

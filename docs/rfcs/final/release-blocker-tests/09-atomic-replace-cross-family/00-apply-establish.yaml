@@ -1,0 +1,58 @@
+# Test 09 phase 1 — establish device-side state for the
+# atomic-replace removal test. Adds VLAN 998, VRF TEST-09-VRF,
+# and Loopback 9996 (which binds to TEST-09-VRF).
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-09-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            vlan:
+              vlans:
+                - id: 998
+                  name: cisco-vk-test-09
+            vrf:
+              vrfs:
+                - name: TEST-09-VRF
+                  rd: "65009:1"
+            interface_loopback:
+              interfaces:
+                - name: 9996
+                  description: "cisco-vk release-blocker test 09"
+                  vrf: TEST-09-VRF
+                  ipv4_address: 10.255.255.96
+                  ipv4_address_mask: 255.255.255.255
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: test-09-atomic-replace
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "09-atomic-replace-cross-family"
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - vlan
+    - vrf
+    - interface_loopback
+  transactional: true
+  # AtomicReplace deliberately false in phase 1 — establish state
+  # additively so the test's phase 2 has something to atomically
+  # remove.
+  atomicReplace: false
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: test-09-data
+      key: data.nac.yaml

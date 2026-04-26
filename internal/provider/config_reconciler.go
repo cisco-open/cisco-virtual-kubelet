@@ -891,6 +891,23 @@ func (r *ConfigReconciler) emitEvents(cr *configv1alpha1.IOSXEConfig, result eng
 		r.Recorder.Eventf(cr, corev1.EventTypeNormal, "SaveStartupOK",
 			"startup-config saved")
 	}
+
+	// Wave 10 — surface confirmed-commit fallback so the operator
+	// knows their auto-revert safety net didn't engage. Emitted as
+	// a Warning because the CR explicitly opted in; the engine's
+	// fall-back to plain Commit IS the safe choice when the
+	// capability isn't available, but the operator should know
+	// they're not getting the protection they asked for. The
+	// confirmed-commit success path emits a Normal event for
+	// symmetry with the SaveStartup pattern above.
+	switch {
+	case result.ConfirmedCommitFallback != "":
+		r.Recorder.Eventf(cr, corev1.EventTypeWarning, "ConfirmedCommitFallback",
+			"spec.confirmTimeoutSeconds set but auto-revert path unavailable: %s — fell back to plain Commit", result.ConfirmedCommitFallback)
+	case result.ConfirmedCommitUsed:
+		r.Recorder.Eventf(cr, corev1.EventTypeNormal, "ConfirmedCommitUsed",
+			"confirmed-commit auto-revert path used; running-verify passed and follow-up confirm fired")
+	}
 }
 
 // appendApplyLog appends a row to every IOSXEConfigApplyLog CR

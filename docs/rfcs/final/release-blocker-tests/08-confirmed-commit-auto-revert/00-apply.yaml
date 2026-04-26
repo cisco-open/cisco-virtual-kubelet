@@ -1,0 +1,72 @@
+# Test 08 — confirmed-commit auto-revert
+#
+# Deliberately submit a management-plane-breaking ACL with
+# spec.confirmTimeoutSeconds: 30 so the device's own timer reverts
+# the change after the controller cannot ConfirmCommit. The test
+# is the most invasive in the runbook — operator MUST have an
+# out-of-band console attached before applying.
+#
+# Substitute the environment-specific values before applying:
+#   - <CONTROLLER_SOURCE_IP>: the IPv4 the cluster's cisco-vk pod
+#     egresses with (visible in 'show users' on the device).
+#   - <MGMT_INTF_TYPE> / <MGMT_INTF_NAME>: typical Cat9K mgmt is
+#     GigabitEthernet0/0 (front-panel mgmt port). Verify with
+#     'show running-config | section interface GigabitEthernet0/0'.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-08-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            access_list_extended:
+              extended:
+                - name: TEST-08-MGMT-LOCKOUT
+                  rules:
+                    - sequence: 10
+                      action: deny
+                      protocol: ip
+                      src_host: "<CONTROLLER_SOURCE_IP>"
+                      dst_any: true
+                    - sequence: 20
+                      action: permit
+                      protocol: ip
+                      src_any: true
+                      dst_any: true
+            interface_ethernet:
+              interfaces:
+                - type: GigabitEthernet
+                  name: "0/0"   # substitute MGMT_INTF_NAME if different
+                  ip_access_group_in: TEST-08-MGMT-LOCKOUT
+
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: test-08-confirmed-commit-auto-revert
+  namespace: cisco-vk-smoke
+  labels:
+    cisco.vk/release-blocker-test: "08-confirmed-commit-auto-revert"
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - access_list_extended
+    - interface_ethernet
+  # Headline: confirmed-commit must fire and the device must
+  # auto-revert when the controller can't ConfirmCommit.
+  transactional: true
+  confirmTimeoutSeconds: 30
+  # AtomicReplace deliberately omitted — pure confirmed-commit test.
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: test-08-data
+      key: data.nac.yaml
