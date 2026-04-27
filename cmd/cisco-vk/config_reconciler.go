@@ -33,7 +33,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -47,6 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	crlog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	coordv1 "k8s.io/api/coordination/v1"
@@ -101,13 +101,19 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	utilruntime.Must(ciskov1.AddToScheme(scheme))
 	utilruntime.Must(coordv1.AddToScheme(scheme))
 
-	// Register engine + transport metrics on the default Prometheus
-	// registry so the existing /metrics endpoint scrapes them. Both
-	// calls are idempotent: a second cisco-vk pod sharing the same
-	// process (test fixtures, in-process callers) won't double-
-	// register.
-	engine.RegisterMetrics(prometheus.DefaultRegisterer)
-	transport.RegisterTransportMetrics(prometheus.DefaultRegisterer)
+	// Register engine + transport metrics on controller-runtime's
+	// registry — the registry the manager's metrics server actually
+	// scrapes at :8080/metrics. Pre-fix, the engine registered on
+	// prometheus.DefaultRegisterer, which is a separate package-level
+	// var; the metrics endpoint exposed only the controller-runtime
+	// + Go runtime collectors and silently dropped every cisco_vk
+	// counter the verify scripts depend on. Caught against a live
+	// Cat9300 retest where the metric scrape returned 577 lines but
+	// not a single cisco_vk_* line. Both calls are idempotent: a
+	// second cisco-vk pod sharing the same process (test fixtures,
+	// in-process callers) won't double-register.
+	engine.RegisterMetrics(metrics.Registry)
+	transport.RegisterTransportMetrics(metrics.Registry)
 
 	// Event recorder: the reconciler emits one event per non-trivial
 	// per-family outcome and a terminal event per tick. The broadcaster
