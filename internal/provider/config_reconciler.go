@@ -59,7 +59,16 @@ type ConfigReconciler struct {
 	// in Phase 0/1 scaffolds where no transport has been constructed
 	// (e.g. stub driver path) — the reconciler records status but skips
 	// device I/O.
+	//
+	// May be replaced concurrently by the deferred-dial goroutine the
+	// pod startup spawns when the first dial loses the apphosting+VK
+	// startup race against ssh.Dial. Use SetTransport / GetTransport to
+	// access; the bare field is preserved for tests that build a
+	// reconciler with a transport in-place. Reads during reconcile go
+	// through GetTransport so the engine sees the freshest value.
 	Transport transport.Interface
+
+	transportSlot atomic.Pointer[transport.Interface]
 
 	// Interval is the poll cadence; zero means defaultConfigReconcileInterval.
 	Interval time.Duration
@@ -173,6 +182,32 @@ func (r *ConfigReconciler) NotifySubscribeFired() {
 	r.subscribeNotifyTime.Store(time.Now().UnixNano())
 }
 
+// SetTransport replaces the device transport on a running reconciler.
+// Used by the deferred-dial goroutine cmd/cisco-vk spawns when the
+// first dial loses the apphosting+VK startup race against ssh.Dial:
+// the reconciler is built with a nil transport, the goroutine retries
+// the dial in the background, and on success swaps in a real
+// transport (typically ~60 s after pod start). Safe for concurrent
+// calls with reconcile reads via GetTransport.
+func (r *ConfigReconciler) SetTransport(t transport.Interface) {
+	if t == nil {
+		r.transportSlot.Store(nil)
+		return
+	}
+	r.transportSlot.Store(&t)
+}
+
+// GetTransport returns the current transport, preferring the atomic
+// slot when set. Falls through to the bare Transport field so existing
+// callers (tests, fixtures) that build a reconciler with the field
+// populated keep working without churn.
+func (r *ConfigReconciler) GetTransport() transport.Interface {
+	if p := r.transportSlot.Load(); p != nil {
+		return *p
+	}
+	return r.Transport
+}
+
 // subscribeFiredSince reports whether a Subscribe notification has
 // arrived since the CR's last device-check. Reconcile uses this to
 // decide between triggerEvent and triggerSubscribe. A nil
@@ -264,7 +299,7 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, 
 		lookup = writers.Get
 	}
 	eng := &engine.Engine{
-		Transport:   r.Transport,
+		Transport:   r.GetTransport(),
 		Lookup:      lookup,
 		FamilyOrder: r.FamilyOrder,
 	}
@@ -413,11 +448,11 @@ func (r *ConfigReconciler) reconcileOne(
 		return engine.Result{Phase: cr.Status.Phase}, nil
 	}
 
-	// If the transport is not yet wired (scaffold / stub path), record
-	// Pending and return — the engine cannot run without it, and we
-	// prefer a clear "waiting for transport" state over a spurious
-	// Failed.
-	if r.Transport == nil {
+	// If the transport is not yet wired (scaffold / stub path or the
+	// deferred-dial loop has not yet succeeded), record Pending and
+	// return — the engine cannot run without it, and we prefer a
+	// clear "waiting for transport" state over a spurious Failed.
+	if r.GetTransport() == nil {
 		return engine.Result{Phase: engine.PhasePending}, r.recordPending(ctx, cr)
 	}
 

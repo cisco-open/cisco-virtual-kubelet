@@ -213,7 +213,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		lookup = writers.Get
 	}
 	eng := &engine.Engine{
-		Transport:   r.Transport,
+		Transport:   r.GetTransport(),
 		Lookup:      lookup,
 		FamilyOrder: r.FamilyOrder,
 	}

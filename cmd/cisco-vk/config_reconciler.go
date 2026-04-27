@@ -162,39 +162,24 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	// the partial context with Transport=nil and a wrapped error.
 	// We log it and proceed in scaffold mode.
 	//
-	// Bounded retry on first dial: if the device's NETCONF / gNMI
-	// service is still warming up at pod startup (e.g. just after a
-	// `netconf-yang feature candidate-datastore` reload, or a fresh
-	// device boot), the first dial loses the race. Pre-fix, the
-	// reconciler stayed in scaffold mode for the lifetime of the pod
-	// — caught by a 2026-04-27 live-device retest. Five attempts on
-	// a 6-second interval cover the typical 30-second NETCONF
-	// service start without making operator pod-rolls slower than
-	// they need to be.
-	const dialAttempts = 5
-	const dialBackoff = 6 * time.Second
-	var dctx *drivers.ConfigDriverContext
-	var dErr error
-	for attempt := 1; attempt <= dialAttempts; attempt++ {
-		dctx, dErr = drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, drivers.ConfigDriverOptions{
-			SessionLock: opts.SessionLock,
-		})
-		if dErr == nil && dctx != nil && dctx.Transport != nil {
-			break
-		}
-		if attempt < dialAttempts {
-			log.G(ctx).WithError(dErr).
-				WithField("attempt", attempt).
-				Warn("config driver dial failed; will retry")
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(dialBackoff):
-			}
-		}
-	}
+	// One synchronous dial attempt at startup, then a deferred async
+	// retry loop. The 2026-04-27 NETCONF-probe experiment (recorded in
+	// docs/rfcs/final/evidence/2026-04-27-live-c9300-netconf-probe-tier1)
+	// proved the from-pod NETCONF dial races against the apphosting +
+	// virtual-kubelet startup window: the very first ssh.Dial fires
+	// while the runtime is still initialising HTTP/2 keep-alives, and
+	// the device sends `read-empty: EOF`. The same code path
+	// SUCCEEDS once the startup window settles (~60 s into pod
+	// life). A bounded synchronous retry would either block pod
+	// readiness for too long or give up before the window closes.
+	// Spawn an async loop instead and proceed with whatever the
+	// reconciler has now; SetTransport patches it in when the dial
+	// eventually succeeds.
+	dctx, dErr := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, drivers.ConfigDriverOptions{
+		SessionLock: opts.SessionLock,
+	})
 	if dErr != nil {
-		log.G(ctx).WithError(dErr).Warn("config driver context error; reconciler will run in scaffold mode")
+		log.G(ctx).WithError(dErr).Warn("config driver dial failed at startup; will retry in background")
 	}
 	if dctx == nil {
 		// Defensive: NewConfigDriver should always return a context
@@ -312,5 +297,48 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 			log.G(ctx).WithError(runErr).Warn("config-reconciler manager exited with error")
 		}
 	}()
+
+	// Deferred-dial loop: when the startup-time NewConfigDriver lost
+	// the apphosting+VK race (Transport==nil), keep retrying until
+	// the dial succeeds, then SetTransport on the live reconciler so
+	// subsequent reconciles see a real transport instead of staying
+	// in scaffold mode forever. 30-second cadence with no upper
+	// bound — operators get a clear "config driver came online after
+	// N attempts" log when the race resolves. Cancelled by ctx.
+	if dctx.Transport == nil {
+		go retryConfigDriverDial(ctx, opts, r)
+	}
+
 	return nil
+}
+
+// retryConfigDriverDial attempts to build a real ConfigDriverContext
+// every 30 seconds until success or ctx cancellation. On success it
+// patches r.SetTransport so the reconciler picks up the live
+// transport on its next tick. Diagnostic logs are at INFO so an
+// operator following pod logs can correlate the "now reachable"
+// transition with whatever device-side or runtime-side event
+// finally cleared the dial race.
+func retryConfigDriverDial(ctx context.Context, opts configReconcilerOptions, r *provider.ConfigReconciler) {
+	const interval = 30 * time.Second
+	tick := time.NewTicker(interval)
+	defer tick.Stop()
+	for attempt := 1; ; attempt++ {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+		dctx, err := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, drivers.ConfigDriverOptions{
+			SessionLock: opts.SessionLock,
+		})
+		if err == nil && dctx != nil && dctx.Transport != nil {
+			r.SetTransport(dctx.Transport)
+			log.G(ctx).Infof("config driver transport acquired after %d retry attempt(s)", attempt)
+			return
+		}
+		log.G(ctx).WithError(err).
+			WithField("attempt", attempt).
+			Info("config driver dial still failing; will retry")
+	}
 }
