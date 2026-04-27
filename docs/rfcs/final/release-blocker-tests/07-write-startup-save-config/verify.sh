@@ -25,14 +25,11 @@ baseline_assert_no_unexpected_drift
 # (no metric) the only signal that save-config ran was a
 # Kubernetes event, which is best-effort and could be lost on
 # rapid reconciles.
-baseline_assert_metric_counter \
+baseline_assert_metric_counter_any \
   cisco_vk_config_save_startup_total \
+  1 \
   'device="'"${DEVICE_NAME}"'",transport="netconf",outcome="ok"' \
-  1 || \
-  baseline_assert_metric_counter \
-    cisco_vk_config_save_startup_total \
-    'device="'"${DEVICE_NAME}"'",transport="restconf",outcome="ok"' \
-    1
+  'device="'"${DEVICE_NAME}"'",transport="restconf",outcome="ok"'
 
 # No save-startup failures should be visible in the metric scrape
 # for this device.
@@ -67,7 +64,7 @@ USER="$(kubectl get ciscodevice "${DEVICE_NAME}" -n "${NAMESPACE}" \
 actual_desc="$(curl --silent --insecure --user "${USER}:${CVK_CONFIG_LINT_PASSWORD}" \
   --header 'Accept: application/yang-data+json' \
   "https://${ADDR}/restconf/data/Cisco-IOS-XE-native:native/interface/Loopback=9997" \
-  | jq -r '.["Cisco-IOS-XE-native:Loopback"].description // ""')"
+  | jq -r '.["Cisco-IOS-XE-native:Loopback"] | (if type=="array" then .[0] else . end) | .description // ""')"
 if [[ "${actual_desc}" != "${EXPECTED_DESC}" ]]; then
   baseline_fail "running-config Loopback9997 description=${actual_desc}, want ${EXPECTED_DESC}"
 else
