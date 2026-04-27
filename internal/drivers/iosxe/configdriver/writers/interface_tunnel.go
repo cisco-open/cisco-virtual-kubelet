@@ -31,5 +31,7 @@ func init() {
 			"shutdown",
 			"tunnel",
 		},
+		yangBodyShape:  interfaceIPv4VRFToYANG,
+		yangFetchShape: interfaceIPv4VRFFromYANG,
 	})
 }

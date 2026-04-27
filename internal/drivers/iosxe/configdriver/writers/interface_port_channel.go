@@ -32,5 +32,7 @@ func init() {
 			"mtu",
 			"switchport",
 		},
+		yangBodyShape:  interfaceIPv4VRFToYANG,
+		yangFetchShape: interfaceIPv4VRFFromYANG,
 	})
 }

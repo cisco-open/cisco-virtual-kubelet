@@ -45,5 +45,7 @@ func init() {
 			"vrf",
 			"shutdown",
 		},
+		yangBodyShape:  interfaceIPv4VRFToYANG,
+		yangFetchShape: interfaceIPv4VRFFromYANG,
 	})
 }

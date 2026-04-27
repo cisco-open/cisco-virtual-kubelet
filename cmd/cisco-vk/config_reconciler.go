@@ -144,9 +144,38 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	// build failure is non-fatal: the per-driver factory returns
 	// the partial context with Transport=nil and a wrapped error.
 	// We log it and proceed in scaffold mode.
-	dctx, dErr := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, drivers.ConfigDriverOptions{
-		SessionLock: opts.SessionLock,
-	})
+	//
+	// Bounded retry on first dial: if the device's NETCONF / gNMI
+	// service is still warming up at pod startup (e.g. just after a
+	// `netconf-yang feature candidate-datastore` reload, or a fresh
+	// device boot), the first dial loses the race. Pre-fix, the
+	// reconciler stayed in scaffold mode for the lifetime of the pod
+	// — caught by a 2026-04-27 live-device retest. Five attempts on
+	// a 6-second interval cover the typical 30-second NETCONF
+	// service start without making operator pod-rolls slower than
+	// they need to be.
+	const dialAttempts = 5
+	const dialBackoff = 6 * time.Second
+	var dctx *drivers.ConfigDriverContext
+	var dErr error
+	for attempt := 1; attempt <= dialAttempts; attempt++ {
+		dctx, dErr = drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, drivers.ConfigDriverOptions{
+			SessionLock: opts.SessionLock,
+		})
+		if dErr == nil && dctx != nil && dctx.Transport != nil {
+			break
+		}
+		if attempt < dialAttempts {
+			log.G(ctx).WithError(dErr).
+				WithField("attempt", attempt).
+				Warn("config driver dial failed; will retry")
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(dialBackoff):
+			}
+		}
+	}
 	if dErr != nil {
 		log.G(ctx).WithError(dErr).Warn("config driver context error; reconciler will run in scaffold mode")
 	}

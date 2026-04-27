@@ -44,5 +44,7 @@ func init() {
 			"mtu",
 			"ip",
 		},
+		yangBodyShape:  interfaceIPv4VRFToYANG,
+		yangFetchShape: interfaceIPv4VRFFromYANG,
 	})
 }

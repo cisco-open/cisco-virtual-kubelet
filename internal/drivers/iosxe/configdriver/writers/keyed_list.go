@@ -45,6 +45,17 @@ type keyedListWriter struct {
 	keyField      string // element leaf used as identity
 	managedLeaves []string
 	extraDesired  func(entry map[string]any) error // optional per-entry validation
+
+	// yangBodyShape, if non-nil, transforms a flat managed-leaf entry
+	// into the nested Cisco-IOS-XE-native YANG body shape the device
+	// expects (e.g. ipv4_address → ip.address.primary.address).
+	// Identity transform is the default and matches the families
+	// whose YANG model keeps every managed leaf flat.
+	yangBodyShape func(flat map[string]any) map[string]any
+	// yangFetchShape, if non-nil, lifts the device's nested YANG
+	// response back to the flat managed-leaf shape so leavesEqual
+	// can compare desired vs observed without per-family branching.
+	yangFetchShape func(yang map[string]any) map[string]any
 }
 
 func (w keyedListWriter) Family() string      { return w.family }
@@ -65,6 +76,11 @@ func (w keyedListWriter) Fetch(ctx context.Context, c transport.Interface) (any,
 	var list []map[string]any
 	if err := json.Unmarshal(body, &list); err != nil {
 		return nil, fmt.Errorf("%s: decode list: %w", w.family, err)
+	}
+	if w.yangFetchShape != nil {
+		for i := range list {
+			list[i] = w.yangFetchShape(list[i])
+		}
 	}
 	return list, nil
 }
@@ -120,6 +136,9 @@ func (w keyedListWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		proj := projectManagedLeaves(entry, w.managedLeaves)
 		if kv, ok := entry[w.keyField]; ok {
 			proj[w.keyField] = kv
+		}
+		if w.yangBodyShape != nil {
+			proj = w.yangBodyShape(proj)
 		}
 		body, err := wrapYANGPayload(w.envelopeKey, []any{proj})
 		if err != nil {

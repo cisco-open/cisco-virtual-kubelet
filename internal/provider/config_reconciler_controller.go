@@ -48,6 +48,55 @@ import (
 // them by instrumentation library.
 const reconcileTracerName = "cisco-virtual-kubelet/config-reconciler"
 
+// iosxeConfigFinalizer makes the reconciler responsible for releasing
+// any family leases this CR holds before Kubernetes deletes the
+// object. Without it, the lease coordination object lingers on its
+// own TTL after the CR is gone — the next CR claiming the same family
+// observes LeaseBlocked even though the original holder no longer
+// exists in the cluster. Caught against a live Cat9300 retest where
+// successive tests serialised on stale leases.
+const iosxeConfigFinalizer = "config.cisco.vk/lease-cleanup"
+
+func containsFinalizer(fs []string, target string) bool {
+	for _, f := range fs {
+		if f == target {
+			return true
+		}
+	}
+	return false
+}
+
+func removeFinalizer(fs []string, target string) []string {
+	out := fs[:0]
+	for _, f := range fs {
+		if f != target {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// releaseLeasesForCR releases every family lease this CR could be
+// holding. A non-owner Release is a no-op on the leaser side, so we
+// can iterate over spec.managedFamilies without first checking lease
+// state — the leaser deletes only leases whose holderIdentity matches
+// this reconciler's identity for the CR.
+func (r *ConfigReconciler) releaseLeasesForCR(ctx context.Context, cr *configv1alpha1.IOSXEConfig) error {
+	if r.Leaser == nil {
+		return nil
+	}
+	identity := cr.Namespace + "/" + cr.Name
+	if r.RuntimeID != "" {
+		identity = identity + "#" + r.RuntimeID
+	}
+	for _, fam := range cr.Spec.ManagedFamilies {
+		if err := r.Leaser.Release(ctx, r.DeviceName, fam, identity); err != nil {
+			return fmt.Errorf("release lease for %s: %w", fam, err)
+		}
+	}
+	return nil
+}
+
 // Reconcile implements reconcile.Reconciler. It is the hot-path entry
 // for the controller-runtime-driven path (see SetupWithManager); the
 // legacy polling entry in Run() uses the same inner reconcileOne so
@@ -104,6 +153,45 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	if cr.Spec.DeviceRef.Name != r.DeviceName {
 		span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "wrong-device"))
 		return reconcile.Result{}, nil
+	}
+
+	// Finalizer + deletion path. On delete, release every family
+	// lease this CR could be holding so the next CR claiming the
+	// same family does not have to wait for lease TTL. On non-delete
+	// reconciles, ensure the finalizer is in place so the deletion
+	// handler will run.
+	if !cr.GetDeletionTimestamp().IsZero() {
+		if containsFinalizer(cr.Finalizers, iosxeConfigFinalizer) {
+			if err := r.releaseLeasesForCR(ctx, &cr); err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "release leases")
+				return reconcile.Result{}, fmt.Errorf("release leases: %w", err)
+			}
+			cr.Finalizers = removeFinalizer(cr.Finalizers, iosxeConfigFinalizer)
+			if err := r.Client.Update(ctx, &cr); err != nil {
+				if apierrors.IsConflict(err) || apierrors.IsNotFound(err) {
+					return reconcile.Result{}, nil
+				}
+				return reconcile.Result{}, fmt.Errorf("remove finalizer: %w", err)
+			}
+		}
+		span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "deleted"))
+		return reconcile.Result{}, nil
+	}
+	// Add the finalizer eagerly when missing so a delete that races
+	// the first reconcile still hits our cleanup path. Update is
+	// best-effort; if the API conflicts we let the next tick re-add
+	// it. Continuing into the reconcile keeps the existing per-tick
+	// contract — the same tick still produces the status update the
+	// caller observes — and matches the unit-test fixtures that run
+	// Reconcile once per scenario.
+	if r.Leaser != nil && !containsFinalizer(cr.Finalizers, iosxeConfigFinalizer) {
+		updated := cr.DeepCopy()
+		updated.Finalizers = append(updated.Finalizers, iosxeConfigFinalizer)
+		if err := r.Client.Update(ctx, updated); err == nil {
+			cr.Finalizers = updated.Finalizers
+			cr.ResourceVersion = updated.ResourceVersion
+		}
 	}
 
 	// Build the same resolver + engine the polling path uses so
