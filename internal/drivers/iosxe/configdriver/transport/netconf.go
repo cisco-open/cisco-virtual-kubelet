@@ -630,7 +630,28 @@ func pathToSubtreeFilterWithBody(path string, body []byte, ncOp string) (string,
 
 		// Inject the body on the last part.
 		if i == len(parts)-1 && len(body) > 0 {
-			inner, err := jsonToNaiveXML(body)
+			// Unwrap one level of envelope when the body's outer
+			// key matches the last path segment's local name. The
+			// writers package follows a RESTCONF-shaped payload
+			// convention where the envelope-key (e.g.
+			// "Cisco-IOS-XE-native:banner") names the resource
+			// being PUT/PATCHed. RESTCONF semantics make this
+			// shape correct because the URL path identifies the
+			// resource and the body is the resource itself. NETCONF
+			// edit-config wants the path AND the body to nest, so
+			// keeping both produces a duplicate `<banner><banner>...`
+			// that the device rejects with `unknown-element`.
+			// Stripping one envelope level when the names match
+			// preserves the existing writer contract while making
+			// the NETCONF wire shape correct. Caught against a
+			// live Cat9300 / IOS-XE 17.18.2 retest of test 06
+			// (banner family, candidate-only mode).
+			lastLocal, _ := splitQualifiedName(parts[len(parts)-1])
+			payload := body
+			if unwrapped, ok := unwrapJSONEnvelope(body, lastLocal); ok {
+				payload = unwrapped
+			}
+			inner, err := jsonToNaiveXML(payload)
 			if err != nil {
 				return "", fmt.Errorf("body → xml: %w", err)
 			}
@@ -642,6 +663,37 @@ func pathToSubtreeFilterWithBody(path string, body []byte, ncOp string) (string,
 		fmt.Fprintf(&b, "</%s>", elem)
 	}
 	return b.String(), nil
+}
+
+// unwrapJSONEnvelope checks whether body is a single-key JSON
+// object whose key (with module prefix stripped) equals
+// `lastLocalElem`, and if so returns the JSON-encoded inner value.
+// Used by pathToSubtreeFilterWithBody to avoid double-wrapping
+// the last path segment when the writer's body already names it.
+//
+// Example: body = `{"Cisco-IOS-XE-native:banner":{"motd":{...}}}`
+// with lastLocalElem="banner" → returns `{"motd":{...}}`, ok=true.
+//
+// Returns ok=false if the body isn't an object, has multiple keys,
+// or the key doesn't match — caller falls back to the body as-is.
+func unwrapJSONEnvelope(body []byte, lastLocalElem string) ([]byte, bool) {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return nil, false
+	}
+	if len(raw) != 1 {
+		return nil, false
+	}
+	for k, v := range raw {
+		local := k
+		if idx := strings.Index(k, ":"); idx >= 0 {
+			local = k[idx+1:]
+		}
+		if local == lastLocalElem {
+			return v, true
+		}
+	}
+	return nil, false
 }
 
 // jsonToNaiveXML is a minimal JSON → XML converter for NETCONF

@@ -699,3 +699,53 @@ func TestNETCONFCommitConfirmedRejectedWhenServerLacksCapability(t *testing.T) {
 		t.Fatal("CommitConfirmed: expected error when server lacks the capability")
 	}
 }
+
+// TestPathToSubtreeFilterWithBodyUnwrapsEnvelope is a regression test
+// for the live-device finding (#6(a) follow-on): writers emit a
+// RESTCONF-shaped payload with the resource name as the outer JSON
+// key (e.g. `{"Cisco-IOS-XE-native:banner": {"motd": {...}}}`).
+// pathToSubtreeFilterWithBody then nests this body inside the last
+// path segment — for path `/Cisco-IOS-XE-native:native/banner` the
+// generated XML used to read `<native><banner><banner><motd>...`,
+// which IOS-XE rejected with `unknown-element` because of the
+// duplicate `banner` element. The unwrap shim strips the envelope
+// when its name matches the last path segment.
+func TestPathToSubtreeFilterWithBodyUnwrapsEnvelope(t *testing.T) {
+	body := []byte(`{"Cisco-IOS-XE-native:banner":{"motd":{"banner":"hello"}}}`)
+	xmlOut, err := pathToSubtreeFilterWithBody(
+		"/Cisco-IOS-XE-native:native/banner", body, "merge")
+	if err != nil {
+		t.Fatalf("pathToSubtreeFilterWithBody: %v", err)
+	}
+	// The duplicate-banner shape pre-fix produced
+	// `<native...><banner ...><banner><motd>...`. Post-fix the inner
+	// `<banner>` envelope is gone and the body sits directly under
+	// the path-built `<banner>` element.
+	if strings.Contains(xmlOut, "<banner><banner>") {
+		t.Fatalf("output still has duplicate <banner><banner>: %s", xmlOut)
+	}
+	if !strings.Contains(xmlOut, "<motd>") {
+		t.Fatalf("output missing <motd> child: %s", xmlOut)
+	}
+}
+
+// TestPathToSubtreeFilterWithBodyKeepsNonMatchingEnvelope verifies
+// the unwrap is targeted: when the body's outer key does NOT match
+// the last path segment, the body is passed through verbatim. This
+// is the keyed-list shape — path `/native/vlan/vlan-list=10` with
+// body `{"vlan-list":[{...}]}` keeps the explicit list element so
+// the device sees `<vlan-list>...</vlan-list>` (singular) inside
+// the list path. (This shape is built by writers that don't go
+// through the singleton-envelope path; the test pins the behavior.)
+func TestPathToSubtreeFilterWithBodyKeepsNonMatchingEnvelope(t *testing.T) {
+	body := []byte(`{"some-other-key":{"x":1}}`)
+	xmlOut, err := pathToSubtreeFilterWithBody(
+		"/Cisco-IOS-XE-native:native/banner", body, "merge")
+	if err != nil {
+		t.Fatalf("pathToSubtreeFilterWithBody: %v", err)
+	}
+	// The non-matching envelope key stays in the output.
+	if !strings.Contains(xmlOut, "<some-other-key>") {
+		t.Fatalf("non-matching envelope was unexpectedly stripped: %s", xmlOut)
+	}
+}
