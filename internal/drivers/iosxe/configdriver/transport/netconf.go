@@ -693,6 +693,25 @@ func dialSSHNetconf(cfg NETCONFConfig) (io.ReadWriteCloser, error) {
 	_ = tls.Config{} // keep crypto/tls imported for the future SSH-over-TLS bridge
 
 	addr := fmt.Sprintf("%s:%d", cfg.Address, port)
+	// Pre-flight: open and close a raw TCP connection to the NETCONF
+	// port. The 2026-04-27 in-pod probe vs configdriver experiment
+	// recorded the standalone probe goroutine succeeding on every
+	// tick where the configdriver-style dial failed — the only
+	// behavioral difference at the wire was that the probe did a
+	// raw-read-then-close on a separate socket BEFORE the ssh.Dial.
+	// Without it, the cisco-vk pod's ssh.Dial reproducibly hits
+	// `read-empty: EOF` (device closes the SSH socket before any
+	// banner). With it, the pre-flight read succeeds AND the
+	// subsequent ssh.Dial reads the banner cleanly. We intentionally
+	// discard the pre-flight bytes — only its TCP timing side-effect
+	// matters — and tolerate any error so the dial still has its
+	// shot when the pre-flight legitimately fails (network down).
+	if c, perr := net.DialTimeout("tcp", addr, 5*time.Second); perr == nil {
+		_ = c.SetReadDeadline(time.Now().Add(3 * time.Second))
+		var pbuf [64]byte
+		_, _ = c.Read(pbuf[:])
+		_ = c.Close()
+	}
 	client, err := ssh.Dial("tcp", addr, conf)
 	if err != nil {
 		// Diagnostic for the from-pod overflow case found on the
