@@ -598,14 +598,33 @@ func (r *ConfigReconciler) recordResult(
 		}
 	}
 
+	// Sticky-OpCount semantics: the engine reports `OpCount` per
+	// reconcile tick, which is the number of writer ops the
+	// most-recent Diff produced. After the CR has converged to
+	// InSync, subsequent verify-loop ticks naturally produce zero
+	// ops — returning `OpCount: 0` would erase the operator-visible
+	// signal that work just landed on the device. Preserve the prior
+	// tick's OpCount on a converged InSync transition; only reset on
+	// a non-InSync state (work still pending) or when the engine
+	// reports a fresh non-zero count (work just applied).
+	priorOpCount := map[string]int32{}
+	for _, prior := range cr.Status.FamilyStatus {
+		priorOpCount[prior.Name] = prior.OpCount
+	}
 	updated.Status.FamilyStatus = updated.Status.FamilyStatus[:0]
 	for _, fs := range result.FamilyStatuses {
+		op := int32(fs.OpCount)
+		if op == 0 && fs.State == "InSync" {
+			if prior, ok := priorOpCount[fs.Name]; ok && prior > 0 {
+				op = prior
+			}
+		}
 		updated.Status.FamilyStatus = append(updated.Status.FamilyStatus,
 			configv1alpha1.FamilyStatus{
 				Name:    fs.Name,
 				State:   fs.State,
 				Entries: fs.Entries,
-				OpCount: int32(fs.OpCount),
+				OpCount: op,
 				Message: fs.Message,
 			})
 	}

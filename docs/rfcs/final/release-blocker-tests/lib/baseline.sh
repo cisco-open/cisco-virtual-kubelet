@@ -234,6 +234,46 @@ baseline_assert_metric_counter() {
   fi
 }
 
+# baseline_assert_metric_counter_any — counts the SUM of multiple
+# label combinations and asserts the sum is at least min. Used when
+# a test cares that an op happened but the writer's choice of verb
+# (MERGE vs REPLACE) depends on whether the resource pre-existed.
+# Caller passes the metric name, the minimum, and any number of
+# label-set arguments — each label set is matched independently.
+baseline_assert_metric_counter_any() {
+  local metric="${1:?usage: baseline_assert_metric_counter_any <name> <min> <labels>...}"
+  local min="${2:?usage: baseline_assert_metric_counter_any <name> <min> <labels>...}"
+  shift 2
+  local pod
+  pod="$(kubectl get pod -n "${baseline_namespace}" -l "app.kubernetes.io/instance=${DEVICE_NAME:-cat9k-smoke}" \
+    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)"
+  if [[ -z "${pod}" ]]; then
+    baseline_fail "could not locate cisco-vk pod for metric scrape"
+    return
+  fi
+  local raw
+  raw="$(_baseline_port_forward_scrape "${baseline_namespace}" "${pod}" 8080)"
+  if [[ -z "${raw}" ]]; then
+    baseline_fail "could not scrape /metrics from pod ${pod}"
+    return
+  fi
+  local total=0 line value labels
+  for labels in "$@"; do
+    line="$(echo "${raw}" | grep -F "${metric}{${labels}}" | head -1 || true)"
+    if [[ -z "${line}" ]]; then
+      continue
+    fi
+    value="$(echo "${line}" | awk '{print $NF}')"
+    value="${value%.*}"
+    total=$((total + value))
+  done
+  if (( total >= min )); then
+    baseline_ok "metric ${metric} sum=${total} (>= ${min}, across $# label sets)"
+  else
+    baseline_fail "metric ${metric} sum=${total}, want >= ${min} (checked $# label sets)"
+  fi
+}
+
 # baseline_assert_metric_counter_zero — strict-zero variant. Used by
 # the negative-control checks in test 02 (no transaction must have
 # fired) and similar. Fails if the metric line exists with a non-zero

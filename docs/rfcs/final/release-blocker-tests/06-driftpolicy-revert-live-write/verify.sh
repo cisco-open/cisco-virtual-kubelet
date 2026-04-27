@@ -48,16 +48,16 @@ hostname="$(curl --silent --insecure --user "${USER}:${CVK_CONFIG_LINT_PASSWORD}
 echo "INFO: hostname=${hostname} (compare to pre-state.txt manually)"
 
 # Engine emitted at least one mutate op for the banner family. We
-# allow either REPLACE or MERGE since the engine's choice depends
-# on whether banner motd is empty or pre-existing on the device.
-baseline_assert_metric_counter \
+# accept either REPLACE or MERGE — the writer's choice depends on
+# whether the banner motd was already present (MERGE on update) or
+# absent (REPLACE on create). The previous `||` chain did not
+# actually fall through because the helper returned 0 either way;
+# `_any` sums the matching label sets and asserts the sum.
+baseline_assert_metric_counter_any \
   cisco_vk_config_mutate_ops_total \
+  1 \
   'device="'"${DEVICE_NAME}"'",transport="restconf",verb="REPLACE"' \
-  1 || \
-  baseline_assert_metric_counter \
-    cisco_vk_config_mutate_ops_total \
-    'device="'"${DEVICE_NAME}"'",transport="restconf",verb="MERGE"' \
-    1
+  'device="'"${DEVICE_NAME}"'",transport="restconf",verb="MERGE"'
 
 baseline_summary
 exit "${baseline_failures}"
