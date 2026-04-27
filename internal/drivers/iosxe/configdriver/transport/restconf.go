@@ -248,10 +248,60 @@ func (r *restconfTransport) Discard(context.Context, TxHandle) error {
 // SaveStartup calls the Cisco-specific save-config RPC. The endpoint
 // returns 204 on success and an error status with a yang-data+json
 // body otherwise.
+//
+// RESTCONF roots are split: data resources live under
+// /restconf/data/... and RPC operations under /restconf/operations/...
+// — see RFC 8040 §3.3.2. Pre-fix, the request was issued against
+// `BaseURL + /operations/cisco-ia:save-config`, where BaseURL is
+// configured to `…/restconf/data` for the data-resource path. That
+// composes to `…/restconf/data/operations/cisco-ia:save-config`,
+// which the device rejects with `404 / uri keypath not found` even
+// though it advertises the operation in `/restconf/operations`.
+//
+// Caught against a live Cat9300-24P / IOS-XE 17.18.2: every test 07
+// reconcile recorded `save_startup_total{outcome="failed"}++` and
+// emitted a `SaveStartupFailed` Warning event despite the
+// running-config apply landing cleanly.
+//
+// Strip the trailing `/data` from the configured root and append
+// `/operations/...`. Operators who supply a non-/data BaseURL keep
+// the historical behavior — only the conventional `…/restconf/data`
+// shape is special-cased.
 func (r *restconfTransport) SaveStartup(ctx context.Context) error {
 	const savePath = "/operations/cisco-ia:save-config"
-	_, err := r.do(ctx, http.MethodPost, savePath, []byte(`{}`))
-	return err
+	// HACK with a clear lifecycle: the do() helper composes
+	// `r.cfg.BaseURL + path`. We need `r.cfg.BaseURL` minus the
+	// trailing `/data` segment, plus `/operations/...`. Building a
+	// dedicated request avoids the path-vs-base coupling.
+	url := r.cfg.BaseURL
+	if strings.HasSuffix(url, "/data") {
+		url = strings.TrimSuffix(url, "/data") + savePath
+	} else {
+		url = url + savePath
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader([]byte(`{}`)))
+	if err != nil {
+		return fmt.Errorf("build save-config request: %w", err)
+	}
+	req.Header.Set("Accept", "application/yang-data+json")
+	req.Header.Set("Content-Type", "application/yang-data+json")
+	if r.cfg.Username != "" || r.cfg.Password != "" {
+		req.SetBasicAuth(r.cfg.Username, r.cfg.Password)
+	}
+	if r.cfg.SessionLock != nil {
+		r.cfg.SessionLock.Lock()
+		defer r.cfg.SessionLock.Unlock()
+	}
+	resp, err := r.cfg.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("RESTCONF POST %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("RESTCONF POST %s: %s: %s", url, resp.Status, snippet(body, 512))
+	}
+	return nil
 }
 
 func (r *restconfTransport) Close() error {

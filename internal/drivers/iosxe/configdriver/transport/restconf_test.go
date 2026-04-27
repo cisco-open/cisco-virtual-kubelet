@@ -196,6 +196,31 @@ func TestSaveStartupCallsRPCEndpoint(t *testing.T) {
 	}
 }
 
+// TestSaveStartupStripsDataSegmentFromBaseURL is a regression test
+// for the live-device finding against IOS-XE 17.18.2: pre-fix the
+// helper composed `BaseURL + /operations/...`, but BaseURL ends in
+// `/restconf/data` for data-resource paths so the result became
+// `/restconf/data/operations/cisco-ia:save-config`, which the
+// device rejects with `404 / uri keypath not found`. RFC 8040 §3.3.2
+// puts data and operations on parallel roots; SaveStartup must hit
+// `/restconf/operations/...` not `/restconf/data/operations/...`.
+func TestSaveStartupStripsDataSegmentFromBaseURL(t *testing.T) {
+	var gotPath string
+	cli, _ := newTestRESTCONF(t, func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.WriteHeader(http.StatusNoContent)
+	})
+	if err := cli.SaveStartup(context.Background()); err != nil {
+		t.Fatalf("SaveStartup: %v", err)
+	}
+	// The httptest server's URL.Path strips the host but not the
+	// rest of the URL. Reject any composed path that retains
+	// `/data/operations/` — that is the historical bug shape.
+	if strings.Contains(gotPath, "/data/operations/") {
+		t.Errorf("SaveStartup hit %q which still has the /data/operations/ shape; expected /operations/...", gotPath)
+	}
+}
+
 func TestSessionLockSerialisesRequests(t *testing.T) {
 	var (
 		inFlight int32
