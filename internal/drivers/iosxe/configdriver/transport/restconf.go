@@ -112,7 +112,22 @@ func (r *restconfTransport) mutate(ctx context.Context, op Op) error {
 		_, err := r.do(ctx, http.MethodPut, op.Path, op.Body)
 		return err
 	case VerbMerge:
+		// RFC 8040 §4.6.1: PATCH "modify existing resource" returns
+		// 404 when the target does not yet exist. The engine's MERGE
+		// verb has create-if-absent semantics — a writer asking to
+		// MERGE a Loopback the device hasn't seen yet is a CREATE,
+		// not a partial-update. PATCH-then-PUT-on-404 covers both:
+		// • existing resource: PATCH applies a partial-merge (preserves
+		//   leaves the writer doesn't manage; what the family writers
+		//   already rely on);
+		// • absent resource: PUT creates idempotently with the body
+		//   the writer produced.
+		// Caught against a live Cat9300-24P (IOS-XE 17.18.2) running
+		// test 07's Loopback-9997 create.
 		_, err := r.do(ctx, http.MethodPatch, op.Path, op.Body)
+		if err != nil && isRESTCONFNotFound(err) {
+			_, err = r.do(ctx, http.MethodPut, op.Path, op.Body)
+		}
 		return err
 	case VerbDelete:
 		_, err := r.do(ctx, http.MethodDelete, op.Path, nil)
@@ -122,6 +137,14 @@ func (r *restconfTransport) mutate(ctx context.Context, op Op) error {
 	default:
 		return fmt.Errorf("unknown verb %q", op.Verb)
 	}
+}
+
+// isRESTCONFNotFound reports whether err is the 404 surfaced by
+// `do` for a PATCH against a path with no existing resource. The
+// status string from net/http is "404 Not Found"; matching against
+// the wrapped error's text keeps us out of the response-body schema.
+func isRESTCONFNotFound(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "404 Not Found")
 }
 
 // pushCLI invokes the Cisco-IA cli-config-data RPC over RESTCONF.

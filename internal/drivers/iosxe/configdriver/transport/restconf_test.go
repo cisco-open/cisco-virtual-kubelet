@@ -88,6 +88,53 @@ func TestMutateVerbsDispatch(t *testing.T) {
 	}
 }
 
+// TestMutateMergePatchFallsBackToPutOn404 is a regression test for
+// the live-device finding against a Cat9300-24P (IOS-XE 17.18.2):
+// VerbMerge against a target the device has not yet provisioned
+// returns 404 from PATCH; the engine's MERGE has create-if-absent
+// semantics, so the transport must retry as PUT (idempotent create).
+func TestMutateMergePatchFallsBackToPutOn404(t *testing.T) {
+	var gotMethods []string
+	var patchSeen bool
+	cli, _ := newTestRESTCONF(t, func(w http.ResponseWriter, r *http.Request) {
+		gotMethods = append(gotMethods, r.Method)
+		if r.Method == http.MethodPatch && !patchSeen {
+			patchSeen = true
+			http.Error(w, `{"ietf-restconf:errors":"missing"}`, http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	ops := []Op{{Verb: VerbMerge, Path: "/Cisco-IOS-XE-native:native/interface/Loopback=9999", Body: []byte(`{"Loopback":[{"name":9999}]}`)}}
+	if err := cli.Mutate(context.Background(), "", ops); err != nil {
+		t.Fatalf("Mutate: %v", err)
+	}
+	want := []string{"PATCH", "PUT"}
+	if !stringSliceEqual(gotMethods, want) {
+		t.Fatalf("methods=%v want %v", gotMethods, want)
+	}
+}
+
+// TestMutateMergePatchSurfacesNon404Errors keeps the regression
+// scoped — only 404 from PATCH triggers the PUT fallback. A 4xx that
+// names a real semantic problem (validation error, locked datastore,
+// etc.) must still surface as the engine error so callers see it.
+func TestMutateMergePatchSurfacesNon404Errors(t *testing.T) {
+	var gotMethods []string
+	cli, _ := newTestRESTCONF(t, func(w http.ResponseWriter, r *http.Request) {
+		gotMethods = append(gotMethods, r.Method)
+		http.Error(w, `{"errors":"validation"}`, http.StatusBadRequest)
+	})
+	ops := []Op{{Verb: VerbMerge, Path: "/x", Body: []byte(`{}`)}}
+	err := cli.Mutate(context.Background(), "", ops)
+	if err == nil {
+		t.Fatalf("expected 400 to surface, got nil")
+	}
+	if len(gotMethods) != 1 || gotMethods[0] != "PATCH" {
+		t.Fatalf("methods=%v want exactly [PATCH]", gotMethods)
+	}
+}
+
 func TestMutateShortCircuitsOnError(t *testing.T) {
 	var requests int32
 	cli, _ := newTestRESTCONF(t, func(w http.ResponseWriter, r *http.Request) {
