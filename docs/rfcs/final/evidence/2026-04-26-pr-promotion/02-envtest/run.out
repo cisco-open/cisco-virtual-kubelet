@@ -1,9 +1,0 @@
-=== RUN   TestEnvtest_StatusPhaseLeaseBlockedAccepted
---- PASS: TestEnvtest_StatusPhaseLeaseBlockedAccepted (5.56s)
-=== RUN   TestEnvtest_StatusPhaseEnumRejectsBogusValue
---- PASS: TestEnvtest_StatusPhaseEnumRejectsBogusValue (5.28s)
-=== RUN   TestEnvtest_LeaseCreationForUnderscoreFamily
---- PASS: TestEnvtest_LeaseCreationForUnderscoreFamily (3.24s)
-PASS
-ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider	14.491s
-exit=0

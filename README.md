@@ -256,11 +256,12 @@ as a drop-in `ConfigMap.data[key]` value.
    picks it up, runs the engine, writes status back.
 
 **Design review:**
-`docs/rfcs/iosxe-config-driver-review.md` is the architectural
-writeup — comparison with netascode, scope model, 54-family
-coverage, drift policies, limitations, and the phased roadmap.
-`docs/rfcs/config-driver-review-feedback.md` tracks the reviewer's
-feedback and status of each action item.
+`docs/rfcs/final/README.md` is the consolidated implementation
+overview — phases, tests, runtime defaults, and the follow-up
+roadmap. `docs/rfcs/iosxe-config-driver-review.md` is the
+architectural writeup — comparison with netascode, scope model,
+54-family coverage, drift policies, limitations, and the phased
+plan.
 
 **Runnable example:**
 `examples/gitops-reference/` — `kubectl apply -k .`-able Flux +

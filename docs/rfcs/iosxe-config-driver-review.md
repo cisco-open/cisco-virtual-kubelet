@@ -453,9 +453,8 @@ map ordering. Worth cross-checking.
 An earlier iteration of this tool was an offline YAML schema
 validator (YAML shape, family-set membership, per-family semantic
 rules). That overlapped `nac-validate` without adding value. Per
-review feedback item 2 in
-`docs/rfcs/config-driver-review-feedback.md`, the tool was
-repurposed:
+review feedback (item 2 — see Phase 3 review-response in §11), the
+tool was repurposed:
 
 - **Static YAML schema validation** is delegated to upstream
   `nac-validate` (run it in pre-commit; same hook netascode users
@@ -500,9 +499,9 @@ primary use case of pre-merge PR validation.
 
 An earlier iteration of this branch shipped a
 `cisco-vk-config-collect` binary that mirrored `nac-collect`
-semantics. Per review feedback (item 1 in
-`docs/rfcs/config-driver-review-feedback.md`), that tool was
-removed: brownfield conversion is a one-shot activity, the
+semantics. Per review feedback (item 1 — see Phase 3
+review-response in §11), that tool was removed: brownfield
+conversion is a one-shot activity, the
 netascode data model is the sole source of truth after onboard,
 and maintaining a parallel collector in the VK repo adds surface
 area with no ongoing value.
@@ -624,9 +623,9 @@ type (`int`, `str`, `ipv4`, `ipv4_prefix`, regex `/pattern/`),
 range, enum, required/optional. `nac-validate` runs this before
 the YAML reaches Terraform.
 
-CVK does not duplicate that. Per review feedback (item 2 in
-`docs/rfcs/config-driver-review-feedback.md`), static schema
-validation is delegated entirely to `nac-validate` — operators
+CVK does not duplicate that. Per review feedback (item 2 — see
+Phase 3 review-response in §11), static schema validation is
+delegated entirely to `nac-validate` — operators
 run it in pre-commit the same way they do today for netascode
 workflows. `cisco-vk-config-lint` was repurposed from an offline
 validator into a live drift reporter (see §9).
@@ -901,8 +900,7 @@ fragment. No device writes; structural only.
 
 ### Phase 3 — review feedback response (✅ shipped)
 
-Addresses the four-item review feedback in
-`docs/rfcs/config-driver-review-feedback.md` that landed after
+Addresses the four-item review feedback that landed after
 Phase 3:
 
 - **Item 1 (collector removal).** `tools/cisco-vk-config-collect`

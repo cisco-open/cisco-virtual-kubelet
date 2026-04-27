@@ -28,8 +28,7 @@
 // This replaces the tool's earlier role as an offline YAML
 // validator. Static schema validation (YAML shape, family-set
 // membership, per-leaf type checks) is deliberately delegated to
-// upstream nac-validate; see docs/rfcs/config-driver-review-feedback.md
-// feedback item 2 for the rationale.
+// upstream nac-validate.
 //
 // Typical usage:
 //
