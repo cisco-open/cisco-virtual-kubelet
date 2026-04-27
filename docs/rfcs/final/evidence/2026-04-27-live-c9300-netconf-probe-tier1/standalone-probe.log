@@ -1,0 +1,5 @@
+attempt=1 RAW READ n=34 err=<nil> bytes="SSH-2.0-OpenSSH_9.9 PKIX[14.4.2]\r\n" SSH DIAL OK ver="SSH-2.0-OpenSSH_9.9 PKIX[14.4.2]"
+attempt=2 RAW READ n=34 err=<nil> bytes="SSH-2.0-OpenSSH_9.9 PKIX[14.4.2]\r\n" SSH DIAL OK ver="SSH-2.0-OpenSSH_9.9 PKIX[14.4.2]"
+attempt=3 RAW READ n=34 err=<nil> bytes="SSH-2.0-OpenSSH_9.9 PKIX[14.4.2]\r\n" SSH DIAL OK ver="SSH-2.0-OpenSSH_9.9 PKIX[14.4.2]"
+attempt=4 RAW READ n=34 err=<nil> bytes="SSH-2.0-OpenSSH_9.9 PKIX[14.4.2]\r\n" SSH DIAL OK ver="SSH-2.0-OpenSSH_9.9 PKIX[14.4.2]"
+attempt=5 RAW READ n=34 err=<nil> bytes="SSH-2.0-OpenSSH_9.9 PKIX[14.4.2]\r\n" SSH DIAL OK ver="SSH-2.0-OpenSSH_9.9 PKIX[14.4.2]"
