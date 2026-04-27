@@ -693,45 +693,23 @@ func dialSSHNetconf(cfg NETCONFConfig) (io.ReadWriteCloser, error) {
 	_ = tls.Config{} // keep crypto/tls imported for the future SSH-over-TLS bridge
 
 	addr := fmt.Sprintf("%s:%d", cfg.Address, port)
-	// Tier-3 diagnostic: explicitly log addr + cfg.Port + port at the
-	// dial site. Tier-2 surfaced TCP errors with destination port 443
-	// instead of 830. We need to know whether the cisco-vk Go process
-	// is dialing :830 (and the kernel rewrites to :443 — Cilium
-	// socket-LB suspect) or whether addr itself ended up as :443.
-	dialAddrSnapshot := addr
-	dialPortSnapshot := port
-	dialCfgPortSnapshot := cfg.Port
-	var preflight string
-	var preflightElapsed time.Duration
-	preStart := time.Now()
-	if c, perr := net.DialTimeout("tcp", addr, 5*time.Second); perr == nil {
-		_ = c.SetReadDeadline(time.Now().Add(3 * time.Second))
-		var pbuf [64]byte
-		n, rerr := c.Read(pbuf[:])
-		_ = c.Close()
-		switch {
-		case n > 0:
-			preflight = fmt.Sprintf("read=%d %q", n, string(pbuf[:n]))
-		case rerr != nil:
-			preflight = fmt.Sprintf("read-err=%v", rerr)
-		default:
-			preflight = "peer-closed-no-bytes"
-		}
-	} else {
-		preflight = "dial-err=" + perr.Error()
-	}
-	preflightElapsed = time.Since(preStart)
-	dialStart := time.Now()
 	client, err := ssh.Dial("tcp", addr, conf)
-	dialElapsed := time.Since(dialStart)
 	if err != nil {
-		// Surface the elapsed timings + pre-flight outcome in the
-		// wrapped error so an operator can compare them with the
-		// in-process probe goroutine's success ticks at the same
-		// wall clock — without ssh-internals tracing.
-		return nil, fmt.Errorf("%w (addr=%q cfg.Port=%d resolved-port=%d preflight=%s preflight-took=%s dial-took=%s peek=%s)",
-			err, dialAddrSnapshot, dialCfgPortSnapshot, dialPortSnapshot, preflight, preflightElapsed.Round(time.Millisecond),
-			dialElapsed.Round(time.Millisecond), tcpBannerPeek(addr, 5*time.Second))
+		// Diagnostic for the from-pod overflow case found on the
+		// 2026-04-27 live-device retest. The same code dials fine
+		// from the cluster host but reproducibly fails inside the
+		// kubelet pod when the wrong port is being dialed. On
+		// overflow read, do a raw TCP banner peek and surface the
+		// hex+ASCII rendering in the wrapped error so the operator
+		// can see what the device actually sent. Skipped on
+		// unrelated dial errors. Root cause was a port-default bug
+		// (config.SetDeviceDefaults applied 443 to NETCONF transports);
+		// the diagnostic stays as a guard-rail for future regressions.
+		if strings.Contains(err.Error(), "overflow reading version string") {
+			return nil, fmt.Errorf("%w (addr=%q raw banner peek: %s)",
+				err, addr, tcpBannerPeek(addr, 5*time.Second))
+		}
+		return nil, err
 	}
 	session, err := client.NewSession()
 	if err != nil {
