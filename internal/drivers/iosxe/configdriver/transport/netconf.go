@@ -697,11 +697,7 @@ func dialSSHNetconf(cfg NETCONFConfig) (io.ReadWriteCloser, error) {
 		// the wrapped error so the operator can see what the device
 		// is actually sending. Skipped on unrelated dial errors.
 		if strings.Contains(err.Error(), "overflow reading version string") {
-			peek := tcpBannerPeek(addr, timeout)
-			if peek == "" {
-				peek = "(raw TCP read returned no bytes / dial failed)"
-			}
-			return nil, fmt.Errorf("%w (raw banner peek: %s)", err, peek)
+			return nil, fmt.Errorf("%w (raw banner peek: %s)", err, tcpBannerPeek(addr, timeout))
 		}
 		return nil, err
 	}
@@ -737,22 +733,26 @@ func dialSSHNetconf(cfg NETCONFConfig) (io.ReadWriteCloser, error) {
 // bytes (or until the peer closes / timeout), and returns a compact
 // hex+ASCII rendering of what it received. The timeout is a hard
 // wall-clock cap — the function is a best-effort diagnostic and does
-// not signal errors back. Returns "" if anything failed; callers
-// treat that as "no diagnostic available."
+// not signal errors back through the return value other than the
+// distinguished sentinels below; callers treat anything containing
+// `dial=` or `read=` as "no useful banner data, here's why".
 func tcpBannerPeek(addr string, timeout time.Duration) string {
 	if timeout <= 0 {
 		timeout = 5 * time.Second
 	}
 	c, err := net.DialTimeout("tcp", addr, timeout)
 	if err != nil {
-		return ""
+		return fmt.Sprintf("dial-failed: %v", err)
 	}
 	defer c.Close()
 	_ = c.SetReadDeadline(time.Now().Add(timeout))
 	buf := make([]byte, 256)
-	n, _ := c.Read(buf)
+	n, readErr := c.Read(buf)
 	if n == 0 {
-		return ""
+		if readErr != nil {
+			return fmt.Sprintf("read-empty: %v", readErr)
+		}
+		return "read-empty: no error, peer sent nothing"
 	}
 	// Compact summary: bytes-read + hex + a sanitised ASCII view
 	// where non-printables are replaced with `.` so the line stays
