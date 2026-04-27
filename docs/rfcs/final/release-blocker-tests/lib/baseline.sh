@@ -132,6 +132,24 @@ baseline_assert_ready_condition_matches() {
   fi
 }
 
+# baseline_assert_ready_message_contains — the Ready condition's
+# message field must contain the supplied substring. Used when the
+# engine encodes the rejection identity in the message rather than
+# in a stable Reason enum (Wave 7A.1's transactional+CLI rejection
+# is the canonical example).
+baseline_assert_ready_message_contains() {
+  local needle="${1:?usage: baseline_assert_ready_message_contains <substring>}"
+  local cr="${baseline_cr:?baseline_cr must be set}"
+  local got_message
+  got_message="$(kubectl get iosxeconfig "${cr}" -n "${baseline_namespace}" \
+    -o jsonpath='{.status.conditions[?(@.type=="Ready")].message}' 2>/dev/null)"
+  if [[ "${got_message}" == *"${needle}"* ]]; then
+    baseline_ok "Ready.message contains ${needle@Q}"
+  else
+    baseline_fail "Ready.message=${got_message@Q} does not contain ${needle@Q}"
+  fi
+}
+
 # baseline_assert_no_unexpected_apply_errors — any familyStatus with
 # state=ApplyError fails the assertion. Tests that EXPECT ApplyError
 # (none of the six release-blocker tests do today) should override

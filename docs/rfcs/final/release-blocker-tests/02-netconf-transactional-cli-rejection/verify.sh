@@ -34,7 +34,12 @@ device_transport="$(kubectl get ciscodevice "${DEVICE_NAME}" -n "${NAMESPACE}" \
 case "${device_transport}" in
   netconf)
     baseline_assert_phase_is Failed
-    baseline_assert_ready_condition_matches False ErrTransactionalCLIUnsupported
+    # The engine's status condition sets Reason=Failed and embeds the
+    # NETCONF-specific rejection text in Message. Match the message
+    # text (Wave 7A.1 fail-fast at the engine boundary) rather than
+    # an obsolete Reason string.
+    baseline_assert_ready_condition_matches False Failed
+    baseline_assert_ready_message_contains "transactional NETCONF apply does not support CLI template blocks"
     ;;
   *)
     baseline_assert_phase_is Drifted
