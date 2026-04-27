@@ -697,9 +697,11 @@ func dialSSHNetconf(cfg NETCONFConfig) (io.ReadWriteCloser, error) {
 		// the wrapped error so the operator can see what the device
 		// is actually sending. Skipped on unrelated dial errors.
 		if strings.Contains(err.Error(), "overflow reading version string") {
-			if peek := tcpBannerPeek(addr, timeout); peek != "" {
-				return nil, fmt.Errorf("%w (raw banner peek: %s)", err, peek)
+			peek := tcpBannerPeek(addr, timeout)
+			if peek == "" {
+				peek = "(raw TCP read returned no bytes / dial failed)"
 			}
+			return nil, fmt.Errorf("%w (raw banner peek: %s)", err, peek)
 		}
 		return nil, err
 	}
