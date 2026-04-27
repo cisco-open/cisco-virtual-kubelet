@@ -357,3 +357,4 @@ Neither blocks merge; both should land before a release announcement.
 | External infrastructure residuals (Phase 8) | [`../phase-8-residuals.md`](../phase-8-residuals.md) |
 | Operator-runnable live-device test playbook | [`./release-blocker-tests/RUNBOOK.md`](./release-blocker-tests/RUNBOOK.md) |
 | Latest gate evidence bundle | [`./evidence/2026-04-26-wave10-variation-matrix/SUMMARY.md`](./evidence/2026-04-26-wave10-variation-matrix/SUMMARY.md) |
+| Live-device retest (Cat9300 / IOS-XE 17.18.2) | [`./evidence/2026-04-27-live-c9300-cat9k-smoke/SUMMARY.md`](./evidence/2026-04-27-live-c9300-cat9k-smoke/SUMMARY.md) |

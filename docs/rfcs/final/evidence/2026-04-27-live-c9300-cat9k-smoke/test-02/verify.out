@@ -1,0 +1,12 @@
+[ OK ] observedGeneration (1) == metadata.generation (1)
+[FAIL] phase=Drifted, want Failed
+[FAIL] Ready=False/Drifted, want False/ErrTransactionalCLIUnsupported (message: not in sync)
+error: Internal error occurred: Internal error occurred: error executing command in container: failed to exec in container: failed to start exec "19b6f50907b13c721c8dea7009c0a6e29d57761866025e273737477f638a954c": OCI runtime exec failed: exec failed: unable to start container process: exec: "sh": executable file not found in $PATH
+[FAIL] could not scrape /metrics from pod cat9k-smoke-vk-f84c94f9-9rbjr
+error: Internal error occurred: Internal error occurred: error executing command in container: failed to exec in container: failed to start exec "2ecf16e42d76a05b24feeeab2f4582b43ea7208b18e3a9cd5c6736c358e7ffef": OCI runtime exec failed: exec failed: unable to start container process: exec: "sh": executable file not found in $PATH
+[FAIL] could not scrape /metrics from pod cat9k-smoke-vk-f84c94f9-9rbjr
+error: Internal error occurred: Internal error occurred: error executing command in container: failed to exec in container: failed to start exec "a5d640e1c96536e76e2ee2ffc2c30b8cc3df0f848f5f1feb69f84b0c7fe35299": OCI runtime exec failed: exec failed: unable to start container process: exec: "sh": executable file not found in $PATH
+[FAIL] could not scrape /metrics from pod cat9k-smoke-vk-f84c94f9-9rbjr
+WARN: pre-state.txt not found; skipping device-state comparison
+
+verify: FAIL (5 failures)

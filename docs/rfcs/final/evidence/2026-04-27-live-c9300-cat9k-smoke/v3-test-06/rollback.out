@@ -1,0 +1,4 @@
+iosxeconfig.config.cisco.vk "test-06-driftpolicy-revert" deleted from cisco-vk-smoke namespace
+configmap "test-06-data" deleted from cisco-vk-smoke namespace
+No pre-state banner — issuing RESTCONF DELETE on the motd subtree.
+rollback complete; verify with pre-state.sh

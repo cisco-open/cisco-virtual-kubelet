@@ -1,0 +1,341 @@
+Warning: Permanently added '198.51.100.103' (RSA) to the list of known hosts.
+
+
+
+Using 7362 out of 2097152 bytes
+!
+! Last configuration change at 06:58:49 UTC Mon Apr 27 2026 by AI_AGENT_RW
+!
+version 17.18
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service call-home
+!
+hostname C9K-4
+!
+!
+vrf definition Mgmt-vrf
+ !
+ address-family ipv4
+ exit-address-family
+ !
+ address-family ipv6
+ exit-address-family
+!
+no aaa new-model
+switch 1 provision c9300-24p
+!
+!
+!
+!
+!
+!
+!
+!
+!
+ip domain name dmz.cisco.com
+!
+ip dhcp pool 192_168_99.0
+ network 192.168.99.0 255.255.255.0
+ default-router 192.168.99.1 
+!
+!
+!
+login on-success log
+vtp mode transparent
+!
+!
+!
+!
+!
+!
+!
+!
+crypto pki trustpoint SLA-TrustPoint
+ enrollment pkcs12
+ revocation-check crl
+ hash sha256
+!
+crypto pki trustpoint TP-self-signed-1646943464
+ enrollment selfsigned
+ subject-name cn=IOS-Self-Signed-Certificate-1646943464
+ revocation-check none
+ rsakeypair TP-self-signed-1646943464
+ hash sha256
+!
+!
+crypto pki certificate chain SLA-TrustPoint
+ certificate ca 01 nvram:CiscoLicensi#1CA.cer
+crypto pki certificate chain TP-self-signed-1646943464
+ certificate self-signed 01 nvram:IOS-Self-Sig#3.cer
+!
+crypto pki certificate pool
+ cabundle nvram:ios_core.p7b
+!
+!
+license boot level network-advantage addon dna-advantage
+memory free low-watermark processor 131088
+!
+diagnostic bootup level minimal
+!
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+!
+!
+enable secret 9 <REDACTED>
+!
+username AI_AGENT_RO secret 9 <REDACTED>
+username AI_AGENT_RW privilege 15 secret 9 <REDACTED>
+username admin privilege 15 secret 9 <REDACTED>
+!
+redundancy
+ mode sso
+crypto engine compliance shield disable
+!
+!
+!
+!
+!
+transceiver type all
+ monitoring
+!
+vlan 99-100 
+!
+vlan 500
+ name 500
+!
+vlan 502
+ name 502
+!
+vlan 510
+ name 510
+!
+!
+class-map match-any system-cpp-police-ewlc-control
+ description EWLC Control 
+class-map match-any system-cpp-police-topology-control
+ description Topology control
+class-map match-any system-cpp-police-sw-forward
+ description Sw forwarding, L2 LVX data packets, LOGGING, Transit Traffic
+class-map match-any system-cpp-default
+ description EWLC Data, Inter FED Traffic 
+class-map match-any system-cpp-police-sys-data
+ description Openflow, Exception, EGR Exception, NFL Sampled Data, RPF Failed
+class-map match-any system-cpp-police-punt-webauth
+ description Punt Webauth
+class-map match-any system-cpp-police-l2lvx-control
+ description L2 LVX control packets
+class-map match-any system-cpp-police-forus
+ description Forus traffic
+class-map match-any system-cpp-police-multicast-end-station
+ description MCAST END STATION
+class-map match-any system-cpp-police-forus-addr-resolution
+ description Forus address resolution
+class-map match-any system-cpp-police-high-rate-app
+ description High Rate Applications 
+class-map match-any system-cpp-police-multicast
+ description MCAST Data
+class-map match-any system-cpp-police-meraki-next-tunnel
+ description Meraki Next tunnel
+class-map match-any system-cpp-police-l2-control
+ description L2 control
+class-map match-any system-cpp-police-dot1x-auth
+ description DOT1X Auth
+class-map match-any system-cpp-police-data
+ description ICMP redirect, ICMP_GEN and BROADCAST
+class-map match-any system-cpp-police-stackwise-virt-control
+ description Stackwise Virtual OOB
+class-map match-any non-client-nrt-class
+class-map match-any system-cpp-police-routing-control
+ description Routing control and Low Latency
+class-map match-any system-cpp-police-protocol-snooping
+ description Protocol snooping
+class-map match-any system-cpp-police-dhcp-snooping
+ description DHCP snooping
+class-map match-any system-cpp-police-ios-routing
+ description L2 control, Topology control, Routing control, Low Latency
+class-map match-any system-cpp-police-system-critical
+ description System Critical and Gold Pkt
+class-map match-any system-cpp-police-ios-feature
+ description ICMPGEN,BROADCAST,ICMP,L2LVXCntrl,ProtoSnoop,PuntWebauth,MCASTData,Transit,DOT1XAuth,Swfwd,LOGGING,L2LVXData,ForusTraffic,ForusARP,McastEndStn,Openflow,Exception,EGRExcption,NflSampled,RpfFailed
+!
+policy-map system-cpp-policy
+!
+! 
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+interface GigabitEthernet0/0
+ vrf forwarding Mgmt-vrf
+ ip address 198.51.100.103 255.255.255.0
+ negotiation auto
+!
+interface GigabitEthernet1/0/1
+!
+interface GigabitEthernet1/0/2
+!
+interface GigabitEthernet1/0/3
+!
+interface GigabitEthernet1/0/4
+!
+interface GigabitEthernet1/0/5
+!
+interface GigabitEthernet1/0/6
+!
+interface GigabitEthernet1/0/7
+!
+interface GigabitEthernet1/0/8
+!
+interface GigabitEthernet1/0/9
+!
+interface GigabitEthernet1/0/10
+!
+interface GigabitEthernet1/0/11
+!
+interface GigabitEthernet1/0/12
+!
+interface GigabitEthernet1/0/13
+!
+interface GigabitEthernet1/0/14
+!
+interface GigabitEthernet1/0/15
+!
+interface GigabitEthernet1/0/16
+!
+interface GigabitEthernet1/0/17
+!
+interface GigabitEthernet1/0/18
+!
+interface GigabitEthernet1/0/19
+!
+interface GigabitEthernet1/0/20
+!
+interface GigabitEthernet1/0/21
+!
+interface GigabitEthernet1/0/22
+!
+interface GigabitEthernet1/0/23
+!
+interface GigabitEthernet1/0/24
+!
+interface GigabitEthernet1/1/1
+!
+interface GigabitEthernet1/1/2
+!
+interface GigabitEthernet1/1/3
+!
+interface GigabitEthernet1/1/4
+!
+interface TenGigabitEthernet1/1/1
+!
+interface TenGigabitEthernet1/1/2
+!
+interface TenGigabitEthernet1/1/3
+!
+interface TenGigabitEthernet1/1/4
+!
+interface TenGigabitEthernet1/1/5
+!
+interface TenGigabitEthernet1/1/6
+!
+interface TenGigabitEthernet1/1/7
+!
+interface TenGigabitEthernet1/1/8
+!
+interface FortyGigabitEthernet1/1/1
+!
+interface FortyGigabitEthernet1/1/2
+!
+interface TwentyFiveGigE1/1/1
+!
+interface TwentyFiveGigE1/1/2
+!
+interface AppGigabitEthernet1/0/1
+ switchport access vlan 99
+ switchport mode access
+!
+interface Vlan1
+ ip dhcp client client-id ascii cisco-ac7a.563b.4147-Vl1
+ ip address dhcp
+!
+interface Vlan99
+ ip address 192.168.99.1 255.255.255.0
+!
+iox
+ip forward-protocol nd
+ip http server
+ip http authentication local
+ip http secure-server
+ip http client source-interface Vlan1
+ip route vrf Mgmt-vrf 0.0.0.0 0.0.0.0 198.51.100.1
+ip ssh bulk-mode 131072
+ip scp server enable
+!
+!
+!
+!
+control-plane
+ service-policy input system-cpp-policy
+!
+!
+!
+line con 0
+ stopbits 1
+line vty 0 4
+ login local
+ transport input all
+line vty 5 31
+ login
+ transport input ssh
+!
+call-home
+ ! If contact email address in call-home is configured as sch-smart-licensing@cisco.com
+ ! the email address configured in Cisco Smart License Portal will be used as contact email address to send SCH notifications.
+ contact-email-addr sch-smart-licensing@cisco.com
+ profile "CiscoTAC-1"
+  active
+  destination transport-method http
+!
+!
+!
+!
+!
+!
+app-hosting appid cvk0000_49d00ef494a14e6090e2b0181f5f16ca
+ app-vnic AppGigabitEthernet access
+  guest-interface 0
+ app-resource profile custom
+  cpu 1000
+  memory 512
+  persist-disk 1024
+  vcpu 1
+ start
+app-hosting appid cvk0000_db4bb8c7be714f38998492be6fccca02
+ app-vnic AppGigabitEthernet access
+  guest-interface 0
+ app-resource profile custom
+  cpu 1000
+  memory 512
+  persist-disk 1024
+  vcpu 1
+ start
+app-hosting appid cvk0000_f31b751121d3485b987ac1fccfffda81
+ app-vnic AppGigabitEthernet access
+  guest-interface 0
+ app-resource profile custom
+  cpu 1000
+  memory 512
+  persist-disk 1024
+  vcpu 1
+ start
+netconf-yang
+restconf
+end
+Connection to 198.51.100.103 closed by remote host.

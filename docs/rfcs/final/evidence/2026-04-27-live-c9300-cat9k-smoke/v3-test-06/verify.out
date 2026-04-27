@@ -1,0 +1,12 @@
+[ OK ] observedGeneration (2) == metadata.generation (2)
+[ OK ] phase=InSync
+[ OK ] Ready/True/Succeeded
+[FAIL] family banner opCount=0, want >= 1
+[ OK ] no ApplyError family statuses
+[ OK ] no drift entries
+[ OK ] device banner matches
+INFO: hostname=C9K-4 (compare to pre-state.txt manually)
+error: Internal error occurred: Internal error occurred: error executing command in container: failed to exec in container: failed to start exec "b3db4a2ef0c2580049a438600a8d18e2a8815dc2755e312370e3bab15331fa7f": OCI runtime exec failed: exec failed: unable to start container process: exec: "sh": executable file not found in $PATH
+[FAIL] could not scrape /metrics from pod cat9k-smoke-vk-6f5c64b4d-k5pzv (does the pod expose 8080?)
+
+verify: FAIL (2 failures)

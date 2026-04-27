@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cisco-vk-smoke
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cat9k-smoke-creds
+  namespace: cisco-vk-smoke
+type: Opaque
+stringData:
+  password: cisco
+---
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: cat9k-smoke
+  namespace: cisco-vk-smoke
+spec:
+  driver: XE
+  address: 198.51.100.103
+  username: AI_AGENT_RW
+  credentialSecretRef:
+    name: cat9k-smoke-creds
+  transport: netconf
+  tls:
+    enabled: true
+    insecureSkipVerify: true
+  podCIDR: 10.10.0.0/24
+  maxPods: 8
+  allowUnsignedApps: true
+  xe:
+    networking:
+      interface:
+        type: AppGigabitEthernet
+        appGigabitEthernet:
+          dhcp: true
+          mode: access
