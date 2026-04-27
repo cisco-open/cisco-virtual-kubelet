@@ -344,6 +344,18 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		log.G(ctx).WithError(err).Warn("IOSXEConfig reconciler not started; continuing without declarative config")
 	}
 
+	// Diagnostic probe for finding #6(a). When CONFIG_NETCONF_PROBE is
+	// set, fire a fresh ssh.Dial to the device's NETCONF port every
+	// 30 seconds for 15 minutes and log the outcome. The probe runs in
+	// parallel with apphosting + VK so an operator can compare the
+	// cisco-vk pod's dial behavior to a side-by-side standalone probe
+	// pod's behavior at the same wall-clock moment. Cheap, scoped,
+	// gated by an explicit env var so production deployments don't pay
+	// for it.
+	if os.Getenv("CONFIG_NETCONF_PROBE") != "" {
+		go runNETCONFProbe(ctx, &appCfg.Device, appCfg.Device.Password)
+	}
+
 	if err := n.Run(ctx); err != nil {
 		return fmt.Errorf("node run failed: %w", err)
 	}
