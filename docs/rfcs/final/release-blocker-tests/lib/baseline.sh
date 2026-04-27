@@ -215,7 +215,10 @@ baseline_assert_metric_counter() {
     return
   fi
   local line value
-  line="$(echo "${raw}" | grep -F "${metric}{${labels}}" | head -1)"
+  # `|| true` keeps the helper additive when the metric label combo
+  # is not present yet — `set -e -o pipefail` would otherwise abort
+  # the verify script before baseline_fail logs the missing-metric.
+  line="$(echo "${raw}" | grep -F "${metric}{${labels}}" | head -1 || true)"
   if [[ -z "${line}" ]]; then
     baseline_fail "metric ${metric}{${labels}} not present in /metrics scrape"
     return
@@ -253,7 +256,11 @@ baseline_assert_metric_counter_zero() {
     return
   fi
   local line value
-  line="$(echo "${raw}" | grep -F "${metric}{${labels}}" | head -1)"
+  # `set -e -o pipefail` would otherwise terminate the whole verify
+  # script the first time grep does not match the label combination
+  # (which is exactly the negative-control case we want to assert).
+  # `|| true` keeps the helper additive on grep miss.
+  line="$(echo "${raw}" | grep -F "${metric}{${labels}}" | head -1 || true)"
   if [[ -z "${line}" ]]; then
     # Label combo never seen — counter has never incremented to
     # this value. That is exactly what the negative control wants.
