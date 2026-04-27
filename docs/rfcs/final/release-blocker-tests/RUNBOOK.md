@@ -20,6 +20,12 @@ Before starting the maintenance window, confirm:
 - [ ] **`jq` and `kubectl`** are on PATH.
 - [ ] **Maintenance window confirmed** with whoever owns the device. Tests 04 and 06 modify a physical interface description and a system-level field respectively; tests 01, 03, and 06 add and remove device-side state (Loopbacks, VLANs).
 - [ ] **Rollback console reachable** independently of the cisco-vk pod (e.g. direct SSH/console). If anything goes wrong, the operator must be able to revert manually.
+- [ ] **Device-side management-plane prereqs** are configured. Confirmed against IOS-XE 17.18.2 in the 2026-04-27 retest:
+   - `restconf` + `ip http secure-server` (default — typically already on).
+   - `netconf-yang` (must be enabled — required for tests 01, 08, 09, 10, 13).
+   - `netconf-yang feature candidate-datastore` — **explicitly required for Wave 10** (`:candidate:1.0` and `:confirmed-commit:1.0` capability advertisement). Off by default. Enabling triggers a NETCONF service restart (~30 s).
+   - `gnxi` + `gnxi server` (replaces `gnmi-yang` in 17.18; insecure listen port default is **50052**, set `spec.port: 50052` on CiscoDevice for gNMI transport — required for test 04).
+   Quick check: `ssh <user>@<device> "show platform software yang-management process"` should report `confd`, `ncsshd`, `pubd`, `gnmib` all `Running`.
 
 ---
 

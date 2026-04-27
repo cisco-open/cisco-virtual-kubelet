@@ -25,6 +25,36 @@ baseline_failures=0
 baseline_ok()   { printf '[ OK ] %s\n' "$*"; }
 baseline_fail() { printf '[FAIL] %s\n' "$*"; baseline_failures=$((baseline_failures + 1)); }
 
+# _baseline_port_forward_scrape — kubectl port-forward + local curl.
+# The cisco-vk image is gcr.io/distroless/static-debian12 (no shell,
+# no curl, no wget) so the prior kubectl-exec approach to scraping
+# /metrics fails on every pod. Spawn a port-forward against a random
+# local port, curl /metrics from the host, then kill the forward.
+# Returns the metrics body on stdout (empty on any error). All status
+# noise is silenced; the caller decides what an empty result means.
+_baseline_port_forward_scrape() {
+  local ns="$1" pod="$2" target_port="$3"
+  local local_port body fwd_pid
+  # Pick a random ephemeral port in the high range to avoid clashes.
+  local_port=$((RANDOM % 10000 + 40000))
+  kubectl port-forward -n "${ns}" "pod/${pod}" "${local_port}:${target_port}" \
+    >/dev/null 2>&1 &
+  fwd_pid=$!
+  # Give the forward up to 3s to bind. Poll the local socket so we
+  # don't sleep blindly.
+  local i
+  for ((i = 0; i < 30; i++)); do
+    if (echo > "/dev/tcp/127.0.0.1/${local_port}") 2>/dev/null; then
+      break
+    fi
+    sleep 0.1
+  done
+  body="$(curl -s --max-time 5 "http://127.0.0.1:${local_port}/metrics" 2>/dev/null || true)"
+  kill "${fwd_pid}" >/dev/null 2>&1 || true
+  wait "${fwd_pid}" 2>/dev/null || true
+  printf '%s' "${body}"
+}
+
 # baseline_assert_observed_generation_synced — pin §5: the CR's
 # observed generation must equal the metadata generation, otherwise
 # the CR's reported phase is from a stale spec and the test's
@@ -172,11 +202,14 @@ baseline_assert_metric_counter() {
     baseline_fail "could not locate cisco-vk pod for metric scrape"
     return
   fi
-  # Use kubectl-exec with curl to localhost rather than port-forward
-  # so the scrape doesn't need a free port on the host.
+  # cisco-vk runs in a distroless static-debian12 container — no
+  # shell, no wget, no curl — so kubectl-exec is unusable for the
+  # scrape. Use kubectl port-forward against the pod's metrics port
+  # instead. The forward terminates as soon as the local curl
+  # finishes; we pick a random local port to avoid clashing with
+  # parallel test runs.
   local raw
-  raw="$(kubectl exec -n "${baseline_namespace}" "${pod}" -- \
-    sh -c "wget -qO- http://localhost:8080/metrics 2>/dev/null || curl -s http://localhost:8080/metrics 2>/dev/null" || true)"
+  raw="$(_baseline_port_forward_scrape "${baseline_namespace}" "${pod}" 8080)"
   if [[ -z "${raw}" ]]; then
     baseline_fail "could not scrape /metrics from pod ${pod} (does the pod expose 8080?)"
     return
@@ -214,8 +247,7 @@ baseline_assert_metric_counter_zero() {
     return
   fi
   local raw
-  raw="$(kubectl exec -n "${baseline_namespace}" "${pod}" -- \
-    sh -c "wget -qO- http://localhost:8080/metrics 2>/dev/null || curl -s http://localhost:8080/metrics 2>/dev/null" || true)"
+  raw="$(_baseline_port_forward_scrape "${baseline_namespace}" "${pod}" 8080)"
   if [[ -z "${raw}" ]]; then
     baseline_fail "could not scrape /metrics from pod ${pod}"
     return
