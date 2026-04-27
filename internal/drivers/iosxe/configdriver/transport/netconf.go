@@ -693,12 +693,14 @@ func dialSSHNetconf(cfg NETCONFConfig) (io.ReadWriteCloser, error) {
 	_ = tls.Config{} // keep crypto/tls imported for the future SSH-over-TLS bridge
 
 	addr := fmt.Sprintf("%s:%d", cfg.Address, port)
-	// Tier-2 diagnostic instrumentation for finding #6(a). The tier-1
-	// experiment proved a probe goroutine doing the same wire pattern
-	// succeeds while this function fails. Capture the pre-flight read
-	// result, the elapsed time at each stage, and the first-byte
-	// inspection of the actual ssh-handshake conn so the next fail
-	// log carries enough data to bottom out the divergence.
+	// Tier-3 diagnostic: explicitly log addr + cfg.Port + port at the
+	// dial site. Tier-2 surfaced TCP errors with destination port 443
+	// instead of 830. We need to know whether the cisco-vk Go process
+	// is dialing :830 (and the kernel rewrites to :443 — Cilium
+	// socket-LB suspect) or whether addr itself ended up as :443.
+	dialAddrSnapshot := addr
+	dialPortSnapshot := port
+	dialCfgPortSnapshot := cfg.Port
 	var preflight string
 	var preflightElapsed time.Duration
 	preStart := time.Now()
@@ -727,8 +729,8 @@ func dialSSHNetconf(cfg NETCONFConfig) (io.ReadWriteCloser, error) {
 		// wrapped error so an operator can compare them with the
 		// in-process probe goroutine's success ticks at the same
 		// wall clock — without ssh-internals tracing.
-		return nil, fmt.Errorf("%w (preflight=%s preflight-took=%s dial-took=%s peek=%s)",
-			err, preflight, preflightElapsed.Round(time.Millisecond),
+		return nil, fmt.Errorf("%w (addr=%q cfg.Port=%d resolved-port=%d preflight=%s preflight-took=%s dial-took=%s peek=%s)",
+			err, dialAddrSnapshot, dialCfgPortSnapshot, dialPortSnapshot, preflight, preflightElapsed.Round(time.Millisecond),
 			dialElapsed.Round(time.Millisecond), tcpBannerPeek(addr, 5*time.Second))
 	}
 	session, err := client.NewSession()
