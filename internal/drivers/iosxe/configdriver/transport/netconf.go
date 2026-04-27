@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -688,6 +689,18 @@ func dialSSHNetconf(cfg NETCONFConfig) (io.ReadWriteCloser, error) {
 	addr := fmt.Sprintf("%s:%d", cfg.Address, port)
 	client, err := ssh.Dial("tcp", addr, conf)
 	if err != nil {
+		// Diagnostic for the from-pod overflow case found on the
+		// 2026-04-27 live-device retest. The same code dials fine
+		// from the cluster host but reproducibly fails inside the
+		// kubelet pod. On overflow read, do a raw TCP read of the
+		// banner and surface the first 256 bytes (hex + ASCII) in
+		// the wrapped error so the operator can see what the device
+		// is actually sending. Skipped on unrelated dial errors.
+		if strings.Contains(err.Error(), "overflow reading version string") {
+			if peek := tcpBannerPeek(addr, timeout); peek != "" {
+				return nil, fmt.Errorf("%w (raw banner peek: %s)", err, peek)
+			}
+		}
 		return nil, err
 	}
 	session, err := client.NewSession()
@@ -716,4 +729,43 @@ func dialSSHNetconf(cfg NETCONFConfig) (io.ReadWriteCloser, error) {
 		client: client, session: session,
 		stdin: stdin, stdout: stdout,
 	}, nil
+}
+
+// tcpBannerPeek opens a raw TCP connection to addr, reads up to 256
+// bytes (or until the peer closes / timeout), and returns a compact
+// hex+ASCII rendering of what it received. The timeout is a hard
+// wall-clock cap — the function is a best-effort diagnostic and does
+// not signal errors back. Returns "" if anything failed; callers
+// treat that as "no diagnostic available."
+func tcpBannerPeek(addr string, timeout time.Duration) string {
+	if timeout <= 0 {
+		timeout = 5 * time.Second
+	}
+	c, err := net.DialTimeout("tcp", addr, timeout)
+	if err != nil {
+		return ""
+	}
+	defer c.Close()
+	_ = c.SetReadDeadline(time.Now().Add(timeout))
+	buf := make([]byte, 256)
+	n, _ := c.Read(buf)
+	if n == 0 {
+		return ""
+	}
+	// Compact summary: bytes-read + hex + a sanitised ASCII view
+	// where non-printables are replaced with `.` so the line stays
+	// log-readable.
+	hexParts := make([]byte, 0, n*2)
+	const hexDigits = "0123456789abcdef"
+	asciiParts := make([]byte, 0, n)
+	for i := 0; i < n; i++ {
+		b := buf[i]
+		hexParts = append(hexParts, hexDigits[b>>4], hexDigits[b&0x0f])
+		if b >= 0x20 && b <= 0x7e {
+			asciiParts = append(asciiParts, b)
+		} else {
+			asciiParts = append(asciiParts, '.')
+		}
+	}
+	return fmt.Sprintf("read=%d hex=%s ascii=%q", n, string(hexParts), string(asciiParts))
 }
