@@ -7,9 +7,14 @@ set -euo pipefail
 
 NAMESPACE="${NAMESPACE:-cisco-vk-smoke}"
 DEVICE_NAME="${DEVICE_NAME:-cat9k-smoke}"
+# DEVICE_CRED_SECRET names the credential Secret the CiscoDevice
+# spec.credentialSecretRef.name points at — the playbook default is
+# cat9k-smoke-creds (created by the bring-up manifest). Override
+# when running against a different lab fixture.
+DEVICE_CRED_SECRET="${DEVICE_CRED_SECRET:-cat9k-smoke-creds}"
 
 echo "secret-resource-version:"
-kubectl get secret cat9k-creds -n "${NAMESPACE}" \
+kubectl get secret "${DEVICE_CRED_SECRET}" -n "${NAMESPACE}" \
   -o jsonpath='{.metadata.resourceVersion}'
 echo
 

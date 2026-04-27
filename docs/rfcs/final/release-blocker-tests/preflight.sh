@@ -131,7 +131,7 @@ fi
 
 # ── 8. Test 04 interface explicit approval ──────────────────────────
 if [[ -z "${INTF_APPROVED}" ]]; then
-  err "test 04 target interface not approved. Pass --intf-approved=<Gi*/*/*> to confirm the operator has verified the chosen interface is unused. Default is GigabitEthernet0/0/0; substitute via TEST_INTF_NAME."
+  err "test 04 target interface not approved. Pass --intf-approved=<Gi*/*/*> to confirm the operator has verified the chosen interface is unused. Default in 00-apply.yaml is GigabitEthernet1/0/24 (Cat9300 line-card numbering); substitute via TEST_INTF_NAME or sed the manifest."
 else
   note "test 04 interface approved by operator: ${INTF_APPROVED}"
 fi

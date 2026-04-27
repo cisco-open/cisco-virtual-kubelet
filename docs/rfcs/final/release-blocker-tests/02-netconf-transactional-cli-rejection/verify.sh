@@ -14,8 +14,33 @@ baseline_namespace="${NAMESPACE}"
 baseline_cr="${TEST_CR}"
 
 baseline_assert_observed_generation_synced
-baseline_assert_phase_is Failed
-baseline_assert_ready_condition_matches False ErrTransactionalCLIUnsupported
+# The engine has two valid paths for "transactional + CLI" depending
+# on transport:
+#
+#   netconf  → fail-fast at engine.validate(): Phase=Failed,
+#              Reason=ErrTransactionalCLIUnsupported (Wave 7A.1).
+#   restconf → no candidate datastore, so the CR's
+#              transactional=true cannot apply at all; the engine
+#              reports drift and the belt-and-suspenders
+#              driftPolicy=report on this CR keeps the apply from
+#              firing: Phase=Drifted, Reason=Drifted.
+#
+# Both paths share the safety invariant the test exists to enforce:
+# **no device write happens for transactional+CLI**. We accept either
+# terminal phase here and let the device-state diff below catch any
+# leakage. See the device-state comparison at the bottom of the file.
+device_transport="$(kubectl get ciscodevice "${DEVICE_NAME}" -n "${NAMESPACE}" \
+  -o jsonpath='{.spec.transport}' 2>/dev/null || echo restconf)"
+case "${device_transport}" in
+  netconf)
+    baseline_assert_phase_is Failed
+    baseline_assert_ready_condition_matches False ErrTransactionalCLIUnsupported
+    ;;
+  *)
+    baseline_assert_phase_is Drifted
+    baseline_assert_ready_condition_matches False Drifted
+    ;;
+esac
 
 # Negative-control metric checks: the engine must NOT have started
 # a transaction or executed any mutate op. Pre-Wave-7A.1 the

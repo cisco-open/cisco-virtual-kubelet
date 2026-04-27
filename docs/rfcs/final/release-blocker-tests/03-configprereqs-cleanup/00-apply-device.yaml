@@ -1,13 +1,19 @@
 # Test 03 — configPrereqs deletion-driven cleanup
 #
 # Creates a synthetic CiscoDevice that points at the same physical
-# 10.1.1.1 device as cat9k-smoke, but carries spec.configPrereqs.
+# device as cat9k-smoke, but carries spec.configPrereqs.
 # The CiscoDeviceReconciler materialises those prereqs into a
 # synthetic IOSXEConfig that day-0 reconciles. Deleting this
 # CiscoDevice triggers the cleanup path under test.
 #
-# We REUSE the existing cat9k-creds Secret (same physical device,
-# same credentials).
+# This manifest defaults to the canonical playbook fixture
+# (198.51.100.103 + cat9k-smoke-creds Secret in cisco-vk-smoke). For
+# a non-default lab, override the address / username /
+# credentialSecretRef via:
+#
+#   sed -e "s/198\.51\.100\.103/<your-ip>/" \
+#       -e "s/cat9k-smoke-creds/<your-secret>/" \
+#       00-apply-device.yaml | kubectl apply -f -
 #
 # IMPORTANT: this test does NOT spawn a per-device cisco-vk-run pod.
 # The synthetic IOSXEConfig reconciles via the existing cat9k-smoke
@@ -23,11 +29,11 @@ metadata:
     cisco.vk/release-blocker-test: "03-configprereqs-cleanup"
 spec:
   driver: XE
-  address: "10.1.1.1"   # same physical device as cat9k-smoke
+  address: "198.51.100.103"   # same physical device as cat9k-smoke
   port: 443
-  username: admin
+  username: AI_AGENT_RW
   credentialSecretRef:
-    name: cat9k-creds
+    name: cat9k-smoke-creds
   tls:
     enabled: true
     insecureSkipVerify: true

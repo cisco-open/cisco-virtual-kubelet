@@ -13,7 +13,7 @@
 #
 #   # Bump the Secret's resourceVersion without changing the password.
 #   # This is what the controller's watch/annotation-stamp path keys off.
-#   kubectl annotate secret cat9k-creds -n cisco-vk-smoke \
+#   kubectl annotate secret ${DEVICE_CRED_SECRET:-cat9k-smoke-creds} -n cisco-vk-smoke \
 #     cisco.vk/release-blocker-test-05="$(date +%s)" --overwrite
 #
 # That single annotation change flips metadata.resourceVersion, which

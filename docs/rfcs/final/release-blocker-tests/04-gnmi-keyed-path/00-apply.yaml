@@ -2,12 +2,18 @@
 #
 # Sets a description on a single ethernet interface to prove that
 # structured PathSpec survives the gNMI Set wire encoding intact (the
-# `0/0/0` slashes in the keyed-list value must not be interpreted as
+# slashes in the keyed-list `name` value must not be interpreted as
 # additional path segments).
 #
-# Before applying, confirm the targeted interface is unused. The
-# default GigabitEthernet0/0/0 is the closing-wave reference; change
-# the `name` field below to a known-spare port if 0/0/0 is in use.
+# Defaults to GigabitEthernet1/0/24 (the operator-approved interface
+# the preflight gate enforces). For non-default lab fixtures, sed the
+# manifest before apply, e.g.:
+#
+#   sed -e "s/GigabitEthernet/${INTF_TYPE}/" \
+#       -e 's/"1\/0\/24"/"<your-port>"/' 00-apply.yaml | kubectl apply -f -
+#
+# Pre-flight CONFIRMS the chosen port is unused via --intf-approved=
+# so this is a deliberate, reviewer-approved port pick.
 
 ---
 apiVersion: v1
@@ -24,7 +30,7 @@ data:
             interface_ethernet:
               interfaces:
                 - type: GigabitEthernet
-                  name: "0/0/0"   # change if 0/0/0 is in production use
+                  name: "1/0/24"
                   description: "cisco-vk release-blocker test 04 — wave 5A-fu/7B"
 
 ---
