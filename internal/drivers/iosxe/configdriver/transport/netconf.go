@@ -680,10 +680,16 @@ func dialSSHNetconf(cfg NETCONFConfig) (io.ReadWriteCloser, error) {
 		Auth:            []ssh.AuthMethod{ssh.Password(cfg.Password)},
 		HostKeyCallback: cfg.HostKeyCallback,
 		Timeout:         timeout,
-		// TLS config hint for hosts that also proxy the SSH
-		// handshake — not typical, but a harmless default.
-		BannerCallback: func(message string) error { return nil },
 	}
+	// Live-device tier-1 evidence (2026-04-27): a sibling probe
+	// goroutine using a stripped-down ssh.ClientConfig dialed cleanly
+	// while this function with a `BannerCallback: func(_) error { return nil }`
+	// shape continued to fail with `overflow reading version string`
+	// from inside the same cisco-vk pod's process. The auth-banner
+	// callback is unrelated to the SSH version-string read on paper,
+	// but in practice removing it eliminated the from-pod-only race.
+	// Don't add it back without re-running the netconf-probe tier-1
+	// experiment — see docs/rfcs/final/evidence/2026-04-27-live-c9300-netconf-probe-tier1.
 	_ = tls.Config{} // keep crypto/tls imported for the future SSH-over-TLS bridge
 
 	addr := fmt.Sprintf("%s:%d", cfg.Address, port)
