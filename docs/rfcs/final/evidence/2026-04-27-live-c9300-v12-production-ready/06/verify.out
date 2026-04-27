@@ -1,0 +1,11 @@
+[ OK ] observedGeneration (2) == metadata.generation (2)
+[ OK ] phase=InSync
+[ OK ] Ready/True/Succeeded
+[ OK ] family banner: state=InSync, opCount=0 (informational; cumulative work asserted via metric counter)
+[ OK ] no ApplyError family statuses
+[ OK ] no drift entries
+[ OK ] device banner matches
+INFO: hostname=C9K-4 (compare to pre-state.txt manually)
+[ OK ] metric cisco_vk_config_mutate_ops_total sum=1 (>= 1, across 2 label sets)
+
+verify: PASS

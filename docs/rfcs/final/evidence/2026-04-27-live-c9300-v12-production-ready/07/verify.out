@@ -1,0 +1,14 @@
+[ OK ] observedGeneration (1) == metadata.generation (1)
+[ OK ] phase=InSync
+[ OK ] Ready/True/Succeeded
+[ OK ] family interface_loopback: state=InSync, opCount=0 (informational; cumulative work asserted via metric counter)
+[ OK ] no ApplyError family statuses
+[ OK ] no drift entries
+[ OK ] metric cisco_vk_config_save_startup_total sum=5 (>= 1, across 2 label sets)
+[ OK ] metric cisco_vk_config_save_startup_total{device="cat9k-smoke",transport="netconf",outcome="failed"} = 0 (label combo not present)
+[ OK ] metric cisco_vk_config_save_startup_total{device="cat9k-smoke",transport="restconf",outcome="failed"} = 0 (label combo not present)
+[ OK ] SaveStartupOK event present: startup-config saved
+[ OK ] running-config Loopback9997 description matches
+INFO: startup-config check skipped — set STARTUP_CONFIG_INCLUDES to your 'show startup-config | include 9997' output for an explicit assertion
+
+verify: PASS

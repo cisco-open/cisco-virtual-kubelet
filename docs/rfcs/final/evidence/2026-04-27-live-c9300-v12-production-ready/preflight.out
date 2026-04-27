@@ -1,0 +1,21 @@
+preflight.sh — 2026-04-27T11:59:03Z
+namespace=cisco-vk-smoke device=cat9k-smoke expected-context=default
+
+[ OK ] tool present: kubectl
+[ OK ] tool present: jq
+[ OK ] tool present: curl
+[ OK ] tool present: nc
+[ OK ] tool present: go
+[ OK ] tool present: helm
+[ OK ] kubectl context: default
+[ OK ] CiscoDevice cat9k-smoke phase: Ready
+[ OK ] cisco-vk pod is Ready
+[ OK ] CVK_CONFIG_LINT_PASSWORD is set (length=5)
+[ OK ] device address: 198.51.100.103
+[ OK ] TCP/443 (RESTCONF) reachable on 198.51.100.103
+[ OK ] TCP/830 (NETCONF) reachable on 198.51.100.103
+[ OK ] test 04 interface approved by operator: GigabitEthernet1/0/24
+[ OK ] no existing non-test IOSXEConfig CRs target cat9k-smoke
+[WARN] go vet ./... reported issues; address before promotion (run manually for detail)
+
+preflight: PASS — proceed with the runbook

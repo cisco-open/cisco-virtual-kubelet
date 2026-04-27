@@ -1,0 +1,12 @@
+[ OK ] observedGeneration (1) == metadata.generation (1)
+[ OK ] phase=InSync
+[ OK ] Ready/True/Succeeded
+[ OK ] family interface_loopback: state=InSync, opCount=0 (informational; cumulative work asserted via metric counter)
+[ OK ] no ApplyError family statuses
+[ OK ] no drift entries
+[ OK ] ConfirmedCommitFallback event present with expected reason
+[ OK ] no ConfirmedCommitUsed event (correct on the fallback path)
+[ OK ] metric cisco_vk_config_transactions_total{device="cat9k-smoke",transport="netconf",outcome="confirmed"} = 0 (label combo not present)
+[ OK ] Loopback 9994 present on device (RESTCONF non-transactional apply succeeded)
+
+verify: PASS

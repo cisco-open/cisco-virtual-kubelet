@@ -359,3 +359,4 @@ Neither blocks merge; both should land before a release announcement.
 | Latest gate evidence bundle | [`./evidence/2026-04-26-wave10-variation-matrix/SUMMARY.md`](./evidence/2026-04-26-wave10-variation-matrix/SUMMARY.md) |
 | Live-device retest (Cat9300 / IOS-XE 17.18.2) | [`./evidence/2026-04-27-live-c9300-cat9k-smoke/SUMMARY.md`](./evidence/2026-04-27-live-c9300-cat9k-smoke/SUMMARY.md) |
 | Live-device retest #2 — fixes validated | [`./evidence/2026-04-27-live-c9300-v8-fixes-validated/SUMMARY.md`](./evidence/2026-04-27-live-c9300-v8-fixes-validated/SUMMARY.md) |
+| Live-device retest #3 — production-readiness pass | [`./evidence/2026-04-27-live-c9300-v12-production-ready/SUMMARY.md`](./evidence/2026-04-27-live-c9300-v12-production-ready/SUMMARY.md) |

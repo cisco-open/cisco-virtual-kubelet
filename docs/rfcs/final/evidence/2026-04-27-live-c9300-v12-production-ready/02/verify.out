@@ -1,0 +1,9 @@
+[ OK ] observedGeneration (1) == metadata.generation (1)
+[ OK ] phase=Drifted
+[ OK ] Ready/False/Drifted
+[ OK ] metric cisco_vk_config_transactions_total{device="cat9k-smoke",transport="netconf",outcome="commit"} = 0 (label combo not present)
+[ OK ] metric cisco_vk_config_transactions_total{device="cat9k-smoke",transport="netconf",outcome="commit_failed"} = 0 (label combo not present)
+[ OK ] metric cisco_vk_config_transactions_total{device="cat9k-smoke",transport="netconf",outcome="start_failed"} = 0 (label combo not present)
+WARN: pre-state.txt not found; skipping device-state comparison
+
+verify: PASS
