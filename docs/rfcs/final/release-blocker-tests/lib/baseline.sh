@@ -25,6 +25,29 @@ baseline_failures=0
 baseline_ok()   { printf '[ OK ] %s\n' "$*"; }
 baseline_fail() { printf '[FAIL] %s\n' "$*"; baseline_failures=$((baseline_failures + 1)); }
 
+# _baseline_metric_match — match a metric line by name + a set of
+# `key="value"` label assertions, regardless of the label-output
+# ORDER Prometheus emits. The Prometheus exposition format
+# alphabetises labels in the rendered output, so a verify pattern
+# written in `device,transport,outcome` order won't `grep -F`-match
+# a line rendered as `device,outcome,transport`. Print a single line
+# `<n> <value>` for each matching metric, where value is the trailing
+# numeric column. Empty stdout means no match.
+_baseline_metric_match() {
+  local raw="$1" metric="$2" labels="$3"
+  # Build an awk script that matches the metric name and every
+  # required label=value pair as substrings in the line — order
+  # independent. Each label literal is escaped for awk-regex use
+  # (only `"` is special here).
+  local awk_filter='$0 ~ ("^" metric "[{ ]")'
+  local label
+  IFS=',' read -ra label_parts <<<"${labels}"
+  for label in "${label_parts[@]}"; do
+    awk_filter+=' && index($0, "'"${label//\"/\\\"}"'")>0'
+  done
+  echo "${raw}" | awk -v metric="${metric}" "${awk_filter} { print \$NF }"
+}
+
 # _baseline_port_forward_scrape — kubectl port-forward + local curl.
 # The cisco-vk image is gcr.io/distroless/static-debian12 (no shell,
 # no curl, no wget) so the prior kubectl-exec approach to scraping
@@ -227,18 +250,12 @@ baseline_assert_metric_counter() {
     baseline_fail "could not scrape /metrics from pod ${pod} (does the pod expose 8080?)"
     return
   fi
-  local line value
-  # `|| true` keeps the helper additive when the metric label combo
-  # is not present yet — `set -e -o pipefail` would otherwise abort
-  # the verify script before baseline_fail logs the missing-metric.
-  line="$(echo "${raw}" | grep -F "${metric}{${labels}}" | head -1 || true)"
-  if [[ -z "${line}" ]]; then
+  local value
+  value="$(_baseline_metric_match "${raw}" "${metric}" "${labels}" | head -1 || true)"
+  if [[ -z "${value}" ]]; then
     baseline_fail "metric ${metric}{${labels}} not present in /metrics scrape"
     return
   fi
-  value="$(echo "${line}" | awk '{print $NF}')"
-  # Simple int comparison; counter values are floats in Prom format
-  # but always integer-equivalent for the counters we care about.
   value="${value%.*}"
   if (( value >= min )); then
     baseline_ok "metric ${metric}{${labels}} = ${value} (>= ${min})"
@@ -270,13 +287,12 @@ baseline_assert_metric_counter_any() {
     baseline_fail "could not scrape /metrics from pod ${pod}"
     return
   fi
-  local total=0 line value labels
+  local total=0 value labels
   for labels in "$@"; do
-    line="$(echo "${raw}" | grep -F "${metric}{${labels}}" | head -1 || true)"
-    if [[ -z "${line}" ]]; then
+    value="$(_baseline_metric_match "${raw}" "${metric}" "${labels}" | head -1 || true)"
+    if [[ -z "${value}" ]]; then
       continue
     fi
-    value="$(echo "${line}" | awk '{print $NF}')"
     value="${value%.*}"
     total=$((total + value))
   done
@@ -308,19 +324,14 @@ baseline_assert_metric_counter_zero() {
     baseline_fail "could not scrape /metrics from pod ${pod}"
     return
   fi
-  local line value
-  # `set -e -o pipefail` would otherwise terminate the whole verify
-  # script the first time grep does not match the label combination
-  # (which is exactly the negative-control case we want to assert).
-  # `|| true` keeps the helper additive on grep miss.
-  line="$(echo "${raw}" | grep -F "${metric}{${labels}}" | head -1 || true)"
-  if [[ -z "${line}" ]]; then
+  local value
+  value="$(_baseline_metric_match "${raw}" "${metric}" "${labels}" | head -1 || true)"
+  if [[ -z "${value}" ]]; then
     # Label combo never seen — counter has never incremented to
     # this value. That is exactly what the negative control wants.
     baseline_ok "metric ${metric}{${labels}} = 0 (label combo not present)"
     return
   fi
-  value="$(echo "${line}" | awk '{print $NF}')"
   value="${value%.*}"
   if (( value == 0 )); then
     baseline_ok "metric ${metric}{${labels}} = 0 (explicit)"
