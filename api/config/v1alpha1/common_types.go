@@ -113,6 +113,13 @@ type FamilyStatus struct {
 	// +optional
 	Entries int32 `json:"entries,omitempty"`
 
+	// OpCount is the number of writer ops produced by this tick's diff —
+	// the metric verify.sh release-blocker assertions consult to confirm
+	// an apply produced device-side work. Zero on InSync no-op ticks
+	// after a converged reconcile; positive after a tick that wrote.
+	// +optional
+	OpCount int32 `json:"opCount,omitempty"`
+
 	// Message is a short human-readable description. Empty when state is InSync.
 	// +optional
 	Message string `json:"message,omitempty"`

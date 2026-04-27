@@ -130,9 +130,20 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	})
 
 	crlog.SetLogger(zap.New(zap.UseDevMode(true)))
+	// Metrics: bind the controller-runtime + Prometheus collectors on
+	// :8080. Operators rely on cisco_vk_config_* counters for the
+	// release-blocker test suite and for production dashboards;
+	// disabling the endpoint with `BindAddress: "0"` (the historical
+	// default) leaves verify.sh metric assertions with nothing to
+	// scrape. The bind address is configurable via CONFIG_METRICS_ADDR
+	// (set to "0" or empty to opt out — same semantics as before).
+	metricsAddr := os.Getenv("CONFIG_METRICS_ADDR")
+	if metricsAddr == "" {
+		metricsAddr = ":8080"
+	}
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                 scheme,
-		Metrics:                metricsserver.Options{BindAddress: "0"},
+		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: "0",
 		LeaderElection:         false,
 	})

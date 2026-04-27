@@ -402,6 +402,13 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					Image: image,
 					Args:  vkContainerArgs(device.Name, device.Spec.LogLevel),
 					Env:   credEnv,
+					Ports: []corev1.ContainerPort{
+						{
+							Name:          "metrics",
+							ContainerPort: 8080,
+							Protocol:      corev1.ProtocolTCP,
+						},
+					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "device-config",

@@ -605,6 +605,7 @@ func (r *ConfigReconciler) recordResult(
 				Name:    fs.Name,
 				State:   fs.State,
 				Entries: fs.Entries,
+				OpCount: int32(fs.OpCount),
 				Message: fs.Message,
 			})
 	}
