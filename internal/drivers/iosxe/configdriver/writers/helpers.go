@@ -17,6 +17,7 @@ package writers
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -110,11 +111,36 @@ func leavesEqual(desired, observed map[string]any, managed []string) bool {
 // scalarEqual compares two YAML-decoded scalars. YAML and JSON both
 // produce float64 for numbers, so == is usually enough; the stringified
 // second pass handles mixed representations (e.g. yang "true" vs bool).
+// Composite values (maps, slices) are not == comparable in Go and would
+// panic — fall back to deep-equal for those, then to stringified compare.
 func scalarEqual(a, b any) bool {
+	if !isComparable(a) || !isComparable(b) {
+		if reflect.DeepEqual(a, b) {
+			return true
+		}
+		return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+	}
 	if a == b {
 		return true
 	}
 	return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+}
+
+// isComparable reports whether v's dynamic type can be == compared
+// without panicking. Maps and slices cannot; structs and arrays can
+// only if every field/element is itself comparable, which the runtime
+// checks lazily and panics on. We treat that family as not-comparable
+// up-front to avoid the recover-after-panic dance.
+func isComparable(v any) bool {
+	if v == nil {
+		return true
+	}
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.Map, reflect.Slice, reflect.Func:
+		return false
+	default:
+		return true
+	}
 }
 
 // projectManagedLeaves returns a copy of src containing only the keys
