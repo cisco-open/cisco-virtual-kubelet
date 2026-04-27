@@ -15,6 +15,7 @@
 package transport
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -57,6 +58,86 @@ func TestForNETCONFDialFailsGracefully(t *testing.T) {
 	// the word 'reserved'; a real dial error won't.
 	if strings.Contains(err.Error(), "reserved") {
 		t.Fatalf("factory still returns reserved placeholder: %v", err)
+	}
+}
+
+// TestBuildNETCONFRejectsRESTCONFPortDefault is a regression test
+// for finding #6(a) root cause. config.SetDeviceDefaults applies
+// the apphosting/RESTCONF port (80 / 443) to spec.Port — which is
+// NOT a sensible NETCONF default. buildNETCONF must override these
+// well-known RESTCONF defaults to 830 (IANA NETCONF-over-SSH).
+// Operator-supplied non-RESTCONF ports are left untouched.
+func TestBuildNETCONFRejectsRESTCONFPortDefault(t *testing.T) {
+	cases := []struct {
+		name     string
+		specPort int
+		wantPort int
+	}{
+		{"unset → 830", 0, 830},
+		{"RESTCONF default 80 → 830", 80, 830},
+		{"RESTCONF default 443 → 830", 443, 830},
+		{"explicit 8830 (hardened lab) preserved", 8830, 8830},
+		{"explicit 8443 (NETCONF on alt port) preserved", 8443, 8443},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			spec := &ciskov1.DeviceSpec{
+				Address:   "127.0.0.1",
+				Port:      tc.specPort,
+				Username:  "x",
+				Transport: "netconf",
+			}
+			// The factory dials immediately. Use a dial error to
+			// inspect the port it actually tried to dial — surfaced
+			// in the wrapped error message as `127.0.0.1:<port>`.
+			_, err := For(spec, "pw", FactoryOptions{})
+			if err == nil {
+				t.Fatal("expected dial error, got nil")
+			}
+			want := fmt.Sprintf("127.0.0.1:%d", tc.wantPort)
+			if !strings.Contains(err.Error(), want) {
+				t.Fatalf("dial port mismatch: err=%v, expected to contain %q", err, want)
+			}
+		})
+	}
+}
+
+// TestBuildGNMIRejectsRESTCONFPortDefault is the gNMI counterpart
+// of TestBuildNETCONFRejectsRESTCONFPortDefault. Same rationale:
+// 80 / 443 are RESTCONF intent, not gNMI intent.
+func TestBuildGNMIRejectsRESTCONFPortDefault(t *testing.T) {
+	cases := []struct {
+		name     string
+		specPort int
+		wantPort int
+	}{
+		{"unset → gnxi insecure default 50052", 0, 50052},
+		{"RESTCONF default 80 → 50052", 80, 50052},
+		{"RESTCONF default 443 → 50052", 443, 50052},
+		{"explicit 6030 (legacy gnmi-yang) preserved", 6030, 6030},
+		{"explicit 57400 preserved", 57400, 57400},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			spec := &ciskov1.DeviceSpec{
+				Address:   "127.0.0.1",
+				Port:      tc.specPort,
+				Username:  "x",
+				Transport: "gnmi",
+			}
+			tr, err := For(spec, "pw", FactoryOptions{})
+			if err != nil {
+				t.Fatalf("gNMI factory should not block on dial: %v", err)
+			}
+			defer tr.Close()
+			gt, ok := tr.(*gnmiTransport)
+			if !ok {
+				t.Fatalf("expected *gnmiTransport, got %T", tr)
+			}
+			if gt.cfg.Port != tc.wantPort {
+				t.Fatalf("gNMI port mismatch: got %d, want %d", gt.cfg.Port, tc.wantPort)
+			}
+		})
 	}
 }
 

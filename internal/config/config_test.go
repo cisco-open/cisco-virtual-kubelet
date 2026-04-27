@@ -70,31 +70,27 @@ func TestLoad_ConditionalDefaults(t *testing.T) {
 	}
 }
 
-// TestSetDeviceDefaults_TransportAwarePort is a regression test for
-// finding #6(a). Pre-fix, SetDeviceDefaults blindly assigned port 443
-// when TLS.Enabled and 80 otherwise — a RESTCONF assumption that
-// silently poisoned NETCONF and gNMI transports. The cisco-vk pod
-// then dialed :443 expecting an SSH banner and read a TLS
-// ServerHello, producing `ssh: overflow reading version string`.
-func TestSetDeviceDefaults_TransportAwarePort(t *testing.T) {
+// TestSetDeviceDefaults_RESTCONFPort verifies that SetDeviceDefaults
+// applies a RESTCONF / apphosting port — the legacy XE driver's
+// connectivity check goes through this port (HTTPS host-meta probe).
+// Configdriver-specific transport ports (NETCONF 830, gNMI 50052)
+// are picked inside transport.For so the apphosting port and the
+// configdriver port stay decoupled. The pre-#6(a) bug here was an
+// earlier attempt to make this defaulter transport-aware, which
+// poisoned the apphosting connectivity check by setting Port=830
+// even when transport=netconf.
+func TestSetDeviceDefaults_RESTCONFPort(t *testing.T) {
 	cases := []struct {
-		name      string
-		transport string
+		name       string
 		tlsEnabled bool
-		wantPort  int
+		wantPort   int
 	}{
-		{"netconf — port 830 regardless of TLS", "netconf", false, 830},
-		{"netconf — port 830 when TLS enabled too", "netconf", true, 830},
-		{"NETCONF case-insensitive", "NETCONF", false, 830},
-		{"gnmi — port 50052 (gnxi insecure default)", "gnmi", false, 50052},
-		{"restconf — TLS off → 80", "restconf", false, 80},
-		{"restconf — TLS on → 443", "restconf", true, 443},
-		{"empty transport — historical RESTCONF default 80", "", false, 80},
-		{"empty transport TLS — historical 443", "", true, 443},
+		{"TLS off → HTTP/80", false, 80},
+		{"TLS on → HTTPS/443", true, 443},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			spec := &v1alpha1.DeviceSpec{Transport: tc.transport}
+			spec := &v1alpha1.DeviceSpec{}
 			if tc.tlsEnabled {
 				spec.TLS = &v1alpha1.TLSConfig{Enabled: true}
 			}
@@ -102,15 +98,14 @@ func TestSetDeviceDefaults_TransportAwarePort(t *testing.T) {
 				t.Fatalf("SetDeviceDefaults: %v", err)
 			}
 			if spec.Port != tc.wantPort {
-				t.Fatalf("transport=%q TLS=%v: port=%d, want %d",
-					tc.transport, tc.tlsEnabled, spec.Port, tc.wantPort)
+				t.Fatalf("TLS=%v: port=%d, want %d", tc.tlsEnabled, spec.Port, tc.wantPort)
 			}
 		})
 	}
 }
 
-// TestSetDeviceDefaults_PortRespected checks the explicit-port path
-// still wins — operators with non-default ports keep that override.
+// TestSetDeviceDefaults_PortRespected — explicit operator-supplied port
+// must survive the defaulter regardless of transport.
 func TestSetDeviceDefaults_PortRespected(t *testing.T) {
 	spec := &v1alpha1.DeviceSpec{Transport: "netconf", Port: 8830}
 	if err := SetDeviceDefaults(spec); err != nil {

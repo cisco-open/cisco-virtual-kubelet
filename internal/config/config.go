@@ -81,44 +81,30 @@ func validateDeviceSpec(spec *v1alpha1.DeviceSpec) error {
 }
 
 func SetDeviceDefaults(spec *v1alpha1.DeviceSpec) error {
-	// Apply default Port if not explicitly set (is 0). The default has
-	// to be transport-aware: RESTCONF uses 80/443 (HTTP/HTTPS),
-	// NETCONF-over-SSH uses 830 (RFC 6242), gNMI uses 50052 in modern
-	// IOS-XE (gnxi default; older `gnmi-yang` builds used 6030/57400).
+	// `spec.Port` is the apphosting RESTCONF / HTTPS port — that path
+	// is what the legacy XE driver's connectivity check uses (it
+	// hits `/.well-known/host-meta` over the configured scheme). The
+	// configdriver's NETCONF / gNMI transports pick their OWN
+	// transport-appropriate ports inside transport.For (830 for
+	// NETCONF/SSH, 50052 for gnxi insecure) so they remain correct
+	// regardless of what apphosting wants on `spec.Port`.
 	//
-	// Pre-fix this function blindly applied 443 whenever TLS.Enabled
-	// was true and 80 otherwise — a RESTCONF assumption that silently
-	// poisoned NETCONF and gNMI transports. Caught against a live
-	// Cat9300-24P / IOS-XE 17.18.2 retest where the per-pod kubelet's
-	// configdriver dialed 198.51.100.103:443 expecting an SSH banner
-	// and read a TLS ServerHello instead, producing
-	// `ssh: overflow reading version string`. Tier-3 evidence:
-	// docs/rfcs/final/evidence/2026-04-27-live-c9300-netconf-probe-tier1.
+	// Caught against a live Cat9300-24P / IOS-XE 17.18.2: an earlier
+	// fix had this defaulter pick the port from `spec.Transport`,
+	// which broke the apphosting connectivity check (it expected
+	// 443/HTTPS but got 830/SSH and bailed with `tls: first record
+	// does not look like a TLS handshake`). Reverted here; the
+	// transport-aware default lives in the transport builders, where
+	// it doesn't perturb the apphosting layer.
 	if spec.Port == 0 {
-		switch strings.ToLower(spec.Transport) {
-		case "netconf":
-			spec.Port = 830
-			if spec.TLS == nil {
-				spec.TLS = &v1alpha1.TLSConfig{Enabled: false}
+		if spec.TLS == nil || !spec.TLS.Enabled {
+			spec.TLS = &v1alpha1.TLSConfig{
+				Enabled: false,
 			}
-		case "gnmi":
-			// IOS-XE 17.18+ exposes gnxi insecure on 50052; operators
-			// running older `gnmi-yang` builds (6030/57400) override
-			// via spec.Port explicitly.
-			spec.Port = 50052
-			if spec.TLS == nil {
-				spec.TLS = &v1alpha1.TLSConfig{Enabled: false}
-			}
-		default: // restconf or empty
-			if spec.TLS == nil || !spec.TLS.Enabled {
-				if spec.TLS == nil {
-					spec.TLS = &v1alpha1.TLSConfig{Enabled: false}
-				}
-				spec.Port = 80
-			} else {
-				spec.TLS.Enabled = true
-				spec.Port = 443
-			}
+			spec.Port = 80
+		} else {
+			spec.TLS.Enabled = true
+			spec.Port = 443
 		}
 	}
 

@@ -82,9 +82,14 @@ func buildGNMI(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (Inte
 	if spec.Address == "" {
 		return nil, fmt.Errorf("transport.For: CiscoDevice.spec.address empty")
 	}
+	// Same caveat as buildNETCONF: spec.Port is the apphosting RESTCONF
+	// port and is NOT a sensible gNMI default. Treat the well-known
+	// RESTCONF defaults as "not a gNMI intent" and fall through to the
+	// IOS-XE 17.18 gnxi insecure default (50052). Operators on older
+	// `gnmi-yang` builds with 6030/57400 set spec.Port explicitly.
 	port := spec.Port
-	if port == 0 {
-		port = 6030
+	if port == 0 || port == 80 || port == 443 {
+		port = 50052
 	}
 	cfg := GNMIConfig{
 		Address:  spec.Address,
@@ -104,12 +109,27 @@ func buildGNMI(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (Inte
 // not TLS; operators who want to pin the SSH host key set
 // NETCONFConfig.HostKeyCallback directly when wiring the factory
 // in cisco-vk-run.
+//
+// `spec.Port` is the **apphosting RESTCONF** port (defaulted to 443
+// by config.SetDeviceDefaults for HTTPS hosts). It is NOT a sensible
+// default for NETCONF — picking 443 lands the SSH dial on the
+// device's HTTPS listener and produces
+// `ssh: overflow reading version string` while reading TLS bytes as
+// an SSH version banner. Caught against a live Cat9300-24P / IOS-XE
+// 17.18.2 retest (#6(a) in
+// docs/rfcs/final/evidence/2026-04-27-live-c9300-netconf-probe-tier1).
+//
+// To preserve the operator-override pathway without coupling the
+// configdriver port to the apphosting port, treat the well-known
+// RESTCONF default ports (80 / 443) as "not a NETCONF intent" and
+// fall through to 830. Any other value is taken as an explicit
+// NETCONF port override (e.g. 8830 on hardened lab images).
 func buildNETCONF(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (Interface, error) {
 	if spec.Address == "" {
 		return nil, fmt.Errorf("transport.For: CiscoDevice.spec.address empty")
 	}
 	port := spec.Port
-	if port == 0 {
+	if port == 0 || port == 80 || port == 443 {
 		port = 830
 	}
 	timeout := opts.DefaultTimeout
