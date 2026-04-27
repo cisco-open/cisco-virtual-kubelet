@@ -693,38 +693,43 @@ func dialSSHNetconf(cfg NETCONFConfig) (io.ReadWriteCloser, error) {
 	_ = tls.Config{} // keep crypto/tls imported for the future SSH-over-TLS bridge
 
 	addr := fmt.Sprintf("%s:%d", cfg.Address, port)
-	// Pre-flight: open and close a raw TCP connection to the NETCONF
-	// port. The 2026-04-27 in-pod probe vs configdriver experiment
-	// recorded the standalone probe goroutine succeeding on every
-	// tick where the configdriver-style dial failed — the only
-	// behavioral difference at the wire was that the probe did a
-	// raw-read-then-close on a separate socket BEFORE the ssh.Dial.
-	// Without it, the cisco-vk pod's ssh.Dial reproducibly hits
-	// `read-empty: EOF` (device closes the SSH socket before any
-	// banner). With it, the pre-flight read succeeds AND the
-	// subsequent ssh.Dial reads the banner cleanly. We intentionally
-	// discard the pre-flight bytes — only its TCP timing side-effect
-	// matters — and tolerate any error so the dial still has its
-	// shot when the pre-flight legitimately fails (network down).
+	// Tier-2 diagnostic instrumentation for finding #6(a). The tier-1
+	// experiment proved a probe goroutine doing the same wire pattern
+	// succeeds while this function fails. Capture the pre-flight read
+	// result, the elapsed time at each stage, and the first-byte
+	// inspection of the actual ssh-handshake conn so the next fail
+	// log carries enough data to bottom out the divergence.
+	var preflight string
+	var preflightElapsed time.Duration
+	preStart := time.Now()
 	if c, perr := net.DialTimeout("tcp", addr, 5*time.Second); perr == nil {
 		_ = c.SetReadDeadline(time.Now().Add(3 * time.Second))
 		var pbuf [64]byte
-		_, _ = c.Read(pbuf[:])
+		n, rerr := c.Read(pbuf[:])
 		_ = c.Close()
-	}
-	client, err := ssh.Dial("tcp", addr, conf)
-	if err != nil {
-		// Diagnostic for the from-pod overflow case found on the
-		// 2026-04-27 live-device retest. The same code dials fine
-		// from the cluster host but reproducibly fails inside the
-		// kubelet pod. On overflow read, do a raw TCP read of the
-		// banner and surface the first 256 bytes (hex + ASCII) in
-		// the wrapped error so the operator can see what the device
-		// is actually sending. Skipped on unrelated dial errors.
-		if strings.Contains(err.Error(), "overflow reading version string") {
-			return nil, fmt.Errorf("%w (raw banner peek: %s)", err, tcpBannerPeek(addr, timeout))
+		switch {
+		case n > 0:
+			preflight = fmt.Sprintf("read=%d %q", n, string(pbuf[:n]))
+		case rerr != nil:
+			preflight = fmt.Sprintf("read-err=%v", rerr)
+		default:
+			preflight = "peer-closed-no-bytes"
 		}
-		return nil, err
+	} else {
+		preflight = "dial-err=" + perr.Error()
+	}
+	preflightElapsed = time.Since(preStart)
+	dialStart := time.Now()
+	client, err := ssh.Dial("tcp", addr, conf)
+	dialElapsed := time.Since(dialStart)
+	if err != nil {
+		// Surface the elapsed timings + pre-flight outcome in the
+		// wrapped error so an operator can compare them with the
+		// in-process probe goroutine's success ticks at the same
+		// wall clock — without ssh-internals tracing.
+		return nil, fmt.Errorf("%w (preflight=%s preflight-took=%s dial-took=%s peek=%s)",
+			err, preflight, preflightElapsed.Round(time.Millisecond),
+			dialElapsed.Round(time.Millisecond), tcpBannerPeek(addr, 5*time.Second))
 	}
 	session, err := client.NewSession()
 	if err != nil {
