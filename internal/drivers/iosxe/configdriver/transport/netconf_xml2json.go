@@ -54,9 +54,18 @@ func xmlToYangJSON(raw []byte, nsToPrefix map[string]string) ([]byte, error) {
 		return []byte(`{}`), nil
 	}
 	dec := xml.NewDecoder(strings.NewReader("<_root_>" + string(raw) + "</_root_>"))
-	root, err := decodeElement(dec, nsToPrefix)
+	root, err := decodeElement(dec, nsToPrefix, "")
 	if err != nil {
 		return nil, fmt.Errorf("xml -> json: %w", err)
+	}
+	// Unwrap the synthetic <_root_> wrapper (injected to give the
+	// XML decoder a single top-level element when reply.Data has
+	// multiple sibling elements). Without this the JSON would carry
+	// a `"_root_": {...}` key which writers don't expect.
+	if m, ok := root.(map[string]any); ok {
+		if inner, has := m["_root_"]; has && len(m) == 1 {
+			root = inner
+		}
 	}
 	return json.Marshal(root)
 }
@@ -65,7 +74,13 @@ func xmlToYangJSON(raw []byte, nsToPrefix map[string]string) ([]byte, error) {
 // element and returns the value. Children are collected into a
 // map[string]any; when a child key recurs, the entry is promoted
 // to []any. Leaf text becomes a string.
-func decodeElement(dec *xml.Decoder, nsToPrefix map[string]string) (any, error) {
+//
+// parentNS carries the parent element's XML namespace. Per RFC 7951,
+// only elements whose namespace differs from their parent get the
+// "<module>:" prefix in JSON; same-namespace children keep just the
+// local name. This matches what RESTCONF emits, and is what the
+// writers' leavesEqual / unwrapYANGEnvelope helpers expect.
+func decodeElement(dec *xml.Decoder, nsToPrefix map[string]string, parentNS string) (any, error) {
 	var obj map[string]any
 	var textBuf strings.Builder
 
@@ -79,11 +94,11 @@ func decodeElement(dec *xml.Decoder, nsToPrefix map[string]string) (any, error) 
 		}
 		switch t := tok.(type) {
 		case xml.StartElement:
-			childVal, err := decodeElement(dec, nsToPrefix)
+			childVal, err := decodeElement(dec, nsToPrefix, t.Name.Space)
 			if err != nil {
 				return nil, err
 			}
-			key := yangKey(t.Name, nsToPrefix)
+			key := yangKey(t.Name, nsToPrefix, parentNS)
 			if obj == nil {
 				obj = map[string]any{}
 			}
@@ -130,20 +145,23 @@ func decodeElement(dec *xml.Decoder, nsToPrefix map[string]string) (any, error) 
 	return text, nil
 }
 
-// yangKey produces the "<module>:<local>" key per RFC 7951. When
-// the namespace isn't in nsToPrefix we emit just the local name —
-// writers tolerate that via unwrapYANGEnvelope's best-effort
-// fallback.
-func yangKey(name xml.Name, nsToPrefix map[string]string) string {
+// yangKey produces the JSON key for an element per RFC 7951:
+//   - same namespace as parent → just the local name
+//   - different namespace (or no parent) → "<module>:<local>"
+//
+// When the namespace isn't in nsToPrefix the prefix is derived from
+// the trailing component of the namespace URI when it has the
+// conventional Cisco shape (http://cisco.com/ns/yang/<module>).
+func yangKey(name xml.Name, nsToPrefix map[string]string, parentNS string) string {
+	if name.Space == parentNS {
+		return name.Local
+	}
 	if name.Space == "" {
 		return name.Local
 	}
 	if prefix, ok := nsToPrefix[name.Space]; ok {
 		return prefix + ":" + name.Local
 	}
-	// Best effort: derive a prefix from the namespace URI when it
-	// has the conventional Cisco shape
-	// http://cisco.com/ns/yang/<module>.
 	if idx := strings.LastIndex(name.Space, "/"); idx != -1 {
 		return name.Space[idx+1:] + ":" + name.Local
 	}

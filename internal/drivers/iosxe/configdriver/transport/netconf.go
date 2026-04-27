@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -195,7 +196,65 @@ func (t *netconfTransport) fetchFromSource(path, source string) ([]byte, error) 
 	if err != nil {
 		return nil, fmt.Errorf("NETCONF Fetch: convert xml: %w", err)
 	}
-	return jsonBytes, nil
+	// Match RESTCONF semantics: writers expect the returned body's
+	// top-level key to be the last path segment (qualified). NETCONF
+	// get-config with a subtree filter for `/native/banner` returns
+	// the whole subtree starting from `<native>`, which xmlToYangJSON
+	// renders as `{"Cisco-IOS-XE-native:native": {"...:banner": ...}}`.
+	// The writer's unwrapYANGEnvelope looks for the literal key
+	// "Cisco-IOS-XE-native:banner" at top level and falls through to
+	// passing the whole document — leavesEqual then sees the desired
+	// motd at the wrong nesting and reports perpetual drift.
+	//
+	// Peel intermediate single-key wrappers until the top-level local
+	// name matches the last path segment. Caught against a live
+	// Cat9300 / IOS-XE 17.18.2 retest of test 06 (banner family,
+	// candidate-only mode): write succeeded but drift-detect kept
+	// re-emitting because of this shape mismatch.
+	return peelToLastPathSegment(jsonBytes, path), nil
+}
+
+// peelToLastPathSegment strips outer single-key JSON wrappers whose
+// local names match intermediate segments of `path`, so the returned
+// body starts at the resource named by the last segment — matching
+// RESTCONF semantics.
+//
+// Path:  /Cisco-IOS-XE-native:native/banner
+// In:    {"Cisco-IOS-XE-native:native":{"Cisco-IOS-XE-native:banner":{...}}}
+// Out:   {"Cisco-IOS-XE-native:banner":{...}}
+//
+// Returns raw verbatim if the top-level key already names the last
+// segment, the document is multi-keyed, or it isn't a JSON object.
+// The peel is bounded by the number of path segments to avoid
+// runaway descent on pathological inputs.
+func peelToLastPathSegment(raw []byte, path string) []byte {
+	segments := strings.Split(strings.TrimPrefix(path, "/"), "/")
+	if len(segments) <= 1 {
+		return raw
+	}
+	lastLocal, _ := splitQualifiedName(segments[len(segments)-1])
+	if lastLocal == "" {
+		return raw
+	}
+	cur := raw
+	for i := 0; i < len(segments); i++ {
+		var m map[string]json.RawMessage
+		if err := json.Unmarshal(cur, &m); err != nil || len(m) != 1 {
+			return cur
+		}
+		var k string
+		var v json.RawMessage
+		for kk, vv := range m {
+			k, v = kk, vv
+			break
+		}
+		kLocal, _ := splitQualifiedName(k)
+		if kLocal == lastLocal {
+			return cur
+		}
+		cur = v
+	}
+	return cur
 }
 
 // StartTransaction locks the candidate datastore. A TxHandle of
@@ -578,13 +637,107 @@ func editConfigXML(target string, op Op) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown verb %q", op.Verb)
 	}
-	subtree, err := pathToSubtreeFilterWithBody(op.Path, op.Body, ncOp)
+	subtree, err := opToSubtreeFilterWithBody(op, ncOp)
 	if err != nil {
 		return "", err
 	}
 	return fmt.Sprintf(
 		`<edit-config><target><%s/></target><config>%s</config></edit-config>`,
 		target, subtree), nil
+}
+
+// opToSubtreeFilterWithBody builds the NETCONF subtree XML for one
+// edit-config op. It uses Path for module/namespace info on
+// intermediate segments AND PathSpec (when present) for list-key
+// field names — Path's RESTCONF "=value" syntax doesn't carry the
+// key field name, so without PathSpec we'd have to guess it.
+//
+// Falls back to pathToSubtreeFilterWithBody for the legacy case
+// where PathSpec is empty (singleton families like banner). The
+// path-based fallback rejects "=value" segments so callers see a
+// clear error rather than a silently-broken element.
+//
+// Caught against the live Cat9300 retest of test 07
+// (interface_loopback): the writer's Path was
+// /Cisco-IOS-XE-native:native/interface/Loopback=9997, the legacy
+// path-only builder emitted `<Loopback=9997>` as an element name,
+// and IOS-XE rejected the edit-config with
+// `unknown-element <bad-element>Loopback=9997</bad-element>`.
+func opToSubtreeFilterWithBody(op Op, ncOp string) (string, error) {
+	if len(op.PathSpec) == 0 {
+		return pathToSubtreeFilterWithBody(op.Path, op.Body, ncOp)
+	}
+	pathSegments := strings.Split(strings.TrimPrefix(op.Path, "/"), "/")
+	if len(pathSegments) != len(op.PathSpec) {
+		return pathToSubtreeFilterWithBody(op.Path, op.Body, ncOp)
+	}
+	prefixToNS := invertPrefixMap(ciscoYANGPrefixes)
+	var b strings.Builder
+
+	for i, ps := range op.PathSpec {
+		_, mod := splitQualifiedName(pathSegments[i])
+		b.WriteString("<")
+		b.WriteString(ps.Name)
+		if mod != "" {
+			if ns, ok := prefixToNS[mod]; ok {
+				fmt.Fprintf(&b, ` xmlns="%s"`, ns)
+			}
+		}
+		if i == len(op.PathSpec)-1 {
+			fmt.Fprintf(&b, ` xmlns:nc="%s" nc:operation="%s"`, netconfBase10, ncOp)
+		}
+		b.WriteString(">")
+
+		if len(ps.Keys) > 0 {
+			keyNames := make([]string, 0, len(ps.Keys))
+			for k := range ps.Keys {
+				keyNames = append(keyNames, k)
+			}
+			sort.Strings(keyNames)
+			for _, kn := range keyNames {
+				fmt.Fprintf(&b, "<%s>%s</%s>", kn, xmlEscape(ps.Keys[kn]), kn)
+			}
+		}
+
+		if i == len(op.PathSpec)-1 && len(op.Body) > 0 {
+			lastLocal := ps.Name
+			payload := op.Body
+			if unwrapped, ok := unwrapJSONEnvelope(op.Body, lastLocal); ok {
+				payload = unwrapped
+			}
+			inner, err := jsonToNaiveXML(payload)
+			if err != nil {
+				return "", fmt.Errorf("body → xml: %w", err)
+			}
+			b.WriteString(inner)
+		}
+	}
+	for i := len(op.PathSpec) - 1; i >= 0; i-- {
+		fmt.Fprintf(&b, "</%s>", op.PathSpec[i].Name)
+	}
+	return b.String(), nil
+}
+
+// xmlEscape minimally escapes a list-key value for embedding as
+// XML text content. Cisco list keys are typically simple
+// identifiers (interface names, integer-like strings) but key
+// values like description-style strings could carry &/<.
+func xmlEscape(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		switch r {
+		case '&':
+			b.WriteString("&amp;")
+		case '<':
+			b.WriteString("&lt;")
+		case '>':
+			b.WriteString("&gt;")
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // pathToSubtreeFilterWithBody wraps pathToSubtreeFilter and

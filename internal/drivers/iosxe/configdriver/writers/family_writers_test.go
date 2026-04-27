@@ -250,3 +250,40 @@ func TestVRFFetchOverHTTPTest(t *testing.T) {
 		t.Fatalf("decoded=%#v", list)
 	}
 }
+
+// TestUnwrapYANGEnvelopeAcceptsLocalOnlyKey is a regression test for
+// the live-device follow-on finding: NETCONF Fetch (after the RFC
+// 7951 xml→json conversion) emits the envelope with the LOCAL-only
+// key for same-namespace children (e.g. `{"banner": {...}}`), while
+// RESTCONF emits the qualified form (`{"Cisco-IOS-XE-native:banner": {...}}`).
+// unwrapYANGEnvelope must accept both shapes so the same writer code
+// drives both transports without family-by-family special-casing.
+func TestUnwrapYANGEnvelopeAcceptsLocalOnlyKey(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "qualified key matches",
+			body: `{"Cisco-IOS-XE-native:banner":{"motd":{"banner":"hi"}}}`,
+			want: `{"motd":{"banner":"hi"}}`,
+		},
+		{
+			name: "local-only key matches (RFC 7951 same-namespace)",
+			body: `{"banner":{"motd":{"banner":"hi"}}}`,
+			want: `{"motd":{"banner":"hi"}}`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := unwrapYANGEnvelope([]byte(tc.body), "Cisco-IOS-XE-native:banner")
+			if err != nil {
+				t.Fatalf("unwrap: %v", err)
+			}
+			if string(got) != tc.want {
+				t.Fatalf("unwrap mismatch:\n got:  %s\n want: %s", got, tc.want)
+			}
+		})
+	}
+}

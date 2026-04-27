@@ -58,10 +58,13 @@ func coerceList(v any, origin string) ([]map[string]any, error) {
 	}
 }
 
-// unwrapYANGEnvelope extracts the inner body from a RESTCONF response
-// that wraps the payload under a "<module>:<element>" key. Returns the
-// raw input when the envelope is absent; callers that require the
-// envelope must validate separately.
+// unwrapYANGEnvelope extracts the inner body from a JSON response
+// that wraps the payload under either the fully-qualified
+// "<module>:<element>" key (RESTCONF GET) or the local-only
+// "<element>" key (NETCONF get-config after our RFC 7951
+// xml→json conversion: same-namespace children carry only the
+// local name). Returns the raw input when neither shape matches;
+// callers that require the envelope must validate separately.
 func unwrapYANGEnvelope(raw []byte, envelopeKey string) (json.RawMessage, error) {
 	if len(raw) == 0 {
 		return nil, nil
@@ -74,6 +77,11 @@ func unwrapYANGEnvelope(raw []byte, envelopeKey string) (json.RawMessage, error)
 	}
 	if body, ok := env[envelopeKey]; ok {
 		return body, nil
+	}
+	if idx := strings.Index(envelopeKey, ":"); idx >= 0 {
+		if body, ok := env[envelopeKey[idx+1:]]; ok {
+			return body, nil
+		}
 	}
 	// Envelope absent — return the original bytes so decoders that
 	// accept a direct payload can still work.

@@ -227,13 +227,20 @@ func TestNETCONFFetchRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
-	// The XML→JSON converter should have produced a JSON object
-	// whose first key is the Cisco-IOS-XE-native:native envelope.
-	if !strings.Contains(string(body), "Cisco-IOS-XE-native:native") {
-		t.Errorf("expected envelope key in JSON; body=%s", body)
+	// Fetch must match RESTCONF semantics: the top-level key of the
+	// returned body is the LAST path segment (here
+	// Cisco-IOS-XE-vlan:vlan-list), not the path-prefix container
+	// (Cisco-IOS-XE-native:native). The writers' unwrapYANGEnvelope
+	// expects to find their envelope key at the top level.
+	if !strings.Contains(string(body), "Cisco-IOS-XE-vlan:vlan-list") {
+		t.Errorf("expected last-segment envelope at top level; body=%s", body)
 	}
 	if !strings.Contains(string(body), "users") {
 		t.Errorf("expected vlan name in JSON; body=%s", body)
+	}
+	// Negative: the path-prefix wrapper must have been peeled.
+	if strings.HasPrefix(strings.TrimSpace(string(body)), `{"Cisco-IOS-XE-native:native"`) {
+		t.Errorf("path-prefix wrapper not peeled; body=%s", body)
 	}
 	m.assertNoFailures()
 }
@@ -747,5 +754,195 @@ func TestPathToSubtreeFilterWithBodyKeepsNonMatchingEnvelope(t *testing.T) {
 	// The non-matching envelope key stays in the output.
 	if !strings.Contains(xmlOut, "<some-other-key>") {
 		t.Fatalf("non-matching envelope was unexpectedly stripped: %s", xmlOut)
+	}
+}
+
+// TestPeelToLastPathSegment is a regression test for the live-device
+// follow-on finding: NETCONF Fetch xmlToYangJSON wraps the result in
+// the path-prefix container (e.g. `Cisco-IOS-XE-native:native`),
+// while the writers expect a RESTCONF-shaped result whose top-level
+// key is the LAST path segment (e.g. `Cisco-IOS-XE-native:banner`).
+// Without the peel, leavesEqual sees the desired motd at the wrong
+// nesting and reports perpetual drift even when the device matches.
+func TestPeelToLastPathSegment(t *testing.T) {
+	cases := []struct {
+		name string
+		path string
+		in   string
+		want string
+	}{
+		{
+			name: "banner singleton — peel one wrapper",
+			path: "/Cisco-IOS-XE-native:native/banner",
+			in:   `{"Cisco-IOS-XE-native:native":{"Cisco-IOS-XE-native:banner":{"motd":{"banner":"hi"}}}}`,
+			want: `{"Cisco-IOS-XE-native:banner":{"motd":{"banner":"hi"}}}`,
+		},
+		{
+			name: "dhcp pool list — peel three wrappers",
+			path: "/Cisco-IOS-XE-native:native/ip/dhcp/pool",
+			in:   `{"Cisco-IOS-XE-native:native":{"Cisco-IOS-XE-native:ip":{"Cisco-IOS-XE-native:dhcp":{"Cisco-IOS-XE-native:pool":[{"name":"foo"}]}}}}`,
+			want: `{"Cisco-IOS-XE-native:pool":[{"name":"foo"}]}`,
+		},
+		{
+			name: "already at last segment — pass through",
+			path: "/Cisco-IOS-XE-native:native/banner",
+			in:   `{"Cisco-IOS-XE-native:banner":{"motd":{"banner":"hi"}}}`,
+			want: `{"Cisco-IOS-XE-native:banner":{"motd":{"banner":"hi"}}}`,
+		},
+		{
+			name: "single-segment path — pass through",
+			path: "/Cisco-IOS-XE-native:native",
+			in:   `{"Cisco-IOS-XE-native:native":{"hostname":"r1"}}`,
+			want: `{"Cisco-IOS-XE-native:native":{"hostname":"r1"}}`,
+		},
+		{
+			// When peel descends into a multi-key intermediate it
+			// stops there. Outer single-key wrapper is peeled, the
+			// inner multi-key map is returned untouched. (For
+			// reasonable Cisco YANG fetches this rarely fires —
+			// a writer that sees this should already work because
+			// its envelope key matches one of the children.)
+			name: "multi-key intermediate — peel one then stop",
+			path: "/Cisco-IOS-XE-native:native/banner",
+			in:   `{"Cisco-IOS-XE-native:native":{"banner":{"motd":"x"},"hostname":"r1"}}`,
+			want: `{"banner":{"motd":"x"},"hostname":"r1"}`,
+		},
+		{
+			name: "non-object input — pass through",
+			path: "/Cisco-IOS-XE-native:native/banner",
+			in:   `[1,2,3]`,
+			want: `[1,2,3]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := peelToLastPathSegment([]byte(tc.in), tc.path)
+			if string(got) != tc.want {
+				t.Fatalf("peel mismatch:\n got:  %s\n want: %s", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestXMLToYangJSONNamespaceInheritance is a regression test for the
+// live-device follow-on finding: same-namespace children must NOT
+// carry a "<module>:" prefix, per RFC 7951. Pre-fix, every element
+// was prefixed regardless of namespace inheritance, which broke
+// writers' leavesEqual (desired keys are unprefixed; observed had
+// `Cisco-IOS-XE-native:motd` instead of `motd`) and produced
+// perpetual drift on banner et al.
+func TestXMLToYangJSONNamespaceInheritance(t *testing.T) {
+	xmlIn := `<native xmlns="http://cisco.com/ns/yang/Cisco-IOS-XE-native">
+  <banner>
+    <motd>
+      <banner>hi</banner>
+    </motd>
+  </banner>
+</native>`
+	got, err := xmlToYangJSON([]byte(xmlIn), ciscoYANGPrefixes)
+	if err != nil {
+		t.Fatalf("xmlToYangJSON: %v", err)
+	}
+	want := `{"Cisco-IOS-XE-native:native":{"banner":{"motd":{"banner":"hi"}}}}`
+	if string(got) != want {
+		t.Fatalf("xml2json same-namespace mismatch:\n got:  %s\n want: %s", got, want)
+	}
+}
+
+// TestXMLToYangJSONNamespaceTransition pins that a child whose
+// namespace differs from its parent gets the "<module>:" prefix —
+// the cross-namespace half of the RFC 7951 contract. Catches the
+// inverse regression: stripping prefixes too eagerly.
+func TestXMLToYangJSONNamespaceTransition(t *testing.T) {
+	xmlIn := `<native xmlns="http://cisco.com/ns/yang/Cisco-IOS-XE-native">
+  <vlan>
+    <vlan-list xmlns="http://cisco.com/ns/yang/Cisco-IOS-XE-vlan">
+      <id>10</id>
+      <name>users</name>
+    </vlan-list>
+  </vlan>
+</native>`
+	got, err := xmlToYangJSON([]byte(xmlIn), ciscoYANGPrefixes)
+	if err != nil {
+		t.Fatalf("xmlToYangJSON: %v", err)
+	}
+	// vlan-list crosses into a different namespace → prefix kept.
+	if !strings.Contains(string(got), `"Cisco-IOS-XE-vlan:vlan-list"`) {
+		t.Fatalf("expected cross-namespace prefix on vlan-list; got %s", got)
+	}
+	// vlan stays in the native namespace → unprefixed.
+	if !strings.Contains(string(got), `"vlan":{"Cisco-IOS-XE-vlan:vlan-list"`) {
+		t.Fatalf("expected same-namespace child unprefixed; got %s", got)
+	}
+}
+
+// TestOpToSubtreeFilterWithBodyKeyedList is a regression test for
+// the live-device follow-on finding: keyed-list ops carry RESTCONF
+// "<elem>=<value>" syntax in op.Path, which the legacy path-only
+// builder turned into an invalid `<Loopback=9997>` element name and
+// IOS-XE rejected with `unknown-element <bad-element>Loopback=9997`.
+// When PathSpec is populated (which writers always do for keyed
+// lists), the builder uses the structured form: emit `<Loopback>`
+// then `<name>9997</name>` as a list-key child element.
+func TestOpToSubtreeFilterWithBodyKeyedList(t *testing.T) {
+	op := Op{
+		Verb: VerbMerge,
+		Path: "/Cisco-IOS-XE-native:native/interface/Loopback=9997",
+		PathSpec: []PathElement{
+			{Name: "native"},
+			{Name: "interface"},
+			{Name: "Loopback", Keys: map[string]string{"name": "9997"}},
+		},
+		Body: []byte(`{"Cisco-IOS-XE-native:Loopback":[{"name":"9997","description":"hi"}]}`),
+	}
+	got, err := opToSubtreeFilterWithBody(op, "merge")
+	if err != nil {
+		t.Fatalf("opToSubtreeFilterWithBody: %v", err)
+	}
+	// The list-key child must appear as `<name>9997</name>` inside
+	// `<Loopback>`. The broken pre-fix output had the literal
+	// `Loopback=9997` as an element name.
+	if !strings.Contains(got, "<Loopback") {
+		t.Fatalf("missing <Loopback element: %s", got)
+	}
+	if strings.Contains(got, "Loopback=9997") {
+		t.Fatalf("RESTCONF =value syntax leaked into XML: %s", got)
+	}
+	if !strings.Contains(got, "<name>9997</name>") {
+		t.Fatalf("missing <name>9997</name> key child: %s", got)
+	}
+	// The native xmlns must be present on the outer element so the
+	// device matches on the right module.
+	if !strings.Contains(got, `xmlns="http://cisco.com/ns/yang/Cisco-IOS-XE-native"`) {
+		t.Fatalf("missing native xmlns: %s", got)
+	}
+	// Description from the body must land inside <Loopback>.
+	if !strings.Contains(got, "<description>hi</description>") {
+		t.Fatalf("body description missing: %s", got)
+	}
+}
+
+// TestOpToSubtreeFilterWithBodySingletonFallback pins that ops with
+// no PathSpec (singleton families like banner) still go through the
+// legacy path-only builder unchanged — confirming the new code path
+// is additive and singleton families do not regress.
+func TestOpToSubtreeFilterWithBodySingletonFallback(t *testing.T) {
+	op := Op{
+		Verb:     VerbMerge,
+		Path:     "/Cisco-IOS-XE-native:native/banner",
+		PathSpec: nil,
+		Body:     []byte(`{"Cisco-IOS-XE-native:banner":{"motd":{"banner":"hi"}}}`),
+	}
+	got, err := opToSubtreeFilterWithBody(op, "merge")
+	if err != nil {
+		t.Fatalf("opToSubtreeFilterWithBody: %v", err)
+	}
+	// Same shape pathToSubtreeFilterWithBody would produce, with the
+	// envelope-unwrap fix already applied.
+	if strings.Contains(got, "<banner><banner>") {
+		t.Fatalf("singleton envelope not unwrapped: %s", got)
+	}
+	if !strings.Contains(got, "<motd>") {
+		t.Fatalf("body did not land in subtree: %s", got)
 	}
 }
