@@ -1,0 +1,49 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  annotations:
+    cisco.vk/poke: "1777315885"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"config.cisco.vk/v1alpha1","kind":"IOSXEConfig","metadata":{"annotations":{},"labels":{"cisco.vk/release-blocker-test":"07-write-startup-save-config"},"name":"test-07-write-startup","namespace":"cisco-vk-smoke"},"spec":{"deviceRef":{"name":"cat9k-smoke"},"driftDetectInterval":"1m","driftPolicy":"revert","managedFamilies":["interface_loopback"],"source":{"configMapRef":{"key":"data.nac.yaml","name":"test-07-data"}},"transactional":true,"writeStartup":true}}
+  creationTimestamp: "2026-04-27T18:43:41Z"
+  generation: 1
+  labels:
+    cisco.vk/release-blocker-test: 07-write-startup-save-config
+  name: test-07-write-startup
+  namespace: cisco-vk-smoke
+  resourceVersion: "230834"
+  uid: df89409d-b7a2-4e12-a91b-463a37c52fd2
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  driftDetectInterval: 1m
+  driftPolicy: revert
+  managedFamilies:
+  - interface_loopback
+  pruneOnRelinquish: false
+  source:
+    configMapRef:
+      key: data.nac.yaml
+      name: test-07-data
+  transactional: true
+  writeStartup: true
+status:
+  conditions:
+  - lastTransitionTime: "2026-04-27T18:51:27Z"
+    message: device reconciled to declared intent
+    reason: Succeeded
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2026-04-27T18:43:41Z"
+    message: no other CR claims this CR's managed families
+    reason: NoOverlap
+    status: "False"
+    type: Conflict
+  familyStatus:
+  - name: interface_loopback
+    state: InSync
+  lastAppliedHash: sha256:18bf932c8688d9ec96ae59d767bf24dec221bdd3c0177cd76b5f58e7e62b9df5
+  lastAppliedTime: "2026-04-27T18:53:40Z"
+  observedGeneration: 1
+  phase: InSync
+  sourceYangVersion: "1791"

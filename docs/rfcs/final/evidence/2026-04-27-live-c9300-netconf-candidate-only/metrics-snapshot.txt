@@ -1,0 +1,6 @@
+cisco_vk_config_drift_detected_total{device="cat9k-smoke",family="system"} 9
+cisco_vk_config_drift_detected_total{device="cat9k-smoke",family="vlan"} 9
+cisco_vk_config_mutate_ops_total{device="cat9k-smoke",transport="netconf",verb="MERGE"} 1
+cisco_vk_config_save_startup_total{device="cat9k-smoke",outcome="ok",transport="netconf"} 27
+cisco_vk_config_transactions_total{device="cat9k-smoke",outcome="commit",transport="netconf"} 27
+cisco_vk_config_transactions_total{device="cat9k-smoke",outcome="start_failed",transport="netconf"} 2

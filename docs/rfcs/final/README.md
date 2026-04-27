@@ -361,3 +361,4 @@ Neither blocks merge; both should land before a release announcement.
 | Live-device retest #2 — fixes validated | [`./evidence/2026-04-27-live-c9300-v8-fixes-validated/SUMMARY.md`](./evidence/2026-04-27-live-c9300-v8-fixes-validated/SUMMARY.md) |
 | Live-device retest #3 — production-readiness pass | [`./evidence/2026-04-27-live-c9300-v12-production-ready/SUMMARY.md`](./evidence/2026-04-27-live-c9300-v12-production-ready/SUMMARY.md) |
 | Live-device tier-1 — #6(a) NETCONF dial root-cause narrowing | [`./evidence/2026-04-27-live-c9300-netconf-probe-tier1/SUMMARY.md`](./evidence/2026-04-27-live-c9300-netconf-probe-tier1/SUMMARY.md) |
+| Live-device — NETCONF candidate-only mode closure (tests 06 + 07) | [`./evidence/2026-04-27-live-c9300-netconf-candidate-only/SUMMARY.md`](./evidence/2026-04-27-live-c9300-netconf-candidate-only/SUMMARY.md) |

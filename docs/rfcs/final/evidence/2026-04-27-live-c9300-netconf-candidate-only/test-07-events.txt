@@ -1,0 +1,6 @@
+LAST SEEN   TYPE      REASON            OBJECT                              MESSAGE
+4m15s       Warning   ApplyFailed       iosxeconfig/test-07-write-startup   family "interface_loopback": Apply: op[0] MERGE /Cisco-IOS-XE-native:native/interface/Loopback=9997: rpc-error: [error/application/unknown-element] (empty message) (path=/rpc/edit-config/config/ios:native/ios:interface info=<bad-element>Loopback=9997</bad-element>)
+4m15s       Warning   ReconcileFailed   iosxeconfig/test-07-write-startup   one or more families failed to reconcile
+3m22s       Warning   ReconcileFailed   iosxeconfig/test-07-write-startup   StartTransaction: NETCONF StartTransaction: lock: rpc-error: [error/protocol/lock-denied] the configuration database is locked by session 2237 cisco http (rest from 192.168.129.216) on since 2026-04-27 18:50:58 (info=<session-id>0</session-id>)
+2m30s       Normal    AppliedSuccess    iosxeconfig/test-07-write-startup   applied 1 family change(s) successfully
+19s         Normal    SaveStartupOK     iosxeconfig/test-07-write-startup   startup-config saved

@@ -1,0 +1,13 @@
+LAST SEEN   TYPE      REASON            OBJECT                                   MESSAGE
+33m         Normal    DriftDetected     iosxeconfig/test-06-driftpolicy-revert   family "banner" drifted: 1 op(s) would be applied under driftPolicy=revert
+28m         Normal    DriftDetected     iosxeconfig/test-06-driftpolicy-revert   family "banner" drifted: 1 op(s) applied but 1 still pending
+28m         Warning   ReconcileFailed   iosxeconfig/test-06-driftpolicy-revert   drift persisted after revert
+24m         Warning   ApplyFailed       iosxeconfig/test-06-driftpolicy-revert   family "banner": Apply: NETCONF Mutate(implicit-tx): lock candidate: rpc-error: [error/protocol/lock-denied] the configuration database is locked by session 844 cisco http (rest from 192.168.129.216) on since 2026-04-27 18:29:59 (info=<session-id>0</session-id>)
+24m         Warning   ReconcileFailed   iosxeconfig/test-06-driftpolicy-revert   one or more families failed to reconcile
+19m         Warning   ReconcileFailed   iosxeconfig/test-06-driftpolicy-revert   drift persisted after revert
+18m         Normal    DriftDetected     iosxeconfig/test-06-driftpolicy-revert   family "banner" drifted: 1 op(s) applied but 1 still pending
+17m         Warning   ApplyFailed       iosxeconfig/test-06-driftpolicy-revert   family "banner": Apply: NETCONF Mutate(implicit-tx): lock candidate: rpc-error: [error/protocol/lock-denied] the configuration database is locked by session 1366 cisco http (rest from 192.168.129.216) on since 2026-04-27 18:36:58 (info=<session-id>0</session-id>)
+15m         Warning   ReconcileFailed   iosxeconfig/test-06-driftpolicy-revert   one or more families failed to reconcile
+15m         Warning   ApplyFailed       iosxeconfig/test-06-driftpolicy-revert   family "banner": Apply: NETCONF Mutate(implicit-tx): lock candidate: rpc-error: [error/protocol/lock-denied] the configuration database is locked by session 1413 cisco http (rest from 192.168.129.111) on since 2026-04-27 18:38:30 (info=<session-id>0</session-id>)
+13m         Normal    DriftDetected     iosxeconfig/test-06-driftpolicy-revert   family "banner" drifted: 1 op(s) applied but 1 still pending
+13m         Warning   ReconcileFailed   iosxeconfig/test-06-driftpolicy-revert   drift persisted after revert

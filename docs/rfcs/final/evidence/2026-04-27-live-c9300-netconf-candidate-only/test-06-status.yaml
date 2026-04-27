@@ -1,0 +1,49 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  annotations:
+    cisco.vk/poke: "1777314612"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"config.cisco.vk/v1alpha1","kind":"IOSXEConfig","metadata":{"annotations":{},"labels":{"cisco.vk/release-blocker-test":"06-driftpolicy-revert-live-write"},"name":"test-06-driftpolicy-revert","namespace":"cisco-vk-smoke"},"spec":{"deviceRef":{"name":"cat9k-smoke"},"driftDetectInterval":"30s","driftPolicy":"revert","managedFamilies":["banner"],"source":{"configMapRef":{"key":"data.nac.yaml","name":"test-06-data"}},"transactional":false,"writeStartup":false}}
+  creationTimestamp: "2026-04-27T18:19:59Z"
+  generation: 2
+  labels:
+    cisco.vk/release-blocker-test: 06-driftpolicy-revert-live-write
+  name: test-06-driftpolicy-revert
+  namespace: cisco-vk-smoke
+  resourceVersion: "230836"
+  uid: 5f6f8112-ebb8-4e80-b3e1-6c9b63977ab7
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  driftDetectInterval: 30s
+  driftPolicy: revert
+  managedFamilies:
+  - banner
+  pruneOnRelinquish: false
+  source:
+    configMapRef:
+      key: data.nac.yaml
+      name: test-06-data
+  transactional: false
+  writeStartup: false
+status:
+  conditions:
+  - lastTransitionTime: "2026-04-27T18:40:37Z"
+    message: device reconciled to declared intent
+    reason: Succeeded
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2026-04-27T18:19:59Z"
+    message: no other CR claims this CR's managed families
+    reason: NoOverlap
+    status: "False"
+    type: Conflict
+  familyStatus:
+  - name: banner
+    state: InSync
+  lastAppliedHash: sha256:6718a6a56cfc7ab36841c2d0036049f724ef12fa9feae613b271bf339eb6aec2
+  lastAppliedTime: "2026-04-27T18:53:40Z"
+  observedGeneration: 2
+  phase: InSync
+  sourceYangVersion: "1791"
