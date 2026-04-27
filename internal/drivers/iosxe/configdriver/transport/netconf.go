@@ -130,12 +130,19 @@ func (t *netconfTransport) Capabilities() Capabilities {
 		// when both this capability is true AND the engine's
 		// type-assertion against ConfirmedCommitter succeeds.
 		_, hasConfirm := t.session.serverCaps[capConfirm]
+		// :writable-running:1.0 — present on stock IOS-XE NETCONF
+		// (the device accepts <edit-config target=running>); removed
+		// by `netconf-yang feature candidate-datastore` on 17.x,
+		// at which point the device becomes candidate-only and
+		// rejects direct running writes.
+		_, hasWritableRunning := t.session.serverCaps[capWriteRunning]
 		t.caps = Capabilities{
 			Kind:                    KindNETCONF,
 			SupportsTransactions:    hasCand,
 			SupportsSaveStartup:     true,  // Cisco-IA RPC covers this
 			SupportsSubscribe:       false, // RFC 5277 not wired
 			SupportsConfirmedCommit: hasConfirm,
+			SupportsWritableRunning: hasWritableRunning,
 		}
 	})
 	return t.caps
@@ -207,28 +214,101 @@ func (t *netconfTransport) StartTransaction(ctx context.Context) (TxHandle, erro
 	return TxHandle("candidate"), nil
 }
 
-// Mutate applies ops in order. When tx is "candidate" each op is
-// an <edit-config target=candidate>; when tx is empty each op is
-// an <edit-config target=running>.
+// Mutate applies ops in order.
+//
+//   - tx == "candidate": each op is <edit-config target=candidate>.
+//     The engine's transactional path orchestrates StartTransaction /
+//     Commit / Discard externally; this function only writes to the
+//     candidate datastore.
+//   - tx == "" AND device supports :writable-running:1.0: each op is
+//     <edit-config target=running>. Direct write — what the
+//     non-transactional engine path expects on legacy NETCONF.
+//   - tx == "" AND device is candidate-only (i.e. operator enabled
+//     `netconf-yang feature candidate-datastore` on IOS-XE 17.x):
+//     wrap the ops in an implicit lock(candidate) + edit-config(s)
+//     + commit + unlock cycle. The engine's non-transactional path
+//     still gets atomic, race-free apply semantics; the engine
+//     doesn't need to know about the device-mode shift.
+//
+// Caught against a live Cat9300-24P / IOS-XE 17.18.2 retest where
+// enabling candidate-datastore for Wave 10 broke non-transactional
+// reconciles with `rpc-error: Unsupported capability :writable-running`.
 func (t *netconfTransport) Mutate(ctx context.Context, tx TxHandle, ops []Op) error {
+	caps := t.Capabilities()
 	target := "running"
-	if tx == "candidate" {
+	implicitTx := false
+	// VerbCLI goes through the Cisco-IA cli-config-data RPC, which
+	// writes to running directly via a separate RPC path that does
+	// NOT depend on the :writable-running capability (the YANG path
+	// is a Cisco-specific operations endpoint, not a NETCONF
+	// edit-config target). CLI-only batches therefore bypass the
+	// implicit-tx promotion decision below — wrapping them in a
+	// candidate lock+commit cycle would be pointless and would
+	// confuse mock test fixtures that don't script the lock/commit
+	// RPCs.
+	hasEditConfigOp := false
+	for _, op := range ops {
+		if op.Verb != VerbCLI {
+			hasEditConfigOp = true
+			break
+		}
+	}
+	switch {
+	case tx == "candidate":
 		target = "candidate"
+	case tx == "":
+		if hasEditConfigOp && caps.SupportsTransactions && !caps.SupportsWritableRunning {
+			// Device-mode shift to candidate-only: wrap the ops in
+			// an implicit lock-candidate + commit cycle so the
+			// non-transactional caller still gets atomic apply.
+			target = "candidate"
+			implicitTx = true
+		}
+	default:
+		return fmt.Errorf("NETCONF Mutate: unknown TxHandle %q", tx)
+	}
+
+	if implicitTx {
+		if _, err := t.session.rpc(`<lock><target><candidate/></target></lock>`); err != nil {
+			return fmt.Errorf("NETCONF Mutate(implicit-tx): lock candidate: %w", err)
+		}
 	}
 	for i, op := range ops {
 		if op.Verb == VerbCLI {
 			if err := t.pushCLI(op.Body); err != nil {
+				if implicitTx {
+					_, _ = t.session.rpc(`<discard-changes/>`)
+					_, _ = t.session.rpc(`<unlock><target><candidate/></target></unlock>`)
+				}
 				return fmt.Errorf("op[%d] CLI: %w", i, err)
 			}
 			continue
 		}
 		edit, err := editConfigXML(target, op)
 		if err != nil {
+			if implicitTx {
+				_, _ = t.session.rpc(`<discard-changes/>`)
+				_, _ = t.session.rpc(`<unlock><target><candidate/></target></unlock>`)
+			}
 			return fmt.Errorf("op[%d] %s %s: build edit-config: %w",
 				i, op.Verb, op.Path, err)
 		}
 		if _, err := t.session.rpc(edit); err != nil {
+			if implicitTx {
+				_, _ = t.session.rpc(`<discard-changes/>`)
+				_, _ = t.session.rpc(`<unlock><target><candidate/></target></unlock>`)
+			}
 			return fmt.Errorf("op[%d] %s %s: %w", i, op.Verb, op.Path, err)
+		}
+	}
+	if implicitTx {
+		if _, err := t.session.rpc(`<commit/>`); err != nil {
+			_, _ = t.session.rpc(`<discard-changes/>`)
+			_, _ = t.session.rpc(`<unlock><target><candidate/></target></unlock>`)
+			return fmt.Errorf("NETCONF Mutate(implicit-tx): commit: %w", err)
+		}
+		if _, err := t.session.rpc(`<unlock><target><candidate/></target></unlock>`); err != nil {
+			return fmt.Errorf("NETCONF Mutate(implicit-tx): unlock: %w", err)
 		}
 	}
 	return nil

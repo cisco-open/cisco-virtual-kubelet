@@ -79,6 +79,12 @@ func (r *restconfTransport) Capabilities() Capabilities {
 		// an RPC at /operations/cisco-ia:save-config. The adapter
 		// implements it below, so capability reports true.
 		SupportsSaveStartup: true,
+		// RESTCONF writes go directly to running by definition (RFC
+		// 8040 — there is no candidate datastore in RESTCONF). Report
+		// true unconditionally; the engine's non-transactional path
+		// uses this signal to choose between direct write and
+		// implicit lock+commit cycle.
+		SupportsWritableRunning: true,
 	}
 }
 

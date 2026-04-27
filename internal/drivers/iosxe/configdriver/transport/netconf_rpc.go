@@ -30,10 +30,11 @@ const netconfBase10 = "urn:ietf:params:xml:ns:netconf:base:1.0"
 
 // capability URIs that we care about.
 const (
-	capBase10  = "urn:ietf:params:netconf:base:1.0"
-	capBase11  = "urn:ietf:params:netconf:base:1.1"
-	capCand    = "urn:ietf:params:netconf:capability:candidate:1.0"
-	capConfirm = "urn:ietf:params:netconf:capability:confirmed-commit:1.0"
+	capBase10        = "urn:ietf:params:netconf:base:1.0"
+	capBase11        = "urn:ietf:params:netconf:base:1.1"
+	capCand          = "urn:ietf:params:netconf:capability:candidate:1.0"
+	capConfirm       = "urn:ietf:params:netconf:capability:confirmed-commit:1.0"
+	capWriteRunning  = "urn:ietf:params:netconf:capability:writable-running:1.0"
 )
 
 // netconfSession is the protocol-level side of the transport. It

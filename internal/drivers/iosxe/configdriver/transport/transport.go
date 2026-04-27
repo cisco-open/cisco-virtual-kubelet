@@ -57,6 +57,23 @@ type Capabilities struct {
 	SupportsSubscribe    bool
 	SupportsSaveStartup  bool
 
+	// SupportsWritableRunning is true when the transport advertises
+	// the NETCONF :writable-running:1.0 capability — i.e. the device
+	// accepts <edit-config target=running> directly. RESTCONF and
+	// gNMI both treat the running config as directly writable and
+	// report this as true. NETCONF reports it from the server's
+	// <hello>: legacy IOS-XE images include `:writable-running:1.0`,
+	// but enabling `netconf-yang feature candidate-datastore` on
+	// IOS-XE 17.x removes it (the device becomes candidate-only
+	// and rejects any direct write to running with
+	// `Unsupported capability :writable-running`).
+	//
+	// The transport's Mutate function uses this signal to decide
+	// whether a non-transactional caller (tx="") can write directly
+	// to running or has to be auto-promoted to an implicit
+	// lock(candidate) + edit + commit + unlock cycle.
+	SupportsWritableRunning bool
+
 	// SupportsConfirmedCommit is true when the transport advertises
 	// RFC 6241 §8.4 confirmed-commit semantics (capability URN
 	// urn:ietf:params:netconf:capability:confirmed-commit:1.0 or

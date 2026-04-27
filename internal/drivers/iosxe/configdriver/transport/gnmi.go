@@ -105,6 +105,8 @@ func (t *gnmiTransport) Capabilities() Capabilities {
 		SupportsTransactions: true,
 		SupportsSubscribe:    true,
 		SupportsSaveStartup:  false, // gNMI has no save-config primitive
+		// gNMI Set writes go directly to the running config by spec.
+		SupportsWritableRunning: true,
 	}
 }
 

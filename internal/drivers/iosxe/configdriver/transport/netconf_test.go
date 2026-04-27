@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -92,6 +93,7 @@ func (m *mockDevice) serve(r io.Reader, w io.Writer) {
 <hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
   <capabilities>
     <capability>urn:ietf:params:netconf:base:1.0</capability>
+    <capability>urn:ietf:params:netconf:capability:writable-running:1.0</capability>
     <capability>urn:ietf:params:netconf:capability:candidate:1.0</capability>
     <capability>urn:ietf:params:netconf:capability:confirmed-commit:1.0</capability>
   </capabilities>
@@ -317,6 +319,94 @@ func TestNETCONFTransactionalApply(t *testing.T) {
 		t.Fatalf("Commit: %v", err)
 	}
 	m.assertNoFailures()
+}
+
+// TestNETCONFMutateAutoPromotesOnCandidateOnly is a regression test
+// for the live retest finding: enabling
+// `netconf-yang feature candidate-datastore` on IOS-XE 17.x drops
+// the device's :writable-running:1.0 capability advertisement and
+// makes direct <edit-config target=running> fail with
+// `Unsupported capability :writable-running`. Non-transactional
+// callers (tx="") must be auto-promoted to an implicit
+// lock(candidate) + edit-config(candidate) + commit + unlock cycle
+// so the engine's non-transactional path keeps working without
+// knowing about the device-mode shift.
+func TestNETCONFMutateAutoPromotesOnCandidateOnly(t *testing.T) {
+	// Mock advertises :candidate:1.0 but NOT :writable-running:1.0
+	// — the candidate-only state.
+	clientR, serverW := io.Pipe()
+	serverR, clientW := io.Pipe()
+	cli := &pipeConn{r: clientR, w: clientW}
+	defer cli.Close()
+	defer serverR.Close()
+	defer serverW.Close()
+
+	candidateOnlyHello := `<?xml version="1.0" encoding="UTF-8"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <capabilities>
+    <capability>urn:ietf:params:netconf:base:1.0</capability>
+    <capability>urn:ietf:params:netconf:capability:candidate:1.0</capability>
+  </capabilities>
+  <session-id>1</session-id>
+</hello>`
+	expectations := []scriptStep{
+		{expect: "<lock>", reply: `<rpc-reply message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><ok/></rpc-reply>`},
+		{expect: "<edit-config><target><candidate/></target>", reply: `<rpc-reply message-id="102" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><ok/></rpc-reply>`},
+		{expect: "<commit/>", reply: `<rpc-reply message-id="103" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><ok/></rpc-reply>`},
+		{expect: "<unlock>", reply: `<rpc-reply message-id="104" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"><ok/></rpc-reply>`},
+	}
+	failures := make(chan string, 8)
+	go func() {
+		br := bufio.NewReader(serverR)
+		// Hello exchange.
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			_ = writeFrame10(serverW, []byte(candidateOnlyHello))
+		}()
+		_, _ = readFrame10(br)
+		<-done
+		// Scripted RPC handling.
+		for _, step := range expectations {
+			req, rerr := readFrame10(br)
+			if rerr != nil {
+				failures <- fmt.Sprintf("read rpc: %v", rerr)
+				return
+			}
+			if !strings.Contains(string(req), step.expect) {
+				failures <- fmt.Sprintf("expected %q, got %s", step.expect, string(req))
+				return
+			}
+			if werr := writeFrame10(serverW, []byte(step.reply)); werr != nil {
+				failures <- fmt.Sprintf("write reply: %v", werr)
+				return
+			}
+		}
+	}()
+
+	ti, err := NewNETCONF(NETCONFConfig{Conn: cli})
+	if err != nil {
+		t.Fatalf("NewNETCONF: %v", err)
+	}
+	defer ti.Close()
+	if ti.Capabilities().SupportsWritableRunning {
+		t.Fatal("test setup: candidate-only mock should report SupportsWritableRunning=false")
+	}
+	if !ti.Capabilities().SupportsTransactions {
+		t.Fatal("test setup: candidate-only mock should report SupportsTransactions=true")
+	}
+	ops := []Op{
+		{Verb: VerbMerge, Path: "/Cisco-IOS-XE-native:native/banner",
+			Body: []byte(`{"Cisco-IOS-XE-native:banner":{"motd":{"banner":"hello"}}}`)},
+	}
+	if merr := ti.Mutate(context.Background(), "", ops); merr != nil {
+		t.Fatalf("Mutate(implicit-tx): %v", merr)
+	}
+	select {
+	case f := <-failures:
+		t.Fatalf("mock device assertion: %s", f)
+	default:
+	}
 }
 
 func TestNETCONFDiscardAfterEditFailure(t *testing.T) {
