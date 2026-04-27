@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -393,6 +394,18 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				Name:  "DISABLE_IN_POD_CONFIG_RECONCILER",
 				Value: "true",
 			})
+		}
+
+		// Diagnostic / opt-in env propagation: any controller-side env
+		// var listed in the CiscoDevice spec.labels (prefix `env.` —
+		// e.g. label `env.CONFIG_NETCONF_PROBE=1`) is forwarded onto
+		// the per-pod kubelet's container env. Currently used only by
+		// the #6(a) probe; same plumbing covers other future operator-
+		// scoped diagnostics without per-knob controller changes.
+		for k, v := range device.Spec.Labels {
+			if name, ok := strings.CutPrefix(k, "env."); ok {
+				credEnv = append(credEnv, corev1.EnvVar{Name: name, Value: v})
+			}
 		}
 
 		deploy.Spec.Template.Spec = corev1.PodSpec{
