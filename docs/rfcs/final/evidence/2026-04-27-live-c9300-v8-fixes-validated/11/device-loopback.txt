@@ -1,0 +1,12 @@
+Warning: Permanently added '198.51.100.103' (RSA) to the list of known hosts.
+
+
+
+Building configuration...
+
+Current configuration : 140 bytes
+!
+interface Loopback9994
+ description cisco-vk release-blocker test 11 b^@^T RESTCONF fallback
+ ip address 10.255.255.94 255.255.255.255
+end

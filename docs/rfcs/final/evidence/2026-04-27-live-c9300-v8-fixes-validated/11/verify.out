@@ -1,0 +1,12 @@
+[ OK ] observedGeneration (1) == metadata.generation (1)
+[ OK ] phase=InSync
+[ OK ] Ready/True/Succeeded
+[FAIL] family interface_loopback opCount=0, want >= 1
+[ OK ] no ApplyError family statuses
+[ OK ] no drift entries
+[ OK ] ConfirmedCommitFallback event present with expected reason
+[ OK ] no ConfirmedCommitUsed event (correct on the fallback path)
+[FAIL] could not scrape /metrics from pod cat9k-smoke-vk-7d45c557bf-xh9qt
+[ OK ] Loopback 9994 present on device (RESTCONF non-transactional apply succeeded)
+
+verify: FAIL (2 failures)

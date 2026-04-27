@@ -1,0 +1,3 @@
+LAST SEEN   TYPE      REASON                    OBJECT                                  MESSAGE
+20s         Normal    AppliedSuccess            iosxeconfig/test-11-restconf-fallback   applied 1 family change(s) successfully
+20s         Warning   ConfirmedCommitFallback   iosxeconfig/test-11-restconf-fallback   spec.confirmTimeoutSeconds set but auto-revert path unavailable: non-transactional reconcile — fell back to plain Commit

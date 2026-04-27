@@ -1,0 +1,4 @@
+Events:
+  Type    Reason         Age                From                        Message
+  ----    ------         ----               ----                        -------
+  Normal  DriftDetected  15s (x3 over 16s)  cisco-vk-config-reconciler  family "cli:test-02-banner-cli" drifted: CLI block withheld under driftPolicy=report

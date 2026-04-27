@@ -1,0 +1,5 @@
+loopback-9997-running-exists:
+no
+
+startup-config-includes-loopback9997:
+(operator SSH attestation, optional — paste output of 'show startup-config | include Loopback9997')

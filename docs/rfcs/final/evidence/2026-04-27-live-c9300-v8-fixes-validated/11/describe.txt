@@ -1,0 +1,4 @@
+Events:
+  Type     Reason                   Age                From                        Message
+  ----     ------                   ----               ----                        -------
+  Normal   AppliedSuccess           83s                cisco-vk-config-reconciler  applied 1 family change(s) successfully

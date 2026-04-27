@@ -1,0 +1,5 @@
+hostname:
+C9K-4
+
+banner-motd-bytes:
+0
