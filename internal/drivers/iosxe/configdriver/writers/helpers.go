@@ -108,6 +108,28 @@ func leavesEqual(desired, observed map[string]any, managed []string) bool {
 	return true
 }
 
+// decodeYANGList unmarshals body as `[]map[string]any`, tolerating
+// the single-object shape some NETCONF candidate-datastore responses
+// emit for one-entry lists. RESTCONF and most NETCONF backends wrap
+// a list as `[{...}]` even when the list has exactly one element;
+// IOS-XE 17.x's candidate datastore sometimes returns the bare
+// `{...}` instead. The keyed-list family writers all need the same
+// tolerance — caught against a live Cat9300 retest where test 07's
+// interface_loopback Fetch failed with `cannot unmarshal object
+// into Go value of type []map[string]interface {}` immediately
+// after the device-mode shift to candidate-only.
+func decodeYANGList(body []byte) ([]map[string]any, error) {
+	var list []map[string]any
+	if err := json.Unmarshal(body, &list); err == nil {
+		return list, nil
+	}
+	var single map[string]any
+	if err := json.Unmarshal(body, &single); err != nil {
+		return nil, err
+	}
+	return []map[string]any{single}, nil
+}
+
 // scalarEqual compares two YAML-decoded scalars. YAML and JSON both
 // produce float64 for numbers, so == is usually enough; the stringified
 // second pass handles mixed representations (e.g. yang "true" vs bool).

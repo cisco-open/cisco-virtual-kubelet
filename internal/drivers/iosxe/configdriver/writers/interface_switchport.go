@@ -87,8 +87,8 @@ func (switchportWriter) Fetch(ctx context.Context, c transport.Interface) (any, 
 		if body == nil {
 			continue
 		}
-		var list []map[string]any
-		if err := json.Unmarshal(body, &list); err != nil {
+		list, err := decodeYANGList(body)
+		if err != nil {
 			return nil, fmt.Errorf("interface_switchport: decode %s list: %w", t, err)
 		}
 		for _, ifr := range list {

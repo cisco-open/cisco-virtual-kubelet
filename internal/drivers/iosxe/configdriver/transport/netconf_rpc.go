@@ -249,12 +249,25 @@ type rpcReply struct {
 }
 
 type rpcError struct {
-	Type     string `xml:"error-type"`
-	Tag      string `xml:"error-tag"`
-	Severity string `xml:"error-severity"`
-	Message  string `xml:"error-message"`
-	AppTag   string `xml:"error-app-tag"`
-	Path     string `xml:"error-path"`
+	Type     string       `xml:"error-type"`
+	Tag      string       `xml:"error-tag"`
+	Severity string       `xml:"error-severity"`
+	Message  string       `xml:"error-message"`
+	AppTag   string       `xml:"error-app-tag"`
+	Path     string       `xml:"error-path"`
+	// Info preserves the <error-info> subtree verbatim so callers
+	// can recover NETCONF-RFC-6241-§4.3 protocol-level diagnostics
+	// the device put there — `<bad-element>banner</bad-element>` for
+	// unknown-element, `<bad-attribute>` for invalid-value, etc. The
+	// structured fields above don't surface these on most IOS-XE
+	// rpc-error replies (Message is empty, Path may be empty), so
+	// the verbatim subtree is often the only place the actual
+	// rejection cause is encoded.
+	Info rpcErrorInfo `xml:"error-info"`
+}
+
+type rpcErrorInfo struct {
+	InnerXML string `xml:",innerxml"`
 }
 
 // parseRPCReply extracts the fields we care about. We avoid a
@@ -312,8 +325,31 @@ func parseRPCReply(raw []byte) (*rpcReply, error) {
 func formatRPCErrors(errs []rpcError) error {
 	parts := make([]string, 0, len(errs))
 	for _, e := range errs {
-		parts = append(parts, fmt.Sprintf(
-			"[%s/%s/%s] %s", e.Severity, e.Type, e.Tag, e.Message))
+		// Assemble the error-fields into a single human-readable
+		// line. Empty Message is common on IOS-XE — fall through to
+		// the structured fields so the next operator hit gets enough
+		// to debug from the log alone (no tcpdump).
+		extras := make([]string, 0, 3)
+		if e.AppTag != "" {
+			extras = append(extras, "app-tag="+e.AppTag)
+		}
+		if e.Path != "" {
+			extras = append(extras, "path="+strings.TrimSpace(e.Path))
+		}
+		if info := strings.TrimSpace(e.Info.InnerXML); info != "" {
+			// Inline the subtree on one line so it stays log-grep-able.
+			info = strings.Join(strings.Fields(info), " ")
+			extras = append(extras, "info="+info)
+		}
+		msg := strings.TrimSpace(e.Message)
+		if msg == "" && len(extras) > 0 {
+			msg = "(empty message)"
+		}
+		piece := fmt.Sprintf("[%s/%s/%s] %s", e.Severity, e.Type, e.Tag, msg)
+		if len(extras) > 0 {
+			piece += " (" + strings.Join(extras, " ") + ")"
+		}
+		parts = append(parts, piece)
 	}
 	return fmt.Errorf("rpc-error: %s", strings.Join(parts, "; "))
 }

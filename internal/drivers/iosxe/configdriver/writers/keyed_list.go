@@ -16,7 +16,6 @@ package writers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 
@@ -73,8 +72,8 @@ func (w keyedListWriter) Fetch(ctx context.Context, c transport.Interface) (any,
 	if err != nil || body == nil {
 		return []map[string]any{}, err
 	}
-	var list []map[string]any
-	if err := json.Unmarshal(body, &list); err != nil {
+	list, err := decodeYANGList(body)
+	if err != nil {
 		return nil, fmt.Errorf("%s: decode list: %w", w.family, err)
 	}
 	if w.yangFetchShape != nil {

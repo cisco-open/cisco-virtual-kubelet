@@ -233,6 +233,30 @@ func TestVLANFetchStripsYANGWrapper(t *testing.T) {
 	}
 }
 
+// TestVLANFetchTolerantOfSingleObjectShape is a regression test for
+// the live retest finding: NETCONF candidate datastore on IOS-XE
+// 17.x sometimes returns a bare `{...}` object instead of `[{...}]`
+// for single-entry lists (a known IOS-XE serialiser quirk). The
+// keyed-list writer's Fetch must accept both shapes; pre-fix it
+// hard-failed with `cannot unmarshal object into Go value of type
+// []map[string]interface {}`.
+func TestVLANFetchTolerantOfSingleObjectShape(t *testing.T) {
+	t.Parallel()
+	cli, _ := newTestTransport(t, func(w http.ResponseWriter, r *http.Request) {
+		// Single-object shape (no array wrapper) — the candidate-only
+		// NETCONF response shape that broke pre-fix.
+		_, _ = io.WriteString(w, `{"Cisco-IOS-XE-vlan:vlan-list":{"id":10,"name":"users"}}`)
+	})
+	got, err := vlanWriter{}.Fetch(context.Background(), cli)
+	if err != nil {
+		t.Fatalf("Fetch (single-object shape): %v", err)
+	}
+	list := got.([]map[string]any)
+	if len(list) != 1 || list[0]["id"].(float64) != 10 {
+		t.Fatalf("single-object decode: %#v", list)
+	}
+}
+
 func TestVLANFetchEmptyOn404(t *testing.T) {
 	t.Parallel()
 	cli, _ := newTestTransport(t, func(w http.ResponseWriter, r *http.Request) {

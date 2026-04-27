@@ -16,7 +16,6 @@ package writers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -65,8 +64,8 @@ func (vlanWriter) Fetch(ctx context.Context, c transport.Interface) (any, error)
 	if err != nil || body == nil {
 		return []map[string]any{}, err
 	}
-	var list []map[string]any
-	if err := json.Unmarshal(body, &list); err != nil {
+	list, err := decodeYANGList(body)
+	if err != nil {
 		return nil, fmt.Errorf("vlan: decode vlan-list: %w", err)
 	}
 	return list, nil
