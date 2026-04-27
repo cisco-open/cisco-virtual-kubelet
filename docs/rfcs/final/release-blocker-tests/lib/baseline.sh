@@ -166,7 +166,7 @@ baseline_assert_metric_counter() {
   local labels="${2:?usage: baseline_assert_metric_counter <name> <labels> <min>}"
   local min="${3:?usage: baseline_assert_metric_counter <name> <labels> <min>}"
   local pod
-  pod="$(kubectl get pod -n "${baseline_namespace}" -l app="${DEVICE_NAME:-cat9k-smoke}" \
+  pod="$(kubectl get pod -n "${baseline_namespace}" -l "app.kubernetes.io/instance=${DEVICE_NAME:-cat9k-smoke}" \
     -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)"
   if [[ -z "${pod}" ]]; then
     baseline_fail "could not locate cisco-vk pod for metric scrape"
@@ -207,7 +207,7 @@ baseline_assert_metric_counter_zero() {
   local metric="${1:?usage: baseline_assert_metric_counter_zero <name> <labels>}"
   local labels="${2:?usage: baseline_assert_metric_counter_zero <name> <labels>}"
   local pod
-  pod="$(kubectl get pod -n "${baseline_namespace}" -l app="${DEVICE_NAME:-cat9k-smoke}" \
+  pod="$(kubectl get pod -n "${baseline_namespace}" -l "app.kubernetes.io/instance=${DEVICE_NAME:-cat9k-smoke}" \
     -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)"
   if [[ -z "${pod}" ]]; then
     baseline_fail "could not locate cisco-vk pod for metric scrape"

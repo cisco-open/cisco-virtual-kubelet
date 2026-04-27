@@ -81,12 +81,12 @@ else
 fi
 
 # ── 4. cisco-vk pod is Running ──────────────────────────────────────
-pod_ready="$(kubectl get pod -n "${NAMESPACE}" -l app="${DEVICE_NAME}" \
+pod_ready="$(kubectl get pod -n "${NAMESPACE}" -l "app.kubernetes.io/instance=${DEVICE_NAME}" \
   -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null || echo false)"
 if [[ "${pod_ready}" == "true" ]]; then
   note "cisco-vk pod is Ready"
 else
-  err "cisco-vk pod not Ready in namespace ${NAMESPACE} (label app=${DEVICE_NAME})"
+  err "cisco-vk pod not Ready in namespace ${NAMESPACE} (label app.kubernetes.io/instance=${DEVICE_NAME})"
 fi
 
 # ── 5. Required env: device password ────────────────────────────────

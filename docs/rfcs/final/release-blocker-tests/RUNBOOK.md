@@ -14,7 +14,7 @@ Before starting the maintenance window, confirm:
 
 - [ ] **kubectl context** is the kind cluster that runs the cisco-vk pod. `kubectl config current-context` should report `kind-kind` (or whatever your local cluster name is).
 - [ ] **CiscoDevice CR exists** and is `Ready`: `kubectl get ciscodevice cat9k-smoke -n cisco-vk-smoke` shows `PHASE=Ready`.
-- [ ] **cisco-vk pod is healthy**: `kubectl get pod -n cisco-vk-smoke -l app=cisco-vk -o wide` shows `1/1 Running`.
+- [ ] **cisco-vk pod is healthy**: `kubectl get pod -n cisco-vk-smoke -l app.kubernetes.io/instance=cat9k-smoke -o wide` shows `1/1 Running`.
 - [ ] **Device password** is set in the operator's environment: `export CVK_CONFIG_LINT_PASSWORD='...'`.
 - [ ] **`cisco-vk-config-lint` binary** is on PATH (`which cisco-vk-config-lint`) or you can run it via `go run ./tools/cisco-vk-config-lint`.
 - [ ] **`jq` and `kubectl`** are on PATH.

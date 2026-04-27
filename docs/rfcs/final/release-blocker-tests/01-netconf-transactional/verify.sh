@@ -66,7 +66,7 @@ else
 fi
 
 # Optional: surface any Discard call from the cisco-vk pod logs.
-pod="$(kubectl get pod -n "${NAMESPACE}" -l app="${DEVICE_NAME}" \
+pod="$(kubectl get pod -n "${NAMESPACE}" -l "app.kubernetes.io/instance=${DEVICE_NAME}" \
   -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
 if [[ -n "${pod}" ]]; then
   if kubectl logs -n "${NAMESPACE}" "${pod}" --tail 200 2>/dev/null \

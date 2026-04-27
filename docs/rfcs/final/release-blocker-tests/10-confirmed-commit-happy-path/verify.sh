@@ -26,7 +26,7 @@ baseline_assert_no_unexpected_drift
 # Headline assertion: outcome=confirmed counter incremented by AT
 # LEAST 1 from pre-test. Read the absolute counter and compare to
 # pre-test snapshot.
-pod="$(kubectl get pod -n "${NAMESPACE}" -l app="${DEVICE_NAME}" \
+pod="$(kubectl get pod -n "${NAMESPACE}" -l "app.kubernetes.io/instance=${DEVICE_NAME}" \
   -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)"
 if [[ -n "${pod}" ]]; then
   post="$(kubectl exec -n "${NAMESPACE}" "${pod}" -- \

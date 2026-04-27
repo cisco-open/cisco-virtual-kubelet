@@ -19,12 +19,12 @@ kubectl get deployment "${DEVICE_NAME}-vk" -n "${NAMESPACE}" \
 echo
 
 echo "current-pod:"
-kubectl get pod -n "${NAMESPACE}" -l app="${DEVICE_NAME}" \
+kubectl get pod -n "${NAMESPACE}" -l "app.kubernetes.io/instance=${DEVICE_NAME}" \
   -o jsonpath='{.items[0].metadata.name}'
 echo
 
 echo "current-pod-uid:"
-kubectl get pod -n "${NAMESPACE}" -l app="${DEVICE_NAME}" \
+kubectl get pod -n "${NAMESPACE}" -l "app.kubernetes.io/instance=${DEVICE_NAME}" \
   -o jsonpath='{.items[0].metadata.uid}'
 echo
 

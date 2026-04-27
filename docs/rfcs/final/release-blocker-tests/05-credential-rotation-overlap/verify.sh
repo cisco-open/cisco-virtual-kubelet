@@ -22,7 +22,7 @@ fail=0
 
 echo "Polling for new pod (different UID from pre-state ${pre_uid:0:8}...)"
 for i in $(seq 1 60); do
-  cur_uid="$(kubectl get pod -n "${NAMESPACE}" -l app="${DEVICE_NAME}" \
+  cur_uid="$(kubectl get pod -n "${NAMESPACE}" -l "app.kubernetes.io/instance=${DEVICE_NAME}" \
     -o jsonpath='{.items[0].metadata.uid}' 2>/dev/null || true)"
   if [[ -n "${cur_uid}" && "${cur_uid}" != "${pre_uid}" ]]; then
     echo "OK:   new pod started, UID=${cur_uid:0:8}... (was ${pre_uid:0:8}...)"

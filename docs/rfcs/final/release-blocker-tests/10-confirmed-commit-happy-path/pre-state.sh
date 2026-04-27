@@ -29,7 +29,7 @@ esac
 # Capture pre-test metric value so verify.sh can assert +1.
 echo ""
 echo "pre-test confirmed-counter:"
-pod="$(kubectl get pod -n "${NAMESPACE}" -l app="${DEVICE_NAME}" \
+pod="$(kubectl get pod -n "${NAMESPACE}" -l "app.kubernetes.io/instance=${DEVICE_NAME}" \
   -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)"
 if [[ -n "${pod}" ]]; then
   pre="$(kubectl exec -n "${NAMESPACE}" "${pod}" -- \
