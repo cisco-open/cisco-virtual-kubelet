@@ -312,13 +312,22 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	return nil
 }
 
-// retryConfigDriverDial attempts to build a real ConfigDriverContext
+// retryConfigDriverDial attempts to build a real device transport
 // every 30 seconds until success or ctx cancellation. On success it
 // patches r.SetTransport so the reconciler picks up the live
-// transport on its next tick. Diagnostic logs are at INFO so an
-// operator following pod logs can correlate the "now reachable"
-// transition with whatever device-side or runtime-side event
-// finally cleared the dial race.
+// transport on its next tick.
+//
+// IMPORTANT: this calls `transport.For` directly rather than
+// drivers.NewConfigDriver. The latter pulls iosxebuilder.LoadYANGReleaseTags
+// on every invocation, which produces a burst of disk I/O + goroutine
+// activity each retry tick — which is exactly the kind of runtime
+// pressure that produced the original from-pod NETCONF dial overflow
+// at startup. A side-by-side in-process probe goroutine that called
+// `ssh.Dial` directly succeeded while NewConfigDriver-based attempts
+// kept failing on the same wall clock; the schema-loading work was
+// the only material difference. Build the transport in isolation
+// here; the rest of the dctx (KeyRules, YANG versions, etc.) is
+// loaded once at startup and is unaffected by the dial race.
 func retryConfigDriverDial(ctx context.Context, opts configReconcilerOptions, r *provider.ConfigReconciler) {
 	const interval = 30 * time.Second
 	tick := time.NewTicker(interval)
@@ -329,11 +338,11 @@ func retryConfigDriverDial(ctx context.Context, opts configReconcilerOptions, r 
 			return
 		case <-tick.C:
 		}
-		dctx, err := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, drivers.ConfigDriverOptions{
+		t, err := transport.For(opts.Spec, opts.Password, transport.FactoryOptions{
 			SessionLock: opts.SessionLock,
 		})
-		if err == nil && dctx != nil && dctx.Transport != nil {
-			r.SetTransport(dctx.Transport)
+		if err == nil && t != nil {
+			r.SetTransport(t)
 			log.G(ctx).Infof("config driver transport acquired after %d retry attempt(s)", attempt)
 			return
 		}
