@@ -352,6 +352,8 @@ Neither blocks merge; both should land before a release announcement.
 | Quality / composition snapshot | [`../iosxe-config-driver-appraisal.md`](../iosxe-config-driver-appraisal.md) |
 | Architectural watch-items 1–12 | [`../architectural-review.md`](../architectural-review.md) |
 | Driver-extension contract (NX-OS, IOS-XR, OpenConfig placeholders) | [`../driver-extension-guide.md`](../driver-extension-guide.md) |
+| Transport architecture — RESTCONF / NETCONF / gNMI internals | [`../transport-architecture.md`](../transport-architecture.md) |
+| Deployment modes — operator setup guide per transport | [`../deployment-modes.md`](../deployment-modes.md) |
 | CRD v1 promotion plan | [`../crd-v1-promotion-plan.md`](../crd-v1-promotion-plan.md) |
 | Slog-backend log unification plan | [`../log-unification-plan.md`](../log-unification-plan.md) |
 | External infrastructure residuals (Phase 8) | [`../phase-8-residuals.md`](../phase-8-residuals.md) |
