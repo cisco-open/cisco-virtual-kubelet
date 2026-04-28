@@ -40,9 +40,11 @@ import "fmt"
 // interfaceIPv4VRFToYANG translates the netascode-flat managed-leaf
 // shape into the nested Cisco-IOS-XE-native body the device expects.
 //
-//   ipv4_address       → ip.address.primary.address
-//   ipv4_address_mask  → ip.address.primary.mask
-//   vrf                → vrf.forwarding
+//   ipv4_address         → ip.address.primary.address
+//   ipv4_address_mask    → ip.address.primary.mask
+//   vrf                  → vrf.forwarding
+//   ip_access_group_in   → ip.access-group.in.acl.acl-name
+//   ip_access_group_out  → ip.access-group.out.acl.acl-name
 //
 // All other leaves pass through. Empty / nil inputs are dropped so
 // the body the transport sends does not carry a half-initialized
@@ -67,6 +69,18 @@ func interfaceIPv4VRFToYANG(flat map[string]any) map[string]any {
 				continue
 			}
 			out["vrf"] = map[string]any{"forwarding": s}
+		case "ip_access_group_in":
+			s, ok := v.(string)
+			if !ok || s == "" {
+				continue
+			}
+			ensureIPAccessGroup(out, "in")["acl-name"] = s
+		case "ip_access_group_out":
+			s, ok := v.(string)
+			if !ok || s == "" {
+				continue
+			}
+			ensureIPAccessGroup(out, "out")["acl-name"] = s
 		default:
 			out[k] = v
 		}
@@ -109,19 +123,30 @@ func interfaceIPv4VRFFromYANG(yang map[string]any) map[string]any {
 			if !ok {
 				continue
 			}
-			addr, ok := ip["address"].(map[string]any)
-			if !ok {
-				continue
+			if addr, ok := ip["address"].(map[string]any); ok {
+				if prim, ok := addr["primary"].(map[string]any); ok {
+					if a, ok := prim["address"]; ok {
+						out["ipv4_address"] = a
+					}
+					if m, ok := prim["mask"]; ok {
+						out["ipv4_address_mask"] = m
+					}
+				}
 			}
-			prim, ok := addr["primary"].(map[string]any)
-			if !ok {
-				continue
-			}
-			if a, ok := prim["address"]; ok {
-				out["ipv4_address"] = a
-			}
-			if m, ok := prim["mask"]; ok {
-				out["ipv4_address_mask"] = m
+			if ag, ok := ip["access-group"].(map[string]any); ok {
+				for _, dir := range []string{"in", "out"} {
+					d, ok := ag[dir].(map[string]any)
+					if !ok {
+						continue
+					}
+					acl, ok := d["acl"].(map[string]any)
+					if !ok {
+						continue
+					}
+					if name, ok := acl["acl-name"]; ok {
+						out["ip_access_group_"+dir] = name
+					}
+				}
 			}
 		case "vrf":
 			vrf, ok := v.(map[string]any)
@@ -138,6 +163,33 @@ func interfaceIPv4VRFFromYANG(yang map[string]any) map[string]any {
 		}
 	}
 	return out
+}
+
+// ensureIPAccessGroup lazily creates the nested ip.access-group.<dir>.acl
+// map on `out`, returning the inner-most map so callers can write the
+// `acl-name` leaf into it. Direction is "in" or "out".
+func ensureIPAccessGroup(out map[string]any, dir string) map[string]any {
+	ip, ok := out["ip"].(map[string]any)
+	if !ok {
+		ip = map[string]any{}
+		out["ip"] = ip
+	}
+	ag, ok := ip["access-group"].(map[string]any)
+	if !ok {
+		ag = map[string]any{}
+		ip["access-group"] = ag
+	}
+	d, ok := ag[dir].(map[string]any)
+	if !ok {
+		d = map[string]any{}
+		ag[dir] = d
+	}
+	acl, ok := d["acl"].(map[string]any)
+	if !ok {
+		acl = map[string]any{}
+		d["acl"] = acl
+	}
+	return acl
 }
 
 // ensureIPPrimary lazily creates the nested ip.address.primary map

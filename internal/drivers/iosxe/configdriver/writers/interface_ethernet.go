@@ -64,6 +64,8 @@ var ethernetManagedLeaves = []string{
 	"description",
 	"shutdown",
 	"mtu",
+	"ip_access_group_in",
+	"ip_access_group_out",
 }
 
 type ethernetWriter struct{}
@@ -165,6 +167,7 @@ func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		}
 		proj := projectManagedLeaves(entry, ethernetManagedLeaves)
 		proj["name"] = k.name
+		proj = interfaceIPv4VRFToYANG(proj)
 		body, err := json.Marshal(map[string]any{
 			"Cisco-IOS-XE-native:" + k.typ: []any{proj},
 		})
