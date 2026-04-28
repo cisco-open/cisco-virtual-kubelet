@@ -354,6 +354,7 @@ The transport-layer extension (Phase A) is small enough that operators wanting a
 
 ## See also
 
+- [`./diagnostics-guide.md`](./diagnostics-guide.md) — operator-facing usage guide for the delivered Phases A–D
 - [`./operator-cli-guide.md`](./operator-cli-guide.md) — the source for §13.6 ("`kubectl ciscovk` plugin"), which this RFC promotes to a full design
 - [`./device-operations-rfc.md`](./device-operations-rfc.md) — the destructive-ops sibling: RBAC-tiered `IOSXEMaintenance` (clears) and `IOSXEDeviceOp` (reload, write-erase) with two-person approval, maintenance windows, and cryptographically chained audit
 - [`./transport-architecture.md`](./transport-architecture.md) §11 — the apphosting / configdriver split that scopes which transport this RFC's Phase A binds to

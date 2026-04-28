@@ -355,7 +355,8 @@ Neither blocks merge; both should land before a release announcement.
 | Transport architecture — RESTCONF / NETCONF / gNMI internals | [`../transport-architecture.md`](../transport-architecture.md) |
 | Deployment modes — operator setup guide per transport | [`../deployment-modes.md`](../deployment-modes.md) |
 | Operator CLI guide — kubectl interaction, status fields, events, metrics, troubleshooting, roadmap | [`../operator-cli-guide.md`](../operator-cli-guide.md) |
-| Diagnostics RFC — show-command surface (proposed `IOSXEDiagnostic` CRD + `kubectl ciscovk exec`) | [`../diagnostics-rfc.md`](../diagnostics-rfc.md) |
+| Diagnostics RFC — show-command surface design (Phases A–D delivered) | [`../diagnostics-rfc.md`](../diagnostics-rfc.md) |
+| Diagnostics guide — operator usage of `IOSXEDiagnostic` CRD + `kubectl ciscovk exec` plugin | [`../diagnostics-guide.md`](../diagnostics-guide.md) |
 | Device-operations RFC — destructive-ops surface (clears / reload / write-erase) with RBAC tiers + two-person rule | [`../device-operations-rfc.md`](../device-operations-rfc.md) |
 | CRD v1 promotion plan | [`../crd-v1-promotion-plan.md`](../crd-v1-promotion-plan.md) |
 | Slog-backend log unification plan | [`../log-unification-plan.md`](../log-unification-plan.md) |

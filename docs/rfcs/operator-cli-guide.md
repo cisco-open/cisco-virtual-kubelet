@@ -21,6 +21,7 @@ This document is the single reference for the operator CLI surface: which `kubec
 | `config.cisco.vk/v1alpha1` | `IOSXEInterfaceGroupConfig` | Namespaced | Per-interface configuration shared across devices |
 | `config.cisco.vk/v1alpha1` | `IOSXETemplate` | Namespaced | Reusable parameterised configuration fragment |
 | `config.cisco.vk/v1alpha1` | `IOSXEConfigApplyLog` | Namespaced | Per-device circular audit log of apply outcomes (replay-capable) |
+| `config.cisco.vk/v1alpha1` | `IOSXEDiagnostic` | Namespaced | Read-only show-command capture (one-shot or scheduled) — see [`./diagnostics-guide.md`](./diagnostics-guide.md) |
 
 Short kind names accepted by `kubectl`:
 
@@ -34,6 +35,7 @@ Short kind names accepted by `kubectl`:
 | `IOSXETemplate` | `iosxetpl` | `iosxetemplates` |
 | `IOSXEDeviceGroupConfig` | `iosxedgc` | `iosxedevicegroupconfigs` |
 | `IOSXEInterfaceGroupConfig` | `iosxeigc` | `iosxeinterfacegroupconfigs` |
+| `IOSXEDiagnostic` | `iosxediag` | `iosxediagnostics` |
 
 Every config-side CRD has the `status` subresource (so `kubectl apply` to spec doesn't update status, and the controller's status writes don't require RBAC for the spec verb).
 
@@ -664,7 +666,7 @@ A standalone plugin (`kubectl-ciscovk`) that builds on top of `client-go` to sur
 - `kubectl ciscovk explain <family>` — show the netascode field reference for a family
 - `kubectl ciscovk replay <iosxe>` — interactive picker over `IOSXEConfigApplyLog.entries[]`, applies the chosen replay annotation
 - `kubectl ciscovk health` — fleet-wide rollup combining IOSXEConfig phases, bundle summaries, and pod readiness
-- `kubectl ciscovk exec <device> -- show ...` — run IOS-XE operational commands and stream the output. **Promoted to a full design in [`./diagnostics-rfc.md`](./diagnostics-rfc.md)** because it requires both transport-layer extensions (a new `DiagnosticExecer` interface backed by Cisco-IA's `cli-exec` RPC) AND a new CRD (`IOSXEDiagnostic`) for repeatable / scheduled captures.
+- `kubectl ciscovk exec <device> -- show ...` — ✅ **delivered** (Phases A–D of the diagnostics RFC, validated against Cat9300 / IOS-XE 17.18.01 on 2026-04-28). Runs IOS-XE show commands via SSH-CLI on the per-device kubelet pod's admin endpoint (port-forward gated by `pods/portforward` RBAC). See [`./diagnostics-guide.md`](./diagnostics-guide.md) for the operator-facing setup and examples; [`./diagnostics-rfc.md`](./diagnostics-rfc.md) §11 for the architectural rationale.
 
 Plugin architecture: discoverable via `kubectl plugin list`; ships with the cisco-virtual-kubelet release artifact; can be Homebrew'd / krew'd separately.
 
