@@ -258,8 +258,6 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 		gapp.RunOptss = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss{
 			RunOpts: runOptsMap,
 		}
-		// Enable docker resources to allow RunOpts to take effect
-		gapp.DockerResource = ygot.Bool(true)
 
 		// Configure resource profile
 		resConfig := d.getResourceConfig(&container)
