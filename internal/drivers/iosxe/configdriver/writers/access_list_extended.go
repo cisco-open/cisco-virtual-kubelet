@@ -19,8 +19,15 @@ package writers
 // the family-specific binding.
 
 const (
-	aclExtFamily      = "access_list_extended"
-	aclExtPath        = "/Cisco-IOS-XE-native:native/ip/access-list/extended"
+	aclExtFamily = "access_list_extended"
+	// The `extended` list lives in the Cisco-IOS-XE-acl YANG module,
+	// not Cisco-IOS-XE-native — so the path's last segment carries
+	// the qualified prefix. Without it, the netconf transport's
+	// path-aware filter builder emits <extended> with no xmlns
+	// declaration and the device rejects with
+	// `unknown-element <bad-element>extended</bad-element>`. Caught
+	// against the live Cat9300 retest of test 08 (2026-04-28).
+	aclExtPath        = "/Cisco-IOS-XE-native:native/ip/access-list/Cisco-IOS-XE-acl:extended"
 	aclExtEnvelopeKey = "Cisco-IOS-XE-acl:extended"
 	aclExtInnerKey    = "extended"
 	aclExtKeyField    = "name"
