@@ -387,20 +387,19 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 		families = e.FamilyOrder(families)
 	}
 	// Wave 10.3 scope refinement (2026-04-28): for atomic-replace
-	// reconciles, REVERSE the topological order so dependent families
-	// (e.g. interface_loopback) are processed before their parents
-	// (e.g. vrf). The forward order is correct for adds (parent must
-	// exist before child binds), but on a delete-heavy atomic-replace
-	// reconcile (test 09 phase 2: empty intent, atomicReplace=true)
-	// the parent must be deleted last because the child still
-	// references it. Without reversal, the device's must-violation
-	// defense rejects the parent's delete op.
+	// reconciles whose resolved intent is EMPTY (the canonical
+	// delete-only case — test 09 phase 2, test 13 phase 2), REVERSE
+	// the topological order so dependent families (e.g.
+	// interface_loopback) are processed before their parents (e.g.
+	// vrf). Forward order is correct for adds; reverse for deletes.
 	//
-	// This is a coarse heuristic — a mixed add+delete atomic-replace
-	// reconcile would benefit from a finer-grained two-pass
-	// (forward-add, reverse-delete) plan. Tests 09p2 + 13 are
-	// delete-only; this single-pass reversal is sufficient.
-	if res.AtomicReplace && len(families) > 1 {
+	// Trigger only on "no managed family has any desired content"
+	// because atomicReplace+non-empty intent is an add (or mixed)
+	// reconcile and the forward-parent-first order is still right.
+	// A mixed add+delete atomic-replace reconcile would benefit from
+	// a finer-grained two-pass plan (forward-add, reverse-delete);
+	// pure delete-only is the only shape this reversal handles.
+	if res.AtomicReplace && len(families) > 1 && allFamiliesEmpty(res, families) {
 		reversed := make([]string, len(families))
 		for i, f := range families {
 			reversed[len(families)-1-i] = f
@@ -881,6 +880,51 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		}
 	}
 	return FamilyStatus{Name: family, State: "InSync", OpCount: len(ops), OwnedKeys: ownedKeysForFamily}
+}
+
+// allFamiliesEmpty reports whether every family in `families` has no
+// desired content under res.Configuration. Used to detect the
+// atomic-replace delete-only case, where the engine reverses family
+// order so child families are processed before their parents (e.g.
+// loopback before vrf). Returns true on a nil or empty Configuration
+// map, OR when every per-family entry is nil / has no recognised
+// inner list.
+//
+// "Recognised" inner-list shapes: a map containing at least one key
+// whose value is a non-empty slice. The check is intentionally
+// loose — a writer can interpret its block in family-specific ways,
+// but every Phase-1 family writer's "empty intent" shape resolves to
+// either a nil block or a block whose inner list is an empty slice.
+func allFamiliesEmpty(res *intent.ResolvedIntent, families []string) bool {
+	if len(res.Configuration) == 0 {
+		return true
+	}
+	for _, fam := range families {
+		v := res.Configuration[fam]
+		if v == nil {
+			continue
+		}
+		switch tv := v.(type) {
+		case map[string]any:
+			for _, inner := range tv {
+				switch iv := inner.(type) {
+				case []any:
+					if len(iv) > 0 {
+						return false
+					}
+				case []map[string]any:
+					if len(iv) > 0 {
+						return false
+					}
+				}
+			}
+		case []any:
+			if len(tv) > 0 {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // scopeObservedToOwned filters an observed list (writer-opaque shape)
