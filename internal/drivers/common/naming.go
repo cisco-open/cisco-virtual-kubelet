@@ -98,16 +98,32 @@ func ExtractContainerNameFromLabels(runOptsLine string) string {
 // ExtractLabelValue extracts a label value from RunOpts labels string.
 // Returns the value if found, empty string otherwise.
 func ExtractLabelValue(runOptsLine, labelKey string) string {
-	// Look for the label: <labelKey>=<value>
-	prefix := labelKey + "="
+	// Look for the label in Docker format: --label <labelKey>=<value>
+	dockerPrefix := "--label " + labelKey + "="
 
-	startIdx := strings.Index(runOptsLine, prefix)
+	startIdx := strings.Index(runOptsLine, dockerPrefix)
+	if startIdx != -1 {
+		// Found Docker-style label, move past the prefix
+		startIdx += len(dockerPrefix)
+
+		// Find the end of the value (space or end of string)
+		endIdx := strings.Index(runOptsLine[startIdx:], " ")
+		if endIdx == -1 {
+			// Value is at the end of the line
+			return runOptsLine[startIdx:]
+		}
+		return runOptsLine[startIdx : startIdx+endIdx]
+	}
+
+	// Fallback: look for raw label format: <labelKey>=<value>
+	rawPrefix := labelKey + "="
+	startIdx = strings.Index(runOptsLine, rawPrefix)
 	if startIdx == -1 {
 		return ""
 	}
 
 	// Move past the prefix
-	startIdx += len(prefix)
+	startIdx += len(rawPrefix)
 
 	// Find the end of the value (space or end of string)
 	endIdx := strings.Index(runOptsLine[startIdx:], " ")
