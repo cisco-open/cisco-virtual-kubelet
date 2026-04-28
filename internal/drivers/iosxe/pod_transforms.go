@@ -500,6 +500,12 @@ func (d *XEDriver) buildEnvironmentOptions(container *v1.Container, pod *v1.Pod)
 	fmt.Printf("[DEBUG]   container.Env count: %d\n", len(container.Env))
 	fmt.Printf("[DEBUG]   container.EnvFrom count: %d\n", len(container.EnvFrom))
 
+	// TEMPORARY TEST: Check for annotation to force zero environment variables
+	if pod.Annotations != nil && pod.Annotations["test.cisco.com/force-zero-env"] == "true" {
+		fmt.Printf("[DEBUG] FORCING ZERO ENVIRONMENT VARIABLES due to test annotation\n")
+		return envOptions, nil
+	}
+
 	// Process environment variables from container.Env
 	for _, env := range container.Env {
 		fmt.Printf("[DEBUG]   Processing container.Env variable: %s\n", env.Name)
