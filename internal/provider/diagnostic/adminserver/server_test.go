@@ -115,7 +115,10 @@ func TestExecRedactsByDefault(t *testing.T) {
 	defer srv.Close()
 
 	body := strings.NewReader(`{"commands":["show running-config"]}`)
-	resp, _ := http.Post(srv.URL+"/v1/exec", "application/json", body)
+	resp, err := http.Post(srv.URL+"/v1/exec", "application/json", body)
+	if err != nil {
+		t.Fatalf("POST /v1/exec: %v", err)
+	}
 	defer resp.Body.Close()
 	var got ExecResponse
 	_ = json.NewDecoder(resp.Body).Decode(&got)
@@ -141,7 +144,10 @@ func TestExecAllowSecrets(t *testing.T) {
 	defer srv.Close()
 
 	body := strings.NewReader(`{"commands":["show running-config"], "allowSecrets": true}`)
-	resp, _ := http.Post(srv.URL+"/v1/exec", "application/json", body)
+	resp, err := http.Post(srv.URL+"/v1/exec", "application/json", body)
+	if err != nil {
+		t.Fatalf("POST /v1/exec: %v", err)
+	}
 	defer resp.Body.Close()
 	var got ExecResponse
 	_ = json.NewDecoder(resp.Body).Decode(&got)
@@ -167,7 +173,10 @@ func TestExecGNMITransportNotImplemented(t *testing.T) {
 	defer srv.Close()
 
 	body := strings.NewReader(`{"commands":["show version"]}`)
-	resp, _ := http.Post(srv.URL+"/v1/exec", "application/json", body)
+	resp, err := http.Post(srv.URL+"/v1/exec", "application/json", body)
+	if err != nil {
+		t.Fatalf("POST /v1/exec: %v", err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNotImplemented {
 		t.Errorf("status=%d want 501", resp.StatusCode)

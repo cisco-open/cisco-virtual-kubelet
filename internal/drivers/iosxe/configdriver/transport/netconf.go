@@ -21,6 +21,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	stdlog "log"
 	"net"
 	"sort"
 	"strings"
@@ -1151,6 +1152,15 @@ func dialSSHNetconf(cfg NETCONFConfig) (io.ReadWriteCloser, error) {
 		port = 830
 	}
 	if cfg.HostKeyCallback == nil {
+		// Insecure-default warning. Production fleets should pin
+		// a key via NETCONFConfig.HostKeyCallback (custom factory
+		// options) — leaving HostKeyCallback nil makes every dial
+		// trust any presented host key, which is fine for lab
+		// devices but a man-in-the-middle vector in production.
+		// Logged WARN at every dial so operators can grep and
+		// audit which devices are running unpinned. Once-per-host
+		// dedup is left to the operator's log pipeline.
+		stdlog.Printf("WARN netconf: HostKeyCallback unset for %s:%d — accepting any host key (lab default; pin a key in production via NETCONFConfig.HostKeyCallback)", cfg.Address, port)
 		cfg.HostKeyCallback = ssh.InsecureIgnoreHostKey()
 	}
 	timeout := cfg.Timeout
