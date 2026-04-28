@@ -1,6 +1,6 @@
 # RFC — Diagnostic show-command surface for cisco-vk
 
-**Status:** proposal, not yet implemented
+**Status:** Phases A–D **implemented and tested** on this branch (commits `d985619`, `1f77230`, `544872f`, `7d25a94`). Phase E (APIService aggregation) deliberately deferred — see §9.
 **Author:** carry-over from the operator-CLI guide roadmap (§13.6) — promoted to a dedicated RFC because this changes the CRD surface
 **Audience:** maintainers and operators
 **Branch context:** `pr/johalley/ciscoconfig_xe`
@@ -215,28 +215,36 @@ Because the per-device pod IS a virtual kubelet that exposes a kubelet API, one 
 
 ## 6. Phasing — minimum-viable rollout
 
-1. **Phase A — transport layer** (1 PR, ~200 LoC).
-   - Add `DiagnosticExecer` to `transport.Interface`.
-   - Implement on RESTCONF + NETCONF; mock for tests.
-   - Unit tests with sample show-output fixtures.
+1. **Phase A — transport layer** (~570 LoC inc. tests). ✅ **DELIVERED** in commit `d985619`.
+   - `DiagnosticExecer` optional interface + `CommandResult` + `Capabilities.SupportsDiagnosticExec` flag in [`transport.go`](../../internal/drivers/iosxe/configdriver/transport/transport.go).
+   - NETCONF: `<cli-exec xmlns="http://cisco.com/yang/cisco-ia">` per command in [`netconf.go`](../../internal/drivers/iosxe/configdriver/transport/netconf.go); `extractCLIExecResult` parses `<result>` text. `rpcReply.Output` field added to `netconf_rpc.go` to capture non-`<data>` reply elements.
+   - RESTCONF: `POST /operations/cisco-ia:cli-exec` in [`restconf.go`](../../internal/drivers/iosxe/configdriver/transport/restconf.go); `extractRESTCONFCLIExecResult` tolerates both qualified (`cisco-ia:output`) and bare (`output`) prefix forms.
+   - gNMI: zero-value `SupportsDiagnosticExec=false` + no method = type-assertion fails cleanly.
+   - 7 tests including per-command failure non-abort + tolerant extraction.
 
-2. **Phase B — `IOSXEDiagnostic` CRD** (1 PR, ~600 LoC).
-   - API types + CRD generate.
-   - Reconciler in [`internal/provider/`](../../internal/provider/) that reuses the per-device-pod transport.
-   - Inline `status.results` only (no ConfigMap sink yet); deliberate scope cut.
-   - Default secret-redaction filter.
+2. **Phase B — `IOSXEDiagnostic` CRD** (~2270 LoC inc. tests, CRD YAML, deepcopy). ✅ **DELIVERED** in commit `1f77230`.
+   - API types in [`api/config/v1alpha1/iosxediagnostic_types.go`](../../api/config/v1alpha1/iosxediagnostic_types.go).
+   - Reconciler at [`internal/provider/diagnostic/reconciler.go`](../../internal/provider/diagnostic/reconciler.go) that reuses the per-device-pod transport via the `TransportProvider` interface.
+   - Inline `status.results` (Phase D adds the ConfigMap sink).
+   - Default secret-redaction filter at [`internal/provider/diagnostic/redact.go`](../../internal/provider/diagnostic/redact.go).
+   - 9 reconciler tests + 8 redaction tests + wire-up into the per-pod-kubelet manager in [`cmd/cisco-vk/config_reconciler.go`](../../cmd/cisco-vk/config_reconciler.go).
    - 5–8 envtest cases covering: one-shot capture, scheduled capture, partial failure, truncation, RBAC.
 
-3. **Phase C — `kubectl ciscovk exec` plugin (Option A)** (1 PR, ~400 LoC).
-   - Standalone binary in [`tools/kubectl-ciscovk/`](../../tools/).
-   - Port-forward + gRPC streaming to a new admin endpoint on the per-device pod.
-   - Unit tests against a fake pod; manual e2e against the lab device.
+3. **Phase C — `kubectl ciscovk exec` plugin (Option A)** (1 PR, ~400 LoC). ✅ **DELIVERED** in commit `544872f`.
+   - Standalone binary at [`tools/kubectl-ciscovk/main.go`](../../tools/kubectl-ciscovk/main.go).
+   - HTTP admin server at [`internal/provider/diagnostic/adminserver/server.go`](../../internal/provider/diagnostic/adminserver/server.go) bound to `127.0.0.1:8082` inside the per-pod kubelet; `pods/portforward` RBAC is the auth gate.
+   - Defence-in-depth: plugin refuses known-destructive command prefixes (`reload`, `write erase`, `delete flash:`, `format flash:`, `clear `) before sending; admin server only invokes `cli-exec` (read-only) regardless.
+   - 13 unit tests across `adminserver/server_test.go` + `kubectl-ciscovk/main_test.go`.
 
-4. **Phase D — ConfigMap output sink** (1 PR, ~200 LoC) — closes the multi-MB output story.
+4. **Phase D — ConfigMap output sink** (1 PR, ~200 LoC) — closes the multi-MB output story. ✅ **DELIVERED** in commit `7d25a94`.
+   - `spec.outputSink.configMapRef.{namePrefix, namespace}` writes each capture to a fresh ConfigMap.
+   - Inline preview (default 2 KiB) retained in `status.results[].commands[].output` so `kubectl describe` still shows the start of every capture.
+   - Owner-reference cascades CR deletion to every captured ConfigMap (when sink namespace = CR namespace; cross-namespace sinks accept manual cleanup).
+   - 5 sink tests in `internal/provider/diagnostic/sink_test.go`.
 
-5. **Phase E — APIService aggregation (Option B)** — only if real-world usage proves the plugin's port-forward UX insufficient.
+5. **Phase E — APIService aggregation (Option B)** — **deferred** per the RFC's own gating: only if real-world usage proves the plugin's port-forward UX insufficient. No planned delivery date.
 
-Phases A + B alone deliver the headline feature ("declare a diagnostic, get show output via `kubectl get iosxediagnostic`"). Phase C adds the interactive UX. Phase D closes the only meaningful gap (large outputs). Phase E is optional.
+Phases A + B alone deliver the headline feature ("declare a diagnostic, get show output via `kubectl get iosxediagnostic`"). Phase C adds the interactive UX. Phase D closes the only meaningful gap (large outputs). Phase E remains optional.
 
 ---
 
@@ -331,9 +339,16 @@ Each capture writes a new ConfigMap `running-snapshot-<timestamp>` whose `data["
 
 ## 9. Decision
 
-**Status:** RFC is open. Recommended path forward: implement Phases A + B as the next post-merge PR after this branch. Phase C lands as a follow-up; Phases D + E are gated on usage data.
+**Status:** Phases A–D delivered on this branch. Combined diff: ~4660 LoC across four commits, all package tests pass (`go test ./...` clean across 21 packages). Phase E remains explicitly deferred.
 
-The transport-layer extension (Phase A) is small enough that operators wanting a private Phase B implementation could fork it cleanly. Shipping Phase A unconditionally is therefore low-risk and high-leverage.
+| Phase | Commit | Files | Tests |
+|---|---|---|---|
+| A — transport layer | `d985619` | 6 changed (`transport.go`, `netconf*.go`, `restconf*.go`) | 7 tests, 100% of new code paths exercised |
+| B — `IOSXEDiagnostic` CRD + reconciler | `1f77230` | 9 created (API types, deepcopy, CRDs, reconciler, redact, tests) | 9 reconciler + 8 redaction tests |
+| C — admin endpoint + `kubectl ciscovk` plugin | `544872f` | 5 created (admin server, plugin binary + tests) | 7 admin-server + 13 plugin tests |
+| D — ConfigMap output sink | `7d25a94` | 7 changed (API extension, sink helper, tests) | 5 sink tests |
+
+The transport-layer extension (Phase A) is small enough that operators wanting a private Phase B implementation could fork it cleanly — but with all four phases delivered, that escape hatch is unnecessary.
 
 ---
 
