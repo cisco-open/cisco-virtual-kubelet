@@ -14,7 +14,7 @@
 | 05 | Credential-Secret rotation with overlap (Wave 6B + 7A.3 + 8.2 + 9.2) | ✅ deployment rolled via `cisco.vk/credential-resource-version` annotation; new pod UID confirmed |
 | 06 | driftPolicy revert live-write (banner) | ✅ already covered in [2026-04-27 candidate-only retest](../2026-04-27-live-c9300-netconf-candidate-only/SUMMARY.md) |
 | 07 | writeStartup save-config (Loopback9997) | ✅ already covered in same bundle |
-| 08 | confirmed-commit auto-revert | ⏸ deferred — requires OOB console (deliberate management-plane break) |
+| 08 | confirmed-commit auto-revert | ⏸ deferred — live-retest attempted on the ubuntu17 cluster against C9K-4; six writer-level fixes landed (v26–v32) but the access_list_extended writer's per-rule body translator (`src_host` / `dst_any` / `protocol` → IOS-XE-acl YANG schema) is incomplete, so the apply never reaches `<commit><confirmed/>`. See [`test-08-attempt.md`](./test-08-attempt.md) for the iteration log + forward plan. Wave-10 itself is validated indirectly via test 10 (this dashboard) and engine-side envtest |
 | 09 | atomic-replace cross-family (Wave 10.3) | ✅ **establish phase InSync** after VRF address-family writer enhancement (`phase9-vrf-af-ipv4` image) — vlan + vrf + interface_loopback all reconciled in one transactional apply against the live device; phase 2 (atomic-replace removal) requires isolated device — see Findings §4 |
 | 10 | confirmed-commit happy path (Wave 10.2) | ✅ phase=InSync, `ConfirmedCommitUsed` event fired |
 | 11 | confirmed-commit RESTCONF fallback | ✅ already covered in [2026-04-27 v12 retest](../2026-04-27-live-c9300-v12-production-ready/SUMMARY.md) |
@@ -96,7 +96,7 @@ Recommended: option 1; track on the production-hardening plan. The Wave-10 *comp
   - 01 ✅ (this retest)
   - 04 ⏸ deferred (transport-flip authorization)
   - 05 ✅ (this retest)
-  - 08 ⏸ deferred (OOB console)
+  - 08 ⏸ deferred (writer feature gap — ACL rule body translator not yet implemented; see test-08-attempt.md). Six writer-level fixes did land during the attempt — VRF address-family, ip_access_group on interface_ethernet, RFC-8040 key URL-encode, lenient observed-list Diff for both keyed-list and nested-keyed writers, access_list_extended path namespace prefix, nestedKeyedListWriter YANGInner unwrap.
   - 09 ✅ establish-phase InSync (this retest, with `phase9-vrf-af-ipv4` image — closes the loopback-VRF blocker via the new VRF address-family writer; phase 2 deferred to isolated device per Findings §5)
   - 10 ✅ (this retest)
   - 13 ⏸ deferred to isolated device (atomicReplace=true on phase 1 incompatible with shared-device baseline; see Findings §5)
@@ -111,6 +111,8 @@ Recommended: option 1; track on the production-hardening plan. The Wave-10 *comp
 |---|---|
 | `test-01-netconf-transactional.yaml` | Test 01 CR with phase=InSync, observedGeneration=1 |
 | `test-05-rotation.txt` | Pre/post pod UIDs + post-rotation deployment annotations showing `cisco.vk/credential-resource-version` populated |
+| `test-08-attempt.md` | Test 08 live-retest narrative against ubuntu17 cluster + C9K-4 device, six-iteration writer fix log, deferral rationale, three-step forward plan |
+| `test-08-final-status.txt` | Test 08 final CR `.status.familyStatus` at the v32 stop point + device-side rollback verification |
 | `test-09-establish-insync.txt` | Test 09 establish-phase phase progression, device-side VRF state with `address-family.ipv4`, post-test cleanup confirmation |
 | `test-10-confirmed-commit-happy.yaml` | Test 10 CR with phase=InSync |
 | `test-10-events.txt` | Event timeline including the `Normal ConfirmedCommitUsed` event |

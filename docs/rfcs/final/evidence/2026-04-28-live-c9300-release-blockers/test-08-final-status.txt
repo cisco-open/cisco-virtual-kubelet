@@ -1,0 +1,36 @@
+# Test 08 — final live-retest status (image v32, 2026-04-28)
+#
+# CR phase=Failed; family-by-family status reproduced from
+# `kubectl -n cisco-vk-smoke get iosxeconfig
+#   test-08-confirmed-commit-auto-revert -o jsonpath=...`.
+
+access_list_extended:
+  Apply: op[0] MERGE
+    /Cisco-IOS-XE-native:native/ip/access-list/Cisco-IOS-XE-acl:extended=TEST-08-MGMT-LOCKOUT
+  rpc-error: [error/application/unknown-element] (empty message)
+  path=/rpc/edit-config/config/ios:native/ios:ip/ios:access-list/
+       ios-acl:extended/ios-acl:access-list-seq-rule
+  info=<bad-element>src_host</bad-element>
+
+interface_ethernet:
+  1 op(s) applied but 1 still pending
+  (the binding Op was emitted with the right URL-encoded path and
+  ip_access_group_in leaf — but the transactional bundle was rolled
+  back when the access_list_extended op[0] failed, so nothing landed
+  on the device.)
+
+# Device-side post-test verification (RESTCONF + console SSH):
+#   show running-config interface GigabitEthernet0/0 | inc access-group
+#     → no access-group line (transactional rollback worked)
+#   show ip access-lists TEST-08-MGMT-LOCKOUT
+#     → empty (ACL not present)
+
+# What this means
+#
+# The Wave-10 confirmed-commit / auto-revert path was never exercised
+# because the apply never reached <commit><confirmed/>. The blocker is
+# at a layer below Wave 10: the Phase-1 access_list_extended writer
+# does not translate per-rule netascode fields (src_host, dst_any,
+# protocol, action) to the IOS-XE-acl YANG schema. See test-08-attempt.md
+# §"Forward plan" for the three writer enhancements that would close
+# this.
