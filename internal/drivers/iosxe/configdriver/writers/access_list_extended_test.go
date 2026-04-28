@@ -282,10 +282,15 @@ func pickRules(t *testing.T, body map[string]any) []any {
 	if !ok {
 		t.Fatalf("envelope entry is not a map: %#v", envelope[0])
 	}
-	// IOS-XE wraps the rule list under <rules><access-list-seq-rule>...
-	// in the YANG body, so the writer emits
-	// rules: {"access-list-seq-rule": [...]}. Older test fixtures that
-	// supplied a bare slice still pass via the fallback below.
+	// IOS-XE-acl emits <access-list-seq-rule> directly under the
+	// <extended> entry — there is no intermediate <rules> wrapper in
+	// the YANG model. When YANGInner is set the writer drops the
+	// netascode leaf and uses the YANG name directly. Tests that
+	// pre-date the unwrap may still see the bare-list shape via the
+	// "rules" fallback below.
+	if inner, ok := first["access-list-seq-rule"].([]any); ok {
+		return inner
+	}
 	switch r := first["rules"].(type) {
 	case []any:
 		return r

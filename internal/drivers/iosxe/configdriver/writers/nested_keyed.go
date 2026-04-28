@@ -331,18 +331,18 @@ func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, erro
 			body[w.base.keyField] = kv
 		}
 		for leaf, changed := range changedByLeaf {
-			// IOS-XE wraps the inner list under a per-family YANG
-			// container (e.g. <rules><access-list-seq-rule>...).
-			// When YANGInner is set, lift the changed slice into
-			// that container; otherwise emit the bare slice.
+			// The netascode-side leaf name (e.g. "rules") is a
+			// logical grouping the device's YANG model doesn't
+			// represent: the IOS-XE-acl `extended` entry holds
+			// the rule list under <access-list-seq-rule> directly,
+			// not under an intermediate <rules> container. When
+			// YANGInner is set, emit the inner list under the
+			// YANG name and drop the netascode leaf entirely.
 			// Caught against the live Cat9300 retest of test 08
-			// where access_list_extended apply hit
-			// `unknown-element <bad-element>rules</bad-element>`
-			// because the body emitted <rules> with the rule
-			// entries as direct children rather than under
-			// <access-list-seq-rule>.
+			// (2026-04-28) where the device rejected
+			// `unknown-element <bad-element>rules</bad-element>`.
 			if spec, ok := specByLeaf[leaf]; ok && spec.YANGInner != "" {
-				body[leaf] = map[string]any{spec.YANGInner: changed}
+				body[spec.YANGInner] = changed
 			} else {
 				body[leaf] = changed
 			}
