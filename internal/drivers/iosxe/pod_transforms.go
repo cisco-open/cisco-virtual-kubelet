@@ -251,15 +251,18 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 		fmt.Printf("DEBUG: Generated %d environment options for container %s: %v\n", len(envOpts), container.Name, envOpts)
 
 		// Distribute across RunOpts lines
+		fmt.Printf("DEBUG: About to distribute RunOpts - baseOpts: %v, envOpts: %v\n", baseOpts, envOpts)
 		runOptsMap, err := distributeRunOpts(baseOpts, envOpts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to distribute RunOpts for container %s: %w", container.Name, err)
 		}
+		fmt.Printf("DEBUG: distributeRunOpts result - runOptsMap: %v\n", runOptsMap)
 
 		// Configure run options
 		gapp.RunOptss = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss{
 			RunOpts: runOptsMap,
 		}
+		fmt.Printf("DEBUG: gapp.RunOptss configured with %d entries\n", len(runOptsMap))
 
 		// Configure resource profile
 		resConfig := d.getResourceConfig(&container)
