@@ -1,4 +1,4 @@
-# Test 08 — final live-retest status (image v32, 2026-04-28)
+# Test 08 — final live-retest status (image v35, 2026-04-28)
 #
 # CR phase=Failed; family-by-family status reproduced from
 # `kubectl -n cisco-vk-smoke get iosxeconfig
@@ -8,9 +8,10 @@ access_list_extended:
   Apply: op[0] MERGE
     /Cisco-IOS-XE-native:native/ip/access-list/Cisco-IOS-XE-acl:extended=TEST-08-MGMT-LOCKOUT
   rpc-error: [error/application/unknown-element] (empty message)
-  path=/rpc/edit-config/config/ios:native/ios:ip/ios:access-list/
-       ios-acl:extended/ios-acl:access-list-seq-rule
-  info=<bad-element>src_host</bad-element>
+  path=/nc:rpc/nc:edit-config/nc:config/ios:native/ios:ip/ios:access-list/
+       ios-acl:extended[ios-acl:name='TEST-08-MGMT-LOCKOUT']/
+       ios-acl:access-list-seq-rule[ios-acl:sequence='10']/ios-acl:deny
+  info=<bad-element>deny</bad-element>
 
 interface_ethernet:
   1 op(s) applied but 1 still pending
@@ -28,9 +29,18 @@ interface_ethernet:
 # What this means
 #
 # The Wave-10 confirmed-commit / auto-revert path was never exercised
-# because the apply never reached <commit><confirmed/>. The blocker is
-# at a layer below Wave 10: the Phase-1 access_list_extended writer
-# does not translate per-rule netascode fields (src_host, dst_any,
-# protocol, action) to the IOS-XE-acl YANG schema. See test-08-attempt.md
-# §"Forward plan" for the three writer enhancements that would close
-# this.
+# because the apply never reached <commit><confirmed/>. The remaining
+# blocker is the IOS-XE-acl YANG model's action-choice container shape:
+# v34 + v35 confirmed `<deny>` and `<permit>` are valid YANG names
+# (the device says they're "unknown" at a specific position, not that
+# the names themselves are invalid), but the position is one level
+# different from what v35 emitted — likely under a wrapper container
+# (`<ace-rule>`?) or with sibling fields at a different nesting depth.
+#
+# Closing this needs one focused YANG-schema discovery session with
+# NETCONF <get-schema> against this device's Cisco-IOS-XE-acl module
+# OR a RESTCONF GET on an existing ACL using admin creds. Estimated
+# half engineer-day + half engineer-day for the translator update.
+#
+# See test-08-attempt.md "Forward plan" + "ACL writer feature-completion
+# delta shipped today" for the precise scope.

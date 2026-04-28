@@ -29,9 +29,20 @@ egress IP, with `spec.transactional: true` and
 | v29 | `v29` | `unknown-element <bad-element>extended</bad-element>` — netconf transport doesn't xmlns-declare `extended` because the writer's path uses bare `extended` instead of `Cisco-IOS-XE-acl:extended` | v30 — qualify the path's last segment |
 | v30 | `v30` | `unknown-element <bad-element>rules</bad-element>` — body emitted `<rules>` as a literal element, but IOS-XE-acl YANG has no intermediate `<rules>` container | v31 — add YANGInner wrap (initially with `<rules>` retained — wrong) |
 | v31 | `v31` | Same | v32 — drop netascode leaf entirely, emit `<access-list-seq-rule>` directly under `<extended>` |
-| v32 | `v32` | `unknown-element <bad-element>src_host</bad-element>` — per-rule netascode fields (`src_host`, `dst_any`, `protocol`) need a netascode → IOS-XE-acl YANG translator (analogous to `interfaceIPv4VRFToYANG` for interface fields). The writer doesn't have one. | **NOT FIXED — deferred to a Phase-1 ACL writer feature-completion PR** |
+| v32 | `v32` | `unknown-element <bad-element>src_host</bad-element>` — per-rule netascode fields (`src_host`, `dst_any`, `protocol`) need a netascode → IOS-XE-acl YANG translator (analogous to `interfaceIPv4VRFToYANG` for interface fields). The writer doesn't have one. | v33 — `aclRuleToYANG` translator + per-spec `BodyShape` hook on `nestedListSpec` + companion ACL-standard path namespace + body-shape wiring (commit `5738a37`) |
+| v33 | `v33` | `unknown-element <bad-element>ace-rule-action</bad-element>` — the IOS-XE-acl model doesn't expose `ace-rule-action` as the action enum; the action choice is encoded differently. | v34 — encode action as empty-leaf `<permit/>` / `<deny/>` siblings of `<sequence>` (commit `8a4f17e`) |
+| v34 | `v34` | `expected tag: sequence, got tag: deny` — YANG strict-order: list keys must come first under the parent. JSON→XML emitter iterated `map[string]any` with Go's randomised order. | v35 — `orderedMapKeys` puts `name` / `id` / `sequence` / `no` / `prefix` first, then alphabetical (commit `3827b70`) |
+| v35 | `v35` | `unknown-element <bad-element>deny</bad-element>` at path `…/access-list-seq-rule[sequence='10']/deny` — the action choice in this YANG variant is wrapped in some intermediate container that the iteration trail hasn't located yet (`<ace-rule>` is one candidate; an enum leaf with a different name is another). | **NOT FIXED — deferred to a focused YANG-schema discovery session** |
 
-The v32-final blocker is genuinely a writer feature gap — the Phase-1 `access_list_extended` writer was wired up structurally (Diff/Apply/Fetch + nested-key handling) but the per-rule body translation that would turn netascode shorthand (`src_host: 10.0.0.1`, `dst_any: true`, `protocol: ip`) into the IOS-XE-acl YANG schema (`source-host`, `dest-any`, `protocol-type`, etc.) was never written. The five interface_* writers got their `interfaceIPv4VRFToYANG` body-shape; the ACL writer didn't get its analogue.
+The v35-final blocker needs **direct YANG schema interrogation** against this specific device's `Cisco-IOS-XE-acl` module — it's no longer productive to iterate via cluster build/deploy/apply cycles. The right path is a single session with the device using a NETCONF `<get-schema>` RPC (or RESTCONF `?fields` query against an existing ACL whose admin-side credentials grant read), then a one-shot translator update to match.
+
+What v32→v35 *did* close — the Phase-1 access-list writer was wired up structurally but missed five non-trivial pieces of the netascode → IOS-XE-acl translation pipeline. All five are now in place:
+
+1. ✅ Per-rule `BodyShape` hook on `nestedListSpec` so families with netascode shorthand can declare their YANG translator (`5738a37`).
+2. ✅ `aclRuleToYANG` translator covering host / network / wildcard / port / log / remark netascode fields (`5738a37`, `8a4f17e`).
+3. ✅ Companion fix for `access_list_standard` — same path-namespace prefix and translator wiring (`5738a37`).
+4. ✅ Action choice encoded as empty-leaf siblings (`8a4f17e`) — turns out to be **partially right**: the *names* `permit` / `deny` are correct YANG identifiers in this model, but they live one level deeper than v34 emitted them. v35 confirmed the names by surfacing a position error rather than a name error.
+5. ✅ YANG strict-order list-key-first emission (`3827b70`) — surfaces in any future YANG list write that has non-key fields, not just ACL rules.
 
 ## What this proves about Wave 10
 
@@ -45,13 +56,20 @@ The auto-revert machinery is shippable by composition; what test 08 would have c
 
 ## Forward plan
 
-Three writer enhancements would unblock test 08's full retest, listed in the order they should land:
+Two pieces of work close test 08, in order:
 
-1. **`interfaceIPv4VRFToYANG`-style ACL rule body translator** — netascode `src_host` / `src_any` / `dst_host` / `dst_any` / `protocol` / `action` fields lifted to the IOS-XE-acl YANG schema (`source`, `destination`, `protocol-type`, choice-statement action, ports + named protocols). Most of this is mechanical — the netascode portal docs the corpus and the netascode resolver in upstream code already does this for the apphosting subsystem. ETA: 1–2 engineer-days.
-2. **YANGInner wrapping audit** for the other netascode → YANG inner-list mismatches (route-map's `entries`, OSPF's `network` list, BGP's `neighbor` list). The pattern is identical to access-list's, and v31's nestedKeyedListWriter fix already supports the lift; only audit the existing writers' `nestedYANGInner` settings. ETA: half a day.
-3. **Operator-runnable retest** of test 08 once #1 lands. Same fixture, no further engine changes needed. ETA: half a day.
+1. **Direct YANG schema interrogation against C9K-4** — one session with NETCONF `<get-schema>identifier>Cisco-IOS-XE-acl` or RESTCONF `?fields` GET against an existing ACL (using admin creds that have RESTCONF read; the cluster's `AI_AGENT_RW` user has NETCONF-only access on this device). Output: the canonical YANG element names and nesting for an extended-ACL deny-host rule. Half engineer-day.
+2. **One-shot translator update** to `aclRuleToYANG` covering whatever wrapper container or enum-leaf naming the v35 attempt missed. Mechanical once #1 surfaces the schema. Half engineer-day.
 
-Estimated total: 3 engineer-days from the current state to a green test 08.
+Then re-run test 08; no further engine changes expected. The Wave-10 confirmed-commit + auto-revert path is end-to-end-validated indirectly via test 10 today (`ConfirmedCommitUsed` event fired on the same device) and via engine-side envtest with race detection. The combined live proof of "ACL-write + confirmed-commit + auto-revert in one transaction" awaits the schema close-out.
+
+**ACL writer feature-completion delta shipped today** (relevant to any future ACL operator workflow on this branch, not just test 08):
+
+- `internal/drivers/iosxe/configdriver/writers/access_list_extended.go`: `aclRuleToYANG` translator (33 lines), wired as `nestedBodyShape`. Covers permit/deny action, IP/TCP/UDP protocol, host/network/wildcard source + destination, port matchers (eq/gt/lt/neq), log + remark.
+- `internal/drivers/iosxe/configdriver/writers/access_list_standard.go`: companion namespace prefix on path + same translator wired. Standard ACLs benefit even though they don't have a current live test.
+- `internal/drivers/iosxe/configdriver/writers/access_list_extended_test.go`: `TestACLRuleToYANG` with six cases locks in the field-by-field mapping so it can't drift.
+- `internal/drivers/iosxe/configdriver/writers/nested_keyed.go`: `BodyShape` field on `nestedListSpec` + alias on the wrapper writer. Available now for any future nested-keyed family that needs netascode → YANG transformation.
+- `internal/drivers/iosxe/configdriver/transport/netconf.go`: `orderedMapKeys` deterministic + key-first XML emit. Affects every nested write across every family.
 
 ## Files in this attempt
 

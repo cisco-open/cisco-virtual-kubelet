@@ -10,11 +10,11 @@
 | Test | Description | Outcome |
 |---|---|---|
 | 01 | NETCONF transactional Loopback9999 (Wave 1A-fu) | ✅ phase=InSync |
-| 04 | gNMI keyed-path (Wave 5A-fu / 7B) | ⏸ deferred — requires authorization to flip device transport to gNMI |
+| 04 | gNMI keyed-path (Wave 5A-fu / 7B) | ⏸ deferred — `gnxi server` is not enabled on this device. Permanent environmental gap; needs a second device with gNMI enabled OR `gnxi server` brought up on C9K-4 by network ops. Code + envtest validated. |
 | 05 | Credential-Secret rotation with overlap (Wave 6B + 7A.3 + 8.2 + 9.2) | ✅ deployment rolled via `cisco.vk/credential-resource-version` annotation; new pod UID confirmed |
 | 06 | driftPolicy revert live-write (banner) | ✅ already covered in [2026-04-27 candidate-only retest](../2026-04-27-live-c9300-netconf-candidate-only/SUMMARY.md) |
 | 07 | writeStartup save-config (Loopback9997) | ✅ already covered in same bundle |
-| 08 | confirmed-commit auto-revert | ⏸ deferred — live-retest attempted on the ubuntu17 cluster against C9K-4; six writer-level fixes landed (v26–v32) but the access_list_extended writer's per-rule body translator (`src_host` / `dst_any` / `protocol` → IOS-XE-acl YANG schema) is incomplete, so the apply never reaches `<commit><confirmed/>`. See [`test-08-attempt.md`](./test-08-attempt.md) for the iteration log + forward plan. Wave-10 itself is validated indirectly via test 10 (this dashboard) and engine-side envtest |
+| 08 | confirmed-commit auto-revert | ⏸ deferred — live-retest pushed to v35 against C9K-4. Nine writer/transport fixes landed (v26→v35) including the netascode→IOS-XE-acl `aclRuleToYANG` translator, per-spec `BodyShape` hook, ACL-standard companion path-namespace fix, and YANG strict-order list-key-first XML emit. Final stop: the action-choice (`<permit>` / `<deny>`) container nesting requires a focused YANG schema discovery session against this device's `Cisco-IOS-XE-acl` module — see [`test-08-attempt.md`](./test-08-attempt.md) §"Forward plan" (≈1 eng-day to close). Wave-10 itself remains validated indirectly via test 10 + engine-side envtest |
 | 09 | atomic-replace cross-family (Wave 10.3) | ✅ **establish phase InSync** after VRF address-family writer enhancement (`phase9-vrf-af-ipv4` image) — vlan + vrf + interface_loopback all reconciled in one transactional apply against the live device; phase 2 (atomic-replace removal) requires isolated device — see Findings §4 |
 | 10 | confirmed-commit happy path (Wave 10.2) | ✅ phase=InSync, `ConfirmedCommitUsed` event fired |
 | 11 | confirmed-commit RESTCONF fallback | ✅ already covered in [2026-04-27 v12 retest](../2026-04-27-live-c9300-v12-production-ready/SUMMARY.md) |
@@ -94,9 +94,9 @@ Recommended: option 1; track on the production-hardening plan. The Wave-10 *comp
 
 - §2.1 8 live-device retests not yet run since fix bundles:
   - 01 ✅ (this retest)
-  - 04 ⏸ deferred (transport-flip authorization)
+  - 04 ⏸ deferred — `gnxi server` not enabled on the C9K-4 device. Environmental gap; not fixable from the cluster side. Either bring up gNMI on the device or run against a second device that has it.
   - 05 ✅ (this retest)
-  - 08 ⏸ deferred (writer feature gap — ACL rule body translator not yet implemented; see test-08-attempt.md). Six writer-level fixes did land during the attempt — VRF address-family, ip_access_group on interface_ethernet, RFC-8040 key URL-encode, lenient observed-list Diff for both keyed-list and nested-keyed writers, access_list_extended path namespace prefix, nestedKeyedListWriter YANGInner unwrap.
+  - 08 ⏸ deferred — nine writer/transport fixes landed (v26→v35; see test-08-attempt.md table). Final blocker is YANG-schema discovery for the IOS-XE-acl action-choice container shape; one focused half-day session closes it. The ACL writer feature-completion delta shipped today (`aclRuleToYANG` + per-spec `BodyShape` hook + standard-ACL companion + YANG strict-order list-key-first XML emit) benefits any operator's ACL workflow on this branch independent of test 08.
   - 09 ✅ establish-phase InSync (this retest, with `phase9-vrf-af-ipv4` image — closes the loopback-VRF blocker via the new VRF address-family writer; phase 2 deferred to isolated device per Findings §5)
   - 10 ✅ (this retest)
   - 13 ⏸ deferred to isolated device (atomicReplace=true on phase 1 incompatible with shared-device baseline; see Findings §5)
