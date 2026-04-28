@@ -21,7 +21,7 @@ spec:
       name: Device
       type: string
     - description: count of input commands
-      jsonPath: .spec.commands
+      jsonPath: .status.commandCount
       name: Commands
       type: integer
     - jsonPath: .status.phase
@@ -231,6 +231,15 @@ spec:
               IOSXEDiagnosticStatus reports the most recent capture and (when
               Schedule is set) the rolling history.
             properties:
+              commandCount:
+                description: |-
+                  CommandCount mirrors len(spec.commands) — populated by the
+                  reconciler purely so the kubectl printer column "Commands"
+                  has a scalar to render. Kubernetes CRD printer JSONPath
+                  expressions can't compute array length, so a scalar field
+                  is the only path to a populated column.
+                format: int32
+                type: integer
               conditions:
                 description: |-
                   Conditions reports a Ready signal (True when the most-recent

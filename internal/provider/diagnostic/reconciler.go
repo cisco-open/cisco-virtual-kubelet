@@ -127,6 +127,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
+	// Surface a scalar command count for the printer column. Runs
+	// ahead of every status-write path AND forces an immediate
+	// status write when the field is out of date — without this
+	// the early-return short-circuit (one-shot CRs already at
+	// phase=Completed for the current generation) leaves the
+	// in-memory assignment unflushed.
+	desired := int32(len(diag.Spec.Commands))
+	if diag.Status.CommandCount != desired {
+		diag.Status.CommandCount = desired
+		if err := r.Client.Status().Update(ctx, &diag); err != nil {
+			return reconcile.Result{}, fmt.Errorf("status update (commandCount): %w", err)
+		}
+	}
+
 	// Maintenance window — notAfter past → Expired terminal.
 	if diag.Spec.NotAfter != nil && now.After(diag.Spec.NotAfter.Time) {
 		if diag.Status.Phase != PhaseExpired {

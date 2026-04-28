@@ -189,6 +189,14 @@ type IOSXEDiagnosticStatus struct {
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
+	// CommandCount mirrors len(spec.commands) — populated by the
+	// reconciler purely so the kubectl printer column "Commands"
+	// has a scalar to render. Kubernetes CRD printer JSONPath
+	// expressions can't compute array length, so a scalar field
+	// is the only path to a populated column.
+	// +optional
+	CommandCount int32 `json:"commandCount,omitempty"`
+
 	// ObservedGeneration is the .metadata.generation the
 	// reconciler last acted on.
 	// +optional
@@ -306,7 +314,7 @@ type CapturedConfigMapRef struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,shortName=iosxediag
 // +kubebuilder:printcolumn:name="Device",type=string,JSONPath=`.spec.deviceRef.name`
-// +kubebuilder:printcolumn:name="Commands",type=integer,JSONPath=`.spec.commands`,description="count of input commands"
+// +kubebuilder:printcolumn:name="Commands",type=integer,JSONPath=`.status.commandCount`,description="count of input commands"
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Last",type=date,JSONPath=`.status.lastCapture`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
