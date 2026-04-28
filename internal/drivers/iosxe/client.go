@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
+	"github.com/openconfig/ygot/ygot"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 )
@@ -69,6 +70,29 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 
 	if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
 		return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
+	}
+
+	// Handle two-phase deployment for DockerResource apps
+	if appConfig.Spec.RequiresTwoPhaseStart {
+		log.G(ctx).Infof("Starting phase 2 deployment for DockerResource app %s (setting Start=true)", appConfig.AppName())
+
+		// Wait for app to reach DEPLOYED state first
+		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
+			return fmt.Errorf("app %s did not reach DEPLOYED state for phase 2: %w", appConfig.AppName(), err)
+		}
+
+		// Now set Start=true and repost configuration
+		gapp := appConfig.Spec.DeviceConfig.App[appConfig.AppName()]
+		origStart := gapp.Start
+		gapp.Start = ygot.Bool(true)
+
+		if err := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller); err != nil {
+			gapp.Start = origStart // restore original value
+			return fmt.Errorf("failed to set Start=true for DockerResource app %s: %w", appConfig.AppName(), err)
+		}
+
+		log.G(ctx).Infof("Successfully updated app %s to Start=true", appConfig.AppName())
+		gapp.Start = origStart // restore original value for consistency
 	}
 
 	// For non-HTTP image paths (flash, bootflash, etc.) the device auto-advances

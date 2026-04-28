@@ -261,9 +261,11 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 
 		// Enable docker resource when we have environment variables
 		// This is required for RunOpts to take effect on the device
+		hasDockerResource := false
 		if len(envOpts) > 0 {
 			fmt.Printf("[DEBUG] Enabling DockerResource for container %s with %d environment options\n", container.Name, len(envOpts))
 			gapp.DockerResource = ygot.Bool(true)
+			hasDockerResource = true
 		}
 
 		// Configure resource profile
@@ -277,7 +279,17 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 		}
 
 		// Set app to start automatically
-		gapp.Start = ygot.Bool(true)
+		// When DockerResource is enabled, we need two-phase deployment:
+		// Phase 1: Deploy with Start=false (to avoid 409 conflict)
+		// Phase 2: Update to Start=true after deployment
+		if hasDockerResource {
+			// Start with false - will be updated to true after deployment
+			gapp.Start = ygot.Bool(false)
+			fmt.Printf("[DEBUG] Setting Start=false for container %s (DockerResource enabled, will update after deployment)\n", container.Name)
+		} else {
+			// Normal single-phase deployment
+			gapp.Start = ygot.Bool(true)
+		}
 
 		// Add to configs slice
 		configs = append(configs, AppHostingConfig{
@@ -290,13 +302,14 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 				Pod:           pod,
 			},
 			Spec: AppHostingSpec{
-				ImagePath:        container.Image,
-				DesiredState:     AppDesiredStateRunning,
-				DeviceConfig:     apps,
-				ImagePullPolicy:  container.ImagePullPolicy,
-				PackageDest:      packageDest,
-				PackageTimeout:   packageTimeout,
-				ImagePullSecrets: pod.Spec.ImagePullSecrets,
+				ImagePath:             container.Image,
+				DesiredState:          AppDesiredStateRunning,
+				DeviceConfig:          apps,
+				ImagePullPolicy:       container.ImagePullPolicy,
+				PackageDest:           packageDest,
+				PackageTimeout:        packageTimeout,
+				ImagePullSecrets:      pod.Spec.ImagePullSecrets,
+				RequiresTwoPhaseStart: hasDockerResource, // Set flag for two-phase deployment
 			},
 			Status: AppHostingStatus{
 				Phase: AppPhaseConverging,
