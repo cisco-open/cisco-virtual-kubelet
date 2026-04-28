@@ -332,6 +332,109 @@ running-snapshot           cat9k-smoke    1          Completed   2026-04-28T12:5
 | `Scheduled` | Maintenance window: `notBefore` is in the future |
 | `Expired` | Maintenance window: `notAfter` passed before any capture |
 
+### 4.5 Reading captured output
+
+Once a CR is `phase=Completed`, the captured text lives at `.status.results[].commands[].output` (one capture per `results[]` entry; one entry per spec command per capture). Six recipes operators reach for, in order of frequency:
+
+#### One-shot CR — latest output of the first command
+
+```bash
+kubectl get iosxediag <name> -n <ns> \
+  -o jsonpath='{.status.results[-1:].commands[0].output}'
+```
+
+The `[-1:]` slice picks the most recent capture (works on both one-shot CRs with one entry and scheduled CRs with N).
+
+#### Pick a specific command by name (when batch order is brittle)
+
+```bash
+kubectl get iosxediag <name> -n <ns> \
+  -o jsonpath='{.status.results[-1:].commands[?(@.command=="show ip route summary")].output}'
+```
+
+JSONPath filter syntax: `[?(@.<field>=="<value>")]`. Useful when you've added/removed commands from `spec.commands` over time and don't want to track the index.
+
+#### All commands at once, with headers (needs `jq`)
+
+```bash
+kubectl get iosxediag <name> -n <ns> -o json \
+  | jq -r '.status.results[-1].commands[] | "=== \(.command) ===\n\(.output)\n"'
+```
+
+Renders like:
+```
+=== show version ===
+Cisco IOS XE Software, Version 17.18.01
+...
+
+=== show ip route summary ===
+IP routing table name is default (0x0)
+...
+```
+
+#### Scheduled CR — full retained history (needs `jq`)
+
+```bash
+kubectl get iosxediag <name> -n <ns> -o json \
+  | jq -r '.status.results[] | "[\(.capturedAt)] \(.commands[0].command):\n  \(.commands[0].output)"'
+```
+
+For a `show clock` schedule capturing every 30 s with `maxResults: 3`:
+```
+[2026-04-28T09:34:38Z] show clock:
+  *09:35:01.226 UTC Tue Apr 28 2026
+[2026-04-28T09:35:08Z] show clock:
+  *09:35:31.242 UTC Tue Apr 28 2026
+[2026-04-28T09:35:38Z] show clock:
+  *09:36:01.230 UTC Tue Apr 28 2026
+```
+
+#### ConfigMap-sink CR — read the full body from the captured ConfigMap
+
+When `spec.outputSink.configMapRef` is set, `status.results[].commands[].output` carries only a 2 KiB preview. The full body lives in a per-capture ConfigMap labelled `cisco.vk/diagnostic=<crname>`:
+
+```bash
+# Find the latest captured ConfigMap for the CR
+CMNAME=$(kubectl get cm -n <ns> \
+  -l cisco.vk/diagnostic=<crname> \
+  --sort-by=.metadata.creationTimestamp \
+  -o jsonpath='{.items[-1:].metadata.name}')
+
+# Read the show output (data key is the sanitised command name —
+# spaces and pipes become dashes: "show running-config" → "show-running-config")
+kubectl get cm "$CMNAME" -n <ns> \
+  -o jsonpath='{.data.show-running-config}'
+```
+
+Or follow the `configMapRef` reference directly off the CR:
+
+```bash
+kubectl get iosxediag <name> -n <ns> \
+  -o jsonpath='{.status.results[-1:].commands[0].configMapRef}'
+# {"name":"running-snapshot-20260428-065338","namespace":"cisco-vk-smoke","key":"show-running-config"}
+```
+
+#### Status flags only — quick redaction / truncation / error audit (needs `jq`)
+
+```bash
+kubectl get iosxediag <name> -n <ns> -o json \
+  | jq -r '.status.results[-1].commands[] |
+    "cmd=\(.command)\n  redacted=\(.redacted // false)\n  truncated=\(.truncated // false)\n  err=\(.err // "(none)")\n  output_bytes=\(.output | length)"'
+```
+
+Useful when triaging a CR that completed but you suspect the output was clipped or the secret-redaction filter fired. Also the canonical pre-flight before paginating to the full body — confirms your `--allow-secrets` choice was honored.
+
+#### Quick-reference cheatsheet
+
+| Goal | Shape |
+|---|---|
+| Latest single-command output | `kubectl get iosxediag … -o jsonpath='{.status.results[-1:].commands[0].output}'` |
+| Output by command name | `…commands[?(@.command=="show ip route")].output` |
+| All commands with headers | `kubectl get … -o json \| jq -r '.status.results[-1].commands[] \| "=== \(.command) ===\n\(.output)"'` |
+| Scheduled history | `kubectl get … -o json \| jq -r '.status.results[] \| "[\(.capturedAt)] \(.commands[0].output)"'` |
+| ConfigMap sink body | `kubectl get cm -n <ns> -l cisco.vk/diagnostic=<name> -o name \| tail -1 \| xargs kubectl get -n <ns> -o jsonpath='{.data.<sanitised-command>}'` |
+| Per-command flags | `kubectl get … -o json \| jq '.status.results[-1].commands[] \| {cmd:.command, redacted, truncated, err, bytes:(.output\|length)}'` |
+
 ---
 
 ## 5. Common operator workflows
