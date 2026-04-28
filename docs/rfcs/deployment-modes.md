@@ -20,6 +20,19 @@ This document is the single setup guide for choosing and operating each transpor
 
 Defaults per transport: RESTCONF picks port 443, NETCONF picks 830, gNMI picks 50052. The transport-aware factory ignores carry-over values like `spec.port: 443` when you switch a CR to a different transport — see commit `b2c1189` for the rationale.
 
+### Switching `spec.transport` — the right CR-shape pattern
+
+`spec.port` and `spec.tls.enabled` carry the **apphosting RESTCONF intent** (apphosting is RESTCONF-only — see §2.2). When you flip `spec.transport` to `netconf` or `gnmi`, **leave `spec.port: 443` and `spec.tls.enabled: true`** at the apphosting defaults. The configdriver's NETCONF / gNMI transports treat the apphosting-shaped values as "no specific intent for me" and pick their own well-known port + TLS:
+
+| Set on CR | Apphosting probe (always RESTCONF) | NETCONF transport | gNMI transport |
+|---|---|---|---|
+| `port: 443, tls: true, transport: restconf` | hits `https://addr:443/.well-known/host-meta` | n/a | n/a |
+| `port: 443, tls: true, transport: netconf` | hits `https://addr:443` | dials port **830** (SSH; spec.tls ignored — NETCONF transports over SSH not TLS) | n/a |
+| `port: 443, tls: true, transport: gnmi` | hits `https://addr:443` | n/a | dials port **50052** (gnxi insecure default — `spec.tls` ignored on the well-known insecure port; the writer's writer-bound YANG model must match what the device's gnxi exposes — Cisco-IOS-XE-native vs OpenConfig — see §5) |
+| `port: 8830, tls: true, transport: netconf` | hits `https://addr:8830/.well-known/host-meta` — **likely fails** because apphosting expected RESTCONF on 8830, which is not a RESTCONF port | dials **8830** explicitly | n/a |
+
+**Don't change `spec.port` away from 443 unless your apphosting RESTCONF also lives on a non-default port.** The transport-flip permission is for switching the configdriver's read/write path, not for repointing apphosting.
+
 ---
 
 ## 2. Common prerequisites

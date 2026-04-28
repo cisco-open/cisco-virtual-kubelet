@@ -35,6 +35,28 @@ import (
 // UnmarshalFunc defines a function signature for unmarshalling data
 type UnmarshalFunc func([]byte, any) error
 
+// apphostingPortHint returns a human-readable diagnostic when
+// spec.Port is set to a port that the configdriver's NETCONF or gNMI
+// transports use as their well-known default but the apphosting
+// subsystem cannot speak (apphosting is RESTCONF-only). Returns
+// empty when port is plausibly a RESTCONF port. Used by
+// NewAppHostingDriver to clarify why the probe handshake failed —
+// the raw TLS / HTTP error is opaque if the operator's mental model
+// is "I set spec.Transport=gnmi so spec.Port should be 50052".
+//
+// Wave 10.4 — caught against the live C9K-4 retest of test 04
+// (2026-04-28) where spec.Port=50052 made apphosting attempt HTTP/1.1
+// TLS against gnxi's HTTP/2 endpoint.
+func apphostingPortHint(port int) string {
+	switch port {
+	case 830:
+		return "spec.port=830 is the well-known NETCONF-over-SSH port; apphosting is RESTCONF-only and needs HTTPS (typically 443) or HTTP (80). Set spec.port=443 and let the configdriver pick port 830 for NETCONF — see docs/rfcs/deployment-modes.md §1."
+	case 50052, 9339, 6030, 57400:
+		return fmt.Sprintf("spec.port=%d is a well-known gNMI port; apphosting is RESTCONF-only and needs HTTPS (typically 443) or HTTP (80). Set spec.port=443 and let the configdriver pick its own gNMI port — see docs/rfcs/deployment-modes.md §1.", port)
+	}
+	return ""
+}
+
 // XEDriver implements the device driver for Cisco IOS-XE AppHosting
 type XEDriver struct {
 	config       *v1alpha1.DeviceSpec
@@ -110,6 +132,18 @@ func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*XEDri
 
 	err = d.CheckConnection(ctx)
 	if err != nil {
+		// Defensive hint: apphosting is RESTCONF-only on a fixed
+		// HTTPS/HTTP probe (`/.well-known/host-meta`). When the
+		// operator has set spec.Port to a non-RESTCONF protocol
+		// port (typically because they meant to flip the
+		// configdriver's transport), the probe handshake fails on
+		// a port that doesn't speak HTTP. Surface a clear hint
+		// pointing at deployment-modes.md §1 so the operator
+		// recognises the misconfiguration immediately rather than
+		// chasing the raw TLS / HTTP error.
+		if hint := apphostingPortHint(spec.Port); hint != "" {
+			return nil, fmt.Errorf("failed to validate device connection on %s: %v\n  hint: %s", BaseUrl, err, hint)
+		}
 		return nil, fmt.Errorf("failed to validate device connection: %v", err)
 	}
 	log.G(ctx).WithFields(log.Fields{

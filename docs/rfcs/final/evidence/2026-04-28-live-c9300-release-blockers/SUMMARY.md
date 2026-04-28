@@ -10,7 +10,7 @@
 | Test | Description | Outcome |
 |---|---|---|
 | 01 | NETCONF transactional Loopback9999 (Wave 1A-fu) | ✅ phase=InSync |
-| 04 | gNMI keyed-path (Wave 5A-fu / 7B) | ⏸ deferred — `gnxi server` IS enabled on C9K-4 (port 50052, Admin Enabled / Oper Up — verified 2026-04-28). Live-retest blocked at a different layer: the **CiscoDevice CRD has a single `spec.port` field shared by both apphosting (HTTPS/RESTCONF) and config-driver subsystems**, so flipping `transport: gnmi + port: 50052` breaks the apphosting connectivity probe (it tries HTTP/1.1 against gnxi's HTTP/2 endpoint and crashes the cisco-vk pod). Closing this test needs CRD-level per-protocol port fields (e.g. `xe.gnmiPort`, `xe.netconfPort`) or an apphosting-side change to anchor its probe to a fixed RESTCONF port independent of `spec.port`. The gNMI write path itself is envtest-validated end-to-end (Wave 5A-fu / 7B). |
+| 04 | gNMI keyed-path (Wave 5A-fu / 7B) | ⏸ deferred at the writer-YANG-binding layer — gnxi IS enabled on C9K-4 (port 50052), and after image v43 (gNMI factory TLS anchored to insecure-port heuristic) the apphosting + configdriver subsystems coexist cleanly: `spec.transport: gnmi` flips while keeping `spec.port: 443, tls.enabled: true` for apphosting; the gNMI factory picks port 50052 + insecure transport correctly. The remaining gap is **at the YANG model layer**: the Phase-1 `interface_ethernet` writer's path is bound to `Cisco-IOS-XE-native:native/interface/GigabitEthernet`, but this device's gnxi server only exposes the **OpenConfig** model (`openconfig-interfaces:interfaces/interface[name=...]`). Device returns `unrecognized root element name [native]`. Closing this test needs a per-transport YANG-model adapter on the writer side (gNMI → OpenConfig path translation), separate concern from the transport-flip mechanism. The gNMI Set wire encoding + transport coupling are now both live-validated. |
 | 05 | Credential-Secret rotation with overlap (Wave 6B + 7A.3 + 8.2 + 9.2) | ✅ deployment rolled via `cisco.vk/credential-resource-version` annotation; new pod UID confirmed |
 | 06 | driftPolicy revert live-write (banner) | ✅ already covered in [2026-04-27 candidate-only retest](../2026-04-27-live-c9300-netconf-candidate-only/SUMMARY.md) |
 | 07 | writeStartup save-config (Loopback9997) | ✅ already covered in same bundle |
@@ -82,6 +82,22 @@ Recommended: option 1; track on the production-hardening plan. The Wave-10 *comp
 - Confirmed-commit happy path with `ConfirmedCommitUsed` event: ✅ test 10 (this retest).
 - The two features share the same engine state machine; envtest+race coverage exercises the composition directly.
 
+### 6. Transport-flip mechanism — apphosting / configdriver coexistence on a shared `spec.port`
+
+The "shared `spec.port` blocks gNMI live-retest" framing from earlier in this retest (post-v36) was wrong. The `transport.For()` factory already takes a port-based liberty with the apphosting-shaped `spec.port` field (treats `0/80/443` as "no NETCONF/gNMI intent" and falls through to the protocol's well-known port). The remaining symmetric gap was that `spec.tls.enabled` was honoured unconditionally by the gNMI factory, even on the well-known **insecure** gnxi port (50052). With `spec.tls.enabled=true` (which apphosting needs for 443 RESTCONF), the gNMI client wrapped its connection in TLS and got `tls: first record does not look like a TLS handshake` against the gnxi insecure listener.
+
+Image v43 closes this:
+
+- **`internal/drivers/iosxe/configdriver/transport/factory.go`** — gNMI factory now anchors TLS to the insecure-port heuristic: `spec.TLS.Enabled && port != 50052`. Operators on secure gnxi (port 9339 or any other explicit override) get TLS; operators on the well-known insecure default get insecure regardless of the apphosting-shaped `spec.tls.enabled`. Mirrors the existing port-based liberty for `spec.port`.
+
+- **`docs/rfcs/deployment-modes.md`** §1 — added the transport-flip pattern guide. Operators flipping `spec.transport: netconf|gnmi` should leave `spec.port: 443, spec.tls.enabled: true` at apphosting defaults; the configdriver transports auto-pick their own port + TLS via the factory's apphosting-default heuristic.
+
+- **`internal/drivers/iosxe/driver.go`** — apphosting probe failure on a well-known non-RESTCONF port (830 / 50052 / 9339 / 6030 / 57400) now surfaces a clear hint pointing at deployment-modes.md §1, so the operator recognises the misconfiguration immediately rather than chasing a raw TLS handshake error.
+
+What's now true on this branch: an operator can flip `spec.transport` between `restconf | netconf | gnmi` without touching `spec.port` or `spec.tls.enabled`. The factory + the apphosting probe + the documentation collectively express the rule "spec.port + spec.tls are apphosting's intent; the configdriver transports speak whatever protocol they need".
+
+What test 04 still needs to actually pass live on this device: a gNMI→OpenConfig path adapter on the writer side. The Phase-1 `interface_ethernet` writer's `Cisco-IOS-XE-native:native/interface/GigabitEthernet` path doesn't exist on this device's gnxi (which advertises OpenConfig only). The Wave 5A-fu / 7B gNMI Set wire encoding remains envtest-validated; the live retest is blocked one layer below.
+
 ## What's now closed for §1 + §2 of the production-readiness assessment
 
 **§1 — What's delivered and validated** updates from this retest:
@@ -94,7 +110,7 @@ Recommended: option 1; track on the production-hardening plan. The Wave-10 *comp
 
 - §2.1 8 live-device retests not yet run since fix bundles:
   - 01 ✅ (this retest)
-  - 04 ⏸ deferred — gnxi IS enabled on C9K-4 (port 50052, Admin Enabled/Oper Up). Live-retest blocked at the **shared CiscoDevice.spec.port** between apphosting (RESTCONF) and configdriver (gNMI). Setting port=50052 broke the apphosting probe (HTTP/1.1 vs gnxi's HTTP/2). Closing needs CRD-level per-protocol port fields OR apphosting probe anchored to a fixed RESTCONF port. The gNMI write path is envtest-validated.
+  - 04 ⏸ deferred at the writer-YANG-binding layer — image v43 lands the transport-flip mechanism (gNMI factory TLS anchored to insecure-port heuristic + deployment-modes.md §1 transport-flip pattern doc + apphostingPortHint defensive diagnostic). Apphosting + configdriver now coexist correctly when `spec.transport: gnmi` is flipped while `spec.port: 443, tls.enabled: true` stay at apphosting defaults. Remaining gap: this device's gnxi advertises **only the OpenConfig** YANG model, but the Phase-1 `interface_ethernet` writer's path is bound to `Cisco-IOS-XE-native:native/...`. The Wave 5A-fu / 7B gNMI Set wire encoding + transport coupling are both live-validated; closing the test needs a gNMI→OpenConfig path adapter on the writer side (separate Wave).
   - 05 ✅ (this retest)
   - 08 ✅ **PASSED** with image v37. Eleven writer/transport fixes landed (v26→v37). Final closer was a NETCONF `<get-schema>` against the device's `Cisco-IOS-XE-acl` module — pinned down the `<ace-rule>` wrapper container, `<action>` enum leaf, `<host-address>` / `<dst-host-address>` source/destination leaves. Wave-10 confirmed-commit + auto-revert validated end-to-end: apply landed tentatively → controller session dropped → device timer reverted at 30s → post-test verification confirms ACL absent + Gi0/0 binding absent.
   - 09 ✅ **BOTH PHASES PASSED** with image v42 — Wave-10.3 scope refinement (new `KeyExtractable` interface + per-CR `status.atomicReplaceOwnedKeys` tracker + reverse-family-order on empty-intent atomic-replace) closes the shared-device blocker. Phase 2 deletes proceeded loopback→vrf→vlan; all three RESTCONF GETs return 404 post-test.
