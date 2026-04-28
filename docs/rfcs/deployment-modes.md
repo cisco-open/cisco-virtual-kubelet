@@ -405,8 +405,703 @@ phase=Failed?
 
 ---
 
+## 11. Configuration examples
+
+Every example below is copy-pasteable. Replace `10.1.1.1`, `cisco`, and `<device-password>` with your lab values. Each example assumes namespace `cisco-vk-smoke` exists; `kubectl create namespace cisco-vk-smoke` if not.
+
+### 11.1 RESTCONF — managing the banner motd
+
+The simplest deployment construct. One Secret, one CiscoDevice, one IOSXEConfig.
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cat9k-creds
+  namespace: cisco-vk-smoke
+type: Opaque
+stringData:
+  password: <device-password>
+---
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: cat9k-smoke
+  namespace: cisco-vk-smoke
+spec:
+  driver: XE
+  address: "10.1.1.1"
+  username: cisco
+  credentialSecretRef:
+    name: cat9k-creds
+  tls:
+    enabled: true
+    insecureSkipVerify: true     # production: use a CA-signed cert
+  transport: restconf
+  port: 443
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-restconf-banner-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            banner:
+              motd:
+                banner: "Welcome — restricted to authorised personnel"
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: example-restconf-banner
+  namespace: cisco-vk-smoke
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - banner
+  transactional: false             # RESTCONF has no transactions
+  writeStartup: false
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: example-restconf-banner-data
+      key: data.nac.yaml
+```
+
+After apply, expect:
+```
+$ kubectl get iosxeconfig example-restconf-banner -n cisco-vk-smoke
+NAME                       PHASE    AGE
+example-restconf-banner    InSync   30s
+
+$ curl -s :8080/metrics | grep mutate_ops_total | grep restconf
+cisco_vk_config_mutate_ops_total{device="cat9k-smoke",transport="restconf",verb="MERGE"} 1
+```
+
+### 11.2 NETCONF writable-running — transactional banner
+
+Use when the device advertises both `:candidate:1.0` and `:writable-running:1.0`. The engine uses candidate + commit because `transactional: true`.
+
+```yaml
+---
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: cat9k-smoke
+  namespace: cisco-vk-smoke
+spec:
+  driver: XE
+  address: "10.1.1.1"
+  username: cisco
+  credentialSecretRef:
+    name: cat9k-creds
+  # tls.enabled is a NO-OP for NETCONF (SSH transport)
+  transport: netconf
+  port: 830
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-netconf-banner-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            banner:
+              motd:
+                banner: "Welcome — NETCONF transactional"
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: example-netconf-banner
+  namespace: cisco-vk-smoke
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - banner
+  transactional: true              # candidate datastore + commit
+  writeStartup: true               # also persist to startup-config
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: example-netconf-banner-data
+      key: data.nac.yaml
+```
+
+Expected metrics:
+```
+cisco_vk_config_mutate_ops_total{transport="netconf",verb="MERGE"}     ≥ 1
+cisco_vk_config_transactions_total{outcome="commit",transport="netconf"} ≥ 1
+cisco_vk_config_save_startup_total{outcome="ok",transport="netconf"}   ≥ 1
+```
+
+### 11.3 NETCONF candidate-only — interface_loopback with implicit-tx
+
+The recommended NETCONF deployment construct. Device-side prereq: `netconf-yang feature candidate-datastore`. Engine sees `:candidate:1.0` advertised but `:writable-running:1.0` absent, and the implicit-tx auto-promote wraps non-transactional ops in lock+commit+unlock automatically.
+
+```yaml
+---
+# CiscoDevice spec same as §11.2 (transport=netconf, port=830).
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-candidate-only-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            interface_loopback:
+              interfaces:
+                - name: 9990
+                  description: "Production loopback — managed by cisco-vk"
+                  ipv4_address: 10.255.255.90
+                  ipv4_address_mask: 255.255.255.255
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: example-candidate-only-loopback
+  namespace: cisco-vk-smoke
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - interface_loopback
+  transactional: false             # implicit-tx still gives atomic apply
+  writeStartup: false
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: example-candidate-only-data
+      key: data.nac.yaml
+```
+
+This is the construct validated by the [2026-04-27 candidate-only evidence bundle](./final/evidence/2026-04-27-live-c9300-netconf-candidate-only/SUMMARY.md). Tests 06 + 07 over this construct land at phase=InSync.
+
+### 11.4 gNMI — interface_ethernet keyed path
+
+Used for keyed paths whose values contain `/` (interface names like `1/0/24`) and for telemetry-driven drift detection.
+
+```yaml
+---
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: cat9k-smoke
+  namespace: cisco-vk-smoke
+spec:
+  driver: XE
+  address: "10.1.1.1"
+  username: cisco
+  credentialSecretRef:
+    name: cat9k-creds
+  tls:
+    enabled: false                 # default gnxi insecure; set true for gnxi secure-server
+  transport: gnmi
+  port: 50052                      # IOS-XE 17.18+ insecure default
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-gnmi-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            interface_ethernet:
+              interfaces:
+                - type: GigabitEthernet
+                  name: "1/0/24"
+                  description: "Managed by cisco-vk via gNMI"
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: example-gnmi-iface
+  namespace: cisco-vk-smoke
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - interface_ethernet
+  transactional: true              # gNMI Set is atomic — single SetRequest
+  writeStartup: false              # gNMI does not implement SaveStartup
+  driftPolicy: revert
+  driftDetectInterval: 30s
+  source:
+    configMapRef:
+      name: example-gnmi-data
+      key: data.nac.yaml
+```
+
+Expected metrics:
+```
+cisco_vk_config_mutate_ops_total{transport="gnmi",verb="MERGE"}     ≥ 1
+cisco_vk_config_transactions_total{outcome="commit",transport="gnmi"} ≥ 1
+```
+
+### 11.5 Wave 10 — confirmed-commit (auto-revert safety net)
+
+Protects against management-plane-breaking applies (bad ACL, wrong SVI on the management VLAN, etc.). If the running-config verify after candidate-commit fails, the engine deliberately omits `ConfirmCommit` and the device's own RFC 6241 timer reverts at `confirmTimeoutSeconds`.
+
+Requires: `transport: netconf` AND device advertises `:confirmed-commit:1.0` AND `transactional: true` AND the chart's Wave-10 CRD applied (see §6.4).
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-confirmed-commit-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            access_list_extended:
+              acls:
+                - name: PROD-MGMT-OOB
+                  entries:
+                    - sequence: 10
+                      action: permit
+                      protocol: ip
+                      source: any
+                      destination: 10.0.0.0/8
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: example-confirmed-commit
+  namespace: cisco-vk-smoke
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - access_list_extended
+  transactional: true
+  confirmTimeoutSeconds: 30        # 1–600s; clamped at transport boundary
+  writeStartup: false
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: example-confirmed-commit-data
+      key: data.nac.yaml
+```
+
+Expected events on success:
+```
+$ kubectl describe iosxeconfig example-confirmed-commit -n cisco-vk-smoke
+Events:
+  Type    Reason                Age   Message
+  Normal  ConfirmedCommitUsed   30s   confirmed-commit + verify + commit (timeout 30s)
+```
+
+On verify-failure path the device auto-reverts; the operator sees an `ApplyFailed` Warning event with the verify-time drift detail.
+
+### 11.6 Wave 10 — atomic replace (cross-family)
+
+Treats the resolved intent as authoritative for managed families. Adds + deletes + updates land in **one** transaction, with cross-family dependency ordering from `schema/families.yaml`. Used when partial-drift between families is intolerable (e.g. removing a VRF must happen with the loopbacks in it, in one shot).
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-atomic-replace-data
+  namespace: cisco-vk-smoke
+data:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - name: cat9k-smoke
+          configuration:
+            vlan:
+              vlans:
+                - id: 200
+                  name: payroll-segment
+            vrf:
+              vrfs:
+                - name: PAYROLL-VRF
+                  rd: "65000:200"
+            interface_loopback:
+              interfaces:
+                - name: 200
+                  description: "Payroll-VRF loopback"
+                  vrf: PAYROLL-VRF
+                  ipv4_address: 10.200.0.1
+                  ipv4_address_mask: 255.255.255.255
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: example-atomic-replace
+  namespace: cisco-vk-smoke
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - vlan
+    - vrf
+    - interface_loopback
+  transactional: true
+  atomicReplace: true              # single transaction across all three families
+  writeStartup: false
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: example-atomic-replace-data
+      key: data.nac.yaml
+```
+
+To later REMOVE everything atomically, replace the ConfigMap's data with an empty configuration block (`iosxe.devices[0].configuration: {}`) and re-apply — `atomicReplace` will issue deletes for all three families in one transaction in reverse-dependency order (interface_loopback → vrf → vlan).
+
+### 11.7 Wave 10 — composed (atomic-replace + confirmed-commit)
+
+The recommended-default for production CRs touching routing or interfaces. Test 13 in the runbook validates this construct.
+
+```yaml
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: example-wave10-composed
+  namespace: cisco-vk-smoke
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - vlan
+    - vrf
+    - interface_loopback
+  transactional: true
+  atomicReplace: true              # one transaction across families
+  confirmTimeoutSeconds: 30        # auto-revert if running-verify fails
+  writeStartup: true               # persist on success
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    configMapRef:
+      name: example-atomic-replace-data
+      key: data.nac.yaml
+```
+
+Two `ConfirmedCommitUsed` events expected (one per atomic-replace phase: establish + cleanup); zero `ConfirmedCommitFallback` events; zero auto-reverts on the happy path.
+
+### 11.8 Inline source (no ConfigMap)
+
+For small / one-off configs you can inline the netascode YAML in the IOSXEConfig itself instead of a ConfigMap reference.
+
+```yaml
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: example-inline-banner
+  namespace: cisco-vk-smoke
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  managedFamilies:
+    - banner
+  transactional: false
+  driftPolicy: revert
+  driftDetectInterval: 1m
+  source:
+    inline:
+      iosxe:
+        devices:
+          - name: cat9k-smoke
+            configuration:
+              banner:
+                motd:
+                  banner: "Inline configuration sample"
+```
+
+`spec.source.inline` is a schemaless object (`runtime.RawExtension` under the hood — `+kubebuilder:pruning:PreserveUnknownFields`), NOT a string literal. Trade-off: inline edits roll the IOSXEConfig generation, ConfigMap edits don't. ConfigMaps are the better choice when the configuration is updated by GitOps tooling that uses `kubectl apply -f` semantics.
+
+---
+
+## 12. Topology examples — per-pod kubelet vs aggregator-mode
+
+### 12.1 Per-pod kubelet (recommended)
+
+Default Helm topology — `aggregator.enabled: false`. The controller manager watches `CiscoDevice` CRs and creates a per-device Deployment automatically; you configure only the chart, not per-device pod manifests.
+
+```yaml
+# values-perpod.yaml
+# helm install cisco-vk ./charts/cisco-virtual-kubelet -f values-perpod.yaml
+
+# Shared default image for both the controller and the per-device pods.
+# Override per-role with controllerImage / vkImage if they should diverge.
+image:
+  repository: containers.dmz.cisco.com:5000/cisco-vk
+  tag: v29
+  pullPolicy: IfNotPresent
+
+# Per-role overrides. Empty repository means "use the shared image above."
+controllerImage:
+  repository: ""
+  tag: ""
+  pullPolicy: ""
+vkImage:
+  repository: ""
+  tag: ""
+  pullPolicy: ""
+
+aggregator:
+  enabled: false                   # per-pod is the recommended construct
+
+controller:
+  leaderElect: false               # set true when running ≥2 controller replicas
+  metricsBindAddress: ":8080"
+  healthProbeBindAddress: ":8081"
+
+config:
+  # Set when IOSXEConfig CRs in different tenant namespaces target the same
+  # device — leases for per-(device, family) arbitration land here so they
+  # don't fragment per-namespace.
+  leaseNamespace: ""               # default: per-pod namespace
+
+resources:
+  requests: { cpu: 100m, memory: 64Mi }
+  limits:   { cpu: 200m, memory: 128Mi }
+```
+
+After install, apply CiscoDevice + IOSXEConfig CRs (per §11) and the controller fans out a Deployment per device under labels `app.kubernetes.io/managed-by=ciscodevice-controller`. To switch a device's transport, patch its CiscoDevice (`kubectl patch ciscodevice <name> -n <ns> --type=merge -p '{"spec":{"transport":"netconf"}}'`) and delete the per-device pod so it picks up the new ConfigMap via deferred-dial.
+
+### 12.2 Aggregator-mode (corner-case)
+
+Single controller process with one `deviceWorker` goroutine per device — no per-device pods. Use only when running per-device pods is operationally awkward (air-gapped operator, bench-test rig). Live-device evidence on this branch was captured against per-pod only; aggregator is exercised by unit + envtest.
+
+```yaml
+# values-aggregator.yaml
+image:
+  repository: containers.dmz.cisco.com:5000/cisco-vk
+  tag: v29
+  pullPolicy: IfNotPresent
+
+aggregator:
+  enabled: true                    # in-process per-device ConfigReconciler
+
+controller:
+  leaderElect: false
+  metricsBindAddress: ":8080"
+  healthProbeBindAddress: ":8081"
+
+# Bump resources — one pod handles every CiscoDevice.
+resources:
+  requests: { cpu: 250m, memory: 512Mi }
+  limits:   { cpu: 2000m, memory: 2Gi }
+```
+
+Trade-offs to weigh before choosing aggregator-mode:
+- One pod handles every CiscoDevice → memory and CPU scale with the device count
+- A controller-pod restart pauses reconcile for every device simultaneously (per-pod is failure-isolated)
+- Single `/metrics` endpoint and log stream — easier to centrally scrape, harder to diagnose per-device issues
+
+---
+
+## 13. Resolution-chain examples
+
+The engine's intent resolver merges the following layers in fixed order before each reconcile: **defaults → device-groups → interface-groups → templates → per-device source → per-family secret refs**. Use the lower layers for cross-cutting baselines, the higher layers for device-specific intent.
+
+### 13.1 Cluster-wide baseline (`IOSXEConfigDefaults`)
+
+```yaml
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfigDefaults
+metadata:
+  name: default                    # singleton; name MUST be "default"
+spec:
+  configuration:
+    cdp:
+      run: true                    # CDP on by default everywhere
+    system:
+      login_on_failure: true
+      login_on_success: true
+    logging:
+      buffered:
+        size: 65536
+        severity: informational
+```
+
+### 13.2 Device-group scope (`IOSXEDeviceGroupConfig`)
+
+```yaml
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEDeviceGroupConfig
+metadata:
+  name: access-switches
+  namespace: cisco-vk-smoke
+spec:
+  deviceSelector:
+    matchLabels:
+      role: access                 # matches CiscoDevice.metadata.labels.role
+  configuration:
+    snmp_server:
+      community:
+        - name: ops-readonly
+          access: ro
+        - name: ops-readwrite
+          access: rw
+          acl: "10"
+```
+
+Apply a matching label on the CiscoDevice: `kubectl label ciscodevice <name> role=access`.
+
+### 13.3 Reusable parameterised fragment (`IOSXETemplate`)
+
+```yaml
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXETemplate
+metadata:
+  name: standard-loopback
+  namespace: cisco-vk-smoke
+spec:
+  parameters:
+    - name: id
+      type: int
+      required: true
+    - name: address
+      type: ipv4
+      required: true
+    - name: description
+      type: string
+      default: "Standard loopback"
+  configuration:
+    interface_loopback:
+      interfaces:
+        - name: "{{ .id }}"
+          description: "{{ .description }}"
+          ipv4_address: "{{ .address }}"
+          ipv4_address_mask: 255.255.255.255
+```
+
+Reference from an `IOSXEConfig`:
+
+```yaml
+spec:
+  templateRefs:
+    - name: standard-loopback
+      values:
+        id: 9991
+        address: 10.255.255.91
+        description: "Telemetry endpoint"
+```
+
+### 13.4 Selector-based fan-out (`IOSXEConfigBundle`)
+
+Apply the same configuration to every CiscoDevice matching a selector — the controller materialises N child `IOSXEConfig` CRs with owner-references for GC.
+
+```yaml
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfigBundle
+metadata:
+  name: lab-banner-rollout
+  namespace: cisco-vk-smoke
+spec:
+  deviceSelector:
+    matchLabels:
+      env: lab
+  template:                          # IOSXEConfigTemplateSpec — no nested .spec
+    managedFamilies:
+      - banner
+    transactional: false
+    driftPolicy: revert
+    source:
+      inline:
+        iosxe:
+          devices:
+            - configuration:
+                banner:
+                  motd:
+                    banner: "LAB DEVICE — non-production data"
+```
+
+The controller fills `deviceRef` on every generated child IOSXEConfig at materialisation time and substitutes the device name into `iosxe.devices[].name`.
+
+### 13.5 Secret refs for sensitive families
+
+When a family includes sensitive values (SNMPv3 auth keys, RADIUS shared secrets), reference them from a Secret instead of inlining:
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: snmp-secrets
+  namespace: cisco-vk-smoke
+type: Opaque
+stringData:
+  data.nac.yaml: |
+    iosxe:
+      devices:
+        - configuration:
+            snmp_server:
+              v3:
+                users:
+                  - name: ops-monitoring
+                    auth_protocol: sha
+                    auth_password: <secret>
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: snmp-with-secrets
+  namespace: cisco-vk-smoke
+spec:
+  deviceRef: { name: cat9k-smoke }
+  managedFamilies: [snmp_server]
+  transactional: true
+  source:
+    inline:
+      iosxe:
+        devices:
+          - name: cat9k-smoke
+            configuration: {}      # populated entirely from secretRefs
+  secretRefs:
+    - name: snmp-secrets
+      key: data.nac.yaml
+      family: snmp_server
+```
+
+The resolver merges secretRefs into the resolved intent **after** the source layer, scoped to the named family. Secrets never appear in the IOSXEConfig spec or status.
+
+---
+
 ## See also
 
 - [`./transport-architecture.md`](./transport-architecture.md) — maintainer-facing architecture reference (wire shapes, capabilities matrix, fix-bundle history)
 - [`./final/release-blocker-tests/RUNBOOK.md`](./final/release-blocker-tests/RUNBOOK.md) — operator playbook for the 11 release-blocker live-device retests
 - [`./final/README.md`](./final/README.md) — branch implementation reference, with §7 roadmap
+- [`../../examples/configs/`](../../examples/configs/) and [`../../examples/gitops-reference/`](../../examples/gitops-reference/) — additional in-tree examples
