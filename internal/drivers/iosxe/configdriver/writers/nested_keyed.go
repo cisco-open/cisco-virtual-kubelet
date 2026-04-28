@@ -172,7 +172,9 @@ func (w nestedKeyedListWriter) PruneDiff(desired, observed any) ([]transport.Op,
 	for _, e := range observedList {
 		k, err := entryKey(e, w.base.keyField)
 		if err != nil {
-			return nil, fmt.Errorf("%s: observed: %w", w.base.family, err)
+			// Skip observed entries we can't recognise; we
+			// can't safely prune what we don't model.
+			continue
 		}
 		if _, dup := got[k]; !dup {
 			keyOrder = append(keyOrder, k)
@@ -281,7 +283,11 @@ func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, erro
 	for _, e := range observedList {
 		k, err := entryKey(e, w.base.keyField)
 		if err != nil {
-			return nil, fmt.Errorf("%s: observed: %w", w.base.family, err)
+			// Skip observed entries whose key field is missing —
+			// IOS-XE returns system ACLs and other defaults that
+			// don't fit the modelled schema. See keyedListWriter
+			// Diff for the same rationale.
+			continue
 		}
 		got[k] = e
 	}
