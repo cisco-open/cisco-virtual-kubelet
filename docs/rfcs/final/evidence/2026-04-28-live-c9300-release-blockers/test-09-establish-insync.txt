@@ -1,0 +1,44 @@
+# Test 09 — atomic-replace cross-family establish phase
+# Live retest 2026-04-28 with controller image phase9-vrf-af-ipv4.
+# All three managed families (vlan, vrf, interface_loopback)
+# reconciled in one transactional apply against the live device.
+
+== Phase progression (every 4s monitor poll) ==
+
+[t+4s]  LeaseBlocked|vrf=InSync;interface_loopback=InSync;vlan=Skipped;
+[t+12s] InSync|vlan=InSync;vrf=InSync;interface_loopback=InSync;
+        REACHED-INSYNC
+
+== Device-side verification (RESTCONF GET against 10.1.1.1) ==
+
+GET /restconf/data/Cisco-IOS-XE-native:native/vrf/definition=TEST-09-VRF →
+{
+  "Cisco-IOS-XE-native:definition": [
+    {
+      "name": "TEST-09-VRF",
+      "rd": "65009:1",
+      "address-family": {
+        "ipv4": {
+        }
+      }
+    }
+  ]
+}
+
+The "address-family.ipv4: {}" presence container is the new wire-shape
+emitted by the VRF writer's vrfToYANG body-shape function (added in this
+retest). Without it, the device's must-violation defense rejects any
+interface's `vrf forwarding TEST-09-VRF` apply with
+"Address-family ipv4 in VRF must be created 1st, deleted last".
+
+== Cleanup (post-evidence-capture) ==
+
+Test entities removed in the cross-family-safe order
+(loopback before vrf before vlan):
+
+DELETE /Cisco-IOS-XE-native:native/interface/Loopback=9996  → 204
+DELETE /Cisco-IOS-XE-native:native/vrf/definition=TEST-09-VRF  → 204
+DELETE /Cisco-IOS-XE-native:native/vlan/vlan-list=998  → 204
+
+Post-cleanup GET on the VRF returns
+"uri keypath not found" — device is back to baseline.

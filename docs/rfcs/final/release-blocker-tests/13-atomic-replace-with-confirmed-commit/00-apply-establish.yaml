@@ -23,6 +23,9 @@ data:
               vrfs:
                 - name: TEST-13-VRF
                   rd: "65013:1"
+                  # IOS-XE rejects `vrf forwarding` on an interface
+                  # unless the matching address-family is enabled.
+                  address_family_ipv4: true
             interface_loopback:
               interfaces:
                 - name: 9993
