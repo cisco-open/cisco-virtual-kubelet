@@ -341,3 +341,106 @@ func jsonNumber(n int) string {
 	}
 	return string(b)
 }
+
+// TestACLRuleToYANG locks in the netascode → IOS-XE-acl flat YANG
+// translation. The mapping has to be byte-stable because the netconf
+// transport's xml emitter uses the field names as XML element names;
+// any drift here re-introduces the live-retest 2026-04-28 failure
+// `unknown-element <bad-element>src_host</bad-element>`.
+func TestACLRuleToYANG(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		in   map[string]any
+		want map[string]any
+	}{
+		{
+			name: "deny-host-to-any-with-protocol",
+			in: map[string]any{
+				"sequence": 10, "action": "deny",
+				"protocol": "ip",
+				"src_host": "10.90.95.15", "dst_any": true,
+			},
+			want: map[string]any{
+				"sequence":        10,
+				"ace-rule-action": "deny",
+				"protocol":        "ip",
+				"host":            "10.90.95.15",
+				"dst-any":         []any{nil},
+			},
+		},
+		{
+			name: "permit-any-to-any",
+			in: map[string]any{
+				"sequence": 20, "action": "permit",
+				"protocol": "ip",
+				"src_any":  true, "dst_any": true,
+			},
+			want: map[string]any{
+				"sequence":        20,
+				"ace-rule-action": "permit",
+				"protocol":        "ip",
+				"any":             []any{nil},
+				"dst-any":         []any{nil},
+			},
+		},
+		{
+			name: "src-network-with-wildcard",
+			in: map[string]any{
+				"sequence": 30, "action": "permit", "protocol": "ip",
+				"src_prefix": "10.0.0.0", "src_wildcard": "0.0.0.255",
+				"dst_any": true,
+			},
+			want: map[string]any{
+				"sequence": 30, "ace-rule-action": "permit", "protocol": "ip",
+				"ipv4-address": "10.0.0.0", "mask": "0.0.0.255",
+				"dst-any": []any{nil},
+			},
+		},
+		{
+			name: "dst-host-with-port-eq-and-log",
+			in: map[string]any{
+				"sequence": 40, "action": "permit", "protocol": "tcp",
+				"src_any":  true,
+				"dst_host": "10.1.1.1", "dst_eq": 80,
+				"log": true,
+			},
+			want: map[string]any{
+				"sequence": 40, "ace-rule-action": "permit", "protocol": "tcp",
+				"any":       []any{nil},
+				"dest-host": "10.1.1.1", "dst-eq": 80,
+				"log": []any{nil},
+			},
+		},
+		{
+			name: "remark-passes-through",
+			in:   map[string]any{"sequence": 5, "remark": "block egress"},
+			want: map[string]any{"sequence": 5, "remark": "block egress"},
+		},
+		{
+			name: "false-empty-leaves-dropped",
+			in:   map[string]any{"sequence": 1, "src_any": false, "log": "no"},
+			want: map[string]any{"sequence": 1},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := aclRuleToYANG(tc.in)
+			if len(got) != len(tc.want) {
+				t.Fatalf("got %d keys, want %d\n  got:  %v\n  want: %v", len(got), len(tc.want), got, tc.want)
+			}
+			for k, v := range tc.want {
+				gv, ok := got[k]
+				if !ok {
+					t.Errorf("missing key %q in output", k)
+					continue
+				}
+				gj, _ := json.Marshal(gv)
+				wj, _ := json.Marshal(v)
+				if string(gj) != string(wj) {
+					t.Errorf("key %q: got %s, want %s", k, gj, wj)
+				}
+			}
+		})
+	}
+}

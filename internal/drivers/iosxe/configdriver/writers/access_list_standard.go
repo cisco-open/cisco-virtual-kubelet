@@ -29,8 +29,13 @@ package writers
 func init() {
 	Override(nestedKeyedListWriter{
 		base: keyedListWriter{
-			family:        "access_list_standard",
-			yangPath:      "/Cisco-IOS-XE-native:native/ip/access-list/standard",
+			family: "access_list_standard",
+			// `standard` lives in the Cisco-IOS-XE-acl YANG module —
+			// path's last segment must carry the qualified prefix
+			// so the netconf transport's path-aware filter builder
+			// xmlns-declares the element. Mirrors the
+			// access_list_extended fix landed in commit a816311.
+			yangPath:      "/Cisco-IOS-XE-native:native/ip/access-list/Cisco-IOS-XE-acl:standard",
 			envelopeKey:   "Cisco-IOS-XE-acl:standard",
 			innerKey:      "standard",
 			keyField:      "name",
@@ -39,5 +44,6 @@ func init() {
 		nestedLeaf:      "rules",
 		nestedKeyField:  "sequence",
 		nestedYANGInner: "access-list-seq-rule",
+		nestedBodyShape: aclRuleToYANG,
 	})
 }

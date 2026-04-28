@@ -67,6 +67,16 @@ type nestedListSpec struct {
 	// the device returns the bare slice; the leaf name is then
 	// the default fallback.
 	YANGInner string
+
+	// BodyShape, if set, is applied to every desired-side entry
+	// before it is placed into the outgoing edit-config body.
+	// Mirrors the keyedListWriter.yangBodyShape pattern but at
+	// per-entry granularity. Used by families whose netascode
+	// shorthand differs from the YANG schema — e.g. ACL rules
+	// where `src_host` lifts to `host` and `dst_any: true` lifts
+	// to the empty-leaf `dst-any`. Leave nil for families whose
+	// netascode shape passes through verbatim.
+	BodyShape func(map[string]any) map[string]any
 }
 
 // nestedKeyedListWriter wraps keyedListWriter and adds per-inner-key
@@ -82,9 +92,10 @@ type nestedKeyedListWriter struct {
 	// non-nil.
 	nested []nestedListSpec
 
-	nestedLeaf      string // alias for one-spec usage
-	nestedKeyField  string // alias for one-spec usage
-	nestedYANGInner string // alias for one-spec usage
+	nestedLeaf      string                                  // alias for one-spec usage
+	nestedKeyField  string                                  // alias for one-spec usage
+	nestedYANGInner string                                  // alias for one-spec usage
+	nestedBodyShape func(map[string]any) map[string]any     // alias for one-spec usage
 }
 
 // specs returns the nested-leaf specifications normalized into the
@@ -102,6 +113,7 @@ func (w nestedKeyedListWriter) specs() []nestedListSpec {
 		Leaf:      w.nestedLeaf,
 		KeyField:  w.nestedKeyField,
 		YANGInner: w.nestedYANGInner,
+		BodyShape: w.nestedBodyShape,
 	}}
 }
 
@@ -331,6 +343,22 @@ func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, erro
 			body[w.base.keyField] = kv
 		}
 		for leaf, changed := range changedByLeaf {
+			spec, hasSpec := specByLeaf[leaf]
+			// Apply per-entry body shape when the family's
+			// netascode shorthand needs lifting to the YANG
+			// schema (e.g. ACL src_host → host, dst_any: true
+			// → <dst-any/> empty leaf).
+			if hasSpec && spec.BodyShape != nil {
+				shaped := make([]any, 0, len(changed))
+				for _, e := range changed {
+					if m, ok := e.(map[string]any); ok {
+						shaped = append(shaped, spec.BodyShape(m))
+						continue
+					}
+					shaped = append(shaped, e)
+				}
+				changed = shaped
+			}
 			// The netascode-side leaf name (e.g. "rules") is a
 			// logical grouping the device's YANG model doesn't
 			// represent: the IOS-XE-acl `extended` entry holds
@@ -341,7 +369,7 @@ func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, erro
 			// Caught against the live Cat9300 retest of test 08
 			// (2026-04-28) where the device rejected
 			// `unknown-element <bad-element>rules</bad-element>`.
-			if spec, ok := specByLeaf[leaf]; ok && spec.YANGInner != "" {
+			if hasSpec && spec.YANGInner != "" {
 				body[spec.YANGInner] = changed
 			} else {
 				body[leaf] = changed
