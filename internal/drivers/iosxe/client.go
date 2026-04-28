@@ -86,16 +86,27 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		}
 
 		log.G(ctx).Infof("Successfully started app %s via RPC", appConfig.AppName())
+
+		// For HTTP URLs, continue to HTTP URL handling logic for RUNNING state and fallback
+		// For flash URLs, we can wait for RUNNING directly since the image is local
+		if !isHTTPURL(appConfig.ImagePath()) {
+			if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
+				return fmt.Errorf("app %s did not reach RUNNING after two-phase start: %w", appConfig.AppName(), err)
+			}
+			log.G(ctx).Infof("Successfully installed app %s (two-phase local path)", appConfig.AppName())
+			return nil
+		}
+		// HTTP URLs continue to HTTP URL handling logic below
 	}
 
-	// For non-HTTP image paths (flash, bootflash, etc.) the device auto-advances
-	// from DEPLOYED to RUNNING because Start=true is already set in the posted config.
+	// For non-HTTP image paths (flash, bootflash, etc.) without DockerResource,
+	// the device auto-advances from DEPLOYED to RUNNING because Start=true is set.
 	// Wait for RUNNING directly; no explicit activate/start RPCs are needed.
 	if !isHTTPURL(appConfig.ImagePath()) {
 		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
 			return fmt.Errorf("app %s did not reach RUNNING after flash install: %w", appConfig.AppName(), err)
 		}
-		log.G(ctx).Infof("Successfully installed app %s (local path)", appConfig.AppName())
+		log.G(ctx).Infof("Successfully installed app %s (single-phase local path)", appConfig.AppName())
 		return nil
 	}
 
