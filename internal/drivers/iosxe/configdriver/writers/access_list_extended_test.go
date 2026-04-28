@@ -362,11 +362,11 @@ func TestACLRuleToYANG(t *testing.T) {
 				"src_host": "10.90.95.15", "dst_any": true,
 			},
 			want: map[string]any{
-				"sequence":        10,
-				"ace-rule-action": "deny",
-				"protocol":        "ip",
-				"host":            "10.90.95.15",
-				"dst-any":         []any{nil},
+				"sequence": 10,
+				"deny":     []any{nil},
+				"protocol": "ip",
+				"host":     "10.90.95.15",
+				"dst-any":  []any{nil},
 			},
 		},
 		{
@@ -377,11 +377,11 @@ func TestACLRuleToYANG(t *testing.T) {
 				"src_any":  true, "dst_any": true,
 			},
 			want: map[string]any{
-				"sequence":        20,
-				"ace-rule-action": "permit",
-				"protocol":        "ip",
-				"any":             []any{nil},
-				"dst-any":         []any{nil},
+				"sequence": 20,
+				"permit":   []any{nil},
+				"protocol": "ip",
+				"any":      []any{nil},
+				"dst-any":  []any{nil},
 			},
 		},
 		{
@@ -392,7 +392,7 @@ func TestACLRuleToYANG(t *testing.T) {
 				"dst_any": true,
 			},
 			want: map[string]any{
-				"sequence": 30, "ace-rule-action": "permit", "protocol": "ip",
+				"sequence": 30, "permit": []any{nil}, "protocol": "ip",
 				"ipv4-address": "10.0.0.0", "mask": "0.0.0.255",
 				"dst-any": []any{nil},
 			},
@@ -406,7 +406,7 @@ func TestACLRuleToYANG(t *testing.T) {
 				"log": true,
 			},
 			want: map[string]any{
-				"sequence": 40, "ace-rule-action": "permit", "protocol": "tcp",
+				"sequence": 40, "permit": []any{nil}, "protocol": "tcp",
 				"any":       []any{nil},
 				"dest-host": "10.1.1.1", "dst-eq": 80,
 				"log": []any{nil},

@@ -107,7 +107,20 @@ func aclRuleToYANG(flat map[string]any) map[string]any {
 		case "sequence":
 			out["sequence"] = v
 		case "action":
-			out["ace-rule-action"] = v
+			// IOS-XE-acl encodes the action as an empty-leaf choice
+			// (<permit/> or <deny/>) at the same level as <sequence>,
+			// not as an `ace-rule-action` enum leaf.
+			s, _ := v.(string)
+			switch s {
+			case "permit":
+				out["permit"] = emptyLeaf
+			case "deny":
+				out["deny"] = emptyLeaf
+			default:
+				if s != "" {
+					out[s] = emptyLeaf
+				}
+			}
 		case "protocol":
 			out["protocol"] = v
 		case "src_host", "source_host":
