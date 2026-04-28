@@ -59,6 +59,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver"
 )
 
 // configReconcilerOptions is what startConfigReconciler needs from the
@@ -306,6 +307,34 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	}
 	if err := diagReconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("diagnostic SetupWithManager: %w", err)
+	}
+
+	// Diagnostics-RFC Phase C: HTTP admin endpoint for ad-hoc
+	// `kubectl ciscovk exec` invocations. Bound to 127.0.0.1:8082
+	// inside the pod; operators reach it via `kubectl port-forward`,
+	// which means pods/portforward RBAC is the auth gate. The
+	// CONFIG_DIAG_ADMIN_ADDR env var lets ops opt out (set to "0"
+	// or empty-disable) or override the bind address for tests.
+	adminAddr := os.Getenv("CONFIG_DIAG_ADMIN_ADDR")
+	if adminAddr == "" {
+		adminAddr = adminserver.DefaultBindAddr
+	}
+	if adminAddr != "0" {
+		admSrv := &adminserver.Server{
+			DeviceName: deviceName,
+			TP:         r,
+			BindAddr:   adminAddr,
+		}
+		stop := make(chan struct{})
+		go func() {
+			<-ctx.Done()
+			close(stop)
+		}()
+		go func() {
+			if err := admSrv.ListenAndServe(stop); err != nil {
+				log.G(ctx).WithError(err).Warn("diagnostic admin server exited")
+			}
+		}()
 	}
 
 	go func() {
