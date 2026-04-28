@@ -405,7 +405,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 		// values as "no change"). Successful (InSync / Drifted)
 		// families return the current desired's keys; the union with
 		// the prior owned set is computed at status writeback time.
-		if res.AtomicReplace && len(fs.OwnedKeys) > 0 {
+		if len(fs.OwnedKeys) > 0 {
 			if result.AtomicReplaceOwnedKeys == nil {
 				result.AtomicReplaceOwnedKeys = map[string][]string{}
 			}
@@ -684,11 +684,17 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// once so successful-return paths can stamp them onto the
 	// FamilyStatus. The aggregator in Reconcile unions these with the
 	// prior owned set to produce Result.AtomicReplaceOwnedKeys.
+	//
+	// Track on every reconcile (regardless of res.AtomicReplace) so
+	// flipping atomicReplace from false → true on a CR's next
+	// generation already has a populated owned-set to scope against.
+	// Without this, a 2-phase test that establishes state with
+	// atomicReplace=false then flips it to true on phase 2 would
+	// see an empty priorOwned set and prune nothing — exactly the
+	// shape of release-blocker tests 09 + 13.
 	var ownedKeysForFamily []string
-	if res.AtomicReplace {
-		if ke, ok := w.(writers.KeyExtractable); ok {
-			ownedKeysForFamily = ke.KeysOf(desired)
-		}
+	if ke, ok := w.(writers.KeyExtractable); ok {
+		ownedKeysForFamily = ke.KeysOf(desired)
 	}
 
 	observed, err := w.Fetch(ctx, e.Transport)
