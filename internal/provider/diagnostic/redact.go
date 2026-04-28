@@ -38,15 +38,26 @@ import (
 var secretLineRe = regexp.MustCompile(`(?i)^[\t ]*(` +
 	`enable\s+secret\b|` +
 	`enable\s+password\b|` +
-	`username\s+\S+\s+(secret|password)\b|` +
+	// `username <name> [privilege <N>] [secret|password] ...` —
+	// Cisco optionally inserts `privilege <N>` BEFORE the secret/
+	// password token, so the older `username \S+ (secret|password)`
+	// regex missed `username admin privilege 15 secret 9 $14$…`.
+	// Match any username line that contains secret or password.
+	`username\s+\S+\b.*\b(secret|password)\b|` +
 	`snmp-server\s+community\b|` +
 	`snmp-server\s+(host|user)\b|` +
+	// `tacacs-server key …` AND the indented `key …` line under a
+	// `tacacs server <name>` / `radius server <name>` stanza.
 	`tacacs-server\s+(key|host)\b|` +
 	`radius-server\s+(key|host)\b|` +
+	`tacacs\s+server\s+\S+|` +   // standalone `tacacs server <name>` header
+	`radius\s+server\s+\S+|` +   // standalone `radius server <name>` header
+	`key\s+(string|chain|7|6|0)\b|` +    // `key 7 …`, `key 0 …`, `key chain`
+	`key\s+\S+\s*$|` +           // bare `key <token>` line (indented under server stanza)
+	`server-private\b|` +        // `server-private … key 7 …` AAA blocks
 	`ip\s+ftp\s+password\b|` +
 	`ip\s+ssh\s+pubkey-chain\b|` +
 	`crypto\s+(isakmp|ipsec|key)\b|` +
-	`key\s+(string|chain)\b|` +
 	`pre-shared-key\b|` +
 	`shared-secret\b|` +
 	`peer\s+default\s+ip\s+address\s+pool\b|` +

@@ -81,6 +81,36 @@ hostname cat9k`,
 			expectHide: []string{"$1$X$Y"},
 			wantDid:    true,
 		},
+		{
+			// Cisco IOS-XE inserts `privilege <N>` between username
+			// and secret/password — caught by the live-device retest
+			// of test 2.
+			name:       "username with privilege then secret",
+			input:      "username cisco privilege 15 secret 9 $14$abcd$xyz",
+			expectHide: []string{"$14$abcd$xyz"},
+			wantDid:    true,
+		},
+		{
+			name:       "username with privilege then password",
+			input:      "username admin privilege 15 password 7 deadbeef",
+			expectHide: []string{"deadbeef"},
+			wantDid:    true,
+		},
+		{
+			// Indented `key <token>` line under a `tacacs server`
+			// stanza — also caught by the test 2 retest.
+			name:       "indented key line",
+			input:      "tacacs server ux-kgs\n key tacacs123",
+			expectHide: []string{"tacacs123"},
+			expectKeep: []string{"<redacted"},
+			wantDid:    true,
+		},
+		{
+			name:       "key 7 hex form",
+			input:      " key 7 020005f1abcd",
+			expectHide: []string{"020005f1abcd"},
+			wantDid:    true,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

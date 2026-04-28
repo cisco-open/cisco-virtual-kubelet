@@ -1,0 +1,48 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEDiagnostic
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"config.cisco.vk/v1alpha1","kind":"IOSXEDiagnostic","metadata":{"annotations":{},"name":"t4-schedule","namespace":"cisco-vk-smoke"},"spec":{"commands":["show clock"],"deviceRef":{"name":"cat9k-smoke"},"retention":{"maxResults":3},"schedule":{"interval":"30s"}}}
+  creationTimestamp: "2026-04-28T06:48:55Z"
+  generation: 1
+  name: t4-schedule
+  namespace: cisco-vk-smoke
+  resourceVersion: "371163"
+  uid: 4572d3f8-736c-4088-a932-48cb3bc1edef
+spec:
+  allowSecrets: false
+  commands:
+  - show clock
+  deviceRef:
+    name: cat9k-smoke
+  retention:
+    maxResults: 3
+    truncateAt: 64KiB
+  schedule:
+    interval: 30s
+status:
+  conditions:
+  - lastTransitionTime: "2026-04-28T06:48:55Z"
+    message: 1 command(s) captured
+    observedGeneration: 1
+    reason: Captured
+    status: "True"
+    type: Ready
+  lastCapture: "2026-04-28T06:55:55Z"
+  nextCapture: "2026-04-28T06:56:25Z"
+  observedGeneration: 1
+  phase: Completed
+  results:
+  - capturedAt: "2026-04-28T06:54:55Z"
+    commands:
+    - command: show clock
+      output: '*06:55:18.414 UTC Tue Apr 28 2026'
+  - capturedAt: "2026-04-28T06:55:25Z"
+    commands:
+    - command: show clock
+      output: '*06:55:48.424 UTC Tue Apr 28 2026'
+  - capturedAt: "2026-04-28T06:55:55Z"
+    commands:
+    - command: show clock
+      output: '*06:56:18.424 UTC Tue Apr 28 2026'

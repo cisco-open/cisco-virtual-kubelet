@@ -1,0 +1,72 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEDiagnostic
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"config.cisco.vk/v1alpha1","kind":"IOSXEDiagnostic","metadata":{"annotations":{},"name":"t5-cm-sink","namespace":"cisco-vk-smoke"},"spec":{"commands":["show running-config"],"deviceRef":{"name":"cat9k-smoke"},"outputSink":{"configMapRef":{"namePrefix":"running-snapshot-"}},"retention":{"truncateAt":"1MiB"}}}
+  creationTimestamp: "2026-04-28T06:53:38Z"
+  generation: 1
+  name: t5-cm-sink
+  namespace: cisco-vk-smoke
+  resourceVersion: "370881"
+  uid: e8b3a009-845f-45c7-b50b-877aa7c5c66a
+spec:
+  allowSecrets: false
+  commands:
+  - show running-config
+  deviceRef:
+    name: cat9k-smoke
+  outputSink:
+    configMapRef:
+      namePrefix: running-snapshot-
+    inline: true
+  retention:
+    maxResults: 24
+    truncateAt: 1MiB
+status:
+  conditions:
+  - lastTransitionTime: "2026-04-28T06:53:38Z"
+    message: 1 command(s) captured
+    observedGeneration: 1
+    reason: Captured
+    status: "True"
+    type: Ready
+  lastCapture: "2026-04-28T06:53:38Z"
+  observedGeneration: 1
+  phase: Completed
+  results:
+  - capturedAt: "2026-04-28T06:53:38Z"
+    commands:
+    - command: show running-config
+      configMapRef:
+        key: show-running-config
+        name: running-snapshot-20260428-065338
+        namespace: cisco-vk-smoke
+      output: "Building configuration...\n\nCurrent configuration : 25979 bytes\n!\n!
+        Last configuration change at 06:35:46 UTC Tue Apr 28 2026 by cisco\n!\nversion
+        17.18\nservice timestamps debug datetime msec\nservice timestamps log datetime
+        msec\nservice internal\nservice compress-config\nservice call-home\nno platform
+        punt-keepalive disable-kernel-core\n!\nhostname Edge-9K\n!\n!\nvrf definition
+        Mgmt-vrf\n !\n address-family ipv4\n exit-address-family\n !\n address-family
+        ipv6\n exit-address-family\n!\nno logging console\naaa new-model\n!\n!\naaa
+        authentication login default local\naaa authorization exec default local \naaa
+        authorization commands 1 default local \naaa authorization commands 15 default
+        local \naaa accounting commands 1 default start-stop group tacacs+\naaa accounting
+        commands 15 default start-stop group tacacs+\n!\n!\naaa session-id common\nswitch
+        1 provision c9300-24ux\n!\n!\n!\n!\nip routing\n!\n!\n!\n!\n!\n!\n!\nip multicast-routing
+        \nip host ai-ux.dmz.cisco.com 192.168.129.244\nip host gitlab.gitlab.dmz.cisco.com
+        192.168.129.111\nip host ise.tcp179.com 192.168.129.100\nip name-server 8.8.8.8
+        8.8.4.4 1.1.1.1\nip domain name dmz.cisco.com\nip dhcp excluded-address 192.168.129.1
+        192.168.129.110\nip dhcp excluded-address 192.168.210.0 192.168.210.10\nip
+        dhcp excluded-address 192.168.202.0 192.168.202.10\nip dhcp excluded-address
+        192.168.201.1 192.168.201.10\nip dhcp excluded-address 192.168.200.1 192.168.200.10\nip
+        dhcp excluded-address 192.168.254.0 192.168.254.11\nip dhcp excluded-address
+        192.168.253.0 192.168.253.11\nip dhcp excluded-address 192.168.255.0 192.168.255.11\nip
+        dhcp excluded-address 192.168.10.0 192.168.10.100\n!\nip dhcp pool AP_VLAN_201\n
+        network 192.168.201.0 255.255.255.0\n default-router 192.168.201.1 \n option
+        43 hex f104.c0a8.810b\n dns-server 8.8.8.8 \n!\nip dhcp pool AP_VLAN_200\n
+        network 192.168.200.0 255.255.255.0\n default-router 192.168.200.1 \n option
+        43 hex f104.c0a8.810a\n domain-name tcp179.com\n dns-server 8.8.8.8 \n!\nip
+        dhcp pool VLAN_129\n... <truncated by cisco-vk — increase spec.retention.truncateAt
+        to retain more>"
+      redacted: true

@@ -1,0 +1,46 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEDiagnostic
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"config.cisco.vk/v1alpha1","kind":"IOSXEDiagnostic","metadata":{"annotations":{},"name":"t2-redaction-default","namespace":"cisco-vk-smoke"},"spec":{"commands":["show running-config | include enable|username|snmp-server|tacacs|radius|secret"],"deviceRef":{"name":"cat9k-smoke"}}}
+  creationTimestamp: "2026-04-28T06:47:49Z"
+  generation: 1
+  name: t2-redaction-default
+  namespace: cisco-vk-smoke
+  resourceVersion: "370192"
+  uid: 333abdfe-f605-433e-bb84-c6410e3db829
+spec:
+  allowSecrets: false
+  commands:
+  - show running-config | include enable|username|snmp-server|tacacs|radius|secret
+  deviceRef:
+    name: cat9k-smoke
+status:
+  conditions:
+  - lastTransitionTime: "2026-04-28T06:47:49Z"
+    message: 1 command(s) captured
+    observedGeneration: 1
+    reason: Captured
+    status: "True"
+    type: Ready
+  lastCapture: "2026-04-28T06:47:49Z"
+  observedGeneration: 1
+  phase: Completed
+  results:
+  - capturedAt: "2026-04-28T06:47:49Z"
+    commands:
+    - command: show running-config | include enable|username|snmp-server|tacacs|radius|secret
+      output: "aaa accounting commands 1 default start-stop group tacacs+\naaa accounting
+        commands 15 default start-stop group tacacs+\n tracking enable\n<redacted
+        by cisco-vk — set spec.allowSecrets: true to disable>\n<redacted by cisco-vk
+        — set spec.allowSecrets: true to disable>\n<redacted by cisco-vk — set spec.allowSecrets:
+        true to disable>\n<redacted by cisco-vk — set spec.allowSecrets: true to disable>\n<redacted
+        by cisco-vk — set spec.allowSecrets: true to disable>\nip ftp username cisco\nip
+        tacacs source-interface Loopback0 \nip scp server enable\n 10 deny tcp any
+        any eq tacacs\n 20 deny tcp any eq tacacs any\n<redacted by cisco-vk — set
+        spec.allowSecrets: true to disable>\n<redacted by cisco-vk — set spec.allowSecrets:
+        true to disable>\n<redacted by cisco-vk — set spec.allowSecrets: true to disable>\ntacacs-server
+        timeout 1\n<redacted by cisco-vk — set spec.allowSecrets: true to disable>\n
+        <redacted by cisco-vk — set spec.allowSecrets: true to disable>\nno gnxi enable-gnoi"
+      redacted: true

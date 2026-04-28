@@ -326,14 +326,35 @@ func startPortForward(ctx context.Context, f *execFlags) (int, *exec.Cmd, error)
 	if port == 0 {
 		port = 0 // kubectl picks; we discover by parsing its stderr
 	}
+	// kubectl port-forward takes a concrete pod NAME, not a label
+	// selector. Resolve the pod first via `kubectl get pod -l
+	// app.kubernetes.io/instance=<device> -o name`. The selector
+	// is the canonical label the controller stamps on per-device
+	// pods so this works in both per-pod-kubelet and aggregator
+	// topologies.
+	getArgs := []string{"get", "pod"}
+	if f.namespace != "" {
+		getArgs = append(getArgs, "-n", f.namespace)
+	}
+	getArgs = append(getArgs,
+		"-l", "app.kubernetes.io/instance="+f.device,
+		"-o", "jsonpath={.items[0].metadata.name}")
+	getCmd := exec.CommandContext(ctx, f.kubectlBin, getArgs...)
+	podOut, err := getCmd.Output()
+	if err != nil {
+		return 0, nil, fmt.Errorf("resolve pod for device %q: %w", f.device, err)
+	}
+	podName := strings.TrimSpace(string(podOut))
+	if podName == "" {
+		return 0, nil, fmt.Errorf("no pod found for device %q (label app.kubernetes.io/instance=%s)",
+			f.device, f.device)
+	}
+
 	args := []string{"port-forward"}
 	if f.namespace != "" {
 		args = append(args, "-n", f.namespace)
 	}
-	// The admin server binds to :8082; kubectl maps localPort:8082.
-	args = append(args, "pod",
-		"--address=127.0.0.1",
-		fmt.Sprintf("-l=app.kubernetes.io/instance=%s", f.device))
+	args = append(args, podName, "--address=127.0.0.1")
 	if port == 0 {
 		args = append(args, ":8082")
 	} else {

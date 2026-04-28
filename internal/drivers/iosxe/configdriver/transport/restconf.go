@@ -48,6 +48,16 @@ type RESTCONFConfig struct {
 	// HTTP client — a half-second lock on the caller is cheaper than a
 	// mid-transaction interleave on the device.
 	SessionLock *sync.Mutex
+
+	// CLIHost / CLIPort enable the SSH-CLI side-channel that
+	// DiagnosticExec uses for show-command capture. IOS-XE 17.18
+	// has no YANG-modelled RPC that returns the textual show
+	// output, so the diagnostic path falls back to interactive
+	// SSH on port 22 (mirrors gnoi cli.exec). The factory wires
+	// these from the same CiscoDevice spec.address (CLIHost) so
+	// the show side hits the same device the RESTCONF half does.
+	CLIHost string
+	CLIPort int
 }
 
 type restconfTransport struct {
@@ -198,85 +208,77 @@ func (r *restconfTransport) pushCLI(ctx context.Context, body []byte) error {
 	return nil
 }
 
-// DiagnosticExec runs each command via the Cisco-IA cli-exec RPC
-// and returns the textual output. Per-command failures populate
-// the result's Err field but do NOT abort the batch — operators
-// frequently want a best-effort capture across a list. A
-// transport-level error (HTTP framing, auth) is returned as the
-// second value with partial results.
+// DiagnosticExec runs each command via the
+// Cisco-IOS-XE-cli-rpc:config-ios-cli-rpc RPC and returns the
+// textual output. Per-command failures populate the result's Err
+// field but do NOT abort the batch — operators frequently want a
+// best-effort capture across a list. A transport-level error
+// (HTTP framing, auth) is returned as the second value with
+// partial results.
 //
-// Wire shape: POST /operations/cisco-ia:cli-exec
+// Wire shape: POST /operations/Cisco-IOS-XE-cli-rpc:config-ios-cli-rpc
 //
-//	{"cisco-ia:input": {"cli-exec": {"cmd": "show ip route"}}}
+//	{"Cisco-IOS-XE-cli-rpc:input": {"config-clis": "do show ip route"}}
 //
 // Reply shape:
 //
-//	{"cisco-ia:output": {"cli-exec": {"result": "...show output..."}}}
+//	{"Cisco-IOS-XE-cli-rpc:output": {"result": "...show output...",
+//	                                  "error-message": ""}}
 //
-// Cisco-IA's cli-exec accepts a single string in / single string
-// out, mirroring the NETCONF transport's per-command framing in
-// netconf.go's DiagnosticExec.
+// Live-device note (cat9k-smoke / IOS-XE 17.18.2, 2026-04-28
+// retest): IOS-XE 17.18 has NO YANG-modelled RPC that returns
+// textual show output. config-ios-cli-rpc accepts the request
+// but its result leaf only carries "RPC request successful" —
+// the actual output goes to the IOS console, not back to the
+// RPC caller. The architecturally correct surface is SSH-CLI
+// direct (port 22), which is what gnoi cli.exec does on
+// platforms that ship gNOI. The configdriver already holds the
+// operator-supplied credentials, so this is a same-credential
+// side-channel rather than a new auth surface.
 func (r *restconfTransport) DiagnosticExec(ctx context.Context, commands []string) ([]CommandResult, error) {
-	out := make([]CommandResult, 0, len(commands))
-	for _, cmd := range commands {
-		cmd = strings.TrimSpace(cmd)
-		if cmd == "" {
-			continue
-		}
-		payload, err := json.Marshal(map[string]any{
-			"cisco-ia:input": map[string]any{
-				"cli-exec": map[string]any{"cmd": cmd},
-			},
-		})
-		if err != nil {
-			return out, fmt.Errorf("RESTCONF cli-exec: marshal %q: %w", cmd, err)
-		}
-		raw, err := r.doOps(ctx, http.MethodPost, "/operations/cisco-ia:cli-exec", payload)
-		if err != nil {
-			out = append(out, CommandResult{Command: cmd, Err: err.Error()})
-			continue
-		}
-		text, perr := extractRESTCONFCLIExecResult(raw)
-		if perr != nil {
-			out = append(out, CommandResult{Command: cmd, Err: perr.Error()})
-			continue
-		}
-		out = append(out, CommandResult{Command: cmd, Output: text})
+	if r.cfg.CLIHost == "" {
+		return nil, fmt.Errorf("RESTCONF DiagnosticExec: CLIHost not configured (factory must set it)")
 	}
-	return out, nil
+	return runShowCommandsViaSSH(sshCLIConfig{
+		Address:  r.cfg.CLIHost,
+		CLIPort:  r.cfg.CLIPort,
+		Username: r.cfg.Username,
+		Password: r.cfg.Password,
+	}, commands)
 }
 
-// extractRESTCONFCLIExecResult parses the cli-exec response JSON to
-// pull the result text. The wrapper key varies slightly across
-// IOS-XE releases (`cisco-ia:output` vs bare `output`), so the
+// extractRESTCONFCLIExecResult parses the config-ios-cli-rpc
+// response JSON to pull the result text and (separately) any
+// error-message. The wrapper key varies across IOS-XE releases
+// (`Cisco-IOS-XE-cli-rpc:output` vs bare `output`), so the
 // extractor tolerates both forms before falling back to the raw
-// body. Returns "" without error when the device produced no output
-// (e.g. empty RPC reply).
-func extractRESTCONFCLIExecResult(raw []byte) (string, error) {
+// body. Returns ("", "", nil) when the device produced no output
+// (e.g. empty RPC reply on a `do clear ...`-style command).
+func extractRESTCONFCLIExecResult(raw []byte) (text, errMsg string, err error) {
 	if len(raw) == 0 {
-		return "", nil
+		return "", "", nil
 	}
 	var parsed map[string]any
-	if err := json.Unmarshal(raw, &parsed); err != nil {
+	if uerr := json.Unmarshal(raw, &parsed); uerr != nil {
 		// Some device builds return raw text — pass through verbatim.
-		return strings.TrimSpace(string(raw)), nil
+		return strings.TrimSpace(string(raw)), "", nil
 	}
-	for _, outerKey := range []string{"cisco-ia:output", "output"} {
+	for _, outerKey := range []string{
+		"Cisco-IOS-XE-cli-rpc:output", "output",
+	} {
 		outer, ok := parsed[outerKey].(map[string]any)
 		if !ok {
 			continue
 		}
-		for _, innerKey := range []string{"cli-exec", "cisco-ia:cli-exec"} {
-			inner, ok := outer[innerKey].(map[string]any)
-			if !ok {
-				continue
-			}
-			if s, ok := inner["result"].(string); ok {
-				return strings.TrimSpace(s), nil
-			}
+		if s, ok := outer["result"].(string); ok {
+			text = strings.TrimSpace(s)
 		}
+		if s, ok := outer["error-message"].(string); ok {
+			errMsg = strings.TrimSpace(s)
+		}
+		return text, errMsg, nil
 	}
-	return "", nil
+	return "", "", nil
 }
 
 // doOps POSTs to an /operations-rooted RPC endpoint. The normal

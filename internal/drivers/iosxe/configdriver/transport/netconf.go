@@ -555,72 +555,122 @@ func (t *netconfTransport) pushCLI(body []byte) error {
 // Reply:
 //
 //   <rpc-reply ...>
-//     <result xmlns="http://cisco.com/yang/cisco-ia">
+//     <result xmlns="http://cisco.com/ns/yang/Cisco-IOS-XE-cli-rpc">
 //       ... show output ...
 //     </result>
+//     <error-message xmlns="..."/>
 //   </rpc-reply>
 //
-// One RPC per command — Cisco-IA cli-exec defines a single string
-// in / single string out, and per-command framing keeps error
-// surfaces simple.
+// One RPC per command — config-ios-cli-rpc defines a single
+// `clis` string in / `result`+`error-message` strings out, and
+// per-command framing keeps error surfaces simple.
+//
+// Live-device note (cat9k-smoke / IOS-XE 17.18.2, 2026-04-28
+// retest): the legacy cisco-ia ConfD `<cli-exec>` element this
+// path used to send was tightened off in 17.18.x — the device
+// rejects it with `unknown-element <bad-element>cli-exec</bad-element>`
+// even though its sibling `<cli-config-data>` still works as a
+// ConfD built-in. The next try, model-validated
+// `Cisco-IOS-XE-cli-rpc:config-ios-cli-rpc`, accepts our request
+// but its `result` leaf only carries a generic "RPC request
+// successful" status string — IOS-XE 17.18 has NO YANG-modelled
+// RPC that returns the textual show output operators expect.
+//
+// The architecturally correct surface is therefore SSH-CLI direct
+// (port 22, the device's normal management SSH service). The
+// configdriver already holds the operator-supplied credentials so
+// this is a same-credential side-channel rather than a new auth
+// surface. Mirrors what `gnoi cli.exec` does on platforms that
+// ship gNOI.
 func (t *netconfTransport) DiagnosticExec(ctx context.Context, commands []string) ([]CommandResult, error) {
-	out := make([]CommandResult, 0, len(commands))
-	for _, cmd := range commands {
-		cmd = strings.TrimSpace(cmd)
-		if cmd == "" {
-			continue
-		}
-		var b strings.Builder
-		b.WriteString(`<cli-exec xmlns="http://cisco.com/yang/cisco-ia"><cmd>`)
-		xmlEscapeText(&b, cmd)
-		b.WriteString(`</cmd></cli-exec>`)
-		reply, err := t.session.rpc(b.String())
-		if err != nil {
-			out = append(out, CommandResult{Command: cmd, Err: err.Error()})
-			continue
-		}
-		text, perr := extractCLIExecResult(reply.Output)
-		if perr != nil {
-			out = append(out, CommandResult{Command: cmd, Err: perr.Error()})
-			continue
-		}
-		out = append(out, CommandResult{Command: cmd, Output: text})
-	}
-	return out, nil
+	return runShowCommandsViaSSH(sshCLIConfig{
+		Address:         t.cfg.Address,
+		CLIPort:         22,
+		Username:        t.cfg.Username,
+		Password:        t.cfg.Password,
+		HostKeyCallback: t.cfg.HostKeyCallback,
+		Timeout:         t.cfg.Timeout,
+	}, commands)
 }
 
-// extractCLIExecResult parses the inner XML of a cli-exec response
-// looking for the first <result>...</result> element (any namespace)
-// and returns its character data with leading/trailing whitespace
-// trimmed. Returns "" without error when the reply has no <result>
-// — some IOS-XE versions return an empty body for commands that
-// produce no output (e.g. successful `clear` operations from the
-// destructive-ops sibling RFC).
-func extractCLIExecResult(raw []byte) (string, error) {
+// normaliseCLIForCLIRPC adapts an operator-typed IOS command to the
+// Cisco-IOS-XE-cli-rpc:config-ios-cli-rpc input shape. The RPC is
+// nominally a "config CLI" runner, so EXEC-mode commands need to
+// be wrapped with `do ` to execute from config mode. Detect known
+// exec-mode prefixes and prepend; pass config-mode commands through
+// unchanged.
+//
+// Heuristic: `show`, `dir`, `more`, `terminal`, `traceroute`,
+// `ping`, `telnet`, `ssh` are exec-mode. `interface`, `ip route`,
+// `vlan`, `router`, etc. are config-mode. The dispatch is a
+// prefix-match over a small allow-list of well-known exec verbs;
+// anything not matching the allow-list passes through unchanged
+// because cli-rpc accepts both config-mode CLIs directly AND
+// exec-mode wrapped in `do `.
+func normaliseCLIForCLIRPC(cmd string) string {
+	trimmed := strings.TrimSpace(cmd)
+	if strings.HasPrefix(trimmed, "do ") {
+		return trimmed
+	}
+	first := trimmed
+	if i := strings.IndexAny(first, " \t"); i >= 0 {
+		first = first[:i]
+	}
+	switch strings.ToLower(first) {
+	case "show", "dir", "more", "terminal", "traceroute", "ping",
+		"telnet", "ssh", "test", "monitor", "debug", "undebug",
+		"copy", "verify", "write":
+		// `write erase` etc. are deliberately rejected upstream
+		// (plugin admission + IOSXEDiagnostic spec.commands MaxItems);
+		// reaching this path with `write memory` should still work,
+		// so prefix `do ` and let the device decide.
+		return "do " + trimmed
+	}
+	return trimmed
+}
+
+// extractCLIExecResult parses the inner XML of a config-ios-cli-rpc
+// response. The Cisco-IOS-XE-cli-rpc RPC returns two leaves at the
+// top of the rpc-reply: <result>...</result> (the textual output)
+// and <error-message>...</error-message> (empty on success).
+// Returns ("", "", nil) when the reply has no <result> — some IOS-XE
+// versions emit an empty reply body for commands that produce no
+// output. Returns the result text and the error-message text
+// separately so the caller can attribute errors per command.
+func extractCLIExecResult(raw []byte) (text, errMsg string, err error) {
 	if len(raw) == 0 {
-		return "", nil
+		return "", "", nil
 	}
 	dec := xml.NewDecoder(strings.NewReader(string(raw)))
 	for {
-		tok, err := dec.Token()
-		if err == io.EOF {
-			return "", nil
+		tok, decErr := dec.Token()
+		if decErr == io.EOF {
+			return text, errMsg, nil
 		}
-		if err != nil {
-			return "", fmt.Errorf("decode cli-exec reply: %w", err)
+		if decErr != nil {
+			return "", "", fmt.Errorf("decode cli-rpc reply: %w", decErr)
 		}
 		start, ok := tok.(xml.StartElement)
 		if !ok {
 			continue
 		}
-		if start.Name.Local == "result" {
+		switch start.Name.Local {
+		case "result":
 			var v struct {
 				CharData string `xml:",chardata"`
 			}
-			if err := dec.DecodeElement(&v, &start); err != nil {
-				return "", fmt.Errorf("decode <result>: %w", err)
+			if dErr := dec.DecodeElement(&v, &start); dErr != nil {
+				return "", "", fmt.Errorf("decode <result>: %w", dErr)
 			}
-			return strings.TrimSpace(v.CharData), nil
+			text = strings.TrimSpace(v.CharData)
+		case "error-message":
+			var v struct {
+				CharData string `xml:",chardata"`
+			}
+			if dErr := dec.DecodeElement(&v, &start); dErr != nil {
+				return "", "", fmt.Errorf("decode <error-message>: %w", dErr)
+			}
+			errMsg = strings.TrimSpace(v.CharData)
 		}
 	}
 }

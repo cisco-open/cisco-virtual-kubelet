@@ -125,7 +125,12 @@ type DiagnosticConfigMapSink struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=200
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// Pattern allows trailing dash because the reconciler appends a
+	// timestamp suffix to form the full ConfigMap name; a trailing
+	// dash on the prefix yields a clean separator (e.g.
+	// "running-snapshot-" + "20260428-065100" =
+	// "running-snapshot-20260428-065100").
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9-])?$`
 	NamePrefix string `json:"namePrefix"`
 
 	// Namespace is the namespace the ConfigMaps are created in.

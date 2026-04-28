@@ -1,0 +1,99 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEDiagnostic
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"config.cisco.vk/v1alpha1","kind":"IOSXEDiagnostic","metadata":{"annotations":{},"name":"t1-basic-shows","namespace":"cisco-vk-smoke"},"spec":{"commands":["show version","show ip route summary","show ip ospf neighbor"],"deviceRef":{"name":"cat9k-smoke"}}}
+  creationTimestamp: "2026-04-28T06:44:12Z"
+  generation: 1
+  name: t1-basic-shows
+  namespace: cisco-vk-smoke
+  resourceVersion: "369760"
+  uid: 3f236154-bf33-490d-98e1-5bb72468e051
+spec:
+  allowSecrets: false
+  commands:
+  - show version
+  - show ip route summary
+  - show ip ospf neighbor
+  deviceRef:
+    name: cat9k-smoke
+status:
+  conditions:
+  - lastTransitionTime: "2026-04-28T06:44:12Z"
+    message: 3 command(s) captured
+    observedGeneration: 1
+    reason: Captured
+    status: "True"
+    type: Ready
+  lastCapture: "2026-04-28T06:44:12Z"
+  observedGeneration: 1
+  phase: Completed
+  results:
+  - capturedAt: "2026-04-28T06:44:12Z"
+    commands:
+    - command: show version
+      output: "Cisco IOS XE Software, Version 17.18.01\nCisco IOS Software [IOSXE],
+        Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.18.1, RELEASE SOFTWARE
+        (fc2)\nTechnical Support: http://www.cisco.com/techsupport\nCopyright (c)
+        1986-2025 by Cisco Systems, Inc.\nCompiled Wed 06-Aug-25 03:45 by mcpre\n\n\nCisco
+        IOS-XE software, Copyright (c) 2005-2025 by cisco Systems, Inc.\nAll rights
+        reserved.  Certain components of Cisco IOS-XE software are\nlicensed under
+        the GNU General Public License (\"GPL\") Version 2.0.  The\nsoftware code
+        licensed under GPL Version 2.0 is free software that comes\nwith ABSOLUTELY
+        NO WARRANTY.  You can redistribute and/or modify such\nGPL code under the
+        terms of GPL Version 2.0.  For more details, see the\ndocumentation or \"License
+        Notice\" file accompanying the IOS-XE software,\nor the applicable URL provided
+        on the flyer accompanying the IOS-XE\nsoftware.\n\n\nROM: IOS-XE ROMMONBOOTLDR:
+        System Bootstrap, Version 17.12.1r, RELEASE SOFTWARE (P)\n\nEdge-9K uptime
+        is 30 weeks, 2 days, 46 minutes\nUptime for this control processor is 30 weeks,
+        2 days, 48 minutes\nSystem returned to ROM by PowerOn at 18:59:33 UTC Mon
+        Sep 22 2025\nSystem image file is \"flash:packages.conf\"\nLast reload reason:
+        PowerOn\n\n\n\nThis product contains cryptographic features and is subject
+        to United\nStates and local country laws governing import, export, transfer
+        and\nuse. Delivery of Cisco cryptographic products does not imply\nthird-party
+        authority to import, export, distribute or use encryption.\nImporters, exporters,
+        distributors and users are responsible for\ncompliance with U.S. and local
+        country laws. By using this product you\nagree to comply with applicable laws
+        and regulations. If you are unable\nto comply with U.S. and local laws, return
+        this product immediately.\n\nA summary of U.S. laws governing Cisco cryptographic
+        products may be found at:\nhttp://www.cisco.com/wwl/export/crypto/tool/stqrg.html\n\nIf
+        you require further assistance please contact us by sending email to\nexport@cisco.com.\n\n\nTechnology
+        Package License Information: \n\n------------------------------------------------------------------------------\nTechnology-package
+        \                                    Technology-package\nCurrent                        Type
+        \                      Next reboot  \n------------------------------------------------------------------------------\nnetwork-advantage
+        \  \tSmart License                 \t network-advantage   \ndna-advantage
+        \      \tSubscription Smart License    \t dna-advantage                 \n\n\nSmart
+        Licensing Status: Smart Licensing Using Policy\n\ncisco C9300-24UX (X86) processor
+        with 1050581K/6147K bytes of memory.\nProcessor board ID FCW2247C1AJ\n21 Virtual
+        Ethernet interfaces\n4 Gigabit Ethernet interfaces\n32 Ten Gigabit Ethernet
+        interfaces\n2 TwentyFive Gigabit Ethernet interfaces\n2 Forty Gigabit Ethernet
+        interfaces\n2048K bytes of non-volatile configuration memory.\n8388608K bytes
+        of physical memory.\n1638400K bytes of Crash Files at crashinfo:.\n11264000K
+        bytes of Flash at flash:.\n117219783K bytes of USB Flash at usbflash1:.\n0K
+        bytes of Cloud S3 Storage at cloudfs:.\n\nBase Ethernet MAC Address          :
+        70:c9:c6:bb:12:80\nMotherboard Assembly Number        : 73-18276-03\nMotherboard
+        Serial Number          : FOC22466JZL\nModel Revision Number              :
+        A0\nMotherboard Revision Number        : A0\nModel Number                       :
+        C9300-24UX\nSystem Serial Number               : FCW2247C1AJ\nCLEI Code Number
+        \                  : INM3Y10BRB\n\n\nSwitch Ports Model              SW Version
+        \       SW Image              Mode   \n------ ----- -----              ----------
+        \       ----------            ----   \n*    1 41    C9300-24UX         17.18.01
+        \         CAT9K_IOSXE           INSTALL"
+    - command: show ip route summary
+      output: |-
+        IP routing table name is default (0x0)
+        IP routing table maximum-paths is 32
+        Route Source    Networks    Subnets     Replicates  Overhead    Memory (bytes)
+        static          2           1           0           336         936
+        connected       0           22          0           2464        6864
+        isis            0           0           0           0           0
+          Level 1: 0 Level 2: 0 Inter-area: 0
+        ospf 100        0           0           0           0           0
+          Intra-area: 0 Inter-area: 0 External-1: 0 External-2: 0
+          NSSA External-1: 0 NSSA External-2: 0
+        bgp 65000       0           0           0           0           0
+          External: 0 Internal: 0 Local: 0
+        internal        7                                               5064
+        Total           9           23          0           2800        12864
+    - command: show ip ospf neighbor

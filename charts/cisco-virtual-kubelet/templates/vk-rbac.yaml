@@ -97,6 +97,20 @@ rules:
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigapplylogs/status"]
     verbs: ["get", "update", "patch"]
+  # IOSXEDiagnostic CRD — diagnostics-RFC Phase B. The reconciler
+  # watches CRs targeting this device and appends capture results
+  # to status. The ConfigMap sink (Phase D) writes a fresh
+  # ConfigMap per capture in either the CR's namespace or the
+  # operator-chosen namespace, then trims oldest by label.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxediagnostics"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxediagnostics/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 # ClusterRoleBinding for the VK service account.
 apiVersion: rbac.authorization.k8s.io/v1

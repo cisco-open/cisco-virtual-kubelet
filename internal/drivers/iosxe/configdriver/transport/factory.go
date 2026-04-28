@@ -176,6 +176,12 @@ func buildRESTCONF(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (
 		Username:    spec.Username,
 		Password:    pass,
 		SessionLock: opts.SessionLock,
+		// Diagnostics-RFC Phase A v2: SSH-CLI side-channel for
+		// show-command capture (IOS-XE 17.18 has no YANG RPC
+		// returning textual show output). spec.address is the
+		// CLI host; port 22 is the IOS-XE CLI default.
+		CLIHost: spec.Address,
+		CLIPort: 22,
 	})
 }
 

@@ -148,9 +148,14 @@ spec:
                           The reconciler appends the capture timestamp; the resulting
                           name must be DNS-1123 compliant (lowercase alphanumeric +
                           dashes only). The admission webhook validates the prefix.
+                          Pattern allows trailing dash because the reconciler appends a
+                          timestamp suffix to form the full ConfigMap name; a trailing
+                          dash on the prefix yields a clean separator (e.g.
+                          "running-snapshot-" + "20260428-065100" =
+                          "running-snapshot-20260428-065100").
                         maxLength: 200
                         minLength: 1
-                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9-])?$
                         type: string
                       namespace:
                         description: |-

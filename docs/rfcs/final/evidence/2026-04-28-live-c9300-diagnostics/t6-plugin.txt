@@ -1,0 +1,23 @@
+=== plugin: show clock ===
+# device=cat9k-smoke transport=netconf captured=2026-04-28T06:56:10.903345377Z
+*06:56:34.324 UTC Tue Apr 28 2026
+
+=== plugin: show version ===
+# device=cat9k-smoke transport=netconf captured=2026-04-28T06:56:11.297289711Z
+Cisco IOS XE Software, Version 17.18.01
+Cisco IOS Software [IOSXE], Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.18.1, RELEASE SOFTWARE (fc2)
+Technical Support: http://www.cisco.com/techsupport
+Copyright (c) 1986-2025 by Cisco Systems, Inc.
+Compiled Wed 06-Aug-25 03:45 by mcpre
+
+
+Cisco IOS-XE software, Copyright (c) 2005-2025 by cisco Systems, Inc.
+All rights reserved.  Certain components of Cisco IOS-XE software are
+
+=== plugin: show running-config | include username (default redaction) ===
+# device=cat9k-smoke transport=netconf captured=2026-04-28T06:56:11.684143753Z
+<redacted by cisco-vk — set spec.allowSecrets: true to disable>
+<redacted by cisco-vk — set spec.allowSecrets: true to disable>
+<redacted by cisco-vk — set spec.allowSecrets: true to disable>
+<redacted by cisco-vk — set spec.allowSecrets: true to disable>
+ip ftp username cisco

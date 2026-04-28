@@ -1,0 +1,351 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    show-running-config: "Building configuration...\n\nCurrent configuration : 25979
+      bytes\n!\n! Last configuration change at 06:35:46 UTC Tue Apr 28 2026 by cisco\n!\nversion
+      17.18\nservice timestamps debug datetime msec\nservice timestamps log datetime
+      msec\nservice internal\nservice compress-config\nservice call-home\nno platform
+      punt-keepalive disable-kernel-core\n!\nhostname Edge-9K\n!\n!\nvrf definition
+      Mgmt-vrf\n !\n address-family ipv4\n exit-address-family\n !\n address-family
+      ipv6\n exit-address-family\n!\nno logging console\naaa new-model\n!\n!\naaa
+      authentication login default local\naaa authorization exec default local \naaa
+      authorization commands 1 default local \naaa authorization commands 15 default
+      local \naaa accounting commands 1 default start-stop group tacacs+\naaa accounting
+      commands 15 default start-stop group tacacs+\n!\n!\naaa session-id common\nswitch
+      1 provision c9300-24ux\n!\n!\n!\n!\nip routing\n!\n!\n!\n!\n!\n!\n!\nip multicast-routing
+      \nip host ai-ux.dmz.cisco.com 192.168.129.244\nip host gitlab.gitlab.dmz.cisco.com
+      192.168.129.111\nip host ise.tcp179.com 192.168.129.100\nip name-server 8.8.8.8
+      8.8.4.4 1.1.1.1\nip domain name dmz.cisco.com\nip dhcp excluded-address 192.168.129.1
+      192.168.129.110\nip dhcp excluded-address 192.168.210.0 192.168.210.10\nip dhcp
+      excluded-address 192.168.202.0 192.168.202.10\nip dhcp excluded-address 192.168.201.1
+      192.168.201.10\nip dhcp excluded-address 192.168.200.1 192.168.200.10\nip dhcp
+      excluded-address 192.168.254.0 192.168.254.11\nip dhcp excluded-address 192.168.253.0
+      192.168.253.11\nip dhcp excluded-address 192.168.255.0 192.168.255.11\nip dhcp
+      excluded-address 192.168.10.0 192.168.10.100\n!\nip dhcp pool AP_VLAN_201\n
+      network 192.168.201.0 255.255.255.0\n default-router 192.168.201.1 \n option
+      43 hex f104.c0a8.810b\n dns-server 8.8.8.8 \n!\nip dhcp pool AP_VLAN_200\n network
+      192.168.200.0 255.255.255.0\n default-router 192.168.200.1 \n option 43 hex
+      f104.c0a8.810a\n domain-name tcp179.com\n dns-server 8.8.8.8 \n!\nip dhcp pool
+      VLAN_129\n network 192.168.129.0 255.255.255.0\n default-router 192.168.129.1
+      \n domain-name tcp179.com\n dns-server 10.1.1.1 \n!\nip dhcp pool CLIENT_VLAN_210\n
+      network 192.168.210.0 255.255.255.0\n default-router 192.168.210.1 \n option
+      119 hex 0573.6973.716f.0363.6f6d.0006.7463.7031.3739.0363.6f6d.00\n dns-server
+      8.8.8.8 \n!\nip dhcp pool AP_VLAN_202\n network 192.168.202.0 255.255.255.0\n
+      default-router 192.168.202.1 \n dns-server 8.8.8.8 \n!\nip dhcp pool CLIENT_VLAN_255\n
+      network 192.168.255.0 255.255.255.0\n default-router 192.168.255.1 \n dns-server
+      8.8.8.8 \n!\nip dhcp pool CLIENT_VLAN_254\n network 192.168.254.0 255.255.255.0\n
+      default-router 192.168.254.1 \n dns-server 8.8.8.8 \n!\nip dhcp pool CLIENT_VLAN_253\n
+      network 192.168.253.0 255.255.255.0\n default-router 192.168.253.1 \n dns-server
+      8.8.8.8 \n!\nip dhcp pool HOST_MAPPING_VLAN500\n host 192.168.50.5 255.255.255.0\n
+      default-router 192.168.50.1 \n dns-server 5.5.5.5 \n option 43 ascii \"5A1N;B2;K4;I192.168.129.102;J80\"\n!\nip
+      dhcp pool VLAN_10\n network 192.168.10.0 255.255.255.0\n default-router 192.168.10.1
+      \n dns-server 192.168.250.1 \n domain-name tcp179.com\n!\nip dhcp pool EDGE1_Clients\n
+      network 10.0.100.0 255.255.255.0\n default-router 10.0.100.1 \n!\nip dhcp pool
+      EDGE2_Clients\n network 10.0.200.0 255.255.255.0\n default-router 10.0.200.1
+      \n!\nip dhcp pool EDGE1_Workstations\n network 10.0.151.0 255.255.255.0\n default-router
+      10.0.151.1 255.255.255.0 \n!\nip dhcp pool UCS\n network 10.70.0.0 255.255.255.0\n
+      default-router 10.70.0.1 \n!\nip dhcp pool VLAN_20\n network 192.168.20.0 255.255.255.0\n
+      default-router 192.168.20.1 \n dns-server 192.168.250.1 \n domain-name tcp179.com\n!\nip
+      dhcp pool ux-ags\n host 192.168.129.111 255.255.255.0\n hardware-address 00ab.1123.671c.dc8a.5872.9e\n!\n!\n!\nlogin
+      on-success log\n!\ndevice-sensor filter-list lldp list lldp-list\n tlv name
+      system-description\n!\ndevice-sensor filter-list cdp list cdp-list\n tlv name
+      device-name\n tlv name platform-type\ndevice-sensor filter-spec lldp include
+      list lldp-list\ndevice-sensor filter-spec cdp include list cdp-list\ndevice-sensor
+      accounting\ndevice-sensor notify all-changes\n!\n!\n!\n!\n!\n!\n!\n!\nflow record
+      STEALTHWATCH\n description NetFlow record format to send to StealthWatch\n match
+      datalink mac source address input\n match datalink mac destination address input\n
+      match datalink vlan input\n match ipv4 ttl\n match ipv4 tos\n match ipv4 protocol\n
+      match ipv4 source address\n match ipv4 destination address\n match transport
+      source-port\n match transport destination-port\n match interface input\n collect
+      interface output\n collect counter bytes long\n collect counter packets long\n
+      collect timestamp absolute first\n collect timestamp absolute last\n!\n!\nflow
+      exporter NETFLOW_TO_STEALTHWATCH\n description Export NetFlow to StealthWatch\n
+      destination 192.168.129.141\n source Loopback0\n transport udp 2055\n!\n!\nflow
+      monitor IPv4_NETFLOW\n exporter NETFLOW_TO_STEALTHWATCH\n cache timeout active
+      60\n record STEALTHWATCH\n!\nepm logging\ndevice-tracking tracking\n!\ndevice-tracking
+      policy IPDT_MAX_10\n limit address-count 10\n tracking enable\n!\nproduct-analytics\n!\ncrypto
+      pki trustpoint TP-self-signed-806566997\n enrollment selfsigned\n subject-name
+      cn=IOS-Self-Signed-Certificate-806566997\n revocation-check none\n rsakeypair
+      TP-self-signed-806566997\n hash sha256\n!\ncrypto pki trustpoint SLA-TrustPoint\n
+      enrollment pkcs12\n revocation-check crl\n hash sha256\n!\n!\ncrypto pki certificate
+      chain TP-self-signed-806566997\n certificate self-signed 01\n  3082032E 30820216
+      A0030201 02020101 300D0609 2A864886 F70D0101 0B050030 \n  30312E30 2C060355
+      04030C25 494F532D 53656C66 2D536967 6E65642D 43657274 \n  69666963 6174652D
+      38303635 36363939 37301E17 0D323630 34323531 32333534 \n  325A170D 33363034
+      32343132 33353432 5A303031 2E302C06 03550403 0C25494F \n  532D5365 6C662D53
+      69676E65 642D4365 72746966 69636174 652D3830 36353636 \n  39393730 82012230
+      0D06092A 864886F7 0D010101 05000382 010F0030 82010A02 \n  82010100 9DA55021
+      6FBE0278 CD55BE9B B73EDBAA 5EBFE746 3EB422C0 CEDCDD7E \n  A345DFFE 51607E8A
+      3888DF41 02501E70 81143816 AC9EE86F 355792EC 00A2F8C9 \n  8B5175C7 383BFBCA
+      1E2B2455 AE1EAD3F A5171F21 8C3460DC F0E642A7 C50F4439 \n  BB1FBBE3 56903C6B
+      68D0612C F7623133 FFECD389 908B5187 CCAC4DD7 64F3729F \n  41EB483D 8BDB9242
+      B03BB90D 416F547A CDB0F3EC 1B8B4EBD BD7BB074 8C2E93F7 \n  81C393A6 A4F7C594
+      91C63AB1 C517774B D747A7E9 8E6B9943 785B4009 09E3DDDC \n  D30F680C 241FB6DD
+      F6FA77A9 A53ECCF3 C3F1C166 70393A62 D212A89A CD320CF7 \n  E6684316 7C8135A7
+      99F273B2 898B8818 1D905614 717AA475 956A588F 5BB540DC \n  FDB1B925 02030100
+      01A35330 51301D06 03551D0E 04160414 729E85EB 68D545EB \n  299E4AB4 D5D4F0D2
+      56F79462 301F0603 551D2304 18301680 14729E85 EB68D545 \n  EB299E4A B4D5D4F0
+      D256F794 62300F06 03551D13 0101FF04 05300301 01FF300D \n  06092A86 4886F70D
+      01010B05 00038201 01003855 3DD6F0AF 723EF606 38162524 \n  08C67C1A 6ECEAF50
+      2D82E119 A5A15572 51578BE4 F80D59BD 68B2F07F 32B54615 \n  D7C0CA95 2088650B
+      DE2C7609 F78B3D02 14BF27CD 4B44AF90 A3A4FA91 1BE07F6F \n  79D7EB6F B19A0AFE
+      31502726 472DC999 9F6BFF28 1CCE5C84 1C996D5B C90CF71A \n  FC924054 02DEAB14
+      26CD6411 7EA40824 37885830 6E5525E1 E0C9B839 1B14BAF7 \n  E4AC5E7D 7476EC26
+      2A3DB6D8 4F20EECC F34FD6AA 497CEF55 7620FA08 1EDD9067 \n  AA6C6CC7 10667A1C
+      35B93E04 3C400E59 2A73CF70 E8E7594F C42C1C88 E1E6573E \n  E9C58F75 897DDFBD
+      4DF9E02F 2681F957 2B135CD7 F8625772 CD936160 96CE686C \n  5352A1D1 B5ACD51A
+      37B79D09 8521FB0B 66D9\n  \tquit\ncrypto pki certificate chain SLA-TrustPoint\n
+      certificate ca 01\n  30820321 30820209 A0030201 02020101 300D0609 2A864886 F70D0101
+      0B050030 \n  32310E30 0C060355 040A1305 43697363 6F312030 1E060355 04031317
+      43697363 \n  6F204C69 63656E73 696E6720 526F6F74 20434130 1E170D31 33303533
+      30313934 \n  3834375A 170D3338 30353330 31393438 34375A30 32310E30 0C060355
+      040A1305 \n  43697363 6F312030 1E060355 04031317 43697363 6F204C69 63656E73
+      696E6720 \n  526F6F74 20434130 82012230 0D06092A 864886F7 0D010101 05000382
+      010F0030 \n  82010A02 82010100 A6BCBD96 131E05F7 145EA72C 2CD686E6 17222EA1
+      F1EFF64D \n  CBB4C798 212AA147 C655D8D7 9471380D 8711441E 1AAF071A 9CAE6388
+      8A38E520 \n  1C394D78 462EF239 C659F715 B98C0A59 5BBB5CBD 0CFEBEA3 700A8BF7
+      D8F256EE \n  4AA4E80D DB6FD1C9 60B1FD18 FFC69C96 6FA68957 A2617DE7 104FDC5F
+      EA2956AC \n  7390A3EB 2B5436AD C847A2C5 DAB553EB 69A9A535 58E9F3E3 C0BD23CF
+      58BD7188 \n  68E69491 20F320E7 948E71D7 AE3BCC84 F10684C7 4BC8E00F 539BA42B
+      42C68BB7 \n  C7479096 B4CB2D62 EA2F505D C7B062A4 6811D95B E8250FC4 5D5D5FB8
+      8F27D191 \n  C55F0D76 61F9A4CD 3D992327 A8BB03BD 4E6D7069 7CBADF8B DF5F4368
+      95135E44 \n  DFC7C6CF 04DD7FD1 02030100 01A34230 40300E06 03551D0F 0101FF04
+      04030201 \n  06300F06 03551D13 0101FF04 05300301 01FF301D 0603551D 0E041604
+      1449DC85 \n  4B3D31E5 1B3E6A17 606AF333 3D3B4C73 E8300D06 092A8648 86F70D01
+      010B0500 \n  03820101 00507F24 D3932A66 86025D9F E838AE5C 6D4DF6B0 49631C78
+      240DA905 \n  604EDCDE FF4FED2B 77FC460E CD636FDB DD44681E 3A5673AB 9093D3B1
+      6C9E3D8B \n  D98987BF E40CBD9E 1AECA0C2 2189BB5C 8FA85686 CD98B646 5575B146
+      8DFC66A8 \n  467A3DF4 4D565700 6ADF0F0D CF835015 3C04FF7C 21E878AC 11BA9CD2
+      55A9232C \n  7CA7B7E6 C1AF74F6 152E99B7 B1FCF9BB E973DE7F 5BDDEB86 C71E3B49
+      1765308B \n  5FB0DA06 B92AFE7F 494E8A9E 07B85737 F3A58BE1 1A48A229 C37C1E69
+      39F08678 \n  80DDCD16 D6BACECA EEBC7CF9 8428787B 35202CDC 60E4616A B623CDBD
+      230E3AFB \n  418616A9 4093E049 4D10AB75 27E86F73 932E35B5 8862FDAE 0275156F
+      719BB2F0 \n  D697DF7F 28\n  \tquit\n!\n!\nlicense boot level network-advantage
+      addon dna-advantage\ndot1x system-auth-control\nmemory free low-watermark processor
+      130180\n!\ndiagnostic bootup level minimal\n!\nspanning-tree mode rapid-pvst\nspanning-tree
+      extend system-id\n!\n!\n!\n<redacted by cisco-vk — set spec.allowSecrets: true
+      to disable>\n!\n<redacted by cisco-vk — set spec.allowSecrets: true to disable>\n<redacted
+      by cisco-vk — set spec.allowSecrets: true to disable>\n<redacted by cisco-vk
+      — set spec.allowSecrets: true to disable>\n<redacted by cisco-vk — set spec.allowSecrets:
+      true to disable>\n!\nredundancy\n mode sso\ncrypto engine compliance shield
+      disable\n!\n!\n!\n!\n!\ntransceiver type all\n monitoring\n!\nvlan 3001-3003
+      \n!\nlldp run\n!\nclass-map match-any system-cpp-police-ewlc-control\n description
+      EWLC Control \nclass-map match-any system-cpp-police-topology-control\n description
+      Topology control\nclass-map match-any system-cpp-police-sw-forward\n description
+      Sw forwarding, L2 LVX data packets, LOGGING, Transit Traffic\nclass-map match-any
+      system-cpp-default\n description EWLC Data, Inter FED Traffic \nclass-map match-any
+      system-cpp-police-sys-data\n description Openflow, Exception, EGR Exception,
+      NFL Sampled Data, RPF Failed\nclass-map match-any system-cpp-police-punt-webauth\n
+      description Punt Webauth\nclass-map match-any system-cpp-police-l2lvx-control\n
+      description L2 LVX control packets\nclass-map match-any system-cpp-police-forus\n
+      description Forus traffic\nclass-map match-any system-cpp-police-multicast-end-station\n
+      description MCAST END STATION\nclass-map match-any system-cpp-police-forus-addr-resolution\n
+      description Forus address resolution\nclass-map match-any system-cpp-police-high-rate-app\n
+      description High Rate Applications \nclass-map match-any system-cpp-police-multicast\n
+      description MCAST Data\nclass-map match-any system-cpp-police-meraki-next-tunnel\n
+      description Meraki Next tunnel\nclass-map match-any system-cpp-police-l2-control\n
+      description L2 control\nclass-map match-any system-cpp-police-dot1x-auth\n description
+      DOT1X Auth\nclass-map match-any system-cpp-police-data\n description ICMP redirect,
+      ICMP_GEN and BROADCAST\nclass-map match-any system-cpp-police-stackwise-virt-control\n
+      description Stackwise Virtual OOB\nclass-map match-any non-client-nrt-class\nclass-map
+      match-any system-cpp-police-routing-control\n description Routing control and
+      Low Latency\nclass-map match-any system-cpp-police-protocol-snooping\n description
+      Protocol snooping\nclass-map match-any system-cpp-police-dhcp-snooping\n description
+      DHCP snooping\nclass-map match-any system-cpp-police-ios-routing\n description
+      L2 control, Topology control, Routing control, Low Latency\nclass-map match-any
+      system-cpp-police-system-critical\n description System Critical and Gold Pkt\nclass-map
+      match-any system-cpp-police-ios-feature\n description ICMPGEN,BROADCAST,ICMP,L2LVXCntrl,ProtoSnoop,PuntWebauth,MCASTData,Transit,DOT1XAuth,Swfwd,LOGGING,L2LVXData,ForusTraffic,ForusARP,McastEndStn,Openflow,Exception,EGRExcption,NflSampled,RpfFailed\n!\npolicy-map
+      system-cpp-policy\n!\n! \n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\ninterface Loopback0\n
+      ip address 10.1.1.1 255.255.255.255\n ip pim sparse-mode\n ip router isis \n!\ninterface
+      Loopback10\n ip address 10.20.30.40 255.255.255.255\n ip pim sparse-mode\n shutdown\n!\ninterface
+      Loopback9997\n description cisco-vk release-blocker test 07 b^@^T writeStartup\n
+      ip address 10.255.255.97 255.255.255.255\n!\ninterface Tunnel99\n no ip address\n!\ninterface
+      GigabitEthernet0/0\n vrf forwarding Mgmt-vrf\n no ip address\n shutdown\n negotiation
+      auto\n!\ninterface TenGigabitEthernet1/0/1\n description Gateway (2901)\n no
+      switchport\n ip address 192.168.5.100 255.255.255.0\n ip pim sparse-mode\n!\ninterface
+      TenGigabitEthernet1/0/2\n description UX-AGX \n switchport access vlan 129\n
+      switchport mode access\n!\ninterface TenGigabitEthernet1/0/3\n!\ninterface TenGigabitEthernet1/0/4\n
+      description VMWARE VMNETWORK\n switchport mode trunk\n!\ninterface TenGigabitEthernet1/0/5\n
+      description IPC-HFW4431R-Z 10.2.0.11\n no switchport\n ip address 10.2.0.1 255.255.255.0\n
+      ip pim sparse-mode\n!\ninterface TenGigabitEthernet1/0/6\n switchport access
+      vlan 129\n switchport mode access\n spanning-tree portfast\n!\ninterface TenGigabitEthernet1/0/7\n
+      description TERMINAL_SVR\n switchport access vlan 129\n switchport mode access\n
+      device-tracking attach-policy IPDT_MAX_10\n ip access-group BLOCK_TACACS in\n
+      ip access-group BLOCK_TACACS out\n spanning-tree portfast\n!\ninterface TenGigabitEthernet1/0/8\n
+      switchport access vlan 129\n switchport mode access\n device-tracking attach-policy
+      IPDT_MAX_10\n spanning-tree portfast\n!\ninterface TenGigabitEthernet1/0/9\n
+      description 9300-48U\n switchport mode trunk\n!\ninterface TenGigabitEthernet1/0/10\n
+      switchport access vlan 129\n switchport mode access\n device-tracking attach-policy
+      IPDT_MAX_10\n spanning-tree portfast\n!\ninterface TenGigabitEthernet1/0/11\n
+      switchport mode trunk\n!\ninterface TenGigabitEthernet1/0/12\n description Edge-2
+      Gig 1/0/48\n switchport access vlan 201\n switchport trunk native vlan 201\n
+      switchport mode trunk\n!\ninterface TenGigabitEthernet1/0/13\n description DROBO
+      129.183\n switchport access vlan 129\n switchport mode access\n device-tracking
+      attach-policy IPDT_MAX_10\n spanning-tree portfast\n!\ninterface TenGigabitEthernet1/0/14\n
+      description UPLINK_TO_IOL\n switchport access vlan 150\n switchport mode access\n
+      device-tracking attach-policy IPDT_MAX_10\n shutdown\n!\ninterface TenGigabitEthernet1/0/15\n
+      description DNAC_GUI\n switchport access vlan 172\n switchport mode access\n
+      device-tracking attach-policy IPDT_MAX_10\n spanning-tree portfast\n!\ninterface
+      TenGigabitEthernet1/0/16\n switchport access vlan 129\n switchport mode access\n
+      device-tracking attach-policy IPDT_MAX_10\n!\ninterface TenGigabitEthernet1/0/17\n
+      description WAP_VLAN_200\n switchport access vlan 200\n switchport mode access\n
+      device-tracking attach-policy IPDT_MAX_10\n dot1x pae authenticator\n spanning-tree
+      portfast\n!\ninterface TenGigabitEthernet1/0/18\n description LAPKULOG1\n switchport
+      access vlan 129\n switchport mode access\n spanning-tree portfast\n!\ninterface
+      TenGigabitEthernet1/0/19\n description WS-C3560CX-PD\n switchport access vlan
+      129\n switchport mode trunk\n!\ninterface TenGigabitEthernet1/0/20\n description
+      WAP_VLAN_201\n switchport access vlan 129\n switchport mode access\n device-tracking
+      attach-policy IPDT_MAX_10\n dot1x pae authenticator\n spanning-tree portfast\n!\ninterface
+      TenGigabitEthernet1/0/21\n switchport access vlan 255\n switchport mode access\n
+      device-tracking attach-policy IPDT_MAX_10\n!\ninterface TenGigabitEthernet1/0/22\n
+      description WS-C2960PD-8TT-L\n switchport access vlan 201\n switchport mode
+      access\n!\ninterface TenGigabitEthernet1/0/23\n description LAPKULOG1\n switchport
+      access vlan 201\n switchport mode access\n spanning-tree portfast\n!\ninterface
+      TenGigabitEthernet1/0/24\n description PRINTER\n speed 1000\n duplex full\n
+      spanning-tree portfast\n!\ninterface GigabitEthernet1/1/1\n device-tracking
+      attach-policy IPDT_MAX_10\n!\ninterface GigabitEthernet1/1/2\n device-tracking
+      attach-policy IPDT_MAX_10\n!\ninterface GigabitEthernet1/1/3\n device-tracking
+      attach-policy IPDT_MAX_10\n!\ninterface GigabitEthernet1/1/4\n device-tracking
+      attach-policy IPDT_MAX_10\n!\ninterface TenGigabitEthernet1/1/1\n device-tracking
+      attach-policy IPDT_MAX_10\n!\ninterface TenGigabitEthernet1/1/2\n device-tracking
+      attach-policy IPDT_MAX_10\n!\ninterface TenGigabitEthernet1/1/3\n device-tracking
+      attach-policy IPDT_MAX_10\n!\ninterface TenGigabitEthernet1/1/4\n device-tracking
+      attach-policy IPDT_MAX_10\n!\ninterface TenGigabitEthernet1/1/5\n!\ninterface
+      TenGigabitEthernet1/1/6\n!\ninterface TenGigabitEthernet1/1/7\n!\ninterface
+      TenGigabitEthernet1/1/8\n!\ninterface FortyGigabitEthernet1/1/1\n!\ninterface
+      FortyGigabitEthernet1/1/2\n!\ninterface TwentyFiveGigE1/1/1\n!\ninterface TwentyFiveGigE1/1/2\n!\ninterface
+      AppGigabitEthernet1/0/1\n switchport access vlan 129\n switchport trunk allowed
+      vlan 129\n switchport mode trunk\n!\ninterface Vlan1\n no ip address\n shutdown\n!\ninterface
+      Vlan10\n ip address 10.192.168.1 255.255.255.0\n!\ninterface Vlan20\n ip address
+      192.168.20.1 255.255.255.0\n!\ninterface Vlan70\n ip address 10.70.0.1 255.255.255.0\n!\ninterface
+      Vlan101\n ip address 10.0.0.1 255.255.255.252\n!\ninterface Vlan129\n ip address
+      192.168.129.2 255.255.255.0\n ip helper-address 192.168.129.100\n ip pim sparse-mode\n
+      standby 129 ip 192.168.129.1\n standby 129 priority 150\n standby 129 preempt\n
+      standby 129 mac-address aaaa.aaaa.aaaa\n!\ninterface Vlan172\n ip address 172.16.0.254
+      255.255.255.0\n!\ninterface Vlan173\n ip address 172.16.5.1 255.255.255.0 secondary\n
+      ip address 172.16.5.2 255.255.255.0 secondary\n ip address 172.16.5.3 255.255.255.0
+      secondary\n ip address 172.16.5.254 255.255.255.0\n!\ninterface Vlan175\n description
+      Shared_Services\n ip address 172.16.4.254 255.255.255.0\n!\ninterface Vlan200\n
+      ip address 192.168.200.2 255.255.255.0\n ip helper-address 192.168.129.100\n
+      ip pim sparse-mode\n standby 200 ip 192.168.200.1\n standby 200 priority 150\n
+      standby 200 preempt\n!\ninterface Vlan201\n ip address 192.168.201.2 255.255.255.0\n
+      ip helper-address 192.168.129.100\n ip helper-address 192.168.129.40\n ip pim
+      sparse-mode\n standby 201 ip 192.168.201.1\n standby 201 priority 150\n standby
+      201 preempt\n!\ninterface Vlan202\n description Unified WLAN Management\n ip
+      address 192.168.202.1 255.255.255.0\n!\ninterface Vlan210\n description CLIENT_VLAN_210\n
+      ip address 192.168.210.2 255.255.255.0\n ip wccp web-cache redirect in\n standby
+      210 ip 192.168.210.1\n standby 210 priority 150\n standby 210 preempt\n!\ninterface
+      Vlan253\n ip address 192.168.253.2 255.255.255.0\n ip helper-address 192.168.129.100\n
+      standby 253 ip 192.168.253.1\n standby 253 priority 150\n!\ninterface Vlan254\n
+      ip address 192.168.254.2 255.255.255.0\n ip helper-address 192.168.129.100\n
+      standby 254 ip 192.168.254.1\n standby 254 priority 150\n!\ninterface Vlan255\n
+      ip address 192.168.255.2 255.255.255.0\n ip helper-address 192.168.129.100\n
+      ip pim sparse-mode\n standby 255 ip 192.168.255.1\n standby 255 priority 150\n!\ninterface
+      Vlan500\n description WIN2K_CLIENT_DHCP_VLAN\n ip address 192.168.50.2 255.255.255.0\n
+      standby 50 ip 192.168.50.1\n standby 50 priority 150\n standby 50 preempt\n!\ninterface
+      Vlan1129\n no ip address\n!\ninterface Vlan3001\n ip address 172.16.10.2 255.255.255.252\n!\ninterface
+      Vlan3002\n ip address 172.16.10.6 255.255.255.252\n!\ninterface Vlan3003\n ip
+      address 172.16.10.10 255.255.255.252\n!\nrouter ospf 100\n router-id 1.1.1.1\n
+      redistribute isis\n passive-interface Loopback0\n passive-interface Loopback10\n
+      network 1.1.1.1 0.0.0.0 area 0\n network 10.20.30.40 0.0.0.0 area 0\n network
+      172.16.0.0 0.0.0.255 area 0\n network 192.168.0.0 0.0.255.255 area 0\n bfd all-interfaces\n!\nrouter
+      isis\n net 49.0000.0001.0100.1001.00\n is-type level-2-only\n domain-password
+      ***REDACTED***\n metric-style transition\n redistribute ospf 100\n bfd all-interfaces\n!\nrouter
+      bgp 65000\n bgp log-neighbor-changes\n neighbor 192.168.129.111 remote-as 65001\n
+      neighbor 192.168.129.111 ebgp-multihop 255\n neighbor 192.168.129.111 update-source
+      Vlan129\n !\n address-family ipv4\n  neighbor 192.168.129.111 activate\n exit-address-family\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\n!\niox\nip
+      forward-protocol nd\nip forward-protocol udp\nip http server\nip http authentication
+      local\nip http secure-server\nip http client source-interface Loopback0\nip
+      pim rp-address 10.1.1.1\nip ftp username cisco\n<redacted by cisco-vk — set
+      spec.allowSecrets: true to disable>\nip route 0.0.0.0 0.0.0.0 TenGigabitEthernet1/0/1
+      192.168.5.1\nip route 10.0.0.0 255.0.0.0 192.168.150.2\nip route 10.1.1.2 255.255.255.255
+      10.0.0.2\nip route 172.16.0.0 255.255.0.0 192.168.150.2\nip route 172.18.0.0
+      255.255.0.0 192.168.129.244\nip route 192.168.129.20 255.255.255.255 192.168.129.111\nip
+      dns server\nip tacacs source-interface Loopback0 \nip ssh bulk-mode 131072\nip
+      ssh source-interface Loopback0\nip scp server enable\n!\n!\nip access-list extended
+      AutoQos-4.0-wlan-Acl-Bulk-Data\n 10 permit tcp any any eq 22\n 20 permit tcp
+      any any eq 465\n 30 permit tcp any any eq 143\n 40 permit tcp any any eq 993\n
+      50 permit tcp any any eq 995\n 60 permit tcp any any eq 1914\nip access-list
+      extended AutoQos-4.0-wlan-Acl-MultiEnhanced-Conf\n 10 permit udp any any range
+      16384 32767\n 20 permit tcp any any range 50000 59999\nip access-list extended
+      AutoQos-4.0-wlan-Acl-Scavanger\n 10 permit tcp any any range 2300 2400\n 20
+      permit udp any any range 2300 2400\n 30 permit tcp any any range 6881 6999\n
+      40 permit tcp any any range 28800 29100\n 50 permit tcp any any eq 1214\n 60
+      permit udp any any eq 1214\n 70 permit tcp any any eq 3689\n 80 permit udp any
+      any eq 3689\n 90 permit tcp any any eq 11999\n 100 permit tcp any any range
+      5060 5061\n 110 permit udp any any range 5060 5061\nip access-list extended
+      AutoQos-4.0-wlan-Acl-Transactional-Data\n 10 permit tcp any any eq 443\n 20
+      permit tcp any any eq 1521\n 30 permit udp any any eq 1521\n 40 permit tcp any
+      any eq 1526\n 50 permit udp any any eq 1526\n 60 permit tcp any any eq 1575\n
+      70 permit udp any any eq 1575\n 80 permit tcp any any eq 1630\n 90 permit udp
+      any any eq 1630\n 100 permit tcp any any eq 1527\n 110 permit tcp any any eq
+      6200\n 120 permit tcp any any eq 3389\n 130 permit tcp any any eq 5985\n 140
+      permit tcp any any eq 8080\nip access-list extended BABY\n 10 permit ip host
+      192.168.255.106 any\n 20 permit ip any host 192.168.255.106\nip access-list
+      extended BLOCK_IPAD\n 10 deny ip host 192.168.255.105 host 192.168.250.1\n 20
+      permit ip host 192.168.255.105 192.168.0.0 0.0.255.255\n 30 permit ip 192.168.0.0
+      0.0.255.255 host 192.168.255.105\n 40 deny ip host 192.168.255.105 any\n 50
+      deny ip any host 192.168.255.105\n 60 permit ip any any\nip access-list extended
+      BLOCK_TACACS\n 10 deny tcp any any eq tacacs\n 20 deny tcp any eq tacacs any\n
+      30 permit ip any any\nip access-list extended EOIP\n 10 permit ip any any\nip
+      access-list extended IPAD\n 10 permit ip host 192.168.255.105 any\n 20 permit
+      ip any host 192.168.255.105\nip access-list extended NETFLOW\n 10 permit tcp
+      any any eq 9400\n 20 permit udp any any eq 9400\n 30 permit udp any eq 9400
+      any\n 40 permit tcp any eq 9400 any\n 50 permit ip host 192.38.119.165 any\n
+      60 permit ip any host 192.38.119.165\n 70 permit ip host 192.168.10.120 any\nip
+      sla 5\nip sla 6\nlogging history debugging\nlogging trap debugging\nlogging
+      source-interface Loopback0\nlogging host 192.168.129.111\nlogging host 192.168.129.242\nip
+      access-list standard 10\n 10 permit 192.168.205.12\n 20 permit 192.168.205.11\n
+      30 permit 192.168.205.10\nip access-list standard 20\n 10 permit 10.0.0.0 0.255.255.255\n
+      30 permit 172.16.0.0 0.15.255.255\n 40 permit 192.168.0.0 0.0.255.255\n 50 deny
+      any\nip access-list extended 100\n 10 deny ip any 192.168.129.0 0.0.0.255\n
+      20 permit ip any any\nip access-list extended 155\n 10 deny ip 192.168.255.0
+      0.0.0.255 192.168.129.0 0.0.0.255\n 20 deny ip 192.168.255.0 0.0.0.255 192.168.200.0
+      0.0.0.255\n 30 deny ip 192.168.255.0 0.0.0.255 192.168.201.0 0.0.0.255\n 40
+      deny ip 192.168.255.0 0.0.0.255 192.168.202.0 0.0.0.255\n 50 deny ip 192.168.255.0
+      0.0.0.255 192.168.210.0 0.0.0.255\n 60 permit ip any any\n<redacted by cisco-vk
+      — set spec.allowSecrets: true to disable>\n<redacted by cisco-vk — set spec.allowSecrets:
+      true to disable>\n<redacted by cisco-vk — set spec.allowSecrets: true to disable>\ntacacs-server
+      timeout 1\n<redacted by cisco-vk — set spec.allowSecrets: true to disable>\n
+      address ipv4 192.168.129.111\n <redacted by cisco-vk — set spec.allowSecrets:
+      true to disable>\n!\n!\n!\n!\ncontrol-plane\n service-policy input system-cpp-policy\n!\n!\nbanner
+      motd ^Ccisco-vk release-blocker test 06 b^@^T wave drift-detect^C\n!\nline con
+      0\n stopbits 1\nline vty 0 4\n password ***REDACTED***\n transport input ssh\nline vty 5
+      31\n transport input ssh\n!\ncall-home\n ! If contact email address in call-home
+      is configured as sch-smart-licensing@cisco.com\n ! the email address configured
+      in Cisco Smart License Portal will be used as contact email address to send
+      SCH notifications.\n contact-email-addr sch-smart-licensing@cisco.com\n profile
+      \"CiscoTAC-1\"\n  active\n  destination transport-method http\nntp server pool.ntp.org
+      minpoll 10\n!\nwsma agent exec\n profile httplistener\n profile httpslistener\n
+      profile httpslisttener\n!\nwsma agent config\n profile httplistener\n profile
+      httpslistener\n!\nwsma agent filesys\n profile httplistener\n profile httpslistener\n!\nwsma
+      agent notify\n profile httplistener\n profile httpslistener\n!\n!\nwsma profile
+      listener httplistener\n transport http\n!\nwsma profile listener httpslistener\n
+      transport https\n!\nnetconf-yang\nnetconf-yang feature candidate-datastore\nrestconf\nno
+      gnxi enable-gnoi\ngnxi read-only\ngnxi secure-allow-self-signed-trustpoint\ngnxi
+      secure-password-auth\ngnxi secure-trustpoint TP-self-signed-2328416372\ngnxi
+      secure-server\ngnxi server\napp-hosting appid cvk0000_c33ef1937b724af1aa5048767ea7132b\n
+      app-vnic AppGigabitEthernet access\n  guest-interface 0\n app-resource profile
+      custom\n  cpu 1000\n  memory 512\n  persist-disk 1024\n  vcpu 1\n start\ntelemetry
+      ietf subscription 100\n filter xpath /interfaces-state/interface/statistics\n
+      stream yang-push\n update-policy periodic 1000\nend"
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: "2026-04-28T06:53:38Z"
+    labels:
+      cisco.vk/diagnostic: t5-cm-sink
+      cisco.vk/diagnostic-capturedAt: 20260428-065338
+    name: running-snapshot-20260428-065338
+    namespace: cisco-vk-smoke
+    ownerReferences:
+    - apiVersion: config.cisco.vk/v1alpha1
+      controller: true
+      kind: IOSXEDiagnostic
+      name: t5-cm-sink
+      uid: e8b3a009-845f-45c7-b50b-877aa7c5c66a
+    resourceVersion: "370878"
+    uid: 3dd78038-2cf1-4b0a-9db1-c73ba21f3405
+kind: List
+metadata:
+  resourceVersion: ""
