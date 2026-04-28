@@ -664,6 +664,36 @@ func (r *ConfigReconciler) recordResult(
 			})
 	}
 
+	// Wave 10.3 scope refinement (2026-04-28): merge per-family
+	// owned-keys produced this tick into status.atomicReplaceOwnedKeys.
+	// Engine populates result.AtomicReplaceOwnedKeys only for families
+	// that successfully reconciled with AtomicReplace=true, so this
+	// loop adds the union of (prior owned, current desired) per
+	// family. A family that didn't reconcile this tick (Skipped /
+	// ApplyError) is not in the engine result map, so its prior status
+	// entry persists. Empty desired (e.g. test 09 phase 2 with empty
+	// intent) yields no engine entry; the prior owned set persists
+	// until the next successful prune actually removes those entries.
+	if len(result.AtomicReplaceOwnedKeys) > 0 {
+		if updated.Status.AtomicReplaceOwnedKeys == nil {
+			updated.Status.AtomicReplaceOwnedKeys = map[string][]string{}
+		}
+		for fam, fresh := range result.AtomicReplaceOwnedKeys {
+			merged := mergeOwnedKeys(updated.Status.AtomicReplaceOwnedKeys[fam], fresh)
+			updated.Status.AtomicReplaceOwnedKeys[fam] = merged
+		}
+	}
+	// Garbage-collect entries actually pruned this tick: every family
+	// in updated.Status.AtomicReplaceOwnedKeys is replaced by the
+	// post-apply observed set, intersected with the prior owned set.
+	// We don't get a "delete-set" from the engine; instead, after a
+	// successful prune the engine returns the post-prune desired keys
+	// in result.AtomicReplaceOwnedKeys, and merging those with prior
+	// preserves correct ownership. This is intentional: it errs on
+	// the side of "keep tracking" so a transient Failed tick doesn't
+	// silently drop ownership and let a subsequent atomic-replace
+	// orphan device-side state.
+
 	updated.Status.Drift = updated.Status.Drift[:0]
 	capped, dropped := engine.CapDrift(result.Drift)
 	for _, d := range capped {
@@ -1216,4 +1246,26 @@ func strconvIndex(s string) (int, error) {
 		n = n*10 + int(c-'0')
 	}
 	return n, nil
+}
+
+// mergeOwnedKeys returns the deduplicated union of two key slices in
+// sorted order. Used by the status-writeback path to merge the prior
+// status.atomicReplaceOwnedKeys[family] with the engine's post-tick
+// per-family owned set. Sorting keeps the status field byte-stable
+// across reconciles so unchanged ownership doesn't churn the CR's
+// resourceVersion.
+func mergeOwnedKeys(prior, fresh []string) []string {
+	seen := make(map[string]struct{}, len(prior)+len(fresh))
+	for _, k := range prior {
+		seen[k] = struct{}{}
+	}
+	for _, k := range fresh {
+		seen[k] = struct{}{}
+	}
+	out := make([]string, 0, len(seen))
+	for k := range seen {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }

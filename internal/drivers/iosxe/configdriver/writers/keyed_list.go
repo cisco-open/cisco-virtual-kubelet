@@ -168,6 +168,30 @@ func (w keyedListWriter) Apply(ctx context.Context, c transport.Interface, ops [
 	return c.Mutate(ctx, "", ops)
 }
 
+// KeysOf implements writers.KeyExtractable. Returns the entry-key
+// values in v in deterministic order. v may be the family block
+// (e.g. {vlans: [...]}), a bare list, or nil. Entries missing the
+// configured keyField are skipped without erroring — matches the
+// lenient observed-side handling in Diff/PruneDiff. The result is
+// used by the engine to track ownership of device-side entries when
+// spec.atomicReplace=true.
+func (w keyedListWriter) KeysOf(v any) []string {
+	list, err := w.coerceBlock(v, "keysOf")
+	if err != nil || len(list) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(list))
+	for _, e := range list {
+		k, err := entryKey(e, w.keyField)
+		if err != nil {
+			continue
+		}
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 // PruneDiff emits a VerbDelete op for every entry present on the
 // device but absent from the desired intent. Implements PruneCapable
 // — the engine calls this only when spec.pruneOnRelinquish: true on

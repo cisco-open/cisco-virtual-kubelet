@@ -77,3 +77,29 @@ type SectionWriter interface {
 type PruneCapable interface {
 	PruneDiff(desired, observed any) ([]transport.Op, error)
 }
+
+// KeyExtractable is an optional interface a writer implements when it
+// can enumerate the list-key values present in a desired or observed
+// shape. The engine uses this to track per-CR ownership of device-side
+// entries: every key returned by KeysOf(desired) on a successful
+// apply is added to the CR's status.atomicReplaceOwnedKeys set, and
+// the atomic-replace prune phase scopes its delete-set to that union.
+//
+// Writers that don't implement this interface fall back to the
+// pre-Wave-10.3-scope behaviour where atomic-replace prune deletes
+// every device-side entry not in the current desired (i.e. baseline
+// state would also be deleted on a shared device). Implementing it
+// is opt-in and family-specific; the keyedListWriter base + the
+// nestedKeyedListWriter wrapper both implement it.
+//
+// Wave 10.3 scope refinement (2026-04-28). Closes the test 09 phase 2
+// + 13 live-retest gap on shared lab devices.
+type KeyExtractable interface {
+	// KeysOf returns the list-key values present in v. v can be either
+	// the netascode block shape (configuration[family]) or the bare
+	// list shape that writers internally accept. Returns an empty
+	// slice when v is nil or has no recognised entries; never returns
+	// an error for shape mismatches — callers treat unrecognised
+	// shapes as "no keys", which is safe for the ownership tracker.
+	KeysOf(v any) []string
+}

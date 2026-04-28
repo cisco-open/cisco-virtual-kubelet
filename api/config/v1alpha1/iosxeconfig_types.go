@@ -318,6 +318,26 @@ type IOSXEConfigStatus struct {
 	// +kubebuilder:validation:MaxItems=50
 	Drift []DriftEntry `json:"drift,omitempty"`
 
+	// AtomicReplaceOwnedKeys tracks, per managed family, the list of
+	// list-key values this CR has previously applied successfully.
+	// Populated only when spec.atomicReplace=true. The engine's
+	// atomic-replace prune phase consults this map so it only deletes
+	// device-side entries the CR established (or applied a Diff for) —
+	// it never deletes baseline state the CR has not previously
+	// touched. Entries are added on successful Apply and removed on
+	// successful Prune; the map persists across reconciles via the
+	// status subresource.
+	//
+	// Wave 10.3 scope refinement (2026-04-28). Pre-fix, atomicReplace
+	// computed orphans against the entire device-side observed set,
+	// which on a shared device with baseline state (Mgmt-vrf,
+	// Loopback 0, etc.) tried to delete entries the CR had never
+	// touched. The device's must-violation defense correctly refused
+	// the bound-entry deletes, leaving tests 09 phase 2 + 13
+	// permanently red on shared devices.
+	// +optional
+	AtomicReplaceOwnedKeys map[string][]string `json:"atomicReplaceOwnedKeys,omitempty"`
+
 	// Conditions follows the standard Kubernetes conditions shape. The
 	// driver maintains Ready, Reconciling, and a Healthy-<family> entry
 	// for each managed family.

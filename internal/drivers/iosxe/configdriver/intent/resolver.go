@@ -147,6 +147,18 @@ type ResolvedIntent struct {
 	// declarations. Wave 10.
 	AtomicReplace bool
 
+	// AtomicReplaceOwnedKeys is the per-family list of list-key values
+	// this CR has previously applied successfully (carried in
+	// IOSXEConfig.status.atomicReplaceOwnedKeys). Only meaningful when
+	// AtomicReplace == true. Lets the engine scope the prune phase to
+	// entries the CR established, so atomic-replace on a shared
+	// device with baseline state doesn't try to delete entries the
+	// CR has not previously touched. Updated round-trip via
+	// Result.AtomicReplaceOwnedKeys → controller status writeback.
+	//
+	// Wave 10.3 scope refinement (2026-04-28).
+	AtomicReplaceOwnedKeys map[string][]string
+
 	// CLIBlocks carries CLI-type template expansions that do not
 	// merge into Configuration. Populated by the resolver when
 	// spec.templateRefs reference an IOSXETemplate with
@@ -360,9 +372,10 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 		PruneOnRelinquish:     cr.Spec.PruneOnRelinquish,
 		TargetYangVersion:     yangVersion,
 		ConfirmTimeoutSeconds: cr.Spec.ConfirmTimeoutSeconds,
-		AtomicReplace:         cr.Spec.AtomicReplace,
-		CLIBlocks:             cliBlocks,
-		SourceCR:              cr.DeepCopy(),
+		AtomicReplace:          cr.Spec.AtomicReplace,
+		AtomicReplaceOwnedKeys: cr.Status.AtomicReplaceOwnedKeys,
+		CLIBlocks:              cliBlocks,
+		SourceCR:               cr.DeepCopy(),
 	}, nil
 }
 

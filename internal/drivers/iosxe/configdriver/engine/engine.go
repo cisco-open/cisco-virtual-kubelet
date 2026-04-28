@@ -163,6 +163,24 @@ type Result struct {
 	// dueForDriftCheck logic, hiding the missed reconciles.
 	DeviceTouched bool
 
+	// AtomicReplaceOwnedKeys carries the per-family list-key values
+	// this CR currently owns after this tick: the union of (prior
+	// owned, set by ResolvedIntent.AtomicReplaceOwnedKeys) and (this
+	// tick's desired keys, harvested from each writer's KeysOf hook
+	// after a successful family apply). Entries successfully pruned
+	// in this tick are removed. The reconciler writes this back to
+	// IOSXEConfig.status.atomicReplaceOwnedKeys so the next tick
+	// starts with up-to-date ownership.
+	//
+	// Only populated when AtomicReplace == true on the intent.
+	// Writers that don't implement KeyExtractable contribute nothing
+	// for their family — the engine falls back to the pre-Wave 10.3-
+	// scope behaviour where every observed entry is candidate for
+	// prune.
+	//
+	// Wave 10.3 scope refinement (2026-04-28).
+	AtomicReplaceOwnedKeys map[string][]string
+
 	// ConfirmedCommitFallback carries a human-readable reason when
 	// the CR requested confirmed-commit (spec.confirmTimeoutSeconds >
 	// 0) but the engine could not use it and fell back to plain
@@ -205,6 +223,17 @@ type FamilyStatus struct {
 	Entries int32
 	Message string
 	OpCount int
+
+	// OwnedKeys carries the list-key values this CR owns for this
+	// family after the tick. Populated only when the intent has
+	// AtomicReplace == true AND the writer implements KeyExtractable
+	// AND the apply (or no-op InSync) reflects a known desired set.
+	// Aggregated by Reconcile into Result.AtomicReplaceOwnedKeys for
+	// status writeback. Empty on Skipped / ApplyError so the
+	// existing owned-set on the CR persists across failure ticks.
+	//
+	// Wave 10.3 scope refinement (2026-04-28).
+	OwnedKeys []string
 }
 
 // DriftEntry matches the configv1alpha1.DriftEntry shape without
@@ -368,6 +397,19 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 			})
 		case "ApplyError", "Unsupported":
 			anyFailure = true
+		}
+		// Wave 10.3 scope refinement: harvest the family's owned-keys
+		// post-tick for the round-trip back to status. Skipped /
+		// ApplyError families return empty OwnedKeys so the prior
+		// status entry persists (the controller treats nil family
+		// values as "no change"). Successful (InSync / Drifted)
+		// families return the current desired's keys; the union with
+		// the prior owned set is computed at status writeback time.
+		if res.AtomicReplace && len(fs.OwnedKeys) > 0 {
+			if result.AtomicReplaceOwnedKeys == nil {
+				result.AtomicReplaceOwnedKeys = map[string][]string{}
+			}
+			result.AtomicReplaceOwnedKeys[family] = fs.OwnedKeys
 		}
 	}
 
@@ -638,6 +680,17 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 
 	desired := res.Configuration[family]
 
+	// Wave 10.3 scope refinement: precompute the desired-side keys
+	// once so successful-return paths can stamp them onto the
+	// FamilyStatus. The aggregator in Reconcile unions these with the
+	// prior owned set to produce Result.AtomicReplaceOwnedKeys.
+	var ownedKeysForFamily []string
+	if res.AtomicReplace {
+		if ke, ok := w.(writers.KeyExtractable); ok {
+			ownedKeysForFamily = ke.KeysOf(desired)
+		}
+	}
+
 	observed, err := w.Fetch(ctx, e.Transport)
 	if err != nil {
 		return FamilyStatus{
@@ -663,7 +716,25 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// every family will fail-closed by default until rolled out.
 	if res.PruneOnRelinquish {
 		if pc, ok := w.(writers.PruneCapable); ok {
-			pruneOps, err := pc.PruneDiff(desired, observed)
+			pruneInput := observed
+			// Wave 10.3 scope refinement (2026-04-28): when the
+			// CR is in atomicReplace mode AND the writer
+			// implements KeyExtractable, scope the prune set to
+			// entries this CR previously owned (per
+			// status.atomicReplaceOwnedKeys) UNION current
+			// desired. Anything observed that's outside that
+			// scope is baseline state the CR has never touched
+			// and must not be deleted. Without this filter, an
+			// atomic-replace prune on a shared device with
+			// baseline state (Mgmt-vrf, Loopback 0, etc.) would
+			// try to delete those, which the device rightly
+			// refuses with a must-violation.
+			if res.AtomicReplace {
+				if ke, ok := w.(writers.KeyExtractable); ok {
+					pruneInput = scopeObservedToOwned(ke, observed, desired, res.AtomicReplaceOwnedKeys[family])
+				}
+			}
+			pruneOps, err := pc.PruneDiff(desired, pruneInput)
 			if err != nil {
 				return FamilyStatus{
 					Name: family, State: "ApplyError",
@@ -677,7 +748,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// No-op: nothing to apply, nothing to verify. Family is InSync by
 	// the writer's own definition of equivalence.
 	if len(ops) == 0 {
-		return FamilyStatus{Name: family, State: "InSync"}
+		return FamilyStatus{Name: family, State: "InSync", OwnedKeys: ownedKeysForFamily}
 	}
 
 	// Report-policy short-circuit: we've observed drift, but the CR
@@ -757,7 +828,13 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// would slip past as InSync.
 	if res.PruneOnRelinquish {
 		if pc, ok := w.(writers.PruneCapable); ok {
-			residualPrune, err := pc.PruneDiff(desired, verify)
+			vInput := verify
+			if res.AtomicReplace {
+				if ke, ok := w.(writers.KeyExtractable); ok {
+					vInput = scopeObservedToOwned(ke, verify, desired, res.AtomicReplaceOwnedKeys[family])
+				}
+			}
+			residualPrune, err := pc.PruneDiff(desired, vInput)
 			if err != nil {
 				return FamilyStatus{
 					Name: family, State: "ApplyError",
@@ -771,11 +848,90 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	if len(residual) > 0 {
 		return FamilyStatus{
 			Name: family, State: "Drifted",
-			OpCount: len(ops),
-			Message: fmt.Sprintf("%d op(s) applied but %d still pending", len(ops), len(residual)),
+			OpCount:   len(ops),
+			Message:   fmt.Sprintf("%d op(s) applied but %d still pending", len(ops), len(residual)),
+			OwnedKeys: ownedKeysForFamily,
 		}
 	}
-	return FamilyStatus{Name: family, State: "InSync", OpCount: len(ops)}
+	return FamilyStatus{Name: family, State: "InSync", OpCount: len(ops), OwnedKeys: ownedKeysForFamily}
+}
+
+// scopeObservedToOwned filters an observed list (writer-opaque shape)
+// down to entries whose key is in (priorOwned ∪ desired). Used by the
+// atomic-replace prune phase so the engine never tries to delete
+// device-side entries this CR has not previously touched.
+//
+// The filter relies on the writer's KeyExtractable hook to enumerate
+// keys both for desired and observed. We rebuild a stub-list shape
+// (one map per kept entry, keyed by `name` / `id` / `sequence` per
+// the writer's expectations) and pass that to PruneDiff. Because the
+// stub list contains only the keys, PruneDiff's "anything in observed
+// not in desired → DELETE" logic produces deletes only for owned
+// entries that aren't in current desired — which is exactly the
+// scoped-atomic-replace semantic.
+//
+// The function is conservative on shape mismatches: if KeysOf returns
+// nil for either side, we fall through to the un-filtered observed
+// (the pre-Wave-10.3 behaviour). That keeps the engine safe against
+// writers that haven't yet implemented KeyExtractable.
+//
+// Wave 10.3 scope refinement (2026-04-28).
+func scopeObservedToOwned(ke writers.KeyExtractable, observed, desired any, priorOwned []string) any {
+	observedKeys := ke.KeysOf(observed)
+	if len(observedKeys) == 0 {
+		return observed
+	}
+	desiredKeys := ke.KeysOf(desired)
+	allowed := make(map[string]struct{}, len(priorOwned)+len(desiredKeys))
+	for _, k := range priorOwned {
+		allowed[k] = struct{}{}
+	}
+	for _, k := range desiredKeys {
+		allowed[k] = struct{}{}
+	}
+	// Rebuild a minimal-shape observed list with only the allowed
+	// keys. The writer's PruneDiff accepts the bare-list shape
+	// (coerceList handles both block and bare list). We can't
+	// project the entry's full body — we only have the keys — but
+	// PruneDiff only needs the key field to compute deletes.
+	//
+	// For the keyedListWriter family the key field is `name` / `id`
+	// / `sequence`. interface_ethernet uses composite `<type>=<name>`
+	// and we synthesise a two-field map. The KeysOf string we get
+	// back is `<type>=<name>` so we split on the first `=`.
+	stubs := make([]map[string]any, 0, len(observedKeys))
+	observedSeen := map[string]struct{}{}
+	for _, k := range observedKeys {
+		if _, ok := allowed[k]; !ok {
+			continue
+		}
+		if _, dup := observedSeen[k]; dup {
+			continue
+		}
+		observedSeen[k] = struct{}{}
+		stubs = append(stubs, stubEntryFromKey(k))
+	}
+	return stubs
+}
+
+// stubEntryFromKey reconstructs a minimal map[string]any from a key
+// string produced by writer KeysOf hooks. Two shapes are recognised:
+//
+//	"GigabitEthernet=0/0/0"    → {type: GigabitEthernet, name: 0/0/0}
+//	"<scalar>"                 → {name: <scalar>, id: <scalar>,
+//	                              sequence: <scalar>}
+//
+// The latter populates all three common key-field names so that
+// keyedListWriter.PruneDiff finds the right one regardless of which
+// the family's keyField is set to. A real entry would have only one;
+// the duplicates are harmless because the entry is never written
+// back to the device — it's solely a vehicle for PruneDiff to compute
+// the delete set.
+func stubEntryFromKey(k string) map[string]any {
+	if i := strings.Index(k, "="); i > 0 {
+		return map[string]any{"type": k[:i], "name": k[i+1:]}
+	}
+	return map[string]any{"name": k, "id": k, "sequence": k}
 }
 
 // ConflictCheck scans the IOSXEConfig set for the same device and

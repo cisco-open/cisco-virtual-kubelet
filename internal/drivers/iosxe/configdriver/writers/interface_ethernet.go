@@ -196,6 +196,28 @@ func (ethernetWriter) Apply(ctx context.Context, c transport.Interface, ops []tr
 	return c.Mutate(ctx, "", ops)
 }
 
+// KeysOf implements writers.KeyExtractable for interface_ethernet.
+// Returns the (type, name) composite keys in "<type>=<name>" form so
+// the engine's atomicReplaceOwnedKeys tracker can disambiguate
+// e.g. GigabitEthernet0/0 from TenGigabitEthernet0/0.
+func (ethernetWriter) KeysOf(v any) []string {
+	list, err := coerceEthernetBlock(v, "keysOf")
+	if err != nil || len(list) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(list))
+	for _, e := range list {
+		t, _ := e["type"].(string)
+		n, _ := e["name"].(string)
+		if t == "" || n == "" {
+			continue
+		}
+		keys = append(keys, t+"="+n)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func knownEthernetType(t string) bool {
 	for _, et := range ethernetTypes {
 		if et == t {

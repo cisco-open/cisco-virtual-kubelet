@@ -120,6 +120,13 @@ func (w nestedKeyedListWriter) specs() []nestedListSpec {
 func (w nestedKeyedListWriter) Family() string      { return w.base.Family() }
 func (w nestedKeyedListWriter) YANGPaths() []string { return w.base.YANGPaths() }
 
+// KeysOf delegates to the base keyedListWriter — nested writers key
+// the OUTER entry by the same field (e.g. ACL by name, route-map by
+// name). Inner-list ownership tracking would need its own keyspace;
+// we don't need that for the Wave 10.3 scope refinement because the
+// tests in question manage outer entries.
+func (w nestedKeyedListWriter) KeysOf(v any) []string { return w.base.KeysOf(v) }
+
 func (w nestedKeyedListWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
 	return w.base.Fetch(ctx, c)
 }

@@ -700,6 +700,22 @@ func (in *IOSXEConfigStatus) DeepCopyInto(out *IOSXEConfigStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.AtomicReplaceOwnedKeys != nil {
+		in, out := &in.AtomicReplaceOwnedKeys, &out.AtomicReplaceOwnedKeys
+		*out = make(map[string][]string, len(*in))
+		for key, val := range *in {
+			var outVal []string
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				inVal := (*in)[key]
+				in, out := &inVal, &outVal
+				*out = make([]string, len(*in))
+				copy(*out, *in)
+			}
+			(*out)[key] = outVal
+		}
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))
