@@ -664,6 +664,7 @@ A standalone plugin (`kubectl-ciscovk`) that builds on top of `client-go` to sur
 - `kubectl ciscovk explain <family>` — show the netascode field reference for a family
 - `kubectl ciscovk replay <iosxe>` — interactive picker over `IOSXEConfigApplyLog.entries[]`, applies the chosen replay annotation
 - `kubectl ciscovk health` — fleet-wide rollup combining IOSXEConfig phases, bundle summaries, and pod readiness
+- `kubectl ciscovk exec <device> -- show ...` — run IOS-XE operational commands and stream the output. **Promoted to a full design in [`./diagnostics-rfc.md`](./diagnostics-rfc.md)** because it requires both transport-layer extensions (a new `DiagnosticExecer` interface backed by Cisco-IA's `cli-exec` RPC) AND a new CRD (`IOSXEDiagnostic`) for repeatable / scheduled captures.
 
 Plugin architecture: discoverable via `kubectl plugin list`; ships with the cisco-virtual-kubelet release artifact; can be Homebrew'd / krew'd separately.
 
