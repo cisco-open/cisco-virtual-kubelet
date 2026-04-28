@@ -494,8 +494,15 @@ func (d *XEDriver) getResourceConfig(container *v1.Container) *resourceConfig {
 func (d *XEDriver) buildEnvironmentOptions(container *v1.Container, pod *v1.Pod) ([]string, error) {
 	var envOptions []string
 
+	// Debug: Log the environment variable sources
+	fmt.Printf("[DEBUG] Container %s environment variable analysis:\n", container.Name)
+	fmt.Printf("[DEBUG]   Pod enableServiceLinks: %v\n", pod.Spec.EnableServiceLinks)
+	fmt.Printf("[DEBUG]   container.Env count: %d\n", len(container.Env))
+	fmt.Printf("[DEBUG]   container.EnvFrom count: %d\n", len(container.EnvFrom))
+
 	// Process environment variables from container.Env
 	for _, env := range container.Env {
+		fmt.Printf("[DEBUG]   Processing container.Env variable: %s\n", env.Name)
 		var value string
 		var err error
 
@@ -520,7 +527,14 @@ func (d *XEDriver) buildEnvironmentOptions(container *v1.Container, pod *v1.Pod)
 
 		// Escape special characters for shell safety
 		escapedValue := escapeShellValue(value)
-		envOptions = append(envOptions, fmt.Sprintf("-e %s=%s", env.Name, escapedValue))
+		envOption := fmt.Sprintf("-e %s=%s", env.Name, escapedValue)
+		fmt.Printf("[DEBUG]   Generated env option: %s\n", envOption)
+		envOptions = append(envOptions, envOption)
+	}
+
+	fmt.Printf("[DEBUG] Container %s total environment options: %d\n", container.Name, len(envOptions))
+	for i, opt := range envOptions {
+		fmt.Printf("[DEBUG]   [%d]: %s\n", i, opt)
 	}
 
 	return envOptions, nil
