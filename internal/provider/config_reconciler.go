@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -38,6 +39,16 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 )
+
+// defaultGracefulShutdownTimeout is the wall-clock budget Run waits
+// after ctx cancellation before returning, so an in-flight
+// reconcileAll has a chance to complete cleanly. 30s covers a
+// typical Mutate + Commit + Verify roundtrip on a healthy device;
+// operators expecting longer ticks tune via
+// ConfigReconciler.GracefulShutdownTimeout.
+//
+// Wave 10 release-readiness fix (2026-04-28).
+const defaultGracefulShutdownTimeout = 30 * time.Second
 
 // defaultConfigReconcileInterval is the poll cadence for listing
 // IOSXEConfig CRs. Phase-1 still polls; Phase-2 swaps in an informer.
@@ -72,6 +83,14 @@ type ConfigReconciler struct {
 
 	// Interval is the poll cadence; zero means defaultConfigReconcileInterval.
 	Interval time.Duration
+
+	// GracefulShutdownTimeout is the wall-clock budget Run waits for
+	// the in-flight reconcileAll to finish after ctx is cancelled.
+	// Zero means defaultGracefulShutdownTimeout (30s). Operators on
+	// large fleets / slow links tune this up to allow long Mutate +
+	// Commit + Verify roundtrips to complete cleanly during
+	// pod-rollout drains.
+	GracefulShutdownTimeout time.Duration
 
 	// KeyRules carries the family-aware path → key-field map. Typically
 	// assembled at startup from schema/families.yaml.
@@ -225,7 +244,19 @@ func (r *ConfigReconciler) subscribeFiredSince(lastDeviceCheck *metav1.Time) boo
 	return notifyT > lastDeviceCheck.UnixNano()
 }
 
-// Run blocks until ctx is cancelled. It returns ctx.Err() on exit.
+// Run blocks until ctx is cancelled, then drains in-flight ticks
+// before returning ctx.Err(). The drain wraps reconcileAll in a
+// per-tick wait group so a SIGTERM during a Mutate doesn't kill the
+// in-flight RPC mid-transaction (NETCONF candidate writes would
+// otherwise be left dangling for TTL until the lease expires; the
+// outer reconciler's status writeback would also be skipped).
+//
+// Drain budget defaults to 30s — long enough for a typical Mutate +
+// Commit + Verify roundtrip on a healthy device. Operators set
+// `--graceful-shutdown-seconds` if they expect longer ticks
+// (large-fleet aggregator with slow-link devices).
+//
+// Wave 10 release-readiness fix (2026-04-28).
 func (r *ConfigReconciler) Run(ctx context.Context) error {
 	if r.Client == nil {
 		return errors.New("ConfigReconciler: nil Client")
@@ -239,16 +270,33 @@ func (r *ConfigReconciler) Run(ctx context.Context) error {
 		interval = defaultConfigReconcileInterval
 	}
 
+	drainBudget := r.GracefulShutdownTimeout
+	if drainBudget <= 0 {
+		drainBudget = defaultGracefulShutdownTimeout
+	}
+
 	logger := log.G(ctx).
 		WithField("component", "config-reconciler").
 		WithField("device", r.DeviceName)
-	logger.WithField("interval", interval).Info("starting IOSXEConfig reconcile loop")
+	logger.WithField("interval", interval).
+		WithField("gracefulShutdownTimeout", drainBudget).
+		Info("starting IOSXEConfig reconcile loop")
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
+	// inflight tracks an in-flight reconcileAll so the drain step
+	// can wait for it to complete cleanly. wg.Wait() with a deadline
+	// is the drain primitive.
+	var inflight sync.WaitGroup
+	runTick := func(trigger reconcileTrigger) {
+		inflight.Add(1)
+		defer inflight.Done()
+		r.reconcileAll(ctx, logger, trigger)
+	}
+
 	// Run one pass immediately so status appears before the first tick.
-	r.reconcileAll(ctx, logger, triggerPoll)
+	runTick(triggerPoll)
 
 	// Subscribe-driven fast path. Pulling the channel into a local
 	// nil-able value lets the select compile cleanly even when no
@@ -257,13 +305,24 @@ func (r *ConfigReconciler) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Info("stopping IOSXEConfig reconcile loop")
+			logger.Info("stopping IOSXEConfig reconcile loop; draining in-flight tick")
+			done := make(chan struct{})
+			go func() {
+				inflight.Wait()
+				close(done)
+			}()
+			select {
+			case <-done:
+				logger.Info("drain complete")
+			case <-time.After(drainBudget):
+				logger.Warn("drain budget exceeded; in-flight tick may abort mid-transaction")
+			}
 			return ctx.Err()
 		case <-ticker.C:
-			r.reconcileAll(ctx, logger, triggerPoll)
+			runTick(triggerPoll)
 		case <-notify:
 			logger.Debug("subscribe-notify fired; running off-cycle reconcile")
-			r.reconcileAll(ctx, logger, triggerSubscribe)
+			runTick(triggerSubscribe)
 		}
 	}
 }

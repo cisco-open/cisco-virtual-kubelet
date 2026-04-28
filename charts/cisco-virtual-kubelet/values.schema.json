@@ -109,6 +109,36 @@
     "tolerations":    { "type": "array" },
     "affinity":       { "type": "object" },
     "podAnnotations": { "type": "object" },
-    "podLabels":      { "type": "object" }
+    "podLabels":      { "type": "object" },
+    "podDisruptionBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled":        { "type": "boolean" },
+        "minAvailable":   { "type": ["string", "integer"] },
+        "maxUnavailable": { "type": ["string", "integer"] }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled":      { "type": "boolean" },
+        "deviceCIDRs":  { "type": "array", "items": { "type": "string" } },
+        "scraperCIDRs": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "serviceMonitor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled":           { "type": "boolean" },
+        "interval":          { "type": "string" },
+        "scrapeTimeout":     { "type": "string" },
+        "labels":            { "type": "object" },
+        "relabelings":       { "type": "array" },
+        "metricRelabelings": { "type": "array" }
+      }
+    }
   }
 }

@@ -27,6 +27,22 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 )
 
+// safeMsg formats an error message via fmt.Sprintf and runs the
+// result through transport.RedactCredentials so credential-bearing
+// payloads from device responses (`<password>`, `<key-string>`,
+// `enable secret 5 ...`) never leak into IOSXEConfig.status,
+// Kubernetes events, controller logs, or applylog entries. Used
+// by every reconcileFamily error-return path that interpolates an
+// error from a transport call.
+//
+// Wave 10 release-readiness fix (2026-04-28). Defense-in-depth: the
+// transport layer also redacts at error-formation time; redacting
+// here as well guarantees that even a future transport-side leak
+// caught by neither path lands in the status writeback.
+func safeMsg(format string, args ...any) string {
+	return transport.RedactCredentials(fmt.Sprintf(format, args...))
+}
+
 // ErrTransactionalCLIUnsupported is returned when the resolved
 // intent combines spec.transactional=true with one or more CLI
 // template blocks. NETCONF's Cisco-IA cli-config-data RPC operates
@@ -105,6 +121,16 @@ type Engine struct {
 	// reconciles process parent families before dependent ones.
 	// Tests pass an explicit ordering to assert the wiring.
 	FamilyOrder func([]string) []string
+
+	// RetryPolicy controls truncated exponential backoff applied to
+	// idempotent transport calls (Fetch, Verify re-Fetch). Apply /
+	// Mutate calls are NOT retried — non-transactional transports
+	// (RESTCONF) cannot guarantee partial-application idempotency.
+	// Zero-value uses transport.RetryPolicy{} defaults: 3 attempts,
+	// 200ms initial, 2× growth, 2s cap, ±20% jitter.
+	//
+	// Wave 10 release-readiness fix (2026-04-28).
+	RetryPolicy transport.RetryPolicy
 }
 
 // Result is the full summary of a reconcile tick. It is intentionally
@@ -694,7 +720,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	if w == nil {
 		return FamilyStatus{
 			Name: family, State: "Unsupported",
-			Message: fmt.Sprintf("no writer registered for family %q", family),
+			Message: safeMsg("no writer registered for family %q", family),
 		}
 	}
 
@@ -717,11 +743,21 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		ownedKeysForFamily = ke.KeysOf(desired)
 	}
 
-	observed, err := w.Fetch(ctx, e.Transport)
+	// Wave 10 release-readiness: Fetch is idempotent (read-only) so
+	// transient TCP-level errors (connection refused, i/o timeout)
+	// retry per the engine's RetryPolicy. Application errors
+	// (rpc-error, access-denied) are NOT retried — they bubble
+	// straight up. See transport.IsTransient for the matcher.
+	var observed any
+	err := transport.RetryIdempotent(ctx, e.RetryPolicy, func() error {
+		var ferr error
+		observed, ferr = w.Fetch(ctx, e.Transport)
+		return ferr
+	})
 	if err != nil {
 		return FamilyStatus{
 			Name: family, State: "ApplyError",
-			Message: fmt.Sprintf("Fetch: %v", err),
+			Message: safeMsg("Fetch: %v", err),
 		}
 	}
 
@@ -732,7 +768,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	if err != nil {
 		return FamilyStatus{
 			Name: family, State: "ApplyError",
-			Message: fmt.Sprintf("Diff: %v", err),
+			Message: safeMsg("Diff: %v", err),
 		}
 	}
 	// PruneOnRelinquish: opt-in DELETE ops for entries on the device
@@ -764,7 +800,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 			if err != nil {
 				return FamilyStatus{
 					Name: family, State: "ApplyError",
-					Message: fmt.Sprintf("PruneDiff: %v", err),
+					Message: safeMsg("PruneDiff: %v", err),
 				}
 			}
 			ops = append(ops, pruneOps...)
@@ -783,7 +819,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		return FamilyStatus{
 			Name: family, State: "Drifted",
 			OpCount: len(ops),
-			Message: fmt.Sprintf("%d op(s) would be applied under driftPolicy=revert", len(ops)),
+			Message: safeMsg("%d op(s) would be applied under driftPolicy=revert", len(ops)),
 		}
 	}
 
@@ -816,7 +852,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		return FamilyStatus{
 			Name: family, State: "ApplyError",
 			OpCount: len(ops),
-			Message: fmt.Sprintf("Apply: %v", err),
+			Message: safeMsg("Apply: %v", err),
 		}
 	}
 	if applyDuration != nil {
@@ -833,12 +869,19 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// where the device rejects part of the candidate at commit time
 	// — surfaces on the NEXT reconcile tick because Commit's error
 	// (caught at the engine level) flips Phase to Failed.
-	verify, err := w.Fetch(ctx, at)
+	// Wave 10 release-readiness: Verify re-Fetch is idempotent;
+	// retry transient TCP-level errors per RetryPolicy.
+	var verify any
+	err = transport.RetryIdempotent(ctx, e.RetryPolicy, func() error {
+		var ferr error
+		verify, ferr = w.Fetch(ctx, at)
+		return ferr
+	})
 	if err != nil {
 		return FamilyStatus{
 			Name: family, State: "ApplyError",
 			OpCount: len(ops),
-			Message: fmt.Sprintf("Verify: re-fetch failed: %v", err),
+			Message: safeMsg("Verify: re-fetch failed: %v", err),
 		}
 	}
 	residual, err := w.Diff(desired, verify)
@@ -846,7 +889,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		return FamilyStatus{
 			Name: family, State: "ApplyError",
 			OpCount: len(ops),
-			Message: fmt.Sprintf("Verify: re-diff failed: %v", err),
+			Message: safeMsg("Verify: re-diff failed: %v", err),
 		}
 	}
 	// Verify against prune too — otherwise a pruned entry that the
@@ -865,7 +908,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 				return FamilyStatus{
 					Name: family, State: "ApplyError",
 					OpCount: len(ops),
-					Message: fmt.Sprintf("Verify: prune re-diff failed: %v", err),
+					Message: safeMsg("Verify: prune re-diff failed: %v", err),
 				}
 			}
 			residual = append(residual, residualPrune...)
@@ -1072,7 +1115,7 @@ func (e *Engine) applyCLIBlock(ctx context.Context, block intent.CLIBlock, res *
 		return FamilyStatus{
 			Name: famName, State: "ApplyError",
 			OpCount: countCLILines(block.CLI),
-			Message: fmt.Sprintf("Apply: %v", err),
+			Message: safeMsg("Apply: %v", err),
 		}
 	}
 	return FamilyStatus{

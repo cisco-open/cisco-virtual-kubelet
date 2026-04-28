@@ -85,3 +85,47 @@ affinity: {}
 podAnnotations: {}
 
 podLabels: {}
+
+# podDisruptionBudget guards the controller against voluntary
+# disruptions (node drain, rolling restart). Disabled by default to
+# keep the chart minimal; recommended-on for production deployments.
+# See production-deployment-guide.md §8.
+podDisruptionBudget:
+  enabled: false
+  # Pick exactly one of minAvailable / maxUnavailable. Defaults to
+  # minAvailable=1 when both are unset.
+  minAvailable: ""
+  maxUnavailable: ""
+
+# networkPolicy adds a default-deny ingress + explicit-allow egress
+# policy for the controller. Disabled by default because
+# `deviceCIDRs` are environment-specific.
+#
+# Production deployments SHOULD enable this and pin the
+# device-management subnets; without it, any pod in the cluster can
+# reach any device on the management network.
+networkPolicy:
+  enabled: false
+  # CIDRs the controller is allowed to reach for device management.
+  # Pin to the operator's management subnet(s).
+  deviceCIDRs: []
+  #  - 10.0.10.0/24
+  #  - 10.0.20.0/24
+  # CIDRs allowed to scrape the controller's :8080/metrics endpoint.
+  # Typically the Prometheus pod IP range.
+  scraperCIDRs: []
+  #  - 10.244.0.0/16
+
+# serviceMonitor templates a Prometheus Operator ServiceMonitor
+# pointing at the controller's :8080/metrics. Requires the
+# Prometheus Operator CRDs (monitoring.coreos.com).
+serviceMonitor:
+  enabled: false
+  # Scrape cadence + timeout.
+  interval: 30s
+  scrapeTimeout: 10s
+  # Extra labels added to the ServiceMonitor (e.g. release: kube-prometheus).
+  labels: {}
+  # Optional Prometheus relabel configs.
+  relabelings: []
+  metricRelabelings: []

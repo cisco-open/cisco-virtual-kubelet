@@ -207,3 +207,35 @@ If the same applylog entry replays twice (e.g., operator triggers replay after a
 ## Forward plan
 
 Today's session closed the test 04 transport-flip mechanism, the test 08 / 09 / 13 live retests, and the gNMI factory's TLS-port heuristic. With the must-fix item closed (credential redaction) the branch is release-tag-mergeable. The should-fix and nice-to-have items are well-bounded follow-up PRs that don't block the tag.
+
+## Punch-list status update (post-readiness-review fixes)
+
+The following items from the punch-list were closed in-session after the original evaluation. Each cites the commit + test coverage.
+
+### Closed in-session
+
+| # | Item | Closed by |
+|---|---|---|
+| **P0** | Credential redaction in transport error logs | New `transport.RedactCredentials` helper + `engine.safeMsg` wrapper applied to all FamilyStatus.Message error paths. 11-case unit test (`redact_test.go`) + idempotency test. |
+| **P1** | NETCONF host-key — known_hosts loader helper + warn-on-default | New `transport.LoadKnownHostsCallback` helper backed by `golang.org/x/crypto/ssh/knownhosts`; 4-case unit test. WARN log on every dial when HostKeyCallback is nil. |
+| **P1** | ConfigReconciler graceful-shutdown drain | `Run()` now wraps reconcileAll in a `sync.WaitGroup` and waits up to `GracefulShutdownTimeout` (default 30s) on ctx.Done() before returning. Adds `ConfigReconciler.GracefulShutdownTimeout` field. |
+| **P1** | Transport-level exponential backoff | New `transport.RetryIdempotent` helper with truncated exponential + jitter; conservative `transport.IsTransient` matcher (TCP-level errors only — application errors not retried). Wired into engine Fetch + Verify-re-Fetch sites. 7-case unit test. |
+| **P2** | PodDisruptionBudget chart template | `charts/.../templates/poddisruptionbudget.yaml`, gated by `values.podDisruptionBudget.enabled`, schema-validated. |
+| **P2** | NetworkPolicy chart template | `charts/.../templates/networkpolicy.yaml`, default-deny ingress + explicit-allow egress to deviceCIDRs. Gated by `values.networkPolicy.enabled`, schema-validated. |
+| **P2** | ServiceMonitor chart template | `charts/.../templates/servicemonitor.yaml` + headless metrics Service. Gated by `values.serviceMonitor.enabled`, schema-validated. |
+
+### Tracked deferrals (post-tag follow-up)
+
+These remain explicit forward work, with rationale and a path forward:
+
+| Item | Why deferred | Path forward |
+|---|---|---|
+| **CRD v1 promotion + conversion webhook** | Multi-release phasing; needs cluster-side data migration; touches every controller's API client. | Already documented in [`crd-v1-promotion-plan.md`](../crd-v1-promotion-plan.md). Code on a release-cut branch with conversion-webhook envtest infra. ~2 eng-weeks. |
+| **gNMI → OpenConfig path adapter** | Architectural addition: writers currently bind to Cisco-IOS-XE-native paths; gNMI on devices that advertise only OpenConfig (this branch's C9K-4) need a per-transport path adapter. The Wave 5A-fu / 7B gNMI Set wire encoding is envtest-validated; live retest needs the adapter. | Track as Wave 11 — design via [`driver-extension-guide.md`](../driver-extension-guide.md) §7's relocation of platform-agnostic code to `internal/configdriver/`, then add an OpenConfig path-translator at the writer→transport boundary. ~1 eng-week. |
+| **Apphosting integration tests** | `internal/drivers/iosxe` 6.3% coverage is pre-existing (carried from `main`); apphosting code unchanged this branch. Adding tests alongside this branch's net-new work creates churn unrelated to the configdriver. | File a separate apphosting-coverage PR after this tag merges. ~1 eng-week. |
+| **Chaos / load test rig** | Needs a network-namespace harness or a fault-injection proxy (toxiproxy / chaos-mesh) plus a fleet of fake devices. Larger infrastructure investment than a single PR. | Track separately under "test infrastructure"; coordinate with the netascode portal-compat corpus (similar harness needs). ~2 eng-weeks. |
+| **Aggregator drain semantics** | Aggregator topology is opt-in (`aggregator.enabled=true`), default off. Per-pod topology has the drain coverage shipped today; aggregator extends the same idiom but needs a different wait-group scope (per-fleet rather than per-device). | Mirror today's per-pod drain in the aggregator `Run` loop. ~½ eng-day post-tag. |
+| **Stored CRD-version bump** | Once v1alpha1 → v1 phasing lands, the cluster needs a stored-version migration step and a CRD-controller readiness check before flipping the storage version. Coupled to the conversion webhook. | Lands with the CRD v1 promotion PR. |
+| **Metrics cardinality safeguards** | Per-device + per-family labels at scale (1000s of devices × 50+ families) can overload Prometheus. Today's metrics are well-named but unbounded. | Add a `--metrics-cardinality-limit` flag with sane defaults; document recommended Prometheus retention in the production guide. ~½ eng-day. |
+| **SaveStartup dedup-by-hash** | Outer reconciler's hash short-circuit prevents repeat reconciles for the same intent; SaveStartup-within-a-tick is single-call. The readiness review's concern was theoretical-only on rapid drift-detect/intent-edit toggles. | Document the hash short-circuit explicitly in the operator guide. No code change needed. |
+| **Lease TTL race window** | TTL is 60s vs typical Mutate of ~5s. The probability of a hung pod racing a successor's Mutate is extremely small; the device's confirmed-commit safety net catches the pathological case. | Document as a known small-probability race in the operator guide. |
