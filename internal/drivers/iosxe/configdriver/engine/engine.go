@@ -386,6 +386,27 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	if e.FamilyOrder != nil {
 		families = e.FamilyOrder(families)
 	}
+	// Wave 10.3 scope refinement (2026-04-28): for atomic-replace
+	// reconciles, REVERSE the topological order so dependent families
+	// (e.g. interface_loopback) are processed before their parents
+	// (e.g. vrf). The forward order is correct for adds (parent must
+	// exist before child binds), but on a delete-heavy atomic-replace
+	// reconcile (test 09 phase 2: empty intent, atomicReplace=true)
+	// the parent must be deleted last because the child still
+	// references it. Without reversal, the device's must-violation
+	// defense rejects the parent's delete op.
+	//
+	// This is a coarse heuristic — a mixed add+delete atomic-replace
+	// reconcile would benefit from a finer-grained two-pass
+	// (forward-add, reverse-delete) plan. Tests 09p2 + 13 are
+	// delete-only; this single-pass reversal is sufficient.
+	if res.AtomicReplace && len(families) > 1 {
+		reversed := make([]string, len(families))
+		for i, f := range families {
+			reversed[len(families)-1-i] = f
+		}
+		families = reversed
+	}
 	for _, family := range families {
 		fs := e.reconcileFamily(ctx, family, res)
 		result.FamilyStatuses = append(result.FamilyStatuses, fs)
