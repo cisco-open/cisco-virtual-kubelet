@@ -17,9 +17,27 @@ package writers
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"reflect"
 	"strings"
 )
+
+// encodeKeyValue URL-escapes a list-key value for embedding in the
+// "=value" segment of a YANG path. RESTCONF (RFC 8040 §3.5.3.1)
+// requires "/" inside a key value to be percent-encoded as "%2F";
+// without this, a path like
+// /Cisco-IOS-XE-native:native/interface/GigabitEthernet=0/0
+// is split by the netconf transport's path-aware filter builder on
+// the embedded "/" and produces <bad-element>GigabitEthernet=0</bad-element>.
+// PathSpec carries the raw key value separately for the XML body
+// emission, so encoding the Path string is purely for the slash-aware
+// segmenter to reach the correct PathSpec entry count.
+//
+// Caught against the live Cat9300 retest of test 08 where
+// interface_ethernet name "0/0" tripped this exact corner.
+func encodeKeyValue(v string) string {
+	return url.PathEscape(v)
+}
 
 // coerceMap normalises a netascode-decoded YAML value into
 // map[string]any. Used by Fetch/Diff when the desired or observed

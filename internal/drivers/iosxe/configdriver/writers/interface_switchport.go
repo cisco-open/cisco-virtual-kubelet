@@ -163,12 +163,8 @@ func (switchportWriter) Diff(desired, observed any) ([]transport.Op, error) {
 			return nil, err
 		}
 		ops = append(ops, transport.Op{
-			Verb: transport.VerbMerge,
-			Path: fmt.Sprintf("/Cisco-IOS-XE-native:native/interface/%s=%s/switchport", k.typ, k.name),
-			// Wave 7B: structured PathSpec including the trailing
-			// "switchport" container, so gNMI emits the right path
-			// for switchport edits on interfaces whose name
-			// contains '/'.
+			Verb:     transport.VerbMerge,
+			Path:     fmt.Sprintf("/Cisco-IOS-XE-native:native/interface/%s=%s/switchport", k.typ, encodeKeyValue(k.name)),
 			PathSpec: pathSpecForInterfaceChild(k.typ, k.name, "switchport"),
 			Body:     body,
 		})

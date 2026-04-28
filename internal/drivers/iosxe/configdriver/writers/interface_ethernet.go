@@ -176,12 +176,12 @@ func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		}
 		ops = append(ops, transport.Op{
 			Verb: transport.VerbMerge,
-			Path: fmt.Sprintf("/Cisco-IOS-XE-native:native/interface/%s=%s", k.typ, k.name),
-			// Wave 7B: structured PathSpec so gNMI Set against an
-			// interface name containing '/' (e.g. GigabitEthernet
-			// "0/0/0") preserves the slash in the key. The string
-			// Path stays for RESTCONF/NETCONF; gNMI prefers
-			// PathSpec via opToGNMIPath.
+			// Path's "=value" must percent-encode any "/" in the
+			// key so the netconf transport's path-aware filter
+			// builder doesn't split the key on the embedded slash.
+			// PathSpec carries the raw key value for the XML body
+			// (and gNMI Set/Delete via opToGNMIPath).
+			Path:     fmt.Sprintf("/Cisco-IOS-XE-native:native/interface/%s=%s", k.typ, encodeKeyValue(k.name)),
 			PathSpec: pathSpecForInterface(k.typ, k.name),
 			Body:     body,
 		})

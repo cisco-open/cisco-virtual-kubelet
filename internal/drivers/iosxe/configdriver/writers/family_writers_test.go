@@ -215,8 +215,9 @@ func TestEthernetDiffOnCreate(t *testing.T) {
 	if len(ops) != 1 {
 		t.Fatalf("got %d ops, want 1", len(ops))
 	}
-	if !strings.Contains(ops[0].Path, "GigabitEthernet=0/0/0") {
-		t.Errorf("op path=%q", ops[0].Path)
+	// Path percent-encodes "/" inside the key value per RFC 8040 §3.5.3.1.
+	if !strings.Contains(ops[0].Path, "GigabitEthernet=0%2F0%2F0") {
+		t.Errorf("op path=%q (want percent-encoded slashes inside the key value)", ops[0].Path)
 	}
 }
 

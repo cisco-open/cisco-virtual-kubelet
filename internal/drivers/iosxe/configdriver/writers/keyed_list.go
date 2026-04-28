@@ -115,7 +115,15 @@ func (w keyedListWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	for _, e := range observedList {
 		k, err := entryKey(e, w.keyField)
 		if err != nil {
-			return nil, fmt.Errorf("%s: observed: %w", w.family, err)
+			// Devices return list entries that don't fit the
+			// modelled key schema (e.g. system-default ACLs that
+			// IOS-XE indexes by sequence rather than name). Drop
+			// them from the observed map; the desired-side loop
+			// only consults `got[k]` to skip equal entries, so
+			// unknown observed entries become a "not in device"
+			// signal that's safe for additive Diff. Pruning is
+			// handled separately in PruneDiff.
+			continue
 		}
 		got[k] = e
 	}
@@ -191,7 +199,10 @@ func (w keyedListWriter) PruneDiff(desired, observed any) ([]transport.Op, error
 	for _, e := range observedList {
 		k, err := entryKey(e, w.keyField)
 		if err != nil {
-			return nil, fmt.Errorf("%s: observed: %w", w.family, err)
+			// Skip observed entries that don't fit the modelled
+			// key schema; we can't safely prune what we don't
+			// recognise. See Diff() for the same rationale.
+			continue
 		}
 		if _, kept := want[k]; kept {
 			continue

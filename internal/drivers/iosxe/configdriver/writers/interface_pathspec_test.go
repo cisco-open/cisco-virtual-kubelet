@@ -52,8 +52,12 @@ func TestEthernetWriter_DiffEmitsPathSpecPreservingSlash(t *testing.T) {
 	}
 	op := ops[0]
 
-	// Legacy string Path stays — RESTCONF/NETCONF still parse it.
-	wantString := "/Cisco-IOS-XE-native:native/interface/GigabitEthernet=0/0/0"
+	// String Path percent-encodes "/" inside the key value per RFC 8040
+	// §3.5.3.1; the netconf transport's path-aware filter builder splits
+	// on "/" segment boundaries, so the embedded slashes in the
+	// interface name must be encoded for the segment count to match the
+	// 3-element PathSpec. PathSpec carries the raw value below.
+	wantString := "/Cisco-IOS-XE-native:native/interface/GigabitEthernet=0%2F0%2F0"
 	if op.Path != wantString {
 		t.Errorf("string Path = %q, want %q", op.Path, wantString)
 	}
