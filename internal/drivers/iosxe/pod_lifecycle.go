@@ -27,7 +27,7 @@ import (
 )
 
 // DeployPod creates and deploys all containers in a pod to the device
-func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister corev1listers.SecretNamespaceLister) error {
+func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister corev1listers.SecretNamespaceLister, configMapLister corev1listers.ConfigMapNamespaceLister) error {
 	log.G(ctx).WithFields(log.Fields{
 		"pod": pod,
 	}).Debug("Pod DeployContainer request received")
@@ -35,6 +35,7 @@ func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister core
 	log.G(ctx).Infof("Deploying pod: %s/%s", pod.Namespace, pod.Name)
 
 	d.secretLister = secretLister
+	d.configMapLister = configMapLister
 
 	// Convert pod spec to app hosting configurations
 	appConfigs, err := d.ConvertPodToAppConfigs(pod)
@@ -71,7 +72,7 @@ func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 		if err := d.DeletePod(ctx, pod); err != nil {
 			log.G(ctx).Warnf("UpdatePod: cleanup had errors (will attempt redeploy): %v", err)
 		}
-		return d.DeployPod(ctx, pod, d.secretLister)
+		return d.DeployPod(ctx, pod, d.secretLister, d.configMapLister)
 	}
 
 	allOperData, operErr := d.GetAppOperationalData(ctx)

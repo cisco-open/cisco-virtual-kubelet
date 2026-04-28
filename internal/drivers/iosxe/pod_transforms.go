@@ -234,23 +234,29 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 			return nil, fmt.Errorf("unsupported interface type: %s", netConfig.interfaceType)
 		}
 
-		// Configure run options with pod/container labels
+		// Configure run options with pod/container labels and environment variables
+		baseOpts := []string{
+			fmt.Sprintf("--label %s=%s", common.LabelPodName, pod.Name),
+			fmt.Sprintf("--label %s=%s", common.LabelPodNamespace, pod.Namespace),
+			fmt.Sprintf("--label %s=%s", common.LabelPodUID, pod.UID),
+			fmt.Sprintf("--label %s=%s", common.LabelContainerName, container.Name),
+		}
+
+		// Build environment options
+		envOpts, err := d.buildEnvironmentOptions(&container, pod)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build environment options for container %s: %w", container.Name, err)
+		}
+
+		// Distribute across RunOpts lines
+		runOptsMap, err := distributeRunOpts(baseOpts, envOpts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to distribute RunOpts for container %s: %w", container.Name, err)
+		}
+
+		// Configure run options
 		gapp.RunOptss = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss{
-			RunOpts: map[uint16]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss_RunOpts{
-				1: {
-					LineIndex: ygot.Uint16(1),
-					LineRunOpts: ygot.String(fmt.Sprintf(
-						"--label %s=%s "+
-							"--label %s=%s "+
-							"--label %s=%s "+
-							"--label %s=%s",
-						common.LabelPodName, pod.Name,
-						common.LabelPodNamespace, pod.Namespace,
-						common.LabelPodUID, pod.UID,
-						common.LabelContainerName, container.Name,
-					)),
-				},
-			},
+			RunOpts: runOptsMap,
 		}
 
 		// Configure resource profile
@@ -461,4 +467,208 @@ func (d *XEDriver) getResourceConfig(container *v1.Container) *resourceConfig {
 	}
 
 	return config
+}
+
+// buildEnvironmentOptions extracts environment variables from a container spec and formats them
+// as Docker run options. Supports direct values and references to secrets/configmaps.
+func (d *XEDriver) buildEnvironmentOptions(container *v1.Container, pod *v1.Pod) ([]string, error) {
+	var envOptions []string
+
+	// Process environment variables from container.Env
+	for _, env := range container.Env {
+		var value string
+		var err error
+
+		if env.Value != "" {
+			// Direct value (Phase 1)
+			value = env.Value
+		} else if env.ValueFrom != nil {
+			// Reference to secret/configmap/etc (Phase 2)
+			value, err = d.resolveEnvVarValueFrom(env.ValueFrom, pod.Namespace)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve environment variable %s: %v", env.Name, err)
+			}
+		} else {
+			// Neither direct value nor valueFrom - skip
+			continue
+		}
+
+		// Skip empty values (including optional secrets/configmaps that don't exist)
+		if value == "" {
+			continue
+		}
+
+		// Escape special characters for shell safety
+		escapedValue := escapeShellValue(value)
+		envOptions = append(envOptions, fmt.Sprintf("-e %s=%s", env.Name, escapedValue))
+	}
+
+	return envOptions, nil
+}
+
+// escapeShellValue safely escapes special characters in environment variable values
+// to prevent shell injection and ensure proper parsing by Docker.
+func escapeShellValue(value string) string {
+	// Escape quotes and special characters that could break shell parsing
+	value = strings.ReplaceAll(value, `\`, `\\`)   // Escape backslashes first
+	value = strings.ReplaceAll(value, `"`, `\"`)   // Escape double quotes
+	value = strings.ReplaceAll(value, `$`, `\$`)   // Escape dollar signs (variable expansion)
+	value = strings.ReplaceAll(value, "`", "\\`")  // Escape backticks (command substitution)
+
+	// Wrap in double quotes to handle spaces and other special chars
+	return fmt.Sprintf(`"%s"`, value)
+}
+
+// resolveEnvVarValueFrom resolves environment variable values from various sources
+// (secrets, configmaps, downward API, resource references).
+func (d *XEDriver) resolveEnvVarValueFrom(valueFrom *v1.EnvVarSource, namespace string) (string, error) {
+	if valueFrom.SecretKeyRef != nil {
+		return d.resolveSecretKeyRef(valueFrom.SecretKeyRef, namespace)
+	}
+
+	if valueFrom.ConfigMapKeyRef != nil {
+		return d.resolveConfigMapKeyRef(valueFrom.ConfigMapKeyRef, namespace)
+	}
+
+	if valueFrom.FieldRef != nil {
+		return "", fmt.Errorf("fieldRef environment variables not yet supported")
+	}
+
+	if valueFrom.ResourceFieldRef != nil {
+		return "", fmt.Errorf("resourceFieldRef environment variables not yet supported")
+	}
+
+	return "", fmt.Errorf("unsupported environment variable source")
+}
+
+// resolveSecretKeyRef resolves a value from a Kubernetes secret.
+func (d *XEDriver) resolveSecretKeyRef(ref *v1.SecretKeySelector, namespace string) (string, error) {
+	if d.secretLister == nil {
+		return "", fmt.Errorf("secret lister not available")
+	}
+
+	secret, err := d.secretLister.Get(ref.Name)
+	if err != nil {
+		if ref.Optional != nil && *ref.Optional {
+			return "", nil // Optional secret, return empty value
+		}
+		return "", fmt.Errorf("failed to get secret %s: %v", ref.Name, err)
+	}
+
+	value, exists := secret.Data[ref.Key]
+	if !exists {
+		if ref.Optional != nil && *ref.Optional {
+			return "", nil // Optional key, return empty value
+		}
+		return "", fmt.Errorf("key %s not found in secret %s", ref.Key, ref.Name)
+	}
+
+	return string(value), nil
+}
+
+// resolveConfigMapKeyRef resolves a value from a Kubernetes configmap.
+func (d *XEDriver) resolveConfigMapKeyRef(ref *v1.ConfigMapKeySelector, namespace string) (string, error) {
+	if d.configMapLister == nil {
+		return "", fmt.Errorf("configmap lister not available")
+	}
+
+	configMap, err := d.configMapLister.Get(ref.Name)
+	if err != nil {
+		if ref.Optional != nil && *ref.Optional {
+			return "", nil // Optional configmap, return empty value
+		}
+		return "", fmt.Errorf("failed to get configmap %s: %v", ref.Name, err)
+	}
+
+	value, exists := configMap.Data[ref.Key]
+	if !exists {
+		if ref.Optional != nil && *ref.Optional {
+			return "", nil // Optional key, return empty value
+		}
+		return "", fmt.Errorf("key %s not found in configmap %s", ref.Key, ref.Name)
+	}
+
+	return value, nil
+}
+
+// distributeRunOpts takes base options (labels) and environment options and distributes them
+// across multiple RunOpts lines if they exceed the character limit per line.
+func distributeRunOpts(baseOpts []string, envOpts []string) (map[uint16]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss_RunOpts, error) {
+	runOptsMap := make(map[uint16]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss_RunOpts)
+
+	var currentLine strings.Builder
+	lineIndex := uint16(1)
+
+	// Helper function to add a line to the map
+	addLine := func() error {
+		if currentLine.Len() == 0 {
+			return nil
+		}
+		if lineIndex > MaxRunOptsLines {
+			return fmt.Errorf("too many RunOpts lines needed (max %d), consider reducing environment variables", MaxRunOptsLines)
+		}
+		runOptsMap[lineIndex] = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss_RunOpts{
+			LineIndex: ygot.Uint16(lineIndex),
+			LineRunOpts: ygot.String(strings.TrimSpace(currentLine.String())),
+		}
+		lineIndex++
+		currentLine.Reset()
+		return nil
+	}
+
+	// Add option to current line, starting new line if needed
+	addOption := func(opt string) error {
+		needed := len(opt)
+		if currentLine.Len() > 0 {
+			needed += 1 // space separator
+		}
+
+		// If this option would exceed the line limit, start a new line
+		if currentLine.Len() > 0 && currentLine.Len()+needed > MaxRunOptsLineLength {
+			if err := addLine(); err != nil {
+				return err
+			}
+		}
+
+		// If even a single option is too long, that's an error
+		if needed > MaxRunOptsLineLength {
+			return fmt.Errorf("single RunOpts option too long (%d chars, max %d): %s", needed, MaxRunOptsLineLength, opt)
+		}
+
+		// Add the option to current line
+		if currentLine.Len() > 0 {
+			currentLine.WriteString(" ")
+		}
+		currentLine.WriteString(opt)
+		return nil
+	}
+
+	// Add base options (labels) first
+	for _, opt := range baseOpts {
+		if err := addOption(opt); err != nil {
+			return nil, err
+		}
+	}
+
+	// Add environment options
+	for _, opt := range envOpts {
+		if err := addOption(opt); err != nil {
+			return nil, err
+		}
+	}
+
+	// Add the final line if not empty
+	if err := addLine(); err != nil {
+		return nil, err
+	}
+
+	// Ensure we have at least one line (even if empty, for backward compatibility)
+	if len(runOptsMap) == 0 {
+		runOptsMap[1] = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss_RunOpts{
+			LineIndex: ygot.Uint16(1),
+			LineRunOpts: ygot.String(""),
+		}
+	}
+
+	return runOptsMap, nil
 }

@@ -85,7 +85,7 @@ func (p *AppHostingProvider) GetCapacity(ctx context.Context) (v1.ResourceList, 
 func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	// Deploy the container. This MUST be idempotent
 	// In future we can range over the pod.spec.containers
-	if err := p.driver.DeployPod(p.ctx, pod, p.secretLister.Secrets(pod.Namespace)); err != nil {
+	if err := p.driver.DeployPod(p.ctx, pod, p.secretLister.Secrets(pod.Namespace), p.configMapLister.ConfigMaps(pod.Namespace)); err != nil {
 		return errdefs.AsInvalidInput(err)
 	}
 

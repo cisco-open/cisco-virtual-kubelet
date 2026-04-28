@@ -1,0 +1,70 @@
+# Example: Basic Environment Variables
+#
+# This example demonstrates using direct environment variables in a pod
+# deployed to a Cisco IOS-XE device via the Virtual Kubelet provider.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: basic-env-pod
+  namespace: default
+  annotations:
+    # Target a specific Cisco device node
+    cisco.io/device-name: "catalyst8000v-01"
+  labels:
+    app: basic-env-example
+    environment: test
+spec:
+  # Pod will be scheduled on the virtual-kubelet node
+  nodeSelector:
+    type: virtual-kubelet
+
+  containers:
+  - name: web-server
+    image: nginx:1.21-alpine
+
+    # Direct environment variables (Phase 1 support)
+    env:
+    - name: NODE_ENV
+      value: "development"
+    - name: PORT
+      value: "8080"
+    - name: DEBUG_MODE
+      value: "true"
+    - name: LOG_LEVEL
+      value: "info"
+    - name: MAX_CONNECTIONS
+      value: "100"
+    - name: TIMEOUT
+      value: "30s"
+
+    # Container configuration
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+
+    ports:
+    - containerPort: 8080
+      name: http
+      protocol: TCP
+
+  # Restart policy for edge computing scenarios
+  restartPolicy: Always
+
+  # Use host networking or configure DHCP
+  # networking is handled by the Virtual Kubelet provider
+
+---
+# Expected Docker RunOpts generation on IOS-XE device:
+#
+# app-hosting appid basic-env-pod
+#  app-vnic management guest-interface 0
+#  app-resource docker
+#   run-opts 1 "--label pod=basic-env-pod --label namespace=default"
+#   run-opts 2 "--label container=web-server -e NODE_ENV=\"development\""
+#   run-opts 3 "-e PORT=\"8080\" -e DEBUG_MODE=\"true\" -e LOG_LEVEL=\"info\""
+#   run-opts 4 "-e MAX_CONNECTIONS=\"100\" -e TIMEOUT=\"30s\""

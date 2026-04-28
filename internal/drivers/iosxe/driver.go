@@ -46,7 +46,8 @@ type XEDriver struct {
 	unmarshaller UnmarshalFunc
 	deviceInfo   *common.DeviceInfo
 
-	secretLister   corev1listers.SecretNamespaceLister
+	secretLister    corev1listers.SecretNamespaceLister
+	configMapLister corev1listers.ConfigMapNamespaceLister
 	recoveryMu     sync.RWMutex
 	recoveringPods map[string]bool // keyed by pod UID
 	eventRecorder  record.EventRecorder

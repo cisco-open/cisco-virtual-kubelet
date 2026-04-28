@@ -21,6 +21,13 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+const (
+	// MaxRunOptsLines is the maximum number of RunOpts lines supported by IOS-XE AppHosting
+	MaxRunOptsLines = 30
+	// MaxRunOptsLineLength is the maximum character length per RunOpts line
+	MaxRunOptsLineLength = 235
+)
+
 // networkConfig holds the network configuration for an app container
 type networkConfig struct {
 	interfaceType             v1alpha1.XEInterfaceType

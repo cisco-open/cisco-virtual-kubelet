@@ -1,0 +1,289 @@
+# Example: Mixed Environment Variable Sources
+#
+# This example demonstrates using all currently supported environment variable
+# sources together: direct values, Secret references, and ConfigMap references.
+
+# Application configuration (non-sensitive settings)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mixed-app-config
+  namespace: default
+data:
+  # Server configuration
+  api-base-url: "https://api.production.example.com/v2"
+  server-timeout: "45s"
+  max-concurrent-requests: "50"
+
+  # Feature flags
+  enable-caching: "true"
+  enable-analytics: "true"
+  enable-debugging: "false"
+
+  # External services
+  redis-host: "redis.production.svc.cluster.local"
+  redis-port: "6379"
+
+---
+# Sensitive credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mixed-app-secrets
+  namespace: default
+type: Opaque
+data:
+  # Database credentials (base64 encoded)
+  db-password: cHJvZC1kYi1wYXNzd29yZA==        # prod-db-password
+  api-token: YWJjZGVmZ2hpamsxMjM0NTY=         # abcdefghijk123456
+  redis-auth: cmVkaXMtcGFzc3dvcmQtMTIz         # redis-password-123
+
+---
+# Optional integrations (may not always be available)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: optional-integrations
+  namespace: default
+type: Opaque
+data:
+  monitoring-api-key: bW9uaXRvcmluZy1rZXktNDU2  # monitoring-key-456
+  webhook-secret: d2ViaG9vay1zZWNyZXQtNzg5     # webhook-secret-789
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: optional-config
+  namespace: default
+data:
+  monitoring-url: "https://monitoring.example.com/api/v1"
+  webhook-url: "https://webhooks.example.com/notify"
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mixed-sources-pod
+  namespace: default
+  annotations:
+    cisco.io/device-name: "catalyst8000v-01"
+    # Environment variable documentation
+    environment-variables: |
+      This pod uses mixed environment variable sources:
+      - Direct values for pod-specific configuration
+      - Secrets for sensitive credentials and tokens
+      - ConfigMaps for application configuration
+      - Optional resources for non-critical integrations
+  labels:
+    app: mixed-sources-example
+    tier: backend
+    environment: production
+spec:
+  nodeSelector:
+    type: virtual-kubelet
+
+  containers:
+  - name: backend-service
+    image: alpine:3.16
+    command: ["sh", "-c"]
+    args:
+    - |
+      echo "=== Mixed Environment Variables Demo ==="
+      echo
+      echo "Direct Values:"
+      echo "  Service: $SERVICE_NAME v$SERVICE_VERSION"
+      echo "  Environment: $ENVIRONMENT"
+      echo "  Node ID: $NODE_ID"
+      echo
+      echo "ConfigMap Values:"
+      echo "  API Base: $API_BASE_URL"
+      echo "  Redis: $REDIS_HOST:$REDIS_PORT"
+      echo "  Caching: $ENABLE_CACHING"
+      echo "  Max Requests: $MAX_CONCURRENT_REQUESTS"
+      echo
+      echo "Secret Values (masked for security):"
+      echo "  DB Password: ${DB_PASSWORD:+***masked***}"
+      echo "  API Token: ${API_TOKEN:+***masked***}"
+      echo "  Redis Auth: ${REDIS_AUTH:+***masked***}"
+      echo
+      echo "Optional Values:"
+      echo "  Monitoring URL: ${MONITORING_URL:-not configured}"
+      echo "  Monitoring Key: ${MONITORING_API_KEY:+***configured***}"
+      echo "  Webhook URL: ${WEBHOOK_URL:-not configured}"
+      echo
+      echo "Starting application..."
+
+      # Keep container running
+      while true; do
+        echo "$(date): Service running with $SERVICE_NAME"
+        sleep 60
+      done
+
+    env:
+    # ===== DIRECT VALUES (Phase 1) =====
+    # Pod-specific configuration that doesn't change
+    - name: SERVICE_NAME
+      value: "mixed-backend-service"
+    - name: SERVICE_VERSION
+      value: "2.1.0"
+    - name: ENVIRONMENT
+      value: "production"
+    - name: NODE_ID
+      value: "node-001"
+    - name: LOG_LEVEL
+      value: "info"
+    - name: PORT
+      value: "8080"
+
+    # ===== CONFIGMAP REFERENCES (Phase 2) =====
+    # Application configuration (non-sensitive)
+    - name: API_BASE_URL
+      valueFrom:
+        configMapKeyRef:
+          name: mixed-app-config
+          key: api-base-url
+    - name: SERVER_TIMEOUT
+      valueFrom:
+        configMapKeyRef:
+          name: mixed-app-config
+          key: server-timeout
+    - name: MAX_CONCURRENT_REQUESTS
+      valueFrom:
+        configMapKeyRef:
+          name: mixed-app-config
+          key: max-concurrent-requests
+
+    # Feature flags from ConfigMap
+    - name: ENABLE_CACHING
+      valueFrom:
+        configMapKeyRef:
+          name: mixed-app-config
+          key: enable-caching
+    - name: ENABLE_ANALYTICS
+      valueFrom:
+        configMapKeyRef:
+          name: mixed-app-config
+          key: enable-analytics
+    - name: ENABLE_DEBUGGING
+      valueFrom:
+        configMapKeyRef:
+          name: mixed-app-config
+          key: enable-debugging
+
+    # Redis connection (non-sensitive parts)
+    - name: REDIS_HOST
+      valueFrom:
+        configMapKeyRef:
+          name: mixed-app-config
+          key: redis-host
+    - name: REDIS_PORT
+      valueFrom:
+        configMapKeyRef:
+          name: mixed-app-config
+          key: redis-port
+
+    # ===== SECRET REFERENCES (Phase 2) =====
+    # Sensitive credentials
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: mixed-app-secrets
+          key: db-password
+    - name: API_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: mixed-app-secrets
+          key: api-token
+    - name: REDIS_AUTH
+      valueFrom:
+        secretKeyRef:
+          name: mixed-app-secrets
+          key: redis-auth
+
+    # ===== OPTIONAL RESOURCES (Phase 2) =====
+    # Optional monitoring integration
+    - name: MONITORING_URL
+      valueFrom:
+        configMapKeyRef:
+          name: optional-config
+          key: monitoring-url
+          optional: true
+    - name: MONITORING_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: optional-integrations
+          key: monitoring-api-key
+          optional: true
+
+    # Optional webhook integration
+    - name: WEBHOOK_URL
+      valueFrom:
+        configMapKeyRef:
+          name: optional-config
+          key: webhook-url
+          optional: true
+    - name: WEBHOOK_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: optional-integrations
+          key: webhook-secret
+          optional: true
+
+    # Optional feature that doesn't exist (will be silently omitted)
+    - name: EXPERIMENTAL_FEATURE
+      valueFrom:
+        configMapKeyRef:
+          name: mixed-app-config
+          key: experimental-feature  # This key doesn't exist
+          optional: true
+
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+    ports:
+    - containerPort: 8080
+      name: http
+      protocol: TCP
+
+  restartPolicy: Always
+
+---
+# Expected Docker RunOpts generation on IOS-XE device:
+#
+# app-hosting appid mixed-sources-pod
+#  app-vnic management guest-interface 0
+#  app-resource docker
+#   run-opts 1 "--label pod=mixed-sources-pod --label namespace=default"
+#   run-opts 2 "--label container=backend-service -e SERVICE_NAME=\"mixed-backend-service\""
+#   run-opts 3 "-e SERVICE_VERSION=\"2.1.0\" -e ENVIRONMENT=\"production\""
+#   run-opts 4 "-e NODE_ID=\"node-001\" -e LOG_LEVEL=\"info\" -e PORT=\"8080\""
+#   run-opts 5 "-e API_BASE_URL=\"https://api.production.example.com/v2\""
+#   run-opts 6 "-e SERVER_TIMEOUT=\"45s\" -e MAX_CONCURRENT_REQUESTS=\"50\""
+#   run-opts 7 "-e ENABLE_CACHING=\"true\" -e ENABLE_ANALYTICS=\"true\""
+#   run-opts 8 "-e ENABLE_DEBUGGING=\"false\" -e REDIS_HOST=\"redis.production.svc.cluster.local\""
+#   run-opts 9 "-e REDIS_PORT=\"6379\" -e DB_PASSWORD=\"prod-db-password\""
+#   run-opts 10 "-e API_TOKEN=\"abcdefghijk123456\" -e REDIS_AUTH=\"redis-password-123\""
+#   run-opts 11 "-e MONITORING_URL=\"https://monitoring.example.com/api/v1\""
+#   run-opts 12 "-e MONITORING_API_KEY=\"monitoring-key-456\""
+#   run-opts 13 "-e WEBHOOK_URL=\"https://webhooks.example.com/notify\""
+#   run-opts 14 "-e WEBHOOK_SECRET=\"webhook-secret-789\""
+#   # Note: EXPERIMENTAL_FEATURE is omitted (optional key doesn't exist)
+
+---
+# Deployment commands:
+#
+# kubectl apply -f pod-with-mixed-sources.yaml
+# kubectl logs mixed-sources-pod -f
+# kubectl describe pod mixed-sources-pod
+#
+# To test missing optional resources:
+# kubectl delete secret optional-integrations
+# kubectl delete configmap optional-config
+# kubectl delete pod mixed-sources-pod
+# kubectl apply -f pod-with-mixed-sources.yaml
