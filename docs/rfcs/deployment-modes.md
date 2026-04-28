@@ -36,6 +36,7 @@ Defaults per transport: RESTCONF picks port 443, NETCONF picks 830, gNMI picks 5
 - Local user with privilege 15 on the device. The cisco-vk pod authenticates as this user for all transports.
 - A management-plane interface reachable from the cluster network (verify with `kubectl exec ... -- nc -zv <device> <port>` if needed).
 - Time sync recommended (cosmetic for log correlation, not required for correctness).
+- **RESTCONF (`ip http secure-server` + `restconf`) is mandatory regardless of `spec.transport`.** The configdriver's transport choice (RESTCONF / NETCONF / gNMI) only governs the per-family read/write path for IOSXEConfig CRs. The apphosting half of cisco-vk (Pod lifecycle, `ListPods`, hardware-data fetch, the startup connectivity check at `/.well-known/host-meta`) is **RESTCONF-only by design** in the legacy XE driver ([`internal/drivers/iosxe/driver.go`](../../internal/drivers/iosxe/driver.go), [`internal/drivers/iosxe/device.go`](../../internal/drivers/iosxe/device.go)) — see §6 below for what this means in practice and the forward work to lift it.
 
 ### 2.3 CiscoDevice CR template
 
@@ -158,17 +159,19 @@ show running-config | include netconf-yang
 ```yaml
 spec:
   transport: netconf
-  port: 830                          # default; can omit
-  # tls is a NO-OP for NETCONF — SSH transport ignores TLS settings.
+  port: 443                          # APPHOSTING port — keep at 443. Configdriver
+                                     # auto-promotes to 830 for NETCONF dials.
+  # tls is a NO-OP for the NETCONF dial (SSH transport) but IS used by
+  # apphosting which speaks RESTCONF in parallel — see §6.
   # transactional + writeStartup + driftPolicy are independent of mode.
 
 # Per-CR (IOSXEConfig) opt-ins:
 # transactional: true       — use candidate explicitly via StartTransaction/Commit
-# confirmTimeoutSeconds: 30 — Wave 10.2 auto-revert (see §6)
+# confirmTimeoutSeconds: 30 — Wave 10.2 auto-revert (see §7)
 # atomicReplace: true       — Wave 10.3 single-transaction apply across families
 ```
 
-**Port-default note.** The transport factory treats `spec.port: 0`, `80`, or `443` as "not a NETCONF intent" and falls back to 830. So a CiscoDevice that previously ran RESTCONF with `port: 443` and is flipped to `transport: netconf` works without editing `port`.
+**Port-default note.** The transport factory treats `spec.port: 0`, `80`, or `443` as "not a NETCONF intent" and falls back to 830. Operator-correct: leave `spec.port: 443` so apphosting (which uses `spec.port` literally — see §6) keeps working in parallel.
 
 ### 4.3 What's available
 
@@ -244,12 +247,14 @@ show platform software yang-management process | include gnmib
 ```yaml
 spec:
   transport: gnmi
-  port: 50052                # IOS-XE 17.18+ insecure default
+  port: 443                  # APPHOSTING port — keep at 443. Configdriver
+                             # auto-promotes to 50052 for gNMI dials.
   tls:
-    enabled: false           # set true if using gnxi secure-server
+    enabled: true            # for the apphosting RESTCONF half on 443
+                             # (gNMI insecure on 50052 is separate; see §6)
 ```
 
-For older `gnmi-yang` builds on 50051, set `port` explicitly.
+**Port note.** `spec.port` is the apphosting RESTCONF port — leave it at 443. The configdriver factory ignores this for the gNMI dial and uses 50052 by default. For older `gnmi-yang` builds whose gNMI listens on 50051, you can't override via `spec.port` because that would also break apphosting; instead, run aggregator-mode (no apphosting — see §6.6) and set `spec.port: 50051`.
 
 ### 5.3 What's available
 
@@ -284,7 +289,69 @@ Note: gNMI's "transaction" is in-memory accumulation flushed by `Commit`, so the
 
 ---
 
-## 6. Wave-10 features (NETCONF + gNMI)
+## 6. The two halves of cisco-vk — apphosting (RESTCONF only) + configdriver (any transport)
+
+A point that confuses everyone the first time they switch `spec.transport` away from `restconf`:
+
+The cisco-vk pod runs **two cooperating subsystems**, with different transport stories.
+
+### 6.1 The apphosting half — RESTCONF only
+
+The original cisco-vk subsystem makes an IOS-XE device appear as a Kubernetes Node so containerised workloads scheduled through Cisco's app-hosting (Cat9k IOx) feature can be lifecycle-managed by `kubectl`. This is the half that:
+
+- runs the virtual-kubelet HTTP server bound to an `AppHostingProvider` and `AppHostingNode`
+- discovers running apps via `/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data`
+- creates / deletes / inspects pods (= IOx apps)
+- runs the startup connectivity check via `/.well-known/host-meta`
+
+It speaks **RESTCONF only**. There is no gNMI or NETCONF code path for apphosting. The driver constructor at [`internal/drivers/iosxe/driver.go:105`](../../internal/drivers/iosxe/driver.go#L105) hardcodes `protocol := "restconf"` and every Pod-lifecycle method in [`internal/drivers/iosxe/pod_lifecycle.go`](../../internal/drivers/iosxe/pod_lifecycle.go) goes through the RESTCONF client. The `spec.port` field on `CiscoDevice` is the apphosting RESTCONF / HTTPS port — that's why commit [`b2c1189`](../../internal/drivers/iosxe/configdriver/transport/factory.go) moved port-defaulting out of the global config defaulter into transport-aware logic: `spec.port: 443` had to keep working for apphosting while the configdriver picked the right port for its own transport.
+
+### 6.2 The configdriver half — any of three transports
+
+The subsystem this branch added drives declarative IOS-XE configuration via three transports (RESTCONF, NETCONF, gNMI). When you set `spec.transport: gnmi`, you are choosing **only the configdriver's transport** for IOSXEConfig CRs. Apphosting still uses RESTCONF in parallel.
+
+### 6.3 What this means operationally
+
+`spec.port` on the CiscoDevice CR is the **apphosting RESTCONF port**, not the configdriver port. The apphosting subsystem builds its base URL from `spec.address:spec.port` literally ([`internal/drivers/iosxe/driver.go:50`](../../internal/drivers/iosxe/driver.go#L50)). The configdriver factory derives its own port from `spec.transport` and ignores `spec.port` when its value doesn't match the chosen transport (commit [`b2c1189`](../../internal/drivers/iosxe/configdriver/transport/factory.go) is the load-bearing piece here).
+
+The matrix:
+
+| `spec.transport` | `spec.port` | apphosting bound to | configdriver bound to | Device-side prereqs |
+|---|---|---|---|---|
+| `restconf` | 443 | RESTCONF on 443 ✅ | RESTCONF on 443 ✅ | `ip http secure-server` + `restconf` |
+| `netconf` | 443 (keep) | RESTCONF on 443 ✅ | NETCONF on 830 ✅ (factory promotes 443 → 830) | `ip http secure-server` + `restconf` + `netconf-yang` (+ `feature candidate-datastore` for Wave 10) |
+| `netconf` | 830 | ❌ apphosting dials 830 expecting RESTCONF, fails | NETCONF on 830 ✅ | same as above |
+| `gnmi` | 443 (keep) | RESTCONF on 443 ✅ | gNMI on 50052 ✅ (factory promotes 443 → 50052) | `ip http secure-server` + `restconf` + `gnxi` + `gnxi server` |
+| `gnmi` | 50052 | ❌ apphosting dials 50052 expecting RESTCONF, fails | gNMI on 50052 ✅ | same as above |
+
+**The operator-correct rule: leave `spec.port: 443` regardless of `spec.transport`.** The configdriver's transport-aware default takes care of routing its own dial to the right port.
+
+A "gNMI-only" deployment (no RESTCONF on the device) **is not supported today** — the apphosting connectivity check would fail at pod startup with a RESTCONF dial error and the per-device pod would never reach Ready. The same caveat applies to a "NETCONF-only" deployment.
+
+### 6.4 Why apphosting is RESTCONF-only
+
+Two reasons, both honest:
+
+1. **Historical.** The apphosting subsystem predates the configdriver. It was built when RESTCONF was the only operational-state surface Cisco offered for IOx app-hosting; the YANG-config / NETCONF / gNMI parity for `Cisco-IOS-XE-app-hosting-oper` came later.
+2. **Operational-data shape.** The driver reads `app-hosting-oper-data` and `device-hardware-data` — operational state, not config — and the existing ygot models / unmarshallers in [`internal/drivers/iosxe/`](../../internal/drivers/iosxe/) target the RESTCONF JSON shape directly. Porting to NETCONF would require re-implementing the unmarshaller against NETCONF XML; porting to gNMI would require re-implementing it against `JSON_IETF` and adapting the keyed-path semantics for app-hosting list entries.
+
+### 6.5 Forward work — apphosting transport parity
+
+To turn `spec.transport: gnmi` (or `netconf`) into a true single-transport deployment, the apphosting driver would need:
+
+- An interface boundary at `internal/drivers/iosxe/`'s `XEDriver` so apphosting reads/writes go through a transport abstraction (mirroring `transport.Interface` in the configdriver).
+- Three concrete bindings: the existing RESTCONF one, plus NETCONF (re-using `transport/netconf.go` for read paths) and gNMI (re-using `transport/gnmi.go`).
+- Schema bookkeeping for `Cisco-IOS-XE-app-hosting-oper` operational paths in each transport.
+
+This is on the watch-item list as a future PR. Until then: enable RESTCONF on the device for any deployment that needs apphosting (per-pod kubelet topology), regardless of which transport the configdriver uses.
+
+### 6.6 Aggregator-mode caveat
+
+In aggregator-mode (`aggregator.enabled: true`), apphosting is not run at all — the aggregator only runs the configdriver. So `spec.transport: gnmi` IS a true gNMI-only deployment in aggregator-mode, and the device does NOT need RESTCONF enabled. This is a corner case: aggregator-mode is recommended only for environments where running per-device pods is operationally awkward, and gives up the apphosting feature entirely. See §13.2.
+
+---
+
+## 7. Wave-10 features (NETCONF + gNMI)
 
 Two opt-in safety nets on `IOSXEConfig`. Available when `spec.transactional: true` AND the transport advertises the matching capability.
 
@@ -306,7 +373,7 @@ spec:
 
 Events to expect on `kubectl describe iosxeconfig`:
 - `Normal ConfirmedCommitUsed` — confirmed-commit happy path
-- `Warning ConfirmedCommitFallback reason=...` — fallback case (see §6.3)
+- `Warning ConfirmedCommitFallback reason=...` — fallback case (see §7.3)
 
 ### 6.2 `spec.atomicReplace: true`
 
@@ -334,7 +401,7 @@ kubectl apply -f charts/cisco-virtual-kubelet/crds/config.cisco.vk_iosxeconfigs.
 
 ---
 
-## 7. Per-pod kubelet vs aggregator-mode topology
+## 8. Per-pod kubelet vs aggregator-mode topology
 
 Two deployment topologies; the transport choice is identical in both.
 
@@ -361,7 +428,7 @@ Not recommended for general production. Tests 02 + 06 + 07 should still pass ove
 
 ---
 
-## 8. Migrating between transports
+## 9. Migrating between transports
 
 Switching `spec.transport` on a live `CiscoDevice` triggers a controller-driven ConfigMap regeneration; the kubelet pod must be restarted to pick up the new transport. Today that means deleting the per-device pod (`kubectl delete pod -n <ns> -l app.kubernetes.io/instance=<device>`).
 
@@ -371,7 +438,7 @@ Pitfall: the deferred-dial loop terminates as soon as ANY transport dial succeed
 
 ---
 
-## 9. Live-device evidence bundles
+## 10. Live-device evidence bundles
 
 Cross-references for "what's been validated" per mode:
 
@@ -385,7 +452,7 @@ Operator-runnable retest playbook with per-test pre-state / verify / rollback: [
 
 ---
 
-## 10. Troubleshooting decision tree
+## 11. Troubleshooting decision tree
 
 ```
 phase=Failed?
@@ -400,12 +467,12 @@ phase=Failed?
 │   └── upgrade to image with commit 88ac685 (NETCONF Fetch shape fix)
 └── reason=ValidationFailed
     └── unknown field spec.confirmTimeoutSeconds/atomicReplace
-        → apply charts/.../config.cisco.vk_iosxeconfigs.yaml (see §6.4)
+        → apply charts/.../config.cisco.vk_iosxeconfigs.yaml (see §7.4)
 ```
 
 ---
 
-## 11. Configuration examples
+## 12. Configuration examples
 
 Every example below is copy-pasteable. Replace `10.1.1.1`, `cisco`, and `<device-password>` with your lab values. Each example assumes namespace `cisco-vk-smoke` exists; `kubectl create namespace cisco-vk-smoke` if not.
 
@@ -503,9 +570,11 @@ spec:
   username: cisco
   credentialSecretRef:
     name: cat9k-creds
-  # tls.enabled is a NO-OP for NETCONF (SSH transport)
+  tls:
+    enabled: true                  # used by the apphosting RESTCONF half (§6)
+    insecureSkipVerify: true
   transport: netconf
-  port: 830
+  port: 443                        # apphosting RESTCONF port; configdriver dials 830 internally
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -555,7 +624,8 @@ The recommended NETCONF deployment construct. Device-side prereq: `netconf-yang 
 
 ```yaml
 ---
-# CiscoDevice spec same as §11.2 (transport=netconf, port=830).
+# CiscoDevice spec same as §12.2 (transport=netconf, port=443 — apphosting RESTCONF port;
+# configdriver dials 830 internally).
 
 ---
 apiVersion: v1
@@ -616,9 +686,11 @@ spec:
   credentialSecretRef:
     name: cat9k-creds
   tls:
-    enabled: false                 # default gnxi insecure; set true for gnxi secure-server
+    enabled: true                  # used by the apphosting RESTCONF half (§6); gNMI uses
+                                   # its own insecure listener on 50052 in parallel
+    insecureSkipVerify: true
   transport: gnmi
-  port: 50052                      # IOS-XE 17.18+ insecure default
+  port: 443                        # apphosting RESTCONF port; configdriver dials 50052 internally
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -667,7 +739,7 @@ cisco_vk_config_transactions_total{outcome="commit",transport="gnmi"} ≥ 1
 
 Protects against management-plane-breaking applies (bad ACL, wrong SVI on the management VLAN, etc.). If the running-config verify after candidate-commit fails, the engine deliberately omits `ConfirmCommit` and the device's own RFC 6241 timer reverts at `confirmTimeoutSeconds`.
 
-Requires: `transport: netconf` AND device advertises `:confirmed-commit:1.0` AND `transactional: true` AND the chart's Wave-10 CRD applied (see §6.4).
+Requires: `transport: netconf` AND device advertises `:confirmed-commit:1.0` AND `transactional: true` AND the chart's Wave-10 CRD applied (see §7.4).
 
 ```yaml
 ---
@@ -847,7 +919,7 @@ spec:
 
 ---
 
-## 12. Topology examples — per-pod kubelet vs aggregator-mode
+## 13. Topology examples — per-pod kubelet vs aggregator-mode
 
 ### 12.1 Per-pod kubelet (recommended)
 
@@ -927,7 +999,7 @@ Trade-offs to weigh before choosing aggregator-mode:
 
 ---
 
-## 13. Resolution-chain examples
+## 14. Resolution-chain examples
 
 The engine's intent resolver merges the following layers in fixed order before each reconcile: **defaults → device-groups → interface-groups → templates → per-device source → per-family secret refs**. Use the lower layers for cross-cutting baselines, the higher layers for device-specific intent.
 

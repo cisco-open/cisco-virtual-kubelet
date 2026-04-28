@@ -323,8 +323,28 @@ Live-device evidence: see [`final/evidence/`](./final/evidence/) (six bundles as
 
 ---
 
-## 11. Forward work
+## 11. Apphosting / configdriver transport asymmetry
 
+The `transport.Interface` and the three implementations covered in this document are the **configdriver-only** transport story. The apphosting subsystem (`internal/drivers/iosxe/`'s `XEDriver`, the original cisco-vk subsystem that makes a device appear as a Kubernetes Node for IOx app-hosting) is **RESTCONF-only**:
+
+- [`driver.go:105`](../../internal/drivers/iosxe/driver.go#L105) hardcodes `protocol := "restconf"`.
+- The connectivity check at [`device.go:32`](../../internal/drivers/iosxe/device.go#L32) hits `/.well-known/host-meta` over HTTPS.
+- Pod lifecycle methods in [`pod_lifecycle.go`](../../internal/drivers/iosxe/pod_lifecycle.go) read/write `/restconf/data/Cisco-IOS-XE-app-hosting-oper:...` exclusively.
+- The driver constructor builds its base URL from `spec.Address:spec.Port` literally — `spec.port` is the apphosting RESTCONF port, not the configdriver port.
+
+What this means in practice:
+
+- The configdriver factory's port-aware default (commit `b2c1189`) lets the operator keep `spec.port: 443` while the configdriver dials its own port (830 / 50052) for NETCONF / gNMI. Without this fix, operators flipping `spec.transport` would have broken apphosting connectivity.
+- A "gNMI-only" or "NETCONF-only" deployment is **not supported in per-pod-kubelet topology** — the device must have RESTCONF enabled for apphosting to come up. The startup connectivity check fails otherwise and the pod never reaches Ready.
+- **Aggregator-mode** (the corner-case topology) doesn't run the apphosting half at all, so a true single-transport deployment is possible there. See [`./deployment-modes.md`](./deployment-modes.md) §6 + §13.
+
+To lift this, the apphosting driver would need an interface boundary mirroring `transport.Interface` plus three concrete bindings (RESTCONF, NETCONF, gNMI), and the ygot unmarshallers for `Cisco-IOS-XE-app-hosting-oper` would need NETCONF-XML / gNMI-`JSON_IETF` shapes alongside the RESTCONF JSON one. Tracked as forward work; no concrete PR scoped yet.
+
+---
+
+## 12. Forward work
+
+- **Apphosting transport parity** — see §11 above.
 - **gNMI confirmed-commit.** Cisco hasn't shipped the equivalent over gNMI yet; when they do, the existing `ConfirmedCommitter` interface absorbs it without engine-side changes.
 - **Cosmetic relocation** of `internal/drivers/iosxe/configdriver/...` → `internal/configdriver/...` (Watch-item #4) — mechanical; deferred to avoid noisy conflict with v1 CRD cut.
 - **Per-family transport overrides** — the current driver picks one transport per CiscoDevice. Future hybrid mode would let banner stay on RESTCONF while interface_loopback uses gNMI; design TBD.
