@@ -354,6 +354,7 @@ To lift this, the apphosting driver would need an interface boundary mirroring `
 ## See also
 
 - [`./deployment-modes.md`](./deployment-modes.md) — operator-facing setup guide per mode
+- [`./operator-cli-guide.md`](./operator-cli-guide.md) — kubectl interaction reference + roadmap of CLI enrichments
 - [`./driver-extension-guide.md`](./driver-extension-guide.md) — how to add a new vendor driver against this Interface
 - [`./final/release-blocker-tests/RUNBOOK.md`](./final/release-blocker-tests/RUNBOOK.md) — live-device retest playbook
 - [`./final/evidence/2026-04-27-live-c9300-netconf-candidate-only/SUMMARY.md`](./final/evidence/2026-04-27-live-c9300-netconf-candidate-only/SUMMARY.md) — closure evidence for the `88ac685` bundle

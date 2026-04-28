@@ -1173,6 +1173,7 @@ The resolver merges secretRefs into the resolved intent **after** the source lay
 
 ## See also
 
+- [`./operator-cli-guide.md`](./operator-cli-guide.md) — kubectl interaction reference: status fields, events, metrics, troubleshooting cookbook, roadmap of CLI enrichments
 - [`./transport-architecture.md`](./transport-architecture.md) — maintainer-facing architecture reference (wire shapes, capabilities matrix, fix-bundle history)
 - [`./final/release-blocker-tests/RUNBOOK.md`](./final/release-blocker-tests/RUNBOOK.md) — operator playbook for the 11 release-blocker live-device retests
 - [`./final/README.md`](./final/README.md) — branch implementation reference, with §7 roadmap
