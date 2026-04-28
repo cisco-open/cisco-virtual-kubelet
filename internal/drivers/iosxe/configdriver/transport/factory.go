@@ -97,7 +97,23 @@ func buildGNMI(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (Inte
 		Username: spec.Username,
 		Password: pass,
 	}
-	if spec.TLS != nil && spec.TLS.Enabled {
+	// spec.TLS.Enabled is the apphosting RESTCONF intent (443 RESTCONF
+	// requires TLS). The IOS-XE gnxi insecure listener on port 50052
+	// does NOT speak TLS — wrapping it in a TLS handshake produces
+	// `tls: first record does not look like a TLS handshake`. Mirror
+	// the port-defaulting pattern above: when gNMI is on its well-
+	// known insecure default, it picks insecure regardless of the
+	// apphosting-shaped spec.TLS.Enabled. Operators who run secure
+	// gnxi (port 9339) leave spec.Port at the apphosting default
+	// AND set their secure gnxi up on the device; we'd then need to
+	// extend this guard. For now the rule is simply "gnxi insecure
+	// on 50052 → no TLS"; explicit operator-override ports (everything
+	// outside 50052/80/443) still honour spec.TLS.Enabled.
+	//
+	// Wave 10.4 — caught against the live C9K-4 retest of test 04
+	// (2026-04-28) where the gNMI client got
+	// `transport: authentication handshake failed` against gnxi:50052.
+	if spec.TLS != nil && spec.TLS.Enabled && port != 50052 {
 		cfg.TLSConfig = buildTLSFromSpec(spec)
 	}
 	return NewGNMI(cfg)

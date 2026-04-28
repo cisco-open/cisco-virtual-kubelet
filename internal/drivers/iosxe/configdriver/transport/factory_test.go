@@ -102,6 +102,58 @@ func TestBuildNETCONFRejectsRESTCONFPortDefault(t *testing.T) {
 	}
 }
 
+// TestBuildGNMITLSAnchoredToInsecurePort pins the rule that
+// spec.TLS.Enabled is the apphosting RESTCONF intent and the gNMI
+// factory takes the same liberty with TLS as it does with port:
+// gnxi insecure (50052) is treated as "no TLS" regardless of
+// spec.TLS.Enabled. Caught against the live C9K-4 retest of test
+// 04 (2026-04-28).
+func TestBuildGNMITLSAnchoredToInsecurePort(t *testing.T) {
+	cases := []struct {
+		name       string
+		specPort   int
+		tlsEnabled bool
+		wantPort   int
+		wantTLS    bool
+	}{
+		{"insecure-50052-tls-true → no TLS", 50052, true, 50052, false},
+		{"insecure-default-port-tls-true → no TLS", 0, true, 50052, false},
+		{"insecure-default-port-tls-false → no TLS", 0, false, 50052, false},
+		{"explicit-9339-tls-true → TLS", 9339, true, 9339, true},
+		{"explicit-9339-tls-false → no TLS", 9339, false, 9339, false},
+		{"explicit-6030-tls-true → TLS", 6030, true, 6030, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			spec := &ciskov1.DeviceSpec{
+				Address:   "127.0.0.1",
+				Port:      tc.specPort,
+				Username:  "x",
+				Transport: "gnmi",
+			}
+			if tc.tlsEnabled {
+				spec.TLS = &ciskov1.TLSConfig{Enabled: true, InsecureSkipVerify: true}
+			}
+			tr, err := For(spec, "pw", FactoryOptions{})
+			if err != nil {
+				t.Fatalf("gNMI factory: %v", err)
+			}
+			defer tr.Close()
+			gt, ok := tr.(*gnmiTransport)
+			if !ok {
+				t.Fatalf("expected *gnmiTransport, got %T", tr)
+			}
+			if gt.cfg.Port != tc.wantPort {
+				t.Errorf("port: got %d, want %d", gt.cfg.Port, tc.wantPort)
+			}
+			gotTLS := gt.cfg.TLSConfig != nil
+			if gotTLS != tc.wantTLS {
+				t.Errorf("TLS: got %v, want %v", gotTLS, tc.wantTLS)
+			}
+		})
+	}
+}
+
 // TestBuildGNMIRejectsRESTCONFPortDefault is the gNMI counterpart
 // of TestBuildNETCONFRejectsRESTCONFPortDefault. Same rationale:
 // 80 / 443 are RESTCONF intent, not gNMI intent.
