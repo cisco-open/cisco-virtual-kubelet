@@ -478,21 +478,27 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 			for _, opt := range app.RunOptss.RunOpts {
 				if opt.LineRunOpts != nil {
 					line := *opt.LineRunOpts
-					log.G(ctx).Infof("Discovery: App %s RunOpts line: %s", appName, line)
+					log.G(ctx).Debugf("Discovery: App %s RunOpts line: %s", appName, line)
 
-					// Extract pod labels
-					podNamespace = common.ExtractLabelValue(line, common.LabelPodNamespace)
-					podName = common.ExtractLabelValue(line, common.LabelPodName)
-					podUID = common.ExtractLabelValue(line, common.LabelPodUID)
-					containerName = common.ExtractContainerNameFromLabels(line)
-
-					log.G(ctx).Infof("Discovery: App %s extracted namespace=%s, name=%s, uid=%s, container=%s",
-						appName, podNamespace, podName, podUID, containerName)
-					break
+					// Extract pod labels and accumulate across all lines
+					if val := common.ExtractLabelValue(line, common.LabelPodNamespace); val != "" && podNamespace == "" {
+						podNamespace = val
+					}
+					if val := common.ExtractLabelValue(line, common.LabelPodName); val != "" && podName == "" {
+						podName = val
+					}
+					if val := common.ExtractLabelValue(line, common.LabelPodUID); val != "" && podUID == "" {
+						podUID = val
+					}
+					if val := common.ExtractContainerNameFromLabels(line); val != "" && containerName == "" {
+						containerName = val
+					}
 				}
 			}
+			log.G(ctx).Debugf("Discovery: App %s final extracted namespace=%s, name=%s, uid=%s, container=%s",
+				appName, podNamespace, podName, podUID, containerName)
 		} else {
-			log.G(ctx).Infof("Discovery: App %s has no RunOptss", appName)
+			log.G(ctx).Debugf("Discovery: App %s has no RunOptss", appName)
 		}
 
 		// If RunOpts labels are missing (e.g. app is in DEPLOYED state and
