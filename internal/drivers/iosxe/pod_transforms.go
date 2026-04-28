@@ -500,12 +500,6 @@ func (d *XEDriver) buildEnvironmentOptions(container *v1.Container, pod *v1.Pod)
 	fmt.Printf("[DEBUG]   container.Env count: %d\n", len(container.Env))
 	fmt.Printf("[DEBUG]   container.EnvFrom count: %d\n", len(container.EnvFrom))
 
-	// TEMPORARY TEST: Check for annotation to force zero environment variables
-	if pod.Annotations != nil && pod.Annotations["test.cisco.com/force-zero-env"] == "true" {
-		fmt.Printf("[DEBUG] FORCING ZERO ENVIRONMENT VARIABLES due to test annotation\n")
-		return envOptions, nil
-	}
-
 	// Process environment variables from container.Env
 	for _, env := range container.Env {
 		fmt.Printf("[DEBUG]   Processing container.Env variable: %s\n", env.Name)
@@ -549,14 +543,15 @@ func (d *XEDriver) buildEnvironmentOptions(container *v1.Container, pod *v1.Pod)
 // escapeShellValue safely escapes special characters in environment variable values
 // to prevent shell injection and ensure proper parsing by Docker.
 func escapeShellValue(value string) string {
-	// Escape quotes and special characters that could break shell parsing
-	value = strings.ReplaceAll(value, `\`, `\\`)   // Escape backslashes first
-	value = strings.ReplaceAll(value, `"`, `\"`)   // Escape double quotes
-	value = strings.ReplaceAll(value, `$`, `\$`)   // Escape dollar signs (variable expansion)
-	value = strings.ReplaceAll(value, "`", "\\`")  // Escape backticks (command substitution)
+	// For IOS-XE compatibility, use single quotes to wrap values
+	// This avoids JSON parsing issues with nested double quotes
 
-	// Wrap in double quotes to handle spaces and other special chars
-	return fmt.Sprintf(`"%s"`, value)
+	// Escape single quotes by ending the quoted string, adding escaped quote, starting new quoted string
+	value = strings.ReplaceAll(value, `'`, `'\''`)
+
+	// Wrap in single quotes to handle spaces and special chars
+	// Single quotes preserve everything literally except single quotes themselves
+	return fmt.Sprintf(`'%s'`, value)
 }
 
 // resolveEnvVarValueFrom resolves environment variable values from various sources
