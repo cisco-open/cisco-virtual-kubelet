@@ -294,8 +294,10 @@ func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, erro
 	sort.Strings(keyOrder)
 
 	nestedNames := make([]string, 0, len(specs))
+	specByLeaf := make(map[string]nestedListSpec, len(specs))
 	for _, s := range specs {
 		nestedNames = append(nestedNames, s.Leaf)
+		specByLeaf[s.Leaf] = s
 	}
 
 	var ops []transport.Op
@@ -329,7 +331,21 @@ func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, erro
 			body[w.base.keyField] = kv
 		}
 		for leaf, changed := range changedByLeaf {
-			body[leaf] = changed
+			// IOS-XE wraps the inner list under a per-family YANG
+			// container (e.g. <rules><access-list-seq-rule>...).
+			// When YANGInner is set, lift the changed slice into
+			// that container; otherwise emit the bare slice.
+			// Caught against the live Cat9300 retest of test 08
+			// where access_list_extended apply hit
+			// `unknown-element <bad-element>rules</bad-element>`
+			// because the body emitted <rules> with the rule
+			// entries as direct children rather than under
+			// <access-list-seq-rule>.
+			if spec, ok := specByLeaf[leaf]; ok && spec.YANGInner != "" {
+				body[leaf] = map[string]any{spec.YANGInner: changed}
+			} else {
+				body[leaf] = changed
+			}
 		}
 		payload, err := wrapYANGPayload(w.base.envelopeKey, []any{body})
 		if err != nil {

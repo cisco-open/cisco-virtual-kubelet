@@ -282,11 +282,19 @@ func pickRules(t *testing.T, body map[string]any) []any {
 	if !ok {
 		t.Fatalf("envelope entry is not a map: %#v", envelope[0])
 	}
-	rules, ok := first["rules"].([]any)
-	if !ok {
-		return nil
+	// IOS-XE wraps the rule list under <rules><access-list-seq-rule>...
+	// in the YANG body, so the writer emits
+	// rules: {"access-list-seq-rule": [...]}. Older test fixtures that
+	// supplied a bare slice still pass via the fallback below.
+	switch r := first["rules"].(type) {
+	case []any:
+		return r
+	case map[string]any:
+		if inner, ok := r["access-list-seq-rule"].([]any); ok {
+			return inner
+		}
 	}
-	return rules
+	return nil
 }
 
 // fmtAny is the same fmt.Sprintf("%v") shape the writer uses for
