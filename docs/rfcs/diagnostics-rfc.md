@@ -322,8 +322,8 @@ Each capture writes a new ConfigMap `running-snapshot-<timestamp>` whose `data["
 
 ## 8. What this RFC does NOT propose
 
-- **Replacing operator SSH for break-glass scenarios.** Anything destructive (`reload`, `clear ip ospf process`, `write erase`) stays out of scope; the plugin should refuse known-destructive commands by default with an explicit `--allow-destructive` flag.
-- **A general OS-shell.** `kubectl ciscovk exec` is **show-only** — it invokes `cli-exec` (operational), not `cli-config-data` (configuration). Configuration changes go through `IOSXEConfig` as today.
+- **Destructive commands** — `clear ip ospf process`, `reload`, `write erase`, etc. — are **a separate RFC** with their own RBAC tiers, two-person rule, maintenance window, and tamper-evident audit chain. See [`./device-operations-rfc.md`](./device-operations-rfc.md) for the design. The transport-layer extension this RFC introduces (`DiagnosticExecer`) generalises to `OperationalExecer` once that work lands; both reuse the same Cisco-IA `cli-exec` RPC.
+- **A general OS-shell.** `kubectl ciscovk exec` (this RFC) is **show-only** — it invokes `cli-exec` (operational reads), not `cli-config-data` (configuration writes). The destructive-ops RFC adds a separate, RBAC-gated path for state-changing commands.
 - **A streaming subscription model.** Diagnostic captures are point-in-time. Telemetry / drift signals stay on gNMI Subscribe.
 - **Cross-device aggregation.** Out of scope for the first cut. A future `IOSXEDiagnosticBundle` can fan out the same way `IOSXEConfigBundle` does.
 
@@ -340,5 +340,6 @@ The transport-layer extension (Phase A) is small enough that operators wanting a
 ## See also
 
 - [`./operator-cli-guide.md`](./operator-cli-guide.md) — the source for §13.6 ("`kubectl ciscovk` plugin"), which this RFC promotes to a full design
+- [`./device-operations-rfc.md`](./device-operations-rfc.md) — the destructive-ops sibling: RBAC-tiered `IOSXEMaintenance` (clears) and `IOSXEDeviceOp` (reload, write-erase) with two-person approval, maintenance windows, and cryptographically chained audit
 - [`./transport-architecture.md`](./transport-architecture.md) §11 — the apphosting / configdriver split that scopes which transport this RFC's Phase A binds to
 - [`./driver-extension-guide.md`](./driver-extension-guide.md) — for vendor-driver authors who'd implement `DiagnosticExecer` against NX-OS / IOS-XR / OpenConfig
