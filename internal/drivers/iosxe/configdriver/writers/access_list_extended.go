@@ -50,124 +50,127 @@ func init() {
 	})
 }
 
-// aclRuleToYANG translates a netascode-shape ACL rule into the flat
-// IOS-XE-acl YANG body shape the device expects under
-// <access-list-seq-rule>.
+// aclRuleToYANG translates a netascode-shape ACL rule into the
+// IOS-XE-acl YANG body the device expects under <access-list-seq-rule>.
 //
-// netascode-flat (operator-friendly shorthand):
+// Schema confirmed via NETCONF <get-schema> for module Cisco-IOS-XE-acl
+// against C9K-4 / IOS-XE 17.18.2 (2026-04-28). The IPv4 ext-acl rule
+// is `grouping ipv4-ext-acl-grouping` → `list access-list-seq-rule`:
+//
+//	access-list-seq-rule
+//	  sequence                    uint64 (list key)
+//	  ace-rule (container)        the ACE choice case wraps everything
+//	    action                    enum: deny | permit
+//	    protocol                  enum: ip | tcp | udp | icmp | ...
+//	    (uses ipv4-acl-src-dst-addr-port-grouping)
+//	    ipv4-address + mask       source: network + wildcard bits
+//	    any (empty)               source: any
+//	    host-address              source: single host
+//	    dest-ipv4-address + dest-mask  destination: network + wildcard
+//	    dst-any (empty)           destination: any
+//	    dst-host-address          destination: single host
+//	    src-eq | src-gt | src-lt | src-neq   source port matchers
+//	    dst-eq | dst-gt | dst-lt | dst-neq   destination port matchers
+//	    log (empty)               log on match
+//	  remarks                    leaf-list of comment strings
+//	                             (alternate to the ace-rule case)
+//
+// netascode operator-friendly shorthand (input):
 //
 //	sequence: 10
 //	action: deny | permit
 //	protocol: ip | tcp | udp | icmp | ...
-//	src_host: 10.0.0.1            # source: single host
-//	src_any: true                 # source: any (empty leaf)
-//	src_prefix: 10.0.0.0          # source: network address
-//	src_wildcard: 0.0.0.255       # source: wildcard mask
-//	dst_host: 10.1.1.1            # destination: single host
-//	dst_any: true                 # destination: any (empty leaf)
+//	src_host: 10.0.0.1
+//	src_any: true
+//	src_prefix: 10.0.0.0
+//	src_wildcard: 0.0.0.255
+//	dst_host: 10.1.1.1
+//	dst_any: true
 //	dst_prefix: 10.1.0.0
 //	dst_wildcard: 0.0.0.255
-//	src_eq: 22                    # source port eq
-//	dst_eq: 80                    # destination port eq
-//	log: true                     # log on match (empty leaf)
-//	remark: "comment"             # rule remark (replaces the ACE)
+//	src_eq: 22
+//	dst_eq: 80
+//	log: true
+//	remark: "comment"
 //
-// IOS-XE-acl YANG (flat, all siblings of <sequence>):
+// Empty-leaf YANG types (`type empty;`) are encoded in JSON RFC 7951
+// as `[null]` and rendered by the netconf json→xml converter as
+// self-closing XML elements (e.g. <any/>). Boolean true on netascode
+// shorthand maps to `[null]`; any other value is dropped.
 //
-//	<sequence>            # uint32
-//	<ace-rule-action>     # enum: permit | deny
-//	<protocol>            # enum/uint
-//	<host>                # source-host
-//	<any/>                # source-any (empty)
-//	<ipv4-address>        # source network
-//	<mask>                # source wildcard
-//	<dest-host>           # destination-host
-//	<dst-any/>            # destination-any (empty)
-//	<dest-ipv4-address>   # destination network
-//	<dest-mask>           # destination wildcard
-//	<src-eq>              # source-port eq
-//	<dst-eq>              # destination-port eq
-//	<log/>                # empty
-//	<remark>              # remark text
+// `sequence` stays at the access-list-seq-rule level because it is
+// the YANG list key; everything else lives under the <ace-rule>
+// wrapper. The orderedMapKeys helper in the netconf transport ensures
+// <sequence> emits first per YANG strict-order.
 //
-// Empty-leaf YANG types (`type empty;`) are encoded in JSON RFC 7951 as
-// `[null]`; the netconf transport's json→xml converter renders these
-// as self-closing elements (e.g. <any/>). Boolean true on netascode
-// shorthand maps to `[null]`; any other value is dropped (operator
-// must explicitly opt in).
-//
-// Caught against the live Cat9300 retest of test 08 (2026-04-28)
-// where the apply hit `unknown-element <bad-element>src_host</bad-element>`
-// because the writer passed the netascode shorthand through verbatim.
+// Caught against the live C9K-4 retest of test 08 (2026-04-28) — nine
+// iterations against the device pinned down the exact wrapper +
+// element names, captured via NETCONF <get-schema>.
 func aclRuleToYANG(flat map[string]any) map[string]any {
-	out := make(map[string]any, len(flat))
 	emptyLeaf := []any{nil}
+	out := map[string]any{}
+	ace := map[string]any{}
+
+	stash := func(k string, v any) { ace[k] = v }
+	stashEmpty := func(k string, v any) {
+		if isTrue(v) {
+			ace[k] = emptyLeaf
+		}
+	}
+
 	for k, v := range flat {
 		switch k {
 		case "sequence":
 			out["sequence"] = v
 		case "action":
-			// IOS-XE-acl encodes the action as an empty-leaf choice
-			// (<permit/> or <deny/>) at the same level as <sequence>,
-			// not as an `ace-rule-action` enum leaf.
-			s, _ := v.(string)
-			switch s {
-			case "permit":
-				out["permit"] = emptyLeaf
-			case "deny":
-				out["deny"] = emptyLeaf
-			default:
-				if s != "" {
-					out[s] = emptyLeaf
-				}
-			}
+			stash("action", v)
 		case "protocol":
-			out["protocol"] = v
+			stash("protocol", v)
 		case "src_host", "source_host":
-			out["host"] = v
+			stash("host-address", v)
 		case "src_any", "source_any":
-			if isTrue(v) {
-				out["any"] = emptyLeaf
-			}
+			stashEmpty("any", v)
 		case "src_prefix", "source_prefix":
-			out["ipv4-address"] = v
+			stash("ipv4-address", v)
 		case "src_wildcard", "source_wildcard":
-			out["mask"] = v
+			stash("mask", v)
 		case "dst_host":
-			out["dest-host"] = v
+			stash("dst-host-address", v)
 		case "dst_any":
-			if isTrue(v) {
-				out["dst-any"] = emptyLeaf
-			}
+			stashEmpty("dst-any", v)
 		case "dst_prefix":
-			out["dest-ipv4-address"] = v
+			stash("dest-ipv4-address", v)
 		case "dst_wildcard":
-			out["dest-mask"] = v
+			stash("dest-mask", v)
 		case "src_eq":
-			out["src-eq"] = v
+			stash("src-eq", v)
 		case "src_gt":
-			out["src-gt"] = v
+			stash("src-gt", v)
 		case "src_lt":
-			out["src-lt"] = v
+			stash("src-lt", v)
 		case "src_neq":
-			out["src-neq"] = v
+			stash("src-neq", v)
 		case "dst_eq":
-			out["dst-eq"] = v
+			stash("dst-eq", v)
 		case "dst_gt":
-			out["dst-gt"] = v
+			stash("dst-gt", v)
 		case "dst_lt":
-			out["dst-lt"] = v
+			stash("dst-lt", v)
 		case "dst_neq":
-			out["dst-neq"] = v
+			stash("dst-neq", v)
 		case "log":
-			if isTrue(v) {
-				out["log"] = emptyLeaf
-			}
+			stashEmpty("log", v)
 		case "remark":
-			out["remark"] = v
+			// remark is the alternate choice case; emit at the
+			// access-list-seq-rule level under <remarks> (leaf-list).
+			out["remarks"] = []any{v}
 		default:
-			out[k] = v
+			ace[k] = v
 		}
+	}
+
+	if len(ace) > 0 {
+		out["ace-rule"] = ace
 	}
 	return out
 }

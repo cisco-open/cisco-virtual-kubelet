@@ -363,10 +363,12 @@ func TestACLRuleToYANG(t *testing.T) {
 			},
 			want: map[string]any{
 				"sequence": 10,
-				"deny":     []any{nil},
-				"protocol": "ip",
-				"host":     "10.90.95.15",
-				"dst-any":  []any{nil},
+				"ace-rule": map[string]any{
+					"action":       "deny",
+					"protocol":     "ip",
+					"host-address": "10.90.95.15",
+					"dst-any":      []any{nil},
+				},
 			},
 		},
 		{
@@ -378,10 +380,12 @@ func TestACLRuleToYANG(t *testing.T) {
 			},
 			want: map[string]any{
 				"sequence": 20,
-				"permit":   []any{nil},
-				"protocol": "ip",
-				"any":      []any{nil},
-				"dst-any":  []any{nil},
+				"ace-rule": map[string]any{
+					"action":   "permit",
+					"protocol": "ip",
+					"any":      []any{nil},
+					"dst-any":  []any{nil},
+				},
 			},
 		},
 		{
@@ -392,9 +396,14 @@ func TestACLRuleToYANG(t *testing.T) {
 				"dst_any": true,
 			},
 			want: map[string]any{
-				"sequence": 30, "permit": []any{nil}, "protocol": "ip",
-				"ipv4-address": "10.0.0.0", "mask": "0.0.0.255",
-				"dst-any": []any{nil},
+				"sequence": 30,
+				"ace-rule": map[string]any{
+					"action":       "permit",
+					"protocol":     "ip",
+					"ipv4-address": "10.0.0.0",
+					"mask":         "0.0.0.255",
+					"dst-any":      []any{nil},
+				},
 			},
 		},
 		{
@@ -406,16 +415,24 @@ func TestACLRuleToYANG(t *testing.T) {
 				"log": true,
 			},
 			want: map[string]any{
-				"sequence": 40, "permit": []any{nil}, "protocol": "tcp",
-				"any":       []any{nil},
-				"dest-host": "10.1.1.1", "dst-eq": 80,
-				"log": []any{nil},
+				"sequence": 40,
+				"ace-rule": map[string]any{
+					"action":           "permit",
+					"protocol":         "tcp",
+					"any":              []any{nil},
+					"dst-host-address": "10.1.1.1",
+					"dst-eq":           80,
+					"log":              []any{nil},
+				},
 			},
 		},
 		{
-			name: "remark-passes-through",
+			name: "remark-emits-leaf-list",
 			in:   map[string]any{"sequence": 5, "remark": "block egress"},
-			want: map[string]any{"sequence": 5, "remark": "block egress"},
+			want: map[string]any{
+				"sequence": 5,
+				"remarks":  []any{"block egress"},
+			},
 		},
 		{
 			name: "false-empty-leaves-dropped",

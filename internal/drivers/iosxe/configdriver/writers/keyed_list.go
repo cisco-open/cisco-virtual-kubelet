@@ -68,15 +68,6 @@ func (w keyedListWriter) Fetch(ctx context.Context, c transport.Interface) (any,
 		}
 		return nil, err
 	}
-	// TEMPORARY (test 08 schema discovery): dump the raw fetch
-	// response for the access_list_extended family so the device's
-	// canonical YANG shape can be observed. Revert this log once
-	// aclRuleToYANG is updated to match. Caught against the live
-	// Cat9300 retest of test 08 (2026-04-28).
-	if w.family == aclExtFamily {
-		fmt.Printf("[acl-fetch-dump] family=%s yangPath=%s rawBytes=%d body=%s\n",
-			w.family, w.yangPath, len(raw), string(raw))
-	}
 	body, err := unwrapYANGEnvelope(raw, w.envelopeKey)
 	if err != nil || body == nil {
 		return []map[string]any{}, err
