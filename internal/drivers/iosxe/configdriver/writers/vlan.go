@@ -133,6 +133,28 @@ func (vlanWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	return ops, nil
 }
 
+// KeysOf implements writers.KeyExtractable for VLAN. Returns the
+// stringified vlan-list ids; the engine uses these to track which
+// VLANs the CR has ever applied (so atomicReplace=true scopes its
+// prune set to entries this CR established and never deletes
+// baseline VLANs the device carries from another source).
+func (vlanWriter) KeysOf(v any) []string {
+	list, err := coerceVLANBlock(v, "keysOf")
+	if err != nil || len(list) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(list))
+	for _, e := range list {
+		id, err := vlanID(e)
+		if err != nil {
+			continue
+		}
+		keys = append(keys, fmt.Sprintf("%d", id))
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func (vlanWriter) Apply(ctx context.Context, c transport.Interface, ops []transport.Op) error {
 	if len(ops) == 0 {
 		return nil
