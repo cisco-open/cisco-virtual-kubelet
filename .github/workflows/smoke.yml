@@ -100,12 +100,16 @@ jobs:
           echo "CRD/chart sync clean (8 of 8)."
 
       - name: setup-envtest binaries
-        # Pinned version per pre-pr-test-enrichment-plan §6 — never
-        # @latest in CI. Bump deliberately and run the suite to
-        # validate any apiserver/etcd-version-specific behaviour
-        # before locking in.
+        # Pinned per pre-pr-test-enrichment-plan §6 — never @latest in
+        # CI. The setup-envtest sub-module of controller-runtime is
+        # not independently tagged; the canonical pin is a Go
+        # pseudo-version anchored on the same commit as the
+        # controller-runtime release used by go.mod (currently
+        # v0.22.4 → 7a1b16d039d2, dated 2025-11-03). Bump together
+        # with the controller-runtime go.mod entry and re-run the
+        # suite before locking in.
         run: |
-          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.19.7
+          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20251103140007-7a1b16d039d2
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Real-apiserver smoke (envtest)
