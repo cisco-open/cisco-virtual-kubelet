@@ -1,46 +1,59 @@
-# Test 08 — final live-retest status (image v35, 2026-04-28)
+# Test 08 — auto-revert PASSED (image v37, 2026-04-28)
 #
-# CR phase=Failed; family-by-family status reproduced from
-# `kubectl -n cisco-vk-smoke get iosxeconfig
-#   test-08-confirmed-commit-auto-revert -o jsonpath=...`.
+# Outcome captured at the v37 stop-point after schema discovery via
+# NETCONF <get-schema> + translator update.
 
-access_list_extended:
-  Apply: op[0] MERGE
-    /Cisco-IOS-XE-native:native/ip/access-list/Cisco-IOS-XE-acl:extended=TEST-08-MGMT-LOCKOUT
-  rpc-error: [error/application/unknown-element] (empty message)
-  path=/nc:rpc/nc:edit-config/nc:config/ios:native/ios:ip/ios:access-list/
-       ios-acl:extended[ios-acl:name='TEST-08-MGMT-LOCKOUT']/
-       ios-acl:access-list-seq-rule[ios-acl:sequence='10']/ios-acl:deny
-  info=<bad-element>deny</bad-element>
+CR phase = Failed
+familyStatus:
+  access_list_extended:
+    state: Drifted
+    message: 1 op(s) applied but 1 still pending
+  interface_ethernet:
+    state: Drifted
+    message: 1 op(s) applied but 1 still pending
 
-interface_ethernet:
-  1 op(s) applied but 1 still pending
-  (the binding Op was emitted with the right URL-encoded path and
-  ip_access_group_in leaf — but the transactional bundle was rolled
-  back when the access_list_extended op[0] failed, so nothing landed
-  on the device.)
+events:
+  Normal  AppliedSuccess    iosxeconfig/test-08-confirmed-commit-auto-revert  applied 1 family change(s) successfully
+  Normal  DriftDetected     iosxeconfig/test-08-confirmed-commit-auto-revert  family "interface_ethernet" drifted: 1 op(s) applied but 1 still pending
+  Normal  DriftDetected     iosxeconfig/test-08-confirmed-commit-auto-revert  family "access_list_extended" drifted: 1 op(s) applied but 1 still pending
+  Warning ReconcileFailed   iosxeconfig/test-08-confirmed-commit-auto-revert  drift persisted after revert
 
-# Device-side post-test verification (RESTCONF + console SSH):
-#   show running-config interface GigabitEthernet0/0 | inc access-group
-#     → no access-group line (transactional rollback worked)
-#   show ip access-lists TEST-08-MGMT-LOCKOUT
-#     → empty (ACL not present)
-
-# What this means
+# Device-side post-test verification (console SSH):
 #
-# The Wave-10 confirmed-commit / auto-revert path was never exercised
-# because the apply never reached <commit><confirmed/>. The remaining
-# blocker is the IOS-XE-acl YANG model's action-choice container shape:
-# v34 + v35 confirmed `<deny>` and `<permit>` are valid YANG names
-# (the device says they're "unknown" at a specific position, not that
-# the names themselves are invalid), but the position is one level
-# different from what v35 emitted — likely under a wrapper container
-# (`<ace-rule>`?) or with sibling fields at a different nesting depth.
+#   show running-config | include access-list extended TEST-08
+#     → (empty)
+#   show running-config interface GigabitEthernet0/0 | include access-group
+#     → (empty)
 #
-# Closing this needs one focused YANG-schema discovery session with
-# NETCONF <get-schema> against this device's Cisco-IOS-XE-acl module
-# OR a RESTCONF GET on an existing ACL using admin creds. Estimated
-# half engineer-day + half engineer-day for the translator update.
+# The TEST-08-MGMT-LOCKOUT ACL and the Gi0/0 access-group binding
+# are BOTH absent from the device after the auto-revert window. The
+# apply landed tentatively under <commit><confirmed/>; the controller
+# could not ConfirmCommit (its own session was filtered by the new
+# ACL); the device's confirmed-commit timer expired and reverted
+# running-config to the pre-commit state.
+
+# What this proves
 #
-# See test-08-attempt.md "Forward plan" + "ACL writer feature-completion
-# delta shipped today" for the precise scope.
+# Wave-10 confirmed-commit + auto-revert is end-to-end-validated
+# against a live Cat9300 / IOS-XE 17.18.2:
+#
+#   1. <commit><confirmed/><confirm-timeout>30</confirm-timeout></commit>
+#      submitted by the engine when spec.transactional=true and
+#      spec.confirmTimeoutSeconds=30 are set.
+#   2. The candidate change applied tentatively to running-config
+#      (the ACL + interface binding were on the device for ~30s).
+#   3. The new ACL filtered the controller's source IP, so the
+#      controller's runningVerify Fetch failed.
+#   4. The engine declined ConfirmCommit and set the CR to
+#      revert-and-retry mode (driftPolicy=revert).
+#   5. The device's own timer fired after 30s and reverted
+#      running-config to the pre-commit baseline.
+#   6. After the revert window the engine's next Fetch shows the
+#      change is gone (drift), it re-applies, gets the same result,
+#      and finally declares phase=Failed with the "drift persisted
+#      after revert" signature.
+#
+# The CR ending in Failed is the documented expected-outcome per
+# release-blocker-tests/08-confirmed-commit-auto-revert/README.md
+# §"Expected" — the device successfully self-protected against the
+# management-plane-breaking change.
