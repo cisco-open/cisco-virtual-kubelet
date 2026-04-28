@@ -27,6 +27,15 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
+    - description: capture cadence; empty for one-shot CRs
+      jsonPath: .spec.schedule.interval
+      name: Schedule
+      type: string
+    - description: next scheduled capture (RFC3339; empty for one-shot CRs). string-typed
+        because kubectl's date renderer treats future timestamps as <invalid>.
+      jsonPath: .status.nextCapture
+      name: Next
+      type: string
     - jsonPath: .status.lastCapture
       name: Last
       type: date

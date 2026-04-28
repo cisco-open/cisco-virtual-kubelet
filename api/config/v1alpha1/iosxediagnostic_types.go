@@ -316,6 +316,8 @@ type CapturedConfigMapRef struct {
 // +kubebuilder:printcolumn:name="Device",type=string,JSONPath=`.spec.deviceRef.name`
 // +kubebuilder:printcolumn:name="Commands",type=integer,JSONPath=`.status.commandCount`,description="count of input commands"
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="Schedule",type=string,JSONPath=`.spec.schedule.interval`,description="capture cadence; empty for one-shot CRs"
+// +kubebuilder:printcolumn:name="Next",type=string,JSONPath=`.status.nextCapture`,description="next scheduled capture (RFC3339; empty for one-shot CRs). string-typed because kubectl's date renderer treats future timestamps as <invalid>."
 // +kubebuilder:printcolumn:name="Last",type=date,JSONPath=`.status.lastCapture`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 type IOSXEDiagnostic struct {
