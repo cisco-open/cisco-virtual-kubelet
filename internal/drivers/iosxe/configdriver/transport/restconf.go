@@ -85,6 +85,11 @@ func (r *restconfTransport) Capabilities() Capabilities {
 		// uses this signal to choose between direct write and
 		// implicit lock+commit cycle.
 		SupportsWritableRunning: true,
+		// Cisco-IA cli-exec is exposed at /operations/cisco-ia:cli-exec
+		// over RESTCONF on every IOS-XE release that runs the
+		// configuration driver, so we report SupportsDiagnosticExec
+		// unconditionally.
+		SupportsDiagnosticExec: true,
 	}
 }
 
@@ -191,6 +196,87 @@ func (r *restconfTransport) pushCLI(ctx context.Context, body []byte) error {
 	}
 	_ = raw // response body is empty on success; keep for debugging
 	return nil
+}
+
+// DiagnosticExec runs each command via the Cisco-IA cli-exec RPC
+// and returns the textual output. Per-command failures populate
+// the result's Err field but do NOT abort the batch — operators
+// frequently want a best-effort capture across a list. A
+// transport-level error (HTTP framing, auth) is returned as the
+// second value with partial results.
+//
+// Wire shape: POST /operations/cisco-ia:cli-exec
+//
+//	{"cisco-ia:input": {"cli-exec": {"cmd": "show ip route"}}}
+//
+// Reply shape:
+//
+//	{"cisco-ia:output": {"cli-exec": {"result": "...show output..."}}}
+//
+// Cisco-IA's cli-exec accepts a single string in / single string
+// out, mirroring the NETCONF transport's per-command framing in
+// netconf.go's DiagnosticExec.
+func (r *restconfTransport) DiagnosticExec(ctx context.Context, commands []string) ([]CommandResult, error) {
+	out := make([]CommandResult, 0, len(commands))
+	for _, cmd := range commands {
+		cmd = strings.TrimSpace(cmd)
+		if cmd == "" {
+			continue
+		}
+		payload, err := json.Marshal(map[string]any{
+			"cisco-ia:input": map[string]any{
+				"cli-exec": map[string]any{"cmd": cmd},
+			},
+		})
+		if err != nil {
+			return out, fmt.Errorf("RESTCONF cli-exec: marshal %q: %w", cmd, err)
+		}
+		raw, err := r.doOps(ctx, http.MethodPost, "/operations/cisco-ia:cli-exec", payload)
+		if err != nil {
+			out = append(out, CommandResult{Command: cmd, Err: err.Error()})
+			continue
+		}
+		text, perr := extractRESTCONFCLIExecResult(raw)
+		if perr != nil {
+			out = append(out, CommandResult{Command: cmd, Err: perr.Error()})
+			continue
+		}
+		out = append(out, CommandResult{Command: cmd, Output: text})
+	}
+	return out, nil
+}
+
+// extractRESTCONFCLIExecResult parses the cli-exec response JSON to
+// pull the result text. The wrapper key varies slightly across
+// IOS-XE releases (`cisco-ia:output` vs bare `output`), so the
+// extractor tolerates both forms before falling back to the raw
+// body. Returns "" without error when the device produced no output
+// (e.g. empty RPC reply).
+func extractRESTCONFCLIExecResult(raw []byte) (string, error) {
+	if len(raw) == 0 {
+		return "", nil
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		// Some device builds return raw text — pass through verbatim.
+		return strings.TrimSpace(string(raw)), nil
+	}
+	for _, outerKey := range []string{"cisco-ia:output", "output"} {
+		outer, ok := parsed[outerKey].(map[string]any)
+		if !ok {
+			continue
+		}
+		for _, innerKey := range []string{"cli-exec", "cisco-ia:cli-exec"} {
+			inner, ok := outer[innerKey].(map[string]any)
+			if !ok {
+				continue
+			}
+			if s, ok := inner["result"].(string); ok {
+				return strings.TrimSpace(s), nil
+			}
+		}
+	}
+	return "", nil
 }
 
 // doOps POSTs to an /operations-rooted RPC endpoint. The normal

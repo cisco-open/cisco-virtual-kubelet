@@ -90,6 +90,17 @@ type Capabilities struct {
 	// reconcile proceeds with plain Commit semantics, preserving
 	// the pre-Wave-10 behaviour.
 	SupportsConfirmedCommit bool
+
+	// SupportsDiagnosticExec is true when the transport implements
+	// the DiagnosticExecer optional interface — i.e. can run
+	// IOS-XE operational ("show") commands and return their textual
+	// output via Cisco-IA's cli-exec RPC.
+	//
+	// RESTCONF and NETCONF report true. gNMI reports false today
+	// because Cisco's current gNMI surface has no equivalent RPC;
+	// the diagnostics RFC absorbs a future gNMI implementation
+	// without engine-side changes.
+	SupportsDiagnosticExec bool
 }
 
 // Op describes a single device-facing mutation at the transport layer.
@@ -292,6 +303,44 @@ type ConfirmedCommitter interface {
 	// that StartTransaction acquired, mirroring plain Commit's
 	// post-RPC unlock semantics.
 	ConfirmCommit(ctx context.Context) error
+}
+
+// DiagnosticExecer runs read-only IOS-XE operational ("show") commands
+// and returns their textual output. Implements the Cisco-IA cli-exec
+// (NETCONF) / cli-exec (RESTCONF operations) RPC.
+//
+// This is the read-side counterpart of the existing VerbCLI write
+// path. It is deliberately scoped to operational reads — no
+// configuration changes are possible through this interface, so it
+// can be exposed to operators with strictly weaker RBAC than the
+// configuration write path.
+//
+// The diagnostics RFC (docs/rfcs/diagnostics-rfc.md) is the spec.
+// Optional — implemented by RESTCONF and NETCONF; gNMI returns
+// ErrUnsupported because Cisco's current gNMI surface has no
+// equivalent RPC. The transport.For factory's Capabilities()
+// reports SupportsDiagnosticExec so callers can branch without
+// type-asserting.
+type DiagnosticExecer interface {
+	// DiagnosticExec runs each command in order and returns one
+	// CommandResult per input. Per-command failures populate the
+	// result's Err field but do NOT abort the batch — operators
+	// frequently want a best-effort capture across a list (one
+	// command failing shouldn't lose the others).
+	//
+	// A transport-level error (dial broken, RPC hard-failed) is
+	// returned as the second return value; in that case results
+	// may be partial.
+	DiagnosticExec(ctx context.Context, commands []string) ([]CommandResult, error)
+}
+
+// CommandResult is one entry returned by DiagnosticExec. Output is
+// the raw text the device produced (CR/LF intact); Err holds the
+// per-command failure reason on a non-nil error.
+type CommandResult struct {
+	Command string
+	Output  string
+	Err     string
 }
 
 // Interface is the capability-aware transport contract. Methods that

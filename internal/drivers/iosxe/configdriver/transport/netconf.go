@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"net"
@@ -144,6 +145,7 @@ func (t *netconfTransport) Capabilities() Capabilities {
 			SupportsSubscribe:       false, // RFC 5277 not wired
 			SupportsConfirmedCommit: hasConfirm,
 			SupportsWritableRunning: hasWritableRunning,
+			SupportsDiagnosticExec:  true, // Cisco-IA cli-exec RPC
 		}
 	})
 	return t.caps
@@ -535,6 +537,92 @@ func (t *netconfTransport) pushCLI(body []byte) error {
 	b.WriteString(`</cli-config-data>`)
 	_, err := t.session.rpc(b.String())
 	return err
+}
+
+// DiagnosticExec runs each command via the Cisco-IA cli-exec RPC and
+// returns the textual output. Per-command failures populate the
+// result's Err field but do NOT abort the batch — operators want a
+// best-effort capture across a list. A transport-level error
+// (broken dial, bad framing) is returned as the second value with
+// partial results.
+//
+// Wire shape:
+//
+//   <cli-exec xmlns="http://cisco.com/yang/cisco-ia">
+//     <cmd>show ip route</cmd>
+//   </cli-exec>
+//
+// Reply:
+//
+//   <rpc-reply ...>
+//     <result xmlns="http://cisco.com/yang/cisco-ia">
+//       ... show output ...
+//     </result>
+//   </rpc-reply>
+//
+// One RPC per command — Cisco-IA cli-exec defines a single string
+// in / single string out, and per-command framing keeps error
+// surfaces simple.
+func (t *netconfTransport) DiagnosticExec(ctx context.Context, commands []string) ([]CommandResult, error) {
+	out := make([]CommandResult, 0, len(commands))
+	for _, cmd := range commands {
+		cmd = strings.TrimSpace(cmd)
+		if cmd == "" {
+			continue
+		}
+		var b strings.Builder
+		b.WriteString(`<cli-exec xmlns="http://cisco.com/yang/cisco-ia"><cmd>`)
+		xmlEscapeText(&b, cmd)
+		b.WriteString(`</cmd></cli-exec>`)
+		reply, err := t.session.rpc(b.String())
+		if err != nil {
+			out = append(out, CommandResult{Command: cmd, Err: err.Error()})
+			continue
+		}
+		text, perr := extractCLIExecResult(reply.Output)
+		if perr != nil {
+			out = append(out, CommandResult{Command: cmd, Err: perr.Error()})
+			continue
+		}
+		out = append(out, CommandResult{Command: cmd, Output: text})
+	}
+	return out, nil
+}
+
+// extractCLIExecResult parses the inner XML of a cli-exec response
+// looking for the first <result>...</result> element (any namespace)
+// and returns its character data with leading/trailing whitespace
+// trimmed. Returns "" without error when the reply has no <result>
+// — some IOS-XE versions return an empty body for commands that
+// produce no output (e.g. successful `clear` operations from the
+// destructive-ops sibling RFC).
+func extractCLIExecResult(raw []byte) (string, error) {
+	if len(raw) == 0 {
+		return "", nil
+	}
+	dec := xml.NewDecoder(strings.NewReader(string(raw)))
+	for {
+		tok, err := dec.Token()
+		if err == io.EOF {
+			return "", nil
+		}
+		if err != nil {
+			return "", fmt.Errorf("decode cli-exec reply: %w", err)
+		}
+		start, ok := tok.(xml.StartElement)
+		if !ok {
+			continue
+		}
+		if start.Name.Local == "result" {
+			var v struct {
+				CharData string `xml:",chardata"`
+			}
+			if err := dec.DecodeElement(&v, &start); err != nil {
+				return "", fmt.Errorf("decode <result>: %w", err)
+			}
+			return strings.TrimSpace(v.CharData), nil
+		}
+	}
 }
 
 // splitCLILines normalises a CLI body into individual commands,

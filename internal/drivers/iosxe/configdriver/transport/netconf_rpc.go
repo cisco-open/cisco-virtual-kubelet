@@ -245,7 +245,13 @@ type rpcReply struct {
 	MessageID string
 	Data      []byte // innerXML of <data>, if present
 	OKOnly    bool   // true when the reply was <ok/>
-	Errors    []rpcError
+	// Output is the concatenated innerXML of any top-level child
+	// elements that aren't <ok/>, <data>, or <rpc-error>. Used by
+	// the cli-exec path (Cisco-IA's <cli-exec> RPC returns its
+	// textual show output wrapped in <result xmlns="cisco-ia">,
+	// not <data>).
+	Output []byte
+	Errors []rpcError
 }
 
 type rpcError struct {
@@ -317,6 +323,20 @@ func parseRPCReply(raw []byte) (*rpcReply, error) {
 				return nil, fmt.Errorf("decode <rpc-error>: %w", err)
 			}
 			reply.Errors = append(reply.Errors, e)
+		default:
+			// Capture the entire element (start tag + inner + end tag)
+			// so cli-exec callers can locate the <result> wrapper. Multiple
+			// non-recognised top-level elements concatenate.
+			var node struct {
+				XMLName xml.Name
+				Inner   []byte `xml:",innerxml"`
+			}
+			if err := dec.DecodeElement(&node, &start); err != nil {
+				return nil, fmt.Errorf("decode <%s>: %w", start.Name.Local, err)
+			}
+			reply.Output = append(reply.Output, []byte("<"+start.Name.Local+">")...)
+			reply.Output = append(reply.Output, node.Inner...)
+			reply.Output = append(reply.Output, []byte("</"+start.Name.Local+">")...)
 		}
 	}
 	return reply, nil
