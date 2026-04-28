@@ -20,4 +20,3 @@ set present on the device are preserved (additive merge).
 - `source`
 - `key`
 - `version`
-

@@ -17,4 +17,3 @@ set present on the device are preserved (additive merge).
 
 - `run`
 - `advertise_v2`
-

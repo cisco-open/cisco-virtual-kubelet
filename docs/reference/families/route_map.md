@@ -21,4 +21,3 @@ set present on the device are preserved (additive merge).
 - `description`
 - `entries`
 - `route-map-without-order-seq`
-

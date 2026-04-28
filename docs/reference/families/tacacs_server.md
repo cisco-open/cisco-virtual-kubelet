@@ -23,4 +23,3 @@ set present on the device are preserved (additive merge).
 - `port`
 - `single-connection`
 - `timeout`
-

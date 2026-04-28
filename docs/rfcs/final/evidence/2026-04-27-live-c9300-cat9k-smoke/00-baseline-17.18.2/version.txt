@@ -46,14 +46,14 @@ If you require further assistance please contact us by sending email to
 export@cisco.com.
 
 
-Technology Package License Information: 
+Technology Package License Information:
 
 ------------------------------------------------------------------------------
 Technology-package                                     Technology-package
-Current                        Type                       Next reboot  
+Current                        Type                       Next reboot
 ------------------------------------------------------------------------------
-network-advantage   	Smart License                 	 network-advantage   
-dna-advantage       	Subscription Smart License    	 dna-advantage                 
+network-advantage   	Smart License                 	 network-advantage
+dna-advantage       	Subscription Smart License    	 dna-advantage
 
 
 Smart Licensing Status: Smart Licensing Using Policy
@@ -80,8 +80,8 @@ System Serial Number               : FOC2416U0MV
 CLEI Code Number                   : INM2T10ARC
 
 
-Switch Ports Model              SW Version        SW Image              Mode   
------- ----- -----              ----------        ----------            ----   
+Switch Ports Model              SW Version        SW Image              Mode
+------ ----- -----              ----------        ----------            ----
 *    1 41    C9300-24P          17.18.02          CAT9K_IOSXE           INSTALL
 
 Connection to 198.51.100.103 closed by remote host.

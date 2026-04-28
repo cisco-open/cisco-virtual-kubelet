@@ -21,4 +21,3 @@ set present on the device are preserved (additive merge).
 - `max-connections`
 - `timeout-policy`
 - `client`
-

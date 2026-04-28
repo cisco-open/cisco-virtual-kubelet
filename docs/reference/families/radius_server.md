@@ -23,4 +23,3 @@ set present on the device are preserved (additive merge).
 - `timeout`
 - `retransmit`
 - `deadtime`
-

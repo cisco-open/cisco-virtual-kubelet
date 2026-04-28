@@ -16,4 +16,3 @@ The writer reads and writes the following leaves. Leaves outside this
 set present on the device are preserved (additive merge).
 
 - `hostname`
-

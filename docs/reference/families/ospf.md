@@ -24,4 +24,3 @@ set present on the device are preserved (additive merge).
 - `area`
 - `auto-cost`
 - `passive-interface`
-

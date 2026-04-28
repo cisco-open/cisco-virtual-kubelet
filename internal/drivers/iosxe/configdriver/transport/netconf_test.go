@@ -946,4 +946,3 @@ func TestOpToSubtreeFilterWithBodySingletonFallback(t *testing.T) {
 		t.Fatalf("body did not land in subtree: %s", got)
 	}
 }
-

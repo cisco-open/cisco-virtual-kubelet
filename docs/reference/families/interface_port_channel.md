@@ -25,4 +25,3 @@ set present on the device are preserved (additive merge).
 - `shutdown`
 - `mtu`
 - `switchport`
-

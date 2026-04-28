@@ -18,4 +18,3 @@ set present on the device are preserved (additive merge).
 - `standard`
 - `expanded`
 - `no-advertise`
-

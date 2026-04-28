@@ -17,4 +17,3 @@ set present on the device are preserved (additive merge).
 
 - `timezone`
 - `summer-time`
-

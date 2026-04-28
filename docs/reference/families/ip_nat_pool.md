@@ -22,4 +22,3 @@ set present on the device are preserved (additive merge).
 - `netmask`
 - `prefix-length`
 - `type`
-

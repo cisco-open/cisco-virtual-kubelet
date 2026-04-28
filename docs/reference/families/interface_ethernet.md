@@ -29,4 +29,3 @@ set present on the device are preserved (additive merge).
 - `description`
 - `shutdown`
 - `mtu`
-

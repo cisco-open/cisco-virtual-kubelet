@@ -21,4 +21,3 @@ set present on the device are preserved (additive merge).
 - `neighbor`
 - `address-family`
 - `redistribute`
-

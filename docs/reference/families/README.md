@@ -59,4 +59,3 @@ writers registry. Do not edit by hand; re-run the generator.
 | [username](username.md) | keyed_list | implemented | [↗](https://netascode.cisco.com/docs/data_models/iosxe/device/username/) |
 | [vlan](vlan.md) | keyed_list | implemented | [↗](https://netascode.cisco.com/docs/data_models/iosxe/device/vlan/) |
 | [vrf](vrf.md) | keyed_list | implemented | [↗](https://netascode.cisco.com/docs/data_models/iosxe/device/vrf/) |
-

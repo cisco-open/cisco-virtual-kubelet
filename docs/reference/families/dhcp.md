@@ -19,4 +19,3 @@ set present on the device are preserved (additive merge).
 - `network`
 - `prefix_length`
 - `default_router`
-
