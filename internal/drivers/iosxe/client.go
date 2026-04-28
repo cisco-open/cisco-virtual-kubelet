@@ -81,18 +81,23 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 			return fmt.Errorf("app %s did not reach DEPLOYED state for phase 2: %w", appConfig.AppName(), err)
 		}
 
-		// Now set Start=true and repost configuration
-		gapp := appConfig.Spec.DeviceConfig.App[appConfig.AppName()]
-		origStart := gapp.Start
-		gapp.Start = ygot.Bool(true)
+		// Create a minimal configuration with only the Start field
+		startOnlyConfig := &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData{
+			Apps: &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps{
+				App: map[string]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App{
+					appConfig.AppName(): {
+						Start: ygot.Bool(true),
+					},
+				},
+			},
+		}
 
-		if err := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller); err != nil {
-			gapp.Start = origStart // restore original value
+		// POST the minimal Start=true configuration
+		if err := d.client.Post(ctx, cfgPath, startOnlyConfig, d.marshaller); err != nil {
 			return fmt.Errorf("failed to set Start=true for DockerResource app %s: %w", appConfig.AppName(), err)
 		}
 
 		log.G(ctx).Infof("Successfully updated app %s to Start=true", appConfig.AppName())
-		gapp.Start = origStart // restore original value for consistency
 	}
 
 	// For non-HTTP image paths (flash, bootflash, etc.) the device auto-advances
