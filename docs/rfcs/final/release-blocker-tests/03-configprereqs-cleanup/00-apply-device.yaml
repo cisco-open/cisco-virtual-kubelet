@@ -1,23 +1,25 @@
 # Test 03 — configPrereqs deletion-driven cleanup
 #
 # Creates a synthetic CiscoDevice that points at the same physical
-# device as cat9k-smoke, but carries spec.configPrereqs.
-# The CiscoDeviceReconciler materialises those prereqs into a
-# synthetic IOSXEConfig that day-0 reconciles. Deleting this
-# CiscoDevice triggers the cleanup path under test.
+# device, carrying spec.configPrereqs. The CiscoDeviceReconciler
+# materialises those prereqs into a synthetic IOSXEConfig that
+# day-0 reconciles. Deleting this CiscoDevice triggers the cleanup
+# path under test.
 #
-# This manifest defaults to the canonical playbook fixture
-# (198.51.100.103 + cat9k-smoke-creds Secret in cisco-vk-smoke). For
-# a non-default lab, override the address / username /
-# credentialSecretRef via:
+# Override the address / username / credentialSecretRef for your lab:
 #
-#   sed -e "s/198\.51\.100\.103/<your-ip>/" \
-#       -e "s/cat9k-smoke-creds/<your-secret>/" \
+#   sed -e "s/10\.1\.1\.1/<your-ip>/" \
+#       -e "s/cat9k-creds/<your-secret>/" \
+#       -e "s/username: cisco/username: <your-user>/" \
 #       00-apply-device.yaml | kubectl apply -f -
 #
-# IMPORTANT: this test does NOT spawn a per-device cisco-vk-run pod.
-# The synthetic IOSXEConfig reconciles via the existing cat9k-smoke
-# pod's reconciler (it targets the same physical address).
+# IMPORTANT — Wave-9 API simplification: configPrereqs.managedFamilies
+# + configPrereqs.source.inline (the original Phase-3 shape) was
+# replaced by configPrereqs.configuration in the Wave-9 CRD bump.
+# The reconciler now scopes configPrereqs to the apphosting-prereq
+# family set (interface_virtual_port_group, dhcp,
+# access_list_extended); for arbitrary families use a regular
+# IOSXEConfig with pruneOnRelinquish=true.
 
 ---
 apiVersion: cisco.vk/v1alpha1
@@ -29,35 +31,34 @@ metadata:
     cisco.vk/release-blocker-test: "03-configprereqs-cleanup"
 spec:
   driver: XE
-  address: "198.51.100.103"   # same physical device as cat9k-smoke
+  address: "10.1.1.1"
   port: 443
-  username: AI_AGENT_RW
+  username: cisco
   credentialSecretRef:
-    name: cat9k-smoke-creds
+    name: cat9k-creds
   tls:
     enabled: true
     insecureSkipVerify: true
+  transport: restconf
+  xe:
+    networking:
+      interface:
+        type: Management
+        management:
+          dhcp: true
   # configPrereqs is the test's payload. The reconciler creates a
   # synthetic IOSXEConfig from this template; on CiscoDevice delete,
   # the finalizer empties the source + flips pruneOnRelinquish=true
   # to drive the cleanup path under test.
   configPrereqs:
-    managedFamilies:
-      - vlan
-      - interface_loopback
-    source:
-      inline:
-        iosxe:
-          devices:
-            - name: test-03-prereq-device
-              configuration:
-                vlan:
-                  vlans:
-                    - id: 999
-                      name: cisco-vk-test-03
-                interface_loopback:
-                  interfaces:
-                    - name: 9998
-                      description: "cisco-vk release-blocker test 03"
-                      ipv4_address: 10.255.255.98
-                      ipv4_address_mask: 255.255.255.255
+    configuration:
+      iosxe:
+        devices:
+          - name: test-03-prereq-device
+            configuration:
+              interface_virtual_port_group:
+                interfaces:
+                  - id: 9
+                    description: "cisco-vk release-blocker test 03"
+                    ipv4_address: 10.255.255.98
+                    ipv4_address_mask: 255.255.255.255

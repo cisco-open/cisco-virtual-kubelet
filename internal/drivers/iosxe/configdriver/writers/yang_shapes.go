@@ -14,6 +14,8 @@
 
 package writers
 
+import "fmt"
+
 // netascode → Cisco-IOS-XE-native YANG body-shape helpers used by the
 // interface_* family writers. The netascode data model is
 // intentionally flat (a single map of leaf-name → value) but the
@@ -70,6 +72,27 @@ func interfaceIPv4VRFToYANG(flat map[string]any) map[string]any {
 		}
 	}
 	return out
+}
+
+// interfaceVPGToYANG is the VirtualPortGroup variant. IOS-XE's
+// Cisco-IOS-XE-native VPG list is keyed by `name` (string), but the
+// netascode shape uses `id` (int) as the per-interface identifier.
+// The base interfaceIPv4VRFToYANG passes `id` through verbatim,
+// which the device rejects with `missing-element: name`. Caught
+// against test 03 retest 2026-04-28.
+func interfaceVPGToYANG(flat map[string]any) map[string]any {
+	if id, hasID := flat["id"]; hasID {
+		dup := make(map[string]any, len(flat))
+		for k, v := range flat {
+			if k == "id" {
+				continue
+			}
+			dup[k] = v
+		}
+		dup["name"] = fmt.Sprint(id)
+		flat = dup
+	}
+	return interfaceIPv4VRFToYANG(flat)
 }
 
 // interfaceIPv4VRFFromYANG inverts the above so observed-state and

@@ -905,6 +905,14 @@ func renderDeviceConfig(spec *ciskov1.DeviceSpec) (string, error) {
 	sanitized.Password = ""
 	sanitized.CredentialSecretRef = nil
 
+	// Strip configPrereqs — it's a controller-side concern (the
+	// controller materialises it into a synthetic IOSXEConfig CR
+	// the per-pod kubelet reconciles directly). Including it here
+	// breaks the per-pod config decoder because mapstructure can't
+	// decode arbitrary YAML into runtime.RawExtension's Raw []byte.
+	// Caught against test 03 retest 2026-04-28.
+	sanitized.ConfigPrereqs = nil
+
 	wrapper := struct {
 		Device ciskov1.DeviceSpec `json:"device"`
 	}{
