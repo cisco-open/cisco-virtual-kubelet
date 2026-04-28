@@ -120,7 +120,14 @@ func (vlanWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		ops = append(ops, transport.Op{
 			Verb: transport.VerbMerge,
 			Path: fmt.Sprintf("%s=%d", vlanListPath, id),
-			Body: body,
+			// 88ac685-fu: NETCONF builder needs PathSpec to emit
+			// `<vlan-list><id>998</id>...` instead of the literal
+			// `<vlan-list=998>` element. The vlanWriter is hand-
+			// written (not the keyed-list base writer) so it
+			// previously missed the PathSpec wire-up; live retest
+			// 09 phase 1 surfaced `unknown-element vlan-list=998`.
+			PathSpec: pathSpecForKeyedListEntry(vlanListPath, "id", fmt.Sprintf("%d", id)),
+			Body:     body,
 		})
 	}
 	return ops, nil
@@ -169,8 +176,9 @@ func (vlanWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
 	ops := make([]transport.Op, 0, len(orphans))
 	for _, id := range orphans {
 		ops = append(ops, transport.Op{
-			Verb: transport.VerbDelete,
-			Path: fmt.Sprintf("%s=%d", vlanListPath, id),
+			Verb:     transport.VerbDelete,
+			Path:     fmt.Sprintf("%s=%d", vlanListPath, id),
+			PathSpec: pathSpecForKeyedListEntry(vlanListPath, "id", fmt.Sprintf("%d", id)),
 		})
 	}
 	return ops, nil

@@ -1,0 +1,55 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"config.cisco.vk/v1alpha1","kind":"IOSXEConfig","metadata":{"annotations":{},"labels":{"cisco.vk/release-blocker-test":"01-netconf-transactional"},"name":"test-01-netconf-transactional","namespace":"cisco-vk-smoke"},"spec":{"deviceRef":{"name":"cat9k-smoke"},"driftDetectInterval":"1m","driftPolicy":"revert","managedFamilies":["interface_loopback"],"source":{"configMapRef":{"key":"data.nac.yaml","name":"test-01-data"}},"transactional":true,"writeStartup":false}}
+  creationTimestamp: "2026-04-28T09:55:24Z"
+  finalizers:
+  - config.cisco.vk/lease-cleanup
+  generation: 1
+  labels:
+    cisco.vk/release-blocker-test: 01-netconf-transactional
+  name: test-01-netconf-transactional
+  namespace: cisco-vk-smoke
+  resourceVersion: "387677"
+  uid: f2fea9da-267f-4df4-aebd-6cb53cae4f71
+spec:
+  atomicReplace: false
+  confirmTimeoutSeconds: 0
+  deviceRef:
+    name: cat9k-smoke
+  driftDetectInterval: 1m
+  driftPolicy: revert
+  managedFamilies:
+  - interface_loopback
+  pruneOnRelinquish: false
+  source:
+    configMapRef:
+      key: data.nac.yaml
+      name: test-01-data
+  transactional: true
+  writeStartup: false
+status:
+  conditions:
+  - lastTransitionTime: "2026-04-28T10:11:34Z"
+    message: device reconciled to declared intent
+    reason: Succeeded
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2026-04-28T09:55:24Z"
+    message: overlaps with cisco-vk-smoke/test-01-netconf-transactional on [interface_loopback];
+      cisco-vk-smoke/test-07-write-startup on [interface_loopback]; cisco-vk-smoke/test-10-confirmed-commit-happy
+      on [interface_loopback]
+    reason: FamilyOverlap
+    status: "True"
+    type: Conflict
+  familyStatus:
+  - name: interface_loopback
+    state: InSync
+  lastAppliedHash: sha256:cd46bead3aec6515e46eb256eb476db3351a221f2f8cd237ac83bd3f0346646c
+  lastAppliedTime: "2026-04-28T10:11:34Z"
+  lastDeviceCheck: "2026-04-28T10:11:34Z"
+  observedGeneration: 1
+  phase: InSync
+  sourceYangVersion: "1791"

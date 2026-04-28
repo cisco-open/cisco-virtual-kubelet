@@ -1,0 +1,56 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"config.cisco.vk/v1alpha1","kind":"IOSXEConfig","metadata":{"annotations":{},"labels":{"cisco.vk/release-blocker-test":"10-confirmed-commit-happy-path"},"name":"test-10-confirmed-commit-happy","namespace":"cisco-vk-smoke"},"spec":{"confirmTimeoutSeconds":30,"deviceRef":{"name":"cat9k-smoke"},"driftDetectInterval":"1m","driftPolicy":"revert","managedFamilies":["interface_loopback"],"source":{"configMapRef":{"key":"data.nac.yaml","name":"test-10-data"}},"transactional":true}}
+  creationTimestamp: "2026-04-28T10:03:15Z"
+  finalizers:
+  - config.cisco.vk/lease-cleanup
+  generation: 1
+  labels:
+    cisco.vk/release-blocker-test: 10-confirmed-commit-happy-path
+  name: test-10-confirmed-commit-happy
+  namespace: cisco-vk-smoke
+  resourceVersion: "387699"
+  uid: c9e9ded4-1c84-4ab9-b818-99df37e09b78
+spec:
+  atomicReplace: false
+  confirmTimeoutSeconds: 30
+  deviceRef:
+    name: cat9k-smoke
+  driftDetectInterval: 1m
+  driftPolicy: revert
+  managedFamilies:
+  - interface_loopback
+  pruneOnRelinquish: false
+  source:
+    configMapRef:
+      key: data.nac.yaml
+      name: test-10-data
+  transactional: true
+  writeStartup: false
+status:
+  conditions:
+  - lastTransitionTime: "2026-04-28T10:11:32Z"
+    message: not in sync
+    reason: LeaseBlocked
+    status: "False"
+    type: Ready
+  - lastTransitionTime: "2026-04-28T10:03:15Z"
+    message: overlaps with cisco-vk-smoke/test-01-netconf-transactional on [interface_loopback];
+      cisco-vk-smoke/test-07-write-startup on [interface_loopback]; cisco-vk-smoke/test-10-confirmed-commit-happy
+      on [interface_loopback]
+    reason: FamilyOverlap
+    status: "True"
+    type: Conflict
+  familyStatus:
+  - message: family leased by "cisco-vk-smoke/test-01-netconf-transactional"
+    name: interface_loopback
+    state: Skipped
+  lastAppliedHash: sha256:ca9f0088082aa303eb7e90fcc37e9cf42e10cf72b97b05f63f34af8fef7509c8
+  lastAppliedTime: "2026-04-28T10:10:32Z"
+  lastDeviceCheck: "2026-04-28T10:10:32Z"
+  observedGeneration: 1
+  phase: LeaseBlocked
+  sourceYangVersion: "1791"

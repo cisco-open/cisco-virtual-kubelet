@@ -1,0 +1,6 @@
+=== Test 05 — Credential rotation evidence ===
+PRE_UID=4a081a89-4f39-451e-b2b1-9d6671aa3325 (deployment annotation triggered roll)
+POST_UID=96ac167d-26ef-4a39-a40e-2705a8f63935
+
+deployment template annotations after rotation:
+{"cisco.vk/config-hash":"c748116e","cisco.vk/credential-resource-version":"386411"}

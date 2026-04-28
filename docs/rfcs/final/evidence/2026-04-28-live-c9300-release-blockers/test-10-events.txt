@@ -1,0 +1,10 @@
+LAST SEEN   TYPE     REASON                OBJECT                                       MESSAGE
+8m13s       Normal   AppliedSuccess        iosxeconfig/test-10-confirmed-commit-happy   applied 1 family change(s) successfully
+7m13s       Normal   FamilySkipped         iosxeconfig/test-10-confirmed-commit-happy   family "interface_loopback": family leased by "cisco-vk-smoke/test-07-write-startup"
+6m43s       Normal   FamilySkipped         iosxeconfig/test-10-confirmed-commit-happy   family "interface_loopback": family leased by "cisco-vk-smoke/test-09-atomic-replace"
+6m13s       Normal   FamilySkipped         iosxeconfig/test-10-confirmed-commit-happy   family "interface_loopback": family leased by "cisco-vk-smoke/test-01-netconf-transactional"
+5m57s       Normal   ConfirmedCommitUsed   iosxeconfig/test-10-confirmed-commit-happy   confirmed-commit auto-revert path used; running-verify passed and follow-up confirm fired
+3m43s       Normal   FamilySkipped         iosxeconfig/test-10-confirmed-commit-happy   family "interface_loopback": family leased by "cisco-vk-smoke/test-09-atomic-replace"
+102s        Normal   ConfirmedCommitUsed   iosxeconfig/test-10-confirmed-commit-happy   confirmed-commit auto-revert path used; running-verify passed and follow-up confirm fired
+42s         Normal   FamilySkipped         iosxeconfig/test-10-confirmed-commit-happy   family "interface_loopback": family leased by "cisco-vk-smoke/test-07-write-startup"
+12s         Normal   FamilySkipped         iosxeconfig/test-10-confirmed-commit-happy   family "interface_loopback": family leased by "cisco-vk-smoke/test-01-netconf-transactional"

@@ -84,7 +84,26 @@ func runManager(cmd *cobra.Command, args []string) error {
 	}
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	cfg := ctrl.GetConfigOrDie()
+
+	// Pre-flight CRD field-drift check. Helm doesn't upgrade CRDs
+	// across releases (only first-install), so on a stale cluster
+	// the manager would happily start and the per-pod kubelet's
+	// reconcile would later fail with `unknown field` errors. The
+	// check below queries the API server's discovery for known
+	// IOSXEConfig fields and logs a prominent WARNING when any
+	// field this binary expects is missing. Non-fatal — the
+	// manager still starts; the warning is enough to point
+	// operators at `kubectl apply -f charts/.../crds/`.
+	if drift := checkCRDFieldDrift(cfg); drift != "" {
+		setupLog.Info("══════════════════════════════════════════════════════════════════")
+		setupLog.Info("CRD FIELD DRIFT DETECTED — apply the chart's CRDs to fix")
+		setupLog.Info(drift)
+		setupLog.Info("Run: kubectl apply -f charts/cisco-virtual-kubelet/crds/")
+		setupLog.Info("══════════════════════════════════════════════════════════════════")
+	}
+
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                 scheme,
 		LeaderElection:         enableLeaderElect,
 		LeaderElectionID:       "ciscodevice.cisco.vk",
