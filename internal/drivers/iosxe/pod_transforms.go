@@ -259,6 +259,13 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 			RunOpts: runOptsMap,
 		}
 
+		// Enable docker resource when we have environment variables
+		// This is required for RunOpts to take effect on the device
+		if len(envOpts) > 0 {
+			fmt.Printf("[DEBUG] Enabling DockerResource for container %s with %d environment options\n", container.Name, len(envOpts))
+			gapp.DockerResource = ygot.Bool(true)
+		}
+
 		// Configure resource profile
 		resConfig := d.getResourceConfig(&container)
 		gapp.ApplicationResourceProfile = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_ApplicationResourceProfile{
