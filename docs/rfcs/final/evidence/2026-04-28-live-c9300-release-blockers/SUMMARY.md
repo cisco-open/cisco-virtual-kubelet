@@ -10,7 +10,7 @@
 | Test | Description | Outcome |
 |---|---|---|
 | 01 | NETCONF transactional Loopback9999 (Wave 1A-fu) | ✅ phase=InSync |
-| 04 | gNMI keyed-path (Wave 5A-fu / 7B) | ⏸ deferred — `gnxi server` is not enabled on this device. Permanent environmental gap; needs a second device with gNMI enabled OR `gnxi server` brought up on C9K-4 by network ops. Code + envtest validated. |
+| 04 | gNMI keyed-path (Wave 5A-fu / 7B) | ⏸ deferred — `gnxi server` IS enabled on C9K-4 (port 50052, Admin Enabled / Oper Up — verified 2026-04-28). Live-retest blocked at a different layer: the **CiscoDevice CRD has a single `spec.port` field shared by both apphosting (HTTPS/RESTCONF) and config-driver subsystems**, so flipping `transport: gnmi + port: 50052` breaks the apphosting connectivity probe (it tries HTTP/1.1 against gnxi's HTTP/2 endpoint and crashes the cisco-vk pod). Closing this test needs CRD-level per-protocol port fields (e.g. `xe.gnmiPort`, `xe.netconfPort`) or an apphosting-side change to anchor its probe to a fixed RESTCONF port independent of `spec.port`. The gNMI write path itself is envtest-validated end-to-end (Wave 5A-fu / 7B). |
 | 05 | Credential-Secret rotation with overlap (Wave 6B + 7A.3 + 8.2 + 9.2) | ✅ deployment rolled via `cisco.vk/credential-resource-version` annotation; new pod UID confirmed |
 | 06 | driftPolicy revert live-write (banner) | ✅ already covered in [2026-04-27 candidate-only retest](../2026-04-27-live-c9300-netconf-candidate-only/SUMMARY.md) |
 | 07 | writeStartup save-config (Loopback9997) | ✅ already covered in same bundle |
@@ -94,7 +94,7 @@ Recommended: option 1; track on the production-hardening plan. The Wave-10 *comp
 
 - §2.1 8 live-device retests not yet run since fix bundles:
   - 01 ✅ (this retest)
-  - 04 ⏸ deferred — `gnxi server` not enabled on the C9K-4 device. Environmental gap; not fixable from the cluster side. Either bring up gNMI on the device or run against a second device that has it.
+  - 04 ⏸ deferred — gnxi IS enabled on C9K-4 (port 50052, Admin Enabled/Oper Up). Live-retest blocked at the **shared CiscoDevice.spec.port** between apphosting (RESTCONF) and configdriver (gNMI). Setting port=50052 broke the apphosting probe (HTTP/1.1 vs gnxi's HTTP/2). Closing needs CRD-level per-protocol port fields OR apphosting probe anchored to a fixed RESTCONF port. The gNMI write path is envtest-validated.
   - 05 ✅ (this retest)
   - 08 ✅ **PASSED** with image v37. Eleven writer/transport fixes landed (v26→v37). Final closer was a NETCONF `<get-schema>` against the device's `Cisco-IOS-XE-acl` module — pinned down the `<ace-rule>` wrapper container, `<action>` enum leaf, `<host-address>` / `<dst-host-address>` source/destination leaves. Wave-10 confirmed-commit + auto-revert validated end-to-end: apply landed tentatively → controller session dropped → device timer reverted at 30s → post-test verification confirms ACL absent + Gi0/0 binding absent.
   - 09 ✅ establish-phase InSync (this retest, with `phase9-vrf-af-ipv4` image — closes the loopback-VRF blocker via the new VRF address-family writer; phase 2 deferred to isolated device per Findings §5)
