@@ -161,6 +161,16 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "commands list is empty", http.StatusBadRequest)
 		return
 	}
+	// Wave 10 release-readiness P0 fix (2026-04-28): server-side
+	// allowlist enforcement. The kubectl-ciscovk plugin has a
+	// denylist of its own, but a direct HTTP caller against the
+	// admin port (port-forward, in-cluster operator) would bypass
+	// it. ValidateCommands rejects every non-read-only command
+	// before it reaches the device.
+	if err := diagnostic.ValidateCommands(req.Commands); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	tr := s.TP.GetTransport()
 	if tr == nil {

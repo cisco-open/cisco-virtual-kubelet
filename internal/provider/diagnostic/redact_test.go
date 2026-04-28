@@ -111,6 +111,58 @@ hostname cat9k`,
 			expectHide: []string{"020005f1abcd"},
 			wantDid:    true,
 		},
+		// Wave 10 release-readiness P1 fixes (2026-04-28).
+		{
+			name:       "line-vty-bare-password",
+			input:      "line vty 0 4\n password ww\n transport input ssh",
+			expectHide: []string{" password ww"},
+			expectKeep: []string{"line vty 0 4", "transport input ssh"},
+			wantDid:    true,
+		},
+		{
+			name:       "line-console-bare-password",
+			input:      "line con 0\n password 7 094F471A1A0A\n logging synchronous",
+			expectHide: []string{"094F471A1A0A"},
+			wantDid:    true,
+		},
+		{
+			name:       "isis-domain-password",
+			input:      "router isis\n net 49.0000.0001.0100.1001.00\n domain-password cisco\n metric-style transition",
+			expectHide: []string{"domain-password cisco"},
+			expectKeep: []string{"router isis", "metric-style transition"},
+			wantDid:    true,
+		},
+		{
+			name:       "isis-area-password",
+			input:      "router isis\n area-password areakey42\n is-type level-2-only",
+			expectHide: []string{"areakey42"},
+			wantDid:    true,
+		},
+		{
+			name:       "ospf-message-digest-key",
+			input:      "interface GigabitEthernet1/0/1\n ip ospf message-digest-key 1 md5 ospfsecret\n ip ospf authentication message-digest",
+			expectHide: []string{"ospfsecret"},
+			wantDid:    true,
+		},
+		{
+			name:       "ospf-authentication-key",
+			input:      "interface GigabitEthernet1/0/1\n ip ospf authentication-key plainospfkey",
+			expectHide: []string{"plainospfkey"},
+			wantDid:    true,
+		},
+		{
+			name:       "bgp-neighbor-password",
+			input:      "router bgp 65000\n neighbor 192.168.1.1 password 7 020005f1abcd\n neighbor 192.168.1.1 remote-as 65001",
+			expectHide: []string{"020005f1abcd"},
+			expectKeep: []string{"router bgp 65000", "remote-as 65001"},
+			wantDid:    true,
+		},
+		{
+			name:       "narrative-password-not-redacted",
+			input:      `! comment about the password rotation policy below`,
+			expectKeep: []string{"comment about"},
+			wantDid:    false,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

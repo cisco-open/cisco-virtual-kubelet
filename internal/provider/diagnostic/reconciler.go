@@ -270,6 +270,17 @@ func (r *Reconciler) runBatch(
 	capture := configv1alpha1.DiagnosticCapture{
 		CapturedAt: metav1.Time{Time: now},
 	}
+	// Wave 10 release-readiness P0 fix (2026-04-28): server-side
+	// allowlist enforcement. Refuse the batch BEFORE contacting the
+	// device when any command falls outside the read-only allowlist.
+	// Pre-fix the reconciler forwarded spec.commands directly with no
+	// validation; a user with create-IOSXEDiagnostic RBAC could
+	// bypass the kubectl plugin's denylist and submit configure-mode
+	// or destructive CLI through the same device credentials.
+	if err := ValidateCommands(diag.Spec.Commands); err != nil {
+		capture.TransportError = err.Error()
+		return capture
+	}
 	results, err := d.DiagnosticExec(ctx, diag.Spec.Commands)
 	if err != nil {
 		capture.TransportError = err.Error()

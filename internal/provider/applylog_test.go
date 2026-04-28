@@ -182,6 +182,66 @@ func TestAppendApplyLogStoresBodyWhenRetainBodyTrue(t *testing.T) {
 	}
 }
 
+// TestAppendApplyLogOmitsBodyWhenSecretRefsPresent is the Wave 10
+// release-readiness P1 fix (2026-04-28): when the source IOSXEConfig
+// declares SecretRefs, the resolver merges secret material into
+// resolved.Configuration. Honouring spec.retainBody=true in that
+// case would persist the merged secret material into
+// IOSXEConfigApplyLog.status.entries[].body — undermining the
+// SecretRefs promise that secret material stays out of CR status.
+// The reconciler must skip body population and (when an event
+// recorder is wired) emit a Warning so operators don't silently
+// lose replay capability.
+func TestAppendApplyLogOmitsBodyWhenSecretRefsPresent(t *testing.T) {
+	scheme := newTestScheme(t)
+	logCR := &configv1alpha1.IOSXEConfigApplyLog{
+		ObjectMeta: metav1.ObjectMeta{Name: "edge-01", Namespace: "network"},
+		Spec: configv1alpha1.IOSXEConfigApplyLogSpec{
+			DeviceRef:  configv1alpha1.DeviceRef{Name: "edge-01"},
+			MaxEntries: 5,
+			RetainBody: true,
+		},
+	}
+	cr := newCR("edge-01", "edge-01")
+	cr.Spec.SecretRefs = []configv1alpha1.FamilySecretRef{
+		{Family: "bgp", Name: "bgp-md5", Key: "snippet.yaml"},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(logCR).
+		WithStatusSubresource(&configv1alpha1.IOSXEConfigApplyLog{}).
+		Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+	resolved := &intent.ResolvedIntent{
+		Configuration: map[string]any{"bgp": map[string]any{
+			// Simulate the secret-merged shape: the resolver would
+			// have copied a Secret-sourced MD5 key in here.
+			"neighbors": []any{
+				map[string]any{"address": "10.0.0.1", "password": "from-secret-md5"},
+			},
+		}},
+	}
+	if err := r.appendApplyLog(context.Background(), cr,
+		engine.Result{Phase: engine.PhaseInSync}, "sha256:abc", resolved); err != nil {
+		t.Fatalf("appendApplyLog: %v", err)
+	}
+	var got configv1alpha1.IOSXEConfigApplyLog
+	if err := c.Get(context.Background(),
+		types.NamespacedName{Namespace: "network", Name: "edge-01"}, &got); err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if len(got.Status.Entries) != 1 {
+		t.Fatalf("entries=%d", len(got.Status.Entries))
+	}
+	if body := got.Status.Entries[0].Body; body != "" {
+		t.Errorf("body must be empty when SecretRefs present even with RetainBody=true; got: %s", body)
+	}
+	// The non-body fields must still land — auditing isn't disabled,
+	// only replay-body capture is.
+	if got.Status.Entries[0].Hash != "sha256:abc" {
+		t.Errorf("hash should still be recorded: %q", got.Status.Entries[0].Hash)
+	}
+}
+
 func TestAppendApplyLogIsNoopWhenNoLogCR(t *testing.T) {
 	// Auditing is opt-in: a device with no IOSXEConfigApplyLog CR
 	// is silently skipped. The reconciler must not error.

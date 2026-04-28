@@ -61,7 +61,28 @@ var secretLineRe = regexp.MustCompile(`(?i)^[\t ]*(` +
 	`pre-shared-key\b|` +
 	`shared-secret\b|` +
 	`peer\s+default\s+ip\s+address\s+pool\b|` +
-	`ppp\s+chap\s+(password|hostname)\b` +
+	`ppp\s+chap\s+(password|hostname)\b|` +
+	// Wave 10 release-readiness P1 fix (2026-04-28): line-mode
+	// password — the bare `password <type?> <token>` line indented
+	// under a `line vty`, `line console`, or `line aux` stanza.
+	// Caught against committed t5 evidence that contained
+	// `line vty 0 4\n password ww\n`. The optional `\d+\s+` allows
+	// `password 7 094F471A1A0A` (Cisco type-7 reversible) as well
+	// as the bare `password ww` shape. Pattern matches indented
+	// `password …` lines that aren't already covered by the
+	// `username` / `enable` clauses above.
+	`password\s+(\d+\s+)?\S+\s*$|` +
+	// Routing-protocol passwords — caught against the same t5
+	// evidence's `domain-password cisco` (ISIS). Covers ISIS
+	// `domain-password` + `area-password`, OSPF + RIP/EIGRP
+	// `authentication-key` + `message-digest-key` (with optional
+	// `ip ospf` / `ipv6 ospf` / `ip rip` / `ip eigrp` prefix), BGP
+	// `neighbor … password …`, and generic `isis password` shapes.
+	`(domain|area)-password\s+\S+|` +
+	`(ip\s+ospf\s+|ipv6\s+ospf\s+|ip\s+rip\s+|ip\s+eigrp\s+\d+\s+)?authentication-key\s+(\d+\s+)?\S+|` +
+	`(ip\s+ospf\s+)?message-digest-key\s+\d+\s+md5\s+\S+|` +
+	`neighbor\s+\S+\s+password\b|` +
+	`isis\s+password\s+\S+` +
 	`)`)
 
 // Redact replaces lines in `output` that match secretLineRe with a

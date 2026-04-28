@@ -1064,6 +1064,20 @@ func (r *ConfigReconciler) emitEvents(cr *configv1alpha1.IOSXEConfig, result eng
 // It is captured into the ApplyLogEntry.Body field only on logs
 // with spec.retainBody=true — necessary for annotation-driven
 // time-travel replay (Phase 7).
+//
+// SecretRefs interaction (Wave 10 release-readiness P1 fix,
+// 2026-04-28): when the source IOSXEConfig has any SecretRefs,
+// the resolved intent contains secret material merged in from
+// referenced Secrets. retainBody=true would persist that secret
+// material into IOSXEConfigApplyLog.status.entries[].body —
+// undermining the SecretRefs promise that secrets stay in
+// Secrets and never land in a ConfigMap or git-tracked CR. The
+// reconciler refuses to populate Body in that case and emits a
+// Warning event so operators don't silently lose replay
+// capability. To use replay with secrets, the operator must
+// either move secret material out of SecretRefs (back into the
+// CR, accepting the risk) or accept that this CR's apply log
+// entries will not have a replay body.
 func (r *ConfigReconciler) appendApplyLog(
 	ctx context.Context,
 	cr *configv1alpha1.IOSXEConfig,
@@ -1075,6 +1089,7 @@ func (r *ConfigReconciler) appendApplyLog(
 	if err := r.Client.List(ctx, &logs, client.InNamespace(cr.Namespace)); err != nil {
 		return fmt.Errorf("list apply logs: %w", err)
 	}
+	hasSecretRefs := len(cr.Spec.SecretRefs) > 0
 	for i := range logs.Items {
 		log := &logs.Items[i]
 		if log.Spec.DeviceRef.Name != cr.Spec.DeviceRef.Name {
@@ -1082,12 +1097,20 @@ func (r *ConfigReconciler) appendApplyLog(
 		}
 		entry := buildApplyLogEntry(cr, result, hash)
 		if log.Spec.RetainBody && resolved != nil && result.Phase == engine.PhaseInSync {
-			body, err := encodeReplayBody(resolved)
-			if err != nil {
-				return fmt.Errorf("encode replay body for %s/%s: %w",
-					log.Namespace, log.Name, err)
+			if hasSecretRefs {
+				if r.Recorder != nil {
+					r.Recorder.Eventf(cr, corev1.EventTypeWarning, "ReplayBodyOmittedSecretRefs",
+						"apply log %s/%s has spec.retainBody=true but %s/%s declares %d secretRef(s); body omitted to keep secret material out of CR status (replay will be unavailable for this entry)",
+						log.Namespace, log.Name, cr.Namespace, cr.Name, len(cr.Spec.SecretRefs))
+				}
+			} else {
+				body, err := encodeReplayBody(resolved)
+				if err != nil {
+					return fmt.Errorf("encode replay body for %s/%s: %w",
+						log.Namespace, log.Name, err)
+				}
+				entry.Body = body
 			}
-			entry.Body = body
 		}
 		updated := log.DeepCopy()
 		max := int(updated.Spec.MaxEntries)

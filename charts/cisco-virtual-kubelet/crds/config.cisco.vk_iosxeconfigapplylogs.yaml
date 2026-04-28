@@ -103,6 +103,17 @@ spec:
                   replay capability should keep it off and use shorter MaxEntries
                   when they need it on. Cap-aware: the entry size is still
                   bounded by Kubernetes' object size limit.
+
+                  Interaction with IOSXEConfig.spec.secretRefs: the resolver
+                  merges Secret-sourced material into the resolved intent, so
+                  retainBody=true would persist that secret material into
+                  status.entries[].body and undermine the SecretRefs promise.
+                  The reconciler refuses to populate Body for any IOSXEConfig
+                  that declares secretRefs and emits a
+                  `ReplayBodyOmittedSecretRefs` Warning event so operators see
+                  the silent replay-loss. To use replay with secret material
+                  the operator must move the secret out of secretRefs (and
+                  accept the security tradeoff).
                 type: boolean
             required:
             - deviceRef

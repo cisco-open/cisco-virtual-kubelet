@@ -39,12 +39,23 @@ type IOSXEDiagnosticSpec struct {
 	// status.results[].err but do NOT abort the batch — operators
 	// frequently want a best-effort capture across a list.
 	//
-	// Destructive commands (clear, reload, write erase) are
-	// rejected by the admission webhook; the device-operations
-	// RFC scopes a parallel CRD with stricter RBAC for those.
+	// Defense-in-depth: every command is checked against three
+	// allowlist layers: (a) this CRD-level Pattern marker, (b) the
+	// reconciler's diagnostic.ValidateCommands at apply-time, and
+	// (c) the kubectl-ciscovk plugin's pre-submit denylist. Bypassing
+	// any one is caught by the next; passing the CRD Pattern requires
+	// the head-word to match the read-only allowlist
+	// (`show`, `more`, `dir`, `ping`, `ping6`, `traceroute`,
+	// `traceroute6`, `monitor`, `test`, `verify`, `calendar`,
+	// `terminal`, `namespace`).
+	//
+	// Destructive commands (clear, reload, write erase) are rejected
+	// at admission time; the device-operations RFC scopes a parallel
+	// CRD with stricter RBAC for those.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
+	// +kubebuilder:validation:items:Pattern=`^(show|more|dir|ping|ping6|traceroute|traceroute6|monitor|test|verify|calendar|terminal|namespace)( |$)`
 	Commands []string `json:"commands"`
 
 	// Schedule, when set, makes the diagnostic a recurring
