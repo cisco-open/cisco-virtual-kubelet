@@ -625,7 +625,77 @@ Before deploying to a real fleet, work through every box. The release-readiness 
 
 ---
 
-## 9. Reference
+## 9. Roadmap & known limitations
+
+cisco-vk's configdriver subsystem ships with a well-bounded roadmap of follow-up work. Operators planning a long-term deployment should review the items below to decide whether any block their environment specifically.
+
+The complete forward plan is in [`roadmap.md`](./roadmap.md) — six tiers covering closed pre-tag fixes, planned Wave 11 work, multi-Wave architectural items, test infrastructure, external infrastructure, and doc-only items closed by mechanism rather than code change. Highlights:
+
+### 9.1 Closed today (release-tag fixes)
+
+- Credential redaction in transport error logs.
+- NETCONF host-key warn-on-default + `LoadKnownHostsCallback` helper.
+- ConfigReconciler graceful-shutdown drain.
+- Transport-level retry on transient errors (idempotent paths only).
+- PodDisruptionBudget / NetworkPolicy / ServiceMonitor chart templates.
+- Wave 10 confirmed-commit + atomic-replace cross-family scoped pruning.
+
+### 9.2 Planned Wave 11 (post-tag, well-bounded)
+
+| Item | Effort | What you should know |
+|---|---|---|
+| Aggregator-mode graceful drain | ½ eng-day | Per-pod topology has it today; aggregator topology kills all reconciles on manager restart until this lands. Mitigation: prefer per-pod topology in production. |
+| gNMI → OpenConfig path adapter | ~1 eng-week | Today's gNMI Set wire encoding is envtest-validated. Live retest against gnxi-OpenConfig-only devices (most modern Cat9K stacks) needs the per-transport YANG-model adapter. Mitigation: use NETCONF or RESTCONF until this lands. |
+| Metrics cardinality safeguards | ½ eng-day | At >1000 device fleets, today's per-device + per-family + per-verb labels can produce ~200K series for the busiest histograms. Mitigation: tune Prometheus retention; future `--metrics-cardinality-limit` flag will let operators cap. |
+| Apphosting integration tests | ~1 eng-week | Pre-existing 6.3% coverage in `internal/drivers/iosxe/`. Apphosting code unchanged in this branch; today's transport-flip coupling is the new behaviour worth pinning. |
+| Family-writer feature audit | ~3 eng-days | Today's session surfaced 8 P-1/P-2 writer-completeness gaps under live retest. Audit sweep before they're surfaced ad-hoc by an operator's first apply. |
+
+### 9.3 Multi-Wave architectural watch-items
+
+| Item | Effort | Document |
+|---|---|---|
+| CRD v1alpha1 → v1 promotion + conversion webhook | ~2 eng-weeks | [`crd-v1-promotion-plan.md`](../crd-v1-promotion-plan.md) |
+| Broader envtest infrastructure | ~1 eng-week | Lands with CRD v1 |
+| Cosmetic relocation `internal/drivers/iosxe/configdriver/...` → `internal/configdriver/...` | ½ eng-day | [`driver-extension-guide.md`](../driver-extension-guide.md) §7 |
+| Log unification logrus + zap → `slog` | ~3 eng-days | [`log-unification-plan.md`](../log-unification-plan.md) |
+| Device-operations CRDs (clears / reload / write-erase) | ~2 eng-weeks | [`device-operations-rfc.md`](../device-operations-rfc.md) — RFC merged, code deferred |
+| Aggregator-mode live retest | ½ eng-day | Never run live; opt-in only |
+
+### 9.4 Test infrastructure
+
+| Item | Effort | What you should know |
+|---|---|---|
+| Chaos / load test rig | ~2 eng-weeks | No coverage today for: 100s of CRs against a fleet, slow device, transient network loss, two pods racing for a family lease. The lease arbitration design + race-detector clean state cover the basic concurrency story; chaos coverage is for soak-grade confidence. |
+| netascode portal-compat example corpus | ~80 eng-hours | Per-family operator-validated example fragments. Structure shipped under [`docs/reference/families/`](../../reference/families/); content authoring + lab validation remains. |
+
+### 9.5 External infrastructure
+
+| Item | Effort | Status |
+|---|---|---|
+| Terraform Registry publish for `cisco-open/iosxeconfig` | paperwork + ~1 eng-week | Provider feature-complete; missing publisher account + GPG key + workflow. See [`phase-8-residuals.md`](../phase-8-residuals.md). |
+| Public Helm repository | ~1 eng-week | Today: install via `helm install ./charts/...`. Future: install via repo URL. |
+
+### 9.6 Doc-only closures (theoretical concerns)
+
+| Concern | Mitigation in code | Closure |
+|---|---|---|
+| SaveStartup not idempotent under rapid reconciles | Outer reconciler's `lastAppliedHash` short-circuit in [`config_reconciler.go:441`](../../../internal/provider/config_reconciler.go#L441) prevents repeat reconciles for the same intent. | Doc-only — no code change. |
+| Lease TTL race window (hung pod → dual writes) | TTL=60s vs typical Mutate ~5s; device's confirmed-commit safety net catches the pathological case. | Doc-only — see §7.4 below. |
+| ApplyLog replay deduplication | Side-effect idempotency (writer-guaranteed for VerbMerge / VerbReplace) covers most cases. State-bearing ops like `clear counters` aren't exposed via applylog yet. | Defer until [`device-operations-rfc.md`](../device-operations-rfc.md) coding lands. |
+
+### 9.7 What this means for your deployment
+
+| If you operate at... | Roadmap items to track |
+|---|---|
+| **Lab / dev / evaluation** | None — branch is feature-complete for non-production workloads. |
+| **Pilot production (1–10 devices)** | Track 9.2 metrics + family-writer audit; rest is irrelevant. |
+| **Small production (10–100 devices)** | Track 9.2 + 9.4 chaos rig (verify in your CI before each cisco-vk upgrade). |
+| **Large production (100+ devices)** | Track all of 9.2–9.5; pin to NETCONF until 9.2 gNMI adapter lands; enable PodDisruptionBudget + NetworkPolicy; stand up your own ServiceMonitor pipeline. |
+| **Multi-tenant / regulated** | All of the above + 9.3 device-ops RFC code (for destructive-ops audit), plus a separate apphosting-coverage uplift PR (9.2). |
+
+---
+
+## 10. Reference
 
 ### 9.1 CR field reference
 
@@ -665,8 +735,10 @@ Auto-generated reference: [`docs/reference/families/`](../../reference/families/
 
 ---
 
-## 10. Support
+## 11. Support
 
 - Issue tracker: <https://github.com/cisco-open/cisco-virtual-kubelet/issues>
 - RFC discussion: open a PR against [`docs/rfcs/`](../) with a `draft` label.
 - Operator quickstart: [`docs/getting-started.md`](../../getting-started.md).
+- Forward roadmap: [`./roadmap.md`](./roadmap.md).
+- Pre-tag readiness review: [`./release-readiness-evaluation.md`](./release-readiness-evaluation.md).
