@@ -63,14 +63,6 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 
 	cfgPath := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
 
-	// Debug: Marshal and log the configuration being sent to device
-	jsonData, marshalErr := d.marshaller(appConfig.Spec.DeviceConfig)
-	if marshalErr == nil {
-		fmt.Printf("DEBUG: RESTCONF payload for app %s: %s\n", appConfig.AppName(), string(jsonData))
-	} else {
-		fmt.Printf("DEBUG: Failed to marshal DeviceConfig for app %s: %v\n", appConfig.AppName(), marshalErr)
-	}
-
 	if err := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller); err != nil {
 		return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName(), err)
 	}
