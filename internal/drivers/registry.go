@@ -46,6 +46,7 @@ import (
 	"sync"
 
 	v1 "k8s.io/api/core/v1"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
@@ -56,10 +57,15 @@ import (
 // register.RegisterConfigDriver; the two are kept independent so a
 // platform can ship apphosting first and configdriver later (the
 // IOS-XE Phase-0 history) or vice versa.
+//
+// DeployPod takes a secret lister scoped to the pod's namespace so a
+// platform can pull image-pull credentials at deploy time without the
+// driver having to hold a cluster-wide informer. Drivers that don't
+// need imagePullSecrets pass it through as `_`.
 type CiscoKubernetesDeviceDriver interface {
 	GetDeviceResources(ctx context.Context) (*v1.ResourceList, error)
 	GetDeviceInfo(ctx context.Context) (*common.DeviceInfo, error)
-	DeployPod(ctx context.Context, pod *v1.Pod) error
+	DeployPod(ctx context.Context, pod *v1.Pod, secretLister corev1listers.SecretNamespaceLister) error
 	UpdatePod(ctx context.Context, pod *v1.Pod) error
 	DeletePod(ctx context.Context, pod *v1.Pod) error
 	GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error)

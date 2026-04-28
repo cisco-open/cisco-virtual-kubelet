@@ -24,12 +24,15 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/openconfig/ygot/ygot"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/record"
 )
 
 // UnmarshalFunc defines a function signature for unmarshalling data
@@ -64,6 +67,11 @@ type XEDriver struct {
 	marshaller   func(any) ([]byte, error)
 	unmarshaller UnmarshalFunc
 	deviceInfo   *common.DeviceInfo
+
+	secretLister   corev1listers.SecretNamespaceLister
+	recoveryMu     sync.RWMutex
+	recoveringPods map[string]bool // keyed by pod UID
+	eventRecorder  record.EventRecorder
 }
 
 // NewAppHostingDriver creates a new IOS-XE AppHosting driver instance
@@ -107,7 +115,7 @@ func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*XEDri
 	}
 
 	BaseUrl := u.String()
-	Timeout := 30 * time.Second
+	Timeout := 10 * time.Minute
 	Client, err := common.NewNetworkClient(
 		BaseUrl,
 		&common.ClientAuth{
@@ -120,8 +128,9 @@ func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*XEDri
 	)
 
 	d := &XEDriver{
-		config: spec,
-		client: Client,
+		config:         spec,
+		client:         Client,
+		recoveringPods: make(map[string]bool),
 	}
 
 	protocol := "restconf"
@@ -230,4 +239,31 @@ func (d *XEDriver) debugLogJson(ctx context.Context, obj ygot.GoStruct) error {
 
 	log.G(ctx).Debug(jsonStr)
 	return nil
+}
+
+// markPodRecovering marks a pod as currently in copy-recovery mode.
+func (d *XEDriver) markPodRecovering(podUID string) {
+	d.recoveryMu.Lock()
+	defer d.recoveryMu.Unlock()
+	d.recoveringPods[podUID] = true
+}
+
+// clearPodRecovering removes a pod from recovery mode.
+func (d *XEDriver) clearPodRecovering(podUID string) {
+	d.recoveryMu.Lock()
+	defer d.recoveryMu.Unlock()
+	delete(d.recoveringPods, podUID)
+}
+
+// isPodRecovering returns true while a pod is in copy-recovery mode.
+func (d *XEDriver) isPodRecovering(podUID string) bool {
+	d.recoveryMu.RLock()
+	defer d.recoveryMu.RUnlock()
+	return d.recoveringPods[podUID]
+}
+
+// SetEventRecorder wires a Kubernetes event recorder into the driver so it can
+// emit pod-scoped events visible via kubectl describe pod.
+func (d *XEDriver) SetEventRecorder(r record.EventRecorder) {
+	d.eventRecorder = r
 }
