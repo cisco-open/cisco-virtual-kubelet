@@ -478,7 +478,7 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 			for _, opt := range app.RunOptss.RunOpts {
 				if opt.LineRunOpts != nil {
 					line := *opt.LineRunOpts
-					log.G(ctx).Debugf("Discovery: App %s RunOpts line: %s", appName, line)
+					log.G(ctx).Infof("Discovery: App %s RunOpts line: %s", appName, line)
 
 					// Extract pod labels
 					podNamespace = common.ExtractLabelValue(line, common.LabelPodNamespace)
@@ -486,13 +486,13 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 					podUID = common.ExtractLabelValue(line, common.LabelPodUID)
 					containerName = common.ExtractContainerNameFromLabels(line)
 
-					log.G(ctx).Debugf("Discovery: App %s extracted namespace=%s, name=%s, uid=%s, container=%s",
+					log.G(ctx).Infof("Discovery: App %s extracted namespace=%s, name=%s, uid=%s, container=%s",
 						appName, podNamespace, podName, podUID, containerName)
 					break
 				}
 			}
 		} else {
-			log.G(ctx).Debugf("Discovery: App %s has no RunOptss", appName)
+			log.G(ctx).Infof("Discovery: App %s has no RunOptss", appName)
 		}
 
 		// If RunOpts labels are missing (e.g. app is in DEPLOYED state and
