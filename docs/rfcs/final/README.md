@@ -203,7 +203,7 @@ Module-wide gate: `GOCACHE=/tmp/cvk-gocache go test -race -count=5 ./...` clean.
 
 ### 4.2 Real-apiserver envtest (9 cases)
 
-Closes the recurring "fake.Client doesn't validate" lesson at the apiserver-admission level. Build-tagged `envtest`; runnable via `make test-envtest` (uses `setup-envtest @ v0.19.7` to download apiserver + etcd binaries).
+Closes the recurring "fake.Client doesn't validate" lesson at the apiserver-admission level. Build-tagged `envtest`; runnable via `make test-envtest`. CI pins `setup-envtest` to a Go pseudo-version anchored on the same commit as the controller-runtime release in `go.mod` (currently `v0.0.0-20251103140007-7a1b16d039d2`, matching controller-runtime v0.22.4) — bump it together with the `go.mod` entry. The `@v0.19.7` tag referenced in earlier drafts of this doc never existed; `tools/setup-envtest` is a sub-module of controller-runtime and is not independently tagged.
 
 | Test | Asserts |
 |---|---|
@@ -255,7 +255,7 @@ The most recent gate run is at [`./evidence/2026-04-26-wave10-variation-matrix/`
 | CRD / Helm-chart sync | ✅ 8 / 8 in sync |
 | `make test-envtest` (real apiserver) | ✅ 9 / 9 PASS |
 
-CI parity: [`.github/workflows/smoke.yml`](../../.github/workflows/smoke.yml) runs `go vet`, generated-artefact drift check, CRD/chart sync, `setup-envtest @ v0.19.7` (PINNED, never `@latest`), `make test-envtest`, `helm lint`, then the kind-cluster smoke (build image → kind load → Helm install → CR apply → cisco-vk pod reaches device-call boundary).
+CI parity: [`.github/workflows/smoke.yml`](../../.github/workflows/smoke.yml) runs `go vet`, generated-artefact drift check, CRD/chart sync, `setup-envtest` pinned to a Go pseudo-version (PINNED, never `@latest`), `make test-envtest`, `helm lint`, then the kind-cluster smoke (build image → kind load → Helm install → CR apply → cisco-vk pod reaches device-call boundary).
 
 ---
 
