@@ -999,6 +999,53 @@ func unwrapJSONEnvelope(body []byte, lastLocalElem string) ([]byte, bool) {
 //
 // This is an intentional simplification; see
 // pathToSubtreeFilterWithBody for the caveat.
+// yangKeyPriority lists element names that the IOS-XE-native /
+// IOS-XE-acl YANG models treat as list keys. Keys must come first
+// under their parent in strict-order edit-config bodies. The list
+// covers the common keys across the Phase-1 family writers; entries
+// not listed sort lexicographically alongside the rest.
+var yangKeyPriority = map[string]int{
+	"name":     1,
+	"id":       2,
+	"sequence": 3,
+	"no":       4,
+	"prefix":   5,
+}
+
+// orderedMapKeys returns map keys with YANG-list-key names first
+// (in priority order), then remaining keys alphabetically. Module-
+// qualified names (`module:local`) sort by their local part so a
+// `Cisco-IOS-XE-acl:sequence` is treated identically to `sequence`.
+func orderedMapKeys(m map[string]any) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		li := keys[i]
+		if idx := strings.Index(li, ":"); idx >= 0 {
+			li = li[idx+1:]
+		}
+		lj := keys[j]
+		if idx := strings.Index(lj, ":"); idx >= 0 {
+			lj = lj[idx+1:]
+		}
+		pi, hasI := yangKeyPriority[li]
+		pj, hasJ := yangKeyPriority[lj]
+		if hasI && hasJ {
+			return pi < pj
+		}
+		if hasI {
+			return true
+		}
+		if hasJ {
+			return false
+		}
+		return li < lj
+	})
+	return keys
+}
+
 func jsonToNaiveXML(body []byte) (string, error) {
 	var v any
 	if err := json.Unmarshal(body, &v); err != nil {
@@ -1014,7 +1061,19 @@ func jsonToNaiveXML(body []byte) (string, error) {
 func emitXML(b *strings.Builder, v any) error {
 	switch tv := v.(type) {
 	case map[string]any:
-		for k, val := range tv {
+		// YANG strict-order RPCs require list-key fields to come
+		// first under each list entry. JSON has no inherent order
+		// and Go's map iteration is randomised — so we sort with a
+		// custom comparator that puts well-known YANG list keys
+		// (sequence, name, id, no, prefix) first, then everything
+		// else alphabetically. Without this, IOS-XE rejects with
+		// `expected tag: sequence, got tag: deny` when an ACL rule
+		// emits non-key fields before the sequence number.
+		// Caught against the live Cat9300 retest of test 08
+		// (2026-04-28).
+		ordered := orderedMapKeys(tv)
+		for _, k := range ordered {
+			val := tv[k]
 			localKey := k
 			if idx := strings.Index(k, ":"); idx >= 0 {
 				localKey = k[idx+1:]
