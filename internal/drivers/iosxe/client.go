@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
-	"github.com/openconfig/ygot/ygot"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 )
@@ -74,30 +73,19 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 
 	// Handle two-phase deployment for DockerResource apps
 	if appConfig.Spec.RequiresTwoPhaseStart {
-		log.G(ctx).Infof("Starting phase 2 deployment for DockerResource app %s (setting Start=true)", appConfig.AppName())
+		log.G(ctx).Infof("Starting phase 2 deployment for DockerResource app %s (starting via RPC)", appConfig.AppName())
 
 		// Wait for app to reach DEPLOYED state first
 		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
 			return fmt.Errorf("app %s did not reach DEPLOYED state for phase 2: %w", appConfig.AppName(), err)
 		}
 
-		// Create a minimal configuration with only the Start field
-		startOnlyConfig := &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData{
-			Apps: &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps{
-				App: map[string]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App{
-					appConfig.AppName(): {
-						Start: ygot.Bool(true),
-					},
-				},
-			},
+		// Use the start RPC instead of modifying configuration
+		if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
+			return fmt.Errorf("failed to start DockerResource app %s: %w", appConfig.AppName(), err)
 		}
 
-		// POST the minimal Start=true configuration
-		if err := d.client.Post(ctx, cfgPath, startOnlyConfig, d.marshaller); err != nil {
-			return fmt.Errorf("failed to set Start=true for DockerResource app %s: %w", appConfig.AppName(), err)
-		}
-
-		log.G(ctx).Infof("Successfully updated app %s to Start=true", appConfig.AppName())
+		log.G(ctx).Infof("Successfully started app %s via RPC", appConfig.AppName())
 	}
 
 	// For non-HTTP image paths (flash, bootflash, etc.) the device auto-advances
