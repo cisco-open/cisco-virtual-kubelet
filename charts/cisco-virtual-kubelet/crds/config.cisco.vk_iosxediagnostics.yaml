@@ -119,6 +119,57 @@ spec:
                   window.
                 format: date-time
                 type: string
+              outputSink:
+                description: |-
+                  OutputSink controls where capture output is stored. Default
+                  (nil or Inline=true) writes results into status.results[]
+                  inline. The ConfigMap sink is for multi-MB outputs that would
+                  otherwise blow past etcd's 1 MB per-object limit (canonical
+                  example: `show running-config` on a busy chassis). Diagnostics
+                  RFC §3.2 + §11.7 covers the trade-offs.
+                properties:
+                  configMapRef:
+                    description: |-
+                      ConfigMapRef directs the reconciler to write each capture
+                      to a fresh ConfigMap. Each capture lands in a distinct
+                      ConfigMap whose name is `<NamePrefix><RFC3339-timestamp>`.
+                      Status carries `configMapRef.name` per command so consumers
+                      can fetch the body via `kubectl get configmap <name> -o
+                      jsonpath='{.data.<command>}'`.
+
+                      The reconciler garbage-collects oldest ConfigMaps when their
+                      count for this CR exceeds Retention.MaxResults — owner-ref
+                      based cleanup, so deletion of the IOSXEDiagnostic CR cascades
+                      to every captured ConfigMap.
+                    properties:
+                      namePrefix:
+                        description: |-
+                          NamePrefix is prepended to every generated ConfigMap name.
+                          The reconciler appends the capture timestamp; the resulting
+                          name must be DNS-1123 compliant (lowercase alphanumeric +
+                          dashes only). The admission webhook validates the prefix.
+                        maxLength: 200
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace the ConfigMaps are created in.
+                          Empty defaults to the IOSXEDiagnostic CR's own namespace.
+                          Cross-namespace targets need cluster-wide
+                          configmaps-create RBAC on the cisco-vk pod's ServiceAccount.
+                        type: string
+                    required:
+                    - namePrefix
+                    type: object
+                  inline:
+                    default: true
+                    description: |-
+                      Inline (the default when OutputSink is unset or this field
+                      is true) stores capture output directly in
+                      status.results[].commands[].output.
+                    type: boolean
+                type: object
               retention:
                 description: |-
                   Retention controls what's preserved on the CR's status when
@@ -296,6 +347,30 @@ spec:
                           command:
                             description: Command is the input from spec.commands[i].
                             type: string
+                          configMapRef:
+                            description: |-
+                              ConfigMapRef, when set, points at the ConfigMap holding
+                              the full output for this command. Populated only when
+                              spec.outputSink.configMapRef is set. The ConfigMap's
+                              data["<sanitised command name>"] holds the text. The
+                              reconciler owns lifecycle: the CR is the OwnerReference,
+                              so deleting the CR cascades to every captured ConfigMap.
+                            properties:
+                              key:
+                                description: Key inside ConfigMap.data that holds
+                                  this command's output.
+                                type: string
+                              name:
+                                description: Name of the ConfigMap.
+                                type: string
+                              namespace:
+                                description: Namespace of the ConfigMap (empty ==
+                                  same as the CR).
+                                type: string
+                            required:
+                            - key
+                            - name
+                            type: object
                           err:
                             description: |-
                               Err, when set, carries a per-command failure reason. The

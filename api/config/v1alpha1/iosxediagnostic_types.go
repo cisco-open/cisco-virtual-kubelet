@@ -79,6 +79,61 @@ type IOSXEDiagnosticSpec struct {
 	// +kubebuilder:default=false
 	// +optional
 	AllowSecrets bool `json:"allowSecrets,omitempty"`
+
+	// OutputSink controls where capture output is stored. Default
+	// (nil or Inline=true) writes results into status.results[]
+	// inline. The ConfigMap sink is for multi-MB outputs that would
+	// otherwise blow past etcd's 1 MB per-object limit (canonical
+	// example: `show running-config` on a busy chassis). Diagnostics
+	// RFC §3.2 + §11.7 covers the trade-offs.
+	// +optional
+	OutputSink *DiagnosticOutputSink `json:"outputSink,omitempty"`
+}
+
+// DiagnosticOutputSink switches between inline status storage and
+// ConfigMap fan-out. Exactly one mode is active at a time —
+// admission rejects setting both Inline=true and ConfigMapRef.
+type DiagnosticOutputSink struct {
+	// Inline (the default when OutputSink is unset or this field
+	// is true) stores capture output directly in
+	// status.results[].commands[].output.
+	// +kubebuilder:default=true
+	// +optional
+	Inline bool `json:"inline,omitempty"`
+
+	// ConfigMapRef directs the reconciler to write each capture
+	// to a fresh ConfigMap. Each capture lands in a distinct
+	// ConfigMap whose name is `<NamePrefix><RFC3339-timestamp>`.
+	// Status carries `configMapRef.name` per command so consumers
+	// can fetch the body via `kubectl get configmap <name> -o
+	// jsonpath='{.data.<command>}'`.
+	//
+	// The reconciler garbage-collects oldest ConfigMaps when their
+	// count for this CR exceeds Retention.MaxResults — owner-ref
+	// based cleanup, so deletion of the IOSXEDiagnostic CR cascades
+	// to every captured ConfigMap.
+	// +optional
+	ConfigMapRef *DiagnosticConfigMapSink `json:"configMapRef,omitempty"`
+}
+
+// DiagnosticConfigMapSink configures the ConfigMap output sink.
+type DiagnosticConfigMapSink struct {
+	// NamePrefix is prepended to every generated ConfigMap name.
+	// The reconciler appends the capture timestamp; the resulting
+	// name must be DNS-1123 compliant (lowercase alphanumeric +
+	// dashes only). The admission webhook validates the prefix.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=200
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	NamePrefix string `json:"namePrefix"`
+
+	// Namespace is the namespace the ConfigMaps are created in.
+	// Empty defaults to the IOSXEDiagnostic CR's own namespace.
+	// Cross-namespace targets need cluster-wide
+	// configmaps-create RBAC on the cisco-vk pod's ServiceAccount.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // DiagnosticSchedule expresses a recurring capture cadence. Only one
@@ -213,6 +268,29 @@ type CommandOutput struct {
 	// can replay with spec.allowSecrets: true.
 	// +optional
 	Redacted bool `json:"redacted,omitempty"`
+
+	// ConfigMapRef, when set, points at the ConfigMap holding
+	// the full output for this command. Populated only when
+	// spec.outputSink.configMapRef is set. The ConfigMap's
+	// data["<sanitised command name>"] holds the text. The
+	// reconciler owns lifecycle: the CR is the OwnerReference,
+	// so deleting the CR cascades to every captured ConfigMap.
+	// +optional
+	ConfigMapRef *CapturedConfigMapRef `json:"configMapRef,omitempty"`
+}
+
+// CapturedConfigMapRef pins one ConfigMap that holds a single
+// command's full output. Mirrors corev1.LocalObjectReference but
+// includes Namespace because the sink may target a different
+// namespace than the IOSXEDiagnostic CR's own.
+type CapturedConfigMapRef struct {
+	// Name of the ConfigMap.
+	Name string `json:"name"`
+	// Namespace of the ConfigMap (empty == same as the CR).
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+	// Key inside ConfigMap.data that holds this command's output.
+	Key string `json:"key"`
 }
 
 // IOSXEDiagnostic is the per-device diagnostic-capture CR. Multiple

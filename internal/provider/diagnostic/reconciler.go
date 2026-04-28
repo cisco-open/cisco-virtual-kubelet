@@ -195,6 +195,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	// Run the batch.
 	capture := r.runBatch(ctx, &diag, d, now)
+
+	// Phase D — when the ConfigMap sink is active, write the full
+	// outputs there and shrink the inline body to a preview. Then
+	// trim oldest ConfigMaps past Retention.MaxResults.
+	if sinkActive(&diag) && capture.TransportError == "" {
+		if err := r.writeToConfigMap(ctx, &diag, &capture); err != nil {
+			capture.TransportError = err.Error()
+			r.event(&diag, corev1.EventTypeWarning, "SinkError", err.Error())
+		} else if err := r.pruneOldConfigMaps(ctx, &diag); err != nil {
+			r.event(&diag, corev1.EventTypeWarning, "SinkPruneFailed", err.Error())
+		}
+	}
+
 	r.appendCapture(&diag, capture)
 	diag.Status.Phase = PhaseCompleted
 	diag.Status.ObservedGeneration = diag.Generation
