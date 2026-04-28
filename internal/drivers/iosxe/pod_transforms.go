@@ -243,10 +243,12 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 		}
 
 		// Build environment options
+		log.G(ctx).WithField("container", container.Name).Infof("Processing %d environment variables for container", len(container.Env))
 		envOpts, err := d.buildEnvironmentOptions(&container, pod)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build environment options for container %s: %w", container.Name, err)
 		}
+		log.G(ctx).WithField("container", container.Name).Infof("Generated %d environment options: %v", len(envOpts), envOpts)
 
 		// Distribute across RunOpts lines
 		runOptsMap, err := distributeRunOpts(baseOpts, envOpts)
