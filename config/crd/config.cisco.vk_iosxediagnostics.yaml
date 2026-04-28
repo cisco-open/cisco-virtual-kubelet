@@ -1,0 +1,346 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: iosxediagnostics.config.cisco.vk
+spec:
+  group: config.cisco.vk
+  names:
+    kind: IOSXEDiagnostic
+    listKind: IOSXEDiagnosticList
+    plural: iosxediagnostics
+    shortNames:
+    - iosxediag
+    singular: iosxediagnostic
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.deviceRef.name
+      name: Device
+      type: string
+    - description: count of input commands
+      jsonPath: .spec.commands
+      name: Commands
+      type: integer
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.lastCapture
+      name: Last
+      type: date
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          IOSXEDiagnostic is the per-device diagnostic-capture CR. Multiple
+          IOSXEDiagnostics may target the same device — they each capture
+          independently and never lease (no mutation, no contention).
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              IOSXEDiagnosticSpec declares a list of read-only IOS-XE
+              operational ("show") commands to execute against the targeted
+              device. The config driver invokes Cisco-IA's cli-exec RPC over
+              the device's configured transport (RESTCONF or NETCONF; gNMI
+              reports the capability missing) and writes the textual output
+              back into status.results.
+
+              Diagnostics are read-only; nothing in this CR can change device
+              configuration. RBAC for IOSXEDiagnostic is therefore safely
+              granted to operators who must NOT have IOSXEConfig write access
+              (NOC viewers, dashboards, on-call triage).
+            properties:
+              allowSecrets:
+                default: false
+                description: |-
+                  AllowSecrets disables the default secret-redaction filter
+                  (which strips lines matching enable-secret / community /
+                  RADIUS-key patterns). Most operators leave this false; set
+                  to true only when retention is internal and audit
+                  requirements demand the unredacted output.
+                type: boolean
+              commands:
+                description: |-
+                  Commands is the ordered list of show / filesystem-read
+                  commands to execute. Per-command failures populate
+                  status.results[].err but do NOT abort the batch — operators
+                  frequently want a best-effort capture across a list.
+
+                  Destructive commands (clear, reload, write erase) are
+                  rejected by the admission webhook; the device-operations
+                  RFC scopes a parallel CRD with stricter RBAC for those.
+                items:
+                  type: string
+                maxItems: 64
+                minItems: 1
+                type: array
+              deviceRef:
+                description: DeviceRef targets the CiscoDevice the commands run against.
+                properties:
+                  name:
+                    description: Name of the CiscoDevice the CR targets.
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                type: object
+              notAfter:
+                format: date-time
+                type: string
+              notBefore:
+                description: |-
+                  NotBefore / NotAfter optionally bound a maintenance window.
+                  The reconciler will not invoke commands before NotBefore;
+                  after NotAfter the CR moves to phase Expired. Useful when
+                  dropping an IOSXEDiagnostic into a GitOps repo whose merge
+                  timing is not aligned to the operator's intended capture
+                  window.
+                format: date-time
+                type: string
+              retention:
+                description: |-
+                  Retention controls what's preserved on the CR's status when
+                  captures accumulate (only meaningful when Schedule is set —
+                  without Schedule the CR holds a single capture).
+                properties:
+                  maxResults:
+                    default: 24
+                    description: |-
+                      MaxResults is the maximum number of capture results retained
+                      in status.results[]. The reconciler trims oldest-first when
+                      the slice exceeds this bound.
+                    format: int32
+                    maximum: 200
+                    minimum: 1
+                    type: integer
+                  truncateAt:
+                    default: 64KiB
+                    description: |-
+                      TruncateAt caps individual command outputs to N bytes. Output
+                      longer than this is truncated and CommandOutput.Truncated is
+                      set true. Default 64 KiB; the etcd 1 MB per-object limit
+                      caps the practical aggregate at ~16 outputs of this size.
+                    pattern: ^[0-9]+(B|KiB|MiB)$
+                    type: string
+                type: object
+              schedule:
+                description: |-
+                  Schedule, when set, makes the diagnostic a recurring
+                  capture. Absent Schedule, the CR is one-shot — runs once
+                  on Create / generation bump and stays in phase Completed
+                  until deleted or the spec changes.
+                properties:
+                  cron:
+                    description: |-
+                      Cron is a 5-field cron expression. Lower-cardinality
+                      alternative to Interval for hourly / daily captures.
+                    type: string
+                  interval:
+                    description: |-
+                      Interval is a Go time.Duration string (e.g. "1h", "30s").
+                      The reconciler captures, then requeues at this cadence.
+                      Minimum enforced by the reconciler is 30 seconds — anything
+                      below is rejected to protect the device CPU.
+                    pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
+                    type: string
+                type: object
+            required:
+            - commands
+            - deviceRef
+            type: object
+          status:
+            description: |-
+              IOSXEDiagnosticStatus reports the most recent capture and (when
+              Schedule is set) the rolling history.
+            properties:
+              conditions:
+                description: |-
+                  Conditions reports a Ready signal (True when the most-recent
+                  capture succeeded for every command).
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              lastCapture:
+                description: |-
+                  LastCapture is the wall-clock of the most recent successful
+                  capture. Used by the scheduler to compute NextCapture.
+                format: date-time
+                type: string
+              nextCapture:
+                description: |-
+                  NextCapture, when Schedule is set, is the wall-clock at
+                  which the reconciler will fire the next capture.
+                format: date-time
+                type: string
+              observedGeneration:
+                description: |-
+                  ObservedGeneration is the .metadata.generation the
+                  reconciler last acted on.
+                format: int64
+                type: integer
+              phase:
+                description: Phase summarises the CR's lifecycle state.
+                enum:
+                - Pending
+                - Capturing
+                - Completed
+                - Failed
+                - Scheduled
+                - Expired
+                type: string
+              results:
+                description: |-
+                  Results is the rolling history of captures. Without
+                  Schedule it holds at most one entry; with Schedule it holds
+                  up to MaxResults entries, oldest first.
+                items:
+                  description: |-
+                    DiagnosticCapture is one capture's full result list. CapturedAt is
+                    the wall-clock at which the reconciler invoked the first command
+                    in the batch; per-command timings are not recorded — operators
+                    who need them should reduce the batch to one command per CR.
+                  properties:
+                    capturedAt:
+                      description: CapturedAt is the timestamp of the first command
+                        in the batch.
+                      format: date-time
+                      type: string
+                    commands:
+                      description: |-
+                        Commands holds one entry per spec.commands input, in the
+                        same order. Output is the device's raw text; truncated and
+                        redaction flags are surfaced explicitly so consumers can
+                        decide whether to chase a fuller body via a follow-up CR.
+                      items:
+                        description: |-
+                          CommandOutput records one show command's text output along with
+                          flags surfacing any post-processing the reconciler applied.
+                        properties:
+                          command:
+                            description: Command is the input from spec.commands[i].
+                            type: string
+                          err:
+                            description: |-
+                              Err, when set, carries a per-command failure reason. The
+                              other commands in the batch still ran.
+                            type: string
+                          output:
+                            description: |-
+                              Output is the device's raw textual reply (stripped of
+                              trailing whitespace and possibly redacted / truncated per
+                              spec.allowSecrets and spec.retention.truncateAt).
+                            type: string
+                          redacted:
+                            description: |-
+                              Redacted is true when the secret-redaction filter dropped
+                              at least one line. Operators with elevated audit rights
+                              can replay with spec.allowSecrets: true.
+                            type: boolean
+                          truncated:
+                            description: |-
+                              Truncated is true when Output was clipped at TruncateAt.
+                              Consumers needing the full body should re-run with a higher
+                              retention.truncateAt or use the ConfigMap sink (Phase D).
+                            type: boolean
+                        required:
+                        - command
+                        type: object
+                      type: array
+                    transportError:
+                      description: |-
+                        TransportError, when set, indicates a transport-level
+                        failure (broken dial, auth) that prevented some or all of
+                        the batch from running. Per-command failures live in
+                        CommandOutput.Err; this field is the "the whole RPC channel
+                        fell over" case.
+                      type: string
+                  required:
+                  - capturedAt
+                  - commands
+                  type: object
+                type: array
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

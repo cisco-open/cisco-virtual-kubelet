@@ -58,6 +58,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 )
 
 // configReconcilerOptions is what startConfigReconciler needs from the
@@ -290,6 +291,21 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("SetupWithManager: %w", err)
+	}
+
+	// Diagnostics-RFC Phase B: the IOSXEDiagnostic reconciler runs in
+	// the same controller-runtime manager as ConfigReconciler. It
+	// borrows the configdriver's transport via the GetTransport
+	// accessor — no separate dial, no separate auth.
+	diagReconciler := &diagnostic.Reconciler{
+		Client:     mgr.GetClient(),
+		Recorder:   recorder,
+		Scheme:     mgr.GetScheme(),
+		DeviceName: deviceName,
+		TP:         r,
+	}
+	if err := diagReconciler.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("diagnostic SetupWithManager: %w", err)
 	}
 
 	go func() {
