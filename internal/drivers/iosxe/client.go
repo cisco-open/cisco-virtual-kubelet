@@ -123,13 +123,38 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 	}
 
 	// ── PRIMARY PATH (HTTP image) ─────────────────────────────────────────────
-	// For DockerResource mode, skip the native device pull since it doesn't work well with
-	// DockerResource=true and Start=false. Go directly to copy fallback.
+	// For DockerResource mode, we need to call InstallApp to set up device state,
+	// but then wait for timeout since device won't actually pull with Start=false.
+	// This maintains compatibility with the copy RPC that depends on this setup.
 	if appConfig.Spec.RequiresTwoPhaseStart {
-		log.G(ctx).Infof("DockerResource mode: skipping native device pull, going directly to copy fallback for HTTP URL %s", appConfig.ImagePath())
-		// Skip device-native pull and go directly to fallback
+		log.G(ctx).Infof("DockerResource mode: setting up device state for HTTP URL %s", appConfig.ImagePath())
+
+		// Call InstallApp to set up device state (required for copy RPC to work)
+		if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
+			log.G(ctx).Warnf("InstallApp setup failed for DockerResource mode (expected): %v", err)
+		}
+
+		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Waiting %s before copy fallback (DockerResource mode)", timeout)
+		log.G(ctx).Infof("DockerResource mode: waiting for configured timeout before copy fallback")
+
+		// Wait for the configured timeout to maintain consistent behavior with main branch
+		waitCtx, cancel := context.WithTimeout(ctx, timeout)
+		defer cancel()
+		<-waitCtx.Done()
+
+		if waitCtx.Err() == context.DeadlineExceeded {
+			log.G(ctx).Infof("DockerResource mode: timeout reached after %s, falling back to copy-then-install", timeout)
+			d.emitEvent(appConfig, v1.EventTypeWarning, "ImagePullFallback", "DockerResource timeout after %s; falling back to copy-then-install", timeout)
+		} else {
+			// Context was cancelled, which means the parent context was cancelled
+			return ctx.Err()
+		}
 	} else {
 		// Non-DockerResource apps: try device-native pull first
+		if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
+			return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
+		}
+
 		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", appConfig.ImagePath())
 		waitErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout)
 		if waitErr == nil {
