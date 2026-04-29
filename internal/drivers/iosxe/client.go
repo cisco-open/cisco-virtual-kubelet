@@ -67,48 +67,33 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName(), err)
 	}
 
-	// For HTTP URLs with DockerResource, skip InstallApp and go directly to HTTP URL handling
-	// because InstallApp with HTTP URLs doesn't work properly in DockerResource mode
-	if appConfig.Spec.RequiresTwoPhaseStart && isHTTPURL(appConfig.ImagePath()) {
-		log.G(ctx).Infof("Skipping InstallApp for HTTP URL in DockerResource mode: %s", appConfig.ImagePath())
-		// Go directly to HTTP URL handling logic at the bottom of the function
-	} else {
-		// For local paths (flash/bootflash) or non-DockerResource apps, call InstallApp normally
-		if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
-			return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
-		}
+	// For all paths (local and HTTP), call InstallApp
+	if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
+		return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
 	}
 
 	// Handle two-phase deployment for DockerResource apps
 	if appConfig.Spec.RequiresTwoPhaseStart {
 		log.G(ctx).Infof("Starting phase 2 deployment for DockerResource app %s (starting via RPC)", appConfig.AppName())
 
-		// For HTTP URLs, we skipped InstallApp, so skip DEPLOYED wait and StartApp RPC
-		// and go directly to HTTP URL handling logic
-		if isHTTPURL(appConfig.ImagePath()) {
-			log.G(ctx).Infof("Skipping DEPLOYED wait and StartApp RPC for HTTP URL in DockerResource mode, proceeding to HTTP URL handling")
-			// Continue to HTTP URL handling logic below
-		} else {
-			// For flash URLs, wait for DEPLOYED state first (since we called InstallApp)
-			if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
-				return fmt.Errorf("app %s did not reach DEPLOYED state for phase 2: %w", appConfig.AppName(), err)
-			}
-
-			// Use the start RPC instead of modifying configuration
-			if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
-				return fmt.Errorf("failed to start DockerResource app %s: %w", appConfig.AppName(), err)
-			}
-
-			log.G(ctx).Infof("Successfully started app %s via RPC", appConfig.AppName())
-
-			// Wait for RUNNING directly since the image is local
-			if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
-				return fmt.Errorf("app %s did not reach RUNNING after two-phase start: %w", appConfig.AppName(), err)
-			}
-			log.G(ctx).Infof("Successfully installed app %s (two-phase local path)", appConfig.AppName())
-			return nil
+		// Wait for DEPLOYED state (device pulls HTTP image or installs from flash, but doesn't start)
+		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
+			return fmt.Errorf("app %s did not reach DEPLOYED state for phase 2: %w", appConfig.AppName(), err)
 		}
-		// HTTP URLs continue to HTTP URL handling logic below
+
+		// Use the start RPC instead of modifying configuration
+		if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
+			return fmt.Errorf("failed to start DockerResource app %s: %w", appConfig.AppName(), err)
+		}
+
+		log.G(ctx).Infof("Successfully started app %s via RPC", appConfig.AppName())
+
+		// Wait for RUNNING
+		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
+			return fmt.Errorf("app %s did not reach RUNNING after two-phase start: %w", appConfig.AppName(), err)
+		}
+		log.G(ctx).Infof("Successfully installed app %s (two-phase)", appConfig.AppName())
+		return nil
 	}
 
 	// For non-HTTP image paths (flash, bootflash, etc.) without DockerResource,
@@ -122,49 +107,17 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		return nil
 	}
 
-	// ── PRIMARY PATH (HTTP image) ─────────────────────────────────────────────
-	// For DockerResource mode, we need to call InstallApp to set up device state,
-	// but then wait for timeout since device won't actually pull with Start=false.
-	// This maintains compatibility with the copy RPC that depends on this setup.
-	if appConfig.Spec.RequiresTwoPhaseStart {
-		log.G(ctx).Infof("DockerResource mode: setting up device state for HTTP URL %s", appConfig.ImagePath())
-
-		// Call InstallApp to set up device state (required for copy RPC to work)
-		if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
-			log.G(ctx).Warnf("InstallApp setup failed for DockerResource mode (expected): %v", err)
-		}
-
-		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Waiting %s before copy fallback (DockerResource mode)", timeout)
-		log.G(ctx).Infof("DockerResource mode: waiting for configured timeout before copy fallback")
-
-		// Wait for the configured timeout to maintain consistent behavior with main branch
-		waitCtx, cancel := context.WithTimeout(ctx, timeout)
-		defer cancel()
-		<-waitCtx.Done()
-
-		if waitCtx.Err() == context.DeadlineExceeded {
-			log.G(ctx).Infof("DockerResource mode: timeout reached after %s, falling back to copy-then-install", timeout)
-			d.emitEvent(appConfig, v1.EventTypeWarning, "ImagePullFallback", "DockerResource timeout after %s; falling back to copy-then-install", timeout)
-		} else {
-			// Context was cancelled, which means the parent context was cancelled
-			return ctx.Err()
-		}
-	} else {
-		// Non-DockerResource apps: try device-native pull first
-		if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
-			return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
-		}
-
-		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", appConfig.ImagePath())
-		waitErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout)
-		if waitErr == nil {
-			log.G(ctx).Infof("Successfully created and installed app %s", appConfig.AppName())
-			return nil
-		}
-
-		log.G(ctx).Warnf("App %s did not reach RUNNING state after install: %v", appConfig.AppName(), waitErr)
-		d.emitEvent(appConfig, v1.EventTypeWarning, "ImagePullFallback", "Device-native pull timed out after %s; falling back to copy-then-install", timeout)
+	// ── PRIMARY PATH (HTTP image, non-DockerResource) ────────────────────────
+	// The device can pull and activate the image itself (Start=true). Wait for RUNNING.
+	d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", appConfig.ImagePath())
+	waitErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout)
+	if waitErr == nil {
+		log.G(ctx).Infof("Successfully created and installed app %s", appConfig.AppName())
+		return nil
 	}
+
+	log.G(ctx).Warnf("App %s did not reach RUNNING state after install: %v", appConfig.AppName(), waitErr)
+	d.emitEvent(appConfig, v1.EventTypeWarning, "ImagePullFallback", "Device-native pull timed out after %s; falling back to copy-then-install", timeout)
 
 	// ── FALLBACK PATH (copy-then-install) ─────────────────────────────────────
 	dest := appConfig.PackageDest()
@@ -232,16 +185,6 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		d.emitEvent(appConfig, v1.EventTypeNormal, "Copying", "Copying image %s to %s (may take several minutes)", appConfig.ImagePath(), dest)
 		if err := d.copyRPC(ctx, src, dest); err != nil {
 			d.clearPodRecovering(appConfig.PodUID())
-
-			// For DockerResource mode, copy is required since direct InstallApp with HTTP doesn't work.
-			// Clean up the configuration to prevent infinite reconciler loops.
-			if appConfig.Spec.RequiresTwoPhaseStart {
-				log.G(ctx).Warnf("Copy failed for DockerResource app %s, cleaning up configuration to prevent broken state", appConfig.AppName())
-				if delErr := d.DeleteApp(ctx, appConfig.AppName()); delErr != nil {
-					log.G(ctx).Warnf("Failed to clean up app %s after copy failure: %v", appConfig.AppName(), delErr)
-				}
-			}
-
 			return fmt.Errorf("copy failed for app %s: %w", appConfig.AppName(), err)
 		}
 		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulled", "Image successfully copied to %s", dest)
