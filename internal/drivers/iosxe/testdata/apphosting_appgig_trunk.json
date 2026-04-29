@@ -30,6 +30,10 @@
           {
             "line-index": 1,
             "line-run-opts": "--label io.kubernetes.pod.name=appgig-trunk-pod --label io.kubernetes.pod.namespace=default --label io.kubernetes.pod.uid=33333333-3333-3333-3333-333333333333 --label io.kubernetes.container.name=appgig-trunk-app"
+          },
+          {
+            "line-index": 2,
+            "line-run-opts": "--hostname=appgig-trunk-app"
           }
         ]
       },
