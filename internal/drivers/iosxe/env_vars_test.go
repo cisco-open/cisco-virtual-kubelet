@@ -54,9 +54,9 @@ func TestBuildEnvironmentOptions_DirectVars(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []string{
-		`-e SIMPLE_VAR="simple_value"`,
-		`-e QUOTED_VAR="value with \"quotes\""`,
-		`-e SPECIAL_VAR="value\$with\` + "`" + `special\\chars"`,
+		`-e SIMPLE_VAR='simple_value'`,
+		`-e QUOTED_VAR='value with "quotes"'`,
+		`-e SPECIAL_VAR='value$with` + "`" + `special\chars'`,
 	}
 	assert.Equal(t, expected, opts)
 }
@@ -70,42 +70,47 @@ func TestEscapeShellValue(t *testing.T) {
 		{
 			name:     "simple value",
 			input:    "simple_value",
-			expected: `"simple_value"`,
+			expected: `'simple_value'`,
 		},
 		{
 			name:     "value with spaces",
 			input:    "value with spaces",
-			expected: `"value with spaces"`,
+			expected: `'value with spaces'`,
 		},
 		{
 			name:     "value with quotes",
 			input:    `value with "quotes"`,
-			expected: `"value with \"quotes\""`,
+			expected: `'value with "quotes"'`,
 		},
 		{
 			name:     "value with dollar signs",
 			input:    "value$with$variables",
-			expected: `"value\$with\$variables"`,
+			expected: `'value$with$variables'`,
 		},
 		{
 			name:     "value with backticks",
 			input:    "value`with`commands",
-			expected: `"value\` + "`" + `with\` + "`" + `commands"`,
+			expected: "'value`with`commands'",
 		},
 		{
 			name:     "value with backslashes",
 			input:    "value\\with\\backslashes",
-			expected: `"value\\with\\backslashes"`,
+			expected: `'value\with\backslashes'`,
+		},
+		{
+			name:     "value with single quotes",
+			input:    "it's a value",
+			expected: `'it'\''s a value'`,
 		},
 		{
 			name:     "complex value",
 			input:    `complex "value" with $vars and \backslashes and ` + "`commands`",
-			expected: `"complex \"value\" with \$vars and \\backslashes and \` + "`" + `commands\` + "`" + `"`,
+			expected: `'complex "value" with $vars and \backslashes and ` + "`commands`" + `'`,
 		},
 		{
 			name:     "empty value",
 			input:    "",
-			expected: `""`,
+			expected: `''`,
 		},
 	}
 
@@ -297,8 +302,8 @@ func TestBuildEnvironmentOptions_SecretRef(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []string{
-		`-e DB_USER="admin"`,
-		`-e DB_PASS="secret123"`,
+		`-e DB_USER='admin'`,
+		`-e DB_PASS='secret123'`,
 	}
 	assert.Equal(t, expected, opts)
 }
@@ -357,8 +362,8 @@ func TestBuildEnvironmentOptions_ConfigMapRef(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []string{
-		`-e API_URL="https://api.example.com"`,
-		`-e LOG_LEVEL="debug"`,
+		`-e API_URL='https://api.example.com'`,
+		`-e LOG_LEVEL='debug'`,
 	}
 	assert.Equal(t, expected, opts)
 }
@@ -401,7 +406,7 @@ func TestBuildEnvironmentOptions_OptionalSecretMissing(t *testing.T) {
 
 	// Should only include the regular variable, optional missing secret is skipped
 	expected := []string{
-		`-e REGULAR_VAR="regular_value"`,
+		`-e REGULAR_VAR='regular_value'`,
 	}
 	assert.Equal(t, expected, opts)
 }
@@ -494,9 +499,9 @@ func TestBuildEnvironmentOptions_MixedSources(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []string{
-		`-e DIRECT_VAR="direct_value"`,
-		`-e SECRET_VAR="secret123"`,
-		`-e CONFIGMAP_VAR="https://api.example.com"`,
+		`-e DIRECT_VAR='direct_value'`,
+		`-e SECRET_VAR='secret123'`,
+		`-e CONFIGMAP_VAR='https://api.example.com'`,
 	}
 	assert.Equal(t, expected, opts)
 }
