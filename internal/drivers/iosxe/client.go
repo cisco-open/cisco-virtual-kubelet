@@ -109,16 +109,13 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		if err := d.copyFallbackToFlash(ctx, appConfig, cfgPath, policy, timeout); err != nil {
 			return err
 		}
-		// PATCH with Start=true to trigger device auto-start (config already exists from fallback).
-		gapp := appConfig.Spec.DeviceConfig.App[appConfig.AppName()]
-		origStart := gapp.Start
-		trueVal := true
-		gapp.Start = &trueVal
-		postErr := d.client.Patch(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller)
-		gapp.Start = origStart
-		if postErr != nil {
+		if err := d.ActivateApp(ctx, appConfig.AppName()); err != nil {
 			d.clearPodRecovering(appConfig.PodUID())
-			return fmt.Errorf("failed to patch config (Start=true) for DockerResource app %s: %w", appConfig.AppName(), postErr)
+			return fmt.Errorf("failed to activate DockerResource app %s after copy fallback: %w", appConfig.AppName(), err)
+		}
+		if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
+			d.clearPodRecovering(appConfig.PodUID())
+			return fmt.Errorf("failed to start DockerResource app %s after copy fallback: %w", appConfig.AppName(), err)
 		}
 		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
 			d.clearPodRecovering(appConfig.PodUID())
@@ -157,18 +154,14 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		return err
 	}
 
-	// Set Start=true and PATCH to trigger device native auto-start.
-	gapp := appConfig.Spec.DeviceConfig.App[appConfig.AppName()]
-	origStart := gapp.Start
-	trueVal := true
-	gapp.Start = &trueVal
-	postErr := d.client.Patch(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller)
-	gapp.Start = origStart
-	if postErr != nil {
+	if err := d.ActivateApp(ctx, appConfig.AppName()); err != nil {
 		d.clearPodRecovering(appConfig.PodUID())
-		return fmt.Errorf("failed to re-post config (Start=true) for app %s: %w", appConfig.AppName(), postErr)
+		return fmt.Errorf("failed to activate app %s after copy fallback: %w", appConfig.AppName(), err)
 	}
-
+	if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
+		d.clearPodRecovering(appConfig.PodUID())
+		return fmt.Errorf("failed to start app %s after copy fallback: %w", appConfig.AppName(), err)
+	}
 	if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
 		d.clearPodRecovering(appConfig.PodUID())
 		return fmt.Errorf("app %s did not reach RUNNING after copy fallback: %w", appConfig.AppName(), err)
