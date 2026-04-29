@@ -207,6 +207,16 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		d.emitEvent(appConfig, v1.EventTypeNormal, "Copying", "Copying image %s to %s (may take several minutes)", appConfig.ImagePath(), dest)
 		if err := d.copyRPC(ctx, src, dest); err != nil {
 			d.clearPodRecovering(appConfig.PodUID())
+
+			// For DockerResource mode, copy is required since direct InstallApp with HTTP doesn't work.
+			// Clean up the configuration to prevent infinite reconciler loops.
+			if appConfig.Spec.RequiresTwoPhaseStart {
+				log.G(ctx).Warnf("Copy failed for DockerResource app %s, cleaning up configuration to prevent broken state", appConfig.AppName())
+				if delErr := d.DeleteApp(ctx, appConfig.AppName()); delErr != nil {
+					log.G(ctx).Warnf("Failed to clean up app %s after copy failure: %v", appConfig.AppName(), delErr)
+				}
+			}
+
 			return fmt.Errorf("copy failed for app %s: %w", appConfig.AppName(), err)
 		}
 		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulled", "Image successfully copied to %s", dest)
@@ -613,7 +623,10 @@ func (d *XEDriver) copyRPC(ctx context.Context, source, destination string) erro
 	path := "/restconf/operations/Cisco-IOS-XE-rpc:copy"
 	jsonMarshaller := func(v any) ([]byte, error) { return json.Marshal(v) }
 
+	log.G(ctx).Debugf("Copy RPC payload: %+v", payload)
+
 	if err := d.client.Post(ctx, path, payload, jsonMarshaller); err != nil {
+		log.G(ctx).Errorf("Copy RPC failed - source: %s, destination: %s, error: %v", source, destination, err)
 		return fmt.Errorf("copy RPC failed (%s -> %s): %w", source, destination, err)
 	}
 
