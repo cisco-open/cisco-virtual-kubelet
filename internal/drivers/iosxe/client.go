@@ -123,6 +123,14 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 	}
 
 	// ── PRIMARY PATH (HTTP image) ─────────────────────────────────────────────
+	// For DockerResource mode, we skipped InstallApp earlier, so call it now to trigger image pull
+	if appConfig.Spec.RequiresTwoPhaseStart {
+		log.G(ctx).Infof("DockerResource mode: calling InstallApp to trigger HTTP image pull for %s", appConfig.ImagePath())
+		if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
+			return fmt.Errorf("failed to install HTTP URL app %s in DockerResource mode: %w", appConfig.AppName(), err)
+		}
+	}
+
 	// The device can pull and activate the image itself. Wait for RUNNING.
 	d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", appConfig.ImagePath())
 	waitErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout)
