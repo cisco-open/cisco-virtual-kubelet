@@ -123,24 +123,23 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 	}
 
 	// ── PRIMARY PATH (HTTP image) ─────────────────────────────────────────────
-	// For DockerResource mode, we skipped InstallApp earlier, so call it now to trigger image pull
+	// For DockerResource mode, skip the native device pull since it doesn't work well with
+	// DockerResource=true and Start=false. Go directly to copy fallback.
 	if appConfig.Spec.RequiresTwoPhaseStart {
-		log.G(ctx).Infof("DockerResource mode: calling InstallApp to trigger HTTP image pull for %s", appConfig.ImagePath())
-		if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
-			return fmt.Errorf("failed to install HTTP URL app %s in DockerResource mode: %w", appConfig.AppName(), err)
+		log.G(ctx).Infof("DockerResource mode: skipping native device pull, going directly to copy fallback for HTTP URL %s", appConfig.ImagePath())
+		// Skip device-native pull and go directly to fallback
+	} else {
+		// Non-DockerResource apps: try device-native pull first
+		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", appConfig.ImagePath())
+		waitErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout)
+		if waitErr == nil {
+			log.G(ctx).Infof("Successfully created and installed app %s", appConfig.AppName())
+			return nil
 		}
-	}
 
-	// The device can pull and activate the image itself. Wait for RUNNING.
-	d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", appConfig.ImagePath())
-	waitErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout)
-	if waitErr == nil {
-		log.G(ctx).Infof("Successfully created and installed app %s", appConfig.AppName())
-		return nil
+		log.G(ctx).Warnf("App %s did not reach RUNNING state after install: %v", appConfig.AppName(), waitErr)
+		d.emitEvent(appConfig, v1.EventTypeWarning, "ImagePullFallback", "Device-native pull timed out after %s; falling back to copy-then-install", timeout)
 	}
-
-	log.G(ctx).Warnf("App %s did not reach RUNNING state after install: %v", appConfig.AppName(), waitErr)
-	d.emitEvent(appConfig, v1.EventTypeWarning, "ImagePullFallback", "Device-native pull timed out after %s; falling back to copy-then-install", timeout)
 
 	// ── FALLBACK PATH (copy-then-install) ─────────────────────────────────────
 	dest := appConfig.PackageDest()
