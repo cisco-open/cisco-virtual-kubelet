@@ -240,6 +240,7 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 			fmt.Sprintf("--label %s=%s", common.LabelPodNamespace, pod.Namespace),
 			fmt.Sprintf("--label %s=%s", common.LabelPodUID, pod.UID),
 			fmt.Sprintf("--label %s=%s", common.LabelContainerName, container.Name),
+			fmt.Sprintf("--hostname=%s", container.Name),
 		}
 
 		// Build environment options
@@ -264,6 +265,7 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 		hasDockerResource := false
 		if len(envOpts) > 0 {
 			gapp.DockerResource = ygot.Bool(true)
+			gapp.PrependPkgOpts = ygot.Bool(true)
 			hasDockerResource = true
 		}
 

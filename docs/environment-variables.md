@@ -212,6 +212,7 @@ docker run \
   --label pod=web-app \
   --label namespace=production \
   --label container=web-server \
+  --hostname=web-server \
   -e NODE_ENV="production" \
   -e PORT="8080" \
   -e DB_HOST="db.production.example.com" \
@@ -256,16 +257,23 @@ If approaching limits:
 
 ### Generated Configuration
 
-Environment variables are integrated into IOS-XE App-Hosting configuration:
+Environment variables are integrated into IOS-XE App-Hosting configuration. When environment variables are present, the provider enables `docker-resource` mode with `prepend-pkg-opts` and automatically sets the container hostname to the container name:
 
 ```
 app-hosting appid web-app
  app-vnic management guest-interface 0
  app-default-gateway 192.168.1.1 guest-interface 0
  app-resource docker
-  run-opts 1 "--label pod=web-app -e NODE_ENV=\"production\""
-  run-opts 2 "-e DB_PASSWORD=\"super-secret-password\""
+  prepend-pkg-opts
+  run-opts 1 "--label pod=web-app --hostname=web-server -e NODE_ENV='production'"
+  run-opts 2 "-e DB_PASSWORD='super-secret-password'"
+ app-resource profile custom
+  cpu 1000
+  memory 512
 ```
+
+- **`prepend-pkg-opts`**: Ensures Docker run options are prepended to the container command.
+- **`--hostname=<container-name>`**: Sets the container hostname to the Kubernetes container name from the pod spec.
 
 ### Monitoring
 
