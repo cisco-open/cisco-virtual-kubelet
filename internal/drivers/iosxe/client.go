@@ -67,29 +67,41 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName(), err)
 	}
 
-	if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
-		return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
+	// For HTTP URLs with DockerResource, skip InstallApp and go directly to HTTP URL handling
+	// because InstallApp with HTTP URLs doesn't work properly in DockerResource mode
+	if appConfig.Spec.RequiresTwoPhaseStart && isHTTPURL(appConfig.ImagePath()) {
+		log.G(ctx).Infof("Skipping InstallApp for HTTP URL in DockerResource mode: %s", appConfig.ImagePath())
+		// Go directly to HTTP URL handling logic at the bottom of the function
+	} else {
+		// For local paths (flash/bootflash) or non-DockerResource apps, call InstallApp normally
+		if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
+			return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
+		}
 	}
 
 	// Handle two-phase deployment for DockerResource apps
 	if appConfig.Spec.RequiresTwoPhaseStart {
 		log.G(ctx).Infof("Starting phase 2 deployment for DockerResource app %s (starting via RPC)", appConfig.AppName())
 
-		// Wait for app to reach DEPLOYED state first
-		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
-			return fmt.Errorf("app %s did not reach DEPLOYED state for phase 2: %w", appConfig.AppName(), err)
-		}
+		// For HTTP URLs, we skipped InstallApp, so skip DEPLOYED wait and StartApp RPC
+		// and go directly to HTTP URL handling logic
+		if isHTTPURL(appConfig.ImagePath()) {
+			log.G(ctx).Infof("Skipping DEPLOYED wait and StartApp RPC for HTTP URL in DockerResource mode, proceeding to HTTP URL handling")
+			// Continue to HTTP URL handling logic below
+		} else {
+			// For flash URLs, wait for DEPLOYED state first (since we called InstallApp)
+			if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
+				return fmt.Errorf("app %s did not reach DEPLOYED state for phase 2: %w", appConfig.AppName(), err)
+			}
 
-		// Use the start RPC instead of modifying configuration
-		if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
-			return fmt.Errorf("failed to start DockerResource app %s: %w", appConfig.AppName(), err)
-		}
+			// Use the start RPC instead of modifying configuration
+			if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
+				return fmt.Errorf("failed to start DockerResource app %s: %w", appConfig.AppName(), err)
+			}
 
-		log.G(ctx).Infof("Successfully started app %s via RPC", appConfig.AppName())
+			log.G(ctx).Infof("Successfully started app %s via RPC", appConfig.AppName())
 
-		// For HTTP URLs, continue to HTTP URL handling logic for RUNNING state and fallback
-		// For flash URLs, we can wait for RUNNING directly since the image is local
-		if !isHTTPURL(appConfig.ImagePath()) {
+			// Wait for RUNNING directly since the image is local
 			if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
 				return fmt.Errorf("app %s did not reach RUNNING after two-phase start: %w", appConfig.AppName(), err)
 			}
