@@ -74,16 +74,13 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 
 	// Handle two-phase deployment for DockerResource apps
 	if appConfig.Spec.RequiresTwoPhaseStart {
-		// For non-HTTP (flash) images, just wait DEPLOYED then start via RPC.
+		// For non-HTTP (flash) images, just wait DEPLOYED then activate and start.
 		if !isHTTPURL(appConfig.ImagePath()) {
 			if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
 				return fmt.Errorf("app %s did not reach DEPLOYED state for phase 2: %w", appConfig.AppName(), err)
 			}
-			if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
-				return fmt.Errorf("failed to start DockerResource app %s: %w", appConfig.AppName(), err)
-			}
-			if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
-				return fmt.Errorf("app %s did not reach RUNNING after two-phase start: %w", appConfig.AppName(), err)
+			if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
+				return err
 			}
 			log.G(ctx).Infof("Successfully installed app %s (two-phase, local path)", appConfig.AppName())
 			return nil
@@ -93,11 +90,8 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", appConfig.ImagePath())
 		deployErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout)
 		if deployErr == nil {
-			if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
-				return fmt.Errorf("failed to start DockerResource app %s: %w", appConfig.AppName(), err)
-			}
-			if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
-				return fmt.Errorf("app %s did not reach RUNNING after two-phase start: %w", appConfig.AppName(), err)
+			if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
+				return err
 			}
 			log.G(ctx).Infof("Successfully installed app %s (two-phase)", appConfig.AppName())
 			return nil
@@ -109,17 +103,9 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		if err := d.copyFallbackToFlash(ctx, appConfig, cfgPath, policy, timeout); err != nil {
 			return err
 		}
-		if err := d.ActivateApp(ctx, appConfig.AppName()); err != nil {
+		if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
 			d.clearPodRecovering(appConfig.PodUID())
-			return fmt.Errorf("failed to activate DockerResource app %s after copy fallback: %w", appConfig.AppName(), err)
-		}
-		if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
-			d.clearPodRecovering(appConfig.PodUID())
-			return fmt.Errorf("failed to start DockerResource app %s after copy fallback: %w", appConfig.AppName(), err)
-		}
-		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
-			d.clearPodRecovering(appConfig.PodUID())
-			return fmt.Errorf("app %s did not reach RUNNING after two-phase copy fallback: %w", appConfig.AppName(), err)
+			return err
 		}
 		d.clearPodRecovering(appConfig.PodUID())
 		d.emitEvent(appConfig, v1.EventTypeNormal, "Started", "App %s is running", appConfig.AppName())
@@ -154,22 +140,29 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		return err
 	}
 
-	if err := d.ActivateApp(ctx, appConfig.AppName()); err != nil {
+	if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
 		d.clearPodRecovering(appConfig.PodUID())
-		return fmt.Errorf("failed to activate app %s after copy fallback: %w", appConfig.AppName(), err)
-	}
-	if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
-		d.clearPodRecovering(appConfig.PodUID())
-		return fmt.Errorf("failed to start app %s after copy fallback: %w", appConfig.AppName(), err)
-	}
-	if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
-		d.clearPodRecovering(appConfig.PodUID())
-		return fmt.Errorf("app %s did not reach RUNNING after copy fallback: %w", appConfig.AppName(), err)
+		return err
 	}
 
 	d.clearPodRecovering(appConfig.PodUID())
 	d.emitEvent(appConfig, v1.EventTypeNormal, "Started", "App %s is running", appConfig.AppName())
 	log.G(ctx).Infof("Successfully installed app %s via copy fallback", appConfig.AppName())
+	return nil
+}
+
+// activateAndStart performs the activate → start → wait RUNNING sequence
+// required for all DockerResource (two-phase) apps and copy-fallback paths.
+func (d *XEDriver) activateAndStart(ctx context.Context, appConfig *AppHostingConfig, timeout time.Duration) error {
+	if err := d.ActivateApp(ctx, appConfig.AppName()); err != nil {
+		return fmt.Errorf("failed to activate app %s: %w", appConfig.AppName(), err)
+	}
+	if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
+		return fmt.Errorf("failed to start app %s: %w", appConfig.AppName(), err)
+	}
+	if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
+		return fmt.Errorf("app %s did not reach RUNNING: %w", appConfig.AppName(), err)
+	}
 	return nil
 }
 

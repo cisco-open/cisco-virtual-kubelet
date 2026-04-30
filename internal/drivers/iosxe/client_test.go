@@ -253,7 +253,7 @@ func TestCreateAppHostingApp_FallbackCopyFailure(t *testing.T) {
 		},
 	}
 	d := newTestDriver(fc)
-	cfg := minimalAppConfig("http://registry.example.com/app.tar", v1.PullIfNotPresent, 50*time.Millisecond)
+	cfg := minimalAppConfig("http://registry.example.com/app.tar", v1.PullAlways, 50*time.Millisecond)
 
 	err := d.CreateAppHostingApp(context.Background(), cfg)
 	if err == nil {
@@ -345,10 +345,11 @@ func minimalDockerResourceConfig(imagePath string, policy v1.PullPolicy, timeout
 }
 
 func TestCreateAppHostingApp_DockerResource_FlashImage(t *testing.T) {
-	// DockerResource + flash path: wait DEPLOYED → StartApp → RUNNING
+	// DockerResource + flash path: wait DEPLOYED → ActivateApp → StartApp → RUNNING
 	var (
-		mu      sync.Mutex
-		started bool
+		mu       sync.Mutex
+		rpcOrder []string
+		activated bool
 	)
 	rpcPath := "/restconf/operations/Cisco-IOS-XE-rpc:app-hosting"
 
@@ -359,8 +360,12 @@ func TestCreateAppHostingApp_DockerResource_FlashImage(t *testing.T) {
 		if path == rpcPath {
 			m, ok := payload.(map[string]interface{})
 			if ok {
+				if _, isActivate := m["activate"]; isActivate {
+					rpcOrder = append(rpcOrder, "activate")
+					activated = true
+				}
 				if _, isStart := m["start"]; isStart {
-					started = true
+					rpcOrder = append(rpcOrder, "start")
 				}
 			}
 		}
@@ -372,9 +377,9 @@ func TestCreateAppHostingApp_DockerResource_FlashImage(t *testing.T) {
 			return nil
 		}
 		mu.Lock()
-		s := started
+		a := activated
 		mu.Unlock()
-		if !s {
+		if !a {
 			*root = *operResponse("test-app", "DEPLOYED")
 		} else {
 			*root = *operResponse("test-app", "RUNNING")
@@ -388,13 +393,21 @@ func TestCreateAppHostingApp_DockerResource_FlashImage(t *testing.T) {
 	if err := d.CreateAppHostingApp(context.Background(), cfg); err != nil {
 		t.Errorf("expected success, got: %v", err)
 	}
+
+	mu.Lock()
+	order := rpcOrder
+	mu.Unlock()
+	if len(order) < 2 || order[0] != "activate" || order[1] != "start" {
+		t.Errorf("expected RPC order [activate, start], got %v", order)
+	}
 }
 
 func TestCreateAppHostingApp_DockerResource_HTTPPrimarySuccess(t *testing.T) {
-	// DockerResource + HTTP: device pull succeeds → DEPLOYED → StartApp → RUNNING
+	// DockerResource + HTTP: device pull succeeds → DEPLOYED → ActivateApp → StartApp → RUNNING
 	var (
-		mu      sync.Mutex
-		started bool
+		mu       sync.Mutex
+		rpcOrder []string
+		activated bool
 	)
 	rpcPath := "/restconf/operations/Cisco-IOS-XE-rpc:app-hosting"
 
@@ -405,8 +418,12 @@ func TestCreateAppHostingApp_DockerResource_HTTPPrimarySuccess(t *testing.T) {
 		if path == rpcPath {
 			m, ok := payload.(map[string]interface{})
 			if ok {
+				if _, isActivate := m["activate"]; isActivate {
+					rpcOrder = append(rpcOrder, "activate")
+					activated = true
+				}
 				if _, isStart := m["start"]; isStart {
-					started = true
+					rpcOrder = append(rpcOrder, "start")
 				}
 			}
 		}
@@ -418,9 +435,9 @@ func TestCreateAppHostingApp_DockerResource_HTTPPrimarySuccess(t *testing.T) {
 			return nil
 		}
 		mu.Lock()
-		s := started
+		a := activated
 		mu.Unlock()
-		if !s {
+		if !a {
 			*root = *operResponse("test-app", "DEPLOYED")
 		} else {
 			*root = *operResponse("test-app", "RUNNING")
@@ -433,6 +450,13 @@ func TestCreateAppHostingApp_DockerResource_HTTPPrimarySuccess(t *testing.T) {
 
 	if err := d.CreateAppHostingApp(context.Background(), cfg); err != nil {
 		t.Errorf("expected success, got: %v", err)
+	}
+
+	mu.Lock()
+	order := rpcOrder
+	mu.Unlock()
+	if len(order) < 2 || order[0] != "activate" || order[1] != "start" {
+		t.Errorf("expected RPC order [activate, start], got %v", order)
 	}
 }
 
@@ -500,3 +524,73 @@ func TestCreateAppHostingApp_DockerResource_HTTPFallbackCopy(t *testing.T) {
 	}
 }
 
+func TestCreateAppHostingApp_DockerResource_MultiContainer(t *testing.T) {
+	// Verifies two containers in a pod both go through activate→start
+	var (
+		mu       sync.Mutex
+		rpcOrder []string
+	)
+	rpcPath := "/restconf/operations/Cisco-IOS-XE-rpc:app-hosting"
+
+	fc := &fakeNetworkClient{}
+	fc.postHook = func(path string, payload any) error {
+		mu.Lock()
+		defer mu.Unlock()
+		if path == rpcPath {
+			m, ok := payload.(map[string]interface{})
+			if ok {
+				if _, isActivate := m["activate"]; isActivate {
+					rpcOrder = append(rpcOrder, "activate")
+				}
+				if _, isStart := m["start"]; isStart {
+					rpcOrder = append(rpcOrder, "start")
+				}
+			}
+		}
+		return nil
+	}
+	fc.getHook = func(_ string, result any) error {
+		root, ok := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData)
+		if !ok {
+			return nil
+		}
+		mu.Lock()
+		activateCount := 0
+		for _, op := range rpcOrder {
+			if op == "activate" {
+				activateCount++
+			}
+		}
+		mu.Unlock()
+		if activateCount == 0 {
+			*root = *operResponse("test-app", "DEPLOYED")
+		} else {
+			*root = *operResponse("test-app", "RUNNING")
+		}
+		return nil
+	}
+
+	d := newTestDriver(fc)
+
+	cfg1 := minimalDockerResourceConfig("flash:app1.tar", v1.PullIfNotPresent, 200*time.Millisecond)
+	cfg2 := minimalDockerResourceConfig("flash:app2.tar", v1.PullIfNotPresent, 200*time.Millisecond)
+
+	if err := d.CreateAppHostingApp(context.Background(), cfg1); err != nil {
+		t.Fatalf("container 1: %v", err)
+	}
+
+	mu.Lock()
+	rpcOrder = nil
+	mu.Unlock()
+
+	if err := d.CreateAppHostingApp(context.Background(), cfg2); err != nil {
+		t.Fatalf("container 2: %v", err)
+	}
+
+	mu.Lock()
+	order := rpcOrder
+	mu.Unlock()
+	if len(order) < 2 || order[0] != "activate" || order[1] != "start" {
+		t.Errorf("container 2: expected RPC order [activate, start], got %v", order)
+	}
+}
