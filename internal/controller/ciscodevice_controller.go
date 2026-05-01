@@ -66,6 +66,13 @@ type CiscoDeviceReconciler struct {
 	Image string
 	// ServiceAccount is the name of the service account for VK pods (defaults to DefaultServiceAccount).
 	ServiceAccount string
+	// AggregatorEnabled mirrors the manager's --enable-config-aggregator
+	// flag. When true, the in-process aggregator owns the per-device
+	// config-reconcile loop, so the per-device cisco-vk pod must skip
+	// its own ConfigReconciler. The field is plumbed through here so
+	// the per-pod env can reflect it; the cisco-vk binary reads
+	// CONFIG_AGGREGATOR_ENABLED on startup.
+	AggregatorEnabled bool
 }
 
 // +kubebuilder:rbac:groups=cisco.vk,resources=ciscodevices,verbs=get;list;watch;update;patch
