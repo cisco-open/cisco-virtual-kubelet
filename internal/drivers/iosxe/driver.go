@@ -50,7 +50,11 @@ type XEDriver struct {
 	configMapLister corev1listers.ConfigMapNamespaceLister
 	recoveryMu     sync.RWMutex
 	recoveringPods map[string]bool // keyed by pod UID
-	eventRecorder  record.EventRecorder
+
+	installMu       sync.Mutex
+	installInFlight map[string]bool // keyed by appID; prevents duplicate background recovery installs
+
+	eventRecorder record.EventRecorder
 }
 
 // NewAppHostingDriver creates a new IOS-XE AppHosting driver instance
@@ -107,9 +111,10 @@ func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*XEDri
 	)
 
 	d := &XEDriver{
-		config:         spec,
-		client:         Client,
-		recoveringPods: make(map[string]bool),
+		config:          spec,
+		client:          Client,
+		recoveringPods:  make(map[string]bool),
+		installInFlight: make(map[string]bool),
 	}
 
 	protocol := "restconf"
@@ -227,6 +232,28 @@ func (d *XEDriver) isPodRecovering(podUID string) bool {
 	d.recoveryMu.RLock()
 	defer d.recoveryMu.RUnlock()
 	return d.recoveringPods[podUID]
+}
+
+// tryMarkInstallInFlight atomically reserves the right to drive a recovery
+// install for the given appID. Returns true if the caller has now claimed
+// the slot and must release it via clearInstallInFlight when done; returns
+// false if another goroutine already holds it. Used by GetPodStatus to
+// dedupe per-app recovery attempts across status cycles.
+func (d *XEDriver) tryMarkInstallInFlight(appID string) bool {
+	d.installMu.Lock()
+	defer d.installMu.Unlock()
+	if d.installInFlight[appID] {
+		return false
+	}
+	d.installInFlight[appID] = true
+	return true
+}
+
+// clearInstallInFlight releases an in-flight install slot.
+func (d *XEDriver) clearInstallInFlight(appID string) {
+	d.installMu.Lock()
+	defer d.installMu.Unlock()
+	delete(d.installInFlight, appID)
 }
 
 // SetEventRecorder wires a Kubernetes event recorder into the driver so it can
