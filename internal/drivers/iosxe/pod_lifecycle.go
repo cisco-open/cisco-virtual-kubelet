@@ -201,33 +201,24 @@ func (d *XEDriver) GetPodContainers(ctx context.Context, pod *v1.Pod) (map[strin
 
 		log.G(ctx).Debugf("Found app %s with matching pod UID", appName)
 
-		// Extract container name from RunOpts labels
+		// Extract pod identity by accumulating labels across every RunOpts
+		// line — distributeRunOpts may split labels across lines, so a
+		// single-line check would silently drop the container.
 		var containerName string
-		var runOptsLine string
-
+		var runOptsLines []string
 		if app.RunOptss != nil {
 			for _, opt := range app.RunOptss.RunOpts {
 				if opt.LineRunOpts != nil {
-					line := *opt.LineRunOpts
-					runOptsLine = line
-
-					log.G(ctx).Debugf("App %s RunOpts: %s", appName, line)
-
-					// Verify this app belongs to our pod by checking all pod labels
-					if strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodName, pod.Name)) &&
-						strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodNamespace, pod.Namespace)) &&
-						strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodUID, pod.UID)) {
-
-						// Extract the container name from the label
-						containerName = common.ExtractContainerNameFromLabels(line)
-
-						if containerName != "" {
-							log.G(ctx).Debugf("Extracted container name: %s from app %s", containerName, appName)
-						} else {
-							log.G(ctx).Warnf("App %s has pod labels but no container name label in line: %s", appName, line)
-						}
-						break
-					}
+					runOptsLines = append(runOptsLines, *opt.LineRunOpts)
+				}
+			}
+		}
+		if len(runOptsLines) > 0 {
+			ns, name, uid, ctr := common.PodIdentityFromRunOpts(runOptsLines)
+			if ns == pod.Namespace && name == pod.Name && uid == string(pod.UID) {
+				containerName = ctr
+				if containerName == "" {
+					log.G(ctx).Warnf("App %s has pod labels but no container name label across RunOpts lines: %v", appName, runOptsLines)
 				}
 			}
 		}
@@ -248,8 +239,8 @@ func (d *XEDriver) GetPodContainers(ctx context.Context, pod *v1.Pod) (map[strin
 			containerToAppID[containerName] = appName
 			log.G(ctx).Infof("Found container %s -> app %s", containerName, appName)
 		} else {
-			log.G(ctx).Warnf("Found app %s with pod UID but couldn't extract container name from labels. RunOpts: %s",
-				appName, runOptsLine)
+			log.G(ctx).Warnf("Found app %s with pod UID but couldn't extract container name from labels. RunOpts: %v",
+				appName, runOptsLines)
 		}
 	}
 
@@ -335,11 +326,17 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 		return statusPod, nil
 	}
 
-	// Get containers for this pod
+	// Get containers for this pod. GetPodContainers may return a partial map
+	// alongside an error when some expected containers have not yet been
+	// created on the device (e.g. multi-container pods mid-deployment, or the
+	// two-phase DockerResource flow where alpha is in DEPLOYED while beta has
+	// not been installed yet). The partial map is still useful — we surface
+	// a Pending pod with the in-flight containers as ContainerCreating
+	// instead of returning NotFound, which the VK framework would otherwise
+	// interpret as a missing pod and try to recreate.
 	discoveredContainers, err := d.GetPodContainers(ctx, pod)
 	if err != nil {
-		log.G(ctx).Debugf("failed to get pod containers: %v", err)
-		return nil, fmt.Errorf("apps for pod %s/%s not found on device", pod.Namespace, pod.Name)
+		log.G(ctx).Debugf("partial container discovery for pod %s/%s: %v", pod.Namespace, pod.Name, err)
 	}
 
 	if len(discoveredContainers) == 0 {
@@ -475,26 +472,13 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 		var podNamespace, podName, podUID, containerName string
 
 		if app.RunOptss != nil {
+			lines := make([]string, 0, len(app.RunOptss.RunOpts))
 			for _, opt := range app.RunOptss.RunOpts {
 				if opt.LineRunOpts != nil {
-					line := *opt.LineRunOpts
-					log.G(ctx).Debugf("Discovery: App %s RunOpts line: %s", appName, line)
-
-					// Extract pod labels and accumulate across all lines
-					if val := common.ExtractLabelValue(line, common.LabelPodNamespace); val != "" && podNamespace == "" {
-						podNamespace = val
-					}
-					if val := common.ExtractLabelValue(line, common.LabelPodName); val != "" && podName == "" {
-						podName = val
-					}
-					if val := common.ExtractLabelValue(line, common.LabelPodUID); val != "" && podUID == "" {
-						podUID = val
-					}
-					if val := common.ExtractContainerNameFromLabels(line); val != "" && containerName == "" {
-						containerName = val
-					}
+					lines = append(lines, *opt.LineRunOpts)
 				}
 			}
+			podNamespace, podName, podUID, containerName = common.PodIdentityFromRunOpts(lines)
 			log.G(ctx).Debugf("Discovery: App %s final extracted namespace=%s, name=%s, uid=%s, container=%s",
 				appName, podNamespace, podName, podUID, containerName)
 		} else {

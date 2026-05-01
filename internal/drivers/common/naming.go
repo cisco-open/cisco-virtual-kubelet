@@ -95,6 +95,40 @@ func ExtractContainerNameFromLabels(runOptsLine string) string {
 	return ExtractLabelValue(runOptsLine, LabelContainerName)
 }
 
+// PodIdentityFromRunOpts walks all RunOpts lines and accumulates the four
+// pod-identity values. Labels emitted by distributeRunOpts may land on any
+// line, so callers that need to verify pod ownership must check across the
+// full set rather than a single line.
+//
+// Each value is taken from the first line in which it appears; once set it is
+// not overwritten by later lines. Any value that is never seen is returned as
+// the empty string.
+func PodIdentityFromRunOpts(lines []string) (namespace, name, uid, container string) {
+	for _, line := range lines {
+		if namespace == "" {
+			if v := ExtractLabelValue(line, LabelPodNamespace); v != "" {
+				namespace = v
+			}
+		}
+		if name == "" {
+			if v := ExtractLabelValue(line, LabelPodName); v != "" {
+				name = v
+			}
+		}
+		if uid == "" {
+			if v := ExtractLabelValue(line, LabelPodUID); v != "" {
+				uid = v
+			}
+		}
+		if container == "" {
+			if v := ExtractContainerNameFromLabels(line); v != "" {
+				container = v
+			}
+		}
+	}
+	return
+}
+
 // ExtractLabelValue extracts a label value from RunOpts labels string.
 // Returns the value if found, empty string otherwise.
 func ExtractLabelValue(runOptsLine, labelKey string) string {

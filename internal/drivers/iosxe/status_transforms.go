@@ -161,6 +161,30 @@ func (d *XEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod,
 		pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses, containerStatus)
 	}
 
+	// Surface containers declared in pod.Spec but not yet seen on the device
+	// (e.g. multi-container pod mid-deployment) as ContainerCreating. Without
+	// this, the resulting pod has fewer ContainerStatuses than declared
+	// containers and the VK framework treats it as malformed.
+	for i := range pod.Spec.Containers {
+		name := pod.Spec.Containers[i].Name
+		if _, found := discoveredContainers[name]; found {
+			continue
+		}
+		pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses, v1.ContainerStatus{
+			Name:    name,
+			Image:   pod.Spec.Containers[i].Image,
+			ImageID: pod.Spec.Containers[i].Image,
+			Ready:   false,
+			State: v1.ContainerState{
+				Waiting: &v1.ContainerStateWaiting{
+					Reason:  "ContainerCreating",
+					Message: "Container has not yet been created on the device",
+				},
+			},
+		})
+		allReady = false
+	}
+
 	if anyFailed && !anyRunning {
 		pod.Status.Phase = v1.PodFailed
 		pod.Status.Reason = "PackagePolicyInvalid"

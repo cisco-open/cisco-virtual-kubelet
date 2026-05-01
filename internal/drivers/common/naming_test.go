@@ -287,3 +287,82 @@ func TestIsCVKManagedApp(t *testing.T) {
 		t.Error("IsCVKManagedApp should return false for non-CVK app name")
 	}
 }
+
+func TestPodIdentityFromRunOpts(t *testing.T) {
+	const (
+		ns   = "default"
+		name = "thousandeyes-agent"
+		uid  = "0ab6b5c3-f13c-483c-ad8c-bee9c740f8ba"
+		ctr  = "te-agent"
+	)
+
+	tests := []struct {
+		name      string
+		lines     []string
+		wantNS    string
+		wantName  string
+		wantUID   string
+		wantCtr   string
+	}{
+		{
+			name: "all labels on a single line",
+			lines: []string{
+				"--label io.kubernetes.pod.name=" + name +
+					" --label io.kubernetes.pod.namespace=" + ns +
+					" --label io.kubernetes.pod.uid=" + uid +
+					" --label io.kubernetes.container.name=" + ctr,
+			},
+			wantNS: ns, wantName: name, wantUID: uid, wantCtr: ctr,
+		},
+		{
+			name: "labels split across two lines",
+			lines: []string{
+				"--label io.kubernetes.pod.name=" + name +
+					" --label io.kubernetes.pod.namespace=" + ns,
+				"--label io.kubernetes.pod.uid=" + uid +
+					" --label io.kubernetes.container.name=" + ctr,
+			},
+			wantNS: ns, wantName: name, wantUID: uid, wantCtr: ctr,
+		},
+		{
+			name: "labels distributed across many lines",
+			lines: []string{
+				"-e FOO=1",
+				"--label io.kubernetes.pod.namespace=" + ns,
+				"-e BAR=2",
+				"--label io.kubernetes.pod.name=" + name,
+				"-e BAZ=3",
+				"--label io.kubernetes.container.name=" + ctr,
+				"--label io.kubernetes.pod.uid=" + uid,
+			},
+			wantNS: ns, wantName: name, wantUID: uid, wantCtr: ctr,
+		},
+		{
+			name:    "no labels at all",
+			lines:   []string{"-e FOO=1", "-e BAR=2"},
+			wantNS:  "",
+			wantName: "",
+			wantUID: "",
+			wantCtr: "",
+		},
+		{
+			name: "first occurrence wins (later duplicate ignored)",
+			lines: []string{
+				"--label io.kubernetes.pod.name=" + name,
+				"--label io.kubernetes.pod.name=other-pod",
+			},
+			wantName: name,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotNS, gotName, gotUID, gotCtr := PodIdentityFromRunOpts(tt.lines)
+			if gotNS != tt.wantNS || gotName != tt.wantName || gotUID != tt.wantUID || gotCtr != tt.wantCtr {
+				t.Errorf("PodIdentityFromRunOpts() = (%q, %q, %q, %q), want (%q, %q, %q, %q)",
+					gotNS, gotName, gotUID, gotCtr,
+					tt.wantNS, tt.wantName, tt.wantUID, tt.wantCtr)
+			}
+		})
+	}
+}

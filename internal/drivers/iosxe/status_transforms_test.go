@@ -370,3 +370,52 @@ func TestGetContainerStatus_ScheduledConditionTrue(t *testing.T) {
 		}
 	}
 }
+
+// Issue #109: containers declared in pod.Spec but missing from
+// discoveredContainers (e.g. multi-container pod mid-deployment) must
+// surface as ContainerCreating, not silently disappear.
+func TestGetContainerStatus_PartialDiscoveryMissingContainer(t *testing.T) {
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1"}}
+	pod := statusTestPod("alpha", "beta")
+	// Only alpha was discovered; beta is missing (still being created).
+	containers := map[string]string{"alpha": "alpha-id"}
+	operData := map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App{
+		"alpha-id": operDataWithState("RUNNING"),
+	}
+
+	if err := d.GetContainerStatus(testCtx(), pod, containers, operData); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(pod.Status.ContainerStatuses) != 2 {
+		t.Fatalf("expected 2 container statuses, got %d", len(pod.Status.ContainerStatuses))
+	}
+
+	// Locate beta's status — order is not guaranteed because alpha comes
+	// from a map iteration.
+	var betaCS *v1.ContainerStatus
+	for i := range pod.Status.ContainerStatuses {
+		if pod.Status.ContainerStatuses[i].Name == "beta" {
+			betaCS = &pod.Status.ContainerStatuses[i]
+		}
+	}
+	if betaCS == nil {
+		t.Fatal("beta container status was not synthesised")
+	}
+	if betaCS.Ready {
+		t.Error("missing container must not be Ready")
+	}
+	if betaCS.State.Waiting == nil {
+		t.Fatal("missing container state should be Waiting")
+	}
+	if betaCS.State.Waiting.Reason != "ContainerCreating" {
+		t.Errorf("Reason = %q, want ContainerCreating", betaCS.State.Waiting.Reason)
+	}
+	// One container running, one waiting → not all ready, so phase must
+	// not be PodRunning with PodReady=True.
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
+			t.Error("PodReady should not be True while a container is still ContainerCreating")
+		}
+	}
+}
