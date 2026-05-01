@@ -27,7 +27,7 @@ import (
 )
 
 // DeployPod creates and deploys all containers in a pod to the device
-func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister corev1listers.SecretNamespaceLister) error {
+func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister corev1listers.SecretNamespaceLister, configMapLister corev1listers.ConfigMapNamespaceLister) error {
 	log.G(ctx).WithFields(log.Fields{
 		"pod": pod,
 	}).Debug("Pod DeployContainer request received")
@@ -35,6 +35,7 @@ func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister core
 	log.G(ctx).Infof("Deploying pod: %s/%s", pod.Namespace, pod.Name)
 
 	d.secretLister = secretLister
+	d.configMapLister = configMapLister
 
 	// Convert pod spec to app hosting configurations
 	appConfigs, err := d.ConvertPodToAppConfigs(pod)
@@ -71,7 +72,7 @@ func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 		if err := d.DeletePod(ctx, pod); err != nil {
 			log.G(ctx).Warnf("UpdatePod: cleanup had errors (will attempt redeploy): %v", err)
 		}
-		return d.DeployPod(ctx, pod, d.secretLister)
+		return d.DeployPod(ctx, pod, d.secretLister, d.configMapLister)
 	}
 
 	allOperData, operErr := d.GetAppOperationalData(ctx)
@@ -477,15 +478,27 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 			for _, opt := range app.RunOptss.RunOpts {
 				if opt.LineRunOpts != nil {
 					line := *opt.LineRunOpts
+					log.G(ctx).Debugf("Discovery: App %s RunOpts line: %s", appName, line)
 
-					// Extract pod labels
-					podNamespace = common.ExtractLabelValue(line, common.LabelPodNamespace)
-					podName = common.ExtractLabelValue(line, common.LabelPodName)
-					podUID = common.ExtractLabelValue(line, common.LabelPodUID)
-					containerName = common.ExtractContainerNameFromLabels(line)
-					break
+					// Extract pod labels and accumulate across all lines
+					if val := common.ExtractLabelValue(line, common.LabelPodNamespace); val != "" && podNamespace == "" {
+						podNamespace = val
+					}
+					if val := common.ExtractLabelValue(line, common.LabelPodName); val != "" && podName == "" {
+						podName = val
+					}
+					if val := common.ExtractLabelValue(line, common.LabelPodUID); val != "" && podUID == "" {
+						podUID = val
+					}
+					if val := common.ExtractContainerNameFromLabels(line); val != "" && containerName == "" {
+						containerName = val
+					}
 				}
 			}
+			log.G(ctx).Debugf("Discovery: App %s final extracted namespace=%s, name=%s, uid=%s, container=%s",
+				appName, podNamespace, podName, podUID, containerName)
+		} else {
+			log.G(ctx).Debugf("Discovery: App %s has no RunOptss", appName)
 		}
 
 		// If RunOpts labels are missing (e.g. app is in DEPLOYED state and

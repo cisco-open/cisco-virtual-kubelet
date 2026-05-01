@@ -21,6 +21,13 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+const (
+	// MaxRunOptsLines is the maximum number of RunOpts lines supported by IOS-XE AppHosting
+	MaxRunOptsLines = 30
+	// MaxRunOptsLineLength is the maximum character length per RunOpts line
+	MaxRunOptsLineLength = 235
+)
+
 // networkConfig holds the network configuration for an app container
 type networkConfig struct {
 	interfaceType             v1alpha1.XEInterfaceType
@@ -82,13 +89,14 @@ type AppHostingMetadata struct {
 
 // AppHostingSpec declares the desired state and the device configuration payload.
 type AppHostingSpec struct {
-	ImagePath        string
-	DesiredState     AppDesiredState
-	DeviceConfig     *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps // YANG config payload
-	ImagePullPolicy  v1.PullPolicy
-	PackageDest      string                    // on-device flash path (from annotation); empty = use default
-	PackageTimeout   time.Duration             // 0 = use default (180s)
-	ImagePullSecrets []v1.LocalObjectReference // from pod.Spec.ImagePullSecrets
+	ImagePath             string
+	DesiredState          AppDesiredState
+	DeviceConfig          *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps // YANG config payload
+	ImagePullPolicy       v1.PullPolicy
+	PackageDest           string                    // on-device flash path (from annotation); empty = use default
+	PackageTimeout        time.Duration             // 0 = use default (180s)
+	ImagePullSecrets      []v1.LocalObjectReference // from pod.Spec.ImagePullSecrets
+	RequiresTwoPhaseStart bool                      // true when DockerResource is enabled, requires Start=false then Start=true
 }
 
 // AppHostingStatus captures the last-observed device state and reconciler phase.

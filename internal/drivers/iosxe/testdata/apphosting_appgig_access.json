@@ -18,6 +18,10 @@
           {
             "line-index": 1,
             "line-run-opts": "--label io.kubernetes.pod.name=appgig-access-pod --label io.kubernetes.pod.namespace=default --label io.kubernetes.pod.uid=22222222-2222-2222-2222-222222222222 --label io.kubernetes.container.name=appgig-access-app"
+          },
+          {
+            "line-index": 2,
+            "line-run-opts": "--hostname=appgig-access-app"
           }
         ]
       },

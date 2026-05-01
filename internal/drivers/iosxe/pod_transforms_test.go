@@ -1216,3 +1216,168 @@ func TestGetPackageTimeout(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertPodToAppConfigs_EnvVars_DockerResource(t *testing.T) {
+	driver := &XEDriver{
+		config: &v1alpha1.DeviceSpec{
+			PodCIDR: "10.0.0.0/24",
+			XE: &v1alpha1.XEConfig{
+				Networking: v1alpha1.XENetworkConfig{
+					Interface: &v1alpha1.XEInterfaceConfig{
+						Type: v1alpha1.XEInterfaceTypeVirtualPortGroup,
+						VirtualPortGroup: &v1alpha1.XEVirtualPortGroupConfig{
+							Dhcp:      true,
+							Interface: "0",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "web-app",
+			Namespace: "production",
+			UID:       "abcdef12-3456-7890-abcd-ef1234567890",
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Name:  "web-server",
+					Image: "nginx:latest",
+					Env: []v1.EnvVar{
+						{Name: "NODE_ENV", Value: "production"},
+						{Name: "PORT", Value: "8080"},
+					},
+				},
+			},
+		},
+	}
+
+	configs, err := driver.ConvertPodToAppConfigs(pod)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if len(configs) != 1 {
+		t.Fatalf("Expected 1 config, got %d", len(configs))
+	}
+
+	config := configs[0]
+
+	if !config.Spec.RequiresTwoPhaseStart {
+		t.Error("Expected RequiresTwoPhaseStart=true when env vars are present")
+	}
+
+	var app *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App
+	for _, a := range config.Spec.DeviceConfig.App {
+		app = a
+		break
+	}
+
+	if app.DockerResource == nil || !*app.DockerResource {
+		t.Error("Expected DockerResource=true when env vars present")
+	}
+	if app.PrependPkgOpts == nil || !*app.PrependPkgOpts {
+		t.Error("Expected PrependPkgOpts=true when DockerResource is enabled")
+	}
+
+	if app.Start == nil || *app.Start {
+		t.Error("Expected Start=false for DockerResource apps")
+	}
+
+	foundHostname := false
+	foundEnv := false
+	if app.RunOptss != nil {
+		for _, ro := range app.RunOptss.RunOpts {
+			if ro.LineRunOpts == nil {
+				continue
+			}
+			if strings.Contains(*ro.LineRunOpts, "--hostname=web-server") {
+				foundHostname = true
+			}
+			if strings.Contains(*ro.LineRunOpts, "-e NODE_ENV=") {
+				foundEnv = true
+			}
+		}
+	}
+	if !foundHostname {
+		t.Error("Expected RunOpts to contain --hostname=web-server")
+	}
+	if !foundEnv {
+		t.Error("Expected RunOpts to contain environment variable -e NODE_ENV=")
+	}
+}
+
+func TestConvertPodToAppConfigs_NoEnvVars_NoDockerResource(t *testing.T) {
+	driver := &XEDriver{
+		config: &v1alpha1.DeviceSpec{
+			PodCIDR: "10.0.0.0/24",
+			XE: &v1alpha1.XEConfig{
+				Networking: v1alpha1.XENetworkConfig{
+					Interface: &v1alpha1.XEInterfaceConfig{
+						Type: v1alpha1.XEInterfaceTypeVirtualPortGroup,
+						VirtualPortGroup: &v1alpha1.XEVirtualPortGroupConfig{
+							Dhcp:      true,
+							Interface: "0",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "simple-app",
+			Namespace: "default",
+			UID:       "abcdef12-3456-7890-abcd-ef1234567890",
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Name:  "app",
+					Image: "nginx:latest",
+				},
+			},
+		},
+	}
+
+	configs, err := driver.ConvertPodToAppConfigs(pod)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	config := configs[0]
+
+	if config.Spec.RequiresTwoPhaseStart {
+		t.Error("Expected RequiresTwoPhaseStart=false when no env vars")
+	}
+
+	var app *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App
+	for _, a := range config.Spec.DeviceConfig.App {
+		app = a
+		break
+	}
+
+	if app.DockerResource != nil && *app.DockerResource {
+		t.Error("Expected DockerResource to not be set when no env vars")
+	}
+
+	if app.Start == nil || !*app.Start {
+		t.Error("Expected Start=true when no DockerResource")
+	}
+
+	// --hostname should still be present
+	foundHostname := false
+	if app.RunOptss != nil {
+		for _, ro := range app.RunOptss.RunOpts {
+			if ro.LineRunOpts != nil && strings.Contains(*ro.LineRunOpts, "--hostname=app") {
+				foundHostname = true
+			}
+		}
+	}
+	if !foundHostname {
+		t.Error("Expected RunOpts to contain --hostname=app even without env vars")
+	}
+}

@@ -67,23 +67,65 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName(), err)
 	}
 
+	// For all paths (local and HTTP), call InstallApp
 	if err := d.InstallApp(ctx, appConfig.AppName(), appConfig.ImagePath()); err != nil {
 		return fmt.Errorf("failed to install app %s: %w", appConfig.AppName(), err)
 	}
 
-	// For non-HTTP image paths (flash, bootflash, etc.) the device auto-advances
-	// from DEPLOYED to RUNNING because Start=true is already set in the posted config.
+	// Handle two-phase deployment for DockerResource apps
+	if appConfig.Spec.RequiresTwoPhaseStart {
+		// For non-HTTP (flash) images, just wait DEPLOYED then activate and start.
+		if !isHTTPURL(appConfig.ImagePath()) {
+			if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
+				return fmt.Errorf("app %s did not reach DEPLOYED state for phase 2: %w", appConfig.AppName(), err)
+			}
+			if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
+				return err
+			}
+			log.G(ctx).Infof("Successfully installed app %s (two-phase, local path)", appConfig.AppName())
+			return nil
+		}
+
+		// HTTP image + DockerResource: try device-native pull, fall back to copy.
+		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", appConfig.ImagePath())
+		deployErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout)
+		if deployErr == nil {
+			if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
+				return err
+			}
+			log.G(ctx).Infof("Successfully installed app %s (two-phase)", appConfig.AppName())
+			return nil
+		}
+
+		log.G(ctx).Warnf("App %s did not reach DEPLOYED after install: %v", appConfig.AppName(), deployErr)
+		d.emitEvent(appConfig, v1.EventTypeWarning, "ImagePullFallback", "Device-native pull timed out after %s; falling back to copy-then-install", timeout)
+
+		if err := d.copyFallbackToFlash(ctx, appConfig, cfgPath, policy, timeout); err != nil {
+			return err
+		}
+		if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
+			d.clearPodRecovering(appConfig.PodUID())
+			return err
+		}
+		d.clearPodRecovering(appConfig.PodUID())
+		d.emitEvent(appConfig, v1.EventTypeNormal, "Started", "App %s is running", appConfig.AppName())
+		log.G(ctx).Infof("Successfully installed app %s via two-phase copy fallback", appConfig.AppName())
+		return nil
+	}
+
+	// For non-HTTP image paths (flash, bootflash, etc.) without DockerResource,
+	// the device auto-advances from DEPLOYED to RUNNING because Start=true is set.
 	// Wait for RUNNING directly; no explicit activate/start RPCs are needed.
 	if !isHTTPURL(appConfig.ImagePath()) {
 		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
 			return fmt.Errorf("app %s did not reach RUNNING after flash install: %w", appConfig.AppName(), err)
 		}
-		log.G(ctx).Infof("Successfully installed app %s (local path)", appConfig.AppName())
+		log.G(ctx).Infof("Successfully installed app %s (single-phase local path)", appConfig.AppName())
 		return nil
 	}
 
-	// ── PRIMARY PATH (HTTP image) ─────────────────────────────────────────────
-	// The device can pull and activate the image itself. Wait for RUNNING.
+	// ── PRIMARY PATH (HTTP image, non-DockerResource) ────────────────────────
+	// The device can pull and activate the image itself (Start=true). Wait for RUNNING.
 	d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", appConfig.ImagePath())
 	waitErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout)
 	if waitErr == nil {
@@ -94,7 +136,40 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 	log.G(ctx).Warnf("App %s did not reach RUNNING state after install: %v", appConfig.AppName(), waitErr)
 	d.emitEvent(appConfig, v1.EventTypeWarning, "ImagePullFallback", "Device-native pull timed out after %s; falling back to copy-then-install", timeout)
 
-	// ── FALLBACK PATH (copy-then-install) ─────────────────────────────────────
+	if err := d.copyFallbackToFlash(ctx, appConfig, cfgPath, policy, timeout); err != nil {
+		return err
+	}
+
+	if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
+		d.clearPodRecovering(appConfig.PodUID())
+		return err
+	}
+
+	d.clearPodRecovering(appConfig.PodUID())
+	d.emitEvent(appConfig, v1.EventTypeNormal, "Started", "App %s is running", appConfig.AppName())
+	log.G(ctx).Infof("Successfully installed app %s via copy fallback", appConfig.AppName())
+	return nil
+}
+
+// activateAndStart performs the activate → start → wait RUNNING sequence
+// required for all DockerResource (two-phase) apps and copy-fallback paths.
+func (d *XEDriver) activateAndStart(ctx context.Context, appConfig *AppHostingConfig, timeout time.Duration) error {
+	if err := d.ActivateApp(ctx, appConfig.AppName()); err != nil {
+		return fmt.Errorf("failed to activate app %s: %w", appConfig.AppName(), err)
+	}
+	if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
+		return fmt.Errorf("failed to start app %s: %w", appConfig.AppName(), err)
+	}
+	if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
+		return fmt.Errorf("app %s did not reach RUNNING: %w", appConfig.AppName(), err)
+	}
+	return nil
+}
+
+// copyFallbackToFlash performs the HTTP-to-flash copy fallback sequence:
+// DeleteApp → re-POST (Start=false) → optional IfNotPresent cache check → copyRPC → InstallApp → wait DEPLOYED.
+// On return the app is in DEPLOYED state; the caller is responsible for starting it.
+func (d *XEDriver) copyFallbackToFlash(ctx context.Context, appConfig *AppHostingConfig, cfgPath string, policy v1.PullPolicy, timeout time.Duration) error {
 	dest := appConfig.PackageDest()
 	if dest == "" {
 		dest = fmt.Sprintf("flash:/virtual-kubelet/%s.tar", appConfig.AppName())
@@ -113,7 +188,6 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		log.G(ctx).Warnf("Failed to delete app %s before copy recovery (continuing): %v", appConfig.AppName(), delErr)
 	}
 
-	// Re-POST config with Start=false to prevent premature auto-start during copy.
 	gapp := appConfig.Spec.DeviceConfig.App[appConfig.AppName()]
 	origStart := gapp.Start
 	falseVal := false
@@ -125,9 +199,6 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		return fmt.Errorf("failed to re-post config (Start=false) for app %s: %w", appConfig.AppName(), postErr)
 	}
 
-	// IfNotPresent: try installing from the cached flash path before re-downloading.
-	// If the image is already on flash from a previous copy, this avoids a multi-minute
-	// download on every restart.
 	installedFromCache := false
 	if policy == v1.PullIfNotPresent {
 		log.G(ctx).Infof("imagePullPolicy=IfNotPresent: checking for cached image at %s", dest)
@@ -141,11 +212,9 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		}
 		if !installedFromCache {
 			log.G(ctx).Infof("App %s: no usable cached image at %s, downloading", appConfig.AppName(), dest)
-			// Clean up the potentially partial install before the copy path re-installs.
 			if delErr := d.DeleteApp(ctx, appConfig.AppName()); delErr != nil {
 				log.G(ctx).Warnf("Failed to delete app %s after failed cache attempt (continuing): %v", appConfig.AppName(), delErr)
 			}
-			// Re-POST config with Start=false again after the cleanup.
 			gapp.Start = &falseVal
 			if repostErr := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller); repostErr != nil {
 				gapp.Start = origStart
@@ -175,24 +244,6 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		}
 	}
 
-	// Set Start=true and re-POST to trigger device native auto-start.
-	trueVal := true
-	gapp.Start = &trueVal
-	postErr = d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller)
-	gapp.Start = origStart
-	if postErr != nil {
-		d.clearPodRecovering(appConfig.PodUID())
-		return fmt.Errorf("failed to re-post config (Start=true) for app %s: %w", appConfig.AppName(), postErr)
-	}
-
-	if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
-		d.clearPodRecovering(appConfig.PodUID())
-		return fmt.Errorf("app %s did not reach RUNNING after copy fallback: %w", appConfig.AppName(), err)
-	}
-
-	d.clearPodRecovering(appConfig.PodUID())
-	d.emitEvent(appConfig, v1.EventTypeNormal, "Started", "App %s is running", appConfig.AppName())
-	log.G(ctx).Infof("Successfully installed app %s via copy fallback", appConfig.AppName())
 	return nil
 }
 
@@ -566,7 +617,10 @@ func (d *XEDriver) copyRPC(ctx context.Context, source, destination string) erro
 	path := "/restconf/operations/Cisco-IOS-XE-rpc:copy"
 	jsonMarshaller := func(v any) ([]byte, error) { return json.Marshal(v) }
 
+	log.G(ctx).Debugf("Copy RPC payload: %+v", payload)
+
 	if err := d.client.Post(ctx, path, payload, jsonMarshaller); err != nil {
+		log.G(ctx).Errorf("Copy RPC failed - source: %s, destination: %s, error: %v", source, destination, err)
 		return fmt.Errorf("copy RPC failed (%s -> %s): %w", source, destination, err)
 	}
 

@@ -16,6 +16,7 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 - **Full Lifecycle Management**: Create, monitor, and delete containers via RESTCONF
 - **Health Monitoring**: Continuous node health checks and status reporting
 - **Resource Management**: CPU, memory, and storage allocation per container
+- **Environment Variables**: Full support for container environment variables from direct values, Secrets, and ConfigMaps
 - **Flexible Networking**: Support both DHCP IP allocation via Virtual Port Groups or AppGigabitEthernet
 - **DHCP Integration**: Automatic IP discovery from device operational data or ARP tables
 
@@ -133,6 +134,7 @@ The controller will create a VK deployment and a matching Kubernetes node. Pods 
 - [Configuration Reference](docs/CONFIGURATION.md) - Configuration options and device setup
 - [Architecture](docs/ARCHITECTURE.md) - Technical architecture details
 - [API Reference](docs/API.md) - RESTCONF API details
+- [Environment Variables](docs/environment-variables.md) - Complete guide to environment variable support
 
 ## Project Structure
 

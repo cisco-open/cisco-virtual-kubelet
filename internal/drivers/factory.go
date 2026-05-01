@@ -44,7 +44,7 @@ func NewDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (CiscoKubernetesD
 type CiscoKubernetesDeviceDriver interface {
 	GetDeviceResources(ctx context.Context) (*v1.ResourceList, error)
 	GetDeviceInfo(ctx context.Context) (*common.DeviceInfo, error)
-	DeployPod(ctx context.Context, pod *v1.Pod, secretLister corev1listers.SecretNamespaceLister) error
+	DeployPod(ctx context.Context, pod *v1.Pod, secretLister corev1listers.SecretNamespaceLister, configMapLister corev1listers.ConfigMapNamespaceLister) error
 	UpdatePod(ctx context.Context, pod *v1.Pod) error
 	DeletePod(ctx context.Context, pod *v1.Pod) error
 	GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error)

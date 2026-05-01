@@ -63,7 +63,7 @@ func (d *FAKEDriver) GetDeviceInfo(ctx context.Context) (*common.DeviceInfo, err
 	}, nil
 }
 
-func (d *FAKEDriver) DeployPod(ctx context.Context, pod *v1.Pod, _ corev1listers.SecretNamespaceLister) error {
+func (d *FAKEDriver) DeployPod(ctx context.Context, pod *v1.Pod, _ corev1listers.SecretNamespaceLister, _ corev1listers.ConfigMapNamespaceLister) error {
 	containerAppIDs := common.GenerateContainerAppIDs(pod)
 
 	log.G(ctx).WithFields(log.Fields{

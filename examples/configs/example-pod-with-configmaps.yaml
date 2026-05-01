@@ -1,0 +1,236 @@
+# Example: ConfigMap References in Environment Variables
+#
+# This example demonstrates using Kubernetes ConfigMaps to provide configuration
+# environment variables to containers deployed on Cisco IOS-XE devices.
+
+# Application configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: default
+data:
+  # API settings
+  api-base-url: "https://api.example.com/v1"
+  api-timeout: "30s"
+  api-retry-count: "3"
+  api-rate-limit: "100"
+
+  # Logging configuration
+  log-level: "info"
+  log-format: "json"
+  log-output: "stdout"
+
+  # Cache settings
+  cache-ttl: "300"
+  cache-max-size: "1000"
+  cache-enabled: "true"
+
+  # Feature flags
+  feature-analytics: "true"
+  feature-monitoring: "true"
+  feature-debug: "false"
+
+---
+# Database configuration (non-sensitive connection settings)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: database-config
+  namespace: default
+data:
+  host: "db.production.example.com"
+  port: "5432"
+  database: "app_production"
+  ssl-mode: "require"
+  connection-timeout: "10s"
+  max-connections: "20"
+  idle-timeout: "300s"
+
+---
+# Optional feature configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: optional-features
+  namespace: default
+data:
+  monitoring-endpoint: "https://monitoring.example.com/api"
+  analytics-endpoint: "https://analytics.example.com/v2"
+  webhook-url: "https://hooks.example.com/webhook"
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: configmap-env-pod
+  namespace: default
+  annotations:
+    cisco.io/device-name: "catalyst8000v-01"
+  labels:
+    app: configmap-example
+    environment: production
+spec:
+  nodeSelector:
+    type: virtual-kubelet
+
+  containers:
+  - name: web-app
+    image: nginx:1.21-alpine
+    command: ["sh", "-c"]
+    args:
+    - |
+      echo "Application Configuration:"
+      echo "API Base URL: $API_BASE_URL"
+      echo "Database: $DB_HOST:$DB_PORT/$DB_NAME"
+      echo "Log Level: $LOG_LEVEL"
+      echo "Cache TTL: $CACHE_TTL seconds"
+      echo "Analytics: $FEATURE_ANALYTICS"
+
+      # Start nginx or your application
+      nginx -g 'daemon off;'
+
+    env:
+    # Direct values for pod-specific config
+    - name: POD_TYPE
+      value: "web-frontend"
+    - name: VERSION
+      value: "1.2.3"
+
+    # API configuration from ConfigMap
+    - name: API_BASE_URL
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: api-base-url
+    - name: API_TIMEOUT
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: api-timeout
+    - name: API_RETRY_COUNT
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: api-retry-count
+
+    # Logging configuration
+    - name: LOG_LEVEL
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: log-level
+    - name: LOG_FORMAT
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: log-format
+
+    # Cache settings
+    - name: CACHE_TTL
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: cache-ttl
+    - name: CACHE_ENABLED
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: cache-enabled
+
+    # Database connection settings (non-sensitive)
+    - name: DB_HOST
+      valueFrom:
+        configMapKeyRef:
+          name: database-config
+          key: host
+    - name: DB_PORT
+      valueFrom:
+        configMapKeyRef:
+          name: database-config
+          key: port
+    - name: DB_NAME
+      valueFrom:
+        configMapKeyRef:
+          name: database-config
+          key: database
+    - name: DB_SSL_MODE
+      valueFrom:
+        configMapKeyRef:
+          name: database-config
+          key: ssl-mode
+
+    # Feature flags
+    - name: FEATURE_ANALYTICS
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: feature-analytics
+    - name: FEATURE_MONITORING
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: feature-monitoring
+
+    # Optional configuration - won't fail if ConfigMap is missing
+    - name: MONITORING_ENDPOINT
+      valueFrom:
+        configMapKeyRef:
+          name: optional-features
+          key: monitoring-endpoint
+          optional: true
+
+    # Optional key in existing ConfigMap
+    - name: CUSTOM_SETTING
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: custom-setting  # This key doesn't exist
+          optional: true       # So it will be silently omitted
+
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+
+    ports:
+    - containerPort: 80
+      name: http
+
+  restartPolicy: Always
+
+---
+# To create ConfigMaps from files:
+#
+# kubectl create configmap app-config \
+#   --from-file=config.properties \
+#   --from-literal=api-base-url=https://api.example.com/v1
+#
+# kubectl create configmap database-config \
+#   --from-env-file=database.env
+
+---
+# To update ConfigMap values:
+#
+# kubectl patch configmap app-config --patch '{"data":{"log-level":"debug"}}'
+
+---
+# Expected Docker RunOpts generation on IOS-XE device:
+#
+# app-hosting appid configmap-env-pod
+#  app-vnic management guest-interface 0
+#  app-resource docker
+#   run-opts 1 "--label pod=configmap-env-pod --label namespace=default"
+#   run-opts 2 "--label container=web-app -e POD_TYPE=\"web-frontend\""
+#   run-opts 3 "-e VERSION=\"1.2.3\" -e API_BASE_URL=\"https://api.example.com/v1\""
+#   run-opts 4 "-e API_TIMEOUT=\"30s\" -e API_RETRY_COUNT=\"3\""
+#   run-opts 5 "-e LOG_LEVEL=\"info\" -e LOG_FORMAT=\"json\""
+#   run-opts 6 "-e CACHE_TTL=\"300\" -e CACHE_ENABLED=\"true\""
+#   run-opts 7 "-e DB_HOST=\"db.production.example.com\" -e DB_PORT=\"5432\""
+#   run-opts 8 "-e DB_NAME=\"app_production\" -e DB_SSL_MODE=\"require\""
+#   run-opts 9 "-e FEATURE_ANALYTICS=\"true\" -e FEATURE_MONITORING=\"true\""
+#   run-opts 10 "-e MONITORING_ENDPOINT=\"https://monitoring.example.com/api\""
+#   # Note: CUSTOM_SETTING is omitted (optional key doesn't exist)

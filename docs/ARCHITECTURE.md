@@ -183,18 +183,29 @@ sequenceDiagram
     Drv->>Dev: RPC install (image path or HTTP URL)
 
     alt Flash path (image: flash:/...)
-        Note over Drv,Dev: Device auto-advances DEPLOYED→RUNNING<br/>via Start=true in config
-        Dev-->>Drv: RUNNING
+        alt No env vars (Start=true)
+            Note over Drv,Dev: Device auto-advances DEPLOYED→RUNNING<br/>via Start=true in config
+            Dev-->>Drv: RUNNING
+        else DockerResource (env vars present, Start=false)
+            Dev-->>Drv: DEPLOYED
+            Drv->>Dev: RPC activate
+            Drv->>Dev: RPC start
+            Dev-->>Drv: RUNNING
+        end
     else HTTP primary path (device-native pull)
         Note over Drv,Dev: Device pulls image itself<br/>(platforms that support it)
-        Dev-->>Drv: DEPLOYED → ACTIVATED → RUNNING
+        Dev-->>Drv: DEPLOYED
+        Drv->>Dev: RPC activate
+        Drv->>Dev: RPC start
+        Dev-->>Drv: RUNNING
     else HTTP fallback path (copy-then-install)
         Note over Drv,Dev: Device cannot pull; VK downloads image
         Drv->>Dev: copy RPC — downloads image to flash<br/>(synchronous, may take minutes)
         Note over Drv: GetPodStatus returns Waiting{PullingImage}<br/>during this period
         Drv->>Dev: RPC install from flash path
         Dev-->>Drv: DEPLOYED
-        Drv->>Dev: POST config Start=true (native auto-start)
+        Drv->>Dev: RPC activate
+        Drv->>Dev: RPC start
         Dev-->>Drv: RUNNING
     end
 

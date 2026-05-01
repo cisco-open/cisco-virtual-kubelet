@@ -119,6 +119,10 @@ func (c *RestconfClient) doRequest(ctx context.Context, method, path string, pay
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
+		errBody, _ := io.ReadAll(resp.Body)
+		if len(errBody) > 0 {
+			return fmt.Errorf("request failed with status %s: %s", resp.Status, string(errBody))
+		}
 		return fmt.Errorf("request failed with status %s", resp.Status)
 	}
 
