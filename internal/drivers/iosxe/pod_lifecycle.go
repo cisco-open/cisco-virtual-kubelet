@@ -341,6 +341,20 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 	}
 
 	if len(discoveredContainers) == 0 {
+		// All containers are missing. If the pod is still alive in K8s and the
+		// driver has the listers it needs, spawn recovery installs and surface a
+		// synthesised Pending pod so the VK framework does not loop on
+		// NotFound. The next status cycle will pick up the apps via normal
+		// discovery once installs land.
+		if pod.DeletionTimestamp == nil && d.secretLister != nil && d.configMapLister != nil {
+			log.G(ctx).Infof("All containers missing for pod %s/%s; driving full recovery", pod.Namespace, pod.Name)
+			d.recoverMissingContainers(ctx, pod, discoveredContainers)
+			statusPod := pod.DeepCopy()
+			if statusErr := d.GetContainerStatus(ctx, statusPod, discoveredContainers, nil); statusErr != nil {
+				return nil, fmt.Errorf("failed to synthesise status for recovering pod: %w", statusErr)
+			}
+			return statusPod, nil
+		}
 		log.G(ctx).Warnf("No containers found on device for pod %s/%s", pod.Namespace, pod.Name)
 		return nil, fmt.Errorf("no containers found for pod %s/%s", pod.Namespace, pod.Name)
 	}
