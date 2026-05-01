@@ -34,8 +34,8 @@ func TestIsCiscoPrompt(t *testing.T) {
 		"random text",
 		"show ip route",
 		"Cisco IOS XE Software, Version 17.18.2",
-		"  Edge-9K#",   // leading whitespace — caller trims first
-		"E*dge#",       // illegal char
+		"  Edge-9K#", // leading whitespace — caller trims first
+		"E*dge#",     // illegal char
 	}
 	for _, line := range yes {
 		if !isCiscoPrompt(line) {

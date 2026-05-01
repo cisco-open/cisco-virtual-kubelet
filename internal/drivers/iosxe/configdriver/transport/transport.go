@@ -273,9 +273,9 @@ type TxHandle string
 //
 // Wire-level (NETCONF):
 //
-//   CommitConfirmed:  <commit><confirmed/><confirm-timeout>N</confirm-timeout></commit>
-//   ConfirmCommit:    <commit/>
-//   Auto-revert:      device's own timer; no client RPC required
+//	CommitConfirmed:  <commit><confirmed/><confirm-timeout>N</confirm-timeout></commit>
+//	ConfirmCommit:    <commit/>
+//	Auto-revert:      device's own timer; no client RPC required
 //
 // The auto-revert path is exactly the failure mode this interface
 // exists to enable — when the engine's running-Verify (post

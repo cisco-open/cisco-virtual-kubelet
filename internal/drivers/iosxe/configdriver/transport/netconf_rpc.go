@@ -30,11 +30,11 @@ const netconfBase10 = "urn:ietf:params:xml:ns:netconf:base:1.0"
 
 // capability URIs that we care about.
 const (
-	capBase10        = "urn:ietf:params:netconf:base:1.0"
-	capBase11        = "urn:ietf:params:netconf:base:1.1"
-	capCand          = "urn:ietf:params:netconf:capability:candidate:1.0"
-	capConfirm       = "urn:ietf:params:netconf:capability:confirmed-commit:1.0"
-	capWriteRunning  = "urn:ietf:params:netconf:capability:writable-running:1.0"
+	capBase10       = "urn:ietf:params:netconf:base:1.0"
+	capBase11       = "urn:ietf:params:netconf:base:1.1"
+	capCand         = "urn:ietf:params:netconf:capability:candidate:1.0"
+	capConfirm      = "urn:ietf:params:netconf:capability:confirmed-commit:1.0"
+	capWriteRunning = "urn:ietf:params:netconf:capability:writable-running:1.0"
 )
 
 // netconfSession is the protocol-level side of the transport. It
@@ -255,12 +255,12 @@ type rpcReply struct {
 }
 
 type rpcError struct {
-	Type     string       `xml:"error-type"`
-	Tag      string       `xml:"error-tag"`
-	Severity string       `xml:"error-severity"`
-	Message  string       `xml:"error-message"`
-	AppTag   string       `xml:"error-app-tag"`
-	Path     string       `xml:"error-path"`
+	Type     string `xml:"error-type"`
+	Tag      string `xml:"error-tag"`
+	Severity string `xml:"error-severity"`
+	Message  string `xml:"error-message"`
+	AppTag   string `xml:"error-app-tag"`
+	Path     string `xml:"error-path"`
 	// Info preserves the <error-info> subtree verbatim so callers
 	// can recover NETCONF-RFC-6241-§4.3 protocol-level diagnostics
 	// the device put there — `<bad-element>banner</bad-element>` for

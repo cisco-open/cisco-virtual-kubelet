@@ -288,7 +288,7 @@ func (t *netconfTransport) StartTransaction(ctx context.Context) (TxHandle, erro
 //   - tx == "" AND device is candidate-only (i.e. operator enabled
 //     `netconf-yang feature candidate-datastore` on IOS-XE 17.x):
 //     wrap the ops in an implicit lock(candidate) + edit-config(s)
-//     + commit + unlock cycle. The engine's non-transactional path
+//   - commit + unlock cycle. The engine's non-transactional path
 //     still gets atomic, race-free apply semantics; the engine
 //     doesn't need to know about the device-mode shift.
 //
@@ -549,18 +549,18 @@ func (t *netconfTransport) pushCLI(body []byte) error {
 //
 // Wire shape:
 //
-//   <cli-exec xmlns="http://cisco.com/yang/cisco-ia">
-//     <cmd>show ip route</cmd>
-//   </cli-exec>
+//	<cli-exec xmlns="http://cisco.com/yang/cisco-ia">
+//	  <cmd>show ip route</cmd>
+//	</cli-exec>
 //
 // Reply:
 //
-//   <rpc-reply ...>
-//     <result xmlns="http://cisco.com/ns/yang/Cisco-IOS-XE-cli-rpc">
-//       ... show output ...
-//     </result>
-//     <error-message xmlns="..."/>
-//   </rpc-reply>
+//	<rpc-reply ...>
+//	  <result xmlns="http://cisco.com/ns/yang/Cisco-IOS-XE-cli-rpc">
+//	    ... show output ...
+//	  </result>
+//	  <error-message xmlns="..."/>
+//	</rpc-reply>
 //
 // One RPC per command — config-ios-cli-rpc defines a single
 // `clis` string in / `result`+`error-message` strings out, and

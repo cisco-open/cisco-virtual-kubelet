@@ -98,8 +98,8 @@ func TestRegisterPathKey_EmptyInputsAreNoOp(t *testing.T) {
 	// Defensive: families.yaml may have an entry with shape=keyed_list
 	// but a missing key_fields list. The registration call must not
 	// panic and must not pollute the registry with empty values.
-	RegisterPathKey("", "name")     // empty segment
-	RegisterPathKey("seg-without")  // no keys
+	RegisterPathKey("", "name")    // empty segment
+	RegisterPathKey("seg-without") // no keys
 	if got := pathKeyFor(""); got != "" {
 		t.Errorf("empty segment should not be registered, got %q", got)
 	}
