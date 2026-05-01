@@ -144,6 +144,16 @@ type DeviceSpec struct {
 	// +kubebuilder:default=false
 	AllowUnsignedApps bool `json:"allowUnsignedApps,omitempty" mapstructure:"allowUnsignedApps"`
 
+	// Transport selects the device channel used by the IOSXEConfig config
+	// driver. "restconf" is the default; "netconf" and "gnmi" select the
+	// corresponding transport implementations. Apphosting operations
+	// always use RESTCONF regardless of this field; it only affects
+	// declarative configuration.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=restconf;netconf;gnmi
+	// +kubebuilder:default=restconf
+	Transport string `json:"transport,omitempty" mapstructure:"transport"`
+
 	// --- Driver-specific networking configuration (union) ---
 	// Only the section matching Driver should be set.
 
