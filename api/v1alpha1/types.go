@@ -19,14 +19,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +kubebuilder:validation:Enum=XE;XR;NXOS;FAKE
+// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE
 type DeviceDriver string
 
 const (
-	DeviceDriverXE   DeviceDriver = "XE"
-	DeviceDriverXR   DeviceDriver = "XR"
-	DeviceDriverNXOS DeviceDriver = "NXOS"
-	DeviceDriverFAKE DeviceDriver = "FAKE"
+	DeviceDriverXE         DeviceDriver = "XE"
+	DeviceDriverXR         DeviceDriver = "XR"
+	DeviceDriverNXOS       DeviceDriver = "NXOS"
+	DeviceDriverOPENCONFIG DeviceDriver = "OPENCONFIG"
+	DeviceDriverFAKE       DeviceDriver = "FAKE"
 )
 
 // CiscoDevice is the Schema for the ciscodevices API.
@@ -61,7 +62,7 @@ type CiscoDeviceList struct {
 // configuration lives under the corresponding driver section (XE, XR, etc.).
 type DeviceSpec struct {
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=XE;XR;NXOS;FAKE
+	// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE
 	Driver DeviceDriver `json:"driver" mapstructure:"driver"`
 
 	// Address is the management IP or hostname of the device.

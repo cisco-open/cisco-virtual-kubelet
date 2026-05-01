@@ -94,11 +94,13 @@ spec:
                   - XE
                   - XR
                   - NXOS
+                  - OPENCONFIG
                   - FAKE
                 - enum:
                   - XE
                   - XR
                   - NXOS
+                  - OPENCONFIG
                   - FAKE
                 type: string
               labels:
