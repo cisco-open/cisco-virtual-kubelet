@@ -363,13 +363,26 @@ spec:
                 description: |-
                   AtomicReplaceOwnedKeys tracks, per managed family, the list of
                   list-key values this CR has previously applied successfully.
-                  Populated only when spec.atomicReplace=true. The engine's
-                  atomic-replace prune phase consults this map so it only deletes
-                  device-side entries the CR established (or applied a Diff for) —
-                  it never deletes baseline state the CR has not previously
-                  touched. Entries are added on successful Apply and removed on
-                  successful Prune; the map persists across reconciles via the
-                  status subresource.
+                  Populated whenever the engine reconciles (regardless of
+                  spec.atomicReplace), so flipping the flag on a later generation
+                  already has a populated owned-set to scope against. The engine's
+                  prune phase consults this map so it only deletes device-side
+                  entries this CR established — it never deletes baseline state the
+                  CR has not previously touched. Entries are added on successful
+                  Apply and removed on successful Prune; the map persists across
+                  reconciles via the status subresource.
+
+                  Ownership semantics: "owned" here means "appeared in the
+                  resolved desired set at the moment of a successful family
+                  apply". The resolved desired is the merged result of
+                  IOSXEConfigDefaults + IOSXEDeviceGroupConfig + IOSXEInterfaceGroupConfig
+                  source. So a VLAN supplied by an IOSXEConfigDefaults CR appears
+                  in every leaf CR's atomicReplaceOwnedKeys for that family. The
+                  engine reconciles ownership by-CR; if you delete a leaf with
+                  pruneOnRelinquish=true, the relinquish-time prune deletes the
+                  keys this CR owned, including those resolved in from a Defaults
+                  or DeviceGroup. Operators who want a Defaults-supplied entry to
+                  outlive any leaf CR should keep it out of leaf intent.
 
                   Wave 10.3 scope refinement (2026-04-28). Pre-fix, atomicReplace
                   computed orphans against the entire device-side observed set,
@@ -378,6 +391,13 @@ spec:
                   touched. The device's must-violation defense correctly refused
                   the bound-entry deletes, leaving tests 09 phase 2 + 13
                   permanently red on shared devices.
+
+                  F1 fix (2026-05-01): scoping is now applied whenever
+                  pruneOnRelinquish is set, not only under atomicReplace, so the
+                  safe behaviour holds for both modes. Writers that don't
+                  implement KeyExtractable have prune skipped entirely under
+                  pruneOnRelinquish — leaking un-pruned entries is preferable to
+                  wiping baseline.
                 type: object
               conditions:
                 description: |-

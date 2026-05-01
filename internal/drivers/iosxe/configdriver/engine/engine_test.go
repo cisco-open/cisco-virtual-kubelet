@@ -102,17 +102,47 @@ func (w *fakeWriter) Apply(_ context.Context, _ transport.Interface, ops []trans
 // PruneDiff is the negative case.
 type fakePruneWriter struct {
 	*fakeWriter
-	pruneOps   []transport.Op
-	pruneErr   error
-	pruneCalls int
+	pruneOps     []transport.Op
+	pruneErr     error
+	pruneCalls   int
+	pruneInputs  []any
+	keysOfReturn func(any) []string
 }
 
 func (w *fakePruneWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
 	w.pruneCalls++
+	w.pruneInputs = append(w.pruneInputs, observed)
 	if w.pruneErr != nil {
 		return nil, w.pruneErr
 	}
 	return w.pruneOps, nil
+}
+
+// KeysOf is the KeyExtractable hook. Real writers extract list-key
+// values from a desired/observed family blob. Tests that need
+// substantive scoping behaviour stage `keysOfReturn`; otherwise the
+// fake reports any []string passed verbatim.
+func (w *fakePruneWriter) KeysOf(input any) []string {
+	if w.keysOfReturn != nil {
+		return w.keysOfReturn(input)
+	}
+	if ks, ok := input.([]string); ok {
+		return ks
+	}
+	return nil
+}
+
+// fakePruneWriterNoKE is PruneCapable but NOT KeyExtractable —
+// represents older / not-yet-uplifted writers. The F1 fix
+// (2026-05-01) skips prune for these to avoid baseline wipes.
+type fakePruneWriterNoKE struct {
+	*fakeWriter
+	pruneCalls int
+}
+
+func (w *fakePruneWriterNoKE) PruneDiff(desired, observed any) ([]transport.Op, error) {
+	w.pruneCalls++
+	return nil, nil
 }
 
 func mkCR(name, device string, families ...string) *configv1alpha1.IOSXEConfig {
@@ -262,6 +292,110 @@ func TestReconcilePruneOnRelinquishSkippedWhenWriterNotCapable(t *testing.T) {
 	r := e.Reconcile(context.Background(), res)
 	if r.Phase != PhaseInSync {
 		t.Fatalf("Phase=%s, want InSync (writer is not prune-capable, so flag is a no-op)", r.Phase)
+	}
+}
+
+// TestReconcilePruneOnRelinquishWithoutAtomicReplaceIsScoped pins the
+// F1 fix (2026-05-01): pruneOnRelinquish without atomicReplace must
+// scope prune to ownedKeys ∪ desired, not the full observed set.
+//
+// Pre-fix, the AtomicReplace guard at engine.go:794 caused
+// scope-to-owned to be skipped under pruneOnRelinquish=true /
+// atomicReplace=false, so the next reconcile would feed the writer's
+// PruneDiff a full observed list — and PruneDiff then deleted every
+// observed entry not in desired, including baseline state the CR had
+// never touched (live-validated wipe of pre-existing VLANs against
+// cat9000-1 / 9300-4).
+func TestReconcilePruneOnRelinquishWithoutAtomicReplaceIsScoped(t *testing.T) {
+	const family = "vlan"
+	// Writer reports observed keys as a fixed set including baseline
+	// entries the CR has never touched (2, 3) plus the one it owns
+	// (4001). Desired pins 4001 only. priorOwned = ["4001"].
+	pw := &fakePruneWriter{
+		fakeWriter: &fakeWriter{family: family},
+		pruneOps:   []transport.Op{{Verb: transport.VerbDelete, Path: "/v"}},
+		keysOfReturn: func(input any) []string {
+			// observed → all keys; desired → pinned key
+			if m, ok := input.(map[string]any); ok && len(m) == 0 {
+				// empty desired family → no keys
+				return nil
+			}
+			if input == nil {
+				// engine passes nil for observed in this fake
+				return []string{"2", "3", "4001"}
+			}
+			return []string{"4001"}
+		},
+	}
+	e := &Engine{
+		Transport: &stubTransport{},
+		Lookup:    func(f string) writers.SectionWriter { return pw },
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName: "edge-01", ManagedFamilies: []string{family},
+		// desired: vlan 4001 only.
+		Configuration:     map[string]any{family: map[string]any{"4001": "owned"}},
+		DriftPolicy:       configv1alpha1.DriftPolicyRevert,
+		PruneOnRelinquish: true,
+		AtomicReplace:     false, // <-- the F1 case
+		AtomicReplaceOwnedKeys: map[string][]string{
+			family: {"4001"},
+		},
+	}
+	_ = e.Reconcile(context.Background(), res)
+	if pw.pruneCalls < 1 {
+		t.Fatalf("PruneDiff calls=%d, want at least 1 (pruneOnRelinquish path must still run)", pw.pruneCalls)
+	}
+	// The first PruneDiff input must be a scoped stub list, NOT the
+	// raw observed (which would have keys 2, 3, 4001). With scoping,
+	// only keys present in priorOwned ∪ desired (= {4001}) survive
+	// the filter — and even then only if observed contains them.
+	if len(pw.pruneInputs) == 0 {
+		t.Fatalf("no PruneDiff inputs captured")
+	}
+	stubs, ok := pw.pruneInputs[0].([]map[string]any)
+	if !ok {
+		t.Fatalf("PruneDiff input not a stub list (scoping bypassed?): %T = %#v", pw.pruneInputs[0], pw.pruneInputs[0])
+	}
+	for _, stub := range stubs {
+		// Disallow baseline keys 2 / 3 in the prune input.
+		for _, kf := range []string{"name", "id", "sequence"} {
+			if v, ok := stub[kf]; ok {
+				if v == "2" || v == "3" {
+					t.Errorf("scoped prune input leaked baseline key %v: %#v", v, stub)
+				}
+			}
+		}
+	}
+}
+
+// TestReconcilePruneOnRelinquishSkippedWhenNotKeyExtractable pins the
+// safe-by-default behaviour for older writers that are PruneCapable
+// but not KeyExtractable. Without ownedKeys scoping the engine cannot
+// distinguish baseline-state from CR-owned entries, so it must skip
+// the prune entirely — leaking un-pruned entries is preferable to
+// wiping baseline.
+func TestReconcilePruneOnRelinquishSkippedWhenNotKeyExtractable(t *testing.T) {
+	w := &fakePruneWriterNoKE{
+		fakeWriter: &fakeWriter{
+			family: "vlan",
+			ops:    []transport.Op{{Verb: transport.VerbMerge, Path: "/x"}},
+		},
+	}
+	e := &Engine{
+		Transport: &stubTransport{},
+		Lookup:    func(f string) writers.SectionWriter { return w },
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName: "edge-01", ManagedFamilies: []string{"vlan"},
+		Configuration:     map[string]any{"vlan": map[string]any{}},
+		DriftPolicy:       configv1alpha1.DriftPolicyRevert,
+		PruneOnRelinquish: true,
+	}
+	_ = e.Reconcile(context.Background(), res)
+	if w.pruneCalls != 0 {
+		t.Fatalf("PruneDiff was called %d times on a writer without KeyExtractable; "+
+			"the engine must skip prune for non-scope-capable writers", w.pruneCalls)
 	}
 }
 

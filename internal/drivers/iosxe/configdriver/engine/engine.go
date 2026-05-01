@@ -779,31 +779,42 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	if res.PruneOnRelinquish {
 		if pc, ok := w.(writers.PruneCapable); ok {
 			pruneInput := observed
-			// Wave 10.3 scope refinement (2026-04-28): when the
-			// CR is in atomicReplace mode AND the writer
-			// implements KeyExtractable, scope the prune set to
-			// entries this CR previously owned (per
-			// status.atomicReplaceOwnedKeys) UNION current
-			// desired. Anything observed that's outside that
-			// scope is baseline state the CR has never touched
-			// and must not be deleted. Without this filter, an
-			// atomic-replace prune on a shared device with
-			// baseline state (Mgmt-vrf, Loopback 0, etc.) would
-			// try to delete those, which the device rightly
-			// refuses with a must-violation.
-			if res.AtomicReplace {
-				if ke, ok := w.(writers.KeyExtractable); ok {
-					pruneInput = scopeObservedToOwned(ke, observed, desired, res.AtomicReplaceOwnedKeys[family])
+			// Scope the prune set to entries this CR has owned
+			// (status.atomicReplaceOwnedKeys) UNION current desired.
+			// Anything observed outside that scope is baseline state
+			// the CR has never touched and must not be deleted —
+			// e.g. operator-authored Loopback 0, Mgmt-vrf, default
+			// VLANs that pre-existed on the device.
+			//
+			// Originally Wave 10.3 only applied this scoping under
+			// atomicReplace, but live validation (2026-05-01) showed
+			// pruneOnRelinquish without atomicReplace silently wipes
+			// shared baseline state on the next reconcile. ownedKeys
+			// are tracked on every reconcile regardless of
+			// res.AtomicReplace (see ownedKeysForFamily above), so
+			// the scoping is safe to apply universally.
+			//
+			// Writers that don't implement KeyExtractable are
+			// pre-Wave-10.3 keyed-list types or true singletons; for
+			// those we fall back to skipping prune entirely under
+			// pruneOnRelinquish — better to leak un-pruned entries
+			// than to wipe baseline.
+			ke, isKE := w.(writers.KeyExtractable)
+			if !isKE {
+				// Skip prune for writers that can't be scoped.
+				// Non-keyed singletons reach here too; they have
+				// nothing list-shaped to prune anyway.
+			} else {
+				pruneInput = scopeObservedToOwned(ke, observed, desired, res.AtomicReplaceOwnedKeys[family])
+				pruneOps, err := pc.PruneDiff(desired, pruneInput)
+				if err != nil {
+					return FamilyStatus{
+						Name: family, State: "ApplyError",
+						Message: safeMsg("PruneDiff: %v", err),
+					}
 				}
+				ops = append(ops, pruneOps...)
 			}
-			pruneOps, err := pc.PruneDiff(desired, pruneInput)
-			if err != nil {
-				return FamilyStatus{
-					Name: family, State: "ApplyError",
-					Message: safeMsg("PruneDiff: %v", err),
-				}
-			}
-			ops = append(ops, pruneOps...)
 		}
 	}
 
@@ -897,21 +908,21 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// would slip past as InSync.
 	if res.PruneOnRelinquish {
 		if pc, ok := w.(writers.PruneCapable); ok {
-			vInput := verify
-			if res.AtomicReplace {
-				if ke, ok := w.(writers.KeyExtractable); ok {
-					vInput = scopeObservedToOwned(ke, verify, desired, res.AtomicReplaceOwnedKeys[family])
+			// Mirror the apply-path scoping (F1, 2026-05-01):
+			// ownedKeys-scoped verify when KeyExtractable is
+			// implemented; skip otherwise.
+			if ke, ok := w.(writers.KeyExtractable); ok {
+				vInput := scopeObservedToOwned(ke, verify, desired, res.AtomicReplaceOwnedKeys[family])
+				residualPrune, err := pc.PruneDiff(desired, vInput)
+				if err != nil {
+					return FamilyStatus{
+						Name: family, State: "ApplyError",
+						OpCount: len(ops),
+						Message: safeMsg("Verify: prune re-diff failed: %v", err),
+					}
 				}
+				residual = append(residual, residualPrune...)
 			}
-			residualPrune, err := pc.PruneDiff(desired, vInput)
-			if err != nil {
-				return FamilyStatus{
-					Name: family, State: "ApplyError",
-					OpCount: len(ops),
-					Message: safeMsg("Verify: prune re-diff failed: %v", err),
-				}
-			}
-			residual = append(residual, residualPrune...)
 		}
 	}
 	if len(residual) > 0 {

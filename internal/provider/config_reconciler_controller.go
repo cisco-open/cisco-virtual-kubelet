@@ -97,6 +97,64 @@ func (r *ConfigReconciler) releaseLeasesForCR(ctx context.Context, cr *configv1a
 	return nil
 }
 
+// relinquishOwnedKeys runs a CR-delete reconcile that drops every
+// list-key this CR owned (per status.atomicReplaceOwnedKeys) from the
+// device. F2 fix (2026-05-01): without this pass, deleting a CR that
+// configured e.g. VLAN 4001 leaves 4001 stranded on the device with
+// no Kubernetes object to track it.
+//
+// The implementation reuses the engine's existing pruneOnRelinquish
+// path by synthesising a ResolvedIntent with empty desired for each
+// managed family. The engine's scope-to-owned helper restricts the
+// prune set to {priorOwned ∪ desired} = {priorOwned}, so only this
+// CR's owned keys are deleted; baseline state is left alone.
+//
+// Errors are returned to the caller; the caller decides whether to
+// block the finalizer or proceed best-effort.
+func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1alpha1.IOSXEConfig) error {
+	tr := r.GetTransport()
+	if tr == nil {
+		return fmt.Errorf("relinquish: transport not yet available")
+	}
+	lookup := r.Lookup
+	if lookup == nil {
+		lookup = writers.Get
+	}
+	eng := &engine.Engine{
+		Transport:   tr,
+		Lookup:      lookup,
+		FamilyOrder: r.FamilyOrder,
+	}
+	// Build empty desired for each managed family. coerceList in the
+	// writer side accepts a missing/empty entry as "no entries
+	// declared", which is what we want — the prune path then deletes
+	// every owned key.
+	conf := make(map[string]any, len(cr.Spec.ManagedFamilies))
+	for _, fam := range cr.Spec.ManagedFamilies {
+		conf[fam] = []any{}
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:             cr.Spec.DeviceRef.Name,
+		ManagedFamilies:        append([]string(nil), cr.Spec.ManagedFamilies...),
+		Configuration:          conf,
+		DriftPolicy:            configv1alpha1.DriftPolicyRevert,
+		PruneOnRelinquish:      true,
+		AtomicReplaceOwnedKeys: cr.Status.AtomicReplaceOwnedKeys,
+	}
+	out := eng.Reconcile(ctx, res)
+	if out.Phase == engine.PhaseFailed {
+		// Surface the first family-level error if any so the
+		// best-effort path can log a meaningful message.
+		for _, fs := range out.FamilyStatuses {
+			if fs.State == "ApplyError" {
+				return fmt.Errorf("relinquish reconcile: family %s: %s", fs.Name, fs.Message)
+			}
+		}
+		return fmt.Errorf("relinquish reconcile failed: phase=%s", out.Phase)
+	}
+	return nil
+}
+
 // Reconcile implements reconcile.Reconciler. It is the hot-path entry
 // for the controller-runtime-driven path (see SetupWithManager); the
 // legacy polling entry in Run() uses the same inner reconcileOne so
@@ -162,6 +220,25 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	// handler will run.
 	if !cr.GetDeletionTimestamp().IsZero() {
 		if containsFinalizer(cr.Finalizers, iosxeConfigFinalizer) {
+			// F2 fix (2026-05-01): when pruneOnRelinquish is true and
+			// the CR has accumulated ownedKeys in status, run a
+			// relinquish reconcile against the device before lease
+			// release + finalizer removal. Without this the CR's
+			// owned entries stay on the device as orphaned config.
+			//
+			// Failure here is best-effort: a long-unreachable device
+			// must not pin the CR forever. The relinquish path logs
+			// the error and lets deletion proceed; operators can
+			// clean up the stale entries by hand once the device
+			// returns. The alternative — refusing to remove the
+			// finalizer until the device is reachable — produces
+			// stuck-deleting CRs that masquerade as a controller bug.
+			if cr.Spec.PruneOnRelinquish && len(cr.Status.AtomicReplaceOwnedKeys) > 0 {
+				if err := r.relinquishOwnedKeys(ctx, &cr); err != nil {
+					logger.Error(err, "relinquish owned keys (best-effort; CR delete will proceed)")
+					span.RecordError(err)
+				}
+			}
 			if err := r.releaseLeasesForCR(ctx, &cr); err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, "release leases")
