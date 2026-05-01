@@ -44,6 +44,30 @@ controller:
   # healthProbeBindAddress is the address the probe endpoint binds to.
   healthProbeBindAddress: ":8081"
 
+aggregator:
+  # When true, the controller manager runs an in-process per-device
+  # ConfigReconciler instead of spawning one cisco-vk pod per
+  # CiscoDevice. Picks the single-manager topology — one /metrics,
+  # one log stream, lower per-fleet overhead. Trades that ergonomic
+  # win for shared blast radius: a manager-pod restart pauses
+  # reconcile for every device.
+  #
+  # The default (false) preserves the per-pod behaviour Phase 0/1
+  # has shipped since day one.
+  enabled: false
+
+config:
+  # leaseNamespace is the shared namespace for per-(device, family)
+  # arbitration leases. Set this when IOSXEConfig CRs in different
+  # tenant namespaces target the same device — they will arbitrate
+  # against the same lease and avoid the last-write-wins race the
+  # default per-pod-namespace setup leaves open. The cisco-vk
+  # ServiceAccount already has cluster-scoped lease RBAC (see
+  # vk-rbac.yaml), so no additional bindings are required.
+  #
+  # Leave empty to keep the historical per-pod-namespace behaviour.
+  leaseNamespace: ""
+
 resources: {}
 #  limits:
 #    cpu: 200m
@@ -61,3 +85,47 @@ affinity: {}
 podAnnotations: {}
 
 podLabels: {}
+
+# podDisruptionBudget guards the controller against voluntary
+# disruptions (node drain, rolling restart). Disabled by default to
+# keep the chart minimal; recommended-on for production deployments.
+# See production-deployment-guide.md §8.
+podDisruptionBudget:
+  enabled: false
+  # Pick exactly one of minAvailable / maxUnavailable. Defaults to
+  # minAvailable=1 when both are unset.
+  minAvailable: ""
+  maxUnavailable: ""
+
+# networkPolicy adds a default-deny ingress + explicit-allow egress
+# policy for the controller. Disabled by default because
+# `deviceCIDRs` are environment-specific.
+#
+# Production deployments SHOULD enable this and pin the
+# device-management subnets; without it, any pod in the cluster can
+# reach any device on the management network.
+networkPolicy:
+  enabled: false
+  # CIDRs the controller is allowed to reach for device management.
+  # Pin to the operator's management subnet(s).
+  deviceCIDRs: []
+  #  - 10.0.10.0/24
+  #  - 10.0.20.0/24
+  # CIDRs allowed to scrape the controller's :8080/metrics endpoint.
+  # Typically the Prometheus pod IP range.
+  scraperCIDRs: []
+  #  - 10.244.0.0/16
+
+# serviceMonitor templates a Prometheus Operator ServiceMonitor
+# pointing at the controller's :8080/metrics. Requires the
+# Prometheus Operator CRDs (monitoring.coreos.com).
+serviceMonitor:
+  enabled: false
+  # Scrape cadence + timeout.
+  interval: 30s
+  scrapeTimeout: 10s
+  # Extra labels added to the ServiceMonitor (e.g. release: kube-prometheus).
+  labels: {}
+  # Optional Prometheus relabel configs.
+  relabelings: []
+  metricRelabelings: []

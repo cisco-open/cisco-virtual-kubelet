@@ -59,6 +59,58 @@ rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # CiscoDevice CR (cisco.vk/v1alpha1) — the cisco-vk run loop
+  # watches CiscoDevice cluster-wide so the in-pod controller-runtime
+  # cache can resolve the device-spec lookup.
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices"]
+    verbs: ["get", "list", "watch"]
+  # IOSXEConfig CRDs (config.cisco.vk/v1alpha1) — the per-device
+  # ConfigReconciler running inside cisco-vk run reads scope objects
+  # (defaults, device groups, interface groups, templates) and reads
+  # the IOSXEConfig CRs targeting its device.
+  - apiGroups: ["config.cisco.vk"]
+    resources:
+      - iosxeconfigdefaults
+      - iosxedevicegroupconfigs
+      - iosxeinterfacegroupconfigs
+      - iosxetemplates
+    verbs: ["get", "list", "watch"]
+  # IOSXEConfig itself needs patch/update in addition to read/watch:
+  # after a successful Phase-7 replay, recordResult clears the
+  # config.cisco.vk/replay-from-log annotation by patching the parent
+  # CR. Without this verb the annotation stays put and the replay
+  # repeats on every tick. (Wave 2A — external-review Finding #5.)
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigs"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigs/status"]
+    verbs: ["get", "update", "patch"]
+  # IOSXEConfigApplyLog CRD — Phase 7 audit log; the reconciler appends
+  # ApplyLogEntry objects after every apply pass and reads back during
+  # the time-travel replay path. List/watch needed for the in-pod
+  # informer cache.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigapplylogs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigapplylogs/status"]
+    verbs: ["get", "update", "patch"]
+  # IOSXEDiagnostic CRD — diagnostics-RFC Phase B. The reconciler
+  # watches CRs targeting this device and appends capture results
+  # to status. The ConfigMap sink (Phase D) writes a fresh
+  # ConfigMap per capture in either the CR's namespace or the
+  # operator-chosen namespace, then trims oldest by label.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxediagnostics"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxediagnostics/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 # ClusterRoleBinding for the VK service account.
 apiVersion: rbac.authorization.k8s.io/v1

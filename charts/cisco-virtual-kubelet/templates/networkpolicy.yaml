@@ -1,0 +1,85 @@
+{{- if .Values.networkPolicy.enabled }}
+# NetworkPolicy for the controller manager. Default-deny ingress +
+# explicit-allow egress to:
+#   - Kubernetes API server (kube-apiserver)
+#   - DNS (CoreDNS in kube-system)
+#   - Device-management subnets listed under values.networkPolicy.deviceCIDRs
+#   - Prometheus scraper (if listed under values.networkPolicy.scraperCIDRs)
+#
+# Disabled by default because deviceCIDRs are environment-specific.
+# Enable in production with the operator's network range pinned. See
+# production-deployment-guide.md §8.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "cisco-virtual-kubelet.fullname" . }}-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "cisco-virtual-kubelet.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: controller
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- if .Values.networkPolicy.scraperCIDRs }}
+    # Allow Prometheus scraper to reach the metrics endpoint.
+    - from:
+        {{- range .Values.networkPolicy.scraperCIDRs }}
+        - ipBlock:
+            cidr: {{ . }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 8080
+    {{- end }}
+    # Allow kube-apiserver to reach health probes if needed.
+    - ports:
+        - protocol: TCP
+          port: 8081
+  egress:
+    # Kubernetes API server.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: default
+      ports:
+        - protocol: TCP
+          port: 443
+    # DNS — CoreDNS in kube-system.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+    {{- if .Values.networkPolicy.deviceCIDRs }}
+    # Device-management subnets.
+    - to:
+        {{- range .Values.networkPolicy.deviceCIDRs }}
+        - ipBlock:
+            cidr: {{ . }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 443        # RESTCONF (HTTPS)
+        - protocol: TCP
+          port: 830        # NETCONF over SSH
+        - protocol: TCP
+          port: 50052      # gNMI insecure (gnxi default)
+        - protocol: TCP
+          port: 9339       # gNMI secure (gnxi secure-server)
+        - protocol: TCP
+          port: 22         # CLI side-channel for IOSXEDiagnostic
+    {{- end }}
+{{- end }}
