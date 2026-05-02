@@ -258,25 +258,32 @@ jobs:
         # Any RBAC, schema, or config-shape failure surfaces here as
         # a non-transport error and fails the job.
         run: |
+          # Poll log content, not just pod phase — Phase=Running triggers
+          # immediately on container start, before the binary has had a
+          # chance to attempt the device call. We need to wait until the
+          # logs actually surface a device-call boundary marker (success
+          # path) or an upstream-defect marker (fail path).
+          ok_re='connect: connection refused|i/o timeout|context deadline exceeded|no route to host|failed to validate device connection'
+          bad_re='requires xe config section|forbidden|cannot list|cannot get'
+          logs=""
           for i in $(seq 1 60); do
-            phase=$(kubectl -n cisco-vk-smoke get pods -l app.kubernetes.io/instance=smoke \
-              -o jsonpath='{.items[*].status.phase}' 2>/dev/null || true)
-            case "$phase" in
-              *Running*|*Failed*) break ;;
-            esac
+            logs=$(kubectl -n cisco-vk-smoke logs -l app.kubernetes.io/instance=smoke --tail=200 2>&1 || true)
+            if echo "$logs" | grep -qE "$ok_re"; then
+              kubectl -n cisco-vk-smoke get pods
+              echo "$logs"
+              echo "Reached device-call boundary as expected"
+              exit 0
+            fi
+            if echo "$logs" | grep -qE "$bad_re"; then
+              kubectl -n cisco-vk-smoke get pods
+              echo "$logs"
+              echo "Failure was upstream of the device call — surfaces a real defect"
+              exit 1
+            fi
             sleep 3
           done
           kubectl -n cisco-vk-smoke get pods
-          logs=$(kubectl -n cisco-vk-smoke logs -l app.kubernetes.io/instance=smoke --tail=80 2>&1 || true)
           echo "$logs"
-          if echo "$logs" | grep -qE 'connect: connection refused|i/o timeout|context deadline exceeded|no route to host|failed to validate device connection'; then
-            echo "Reached device-call boundary as expected"
-            exit 0
-          fi
-          if echo "$logs" | grep -qE 'requires xe config section|forbidden|cannot list|cannot get'; then
-            echo "Failure was upstream of the device call — surfaces a real defect"
-            exit 1
-          fi
           # Pod still starting and we ran out of polls; treat as soft fail
           # so the job is investigatable rather than silently green.
           echo "cisco-vk did not reach a recognised state in time"
