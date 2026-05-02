@@ -55,6 +55,20 @@ func newResourceState(t *testing.T) tfsdk.State {
 	}
 }
 
+func newResourcePlan(t *testing.T) tfsdk.Plan {
+	t.Helper()
+	ctx := context.Background()
+	var schemaResp frameworkresource.SchemaResponse
+	(&iosxeConfigResource{}).Schema(ctx, frameworkresource.SchemaRequest{}, &schemaResp)
+	if schemaResp.Diagnostics.HasError() {
+		t.Fatalf("Schema diagnostics: %v", schemaResp.Diagnostics)
+	}
+	return tfsdk.Plan{
+		Schema: schemaResp.Schema,
+		Raw:    tftypes.NewValue(schemaResp.Schema.Type().TerraformType(ctx), nil),
+	}
+}
+
 func stateForModel(t *testing.T, model *IOSXEConfigResourceModel) tfsdk.State {
 	t.Helper()
 	ctx := context.Background()
@@ -63,6 +77,16 @@ func stateForModel(t *testing.T, model *IOSXEConfigResourceModel) tfsdk.State {
 		t.Fatalf("state.Set diagnostics: %v", diags)
 	}
 	return state
+}
+
+func planForModel(t *testing.T, model *IOSXEConfigResourceModel) tfsdk.Plan {
+	t.Helper()
+	ctx := context.Background()
+	plan := newResourcePlan(t)
+	if diags := plan.Set(ctx, model); diags.HasError() {
+		t.Fatalf("plan.Set diagnostics: %v", diags)
+	}
+	return plan
 }
 
 func readResourceForTest(t *testing.T, r *iosxeConfigResource, model *IOSXEConfigResourceModel) IOSXEConfigResourceModel {
@@ -79,6 +103,66 @@ func readResourceForTest(t *testing.T, r *iosxeConfigResource, model *IOSXEConfi
 		t.Fatalf("read state diagnostics: %v", diags)
 	}
 	return out
+}
+
+func createResourceForTest(t *testing.T, r *iosxeConfigResource, model *IOSXEConfigResourceModel) IOSXEConfigResourceModel {
+	t.Helper()
+	ctx := context.Background()
+	req := frameworkresource.CreateRequest{Plan: planForModel(t, model)}
+	resp := frameworkresource.CreateResponse{State: newResourceState(t)}
+	r.Create(ctx, req, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Create diagnostics: %v", resp.Diagnostics)
+	}
+	var out IOSXEConfigResourceModel
+	if diags := resp.State.Get(ctx, &out); diags.HasError() {
+		t.Fatalf("create state diagnostics: %v", diags)
+	}
+	return out
+}
+
+func updateResourceForTest(t *testing.T, r *iosxeConfigResource, model *IOSXEConfigResourceModel) IOSXEConfigResourceModel {
+	t.Helper()
+	ctx := context.Background()
+	req := frameworkresource.UpdateRequest{
+		Plan:  planForModel(t, model),
+		State: stateForModel(t, validIOSXEConfigModel(t, model.Name.ValueString(), model.Namespace.ValueString())),
+	}
+	resp := frameworkresource.UpdateResponse{State: newResourceState(t)}
+	r.Update(ctx, req, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Update diagnostics: %v", resp.Diagnostics)
+	}
+	var out IOSXEConfigResourceModel
+	if diags := resp.State.Get(ctx, &out); diags.HasError() {
+		t.Fatalf("update state diagnostics: %v", diags)
+	}
+	return out
+}
+
+func newApplyResourceForTest(t *testing.T) *iosxeConfigResource {
+	t.Helper()
+	r := &iosxeConfigResource{
+		client: fakeDynamic(t),
+	}
+	r.client.(*dynfake.FakeDynamicClient).PrependReactor("patch", "iosxeconfigs", func(action ktesting.Action) (bool, runtime.Object, error) {
+		patch := action.(ktesting.PatchAction)
+		var payload map[string]any
+		if err := json.Unmarshal(patch.GetPatch(), &payload); err != nil {
+			return true, nil, err
+		}
+		obj := &unstructured.Unstructured{}
+		obj.SetUnstructuredContent(payload)
+		obj.SetGeneration(1)
+		if err := unstructured.SetNestedMap(obj.Object, map[string]any{
+			"observedGeneration": int64(1),
+			"phase":              "InSync",
+		}, "status"); err != nil {
+			return true, nil, err
+		}
+		return true, obj, nil
+	})
+	return r
 }
 
 func mustList(t *testing.T, ss ...string) types.List {
@@ -105,6 +189,19 @@ func mustMap(t *testing.T, values map[string]string) types.Map {
 		t.Fatalf("types.MapValue: %v", dgs)
 	}
 	return out
+}
+
+func assertKnownEmptyMap(t *testing.T, name string, got types.Map) {
+	t.Helper()
+	if got.IsNull() {
+		t.Fatalf("%s is null, want known empty map", name)
+	}
+	if got.IsUnknown() {
+		t.Fatalf("%s is unknown, want known empty map", name)
+	}
+	if len(got.Elements()) != 0 {
+		t.Fatalf("%s=%v, want empty map", name, got.Elements())
+	}
 }
 
 func mustStringMapValue(t *testing.T, in types.Map) map[string]string {
@@ -152,6 +249,50 @@ func validIOSXEConfigModel(t *testing.T, name, namespace string) *IOSXEConfigRes
 		SourceInline:    types.StringValue(`{"vlan":{"vlans":[{"id":10,"name":"users"}]}}`),
 		Labels:          types.MapNull(types.StringType),
 		Annotations:     types.MapNull(types.StringType),
+	}
+}
+
+func TestCreateOmittedMetadataReturnsKnownEmpty(t *testing.T) {
+	r := newApplyResourceForTest(t)
+	model := validIOSXEConfigModel(t, "edge-create", "network")
+	model.Labels = types.MapUnknown(types.StringType)
+	model.Annotations = types.MapUnknown(types.StringType)
+
+	got := createResourceForTest(t, r, model)
+	assertKnownEmptyMap(t, "labels", got.Labels)
+	assertKnownEmptyMap(t, "annotations", got.Annotations)
+}
+
+func TestUpdateOmittedMetadataReturnsKnownEmpty(t *testing.T) {
+	r := newApplyResourceForTest(t)
+	model := validIOSXEConfigModel(t, "edge-update", "network")
+	model.Labels = types.MapUnknown(types.StringType)
+	model.Annotations = types.MapUnknown(types.StringType)
+
+	got := updateResourceForTest(t, r, model)
+	assertKnownEmptyMap(t, "labels", got.Labels)
+	assertKnownEmptyMap(t, "annotations", got.Annotations)
+}
+
+func TestCreateExplicitEmptyMapsRemainStable(t *testing.T) {
+	r := newApplyResourceForTest(t)
+	model := validIOSXEConfigModel(t, "edge-empty", "network")
+	model.Labels = mustMap(t, map[string]string{})
+	model.Annotations = mustMap(t, map[string]string{})
+
+	got := createResourceForTest(t, r, model)
+	assertKnownEmptyMap(t, "labels", got.Labels)
+	assertKnownEmptyMap(t, "annotations", got.Annotations)
+}
+
+func TestCreateConfiguredMetadataPreserved(t *testing.T) {
+	r := newApplyResourceForTest(t)
+	model := validIOSXEConfigModel(t, "edge-metadata", "network")
+	model.Labels = mustMap(t, map[string]string{"tf": "yes"})
+
+	got := createResourceForTest(t, r, model)
+	if labels := mustStringMapValue(t, got.Labels); !reflect.DeepEqual(labels, map[string]string{"tf": "yes"}) {
+		t.Fatalf("labels=%v, want configured labels", labels)
 	}
 }
 

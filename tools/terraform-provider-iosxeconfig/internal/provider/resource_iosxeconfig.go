@@ -186,6 +186,7 @@ func (r *iosxeConfigResource) Create(ctx context.Context, req resource.CreateReq
 		}
 	}
 	r.refreshFromCluster(ctx, &plan, created)
+	normalizeMetadataKnown(&plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -243,6 +244,7 @@ func (r *iosxeConfigResource) Update(ctx context.Context, req resource.UpdateReq
 		}
 	}
 	r.refreshFromCluster(ctx, &plan, updated)
+	normalizeMetadataKnown(&plan)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -411,6 +413,18 @@ func (r *iosxeConfigResource) refreshFromCluster(_ context.Context, m *IOSXEConf
 	m.Phase = stringFromMap(status, "phase")
 	m.LastAppliedHash = stringFromMap(status, "lastAppliedHash")
 	m.SourceYangVersion = stringFromMap(status, "sourceYangVersion")
+}
+
+// normalizeMetadataKnown sets omitted Optional+Computed metadata maps to
+// known empty maps after Create/Update. It intentionally does not hydrate
+// controller-set metadata here; Read handles only import-like state hydration.
+func normalizeMetadataKnown(m *IOSXEConfigResourceModel) {
+	if m.Labels.IsNull() || m.Labels.IsUnknown() {
+		m.Labels = types.MapValueMust(types.StringType, map[string]attr.Value{})
+	}
+	if m.Annotations.IsNull() || m.Annotations.IsUnknown() {
+		m.Annotations = types.MapValueMust(types.StringType, map[string]attr.Value{})
+	}
 }
 
 func mapValueFromStrings(values map[string]string) types.Map {
