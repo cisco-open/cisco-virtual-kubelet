@@ -1,0 +1,25 @@
+# Distroless image carrying just the cisco-vk-config-lint tool.
+# Built separately from the main Dockerfile so a pre-commit
+# integration via `language: docker_image` doesn't have to pull the
+# full cisco-vk binary.
+#
+# Image users:
+#   docker run --rm -v "$PWD/manifests:/manifests" \
+#     <repo>/cisco-vk-config-lint:<tag> \
+#     --address=192.0.2.10 --username=cvk --password-env=DEV_PASSWORD \
+#     --device-name=edge-01 --exit-on-drift /manifests
+FROM golang:1.25-alpine AS builder
+WORKDIR /app
+RUN apk add --no-cache git
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-w -s" \
+    -o /out/cisco-vk-config-lint \
+    ./tools/cisco-vk-config-lint
+
+FROM gcr.io/distroless/static-debian12
+COPY --from=builder /out/cisco-vk-config-lint /usr/local/bin/cisco-vk-config-lint
+USER nonroot:nonroot
+ENTRYPOINT ["/usr/local/bin/cisco-vk-config-lint"]

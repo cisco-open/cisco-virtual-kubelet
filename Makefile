@@ -38,7 +38,7 @@ INSTALL_DIR=$(PREFIX)/bin
 CONFIG_DIR=/etc/cisco-vk
 SYSTEMD_DIR=/etc/systemd/system
 
-.PHONY: all build clean install uninstall test lint fmt deps help crd-gen
+.PHONY: all build clean install uninstall test lint fmt deps help crd-gen config-lint
 
 all: build
 
@@ -108,6 +108,9 @@ fmt: ## Format code
 
 vet: ## Run go vet
 	$(GO_BIN) vet ./...
+
+config-lint: ## Run cisco-vk-config-lint (pass arguments with ARGS="...")
+	$(GO_BIN) run ./tools/cisco-vk-config-lint $(ARGS)
 
 ## Code generation targets
 
