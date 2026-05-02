@@ -452,6 +452,15 @@ func perDeviceDeploymentLabels(deviceName string) map[string]string {
 	}
 }
 
+func matchesPerDeviceLabels(labels map[string]string, deviceName string) bool {
+	for key, value := range perDeviceDeploymentLabels(deviceName) {
+		if labels[key] != value {
+			return false
+		}
+	}
+	return true
+}
+
 func isPrereqTearingDown(cr *configv1alpha1.IOSXEConfig) bool {
 	return cr.Spec.PruneOnRelinquish &&
 		cr.Spec.Source.Inline != nil &&
@@ -649,14 +658,84 @@ func (r *CiscoDeviceReconciler) deleteNode(ctx context.Context, name string) err
 }
 
 func (r *CiscoDeviceReconciler) perDevicePodsQuiesced(ctx context.Context, device *ciskov1.CiscoDevice) (bool, []corev1.Pod, error) {
-	var pods corev1.PodList
-	if err := r.List(ctx, &pods,
-		client.InNamespace(device.Namespace),
-		client.MatchingLabels(perDeviceDeploymentLabels(device.Name)),
-	); err != nil {
-		return false, nil, err
+	deployKey := types.NamespacedName{
+		Namespace: device.Namespace,
+		Name:      device.Name + deploymentSuffix,
 	}
-	return len(pods.Items) == 0, pods.Items, nil
+	var deploy appsv1.Deployment
+	err := r.Get(ctx, deployKey, &deploy)
+	deploymentGone := errors.IsNotFound(err)
+	if err != nil && !deploymentGone {
+		return false, nil, fmt.Errorf("inspect per-device Deployment for quiescence: %w", err)
+	}
+
+	staleAncestorUIDs := map[types.UID]struct{}{}
+	if !deploymentGone && deploy.UID != "" {
+		staleAncestorUIDs[deploy.UID] = struct{}{}
+	}
+
+	var replicasets appsv1.ReplicaSetList
+	if err := r.List(ctx, &replicasets, client.InNamespace(device.Namespace)); err != nil {
+		return false, nil, fmt.Errorf("list ReplicaSets for quiescence: %w", err)
+	}
+	for {
+		added := false
+		for i := range replicasets.Items {
+			rs := &replicasets.Items[i]
+			if _, found := staleAncestorUIDs[rs.UID]; found {
+				continue
+			}
+			if ownedByPerDeviceDeployment(rs.OwnerReferences, deployKey.Name, deploy.UID, deploymentGone, staleAncestorUIDs) && rs.UID != "" {
+				staleAncestorUIDs[rs.UID] = struct{}{}
+				added = true
+			}
+		}
+		if !added {
+			break
+		}
+	}
+
+	var pods corev1.PodList
+	if err := r.List(ctx, &pods, client.InNamespace(device.Namespace)); err != nil {
+		return false, nil, fmt.Errorf("list Pods for quiescence: %w", err)
+	}
+	stalePods := make([]corev1.Pod, 0)
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+		if matchesPerDeviceLabels(pod.Labels, device.Name) ||
+			ownedByPerDeviceDeployment(pod.OwnerReferences, deployKey.Name, deploy.UID, deploymentGone, staleAncestorUIDs) {
+			stalePods = append(stalePods, *pod)
+		}
+	}
+	if !deploymentGone {
+		return false, stalePods, nil
+	}
+	return len(stalePods) == 0, stalePods, nil
+}
+
+func ownedByPerDeviceDeployment(
+	owners []metav1.OwnerReference,
+	deploymentName string,
+	deploymentUID types.UID,
+	deploymentGone bool,
+	staleAncestorUIDs map[types.UID]struct{},
+) bool {
+	for _, owner := range owners {
+		if owner.UID != "" {
+			if _, found := staleAncestorUIDs[owner.UID]; found {
+				return true
+			}
+		}
+		if owner.APIVersion != appsv1.SchemeGroupVersion.String() ||
+			owner.Kind != "Deployment" ||
+			owner.Name != deploymentName {
+			continue
+		}
+		if deploymentGone || deploymentUID == "" || owner.UID == deploymentUID {
+			return true
+		}
+	}
+	return false
 }
 
 func conditionTrue(cond *metav1.Condition) bool {
@@ -761,6 +840,10 @@ func (r *CiscoDeviceReconciler) clearAggregatorTopologyStuck(ctx context.Context
 }
 
 func describePerDevicePods(pods []corev1.Pod) string {
+	if len(pods) == 0 {
+		return fmt.Sprintf("per-device Deployment still present after %s; no stale Pods currently observed",
+			aggregatorTopologyShiftTimeout)
+	}
 	descriptions := make([]string, 0, len(pods))
 	for _, pod := range pods {
 		finalizers := append([]string(nil), pod.Finalizers...)

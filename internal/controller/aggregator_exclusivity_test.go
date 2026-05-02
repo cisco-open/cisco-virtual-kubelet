@@ -185,6 +185,170 @@ func TestAggregatorTopologyShiftWaitsForPodsToQuiesce(t *testing.T) {
 	}
 }
 
+func TestQuiescenceWaitsForDeploymentToBeGone(t *testing.T) {
+	registerExclusivityStubFakeCD(t)
+
+	dev := newDevice("deploy-still-present", "default")
+	dev.UID = types.UID("44444444-4444-4444-4444-444444444444")
+	dev.Spec.Driver = ciskov1.DeviceDriverFAKE
+
+	controller := true
+	deleteAt := metav1.NewTime(time.Date(2026, 5, 2, 13, 0, 0, 0, time.UTC))
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              dev.Name + deploymentSuffix,
+			Namespace:         dev.Namespace,
+			UID:               types.UID("44444444-4444-4444-4444-deploy000001"),
+			DeletionTimestamp: &deleteAt,
+			Finalizers:        []string{"example.com/hold"},
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: "cisco.vk/v1alpha1",
+				Kind:       "CiscoDevice",
+				Name:       dev.Name,
+				UID:        dev.UID,
+				Controller: &controller,
+			}},
+		},
+	}
+	r := reconcilerFor(t, dev, deploy)
+	r.AggregatorEnabled = true
+
+	quiesced, pods, err := r.perDevicePodsQuiesced(context.Background(), dev)
+	if err != nil {
+		t.Fatalf("perDevicePodsQuiesced: %v", err)
+	}
+	if quiesced {
+		t.Fatal("perDevicePodsQuiesced=true, want false while Deployment object is still present")
+	}
+	if len(pods) != 0 {
+		t.Fatalf("pods=%v, want none; Deployment presence alone should block quiescence", pods)
+	}
+
+	result, err := r.Reconcile(context.Background(), reconcileRequest(dev.Namespace, dev.Name))
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if result.RequeueAfter != aggregatorTopologyPollInterval {
+		t.Fatalf("RequeueAfter=%v, want %v while Deployment remains", result.RequeueAfter, aggregatorTopologyPollInterval)
+	}
+
+	var gotDevice ciskov1.CiscoDevice
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: dev.Namespace, Name: dev.Name}, &gotDevice); err != nil {
+		t.Fatalf("get CiscoDevice: %v", err)
+	}
+	owned := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwned)
+	if owned != nil && owned.Status == metav1.ConditionTrue {
+		t.Fatalf("AggregatorOwned=%+v, want not True while Deployment remains", owned)
+	}
+}
+
+func TestQuiescenceCatchesLabelDriftedPods(t *testing.T) {
+	registerExclusivityStubFakeCD(t)
+
+	dev := newDevice("label-drift", "default")
+	dev.Spec.Driver = ciskov1.DeviceDriverFAKE
+
+	controller := true
+	deletedDeployUID := types.UID("55555555-5555-5555-5555-deploy000001")
+	rsUID := types.UID("55555555-5555-5555-5555-rs0000000001")
+	rs := &appsv1.ReplicaSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dev.Name + deploymentSuffix + "-abc123",
+			Namespace: dev.Namespace,
+			UID:       rsUID,
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "Deployment",
+				Name:       dev.Name + deploymentSuffix,
+				UID:        deletedDeployUID,
+				Controller: &controller,
+			}},
+		},
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dev.Name + deploymentSuffix + "-stripped-labels",
+			Namespace: dev.Namespace,
+			UID:       types.UID("55555555-5555-5555-5555-pod000000001"),
+			Labels:    map[string]string{"unrelated": "true"},
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "ReplicaSet",
+				Name:       rs.Name,
+				UID:        rsUID,
+				Controller: &controller,
+			}},
+		},
+	}
+	r := reconcilerFor(t, dev, rs, pod)
+	r.AggregatorEnabled = true
+
+	quiesced, pods, err := r.perDevicePodsQuiesced(context.Background(), dev)
+	if err != nil {
+		t.Fatalf("perDevicePodsQuiesced: %v", err)
+	}
+	if quiesced {
+		t.Fatal("perDevicePodsQuiesced=true, want false while label-drifted Pod has stale owner ancestry")
+	}
+	if len(pods) != 1 || pods[0].Name != pod.Name {
+		t.Fatalf("pods=%v, want stale label-drifted Pod %q", pods, pod.Name)
+	}
+
+	result, err := r.Reconcile(context.Background(), reconcileRequest(dev.Namespace, dev.Name))
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if result.RequeueAfter != aggregatorTopologyPollInterval {
+		t.Fatalf("RequeueAfter=%v, want %v while stale Pod remains", result.RequeueAfter, aggregatorTopologyPollInterval)
+	}
+	var gotDevice ciskov1.CiscoDevice
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: dev.Namespace, Name: dev.Name}, &gotDevice); err != nil {
+		t.Fatalf("get CiscoDevice: %v", err)
+	}
+	owned := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwned)
+	if owned != nil && owned.Status == metav1.ConditionTrue {
+		t.Fatalf("AggregatorOwned=%+v, want not True while stale label-drifted Pod remains", owned)
+	}
+}
+
+func TestQuiescenceTrueWhenAllGone(t *testing.T) {
+	registerExclusivityStubFakeCD(t)
+
+	dev := newDevice("all-gone", "default")
+	dev.Spec.Driver = ciskov1.DeviceDriverFAKE
+	r := reconcilerFor(t, dev)
+	r.AggregatorEnabled = true
+
+	quiesced, pods, err := r.perDevicePodsQuiesced(context.Background(), dev)
+	if err != nil {
+		t.Fatalf("perDevicePodsQuiesced: %v", err)
+	}
+	if !quiesced || len(pods) != 0 {
+		t.Fatalf("perDevicePodsQuiesced=%v pods=%v, want true with no stale Pods", quiesced, pods)
+	}
+
+	result, err := r.Reconcile(context.Background(), reconcileRequest(dev.Namespace, dev.Name))
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if result.RequeueAfter != 0 || result.Requeue {
+		t.Fatalf("result=%+v, want no requeue after quiescence", result)
+	}
+
+	var gotDevice ciskov1.CiscoDevice
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: dev.Namespace, Name: dev.Name}, &gotDevice); err != nil {
+		t.Fatalf("get CiscoDevice: %v", err)
+	}
+	owned := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwned)
+	if owned == nil || owned.Status != metav1.ConditionTrue || owned.Reason != "AggregatorEnabled" {
+		t.Fatalf("AggregatorOwned=%+v, want True/AggregatorEnabled", owned)
+	}
+	owning := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwning)
+	if owning == nil || owning.Status != metav1.ConditionFalse || owning.Reason != "HandoverComplete" {
+		t.Fatalf("AggregatorOwning=%+v, want False/HandoverComplete", owning)
+	}
+}
+
 func TestAggregatorTopologyShiftStuckSurfacesAfterTimeout(t *testing.T) {
 	registerExclusivityStubFakeCD(t)
 
