@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -138,10 +139,12 @@ func (r *iosxeConfigResource) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"labels": schema.MapAttribute{
 				Optional:    true,
+				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"annotations": schema.MapAttribute{
 				Optional:    true,
+				Computed:    true,
 				ElementType: types.StringType,
 			},
 			"phase": schema.StringAttribute{
@@ -389,10 +392,11 @@ func (r *iosxeConfigResource) waitForObservedGeneration(ctx context.Context, ns,
 	}
 }
 
-// refreshFromCluster copies the CR's status fields onto the model
-// so the computed attributes (phase, last_applied_hash,
-// source_yang_version) reflect what the cluster knows.
+// refreshFromCluster copies the CR's metadata and status fields onto
+// the model so computed attributes reflect what the cluster knows.
 func (r *iosxeConfigResource) refreshFromCluster(_ context.Context, m *IOSXEConfigResourceModel, got *unstructured.Unstructured) {
+	m.Labels = mapValueFromStrings(got.GetLabels())
+	m.Annotations = mapValueFromStrings(got.GetAnnotations())
 	if !observedGenerationCurrent(got, got.GetGeneration()) {
 		m.Phase = types.StringValue(reconcilePendingPhase)
 		m.LastAppliedHash = types.StringNull()
@@ -403,6 +407,14 @@ func (r *iosxeConfigResource) refreshFromCluster(_ context.Context, m *IOSXEConf
 	m.Phase = stringFromMap(status, "phase")
 	m.LastAppliedHash = stringFromMap(status, "lastAppliedHash")
 	m.SourceYangVersion = stringFromMap(status, "sourceYangVersion")
+}
+
+func mapValueFromStrings(values map[string]string) types.Map {
+	elements := make(map[string]attr.Value, len(values))
+	for key, value := range values {
+		elements[key] = types.StringValue(value)
+	}
+	return types.MapValueMust(types.StringType, elements)
 }
 
 func observedGenerationCurrent(got *unstructured.Unstructured, generation int64) bool {

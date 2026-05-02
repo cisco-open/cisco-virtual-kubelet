@@ -17,7 +17,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,6 +39,46 @@ func fakeDynamic(t *testing.T, objs ...runtime.Object) *dynfake.FakeDynamicClien
 		iosxeConfigGVR: "IOSXEConfigList",
 	}
 	return dynfake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, objs...)
+}
+
+func newResourceState(t *testing.T) tfsdk.State {
+	t.Helper()
+	ctx := context.Background()
+	var schemaResp frameworkresource.SchemaResponse
+	(&iosxeConfigResource{}).Schema(ctx, frameworkresource.SchemaRequest{}, &schemaResp)
+	if schemaResp.Diagnostics.HasError() {
+		t.Fatalf("Schema diagnostics: %v", schemaResp.Diagnostics)
+	}
+	return tfsdk.State{
+		Schema: schemaResp.Schema,
+		Raw:    tftypes.NewValue(schemaResp.Schema.Type().TerraformType(ctx), nil),
+	}
+}
+
+func stateForModel(t *testing.T, model *IOSXEConfigResourceModel) tfsdk.State {
+	t.Helper()
+	ctx := context.Background()
+	state := newResourceState(t)
+	if diags := state.Set(ctx, model); diags.HasError() {
+		t.Fatalf("state.Set diagnostics: %v", diags)
+	}
+	return state
+}
+
+func readResourceForTest(t *testing.T, r *iosxeConfigResource, model *IOSXEConfigResourceModel) IOSXEConfigResourceModel {
+	t.Helper()
+	ctx := context.Background()
+	req := frameworkresource.ReadRequest{State: stateForModel(t, model)}
+	resp := frameworkresource.ReadResponse{State: newResourceState(t)}
+	r.Read(ctx, req, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("Read diagnostics: %v", resp.Diagnostics)
+	}
+	var out IOSXEConfigResourceModel
+	if diags := resp.State.Get(ctx, &out); diags.HasError() {
+		t.Fatalf("read state diagnostics: %v", diags)
+	}
+	return out
 }
 
 func mustList(t *testing.T, ss ...string) types.List {
@@ -61,6 +105,54 @@ func mustMap(t *testing.T, values map[string]string) types.Map {
 		t.Fatalf("types.MapValue: %v", dgs)
 	}
 	return out
+}
+
+func mustStringMapValue(t *testing.T, in types.Map) map[string]string {
+	t.Helper()
+	out, err := stringMapFromMap(in)
+	if err != nil {
+		t.Fatalf("stringMapFromMap: %v", err)
+	}
+	if out == nil {
+		return map[string]string{}
+	}
+	return out
+}
+
+func newIOSXEConfigObject(t *testing.T, name, namespace string) *unstructured.Unstructured {
+	t.Helper()
+	obj := &unstructured.Unstructured{}
+	obj.SetAPIVersion("config.cisco.vk/v1alpha1")
+	obj.SetKind("IOSXEConfig")
+	obj.SetName(name)
+	obj.SetNamespace(namespace)
+	obj.SetGeneration(1)
+	if err := unstructured.SetNestedField(obj.Object, map[string]any{"name": name}, "spec", "deviceRef"); err != nil {
+		t.Fatalf("seed spec.deviceRef: %v", err)
+	}
+	if err := unstructured.SetNestedStringSlice(obj.Object, []string{"vlan"}, "spec", "managedFamilies"); err != nil {
+		t.Fatalf("seed spec.managedFamilies: %v", err)
+	}
+	if err := unstructured.SetNestedMap(obj.Object, map[string]any{
+		"observedGeneration": int64(1),
+		"phase":              "InSync",
+	}, "status"); err != nil {
+		t.Fatalf("seed status: %v", err)
+	}
+	return obj
+}
+
+func validIOSXEConfigModel(t *testing.T, name, namespace string) *IOSXEConfigResourceModel {
+	t.Helper()
+	return &IOSXEConfigResourceModel{
+		Name:            types.StringValue(name),
+		Namespace:       types.StringValue(namespace),
+		DeviceRef:       types.StringValue(name),
+		ManagedFamilies: mustList(t, "vlan"),
+		SourceInline:    types.StringValue(`{"vlan":{"vlans":[{"id":10,"name":"users"}]}}`),
+		Labels:          types.MapNull(types.StringType),
+		Annotations:     types.MapNull(types.StringType),
+	}
 }
 
 func TestSplitNamespacedNameWellFormed(t *testing.T) {
@@ -185,6 +277,35 @@ func TestRefreshFromClusterPullsStatusFields(t *testing.T) {
 	}
 	if m.SourceYangVersion.ValueString() != "1791" {
 		t.Errorf("yang=%q", m.SourceYangVersion.ValueString())
+	}
+}
+
+func TestReadRefreshesMetadataDrift(t *testing.T) {
+	ctx := context.Background()
+	existing := newIOSXEConfigObject(t, "edge-01", "network")
+	existing.SetLabels(map[string]string{"tf": "yes", "foo": "bar"})
+	r := &iosxeConfigResource{
+		client: fakeDynamic(t, existing),
+	}
+
+	model := validIOSXEConfigModel(t, "edge-01", "network")
+	got := readResourceForTest(t, r, model)
+	if labels := mustStringMapValue(t, got.Labels); !reflect.DeepEqual(labels, map[string]string{"tf": "yes", "foo": "bar"}) {
+		t.Fatalf("labels=%v, want initial cluster labels", labels)
+	}
+
+	live, err := r.client.Resource(iosxeConfigGVR).Namespace("network").Get(ctx, "edge-01", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get IOSXEConfig for mutation: %v", err)
+	}
+	live.SetLabels(map[string]string{"tf": "updated", "baz": "new"})
+	if _, err := r.client.Resource(iosxeConfigGVR).Namespace("network").Update(ctx, live, metav1.UpdateOptions{}); err != nil {
+		t.Fatalf("update IOSXEConfig labels: %v", err)
+	}
+
+	got = readResourceForTest(t, r, &got)
+	if labels := mustStringMapValue(t, got.Labels); !reflect.DeepEqual(labels, map[string]string{"tf": "updated", "baz": "new"}) {
+		t.Fatalf("labels=%v, want mutated cluster labels", labels)
 	}
 }
 
@@ -411,6 +532,38 @@ func TestImportStateSplitsNamespacedID(t *testing.T) {
 	}
 	if _, _, ok := splitNamespacedName("bare-name"); ok {
 		t.Fatal("bare name accepted; expected rejection")
+	}
+}
+
+func TestImportPopulatesExistingMetadata(t *testing.T) {
+	ctx := context.Background()
+	existing := newIOSXEConfigObject(t, "edge-import", "network")
+	existing.SetLabels(map[string]string{"tf": "yes", "foo": "bar"})
+	existing.SetAnnotations(map[string]string{"owner": "network-team", "ticket": "123"})
+	r := &iosxeConfigResource{
+		client: fakeDynamic(t, existing),
+	}
+
+	importResp := frameworkresource.ImportStateResponse{State: newResourceState(t)}
+	r.ImportState(ctx, frameworkresource.ImportStateRequest{ID: "network/edge-import"}, &importResp)
+	if importResp.Diagnostics.HasError() {
+		t.Fatalf("ImportState diagnostics: %v", importResp.Diagnostics)
+	}
+	var importedName, importedNamespace types.String
+	if diags := importResp.State.GetAttribute(ctx, path.Root("name"), &importedName); diags.HasError() {
+		t.Fatalf("imported name diagnostics: %v", diags)
+	}
+	if diags := importResp.State.GetAttribute(ctx, path.Root("namespace"), &importedNamespace); diags.HasError() {
+		t.Fatalf("imported namespace diagnostics: %v", diags)
+	}
+
+	model := validIOSXEConfigModel(t, importedName.ValueString(), importedNamespace.ValueString())
+	got := readResourceForTest(t, r, model)
+	if labels := mustStringMapValue(t, got.Labels); !reflect.DeepEqual(labels, map[string]string{"tf": "yes", "foo": "bar"}) {
+		t.Fatalf("labels=%v, want imported cluster labels", labels)
+	}
+	if annotations := mustStringMapValue(t, got.Annotations); !reflect.DeepEqual(annotations, map[string]string{"owner": "network-team", "ticket": "123"}) {
+		t.Fatalf("annotations=%v, want imported cluster annotations", annotations)
 	}
 }
 
