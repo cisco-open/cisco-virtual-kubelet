@@ -778,7 +778,6 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// every family will fail-closed by default until rolled out.
 	if res.PruneOnRelinquish {
 		if pc, ok := w.(writers.PruneCapable); ok {
-			pruneInput := observed
 			// Scope the prune set to entries this CR has owned
 			// (status.atomicReplaceOwnedKeys) UNION current desired.
 			// Anything observed outside that scope is baseline state
@@ -794,27 +793,35 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 			// res.AtomicReplace (see ownedKeysForFamily above), so
 			// the scoping is safe to apply universally.
 			//
-			// Writers that don't implement KeyExtractable are
-			// pre-Wave-10.3 keyed-list types or true singletons; for
-			// those we fall back to skipping prune entirely under
-			// pruneOnRelinquish — better to leak un-pruned entries
-			// than to wipe baseline.
+			// A3 fix (2026-05-01): when a PruneCapable writer does
+			// not implement KeyExtractable we cannot scope the prune
+			// safely. Pre-fix the engine silently skipped prune in
+			// that case and reported InSync — operators had no way
+			// to know prune never ran. Surface this as a hard
+			// Unsupported error so pruneOnRelinquish either runs
+			// scoped or fails loudly. Adding KeysOf to a writer is
+			// the documented uplift path; see writers/dhcp.go for
+			// the canonical shape.
 			ke, isKE := w.(writers.KeyExtractable)
 			if !isKE {
-				// Skip prune for writers that can't be scoped.
-				// Non-keyed singletons reach here too; they have
-				// nothing list-shaped to prune anyway.
-			} else {
-				pruneInput = scopeObservedToOwned(ke, observed, desired, res.AtomicReplaceOwnedKeys[family])
-				pruneOps, err := pc.PruneDiff(desired, pruneInput)
-				if err != nil {
-					return FamilyStatus{
-						Name: family, State: "ApplyError",
-						Message: safeMsg("PruneDiff: %v", err),
-					}
+				return FamilyStatus{
+					Name: family, State: "Unsupported",
+					Message: safeMsg(
+						"family %s is PruneCapable but not KeyExtractable; "+
+							"pruneOnRelinquish requires both so deletes can be "+
+							"scoped to CR-owned keys. Add KeysOf to the writer "+
+							"or remove pruneOnRelinquish from the CR.", family),
 				}
-				ops = append(ops, pruneOps...)
 			}
+			pruneInput := scopeObservedToOwned(ke, observed, desired, res.AtomicReplaceOwnedKeys[family])
+			pruneOps, err := pc.PruneDiff(desired, pruneInput)
+			if err != nil {
+				return FamilyStatus{
+					Name: family, State: "ApplyError",
+					Message: safeMsg("PruneDiff: %v", err),
+				}
+			}
+			ops = append(ops, pruneOps...)
 		}
 	}
 
@@ -908,9 +915,11 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// would slip past as InSync.
 	if res.PruneOnRelinquish {
 		if pc, ok := w.(writers.PruneCapable); ok {
-			// Mirror the apply-path scoping (F1, 2026-05-01):
-			// ownedKeys-scoped verify when KeyExtractable is
-			// implemented; skip otherwise.
+			// Mirror the apply-path scoping. The not-KeyExtractable
+			// branch is unreachable here in practice — the apply-
+			// path Unsupported short-circuit returns before we get
+			// to verify — but we keep a defensive skip just in case
+			// the family roster shifts mid-reconcile.
 			if ke, ok := w.(writers.KeyExtractable); ok {
 				vInput := scopeObservedToOwned(ke, verify, desired, res.AtomicReplaceOwnedKeys[family])
 				residualPrune, err := pc.PruneDiff(desired, vInput)

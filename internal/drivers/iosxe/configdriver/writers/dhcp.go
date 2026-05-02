@@ -139,6 +139,28 @@ func (dhcpWriter) Apply(ctx context.Context, c transport.Interface, ops []transp
 	return c.Mutate(ctx, "", ops)
 }
 
+// KeysOf implements KeyExtractable. Returns the pool names in the
+// supplied dhcp block. Required so the engine's pruneOnRelinquish
+// path can scope deletes to the keys this CR has owned rather than
+// every pool on the device. A3 fix (2026-05-01): without this hook
+// the engine silently skips pruneOnRelinquish for the dhcp family
+// while reporting InSync — operators couldn't tell the prune never
+// ran.
+func (dhcpWriter) KeysOf(v any) []string {
+	list, err := coerceDHCPBlock(v, "keysOf")
+	if err != nil || len(list) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(list))
+	for _, p := range list {
+		if name, ok := p["name"].(string); ok && name != "" {
+			keys = append(keys, name)
+		}
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 // PruneDiff implements PruneCapable: a VerbDelete op for every
 // pool present on the device but absent from the desired intent.
 // Required because dhcp is one of the apphosting-prerequisite

@@ -369,13 +369,13 @@ func TestReconcilePruneOnRelinquishWithoutAtomicReplaceIsScoped(t *testing.T) {
 	}
 }
 
-// TestReconcilePruneOnRelinquishSkippedWhenNotKeyExtractable pins the
-// safe-by-default behaviour for older writers that are PruneCapable
-// but not KeyExtractable. Without ownedKeys scoping the engine cannot
-// distinguish baseline-state from CR-owned entries, so it must skip
-// the prune entirely — leaking un-pruned entries is preferable to
-// wiping baseline.
-func TestReconcilePruneOnRelinquishSkippedWhenNotKeyExtractable(t *testing.T) {
+// TestReconcilePruneOnRelinquishUnsupportedWhenNotKeyExtractable
+// pins the A3 fix (2026-05-01): when a writer is PruneCapable but
+// not KeyExtractable, pruneOnRelinquish must surface the family as
+// Unsupported rather than silently no-op. Pre-fix, the engine
+// skipped prune and reported InSync, hiding the fact that requested
+// cleanup never ran.
+func TestReconcilePruneOnRelinquishUnsupportedWhenNotKeyExtractable(t *testing.T) {
 	w := &fakePruneWriterNoKE{
 		fakeWriter: &fakeWriter{
 			family: "vlan",
@@ -392,10 +392,13 @@ func TestReconcilePruneOnRelinquishSkippedWhenNotKeyExtractable(t *testing.T) {
 		DriftPolicy:       configv1alpha1.DriftPolicyRevert,
 		PruneOnRelinquish: true,
 	}
-	_ = e.Reconcile(context.Background(), res)
+	r := e.Reconcile(context.Background(), res)
 	if w.pruneCalls != 0 {
-		t.Fatalf("PruneDiff was called %d times on a writer without KeyExtractable; "+
-			"the engine must skip prune for non-scope-capable writers", w.pruneCalls)
+		t.Fatalf("PruneDiff was called %d times on a non-KeyExtractable writer; "+
+			"the engine must short-circuit before calling PruneDiff", w.pruneCalls)
+	}
+	if len(r.FamilyStatuses) != 1 || r.FamilyStatuses[0].State != "Unsupported" {
+		t.Fatalf("family state = %#v, want Unsupported", r.FamilyStatuses)
 	}
 }
 
