@@ -142,7 +142,13 @@ func loadRESTConfig(kubeconfig, context string) (*rest.Config, error) {
 		).ClientConfig()
 	}
 	if env := os.Getenv("KUBECONFIG"); env != "" {
-		return clientcmd.BuildConfigFromFlags(context, env)
+		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+		loadingRules.ExplicitPath = env
+		overrides := &clientcmd.ConfigOverrides{}
+		if context != "" {
+			overrides.CurrentContext = context
+		}
+		return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, overrides).ClientConfig()
 	}
 	if cfg, err := rest.InClusterConfig(); err == nil {
 		return cfg, nil
