@@ -40,6 +40,9 @@ const (
 	// CiscoDeviceConditionAggregatorOwned is set by the CiscoDevice controller
 	// once aggregator topology owns a configdriver-backed device.
 	CiscoDeviceConditionAggregatorOwned = "AggregatorOwned"
+	// CiscoDeviceConditionAggregatorTopologyStuck is set when a topology shift
+	// to aggregator ownership cannot finish because old per-device Pods remain.
+	CiscoDeviceConditionAggregatorTopologyStuck = "AggregatorTopologyStuck"
 	// CiscoDeviceConditionPrereqTeardownObserved records that the controller
 	// has seen the owned prereq IOSXEConfig enter deletion.
 	CiscoDeviceConditionPrereqTeardownObserved = "PrereqTeardownObserved"

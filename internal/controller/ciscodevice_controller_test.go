@@ -85,6 +85,18 @@ func reconcilerFor(t *testing.T, objs ...runtime.Object) *CiscoDeviceReconciler 
 	}
 }
 
+type fakeClock struct {
+	now time.Time
+}
+
+func (f *fakeClock) Now() time.Time {
+	return f.now
+}
+
+func (f *fakeClock) Advance(d time.Duration) {
+	f.now = f.now.Add(d)
+}
+
 // reconcileRequest builds a ctrl.Request from a namespace and name.
 func reconcileRequest(namespace, name string) ctrl.Request {
 	return ctrl.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: name}}

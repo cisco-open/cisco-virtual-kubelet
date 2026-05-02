@@ -77,6 +77,20 @@ const configPrereqsTeardownPollInterval = 5 * time.Second
 // requeue while old per-device Pods drain after the Deployment delete.
 const aggregatorTopologyPollInterval = 4 * time.Second
 
+// aggregatorTopologyShiftTimeout is how long the controller waits for stale
+// per-device Pods to vanish before surfacing the topology shift as stuck.
+const aggregatorTopologyShiftTimeout = 5 * time.Minute
+
+type clock interface {
+	Now() time.Time
+}
+
+type realClock struct{}
+
+func (realClock) Now() time.Time {
+	return time.Now()
+}
+
 // CiscoDeviceReconciler reconciles a CiscoDevice object.
 // It creates (or updates) a ConfigMap containing the device spec and
 // a Deployment that runs the cisco-vk binary with that configuration.
@@ -95,6 +109,7 @@ type CiscoDeviceReconciler struct {
 	// with the in-pod ConfigReconciler disabled.
 	AggregatorEnabled bool
 	Recorder          record.EventRecorder
+	clock             clock
 }
 
 // +kubebuilder:rbac:groups=cisco.vk,resources=ciscodevices,verbs=get;list;watch;update;patch
@@ -214,7 +229,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				return ctrl.Result{}, fmt.Errorf("delete stale per-device Deployment under aggregator mode: %w", err)
 			}
 		}
-		quiesced, err := r.perDevicePodsQuiesced(ctx, &device)
+		quiesced, pods, err := r.perDevicePodsQuiesced(ctx, &device)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("list stale per-device Pods under aggregator mode: %w", err)
 		}
@@ -224,9 +239,15 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					return ctrl.Result{}, err
 				}
 			}
+			if err := r.surfaceAggregatorTopologyStuckIfTimedOut(ctx, &device, pods); err != nil {
+				return ctrl.Result{}, err
+			}
 			logger.Info("aggregator owns config reconciliation; waiting for stale per-device Pods to exit",
 				"device", device.Name, "driver", device.Spec.Driver)
 			return ctrl.Result{RequeueAfter: aggregatorTopologyPollInterval}, nil
+		}
+		if err := r.clearAggregatorTopologyStuck(ctx, &device); err != nil {
+			return ctrl.Result{}, err
 		}
 		if handoverActive {
 			if err := r.setCiscoDeviceCondition(ctx, &device, metav1.Condition{
@@ -627,15 +648,15 @@ func (r *CiscoDeviceReconciler) deleteNode(ctx context.Context, name string) err
 	return nil
 }
 
-func (r *CiscoDeviceReconciler) perDevicePodsQuiesced(ctx context.Context, device *ciskov1.CiscoDevice) (bool, error) {
+func (r *CiscoDeviceReconciler) perDevicePodsQuiesced(ctx context.Context, device *ciskov1.CiscoDevice) (bool, []corev1.Pod, error) {
 	var pods corev1.PodList
 	if err := r.List(ctx, &pods,
 		client.InNamespace(device.Namespace),
 		client.MatchingLabels(perDeviceDeploymentLabels(device.Name)),
 	); err != nil {
-		return false, err
+		return false, nil, err
 	}
-	return len(pods.Items) == 0, nil
+	return len(pods.Items) == 0, pods.Items, nil
 }
 
 func conditionTrue(cond *metav1.Condition) bool {
@@ -683,7 +704,81 @@ func (r *CiscoDeviceReconciler) clearAggregatorHandoverConditions(ctx context.Co
 	}); err != nil {
 		return err
 	}
+	if err := r.setCiscoDeviceConditionIfPresent(ctx, device, metav1.Condition{
+		Type:               ciskov1.CiscoDeviceConditionAggregatorTopologyStuck,
+		Status:             metav1.ConditionFalse,
+		Reason:             "PerDeviceTopology",
+		ObservedGeneration: device.Generation,
+		Message:            "aggregator topology shift is inactive while per-device topology is enabled",
+	}); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (r *CiscoDeviceReconciler) surfaceAggregatorTopologyStuckIfTimedOut(ctx context.Context, device *ciskov1.CiscoDevice, pods []corev1.Pod) error {
+	owning := meta.FindStatusCondition(device.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwning)
+	if !conditionTrue(owning) || owning.LastTransitionTime.IsZero() {
+		return nil
+	}
+	if r.now().Sub(owning.LastTransitionTime.Time) < aggregatorTopologyShiftTimeout {
+		return nil
+	}
+
+	message := describePerDevicePods(pods)
+	existing := meta.FindStatusCondition(device.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorTopologyStuck)
+	emitEvent := existing == nil ||
+		existing.Status != metav1.ConditionTrue ||
+		existing.Reason != "PodQuiesceTimeout" ||
+		existing.Message != message
+
+	if err := r.setCiscoDeviceCondition(ctx, device, metav1.Condition{
+		Type:               ciskov1.CiscoDeviceConditionAggregatorTopologyStuck,
+		Status:             metav1.ConditionTrue,
+		Reason:             "PodQuiesceTimeout",
+		ObservedGeneration: device.Generation,
+		Message:            message,
+	}); err != nil {
+		return err
+	}
+	if emitEvent && r.Recorder != nil {
+		r.Recorder.Eventf(device, corev1.EventTypeWarning, "AggregatorTopologyShiftStuck", "%s", message)
+	}
+	return nil
+}
+
+func (r *CiscoDeviceReconciler) clearAggregatorTopologyStuck(ctx context.Context, device *ciskov1.CiscoDevice) error {
+	if meta.FindStatusCondition(device.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorTopologyStuck) == nil {
+		return nil
+	}
+	return r.setCiscoDeviceCondition(ctx, device, metav1.Condition{
+		Type:               ciskov1.CiscoDeviceConditionAggregatorTopologyStuck,
+		Status:             metav1.ConditionFalse,
+		Reason:             "Resolved",
+		ObservedGeneration: device.Generation,
+		Message:            "per-device Pods have quiesced",
+	})
+}
+
+func describePerDevicePods(pods []corev1.Pod) string {
+	descriptions := make([]string, 0, len(pods))
+	for _, pod := range pods {
+		finalizers := append([]string(nil), pod.Finalizers...)
+		sort.Strings(finalizers)
+		finalizerList := strings.Join(finalizers, ",")
+		if finalizerList == "" {
+			finalizerList = "<none>"
+		}
+		phase := string(pod.Status.Phase)
+		if phase == "" {
+			phase = "Unknown"
+		}
+		descriptions = append(descriptions, fmt.Sprintf("%s/%s phase=%s finalizers=[%s]",
+			pod.Namespace, pod.Name, phase, finalizerList))
+	}
+	sort.Strings(descriptions)
+	return fmt.Sprintf("per-device Pods still present after %s: %s",
+		aggregatorTopologyShiftTimeout, strings.Join(descriptions, "; "))
 }
 
 func (r *CiscoDeviceReconciler) setCiscoDeviceConditionIfPresent(ctx context.Context, device *ciskov1.CiscoDevice, cond metav1.Condition) error {
@@ -691,6 +786,13 @@ func (r *CiscoDeviceReconciler) setCiscoDeviceConditionIfPresent(ctx context.Con
 		return nil
 	}
 	return r.setCiscoDeviceCondition(ctx, device, cond)
+}
+
+func (r *CiscoDeviceReconciler) now() time.Time {
+	if r.clock != nil {
+		return r.clock.Now()
+	}
+	return realClock{}.Now()
 }
 
 func (r *CiscoDeviceReconciler) setCiscoDeviceCondition(ctx context.Context, device *ciskov1.CiscoDevice, cond metav1.Condition) error {
@@ -701,6 +803,9 @@ func (r *CiscoDeviceReconciler) setCiscoDeviceCondition(ctx context.Context, dev
 		existing.Message == cond.Message &&
 		existing.ObservedGeneration == cond.ObservedGeneration {
 		return nil
+	}
+	if cond.LastTransitionTime.IsZero() {
+		cond.LastTransitionTime = metav1.NewTime(r.now())
 	}
 	meta.SetStatusCondition(&device.Status.Conditions, cond)
 	if err := r.Status().Update(ctx, device); err != nil {

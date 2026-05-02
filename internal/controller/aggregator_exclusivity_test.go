@@ -26,9 +26,11 @@ package controller
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -179,6 +182,172 @@ func TestAggregatorTopologyShiftWaitsForPodsToQuiesce(t *testing.T) {
 	owning = meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwning)
 	if owning == nil || owning.Status != metav1.ConditionFalse || owning.Reason != "HandoverComplete" {
 		t.Fatalf("AggregatorOwning condition after quiesce=%+v, want False/HandoverComplete", owning)
+	}
+}
+
+func TestAggregatorTopologyShiftStuckSurfacesAfterTimeout(t *testing.T) {
+	registerExclusivityStubFakeCD(t)
+
+	start := time.Date(2026, 5, 2, 12, 0, 0, 0, time.UTC)
+	clk := &fakeClock{now: start}
+	dev := newDevice("shift-stuck", "default")
+	dev.UID = types.UID("22222222-2222-2222-2222-222222222222")
+	dev.Spec.Driver = ciskov1.DeviceDriverFAKE
+
+	controller := true
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dev.Name + deploymentSuffix,
+			Namespace: dev.Namespace,
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: "cisco.vk/v1alpha1",
+				Kind:       "CiscoDevice",
+				Name:       dev.Name,
+				UID:        dev.UID,
+				Controller: &controller,
+			}},
+		},
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       dev.Name + deploymentSuffix + "-old",
+			Namespace:  dev.Namespace,
+			Labels:     perDeviceDeploymentLabels(dev.Name),
+			Finalizers: []string{"example.com/hold"},
+		},
+		Status: corev1.PodStatus{Phase: corev1.PodRunning},
+	}
+	recorder := record.NewFakeRecorder(10)
+	r := reconcilerFor(t, dev, deploy, pod)
+	r.AggregatorEnabled = true
+	r.Recorder = recorder
+	r.clock = clk
+
+	result, err := r.Reconcile(context.Background(), reconcileRequest("default", dev.Name))
+	if err != nil {
+		t.Fatalf("Reconcile start: %v", err)
+	}
+	if result.RequeueAfter != aggregatorTopologyPollInterval {
+		t.Fatalf("RequeueAfter=%v, want %v while stale Pods remain", result.RequeueAfter, aggregatorTopologyPollInterval)
+	}
+
+	clk.Advance(aggregatorTopologyShiftTimeout + time.Second)
+	result, err = r.Reconcile(context.Background(), reconcileRequest("default", dev.Name))
+	if err != nil {
+		t.Fatalf("Reconcile after timeout: %v", err)
+	}
+	if result.RequeueAfter != aggregatorTopologyPollInterval {
+		t.Fatalf("RequeueAfter after timeout=%v, want %v", result.RequeueAfter, aggregatorTopologyPollInterval)
+	}
+
+	var gotDevice ciskov1.CiscoDevice
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: dev.Namespace, Name: dev.Name}, &gotDevice); err != nil {
+		t.Fatalf("get CiscoDevice: %v", err)
+	}
+	stuck := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorTopologyStuck)
+	if stuck == nil || stuck.Status != metav1.ConditionTrue || stuck.Reason != "PodQuiesceTimeout" {
+		t.Fatalf("AggregatorTopologyStuck=%+v, want True/PodQuiesceTimeout", stuck)
+	}
+	for _, want := range []string{pod.Name, "example.com/hold", string(corev1.PodRunning)} {
+		if !strings.Contains(stuck.Message, want) {
+			t.Fatalf("AggregatorTopologyStuck message=%q, want it to contain %q", stuck.Message, want)
+		}
+	}
+	owned := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwned)
+	if owned != nil && owned.Status == metav1.ConditionTrue {
+		t.Fatalf("AggregatorOwned=%+v, want not True while topology shift is stuck", owned)
+	}
+	select {
+	case event := <-recorder.Events:
+		for _, want := range []string{"AggregatorTopologyShiftStuck", pod.Name, "example.com/hold", string(corev1.PodRunning)} {
+			if !strings.Contains(event, want) {
+				t.Fatalf("event=%q, want it to contain %q", event, want)
+			}
+		}
+	default:
+		t.Fatal("expected AggregatorTopologyShiftStuck warning event")
+	}
+}
+
+func TestAggregatorTopologyShiftStuckClearsOnRecovery(t *testing.T) {
+	registerExclusivityStubFakeCD(t)
+
+	start := time.Date(2026, 5, 2, 12, 0, 0, 0, time.UTC)
+	clk := &fakeClock{now: start}
+	dev := newDevice("shift-recover", "default")
+	dev.UID = types.UID("33333333-3333-3333-3333-333333333333")
+	dev.Spec.Driver = ciskov1.DeviceDriverFAKE
+
+	controller := true
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dev.Name + deploymentSuffix,
+			Namespace: dev.Namespace,
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: "cisco.vk/v1alpha1",
+				Kind:       "CiscoDevice",
+				Name:       dev.Name,
+				UID:        dev.UID,
+				Controller: &controller,
+			}},
+		},
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       dev.Name + deploymentSuffix + "-old",
+			Namespace:  dev.Namespace,
+			Labels:     perDeviceDeploymentLabels(dev.Name),
+			Finalizers: []string{"example.com/hold"},
+		},
+		Status: corev1.PodStatus{Phase: corev1.PodRunning},
+	}
+	r := reconcilerFor(t, dev, deploy, pod)
+	r.AggregatorEnabled = true
+	r.clock = clk
+
+	if _, err := r.Reconcile(context.Background(), reconcileRequest("default", dev.Name)); err != nil {
+		t.Fatalf("Reconcile start: %v", err)
+	}
+	clk.Advance(aggregatorTopologyShiftTimeout + time.Second)
+	if _, err := r.Reconcile(context.Background(), reconcileRequest("default", dev.Name)); err != nil {
+		t.Fatalf("Reconcile stuck: %v", err)
+	}
+
+	var held corev1.Pod
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name}, &held); err != nil {
+		t.Fatalf("get held Pod: %v", err)
+	}
+	held.Finalizers = nil
+	if err := r.Update(context.Background(), &held); err != nil {
+		t.Fatalf("remove Pod finalizer: %v", err)
+	}
+	if err := r.Delete(context.Background(), &held); err != nil {
+		t.Fatalf("delete recovered Pod: %v", err)
+	}
+
+	result, err := r.Reconcile(context.Background(), reconcileRequest("default", dev.Name))
+	if err != nil {
+		t.Fatalf("Reconcile after recovery: %v", err)
+	}
+	if result.RequeueAfter != 0 || result.Requeue {
+		t.Fatalf("result after recovery=%+v, want no requeue", result)
+	}
+
+	var gotDevice ciskov1.CiscoDevice
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: dev.Namespace, Name: dev.Name}, &gotDevice); err != nil {
+		t.Fatalf("get CiscoDevice after recovery: %v", err)
+	}
+	stuck := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorTopologyStuck)
+	if stuck == nil || stuck.Status != metav1.ConditionFalse || stuck.Reason != "Resolved" {
+		t.Fatalf("AggregatorTopologyStuck after recovery=%+v, want False/Resolved", stuck)
+	}
+	owned := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwned)
+	if owned == nil || owned.Status != metav1.ConditionTrue || owned.Reason != "AggregatorEnabled" {
+		t.Fatalf("AggregatorOwned after recovery=%+v, want True/AggregatorEnabled", owned)
+	}
+	owning := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwning)
+	if owning == nil || owning.Status != metav1.ConditionFalse || owning.Reason != "HandoverComplete" {
+		t.Fatalf("AggregatorOwning after recovery=%+v, want False/HandoverComplete", owning)
 	}
 }
 
