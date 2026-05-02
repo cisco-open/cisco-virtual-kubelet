@@ -122,21 +122,21 @@ const ForceRelinquishSkipAnnotation = "config.cisco.vk/force-relinquish-skip"
 //
 // Codex /codex:adversarial-review (2026-05-02) follow-ups:
 //
-//   B1 — Use AcquireIfFree, NOT Acquire. The takeover-capable
-//        Acquire would let a deleting CR claim a foreign lease whose
-//        holder hasn't heartbeat through a long Fetch/Apply (looks
-//        expired but is still in flight) — and then prune the in-
-//        flight CR's keys mid-write. AcquireIfFree refuses any
-//        foreign holder regardless of expiry; stale-but-in-flight
-//        recovery stays the responsibility of the normal-reconcile
-//        path that holds and renews its own lease.
+//	B1 — Use AcquireIfFree, NOT Acquire. The takeover-capable
+//	     Acquire would let a deleting CR claim a foreign lease whose
+//	     holder hasn't heartbeat through a long Fetch/Apply (looks
+//	     expired but is still in flight) — and then prune the in-
+//	     flight CR's keys mid-write. AcquireIfFree refuses any
+//	     foreign holder regardless of expiry; stale-but-in-flight
+//	     recovery stays the responsibility of the normal-reconcile
+//	     path that holds and renews its own lease.
 //
-//   B2 — On failure, release every lease this attempt acquired so
-//        a stuck terminating CR doesn't permanently pin those
-//        families for other CRs. The next retry will Acquire-IfFree
-//        again, so the pattern is "acquire → mutate → release on
-//        success-or-failure" instead of the old "hold until
-//        finalizer removal".
+//	B2 — On failure, release every lease this attempt acquired so
+//	     a stuck terminating CR doesn't permanently pin those
+//	     families for other CRs. The next retry will Acquire-IfFree
+//	     again, so the pattern is "acquire → mutate → release on
+//	     success-or-failure" instead of the old "hold until
+//	     finalizer removal".
 func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1alpha1.IOSXEConfig) (returnedErr error) {
 	tr := r.GetTransport()
 	if tr == nil {
