@@ -123,6 +123,7 @@ func runManager(cmd *cobra.Command, args []string) error {
 		Image:             vkImage,
 		ServiceAccount:    vkServiceAccount,
 		AggregatorEnabled: enableAggregator,
+		Recorder:          mgr.GetEventRecorderFor("ciscodevice-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CiscoDevice")
 		os.Exit(1)

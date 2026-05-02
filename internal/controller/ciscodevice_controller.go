@@ -17,6 +17,8 @@ package controller
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -59,6 +62,10 @@ const (
 	DefaultImage = "ghcr.io/cisco/virtual-kubelet-cisco:latest"
 	// DefaultServiceAccount is the shared service account used by all VK deployments.
 	DefaultServiceAccount = "cisco-virtual-kubelet"
+	// ForcePrereqsSkipAnnotation lets an operator unblock CiscoDevice deletion
+	// when prereq relinquish cannot converge and accepted orphaned config.
+	ForcePrereqsSkipAnnotation    = "config.cisco.vk/force-prereqs-skip"
+	forceRelinquishSkipAnnotation = "config.cisco.vk/force-relinquish-skip"
 )
 
 // configPrereqsTeardownPollInterval is how often the deletion-finalizer path
@@ -87,6 +94,7 @@ type CiscoDeviceReconciler struct {
 	// without a registered configdriver still get apphosting pods, but
 	// with the in-pod ConfigReconciler disabled.
 	AggregatorEnabled bool
+	Recorder          record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=cisco.vk,resources=ciscodevices,verbs=get;list;watch;update;patch
@@ -212,8 +220,12 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 		logger.Info("aggregator owns config reconciliation; skipping per-device Deployment",
 			"device", device.Name, "driver", device.Spec.Driver)
-		if _, err := r.reconcileConfigPrereqs(ctx, &device); err != nil {
+		done, err := r.reconcileConfigPrereqs(ctx, &device)
+		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to reconcile configPrereqs: %w", err)
+		}
+		if !done {
+			return ctrl.Result{RequeueAfter: configPrereqsTeardownPollInterval}, nil
 		}
 		if err := r.updateStatus(ctx, &device, nil); err != nil {
 			return ctrl.Result{}, err
@@ -345,8 +357,12 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	logger.Info("Deployment reconciled", "name", deploy.Name, "operation", op)
 
 	// ── 6b. Reconcile the owned IOSXEConfig (configPrereqs) ─────────────
-	if _, err := r.reconcileConfigPrereqs(ctx, &device); err != nil {
+	done, err := r.reconcileConfigPrereqs(ctx, &device)
+	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reconcile configPrereqs: %w", err)
+	}
+	if !done {
+		return ctrl.Result{RequeueAfter: configPrereqsTeardownPollInterval}, nil
 	}
 
 	// ── 7. Update CiscoDevice status ────────────────────────────────────
@@ -388,10 +404,10 @@ func isPrereqTearingDown(cr *configv1alpha1.IOSXEConfig) bool {
 }
 
 // reconcileConfigPrereqs creates, updates, or tears down the IOSXEConfig CR
-// owned by CiscoDevice.spec.configPrereqs. Teardown is staged: drive empty
-// intent, wait for the per-device reconciler to observe that generation and
-// report InSync, request IOSXEConfig deletion, then wait for the CR to vanish
-// so its own finalizer has a chance to relinquish owned keys.
+// owned by CiscoDevice.spec.configPrereqs. Teardown delegates cleanup to the
+// IOSXEConfig controller's own pruneOnRelinquish finalizer: mark the owned CR
+// for relinquish, delete it with foreground propagation, observe it enter
+// deletion, then wait for it to vanish.
 func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, device *ciskov1.CiscoDevice) (bool, error) {
 	name := ownedIOSXEConfigName(device.Name)
 	key := types.NamespacedName{Namespace: device.Namespace, Name: name}
@@ -404,39 +420,51 @@ func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, devi
 	}
 
 	if device.Spec.ConfigPrereqs == nil {
+		if device.Annotations[ForcePrereqsSkipAnnotation] == "true" {
+			if found {
+				if err := r.forceSkipOwnedPrereqs(ctx, &existing); err != nil {
+					return false, err
+				}
+			}
+			r.emitPrereqsSkipped(device, prereqOrphanFamilies(&existing, found))
+			return true, nil
+		}
 		if !found {
+			if prereqTeardownObserved(device) {
+				return true, nil
+			}
+			if prereqTeardownStarted(device) {
+				if r.Recorder != nil {
+					r.Recorder.Eventf(device, corev1.EventTypeWarning, "PrereqTeardownDeletedExternally",
+						"owned IOSXEConfig %s/%s disappeared before deletion was observed; recreating empty intent to drive pruneOnRelinquish cleanup",
+						device.Namespace, name)
+				}
+				if err := r.recreatePrereqTeardownIOSXEConfig(ctx, device); err != nil {
+					return false, err
+				}
+				return false, nil
+			}
 			return true, nil
 		}
 		if !existing.DeletionTimestamp.IsZero() {
-			return false, nil
-		}
-		if !isPrereqTearingDown(&existing) {
-			updated := existing.DeepCopy()
-			updated.Spec.ManagedFamilies = append([]string(nil), apphostingPrereqFamilies...)
-			emptyInline := emptyPrereqInline()
-			updated.Spec.Source = configv1alpha1.ConfigurationSource{Inline: &emptyInline}
-			updated.Spec.PruneOnRelinquish = true
-			if err := r.Update(ctx, updated); err != nil {
-				return false, fmt.Errorf("drive owned IOSXEConfig to empty intent: %w", err)
+			if err := r.setCiscoDeviceCondition(ctx, device, metav1.Condition{
+				Type:               ciskov1.CiscoDeviceConditionPrereqTeardownObserved,
+				Status:             metav1.ConditionTrue,
+				Reason:             "IOSXEConfigDeleting",
+				ObservedGeneration: device.Generation,
+				Message:            "owned prereq IOSXEConfig deletion has been observed",
+			}); err != nil {
+				return false, err
 			}
-			log.FromContext(ctx).Info("configPrereqs teardown: empty intent applied; awaiting InSync",
-				"iosxeconfig", name)
 			return false, nil
 		}
-		if existing.Status.ObservedGeneration != existing.Generation {
-			log.FromContext(ctx).V(1).Info("configPrereqs teardown: awaiting observed generation",
-				"iosxeconfig", name,
-				"observedGeneration", existing.Status.ObservedGeneration,
-				"generation", existing.Generation)
-			return false, nil
+		updated, err := r.patchOwnedPrereqsForTeardown(ctx, &existing, false)
+		if err != nil {
+			return false, err
 		}
-		if existing.Status.Phase != "InSync" {
-			log.FromContext(ctx).V(1).Info("configPrereqs teardown: awaiting InSync",
-				"iosxeconfig", name, "phase", existing.Status.Phase)
-			return false, nil
-		}
-		if err := r.Delete(ctx, &existing); err != nil && !errors.IsNotFound(err) {
-			return false, fmt.Errorf("delete owned IOSXEConfig after teardown: %w", err)
+		fg := metav1.DeletePropagationForeground
+		if err := r.Delete(ctx, updated, &client.DeleteOptions{PropagationPolicy: &fg}); err != nil && !errors.IsNotFound(err) {
+			return false, fmt.Errorf("delete owned IOSXEConfig for prereq teardown: %w", err)
 		}
 		log.FromContext(ctx).Info("configPrereqs teardown: delete requested", "iosxeconfig", name)
 		return false, nil
@@ -461,6 +489,15 @@ func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, devi
 	})
 	if err != nil {
 		return false, fmt.Errorf("upsert owned IOSXEConfig: %w", err)
+	}
+	if err := r.setCiscoDeviceCondition(ctx, device, metav1.Condition{
+		Type:               ciskov1.CiscoDeviceConditionPrereqTeardownObserved,
+		Status:             metav1.ConditionFalse,
+		Reason:             "PrereqsActive",
+		ObservedGeneration: device.Generation,
+		Message:            "owned prereq IOSXEConfig is active",
+	}); err != nil {
+		return false, err
 	}
 	log.FromContext(ctx).Info("configPrereqs reconciled", "iosxeconfig", name, "operation", op)
 	return true, nil
@@ -581,6 +618,116 @@ func (r *CiscoDeviceReconciler) setCiscoDeviceCondition(ctx context.Context, dev
 		return fmt.Errorf("failed to update CiscoDevice condition %s: %w", cond.Type, err)
 	}
 	return nil
+}
+
+func prereqTeardownObserved(device *ciskov1.CiscoDevice) bool {
+	cond := meta.FindStatusCondition(device.Status.Conditions, ciskov1.CiscoDeviceConditionPrereqTeardownObserved)
+	return cond != nil && cond.Status == metav1.ConditionTrue
+}
+
+func prereqTeardownStarted(device *ciskov1.CiscoDevice) bool {
+	return meta.FindStatusCondition(device.Status.Conditions, ciskov1.CiscoDeviceConditionPrereqTeardownObserved) != nil
+}
+
+func (r *CiscoDeviceReconciler) patchOwnedPrereqsForTeardown(
+	ctx context.Context,
+	existing *configv1alpha1.IOSXEConfig,
+	forceRelinquishSkip bool,
+) (*configv1alpha1.IOSXEConfig, error) {
+	updated := existing.DeepCopy()
+	changed := false
+	if !updated.Spec.PruneOnRelinquish {
+		updated.Spec.PruneOnRelinquish = true
+		changed = true
+	}
+	if forceRelinquishSkip {
+		if updated.Annotations == nil {
+			updated.Annotations = map[string]string{}
+		}
+		if updated.Annotations[forceRelinquishSkipAnnotation] != "true" {
+			updated.Annotations[forceRelinquishSkipAnnotation] = "true"
+			changed = true
+		}
+	}
+	if !changed {
+		return updated, nil
+	}
+	if err := r.Patch(ctx, updated, client.MergeFrom(existing.DeepCopy())); err != nil {
+		return nil, fmt.Errorf("patch owned IOSXEConfig for prereq teardown: %w", err)
+	}
+	return updated, nil
+}
+
+func (r *CiscoDeviceReconciler) forceSkipOwnedPrereqs(ctx context.Context, existing *configv1alpha1.IOSXEConfig) error {
+	updated, err := r.patchOwnedPrereqsForTeardown(ctx, existing, true)
+	if err != nil {
+		return err
+	}
+	if !updated.DeletionTimestamp.IsZero() {
+		return nil
+	}
+	fg := metav1.DeletePropagationForeground
+	if err := r.Delete(ctx, updated, &client.DeleteOptions{PropagationPolicy: &fg}); err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("delete force-skipped owned IOSXEConfig: %w", err)
+	}
+	return nil
+}
+
+func (r *CiscoDeviceReconciler) recreatePrereqTeardownIOSXEConfig(ctx context.Context, device *ciskov1.CiscoDevice) error {
+	name := ownedIOSXEConfigName(device.Name)
+	emptyInline := emptyPrereqInline()
+	desired := &configv1alpha1.IOSXEConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: device.Namespace},
+		Spec: configv1alpha1.IOSXEConfigSpec{
+			DeviceRef: configv1alpha1.DeviceRef{Name: device.Name},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies:   append([]string(nil), apphostingPrereqFamilies...),
+				Source:            configv1alpha1.ConfigurationSource{Inline: &emptyInline},
+				DriftPolicy:       configv1alpha1.DriftPolicyRevert,
+				PruneOnRelinquish: true,
+			},
+		},
+	}
+	if err := controllerutil.SetControllerReference(device, desired, r.Scheme); err != nil {
+		return fmt.Errorf("set owner on recreated prereq IOSXEConfig: %w", err)
+	}
+	if err := r.Create(ctx, desired); err != nil && !errors.IsAlreadyExists(err) {
+		return fmt.Errorf("recreate prereq IOSXEConfig teardown driver: %w", err)
+	}
+	return nil
+}
+
+func prereqOrphanFamilies(cr *configv1alpha1.IOSXEConfig, found bool) []string {
+	if !found {
+		return append([]string(nil), apphostingPrereqFamilies...)
+	}
+	if len(cr.Status.AtomicReplaceOwnedKeys) > 0 {
+		out := make([]string, 0, len(cr.Status.AtomicReplaceOwnedKeys))
+		for family, keys := range cr.Status.AtomicReplaceOwnedKeys {
+			if len(keys) > 0 {
+				out = append(out, family)
+			}
+		}
+		if len(out) > 0 {
+			sort.Strings(out)
+			return out
+		}
+	}
+	if len(cr.Spec.ManagedFamilies) > 0 {
+		out := append([]string(nil), cr.Spec.ManagedFamilies...)
+		sort.Strings(out)
+		return out
+	}
+	return append([]string(nil), apphostingPrereqFamilies...)
+}
+
+func (r *CiscoDeviceReconciler) emitPrereqsSkipped(device *ciskov1.CiscoDevice, families []string) {
+	if r.Recorder == nil {
+		return
+	}
+	r.Recorder.Eventf(device, corev1.EventTypeWarning, "PrereqsSkipped",
+		"force-prereqs-skip annotation set; orphaning prereq families [%s] on device %q",
+		strings.Join(families, ", "), device.Name)
 }
 
 // mapSecretToCiscoDevices fans a Secret event out to CiscoDevices in the same
