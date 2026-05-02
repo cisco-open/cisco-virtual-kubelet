@@ -72,6 +72,8 @@ type IOSXEConfigResourceModel struct {
 	SourceInline      types.String `tfsdk:"source_inline"`
 	WriteStartup      types.Bool   `tfsdk:"write_startup"`
 	PruneOnRelinquish types.Bool   `tfsdk:"prune_on_relinquish"`
+	Labels            types.Map    `tfsdk:"labels"`
+	Annotations       types.Map    `tfsdk:"annotations"`
 
 	Phase             types.String `tfsdk:"phase"`
 	LastAppliedHash   types.String `tfsdk:"last_applied_hash"`
@@ -133,6 +135,14 @@ func (r *iosxeConfigResource) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"prune_on_relinquish": schema.BoolAttribute{
 				Optional: true,
+			},
+			"labels": schema.MapAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+			},
+			"annotations": schema.MapAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
 			},
 			"phase": schema.StringAttribute{
 				Computed: true,
@@ -298,15 +308,34 @@ func (r *iosxeConfigResource) toUnstructured(_ context.Context, m *IOSXEConfigRe
 	if !m.PruneOnRelinquish.IsNull() {
 		spec["pruneOnRelinquish"] = m.PruneOnRelinquish.ValueBool()
 	}
+
+	metadata := map[string]any{
+		"name":      m.Name.ValueString(),
+		"namespace": r.namespaceFor(m),
+	}
+	labels, err := stringMapFromMap(m.Labels)
+	if err != nil {
+		diag.AddError("decode labels failed", err.Error())
+		return nil, err
+	}
+	if len(labels) > 0 {
+		metadata["labels"] = stringsMapToAny(labels)
+	}
+	annotations, err := stringMapFromMap(m.Annotations)
+	if err != nil {
+		diag.AddError("decode annotations failed", err.Error())
+		return nil, err
+	}
+	if len(annotations) > 0 {
+		metadata["annotations"] = stringsMapToAny(annotations)
+	}
+
 	out := &unstructured.Unstructured{}
 	out.SetUnstructuredContent(map[string]any{
 		"apiVersion": "config.cisco.vk/v1alpha1",
 		"kind":       "IOSXEConfig",
-		"metadata": map[string]any{
-			"name":      m.Name.ValueString(),
-			"namespace": r.namespaceFor(m),
-		},
-		"spec": spec,
+		"metadata":   metadata,
+		"spec":       spec,
 	})
 	return out, nil
 }
@@ -425,6 +454,32 @@ func stringsToAny(in []string) []any {
 	out := make([]any, len(in))
 	for i, s := range in {
 		out[i] = s
+	}
+	return out
+}
+
+func stringMapFromMap(in types.Map) (map[string]string, error) {
+	if in.IsNull() || in.IsUnknown() {
+		return nil, nil
+	}
+	out := make(map[string]string, len(in.Elements()))
+	for k, e := range in.Elements() {
+		v, ok := e.(types.String)
+		if !ok {
+			return nil, fmt.Errorf("element %v is not a string", e)
+		}
+		if v.IsNull() || v.IsUnknown() {
+			continue
+		}
+		out[k] = v.ValueString()
+	}
+	return out, nil
+}
+
+func stringsMapToAny(in map[string]string) map[string]any {
+	out := make(map[string]any, len(in))
+	for k, v := range in {
+		out[k] = v
 	}
 	return out
 }

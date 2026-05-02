@@ -50,6 +50,19 @@ func mustList(t *testing.T, ss ...string) types.List {
 	return out
 }
 
+func mustMap(t *testing.T, values map[string]string) types.Map {
+	t.Helper()
+	elems := make(map[string]attr.Value, len(values))
+	for k, v := range values {
+		elems[k] = types.StringValue(v)
+	}
+	out, dgs := types.MapValue(types.StringType, elems)
+	if dgs.HasError() {
+		t.Fatalf("types.MapValue: %v", dgs)
+	}
+	return out
+}
+
 func TestSplitNamespacedNameWellFormed(t *testing.T) {
 	ns, name, ok := splitNamespacedName("network/edge-01")
 	if !ok || ns != "network" || name != "edge-01" {
@@ -182,7 +195,7 @@ func TestUpdatePreservesControllerMetadata(t *testing.T) {
 	existing.SetName("edge-01")
 	existing.SetNamespace("network")
 	existing.SetFinalizers([]string{"config.cisco.vk/lease-cleanup"})
-	existing.SetLabels(map[string]string{"controller.cisco.vk/owned": "true"})
+	existing.SetLabels(map[string]string{"cisco.vk/managed-by-controller": "true"})
 	existing.SetAnnotations(map[string]string{"controller.cisco.vk/annotation": "keep"})
 	existing.SetOwnerReferences([]metav1.OwnerReference{{
 		APIVersion: "cisco.vk/v1alpha1",
@@ -196,6 +209,12 @@ func TestUpdatePreservesControllerMetadata(t *testing.T) {
 	if err := unstructured.SetNestedStringSlice(existing.Object, []string{"vlan"}, "spec", "managedFamilies"); err != nil {
 		t.Fatalf("seed spec.managedFamilies: %v", err)
 	}
+	if err := unstructured.SetNestedMap(existing.Object, map[string]any{
+		"observedGeneration": int64(3),
+		"phase":              "InSync",
+	}, "status"); err != nil {
+		t.Fatalf("seed status: %v", err)
+	}
 
 	r := &iosxeConfigResource{
 		client: fakeDynamic(t, existing),
@@ -206,6 +225,18 @@ func TestUpdatePreservesControllerMetadata(t *testing.T) {
 		var payload map[string]any
 		if err := json.Unmarshal(patch.GetPatch(), &payload); err != nil {
 			return true, nil, err
+		}
+		if _, ok := payload["status"]; ok {
+			t.Fatalf("apply payload included status: %v", payload["status"])
+		}
+		metadata, ok := payload["metadata"].(map[string]any)
+		if !ok {
+			t.Fatalf("apply payload metadata=%T, want map[string]any", payload["metadata"])
+		}
+		for _, forbidden := range []string{"finalizers", "ownerReferences", "managedFields", "labels", "annotations"} {
+			if _, ok := metadata[forbidden]; ok {
+				t.Fatalf("apply payload metadata included %s: %v", forbidden, metadata[forbidden])
+			}
 		}
 		if spec, ok := payload["spec"]; ok {
 			stored.Object["spec"] = spec
@@ -240,15 +271,100 @@ func TestUpdatePreservesControllerMetadata(t *testing.T) {
 	if !reflect.DeepEqual(got.GetOwnerReferences(), existing.GetOwnerReferences()) {
 		t.Fatalf("ownerReferences=%v, want %v", got.GetOwnerReferences(), existing.GetOwnerReferences())
 	}
-	if got.GetLabels()["controller.cisco.vk/owned"] != "true" {
+	if got.GetLabels()["cisco.vk/managed-by-controller"] != "true" {
 		t.Fatalf("labels=%v, want controller label preserved", got.GetLabels())
 	}
 	if got.GetAnnotations()["controller.cisco.vk/annotation"] != "keep" {
 		t.Fatalf("annotations=%v, want controller annotation preserved", got.GetAnnotations())
 	}
+	phase, found, err := unstructured.NestedString(got.Object, "status", "phase")
+	if err != nil || !found || phase != "InSync" {
+		t.Fatalf("status.phase=%q found=%v err=%v, want preserved InSync", phase, found, err)
+	}
 	families, _, _ := unstructured.NestedStringSlice(got.Object, "spec", "managedFamilies")
 	if !reflect.DeepEqual(families, []string{"vlan", "vrf"}) {
 		t.Fatalf("managedFamilies=%v, want updated Terraform spec", families)
+	}
+}
+
+func TestUpdatePreservesNonTerraformLabels(t *testing.T) {
+	existing := &unstructured.Unstructured{}
+	existing.SetAPIVersion("config.cisco.vk/v1alpha1")
+	existing.SetKind("IOSXEConfig")
+	existing.SetName("edge-01")
+	existing.SetNamespace("network")
+	existing.SetLabels(map[string]string{
+		"foo": "bar",
+		"tf":  "yes",
+	})
+	if err := unstructured.SetNestedField(existing.Object, map[string]any{"name": "edge-01"}, "spec", "deviceRef"); err != nil {
+		t.Fatalf("seed spec.deviceRef: %v", err)
+	}
+	if err := unstructured.SetNestedStringSlice(existing.Object, []string{"vlan"}, "spec", "managedFamilies"); err != nil {
+		t.Fatalf("seed spec.managedFamilies: %v", err)
+	}
+
+	r := &iosxeConfigResource{
+		client: fakeDynamic(t, existing),
+	}
+	stored := existing.DeepCopy()
+	r.client.(*dynfake.FakeDynamicClient).PrependReactor("patch", "iosxeconfigs", func(action ktesting.Action) (bool, runtime.Object, error) {
+		patch := action.(ktesting.PatchAction)
+		var payload map[string]any
+		if err := json.Unmarshal(patch.GetPatch(), &payload); err != nil {
+			return true, nil, err
+		}
+		metadata, ok := payload["metadata"].(map[string]any)
+		if !ok {
+			t.Fatalf("apply payload metadata=%T, want map[string]any", payload["metadata"])
+		}
+		rawLabels, ok := metadata["labels"].(map[string]any)
+		if !ok {
+			t.Fatalf("apply payload labels=%T, want map[string]any", metadata["labels"])
+		}
+		if len(rawLabels) != 1 || rawLabels["tf"] != "updated" {
+			t.Fatalf("apply payload labels=%v, want only Terraform-owned tf=updated", rawLabels)
+		}
+		labels := stored.GetLabels()
+		if labels == nil {
+			labels = map[string]string{}
+		}
+		for k, v := range rawLabels {
+			s, ok := v.(string)
+			if !ok {
+				t.Fatalf("label %s=%T, want string", k, v)
+			}
+			labels[k] = s
+		}
+		stored.SetLabels(labels)
+		if spec, ok := payload["spec"]; ok {
+			stored.Object["spec"] = spec
+		}
+		return true, stored.DeepCopy(), nil
+	})
+
+	model := &IOSXEConfigResourceModel{
+		Name:            types.StringValue("edge-01"),
+		Namespace:       types.StringValue("network"),
+		DeviceRef:       types.StringValue("edge-01"),
+		ManagedFamilies: mustList(t, "vlan"),
+		SourceInline:    types.StringValue(`{"vlan":{"vlans":[{"id":10,"name":"users"}]}}`),
+		Labels:          mustMap(t, map[string]string{"tf": "updated"}),
+	}
+	sink := &dummySink{}
+	obj, err := r.toUnstructured(context.Background(), model, sink)
+	if err != nil || sink.errs != nil {
+		t.Fatalf("toUnstructured: err=%v sink=%v", err, sink.errs)
+	}
+	got, err := r.applyIOSXEConfig(context.Background(), "network", obj)
+	if err != nil {
+		t.Fatalf("applyIOSXEConfig: %v", err)
+	}
+	if got.GetLabels()["foo"] != "bar" {
+		t.Fatalf("labels=%v, want non-Terraform label foo=bar preserved", got.GetLabels())
+	}
+	if got.GetLabels()["tf"] != "updated" {
+		t.Fatalf("labels=%v, want Terraform label tf=updated", got.GetLabels())
 	}
 }
 
