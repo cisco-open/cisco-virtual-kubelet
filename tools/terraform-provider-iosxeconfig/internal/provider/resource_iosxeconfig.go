@@ -378,7 +378,10 @@ func (r *iosxeConfigResource) waitForObservedGeneration(ctx context.Context, ns,
 		select {
 		case <-waitCtx.Done():
 			if last != nil {
-				return last, fmt.Errorf("timed out waiting for status.observedGeneration to reach metadata.generation")
+				lastObserved, _, _ := unstructured.NestedInt64(last.Object, "status", "observedGeneration")
+				lastPhase, _, _ := unstructured.NestedString(last.Object, "status", "phase")
+				return last, fmt.Errorf("timed out waiting for status.observedGeneration=%d to reach metadata.generation=%d (last resourceVersion=%s, status.phase=%q); if the cisco-vk reconciler is down, restart it",
+					lastObserved, generation, last.GetResourceVersion(), lastPhase)
 			}
 			return nil, waitCtx.Err()
 		case <-time.After(convergencePoll):
