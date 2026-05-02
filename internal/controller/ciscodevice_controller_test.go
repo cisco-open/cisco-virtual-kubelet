@@ -23,6 +23,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,6 +47,7 @@ func newTestScheme(t *testing.T) *runtime.Scheme {
 	s := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(s))
 	utilruntime.Must(coordv1.AddToScheme(s))
+	utilruntime.Must(rbacv1.AddToScheme(s))
 	utilruntime.Must(ciskov1.AddToScheme(s))
 	utilruntime.Must(configv1alpha1.AddToScheme(s))
 	return s
@@ -173,6 +175,45 @@ func TestReconcile_CreatesDeployment(t *testing.T) {
 	}
 	if len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts) != 2 {
 		t.Errorf("expected 2 volume mounts (device-config, tls-gen), got %d", len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts))
+	}
+}
+
+func TestReconcile_ProvisionsVKAccessInDeviceNamespace(t *testing.T) {
+	device := newDevice("router-access", "tenant-a")
+	device.UID = types.UID("router-access-uid")
+	r := reconcilerFor(t, device)
+	r.ServiceAccount = ""
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("tenant-a", "router-access")); err != nil {
+		t.Fatalf("Reconcile returned unexpected error: %v", err)
+	}
+
+	var sa corev1.ServiceAccount
+	key := types.NamespacedName{Namespace: "tenant-a", Name: DefaultServiceAccount}
+	if err := r.Get(ctx, key, &sa); err != nil {
+		t.Fatalf("ServiceAccount not found after reconcile: %v", err)
+	}
+	if !metav1.IsControlledBy(&sa, device) {
+		t.Fatalf("ServiceAccount owner references = %+v, want controlled by CiscoDevice", sa.OwnerReferences)
+	}
+
+	var rb rbacv1.RoleBinding
+	if err := r.Get(ctx, key, &rb); err != nil {
+		t.Fatalf("RoleBinding not found after reconcile: %v", err)
+	}
+	if !metav1.IsControlledBy(&rb, device) {
+		t.Fatalf("RoleBinding owner references = %+v, want controlled by CiscoDevice", rb.OwnerReferences)
+	}
+	if rb.RoleRef.APIGroup != rbacv1.GroupName || rb.RoleRef.Kind != "ClusterRole" || rb.RoleRef.Name != vkSharedClusterRole {
+		t.Fatalf("RoleBinding RoleRef = %+v, want ClusterRole %s", rb.RoleRef, vkSharedClusterRole)
+	}
+	if len(rb.Subjects) != 1 {
+		t.Fatalf("RoleBinding subjects = %+v, want exactly one ServiceAccount subject", rb.Subjects)
+	}
+	subject := rb.Subjects[0]
+	if subject.Kind != rbacv1.ServiceAccountKind || subject.Name != DefaultServiceAccount || subject.Namespace != "tenant-a" {
+		t.Fatalf("RoleBinding subject = %+v, want tenant ServiceAccount %s", subject, DefaultServiceAccount)
 	}
 }
 

@@ -23,6 +23,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -119,6 +120,15 @@ type CiscoDeviceReconciler struct {
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;delete
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs/status,verbs=get
+// The controller spawns per-device cisco-vk Deployments in the device's
+// namespace and references a shared ServiceAccount. The chart only seeds that
+// ServiceAccount in the release namespace, so tenant namespaces need their own
+// local ServiceAccount and RoleBinding to the chart-supplied ClusterRole.
+// +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch
+// Required by the API server's privilege-escalation check when binding the
+// chart-supplied ClusterRole into a tenant namespace.
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet,verbs=bind
 
 // Reconcile ensures a ConfigMap and Deployment exist for each CiscoDevice.
 func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -284,6 +294,15 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, nil
 	}
 
+	// -- 5b. Ensure VK SA + RoleBinding exist in the device's namespace --
+	serviceAccount := r.ServiceAccount
+	if serviceAccount == "" {
+		serviceAccount = DefaultServiceAccount
+	}
+	if err := r.ensureVKAccess(ctx, &device, serviceAccount); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to ensure VK access: %w", err)
+	}
+
 	// ── 6. Reconcile the Deployment ─────────────────────────────────────
 	if err := r.clearAggregatorHandoverConditions(ctx, &device); err != nil {
 		return ctrl.Result{}, err
@@ -299,11 +318,6 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	image := r.Image
 	if image == "" {
 		image = DefaultImage
-	}
-
-	serviceAccount := r.ServiceAccount
-	if serviceAccount == "" {
-		serviceAccount = DefaultServiceAccount
 	}
 
 	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, deploy, func() error {
@@ -426,6 +440,58 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// vkSharedClusterRole is the cluster-scoped Role the chart ships with the VK
+// pod permissions baked in. The controller binds it into the device namespace
+// so per-device cisco-vk pods can run outside the chart release namespace.
+const vkSharedClusterRole = "cisco-virtual-kubelet"
+
+// ensureVKAccess provisions the per-namespace bits the chart cannot: a
+// ServiceAccount and a RoleBinding to the chart-supplied ClusterRole. Both
+// objects are owned by the CiscoDevice so removing the device garbage-collects
+// them.
+func (r *CiscoDeviceReconciler) ensureVKAccess(ctx context.Context, device *ciskov1.CiscoDevice, saName string) error {
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      saName,
+			Namespace: device.Namespace,
+		},
+	}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, sa, func() error {
+		if len(sa.OwnerReferences) == 0 {
+			return controllerutil.SetControllerReference(device, sa, r.Scheme)
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("ServiceAccount %s/%s: %w", sa.Namespace, sa.Name, err)
+	}
+
+	rb := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      saName,
+			Namespace: device.Namespace,
+		},
+	}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, rb, func() error {
+		rb.RoleRef = rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     vkSharedClusterRole,
+		}
+		rb.Subjects = []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      saName,
+			Namespace: device.Namespace,
+		}}
+		if len(rb.OwnerReferences) == 0 {
+			return controllerutil.SetControllerReference(device, rb, r.Scheme)
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("RoleBinding %s/%s: %w", rb.Namespace, rb.Name, err)
+	}
+	return nil
 }
 
 // apphostingPrereqFamilies is the closed set of IOSXEConfig families the
