@@ -1,0 +1,159 @@
+# Copyright 2026 Cisco Systems, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Release pipeline: build, scan, push, sign, attest.
+#
+# Triggers on tags v* so the smoke workflow doesn't have to do the
+# heavy lifting on every push. The job produces:
+#
+#   - A multi-arch container image at
+#     ghcr.io/${{ github.repository }}:<tag>
+#   - A CycloneDX SBOM committed as a release asset
+#   - A keyless cosign signature on the image (Sigstore Fulcio)
+#   - A SLSA-style provenance attestation via cosign attest
+#   - A Trivy vulnerability scan report (HIGH/CRITICAL fail the build)
+#
+# Why keyless signing instead of a long-lived signing key: cosign's
+# OIDC flow with the GitHub Actions identity gives every signature a
+# verifiable provenance trail (this workflow, this commit, this run)
+# without any KMS or secret rotation overhead. Verification looks
+# like:
+#
+#   cosign verify ghcr.io/<repo>:<tag> \
+#     --certificate-identity-regexp "https://github.com/<repo>/.github/workflows/release.yml@refs/tags/v.*" \
+#     --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write   # required for cosign keyless signing
+  attestations: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-sign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          sbom: true
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.2.0
+        with:
+          version: v0.55.2
+
+      - name: Scan image for HIGH/CRITICAL CVEs
+        # Fails the build on HIGH/CRITICAL only — MEDIUM and below are
+        # surfaced in the report but don't block. Adjust the severity
+        # threshold here as the project's appetite changes.
+        run: |
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            --ignore-unfixed \
+            --format sarif \
+            --output trivy.sarif \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+
+      - name: Upload Trivy SARIF to code-scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy.sarif
+
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: v2.4.1
+
+      - name: Keyless sign image
+        env:
+          COSIGN_EXPERIMENTAL: 'true'
+        run: |
+          cosign sign --yes ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+
+      - name: Attach SBOM as cosign attestation
+        env:
+          COSIGN_EXPERIMENTAL: 'true'
+        run: |
+          cosign attest --yes \
+            --type cyclonedx \
+            --predicate sbom.cdx.json \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+
+      - name: Upload SBOM as workflow artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.ref_name }}
+          path: sbom.cdx.json
+          retention-days: 90
+
+      - name: Attach SBOM to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sbom.cdx.json

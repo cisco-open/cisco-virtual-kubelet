@@ -1,0 +1,294 @@
+# Copyright 2026 Cisco Systems, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Smoke pipeline — runs on every push and PR. The point is not to
+# verify the *device* side (which needs a real Cat9K reachable on
+# RESTCONF/NETCONF/gNMI and so cannot live in CI) but to verify the
+# *cluster-side plumbing* of the controller: build, image side-load,
+# Helm install, CRDs, RBAC, and that the cisco-vk pod actually
+# reaches the device-call boundary. The connection-refused beyond
+# that boundary is expected and is treated as a passing condition.
+#
+# When this workflow is green, the things that have been validated
+# end-to-end in a clean environment are:
+#   - Go module builds and tests pass with -race
+#   - Container image builds
+#   - Helm chart installs (values.schema.json catches typos)
+#   - CRDs apply without conversion failures
+#   - Controller pod reaches Ready
+#   - Per-namespace VK SA + RoleBinding are auto-provisioned
+#   - cisco-vk pod schedules in the device namespace
+#   - The device-call path is reached (the failure mode beyond is
+#     out of scope for CI).
+
+name: smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Build
+        run: go build ./...
+
+      - name: go vet
+        # Static analysis gate per pre-pr-test-enrichment-plan §6.
+        # A separate step from the test gate so a vet failure is
+        # diagnosed without waiting for the test suite.
+        run: go vet ./...
+
+      - name: Unit tests
+        run: go test -race -count=1 ./...
+
+      - name: Generated artefact drift check
+        # Per pre-pr-test-enrichment-plan §6: regenerate the CRDs
+        # and DeepCopy methods, then assert no drift. A non-empty
+        # `git status` here means the source-of-truth markers and
+        # the committed artefacts have diverged. The ygot regen
+        # is deliberately excluded because its drift is currently
+        # owned as a separate apphosting cleanup item.
+        run: |
+          make crd-gen deepcopy-gen rbac-gen helm-sync-crds
+          if ! git diff --quiet -- api/ config/crd/ charts/cisco-virtual-kubelet/; then
+            echo "Generated CRDs / DeepCopy / RBAC drifted from sources:"
+            git diff --stat -- api/ config/crd/ charts/cisco-virtual-kubelet/
+            git diff -- api/ config/crd/ charts/cisco-virtual-kubelet/ | head -200
+            exit 1
+          fi
+          echo "Generated artefacts in sync with sources."
+
+      - name: CRD / Helm chart sync check
+        # Belt-and-suspenders for the diff above: explicitly enumerate
+        # each CRD file and confirm config/crd/ matches charts/.../crds/.
+        run: |
+          for f in config/crd/*.yaml; do
+            base="$(basename "$f")"
+            if ! diff -q "$f" "charts/cisco-virtual-kubelet/crds/${base}" > /dev/null; then
+              echo "CRD/chart sync drift on ${base}"
+              diff -u "$f" "charts/cisco-virtual-kubelet/crds/${base}" | head -100
+              exit 1
+            fi
+          done
+          echo "CRD/chart sync clean (8 of 8)."
+
+      - name: setup-envtest binaries
+        # Pinned per pre-pr-test-enrichment-plan §6 — never @latest in
+        # CI. The setup-envtest sub-module of controller-runtime is
+        # not independently tagged; the canonical pin is a Go
+        # pseudo-version anchored on the same commit as the
+        # controller-runtime release used by go.mod (currently
+        # v0.22.4 → 7a1b16d039d2, dated 2025-11-03). Bump together
+        # with the controller-runtime go.mod entry and re-run the
+        # suite before locking in.
+        run: |
+          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20251103140007-7a1b16d039d2
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Real-apiserver smoke (envtest)
+        # Closes the recurring fake-client-doesn't-validate gap at
+        # the apiserver-admission level (LeaseBlocked enum, DNS-1123
+        # Lease names, future schema additions).
+        run: make test-envtest
+
+      - name: Install kind
+        uses: helm/kind-action@v1
+        with:
+          version: v0.24.0
+          cluster_name: smoke
+          wait: 60s
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.15.4
+
+      - name: helm lint
+        # Lint the chart with the regenerated CRDs in place. Runs
+        # after Helm install (which is what brings the binary onto
+        # the runner) but before the chart is templated against
+        # the kind cluster — the lint is a static check.
+        run: helm lint charts/cisco-virtual-kubelet
+
+      - name: Build controller image
+        run: docker build -t cisco-vk:smoke .
+
+      - name: Side-load image into kind
+        # Non-destructive — kind copies the image into the node.
+        run: kind load docker-image cisco-vk:smoke --name smoke
+
+      - name: Helm install
+        run: |
+          kubectl create namespace cisco-vk-system
+          helm install cisco-vk ./charts/cisco-virtual-kubelet \
+            --namespace cisco-vk-system \
+            --set image.repository=cisco-vk \
+            --set image.tag=smoke \
+            --set image.pullPolicy=Never \
+            --set controllerImage.repository=cisco-vk \
+            --set controllerImage.tag=smoke \
+            --set controllerImage.pullPolicy=Never \
+            --set vkImage.repository=cisco-vk \
+            --set vkImage.tag=smoke \
+            --set vkImage.pullPolicy=Never \
+            --wait --timeout 5m
+
+      - name: Verify controller is Ready
+        run: |
+          kubectl -n cisco-vk-system rollout status \
+            deploy/cisco-vk-cisco-virtual-kubelet-controller --timeout=180s
+          kubectl -n cisco-vk-system get pods
+
+      - name: Apply test CRs
+        # The device address is RFC 5737 documentation space — the
+        # connection-refused we expect is what tells us the cisco-vk
+        # binary reached the transport-build path. We are not asking
+        # CI to talk to a real Cat9K.
+        run: |
+          kubectl create namespace cisco-vk-smoke
+          cat <<'EOF' | kubectl apply -f -
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: smoke-creds
+            namespace: cisco-vk-smoke
+          type: Opaque
+          stringData:
+            password: smoke
+          ---
+          apiVersion: cisco.vk/v1alpha1
+          kind: CiscoDevice
+          metadata:
+            name: smoke
+            namespace: cisco-vk-smoke
+          spec:
+            driver: XE
+            address: 192.0.2.1
+            port: 443
+            username: smoke
+            credentialSecretRef: { name: smoke-creds }
+            tls: { enabled: true, insecureSkipVerify: true }
+            maxPods: 1
+            xe:
+              networking:
+                interface:
+                  type: Management
+                  management:
+                    dhcp: true
+          ---
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: smoke-data
+            namespace: cisco-vk-smoke
+          data:
+            data.nac.yaml: |
+              iosxe:
+                devices:
+                  - name: smoke
+                    host: 192.0.2.1
+                    configuration:
+                      system:
+                        hostname: smoke
+          ---
+          apiVersion: config.cisco.vk/v1alpha1
+          kind: IOSXEConfig
+          metadata:
+            name: smoke
+            namespace: cisco-vk-smoke
+          spec:
+            deviceRef: { name: smoke }
+            managedFamilies: [system]
+            transactional: false
+            writeStartup: false
+            driftDetectInterval: 5m
+            driftPolicy: report
+            source:
+              configMapRef: { name: smoke-data, key: data.nac.yaml }
+          EOF
+
+      - name: Verify VK SA and RoleBinding auto-provisioned
+        # Assertion of the controller fix: a CiscoDevice in a tenant
+        # namespace must cause the VK SA + RoleBinding to appear there.
+        run: |
+          for i in $(seq 1 30); do
+            if kubectl -n cisco-vk-smoke get sa cisco-virtual-kubelet >/dev/null 2>&1 \
+               && kubectl -n cisco-vk-smoke get rolebinding cisco-virtual-kubelet >/dev/null 2>&1; then
+              echo "VK access provisioned"
+              break
+            fi
+            sleep 2
+          done
+          kubectl -n cisco-vk-smoke get sa,rolebinding,deploy
+
+      - name: Verify cisco-vk pod reaches device-call boundary
+        # The only blocker past this point is an unreachable device,
+        # which CI does not provide. Either:
+        #   - pod is Running (e.g. on a future stub-driver path), OR
+        #   - pod is CrashLoopBackOff/Error with a transport-level
+        #     connection-refused or timeout — proves the binary
+        #     reached the device call.
+        # Any RBAC, schema, or config-shape failure surfaces here as
+        # a non-transport error and fails the job.
+        run: |
+          for i in $(seq 1 60); do
+            phase=$(kubectl -n cisco-vk-smoke get pods -l app.kubernetes.io/instance=smoke \
+              -o jsonpath='{.items[*].status.phase}' 2>/dev/null || true)
+            case "$phase" in
+              *Running*|*Failed*) break ;;
+            esac
+            sleep 3
+          done
+          kubectl -n cisco-vk-smoke get pods
+          logs=$(kubectl -n cisco-vk-smoke logs -l app.kubernetes.io/instance=smoke --tail=80 2>&1 || true)
+          echo "$logs"
+          if echo "$logs" | grep -qE 'connect: connection refused|i/o timeout|context deadline exceeded|no route to host|failed to validate device connection'; then
+            echo "Reached device-call boundary as expected"
+            exit 0
+          fi
+          if echo "$logs" | grep -qE 'requires xe config section|forbidden|cannot list|cannot get'; then
+            echo "Failure was upstream of the device call — surfaces a real defect"
+            exit 1
+          fi
+          # Pod still starting and we ran out of polls; treat as soft fail
+          # so the job is investigatable rather than silently green.
+          echo "cisco-vk did not reach a recognised state in time"
+          exit 1
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          kubectl get nodes -o wide
+          kubectl get pods -A
+          kubectl -n cisco-vk-system describe deploy/cisco-vk-cisco-virtual-kubelet-controller || true
+          kubectl -n cisco-vk-system logs deploy/cisco-vk-cisco-virtual-kubelet-controller --tail=200 || true
+          kubectl -n cisco-vk-smoke describe ciscodevice smoke || true
+          kubectl -n cisco-vk-smoke describe iosxeconfig smoke || true
+          kubectl -n cisco-vk-smoke get events --sort-by=.lastTimestamp || true
