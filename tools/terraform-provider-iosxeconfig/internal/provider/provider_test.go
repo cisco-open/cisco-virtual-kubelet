@@ -23,7 +23,7 @@ kind: Config
 clusters:
 - name: default-cluster
   cluster:
-    server: https://default.example.invalid
+    server: https://default-cluster.example.invalid
 - name: non-default-cluster
   cluster:
     server: https://non-default.example.invalid
@@ -52,6 +52,48 @@ users:
 		t.Fatalf("loadRESTConfig: %v", err)
 	}
 	if got, want := cfg.Host, "https://non-default.example.invalid"; got != want {
+		t.Fatalf("REST host=%q, want %q", got, want)
+	}
+}
+
+func TestProviderEnvKubeconfigWithoutContext(t *testing.T) {
+	dir := t.TempDir()
+	kubeconfig := filepath.Join(dir, "config")
+	body := []byte(`
+apiVersion: v1
+kind: Config
+clusters:
+- name: default-cluster
+  cluster:
+    server: https://default-cluster.example.invalid
+- name: non-default-cluster
+  cluster:
+    server: https://non-default.example.invalid
+contexts:
+- name: default
+  context:
+    cluster: default-cluster
+    user: test-user
+- name: non-default
+  context:
+    cluster: non-default-cluster
+    user: test-user
+current-context: default
+users:
+- name: test-user
+  user:
+    token: test-token
+`)
+	if err := os.WriteFile(kubeconfig, body, 0o600); err != nil {
+		t.Fatalf("write kubeconfig fixture: %v", err)
+	}
+	t.Setenv("KUBECONFIG", kubeconfig)
+
+	cfg, err := loadRESTConfig("", "")
+	if err != nil {
+		t.Fatalf("loadRESTConfig: %v", err)
+	}
+	if got, want := cfg.Host, "https://default-cluster.example.invalid"; got != want {
 		t.Fatalf("REST host=%q, want %q", got, want)
 	}
 }
