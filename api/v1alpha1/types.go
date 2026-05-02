@@ -32,6 +32,11 @@ const (
 )
 
 const (
+	// CiscoDeviceConditionAggregatorOwning is set while the controller is
+	// transferring config-reconcile ownership to the aggregator. Per-device
+	// Pods may still be terminating. Aggregator MUST NOT act on a device whose
+	// AggregatorOwned condition is still false.
+	CiscoDeviceConditionAggregatorOwning = "AggregatorOwning"
 	// CiscoDeviceConditionAggregatorOwned is set by the CiscoDevice controller
 	// once aggregator topology owns a configdriver-backed device.
 	CiscoDeviceConditionAggregatorOwned = "AggregatorOwned"

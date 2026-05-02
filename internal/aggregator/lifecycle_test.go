@@ -299,3 +299,64 @@ func TestAggregatorCredentialFallthrough(t *testing.T) {
 		t.Errorf("missing credential should NOT start a partial worker")
 	}
 }
+
+func TestAggregatorRefusesDeviceWhileOwning(t *testing.T) {
+	registerStubFakeDriver(t)
+
+	scheme := aggScheme(t)
+	dev := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{Name: "owning-fake", Namespace: "agg-test"},
+		Spec: ciskov1.DeviceSpec{
+			Driver:   ciskov1.DeviceDriverFAKE,
+			Address:  "10.0.0.10",
+			Username: "u",
+			Password: "inline",
+		},
+		Status: ciskov1.DeviceStatus{
+			Conditions: []metav1.Condition{
+				{
+					Type:   ciskov1.CiscoDeviceConditionAggregatorOwning,
+					Status: metav1.ConditionTrue,
+					Reason: "HandoverInProgress",
+				},
+				{
+					Type:   ciskov1.CiscoDeviceConditionAggregatorOwned,
+					Status: metav1.ConditionTrue,
+					Reason: "AggregatorEnabled",
+				},
+			},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&ciskov1.CiscoDevice{}).
+		WithObjects(dev).
+		Build()
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	workerCtx, workerCancel := context.WithCancel(rootCtx)
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: dev.Namespace, Name: dev.Name}}
+	r := &AggregatedReconciler{
+		Client:  c,
+		Scheme:  scheme,
+		managed: map[string]*deviceWorker{req.String(): &deviceWorker{cancel: workerCancel, specHash: "old"}},
+		rootCtx: rootCtx,
+	}
+
+	if _, err := r.Reconcile(rootCtx, req); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	r.mu.Lock()
+	_, present := r.managed[req.String()]
+	r.mu.Unlock()
+	if present {
+		t.Fatalf("AggregatorOwning=True must stop the worker even if AggregatorOwned=True")
+	}
+	select {
+	case <-workerCtx.Done():
+	default:
+		t.Fatal("worker cancel was not called")
+	}
+}

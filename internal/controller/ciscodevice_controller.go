@@ -190,20 +190,25 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			Name:      device.Name + deploymentSuffix,
 			Namespace: device.Namespace,
 		}
-		if err := r.setCiscoDeviceCondition(ctx, &device, metav1.Condition{
-			Type:               ciskov1.CiscoDeviceConditionAggregatorOwned,
-			Status:             metav1.ConditionTrue,
-			Reason:             "AggregatorEnabled",
-			ObservedGeneration: device.Generation,
-			Message:            "config reconciliation is owned by the manager aggregator",
-		}); err != nil {
-			return ctrl.Result{}, err
-		}
+		staleControlled := false
 		if err := r.Get(ctx, staleKey, stale); err != nil {
 			if !errors.IsNotFound(err) {
 				return ctrl.Result{}, fmt.Errorf("fetch stale per-device Deployment under aggregator mode: %w", err)
 			}
-		} else if metav1.IsControlledBy(stale, &device) {
+		} else {
+			staleControlled = metav1.IsControlledBy(stale, &device)
+		}
+
+		owned := meta.FindStatusCondition(device.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwned)
+		owning := meta.FindStatusCondition(device.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwning)
+		handoverActive := staleControlled || conditionTrue(owning) || !conditionTrue(owned)
+		if handoverActive {
+			if err := r.markAggregatorHandoverInProgress(ctx, &device); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+
+		if staleControlled {
 			fg := metav1.DeletePropagationForeground
 			if err := r.Delete(ctx, stale, &client.DeleteOptions{PropagationPolicy: &fg}); err != nil && !errors.IsNotFound(err) {
 				return ctrl.Result{}, fmt.Errorf("delete stale per-device Deployment under aggregator mode: %w", err)
@@ -214,9 +219,34 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, fmt.Errorf("list stale per-device Pods under aggregator mode: %w", err)
 		}
 		if !quiesced {
+			if !handoverActive {
+				if err := r.markAggregatorHandoverInProgress(ctx, &device); err != nil {
+					return ctrl.Result{}, err
+				}
+			}
 			logger.Info("aggregator owns config reconciliation; waiting for stale per-device Pods to exit",
 				"device", device.Name, "driver", device.Spec.Driver)
 			return ctrl.Result{RequeueAfter: aggregatorTopologyPollInterval}, nil
+		}
+		if handoverActive {
+			if err := r.setCiscoDeviceCondition(ctx, &device, metav1.Condition{
+				Type:               ciskov1.CiscoDeviceConditionAggregatorOwning,
+				Status:             metav1.ConditionFalse,
+				Reason:             "HandoverComplete",
+				ObservedGeneration: device.Generation,
+				Message:            "per-device Pods are quiesced; aggregator ownership may proceed",
+			}); err != nil {
+				return ctrl.Result{}, err
+			}
+			if err := r.setCiscoDeviceCondition(ctx, &device, metav1.Condition{
+				Type:               ciskov1.CiscoDeviceConditionAggregatorOwned,
+				Status:             metav1.ConditionTrue,
+				Reason:             "AggregatorEnabled",
+				ObservedGeneration: device.Generation,
+				Message:            "config reconciliation is owned by the manager aggregator",
+			}); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 		logger.Info("aggregator owns config reconciliation; skipping per-device Deployment",
 			"device", device.Name, "driver", device.Spec.Driver)
@@ -234,6 +264,10 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// ── 6. Reconcile the Deployment ─────────────────────────────────────
+	if err := r.clearAggregatorHandoverConditions(ctx, &device); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      device.Name + deploymentSuffix,
@@ -602,6 +636,61 @@ func (r *CiscoDeviceReconciler) perDevicePodsQuiesced(ctx context.Context, devic
 		return false, err
 	}
 	return len(pods.Items) == 0, nil
+}
+
+func conditionTrue(cond *metav1.Condition) bool {
+	return cond != nil && cond.Status == metav1.ConditionTrue
+}
+
+func (r *CiscoDeviceReconciler) markAggregatorHandoverInProgress(ctx context.Context, device *ciskov1.CiscoDevice) error {
+	if err := r.setCiscoDeviceCondition(ctx, device, metav1.Condition{
+		Type:               ciskov1.CiscoDeviceConditionAggregatorOwning,
+		Status:             metav1.ConditionTrue,
+		Reason:             "HandoverInProgress",
+		ObservedGeneration: device.Generation,
+		Message:            "config reconciliation is transferring to the manager aggregator; waiting for per-device Pods to quiesce",
+	}); err != nil {
+		return err
+	}
+	if err := r.setCiscoDeviceCondition(ctx, device, metav1.Condition{
+		Type:               ciskov1.CiscoDeviceConditionAggregatorOwned,
+		Status:             metav1.ConditionFalse,
+		Reason:             "HandoverInProgress",
+		ObservedGeneration: device.Generation,
+		Message:            "aggregator ownership is pending until per-device Pods quiesce",
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *CiscoDeviceReconciler) clearAggregatorHandoverConditions(ctx context.Context, device *ciskov1.CiscoDevice) error {
+	if err := r.setCiscoDeviceConditionIfPresent(ctx, device, metav1.Condition{
+		Type:               ciskov1.CiscoDeviceConditionAggregatorOwned,
+		Status:             metav1.ConditionFalse,
+		Reason:             "PerDeviceTopology",
+		ObservedGeneration: device.Generation,
+		Message:            "config reconciliation is owned by the per-device Deployment",
+	}); err != nil {
+		return err
+	}
+	if err := r.setCiscoDeviceConditionIfPresent(ctx, device, metav1.Condition{
+		Type:               ciskov1.CiscoDeviceConditionAggregatorOwning,
+		Status:             metav1.ConditionFalse,
+		Reason:             "PerDeviceTopology",
+		ObservedGeneration: device.Generation,
+		Message:            "aggregator handover is inactive while per-device topology is enabled",
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *CiscoDeviceReconciler) setCiscoDeviceConditionIfPresent(ctx context.Context, device *ciskov1.CiscoDevice, cond metav1.Condition) error {
+	if meta.FindStatusCondition(device.Status.Conditions, cond.Type) == nil {
+		return nil
+	}
+	return r.setCiscoDeviceCondition(ctx, device, cond)
 }
 
 func (r *CiscoDeviceReconciler) setCiscoDeviceCondition(ctx context.Context, device *ciskov1.CiscoDevice, cond metav1.Condition) error {

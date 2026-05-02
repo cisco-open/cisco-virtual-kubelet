@@ -169,6 +169,11 @@ func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		r.stopWorker(req.String())
 		return ctrl.Result{}, nil
 	}
+	owning := meta.FindStatusCondition(dev.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwning)
+	if owning != nil && owning.Status == metav1.ConditionTrue {
+		r.stopWorker(req.String())
+		return ctrl.Result{}, nil
+	}
 	owned := meta.FindStatusCondition(dev.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwned)
 	if owned == nil || owned.Status != metav1.ConditionTrue {
 		r.stopWorker(req.String())

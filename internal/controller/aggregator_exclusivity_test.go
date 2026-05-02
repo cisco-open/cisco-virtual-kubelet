@@ -147,8 +147,12 @@ func TestAggregatorTopologyShiftWaitsForPodsToQuiesce(t *testing.T) {
 		t.Fatalf("get CiscoDevice: %v", err)
 	}
 	cond := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwned)
-	if cond == nil || cond.Status != metav1.ConditionTrue || cond.Reason != "AggregatorEnabled" {
-		t.Fatalf("AggregatorOwned condition=%+v, want True/AggregatorEnabled", cond)
+	if cond != nil && cond.Status == metav1.ConditionTrue {
+		t.Fatalf("AggregatorOwned condition=%+v, want not True while stale Pods remain", cond)
+	}
+	owning := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwning)
+	if owning == nil || owning.Status != metav1.ConditionTrue || owning.Reason != "HandoverInProgress" {
+		t.Fatalf("AggregatorOwning condition=%+v, want True/HandoverInProgress", owning)
 	}
 	var gone appsv1.Deployment
 	if err := r.Get(context.Background(), types.NamespacedName{Namespace: deploy.Namespace, Name: deploy.Name}, &gone); !errors.IsNotFound(err) {
@@ -164,6 +168,17 @@ func TestAggregatorTopologyShiftWaitsForPodsToQuiesce(t *testing.T) {
 	}
 	if result.RequeueAfter != 0 || result.Requeue {
 		t.Fatalf("result after Pod quiesce=%+v, want no requeue", result)
+	}
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: dev.Namespace, Name: dev.Name}, &gotDevice); err != nil {
+		t.Fatalf("get CiscoDevice after quiesce: %v", err)
+	}
+	cond = meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwned)
+	if cond == nil || cond.Status != metav1.ConditionTrue || cond.Reason != "AggregatorEnabled" {
+		t.Fatalf("AggregatorOwned condition after quiesce=%+v, want True/AggregatorEnabled", cond)
+	}
+	owning = meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwning)
+	if owning == nil || owning.Status != metav1.ConditionFalse || owning.Reason != "HandoverComplete" {
+		t.Fatalf("AggregatorOwning condition after quiesce=%+v, want False/HandoverComplete", owning)
 	}
 }
 
