@@ -97,6 +97,17 @@ func (r *ConfigReconciler) releaseLeasesForCR(ctx context.Context, cr *configv1a
 	return nil
 }
 
+// ForceRelinquishSkipAnnotation is the operator-controlled escape
+// hatch for delete-time relinquish. When set to "true" on an
+// IOSXEConfig that's stuck in Terminating, the controller skips the
+// relinquish reconcile entirely, records a Warning event listing the
+// owned keys it gave up cleaning up, releases leases, and removes the
+// finalizer. Use this when a permanent failure (decommissioned
+// device, unsupported family that needs a writer uplift, persistent
+// auth failure) makes retry pointless and the operator accepts the
+// orphaned device config.
+const ForceRelinquishSkipAnnotation = "config.cisco.vk/force-relinquish-skip"
+
 // relinquishOwnedKeys runs a CR-delete reconcile that drops every
 // list-key this CR owned (per status.atomicReplaceOwnedKeys) from the
 // device. F2 fix (2026-05-01): without this pass, deleting a CR that
@@ -109,21 +120,24 @@ func (r *ConfigReconciler) releaseLeasesForCR(ctx context.Context, cr *configv1a
 // prune set to {priorOwned ∪ desired} = {priorOwned}, so only this
 // CR's owned keys are deleted; baseline state is left alone.
 //
-// A1 fix (2026-05-01, codex/HEAD~1 review): before mutating the
-// device we acquire each owned-key family's lease with this CR's
-// identity. Families whose lease is held by another CR are skipped
-// — touching them would race the current owner. If any family is
-// skipped we return an error so the caller blocks the finalizer
-// (A2): operator must wait for the contending holder to release or
-// patch the finalizer off explicitly.
+// Codex /codex:adversarial-review (2026-05-02) follow-ups:
 //
-// A2 fix (2026-05-01, codex/HEAD~1 review): every error is now
-// retryable from the controller's perspective. Returning a non-nil
-// error from this method tells the caller to keep the finalizer in
-// place so the next reconcile retries against the device. The
-// previous best-effort behaviour silently dropped device-side
-// orphans on first failure.
-func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1alpha1.IOSXEConfig) error {
+//   B1 — Use AcquireIfFree, NOT Acquire. The takeover-capable
+//        Acquire would let a deleting CR claim a foreign lease whose
+//        holder hasn't heartbeat through a long Fetch/Apply (looks
+//        expired but is still in flight) — and then prune the in-
+//        flight CR's keys mid-write. AcquireIfFree refuses any
+//        foreign holder regardless of expiry; stale-but-in-flight
+//        recovery stays the responsibility of the normal-reconcile
+//        path that holds and renews its own lease.
+//
+//   B2 — On failure, release every lease this attempt acquired so
+//        a stuck terminating CR doesn't permanently pin those
+//        families for other CRs. The next retry will Acquire-IfFree
+//        again, so the pattern is "acquire → mutate → release on
+//        success-or-failure" instead of the old "hold until
+//        finalizer removal".
+func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1alpha1.IOSXEConfig) (returnedErr error) {
 	tr := r.GetTransport()
 	if tr == nil {
 		return fmt.Errorf("relinquish: transport not yet available")
@@ -133,8 +147,8 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 		lookup = writers.Get
 	}
 
-	// A1: per-family lease ownership check. Only families we
-	// successfully Acquire are eligible for relinquish; lease-blocked
+	// Per-family AcquireIfFree. Only families we successfully claim
+	// without takeover are eligible for relinquish; foreign-held
 	// families are reported and force the caller to retry. The
 	// identity matches the per-tick identity used in reconcileOne so
 	// our normal-tick lease (if any) survives the Acquire call.
@@ -146,8 +160,11 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 	leaseBlocked := make([]string, 0, len(cr.Spec.ManagedFamilies))
 	if r.Leaser != nil {
 		for _, fam := range cr.Spec.ManagedFamilies {
-			res, err := r.Leaser.Acquire(ctx, r.DeviceName, fam, identity)
+			res, err := r.Leaser.AcquireIfFree(ctx, r.DeviceName, fam, identity)
 			if err != nil {
+				// Release whatever we already claimed so other CRs
+				// aren't pinned by a partial relinquish attempt.
+				r.releaseAcquiredFamilies(ctx, owned, identity)
 				return fmt.Errorf("relinquish: acquire lease for %s: %w", fam, err)
 			}
 			if !res.Owned {
@@ -161,6 +178,18 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 		// caller's spec.
 		owned = append(owned, cr.Spec.ManagedFamilies...)
 	}
+
+	// Defer the lease release so every error path — including
+	// engine.Reconcile failures and lease-blocked-tail returns —
+	// hands the families back. On success we release too: the CR is
+	// about to be GC'd, so holding the lease past relinquish only
+	// stalls the next CR.
+	defer func() {
+		if r.Leaser != nil {
+			r.releaseAcquiredFamilies(ctx, owned, identity)
+		}
+	}()
+
 	if len(owned) == 0 {
 		if len(leaseBlocked) > 0 {
 			return fmt.Errorf("relinquish: every managed family is held by another CR: %v; "+
@@ -183,7 +212,7 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 	for _, fam := range owned {
 		conf[fam] = []any{}
 	}
-	res := &intent.ResolvedIntent{
+	resIntent := &intent.ResolvedIntent{
 		DeviceName:             cr.Spec.DeviceRef.Name,
 		ManagedFamilies:        owned,
 		Configuration:          conf,
@@ -191,7 +220,7 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 		PruneOnRelinquish:      true,
 		AtomicReplaceOwnedKeys: cr.Status.AtomicReplaceOwnedKeys,
 	}
-	out := eng.Reconcile(ctx, res)
+	out := eng.Reconcile(ctx, resIntent)
 	if out.Phase == engine.PhaseFailed {
 		// Surface the first family-level error so the controller
 		// log + Event recorder show what to fix before retry.
@@ -209,6 +238,23 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 			len(owned), len(owned)+len(leaseBlocked), leaseBlocked)
 	}
 	return nil
+}
+
+// releaseAcquiredFamilies releases every lease in `families` held by
+// `identity`. Used both on relinquish success (we're done with these
+// leases anyway) and on relinquish failure (so a stuck terminating CR
+// doesn't pin families for other CRs while it retries). Best-effort:
+// any per-family release error is logged, never returned.
+func (r *ConfigReconciler) releaseAcquiredFamilies(ctx context.Context, families []string, identity string) {
+	if r.Leaser == nil {
+		return
+	}
+	logger := crlog.FromContext(ctx)
+	for _, fam := range families {
+		if err := r.Leaser.Release(ctx, r.DeviceName, fam, identity); err != nil {
+			logger.Error(err, "release lease after relinquish attempt", "family", fam)
+		}
+	}
 }
 
 // Reconcile implements reconcile.Reconciler. It is the hot-path entry
@@ -292,14 +338,34 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 			// finalizer off explicitly — the standard Kubernetes
 			// escape hatch — once they accept the orphan.
 			if cr.Spec.PruneOnRelinquish && len(cr.Status.AtomicReplaceOwnedKeys) > 0 {
-				if err := r.relinquishOwnedKeys(ctx, &cr); err != nil {
-					logger.Error(err, "relinquish owned keys; will retry")
+				// B2 escape hatch (codex /codex:adversarial-review
+				// 2026-05-02): an operator who has accepted that
+				// relinquish will not succeed — decommissioned device,
+				// permanent auth failure, family that needs a writer
+				// uplift — sets cisco.vk/force-relinquish-skip=true.
+				// We skip the relinquish reconcile, emit a Warning
+				// event recording the orphan list, and proceed to
+				// finalizer removal. Strictly more controlled than
+				// `kubectl patch finalizers: []` because the
+				// orphaned keys land in the audit trail.
+				if cr.Annotations[ForceRelinquishSkipAnnotation] == "true" {
+					if r.Recorder != nil {
+						r.Recorder.Eventf(&cr, "Warning", "RelinquishSkipped",
+							"force-relinquish-skip annotation set; orphaning %v on device %q",
+							cr.Status.AtomicReplaceOwnedKeys, r.DeviceName)
+					}
+					span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "relinquish-skipped"))
+				} else if err := r.relinquishOwnedKeys(ctx, &cr); err != nil {
+					logger.Error(err, "relinquish owned keys; will retry "+
+						"(set annotation "+ForceRelinquishSkipAnnotation+"=true to give up)")
 					span.RecordError(err)
 					span.SetStatus(codes.Error, "relinquish")
 					span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "relinquish-blocked"))
 					if r.Recorder != nil {
 						r.Recorder.Eventf(&cr, "Warning", "RelinquishBlocked",
-							"deletion blocked while pruneOnRelinquish cleanup retries: %v", err)
+							"deletion blocked while pruneOnRelinquish cleanup retries: %v "+
+								"(set annotation %s=true to give up)",
+							err, ForceRelinquishSkipAnnotation)
 					}
 					return reconcile.Result{}, fmt.Errorf("relinquish: %w", err)
 				}

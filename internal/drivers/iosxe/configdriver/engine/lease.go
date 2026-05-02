@@ -56,6 +56,106 @@ type LeaseResult struct {
 	Holder string
 }
 
+// AcquireIfFree is the takeover-safe variant of Acquire used by the
+// CR-delete relinquish path. It returns Owned=true only when the
+// lease is unheld OR already held by `identity` — never when a
+// foreign holder is present, whether the lease is expired or not.
+//
+// Why a separate path: Acquire actively takes over an expired
+// lease (RenewTime + LeaseDuration in the past), which is the
+// correct policy for crashed-holder recovery during normal
+// reconcile. But it is the WRONG policy at delete time: a foreign
+// reconcile that hasn't heartbeat through a long Fetch/Apply call
+// can look expired while still in flight; takeover would let the
+// terminating CR DELETE keys the live CR is mid-reconcile against.
+// Codex /codex:adversarial-review (2026-05-02) B1.
+//
+// Stale-but-in-flight recovery stays the responsibility of the
+// normal-reconcile path, which holds and renews the lease through
+// its own critical section.
+func (l *FamilyLeaser) AcquireIfFree(ctx context.Context, device, family, identity string) (LeaseResult, error) {
+	if l.Client == nil {
+		return LeaseResult{}, fmt.Errorf("FamilyLeaser: nil Client")
+	}
+	if l.Namespace == "" {
+		return LeaseResult{}, fmt.Errorf("FamilyLeaser: empty Namespace")
+	}
+	ttl := l.TTL
+	if ttl <= 0 {
+		ttl = 30 * time.Second
+	}
+	ttlSeconds := int32(ttl / time.Second)
+	if ttlSeconds < 1 {
+		ttlSeconds = 1
+	}
+	name := leaseName(device, family)
+	now := metav1.NewMicroTime(time.Now())
+
+	var lease coordv1.Lease
+	err := l.Client.Get(ctx, types.NamespacedName{Namespace: l.Namespace, Name: name}, &lease)
+	switch {
+	case apierrors.IsNotFound(err):
+		// Free → create + own.
+		lease = coordv1.Lease{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: l.Namespace,
+				Labels: map[string]string{
+					"cisco.vk/device": device,
+					"cisco.vk/family": family,
+				},
+			},
+			Spec: coordv1.LeaseSpec{
+				HolderIdentity:       strPtr(identity),
+				LeaseDurationSeconds: &ttlSeconds,
+				AcquireTime:          &now,
+				RenewTime:            &now,
+				LeaseTransitions:     int32Ptr(1),
+			},
+		}
+		if err := l.Client.Create(ctx, &lease); err != nil {
+			if !apierrors.IsAlreadyExists(err) {
+				return LeaseResult{}, fmt.Errorf("create lease: %w", err)
+			}
+			// Lost the create race — re-read and re-evaluate.
+			if err := l.Client.Get(ctx, types.NamespacedName{Namespace: l.Namespace, Name: name}, &lease); err != nil {
+				return LeaseResult{}, fmt.Errorf("re-read lease after conflict: %w", err)
+			}
+			break
+		}
+		return LeaseResult{Owned: true, Holder: identity}, nil
+	case err != nil:
+		return LeaseResult{}, fmt.Errorf("get lease: %w", err)
+	}
+
+	// Existing lease: only acceptable if we are the holder.
+	holder := ""
+	if lease.Spec.HolderIdentity != nil {
+		holder = *lease.Spec.HolderIdentity
+	}
+	if holder == "" || holder == identity {
+		// Empty holder is treated as free; renew with our identity.
+		lease.Spec.HolderIdentity = strPtr(identity)
+		lease.Spec.RenewTime = &now
+		lease.Spec.LeaseDurationSeconds = &ttlSeconds
+		if err := l.Client.Update(ctx, &lease); err != nil {
+			if apierrors.IsConflict(err) {
+				return LeaseResult{Owned: true, Holder: identity}, nil
+			}
+			return LeaseResult{}, fmt.Errorf("renew lease: %w", err)
+		}
+		return LeaseResult{Owned: true, Holder: identity}, nil
+	}
+	// Foreign holder, regardless of expiry → blocked.
+	return LeaseResult{Owned: false, Holder: holder}, nil
+}
+
+// LeaseName returns the canonical Lease name FamilyLeaser uses for
+// (device, family). Exported so tests and operator tooling can
+// look up or seed the right object without guessing the hashing
+// rules in leaseName().
+func LeaseName(device, family string) string { return leaseName(device, family) }
+
 // Acquire creates or renews the lease for (device, family) with
 // identity as the holder. If the lease already exists with a
 // different, unexpired holder, Acquire returns Owned=false and does
