@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 )
 
 const (
@@ -68,10 +69,10 @@ type CiscoDeviceReconciler struct {
 	ServiceAccount string
 	// AggregatorEnabled mirrors the manager's --enable-config-aggregator
 	// flag. When true, the in-process aggregator owns the per-device
-	// config-reconcile loop, so the per-device cisco-vk pod must skip
-	// its own ConfigReconciler. The field is plumbed through here so
-	// the per-pod env can reflect it; the cisco-vk binary reads
-	// CONFIG_AGGREGATOR_ENABLED on startup.
+	// config-reconcile loop for configdriver-registered platforms, so
+	// per-device cisco-vk pods are skipped for those devices. Platforms
+	// without a registered configdriver still get apphosting pods, but
+	// with the in-pod ConfigReconciler disabled.
 	AggregatorEnabled bool
 }
 
@@ -143,6 +144,35 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 	logger.Info("ConfigMap reconciled", "name", cm.Name, "operation", op)
 
+	// Wave 1C: aggregator/per-pod exclusivity. If the manager is running
+	// the config aggregator and this driver's configdriver is registered,
+	// the aggregator owns config reconciliation for this device. Do not run
+	// a per-device cisco-vk pod that could start a second in-pod
+	// ConfigReconciler for the same lease scope.
+	configDriverRegistered := drivers.ConfigDriverRegistered(device.Spec.Driver)
+	if r.AggregatorEnabled && configDriverRegistered {
+		stale := &appsv1.Deployment{}
+		staleKey := types.NamespacedName{
+			Name:      device.Name + deploymentSuffix,
+			Namespace: device.Namespace,
+		}
+		if err := r.Get(ctx, staleKey, stale); err != nil {
+			if !errors.IsNotFound(err) {
+				return ctrl.Result{}, fmt.Errorf("fetch stale per-device Deployment under aggregator mode: %w", err)
+			}
+		} else if metav1.IsControlledBy(stale, &device) {
+			if err := r.Delete(ctx, stale); err != nil && !errors.IsNotFound(err) {
+				return ctrl.Result{}, fmt.Errorf("delete stale per-device Deployment under aggregator mode: %w", err)
+			}
+		}
+		logger.Info("aggregator owns config reconciliation; skipping per-device Deployment",
+			"device", device.Name, "driver", device.Spec.Driver)
+		if err := r.updateStatus(ctx, &device, nil); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
 	// ── 6. Reconcile the Deployment ─────────────────────────────────────
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -204,6 +234,12 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			credEnv = append(credEnv, corev1.EnvVar{
 				Name:  "VK_DEVICE_PASSWORD",
 				Value: device.Spec.Password,
+			})
+		}
+		if r.AggregatorEnabled {
+			credEnv = append(credEnv, corev1.EnvVar{
+				Name:  "DISABLE_IN_POD_CONFIG_RECONCILER",
+				Value: "true",
 			})
 		}
 
@@ -357,15 +393,19 @@ func (r *CiscoDeviceReconciler) deleteNode(ctx context.Context, name string) err
 
 // updateStatus patches the CiscoDevice status based on the Deployment state.
 func (r *CiscoDeviceReconciler) updateStatus(ctx context.Context, device *ciskov1.CiscoDevice, deploy *appsv1.Deployment) error {
-	// Re-fetch deployment to get latest status.
-	var current appsv1.Deployment
-	if err := r.Get(ctx, types.NamespacedName{Name: deploy.Name, Namespace: deploy.Namespace}, &current); err != nil {
-		return fmt.Errorf("failed to fetch deployment for status: %w", err)
-	}
-
-	phase := "Provisioning"
-	if current.Status.ReadyReplicas > 0 {
+	var phase string
+	if deploy == nil {
 		phase = "Ready"
+	} else {
+		// Re-fetch deployment to get latest status.
+		var current appsv1.Deployment
+		if err := r.Get(ctx, types.NamespacedName{Name: deploy.Name, Namespace: deploy.Namespace}, &current); err != nil {
+			return fmt.Errorf("failed to fetch deployment for status: %w", err)
+		}
+		phase = "Provisioning"
+		if current.Status.ReadyReplicas > 0 {
+			phase = "Ready"
+		}
 	}
 
 	if device.Status.Phase != phase {
