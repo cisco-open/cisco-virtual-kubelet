@@ -1,0 +1,22 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: network
+  namespace: flux-system
+spec:
+  interval: 2m
+  path: ./examples/gitops-reference
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: network-config
+  targetNamespace: network
+  healthChecks:
+    - apiVersion: config.cisco.vk/v1alpha1
+      kind: IOSXEConfig
+      name: edge-01
+      namespace: network
+    - apiVersion: cisco.vk/v1alpha1
+      kind: CiscoDevice
+      name: edge-01
+      namespace: network

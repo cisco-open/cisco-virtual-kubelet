@@ -1,0 +1,11 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: network-config
+  namespace: flux-system
+spec:
+  interval: 1m
+  # Replace with the URL and branch of your own fork.
+  url: https://github.com/example-org/network-config
+  ref:
+    branch: main
