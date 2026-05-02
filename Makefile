@@ -38,7 +38,7 @@ INSTALL_DIR=$(PREFIX)/bin
 CONFIG_DIR=/etc/cisco-vk
 SYSTEMD_DIR=/etc/systemd/system
 
-.PHONY: all build clean install uninstall test lint fmt deps help crd-gen config-lint
+.PHONY: all build clean install uninstall test lint fmt deps help crd-gen config-lint config-docs yang-sync
 
 all: build
 
@@ -111,6 +111,12 @@ vet: ## Run go vet
 
 config-lint: ## Run cisco-vk-config-lint (pass arguments with ARGS="...")
 	$(GO_BIN) run ./tools/cisco-vk-config-lint $(ARGS)
+
+config-docs: ## Generate IOS-XE config family reference docs
+	$(GO_BIN) run ./tools/cisco-vk-config-docs $(ARGS)
+
+yang-sync: ## Run the IOS-XE config YANG sync helper
+	$(GO_BIN) run ./tools/cisco-vk-yang-sync $(ARGS)
 
 ## Code generation targets
 
