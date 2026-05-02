@@ -38,7 +38,7 @@ INSTALL_DIR=$(PREFIX)/bin
 CONFIG_DIR=/etc/cisco-vk
 SYSTEMD_DIR=/etc/systemd/system
 
-.PHONY: all build clean install uninstall test lint fmt deps help crd-gen config-lint config-docs yang-sync
+.PHONY: all build clean install uninstall test test-envtest lint fmt deps help crd-gen config-lint config-docs yang-sync
 
 all: build
 
@@ -90,6 +90,25 @@ test: ## Run tests
 test-coverage: ## Run tests with coverage
 	$(GO_BIN) test -v -race -coverprofile=coverage.out ./...
 	$(GO_BIN) tool cover -html=coverage.out -o coverage.html
+
+# Real-apiserver smoke gate. The build-tag `envtest` keeps these tests
+# out of the default `make test` run because they require a setup-envtest
+# managed apiserver/etcd binary set. CI installs setup-envtest before
+# invocation; locally, run:
+#
+#   go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+#   make test-envtest
+#
+# The KUBEBUILDER_ASSETS env var points the envtest harness at the
+# downloaded apiserver binaries.
+test-envtest: ## Run envtest real-apiserver smoke tests (requires setup-envtest in PATH)
+	@command -v setup-envtest >/dev/null 2>&1 || { \
+		echo "setup-envtest not found. Install with:"; \
+		echo "  $(GO_BIN) install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest"; \
+		exit 1; \
+	}
+	@KUBEBUILDER_ASSETS="$$(setup-envtest use 1.30 -p path)" \
+		$(GO_BIN) test -tags envtest -count=1 -v ./internal/provider/ -run TestEnvtest_
 
 lint: ## Run linter
 	@if command -v golangci-lint >/dev/null 2>&1; then \
