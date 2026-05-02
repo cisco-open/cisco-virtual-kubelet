@@ -27,6 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/yaml"
 
@@ -206,12 +207,16 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			MatchLabels: labels,
 		}
 
+		annos := map[string]string{
+			// Force a rollout whenever the ConfigMap content changes.
+			"cisco.vk/config-hash": shortHash(configData),
+		}
+		if credRV := r.lookupCredentialResourceVersion(ctx, &device); credRV != "" {
+			annos["cisco.vk/credential-resource-version"] = credRV
+		}
 		deploy.Spec.Template.ObjectMeta = metav1.ObjectMeta{
-			Labels: labels,
-			Annotations: map[string]string{
-				// Force a rollout whenever the ConfigMap content changes.
-				"cisco.vk/config-hash": shortHash(configData),
-			},
+			Labels:      labels,
+			Annotations: annos,
 		}
 
 		// Build credential env vars. When a Secret reference is provided,
@@ -310,6 +315,7 @@ func (r *CiscoDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&ciskov1.CiscoDevice{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.mapSecretToCiscoDevices)).
 		Complete(r)
 }
 
@@ -389,6 +395,50 @@ func (r *CiscoDeviceReconciler) deleteNode(ctx context.Context, name string) err
 	}
 	logger.Info("Deleted VK node", "node", name)
 	return nil
+}
+
+// mapSecretToCiscoDevices fans a Secret event out to CiscoDevices in the same
+// namespace that reference it through spec.credentialSecretRef.
+func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj client.Object) []ctrl.Request {
+	secret, ok := obj.(*corev1.Secret)
+	if !ok {
+		return nil
+	}
+	var devices ciskov1.CiscoDeviceList
+	if err := r.List(ctx, &devices, client.InNamespace(secret.Namespace)); err != nil {
+		log.FromContext(ctx).Error(err, "list CiscoDevices for credential-secret mapping",
+			"secret", secret.Name, "namespace", secret.Namespace)
+		return nil
+	}
+	requests := make([]ctrl.Request, 0, len(devices.Items))
+	for i := range devices.Items {
+		dev := &devices.Items[i]
+		if dev.Spec.CredentialSecretRef == nil || dev.Spec.CredentialSecretRef.Name != secret.Name {
+			continue
+		}
+		requests = append(requests, ctrl.Request{NamespacedName: types.NamespacedName{
+			Namespace: dev.Namespace,
+			Name:      dev.Name,
+		}})
+	}
+	return requests
+}
+
+// lookupCredentialResourceVersion returns the referenced Secret's
+// resourceVersion for use as a pod-template rollout annotation. It never reads
+// Secret data.
+func (r *CiscoDeviceReconciler) lookupCredentialResourceVersion(ctx context.Context, device *ciskov1.CiscoDevice) string {
+	if device.Spec.CredentialSecretRef == nil {
+		return ""
+	}
+	var sec corev1.Secret
+	if err := r.Get(ctx, types.NamespacedName{
+		Namespace: device.Namespace,
+		Name:      device.Spec.CredentialSecretRef.Name,
+	}, &sec); err != nil {
+		return ""
+	}
+	return sec.ResourceVersion
 }
 
 // updateStatus patches the CiscoDevice status based on the Deployment state.
