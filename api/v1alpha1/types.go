@@ -17,6 +17,7 @@ package v1alpha1
 import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE
@@ -155,6 +156,19 @@ type DeviceSpec struct {
 	// +kubebuilder:default=restconf
 	Transport string `json:"transport,omitempty" mapstructure:"transport"`
 
+	// ConfigPrereqs declares the network configuration this device requires
+	// before pods can be hosted on it, for example a VirtualPortGroup
+	// interface, DHCP pool, or app egress ACL. When set, the controller
+	// materializes an owned IOSXEConfig whose managed families are limited to
+	// the apphosting prerequisite set.
+	//
+	// The payload carries the same netascode-shaped YAML as
+	// IOSXEConfig.spec.source.inline. Operator-authored IOSXEConfig CRs may
+	// coexist with this controller-owned CR as long as they do not claim the
+	// same families.
+	// +kubebuilder:validation:Optional
+	ConfigPrereqs *ConfigPrereqs `json:"configPrereqs,omitempty" mapstructure:"configPrereqs,omitempty"`
+
 	// --- Driver-specific networking configuration (union) ---
 	// Only the section matching Driver should be set.
 
@@ -170,6 +184,20 @@ type DeviceSpec struct {
 	// NXOS holds NX-OS specific networking configuration (future).
 	// +kubebuilder:validation:Optional
 	// NXOS *NXOSConfig `json:"nxos,omitempty" mapstructure:"nxos,omitempty"`
+}
+
+// ConfigPrereqs is the inline netascode-shaped configuration block the
+// controller uses to auto-create an owned IOSXEConfig for a device. The
+// payload's top-level keys should be families in the apphosting-prerequisite
+// set; the controller-owned IOSXEConfig is scoped to that family set.
+type ConfigPrereqs struct {
+	// Configuration is the netascode-shaped fragment. Same shape as
+	// IOSXEConfig.spec.source.inline.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Configuration runtime.RawExtension `json:"configuration"`
 }
 
 // DeviceStatus defines the observed state of a CiscoDevice.

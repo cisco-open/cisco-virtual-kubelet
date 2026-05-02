@@ -72,6 +72,27 @@ spec:
                   INSTALLING as a terminal failure only when confirmed by an install
                   notification from the device.
                 type: boolean
+              configPrereqs:
+                description: |-
+                  ConfigPrereqs declares the network configuration this device requires
+                  before pods can be hosted on it, for example a VirtualPortGroup
+                  interface, DHCP pool, or app egress ACL. When set, the controller
+                  materializes an owned IOSXEConfig whose managed families are limited to
+                  the apphosting prerequisite set.
+
+                  The payload carries the same netascode-shaped YAML as
+                  IOSXEConfig.spec.source.inline. Operator-authored IOSXEConfig CRs may
+                  coexist with this controller-owned CR as long as they do not claim the
+                  same families.
+                properties:
+                  configuration:
+                    description: |-
+                      Configuration is the netascode-shaped fragment. Same shape as
+                      IOSXEConfig.spec.source.inline.
+                    x-kubernetes-preserve-unknown-fields: true
+                required:
+                - configuration
+                type: object
               credentialSecretRef:
                 description: |-
                   CredentialSecretRef references a Secret containing device credentials.

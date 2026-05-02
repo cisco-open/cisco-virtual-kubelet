@@ -29,6 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
 
@@ -38,6 +39,7 @@ func newTestScheme(t *testing.T) *runtime.Scheme {
 	s := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(s))
 	utilruntime.Must(ciskov1.AddToScheme(s))
+	utilruntime.Must(configv1alpha1.AddToScheme(s))
 	return s
 }
 
@@ -570,5 +572,120 @@ func TestShortHash_Length(t *testing.T) {
 func TestShortHash_EmptyString(t *testing.T) {
 	if got := len(shortHash("")); got != 8 {
 		t.Errorf("expected 8-char hash for empty string, got length %d", got)
+	}
+}
+
+func TestReconcile_ConfigPrereqsCreatesOwnedIOSXEConfig(t *testing.T) {
+	device := newDevice("router-p", "default")
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		Configuration: runtime.RawExtension{Raw: []byte(
+			`{"interface_virtual_port_group":{"interfaces":[{"id":0,"ipv4_address":"192.168.10.1","ipv4_address_mask":"255.255.255.0"}]}}`,
+		)},
+	}
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-p")); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	var owned configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-p-prereqs"}, &owned); err != nil {
+		t.Fatalf("expected owned IOSXEConfig: %v", err)
+	}
+	if owned.Spec.DeviceRef.Name != "router-p" {
+		t.Errorf("deviceRef=%q", owned.Spec.DeviceRef.Name)
+	}
+	if len(owned.OwnerReferences) != 1 || owned.OwnerReferences[0].Name != "router-p" {
+		t.Errorf("owner references = %+v", owned.OwnerReferences)
+	}
+	want := map[string]struct{}{
+		"interface_virtual_port_group": {},
+		"dhcp":                         {},
+		"access_list_extended":         {},
+	}
+	for _, f := range owned.Spec.ManagedFamilies {
+		if _, ok := want[f]; !ok {
+			t.Errorf("unexpected managed family %q on owned CR", f)
+		}
+	}
+	if len(owned.Spec.ManagedFamilies) != len(want) {
+		t.Errorf("ManagedFamilies=%v, want the 3-family prereq set", owned.Spec.ManagedFamilies)
+	}
+	if owned.Spec.PruneOnRelinquish {
+		t.Errorf("steady-state configPrereqs CR must not set PruneOnRelinquish")
+	}
+}
+
+func TestReconcile_ConfigPrereqsRemovedDrivesEmptyIntentThenDeletes(t *testing.T) {
+	device := newDevice("router-prune", "default")
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		Configuration: runtime.RawExtension{Raw: []byte(`{"dhcp":{}}`)},
+	}
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-prune")); err != nil {
+		t.Fatalf("Reconcile (create): %v", err)
+	}
+	ownedKey := types.NamespacedName{Namespace: "default", Name: "router-prune-prereqs"}
+	var owned configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, ownedKey, &owned); err != nil {
+		t.Fatalf("expected owned CR: %v", err)
+	}
+	if owned.Spec.PruneOnRelinquish {
+		t.Errorf("owned CR steady-state must have pruneOnRelinquish=false")
+	}
+
+	var updated ciskov1.CiscoDevice
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-prune"}, &updated); err != nil {
+		t.Fatalf("get device: %v", err)
+	}
+	updated.Spec.ConfigPrereqs = nil
+	if err := r.Update(ctx, &updated); err != nil {
+		t.Fatalf("update device: %v", err)
+	}
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-prune")); err != nil {
+		t.Fatalf("Reconcile (remove tick 1): %v", err)
+	}
+	var afterTick1 configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, ownedKey, &afterTick1); err != nil {
+		t.Fatalf("owned CR must still exist after empty-intent step: %v", err)
+	}
+	if len(afterTick1.Spec.ManagedFamilies) == 0 {
+		t.Errorf("owned CR ManagedFamilies must remain non-empty during teardown")
+	}
+	if afterTick1.Spec.Source.Inline == nil {
+		t.Errorf("owned CR Source.Inline must be set to an empty body during teardown")
+	}
+	if !afterTick1.Spec.PruneOnRelinquish {
+		t.Errorf("owned CR PruneOnRelinquish must be true during teardown")
+	}
+
+	afterTick1.Status.Phase = "InSync"
+	afterTick1.Status.ObservedGeneration = afterTick1.Generation - 1
+	if err := r.Update(ctx, &afterTick1); err != nil {
+		t.Fatalf("update simulating stale-status convergence: %v", err)
+	}
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-prune")); err != nil {
+		t.Fatalf("Reconcile (stale-status tick): %v", err)
+	}
+	var stillThere configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, ownedKey, &stillThere); err != nil {
+		t.Fatalf("owned CR was prematurely deleted on stale InSync: %v", err)
+	}
+
+	stillThere.Status.Phase = "InSync"
+	stillThere.Status.ObservedGeneration = stillThere.Generation
+	if err := r.Update(ctx, &stillThere); err != nil {
+		t.Fatalf("update simulating engine convergence: %v", err)
+	}
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-prune")); err != nil {
+		t.Fatalf("Reconcile (delete request): %v", err)
+	}
+	var deleting configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, ownedKey, &deleting); err == nil && deleting.DeletionTimestamp.IsZero() {
+		t.Fatalf("owned CR should be gone or deleting after teardown InSync: %+v", deleting)
 	}
 }
