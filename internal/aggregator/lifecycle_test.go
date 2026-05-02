@@ -117,6 +117,13 @@ func TestAggregatorLifecycle(t *testing.T) {
 			Username: "u",
 			Password: "inline",
 		},
+		Status: ciskov1.DeviceStatus{
+			Conditions: []metav1.Condition{{
+				Type:   ciskov1.CiscoDeviceConditionAggregatorOwned,
+				Status: metav1.ConditionTrue,
+				Reason: "AggregatorEnabled",
+			}},
+		},
 	}
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -261,6 +268,13 @@ func TestAggregatorCredentialFallthrough(t *testing.T) {
 			CredentialSecretRef: &corev1.LocalObjectReference{
 				Name: "this-secret-does-not-exist",
 			},
+		},
+		Status: ciskov1.DeviceStatus{
+			Conditions: []metav1.Condition{{
+				Type:   ciskov1.CiscoDeviceConditionAggregatorOwned,
+				Status: metav1.ConditionTrue,
+				Reason: "AggregatorEnabled",
+			}},
 		},
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(dev).Build()

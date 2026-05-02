@@ -22,6 +22,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -64,6 +65,10 @@ const (
 // requeues while waiting for the owned IOSXEConfig to drive empty intent and
 // finish its own deletion/finalizer cleanup.
 const configPrereqsTeardownPollInterval = 5 * time.Second
+
+// aggregatorTopologyPollInterval is how often aggregator-mode topology shifts
+// requeue while old per-device Pods drain after the Deployment delete.
+const aggregatorTopologyPollInterval = 4 * time.Second
 
 // CiscoDeviceReconciler reconciles a CiscoDevice object.
 // It creates (or updates) a ConfigMap containing the device spec and
@@ -177,14 +182,33 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			Name:      device.Name + deploymentSuffix,
 			Namespace: device.Namespace,
 		}
+		if err := r.setCiscoDeviceCondition(ctx, &device, metav1.Condition{
+			Type:               ciskov1.CiscoDeviceConditionAggregatorOwned,
+			Status:             metav1.ConditionTrue,
+			Reason:             "AggregatorEnabled",
+			ObservedGeneration: device.Generation,
+			Message:            "config reconciliation is owned by the manager aggregator",
+		}); err != nil {
+			return ctrl.Result{}, err
+		}
 		if err := r.Get(ctx, staleKey, stale); err != nil {
 			if !errors.IsNotFound(err) {
 				return ctrl.Result{}, fmt.Errorf("fetch stale per-device Deployment under aggregator mode: %w", err)
 			}
 		} else if metav1.IsControlledBy(stale, &device) {
-			if err := r.Delete(ctx, stale); err != nil && !errors.IsNotFound(err) {
+			fg := metav1.DeletePropagationForeground
+			if err := r.Delete(ctx, stale, &client.DeleteOptions{PropagationPolicy: &fg}); err != nil && !errors.IsNotFound(err) {
 				return ctrl.Result{}, fmt.Errorf("delete stale per-device Deployment under aggregator mode: %w", err)
 			}
+		}
+		quiesced, err := r.perDevicePodsQuiesced(ctx, &device)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("list stale per-device Pods under aggregator mode: %w", err)
+		}
+		if !quiesced {
+			logger.Info("aggregator owns config reconciliation; waiting for stale per-device Pods to exit",
+				"device", device.Name, "driver", device.Spec.Driver)
+			return ctrl.Result{RequeueAfter: aggregatorTopologyPollInterval}, nil
 		}
 		logger.Info("aggregator owns config reconciliation; skipping per-device Deployment",
 			"device", device.Name, "driver", device.Spec.Driver)
@@ -217,11 +241,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, deploy, func() error {
 		// Immutable labels used as selector.
-		labels := map[string]string{
-			"app.kubernetes.io/name":       "cisco-vk",
-			"app.kubernetes.io/instance":   device.Name,
-			"app.kubernetes.io/managed-by": "ciscodevice-controller",
-		}
+		labels := perDeviceDeploymentLabels(device.Name)
 
 		var replicas int32 = 1
 		deploy.Spec.Replicas = &replicas
@@ -351,6 +371,14 @@ func ownedIOSXEConfigName(deviceName string) string {
 
 func emptyPrereqInline() runtime.RawExtension {
 	return runtime.RawExtension{Raw: []byte(`{"interface_virtual_port_group":{},"dhcp":{},"access_list_extended":{}}`)}
+}
+
+func perDeviceDeploymentLabels(deviceName string) map[string]string {
+	return map[string]string{
+		"app.kubernetes.io/name":       "cisco-vk",
+		"app.kubernetes.io/instance":   deviceName,
+		"app.kubernetes.io/managed-by": "ciscodevice-controller",
+	}
 }
 
 func isPrereqTearingDown(cr *configv1alpha1.IOSXEConfig) bool {
@@ -525,6 +553,33 @@ func (r *CiscoDeviceReconciler) deleteNode(ctx context.Context, name string) err
 		return fmt.Errorf("failed to delete node %s: %w", name, err)
 	}
 	logger.Info("Deleted VK node", "node", name)
+	return nil
+}
+
+func (r *CiscoDeviceReconciler) perDevicePodsQuiesced(ctx context.Context, device *ciskov1.CiscoDevice) (bool, error) {
+	var pods corev1.PodList
+	if err := r.List(ctx, &pods,
+		client.InNamespace(device.Namespace),
+		client.MatchingLabels(perDeviceDeploymentLabels(device.Name)),
+	); err != nil {
+		return false, err
+	}
+	return len(pods.Items) == 0, nil
+}
+
+func (r *CiscoDeviceReconciler) setCiscoDeviceCondition(ctx context.Context, device *ciskov1.CiscoDevice, cond metav1.Condition) error {
+	existing := meta.FindStatusCondition(device.Status.Conditions, cond.Type)
+	if existing != nil &&
+		existing.Status == cond.Status &&
+		existing.Reason == cond.Reason &&
+		existing.Message == cond.Message &&
+		existing.ObservedGeneration == cond.ObservedGeneration {
+		return nil
+	}
+	meta.SetStatusCondition(&device.Status.Conditions, cond)
+	if err := r.Status().Update(ctx, device); err != nil {
+		return fmt.Errorf("failed to update CiscoDevice condition %s: %w", cond.Type, err)
+	}
 	return nil
 }
 

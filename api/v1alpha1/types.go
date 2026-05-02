@@ -31,6 +31,12 @@ const (
 	DeviceDriverFAKE       DeviceDriver = "FAKE"
 )
 
+const (
+	// CiscoDeviceConditionAggregatorOwned is set by the CiscoDevice controller
+	// once aggregator topology owns a configdriver-backed device.
+	CiscoDeviceConditionAggregatorOwned = "AggregatorOwned"
+)
+
 // CiscoDevice is the Schema for the ciscodevices API.
 // It represents a single Cisco device managed by the virtual kubelet operator.
 //

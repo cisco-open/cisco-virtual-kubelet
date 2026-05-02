@@ -27,13 +27,21 @@ package controller
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/aggregator"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 )
@@ -43,6 +51,7 @@ import (
 // check returns true. sync.Once-guarded so multiple tests in the same
 // `go test` invocation don't trigger the registry's duplicate-panic.
 var stubExclusivityCDRegistrationOnce sync.Once
+var stubExclusivityCDFactoryCalls atomic.Int32
 
 func registerExclusivityStubFakeCD(t *testing.T) {
 	t.Helper()
@@ -50,11 +59,23 @@ func registerExclusivityStubFakeCD(t *testing.T) {
 		drivers.RegisterConfigDriver(
 			ciskov1.DeviceDriverFAKE,
 			func(_ context.Context, _ *ciskov1.DeviceSpec, _ string, _ drivers.ConfigDriverOptions) (*drivers.ConfigDriverContext, error) {
+				stubExclusivityCDFactoryCalls.Add(1)
 				return &drivers.ConfigDriverContext{Transport: nil}, nil
 			},
 		)
 	})
 	_ = transport.ErrUnsupported // keep transport import live for clarity
+}
+
+type recordingDeleteClient struct {
+	client.Client
+	propagation *metav1.DeletionPropagation
+}
+
+func (c *recordingDeleteClient) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+	options := (&client.DeleteOptions{}).ApplyOptions(opts)
+	c.propagation = options.PropagationPolicy
+	return c.Client.Delete(ctx, obj, opts...)
 }
 
 func TestReconcile_AggregatorMode_SkipsDeploymentForConfigDriverRegisteredDevice(t *testing.T) {
@@ -75,6 +96,100 @@ func TestReconcile_AggregatorMode_SkipsDeploymentForConfigDriverRegisteredDevice
 		&d)
 	if !errors.IsNotFound(err) {
 		t.Fatalf("expected NotFound for the per-device Deployment under aggregator mode, got err=%v deploy=%+v", err, d)
+	}
+}
+
+func TestAggregatorTopologyShiftWaitsForPodsToQuiesce(t *testing.T) {
+	registerExclusivityStubFakeCD(t)
+
+	dev := newDevice("shift-fake", "default")
+	dev.UID = types.UID("11111111-1111-1111-1111-111111111111")
+	dev.Spec.Driver = ciskov1.DeviceDriverFAKE
+
+	controller := true
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dev.Name + deploymentSuffix,
+			Namespace: dev.Namespace,
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: "cisco.vk/v1alpha1",
+				Kind:       "CiscoDevice",
+				Name:       dev.Name,
+				UID:        dev.UID,
+				Controller: &controller,
+			}},
+		},
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dev.Name + deploymentSuffix + "-old",
+			Namespace: dev.Namespace,
+			Labels:    perDeviceDeploymentLabels(dev.Name),
+		},
+	}
+	r := reconcilerFor(t, dev, deploy, pod)
+	recorder := &recordingDeleteClient{Client: r.Client}
+	r.Client = recorder
+	r.AggregatorEnabled = true
+
+	result, err := r.Reconcile(context.Background(), reconcileRequest("default", dev.Name))
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if result.RequeueAfter != aggregatorTopologyPollInterval {
+		t.Fatalf("RequeueAfter=%v, want %v while stale Pods remain", result.RequeueAfter, aggregatorTopologyPollInterval)
+	}
+	if recorder.propagation == nil || *recorder.propagation != metav1.DeletePropagationForeground {
+		t.Fatalf("Deployment delete propagation=%v, want Foreground", recorder.propagation)
+	}
+	var gotDevice ciskov1.CiscoDevice
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: dev.Namespace, Name: dev.Name}, &gotDevice); err != nil {
+		t.Fatalf("get CiscoDevice: %v", err)
+	}
+	cond := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwned)
+	if cond == nil || cond.Status != metav1.ConditionTrue || cond.Reason != "AggregatorEnabled" {
+		t.Fatalf("AggregatorOwned condition=%+v, want True/AggregatorEnabled", cond)
+	}
+	var gone appsv1.Deployment
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: deploy.Namespace, Name: deploy.Name}, &gone); !errors.IsNotFound(err) {
+		t.Fatalf("stale Deployment should be deleted, got err=%v deploy=%+v", err, gone)
+	}
+
+	if err := r.Delete(context.Background(), pod); err != nil {
+		t.Fatalf("delete stale Pod: %v", err)
+	}
+	result, err = r.Reconcile(context.Background(), reconcileRequest("default", dev.Name))
+	if err != nil {
+		t.Fatalf("Reconcile after Pod quiesce: %v", err)
+	}
+	if result.RequeueAfter != 0 || result.Requeue {
+		t.Fatalf("result after Pod quiesce=%+v, want no requeue", result)
+	}
+}
+
+func TestAggregatorWorkerRefusesUnownedDevice(t *testing.T) {
+	registerExclusivityStubFakeCD(t)
+	stubExclusivityCDFactoryCalls.Store(0)
+
+	dev := newDevice("unowned-fake", "default")
+	dev.Spec.Driver = ciskov1.DeviceDriverFAKE
+	scheme := newTestScheme(t)
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(dev).
+		Build()
+	r := &aggregator.AggregatedReconciler{
+		Client: c,
+		Scheme: scheme,
+	}
+	_, err := r.Reconcile(context.Background(), ctrl.Request{
+		NamespacedName: types.NamespacedName{Namespace: dev.Namespace, Name: dev.Name},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if calls := stubExclusivityCDFactoryCalls.Load(); calls != 0 {
+		t.Fatalf("aggregator started device-side work without AggregatorOwned condition; factory calls=%d", calls)
 	}
 }
 
