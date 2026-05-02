@@ -195,6 +195,8 @@ func (r *iosxeConfigResource) Read(ctx context.Context, req resource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	importLikeRead := state.Labels.IsNull() || state.Labels.IsUnknown()
+
 	ns := r.namespaceFor(&state)
 	got, err := r.client.Resource(iosxeConfigGVR).Namespace(ns).
 		Get(ctx, state.Name.ValueString(), metav1.GetOptions{})
@@ -208,6 +210,10 @@ func (r *iosxeConfigResource) Read(ctx context.Context, req resource.ReadRequest
 		return
 	}
 	r.refreshFromCluster(ctx, &state, got)
+	if importLikeRead {
+		state.Labels = mapValueFromStrings(got.GetLabels())
+		state.Annotations = mapValueFromStrings(got.GetAnnotations())
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -392,11 +398,9 @@ func (r *iosxeConfigResource) waitForObservedGeneration(ctx context.Context, ns,
 	}
 }
 
-// refreshFromCluster copies the CR's metadata and status fields onto
-// the model so computed attributes reflect what the cluster knows.
+// refreshFromCluster copies only status fields onto the model. Metadata
+// is desired state except during import-like reads; see Read.
 func (r *iosxeConfigResource) refreshFromCluster(_ context.Context, m *IOSXEConfigResourceModel, got *unstructured.Unstructured) {
-	m.Labels = mapValueFromStrings(got.GetLabels())
-	m.Annotations = mapValueFromStrings(got.GetAnnotations())
 	if !observedGenerationCurrent(got, got.GetGeneration()) {
 		m.Phase = types.StringValue(reconcilePendingPhase)
 		m.LastAppliedHash = types.StringNull()

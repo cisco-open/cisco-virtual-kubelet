@@ -280,32 +280,18 @@ func TestRefreshFromClusterPullsStatusFields(t *testing.T) {
 	}
 }
 
-func TestReadRefreshesMetadataDrift(t *testing.T) {
-	ctx := context.Background()
+func TestReadDoesNotPullControllerLabelsIntoState(t *testing.T) {
 	existing := newIOSXEConfigObject(t, "edge-01", "network")
-	existing.SetLabels(map[string]string{"tf": "yes", "foo": "bar"})
+	existing.SetLabels(map[string]string{"tf": "yes", "ops/managed": "true"})
 	r := &iosxeConfigResource{
 		client: fakeDynamic(t, existing),
 	}
 
 	model := validIOSXEConfigModel(t, "edge-01", "network")
+	model.Labels = mustMap(t, map[string]string{"tf": "yes"})
 	got := readResourceForTest(t, r, model)
-	if labels := mustStringMapValue(t, got.Labels); !reflect.DeepEqual(labels, map[string]string{"tf": "yes", "foo": "bar"}) {
-		t.Fatalf("labels=%v, want initial cluster labels", labels)
-	}
-
-	live, err := r.client.Resource(iosxeConfigGVR).Namespace("network").Get(ctx, "edge-01", metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("get IOSXEConfig for mutation: %v", err)
-	}
-	live.SetLabels(map[string]string{"tf": "updated", "baz": "new"})
-	if _, err := r.client.Resource(iosxeConfigGVR).Namespace("network").Update(ctx, live, metav1.UpdateOptions{}); err != nil {
-		t.Fatalf("update IOSXEConfig labels: %v", err)
-	}
-
-	got = readResourceForTest(t, r, &got)
-	if labels := mustStringMapValue(t, got.Labels); !reflect.DeepEqual(labels, map[string]string{"tf": "updated", "baz": "new"}) {
-		t.Fatalf("labels=%v, want mutated cluster labels", labels)
+	if labels := mustStringMapValue(t, got.Labels); !reflect.DeepEqual(labels, map[string]string{"tf": "yes"}) {
+		t.Fatalf("labels=%v, want only Terraform-configured labels", labels)
 	}
 }
 
@@ -538,8 +524,8 @@ func TestImportStateSplitsNamespacedID(t *testing.T) {
 func TestImportPopulatesExistingMetadata(t *testing.T) {
 	ctx := context.Background()
 	existing := newIOSXEConfigObject(t, "edge-import", "network")
-	existing.SetLabels(map[string]string{"tf": "yes", "foo": "bar"})
-	existing.SetAnnotations(map[string]string{"owner": "network-team", "ticket": "123"})
+	existing.SetLabels(map[string]string{"imported": "true"})
+	existing.SetAnnotations(map[string]string{"imp": "ann"})
 	r := &iosxeConfigResource{
 		client: fakeDynamic(t, existing),
 	}
@@ -559,10 +545,10 @@ func TestImportPopulatesExistingMetadata(t *testing.T) {
 
 	model := validIOSXEConfigModel(t, importedName.ValueString(), importedNamespace.ValueString())
 	got := readResourceForTest(t, r, model)
-	if labels := mustStringMapValue(t, got.Labels); !reflect.DeepEqual(labels, map[string]string{"tf": "yes", "foo": "bar"}) {
+	if labels := mustStringMapValue(t, got.Labels); !reflect.DeepEqual(labels, map[string]string{"imported": "true"}) {
 		t.Fatalf("labels=%v, want imported cluster labels", labels)
 	}
-	if annotations := mustStringMapValue(t, got.Annotations); !reflect.DeepEqual(annotations, map[string]string{"owner": "network-team", "ticket": "123"}) {
+	if annotations := mustStringMapValue(t, got.Annotations); !reflect.DeepEqual(annotations, map[string]string{"imp": "ann"}) {
 		t.Fatalf("annotations=%v, want imported cluster annotations", annotations)
 	}
 }
