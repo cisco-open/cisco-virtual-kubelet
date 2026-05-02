@@ -40,8 +40,9 @@ type iosxeConfigProvider struct{}
 // client (rather than a *rest.Config) means resources don't need
 // to re-build the same client per-Resource.
 type providerData struct {
-	Dynamic dynamic.Interface
-	Default Namespace
+	Dynamic            dynamic.Interface
+	Default            Namespace
+	WaitForConvergence bool
 }
 
 // Namespace is a small typed-string so a refactor that adds
@@ -74,14 +75,19 @@ writes IOSXEConfig CRs against the cluster's API. The per-device cisco-vk pod
 				Optional:            true,
 				MarkdownDescription: "Default namespace for IOSXEConfig CRs whose `namespace` attribute is not set.",
 			},
+			"wait_for_convergence": schema.BoolAttribute{
+				Optional:            true,
+				MarkdownDescription: "When true, Create and Update wait for status.observedGeneration to catch metadata.generation before storing computed status fields.",
+			},
 		},
 	}
 }
 
 type providerModel struct {
-	Kubeconfig types.String `tfsdk:"kubeconfig"`
-	Context    types.String `tfsdk:"context"`
-	Namespace  types.String `tfsdk:"namespace"`
+	Kubeconfig         types.String `tfsdk:"kubeconfig"`
+	Context            types.String `tfsdk:"context"`
+	Namespace          types.String `tfsdk:"namespace"`
+	WaitForConvergence types.Bool   `tfsdk:"wait_for_convergence"`
 }
 
 func (p *iosxeConfigProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
@@ -102,8 +108,9 @@ func (p *iosxeConfigProvider) Configure(ctx context.Context, req provider.Config
 		return
 	}
 	pd := &providerData{
-		Dynamic: dynClient,
-		Default: Namespace(cfg.Namespace.ValueString()),
+		Dynamic:            dynClient,
+		Default:            Namespace(cfg.Namespace.ValueString()),
+		WaitForConvergence: !cfg.WaitForConvergence.IsNull() && cfg.WaitForConvergence.ValueBool(),
 	}
 	resp.DataSourceData = pd
 	resp.ResourceData = pd

@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -23,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	gvrschema "k8s.io/apimachinery/pkg/runtime/schema"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/yaml"
 )
@@ -38,6 +40,13 @@ var iosxeConfigGVR = gvrschema.GroupVersionResource{
 
 const ResourceMetadataName = "iosxeconfig_config"
 
+const (
+	terraformFieldManager = "cisco.vk/terraform-provider"
+	reconcilePendingPhase = "(reconcile-pending)"
+	convergenceTimeout    = 2 * time.Minute
+	convergencePoll       = 2 * time.Second
+)
+
 // NewIOSXEConfigResource is what the provider's Resources() hands
 // the framework. Each call returns a fresh resource value; the
 // framework calls Configure on it before any CRUD method runs.
@@ -46,8 +55,9 @@ func NewIOSXEConfigResource() resource.Resource {
 }
 
 type iosxeConfigResource struct {
-	client    dynamic.Interface
-	defaultNS string
+	client             dynamic.Interface
+	defaultNS          string
+	waitForConvergence bool
 }
 
 // IOSXEConfigResourceModel is the Terraform-side projection of
@@ -84,6 +94,7 @@ func (r *iosxeConfigResource) Configure(_ context.Context, req resource.Configur
 	}
 	r.client = pd.Dynamic
 	r.defaultNS = string(pd.Default)
+	r.waitForConvergence = pd.WaitForConvergence
 }
 
 func (r *iosxeConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -149,11 +160,17 @@ func (r *iosxeConfigResource) Create(ctx context.Context, req resource.CreateReq
 	if err != nil {
 		return
 	}
-	created, err := r.client.Resource(iosxeConfigGVR).Namespace(ns).
-		Create(ctx, obj, metav1.CreateOptions{})
+	created, err := r.applyIOSXEConfig(ctx, ns, obj)
 	if err != nil {
 		resp.Diagnostics.AddError("create IOSXEConfig failed", err.Error())
 		return
+	}
+	if r.waitForConvergence {
+		created, err = r.waitForObservedGeneration(ctx, ns, plan.Name.ValueString(), created.GetGeneration())
+		if err != nil {
+			resp.Diagnostics.AddError("wait for IOSXEConfig convergence failed", err.Error())
+			return
+		}
 	}
 	r.refreshFromCluster(ctx, &plan, created)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -194,21 +211,17 @@ func (r *iosxeConfigResource) Update(ctx context.Context, req resource.UpdateReq
 	if err != nil {
 		return
 	}
-	// Carry the existing resourceVersion forward so concurrent
-	// edits surface as a clean Conflict instead of overwriting.
-	current, getErr := r.client.Resource(iosxeConfigGVR).Namespace(ns).
-		Get(ctx, plan.Name.ValueString(), metav1.GetOptions{})
-	if getErr != nil {
-		resp.Diagnostics.AddError("update prefetch failed", getErr.Error())
-		return
-	}
-	obj.SetResourceVersion(current.GetResourceVersion())
-
-	updated, err := r.client.Resource(iosxeConfigGVR).Namespace(ns).
-		Update(ctx, obj, metav1.UpdateOptions{})
+	updated, err := r.applyIOSXEConfig(ctx, ns, obj)
 	if err != nil {
 		resp.Diagnostics.AddError("update IOSXEConfig failed", err.Error())
 		return
+	}
+	if r.waitForConvergence {
+		updated, err = r.waitForObservedGeneration(ctx, ns, plan.Name.ValueString(), updated.GetGeneration())
+		if err != nil {
+			resp.Diagnostics.AddError("wait for IOSXEConfig convergence failed", err.Error())
+			return
+		}
 	}
 	r.refreshFromCluster(ctx, &plan, updated)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -298,14 +311,77 @@ func (r *iosxeConfigResource) toUnstructured(_ context.Context, m *IOSXEConfigRe
 	return out, nil
 }
 
+func (r *iosxeConfigResource) applyIOSXEConfig(ctx context.Context, ns string, obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	payload, err := json.Marshal(obj.Object)
+	if err != nil {
+		return nil, fmt.Errorf("marshal apply payload: %w", err)
+	}
+	force := true
+	return r.client.Resource(iosxeConfigGVR).Namespace(ns).Patch(
+		ctx,
+		obj.GetName(),
+		k8stypes.ApplyPatchType,
+		payload,
+		metav1.PatchOptions{
+			FieldManager: terraformFieldManager,
+			Force:        &force,
+		},
+	)
+}
+
+func (r *iosxeConfigResource) waitForObservedGeneration(ctx context.Context, ns, name string, generation int64) (*unstructured.Unstructured, error) {
+	waitCtx, cancel := context.WithTimeout(ctx, convergenceTimeout)
+	defer cancel()
+
+	var last *unstructured.Unstructured
+	for {
+		got, err := r.client.Resource(iosxeConfigGVR).Namespace(ns).Get(waitCtx, name, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+		last = got
+		if generation == 0 {
+			generation = got.GetGeneration()
+		}
+		if observedGenerationCurrent(got, generation) {
+			return got, nil
+		}
+		select {
+		case <-waitCtx.Done():
+			if last != nil {
+				return last, fmt.Errorf("timed out waiting for status.observedGeneration to reach metadata.generation")
+			}
+			return nil, waitCtx.Err()
+		case <-time.After(convergencePoll):
+		}
+	}
+}
+
 // refreshFromCluster copies the CR's status fields onto the model
 // so the computed attributes (phase, last_applied_hash,
 // source_yang_version) reflect what the cluster knows.
 func (r *iosxeConfigResource) refreshFromCluster(_ context.Context, m *IOSXEConfigResourceModel, got *unstructured.Unstructured) {
+	if !observedGenerationCurrent(got, got.GetGeneration()) {
+		m.Phase = types.StringValue(reconcilePendingPhase)
+		m.LastAppliedHash = types.StringNull()
+		m.SourceYangVersion = types.StringNull()
+		return
+	}
 	status, _, _ := unstructured.NestedMap(got.Object, "status")
 	m.Phase = stringFromMap(status, "phase")
 	m.LastAppliedHash = stringFromMap(status, "lastAppliedHash")
 	m.SourceYangVersion = stringFromMap(status, "sourceYangVersion")
+}
+
+func observedGenerationCurrent(got *unstructured.Unstructured, generation int64) bool {
+	if got == nil {
+		return false
+	}
+	observed, found, err := unstructured.NestedInt64(got.Object, "status", "observedGeneration")
+	if err != nil || !found {
+		return false
+	}
+	return observed >= generation
 }
 
 // DiagnosticsSink is the narrow surface toUnstructured needs.
@@ -368,7 +444,3 @@ var (
 	_ resource.ResourceWithConfigure   = (*iosxeConfigResource)(nil)
 	_ resource.ResourceWithImportState = (*iosxeConfigResource)(nil)
 )
-
-// Anchor the encoding/json import — used in tests + by future
-// fields we expect to surface (computed status payloads).
-var _ = json.Marshal

@@ -10,6 +10,8 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -21,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	gvrschema "k8s.io/apimachinery/pkg/runtime/schema"
 	dynfake "k8s.io/client-go/dynamic/fake"
+	ktesting "k8s.io/client-go/testing"
 )
 
 // fakeDynamic builds a fake dynamic client knowing about
@@ -149,10 +152,14 @@ func TestToUnstructuredRejectsBadYAML(t *testing.T) {
 func TestRefreshFromClusterPullsStatusFields(t *testing.T) {
 	got := &unstructured.Unstructured{}
 	got.SetUnstructuredContent(map[string]any{
+		"metadata": map[string]any{
+			"generation": int64(3),
+		},
 		"status": map[string]any{
-			"phase":             "InSync",
-			"lastAppliedHash":   "sha256:abc",
-			"sourceYangVersion": "1791",
+			"observedGeneration": int64(3),
+			"phase":              "InSync",
+			"lastAppliedHash":    "sha256:abc",
+			"sourceYangVersion":  "1791",
 		},
 	})
 	m := &IOSXEConfigResourceModel{}
@@ -165,6 +172,117 @@ func TestRefreshFromClusterPullsStatusFields(t *testing.T) {
 	}
 	if m.SourceYangVersion.ValueString() != "1791" {
 		t.Errorf("yang=%q", m.SourceYangVersion.ValueString())
+	}
+}
+
+func TestUpdatePreservesControllerMetadata(t *testing.T) {
+	existing := &unstructured.Unstructured{}
+	existing.SetAPIVersion("config.cisco.vk/v1alpha1")
+	existing.SetKind("IOSXEConfig")
+	existing.SetName("edge-01")
+	existing.SetNamespace("network")
+	existing.SetFinalizers([]string{"config.cisco.vk/lease-cleanup"})
+	existing.SetLabels(map[string]string{"controller.cisco.vk/owned": "true"})
+	existing.SetAnnotations(map[string]string{"controller.cisco.vk/annotation": "keep"})
+	existing.SetOwnerReferences([]metav1.OwnerReference{{
+		APIVersion: "cisco.vk/v1alpha1",
+		Kind:       "CiscoDevice",
+		Name:       "edge-01",
+		UID:        "11111111-1111-1111-1111-111111111111",
+	}})
+	if err := unstructured.SetNestedField(existing.Object, map[string]any{"name": "edge-01"}, "spec", "deviceRef"); err != nil {
+		t.Fatalf("seed spec.deviceRef: %v", err)
+	}
+	if err := unstructured.SetNestedStringSlice(existing.Object, []string{"vlan"}, "spec", "managedFamilies"); err != nil {
+		t.Fatalf("seed spec.managedFamilies: %v", err)
+	}
+
+	r := &iosxeConfigResource{
+		client: fakeDynamic(t, existing),
+	}
+	stored := existing.DeepCopy()
+	r.client.(*dynfake.FakeDynamicClient).PrependReactor("patch", "iosxeconfigs", func(action ktesting.Action) (bool, runtime.Object, error) {
+		patch := action.(ktesting.PatchAction)
+		var payload map[string]any
+		if err := json.Unmarshal(patch.GetPatch(), &payload); err != nil {
+			return true, nil, err
+		}
+		if spec, ok := payload["spec"]; ok {
+			stored.Object["spec"] = spec
+		}
+		if apiVersion, ok := payload["apiVersion"].(string); ok {
+			stored.SetAPIVersion(apiVersion)
+		}
+		if kind, ok := payload["kind"].(string); ok {
+			stored.SetKind(kind)
+		}
+		return true, stored.DeepCopy(), nil
+	})
+	model := &IOSXEConfigResourceModel{
+		Name:            types.StringValue("edge-01"),
+		Namespace:       types.StringValue("network"),
+		DeviceRef:       types.StringValue("edge-01"),
+		ManagedFamilies: mustList(t, "vlan", "vrf"),
+		SourceInline:    types.StringValue(`{"vlan":{"vlans":[{"id":10,"name":"users"}]}}`),
+	}
+	sink := &dummySink{}
+	obj, err := r.toUnstructured(context.Background(), model, sink)
+	if err != nil || sink.errs != nil {
+		t.Fatalf("toUnstructured: err=%v sink=%v", err, sink.errs)
+	}
+	got, err := r.applyIOSXEConfig(context.Background(), "network", obj)
+	if err != nil {
+		t.Fatalf("applyIOSXEConfig: %v", err)
+	}
+	if !reflect.DeepEqual(got.GetFinalizers(), existing.GetFinalizers()) {
+		t.Fatalf("finalizers=%v, want %v", got.GetFinalizers(), existing.GetFinalizers())
+	}
+	if !reflect.DeepEqual(got.GetOwnerReferences(), existing.GetOwnerReferences()) {
+		t.Fatalf("ownerReferences=%v, want %v", got.GetOwnerReferences(), existing.GetOwnerReferences())
+	}
+	if got.GetLabels()["controller.cisco.vk/owned"] != "true" {
+		t.Fatalf("labels=%v, want controller label preserved", got.GetLabels())
+	}
+	if got.GetAnnotations()["controller.cisco.vk/annotation"] != "keep" {
+		t.Fatalf("annotations=%v, want controller annotation preserved", got.GetAnnotations())
+	}
+	families, _, _ := unstructured.NestedStringSlice(got.Object, "spec", "managedFamilies")
+	if !reflect.DeepEqual(families, []string{"vlan", "vrf"}) {
+		t.Fatalf("managedFamilies=%v, want updated Terraform spec", families)
+	}
+}
+
+func TestUpdateSuppressesStaleStatus(t *testing.T) {
+	got := &unstructured.Unstructured{}
+	got.SetUnstructuredContent(map[string]any{
+		"metadata": map[string]any{
+			"generation": int64(8),
+		},
+		"status": map[string]any{
+			"observedGeneration": int64(7),
+			"phase":              "InSync",
+			"lastAppliedHash":    "sha256:stale",
+			"sourceYangVersion":  "1791",
+		},
+	})
+	model := &IOSXEConfigResourceModel{}
+	(&iosxeConfigResource{}).refreshFromCluster(context.Background(), model, got)
+	if model.Phase.ValueString() != reconcilePendingPhase {
+		t.Fatalf("phase=%q, want %q", model.Phase.ValueString(), reconcilePendingPhase)
+	}
+	if !model.LastAppliedHash.IsNull() {
+		t.Fatalf("lastAppliedHash=%q, want null while observedGeneration is stale", model.LastAppliedHash.ValueString())
+	}
+
+	if err := unstructured.SetNestedField(got.Object, int64(8), "status", "observedGeneration"); err != nil {
+		t.Fatalf("set observedGeneration current: %v", err)
+	}
+	(&iosxeConfigResource{}).refreshFromCluster(context.Background(), model, got)
+	if model.Phase.ValueString() != "InSync" {
+		t.Fatalf("phase after observedGeneration catches up=%q, want InSync", model.Phase.ValueString())
+	}
+	if model.LastAppliedHash.ValueString() != "sha256:stale" {
+		t.Fatalf("lastAppliedHash after observedGeneration catches up=%q", model.LastAppliedHash.ValueString())
 	}
 }
 
