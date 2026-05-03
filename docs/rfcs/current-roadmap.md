@@ -817,6 +817,208 @@ Phase C does both:
 
 ---
 
+## 5b. Theme: Platform telemetry pipeline (MDT / OTel)
+
+> Operators want device-side throughput, environment, BGP, OSPF, PoE,
+> and TCAM telemetry surfaced as Prometheus / OTel time series next
+> to cvk's controller metrics. cvk does not produce that data today
+> — it consumes a narrow gNMI Subscribe slice for **drift detection
+> only** ([`internal/drivers/iosxe/configdriver/transport/gnmi.go:129`](../../internal/drivers/iosxe/configdriver/transport/gnmi.go))
+> and exposes controller-side metrics
+> ([`internal/drivers/iosxe/configdriver/engine/metrics.go:103`](../../internal/drivers/iosxe/configdriver/engine/metrics.go)).
+> The device-side platform telemetry plane is missing.
+
+### 5b.1 Current state
+
+- gNMI dial-IN: drift detection only
+  ([`gnmi.go:129`](../../internal/drivers/iosxe/configdriver/transport/gnmi.go)).
+- Controller-side Prometheus: drift, transactions, mutate-ops,
+  apply-errors, subscribe-events-dropped (engine + transport
+  packages).
+- OTel: topology *spans* only — nodes, links, hosted apps
+  ([`docs/observability.md:63`](../observability.md)). No metrics
+  pipeline.
+- MDT (Cisco's Model-Driven Telemetry) gRPC dial-out from the
+  device: not handled. No collector. No CRD field for "configure
+  MDT subscriptions on this device".
+
+### 5b.2 Reference receiver: `jeremycohoe/otel-grpc-cisco-receiver`
+
+A custom OTel Collector receiver that accepts IOS-XE MDT gRPC
+dial-out (kvGPB encoding), translates Cisco YANG leaf values to
+OTel metrics with attributes, and fans the output into any
+OTel-compatible backend (Splunk HEC examples shipped, Prometheus
+/ Datadog / Loki all valid). Covers interfaces / CPU / memory /
+environment / BGP / OSPF / PoE / TCAM / TrustSec out of the box;
+arbitrary YANG paths via mounted model files. Production-ready
+performance characteristics (>1k msg/s, <10ms p99); single
+contributor; preparing for upstream contribution to
+`opentelemetry-collector-contrib`.
+
+cvk does **not** take a hard dependency on this project. Instead,
+treat it as the reference implementation of the *pattern* —
+device-as-MDT-source, OTel-collector-as-translator,
+backend-of-choice-as-storage. Telegraf's MDT input plugin and
+the eventual contrib-repo receiver are alternatives operators
+may pick; cvk's job is to make the device-side configuration
+seamless and the integration path documented, not to ship the
+collector itself.
+
+### 5b.3 Phased plan
+
+**Phase A — Documentation pattern (1 week).**
+- Add `docs/operations/platform-telemetry.md`: how to deploy an
+  OTel collector with the receiver alongside cvk, point Cat9k
+  / Cat8kv at it via existing config tooling, and consume the
+  metrics. Include a Helm-values overlay for the OTel collector.
+- A reference Grafana dashboard (`docs/operations/grafana/`).
+- Zero code in cvk. **Deliverable:** an operator can wire the
+  pipeline up by following the guide.
+
+**Phase B — Closed-loop CRD field (3 weeks).**
+- Add `CiscoDevice.spec.telemetry`:
+  ```yaml
+  spec:
+    telemetry:
+      enabled: true
+      receiver:
+        endpoint: otel-collector.observability.svc:57500
+        protocol: mdt-grpc-dialout    # | gnmi-dialin | telegraf-mdt
+      subscriptions:
+        - name: interfaces
+          paths: [/interfaces/interface/state/counters]
+          sampleIntervalMs: 30000
+        - name: environment
+          paths: [/environment-sensors/environment-sensor/state]
+          sampleIntervalMs: 60000
+  ```
+- The configdriver renders this into the device's
+  `telemetry` config family (NETCONF / RESTCONF / gNMI Set,
+  whichever the chosen transport supports — see §3).
+- The controller does **not** ship or run the collector itself;
+  `spec.telemetry.receiver.endpoint` points at whatever the
+  operator is running.
+- **Vendor-neutrality requirement:** the schema must accept
+  multiple `protocol` values so future drivers (NX-OS, IOS-XR,
+  third-party) can plug in without breaking the field shape.
+  cvk-on-IOS-XE today emits MDT; cvk-on-IOS-XR tomorrow emits
+  the IOS-XR variant; the CRD shape is the same.
+- **Deliverable:** one CR drives device subscriptions; operator
+  adds a destination collector; metrics arrive in their backend
+  of choice.
+
+**Phase C — Optional bundled subchart (2 weeks).**
+- `charts/cisco-virtual-kubelet-telemetry`: deploys an OTel
+  collector + the upstream MDT receiver + a default
+  ServiceMonitor / Splunk HEC config. Off by default; opt-in via
+  `--set telemetry.enabled=true` on the parent chart, or
+  `helm install` the subchart standalone.
+- This is a packaging convenience, **not a hard dependency**.
+  The subchart pins to a specific receiver image tag (or to
+  whatever lands in `opentelemetry-collector-contrib`); operators
+  who want a different receiver replace the values overlay.
+- **Deliverable:** "out of the box" telemetry experience for
+  greenfield deployments.
+
+### 5b.4 Design decisions to settle before Phase B
+
+- **Where does the YANG-path catalogue live?** Phase B needs a
+  validation list (which paths cvk knows are sane on Cat9k 17.18).
+  Recommendation: extend the existing
+  `internal/drivers/iosxe/configdriver/schema/` catalogue with a
+  `telemetry-paths.yaml` rather than inventing a new validation
+  pipeline.
+- **Push vs pull semantics.** MDT dial-out is push; gNMI dial-in
+  is pull. The CRD's `protocol` field has to be honest about
+  which: `mdt-grpc-dialout` requires the device to know the
+  receiver's address (operator deploys collector first, then
+  references it); `gnmi-dialin` requires the receiver to know
+  the device's address (the existing cvk transport already does
+  this for drift). Don't conflate.
+- **Schema evolution.** `spec.telemetry.subscriptions` will grow
+  per-vendor. Use a discriminated-union pattern (`type` +
+  `mdt:` / `gnmi:` / `streaming-telemetry:` siblings) to leave
+  room for IOS-XR's protobuf-over-TCP and NX-OS's NX-API.
+- **Cross-cut with §3 transport consolidation.** Phase B's
+  rendering of telemetry config onto the device goes through
+  the same configdriver `transport.Interface`. If §3 hasn't
+  finished, only the RESTCONF path will work. That's acceptable
+  for Phase B; Phase C should ride on top of §3 Phase B (NETCONF
+  + gNMI bindings) so any chosen device protocol can carry
+  telemetry config.
+
+### 5b.5 RBAC implications
+
+- Phase A: no new RBAC.
+- Phase B: the configdriver already has the necessary device-write
+  RBAC for the `telemetry` family; nothing new on the cvk side.
+  The collector deployment runs in the `observability` namespace
+  with its own SA — out of cvk's scope.
+- Phase C: new chart values for the subchart's collector SA;
+  recommend a default Pod Security Standard of `restricted`,
+  NetworkPolicy egress-only to the OTel receiver port, no
+  pod-to-cvk ingress.
+- Cross-link with §5 personas: the *config* persona can declare
+  `spec.telemetry`, but cannot deploy or modify the collector
+  itself; that's a platform-team concern.
+
+### 5b.6 Risks
+
+- **Adoption risk on the reference receiver.** 0 stars, single
+  contributor, no contrib-repo home yet. Mitigation: Phase A is
+  documentation-only and has no dependency on this specific
+  project; the pattern works with telegraf-mdt or any future
+  contrib receiver.
+- **Vendor lock at the wrong layer.** MDT kvGPB is Cisco-specific;
+  cvk's design point is that the configdriver insulates operators
+  from vendor protocol details. Mitigation: `spec.telemetry`
+  schema is vendor-neutral (paths + intervals + endpoint); the
+  driver translates.
+- **Cardinality explosion.** Per-interface, per-sensor metrics
+  on a 96-port Cat9k * 100 devices = ~10K series per device, ~1M
+  series fleet-wide. Mitigation: document the cardinality budget
+  in Phase A; recommend recording rules for fleet-aggregate
+  metrics; default the chart's ServiceMonitor scrape interval to
+  60s, not 15s.
+- **Collector drift.** OTel collector versions move quickly; the
+  reference receiver pins to v0.138+. Phase C's subchart needs a
+  version-bump cadence (quarterly?). Add to release-engineering
+  checklist.
+- **Privacy / data-egress.** Some operators forbid telemetry
+  egress to cloud backends. Phase A guide must show a
+  fully-on-prem path (collector → Prometheus / Splunk on-prem)
+  alongside the cloud examples.
+
+### 5b.7 Cross-theme dependencies
+
+- §3 (transport consolidation) — Phase B device-side rendering
+  benefits from §3 Phase B (NETCONF / gNMI bindings); without
+  them, only RESTCONF can carry the telemetry config.
+- §1.4 (production chart profile) — when the parent chart's
+  ServiceMonitor is enabled, document the discovery path for
+  the telemetry subchart's metrics endpoint as well.
+- §7.3 (per-device throughput aggregate) — §7.3 is a
+  controller-side metric (per-CR + per-family aggregates that
+  the controller already has visibility into). §5b is a
+  device-side metric (per-interface counters straight from the
+  device). Different sources, complementary outputs; both should
+  exist. Cross-reference rather than substitute.
+
+### 5b.8 Effort summary
+
+| Phase | Effort | Gate |
+|---|---|---|
+| A — pattern docs | 1 week | None |
+| B — `spec.telemetry` CRD field | 3 weeks | §1.2 (schema decisions for v1) ideally precede; otherwise ship as `v1alpha1` and migrate |
+| C — bundled subchart | 2 weeks | A + B; benefits from §3 Phase B for non-RESTCONF transport |
+
+Tier classification: **Tier-2** (operator-facing value, not a
+release-readiness blocker). Phase A can land in any quarter;
+Phase B should follow §1.2's `CiscoDevice` schema decision so it
+doesn't churn that field again at v1; Phase C is opportunistic.
+
+---
+
 ## 6. Tier-3 — v1 CRD promotion
 
 After §1 lands. The plan in
@@ -853,7 +1055,7 @@ under-scoped (see §1.1).
   exists since H2 / commit `573e48f`).
 - **Effort:** 2 weeks for >70% coverage.
 
-### 7.3 Per-device throughput telemetry
+### 7.3 Per-device throughput telemetry (controller-side)
 - Today: config metrics carry `device`, `family`, `transport`,
   `verb` labels
   ([`operator-cli-guide.md:438`](operator-cli-guide.md));
@@ -868,6 +1070,14 @@ under-scoped (see §1.1).
   `cisco_vk_config_writes_per_device_total` aggregate. Document
   the canonical Grafana dashboard alongside.
 - **Effort:** 1 week including dashboard JSON.
+- **Cross-reference §5b.** §7.3 is the *controller-side* metric
+  (what the controller saw, with CR + family attribution). §5b
+  is the *device-side* pipeline (what the device pushed via MDT,
+  raw counters and environment data). They are complementary —
+  one shows "the controller successfully wrote interface X 47
+  times this hour"; the other shows "interface X carried 4.2 Gbps
+  during that hour". Both should exist; neither subsumes the
+  other.
 
 ### 7.4 Chaos / disaster recovery drill
 - Today: `internal/provider/diagnostic/sink.go` and
@@ -932,12 +1142,16 @@ Q1                    Q2                    Q3                    Q4
    probe milestone)      cert-manager flow) §4 Phase C (File +    §7.4 Chaos drills
 §5 Phase A.0          §5 Phase A.1            OS image install)     (weekly schedule)
   (managedFamilies      (persona            §5 Phase B (family    §8 Template loops
-   enum)                 ClusterRoles +       allow-list webhook)
-§2 status fields +       chart wiring)      §5 Phase C (diag
-  printer columns     §2.4 packaging        command allow-list +
+   enum)                 ClusterRoles +       allow-list webhook) §5b Phase C (bundled
+§2 status fields +       chart wiring)      §5 Phase C (diag       telemetry subchart,
+  printer columns     §2.4 packaging        command allow-list +    rides on §3 Phase B)
 §2.2 selectableFields    + plugin diff       admin-server SAR)
 §2.5 OTel family attrs §7.3 throughput       §2.4 plugin explain
-                         metrics + dash       / health / replay
+§5b Phase A (telemetry   metrics + dash       / health / replay
+  pattern docs)       §5b Phase B
+                         (CiscoDevice.spec.
+                          telemetry CRD,
+                          rides on §1.2)
                        §7.1 Log unification
                          (cosmetic; deferred
                           if Q2 is full)
@@ -969,6 +1183,14 @@ Q1                    Q2                    Q3                    Q4
   collapse the two configs.
 - **§6 v1 promotion** is gated on §1 (all of), §3 Phase A, and
   §5 Phase A (both A.0 and A.1) being live.
+- **§5b Phase B (`CiscoDevice.spec.telemetry`)** rides on §1.2's
+  `CiscoDevice` schema decision so the field shape is settled
+  before v1 freezes it. If §1.2 slips, ship §5b Phase B as
+  `v1alpha1` with explicit migration semantics rather than
+  blocking §5b on §1.2.
+- **§5b Phase C (bundled telemetry subchart)** rides on §3
+  Phase B (NETCONF + gNMI bindings) so any device transport can
+  carry the telemetry config; otherwise restricted to RESTCONF.
 
 ---
 
