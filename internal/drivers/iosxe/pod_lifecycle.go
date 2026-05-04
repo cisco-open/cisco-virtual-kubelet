@@ -18,12 +18,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
-	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 )
 
 // DeployPod creates and deploys all containers in a pod to the device
@@ -201,33 +202,24 @@ func (d *XEDriver) GetPodContainers(ctx context.Context, pod *v1.Pod) (map[strin
 
 		log.G(ctx).Debugf("Found app %s with matching pod UID", appName)
 
-		// Extract container name from RunOpts labels
+		// Extract pod identity by accumulating labels across every RunOpts
+		// line — distributeRunOpts may split labels across lines, so a
+		// single-line check would silently drop the container.
 		var containerName string
-		var runOptsLine string
-
+		var runOptsLines []string
 		if app.RunOptss != nil {
 			for _, opt := range app.RunOptss.RunOpts {
 				if opt.LineRunOpts != nil {
-					line := *opt.LineRunOpts
-					runOptsLine = line
-
-					log.G(ctx).Debugf("App %s RunOpts: %s", appName, line)
-
-					// Verify this app belongs to our pod by checking all pod labels
-					if strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodName, pod.Name)) &&
-						strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodNamespace, pod.Namespace)) &&
-						strings.Contains(line, fmt.Sprintf("%s=%s", common.LabelPodUID, pod.UID)) {
-
-						// Extract the container name from the label
-						containerName = common.ExtractContainerNameFromLabels(line)
-
-						if containerName != "" {
-							log.G(ctx).Debugf("Extracted container name: %s from app %s", containerName, appName)
-						} else {
-							log.G(ctx).Warnf("App %s has pod labels but no container name label in line: %s", appName, line)
-						}
-						break
-					}
+					runOptsLines = append(runOptsLines, *opt.LineRunOpts)
+				}
+			}
+		}
+		if len(runOptsLines) > 0 {
+			ns, name, uid, ctr := common.PodIdentityFromRunOpts(runOptsLines)
+			if ns == pod.Namespace && name == pod.Name && uid == string(pod.UID) {
+				containerName = ctr
+				if containerName == "" {
+					log.G(ctx).Warnf("App %s has pod labels but no container name label across RunOpts lines: %v", appName, runOptsLines)
 				}
 			}
 		}
@@ -248,8 +240,8 @@ func (d *XEDriver) GetPodContainers(ctx context.Context, pod *v1.Pod) (map[strin
 			containerToAppID[containerName] = appName
 			log.G(ctx).Infof("Found container %s -> app %s", containerName, appName)
 		} else {
-			log.G(ctx).Warnf("Found app %s with pod UID but couldn't extract container name from labels. RunOpts: %s",
-				appName, runOptsLine)
+			log.G(ctx).Warnf("Found app %s with pod UID but couldn't extract container name from labels. RunOpts: %v",
+				appName, runOptsLines)
 		}
 	}
 
@@ -335,14 +327,34 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 		return statusPod, nil
 	}
 
-	// Get containers for this pod
+	// Get containers for this pod. GetPodContainers may return a partial map
+	// alongside an error when some expected containers have not yet been
+	// created on the device (e.g. multi-container pods mid-deployment, or the
+	// two-phase DockerResource flow where alpha is in DEPLOYED while beta has
+	// not been installed yet). The partial map is still useful — we surface
+	// a Pending pod with the in-flight containers as ContainerCreating
+	// instead of returning NotFound, which the VK framework would otherwise
+	// interpret as a missing pod and try to recreate.
 	discoveredContainers, err := d.GetPodContainers(ctx, pod)
 	if err != nil {
-		log.G(ctx).Debugf("failed to get pod containers: %v", err)
-		return nil, fmt.Errorf("apps for pod %s/%s not found on device", pod.Namespace, pod.Name)
+		log.G(ctx).Debugf("partial container discovery for pod %s/%s: %v", pod.Namespace, pod.Name, err)
 	}
 
 	if len(discoveredContainers) == 0 {
+		// All containers are missing. If the pod is still alive in K8s and the
+		// driver has the listers it needs, spawn recovery installs and surface a
+		// synthesised Pending pod so the VK framework does not loop on
+		// NotFound. The next status cycle will pick up the apps via normal
+		// discovery once installs land.
+		if pod.DeletionTimestamp == nil && d.secretLister != nil && d.configMapLister != nil {
+			log.G(ctx).Infof("All containers missing for pod %s/%s; driving full recovery", pod.Namespace, pod.Name)
+			d.recoverMissingContainers(ctx, pod, discoveredContainers)
+			statusPod := pod.DeepCopy()
+			if statusErr := d.GetContainerStatus(ctx, statusPod, discoveredContainers, nil); statusErr != nil {
+				return nil, fmt.Errorf("failed to synthesise status for recovering pod: %w", statusErr)
+			}
+			return statusPod, nil
+		}
 		log.G(ctx).Warnf("No containers found on device for pod %s/%s", pod.Namespace, pod.Name)
 		return nil, fmt.Errorf("no containers found for pod %s/%s", pod.Namespace, pod.Name)
 	}
@@ -396,6 +408,15 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 			}
 			d.ReconcileApp(ctx, appCfg)
 		}
+
+		// Drive recovery for any spec containers that are missing from the
+		// device. Without this, a container that failed to install or was
+		// deleted out-of-band would stay in ContainerCreating indefinitely
+		// because the loop above only iterates discoveredContainers.
+		// Each missing container is installed in a background goroutine so
+		// the status path stays non-blocking; tryMarkInstallInFlight prevents
+		// duplicate installs from concurrent status cycles.
+		d.recoverMissingContainers(ctx, pod, discoveredContainers)
 	} else {
 		log.G(ctx).Debugf("Pod %s/%s has DeletionTimestamp set; skipping forward reconciliation", pod.Namespace, pod.Name)
 	}
@@ -409,6 +430,81 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 	}
 
 	return statusPod, nil
+}
+
+// recoverMissingContainers kicks off a background install for any container
+// in pod.Spec that is not present in discoveredContainers. This complements
+// the synthesised ContainerCreating status emitted by GetContainerStatus —
+// without an actual install the container would stay Waiting forever.
+//
+// Each install is dedup'd by appID via tryMarkInstallInFlight so concurrent
+// GetPodStatus calls do not stack duplicate goroutines. CreateAppHostingApp
+// is non-blocking from the caller's perspective (runs in its own goroutine
+// with a fresh context); a failed install clears the in-flight flag so the
+// next status cycle retries.
+//
+// If the secret/configmap listers haven't been populated yet (cvk just
+// started up and DeployPod hasn't run for this pod), recovery is skipped —
+// the necessary env-var resolution would fail. The next status cycle will
+// retry once listers are wired up.
+func (d *XEDriver) recoverMissingContainers(ctx context.Context, pod *v1.Pod, discoveredContainers map[string]string) {
+	var missingNames []string
+	for i := range pod.Spec.Containers {
+		name := pod.Spec.Containers[i].Name
+		if _, found := discoveredContainers[name]; !found {
+			missingNames = append(missingNames, name)
+		}
+	}
+	if len(missingNames) == 0 {
+		return
+	}
+
+	if d.secretLister == nil || d.configMapLister == nil {
+		log.G(ctx).Warnf("Cannot drive recovery for missing containers in pod %s/%s: secret/configmap listers not yet initialised (will retry next status cycle)",
+			pod.Namespace, pod.Name)
+		return
+	}
+
+	appConfigs, err := d.ConvertPodToAppConfigs(pod)
+	if err != nil {
+		log.G(ctx).Warnf("Failed to build recovery app configs for pod %s/%s: %v", pod.Namespace, pod.Name, err)
+		return
+	}
+
+	byContainer := make(map[string]*AppHostingConfig, len(appConfigs))
+	for i := range appConfigs {
+		byContainer[appConfigs[i].ContainerName()] = &appConfigs[i]
+	}
+
+	for _, name := range missingNames {
+		cfg, ok := byContainer[name]
+		if !ok {
+			log.G(ctx).Warnf("Recovery: no app config produced for missing container %s of pod %s/%s",
+				name, pod.Namespace, pod.Name)
+			continue
+		}
+		if !d.tryMarkInstallInFlight(cfg.AppName()) {
+			log.G(ctx).Debugf("Recovery: install already in flight for container %s (appID=%s)", name, cfg.AppName())
+			continue
+		}
+		// Copy the config — the slice it points into is local to this
+		// function and the goroutine outlives the call.
+		cfgCopy := *cfg
+		log.G(ctx).Infof("Recovery: spawning install for missing container %s (appID=%s) of pod %s/%s",
+			name, cfgCopy.AppName(), pod.Namespace, pod.Name)
+		go func() {
+			bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+			defer cancel()
+			defer d.clearInstallInFlight(cfgCopy.AppName())
+			if err := d.CreateAppHostingApp(bgCtx, &cfgCopy); err != nil {
+				log.G(bgCtx).Warnf("Recovery: install failed for container %s of pod %s/%s: %v",
+					cfgCopy.ContainerName(), pod.Namespace, pod.Name, err)
+				return
+			}
+			log.G(bgCtx).Infof("Recovery: install succeeded for container %s of pod %s/%s",
+				cfgCopy.ContainerName(), pod.Namespace, pod.Name)
+		}()
+	}
 }
 
 // ListPods discovers all pods currently running on the device by analyzing app configurations.
@@ -475,26 +571,13 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 		var podNamespace, podName, podUID, containerName string
 
 		if app.RunOptss != nil {
+			lines := make([]string, 0, len(app.RunOptss.RunOpts))
 			for _, opt := range app.RunOptss.RunOpts {
 				if opt.LineRunOpts != nil {
-					line := *opt.LineRunOpts
-					log.G(ctx).Debugf("Discovery: App %s RunOpts line: %s", appName, line)
-
-					// Extract pod labels and accumulate across all lines
-					if val := common.ExtractLabelValue(line, common.LabelPodNamespace); val != "" && podNamespace == "" {
-						podNamespace = val
-					}
-					if val := common.ExtractLabelValue(line, common.LabelPodName); val != "" && podName == "" {
-						podName = val
-					}
-					if val := common.ExtractLabelValue(line, common.LabelPodUID); val != "" && podUID == "" {
-						podUID = val
-					}
-					if val := common.ExtractContainerNameFromLabels(line); val != "" && containerName == "" {
-						containerName = val
-					}
+					lines = append(lines, *opt.LineRunOpts)
 				}
 			}
+			podNamespace, podName, podUID, containerName = common.PodIdentityFromRunOpts(lines)
 			log.G(ctx).Debugf("Discovery: App %s final extracted namespace=%s, name=%s, uid=%s, container=%s",
 				appName, podNamespace, podName, podUID, containerName)
 		} else {
