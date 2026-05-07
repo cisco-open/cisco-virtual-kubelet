@@ -1,0 +1,30 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+# PodDisruptionBudget for the controller manager. With replicaCount: 1
+# (the default), this prevents voluntary disruptions (node drain,
+# rolling-restart) from removing the only controller pod until a
+# replacement is healthy. Operators running 2+ replicas with
+# leader-election can raise minAvailable accordingly.
+#
+# Disabled by default to keep the chart minimal; enable in values.yaml
+# for production deployments. See production-deployment-guide.md §8.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "cisco-virtual-kubelet.fullname" . }}-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
+spec:
+  {{- if .Values.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  {{- else if .Values.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  {{- else }}
+  minAvailable: 1
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "cisco-virtual-kubelet.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: controller
+{{- end }}

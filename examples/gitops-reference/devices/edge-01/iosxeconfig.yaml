@@ -1,0 +1,30 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: edge-01
+  namespace: network
+spec:
+  deviceRef:
+    name: edge-01
+  deviceGroups:
+    - access-switches
+  managedFamilies:
+    - system
+    - vlan
+    - vrf
+    - interface_ethernet
+    - interface_loopback
+    - interface_virtual_port_group
+    - dhcp
+    - access_list_extended
+  # Phase-1 RESTCONF transport has no candidate datastore; leave
+  # transactional off until the Phase-2 NETCONF path lands.
+  transactional: false
+  writeStartup: false
+  driftDetectInterval: 5m
+  # Cutover-safe default. Switch to "revert" once parallel-run is clean.
+  driftPolicy: report
+  source:
+    configMapRef:
+      name: edge-01-data
+      key: data.nac.yaml

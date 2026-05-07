@@ -1,0 +1,16 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEDeviceGroupConfig
+metadata:
+  name: access-switches
+  namespace: network
+spec:
+  deviceSelector:
+    matchLabels:
+      role: access-switch
+  configuration:
+    vlan:
+      vlans:
+        - id: 10
+          name: users
+        - id: 20
+          name: voice

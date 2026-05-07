@@ -1,0 +1,10 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfigDefaults
+metadata:
+  name: default
+spec:
+  configuration:
+    cdp:
+      run: true
+    system:
+      login_on_failure: true

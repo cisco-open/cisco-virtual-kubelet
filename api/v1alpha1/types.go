@@ -17,16 +17,35 @@ package v1alpha1
 import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// +kubebuilder:validation:Enum=XE;XR;NXOS;FAKE
+// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE
 type DeviceDriver string
 
 const (
-	DeviceDriverXE   DeviceDriver = "XE"
-	DeviceDriverXR   DeviceDriver = "XR"
-	DeviceDriverNXOS DeviceDriver = "NXOS"
-	DeviceDriverFAKE DeviceDriver = "FAKE"
+	DeviceDriverXE         DeviceDriver = "XE"
+	DeviceDriverXR         DeviceDriver = "XR"
+	DeviceDriverNXOS       DeviceDriver = "NXOS"
+	DeviceDriverOPENCONFIG DeviceDriver = "OPENCONFIG"
+	DeviceDriverFAKE       DeviceDriver = "FAKE"
+)
+
+const (
+	// CiscoDeviceConditionAggregatorOwning is set while the controller is
+	// transferring config-reconcile ownership to the aggregator. Per-device
+	// Pods may still be terminating. Aggregator MUST NOT act on a device whose
+	// AggregatorOwned condition is still false.
+	CiscoDeviceConditionAggregatorOwning = "AggregatorOwning"
+	// CiscoDeviceConditionAggregatorOwned is set by the CiscoDevice controller
+	// once aggregator topology owns a configdriver-backed device.
+	CiscoDeviceConditionAggregatorOwned = "AggregatorOwned"
+	// CiscoDeviceConditionAggregatorTopologyStuck is set when a topology shift
+	// to aggregator ownership cannot finish because old per-device Pods remain.
+	CiscoDeviceConditionAggregatorTopologyStuck = "AggregatorTopologyStuck"
+	// CiscoDeviceConditionPrereqTeardownObserved records that the controller
+	// has seen the owned prereq IOSXEConfig enter deletion.
+	CiscoDeviceConditionPrereqTeardownObserved = "PrereqTeardownObserved"
 )
 
 // CiscoDevice is the Schema for the ciscodevices API.
@@ -61,7 +80,7 @@ type CiscoDeviceList struct {
 // configuration lives under the corresponding driver section (XE, XR, etc.).
 type DeviceSpec struct {
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=XE;XR;NXOS;FAKE
+	// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE
 	Driver DeviceDriver `json:"driver" mapstructure:"driver"`
 
 	// Address is the management IP or hostname of the device.
@@ -144,6 +163,29 @@ type DeviceSpec struct {
 	// +kubebuilder:default=false
 	AllowUnsignedApps bool `json:"allowUnsignedApps,omitempty" mapstructure:"allowUnsignedApps"`
 
+	// Transport selects the device channel used by the IOSXEConfig config
+	// driver. "restconf" is the default; "netconf" and "gnmi" select the
+	// corresponding transport implementations. Apphosting operations
+	// always use RESTCONF regardless of this field; it only affects
+	// declarative configuration.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=restconf;netconf;gnmi
+	// +kubebuilder:default=restconf
+	Transport string `json:"transport,omitempty" mapstructure:"transport"`
+
+	// ConfigPrereqs declares the network configuration this device requires
+	// before pods can be hosted on it, for example a VirtualPortGroup
+	// interface, DHCP pool, or app egress ACL. When set, the controller
+	// materializes an owned IOSXEConfig whose managed families are limited to
+	// the apphosting prerequisite set.
+	//
+	// The payload carries the same netascode-shaped YAML as
+	// IOSXEConfig.spec.source.inline. Operator-authored IOSXEConfig CRs may
+	// coexist with this controller-owned CR as long as they do not claim the
+	// same families.
+	// +kubebuilder:validation:Optional
+	ConfigPrereqs *ConfigPrereqs `json:"configPrereqs,omitempty" mapstructure:"configPrereqs,omitempty"`
+
 	// --- Driver-specific networking configuration (union) ---
 	// Only the section matching Driver should be set.
 
@@ -159,6 +201,20 @@ type DeviceSpec struct {
 	// NXOS holds NX-OS specific networking configuration (future).
 	// +kubebuilder:validation:Optional
 	// NXOS *NXOSConfig `json:"nxos,omitempty" mapstructure:"nxos,omitempty"`
+}
+
+// ConfigPrereqs is the inline netascode-shaped configuration block the
+// controller uses to auto-create an owned IOSXEConfig for a device. The
+// payload's top-level keys should be families in the apphosting-prerequisite
+// set; the controller-owned IOSXEConfig is scoped to that family set.
+type ConfigPrereqs struct {
+	// Configuration is the netascode-shaped fragment. Same shape as
+	// IOSXEConfig.spec.source.inline.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Configuration runtime.RawExtension `json:"configuration"`
 }
 
 // DeviceStatus defines the observed state of a CiscoDevice.

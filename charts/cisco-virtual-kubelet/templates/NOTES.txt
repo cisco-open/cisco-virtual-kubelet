@@ -1,0 +1,67 @@
+{{- if .Release.IsUpgrade -}}
+═══════════════════════════════════════════════════════════════════════════════
+  cisco-virtual-kubelet upgraded — release {{ .Release.Name }} revision {{ .Release.Revision }}
+═══════════════════════════════════════════════════════════════════════════════
+
+  ⚠️  THE CRDs ARE NOT UPGRADED AUTOMATICALLY ON HELM UPGRADE.
+
+  Helm only installs files under crds/ on FIRST install; subsequent upgrades
+  leave existing CRDs in place. If this release adds new fields to existing
+  CRDs (e.g. Wave-10 fields like spec.confirmTimeoutSeconds, spec.atomicReplace,
+  status.commandCount on IOSXEDiagnostic) you will see "unknown field" errors
+  on apply until you patch the CRDs manually:
+
+    kubectl apply -f charts/cisco-virtual-kubelet/crds/
+
+  This is one-time per upgrade and is safe — CRD updates are
+  schema-additive across this branch.
+
+  ───────────────────────────────────────────────────────────────────────────
+
+  RBAC RECONCILE — the chart updates ClusterRole bindings on every helm upgrade,
+  so the iosxediagnostics + configmaps verbs needed by the diagnostics
+  reconciler (Phase B-D) propagate automatically. If you see the
+  per-pod-kubelet log emit:
+
+    "iosxediagnostics is forbidden: User <ServiceAccount> cannot list
+     resource ..."
+
+  it means the ClusterRoleBinding hasn't yet picked up the new role — restart
+  the cisco-vk-system controller deployment to force a re-bind:
+
+    kubectl rollout restart -n cisco-vk-system \
+      deploy/cisco-vk-cisco-virtual-kubelet-controller
+
+  ───────────────────────────────────────────────────────────────────────────
+
+{{- else -}}
+═══════════════════════════════════════════════════════════════════════════════
+  cisco-virtual-kubelet installed — release {{ .Release.Name }}
+═══════════════════════════════════════════════════════════════════════════════
+
+  Verify the install:
+
+    kubectl get pod -n {{ .Release.Namespace }} \
+      -l app.kubernetes.io/name=cisco-virtual-kubelet
+    kubectl get crd | grep cisco.vk
+
+  Apply your first CiscoDevice CR (see examples/configs/ciscodevice-crs.yaml).
+
+  Documentation:
+    docs/rfcs/final/README.md       — branch implementation reference
+    docs/rfcs/deployment-modes.md   — operator setup per transport
+    docs/rfcs/operator-cli-guide.md — kubectl interaction reference
+    docs/rfcs/diagnostics-guide.md  — show-command capture (IOSXEDiagnostic)
+
+{{- end }}
+
+═══════════════════════════════════════════════════════════════════════════════
+
+The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{{ end }} topology is configured.
+
+  controller image: {{ .Values.controllerImage.repository | default .Values.image.repository }}:{{ .Values.controllerImage.tag | default .Values.image.tag }}
+  vk image:         {{ .Values.vkImage.repository | default .Values.image.repository }}:{{ .Values.vkImage.tag | default .Values.image.tag }}
+  metrics:          {{ .Values.controller.metricsBindAddress }}
+  diag admin:       {{ if .Values.aggregator.enabled }}(disabled in aggregator-mode){{ else }}127.0.0.1:8082 inside each per-device pod{{ end }}
+
+═══════════════════════════════════════════════════════════════════════════════

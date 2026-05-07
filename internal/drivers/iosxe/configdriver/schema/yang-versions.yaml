@@ -1,0 +1,21 @@
+# Cisco-IOS-XE YANG releases the config driver currently supports.
+#
+# A release listed here has a directory at schema/yang/<version>/ containing
+# the authoritative YANG modules; the schema-sync tool (tools/cisco-vk-yang-sync)
+# generates Go types, CRD OpenAPI fragments, and per-family writer skeletons
+# from those modules. Do not hand-edit the generated files.
+#
+# status values:
+#   - supported:   the driver ships writers for this release
+#   - experimental: the driver compiles for this release but its writers
+#                   have not been integration-tested
+#   - deprecated:  supported for one more CVK release, then removed
+
+releases:
+  - version: "1791"      # IOS-XE 17.9.1 — Phase-1 target
+    status: supported
+    default: true
+    notes: >
+      Phase-1 scaffold runs against the 17.9.1 YANG modules.
+      Device software versions 17.9.x are expected to be
+      functionally compatible for the Phase-1 family set.

@@ -1,0 +1,531 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: iosxeconfigbundles.config.cisco.vk
+spec:
+  group: config.cisco.vk
+  names:
+    kind: IOSXEConfigBundle
+    listKind: IOSXEConfigBundleList
+    plural: iosxeconfigbundles
+    shortNames:
+    - iosxebundle
+    singular: iosxeconfigbundle
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.memberDevices
+      name: Devices
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          IOSXEConfigBundle stamps a per-device IOSXEConfig spec across a
+          set of devices.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              IOSXEConfigBundleSpec describes a configuration that should be
+              fanned out across a set of CiscoDevices. The bundle controller
+              creates one IOSXEConfig CR per matched device, owned by the
+              bundle so that deleting the bundle garbage-collects every child.
+
+              netascode-style "configure every device with role=spine" lands
+              here: the operator authors the per-device spec once and the
+              controller materialises N IOSXEConfig CRs.
+            properties:
+              deviceRefs:
+                description: |-
+                  DeviceRefs explicitly names CiscoDevices to fan out to. Either
+                  DeviceRefs or DeviceSelector must produce at least one device;
+                  an empty match set is reported on Status.Conditions[Ready] but
+                  is not an error condition (the operator may be authoring
+                  against a not-yet-deployed fleet).
+                items:
+                  description: DeviceRef names a CiscoDevice in the same namespace
+                    as the referring CR.
+                  properties:
+                    name:
+                      description: Name of the CiscoDevice the CR targets.
+                      minLength: 1
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              deviceSelector:
+                description: |-
+                  DeviceSelector matches CiscoDevices by their metadata labels.
+                  The intersection-of-conditions semantics match Kubernetes'
+                  LabelSelector contract.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              template:
+                description: |-
+                  Template is the per-device spec the controller stamps onto
+                  every generated child IOSXEConfig. The controller fills
+                  DeviceRef per device during fan-out, so the template type
+                  here deliberately omits DeviceRef — operators don't write
+                  a dummy value just to clear admission. Wave 3B
+                  (external-review Finding #10).
+                properties:
+                  atomicReplace:
+                    default: false
+                    description: |-
+                      AtomicReplace opts into all-or-nothing replacement semantics
+                      for this CR's managed families. When true AND transactional=true
+                      the engine treats the resolved intent as the COMPLETE
+                      device-side state for those families: device-side entries not
+                      in the intent are deleted in the same transaction that adds
+                      the new entries. Cross-family ordering is taken from the
+                      schema's depends_on declarations.
+
+                      Mutually compatible with — and stronger than —
+                      pruneOnRelinquish: pruneOnRelinquish does per-family
+                      authoritative pruning continuously; atomicReplace also enforces
+                      cross-family ordering inside the transaction (e.g. removing a
+                      VRF that's bound to an interface that's also being removed
+                      runs in the right order).
+
+                      Defaults to false to preserve the existing additive day-0
+                      behaviour. Operators flip to true on CRs whose intent is the
+                      authoritative source for those families' device-side state —
+                      typically a single per-device CR that owns interface_ethernet,
+                      vlan, vrf, and routing protocols.
+
+                      Wave 10. Requires transactional=true; ignored on
+                      non-transactional reconciles with a one-time Warning event.
+                    type: boolean
+                  confirmTimeoutSeconds:
+                    default: 0
+                    description: |-
+                      ConfirmTimeoutSeconds enables RFC 6241 §8.4 confirmed-commit
+                      auto-revert. When non-zero (and transactional=true) the engine
+                      commits tentatively, runs the verify phase against running,
+                      and only sends the follow-up confirm if running matches the
+                      resolved intent. If verify fails OR the controller's session
+                      drops before the follow-up commit fires, the device's own
+                      timer reverts running to its pre-commit state — derisking
+                      changes that could otherwise lock the controller out of the
+                      device (ACL on management interface, BGP reconfiguration,
+                      IP-domain change).
+
+                      Defaults to 0 (off) for backward compatibility — existing
+                      CRs see no behavioural change. The kubebuilder maximum is
+                      300s (5 minutes); operators who need longer should
+                      re-architect the change rather than extend the window.
+
+                      Capability requirements:
+                        - The transport must advertise the RFC 6241 :confirmed-commit:1.0
+                          capability AND implement the ConfirmedCommitter interface.
+                        - NETCONF supports this on modern IOS-XE images.
+                        - RESTCONF has no protocol-equivalent; CRs that opt in on a
+                          RESTCONF transport see a one-time Warning event and the
+                          engine falls back to plain commit.
+                        - gNMI defines an open-standard equivalent but Cisco devices
+                          do not implement it yet (as of writing); same fallback as
+                          RESTCONF.
+
+                      Wave 10. Recommended values: 30 for ACL or management-plane
+                      changes; 60-120 for BGP / routing-protocol changes that need
+                      adjacency re-establishment time before the controller can
+                      verify reachability.
+                    format: int32
+                    maximum: 300
+                    minimum: 0
+                    type: integer
+                  deviceGroups:
+                    description: |-
+                      DeviceGroups names the IOSXEDeviceGroupConfig CRs whose configuration
+                      is merged into the resolved intent before this CR's source.
+                      Merge order follows netascode semantics: defaults → device groups →
+                      interface groups → templates → per-device, rightmost wins.
+                    items:
+                      type: string
+                    type: array
+                  driftDetectInterval:
+                    default: 5m
+                    description: |-
+                      DriftDetectInterval is the cadence at which the driver re-fetches and
+                      compares observed state to intent when the spec is otherwise quiescent.
+                      Parsed as a Go duration; minimum 30s to avoid device hammering.
+                    type: string
+                  driftPolicy:
+                    default: revert
+                    description: DriftPolicy controls what happens when drift is found.
+                      See DriftPolicy.
+                    enum:
+                    - revert
+                    - report
+                    - pause
+                    type: string
+                  interfaceGroups:
+                    description: |-
+                      InterfaceGroups names the IOSXEInterfaceGroupConfig CRs whose
+                      per-interface configuration is expanded and merged into the
+                      resolved intent. Each named group must be in the same namespace
+                      as the CR. Matches netascode's `interface_groups[]`.
+                    items:
+                      type: string
+                    type: array
+                  managedFamilies:
+                    description: |-
+                      ManagedFamilies is the closed list of netascode families this CR owns.
+                      A family outside this list is not written by this CR even when the
+                      merged intent contains values for it, so config can be adopted family
+                      by family during a cutover.
+                    items:
+                      type: string
+                    minItems: 1
+                    type: array
+                    x-kubernetes-list-type: set
+                  pruneOnRelinquish:
+                    default: false
+                    description: |-
+                      PruneOnRelinquish, when true, makes this CR AUTHORITATIVE over
+                      every entry in every still-managed family on every reconcile:
+                      the engine emits VerbDelete ops for any device-side entry that
+                      is not in the resolved intent for those families. The flag's
+                      effect is continuous, not just at relinquishment — operators
+                      who add entries out-of-band in the same families will see
+                      them deleted on the next reconcile.
+
+                      Wave 7A.4 (external-review-next-actions Finding #4): the
+                      docstring previously said "families *removed from
+                      ManagedFamilies*" — that was the original design intent but
+                      the engine implementation treats the flag as continuous
+                      authoritative pruning. The CiscoDevice controller's
+                      configPrereqs CR therefore sets this flag only during
+                      teardown, never on steady-state, so day-0 prereqs apply is
+                      additive. User-authored IOSXEConfig CRs may set it
+                      explicitly to opt into authoritative pruning.
+
+                      A future v1 cut may rename this to authoritativePrune (or
+                      split it from a relinquish-only flag) — tracked in
+                      crd-v1-promotion-plan.md.
+                    type: boolean
+                  secretRefs:
+                    description: |-
+                      SecretRefs lets the resolver merge sensitive configuration
+                      (BGP MD5 keys, IPSec PSKs, SNMPv3 auth/priv passphrases,
+                      enable secrets, RADIUS shared keys) into the resolved intent
+                      from Kubernetes Secrets, so secret material never lives in a
+                      ConfigMap or git-tracked YAML.
+
+                      Each entry names a family and a Secret-key whose value is a
+                      YAML/JSON snippet that deep-merges into the family's intent
+                      block. Snippets are merged after defaults, device groups,
+                      interface groups, templates, and the per-device source —
+                      secret material wins on overlap so a placeholder value in
+                      the source can never leak past resolution.
+
+                      The cisco-vk pod's ServiceAccount must have get/watch
+                      permission on the referenced Secrets in their namespace; the
+                      shipped Helm RBAC already covers this for the pod's own
+                      namespace.
+                    items:
+                      description: |-
+                        FamilySecretRef binds a Kubernetes Secret to a family's intent
+                        block. The named Secret is read from the same namespace as the
+                        IOSXEConfig CR; cross-namespace references are deliberately
+                        disallowed to keep RBAC trivial. Shape mirrors ConfigMapKeyRef
+                        so operators have one mental model for both kinds of external
+                        payload.
+                      properties:
+                        family:
+                          description: |-
+                            Family is the netascode family the snippet merges into. Must
+                            be one of the names in ManagedFamilies; resolution fails if
+                            it isn't, so a typo doesn't quietly produce a no-op.
+                          minLength: 1
+                          type: string
+                        key:
+                          description: |-
+                            Key is the entry inside Secret.Data whose value is parsed as
+                            a YAML/JSON snippet and merged into the family's intent. The
+                            snippet must shape itself to fit under the family root —
+                            `{"neighbors":[...]}` for bgp, `{"communities":[...]}` for
+                            snmp_server — exactly as it would appear in a per-device
+                            source.
+                          minLength: 1
+                          type: string
+                        name:
+                          description: Name of the Secret in the same namespace as
+                            the CR.
+                          minLength: 1
+                          type: string
+                      required:
+                      - family
+                      - key
+                      - name
+                      type: object
+                    type: array
+                  source:
+                    description: Source carries the per-device netascode configuration
+                      payload.
+                    properties:
+                      configMapRef:
+                        description: |-
+                          ConfigMapRef references a ConfigMap in the same namespace whose keyed
+                          entry holds a netascode YAML document. Used for large configurations
+                          that would otherwise bloat the CR past etcd's per-object limit.
+                        properties:
+                          key:
+                            description: Key within the ConfigMap whose value is the
+                              netascode YAML body.
+                            minLength: 1
+                            type: string
+                          name:
+                            description: Name of the ConfigMap (same namespace as
+                              the CR).
+                            minLength: 1
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      inline:
+                        description: |-
+                          Inline is an inline netascode configuration. The payload is the content
+                          of an iosxe.devices[].configuration block; the field is schemaless so
+                          family shape evolves with the YANG release, not the CRD.
+                        x-kubernetes-preserve-unknown-fields: true
+                    type: object
+                  targetYangVersion:
+                    description: |-
+                      TargetYangVersion pins the IOS-XE YANG release the writers
+                      should compile their managed-leaf set against. When set, the
+                      resolver validates the value is in `schema/yang-versions.yaml`
+                      and the engine records it on `status.sourceYangVersion` after
+                      every successful apply so an operator can correlate device
+                      state with the release that drove it.
+
+                      Empty (the common case) means the driver picks the default
+                      release. Multi-release writer sets are not yet shipped — every
+                      release currently maps to the same writer set — but the field
+                      is here so operators don't need a schema migration when they
+                      do.
+                    type: string
+                  templateRefs:
+                    description: |-
+                      TemplateRefs names IOSXETemplate CRs to expand and merge before the
+                      per-device source.
+                    items:
+                      description: |-
+                        TemplateRef refers to an IOSXETemplate and supplies parameter values used
+                        during expansion.
+                      properties:
+                        name:
+                          description: Name of the IOSXETemplate (same namespace as
+                            the referring CR).
+                          minLength: 1
+                          type: string
+                        values:
+                          description: |-
+                            Values overrides the template's parameter defaults. Shape is validated
+                            against the template's declared parameters at expansion time.
+                          x-kubernetes-preserve-unknown-fields: true
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  transactional:
+                    default: false
+                    description: |-
+                      Transactional requests a candidate-datastore + commit apply when the
+                      transport supports it (NETCONF). Ignored with a warning on RESTCONF,
+                      which has no candidate datastore; Phase-2 lifts this limitation.
+                    type: boolean
+                  writeStartup:
+                    default: false
+                    description: |-
+                      WriteStartup copies running-config to startup-config after a successful
+                      apply. Off by default to keep reconciles cheap; turn on for devices
+                      expected to reboot without a config-save orchestrator.
+                    type: boolean
+                required:
+                - managedFamilies
+                - source
+                type: object
+            required:
+            - template
+            type: object
+          status:
+            description: |-
+              IOSXEConfigBundleStatus reports the controller's view of the
+              fanout: which children exist, which devices they target, and
+              whether everything resolved.
+            properties:
+              conditions:
+                description: Conditions follows the standard Kubernetes shape.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              generatedCRs:
+                description: |-
+                  GeneratedCRs lists every child IOSXEConfig the bundle owns,
+                  in name-sorted order so changes are diff-friendly.
+                items:
+                  description: |-
+                    GeneratedCR pins a child IOSXEConfig to its device and tracks
+                    the apply phase so an operator can read fleet-wide state from
+                    the bundle status alone.
+                  properties:
+                    device:
+                      description: Device the child targets.
+                      type: string
+                    name:
+                      description: Name of the child IOSXEConfig (same namespace as
+                        the bundle).
+                      type: string
+                    phase:
+                      description: |-
+                        Phase is a copy of the child's status.phase, for fleet-wide
+                        rollups. Empty when the child is freshly created and hasn't
+                        yet run a reconcile.
+                      type: string
+                  required:
+                  - device
+                  - name
+                  type: object
+                type: array
+              memberDevices:
+                description: MemberDevices is the count of CiscoDevices currently
+                  in scope.
+                format: int32
+                type: integer
+              observedGeneration:
+                description: |-
+                  ObservedGeneration is the .metadata.generation the controller
+                  last reconciled.
+                format: int64
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

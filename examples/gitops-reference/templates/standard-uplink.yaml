@@ -1,0 +1,25 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXETemplate
+metadata:
+  name: standard-uplink
+  namespace: network
+spec:
+  parameters:
+    - name: interface
+      type: string
+      required: true
+      description: "Interface short name, e.g. 0/0/0"
+    - name: description
+      type: string
+      default: "Uplink"
+    - name: mtu
+      type: int
+      default: "1500"
+  configuration:
+    interface_ethernet:
+      interfaces:
+        - type: GigabitEthernet
+          name: "{{ .interface }}"
+          description: "{{ .description }}"
+          mtu: "{{ .mtu }}"
+          shutdown: false

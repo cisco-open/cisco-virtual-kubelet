@@ -40,6 +40,22 @@ spec:
             {{- if .Values.controller.leaderElect }}
             - --leader-elect
             {{- end }}
+            {{- if .Values.aggregator.enabled }}
+            - --enable-config-aggregator
+            {{- end }}
+          env:
+            {{- if .Values.config.leaseNamespace }}
+            # Shared cluster namespace for the per-(device,family)
+            # arbitration leases. When set, every cisco-vk pod the
+            # controller spawns inherits this value via downward
+            # propagation, so IOSXEConfig CRs in different tenant
+            # namespaces actually arbitrate against each other for
+            # the same device+family. Leave unset to keep historical
+            # per-pod-namespace behaviour (no cross-namespace
+            # arbitration).
+            - name: CONFIG_LEASE_NAMESPACE
+              value: {{ .Values.config.leaseNamespace | quote }}
+            {{- end }}
           ports:
             - name: metrics
               containerPort: 8080

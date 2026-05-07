@@ -26,7 +26,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/aggregator"
 	"github.com/cisco/virtual-kubelet-cisco/internal/controller"
 )
 
@@ -41,6 +43,7 @@ var (
 	probeAddr         string
 	vkImage           string
 	vkServiceAccount  string
+	enableAggregator  bool
 )
 
 var managerCmd = &cobra.Command{
@@ -54,6 +57,7 @@ custom resources and manages Virtual Kubelet deployments.`,
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(ciskov1.AddToScheme(scheme))
+	utilruntime.Must(configv1alpha1.AddToScheme(scheme))
 
 	managerCmd.Flags().StringVar(&metricsAddr, "metrics-bind-address", ":8080",
 		"The address the metric endpoint binds to.")
@@ -66,6 +70,12 @@ func init() {
 		"Container image to use for Virtual Kubelet deployments.")
 	managerCmd.Flags().StringVar(&vkServiceAccount, "vk-service-account", controller.DefaultServiceAccount,
 		"Service account name for Virtual Kubelet pods.")
+	managerCmd.Flags().BoolVar(&enableAggregator, "enable-config-aggregator", false,
+		"Run an in-process per-device ConfigReconciler instead of "+
+			"spawning one cisco-vk pod per CiscoDevice. Trades the "+
+			"per-pod isolation for one /metrics + one log stream + "+
+			"lower per-fleet overhead. The cisco-vk pod-spawning "+
+			"flow continues to operate alongside this for non-IOSXE devices.")
 }
 
 func runManager(cmd *cobra.Command, args []string) error {
@@ -74,7 +84,26 @@ func runManager(cmd *cobra.Command, args []string) error {
 	}
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	cfg := ctrl.GetConfigOrDie()
+
+	// Pre-flight CRD field-drift check. Helm doesn't upgrade CRDs
+	// across releases (only first-install), so on a stale cluster
+	// the manager would happily start and the per-pod kubelet's
+	// reconcile would later fail with `unknown field` errors. The
+	// check below queries the API server's discovery for known
+	// IOSXEConfig fields and logs a prominent WARNING when any
+	// field this binary expects is missing. Non-fatal — the
+	// manager still starts; the warning is enough to point
+	// operators at `kubectl apply -f charts/.../crds/`.
+	if drift := checkCRDFieldDrift(cfg); drift != "" {
+		setupLog.Info("══════════════════════════════════════════════════════════════════")
+		setupLog.Info("CRD FIELD DRIFT DETECTED — apply the chart's CRDs to fix")
+		setupLog.Info(drift)
+		setupLog.Info("Run: kubectl apply -f charts/cisco-virtual-kubelet/crds/")
+		setupLog.Info("══════════════════════════════════════════════════════════════════")
+	}
+
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                 scheme,
 		LeaderElection:         enableLeaderElect,
 		LeaderElectionID:       "ciscodevice.cisco.vk",
@@ -89,13 +118,42 @@ func runManager(cmd *cobra.Command, args []string) error {
 	}
 
 	if err = (&controller.CiscoDeviceReconciler{
-		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
-		Image:          vkImage,
-		ServiceAccount: vkServiceAccount,
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		Image:             vkImage,
+		ServiceAccount:    vkServiceAccount,
+		AggregatorEnabled: enableAggregator,
+		Recorder:          mgr.GetEventRecorderFor("ciscodevice-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CiscoDevice")
 		os.Exit(1)
+	}
+
+	if err = (&controller.IOSXEConfigBundleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "IOSXEConfigBundle")
+		os.Exit(1)
+	}
+
+	signalCtx := ctrl.SetupSignalHandler()
+
+	if enableAggregator {
+		// The aggregator is platform-agnostic post-Phase-9: it
+		// pulls the per-device ConfigDriverContext (transport,
+		// key rules, writer lookup, subscribe paths) from the
+		// platform registry. New platforms become aggregator-
+		// addressable by registering — no edit here.
+		if err = (&aggregator.AggregatedReconciler{
+			Client:         mgr.GetClient(),
+			Scheme:         mgr.GetScheme(),
+			Recorder:       mgr.GetEventRecorderFor("config-aggregator"),
+			LeaseNamespace: os.Getenv("CONFIG_LEASE_NAMESPACE"),
+		}).SetupWithManager(signalCtx, mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ConfigAggregator")
+			os.Exit(1)
+		}
 	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -108,7 +166,7 @@ func runManager(cmd *cobra.Command, args []string) error {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(signalCtx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}

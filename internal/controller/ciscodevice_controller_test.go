@@ -18,18 +18,27 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 )
 
 // newTestScheme builds a runtime.Scheme with all types needed by the reconciler.
@@ -37,7 +46,10 @@ func newTestScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	s := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(s))
+	utilruntime.Must(coordv1.AddToScheme(s))
+	utilruntime.Must(rbacv1.AddToScheme(s))
 	utilruntime.Must(ciskov1.AddToScheme(s))
+	utilruntime.Must(configv1alpha1.AddToScheme(s))
 	return s
 }
 
@@ -73,6 +85,18 @@ func reconcilerFor(t *testing.T, objs ...runtime.Object) *CiscoDeviceReconciler 
 		Image:          "cisco-vk:test",
 		ServiceAccount: "test-sa",
 	}
+}
+
+type fakeClock struct {
+	now time.Time
+}
+
+func (f *fakeClock) Now() time.Time {
+	return f.now
+}
+
+func (f *fakeClock) Advance(d time.Duration) {
+	f.now = f.now.Add(d)
 }
 
 // reconcileRequest builds a ctrl.Request from a namespace and name.
@@ -151,6 +175,45 @@ func TestReconcile_CreatesDeployment(t *testing.T) {
 	}
 	if len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts) != 2 {
 		t.Errorf("expected 2 volume mounts (device-config, tls-gen), got %d", len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts))
+	}
+}
+
+func TestReconcile_ProvisionsVKAccessInDeviceNamespace(t *testing.T) {
+	device := newDevice("router-access", "tenant-a")
+	device.UID = types.UID("router-access-uid")
+	r := reconcilerFor(t, device)
+	r.ServiceAccount = ""
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("tenant-a", "router-access")); err != nil {
+		t.Fatalf("Reconcile returned unexpected error: %v", err)
+	}
+
+	var sa corev1.ServiceAccount
+	key := types.NamespacedName{Namespace: "tenant-a", Name: DefaultServiceAccount}
+	if err := r.Get(ctx, key, &sa); err != nil {
+		t.Fatalf("ServiceAccount not found after reconcile: %v", err)
+	}
+	if !metav1.IsControlledBy(&sa, device) {
+		t.Fatalf("ServiceAccount owner references = %+v, want controlled by CiscoDevice", sa.OwnerReferences)
+	}
+
+	var rb rbacv1.RoleBinding
+	if err := r.Get(ctx, key, &rb); err != nil {
+		t.Fatalf("RoleBinding not found after reconcile: %v", err)
+	}
+	if !metav1.IsControlledBy(&rb, device) {
+		t.Fatalf("RoleBinding owner references = %+v, want controlled by CiscoDevice", rb.OwnerReferences)
+	}
+	if rb.RoleRef.APIGroup != rbacv1.GroupName || rb.RoleRef.Kind != "ClusterRole" || rb.RoleRef.Name != vkSharedClusterRole {
+		t.Fatalf("RoleBinding RoleRef = %+v, want ClusterRole %s", rb.RoleRef, vkSharedClusterRole)
+	}
+	if len(rb.Subjects) != 1 {
+		t.Fatalf("RoleBinding subjects = %+v, want exactly one ServiceAccount subject", rb.Subjects)
+	}
+	subject := rb.Subjects[0]
+	if subject.Kind != rbacv1.ServiceAccountKind || subject.Name != DefaultServiceAccount || subject.Namespace != "tenant-a" {
+		t.Fatalf("RoleBinding subject = %+v, want tenant ServiceAccount %s", subject, DefaultServiceAccount)
 	}
 }
 
@@ -570,5 +633,279 @@ func TestShortHash_Length(t *testing.T) {
 func TestShortHash_EmptyString(t *testing.T) {
 	if got := len(shortHash("")); got != 8 {
 		t.Errorf("expected 8-char hash for empty string, got length %d", got)
+	}
+}
+
+func TestReconcile_ConfigPrereqsCreatesOwnedIOSXEConfig(t *testing.T) {
+	device := newDevice("router-p", "default")
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		Configuration: runtime.RawExtension{Raw: []byte(
+			`{"interface_virtual_port_group":{"interfaces":[{"id":0,"ipv4_address":"192.168.10.1","ipv4_address_mask":"255.255.255.0"}]}}`,
+		)},
+	}
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-p")); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	var owned configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-p-prereqs"}, &owned); err != nil {
+		t.Fatalf("expected owned IOSXEConfig: %v", err)
+	}
+	if owned.Spec.DeviceRef.Name != "router-p" {
+		t.Errorf("deviceRef=%q", owned.Spec.DeviceRef.Name)
+	}
+	if len(owned.OwnerReferences) != 1 || owned.OwnerReferences[0].Name != "router-p" {
+		t.Errorf("owner references = %+v", owned.OwnerReferences)
+	}
+	want := map[string]struct{}{
+		"interface_virtual_port_group": {},
+		"dhcp":                         {},
+		"access_list_extended":         {},
+	}
+	for _, f := range owned.Spec.ManagedFamilies {
+		if _, ok := want[f]; !ok {
+			t.Errorf("unexpected managed family %q on owned CR", f)
+		}
+	}
+	if len(owned.Spec.ManagedFamilies) != len(want) {
+		t.Errorf("ManagedFamilies=%v, want the 3-family prereq set", owned.Spec.ManagedFamilies)
+	}
+	if owned.Spec.PruneOnRelinquish {
+		t.Errorf("steady-state configPrereqs CR must not set PruneOnRelinquish")
+	}
+}
+
+func TestReconcile_ConfigPrereqsRemovedDrivesEmptyIntentThenDeletes(t *testing.T) {
+	device := newDevice("router-prune", "default")
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		Configuration: runtime.RawExtension{Raw: []byte(`{"dhcp":{}}`)},
+	}
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-prune")); err != nil {
+		t.Fatalf("Reconcile (create): %v", err)
+	}
+	ownedKey := types.NamespacedName{Namespace: "default", Name: "router-prune-prereqs"}
+	var owned configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, ownedKey, &owned); err != nil {
+		t.Fatalf("expected owned CR: %v", err)
+	}
+	if owned.Spec.PruneOnRelinquish {
+		t.Errorf("owned CR steady-state must have pruneOnRelinquish=false")
+	}
+	owned.Finalizers = []string{"config.cisco.vk/lease-cleanup"}
+	if err := r.Update(ctx, &owned); err != nil {
+		t.Fatalf("add owned CR finalizer: %v", err)
+	}
+
+	var updated ciskov1.CiscoDevice
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-prune"}, &updated); err != nil {
+		t.Fatalf("get device: %v", err)
+	}
+	updated.Spec.ConfigPrereqs = nil
+	if err := r.Update(ctx, &updated); err != nil {
+		t.Fatalf("update device: %v", err)
+	}
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-prune")); err != nil {
+		t.Fatalf("Reconcile (remove tick 1): %v", err)
+	}
+	var afterTick1 configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, ownedKey, &afterTick1); err != nil {
+		t.Fatalf("owned CR with finalizer must still exist after delete request: %v", err)
+	}
+	if len(afterTick1.Spec.ManagedFamilies) == 0 {
+		t.Errorf("owned CR ManagedFamilies must remain non-empty during teardown")
+	}
+	if !afterTick1.Spec.PruneOnRelinquish {
+		t.Errorf("owned CR PruneOnRelinquish must be true during teardown")
+	}
+	if afterTick1.DeletionTimestamp.IsZero() {
+		t.Fatalf("owned CR should have deletion timestamp after teardown delete request")
+	}
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-prune")); err != nil {
+		t.Fatalf("Reconcile (observe delete): %v", err)
+	}
+	var gotDevice ciskov1.CiscoDevice
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-prune"}, &gotDevice); err != nil {
+		t.Fatalf("get device after delete observation: %v", err)
+	}
+	cond := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionPrereqTeardownObserved)
+	if cond == nil || cond.Status != metav1.ConditionTrue {
+		t.Fatalf("PrereqTeardownObserved=%+v, want True after seeing child deletion timestamp", cond)
+	}
+}
+
+func TestPrereqsTeardownExternalDeleteIsRecreated(t *testing.T) {
+	device := newDevice("router-external", "default")
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		Configuration: runtime.RawExtension{Raw: []byte(`{"dhcp":{}}`)},
+	}
+	recorder := record.NewFakeRecorder(10)
+	r := reconcilerFor(t, device)
+	r.Recorder = recorder
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", device.Name)); err != nil {
+		t.Fatalf("Reconcile create: %v", err)
+	}
+	ownedKey := types.NamespacedName{Namespace: "default", Name: ownedIOSXEConfigName(device.Name)}
+	var owned configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, ownedKey, &owned); err != nil {
+		t.Fatalf("expected owned CR: %v", err)
+	}
+	owned.Status.Phase = "InSync"
+	owned.Status.ObservedGeneration = owned.Generation
+	if err := r.Update(ctx, &owned); err != nil {
+		t.Fatalf("stage owned CR status: %v", err)
+	}
+
+	var updated ciskov1.CiscoDevice
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: device.Name}, &updated); err != nil {
+		t.Fatalf("get device: %v", err)
+	}
+	updated.Spec.ConfigPrereqs = nil
+	if err := r.Update(ctx, &updated); err != nil {
+		t.Fatalf("remove configPrereqs: %v", err)
+	}
+	if err := r.Delete(ctx, &owned); err != nil {
+		t.Fatalf("external delete owned CR: %v", err)
+	}
+
+	result, err := r.Reconcile(ctx, reconcileRequest("default", device.Name))
+	if err != nil {
+		t.Fatalf("Reconcile teardown after external delete: %v", err)
+	}
+	if result.RequeueAfter != configPrereqsTeardownPollInterval {
+		t.Fatalf("RequeueAfter=%v, want %v while recreated teardown CR converges", result.RequeueAfter, configPrereqsTeardownPollInterval)
+	}
+	var recreated configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, ownedKey, &recreated); err != nil {
+		t.Fatalf("expected recreated empty-intent CR: %v", err)
+	}
+	if !recreated.Spec.PruneOnRelinquish {
+		t.Fatalf("recreated CR pruneOnRelinquish=false, want true")
+	}
+	if recreated.Spec.Source.Inline == nil || string(recreated.Spec.Source.Inline.Raw) != string(emptyPrereqInline().Raw) {
+		t.Fatalf("recreated CR inline=%v, want empty prereq intent", recreated.Spec.Source.Inline)
+	}
+	if len(recreated.OwnerReferences) != 1 || recreated.OwnerReferences[0].Name != device.Name {
+		t.Fatalf("recreated CR ownerReferences=%+v", recreated.OwnerReferences)
+	}
+	select {
+	case event := <-recorder.Events:
+		if !strings.Contains(event, "PrereqTeardownDeletedExternally") {
+			t.Fatalf("event=%q, want PrereqTeardownDeletedExternally", event)
+		}
+	default:
+		t.Fatal("expected PrereqTeardownDeletedExternally event")
+	}
+}
+
+func TestPrereqsTeardownLeaseBlockedHonoursForceAnnotation(t *testing.T) {
+	now := metav1.NewTime(time.Now())
+	device := newDevice("router-force", "default")
+	device.Finalizers = []string{ciscoDeviceFinalizer}
+	device.DeletionTimestamp = &now
+	device.Status.Conditions = []metav1.Condition{{
+		Type:   ciskov1.CiscoDeviceConditionPrereqTeardownObserved,
+		Status: metav1.ConditionFalse,
+		Reason: "PrereqsActive",
+	}}
+	owned := &configv1alpha1.IOSXEConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              ownedIOSXEConfigName(device.Name),
+			Namespace:         device.Namespace,
+			DeletionTimestamp: &now,
+			Finalizers:        []string{"config.cisco.vk/lease-cleanup"},
+		},
+		Spec: configv1alpha1.IOSXEConfigSpec{
+			DeviceRef: configv1alpha1.DeviceRef{Name: device.Name},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies:   append([]string(nil), apphostingPrereqFamilies...),
+				Source:            configv1alpha1.ConfigurationSource{Inline: &runtime.RawExtension{Raw: []byte(`{"dhcp":{}}`)}},
+				PruneOnRelinquish: true,
+			},
+		},
+		Status: configv1alpha1.IOSXEConfigStatus{
+			AtomicReplaceOwnedKeys: map[string][]string{
+				"dhcp": {"APPHOSTING"},
+			},
+		},
+	}
+	holder := "foreign/config#runtime"
+	ttl := int32(30)
+	renew := metav1.NewMicroTime(time.Now())
+	lease := &coordv1.Lease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      engine.LeaseName(device.Name, "dhcp"),
+			Namespace: "default",
+		},
+		Spec: coordv1.LeaseSpec{
+			HolderIdentity:       &holder,
+			LeaseDurationSeconds: &ttl,
+			RenewTime:            &renew,
+		},
+	}
+	recorder := record.NewFakeRecorder(10)
+	r := reconcilerFor(t, device, owned, lease)
+	r.Recorder = recorder
+	ctx := context.Background()
+
+	result, err := r.Reconcile(ctx, reconcileRequest("default", device.Name))
+	if err != nil {
+		t.Fatalf("Reconcile without force annotation: %v", err)
+	}
+	if result.RequeueAfter != configPrereqsTeardownPollInterval {
+		t.Fatalf("RequeueAfter=%v, want %v while prereq CR is stuck deleting", result.RequeueAfter, configPrereqsTeardownPollInterval)
+	}
+	var blocked ciskov1.CiscoDevice
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: device.Name}, &blocked); err != nil {
+		t.Fatalf("get blocked device: %v", err)
+	}
+	if !controllerutil.ContainsFinalizer(&blocked, ciscoDeviceFinalizer) {
+		t.Fatalf("CiscoDevice finalizer removed without force annotation")
+	}
+
+	if blocked.Annotations == nil {
+		blocked.Annotations = map[string]string{}
+	}
+	blocked.Annotations[ForcePrereqsSkipAnnotation] = "true"
+	if err := r.Update(ctx, &blocked); err != nil {
+		t.Fatalf("add force annotation: %v", err)
+	}
+	result, err = r.Reconcile(ctx, reconcileRequest("default", device.Name))
+	if err != nil {
+		t.Fatalf("Reconcile with force annotation: %v", err)
+	}
+	if result.RequeueAfter != 0 || result.Requeue {
+		t.Fatalf("result with force annotation=%+v, want no requeue", result)
+	}
+	var forced ciskov1.CiscoDevice
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: device.Name}, &forced); err == nil {
+		if controllerutil.ContainsFinalizer(&forced, ciscoDeviceFinalizer) {
+			t.Fatalf("CiscoDevice finalizer still present after force annotation")
+		}
+	} else if !errors.IsNotFound(err) {
+		t.Fatalf("get forced device: %v", err)
+	}
+	var child configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, types.NamespacedName{Namespace: owned.Namespace, Name: owned.Name}, &child); err != nil {
+		t.Fatalf("get child after force annotation: %v", err)
+	}
+	if child.Annotations[forceRelinquishSkipAnnotation] != "true" {
+		t.Fatalf("child force relinquish annotation=%q, want true", child.Annotations[forceRelinquishSkipAnnotation])
+	}
+	select {
+	case event := <-recorder.Events:
+		if !strings.Contains(event, "PrereqsSkipped") || !strings.Contains(event, "dhcp") {
+			t.Fatalf("event=%q, want PrereqsSkipped listing dhcp", event)
+		}
+	default:
+		t.Fatal("expected PrereqsSkipped event")
 	}
 }

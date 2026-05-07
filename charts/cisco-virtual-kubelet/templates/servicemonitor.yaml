@@ -1,0 +1,62 @@
+{{- if .Values.serviceMonitor.enabled }}
+# Prometheus Operator ServiceMonitor for the controller manager's
+# /metrics endpoint at :8080. Scraped on the interval listed in
+# values.serviceMonitor.interval (default 30s).
+#
+# Per-pod-kubelet metrics are scraped via separate per-pod
+# ServiceMonitors that the CiscoDeviceReconciler creates dynamically;
+# this template only covers the controller manager.
+#
+# Requires the Prometheus Operator CRDs (monitoring.coreos.com).
+# Disabled by default — enable in environments running Prometheus
+# Operator. See production-deployment-guide.md §6.1.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cisco-virtual-kubelet.fullname" . }}-controller-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: metrics
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    {{- include "cisco-virtual-kubelet.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "cisco-virtual-kubelet.fullname" . }}-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
+    {{- with .Values.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "cisco-virtual-kubelet.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: controller
+  endpoints:
+    - port: metrics
+      interval: {{ .Values.serviceMonitor.interval | default "30s" }}
+      scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout | default "10s" }}
+      path: /metrics
+      {{- with .Values.serviceMonitor.relabelings }}
+      relabelings:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.serviceMonitor.metricRelabelings }}
+      metricRelabelings:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

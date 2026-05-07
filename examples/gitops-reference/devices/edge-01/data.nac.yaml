@@ -1,0 +1,51 @@
+iosxe:
+  devices:
+    - name: edge-01
+      host: 192.0.2.10
+      configuration:
+        system:
+          hostname: edge-01
+          mtu: 1500
+        vlan:
+          vlans:
+            - id: 10
+              name: users
+            - id: 20
+              name: voice
+        vrf:
+          vrfs:
+            - name: MGMT
+              rd: "65000:1"
+        interface_ethernet:
+          interfaces:
+            - type: GigabitEthernet
+              name: "0/0/0"
+              description: Uplink
+              shutdown: false
+        interface_loopback:
+          interfaces:
+            - name: 0
+              description: router-id
+              ipv4_address: 10.255.255.1
+              ipv4_address_mask: 255.255.255.255
+        interface_virtual_port_group:
+          interfaces:
+            - id: 0
+              description: iox-app-hosting
+              ipv4_address: 192.168.10.1
+              ipv4_address_mask: 255.255.255.0
+        dhcp:
+          pools:
+            - name: IOX
+              network: 192.168.10.0
+              prefix_length: 24
+              default_router: 192.168.10.1
+        access_list_extended:
+          extended:
+            - name: IOX-INGRESS
+              rules:
+                - sequence: 10
+                  action: permit
+                  protocol: ip
+                  src_any: true
+                  dst_any: true

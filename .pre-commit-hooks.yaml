@@ -1,0 +1,43 @@
+# Pre-commit hook entries for cisco-virtual-kubelet.
+#
+# Consumers reference these via:
+#
+#   repos:
+#     - repo: https://github.com/cisco-open/cisco-virtual-kubelet
+#       rev: <version-tag>
+#       hooks:
+#         - id: cisco-vk-config-lint
+#           args:
+#             - --address=192.0.2.10
+#             - --username=cvk
+#             - --password-env=DEV_PASSWORD
+#             - --device-name=edge-01
+#             - --exit-on-drift
+#
+# The hook runs in CI / on pre-push to gate IOSXEConfig manifest
+# changes against a reference device. With --exit-on-drift it returns
+# exit code 4 when any managed drift or device orphan is detected,
+# which pre-commit surfaces as a blocked commit.
+#
+# Pass IOSXEConfig YAML paths or directories as positional file
+# arguments; pre-commit's `files: ...` filter is the natural way to
+# scope which manifests are linted.
+- id: cisco-vk-config-lint
+  name: cisco-vk-config-lint
+  description: Live drift / orphan reporter for IOSXEConfig manifests against a reference device.
+  entry: cisco-vk-config-lint
+  language: golang
+  types: [yaml]
+  pass_filenames: true
+
+# Same tool, cluster mode — no positional file arguments. Useful in
+# CI jobs that run inside a cluster and want to gate on currently-
+# applied state rather than what's in the diff.
+- id: cisco-vk-config-lint-cluster
+  name: cisco-vk-config-lint (cluster mode)
+  description: Live drift / orphan reporter against IOSXEConfig CRs already in the cluster.
+  entry: cisco-vk-config-lint
+  language: golang
+  args:
+    - --from-cluster
+  pass_filenames: false

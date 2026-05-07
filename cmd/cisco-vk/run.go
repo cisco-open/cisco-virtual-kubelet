@@ -40,11 +40,12 @@ import (
 	vkotel "github.com/virtual-kubelet/virtual-kubelet/trace/opentelemetry"
 	"go.opentelemetry.io/otel"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
-	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/record"
@@ -330,6 +331,39 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	// when a recovery actually occurs.
 	go runPodRecoveryLoop(ctx, clientset, effectiveNodeName)
 
+	// Start the Phase-0 IOS-XE config reconciler. It watches IOSXEConfig CRs
+	// that target this device and drives the (stub) configdriver.Driver.
+	// Failure to build the controller-runtime client is not fatal — apphosting
+	// continues to work; the operator sees the warning and addresses RBAC.
+	//
+	// External-review Finding #3 (Wave 1C): when the controller manager
+	// is running in aggregator mode, it sets DISABLE_IN_POD_CONFIG_RECONCILER=true
+	// on the per-device pod's env. The cisco-vk binary must then NOT
+	// start its own in-pod ConfigReconciler — otherwise the aggregator
+	// and the in-pod reconciler both write the same (device, family)
+	// concurrently, defeating the whole point of single-manager
+	// topology and producing a duplicate-writer hazard.
+	if v := os.Getenv("DISABLE_IN_POD_CONFIG_RECONCILER"); v == "true" || v == "1" {
+		log.G(ctx).Info("DISABLE_IN_POD_CONFIG_RECONCILER set; skipping in-pod ConfigReconciler (aggregator-mode topology)")
+	} else if err := startConfigReconciler(ctx, kubeconfigCfg, effectiveNodeName, configReconcilerOptions{
+		Spec:     &appCfg.Device,
+		Password: appCfg.Device.Password,
+	}); err != nil {
+		log.G(ctx).WithError(err).Warn("IOSXEConfig reconciler not started; continuing without declarative config")
+	}
+
+	// Diagnostic probe for finding #6(a). When CONFIG_NETCONF_PROBE is
+	// set, fire a fresh ssh.Dial to the device's NETCONF port every
+	// 30 seconds for 15 minutes and log the outcome. The probe runs in
+	// parallel with apphosting + VK so an operator can compare the
+	// cisco-vk pod's dial behavior to a side-by-side standalone probe
+	// pod's behavior at the same wall-clock moment. Cheap, scoped,
+	// gated by an explicit env var so production deployments don't pay
+	// for it.
+	if os.Getenv("CONFIG_NETCONF_PROBE") != "" {
+		go runNETCONFProbe(ctx, &appCfg.Device, appCfg.Device.Password)
+	}
+
 	if err := n.Run(ctx); err != nil {
 		return fmt.Errorf("node run failed: %w", err)
 	}
@@ -374,6 +408,14 @@ func recoverStaleFailedPods(ctx context.Context, clientset kubernetes.Interface,
 		FieldSelector: "spec.nodeName=" + nodeName + ",status.phase=Failed",
 	})
 	if err != nil {
+		// Under H1's per-tenant-namespace RoleBinding the VK SA has no
+		// cluster-scope pod list. Cross-namespace stuck-pod recovery is
+		// unavailable in that mode; degrade silently so the boundary
+		// surfaces only real defects (CI greps for "cannot list").
+		if apierrors.IsForbidden(err) {
+			log.G(ctx).WithError(err).Debug("stuck-pod recovery skipped: cluster-scope pod list not permitted")
+			return 0
+		}
 		log.G(ctx).WithError(err).Warn("Failed to list failed pods for recovery")
 		return 0
 	}
