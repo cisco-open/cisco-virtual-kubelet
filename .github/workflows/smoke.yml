@@ -265,9 +265,18 @@ jobs:
           # path) or an upstream-defect marker (fail path).
           ok_re='connect: connection refused|i/o timeout|context deadline exceeded|no route to host|failed to validate device connection'
           bad_re='requires xe config section|forbidden|cannot list|cannot get'
+          # Concatenate current + previous container logs each cycle. If the
+          # binary crashes within the poll window (observed: pod Restarts=1
+          # with empty current-container logs), --previous keeps the markers
+          # visible. `|| true` swallows the "previous terminated container
+          # not found" message during normal startup.
+          cur=""
+          prev=""
           logs=""
           for i in $(seq 1 60); do
-            logs=$(kubectl -n cisco-vk-smoke logs -l app.kubernetes.io/instance=smoke --tail=200 2>&1 || true)
+            cur=$(kubectl -n cisco-vk-smoke logs -l app.kubernetes.io/instance=smoke --tail=200 2>&1 || true)
+            prev=$(kubectl -n cisco-vk-smoke logs -l app.kubernetes.io/instance=smoke --previous --tail=200 2>&1 || true)
+            logs="${prev}"$'\n'"${cur}"
             if echo "$logs" | grep -qE "$ok_re"; then
               kubectl -n cisco-vk-smoke get pods
               echo "$logs"
@@ -282,10 +291,14 @@ jobs:
             fi
             sleep 3
           done
-          kubectl -n cisco-vk-smoke get pods
-          echo "$logs"
-          # Pod still starting and we ran out of polls; treat as soft fail
-          # so the job is investigatable rather than silently green.
+          # Timeout path: dump everything that helps explain WHY no marker
+          # was seen — pod state, restart reason, and both log streams.
+          kubectl -n cisco-vk-smoke get pods -o wide
+          kubectl -n cisco-vk-smoke describe pods -l app.kubernetes.io/instance=smoke
+          echo "--- current container logs ---"
+          echo "$cur"
+          echo "--- previous container logs (--previous) ---"
+          echo "$prev"
           echo "cisco-vk did not reach a recognised state in time"
           exit 1
 
