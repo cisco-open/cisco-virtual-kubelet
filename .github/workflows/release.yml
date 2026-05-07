@@ -95,7 +95,7 @@ jobs:
           sbom: true
 
       - name: Install Trivy
-        uses: aquasecurity/setup-trivy@v0.2.0
+        uses: aquasecurity/setup-trivy@v0.2.6
         with:
           version: v0.55.2
 
