@@ -130,6 +130,8 @@ rules:
   - config.cisco.vk
   resources:
   - iosxeconfigs
+  - iosxetelemetries
+  - iosxetelemetries/status
   verbs:
   - create
   - delete

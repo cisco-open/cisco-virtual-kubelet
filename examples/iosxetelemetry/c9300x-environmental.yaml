@@ -1,0 +1,31 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXETelemetry
+metadata:
+  name: c9300x-environmental
+  namespace: network
+spec:
+  deviceRef:
+    name: c9300x-01
+  subscriptions:
+    - name: environmental
+      enabled: true
+      paths:
+        - /Cisco-IOS-XE-environment-oper:environment-sensors
+      mode: STREAM
+      streamMode: SAMPLE
+      sampleInterval: 30s
+      heartbeatInterval: 5m
+      suppressRedundant: true
+      encoding: PROTO
+  reconnect:
+    initialBackoff: 1s
+    maxBackoff: 30s
+    maxRetries: 0
+  cardinalityLimits:
+    maxSeriesPerSubscription: 10000
+    onExceeded: dropNewSeries
+  timestamps:
+    useCollectorTimestamp: true
+  output:
+    signal:
+      - metrics

@@ -120,6 +120,8 @@ type CiscoDeviceReconciler struct {
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;delete
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs/status,verbs=get
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxetelemetries,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxetelemetries/status,verbs=get;list;watch;create;update;patch;delete
 // The controller spawns per-device cisco-vk Deployments in the device's
 // namespace and references a shared ServiceAccount. The chart only seeds that
 // ServiceAccount in the release namespace, so tenant namespaces need their own

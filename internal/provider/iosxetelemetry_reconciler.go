@@ -1,0 +1,385 @@
+// Copyright © 2026 Cisco Systems Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package provider
+
+import (
+	"context"
+	"fmt"
+	"sort"
+	"sync"
+	"time"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	crlog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry"
+)
+
+const (
+	iosxeTelemetryFinalizer = "config.cisco.vk/telemetry-cleanup"
+	telemetryStatusCadence  = 10 * time.Second
+)
+
+// IOSXETelemetryReconciler watches IOSXETelemetry CRs for one CiscoDevice and
+// manages that device's dedicated MDT-over-gNMI subscriber.
+type IOSXETelemetryReconciler struct {
+	Client     client.Client
+	DeviceName string
+	Factory    telemetry.SubscribeClientFactory
+
+	RootContext     context.Context
+	StatusEvents    chan event.GenericEvent
+	ChannelCapacity int
+
+	mu         sync.Mutex
+	subscriber *telemetry.Subscriber
+	owned      map[client.ObjectKey][]string
+	bridgeStop context.CancelFunc
+}
+
+func (r *IOSXETelemetryReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if r.DeviceName == "" {
+		return fmt.Errorf("IOSXETelemetryReconciler: empty DeviceName")
+	}
+	devicePredicate := predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool { return telemetryTargetsDevice(e.Object, r.DeviceName) },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return telemetryTargetsDevice(e.ObjectNew, r.DeviceName) ||
+				telemetryTargetsDevice(e.ObjectOld, r.DeviceName)
+		},
+		DeleteFunc:  func(e event.DeleteEvent) bool { return telemetryTargetsDevice(e.Object, r.DeviceName) },
+		GenericFunc: func(e event.GenericEvent) bool { return telemetryTargetsDevice(e.Object, r.DeviceName) },
+	}
+
+	mapAll := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
+		var list configv1alpha1.IOSXETelemetryList
+		if err := r.Client.List(ctx, &list); err != nil {
+			crlog.FromContext(ctx).Error(err, "mapAll list IOSXETelemetry")
+			return nil
+		}
+		out := make([]reconcile.Request, 0, len(list.Items))
+		for _, cr := range list.Items {
+			if cr.Spec.DeviceRef.Name != r.DeviceName {
+				continue
+			}
+			out = append(out, reconcile.Request{
+				NamespacedName: client.ObjectKey{Namespace: cr.Namespace, Name: cr.Name},
+			})
+		}
+		return out
+	})
+
+	b := ctrl.NewControllerManagedBy(mgr).
+		Named("iosxetelemetry-"+r.DeviceName).
+		For(&configv1alpha1.IOSXETelemetry{}, builder.WithPredicates(devicePredicate))
+	if r.StatusEvents != nil {
+		b = b.WatchesRawSource(source.Channel(r.StatusEvents, mapAll))
+	}
+	return b.Complete(r)
+}
+
+func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	var cr configv1alpha1.IOSXETelemetry
+	if err := r.Client.Get(ctx, req.NamespacedName, &cr); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.removeOwned(req.NamespacedName)
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{}, fmt.Errorf("get IOSXETelemetry: %w", err)
+	}
+
+	if cr.Spec.DeviceRef.Name != r.DeviceName {
+		return reconcile.Result{}, nil
+	}
+
+	if !cr.GetDeletionTimestamp().IsZero() {
+		r.removeOwned(req.NamespacedName)
+		if containsFinalizer(cr.Finalizers, iosxeTelemetryFinalizer) {
+			cr.Finalizers = removeFinalizer(cr.Finalizers, iosxeTelemetryFinalizer)
+			if err := r.Client.Update(ctx, &cr); err != nil && !apierrors.IsNotFound(err) {
+				return reconcile.Result{}, fmt.Errorf("remove telemetry finalizer: %w", err)
+			}
+		}
+		return reconcile.Result{}, nil
+	}
+
+	if !containsFinalizer(cr.Finalizers, iosxeTelemetryFinalizer) {
+		updated := cr.DeepCopy()
+		updated.Finalizers = append(updated.Finalizers, iosxeTelemetryFinalizer)
+		if err := r.Client.Update(ctx, updated); err == nil {
+			cr.Finalizers = updated.Finalizers
+			cr.ResourceVersion = updated.ResourceVersion
+		} else if !apierrors.IsConflict(err) {
+			return reconcile.Result{}, fmt.Errorf("add telemetry finalizer: %w", err)
+		}
+	}
+
+	if err := configv1alpha1.ValidateIOSXETelemetry(&cr); err != nil {
+		cr.Status.Phase = configv1alpha1.IOSXETelemetryPhaseFailed
+		r.setReady(&cr, metav1.ConditionFalse, "InvalidSpec", err.Error())
+		return reconcile.Result{}, r.Client.Status().Update(ctx, &cr)
+	}
+
+	sub, err := r.ensureSubscriber()
+	if err != nil {
+		cr.Status.Phase = configv1alpha1.IOSXETelemetryPhaseDegraded
+		r.setReady(&cr, metav1.ConditionFalse, "SubscriberUnavailable", err.Error())
+		if updateErr := r.Client.Status().Update(ctx, &cr); updateErr != nil {
+			return reconcile.Result{}, updateErr
+		}
+		return reconcile.Result{RequeueAfter: telemetryStatusCadence}, nil
+	}
+
+	reconnect := defaultReconnect(cr.Spec.Reconnect)
+	sub.SetReconnectConfig(reconnect)
+	activeNames, allNames, err := r.applyDesired(req.NamespacedName, sub, &cr)
+	if err != nil {
+		cr.Status.Phase = configv1alpha1.IOSXETelemetryPhaseFailed
+		r.setReady(&cr, metav1.ConditionFalse, "SubscribeConfigError", err.Error())
+		if updateErr := r.Client.Status().Update(ctx, &cr); updateErr != nil {
+			return reconcile.Result{}, updateErr
+		}
+		return reconcile.Result{RequeueAfter: telemetryStatusCadence}, nil
+	}
+
+	phase, states := sub.StatusFor(allNames)
+	if len(activeNames) == 0 {
+		phase = configv1alpha1.IOSXETelemetryPhasePending
+	}
+	cr.Status.Phase = phase
+	cr.Status.ObservedSubscriptionState = states
+	switch phase {
+	case configv1alpha1.IOSXETelemetryPhaseStreaming:
+		r.setReady(&cr, metav1.ConditionTrue, "Streaming", "telemetry subscription streams are active")
+	case configv1alpha1.IOSXETelemetryPhaseFailed:
+		r.setReady(&cr, metav1.ConditionFalse, "Failed", "one or more telemetry streams failed")
+	case configv1alpha1.IOSXETelemetryPhaseDegraded:
+		r.setReady(&cr, metav1.ConditionFalse, "Degraded", "one or more telemetry streams are reconnecting")
+	default:
+		r.setReady(&cr, metav1.ConditionFalse, "Pending", "telemetry subscription streams are not active yet")
+	}
+	if err := r.Client.Status().Update(ctx, &cr); err != nil {
+		return reconcile.Result{}, fmt.Errorf("status update IOSXETelemetry: %w", err)
+	}
+	return reconcile.Result{RequeueAfter: telemetryStatusCadence}, nil
+}
+
+func (r *IOSXETelemetryReconciler) ensureSubscriber() (*telemetry.Subscriber, error) {
+	r.mu.Lock()
+	if r.subscriber != nil {
+		sub := r.subscriber
+		r.mu.Unlock()
+		return sub, nil
+	}
+	root := r.RootContext
+	if root == nil {
+		root = context.Background()
+	}
+	sub := telemetry.NewSubscriber(
+		r.DeviceName,
+		r.Factory,
+		telemetry.WithLogger(crlog.Log.WithName("iosxetelemetry").WithValues("device", r.DeviceName)),
+		telemetry.WithChannelCapacity(r.ChannelCapacity),
+	)
+	r.subscriber = sub
+	if r.owned == nil {
+		r.owned = map[client.ObjectKey][]string{}
+	}
+	r.mu.Unlock()
+
+	if err := sub.Start(root); err != nil {
+		r.mu.Lock()
+		if r.subscriber == sub {
+			r.subscriber = nil
+		}
+		r.mu.Unlock()
+		return nil, err
+	}
+	r.startStateBridge(root, sub)
+	return sub, nil
+}
+
+func (r *IOSXETelemetryReconciler) startStateBridge(root context.Context, sub *telemetry.Subscriber) {
+	if r.StatusEvents == nil {
+		return
+	}
+	ctx, cancel := context.WithCancel(root)
+	r.mu.Lock()
+	if r.bridgeStop != nil {
+		r.bridgeStop()
+	}
+	r.bridgeStop = cancel
+	r.mu.Unlock()
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case _, ok := <-sub.StateChanged():
+				if !ok {
+					return
+				}
+				select {
+				case r.StatusEvents <- event.GenericEvent{
+					Object: &configv1alpha1.IOSXETelemetry{
+						ObjectMeta: metav1.ObjectMeta{Name: r.DeviceName},
+					},
+				}:
+				default:
+				}
+			}
+		}
+	}()
+}
+
+func (r *IOSXETelemetryReconciler) applyDesired(
+	key client.ObjectKey,
+	sub *telemetry.Subscriber,
+	cr *configv1alpha1.IOSXETelemetry,
+) ([]string, []string, error) {
+	active := make([]string, 0, len(cr.Spec.Subscriptions))
+	all := make([]string, 0, len(cr.Spec.Subscriptions))
+	for _, desired := range cr.Spec.Subscriptions {
+		spec := defaultSubscription(desired)
+		all = append(all, spec.Name)
+		if spec.Enabled != nil && !*spec.Enabled {
+			sub.RemoveSubscription(spec.Name)
+			continue
+		}
+		if err := sub.AddSubscription(spec); err != nil {
+			return nil, nil, err
+		}
+		active = append(active, spec.Name)
+	}
+	sort.Strings(active)
+	sort.Strings(all)
+
+	r.mu.Lock()
+	if r.owned == nil {
+		r.owned = map[client.ObjectKey][]string{}
+	}
+	previous := append([]string(nil), r.owned[key]...)
+	r.owned[key] = append([]string(nil), active...)
+	r.mu.Unlock()
+
+	activeSet := map[string]struct{}{}
+	for _, name := range active {
+		activeSet[name] = struct{}{}
+	}
+	for _, name := range previous {
+		if _, ok := activeSet[name]; !ok {
+			sub.RemoveSubscription(name)
+		}
+	}
+	return active, all, nil
+}
+
+func (r *IOSXETelemetryReconciler) removeOwned(key client.ObjectKey) {
+	r.mu.Lock()
+	if r.owned == nil {
+		r.mu.Unlock()
+		return
+	}
+	names := append([]string(nil), r.owned[key]...)
+	delete(r.owned, key)
+	sub := r.subscriber
+	remaining := 0
+	for _, owned := range r.owned {
+		remaining += len(owned)
+	}
+	bridgeStop := r.bridgeStop
+	if remaining == 0 {
+		r.subscriber = nil
+		r.bridgeStop = nil
+	}
+	r.mu.Unlock()
+
+	for _, name := range names {
+		if sub != nil {
+			sub.RemoveSubscription(name)
+		}
+	}
+	if remaining == 0 && sub != nil {
+		if bridgeStop != nil {
+			bridgeStop()
+		}
+		sub.Stop()
+	}
+}
+
+func (r *IOSXETelemetryReconciler) setReady(
+	cr *configv1alpha1.IOSXETelemetry,
+	status metav1.ConditionStatus,
+	reason string,
+	message string,
+) {
+	meta.SetStatusCondition(&cr.Status.Conditions, metav1.Condition{
+		Type:               "Ready",
+		Status:             status,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: cr.Generation,
+		LastTransitionTime: metav1.Now(),
+	})
+}
+
+func defaultReconnect(in *configv1alpha1.ReconnectConfig) *configv1alpha1.ReconnectConfig {
+	out := &configv1alpha1.ReconnectConfig{
+		InitialBackoff: metav1.Duration{Duration: time.Second},
+		MaxBackoff:     metav1.Duration{Duration: 30 * time.Second},
+	}
+	if in == nil {
+		return out
+	}
+	*out = *in
+	if out.InitialBackoff.Duration == 0 {
+		out.InitialBackoff = metav1.Duration{Duration: time.Second}
+	}
+	if out.MaxBackoff.Duration == 0 {
+		out.MaxBackoff = metav1.Duration{Duration: 30 * time.Second}
+	}
+	return out
+}
+
+func defaultSubscription(in configv1alpha1.TelemetrySubscription) configv1alpha1.TelemetrySubscription {
+	out := in
+	if out.Enabled == nil {
+		v := true
+		out.Enabled = &v
+	}
+	if out.Encoding == "" {
+		out.Encoding = configv1alpha1.TelemetryEncodingProto
+	}
+	return out
+}
+
+func telemetryTargetsDevice(obj client.Object, name string) bool {
+	cr, ok := obj.(*configv1alpha1.IOSXETelemetry)
+	if !ok {
+		return false
+	}
+	return cr.Spec.DeviceRef.Name == name
+}

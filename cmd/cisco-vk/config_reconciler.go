@@ -57,6 +57,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver"
@@ -307,6 +308,22 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	}
 	if err := diagReconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("diagnostic SetupWithManager: %w", err)
+	}
+
+	telemetryFactory, err := telemetry.NewDefaultSubscribeClientFactoryForDevice(opts.Spec, opts.Password)
+	if err != nil {
+		return fmt.Errorf("telemetry subscriber factory: %w", err)
+	}
+	telemetryEvents := make(chan event.GenericEvent, 1)
+	telemetryReconciler := &provider.IOSXETelemetryReconciler{
+		Client:       mgr.GetClient(),
+		DeviceName:   deviceName,
+		Factory:      telemetryFactory,
+		RootContext:  ctx,
+		StatusEvents: telemetryEvents,
+	}
+	if err := telemetryReconciler.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("telemetry SetupWithManager: %w", err)
 	}
 
 	// Diagnostics-RFC Phase C: HTTP admin endpoint for ad-hoc
