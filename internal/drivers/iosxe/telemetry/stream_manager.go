@@ -25,6 +25,7 @@ import (
 
 	"github.com/go-logr/logr"
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
+	"google.golang.org/protobuf/proto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
@@ -136,11 +137,6 @@ func (m *StreamManager) RemoveSubscription(name string) {
 }
 
 func (m *StreamManager) rebuildLocked() {
-	for _, h := range m.streams {
-		h.cancel()
-	}
-	m.streams = map[bucketKey]*streamHandle{}
-
 	buckets := map[bucketKey][]configv1alpha1.TelemetrySubscription{}
 	for _, sub := range m.subs {
 		key := bucketFor(sub)
@@ -151,19 +147,34 @@ func (m *StreamManager) rebuildLocked() {
 		keys = append(keys, key)
 	}
 	sort.Slice(keys, func(i, j int) bool { return keys[i].String() < keys[j].String() })
+
+	next := make(map[bucketKey]*streamHandle, len(buckets))
 	for _, key := range keys {
 		subs := buckets[key]
 		sort.Slice(subs, func(i, j int) bool { return subs[i].Name < subs[j].Name })
+		if existing := m.streams[key]; existing != nil && existing.matchesSubscriptions(subs) {
+			next[key] = existing
+			continue
+		}
+		if existing := m.streams[key]; existing != nil {
+			existing.cancel()
+		}
 		m.generation++
 		ctx, cancel := context.WithCancel(m.ctx)
-		h := newStreamHandle(key, subs, StreamID(fmt.Sprintf("%s-%d", key.String(), m.generation)), cancel)
-		m.streams[key] = h
+		h := newStreamHandle(ctx, key, subs, StreamID(fmt.Sprintf("%s-%d", key.String(), m.generation)), cancel)
+		next[key] = h
 		m.wg.Add(1)
-		go func(handle *streamHandle) {
+		go func(streamCtx context.Context, handle *streamHandle) {
 			defer m.wg.Done()
-			m.runStream(ctx, handle)
-		}(h)
+			m.runStream(streamCtx, handle)
+		}(ctx, h)
 	}
+	for key, h := range m.streams {
+		if _, ok := buckets[key]; !ok {
+			h.cancel()
+		}
+	}
+	m.streams = next
 }
 
 func (m *StreamManager) runStream(ctx context.Context, h *streamHandle) {
@@ -321,6 +332,7 @@ func bucketFor(sub configv1alpha1.TelemetrySubscription) bucketKey {
 type streamHandle struct {
 	bucket        bucketKey
 	id            StreamID
+	ctx           context.Context
 	cancel        context.CancelFunc
 	subNames      []string
 	pathBySub     map[string][]string
@@ -328,32 +340,80 @@ type streamHandle struct {
 }
 
 func newStreamHandle(
+	ctx context.Context,
 	key bucketKey,
 	subs []configv1alpha1.TelemetrySubscription,
 	id StreamID,
 	cancel context.CancelFunc,
 ) *streamHandle {
+	subNames, subscriptions, pathBySub := buildStreamSubscriptions(subs)
 	h := &streamHandle{
-		bucket:    key,
-		id:        id,
-		cancel:    cancel,
-		pathBySub: map[string][]string{},
+		bucket:        key,
+		id:            id,
+		ctx:           ctx,
+		cancel:        cancel,
+		subNames:      subNames,
+		pathBySub:     pathBySub,
+		subscriptions: subscriptions,
 	}
-	for _, sub := range subs {
-		h.subNames = append(h.subNames, sub.Name)
+	return h
+}
+
+func buildStreamSubscriptions(
+	subs []configv1alpha1.TelemetrySubscription,
+) ([]string, []*gpb.Subscription, map[string][]string) {
+	ordered := append([]configv1alpha1.TelemetrySubscription(nil), subs...)
+	sort.Slice(ordered, func(i, j int) bool { return ordered[i].Name < ordered[j].Name })
+
+	subNames := make([]string, 0, len(ordered))
+	subscriptions := []*gpb.Subscription{}
+	pathBySub := map[string][]string{}
+	for _, sub := range ordered {
+		subNames = append(subNames, sub.Name)
 		for _, path := range sub.Paths {
-			gpath, _ := parsePath(path)
-			h.subscriptions = append(h.subscriptions, &gpb.Subscription{
+			gpath, _ := parsePath(path, sub.Origin)
+			subscriptions = append(subscriptions, &gpb.Subscription{
 				Path:              gpath,
 				Mode:              subscriptionModeEnum(sub),
 				SampleInterval:    uint64(sub.SampleInterval.Duration.Nanoseconds()),
 				SuppressRedundant: boolPtrValue(sub.SuppressRedundant),
 				HeartbeatInterval: durationPtrNanos(sub.HeartbeatInterval),
 			})
-			h.pathBySub[sub.Name] = append(h.pathBySub[sub.Name], normalizePath(path))
+			pathBySub[sub.Name] = append(pathBySub[sub.Name], normalizePath(path))
 		}
 	}
-	return h
+	return subNames, subscriptions, pathBySub
+}
+
+func (h *streamHandle) matchesSubscriptions(subs []configv1alpha1.TelemetrySubscription) bool {
+	if h == nil {
+		return false
+	}
+	names, subscriptions, _ := buildStreamSubscriptions(subs)
+	if !sameStrings(h.subNames, names) {
+		return false
+	}
+	if len(h.subscriptions) != len(subscriptions) {
+		return false
+	}
+	for i := range subscriptions {
+		if !proto.Equal(h.subscriptions[i], subscriptions[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func sameStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func (h *streamHandle) match(path string) []string {
@@ -404,27 +464,62 @@ func encodingEnum(encoding string) gpb.Encoding {
 	}
 }
 
-func parsePath(p string) (*gpb.Path, error) {
+func parsePath(p string, originOverride ...string) (*gpb.Path, error) {
 	p = strings.TrimSpace(p)
+	var explicitOrigin string
+	if len(originOverride) > 0 {
+		explicitOrigin = strings.TrimSpace(originOverride[0])
+	}
 	if p == "" || p == "/" {
-		return &gpb.Path{}, nil
+		return &gpb.Path{Origin: explicitOrigin}, nil
 	}
 	p = strings.TrimPrefix(p, "/")
 	out := &gpb.Path{}
-	for _, raw := range strings.Split(p, "/") {
+	firstElem := true
+	for _, raw := range splitPathElements(p) {
 		if raw == "" {
 			continue
 		}
-		elem, err := parsePathElem(raw)
+		elem, origin, err := parsePathElem(raw, firstElem)
 		if err != nil {
 			return nil, err
 		}
+		if firstElem && explicitOrigin == "" {
+			out.Origin = origin
+		}
 		out.Elem = append(out.Elem, elem)
+		firstElem = false
+	}
+	if explicitOrigin != "" {
+		out.Origin = explicitOrigin
 	}
 	return out, nil
 }
 
-func parsePathElem(raw string) (*gpb.PathElem, error) {
+func splitPathElements(p string) []string {
+	var elems []string
+	depth := 0
+	start := 0
+	for i, r := range p {
+		switch r {
+		case '[':
+			depth++
+		case ']':
+			if depth > 0 {
+				depth--
+			}
+		case '/':
+			if depth == 0 {
+				elems = append(elems, p[start:i])
+				start = i + 1
+			}
+		}
+	}
+	elems = append(elems, p[start:])
+	return elems
+}
+
+func parsePathElem(raw string, first bool) (*gpb.PathElem, string, error) {
 	name := raw
 	keys := map[string]string{}
 	if idx := strings.Index(raw, "["); idx >= 0 {
@@ -432,16 +527,16 @@ func parsePathElem(raw string) (*gpb.PathElem, error) {
 		rest := raw[idx:]
 		for rest != "" {
 			if !strings.HasPrefix(rest, "[") {
-				return nil, fmt.Errorf("malformed key selector %q", raw)
+				return nil, "", fmt.Errorf("malformed key selector %q", raw)
 			}
 			end := strings.Index(rest, "]")
 			if end < 0 {
-				return nil, fmt.Errorf("malformed key selector %q", raw)
+				return nil, "", fmt.Errorf("malformed key selector %q", raw)
 			}
 			kv := rest[1:end]
 			parts := strings.SplitN(kv, "=", 2)
 			if len(parts) != 2 || parts[0] == "" {
-				return nil, fmt.Errorf("malformed key selector %q", raw)
+				return nil, "", fmt.Errorf("malformed key selector %q", raw)
 			}
 			keys[parts[0]] = parts[1]
 			rest = rest[end+1:]
@@ -450,17 +545,21 @@ func parsePathElem(raw string) (*gpb.PathElem, error) {
 		name = raw[:idx]
 		keys["name"] = raw[idx+1:]
 	}
-	if idx := strings.Index(name, ":"); idx > 0 {
-		name = name[idx+1:]
+	var origin string
+	if first {
+		if idx := strings.Index(name, ":"); idx > 0 {
+			origin = name[:idx]
+			name = name[idx+1:]
+		}
 	}
 	if name == "" {
-		return nil, fmt.Errorf("empty path element in %q", raw)
+		return nil, "", fmt.Errorf("empty path element in %q", raw)
 	}
 	elem := &gpb.PathElem{Name: name}
 	if len(keys) > 0 {
 		elem.Key = keys
 	}
-	return elem, nil
+	return elem, origin, nil
 }
 
 func notificationPath(n *gpb.Notification) string {

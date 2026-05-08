@@ -53,6 +53,20 @@ func ValidateIOSXETelemetrySpec(spec *IOSXETelemetrySpec) field.ErrorList {
 		if sub.Mode != TelemetryModeStream {
 			errs = append(errs, field.NotSupported(p.Child("mode"), sub.Mode, []string{TelemetryModeStream}))
 		}
+		if sub.SuppressRedundant != nil && *sub.SuppressRedundant && sub.StreamMode != TelemetryStreamModeOnChange {
+			errs = append(errs, field.Invalid(
+				p.Child("suppressRedundant"),
+				*sub.SuppressRedundant,
+				"suppressRedundant requires streamMode=ON_CHANGE",
+			))
+		}
+		if sub.HeartbeatInterval != nil && sub.StreamMode != TelemetryStreamModeOnChange {
+			errs = append(errs, field.Invalid(
+				p.Child("heartbeatInterval"),
+				sub.HeartbeatInterval.Duration.String(),
+				"heartbeatInterval requires streamMode=ON_CHANGE",
+			))
+		}
 		switch sub.Encoding {
 		case "", TelemetryEncodingProto, TelemetryEncodingJSONIETF:
 		default:

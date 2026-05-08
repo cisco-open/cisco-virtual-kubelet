@@ -39,8 +39,9 @@ import (
 )
 
 const (
-	iosxeTelemetryFinalizer = "config.cisco.vk/telemetry-cleanup"
-	telemetryStatusCadence  = 10 * time.Second
+	iosxeTelemetryFinalizer       = "config.cisco.vk/telemetry-cleanup"
+	telemetryStatusCadence        = 10 * time.Second
+	telemetryStatusBridgeDebounce = time.Second
 )
 
 // IOSXETelemetryReconciler watches IOSXETelemetry CRs for one CiscoDevice and
@@ -138,17 +139,22 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 	}
 
 	if err := configv1alpha1.ValidateIOSXETelemetry(&cr); err != nil {
+		base := cr.DeepCopy()
 		cr.Status.Phase = configv1alpha1.IOSXETelemetryPhaseFailed
 		r.setReady(&cr, metav1.ConditionFalse, "InvalidSpec", err.Error())
-		return reconcile.Result{}, r.Client.Status().Update(ctx, &cr)
+		if updateErr := r.patchTelemetryStatus(ctx, base, &cr); updateErr != nil {
+			return statusPatchResult(updateErr)
+		}
+		return reconcile.Result{}, nil
 	}
 
 	sub, err := r.ensureSubscriber()
 	if err != nil {
+		base := cr.DeepCopy()
 		cr.Status.Phase = configv1alpha1.IOSXETelemetryPhaseDegraded
 		r.setReady(&cr, metav1.ConditionFalse, "SubscriberUnavailable", err.Error())
-		if updateErr := r.Client.Status().Update(ctx, &cr); updateErr != nil {
-			return reconcile.Result{}, updateErr
+		if updateErr := r.patchTelemetryStatus(ctx, base, &cr); updateErr != nil {
+			return statusPatchResult(updateErr)
 		}
 		return reconcile.Result{RequeueAfter: telemetryStatusCadence}, nil
 	}
@@ -157,14 +163,16 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 	sub.SetReconnectConfig(reconnect)
 	activeNames, allNames, err := r.applyDesired(req.NamespacedName, sub, &cr)
 	if err != nil {
+		base := cr.DeepCopy()
 		cr.Status.Phase = configv1alpha1.IOSXETelemetryPhaseFailed
 		r.setReady(&cr, metav1.ConditionFalse, "SubscribeConfigError", err.Error())
-		if updateErr := r.Client.Status().Update(ctx, &cr); updateErr != nil {
-			return reconcile.Result{}, updateErr
+		if updateErr := r.patchTelemetryStatus(ctx, base, &cr); updateErr != nil {
+			return statusPatchResult(updateErr)
 		}
 		return reconcile.Result{RequeueAfter: telemetryStatusCadence}, nil
 	}
 
+	base := cr.DeepCopy()
 	phase, states := sub.StatusFor(allNames)
 	if len(activeNames) == 0 {
 		phase = configv1alpha1.IOSXETelemetryPhasePending
@@ -181,10 +189,25 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 	default:
 		r.setReady(&cr, metav1.ConditionFalse, "Pending", "telemetry subscription streams are not active yet")
 	}
-	if err := r.Client.Status().Update(ctx, &cr); err != nil {
-		return reconcile.Result{}, fmt.Errorf("status update IOSXETelemetry: %w", err)
+	if err := r.patchTelemetryStatus(ctx, base, &cr); err != nil {
+		return statusPatchResult(err)
 	}
 	return reconcile.Result{RequeueAfter: telemetryStatusCadence}, nil
+}
+
+func (r *IOSXETelemetryReconciler) patchTelemetryStatus(
+	ctx context.Context,
+	base *configv1alpha1.IOSXETelemetry,
+	updated *configv1alpha1.IOSXETelemetry,
+) error {
+	return r.Client.Status().Patch(ctx, updated, client.MergeFrom(base))
+}
+
+func statusPatchResult(err error) (reconcile.Result, error) {
+	if apierrors.IsConflict(err) {
+		return reconcile.Result{Requeue: true}, nil
+	}
+	return reconcile.Result{}, fmt.Errorf("status patch IOSXETelemetry: %w", err)
 }
 
 func (r *IOSXETelemetryReconciler) ensureSubscriber() (*telemetry.Subscriber, error) {
@@ -234,6 +257,55 @@ func (r *IOSXETelemetryReconciler) startStateBridge(root context.Context, sub *t
 	r.bridgeStop = cancel
 	r.mu.Unlock()
 	go func() {
+		var lastEmit time.Time
+		var trailing bool
+		var timer *time.Timer
+		var timerC <-chan time.Time
+		stopTimer := func() {
+			if timer == nil {
+				return
+			}
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			timer = nil
+			timerC = nil
+		}
+		armTrailing := func() {
+			trailing = true
+			delay := time.Until(lastEmit.Add(telemetryStatusBridgeDebounce))
+			if delay < 0 {
+				delay = 0
+			}
+			if timer == nil {
+				timer = time.NewTimer(delay)
+				timerC = timer.C
+				return
+			}
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			timer.Reset(delay)
+			timerC = timer.C
+		}
+		emit := func() {
+			select {
+			case r.StatusEvents <- event.GenericEvent{
+				Object: &configv1alpha1.IOSXETelemetry{
+					ObjectMeta: metav1.ObjectMeta{Name: r.DeviceName},
+				},
+			}:
+			default:
+			}
+			lastEmit = time.Now()
+		}
+		defer stopTimer()
 		for {
 			select {
 			case <-ctx.Done():
@@ -242,13 +314,19 @@ func (r *IOSXETelemetryReconciler) startStateBridge(root context.Context, sub *t
 				if !ok {
 					return
 				}
-				select {
-				case r.StatusEvents <- event.GenericEvent{
-					Object: &configv1alpha1.IOSXETelemetry{
-						ObjectMeta: metav1.ObjectMeta{Name: r.DeviceName},
-					},
-				}:
-				default:
+				if !lastEmit.IsZero() && time.Now().Before(lastEmit.Add(telemetryStatusBridgeDebounce)) {
+					armTrailing()
+					continue
+				}
+				trailing = false
+				stopTimer()
+				emit()
+			case <-timerC:
+				timer = nil
+				timerC = nil
+				if trailing {
+					trailing = false
+					emit()
 				}
 			}
 		}

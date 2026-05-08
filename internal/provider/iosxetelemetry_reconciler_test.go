@@ -16,14 +16,19 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"net"
 	"testing"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
@@ -102,6 +107,36 @@ func newProviderTelemetryServer(t *testing.T) (*providerFakeGNMIServer, telemetr
 	}()
 	t.Cleanup(srv.Stop)
 	return fakeServer, &providerBufconnFactory{lis: lis}
+}
+
+type conflictStatusClient struct {
+	client.Client
+}
+
+func (c *conflictStatusClient) Status() client.StatusWriter {
+	return conflictStatusWriter{}
+}
+
+type conflictStatusWriter struct{}
+
+func (conflictStatusWriter) Create(context.Context, client.Object, client.Object, ...client.SubResourceCreateOption) error {
+	return telemetryStatusConflict()
+}
+
+func (conflictStatusWriter) Update(context.Context, client.Object, ...client.SubResourceUpdateOption) error {
+	return telemetryStatusConflict()
+}
+
+func (conflictStatusWriter) Patch(context.Context, client.Object, client.Patch, ...client.SubResourcePatchOption) error {
+	return telemetryStatusConflict()
+}
+
+func telemetryStatusConflict() error {
+	return apierrors.NewConflict(
+		schema.GroupResource{Group: "config.cisco.vk", Resource: "iosxetelemetries"},
+		"telemetry",
+		errors.New("status resource version changed"),
+	)
 }
 
 func newTelemetryCR(name, device string) *configv1alpha1.IOSXETelemetry {
@@ -235,6 +270,68 @@ func TestIOSXETelemetryValidationFailureUpdatesStatus(t *testing.T) {
 	}
 }
 
+func TestIOSXETelemetryStatusConflictRequeues(t *testing.T) {
+	scheme := newTestScheme(t)
+	cr := newTelemetryCR("telemetry", "edge-01")
+	cr.Spec.Subscriptions[0].Mode = "POLL"
+	baseClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithRuntimeObjects(cr).
+		WithStatusSubresource(&configv1alpha1.IOSXETelemetry{}).
+		Build()
+	_, factory := newProviderTelemetryServer(t)
+	r := &IOSXETelemetryReconciler{
+		Client:     &conflictStatusClient{Client: baseClient},
+		DeviceName: "edge-01",
+		Factory:    factory,
+	}
+
+	res, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: "network", Name: "telemetry"},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile error=%v, want nil conflict requeue", err)
+	}
+	if !res.Requeue {
+		t.Fatalf("result=%+v, want Requeue=true", res)
+	}
+}
+
+func TestIOSXETelemetryStateBridgeDebouncesBurst(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	events := make(chan event.GenericEvent, 4)
+	r := &IOSXETelemetryReconciler{
+		DeviceName:   "edge-01",
+		StatusEvents: events,
+	}
+	sub := telemetry.NewSubscriber("edge-01", nil)
+	r.startStateBridge(ctx, sub)
+
+	spec := newTelemetryCR("telemetry", "edge-01").Spec.Subscriptions[0]
+	spec.Name = "environmental-a"
+	if err := sub.AddSubscription(spec); err != nil {
+		t.Fatalf("AddSubscription first: %v", err)
+	}
+	waitProviderBridgeEvent(t, events)
+
+	spec.Name = "environmental-b"
+	if err := sub.AddSubscription(spec); err != nil {
+		t.Fatalf("AddSubscription second: %v", err)
+	}
+	spec.Name = "environmental-c"
+	if err := sub.AddSubscription(spec); err != nil {
+		t.Fatalf("AddSubscription third: %v", err)
+	}
+
+	select {
+	case got := <-events:
+		t.Fatalf("unexpected immediate bridge event during debounce: %+v", got)
+	case <-time.After(200 * time.Millisecond):
+	}
+	waitProviderBridgeEvent(t, events)
+}
+
 func waitProviderRequest(t *testing.T, ch <-chan *gpb.SubscribeRequest) *gpb.SubscribeRequest {
 	t.Helper()
 	select {
@@ -243,6 +340,17 @@ func waitProviderRequest(t *testing.T, ch <-chan *gpb.SubscribeRequest) *gpb.Sub
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for SubscribeRequest")
 		return nil
+	}
+}
+
+func waitProviderBridgeEvent(t *testing.T, ch <-chan event.GenericEvent) event.GenericEvent {
+	t.Helper()
+	select {
+	case ev := <-ch:
+		return ev
+	case <-time.After(1500 * time.Millisecond):
+		t.Fatal("timed out waiting for status bridge event")
+		return event.GenericEvent{}
 	}
 }
 

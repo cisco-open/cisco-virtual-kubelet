@@ -232,6 +232,10 @@ spec:
                       minLength: 1
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
+                    origin:
+                      description: Origin overrides gNMI Path.Origin for all paths
+                        in this subscription.
+                      type: string
                     paths:
                       description: Paths is the non-empty set of gNMI paths to subscribe
                         to.
@@ -259,6 +263,12 @@ spec:
                   - paths
                   - streamMode
                   type: object
+                  x-kubernetes-validations:
+                  - message: suppressRedundant requires streamMode=ON_CHANGE
+                    rule: '!(has(self.suppressRedundant) && self.suppressRedundant
+                      && self.streamMode != ''ON_CHANGE'')'
+                  - message: heartbeatInterval requires streamMode=ON_CHANGE
+                    rule: '!(has(self.heartbeatInterval) && self.streamMode != ''ON_CHANGE'')'
                 minItems: 1
                 type: array
                 x-kubernetes-list-map-keys:

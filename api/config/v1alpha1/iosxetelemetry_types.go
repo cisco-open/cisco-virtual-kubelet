@@ -81,6 +81,8 @@ type IOSXETelemetrySpec struct {
 
 // TelemetrySubscription is one logical subscription entry. The reconciler
 // multiplexes compatible entries into shared gNMI Subscribe RPCs per device.
+// +kubebuilder:validation:XValidation:rule="!(has(self.suppressRedundant) && self.suppressRedundant && self.streamMode != 'ON_CHANGE')",message="suppressRedundant requires streamMode=ON_CHANGE"
+// +kubebuilder:validation:XValidation:rule="!(has(self.heartbeatInterval) && self.streamMode != 'ON_CHANGE')",message="heartbeatInterval requires streamMode=ON_CHANGE"
 type TelemetrySubscription struct {
 	// Name is a DNS-1123-ish stable identifier used in status.
 	// +kubebuilder:validation:Required
@@ -99,6 +101,10 @@ type TelemetrySubscription struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	Paths []string `json:"paths"`
+
+	// Origin overrides gNMI Path.Origin for all paths in this subscription.
+	// +optional
+	Origin string `json:"origin,omitempty"`
 
 	// Mode is restricted to STREAM in v1alpha1.
 	// +kubebuilder:validation:Required

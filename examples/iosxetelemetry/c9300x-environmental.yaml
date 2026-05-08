@@ -14,8 +14,6 @@ spec:
       mode: STREAM
       streamMode: SAMPLE
       sampleInterval: 30s
-      heartbeatInterval: 5m
-      suppressRedundant: true
       encoding: PROTO
   reconnect:
     initialBackoff: 1s

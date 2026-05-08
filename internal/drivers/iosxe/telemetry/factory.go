@@ -71,9 +71,14 @@ func GNMIConfigFromDeviceSpec(spec *ciskov1.DeviceSpec, password string) (transp
 	if spec.Address == "" {
 		return transport.GNMIConfig{}, errors.New("telemetry factory: CiscoDevice.spec.address empty")
 	}
+	tlsEnabled := spec.TLS != nil && spec.TLS.Enabled
 	port := spec.Port
 	if port == 0 || port == 80 || port == 443 {
-		port = 50052
+		if tlsEnabled {
+			port = 9339
+		} else {
+			port = 50052
+		}
 	}
 	cfg := transport.GNMIConfig{
 		Address:  spec.Address,
@@ -81,7 +86,7 @@ func GNMIConfigFromDeviceSpec(spec *ciskov1.DeviceSpec, password string) (transp
 		Username: spec.Username,
 		Password: password,
 	}
-	if spec.TLS != nil && spec.TLS.Enabled && port != 50052 {
+	if tlsEnabled {
 		cfg.TLSConfig = tlsConfigFromDeviceSpec(spec)
 	}
 	return cfg, nil
@@ -92,11 +97,7 @@ func (f *DefaultSubscribeClientFactory) NewClient(_ context.Context) (*Subscribe
 	if cfg.Address == "" {
 		return nil, errors.New("telemetry factory: address empty")
 	}
-	port := cfg.Port
-	if port == 0 {
-		port = 6030
-	}
-	target := fmt.Sprintf("%s:%d", cfg.Address, port)
+	target := fmt.Sprintf("%s:%d", cfg.Address, cfg.Port)
 	var creds credentials.TransportCredentials
 	if cfg.TLSConfig != nil {
 		creds = credentials.NewTLS(cfg.TLSConfig)

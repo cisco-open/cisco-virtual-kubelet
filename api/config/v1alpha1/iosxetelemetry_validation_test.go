@@ -17,8 +17,10 @@ package v1alpha1
 import (
 	"strings"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func validTelemetrySpec() IOSXETelemetrySpec {
@@ -59,6 +61,21 @@ func TestValidateIOSXETelemetrySpecRejectRules(t *testing.T) {
 				s.Subscriptions[0].Encoding = "ASCII"
 			},
 			wantErr: "encoding",
+		},
+		{
+			name: "suppress redundant requires on change",
+			mutate: func(s *IOSXETelemetrySpec) {
+				v := true
+				s.Subscriptions[0].SuppressRedundant = &v
+			},
+			wantErr: "suppressRedundant requires streamMode=ON_CHANGE",
+		},
+		{
+			name: "heartbeat interval requires on change",
+			mutate: func(s *IOSXETelemetrySpec) {
+				s.Subscriptions[0].HeartbeatInterval = &metav1.Duration{Duration: 5 * time.Minute}
+			},
+			wantErr: "heartbeatInterval requires streamMode=ON_CHANGE",
 		},
 		{
 			name: "onExceeded enum",
