@@ -67,13 +67,17 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 	if err != nil {
 		return nil, nil, err
 	}
-	// 64 MiB max-message-size for OTLP gRPC. The default 4 MiB is too low for
-	// telemetry batches that include interface counters across many ports.
+	// OTLP gRPC tuning. Telemetry batches with cumulative interface counters
+	// regularly exceed the otel-collector's default 4 MiB receive limit; pin
+	// gzip on every outgoing call (the OTLP exporters' WithCompressor option
+	// is silently ignored when WithGRPCConn supplies the connection) and lift
+	// the per-call envelope to 64 MiB on both sides.
 	const maxOTLPMsgBytes = 64 * 1024 * 1024
 	conn, err := grpc.NewClient(
 		endpointTarget(cfg.OTLPEndpoint),
 		grpc.WithTransportCredentials(transportCredentials(cfg.Insecure)),
 		grpc.WithDefaultCallOptions(
+			grpc.UseCompressor("gzip"),
 			grpc.MaxCallSendMsgSize(maxOTLPMsgBytes),
 			grpc.MaxCallRecvMsgSize(maxOTLPMsgBytes),
 		),
