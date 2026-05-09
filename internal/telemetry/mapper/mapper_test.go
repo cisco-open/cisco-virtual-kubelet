@@ -273,3 +273,88 @@ func attrValue(attrs []KeyValue, key string) string {
 	}
 	return ""
 }
+
+func TestPerEntityResourceAttributes(t *testing.T) {
+	// One notification carries both a string leaf (state) and a numeric leaf
+	// (cpu) for two apps. The resource attribute config matches the state
+	// path with list-keys stripped — every metric event should land with the
+	// state value of the SAME app, not the other one.
+	notif := &gpb.Notification{
+		Prefix: &gpb.Path{Origin: "rfc7951"},
+		Update: []*gpb.Update{
+			{
+				Path: &gpb.Path{Elem: []*gpb.PathElem{
+					{Name: "app-hosting-oper-data"},
+					{Name: "app", Key: map[string]string{"name": "c9ktest"}},
+					{Name: "details"}, {Name: "state"},
+				}},
+				Val: &gpb.TypedValue{Value: &gpb.TypedValue_StringVal{StringVal: "DEPLOYED"}},
+			},
+			{
+				Path: &gpb.Path{Elem: []*gpb.PathElem{
+					{Name: "app-hosting-oper-data"},
+					{Name: "app", Key: map[string]string{"name": "c9ktest"}},
+					{Name: "details"}, {Name: "resource-reservation"}, {Name: "cpu"},
+				}},
+				Val: &gpb.TypedValue{Value: &gpb.TypedValue_UintVal{UintVal: 1480}},
+			},
+			{
+				Path: &gpb.Path{Elem: []*gpb.PathElem{
+					{Name: "app-hosting-oper-data"},
+					{Name: "app", Key: map[string]string{"name": "cvk0000"}},
+					{Name: "details"}, {Name: "state"},
+				}},
+				Val: &gpb.TypedValue{Value: &gpb.TypedValue_StringVal{StringVal: "RUNNING"}},
+			},
+			{
+				Path: &gpb.Path{Elem: []*gpb.PathElem{
+					{Name: "app-hosting-oper-data"},
+					{Name: "app", Key: map[string]string{"name": "cvk0000"}},
+					{Name: "details"}, {Name: "resource-reservation"}, {Name: "cpu"},
+				}},
+				Val: &gpb.TypedValue{Value: &gpb.TypedValue_UintVal{UintVal: 500}},
+			},
+		},
+	}
+
+	mapping := &configv1alpha1.MappingConfig{
+		ResourceAttributes: []configv1alpha1.ResourceAttribute{
+			{Path: "/app-hosting-oper-data/app/details/state", Key: "cisco.app_hosting.state"},
+		},
+	}
+	out := configv1alpha1.OutputConfig{Signal: []string{"metrics", "logs"}}
+
+	mapper := New()
+	events := mapper.Process(notif, EventContext{
+		Device: "cat9k", Subscription: "ah", StreamEpoch: 1,
+		Mapping: mapping, Output: out, ReceiveTime: time.Now(),
+	})
+
+	// Find the cpu metric events for each app and verify per-entity state attr.
+	wantState := map[string]string{"c9ktest": "DEPLOYED", "cvk0000": "RUNNING"}
+	seen := map[string]string{}
+	for _, ev := range events {
+		if ev.Signal != SignalKindMetric {
+			continue
+		}
+		var app string
+		for _, kv := range ev.Attributes {
+			if kv.Key == "name" {
+				app = kv.Value
+			}
+		}
+		if app == "" {
+			continue
+		}
+		for _, kv := range ev.Resource {
+			if kv.Key == "cisco.app_hosting.state" {
+				seen[app] = kv.Value
+			}
+		}
+	}
+	for app, want := range wantState {
+		if got := seen[app]; got != want {
+			t.Errorf("app=%s state=%q, want %q (resources observed: %+v)", app, got, want, seen)
+		}
+	}
+}

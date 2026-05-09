@@ -63,6 +63,10 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 	extractor := NewResourceAttrExtractor(resourceAttrs)
 
 	baseResource := m.resource(notif, ctx, extractor)
+	// Per-entity resource attrs grouped by outermost list-key. Lets configured
+	// paths like /app-hosting-list/details/state pin per-app strings (state,
+	// IP, MAC, image type) onto every metric/log event for the same app.
+	entityAttrs := extractor.ExtractByEntity(notif)
 	timestamp, timestampAttrs := timestamps(notif.GetTimestamp(), ctx)
 	metricClassifier := ctx.Classifier
 	if metricClassifier == nil {
@@ -74,7 +78,18 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 		canonical, keys, _ := FlattenPath(notif.GetPrefix(), update.GetPath())
 		name := resolver.Resolve(canonical)
 		attrs := eventAttributes(ctx, canonical, keys, timestampAttrs)
-		if drop := m.evaluate(ctx, filter, canonical, name, keys, baseResource, attrs, timestamp); drop != nil {
+		// Merge baseResource with per-entity attrs for this update's outermost
+		// list-key (e.g. an app-hosting app name). Globals (entity "") are
+		// already in baseResource via Extract().
+		eventResource := baseResource
+		if entity := firstListKeyPair(keys); entity != "" {
+			if extra := entityAttrs[entity]; len(extra) > 0 {
+				eventResource = make([]KeyValue, 0, len(baseResource)+len(extra))
+				eventResource = append(eventResource, baseResource...)
+				eventResource = append(eventResource, extra...)
+			}
+		}
+		if drop := m.evaluate(ctx, filter, canonical, name, keys, eventResource, attrs, timestamp); drop != nil {
 			out = append(out, *drop)
 			continue
 		}
@@ -83,7 +98,7 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 				Signal:        SignalKindTrace,
 				Name:          name,
 				Attributes:    attrs,
-				Resource:      baseResource,
+				Resource:      eventResource,
 				Timestamp:     timestamp,
 				Body:          body,
 				CanonicalPath: canonical,
@@ -98,7 +113,7 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 				Signal:        SignalKindLog,
 				Name:          name,
 				Attributes:    attrs,
-				Resource:      baseResource,
+				Resource:      eventResource,
 				Timestamp:     timestamp,
 				Body:          body,
 				Severity:      inferSeverity(body),
@@ -119,7 +134,7 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 				Signal:         SignalKindMetric,
 				Name:           name,
 				Attributes:     attrs,
-				Resource:       baseResource,
+				Resource:       eventResource,
 				Timestamp:      timestamp,
 				NumberValue:    &v,
 				MetricKind:     kind,
@@ -134,7 +149,15 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 		name := resolver.Resolve(canonical)
 		attrs := eventAttributes(ctx, canonical, keys, timestampAttrs)
 		attrs = append(attrs, KeyValue{Key: "cisco.gnmi.event", Value: "delete"})
-		if drop := m.evaluate(ctx, filter, canonical, name, keys, baseResource, attrs, timestamp); drop != nil {
+		eventResource := baseResource
+		if entity := firstListKeyPair(keys); entity != "" {
+			if extra := entityAttrs[entity]; len(extra) > 0 {
+				eventResource = make([]KeyValue, 0, len(baseResource)+len(extra))
+				eventResource = append(eventResource, baseResource...)
+				eventResource = append(eventResource, extra...)
+			}
+		}
+		if drop := m.evaluate(ctx, filter, canonical, name, keys, eventResource, attrs, timestamp); drop != nil {
 			out = append(out, *drop)
 			continue
 		}
@@ -148,7 +171,7 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 				Signal:        SignalKindTrace,
 				Name:          name,
 				Attributes:    attrs,
-				Resource:      baseResource,
+				Resource:      eventResource,
 				Timestamp:     timestamp,
 				CanonicalPath: canonical,
 				SeriesKey:     BuildSeriesKey(ctx.Subscription, canonical, keys),
@@ -161,7 +184,7 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 			Signal:        SignalKindLog,
 			Name:          name,
 			Attributes:    attrs,
-			Resource:      baseResource,
+			Resource:      eventResource,
 			Timestamp:     timestamp,
 			Body:          "deleted: " + canonical,
 			Severity:      SeverityInfo,

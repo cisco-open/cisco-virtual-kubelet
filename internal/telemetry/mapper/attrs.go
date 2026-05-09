@@ -20,11 +20,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
 )
 
+// ResourceAttrExtractor matches gNMI Update paths against operator-configured
+// path → attribute-key mappings and extracts the leaf values as OTel resource
+// attributes. The matcher strips gNMI list-key selectors from the canonical
+// path so a config like /app-hosting-list/details/state matches every list
+// instance (every app). The extracted value is then attached to every metric
+// event that shares the same outermost list-key tuple — i.e. the per-entity
+// extracted attrs land on metrics emitted for that same entity.
 type ResourceAttrExtractor struct {
 	byPath map[string]string
 }
@@ -35,18 +43,24 @@ func NewResourceAttrExtractor(attrs []configv1alpha1.ResourceAttribute) Resource
 		if attr.Path == "" || attr.Key == "" {
 			continue
 		}
-		byPath[normalizeCanonicalPath(attr.Path)] = attr.Key
+		byPath[stripPathListKeys(normalizeCanonicalPath(attr.Path))] = attr.Key
 	}
 	return ResourceAttrExtractor{byPath: byPath}
 }
 
+// Extract returns resource attributes extracted from update paths that have no
+// list-key selector. List-keyed updates are surfaced via ExtractByEntity so
+// each entity's metric events can carry its own attrs.
 func (e ResourceAttrExtractor) Extract(notif *gpb.Notification) []KeyValue {
 	if notif == nil || len(e.byPath) == 0 {
 		return nil
 	}
 	out := make([]KeyValue, 0, len(e.byPath))
 	for _, update := range notif.GetUpdate() {
-		canonical, _, _ := FlattenPath(notif.GetPrefix(), update.GetPath())
+		canonical, keys, _ := FlattenPath(notif.GetPrefix(), update.GetPath())
+		if len(keys) > 0 {
+			continue
+		}
 		if key, ok := e.byPath[canonical]; ok {
 			if value, ok := typedValueString(update.GetVal()); ok {
 				out = append(out, KeyValue{Key: key, Value: value})
@@ -54,6 +68,66 @@ func (e ResourceAttrExtractor) Extract(notif *gpb.Notification) []KeyValue {
 		}
 	}
 	return out
+}
+
+// ExtractByEntity groups extracted resource attributes by the outermost
+// list-key pair on the matched path. Updates with no list-keys are stored
+// under the empty entity "" and apply globally to every metric event in the
+// notification. Mapper.Process attaches the per-entity attrs to events whose
+// own outermost list-key matches.
+func (e ResourceAttrExtractor) ExtractByEntity(notif *gpb.Notification) map[string][]KeyValue {
+	if notif == nil || len(e.byPath) == 0 {
+		return nil
+	}
+	out := map[string][]KeyValue{}
+	for _, update := range notif.GetUpdate() {
+		canonical, keys, _ := FlattenPath(notif.GetPrefix(), update.GetPath())
+		stripped := stripPathListKeys(canonical)
+		attrKey, ok := e.byPath[stripped]
+		if !ok {
+			continue
+		}
+		value, ok := typedValueString(update.GetVal())
+		if !ok {
+			continue
+		}
+		entity := firstListKeyPair(keys)
+		out[entity] = append(out[entity], KeyValue{Key: attrKey, Value: value})
+	}
+	return out
+}
+
+// stripPathListKeys removes "[k=v]" selectors from each element of a canonical
+// path so configured paths can wildcard-match every list instance.
+func stripPathListKeys(canonical string) string {
+	var b strings.Builder
+	depth := 0
+	for _, r := range canonical {
+		switch r {
+		case '[':
+			depth++
+		case ']':
+			if depth > 0 {
+				depth--
+			}
+		default:
+			if depth == 0 {
+				b.WriteRune(r)
+			}
+		}
+	}
+	return b.String()
+}
+
+// firstListKeyPair returns "k=v" for the outermost list key on a path, or ""
+// when the path has no list keys. The "outermost" key identifies the entity
+// (e.g., the app-hosting app name) so per-entity attrs flow to the right
+// metric events even when nested lists appear deeper in the path.
+func firstListKeyPair(keys []KeyValue) string {
+	if len(keys) == 0 {
+		return ""
+	}
+	return keys[0].Key + "=" + keys[0].Value
 }
 
 func typedValueString(v *gpb.TypedValue) (string, bool) {
