@@ -52,6 +52,16 @@ func buildTelemetryProviders(ctx context.Context, deviceName string, opts config
 		return nil, nil, nil
 	}
 	insecure, _ := strconv.ParseBool(os.Getenv("OTEL_EXPORTER_OTLP_INSECURE"))
+	// The OpenTelemetry env var spec requires a URL scheme on
+	// OTEL_EXPORTER_OTLP_ENDPOINT. Operators frequently set a bare host:port,
+	// which the SDK's url.Parse rejects with "first path segment in URL cannot
+	// contain colon". Normalize before constructing providers and write the
+	// fixed value back to the env so any SDK code path that re-reads the env
+	// sees the same value.
+	if normalized := normalizeOTLPEndpoint(endpoint, insecure); normalized != endpoint {
+		_ = os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", normalized)
+		endpoint = normalized
+	}
 	headers, err := serializedStringMap(os.Getenv(envOTELExporterOTLPHeaders))
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s: %w", envOTELExporterOTLPHeaders, err)
@@ -90,6 +100,25 @@ func telemetryResourceAttributes(base map[string]string) (map[string]string, err
 		attrs[k] = v
 	}
 	return attrs, nil
+}
+
+// normalizeOTLPEndpoint ensures the OTEL_EXPORTER_OTLP_ENDPOINT value carries a
+// URL scheme. If the input already starts with http:// or https:// it is
+// returned unchanged. Otherwise the function prepends http:// when insecure is
+// true and https:// when it is false, matching the OTel SDK's expectations.
+func normalizeOTLPEndpoint(raw string, insecure bool) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return raw
+	}
+	lowered := strings.ToLower(trimmed)
+	if strings.HasPrefix(lowered, "http://") || strings.HasPrefix(lowered, "https://") {
+		return trimmed
+	}
+	if insecure {
+		return "http://" + trimmed
+	}
+	return "https://" + trimmed
 }
 
 func serializedStringMap(raw string) (map[string]string, error) {

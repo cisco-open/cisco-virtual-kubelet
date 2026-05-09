@@ -16,6 +16,31 @@ package main
 
 import "testing"
 
+func TestNormalizeOTLPEndpoint(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    string
+		insecure bool
+		want     string
+	}{
+		{"bare host:port insecure adds http", "192.168.129.23:4317", true, "http://192.168.129.23:4317"},
+		{"bare host:port secure adds https", "otelcol.observability:4317", false, "https://otelcol.observability:4317"},
+		{"already-http preserved", "http://otelcol:4317", true, "http://otelcol:4317"},
+		{"already-https preserved", "https://otelcol:4317", false, "https://otelcol:4317"},
+		{"mixed-case scheme preserved", "HTTPS://otelcol:4317", false, "HTTPS://otelcol:4317"},
+		{"empty stays empty", "", true, ""},
+		{"trims whitespace", "  192.168.129.23:4317  ", true, "http://192.168.129.23:4317"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := normalizeOTLPEndpoint(tc.input, tc.insecure)
+			if got != tc.want {
+				t.Errorf("normalizeOTLPEndpoint(%q, %v) = %q; want %q", tc.input, tc.insecure, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestSerializedStringMapParsesJSON(t *testing.T) {
 	got, err := serializedStringMap(`{"authorization":"Bearer token","x-scope-orgid":"network"}`)
 	if err != nil {
