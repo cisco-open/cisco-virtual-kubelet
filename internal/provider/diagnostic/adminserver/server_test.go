@@ -26,8 +26,10 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -64,6 +66,12 @@ func (f *fakeTransport) DiagnosticExec(ctx context.Context, cmds []string) ([]tr
 type stubProvider struct{ tr transport.Interface }
 
 func (s *stubProvider) GetTransport() transport.Interface { return s.tr }
+
+type staleGetClient struct{ client.Client }
+
+func (s staleGetClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	return apierrors.NewNotFound(schema.GroupResource{Group: "ops.cisco.vk", Resource: "deviceoperations"}, key.Name)
+}
 
 // TestExecHappyPath drives a single show command through the
 // admin endpoint and asserts the JSON response shape + body.
@@ -146,7 +154,8 @@ func TestExecViaDeviceOperation(t *testing.T) {
 
 	s := &Server{
 		DeviceName:         "cat9k-smoke",
-		OperationClient:    c,
+		OperationClient:    staleGetClient{Client: c},
+		OperationReader:    c,
 		OperationNamespace: "ops",
 		OperationPoll:      5 * time.Millisecond,
 		OperationTimeout:   2 * time.Second,

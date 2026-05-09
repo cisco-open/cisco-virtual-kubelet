@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -52,7 +53,11 @@ type TransportProvider interface {
 // Reconciler watches DeviceOperation CRs for one device and executes the
 // supported read-only operation kinds.
 type Reconciler struct {
-	Client     client.Client
+	Client client.Client
+	// Reader should be an uncached API reader when available. Status updates
+	// can be triggered immediately after create from the admin endpoint; reading
+	// the latest resourceVersion avoids cache-staleness conflict loops.
+	Reader     client.Reader
 	Recorder   record.EventRecorder
 	Scheme     *runtime.Scheme
 	DeviceName string
@@ -165,27 +170,29 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 }
 
 func (r *Reconciler) markPending(ctx context.Context, op *opsv1alpha1.DeviceOperation, reason, message string, now time.Time) error {
-	op.Status.Phase = opsv1alpha1.OperationPhasePending
-	op.Status.ObservedGeneration = op.Generation
-	op.Status.Message = message
-	op.Status.CompletionTime = nil
-	r.setReady(op, metav1.ConditionFalse, reason, message, now)
-	if err := r.Client.Status().Update(ctx, op); err != nil {
+	if err := r.updateStatus(ctx, op, func(current *opsv1alpha1.DeviceOperation) {
+		current.Status.Phase = opsv1alpha1.OperationPhasePending
+		current.Status.ObservedGeneration = current.Generation
+		current.Status.Message = message
+		current.Status.CompletionTime = nil
+		r.setReady(current, metav1.ConditionFalse, reason, message, now)
+	}); err != nil {
 		return fmt.Errorf("status update pending: %w", err)
 	}
 	return nil
 }
 
 func (r *Reconciler) markRunning(ctx context.Context, op *opsv1alpha1.DeviceOperation, now time.Time) error {
-	op.Status.Phase = opsv1alpha1.OperationPhaseRunning
-	op.Status.ObservedGeneration = op.Generation
-	op.Status.StartTime = &metav1.Time{Time: now}
-	op.Status.CompletionTime = nil
-	op.Status.Message = "operation is running"
-	op.Status.Outputs = nil
-	op.Status.ArtifactURIs = nil
-	r.setReady(op, metav1.ConditionFalse, "Running", "operation is running", now)
-	if err := r.Client.Status().Update(ctx, op); err != nil {
+	if err := r.updateStatus(ctx, op, func(current *opsv1alpha1.DeviceOperation) {
+		current.Status.Phase = opsv1alpha1.OperationPhaseRunning
+		current.Status.ObservedGeneration = current.Generation
+		current.Status.StartTime = &metav1.Time{Time: now}
+		current.Status.CompletionTime = nil
+		current.Status.Message = "operation is running"
+		current.Status.Outputs = nil
+		current.Status.ArtifactURIs = nil
+		r.setReady(current, metav1.ConditionFalse, "Running", "operation is running", now)
+	}); err != nil {
 		return fmt.Errorf("status update running: %w", err)
 	}
 	return nil
@@ -199,25 +206,53 @@ func (r *Reconciler) finish(
 	outputs []opsv1alpha1.DeviceOperationOutput,
 	now time.Time,
 ) error {
-	op.Status.Phase = phase
-	op.Status.ObservedGeneration = op.Generation
-	if op.Status.StartTime == nil {
-		op.Status.StartTime = &metav1.Time{Time: now}
-	}
-	op.Status.CompletionTime = &metav1.Time{Time: now}
-	op.Status.Message = message
-	op.Status.Outputs = outputs
-	if phase == opsv1alpha1.OperationPhaseSucceeded {
-		r.setReady(op, metav1.ConditionTrue, "Succeeded", message, now)
-		r.event(op, corev1.EventTypeNormal, "Succeeded", message)
-	} else {
-		r.setReady(op, metav1.ConditionFalse, "Failed", message, now)
-		r.event(op, corev1.EventTypeWarning, "Failed", message)
-	}
-	if err := r.Client.Status().Update(ctx, op); err != nil {
+	if err := r.updateStatus(ctx, op, func(current *opsv1alpha1.DeviceOperation) {
+		current.Status.Phase = phase
+		current.Status.ObservedGeneration = current.Generation
+		if current.Status.StartTime == nil {
+			current.Status.StartTime = &metav1.Time{Time: now}
+		}
+		current.Status.CompletionTime = &metav1.Time{Time: now}
+		current.Status.Message = message
+		current.Status.Outputs = outputs
+		if phase == opsv1alpha1.OperationPhaseSucceeded {
+			r.setReady(current, metav1.ConditionTrue, "Succeeded", message, now)
+		} else {
+			r.setReady(current, metav1.ConditionFalse, "Failed", message, now)
+		}
+	}); err != nil {
 		return fmt.Errorf("status update terminal: %w", err)
 	}
+	if phase == opsv1alpha1.OperationPhaseSucceeded {
+		r.event(op, corev1.EventTypeNormal, "Succeeded", message)
+	} else {
+		r.event(op, corev1.EventTypeWarning, "Failed", message)
+	}
 	return nil
+}
+
+func (r *Reconciler) updateStatus(
+	ctx context.Context,
+	op *opsv1alpha1.DeviceOperation,
+	mutate func(*opsv1alpha1.DeviceOperation),
+) error {
+	key := client.ObjectKeyFromObject(op)
+	reader := r.Reader
+	if reader == nil {
+		reader = r.Client
+	}
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		var current opsv1alpha1.DeviceOperation
+		if err := reader.Get(ctx, key, &current); err != nil {
+			return err
+		}
+		mutate(&current)
+		if err := r.Client.Status().Update(ctx, &current); err != nil {
+			return err
+		}
+		*op = current
+		return nil
+	})
 }
 
 func (r *Reconciler) handleTTL(ctx context.Context, op *opsv1alpha1.DeviceOperation, now time.Time) (reconcile.Result, error) {

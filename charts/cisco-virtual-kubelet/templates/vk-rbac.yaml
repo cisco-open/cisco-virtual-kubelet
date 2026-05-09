@@ -129,12 +129,14 @@ rules:
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  # DeviceOperation CRD — read-only async operations. The first
-  # reconciler supports ShowCommand only and reuses the diagnostic
-  # transport/validation/redaction path.
+  # DeviceOperation CRD — read-only async operations. create is required for
+  # the localhost admin /v1/exec wrapper, which synthesizes transient
+  # operations; delete is required only for ttlSecondsAfterFinished cleanup.
+  # The reconciler writes results through the status subresource below and
+  # does not need update/patch on the main object.
   - apiGroups: ["ops.cisco.vk"]
     resources: ["deviceoperations"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch", "create", "delete"]
   - apiGroups: ["ops.cisco.vk"]
     resources: ["deviceoperations/status"]
     verbs: ["get", "update", "patch"]

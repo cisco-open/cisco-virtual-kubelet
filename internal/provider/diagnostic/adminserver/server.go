@@ -97,7 +97,11 @@ type Server struct {
 	// DeviceOperation CR and poll its status instead of invoking DiagnosticExec
 	// directly. This keeps the port-forward admin endpoint on the same auditable
 	// CRD path as other operations.
-	OperationClient    client.Client
+	OperationClient client.Client
+	// OperationReader should be an uncached reader when available. The admin
+	// endpoint polls a CR immediately after creating it, before the manager cache
+	// may have observed the new object.
+	OperationReader    client.Reader
 	OperationNamespace string
 	OperationTimeout   time.Duration
 	OperationPoll      time.Duration
@@ -330,6 +334,10 @@ func (s *Server) handleExecViaOperation(w http.ResponseWriter, r *http.Request, 
 		http.Error(w, "create DeviceOperation: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	reader := s.OperationReader
+	if reader == nil {
+		reader = s.OperationClient
+	}
 
 	timeout := s.OperationTimeout
 	if timeout <= 0 {
@@ -347,7 +355,7 @@ func (s *Server) handleExecViaOperation(w http.ResponseWriter, r *http.Request, 
 	var current opsv1alpha1.DeviceOperation
 	key := client.ObjectKey{Namespace: namespace, Name: name}
 	for {
-		if err := s.OperationClient.Get(waitCtx, key, &current); err != nil {
+		if err := reader.Get(waitCtx, key, &current); err != nil {
 			if apierrors.IsNotFound(err) {
 				http.Error(w, "DeviceOperation disappeared before completion", http.StatusInternalServerError)
 				return

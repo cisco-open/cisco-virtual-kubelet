@@ -329,6 +329,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 
 	operationReconciler := &deviceoperation.Reconciler{
 		Client:     mgr.GetClient(),
+		Reader:     mgr.GetAPIReader(),
 		Recorder:   recorder,
 		Scheme:     mgr.GetScheme(),
 		DeviceName: deviceName,
@@ -412,6 +413,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 			DeviceName:         deviceName,
 			TP:                 r,
 			OperationClient:    mgr.GetClient(),
+			OperationReader:    mgr.GetAPIReader(),
 			OperationNamespace: operationNamespace(),
 			BindAddr:           adminAddr,
 			TelemetrySource:    telemetryReconciler.TelemetryHealthSnapshot,
