@@ -21,8 +21,16 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 // fakeTransport is a minimal transport.Interface that satisfies the
@@ -95,6 +103,73 @@ func TestExecHappyPath(t *testing.T) {
 	}
 	if len(got.Results) != 1 || !strings.Contains(got.Results[0].Output, "17.18.2") {
 		t.Errorf("unexpected results: %+v", got.Results)
+	}
+}
+
+func TestExecViaDeviceOperation(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		t.Fatalf("client-go scheme: %v", err)
+	}
+	if err := configv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatalf("config scheme: %v", err)
+	}
+	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatalf("ops scheme: %v", err)
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		deadline := time.Now().Add(2 * time.Second)
+		for time.Now().Before(deadline) {
+			var list opsv1alpha1.DeviceOperationList
+			if err := c.List(ctx, &list, client.InNamespace("ops")); err == nil && len(list.Items) > 0 {
+				op := list.Items[0]
+				now := metav1.Now()
+				op.Status.Phase = opsv1alpha1.OperationPhaseSucceeded
+				op.Status.CompletionTime = &now
+				op.Status.Message = "1 command(s) completed"
+				op.Status.Outputs = []opsv1alpha1.DeviceOperationOutput{{
+					Command: "show version",
+					Output:  "Cisco IOS XE Software, Version 17.18.2",
+				}}
+				_ = c.Status().Update(ctx, &op)
+				return
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
+
+	s := &Server{
+		DeviceName:         "cat9k-smoke",
+		OperationClient:    c,
+		OperationNamespace: "ops",
+		OperationPoll:      5 * time.Millisecond,
+		OperationTimeout:   2 * time.Second,
+	}
+	srv := httptest.NewServer(s.Handler())
+	defer srv.Close()
+	resp, err := http.Post(srv.URL+"/v1/exec", "application/json", strings.NewReader(`{"commands":["show version"]}`))
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status=%d", resp.StatusCode)
+	}
+	var got ExecResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if got.Transport != "deviceoperation" {
+		t.Fatalf("transport=%q want deviceoperation", got.Transport)
+	}
+	if len(got.Results) != 1 || !strings.Contains(got.Results[0].Output, "17.18.2") {
+		t.Fatalf("unexpected results: %+v", got.Results)
 	}
 }
 

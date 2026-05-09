@@ -275,6 +275,14 @@ type OTELConfig struct {
 	// +kubebuilder:validation:Minimum=10
 	// +kubebuilder:default=60
 	IntervalSecs int `json:"intervalSecs,omitempty" mapstructure:"intervalSecs"`
+
+	// MaxLinkSpans caps link spans emitted per topology cycle. Extra links are
+	// counted on the root span as topology.dropped_link_count so large devices
+	// cannot create unbounded Tempo write bursts.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=256
+	MaxLinkSpans int `json:"maxLinkSpans,omitempty" mapstructure:"maxLinkSpans"`
 }
 
 // ResourceConfig represents resource limits and defaults for container workloads.

@@ -24,12 +24,13 @@ import (
 )
 
 const (
-	activeStreamsSelfMetric       = "cisco_vk_telemetry_active_streams"
-	streamReconnectsSelfMetric    = "cisco_vk_telemetry_stream_reconnects_total"
-	logRecordsSelfMetric          = "cisco_vk_telemetry_log_records_emitted_total"
-	instrumentCapDropsSelfMetric  = "cisco_vk_telemetry_instrument_cap_drops_total"
-	processingDurationSelfMetric  = "cisco_vk_telemetry_processing_duration_seconds"
-	transitionsDroppedSelfMetric  = "cisco_vk_telemetry_transitions_dropped_total"
+	activeStreamsSelfMetric      = "cisco_vk_telemetry_active_streams"
+	streamReconnectsSelfMetric   = "cisco_vk_telemetry_stream_reconnects_total"
+	logRecordsSelfMetric         = "cisco_vk_telemetry_log_records_emitted_total"
+	instrumentCapDropsSelfMetric = "cisco_vk_telemetry_instrument_cap_drops_total"
+	processingDurationSelfMetric = "cisco_vk_telemetry_processing_duration_seconds"
+	transitionsDroppedSelfMetric = "cisco_vk_telemetry_transitions_dropped_total"
+	notifierDroppedSelfMetric    = "cisco_vk_telemetry_notifier_dropped_total"
 )
 
 // SelfMetrics holds the OTel instruments shared across emitters and the stream
@@ -42,6 +43,7 @@ type SelfMetrics struct {
 	instrumentCapDrops metric.Int64Counter
 	processingDuration metric.Float64Histogram
 	transitionsDropped metric.Int64Counter
+	notifierDropped    metric.Int64Counter
 
 	capDropTotal atomic.Int64
 }
@@ -71,6 +73,7 @@ func NewSelfMetrics(provider metric.MeterProvider) *SelfMetrics {
 		),
 	)
 	transitionsDropped, _ := meter.Int64Counter(transitionsDroppedSelfMetric)
+	notifierDropped, _ := meter.Int64Counter(notifierDroppedSelfMetric)
 	return &SelfMetrics{
 		activeStreams:      active,
 		streamReconnects:   reconnects,
@@ -78,6 +81,7 @@ func NewSelfMetrics(provider metric.MeterProvider) *SelfMetrics {
 		instrumentCapDrops: capDrops,
 		processingDuration: duration,
 		transitionsDropped: transitionsDropped,
+		notifierDropped:    notifierDropped,
 	}
 }
 
@@ -165,4 +169,18 @@ func (s *SelfMetrics) IncTransitionsDropped(ctx context.Context, device, subscri
 		attribute.String("subscription", subscription),
 		attribute.String("path", path),
 	))
+}
+
+// IncNotifierDropped counts app-hosting state events that could not be queued
+// to the PodNotifier bridge. The bridge is intentionally lossy on overflow:
+// the next status poll remains authoritative, while this counter exposes that
+// push-based freshness is falling behind.
+func (s *SelfMetrics) IncNotifierDropped(ctx context.Context, reason string) {
+	if s == nil || s.notifierDropped == nil {
+		return
+	}
+	if reason == "" {
+		reason = "unknown"
+	}
+	s.notifierDropped.Add(ctx, 1, metric.WithAttributes(attribute.String("reason", reason)))
 }

@@ -71,6 +71,7 @@ otel:
   insecure: true
   serviceName: "cisco-network"
   intervalSecs: 60
+  maxLinkSpans: 256
 ```
 
 The exporter connects to the OTLP gRPC endpoint, emits one trace per interval, and shuts down cleanly on context cancel (5 s grace).
@@ -91,20 +92,24 @@ Every span carries:
 Each emission cycle produces one trace:
 
 ```
-root span: node.<hostname>              [SERVER]
+root span: cvk.topology.cycle           [SERVER]
 ├── link.<localIface>-><peerDeviceID>   [CLIENT]  (one per CDP/OSPF neighbor)
 ├── link.<localIface>-><peerDeviceID>   [CLIENT]
 ├── …
 └── hosted.<podNs>/<podName>            [CLIENT]  (one per hosted container)
 ```
 
-#### Root span (`node.<hostname>`)
+#### Root span (`cvk.topology.cycle`)
 
 | Attribute | Source |
 |---|---|
+| `topology.cycle.id` | Unique ID for one bounded topology emission cycle |
+| `topology.emitted_link_count` | Link spans emitted after applying `maxLinkSpans` |
+| `topology.dropped_link_count` | Links omitted because the cap was reached |
+| `node.name` | Device hostname |
 | `node.type` | `"network_device"` |
 | `node.role` | `"router"` |
-| `node.neighbor_count` | count of consolidated neighbors |
+| `node.neighbor_count` | count of observed consolidated neighbors before span capping |
 | `node.interface_count` | count of interfaces with IPs |
 | `router.id` | `DeviceInfo.RouterID` (OSPF/BGP) |
 | `router.platform` | `DeviceInfo.ProductID` |
@@ -120,6 +125,7 @@ CDP and OSPF neighbors are consolidated per local interface — a single span re
 
 | Attribute | Notes |
 |---|---|
+| `topology.cycle.id` | Matches the cycle root span |
 | `peer.service` | `"{serviceName}.{peerDeviceID}"` — matches the root span of the peer if it's also exporting, enabling service-map correlation |
 | `net.peer.name` | `peerDeviceID` |
 | `net.peer.ip` | Peer management IP |
@@ -140,6 +146,7 @@ CDP and OSPF neighbors are consolidated per local interface — a single span re
 
 | Attribute | Notes |
 |---|---|
+| `topology.cycle.id` | Matches the cycle root span |
 | `peer.service` | `"app.{namespace}/{podName}"` — distinct namespace from network neighbors |
 | `service.type` | `"app-hosting"` |
 | `deployment.environment` | `"edge-compute"` |

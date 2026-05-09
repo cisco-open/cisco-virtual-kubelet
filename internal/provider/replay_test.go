@@ -18,11 +18,14 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 )
 
@@ -182,5 +185,115 @@ func TestApplyReplayAnnotationNoOpWhenAbsent(t *testing.T) {
 	}
 	if got != resolved {
 		t.Error("no-op path should return the same pointer")
+	}
+}
+
+func TestApplyRollbackToOverridesResolvedIntent(t *testing.T) {
+	scheme := newTestScheme(t)
+	body, err := encodeReplayBody(&intent.ResolvedIntent{
+		Configuration: map[string]any{"vlan": map[string]any{
+			"vlans": []any{map[string]any{"id": float64(99), "name": "from-revision"}},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	cr := newCR("edge-01", "edge-01")
+	cr.UID = types.UID("config-uid")
+	cr.Spec.RollbackTo = "edge-01-rev-1"
+	rev := &configv1alpha1.IOSXEConfigRevision{
+		ObjectMeta: metav1.ObjectMeta{Name: "edge-01-rev-1", Namespace: "network"},
+		Spec: configv1alpha1.IOSXEConfigRevisionSpec{
+			DeviceRef: configv1alpha1.DeviceRef{Name: "edge-01"},
+			SourceRef: "network/edge-01",
+			SourceUID: "config-uid",
+			Hash:      "sha256:hist",
+			Body:      body,
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cr, rev).Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+	resolved := &intent.ResolvedIntent{
+		Configuration: map[string]any{"vlan": map[string]any{
+			"vlans": []any{map[string]any{"id": float64(10), "name": "current"}},
+		}},
+	}
+	got, applied, err := r.applyRollbackTo(context.Background(), cr, resolved)
+	if err != nil {
+		t.Fatalf("applyRollbackTo: %v", err)
+	}
+	if !applied {
+		t.Fatal("rollbackTo set; applied should be true")
+	}
+	vlans, _ := got.Configuration["vlan"].(map[string]any)["vlans"].([]any)
+	if len(vlans) == 0 {
+		t.Fatalf("rollback produced no vlans: %#v", got.Configuration)
+	}
+	first := vlans[0].(map[string]any)
+	if first["id"] != float64(99) || first["name"] != "from-revision" {
+		t.Errorf("rollback didn't replace current intent: %#v", first)
+	}
+}
+
+func TestAppendConfigRevisionCreatesAndPrunesOldest(t *testing.T) {
+	scheme := newTestScheme(t)
+	cr := newCR("edge-01", "edge-01")
+	cr.UID = types.UID("config-uid")
+	cr.Generation = 3
+	cr.Spec.RevisionHistoryLimit = 2
+	old := func(name string, ts time.Time) *configv1alpha1.IOSXEConfigRevision {
+		return &configv1alpha1.IOSXEConfigRevision{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              name,
+				Namespace:         "network",
+				CreationTimestamp: metav1.NewTime(ts),
+				Labels: map[string]string{
+					revisionSourceNameLabel: "edge-01",
+					revisionSourceUIDLabel:  "config-uid",
+				},
+			},
+			Spec: configv1alpha1.IOSXEConfigRevisionSpec{
+				DeviceRef: configv1alpha1.DeviceRef{Name: "edge-01"},
+				SourceRef: "network/edge-01",
+				SourceUID: "config-uid",
+				Hash:      "sha256:" + name,
+				Body:      `{"v":1,"configuration":{}}`,
+			},
+		}
+	}
+	now := time.Now().UTC()
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(
+			old("oldest", now.Add(-2*time.Hour)),
+			old("middle", now.Add(-1*time.Hour)),
+		).
+		Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+	resolved := &intent.ResolvedIntent{
+		Configuration: map[string]any{"vlan": map[string]any{"vlans": []any{
+			map[string]any{"id": float64(10), "name": "users"},
+		}}},
+	}
+	if err := r.appendConfigRevision(context.Background(), cr,
+		engine.Result{Phase: engine.PhaseInSync}, "sha256:newest", resolved,
+		map[string][]string{"vlan": {"10"}}); err != nil {
+		t.Fatalf("appendConfigRevision: %v", err)
+	}
+	var list configv1alpha1.IOSXEConfigRevisionList
+	if err := c.List(context.Background(), &list); err != nil {
+		t.Fatalf("list revisions: %v", err)
+	}
+	if len(list.Items) != 2 {
+		t.Fatalf("revisions=%d want 2: %#v", len(list.Items), list.Items)
+	}
+	names := map[string]bool{}
+	for _, item := range list.Items {
+		names[item.Name] = true
+	}
+	if names["oldest"] {
+		t.Fatalf("oldest revision was not pruned: %#v", names)
+	}
+	if !names["middle"] || !names[revisionName(cr, "sha256:newest")] {
+		t.Fatalf("expected middle and newest revisions, got %#v", names)
 	}
 }

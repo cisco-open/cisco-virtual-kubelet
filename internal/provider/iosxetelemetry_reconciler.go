@@ -41,8 +41,10 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver"
 	metricclassifier "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/classifier"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
 	telemetryyang "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/yang"
 )
 
@@ -71,6 +73,16 @@ type IOSXETelemetryReconciler struct {
 	// ResourceAttrs are added to every mapped event's resource (alongside
 	// the per-CR Mapping.ResourceAttributes pinned leaves).
 	ResourceAttrs map[string]string
+	// StateCache receives MDT-derived app/interface/topology facts. It is a
+	// read-through cache: emitters and notifiers can use it for freshness, but
+	// driver calls remain authoritative.
+	StateCache *state.Cache
+	// AppEventConsumer receives app-hosting state events from the mapper. The
+	// Virtual Kubelet provider uses this to wake its PodNotifier bridge.
+	AppEventConsumer state.AppEventConsumer
+	// CorrelationCache maps MDT app IDs back to the VK admission trace context
+	// that created them, allowing recovery spans to nest under the causal trace.
+	CorrelationCache *correlation.Cache
 	// YangRegistry enables YANG-driven metric classification when configured.
 	// Nil preserves the curated classifier behavior.
 	YangRegistry *telemetryyang.Registry
@@ -329,6 +341,15 @@ func (r *IOSXETelemetryReconciler) ensureSubscriber() (*telemetry.Subscriber, er
 		telemetry.WithMetricsEmitter(metricsEmitter),
 		telemetry.WithTracesEmitter(emit.NewTracesEmitter(r.TracerProvider, r.MeterProvider, nil).WithSelfMetrics(selfMetrics)),
 		telemetry.WithSelfMetrics(selfMetrics),
+	}
+	if r.StateCache != nil {
+		opts = append(opts, telemetry.WithStateCache(r.StateCache))
+	}
+	if r.AppEventConsumer != nil {
+		opts = append(opts, telemetry.WithAppEventConsumer(r.AppEventConsumer))
+	}
+	if r.CorrelationCache != nil {
+		opts = append(opts, telemetry.WithCorrelationCache(r.CorrelationCache))
 	}
 	if attrs := r.subscriberResourceAttrs(); len(attrs) > 0 {
 		opts = append(opts, telemetry.WithResourceAttributes(attrs))

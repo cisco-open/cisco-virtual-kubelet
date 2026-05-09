@@ -97,6 +97,24 @@ rules:
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigapplylogs/status"]
     verbs: ["get", "update", "patch"]
+  # IOSXEConfigRevision CRD — durable resolved-intent history used by
+  # rollbackTo. Reconciler creates revisions after successful applies,
+  # reads them during rollback, and garbage-collects old entries.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigrevisions"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigrevisions/status"]
+    verbs: ["get", "update", "patch"]
+  # IOSXETelemetry CRD — per-device MDT-over-gNMI controller running
+  # inside the VK pod watches telemetry specs for its device and reports
+  # stream state back to status.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxetelemetries"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxetelemetries/status"]
+    verbs: ["get", "update", "patch"]
   # IOSXEDiagnostic CRD — diagnostics-RFC Phase B. The reconciler
   # watches CRs targeting this device and appends capture results
   # to status. The ConfigMap sink (Phase D) writes a fresh
@@ -111,6 +129,15 @@ rules:
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # DeviceOperation CRD — read-only async operations. The first
+  # reconciler supports ShowCommand only and reuses the diagnostic
+  # transport/validation/redaction path.
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["deviceoperations"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["deviceoperations/status"]
+    verbs: ["get", "update", "patch"]
 ---
 # ClusterRoleBinding for the VK service account.
 apiVersion: rbac.authorization.k8s.io/v1

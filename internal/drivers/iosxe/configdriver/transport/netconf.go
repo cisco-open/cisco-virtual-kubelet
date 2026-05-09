@@ -158,6 +158,8 @@ func (t *netconfTransport) Capabilities() Capabilities {
 // (e.g. /Cisco-IOS-XE-native:native/vlan/Cisco-IOS-XE-vlan:vlan-list);
 // pathToSubtreeFilter converts it to the NETCONF subtree form.
 func (t *netconfTransport) Fetch(ctx context.Context, path string) ([]byte, error) {
+	ctx, span := startTransportSpan(ctx, KindNETCONF, "get", spanPath(path))
+	defer span.End()
 	return t.fetchFromSource(path, "running")
 }
 
@@ -172,6 +174,8 @@ func (t *netconfTransport) Fetch(ctx context.Context, path string) ([]byte, erro
 // running and reports drift, the engine Discard's the candidate,
 // and the apply that would have committed cleanly never does.
 func (t *netconfTransport) FetchTx(ctx context.Context, tx TxHandle, path string) ([]byte, error) {
+	ctx, span := startTransportSpan(ctx, KindNETCONF, "get", spanPath(path))
+	defer span.End()
 	source := "running"
 	if tx == "candidate" {
 		source = "candidate"
@@ -267,6 +271,8 @@ func peelToLastPathSegment(raw []byte, path string) []byte {
 // Returns ErrUnsupported when the server did not advertise the
 // candidate capability — Cisco IOS-XE devices almost always do.
 func (t *netconfTransport) StartTransaction(ctx context.Context) (TxHandle, error) {
+	ctx, span := startTransportSpan(ctx, KindNETCONF, "start_transaction")
+	defer span.End()
 	if !t.Capabilities().SupportsTransactions {
 		return "", ErrUnsupported
 	}
@@ -296,6 +302,8 @@ func (t *netconfTransport) StartTransaction(ctx context.Context) (TxHandle, erro
 // enabling candidate-datastore for Wave 10 broke non-transactional
 // reconciles with `rpc-error: Unsupported capability :writable-running`.
 func (t *netconfTransport) Mutate(ctx context.Context, tx TxHandle, ops []Op) error {
+	ctx, span := startTransportSpan(ctx, KindNETCONF, "mutate", spanOpCount(len(ops)))
+	defer span.End()
 	caps := t.Capabilities()
 	target := "running"
 	implicitTx := false
@@ -380,6 +388,8 @@ func (t *netconfTransport) Mutate(ctx context.Context, tx TxHandle, ops []Op) er
 // the lock. A zero TxHandle is a no-op (matches RESTCONF's
 // non-transactional behaviour).
 func (t *netconfTransport) Commit(ctx context.Context, tx TxHandle) error {
+	ctx, span := startTransportSpan(ctx, KindNETCONF, "commit")
+	defer span.End()
 	if tx == "" {
 		return nil
 	}
@@ -427,6 +437,8 @@ func (t *netconfTransport) Commit(ctx context.Context, tx TxHandle) error {
 //     dispatching, but the transport-level guard is here for
 //     defense-in-depth.
 func (t *netconfTransport) CommitConfirmed(ctx context.Context, tx TxHandle, timeout time.Duration) error {
+	ctx, span := startTransportSpan(ctx, KindNETCONF, "commit_confirmed")
+	defer span.End()
 	if tx == "" {
 		return nil
 	}
@@ -463,6 +475,8 @@ func (t *netconfTransport) CommitConfirmed(ctx context.Context, tx TxHandle, tim
 // Commit). After ConfirmCommit returns success, the engine
 // considers the transaction complete; no Discard runs.
 func (t *netconfTransport) ConfirmCommit(ctx context.Context) error {
+	ctx, span := startTransportSpan(ctx, KindNETCONF, "confirm_commit")
+	defer span.End()
 	if _, err := t.session.rpc(`<commit/>`); err != nil {
 		return fmt.Errorf("NETCONF ConfirmCommit: %w", err)
 	}
@@ -479,6 +493,8 @@ func (t *netconfTransport) ConfirmCommit(ctx context.Context) error {
 // Discard cancels a candidate transaction. Safe to call after a
 // failed Mutate; the candidate is reset and the lock is released.
 func (t *netconfTransport) Discard(ctx context.Context, tx TxHandle) error {
+	ctx, span := startTransportSpan(ctx, KindNETCONF, "discard")
+	defer span.End()
 	if tx == "" {
 		return nil
 	}
@@ -494,6 +510,8 @@ func (t *netconfTransport) Discard(ctx context.Context, tx TxHandle) error {
 // SaveStartup uses the Cisco-IA save-config RPC, matching RESTCONF's
 // behaviour so the capability reads the same on both transports.
 func (t *netconfTransport) SaveStartup(ctx context.Context) error {
+	ctx, span := startTransportSpan(ctx, KindNETCONF, "save_startup")
+	defer span.End()
 	_, err := t.session.rpc(`<save-config xmlns="http://cisco.com/yang/cisco-ia"/>`)
 	return err
 }

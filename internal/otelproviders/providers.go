@@ -22,28 +22,33 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	otellog "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	otellog "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/metric"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	// register the gzip compressor under the name "gzip" so OTLP exporters
 	// can request it via WithCompressor.
 	_ "google.golang.org/grpc/encoding/gzip"
 )
 
 const defaultShutdownTimeout = 5 * time.Second
+const exporterFailuresMetric = "cisco_vk_telemetry_exporter_failures_total"
 
 type Config struct {
 	OTLPEndpoint    string
@@ -63,6 +68,7 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	exportFailures := newExportFailureRecorder()
 	res, err := resource(ctx, cfg.ResourceAttrs)
 	if err != nil {
 		return nil, nil, err
@@ -98,6 +104,7 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 		_ = conn.Close()
 		return nil, nil, fmt.Errorf("create OTLP trace exporter: %w", err)
 	}
+	countedTraceExp := failureCountingTraceExporter{SpanExporter: traceExp, recorder: exportFailures}
 	metricExp, err := otlpmetricgrpc.New(ctx,
 		otlpmetricgrpc.WithGRPCConn(conn),
 		otlpmetricgrpc.WithHeaders(cfg.Headers),
@@ -108,6 +115,7 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 		_ = conn.Close()
 		return nil, nil, fmt.Errorf("create OTLP metric exporter: %w", err)
 	}
+	countedMetricExp := failureCountingMetricExporter{Exporter: metricExp, recorder: exportFailures}
 	logExp, err := otlploggrpc.New(ctx,
 		otlploggrpc.WithGRPCConn(conn),
 		otlploggrpc.WithHeaders(cfg.Headers),
@@ -119,12 +127,13 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 		_ = conn.Close()
 		return nil, nil, fmt.Errorf("create OTLP log exporter: %w", err)
 	}
+	countedLogExp := failureCountingLogExporter{Exporter: logExp, recorder: exportFailures}
 
 	// Explicit exporter boundary controls. SDK defaults silently drop sends
 	// under MDT-rate sustained load; pin queue depth, batch sizing, and
 	// export timeouts so behaviour is predictable across deployments.
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(traceExp,
+		sdktrace.WithBatcher(countedTraceExp,
 			sdktrace.WithMaxQueueSize(8192),
 			sdktrace.WithMaxExportBatchSize(512),
 			sdktrace.WithBatchTimeout(5*time.Second),
@@ -133,14 +142,14 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 		sdktrace.WithResource(res),
 	)
 	mp := sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExp,
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(countedMetricExp,
 			sdkmetric.WithInterval(15*time.Second),
 			sdkmetric.WithTimeout(30*time.Second),
 		)),
 		sdkmetric.WithResource(res),
 	)
 	lp := sdklog.NewLoggerProvider(
-		sdklog.WithProcessor(sdklog.NewBatchProcessor(logExp,
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(countedLogExp,
 			sdklog.WithMaxQueueSize(8192),
 			sdklog.WithExportMaxBatchSize(512),
 			sdklog.WithExportInterval(5*time.Second),
@@ -148,6 +157,7 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 		)),
 		sdklog.WithResource(res),
 	)
+	exportFailures.register(mp)
 
 	providers := &Providers{Tracer: tp, Meter: mp, Logger: lp}
 	timeout := cfg.ShutdownTimeout
@@ -216,6 +226,125 @@ func endpointTarget(endpoint string) string {
 		return u.Host
 	}
 	return strings.TrimPrefix(strings.TrimPrefix(endpoint, "http://"), "https://")
+}
+
+type exportFailureKey struct {
+	signal string
+	reason string
+}
+
+type exportFailureRecorder struct {
+	mu     sync.Mutex
+	counts map[exportFailureKey]*atomic.Int64
+}
+
+func newExportFailureRecorder() *exportFailureRecorder {
+	return &exportFailureRecorder{counts: map[exportFailureKey]*atomic.Int64{}}
+}
+
+func (r *exportFailureRecorder) register(provider metric.MeterProvider) {
+	if r == nil || provider == nil {
+		return
+	}
+	meter := provider.Meter("github.com/cisco/virtual-kubelet-cisco/internal/otelproviders")
+	_, _ = meter.Int64ObservableCounter(
+		exporterFailuresMetric,
+		metric.WithDescription("OTLP exporter failures observed by cisco-vk"),
+		metric.WithInt64Callback(func(ctx context.Context, observer metric.Int64Observer) error {
+			for _, sample := range r.samples() {
+				observer.Observe(sample.value, metric.WithAttributes(
+					attribute.String("signal", sample.key.signal),
+					attribute.String("reason", sample.key.reason),
+				))
+			}
+			return nil
+		}),
+	)
+}
+
+func (r *exportFailureRecorder) record(signal string, err error) {
+	if r == nil || err == nil {
+		return
+	}
+	key := exportFailureKey{signal: signal, reason: exportFailureReason(err)}
+	r.mu.Lock()
+	count, ok := r.counts[key]
+	if !ok {
+		count = &atomic.Int64{}
+		r.counts[key] = count
+	}
+	r.mu.Unlock()
+	count.Add(1)
+}
+
+type exportFailureSample struct {
+	key   exportFailureKey
+	value int64
+}
+
+func (r *exportFailureRecorder) samples() []exportFailureSample {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	samples := make([]exportFailureSample, 0, len(r.counts))
+	for key, count := range r.counts {
+		samples = append(samples, exportFailureSample{key: key, value: count.Load()})
+	}
+	sort.Slice(samples, func(i, j int) bool {
+		if samples[i].key.signal == samples[j].key.signal {
+			return samples[i].key.reason < samples[j].key.reason
+		}
+		return samples[i].key.signal < samples[j].key.signal
+	})
+	return samples
+}
+
+func exportFailureReason(err error) string {
+	switch {
+	case err == nil:
+		return ""
+	case errors.Is(err, context.Canceled):
+		return "canceled"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "deadline_exceeded"
+	}
+	code := status.Code(err)
+	if code != codes.OK && code != codes.Unknown {
+		return strings.ToLower(code.String())
+	}
+	return "export_error"
+}
+
+type failureCountingTraceExporter struct {
+	sdktrace.SpanExporter
+	recorder *exportFailureRecorder
+}
+
+func (e failureCountingTraceExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+	err := e.SpanExporter.ExportSpans(ctx, spans)
+	e.recorder.record("traces", err)
+	return err
+}
+
+type failureCountingMetricExporter struct {
+	sdkmetric.Exporter
+	recorder *exportFailureRecorder
+}
+
+func (e failureCountingMetricExporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+	err := e.Exporter.Export(ctx, rm)
+	e.recorder.record("metrics", err)
+	return err
+}
+
+type failureCountingLogExporter struct {
+	sdklog.Exporter
+	recorder *exportFailureRecorder
+}
+
+func (e failureCountingLogExporter) Export(ctx context.Context, records []sdklog.Record) error {
+	err := e.Exporter.Export(ctx, records)
+	e.recorder.record("logs", err)
+	return err
 }
 
 func transportCredentials(insecureTransport bool) credentials.TransportCredentials {

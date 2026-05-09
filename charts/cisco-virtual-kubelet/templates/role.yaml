@@ -100,6 +100,7 @@ rules:
   resources:
   - iosxeconfigapplylogs/status
   - iosxeconfigbundles/status
+  - iosxeconfigrevisions/status
   - iosxeconfigs/status
   verbs:
   - get
@@ -129,6 +130,7 @@ rules:
 - apiGroups:
   - config.cisco.vk
   resources:
+  - iosxeconfigrevisions
   - iosxeconfigs
   - iosxetelemetries
   - iosxetelemetries/status

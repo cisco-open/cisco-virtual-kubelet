@@ -24,18 +24,25 @@ import (
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
 	statsv1alpha1 "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
+
+const defaultPodNotifierCapacity = 1024
 
 type AppHostingProvider struct {
 	ctx             context.Context
@@ -46,6 +53,14 @@ type AppHostingProvider struct {
 	secretLister    corev1listers.SecretLister
 	serviceLister   corev1listers.ServiceLister
 	nodeProvider    *AppHostingNode
+
+	notifyMu      sync.Mutex
+	notifyFn      func(*v1.Pod)
+	notifyQueue   chan state.AppEvent
+	notifyStarted bool
+	notifyDropped int64
+	traceDevice   string
+	traceCache    *correlation.Cache
 }
 
 func NewAppHostingProvider(
@@ -74,7 +89,22 @@ func NewAppHostingProvider(
 		secretLister:    vkCfg.Secrets,
 		serviceLister:   vkCfg.Services,
 		nodeProvider:    nodeProvider,
+		notifyQueue:     make(chan state.AppEvent, defaultPodNotifierCapacity),
 	}, nil
+}
+
+// SetTraceCorrelation attaches the per-process pod/app trace correlation cache.
+// CreatePod records the active VK span context by generated app ID; MDT recovery
+// spans can then parent to the original admission trace while the cache entry is
+// fresh.
+func (p *AppHostingProvider) SetTraceCorrelation(deviceName string, cache *correlation.Cache) {
+	if p == nil {
+		return
+	}
+	p.notifyMu.Lock()
+	p.traceDevice = deviceName
+	p.traceCache = cache
+	p.notifyMu.Unlock()
 }
 
 func (p *AppHostingProvider) GetCapacity(ctx context.Context) (v1.ResourceList, error) {
@@ -82,7 +112,106 @@ func (p *AppHostingProvider) GetCapacity(ctx context.Context) (v1.ResourceList, 
 	return *resources, err
 }
 
+// NotifyPods implements node.PodNotifier. Registration is intentionally cheap:
+// the callback is stored and a single background consumer drains app-hosting
+// state events at the callback's pace. The producer side never blocks telemetry
+// goroutines; overflow is surfaced via DroppedNotifierEvents.
+func (p *AppHostingProvider) NotifyPods(ctx context.Context, notify func(*v1.Pod)) {
+	p.notifyMu.Lock()
+	p.notifyFn = notify
+	if !p.notifyStarted {
+		p.notifyStarted = true
+		go p.runPodNotifier(ctx)
+	}
+	p.notifyMu.Unlock()
+}
+
+// ObserveAppEvent receives MDT app-hosting state transitions from the telemetry
+// subscriber. It is the producer half of the non-blocking PodNotifier bridge.
+func (p *AppHostingProvider) ObserveAppEvent(_ context.Context, event state.AppEvent) bool {
+	if p == nil || event.AppID == "" {
+		return true
+	}
+	select {
+	case p.notifyQueue <- event:
+		return true
+	default:
+		p.notifyMu.Lock()
+		p.notifyDropped++
+		p.notifyMu.Unlock()
+		return false
+	}
+}
+
+// DroppedNotifierEvents returns the cumulative count of app-hosting events
+// dropped before they could be queued to the PodNotifier consumer.
+func (p *AppHostingProvider) DroppedNotifierEvents() int64 {
+	if p == nil {
+		return 0
+	}
+	p.notifyMu.Lock()
+	defer p.notifyMu.Unlock()
+	return p.notifyDropped
+}
+
+func (p *AppHostingProvider) runPodNotifier(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case ev := <-p.notifyQueue:
+			p.notifyPodForAppEvent(ctx, ev)
+		}
+	}
+}
+
+func (p *AppHostingProvider) notifyPodForAppEvent(ctx context.Context, ev state.AppEvent) {
+	cb := p.currentNotifyFunc()
+	if cb == nil || ev.AppID == "" || p.podsLister == nil || p.driver == nil {
+		return
+	}
+	pod := p.findPodByAppID(ctx, ev.AppID)
+	if pod == nil {
+		return
+	}
+	statusPod, err := p.driver.GetPodStatus(ctx, pod)
+	if err != nil {
+		log.G(ctx).WithError(err).WithFields(log.Fields{
+			"appID":     ev.AppID,
+			"pod":       pod.Name,
+			"namespace": pod.Namespace,
+		}).Debug("PodNotifier: status refresh skipped")
+		return
+	}
+	cb(statusPod.DeepCopy())
+}
+
+func (p *AppHostingProvider) currentNotifyFunc() func(*v1.Pod) {
+	p.notifyMu.Lock()
+	defer p.notifyMu.Unlock()
+	return p.notifyFn
+}
+
+func (p *AppHostingProvider) findPodByAppID(ctx context.Context, appID string) *v1.Pod {
+	_, cleanUID, ok := common.ParseCVKAppName(appID)
+	if !ok || cleanUID == "" {
+		return nil
+	}
+	pods, err := p.podsLister.List(labels.Everything())
+	if err != nil {
+		log.G(ctx).WithError(err).Debug("PodNotifier: list pods")
+		return nil
+	}
+	for _, pod := range pods {
+		if strings.ReplaceAll(string(pod.UID), "-", "") == cleanUID {
+			return pod.DeepCopy()
+		}
+	}
+	return nil
+}
+
 func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
+	p.rememberPodTrace(ctx, pod)
 	// Deploy the container. This MUST be idempotent
 	// In future we can range over the pod.spec.containers
 	if err := p.driver.DeployPod(p.ctx, pod, p.secretLister.Secrets(pod.Namespace), p.configMapLister.ConfigMaps(pod.Namespace)); err != nil {
@@ -95,6 +224,26 @@ func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	}
 
 	return nil
+}
+
+func (p *AppHostingProvider) rememberPodTrace(ctx context.Context, pod *v1.Pod) {
+	if p == nil || pod == nil {
+		return
+	}
+	sc := oteltrace.SpanContextFromContext(ctx)
+	if !sc.IsValid() {
+		return
+	}
+	p.notifyMu.Lock()
+	device := p.traceDevice
+	cache := p.traceCache
+	p.notifyMu.Unlock()
+	if cache == nil || device == "" {
+		return
+	}
+	for _, appID := range common.GenerateContainerAppIDs(pod) {
+		cache.Upsert(device, appID, sc)
+	}
 }
 
 func (p *AppHostingProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {

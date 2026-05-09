@@ -15,9 +15,12 @@
 package main
 
 import (
+	"context"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -27,6 +30,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/aggregator"
 	"github.com/cisco/virtual-kubelet-cisco/internal/controller"
@@ -58,6 +62,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(ciskov1.AddToScheme(scheme))
 	utilruntime.Must(configv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(opsv1alpha1.AddToScheme(scheme))
 
 	managerCmd.Flags().StringVar(&metricsAddr, "metrics-bind-address", ":8080",
 		"The address the metric endpoint binds to.")
@@ -85,6 +90,29 @@ func runManager(cmd *cobra.Command, args []string) error {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	cfg := ctrl.GetConfigOrDie()
+	signalCtx := ctrl.SetupSignalHandler()
+
+	controllerProviders, controllerShutdown, err := buildControllerProviders(context.Background())
+	if err != nil {
+		setupLog.Error(err, "controller OTel providers unavailable; continuing with global no-op provider")
+	} else if controllerProviders != nil {
+		if controllerProviders.Tracer != nil {
+			otel.SetTracerProvider(controllerProviders.Tracer)
+		}
+		if controllerProviders.Meter != nil {
+			otel.SetMeterProvider(controllerProviders.Meter)
+		}
+	}
+	if controllerShutdown != nil {
+		go func() {
+			<-signalCtx.Done()
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := controllerShutdown(shutdownCtx); err != nil {
+				setupLog.Error(err, "controller OTel providers shutdown error")
+			}
+		}()
+	}
 
 	// Pre-flight CRD field-drift check. Helm doesn't upgrade CRDs
 	// across releases (only first-install), so on a stale cluster
@@ -136,8 +164,6 @@ func runManager(cmd *cobra.Command, args []string) error {
 		setupLog.Error(err, "unable to create controller", "controller", "IOSXEConfigBundle")
 		os.Exit(1)
 	}
-
-	signalCtx := ctrl.SetupSignalHandler()
 
 	if enableAggregator {
 		// The aggregator is platform-agnostic post-Phase-9: it

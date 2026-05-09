@@ -17,6 +17,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -195,6 +196,13 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 
 	// Consolidate neighbors (merge CDP + OSPF by interface, like the TCL script)
 	consolidated := consolidateNeighbors(cdpNeighbors, ospfNeighbors)
+	totalNeighbors := len(consolidated)
+	linkCap := topologyLinkCap(e.config)
+	droppedLinks := 0
+	if len(consolidated) > linkCap {
+		droppedLinks = len(consolidated) - linkCap
+		consolidated = consolidated[:linkCap]
+	}
 
 	// Build interface stats lookup
 	ifStatsMap := make(map[string]common.InterfaceStats)
@@ -206,6 +214,7 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 	if deviceInfo.Hostname != "" {
 		hostname = deviceInfo.Hostname
 	}
+	cycleID := fmt.Sprintf("%s-%d", hostname, time.Now().UTC().UnixNano())
 
 	serviceName := e.config.ServiceName
 	if serviceName == "" {
@@ -218,14 +227,18 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 		ipList = append(ipList, ip.IPv4)
 	}
 
-	// --- Root span: represents the device node ---
-	rootCtx, rootSpan := e.tracer.Start(ctx, fmt.Sprintf("node.%s", hostname),
+	// --- Root span: one bounded topology collection cycle ---
+	rootCtx, rootSpan := e.tracer.Start(ctx, "cvk.topology.cycle",
 		oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		oteltrace.WithAttributes(
+			attribute.String("topology.cycle.id", cycleID),
+			attribute.String("node.name", hostname),
 			attribute.String("node.type", "network_device"),
 			attribute.String("node.role", "router"),
-			attribute.Int("node.neighbor_count", len(consolidated)),
+			attribute.Int("node.neighbor_count", totalNeighbors),
 			attribute.Int("node.interface_count", len(interfaceIPs)),
+			attribute.Int("topology.emitted_link_count", len(consolidated)),
+			attribute.Int("topology.dropped_link_count", droppedLinks),
 			attribute.String("router.id", deviceInfo.RouterID),
 			attribute.String("router.platform", deviceInfo.ProductID),
 			attribute.String("router.os.version", deviceInfo.SoftwareVersion),
@@ -247,6 +260,7 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 		}
 
 		linkAttrs := []attribute.KeyValue{
+			attribute.String("topology.cycle.id", cycleID),
 			attribute.String("peer.service", peerServiceName),
 			attribute.String("service.type", "network-device"),
 			attribute.String("deployment.environment", "network-infrastructure"),
@@ -299,6 +313,7 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 		peerSvc := fmt.Sprintf("app.%s/%s", app.PodNamespace, app.PodName)
 
 		appAttrs := []attribute.KeyValue{
+			attribute.String("topology.cycle.id", cycleID),
 			attribute.String("peer.service", peerSvc),
 			attribute.String("service.type", "app-hosting"),
 			attribute.String("deployment.environment", "edge-compute"),
@@ -332,7 +347,8 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 
 	rootSpan.End()
 
-	log.G(ctx).Infof("OTEL: emitted topology trace with %d link spans and %d app spans", len(consolidated), len(hostedApps))
+	log.G(ctx).Infof("OTEL: emitted topology trace cycle=%s with %d link spans, %d dropped links, and %d app spans",
+		cycleID, len(consolidated), droppedLinks, len(hostedApps))
 }
 
 // consolidatedNeighbor merges CDP and OSPF data for the same link.
@@ -393,5 +409,18 @@ func consolidateNeighbors(cdp []common.CDPNeighbor, ospf []common.OSPFNeighbor) 
 	for _, cn := range byInterface {
 		result = append(result, *cn)
 	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].LocalInterface == result[j].LocalInterface {
+			return result[i].DeviceID < result[j].DeviceID
+		}
+		return result[i].LocalInterface < result[j].LocalInterface
+	})
 	return result
+}
+
+func topologyLinkCap(config *v1alpha1.OTELConfig) int {
+	if config != nil && config.MaxLinkSpans > 0 {
+		return config.MaxLinkSpans
+	}
+	return 256
 }

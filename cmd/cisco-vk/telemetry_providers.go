@@ -26,12 +26,19 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/otelproviders"
 )
 
 const (
 	envOTELExporterOTLPHeaders = "OTEL_EXPORTER_OTLP_HEADERS"
 	envCVKResourceAttributes   = "CVK_RESOURCE_ATTRIBUTES"
+)
+
+const (
+	processRoleController       = "controller"
+	processRoleVKProvider       = "vk-provider"
+	processRoleTelemetryEmitter = "telemetry-emitter"
 )
 
 // buildTelemetryProviders constructs the per-device telemetry OTel provider
@@ -47,6 +54,62 @@ const (
 // When the endpoint is unset this returns a nil Providers value and emission
 // is suppressed by noop emitter fallbacks.
 func buildTelemetryProviders(ctx context.Context, deviceName string, opts configReconcilerOptions) (*otelproviders.Providers, func(context.Context) error, error) {
+	if opts.Spec == nil {
+		return nil, nil, fmt.Errorf("nil DeviceSpec")
+	}
+	deviceAddress := opts.Spec.Address
+	base := map[string]string{
+		"service.name":         "cisco-vk-telemetry",
+		"service.instance.id":  telemetryServiceInstanceID(deviceName),
+		"cvk.process.role":     processRoleTelemetryEmitter,
+		"host.name":            deviceName,
+		"net.peer.name":        deviceAddress,
+		"cisco.device.name":    deviceName,
+		"cisco.device.address": deviceAddress,
+		"cvk.driver.kind":      string(opts.Spec.Driver),
+	}
+	return buildOTelProviders(ctx, base)
+}
+
+// buildVKProviders constructs the per-device Virtual Kubelet provider's OTel
+// provider. It is intentionally separate from buildTelemetryProviders because
+// the same pod emits two logical services: the provider control-plane spans
+// (`cisco-vk-vk`) and the MDT emitter signals (`cisco-vk-telemetry`).
+func buildVKProviders(ctx context.Context, deviceName string, spec *ciskov1.DeviceSpec) (*otelproviders.Providers, func(context.Context) error, error) {
+	if spec == nil {
+		return nil, nil, fmt.Errorf("nil DeviceSpec")
+	}
+	base := map[string]string{
+		"service.name":         "cisco-vk-vk",
+		"service.instance.id":  serviceInstanceID(deviceName),
+		"cvk.process.role":     processRoleVKProvider,
+		"host.name":            deviceName,
+		"net.peer.name":        spec.Address,
+		"cisco.device.name":    deviceName,
+		"cisco.device.address": spec.Address,
+		"cvk.driver.kind":      string(spec.Driver),
+	}
+	return buildOTelProviders(ctx, base)
+}
+
+// buildControllerProviders constructs the system-controller OTel provider.
+// Controller-manager spans and metrics carry the cluster pod identity rather
+// than a device peer address.
+func buildControllerProviders(ctx context.Context) (*otelproviders.Providers, func(context.Context) error, error) {
+	hostName := os.Getenv("NODE_NAME")
+	if hostName == "" {
+		hostName, _ = os.Hostname()
+	}
+	base := map[string]string{
+		"service.name":        "cisco-vk-controller",
+		"service.instance.id": serviceInstanceID("controller"),
+		"cvk.process.role":    processRoleController,
+		"host.name":           hostName,
+	}
+	return buildOTelProviders(ctx, base)
+}
+
+func buildOTelProviders(ctx context.Context, base map[string]string) (*otelproviders.Providers, func(context.Context) error, error) {
 	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	if endpoint == "" {
 		return nil, nil, nil
@@ -65,23 +128,6 @@ func buildTelemetryProviders(ctx context.Context, deviceName string, opts config
 	headers, err := serializedStringMap(os.Getenv(envOTELExporterOTLPHeaders))
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s: %w", envOTELExporterOTLPHeaders, err)
-	}
-	deviceAddress := ""
-	if opts.Spec != nil {
-		deviceAddress = opts.Spec.Address
-	}
-	base := map[string]string{
-		// OTel semantic conventions — required for cross-tool correlation.
-		// service.name groups all CVK telemetry; service.instance.id (the
-		// per-device pod's name) lets Prometheus/Grafana disambiguate
-		// replicas. host.name pins the device the per-device pod is
-		// streaming from. net.peer.name is the device management address.
-		"service.name":         "cisco-vk-telemetry",
-		"service.instance.id":  serviceInstanceID(deviceName),
-		"host.name":            deviceName,
-		"net.peer.name":        deviceAddress,
-		"cisco.device.name":    deviceName,
-		"cisco.device.address": deviceAddress,
 	}
 	for k, v := range k8sResourceAttributesFromEnv() {
 		base[k] = v
@@ -135,6 +181,14 @@ func serviceInstanceID(deviceName string) string {
 		return v
 	}
 	return deviceName
+}
+
+func telemetryServiceInstanceID(deviceName string) string {
+	base := serviceInstanceID(deviceName)
+	if deviceName == "" {
+		return base
+	}
+	return base + ":" + deviceName
 }
 
 func telemetryResourceAttributes(base map[string]string) (map[string]string, error) {

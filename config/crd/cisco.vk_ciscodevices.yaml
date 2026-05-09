@@ -170,6 +170,14 @@ spec:
                       trace emissions.
                     minimum: 10
                     type: integer
+                  maxLinkSpans:
+                    default: 256
+                    description: |-
+                      MaxLinkSpans caps link spans emitted per topology cycle. Extra links are
+                      counted on the root span as topology.dropped_link_count so large devices
+                      cannot create unbounded Tempo write bursts.
+                    minimum: 1
+                    type: integer
                   serviceName:
                     default: cisco-network
                     description: |-

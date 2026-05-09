@@ -99,6 +99,8 @@ type deviceWorker struct {
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxetemplates,verbs=get;list;watch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigapplylogs,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigapplylogs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigrevisions,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigrevisions/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 

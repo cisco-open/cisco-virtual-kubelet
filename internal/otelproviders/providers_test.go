@@ -21,12 +21,17 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	otellog "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/metric"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	logscol "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	metricscol "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	tracecol "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestProvidersConstructAndShutdown(t *testing.T) {
@@ -82,6 +87,53 @@ func TestProvidersConstructAndShutdown(t *testing.T) {
 	if logs == 0 || metrics == 0 || traces == 0 {
 		t.Fatalf("collector counts logs=%d metrics=%d traces=%d, want all > 0", logs, metrics, traces)
 	}
+}
+
+func TestExportFailureRecorderPublishesObservableCounter(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	recorder := newExportFailureRecorder()
+	recorder.register(mp)
+
+	recorder.record("traces", status.Error(codes.Unavailable, "collector down"))
+	recorder.record("traces", status.Error(codes.Unavailable, "collector down"))
+	recorder.record("logs", context.DeadlineExceeded)
+
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	got := map[string]int64{}
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name != exporterFailuresMetric {
+				continue
+			}
+			sum, ok := m.Data.(metricdata.Sum[int64])
+			if !ok {
+				t.Fatalf("%s data type = %T, want metricdata.Sum[int64]", exporterFailuresMetric, m.Data)
+			}
+			for _, dp := range sum.DataPoints {
+				signal := attrString(dp.Attributes, "signal")
+				reason := attrString(dp.Attributes, "reason")
+				got[signal+"/"+reason] = dp.Value
+			}
+		}
+	}
+	if got["traces/unavailable"] != 2 {
+		t.Fatalf("traces/unavailable=%d, want 2; all=%v", got["traces/unavailable"], got)
+	}
+	if got["logs/deadline_exceeded"] != 1 {
+		t.Fatalf("logs/deadline_exceeded=%d, want 1; all=%v", got["logs/deadline_exceeded"], got)
+	}
+}
+
+func attrString(attrs attribute.Set, key string) string {
+	value, ok := attrs.Value(attribute.Key(key))
+	if !ok {
+		return ""
+	}
+	return value.AsString()
 }
 
 type fakeOTLPCollector struct {

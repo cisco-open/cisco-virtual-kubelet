@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"sort"
 	"strings"
 	"sync"
@@ -38,6 +39,10 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 // defaultGracefulShutdownTimeout is the wall-clock budget Run waits
@@ -53,6 +58,11 @@ const defaultGracefulShutdownTimeout = 30 * time.Second
 // defaultConfigReconcileInterval is the poll cadence for listing
 // IOSXEConfig CRs. Phase-1 still polls; Phase-2 swaps in an informer.
 const defaultConfigReconcileInterval = 5 * time.Second
+
+const (
+	revisionSourceNameLabel = "config.cisco.vk/source-name"
+	revisionSourceUIDLabel  = "config.cisco.vk/source-uid"
+)
 
 // ConfigReconciler is the outer per-device loop that resolves
 // IOSXEConfig CRs targeting its device and dispatches each to the
@@ -451,10 +461,24 @@ func (r *ConfigReconciler) reconcileOne(
 	conflicts map[string][]string,
 	trigger reconcileTrigger,
 ) (engine.Result, error) {
+	tickStart := time.Now()
 	resolved, err := resolver.Resolve(ctx, cr)
 	if err != nil {
+		recordErr := r.recordFailure(ctx, cr, fmt.Sprintf("resolve: %v", err))
+		r.patchTraceAnnotations(ctx, cr, engine.PhaseFailed, time.Since(tickStart))
 		return engine.Result{Phase: engine.PhaseFailed, Err: err},
-			r.recordFailure(ctx, cr, fmt.Sprintf("resolve: %v", err))
+			recordErr
+	}
+
+	rolledBack, appliedRollback, err := r.applyRollbackTo(ctx, cr, resolved)
+	if err != nil {
+		recordErr := r.recordFailure(ctx, cr, fmt.Sprintf("rollback: %v", err))
+		r.patchTraceAnnotations(ctx, cr, engine.PhaseFailed, time.Since(tickStart))
+		return engine.Result{Phase: engine.PhaseFailed, Err: err},
+			recordErr
+	}
+	if appliedRollback {
+		resolved = rolledBack
 	}
 
 	// Replay annotation (Phase 7 time-travel): when the CR carries
@@ -466,8 +490,10 @@ func (r *ConfigReconciler) reconcileOne(
 	// update that records the apply.
 	replayed, applied, err := r.applyReplayAnnotation(ctx, cr, resolved)
 	if err != nil {
+		recordErr := r.recordFailure(ctx, cr, fmt.Sprintf("replay: %v", err))
+		r.patchTraceAnnotations(ctx, cr, engine.PhaseFailed, time.Since(tickStart))
 		return engine.Result{Phase: engine.PhaseFailed, Err: err},
-			r.recordFailure(ctx, cr, fmt.Sprintf("replay: %v", err))
+			recordErr
 	}
 	if applied {
 		resolved = replayed
@@ -480,8 +506,10 @@ func (r *ConfigReconciler) reconcileOne(
 	// operator asked for the work even when the hash matches.
 	h, err := intent.CanonicalHash(resolved)
 	if err != nil {
+		recordErr := r.recordFailure(ctx, cr, fmt.Sprintf("hash: %v", err))
+		r.patchTraceAnnotations(ctx, cr, engine.PhaseFailed, time.Since(tickStart))
 		return engine.Result{Phase: engine.PhaseFailed, Err: err},
-			r.recordFailure(ctx, cr, fmt.Sprintf("hash: %v", err))
+			recordErr
 	}
 	// The hash short-circuit fires only when ALL of these hold:
 	//   - the operator did NOT request a replay,
@@ -495,6 +523,7 @@ func (r *ConfigReconciler) reconcileOne(
 	// short-circuit. Splitting "intent freshness" (hash) from "device
 	// freshness" (LastDeviceCheck) is the fix.
 	if !applied &&
+		!appliedRollback &&
 		trigger != triggerSubscribe &&
 		cr.Status.ObservedGeneration == cr.Generation &&
 		cr.Status.LastAppliedHash == h &&
@@ -512,7 +541,9 @@ func (r *ConfigReconciler) reconcileOne(
 	// return — the engine cannot run without it, and we prefer a
 	// clear "waiting for transport" state over a spurious Failed.
 	if r.GetTransport() == nil {
-		return engine.Result{Phase: engine.PhasePending}, r.recordPending(ctx, cr)
+		recordErr := r.recordPending(ctx, cr)
+		r.patchTraceAnnotations(ctx, cr, engine.PhasePending, time.Since(tickStart))
+		return engine.Result{Phase: engine.PhasePending}, recordErr
 	}
 
 	// Acquire per-family leases before running the engine. Families we
@@ -563,7 +594,9 @@ func (r *ConfigReconciler) reconcileOne(
 			Message: fmt.Sprintf("family leased by %q", holder),
 		})
 	}
-	return result, r.recordResult(ctx, cr, result, h, conflicts, resolved)
+	recordErr := r.recordResult(ctx, cr, result, h, conflicts, resolved)
+	r.patchTraceAnnotations(ctx, cr, result.Phase, time.Since(tickStart))
+	return result, recordErr
 }
 
 // acquireLeases filters resolved.ManagedFamilies to the ones this CR
@@ -847,7 +880,33 @@ func (r *ConfigReconciler) recordResult(
 				"could not append apply-log entry: %v", err)
 		}
 	}
+	if err := r.appendConfigRevision(ctx, cr, result, hash, resolved, updated.Status.AtomicReplaceOwnedKeys); err != nil {
+		if r.Recorder != nil {
+			r.Recorder.Eventf(cr, "Warning", "RevisionUpdateFailed",
+				"could not update config revision history: %v", err)
+		}
+	}
 	return nil
+}
+
+func (r *ConfigReconciler) patchTraceAnnotations(ctx context.Context, cr *configv1alpha1.IOSXEConfig, phase string, duration time.Duration) {
+	sc := oteltrace.SpanContextFromContext(ctx)
+	if !sc.IsValid() {
+		return
+	}
+	updated := cr.DeepCopy()
+	if updated.Annotations == nil {
+		updated.Annotations = map[string]string{}
+	}
+	traceID := sc.TraceID().String()
+	updated.Annotations[correlation.TraceparentAnnotation] = correlation.FormatTraceparent(sc)
+	updated.Annotations[correlation.TraceWindowEndAnnotation] = time.Now().Add(correlation.DefaultTTL).UTC().Format(time.RFC3339)
+	updated.Annotations[correlation.LastTraceIDAnnotation] = traceID
+	updated.Annotations[correlation.LastTraceDurationAnnotation] = duration.String()
+	if phase == engine.PhaseFailed {
+		updated.Annotations[correlation.LastErrorTraceIDAnnotation] = traceID
+	}
+	_ = ignoreConflict(r.Client.Patch(ctx, updated, client.MergeFrom(cr)))
 }
 
 // stripRuntimeIDSuffix removes the "#<runtime-id>" tail from a
@@ -1166,6 +1225,186 @@ func decodeReplayBody(raw string) (*replayBody, error) {
 		return nil, fmt.Errorf("unsupported replay body version %d", b.Version)
 	}
 	return &b, nil
+}
+
+func (r *ConfigReconciler) applyRollbackTo(
+	ctx context.Context,
+	cr *configv1alpha1.IOSXEConfig,
+	resolved *intent.ResolvedIntent,
+) (*intent.ResolvedIntent, bool, error) {
+	target := strings.TrimSpace(cr.Spec.RollbackTo)
+	if target == "" {
+		return resolved, false, nil
+	}
+	ctx, span := otel.Tracer(reconcileTracerName).Start(ctx, "cvk.config.rollback",
+		oteltrace.WithAttributes(attribute.String("cvk.rollback.target_revision", target)))
+	defer span.End()
+	var rev configv1alpha1.IOSXEConfigRevision
+	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: cr.Namespace, Name: target}, &rev); err != nil {
+		span.RecordError(err)
+		return resolved, false, fmt.Errorf("get revision %s/%s: %w", cr.Namespace, target, err)
+	}
+	sourceRef := cr.Namespace + "/" + cr.Name
+	if rev.Spec.SourceRef != sourceRef || rev.Spec.SourceUID != string(cr.UID) {
+		err := fmt.Errorf("revision %s/%s belongs to %s uid=%s, not %s uid=%s",
+			rev.Namespace, rev.Name, rev.Spec.SourceRef, rev.Spec.SourceUID, sourceRef, cr.UID)
+		span.RecordError(err)
+		return resolved, false, err
+	}
+	if rev.Spec.DeviceRef.Name != cr.Spec.DeviceRef.Name {
+		err := fmt.Errorf("revision %s/%s targets device %q, not %q",
+			rev.Namespace, rev.Name, rev.Spec.DeviceRef.Name, cr.Spec.DeviceRef.Name)
+		span.RecordError(err)
+		return resolved, false, err
+	}
+	body, err := decodeReplayBody(rev.Spec.Body)
+	if err != nil {
+		span.RecordError(err)
+		return resolved, false, fmt.Errorf("decode revision body: %w", err)
+	}
+	out := *resolved
+	out.Configuration = body.Configuration
+	out.CLIBlocks = body.CLIBlocks
+	return &out, true, nil
+}
+
+func (r *ConfigReconciler) appendConfigRevision(
+	ctx context.Context,
+	cr *configv1alpha1.IOSXEConfig,
+	result engine.Result,
+	hash string,
+	resolved *intent.ResolvedIntent,
+	owned map[string][]string,
+) error {
+	if result.Phase != engine.PhaseInSync || resolved == nil || cr.Spec.RevisionHistoryLimit <= 0 {
+		return nil
+	}
+	if len(cr.Spec.SecretRefs) > 0 {
+		if r.Recorder != nil {
+			r.Recorder.Eventf(cr, corev1.EventTypeWarning, "RevisionBodyOmittedSecretRefs",
+				"revision history skipped for %s/%s because spec.secretRefs would persist secret material in an IOSXEConfigRevision",
+				cr.Namespace, cr.Name)
+		}
+		return nil
+	}
+	body, err := encodeReplayBody(resolved)
+	if err != nil {
+		return fmt.Errorf("encode revision body: %w", err)
+	}
+	now := metav1.Now()
+	rev := &configv1alpha1.IOSXEConfigRevision{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: cr.Namespace,
+			Name:      revisionName(cr, hash),
+			Labels: map[string]string{
+				revisionSourceNameLabel: cr.Name,
+				revisionSourceUIDLabel:  string(cr.UID),
+			},
+		},
+		Spec: configv1alpha1.IOSXEConfigRevisionSpec{
+			DeviceRef:              cr.Spec.DeviceRef,
+			SourceRef:              cr.Namespace + "/" + cr.Name,
+			SourceUID:              string(cr.UID),
+			SourceGeneration:       cr.Generation,
+			Hash:                   hash,
+			Body:                   body,
+			AtomicReplaceOwnedKeys: copyOwnedKeys(owned),
+		},
+		Status: configv1alpha1.IOSXEConfigRevisionStatus{CreatedAt: &now},
+	}
+	if err := r.Client.Create(ctx, rev); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("create revision %s/%s: %w", rev.Namespace, rev.Name, err)
+	}
+	return r.gcConfigRevisions(ctx, cr)
+}
+
+func (r *ConfigReconciler) gcConfigRevisions(ctx context.Context, cr *configv1alpha1.IOSXEConfig) error {
+	limit := int(cr.Spec.RevisionHistoryLimit)
+	if limit <= 0 {
+		return nil
+	}
+	var list configv1alpha1.IOSXEConfigRevisionList
+	if err := r.Client.List(ctx, &list,
+		client.InNamespace(cr.Namespace),
+		client.MatchingLabels{
+			revisionSourceNameLabel: cr.Name,
+			revisionSourceUIDLabel:  string(cr.UID),
+		}); err != nil {
+		return fmt.Errorf("list revisions: %w", err)
+	}
+	if len(list.Items) <= limit {
+		return nil
+	}
+	sort.Slice(list.Items, func(i, j int) bool {
+		return revisionCreatedAt(&list.Items[i]).Before(revisionCreatedAt(&list.Items[j]))
+	})
+	for i := 0; i < len(list.Items)-limit; i++ {
+		item := list.Items[i]
+		if err := r.Client.Delete(ctx, &item); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("delete old revision %s/%s: %w", item.Namespace, item.Name, err)
+		}
+	}
+	return nil
+}
+
+func revisionCreatedAt(rev *configv1alpha1.IOSXEConfigRevision) time.Time {
+	if rev == nil {
+		return time.Time{}
+	}
+	if !rev.CreationTimestamp.IsZero() {
+		return rev.CreationTimestamp.Time
+	}
+	if rev.Status.CreatedAt != nil {
+		return rev.Status.CreatedAt.Time
+	}
+	return time.Time{}
+}
+
+func revisionName(cr *configv1alpha1.IOSXEConfig, hash string) string {
+	suffix := hash
+	if i := strings.LastIndex(hash, ":"); i >= 0 {
+		suffix = hash[i+1:]
+	}
+	if len(suffix) > 12 {
+		suffix = suffix[:12]
+	}
+	base := dns1123Name(cr.Name)
+	if len(base) > 40 {
+		base = strings.Trim(base[:40], "-")
+	}
+	return fmt.Sprintf("%s-rev-%d-%s", base, cr.Generation, suffix)
+}
+
+func dns1123Name(in string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(in) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == '-' || r == '.':
+			b.WriteByte('-')
+		default:
+			b.WriteByte('-')
+		}
+	}
+	out := strings.Trim(b.String(), "-")
+	if out != "" {
+		return out
+	}
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(in))
+	return fmt.Sprintf("cfg-%x", h.Sum32())
+}
+
+func copyOwnedKeys(in map[string][]string) map[string][]string {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make(map[string][]string, len(in))
+	for k, v := range in {
+		out[k] = append([]string(nil), v...)
+	}
+	return out
 }
 
 // buildApplyLogEntry compresses an engine.Result into the

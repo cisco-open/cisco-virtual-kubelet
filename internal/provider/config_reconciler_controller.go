@@ -278,7 +278,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	// reconcile attempts end to end.
 	ctx, span := otel.Tracer(reconcileTracerName).Start(
 		ctx,
-		"ConfigReconciler.Reconcile",
+		"cvk.iosxeconfig.reconcile",
 		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
 		oteltrace.WithAttributes(
 			attribute.String("cisco.vk.device.name", r.DeviceName),

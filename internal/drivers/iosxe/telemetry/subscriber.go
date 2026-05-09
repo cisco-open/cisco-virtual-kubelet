@@ -27,8 +27,10 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/classifier"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
 )
 
 // MappingProfile carries spec-level mapping/output/cardinality/timestamp
@@ -56,17 +58,20 @@ type Subscriber struct {
 	tracesEmitter   *emit.TracesEmitter
 	selfMetrics     *emit.SelfMetrics
 	resourceAttrs   map[string]string
+	stateCache      *state.Cache
+	appConsumer     state.AppEventConsumer
+	correlation     *correlation.Cache
 
-	mu              sync.Mutex
-	ctx             context.Context
-	cancel          context.CancelFunc
-	conn            *grpc.ClientConn
-	manager         *StreamManager
-	specs           map[string]configv1alpha1.TelemetrySubscription
-	states          map[string]*SubscriptionState
-	profiles        map[string]MappingProfile
-	defaultProfile  MappingProfile
-	started         bool
+	mu             sync.Mutex
+	ctx            context.Context
+	cancel         context.CancelFunc
+	conn           *grpc.ClientConn
+	manager        *StreamManager
+	specs          map[string]configv1alpha1.TelemetrySubscription
+	states         map[string]*SubscriptionState
+	profiles       map[string]MappingProfile
+	defaultProfile MappingProfile
+	started        bool
 
 	stateChanged chan struct{}
 }
@@ -128,6 +133,24 @@ func WithResourceAttributes(attrs map[string]string) SubscriberOption {
 			s.resourceAttrs[k] = v
 		}
 	}
+}
+
+// WithStateCache attaches the shared MDT state cache that receives every
+// mapped event before signal-specific emitters consume it.
+func WithStateCache(cache *state.Cache) SubscriberOption {
+	return func(s *Subscriber) { s.stateCache = cache }
+}
+
+// WithAppEventConsumer attaches a non-blocking consumer for app-hosting state
+// events. The provider's PodNotifier bridge implements this interface.
+func WithAppEventConsumer(consumer state.AppEventConsumer) SubscriberOption {
+	return func(s *Subscriber) { s.appConsumer = consumer }
+}
+
+// WithCorrelationCache attaches the app-ID to SpanContext cache used to parent
+// MDT recovery spans under the VK admission trace that created the app.
+func WithCorrelationCache(cache *correlation.Cache) SubscriberOption {
+	return func(s *Subscriber) { s.correlation = cache }
 }
 
 // WithMappingProfile installs a default profile applied to subscriptions that
@@ -535,6 +558,9 @@ func (s *Subscriber) drainEvents(events <-chan NotificationEvent) {
 		}
 		s.mu.Lock()
 		resAttrs := s.resourceAttrs
+		stateCache := s.stateCache
+		appConsumer := s.appConsumer
+		corr := s.correlation
 		emitCtx := s.ctx
 		defaultProfile := s.defaultProfile
 		profilesByName := make(map[string]MappingProfile, len(ev.SubscriptionNames))
@@ -574,6 +600,27 @@ func (s *Subscriber) drainEvents(events <-chan NotificationEvent) {
 			if len(mapped) == 0 {
 				s.selfMetrics.RecordProcessingDuration(emitCtx, time.Since(startProcessing).Seconds(), s.deviceRef, name)
 				continue
+			}
+			var appEvents []state.AppEvent
+			if stateCache != nil {
+				appEvents = stateCache.ApplyMappedEvents(mapped)
+			} else if appConsumer != nil {
+				appEvents = state.ExtractAppEvents(mapped)
+			}
+			if appConsumer != nil {
+				for _, appEvent := range appEvents {
+					if ok := appConsumer.ObserveAppEvent(emitCtx, appEvent); !ok && s.selfMetrics != nil {
+						s.selfMetrics.IncNotifierDropped(emitCtx, "consumer_backpressure")
+					}
+				}
+			}
+			if corr != nil {
+				for _, appEvent := range appEvents {
+					if sc, ok := corr.Get(appEvent.Device, appEvent.AppID); ok {
+						emitCtx = correlation.WithSpanContext(emitCtx, sc)
+						break
+					}
+				}
 			}
 			if s.logsEmitter != nil {
 				if emitted := s.logsEmitter.Emit(emitCtx, mapped); emitted > 0 {

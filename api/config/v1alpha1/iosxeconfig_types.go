@@ -233,6 +233,23 @@ type IOSXEConfigTemplateSpec struct {
 	// namespace.
 	// +optional
 	SecretRefs []FamilySecretRef `json:"secretRefs,omitempty"`
+
+	// RevisionHistoryLimit caps the number of IOSXEConfigRevision objects
+	// retained for this CR after successful applies. Set to 0 to disable
+	// revision creation. Revisions with secret-sourced intent are skipped to
+	// avoid persisting Secret material into CR status or spec.
+	// +kubebuilder:default=10
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +optional
+	RevisionHistoryLimit int32 `json:"revisionHistoryLimit,omitempty"`
+
+	// RollbackTo names an IOSXEConfigRevision in the same namespace. When set,
+	// the reconciler treats that revision's resolved intent as desired state
+	// and runs the normal plan/apply/verify flow. Confirmed-commit remains a
+	// transport safety timer; rollbackTo is declarative intent selection.
+	// +optional
+	RollbackTo string `json:"rollbackTo,omitempty"`
 }
 
 // FamilySecretRef binds a Kubernetes Secret to a family's intent
