@@ -33,7 +33,7 @@
       },
       "id": 100,
       "panels": [],
-      "title": "Pipeline overview",
+      "title": "Application Hosting \u2014 IOS-XE app-hosting via preservePathPrefix",
       "type": "row"
     },
     {
@@ -41,6 +41,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
+      "description": "Total app-hosting applications observed via Cisco-IOS-XE-app-hosting-oper. Counts distinct apps publishing a health_status.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -60,11 +61,11 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
+        "w": 4,
         "x": 0,
         "y": 1
       },
-      "id": 1,
+      "id": 110,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -74,7 +75,8 @@
           ],
           "fields": "",
           "values": false
-        }
+        },
+        "textMode": "auto"
       },
       "targets": [
         {
@@ -82,11 +84,11 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "count(count by (subscription) ({service_name=\"cisco-vk-telemetry\",__name__=~\"cisco_vk_telemetry_metric_points_emitted_total\"}))",
+          "expr": "count(count by (__name__) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\"}))",
           "refId": "A"
         }
       ],
-      "title": "Subscriptions Streaming",
+      "title": "Apps deployed",
       "type": "stat"
     },
     {
@@ -94,6 +96,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
+      "description": "Apps with health_status==0 (running). IOS-XE encodes status as enum; 0 typically = APP_RUNNING.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -113,11 +116,11 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 6,
+        "w": 5,
+        "x": 4,
         "y": 1
       },
-      "id": 2,
+      "id": 111,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -127,7 +130,8 @@
           ],
           "fields": "",
           "values": false
-        }
+        },
+        "textMode": "auto"
       },
       "targets": [
         {
@@ -135,11 +139,11 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "count({service_name=\"cisco-vk-telemetry\"})",
+          "expr": "count(count by (__name__) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\"} == 0))",
           "refId": "A"
         }
       ],
-      "title": "CVK metric series live",
+      "title": "Healthy apps (health_status code)",
       "type": "stat"
     },
     {
@@ -147,6 +151,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
+      "description": "Sum of CPU units reserved across all running apps.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -166,11 +171,11 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 12,
+        "w": 5,
+        "x": 9,
         "y": 1
       },
-      "id": 3,
+      "id": 112,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -180,7 +185,8 @@
           ],
           "fields": "",
           "values": false
-        }
+        },
+        "textMode": "auto"
       },
       "targets": [
         {
@@ -188,11 +194,11 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "count(group by (__name__) ({service_name=\"cisco-vk-telemetry\"}))",
+          "expr": "sum(avg by (__name__) ({__name__=~\"cvk_app_hosting_app_name_.*_details_resource_reservation_cpu$\"}))",
           "refId": "A"
         }
       ],
-      "title": "Distinct metric names",
+      "title": "Total CPU reserved (units)",
       "type": "stat"
     },
     {
@@ -200,6 +206,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
+      "description": "Sum of memory reservation across all running apps.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -214,16 +221,16 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "decmbytes"
         }
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 18,
+        "w": 5,
+        "x": 14,
         "y": 1
       },
-      "id": 4,
+      "id": 113,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -233,7 +240,8 @@
           ],
           "fields": "",
           "values": false
-        }
+        },
+        "textMode": "auto"
       },
       "targets": [
         {
@@ -241,626 +249,92 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(cisco_vk_telemetry_counter_resets_total[5m]))",
+          "expr": "sum(avg by (__name__) ({__name__=~\"cvk_app_hosting_app_name_.*_details_resource_reservation_memory$\"}))",
           "refId": "A"
         }
       ],
-      "title": "Counter resets (5m)",
+      "title": "Total memory reserved (MB)",
       "type": "stat"
     },
     {
-      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "decmbytes"
+        }
+      },
       "gridPos": {
-        "h": 1,
+        "h": 4,
+        "w": 5,
+        "x": 19,
+        "y": 1
+      },
+      "id": 114,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(avg by (__name__) ({__name__=~\"cvk_app_hosting_app_name_.*_details_resource_reservation_disk$\"}))",
+          "refId": "A"
+        }
+      ],
+      "title": "Total disk reserved (MB)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Per-app CPU / memory / disk / vcpu reservation and CPU utilization. Each row is one (app, metric) tuple sourced from /Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/app-hosting-list.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "align": "left"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
         "w": 24,
         "x": 0,
         "y": 5
       },
-      "id": 200,
-      "panels": [],
-      "title": "Per-device interface counters (all interfaces from cat9k-smoke)",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Inbound octet rate across every gNMI-streamed interface. Idle interfaces sit at 0; active ones rise. Legend label re-extracts the interface name from the metric name.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 5,
-            "lineWidth": 1
-          },
-          "unit": "Bps"
-        }
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 6
-      },
-      "id": 11,
-      "options": {
-        "legend": {
-          "calcs": [
-            "last",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "topk(15, rate({__name__=~\"interfaces_interface_name_.*_state_counters_in_octets_total\",service_name=\"cisco-vk-telemetry\",cisco_device_name=~\"$device\"}[5m]))",
-          "legendFormat": "{{__name__}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Top 15 interfaces by in_octets rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Outbound octet rate across every gNMI-streamed interface.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 5,
-            "lineWidth": 1
-          },
-          "unit": "Bps"
-        }
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 6
-      },
-      "id": 12,
-      "options": {
-        "legend": {
-          "calcs": [
-            "last",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "topk(15, rate({__name__=~\"interfaces_interface_name_.*_state_counters_out_octets_total\",service_name=\"cisco-vk-telemetry\",cisco_device_name=~\"$device\"}[5m]))",
-          "legendFormat": "{{__name__}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Top 15 interfaces by out_octets rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Absolute in_octets counter values across all interfaces. Useful when rate windows are too short to show activity.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "align": "left"
-          },
-          "unit": "decbytes"
-        }
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 15
-      },
-      "id": 13,
-      "options": {
-        "showHeader": true,
-        "frameIndex": 0
-      },
-      "pluginVersion": "13.0.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "topk(15, last_over_time({__name__=~\"interfaces_interface_name_.*_state_counters_in_octets_total\",service_name=\"cisco-vk-telemetry\",cisco_device_name=~\"$device\"}[10m]))",
-          "format": "table",
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "service_name": true,
-              "exported_job": true,
-              "instance": true,
-              "job": true,
-              "otel_scope_name": true,
-              "telemetry_sdk_language": true,
-              "telemetry_sdk_name": true,
-              "telemetry_sdk_version": true,
-              "smoke_run": true,
-              "env": true,
-              "cluster": true,
-              "owner": true,
-              "cisco_device_address": true,
-              "cisco_device_driver": true,
-              "service_namespace": true
-            },
-            "renameByName": {
-              "Value": "in_octets total"
-            }
-          }
-        }
-      ],
-      "title": "Absolute in_octets counter (top 15)",
-      "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Inbound errors + discards aggregated across all interfaces. Should stay near zero on a healthy device.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1
-          },
-          "unit": "ops"
-        }
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 15
-      },
-      "id": 14,
-      "options": {
-        "legend": {
-          "calcs": [
-            "last",
-            "sum"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (__name__) (rate({__name__=~\"interfaces_interface_name_.*_state_counters_in_(errors|discards|fcs_errors)_total\",service_name=\"cisco-vk-telemetry\",cisco_device_name=~\"$device\"}[5m]))",
-          "legendFormat": "{{__name__}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Inbound errors / discards (sum across all interfaces)",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 24
-      },
-      "id": 250,
-      "panels": [],
-      "title": "App-hosting (Cisco-IOS-XE native via preservePathPrefix)",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Per-app CPU reservation (CPU units, IOS-XE app-hosting). Pulled from /Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data via preservePathPrefix.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 0,
-        "y": 25
-      },
-      "id": 251,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": true
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "{__name__=~\"cvk_app_hosting_app_name_.*_details_resource_reservation_cpu$\"}",
-          "legendFormat": "{{__name__}}",
-          "refId": "A"
-        }
-      ],
-      "title": "App CPU reservation",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Per-app memory reservation (MB).",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "decmbytes"
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 6,
-        "y": 25
-      },
-      "id": 252,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "values": true
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "{__name__=~\"cvk_app_hosting_app_name_.*_details_resource_reservation_memory$\"}",
-          "legendFormat": "{{__name__}}",
-          "refId": "A"
-        }
-      ],
-      "title": "App memory reservation",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Per-app disk reservation (MB).",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "decmbytes"
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 12,
-        "y": 25
-      },
-      "id": 253,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "values": true
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "{__name__=~\"cvk_app_hosting_app_name_.*_details_resource_reservation_disk$\"}",
-          "legendFormat": "{{__name__}}",
-          "refId": "A"
-        }
-      ],
-      "title": "App disk reservation",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Per-app vCPU reservation.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 18,
-        "y": 25
-      },
-      "id": 254,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "values": true
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "{__name__=~\"cvk_app_hosting_app_name_.*_details_resource_reservation_vcpu$\"}",
-          "legendFormat": "{{__name__}}",
-          "refId": "A"
-        }
-      ],
-      "title": "App vCPU reservation",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "RX byte rate per app-hosting network bridge. Cumulative-counter delta, sourced from app-hosting-oper-data.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1
-          },
-          "unit": "Bps"
-        }
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 31
-      },
-      "id": 255,
-      "options": {
-        "legend": {
-          "calcs": [
-            "last",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "rate({__name__=~\"cvk_app_hosting_app_name_.*_network_utils_.*_rx_bytes_total\",service_name=\"cisco-vk-telemetry\",cisco_device_name=~\"$device\"}[5m])",
-          "legendFormat": "{{__name__}}",
-          "refId": "A"
-        }
-      ],
-      "title": "App network RX byte rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "TX byte rate per app-hosting network bridge.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1
-          },
-          "unit": "Bps"
-        }
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 31
-      },
-      "id": 256,
-      "options": {
-        "legend": {
-          "calcs": [
-            "last",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "rate({__name__=~\"cvk_app_hosting_app_name_.*_network_utils_.*_tx_bytes_total\",service_name=\"cisco-vk-telemetry\",cisco_device_name=~\"$device\"}[5m])",
-          "legendFormat": "{{__name__}}",
-          "refId": "A"
-        }
-      ],
-      "title": "App network TX byte rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "All non-zero app-hosting metric values, sorted descending. Replaces the earlier inventory table that group-by'd to a single row.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "align": "left"
-          },
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 12,
-        "w": 24,
-        "x": 0,
-        "y": 40
-      },
-      "id": 257,
+      "id": 120,
       "options": {
         "showHeader": true
       },
@@ -871,7 +345,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "topk(40, last_over_time({__name__=~\"cvk_app_hosting_.*\",service_name=\"cisco-vk-telemetry\",cisco_device_name=~\"$device\"}[10m]) > 0)",
+          "expr": "topk(40, avg by (__name__) (last_over_time({__name__=~\"cvk_app_hosting_app_name_.*_(details_resource_reservation_(cpu|memory|disk|vcpu|cpu_percent)|utilization_cpu_util_(actual|requested)_application_util)$\"}[10m])))",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -884,9 +358,9 @@
             "excludeByName": {
               "Time": true,
               "service_name": true,
-              "exported_job": true,
               "instance": true,
               "job": true,
+              "exported_job": true,
               "otel_scope_name": true,
               "telemetry_sdk_language": true,
               "telemetry_sdk_name": true,
@@ -905,84 +379,15 @@
           }
         }
       ],
-      "title": "Top 40 app-hosting metrics by value",
+      "title": "App resource snapshot \u2014 per app reservations and utilization",
       "type": "table"
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 52
-      },
-      "id": 300,
-      "panels": [],
-      "title": "CVK pipeline self-metrics",
-      "type": "row"
-    },
-    {
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Phase 3: classifier decisions broken out by kind. \"unclassified\" indicates paths that fell through to the gauge default.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "bars",
-            "fillOpacity": 60,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            }
-          },
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 53
-      },
-      "id": 301,
-      "options": {
-        "legend": {
-          "calcs": [
-            "sum"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (kind) (rate(cisco_vk_telemetry_classifier_decisions_total{cisco_device_name=~\"$device\"}[5m]))",
-          "legendFormat": "{{kind}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Classifier decisions by kind (rate)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Metric points emitted by the metrics emitter, broken out by gauge vs sum.",
+      "description": "Per-app per-bridge RX byte rate (Phase 3 cumulative-counter delta).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -993,28 +398,29 @@
             "fillOpacity": 10,
             "lineWidth": 1
           },
-          "unit": "short"
+          "unit": "Bps"
         }
       },
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 53
+        "x": 0,
+        "y": 13
       },
-      "id": 302,
+      "id": 130,
       "options": {
         "legend": {
           "calcs": [
             "last",
-            "sum"
+            "max"
           ],
           "displayMode": "table",
           "placement": "right",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "multi"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
@@ -1023,12 +429,12 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (kind) (rate(cisco_vk_telemetry_metric_points_emitted_total{cisco_device_name=~\"$device\"}[5m]))",
-          "legendFormat": "{{kind}}",
+          "expr": "sum by (__name__) (rate({__name__=~\"cvk_app_hosting_app_name_.*_network_utils_.*_rx_bytes_total\"}[5m]))",
+          "legendFormat": "{{__name__}}",
           "refId": "A"
         }
       ],
-      "title": "Metric points emitted by kind (rate)",
+      "title": "App network RX rate (bytes/s)",
       "type": "timeseries"
     },
     {
@@ -1036,15 +442,367 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Counter resets per metric (rate).",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1
+          },
+          "unit": "Bps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "id": 131,
+      "options": {
+        "legend": {
+          "calcs": [
+            "last",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (__name__) (rate({__name__=~\"cvk_app_hosting_app_name_.*_network_utils_.*_tx_bytes_total\"}[5m]))",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        }
+      ],
+      "title": "App network TX rate (bytes/s)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "id": 200,
+      "panels": [],
+      "title": "Device system health \u2014 environment, CPU, memory",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Cisco-IOS-XE-memory-oper: Processor total memory.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "custom": {
-            "drawStyle": "bars",
-            "fillOpacity": 50
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "decbytes"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 0,
+        "y": 22
+      },
+      "id": 210,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "avg({__name__=\"cvk_memory_memory_statistic_name_Processor_total_memory\"})",
+          "refId": "A"
+        }
+      ],
+      "title": "Memory total",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "decbytes"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 5,
+        "y": 22
+      },
+      "id": 211,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "avg({__name__=\"cvk_memory_memory_statistic_name_Processor_free_memory\"})",
+          "refId": "A"
+        }
+      ],
+      "title": "Memory free",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent",
+          "decimals": 1
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 10,
+        "y": 22
+      },
+      "id": 212,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * (1 - on() avg({__name__=\"cvk_memory_memory_statistic_name_Processor_free_memory\"}) / on() avg({__name__=\"cvk_memory_memory_statistic_name_Processor_total_memory\"}))",
+          "refId": "A"
+        }
+      ],
+      "title": "Memory used %",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "decbytes"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 22
+      },
+      "id": 213,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "avg({__name__=\"cvk_memory_memory_statistic_name_Processor_highest_usage\"})",
+          "refId": "A"
+        }
+      ],
+      "title": "Memory highest usage",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 26
+      },
+      "id": 220,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "avg(last_over_time({__name__=\"cvk_env_env_stat_crit_alrm\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Critical alarms",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
           },
           "thresholds": {
             "mode": "absolute",
@@ -1063,23 +821,190 @@
         }
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 61
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 26
       },
-      "id": 303,
+      "id": 221,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "avg(last_over_time({__name__=\"cvk_env_env_stat_major_alrm\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Major alarms",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 26
+      },
+      "id": 222,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "avg(last_over_time({__name__=\"cvk_env_env_stat_minor_alrm\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Minor alarms",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Count of environment sensors reporting in null state.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 26
+      },
+      "id": 223,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "avg(last_over_time({__name__=\"cvk_env_env_stat_null_st_snsrs\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Null-state sensors",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Temperatures from /Cisco-IOS-XE-environment-oper:environment-sensors. HotSpot, Inlet, Outlet sensors per switch.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1
+          },
+          "unit": "celsius"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 30
+      },
+      "id": 230,
       "options": {
         "legend": {
           "calcs": [
-            "sum"
+            "last",
+            "max"
           ],
-          "displayMode": "list",
-          "placement": "bottom",
+          "displayMode": "table",
+          "placement": "right",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
@@ -1088,12 +1013,12 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (metric) (rate(cisco_vk_telemetry_counter_resets_total{cisco_device_name=~\"$device\"}[5m]))",
-          "legendFormat": "{{metric}}",
+          "expr": "avg by (__name__) ({__name__=~\"cvk_env_environment_sensor_location_Switch_.*_name_(HotSpot|Inlet|Outlet)_Temp_Sensor_current_reading\"})",
+          "legendFormat": "{{__name__}}",
           "refId": "A"
         }
       ],
-      "title": "Counter resets per metric (rate)",
+      "title": "Temperature sensors (\u00b0C)",
       "type": "timeseries"
     },
     {
@@ -1101,7 +1026,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Top 30 cvk_telemetry self-metrics by value over the last 10 minutes.",
+      "description": "Per-sensor current readings \u2014 temperatures (\u00b0C), fan speeds, power supply state, etc.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1115,11 +1040,11 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 61
+        "w": 8,
+        "x": 16,
+        "y": 30
       },
-      "id": 304,
+      "id": 231,
       "options": {
         "showHeader": true
       },
@@ -1130,7 +1055,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "topk(30, last_over_time({__name__=~\"cisco_vk_telemetry_.*\",cisco_device_name=~\"$device\"}[10m]))",
+          "expr": "topk(20, avg by (__name__) (last_over_time({__name__=~\"cvk_env_environment_sensor_.*_current_reading\"}[5m])))",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -1145,17 +1070,18 @@
               "service_name": true,
               "instance": true,
               "job": true,
+              "exported_job": true,
               "otel_scope_name": true,
               "telemetry_sdk_language": true,
               "telemetry_sdk_name": true,
               "telemetry_sdk_version": true,
-              "exported_job": true,
               "smoke_run": true,
               "env": true,
               "cluster": true,
               "owner": true,
               "cisco_device_address": true,
-              "cisco_device_driver": true
+              "cisco_device_driver": true,
+              "service_namespace": true
             },
             "renameByName": {
               "Value": "value"
@@ -1163,7 +1089,78 @@
           }
         }
       ],
-      "title": "CVK self-metric snapshot",
+      "title": "All sensor current readings",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Per-process CPU activity from /Cisco-IOS-XE-process-cpu-oper:cpu-usage/cpu-utilization. Shows the busiest IOS-XE control-plane processes by counter delta.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "align": "left"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "id": 240,
+      "options": {
+        "showHeader": true
+      },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "topk(20, sum by (__name__) (increase({__name__=~\"cvk_cpu_cpu_utilization_cpu_usage_processes_cpu_usage_.*_(invocation_count|total_run_time)\"}[5m])))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "service_name": true,
+              "instance": true,
+              "job": true,
+              "exported_job": true,
+              "otel_scope_name": true,
+              "telemetry_sdk_language": true,
+              "telemetry_sdk_name": true,
+              "telemetry_sdk_version": true,
+              "smoke_run": true,
+              "env": true,
+              "cluster": true,
+              "owner": true,
+              "cisco_device_address": true,
+              "cisco_device_driver": true,
+              "service_namespace": true
+            },
+            "renameByName": {
+              "Value": "delta over 5m"
+            }
+          }
+        }
+      ],
+      "title": "Top processes by total run time / invocation count (deltas)",
       "type": "table"
     },
     {
@@ -1172,9 +1169,216 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 69
+        "y": 46
+      },
+      "id": 300,
+      "panels": [],
+      "title": "Vlan129 interface counters",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Cumulative interface counters for Vlan129 \u2014 captured to show the OpenConfig path style alongside the IOS-XE native paths.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "align": "left"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "id": 301,
+      "options": {
+        "showHeader": true
+      },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "avg by (__name__) (last_over_time({__name__=~\"interfaces_interface_name_Vlan129_state_counters_.*\"}[10m]))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "service_name": true,
+              "instance": true,
+              "job": true,
+              "exported_job": true,
+              "otel_scope_name": true,
+              "telemetry_sdk_language": true,
+              "telemetry_sdk_name": true,
+              "telemetry_sdk_version": true,
+              "smoke_run": true,
+              "env": true,
+              "cluster": true,
+              "owner": true,
+              "cisco_device_address": true,
+              "cisco_device_driver": true,
+              "service_namespace": true
+            },
+            "renameByName": {
+              "Value": "value"
+            }
+          }
+        }
+      ],
+      "title": "Vlan129 cumulative counters",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 53
       },
       "id": 400,
+      "panels": [],
+      "title": "CVK pipeline self-metrics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 54
+      },
+      "id": 410,
+      "options": {
+        "legend": {
+          "calcs": [
+            "last",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (kind) (rate(cisco_vk_telemetry_classifier_decisions_total[5m]))",
+          "legendFormat": "{{kind}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Classifier decisions / sec by kind",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 54
+      },
+      "id": 411,
+      "options": {
+        "legend": {
+          "calcs": [
+            "last",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (kind) (rate(cisco_vk_telemetry_metric_points_emitted_total[5m]))",
+          "legendFormat": "{{kind}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Metric points emitted / sec by kind",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "id": 500,
       "panels": [],
       "title": "Logs (Phase 2 string-leaf + Delete records)",
       "type": "row"
@@ -1188,12 +1392,11 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 70
+        "y": 63
       },
-      "id": 401,
+      "id": 510,
       "options": {
         "dedupStrategy": "none",
-        "enableInfiniteScrolling": false,
         "enableLogDetails": true,
         "showCommonLabels": false,
         "showLabels": true,
@@ -1207,7 +1410,6 @@
             "type": "loki",
             "uid": "loki"
           },
-          "editorMode": "code",
           "expr": "{service_name=\"cisco-vk-telemetry\"}",
           "queryType": "range",
           "refId": "A"
@@ -1222,9 +1424,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 82
+        "y": 75
       },
-      "id": 500,
+      "id": 600,
       "panels": [],
       "title": "Traces (Phase 4 state-transition spans)",
       "type": "row"
@@ -1234,14 +1436,14 @@
         "type": "jaeger",
         "uid": "jaeger"
       },
-      "description": "Phase 4 transition spans. Each span captures one unhealthy \u2192 healthy recovery interval for a path watched by spec.mapping.transitions.",
+      "description": "Phase 4 transition spans. Empty until a watched leaf observes an unhealthy \u2192 healthy state recovery.",
       "gridPos": {
-        "h": 10,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 83
+        "y": 76
       },
-      "id": 501,
+      "id": 610,
       "options": {
         "showHeader": true
       },
@@ -1303,6 +1505,6 @@
   "timezone": "",
   "title": "CVK MDT-over-gNMI to OpenTelemetry \u2014 overview",
   "uid": "cvk-mdt-overview",
-  "version": 2,
+  "version": 4,
   "weekStart": ""
 }
