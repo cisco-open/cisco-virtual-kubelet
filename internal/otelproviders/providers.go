@@ -79,18 +79,33 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 		return nil, nil, fmt.Errorf("create OTLP gRPC connection: %w", err)
 	}
 
-	traceExp, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn), otlptracegrpc.WithHeaders(cfg.Headers))
+	// gzip-compress OTLP payloads. Telemetry batches with cumulative interface
+	// counters routinely exceed the otel-collector's default 4 MiB receive limit;
+	// gzip typically yields ~20x compression on counter-heavy payloads.
+	traceExp, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithGRPCConn(conn),
+		otlptracegrpc.WithHeaders(cfg.Headers),
+		otlptracegrpc.WithCompressor("gzip"),
+	)
 	if err != nil {
 		_ = conn.Close()
 		return nil, nil, fmt.Errorf("create OTLP trace exporter: %w", err)
 	}
-	metricExp, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithGRPCConn(conn), otlpmetricgrpc.WithHeaders(cfg.Headers))
+	metricExp, err := otlpmetricgrpc.New(ctx,
+		otlpmetricgrpc.WithGRPCConn(conn),
+		otlpmetricgrpc.WithHeaders(cfg.Headers),
+		otlpmetricgrpc.WithCompressor("gzip"),
+	)
 	if err != nil {
 		_ = traceExp.Shutdown(ctx)
 		_ = conn.Close()
 		return nil, nil, fmt.Errorf("create OTLP metric exporter: %w", err)
 	}
-	logExp, err := otlploggrpc.New(ctx, otlploggrpc.WithGRPCConn(conn), otlploggrpc.WithHeaders(cfg.Headers))
+	logExp, err := otlploggrpc.New(ctx,
+		otlploggrpc.WithGRPCConn(conn),
+		otlploggrpc.WithHeaders(cfg.Headers),
+		otlploggrpc.WithCompressor("gzip"),
+	)
 	if err != nil {
 		_ = metricExp.Shutdown(ctx)
 		_ = traceExp.Shutdown(ctx)
