@@ -1,0 +1,141 @@
+{
+  "_license": "Copyright 2026 Cisco Systems Inc. Licensed under the Apache License, Version 2.0. See LICENSE for the full license text.",
+  "_note": "CVK-native Dashboard Studio overview. The receiver repo dashboards use cisco.content.* dial-out metric names, so this dashboard is authored against CVK Phase 3 self-metrics.",
+  "visualizations": {
+    "viz_active_streams": {
+      "type": "splunk.singlevalue",
+      "title": "Active Streams",
+      "dataSources": { "primary": "ds_active_streams" },
+      "options": { "underLabel": "latest by selected device" }
+    },
+    "viz_metric_log_emission": {
+      "type": "splunk.area",
+      "title": "Metric Points and Log Records",
+      "dataSources": { "primary": "ds_metric_log_emission" },
+      "options": {
+        "yAxisTitleText": "records",
+        "legendDisplay": "bottom",
+        "stackMode": "stacked"
+      }
+    },
+    "viz_reconnects": {
+      "type": "splunk.table",
+      "title": "Stream Reconnects",
+      "dataSources": { "primary": "ds_reconnects" },
+      "options": { "count": 20 }
+    },
+    "viz_state_transitions": {
+      "type": "splunk.table",
+      "title": "State Transitions",
+      "dataSources": { "primary": "ds_state_transitions" },
+      "options": { "count": 20 }
+    },
+    "viz_counter_resets": {
+      "type": "splunk.table",
+      "title": "Counter Resets",
+      "dataSources": { "primary": "ds_counter_resets" },
+      "options": { "count": 20 }
+    },
+    "viz_pipeline_totals": {
+      "type": "splunk.table",
+      "title": "Pipeline Totals by Subscription",
+      "dataSources": { "primary": "ds_pipeline_totals" },
+      "options": { "count": 50 }
+    }
+  },
+  "dataSources": {
+    "ds_device_list": {
+      "type": "ds.search",
+      "options": {
+        "query": "| mcatalog values(device) as device WHERE index=$metrics_index$ metric_name=\"cisco_vk_telemetry_*\" | mvexpand device | rename device as label | eval value=label | fields label value | append [| makeresults | eval label=\"All devices\", value=\"*\"] | dedup value | sort label",
+        "queryParameters": { "earliest": "-24h@h", "latest": "now" }
+      }
+    },
+    "ds_active_streams": {
+      "type": "ds.search",
+      "options": {
+        "query": "| mstats latest(_value) as active WHERE index=$metrics_index$ metric_name=\"cisco_vk_telemetry_active_streams\" device=\"$device$\" BY device | stats sum(active) as active",
+        "queryParameters": { "earliest": "-15m@m", "latest": "$global_time.latest$" }
+      }
+    },
+    "ds_metric_log_emission": {
+      "type": "ds.search",
+      "options": {
+        "query": "| mstats sum(_value) as value WHERE index=$metrics_index$ metric_name=\"cisco_vk_telemetry_metric_points_emitted_total\" device=\"$device$\" BY metric_name span=5m | eval signal=\"metric_points\" | append [| mstats sum(_value) as value WHERE index=$metrics_index$ metric_name=\"cisco_vk_telemetry_log_records_emitted_total\" device=\"$device$\" BY metric_name span=5m | eval signal=\"log_records\"] | timechart span=5m sum(value) as records by signal",
+        "queryParameters": { "earliest": "$global_time.earliest$", "latest": "$global_time.latest$" }
+      }
+    },
+    "ds_reconnects": {
+      "type": "ds.search",
+      "options": {
+        "query": "| mstats sum(_value) as reconnects WHERE index=$metrics_index$ metric_name=\"cisco_vk_telemetry_stream_reconnects_total\" device=\"$device$\" BY device subscription | sort - reconnects | rename device as Device subscription as Subscription reconnects as Reconnects",
+        "queryParameters": { "earliest": "$global_time.earliest$", "latest": "$global_time.latest$" }
+      }
+    },
+    "ds_state_transitions": {
+      "type": "ds.search",
+      "options": {
+        "query": "| mstats sum(_value) as transitions WHERE index=$metrics_index$ metric_name=\"cisco_vk_telemetry_state_transitions_total\" device=\"$device$\" BY device subscription path from to | sort - transitions | rename device as Device subscription as Subscription path as Path from as From to as To transitions as Transitions",
+        "queryParameters": { "earliest": "$global_time.earliest$", "latest": "$global_time.latest$" }
+      }
+    },
+    "ds_counter_resets": {
+      "type": "ds.search",
+      "options": {
+        "query": "| mstats sum(_value) as resets WHERE index=$metrics_index$ metric_name=\"cisco_vk_telemetry_counter_resets_total\" device=\"$device$\" BY device subscription metric | sort - resets | rename device as Device subscription as Subscription metric as Metric resets as Resets",
+        "queryParameters": { "earliest": "$global_time.earliest$", "latest": "$global_time.latest$" }
+      }
+    },
+    "ds_pipeline_totals": {
+      "type": "ds.search",
+      "options": {
+        "query": "| mstats sum(_value) as metric_points WHERE index=$metrics_index$ metric_name=\"cisco_vk_telemetry_metric_points_emitted_total\" device=\"$device$\" BY device subscription | appendcols [| mstats sum(_value) as log_records WHERE index=$metrics_index$ metric_name=\"cisco_vk_telemetry_log_records_emitted_total\" device=\"$device$\" BY device subscription] | fillnull value=0 metric_points log_records | rename device as Device subscription as Subscription metric_points as \"Metric Points\" log_records as \"Log Records\" | sort Device Subscription",
+        "queryParameters": { "earliest": "$global_time.earliest$", "latest": "$global_time.latest$" }
+      }
+    }
+  },
+  "defaults": {
+    "dataSources": {
+      "ds.search": {
+        "options": { "queryParameters": { "earliest": "-4h@m", "latest": "now" } }
+      }
+    }
+  },
+  "inputs": {
+    "input_metrics_index": {
+      "type": "input.text",
+      "options": { "defaultValue": "cisco_mdt", "token": "metrics_index" },
+      "title": "Metrics index"
+    },
+    "input_device": {
+      "type": "input.dropdown",
+      "options": {
+        "items": [{ "label": "All devices", "value": "*" }],
+        "defaultValue": "*",
+        "token": "device"
+      },
+      "title": "Device",
+      "dataSources": { "primary": "ds_device_list" }
+    },
+    "input_time": {
+      "type": "input.timerange",
+      "options": { "token": "global_time", "defaultValue": "-4h@m,now" },
+      "title": "Time Range"
+    }
+  },
+  "layout": {
+    "type": "grid",
+    "options": { "width": 1440, "height": 1200 },
+    "structure": [
+      { "item": "viz_active_streams", "type": "block", "position": { "x": 0, "y": 0, "w": 360, "h": 200 } },
+      { "item": "viz_reconnects", "type": "block", "position": { "x": 360, "y": 0, "w": 540, "h": 200 } },
+      { "item": "viz_counter_resets", "type": "block", "position": { "x": 900, "y": 0, "w": 540, "h": 200 } },
+      { "item": "viz_metric_log_emission", "type": "block", "position": { "x": 0, "y": 220, "w": 1440, "h": 320 } },
+      { "item": "viz_state_transitions", "type": "block", "position": { "x": 0, "y": 560, "w": 720, "h": 320 } },
+      { "item": "viz_pipeline_totals", "type": "block", "position": { "x": 720, "y": 560, "w": 720, "h": 320 } }
+    ],
+    "globalInputs": ["input_metrics_index", "input_device", "input_time"]
+  },
+  "title": "Cisco Virtual Kubelet - IOS-XE Telemetry",
+  "description": "CVK MDT-over-gNMI OpenTelemetry self-metrics overview. Copyright 2026 Cisco Systems Inc. Licensed under Apache-2.0."
+}

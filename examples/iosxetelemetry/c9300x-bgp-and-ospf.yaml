@@ -1,0 +1,110 @@
+# Copyright 2026 Cisco Systems Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXETelemetry
+metadata:
+  name: c9300x-bgp-and-ospf
+  namespace: network
+spec:
+  deviceRef:
+    name: c9300x-01
+  subscriptions:
+    - name: bgp-neighbors
+      enabled: true
+      origin: openconfig
+      paths:
+        - /network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state
+        - /network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/messages
+      mode: STREAM
+      streamMode: SAMPLE
+      sampleInterval: 30s
+      encoding: PROTO
+    - name: ospf-neighbors
+      enabled: true
+      paths:
+        - /Cisco-IOS-XE-ospf-oper:ospf-oper-data/ospfv2-instance/ospfv2-area/ospfv2-interface/ospfv2-neighbor
+      mode: STREAM
+      streamMode: SAMPLE
+      sampleInterval: 30s
+      encoding: PROTO
+  reconnect:
+    initialBackoff: 1s
+    maxBackoff: 30s
+    maxRetries: 0
+  cardinalityLimits:
+    maxSeriesPerSubscription: 8000
+    onExceeded: dropNewSeries
+  timestamps:
+    useCollectorTimestamp: true
+  mapping:
+    pathAliases:
+      - prefix: /network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state
+        rename: oc.bgp.neighbor.state
+      - prefix: /network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/messages
+        rename: oc.bgp.neighbor.messages
+      - prefix: /Cisco-IOS-XE-ospf-oper:ospf-oper-data/ospfv2-instance/ospfv2-area/ospfv2-interface/ospfv2-neighbor
+        rename: iosxe.ospf.neighbor
+    resourceAttributes:
+      - path: /network-instances/network-instance/name
+        key: network.instance.name
+      - path: /network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/neighbor-address
+        key: bgp.neighbor.address
+      - path: /Cisco-IOS-XE-ospf-oper:ospf-oper-data/ospfv2-instance/ospfv2-area/ospfv2-interface/name
+        key: ospf.interface.name
+      - path: /Cisco-IOS-XE-ospf-oper:ospf-oper-data/ospfv2-instance/ospfv2-area/ospfv2-interface/ospfv2-neighbor/neighbor-id
+        key: ospf.neighbor.id
+    metricTypeOverrides:
+      - prefix: /network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/messages
+        type: sum
+      - prefix: /network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state
+        type: gauge
+      - prefix: /Cisco-IOS-XE-ospf-oper:ospf-oper-data/ospfv2-instance/ospfv2-area/ospfv2-interface/ospfv2-neighbor/statistics
+        type: sum
+      - prefix: /Cisco-IOS-XE-ospf-oper:ospf-oper-data/ospfv2-instance/ospfv2-area/ospfv2-interface/ospfv2-neighbor/state
+        type: gauge
+    transitions:
+      - path: /network-instances/network-instance[name=*]/protocols/protocol[identifier=BGP][name=*]/bgp/neighbors/neighbor[neighbor-address=*]/state/session-state
+        healthyValues:
+          - ESTABLISHED
+          - established
+        unhealthyValues:
+          - IDLE
+          - ACTIVE
+          - CONNECT
+          - OPENSENT
+          - OPENCONFIRM
+          - idle
+          - active
+          - connect
+      - path: /Cisco-IOS-XE-ospf-oper:ospf-oper-data/ospfv2-instance[instance-id=*]/ospfv2-area[area-id=*]/ospfv2-interface[name=*]/ospfv2-neighbor[neighbor-id=*]/state
+        healthyValues:
+          - ospf-nbr-full
+          - ospf-nbr-two-way
+          - full
+          - FULL
+        unhealthyValues:
+          - ospf-nbr-down
+          - ospf-nbr-attempt
+          - ospf-nbr-init
+          - ospf-nbr-exchange-start
+          - ospf-nbr-exchange
+          - ospf-nbr-loading
+          - down
+          - DOWN
+  output:
+    signal:
+      - metrics
+      - logs
+      - traces

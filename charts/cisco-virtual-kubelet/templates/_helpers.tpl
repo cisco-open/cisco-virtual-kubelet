@@ -89,3 +89,17 @@ VK ServiceAccount name.
 {{- define "cisco-virtual-kubelet.vkServiceAccountName" -}}
 {{- .Values.serviceAccount.vkName }}
 {{- end }}
+
+{{/*
+Resolve the telemetry OTLP endpoint injected into the controller pod.
+The controller copies this value into per-device VK pods when it creates
+their Deployments.
+*/}}
+{{- define "cisco-virtual-kubelet.telemetryOtlpEndpoint" -}}
+{{- $collector := index .Values "collector" -}}
+{{- if .Values.telemetry.otlp.endpoint -}}
+{{- .Values.telemetry.otlp.endpoint -}}
+{{- else if and $collector (index $collector "enabled") -}}
+{{- printf "%s-collector:4317" .Release.Name -}}
+{{- end -}}
+{{- end }}

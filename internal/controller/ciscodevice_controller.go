@@ -17,6 +17,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -67,7 +68,21 @@ const (
 	// when prereq relinquish cannot converge and accepted orphaned config.
 	ForcePrereqsSkipAnnotation    = "config.cisco.vk/force-prereqs-skip"
 	forceRelinquishSkipAnnotation = "config.cisco.vk/force-relinquish-skip"
+
+	envOTELExporterOTLPEndpoint = "OTEL_EXPORTER_OTLP_ENDPOINT"
+	envOTELExporterOTLPInsecure = "OTEL_EXPORTER_OTLP_INSECURE"
+	envOTELExporterOTLPHeaders  = "OTEL_EXPORTER_OTLP_HEADERS"
+	envYANGModelsDir            = "YANG_MODELS_DIR"
+	envCVKResourceAttributes    = "CVK_RESOURCE_ATTRIBUTES"
 )
+
+var telemetryEnvPropagationNames = []string{
+	envOTELExporterOTLPEndpoint,
+	envOTELExporterOTLPInsecure,
+	envOTELExporterOTLPHeaders,
+	envYANGModelsDir,
+	envCVKResourceAttributes,
+}
 
 // configPrereqsTeardownPollInterval is how often the deletion-finalizer path
 // requeues while waiting for the owned IOSXEConfig to drive empty intent and
@@ -373,6 +388,12 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				Value: "true",
 			})
 		}
+		// Helm injects telemetry env vars into the controller Deployment.
+		// The per-device VK pod is the process that owns MDT-over-gNMI
+		// subscriptions and OTel exporters, so propagate those controller
+		// env values into the pod spec the controller creates.
+		podEnv := append([]corev1.EnvVar{}, credEnv...)
+		podEnv = append(podEnv, propagatedTelemetryEnv()...)
 
 		deploy.Spec.Template.Spec = corev1.PodSpec{
 			Containers: []corev1.Container{
@@ -380,7 +401,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					Name:  "cisco-vk",
 					Image: image,
 					Args:  vkContainerArgs(device.Name, device.Spec.LogLevel),
-					Env:   credEnv,
+					Env:   podEnv,
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "device-config",
@@ -518,6 +539,18 @@ func perDeviceDeploymentLabels(deviceName string) map[string]string {
 		"app.kubernetes.io/instance":   deviceName,
 		"app.kubernetes.io/managed-by": "ciscodevice-controller",
 	}
+}
+
+func propagatedTelemetryEnv() []corev1.EnvVar {
+	env := make([]corev1.EnvVar, 0, len(telemetryEnvPropagationNames))
+	for _, name := range telemetryEnvPropagationNames {
+		value, ok := os.LookupEnv(name)
+		if !ok {
+			continue
+		}
+		env = append(env, corev1.EnvVar{Name: name, Value: value})
+	}
+	return env
 }
 
 func matchesPerDeviceLabels(labels map[string]string, deviceName string) bool {

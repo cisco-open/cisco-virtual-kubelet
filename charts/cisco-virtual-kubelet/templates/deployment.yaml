@@ -44,6 +44,20 @@ spec:
             - --enable-config-aggregator
             {{- end }}
           env:
+            # Helm injects telemetry values into the controller first. The
+            # CiscoDevice controller reads these env vars from its own process
+            # environment and propagates them verbatim to each per-device VK
+            # pod, where MDT-over-gNMI subscriptions and OTel exporters run.
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ include "cisco-virtual-kubelet.telemetryOtlpEndpoint" . | quote }}
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: {{ .Values.telemetry.otlp.insecure | quote }}
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              value: {{ .Values.telemetry.otlp.headers | toJson | quote }}
+            - name: YANG_MODELS_DIR
+              value: {{ .Values.telemetry.yangModelsDir | quote }}
+            - name: CVK_RESOURCE_ATTRIBUTES
+              value: {{ .Values.telemetry.resourceAttributes | toJson | quote }}
             {{- if .Values.config.leaseNamespace }}
             # Shared cluster namespace for the per-(device,family)
             # arbitration leases. When set, every cisco-vk pod the

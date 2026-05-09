@@ -16,14 +16,22 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	otellog "go.opentelemetry.io/otel/log"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/otelproviders"
+)
+
+const (
+	envOTELExporterOTLPHeaders = "OTEL_EXPORTER_OTLP_HEADERS"
+	envCVKResourceAttributes   = "CVK_RESOURCE_ATTRIBUTES"
 )
 
 // buildTelemetryProviders constructs the per-device telemetry OTel provider
@@ -33,6 +41,8 @@ import (
 //
 //	OTEL_EXPORTER_OTLP_ENDPOINT      (e.g. otelcol.observability:4317)
 //	OTEL_EXPORTER_OTLP_INSECURE      ("true" disables TLS; default false)
+//	OTEL_EXPORTER_OTLP_HEADERS       (serialized metadata headers)
+//	CVK_RESOURCE_ATTRIBUTES          (serialized extra resource attributes)
 //
 // When the endpoint is unset this returns a nil Providers value and emission
 // is suppressed by noop emitter fallbacks.
@@ -42,16 +52,75 @@ func buildTelemetryProviders(ctx context.Context, deviceName string, opts config
 		return nil, nil, nil
 	}
 	insecure, _ := strconv.ParseBool(os.Getenv("OTEL_EXPORTER_OTLP_INSECURE"))
+	headers, err := serializedStringMap(os.Getenv(envOTELExporterOTLPHeaders))
+	if err != nil {
+		return nil, nil, fmt.Errorf("%s: %w", envOTELExporterOTLPHeaders, err)
+	}
+	deviceAddress := ""
+	if opts.Spec != nil {
+		deviceAddress = opts.Spec.Address
+	}
+	resourceAttrs, err := telemetryResourceAttributes(map[string]string{
+		"service.name":         "cisco-vk-telemetry",
+		"cisco.device.name":    deviceName,
+		"cisco.device.address": deviceAddress,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
 	cfg := otelproviders.Config{
-		OTLPEndpoint: endpoint,
-		Insecure:     insecure,
-		ResourceAttrs: map[string]string{
-			"service.name":         "cisco-vk-telemetry",
-			"cisco.device.name":    deviceName,
-			"cisco.device.address": opts.Spec.Address,
-		},
+		OTLPEndpoint:  endpoint,
+		Insecure:      insecure,
+		Headers:       headers,
+		ResourceAttrs: resourceAttrs,
 	}
 	return otelproviders.New(ctx, cfg)
+}
+
+func telemetryResourceAttributes(base map[string]string) (map[string]string, error) {
+	attrs := make(map[string]string, len(base))
+	for k, v := range base {
+		attrs[k] = v
+	}
+	extra, err := serializedStringMap(os.Getenv(envCVKResourceAttributes))
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", envCVKResourceAttributes, err)
+	}
+	for k, v := range extra {
+		attrs[k] = v
+	}
+	return attrs, nil
+}
+
+func serializedStringMap(raw string) (map[string]string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "{}" {
+		return nil, nil
+	}
+	if strings.HasPrefix(raw, "{") {
+		var out map[string]string
+		if err := json.Unmarshal([]byte(raw), &out); err != nil {
+			return nil, err
+		}
+		return out, nil
+	}
+	out := map[string]string{}
+	for _, pair := range strings.Split(raw, ",") {
+		pair = strings.TrimSpace(pair)
+		if pair == "" {
+			continue
+		}
+		key, value, ok := strings.Cut(pair, "=")
+		if !ok {
+			return nil, fmt.Errorf("expected key=value entry %q", pair)
+		}
+		key = strings.TrimSpace(key)
+		if key == "" {
+			return nil, fmt.Errorf("empty key in %q", pair)
+		}
+		out[key] = strings.TrimSpace(value)
+	}
+	return out, nil
 }
 
 // telemetryLoggerProvider returns the LoggerProvider from the optional

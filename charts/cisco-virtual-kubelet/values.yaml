@@ -56,6 +56,42 @@ aggregator:
   # has shipped since day one.
   enabled: false
 
+# telemetry is injected into the controller pod as environment variables.
+# The CiscoDevice controller then propagates the same values to each
+# per-device VK pod it creates, so the process that owns MDT-over-gNMI
+# subscriptions also owns OTLP export configuration.
+telemetry:
+  otlp:
+    # endpoint is the OTLP gRPC collector endpoint, for example
+    # otelcol.observability:4317. When collector.enabled=true and this is
+    # empty, the chart points CVK at the bundled collector Service.
+    endpoint: ""
+    # insecure disables TLS for the OTLP gRPC exporter.
+    insecure: false
+    # headers are serialized into OTEL_EXPORTER_OTLP_HEADERS for optional
+    # collector metadata or auth headers.
+    headers: {}
+  # yangModelsDir is propagated as YANG_MODELS_DIR for optional
+  # YANG-driven metric classification.
+  yangModelsDir: ""
+  # resourceAttributes are serialized into CVK_RESOURCE_ATTRIBUTES and merged
+  # into OTel resource attributes by the per-device VK process.
+  resourceAttributes: {}
+
+collector:
+  # enabled deploys a small in-cluster OpenTelemetry Collector intended for
+  # smoke tests and lab installs. Production installs should usually point
+  # telemetry.otlp.endpoint at an externally managed collector.
+  enabled: false
+  image:
+    repository: otel/opentelemetry-collector-contrib
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
 config:
   # leaseNamespace is the shared namespace for per-(device, family)
   # arbitration leases. Set this when IOSXEConfig CRs in different

@@ -343,6 +343,17 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		log.G(ctx).WithError(err).Warn("YANG registry unavailable; using curated telemetry classifier fallback")
 		yangRegistry = nil
 	}
+	// CVK_RESOURCE_ATTRIBUTES is injected by Helm into the controller and
+	// propagated into this per-device VK pod by the CiscoDevice controller.
+	// Merge those operator-supplied attributes into the per-event resource
+	// attributes used by MDT-over-gNMI OTel emissions.
+	resourceAttrs, err := telemetryResourceAttributes(map[string]string{
+		"cisco.device.address": opts.Spec.Address,
+		"cisco.device.driver":  string(opts.Spec.Driver),
+	})
+	if err != nil {
+		return err
+	}
 	telemetryEvents := make(chan event.GenericEvent, 1)
 	telemetryReconciler := &provider.IOSXETelemetryReconciler{
 		Client:         mgr.GetClient(),
@@ -352,12 +363,9 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		MeterProvider:  telemetryMeterProvider(otelProviders),
 		TracerProvider: telemetryTracerProvider(otelProviders),
 		YangRegistry:   yangRegistry,
-		ResourceAttrs: map[string]string{
-			"cisco.device.address": opts.Spec.Address,
-			"cisco.device.driver":  string(opts.Spec.Driver),
-		},
-		RootContext:  ctx,
-		StatusEvents: telemetryEvents,
+		ResourceAttrs:  resourceAttrs,
+		RootContext:    ctx,
+		StatusEvents:   telemetryEvents,
 	}
 	if err := telemetryReconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("telemetry SetupWithManager: %w", err)
