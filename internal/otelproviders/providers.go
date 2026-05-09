@@ -64,7 +64,17 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 	if err != nil {
 		return nil, nil, err
 	}
-	conn, err := grpc.NewClient(endpointTarget(cfg.OTLPEndpoint), grpc.WithTransportCredentials(transportCredentials(cfg.Insecure)))
+	// 64 MiB max-message-size for OTLP gRPC. The default 4 MiB is too low for
+	// telemetry batches that include interface counters across many ports.
+	const maxOTLPMsgBytes = 64 * 1024 * 1024
+	conn, err := grpc.NewClient(
+		endpointTarget(cfg.OTLPEndpoint),
+		grpc.WithTransportCredentials(transportCredentials(cfg.Insecure)),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallSendMsgSize(maxOTLPMsgBytes),
+			grpc.MaxCallRecvMsgSize(maxOTLPMsgBytes),
+		),
+	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create OTLP gRPC connection: %w", err)
 	}
