@@ -397,6 +397,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		// subscriptions and OTel exporters, so propagate those controller
 		// env values into the pod spec the controller creates.
 		podEnv := append([]corev1.EnvVar{}, credEnv...)
+		podEnv = append(podEnv, downwardAPIEnv()...)
 		podEnv = append(podEnv, propagatedTelemetryEnv()...)
 
 		deploy.Spec.Template.Spec = corev1.PodSpec{
@@ -542,6 +543,20 @@ func perDeviceDeploymentLabels(deviceName string) map[string]string {
 		"app.kubernetes.io/name":       "cisco-vk",
 		"app.kubernetes.io/instance":   deviceName,
 		"app.kubernetes.io/managed-by": "ciscodevice-controller",
+	}
+}
+
+// downwardAPIEnv returns the per-pod identity env vars (POD_NAME,
+// POD_NAMESPACE, POD_UID, NODE_NAME) the per-device VK process needs to
+// emit OTel SemConv resource attributes (k8s.pod.*, k8s.node.*,
+// service.instance.id). These attributes let multi-replica deployments
+// disambiguate metric series downstream.
+func downwardAPIEnv() []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
+		{Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
+		{Name: "POD_UID", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.uid"}}},
+		{Name: "NODE_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
 	}
 }
 

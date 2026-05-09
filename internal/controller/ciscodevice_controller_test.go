@@ -116,12 +116,20 @@ func findEnvVar(env []corev1.EnvVar, name string) (corev1.EnvVar, bool) {
 func nonTelemetryEnv(env []corev1.EnvVar) []corev1.EnvVar {
 	out := make([]corev1.EnvVar, 0, len(env))
 	for _, item := range env {
-		if isTelemetryEnvName(item.Name) {
+		if isTelemetryEnvName(item.Name) || isDownwardAPIEnvName(item.Name) {
 			continue
 		}
 		out = append(out, item)
 	}
 	return out
+}
+
+func isDownwardAPIEnvName(name string) bool {
+	switch name {
+	case "POD_NAME", "POD_NAMESPACE", "POD_UID", "NODE_NAME":
+		return true
+	}
+	return false
 }
 
 func isTelemetryEnvName(name string) bool {

@@ -46,11 +46,13 @@ const (
 type IOSXETelemetrySpec struct {
 	// DeviceRef targets the CiscoDevice this telemetry stream applies to.
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="self.name != ''",message="deviceRef.name must be non-empty"
 	DeviceRef corev1.LocalObjectReference `json:"deviceRef"`
 
 	// Subscriptions is the non-empty set of gNMI Subscribe requests to run.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=64
 	// +listType=map
 	// +listMapKey=name
 	Subscriptions []TelemetrySubscription `json:"subscriptions"`
@@ -98,6 +100,8 @@ type TelemetrySubscription struct {
 	// Paths is the non-empty set of gNMI paths to subscribe to.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=256
+	// +listType=set
 	Paths []string `json:"paths"`
 
 	// Origin overrides gNMI Path.Origin for all paths in this subscription.
@@ -197,7 +201,9 @@ type TimestampConfig struct {
 }
 
 // MappingConfig carries mapper controls for aliases, metric type overrides,
-// resource attributes, and filters.
+// resource attributes, and filters. Hard list caps prevent CRDs from
+// growing unboundedly large; raise via per-CR review if your fleet's
+// canonical-path surface justifies it.
 type MappingConfig struct {
 	// IncludeListKeysInMetricName preserves legacy metric naming that embeds
 	// YANG list-key selectors in metric names. It defaults false so list-key
@@ -205,12 +211,16 @@ type MappingConfig struct {
 	// +optional
 	IncludeListKeysInMetricName *bool `json:"includeListKeysInMetricName,omitempty"`
 	// +optional
+	// +kubebuilder:validation:MaxItems=512
 	PathAliases []PathAlias `json:"pathAliases,omitempty"`
 	// +optional
+	// +kubebuilder:validation:MaxItems=512
 	MetricTypeOverrides []MetricTypeOverride `json:"metricTypeOverrides,omitempty"`
 	// +optional
+	// +kubebuilder:validation:MaxItems=256
 	Transitions []Transition `json:"transitions,omitempty"`
 	// +optional
+	// +kubebuilder:validation:MaxItems=512
 	ResourceAttributes []ResourceAttribute `json:"resourceAttributes,omitempty"`
 	// +optional
 	Filter *FilterConfig `json:"filter,omitempty"`
@@ -253,22 +263,33 @@ type FilterRules struct {
 
 // PathAlias renames mapped telemetry paths by prefix.
 type PathAlias struct {
-	Prefix string `json:"prefix,omitempty"`
-	Rename string `json:"rename,omitempty"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Prefix string `json:"prefix"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Rename string `json:"rename"`
 }
 
 // MetricTypeOverride pins a mapped metric type for a path prefix.
 type MetricTypeOverride struct {
-	Prefix string `json:"prefix,omitempty"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Prefix string `json:"prefix"`
 
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Enum=gauge;sum
-	Type string `json:"type,omitempty"`
+	Type string `json:"type"`
 }
 
 // ResourceAttribute maps a telemetry path to a resource attribute key.
 type ResourceAttribute struct {
-	Path string `json:"path,omitempty"`
-	Key  string `json:"key,omitempty"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Path string `json:"path"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Key string `json:"key"`
 }
 
 // OutputConfig declares the requested OpenTelemetry signal families.

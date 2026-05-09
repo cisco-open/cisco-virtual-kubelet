@@ -98,6 +98,9 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
+                x-kubernetes-validations:
+                - message: deviceRef.name must be non-empty
+                  rule: self.name != ''
               mapping:
                 description: |-
                   Mapping carries path-to-signal mapping, filtering, and classification
@@ -144,23 +147,34 @@ spec:
                         a path prefix.
                       properties:
                         prefix:
+                          minLength: 1
                           type: string
                         type:
                           enum:
                           - gauge
                           - sum
                           type: string
+                      required:
+                      - prefix
+                      - type
                       type: object
+                    maxItems: 512
                     type: array
                   pathAliases:
                     items:
                       description: PathAlias renames mapped telemetry paths by prefix.
                       properties:
                         prefix:
+                          minLength: 1
                           type: string
                         rename:
+                          minLength: 1
                           type: string
+                      required:
+                      - prefix
+                      - rename
                       type: object
+                    maxItems: 512
                     type: array
                   resourceAttributes:
                     items:
@@ -168,10 +182,16 @@ spec:
                         attribute key.
                       properties:
                         key:
+                          minLength: 1
                           type: string
                         path:
+                          minLength: 1
                           type: string
+                      required:
+                      - key
+                      - path
                       type: object
+                    maxItems: 512
                     type: array
                   transitions:
                     items:
@@ -202,6 +222,7 @@ spec:
                       - path
                       - unhealthyValues
                       type: object
+                    maxItems: 256
                     type: array
                 type: object
               output:
@@ -284,8 +305,10 @@ spec:
                         to.
                       items:
                         type: string
+                      maxItems: 256
                       minItems: 1
                       type: array
+                      x-kubernetes-list-type: set
                     preservePathPrefix:
                       description: |-
                         PreservePathPrefix keeps the YANG module prefix on the first PathElem
@@ -322,6 +345,7 @@ spec:
                       && self.streamMode != ''ON_CHANGE'')'
                   - message: heartbeatInterval requires streamMode=ON_CHANGE
                     rule: '!(has(self.heartbeatInterval) && self.streamMode != ''ON_CHANGE'')'
+                maxItems: 64
                 minItems: 1
                 type: array
                 x-kubernetes-list-map-keys:

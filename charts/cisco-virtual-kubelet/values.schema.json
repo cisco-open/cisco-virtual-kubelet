@@ -90,7 +90,7 @@
     "telemetry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["otlp", "yangModelsDir", "resourceAttributes"],
+      "required": ["otlp", "yangModelsDir", "yangModels", "resourceAttributes"],
       "properties": {
         "otlp": {
           "type": "object",
@@ -106,6 +106,15 @@
           }
         },
         "yangModelsDir": { "type": "string" },
+        "yangModels": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["configMapName", "mountPath"],
+          "properties": {
+            "configMapName": { "type": "string" },
+            "mountPath":     { "type": "string" }
+          }
+        },
         "resourceAttributes": {
           "type": "object",
           "additionalProperties": { "type": "string" }

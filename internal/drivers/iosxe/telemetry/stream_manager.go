@@ -391,9 +391,18 @@ func buildStreamSubscriptions(
 	ordered := append([]configv1alpha1.TelemetrySubscription(nil), subs...)
 	sort.Slice(ordered, func(i, j int) bool { return ordered[i].Name < ordered[j].Name })
 
+	type dedupKey struct {
+		path              string
+		mode              gpb.SubscriptionMode
+		suppressRedundant bool
+		heartbeatNanos    uint64
+		origin            string
+		preservePrefix    bool
+	}
 	subNames := make([]string, 0, len(ordered))
 	subscriptions := []*gpb.Subscription{}
 	pathBySub := map[string][]string{}
+	seen := map[dedupKey]struct{}{}
 	for _, sub := range ordered {
 		subNames = append(subNames, sub.Name)
 		for _, path := range sub.Paths {
@@ -408,14 +417,31 @@ func buildStreamSubscriptions(
 				opts.HasOriginOverride = true
 			}
 			gpath, _ := parsePathWithOpts(path, opts)
+			key := dedupKey{
+				path:              normalizePath(path),
+				mode:              subscriptionModeEnum(sub),
+				suppressRedundant: boolPtrValue(sub.SuppressRedundant),
+				heartbeatNanos:    durationPtrNanos(sub.HeartbeatInterval),
+				origin:            sub.Origin,
+				preservePrefix:    sub.PreservePathPrefix != nil && *sub.PreservePathPrefix,
+			}
+			pathBySub[sub.Name] = append(pathBySub[sub.Name], normalizePath(path))
+			// Dedup at the gNMI Subscribe level: distinct CRs that subscribe
+			// to the same path with identical mode/cadence/origin must share
+			// one wire-level subscription. The notification fan-out via
+			// pathBySub already routes a single notification to every CR
+			// that owns the path.
+			if _, dup := seen[key]; dup {
+				continue
+			}
+			seen[key] = struct{}{}
 			subscriptions = append(subscriptions, &gpb.Subscription{
 				Path:              gpath,
-				Mode:              subscriptionModeEnum(sub),
+				Mode:              key.mode,
 				SampleInterval:    uint64(sub.SampleInterval.Duration.Nanoseconds()),
-				SuppressRedundant: boolPtrValue(sub.SuppressRedundant),
-				HeartbeatInterval: durationPtrNanos(sub.HeartbeatInterval),
+				SuppressRedundant: key.suppressRedundant,
+				HeartbeatInterval: key.heartbeatNanos,
 			})
-			pathBySub[sub.Name] = append(pathBySub[sub.Name], normalizePath(path))
 		}
 	}
 	return subNames, subscriptions, pathBySub

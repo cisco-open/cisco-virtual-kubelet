@@ -70,11 +70,23 @@ func buildTelemetryProviders(ctx context.Context, deviceName string, opts config
 	if opts.Spec != nil {
 		deviceAddress = opts.Spec.Address
 	}
-	resourceAttrs, err := telemetryResourceAttributes(map[string]string{
+	base := map[string]string{
+		// OTel semantic conventions — required for cross-tool correlation.
+		// service.name groups all CVK telemetry; service.instance.id (the
+		// per-device pod's name) lets Prometheus/Grafana disambiguate
+		// replicas. host.name pins the device the per-device pod is
+		// streaming from. net.peer.name is the device management address.
 		"service.name":         "cisco-vk-telemetry",
+		"service.instance.id":  serviceInstanceID(deviceName),
+		"host.name":            deviceName,
+		"net.peer.name":        deviceAddress,
 		"cisco.device.name":    deviceName,
 		"cisco.device.address": deviceAddress,
-	})
+	}
+	for k, v := range k8sResourceAttributesFromEnv() {
+		base[k] = v
+	}
+	resourceAttrs, err := telemetryResourceAttributes(base)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -85,6 +97,44 @@ func buildTelemetryProviders(ctx context.Context, deviceName string, opts config
 		ResourceAttrs: resourceAttrs,
 	}
 	return otelproviders.New(ctx, cfg)
+}
+
+// k8sResourceAttributesFromEnv reads downward-API-injected env vars (POD_NAME,
+// POD_NAMESPACE, NODE_NAME, POD_UID) and returns OTel SemConv resource
+// attributes. Empty values are dropped so unset env vars do not produce empty
+// labels. The Helm chart wires these via the downward API on every pod that
+// emits telemetry; outside Kubernetes (e.g. unit tests) the map is empty and
+// the SDK falls back to telemetry.sdk.* identity only.
+func k8sResourceAttributesFromEnv() map[string]string {
+	out := map[string]string{}
+	if v := strings.TrimSpace(os.Getenv("POD_NAME")); v != "" {
+		out["k8s.pod.name"] = v
+	}
+	if v := strings.TrimSpace(os.Getenv("POD_NAMESPACE")); v != "" {
+		out["k8s.namespace.name"] = v
+	}
+	if v := strings.TrimSpace(os.Getenv("NODE_NAME")); v != "" {
+		out["k8s.node.name"] = v
+	}
+	if v := strings.TrimSpace(os.Getenv("POD_UID")); v != "" {
+		out["k8s.pod.uid"] = v
+	}
+	return out
+}
+
+// serviceInstanceID returns a stable identifier for this telemetry-emitting
+// process. POD_UID is preferred (uniquely identifies the process incarnation
+// across restarts on the same node); falling back to POD_NAME if UID is
+// unavailable; falling back to deviceName as a last resort so non-k8s
+// deployments still get an instance.id distinct from service.name.
+func serviceInstanceID(deviceName string) string {
+	if v := strings.TrimSpace(os.Getenv("POD_UID")); v != "" {
+		return v
+	}
+	if v := strings.TrimSpace(os.Getenv("POD_NAME")); v != "" {
+		return v
+	}
+	return deviceName
 }
 
 func telemetryResourceAttributes(base map[string]string) (map[string]string, error) {

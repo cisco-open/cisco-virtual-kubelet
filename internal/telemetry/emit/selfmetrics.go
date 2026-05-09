@@ -24,10 +24,12 @@ import (
 )
 
 const (
-	activeStreamsSelfMetric      = "cisco_vk_telemetry_active_streams"
-	streamReconnectsSelfMetric   = "cisco_vk_telemetry_stream_reconnects_total"
-	logRecordsSelfMetric         = "cisco_vk_telemetry_log_records_emitted_total"
-	instrumentCapDropsSelfMetric = "cisco_vk_telemetry_instrument_cap_drops_total"
+	activeStreamsSelfMetric       = "cisco_vk_telemetry_active_streams"
+	streamReconnectsSelfMetric    = "cisco_vk_telemetry_stream_reconnects_total"
+	logRecordsSelfMetric          = "cisco_vk_telemetry_log_records_emitted_total"
+	instrumentCapDropsSelfMetric  = "cisco_vk_telemetry_instrument_cap_drops_total"
+	processingDurationSelfMetric  = "cisco_vk_telemetry_processing_duration_seconds"
+	transitionsDroppedSelfMetric  = "cisco_vk_telemetry_transitions_dropped_total"
 )
 
 // SelfMetrics holds the OTel instruments shared across emitters and the stream
@@ -38,6 +40,8 @@ type SelfMetrics struct {
 	streamReconnects   metric.Int64Counter
 	logRecords         metric.Int64Counter
 	instrumentCapDrops metric.Int64Counter
+	processingDuration metric.Float64Histogram
+	transitionsDropped metric.Int64Counter
 
 	capDropTotal atomic.Int64
 }
@@ -54,11 +58,26 @@ func NewSelfMetrics(provider metric.MeterProvider) *SelfMetrics {
 	reconnects, _ := meter.Int64Counter(streamReconnectsSelfMetric)
 	logs, _ := meter.Int64Counter(logRecordsSelfMetric)
 	capDrops, _ := meter.Int64Counter(instrumentCapDropsSelfMetric)
+	// Processing-duration histogram covers mapper.Process + emitter dispatch
+	// per gNMI Notification. Buckets span 100µs to 10s — the receiver's
+	// equivalent metric uses 0.1ms–1000ms; we widen the upper bound because
+	// pathological notifications (~6000 updates) measured ~2s end-to-end on
+	// cat9k-smoke.
+	duration, _ := meter.Float64Histogram(
+		processingDurationSelfMetric,
+		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(
+			0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10,
+		),
+	)
+	transitionsDropped, _ := meter.Int64Counter(transitionsDroppedSelfMetric)
 	return &SelfMetrics{
 		activeStreams:      active,
 		streamReconnects:   reconnects,
 		logRecords:         logs,
 		instrumentCapDrops: capDrops,
+		processingDuration: duration,
+		transitionsDropped: transitionsDropped,
 	}
 }
 
@@ -119,4 +138,31 @@ func (s *SelfMetrics) CapDropTotal() int64 {
 		return 0
 	}
 	return s.capDropTotal.Load()
+}
+
+// RecordProcessingDuration records mapper + emitter end-to-end time per
+// gNMI Notification. duration is in seconds; callers measure with
+// time.Since on a stable monotonic clock.
+func (s *SelfMetrics) RecordProcessingDuration(ctx context.Context, seconds float64, device, subscription string) {
+	if s == nil || s.processingDuration == nil {
+		return
+	}
+	s.processingDuration.Record(ctx, seconds, metric.WithAttributes(
+		attribute.String("device", device),
+		attribute.String("subscription", subscription),
+	))
+}
+
+// IncTransitionsDropped counts state-transition spans that were rate-limited
+// out by the traces emitter. Operators read this to size the per-entity
+// budget; high cumulative counts indicate routes/interfaces are flapping.
+func (s *SelfMetrics) IncTransitionsDropped(ctx context.Context, device, subscription, path string) {
+	if s == nil || s.transitionsDropped == nil {
+		return
+	}
+	s.transitionsDropped.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("device", device),
+		attribute.String("subscription", subscription),
+		attribute.String("path", path),
+	))
 }

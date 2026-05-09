@@ -186,13 +186,16 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 
 	reconnect := defaultReconnect(cr.Spec.Reconnect)
 	sub.SetReconnectConfig(reconnect)
-	sub.SetMappingProfile(telemetry.MappingProfile{
+	profile := telemetry.MappingProfile{
 		Mapping:           cr.Spec.Mapping,
 		Classifier:        telemetryClassifier(cr.Spec.Mapping, r.YangRegistry),
 		Output:            cr.Spec.Output,
 		CardinalityLimits: cr.Spec.CardinalityLimits,
 		Timestamps:        cr.Spec.Timestamps,
-	})
+	}
+	for _, desired := range cr.Spec.Subscriptions {
+		sub.SetSubscriptionProfile(desired.Name, profile)
+	}
 	activeNames, allNames, err := r.applyDesired(req.NamespacedName, sub, &cr)
 	if err != nil {
 		base := cr.DeepCopy()
@@ -324,7 +327,7 @@ func (r *IOSXETelemetryReconciler) ensureSubscriber() (*telemetry.Subscriber, er
 		telemetry.WithMapper(mapper.New()),
 		telemetry.WithLogsEmitter(emit.NewLogsEmitter(r.LoggerProvider, emit.WithLogsSelfMetrics(selfMetrics))),
 		telemetry.WithMetricsEmitter(metricsEmitter),
-		telemetry.WithTracesEmitter(emit.NewTracesEmitter(r.TracerProvider, r.MeterProvider, nil)),
+		telemetry.WithTracesEmitter(emit.NewTracesEmitter(r.TracerProvider, r.MeterProvider, nil).WithSelfMetrics(selfMetrics)),
 		telemetry.WithSelfMetrics(selfMetrics),
 	}
 	if attrs := r.subscriberResourceAttrs(); len(attrs) > 0 {
@@ -460,6 +463,7 @@ func (r *IOSXETelemetryReconciler) applyDesired(
 		all = append(all, spec.Name)
 		if spec.Enabled != nil && !*spec.Enabled {
 			sub.RemoveSubscription(spec.Name)
+			sub.RemoveSubscriptionProfile(spec.Name)
 			continue
 		}
 		if err := sub.AddSubscription(spec); err != nil {
@@ -485,6 +489,7 @@ func (r *IOSXETelemetryReconciler) applyDesired(
 	for _, name := range previous {
 		if _, ok := activeSet[name]; !ok {
 			sub.RemoveSubscription(name)
+			sub.RemoveSubscriptionProfile(name)
 		}
 	}
 	return active, all, nil
@@ -513,6 +518,7 @@ func (r *IOSXETelemetryReconciler) removeOwned(key client.ObjectKey) {
 	for _, name := range names {
 		if sub != nil {
 			sub.RemoveSubscription(name)
+			sub.RemoveSubscriptionProfile(name)
 		}
 	}
 	if remaining == 0 && sub != nil {

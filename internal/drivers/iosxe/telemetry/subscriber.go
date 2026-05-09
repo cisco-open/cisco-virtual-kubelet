@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -55,16 +56,17 @@ type Subscriber struct {
 	tracesEmitter   *emit.TracesEmitter
 	selfMetrics     *emit.SelfMetrics
 	resourceAttrs   map[string]string
-	profile         MappingProfile
 
-	mu      sync.Mutex
-	ctx     context.Context
-	cancel  context.CancelFunc
-	conn    *grpc.ClientConn
-	manager *StreamManager
-	specs   map[string]configv1alpha1.TelemetrySubscription
-	states  map[string]*SubscriptionState
-	started bool
+	mu              sync.Mutex
+	ctx             context.Context
+	cancel          context.CancelFunc
+	conn            *grpc.ClientConn
+	manager         *StreamManager
+	specs           map[string]configv1alpha1.TelemetrySubscription
+	states          map[string]*SubscriptionState
+	profiles        map[string]MappingProfile
+	defaultProfile  MappingProfile
+	started         bool
 
 	stateChanged chan struct{}
 }
@@ -128,29 +130,100 @@ func WithResourceAttributes(attrs map[string]string) SubscriberOption {
 	}
 }
 
-// WithMappingProfile installs the spec-level mapping configuration shared by
-// every subscription on this Subscriber.
+// WithMappingProfile installs a default profile applied to subscriptions that
+// have no per-subscription profile set. Useful for tests; production wiring
+// should call SetSubscriptionProfile per subscription.
 func WithMappingProfile(p MappingProfile) SubscriberOption {
-	return func(s *Subscriber) { s.profile = p }
+	return func(s *Subscriber) { s.defaultProfile = p }
 }
 
-// SetMappingProfile updates the active profile after Start. Safe for the
-// reconciler to call on each CR update.
-func (s *Subscriber) SetMappingProfile(p MappingProfile) {
-	if s == nil {
+// SetSubscriptionProfile installs the mapping profile for one subscription.
+// Distinct CRs targeting the same device get distinct profiles; nothing is
+// shared across CRs. The metrics emitter's instrument cap is recomputed as
+// the maximum of all installed profiles. SetTransitions is the union of
+// transition rules across all profiles (the traces emitter does not care
+// which CR contributed which rule — its transition tracker is keyed by
+// path+entity).
+func (s *Subscriber) SetSubscriptionProfile(name string, p MappingProfile) {
+	if s == nil || name == "" {
 		return
 	}
 	s.mu.Lock()
-	s.profile = p
+	if s.profiles == nil {
+		s.profiles = map[string]MappingProfile{}
+	}
+	s.profiles[name] = p
+	transitions := unionTransitionsLocked(s.profiles)
+	maxInstruments := maxInstrumentsLocked(s.profiles)
 	tracesEmitter := s.tracesEmitter
 	metricsEmitter := s.metricsEmitter
 	s.mu.Unlock()
 	if tracesEmitter != nil {
-		tracesEmitter.SetTransitions(mappingTransitions(p.Mapping))
+		tracesEmitter.SetTransitions(transitions)
 	}
-	if metricsEmitter != nil && p.CardinalityLimits != nil && p.CardinalityLimits.MaxInstruments > 0 {
-		metricsEmitter.SetMaxInstruments(int(p.CardinalityLimits.MaxInstruments))
+	if metricsEmitter != nil && maxInstruments > 0 {
+		metricsEmitter.SetMaxInstruments(maxInstruments)
 	}
+}
+
+// RemoveSubscriptionProfile drops the per-subscription profile when its
+// owning CR is deleted or when the subscription is removed from a spec.
+func (s *Subscriber) RemoveSubscriptionProfile(name string) {
+	if s == nil || name == "" {
+		return
+	}
+	s.mu.Lock()
+	delete(s.profiles, name)
+	transitions := unionTransitionsLocked(s.profiles)
+	maxInstruments := maxInstrumentsLocked(s.profiles)
+	tracesEmitter := s.tracesEmitter
+	metricsEmitter := s.metricsEmitter
+	s.mu.Unlock()
+	if tracesEmitter != nil {
+		tracesEmitter.SetTransitions(transitions)
+	}
+	if metricsEmitter != nil && maxInstruments > 0 {
+		metricsEmitter.SetMaxInstruments(maxInstruments)
+	}
+}
+
+// unionTransitionsLocked must be called with s.mu held.
+func unionTransitionsLocked(profiles map[string]MappingProfile) []configv1alpha1.Transition {
+	if len(profiles) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(profiles))
+	for name := range profiles {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var out []configv1alpha1.Transition
+	seen := map[string]struct{}{}
+	for _, name := range names {
+		for _, t := range mappingTransitions(profiles[name].Mapping) {
+			key := t.Path + "\x00" + strings.Join(t.HealthyValues, "\x00") + "\x00" + strings.Join(t.UnhealthyValues, "\x00")
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// maxInstrumentsLocked must be called with s.mu held.
+func maxInstrumentsLocked(profiles map[string]MappingProfile) int {
+	max := 0
+	for _, p := range profiles {
+		if p.CardinalityLimits == nil {
+			continue
+		}
+		if int(p.CardinalityLimits.MaxInstruments) > max {
+			max = int(p.CardinalityLimits.MaxInstruments)
+		}
+	}
+	return max
 }
 
 func NewSubscriber(deviceRef string, factory SubscribeClientFactory, opts ...SubscriberOption) *Subscriber {
@@ -161,6 +234,7 @@ func NewSubscriber(deviceRef string, factory SubscribeClientFactory, opts ...Sub
 		channelCapacity: DefaultEventChannelCapacity,
 		specs:           map[string]configv1alpha1.TelemetrySubscription{},
 		states:          map[string]*SubscriptionState{},
+		profiles:        map[string]MappingProfile{},
 		stateChanged:    make(chan struct{}, 1),
 	}
 	for _, opt := range opts {
@@ -460,13 +534,20 @@ func (s *Subscriber) drainEvents(events <-chan NotificationEvent) {
 			continue
 		}
 		s.mu.Lock()
-		profile := s.profile
 		resAttrs := s.resourceAttrs
 		emitCtx := s.ctx
+		defaultProfile := s.defaultProfile
+		profilesByName := make(map[string]MappingProfile, len(ev.SubscriptionNames))
 		var subs []string
 		for _, name := range ev.SubscriptionNames {
-			if _, ok := s.specs[name]; ok {
-				subs = append(subs, name)
+			if _, ok := s.specs[name]; !ok {
+				continue
+			}
+			subs = append(subs, name)
+			if p, ok := s.profiles[name]; ok {
+				profilesByName[name] = p
+			} else {
+				profilesByName[name] = defaultProfile
 			}
 		}
 		s.mu.Unlock()
@@ -474,6 +555,7 @@ func (s *Subscriber) drainEvents(events <-chan NotificationEvent) {
 			emitCtx = context.Background()
 		}
 		for _, name := range subs {
+			profile := profilesByName[name]
 			ctx := mapper.EventContext{
 				Device:             s.deviceRef,
 				Subscription:       name,
@@ -487,8 +569,10 @@ func (s *Subscriber) drainEvents(events <-chan NotificationEvent) {
 				ResourceAttributes: resAttrs,
 				ReceiveTime:        time.Now(),
 			}
+			startProcessing := time.Now()
 			mapped := s.mapper.Process(ev.Notification, ctx)
 			if len(mapped) == 0 {
+				s.selfMetrics.RecordProcessingDuration(emitCtx, time.Since(startProcessing).Seconds(), s.deviceRef, name)
 				continue
 			}
 			if s.logsEmitter != nil {
@@ -505,6 +589,7 @@ func (s *Subscriber) drainEvents(events <-chan NotificationEvent) {
 				s.tracesEmitter.Emit(emitCtx, mapped)
 			}
 			s.recordMappedDrops(name, mapped)
+			s.selfMetrics.RecordProcessingDuration(emitCtx, time.Since(startProcessing).Seconds(), s.deviceRef, name)
 		}
 	}
 }

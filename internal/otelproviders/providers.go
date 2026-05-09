@@ -120,13 +120,32 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 		return nil, nil, fmt.Errorf("create OTLP log exporter: %w", err)
 	}
 
-	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(traceExp), sdktrace.WithResource(res))
+	// Explicit exporter boundary controls. SDK defaults silently drop sends
+	// under MDT-rate sustained load; pin queue depth, batch sizing, and
+	// export timeouts so behaviour is predictable across deployments.
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(traceExp,
+			sdktrace.WithMaxQueueSize(8192),
+			sdktrace.WithMaxExportBatchSize(512),
+			sdktrace.WithBatchTimeout(5*time.Second),
+			sdktrace.WithExportTimeout(30*time.Second),
+		),
+		sdktrace.WithResource(res),
+	)
 	mp := sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExp)),
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExp,
+			sdkmetric.WithInterval(15*time.Second),
+			sdkmetric.WithTimeout(30*time.Second),
+		)),
 		sdkmetric.WithResource(res),
 	)
 	lp := sdklog.NewLoggerProvider(
-		sdklog.WithProcessor(sdklog.NewBatchProcessor(logExp)),
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(logExp,
+			sdklog.WithMaxQueueSize(8192),
+			sdklog.WithExportMaxBatchSize(512),
+			sdklog.WithExportInterval(5*time.Second),
+			sdklog.WithExportTimeout(30*time.Second),
+		)),
 		sdklog.WithResource(res),
 	)
 

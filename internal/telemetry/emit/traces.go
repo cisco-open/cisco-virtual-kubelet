@@ -16,6 +16,7 @@ package emit
 
 import (
 	"context"
+	"math"
 	"sort"
 	"strings"
 	"sync"
@@ -43,6 +44,45 @@ type TracesEmitter struct {
 	rulesKey string
 
 	stateTransitionsTotal metric.Int64Counter
+	self                  *SelfMetrics
+
+	// Per-(rule path, entity) token bucket. Caps the rate of state-transition
+	// spans the emitter produces so a flapping route on 1000 BGP neighbors
+	// can't generate 1000 spans/oscillation. Drops counted in
+	// SelfMetrics.transitionsDropped.
+	rateMu      sync.Mutex
+	rateBuckets map[string]*tokenBucket
+}
+
+const (
+	defaultTransitionTokensPerMinute = 100
+	defaultTransitionBucketSize      = 100
+)
+
+type tokenBucket struct {
+	tokens     float64
+	last       time.Time
+	refillRate float64 // tokens per second
+	capacity   float64
+}
+
+// allow returns true when one token can be consumed; false when rate-limited.
+// Refill happens lazily on each call.
+func (b *tokenBucket) allow(now time.Time) bool {
+	if b.last.IsZero() {
+		b.last = now
+		b.tokens = b.capacity
+	}
+	elapsed := now.Sub(b.last).Seconds()
+	if elapsed > 0 {
+		b.tokens = math.Min(b.capacity, b.tokens+elapsed*b.refillRate)
+		b.last = now
+	}
+	if b.tokens >= 1 {
+		b.tokens--
+		return true
+	}
+	return false
 }
 
 func NewTracesEmitter(tracerProvider trace.TracerProvider, meterProvider metric.MeterProvider, transitions []configv1alpha1.Transition) *TracesEmitter {
@@ -59,7 +99,20 @@ func NewTracesEmitter(tracerProvider trace.TracerProvider, meterProvider metric.
 		tracker:               newTransitionTracker(transitions),
 		rulesKey:              transitionRulesKey(transitions),
 		stateTransitionsTotal: counter,
+		rateBuckets:           map[string]*tokenBucket{},
 	}
+}
+
+// WithSelfMetrics wires shared SelfMetrics so rate-limited transitions are
+// reported on cisco_vk_telemetry_transitions_dropped_total.
+func (e *TracesEmitter) WithSelfMetrics(self *SelfMetrics) *TracesEmitter {
+	if e == nil {
+		return e
+	}
+	e.mu.Lock()
+	e.self = self
+	e.mu.Unlock()
+	return e
 }
 
 func (e *TracesEmitter) SetTransitions(transitions []configv1alpha1.Transition) {
@@ -110,10 +163,44 @@ func (e *TracesEmitter) Emit(ctx context.Context, events []mapper.MappedEvent) i
 		if !out.recovered {
 			continue
 		}
+		if !e.allowSpan(out.rule.path, entityKey) {
+			e.recordTransitionDropped(ctx, event, out)
+			continue
+		}
 		e.emitRecoverySpan(ctx, event, out, ts)
 		emitted++
 	}
 	return emitted
+}
+
+// allowSpan returns true when the per-(rule, entity) token bucket has
+// capacity. Defaults: 100 tokens/min refill, 100-token capacity. Rate-limited
+// callers do not produce a span and are counted via
+// cisco_vk_telemetry_transitions_dropped_total.
+func (e *TracesEmitter) allowSpan(rulePath, entityKey string) bool {
+	key := rulePath + "\x00" + entityKey
+	e.rateMu.Lock()
+	defer e.rateMu.Unlock()
+	bucket := e.rateBuckets[key]
+	if bucket == nil {
+		bucket = &tokenBucket{
+			capacity:   defaultTransitionBucketSize,
+			refillRate: defaultTransitionTokensPerMinute / 60.0,
+		}
+		e.rateBuckets[key] = bucket
+	}
+	return bucket.allow(time.Now())
+}
+
+func (e *TracesEmitter) recordTransitionDropped(ctx context.Context, event mapper.MappedEvent, out transition) {
+	if e.self == nil {
+		return
+	}
+	e.self.IncTransitionsDropped(ctx,
+		attrValue(event.Resource, "device"),
+		attrValue(event.Resource, "subscription"),
+		out.rule.path,
+	)
 }
 
 func (e *TracesEmitter) emitRecoverySpan(ctx context.Context, event mapper.MappedEvent, out transition, end time.Time) {

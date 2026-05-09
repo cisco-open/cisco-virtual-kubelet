@@ -71,9 +71,21 @@ telemetry:
     # headers are serialized into OTEL_EXPORTER_OTLP_HEADERS for optional
     # collector metadata or auth headers.
     headers: {}
-  # yangModelsDir is propagated as YANG_MODELS_DIR for optional
-  # YANG-driven metric classification.
+  # yangModelsDir is the legacy in-image YANG path, propagated as
+  # YANG_MODELS_DIR. Prefer the yangModels block below for k8s-native
+  # delivery via a ConfigMap; this field stays for backward compatibility
+  # when the operator builds its own image with YANG files baked in.
   yangModelsDir: ""
+  # yangModels declares an optional ConfigMap-mounted YANG models directory.
+  # When configMapName is set the chart mounts that ConfigMap (read-only,
+  # optional) at mountPath on every controller and per-device pod, and
+  # YANG_MODELS_DIR is set to mountPath. Operators populate the ConfigMap
+  # from their own .yang sources (e.g. via `kubectl create configmap
+  # cvk-yang --from-file=./yang/`). Leave configMapName empty to use the
+  # legacy in-image yangModelsDir behavior.
+  yangModels:
+    configMapName: ""
+    mountPath: /var/lib/cvk/yang
   # resourceAttributes are serialized into CVK_RESOURCE_ATTRIBUTES and merged
   # into OTel resource attributes by the per-device VK process.
   resourceAttributes: {}
