@@ -33,7 +33,7 @@
       },
       "id": 100,
       "panels": [],
-      "title": "Application Hosting \u2014 per-container view",
+      "title": "Application Hosting fleet",
       "type": "row"
     },
     {
@@ -41,7 +41,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "One row per running app. health_status=0 typically means RUNNING. Use the $container variable below to drill into one app.",
+      "description": "One row per app on the device. Columns are pinned-resource-attribute values from the IOS-XE app-hosting-oper YANG tree (state, image type, version, package, network endpoint).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -70,7 +70,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "avg by (name) (last_over_time({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\"}[10m]))",
+          "expr": "group by (name, cisco_app_hosting_state, cisco_app_hosting_image_type, cisco_app_hosting_version, cisco_app_hosting_package_name, cisco_app_hosting_owner, cisco_app_hosting_profile, cisco_app_hosting_ipv4_address, cisco_app_hosting_mac_address, cisco_app_hosting_network_name, cisco_app_hosting_attached_interface) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\"})",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -101,15 +101,19 @@
               "otel_scope_version": true,
               "cisco_gnmi_origin": true,
               "cisco_gnmi_stream_id": true,
-              "cisco_device_timestamp": true
+              "cisco_device_timestamp": true,
+              "subscription": true,
+              "cisco_gnmi_path": true,
+              "device": true,
+              "Value": true
             },
             "renameByName": {
-              "Value": "health_status"
+              "Value": "value"
             }
           }
         }
       ],
-      "title": "Containers \u2014 overview (across all apps)",
+      "title": "All containers \u2014 pick one in the $container variable to drill down",
       "type": "table"
     },
     {
@@ -122,7 +126,7 @@
       },
       "id": 200,
       "panels": [],
-      "title": "Container details \u2014 $container",
+      "title": "$container \u2014 kubernetes-style metadata (sourced from MDT)",
       "type": "row"
     },
     {
@@ -130,7 +134,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "0 = APP_RUNNING per IOS-XE app-hosting state enum.",
+      "description": "DEPLOYED / RUNNING / STOPPED \u2014 IOS-XE app-hosting state machine.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -140,20 +144,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "blue",
                 "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 2
               }
             ]
-          },
-          "unit": "short"
+          }
         }
       },
       "gridPos": {
@@ -165,13 +160,15 @@
       "id": 210,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
-          "values": false
-        }
+          "fields": "/^cisco_app_hosting_state$/",
+          "values": true
+        },
+        "textMode": "value"
       },
       "targets": [
         {
@@ -179,12 +176,959 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "avg(last_over_time({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\"}[5m]))",
-          "refId": "A"
+          "expr": "group by (cisco_app_hosting_state) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\",cisco_app_hosting_state!=\"\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table"
         }
       ],
-      "title": "Health status",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cisco_app_hosting_state"
+              ]
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "cisco_app_hosting_state",
+            "renamePattern": "State"
+          }
+        }
+      ],
+      "title": "State",
       "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "PASSED if reservation request fit; FAILED if rejected.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 8
+      },
+      "id": 211,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^cisco_app_hosting_admission$/",
+          "values": true
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "group by (cisco_app_hosting_admission) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\",cisco_app_hosting_admission!=\"\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cisco_app_hosting_admission"
+              ]
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "cisco_app_hosting_admission",
+            "renamePattern": "Admission"
+          }
+        }
+      ],
+      "title": "Admission",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Running / Stopped \u2014 derived by IOS-XE from the container CPU scheduler view.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 8
+      },
+      "id": 212,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^cisco_app_hosting_cpu_state$/",
+          "values": true
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "group by (cisco_app_hosting_cpu_state) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\",cisco_app_hosting_cpu_state!=\"\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cisco_app_hosting_cpu_state"
+              ]
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "cisco_app_hosting_cpu_state",
+            "renamePattern": "CPU state"
+          }
+        }
+      ],
+      "title": "CPU state",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "docker / lxc / vm \u2014 package format.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 8
+      },
+      "id": 213,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^cisco_app_hosting_image_type$/",
+          "values": true
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "group by (cisco_app_hosting_image_type) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\",cisco_app_hosting_image_type!=\"\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cisco_app_hosting_image_type"
+              ]
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "cisco_app_hosting_image_type",
+            "renamePattern": "Image type"
+          }
+        }
+      ],
+      "title": "Image type",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "package-information/application/installed-version",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 8
+      },
+      "id": 214,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^cisco_app_hosting_version$/",
+          "values": true
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "group by (cisco_app_hosting_version) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\",cisco_app_hosting_version!=\"\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cisco_app_hosting_version"
+              ]
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "cisco_app_hosting_version",
+            "renamePattern": "Version"
+          }
+        }
+      ],
+      "title": "Version",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "activated-profile-name (default / custom / etc.)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 8
+      },
+      "id": 215,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^cisco_app_hosting_profile$/",
+          "values": true
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "group by (cisco_app_hosting_profile) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\",cisco_app_hosting_profile!=\"\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cisco_app_hosting_profile"
+              ]
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "cisco_app_hosting_profile",
+            "renamePattern": "Profile"
+          }
+        }
+      ],
+      "title": "Profile",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Primary IPv4 from app-hosting-oper-data/app/network-interfaces/network-interface.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 12
+      },
+      "id": 220,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^cisco_app_hosting_ipv4_address$/",
+          "values": true
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "group by (cisco_app_hosting_ipv4_address) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\",cisco_app_hosting_ipv4_address!=\"\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cisco_app_hosting_ipv4_address"
+              ]
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "cisco_app_hosting_ipv4_address",
+            "renamePattern": "Container IPv4"
+          }
+        }
+      ],
+      "title": "Container IPv4",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Primary MAC; this is the list-key of the network-interface entry on the device.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 12
+      },
+      "id": 221,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^cisco_app_hosting_mac_address$/",
+          "values": true
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "group by (cisco_app_hosting_mac_address) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\",cisco_app_hosting_mac_address!=\"\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cisco_app_hosting_mac_address"
+              ]
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "cisco_app_hosting_mac_address",
+            "renamePattern": "Container MAC"
+          }
+        }
+      ],
+      "title": "Container MAC",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "IOS-XE bridge the container is attached to (e.g., mgmt-bridge-v129).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 12
+      },
+      "id": 222,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^cisco_app_hosting_network_name$/",
+          "values": true
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "group by (cisco_app_hosting_network_name) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\",cisco_app_hosting_network_name!=\"\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cisco_app_hosting_network_name"
+              ]
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "cisco_app_hosting_network_name",
+            "renamePattern": "Network bridge"
+          }
+        }
+      ],
+      "title": "Network bridge",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Attached interface inside the container (eth0, etc.).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 12
+      },
+      "id": 223,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^cisco_app_hosting_attached_interface$/",
+          "values": true
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "group by (cisco_app_hosting_attached_interface) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\",cisco_app_hosting_attached_interface!=\"\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cisco_app_hosting_attached_interface"
+              ]
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "cisco_app_hosting_attached_interface",
+            "renamePattern": "Guest interface"
+          }
+        }
+      ],
+      "title": "Guest interface",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "package-information/name from app-hosting-oper-data/app/details.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 16
+      },
+      "id": 230,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^cisco_app_hosting_package_name$/",
+          "values": true
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "group by (cisco_app_hosting_package_name) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\",cisco_app_hosting_package_name!=\"\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cisco_app_hosting_package_name"
+              ]
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "cisco_app_hosting_package_name",
+            "renamePattern": "Package name"
+          }
+        }
+      ],
+      "title": "Package name",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "On-device package location (flash:/, usbflash1:/, etc.).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 8,
+        "y": 16
+      },
+      "id": 231,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^cisco_app_hosting_package_path$/",
+          "values": true
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "group by (cisco_app_hosting_package_path) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\",cisco_app_hosting_package_path!=\"\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cisco_app_hosting_package_path"
+              ]
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "cisco_app_hosting_package_path",
+            "renamePattern": "Package path"
+          }
+        }
+      ],
+      "title": "Package path",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Application owner \u2014 typically iox.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 16
+      },
+      "id": 232,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^cisco_app_hosting_owner$/",
+          "values": true
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "group by (cisco_app_hosting_owner) ({__name__=~\"cvk_app_hosting_app_name_.*_details_health_status\",name=~\"$container\",cisco_app_hosting_owner!=\"\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cisco_app_hosting_owner"
+              ]
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "cisco_app_hosting_owner",
+            "renamePattern": "Owner"
+          }
+        }
+      ],
+      "title": "Owner",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "id": 300,
+      "panels": [],
+      "title": "$container \u2014 resource utilization",
+      "type": "row"
     },
     {
       "datasource": {
@@ -210,12 +1154,12 @@
         }
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 4,
-        "x": 4,
-        "y": 8
+        "x": 0,
+        "y": 21
       },
-      "id": 211,
+      "id": 310,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -263,12 +1207,12 @@
         }
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 4,
-        "x": 8,
-        "y": 8
+        "x": 4,
+        "y": 21
       },
-      "id": 212,
+      "id": 311,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -289,7 +1233,7 @@
           "refId": "A"
         }
       ],
-      "title": "CPU reserved %",
+      "title": "CPU reserved (%)",
       "type": "stat"
     },
     {
@@ -309,6 +1253,14 @@
               {
                 "color": "blue",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1024
+              },
+              {
+                "color": "red",
+                "value": 4096
               }
             ]
           },
@@ -316,12 +1268,12 @@
         }
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 4,
-        "x": 12,
-        "y": 8
+        "x": 8,
+        "y": 21
       },
-      "id": 213,
+      "id": 312,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -342,7 +1294,60 @@
           "refId": "A"
         }
       ],
-      "title": "Memory reserved",
+      "title": "Memory allocated (MB)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "memory-util/memory-used (from MDT label)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 12,
+        "y": 21
+      },
+      "id": 313,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(group by (cisco_app_hosting_memory_used) ({__name__=~\"cvk_app_hosting_.*\",name=~\"$container\",cisco_app_hosting_memory_used!=\"\"}))",
+          "refId": "A"
+        }
+      ],
+      "title": "Memory used (KB)",
       "type": "stat"
     },
     {
@@ -369,12 +1374,12 @@
         }
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 4,
         "x": 16,
-        "y": 8
+        "y": 21
       },
-      "id": 214,
+      "id": 314,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -395,7 +1400,7 @@
           "refId": "A"
         }
       ],
-      "title": "Disk reserved",
+      "title": "Disk reserved (MB)",
       "type": "stat"
     },
     {
@@ -422,12 +1427,12 @@
         }
       },
       "gridPos": {
-        "h": 4,
+        "h": 5,
         "w": 4,
         "x": 20,
-        "y": 8
+        "y": 21
       },
-      "id": 215,
+      "id": 315,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -471,12 +1476,12 @@
         }
       },
       "gridPos": {
-        "h": 7,
-        "w": 8,
+        "h": 8,
+        "w": 12,
         "x": 0,
-        "y": 12
+        "y": 26
       },
-      "id": 220,
+      "id": 320,
       "options": {
         "legend": {
           "calcs": [
@@ -526,12 +1531,12 @@
         }
       },
       "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 8,
-        "y": 12
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
       },
-      "id": 221,
+      "id": 321,
       "options": {
         "legend": {
           "calcs": [
@@ -558,7 +1563,7 @@
           "refId": "A"
         }
       ],
-      "title": "$container disk used / capacity (MB)",
+      "title": "$container disk used vs capacity",
       "type": "timeseries"
     },
     {
@@ -577,61 +1582,6 @@
             "fillOpacity": 10,
             "lineWidth": 1
           },
-          "unit": "ops"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 12
-      },
-      "id": 222,
-      "options": {
-        "legend": {
-          "calcs": [
-            "last",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum by (__name__) (rate({__name__=~\"cvk_app_hosting_app_name_.*_storage_utils_storage_util_name_disk_(rd|wr)_(bytes|requests)\",name=~\"$container\"}[5m]))",
-          "legendFormat": "{{__name__}}",
-          "refId": "A"
-        }
-      ],
-      "title": "$container disk i/o rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Per-bridge RX byte rate. The bridge name is encoded in the metric name (e.g. mgmt_bridge_v129).",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1
-          },
           "unit": "Bps"
         }
       },
@@ -639,9 +1589,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 19
+        "y": 34
       },
-      "id": 230,
+      "id": 322,
       "options": {
         "legend": {
           "calcs": [
@@ -694,9 +1644,9 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 34
       },
-      "id": 231,
+      "id": 323,
       "options": {
         "legend": {
           "calcs": [
@@ -731,7 +1681,62 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Every published metric for the selected container. Network utils embed the bridge name (mgmt_bridge_v129); storage_utils embed the device name (disk).",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 42
+      },
+      "id": 324,
+      "options": {
+        "legend": {
+          "calcs": [
+            "last",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (__name__) (rate({__name__=~\"cvk_app_hosting_app_name_.*_storage_utils_storage_util_name_disk_(rd|wr)_(bytes|requests)\",name=~\"$container\"}[5m]))",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        }
+      ],
+      "title": "$container disk i/o (read/write requests/sec)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Every published numeric metric for the selected container.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -744,12 +1749,12 @@
         }
       },
       "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 27
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 42
       },
-      "id": 240,
+      "id": 325,
       "options": {
         "showHeader": true
       },
@@ -791,7 +1796,10 @@
               "otel_scope_version": true,
               "cisco_gnmi_origin": true,
               "cisco_gnmi_stream_id": true,
-              "cisco_device_timestamp": true
+              "cisco_device_timestamp": true,
+              "subscription": true,
+              "cisco_gnmi_path": true,
+              "device": true
             },
             "renameByName": {
               "Value": "value"
@@ -803,135 +1811,12 @@
       "type": "table"
     },
     {
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
-      },
-      "id": 300,
-      "panels": [],
-      "title": "AppGigabitEthernet + SVI traffic",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Aggregate of per-container per-bridge RX. AppGigabitEthernet1/0/1 isn't exposed via the OpenConfig schema on this device; the app-hosting subscription supplies the equivalent per-bridge byte counters.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1
-          },
-          "unit": "Bps"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 36
-      },
-      "id": 310,
-      "options": {
-        "legend": {
-          "calcs": [
-            "last",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "sum(rate({__name__=~\"cvk_app_hosting_app_name_.*_network_utils_.*_rx_bytes_total\"}[5m]))",
-          "legendFormat": "all-bridge RX",
-          "refId": "A"
-        }
-      ],
-      "title": "App-hosting bridge total RX rate (sum across containers)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "Vlan129 is the SVI L3 endpoint for the mgmt-bridge-v129 the apps live on.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1
-          },
-          "unit": "decbytes"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 36
-      },
-      "id": 311,
-      "options": {
-        "legend": {
-          "calcs": [
-            "last",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "increase({__name__=~\"interfaces_interface_name_Vlan129_state_counters_(in|out)_octets_total\"}[1m])",
-          "legendFormat": "{{__name__}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Vlan129 cumulative counters (host-side SVI for app traffic)",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 43
+        "y": 49
       },
       "id": 400,
       "panels": [],
@@ -974,7 +1859,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 44
+        "y": 50
       },
       "id": 410,
       "options": {
@@ -997,7 +1882,7 @@
           "refId": "A"
         }
       ],
-      "title": "Memory used %",
+      "title": "Switch memory used %",
       "type": "stat"
     },
     {
@@ -1031,7 +1916,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 44
+        "y": 50
       },
       "id": 411,
       "options": {
@@ -1054,7 +1939,7 @@
           "refId": "A"
         }
       ],
-      "title": "Critical alarms",
+      "title": "Switch critical alarms",
       "type": "stat"
     },
     {
@@ -1088,7 +1973,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 44
+        "y": 50
       },
       "id": 412,
       "options": {
@@ -1145,7 +2030,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 44
+        "y": 50
       },
       "id": 413,
       "options": {
@@ -1194,7 +2079,7 @@
         "h": 7,
         "w": 16,
         "x": 0,
-        "y": 48
+        "y": 54
       },
       "id": 420,
       "options": {
@@ -1223,7 +2108,7 @@
           "refId": "A"
         }
       ],
-      "title": "Temperature sensors (\u00b0C)",
+      "title": "Switch temperatures (\u00b0C)",
       "type": "timeseries"
     },
     {
@@ -1247,7 +2132,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 48
+        "y": 54
       },
       "id": 421,
       "options": {
@@ -1291,7 +2176,10 @@
               "otel_scope_version": true,
               "cisco_gnmi_origin": true,
               "cisco_gnmi_stream_id": true,
-              "cisco_device_timestamp": true
+              "cisco_device_timestamp": true,
+              "subscription": true,
+              "cisco_gnmi_path": true,
+              "device": true
             },
             "renameByName": {
               "Value": "value"
@@ -1303,12 +2191,12 @@
       "type": "table"
     },
     {
-      "collapsed": false,
+      "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 55
+        "y": 61
       },
       "id": 500,
       "panels": [],
@@ -1338,7 +2226,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 56
+        "y": 62
       },
       "id": 510,
       "options": {
@@ -1393,7 +2281,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 56
+        "y": 62
       },
       "id": 511,
       "options": {
@@ -1431,11 +2319,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 69
       },
       "id": 600,
       "panels": [],
-      "title": "Container log records (Phase 2 LogsEmitter)",
+      "title": "$container telemetry log records (Loki)",
       "type": "row"
     },
     {
@@ -1443,12 +2331,12 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "App-hosting string-leaf log records. Use the search box to filter by container/app name; entries carry the cisco_gnmi_path resource attribute identifying which leaf produced the record.",
+      "description": "All log records \u2014 string-leaves and Delete notifications \u2014 flowing from the cvk pod for any of its subscriptions. Use the Grafana log search bar to narrow further (e.g., '|= state').",
       "gridPos": {
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 64
+        "y": 70
       },
       "id": 610,
       "options": {
@@ -1471,7 +2359,7 @@
           "refId": "A"
         }
       ],
-      "title": "Loki \u2014 telemetry log stream filtered to $container",
+      "title": "Loki \u2014 cvk telemetry log stream filtered to $container",
       "type": "logs"
     },
     {
@@ -1480,7 +2368,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 76
+        "y": 82
       },
       "id": 700,
       "panels": [],
@@ -1492,12 +2380,12 @@
         "type": "jaeger",
         "uid": "jaeger"
       },
-      "description": "Phase 4 transition spans for state changes (e.g. interface oper-status flap, app health transitions).",
+      "description": "Phase 4 transition spans \u2014 fired on state changes (e.g., container health flap, interface oper-status change).",
       "gridPos": {
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 77
+        "y": 83
       },
       "id": 710,
       "options": {
@@ -1515,7 +2403,7 @@
           "refId": "A"
         }
       ],
-      "title": "Recent state-transition recovery spans",
+      "title": "State-transition recovery spans",
       "type": "table"
     }
   ],
@@ -1564,8 +2452,8 @@
           "refId": "container"
         },
         "hide": 0,
-        "includeAll": true,
-        "multi": true,
+        "includeAll": false,
+        "multi": false,
         "options": [],
         "refresh": 2,
         "regex": "",
@@ -1583,6 +2471,6 @@
   "timezone": "",
   "title": "CVK MDT-over-gNMI to OpenTelemetry \u2014 overview",
   "uid": "cvk-mdt-overview",
-  "version": 6,
+  "version": 7,
   "weekStart": ""
 }
