@@ -1,0 +1,494 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "End-to-end MELT view of Cisco Virtual Kubelet's MDT-over-gNMI to OpenTelemetry pipeline. Shows device-side gNMI counters, the CVK self-observability metrics that describe the pipeline's own health, log records flowing through the mapper, and Phase 4 transition spans. Designed for the IOSXETelemetry CRD + the otelproviders / mapper / classifier / emit packages introduced in PR #115.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "panels": [],
+      "title": "Pipeline overview",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Cumulative count of gNMI Subscribe Notification messages that the mapper has converted into MappedEvents.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "short"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 1},
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "sum(cisco_vk_telemetry_metric_points_emitted_total)",
+          "refId": "A"
+        }
+      ],
+      "title": "Total metric points emitted",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Counter resets detected by the metrics emitter (current sample lower than last sample). Phase 3 logic. Should be near zero except after a stream reconnect.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]},
+          "unit": "short"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 1},
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "sum(increase(cisco_vk_telemetry_counter_resets_total[5m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Counter resets (5m)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Distinct gNMI paths the classifier has mapped to OTel metric kinds.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "short"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 1},
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "count(group by (__name__) ({service_name=\"cisco-vk-telemetry\"}))",
+          "refId": "A"
+        }
+      ],
+      "title": "Distinct CVK metric names",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Active per-(device,subscription) cumulative-counter series in the OTel exporter.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "short"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 1},
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      },
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "count({service_name=\"cisco-vk-telemetry\"})",
+          "refId": "A"
+        }
+      ],
+      "title": "Active CVK series",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 5},
+      "id": 200,
+      "panels": [],
+      "title": "Per-device interface counters (gNMI from cat9k-smoke)",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Inbound octet counter rate per interface (gNMI cumulative-counter delta divided by sample period).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "octets/sec",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {"group": "A", "mode": "none"}
+          },
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "Bps"
+        }
+      },
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 6},
+      "id": 10,
+      "options": {
+        "legend": {"calcs": ["last", "max"], "displayMode": "table", "placement": "right", "showLegend": true},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "rate({__name__=~\"interfaces_interface_name_.*_state_counters_in_octets_total\",service_name=\"cisco-vk-telemetry\",cisco_device_name=~\"$device\"}[5m])",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        }
+      ],
+      "title": "in_octets rate (per interface)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Outbound octet counter rate per interface.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "octets/sec",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "stacking": {"group": "A", "mode": "none"}
+          },
+          "unit": "Bps"
+        }
+      },
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 6},
+      "id": 11,
+      "options": {
+        "legend": {"calcs": ["last", "max"], "displayMode": "table", "placement": "right", "showLegend": true},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "rate({__name__=~\"interfaces_interface_name_.*_state_counters_out_octets_total\",service_name=\"cisco-vk-telemetry\",cisco_device_name=~\"$device\"}[5m])",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        }
+      ],
+      "title": "out_octets rate (per interface)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Inbound discards/errors per interface.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisLabel": "errors/sec", "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1},
+          "unit": "ops"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 15},
+      "id": 12,
+      "options": {
+        "legend": {"calcs": ["last"], "displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "rate({__name__=~\"interfaces_interface_name_.*_state_counters_in_(errors|discards|fcs_errors)_total\",service_name=\"cisco-vk-telemetry\",cisco_device_name=~\"$device\"}[5m])",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Inbound errors / discards",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Inbound packet rates split by unicast / multicast / broadcast.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisLabel": "pkts/sec", "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1},
+          "unit": "pps"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 15},
+      "id": 13,
+      "options": {
+        "legend": {"calcs": ["last"], "displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "rate({__name__=~\"interfaces_interface_name_.*_state_counters_in_(unicast|multicast|broadcast)_pkts_total\",service_name=\"cisco-vk-telemetry\",cisco_device_name=~\"$device\"}[5m])",
+          "legendFormat": "{{__name__}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Inbound packet mix",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 23},
+      "id": 300,
+      "panels": [],
+      "title": "CVK pipeline self-metrics (mapper / emitter / classifier)",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Phase 3: classifier decisions broken out by kind. \"unclassified\" indicates paths that fell through to the gauge-default. High counts there suggest the curated registry needs more entries or the user should add metricTypeOverrides.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "bars", "fillOpacity": 60, "stacking": {"group": "A", "mode": "normal"}},
+          "unit": "short"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+      "id": 20,
+      "options": {
+        "legend": {"calcs": ["sum"], "displayMode": "table", "placement": "right", "showLegend": true},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "sum by (kind) (rate(cisco_vk_telemetry_classifier_decisions_total{cisco_device_name=~\"$device\"}[5m]))",
+          "legendFormat": "{{kind}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Classifier decisions by kind (rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Metric points emitted by the metrics emitter, broken out by gauge vs sum (cumulative counter delta).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "stacking": {"group": "A", "mode": "normal"}},
+          "unit": "short"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+      "id": 21,
+      "options": {
+        "legend": {"calcs": ["last", "sum"], "displayMode": "table", "placement": "right", "showLegend": true},
+        "tooltip": {"mode": "multi"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "sum by (kind) (rate(cisco_vk_telemetry_metric_points_emitted_total{cisco_device_name=~\"$device\"}[5m]))",
+          "legendFormat": "{{kind}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Metric points emitted by kind (rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Counter-reset events. Each event represents a sample whose cumulative counter went backwards (likely a stream restart). The metrics emitter logs the reset, suppresses the negative sample, and stores the new baseline.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "custom": {"drawStyle": "bars", "fillOpacity": 50, "lineWidth": 1},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}]},
+          "unit": "short"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+      "id": 22,
+      "options": {
+        "legend": {"calcs": ["sum"], "displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "sum by (metric) (rate(cisco_vk_telemetry_counter_resets_total{cisco_device_name=~\"$device\"}[5m]))",
+          "legendFormat": "{{metric}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Counter resets per metric (rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "List of all CVK-emitted metric series broken out by name. Useful for sanity-checking mapping output and the path-alias renames.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"align": "left", "displayMode": "auto"},
+          "mappings": []
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+      "id": 23,
+      "options": {"showHeader": true},
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "group by (__name__, cisco_device_name, cisco_interface_name) ({service_name=\"cisco-vk-telemetry\",cisco_device_name=~\"$device\"})",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Active CVK metric series",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 40},
+      "id": 400,
+      "panels": [],
+      "title": "Logs (Phase 2 string-leaf + Delete records)",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "description": "OTel LogRecords emitted by the Phase 2 LogsEmitter for non-numeric leaves (hostname, oper-status, sensor names, etc.) and gNMI Delete notifications. Each record carries device, subscription, and the resource attributes pinned by mapping.resourceAttributes.",
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 41},
+      "id": 30,
+      "options": {
+        "dedupStrategy": "none",
+        "enableInfiniteScrolling": false,
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "editorMode": "code",
+          "expr": "{service_name=\"cisco-vk-telemetry\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "CVK telemetry log stream",
+      "type": "logs"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 53},
+      "id": 500,
+      "panels": [],
+      "title": "Traces (Phase 4 state-transition spans)",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "jaeger", "uid": "jaeger"},
+      "description": "Phase 4 transition spans. Each span captures one unhealthy → healthy recovery interval for a path watched by spec.mapping.transitions. With stable interfaces this panel is empty (expected) until the next link flap.",
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 54},
+      "id": 40,
+      "options": {"showHeader": true},
+      "pluginVersion": "13.0.1",
+      "targets": [
+        {
+          "datasource": {"type": "jaeger", "uid": "jaeger"},
+          "queryType": "search",
+          "refId": "A",
+          "service": "cisco-vk-telemetry"
+        }
+      ],
+      "title": "Recent state-transition recovery spans (cisco-vk-telemetry)",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["cisco-vk", "mdt", "telemetry"],
+  "templating": {
+    "list": [
+      {
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "definition": "label_values({service_name=\"cisco-vk-telemetry\"}, cisco_device_name)",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
+        "name": "device",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values({service_name=\"cisco-vk-telemetry\"}, cisco_device_name)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-30m", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "CVK MDT-over-gNMI to OpenTelemetry — overview",
+  "uid": "cvk-mdt-overview",
+  "version": 1,
+  "weekStart": ""
+}
