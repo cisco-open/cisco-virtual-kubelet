@@ -45,27 +45,29 @@ type NotificationEvent struct {
 // SubscriptionState is the internal counter set projected into
 // IOSXETelemetry.status.observedSubscriptionState.
 type SubscriptionState struct {
-	Name             string
-	StreamID         StreamID
-	LastUpdate       *metav1.Time
-	MessagesReceived int64
-	DroppedEvents    map[string]int64
-	Reconnects       int64
-	CurrentBackoff   time.Duration
-	LastError        string
-	Running          bool
-	Failed           bool
+	Name              string
+	StreamID          StreamID
+	LastUpdate        *metav1.Time
+	MessagesReceived  int64
+	LogRecordsEmitted int64
+	DroppedEvents     map[string]int64
+	Reconnects        int64
+	CurrentBackoff    time.Duration
+	LastError         string
+	Running           bool
+	Failed            bool
 }
 
 func (s SubscriptionState) ToStatus() configv1alpha1.ObservedSubscriptionState {
 	out := configv1alpha1.ObservedSubscriptionState{
-		Name:             s.Name,
-		StreamID:         string(s.StreamID),
-		LastUpdate:       s.LastUpdate,
-		MessagesReceived: s.MessagesReceived,
-		Reconnects:       s.Reconnects,
-		CurrentBackoff:   metav1.Duration{Duration: s.CurrentBackoff},
-		LastError:        s.LastError,
+		Name:              s.Name,
+		StreamID:          string(s.StreamID),
+		LastUpdate:        s.LastUpdate,
+		MessagesReceived:  s.MessagesReceived,
+		LogRecordsEmitted: s.LogRecordsEmitted,
+		Reconnects:        s.Reconnects,
+		CurrentBackoff:    metav1.Duration{Duration: s.CurrentBackoff},
+		LastError:         s.LastError,
 	}
 	if len(s.DroppedEvents) > 0 {
 		out.DroppedEvents = make(map[string]int64, len(s.DroppedEvents))

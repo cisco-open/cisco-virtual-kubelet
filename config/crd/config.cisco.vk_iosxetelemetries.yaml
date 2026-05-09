@@ -375,6 +375,12 @@ spec:
                     lastUpdate:
                       format: date-time
                       type: string
+                    logRecordsEmitted:
+                      description: |-
+                        LogRecordsEmitted is the count of OTel LogRecords produced by the
+                        mapper-and-logs-emitter pipeline for this subscription. Phase 2.
+                      format: int64
+                      type: integer
                     messagesReceived:
                       format: int64
                       type: integer

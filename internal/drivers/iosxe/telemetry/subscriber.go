@@ -19,12 +19,24 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/go-logr/logr"
 	"google.golang.org/grpc"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
 )
+
+// MappingProfile carries spec-level mapping/output/cardinality/timestamp
+// configuration shared by every subscription on a Subscriber.
+type MappingProfile struct {
+	Mapping           *configv1alpha1.MappingConfig
+	Output            configv1alpha1.OutputConfig
+	CardinalityLimits *configv1alpha1.CardinalityLimits
+	Timestamps        *configv1alpha1.TimestampConfig
+}
 
 // Subscriber owns one telemetry gNMI client connection and all active
 // Subscribe RPCs for a CiscoDevice.
@@ -35,6 +47,10 @@ type Subscriber struct {
 
 	channelCapacity int
 	reconnect       *configv1alpha1.ReconnectConfig
+	mapper          *mapper.Mapper
+	logsEmitter     *emit.LogsEmitter
+	resourceAttrs   map[string]string
+	profile         MappingProfile
 
 	mu      sync.Mutex
 	ctx     context.Context
@@ -60,6 +76,49 @@ func WithChannelCapacity(capacity int) SubscriberOption {
 
 func WithReconnectConfig(cfg *configv1alpha1.ReconnectConfig) SubscriberOption {
 	return func(s *Subscriber) { s.reconnect = cfg }
+}
+
+// WithMapper attaches a Phase 2 Mapper. When nil, drainEvents is a no-op.
+func WithMapper(m *mapper.Mapper) SubscriberOption {
+	return func(s *Subscriber) { s.mapper = m }
+}
+
+// WithLogsEmitter attaches the OTel logs emitter that consumes mapped events
+// where Signal=logs.
+func WithLogsEmitter(e *emit.LogsEmitter) SubscriberOption {
+	return func(s *Subscriber) { s.logsEmitter = e }
+}
+
+// WithResourceAttributes seeds the per-event resource attributes (device,
+// service.name, etc.) added to every mapped record alongside the mapping
+// configured ResourceAttributes leaves.
+func WithResourceAttributes(attrs map[string]string) SubscriberOption {
+	return func(s *Subscriber) {
+		if attrs == nil {
+			return
+		}
+		s.resourceAttrs = make(map[string]string, len(attrs))
+		for k, v := range attrs {
+			s.resourceAttrs[k] = v
+		}
+	}
+}
+
+// WithMappingProfile installs the spec-level mapping configuration shared by
+// every subscription on this Subscriber.
+func WithMappingProfile(p MappingProfile) SubscriberOption {
+	return func(s *Subscriber) { s.profile = p }
+}
+
+// SetMappingProfile updates the active profile after Start. Safe for the
+// reconciler to call on each CR update.
+func (s *Subscriber) SetMappingProfile(p MappingProfile) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.profile = p
+	s.mu.Unlock()
 }
 
 func NewSubscriber(deviceRef string, factory SubscribeClientFactory, opts ...SubscriberOption) *Subscriber {
@@ -324,7 +383,80 @@ func (s *Subscriber) signalStateChanged() {
 	}
 }
 
+func (s *Subscriber) bumpLogRecords(name string, n int64) {
+	s.updateState(name, func(st *SubscriptionState) { st.LogRecordsEmitted += n })
+}
+
+func (s *Subscriber) recordMappedDrops(name string, events []mapper.MappedEvent) {
+	var drops map[string]int64
+	for _, ev := range events {
+		if ev.Signal != mapper.SignalKindDrop {
+			continue
+		}
+		if drops == nil {
+			drops = map[string]int64{}
+		}
+		reason := ev.DropReason
+		if reason == "" {
+			reason = "unknown"
+		}
+		drops[reason]++
+	}
+	if len(drops) == 0 {
+		return
+	}
+	s.updateState(name, func(st *SubscriptionState) {
+		if st.DroppedEvents == nil {
+			st.DroppedEvents = map[string]int64{}
+		}
+		for k, v := range drops {
+			st.DroppedEvents[k] += v
+		}
+	})
+}
+
 func (s *Subscriber) drainEvents(events <-chan NotificationEvent) {
-	for range events {
+	useMapper := s.mapper != nil
+	for ev := range events {
+		if !useMapper {
+			continue
+		}
+		s.mu.Lock()
+		profile := s.profile
+		resAttrs := s.resourceAttrs
+		emitCtx := s.ctx
+		var subs []string
+		for _, name := range ev.SubscriptionNames {
+			if _, ok := s.specs[name]; ok {
+				subs = append(subs, name)
+			}
+		}
+		s.mu.Unlock()
+		if emitCtx == nil {
+			emitCtx = context.Background()
+		}
+		for _, name := range subs {
+			ctx := mapper.EventContext{
+				Device:             s.deviceRef,
+				Subscription:       name,
+				StreamID:           string(ev.StreamID),
+				Mapping:            profile.Mapping,
+				Output:             profile.Output,
+				CardinalityLimits:  profile.CardinalityLimits,
+				Timestamps:         profile.Timestamps,
+				ResourceAttributes: resAttrs,
+				ReceiveTime:        time.Now(),
+			}
+			mapped := s.mapper.Process(ev.Notification, ctx)
+			if len(mapped) == 0 {
+				continue
+			}
+			if s.logsEmitter != nil {
+				if emitted := s.logsEmitter.Emit(emitCtx, mapped); emitted > 0 {
+					s.bumpLogRecords(name, int64(emitted))
+				}
+			}
+			s.recordMappedDrops(name, mapped)
+		}
 	}
 }

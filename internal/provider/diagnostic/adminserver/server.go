@@ -85,11 +85,34 @@ type Server struct {
 	DeviceName string
 	TP         TransportProvider
 
+	// TelemetrySource, if set, backs the GET /telemetry/health
+	// endpoint. Phase 2 wire-up: cmd/cisco-vk plumbs the
+	// IOSXETelemetryReconciler's snapshot accessor through here.
+	TelemetrySource func() TelemetryHealth
+
 	// BindAddr defaults to "127.0.0.1:8082". The plugin's
 	// kubectl-port-forward tunnel terminates here; the device-side
 	// listener is intentionally NOT bound to 0.0.0.0 so off-pod
 	// dial attempts fail at the kernel.
 	BindAddr string
+}
+
+// TelemetryHealth is the JSON payload returned by GET /telemetry/health.
+type TelemetryHealth struct {
+	Device        string                        `json:"device"`
+	Subscriptions []TelemetrySubscriptionHealth `json:"subscriptions"`
+}
+
+// TelemetrySubscriptionHealth is the per-subscription health projection.
+type TelemetrySubscriptionHealth struct {
+	Name              string `json:"name"`
+	Phase             string `json:"phase,omitempty"`
+	MessagesReceived  int64  `json:"messagesReceived"`
+	LogRecordsEmitted int64  `json:"logRecordsEmitted"`
+	Reconnects        int64  `json:"reconnects"`
+	StreamID          string `json:"streamID,omitempty"`
+	LastError         string `json:"lastError,omitempty"`
+	CurrentBackoff    string `json:"currentBackoff,omitempty"`
 }
 
 // Default values for unspecified fields.
@@ -104,7 +127,25 @@ func (s *Server) Handler() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", s.handleHealth)
 	mux.HandleFunc("/v1/exec", s.handleExec)
+	mux.HandleFunc("/telemetry/health", s.handleTelemetryHealth)
 	return mux
+}
+
+func (s *Server) handleTelemetryHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if s.TelemetrySource == nil {
+		_ = json.NewEncoder(w).Encode(TelemetryHealth{Device: s.DeviceName})
+		return
+	}
+	payload := s.TelemetrySource()
+	if payload.Device == "" {
+		payload.Device = s.DeviceName
+	}
+	_ = json.NewEncoder(w).Encode(payload)
 }
 
 // ListenAndServe binds + serves until ctx errors or the server

@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	otellog "go.opentelemetry.io/otel/log"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,6 +37,9 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
 )
 
 const (
@@ -50,6 +54,13 @@ type IOSXETelemetryReconciler struct {
 	Client     client.Client
 	DeviceName string
 	Factory    telemetry.SubscribeClientFactory
+
+	// Phase 2: OTel emitters wired through the subscriber's drainEvents
+	// pump. LoggerProvider is required for log emission; nil disables it.
+	LoggerProvider otellog.LoggerProvider
+	// ResourceAttrs are added to every mapped event's resource (alongside
+	// the per-CR Mapping.ResourceAttributes pinned leaves).
+	ResourceAttrs map[string]string
 
 	RootContext     context.Context
 	StatusEvents    chan event.GenericEvent
@@ -161,6 +172,12 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 
 	reconnect := defaultReconnect(cr.Spec.Reconnect)
 	sub.SetReconnectConfig(reconnect)
+	sub.SetMappingProfile(telemetry.MappingProfile{
+		Mapping:           cr.Spec.Mapping,
+		Output:            cr.Spec.Output,
+		CardinalityLimits: cr.Spec.CardinalityLimits,
+		Timestamps:        cr.Spec.Timestamps,
+	})
 	activeNames, allNames, err := r.applyDesired(req.NamespacedName, sub, &cr)
 	if err != nil {
 		base := cr.DeepCopy()
@@ -210,6 +227,64 @@ func statusPatchResult(err error) (reconcile.Result, error) {
 	return reconcile.Result{}, fmt.Errorf("status patch IOSXETelemetry: %w", err)
 }
 
+// TelemetryHealthSnapshot returns the per-subscription health summary that
+// backs the diagnostic adminserver's GET /telemetry/health endpoint. It
+// projects the subscriber's current StatusFor view onto the JSON shape.
+func (r *IOSXETelemetryReconciler) TelemetryHealthSnapshot() adminserver.TelemetryHealth {
+	r.mu.Lock()
+	sub := r.subscriber
+	owned := make(map[client.ObjectKey][]string, len(r.owned))
+	for k, names := range r.owned {
+		owned[k] = append([]string(nil), names...)
+	}
+	r.mu.Unlock()
+	out := adminserver.TelemetryHealth{Device: r.DeviceName}
+	if sub == nil {
+		return out
+	}
+	seen := map[string]bool{}
+	for _, names := range owned {
+		for _, name := range names {
+			if seen[name] {
+				continue
+			}
+			seen[name] = true
+			phase, states := sub.StatusFor([]string{name})
+			if len(states) == 0 {
+				continue
+			}
+			st := states[0]
+			out.Subscriptions = append(out.Subscriptions, adminserver.TelemetrySubscriptionHealth{
+				Name:              st.Name,
+				Phase:             phase,
+				MessagesReceived:  st.MessagesReceived,
+				LogRecordsEmitted: st.LogRecordsEmitted,
+				Reconnects:        st.Reconnects,
+				StreamID:          st.StreamID,
+				LastError:         st.LastError,
+				CurrentBackoff:    st.CurrentBackoff.Duration.String(),
+			})
+		}
+	}
+	sort.Slice(out.Subscriptions, func(i, j int) bool {
+		return out.Subscriptions[i].Name < out.Subscriptions[j].Name
+	})
+	return out
+}
+
+// subscriberResourceAttrs returns the per-device resource attributes that the
+// Subscriber pins onto every mapped event. The reconciler-level attrs
+// override / extend whatever the spec-level Mapping.ResourceAttributes sets.
+func (r *IOSXETelemetryReconciler) subscriberResourceAttrs() map[string]string {
+	out := map[string]string{
+		"cisco.device.name": r.DeviceName,
+	}
+	for k, v := range r.ResourceAttrs {
+		out[k] = v
+	}
+	return out
+}
+
 func (r *IOSXETelemetryReconciler) ensureSubscriber() (*telemetry.Subscriber, error) {
 	r.mu.Lock()
 	if r.subscriber != nil {
@@ -221,12 +296,16 @@ func (r *IOSXETelemetryReconciler) ensureSubscriber() (*telemetry.Subscriber, er
 	if root == nil {
 		root = context.Background()
 	}
-	sub := telemetry.NewSubscriber(
-		r.DeviceName,
-		r.Factory,
+	opts := []telemetry.SubscriberOption{
 		telemetry.WithLogger(crlog.Log.WithName("iosxetelemetry").WithValues("device", r.DeviceName)),
 		telemetry.WithChannelCapacity(r.ChannelCapacity),
-	)
+		telemetry.WithMapper(mapper.New()),
+		telemetry.WithLogsEmitter(emit.NewLogsEmitter(r.LoggerProvider)),
+	}
+	if attrs := r.subscriberResourceAttrs(); len(attrs) > 0 {
+		opts = append(opts, telemetry.WithResourceAttributes(attrs))
+	}
+	sub := telemetry.NewSubscriber(r.DeviceName, r.Factory, opts...)
 	r.subscriber = sub
 	if r.owned == nil {
 		r.owned = map[client.ObjectKey][]string{}

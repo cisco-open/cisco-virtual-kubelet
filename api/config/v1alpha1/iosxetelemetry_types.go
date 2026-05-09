@@ -272,6 +272,11 @@ type ObservedSubscriptionState struct {
 	// +optional
 	MessagesReceived int64 `json:"messagesReceived,omitempty"`
 
+	// LogRecordsEmitted is the count of OTel LogRecords produced by the
+	// mapper-and-logs-emitter pipeline for this subscription. Phase 2.
+	// +optional
+	LogRecordsEmitted int64 `json:"logRecordsEmitted,omitempty"`
+
 	// DroppedEvents is keyed by reason, for example buffer_overflow.
 	// +optional
 	DroppedEvents map[string]int64 `json:"droppedEvents,omitempty"`

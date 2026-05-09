@@ -314,11 +314,30 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	if err != nil {
 		return fmt.Errorf("telemetry subscriber factory: %w", err)
 	}
+	otelProviders, otelShutdown, err := buildTelemetryProviders(ctx, deviceName, opts)
+	if err != nil {
+		return fmt.Errorf("telemetry OTel providers: %w", err)
+	}
+	if otelShutdown != nil {
+		go func() {
+			<-ctx.Done()
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := otelShutdown(shutdownCtx); err != nil {
+				log.G(ctx).WithError(err).Warn("telemetry OTel providers shutdown error")
+			}
+		}()
+	}
 	telemetryEvents := make(chan event.GenericEvent, 1)
 	telemetryReconciler := &provider.IOSXETelemetryReconciler{
-		Client:       mgr.GetClient(),
-		DeviceName:   deviceName,
-		Factory:      telemetryFactory,
+		Client:         mgr.GetClient(),
+		DeviceName:     deviceName,
+		Factory:        telemetryFactory,
+		LoggerProvider: telemetryLoggerProvider(otelProviders),
+		ResourceAttrs: map[string]string{
+			"cisco.device.address": opts.Spec.Address,
+			"cisco.device.driver":  string(opts.Spec.Driver),
+		},
 		RootContext:  ctx,
 		StatusEvents: telemetryEvents,
 	}
@@ -338,9 +357,10 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	}
 	if adminAddr != "0" {
 		admSrv := &adminserver.Server{
-			DeviceName: deviceName,
-			TP:         r,
-			BindAddr:   adminAddr,
+			DeviceName:      deviceName,
+			TP:              r,
+			BindAddr:        adminAddr,
+			TelemetrySource: telemetryReconciler.TelemetryHealthSnapshot,
 		}
 		stop := make(chan struct{})
 		go func() {
