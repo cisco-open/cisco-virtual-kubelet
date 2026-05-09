@@ -74,6 +74,8 @@ const (
 	envOTELExporterOTLPHeaders  = "OTEL_EXPORTER_OTLP_HEADERS"
 	envYANGModelsDir            = "YANG_MODELS_DIR"
 	envCVKResourceAttributes    = "CVK_RESOURCE_ATTRIBUTES"
+	envCVKTelemetryInsecure     = "CISCO_VK_TELEMETRY_INSECURE"
+	envCVKTelemetryPort         = "CISCO_VK_TELEMETRY_PORT"
 )
 
 var telemetryEnvPropagationNames = []string{
@@ -82,6 +84,8 @@ var telemetryEnvPropagationNames = []string{
 	envOTELExporterOTLPHeaders,
 	envYANGModelsDir,
 	envCVKResourceAttributes,
+	envCVKTelemetryInsecure,
+	envCVKTelemetryPort,
 }
 
 // configPrereqsTeardownPollInterval is how often the deletion-finalizer path
