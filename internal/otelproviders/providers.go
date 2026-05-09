@@ -38,6 +38,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	// register the gzip compressor under the name "gzip" so OTLP exporters
+	// can request it via WithCompressor.
+	_ "google.golang.org/grpc/encoding/gzip"
 )
 
 const defaultShutdownTimeout = 5 * time.Second
