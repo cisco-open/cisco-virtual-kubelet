@@ -52,6 +52,7 @@ type Subscriber struct {
 	mapper          *mapper.Mapper
 	logsEmitter     *emit.LogsEmitter
 	metricsEmitter  *emit.MetricsEmitter
+	tracesEmitter   *emit.TracesEmitter
 	resourceAttrs   map[string]string
 	profile         MappingProfile
 
@@ -98,6 +99,12 @@ func WithMetricsEmitter(e *emit.MetricsEmitter) SubscriberOption {
 	return func(s *Subscriber) { s.metricsEmitter = e }
 }
 
+// WithTracesEmitter attaches the OTel traces emitter that consumes mapped
+// events where Signal=traces.
+func WithTracesEmitter(e *emit.TracesEmitter) SubscriberOption {
+	return func(s *Subscriber) { s.tracesEmitter = e }
+}
+
 // WithResourceAttributes seeds the per-event resource attributes (device,
 // service.name, etc.) added to every mapped record alongside the mapping
 // configured ResourceAttributes leaves.
@@ -127,7 +134,11 @@ func (s *Subscriber) SetMappingProfile(p MappingProfile) {
 	}
 	s.mu.Lock()
 	s.profile = p
+	tracesEmitter := s.tracesEmitter
 	s.mu.Unlock()
+	if tracesEmitter != nil {
+		tracesEmitter.SetTransitions(mappingTransitions(p.Mapping))
+	}
 }
 
 func NewSubscriber(deviceRef string, factory SubscribeClientFactory, opts ...SubscriberOption) *Subscriber {
@@ -476,7 +487,17 @@ func (s *Subscriber) drainEvents(events <-chan NotificationEvent) {
 					s.bumpMetricPoints(name, int64(emitted))
 				}
 			}
+			if s.tracesEmitter != nil {
+				s.tracesEmitter.Emit(emitCtx, mapped)
+			}
 			s.recordMappedDrops(name, mapped)
 		}
 	}
+}
+
+func mappingTransitions(mapping *configv1alpha1.MappingConfig) []configv1alpha1.Transition {
+	if mapping == nil {
+		return nil
+	}
+	return mapping.Transitions
 }

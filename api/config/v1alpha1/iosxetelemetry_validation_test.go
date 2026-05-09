@@ -101,6 +101,36 @@ func TestValidateIOSXETelemetrySpecRejectRules(t *testing.T) {
 			},
 			wantErr: "signal",
 		},
+		{
+			name: "transition path required",
+			mutate: func(s *IOSXETelemetrySpec) {
+				s.Mapping = &MappingConfig{Transitions: []Transition{{
+					HealthyValues:   []string{"up"},
+					UnhealthyValues: []string{"down"},
+				}}}
+			},
+			wantErr: "path",
+		},
+		{
+			name: "transition healthy values required",
+			mutate: func(s *IOSXETelemetrySpec) {
+				s.Mapping = &MappingConfig{Transitions: []Transition{{
+					Path:            "/interfaces/interface[name=*]/state/oper-status",
+					UnhealthyValues: []string{"down"},
+				}}}
+			},
+			wantErr: "healthyValues",
+		},
+		{
+			name: "transition unhealthy values required",
+			mutate: func(s *IOSXETelemetrySpec) {
+				s.Mapping = &MappingConfig{Transitions: []Transition{{
+					Path:          "/interfaces/interface[name=*]/state/oper-status",
+					HealthyValues: []string{"up"},
+				}}}
+			},
+			wantErr: "unhealthyValues",
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

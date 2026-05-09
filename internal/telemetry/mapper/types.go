@@ -100,3 +100,9 @@ func signalEnabled(output configv1alpha1.OutputConfig, signal SignalKind) bool {
 	}
 	return false
 }
+
+func transitionEventsEnabled(ctx EventContext) bool {
+	return ctx.Mapping != nil &&
+		len(ctx.Mapping.Transitions) > 0 &&
+		signalEnabled(ctx.Output, SignalKindTrace)
+}

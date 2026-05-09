@@ -45,15 +45,15 @@ type OTELTopologyExporter struct {
 	topo     drivers.TopologyProvider
 	config   *v1alpha1.OTELConfig
 	nodeName string
-	tp       *sdktrace.TracerProvider
+	tp       oteltrace.TracerProvider
+	ownedTP  *sdktrace.TracerProvider
 	tracer   oteltrace.Tracer
 }
 
-// NewOTELTopologyExporter creates a new exporter instance and initialises the
-// OTEL SDK TracerProvider with an otlptracegrpc span exporter.
-//
-// The caller is responsible for wiring the global OTEL TracerProvider and VK
-// trace adapter if desired (see run.go).
+// NewOTELTopologyExporter creates a new exporter instance. When tracerProvider
+// is nil it preserves the historical behavior by creating a device-specific
+// SDK TracerProvider from config; when non-nil it uses the shared provider and
+// leaves shutdown to the provider owner.
 func NewOTELTopologyExporter(
 	ctx context.Context,
 	driver drivers.CiscoKubernetesDeviceDriver,
@@ -61,58 +61,66 @@ func NewOTELTopologyExporter(
 	config *v1alpha1.OTELConfig,
 	nodeName string,
 	deviceAddress string,
+	tracerProvider oteltrace.TracerProvider,
 ) (*OTELTopologyExporter, error) {
-	// Build gRPC exporter options
-	grpcOpts := []otlptracegrpc.Option{
-		otlptracegrpc.WithEndpoint(config.Endpoint),
-	}
-	if config.Insecure {
-		grpcOpts = append(grpcOpts, otlptracegrpc.WithInsecure())
+	var ownedTP *sdktrace.TracerProvider
+	if tracerProvider == nil {
+		// Legacy fallback: topology owns a per-device provider with topology
+		// resource attributes. When a shared provider is supplied, those resource
+		// attributes come from otelproviders instead and this exporter only sets
+		// topology-specific span attributes.
+		grpcOpts := []otlptracegrpc.Option{
+			otlptracegrpc.WithEndpoint(config.Endpoint),
+		}
+		if config.Insecure {
+			grpcOpts = append(grpcOpts, otlptracegrpc.WithInsecure())
+		}
+
+		exporter, err := otlptracegrpc.New(ctx, grpcOpts...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OTLP gRPC exporter: %w", err)
+		}
+
+		serviceName := config.ServiceName
+		if serviceName == "" {
+			serviceName = "cisco-network"
+		}
+
+		res, err := sdkresource.New(ctx,
+			sdkresource.WithAttributes(
+				semconv.ServiceNameKey.String(fmt.Sprintf("%s.%s", serviceName, nodeName)),
+				semconv.ServiceNamespaceKey.String("network.infrastructure"),
+				attribute.String("host.name", nodeName),
+				attribute.String("device.address", deviceAddress),
+			),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OTEL resource: %w", err)
+		}
+
+		ownedTP = sdktrace.NewTracerProvider(
+			sdktrace.WithBatcher(exporter),
+			sdktrace.WithResource(res),
+		)
+		tracerProvider = ownedTP
 	}
 
-	exporter, err := otlptracegrpc.New(ctx, grpcOpts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OTLP gRPC exporter: %w", err)
-	}
-
-	serviceName := config.ServiceName
-	if serviceName == "" {
-		serviceName = "cisco-network"
-	}
-
-	// Build SDK resource with service identity
-	res, err := sdkresource.New(ctx,
-		sdkresource.WithAttributes(
-			semconv.ServiceNameKey.String(fmt.Sprintf("%s.%s", serviceName, nodeName)),
-			semconv.ServiceNamespaceKey.String("network.infrastructure"),
-			attribute.String("host.name", nodeName),
-			attribute.String("device.address", deviceAddress),
-		),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OTEL resource: %w", err)
-	}
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(res),
-	)
-
-	tracer := tp.Tracer("cisco-virtual-kubelet/topology")
+	tracer := tracerProvider.Tracer("cisco-virtual-kubelet/topology")
 
 	return &OTELTopologyExporter{
 		driver:   driver,
 		topo:     topo,
 		config:   config,
 		nodeName: nodeName,
-		tp:       tp,
+		tp:       tracerProvider,
+		ownedTP:  ownedTP,
 		tracer:   tracer,
 	}, nil
 }
 
-// TracerProvider returns the underlying SDK TracerProvider so callers can wire
-// it as the global OTEL provider.
-func (e *OTELTopologyExporter) TracerProvider() *sdktrace.TracerProvider {
+// TracerProvider returns the exporter TracerProvider so callers can wire it as
+// the global OTEL provider.
+func (e *OTELTopologyExporter) TracerProvider() oteltrace.TracerProvider {
 	return e.tp
 }
 
@@ -130,10 +138,12 @@ func (e *OTELTopologyExporter) Run(ctx context.Context) {
 	defer ticker.Stop()
 
 	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := e.tp.Shutdown(shutdownCtx); err != nil {
-			log.G(ctx).WithError(err).Warn("OTEL: TracerProvider shutdown error")
+		if e.ownedTP != nil {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := e.ownedTP.Shutdown(shutdownCtx); err != nil {
+				log.G(ctx).WithError(err).Warn("OTEL: TracerProvider shutdown error")
+			}
 		}
 		log.G(ctx).Info("OTEL topology exporter stopped")
 	}()

@@ -135,6 +135,70 @@ The metrics path registers these counters on `Providers.Meter`:
 `status.observedSubscriptionState[].metricPointsEmitted` and
 `GET /telemetry/health` report metric points emitted per subscription.
 
+## Phase 4 — YANG classification and transition traces
+
+Phase 4 adds optional YANG-driven metric classification, recovery spans
+for watched state transitions, and a shared trace provider path for
+topology spans.
+
+### YANG-driven classification
+
+When `YANG_MODELS_DIR` points at a directory of `.yang` files, the
+`cvk-<device>` process loads those modules once and compiles resolved
+leaf types into the metric classifier chain:
+
+```text
+OverrideClassifier(
+  spec.mapping.metricTypeOverrides,
+  YangClassifier(yangRegistry, fallback: CuratedClassifier()),
+)
+```
+
+The YANG loader resolves typedefs, imports, groupings, uses, leaves,
+leaf-lists, containers, and lists. Types named `counter32` or
+`counter64` classify as `sum`; integer, unsigned integer, decimal64,
+string, and enumeration leaves classify as `gauge`. Unknown or
+unresolved paths fall through to the curated classifier, so users
+without `YANG_MODELS_DIR` keep the Phase 3 behavior.
+
+YANG lookups are memoized in a bounded registry cache. The default cap
+is 4096 compiled `(module, leafPath)` lookups; on cap hit, the cache
+resets all entries rather than doing per-entry LRU eviction.
+
+### State-transition spans
+
+`spec.mapping.transitions` declares state leaves to watch. The mapper
+emits trace candidate events for those paths when `output.signal`
+includes `traces`. The `TracesEmitter` tracks each `(path, key-set)`
+independently:
+
+- healthy → unhealthy records the observation timestamp
+- unhealthy → healthy emits a span from the latest unhealthy
+  observation to the healthy observation
+- healthy-only observations do not emit spans
+
+Recovery span names use `state.transition.<aliasedName>`. Span
+attributes include `from-state`, `to-state`, `duration`,
+`cisco.gnmi.path`, and the path keys such as interface `name`.
+
+The emitter also records
+`cisco_vk_telemetry_state_transitions_total` on `Providers.Meter` with
+`device`, `subscription`, `path`, `from`, and `to` attributes.
+
+### Topology trace consolidation
+
+The topology exporter now accepts a shared `trace.TracerProvider`.
+When the MDT telemetry provider stack exists, topology spans use
+`otelproviders.Providers.Tracer` and keep their own instrumentation
+scope, `cisco-virtual-kubelet/topology`. When no shared provider is
+available, the exporter preserves the older behavior and builds its own
+per-device OTLP trace provider from `device.otel`.
+
+When topology uses the shared provider, endpoint, TLS, headers, and
+shutdown are owned by `internal/otelproviders`; topology-specific data
+remains on span attributes and scope name rather than a separate
+topology-only resource.
+
 ## Phase 2 example
 
 ```yaml
@@ -227,9 +291,66 @@ spec:
       - metrics
 ```
 
-## What's still deferred
+## Phase 4 example
 
-- Trace spans for state transitions (BGP up/down, link flap) — Phase 4
-- RFC 6020/7950 YANG parser — Phase 4
-- Topology trace exporter consolidation onto the shared
-  `otelproviders` stack — Phase 4
+```yaml
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXETelemetry
+metadata:
+  name: c9300x-full-otel
+  namespace: network
+spec:
+  deviceRef:
+    name: c9300x-01
+  subscriptions:
+    - name: interface-counters
+      enabled: true
+      origin: openconfig
+      paths:
+        - /interfaces/interface/state
+        - /interfaces/interface/state/counters
+      mode: STREAM
+      streamMode: SAMPLE
+      sampleInterval: 30s
+      encoding: PROTO
+    - name: bgp-state
+      enabled: true
+      paths:
+        - /network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state/session-state
+      mode: STREAM
+      streamMode: ON_CHANGE
+      encoding: PROTO
+  mapping:
+    pathAliases:
+      - prefix: /interfaces/interface/state
+        rename: oc.interface.state
+      - prefix: /network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state
+        rename: oc.bgp.neighbor.state
+    transitions:
+      - path: /interfaces/interface[name=*]/state/oper-status
+        healthyValues:
+          - UP
+        unhealthyValues:
+          - DOWN
+          - LOWER_LAYER_DOWN
+      - path: /network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor[neighbor-address=*]/state/session-state
+        healthyValues:
+          - ESTABLISHED
+        unhealthyValues:
+          - IDLE
+          - ACTIVE
+          - CONNECT
+    metricTypeOverrides:
+      - prefix: /interfaces/interface/state/counters
+        type: sum
+  output:
+    signal:
+      - logs
+      - metrics
+      - traces
+```
+
+## Future work
+
+- Add curated transition presets for common IOS-XE and OpenConfig
+  operational state paths.

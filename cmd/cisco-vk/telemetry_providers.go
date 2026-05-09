@@ -21,6 +21,7 @@ import (
 
 	otellog "go.opentelemetry.io/otel/log"
 	otelmetric "go.opentelemetry.io/otel/metric"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/otelproviders"
 )
@@ -72,4 +73,15 @@ func telemetryMeterProvider(p *otelproviders.Providers) otelmetric.MeterProvider
 		return nil
 	}
 	return p.Meter
+}
+
+// telemetryTracerProvider returns the TracerProvider from the optional
+// Providers value built by buildTelemetryProviders. Returns nil when no
+// providers were constructed; the TracesEmitter handles a nil provider with a
+// noop fallback.
+func telemetryTracerProvider(p *otelproviders.Providers) oteltrace.TracerProvider {
+	if p == nil {
+		return nil
+	}
+	return p.Tracer
 }

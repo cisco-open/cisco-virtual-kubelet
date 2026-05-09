@@ -23,6 +23,7 @@ import (
 
 	otellog "go.opentelemetry.io/otel/log"
 	otelmetric "go.opentelemetry.io/otel/metric"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,6 +43,7 @@ import (
 	metricclassifier "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/classifier"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
+	telemetryyang "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/yang"
 )
 
 const (
@@ -63,9 +65,15 @@ type IOSXETelemetryReconciler struct {
 	// MeterProvider is required for metric emission and telemetry self-metrics;
 	// nil disables them via the MetricsEmitter noop fallback.
 	MeterProvider otelmetric.MeterProvider
+	// TracerProvider is required for transition trace spans; nil uses the
+	// TracesEmitter noop fallback.
+	TracerProvider oteltrace.TracerProvider
 	// ResourceAttrs are added to every mapped event's resource (alongside
 	// the per-CR Mapping.ResourceAttributes pinned leaves).
 	ResourceAttrs map[string]string
+	// YangRegistry enables YANG-driven metric classification when configured.
+	// Nil preserves the curated classifier behavior.
+	YangRegistry *telemetryyang.Registry
 
 	RootContext     context.Context
 	StatusEvents    chan event.GenericEvent
@@ -179,7 +187,7 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 	sub.SetReconnectConfig(reconnect)
 	sub.SetMappingProfile(telemetry.MappingProfile{
 		Mapping:           cr.Spec.Mapping,
-		Classifier:        telemetryClassifier(cr.Spec.Mapping),
+		Classifier:        telemetryClassifier(cr.Spec.Mapping, r.YangRegistry),
 		Output:            cr.Spec.Output,
 		CardinalityLimits: cr.Spec.CardinalityLimits,
 		Timestamps:        cr.Spec.Timestamps,
@@ -309,6 +317,7 @@ func (r *IOSXETelemetryReconciler) ensureSubscriber() (*telemetry.Subscriber, er
 		telemetry.WithMapper(mapper.New()),
 		telemetry.WithLogsEmitter(emit.NewLogsEmitter(r.LoggerProvider)),
 		telemetry.WithMetricsEmitter(emit.NewMetricsEmitter(r.MeterProvider)),
+		telemetry.WithTracesEmitter(emit.NewTracesEmitter(r.TracerProvider, r.MeterProvider, nil)),
 	}
 	if attrs := r.subscriberResourceAttrs(); len(attrs) > 0 {
 		opts = append(opts, telemetry.WithResourceAttributes(attrs))
@@ -332,8 +341,11 @@ func (r *IOSXETelemetryReconciler) ensureSubscriber() (*telemetry.Subscriber, er
 	return sub, nil
 }
 
-func telemetryClassifier(mapping *configv1alpha1.MappingConfig) metricclassifier.Classifier {
+func telemetryClassifier(mapping *configv1alpha1.MappingConfig, registry *telemetryyang.Registry) metricclassifier.Classifier {
 	base := metricclassifier.CuratedClassifier()
+	if registry != nil {
+		base = telemetryyang.NewClassifier(registry, base)
+	}
 	if mapping == nil || len(mapping.MetricTypeOverrides) == 0 {
 		return base
 	}

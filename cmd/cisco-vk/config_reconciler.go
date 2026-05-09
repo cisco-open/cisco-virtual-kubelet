@@ -58,9 +58,11 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry"
+	"github.com/cisco/virtual-kubelet-cisco/internal/otelproviders"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver"
+	telemetryyang "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/yang"
 )
 
 // configReconcilerOptions is what startConfigReconciler needs from the
@@ -72,6 +74,9 @@ type configReconcilerOptions struct {
 	// SessionLock optionally serialises config-driver traffic
 	// against the apphosting driver. Recommended in production.
 	SessionLock *sync.Mutex
+	// TelemetryProviders optionally carries the per-device OTel providers built
+	// by run.go so topology and MDT telemetry share endpoint configuration.
+	TelemetryProviders *otelproviders.Providers
 }
 
 // startConfigReconciler builds a controller-runtime client, asks
@@ -314,9 +319,14 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	if err != nil {
 		return fmt.Errorf("telemetry subscriber factory: %w", err)
 	}
-	otelProviders, otelShutdown, err := buildTelemetryProviders(ctx, deviceName, opts)
-	if err != nil {
-		return fmt.Errorf("telemetry OTel providers: %w", err)
+	otelProviders := opts.TelemetryProviders
+	var otelShutdown func(context.Context) error
+	if otelProviders == nil {
+		var err error
+		otelProviders, otelShutdown, err = buildTelemetryProviders(ctx, deviceName, opts)
+		if err != nil {
+			return fmt.Errorf("telemetry OTel providers: %w", err)
+		}
 	}
 	if otelShutdown != nil {
 		go func() {
@@ -328,6 +338,11 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 			}
 		}()
 	}
+	yangRegistry, err := telemetryyang.NewRegistryFromEnv()
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("YANG registry unavailable; using curated telemetry classifier fallback")
+		yangRegistry = nil
+	}
 	telemetryEvents := make(chan event.GenericEvent, 1)
 	telemetryReconciler := &provider.IOSXETelemetryReconciler{
 		Client:         mgr.GetClient(),
@@ -335,6 +350,8 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		Factory:        telemetryFactory,
 		LoggerProvider: telemetryLoggerProvider(otelProviders),
 		MeterProvider:  telemetryMeterProvider(otelProviders),
+		TracerProvider: telemetryTracerProvider(otelProviders),
+		YangRegistry:   yangRegistry,
 		ResourceAttrs: map[string]string{
 			"cisco.device.address": opts.Spec.Address,
 			"cisco.device.driver":  string(opts.Spec.Driver),

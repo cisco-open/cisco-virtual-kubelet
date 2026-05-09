@@ -78,7 +78,22 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 			out = append(out, *drop)
 			continue
 		}
-		if body, ok := logScalarValue(update.GetVal()); ok && signalEnabled(ctx.Output, SignalKindLog) {
+		if body, ok := typedValueString(update.GetVal()); ok && transitionEventsEnabled(ctx) {
+			out = append(out, MappedEvent{
+				Signal:        SignalKindTrace,
+				Name:          name,
+				Attributes:    attrs,
+				Resource:      baseResource,
+				Timestamp:     timestamp,
+				Body:          body,
+				CanonicalPath: canonical,
+				SeriesKey:     BuildSeriesKey(ctx.Subscription, canonical, keys),
+			})
+		}
+		if body, ok := logScalarValue(update.GetVal()); ok {
+			if !signalEnabled(ctx.Output, SignalKindLog) {
+				continue
+			}
 			out = append(out, MappedEvent{
 				Signal:        SignalKindLog,
 				Name:          name,
@@ -122,6 +137,22 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 		if drop := m.evaluate(ctx, filter, canonical, name, keys, baseResource, attrs, timestamp); drop != nil {
 			out = append(out, *drop)
 			continue
+		}
+		if !signalEnabled(ctx.Output, SignalKindLog) {
+			if !transitionEventsEnabled(ctx) {
+				continue
+			}
+		}
+		if transitionEventsEnabled(ctx) {
+			out = append(out, MappedEvent{
+				Signal:        SignalKindTrace,
+				Name:          name,
+				Attributes:    attrs,
+				Resource:      baseResource,
+				Timestamp:     timestamp,
+				CanonicalPath: canonical,
+				SeriesKey:     BuildSeriesKey(ctx.Subscription, canonical, keys),
+			})
 		}
 		if !signalEnabled(ctx.Output, SignalKindLog) {
 			continue

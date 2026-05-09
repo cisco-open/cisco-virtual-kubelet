@@ -183,9 +183,30 @@ type MappingConfig struct {
 	// +optional
 	MetricTypeOverrides []MetricTypeOverride `json:"metricTypeOverrides,omitempty"`
 	// +optional
+	Transitions []Transition `json:"transitions,omitempty"`
+	// +optional
 	ResourceAttributes []ResourceAttribute `json:"resourceAttributes,omitempty"`
 	// +optional
 	Filter *FilterConfig `json:"filter,omitempty"`
+}
+
+// Transition declares a watched state leaf and the values that bound an
+// unhealthy interval.
+type Transition struct {
+	// Path is the canonical telemetry path to watch.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Path string `json:"path"`
+
+	// HealthyValues are leaf values that close an unhealthy interval.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	HealthyValues []string `json:"healthyValues"`
+
+	// UnhealthyValues are leaf values that open an unhealthy interval.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	UnhealthyValues []string `json:"unhealthyValues"`
 }
 
 // FilterConfig carries allow/deny rules for mapper stages.

@@ -261,6 +261,23 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	eventBroadcaster.StartRecordingToSink(&typedv1.EventSinkImpl{Interface: clientset.CoreV1().Events("")})
 	eventRecorder := eventBroadcaster.NewRecorder(clientgoscheme.Scheme, v1.EventSource{Component: "cisco-virtual-kubelet"})
 
+	telemetryProviders, telemetryShutdown, err := buildTelemetryProviders(ctx, effectiveNodeName, configReconcilerOptions{
+		Spec: &appCfg.Device,
+	})
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("telemetry OTel providers unavailable; continuing with signal-specific fallbacks")
+	}
+	if telemetryShutdown != nil {
+		go func() {
+			<-ctx.Done()
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := telemetryShutdown(shutdownCtx); err != nil {
+				log.G(ctx).WithError(err).Warn("telemetry OTel providers shutdown error")
+			}
+		}()
+	}
+
 	newProviderFunc := func(vkCfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
 		// Create a single shared driver for both node and pod handlers
 		sharedDriver, err := drivers.NewDriver(ctx, &appCfg.Device)
@@ -273,7 +290,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		// Start OTEL topology exporter if configured and the driver supports topology
 		if appCfg.Device.OTEL != nil && appCfg.Device.OTEL.Enabled && appCfg.Device.OTEL.Endpoint != "" {
 			if topo, ok := sharedDriver.(drivers.TopologyProvider); ok {
-				otelExporter, otelErr := provider.NewOTELTopologyExporter(ctx, sharedDriver, topo, appCfg.Device.OTEL, effectiveNodeName, appCfg.Device.Address)
+				otelExporter, otelErr := provider.NewOTELTopologyExporter(ctx, sharedDriver, topo, appCfg.Device.OTEL, effectiveNodeName, appCfg.Device.Address, telemetryTracerProvider(telemetryProviders))
 				if otelErr != nil {
 					log.G(ctx).WithError(otelErr).Warn("Failed to initialise OTEL topology exporter, continuing without it")
 				} else {
@@ -346,8 +363,9 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	if v := os.Getenv("DISABLE_IN_POD_CONFIG_RECONCILER"); v == "true" || v == "1" {
 		log.G(ctx).Info("DISABLE_IN_POD_CONFIG_RECONCILER set; skipping in-pod ConfigReconciler (aggregator-mode topology)")
 	} else if err := startConfigReconciler(ctx, kubeconfigCfg, effectiveNodeName, configReconcilerOptions{
-		Spec:     &appCfg.Device,
-		Password: appCfg.Device.Password,
+		Spec:               &appCfg.Device,
+		Password:           appCfg.Device.Password,
+		TelemetryProviders: telemetryProviders,
 	}); err != nil {
 		log.G(ctx).WithError(err).Warn("IOSXEConfig reconciler not started; continuing without declarative config")
 	}

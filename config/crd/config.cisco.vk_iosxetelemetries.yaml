@@ -155,6 +155,36 @@ spec:
                           type: string
                       type: object
                     type: array
+                  transitions:
+                    items:
+                      description: |-
+                        Transition declares a watched state leaf and the values that bound an
+                        unhealthy interval.
+                      properties:
+                        healthyValues:
+                          description: HealthyValues are leaf values that close an
+                            unhealthy interval.
+                          items:
+                            type: string
+                          minItems: 1
+                          type: array
+                        path:
+                          description: Path is the canonical telemetry path to watch.
+                          minLength: 1
+                          type: string
+                        unhealthyValues:
+                          description: UnhealthyValues are leaf values that open an
+                            unhealthy interval.
+                          items:
+                            type: string
+                          minItems: 1
+                          type: array
+                      required:
+                      - healthyValues
+                      - path
+                      - unhealthyValues
+                      type: object
+                    type: array
                 type: object
               output:
                 description: Output declares the desired signal families.

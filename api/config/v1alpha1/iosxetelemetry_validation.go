@@ -103,5 +103,19 @@ func ValidateIOSXETelemetrySpec(spec *IOSXETelemetrySpec) field.ErrorList {
 			))
 		}
 	}
+	if spec.Mapping != nil {
+		for i, transition := range spec.Mapping.Transitions {
+			p := root.Child("mapping").Child("transitions").Index(i)
+			if transition.Path == "" {
+				errs = append(errs, field.Required(p.Child("path"), "path is required"))
+			}
+			if len(transition.HealthyValues) == 0 {
+				errs = append(errs, field.Required(p.Child("healthyValues"), "at least one healthy value is required"))
+			}
+			if len(transition.UnhealthyValues) == 0 {
+				errs = append(errs, field.Required(p.Child("unhealthyValues"), "at least one unhealthy value is required"))
+			}
+		}
+	}
 	return errs
 }
