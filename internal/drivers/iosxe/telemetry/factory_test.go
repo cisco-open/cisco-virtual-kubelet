@@ -83,3 +83,55 @@ func TestGNMIConfigFromDeviceSpecTLSDefaults(t *testing.T) {
 		})
 	}
 }
+
+func TestGNMIConfigFromDeviceSpecTelemetryOverrides(t *testing.T) {
+	t.Run("CISCO_VK_TELEMETRY_INSECURE forces insecure", func(t *testing.T) {
+		t.Setenv("CISCO_VK_TELEMETRY_INSECURE", "1")
+		spec := &ciskov1.DeviceSpec{
+			Address:  "10.0.0.1",
+			Port:     443,
+			Username: "admin",
+			TLS:      &ciskov1.TLSConfig{Enabled: true, InsecureSkipVerify: true},
+		}
+		cfg, err := GNMIConfigFromDeviceSpec(spec, "pw")
+		if err != nil {
+			t.Fatalf("GNMIConfigFromDeviceSpec: %v", err)
+		}
+		if cfg.Port != 50052 {
+			t.Errorf("port=%d, want 50052 (insecure default)", cfg.Port)
+		}
+		if cfg.TLSConfig != nil {
+			t.Error("TLSConfig should be nil when CISCO_VK_TELEMETRY_INSECURE forces insecure")
+		}
+	})
+	t.Run("CISCO_VK_TELEMETRY_PORT pins explicit port", func(t *testing.T) {
+		t.Setenv("CISCO_VK_TELEMETRY_PORT", "50052")
+		t.Setenv("CISCO_VK_TELEMETRY_INSECURE", "1")
+		spec := &ciskov1.DeviceSpec{
+			Address:  "10.0.0.1",
+			Port:     443,
+			Username: "admin",
+			TLS:      &ciskov1.TLSConfig{Enabled: true, InsecureSkipVerify: true},
+		}
+		cfg, err := GNMIConfigFromDeviceSpec(spec, "pw")
+		if err != nil {
+			t.Fatalf("GNMIConfigFromDeviceSpec: %v", err)
+		}
+		if cfg.Port != 50052 {
+			t.Errorf("port=%d, want 50052 (explicit override)", cfg.Port)
+		}
+	})
+	t.Run("no override preserves spec defaults", func(t *testing.T) {
+		spec := &ciskov1.DeviceSpec{
+			Address: "10.0.0.1", Port: 443, Username: "admin",
+			TLS: &ciskov1.TLSConfig{Enabled: true, InsecureSkipVerify: true},
+		}
+		cfg, err := GNMIConfigFromDeviceSpec(spec, "pw")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Port != 9339 || cfg.TLSConfig == nil {
+			t.Errorf("expected gNMI-secure 9339+TLS, got port=%d TLS=%v", cfg.Port, cfg.TLSConfig != nil)
+		}
+	})
+}

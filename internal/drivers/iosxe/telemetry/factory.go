@@ -20,6 +20,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
 	"google.golang.org/grpc"
@@ -72,7 +75,21 @@ func GNMIConfigFromDeviceSpec(spec *ciskov1.DeviceSpec, password string) (transp
 		return transport.GNMIConfig{}, errors.New("telemetry factory: CiscoDevice.spec.address empty")
 	}
 	tlsEnabled := spec.TLS != nil && spec.TLS.Enabled
+	// Telemetry-path TLS override. CISCO_VK_TELEMETRY_INSECURE forces the
+	// telemetry gNMI client to dial the insecure listener regardless of the
+	// CiscoDevice.spec.tls setting that drives the config-driver's RESTCONF
+	// transport. CISCO_VK_TELEMETRY_PORT pins an explicit port. Both knobs
+	// exist so operators can route telemetry through gnxi-server on 50052
+	// while leaving RESTCONF/NETCONF on TLS for the config-driver.
+	if v := os.Getenv("CISCO_VK_TELEMETRY_INSECURE"); v == "1" || strings.EqualFold(v, "true") {
+		tlsEnabled = false
+	}
 	port := spec.Port
+	if v := os.Getenv("CISCO_VK_TELEMETRY_PORT"); v != "" {
+		if p, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && p > 0 {
+			port = p
+		}
+	}
 	if port == 0 || port == 80 || port == 443 {
 		if tlsEnabled {
 			port = 9339
