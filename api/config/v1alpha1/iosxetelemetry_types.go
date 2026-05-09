@@ -104,6 +104,16 @@ type TelemetrySubscription struct {
 	// +optional
 	Origin string `json:"origin,omitempty"`
 
+	// PreservePathPrefix keeps the YANG module prefix on the first PathElem
+	// name instead of lifting it into Path.Origin. Set true for IOS-XE native
+	// YANG paths (Cisco-IOS-XE-*-oper / Cisco-IOS-XE-*-cfg) — IOS-XE gnxi
+	// rejects those module names as Path.Origin and expects the prefix to
+	// stay on the element (RFC 7951 module-qualified form). Leave unset
+	// (default false) for OpenConfig paths where the openconfig-* prefix
+	// canonically lives in Path.Origin.
+	// +optional
+	PreservePathPrefix *bool `json:"preservePathPrefix,omitempty"`
+
 	// Mode is restricted to STREAM in v1alpha1.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Enum=STREAM

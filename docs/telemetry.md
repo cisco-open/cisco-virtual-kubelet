@@ -18,6 +18,16 @@ The `IOSXETelemetry` CRD declares MDT-over-gNMI subscriptions for one
 - Reconnect with exponential backoff (spec.reconnect)
 - Per-stream `Path.Origin` populated from path syntax (first element's
   YANG-module prefix) or the explicit `subscriptions[].origin` field
+- `subscriptions[].preservePathPrefix` keeps the module prefix on the first
+  `PathElem.Name` instead of lifting it into `Path.Origin`. Required for
+  IOS-XE native YANG paths because IOS-XE gnxi rejects `Cisco-IOS-XE-*`
+  values as `Path.Origin` and instead expects RFC 7951-style
+  module-qualified element names. Leave unset for OpenConfig paths.
+
+  | Path style | spec.subscriptions[] |
+  |---|---|
+  | OpenConfig | `paths: ["/interfaces/interface/state"]` and `origin: openconfig` |
+  | IOS-XE native | `paths: ["/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/apps"]` and `preservePathPrefix: true` |
 
 ## Phase 2 — Mapper, log emission, and OTel provider stack
 

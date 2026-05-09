@@ -1615,6 +1615,11 @@ func (in *TelemetrySubscription) DeepCopyInto(out *TelemetrySubscription) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.PreservePathPrefix != nil {
+		in, out := &in.PreservePathPrefix, &out.PreservePathPrefix
+		*out = new(bool)
+		**out = **in
+	}
 	out.SampleInterval = in.SampleInterval
 	if in.HeartbeatInterval != nil {
 		in, out := &in.HeartbeatInterval, &out.HeartbeatInterval

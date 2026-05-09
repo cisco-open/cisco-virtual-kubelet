@@ -188,3 +188,68 @@ func streamManagerTestSubscription(sampleInterval time.Duration) configv1alpha1.
 		Encoding:       configv1alpha1.TelemetryEncodingProto,
 	}
 }
+
+func TestParsePathPreservePrefix(t *testing.T) {
+	cases := []struct {
+		name       string
+		path       string
+		opts       parsePathOpts
+		wantOrigin string
+		wantElems  []string
+	}{
+		{
+			name:       "iosxe native preserves module prefix on element",
+			path:       "/Cisco-IOS-XE-environment-oper:environment-sensors/environment-sensor",
+			opts:       parsePathOpts{PreservePathPrefix: true},
+			wantOrigin: "",
+			wantElems:  []string{"Cisco-IOS-XE-environment-oper:environment-sensors", "environment-sensor"},
+		},
+		{
+			name:       "iosxe native with explicit empty origin override stays empty",
+			path:       "/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/apps",
+			opts:       parsePathOpts{PreservePathPrefix: true, HasOriginOverride: true, OriginOverride: ""},
+			wantOrigin: "",
+			wantElems:  []string{"Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data", "apps"},
+		},
+		{
+			name:       "iosxe native with rfc7951 origin pin",
+			path:       "/Cisco-IOS-XE-environment-oper:environment-sensors",
+			opts:       parsePathOpts{PreservePathPrefix: true, HasOriginOverride: true, OriginOverride: "rfc7951"},
+			wantOrigin: "rfc7951",
+			wantElems:  []string{"Cisco-IOS-XE-environment-oper:environment-sensors"},
+		},
+		{
+			name:       "openconfig path with preserve still keeps prefix on element",
+			path:       "/openconfig-interfaces:interfaces/interface",
+			opts:       parsePathOpts{PreservePathPrefix: true},
+			wantOrigin: "",
+			wantElems:  []string{"openconfig-interfaces:interfaces", "interface"},
+		},
+		{
+			name:       "default behavior still extracts prefix to origin",
+			path:       "/openconfig-interfaces:interfaces/interface",
+			opts:       parsePathOpts{},
+			wantOrigin: "openconfig-interfaces",
+			wantElems:  []string{"interfaces", "interface"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := parsePathWithOpts(tc.path, tc.opts)
+			if err != nil {
+				t.Fatalf("parsePathWithOpts: %v", err)
+			}
+			if got.GetOrigin() != tc.wantOrigin {
+				t.Fatalf("origin=%q, want %q", got.GetOrigin(), tc.wantOrigin)
+			}
+			if len(got.GetElem()) != len(tc.wantElems) {
+				t.Fatalf("elems=%v, want %v", got.GetElem(), tc.wantElems)
+			}
+			for i, want := range tc.wantElems {
+				if got.GetElem()[i].GetName() != want {
+					t.Fatalf("elem[%d]=%q, want %q", i, got.GetElem()[i].GetName(), want)
+				}
+			}
+		})
+	}
+}

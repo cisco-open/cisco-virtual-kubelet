@@ -381,7 +381,17 @@ func buildStreamSubscriptions(
 	for _, sub := range ordered {
 		subNames = append(subNames, sub.Name)
 		for _, path := range sub.Paths {
-			gpath, _ := parsePath(path, sub.Origin)
+			opts := parsePathOpts{
+				PreservePathPrefix: sub.PreservePathPrefix != nil && *sub.PreservePathPrefix,
+			}
+			// Origin is a plain string; we treat any non-default value as an
+			// explicit override so users can pin Path.Origin to "" by setting
+			// origin: "" in the CR (rare but legal for RFC 7951 paths).
+			if sub.Origin != "" || sub.PreservePathPrefix != nil {
+				opts.OriginOverride = sub.Origin
+				opts.HasOriginOverride = true
+			}
+			gpath, _ := parsePathWithOpts(path, opts)
 			subscriptions = append(subscriptions, &gpb.Subscription{
 				Path:              gpath,
 				Mode:              subscriptionModeEnum(sub),
@@ -474,14 +484,48 @@ func encodingEnum(encoding string) gpb.Encoding {
 	}
 }
 
+// parsePathOpts tunes parsePath's handling of the leading YANG module prefix.
+type parsePathOpts struct {
+	// OriginOverride pins gNMI Path.Origin to a specific value. An empty
+	// string disables prefix-to-origin extraction without setting an origin.
+	OriginOverride string
+	// HasOriginOverride is true when the caller passed an explicit
+	// OriginOverride (including the empty string), distinguishing
+	// "no preference" from "deliberately empty".
+	HasOriginOverride bool
+	// PreservePathPrefix keeps the leading YANG module prefix on the first
+	// PathElem name instead of stripping it. Required for IOS-XE native YANG
+	// paths whose gnxi server rejects Cisco-IOS-XE-* as a Path.Origin value.
+	PreservePathPrefix bool
+}
+
+// parsePath converts a slash-delimited path string into a gNMI Path. The
+// variadic originOverride matches the prior call shape and preserves the
+// historical semantics: a non-empty override pins Path.Origin; an empty or
+// missing override falls back to module-prefix auto-extraction. Callers
+// needing the explicit-empty-override behavior use parsePathWithOpts.
 func parsePath(p string, originOverride ...string) (*gpb.Path, error) {
-	p = strings.TrimSpace(p)
-	var explicitOrigin string
+	opts := parsePathOpts{}
 	if len(originOverride) > 0 {
-		explicitOrigin = strings.TrimSpace(originOverride[0])
+		v := strings.TrimSpace(originOverride[0])
+		if v != "" {
+			opts.OriginOverride = v
+			opts.HasOriginOverride = true
+		}
 	}
+	return parsePathWithOpts(p, opts)
+}
+
+// parsePathWithOpts is the full-fidelity parser. The caller controls origin
+// extraction and prefix preservation via parsePathOpts.
+func parsePathWithOpts(p string, opts parsePathOpts) (*gpb.Path, error) {
+	p = strings.TrimSpace(p)
 	if p == "" || p == "/" {
-		return &gpb.Path{Origin: explicitOrigin}, nil
+		out := &gpb.Path{}
+		if opts.HasOriginOverride {
+			out.Origin = opts.OriginOverride
+		}
+		return out, nil
 	}
 	p = strings.TrimPrefix(p, "/")
 	out := &gpb.Path{}
@@ -490,18 +534,21 @@ func parsePath(p string, originOverride ...string) (*gpb.Path, error) {
 		if raw == "" {
 			continue
 		}
-		elem, origin, err := parsePathElem(raw, firstElem)
+		// PreservePathPrefix → leave the module prefix on the element name
+		// and never auto-extract it into Path.Origin.
+		extractPrefix := firstElem && !opts.PreservePathPrefix
+		elem, inferredOrigin, err := parsePathElem(raw, extractPrefix)
 		if err != nil {
 			return nil, err
 		}
-		if firstElem && explicitOrigin == "" {
-			out.Origin = origin
+		if firstElem && !opts.HasOriginOverride && !opts.PreservePathPrefix {
+			out.Origin = inferredOrigin
 		}
 		out.Elem = append(out.Elem, elem)
 		firstElem = false
 	}
-	if explicitOrigin != "" {
-		out.Origin = explicitOrigin
+	if opts.HasOriginOverride {
+		out.Origin = opts.OriginOverride
 	}
 	return out, nil
 }
