@@ -40,9 +40,9 @@ const (
 	TelemetrySignalTraces  = "traces"
 )
 
-// IOSXETelemetrySpec declares MDT-over-gNMI subscriptions for one
-// CiscoDevice. Phase 1 opens and drains gNMI Subscribe streams and reports
-// lifecycle/status; metric/log/trace emission is intentionally deferred.
+// IOSXETelemetrySpec declares MDT-over-gNMI subscriptions for one CiscoDevice.
+// The subscriber maps telemetry notifications to OpenTelemetry logs and
+// metrics; trace emission is deferred.
 type IOSXETelemetrySpec struct {
 	// DeviceRef targets the CiscoDevice this telemetry stream applies to.
 	// +kubebuilder:validation:Required
@@ -59,23 +59,21 @@ type IOSXETelemetrySpec struct {
 	// +optional
 	Reconnect *ReconnectConfig `json:"reconnect,omitempty"`
 
-	// CardinalityLimits bounds future mapper output. Present in Phase 1 for
-	// API compatibility; the Phase 1 reconciler does not map series.
+	// CardinalityLimits bounds mapper output.
 	// +optional
 	CardinalityLimits *CardinalityLimits `json:"cardinalityLimits,omitempty"`
 
-	// Timestamps controls whether collector receive time is used later in the
-	// mapping pipeline. Phase 1 records the API field only.
+	// Timestamps controls whether collector receive time is used in the mapping
+	// pipeline.
 	// +optional
 	Timestamps *TimestampConfig `json:"timestamps,omitempty"`
 
-	// Mapping carries future path-to-signal mapping controls. Phase 1 stores
-	// the struct but does not execute mapping, filtering, or classification.
+	// Mapping carries path-to-signal mapping, filtering, and classification
+	// controls.
 	// +optional
 	Mapping *MappingConfig `json:"mapping,omitempty"`
 
-	// Output declares the desired signal families. Phase 1 validates and stores
-	// the setting only; emission is deferred to later phases.
+	// Output declares the desired signal families.
 	Output OutputConfig `json:"output"`
 }
 
@@ -154,8 +152,7 @@ type ReconnectConfig struct {
 	MaxRetries int32 `json:"maxRetries,omitempty"`
 }
 
-// CardinalityLimits bounds future mapper output. Phase 1 records and
-// validates the values but does not create time series.
+// CardinalityLimits bounds mapper output.
 type CardinalityLimits struct {
 	// MaxSeriesPerSubscription is the per-subscription series cap.
 	// +kubebuilder:default=10000
@@ -170,7 +167,7 @@ type CardinalityLimits struct {
 	OnExceeded string `json:"onExceeded,omitempty"`
 }
 
-// TimestampConfig controls timestamp source selection for future mapping.
+// TimestampConfig controls timestamp source selection for mapping.
 type TimestampConfig struct {
 	// UseCollectorTimestamp defaults true in Phase 1.
 	// +kubebuilder:default=true
@@ -178,8 +175,8 @@ type TimestampConfig struct {
 	UseCollectorTimestamp *bool `json:"useCollectorTimestamp,omitempty"`
 }
 
-// MappingConfig is intentionally unused by the Phase 1 reconciler. It is
-// present so users can author manifests against the stable v1alpha1 shape.
+// MappingConfig carries mapper controls for aliases, metric type overrides,
+// resource attributes, and filters.
 type MappingConfig struct {
 	// +optional
 	PathAliases []PathAlias `json:"pathAliases,omitempty"`
@@ -191,7 +188,7 @@ type MappingConfig struct {
 	Filter *FilterConfig `json:"filter,omitempty"`
 }
 
-// FilterConfig carries allow/deny rules for future mapper stages.
+// FilterConfig carries allow/deny rules for mapper stages.
 type FilterConfig struct {
 	// +optional
 	WirePath *FilterRules `json:"wirePath,omitempty"`
@@ -207,13 +204,13 @@ type FilterRules struct {
 	Deny []string `json:"deny,omitempty"`
 }
 
-// PathAlias renames future mapped metric paths by prefix.
+// PathAlias renames mapped telemetry paths by prefix.
 type PathAlias struct {
 	Prefix string `json:"prefix,omitempty"`
 	Rename string `json:"rename,omitempty"`
 }
 
-// MetricTypeOverride pins a future mapped metric type for a path prefix.
+// MetricTypeOverride pins a mapped metric type for a path prefix.
 type MetricTypeOverride struct {
 	Prefix string `json:"prefix,omitempty"`
 
@@ -237,7 +234,7 @@ type OutputConfig struct {
 }
 
 // IOSXETelemetryStatus reports subscriber lifecycle and per-subscription
-// counters surfaced by the Phase 1 stream manager.
+// counters surfaced by the stream manager and emitters.
 type IOSXETelemetryStatus struct {
 	// Phase summarises the CR's lifecycle state.
 	// +kubebuilder:validation:Enum=Pending;Streaming;Degraded;Failed
@@ -276,6 +273,11 @@ type ObservedSubscriptionState struct {
 	// mapper-and-logs-emitter pipeline for this subscription. Phase 2.
 	// +optional
 	LogRecordsEmitted int64 `json:"logRecordsEmitted,omitempty"`
+
+	// MetricPointsEmitted is the count of OTel metric points produced by the
+	// mapper-and-metrics-emitter pipeline for this subscription. Phase 3.
+	// +optional
+	MetricPointsEmitted int64 `json:"metricPointsEmitted,omitempty"`
 
 	// DroppedEvents is keyed by reason, for example buffer_overflow.
 	// +optional

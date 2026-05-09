@@ -22,6 +22,7 @@ import (
 	"time"
 
 	otellog "go.opentelemetry.io/otel/log"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,6 +39,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver"
+	metricclassifier "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/classifier"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
 )
@@ -55,9 +57,12 @@ type IOSXETelemetryReconciler struct {
 	DeviceName string
 	Factory    telemetry.SubscribeClientFactory
 
-	// Phase 2: OTel emitters wired through the subscriber's drainEvents
-	// pump. LoggerProvider is required for log emission; nil disables it.
+	// OTel emitters are wired through the subscriber's drainEvents pump.
+	// LoggerProvider is required for log emission; nil disables it.
 	LoggerProvider otellog.LoggerProvider
+	// MeterProvider is required for metric emission and telemetry self-metrics;
+	// nil disables them via the MetricsEmitter noop fallback.
+	MeterProvider otelmetric.MeterProvider
 	// ResourceAttrs are added to every mapped event's resource (alongside
 	// the per-CR Mapping.ResourceAttributes pinned leaves).
 	ResourceAttrs map[string]string
@@ -174,6 +179,7 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 	sub.SetReconnectConfig(reconnect)
 	sub.SetMappingProfile(telemetry.MappingProfile{
 		Mapping:           cr.Spec.Mapping,
+		Classifier:        telemetryClassifier(cr.Spec.Mapping),
 		Output:            cr.Spec.Output,
 		CardinalityLimits: cr.Spec.CardinalityLimits,
 		Timestamps:        cr.Spec.Timestamps,
@@ -255,14 +261,15 @@ func (r *IOSXETelemetryReconciler) TelemetryHealthSnapshot() adminserver.Telemet
 			}
 			st := states[0]
 			out.Subscriptions = append(out.Subscriptions, adminserver.TelemetrySubscriptionHealth{
-				Name:              st.Name,
-				Phase:             phase,
-				MessagesReceived:  st.MessagesReceived,
-				LogRecordsEmitted: st.LogRecordsEmitted,
-				Reconnects:        st.Reconnects,
-				StreamID:          st.StreamID,
-				LastError:         st.LastError,
-				CurrentBackoff:    st.CurrentBackoff.Duration.String(),
+				Name:                st.Name,
+				Phase:               phase,
+				MessagesReceived:    st.MessagesReceived,
+				LogRecordsEmitted:   st.LogRecordsEmitted,
+				MetricPointsEmitted: st.MetricPointsEmitted,
+				Reconnects:          st.Reconnects,
+				StreamID:            st.StreamID,
+				LastError:           st.LastError,
+				CurrentBackoff:      st.CurrentBackoff.Duration.String(),
 			})
 		}
 	}
@@ -301,6 +308,7 @@ func (r *IOSXETelemetryReconciler) ensureSubscriber() (*telemetry.Subscriber, er
 		telemetry.WithChannelCapacity(r.ChannelCapacity),
 		telemetry.WithMapper(mapper.New()),
 		telemetry.WithLogsEmitter(emit.NewLogsEmitter(r.LoggerProvider)),
+		telemetry.WithMetricsEmitter(emit.NewMetricsEmitter(r.MeterProvider)),
 	}
 	if attrs := r.subscriberResourceAttrs(); len(attrs) > 0 {
 		opts = append(opts, telemetry.WithResourceAttributes(attrs))
@@ -322,6 +330,14 @@ func (r *IOSXETelemetryReconciler) ensureSubscriber() (*telemetry.Subscriber, er
 	}
 	r.startStateBridge(root, sub)
 	return sub, nil
+}
+
+func telemetryClassifier(mapping *configv1alpha1.MappingConfig) metricclassifier.Classifier {
+	base := metricclassifier.CuratedClassifier()
+	if mapping == nil || len(mapping.MetricTypeOverrides) == 0 {
+		return base
+	}
+	return metricclassifier.OverrideClassifier(mapping.MetricTypeOverrides, base)
 }
 
 func (r *IOSXETelemetryReconciler) startStateBridge(root context.Context, sub *telemetry.Subscriber) {

@@ -86,8 +86,8 @@ type Server struct {
 	TP         TransportProvider
 
 	// TelemetrySource, if set, backs the GET /telemetry/health
-	// endpoint. Phase 2 wire-up: cmd/cisco-vk plumbs the
-	// IOSXETelemetryReconciler's snapshot accessor through here.
+	// endpoint. cmd/cisco-vk plumbs the IOSXETelemetryReconciler's snapshot
+	// accessor through here.
 	TelemetrySource func() TelemetryHealth
 
 	// BindAddr defaults to "127.0.0.1:8082". The plugin's
@@ -105,14 +105,15 @@ type TelemetryHealth struct {
 
 // TelemetrySubscriptionHealth is the per-subscription health projection.
 type TelemetrySubscriptionHealth struct {
-	Name              string `json:"name"`
-	Phase             string `json:"phase,omitempty"`
-	MessagesReceived  int64  `json:"messagesReceived"`
-	LogRecordsEmitted int64  `json:"logRecordsEmitted"`
-	Reconnects        int64  `json:"reconnects"`
-	StreamID          string `json:"streamID,omitempty"`
-	LastError         string `json:"lastError,omitempty"`
-	CurrentBackoff    string `json:"currentBackoff,omitempty"`
+	Name                string `json:"name"`
+	Phase               string `json:"phase,omitempty"`
+	MessagesReceived    int64  `json:"messagesReceived"`
+	LogRecordsEmitted   int64  `json:"logRecordsEmitted"`
+	MetricPointsEmitted int64  `json:"metricPointsEmitted"`
+	Reconnects          int64  `json:"reconnects"`
+	StreamID            string `json:"streamID,omitempty"`
+	LastError           string `json:"lastError,omitempty"`
+	CurrentBackoff      string `json:"currentBackoff,omitempty"`
 }
 
 // Default values for unspecified fields.

@@ -20,6 +20,7 @@ import (
 	"strconv"
 
 	otellog "go.opentelemetry.io/otel/log"
+	otelmetric "go.opentelemetry.io/otel/metric"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/otelproviders"
 )
@@ -29,11 +30,11 @@ import (
 // CVK-self metrics. Endpoint and TLS controls follow the standard
 // OpenTelemetry SDK environment-variable contract:
 //
-//   OTEL_EXPORTER_OTLP_ENDPOINT      (e.g. otelcol.observability:4317)
-//   OTEL_EXPORTER_OTLP_INSECURE      ("true" disables TLS; default false)
+//	OTEL_EXPORTER_OTLP_ENDPOINT      (e.g. otelcol.observability:4317)
+//	OTEL_EXPORTER_OTLP_INSECURE      ("true" disables TLS; default false)
 //
-// When the endpoint is unset Phase 2 returns a nil Providers value and
-// emission is suppressed (LogsEmitter falls back to a noop provider).
+// When the endpoint is unset this returns a nil Providers value and emission
+// is suppressed by noop emitter fallbacks.
 func buildTelemetryProviders(ctx context.Context, deviceName string, opts configReconcilerOptions) (*otelproviders.Providers, func(context.Context) error, error) {
 	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	if endpoint == "" {
@@ -61,4 +62,14 @@ func telemetryLoggerProvider(p *otelproviders.Providers) otellog.LoggerProvider 
 		return nil
 	}
 	return p.Logger
+}
+
+// telemetryMeterProvider returns the MeterProvider from the optional Providers
+// value built by buildTelemetryProviders. Returns nil when no providers were
+// constructed; the MetricsEmitter handles a nil provider with a noop fallback.
+func telemetryMeterProvider(p *otelproviders.Providers) otelmetric.MeterProvider {
+	if p == nil {
+		return nil
+	}
+	return p.Meter
 }

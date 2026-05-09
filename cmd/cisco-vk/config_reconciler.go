@@ -334,6 +334,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		DeviceName:     deviceName,
 		Factory:        telemetryFactory,
 		LoggerProvider: telemetryLoggerProvider(otelProviders),
+		MeterProvider:  telemetryMeterProvider(otelProviders),
 		ResourceAttrs: map[string]string{
 			"cisco.device.address": opts.Spec.Address,
 			"cisco.device.driver":  string(opts.Spec.Driver),

@@ -120,7 +120,7 @@ const ForceRelinquishSkipAnnotation = "config.cisco.vk/force-relinquish-skip"
 // prune set to {priorOwned ∪ desired} = {priorOwned}, so only this
 // CR's owned keys are deleted; baseline state is left alone.
 //
-// Codex /codex:adversarial-review (2026-05-02) follow-ups:
+// Review follow-ups from 2026-05-02:
 //
 //	B1 — Use AcquireIfFree, NOT Acquire. The takeover-capable
 //	     Acquire would let a deleting CR claim a foreign lease whose

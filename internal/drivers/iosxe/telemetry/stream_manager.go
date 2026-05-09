@@ -44,6 +44,7 @@ type StreamManager struct {
 
 	mu         sync.Mutex
 	generation int64
+	epoch      uint64
 	subs       map[string]configv1alpha1.TelemetrySubscription
 	streams    map[bucketKey]*streamHandle
 	wg         sync.WaitGroup
@@ -233,6 +234,7 @@ func (m *StreamManager) openAndDrain(ctx context.Context, h *streamHandle) error
 	}); err != nil {
 		return fmt.Errorf("gnmi Subscribe send: %w", err)
 	}
+	epoch := m.nextEpoch()
 	for _, name := range h.subNames {
 		m.updateState(name, func(st *SubscriptionState) {
 			st.StreamID = h.id
@@ -268,6 +270,7 @@ func (m *StreamManager) openAndDrain(ctx context.Context, h *streamHandle) error
 		}
 		event := NotificationEvent{
 			StreamID:          h.id,
+			StreamEpoch:       epoch,
 			SubscriptionNames: names,
 			Notification:      notif,
 			Path:              path,
@@ -311,6 +314,13 @@ func (m *StreamManager) updateState(name string, mutate func(*SubscriptionState)
 	if m.update != nil {
 		m.update(name, mutate)
 	}
+}
+
+func (m *StreamManager) nextEpoch() uint64 {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.epoch++
+	return m.epoch
 }
 
 type bucketKey struct {

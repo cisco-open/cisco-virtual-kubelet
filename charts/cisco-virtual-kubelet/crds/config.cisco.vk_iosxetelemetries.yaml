@@ -50,14 +50,12 @@ spec:
             type: object
           spec:
             description: |-
-              IOSXETelemetrySpec declares MDT-over-gNMI subscriptions for one
-              CiscoDevice. Phase 1 opens and drains gNMI Subscribe streams and reports
-              lifecycle/status; metric/log/trace emission is intentionally deferred.
+              IOSXETelemetrySpec declares MDT-over-gNMI subscriptions for one CiscoDevice.
+              The subscriber maps telemetry notifications to OpenTelemetry logs and
+              metrics; trace emission is deferred.
             properties:
               cardinalityLimits:
-                description: |-
-                  CardinalityLimits bounds future mapper output. Present in Phase 1 for
-                  API compatibility; the Phase 1 reconciler does not map series.
+                description: CardinalityLimits bounds mapper output.
                 properties:
                   maxSeriesPerSubscription:
                     default: 10000
@@ -90,12 +88,12 @@ spec:
                 x-kubernetes-map-type: atomic
               mapping:
                 description: |-
-                  Mapping carries future path-to-signal mapping controls. Phase 1 stores
-                  the struct but does not execute mapping, filtering, or classification.
+                  Mapping carries path-to-signal mapping, filtering, and classification
+                  controls.
                 properties:
                   filter:
-                    description: FilterConfig carries allow/deny rules for future
-                      mapper stages.
+                    description: FilterConfig carries allow/deny rules for mapper
+                      stages.
                     properties:
                       metricName:
                         description: FilterRules is an ordered allow/deny rule set.
@@ -124,8 +122,8 @@ spec:
                     type: object
                   metricTypeOverrides:
                     items:
-                      description: MetricTypeOverride pins a future mapped metric
-                        type for a path prefix.
+                      description: MetricTypeOverride pins a mapped metric type for
+                        a path prefix.
                       properties:
                         prefix:
                           type: string
@@ -138,8 +136,7 @@ spec:
                     type: array
                   pathAliases:
                     items:
-                      description: PathAlias renames future mapped metric paths by
-                        prefix.
+                      description: PathAlias renames mapped telemetry paths by prefix.
                       properties:
                         prefix:
                           type: string
@@ -160,9 +157,7 @@ spec:
                     type: array
                 type: object
               output:
-                description: |-
-                  Output declares the desired signal families. Phase 1 validates and stores
-                  the setting only; emission is deferred to later phases.
+                description: Output declares the desired signal families.
                 properties:
                   signal:
                     description: Signal is a subset of metrics, logs, and traces.
@@ -276,8 +271,8 @@ spec:
                 x-kubernetes-list-type: map
               timestamps:
                 description: |-
-                  Timestamps controls whether collector receive time is used later in the
-                  mapping pipeline. Phase 1 records the API field only.
+                  Timestamps controls whether collector receive time is used in the mapping
+                  pipeline.
                 properties:
                   useCollectorTimestamp:
                     default: true
@@ -292,7 +287,7 @@ spec:
           status:
             description: |-
               IOSXETelemetryStatus reports subscriber lifecycle and per-subscription
-              counters surfaced by the Phase 1 stream manager.
+              counters surfaced by the stream manager and emitters.
             properties:
               conditions:
                 description: Conditions follows the standard Kubernetes conditions
@@ -382,6 +377,12 @@ spec:
                       format: int64
                       type: integer
                     messagesReceived:
+                      format: int64
+                      type: integer
+                    metricPointsEmitted:
+                      description: |-
+                        MetricPointsEmitted is the count of OTel metric points produced by the
+                        mapper-and-metrics-emitter pipeline for this subscription. Phase 3.
                       format: int64
                       type: integer
                     name:

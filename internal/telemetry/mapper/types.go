@@ -18,6 +18,7 @@ import (
 	"time"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/classifier"
 )
 
 const (
@@ -55,10 +56,12 @@ type EventContext struct {
 	Subscription       string
 	StreamID           string
 	Mapping            *configv1alpha1.MappingConfig
+	Classifier         classifier.Classifier
 	Output             configv1alpha1.OutputConfig
 	CardinalityLimits  *configv1alpha1.CardinalityLimits
 	Timestamps         *configv1alpha1.TimestampConfig
 	ResourceAttributes map[string]string
+	StreamEpoch        uint64
 
 	// ReceiveTime is optional test/control input. When zero and collector
 	// timestamps are enabled, Process uses time.Now().
@@ -66,8 +69,7 @@ type EventContext struct {
 }
 
 // MappedEvent is the structured, side-effect-free output of Mapper.Process.
-// Phase 2 emits only SignalKindLog records externally. Metric events are kept
-// in this shape for Phase 3 and drop events feed CVK self-metrics.
+// Emitters consume log and metric events; drop events feed CVK self-metrics.
 type MappedEvent struct {
 	Signal     SignalKind
 	Name       string
@@ -76,12 +78,15 @@ type MappedEvent struct {
 	Timestamp  time.Time
 
 	NumberValue *float64
+	MetricKind  classifier.MetricKind
+	Unit        string
 	Body        string
 	Severity    Severity
 
-	CanonicalPath string
-	SeriesKey     string
-	DropReason    string
+	CanonicalPath  string
+	SeriesKey      string
+	StartTimestamp time.Time
+	DropReason     string
 }
 
 func signalEnabled(output configv1alpha1.OutputConfig, signal SignalKind) bool {

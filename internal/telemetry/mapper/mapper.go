@@ -22,21 +22,28 @@ import (
 	"time"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/classifier"
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
 )
 
 type Mapper struct {
-	mu     sync.Mutex
-	series map[string]*SeriesKeyCache
-	caps   map[string]int
+	mu        sync.Mutex
+	series    map[string]*SeriesKeyCache
+	starts    map[string]*StartTimestampCache
+	caps      map[string]int
+	startCaps map[string]int
 }
 
 func New() *Mapper {
 	return &Mapper{
-		series: map[string]*SeriesKeyCache{},
-		caps:   map[string]int{},
+		series:    map[string]*SeriesKeyCache{},
+		starts:    map[string]*StartTimestampCache{},
+		caps:      map[string]int{},
+		startCaps: map[string]int{},
 	}
 }
+
+var defaultClassifier = classifier.CuratedClassifier()
 
 func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEvent {
 	if notif == nil {
@@ -57,6 +64,10 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 
 	baseResource := m.resource(notif, ctx, extractor)
 	timestamp, timestampAttrs := timestamps(notif.GetTimestamp(), ctx)
+	metricClassifier := ctx.Classifier
+	if metricClassifier == nil {
+		metricClassifier = defaultClassifier
+	}
 
 	out := make([]MappedEvent, 0, len(notif.GetUpdate())+len(notif.GetDelete()))
 	for _, update := range notif.GetUpdate() {
@@ -83,15 +94,23 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 		}
 		if value, ok := numericValue(update.GetVal()); ok && signalEnabled(ctx.Output, SignalKindMetric) {
 			v := value
+			kind := metricClassifier.Classify(canonical)
+			seriesKey := BuildSeriesKey(ctx.Subscription, canonical, keys)
+			var start time.Time
+			if kind == classifier.MetricKindSum {
+				start = m.startCache(ctx).Start(ctx.StreamEpoch, seriesKey, ctx.ReceiveTime)
+			}
 			out = append(out, MappedEvent{
-				Signal:        SignalKindMetric,
-				Name:          name,
-				Attributes:    attrs,
-				Resource:      baseResource,
-				Timestamp:     timestamp,
-				NumberValue:   &v,
-				CanonicalPath: canonical,
-				SeriesKey:     BuildSeriesKey(ctx.Subscription, canonical, keys),
+				Signal:         SignalKindMetric,
+				Name:           name,
+				Attributes:     attrs,
+				Resource:       baseResource,
+				Timestamp:      timestamp,
+				NumberValue:    &v,
+				MetricKind:     kind,
+				CanonicalPath:  canonical,
+				SeriesKey:      seriesKey,
+				StartTimestamp: start,
 			})
 		}
 	}
@@ -180,7 +199,9 @@ func (m *Mapper) seriesCache(ctx EventContext) *SeriesKeyCache {
 	defer m.mu.Unlock()
 	if m.series == nil {
 		m.series = map[string]*SeriesKeyCache{}
+		m.starts = map[string]*StartTimestampCache{}
 		m.caps = map[string]int{}
+		m.startCaps = map[string]int{}
 	}
 	if cache := m.series[ctx.Subscription]; cache != nil && m.caps[ctx.Subscription] == capacity {
 		return cache
@@ -188,6 +209,28 @@ func (m *Mapper) seriesCache(ctx EventContext) *SeriesKeyCache {
 	cache := NewSeriesKeyCache(capacity)
 	m.series[ctx.Subscription] = cache
 	m.caps[ctx.Subscription] = capacity
+	return cache
+}
+
+func (m *Mapper) startCache(ctx EventContext) *StartTimestampCache {
+	capacity := DefaultMaxSeriesPerSubscription
+	if ctx.CardinalityLimits != nil && ctx.CardinalityLimits.MaxSeriesPerSubscription > 0 {
+		capacity = int(ctx.CardinalityLimits.MaxSeriesPerSubscription)
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.starts == nil {
+		m.starts = map[string]*StartTimestampCache{}
+	}
+	if m.startCaps == nil {
+		m.startCaps = map[string]int{}
+	}
+	if cache := m.starts[ctx.Subscription]; cache != nil && m.startCaps[ctx.Subscription] == capacity {
+		return cache
+	}
+	cache := NewStartTimestampCache(capacity)
+	m.starts[ctx.Subscription] = cache
+	m.startCaps[ctx.Subscription] = capacity
 	return cache
 }
 

@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/classifier"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
 )
@@ -33,6 +34,7 @@ import (
 // configuration shared by every subscription on a Subscriber.
 type MappingProfile struct {
 	Mapping           *configv1alpha1.MappingConfig
+	Classifier        classifier.Classifier
 	Output            configv1alpha1.OutputConfig
 	CardinalityLimits *configv1alpha1.CardinalityLimits
 	Timestamps        *configv1alpha1.TimestampConfig
@@ -49,6 +51,7 @@ type Subscriber struct {
 	reconnect       *configv1alpha1.ReconnectConfig
 	mapper          *mapper.Mapper
 	logsEmitter     *emit.LogsEmitter
+	metricsEmitter  *emit.MetricsEmitter
 	resourceAttrs   map[string]string
 	profile         MappingProfile
 
@@ -78,7 +81,7 @@ func WithReconnectConfig(cfg *configv1alpha1.ReconnectConfig) SubscriberOption {
 	return func(s *Subscriber) { s.reconnect = cfg }
 }
 
-// WithMapper attaches a Phase 2 Mapper. When nil, drainEvents is a no-op.
+// WithMapper attaches a telemetry Mapper. When nil, drainEvents is a no-op.
 func WithMapper(m *mapper.Mapper) SubscriberOption {
 	return func(s *Subscriber) { s.mapper = m }
 }
@@ -87,6 +90,12 @@ func WithMapper(m *mapper.Mapper) SubscriberOption {
 // where Signal=logs.
 func WithLogsEmitter(e *emit.LogsEmitter) SubscriberOption {
 	return func(s *Subscriber) { s.logsEmitter = e }
+}
+
+// WithMetricsEmitter attaches the OTel metrics emitter that consumes mapped
+// events where Signal=metrics.
+func WithMetricsEmitter(e *emit.MetricsEmitter) SubscriberOption {
+	return func(s *Subscriber) { s.metricsEmitter = e }
 }
 
 // WithResourceAttributes seeds the per-event resource attributes (device,
@@ -387,6 +396,10 @@ func (s *Subscriber) bumpLogRecords(name string, n int64) {
 	s.updateState(name, func(st *SubscriptionState) { st.LogRecordsEmitted += n })
 }
 
+func (s *Subscriber) bumpMetricPoints(name string, n int64) {
+	s.updateState(name, func(st *SubscriptionState) { st.MetricPointsEmitted += n })
+}
+
 func (s *Subscriber) recordMappedDrops(name string, events []mapper.MappedEvent) {
 	var drops map[string]int64
 	for _, ev := range events {
@@ -440,7 +453,9 @@ func (s *Subscriber) drainEvents(events <-chan NotificationEvent) {
 				Device:             s.deviceRef,
 				Subscription:       name,
 				StreamID:           string(ev.StreamID),
+				StreamEpoch:        ev.StreamEpoch,
 				Mapping:            profile.Mapping,
+				Classifier:         profile.Classifier,
 				Output:             profile.Output,
 				CardinalityLimits:  profile.CardinalityLimits,
 				Timestamps:         profile.Timestamps,
@@ -454,6 +469,11 @@ func (s *Subscriber) drainEvents(events <-chan NotificationEvent) {
 			if s.logsEmitter != nil {
 				if emitted := s.logsEmitter.Emit(emitCtx, mapped); emitted > 0 {
 					s.bumpLogRecords(name, int64(emitted))
+				}
+			}
+			if s.metricsEmitter != nil {
+				if emitted := s.metricsEmitter.Emit(emitCtx, mapped); emitted > 0 {
+					s.bumpMetricPoints(name, int64(emitted))
 				}
 			}
 			s.recordMappedDrops(name, mapped)

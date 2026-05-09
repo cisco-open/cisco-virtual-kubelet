@@ -15,8 +15,11 @@
 package mapper
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"strconv"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
@@ -116,6 +119,32 @@ func numericValue(v *gpb.TypedValue) (float64, bool) {
 			scale *= 10
 		}
 		return float64(x.DecimalVal.Digits) / scale, true
+	case *gpb.TypedValue_JsonVal:
+		return numericJSON(x.JsonVal)
+	case *gpb.TypedValue_JsonIetfVal:
+		return numericJSON(x.JsonIetfVal)
+	default:
+		return 0, false
+	}
+}
+
+func numericJSON(raw []byte) (float64, bool) {
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return 0, false
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.UseNumber()
+	var value interface{}
+	if err := decoder.Decode(&value); err != nil {
+		return 0, false
+	}
+	switch v := value.(type) {
+	case json.Number:
+		f, err := v.Float64()
+		return f, err == nil
+	case string:
+		f, err := strconv.ParseFloat(v, 64)
+		return f, err == nil
 	default:
 		return 0, false
 	}
