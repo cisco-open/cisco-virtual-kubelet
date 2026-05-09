@@ -79,10 +79,11 @@ type IOSXETelemetryReconciler struct {
 	StatusEvents    chan event.GenericEvent
 	ChannelCapacity int
 
-	mu         sync.Mutex
-	subscriber *telemetry.Subscriber
-	owned      map[client.ObjectKey][]string
-	bridgeStop context.CancelFunc
+	mu          sync.Mutex
+	subscriber  *telemetry.Subscriber
+	owned       map[client.ObjectKey][]string
+	bridgeStop  context.CancelFunc
+	selfMetrics *emit.SelfMetrics
 }
 
 func (r *IOSXETelemetryReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -220,6 +221,7 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 	default:
 		r.setReady(&cr, metav1.ConditionFalse, "Pending", "telemetry subscription streams are not active yet")
 	}
+	r.setInstrumentCapCondition(&cr)
 	if err := r.patchTelemetryStatus(ctx, base, &cr); err != nil {
 		return statusPatchResult(err)
 	}
@@ -311,13 +313,19 @@ func (r *IOSXETelemetryReconciler) ensureSubscriber() (*telemetry.Subscriber, er
 	if root == nil {
 		root = context.Background()
 	}
+	if r.selfMetrics == nil {
+		r.selfMetrics = emit.NewSelfMetrics(r.MeterProvider)
+	}
+	selfMetrics := r.selfMetrics
+	metricsEmitter := emit.NewMetricsEmitter(r.MeterProvider, emit.WithMetricsSelfMetrics(selfMetrics))
 	opts := []telemetry.SubscriberOption{
 		telemetry.WithLogger(crlog.Log.WithName("iosxetelemetry").WithValues("device", r.DeviceName)),
 		telemetry.WithChannelCapacity(r.ChannelCapacity),
 		telemetry.WithMapper(mapper.New()),
-		telemetry.WithLogsEmitter(emit.NewLogsEmitter(r.LoggerProvider)),
-		telemetry.WithMetricsEmitter(emit.NewMetricsEmitter(r.MeterProvider)),
+		telemetry.WithLogsEmitter(emit.NewLogsEmitter(r.LoggerProvider, emit.WithLogsSelfMetrics(selfMetrics))),
+		telemetry.WithMetricsEmitter(metricsEmitter),
 		telemetry.WithTracesEmitter(emit.NewTracesEmitter(r.TracerProvider, r.MeterProvider, nil)),
+		telemetry.WithSelfMetrics(selfMetrics),
 	}
 	if attrs := r.subscriberResourceAttrs(); len(attrs) > 0 {
 		opts = append(opts, telemetry.WithResourceAttributes(attrs))
@@ -529,6 +537,32 @@ func (r *IOSXETelemetryReconciler) setReady(
 		ObservedGeneration: cr.Generation,
 		LastTransitionTime: metav1.Now(),
 	})
+}
+
+// setInstrumentCapCondition surfaces the cumulative instrument-cap drop count
+// from the shared SelfMetrics. Once any cap drop is recorded, the
+// InstrumentCapExceeded condition flips to True so operators see it without
+// scraping the OTel pipeline.
+func (r *IOSXETelemetryReconciler) setInstrumentCapCondition(cr *configv1alpha1.IOSXETelemetry) {
+	if r.selfMetrics == nil {
+		return
+	}
+	dropped := r.selfMetrics.CapDropTotal()
+	cond := metav1.Condition{
+		Type:               "InstrumentCapExceeded",
+		ObservedGeneration: cr.Generation,
+		LastTransitionTime: metav1.Now(),
+	}
+	if dropped > 0 {
+		cond.Status = metav1.ConditionTrue
+		cond.Reason = "MetricInstrumentsDropped"
+		cond.Message = fmt.Sprintf("metric points dropped because the instrument cap was reached (cumulative=%d); raise spec.cardinalityLimits.maxInstruments", dropped)
+	} else {
+		cond.Status = metav1.ConditionFalse
+		cond.Reason = "WithinCap"
+		cond.Message = "metric instrument count is within the configured cap"
+	}
+	meta.SetStatusCondition(&cr.Status.Conditions, cond)
 }
 
 func defaultReconnect(in *configv1alpha1.ReconnectConfig) *configv1alpha1.ReconnectConfig {

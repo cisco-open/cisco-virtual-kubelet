@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
 )
 
 type stateUpdater func(name string, mutate func(*SubscriptionState))
@@ -41,6 +42,8 @@ type StreamManager struct {
 	events    chan NotificationEvent
 	reconnect *configv1alpha1.ReconnectConfig
 	update    stateUpdater
+	device    string
+	self      *emit.SelfMetrics
 
 	mu         sync.Mutex
 	generation int64
@@ -55,6 +58,8 @@ type StreamManagerOptions struct {
 	ChannelCapacity int
 	Reconnect       *configv1alpha1.ReconnectConfig
 	Update          stateUpdater
+	Device          string
+	SelfMetrics     *emit.SelfMetrics
 }
 
 func NewStreamManager(ctx context.Context, client *SubscribeClient, opts StreamManagerOptions) *StreamManager {
@@ -71,6 +76,8 @@ func NewStreamManager(ctx context.Context, client *SubscribeClient, opts StreamM
 		events:    make(chan NotificationEvent, capacity),
 		reconnect: opts.Reconnect,
 		update:    opts.Update,
+		device:    opts.Device,
+		self:      opts.SelfMetrics,
 		subs:      map[string]configv1alpha1.TelemetrySubscription{},
 		streams:   map[bucketKey]*streamHandle{},
 	}
@@ -201,6 +208,9 @@ func (m *StreamManager) runStream(ctx context.Context, h *streamHandle) {
 					st.Failed = true
 				}
 			})
+			if ok {
+				m.self.IncStreamReconnects(ctx, m.device, name)
+			}
 		}
 		if !ok {
 			return
@@ -243,7 +253,13 @@ func (m *StreamManager) openAndDrain(ctx context.Context, h *streamHandle) error
 			st.LastError = ""
 			st.CurrentBackoff = 0
 		})
+		m.self.AddActiveStreams(ctx, 1, m.device, name)
 	}
+	defer func() {
+		for _, name := range h.subNames {
+			m.self.AddActiveStreams(ctx, -1, m.device, name)
+		}
+	}()
 
 	for {
 		if ctx.Err() != nil {

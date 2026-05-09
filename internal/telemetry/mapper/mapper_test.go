@@ -23,7 +23,7 @@ import (
 )
 
 func TestFlattenPathPreservesElemOrder(t *testing.T) {
-	canonical, keys, originalOrder := FlattenPath(
+	canonical, keys, originalOrder, tuple := FlattenPath(
 		&gpb.Path{Elem: []*gpb.PathElem{
 			{Name: "openconfig-interfaces:interfaces"},
 			{Name: "interface", Key: map[string]string{"name": "GigabitEthernet1"}},
@@ -43,6 +43,13 @@ func TestFlattenPathPreservesElemOrder(t *testing.T) {
 	}
 	if len(keys) != 1 || keys[0] != (KeyValue{Key: "name", Value: "GigabitEthernet1"}) {
 		t.Fatalf("keys=%+v, want name=GigabitEthernet1", keys)
+	}
+	if len(tuple) != 1 || tuple[0] != (ListKey{
+		ListPath: "/interfaces/interface",
+		KeyName:  "name",
+		KeyValue: "GigabitEthernet1",
+	}) {
+		t.Fatalf("tuple=%+v, want interface name tuple", tuple)
 	}
 }
 
@@ -101,6 +108,98 @@ func TestAliasLongestPrefixWins(t *testing.T) {
 	got := resolver.Resolve("/interfaces/interface/state/admin-status")
 	if got != "if.state/admin-status" {
 		t.Fatalf("Resolve()=%q, want longest-prefix alias", got)
+	}
+}
+
+func TestMetricNameDropsListKeysByDefault(t *testing.T) {
+	events := New().Process(&gpb.Notification{
+		Update: []*gpb.Update{
+			uintUpdate(&gpb.Path{Elem: []*gpb.PathElem{
+				{Name: "app", Key: map[string]string{"name": "c9ktest"}},
+				{Name: "details"},
+				{Name: "resource-reservation"},
+				{Name: "cpu"},
+			}}, 1480),
+		},
+	}, EventContext{
+		Subscription: "ah",
+		Output:       metricsOnlyOutput(),
+	})
+
+	if len(events) != 1 || events[0].Signal != SignalKindMetric {
+		t.Fatalf("events=%+v, want one metric event", events)
+	}
+	if got := events[0].Name; got != "details_resource_reservation_cpu" {
+		t.Fatalf("Name=%q, want details_resource_reservation_cpu", got)
+	}
+	if got := events[0].CanonicalPath; got != "/app[name=c9ktest]/details/resource-reservation/cpu" {
+		t.Fatalf("CanonicalPath=%q, want full keyed path", got)
+	}
+	if got := attrValue(events[0].Attributes, "name"); got != "c9ktest" {
+		t.Fatalf("name label=%q, want c9ktest", got)
+	}
+}
+
+func TestMetricNameKeepsListKeysWithFlag(t *testing.T) {
+	include := true
+	events := New().Process(&gpb.Notification{
+		Update: []*gpb.Update{
+			uintUpdate(&gpb.Path{Elem: []*gpb.PathElem{
+				{Name: "app", Key: map[string]string{"name": "c9ktest"}},
+				{Name: "details"},
+				{Name: "resource-reservation"},
+				{Name: "cpu"},
+			}}, 1480),
+		},
+	}, EventContext{
+		Subscription: "ah",
+		Mapping: &configv1alpha1.MappingConfig{
+			IncludeListKeysInMetricName: &include,
+		},
+		Output: metricsOnlyOutput(),
+	})
+
+	if len(events) != 1 || events[0].Signal != SignalKindMetric {
+		t.Fatalf("events=%+v, want one metric event", events)
+	}
+	if got := events[0].Name; got != "/app[name=c9ktest]/details/resource-reservation/cpu" {
+		t.Fatalf("Name=%q, want legacy keyed path", got)
+	}
+}
+
+func TestAliasMatchesAcrossListKeys(t *testing.T) {
+	notif := &gpb.Notification{
+		Update: []*gpb.Update{
+			uintUpdate(interfaceCounterPathFor("GigabitEthernet1", "counters"), 100),
+			uintUpdate(interfaceCounterPathFor("GigabitEthernet2", "counters"), 200),
+		},
+	}
+	events := New().Process(notif, EventContext{
+		Subscription: "interfaces",
+		Mapping: &configv1alpha1.MappingConfig{
+			PathAliases: []configv1alpha1.PathAlias{{
+				Prefix: "/interfaces/interface/state/counters",
+				Rename: "cvk.iface.counters",
+			}},
+		},
+		Output: metricsOnlyOutput(),
+	})
+
+	if len(events) != 2 {
+		t.Fatalf("events=%+v, want two metric events", events)
+	}
+	seen := map[string]bool{}
+	for _, event := range events {
+		if event.Signal != SignalKindMetric {
+			t.Fatalf("event=%+v, want metric", event)
+		}
+		if event.Name != "cvk.iface.counters" {
+			t.Fatalf("Name=%q, want alias", event.Name)
+		}
+		seen[attrValue(event.Attributes, "name")] = true
+	}
+	if !seen["GigabitEthernet1"] || !seen["GigabitEthernet2"] {
+		t.Fatalf("labels seen=%+v, want both interface names", seen)
 	}
 }
 
@@ -222,12 +321,31 @@ func stringUpdate(p *gpb.Path, value string) *gpb.Update {
 	}
 }
 
+func uintUpdate(p *gpb.Path, value uint64) *gpb.Update {
+	return &gpb.Update{
+		Path: p,
+		Val:  &gpb.TypedValue{Value: &gpb.TypedValue_UintVal{UintVal: value}},
+	}
+}
+
 func path(names ...string) *gpb.Path {
 	out := &gpb.Path{Elem: make([]*gpb.PathElem, 0, len(names))}
 	for _, name := range names {
 		out.Elem = append(out.Elem, &gpb.PathElem{Name: name})
 	}
 	return out
+}
+
+func interfaceCounterPathFor(ifName string, leaf ...string) *gpb.Path {
+	elems := []*gpb.PathElem{
+		{Name: "interfaces"},
+		{Name: "interface", Key: map[string]string{"name": ifName}},
+		{Name: "state"},
+	}
+	for _, name := range leaf {
+		elems = append(elems, &gpb.PathElem{Name: name})
+	}
+	return &gpb.Path{Elem: elems}
 }
 
 func pathFromCanonical(canonical string) *gpb.Path {
@@ -272,6 +390,119 @@ func attrValue(attrs []KeyValue, key string) string {
 		}
 	}
 	return ""
+}
+
+func TestNestedListEntityScoping(t *testing.T) {
+	events := New().Process(&gpb.Notification{
+		Update: []*gpb.Update{
+			uintUpdate(&gpb.Path{Elem: []*gpb.PathElem{
+				{Name: "app-hosting-oper-data"},
+				{Name: "app", Key: map[string]string{"name": "c9ktest"}},
+				{Name: "storage-utils"},
+				{Name: "storage-util", Key: map[string]string{"name": "disk"}},
+				{Name: "used"},
+			}}, 42),
+		},
+	}, EventContext{
+		Subscription: "ah",
+		Output:       metricsOnlyOutput(),
+	})
+
+	if len(events) != 1 || events[0].Signal != SignalKindMetric {
+		t.Fatalf("events=%+v, want one metric event", events)
+	}
+	if got := attrValue(events[0].Attributes, "app_name"); got != "c9ktest" {
+		t.Fatalf("app_name=%q, want c9ktest", got)
+	}
+	if got := attrValue(events[0].Attributes, "storage_util_name"); got != "disk" {
+		t.Fatalf("storage_util_name=%q, want disk", got)
+	}
+	if got := attrValue(events[0].Attributes, "name"); got != "" {
+		t.Fatalf("name=%q, want absent for nested list path", got)
+	}
+}
+
+func TestBGPPerNeighborAttrs(t *testing.T) {
+	neighborPath := func(addr string, leaf ...string) *gpb.Path {
+		elems := []*gpb.PathElem{
+			{Name: "network-instances"},
+			{Name: "network-instance", Key: map[string]string{"name": "default"}},
+			{Name: "protocols"},
+			{Name: "protocol", Key: map[string]string{"identifier": "BGP", "name": "BGP"}},
+			{Name: "bgp"},
+			{Name: "neighbors"},
+			{Name: "neighbor", Key: map[string]string{"neighbor-address": addr}},
+			{Name: "state"},
+		}
+		for _, name := range leaf {
+			elems = append(elems, &gpb.PathElem{Name: name})
+		}
+		return &gpb.Path{Elem: elems}
+	}
+	notif := &gpb.Notification{
+		Update: []*gpb.Update{
+			stringUpdate(neighborPath("192.0.2.1", "session-state"), "ESTABLISHED"),
+			uintUpdate(neighborPath("192.0.2.1", "messages", "sent"), 11),
+			stringUpdate(neighborPath("192.0.2.2", "session-state"), "ACTIVE"),
+			uintUpdate(neighborPath("192.0.2.2", "messages", "sent"), 22),
+		},
+	}
+
+	events := New().Process(notif, EventContext{
+		Subscription: "bgp",
+		Mapping: &configv1alpha1.MappingConfig{
+			ResourceAttributes: []configv1alpha1.ResourceAttribute{{
+				Path: "/network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state/session-state",
+				Key:  "bgp.session_state",
+			}},
+		},
+		Output: metricsOnlyOutput(),
+	})
+
+	seen := map[string]string{}
+	for _, event := range events {
+		if event.Signal != SignalKindMetric {
+			continue
+		}
+		addr := attrValue(event.Attributes, "neighbor_neighbor_address")
+		if addr == "" {
+			t.Fatalf("metric attrs=%+v, want neighbor_neighbor_address", event.Attributes)
+		}
+		seen[addr] = attrValue(event.Resource, "bgp.session_state")
+	}
+	want := map[string]string{"192.0.2.1": "ESTABLISHED", "192.0.2.2": "ACTIVE"}
+	for addr, state := range want {
+		if got := seen[addr]; got != state {
+			t.Fatalf("neighbor %s session_state=%q, want %q (seen=%+v)", addr, got, state, seen)
+		}
+	}
+}
+
+func TestSingleListBackCompat(t *testing.T) {
+	events := New().Process(&gpb.Notification{
+		Update: []*gpb.Update{
+			uintUpdate(&gpb.Path{Elem: []*gpb.PathElem{
+				{Name: "app-hosting-oper-data"},
+				{Name: "app", Key: map[string]string{"name": "c9ktest"}},
+				{Name: "details"},
+				{Name: "resource-reservation"},
+				{Name: "cpu"},
+			}}, 1480),
+		},
+	}, EventContext{
+		Subscription: "ah",
+		Output:       metricsOnlyOutput(),
+	})
+
+	if len(events) != 1 || events[0].Signal != SignalKindMetric {
+		t.Fatalf("events=%+v, want one metric event", events)
+	}
+	if got := attrValue(events[0].Attributes, "name"); got != "c9ktest" {
+		t.Fatalf("name=%q, want c9ktest", got)
+	}
+	if got := attrValue(events[0].Attributes, "app_name"); got != "" {
+		t.Fatalf("app_name=%q, want absent for single-list path", got)
+	}
 }
 
 func TestPerEntityResourceAttributes(t *testing.T) {

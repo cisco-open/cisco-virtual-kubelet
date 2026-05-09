@@ -26,13 +26,29 @@ const loggerName = "cisco_vk_telemetry"
 
 type LogsEmitter struct {
 	logger log.Logger
+	self   *SelfMetrics
 }
 
-func NewLogsEmitter(provider log.LoggerProvider) *LogsEmitter {
+// LogsEmitterOption configures a LogsEmitter at construction.
+type LogsEmitterOption func(*LogsEmitter)
+
+// WithLogsSelfMetrics wires the shared SelfMetrics so log emission counts are
+// reported on the OTel pipeline.
+func WithLogsSelfMetrics(self *SelfMetrics) LogsEmitterOption {
+	return func(e *LogsEmitter) { e.self = self }
+}
+
+func NewLogsEmitter(provider log.LoggerProvider, opts ...LogsEmitterOption) *LogsEmitter {
 	if provider == nil {
 		provider = noop.NewLoggerProvider()
 	}
-	return &LogsEmitter{logger: provider.Logger(loggerName)}
+	e := &LogsEmitter{logger: provider.Logger(loggerName)}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(e)
+		}
+	}
+	return e
 }
 
 // Emit writes log mapped events and returns the number of emitted LogRecords.
@@ -41,6 +57,7 @@ func (e *LogsEmitter) Emit(ctx context.Context, events []mapper.MappedEvent) int
 		return 0
 	}
 	emitted := 0
+	var device, subscription string
 	for _, event := range events {
 		if event.Signal != mapper.SignalKindLog {
 			continue
@@ -57,6 +74,15 @@ func (e *LogsEmitter) Emit(ctx context.Context, events []mapper.MappedEvent) int
 		rec.AddAttributes(toLogAttrs(attrs)...)
 		e.logger.Emit(ctx, rec)
 		emitted++
+		if device == "" {
+			device = attrValue(event.Resource, "device")
+		}
+		if subscription == "" {
+			subscription = attrValue(event.Resource, "subscription")
+		}
+	}
+	if emitted > 0 {
+		e.self.AddLogRecords(ctx, int64(emitted), device, subscription)
 	}
 	return emitted
 }

@@ -117,6 +117,61 @@ func TestInstrumentMemoization(t *testing.T) {
 	}
 }
 
+func TestInstrumentCapDropsSurfaceSelfMetric(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	t.Cleanup(func() { _ = provider.Shutdown(context.Background()) })
+
+	self := NewSelfMetrics(provider)
+	emitter := NewMetricsEmitter(provider,
+		WithMaxInstruments(1),
+		WithMetricsSelfMetrics(self),
+	)
+
+	if emitted := emitter.Emit(context.Background(), []mapper.MappedEvent{
+		metricEvent("memory.used", classifier.MetricKindGauge, 10, "memory-used"),
+	}); emitted != 1 {
+		t.Fatalf("first Emit()=%d, want 1", emitted)
+	}
+	if emitted := emitter.Emit(context.Background(), []mapper.MappedEvent{
+		metricEvent("memory.allocated", classifier.MetricKindGauge, 20, "memory-alloc"),
+	}); emitted != 0 {
+		t.Fatalf("second Emit()=%d, want 0 (cap blocks new instrument)", emitted)
+	}
+	if got := self.CapDropTotal(); got != 1 {
+		t.Fatalf("CapDropTotal()=%d, want 1", got)
+	}
+
+	rm := collectMetrics(t, reader)
+	point, ok := intSumPoint(rm, instrumentCapDropsSelfMetric)
+	if !ok || point.Value != 1 {
+		t.Fatalf("cap drop self metric=%+v ok=%t, want 1", point, ok)
+	}
+	if got := attrString(point.Attributes, "metric"); got != "memory.allocated" {
+		t.Fatalf("metric attr=%q, want memory.allocated", got)
+	}
+}
+
+func TestSetMaxInstrumentsRaisesCap(t *testing.T) {
+	emitter, _ := newTestMetricsEmitter(t)
+	emitter.SetMaxInstruments(2)
+
+	events := []mapper.MappedEvent{
+		metricEvent("a", classifier.MetricKindGauge, 1, "a"),
+		metricEvent("b", classifier.MetricKindGauge, 2, "b"),
+		metricEvent("c", classifier.MetricKindGauge, 3, "c"),
+	}
+	if emitted := emitter.Emit(context.Background(), events); emitted != 2 {
+		t.Fatalf("Emit()=%d, want 2 (third blocked by cap=2)", emitted)
+	}
+	emitter.SetMaxInstruments(3)
+	if emitted := emitter.Emit(context.Background(), []mapper.MappedEvent{
+		metricEvent("c", classifier.MetricKindGauge, 3, "c"),
+	}); emitted != 1 {
+		t.Fatalf("after raising cap Emit()=%d, want 1", emitted)
+	}
+}
+
 func newTestMetricsEmitter(t *testing.T, opts ...sdkmetric.ManualReaderOption) (*MetricsEmitter, *sdkmetric.ManualReader) {
 	t.Helper()
 	reader := sdkmetric.NewManualReader(opts...)

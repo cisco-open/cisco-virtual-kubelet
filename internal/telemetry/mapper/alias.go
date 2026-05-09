@@ -37,7 +37,7 @@ func NewAliasResolver(in []configv1alpha1.PathAlias) AliasResolver {
 			continue
 		}
 		aliases = append(aliases, pathAlias{
-			prefix: normalizeCanonicalPath(a.Prefix),
+			prefix: stripPathListKeys(normalizeCanonicalPath(a.Prefix)),
 			rename: strings.TrimSuffix(a.Rename, "/"),
 		})
 	}
@@ -48,14 +48,19 @@ func NewAliasResolver(in []configv1alpha1.PathAlias) AliasResolver {
 }
 
 func (r AliasResolver) Resolve(canonicalPath string) string {
-	canonicalPath = normalizeCanonicalPath(canonicalPath)
+	resolved, _ := r.ResolveWithMatch(canonicalPath)
+	return resolved
+}
+
+func (r AliasResolver) ResolveWithMatch(canonicalPath string) (string, bool) {
+	canonicalPath = stripPathListKeys(normalizeCanonicalPath(canonicalPath))
 	for _, alias := range r.aliases {
 		if canonicalPath == alias.prefix {
-			return alias.rename
+			return alias.rename, true
 		}
 		if strings.HasPrefix(canonicalPath, alias.prefix+"/") {
-			return alias.rename + strings.TrimPrefix(canonicalPath, alias.prefix)
+			return alias.rename + strings.TrimPrefix(canonicalPath, alias.prefix), true
 		}
 	}
-	return canonicalPath
+	return canonicalPath, false
 }

@@ -61,11 +61,12 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 	resolver := NewAliasResolver(aliases)
 	filter := NewFilter(filterCfg)
 	extractor := NewResourceAttrExtractor(resourceAttrs)
+	includeListKeysInName := includeListKeysInMetricName(mapping)
 
 	baseResource := m.resource(notif, ctx, extractor)
-	// Per-entity resource attrs grouped by outermost list-key. Lets configured
-	// paths like /app-hosting-list/details/state pin per-app strings (state,
-	// IP, MAC, image type) onto every metric/log event for the same app.
+	// Per-entity resource attrs grouped by list-key scope. This lets configured
+	// paths pin per-list strings (state, IP, MAC, image type) onto every
+	// metric/log event for the same entity or nested entity.
 	entityAttrs := extractor.ExtractByEntity(notif)
 	timestamp, timestampAttrs := timestamps(notif.GetTimestamp(), ctx)
 	metricClassifier := ctx.Classifier
@@ -75,21 +76,12 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 
 	out := make([]MappedEvent, 0, len(notif.GetUpdate())+len(notif.GetDelete()))
 	for _, update := range notif.GetUpdate() {
-		canonical, keys, _ := FlattenPath(notif.GetPrefix(), update.GetPath())
-		name := resolver.Resolve(canonical)
-		attrs := eventAttributes(ctx, canonical, keys, timestampAttrs)
-		// Merge baseResource with per-entity attrs for this update's outermost
-		// list-key (e.g. an app-hosting app name). Globals (entity "") are
-		// already in baseResource via Extract().
-		eventResource := baseResource
-		if entity := firstListKeyPair(keys); entity != "" {
-			if extra := entityAttrs[entity]; len(extra) > 0 {
-				eventResource = make([]KeyValue, 0, len(baseResource)+len(extra))
-				eventResource = append(eventResource, baseResource...)
-				eventResource = append(eventResource, extra...)
-			}
-		}
-		if drop := m.evaluate(ctx, filter, canonical, name, keys, eventResource, attrs, timestamp); drop != nil {
+		canonical, keys, _, tuple := FlattenPath(notif.GetPrefix(), update.GetPath())
+		name := eventName(resolver, canonical, tuple, includeListKeysInName)
+		seriesKey := eventSeriesKey(ctx.Subscription, canonical, keys, includeListKeysInName)
+		attrs := eventAttributes(ctx, canonical, keys, tuple, timestampAttrs)
+		eventResource := resourceForEntity(baseResource, entityAttrs, tuple)
+		if drop := m.evaluate(ctx, filter, canonical, name, seriesKey, eventResource, attrs, timestamp); drop != nil {
 			out = append(out, *drop)
 			continue
 		}
@@ -102,7 +94,7 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 				Timestamp:     timestamp,
 				Body:          body,
 				CanonicalPath: canonical,
-				SeriesKey:     BuildSeriesKey(ctx.Subscription, canonical, keys),
+				SeriesKey:     seriesKey,
 			})
 		}
 		if body, ok := logScalarValue(update.GetVal()); ok {
@@ -118,14 +110,13 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 				Body:          body,
 				Severity:      inferSeverity(body),
 				CanonicalPath: canonical,
-				SeriesKey:     BuildSeriesKey(ctx.Subscription, canonical, keys),
+				SeriesKey:     seriesKey,
 			})
 			continue
 		}
 		if value, ok := numericValue(update.GetVal()); ok && signalEnabled(ctx.Output, SignalKindMetric) {
 			v := value
 			kind := metricClassifier.Classify(canonical)
-			seriesKey := BuildSeriesKey(ctx.Subscription, canonical, keys)
 			var start time.Time
 			if kind == classifier.MetricKindSum {
 				start = m.startCache(ctx).Start(ctx.StreamEpoch, seriesKey, ctx.ReceiveTime)
@@ -145,19 +136,13 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 		}
 	}
 	for _, del := range notif.GetDelete() {
-		canonical, keys, _ := FlattenPath(notif.GetPrefix(), del)
-		name := resolver.Resolve(canonical)
-		attrs := eventAttributes(ctx, canonical, keys, timestampAttrs)
+		canonical, keys, _, tuple := FlattenPath(notif.GetPrefix(), del)
+		name := eventName(resolver, canonical, tuple, includeListKeysInName)
+		seriesKey := eventSeriesKey(ctx.Subscription, canonical, keys, includeListKeysInName)
+		attrs := eventAttributes(ctx, canonical, keys, tuple, timestampAttrs)
 		attrs = append(attrs, KeyValue{Key: "cisco.gnmi.event", Value: "delete"})
-		eventResource := baseResource
-		if entity := firstListKeyPair(keys); entity != "" {
-			if extra := entityAttrs[entity]; len(extra) > 0 {
-				eventResource = make([]KeyValue, 0, len(baseResource)+len(extra))
-				eventResource = append(eventResource, baseResource...)
-				eventResource = append(eventResource, extra...)
-			}
-		}
-		if drop := m.evaluate(ctx, filter, canonical, name, keys, eventResource, attrs, timestamp); drop != nil {
+		eventResource := resourceForEntity(baseResource, entityAttrs, tuple)
+		if drop := m.evaluate(ctx, filter, canonical, name, seriesKey, eventResource, attrs, timestamp); drop != nil {
 			out = append(out, *drop)
 			continue
 		}
@@ -174,7 +159,7 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 				Resource:      eventResource,
 				Timestamp:     timestamp,
 				CanonicalPath: canonical,
-				SeriesKey:     BuildSeriesKey(ctx.Subscription, canonical, keys),
+				SeriesKey:     seriesKey,
 			})
 		}
 		if !signalEnabled(ctx.Output, SignalKindLog) {
@@ -189,7 +174,7 @@ func (m *Mapper) Process(notif *gpb.Notification, ctx EventContext) []MappedEven
 			Body:          "deleted: " + canonical,
 			Severity:      SeverityInfo,
 			CanonicalPath: canonical,
-			SeriesKey:     BuildSeriesKey(ctx.Subscription, canonical, keys),
+			SeriesKey:     seriesKey,
 		})
 	}
 	return out
@@ -210,7 +195,7 @@ func (m *Mapper) evaluate(
 	filter Filter,
 	canonicalPath string,
 	name string,
-	keys []KeyValue,
+	seriesKey string,
 	resource []KeyValue,
 	attrs []KeyValue,
 	ts time.Time,
@@ -223,12 +208,11 @@ func (m *Mapper) evaluate(
 			Resource:      resource,
 			Timestamp:     ts,
 			CanonicalPath: canonicalPath,
-			SeriesKey:     BuildSeriesKey(ctx.Subscription, canonicalPath, keys),
+			SeriesKey:     seriesKey,
 			DropReason:    DropReasonFilter,
 		}
 	}
-	key := BuildSeriesKey(ctx.Subscription, canonicalPath, keys)
-	_, ok, _ := m.seriesCache(ctx).Check(key)
+	_, ok, _ := m.seriesCache(ctx).Check(seriesKey)
 	if !ok {
 		return &MappedEvent{
 			Signal:        SignalKindDrop,
@@ -237,7 +221,7 @@ func (m *Mapper) evaluate(
 			Resource:      resource,
 			Timestamp:     ts,
 			CanonicalPath: canonicalPath,
-			SeriesKey:     key,
+			SeriesKey:     seriesKey,
 			DropReason:    DropReasonCardinalityLimit,
 		}
 	}
@@ -343,15 +327,154 @@ func sortedMap(in map[string]string) []KeyValue {
 	return out
 }
 
-func eventAttributes(ctx EventContext, canonicalPath string, keys []KeyValue, timestampAttrs []KeyValue) []KeyValue {
+func eventAttributes(ctx EventContext, canonicalPath string, keys []KeyValue, tuple ListKeyTuple, timestampAttrs []KeyValue) []KeyValue {
 	out := make([]KeyValue, 0, len(keys)+len(timestampAttrs)+3)
-	out = append(out, keys...)
+	out = append(out, pathLabelAttributes(keys, tuple)...)
 	out = append(out, KeyValue{Key: "cisco.gnmi.path", Value: canonicalPath})
 	if ctx.StreamID != "" {
 		out = append(out, KeyValue{Key: "cisco.gnmi.stream_id", Value: ctx.StreamID})
 	}
 	out = append(out, timestampAttrs...)
 	return out
+}
+
+func includeListKeysInMetricName(mapping *configv1alpha1.MappingConfig) bool {
+	return mapping != nil &&
+		mapping.IncludeListKeysInMetricName != nil &&
+		*mapping.IncludeListKeysInMetricName
+}
+
+func eventName(resolver AliasResolver, canonicalPath string, tuple ListKeyTuple, includeListKeys bool) string {
+	if includeListKeys {
+		if name, matched := resolver.ResolveWithMatch(canonicalPath); matched {
+			return name
+		}
+		return canonicalPath
+	}
+	stripped := stripPathListKeys(canonicalPath)
+	if name, matched := resolver.ResolveWithMatch(stripped); matched {
+		return name
+	}
+	if len(tuple) == 0 {
+		return stripped
+	}
+	return metricLeafName(stripped, tuple)
+}
+
+func eventSeriesKey(subscription, canonicalPath string, keys []KeyValue, includeListKeys bool) string {
+	seriesPath := canonicalPath
+	if !includeListKeys {
+		seriesPath = stripPathListKeys(canonicalPath)
+	}
+	return BuildSeriesKey(subscription, seriesPath, keys)
+}
+
+func metricLeafName(strippedPath string, tuple ListKeyTuple) string {
+	namePath := strippedPath
+	if len(tuple) > 0 {
+		firstListPath := tuple[0].ListPath
+		switch {
+		case strippedPath == firstListPath:
+			namePath = "/" + listName(firstListPath)
+		case strings.HasPrefix(strippedPath, firstListPath+"/"):
+			namePath = strings.TrimPrefix(strippedPath, firstListPath)
+		}
+	}
+	name := labelComponent(strings.Trim(namePath, "/"))
+	if name == "" {
+		name = labelComponent(strings.Trim(strippedPath, "/"))
+	}
+	return name
+}
+
+func resourceForEntity(base []KeyValue, scoped map[string][]KeyValue, tuple ListKeyTuple) []KeyValue {
+	if len(scoped) == 0 || len(tuple) == 0 {
+		return base
+	}
+	out := base
+	copied := false
+	for _, scope := range entityScopePrefixKeys(tuple) {
+		extra := scoped[scope]
+		if len(extra) == 0 {
+			continue
+		}
+		if !copied {
+			out = make([]KeyValue, len(base))
+			copy(out, base)
+			copied = true
+		}
+		out = mergeKeyValues(out, extra)
+	}
+	return out
+}
+
+func mergeKeyValues(base []KeyValue, extra []KeyValue) []KeyValue {
+	for _, kv := range extra {
+		replaced := false
+		for i := range base {
+			if base[i].Key == kv.Key {
+				base[i].Value = kv.Value
+				replaced = true
+				break
+			}
+		}
+		if !replaced {
+			base = append(base, kv)
+		}
+	}
+	return base
+}
+
+func pathLabelAttributes(keys []KeyValue, tuple ListKeyTuple) []KeyValue {
+	if len(keys) == 0 {
+		return nil
+	}
+	if singleListScope(tuple) {
+		return keys
+	}
+	out := make([]KeyValue, 0, len(keys))
+	for i, kv := range keys {
+		if i >= len(tuple) {
+			out = append(out, kv)
+			continue
+		}
+		out = append(out, KeyValue{
+			Key:   labelComponent(listName(tuple[i].ListPath)) + "_" + labelComponent(tuple[i].KeyName),
+			Value: kv.Value,
+		})
+	}
+	return out
+}
+
+func singleListScope(tuple ListKeyTuple) bool {
+	if len(tuple) == 0 {
+		return true
+	}
+	listPath := tuple[0].ListPath
+	for _, key := range tuple[1:] {
+		if key.ListPath != listPath {
+			return false
+		}
+	}
+	return true
+}
+
+func labelComponent(in string) string {
+	var b strings.Builder
+	lastUnderscore := false
+	for _, r := range in {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+			lastUnderscore = false
+		default:
+			if !lastUnderscore {
+				b.WriteByte('_')
+				lastUnderscore = true
+			}
+		}
+	}
+	return strings.Trim(b.String(), "_")
 }
 
 func timestamps(deviceTimestamp int64, ctx EventContext) (time.Time, []KeyValue) {

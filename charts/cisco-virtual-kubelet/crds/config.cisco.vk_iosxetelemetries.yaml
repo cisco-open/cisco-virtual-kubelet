@@ -57,6 +57,18 @@ spec:
               cardinalityLimits:
                 description: CardinalityLimits bounds mapper output.
                 properties:
+                  maxInstruments:
+                    default: 1024
+                    description: |-
+                      MaxInstruments caps the number of distinct OTel metric instruments
+                      (gauge + sum, keyed by name) the emitter will register before refusing
+                      new instruments. Once reached, additional metric points whose name has
+                      not been seen are dropped and counted in the cap-drop self-metric.
+                      Operators raise this on chassis with broad subscription paths
+                      (BGP-per-neighbor, interfaces-per-port).
+                    format: int32
+                    minimum: 1
+                    type: integer
                   maxSeriesPerSubscription:
                     default: 10000
                     description: MaxSeriesPerSubscription is the per-subscription
@@ -120,6 +132,12 @@ spec:
                             type: array
                         type: object
                     type: object
+                  includeListKeysInMetricName:
+                    description: |-
+                      IncludeListKeysInMetricName preserves legacy metric naming that embeds
+                      YANG list-key selectors in metric names. It defaults false so list-key
+                      values are emitted as labels only, avoiding one instrument per entity.
+                    type: boolean
                   metricTypeOverrides:
                     items:
                       description: MetricTypeOverride pins a mapped metric type for

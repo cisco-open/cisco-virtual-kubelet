@@ -29,7 +29,7 @@ import (
 
 const (
 	meterName                   = "cisco_vk_telemetry"
-	maxMetricInstruments        = 1024
+	defaultMaxMetricInstruments = 1024
 	metricPointsSelfMetric      = "cisco_vk_telemetry_metric_points_emitted_total"
 	classifierDecisionsMetric   = "cisco_vk_telemetry_classifier_decisions_total"
 	counterResetsSelfMetric     = "cisco_vk_telemetry_counter_resets_total"
@@ -38,6 +38,9 @@ const (
 
 type MetricsEmitter struct {
 	meter metric.Meter
+
+	maxInstruments int
+	self           *SelfMetrics
 
 	mu          sync.Mutex
 	gauges      map[string]metric.Float64Gauge
@@ -50,12 +53,33 @@ type MetricsEmitter struct {
 	counterResetsTotal       metric.Int64Counter
 }
 
+// MetricsEmitterOption configures a MetricsEmitter at construction.
+type MetricsEmitterOption func(*MetricsEmitter)
+
+// WithMaxInstruments overrides the default instrument-name cap. Values <= 0
+// keep the default.
+func WithMaxInstruments(n int) MetricsEmitterOption {
+	return func(e *MetricsEmitter) {
+		if n > 0 {
+			e.maxInstruments = n
+		}
+	}
+}
+
+// WithMetricsSelfMetrics wires the shared SelfMetrics so cap-drop events are
+// reported on the OTel pipeline and surfaced via CapDropTotal.
+func WithMetricsSelfMetrics(self *SelfMetrics) MetricsEmitterOption {
+	return func(e *MetricsEmitter) {
+		e.self = self
+	}
+}
+
 type instrumentKey struct {
 	name string
 	kind classifier.MetricKind
 }
 
-func NewMetricsEmitter(provider metric.MeterProvider) *MetricsEmitter {
+func NewMetricsEmitter(provider metric.MeterProvider, opts ...MetricsEmitterOption) *MetricsEmitter {
 	if provider == nil {
 		provider = noop.NewMeterProvider()
 	}
@@ -63,8 +87,9 @@ func NewMetricsEmitter(provider metric.MeterProvider) *MetricsEmitter {
 	metricPoints, _ := meter.Int64Counter(metricPointsSelfMetric)
 	classifierDecisions, _ := meter.Int64Counter(classifierDecisionsMetric)
 	counterResets, _ := meter.Int64Counter(counterResetsSelfMetric)
-	return &MetricsEmitter{
+	e := &MetricsEmitter{
 		meter:                    meter,
+		maxInstruments:           defaultMaxMetricInstruments,
 		gauges:                   map[string]metric.Float64Gauge{},
 		counters:                 map[string]metric.Float64Counter{},
 		instruments:              map[instrumentKey]struct{}{},
@@ -73,6 +98,12 @@ func NewMetricsEmitter(provider metric.MeterProvider) *MetricsEmitter {
 		classifierDecisionsTotal: classifierDecisions,
 		counterResetsTotal:       counterResets,
 	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(e)
+		}
+	}
+	return e
 }
 
 func (e *MetricsEmitter) Emit(ctx context.Context, events []mapper.MappedEvent) int {
@@ -108,7 +139,7 @@ func (e *MetricsEmitter) Emit(ctx context.Context, events []mapper.MappedEvent) 
 }
 
 func (e *MetricsEmitter) emitGauge(ctx context.Context, event mapper.MappedEvent, attrs attribute.Set) bool {
-	gauge, ok := e.gauge(event)
+	gauge, ok := e.gauge(ctx, event)
 	if !ok {
 		return false
 	}
@@ -118,7 +149,7 @@ func (e *MetricsEmitter) emitGauge(ctx context.Context, event mapper.MappedEvent
 }
 
 func (e *MetricsEmitter) emitSum(ctx context.Context, event mapper.MappedEvent, attrs attribute.Set) bool {
-	counter, ok := e.counter(event)
+	counter, ok := e.counter(ctx, event)
 	if !ok {
 		return false
 	}
@@ -148,44 +179,63 @@ func (e *MetricsEmitter) emitSum(ctx context.Context, event mapper.MappedEvent, 
 	return true
 }
 
-func (e *MetricsEmitter) gauge(event mapper.MappedEvent) (metric.Float64Gauge, bool) {
+func (e *MetricsEmitter) gauge(ctx context.Context, event mapper.MappedEvent) (metric.Float64Gauge, bool) {
 	name := metricName(event)
 	e.mu.Lock()
-	defer e.mu.Unlock()
 	if gauge := e.gauges[name]; gauge != nil {
+		e.mu.Unlock()
 		return gauge, true
 	}
 	key := instrumentKey{name: name, kind: classifier.MetricKindGauge}
-	if _, ok := e.instruments[key]; !ok && len(e.instruments) >= maxMetricInstruments {
+	if _, ok := e.instruments[key]; !ok && len(e.instruments) >= e.maxInstruments {
+		e.mu.Unlock()
+		e.recordCapDrop(ctx, event, name)
 		return nil, false
 	}
 	gauge, err := e.meter.Float64Gauge(name, metric.WithUnit(event.Unit))
 	if err != nil {
+		e.mu.Unlock()
 		return nil, false
 	}
 	e.gauges[name] = gauge
 	e.instruments[key] = struct{}{}
+	e.mu.Unlock()
 	return gauge, true
 }
 
-func (e *MetricsEmitter) counter(event mapper.MappedEvent) (metric.Float64Counter, bool) {
+func (e *MetricsEmitter) counter(ctx context.Context, event mapper.MappedEvent) (metric.Float64Counter, bool) {
 	name := metricName(event)
 	e.mu.Lock()
-	defer e.mu.Unlock()
 	if counter := e.counters[name]; counter != nil {
+		e.mu.Unlock()
 		return counter, true
 	}
 	key := instrumentKey{name: name, kind: classifier.MetricKindSum}
-	if _, ok := e.instruments[key]; !ok && len(e.instruments) >= maxMetricInstruments {
+	if _, ok := e.instruments[key]; !ok && len(e.instruments) >= e.maxInstruments {
+		e.mu.Unlock()
+		e.recordCapDrop(ctx, event, name)
 		return nil, false
 	}
 	counter, err := e.meter.Float64Counter(name, metric.WithUnit(event.Unit))
 	if err != nil {
+		e.mu.Unlock()
 		return nil, false
 	}
 	e.counters[name] = counter
 	e.instruments[key] = struct{}{}
+	e.mu.Unlock()
 	return counter, true
+}
+
+func (e *MetricsEmitter) recordCapDrop(ctx context.Context, event mapper.MappedEvent, name string) {
+	if e.self == nil {
+		return
+	}
+	e.self.IncInstrumentCapDrops(ctx,
+		attrValue(event.Resource, "device"),
+		attrValue(event.Resource, "subscription"),
+		name,
+	)
 }
 
 func (e *MetricsEmitter) recordPoint(ctx context.Context, event mapper.MappedEvent, kind classifier.MetricKind) {
@@ -235,6 +285,29 @@ func (e *MetricsEmitter) instrumentCount() int {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	return len(e.instruments)
+}
+
+// SetMaxInstruments updates the instrument-name cap. Existing registered
+// instruments are preserved; only future name registrations are subject to
+// the new cap. Values <= 0 are ignored so partial spec data doesn't shrink
+// a working cap.
+func (e *MetricsEmitter) SetMaxInstruments(n int) {
+	if e == nil || n <= 0 {
+		return
+	}
+	e.mu.Lock()
+	e.maxInstruments = n
+	e.mu.Unlock()
+}
+
+// MaxInstruments returns the current cap.
+func (e *MetricsEmitter) MaxInstruments() int {
+	if e == nil {
+		return 0
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.maxInstruments
 }
 
 func metricName(event mapper.MappedEvent) string {

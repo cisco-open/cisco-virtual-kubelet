@@ -53,6 +53,7 @@ type Subscriber struct {
 	logsEmitter     *emit.LogsEmitter
 	metricsEmitter  *emit.MetricsEmitter
 	tracesEmitter   *emit.TracesEmitter
+	selfMetrics     *emit.SelfMetrics
 	resourceAttrs   map[string]string
 	profile         MappingProfile
 
@@ -105,6 +106,13 @@ func WithTracesEmitter(e *emit.TracesEmitter) SubscriberOption {
 	return func(s *Subscriber) { s.tracesEmitter = e }
 }
 
+// WithSelfMetrics attaches the shared SelfMetrics. The Subscriber threads it
+// down to the StreamManager so stream-level counters report to the same OTel
+// pipeline as emitter-level counters.
+func WithSelfMetrics(self *emit.SelfMetrics) SubscriberOption {
+	return func(s *Subscriber) { s.selfMetrics = self }
+}
+
 // WithResourceAttributes seeds the per-event resource attributes (device,
 // service.name, etc.) added to every mapped record alongside the mapping
 // configured ResourceAttributes leaves.
@@ -135,9 +143,13 @@ func (s *Subscriber) SetMappingProfile(p MappingProfile) {
 	s.mu.Lock()
 	s.profile = p
 	tracesEmitter := s.tracesEmitter
+	metricsEmitter := s.metricsEmitter
 	s.mu.Unlock()
 	if tracesEmitter != nil {
 		tracesEmitter.SetTransitions(mappingTransitions(p.Mapping))
+	}
+	if metricsEmitter != nil && p.CardinalityLimits != nil && p.CardinalityLimits.MaxInstruments > 0 {
+		metricsEmitter.SetMaxInstruments(int(p.CardinalityLimits.MaxInstruments))
 	}
 }
 
@@ -190,6 +202,8 @@ func (s *Subscriber) Start(ctx context.Context) error {
 		ChannelCapacity: s.channelCapacity,
 		Reconnect:       s.reconnect,
 		Update:          s.updateState,
+		Device:          s.deviceRef,
+		SelfMetrics:     s.selfMetrics,
 	})
 
 	s.mu.Lock()

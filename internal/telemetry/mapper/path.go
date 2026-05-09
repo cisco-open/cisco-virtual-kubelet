@@ -21,9 +21,18 @@ import (
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
 )
 
+// ListKeyTuple is the ordered list-key trail along a flattened path.
+type ListKeyTuple []ListKey
+
+type ListKey struct {
+	ListPath string
+	KeyName  string
+	KeyValue string
+}
+
 // FlattenPath joins a gNMI Notification prefix with an update/delete path using
 // gNMI's prefix-relative semantics. PathElem order is preserved from the wire.
-func FlattenPath(prefix, path *gpb.Path) (canonical string, keys []KeyValue, originalOrder bool) {
+func FlattenPath(prefix, path *gpb.Path) (canonical string, keys []KeyValue, originalOrder bool, tuple ListKeyTuple) {
 	var elems []*gpb.PathElem
 	if prefix != nil {
 		elems = append(elems, prefix.GetElem()...)
@@ -32,11 +41,15 @@ func FlattenPath(prefix, path *gpb.Path) (canonical string, keys []KeyValue, ori
 		elems = append(elems, path.GetElem()...)
 	}
 	parts := make([]string, 0, len(elems))
+	listPathParts := make([]string, 0, len(elems))
 	for _, elem := range elems {
 		if elem == nil || elem.Name == "" {
 			continue
 		}
-		part := stripOriginPrefix(elem.Name)
+		name := stripOriginPrefix(elem.Name)
+		part := name
+		listPathParts = append(listPathParts, name)
+		listPath := "/" + strings.Join(listPathParts, "/")
 		if len(elem.Key) > 0 {
 			keyNames := make([]string, 0, len(elem.Key))
 			for k := range elem.Key {
@@ -47,14 +60,15 @@ func FlattenPath(prefix, path *gpb.Path) (canonical string, keys []KeyValue, ori
 				v := elem.Key[k]
 				part += "[" + k + "=" + v + "]"
 				keys = append(keys, KeyValue{Key: k, Value: v})
+				tuple = append(tuple, ListKey{ListPath: listPath, KeyName: k, KeyValue: v})
 			}
 		}
 		parts = append(parts, part)
 	}
 	if len(parts) == 0 {
-		return "/", keys, true
+		return "/", keys, true, tuple
 	}
-	return "/" + strings.Join(parts, "/"), keys, true
+	return "/" + strings.Join(parts, "/"), keys, true, tuple
 }
 
 func normalizeCanonicalPath(p string) string {

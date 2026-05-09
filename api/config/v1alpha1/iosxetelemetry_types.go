@@ -170,6 +170,17 @@ type CardinalityLimits struct {
 	// +optional
 	MaxSeriesPerSubscription int32 `json:"maxSeriesPerSubscription,omitempty"`
 
+	// MaxInstruments caps the number of distinct OTel metric instruments
+	// (gauge + sum, keyed by name) the emitter will register before refusing
+	// new instruments. Once reached, additional metric points whose name has
+	// not been seen are dropped and counted in the cap-drop self-metric.
+	// Operators raise this on chassis with broad subscription paths
+	// (BGP-per-neighbor, interfaces-per-port).
+	// +kubebuilder:default=1024
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	MaxInstruments int32 `json:"maxInstruments,omitempty"`
+
 	// OnExceeded is restricted to dropNewSeries in v1alpha1.
 	// +kubebuilder:default=dropNewSeries
 	// +kubebuilder:validation:Enum=dropNewSeries
@@ -188,6 +199,11 @@ type TimestampConfig struct {
 // MappingConfig carries mapper controls for aliases, metric type overrides,
 // resource attributes, and filters.
 type MappingConfig struct {
+	// IncludeListKeysInMetricName preserves legacy metric naming that embeds
+	// YANG list-key selectors in metric names. It defaults false so list-key
+	// values are emitted as labels only, avoiding one instrument per entity.
+	// +optional
+	IncludeListKeysInMetricName *bool `json:"includeListKeysInMetricName,omitempty"`
 	// +optional
 	PathAliases []PathAlias `json:"pathAliases,omitempty"`
 	// +optional

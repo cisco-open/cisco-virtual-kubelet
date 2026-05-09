@@ -31,8 +31,7 @@ import (
 // attributes. The matcher strips gNMI list-key selectors from the canonical
 // path so a config like /app-hosting-list/details/state matches every list
 // instance (every app). The extracted value is then attached to every metric
-// event that shares the same outermost list-key tuple — i.e. the per-entity
-// extracted attrs land on metrics emitted for that same entity.
+// event that shares the same list-key scope.
 type ResourceAttrExtractor struct {
 	byPath map[string]string
 }
@@ -57,7 +56,7 @@ func (e ResourceAttrExtractor) Extract(notif *gpb.Notification) []KeyValue {
 	}
 	out := make([]KeyValue, 0, len(e.byPath))
 	for _, update := range notif.GetUpdate() {
-		canonical, keys, _ := FlattenPath(notif.GetPrefix(), update.GetPath())
+		canonical, keys, _, _ := FlattenPath(notif.GetPrefix(), update.GetPath())
 		if len(keys) > 0 {
 			continue
 		}
@@ -70,18 +69,19 @@ func (e ResourceAttrExtractor) Extract(notif *gpb.Notification) []KeyValue {
 	return out
 }
 
-// ExtractByEntity groups extracted resource attributes by the outermost
-// list-key pair on the matched path. Updates with no list-keys are stored
-// under the empty entity "" and apply globally to every metric event in the
-// notification. Mapper.Process attaches the per-entity attrs to events whose
-// own outermost list-key matches.
+// ExtractByEntity groups extracted resource attributes by their full list-key
+// scope. Mapper.Process attaches attrs from the update's exact scope and
+// prefix scopes, with the longest matching scope taking precedence.
 func (e ResourceAttrExtractor) ExtractByEntity(notif *gpb.Notification) map[string][]KeyValue {
 	if notif == nil || len(e.byPath) == 0 {
 		return nil
 	}
 	out := map[string][]KeyValue{}
 	for _, update := range notif.GetUpdate() {
-		canonical, keys, _ := FlattenPath(notif.GetPrefix(), update.GetPath())
+		canonical, _, _, tuple := FlattenPath(notif.GetPrefix(), update.GetPath())
+		if len(tuple) == 0 {
+			continue
+		}
 		stripped := stripPathListKeys(canonical)
 		attrKey, ok := e.byPath[stripped]
 		if !ok {
@@ -91,7 +91,7 @@ func (e ResourceAttrExtractor) ExtractByEntity(notif *gpb.Notification) map[stri
 		if !ok {
 			continue
 		}
-		entity := firstListKeyPair(keys)
+		entity := entityScopeKey(tuple)
 		out[entity] = append(out[entity], KeyValue{Key: attrKey, Value: value})
 	}
 	return out
@@ -119,15 +119,52 @@ func stripPathListKeys(canonical string) string {
 	return b.String()
 }
 
-// firstListKeyPair returns "k=v" for the outermost list key on a path, or ""
-// when the path has no list keys. The "outermost" key identifies the entity
-// (e.g., the app-hosting app name) so per-entity attrs flow to the right
-// metric events even when nested lists appear deeper in the path.
-func firstListKeyPair(keys []KeyValue) string {
-	if len(keys) == 0 {
+func entityScopeKey(t ListKeyTuple) string {
+	if len(t) == 0 {
 		return ""
 	}
-	return keys[0].Key + "=" + keys[0].Value
+	var b strings.Builder
+	for i := 0; i < len(t); {
+		if b.Len() > 0 {
+			b.WriteByte('|')
+		}
+		listPath := t[i].ListPath
+		b.WriteString(listName(listPath))
+		for i < len(t) && t[i].ListPath == listPath {
+			b.WriteByte('[')
+			b.WriteString(t[i].KeyName)
+			b.WriteByte('=')
+			b.WriteString(t[i].KeyValue)
+			b.WriteByte(']')
+			i++
+		}
+	}
+	return b.String()
+}
+
+func entityScopePrefixKeys(t ListKeyTuple) []string {
+	if len(t) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(t))
+	for i := range t {
+		if i+1 < len(t) && t[i+1].ListPath == t[i].ListPath {
+			continue
+		}
+		keys = append(keys, entityScopeKey(t[:i+1]))
+	}
+	return keys
+}
+
+func listName(listPath string) string {
+	listPath = strings.Trim(listPath, "/")
+	if listPath == "" {
+		return ""
+	}
+	if idx := strings.LastIndexByte(listPath, '/'); idx >= 0 {
+		return listPath[idx+1:]
+	}
+	return listPath
 }
 
 func typedValueString(v *gpb.TypedValue) (string, bool) {
