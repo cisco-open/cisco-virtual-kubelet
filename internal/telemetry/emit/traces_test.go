@@ -55,7 +55,8 @@ func TestEmitsRecoverySpan(t *testing.T) {
 		t.Fatalf("span interval=[%s,%s], want [%s,%s]", span.StartTime(), span.EndTime(), t1, t2)
 	}
 	attrs := attrsByKey(span.Attributes())
-	if attrs["from-state"] != "down" || attrs["to-state"] != "up" || attrs["name"] != "Gi1" {
+	if attrs["from-state"] != "down" || attrs["to-state"] != "up" || attrs["name"] != "Gi1" ||
+		attrs["cvk.evidence.type"] != "state_transition" {
 		t.Fatalf("span attrs=%v", attrs)
 	}
 }

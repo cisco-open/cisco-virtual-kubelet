@@ -17,8 +17,10 @@ package transport
 import (
 	"context"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -31,12 +33,24 @@ func startTransportSpan(ctx context.Context, kind Kind, verb string, attrs ...at
 		attribute.String("cvk.transport.verb", verb),
 	}
 	base = append(base, attrs...)
-	return otel.Tracer(transportTracerName).Start(
+	ctx, span := otel.Tracer(transportTracerName).Start(
 		ctx,
 		"cvk.transport."+string(kind)+"."+verb,
 		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
 		oteltrace.WithAttributes(base...),
 	)
+	return ctx, transportSpan{Span: span}
+}
+
+type transportSpan struct {
+	oteltrace.Span
+}
+
+func (s transportSpan) SetStatus(code codes.Code, description string) {
+	if code == codes.Error {
+		s.SetAttributes(attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeTransportError))
+	}
+	s.Span.SetStatus(code, description)
 }
 
 func spanPath(path string) attribute.KeyValue {

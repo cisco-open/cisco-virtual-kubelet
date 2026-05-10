@@ -328,8 +328,9 @@ func sortedMap(in map[string]string) []KeyValue {
 }
 
 func eventAttributes(ctx EventContext, canonicalPath string, keys []KeyValue, tuple ListKeyTuple, timestampAttrs []KeyValue) []KeyValue {
-	out := make([]KeyValue, 0, len(keys)+len(timestampAttrs)+3)
+	out := make([]KeyValue, 0, len(keys)+len(timestampAttrs)+5)
 	out = append(out, pathLabelAttributes(keys, tuple)...)
+	out = append(out, entityAttributes(ctx, canonicalPath, tuple)...)
 	out = append(out, KeyValue{Key: "cisco.gnmi.path", Value: canonicalPath})
 	if ctx.StreamID != "" {
 		out = append(out, KeyValue{Key: "cisco.gnmi.stream_id", Value: ctx.StreamID})

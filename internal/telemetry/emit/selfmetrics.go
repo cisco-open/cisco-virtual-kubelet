@@ -18,6 +18,7 @@ import (
 	"context"
 	"sync/atomic"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
@@ -131,6 +132,7 @@ func (s *SelfMetrics) IncInstrumentCapDrops(ctx context.Context, device, subscri
 		attribute.String("device", device),
 		attribute.String("subscription", subscription),
 		attribute.String("metric", metricName),
+		attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeMetricAnomaly),
 	))
 }
 

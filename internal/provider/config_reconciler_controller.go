@@ -40,6 +40,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 )
 
 // reconcileTracerName is the instrumentation name used for the root
@@ -56,6 +57,19 @@ const reconcileTracerName = "cisco-virtual-kubelet/config-reconciler"
 // exists in the cluster. Caught against a live Cat9300 retest where
 // successive tests serialised on stale leases.
 const iosxeConfigFinalizer = "config.cisco.vk/lease-cleanup"
+
+func configTelemetryEntityID(cr *configv1alpha1.IOSXEConfig) string {
+	if cr == nil {
+		return ""
+	}
+	if cr.UID != "" {
+		return string(cr.UID)
+	}
+	if cr.Namespace != "" {
+		return cr.Namespace + "/" + cr.Name
+	}
+	return cr.Name
+}
 
 func containsFinalizer(fs []string, target string) bool {
 	for _, f := range fs {
@@ -284,6 +298,8 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 			attribute.String("cisco.vk.device.name", r.DeviceName),
 			attribute.String("cisco.vk.iosxeconfig.namespace", req.Namespace),
 			attribute.String("cisco.vk.iosxeconfig.name", req.Name),
+			attribute.String(semconv.CvkEntityType, semconv.EntityTypeConfig),
+			attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeConfigChange),
 		),
 	)
 	defer span.End()
@@ -299,12 +315,14 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 			// owner-ref cleanup (if any) is handled elsewhere and our
 			// status writes are unreachable anyway.
 			span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "not-found"))
+			span.SetAttributes(attribute.String(semconv.CvkEntityID, req.Namespace+"/"+req.Name))
 			return reconcile.Result{}, nil
 		}
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "get IOSXEConfig")
 		return reconcile.Result{}, fmt.Errorf("get IOSXEConfig: %w", err)
 	}
+	span.SetAttributes(attribute.String(semconv.CvkEntityID, configTelemetryEntityID(&cr)))
 
 	// Defence in depth: a CR reaching us that targets a different
 	// device is ignored. In production the predicate filter below

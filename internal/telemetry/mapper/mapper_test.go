@@ -19,6 +19,7 @@ import (
 	"time"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
 )
 
@@ -138,6 +139,12 @@ func TestMetricNameDropsListKeysByDefault(t *testing.T) {
 	if got := attrValue(events[0].Attributes, "name"); got != "c9ktest" {
 		t.Fatalf("name label=%q, want c9ktest", got)
 	}
+	if got := attrValue(events[0].Attributes, semconv.CvkEntityType); got != semconv.EntityTypeApp {
+		t.Fatalf("entity type=%q, want app", got)
+	}
+	if got := attrValue(events[0].Attributes, semconv.CvkEntityID); got != "c9ktest" {
+		t.Fatalf("entity id=%q, want c9ktest", got)
+	}
 }
 
 func TestMetricNameKeepsListKeysWithFlag(t *testing.T) {
@@ -200,6 +207,34 @@ func TestAliasMatchesAcrossListKeys(t *testing.T) {
 	}
 	if !seen["GigabitEthernet1"] || !seen["GigabitEthernet2"] {
 		t.Fatalf("labels seen=%+v, want both interface names", seen)
+	}
+}
+
+func TestInterfaceEntityAttributesPreferNameAndIfIndex(t *testing.T) {
+	events := New().Process(&gpb.Notification{
+		Update: []*gpb.Update{
+			uintUpdate(&gpb.Path{Elem: []*gpb.PathElem{
+				{Name: "interfaces"},
+				{Name: "interface", Key: map[string]string{"if-index": "1", "name": "GigabitEthernet0/0/0"}},
+				{Name: "state"},
+				{Name: "counters"},
+				{Name: "in-octets"},
+			}}, 42),
+		},
+	}, EventContext{
+		Device:       "edge-01",
+		Subscription: "interfaces",
+		Output:       metricsOnlyOutput(),
+	})
+
+	if len(events) != 1 || events[0].Signal != SignalKindMetric {
+		t.Fatalf("events=%+v, want one metric event", events)
+	}
+	if got := attrValue(events[0].Attributes, semconv.CvkEntityType); got != semconv.EntityTypeInterface {
+		t.Fatalf("entity type=%q, want interface", got)
+	}
+	if got := attrValue(events[0].Attributes, semconv.CvkEntityID); got != "GigabitEthernet0/0/0:1" {
+		t.Fatalf("entity id=%q, want GigabitEthernet0/0/0:1", got)
 	}
 }
 

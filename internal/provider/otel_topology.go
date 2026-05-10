@@ -24,12 +24,13 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
+	cvksemconv "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -89,8 +90,8 @@ func NewOTELTopologyExporter(
 
 		res, err := sdkresource.New(ctx,
 			sdkresource.WithAttributes(
-				semconv.ServiceNameKey.String(fmt.Sprintf("%s.%s", serviceName, nodeName)),
-				semconv.ServiceNamespaceKey.String("network.infrastructure"),
+				otelsemconv.ServiceNameKey.String(fmt.Sprintf("%s.%s", serviceName, nodeName)),
+				otelsemconv.ServiceNamespaceKey.String("network.infrastructure"),
 				attribute.String("host.name", nodeName),
 				attribute.String("device.address", deviceAddress),
 			),
@@ -226,6 +227,7 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 	for _, ip := range interfaceIPs {
 		ipList = append(ipList, ip.IPv4)
 	}
+	deviceEntityID := topologyDeviceEntityID(deviceInfo, hostname)
 
 	// --- Root span: one bounded topology collection cycle ---
 	rootCtx, rootSpan := e.tracer.Start(ctx, "cvk.topology.cycle",
@@ -246,6 +248,8 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 			attribute.String("router.ip.addresses", strings.Join(ipList, ",")),
 			attribute.String("network.layer", "L3"),
 			attribute.String("network.type", "routed"),
+			attribute.String(cvksemconv.CvkEntityType, cvksemconv.EntityTypeDevice),
+			attribute.String(cvksemconv.CvkEntityID, deviceEntityID),
 		),
 	)
 
@@ -275,6 +279,8 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 			attribute.String("peer.platform", n.Platform),
 			attribute.String("peer.capabilities", n.Capabilities),
 			attribute.String("link.state", linkState),
+			attribute.String(cvksemconv.CvkEntityType, cvksemconv.EntityTypeTopologyLink),
+			attribute.String(cvksemconv.CvkEntityID, linkID),
 		}
 
 		if n.OSPFState != "" {
@@ -326,6 +332,8 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 			attribute.String("k8s.container.name", app.ContainerName),
 			attribute.String("topology.link_id", fmt.Sprintf("%s->%s", hostname, peerSvc)),
 			attribute.String("topology.layer", "app-hosting"),
+			attribute.String(cvksemconv.CvkEntityType, cvksemconv.EntityTypeApp),
+			attribute.String(cvksemconv.CvkEntityID, topologyAppEntityID(app)),
 		}
 		if app.IPv4Address != "" {
 			appAttrs = append(appAttrs, attribute.String("app.ip", app.IPv4Address))
@@ -349,6 +357,33 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 
 	log.G(ctx).Infof("OTEL: emitted topology trace cycle=%s with %d link spans, %d dropped links, and %d app spans",
 		cycleID, len(consolidated), droppedLinks, len(hostedApps))
+}
+
+func topologyDeviceEntityID(info *common.DeviceInfo, hostname string) string {
+	if info != nil {
+		switch {
+		case info.SerialNumber != "":
+			return info.SerialNumber
+		case info.RouterID != "":
+			return info.RouterID
+		case info.Hostname != "":
+			return info.Hostname
+		}
+	}
+	return hostname
+}
+
+func topologyAppEntityID(app common.HostedApp) string {
+	if app.PodUID != "" {
+		return app.PodUID
+	}
+	if app.AppID != "" {
+		return app.AppID
+	}
+	if app.PodNamespace != "" {
+		return app.PodNamespace + "/" + app.PodName
+	}
+	return app.PodName
 }
 
 // consolidatedNeighbor merges CDP and OSPF data for the same link.

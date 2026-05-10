@@ -25,6 +25,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
 )
 
@@ -295,6 +296,9 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 		"cisco.vk.device.name":   res.DeviceName,
 		"cvk.config.families":    strings.Join(res.ManagedFamilies, ","),
 		"cvk.config.driftPolicy": string(res.DriftPolicy),
+		semconv.CvkEntityType:    semconv.EntityTypeConfig,
+		semconv.CvkEntityID:      engineConfigEntityID(res),
+		semconv.CvkEvidenceType:  semconv.EvidenceTypeConfigChange,
 	})
 
 	if res.DriftPolicy == configv1alpha1.DriftPolicyPause {
@@ -615,6 +619,24 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	return result
 }
 
+func engineConfigEntityID(res *intent.ResolvedIntent) string {
+	if res == nil {
+		return ""
+	}
+	if res.SourceCR != nil {
+		if res.SourceCR.UID != "" {
+			return string(res.SourceCR.UID)
+		}
+		if res.SourceCR.Namespace != "" {
+			return res.SourceCR.Namespace + "/" + res.SourceCR.Name
+		}
+		if res.SourceCR.Name != "" {
+			return res.SourceCR.Name
+		}
+	}
+	return res.DeviceName
+}
+
 // confirmedCommitDecision tells the Reconcile path whether to take
 // the auto-revert flow or fall back to plain Commit. Returns
 // (useConfirmed, ConfirmedCommitter, fallback-reason). When
@@ -731,8 +753,11 @@ func (e *Engine) validate(res *intent.ResolvedIntent) error {
 func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent.ResolvedIntent) FamilyStatus {
 	ctx, familySpan := vktrace.StartSpan(ctx, "cvk.config.family")
 	ctx = familySpan.WithFields(ctx, map[string]any{
-		"cisco.vk.device.name": res.DeviceName,
-		"cvk.config.family":    family,
+		"cisco.vk.device.name":  res.DeviceName,
+		"cvk.config.family":     family,
+		semconv.CvkEntityType:   semconv.EntityTypeConfig,
+		semconv.CvkEntityID:     engineConfigEntityID(res),
+		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
 	})
 	defer familySpan.End()
 	w := e.Lookup(family)
@@ -769,7 +794,12 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// straight up. See transport.IsTransient for the matcher.
 	var observed any
 	planCtx, planSpan := vktrace.StartSpan(ctx, "cvk.config.plan")
-	planCtx = planSpan.WithField(planCtx, "cvk.config.phase", "fetch-diff")
+	planCtx = planSpan.WithFields(planCtx, map[string]any{
+		"cvk.config.phase":      "fetch-diff",
+		semconv.CvkEntityType:   semconv.EntityTypeConfig,
+		semconv.CvkEntityID:     engineConfigEntityID(res),
+		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
+	})
 	err := transport.RetryIdempotent(planCtx, e.RetryPolicy, func() error {
 		var ferr error
 		observed, ferr = w.Fetch(planCtx, e.Transport)
@@ -879,8 +909,11 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	applyStart := time.Now()
 	applyCtx, applySpan := vktrace.StartSpan(ctx, "cvk.config.apply")
 	applyCtx = applySpan.WithFields(applyCtx, map[string]any{
-		"cvk.config.family":   family,
-		"cvk.config.op_count": len(ops),
+		"cvk.config.family":     family,
+		"cvk.config.op_count":   len(ops),
+		semconv.CvkEntityType:   semconv.EntityTypeConfig,
+		semconv.CvkEntityID:     engineConfigEntityID(res),
+		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
 	})
 	defer applySpan.End()
 	// Apply through the engine's per-tick view of the transport. When
@@ -934,7 +967,12 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// retry transient TCP-level errors per RetryPolicy.
 	var verify any
 	verifyCtx, verifySpan := vktrace.StartSpan(ctx, "cvk.config.verify")
-	verifyCtx = verifySpan.WithField(verifyCtx, "cvk.config.family", family)
+	verifyCtx = verifySpan.WithFields(verifyCtx, map[string]any{
+		"cvk.config.family":     family,
+		semconv.CvkEntityType:   semconv.EntityTypeConfig,
+		semconv.CvkEntityID:     engineConfigEntityID(res),
+		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
+	})
 	defer verifySpan.End()
 	err = transport.RetryIdempotent(verifyCtx, e.RetryPolicy, func() error {
 		var ferr error
@@ -1160,9 +1198,12 @@ func (e *Engine) applyCLIBlock(ctx context.Context, block intent.CLIBlock, res *
 	famName := "cli:" + block.TemplateName
 	ctx, span := vktrace.StartSpan(ctx, "cvk.config.apply")
 	ctx = span.WithFields(ctx, map[string]any{
-		"cisco.vk.device.name": res.DeviceName,
-		"cvk.config.family":    famName,
-		"cvk.config.kind":      "cli",
+		"cisco.vk.device.name":  res.DeviceName,
+		"cvk.config.family":     famName,
+		"cvk.config.kind":       "cli",
+		semconv.CvkEntityType:   semconv.EntityTypeConfig,
+		semconv.CvkEntityID:     engineConfigEntityID(res),
+		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
 	})
 	defer span.End()
 	op := transport.Op{

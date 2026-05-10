@@ -25,6 +25,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
@@ -214,6 +215,7 @@ func (e *TracesEmitter) emitRecoverySpan(ctx context.Context, event mapper.Mappe
 		attribute.String("to-state", event.Body),
 		attribute.String("duration", end.Sub(start).String()),
 		attribute.String("cisco.gnmi.path", event.CanonicalPath),
+		attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeStateTransition),
 	}
 	for _, kv := range sortedKeyValues(out.keys) {
 		if mapper.IsForbiddenDataPointAttribute(kv.Key) {

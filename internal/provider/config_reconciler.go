@@ -40,6 +40,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -467,6 +468,9 @@ func (r *ConfigReconciler) reconcileOne(
 		oteltrace.WithAttributes(
 			attribute.String("config.cisco.vk.iosxeconfig.namespace", cr.Namespace),
 			attribute.String("config.cisco.vk.iosxeconfig.name", cr.Name),
+			attribute.String(semconv.CvkEntityType, semconv.EntityTypeConfig),
+			attribute.String(semconv.CvkEntityID, configTelemetryEntityID(cr)),
+			attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeConfigChange),
 		))
 	resolved, err := resolver.Resolve(intentCtx, cr)
 	if err != nil {
@@ -1358,7 +1362,12 @@ func (r *ConfigReconciler) applyRollbackTo(
 		return resolved, false, "", nil
 	}
 	ctx, span := otel.Tracer(reconcileTracerName).Start(ctx, "cvk.config.rollback",
-		oteltrace.WithAttributes(attribute.String("cvk.rollback.target_revision", target)))
+		oteltrace.WithAttributes(
+			attribute.String("cvk.rollback.target_revision", target),
+			attribute.String(semconv.CvkEntityType, semconv.EntityTypeConfig),
+			attribute.String(semconv.CvkEntityID, configTelemetryEntityID(cr)),
+			attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeConfigChange),
+		))
 	defer span.End()
 	var rev configv1alpha1.IOSXEConfigRevision
 	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: cr.Namespace, Name: target}, &rev); err != nil {

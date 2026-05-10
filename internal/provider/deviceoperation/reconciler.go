@@ -39,6 +39,7 @@ import (
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 )
 
 const (
@@ -119,6 +120,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		attribute.String("cvk.operation.kind", string(op.Spec.Operation.Kind)),
 		attribute.String("k8s.namespace.name", op.Namespace),
 		attribute.String("k8s.resource.name", op.Name),
+		attribute.String(semconv.CvkEntityType, semconv.EntityTypeOperation),
+		attribute.String(semconv.CvkEntityID, operationEntityID(&op)),
+		attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeOperatorAction),
 	)
 
 	plan, err := buildPlan(op.Spec.Operation)
@@ -197,6 +201,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		span.SetStatus(codes.Ok, "")
 	}
 	return reconcile.Result{}, r.finishWithReason(ctx, &op, terminalPhase, reason, message, outputs, artifactURIs, now)
+}
+
+func operationEntityID(op *opsv1alpha1.DeviceOperation) string {
+	if op == nil {
+		return ""
+	}
+	if op.UID != "" {
+		return string(op.UID)
+	}
+	if op.Namespace != "" {
+		return op.Namespace + "/" + op.Name
+	}
+	return op.Name
 }
 
 func (r *Reconciler) markPending(ctx context.Context, op *opsv1alpha1.DeviceOperation, reason, message string, now time.Time) error {
