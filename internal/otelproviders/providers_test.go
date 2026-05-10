@@ -128,6 +128,61 @@ func TestExportFailureRecorderPublishesObservableCounter(t *testing.T) {
 	}
 }
 
+func TestRegisterProcessInfoGaugePublishesResourceLabels(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	registerProcessInfoGauge(mp, map[string]string{
+		"service.name":        "cisco-vk-controller",
+		"service.instance.id": "pod-123",
+		"cvk.process.role":    "controller",
+		"cvk.driver.kind":     "iosxe",
+		"cluster":             "prod",
+		"env":                 "test",
+		"owner":               "netops",
+	})
+
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	var found bool
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name != processInfoMetric {
+				continue
+			}
+			found = true
+			gauge, ok := m.Data.(metricdata.Gauge[int64])
+			if !ok {
+				t.Fatalf("%s data type = %T, want metricdata.Gauge[int64]", processInfoMetric, m.Data)
+			}
+			if len(gauge.DataPoints) != 1 {
+				t.Fatalf("datapoints=%d want 1", len(gauge.DataPoints))
+			}
+			dp := gauge.DataPoints[0]
+			if dp.Value != 1 {
+				t.Fatalf("%s value=%d want 1", processInfoMetric, dp.Value)
+			}
+			for key, want := range map[string]string{
+				"service_name":        "cisco-vk-controller",
+				"service_instance_id": "pod-123",
+				"cvk_process_role":    "controller",
+				"cvk_driver_kind":     "iosxe",
+				"cluster":             "prod",
+				"env":                 "test",
+				"owner":               "netops",
+			} {
+				if got := attrString(dp.Attributes, key); got != want {
+					t.Fatalf("attribute %s=%q want %q", key, got, want)
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("missing %s", processInfoMetric)
+	}
+}
+
 func attrString(attrs attribute.Set, key string) string {
 	value, ok := attrs.Value(attribute.Key(key))
 	if !ok {

@@ -49,6 +49,7 @@ import (
 
 const defaultShutdownTimeout = 5 * time.Second
 const exporterFailuresMetric = "cisco_vk_telemetry_exporter_failures_total"
+const processInfoMetric = "cisco_vk_process_info"
 
 type Config struct {
 	OTLPEndpoint    string
@@ -158,6 +159,7 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 		sdklog.WithResource(res),
 	)
 	exportFailures.register(mp)
+	registerProcessInfoGauge(mp, cfg.ResourceAttrs)
 
 	providers := &Providers{Tracer: tp, Meter: mp, Logger: lp}
 	timeout := cfg.ShutdownTimeout
@@ -215,6 +217,42 @@ func resource(ctx context.Context, attrs map[string]string) (*sdkresource.Resour
 		return nil, fmt.Errorf("create OTEL resource: %w", err)
 	}
 	return res, nil
+}
+
+func registerProcessInfoGauge(provider metric.MeterProvider, resourceAttrs map[string]string) {
+	if provider == nil {
+		return
+	}
+	attrs := processInfoAttributes(resourceAttrs)
+	meter := provider.Meter("github.com/cisco/virtual-kubelet-cisco/internal/otelproviders")
+	_, _ = meter.Int64ObservableGauge(
+		processInfoMetric,
+		metric.WithDescription("CVK process heartbeat and static process identity"),
+		metric.WithInt64Callback(func(ctx context.Context, observer metric.Int64Observer) error {
+			observer.Observe(1, metric.WithAttributes(attrs...))
+			return nil
+		}),
+	)
+}
+
+func processInfoAttributes(resourceAttrs map[string]string) []attribute.KeyValue {
+	keys := []struct {
+		resource string
+		label    string
+	}{
+		{resource: "service.name", label: "service_name"},
+		{resource: "service.instance.id", label: "service_instance_id"},
+		{resource: "cvk.process.role", label: "cvk_process_role"},
+		{resource: "cvk.driver.kind", label: "cvk_driver_kind"},
+		{resource: "cluster", label: "cluster"},
+		{resource: "env", label: "env"},
+		{resource: "owner", label: "owner"},
+	}
+	out := make([]attribute.KeyValue, 0, len(keys))
+	for _, key := range keys {
+		out = append(out, attribute.String(key.label, resourceAttrs[key.resource]))
+	}
+	return out
 }
 
 func endpointTarget(endpoint string) string {
