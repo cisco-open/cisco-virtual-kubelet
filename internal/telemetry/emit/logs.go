@@ -16,6 +16,7 @@ package emit
 
 import (
 	"context"
+	"strings"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
 	"go.opentelemetry.io/otel/log"
@@ -67,6 +68,7 @@ func (e *LogsEmitter) Emit(ctx context.Context, events []mapper.MappedEvent) int
 		rec.SetObservedTimestamp(event.Timestamp)
 		rec.SetSeverity(toOTelSeverity(event.Severity))
 		rec.SetSeverityText(string(event.Severity))
+		rec.SetEventName(logEventName(event.Name))
 		rec.SetBody(log.StringValue(event.Body))
 		attrs := make([]mapper.KeyValue, 0, len(event.Resource)+len(event.Attributes))
 		attrs = append(attrs, event.Resource...)
@@ -85,6 +87,13 @@ func (e *LogsEmitter) Emit(ctx context.Context, events []mapper.MappedEvent) int
 		e.self.AddLogRecords(ctx, int64(emitted), device, subscription)
 	}
 	return emitted
+}
+
+func logEventName(name string) string {
+	if strings.HasPrefix(name, "cvk.") {
+		return name
+	}
+	return "cvk." + name
 }
 
 func toOTelSeverity(sev mapper.Severity) log.Severity {

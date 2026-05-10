@@ -31,6 +31,7 @@ func TestLogsEmitterEmitsStringLeaves(t *testing.T) {
 
 	emitted := emitter.Emit(context.Background(), []mapper.MappedEvent{{
 		Signal:    mapper.SignalKindLog,
+		Name:      "interfaces.interface.state.oper-status",
 		Body:      "interface up",
 		Severity:  mapper.SeverityInfo,
 		Timestamp: ts,
@@ -51,6 +52,30 @@ func TestLogsEmitterEmitsStringLeaves(t *testing.T) {
 	}
 	if !records[0].Timestamp().Equal(ts) {
 		t.Fatalf("timestamp=%s, want %s", records[0].Timestamp(), ts)
+	}
+	if got := records[0].EventName(); got != "cvk.interfaces.interface.state.oper-status" {
+		t.Fatalf("event name=%q, want cvk.interfaces.interface.state.oper-status", got)
+	}
+}
+
+func TestLogsEmitterDoesNotDoublePrefixEventName(t *testing.T) {
+	emitter, exporter := newCaptureEmitter(t)
+
+	emitted := emitter.Emit(context.Background(), []mapper.MappedEvent{{
+		Signal:   mapper.SignalKindLog,
+		Name:     "cvk.app-hosting.state",
+		Body:     "DEPLOYED",
+		Severity: mapper.SeverityInfo,
+	}})
+	if emitted != 1 {
+		t.Fatalf("Emit()=%d, want 1", emitted)
+	}
+	records := exporter.Records()
+	if len(records) != 1 {
+		t.Fatalf("records=%d, want 1", len(records))
+	}
+	if got := records[0].EventName(); got != "cvk.app-hosting.state" {
+		t.Fatalf("event name=%q, want cvk.app-hosting.state", got)
 	}
 }
 
