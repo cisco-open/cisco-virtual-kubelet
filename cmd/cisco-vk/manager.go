@@ -26,7 +26,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
@@ -48,6 +47,7 @@ var (
 	vkImage           string
 	vkServiceAccount  string
 	enableAggregator  bool
+	controllerInfoLogRateLimit int
 )
 
 var managerCmd = &cobra.Command{
@@ -81,18 +81,29 @@ func init() {
 			"per-pod isolation for one /metrics + one log stream + "+
 			"lower per-fleet overhead. The cisco-vk pod-spawning "+
 			"flow continues to operate alongside this for non-IOSXE devices.")
+	managerCmd.Flags().StringVar(&logLevel, "log-level", "",
+		"log level: debug, info, warn, error (default: $LOG_LEVEL or info)")
+	managerCmd.Flags().IntVar(&controllerInfoLogRateLimit, "controller-info-log-rate-limit", 100,
+		"Maximum controller INFO log records per second exported to OpenTelemetry.")
 }
 
 func runManager(cmd *cobra.Command, args []string) error {
-	opts := zap.Options{
-		Development: true,
+	controllerDebug, err := controllerDebugLogging()
+	if err != nil {
+		return err
 	}
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	controllerProviders, controllerShutdown, err := buildControllerProviders(context.Background())
+	ctrl.SetLogger(newControllerRuntimeLogger(
+		telemetryLoggerProvider(controllerProviders),
+		controllerInfoLogRateLimit,
+		controllerDebug,
+	))
+	setupLog = ctrl.Log.WithName("setup")
 
 	cfg := ctrl.GetConfigOrDie()
 	signalCtx := ctrl.SetupSignalHandler()
 
-	controllerProviders, controllerShutdown, err := buildControllerProviders(context.Background())
 	if err != nil {
 		setupLog.Error(err, "controller OTel providers unavailable; continuing with global no-op provider")
 	} else if controllerProviders != nil {
