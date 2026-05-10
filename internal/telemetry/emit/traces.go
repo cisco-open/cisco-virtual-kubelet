@@ -215,6 +215,9 @@ func (e *TracesEmitter) emitRecoverySpan(ctx context.Context, event mapper.Mappe
 		attribute.String("cisco.gnmi.path", event.CanonicalPath),
 	}
 	for _, kv := range sortedKeyValues(out.keys) {
+		if mapper.IsForbiddenDataPointAttribute(kv.Key) {
+			continue
+		}
 		attrs = append(attrs, attribute.String(kv.Key, kv.Value))
 	}
 	_, span := e.tracer.Start(ctx, transitionSpanName(event),
@@ -419,6 +422,9 @@ func pathKeys(event mapper.MappedEvent) map[string]string {
 	out := map[string]string{}
 	for _, attr := range event.Attributes {
 		if strings.HasPrefix(attr.Key, "cisco.") {
+			continue
+		}
+		if mapper.IsForbiddenDataPointAttribute(attr.Key) {
 			continue
 		}
 		out[attr.Key] = attr.Value

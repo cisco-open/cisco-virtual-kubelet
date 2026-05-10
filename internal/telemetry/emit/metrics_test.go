@@ -47,6 +47,9 @@ func TestEmitGaugeRecordsValue(t *testing.T) {
 	if got := attrString(dp.Attributes, "device"); got != "edge-01" {
 		t.Fatalf("device attr=%q, want edge-01", got)
 	}
+	if got := attrString(dp.Attributes, "cisco.device.name"); got != "" {
+		t.Fatalf("cisco.device.name data-point attr=%q, want absent", got)
+	}
 }
 
 func TestEmitSumComputesDeltaFromCumulative(t *testing.T) {
@@ -192,6 +195,7 @@ func metricEvent(name string, kind classifier.MetricKind, value float64, series 
 		Resource: []mapper.KeyValue{
 			{Key: "device", Value: "edge-01"},
 			{Key: "subscription", Value: "interfaces"},
+			{Key: "cisco.device.name", Value: "edge-01"},
 		},
 		Attributes: []mapper.KeyValue{
 			{Key: "ifname", Value: "GigabitEthernet1"},

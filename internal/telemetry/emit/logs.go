@@ -101,6 +101,9 @@ func toOTelSeverity(sev mapper.Severity) log.Severity {
 func toLogAttrs(attrs []mapper.KeyValue) []log.KeyValue {
 	out := make([]log.KeyValue, 0, len(attrs))
 	for _, attr := range attrs {
+		if mapper.IsForbiddenDataPointAttribute(attr.Key) {
+			continue
+		}
 		out = append(out, log.String(attr.Key, attr.Value))
 	}
 	return out

@@ -359,9 +359,15 @@ func utf8FirstRune(s string) (rune, bool) {
 func attributeSet(resource []mapper.KeyValue, attrs []mapper.KeyValue) attribute.Set {
 	kvs := make([]attribute.KeyValue, 0, len(resource)+len(attrs))
 	for _, attr := range resource {
+		if mapper.IsForbiddenDataPointAttribute(attr.Key) {
+			continue
+		}
 		kvs = append(kvs, attribute.String(attr.Key, attr.Value))
 	}
 	for _, attr := range attrs {
+		if mapper.IsForbiddenDataPointAttribute(attr.Key) {
+			continue
+		}
 		kvs = append(kvs, attribute.String(attr.Key, attr.Value))
 	}
 	return attribute.NewSet(kvs...)

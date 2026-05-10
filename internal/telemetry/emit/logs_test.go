@@ -96,10 +96,12 @@ func TestLogsEmitterPropagatesAttrs(t *testing.T) {
 			Resource: []mapper.KeyValue{
 				{Key: "device", Value: "edge-01"},
 				{Key: "subscription", Value: "interfaces"},
+				{Key: "cisco.device.name", Value: "edge-01"},
 			},
 			Attributes: []mapper.KeyValue{
 				{Key: "cisco.gnmi.path", Value: "/interfaces/interface/state/oper-status"},
 				{Key: "name", Value: "GigabitEthernet1"},
+				{Key: "owner", Value: "platform"},
 			},
 		},
 	})
@@ -120,6 +122,11 @@ func TestLogsEmitterPropagatesAttrs(t *testing.T) {
 	for key, want := range wantAttrs {
 		if got := logAttr(records[0], key); got != want {
 			t.Fatalf("%s=%q, want %q", key, got, want)
+		}
+	}
+	for _, key := range []string{"cisco.device.name", "owner"} {
+		if got := logAttr(records[0], key); got != "" {
+			t.Fatalf("%s=%q, want absent", key, got)
 		}
 	}
 }

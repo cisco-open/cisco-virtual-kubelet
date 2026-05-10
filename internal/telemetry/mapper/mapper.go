@@ -335,7 +335,7 @@ func eventAttributes(ctx EventContext, canonicalPath string, keys []KeyValue, tu
 		out = append(out, KeyValue{Key: "cisco.gnmi.stream_id", Value: ctx.StreamID})
 	}
 	out = append(out, timestampAttrs...)
-	return out
+	return stripForbiddenDataPointAttributes(out)
 }
 
 func includeListKeysInMetricName(mapping *configv1alpha1.MappingConfig) bool {
