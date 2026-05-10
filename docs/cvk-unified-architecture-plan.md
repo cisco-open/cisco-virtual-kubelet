@@ -376,7 +376,9 @@ Each milestone is independently shippable and provides operator value. v1.0 is a
 
 ## 7. Unified phased roadmap
 
-### Tranche I — Trace foundation + pod-status bridge (2 weeks)
+Section 12 supersedes prior estimates in this document.
+
+### Tranche I — Trace foundation + pod-status bridge (3-4 weeks)
 
 | Item | File / package | Effort |
 |---|---|---|
@@ -391,7 +393,7 @@ Each milestone is independently shippable and provides operator value. v1.0 is a
 
 **Cumulative outcome:** operator-side traces work, pods see their own state. **Closes the v1.0 gate.**
 
-### Tranche II — MDT-supplemented topology + correlation cache (2 weeks)
+### Tranche II — MDT-supplemented topology + correlation cache (3 weeks)
 
 | Item | Effort |
 |---|---|
@@ -405,7 +407,7 @@ Each milestone is independently shippable and provides operator value. v1.0 is a
 
 **Cumulative outcome:** distributed trace per Pod admission, end-to-end. Topology becomes a consumer of MDT state, not an independent poller.
 
-### Tranche III — Configuration revision history + rollback (2-3 weeks)
+### Tranche III — Configuration revision history + rollback (3-4 weeks)
 
 | Item | Effort |
 |---|---|
@@ -417,7 +419,7 @@ Each milestone is independently shippable and provides operator value. v1.0 is a
 | Tests: rollback to N revisions back; confirm-timeout interaction; failed rollback emits event | 2-3 days |
 | **Verification:** apply config v1, apply v2, set `rollbackTo: rev-1`; device returns to v1 state; trace shows `cvk.config.rollback` parent over `cvk.config.apply` child | lab |
 
-### Tranche IV — DeviceOperation CRD (read-only ops + adminserver wrap) (2 weeks)
+### Tranche IV — DeviceOperation CRD (read-only ops + adminserver wrap) (3 weeks)
 
 | Item | Effort |
 |---|---|
@@ -428,7 +430,7 @@ Each milestone is independently shippable and provides operator value. v1.0 is a
 | Adminserver `/v1/exec` becomes a thin wrapper synthesizing transient CRs | 1 day |
 | **Verification:** `kubectl create -f packet-capture.yaml` on a real device produces an artifact, status reflects progress, trace shows the operation lifecycle | lab |
 
-### Tranche V — DeviceUpgrade CRD (IOS-XE only initially) (4-6 weeks)
+### Tranche V — DeviceUpgrade CRD (IOS-XE only initially) (6-8 weeks)
 
 | Item | Effort |
 |---|---|
