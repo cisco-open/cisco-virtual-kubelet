@@ -41,6 +41,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
 )
 
 const (
@@ -152,7 +153,18 @@ type CiscoDeviceReconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet,verbs=bind
 
 // Reconcile ensures a ConfigMap and Deployment exist for each CiscoDevice.
-func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, retErr error) {
+	ctx, span := vktrace.StartSpan(ctx, "cvk.ciscodevice.reconcile")
+	ctx = span.WithField(ctx, "cisco.device.name", req.Name)
+	ctx = span.WithField(ctx, "cisco.device.namespace", req.Namespace)
+	defer func() {
+		span.WithField(ctx, "cvk.reconcile.result", reconcileResultAttribute(result))
+		if retErr != nil {
+			span.SetStatus(retErr)
+		}
+		span.End()
+	}()
+
 	logger := log.FromContext(ctx)
 
 	// ── 1. Fetch the CiscoDevice ────────────────────────────────────────
@@ -164,6 +176,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 		return ctrl.Result{}, fmt.Errorf("unable to fetch CiscoDevice: %w", err)
 	}
+	ctx = span.WithField(ctx, "cvk.driver.kind", string(device.Spec.Driver))
 
 	// ── 2. Handle deletion (finalizer) ───────────────────────────────────
 	if !device.DeletionTimestamp.IsZero() {
@@ -468,6 +481,16 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func reconcileResultAttribute(result ctrl.Result) string {
+	if result.RequeueAfter > 0 {
+		return "requeue-after:" + result.RequeueAfter.String()
+	}
+	if result.Requeue {
+		return "requeue"
+	}
+	return "done"
 }
 
 // vkSharedClusterRole is the cluster-scoped Role the chart ships with the VK
