@@ -788,6 +788,11 @@ func (in *IOSXEConfigRevisionList) DeepCopyObject() runtime.Object {
 func (in *IOSXEConfigRevisionSpec) DeepCopyInto(out *IOSXEConfigRevisionSpec) {
 	*out = *in
 	out.DeviceRef = in.DeviceRef
+	if in.SecretRefNames != nil {
+		in, out := &in.SecretRefNames, &out.SecretRefNames
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.AtomicReplaceOwnedKeys != nil {
 		in, out := &in.AtomicReplaceOwnedKeys, &out.AtomicReplaceOwnedKeys
 		*out = make(map[string][]string, len(*in))

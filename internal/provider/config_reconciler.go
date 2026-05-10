@@ -484,7 +484,13 @@ func (r *ConfigReconciler) reconcileOne(
 		intentSpan.RecordError(err)
 		intentSpan.SetStatus(codes.Error, "rollback")
 		intentSpan.End()
-		recordErr := r.recordRollbackFailure(ctx, cr, fmt.Sprintf("rollback: %v", err))
+		var blocked *rollbackBlockedError
+		var recordErr error
+		if errors.As(err, &blocked) {
+			recordErr = r.recordRollbackBlocked(ctx, cr, blocked.reason, blocked.Error())
+		} else {
+			recordErr = r.recordRollbackFailure(ctx, cr, fmt.Sprintf("rollback: %v", err))
+		}
 		r.patchTraceAnnotations(ctx, cr, engine.PhaseFailed, time.Since(tickStart))
 		return engine.Result{Phase: engine.PhaseFailed, Err: err},
 			recordErr
@@ -743,6 +749,31 @@ func (r *ConfigReconciler) recordRollbackFailure(ctx context.Context, cr *config
 	return ignoreConflict(r.Client.Status().Update(ctx, updated))
 }
 
+func (r *ConfigReconciler) recordRollbackBlocked(ctx context.Context, cr *configv1alpha1.IOSXEConfig, reason, msg string) error {
+	updated := cr.DeepCopy()
+	updated.Status.Phase = engine.PhaseFailed
+	updated.Status.ObservedGeneration = cr.Generation
+	setCondition(&updated.Status, metav1.Condition{
+		Type:    "Ready",
+		Status:  metav1.ConditionFalse,
+		Reason:  reason,
+		Message: msg,
+	})
+	setCondition(&updated.Status, metav1.Condition{
+		Type:    "RollbackBlocked",
+		Status:  metav1.ConditionTrue,
+		Reason:  reason,
+		Message: msg,
+	})
+	setCondition(&updated.Status, metav1.Condition{
+		Type:    "Rolled-Back",
+		Status:  metav1.ConditionFalse,
+		Reason:  "RollbackFailed",
+		Message: msg,
+	})
+	return ignoreConflict(r.Client.Status().Update(ctx, updated))
+}
+
 // recordResult serialises an engine.Result into the CR's status and
 // emits Kubernetes events describing the tick. It also writes the
 // per-family list, current drift, the hash, and a Conflict condition
@@ -789,6 +820,12 @@ func (r *ConfigReconciler) recordResult(
 				Reason:  "RolledBack",
 				Message: fmt.Sprintf("rolled back to revision %s", rollbackTarget),
 			})
+			setCondition(&updated.Status, metav1.Condition{
+				Type:    "RollbackBlocked",
+				Status:  metav1.ConditionFalse,
+				Reason:  "RollbackApplied",
+				Message: "rollback revision was applied",
+			})
 		} else {
 			msg := "rollback did not converge"
 			if result.Err != nil {
@@ -799,6 +836,12 @@ func (r *ConfigReconciler) recordResult(
 				Status:  metav1.ConditionFalse,
 				Reason:  "RollbackFailed",
 				Message: msg,
+			})
+			setCondition(&updated.Status, metav1.Condition{
+				Type:    "RollbackBlocked",
+				Status:  metav1.ConditionFalse,
+				Reason:  "RollbackAttempted",
+				Message: "rollback was not blocked before apply",
 			})
 		}
 	}
@@ -1335,6 +1378,15 @@ func (r *ConfigReconciler) applyRollbackTo(
 		span.RecordError(err)
 		return resolved, false, target, err
 	}
+	if rev.Spec.SecretMaterialOmitted && !sameSecretRefNames(rev.Spec.SecretRefNames, cr.Spec.SecretRefs) {
+		err := &rollbackBlockedError{
+			reason: "RevisionMissingSecretMaterial",
+			message: fmt.Sprintf("revision %s/%s omitted secret material and current spec.secretRefs do not match the revision Secret names",
+				rev.Namespace, rev.Name),
+		}
+		span.RecordError(err)
+		return resolved, false, target, err
+	}
 	body, err := decodeReplayBody(rev.Spec.Body)
 	if err != nil {
 		span.RecordError(err)
@@ -1342,9 +1394,19 @@ func (r *ConfigReconciler) applyRollbackTo(
 	}
 	out := *resolved
 	out.Configuration = body.Configuration
+	if rev.Spec.SecretMaterialOmitted {
+		out.Configuration = restoreCurrentSecretFamilies(body.Configuration, resolved.Configuration, cr.Spec.SecretRefs)
+	}
 	out.CLIBlocks = body.CLIBlocks
 	return &out, true, target, nil
 }
+
+type rollbackBlockedError struct {
+	reason  string
+	message string
+}
+
+func (e *rollbackBlockedError) Error() string { return e.message }
 
 func (r *ConfigReconciler) appendConfigRevision(
 	ctx context.Context,
@@ -1357,15 +1419,17 @@ func (r *ConfigReconciler) appendConfigRevision(
 	if result.Phase != engine.PhaseInSync || resolved == nil || cr.Spec.RevisionHistoryLimit <= 0 {
 		return nil
 	}
-	if len(cr.Spec.SecretRefs) > 0 {
+	secretMaterialOmitted := len(cr.Spec.SecretRefs) > 0
+	revisionIntent := resolved
+	if secretMaterialOmitted {
+		revisionIntent = revisionIntentWithoutSecretFamilies(resolved, cr.Spec.SecretRefs)
 		if r.Recorder != nil {
 			r.Recorder.Eventf(cr, corev1.EventTypeWarning, "RevisionBodyOmittedSecretRefs",
-				"revision history skipped for %s/%s because spec.secretRefs would persist secret material in an IOSXEConfigRevision",
+				"revision history for %s/%s omitted family blocks sourced from spec.secretRefs to keep secret material out of IOSXEConfigRevision",
 				cr.Namespace, cr.Name)
 		}
-		return nil
 	}
-	body, err := encodeReplayBody(resolved)
+	body, err := encodeReplayBody(revisionIntent)
 	if err != nil {
 		return fmt.Errorf("encode revision body: %w", err)
 	}
@@ -1386,6 +1450,8 @@ func (r *ConfigReconciler) appendConfigRevision(
 			SourceGeneration:       cr.Generation,
 			Hash:                   hash,
 			Body:                   body,
+			SecretMaterialOmitted:  secretMaterialOmitted,
+			SecretRefNames:         secretRefNames(cr.Spec.SecretRefs),
 			AtomicReplaceOwnedKeys: copyOwnedKeys(owned),
 		},
 		Status: configv1alpha1.IOSXEConfigRevisionStatus{CreatedAt: &now},
@@ -1394,6 +1460,85 @@ func (r *ConfigReconciler) appendConfigRevision(
 		return fmt.Errorf("create revision %s/%s: %w", rev.Namespace, rev.Name, err)
 	}
 	return r.gcConfigRevisions(ctx, cr)
+}
+
+func revisionIntentWithoutSecretFamilies(
+	resolved *intent.ResolvedIntent,
+	refs []configv1alpha1.FamilySecretRef,
+) *intent.ResolvedIntent {
+	if resolved == nil || len(refs) == 0 {
+		return resolved
+	}
+	omit := secretRefFamilies(refs)
+	out := *resolved
+	out.Configuration = make(map[string]any, len(resolved.Configuration))
+	for family, value := range resolved.Configuration {
+		if _, secretBacked := omit[family]; secretBacked {
+			continue
+		}
+		out.Configuration[family] = value
+	}
+	return &out
+}
+
+func restoreCurrentSecretFamilies(
+	revisionConfig map[string]any,
+	currentConfig map[string]any,
+	refs []configv1alpha1.FamilySecretRef,
+) map[string]any {
+	out := make(map[string]any, len(revisionConfig)+len(refs))
+	for family, value := range revisionConfig {
+		out[family] = value
+	}
+	for family := range secretRefFamilies(refs) {
+		if value, ok := currentConfig[family]; ok {
+			out[family] = value
+		}
+	}
+	return out
+}
+
+func secretRefFamilies(refs []configv1alpha1.FamilySecretRef) map[string]struct{} {
+	out := make(map[string]struct{}, len(refs))
+	for _, ref := range refs {
+		if ref.Family != "" {
+			out[ref.Family] = struct{}{}
+		}
+	}
+	return out
+}
+
+func secretRefNames(refs []configv1alpha1.FamilySecretRef) []string {
+	seen := map[string]struct{}{}
+	for _, ref := range refs {
+		if ref.Name != "" {
+			seen[ref.Name] = struct{}{}
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for name := range seen {
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func sameSecretRefNames(revisionNames []string, current []configv1alpha1.FamilySecretRef) bool {
+	if len(revisionNames) == 0 {
+		return false
+	}
+	currentNames := secretRefNames(current)
+	if len(revisionNames) != len(currentNames) {
+		return false
+	}
+	expected := append([]string(nil), revisionNames...)
+	sort.Strings(expected)
+	for i := range expected {
+		if expected[i] != currentNames[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func (r *ConfigReconciler) gcConfigRevisions(ctx context.Context, cr *configv1alpha1.IOSXEConfig) error {

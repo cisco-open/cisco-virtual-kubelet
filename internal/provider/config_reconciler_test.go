@@ -241,6 +241,113 @@ func TestRecordResultSetsRollbackFailedCondition(t *testing.T) {
 	}
 }
 
+func TestAppendConfigRevisionWithSecretRefsOmitsSecretFamilies(t *testing.T) {
+	scheme := newTestScheme(t)
+	cr := newCR("edge-01", "edge-01")
+	cr.UID = types.UID("config-uid")
+	cr.Generation = 7
+	cr.Spec.RevisionHistoryLimit = 5
+	cr.Spec.SecretRefs = []configv1alpha1.FamilySecretRef{{
+		Family: "bgp",
+		Name:   "bgp-creds",
+		Key:    "intent.yaml",
+	}}
+	resolved := &intent.ResolvedIntent{
+		Configuration: map[string]any{
+			"vlan": map[string]any{"vlans": []any{map[string]any{"id": float64(10)}}},
+			"bgp":  map[string]any{"neighbors": []any{map[string]any{"id": "192.0.2.1", "password": "secret"}}},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+
+	if err := r.appendConfigRevision(context.Background(), cr, engine.Result{Phase: engine.PhaseInSync}, "sha256:secret", resolved, nil); err != nil {
+		t.Fatalf("appendConfigRevision: %v", err)
+	}
+
+	var revs configv1alpha1.IOSXEConfigRevisionList
+	if err := c.List(context.Background(), &revs); err != nil {
+		t.Fatalf("list revisions: %v", err)
+	}
+	if len(revs.Items) != 1 {
+		t.Fatalf("revisions=%d want 1", len(revs.Items))
+	}
+	rev := revs.Items[0]
+	if !rev.Spec.SecretMaterialOmitted {
+		t.Fatal("SecretMaterialOmitted=false want true")
+	}
+	if len(rev.Spec.SecretRefNames) != 1 || rev.Spec.SecretRefNames[0] != "bgp-creds" {
+		t.Fatalf("SecretRefNames=%v want [bgp-creds]", rev.Spec.SecretRefNames)
+	}
+	body, err := decodeReplayBody(rev.Spec.Body)
+	if err != nil {
+		t.Fatalf("decode revision body: %v", err)
+	}
+	if _, ok := body.Configuration["bgp"]; ok {
+		t.Fatalf("secret-backed bgp family persisted in revision body: %#v", body.Configuration["bgp"])
+	}
+	if _, ok := body.Configuration["vlan"]; !ok {
+		t.Fatalf("non-secret vlan family missing from revision body: %#v", body.Configuration)
+	}
+}
+
+func TestRollbackBlockedWhenSecretRevisionNamesDiffer(t *testing.T) {
+	scheme := newTestScheme(t)
+	cr := newCR("edge-01", "edge-01")
+	cr.UID = types.UID("config-uid")
+	cr.Spec.RollbackTo = "edge-01-rev-1"
+	cr.Spec.SecretRefs = []configv1alpha1.FamilySecretRef{{
+		Family: "vlan",
+		Name:   "new-secret",
+		Key:    "intent.yaml",
+	}}
+	body, err := encodeReplayBody(&intent.ResolvedIntent{
+		Configuration: map[string]any{"vlan": map[string]any{"vlans": []any{}}},
+	})
+	if err != nil {
+		t.Fatalf("encode revision body: %v", err)
+	}
+	rev := &configv1alpha1.IOSXEConfigRevision{
+		ObjectMeta: metav1.ObjectMeta{Name: "edge-01-rev-1", Namespace: "network"},
+		Spec: configv1alpha1.IOSXEConfigRevisionSpec{
+			DeviceRef:             configv1alpha1.DeviceRef{Name: "edge-01"},
+			SourceRef:             "network/edge-01",
+			SourceUID:             "config-uid",
+			Hash:                  "sha256:old",
+			Body:                  body,
+			SecretMaterialOmitted: true,
+			SecretRefNames:        []string{"old-secret"},
+		},
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "new-secret", Namespace: "network"},
+		Data:       map[string][]byte{"intent.yaml": []byte(`{"vlans":[]}`)},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(newDevice("edge-01"), cr, rev, secret).
+		WithStatusSubresource(&configv1alpha1.IOSXEConfig{}).
+		Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+	resolver := &intent.Resolver{Client: c}
+	eng := &engine.Engine{}
+
+	result, err := r.reconcileOne(context.Background(), nil, resolver, eng, cr, nil, triggerEvent)
+	if err != nil {
+		t.Fatalf("reconcileOne record status: %v", err)
+	}
+	if result.Phase != engine.PhaseFailed {
+		t.Fatalf("phase=%q want failed", result.Phase)
+	}
+	var got configv1alpha1.IOSXEConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: cr.Namespace, Name: cr.Name}, &got); err != nil {
+		t.Fatalf("get config: %v", err)
+	}
+	if !conditionIs(got.Status.Conditions, "RollbackBlocked", metav1.ConditionTrue, "RevisionMissingSecretMaterial") {
+		t.Fatalf("RollbackBlocked condition missing RevisionMissingSecretMaterial: %#v", got.Status.Conditions)
+	}
+}
+
 func conditionIs(conds []metav1.Condition, t string, s metav1.ConditionStatus, reason string) bool {
 	for _, c := range conds {
 		if c.Type == t && c.Status == s && c.Reason == reason {

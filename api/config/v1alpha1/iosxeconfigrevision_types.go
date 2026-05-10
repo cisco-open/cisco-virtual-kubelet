@@ -49,6 +49,19 @@ type IOSXEConfigRevisionSpec struct {
 	// +kubebuilder:validation:Required
 	Body string `json:"body"`
 
+	// SecretMaterialOmitted is true when the source IOSXEConfig used
+	// spec.secretRefs and the revision body intentionally omitted the
+	// secret-sourced family blocks.
+	// +optional
+	SecretMaterialOmitted bool `json:"secretMaterialOmitted,omitempty"`
+
+	// SecretRefNames stores only the names of SecretRefs present when this
+	// revision was created. Rollback to an omitted-secret revision is allowed
+	// only when the current IOSXEConfig still references the same Secret names.
+	// +optional
+	// +listType=set
+	SecretRefNames []string `json:"secretRefNames,omitempty"`
+
 	// AtomicReplaceOwnedKeys snapshots the CR-owned keys after the apply.
 	// +optional
 	AtomicReplaceOwnedKeys map[string][]string `json:"atomicReplaceOwnedKeys,omitempty"`

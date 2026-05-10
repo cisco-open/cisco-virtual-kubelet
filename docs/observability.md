@@ -63,6 +63,17 @@ Config reconcile writes trace hints back to status annotations:
 | `cisco.vk/last-trace-duration` | Most recent reconcile duration. |
 | `cisco.vk/last-error-trace-id` | Failed reconcile trace ID, when present. |
 
+### Config Revision History
+
+`IOSXEConfigRevision` objects store resolved intent for successful applies so
+`spec.rollbackTo` can replay a prior revision through the normal reconcile
+path. When an `IOSXEConfig` uses `spec.secretRefs`, revisions are still
+created, but secret-backed family blocks are omitted from `spec.body` and
+`spec.secretMaterialOmitted` is set. Rollback to those revisions is allowed
+only when the current `IOSXEConfig` references the same Secret names; otherwise
+status reports `RollbackBlocked=True` with reason
+`RevisionMissingSecretMaterial`.
+
 ### Self metrics
 
 CVK emits self metrics with the `cisco_vk_telemetry_*` prefix. Important

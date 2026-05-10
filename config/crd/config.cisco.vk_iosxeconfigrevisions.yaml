@@ -88,6 +88,21 @@ spec:
               hash:
                 description: Hash is the canonical resolved-intent hash that was applied.
                 type: string
+              secretMaterialOmitted:
+                description: |-
+                  SecretMaterialOmitted is true when the source IOSXEConfig used
+                  spec.secretRefs and the revision body intentionally omitted the
+                  secret-sourced family blocks.
+                type: boolean
+              secretRefNames:
+                description: |-
+                  SecretRefNames stores only the names of SecretRefs present when this
+                  revision was created. Rollback to an omitted-secret revision is allowed
+                  only when the current IOSXEConfig still references the same Secret names.
+                items:
+                  type: string
+                type: array
+                x-kubernetes-list-type: set
               sourceGeneration:
                 description: |-
                   SourceGeneration is the IOSXEConfig generation that produced this
