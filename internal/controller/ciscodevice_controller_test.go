@@ -989,3 +989,50 @@ func TestPrereqsTeardownLeaseBlockedHonoursForceAnnotation(t *testing.T) {
 		t.Fatal("expected PrereqsSkipped event")
 	}
 }
+
+func TestOpsPolicyEnvRendersConfigDiffAllowlist(t *testing.T) {
+	cases := map[string]struct {
+		policy *ciskov1.OpsPolicy
+		want   []corev1.EnvVar
+	}{
+		"nil policy yields no env": {
+			policy: nil,
+			want:   nil,
+		},
+		"empty list yields no env (preserves unrestricted default)": {
+			policy: &ciskov1.OpsPolicy{ConfigDiffAllowedNamespaces: nil},
+			want:   nil,
+		},
+		"single namespace": {
+			policy: &ciskov1.OpsPolicy{ConfigDiffAllowedNamespaces: []string{"ops"}},
+			want: []corev1.EnvVar{
+				{Name: "CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES", Value: "ops"},
+			},
+		},
+		"multi-namespace, dedupe + trim": {
+			policy: &ciskov1.OpsPolicy{ConfigDiffAllowedNamespaces: []string{
+				"ops", "  ops  ", "", "tenant-a", "tenant-a",
+			}},
+			want: []corev1.EnvVar{
+				{Name: "CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES", Value: "ops,tenant-a"},
+			},
+		},
+		"only-empty-strings yields no env": {
+			policy: &ciskov1.OpsPolicy{ConfigDiffAllowedNamespaces: []string{"", "  "}},
+			want:   nil,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := opsPolicyEnv(tc.policy)
+			if len(got) != len(tc.want) {
+				t.Fatalf("env len=%d want %d (got=%v)", len(got), len(tc.want), got)
+			}
+			for i := range got {
+				if got[i].Name != tc.want[i].Name || got[i].Value != tc.want[i].Value {
+					t.Fatalf("env[%d] = %+v want %+v", i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}

@@ -412,6 +412,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		podEnv := append([]corev1.EnvVar{}, credEnv...)
 		podEnv = append(podEnv, downwardAPIEnv()...)
 		podEnv = append(podEnv, propagatedTelemetryEnv()...)
+		podEnv = append(podEnv, opsPolicyEnv(device.Spec.OpsPolicy)...)
 
 		deploy.Spec.Template.Spec = corev1.PodSpec{
 			Containers: []corev1.Container{
@@ -593,6 +594,44 @@ func propagatedTelemetryEnv() []corev1.EnvVar {
 		env = append(env, corev1.EnvVar{Name: name, Value: value})
 	}
 	return env
+}
+
+// opsPolicyEnv translates DeviceSpec.OpsPolicy into env vars on the per-device
+// VK pod. Centralising the translation here keeps the CRD the authoritative
+// source: imperative `kubectl set env` edits get reverted by the controller's
+// next reconcile, while flipping spec.opsPolicy persists.
+func opsPolicyEnv(policy *ciskov1.OpsPolicy) []corev1.EnvVar {
+	if policy == nil {
+		return nil
+	}
+	var env []corev1.EnvVar
+	if names := dedupeNonEmpty(policy.ConfigDiffAllowedNamespaces); len(names) > 0 {
+		env = append(env, corev1.EnvVar{
+			Name:  "CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES",
+			Value: strings.Join(names, ","),
+		})
+	}
+	return env
+}
+
+func dedupeNonEmpty(in []string) []string {
+	if len(in) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(in))
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
 }
 
 func matchesPerDeviceLabels(labels map[string]string, deviceName string) bool {

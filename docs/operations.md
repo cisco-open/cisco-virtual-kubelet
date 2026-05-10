@@ -23,10 +23,25 @@ spec:
 
 `ConfigDiff` captures `show running-config`. If `operation.args.baseline` is provided, status output contains a compact line diff between the baseline and observed running configuration.
 
-Set `CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES` to a comma-separated namespace list
-to restrict `ConfigDiff` execution. When unset, existing behavior is preserved.
-Requests outside the allowlist fail with `Ready=False,
-reason=NamespaceNotAuthorized`.
+Restrict `ConfigDiff` to specific namespaces via the per-device CR:
+
+```yaml
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata: {name: cat9k-smoke}
+spec:
+  driver: XE
+  address: 10.1.1.1
+  opsPolicy:
+    configDiffAllowedNamespaces: ["ops", "tenant-a"]
+```
+
+The CiscoDevice controller renders `spec.opsPolicy.configDiffAllowedNamespaces`
+as `CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES` (comma-separated) on the per-device
+VK pod. Requests from other namespaces fail with `Ready=False,
+reason=NamespaceNotAuthorized`. An empty/absent list preserves the
+unrestricted default. The CRD spec is the authoritative source — imperative
+`kubectl set env` edits get reverted on the next reconcile.
 
 `PacketCapture` reads an existing IOS-XE monitor capture buffer. Provide either `operation.args.name`/`capture`, which expands to `show monitor capture <name> buffer dump`, or an explicit allowlisted `operation.args.command`.
 
