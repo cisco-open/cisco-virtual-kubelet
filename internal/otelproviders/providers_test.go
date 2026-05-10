@@ -128,7 +128,13 @@ func TestExportFailureRecorderPublishesObservableCounter(t *testing.T) {
 	}
 }
 
-func TestRegisterProcessInfoGaugePublishesResourceLabels(t *testing.T) {
+// TestRegisterProcessInfoGaugeEmitsBareGauge guards against a regression where
+// the gauge carried data-point attributes that duplicated resource attribute
+// keys. The OTel Collector's prometheus exporter rejects such data points with
+// "duplicate label names in constant and variable labels" when
+// resource_to_telemetry_conversion is enabled, which then drops every cisco_vk_*
+// series after the gauge in the same scrape.
+func TestRegisterProcessInfoGaugeEmitsBareGauge(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	registerProcessInfoGauge(mp, map[string]string{
@@ -163,17 +169,21 @@ func TestRegisterProcessInfoGaugePublishesResourceLabels(t *testing.T) {
 			if dp.Value != 1 {
 				t.Fatalf("%s value=%d want 1", processInfoMetric, dp.Value)
 			}
-			for key, want := range map[string]string{
-				"service_name":        "cisco-vk-controller",
-				"service_instance_id": "pod-123",
-				"cvk_process_role":    "controller",
-				"cvk_driver_kind":     "iosxe",
-				"cluster":             "prod",
-				"env":                 "test",
-				"owner":               "netops",
+			// Identity must travel on the resource, not on the data point.
+			// Each forbidden key here would, when promoted to a constant
+			// label by resource_to_telemetry_conversion, collide with the
+			// same-named data-point label and trip the prometheus exporter.
+			for _, k := range []string{
+				"service_name",
+				"service_instance_id",
+				"cvk_process_role",
+				"cvk_driver_kind",
+				"cluster",
+				"env",
+				"owner",
 			} {
-				if got := attrString(dp.Attributes, key); got != want {
-					t.Fatalf("attribute %s=%q want %q", key, got, want)
+				if _, ok := dp.Attributes.Value(attribute.Key(k)); ok {
+					t.Fatalf("data-point attribute %q must not be set; identity belongs on the resource", k)
 				}
 			}
 		}

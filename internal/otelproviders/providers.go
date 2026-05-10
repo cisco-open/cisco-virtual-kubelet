@@ -219,40 +219,26 @@ func resource(ctx context.Context, attrs map[string]string) (*sdkresource.Resour
 	return res, nil
 }
 
-func registerProcessInfoGauge(provider metric.MeterProvider, resourceAttrs map[string]string) {
+func registerProcessInfoGauge(provider metric.MeterProvider, _ map[string]string) {
 	if provider == nil {
 		return
 	}
-	attrs := processInfoAttributes(resourceAttrs)
+	// Emit the gauge with no data-point attributes; identity travels on the
+	// resource (service.name, service.instance.id, cvk.process.role, ...).
+	// Duplicating those keys as data-point attributes makes the OTel
+	// Collector's prometheus exporter reject the metric with
+	// "duplicate label names in constant and variable labels" when
+	// resource_to_telemetry_conversion is enabled, which causes the
+	// /metrics scrape to drop every cisco_vk_* series after the gauge.
 	meter := provider.Meter("github.com/cisco/virtual-kubelet-cisco/internal/otelproviders")
 	_, _ = meter.Int64ObservableGauge(
 		processInfoMetric,
-		metric.WithDescription("CVK process heartbeat and static process identity"),
+		metric.WithDescription("CVK process heartbeat (value=1 while process is alive); identity is on the resource"),
 		metric.WithInt64Callback(func(ctx context.Context, observer metric.Int64Observer) error {
-			observer.Observe(1, metric.WithAttributes(attrs...))
+			observer.Observe(1)
 			return nil
 		}),
 	)
-}
-
-func processInfoAttributes(resourceAttrs map[string]string) []attribute.KeyValue {
-	keys := []struct {
-		resource string
-		label    string
-	}{
-		{resource: "service.name", label: "service_name"},
-		{resource: "service.instance.id", label: "service_instance_id"},
-		{resource: "cvk.process.role", label: "cvk_process_role"},
-		{resource: "cvk.driver.kind", label: "cvk_driver_kind"},
-		{resource: "cluster", label: "cluster"},
-		{resource: "env", label: "env"},
-		{resource: "owner", label: "owner"},
-	}
-	out := make([]attribute.KeyValue, 0, len(keys))
-	for _, key := range keys {
-		out = append(out, attribute.String(key.label, resourceAttrs[key.resource]))
-	}
-	return out
 }
 
 func endpointTarget(endpoint string) string {
