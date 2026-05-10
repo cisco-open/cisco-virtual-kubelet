@@ -25,6 +25,13 @@ spec:
 
 `PacketCapture` reads an existing IOS-XE monitor capture buffer. Provide either `operation.args.name`/`capture`, which expands to `show monitor capture <name> buffer dump`, or an explicit allowlisted `operation.args.command`.
 
+Packet-capture output larger than 256 KiB is written to a ConfigMap named
+`<deviceoperation-name>-output` in the same namespace. The status keeps a
+truncated preview in `.status.outputs[].output` and records
+`.status.artifactURIs[]` as `configmap://<namespace>/<name>/<key>`, for example
+`configmap://default/capture-output/output`. Captures larger than 900 KiB are
+rejected with `Ready=False, reason=ArtifactTooLarge`.
+
 Write-class operations such as reload, factory reset, and config push are intentionally not implemented. They require the later multi-tenancy, admission, and RBAC split described in the unified architecture plan.
 
 ## Implementation Boundary
@@ -58,7 +65,10 @@ The localhost admin endpoint `POST /v1/exec` now creates a transient `DeviceOper
 
 ## Status
 
-Results are written to `.status.outputs[]`; terminal phase is one of `Succeeded`, `Failed`, or `Cancelled`. `ttlSecondsAfterFinished` requests best-effort cleanup after completion.
+Results are written to `.status.outputs[]`; large packet captures may also set
+`.status.artifactURIs[]`. Terminal phase is one of `Succeeded`, `Failed`, or
+`Cancelled`. `ttlSecondsAfterFinished` requests best-effort cleanup after
+completion.
 
 ## Roadmap Gates
 
@@ -68,4 +78,5 @@ surface:
 - Per-kind reconcilers and capability maps before write operations.
 - Tenant ownership/admission checks before write-class CRDs.
 - Conversion webhook scaffolding before promotion beyond `v1alpha1`.
-- External artifact sinks for large captures or long-running operations.
+- External artifact sinks beyond the in-namespace ConfigMap backing for large
+  packet-capture output.

@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -249,6 +250,111 @@ func TestReconcilePacketCaptureReadsExistingBuffer(t *testing.T) {
 	}
 }
 
+func TestReconcilePacketCaptureWritesLargeOutputArtifact(t *testing.T) {
+	ctx := context.Background()
+	scheme := newScheme(t)
+	op := newOperation("capture", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Kind = opsv1alpha1.OperationKindPacketCapture
+		op.Spec.Operation.Args = map[string]string{"name": "cvkcap"}
+	})
+	fullOutput := strings.Repeat("packet line\n", 30*1024)
+	tr := &fakeTransport{
+		caps: transport.Capabilities{
+			Kind:                   transport.KindNETCONF,
+			SupportsDiagnosticExec: true,
+		},
+		results: []transport.CommandResult{{
+			Command: "show monitor capture cvkcap buffer dump",
+			Output:  fullOutput,
+		}},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+	r := &Reconciler{Client: c, Scheme: scheme, DeviceName: "dev1", TP: &staticTP{tr: tr}}
+	_, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := c.Get(ctx, types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
+		t.Fatalf("get operation: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhaseSucceeded {
+		t.Fatalf("phase=%q want succeeded: %s", got.Status.Phase, got.Status.Message)
+	}
+	wantURI := "configmap://default/capture-output/output"
+	if len(got.Status.ArtifactURIs) != 1 || got.Status.ArtifactURIs[0] != wantURI {
+		t.Fatalf("artifactURIs=%v want [%s]", got.Status.ArtifactURIs, wantURI)
+	}
+	if len(got.Status.Outputs) != 1 || !strings.Contains(got.Status.Outputs[0].Output, "<truncated; see artifactURIs>") {
+		t.Fatalf("preview missing artifact footer: %#v", got.Status.Outputs)
+	}
+	if len(got.Status.Outputs[0].Output) > defaultInlineMaxBytes {
+		t.Fatalf("preview length=%d exceeds inline max %d", len(got.Status.Outputs[0].Output), defaultInlineMaxBytes)
+	}
+	var cm corev1.ConfigMap
+	if err := c.Get(ctx, types.NamespacedName{Namespace: op.Namespace, Name: "capture-output"}, &cm); err != nil {
+		t.Fatalf("get artifact ConfigMap: %v", err)
+	}
+	if cm.Data["output"] != fullOutput {
+		t.Fatalf("artifact output length=%d want %d", len(cm.Data["output"]), len(fullOutput))
+	}
+	if len(cm.OwnerReferences) != 1 || cm.OwnerReferences[0].Name != op.Name {
+		t.Fatalf("ownerReferences=%#v want DeviceOperation owner", cm.OwnerReferences)
+	}
+}
+
+func TestReconcilePacketCaptureRejectsOversizedArtifact(t *testing.T) {
+	ctx := context.Background()
+	scheme := newScheme(t)
+	op := newOperation("capture", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Kind = opsv1alpha1.OperationKindPacketCapture
+		op.Spec.Operation.Args = map[string]string{"name": "cvkcap"}
+	})
+	tr := &fakeTransport{
+		caps: transport.Capabilities{
+			Kind:                   transport.KindNETCONF,
+			SupportsDiagnosticExec: true,
+		},
+		results: []transport.CommandResult{{
+			Command: "show monitor capture cvkcap buffer dump",
+			Output:  strings.Repeat("x", artifactMaxBytes+1),
+		}},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+	r := &Reconciler{Client: c, Scheme: scheme, DeviceName: "dev1", TP: &staticTP{tr: tr}}
+	_, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := c.Get(ctx, types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
+		t.Fatalf("get operation: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhaseFailed {
+		t.Fatalf("phase=%q want failed", got.Status.Phase)
+	}
+	if !operationConditionIs(got.Status.Conditions, "Ready", metav1.ConditionFalse, "ArtifactTooLarge") {
+		t.Fatalf("Ready condition missing ArtifactTooLarge: %#v", got.Status.Conditions)
+	}
+	if len(got.Status.ArtifactURIs) != 0 {
+		t.Fatalf("artifactURIs=%v want none", got.Status.ArtifactURIs)
+	}
+}
+
 func newScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	scheme := runtime.NewScheme()
@@ -281,4 +387,13 @@ func newOperation(name string, mutate func(*opsv1alpha1.DeviceOperation)) *opsv1
 		mutate(op)
 	}
 	return op
+}
+
+func operationConditionIs(conds []metav1.Condition, typ string, status metav1.ConditionStatus, reason string) bool {
+	for _, cond := range conds {
+		if cond.Type == typ && cond.Status == status && cond.Reason == reason {
+			return true
+		}
+	}
+	return false
 }

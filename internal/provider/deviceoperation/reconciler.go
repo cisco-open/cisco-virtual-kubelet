@@ -32,6 +32,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
@@ -40,8 +41,12 @@ import (
 )
 
 const (
-	tracerName            = "cisco-virtual-kubelet/device-operation"
-	defaultInlineMaxBytes = 64 * 1024
+	tracerName             = "cisco-virtual-kubelet/device-operation"
+	defaultInlineMaxBytes  = 64 * 1024
+	artifactThresholdBytes = 256 * 1024
+	artifactMaxBytes       = 900 * 1024
+	packetCaptureOutputKey = "output"
+	artifactPreviewFooter  = "\n<truncated; see artifactURIs>"
 )
 
 // TransportProvider abstracts the per-device config reconciler so operation
@@ -147,18 +152,34 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	results, err := execer.DiagnosticExec(ctx, commands)
 	outputs := plan.outputs(results)
+	var artifactURIs []string
 	terminalPhase := opsv1alpha1.OperationPhaseSucceeded
 	message := plan.successMessage
+	reason := "Succeeded"
 	if err != nil {
 		span.RecordError(err)
 		terminalPhase = opsv1alpha1.OperationPhaseFailed
 		message = err.Error()
+		reason = "Failed"
 	}
 	for i := range outputs {
 		out := &outputs[i]
 		if out.Err != "" && terminalPhase != opsv1alpha1.OperationPhaseFailed {
 			terminalPhase = opsv1alpha1.OperationPhaseFailed
 			message = "one or more commands returned an error"
+			reason = "Failed"
+		}
+	}
+	if terminalPhase == opsv1alpha1.OperationPhaseSucceeded &&
+		op.Spec.Operation.Kind == opsv1alpha1.OperationKindPacketCapture {
+		var artifactErr *operationArtifactError
+		outputs, artifactURIs, artifactErr = r.backPacketCaptureArtifacts(ctx, &op, outputs, results)
+		if artifactErr != nil {
+			span.RecordError(artifactErr)
+			terminalPhase = opsv1alpha1.OperationPhaseFailed
+			message = artifactErr.Error()
+			reason = artifactErr.reason
+			artifactURIs = nil
 		}
 	}
 	if terminalPhase == opsv1alpha1.OperationPhaseFailed {
@@ -166,7 +187,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	} else {
 		span.SetStatus(codes.Ok, "")
 	}
-	return reconcile.Result{}, r.finish(ctx, &op, terminalPhase, message, outputs, now)
+	return reconcile.Result{}, r.finishWithReason(ctx, &op, terminalPhase, reason, message, outputs, artifactURIs, now)
 }
 
 func (r *Reconciler) markPending(ctx context.Context, op *opsv1alpha1.DeviceOperation, reason, message string, now time.Time) error {
@@ -206,6 +227,23 @@ func (r *Reconciler) finish(
 	outputs []opsv1alpha1.DeviceOperationOutput,
 	now time.Time,
 ) error {
+	reason := "Failed"
+	if phase == opsv1alpha1.OperationPhaseSucceeded {
+		reason = "Succeeded"
+	}
+	return r.finishWithReason(ctx, op, phase, reason, message, outputs, nil, now)
+}
+
+func (r *Reconciler) finishWithReason(
+	ctx context.Context,
+	op *opsv1alpha1.DeviceOperation,
+	phase opsv1alpha1.OperationPhase,
+	reason string,
+	message string,
+	outputs []opsv1alpha1.DeviceOperationOutput,
+	artifactURIs []string,
+	now time.Time,
+) error {
 	if err := r.updateStatus(ctx, op, func(current *opsv1alpha1.DeviceOperation) {
 		current.Status.Phase = phase
 		current.Status.ObservedGeneration = current.Generation
@@ -215,10 +253,11 @@ func (r *Reconciler) finish(
 		current.Status.CompletionTime = &metav1.Time{Time: now}
 		current.Status.Message = message
 		current.Status.Outputs = outputs
+		current.Status.ArtifactURIs = artifactURIs
 		if phase == opsv1alpha1.OperationPhaseSucceeded {
-			r.setReady(current, metav1.ConditionTrue, "Succeeded", message, now)
+			r.setReady(current, metav1.ConditionTrue, reason, message, now)
 		} else {
-			r.setReady(current, metav1.ConditionFalse, "Failed", message, now)
+			r.setReady(current, metav1.ConditionFalse, reason, message, now)
 		}
 	}); err != nil {
 		return fmt.Errorf("status update terminal: %w", err)
@@ -226,7 +265,7 @@ func (r *Reconciler) finish(
 	if phase == opsv1alpha1.OperationPhaseSucceeded {
 		r.event(op, corev1.EventTypeNormal, "Succeeded", message)
 	} else {
-		r.event(op, corev1.EventTypeWarning, "Failed", message)
+		r.event(op, corev1.EventTypeWarning, reason, message)
 	}
 	return nil
 }
@@ -253,6 +292,92 @@ func (r *Reconciler) updateStatus(
 		*op = current
 		return nil
 	})
+}
+
+type operationArtifactError struct {
+	reason  string
+	message string
+}
+
+func (e *operationArtifactError) Error() string { return e.message }
+
+func (r *Reconciler) backPacketCaptureArtifacts(
+	ctx context.Context,
+	op *opsv1alpha1.DeviceOperation,
+	outputs []opsv1alpha1.DeviceOperationOutput,
+	results []transport.CommandResult,
+) ([]opsv1alpha1.DeviceOperationOutput, []string, *operationArtifactError) {
+	data := map[string]string{}
+	uris := []string{}
+	for i := range outputs {
+		if i >= len(results) || outputs[i].Err != "" || results[i].Output == "" {
+			continue
+		}
+		redacted, didRedact := diagnostic.Redact(results[i].Output)
+		if len(redacted) <= artifactThresholdBytes {
+			continue
+		}
+		if len(redacted) > artifactMaxBytes {
+			return outputs, nil, &operationArtifactError{
+				reason: "ArtifactTooLarge",
+				message: fmt.Sprintf("packet-capture output for command %q is %d bytes; ConfigMap artifact limit is %d bytes",
+					results[i].Command, len(redacted), artifactMaxBytes),
+			}
+		}
+		key := packetCaptureOutputKey
+		if len(outputs) > 1 {
+			key = fmt.Sprintf("%s-%d", packetCaptureOutputKey, i)
+		}
+		data[key] = redacted
+		outputs[i].Output = truncatePreviewWithFooter(redacted, defaultInlineMaxBytes, artifactPreviewFooter)
+		outputs[i].Truncated = true
+		outputs[i].Redacted = outputs[i].Redacted || didRedact
+		uris = append(uris, fmt.Sprintf("configmap://%s/%s/%s", op.Namespace, artifactConfigMapName(op), key))
+	}
+	if len(data) == 0 {
+		return outputs, nil, nil
+	}
+	if r.Scheme == nil {
+		return outputs, nil, &operationArtifactError{
+			reason:  "ArtifactWriteFailed",
+			message: "device operation artifact owner reference scheme is not configured",
+		}
+	}
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: op.Namespace,
+			Name:      artifactConfigMapName(op),
+		},
+	}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, cm, func() error {
+		cm.Data = data
+		return controllerutil.SetControllerReference(op, cm, r.Scheme)
+	}); err != nil {
+		return outputs, nil, &operationArtifactError{
+			reason:  "ArtifactWriteFailed",
+			message: fmt.Sprintf("write packet-capture artifact ConfigMap: %v", err),
+		}
+	}
+	return outputs, uris, nil
+}
+
+func artifactConfigMapName(op *opsv1alpha1.DeviceOperation) string {
+	return op.Name + "-output"
+}
+
+func truncatePreviewWithFooter(s string, maxBytes int, footer string) string {
+	if maxBytes <= 0 || len(s)+len(footer) <= maxBytes {
+		return s
+	}
+	budget := maxBytes - len(footer)
+	if budget <= 0 {
+		return footer[:maxBytes]
+	}
+	cut := budget
+	if idx := strings.LastIndex(s[:cut], "\n"); idx > 0 {
+		cut = idx
+	}
+	return s[:cut] + footer
 }
 
 func (r *Reconciler) handleTTL(ctx context.Context, op *opsv1alpha1.DeviceOperation, now time.Time) (reconcile.Result, error) {
