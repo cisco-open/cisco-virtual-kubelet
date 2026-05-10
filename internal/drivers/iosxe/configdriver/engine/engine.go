@@ -299,6 +299,8 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 		semconv.CvkEntityType:    semconv.EntityTypeConfig,
 		semconv.CvkEntityID:      engineConfigEntityID(res),
 		semconv.CvkEvidenceType:  semconv.EvidenceTypeConfigChange,
+		semconv.CvkWorkflowName:  "config.apply",
+		semconv.CvkTaskName:      "engine.reconcile",
 	})
 
 	if res.DriftPolicy == configv1alpha1.DriftPolicyPause {
@@ -758,6 +760,8 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		semconv.CvkEntityType:   semconv.EntityTypeConfig,
 		semconv.CvkEntityID:     engineConfigEntityID(res),
 		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
+		semconv.CvkWorkflowName: "config.apply",
+		semconv.CvkTaskName:     "family.reconcile",
 	})
 	defer familySpan.End()
 	w := e.Lookup(family)
@@ -799,6 +803,8 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		semconv.CvkEntityType:   semconv.EntityTypeConfig,
 		semconv.CvkEntityID:     engineConfigEntityID(res),
 		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
+		semconv.CvkWorkflowName: "config.apply",
+		semconv.CvkTaskName:     "plan.diff",
 	})
 	err := transport.RetryIdempotent(planCtx, e.RetryPolicy, func() error {
 		var ferr error
@@ -914,6 +920,8 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		semconv.CvkEntityType:   semconv.EntityTypeConfig,
 		semconv.CvkEntityID:     engineConfigEntityID(res),
 		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
+		semconv.CvkWorkflowName: "config.apply",
+		semconv.CvkTaskName:     "apply.diff",
 	})
 	defer applySpan.End()
 	// Apply through the engine's per-tick view of the transport. When
@@ -972,6 +980,8 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		semconv.CvkEntityType:   semconv.EntityTypeConfig,
 		semconv.CvkEntityID:     engineConfigEntityID(res),
 		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
+		semconv.CvkWorkflowName: "config.apply",
+		semconv.CvkTaskName:     "verify.in_sync",
 	})
 	defer verifySpan.End()
 	err = transport.RetryIdempotent(verifyCtx, e.RetryPolicy, func() error {
@@ -1204,6 +1214,8 @@ func (e *Engine) applyCLIBlock(ctx context.Context, block intent.CLIBlock, res *
 		semconv.CvkEntityType:   semconv.EntityTypeConfig,
 		semconv.CvkEntityID:     engineConfigEntityID(res),
 		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
+		semconv.CvkWorkflowName: "config.apply",
+		semconv.CvkTaskName:     "apply.cli_block",
 	})
 	defer span.End()
 	op := transport.Op{

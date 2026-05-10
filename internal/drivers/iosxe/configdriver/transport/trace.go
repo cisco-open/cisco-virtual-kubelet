@@ -31,6 +31,7 @@ func startTransportSpan(ctx context.Context, kind Kind, verb string, attrs ...at
 		attribute.String("network.protocol.name", string(kind)),
 		attribute.String("cvk.transport.kind", string(kind)),
 		attribute.String("cvk.transport.verb", verb),
+		attribute.String(semconv.CvkToolName, string(kind)),
 	}
 	base = append(base, attrs...)
 	ctx, span := otel.Tracer(transportTracerName).Start(

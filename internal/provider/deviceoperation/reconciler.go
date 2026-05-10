@@ -123,6 +123,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		attribute.String(semconv.CvkEntityType, semconv.EntityTypeOperation),
 		attribute.String(semconv.CvkEntityID, operationEntityID(&op)),
 		attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeOperatorAction),
+		attribute.String(semconv.CvkWorkflowName, "operator.diagnostic"),
+		attribute.String(semconv.CvkTaskName, "op."+string(op.Spec.Operation.Kind)),
 	)
 
 	plan, err := buildPlan(op.Spec.Operation)

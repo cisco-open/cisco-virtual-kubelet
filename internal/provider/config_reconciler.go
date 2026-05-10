@@ -471,6 +471,8 @@ func (r *ConfigReconciler) reconcileOne(
 			attribute.String(semconv.CvkEntityType, semconv.EntityTypeConfig),
 			attribute.String(semconv.CvkEntityID, configTelemetryEntityID(cr)),
 			attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeConfigChange),
+			attribute.String(semconv.CvkWorkflowName, "config.apply"),
+			attribute.String(semconv.CvkTaskName, "resolve.intent"),
 		))
 	resolved, err := resolver.Resolve(intentCtx, cr)
 	if err != nil {
@@ -1367,6 +1369,8 @@ func (r *ConfigReconciler) applyRollbackTo(
 			attribute.String(semconv.CvkEntityType, semconv.EntityTypeConfig),
 			attribute.String(semconv.CvkEntityID, configTelemetryEntityID(cr)),
 			attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeConfigChange),
+			attribute.String(semconv.CvkWorkflowName, "config.rollback"),
+			attribute.String(semconv.CvkTaskName, "rollback.replay_revision"),
 		))
 	defer span.End()
 	var rev configv1alpha1.IOSXEConfigRevision
