@@ -308,6 +308,11 @@ type IOSXEConfigStatus struct {
 	// +optional
 	LastAppliedTime *metav1.Time `json:"lastAppliedTime,omitempty"`
 
+	// LastRollbackedTo records the most recent revision name that was
+	// successfully applied through spec.rollbackTo.
+	// +optional
+	LastRollbackedTo *string `json:"lastRollbackedTo,omitempty"`
+
 	// LastDeviceCheck records the most recent reconcile tick that
 	// actually fetched device state and ran the diff (i.e., the
 	// hash short-circuit was bypassed). Used to honour

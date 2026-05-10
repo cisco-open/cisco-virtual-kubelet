@@ -29,6 +29,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 )
 
 func newTestScheme(t *testing.T) *runtime.Scheme {
@@ -175,6 +176,68 @@ func TestRunRejectsNilDependencies(t *testing.T) {
 				t.Fatal("expected validation error, got nil")
 			}
 		})
+	}
+}
+
+func TestRecordResultSetsRolledBackCondition(t *testing.T) {
+	scheme := newTestScheme(t)
+	cr := newCR("edge-01", "edge-01")
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(&configv1alpha1.IOSXEConfig{}).
+		Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+
+	result := engine.Result{
+		Phase:         engine.PhaseInSync,
+		DeviceTouched: true,
+	}
+	resolved := &intent.ResolvedIntent{ManagedFamilies: []string{"vlan"}}
+	if err := r.recordResult(context.Background(), cr, result, "sha256:rollback", nil, resolved, "edge-01-rev-1"); err != nil {
+		t.Fatalf("recordResult: %v", err)
+	}
+
+	var got configv1alpha1.IOSXEConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: cr.Namespace, Name: cr.Name}, &got); err != nil {
+		t.Fatalf("get config: %v", err)
+	}
+	if got.Status.LastRollbackedTo == nil || *got.Status.LastRollbackedTo != "edge-01-rev-1" {
+		t.Fatalf("LastRollbackedTo=%v, want edge-01-rev-1", got.Status.LastRollbackedTo)
+	}
+	if !conditionIs(got.Status.Conditions, "Rolled-Back", metav1.ConditionTrue, "RolledBack") {
+		t.Fatalf("Rolled-Back condition missing/RolledBack:\n%#v", got.Status.Conditions)
+	}
+}
+
+func TestRecordResultSetsRollbackFailedCondition(t *testing.T) {
+	scheme := newTestScheme(t)
+	cr := newCR("edge-01", "edge-01")
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithStatusSubresource(&configv1alpha1.IOSXEConfig{}).
+		Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+
+	result := engine.Result{
+		Phase: engine.PhaseFailed,
+		Err:   errors.New("apply failed"),
+	}
+	resolved := &intent.ResolvedIntent{ManagedFamilies: []string{"vlan"}}
+	if err := r.recordResult(context.Background(), cr, result, "sha256:rollback", nil, resolved, "edge-01-rev-1"); err != nil {
+		t.Fatalf("recordResult: %v", err)
+	}
+
+	var got configv1alpha1.IOSXEConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: cr.Namespace, Name: cr.Name}, &got); err != nil {
+		t.Fatalf("get config: %v", err)
+	}
+	if got.Status.LastRollbackedTo != nil {
+		t.Fatalf("LastRollbackedTo=%v, want nil on failed rollback", *got.Status.LastRollbackedTo)
+	}
+	if !conditionIs(got.Status.Conditions, "Rolled-Back", metav1.ConditionFalse, "RollbackFailed") {
+		t.Fatalf("Rolled-Back condition missing/RollbackFailed:\n%#v", got.Status.Conditions)
 	}
 }
 

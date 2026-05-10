@@ -584,6 +584,11 @@ spec:
                   generation are unchanged.
                 format: date-time
                 type: string
+              lastRollbackedTo:
+                description: |-
+                  LastRollbackedTo records the most recent revision name that was
+                  successfully applied through spec.rollbackTo.
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the .metadata.generation the driver
                   last acted on.

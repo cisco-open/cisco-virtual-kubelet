@@ -470,9 +470,9 @@ func (r *ConfigReconciler) reconcileOne(
 			recordErr
 	}
 
-	rolledBack, appliedRollback, err := r.applyRollbackTo(ctx, cr, resolved)
+	rolledBack, appliedRollback, rollbackTarget, err := r.applyRollbackTo(ctx, cr, resolved)
 	if err != nil {
-		recordErr := r.recordFailure(ctx, cr, fmt.Sprintf("rollback: %v", err))
+		recordErr := r.recordRollbackFailure(ctx, cr, fmt.Sprintf("rollback: %v", err))
 		r.patchTraceAnnotations(ctx, cr, engine.PhaseFailed, time.Since(tickStart))
 		return engine.Result{Phase: engine.PhaseFailed, Err: err},
 			recordErr
@@ -594,7 +594,7 @@ func (r *ConfigReconciler) reconcileOne(
 			Message: fmt.Sprintf("family leased by %q", holder),
 		})
 	}
-	recordErr := r.recordResult(ctx, cr, result, h, conflicts, resolved)
+	recordErr := r.recordResult(ctx, cr, result, h, conflicts, resolved, rollbackTarget)
 	r.patchTraceAnnotations(ctx, cr, result.Phase, time.Since(tickStart))
 	return result, recordErr
 }
@@ -689,6 +689,25 @@ func (r *ConfigReconciler) recordFailure(ctx context.Context, cr *configv1alpha1
 	return ignoreConflict(r.Client.Status().Update(ctx, updated))
 }
 
+func (r *ConfigReconciler) recordRollbackFailure(ctx context.Context, cr *configv1alpha1.IOSXEConfig, msg string) error {
+	updated := cr.DeepCopy()
+	updated.Status.Phase = engine.PhaseFailed
+	updated.Status.ObservedGeneration = cr.Generation
+	setCondition(&updated.Status, metav1.Condition{
+		Type:    "Ready",
+		Status:  metav1.ConditionFalse,
+		Reason:  "ReconcileFailed",
+		Message: msg,
+	})
+	setCondition(&updated.Status, metav1.Condition{
+		Type:    "Rolled-Back",
+		Status:  metav1.ConditionFalse,
+		Reason:  "RollbackFailed",
+		Message: msg,
+	})
+	return ignoreConflict(r.Client.Status().Update(ctx, updated))
+}
+
 // recordResult serialises an engine.Result into the CR's status and
 // emits Kubernetes events describing the tick. It also writes the
 // per-family list, current drift, the hash, and a Conflict condition
@@ -700,6 +719,7 @@ func (r *ConfigReconciler) recordResult(
 	hash string,
 	conflicts map[string][]string,
 	resolved *intent.ResolvedIntent,
+	rollbackTarget string,
 ) error {
 	r.emitEvents(cr, result)
 	updated := cr.DeepCopy()
@@ -722,6 +742,29 @@ func (r *ConfigReconciler) recordResult(
 		updated.Status.LastAppliedTime = &deviceCheck
 		if result.YangVersion != "" {
 			updated.Status.SourceYangVersion = result.YangVersion
+		}
+	}
+	if rollbackTarget != "" {
+		if result.Phase == engine.PhaseInSync {
+			target := rollbackTarget
+			updated.Status.LastRollbackedTo = &target
+			setCondition(&updated.Status, metav1.Condition{
+				Type:    "Rolled-Back",
+				Status:  metav1.ConditionTrue,
+				Reason:  "RolledBack",
+				Message: fmt.Sprintf("rolled back to revision %s", rollbackTarget),
+			})
+		} else {
+			msg := "rollback did not converge"
+			if result.Err != nil {
+				msg = result.Err.Error()
+			}
+			setCondition(&updated.Status, metav1.Condition{
+				Type:    "Rolled-Back",
+				Status:  metav1.ConditionFalse,
+				Reason:  "RollbackFailed",
+				Message: msg,
+			})
 		}
 	}
 
@@ -1231,10 +1274,10 @@ func (r *ConfigReconciler) applyRollbackTo(
 	ctx context.Context,
 	cr *configv1alpha1.IOSXEConfig,
 	resolved *intent.ResolvedIntent,
-) (*intent.ResolvedIntent, bool, error) {
+) (*intent.ResolvedIntent, bool, string, error) {
 	target := strings.TrimSpace(cr.Spec.RollbackTo)
 	if target == "" {
-		return resolved, false, nil
+		return resolved, false, "", nil
 	}
 	ctx, span := otel.Tracer(reconcileTracerName).Start(ctx, "cvk.config.rollback",
 		oteltrace.WithAttributes(attribute.String("cvk.rollback.target_revision", target)))
@@ -1242,30 +1285,30 @@ func (r *ConfigReconciler) applyRollbackTo(
 	var rev configv1alpha1.IOSXEConfigRevision
 	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: cr.Namespace, Name: target}, &rev); err != nil {
 		span.RecordError(err)
-		return resolved, false, fmt.Errorf("get revision %s/%s: %w", cr.Namespace, target, err)
+		return resolved, false, target, fmt.Errorf("get revision %s/%s: %w", cr.Namespace, target, err)
 	}
 	sourceRef := cr.Namespace + "/" + cr.Name
 	if rev.Spec.SourceRef != sourceRef || rev.Spec.SourceUID != string(cr.UID) {
 		err := fmt.Errorf("revision %s/%s belongs to %s uid=%s, not %s uid=%s",
 			rev.Namespace, rev.Name, rev.Spec.SourceRef, rev.Spec.SourceUID, sourceRef, cr.UID)
 		span.RecordError(err)
-		return resolved, false, err
+		return resolved, false, target, err
 	}
 	if rev.Spec.DeviceRef.Name != cr.Spec.DeviceRef.Name {
 		err := fmt.Errorf("revision %s/%s targets device %q, not %q",
 			rev.Namespace, rev.Name, rev.Spec.DeviceRef.Name, cr.Spec.DeviceRef.Name)
 		span.RecordError(err)
-		return resolved, false, err
+		return resolved, false, target, err
 	}
 	body, err := decodeReplayBody(rev.Spec.Body)
 	if err != nil {
 		span.RecordError(err)
-		return resolved, false, fmt.Errorf("decode revision body: %w", err)
+		return resolved, false, target, fmt.Errorf("decode revision body: %w", err)
 	}
 	out := *resolved
 	out.Configuration = body.Configuration
 	out.CLIBlocks = body.CLIBlocks
-	return &out, true, nil
+	return &out, true, target, nil
 }
 
 func (r *ConfigReconciler) appendConfigRevision(

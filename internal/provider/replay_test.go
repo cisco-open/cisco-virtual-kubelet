@@ -218,12 +218,15 @@ func TestApplyRollbackToOverridesResolvedIntent(t *testing.T) {
 			"vlans": []any{map[string]any{"id": float64(10), "name": "current"}},
 		}},
 	}
-	got, applied, err := r.applyRollbackTo(context.Background(), cr, resolved)
+	got, applied, target, err := r.applyRollbackTo(context.Background(), cr, resolved)
 	if err != nil {
 		t.Fatalf("applyRollbackTo: %v", err)
 	}
 	if !applied {
 		t.Fatal("rollbackTo set; applied should be true")
+	}
+	if target != "edge-01-rev-1" {
+		t.Fatalf("target=%q want edge-01-rev-1", target)
 	}
 	vlans, _ := got.Configuration["vlan"].(map[string]any)["vlans"].([]any)
 	if len(vlans) == 0 {

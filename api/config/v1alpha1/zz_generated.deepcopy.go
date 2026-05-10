@@ -859,6 +859,11 @@ func (in *IOSXEConfigStatus) DeepCopyInto(out *IOSXEConfigStatus) {
 		in, out := &in.LastAppliedTime, &out.LastAppliedTime
 		*out = (*in).DeepCopy()
 	}
+	if in.LastRollbackedTo != nil {
+		in, out := &in.LastRollbackedTo, &out.LastRollbackedTo
+		*out = new(string)
+		**out = **in
+	}
 	if in.LastDeviceCheck != nil {
 		in, out := &in.LastDeviceCheck, &out.LastDeviceCheck
 		*out = (*in).DeepCopy()

@@ -210,7 +210,7 @@ func TestRecordResult_LeaseBlockedDoesNotBumpLastDeviceCheck(t *testing.T) {
 		Phase:         engine.PhaseLeaseBlocked,
 		DeviceTouched: false,
 	}
-	if err := r.recordResult(t.Context(), &seeded, result, "hash", nil, nil); err != nil {
+	if err := r.recordResult(t.Context(), &seeded, result, "hash", nil, nil, ""); err != nil {
 		t.Fatalf("recordResult: %v", err)
 	}
 
@@ -266,7 +266,7 @@ func TestRecordResult_DeviceTouchedBumpsLastDeviceCheck(t *testing.T) {
 		Phase:         engine.PhaseInSync,
 		DeviceTouched: true,
 	}
-	if err := r.recordResult(t.Context(), &seeded, result, "hash", nil, nil); err != nil {
+	if err := r.recordResult(t.Context(), &seeded, result, "hash", nil, nil, ""); err != nil {
 		t.Fatalf("recordResult: %v", err)
 	}
 
