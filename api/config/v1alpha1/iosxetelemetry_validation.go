@@ -103,6 +103,29 @@ func ValidateIOSXETelemetrySpec(spec *IOSXETelemetrySpec) field.ErrorList {
 			))
 		}
 	}
+	if spec.Output.Logs.SampleEveryN < 0 {
+		errs = append(errs, field.Invalid(
+			root.Child("output").Child("logs").Child("sampleEveryN"),
+			spec.Output.Logs.SampleEveryN,
+			"must be at least 1",
+		))
+	}
+	if spec.Budgets != nil {
+		if spec.Budgets.MaxLogRecordsPerSecond < 0 {
+			errs = append(errs, field.Invalid(
+				root.Child("budgets").Child("maxLogRecordsPerSecond"),
+				spec.Budgets.MaxLogRecordsPerSecond,
+				"must be at least 1",
+			))
+		}
+		if spec.Budgets.MaxPayloadBytesPerMinute < 0 {
+			errs = append(errs, field.Invalid(
+				root.Child("budgets").Child("maxPayloadBytesPerMinute"),
+				spec.Budgets.MaxPayloadBytesPerMinute,
+				"must be at least 1",
+			))
+		}
+	}
 	if spec.Mapping != nil {
 		for i, transition := range spec.Mapping.Transitions {
 			p := root.Child("mapping").Child("transitions").Index(i)

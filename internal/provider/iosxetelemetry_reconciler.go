@@ -96,6 +96,9 @@ type IOSXETelemetryReconciler struct {
 	owned       map[client.ObjectKey][]string
 	bridgeStop  context.CancelFunc
 	selfMetrics *emit.SelfMetrics
+
+	legacyLogWarnings   map[client.ObjectKey]string
+	payloadBudgetLimits map[client.ObjectKey]int
 }
 
 func (r *IOSXETelemetryReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -184,6 +187,7 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 		}
 		return reconcile.Result{}, nil
 	}
+	r.warnLegacyLogOutput(ctx, req.NamespacedName, cr.Spec.Output.Logs.LegacyMode)
 
 	sub, err := r.ensureSubscriber()
 	if err != nil {
@@ -198,10 +202,13 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 
 	reconnect := defaultReconnect(cr.Spec.Reconnect)
 	sub.SetReconnectConfig(reconnect)
+	budgets := configv1alpha1.DefaultBudgetConfig(cr.Spec.Budgets)
+	r.updatePayloadBudgetLimit(req.NamespacedName, budgets.MaxPayloadBytesPerMinute)
 	profile := telemetry.MappingProfile{
 		Mapping:           cr.Spec.Mapping,
 		Classifier:        telemetryClassifier(cr.Spec.Mapping, r.YangRegistry),
 		Output:            cr.Spec.Output,
+		Budgets:           budgets,
 		CardinalityLimits: cr.Spec.CardinalityLimits,
 		Timestamps:        cr.Spec.Timestamps,
 	}
@@ -237,6 +244,7 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 		r.setReady(&cr, metav1.ConditionFalse, "Pending", "telemetry subscription streams are not active yet")
 	}
 	r.setInstrumentCapCondition(&cr)
+	r.setBudgetCondition(&cr)
 	if err := r.patchTelemetryStatus(ctx, base, &cr); err != nil {
 		return statusPatchResult(err)
 	}
@@ -518,8 +526,12 @@ func (r *IOSXETelemetryReconciler) applyDesired(
 
 func (r *IOSXETelemetryReconciler) removeOwned(key client.ObjectKey) {
 	r.mu.Lock()
+	delete(r.legacyLogWarnings, key)
+	delete(r.payloadBudgetLimits, key)
+	effectivePayloadBudget := r.effectivePayloadBudgetLimitLocked()
 	if r.owned == nil {
 		r.mu.Unlock()
+		emit.SetPayloadByteBudgetLimit(r.DeviceName, effectivePayloadBudget)
 		return
 	}
 	names := append([]string(nil), r.owned[key]...)
@@ -535,6 +547,7 @@ func (r *IOSXETelemetryReconciler) removeOwned(key client.ObjectKey) {
 		r.bridgeStop = nil
 	}
 	r.mu.Unlock()
+	emit.SetPayloadByteBudgetLimit(r.DeviceName, effectivePayloadBudget)
 
 	for _, name := range names {
 		if sub != nil {
@@ -590,6 +603,107 @@ func (r *IOSXETelemetryReconciler) setInstrumentCapCondition(cr *configv1alpha1.
 		cond.Message = "metric instrument count is within the configured cap"
 	}
 	meta.SetStatusCondition(&cr.Status.Conditions, cond)
+}
+
+func (r *IOSXETelemetryReconciler) setBudgetCondition(cr *configv1alpha1.IOSXETelemetry) {
+	samples := emit.BudgetDropSnapshotForDevice(r.DeviceName)
+	cond := metav1.Condition{
+		Type:               "BudgetExceeded",
+		ObservedGeneration: cr.Generation,
+		LastTransitionTime: metav1.Now(),
+	}
+	if len(samples) == 0 {
+		cond.Status = metav1.ConditionFalse
+		cond.Reason = "WithinBudget"
+		cond.Message = "signal emission is within the configured budgets"
+		meta.SetStatusCondition(&cr.Status.Conditions, cond)
+		return
+	}
+	sort.Slice(samples, func(i, j int) bool {
+		if samples[i].Signal == samples[j].Signal {
+			return samples[i].Reason < samples[j].Reason
+		}
+		return samples[i].Signal < samples[j].Signal
+	})
+	reason := "SignalBudgetExceeded"
+	switch {
+	case hasBudgetReason(samples, "rate_limit_log_records"):
+		reason = "LogRecordRateBudgetExceeded"
+	case hasBudgetReason(samples, "rate_limit_payload_bytes"):
+		reason = "PayloadByteBudgetExceeded"
+	}
+	total := int64(0)
+	for _, sample := range samples {
+		total += sample.Count
+	}
+	cond.Status = metav1.ConditionTrue
+	cond.Reason = reason
+	cond.Message = fmt.Sprintf("signal records dropped after budget enforcement (cumulative=%d)", total)
+	meta.SetStatusCondition(&cr.Status.Conditions, cond)
+}
+
+func hasBudgetReason(samples []emit.BudgetDropSample, reason string) bool {
+	for _, sample := range samples {
+		if sample.Reason == reason {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *IOSXETelemetryReconciler) warnLegacyLogOutput(ctx context.Context, key client.ObjectKey, mode string) {
+	if mode == "" {
+		return
+	}
+	r.mu.Lock()
+	if r.legacyLogWarnings == nil {
+		r.legacyLogWarnings = map[client.ObjectKey]string{}
+	}
+	if r.legacyLogWarnings[key] == mode {
+		r.mu.Unlock()
+		return
+	}
+	r.legacyLogWarnings[key] = mode
+	r.mu.Unlock()
+	crlog.FromContext(ctx).Info(
+		"deprecated IOSXETelemetry output.logs compatibility mode",
+		"iosxetelemetry", key.Namespace+"/"+key.Name,
+		"mode", mode,
+	)
+}
+
+func (r *IOSXETelemetryReconciler) updatePayloadBudgetLimit(key client.ObjectKey, limit int) {
+	if limit <= 0 {
+		return
+	}
+	r.mu.Lock()
+	if r.payloadBudgetLimits == nil {
+		r.payloadBudgetLimits = map[client.ObjectKey]int{}
+	}
+	r.payloadBudgetLimits[key] = limit
+	effective := r.effectivePayloadBudgetLimitLocked()
+	r.mu.Unlock()
+	emit.SetPayloadByteBudgetLimit(r.DeviceName, effective)
+}
+
+func (r *IOSXETelemetryReconciler) effectivePayloadBudgetLimitLocked() int {
+	defaultLimit := configv1alpha1.DefaultBudgetConfig(nil).MaxPayloadBytesPerMinute
+	if len(r.payloadBudgetLimits) == 0 {
+		return defaultLimit
+	}
+	effective := 0
+	for _, limit := range r.payloadBudgetLimits {
+		if limit <= 0 {
+			continue
+		}
+		if effective == 0 || limit < effective {
+			effective = limit
+		}
+	}
+	if effective <= 0 {
+		return defaultLimit
+	}
+	return effective
 }
 
 func defaultReconnect(in *configv1alpha1.ReconnectConfig) *configv1alpha1.ReconnectConfig {

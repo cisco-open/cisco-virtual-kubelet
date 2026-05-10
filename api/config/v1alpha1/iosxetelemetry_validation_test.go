@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -151,5 +152,50 @@ func TestValidateIOSXETelemetrySpecAcceptsPhase1Shape(t *testing.T) {
 	spec := validTelemetrySpec()
 	if errs := ValidateIOSXETelemetrySpec(&spec); len(errs) > 0 {
 		t.Fatalf("unexpected validation errors: %v", errs.ToAggregate())
+	}
+}
+
+func TestOutputConfigDecodesLegacyLogs(t *testing.T) {
+	tests := []struct {
+		name        string
+		raw         string
+		wantEnabled bool
+		wantMode    string
+	}{
+		{
+			name:        "omitted",
+			raw:         `{"signal":["logs"]}`,
+			wantEnabled: true,
+			wantMode:    "omitted",
+		},
+		{
+			name:        "boolean",
+			raw:         `{"signal":["logs"],"logs":true}`,
+			wantEnabled: true,
+			wantMode:    "boolean",
+		},
+		{
+			name:        "object",
+			raw:         `{"signal":["logs"],"logs":{"enabled":false,"paths":["/memory"],"sampleEveryN":5}}`,
+			wantEnabled: false,
+			wantMode:    "",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var got OutputConfig
+			if err := json.Unmarshal([]byte(tc.raw), &got); err != nil {
+				t.Fatalf("Unmarshal: %v", err)
+			}
+			if got.Logs.Enabled != tc.wantEnabled {
+				t.Fatalf("logs.enabled=%v, want %v", got.Logs.Enabled, tc.wantEnabled)
+			}
+			if got.Logs.LegacyMode != tc.wantMode {
+				t.Fatalf("legacy mode=%q, want %q", got.Logs.LegacyMode, tc.wantMode)
+			}
+			if got.Logs.SampleEveryN <= 0 {
+				t.Fatalf("sampleEveryN=%d, want positive", got.Logs.SampleEveryN)
+			}
+		})
 	}
 }

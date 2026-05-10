@@ -17,7 +17,10 @@ package emit
 import (
 	"context"
 	"strings"
+	"sync"
+	"time"
 
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
@@ -28,6 +31,10 @@ const loggerName = "cisco_vk_telemetry"
 type LogsEmitter struct {
 	logger log.Logger
 	self   *SelfMetrics
+
+	mu             sync.Mutex
+	sampleCounters map[string]uint64
+	rateBuckets    map[string]*tokenBucket
 }
 
 // LogsEmitterOption configures a LogsEmitter at construction.
@@ -43,7 +50,11 @@ func NewLogsEmitter(provider log.LoggerProvider, opts ...LogsEmitterOption) *Log
 	if provider == nil {
 		provider = noop.NewLoggerProvider()
 	}
-	e := &LogsEmitter{logger: provider.Logger(loggerName)}
+	e := &LogsEmitter{
+		logger:         provider.Logger(loggerName),
+		sampleCounters: map[string]uint64{},
+		rateBuckets:    map[string]*tokenBucket{},
+	}
 	for _, opt := range opts {
 		if opt != nil {
 			opt(e)
@@ -54,13 +65,48 @@ func NewLogsEmitter(provider log.LoggerProvider, opts ...LogsEmitterOption) *Log
 
 // Emit writes log mapped events and returns the number of emitted LogRecords.
 func (e *LogsEmitter) Emit(ctx context.Context, events []mapper.MappedEvent) int {
+	return e.EmitWithPolicy(ctx, events,
+		configv1alpha1.LogsOutputConfig{Enabled: true, SampleEveryN: 1},
+		configv1alpha1.DefaultBudgetConfig(nil),
+		"",
+	)
+}
+
+// EmitWithPolicy writes log mapped events after applying the CR's resolved log
+// output policy and signal budget.
+func (e *LogsEmitter) EmitWithPolicy(
+	ctx context.Context,
+	events []mapper.MappedEvent,
+	policy configv1alpha1.LogsOutputConfig,
+	budgets configv1alpha1.BudgetConfig,
+	policyKey string,
+) int {
 	if e == nil || e.logger == nil {
 		return 0
 	}
+	policy = policy.Resolved()
+	if !policy.Enabled {
+		return 0
+	}
+	budgets = configv1alpha1.DefaultBudgetConfig(&budgets)
 	emitted := 0
 	var device, subscription string
 	for _, event := range events {
 		if event.Signal != mapper.SignalKindLog {
+			continue
+		}
+		if !pathAllowed(policy.Paths, event.CanonicalPath) {
+			continue
+		}
+		if !e.allowSample(policyKey, event.CanonicalPath, policy.SampleEveryN) {
+			continue
+		}
+		eventDevice := attrValue(event.Resource, "device")
+		if eventDevice == "" {
+			eventDevice = "unknown"
+		}
+		if !e.allowLogRecord(eventDevice, budgets.MaxLogRecordsPerSecond) {
+			RecordBudgetDropped(ctx, "logs", "rate_limit_log_records", eventDevice)
 			continue
 		}
 		var rec log.Record
@@ -77,7 +123,7 @@ func (e *LogsEmitter) Emit(ctx context.Context, events []mapper.MappedEvent) int
 		e.logger.Emit(ctx, rec)
 		emitted++
 		if device == "" {
-			device = attrValue(event.Resource, "device")
+			device = eventDevice
 		}
 		if subscription == "" {
 			subscription = attrValue(event.Resource, "subscription")
@@ -87,6 +133,47 @@ func (e *LogsEmitter) Emit(ctx context.Context, events []mapper.MappedEvent) int
 		e.self.AddLogRecords(ctx, int64(emitted), device, subscription)
 	}
 	return emitted
+}
+
+func pathAllowed(paths []string, path string) bool {
+	if len(paths) == 0 {
+		return true
+	}
+	for _, allowed := range paths {
+		if allowed == path {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *LogsEmitter) allowSample(policyKey, path string, everyN int) bool {
+	if everyN <= 1 {
+		return true
+	}
+	key := policyKey + "\x00" + path
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	next := e.sampleCounters[key] + 1
+	e.sampleCounters[key] = next
+	return (next-1)%uint64(everyN) == 0
+}
+
+func (e *LogsEmitter) allowLogRecord(device string, maxPerSecond int) bool {
+	if maxPerSecond <= 0 {
+		maxPerSecond = 500
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	bucket := e.rateBuckets[device]
+	if bucket == nil {
+		bucket = &tokenBucket{
+			capacity:   float64(maxPerSecond),
+			refillRate: float64(maxPerSecond),
+		}
+		e.rateBuckets[device] = bucket
+	}
+	return bucket.allow(time.Now())
 }
 
 func logEventName(name string) string {

@@ -16,6 +16,7 @@ package emit
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
@@ -32,6 +33,30 @@ const (
 	processingDurationSelfMetric = "cisco_vk_telemetry_processing_duration_seconds"
 	transitionsDroppedSelfMetric = "cisco_vk_telemetry_transitions_dropped_total"
 	notifierDroppedSelfMetric    = "cisco_vk_telemetry_notifier_dropped_total"
+	signalBudgetDroppedMetric    = "cisco_vk_signal_budget_dropped_total"
+)
+
+type budgetDropKey struct {
+	signal string
+	reason string
+	device string
+}
+
+// BudgetDropSample is a cumulative in-process signal-budget drop sample.
+type BudgetDropSample struct {
+	Signal string
+	Reason string
+	Device string
+	Count  int64
+}
+
+var (
+	budgetDropMu      sync.Mutex
+	budgetDropCounter metric.Int64Counter
+	budgetDropCounts  = map[budgetDropKey]int64{}
+
+	payloadBudgetMu     sync.Mutex
+	payloadBudgetLimits = map[string]int64{}
 )
 
 // SelfMetrics holds the OTel instruments shared across emitters and the stream
@@ -45,6 +70,7 @@ type SelfMetrics struct {
 	processingDuration metric.Float64Histogram
 	transitionsDropped metric.Int64Counter
 	notifierDropped    metric.Int64Counter
+	signalBudgetDrops  metric.Int64Counter
 
 	capDropTotal atomic.Int64
 }
@@ -75,6 +101,8 @@ func NewSelfMetrics(provider metric.MeterProvider) *SelfMetrics {
 	)
 	transitionsDropped, _ := meter.Int64Counter(transitionsDroppedSelfMetric)
 	notifierDropped, _ := meter.Int64Counter(notifierDroppedSelfMetric)
+	signalBudgetDrops, _ := meter.Int64Counter(signalBudgetDroppedMetric)
+	setBudgetDropCounter(signalBudgetDrops)
 	return &SelfMetrics{
 		activeStreams:      active,
 		streamReconnects:   reconnects,
@@ -83,7 +111,89 @@ func NewSelfMetrics(provider metric.MeterProvider) *SelfMetrics {
 		processingDuration: duration,
 		transitionsDropped: transitionsDropped,
 		notifierDropped:    notifierDropped,
+		signalBudgetDrops:  signalBudgetDrops,
 	}
+}
+
+func setBudgetDropCounter(counter metric.Int64Counter) {
+	budgetDropMu.Lock()
+	budgetDropCounter = counter
+	budgetDropMu.Unlock()
+}
+
+// RecordBudgetDropped increments the unified signal-budget drop counter.
+func RecordBudgetDropped(ctx context.Context, signal, reason, device string) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if signal == "" {
+		signal = "unknown"
+	}
+	if reason == "" {
+		reason = "unknown"
+	}
+	if device == "" {
+		device = "unknown"
+	}
+	key := budgetDropKey{signal: signal, reason: reason, device: device}
+	budgetDropMu.Lock()
+	budgetDropCounts[key]++
+	counter := budgetDropCounter
+	budgetDropMu.Unlock()
+	if counter != nil {
+		counter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("signal", signal),
+			attribute.String("reason", reason),
+			attribute.String("device", device),
+		))
+	}
+}
+
+// BudgetDropSnapshotForDevice returns cumulative budget drops for one device.
+func BudgetDropSnapshotForDevice(device string) []BudgetDropSample {
+	if device == "" {
+		device = "unknown"
+	}
+	budgetDropMu.Lock()
+	defer budgetDropMu.Unlock()
+	out := make([]BudgetDropSample, 0)
+	for key, count := range budgetDropCounts {
+		if key.device != device || count <= 0 {
+			continue
+		}
+		out = append(out, BudgetDropSample{
+			Signal: key.signal,
+			Reason: key.reason,
+			Device: key.device,
+			Count:  count,
+		})
+	}
+	return out
+}
+
+// SetPayloadByteBudgetLimit records the effective per-device exporter payload
+// byte budget. Exporter wrappers consult it at send time.
+func SetPayloadByteBudgetLimit(device string, limit int) {
+	if device == "" || limit <= 0 {
+		return
+	}
+	payloadBudgetMu.Lock()
+	payloadBudgetLimits[device] = int64(limit)
+	payloadBudgetMu.Unlock()
+}
+
+// PayloadByteBudgetLimit returns the configured per-device exporter budget.
+func PayloadByteBudgetLimit(device string, fallback int64) int64 {
+	if device == "" {
+		return fallback
+	}
+	payloadBudgetMu.Lock()
+	limit := payloadBudgetLimits[device]
+	payloadBudgetMu.Unlock()
+	if limit <= 0 {
+		return fallback
+	}
+	return limit
 }
 
 // AddActiveStreams adjusts the active-stream gauge by delta (typically +1 on
@@ -124,6 +234,7 @@ func (s *SelfMetrics) AddLogRecords(ctx context.Context, n int64, device, subscr
 // instrument cap blocked instrument creation. Callers pass the metric name
 // that would have been registered so dashboards can pinpoint hot offenders.
 func (s *SelfMetrics) IncInstrumentCapDrops(ctx context.Context, device, subscription, metricName string) {
+	RecordBudgetDropped(ctx, "metrics", "instrument_cap", device)
 	if s == nil || s.instrumentCapDrops == nil {
 		return
 	}
@@ -163,6 +274,7 @@ func (s *SelfMetrics) RecordProcessingDuration(ctx context.Context, seconds floa
 // out by the traces emitter. Operators read this to size the per-entity
 // budget; high cumulative counts indicate routes/interfaces are flapping.
 func (s *SelfMetrics) IncTransitionsDropped(ctx context.Context, device, subscription, path string) {
+	RecordBudgetDropped(ctx, "traces", "transition_rate_limit", device)
 	if s == nil || s.transitionsDropped == nil {
 		return
 	}
@@ -178,11 +290,12 @@ func (s *SelfMetrics) IncTransitionsDropped(ctx context.Context, device, subscri
 // the next status poll remains authoritative, while this counter exposes that
 // push-based freshness is falling behind.
 func (s *SelfMetrics) IncNotifierDropped(ctx context.Context, reason string) {
-	if s == nil || s.notifierDropped == nil {
-		return
-	}
 	if reason == "" {
 		reason = "unknown"
+	}
+	RecordBudgetDropped(ctx, "podnotifier", reason, "unknown")
+	if s == nil || s.notifierDropped == nil {
+		return
 	}
 	s.notifierDropped.Add(ctx, 1, metric.WithAttributes(attribute.String("reason", reason)))
 }

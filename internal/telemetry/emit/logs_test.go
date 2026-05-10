@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
 	"go.opentelemetry.io/otel/log"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
@@ -156,6 +157,51 @@ func TestLogsEmitterPropagatesAttrs(t *testing.T) {
 	}
 }
 
+func TestLogsEmitterAppliesOutputPolicy(t *testing.T) {
+	emitter, exporter := newCaptureEmitter(t)
+	events := []mapper.MappedEvent{
+		logEvent("/interfaces/interface/state/oper-status", "up"),
+		logEvent("/interfaces/interface/state/oper-status", "down"),
+		logEvent("/interfaces/interface/state/oper-status", "up"),
+		logEvent("/memory/state/used", "42"),
+	}
+
+	if emitted := emitter.EmitWithPolicy(context.Background(), events, configv1alpha1.LogsOutputConfig{}, configv1alpha1.DefaultBudgetConfig(nil), "cr-a"); emitted != 0 {
+		t.Fatalf("disabled EmitWithPolicy()=%d, want 0", emitted)
+	}
+	emitted := emitter.EmitWithPolicy(context.Background(), events, configv1alpha1.LogsOutputConfig{
+		Enabled:      true,
+		Paths:        []string{"/interfaces/interface/state/oper-status"},
+		SampleEveryN: 2,
+	}, configv1alpha1.DefaultBudgetConfig(nil), "cr-b")
+	if emitted != 2 {
+		t.Fatalf("sampled EmitWithPolicy()=%d, want 2", emitted)
+	}
+	if got := len(exporter.Records()); got != 2 {
+		t.Fatalf("records=%d, want 2", got)
+	}
+}
+
+func TestLogsEmitterRateLimitsByDevice(t *testing.T) {
+	emitter, exporter := newCaptureEmitter(t)
+	events := []mapper.MappedEvent{
+		logEvent("/interfaces/interface/state/oper-status", "up"),
+		logEvent("/interfaces/interface/state/admin-status", "up"),
+	}
+
+	emitted := emitter.EmitWithPolicy(context.Background(), events,
+		configv1alpha1.LogsOutputConfig{Enabled: true},
+		configv1alpha1.BudgetConfig{MaxLogRecordsPerSecond: 1},
+		"cr-a",
+	)
+	if emitted != 1 {
+		t.Fatalf("EmitWithPolicy()=%d, want 1", emitted)
+	}
+	if got := len(exporter.Records()); got != 1 {
+		t.Fatalf("records=%d, want 1", got)
+	}
+}
+
 type captureLogExporter struct {
 	mu      sync.Mutex
 	records []sdklog.Record
@@ -204,4 +250,18 @@ func logAttr(record sdklog.Record, key string) string {
 		return true
 	})
 	return out
+}
+
+func logEvent(path, body string) mapper.MappedEvent {
+	return mapper.MappedEvent{
+		Signal:        mapper.SignalKindLog,
+		Name:          "interfaces.interface.state.oper-status",
+		Body:          body,
+		Severity:      mapper.SeverityInfo,
+		CanonicalPath: path,
+		Resource: []mapper.KeyValue{
+			{Key: "device", Value: "edge-01"},
+			{Key: "subscription", Value: "interfaces"},
+		},
+	}
 }

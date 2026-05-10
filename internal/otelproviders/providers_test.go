@@ -92,12 +92,12 @@ func TestProvidersConstructAndShutdown(t *testing.T) {
 func TestExportFailureRecorderPublishesObservableCounter(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
-	recorder := newExportFailureRecorder()
+	recorder := newExportFailureRecorder("edge-01")
 	recorder.register(mp)
 
-	recorder.record("traces", status.Error(codes.Unavailable, "collector down"))
-	recorder.record("traces", status.Error(codes.Unavailable, "collector down"))
-	recorder.record("logs", context.DeadlineExceeded)
+	recorder.record(context.Background(), "traces", status.Error(codes.Unavailable, "collector down"))
+	recorder.record(context.Background(), "traces", status.Error(codes.Unavailable, "collector down"))
+	recorder.record(context.Background(), "logs", context.DeadlineExceeded)
 
 	var rm metricdata.ResourceMetrics
 	if err := reader.Collect(context.Background(), &rm); err != nil {

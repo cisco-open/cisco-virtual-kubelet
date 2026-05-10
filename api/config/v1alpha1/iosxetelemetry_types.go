@@ -15,6 +15,9 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -77,6 +80,10 @@ type IOSXETelemetrySpec struct {
 
 	// Output declares the desired signal families.
 	Output OutputConfig `json:"output"`
+
+	// Budgets bounds high-volume telemetry emission.
+	// +optional
+	Budgets *BudgetConfig `json:"budgets,omitempty"`
 }
 
 // TelemetrySubscription is one logical subscription entry. The reconciler
@@ -299,6 +306,105 @@ type OutputConfig struct {
 	// +listType=set
 	// +kubebuilder:validation:items:Enum=metrics;logs;traces
 	Signal []string `json:"signal,omitempty"`
+
+	// Logs controls MDT-derived log emission. Explicit object form defaults
+	// enabled=false; omitted or legacy boolean form is accepted for one release
+	// by custom JSON decoding.
+	// +optional
+	Logs LogsOutputConfig `json:"logs,omitempty"`
+}
+
+// LogsOutputConfig declares the MDT log emission policy.
+type LogsOutputConfig struct {
+	// Enabled defaults false for the object form.
+	// +kubebuilder:default=false
+	// +optional
+	Enabled bool `json:"enabled"`
+	// Paths is an optional canonical telemetry path allowlist.
+	// +optional
+	// +listType=set
+	Paths []string `json:"paths,omitempty"`
+	// SampleEveryN emits one matching record out of every N. Values <= 1 disable sampling.
+	// +kubebuilder:default=1
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	SampleEveryN int `json:"sampleEveryN,omitempty"`
+
+	LegacyMode string `json:"-"`
+}
+
+// BudgetConfig declares per-device telemetry budgets.
+type BudgetConfig struct {
+	// MaxLogRecordsPerSecond caps MDT-derived log records per device.
+	// +kubebuilder:default=500
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	MaxLogRecordsPerSecond int `json:"maxLogRecordsPerSecond,omitempty"`
+
+	// MaxPayloadBytesPerMinute caps OTLP export payload bytes per device.
+	// +kubebuilder:default=16777216
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	MaxPayloadBytesPerMinute int `json:"maxPayloadBytesPerMinute,omitempty"`
+}
+
+func (o *OutputConfig) UnmarshalJSON(raw []byte) error {
+	type outputAlias OutputConfig
+	var alias outputAlias
+	if err := json.Unmarshal(raw, &alias); err != nil {
+		return err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return err
+	}
+	if _, ok := fields["logs"]; !ok {
+		alias.Logs = LogsOutputConfig{Enabled: true, SampleEveryN: 1, LegacyMode: "omitted"}
+	}
+	*o = OutputConfig(alias)
+	return nil
+}
+
+func (l *LogsOutputConfig) UnmarshalJSON(raw []byte) error {
+	var enabled bool
+	if err := json.Unmarshal(raw, &enabled); err == nil {
+		*l = LogsOutputConfig{Enabled: enabled, SampleEveryN: 1, LegacyMode: "boolean"}
+		return nil
+	}
+	type logsAlias LogsOutputConfig
+	var alias logsAlias
+	if err := json.Unmarshal(raw, &alias); err != nil {
+		return fmt.Errorf("logs output config: %w", err)
+	}
+	if alias.SampleEveryN <= 0 {
+		alias.SampleEveryN = 1
+	}
+	*l = LogsOutputConfig(alias)
+	return nil
+}
+
+func (l LogsOutputConfig) Resolved() LogsOutputConfig {
+	if l.SampleEveryN <= 0 {
+		l.SampleEveryN = 1
+	}
+	return l
+}
+
+func DefaultBudgetConfig(in *BudgetConfig) BudgetConfig {
+	out := BudgetConfig{
+		MaxLogRecordsPerSecond:   500,
+		MaxPayloadBytesPerMinute: 16 * 1024 * 1024,
+	}
+	if in == nil {
+		return out
+	}
+	if in.MaxLogRecordsPerSecond > 0 {
+		out.MaxLogRecordsPerSecond = in.MaxLogRecordsPerSecond
+	}
+	if in.MaxPayloadBytesPerMinute > 0 {
+		out.MaxPayloadBytesPerMinute = in.MaxPayloadBytesPerMinute
+	}
+	return out
 }
 
 // IOSXETelemetryStatus reports subscriber lifecycle and per-subscription

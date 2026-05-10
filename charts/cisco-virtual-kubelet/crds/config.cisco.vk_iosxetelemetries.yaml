@@ -54,6 +54,22 @@ spec:
               The subscriber maps telemetry notifications to OpenTelemetry logs and
               metrics; trace emission is deferred.
             properties:
+              budgets:
+                description: Budgets bounds high-volume telemetry emission.
+                properties:
+                  maxLogRecordsPerSecond:
+                    default: 500
+                    description: MaxLogRecordsPerSecond caps MDT-derived log records
+                      per device.
+                    minimum: 1
+                    type: integer
+                  maxPayloadBytesPerMinute:
+                    default: 16777216
+                    description: MaxPayloadBytesPerMinute caps OTLP export payload
+                      bytes per device.
+                    minimum: 1
+                    type: integer
+                type: object
               cardinalityLimits:
                 description: CardinalityLimits bounds mapper output.
                 properties:
@@ -228,6 +244,30 @@ spec:
               output:
                 description: Output declares the desired signal families.
                 properties:
+                  logs:
+                    description: |-
+                      Logs controls MDT-derived log emission. Explicit object form defaults
+                      enabled=false; omitted or legacy boolean form is accepted for one release
+                      by custom JSON decoding.
+                    properties:
+                      enabled:
+                        default: false
+                        description: Enabled defaults false for the object form.
+                        type: boolean
+                      paths:
+                        description: Paths is an optional canonical telemetry path
+                          allowlist.
+                        items:
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: set
+                      sampleEveryN:
+                        default: 1
+                        description: SampleEveryN emits one matching record out of
+                          every N. Values <= 1 disable sampling.
+                        minimum: 1
+                        type: integer
+                    type: object
                   signal:
                     description: Signal is a subset of metrics, logs, and traces.
                     items:

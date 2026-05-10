@@ -16,6 +16,7 @@ package otelproviders
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -25,6 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -50,13 +52,15 @@ import (
 const defaultShutdownTimeout = 5 * time.Second
 const exporterFailuresMetric = "cisco_vk_telemetry_exporter_failures_total"
 const processInfoMetric = "cisco_vk_process_info"
+const defaultMaxPayloadBytesPerMinute = 16 * 1024 * 1024
 
 type Config struct {
-	OTLPEndpoint    string
-	Insecure        bool
-	Headers         map[string]string
-	ResourceAttrs   map[string]string
-	ShutdownTimeout time.Duration
+	OTLPEndpoint             string
+	Insecure                 bool
+	Headers                  map[string]string
+	ResourceAttrs            map[string]string
+	ShutdownTimeout          time.Duration
+	MaxPayloadBytesPerMinute int
 }
 
 type Providers struct {
@@ -69,7 +73,9 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	exportFailures := newExportFailureRecorder()
+	device := payloadBudgetDevice(cfg.ResourceAttrs)
+	exportFailures := newExportFailureRecorder(device)
+	payloadBudget := newPayloadBudget(device, cfg.MaxPayloadBytesPerMinute)
 	res, err := resource(ctx, cfg.ResourceAttrs)
 	if err != nil {
 		return nil, nil, err
@@ -105,7 +111,10 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 		_ = conn.Close()
 		return nil, nil, fmt.Errorf("create OTLP trace exporter: %w", err)
 	}
-	countedTraceExp := failureCountingTraceExporter{SpanExporter: traceExp, recorder: exportFailures}
+	countedTraceExp := failureCountingTraceExporter{
+		SpanExporter: payloadBudgetTraceExporter{SpanExporter: traceExp, budget: payloadBudget},
+		recorder:     exportFailures,
+	}
 	metricExp, err := otlpmetricgrpc.New(ctx,
 		otlpmetricgrpc.WithGRPCConn(conn),
 		otlpmetricgrpc.WithHeaders(cfg.Headers),
@@ -116,7 +125,10 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 		_ = conn.Close()
 		return nil, nil, fmt.Errorf("create OTLP metric exporter: %w", err)
 	}
-	countedMetricExp := failureCountingMetricExporter{Exporter: metricExp, recorder: exportFailures}
+	countedMetricExp := failureCountingMetricExporter{
+		Exporter: payloadBudgetMetricExporter{Exporter: metricExp, budget: payloadBudget},
+		recorder: exportFailures,
+	}
 	logExp, err := otlploggrpc.New(ctx,
 		otlploggrpc.WithGRPCConn(conn),
 		otlploggrpc.WithHeaders(cfg.Headers),
@@ -128,7 +140,10 @@ func New(ctx context.Context, cfg Config) (*Providers, func(context.Context) err
 		_ = conn.Close()
 		return nil, nil, fmt.Errorf("create OTLP log exporter: %w", err)
 	}
-	countedLogExp := failureCountingLogExporter{Exporter: logExp, recorder: exportFailures}
+	countedLogExp := failureCountingLogExporter{
+		Exporter: payloadBudgetLogExporter{Exporter: logExp, budget: payloadBudget},
+		recorder: exportFailures,
+	}
 
 	// Explicit exporter boundary controls. SDK defaults silently drop sends
 	// under MDT-rate sustained load; pin queue depth, batch sizing, and
@@ -260,10 +275,14 @@ type exportFailureKey struct {
 type exportFailureRecorder struct {
 	mu     sync.Mutex
 	counts map[exportFailureKey]*atomic.Int64
+	device string
 }
 
-func newExportFailureRecorder() *exportFailureRecorder {
-	return &exportFailureRecorder{counts: map[exportFailureKey]*atomic.Int64{}}
+func newExportFailureRecorder(device string) *exportFailureRecorder {
+	if device == "" {
+		device = "unknown"
+	}
+	return &exportFailureRecorder{counts: map[exportFailureKey]*atomic.Int64{}, device: device}
 }
 
 func (r *exportFailureRecorder) register(provider metric.MeterProvider) {
@@ -286,11 +305,12 @@ func (r *exportFailureRecorder) register(provider metric.MeterProvider) {
 	)
 }
 
-func (r *exportFailureRecorder) record(signal string, err error) {
+func (r *exportFailureRecorder) record(ctx context.Context, signal string, err error) {
 	if r == nil || err == nil {
 		return
 	}
-	key := exportFailureKey{signal: signal, reason: exportFailureReason(err)}
+	reason := exportFailureReason(err)
+	key := exportFailureKey{signal: signal, reason: reason}
 	r.mu.Lock()
 	count, ok := r.counts[key]
 	if !ok {
@@ -299,6 +319,7 @@ func (r *exportFailureRecorder) record(signal string, err error) {
 	}
 	r.mu.Unlock()
 	count.Add(1)
+	emit.RecordBudgetDropped(ctx, signal, "exporter_"+reason, r.device)
 }
 
 type exportFailureSample struct {
@@ -345,7 +366,7 @@ type failureCountingTraceExporter struct {
 
 func (e failureCountingTraceExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
 	err := e.SpanExporter.ExportSpans(ctx, spans)
-	e.recorder.record("traces", err)
+	e.recorder.record(ctx, "traces", err)
 	return err
 }
 
@@ -356,7 +377,7 @@ type failureCountingMetricExporter struct {
 
 func (e failureCountingMetricExporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	err := e.Exporter.Export(ctx, rm)
-	e.recorder.record("metrics", err)
+	e.recorder.record(ctx, "metrics", err)
 	return err
 }
 
@@ -367,8 +388,152 @@ type failureCountingLogExporter struct {
 
 func (e failureCountingLogExporter) Export(ctx context.Context, records []sdklog.Record) error {
 	err := e.Exporter.Export(ctx, records)
-	e.recorder.record("logs", err)
+	e.recorder.record(ctx, "logs", err)
 	return err
+}
+
+type payloadBudget struct {
+	mu           sync.Mutex
+	device       string
+	defaultLimit int64
+	windows      map[string]payloadWindow
+}
+
+type payloadWindow struct {
+	start time.Time
+	used  int64
+}
+
+func newPayloadBudget(device string, limit int) *payloadBudget {
+	if device == "" {
+		device = "unknown"
+	}
+	if limit <= 0 {
+		limit = defaultMaxPayloadBytesPerMinute
+	}
+	return &payloadBudget{
+		device:       device,
+		defaultLimit: int64(limit),
+		windows:      map[string]payloadWindow{},
+	}
+}
+
+func (b *payloadBudget) allow(ctx context.Context, signal string, size int) bool {
+	if b == nil || size <= 0 {
+		return true
+	}
+	now := time.Now()
+	b.mu.Lock()
+	window := b.windows[signal]
+	if window.start.IsZero() || now.Sub(window.start) >= time.Minute {
+		window = payloadWindow{start: now}
+	}
+	limit := emit.PayloadByteBudgetLimit(b.device, b.defaultLimit)
+	if window.used+int64(size) > limit {
+		b.windows[signal] = window
+		b.mu.Unlock()
+		emit.RecordBudgetDropped(ctx, signal, "rate_limit_payload_bytes", b.device)
+		return false
+	}
+	window.used += int64(size)
+	b.windows[signal] = window
+	b.mu.Unlock()
+	return true
+}
+
+type payloadBudgetTraceExporter struct {
+	sdktrace.SpanExporter
+	budget *payloadBudget
+}
+
+func (e payloadBudgetTraceExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+	if !e.budget.allow(ctx, "traces", tracePayloadBytes(spans)) {
+		return nil
+	}
+	return e.SpanExporter.ExportSpans(ctx, spans)
+}
+
+type payloadBudgetMetricExporter struct {
+	sdkmetric.Exporter
+	budget *payloadBudget
+}
+
+func (e payloadBudgetMetricExporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+	if !e.budget.allow(ctx, "metrics", metricPayloadBytes(rm)) {
+		return nil
+	}
+	return e.Exporter.Export(ctx, rm)
+}
+
+type payloadBudgetLogExporter struct {
+	sdklog.Exporter
+	budget *payloadBudget
+}
+
+func (e payloadBudgetLogExporter) Export(ctx context.Context, records []sdklog.Record) error {
+	if !e.budget.allow(ctx, "logs", logPayloadBytes(records)) {
+		return nil
+	}
+	return e.Exporter.Export(ctx, records)
+}
+
+func metricPayloadBytes(rm *metricdata.ResourceMetrics) int {
+	if rm == nil {
+		return 0
+	}
+	if payload, err := json.Marshal(rm); err == nil && len(payload) > 0 {
+		return len(payload)
+	}
+	return 0
+}
+
+func tracePayloadBytes(spans []sdktrace.ReadOnlySpan) int {
+	size := 0
+	for _, span := range spans {
+		if span == nil {
+			continue
+		}
+		size += len(span.Name()) + 128
+		size += attrPayloadBytes(span.Attributes())
+		for _, event := range span.Events() {
+			size += len(event.Name) + attrPayloadBytes(event.Attributes) + 32
+		}
+		for _, link := range span.Links() {
+			size += attrPayloadBytes(link.Attributes) + 32
+		}
+		size += len(span.Status().Description)
+	}
+	return size
+}
+
+func logPayloadBytes(records []sdklog.Record) int {
+	size := 0
+	for i := range records {
+		record := records[i]
+		size += len(record.EventName()) + len(record.SeverityText()) + len(record.Body().String()) + 64
+		record.WalkAttributes(func(kv otellog.KeyValue) bool {
+			size += len(kv.Key) + len(kv.Value.String())
+			return true
+		})
+	}
+	return size
+}
+
+func attrPayloadBytes(attrs []attribute.KeyValue) int {
+	size := 0
+	for _, attr := range attrs {
+		size += len(string(attr.Key)) + len(attr.Value.Emit())
+	}
+	return size
+}
+
+func payloadBudgetDevice(attrs map[string]string) string {
+	for _, key := range []string{"cisco.device.name", "device", "host.name", "service.instance.id"} {
+		if value := strings.TrimSpace(attrs[key]); value != "" {
+			return value
+		}
+	}
+	return "unknown"
 }
 
 func transportCredentials(insecureTransport bool) credentials.TransportCredentials {

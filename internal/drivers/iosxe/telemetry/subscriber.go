@@ -39,6 +39,7 @@ type MappingProfile struct {
 	Mapping           *configv1alpha1.MappingConfig
 	Classifier        classifier.Classifier
 	Output            configv1alpha1.OutputConfig
+	Budgets           configv1alpha1.BudgetConfig
 	CardinalityLimits *configv1alpha1.CardinalityLimits
 	Timestamps        *configv1alpha1.TimestampConfig
 }
@@ -629,7 +630,8 @@ func (s *Subscriber) drainEvents(events <-chan NotificationEvent) {
 				}
 			}
 			if s.logsEmitter != nil {
-				if emitted := s.logsEmitter.Emit(eventEmitCtx, mapped); emitted > 0 {
+				policyKey := s.deviceRef + "\x00" + name
+				if emitted := s.logsEmitter.EmitWithPolicy(eventEmitCtx, mapped, profile.Output.Logs, profile.Budgets, policyKey); emitted > 0 {
 					s.bumpLogRecords(name, int64(emitted))
 				}
 			}
