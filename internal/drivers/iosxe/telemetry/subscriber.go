@@ -614,29 +614,35 @@ func (s *Subscriber) drainEvents(events <-chan NotificationEvent) {
 					}
 				}
 			}
+			eventEmitCtx := emitCtx
 			if corr != nil {
 				for _, appEvent := range appEvents {
-					if sc, ok := corr.Get(appEvent.Device, appEvent.AppID); ok {
-						emitCtx = correlation.WithSpanContext(emitCtx, sc)
+					if sc, age, ok := corr.Get(appEvent.Device, appEvent.AppID); ok {
+						switch corr.RelationshipForAge(age) {
+						case correlation.RelationshipParent:
+							eventEmitCtx = correlation.WithSpanContext(eventEmitCtx, sc)
+						default:
+							eventEmitCtx = correlation.WithSpanLink(eventEmitCtx, sc)
+						}
 						break
 					}
 				}
 			}
 			if s.logsEmitter != nil {
-				if emitted := s.logsEmitter.Emit(emitCtx, mapped); emitted > 0 {
+				if emitted := s.logsEmitter.Emit(eventEmitCtx, mapped); emitted > 0 {
 					s.bumpLogRecords(name, int64(emitted))
 				}
 			}
 			if s.metricsEmitter != nil {
-				if emitted := s.metricsEmitter.Emit(emitCtx, mapped); emitted > 0 {
+				if emitted := s.metricsEmitter.Emit(eventEmitCtx, mapped); emitted > 0 {
 					s.bumpMetricPoints(name, int64(emitted))
 				}
 			}
 			if s.tracesEmitter != nil {
-				s.tracesEmitter.Emit(emitCtx, mapped)
+				s.tracesEmitter.Emit(eventEmitCtx, mapped)
 			}
 			s.recordMappedDrops(name, mapped)
-			s.selfMetrics.RecordProcessingDuration(emitCtx, time.Since(startProcessing).Seconds(), s.deviceRef, name)
+			s.selfMetrics.RecordProcessingDuration(eventEmitCtx, time.Since(startProcessing).Seconds(), s.deviceRef, name)
 		}
 	}
 }

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -220,10 +221,14 @@ func (e *TracesEmitter) emitRecoverySpan(ctx context.Context, event mapper.Mappe
 		}
 		attrs = append(attrs, attribute.String(kv.Key, kv.Value))
 	}
-	_, span := e.tracer.Start(ctx, transitionSpanName(event),
+	opts := []trace.SpanStartOption{
 		trace.WithTimestamp(start),
 		trace.WithAttributes(attrs...),
-	)
+	}
+	if links := correlation.SpanLinksFromContext(ctx); len(links) > 0 {
+		opts = append(opts, trace.WithLinks(links...))
+	}
+	_, span := e.tracer.Start(ctx, transitionSpanName(event), opts...)
 	span.End(trace.WithTimestamp(end))
 	if e.stateTransitionsTotal != nil {
 		e.stateTransitionsTotal.Add(ctx, 1, metric.WithAttributes(

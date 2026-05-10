@@ -238,7 +238,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	// the real mux once the provider is available.
 	var innerHandler http.Handler
 	mdtStateCache := telemetrystate.NewCache()
-	traceCorrelationCache := correlation.NewCache(0, 0)
+	traceCorrelationCache := correlation.NewCache(0, 0, 0)
 	var appEventConsumer telemetrystate.AppEventConsumer
 
 	handlerWrapper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
