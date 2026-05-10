@@ -212,6 +212,89 @@ func TestReconcileConfigDiffWithBaseline(t *testing.T) {
 	}
 }
 
+func TestReconcileConfigDiffAllowedNamespaceGate(t *testing.T) {
+	t.Setenv(envConfigDiffAllowedNamespaces, "other, default ")
+	ctx := context.Background()
+	scheme := newScheme(t)
+	op := newOperation("diff", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Kind = opsv1alpha1.OperationKindConfigDiff
+	})
+	tr := &fakeTransport{
+		caps: transport.Capabilities{
+			Kind:                   transport.KindNETCONF,
+			SupportsDiagnosticExec: true,
+		},
+		results: []transport.CommandResult{{
+			Command: "show running-config",
+			Output:  "hostname edge-01",
+		}},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+	r := &Reconciler{Client: c, DeviceName: "dev1", TP: &staticTP{tr: tr}}
+	_, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := c.Get(ctx, types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
+		t.Fatalf("get operation: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhaseSucceeded {
+		t.Fatalf("phase=%q want succeeded: %s", got.Status.Phase, got.Status.Message)
+	}
+	if tr.calls != 1 {
+		t.Fatalf("DiagnosticExec calls=%d want 1", tr.calls)
+	}
+}
+
+func TestReconcileConfigDiffRejectedNamespaceGate(t *testing.T) {
+	t.Setenv(envConfigDiffAllowedNamespaces, "network,ops")
+	ctx := context.Background()
+	scheme := newScheme(t)
+	op := newOperation("diff", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Kind = opsv1alpha1.OperationKindConfigDiff
+	})
+	tr := &fakeTransport{
+		caps: transport.Capabilities{
+			Kind:                   transport.KindNETCONF,
+			SupportsDiagnosticExec: true,
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+	r := &Reconciler{Client: c, DeviceName: "dev1", TP: &staticTP{tr: tr}}
+	_, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := c.Get(ctx, types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
+		t.Fatalf("get operation: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhaseFailed {
+		t.Fatalf("phase=%q want failed", got.Status.Phase)
+	}
+	if !operationConditionIs(got.Status.Conditions, "Ready", metav1.ConditionFalse, "NamespaceNotAuthorized") {
+		t.Fatalf("Ready condition missing NamespaceNotAuthorized: %#v", got.Status.Conditions)
+	}
+	if tr.calls != 0 {
+		t.Fatalf("DiagnosticExec calls=%d want 0", tr.calls)
+	}
+}
+
 func TestReconcilePacketCaptureReadsExistingBuffer(t *testing.T) {
 	ctx := context.Background()
 	scheme := newScheme(t)

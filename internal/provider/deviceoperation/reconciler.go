@@ -18,6 +18,7 @@ package deviceoperation
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -47,6 +48,8 @@ const (
 	artifactMaxBytes       = 900 * 1024
 	packetCaptureOutputKey = "output"
 	artifactPreviewFooter  = "\n<truncated; see artifactURIs>"
+
+	envConfigDiffAllowedNamespaces = "CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES"
 )
 
 // TransportProvider abstracts the per-device config reconciler so operation
@@ -100,6 +103,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	if terminal(op.Status.Phase) && op.Status.ObservedGeneration == op.Generation {
 		return r.handleTTL(ctx, &op, now)
+	}
+	if op.Spec.Operation.Kind == opsv1alpha1.OperationKindConfigDiff &&
+		!configDiffNamespaceAllowed(op.Namespace) {
+		msg := fmt.Sprintf("ConfigDiff is not authorized in namespace %q", op.Namespace)
+		return reconcile.Result{}, r.finishWithReason(ctx, &op, opsv1alpha1.OperationPhaseFailed,
+			"NamespaceNotAuthorized", msg, nil, nil, now)
 	}
 
 	spanName := operationSpanName(op.Spec.Operation.Kind)
@@ -621,6 +630,19 @@ func splitCommandArg(s string) []string {
 		}
 	}
 	return out
+}
+
+func configDiffNamespaceAllowed(namespace string) bool {
+	raw := strings.TrimSpace(os.Getenv(envConfigDiffAllowedNamespaces))
+	if raw == "" {
+		return true
+	}
+	for _, part := range strings.Split(raw, ",") {
+		if strings.TrimSpace(part) == namespace {
+			return true
+		}
+	}
+	return false
 }
 
 func operationSpanName(kind opsv1alpha1.OperationKind) string {

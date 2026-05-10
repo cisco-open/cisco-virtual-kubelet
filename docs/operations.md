@@ -23,6 +23,11 @@ spec:
 
 `ConfigDiff` captures `show running-config`. If `operation.args.baseline` is provided, status output contains a compact line diff between the baseline and observed running configuration.
 
+Set `CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES` to a comma-separated namespace list
+to restrict `ConfigDiff` execution. When unset, existing behavior is preserved.
+Requests outside the allowlist fail with `Ready=False,
+reason=NamespaceNotAuthorized`.
+
 `PacketCapture` reads an existing IOS-XE monitor capture buffer. Provide either `operation.args.name`/`capture`, which expands to `show monitor capture <name> buffer dump`, or an explicit allowlisted `operation.args.command`.
 
 Packet-capture output larger than 256 KiB is written to a ConfigMap named
