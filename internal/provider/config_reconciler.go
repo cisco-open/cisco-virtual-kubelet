@@ -42,6 +42,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -462,16 +463,27 @@ func (r *ConfigReconciler) reconcileOne(
 	trigger reconcileTrigger,
 ) (engine.Result, error) {
 	tickStart := time.Now()
-	resolved, err := resolver.Resolve(ctx, cr)
+	intentCtx, intentSpan := otel.Tracer(reconcileTracerName).Start(ctx, "cvk.config.intent",
+		oteltrace.WithAttributes(
+			attribute.String("config.cisco.vk.iosxeconfig.namespace", cr.Namespace),
+			attribute.String("config.cisco.vk.iosxeconfig.name", cr.Name),
+		))
+	resolved, err := resolver.Resolve(intentCtx, cr)
 	if err != nil {
+		intentSpan.RecordError(err)
+		intentSpan.SetStatus(codes.Error, "resolve")
+		intentSpan.End()
 		recordErr := r.recordFailure(ctx, cr, fmt.Sprintf("resolve: %v", err))
 		r.patchTraceAnnotations(ctx, cr, engine.PhaseFailed, time.Since(tickStart))
 		return engine.Result{Phase: engine.PhaseFailed, Err: err},
 			recordErr
 	}
 
-	rolledBack, appliedRollback, rollbackTarget, err := r.applyRollbackTo(ctx, cr, resolved)
+	rolledBack, appliedRollback, rollbackTarget, err := r.applyRollbackTo(intentCtx, cr, resolved)
 	if err != nil {
+		intentSpan.RecordError(err)
+		intentSpan.SetStatus(codes.Error, "rollback")
+		intentSpan.End()
 		recordErr := r.recordRollbackFailure(ctx, cr, fmt.Sprintf("rollback: %v", err))
 		r.patchTraceAnnotations(ctx, cr, engine.PhaseFailed, time.Since(tickStart))
 		return engine.Result{Phase: engine.PhaseFailed, Err: err},
@@ -488,8 +500,11 @@ func (r *ConfigReconciler) reconcileOne(
 	// operator had authored the historical intent, the device
 	// converges, and the annotation is removed by the same status
 	// update that records the apply.
-	replayed, applied, err := r.applyReplayAnnotation(ctx, cr, resolved)
+	replayed, applied, err := r.applyReplayAnnotation(intentCtx, cr, resolved)
 	if err != nil {
+		intentSpan.RecordError(err)
+		intentSpan.SetStatus(codes.Error, "replay")
+		intentSpan.End()
 		recordErr := r.recordFailure(ctx, cr, fmt.Sprintf("replay: %v", err))
 		r.patchTraceAnnotations(ctx, cr, engine.PhaseFailed, time.Since(tickStart))
 		return engine.Result{Phase: engine.PhaseFailed, Err: err},
@@ -506,11 +521,31 @@ func (r *ConfigReconciler) reconcileOne(
 	// operator asked for the work even when the hash matches.
 	h, err := intent.CanonicalHash(resolved)
 	if err != nil {
+		intentSpan.RecordError(err)
+		intentSpan.SetStatus(codes.Error, "hash")
+		intentSpan.End()
 		recordErr := r.recordFailure(ctx, cr, fmt.Sprintf("hash: %v", err))
 		r.patchTraceAnnotations(ctx, cr, engine.PhaseFailed, time.Since(tickStart))
 		return engine.Result{Phase: engine.PhaseFailed, Err: err},
 			recordErr
 	}
+	intentBody, err := encodeReplayBody(resolved)
+	if err != nil {
+		intentSpan.RecordError(err)
+		intentSpan.SetStatus(codes.Error, "marshal intent")
+		intentSpan.End()
+		recordErr := r.recordFailure(ctx, cr, fmt.Sprintf("marshal intent: %v", err))
+		r.patchTraceAnnotations(ctx, cr, engine.PhaseFailed, time.Since(tickStart))
+		return engine.Result{Phase: engine.PhaseFailed, Err: err},
+			recordErr
+	}
+	intentSpan.SetAttributes(
+		attribute.StringSlice("cvk.config.families", append([]string(nil), resolved.ManagedFamilies...)),
+		attribute.String("cvk.config.hash", h),
+		attribute.Int("cvk.config.intent.bytes", len(intentBody)),
+	)
+	intentSpan.SetStatus(codes.Ok, "")
+	intentSpan.End()
 	// The hash short-circuit fires only when ALL of these hold:
 	//   - the operator did NOT request a replay,
 	//   - generation + hash + InSync match (intent unchanged), AND
