@@ -123,12 +123,66 @@ func TestPodNotifierOverflowDropsAndSelfMetric(t *testing.T) {
 type notifierDriver struct {
 	fakeTopologyDriver
 	status v1.PodStatus
+	calls  int
 }
 
 func (d *notifierDriver) GetPodStatus(_ context.Context, pod *v1.Pod) (*v1.Pod, error) {
+	d.calls++
 	out := pod.DeepCopy()
 	out.Status = d.status
 	return out, nil
+}
+
+// TestPodNotifierPollDrivesCallbackWithoutMDT covers the regression that
+// caused PR #116's lab CI to fail: implementing PodNotifier disables upstream
+// VK's syncProviderWrapper poll path, so without MDT events firing
+// ObserveAppEvent the callback never sees a status update. The runPodNotifier
+// loop now ticks every defaultPodPollInterval and calls driver.GetPodStatus
+// for every node-local pod, mirroring the upstream poll cadence.
+func TestPodNotifierPollDrivesCallbackWithoutMDT(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "lab-ci",
+			UID:       types.UID("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
+		},
+		Spec: v1.PodSpec{Containers: []v1.Container{{Name: "hello"}}},
+	}
+	driver := &notifierDriver{status: v1.PodStatus{Phase: v1.PodRunning}}
+	provider, err := NewAppHostingProvider(ctx,
+		&ciskov1.DeviceSpec{},
+		nodeutil.ProviderConfig{Pods: podLister(t, pod)},
+		driver,
+		nil,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("NewAppHostingProvider: %v", err)
+	}
+	seen := make(chan *v1.Pod, 4)
+	provider.NotifyPods(ctx, func(pod *v1.Pod) { seen <- pod })
+
+	// Drive the poll path directly so the test is deterministic — equivalent
+	// to one tick of the runPodNotifier ticker, with NO ObserveAppEvent call.
+	provider.pollAndNotifyAllPods(ctx)
+
+	select {
+	case got := <-seen:
+		if got.Status.Phase != v1.PodRunning {
+			t.Fatalf("phase=%q want %q", got.Status.Phase, v1.PodRunning)
+		}
+		if got.Name != "lab-ci" {
+			t.Fatalf("pod name=%q want lab-ci", got.Name)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("poll did not push pod through callback")
+	}
+	if driver.calls != 1 {
+		t.Fatalf("driver.GetPodStatus calls=%d want 1", driver.calls)
+	}
 }
 
 func podLister(t *testing.T, pods ...*v1.Pod) corev1listers.PodLister {

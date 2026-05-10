@@ -154,14 +154,57 @@ func (p *AppHostingProvider) DroppedNotifierEvents() int64 {
 	return p.notifyDropped
 }
 
+// defaultPodPollInterval matches upstream VK's syncProviderWrapper cadence
+// (5s). Implementing PodNotifier disables upstream's poll fallback, so we run
+// our own poll alongside the push-based MDT notifications. Without this,
+// deployments without an IOSXETelemetry CR (e.g. lab CI scenarios that don't
+// configure MDT) would never see pod status flip from Pending — driver state
+// changes would only reach the upstream pod controller via MDT events that
+// never arrive.
+const defaultPodPollInterval = 5 * time.Second
+
 func (p *AppHostingProvider) runPodNotifier(ctx context.Context) {
+	ticker := time.NewTicker(defaultPodPollInterval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case ev := <-p.notifyQueue:
 			p.notifyPodForAppEvent(ctx, ev)
+		case <-ticker.C:
+			p.pollAndNotifyAllPods(ctx)
 		}
+	}
+}
+
+// pollAndNotifyAllPods fetches live status for every pod the per-device VK
+// pod's lister knows about and pushes each through the registered notifyFn.
+// Mirrors the upstream syncProviderWrapper.syncPodStatuses path that
+// PodNotifier-implementing providers opt out of.
+func (p *AppHostingProvider) pollAndNotifyAllPods(ctx context.Context) {
+	cb := p.currentNotifyFunc()
+	if cb == nil || p.podsLister == nil || p.driver == nil {
+		return
+	}
+	pods, err := p.podsLister.List(labels.Everything())
+	if err != nil {
+		log.G(ctx).WithError(err).Debug("PodNotifier poll: list pods")
+		return
+	}
+	for _, pod := range pods {
+		if pod.DeletionTimestamp != nil {
+			continue
+		}
+		statusPod, err := p.driver.GetPodStatus(ctx, pod)
+		if err != nil {
+			log.G(ctx).WithError(err).WithFields(log.Fields{
+				"pod":       pod.Name,
+				"namespace": pod.Namespace,
+			}).Debug("PodNotifier poll: status refresh skipped")
+			continue
+		}
+		cb(statusPod.DeepCopy())
 	}
 }
 
