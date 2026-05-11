@@ -386,8 +386,13 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	}
 	telemetryEvents := make(chan event.GenericEvent, 1)
 	telemetryReconciler := &provider.IOSXETelemetryReconciler{
-		Client:           mgr.GetClient(),
-		DeviceName:       deviceName,
+		Client:     mgr.GetClient(),
+		DeviceName: deviceName,
+		// DeviceNamespace mirrors the DeviceOperation reconciler: the
+		// VK pod always runs in the same namespace as its owning
+		// CiscoDevice CR, so IOSXETelemetry CRs from other namespaces
+		// must not be honored even when their DeviceRef matches.
+		DeviceNamespace:  operationNamespace(),
 		Factory:          telemetryFactory,
 		LoggerProvider:   telemetryLoggerProvider(otelProviders),
 		MeterProvider:    telemetryMeterProvider(otelProviders),

@@ -66,6 +66,21 @@ func TestValidateCommands(t *testing.T) {
 
 		// head-prefix match without space — must reject
 		{"showbogus-head-prefix", []string{"showbogus hack"}, true},
+
+		// Adversarial-review Finding #3: per-head subcommand
+		// restrictions. `monitor capture <name> ... buffer ...` is the
+		// only read-only monitor form; state-changing variants must be
+		// rejected even though the head matches the old allowlist.
+		{"monitor-capture-buffer", []string{"monitor capture cvkcap buffer brief"}, false},
+		{"monitor-capture-show-buffer", []string{"monitor capture cvkcap buffer dump"}, false},
+		{"monitor-capture-start", []string{"monitor capture cvkcap start"}, true},
+		{"monitor-capture-stop", []string{"monitor capture cvkcap stop"}, true},
+		{"monitor-capture-clear", []string{"monitor capture cvkcap clear"}, true},
+		{"monitor-capture-export", []string{"monitor capture cvkcap export flash:cap.pcap"}, true},
+		{"monitor-event", []string{"monitor event-trace foo"}, true},
+		{"terminal-monitor", []string{"terminal monitor"}, true},
+		{"terminal-no-monitor", []string{"terminal no monitor"}, false},
+		{"terminal-width", []string{"terminal width 132"}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

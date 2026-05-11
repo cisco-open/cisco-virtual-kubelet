@@ -202,6 +202,40 @@ func TestLogsEmitterRateLimitsByDevice(t *testing.T) {
 	}
 }
 
+// TestLogsEmitterRateLimitIsolatedPerCR is the adversarial-review
+// regression for Finding #6: previously the rate bucket was keyed only
+// on the device, so CR A's low MaxLogRecordsPerSecond throttled CR B
+// even though they were independent telemetry subscriptions. The fix
+// keys the bucket on (policyKey, device).
+func TestLogsEmitterRateLimitIsolatedPerCR(t *testing.T) {
+	emitter, exporter := newCaptureEmitter(t)
+	event := logEvent("/interfaces/interface/state/oper-status", "up")
+
+	// CR A allows 1 log record per second.
+	emittedA := emitter.EmitWithPolicy(context.Background(), []mapper.MappedEvent{event, event},
+		configv1alpha1.LogsOutputConfig{Enabled: true},
+		configv1alpha1.BudgetConfig{MaxLogRecordsPerSecond: 1},
+		"cr-a",
+	)
+	if emittedA != 1 {
+		t.Fatalf("CR A emitted=%d, want 1", emittedA)
+	}
+
+	// CR B (same device) gets its own bucket and a different rate.
+	// Pre-fix, CR A's saturated bucket would have throttled this to 0.
+	emittedB := emitter.EmitWithPolicy(context.Background(), []mapper.MappedEvent{event, event, event},
+		configv1alpha1.LogsOutputConfig{Enabled: true},
+		configv1alpha1.BudgetConfig{MaxLogRecordsPerSecond: 5},
+		"cr-b",
+	)
+	if emittedB < 2 {
+		t.Fatalf("CR B emitted=%d, want >=2 (bucket should be independent)", emittedB)
+	}
+	if got := len(exporter.Records()); got < 3 {
+		t.Fatalf("total records=%d, want >=3", got)
+	}
+}
+
 type captureLogExporter struct {
 	mu      sync.Mutex
 	records []sdklog.Record

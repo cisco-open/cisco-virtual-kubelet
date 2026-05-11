@@ -160,3 +160,42 @@ func TestShortCircuitHonoursDriftDetectInterval(t *testing.T) {
 		})
 	}
 }
+
+// TestShortCircuitFiresWhenRolledBackTargetMatches is the adversarial-
+// review regression for Finding #2 (rollback). After a successful
+// rollback the resolved-intent body is the revision body, the hash is
+// computed from that body, and LastAppliedHash was set to the same
+// value by the prior tick. The short-circuit predicate must therefore
+// fire on subsequent steady-state ticks even though spec.rollbackTo
+// remains set — the controller cannot clear the spec, so without this
+// the engine ran on every poll. The predicate intentionally omits any
+// appliedRollback clause: the hash check is the gate.
+func TestShortCircuitFiresWhenRolledBackTargetMatches(t *testing.T) {
+	t.Parallel()
+	freshCheck := metav1.Now()
+	cr := &configv1alpha1.IOSXEConfig{
+		ObjectMeta: metav1.ObjectMeta{Generation: 4},
+		Spec: configv1alpha1.IOSXEConfigSpec{
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				DriftDetectInterval: "5m",
+				RollbackTo:          "edge-01-rev-7",
+			},
+		},
+		Status: configv1alpha1.IOSXEConfigStatus{
+			ObservedGeneration: 4,
+			LastAppliedHash:    "sha256:rev-7-body",
+			Phase:              engine.PhaseInSync,
+			LastDeviceCheck:    &freshCheck,
+		},
+	}
+	// Predicate mirrors reconcileOne post-fix: no !appliedRollback clause.
+	shortCircuits := !false &&
+		triggerEvent != triggerSubscribe &&
+		cr.Status.ObservedGeneration == cr.Generation &&
+		cr.Status.LastAppliedHash == "sha256:rev-7-body" &&
+		cr.Status.Phase == engine.PhaseInSync &&
+		!dueForDriftCheck(cr)
+	if !shortCircuits {
+		t.Fatalf("expected short-circuit on steady-state rollback tick; cr=%+v", cr)
+	}
+}

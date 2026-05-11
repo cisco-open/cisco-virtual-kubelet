@@ -105,7 +105,7 @@ func (e *LogsEmitter) EmitWithPolicy(
 		if eventDevice == "" {
 			eventDevice = "unknown"
 		}
-		if !e.allowLogRecord(eventDevice, budgets.MaxLogRecordsPerSecond) {
+		if !e.allowLogRecord(policyKey, eventDevice, budgets.MaxLogRecordsPerSecond) {
 			RecordBudgetDropped(ctx, "logs", "rate_limit_log_records", eventDevice)
 			continue
 		}
@@ -159,19 +159,42 @@ func (e *LogsEmitter) allowSample(policyKey, path string, everyN int) bool {
 	return (next-1)%uint64(everyN) == 0
 }
 
-func (e *LogsEmitter) allowLogRecord(device string, maxPerSecond int) bool {
+// allowLogRecord enforces the per-subscription log rate budget. The
+// bucket key combines policyKey (the CR/subscription identifier) and
+// the device, so two CRs targeting the same device do not share a
+// bucket and the *current* maxPerSecond is applied — not whatever
+// the first CR to emit set up.
+//
+// Adversarial-review Finding #6: previously the bucket was keyed only
+// on `device` and initialized once with the first CR's
+// maxPerSecond. The first emitting CR effectively defined the log
+// budget for every other CR on the same device, and a later
+// MaxLogRecordsPerSecond change did not resize the bucket. The
+// key+resize logic below fixes both.
+func (e *LogsEmitter) allowLogRecord(policyKey, device string, maxPerSecond int) bool {
 	if maxPerSecond <= 0 {
 		maxPerSecond = 500
 	}
+	rate := float64(maxPerSecond)
+	bucketKey := policyKey + "\x00" + device
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	bucket := e.rateBuckets[device]
+	bucket := e.rateBuckets[bucketKey]
 	if bucket == nil {
 		bucket = &tokenBucket{
-			capacity:   float64(maxPerSecond),
-			refillRate: float64(maxPerSecond),
+			capacity:   rate,
+			refillRate: rate,
 		}
-		e.rateBuckets[device] = bucket
+		e.rateBuckets[bucketKey] = bucket
+	} else if bucket.capacity != rate || bucket.refillRate != rate {
+		// MaxLogRecordsPerSecond changed since the bucket was last
+		// touched. Resize so the budget tracks the current CR setting
+		// rather than the value baked in when the bucket was created.
+		bucket.capacity = rate
+		bucket.refillRate = rate
+		if bucket.tokens > rate {
+			bucket.tokens = rate
+		}
 	}
 	return bucket.allow(time.Now())
 }

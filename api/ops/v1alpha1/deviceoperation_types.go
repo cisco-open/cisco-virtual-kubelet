@@ -73,8 +73,20 @@ type DeviceOperationRequest struct {
 	// +kubebuilder:validation:Required
 	Kind OperationKind `json:"kind"`
 
-	// Args is a string bag for operation-specific parameters. For ShowCommand,
-	// args.command or args.commands may be used when Commands is not set.
+	// Args is a string bag for operation-specific parameters.
+	//
+	// For ShowCommand, args.command or args.commands may be used when
+	// Commands is not set.
+	//
+	// For PacketCapture, args.name (or args.capture) names an existing
+	// monitor-capture session and the reconciler synthesises only the
+	// exact `show monitor capture <name> buffer dump` command. The
+	// historical args.command escape hatch was removed because it
+	// flowed through the diagnostic allowlist which permits broad
+	// monitor/terminal/test head-words; PacketCapture is documented as
+	// read-only and the allowlist was wider than that contract.
+	// Callers that need other monitor invocations must use ShowCommand
+	// with explicit Commands.
 	// +optional
 	Args map[string]string `json:"args,omitempty"`
 

@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -49,6 +50,23 @@ const (
 	artifactMaxBytes       = 900 * 1024
 	packetCaptureOutputKey = "output"
 	artifactPreviewFooter  = "\n<truncated; see artifactURIs>"
+
+	// totalInlineMaxBytes caps the cumulative size of all
+	// DeviceOperation.Status.Outputs[*].Output strings before the
+	// reconciler writes the status. The Kubernetes etcd object limit
+	// is ~1.5 MiB; with up to 64 commands at 64 KiB each (the
+	// per-output cap) the unconstrained worst case is ~4 MiB, which
+	// failed status updates and made the reconciler retry every
+	// command against the device. We spill overflow into the
+	// per-operation ConfigMap artifact and replace inline Output
+	// fields with a short preview when this cap is reached.
+	// Adversarial-review Finding #4.
+	totalInlineMaxBytes = 256 * 1024
+	// inlinePreviewBytes is the per-output cap applied to the inline
+	// preview when total-budget spill kicks in. Much smaller than the
+	// per-output cap so 64 spilled previews stay well under
+	// totalInlineMaxBytes.
+	inlinePreviewBytes = 2 * 1024
 
 	envConfigDiffAllowedNamespaces = "CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES"
 )
@@ -213,6 +231,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			message = artifactErr.Error()
 			reason = artifactErr.reason
 			artifactURIs = nil
+		}
+	}
+	// Adversarial-review Finding #4: even after per-output truncation
+	// the cumulative inline status payload can exceed etcd's object
+	// limit (64 commands × 64 KiB ≈ 4 MiB). Spill overflow into the
+	// per-operation ConfigMap artifact and shrink inline previews so
+	// the Status.Update never fails for size. Applied regardless of
+	// operation kind so ShowCommand fan-outs are also protected.
+	if terminalPhase == opsv1alpha1.OperationPhaseSucceeded {
+		extraURIs, artifactErr := r.enforceTotalInlineBudget(ctx, &op, outputs, results)
+		if artifactErr != nil {
+			span.RecordError(artifactErr)
+			terminalPhase = opsv1alpha1.OperationPhaseFailed
+			message = artifactErr.Error()
+			reason = artifactErr.reason
+			artifactURIs = nil
+		} else {
+			artifactURIs = append(artifactURIs, extraURIs...)
 		}
 	}
 	if terminalPhase == opsv1alpha1.OperationPhaseFailed {
@@ -389,6 +425,9 @@ func (r *Reconciler) backPacketCaptureArtifacts(
 			message: "device operation artifact owner reference scheme is not configured",
 		}
 	}
+	if err := r.assertArtifactConfigMapOwned(ctx, op); err != nil {
+		return outputs, nil, err
+	}
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: op.Namespace,
@@ -405,6 +444,183 @@ func (r *Reconciler) backPacketCaptureArtifacts(
 		}
 	}
 	return outputs, uris, nil
+}
+
+// assertArtifactConfigMapOwned refuses to back an operation by an
+// existing ConfigMap that is not already owned (via controller
+// reference) by this DeviceOperation.
+//
+// Adversarial-review Finding #7: previously the per-operation artifact
+// name was deterministic (`<op-name>-output`) and CreateOrUpdate
+// replaced Data unconditionally. A DeviceOperation creator with no
+// ConfigMap update rights could therefore clobber any pre-existing
+// ConfigMap that happened to share the name. We now perform a Get
+// first; if the CM exists with no controller ref, or its controller
+// ref points elsewhere, we refuse rather than overwrite.
+func (r *Reconciler) assertArtifactConfigMapOwned(
+	ctx context.Context,
+	op *opsv1alpha1.DeviceOperation,
+) *operationArtifactError {
+	if r.Reader == nil && r.Client == nil {
+		return nil
+	}
+	reader := r.Reader
+	if reader == nil {
+		reader = r.Client
+	}
+	var existing corev1.ConfigMap
+	err := reader.Get(ctx, client.ObjectKey{
+		Namespace: op.Namespace,
+		Name:      artifactConfigMapName(op),
+	}, &existing)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return &operationArtifactError{
+			reason:  "ArtifactWriteFailed",
+			message: fmt.Sprintf("inspect existing artifact ConfigMap: %v", err),
+		}
+	}
+	owner := metav1.GetControllerOf(&existing)
+	if owner == nil {
+		return &operationArtifactError{
+			reason: "ArtifactExistsUnowned",
+			message: fmt.Sprintf("ConfigMap %s/%s already exists and is not owned by a DeviceOperation; refusing to overwrite",
+				existing.Namespace, existing.Name),
+		}
+	}
+	if owner.UID != op.UID {
+		return &operationArtifactError{
+			reason: "ArtifactExistsForeignOwner",
+			message: fmt.Sprintf("ConfigMap %s/%s is controller-owned by %s/%s (uid=%s), not by this DeviceOperation (uid=%s)",
+				existing.Namespace, existing.Name, owner.Kind, owner.Name, owner.UID, op.UID),
+		}
+	}
+	return nil
+}
+
+// enforceTotalInlineBudget caps the cumulative size of inline Output
+// fields across all per-command outputs. When the sum exceeds
+// totalInlineMaxBytes, the largest outputs are progressively spilled
+// to the per-operation ConfigMap artifact (full redacted text) and
+// their inline Output is replaced with a short preview that points at
+// the artifact key. The function mutates outputs in place and returns
+// any newly-added artifact URIs.
+//
+// Adversarial-review Finding #4: prior to this guard a 64-command
+// operation with 64 KiB outputs (the per-output cap) produced ~4 MiB
+// of status content, which exceeded Kubernetes' object size limit
+// and made the status update fail; the reconciler then retried
+// command execution against the device on every reconcile.
+func (r *Reconciler) enforceTotalInlineBudget(
+	ctx context.Context,
+	op *opsv1alpha1.DeviceOperation,
+	outputs []opsv1alpha1.DeviceOperationOutput,
+	results []transport.CommandResult,
+) ([]string, *operationArtifactError) {
+	if totalInline(outputs) <= totalInlineMaxBytes {
+		return nil, nil
+	}
+	if r.Scheme == nil {
+		return nil, &operationArtifactError{
+			reason:  "ArtifactWriteFailed",
+			message: "device operation artifact owner reference scheme is not configured",
+		}
+	}
+	// Spill in descending size order so the smallest number of
+	// outputs gets the artifact treatment; remaining inline outputs
+	// stay full-fidelity.
+	type idxBytes struct {
+		i, n int
+	}
+	order := make([]idxBytes, 0, len(outputs))
+	for i := range outputs {
+		order = append(order, idxBytes{i, len(outputs[i].Output)})
+	}
+	// Insertion sort (n ≤ 64) descending by size.
+	for i := 1; i < len(order); i++ {
+		for j := i; j > 0 && order[j].n > order[j-1].n; j-- {
+			order[j], order[j-1] = order[j-1], order[j]
+		}
+	}
+
+	data := map[string]string{}
+	uris := []string{}
+	for _, ent := range order {
+		if totalInline(outputs) <= totalInlineMaxBytes {
+			break
+		}
+		i := ent.i
+		if outputs[i].Err != "" {
+			continue
+		}
+		// Prefer the full (untruncated) text from results so the
+		// artifact contains the original output, not the already-
+		// truncated inline copy.
+		full := outputs[i].Output
+		if i < len(results) && results[i].Output != "" {
+			redacted, didRedact := diagnostic.Redact(results[i].Output)
+			full = redacted
+			outputs[i].Redacted = outputs[i].Redacted || didRedact
+		}
+		if len(full) > artifactMaxBytes {
+			return nil, &operationArtifactError{
+				reason: "ArtifactTooLarge",
+				message: fmt.Sprintf("operation output for command %q is %d bytes; ConfigMap artifact limit is %d bytes",
+					outputs[i].Command, len(full), artifactMaxBytes),
+			}
+		}
+		key := packetCaptureOutputKey
+		if len(outputs) > 1 {
+			key = fmt.Sprintf("%s-%d", packetCaptureOutputKey, i)
+		}
+		// If the PacketCapture path already spilled this key, skip
+		// re-writing it but still trim the inline preview.
+		if _, already := data[key]; !already {
+			data[key] = full
+			uris = append(uris, fmt.Sprintf("configmap://%s/%s/%s", op.Namespace, artifactConfigMapName(op), key))
+		}
+		outputs[i].Output = truncatePreviewWithFooter(full, inlinePreviewBytes, artifactPreviewFooter)
+		outputs[i].Truncated = true
+	}
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if err := r.assertArtifactConfigMapOwned(ctx, op); err != nil {
+		return nil, err
+	}
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: op.Namespace,
+			Name:      artifactConfigMapName(op),
+		},
+	}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, cm, func() error {
+		if cm.Data == nil {
+			cm.Data = map[string]string{}
+		}
+		// Merge with any data the PacketCapture path already wrote
+		// so this pass does not lose those keys.
+		for k, v := range data {
+			cm.Data[k] = v
+		}
+		return controllerutil.SetControllerReference(op, cm, r.Scheme)
+	}); err != nil {
+		return nil, &operationArtifactError{
+			reason:  "ArtifactWriteFailed",
+			message: fmt.Sprintf("write operation artifact ConfigMap: %v", err),
+		}
+	}
+	return uris, nil
+}
+
+func totalInline(outputs []opsv1alpha1.DeviceOperationOutput) int {
+	total := 0
+	for _, o := range outputs {
+		total += len(o.Output)
+	}
+	return total
 }
 
 func artifactConfigMapName(op *opsv1alpha1.DeviceOperation) string {
@@ -558,30 +774,53 @@ func buildPlan(req opsv1alpha1.DeviceOperationRequest) (operationPlan, error) {
 		}
 		return plan, nil
 	case opsv1alpha1.OperationKindPacketCapture:
-		if req.Args != nil {
-			if cmd := strings.TrimSpace(req.Args["command"]); cmd != "" {
-				return operationPlan{
-					commands:       []string{cmd},
-					successMessage: "packet-capture command completed",
-					outputs:        commandOutputs,
-				}, nil
-			}
-			name := strings.TrimSpace(req.Args["name"])
-			if name == "" {
-				name = strings.TrimSpace(req.Args["capture"])
-			}
-			if name != "" {
-				return operationPlan{
-					commands:       []string{fmt.Sprintf("show monitor capture %s buffer dump", name)},
-					successMessage: "packet-capture buffer captured",
-					outputs:        commandOutputs,
-				}, nil
-			}
+		// Adversarial-review Finding #3: PacketCapture previously
+		// accepted an arbitrary args.command which flowed through the
+		// shared diagnostic allowlist. That allowlist permits broad
+		// `monitor`, `terminal`, and `test` head-words, so a caller
+		// could drive state-changing operations (capture start/stop/
+		// clear/export, terminal monitor, etc.) under an API that
+		// advertises read-only semantics. The fix removes the
+		// args.command escape hatch: PacketCapture only synthesises
+		// the exact `show monitor capture <name> buffer dump` command
+		// from a validated capture name. Operators who genuinely need
+		// to invoke a different head-word must use ShowCommand with
+		// the explicit allowlisted form.
+		if req.Args == nil {
+			return operationPlan{}, fmt.Errorf("operation.args.name is required for PacketCapture")
 		}
-		return operationPlan{}, fmt.Errorf("operation.args.name or operation.args.command is required for PacketCapture")
+		name := strings.TrimSpace(req.Args["name"])
+		if name == "" {
+			name = strings.TrimSpace(req.Args["capture"])
+		}
+		if name == "" {
+			return operationPlan{}, fmt.Errorf("operation.args.name is required for PacketCapture")
+		}
+		if err := validatePacketCaptureName(name); err != nil {
+			return operationPlan{}, err
+		}
+		return operationPlan{
+			commands:       []string{fmt.Sprintf("show monitor capture %s buffer dump", name)},
+			successMessage: "packet-capture buffer captured",
+			outputs:        commandOutputs,
+		}, nil
 	default:
 		return operationPlan{}, fmt.Errorf("operation kind %q is not supported", req.Kind)
 	}
+}
+
+// packetCaptureNamePattern bounds the capture name to a syntactic
+// shape that cannot inject IOS-XE CLI tokens. IOS-XE monitor-capture
+// names are short identifiers; anything outside this pattern is
+// either a bug in the operator's spec or an injection attempt.
+var packetCaptureNamePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
+
+func validatePacketCaptureName(name string) error {
+	if !packetCaptureNamePattern.MatchString(name) {
+		return fmt.Errorf("packet-capture name %q is invalid: must match %s",
+			name, packetCaptureNamePattern.String())
+	}
+	return nil
 }
 
 func commandOutputs(results []transport.CommandResult) []opsv1alpha1.DeviceOperationOutput {

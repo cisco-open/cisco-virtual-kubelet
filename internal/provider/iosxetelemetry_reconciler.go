@@ -60,7 +60,13 @@ const (
 type IOSXETelemetryReconciler struct {
 	Client     client.Client
 	DeviceName string
-	Factory    telemetry.SubscribeClientFactory
+	// DeviceNamespace is the namespace of the owning CiscoDevice CR. When
+	// non-empty the reconciler refuses to act on IOSXETelemetry CRs from
+	// any other namespace, even if their spec.deviceRef.name matches.
+	// Mirrors the DeviceOperation guard so a tenant who can create the CR
+	// in another namespace cannot drive a device pod outside their own.
+	DeviceNamespace string
+	Factory         telemetry.SubscribeClientFactory
 
 	// OTel emitters are wired through the subscriber's drainEvents pump.
 	// LoggerProvider is required for log emission; nil disables it.
@@ -107,24 +113,30 @@ func (r *IOSXETelemetryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("IOSXETelemetryReconciler: empty DeviceName")
 	}
 	devicePredicate := predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool { return telemetryTargetsDevice(e.Object, r.DeviceName) },
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			return telemetryTargetsDevice(e.ObjectNew, r.DeviceName) ||
-				telemetryTargetsDevice(e.ObjectOld, r.DeviceName)
+		CreateFunc: func(e event.CreateEvent) bool {
+			return r.telemetryTargetsThisDevice(e.Object)
 		},
-		DeleteFunc:  func(e event.DeleteEvent) bool { return telemetryTargetsDevice(e.Object, r.DeviceName) },
-		GenericFunc: func(e event.GenericEvent) bool { return telemetryTargetsDevice(e.Object, r.DeviceName) },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return r.telemetryTargetsThisDevice(e.ObjectNew) ||
+				r.telemetryTargetsThisDevice(e.ObjectOld)
+		},
+		DeleteFunc:  func(e event.DeleteEvent) bool { return r.telemetryTargetsThisDevice(e.Object) },
+		GenericFunc: func(e event.GenericEvent) bool { return r.telemetryTargetsThisDevice(e.Object) },
 	}
 
 	mapAll := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
 		var list configv1alpha1.IOSXETelemetryList
-		if err := r.Client.List(ctx, &list); err != nil {
+		listOpts := []client.ListOption{}
+		if r.DeviceNamespace != "" {
+			listOpts = append(listOpts, client.InNamespace(r.DeviceNamespace))
+		}
+		if err := r.Client.List(ctx, &list, listOpts...); err != nil {
 			crlog.FromContext(ctx).Error(err, "mapAll list IOSXETelemetry")
 			return nil
 		}
 		out := make([]reconcile.Request, 0, len(list.Items))
 		for _, cr := range list.Items {
-			if cr.Spec.DeviceRef.Name != r.DeviceName {
+			if !r.telemetryTargetsThisDevice(&cr) {
 				continue
 			}
 			out = append(out, reconcile.Request{
@@ -158,6 +170,14 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 		// this reconciler still owns for it; otherwise the on-device
 		// subscriptions and stream bookkeeping leak until the per-device
 		// pod restarts.
+		r.removeOwned(req.NamespacedName)
+		return reconcile.Result{}, nil
+	}
+	if r.DeviceNamespace != "" && cr.Namespace != r.DeviceNamespace {
+		// Cross-namespace tenancy boundary: refuse to act on a CR that
+		// names this device but lives in a different namespace from the
+		// CiscoDevice CR. Drop any state we may have accidentally
+		// accumulated before the predicate caught up.
 		r.removeOwned(req.NamespacedName)
 		return reconcile.Result{}, nil
 	}
@@ -760,10 +780,22 @@ func defaultSubscription(in configv1alpha1.TelemetrySubscription) configv1alpha1
 	return out
 }
 
-func telemetryTargetsDevice(obj client.Object, name string) bool {
+// telemetryTargetsThisDevice returns true only when obj is an
+// IOSXETelemetry CR whose spec targets this reconciler's device AND
+// (when DeviceNamespace is configured) lives in the same namespace as
+// the device. Cross-namespace name collisions are explicitly rejected
+// to prevent a tenant in namespace A from steering a device that lives
+// in namespace B.
+func (r *IOSXETelemetryReconciler) telemetryTargetsThisDevice(obj client.Object) bool {
 	cr, ok := obj.(*configv1alpha1.IOSXETelemetry)
 	if !ok {
 		return false
 	}
-	return cr.Spec.DeviceRef.Name == name
+	if cr.Spec.DeviceRef.Name != r.DeviceName {
+		return false
+	}
+	if r.DeviceNamespace != "" && cr.Namespace != r.DeviceNamespace {
+		return false
+	}
+	return true
 }

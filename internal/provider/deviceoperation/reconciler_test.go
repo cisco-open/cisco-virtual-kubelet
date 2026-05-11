@@ -487,6 +487,144 @@ func TestReconcilePacketCaptureRejectsOversizedArtifact(t *testing.T) {
 	}
 }
 
+// TestReconcilePacketCaptureRefusesUnownedConfigMap is the
+// adversarial-review regression for Finding #7. When a ConfigMap
+// matching the deterministic artifact name already exists with no
+// controller reference, the reconciler must refuse to overwrite it
+// rather than silently clobber.
+func TestReconcilePacketCaptureRefusesUnownedConfigMap(t *testing.T) {
+	ctx := context.Background()
+	scheme := newScheme(t)
+	op := newOperation("capture", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Kind = opsv1alpha1.OperationKindPacketCapture
+		op.Spec.Operation.Args = map[string]string{"name": "cvkcap"}
+	})
+	// Pre-existing CM owned by nothing (or by a foreign object).
+	preexisting := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: op.Namespace,
+			Name:      "capture-output",
+		},
+		Data: map[string]string{
+			"important-tenant-data": "must-not-be-clobbered",
+		},
+	}
+	tr := &fakeTransport{
+		caps: transport.Capabilities{
+			Kind:                   transport.KindNETCONF,
+			SupportsDiagnosticExec: true,
+		},
+		results: []transport.CommandResult{{
+			Command: "show monitor capture cvkcap buffer dump",
+			Output:  strings.Repeat("packet line\n", 30*1024),
+		}},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op, preexisting).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+	r := &Reconciler{Client: c, Scheme: scheme, DeviceName: "dev1", TP: &staticTP{tr: tr}}
+	if _, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := c.Get(ctx, types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
+		t.Fatalf("get operation: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhaseFailed {
+		t.Fatalf("phase=%q want failed", got.Status.Phase)
+	}
+	if !operationConditionIs(got.Status.Conditions, "Ready", metav1.ConditionFalse, "ArtifactExistsUnowned") {
+		t.Fatalf("Ready condition missing ArtifactExistsUnowned: %#v", got.Status.Conditions)
+	}
+	var cm corev1.ConfigMap
+	if err := c.Get(ctx, types.NamespacedName{Namespace: op.Namespace, Name: "capture-output"}, &cm); err != nil {
+		t.Fatalf("get artifact ConfigMap: %v", err)
+	}
+	if cm.Data["important-tenant-data"] != "must-not-be-clobbered" {
+		t.Fatalf("existing ConfigMap was overwritten: data=%#v", cm.Data)
+	}
+}
+
+// TestReconcileShowCommandTotalInlineBudgetSpills is the regression
+// test for adversarial-review Finding #4. A ShowCommand operation
+// with many outputs whose cumulative size exceeds totalInlineMaxBytes
+// must spill the overflow to the per-operation ConfigMap artifact
+// instead of writing a 4 MiB status object that would fail
+// Status.Update.
+func TestReconcileShowCommandTotalInlineBudgetSpills(t *testing.T) {
+	ctx := context.Background()
+	scheme := newScheme(t)
+	// 8 commands × 50 KiB each = 400 KiB total; well above the
+	// 256 KiB total-inline budget but each output is under the
+	// 256 KiB per-output spill threshold so the PacketCapture path
+	// would never have fired.
+	const perOutputBytes = 50 * 1024
+	const commandCount = 8
+	cmds := make([]string, commandCount)
+	results := make([]transport.CommandResult, commandCount)
+	for i := 0; i < commandCount; i++ {
+		cmds[i] = "show running-config"
+		results[i] = transport.CommandResult{
+			Command: "show running-config",
+			Output:  strings.Repeat("x", perOutputBytes),
+		}
+	}
+	op := newOperation("bigshow", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Commands = cmds
+	})
+	tr := &fakeTransport{
+		caps: transport.Capabilities{
+			Kind:                   transport.KindNETCONF,
+			SupportsDiagnosticExec: true,
+		},
+		results: results,
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+	r := &Reconciler{
+		Client:     c,
+		Scheme:     scheme,
+		DeviceName: "dev1",
+		TP:         &staticTP{tr: tr},
+		Now:        func() time.Time { return time.Unix(100, 0).UTC() },
+	}
+	if _, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := c.Get(ctx, types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
+		t.Fatalf("get operation: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhaseSucceeded {
+		t.Fatalf("phase=%q want succeeded; msg=%s", got.Status.Phase, got.Status.Message)
+	}
+	if total := totalInline(got.Status.Outputs); total > totalInlineMaxBytes {
+		t.Fatalf("inline total=%d bytes still over budget %d", total, totalInlineMaxBytes)
+	}
+	if len(got.Status.ArtifactURIs) == 0 {
+		t.Fatalf("expected artifactURIs for spilled outputs; got none. outputs=%d",
+			len(got.Status.Outputs))
+	}
+	var cm corev1.ConfigMap
+	if err := c.Get(ctx, types.NamespacedName{Namespace: op.Namespace, Name: "bigshow-output"}, &cm); err != nil {
+		t.Fatalf("get artifact ConfigMap: %v", err)
+	}
+	if len(cm.Data) == 0 {
+		t.Fatalf("artifact ConfigMap has no data")
+	}
+}
+
 func newScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	scheme := runtime.NewScheme()

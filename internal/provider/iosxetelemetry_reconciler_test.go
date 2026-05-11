@@ -182,6 +182,54 @@ func TestIOSXETelemetryReconcilerIgnoresForeignDevice(t *testing.T) {
 	}
 }
 
+// TestIOSXETelemetryReconcilerRejectsForeignNamespace verifies that the
+// reconciler refuses to act on a CR that targets this device by name but
+// lives in a namespace other than DeviceNamespace. Without this guard a
+// tenant who can create IOSXETelemetry in any namespace could steer a
+// device pod outside their own tenancy boundary as long as they knew the
+// device name (the cluster-wide RBAC plus name-only filter previously
+// made this possible — see the adversarial-review findings).
+func TestIOSXETelemetryReconcilerRejectsForeignNamespace(t *testing.T) {
+	scheme := newTestScheme(t)
+	// CR is in namespace "attacker"; reconciler is bound to "network".
+	cr := newTelemetryCR("telemetry", "edge-01")
+	cr.Namespace = "attacker"
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithRuntimeObjects(cr).
+		WithStatusSubresource(&configv1alpha1.IOSXETelemetry{}).
+		Build()
+	_, factory := newProviderTelemetryServer(t)
+	r := &IOSXETelemetryReconciler{
+		Client:          c,
+		DeviceName:      "edge-01",
+		DeviceNamespace: "network",
+		Factory:         factory,
+	}
+
+	// The predicate must reject this CR even though the device name
+	// matches — defense-in-depth before Reconcile is reached.
+	if r.telemetryTargetsThisDevice(cr) {
+		t.Fatalf("predicate accepted cross-namespace CR: %+v", cr)
+	}
+
+	if _, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: "attacker", Name: "telemetry"},
+	}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	var got configv1alpha1.IOSXETelemetry
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "attacker", Name: "telemetry"}, &got); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.Status.Phase != "" {
+		t.Fatalf("cross-namespace status touched: %+v", got.Status)
+	}
+	if len(got.Finalizers) != 0 {
+		t.Fatalf("finalizer added to cross-namespace CR: %+v", got.Finalizers)
+	}
+}
+
 func TestIOSXETelemetryRoundTripStatus(t *testing.T) {
 	fakeServer, factory := newProviderTelemetryServer(t)
 	ctx, cancel := context.WithCancel(context.Background())

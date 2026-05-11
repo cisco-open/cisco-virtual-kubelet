@@ -282,7 +282,19 @@ func (m *StreamManager) openAndDrain(ctx context.Context, h *streamHandle) error
 		path := notificationPath(notif)
 		names := h.match(path)
 		if len(names) == 0 {
-			names = h.subNames
+			// Adversarial-review Finding #5: previously we fanned the
+			// notification out to every subscription in the bucket
+			// when no path matched. That broke CR/profile isolation:
+			// a parser mismatch or sibling-prefix notification would
+			// surface under another CR's output/filter/budget
+			// profile. Drop unmatched notifications instead and
+			// record the miss so it shows up in self-metrics.
+			m.logger.V(1).Info("dropping unmatched gnmi notification",
+				"device", m.device, "stream", h.id, "path", path)
+			if m.self != nil {
+				emit.RecordBudgetDropped(ctx, "telemetry", "unmatched_path", m.device)
+			}
+			continue
 		}
 		event := NotificationEvent{
 			StreamID:          h.id,
@@ -486,13 +498,40 @@ func (h *streamHandle) match(path string) []string {
 	var names []string
 	for _, name := range h.subNames {
 		for _, want := range h.pathBySub[name] {
-			if strings.HasPrefix(path, want) || strings.HasPrefix(want, path) {
+			if pathAncestorMatch(path, want) {
 				names = append(names, name)
 				break
 			}
 		}
 	}
 	return names
+}
+
+// pathAncestorMatch returns true when the notification path and a
+// subscription path are in the same gNMI ancestor/descendant chain,
+// with segment boundaries respected.
+//
+// Adversarial-review Finding #5: the previous implementation used
+// raw `strings.HasPrefix(path, want) || strings.HasPrefix(want, path)`,
+// which matched sibling paths whose names happened to share a
+// character prefix (e.g. `/foo` and `/foobar`). Anchoring on the
+// path-separator byte prevents that bleed.
+func pathAncestorMatch(notif, sub string) bool {
+	if notif == "" || sub == "" {
+		return false
+	}
+	if notif == sub {
+		return true
+	}
+	// Descendant: notif starts at sub plus a separator.
+	if strings.HasPrefix(notif, sub) && len(notif) > len(sub) && notif[len(sub)] == '/' {
+		return true
+	}
+	// Ancestor: sub starts at notif plus a separator.
+	if strings.HasPrefix(sub, notif) && len(sub) > len(notif) && sub[len(notif)] == '/' {
+		return true
+	}
+	return false
 }
 
 func boolPtrValue(v *bool) bool {
@@ -720,5 +759,46 @@ func normalizePath(p string) string {
 	if !strings.HasPrefix(p, "/") {
 		p = "/" + p
 	}
-	return strings.TrimRight(p, "/")
+	p = strings.TrimRight(p, "/")
+	// Strip per-segment YANG module prefixes (e.g.
+	// `/Cisco-IOS-XE-environment-oper:environment-sensors/sensor`
+	// becomes `/environment-sensors/sensor`). gNMI Notification
+	// PathElems do not carry module prefixes, so subscription paths
+	// (which conventionally do) would never match Notification paths
+	// without this normalization. The previous matcher hid the
+	// mismatch behind a broadcast fan-out fallback, which is itself
+	// fixed by adversarial-review Finding #5.
+	if !strings.Contains(p, ":") {
+		return p
+	}
+	segments := strings.Split(p, "/")
+	for i, seg := range segments {
+		if idx := strings.Index(seg, ":"); idx >= 0 {
+			// Only strip when the colon is in the module-prefix
+			// position (no whitespace, alphanum/dash prefix). This
+			// keeps `[key=ipv6:address]` intact.
+			prefix := seg[:idx]
+			if isYangModulePrefix(prefix) {
+				segments[i] = seg[idx+1:]
+			}
+		}
+	}
+	return strings.Join(segments, "/")
+}
+
+func isYangModulePrefix(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z':
+		case r >= 'A' && r <= 'Z':
+		case r >= '0' && r <= '9':
+		case r == '-' || r == '_' || r == '.':
+		default:
+			return false
+		}
+	}
+	return true
 }

@@ -571,8 +571,20 @@ func (r *ConfigReconciler) reconcileOne(
 	// after the first clean apply and Subscribe events re-entered the
 	// short-circuit. Splitting "intent freshness" (hash) from "device
 	// freshness" (LastDeviceCheck) is the fix.
+	//
+	// Adversarial-review Finding #2 (rollback): the previous condition
+	// also required `!appliedRollback`, which meant every tick while
+	// spec.rollbackTo remained set re-ran the full Fetch/Diff/Apply
+	// pipeline — the controller cannot clear spec, so a successful
+	// rollback drove the device on every poll. The hash check already
+	// captures "target already applied": when applyRollbackTo overrode
+	// `resolved` with the revision body, `h` is computed from that
+	// rolled-back body, and `LastAppliedHash` was set to the same value
+	// by the prior successful tick. So we drop the appliedRollback
+	// veto and let the hash short-circuit gate steady state. The first
+	// rollback tick still runs (hash differs from the pre-rollback
+	// LastAppliedHash); subsequent steady-state ticks are skipped.
 	if !applied &&
-		!appliedRollback &&
 		trigger != triggerSubscribe &&
 		cr.Status.ObservedGeneration == cr.Generation &&
 		cr.Status.LastAppliedHash == h &&

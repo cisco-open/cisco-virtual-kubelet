@@ -132,6 +132,35 @@ func TestValidateIOSXETelemetrySpecRejectRules(t *testing.T) {
 			},
 			wantErr: "unhealthyValues",
 		},
+		// Adversarial-review Finding #8 regressions: unknown
+		// streamMode and negative durations must be rejected before
+		// the values reach gNMI.
+		{
+			name: "streamMode enum",
+			mutate: func(s *IOSXETelemetrySpec) {
+				s.Subscriptions[0].StreamMode = "SampleOnce"
+			},
+			wantErr: "streamMode",
+		},
+		{
+			name: "negative sampleInterval rejected",
+			mutate: func(s *IOSXETelemetrySpec) {
+				s.Subscriptions[0].SampleInterval = metav1.Duration{Duration: -time.Second}
+			},
+			wantErr: "sampleInterval must be non-negative",
+		},
+		{
+			name: "negative heartbeatInterval rejected",
+			mutate: func(s *IOSXETelemetrySpec) {
+				// Set ON_CHANGE so we hit the duration check not the
+				// "heartbeatInterval requires streamMode=ON_CHANGE"
+				// rule first.
+				s.Subscriptions[0].StreamMode = TelemetryStreamModeOnChange
+				d := metav1.Duration{Duration: -time.Second}
+				s.Subscriptions[0].HeartbeatInterval = &d
+			},
+			wantErr: "heartbeatInterval must be non-negative",
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

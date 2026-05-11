@@ -53,6 +53,38 @@ func ValidateIOSXETelemetrySpec(spec *IOSXETelemetrySpec) field.ErrorList {
 		if sub.Mode != TelemetryModeStream {
 			errs = append(errs, field.NotSupported(p.Child("mode"), sub.Mode, []string{TelemetryModeStream}))
 		}
+		// Adversarial-review Finding #8: previously the validator did
+		// not constrain StreamMode to its enum, so a typo like
+		// "sample" or an unknown value flowed through to gNMI as
+		// TARGET_DEFINED (the default case in subscriptionModeEnum).
+		switch sub.StreamMode {
+		case "", TelemetryStreamModeSample, TelemetryStreamModeOnChange, TelemetryStreamModeTargetDef:
+		default:
+			errs = append(errs, field.NotSupported(p.Child("streamMode"), sub.StreamMode, []string{
+				TelemetryStreamModeSample,
+				TelemetryStreamModeOnChange,
+				TelemetryStreamModeTargetDef,
+			}))
+		}
+		// Adversarial-review Finding #8: SampleInterval and
+		// HeartbeatInterval are signed metav1.Duration values; without
+		// a lower bound check, a negative value reaches gNMI as a
+		// huge uint64 via durationPtrNanos's cast and either spams
+		// the device or hangs the subscription.
+		if d := sub.SampleInterval.Duration; d < 0 {
+			errs = append(errs, field.Invalid(
+				p.Child("sampleInterval"),
+				d.String(),
+				"sampleInterval must be non-negative",
+			))
+		}
+		if sub.HeartbeatInterval != nil && sub.HeartbeatInterval.Duration < 0 {
+			errs = append(errs, field.Invalid(
+				p.Child("heartbeatInterval"),
+				sub.HeartbeatInterval.Duration.String(),
+				"heartbeatInterval must be non-negative",
+			))
+		}
 		if sub.SuppressRedundant != nil && *sub.SuppressRedundant && sub.StreamMode != TelemetryStreamModeOnChange {
 			errs = append(errs, field.Invalid(
 				p.Child("suppressRedundant"),
