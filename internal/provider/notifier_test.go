@@ -24,6 +24,8 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
+	"github.com/prometheus/client_golang/prometheus"
+	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -137,7 +139,7 @@ func (d *notifierDriver) GetPodStatus(_ context.Context, pod *v1.Pod) (*v1.Pod, 
 // caused PR #116's lab CI to fail: implementing PodNotifier disables upstream
 // VK's syncProviderWrapper poll path, so without MDT events firing
 // ObserveAppEvent the callback never sees a status update. The runPodNotifier
-// loop now ticks every defaultPodPollInterval and calls driver.GetPodStatus
+// loop ticks on the provider poll interval and calls driver.GetPodStatus
 // for every node-local pod, mirroring the upstream poll cadence.
 func TestPodNotifierPollDrivesCallbackWithoutMDT(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -151,7 +153,7 @@ func TestPodNotifierPollDrivesCallbackWithoutMDT(t *testing.T) {
 		},
 		Spec: v1.PodSpec{Containers: []v1.Container{{Name: "hello"}}},
 	}
-	driver := &notifierDriver{status: v1.PodStatus{Phase: v1.PodRunning}}
+	driver := &notifierDriver{status: notifierPodStatus(v1.PodRunning, true)}
 	provider, err := NewAppHostingProvider(ctx,
 		&ciskov1.DeviceSpec{},
 		nodeutil.ProviderConfig{Pods: podLister(t, pod)},
@@ -162,30 +164,159 @@ func TestPodNotifierPollDrivesCallbackWithoutMDT(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAppHostingProvider: %v", err)
 	}
+	provider.SetPodPollIntervalForTest(50 * time.Millisecond)
 	seen := make(chan *v1.Pod, 4)
 	provider.NotifyPods(ctx, func(pod *v1.Pod) { seen <- pod })
 
-	// Drive the poll path directly so the test is deterministic — equivalent
-	// to one tick of the runPodNotifier ticker, with NO ObserveAppEvent call.
-	provider.pollAndNotifyAllPods(ctx)
-
 	select {
 	case got := <-seen:
+		cancel()
 		if got.Status.Phase != v1.PodRunning {
 			t.Fatalf("phase=%q want %q", got.Status.Phase, v1.PodRunning)
 		}
 		if got.Name != "lab-ci" {
 			t.Fatalf("pod name=%q want lab-ci", got.Name)
 		}
-	case <-time.After(500 * time.Millisecond):
-		t.Fatal("poll did not push pod through callback")
+		if len(got.Status.ContainerStatuses) != 1 || !got.Status.ContainerStatuses[0].Ready {
+			t.Fatalf("container status=%+v, want one ready container", got.Status.ContainerStatuses)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("ticker poll did not push pod through callback")
 	}
-	if driver.calls != 1 {
-		t.Fatalf("driver.GetPodStatus calls=%d want 1", driver.calls)
+	if driver.calls == 0 {
+		t.Fatal("driver.GetPodStatus was not called")
+	}
+}
+
+func TestPodNotifierPollSuppressesUnchangedPodStatus(t *testing.T) {
+	ctx := context.Background()
+	pod := notifierPod("unchanged", "11111111-1111-1111-1111-111111111111")
+	driver := &notifierDriver{status: notifierPodStatus(v1.PodRunning, true)}
+	provider, err := NewAppHostingProvider(ctx,
+		&ciskov1.DeviceSpec{},
+		nodeutil.ProviderConfig{Pods: podLister(t, pod)},
+		driver,
+		nil,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("NewAppHostingProvider: %v", err)
+	}
+
+	var seen []*v1.Pod
+	setNotifyFuncForTest(provider, func(pod *v1.Pod) {
+		seen = append(seen, pod)
+	})
+	before := podStatusNotificationsSuppressedMetric(t)
+
+	provider.pollAndNotifyAllPods(ctx)
+	driver.status.ContainerStatuses[0].State.Running.StartedAt = metav1.Now()
+	driver.status.Conditions[0].LastTransitionTime = metav1.Now()
+	provider.pollAndNotifyAllPods(ctx)
+
+	if len(seen) != 1 {
+		t.Fatalf("callbacks=%d want 1", len(seen))
+	}
+	if got := podStatusNotificationsSuppressedMetric(t) - before; got != 1 {
+		t.Fatalf("suppressed counter delta=%v want 1", got)
+	}
+}
+
+func TestPodNotifierPollEmitsOnGenuineStateChange(t *testing.T) {
+	ctx := context.Background()
+	pod := notifierPod("state-change", "22222222-2222-2222-2222-222222222222")
+	driver := &notifierDriver{status: notifierPodStatus(v1.PodRunning, true)}
+	provider, err := NewAppHostingProvider(ctx,
+		&ciskov1.DeviceSpec{},
+		nodeutil.ProviderConfig{Pods: podLister(t, pod)},
+		driver,
+		nil,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("NewAppHostingProvider: %v", err)
+	}
+
+	var seen []*v1.Pod
+	setNotifyFuncForTest(provider, func(pod *v1.Pod) {
+		seen = append(seen, pod)
+	})
+
+	provider.pollAndNotifyAllPods(ctx)
+	afterFirstPoll := podStatusNotificationsSuppressedMetric(t)
+	driver.status = notifierPodStatus(v1.PodFailed, true)
+	provider.pollAndNotifyAllPods(ctx)
+	afterSecondPoll := podStatusNotificationsSuppressedMetric(t)
+
+	if len(seen) != 2 {
+		t.Fatalf("callbacks=%d want 2", len(seen))
+	}
+	if got := seen[1].Status.Phase; got != v1.PodFailed {
+		t.Fatalf("second callback phase=%q want %q", got, v1.PodFailed)
+	}
+	if afterSecondPoll != afterFirstPoll {
+		t.Fatalf("suppressed counter advanced from %v to %v on state change", afterFirstPoll, afterSecondPoll)
+	}
+}
+
+func TestPodNotifierGCDropsDeletedPodFingerprints(t *testing.T) {
+	ctx := context.Background()
+	podA := notifierPod("pod-a", "33333333-3333-3333-3333-333333333333")
+	podB := notifierPod("pod-b", "44444444-4444-4444-4444-444444444444")
+	lister, indexer := podListerWithIndexer(t, podA, podB)
+	driver := &notifierDriver{status: notifierPodStatus(v1.PodRunning, true)}
+	provider, err := NewAppHostingProvider(ctx,
+		&ciskov1.DeviceSpec{},
+		nodeutil.ProviderConfig{Pods: lister},
+		driver,
+		nil,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("NewAppHostingProvider: %v", err)
+	}
+
+	var seen []*v1.Pod
+	setNotifyFuncForTest(provider, func(pod *v1.Pod) {
+		seen = append(seen, pod)
+	})
+
+	provider.pollAndNotifyAllPods(ctx)
+	if len(seen) != 2 {
+		t.Fatalf("callbacks after first poll=%d want 2", len(seen))
+	}
+	provider.pollAndNotifyAllPods(ctx)
+	if len(seen) != 2 {
+		t.Fatalf("callbacks after unchanged second poll=%d want 2", len(seen))
+	}
+
+	if err := indexer.Delete(podA); err != nil {
+		t.Fatalf("delete pod from indexer: %v", err)
+	}
+	driver.status = notifierPodStatus(v1.PodFailed, true)
+	provider.pollAndNotifyAllPods(ctx)
+
+	if len(seen) != 3 {
+		t.Fatalf("callbacks after deleting one pod and changing state=%d want 3", len(seen))
+	}
+	if got := seen[2].Name; got != "pod-b" {
+		t.Fatalf("third poll notified pod %q want pod-b", got)
+	}
+	provider.lastNotifiedMu.Lock()
+	cacheLen := len(provider.lastNotified)
+	provider.lastNotifiedMu.Unlock()
+	if cacheLen != 1 {
+		t.Fatalf("lastNotified entries=%d want 1", cacheLen)
 	}
 }
 
 func podLister(t *testing.T, pods ...*v1.Pod) corev1listers.PodLister {
+	t.Helper()
+	lister, _ := podListerWithIndexer(t, pods...)
+	return lister
+}
+
+func podListerWithIndexer(t *testing.T, pods ...*v1.Pod) (corev1listers.PodLister, cache.Indexer) {
 	t.Helper()
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{
 		cache.NamespaceIndex: cache.MetaNamespaceIndexFunc,
@@ -195,7 +326,48 @@ func podLister(t *testing.T, pods ...*v1.Pod) corev1listers.PodLister {
 			t.Fatalf("add pod to indexer: %v", err)
 		}
 	}
-	return corev1listers.NewPodLister(indexer)
+	return corev1listers.NewPodLister(indexer), indexer
+}
+
+func notifierPod(name, uid string) *v1.Pod {
+	return &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      name,
+			UID:       types.UID(uid),
+		},
+		Spec: v1.PodSpec{Containers: []v1.Container{{Name: "app"}}},
+	}
+}
+
+func notifierPodStatus(phase v1.PodPhase, ready bool) v1.PodStatus {
+	started := true
+	return v1.PodStatus{
+		Phase: phase,
+		ContainerStatuses: []v1.ContainerStatus{{
+			Name:         "app",
+			Ready:        ready,
+			Started:      &started,
+			RestartCount: 1,
+			State: v1.ContainerState{
+				Running: &v1.ContainerStateRunning{StartedAt: metav1.Now()},
+			},
+		}},
+		Conditions: []v1.PodCondition{{
+			Type:               v1.PodReady,
+			Status:             v1.ConditionTrue,
+			Reason:             "Ready",
+			LastTransitionTime: metav1.Now(),
+		}},
+		PodIP:  "10.0.0.1",
+		PodIPs: []v1.PodIP{{IP: "10.0.0.1"}},
+	}
+}
+
+func setNotifyFuncForTest(provider *AppHostingProvider, cb func(*v1.Pod)) {
+	provider.notifyMu.Lock()
+	provider.notifyFn = cb
+	provider.notifyMu.Unlock()
 }
 
 func notifierDroppedMetric(rm metricdata.ResourceMetrics) (int64, bool) {
@@ -216,6 +388,38 @@ func notifierDroppedMetric(rm metricdata.ResourceMetrics) (int64, bool) {
 		}
 	}
 	return 0, false
+}
+
+func podStatusNotificationsSuppressedMetric(t *testing.T) float64 {
+	t.Helper()
+	families, err := prometheus.DefaultGatherer.Gather()
+	if err != nil {
+		t.Fatalf("gather prometheus metrics: %v", err)
+	}
+	for _, family := range families {
+		if family.GetName() != "cisco_vk_pod_status_notifications_suppressed_total" {
+			continue
+		}
+		for _, metric := range family.GetMetric() {
+			if prometheusLabelValue(metric.GetLabel(), "reason") != "unchanged" {
+				continue
+			}
+			if metric.GetCounter() == nil {
+				return 0
+			}
+			return metric.GetCounter().GetValue()
+		}
+	}
+	return 0
+}
+
+func prometheusLabelValue(labels []*io_prometheus_client.LabelPair, name string) string {
+	for _, label := range labels {
+		if label.GetName() == name {
+			return label.GetValue()
+		}
+	}
+	return ""
 }
 
 func metricAttrString(attrs attribute.Set, key string) string {

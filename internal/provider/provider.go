@@ -16,8 +16,12 @@ package provider
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +30,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
@@ -37,12 +42,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
 	statsv1alpha1 "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
 
 const defaultPodNotifierCapacity = 1024
+const podStatusNotificationSuppressedReasonUnchanged = "unchanged"
 
 type AppHostingProvider struct {
 	ctx             context.Context
@@ -54,13 +61,17 @@ type AppHostingProvider struct {
 	serviceLister   corev1listers.ServiceLister
 	nodeProvider    *AppHostingNode
 
-	notifyMu      sync.Mutex
-	notifyFn      func(*v1.Pod)
-	notifyQueue   chan state.AppEvent
-	notifyStarted bool
-	notifyDropped int64
-	traceDevice   string
-	traceCache    *correlation.Cache
+	notifyMu        sync.Mutex
+	notifyFn        func(*v1.Pod)
+	notifyQueue     chan state.AppEvent
+	notifyStarted   bool
+	notifyDropped   int64
+	traceDevice     string
+	traceCache      *correlation.Cache
+	podPollInterval time.Duration
+
+	lastNotifiedMu sync.Mutex
+	lastNotified   map[types.UID]string
 }
 
 func NewAppHostingProvider(
@@ -90,6 +101,8 @@ func NewAppHostingProvider(
 		serviceLister:   vkCfg.Services,
 		nodeProvider:    nodeProvider,
 		notifyQueue:     make(chan state.AppEvent, defaultPodNotifierCapacity),
+		podPollInterval: defaultPodPollInterval,
+		lastNotified:    make(map[types.UID]string),
 	}, nil
 }
 
@@ -163,8 +176,33 @@ func (p *AppHostingProvider) DroppedNotifierEvents() int64 {
 // never arrive.
 const defaultPodPollInterval = 5 * time.Second
 
+// SetPodPollIntervalForTest overrides the PodNotifier poll cadence in tests.
+func (p *AppHostingProvider) SetPodPollIntervalForTest(d time.Duration) {
+	if p == nil {
+		return
+	}
+	if d <= 0 {
+		d = defaultPodPollInterval
+	}
+	p.notifyMu.Lock()
+	p.podPollInterval = d
+	p.notifyMu.Unlock()
+}
+
+func (p *AppHostingProvider) currentPodPollInterval() time.Duration {
+	if p == nil {
+		return defaultPodPollInterval
+	}
+	p.notifyMu.Lock()
+	defer p.notifyMu.Unlock()
+	if p.podPollInterval <= 0 {
+		return defaultPodPollInterval
+	}
+	return p.podPollInterval
+}
+
 func (p *AppHostingProvider) runPodNotifier(ctx context.Context) {
-	ticker := time.NewTicker(defaultPodPollInterval)
+	ticker := time.NewTicker(p.currentPodPollInterval())
 	defer ticker.Stop()
 	for {
 		select {
@@ -192,8 +230,16 @@ func (p *AppHostingProvider) pollAndNotifyAllPods(ctx context.Context) {
 		log.G(ctx).WithError(err).Debug("PodNotifier poll: list pods")
 		return
 	}
+	currentUIDs := make(map[types.UID]struct{}, len(pods))
 	for _, pod := range pods {
-		if pod.DeletionTimestamp != nil {
+		if pod != nil {
+			currentUIDs[pod.UID] = struct{}{}
+		}
+	}
+	p.gcLastNotified(currentUIDs)
+
+	for _, pod := range pods {
+		if pod == nil || pod.DeletionTimestamp != nil {
 			continue
 		}
 		statusPod, err := p.driver.GetPodStatus(ctx, pod)
@@ -204,7 +250,9 @@ func (p *AppHostingProvider) pollAndNotifyAllPods(ctx context.Context) {
 			}).Debug("PodNotifier poll: status refresh skipped")
 			continue
 		}
-		cb(statusPod.DeepCopy())
+		if p.shouldNotifyPodStatus(statusPod) {
+			cb(statusPod.DeepCopy())
+		}
 	}
 }
 
@@ -226,7 +274,145 @@ func (p *AppHostingProvider) notifyPodForAppEvent(ctx context.Context, ev state.
 		}).Debug("PodNotifier: status refresh skipped")
 		return
 	}
-	cb(statusPod.DeepCopy())
+	if p.shouldNotifyPodStatus(statusPod) {
+		cb(statusPod.DeepCopy())
+	}
+}
+
+func (p *AppHostingProvider) shouldNotifyPodStatus(pod *v1.Pod) bool {
+	if p == nil || pod == nil {
+		return false
+	}
+	fingerprint := podStateFingerprint(pod)
+	p.lastNotifiedMu.Lock()
+	if p.lastNotified == nil {
+		p.lastNotified = make(map[types.UID]string)
+	}
+	prev, ok := p.lastNotified[pod.UID]
+	if ok && prev == fingerprint {
+		p.lastNotifiedMu.Unlock()
+		emit.IncPodStatusNotificationSuppressed(podStatusNotificationSuppressedReasonUnchanged)
+		return false
+	}
+	p.lastNotified[pod.UID] = fingerprint
+	p.lastNotifiedMu.Unlock()
+	return true
+}
+
+func (p *AppHostingProvider) gcLastNotified(currentUIDs map[types.UID]struct{}) {
+	if p == nil {
+		return
+	}
+	p.lastNotifiedMu.Lock()
+	defer p.lastNotifiedMu.Unlock()
+	for uid := range p.lastNotified {
+		if _, ok := currentUIDs[uid]; !ok {
+			delete(p.lastNotified, uid)
+		}
+	}
+}
+
+func (p *AppHostingProvider) forgetLastNotified(uid types.UID) {
+	if p == nil {
+		return
+	}
+	p.lastNotifiedMu.Lock()
+	delete(p.lastNotified, uid)
+	p.lastNotifiedMu.Unlock()
+}
+
+func podStateFingerprint(pod *v1.Pod) string {
+	if pod == nil {
+		return ""
+	}
+
+	type stableContainerStatus struct {
+		Name         string `json:"name"`
+		Ready        bool   `json:"ready"`
+		Started      *bool  `json:"started"`
+		RestartCount int32  `json:"restartCount"`
+		State        string `json:"state"`
+		StateReason  string `json:"stateReason"`
+	}
+	type stablePodCondition struct {
+		Type   v1.PodConditionType `json:"type"`
+		Status v1.ConditionStatus  `json:"status"`
+		Reason string              `json:"reason"`
+	}
+
+	containers := make([]stableContainerStatus, 0, len(pod.Status.ContainerStatuses))
+	for _, status := range pod.Status.ContainerStatuses {
+		state := "None"
+		reason := ""
+		switch {
+		case status.State.Running != nil:
+			state = "Running"
+		case status.State.Waiting != nil:
+			state = "Waiting"
+			reason = status.State.Waiting.Reason
+		case status.State.Terminated != nil:
+			state = "Terminated"
+			reason = status.State.Terminated.Reason
+		}
+		var started *bool
+		if status.Started != nil {
+			value := *status.Started
+			started = &value
+		}
+		containers = append(containers, stableContainerStatus{
+			Name:         status.Name,
+			Ready:        status.Ready,
+			Started:      started,
+			RestartCount: status.RestartCount,
+			State:        state,
+			StateReason:  reason,
+		})
+	}
+	sort.Slice(containers, func(i, j int) bool {
+		return containers[i].Name < containers[j].Name
+	})
+
+	conditions := make([]stablePodCondition, 0, len(pod.Status.Conditions))
+	for _, condition := range pod.Status.Conditions {
+		conditions = append(conditions, stablePodCondition{
+			Type:   condition.Type,
+			Status: condition.Status,
+			Reason: condition.Reason,
+		})
+	}
+	sort.Slice(conditions, func(i, j int) bool {
+		return conditions[i].Type < conditions[j].Type
+	})
+
+	podIPs := make([]string, 0, len(pod.Status.PodIPs))
+	for _, ip := range pod.Status.PodIPs {
+		podIPs = append(podIPs, ip.IP)
+	}
+
+	payload := struct {
+		Phase             v1.PodPhase             `json:"phase"`
+		Reason            string                  `json:"reason"`
+		Message           string                  `json:"message"`
+		ContainerStatuses []stableContainerStatus `json:"containerStatuses"`
+		Conditions        []stablePodCondition    `json:"conditions"`
+		PodIP             string                  `json:"podIP"`
+		PodIPs            []string                `json:"podIPs"`
+	}{
+		Phase:             pod.Status.Phase,
+		Reason:            pod.Status.Reason,
+		Message:           pod.Status.Message,
+		ContainerStatuses: containers,
+		Conditions:        conditions,
+		PodIP:             pod.Status.PodIP,
+		PodIPs:            podIPs,
+	}
+
+	b, err := json.Marshal(payload)
+	if err != nil {
+		return ""
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
 }
 
 func (p *AppHostingProvider) currentNotifyFunc() func(*v1.Pod) {
@@ -296,6 +482,9 @@ func (p *AppHostingProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 
 func (p *AppHostingProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	err := p.driver.DeletePod(p.ctx, pod)
+	if pod != nil {
+		p.forgetLastNotified(pod.UID)
+	}
 
 	// Trigger node status update to reflect potentially freed resources
 	if p.nodeProvider != nil {

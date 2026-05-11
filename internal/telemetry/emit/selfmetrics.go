@@ -20,6 +20,7 @@ import (
 	"sync/atomic"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
@@ -57,7 +58,19 @@ var (
 
 	payloadBudgetMu     sync.Mutex
 	payloadBudgetLimits = map[string]int64{}
+
+	podStatusNotificationsSuppressed = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "cisco_vk_pod_status_notifications_suppressed_total",
+			Help: "Number of provider pod status notifications suppressed because the meaningful pod state fingerprint did not change.",
+		},
+		[]string{"reason"},
+	)
 )
+
+func init() {
+	prometheus.MustRegister(podStatusNotificationsSuppressed)
+}
 
 // SelfMetrics holds the OTel instruments shared across emitters and the stream
 // manager. A nil receiver is safe — every method short-circuits — so callers
@@ -298,4 +311,12 @@ func (s *SelfMetrics) IncNotifierDropped(ctx context.Context, reason string) {
 		return
 	}
 	s.notifierDropped.Add(ctx, 1, metric.WithAttributes(attribute.String("reason", reason)))
+}
+
+// IncPodStatusNotificationSuppressed counts a skipped PodNotifier callback.
+func IncPodStatusNotificationSuppressed(reason string) {
+	if reason == "" {
+		reason = "unknown"
+	}
+	podStatusNotificationsSuppressed.WithLabelValues(reason).Inc()
 }
