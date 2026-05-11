@@ -66,11 +66,19 @@ type Reconciler struct {
 	// Reader should be an uncached API reader when available. Status updates
 	// can be triggered immediately after create from the admin endpoint; reading
 	// the latest resourceVersion avoids cache-staleness conflict loops.
-	Reader     client.Reader
-	Recorder   record.EventRecorder
-	Scheme     *runtime.Scheme
+	Reader   client.Reader
+	Recorder record.EventRecorder
+	Scheme   *runtime.Scheme
+	// DeviceName is the CiscoDevice metadata.name this reconciler serves.
 	DeviceName string
-	TP         TransportProvider
+	// DeviceNamespace is the namespace of the owning CiscoDevice CR. Reconcile
+	// rejects DeviceOperation CRs whose own namespace does not match — without
+	// this guard a tenant in any namespace can create a DeviceOperation
+	// targeting deviceRef.name=<known-device> and the per-device pod will
+	// execute it with device credentials. Empty disables the check (legacy
+	// single-tenant behaviour for tests that do not plumb the namespace).
+	DeviceNamespace string
+	TP              TransportProvider
 
 	// Now is injected for tests. nil means time.Now.
 	Now func() time.Time
@@ -100,6 +108,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	if op.Spec.DeviceRef.Name != r.DeviceName {
 		return reconcile.Result{}, nil
+	}
+	// DeviceOperation.spec.deviceRef is a same-namespace pointer by convention,
+	// but the watch is cluster-wide so nothing stops a tenant in namespace X
+	// from creating a DeviceOperation that names deviceRef from namespace Y.
+	// Reject those before any device transport is touched.
+	if r.DeviceNamespace != "" && op.Namespace != r.DeviceNamespace {
+		msg := fmt.Sprintf("DeviceOperation %s/%s targets device %q which lives in namespace %q; refusing to execute cross-namespace request",
+			op.Namespace, op.Name, op.Spec.DeviceRef.Name, r.DeviceNamespace)
+		return reconcile.Result{}, r.finishWithReason(ctx, &op, opsv1alpha1.OperationPhaseFailed,
+			"NamespaceMismatch", msg, nil, nil, now)
 	}
 
 	if terminal(op.Status.Phase) && op.Status.ObservedGeneration == op.Generation {

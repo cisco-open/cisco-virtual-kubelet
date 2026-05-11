@@ -154,6 +154,11 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 	}
 
 	if cr.Spec.DeviceRef.Name != r.DeviceName {
+		// CR was retargeted away from this device. Drop any subscriptions
+		// this reconciler still owns for it; otherwise the on-device
+		// subscriptions and stream bookkeeping leak until the per-device
+		// pod restarts.
+		r.removeOwned(req.NamespacedName)
 		return reconcile.Result{}, nil
 	}
 

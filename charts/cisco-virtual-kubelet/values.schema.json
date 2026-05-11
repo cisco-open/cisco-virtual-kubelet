@@ -102,6 +102,16 @@
             "headers": {
               "type": "object",
               "additionalProperties": { "type": "string" }
+            },
+            "headersSecret": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "key"],
+              "description": "When name is non-empty the chart wires OTEL_EXPORTER_OTLP_HEADERS via a SecretKeyRef and the controller mirrors that ref onto every per-device VK pod (operators must replicate the Secret to each device.Namespace). Use this instead of inline headers when the value contains auth tokens.",
+              "properties": {
+                "name": { "type": "string" },
+                "key":  { "type": "string", "minLength": 1 }
+              }
             }
           }
         },

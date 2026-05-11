@@ -71,8 +71,23 @@ telemetry:
     # the bundled collector listens on plaintext gRPC.
     insecure: false
     # headers are serialized into OTEL_EXPORTER_OTLP_HEADERS for optional
-    # collector metadata or auth headers.
+    # collector metadata or auth headers. SECURITY: prefer headersSecret
+    # below over inline headers when those headers carry auth tokens —
+    # inline values land as literal EnvVar.value on every per-device pod
+    # spec, where any holder of `get pod` in the device's namespace can
+    # read them.
     headers: {}
+    # headersSecret references a Secret whose key holds the JSON-encoded
+    # OTLP headers map (same format as `headers` above). When name is set
+    # the chart wires OTEL_EXPORTER_OTLP_HEADERS as a SecretKeyRef on the
+    # controller pod AND the controller mirrors that SecretKeyRef onto
+    # every per-device VK pod it spawns. Operators are responsible for
+    # ensuring a Secret with this name exists in each namespace that has
+    # a CiscoDevice CR (same model as imagePullSecrets). Leave name=""
+    # to keep the literal-headers behaviour above.
+    headersSecret:
+      name: ""
+      key: "OTEL_EXPORTER_OTLP_HEADERS"
   # yangModelsDir is the legacy in-image YANG path, propagated as
   # YANG_MODELS_DIR. Prefer the yangModels block below for k8s-native
   # delivery via a ConfigMap; this field stays for backward compatibility

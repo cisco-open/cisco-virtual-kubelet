@@ -73,8 +73,28 @@ spec:
               value: {{ include "cisco-virtual-kubelet.telemetryOtlpEndpoint" . | quote }}
             - name: OTEL_EXPORTER_OTLP_INSECURE
               value: {{ include "cisco-virtual-kubelet.telemetryOtlpInsecure" . | quote }}
+            {{- if .Values.telemetry.otlp.headersSecret.name }}
+            # SecretKeyRef-backed OTLP headers. The controller mirrors this
+            # SecretKeyRef onto every per-device VK pod it spawns; operators
+            # must ensure the named Secret exists in each device.Namespace
+            # (same model as imagePullSecrets).
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.telemetry.otlp.headersSecret.name | quote }}
+                  key: {{ .Values.telemetry.otlp.headersSecret.key | default "OTEL_EXPORTER_OTLP_HEADERS" | quote }}
+            - name: CVK_OTLP_HEADERS_SECRET_NAME
+              value: {{ .Values.telemetry.otlp.headersSecret.name | quote }}
+            - name: CVK_OTLP_HEADERS_SECRET_KEY
+              value: {{ .Values.telemetry.otlp.headersSecret.key | default "OTEL_EXPORTER_OTLP_HEADERS" | quote }}
+            {{- else }}
+            # Inline OTLP headers as a literal value. SECURITY: anything in
+            # this map is visible to anyone with `get pod` on this and every
+            # per-device pod's namespace. Switch to telemetry.otlp.headersSecret
+            # if these headers carry auth tokens.
             - name: OTEL_EXPORTER_OTLP_HEADERS
               value: {{ .Values.telemetry.otlp.headers | toJson | quote }}
+            {{- end }}
             - name: YANG_MODELS_DIR
               value: {{ include "cisco-virtual-kubelet.yangModelsMountPath" . | quote }}
             - name: CVK_RESOURCE_ATTRIBUTES

@@ -328,12 +328,18 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	}
 
 	operationReconciler := &deviceoperation.Reconciler{
-		Client:     mgr.GetClient(),
-		Reader:     mgr.GetAPIReader(),
-		Recorder:   recorder,
-		Scheme:     mgr.GetScheme(),
-		DeviceName: deviceName,
-		TP:         r,
+		Client:   mgr.GetClient(),
+		Reader:   mgr.GetAPIReader(),
+		Recorder: recorder,
+		Scheme:   mgr.GetScheme(),
+		// DeviceNamespace is the namespace of the owning CiscoDevice CR,
+		// which is the same as this VK pod's POD_NAMESPACE because the
+		// controller always creates the per-device Deployment in
+		// device.Namespace (see ciscodevice_controller.go). The reconciler
+		// uses it to refuse cross-namespace DeviceOperation requests.
+		DeviceName:      deviceName,
+		DeviceNamespace: operationNamespace(),
+		TP:              r,
 	}
 	if err := operationReconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("device operation SetupWithManager: %w", err)

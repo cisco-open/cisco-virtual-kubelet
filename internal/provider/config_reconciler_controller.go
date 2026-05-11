@@ -122,6 +122,15 @@ func (r *ConfigReconciler) releaseLeasesForCR(ctx context.Context, cr *configv1a
 // orphaned device config.
 const ForceRelinquishSkipAnnotation = "config.cisco.vk/force-relinquish-skip"
 
+// RollbackAllowSecretOmittedAnnotation is the operator-controlled opt-in for
+// rolling back to an IOSXEConfigRevision whose body omitted secret-bearing
+// family content. The reconciler restores those families from the *current*
+// resolved intent rather than the revision body (Secret material is never
+// persisted to revisions), which means non-secret content in those families
+// is NOT actually rolled back. Setting this annotation to "true" on the
+// IOSXEConfig acknowledges that the rollback is partial and proceeds.
+const RollbackAllowSecretOmittedAnnotation = "config.cisco.vk/rollback-allow-secret-omitted"
+
 // relinquishOwnedKeys runs a CR-delete reconcile that drops every
 // list-key this CR owned (per status.atomicReplaceOwnedKeys) from the
 // device. F2 fix (2026-05-01): without this pass, deleting a CR that

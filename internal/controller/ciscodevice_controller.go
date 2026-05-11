@@ -79,15 +79,30 @@ const (
 	envCVKTelemetryPort         = "CISCO_VK_TELEMETRY_PORT"
 )
 
+// telemetryEnvPropagationNames is the set of env vars whose literal values
+// the controller copies into every per-device VK pod's env block.
+//
+// OTEL_EXPORTER_OTLP_HEADERS is intentionally excluded — those values can
+// carry collector auth tokens and copying them as literal `EnvVar.value`
+// makes them visible to anyone with `get pod` on the per-device pod's
+// namespace. When the chart configures a secret reference (env vars
+// CVK_OTLP_HEADERS_SECRET_NAME / CVK_OTLP_HEADERS_SECRET_KEY are set on the
+// controller pod), propagatedTelemetryHeadersEnvVar mirrors that secret
+// reference into per-device pods. Operators must ensure the named Secret
+// exists in each device.Namespace (same pattern as imagePullSecrets).
 var telemetryEnvPropagationNames = []string{
 	envOTELExporterOTLPEndpoint,
 	envOTELExporterOTLPInsecure,
-	envOTELExporterOTLPHeaders,
 	envYANGModelsDir,
 	envCVKResourceAttributes,
 	envCVKTelemetryInsecure,
 	envCVKTelemetryPort,
 }
+
+const (
+	envCVKOTLPHeadersSecretName = "CVK_OTLP_HEADERS_SECRET_NAME"
+	envCVKOTLPHeadersSecretKey  = "CVK_OTLP_HEADERS_SECRET_KEY"
+)
 
 // configPrereqsTeardownPollInterval is how often the deletion-finalizer path
 // requeues while waiting for the owned IOSXEConfig to drive empty intent and
@@ -412,6 +427,9 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		podEnv := append([]corev1.EnvVar{}, credEnv...)
 		podEnv = append(podEnv, downwardAPIEnv()...)
 		podEnv = append(podEnv, propagatedTelemetryEnv()...)
+		if hdr := propagatedTelemetryHeadersEnvVar(); hdr != nil {
+			podEnv = append(podEnv, *hdr)
+		}
 		podEnv = append(podEnv, opsPolicyEnv(device.Spec.OpsPolicy)...)
 
 		deploy.Spec.Template.Spec = corev1.PodSpec{
@@ -594,6 +612,37 @@ func propagatedTelemetryEnv() []corev1.EnvVar {
 		env = append(env, corev1.EnvVar{Name: name, Value: value})
 	}
 	return env
+}
+
+// propagatedTelemetryHeadersEnvVar mirrors the controller's
+// OTEL_EXPORTER_OTLP_HEADERS configuration onto per-device pods as a
+// SecretKeyRef-backed env var when the chart has wired one. Returning nil
+// means "no headers propagation configured" — operators who need OTLP auth
+// must either set telemetry.otlp.headersSecret in the chart or inject the
+// env var manually on the per-device pod via custom workload tooling.
+//
+// Why not propagate the literal value: OTEL_EXPORTER_OTLP_HEADERS commonly
+// carries collector auth tokens; copying it as a literal `EnvVar.value` puts
+// those tokens into per-device pod specs that any holder of `get pod` on
+// the device's namespace can read.
+func propagatedTelemetryHeadersEnvVar() *corev1.EnvVar {
+	name := strings.TrimSpace(os.Getenv(envCVKOTLPHeadersSecretName))
+	if name == "" {
+		return nil
+	}
+	key := strings.TrimSpace(os.Getenv(envCVKOTLPHeadersSecretKey))
+	if key == "" {
+		key = envOTELExporterOTLPHeaders
+	}
+	return &corev1.EnvVar{
+		Name: envOTELExporterOTLPHeaders,
+		ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: name},
+				Key:                  key,
+			},
+		},
+	}
 }
 
 // opsPolicyEnv translates DeviceSpec.OpsPolicy into env vars on the per-device

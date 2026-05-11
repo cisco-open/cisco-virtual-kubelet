@@ -1402,6 +1402,22 @@ func (r *ConfigReconciler) applyRollbackTo(
 		span.RecordError(err)
 		return resolved, false, target, err
 	}
+	// Even when secret-ref names match, restoring secret-backed families from
+	// the *current* resolved intent means any non-secret content in those
+	// families (BGP/SNMP peers, MD5-keyed but mostly plain config, etc.) is
+	// NOT actually rolled back. Block by default so operators can't silently
+	// get a partial revert; require an explicit opt-in annotation that
+	// acknowledges the limitation.
+	if rev.Spec.SecretMaterialOmitted &&
+		cr.Annotations[RollbackAllowSecretOmittedAnnotation] != "true" {
+		err := &rollbackBlockedError{
+			reason: "RevisionMissingSecretMaterial",
+			message: fmt.Sprintf("revision %s/%s omitted secret material; rolling back would restore secret-backed families from current spec, not the revision (set annotation %s=true to acknowledge and proceed)",
+				rev.Namespace, rev.Name, RollbackAllowSecretOmittedAnnotation),
+		}
+		span.RecordError(err)
+		return resolved, false, target, err
+	}
 	body, err := decodeReplayBody(rev.Spec.Body)
 	if err != nil {
 		span.RecordError(err)

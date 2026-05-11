@@ -5,3 +5,4 @@ bin
 .venv/
 .claude/
 site/
+/cisco-vk

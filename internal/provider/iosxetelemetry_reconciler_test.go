@@ -361,6 +361,72 @@ func TestIOSXETelemetrySameSubscriptionNameAcrossCRsDoNotStomp(t *testing.T) {
 	}
 }
 
+// When a CR is retargeted away from this device (spec.deviceRef.name changes
+// from "edge-01" to something else), the reconciler must drop the
+// subscriptions it owned for that CR. Without that, the on-device
+// subscriptions and stream bookkeeping leak until the per-device pod
+// restarts.
+func TestIOSXETelemetryReconcilerCleansUpOnRetarget(t *testing.T) {
+	_, factory := newProviderTelemetryServer(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	scheme := newTestScheme(t)
+	cr := newTelemetryCR("telemetry", "edge-01")
+	cr.Spec.Subscriptions[0].Name = "interface-counters"
+	cr.Spec.Subscriptions[0].Paths = []string{"/interfaces/interface[name=GigabitEthernet1]/state/counters/in-octets"}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithRuntimeObjects(cr).
+		WithStatusSubresource(&configv1alpha1.IOSXETelemetry{}).
+		Build()
+	r := &IOSXETelemetryReconciler{
+		Client:      c,
+		DeviceName:  "edge-01",
+		Factory:     factory,
+		RootContext: ctx,
+	}
+	req := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "telemetry"}}
+
+	if _, err := r.Reconcile(context.Background(), req); err != nil {
+		t.Fatalf("first reconcile: %v", err)
+	}
+	subKey := telemetrySubscriptionOwnerKey(req.NamespacedName, "interface-counters")
+	eventuallyProvider(t, 2*time.Second, func() bool {
+		if r.subscriber == nil {
+			return false
+		}
+		phase, states := r.subscriber.StatusFor([]string{subKey})
+		return phase == configv1alpha1.IOSXETelemetryPhaseStreaming && len(states) == 1
+	})
+	r.mu.Lock()
+	if got := len(r.owned[req.NamespacedName]); got == 0 {
+		r.mu.Unlock()
+		t.Fatalf("expected reconciler to own at least one subscription before retarget; owned=%v", r.owned)
+	}
+	r.mu.Unlock()
+
+	// Retarget the CR to a foreign device and reconcile again.
+	var fresh configv1alpha1.IOSXETelemetry
+	if err := c.Get(context.Background(), req.NamespacedName, &fresh); err != nil {
+		t.Fatalf("get CR: %v", err)
+	}
+	fresh.Spec.DeviceRef.Name = "edge-99"
+	if err := c.Update(context.Background(), &fresh); err != nil {
+		t.Fatalf("update CR: %v", err)
+	}
+	if _, err := r.Reconcile(context.Background(), req); err != nil {
+		t.Fatalf("retarget reconcile: %v", err)
+	}
+
+	r.mu.Lock()
+	if owned, ok := r.owned[req.NamespacedName]; ok {
+		r.mu.Unlock()
+		t.Fatalf("expected reconciler to drop owned subscriptions after retarget; still owned=%v", owned)
+	}
+	r.mu.Unlock()
+}
+
 func TestIOSXETelemetryStateBridgeDebouncesBurst(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

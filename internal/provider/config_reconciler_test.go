@@ -349,6 +349,130 @@ func TestRollbackBlockedWhenSecretRevisionNamesDiffer(t *testing.T) {
 	}
 }
 
+// Even when the revision's SecretRefNames match the current spec, rollback
+// must be blocked by default because restoring secret-bearing families from
+// the *current* resolved intent silently drops any non-secret content the
+// operator changed since the revision was created. The opt-in annotation
+// acknowledges this partial-revert behaviour.
+func TestRollbackBlockedWhenSecretMaterialOmittedWithoutOptIn(t *testing.T) {
+	scheme := newTestScheme(t)
+	cr := newCR("edge-01", "edge-01")
+	cr.UID = types.UID("config-uid")
+	cr.Spec.RollbackTo = "edge-01-rev-1"
+	cr.Spec.SecretRefs = []configv1alpha1.FamilySecretRef{{
+		Family: "vlan",
+		Name:   "vlan-secret",
+		Key:    "intent.yaml",
+	}}
+	body, err := encodeReplayBody(&intent.ResolvedIntent{
+		Configuration: map[string]any{"vlan": map[string]any{"vlans": []any{}}},
+	})
+	if err != nil {
+		t.Fatalf("encode revision body: %v", err)
+	}
+	rev := &configv1alpha1.IOSXEConfigRevision{
+		ObjectMeta: metav1.ObjectMeta{Name: "edge-01-rev-1", Namespace: "network"},
+		Spec: configv1alpha1.IOSXEConfigRevisionSpec{
+			DeviceRef:             configv1alpha1.DeviceRef{Name: "edge-01"},
+			SourceRef:             "network/edge-01",
+			SourceUID:             "config-uid",
+			Hash:                  "sha256:old",
+			Body:                  body,
+			SecretMaterialOmitted: true,
+			SecretRefNames:        []string{"vlan-secret"}, // matches current
+		},
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "vlan-secret", Namespace: "network"},
+		Data:       map[string][]byte{"intent.yaml": []byte(`{"vlans":[]}`)},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(newDevice("edge-01"), cr, rev, secret).
+		WithStatusSubresource(&configv1alpha1.IOSXEConfig{}).
+		Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+	resolver := &intent.Resolver{Client: c}
+	eng := &engine.Engine{}
+
+	result, err := r.reconcileOne(context.Background(), nil, resolver, eng, cr, nil, triggerEvent)
+	if err != nil {
+		t.Fatalf("reconcileOne: %v", err)
+	}
+	if result.Phase != engine.PhaseFailed {
+		t.Fatalf("phase=%q want failed (rollback should be blocked)", result.Phase)
+	}
+	var got configv1alpha1.IOSXEConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: cr.Namespace, Name: cr.Name}, &got); err != nil {
+		t.Fatalf("get config: %v", err)
+	}
+	if !conditionIs(got.Status.Conditions, "RollbackBlocked", metav1.ConditionTrue, "RevisionMissingSecretMaterial") {
+		t.Fatalf("RollbackBlocked condition missing RevisionMissingSecretMaterial: %#v", got.Status.Conditions)
+	}
+}
+
+// With the opt-in annotation set, rollback to a SecretMaterialOmitted
+// revision proceeds (secret-backed families come from current spec). The
+// annotation makes the partial-revert behaviour explicit.
+func TestRollbackProceedsWhenSecretMaterialOmittedAndOptIn(t *testing.T) {
+	scheme := newTestScheme(t)
+	cr := newCR("edge-01", "edge-01")
+	cr.UID = types.UID("config-uid")
+	cr.Spec.RollbackTo = "edge-01-rev-1"
+	cr.Annotations = map[string]string{RollbackAllowSecretOmittedAnnotation: "true"}
+	cr.Spec.SecretRefs = []configv1alpha1.FamilySecretRef{{
+		Family: "vlan",
+		Name:   "vlan-secret",
+		Key:    "intent.yaml",
+	}}
+	body, err := encodeReplayBody(&intent.ResolvedIntent{
+		Configuration: map[string]any{"vlan": map[string]any{"vlans": []any{}}},
+	})
+	if err != nil {
+		t.Fatalf("encode revision body: %v", err)
+	}
+	rev := &configv1alpha1.IOSXEConfigRevision{
+		ObjectMeta: metav1.ObjectMeta{Name: "edge-01-rev-1", Namespace: "network"},
+		Spec: configv1alpha1.IOSXEConfigRevisionSpec{
+			DeviceRef:             configv1alpha1.DeviceRef{Name: "edge-01"},
+			SourceRef:             "network/edge-01",
+			SourceUID:             "config-uid",
+			Hash:                  "sha256:old",
+			Body:                  body,
+			SecretMaterialOmitted: true,
+			SecretRefNames:        []string{"vlan-secret"},
+		},
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "vlan-secret", Namespace: "network"},
+		Data:       map[string][]byte{"intent.yaml": []byte(`{"vlans":[]}`)},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(newDevice("edge-01"), cr, rev, secret).
+		WithStatusSubresource(&configv1alpha1.IOSXEConfig{}).
+		Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+	resolver := &intent.Resolver{Client: c}
+	eng := &engine.Engine{}
+
+	result, err := r.reconcileOne(context.Background(), nil, resolver, eng, cr, nil, triggerEvent)
+	if err != nil {
+		t.Fatalf("reconcileOne: %v", err)
+	}
+	// Without a real transport the reconcile won't reach InSync, but it
+	// must NOT fail with RollbackBlocked — the opt-in annotation lets the
+	// rollback proceed past the guard into the normal apply path.
+	var got configv1alpha1.IOSXEConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: cr.Namespace, Name: cr.Name}, &got); err != nil {
+		t.Fatalf("get config: %v", err)
+	}
+	if conditionIs(got.Status.Conditions, "RollbackBlocked", metav1.ConditionTrue, "RevisionMissingSecretMaterial") {
+		t.Fatalf("opt-in annotation should bypass the secret-omitted guard, but RollbackBlocked is still set: %#v", got.Status.Conditions)
+	}
+	_ = result
+}
+
 func conditionIs(conds []metav1.Condition, t string, s metav1.ConditionStatus, reason string) bool {
 	for _, c := range conds {
 		if c.Type == t && c.Status == s && c.Reason == reason {

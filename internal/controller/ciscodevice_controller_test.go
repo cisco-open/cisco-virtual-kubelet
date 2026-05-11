@@ -633,7 +633,10 @@ func TestReconcile_NoPasswordNoSecretRef_NoEnvVars(t *testing.T) {
 func TestReconcile_PropagatesTelemetryEnvVars(t *testing.T) {
 	t.Setenv(envOTELExporterOTLPEndpoint, "otelcol.observability:4317")
 	t.Setenv(envOTELExporterOTLPInsecure, "true")
-	t.Setenv(envOTELExporterOTLPHeaders, `{"x-scope-orgid":"network"}`)
+	// OTEL_EXPORTER_OTLP_HEADERS is intentionally NOT in the literal-value
+	// propagation list (would leak collector auth tokens into per-device pod
+	// specs). The SecretKeyRef path is exercised by
+	// TestReconcile_PropagatesTelemetryHeadersAsSecretRef below.
 	t.Setenv(envYANGModelsDir, "/opt/yang")
 	t.Setenv(envCVKResourceAttributes, `{"deployment.environment":"lab","site.id":"sjc01"}`)
 
@@ -656,7 +659,6 @@ func TestReconcile_PropagatesTelemetryEnvVars(t *testing.T) {
 	want := map[string]string{
 		envOTELExporterOTLPEndpoint: "otelcol.observability:4317",
 		envOTELExporterOTLPInsecure: "true",
-		envOTELExporterOTLPHeaders:  `{"x-scope-orgid":"network"}`,
 		envYANGModelsDir:            "/opt/yang",
 		envCVKResourceAttributes:    `{"deployment.environment":"lab","site.id":"sjc01"}`,
 	}
@@ -668,6 +670,48 @@ func TestReconcile_PropagatesTelemetryEnvVars(t *testing.T) {
 		if got.Value != value {
 			t.Errorf("%s=%q, want %q", name, got.Value, value)
 		}
+	}
+	// Negative assertion: OTEL_EXPORTER_OTLP_HEADERS must not leak as a
+	// literal value when no headersSecret is configured.
+	if got, ok := findEnvVar(env, envOTELExporterOTLPHeaders); ok {
+		t.Errorf("%s should not be propagated as literal value (security: leaks auth tokens to per-device pod readers); got %+v", envOTELExporterOTLPHeaders, got)
+	}
+}
+
+// When the chart configures telemetry.otlp.headersSecret, the controller
+// pod sees CVK_OTLP_HEADERS_SECRET_NAME / _KEY and mirrors that SecretKeyRef
+// onto every per-device pod's OTEL_EXPORTER_OTLP_HEADERS env var.
+func TestReconcile_PropagatesTelemetryHeadersAsSecretRef(t *testing.T) {
+	t.Setenv(envCVKOTLPHeadersSecretName, "otlp-auth")
+	t.Setenv(envCVKOTLPHeadersSecretKey, "headers")
+
+	device := newDevice("router-otel-secret", "default")
+	device.Spec.Password = ""
+	device.Spec.CredentialSecretRef = nil
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-otel-secret")); err != nil {
+		t.Fatalf("Reconcile error: %v", err)
+	}
+	var deploy appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-otel-secret" + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("Deployment not found: %v", err)
+	}
+	env := deploy.Spec.Template.Spec.Containers[0].Env
+	got, ok := findEnvVar(env, envOTELExporterOTLPHeaders)
+	if !ok {
+		t.Fatalf("expected %s on per-device pod, got %+v", envOTELExporterOTLPHeaders, env)
+	}
+	if got.Value != "" {
+		t.Errorf("expected empty literal value (ValueFrom-only); got %q", got.Value)
+	}
+	if got.ValueFrom == nil || got.ValueFrom.SecretKeyRef == nil {
+		t.Fatalf("expected ValueFrom.SecretKeyRef; got %+v", got.ValueFrom)
+	}
+	if got.ValueFrom.SecretKeyRef.Name != "otlp-auth" || got.ValueFrom.SecretKeyRef.Key != "headers" {
+		t.Errorf("SecretKeyRef={Name:%q,Key:%q}; want {otlp-auth, headers}",
+			got.ValueFrom.SecretKeyRef.Name, got.ValueFrom.SecretKeyRef.Key)
 	}
 }
 

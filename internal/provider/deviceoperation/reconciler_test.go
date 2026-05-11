@@ -295,6 +295,55 @@ func TestReconcileConfigDiffRejectedNamespaceGate(t *testing.T) {
 	}
 }
 
+// Reject DeviceOperation CRs whose namespace differs from the owning
+// CiscoDevice's namespace. Without this guard a tenant in any namespace can
+// create a DeviceOperation that names a device whose name they happen to know
+// and have it executed with that device's credentials.
+func TestReconcileRejectsCrossNamespaceDeviceOperation(t *testing.T) {
+	ctx := context.Background()
+	scheme := newScheme(t)
+	op := newOperation("show", func(op *opsv1alpha1.DeviceOperation) {
+		op.Namespace = "tenant-a"
+	})
+	tr := &fakeTransport{
+		caps: transport.Capabilities{
+			Kind:                   transport.KindNETCONF,
+			SupportsDiagnosticExec: true,
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+	r := &Reconciler{
+		Client:          c,
+		DeviceName:      "dev1",
+		DeviceNamespace: "prod",
+		TP:              &staticTP{tr: tr},
+	}
+	_, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := c.Get(ctx, types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
+		t.Fatalf("get operation: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhaseFailed {
+		t.Fatalf("phase=%q want failed", got.Status.Phase)
+	}
+	if !operationConditionIs(got.Status.Conditions, "Ready", metav1.ConditionFalse, "NamespaceMismatch") {
+		t.Fatalf("Ready condition missing NamespaceMismatch: %#v", got.Status.Conditions)
+	}
+	if tr.calls != 0 {
+		t.Fatalf("DiagnosticExec calls=%d want 0 (transport must not be touched)", tr.calls)
+	}
+}
+
 func TestReconcilePacketCaptureReadsExistingBuffer(t *testing.T) {
 	ctx := context.Background()
 	scheme := newScheme(t)
