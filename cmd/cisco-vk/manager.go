@@ -16,6 +16,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -41,12 +43,12 @@ var (
 )
 
 var (
-	metricsAddr       string
-	enableLeaderElect bool
-	probeAddr         string
-	vkImage           string
-	vkServiceAccount  string
-	enableAggregator  bool
+	metricsAddr                string
+	enableLeaderElect          bool
+	probeAddr                  string
+	vkImage                    string
+	vkServiceAccount           string
+	enableAggregator           bool
 	controllerInfoLogRateLimit int
 )
 
@@ -94,15 +96,27 @@ func runManager(cmd *cobra.Command, args []string) error {
 	}
 
 	controllerProviders, controllerShutdown, err := buildControllerProviders(context.Background())
-	ctrl.SetLogger(newControllerRuntimeLogger(
-		telemetryLoggerProvider(controllerProviders),
-		controllerInfoLogRateLimit,
-		controllerDebug,
-	))
+	controllerHandler, controllerLogsToStderr := newControllerSlogHandler(telemetryLoggerProvider(controllerProviders))
+	ctrl.SetLogger(newControllerRuntimeLogger(controllerHandler, controllerInfoLogRateLimit, controllerDebug))
 	setupLog = ctrl.Log.WithName("setup")
+	if controllerLogsToStderr {
+		slog.New(controllerHandler).Warn("controller logs going to stderr only — OTLP endpoint unset")
+	}
 
 	cfg := ctrl.GetConfigOrDie()
 	signalCtx := ctrl.SetupSignalHandler()
+
+	missingCRDs, crdErr := missingRequiredCRDs(cfg)
+	if crdErr != nil {
+		setupLog.Error(crdErr, "required CRD preflight failed")
+		os.Exit(1)
+	}
+	if len(missingCRDs) > 0 {
+		for _, name := range missingCRDs {
+			setupLog.Error(nil, fmt.Sprintf("required CRD %s not present — apply charts/cisco-virtual-kubelet/crds/ before starting cisco-vk", name))
+		}
+		os.Exit(1)
+	}
 
 	if err != nil {
 		setupLog.Error(err, "controller OTel providers unavailable; continuing with global no-op provider")

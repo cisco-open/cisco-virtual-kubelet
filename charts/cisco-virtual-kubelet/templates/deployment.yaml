@@ -72,7 +72,7 @@ spec:
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ include "cisco-virtual-kubelet.telemetryOtlpEndpoint" . | quote }}
             - name: OTEL_EXPORTER_OTLP_INSECURE
-              value: {{ .Values.telemetry.otlp.insecure | quote }}
+              value: {{ include "cisco-virtual-kubelet.telemetryOtlpInsecure" . | quote }}
             - name: OTEL_EXPORTER_OTLP_HEADERS
               value: {{ .Values.telemetry.otlp.headers | toJson | quote }}
             - name: YANG_MODELS_DIR

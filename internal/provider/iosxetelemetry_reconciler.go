@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -213,7 +214,7 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 		Timestamps:        cr.Spec.Timestamps,
 	}
 	for _, desired := range cr.Spec.Subscriptions {
-		sub.SetSubscriptionProfile(desired.Name, profile)
+		sub.SetSubscriptionProfile(telemetrySubscriptionOwnerKey(req.NamespacedName, desired.Name), profile)
 	}
 	activeNames, allNames, err := r.applyDesired(req.NamespacedName, sub, &cr)
 	if err != nil {
@@ -228,6 +229,7 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 
 	base := cr.DeepCopy()
 	phase, states := sub.StatusFor(allNames)
+	states = telemetrySubscriptionStatusNames(req.NamespacedName, states)
 	if len(activeNames) == 0 {
 		phase = configv1alpha1.IOSXETelemetryPhasePending
 	}
@@ -489,16 +491,18 @@ func (r *IOSXETelemetryReconciler) applyDesired(
 	all := make([]string, 0, len(cr.Spec.Subscriptions))
 	for _, desired := range cr.Spec.Subscriptions {
 		spec := defaultSubscription(desired)
-		all = append(all, spec.Name)
+		ownerName := telemetrySubscriptionOwnerKey(key, spec.Name)
+		all = append(all, ownerName)
+		spec.Name = ownerName
 		if spec.Enabled != nil && !*spec.Enabled {
-			sub.RemoveSubscription(spec.Name)
-			sub.RemoveSubscriptionProfile(spec.Name)
+			sub.RemoveSubscription(ownerName)
+			sub.RemoveSubscriptionProfile(ownerName)
 			continue
 		}
 		if err := sub.AddSubscription(spec); err != nil {
 			return nil, nil, err
 		}
-		active = append(active, spec.Name)
+		active = append(active, ownerName)
 	}
 	sort.Strings(active)
 	sort.Strings(all)
@@ -522,6 +526,21 @@ func (r *IOSXETelemetryReconciler) applyDesired(
 		}
 	}
 	return active, all, nil
+}
+
+func telemetrySubscriptionOwnerKey(key client.ObjectKey, subscriptionName string) string {
+	return key.Namespace + "/" + key.Name + "/" + subscriptionName
+}
+
+func telemetrySubscriptionStatusNames(
+	key client.ObjectKey,
+	states []configv1alpha1.ObservedSubscriptionState,
+) []configv1alpha1.ObservedSubscriptionState {
+	prefix := key.Namespace + "/" + key.Name + "/"
+	for i := range states {
+		states[i].Name = strings.TrimPrefix(states[i].Name, prefix)
+	}
+	return states
 }
 
 func (r *IOSXETelemetryReconciler) removeOwned(key client.ObjectKey) {

@@ -412,6 +412,8 @@ const minDriftDetectInterval = 30 * time.Second
 // is empty or unparseable. Matches the kubebuilder default in the CRD.
 const defaultDriftDetectInterval = 5 * time.Minute
 
+const defaultRevisionHistoryLimit int32 = 10
+
 // driftDetectInterval parses the CR's spec.driftDetectInterval into a
 // Go duration, clamping below the floor and falling back to the
 // default on parse error. Centralised so the reconciler and the
@@ -1429,7 +1431,9 @@ func (r *ConfigReconciler) appendConfigRevision(
 	resolved *intent.ResolvedIntent,
 	owned map[string][]string,
 ) error {
-	if result.Phase != engine.PhaseInSync || resolved == nil || cr.Spec.RevisionHistoryLimit <= 0 {
+	if result.Phase != engine.PhaseInSync ||
+		resolved == nil ||
+		effectiveRevisionHistoryLimit(cr.Spec.RevisionHistoryLimit) <= 0 {
 		return nil
 	}
 	secretMaterialOmitted := len(cr.Spec.SecretRefs) > 0
@@ -1555,7 +1559,7 @@ func sameSecretRefNames(revisionNames []string, current []configv1alpha1.FamilyS
 }
 
 func (r *ConfigReconciler) gcConfigRevisions(ctx context.Context, cr *configv1alpha1.IOSXEConfig) error {
-	limit := int(cr.Spec.RevisionHistoryLimit)
+	limit := int(effectiveRevisionHistoryLimit(cr.Spec.RevisionHistoryLimit))
 	if limit <= 0 {
 		return nil
 	}
@@ -1581,6 +1585,13 @@ func (r *ConfigReconciler) gcConfigRevisions(ctx context.Context, cr *configv1al
 		}
 	}
 	return nil
+}
+
+func effectiveRevisionHistoryLimit(limit int32) int32 {
+	if limit == 0 {
+		return defaultRevisionHistoryLimit
+	}
+	return limit
 }
 
 func revisionCreatedAt(rev *configv1alpha1.IOSXEConfigRevision) time.Time {

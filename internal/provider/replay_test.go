@@ -16,12 +16,14 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
@@ -298,5 +300,66 @@ func TestAppendConfigRevisionCreatesAndPrunesOldest(t *testing.T) {
 	}
 	if !names["middle"] || !names[revisionName(cr, "sha256:newest")] {
 		t.Fatalf("expected middle and newest revisions, got %#v", names)
+	}
+}
+
+func TestAppendConfigRevisionDefaultsZeroHistoryLimitToTen(t *testing.T) {
+	scheme := newTestScheme(t)
+	cr := newCR("edge-01", "edge-01")
+	cr.UID = types.UID("config-uid")
+	cr.Generation = 3
+	old := func(name string, ts time.Time) *configv1alpha1.IOSXEConfigRevision {
+		return &configv1alpha1.IOSXEConfigRevision{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              name,
+				Namespace:         "network",
+				CreationTimestamp: metav1.NewTime(ts),
+				Labels: map[string]string{
+					revisionSourceNameLabel: "edge-01",
+					revisionSourceUIDLabel:  "config-uid",
+				},
+			},
+			Spec: configv1alpha1.IOSXEConfigRevisionSpec{
+				DeviceRef: configv1alpha1.DeviceRef{Name: "edge-01"},
+				SourceRef: "network/edge-01",
+				SourceUID: "config-uid",
+				Hash:      "sha256:" + name,
+				Body:      `{"v":1,"configuration":{}}`,
+			},
+		}
+	}
+	now := time.Now().UTC()
+	existing := make([]client.Object, 0, 10)
+	for i := 0; i < 10; i++ {
+		existing = append(existing, old(fmt.Sprintf("old-%02d", i), now.Add(time.Duration(i-10)*time.Minute)))
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(existing...).Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+	resolved := &intent.ResolvedIntent{
+		Configuration: map[string]any{"vlan": map[string]any{"vlans": []any{
+			map[string]any{"id": float64(10), "name": "users"},
+		}}},
+	}
+	if err := r.appendConfigRevision(context.Background(), cr,
+		engine.Result{Phase: engine.PhaseInSync}, "sha256:newest-zero-default", resolved,
+		nil); err != nil {
+		t.Fatalf("appendConfigRevision: %v", err)
+	}
+	var list configv1alpha1.IOSXEConfigRevisionList
+	if err := c.List(context.Background(), &list); err != nil {
+		t.Fatalf("list revisions: %v", err)
+	}
+	if len(list.Items) != int(defaultRevisionHistoryLimit) {
+		t.Fatalf("revisions=%d want %d: %#v", len(list.Items), defaultRevisionHistoryLimit, list.Items)
+	}
+	names := map[string]bool{}
+	for _, item := range list.Items {
+		names[item.Name] = true
+	}
+	if !names[revisionName(cr, "sha256:newest-zero-default")] {
+		t.Fatalf("new revision missing with zero history limit default: %#v", names)
+	}
+	if names["old-00"] {
+		t.Fatalf("oldest revision was not pruned under default limit: %#v", names)
 	}
 }

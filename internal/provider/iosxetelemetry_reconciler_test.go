@@ -205,6 +205,7 @@ func TestIOSXETelemetryRoundTripStatus(t *testing.T) {
 		t.Fatalf("first Reconcile: %v", err)
 	}
 	waitProviderRequest(t, fakeServer.requests)
+	ownerKey := telemetrySubscriptionOwnerKey(req.NamespacedName, "environmental")
 
 	fakeServer.notify <- &gpb.Notification{
 		Prefix: &gpb.Path{Elem: []*gpb.PathElem{{Name: "environment-sensors"}}},
@@ -214,7 +215,7 @@ func TestIOSXETelemetryRoundTripStatus(t *testing.T) {
 		}},
 	}
 	eventuallyProvider(t, time.Second, func() bool {
-		phase, states := r.subscriber.StatusFor([]string{"environmental"})
+		phase, states := r.subscriber.StatusFor([]string{ownerKey})
 		return phase == configv1alpha1.IOSXETelemetryPhaseStreaming &&
 			len(states) == 1 &&
 			states[0].MessagesReceived == 1
@@ -294,6 +295,69 @@ func TestIOSXETelemetryStatusConflictRequeues(t *testing.T) {
 	}
 	if !res.Requeue {
 		t.Fatalf("result=%+v, want Requeue=true", res)
+	}
+}
+
+func TestIOSXETelemetrySameSubscriptionNameAcrossCRsDoNotStomp(t *testing.T) {
+	_, factory := newProviderTelemetryServer(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	scheme := newTestScheme(t)
+	crA := newTelemetryCR("telemetry-a", "edge-01")
+	crB := newTelemetryCR("telemetry-b", "edge-01")
+	crA.Spec.Subscriptions[0].Name = "interface-counters"
+	crB.Spec.Subscriptions[0].Name = "interface-counters"
+	crA.Spec.Subscriptions[0].Paths = []string{"/interfaces/interface[name=GigabitEthernet1]/state/counters/in-octets"}
+	crB.Spec.Subscriptions[0].Paths = []string{"/interfaces/interface[name=GigabitEthernet1]/state/counters/out-octets"}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithRuntimeObjects(crA, crB).
+		WithStatusSubresource(&configv1alpha1.IOSXETelemetry{}).
+		Build()
+	r := &IOSXETelemetryReconciler{
+		Client:      c,
+		DeviceName:  "edge-01",
+		Factory:     factory,
+		RootContext: ctx,
+	}
+	reqA := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "telemetry-a"}}
+	reqB := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "telemetry-b"}}
+
+	if _, err := r.Reconcile(context.Background(), reqA); err != nil {
+		t.Fatalf("reconcile A: %v", err)
+	}
+	if _, err := r.Reconcile(context.Background(), reqB); err != nil {
+		t.Fatalf("reconcile B: %v", err)
+	}
+	if _, err := r.Reconcile(context.Background(), reqA); err != nil {
+		t.Fatalf("reconcile A again: %v", err)
+	}
+
+	keyA := telemetrySubscriptionOwnerKey(reqA.NamespacedName, "interface-counters")
+	keyB := telemetrySubscriptionOwnerKey(reqB.NamespacedName, "interface-counters")
+	eventuallyProvider(t, 2*time.Second, func() bool {
+		phase, states := r.subscriber.StatusFor([]string{keyA, keyB})
+		return phase == configv1alpha1.IOSXETelemetryPhaseStreaming && len(states) == 2
+	})
+
+	if _, err := r.Reconcile(context.Background(), reqA); err != nil {
+		t.Fatalf("reconcile A status: %v", err)
+	}
+	if _, err := r.Reconcile(context.Background(), reqB); err != nil {
+		t.Fatalf("reconcile B status: %v", err)
+	}
+	for _, req := range []reconcile.Request{reqA, reqB} {
+		var got configv1alpha1.IOSXETelemetry
+		if err := c.Get(context.Background(), req.NamespacedName, &got); err != nil {
+			t.Fatalf("get %s: %v", req.NamespacedName, err)
+		}
+		if len(got.Status.ObservedSubscriptionState) != 1 {
+			t.Fatalf("%s states=%+v, want one", req.NamespacedName, got.Status.ObservedSubscriptionState)
+		}
+		if got.Status.ObservedSubscriptionState[0].Name != "interface-counters" {
+			t.Fatalf("%s status name=%q, want interface-counters", req.NamespacedName, got.Status.ObservedSubscriptionState[0].Name)
+		}
 	}
 }
 

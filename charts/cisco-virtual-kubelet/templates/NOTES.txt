@@ -16,6 +16,9 @@
   This is one-time per upgrade and is safe — CRD updates are
   schema-additive across this branch.
 
+  After helm upgrade, run kubectl apply -f charts/cisco-virtual-kubelet/crds/
+  if upgrading from a version prior to 0.1.0.
+
   ───────────────────────────────────────────────────────────────────────────
 
   RBAC RECONCILE — the chart updates ClusterRole bindings on every helm upgrade,

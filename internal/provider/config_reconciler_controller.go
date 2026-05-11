@@ -346,7 +346,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 			// release + finalizer removal. Without this the CR's
 			// owned entries stay on the device as orphaned config.
 			//
-			// A2 fix (2026-05-01, codex/HEAD~1 review): relinquish
+			// A2 fix (2026-05-01): relinquish
 			// failure is now retryable. We return the error from
 			// Reconcile so controller-runtime requeues, keeping the
 			// finalizer in place. status.atomicReplaceOwnedKeys
@@ -356,8 +356,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 			// finalizer off explicitly — the standard Kubernetes
 			// escape hatch — once they accept the orphan.
 			if cr.Spec.PruneOnRelinquish && len(cr.Status.AtomicReplaceOwnedKeys) > 0 {
-				// B2 escape hatch (codex /codex:adversarial-review
-				// 2026-05-02): an operator who has accepted that
+				// B2 escape hatch (2026-05-02): an operator who has accepted that
 				// relinquish will not succeed — decommissioned device,
 				// permanent auth failure, family that needs a writer
 				// uplift — sets cisco.vk/force-relinquish-skip=true.

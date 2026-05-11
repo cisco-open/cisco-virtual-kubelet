@@ -48,28 +48,38 @@ func controllerDebugLogging() (bool, error) {
 	}
 }
 
-// newControllerRuntimeLogger returns a logr.Logger that writes through the
-// OTel slog bridge, sampled so a busy reconcile loop cannot flood Loki:
+// newControllerSlogHandler returns the base slog handler used by
+// controller-runtime. When OTLP is unset the controller must still surface logs
+// locally because an OTel bridge without a provider drops records.
+func newControllerSlogHandler(loggerProvider otellog.LoggerProvider) (slog.Handler, bool) {
+	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") == "" {
+		return slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+			Level:     slog.LevelInfo,
+			AddSource: false,
+		}), true
+	}
+	opts := []otelslog.Option{}
+	if loggerProvider != nil {
+		opts = append(opts, otelslog.WithLoggerProvider(loggerProvider))
+	}
+	return otelslog.NewHandler("cisco-vk-controller", opts...), false
+}
+
+// newControllerRuntimeLogger returns a logr.Logger that writes through handler,
+// sampled so a busy reconcile loop cannot flood Loki:
 //   - WARN+ records always pass through.
 //   - DEBUG records always pass through if the controller is in debug mode
 //     (otherwise dropped silently — caller is opting in by setting the level).
 //   - INFO records are rate-limited to infoBudgetPerSec; over-budget records
 //     drop silently and bump cisco_vk_signal_budget_dropped_total
 //     {signal=logs, reason=rate_limit_controller_info, device=""}.
-//
-// loggerProvider may be nil — falls back to the global noop OTel
-// LoggerProvider, which keeps controller-runtime functional but means no log
-// records reach the OTel collector. The caller is expected to log a setup
-// warning in that case.
-func newControllerRuntimeLogger(loggerProvider otellog.LoggerProvider, infoBudgetPerSec int, debug bool) logr.Logger {
-	opts := []otelslog.Option{}
-	if loggerProvider != nil {
-		opts = append(opts, otelslog.WithLoggerProvider(loggerProvider))
+func newControllerRuntimeLogger(handler slog.Handler, infoBudgetPerSec int, debug bool) logr.Logger {
+	if handler == nil {
+		handler, _ = newControllerSlogHandler(nil)
 	}
-	base := otelslog.NewHandler("cisco-vk-controller", opts...)
 	sampling := &samplingSlogHandler{
-		next:  base,
-		debug: debug,
+		next:   handler,
+		debug:  debug,
 		bucket: newControllerInfoBucket(infoBudgetPerSec),
 	}
 	return logr.FromSlogHandler(sampling)
@@ -134,11 +144,11 @@ func (h *samplingSlogHandler) WithGroup(name string) slog.Handler {
 // refilled to capacity once per second. A zero or negative budget disables
 // rate limiting (every Allow returns true).
 type controllerInfoBucket struct {
-	mu          sync.Mutex
-	capacity    int
-	tokens      int
-	lastRefill  time.Time
-	disabled    bool
+	mu         sync.Mutex
+	capacity   int
+	tokens     int
+	lastRefill time.Time
+	disabled   bool
 }
 
 func newControllerInfoBucket(perSec int) *controllerInfoBucket {

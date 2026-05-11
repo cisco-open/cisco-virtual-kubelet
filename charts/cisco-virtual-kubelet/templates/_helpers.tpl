@@ -105,6 +105,14 @@ their Deployments.
 {{- end }}
 
 {{/*
+Resolve the effective OTLP insecure flag. The bundled collector listens on
+plaintext gRPC, so enabling it forces insecure export.
+*/}}
+{{- define "cisco-virtual-kubelet.telemetryOtlpInsecure" -}}
+{{- if .Values.collector.enabled -}}true{{- else -}}{{- .Values.telemetry.otlp.insecure -}}{{- end -}}
+{{- end }}
+
+{{/*
 Resolve the YANG models mount path. When telemetry.yangModels.configMapName
 is set the models are mounted at telemetry.yangModels.mountPath (default
 /var/lib/cvk/yang). When the ConfigMap is not configured we fall back to

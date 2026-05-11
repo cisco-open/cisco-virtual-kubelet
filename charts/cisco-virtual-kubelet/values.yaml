@@ -66,7 +66,9 @@ telemetry:
     # otelcol.observability:4317. When collector.enabled=true and this is
     # empty, the chart points CVK at the bundled collector Service.
     endpoint: ""
-    # insecure disables TLS for the OTLP gRPC exporter.
+    # insecure disables TLS for the OTLP gRPC exporter. When
+    # collector.enabled=true, the rendered env var is forced to true because
+    # the bundled collector listens on plaintext gRPC.
     insecure: false
     # headers are serialized into OTEL_EXPORTER_OTLP_HEADERS for optional
     # collector metadata or auth headers.

@@ -235,9 +235,11 @@ type IOSXEConfigTemplateSpec struct {
 	SecretRefs []FamilySecretRef `json:"secretRefs,omitempty"`
 
 	// RevisionHistoryLimit caps the number of IOSXEConfigRevision objects
-	// retained for this CR after successful applies. Set to 0 to disable
-	// revision creation. Revisions with secret-sourced intent are skipped to
-	// avoid persisting Secret material into CR status or spec.
+	// retained for this CR after successful applies. Defaults to 10 when unset;
+	// existing pre-upgrade objects are treated as if revisionHistoryLimit=10
+	// unless explicitly set to a different value. Revisions with secret-sourced
+	// intent are skipped to avoid persisting Secret material into CR status or
+	// spec.
 	// +kubebuilder:default=10
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
