@@ -208,14 +208,13 @@ spec:
                   crd-v1-promotion-plan.md.
                 type: boolean
               revisionHistoryLimit:
-                default: 10
                 description: |-
                   RevisionHistoryLimit caps the number of IOSXEConfigRevision objects
-                  retained for this CR after successful applies. Defaults to 10 when unset;
-                  existing pre-upgrade objects are treated as if revisionHistoryLimit=10
-                  unless explicitly set to a different value. Revisions with secret-sourced
-                  intent are skipped to avoid persisting Secret material into CR status or
-                  spec.
+                  retained for this CR after successful applies. Unset (nil) defaults to
+                  10; an explicit 0 disables revision creation entirely. Pre-upgrade
+                  objects are treated as nil and therefore default to 10. Revisions with
+                  secret-sourced intent are skipped to avoid persisting Secret material
+                  into CR status or spec.
                 format: int32
                 maximum: 100
                 minimum: 0

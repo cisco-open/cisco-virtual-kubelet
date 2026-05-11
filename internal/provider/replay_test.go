@@ -23,6 +23,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -245,7 +246,7 @@ func TestAppendConfigRevisionCreatesAndPrunesOldest(t *testing.T) {
 	cr := newCR("edge-01", "edge-01")
 	cr.UID = types.UID("config-uid")
 	cr.Generation = 3
-	cr.Spec.RevisionHistoryLimit = 2
+	cr.Spec.RevisionHistoryLimit = ptr.To[int32](2)
 	old := func(name string, ts time.Time) *configv1alpha1.IOSXEConfigRevision {
 		return &configv1alpha1.IOSXEConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
@@ -303,7 +304,7 @@ func TestAppendConfigRevisionCreatesAndPrunesOldest(t *testing.T) {
 	}
 }
 
-func TestAppendConfigRevisionDefaultsZeroHistoryLimitToTen(t *testing.T) {
+func TestAppendConfigRevisionUnsetHistoryLimitDefaultsToTen(t *testing.T) {
 	scheme := newTestScheme(t)
 	cr := newCR("edge-01", "edge-01")
 	cr.UID = types.UID("config-uid")
@@ -361,5 +362,32 @@ func TestAppendConfigRevisionDefaultsZeroHistoryLimitToTen(t *testing.T) {
 	}
 	if names["old-00"] {
 		t.Fatalf("oldest revision was not pruned under default limit: %#v", names)
+	}
+}
+
+func TestAppendConfigRevisionExplicitZeroDisablesRevisions(t *testing.T) {
+	scheme := newTestScheme(t)
+	cr := newCR("edge-01", "edge-01")
+	cr.UID = types.UID("config-uid")
+	cr.Generation = 4
+	cr.Spec.RevisionHistoryLimit = ptr.To[int32](0)
+	c := fake.NewClientBuilder().WithScheme(scheme).Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+	resolved := &intent.ResolvedIntent{
+		Configuration: map[string]any{"vlan": map[string]any{"vlans": []any{
+			map[string]any{"id": float64(20), "name": "guests"},
+		}}},
+	}
+	if err := r.appendConfigRevision(context.Background(), cr,
+		engine.Result{Phase: engine.PhaseInSync}, "sha256:should-not-persist", resolved,
+		nil); err != nil {
+		t.Fatalf("appendConfigRevision: %v", err)
+	}
+	var list configv1alpha1.IOSXEConfigRevisionList
+	if err := c.List(context.Background(), &list); err != nil {
+		t.Fatalf("list revisions: %v", err)
+	}
+	if len(list.Items) != 0 {
+		t.Fatalf("revisions=%d want 0 (explicit zero disables): %#v", len(list.Items), list.Items)
 	}
 }

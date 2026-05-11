@@ -49,20 +49,22 @@ func controllerDebugLogging() (bool, error) {
 }
 
 // newControllerSlogHandler returns the base slog handler used by
-// controller-runtime. When OTLP is unset the controller must still surface logs
-// locally because an OTel bridge without a provider drops records.
+// controller-runtime. The bool return reports whether the controller is
+// falling back to stderr (caller should warn the operator).
+//
+// Falls back to stderr in two cases:
+//   - OTEL_EXPORTER_OTLP_ENDPOINT is unset (no exporter destination).
+//   - The OTel logger provider failed to build (loggerProvider == nil even
+//     though endpoint is set). Without this guard, otelslog would resolve to
+//     the global noop provider and silently drop every controller log.
 func newControllerSlogHandler(loggerProvider otellog.LoggerProvider) (slog.Handler, bool) {
-	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") == "" {
+	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") == "" || loggerProvider == nil {
 		return slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 			Level:     slog.LevelInfo,
 			AddSource: false,
 		}), true
 	}
-	opts := []otelslog.Option{}
-	if loggerProvider != nil {
-		opts = append(opts, otelslog.WithLoggerProvider(loggerProvider))
-	}
-	return otelslog.NewHandler("cisco-vk-controller", opts...), false
+	return otelslog.NewHandler("cisco-vk-controller", otelslog.WithLoggerProvider(loggerProvider)), false
 }
 
 // newControllerRuntimeLogger returns a logr.Logger that writes through handler,

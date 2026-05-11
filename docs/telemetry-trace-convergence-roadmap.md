@@ -46,7 +46,7 @@ you may not use this file except in compliance with the License.
   └────────────────┬─────────────────┘                │
                    │ writes annotation                 │
    pod.annotations[cisco.vk/trace-id] = <T>            │
-                   ▼                                  ── 
+                   ▼                                  ──
           Device starts container                       ┌── Layer B (snapshot)
                    ▼                                    │
   ┌─────────────────────────────────────────┐           │

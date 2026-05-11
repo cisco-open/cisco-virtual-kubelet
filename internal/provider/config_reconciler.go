@@ -1587,11 +1587,14 @@ func (r *ConfigReconciler) gcConfigRevisions(ctx context.Context, cr *configv1al
 	return nil
 }
 
-func effectiveRevisionHistoryLimit(limit int32) int32 {
-	if limit == 0 {
+// effectiveRevisionHistoryLimit returns the limit to apply for revision
+// retention. nil means "operator did not set it" → default 10. An explicit
+// 0 means "disable revision creation" and is honored.
+func effectiveRevisionHistoryLimit(limit *int32) int32 {
+	if limit == nil {
 		return defaultRevisionHistoryLimit
 	}
-	return limit
+	return *limit
 }
 
 func revisionCreatedAt(rev *configv1alpha1.IOSXEConfigRevision) time.Time {

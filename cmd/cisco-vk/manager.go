@@ -100,7 +100,11 @@ func runManager(cmd *cobra.Command, args []string) error {
 	ctrl.SetLogger(newControllerRuntimeLogger(controllerHandler, controllerInfoLogRateLimit, controllerDebug))
 	setupLog = ctrl.Log.WithName("setup")
 	if controllerLogsToStderr {
-		slog.New(controllerHandler).Warn("controller logs going to stderr only — OTLP endpoint unset")
+		reason := "OTLP endpoint unset"
+		if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") != "" {
+			reason = "OTel provider build failed"
+		}
+		slog.New(controllerHandler).Warn(fmt.Sprintf("controller logs going to stderr only — %s", reason))
 	}
 
 	cfg := ctrl.GetConfigOrDie()

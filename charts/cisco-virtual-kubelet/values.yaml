@@ -99,7 +99,10 @@ collector:
   enabled: false
   image:
     repository: otel/opentelemetry-collector-contrib
-    tag: latest
+    # Pinned for reproducible installs. Bump deliberately after lab smoke;
+    # avoid `latest` so a routine helm upgrade can't pull a new collector
+    # image with breaking config changes.
+    tag: 0.121.0
     pullPolicy: IfNotPresent
   resources: {}
   nodeSelector: {}

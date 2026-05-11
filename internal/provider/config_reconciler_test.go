@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
@@ -246,7 +247,7 @@ func TestAppendConfigRevisionWithSecretRefsOmitsSecretFamilies(t *testing.T) {
 	cr := newCR("edge-01", "edge-01")
 	cr.UID = types.UID("config-uid")
 	cr.Generation = 7
-	cr.Spec.RevisionHistoryLimit = 5
+	cr.Spec.RevisionHistoryLimit = ptr.To[int32](5)
 	cr.Spec.SecretRefs = []configv1alpha1.FamilySecretRef{{
 		Family: "bgp",
 		Name:   "bgp-creds",
