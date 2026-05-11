@@ -214,7 +214,8 @@ spec:
                   retained for this CR after successful applies. Defaults to 10 when unset;
                   existing pre-upgrade objects are treated as if revisionHistoryLimit=10
                   unless explicitly set to a different value. Revisions with secret-sourced
-                  intent are skipped to avoid persisting Secret material into CR status or spec.
+                  intent are skipped to avoid persisting Secret material into CR status or
+                  spec.
                 format: int32
                 maximum: 100
                 minimum: 0
