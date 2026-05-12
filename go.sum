@@ -174,8 +174,14 @@ github.com/onsi/ginkgo/v2 v2.27.2 h1:LzwLj0b89qtIy6SSASkzlNvX6WktqurSHwkk2ipF/Ns
 github.com/onsi/ginkgo/v2 v2.27.2/go.mod h1:ArE1D/XhNXBXCBkKOLkbsb2c81dQHCRcF5zwn/ykDRo=
 github.com/onsi/gomega v1.38.2 h1:eZCjf2xjZAqe+LeWvKb5weQ+NcPwX84kqJ0cZNxok2A=
 github.com/onsi/gomega v1.38.2/go.mod h1:W2MJcYxRGV63b418Ai34Ud0hEdTVXq9NW9+Sx6uXf3k=
+github.com/openconfig/bootz v0.6.1 h1:1jfSYgc9i0lLrrjVLYTmtcalL4RCozdaMP/ESTF4X+w=
+github.com/openconfig/bootz v0.6.1/go.mod h1:FIi46oRpvqA3OaFVd3qFXkm3WhbfQ/Vm8C0h0lBjQuE=
 github.com/openconfig/gnmi v0.14.1 h1:qKMuFvhIRR2/xxCOsStPQ25aKpbMDdWr3kI+nP9bhMs=
 github.com/openconfig/gnmi v0.14.1/go.mod h1:whr6zVq9PCU8mV1D0K9v7Ajd3+swoN6Yam9n8OH3eT0=
+github.com/openconfig/gnoi v0.8.0 h1:fwZm4zlwoY5i7KALTpVhpAv53Y3YskleoTpg1IUCa+c=
+github.com/openconfig/gnoi v0.8.0/go.mod h1:/kbYAWyBjQ08oahe7VGG8lAJc+yIfXdD7CF/T8RUjl0=
+github.com/openconfig/gnsi v1.9.0 h1:DokjN2rvzrP9/sMexBtigq6XkeKO8cPzzQmF8HQcVLQ=
+github.com/openconfig/gnsi v1.9.0/go.mod h1:mvfo1wUBFfojkHrD8kKqVV8Epoyq1Vt1Qpkj2hif6ow=
 github.com/openconfig/goyang v1.6.3 h1:9nWXBwd6b4+nZr8ni7O4zUXVhrVMXCLFz8os5YWFuo4=
 github.com/openconfig/goyang v1.6.3/go.mod h1:5WolITjek1NF8yrNERyVZ7jqjOClJTpO8p/+OwmETM4=
 github.com/openconfig/ygot v0.34.0 h1:9OkVjy3SGi4mbvAZc4HTQBU9u4MT6k4j5DdX+hgRiC4=

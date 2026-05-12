@@ -39,6 +39,7 @@ import (
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 )
@@ -77,6 +78,15 @@ type TransportProvider interface {
 	GetTransport() transport.Interface
 }
 
+// GNOIProvider exposes the per-device gNOI client. The reconciler
+// dispatches read-only gNOI operation kinds (Ping, Traceroute, Time,
+// FileGet, FileStat, CertGet, CanGenerateCSR, RebootStatus, OSVerify)
+// to this client when set; absent it, gNOI kinds fail fast with
+// reason GNOIUnsupported.
+type GNOIProvider interface {
+	GNOIClient(ctx context.Context) (*gnoi.Client, error)
+}
+
 // Reconciler watches DeviceOperation CRs for one device and executes the
 // supported read-only operation kinds.
 type Reconciler struct {
@@ -97,6 +107,10 @@ type Reconciler struct {
 	// single-tenant behaviour for tests that do not plumb the namespace).
 	DeviceNamespace string
 	TP              TransportProvider
+
+	// GNOI is the optional per-device gNOI client provider. When nil,
+	// gNOI operation kinds fail fast with reason GNOIUnsupported.
+	GNOI GNOIProvider
 
 	// Now is injected for tests. nil means time.Now.
 	Now func() time.Time
@@ -162,6 +176,32 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		attribute.String(semconv.CvkWorkflowName, "operator.diagnostic"),
 		attribute.String(semconv.CvkTaskName, "op."+string(op.Spec.Operation.Kind)),
 	)
+
+	// gNOI dispatch path. The gNOI-backed operation kinds produce
+	// structured JSON output directly from the gNOI client; they do
+	// not flow through the CLI/diagnostic transport that the rest of
+	// this reconciler is built around.
+	if isGNOIKind(op.Spec.Operation.Kind) {
+		if err := r.markRunning(ctx, &op, now); err != nil {
+			return reconcile.Result{}, err
+		}
+		outputs, successMsg, err := r.dispatchGNOI(ctx, &op)
+		terminalPhase := opsv1alpha1.OperationPhaseSucceeded
+		message := successMsg
+		reason := "Succeeded"
+		if err != nil {
+			span.RecordError(err)
+			terminalPhase = opsv1alpha1.OperationPhaseFailed
+			message = err.Error()
+			reason = "GNOIFailed"
+		}
+		if terminalPhase == opsv1alpha1.OperationPhaseFailed {
+			span.SetStatus(codes.Error, message)
+		} else {
+			span.SetStatus(codes.Ok, "")
+		}
+		return reconcile.Result{}, r.finishWithReason(ctx, &op, terminalPhase, reason, message, outputs, nil, now)
+	}
 
 	plan, err := buildPlan(op.Spec.Operation)
 	if err != nil {

@@ -22,7 +22,14 @@ import (
 
 // OperationKind identifies the requested device operation.
 //
-// +kubebuilder:validation:Enum=ShowCommand;ConfigDiff;PacketCapture
+// Every kind on this enum is read-only by API contract. Destructive
+// gNOI operations (Reboot, FactoryReset, FileRemove, CertRotate, etc.)
+// live on the separate IOSXEOperationalAction CRD with distinct RBAC,
+// so this enum continues to describe a safe, query-shaped surface
+// that operators can grant to dashboards or low-trust automation
+// without giving them mutation power on the device.
+//
+// +kubebuilder:validation:Enum=ShowCommand;ConfigDiff;PacketCapture;GNOIPing;GNOITraceroute;GNOITime;GNOIFileGet;GNOIFileStat;GNOICertGet;GNOICanGenerateCSR;GNOIRebootStatus;GNOIOSVerify
 type OperationKind string
 
 const (
@@ -32,6 +39,28 @@ const (
 	OperationKindConfigDiff OperationKind = "ConfigDiff"
 	// OperationKindPacketCapture is reserved for a read-only capture operation.
 	OperationKindPacketCapture OperationKind = "PacketCapture"
+
+	// gNOI read-only operations. All produce structured output.
+
+	// OperationKindGNOIPing runs gNOI System.Ping and captures the
+	// streamed responses (per-probe RTT plus summary).
+	OperationKindGNOIPing OperationKind = "GNOIPing"
+	// OperationKindGNOITraceroute runs gNOI System.Traceroute.
+	OperationKindGNOITraceroute OperationKind = "GNOITraceroute"
+	// OperationKindGNOITime returns the device clock from gNOI System.Time.
+	OperationKindGNOITime OperationKind = "GNOITime"
+	// OperationKindGNOIFileGet streams a file off the device via gNOI File.Get.
+	OperationKindGNOIFileGet OperationKind = "GNOIFileGet"
+	// OperationKindGNOIFileStat returns gNOI File.Stat metadata.
+	OperationKindGNOIFileStat OperationKind = "GNOIFileStat"
+	// OperationKindGNOICertGet returns gNOI Cert.GetCertificates output.
+	OperationKindGNOICertGet OperationKind = "GNOICertGet"
+	// OperationKindGNOICanGenerateCSR asks the device whether it can produce a CSR.
+	OperationKindGNOICanGenerateCSR OperationKind = "GNOICanGenerateCSR"
+	// OperationKindGNOIRebootStatus returns gNOI System.RebootStatus.
+	OperationKindGNOIRebootStatus OperationKind = "GNOIRebootStatus"
+	// OperationKindGNOIOSVerify returns gNOI OS.Verify (running version + activation message).
+	OperationKindGNOIOSVerify OperationKind = "GNOIOSVerify"
 )
 
 // OperationPhase reports the lifecycle state of a DeviceOperation.
@@ -96,6 +125,106 @@ type DeviceOperationRequest struct {
 	// +kubebuilder:validation:MaxItems=64
 	// +kubebuilder:validation:items:Pattern=`^(show|more|dir|ping|ping6|traceroute|traceroute6|monitor|test|verify|calendar|terminal|namespace)( |$)`
 	Commands []string `json:"commands,omitempty"`
+
+	// GNOI carries typed parameters for gNOI-backed operation kinds.
+	// Ignored by ShowCommand/ConfigDiff/PacketCapture.
+	// +optional
+	GNOI *GNOIArgs `json:"gnoi,omitempty"`
+}
+
+// GNOIArgs holds typed inputs for the gNOI-backed read-only operation
+// kinds. Each kind reads at most one of the inner fields; unused ones
+// are ignored. Destructive gNOI inputs live on IOSXEOperationalAction
+// instead.
+type GNOIArgs struct {
+	// Ping carries parameters for OperationKindGNOIPing.
+	// +optional
+	Ping *GNOIPingArgs `json:"ping,omitempty"`
+
+	// Traceroute carries parameters for OperationKindGNOITraceroute.
+	// +optional
+	Traceroute *GNOITracerouteArgs `json:"traceroute,omitempty"`
+
+	// File carries parameters for OperationKindGNOIFileGet and
+	// OperationKindGNOIFileStat.
+	// +optional
+	File *GNOIFileArgs `json:"file,omitempty"`
+
+	// Cert carries parameters for OperationKindGNOICanGenerateCSR.
+	// (OperationKindGNOICertGet takes no inputs.)
+	// +optional
+	Cert *GNOICertArgs `json:"cert,omitempty"`
+}
+
+// GNOIPingArgs mirrors PingOpts on the wire.
+type GNOIPingArgs struct {
+	// +kubebuilder:validation:Required
+	Destination string `json:"destination"`
+	// +optional
+	Source string `json:"source,omitempty"`
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=1000
+	Count int32 `json:"count,omitempty"`
+	// IntervalMillis between probes; 0 = device default.
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	IntervalMillis int32 `json:"intervalMillis,omitempty"`
+	// WaitMillis per probe; 0 = device default.
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	WaitMillis int32 `json:"waitMillis,omitempty"`
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	Size int32 `json:"size,omitempty"`
+}
+
+// GNOITracerouteArgs mirrors TracerouteOpts on the wire.
+type GNOITracerouteArgs struct {
+	// +kubebuilder:validation:Required
+	Destination string `json:"destination"`
+	// +optional
+	Source string `json:"source,omitempty"`
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=255
+	MaxHops int32 `json:"maxHops,omitempty"`
+	// +optional
+	// +kubebuilder:validation:Enum=ICMP;UDP;TCP
+	Protocol string `json:"protocol,omitempty"`
+	// +optional
+	WaitMillis int32 `json:"waitMillis,omitempty"`
+}
+
+// GNOIFileArgs mirrors the File.Get / File.Stat inputs.
+type GNOIFileArgs struct {
+	// Path is the absolute IOS-XE filesystem path (e.g.
+	// "flash:cat9k.bin"). Required; rejected when missing a recognised
+	// filesystem prefix.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^(flash|bootflash|harddisk|usbflash0|usbflash1|crashinfo|nvram|webui):`
+	Path string `json:"path"`
+
+	// MaxBytes caps the inlined output of FileGet. Files larger than
+	// this are spilled to a ConfigMap (reusing the existing artefact-
+	// spill path); 0 means use the reconciler default (256 KiB).
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	MaxBytes int64 `json:"maxBytes,omitempty"`
+}
+
+// GNOICertArgs mirrors CanGenerateCSROpts on the wire.
+type GNOICertArgs struct {
+	// +optional
+	// +kubebuilder:validation:Enum=RT_RSA
+	KeyType string `json:"keyType,omitempty"`
+	// +optional
+	// +kubebuilder:validation:Enum=CT_X509
+	CertificateType string `json:"certificateType,omitempty"`
+	// +optional
+	// +kubebuilder:validation:Minimum=1024
+	// +kubebuilder:validation:Maximum=8192
+	KeySize uint32 `json:"keySize,omitempty"`
 }
 
 // DeviceOperationStatus reports operation progress and any small inline

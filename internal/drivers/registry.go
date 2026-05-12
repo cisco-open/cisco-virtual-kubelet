@@ -86,6 +86,28 @@ type TopologyProvider interface {
 	GetHostedApps(ctx context.Context) ([]common.HostedApp, error)
 }
 
+// GNOICapable is an optional interface that drivers implement to expose
+// a per-device gNOI client. The DeviceOperation reconciler (read-only
+// gNOI ops), IOSXESoftwareUpgrade reconciler (OS install/activate/
+// verify), and IOSXEOperationalAction reconciler (write-class gNOI
+// ops) all type-assert to this interface; absent it, those reconcilers
+// fail fast with reason GNOIUnsupported instead of attempting RPCs.
+//
+// Implementations should construct the gNOI client lazily on first
+// call and cache it for the lifetime of the device worker — the
+// underlying conn is leased from a devicegrpc.Pool and the lease is
+// released when the worker tears down.
+type GNOICapable interface {
+	// GNOIClient returns a non-nil *gnoi.Client. The return type is
+	// declared as any here to keep this package free of the gnoi
+	// import; consumers cast to *gnoi.Client at the call site. This
+	// keeps internal/drivers/registry.go from depending on the gnoi
+	// package, preserving the import-graph cleanliness that lets
+	// drivers/registry.go be imported by both drivers and provider-
+	// side reconcilers.
+	GNOIClient(ctx context.Context) (any, error)
+}
+
 // Factory is the per-platform constructor signature. Every Register
 // call hands one of these in.
 type Factory func(ctx context.Context, spec *v1alpha1.DeviceSpec) (CiscoKubernetesDeviceDriver, error)
