@@ -67,6 +67,7 @@ type Subscriber struct {
 	ctx            context.Context
 	cancel         context.CancelFunc
 	conn           *grpc.ClientConn
+	connRelease    func()
 	manager        *StreamManager
 	specs          map[string]configv1alpha1.TelemetrySubscription
 	states         map[string]*SubscriptionState
@@ -308,6 +309,7 @@ func (s *Subscriber) Start(ctx context.Context) error {
 	s.ctx = child
 	s.cancel = cancel
 	s.conn = client.Conn
+	s.connRelease = client.Release
 	s.manager = manager
 	s.started = true
 	s.mu.Unlock()
@@ -331,10 +333,12 @@ func (s *Subscriber) Stop() {
 	cancel := s.cancel
 	manager := s.manager
 	conn := s.conn
+	release := s.connRelease
 	s.cancel = nil
 	s.ctx = nil
 	s.manager = nil
 	s.conn = nil
+	s.connRelease = nil
 	s.started = false
 	s.mu.Unlock()
 
@@ -344,7 +348,14 @@ func (s *Subscriber) Stop() {
 	if manager != nil {
 		manager.Stop()
 	}
-	if conn != nil {
+	// Conn ownership: when the factory supplied a Release hook (pool-
+	// backed dial), use it and leave the underlying conn alone — other
+	// consumers (gNMI Set, gNOI unary RPCs) on the same WorkloadClass
+	// share it. Otherwise fall back to Close() so the original
+	// "telemetry owns its dial" contract still holds.
+	if release != nil {
+		release()
+	} else if conn != nil {
 		_ = conn.Close()
 	}
 	s.signalStateChanged()

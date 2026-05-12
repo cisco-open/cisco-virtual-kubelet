@@ -22,6 +22,8 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc"
+
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
 
@@ -44,6 +46,15 @@ type FactoryOptions struct {
 	// DefaultTimeout is used for HTTPClient construction when
 	// FactoryOptions.HTTPClient is nil. Zero means 30s.
 	DefaultTimeout time.Duration
+
+	// GRPCConn, when non-nil, is injected into the gNMI transport in
+	// place of a fresh dial. Production callers obtain it from a
+	// devicegrpc.Pool lease (WorkloadClass ClassControl) and retain
+	// the lease — the transport does not own the conn and never
+	// closes it. Tests pass a bufconn-backed conn here directly.
+	//
+	// Ignored by non-gNMI transports.
+	GRPCConn *grpc.ClientConn
 }
 
 // For builds a transport for a CiscoDevice per its spec.Transport field.
@@ -96,6 +107,7 @@ func buildGNMI(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (Inte
 		Port:     port,
 		Username: spec.Username,
 		Password: pass,
+		Conn:     opts.GRPCConn,
 	}
 	// spec.TLS.Enabled is the apphosting RESTCONF intent (443 RESTCONF
 	// requires TLS). The IOS-XE gnxi insecure listener on port 50052
