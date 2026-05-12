@@ -214,6 +214,122 @@ type RebootStatusResult struct {
 	LastRebootError string
 }
 
+// RebootOpts mirrors the RebootRequest inputs.
+type RebootOpts struct {
+	// Method names the reboot variant; defaults to COLD on empty.
+	// IOS-XE supports COLD; NSF/POWERDOWN/HALT are platform-specific.
+	Method string
+
+	// Delay before the reboot fires, in nanoseconds since the request.
+	// Zero means immediate (subject to device queuing).
+	Delay time.Duration
+
+	// Message is an operator-visible reason recorded by the device.
+	Message string
+
+	// Force overrides device-side sanity checks (uncommitted config,
+	// in-flight ISSU, etc.). Destructive — operators set this only
+	// when they have explicit confirmation.
+	Force bool
+}
+
+// Reboot triggers gNOI System.Reboot. The device returns once the
+// reboot has been scheduled; the operator must subsequently observe
+// reachability or call RebootStatus to know when it has completed.
+func (c *Client) Reboot(ctx context.Context, opts RebootOpts) error {
+	if err := c.cap.ensureSupported(ServiceSystem); err != nil {
+		return err
+	}
+	req := &syspb.RebootRequest{
+		Method:  rebootMethodFromString(opts.Method),
+		Delay:   uint64(opts.Delay),
+		Message: opts.Message,
+		Force:   opts.Force,
+	}
+	_, err := c.system.Reboot(c.authCtx(ctx), req)
+	c.cap.Observe(ServiceSystem, err)
+	if err != nil {
+		return fmt.Errorf("gnoi System.Reboot: %w", err)
+	}
+	return nil
+}
+
+// CancelReboot cancels any pending reboot scheduled via Reboot with a
+// non-zero Delay. Returns nil if there was nothing to cancel.
+func (c *Client) CancelReboot(ctx context.Context, message string) error {
+	if err := c.cap.ensureSupported(ServiceSystem); err != nil {
+		return err
+	}
+	_, err := c.system.CancelReboot(c.authCtx(ctx), &syspb.CancelRebootRequest{Message: message})
+	c.cap.Observe(ServiceSystem, err)
+	if err != nil {
+		return fmt.Errorf("gnoi System.CancelReboot: %w", err)
+	}
+	return nil
+}
+
+// KillProcessOpts mirrors the KillProcessRequest inputs.
+type KillProcessOpts struct {
+	// PID, when non-zero, names the target process by id.
+	PID uint32
+	// Name, when non-empty, names the target process by name. The
+	// device chooses Pid when both are set.
+	Name string
+	// Signal: TERM, KILL, HUP, ABRT. Empty defaults to TERM.
+	Signal string
+	// Restart the process after the kill?
+	Restart bool
+}
+
+// KillProcess sends a signal to a device process.
+func (c *Client) KillProcess(ctx context.Context, opts KillProcessOpts) error {
+	if err := c.cap.ensureSupported(ServiceSystem); err != nil {
+		return err
+	}
+	req := &syspb.KillProcessRequest{
+		Pid:     opts.PID,
+		Name:    opts.Name,
+		Signal:  killSignalFromString(opts.Signal),
+		Restart: opts.Restart,
+	}
+	_, err := c.system.KillProcess(c.authCtx(ctx), req)
+	c.cap.Observe(ServiceSystem, err)
+	if err != nil {
+		return fmt.Errorf("gnoi System.KillProcess: %w", err)
+	}
+	return nil
+}
+
+func rebootMethodFromString(s string) syspb.RebootMethod {
+	switch s {
+	case "COLD", "":
+		return syspb.RebootMethod_COLD
+	case "NSF":
+		return syspb.RebootMethod_NSF
+	case "POWERDOWN":
+		return syspb.RebootMethod_POWERDOWN
+	case "HALT":
+		return syspb.RebootMethod_HALT
+	case "WARM":
+		return syspb.RebootMethod_WARM
+	}
+	return syspb.RebootMethod_UNKNOWN
+}
+
+func killSignalFromString(s string) syspb.KillProcessRequest_Signal {
+	switch s {
+	case "TERM", "":
+		return syspb.KillProcessRequest_SIGNAL_TERM
+	case "KILL":
+		return syspb.KillProcessRequest_SIGNAL_KILL
+	case "HUP":
+		return syspb.KillProcessRequest_SIGNAL_HUP
+	case "ABRT":
+		return syspb.KillProcessRequest_SIGNAL_ABRT
+	}
+	return syspb.KillProcessRequest_SIGNAL_UNSPECIFIED
+}
+
 // RebootStatus polls the device for the status of any in-flight or
 // completed reboot. Subcomponents is currently unused — IOS-XE
 // platform-wide reboots only.

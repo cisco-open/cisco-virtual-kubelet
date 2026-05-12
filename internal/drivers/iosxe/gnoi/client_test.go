@@ -351,13 +351,11 @@ func TestCacheTTL(t *testing.T) {
 	}
 }
 
-func TestFactoryResetNotImplementedInPhaseB(t *testing.T) {
-	ts := newTestServer(t)
-	err := ts.client(t).FactoryReset(context.Background(), FactoryResetOpts{})
-	if err == nil || !strings.Contains(err.Error(), "Phase D") {
-		t.Fatalf("expected Phase-D deferral error, got %v", err)
-	}
-}
+// FactoryReset is now implemented; exercised by the IOSXEOperationalAction
+// reconciler tests against a fake gNOI server that returns a Start
+// response. The fake here defaults to Unimplemented so a bare call
+// surfaces the gRPC error, which the IOSXEOperationalAction reconciler
+// classifies for the operator.
 
 // Install/Activate are now implemented and exercised by the
 // IOSXESoftwareUpgrade reconciler tests in Phase C. The gnoi package

@@ -17,6 +17,8 @@ package gnoi
 import (
 	"context"
 	"fmt"
+
+	resetpb "github.com/openconfig/gnoi/factory_reset"
 )
 
 // FactoryResetOpts mirrors the Start RPC inputs.
@@ -26,16 +28,57 @@ type FactoryResetOpts struct {
 	RetainCerts bool // preserve cert.proto-installed certificates
 }
 
-// FactoryReset triggers gNOI FactoryReset.Start. There is no
-// pre-flight read-only probe for this service — callers should pin
-// the capability via CapabilityCache.Pin if they have prior knowledge,
-// otherwise the cache leaves the service marked "unknown" (assume
-// supported until proven otherwise) and learns from the RPC response.
-//
-// IMPORTANT: this is the most destructive RPC in the gNOI catalogue.
-// The Phase-B build of the gNOI client intentionally leaves it
-// unimplemented; Phase D adds it behind the IOSXEOperationalAction
-// CRD's write-class RBAC gate.
+// FactoryResetError wraps a typed device-side ResetError so reconcilers
+// can distinguish "not supported" from "operator-input invalid".
+type FactoryResetError struct {
+	Detail string
+	// Codes are surfaced verbatim from the device for diagnostic
+	// fidelity — typical values include "factory_os" / "zero_fill" /
+	// "other" indicating which optional flag the device rejected.
+	Codes []string
+}
+
+func (e *FactoryResetError) Error() string {
+	if len(e.Codes) > 0 {
+		return fmt.Sprintf("gnoi FactoryReset.Start error (%v): %s", e.Codes, e.Detail)
+	}
+	return fmt.Sprintf("gnoi FactoryReset.Start error: %s", e.Detail)
+}
+
+// FactoryReset triggers gNOI FactoryReset.Start. This is the single
+// most destructive RPC in the catalogue: it wipes the device and
+// reboots to factory defaults. Callers (the IOSXEOperationalAction
+// reconciler with write-class RBAC) must validate operator intent
+// before invocation.
 func (c *Client) FactoryReset(ctx context.Context, opts FactoryResetOpts) error {
-	return fmt.Errorf("gnoi FactoryReset.Start: not implemented in Phase B; see IOSXEOperationalAction in Phase D")
+	if err := c.cap.ensureSupported(ServiceFactoryReset); err != nil {
+		return err
+	}
+	req := &resetpb.StartRequest{
+		FactoryOs:   opts.FactoryOS,
+		ZeroFill:    opts.ZeroFill,
+		RetainCerts: opts.RetainCerts,
+	}
+	resp, err := c.reset.Start(c.authCtx(ctx), req)
+	c.cap.Observe(ServiceFactoryReset, err)
+	if err != nil {
+		return fmt.Errorf("gnoi FactoryReset.Start: %w", err)
+	}
+	if resp == nil {
+		return nil
+	}
+	if errBlock := resp.GetResetError(); errBlock != nil {
+		out := &FactoryResetError{Detail: errBlock.Detail}
+		if errBlock.FactoryOsUnsupported {
+			out.Codes = append(out.Codes, "factory_os_unsupported")
+		}
+		if errBlock.ZeroFillUnsupported {
+			out.Codes = append(out.Codes, "zero_fill_unsupported")
+		}
+		if errBlock.Other {
+			out.Codes = append(out.Codes, "other")
+		}
+		return out
+	}
+	return nil
 }

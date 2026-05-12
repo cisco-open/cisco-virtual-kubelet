@@ -16,6 +16,7 @@ package gnoi
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -90,6 +91,106 @@ func (c *Client) Stat(ctx context.Context, path string) ([]FileStat, error) {
 		out = append(out, fs)
 	}
 	return out, nil
+}
+
+// PutOpts holds optional inputs for File.Put.
+type PutOpts struct {
+	// Permissions is the UNIX octal mode bits to apply on the device.
+	// Zero defaults to 0o644.
+	Permissions uint32
+
+	// ChunkSize bounds each TransferContent message; zero defaults to
+	// 64 KiB. Cap at 1 MiB.
+	ChunkSize int
+}
+
+// Put streams a file to the device. Runs on the bulk-transfer conn so
+// large payloads cannot HOL-block control RPCs. Computes a SHA256
+// hash incrementally and sends it in the terminal message; the device
+// rejects the upload on mismatch.
+func (c *Client) Put(ctx context.Context, path string, r io.Reader, opts PutOpts) error {
+	if err := c.cap.ensureSupported(ServiceFile); err != nil {
+		return err
+	}
+	if err := ValidateIOSXEPath(path); err != nil {
+		return err
+	}
+	if opts.Permissions == 0 {
+		opts.Permissions = 0o644
+	}
+	if opts.ChunkSize == 0 {
+		opts.ChunkSize = 64 * 1024
+	}
+	if opts.ChunkSize > 1024*1024 {
+		return fmt.Errorf("gnoi File.Put: ChunkSize=%d exceeds 1 MiB cap", opts.ChunkSize)
+	}
+
+	stream, err := c.fileBulk.Put(c.authCtx(ctx))
+	if err != nil {
+		c.cap.Observe(ServiceFile, err)
+		return fmt.Errorf("gnoi File.Put open: %w", err)
+	}
+	if err := stream.Send(&filepb.PutRequest{
+		Request: &filepb.PutRequest_Open{Open: &filepb.PutRequest_Details{RemoteFile: path, Permissions: opts.Permissions}},
+	}); err != nil {
+		c.cap.Observe(ServiceFile, err)
+		return fmt.Errorf("gnoi File.Put send Open: %w", err)
+	}
+
+	hash := sha256.New()
+	buf := make([]byte, opts.ChunkSize)
+	for {
+		n, rerr := r.Read(buf)
+		if n > 0 {
+			chunk := append([]byte(nil), buf[:n]...)
+			hash.Write(chunk)
+			if err := stream.Send(&filepb.PutRequest{
+				Request: &filepb.PutRequest_Contents{Contents: chunk},
+			}); err != nil {
+				c.cap.Observe(ServiceFile, err)
+				return fmt.Errorf("gnoi File.Put send chunk: %w", err)
+			}
+		}
+		if rerr == io.EOF {
+			break
+		}
+		if rerr != nil {
+			c.cap.Observe(ServiceFile, rerr)
+			return fmt.Errorf("gnoi File.Put read source: %w", rerr)
+		}
+	}
+	if err := stream.Send(&filepb.PutRequest{
+		Request: &filepb.PutRequest_Hash{Hash: &commonpb.HashType{
+			Method: commonpb.HashType_SHA256,
+			Hash:   hash.Sum(nil),
+		}},
+	}); err != nil {
+		c.cap.Observe(ServiceFile, err)
+		return fmt.Errorf("gnoi File.Put send Hash: %w", err)
+	}
+	if _, err := stream.CloseAndRecv(); err != nil {
+		c.cap.Observe(ServiceFile, err)
+		return fmt.Errorf("gnoi File.Put close: %w", err)
+	}
+	c.cap.Observe(ServiceFile, nil)
+	return nil
+}
+
+// Remove deletes a file from the device flash. Path must begin with a
+// recognised IOS-XE filesystem prefix.
+func (c *Client) Remove(ctx context.Context, path string) error {
+	if err := c.cap.ensureSupported(ServiceFile); err != nil {
+		return err
+	}
+	if err := ValidateIOSXEPath(path); err != nil {
+		return err
+	}
+	_, err := c.file.Remove(c.authCtx(ctx), &filepb.RemoveRequest{RemoteFile: path})
+	c.cap.Observe(ServiceFile, err)
+	if err != nil {
+		return fmt.Errorf("gnoi File.Remove: %w", err)
+	}
+	return nil
 }
 
 // Get streams a file from the device into w. The final response from
