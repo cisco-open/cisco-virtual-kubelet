@@ -908,7 +908,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		return FamilyStatus{
 			Name: family, State: "Drifted",
 			OpCount: len(ops),
-			Message: safeMsg("%d op(s) would be applied under driftPolicy=revert", len(ops)),
+			Message: safeMsg("driftPolicy=report: %d op(s) detected as drift but not applied; switch to driftPolicy=revert to reconcile", len(ops)),
 		}
 	}
 
