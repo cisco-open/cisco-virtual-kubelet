@@ -1,0 +1,531 @@
+// Copyright © 2026 Cisco Systems Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package softwareupgrade
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
+)
+
+// Finalizer is held while an upgrade is in flight so a delete cannot
+// orphan device-side resources (in-flight Install streams, staged
+// image bytes).
+const Finalizer = "ops.cisco.vk/iosxesoftwareupgrade-cleanup"
+
+const conditionTypeReady = "Ready"
+
+// GNOIProvider exposes the per-device gNOI client. Set on the
+// reconciler at startup.
+type GNOIProvider interface {
+	GNOIClient(ctx context.Context) (*gnoi.Client, error)
+}
+
+// Reconciler advances IOSXESoftwareUpgrade CRs through the upgrade
+// state machine. Exactly one transition per Reconcile call.
+type Reconciler struct {
+	Client          client.Client
+	Reader          client.Reader
+	Recorder        record.EventRecorder
+	Scheme          *runtime.Scheme
+	DeviceName      string
+	DeviceNamespace string
+	GNOI            GNOIProvider
+	ImageResolver   ImageResolver
+
+	// Now is injected for tests. nil means time.Now.
+	Now func() time.Time
+}
+
+func (r *Reconciler) now() time.Time {
+	if r.Now != nil {
+		return r.Now()
+	}
+	return time.Now()
+}
+
+// Reconcile is the main entry point. Defensive guards run first, then
+// the per-phase dispatcher.
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	var up opsv1alpha1.IOSXESoftwareUpgrade
+	reader := r.Reader
+	if reader == nil {
+		reader = r.Client
+	}
+	if err := reader.Get(ctx, req.NamespacedName, &up); err != nil {
+		if apierrors.IsNotFound(err) {
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{}, fmt.Errorf("get IOSXESoftwareUpgrade: %w", err)
+	}
+
+	// Defensive: ignore upgrades that target a different device or live
+	// in a different namespace than the one this reconciler serves.
+	if up.Spec.DeviceRef.Name != r.DeviceName {
+		return reconcile.Result{}, nil
+	}
+	if r.DeviceNamespace != "" && up.Namespace != r.DeviceNamespace {
+		return reconcile.Result{}, nil
+	}
+
+	now := r.now()
+
+	// Deletion path.
+	if !up.DeletionTimestamp.IsZero() {
+		return r.handleDelete(ctx, &up, now)
+	}
+
+	// Add finalizer on first observe.
+	if !controllerutil.ContainsFinalizer(&up, Finalizer) {
+		controllerutil.AddFinalizer(&up, Finalizer)
+		if err := r.Client.Update(ctx, &up); err != nil {
+			return reconcile.Result{}, fmt.Errorf("set finalizer: %w", err)
+		}
+		return reconcile.Result{Requeue: true}, nil
+	}
+
+	switch up.Status.Phase {
+	case "", opsv1alpha1.UpgradePhasePending:
+		return r.runPending(ctx, &up, now)
+	case opsv1alpha1.UpgradePhaseResolving:
+		return r.runResolving(ctx, &up, now)
+	case opsv1alpha1.UpgradePhaseTransferring:
+		return r.runTransferring(ctx, &up, now)
+	case opsv1alpha1.UpgradePhaseTransferInterrupted:
+		return r.runTransferInterrupted(ctx, &up, now)
+	case opsv1alpha1.UpgradePhaseValidating:
+		// Validating is folded into runTransferring — the gNOI stream
+		// returns Validated as its terminal success message. If we
+		// ever land here, advance to Activating.
+		return r.advance(ctx, &up, opsv1alpha1.UpgradePhaseActivating, "Validating", "image validated, activating")
+	case opsv1alpha1.UpgradePhaseActivating:
+		return r.runActivating(ctx, &up, now)
+	case opsv1alpha1.UpgradePhaseAwaitingReachability:
+		return r.runAwaitingReachability(ctx, &up, now)
+	case opsv1alpha1.UpgradePhaseVerifying:
+		return r.runVerifying(ctx, &up, now)
+	case opsv1alpha1.UpgradePhaseRollingBack:
+		// Phase C ships RollingBack as a terminal placeholder — the
+		// reconciler records the rollback decision but does not yet
+		// trigger the boot-variable rewrite. Phase D follow-up wires
+		// the gNMI Set + System.Reboot pair.
+		return r.terminal(ctx, &up, opsv1alpha1.UpgradePhaseRolledBack, "RolledBack",
+			"rollback pending: boot-variable rewrite not yet implemented in Phase C", now)
+	default:
+		// Terminal phases: nothing to do.
+		return reconcile.Result{}, nil
+	}
+}
+
+// --- per-phase handlers ---
+
+func (r *Reconciler) runPending(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
+	if up.Spec.MaintenanceWindow != nil {
+		w := up.Spec.MaintenanceWindow
+		if w.NotBefore != nil && now.Before(w.NotBefore.Time) {
+			return r.pendingMessage(ctx, up, "WindowPending",
+				fmt.Sprintf("waiting for maintenance window start (%s)", w.NotBefore.Time.Format(time.RFC3339)),
+				now, 30*time.Second)
+		}
+		if w.NotAfter != nil && now.After(w.NotAfter.Time) {
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "MaintenanceWindowExpired",
+				"maintenance window NotAfter has passed", now)
+		}
+	}
+
+	// Preflight: ImageSource must declare exactly one variant. The CRD-
+	// level validation enforces field-level patterns but cannot encode
+	// "exactly one of"; check here.
+	if err := validateImageSource(up.Spec.ImageSource); err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "InvalidImageSource", err.Error(), now)
+	}
+
+	return r.advance(ctx, up, opsv1alpha1.UpgradePhaseResolving, "Resolving", "preflight passed, resolving image")
+}
+
+func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
+	if r.ImageResolver == nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "NoImageResolver",
+			"image resolver not configured on reconciler", now)
+	}
+	resolved, err := r.ImageResolver.Resolve(ctx, up.Namespace, up.Spec.ImageSource)
+	if err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ImageResolveFailed", err.Error(), now)
+	}
+	// LocalPath shortcut: image is already on flash, skip Transferring.
+	if resolved.Local {
+		if resolved.Cleanup != nil {
+			_ = resolved.Cleanup()
+		}
+		return r.advance(ctx, up, opsv1alpha1.UpgradePhaseActivating, "ImageResolved",
+			"using image already on device flash")
+	}
+	// Phase C invariant: bulk-transfer streams happen inline within
+	// runTransferring. We do not stash the resolved image on the CR;
+	// runTransferring re-resolves and streams in one phase. This
+	// keeps the state machine durable across pod restarts at the cost
+	// of one HTTP GET per Transferring entry.
+	if resolved.Cleanup != nil {
+		_ = resolved.Cleanup()
+	}
+	return r.advance(ctx, up, opsv1alpha1.UpgradePhaseTransferring, "ImageResolved",
+		fmt.Sprintf("image resolved (%d bytes), transferring to device", resolved.Size))
+}
+
+func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
+	if r.GNOI == nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "NoGNOIProvider",
+			"gnoi provider not configured on reconciler", now)
+	}
+	client, err := r.GNOI.GNOIClient(ctx)
+	if err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "GNOIClient", err.Error(), now)
+	}
+	resolved, err := r.ImageResolver.Resolve(ctx, up.Namespace, up.Spec.ImageSource)
+	if err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ImageResolveFailed", err.Error(), now)
+	}
+	defer func() {
+		if resolved != nil && resolved.Cleanup != nil {
+			_ = resolved.Cleanup()
+		}
+	}()
+	if resolved.Local {
+		// Shouldn't happen — Resolving handles LocalPath. Defensive.
+		return r.advance(ctx, up, opsv1alpha1.UpgradePhaseActivating, "ImageResolved",
+			"image already on device flash")
+	}
+	progress, err := client.Install(ctx, resolved.Reader, gnoi.InstallOpts{
+		Version:     up.Spec.TargetVersion,
+		PackageSize: uint64(resolved.Size),
+	})
+	if err != nil {
+		return r.handleInstallErr(ctx, up, err, now)
+	}
+	var validated *gnoi.InstallValidated
+	for ev := range progress {
+		switch {
+		case ev.Err != nil:
+			return r.handleInstallErr(ctx, up, ev.Err, now)
+		case ev.TransferProgress != nil:
+			r.updateTransferProgress(ctx, up, ev.TransferProgress.BytesReceived, resolved.Size, now)
+		case ev.Validated != nil:
+			validated = ev.Validated
+		}
+	}
+	if validated == nil {
+		return r.handleInstallErr(ctx, up, errors.New("gnoi Install: stream ended without Validated"), now)
+	}
+	if validated.Version != "" && validated.Version != up.Spec.TargetVersion {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "VersionMismatch",
+			fmt.Sprintf("device validated version %q but spec targets %q", validated.Version, up.Spec.TargetVersion), now)
+	}
+	return r.advance(ctx, up, opsv1alpha1.UpgradePhaseActivating, "Validated",
+		fmt.Sprintf("device validated %s, activating", validated.Version))
+}
+
+func (r *Reconciler) handleInstallErr(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, err error, now time.Time) (reconcile.Result, error) {
+	// INSTALL_IN_PROGRESS and transient stream errors → TransferInterrupted
+	var iErr *gnoi.InstallError
+	if errors.As(err, &iErr) {
+		switch iErr.Type {
+		case gnoi.InstallErrorIncompatible,
+			gnoi.InstallErrorTooLarge,
+			gnoi.InstallErrorParseFail,
+			gnoi.InstallErrorIntegrityFail,
+			gnoi.InstallErrorInstallRunPackage,
+			gnoi.InstallErrorNotSupportedBackup:
+			// Hard failure — no retry.
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, string(iErr.Type), iErr.Error(), now)
+		}
+	}
+	// Soft failure → TransferInterrupted, honour ResumePolicy.
+	if up.Spec.ResumePolicy == "Abort" {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "TransferAborted", err.Error(), now)
+	}
+	maxRetries := up.Spec.MaxRetries
+	if maxRetries == 0 {
+		maxRetries = 3
+	}
+	if up.Status.RetryCount >= maxRetries {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "TransferMaxRetries",
+			fmt.Sprintf("transfer interrupted %d time(s): %s", up.Status.RetryCount, err.Error()), now)
+	}
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseTransferInterrupted
+		cur.Status.RetryCount++
+		cur.Status.Message = err.Error()
+		cur.Status.FailureReason = "TransferInterrupted"
+		r.setReady(cur, metav1.ConditionFalse, "TransferInterrupted", err.Error(), now)
+	}, reconcile.Result{RequeueAfter: backoff(up.Status.RetryCount)})
+}
+
+func (r *Reconciler) runTransferInterrupted(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
+	return r.advance(ctx, up, opsv1alpha1.UpgradePhaseTransferring, "RetryTransfer",
+		fmt.Sprintf("retrying transfer (attempt %d)", up.Status.RetryCount+1))
+}
+
+func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
+	client, err := r.GNOI.GNOIClient(ctx)
+	if err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "GNOIClient", err.Error(), now)
+	}
+	noReboot := up.Spec.Strategy == opsv1alpha1.UpgradeStrategyNoReboot
+	if err := client.Activate(ctx, gnoi.ActivateOpts{Version: up.Spec.TargetVersion, NoReboot: noReboot}); err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivateFailed", err.Error(), now)
+	}
+	if noReboot {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseSucceeded, "Activated",
+			"activate complete; device not rebooted (strategy=NoReboot)", now)
+	}
+	return r.advance(ctx, up, opsv1alpha1.UpgradePhaseAwaitingReachability, "Rebooting",
+		"activate complete; awaiting device reachability after reboot")
+}
+
+func (r *Reconciler) runAwaitingReachability(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
+	client, err := r.GNOI.GNOIClient(ctx)
+	if err != nil {
+		// Conn missing usually means the device is still rebooting; backoff.
+		return r.requeueAwaitingReachability(ctx, up, err, now)
+	}
+	if _, err := client.Time(ctx); err != nil {
+		return r.requeueAwaitingReachability(ctx, up, err, now)
+	}
+	return r.advance(ctx, up, opsv1alpha1.UpgradePhaseVerifying, "DeviceReachable",
+		"device is reachable, verifying installed version")
+}
+
+func (r *Reconciler) requeueAwaitingReachability(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, err error, now time.Time) (reconcile.Result, error) {
+	timeoutSec := up.Spec.RebootTimeoutSeconds
+	if timeoutSec == 0 {
+		timeoutSec = 1800
+	}
+	if up.Status.StartTime != nil && now.Sub(up.Status.StartTime.Time) > time.Duration(timeoutSec)*time.Second {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseRebootTimeout, "RebootTimeout",
+			fmt.Sprintf("device did not become reachable within %ds", timeoutSec), now)
+	}
+	delay := backoff(up.Status.RetryCount)
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseAwaitingReachability
+		cur.Status.Message = fmt.Sprintf("device unreachable: %s", err.Error())
+		r.setReady(cur, metav1.ConditionFalse, "DeviceUnreachable", err.Error(), now)
+	}, reconcile.Result{RequeueAfter: delay})
+}
+
+func (r *Reconciler) runVerifying(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
+	client, err := r.GNOI.GNOIClient(ctx)
+	if err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "GNOIClient", err.Error(), now)
+	}
+	res, err := client.Verify(ctx)
+	if err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "VerifyFailed", err.Error(), now)
+	}
+	if res.Version != up.Spec.TargetVersion {
+		rollback := up.Spec.RollbackOnFailure == nil || *up.Spec.RollbackOnFailure
+		if rollback {
+			return r.advance(ctx, up, opsv1alpha1.UpgradePhaseRollingBack, "VerifyMismatch",
+				fmt.Sprintf("device runs %s but spec targets %s; rolling back", res.Version, up.Spec.TargetVersion))
+		}
+		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+			cur.Status.Phase = opsv1alpha1.UpgradePhaseFailed
+			cur.Status.RunningVersion = res.Version
+			cur.Status.FailureReason = "VerifyMismatch"
+			cur.Status.CompletionTime = &metav1.Time{Time: now}
+			cur.Status.Message = fmt.Sprintf("device runs %s; target was %s", res.Version, up.Spec.TargetVersion)
+			r.setReady(cur, metav1.ConditionFalse, "VerifyMismatch", cur.Status.Message, now)
+		}, reconcile.Result{})
+	}
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseSucceeded
+		cur.Status.RunningVersion = res.Version
+		cur.Status.CompletionTime = &metav1.Time{Time: now}
+		cur.Status.Message = "upgrade complete"
+		r.setReady(cur, metav1.ConditionTrue, "Succeeded", "upgrade complete", now)
+	}, reconcile.Result{})
+}
+
+func (r *Reconciler) handleDelete(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
+	// Phase-specific cleanup. Phase C ships best-effort: clear the
+	// finalizer regardless of phase, but emit a Warning event for
+	// "uncancellable" phases so operators can see what happened.
+	switch up.Status.Phase {
+	case opsv1alpha1.UpgradePhaseValidating,
+		opsv1alpha1.UpgradePhaseActivating,
+		opsv1alpha1.UpgradePhaseAwaitingReachability,
+		opsv1alpha1.UpgradePhaseRollingBack:
+		if r.Recorder != nil {
+			r.Recorder.Eventf(up, "Warning", "DeleteDuringInflightUpgrade",
+				"deletion requested in phase %s; device-side activate may complete asynchronously", up.Status.Phase)
+		}
+	}
+	if controllerutil.ContainsFinalizer(up, Finalizer) {
+		controllerutil.RemoveFinalizer(up, Finalizer)
+		if err := r.Client.Update(ctx, up); err != nil {
+			return reconcile.Result{}, fmt.Errorf("clear finalizer: %w", err)
+		}
+	}
+	return reconcile.Result{}, nil
+}
+
+// --- helpers ---
+
+func (r *Reconciler) advance(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, phase opsv1alpha1.UpgradePhase, reason, message string) (reconcile.Result, error) {
+	now := r.now()
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		if cur.Status.StartTime == nil && phase != opsv1alpha1.UpgradePhasePending {
+			cur.Status.StartTime = &metav1.Time{Time: now}
+		}
+		cur.Status.Phase = phase
+		cur.Status.Message = message
+		cur.Status.FailureReason = ""
+		r.setReady(cur, metav1.ConditionFalse, reason, message, now)
+	}, reconcile.Result{Requeue: true})
+}
+
+func (r *Reconciler) pendingMessage(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, reason, message string, now time.Time, requeue time.Duration) (reconcile.Result, error) {
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhasePending
+		cur.Status.Message = message
+		r.setReady(cur, metav1.ConditionFalse, reason, message, now)
+	}, reconcile.Result{RequeueAfter: requeue})
+}
+
+func (r *Reconciler) terminal(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, phase opsv1alpha1.UpgradePhase, reason, message string, now time.Time) (reconcile.Result, error) {
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = phase
+		cur.Status.FailureReason = reason
+		cur.Status.Message = message
+		cur.Status.CompletionTime = &metav1.Time{Time: now}
+		condStatus := metav1.ConditionFalse
+		if phase == opsv1alpha1.UpgradePhaseSucceeded {
+			condStatus = metav1.ConditionTrue
+		}
+		r.setReady(cur, condStatus, reason, message, now)
+	}, reconcile.Result{})
+}
+
+func (r *Reconciler) updateTransferProgress(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, bytesReceived uint64, total int64, now time.Time) {
+	// Throttle: write progress at most once per 2s.
+	if up.Status.TransferProgress != nil && up.Status.TransferProgress.BytesTransferred > 0 {
+		if last := up.Status.TransferProgress.BytesTransferred; bytesReceived-uint64(last) < 64*1024 {
+			return
+		}
+	}
+	_, _ = r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		percent := int32(0)
+		if total > 0 {
+			percent = int32(bytesReceived * 100 / uint64(total))
+		}
+		cur.Status.TransferProgress = &opsv1alpha1.UpgradeTransferProgress{
+			BytesTransferred: int64(bytesReceived),
+			TotalBytes:       total,
+			Percent:          percent,
+		}
+		cur.Status.Message = fmt.Sprintf("transferring: %d/%d bytes (%d%%)", bytesReceived, total, percent)
+	}, reconcile.Result{})
+}
+
+func (r *Reconciler) setReady(up *opsv1alpha1.IOSXESoftwareUpgrade, status metav1.ConditionStatus, reason, message string, now time.Time) {
+	cond := metav1.Condition{
+		Type:               conditionTypeReady,
+		Status:             status,
+		Reason:             reason,
+		Message:            message,
+		LastTransitionTime: metav1.Time{Time: now},
+		ObservedGeneration: up.Generation,
+	}
+	conds := up.Status.Conditions
+	for i, c := range conds {
+		if c.Type == cond.Type {
+			if c.Status == cond.Status && c.Reason == cond.Reason && c.Message == cond.Message {
+				return
+			}
+			conds[i] = cond
+			up.Status.Conditions = conds
+			return
+		}
+	}
+	up.Status.Conditions = append(conds, cond)
+}
+
+func (r *Reconciler) updateStatus(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, mutate func(*opsv1alpha1.IOSXESoftwareUpgrade), result reconcile.Result) (reconcile.Result, error) {
+	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		var cur opsv1alpha1.IOSXESoftwareUpgrade
+		reader := r.Reader
+		if reader == nil {
+			reader = r.Client
+		}
+		if err := reader.Get(ctx, client.ObjectKeyFromObject(up), &cur); err != nil {
+			return err
+		}
+		mutate(&cur)
+		cur.Status.ObservedGeneration = cur.Generation
+		return r.Client.Status().Update(ctx, &cur)
+	})
+	if err != nil {
+		return result, fmt.Errorf("update upgrade status: %w", err)
+	}
+	return result, nil
+}
+
+func validateImageSource(src opsv1alpha1.UpgradeImageSource) error {
+	count := 0
+	if src.URL != "" {
+		count++
+	}
+	if src.ConfigMapRef != nil {
+		count++
+	}
+	if src.LocalPath != "" {
+		count++
+	}
+	if count == 0 {
+		return errors.New("imageSource: one of url, configMapRef, or localPath is required")
+	}
+	if count > 1 {
+		return errors.New("imageSource: only one of url, configMapRef, or localPath may be set")
+	}
+	if src.URL != "" && src.SHA256 == "" {
+		return errors.New("imageSource.url requires imageSource.sha256 for integrity verification")
+	}
+	return nil
+}
+
+func backoff(retryCount int32) time.Duration {
+	switch {
+	case retryCount <= 0:
+		return 30 * time.Second
+	case retryCount == 1:
+		return 60 * time.Second
+	case retryCount == 2:
+		return 120 * time.Second
+	default:
+		return 300 * time.Second
+	}
+}

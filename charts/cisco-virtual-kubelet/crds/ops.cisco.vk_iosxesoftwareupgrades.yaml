@@ -1,0 +1,334 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: iosxesoftwareupgrades.ops.cisco.vk
+spec:
+  group: ops.cisco.vk
+  names:
+    kind: IOSXESoftwareUpgrade
+    listKind: IOSXESoftwareUpgradeList
+    plural: iosxesoftwareupgrades
+    shortNames:
+    - xeupgrade
+    singular: iosxesoftwareupgrade
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.deviceRef.name
+      name: Device
+      type: string
+    - jsonPath: .spec.targetVersion
+      name: Target
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.runningVersion
+      name: Running
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          IOSXESoftwareUpgrade drives a multi-phase IOS-XE image upgrade via
+          gNOI OS.Install / Activate / Verify. One CR per upgrade operation;
+          owner-referenced to the target CiscoDevice so a device delete
+          cascades.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: IOSXESoftwareUpgradeSpec declares an upgrade request.
+            properties:
+              deviceRef:
+                description: DeviceRef targets the CiscoDevice the upgrade runs against.
+                properties:
+                  name:
+                    description: Name of the CiscoDevice the CR targets.
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                type: object
+              imageSource:
+                description: ImageSource is where the reconciler obtains the SPA bundle
+                  bytes.
+                properties:
+                  configMapRef:
+                    description: |-
+                      ConfigMapRef names a ConfigMap whose binaryData["image"] holds
+                      the bytes. Capped at ~900 KiB by Kubernetes — testing only.
+                    properties:
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  localPath:
+                    description: |-
+                      LocalPath assumes the image is already on the device flash. The
+                      reconciler skips Resolving + Transferring and jumps to Activating.
+                      Path must be an absolute IOS-XE filesystem path.
+                    pattern: '^(flash|bootflash|harddisk):'
+                    type: string
+                  sha256:
+                    description: |-
+                      SHA256 is the lowercase hex SHA-256 digest the reconciler asserts
+                      after GETting the URL. Required when URL is set.
+                    pattern: ^[a-f0-9]{64}$
+                    type: string
+                  url:
+                    description: |-
+                      URL is an HTTPS URL the reconciler GETs the image from. Required
+                      SHA256 verification — declared via SHA256 below.
+                    pattern: ^https?://
+                    type: string
+                type: object
+              maintenanceWindow:
+                description: |-
+                  MaintenanceWindow bounds when the reconciler will begin the
+                  Transferring phase. Outside the window, the CR sits in Pending
+                  without consuming device cycles.
+                properties:
+                  notAfter:
+                    description: |-
+                      NotAfter is the latest time the reconciler may enter Resolving.
+                      Past this, the CR transitions to terminal Failed with reason
+                      MaintenanceWindowExpired.
+                    format: date-time
+                    type: string
+                  notBefore:
+                    description: NotBefore is the earliest time the reconciler may
+                      enter Resolving.
+                    format: date-time
+                    type: string
+                type: object
+              maxRetries:
+                default: 3
+                description: |-
+                  MaxRetries caps the number of TransferInterrupted → Transferring
+                  retries before terminal Failed. Default 3.
+                format: int32
+                maximum: 10
+                minimum: 0
+                type: integer
+              rebootTimeoutSeconds:
+                default: 1800
+                description: |-
+                  RebootTimeoutSeconds caps how long the reconciler will wait in
+                  AwaitingReachability before declaring RebootTimeout. Default 1800.
+                format: int32
+                minimum: 60
+                type: integer
+              resumePolicy:
+                default: Retry
+                description: ResumePolicy controls how TransferInterrupted is handled.
+                enum:
+                - Retry
+                - Abort
+                type: string
+              rollbackOnFailure:
+                default: true
+                description: |-
+                  RollbackOnFailure, when true, drives the RollingBack phase if
+                  post-Verify the device is running a different version. The
+                  fallback uses the device's prior boot variable plus one
+                  System.Reboot. Default true.
+                type: boolean
+              strategy:
+                default: Reload
+                description: |-
+                  Strategy controls whether Activate performs the reload itself
+                  (default Reload), asserts an ISSU path, or stages without
+                  rebooting (NoReboot).
+                enum:
+                - Reload
+                - ISSU
+                - NoReboot
+                type: string
+              targetVersion:
+                description: |-
+                  TargetVersion is the SPA bundle version this upgrade installs
+                  (e.g. "17.15.01a"). The reconciler:
+                    - rejects in Pending if the device already runs this version
+                    - asserts the Validated message names this version
+                    - cross-checks gNMI Cisco-IOS-XE-native:native/version in Verifying
+                pattern: ^[0-9]+\.[0-9]+(\.[0-9]+([a-z])?)?$
+                type: string
+            required:
+            - deviceRef
+            - imageSource
+            - targetVersion
+            type: object
+          status:
+            description: IOSXESoftwareUpgradeStatus carries observed state.
+            properties:
+              completionTime:
+                description: CompletionTime is when the reconciler entered a terminal
+                  phase.
+                format: date-time
+                type: string
+              conditions:
+                description: |-
+                  Conditions surface granular state. Type "Ready" follows the
+                  standard "True/False/Unknown" convention; intermediate
+                  conditions (e.g. "ImageResolved", "Transferred", "Activated",
+                  "DeviceReachable", "Verified") are set as the state machine
+                  advances.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureReason:
+                description: |-
+                  FailureReason holds a short machine-readable reason on Failed /
+                  PreflightFailed / ValidationFailed / RolledBack / RebootTimeout.
+                type: string
+              message:
+                description: |-
+                  Message is the human-readable status message. Mirrored on the
+                  Ready condition.
+                type: string
+              observedGeneration:
+                description: ObservedGeneration mirrors spec.generation that produced
+                  this status.
+                format: int64
+                type: integer
+              phase:
+                description: Phase is the current state-machine position.
+                enum:
+                - Pending
+                - Resolving
+                - Transferring
+                - TransferInterrupted
+                - Validating
+                - Activating
+                - AwaitingReachability
+                - Verifying
+                - RollingBack
+                - Succeeded
+                - Failed
+                - PreflightFailed
+                - ValidationFailed
+                - RolledBack
+                - RebootTimeout
+                - Cancelled
+                type: string
+              retryCount:
+                description: RetryCount tracks TransferInterrupted retries.
+                format: int32
+                type: integer
+              runningVersion:
+                description: |-
+                  RunningVersion is the device-reported running OS version after
+                  Verifying.
+                type: string
+              startTime:
+                description: StartTime is when the reconciler first transitioned out
+                  of Pending.
+                format: date-time
+                type: string
+              transferProgress:
+                description: |-
+                  TransferProgress reports cumulative bytes uploaded during the
+                  Transferring phase. Cleared on Validated.
+                properties:
+                  bytesTransferred:
+                    format: int64
+                    type: integer
+                  percent:
+                    description: |-
+                      Percent is BytesTransferred/TotalBytes×100, rounded down. Zero
+                      when TotalBytes is unknown.
+                    format: int32
+                    type: integer
+                  totalBytes:
+                    format: int64
+                    type: integer
+                required:
+                - bytesTransferred
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

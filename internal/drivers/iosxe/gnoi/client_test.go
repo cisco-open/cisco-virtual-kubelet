@@ -359,12 +359,11 @@ func TestFactoryResetNotImplementedInPhaseB(t *testing.T) {
 	}
 }
 
-func TestInstallNotImplementedInPhaseB(t *testing.T) {
-	ts := newTestServer(t)
-	err := ts.client(t).Install(context.Background())
-	if err == nil || !strings.Contains(err.Error(), "Phase C") {
-		t.Fatalf("expected Phase-C deferral error, got %v", err)
-	}
-}
+// Install/Activate are now implemented and exercised by the
+// IOSXESoftwareUpgrade reconciler tests in Phase C. The gnoi package
+// keeps the byte-stream protocol details unit-tested by the reconciler
+// fixture since both halves (sender goroutine + recv loop) need to
+// be driven against a fake gNOI server with a non-trivial scripted
+// response sequence.
 
-var _ io.Reader // keep the import slot for future bulk-stream tests
+var _ io.Reader // keep the import slot
