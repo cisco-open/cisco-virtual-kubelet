@@ -37,6 +37,13 @@ const gNOIDisabledEnv = "CISCO_VK_GNOI_DISABLED"
 // follow the same secure/insecure heuristic the gNMI transport uses.
 const gNOIPortEnv = "CISCO_VK_GNOI_PORT"
 
+// gNOIInsecureEnv forces the gNOI dial to the device's insecure gnxi
+// listener (typically port 50052), bypassing the spec.tls.enabled
+// inference. Mirrors CISCO_VK_TELEMETRY_INSECURE — useful when the
+// RESTCONF transport uses TLS (port 443) but gNOI is bound to the
+// `gnxi server` (insecure) line rather than `gnxi secure-server`.
+const gNOIInsecureEnv = "CISCO_VK_GNOI_INSECURE"
+
 // setupGNOI builds the per-device gRPC pool, leases the ClassControl
 // and ClassBulkTransfer connections, and assembles a *gnoi.Client.
 // The returned cleanup function releases both leases and closes the
@@ -59,13 +66,18 @@ func setupGNOI(ctx context.Context, opts configReconcilerOptions) (*staticGNOIPr
 		return nil, nil
 	}
 
-	port := gnoiPortForSpec(opts.Spec)
+	forceInsecure := false
+	if v := os.Getenv(gNOIInsecureEnv); v == "1" || strings.EqualFold(v, "true") {
+		forceInsecure = true
+	}
+
+	port := gnoiPortForSpec(opts.Spec, forceInsecure)
 
 	dialCfg := devicegrpc.DialConfig{
 		Username: opts.Spec.Username,
 		Password: opts.Password,
 	}
-	if opts.Spec.TLS != nil && opts.Spec.TLS.Enabled {
+	if !forceInsecure && opts.Spec.TLS != nil && opts.Spec.TLS.Enabled {
 		dialCfg.TLSConfig = &tls.Config{
 			MinVersion:         tls.VersionTLS12,
 			InsecureSkipVerify: opts.Spec.TLS.InsecureSkipVerify,
@@ -119,14 +131,16 @@ func setupGNOI(ctx context.Context, opts configReconcilerOptions) (*staticGNOIPr
 // gnoiPortForSpec picks the device-side gNOI port. Same heuristic the
 // telemetry factory uses: insecure path → 50052, secure → 9339. The
 // CISCO_VK_GNOI_PORT env var pins an explicit port for operators on
-// non-standard gnxi listeners.
-func gnoiPortForSpec(spec *ciskov1.DeviceSpec) int {
+// non-standard gnxi listeners; forceInsecure overrides spec.tls.enabled
+// inference so operators can target the `gnxi server` (insecure) line
+// even when RESTCONF on the same device uses TLS.
+func gnoiPortForSpec(spec *ciskov1.DeviceSpec, forceInsecure bool) int {
 	if v := os.Getenv(gNOIPortEnv); v != "" {
 		if p, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && p > 0 {
 			return p
 		}
 	}
-	tlsEnabled := spec.TLS != nil && spec.TLS.Enabled
+	tlsEnabled := !forceInsecure && spec.TLS != nil && spec.TLS.Enabled
 	port := spec.Port
 	if port == 0 || port == 80 || port == 443 {
 		if tlsEnabled {
