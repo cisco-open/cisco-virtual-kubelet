@@ -333,6 +333,68 @@ See [Observability](observability.md) for the full reference. At a high level:
 - **OpenTelemetry topology traces** are emitted on a configurable interval (default 60 s) and include a device root span with child link spans (one per CDP/OSPF neighbor) and app spans (one per hosted container).
 - **Node annotations** (`cisco.io/router-id`, `cisco.io/hostname`, `cisco.io/cdp-neighbor-count`, `cisco.io/ospf-neighbor-count`, `cisco.io/protocols`) make topology context queryable via `kubectl describe node`.
 
+## gNOI pillar
+
+The gNOI (gRPC Network Operations Interface) pillar handles imperative
+device operations: software upgrades, reboots, file transfers, certificate
+management, and factory reset. It sits alongside the configuration,
+diagnostics, and operations pillars and shares the same gNxI-server TLS
+listener IOS-XE already exposes for gNMI.
+
+**Connection management.** A workload-classed pool
+(`internal/drivers/iosxe/devicegrpc/`) hands out `*grpc.ClientConn`
+leases keyed on `(DeviceKey, WorkloadClass)`. Three classes
+isolate stream lifetimes: `ClassControl` for unary RPCs, `ClassTelemetry`
+for the gNMI Subscribe stream, and `ClassBulkTransfer` for OS.Install
+and File.Put/Get. Separate connections per class avoid HTTP/2 head-of-
+line blocking — a 500 MB image upload cannot back-pressure live
+telemetry on the same TCP socket.
+
+**Client.** `internal/drivers/iosxe/gnoi/` wraps the openconfig protos
+with ergonomic Go methods, mandatory IOS-XE filesystem-prefix validation
+on file paths, and a per-service `CapabilityCache`. Each RPC observes
+its outcome; `codes.Unimplemented` flips the service to unsupported
+and short-circuits subsequent calls with a typed `*ErrServiceUnsupported`.
+
+**CRD surface.** Three CRDs distribute the operation set by trust level:
+
+| CRD | Purpose | RBAC class |
+|-----|---------|------------|
+| `DeviceOperation` (extended) | Read-only RPCs: Ping, Traceroute, Time, FileGet, FileStat, CertGet, CanGenerateCSR, RebootStatus, OSVerify | low-trust |
+| `IOSXESoftwareUpgrade` | Multi-phase OS upgrade state machine (Install → Activate → Verify, with rollback) | upgrade |
+| `IOSXEOperationalAction` | Write-class one-shots: Reboot, CancelReboot, KillProcess, FilePut, FileRemove, FactoryReset | destructive |
+
+The split lets operators grant `DeviceOperation` access to dashboards
+or low-trust automation without giving them mutation power on the
+device. The write-class `IOSXEOperationalAction` is gated by
+`--enable-write-class-gnoi` on the per-device VK pod and requires a
+`spec.confirm` field matching the target device's name as a typo guard.
+
+**Software upgrade state machine** (IOSXESoftwareUpgrade):
+
+```
+Pending → Resolving → Transferring → Activating → AwaitingReachability → Verifying → Succeeded
+   │            │           │            │                 │                 │
+   ↓            ↓           ↓            ↓                 ↓                 ↓
+PreflightFailed │      TransferInterrupted ─┘         RebootTimeout      RollingBack → RolledBack
+              Failed                                                          ↓
+                                                                            Failed
+```
+
+`OS.Activate` reboots the device itself per the gNOI spec; the
+reconciler does *not* follow with `System.Reboot`. The `NoReboot`
+strategy short-circuits to Succeeded; the `Reload` strategy enters
+`AwaitingReachability` and polls `System.Time` until the device is
+back, then runs `OS.Verify`. Verify mismatch with `RollbackOnFailure=true`
+enters `RollingBack` (boot-variable rewrite is a Phase D follow-up).
+
+**IOS-XE capability matrix.** Per the IOS-XE 17.15 Programmability
+Guide, only OS, Cert, Bootstrapping, and FactoryReset are
+documented as supported services. System and File are wired but
+gated behind a runtime probe + `CiscoDevice.spec.capabilities.gnoi.services`
+opt-in; reconcilers fail fast with `*ErrServiceUnsupported` if the
+device returns `codes.Unimplemented`.
+
 ## RESTCONF endpoints
 
 | Operation | Method | Endpoint |
