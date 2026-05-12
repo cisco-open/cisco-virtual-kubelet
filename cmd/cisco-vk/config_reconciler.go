@@ -58,16 +58,33 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry"
 	"github.com/cisco/virtual-kubelet-cisco/internal/otelproviders"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/deviceoperation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/operationalaction"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	telemetrystate "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
 	telemetryyang "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/yang"
 )
+
+// staticGNOIProvider adapts a pre-built *gnoi.Client into the
+// {deviceoperation,softwareupgrade,operationalaction}.GNOIProvider
+// interfaces. The same client is shared across all three reconcilers
+// — the gNOI service stubs are stateless and the underlying conn is
+// pool-managed.
+type staticGNOIProvider struct{ c *gnoi.Client }
+
+func (s *staticGNOIProvider) GNOIClient(context.Context) (*gnoi.Client, error) {
+	if s == nil || s.c == nil {
+		return nil, fmt.Errorf("gnoi client not initialized")
+	}
+	return s.c, nil
+}
 
 // configReconcilerOptions is what startConfigReconciler needs from the
 // surrounding cisco-vk-run setup: device spec (for transport build) and
@@ -327,6 +344,22 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		return fmt.Errorf("diagnostic SetupWithManager: %w", err)
 	}
 
+	// gNOI pillar: build a per-device gRPC pool and gNOI client, then
+	// wire the three reconcilers that consume it.
+	//
+	// Pool lifetime is bound to the surrounding ctx (the VK pod's run
+	// context). Control + bulk-transfer leases are held for the pod
+	// lifetime; releases fire on ctx.Done. If the gNOI server is not
+	// reachable at startup the dial is lazy — the conn materialises
+	// on first RPC, so a device that comes up after the VK pod is fine.
+	gnoiProv, gnoiCleanup := setupGNOI(ctx, opts)
+	if gnoiCleanup != nil {
+		go func() {
+			<-ctx.Done()
+			gnoiCleanup()
+		}()
+	}
+
 	operationReconciler := &deviceoperation.Reconciler{
 		Client:   mgr.GetClient(),
 		Reader:   mgr.GetAPIReader(),
@@ -340,9 +373,39 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		DeviceName:      deviceName,
 		DeviceNamespace: operationNamespace(),
 		TP:              r,
+		GNOI:            gnoiProv,
 	}
 	if err := operationReconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("device operation SetupWithManager: %w", err)
+	}
+
+	if gnoiProv != nil {
+		upgradeReconciler := &softwareupgrade.Reconciler{
+			Client:          mgr.GetClient(),
+			Reader:          mgr.GetAPIReader(),
+			Recorder:        recorder,
+			Scheme:          mgr.GetScheme(),
+			DeviceName:      deviceName,
+			DeviceNamespace: operationNamespace(),
+			GNOI:            gnoiProv,
+			ImageResolver:   softwareupgrade.NewDefaultImageResolver(mgr.GetClient(), nil),
+		}
+		if err := upgradeReconciler.SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("software upgrade SetupWithManager: %w", err)
+		}
+
+		actionReconciler := &operationalaction.Reconciler{
+			Client:          mgr.GetClient(),
+			Reader:          mgr.GetAPIReader(),
+			Recorder:        recorder,
+			Scheme:          mgr.GetScheme(),
+			DeviceName:      deviceName,
+			DeviceNamespace: operationNamespace(),
+			GNOI:            gnoiProv,
+		}
+		if err := actionReconciler.SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("operational action SetupWithManager: %w", err)
+		}
 	}
 
 	telemetryFactory, err := telemetry.NewDefaultSubscribeClientFactoryForDevice(opts.Spec, opts.Password)

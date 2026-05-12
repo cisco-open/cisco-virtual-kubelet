@@ -171,7 +171,7 @@ func runReconcile(t *testing.T, r *Reconciler, up *opsv1alpha1.IOSXESoftwareUpgr
 		if isTerminal(got.Status.Phase) {
 			return &got
 		}
-		if !res.Requeue && res.RequeueAfter == 0 {
+		if res.RequeueAfter == 0 {
 			// Continue to drive the loop manually to exercise the state machine.
 		}
 	}

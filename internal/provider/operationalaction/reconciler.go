@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -70,6 +71,13 @@ func (r *Reconciler) now() time.Time {
 		return r.Now()
 	}
 	return time.Now()
+}
+
+// SetupWithManager registers the IOSXEOperationalAction controller.
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&opsv1alpha1.IOSXEOperationalAction{}).
+		Complete(r)
 }
 
 // Reconcile runs the action.

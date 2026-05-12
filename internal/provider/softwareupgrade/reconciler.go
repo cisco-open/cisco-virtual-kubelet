@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -32,6 +33,13 @@ import (
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 )
+
+// SetupWithManager registers the IOSXESoftwareUpgrade controller.
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&opsv1alpha1.IOSXESoftwareUpgrade{}).
+		Complete(r)
+}
 
 // Finalizer is held while an upgrade is in flight so a delete cannot
 // orphan device-side resources (in-flight Install streams, staged
@@ -106,7 +114,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		if err := r.Client.Update(ctx, &up); err != nil {
 			return reconcile.Result{}, fmt.Errorf("set finalizer: %w", err)
 		}
-		return reconcile.Result{Requeue: true}, nil
+		return reconcile.Result{RequeueAfter: time.Second}, nil
 	}
 
 	switch up.Status.Phase {
@@ -405,7 +413,7 @@ func (r *Reconciler) advance(ctx context.Context, up *opsv1alpha1.IOSXESoftwareU
 		cur.Status.Message = message
 		cur.Status.FailureReason = ""
 		r.setReady(cur, metav1.ConditionFalse, reason, message, now)
-	}, reconcile.Result{Requeue: true})
+	}, reconcile.Result{RequeueAfter: time.Second})
 }
 
 func (r *Reconciler) pendingMessage(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, reason, message string, now time.Time, requeue time.Duration) (reconcile.Result, error) {
