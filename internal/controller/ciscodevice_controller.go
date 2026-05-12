@@ -77,6 +77,9 @@ const (
 	envCVKResourceAttributes    = "CVK_RESOURCE_ATTRIBUTES"
 	envCVKTelemetryInsecure     = "CISCO_VK_TELEMETRY_INSECURE"
 	envCVKTelemetryPort         = "CISCO_VK_TELEMETRY_PORT"
+	envCVKGNOIInsecure          = "CISCO_VK_GNOI_INSECURE"
+	envCVKGNOIPort              = "CISCO_VK_GNOI_PORT"
+	envCVKGNOIDisabled          = "CISCO_VK_GNOI_DISABLED"
 )
 
 // telemetryEnvPropagationNames is the set of env vars whose literal values
@@ -97,6 +100,9 @@ var telemetryEnvPropagationNames = []string{
 	envCVKResourceAttributes,
 	envCVKTelemetryInsecure,
 	envCVKTelemetryPort,
+	envCVKGNOIInsecure,
+	envCVKGNOIPort,
+	envCVKGNOIDisabled,
 }
 
 const (
