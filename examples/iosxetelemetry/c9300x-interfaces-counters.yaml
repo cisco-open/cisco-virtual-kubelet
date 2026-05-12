@@ -1,0 +1,82 @@
+# Copyright 2026 Cisco Systems Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXETelemetry
+metadata:
+  name: c9300x-interfaces-counters
+  namespace: network
+spec:
+  deviceRef:
+    name: c9300x-01
+  subscriptions:
+    - name: interface-counters
+      enabled: true
+      paths:
+        - /Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics
+      mode: STREAM
+      streamMode: SAMPLE
+      sampleInterval: 30s
+      encoding: PROTO
+    - name: interface-oper-status
+      enabled: true
+      paths:
+        - /Cisco-IOS-XE-interfaces-oper:interfaces/interface/oper-status
+      mode: STREAM
+      streamMode: ON_CHANGE
+      encoding: PROTO
+  reconnect:
+    initialBackoff: 1s
+    maxBackoff: 30s
+    maxRetries: 0
+  cardinalityLimits:
+    maxSeriesPerSubscription: 12000
+    onExceeded: dropNewSeries
+  timestamps:
+    useCollectorTimestamp: true
+  mapping:
+    pathAliases:
+      - prefix: /Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics
+        rename: iosxe.interface.statistics
+      - prefix: /Cisco-IOS-XE-interfaces-oper:interfaces/interface/oper-status
+        rename: iosxe.interface.oper_status
+    resourceAttributes:
+      - path: /Cisco-IOS-XE-interfaces-oper:interfaces/interface/name
+        key: network.interface.name
+      - path: /Cisco-IOS-XE-interfaces-oper:interfaces/interface/interface-type
+        key: network.interface.type
+      - path: /Cisco-IOS-XE-interfaces-oper:interfaces/interface/description
+        key: network.interface.description
+    metricTypeOverrides:
+      - prefix: /Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics
+        type: sum
+      - prefix: /Cisco-IOS-XE-interfaces-oper:interfaces/interface/oper-status
+        type: gauge
+    transitions:
+      - path: /Cisco-IOS-XE-interfaces-oper:interfaces/interface[name=*]/oper-status
+        healthyValues:
+          - if-oper-state-ready
+          - up
+          - UP
+        unhealthyValues:
+          - if-oper-state-lower-layer-down
+          - if-oper-state-not-present
+          - if-oper-state-no-pass
+          - down
+          - DOWN
+  output:
+    signal:
+      - metrics
+      - logs
+      - traces

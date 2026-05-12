@@ -127,6 +127,8 @@ func (t *gnmiTransport) Capabilities() Capabilities {
 // drops events on the floor and bumps a metric so it's visible
 // rather than silently stalling the device-side stream.
 func (t *gnmiTransport) Subscribe(ctx context.Context, paths []string, mode SubscribeMode) (<-chan SubscribeEvent, error) {
+	ctx, span := startTransportSpan(ctx, KindGNMI, "subscribe", spanOpCount(len(paths)))
+	defer span.End()
 	cli, err := t.dial(ctx)
 	if err != nil {
 		return nil, err
@@ -304,6 +306,8 @@ func (t *gnmiTransport) authCtx(ctx context.Context) context.Context {
 // the first update in the response — writers parse it the same
 // way they would a RESTCONF JSON body.
 func (t *gnmiTransport) Fetch(ctx context.Context, path string) ([]byte, error) {
+	ctx, span := startTransportSpan(ctx, KindGNMI, "get", spanPath(path))
+	defer span.End()
 	cli, err := t.dial(ctx)
 	if err != nil {
 		return nil, err
@@ -337,6 +341,8 @@ func (t *gnmiTransport) Fetch(ctx context.Context, path string) ([]byte, error) 
 }
 
 func (t *gnmiTransport) StartTransaction(ctx context.Context) (TxHandle, error) {
+	ctx, span := startTransportSpan(ctx, KindGNMI, "start_transaction")
+	defer span.End()
 	t.txMu.Lock()
 	defer t.txMu.Unlock()
 	if t.open {
@@ -353,6 +359,8 @@ func (t *gnmiTransport) StartTransaction(ctx context.Context) (TxHandle, error) 
 // SetRequest. The latter matches the RESTCONF/NETCONF "apply now"
 // semantics for non-transactional callers.
 func (t *gnmiTransport) Mutate(ctx context.Context, tx TxHandle, ops []Op) error {
+	ctx, span := startTransportSpan(ctx, KindGNMI, "mutate", spanOpCount(len(ops)))
+	defer span.End()
 	if len(ops) == 0 {
 		return nil
 	}
@@ -369,6 +377,8 @@ func (t *gnmiTransport) Mutate(ctx context.Context, tx TxHandle, ops []Op) error
 }
 
 func (t *gnmiTransport) Commit(ctx context.Context, tx TxHandle) error {
+	ctx, span := startTransportSpan(ctx, KindGNMI, "commit")
+	defer span.End()
 	t.txMu.Lock()
 	if !t.open || tx != t.tx {
 		t.txMu.Unlock()
@@ -386,6 +396,8 @@ func (t *gnmiTransport) Commit(ctx context.Context, tx TxHandle) error {
 }
 
 func (t *gnmiTransport) Discard(ctx context.Context, tx TxHandle) error {
+	ctx, span := startTransportSpan(ctx, KindGNMI, "discard")
+	defer span.End()
 	t.txMu.Lock()
 	defer t.txMu.Unlock()
 	if !t.open {
@@ -401,6 +413,8 @@ func (t *gnmiTransport) Discard(ctx context.Context, tx TxHandle) error {
 }
 
 func (t *gnmiTransport) SaveStartup(ctx context.Context) error {
+	_, span := startTransportSpan(ctx, KindGNMI, "save_startup")
+	defer span.End()
 	// gNMI does not standardise a save-config RPC. Callers checking
 	// Capabilities().SupportsSaveStartup get the right answer; this
 	// method exists only because the interface mandates it.

@@ -23,6 +23,7 @@ export GOROOT
 export PATH:=$(GOROOT)/bin:$(PATH)
 
 GO_VERSION=$(shell $(GO_BIN) version 2>/dev/null | awk '{print $$3}' || echo "unknown")
+CONTROLLER_GEN?=$(GO_BIN) run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.5
 
 # Go build flags
 LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT)"
@@ -38,7 +39,7 @@ INSTALL_DIR=$(PREFIX)/bin
 CONFIG_DIR=/etc/cisco-vk
 SYSTEMD_DIR=/etc/systemd/system
 
-.PHONY: all build clean install uninstall test test-envtest lint fmt deps help crd-gen config-lint config-docs yang-sync
+.PHONY: all build clean install uninstall test test-envtest lint fmt deps help generate manifests crd-gen deepcopy-gen rbac-gen helm-sync-crds config-lint config-docs yang-sync
 
 all: build
 
@@ -141,16 +142,18 @@ yang-sync: ## Run the IOS-XE config YANG sync helper
 
 generate: crd-gen deepcopy-gen rbac-gen helm-sync-crds ygot-gen ## Run all code generators
 
+manifests: crd-gen rbac-gen helm-sync-crds ## Generate Kubernetes and Helm manifests
+
 crd-gen: ## Generate CRDs from ./api (controller-gen)
 	@echo "Generating CRDs from ./api..."
-	$(GO_BIN) run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.5 \
+	$(CONTROLLER_GEN) \
 		crd:crdVersions=v1 \
 		paths=./api/... \
 		output:crd:dir=./config/crd
 
 deepcopy-gen: ## Generate DeepCopy methods for API types
 	@echo "Generating DeepCopy methods..."
-	$(GO_BIN) run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.5 \
+	$(CONTROLLER_GEN) \
 		object \
 		paths=./api/...
 
@@ -160,7 +163,7 @@ deepcopy-gen: ## Generate DeepCopy methods for API types
 # and config CR access, so omitting that package causes generated RBAC drift.
 rbac-gen: ## Generate controller ClusterRole into the Helm chart templates dir
 	@echo "Generating controller RBAC ClusterRole into Helm chart templates..."
-	$(GO_BIN) run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.5 \
+	$(CONTROLLER_GEN) \
 		rbac:roleName=cisco-virtual-kubelet-controller \
 		paths=./internal/controller/... \
 		paths=./internal/aggregator/... \

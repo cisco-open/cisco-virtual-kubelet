@@ -178,10 +178,9 @@ func seedForeignLease(
 }
 
 // TestRelinquishOnDeleteSkipsLeaseBlockedFamilies pins the corrected
-// A1 contract (codex/HEAD~1 review B3, 2026-05-02): the previous
-// version of this test (a) seeded the wrong lease name and (b) ran
-// without a transport so the function short-circuited before
-// AcquireIfFree was reached. The fixed test seeds the canonical
+// A1 contract: the previous version of this test (a) seeded the wrong
+// lease name and (b) ran without a transport so the function
+// short-circuited before AcquireIfFree was reached. The fixed test seeds the canonical
 // engine.LeaseName output, wires a reachable transport + writer
 // Lookup, and asserts: (i) Reconcile returns error, (ii) finalizer
 // retained, (iii) the foreign lease holder is unchanged (proving
@@ -257,8 +256,8 @@ func TestRelinquishOnDeleteSkipsLeaseBlockedFamilies(t *testing.T) {
 	}
 }
 
-// TestRelinquishDoesNotTakeOverStaleButInFlightLease pins B1
-// (codex/HEAD~1 review, 2026-05-02): a foreign lease whose
+// TestRelinquishDoesNotTakeOverStaleButInFlightLease pins B1:
+// a foreign lease whose
 // RenewTime + LeaseDuration is in the past is still NOT a free
 // lease — the holder may be mid-Fetch/Apply on a long device call.
 // AcquireIfFree must refuse takeover; the deleting CR must surface
@@ -311,8 +310,8 @@ func TestRelinquishDoesNotTakeOverStaleButInFlightLease(t *testing.T) {
 	}
 }
 
-// TestRelinquishOnDeleteRetainsFinalizerWhenTransportMissing pins A2
-// (codex/HEAD~1 review, 2026-05-01): when relinquish cannot run
+// TestRelinquishOnDeleteRetainsFinalizerWhenTransportMissing pins A2:
+// when relinquish cannot run
 // (transport down at delete time, partial device failure, lease-
 // blocked, etc.) the controller must return error from Reconcile so
 // the next tick retries. status.atomicReplaceOwnedKeys stays
@@ -368,8 +367,8 @@ func TestRelinquishOnDeleteRetainsFinalizerWhenTransportMissing(t *testing.T) {
 	}
 }
 
-// TestRelinquishReleasesAcquiredLeasesOnFailure pins B2a
-// (codex/HEAD~1 review, 2026-05-02): when relinquishOwnedKeys fails
+// TestRelinquishReleasesAcquiredLeasesOnFailure pins B2a:
+// when relinquishOwnedKeys fails
 // after acquiring some leases, those leases must be released so a
 // stuck terminating CR doesn't permanently pin those families for
 // other CRs. Pre-fix, a CR with two managed families where one
@@ -433,8 +432,8 @@ func TestRelinquishReleasesAcquiredLeasesOnFailure(t *testing.T) {
 	}
 }
 
-// TestRelinquishSkippedByForceAnnotation pins B2b (codex/HEAD~1
-// review, 2026-05-02): the operator escape hatch. When
+// TestRelinquishSkippedByForceAnnotation pins B2b: the operator escape
+// hatch. When
 // cisco.vk/force-relinquish-skip=true is set on a Terminating CR
 // with pruneOnRelinquish, the controller skips the relinquish
 // reconcile, records a Warning event listing the orphan, and

@@ -13,3 +13,8 @@ sources:
   - https://github.com/cisco/virtual-kubelet-cisco
 maintainers:
   - name: Cisco Systems
+dependencies:
+  - name: collector
+    version: 0.1.0
+    repository: file://charts/collector
+    condition: collector.enabled

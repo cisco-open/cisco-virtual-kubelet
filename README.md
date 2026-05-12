@@ -15,6 +15,7 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 - **Driver-Based Architecture**: Extensible driver pattern currently supporting IOS-XE devices
 - **Full Lifecycle Management**: Create, monitor, and delete containers via RESTCONF
 - **Health Monitoring**: Continuous node health checks and status reporting
+- **IOS-XE Telemetry CRD**: Declare MDT-over-gNMI subscriptions and emit OpenTelemetry metrics, logs, and state-transition traces
 - **Resource Management**: CPU, memory, and storage allocation per container
 - **Environment Variables**: Full support for container environment variables from direct values, Secrets, and ConfigMaps
 - **Flexible Networking**: Support both DHCP IP allocation via Virtual Port Groups or AppGigabitEthernet

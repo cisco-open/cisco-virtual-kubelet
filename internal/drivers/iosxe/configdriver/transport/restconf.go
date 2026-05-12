@@ -104,6 +104,8 @@ func (r *restconfTransport) Capabilities() Capabilities {
 }
 
 func (r *restconfTransport) Fetch(ctx context.Context, path string) ([]byte, error) {
+	ctx, span := startTransportSpan(ctx, KindRESTCONF, "get", spanPath(path))
+	defer span.End()
 	return r.do(ctx, http.MethodGet, path, nil)
 }
 
@@ -116,6 +118,8 @@ func (r *restconfTransport) StartTransaction(context.Context) (TxHandle, error) 
 }
 
 func (r *restconfTransport) Mutate(ctx context.Context, tx TxHandle, ops []Op) error {
+	ctx, span := startTransportSpan(ctx, KindRESTCONF, "mutate", spanOpCount(len(ops)))
+	defer span.End()
 	if tx != "" {
 		return fmt.Errorf("RESTCONF: non-empty TxHandle %q: %w", tx, ErrUnsupported)
 	}
@@ -362,6 +366,8 @@ func (r *restconfTransport) Discard(context.Context, TxHandle) error {
 // the historical behavior — only the conventional `…/restconf/data`
 // shape is special-cased.
 func (r *restconfTransport) SaveStartup(ctx context.Context) error {
+	ctx, span := startTransportSpan(ctx, KindRESTCONF, "save_startup")
+	defer span.End()
 	const savePath = "/operations/cisco-ia:save-config"
 	// HACK with a clear lifecycle: the do() helper composes
 	// `r.cfg.BaseURL + path`. We need `r.cfg.BaseURL` minus the

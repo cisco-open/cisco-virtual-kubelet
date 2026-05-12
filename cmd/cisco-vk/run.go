@@ -28,6 +28,8 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
+	telemetrystate "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
 	"github.com/cisco/virtual-kubelet-cisco/internal/tlsutil"
 	logruslib "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -36,8 +38,6 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/node"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
-	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
-	vkotel "github.com/virtual-kubelet/virtual-kubelet/trace/opentelemetry"
 	"go.opentelemetry.io/otel"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -237,6 +237,9 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	// NodeConfig.Handler requirement before the provider exists, while still wiring
 	// the real mux once the provider is available.
 	var innerHandler http.Handler
+	mdtStateCache := telemetrystate.NewCache()
+	traceCorrelationCache := correlation.NewCache(0, 0, 0)
+	var appEventConsumer telemetrystate.AppEventConsumer
 
 	handlerWrapper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if innerHandler != nil {
@@ -261,6 +264,46 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	eventBroadcaster.StartRecordingToSink(&typedv1.EventSinkImpl{Interface: clientset.CoreV1().Events("")})
 	eventRecorder := eventBroadcaster.NewRecorder(clientgoscheme.Scheme, v1.EventSource{Component: "cisco-virtual-kubelet"})
 
+	vkProviders, vkShutdown, err := buildVKProviders(ctx, effectiveNodeName, &appCfg.Device)
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("Virtual Kubelet OTel providers unavailable; continuing with global no-op provider")
+	}
+	if vkProviders != nil {
+		if vkProviders.Tracer != nil {
+			otel.SetTracerProvider(vkProviders.Tracer)
+		}
+		if vkProviders.Meter != nil {
+			otel.SetMeterProvider(vkProviders.Meter)
+		}
+	}
+	if vkShutdown != nil {
+		go func() {
+			<-ctx.Done()
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := vkShutdown(shutdownCtx); err != nil {
+				log.G(ctx).WithError(err).Warn("Virtual Kubelet OTel providers shutdown error")
+			}
+		}()
+	}
+
+	telemetryProviders, telemetryShutdown, err := buildTelemetryProviders(ctx, effectiveNodeName, configReconcilerOptions{
+		Spec: &appCfg.Device,
+	})
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("telemetry OTel providers unavailable; continuing with signal-specific fallbacks")
+	}
+	if telemetryShutdown != nil {
+		go func() {
+			<-ctx.Done()
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := telemetryShutdown(shutdownCtx); err != nil {
+				log.G(ctx).WithError(err).Warn("telemetry OTel providers shutdown error")
+			}
+		}()
+	}
+
 	newProviderFunc := func(vkCfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
 		// Create a single shared driver for both node and pod handlers
 		sharedDriver, err := drivers.NewDriver(ctx, &appCfg.Device)
@@ -273,13 +316,10 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		// Start OTEL topology exporter if configured and the driver supports topology
 		if appCfg.Device.OTEL != nil && appCfg.Device.OTEL.Enabled && appCfg.Device.OTEL.Endpoint != "" {
 			if topo, ok := sharedDriver.(drivers.TopologyProvider); ok {
-				otelExporter, otelErr := provider.NewOTELTopologyExporter(ctx, sharedDriver, topo, appCfg.Device.OTEL, effectiveNodeName, appCfg.Device.Address)
+				otelExporter, otelErr := provider.NewOTELTopologyExporter(ctx, sharedDriver, topo, appCfg.Device.OTEL, effectiveNodeName, appCfg.Device.Address, telemetryTracerProvider(telemetryProviders))
 				if otelErr != nil {
 					log.G(ctx).WithError(otelErr).Warn("Failed to initialise OTEL topology exporter, continuing without it")
 				} else {
-					// Wire global OTEL trace provider so VK internal operations are also traced
-					otel.SetTracerProvider(otelExporter.TracerProvider())
-					vktrace.T = vkotel.Adapter{}
 					go otelExporter.Run(ctx)
 				}
 			} else {
@@ -291,6 +331,8 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise PodHandler: %w", err)
 		}
+		podHandler.SetTraceCorrelation(effectiveNodeName, traceCorrelationCache)
+		appEventConsumer = podHandler
 
 		// Build a custom PodHandlerConfig that only wires supported operations.
 		// Unsupported methods are left nil so the VK library returns HTTP 501
@@ -346,8 +388,12 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	if v := os.Getenv("DISABLE_IN_POD_CONFIG_RECONCILER"); v == "true" || v == "1" {
 		log.G(ctx).Info("DISABLE_IN_POD_CONFIG_RECONCILER set; skipping in-pod ConfigReconciler (aggregator-mode topology)")
 	} else if err := startConfigReconciler(ctx, kubeconfigCfg, effectiveNodeName, configReconcilerOptions{
-		Spec:     &appCfg.Device,
-		Password: appCfg.Device.Password,
+		Spec:               &appCfg.Device,
+		Password:           appCfg.Device.Password,
+		TelemetryProviders: telemetryProviders,
+		StateCache:         mdtStateCache,
+		AppEventConsumer:   appEventConsumer,
+		CorrelationCache:   traceCorrelationCache,
 	}); err != nil {
 		log.G(ctx).WithError(err).Warn("IOSXEConfig reconciler not started; continuing without declarative config")
 	}

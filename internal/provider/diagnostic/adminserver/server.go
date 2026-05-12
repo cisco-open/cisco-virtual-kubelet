@@ -26,13 +26,21 @@
 package adminserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // TransportProvider mirrors diagnostic.TransportProvider so the
@@ -85,6 +93,25 @@ type Server struct {
 	DeviceName string
 	TP         TransportProvider
 
+	// OperationClient, when set, makes POST /v1/exec synthesize a transient
+	// DeviceOperation CR and poll its status instead of invoking DiagnosticExec
+	// directly. This keeps the port-forward admin endpoint on the same auditable
+	// CRD path as other operations.
+	OperationClient client.Client
+	// OperationReader should be an uncached reader when available. The admin
+	// endpoint polls a CR immediately after creating it, before the manager cache
+	// may have observed the new object.
+	OperationReader    client.Reader
+	OperationNamespace string
+	OperationTimeout   time.Duration
+	OperationPoll      time.Duration
+	OperationTTL       int32
+
+	// TelemetrySource, if set, backs the GET /telemetry/health
+	// endpoint. cmd/cisco-vk plumbs the IOSXETelemetryReconciler's snapshot
+	// accessor through here.
+	TelemetrySource func() TelemetryHealth
+
 	// BindAddr defaults to "127.0.0.1:8082". The plugin's
 	// kubectl-port-forward tunnel terminates here; the device-side
 	// listener is intentionally NOT bound to 0.0.0.0 so off-pod
@@ -92,10 +119,30 @@ type Server struct {
 	BindAddr string
 }
 
+// TelemetryHealth is the JSON payload returned by GET /telemetry/health.
+type TelemetryHealth struct {
+	Device        string                        `json:"device"`
+	Subscriptions []TelemetrySubscriptionHealth `json:"subscriptions"`
+}
+
+// TelemetrySubscriptionHealth is the per-subscription health projection.
+type TelemetrySubscriptionHealth struct {
+	Name                string `json:"name"`
+	Phase               string `json:"phase,omitempty"`
+	MessagesReceived    int64  `json:"messagesReceived"`
+	LogRecordsEmitted   int64  `json:"logRecordsEmitted"`
+	MetricPointsEmitted int64  `json:"metricPointsEmitted"`
+	Reconnects          int64  `json:"reconnects"`
+	StreamID            string `json:"streamID,omitempty"`
+	LastError           string `json:"lastError,omitempty"`
+	CurrentBackoff      string `json:"currentBackoff,omitempty"`
+}
+
 // Default values for unspecified fields.
 const (
 	DefaultBindAddr      = "127.0.0.1:8082"
 	DefaultTruncateBytes = 64 * 1024
+	DefaultOperationTTL  = int32(300)
 )
 
 // Handler returns a *http.ServeMux configured with the admin routes.
@@ -104,7 +151,25 @@ func (s *Server) Handler() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", s.handleHealth)
 	mux.HandleFunc("/v1/exec", s.handleExec)
+	mux.HandleFunc("/telemetry/health", s.handleTelemetryHealth)
 	return mux
+}
+
+func (s *Server) handleTelemetryHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if s.TelemetrySource == nil {
+		_ = json.NewEncoder(w).Encode(TelemetryHealth{Device: s.DeviceName})
+		return
+	}
+	payload := s.TelemetrySource()
+	if payload.Device == "" {
+		payload.Device = s.DeviceName
+	}
+	_ = json.NewEncoder(w).Encode(payload)
 }
 
 // ListenAndServe binds + serves until ctx errors or the server
@@ -172,6 +237,11 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if s.OperationClient != nil {
+		s.handleExecViaOperation(w, r, req)
+		return
+	}
+
 	tr := s.TP.GetTransport()
 	if tr == nil {
 		http.Error(w, "transport not yet ready", http.StatusServiceUnavailable)
@@ -230,4 +300,138 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 		// is no-op at this point. Drop quietly.
 		_ = err
 	}
+}
+
+func (s *Server) handleExecViaOperation(w http.ResponseWriter, r *http.Request, req ExecRequest) {
+	ctx := r.Context()
+	namespace := strings.TrimSpace(s.OperationNamespace)
+	if namespace == "" {
+		namespace = "default"
+	}
+	ttl := s.OperationTTL
+	if ttl <= 0 {
+		ttl = DefaultOperationTTL
+	}
+	name := fmt.Sprintf("exec-%s-%s", dnsLabel(s.DeviceName), utilrand.String(8))
+	op := &opsv1alpha1.DeviceOperation{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+			Labels: map[string]string{
+				"ops.cisco.vk/source": "adminserver",
+			},
+		},
+		Spec: opsv1alpha1.DeviceOperationSpec{
+			DeviceRef: configv1alpha1.DeviceRef{Name: s.DeviceName},
+			Operation: opsv1alpha1.DeviceOperationRequest{
+				Kind:     opsv1alpha1.OperationKindShowCommand,
+				Commands: append([]string(nil), req.Commands...),
+			},
+			TTLSecondsAfterFinished: &ttl,
+		},
+	}
+	if err := s.OperationClient.Create(ctx, op); err != nil {
+		http.Error(w, "create DeviceOperation: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	reader := s.OperationReader
+	if reader == nil {
+		reader = s.OperationClient
+	}
+
+	timeout := s.OperationTimeout
+	if timeout <= 0 {
+		timeout = 60 * time.Second
+	}
+	poll := s.OperationPoll
+	if poll <= 0 {
+		poll = 250 * time.Millisecond
+	}
+	waitCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	ticker := time.NewTicker(poll)
+	defer ticker.Stop()
+
+	var current opsv1alpha1.DeviceOperation
+	key := client.ObjectKey{Namespace: namespace, Name: name}
+	for {
+		if err := reader.Get(waitCtx, key, &current); err != nil {
+			if apierrors.IsNotFound(err) {
+				http.Error(w, "DeviceOperation disappeared before completion", http.StatusInternalServerError)
+				return
+			}
+			http.Error(w, "get DeviceOperation: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if operationTerminal(current.Status.Phase) {
+			s.writeOperationExecResponse(w, &current)
+			return
+		}
+		select {
+		case <-waitCtx.Done():
+			http.Error(w, "DeviceOperation did not finish before timeout", http.StatusGatewayTimeout)
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+func (s *Server) writeOperationExecResponse(w http.ResponseWriter, op *opsv1alpha1.DeviceOperation) {
+	resp := ExecResponse{
+		Device:         s.DeviceName,
+		Transport:      "deviceoperation",
+		CapturedAt:     time.Now().UTC(),
+		TransportError: "",
+	}
+	if op.Status.CompletionTime != nil {
+		resp.CapturedAt = op.Status.CompletionTime.Time
+	}
+	for _, out := range op.Status.Outputs {
+		resp.Results = append(resp.Results, ExecResult{
+			Command:   out.Command,
+			Output:    out.Output,
+			Err:       out.Err,
+			Truncated: out.Truncated,
+			Redacted:  out.Redacted,
+		})
+	}
+	if op.Status.Phase == opsv1alpha1.OperationPhaseFailed {
+		resp.TransportError = op.Status.Message
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func operationTerminal(phase opsv1alpha1.OperationPhase) bool {
+	switch phase {
+	case opsv1alpha1.OperationPhaseSucceeded, opsv1alpha1.OperationPhaseFailed, opsv1alpha1.OperationPhaseCancelled:
+		return true
+	default:
+		return false
+	}
+}
+
+func dnsLabel(in string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(in) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == '-' || r == '.':
+			b.WriteByte('-')
+		default:
+			b.WriteByte('-')
+		}
+	}
+	out := strings.Trim(b.String(), "-")
+	if out == "" {
+		out = "device"
+	}
+	if len(out) > 40 {
+		out = strings.Trim(out[:40], "-")
+	}
+	if out == "" {
+		return "device"
+	}
+	return out
 }

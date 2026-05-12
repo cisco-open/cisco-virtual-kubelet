@@ -1,0 +1,539 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: iosxetelemetries.config.cisco.vk
+spec:
+  group: config.cisco.vk
+  names:
+    kind: IOSXETelemetry
+    listKind: IOSXETelemetryList
+    plural: iosxetelemetries
+    shortNames:
+    - iosxetel
+    singular: iosxetelemetry
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.deviceRef.name
+      name: Device
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: IOSXETelemetry is the Schema for the iosxetelemetries API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              IOSXETelemetrySpec declares MDT-over-gNMI subscriptions for one CiscoDevice.
+              The subscriber maps telemetry notifications to OpenTelemetry logs and
+              metrics; trace emission is deferred.
+            properties:
+              budgets:
+                description: Budgets bounds high-volume telemetry emission.
+                properties:
+                  maxLogRecordsPerSecond:
+                    default: 500
+                    description: MaxLogRecordsPerSecond caps MDT-derived log records
+                      per device.
+                    minimum: 1
+                    type: integer
+                  maxPayloadBytesPerMinute:
+                    default: 16777216
+                    description: MaxPayloadBytesPerMinute caps OTLP export payload
+                      bytes per device.
+                    minimum: 1
+                    type: integer
+                type: object
+              cardinalityLimits:
+                description: CardinalityLimits bounds mapper output.
+                properties:
+                  maxInstruments:
+                    default: 1024
+                    description: |-
+                      MaxInstruments caps the number of distinct OTel metric instruments
+                      (gauge + sum, keyed by name) the emitter will register before refusing
+                      new instruments. Once reached, additional metric points whose name has
+                      not been seen are dropped and counted in the cap-drop self-metric.
+                      Operators raise this on chassis with broad subscription paths
+                      (BGP-per-neighbor, interfaces-per-port).
+                    format: int32
+                    minimum: 1
+                    type: integer
+                  maxSeriesPerSubscription:
+                    default: 10000
+                    description: MaxSeriesPerSubscription is the per-subscription
+                      series cap.
+                    format: int32
+                    minimum: 1
+                    type: integer
+                  onExceeded:
+                    default: dropNewSeries
+                    description: OnExceeded is restricted to dropNewSeries in v1alpha1.
+                    enum:
+                    - dropNewSeries
+                    type: string
+                type: object
+              deviceRef:
+                description: DeviceRef targets the CiscoDevice this telemetry stream
+                  applies to.
+                properties:
+                  name:
+                    default: ""
+                    description: |-
+                      Name of the referent.
+                      This field is effectively required, but due to backwards compatibility is
+                      allowed to be empty. Instances of this type with an empty value here are
+                      almost certainly wrong.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+                x-kubernetes-validations:
+                - message: deviceRef.name must be non-empty
+                  rule: self.name != ''
+              mapping:
+                description: |-
+                  Mapping carries path-to-signal mapping, filtering, and classification
+                  controls.
+                properties:
+                  filter:
+                    description: FilterConfig carries allow/deny rules for mapper
+                      stages.
+                    properties:
+                      metricName:
+                        description: FilterRules is an ordered allow/deny rule set.
+                        properties:
+                          allow:
+                            items:
+                              type: string
+                            type: array
+                          deny:
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      wirePath:
+                        description: FilterRules is an ordered allow/deny rule set.
+                        properties:
+                          allow:
+                            items:
+                              type: string
+                            type: array
+                          deny:
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                    type: object
+                  includeListKeysInMetricName:
+                    description: |-
+                      IncludeListKeysInMetricName preserves legacy metric naming that embeds
+                      YANG list-key selectors in metric names. It defaults false so list-key
+                      values are emitted as labels only, avoiding one instrument per entity.
+                    type: boolean
+                  metricTypeOverrides:
+                    items:
+                      description: MetricTypeOverride pins a mapped metric type for
+                        a path prefix.
+                      properties:
+                        prefix:
+                          minLength: 1
+                          type: string
+                        type:
+                          enum:
+                          - gauge
+                          - sum
+                          type: string
+                      required:
+                      - prefix
+                      - type
+                      type: object
+                    maxItems: 512
+                    type: array
+                  pathAliases:
+                    items:
+                      description: PathAlias renames mapped telemetry paths by prefix.
+                      properties:
+                        prefix:
+                          minLength: 1
+                          type: string
+                        rename:
+                          minLength: 1
+                          type: string
+                      required:
+                      - prefix
+                      - rename
+                      type: object
+                    maxItems: 512
+                    type: array
+                  resourceAttributes:
+                    items:
+                      description: ResourceAttribute maps a telemetry path to a resource
+                        attribute key.
+                      properties:
+                        key:
+                          minLength: 1
+                          type: string
+                        path:
+                          minLength: 1
+                          type: string
+                      required:
+                      - key
+                      - path
+                      type: object
+                    maxItems: 512
+                    type: array
+                  transitions:
+                    items:
+                      description: |-
+                        Transition declares a watched state leaf and the values that bound an
+                        unhealthy interval.
+                      properties:
+                        healthyValues:
+                          description: HealthyValues are leaf values that close an
+                            unhealthy interval.
+                          items:
+                            type: string
+                          minItems: 1
+                          type: array
+                        path:
+                          description: Path is the canonical telemetry path to watch.
+                          minLength: 1
+                          type: string
+                        unhealthyValues:
+                          description: UnhealthyValues are leaf values that open an
+                            unhealthy interval.
+                          items:
+                            type: string
+                          minItems: 1
+                          type: array
+                      required:
+                      - healthyValues
+                      - path
+                      - unhealthyValues
+                      type: object
+                    maxItems: 256
+                    type: array
+                type: object
+              output:
+                description: Output declares the desired signal families.
+                properties:
+                  logs:
+                    description: |-
+                      Logs controls MDT-derived log emission. Explicit object form defaults
+                      enabled=false; omitted or legacy boolean form is accepted for one release
+                      by custom JSON decoding.
+                    properties:
+                      enabled:
+                        default: false
+                        description: Enabled defaults false for the object form.
+                        type: boolean
+                      paths:
+                        description: Paths is an optional canonical telemetry path
+                          allowlist.
+                        items:
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: set
+                      sampleEveryN:
+                        default: 1
+                        description: SampleEveryN emits one matching record out of
+                          every N. Values <= 1 disable sampling.
+                        minimum: 1
+                        type: integer
+                    type: object
+                  signal:
+                    description: Signal is a subset of metrics, logs, and traces.
+                    items:
+                      enum:
+                      - metrics
+                      - logs
+                      - traces
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                type: object
+              reconnect:
+                description: Reconnect controls retry/backoff after a Subscribe RPC
+                  fails.
+                properties:
+                  initialBackoff:
+                    default: 1s
+                    description: InitialBackoff is the first retry delay.
+                    type: string
+                  maxBackoff:
+                    default: 30s
+                    description: MaxBackoff caps retry delay growth.
+                    type: string
+                  maxRetries:
+                    default: 0
+                    description: MaxRetries caps consecutive retries. Zero means retry
+                      forever.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                type: object
+              subscriptions:
+                description: Subscriptions is the non-empty set of gNMI Subscribe
+                  requests to run.
+                items:
+                  description: |-
+                    TelemetrySubscription is one logical subscription entry. The reconciler
+                    multiplexes compatible entries into shared gNMI Subscribe RPCs per device.
+                  properties:
+                    enabled:
+                      default: true
+                      description: |-
+                        Enabled defaults true. Disabled entries are retained in spec but not
+                        opened on the device.
+                      type: boolean
+                    encoding:
+                      default: PROTO
+                      description: Encoding selects the gNMI Subscribe response encoding.
+                      enum:
+                      - PROTO
+                      - JSON_IETF
+                      type: string
+                    heartbeatInterval:
+                      description: HeartbeatInterval requests periodic target heartbeats
+                        when supported.
+                      type: string
+                    mode:
+                      description: Mode is restricted to STREAM in v1alpha1.
+                      enum:
+                      - STREAM
+                      type: string
+                    name:
+                      description: Name is a DNS-1123-ish stable identifier used in
+                        status.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                    origin:
+                      description: Origin overrides gNMI Path.Origin for all paths
+                        in this subscription.
+                      type: string
+                    paths:
+                      description: Paths is the non-empty set of gNMI paths to subscribe
+                        to.
+                      items:
+                        type: string
+                      maxItems: 256
+                      minItems: 1
+                      type: array
+                      x-kubernetes-list-type: set
+                    preservePathPrefix:
+                      description: |-
+                        PreservePathPrefix keeps the YANG module prefix on the first PathElem
+                        name instead of lifting it into Path.Origin. Set true for IOS-XE native
+                        YANG paths (Cisco-IOS-XE-*-oper / Cisco-IOS-XE-*-cfg) — IOS-XE gnxi
+                        rejects those module names as Path.Origin and expects the prefix to
+                        stay on the element (RFC 7951 module-qualified form). Leave unset
+                        (default false) for OpenConfig paths where the openconfig-* prefix
+                        canonically lives in Path.Origin.
+                      type: boolean
+                    sampleInterval:
+                      description: SampleInterval is used for SAMPLE subscriptions.
+                      type: string
+                    streamMode:
+                      description: StreamMode controls the gNMI subscription mode
+                        per path.
+                      enum:
+                      - SAMPLE
+                      - ON_CHANGE
+                      - TARGET_DEFINED
+                      type: string
+                    suppressRedundant:
+                      description: SuppressRedundant maps to gNMI suppress_redundant.
+                      type: boolean
+                  required:
+                  - mode
+                  - name
+                  - paths
+                  - streamMode
+                  type: object
+                  x-kubernetes-validations:
+                  - message: suppressRedundant requires streamMode=ON_CHANGE
+                    rule: '!(has(self.suppressRedundant) && self.suppressRedundant
+                      && self.streamMode != ''ON_CHANGE'')'
+                  - message: heartbeatInterval requires streamMode=ON_CHANGE
+                    rule: '!(has(self.heartbeatInterval) && self.streamMode != ''ON_CHANGE'')'
+                maxItems: 64
+                minItems: 1
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              timestamps:
+                description: |-
+                  Timestamps controls whether collector receive time is used in the mapping
+                  pipeline.
+                properties:
+                  useCollectorTimestamp:
+                    default: true
+                    description: UseCollectorTimestamp defaults true in Phase 1.
+                    type: boolean
+                type: object
+            required:
+            - deviceRef
+            - output
+            - subscriptions
+            type: object
+          status:
+            description: |-
+              IOSXETelemetryStatus reports subscriber lifecycle and per-subscription
+              counters surfaced by the stream manager and emitters.
+            properties:
+              conditions:
+                description: Conditions follows the standard Kubernetes conditions
+                  shape.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              observedSubscriptionState:
+                description: ObservedSubscriptionState carries per-subscription stream
+                  counters.
+                items:
+                  description: ObservedSubscriptionState is the status projection
+                    for one subscription.
+                  properties:
+                    currentBackoff:
+                      type: string
+                    droppedEvents:
+                      additionalProperties:
+                        format: int64
+                        type: integer
+                      description: DroppedEvents is keyed by reason, for example buffer_overflow.
+                      type: object
+                    lastError:
+                      type: string
+                    lastUpdate:
+                      format: date-time
+                      type: string
+                    logRecordsEmitted:
+                      description: |-
+                        LogRecordsEmitted is the count of OTel LogRecords produced by the
+                        mapper-and-logs-emitter pipeline for this subscription. Phase 2.
+                      format: int64
+                      type: integer
+                    messagesReceived:
+                      format: int64
+                      type: integer
+                    metricPointsEmitted:
+                      description: |-
+                        MetricPointsEmitted is the count of OTel metric points produced by the
+                        mapper-and-metrics-emitter pipeline for this subscription. Phase 3.
+                      format: int64
+                      type: integer
+                    name:
+                      type: string
+                    reconnects:
+                      format: int64
+                      type: integer
+                    streamID:
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              phase:
+                description: Phase summarises the CR's lifecycle state.
+                enum:
+                - Pending
+                - Streaming
+                - Degraded
+                - Failed
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -71,41 +71,131 @@ func validateOne(raw string) error {
 	}
 	// Lowercase head-word for the allowlist check.
 	lower := strings.ToLower(cmd)
-	for _, ok := range allowedHeads {
-		if lower == ok || strings.HasPrefix(lower, ok+" ") {
-			// Defense-in-depth denylist on substrings inside
-			// otherwise-allowed commands (e.g. `show ip route` is
-			// fine; `show running-config | redirect tftp:…` would
-			// exfiltrate config). Reject pipe/redirect chains.
-			for _, denied := range deniedSubstrings {
-				if strings.Contains(lower, denied) {
-					return fmt.Errorf("%w: contains denylisted substring %q", ErrCommandDisallowed, denied)
-				}
-			}
-			return nil
+	for _, h := range allowedHeads {
+		if lower != h.head && !strings.HasPrefix(lower, h.head+" ") {
+			continue
 		}
+		// Per-head subcommand whitelist (adversarial-review Finding #3):
+		// `monitor` and `terminal` are no longer wildcard heads.
+		// `monitor` allows only `monitor capture <name> ... buffer ...`
+		// (read-only buffer inspection); start/stop/clear/export are
+		// state-changing and rejected. `terminal` is restricted to
+		// pager/session-control invocations.
+		if !headAllowsBody(h, lower) {
+			return fmt.Errorf("%w: %s subcommand is not read-only", ErrCommandDisallowed, h.head)
+		}
+		// Defense-in-depth denylist on substrings inside
+		// otherwise-allowed commands (e.g. `show ip route` is
+		// fine; `show running-config | redirect tftp:…` would
+		// exfiltrate config). Reject pipe/redirect chains.
+		for _, denied := range deniedSubstrings {
+			if strings.Contains(lower, denied) {
+				return fmt.Errorf("%w: contains denylisted substring %q", ErrCommandDisallowed, denied)
+			}
+		}
+		return nil
 	}
 	return fmt.Errorf("%w: head-word not in read-only allowlist", ErrCommandDisallowed)
+}
+
+// allowedHead describes one read-only CLI head-word. When
+// allowedSubcommandPatterns is non-empty the body after the head
+// must match one of the listed substrings (each substring is
+// interpreted as "the body must contain this token sequence"); this
+// is how we keep `monitor capture <name> ... buffer ...` while
+// rejecting `monitor capture <name> start|stop|clear|export ...`.
+type allowedHead struct {
+	head string
+	// allowedSubcommandPatterns is matched against the body after the
+	// head-word (lowercased). Empty list means the head is a wildcard
+	// (e.g. `show` accepts any subcommand because the surface is huge
+	// and uniformly read-only).
+	allowedSubcommandPatterns []string
+	// deniedSubcommandTokens is matched against the body after the
+	// head-word; if any of these whole-word tokens appear, the
+	// command is rejected. Used to keep `terminal length 0` while
+	// rejecting `terminal monitor` (enables console log mirror).
+	deniedSubcommandTokens []string
 }
 
 // allowedHeads is the closed set of CLI head-words the diagnostic
 // subsystem accepts. Every entry must be a user-mode read-only
 // command on Cisco IOS-XE; adding a new entry requires explicit
 // review. Sorted by frequency-of-use.
-var allowedHeads = []string{
-	"show",
-	"more",
-	"dir",
-	"ping",
-	"ping6",
-	"traceroute",
-	"traceroute6",
-	"monitor",
-	"test",      // narrow; allowlisted because `test cable-diagnostics` etc. are read-only diagnostic surfaces
-	"verify",    // image / file integrity checks
-	"calendar",  // `calendar` (read-only date display)
-	"terminal",  // `terminal length 0` / `terminal no monitor` — pager + session controls only
-	"namespace", // ip vrf-name display
+var allowedHeads = []allowedHead{
+	{head: "show"},
+	{head: "more"},
+	{head: "dir"},
+	{head: "ping"},
+	{head: "ping6"},
+	{head: "traceroute"},
+	{head: "traceroute6"},
+	// `monitor capture <name> ... buffer ...` is the only read-only
+	// monitor form; start/stop/clear/export change device state and
+	// must not flow through a read-only API surface.
+	{
+		head: "monitor",
+		allowedSubcommandPatterns: []string{
+			"capture ", // must be capture-related
+		},
+		deniedSubcommandTokens: []string{
+			"start", "stop", "clear", "export", "file", "associate",
+			"limit", "match", "buffer-size", "circular", "linear",
+		},
+	},
+	// `test cable-diagnostics ...` etc. are read-only diagnostic
+	// surfaces. The deny list rejects the few `test` forms that
+	// trigger packet generation or device-side writes.
+	{
+		head: "test",
+		deniedSubcommandTokens: []string{
+			"crash", "platform", "flash",
+		},
+	},
+	{head: "verify"},   // image / file integrity checks
+	{head: "calendar"}, // `calendar` (read-only date display)
+	// `terminal length 0` / `terminal no monitor` are pager / session
+	// controls; `terminal monitor` enables console log mirror which
+	// is a session-state change that surfaces device logs to the
+	// caller's session and must not be invoked through a read-only API.
+	{
+		head: "terminal",
+		allowedSubcommandPatterns: []string{
+			"length ", "width ", "no monitor", "exec-timeout ", "history ",
+		},
+	},
+	{head: "namespace"}, // ip vrf-name display
+}
+
+// headAllowsBody returns true if the lowercased command body satisfies
+// the per-head subcommand constraints. The full lowercased command
+// (head + body) is passed in to keep token-boundary matching simple.
+func headAllowsBody(h allowedHead, lower string) bool {
+	body := strings.TrimSpace(strings.TrimPrefix(lower, h.head))
+	if len(h.allowedSubcommandPatterns) > 0 {
+		matched := false
+		for _, pat := range h.allowedSubcommandPatterns {
+			if strings.HasPrefix(body, pat) || strings.Contains(body, " "+pat) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return false
+		}
+	}
+	if len(h.deniedSubcommandTokens) > 0 {
+		// Token-boundary check: reject if any denied token appears as
+		// a whole word in the body. Surrounding spaces or end-of-string
+		// count as boundaries.
+		padded := " " + body + " "
+		for _, tok := range h.deniedSubcommandTokens {
+			if strings.Contains(padded, " "+tok+" ") {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // deniedSubstrings catches device-side I/O redirection and pipe

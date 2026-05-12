@@ -56,6 +56,74 @@ aggregator:
   # has shipped since day one.
   enabled: false
 
+# telemetry is injected into the controller pod as environment variables.
+# The CiscoDevice controller then propagates the same values to each
+# per-device VK pod it creates, so the process that owns MDT-over-gNMI
+# subscriptions also owns OTLP export configuration.
+telemetry:
+  otlp:
+    # endpoint is the OTLP gRPC collector endpoint, for example
+    # otelcol.observability:4317. When collector.enabled=true and this is
+    # empty, the chart points CVK at the bundled collector Service.
+    endpoint: ""
+    # insecure disables TLS for the OTLP gRPC exporter. When
+    # collector.enabled=true, the rendered env var is forced to true because
+    # the bundled collector listens on plaintext gRPC.
+    insecure: false
+    # headers are serialized into OTEL_EXPORTER_OTLP_HEADERS for optional
+    # collector metadata or auth headers. SECURITY: prefer headersSecret
+    # below over inline headers when those headers carry auth tokens —
+    # inline values land as literal EnvVar.value on every per-device pod
+    # spec, where any holder of `get pod` in the device's namespace can
+    # read them.
+    headers: {}
+    # headersSecret references a Secret whose key holds the JSON-encoded
+    # OTLP headers map (same format as `headers` above). When name is set
+    # the chart wires OTEL_EXPORTER_OTLP_HEADERS as a SecretKeyRef on the
+    # controller pod AND the controller mirrors that SecretKeyRef onto
+    # every per-device VK pod it spawns. Operators are responsible for
+    # ensuring a Secret with this name exists in each namespace that has
+    # a CiscoDevice CR (same model as imagePullSecrets). Leave name=""
+    # to keep the literal-headers behaviour above.
+    headersSecret:
+      name: ""
+      key: "OTEL_EXPORTER_OTLP_HEADERS"
+  # yangModelsDir is the legacy in-image YANG path, propagated as
+  # YANG_MODELS_DIR. Prefer the yangModels block below for k8s-native
+  # delivery via a ConfigMap; this field stays for backward compatibility
+  # when the operator builds its own image with YANG files baked in.
+  yangModelsDir: ""
+  # yangModels declares an optional ConfigMap-mounted YANG models directory.
+  # When configMapName is set the chart mounts that ConfigMap (read-only,
+  # optional) at mountPath on every controller and per-device pod, and
+  # YANG_MODELS_DIR is set to mountPath. Operators populate the ConfigMap
+  # from their own .yang sources (e.g. via `kubectl create configmap
+  # cvk-yang --from-file=./yang/`). Leave configMapName empty to use the
+  # legacy in-image yangModelsDir behavior.
+  yangModels:
+    configMapName: ""
+    mountPath: /var/lib/cvk/yang
+  # resourceAttributes are serialized into CVK_RESOURCE_ATTRIBUTES and merged
+  # into OTel resource attributes by the per-device VK process.
+  resourceAttributes: {}
+
+collector:
+  # enabled deploys a small in-cluster OpenTelemetry Collector intended for
+  # smoke tests and lab installs. Production installs should usually point
+  # telemetry.otlp.endpoint at an externally managed collector.
+  enabled: false
+  image:
+    repository: otel/opentelemetry-collector-contrib
+    # Pinned for reproducible installs. Bump deliberately after lab smoke;
+    # avoid `latest` so a routine helm upgrade can't pull a new collector
+    # image with breaking config changes.
+    tag: 0.121.0
+    pullPolicy: IfNotPresent
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
 config:
   # leaseNamespace is the shared namespace for per-(device, family)
   # arbitration leases. Set this when IOSXEConfig CRs in different

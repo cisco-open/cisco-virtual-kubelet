@@ -17,18 +17,20 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
+	cvksemconv "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -45,15 +47,15 @@ type OTELTopologyExporter struct {
 	topo     drivers.TopologyProvider
 	config   *v1alpha1.OTELConfig
 	nodeName string
-	tp       *sdktrace.TracerProvider
+	tp       oteltrace.TracerProvider
+	ownedTP  *sdktrace.TracerProvider
 	tracer   oteltrace.Tracer
 }
 
-// NewOTELTopologyExporter creates a new exporter instance and initialises the
-// OTEL SDK TracerProvider with an otlptracegrpc span exporter.
-//
-// The caller is responsible for wiring the global OTEL TracerProvider and VK
-// trace adapter if desired (see run.go).
+// NewOTELTopologyExporter creates a new exporter instance. When tracerProvider
+// is nil it preserves the historical behavior by creating a device-specific
+// SDK TracerProvider from config; when non-nil it uses the shared provider and
+// leaves shutdown to the provider owner.
 func NewOTELTopologyExporter(
 	ctx context.Context,
 	driver drivers.CiscoKubernetesDeviceDriver,
@@ -61,58 +63,66 @@ func NewOTELTopologyExporter(
 	config *v1alpha1.OTELConfig,
 	nodeName string,
 	deviceAddress string,
+	tracerProvider oteltrace.TracerProvider,
 ) (*OTELTopologyExporter, error) {
-	// Build gRPC exporter options
-	grpcOpts := []otlptracegrpc.Option{
-		otlptracegrpc.WithEndpoint(config.Endpoint),
-	}
-	if config.Insecure {
-		grpcOpts = append(grpcOpts, otlptracegrpc.WithInsecure())
+	var ownedTP *sdktrace.TracerProvider
+	if tracerProvider == nil {
+		// Legacy fallback: topology owns a per-device provider with topology
+		// resource attributes. When a shared provider is supplied, those resource
+		// attributes come from otelproviders instead and this exporter only sets
+		// topology-specific span attributes.
+		grpcOpts := []otlptracegrpc.Option{
+			otlptracegrpc.WithEndpoint(config.Endpoint),
+		}
+		if config.Insecure {
+			grpcOpts = append(grpcOpts, otlptracegrpc.WithInsecure())
+		}
+
+		exporter, err := otlptracegrpc.New(ctx, grpcOpts...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OTLP gRPC exporter: %w", err)
+		}
+
+		serviceName := config.ServiceName
+		if serviceName == "" {
+			serviceName = "cisco-network"
+		}
+
+		res, err := sdkresource.New(ctx,
+			sdkresource.WithAttributes(
+				otelsemconv.ServiceNameKey.String(fmt.Sprintf("%s.%s", serviceName, nodeName)),
+				otelsemconv.ServiceNamespaceKey.String("network.infrastructure"),
+				attribute.String("host.name", nodeName),
+				attribute.String("device.address", deviceAddress),
+			),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OTEL resource: %w", err)
+		}
+
+		ownedTP = sdktrace.NewTracerProvider(
+			sdktrace.WithBatcher(exporter),
+			sdktrace.WithResource(res),
+		)
+		tracerProvider = ownedTP
 	}
 
-	exporter, err := otlptracegrpc.New(ctx, grpcOpts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OTLP gRPC exporter: %w", err)
-	}
-
-	serviceName := config.ServiceName
-	if serviceName == "" {
-		serviceName = "cisco-network"
-	}
-
-	// Build SDK resource with service identity
-	res, err := sdkresource.New(ctx,
-		sdkresource.WithAttributes(
-			semconv.ServiceNameKey.String(fmt.Sprintf("%s.%s", serviceName, nodeName)),
-			semconv.ServiceNamespaceKey.String("network.infrastructure"),
-			attribute.String("host.name", nodeName),
-			attribute.String("device.address", deviceAddress),
-		),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OTEL resource: %w", err)
-	}
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(res),
-	)
-
-	tracer := tp.Tracer("cisco-virtual-kubelet/topology")
+	tracer := tracerProvider.Tracer("cisco-virtual-kubelet/topology")
 
 	return &OTELTopologyExporter{
 		driver:   driver,
 		topo:     topo,
 		config:   config,
 		nodeName: nodeName,
-		tp:       tp,
+		tp:       tracerProvider,
+		ownedTP:  ownedTP,
 		tracer:   tracer,
 	}, nil
 }
 
-// TracerProvider returns the underlying SDK TracerProvider so callers can wire
-// it as the global OTEL provider.
-func (e *OTELTopologyExporter) TracerProvider() *sdktrace.TracerProvider {
+// TracerProvider returns the exporter TracerProvider so callers can wire it as
+// the global OTEL provider.
+func (e *OTELTopologyExporter) TracerProvider() oteltrace.TracerProvider {
 	return e.tp
 }
 
@@ -130,10 +140,12 @@ func (e *OTELTopologyExporter) Run(ctx context.Context) {
 	defer ticker.Stop()
 
 	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := e.tp.Shutdown(shutdownCtx); err != nil {
-			log.G(ctx).WithError(err).Warn("OTEL: TracerProvider shutdown error")
+		if e.ownedTP != nil {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := e.ownedTP.Shutdown(shutdownCtx); err != nil {
+				log.G(ctx).WithError(err).Warn("OTEL: TracerProvider shutdown error")
+			}
 		}
 		log.G(ctx).Info("OTEL topology exporter stopped")
 	}()
@@ -185,6 +197,13 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 
 	// Consolidate neighbors (merge CDP + OSPF by interface, like the TCL script)
 	consolidated := consolidateNeighbors(cdpNeighbors, ospfNeighbors)
+	totalNeighbors := len(consolidated)
+	linkCap := topologyLinkCap(e.config)
+	droppedLinks := 0
+	if len(consolidated) > linkCap {
+		droppedLinks = len(consolidated) - linkCap
+		consolidated = consolidated[:linkCap]
+	}
 
 	// Build interface stats lookup
 	ifStatsMap := make(map[string]common.InterfaceStats)
@@ -196,6 +215,7 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 	if deviceInfo.Hostname != "" {
 		hostname = deviceInfo.Hostname
 	}
+	cycleID := fmt.Sprintf("%s-%d", hostname, time.Now().UTC().UnixNano())
 
 	serviceName := e.config.ServiceName
 	if serviceName == "" {
@@ -207,15 +227,20 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 	for _, ip := range interfaceIPs {
 		ipList = append(ipList, ip.IPv4)
 	}
+	deviceEntityID := topologyDeviceEntityID(deviceInfo, hostname)
 
-	// --- Root span: represents the device node ---
-	rootCtx, rootSpan := e.tracer.Start(ctx, fmt.Sprintf("node.%s", hostname),
+	// --- Root span: one bounded topology collection cycle ---
+	rootCtx, rootSpan := e.tracer.Start(ctx, "cvk.topology.cycle",
 		oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		oteltrace.WithAttributes(
+			attribute.String("topology.cycle.id", cycleID),
+			attribute.String("node.name", hostname),
 			attribute.String("node.type", "network_device"),
 			attribute.String("node.role", "router"),
-			attribute.Int("node.neighbor_count", len(consolidated)),
+			attribute.Int("node.neighbor_count", totalNeighbors),
 			attribute.Int("node.interface_count", len(interfaceIPs)),
+			attribute.Int("topology.emitted_link_count", len(consolidated)),
+			attribute.Int("topology.dropped_link_count", droppedLinks),
 			attribute.String("router.id", deviceInfo.RouterID),
 			attribute.String("router.platform", deviceInfo.ProductID),
 			attribute.String("router.os.version", deviceInfo.SoftwareVersion),
@@ -223,6 +248,8 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 			attribute.String("router.ip.addresses", strings.Join(ipList, ",")),
 			attribute.String("network.layer", "L3"),
 			attribute.String("network.type", "routed"),
+			attribute.String(cvksemconv.CvkEntityType, cvksemconv.EntityTypeDevice),
+			attribute.String(cvksemconv.CvkEntityID, deviceEntityID),
 		),
 	)
 
@@ -237,6 +264,7 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 		}
 
 		linkAttrs := []attribute.KeyValue{
+			attribute.String("topology.cycle.id", cycleID),
 			attribute.String("peer.service", peerServiceName),
 			attribute.String("service.type", "network-device"),
 			attribute.String("deployment.environment", "network-infrastructure"),
@@ -251,6 +279,8 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 			attribute.String("peer.platform", n.Platform),
 			attribute.String("peer.capabilities", n.Capabilities),
 			attribute.String("link.state", linkState),
+			attribute.String(cvksemconv.CvkEntityType, cvksemconv.EntityTypeTopologyLink),
+			attribute.String(cvksemconv.CvkEntityID, linkID),
 		}
 
 		if n.OSPFState != "" {
@@ -289,6 +319,7 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 		peerSvc := fmt.Sprintf("app.%s/%s", app.PodNamespace, app.PodName)
 
 		appAttrs := []attribute.KeyValue{
+			attribute.String("topology.cycle.id", cycleID),
 			attribute.String("peer.service", peerSvc),
 			attribute.String("service.type", "app-hosting"),
 			attribute.String("deployment.environment", "edge-compute"),
@@ -301,6 +332,8 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 			attribute.String("k8s.container.name", app.ContainerName),
 			attribute.String("topology.link_id", fmt.Sprintf("%s->%s", hostname, peerSvc)),
 			attribute.String("topology.layer", "app-hosting"),
+			attribute.String(cvksemconv.CvkEntityType, cvksemconv.EntityTypeApp),
+			attribute.String(cvksemconv.CvkEntityID, topologyAppEntityID(app)),
 		}
 		if app.IPv4Address != "" {
 			appAttrs = append(appAttrs, attribute.String("app.ip", app.IPv4Address))
@@ -322,7 +355,35 @@ func (e *OTELTopologyExporter) emitTopology(ctx context.Context) {
 
 	rootSpan.End()
 
-	log.G(ctx).Infof("OTEL: emitted topology trace with %d link spans and %d app spans", len(consolidated), len(hostedApps))
+	log.G(ctx).Infof("OTEL: emitted topology trace cycle=%s with %d link spans, %d dropped links, and %d app spans",
+		cycleID, len(consolidated), droppedLinks, len(hostedApps))
+}
+
+func topologyDeviceEntityID(info *common.DeviceInfo, hostname string) string {
+	if info != nil {
+		switch {
+		case info.SerialNumber != "":
+			return info.SerialNumber
+		case info.RouterID != "":
+			return info.RouterID
+		case info.Hostname != "":
+			return info.Hostname
+		}
+	}
+	return hostname
+}
+
+func topologyAppEntityID(app common.HostedApp) string {
+	if app.PodUID != "" {
+		return app.PodUID
+	}
+	if app.AppID != "" {
+		return app.AppID
+	}
+	if app.PodNamespace != "" {
+		return app.PodNamespace + "/" + app.PodName
+	}
+	return app.PodName
 }
 
 // consolidatedNeighbor merges CDP and OSPF data for the same link.
@@ -383,5 +444,18 @@ func consolidateNeighbors(cdp []common.CDPNeighbor, ospf []common.OSPFNeighbor) 
 	for _, cn := range byInterface {
 		result = append(result, *cn)
 	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].LocalInterface == result[j].LocalInterface {
+			return result[i].DeviceID < result[j].DeviceID
+		}
+		return result[i].LocalInterface < result[j].LocalInterface
+	})
 	return result
+}
+
+func topologyLinkCap(config *v1alpha1.OTELConfig) int {
+	if config != nil && config.MaxLinkSpans > 0 {
+		return config.MaxLinkSpans
+	}
+	return 256
 }

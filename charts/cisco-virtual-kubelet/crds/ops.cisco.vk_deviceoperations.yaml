@@ -1,0 +1,264 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: deviceoperations.ops.cisco.vk
+spec:
+  group: ops.cisco.vk
+  names:
+    kind: DeviceOperation
+    listKind: DeviceOperationList
+    plural: deviceoperations
+    shortNames:
+    - devop
+    singular: deviceoperation
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.deviceRef.name
+      name: Device
+      type: string
+    - jsonPath: .spec.operation.kind
+      name: Kind
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          DeviceOperation is the auditable async operation CRD. It is intentionally
+          independent of Virtual Kubelet's Pod lifecycle APIs.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              DeviceOperationSpec declares a bounded asynchronous operation against one
+              CiscoDevice. v1alpha1 is intentionally read-only: ShowCommand, ConfigDiff,
+              and existing PacketCapture buffer reads. Write-class operations are a later
+              RBAC/admission phase.
+            properties:
+              deviceRef:
+                description: DeviceRef targets the CiscoDevice the operation runs
+                  against.
+                properties:
+                  name:
+                    description: Name of the CiscoDevice the CR targets.
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                type: object
+              operation:
+                description: Operation is the requested operation kind plus operation-specific
+                  inputs.
+                properties:
+                  args:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Args is a string bag for operation-specific parameters.
+
+                      For ShowCommand, args.command or args.commands may be used when
+                      Commands is not set.
+
+                      For PacketCapture, args.name (or args.capture) names an existing
+                      monitor-capture session and the reconciler synthesises only the
+                      exact `show monitor capture <name> buffer dump` command. The
+                      historical args.command escape hatch was removed because it
+                      flowed through the diagnostic allowlist which permits broad
+                      monitor/terminal/test head-words; PacketCapture is documented as
+                      read-only and the allowlist was wider than that contract.
+                      Callers that need other monitor invocations must use ShowCommand
+                      with explicit Commands.
+                    type: object
+                  commands:
+                    description: |-
+                      Commands is the ordered ShowCommand command list. Every command is
+                      checked by the server-side read-only allowlist before any device RPC.
+                    items:
+                      pattern: ^(show|more|dir|ping|ping6|traceroute|traceroute6|monitor|test|verify|calendar|terminal|namespace)(
+                        |$)
+                      type: string
+                    maxItems: 64
+                    type: array
+                  kind:
+                    description: Kind names the read-only operation.
+                    enum:
+                    - ShowCommand
+                    - ConfigDiff
+                    - PacketCapture
+                    type: string
+                required:
+                - kind
+                type: object
+              ttlSecondsAfterFinished:
+                description: |-
+                  TTLSecondsAfterFinished requests best-effort cleanup after the operation
+                  reaches a terminal phase. Zero or nil disables automatic cleanup.
+                format: int32
+                minimum: 0
+                type: integer
+            required:
+            - deviceRef
+            - operation
+            type: object
+          status:
+            description: |-
+              DeviceOperationStatus reports operation progress and any small inline
+              results. Large artifact sinks are reserved for later operation kinds.
+            properties:
+              artifactURIs:
+                description: |-
+                  ArtifactURIs references out-of-band operation artifacts. ShowCommand keeps
+                  small output inline; future capture/diff reconcilers can populate this.
+                items:
+                  type: string
+                type: array
+              completionTime:
+                description: |-
+                  CompletionTime records when the current generation reached a terminal
+                  phase.
+                format: date-time
+                type: string
+              conditions:
+                description: Conditions reports Ready for consumers that prefer condition-based
+                  reads.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              message:
+                description: Message is a short human-readable terminal or waiting
+                  reason.
+                type: string
+              observedGeneration:
+                description: |-
+                  ObservedGeneration is the .metadata.generation the reconciler last acted
+                  on.
+                format: int64
+                type: integer
+              outputs:
+                description: Outputs holds inline ShowCommand results.
+                items:
+                  description: DeviceOperationOutput records one command's output
+                    and post-processing flags.
+                  properties:
+                    command:
+                      description: Command is the input command.
+                      type: string
+                    err:
+                      description: Err carries a per-command failure from the device.
+                      type: string
+                    output:
+                      description: Output is the redacted and possibly truncated output.
+                      type: string
+                    redacted:
+                      description: Redacted is true when the secret-redaction filter
+                        removed content.
+                      type: boolean
+                    truncated:
+                      description: Truncated is true when Output was clipped to the
+                        inline size limit.
+                      type: boolean
+                  required:
+                  - command
+                  type: object
+                type: array
+              phase:
+                description: Phase summarises the operation lifecycle.
+                enum:
+                - Pending
+                - Running
+                - Succeeded
+                - Failed
+                - Cancelled
+                type: string
+              startTime:
+                description: StartTime records when the current generation began executing.
+                format: date-time
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

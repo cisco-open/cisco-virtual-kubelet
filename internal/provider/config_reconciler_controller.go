@@ -40,6 +40,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 )
 
 // reconcileTracerName is the instrumentation name used for the root
@@ -56,6 +57,19 @@ const reconcileTracerName = "cisco-virtual-kubelet/config-reconciler"
 // exists in the cluster. Caught against a live Cat9300 retest where
 // successive tests serialised on stale leases.
 const iosxeConfigFinalizer = "config.cisco.vk/lease-cleanup"
+
+func configTelemetryEntityID(cr *configv1alpha1.IOSXEConfig) string {
+	if cr == nil {
+		return ""
+	}
+	if cr.UID != "" {
+		return string(cr.UID)
+	}
+	if cr.Namespace != "" {
+		return cr.Namespace + "/" + cr.Name
+	}
+	return cr.Name
+}
 
 func containsFinalizer(fs []string, target string) bool {
 	for _, f := range fs {
@@ -108,6 +122,15 @@ func (r *ConfigReconciler) releaseLeasesForCR(ctx context.Context, cr *configv1a
 // orphaned device config.
 const ForceRelinquishSkipAnnotation = "config.cisco.vk/force-relinquish-skip"
 
+// RollbackAllowSecretOmittedAnnotation is the operator-controlled opt-in for
+// rolling back to an IOSXEConfigRevision whose body omitted secret-bearing
+// family content. The reconciler restores those families from the *current*
+// resolved intent rather than the revision body (Secret material is never
+// persisted to revisions), which means non-secret content in those families
+// is NOT actually rolled back. Setting this annotation to "true" on the
+// IOSXEConfig acknowledges that the rollback is partial and proceeds.
+const RollbackAllowSecretOmittedAnnotation = "config.cisco.vk/rollback-allow-secret-omitted"
+
 // relinquishOwnedKeys runs a CR-delete reconcile that drops every
 // list-key this CR owned (per status.atomicReplaceOwnedKeys) from the
 // device. F2 fix (2026-05-01): without this pass, deleting a CR that
@@ -120,7 +143,7 @@ const ForceRelinquishSkipAnnotation = "config.cisco.vk/force-relinquish-skip"
 // prune set to {priorOwned ∪ desired} = {priorOwned}, so only this
 // CR's owned keys are deleted; baseline state is left alone.
 //
-// Codex /codex:adversarial-review (2026-05-02) follow-ups:
+// Review follow-ups from 2026-05-02:
 //
 //	B1 — Use AcquireIfFree, NOT Acquire. The takeover-capable
 //	     Acquire would let a deleting CR claim a foreign lease whose
@@ -278,12 +301,14 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	// reconcile attempts end to end.
 	ctx, span := otel.Tracer(reconcileTracerName).Start(
 		ctx,
-		"ConfigReconciler.Reconcile",
+		"cvk.iosxeconfig.reconcile",
 		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
 		oteltrace.WithAttributes(
 			attribute.String("cisco.vk.device.name", r.DeviceName),
 			attribute.String("cisco.vk.iosxeconfig.namespace", req.Namespace),
 			attribute.String("cisco.vk.iosxeconfig.name", req.Name),
+			attribute.String(semconv.CvkEntityType, semconv.EntityTypeConfig),
+			attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeConfigChange),
 		),
 	)
 	defer span.End()
@@ -299,12 +324,14 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 			// owner-ref cleanup (if any) is handled elsewhere and our
 			// status writes are unreachable anyway.
 			span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "not-found"))
+			span.SetAttributes(attribute.String(semconv.CvkEntityID, req.Namespace+"/"+req.Name))
 			return reconcile.Result{}, nil
 		}
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "get IOSXEConfig")
 		return reconcile.Result{}, fmt.Errorf("get IOSXEConfig: %w", err)
 	}
+	span.SetAttributes(attribute.String(semconv.CvkEntityID, configTelemetryEntityID(&cr)))
 
 	// Defence in depth: a CR reaching us that targets a different
 	// device is ignored. In production the predicate filter below
@@ -328,7 +355,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 			// release + finalizer removal. Without this the CR's
 			// owned entries stay on the device as orphaned config.
 			//
-			// A2 fix (2026-05-01, codex/HEAD~1 review): relinquish
+			// A2 fix (2026-05-01): relinquish
 			// failure is now retryable. We return the error from
 			// Reconcile so controller-runtime requeues, keeping the
 			// finalizer in place. status.atomicReplaceOwnedKeys
@@ -338,8 +365,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 			// finalizer off explicitly — the standard Kubernetes
 			// escape hatch — once they accept the orphan.
 			if cr.Spec.PruneOnRelinquish && len(cr.Status.AtomicReplaceOwnedKeys) > 0 {
-				// B2 escape hatch (codex /codex:adversarial-review
-				// 2026-05-02): an operator who has accepted that
+				// B2 escape hatch (2026-05-02): an operator who has accepted that
 				// relinquish will not succeed — decommissioned device,
 				// permanent auth failure, family that needs a writer
 				// uplift — sets cisco.vk/force-relinquish-skip=true.

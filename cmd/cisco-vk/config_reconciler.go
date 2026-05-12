@@ -53,13 +53,20 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry"
+	"github.com/cisco/virtual-kubelet-cisco/internal/otelproviders"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/deviceoperation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
+	telemetrystate "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
+	telemetryyang "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/yang"
 )
 
 // configReconcilerOptions is what startConfigReconciler needs from the
@@ -71,6 +78,16 @@ type configReconcilerOptions struct {
 	// SessionLock optionally serialises config-driver traffic
 	// against the apphosting driver. Recommended in production.
 	SessionLock *sync.Mutex
+	// TelemetryProviders optionally carries the per-device OTel providers built
+	// by run.go so topology and MDT telemetry share endpoint configuration.
+	TelemetryProviders *otelproviders.Providers
+	// StateCache receives MDT-derived state records from IOSXETelemetry.
+	StateCache *telemetrystate.Cache
+	// AppEventConsumer receives app-hosting state events and usually points at
+	// the AppHostingProvider's PodNotifier bridge.
+	AppEventConsumer telemetrystate.AppEventConsumer
+	// CorrelationCache maps app IDs to the span context that created them.
+	CorrelationCache *correlation.Cache
 }
 
 // startConfigReconciler builds a controller-runtime client, asks
@@ -100,6 +117,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	scheme := k8sruntime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(configv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(opsv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(ciskov1.AddToScheme(scheme))
 	utilruntime.Must(coordv1.AddToScheme(scheme))
 
@@ -309,6 +327,88 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		return fmt.Errorf("diagnostic SetupWithManager: %w", err)
 	}
 
+	operationReconciler := &deviceoperation.Reconciler{
+		Client:   mgr.GetClient(),
+		Reader:   mgr.GetAPIReader(),
+		Recorder: recorder,
+		Scheme:   mgr.GetScheme(),
+		// DeviceNamespace is the namespace of the owning CiscoDevice CR,
+		// which is the same as this VK pod's POD_NAMESPACE because the
+		// controller always creates the per-device Deployment in
+		// device.Namespace (see ciscodevice_controller.go). The reconciler
+		// uses it to refuse cross-namespace DeviceOperation requests.
+		DeviceName:      deviceName,
+		DeviceNamespace: operationNamespace(),
+		TP:              r,
+	}
+	if err := operationReconciler.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("device operation SetupWithManager: %w", err)
+	}
+
+	telemetryFactory, err := telemetry.NewDefaultSubscribeClientFactoryForDevice(opts.Spec, opts.Password)
+	if err != nil {
+		return fmt.Errorf("telemetry subscriber factory: %w", err)
+	}
+	otelProviders := opts.TelemetryProviders
+	var otelShutdown func(context.Context) error
+	if otelProviders == nil {
+		var err error
+		otelProviders, otelShutdown, err = buildTelemetryProviders(ctx, deviceName, opts)
+		if err != nil {
+			return fmt.Errorf("telemetry OTel providers: %w", err)
+		}
+	}
+	if otelShutdown != nil {
+		go func() {
+			<-ctx.Done()
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := otelShutdown(shutdownCtx); err != nil {
+				log.G(ctx).WithError(err).Warn("telemetry OTel providers shutdown error")
+			}
+		}()
+	}
+	yangRegistry, err := telemetryyang.NewRegistryFromEnv()
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("YANG registry unavailable; using curated telemetry classifier fallback")
+		yangRegistry = nil
+	}
+	// CVK_RESOURCE_ATTRIBUTES is injected by Helm into the controller and
+	// propagated into this per-device VK pod by the CiscoDevice controller.
+	// Merge those operator-supplied attributes into the per-event resource
+	// attributes used by MDT-over-gNMI OTel emissions.
+	resourceAttrs, err := telemetryResourceAttributes(map[string]string{
+		"cisco.device.address": opts.Spec.Address,
+		"cisco.device.driver":  string(opts.Spec.Driver),
+	})
+	if err != nil {
+		return err
+	}
+	telemetryEvents := make(chan event.GenericEvent, 1)
+	telemetryReconciler := &provider.IOSXETelemetryReconciler{
+		Client:     mgr.GetClient(),
+		DeviceName: deviceName,
+		// DeviceNamespace mirrors the DeviceOperation reconciler: the
+		// VK pod always runs in the same namespace as its owning
+		// CiscoDevice CR, so IOSXETelemetry CRs from other namespaces
+		// must not be honored even when their DeviceRef matches.
+		DeviceNamespace:  operationNamespace(),
+		Factory:          telemetryFactory,
+		LoggerProvider:   telemetryLoggerProvider(otelProviders),
+		MeterProvider:    telemetryMeterProvider(otelProviders),
+		TracerProvider:   telemetryTracerProvider(otelProviders),
+		YangRegistry:     yangRegistry,
+		ResourceAttrs:    resourceAttrs,
+		StateCache:       opts.StateCache,
+		AppEventConsumer: opts.AppEventConsumer,
+		CorrelationCache: opts.CorrelationCache,
+		RootContext:      ctx,
+		StatusEvents:     telemetryEvents,
+	}
+	if err := telemetryReconciler.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("telemetry SetupWithManager: %w", err)
+	}
+
 	// Diagnostics-RFC Phase C: HTTP admin endpoint for ad-hoc
 	// `kubectl ciscovk exec` invocations. Bound to 127.0.0.1:8082
 	// inside the pod; operators reach it via `kubectl port-forward`,
@@ -321,9 +421,13 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	}
 	if adminAddr != "0" {
 		admSrv := &adminserver.Server{
-			DeviceName: deviceName,
-			TP:         r,
-			BindAddr:   adminAddr,
+			DeviceName:         deviceName,
+			TP:                 r,
+			OperationClient:    mgr.GetClient(),
+			OperationReader:    mgr.GetAPIReader(),
+			OperationNamespace: operationNamespace(),
+			BindAddr:           adminAddr,
+			TelemetrySource:    telemetryReconciler.TelemetryHealthSnapshot,
 		}
 		stop := make(chan struct{})
 		go func() {
@@ -355,6 +459,13 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	}
 
 	return nil
+}
+
+func operationNamespace() string {
+	if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
+		return ns
+	}
+	return "default"
 }
 
 // retryConfigDriverDial attempts to build a real device transport

@@ -19,6 +19,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
+	vkotel "github.com/virtual-kubelet/virtual-kubelet/trace/opentelemetry"
 )
 
 var rootCmd = &cobra.Command{
@@ -34,6 +36,11 @@ Available subcommands:
 }
 
 func init() {
+	// Install the upstream Virtual Kubelet trace adapter before any node,
+	// pod-controller, or queue goroutine can open a VK span. The concrete
+	// OpenTelemetry SDK provider is process-specific and is set later once
+	// command configuration and OTLP env vars have been loaded.
+	vktrace.T = vkotel.Adapter{}
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(managerCmd)
 }

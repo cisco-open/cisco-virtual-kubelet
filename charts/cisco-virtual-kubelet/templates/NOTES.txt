@@ -16,6 +16,9 @@
   This is one-time per upgrade and is safe — CRD updates are
   schema-additive across this branch.
 
+  After helm upgrade, run kubectl apply -f charts/cisco-virtual-kubelet/crds/
+  if upgrading from a version prior to 0.1.0.
+
   ───────────────────────────────────────────────────────────────────────────
 
   RBAC RECONCILE — the chart updates ClusterRole bindings on every helm upgrade,
@@ -63,5 +66,22 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   vk image:         {{ .Values.vkImage.repository | default .Values.image.repository }}:{{ .Values.vkImage.tag | default .Values.image.tag }}
   metrics:          {{ .Values.controller.metricsBindAddress }}
   diag admin:       {{ if .Values.aggregator.enabled }}(disabled in aggregator-mode){{ else }}127.0.0.1:8082 inside each per-device pod{{ end }}
+
+{{- if and .Values.telemetry.otlp.headers (not (eq (.Values.telemetry.otlp.headers | toJson) "{}")) (not .Values.telemetry.otlp.headersSecret.name) }}
+
+  ⚠️  SECURITY: telemetry.otlp.headers is set inline. Those values will land
+     as literal EnvVar.value on every per-device pod spec where any holder of
+     `get pod` in the device's namespace can read them. If those headers
+     carry auth tokens, switch to telemetry.otlp.headersSecret.name and
+     create the Secret in each namespace that has a CiscoDevice CR.
+{{- end }}
+{{- if .Values.telemetry.otlp.headersSecret.name }}
+
+  ℹ️  OTLP headers are wired via SecretKeyRef ({{ .Values.telemetry.otlp.headersSecret.name }}/{{ .Values.telemetry.otlp.headersSecret.key | default "OTEL_EXPORTER_OTLP_HEADERS" }}).
+     The controller will mirror this SecretKeyRef onto every per-device VK pod
+     it spawns. You must ensure a Secret named "{{ .Values.telemetry.otlp.headersSecret.name }}" exists in each
+     namespace that hosts a CiscoDevice CR (the per-device pod runs in the
+     CiscoDevice's namespace).
+{{- end }}
 
 ═══════════════════════════════════════════════════════════════════════════════

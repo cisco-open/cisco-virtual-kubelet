@@ -207,6 +207,25 @@ spec:
                   split it from a relinquish-only flag) — tracked in
                   crd-v1-promotion-plan.md.
                 type: boolean
+              revisionHistoryLimit:
+                description: |-
+                  RevisionHistoryLimit caps the number of IOSXEConfigRevision objects
+                  retained for this CR after successful applies. Unset (nil) defaults to
+                  10; an explicit 0 disables revision creation entirely. Pre-upgrade
+                  objects are treated as nil and therefore default to 10. Revisions with
+                  secret-sourced intent are skipped to avoid persisting Secret material
+                  into CR status or spec.
+                format: int32
+                maximum: 100
+                minimum: 0
+                type: integer
+              rollbackTo:
+                description: |-
+                  RollbackTo names an IOSXEConfigRevision in the same namespace. When set,
+                  the reconciler treats that revision's resolved intent as desired state
+                  and runs the normal plan/apply/verify flow. Confirmed-commit remains a
+                  transport safety timer; rollbackTo is declarative intent selection.
+                type: string
               secretRefs:
                 description: |-
                   SecretRefs lets the resolver merge sensitive configuration
@@ -565,6 +584,11 @@ spec:
                   LastDeviceCheck + interval has elapsed, even if intent and
                   generation are unchanged.
                 format: date-time
+                type: string
+              lastRollbackedTo:
+                description: |-
+                  LastRollbackedTo records the most recent revision name that was
+                  successfully applied through spec.rollbackTo.
                 type: string
               observedGeneration:
                 description: ObservedGeneration is the .metadata.generation the driver

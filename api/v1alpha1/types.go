@@ -186,6 +186,13 @@ type DeviceSpec struct {
 	// +kubebuilder:validation:Optional
 	ConfigPrereqs *ConfigPrereqs `json:"configPrereqs,omitempty" mapstructure:"configPrereqs,omitempty"`
 
+	// OpsPolicy declares per-device DeviceOperation gates the controller
+	// templates into the per-device VK pod's environment. The CiscoDevice
+	// reconciler is the authoritative source — imperative `kubectl set env`
+	// edits are reverted on the next reconcile.
+	// +kubebuilder:validation:Optional
+	OpsPolicy *OpsPolicy `json:"opsPolicy,omitempty" mapstructure:"opsPolicy,omitempty"`
+
 	// --- Driver-specific networking configuration (union) ---
 	// Only the section matching Driver should be set.
 
@@ -201,6 +208,24 @@ type DeviceSpec struct {
 	// NXOS holds NX-OS specific networking configuration (future).
 	// +kubebuilder:validation:Optional
 	// NXOS *NXOSConfig `json:"nxos,omitempty" mapstructure:"nxos,omitempty"`
+}
+
+// OpsPolicy carries per-device DeviceOperation gates the CiscoDevice
+// controller templates into the per-device VK pod's environment. Adding a
+// field here means: (a) declare it in this struct, (b) extend
+// opsPolicyEnv() in the controller to translate it into the pod env, (c)
+// teach the receiving reconciler to read the matching env var.
+type OpsPolicy struct {
+	// ConfigDiffAllowedNamespaces, when non-empty, restricts the namespaces
+	// from which DeviceOperation/ConfigDiff requests targeting this device
+	// will run. Requests from other namespaces fail at admission with
+	// reason=NamespaceNotAuthorized. The controller renders this list as
+	// CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES (comma-separated) on the
+	// per-device VK pod. An empty/nil list preserves the unrestricted
+	// default for backward compatibility.
+	// +kubebuilder:validation:Optional
+	// +listType=set
+	ConfigDiffAllowedNamespaces []string `json:"configDiffAllowedNamespaces,omitempty" mapstructure:"configDiffAllowedNamespaces,omitempty"`
 }
 
 // ConfigPrereqs is the inline netascode-shaped configuration block the
@@ -275,6 +300,14 @@ type OTELConfig struct {
 	// +kubebuilder:validation:Minimum=10
 	// +kubebuilder:default=60
 	IntervalSecs int `json:"intervalSecs,omitempty" mapstructure:"intervalSecs"`
+
+	// MaxLinkSpans caps link spans emitted per topology cycle. Extra links are
+	// counted on the root span as topology.dropped_link_count so large devices
+	// cannot create unbounded Tempo write bursts.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=256
+	MaxLinkSpans int `json:"maxLinkSpans,omitempty" mapstructure:"maxLinkSpans"`
 }
 
 // ResourceConfig represents resource limits and defaults for container workloads.

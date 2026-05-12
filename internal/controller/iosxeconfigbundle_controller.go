@@ -33,6 +33,7 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
 )
 
 // IOSXEConfigBundleReconciler fans an IOSXEConfigBundle out into
@@ -54,7 +55,18 @@ type IOSXEConfigBundleReconciler struct {
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=cisco.vk,resources=ciscodevices,verbs=get;list;watch
 
-func (r *IOSXEConfigBundleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *IOSXEConfigBundleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, retErr error) {
+	ctx, span := vktrace.StartSpan(ctx, "cvk.iosxeconfigbundle.reconcile")
+	ctx = span.WithField(ctx, "config.cisco.vk.iosxeconfigbundle.name", req.Name)
+	ctx = span.WithField(ctx, "config.cisco.vk.iosxeconfigbundle.namespace", req.Namespace)
+	defer func() {
+		span.WithField(ctx, "cvk.reconcile.result", reconcileResultAttribute(result))
+		if retErr != nil {
+			span.SetStatus(retErr)
+		}
+		span.End()
+	}()
+
 	var bundle configv1alpha1.IOSXEConfigBundle
 	if err := r.Get(ctx, req.NamespacedName, &bundle); err != nil {
 		if apierrors.IsNotFound(err) {

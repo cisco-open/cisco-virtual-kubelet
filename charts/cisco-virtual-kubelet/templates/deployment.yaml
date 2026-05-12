@@ -1,3 +1,4 @@
+{{- include "cisco-virtual-kubelet.validateLeaderElection" . -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -44,6 +45,60 @@ spec:
             - --enable-config-aggregator
             {{- end }}
           env:
+            # Kubernetes downward-API identity. The OTel SDK promotes these
+            # to standard SemConv resource attributes (k8s.pod.*, k8s.node.*,
+            # service.instance.id) on every emitted signal so multi-replica
+            # deployments are correlatable downstream.
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            # Helm injects telemetry values into the controller first. The
+            # CiscoDevice controller reads these env vars from its own process
+            # environment and propagates them verbatim to each per-device VK
+            # pod, where MDT-over-gNMI subscriptions and OTel exporters run.
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ include "cisco-virtual-kubelet.telemetryOtlpEndpoint" . | quote }}
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: {{ include "cisco-virtual-kubelet.telemetryOtlpInsecure" . | quote }}
+            {{- if .Values.telemetry.otlp.headersSecret.name }}
+            # SecretKeyRef-backed OTLP headers. The controller mirrors this
+            # SecretKeyRef onto every per-device VK pod it spawns; operators
+            # must ensure the named Secret exists in each device.Namespace
+            # (same model as imagePullSecrets).
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.telemetry.otlp.headersSecret.name | quote }}
+                  key: {{ .Values.telemetry.otlp.headersSecret.key | default "OTEL_EXPORTER_OTLP_HEADERS" | quote }}
+            - name: CVK_OTLP_HEADERS_SECRET_NAME
+              value: {{ .Values.telemetry.otlp.headersSecret.name | quote }}
+            - name: CVK_OTLP_HEADERS_SECRET_KEY
+              value: {{ .Values.telemetry.otlp.headersSecret.key | default "OTEL_EXPORTER_OTLP_HEADERS" | quote }}
+            {{- else }}
+            # Inline OTLP headers as a literal value. SECURITY: anything in
+            # this map is visible to anyone with `get pod` on this and every
+            # per-device pod's namespace. Switch to telemetry.otlp.headersSecret
+            # if these headers carry auth tokens.
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              value: {{ .Values.telemetry.otlp.headers | toJson | quote }}
+            {{- end }}
+            - name: YANG_MODELS_DIR
+              value: {{ include "cisco-virtual-kubelet.yangModelsMountPath" . | quote }}
+            - name: CVK_RESOURCE_ATTRIBUTES
+              value: {{ .Values.telemetry.resourceAttributes | toJson | quote }}
             {{- if .Values.config.leaseNamespace }}
             # Shared cluster namespace for the per-(device,family)
             # arbitration leases. When set, every cisco-vk pod the
@@ -79,6 +134,19 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- if .Values.telemetry.yangModels.configMapName }}
+          volumeMounts:
+            - name: yang-models
+              mountPath: {{ include "cisco-virtual-kubelet.yangModelsMountPath" . }}
+              readOnly: true
+          {{- end }}
+      {{- if .Values.telemetry.yangModels.configMapName }}
+      volumes:
+        - name: yang-models
+          configMap:
+            name: {{ .Values.telemetry.yangModels.configMapName }}
+            optional: true
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

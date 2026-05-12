@@ -87,6 +87,74 @@
         }
       }
     },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["otlp", "yangModelsDir", "yangModels", "resourceAttributes"],
+      "properties": {
+        "otlp": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["endpoint", "insecure", "headers"],
+          "properties": {
+            "endpoint": { "type": "string" },
+            "insecure": { "type": "boolean" },
+            "headers": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "headersSecret": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "key"],
+              "description": "When name is non-empty the chart wires OTEL_EXPORTER_OTLP_HEADERS via a SecretKeyRef and the controller mirrors that ref onto every per-device VK pod (operators must replicate the Secret to each device.Namespace). Use this instead of inline headers when the value contains auth tokens.",
+              "properties": {
+                "name": { "type": "string" },
+                "key":  { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        },
+        "yangModelsDir": { "type": "string" },
+        "yangModels": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["configMapName", "mountPath"],
+          "properties": {
+            "configMapName": { "type": "string" },
+            "mountPath":     { "type": "string" }
+          }
+        },
+        "resourceAttributes": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "collector": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "repository": { "type": "string" },
+            "tag": { "type": "string" },
+            "pullPolicy": {
+              "type": "string",
+              "enum": ["Always", "IfNotPresent", "Never"]
+            }
+          }
+        },
+        "resources": { "type": "object" },
+        "nodeSelector": { "type": "object" },
+        "tolerations": { "type": "array" },
+        "affinity": { "type": "object" },
+        "global": { "type": "object" }
+      }
+    },
     "config": {
       "type": "object",
       "additionalProperties": false,

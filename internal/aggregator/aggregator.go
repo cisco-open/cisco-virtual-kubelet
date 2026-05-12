@@ -52,6 +52,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
 )
 
 // AggregatedReconciler watches CiscoDevices and runs one in-process
@@ -99,6 +100,8 @@ type deviceWorker struct {
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxetemplates,verbs=get;list;watch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigapplylogs,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigapplylogs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigrevisions,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigrevisions/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
@@ -151,7 +154,18 @@ func (r *AggregatedReconciler) mapSecretToCiscoDevices(ctx context.Context, obj 
 	return out
 }
 
-func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, retErr error) {
+	ctx, span := vktrace.StartSpan(ctx, "cvk.aggregated.reconcile")
+	ctx = span.WithField(ctx, "cisco.device.name", req.Name)
+	ctx = span.WithField(ctx, "cisco.device.namespace", req.Namespace)
+	defer func() {
+		span.WithField(ctx, "cvk.reconcile.result", aggregatedReconcileResultAttribute(result))
+		if retErr != nil {
+			span.SetStatus(retErr)
+		}
+		span.End()
+	}()
+
 	var dev ciskov1.CiscoDevice
 	if err := r.Get(ctx, req.NamespacedName, &dev); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -160,6 +174,7 @@ func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		return ctrl.Result{}, err
 	}
+	ctx = span.WithField(ctx, "cvk.driver.kind", string(dev.Spec.Driver))
 
 	// Platforms without a registered config driver: silent skip.
 	// Operators see the device through the existing per-pod flow
@@ -205,6 +220,16 @@ func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, fmt.Errorf("start worker %s: %w", req.String(), err)
 	}
 	return ctrl.Result{}, nil
+}
+
+func aggregatedReconcileResultAttribute(result ctrl.Result) string {
+	if result.RequeueAfter > 0 {
+		return "requeue-after:" + result.RequeueAfter.String()
+	}
+	if result.Requeue {
+		return "requeue"
+	}
+	return "done"
 }
 
 // startWorker asks the platform registry for a

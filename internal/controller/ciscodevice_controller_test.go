@@ -104,6 +104,43 @@ func reconcileRequest(namespace, name string) ctrl.Request {
 	return ctrl.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: name}}
 }
 
+func findEnvVar(env []corev1.EnvVar, name string) (corev1.EnvVar, bool) {
+	for _, item := range env {
+		if item.Name == name {
+			return item, true
+		}
+	}
+	return corev1.EnvVar{}, false
+}
+
+func nonTelemetryEnv(env []corev1.EnvVar) []corev1.EnvVar {
+	out := make([]corev1.EnvVar, 0, len(env))
+	for _, item := range env {
+		if isTelemetryEnvName(item.Name) || isDownwardAPIEnvName(item.Name) {
+			continue
+		}
+		out = append(out, item)
+	}
+	return out
+}
+
+func isDownwardAPIEnvName(name string) bool {
+	switch name {
+	case "POD_NAME", "POD_NAMESPACE", "POD_UID", "NODE_NAME":
+		return true
+	}
+	return false
+}
+
+func isTelemetryEnvName(name string) bool {
+	for _, candidate := range telemetryEnvPropagationNames {
+		if name == candidate {
+			return true
+		}
+	}
+	return false
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Reconcile happy path
 // ─────────────────────────────────────────────────────────────────────────────
@@ -530,17 +567,18 @@ func TestReconcile_SecretRefInjectsEnvFromSecret(t *testing.T) {
 	}
 
 	env := deploy.Spec.Template.Spec.Containers[0].Env
-	if len(env) != 1 || env[0].Name != "VK_DEVICE_PASSWORD" {
+	pw, ok := findEnvVar(env, "VK_DEVICE_PASSWORD")
+	if !ok {
 		t.Fatalf("expected VK_DEVICE_PASSWORD env var, got %v", env)
 	}
-	if env[0].ValueFrom == nil || env[0].ValueFrom.SecretKeyRef == nil {
+	if pw.ValueFrom == nil || pw.ValueFrom.SecretKeyRef == nil {
 		t.Fatal("expected VK_DEVICE_PASSWORD to use valueFrom.secretKeyRef")
 	}
-	if env[0].ValueFrom.SecretKeyRef.Name != "device-creds" {
-		t.Errorf("expected secretKeyRef name 'device-creds', got %q", env[0].ValueFrom.SecretKeyRef.Name)
+	if pw.ValueFrom.SecretKeyRef.Name != "device-creds" {
+		t.Errorf("expected secretKeyRef name 'device-creds', got %q", pw.ValueFrom.SecretKeyRef.Name)
 	}
-	if env[0].ValueFrom.SecretKeyRef.Key != "password" {
-		t.Errorf("expected secretKeyRef key 'password', got %q", env[0].ValueFrom.SecretKeyRef.Key)
+	if pw.ValueFrom.SecretKeyRef.Key != "password" {
+		t.Errorf("expected secretKeyRef key 'password', got %q", pw.ValueFrom.SecretKeyRef.Key)
 	}
 }
 
@@ -561,11 +599,12 @@ func TestReconcile_DirectPasswordInjectsEnvValue(t *testing.T) {
 	}
 
 	env := deploy.Spec.Template.Spec.Containers[0].Env
-	if len(env) != 1 || env[0].Name != "VK_DEVICE_PASSWORD" {
+	pw, ok := findEnvVar(env, "VK_DEVICE_PASSWORD")
+	if !ok {
 		t.Fatalf("expected VK_DEVICE_PASSWORD env var, got %v", env)
 	}
-	if env[0].Value != "directpass" {
-		t.Errorf("expected direct password value 'directpass', got %q", env[0].Value)
+	if pw.Value != "directpass" {
+		t.Errorf("expected direct password value 'directpass', got %q", pw.Value)
 	}
 }
 
@@ -586,8 +625,93 @@ func TestReconcile_NoPasswordNoSecretRef_NoEnvVars(t *testing.T) {
 	}
 
 	env := deploy.Spec.Template.Spec.Containers[0].Env
-	if len(env) != 0 {
-		t.Errorf("expected no env vars when neither password nor secretRef is set, got %v", env)
+	if got := nonTelemetryEnv(env); len(got) != 0 {
+		t.Errorf("expected no non-telemetry env vars when neither password nor secretRef is set, got %v", got)
+	}
+}
+
+func TestReconcile_PropagatesTelemetryEnvVars(t *testing.T) {
+	t.Setenv(envOTELExporterOTLPEndpoint, "otelcol.observability:4317")
+	t.Setenv(envOTELExporterOTLPInsecure, "true")
+	// OTEL_EXPORTER_OTLP_HEADERS is intentionally NOT in the literal-value
+	// propagation list (would leak collector auth tokens into per-device pod
+	// specs). The SecretKeyRef path is exercised by
+	// TestReconcile_PropagatesTelemetryHeadersAsSecretRef below.
+	t.Setenv(envYANGModelsDir, "/opt/yang")
+	t.Setenv(envCVKResourceAttributes, `{"deployment.environment":"lab","site.id":"sjc01"}`)
+
+	device := newDevice("router-otel", "default")
+	device.Spec.Password = ""
+	device.Spec.CredentialSecretRef = nil
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-otel")); err != nil {
+		t.Fatalf("Reconcile error: %v", err)
+	}
+
+	var deploy appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-otel" + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("Deployment not found: %v", err)
+	}
+
+	env := deploy.Spec.Template.Spec.Containers[0].Env
+	want := map[string]string{
+		envOTELExporterOTLPEndpoint: "otelcol.observability:4317",
+		envOTELExporterOTLPInsecure: "true",
+		envYANGModelsDir:            "/opt/yang",
+		envCVKResourceAttributes:    `{"deployment.environment":"lab","site.id":"sjc01"}`,
+	}
+	for name, value := range want {
+		got, ok := findEnvVar(env, name)
+		if !ok {
+			t.Fatalf("expected propagated telemetry env var %s, got %v", name, env)
+		}
+		if got.Value != value {
+			t.Errorf("%s=%q, want %q", name, got.Value, value)
+		}
+	}
+	// Negative assertion: OTEL_EXPORTER_OTLP_HEADERS must not leak as a
+	// literal value when no headersSecret is configured.
+	if got, ok := findEnvVar(env, envOTELExporterOTLPHeaders); ok {
+		t.Errorf("%s should not be propagated as literal value (security: leaks auth tokens to per-device pod readers); got %+v", envOTELExporterOTLPHeaders, got)
+	}
+}
+
+// When the chart configures telemetry.otlp.headersSecret, the controller
+// pod sees CVK_OTLP_HEADERS_SECRET_NAME / _KEY and mirrors that SecretKeyRef
+// onto every per-device pod's OTEL_EXPORTER_OTLP_HEADERS env var.
+func TestReconcile_PropagatesTelemetryHeadersAsSecretRef(t *testing.T) {
+	t.Setenv(envCVKOTLPHeadersSecretName, "otlp-auth")
+	t.Setenv(envCVKOTLPHeadersSecretKey, "headers")
+
+	device := newDevice("router-otel-secret", "default")
+	device.Spec.Password = ""
+	device.Spec.CredentialSecretRef = nil
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-otel-secret")); err != nil {
+		t.Fatalf("Reconcile error: %v", err)
+	}
+	var deploy appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-otel-secret" + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("Deployment not found: %v", err)
+	}
+	env := deploy.Spec.Template.Spec.Containers[0].Env
+	got, ok := findEnvVar(env, envOTELExporterOTLPHeaders)
+	if !ok {
+		t.Fatalf("expected %s on per-device pod, got %+v", envOTELExporterOTLPHeaders, env)
+	}
+	if got.Value != "" {
+		t.Errorf("expected empty literal value (ValueFrom-only); got %q", got.Value)
+	}
+	if got.ValueFrom == nil || got.ValueFrom.SecretKeyRef == nil {
+		t.Fatalf("expected ValueFrom.SecretKeyRef; got %+v", got.ValueFrom)
+	}
+	if got.ValueFrom.SecretKeyRef.Name != "otlp-auth" || got.ValueFrom.SecretKeyRef.Key != "headers" {
+		t.Errorf("SecretKeyRef={Name:%q,Key:%q}; want {otlp-auth, headers}",
+			got.ValueFrom.SecretKeyRef.Name, got.ValueFrom.SecretKeyRef.Key)
 	}
 }
 
@@ -907,5 +1031,52 @@ func TestPrereqsTeardownLeaseBlockedHonoursForceAnnotation(t *testing.T) {
 		}
 	default:
 		t.Fatal("expected PrereqsSkipped event")
+	}
+}
+
+func TestOpsPolicyEnvRendersConfigDiffAllowlist(t *testing.T) {
+	cases := map[string]struct {
+		policy *ciskov1.OpsPolicy
+		want   []corev1.EnvVar
+	}{
+		"nil policy yields no env": {
+			policy: nil,
+			want:   nil,
+		},
+		"empty list yields no env (preserves unrestricted default)": {
+			policy: &ciskov1.OpsPolicy{ConfigDiffAllowedNamespaces: nil},
+			want:   nil,
+		},
+		"single namespace": {
+			policy: &ciskov1.OpsPolicy{ConfigDiffAllowedNamespaces: []string{"ops"}},
+			want: []corev1.EnvVar{
+				{Name: "CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES", Value: "ops"},
+			},
+		},
+		"multi-namespace, dedupe + trim": {
+			policy: &ciskov1.OpsPolicy{ConfigDiffAllowedNamespaces: []string{
+				"ops", "  ops  ", "", "tenant-a", "tenant-a",
+			}},
+			want: []corev1.EnvVar{
+				{Name: "CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES", Value: "ops,tenant-a"},
+			},
+		},
+		"only-empty-strings yields no env": {
+			policy: &ciskov1.OpsPolicy{ConfigDiffAllowedNamespaces: []string{"", "  "}},
+			want:   nil,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := opsPolicyEnv(tc.policy)
+			if len(got) != len(tc.want) {
+				t.Fatalf("env len=%d want %d (got=%v)", len(got), len(tc.want), got)
+			}
+			for i := range got {
+				if got[i].Name != tc.want[i].Name || got[i].Value != tc.want[i].Value {
+					t.Fatalf("env[%d] = %+v want %+v", i, got[i], tc.want[i])
+				}
+			}
+		})
 	}
 }

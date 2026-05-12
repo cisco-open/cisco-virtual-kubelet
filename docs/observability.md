@@ -1,6 +1,106 @@
 # Observability
 
-Cisco Virtual Kubelet exposes four observability surfaces:
+Cisco Virtual Kubelet uses OpenTelemetry as the shared correlation plane for
+controller reconciliation, per-device Virtual Kubelet work, MDT-over-gNMI
+telemetry, configuration, topology, and read-only device operations.
+
+The important rule is that every signal carries stable resource identity. That
+lets Grafana, Prometheus, Jaeger, Loki, Tempo, Splunk Observability, or another
+OTel backend join traces, metrics, and logs by device, pod, process role, and
+Kubernetes namespace without relying on log text.
+
+## OTel Spine
+
+### Process identity
+
+CVK emits from three process roles. They may run in one Kubernetes pod, but they
+are separate OTel resources by design:
+
+| Process | `service.name` | `cvk.process.role` | Notes |
+|---|---|---|---|
+| System controller | `cisco-vk-controller` | `controller` | Watches `CiscoDevice` and reconciles controller-managed Kubernetes resources. |
+| Per-device VK provider | `cisco-vk-vk` | `vk-provider` | Owns the upstream Virtual Kubelet node and Pod lifecycle. |
+| Per-device telemetry emitter | `cisco-vk-telemetry` | `telemetry-emitter` | Owns MDT-over-gNMI subscriptions and telemetry mapping. |
+
+Common attributes include `service.instance.id`, `host.name`,
+`net.peer.name`, `k8s.pod.name`, `k8s.namespace.name`, `k8s.node.name`,
+`k8s.pod.uid`, `cisco.device.name`, `cisco.device.address`, and
+`cvk.driver.kind`.
+
+### Trace taxonomy
+
+Span names use one stable shape across surfaces:
+
+| Surface | Span name pattern | Examples |
+|---|---|---|
+| Kubernetes reconcile | `cvk.<resource>.reconcile` | `cvk.iosxeconfig.reconcile` |
+| Device transport | `cvk.transport.<protocol>.<verb>` | `cvk.transport.netconf.get`, `cvk.transport.restconf.post` |
+| Config engine | `cvk.config.<phase>` | `cvk.config.reconcile`, `cvk.config.plan`, `cvk.config.apply` |
+| Topology cycle | `cvk.topology.cycle` | root span per bounded topology emission |
+| Device operation | `cvk.op.<kind>` | `cvk.op.show_command`, `cvk.op.config_diff` |
+
+The process installs the upstream Virtual Kubelet OTel adapter at startup, so
+VK spans such as Pod admission, status sync, and lease updates can parent CVK
+driver spans automatically when context is propagated. The repository keeps a
+small `scripts/lint-ctx.sh` guard to catch new unreviewed
+`context.Background()` usage in controller or driver paths.
+
+### Correlation
+
+Pod admission stores a bounded `(device, app_id) -> SpanContext` entry using
+the W3C `traceparent` format. MDT app-hosting recovery events consult that cache
+so recent device-side state transitions can be emitted under the Pod admission
+trace. The cache is deliberately bounded and short-lived: it is for causality,
+not durable storage.
+
+Config reconcile writes trace hints back to status annotations:
+
+| Annotation | Meaning |
+|---|---|
+| `cisco.vk/traceparent` | W3C carrier for the current reconcile window. |
+| `cisco.vk/trace-window-end` | Expiry for using that trace context. |
+| `cisco.vk/last-trace-id` | Most recent reconcile trace ID. |
+| `cisco.vk/last-trace-duration` | Most recent reconcile duration. |
+| `cisco.vk/last-error-trace-id` | Failed reconcile trace ID, when present. |
+
+### Config Revision History
+
+`IOSXEConfigRevision` objects store resolved intent for successful applies so
+`spec.rollbackTo` can replay a prior revision through the normal reconcile
+path. When an `IOSXEConfig` uses `spec.secretRefs`, revisions are still
+created, but secret-backed family blocks are omitted from `spec.body` and
+`spec.secretMaterialOmitted` is set. Rollback to those revisions is allowed
+only when the current `IOSXEConfig` references the same Secret names; otherwise
+status reports `RollbackBlocked=True` with reason
+`RevisionMissingSecretMaterial`.
+
+### Self metrics
+
+CVK emits self metrics with the `cisco_vk_telemetry_*` prefix. Important
+pipeline health metrics include:
+
+| Metric | Meaning |
+|---|---|
+| `cisco_vk_telemetry_active_streams` | Active gNMI subscription streams by device and subscription. |
+| `cisco_vk_telemetry_stream_reconnects_total` | Stream reconnect attempts. |
+| `cisco_vk_telemetry_log_records_emitted_total` | OTel log records emitted by the MDT mapper. |
+| `cisco_vk_telemetry_instrument_cap_drops_total` | Metric instruments dropped by cardinality cap. |
+| `cisco_vk_telemetry_transitions_dropped_total` | State transition events dropped by transition buffering. |
+| `cisco_vk_telemetry_notifier_dropped_total` | PodNotifier events dropped because the callback queue was full. |
+| `cisco_vk_telemetry_exporter_failures_total` | OTLP exporter failures by signal and reason. |
+
+### Current topology boundary
+
+The MDT state cache is currently used for telemetry state, PodNotifier, and
+trace correlation. It is not yet the source of topology. The topology provider
+still reads the device through the existing driver paths. Moving CDP/OSPF
+topology to MDT remains gated on the lab validation of the YANG paths listed in
+the unified architecture plan.
+
+## Existing Surfaces
+
+Cisco Virtual Kubelet also exposes four Kubernetes-facing observability
+surfaces:
 
 - **Prometheus metrics** on the standard kubelet `/metrics/resource` endpoint.
 - **Kubernetes stats/summary** on `/stats/summary` — powers `kubectl top node`.
@@ -71,6 +171,7 @@ otel:
   insecure: true
   serviceName: "cisco-network"
   intervalSecs: 60
+  maxLinkSpans: 256
 ```
 
 The exporter connects to the OTLP gRPC endpoint, emits one trace per interval, and shuts down cleanly on context cancel (5 s grace).
@@ -91,20 +192,24 @@ Every span carries:
 Each emission cycle produces one trace:
 
 ```
-root span: node.<hostname>              [SERVER]
+root span: cvk.topology.cycle           [SERVER]
 ├── link.<localIface>-><peerDeviceID>   [CLIENT]  (one per CDP/OSPF neighbor)
 ├── link.<localIface>-><peerDeviceID>   [CLIENT]
 ├── …
 └── hosted.<podNs>/<podName>            [CLIENT]  (one per hosted container)
 ```
 
-#### Root span (`node.<hostname>`)
+#### Root span (`cvk.topology.cycle`)
 
 | Attribute | Source |
 |---|---|
+| `topology.cycle.id` | Unique ID for one bounded topology emission cycle |
+| `topology.emitted_link_count` | Link spans emitted after applying `maxLinkSpans` |
+| `topology.dropped_link_count` | Links omitted because the cap was reached |
+| `node.name` | Device hostname |
 | `node.type` | `"network_device"` |
 | `node.role` | `"router"` |
-| `node.neighbor_count` | count of consolidated neighbors |
+| `node.neighbor_count` | count of observed consolidated neighbors before span capping |
 | `node.interface_count` | count of interfaces with IPs |
 | `router.id` | `DeviceInfo.RouterID` (OSPF/BGP) |
 | `router.platform` | `DeviceInfo.ProductID` |
@@ -120,6 +225,7 @@ CDP and OSPF neighbors are consolidated per local interface — a single span re
 
 | Attribute | Notes |
 |---|---|
+| `topology.cycle.id` | Matches the cycle root span |
 | `peer.service` | `"{serviceName}.{peerDeviceID}"` — matches the root span of the peer if it's also exporting, enabling service-map correlation |
 | `net.peer.name` | `peerDeviceID` |
 | `net.peer.ip` | Peer management IP |
@@ -140,6 +246,7 @@ CDP and OSPF neighbors are consolidated per local interface — a single span re
 
 | Attribute | Notes |
 |---|---|
+| `topology.cycle.id` | Matches the cycle root span |
 | `peer.service` | `"app.{namespace}/{podName}"` — distinct namespace from network neighbors |
 | `service.type` | `"app-hosting"` |
 | `deployment.environment` | `"edge-compute"` |

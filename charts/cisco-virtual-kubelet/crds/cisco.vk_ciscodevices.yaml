@@ -146,6 +146,27 @@ spec:
                   host.
                 format: int32
                 type: integer
+              opsPolicy:
+                description: |-
+                  OpsPolicy declares per-device DeviceOperation gates the controller
+                  templates into the per-device VK pod's environment. The CiscoDevice
+                  reconciler is the authoritative source — imperative `kubectl set env`
+                  edits are reverted on the next reconcile.
+                properties:
+                  configDiffAllowedNamespaces:
+                    description: |-
+                      ConfigDiffAllowedNamespaces, when non-empty, restricts the namespaces
+                      from which DeviceOperation/ConfigDiff requests targeting this device
+                      will run. Requests from other namespaces fail at admission with
+                      reason=NamespaceNotAuthorized. The controller renders this list as
+                      CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES (comma-separated) on the
+                      per-device VK pod. An empty/nil list preserves the unrestricted
+                      default for backward compatibility.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                type: object
               otel:
                 description: |-
                   OTEL holds OpenTelemetry topology export configuration.
@@ -169,6 +190,14 @@ spec:
                     description: IntervalSecs is the interval in seconds between topology
                       trace emissions.
                     minimum: 10
+                    type: integer
+                  maxLinkSpans:
+                    default: 256
+                    description: |-
+                      MaxLinkSpans caps link spans emitted per topology cycle. Extra links are
+                      counted on the root span as topology.dropped_link_count so large devices
+                      cannot create unbounded Tempo write bursts.
+                    minimum: 1
                     type: integer
                   serviceName:
                     default: cisco-network

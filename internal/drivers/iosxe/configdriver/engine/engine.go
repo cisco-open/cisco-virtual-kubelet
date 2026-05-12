@@ -25,6 +25,8 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
+	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
 )
 
 // safeMsg formats an error message via fmt.Sprintf and runs the
@@ -282,11 +284,24 @@ type DriftEntry struct {
 // on a single device.
 func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Result {
 	start := time.Now()
+	ctx, span := vktrace.StartSpan(ctx, "cvk.config.reconcile")
+	defer span.End()
 	if res == nil {
 		r := Result{Phase: PhaseFailed, Err: errors.New("engine.Reconcile: nil intent")}
+		span.SetStatus(r.Err)
 		recordResult("", r, time.Since(start).Seconds())
 		return r
 	}
+	ctx = span.WithFields(ctx, map[string]any{
+		"cisco.vk.device.name":   res.DeviceName,
+		"cvk.config.families":    strings.Join(res.ManagedFamilies, ","),
+		"cvk.config.driftPolicy": string(res.DriftPolicy),
+		semconv.CvkEntityType:    semconv.EntityTypeConfig,
+		semconv.CvkEntityID:      engineConfigEntityID(res),
+		semconv.CvkEvidenceType:  semconv.EvidenceTypeConfigChange,
+		semconv.CvkWorkflowName:  "config.apply",
+		semconv.CvkTaskName:      "engine.reconcile",
+	})
 
 	if res.DriftPolicy == configv1alpha1.DriftPolicyPause {
 		r := Result{Phase: PhasePaused}
@@ -296,6 +311,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 
 	if err := e.validate(res); err != nil {
 		r := Result{Phase: PhaseFailed, Err: fmt.Errorf("Validating: %w", err)}
+		span.SetStatus(r.Err)
 		recordResult(res.DeviceName, r, time.Since(start).Seconds())
 		return r
 	}
@@ -340,6 +356,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 			Phase: PhaseFailed,
 			Err:   ErrTransactionalCLIUnsupported,
 		}
+		span.SetStatus(r.Err)
 		recordResult(res.DeviceName, r, time.Since(start).Seconds())
 		return r
 	}
@@ -353,6 +370,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 		if err != nil {
 			recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "start_failed")
 			r := Result{Phase: PhaseFailed, Err: fmt.Errorf("StartTransaction: %w", err)}
+			span.SetStatus(r.Err)
 			recordResult(res.DeviceName, r, time.Since(start).Seconds())
 			return r
 		}
@@ -599,7 +617,26 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	}
 
 	recordResult(res.DeviceName, result, time.Since(start).Seconds())
+	span.SetStatus(result.Err)
 	return result
+}
+
+func engineConfigEntityID(res *intent.ResolvedIntent) string {
+	if res == nil {
+		return ""
+	}
+	if res.SourceCR != nil {
+		if res.SourceCR.UID != "" {
+			return string(res.SourceCR.UID)
+		}
+		if res.SourceCR.Namespace != "" {
+			return res.SourceCR.Namespace + "/" + res.SourceCR.Name
+		}
+		if res.SourceCR.Name != "" {
+			return res.SourceCR.Name
+		}
+	}
+	return res.DeviceName
 }
 
 // confirmedCommitDecision tells the Reconcile path whether to take
@@ -716,6 +753,17 @@ func (e *Engine) validate(res *intent.ResolvedIntent) error {
 // The function is intentionally verbose rather than pipelined so each
 // stage's error is attributable in the returned FamilyStatus.
 func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent.ResolvedIntent) FamilyStatus {
+	ctx, familySpan := vktrace.StartSpan(ctx, "cvk.config.family")
+	ctx = familySpan.WithFields(ctx, map[string]any{
+		"cisco.vk.device.name":  res.DeviceName,
+		"cvk.config.family":     family,
+		semconv.CvkEntityType:   semconv.EntityTypeConfig,
+		semconv.CvkEntityID:     engineConfigEntityID(res),
+		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
+		semconv.CvkWorkflowName: "config.apply",
+		semconv.CvkTaskName:     "family.reconcile",
+	})
+	defer familySpan.End()
 	w := e.Lookup(family)
 	if w == nil {
 		return FamilyStatus{
@@ -749,12 +797,24 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// (rpc-error, access-denied) are NOT retried — they bubble
 	// straight up. See transport.IsTransient for the matcher.
 	var observed any
-	err := transport.RetryIdempotent(ctx, e.RetryPolicy, func() error {
+	planCtx, planSpan := vktrace.StartSpan(ctx, "cvk.config.plan")
+	planCtx = planSpan.WithFields(planCtx, map[string]any{
+		"cvk.config.phase":      "fetch-diff",
+		semconv.CvkEntityType:   semconv.EntityTypeConfig,
+		semconv.CvkEntityID:     engineConfigEntityID(res),
+		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
+		semconv.CvkWorkflowName: "config.apply",
+		semconv.CvkTaskName:     "plan.diff",
+	})
+	err := transport.RetryIdempotent(planCtx, e.RetryPolicy, func() error {
 		var ferr error
-		observed, ferr = w.Fetch(ctx, e.Transport)
+		observed, ferr = w.Fetch(planCtx, e.Transport)
 		return ferr
 	})
 	if err != nil {
+		planSpan.SetStatus(err)
+		planSpan.End()
+		familySpan.SetStatus(err)
 		return FamilyStatus{
 			Name: family, State: "ApplyError",
 			Message: safeMsg("Fetch: %v", err),
@@ -766,6 +826,9 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// family block and descend internally, so we pass the entire entry.
 	ops, err := w.Diff(desired, observed)
 	if err != nil {
+		planSpan.SetStatus(err)
+		planSpan.End()
+		familySpan.SetStatus(err)
 		return FamilyStatus{
 			Name: family, State: "ApplyError",
 			Message: safeMsg("Diff: %v", err),
@@ -804,6 +867,10 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 			// the canonical shape.
 			ke, isKE := w.(writers.KeyExtractable)
 			if !isKE {
+				err := fmt.Errorf("family %s is PruneCapable but not KeyExtractable", family)
+				planSpan.SetStatus(err)
+				planSpan.End()
+				familySpan.SetStatus(err)
 				return FamilyStatus{
 					Name: family, State: "Unsupported",
 					Message: safeMsg(
@@ -816,6 +883,9 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 			pruneInput := scopeObservedToOwned(ke, observed, desired, res.AtomicReplaceOwnedKeys[family])
 			pruneOps, err := pc.PruneDiff(desired, pruneInput)
 			if err != nil {
+				planSpan.SetStatus(err)
+				planSpan.End()
+				familySpan.SetStatus(err)
 				return FamilyStatus{
 					Name: family, State: "ApplyError",
 					Message: safeMsg("PruneDiff: %v", err),
@@ -824,6 +894,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 			ops = append(ops, pruneOps...)
 		}
 	}
+	planSpan.End()
 
 	// No-op: nothing to apply, nothing to verify. Family is InSync by
 	// the writer's own definition of equivalence.
@@ -842,6 +913,17 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	}
 
 	applyStart := time.Now()
+	applyCtx, applySpan := vktrace.StartSpan(ctx, "cvk.config.apply")
+	applyCtx = applySpan.WithFields(applyCtx, map[string]any{
+		"cvk.config.family":     family,
+		"cvk.config.op_count":   len(ops),
+		semconv.CvkEntityType:   semconv.EntityTypeConfig,
+		semconv.CvkEntityID:     engineConfigEntityID(res),
+		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
+		semconv.CvkWorkflowName: "config.apply",
+		semconv.CvkTaskName:     "apply.diff",
+	})
+	defer applySpan.End()
 	// Apply through the engine's per-tick view of the transport. When
 	// the tick is transactional this is the transactionalView wrapper
 	// (writes go to the candidate datastore); otherwise it's the raw
@@ -863,10 +945,12 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// wrapper, so the counter still labels the wire correctly under
 	// transactional reconciles.
 	recordMutateOps(res.DeviceName, transportKindLabel(e.Transport), ops)
-	if err := w.Apply(ctx, at, ops); err != nil {
+	if err := w.Apply(applyCtx, at, ops); err != nil {
 		if applyDuration != nil {
 			applyDuration.WithLabelValues(res.DeviceName, family).Observe(time.Since(applyStart).Seconds())
 		}
+		applySpan.SetStatus(err)
+		familySpan.SetStatus(err)
 		return FamilyStatus{
 			Name: family, State: "ApplyError",
 			OpCount: len(ops),
@@ -890,12 +974,24 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// Wave 10 release-readiness: Verify re-Fetch is idempotent;
 	// retry transient TCP-level errors per RetryPolicy.
 	var verify any
-	err = transport.RetryIdempotent(ctx, e.RetryPolicy, func() error {
+	verifyCtx, verifySpan := vktrace.StartSpan(ctx, "cvk.config.verify")
+	verifyCtx = verifySpan.WithFields(verifyCtx, map[string]any{
+		"cvk.config.family":     family,
+		semconv.CvkEntityType:   semconv.EntityTypeConfig,
+		semconv.CvkEntityID:     engineConfigEntityID(res),
+		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
+		semconv.CvkWorkflowName: "config.apply",
+		semconv.CvkTaskName:     "verify.in_sync",
+	})
+	defer verifySpan.End()
+	err = transport.RetryIdempotent(verifyCtx, e.RetryPolicy, func() error {
 		var ferr error
-		verify, ferr = w.Fetch(ctx, at)
+		verify, ferr = w.Fetch(verifyCtx, at)
 		return ferr
 	})
 	if err != nil {
+		verifySpan.SetStatus(err)
+		familySpan.SetStatus(err)
 		return FamilyStatus{
 			Name: family, State: "ApplyError",
 			OpCount: len(ops),
@@ -904,6 +1000,8 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	}
 	residual, err := w.Diff(desired, verify)
 	if err != nil {
+		verifySpan.SetStatus(err)
+		familySpan.SetStatus(err)
 		return FamilyStatus{
 			Name: family, State: "ApplyError",
 			OpCount: len(ops),
@@ -924,6 +1022,8 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 				vInput := scopeObservedToOwned(ke, verify, desired, res.AtomicReplaceOwnedKeys[family])
 				residualPrune, err := pc.PruneDiff(desired, vInput)
 				if err != nil {
+					verifySpan.SetStatus(err)
+					familySpan.SetStatus(err)
 					return FamilyStatus{
 						Name: family, State: "ApplyError",
 						OpCount: len(ops),
@@ -935,6 +1035,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		}
 	}
 	if len(residual) > 0 {
+		verifySpan.SetStatus(errors.New("residual drift after apply"))
 		return FamilyStatus{
 			Name: family, State: "Drifted",
 			OpCount:   len(ops),
@@ -1105,6 +1206,18 @@ func ConflictCheck(deviceName string, allForDevice []*configv1alpha1.IOSXEConfig
 // list without adding another CR field.
 func (e *Engine) applyCLIBlock(ctx context.Context, block intent.CLIBlock, res *intent.ResolvedIntent) FamilyStatus {
 	famName := "cli:" + block.TemplateName
+	ctx, span := vktrace.StartSpan(ctx, "cvk.config.apply")
+	ctx = span.WithFields(ctx, map[string]any{
+		"cisco.vk.device.name":  res.DeviceName,
+		"cvk.config.family":     famName,
+		"cvk.config.kind":       "cli",
+		semconv.CvkEntityType:   semconv.EntityTypeConfig,
+		semconv.CvkEntityID:     engineConfigEntityID(res),
+		semconv.CvkEvidenceType: semconv.EvidenceTypeConfigChange,
+		semconv.CvkWorkflowName: "config.apply",
+		semconv.CvkTaskName:     "apply.cli_block",
+	})
+	defer span.End()
 	op := transport.Op{
 		Verb: transport.VerbCLI,
 		Body: []byte(block.CLI),
@@ -1132,6 +1245,7 @@ func (e *Engine) applyCLIBlock(ctx context.Context, block intent.CLIBlock, res *
 		applyDuration.WithLabelValues(res.DeviceName, famName).Observe(time.Since(applyStart).Seconds())
 	}
 	if err != nil {
+		span.SetStatus(err)
 		return FamilyStatus{
 			Name: famName, State: "ApplyError",
 			OpCount: countCLILines(block.CLI),

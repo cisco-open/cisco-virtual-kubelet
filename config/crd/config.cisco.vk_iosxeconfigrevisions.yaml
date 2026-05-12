@@ -1,0 +1,144 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: iosxeconfigrevisions.config.cisco.vk
+spec:
+  group: config.cisco.vk
+  names:
+    kind: IOSXEConfigRevision
+    listKind: IOSXEConfigRevisionList
+    plural: iosxeconfigrevisions
+    shortNames:
+    - iosxerev
+    singular: iosxeconfigrevision
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.deviceRef.name
+      name: Device
+      type: string
+    - jsonPath: .spec.sourceRef
+      name: Source
+      type: string
+    - jsonPath: .spec.sourceGeneration
+      name: Generation
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          IOSXEConfigRevision stores durable resolved intent history for
+          IOSXEConfig rollback.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              IOSXEConfigRevisionSpec stores one successfully applied resolved intent for
+              an IOSXEConfig. It is intentionally immutable from the reconciler's point of
+              view: rollback selects a revision and re-runs the normal IOSXEConfig apply
+              path rather than invoking a separate rollback engine.
+            properties:
+              atomicReplaceOwnedKeys:
+                additionalProperties:
+                  items:
+                    type: string
+                  type: array
+                description: AtomicReplaceOwnedKeys snapshots the CR-owned keys after
+                  the apply.
+                type: object
+              body:
+                description: |-
+                  Body is a versioned JSON replay body containing the resolved
+                  configuration and CLI blocks. It uses the same shape as
+                  IOSXEConfigApplyLog entries so rollback and replay share one decoder.
+                type: string
+              deviceRef:
+                description: DeviceRef targets the CiscoDevice the revision was applied
+                  to.
+                properties:
+                  name:
+                    description: Name of the CiscoDevice the CR targets.
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                type: object
+              hash:
+                description: Hash is the canonical resolved-intent hash that was applied.
+                type: string
+              secretMaterialOmitted:
+                description: |-
+                  SecretMaterialOmitted is true when the source IOSXEConfig used
+                  spec.secretRefs and the revision body intentionally omitted the
+                  secret-sourced family blocks.
+                type: boolean
+              secretRefNames:
+                description: |-
+                  SecretRefNames stores only the names of SecretRefs present when this
+                  revision was created. Rollback to an omitted-secret revision is allowed
+                  only when the current IOSXEConfig still references the same Secret names.
+                items:
+                  type: string
+                type: array
+                x-kubernetes-list-type: set
+              sourceGeneration:
+                description: |-
+                  SourceGeneration is the IOSXEConfig generation that produced this
+                  revision.
+                format: int64
+                type: integer
+              sourceRef:
+                description: |-
+                  SourceRef is the namespace/name of the IOSXEConfig that produced this
+                  revision.
+                type: string
+              sourceUID:
+                description: SourceUID is the UID of the IOSXEConfig that produced
+                  this revision.
+                type: string
+            required:
+            - body
+            - deviceRef
+            - hash
+            - sourceRef
+            - sourceUID
+            type: object
+          status:
+            description: |-
+              IOSXEConfigRevisionStatus carries lightweight lifecycle information for
+              operators and GC.
+            properties:
+              createdAt:
+                description: CreatedAt records when the reconciler created the revision.
+                format: date-time
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

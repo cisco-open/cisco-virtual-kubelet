@@ -233,6 +233,24 @@ type IOSXEConfigTemplateSpec struct {
 	// namespace.
 	// +optional
 	SecretRefs []FamilySecretRef `json:"secretRefs,omitempty"`
+
+	// RevisionHistoryLimit caps the number of IOSXEConfigRevision objects
+	// retained for this CR after successful applies. Unset (nil) defaults to
+	// 10; an explicit 0 disables revision creation entirely. Pre-upgrade
+	// objects are treated as nil and therefore default to 10. Revisions with
+	// secret-sourced intent are skipped to avoid persisting Secret material
+	// into CR status or spec.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +optional
+	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
+
+	// RollbackTo names an IOSXEConfigRevision in the same namespace. When set,
+	// the reconciler treats that revision's resolved intent as desired state
+	// and runs the normal plan/apply/verify flow. Confirmed-commit remains a
+	// transport safety timer; rollbackTo is declarative intent selection.
+	// +optional
+	RollbackTo string `json:"rollbackTo,omitempty"`
 }
 
 // FamilySecretRef binds a Kubernetes Secret to a family's intent
@@ -290,6 +308,11 @@ type IOSXEConfigStatus struct {
 	// LastAppliedTime records the most recent successful apply.
 	// +optional
 	LastAppliedTime *metav1.Time `json:"lastAppliedTime,omitempty"`
+
+	// LastRollbackedTo records the most recent revision name that was
+	// successfully applied through spec.rollbackTo.
+	// +optional
+	LastRollbackedTo *string `json:"lastRollbackedTo,omitempty"`
 
 	// LastDeviceCheck records the most recent reconcile tick that
 	// actually fetched device state and ran the diff (i.e., the

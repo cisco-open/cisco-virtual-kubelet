@@ -17,6 +17,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -40,6 +41,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
 )
 
 const (
@@ -67,6 +69,39 @@ const (
 	// when prereq relinquish cannot converge and accepted orphaned config.
 	ForcePrereqsSkipAnnotation    = "config.cisco.vk/force-prereqs-skip"
 	forceRelinquishSkipAnnotation = "config.cisco.vk/force-relinquish-skip"
+
+	envOTELExporterOTLPEndpoint = "OTEL_EXPORTER_OTLP_ENDPOINT"
+	envOTELExporterOTLPInsecure = "OTEL_EXPORTER_OTLP_INSECURE"
+	envOTELExporterOTLPHeaders  = "OTEL_EXPORTER_OTLP_HEADERS"
+	envYANGModelsDir            = "YANG_MODELS_DIR"
+	envCVKResourceAttributes    = "CVK_RESOURCE_ATTRIBUTES"
+	envCVKTelemetryInsecure     = "CISCO_VK_TELEMETRY_INSECURE"
+	envCVKTelemetryPort         = "CISCO_VK_TELEMETRY_PORT"
+)
+
+// telemetryEnvPropagationNames is the set of env vars whose literal values
+// the controller copies into every per-device VK pod's env block.
+//
+// OTEL_EXPORTER_OTLP_HEADERS is intentionally excluded — those values can
+// carry collector auth tokens and copying them as literal `EnvVar.value`
+// makes them visible to anyone with `get pod` on the per-device pod's
+// namespace. When the chart configures a secret reference (env vars
+// CVK_OTLP_HEADERS_SECRET_NAME / CVK_OTLP_HEADERS_SECRET_KEY are set on the
+// controller pod), propagatedTelemetryHeadersEnvVar mirrors that secret
+// reference into per-device pods. Operators must ensure the named Secret
+// exists in each device.Namespace (same pattern as imagePullSecrets).
+var telemetryEnvPropagationNames = []string{
+	envOTELExporterOTLPEndpoint,
+	envOTELExporterOTLPInsecure,
+	envYANGModelsDir,
+	envCVKResourceAttributes,
+	envCVKTelemetryInsecure,
+	envCVKTelemetryPort,
+}
+
+const (
+	envCVKOTLPHeadersSecretName = "CVK_OTLP_HEADERS_SECRET_NAME"
+	envCVKOTLPHeadersSecretKey  = "CVK_OTLP_HEADERS_SECRET_KEY"
 )
 
 // configPrereqsTeardownPollInterval is how often the deletion-finalizer path
@@ -120,6 +155,8 @@ type CiscoDeviceReconciler struct {
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;delete
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs/status,verbs=get
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxetelemetries,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxetelemetries/status,verbs=get;list;watch;create;update;patch;delete
 // The controller spawns per-device cisco-vk Deployments in the device's
 // namespace and references a shared ServiceAccount. The chart only seeds that
 // ServiceAccount in the release namespace, so tenant namespaces need their own
@@ -131,7 +168,18 @@ type CiscoDeviceReconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet,verbs=bind
 
 // Reconcile ensures a ConfigMap and Deployment exist for each CiscoDevice.
-func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, retErr error) {
+	ctx, span := vktrace.StartSpan(ctx, "cvk.ciscodevice.reconcile")
+	ctx = span.WithField(ctx, "cisco.device.name", req.Name)
+	ctx = span.WithField(ctx, "cisco.device.namespace", req.Namespace)
+	defer func() {
+		span.WithField(ctx, "cvk.reconcile.result", reconcileResultAttribute(result))
+		if retErr != nil {
+			span.SetStatus(retErr)
+		}
+		span.End()
+	}()
+
 	logger := log.FromContext(ctx)
 
 	// ── 1. Fetch the CiscoDevice ────────────────────────────────────────
@@ -143,6 +191,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 		return ctrl.Result{}, fmt.Errorf("unable to fetch CiscoDevice: %w", err)
 	}
+	ctx = span.WithField(ctx, "cvk.driver.kind", string(device.Spec.Driver))
 
 	// ── 2. Handle deletion (finalizer) ───────────────────────────────────
 	if !device.DeletionTimestamp.IsZero() {
@@ -371,6 +420,17 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				Value: "true",
 			})
 		}
+		// Helm injects telemetry env vars into the controller Deployment.
+		// The per-device VK pod is the process that owns MDT-over-gNMI
+		// subscriptions and OTel exporters, so propagate those controller
+		// env values into the pod spec the controller creates.
+		podEnv := append([]corev1.EnvVar{}, credEnv...)
+		podEnv = append(podEnv, downwardAPIEnv()...)
+		podEnv = append(podEnv, propagatedTelemetryEnv()...)
+		if hdr := propagatedTelemetryHeadersEnvVar(); hdr != nil {
+			podEnv = append(podEnv, *hdr)
+		}
+		podEnv = append(podEnv, opsPolicyEnv(device.Spec.OpsPolicy)...)
 
 		deploy.Spec.Template.Spec = corev1.PodSpec{
 			Containers: []corev1.Container{
@@ -378,7 +438,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					Name:  "cisco-vk",
 					Image: image,
 					Args:  vkContainerArgs(device.Name, device.Spec.LogLevel),
-					Env:   credEnv,
+					Env:   podEnv,
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "device-config",
@@ -440,6 +500,16 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func reconcileResultAttribute(result ctrl.Result) string {
+	if result.RequeueAfter > 0 {
+		return "requeue-after:" + result.RequeueAfter.String()
+	}
+	if result.Requeue {
+		return "requeue"
+	}
+	return "done"
 }
 
 // vkSharedClusterRole is the cluster-scoped Role the chart ships with the VK
@@ -516,6 +586,101 @@ func perDeviceDeploymentLabels(deviceName string) map[string]string {
 		"app.kubernetes.io/instance":   deviceName,
 		"app.kubernetes.io/managed-by": "ciscodevice-controller",
 	}
+}
+
+// downwardAPIEnv returns the per-pod identity env vars (POD_NAME,
+// POD_NAMESPACE, POD_UID, NODE_NAME) the per-device VK process needs to
+// emit OTel SemConv resource attributes (k8s.pod.*, k8s.node.*,
+// service.instance.id). These attributes let multi-replica deployments
+// disambiguate metric series downstream.
+func downwardAPIEnv() []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
+		{Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
+		{Name: "POD_UID", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.uid"}}},
+		{Name: "NODE_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
+	}
+}
+
+func propagatedTelemetryEnv() []corev1.EnvVar {
+	env := make([]corev1.EnvVar, 0, len(telemetryEnvPropagationNames))
+	for _, name := range telemetryEnvPropagationNames {
+		value, ok := os.LookupEnv(name)
+		if !ok {
+			continue
+		}
+		env = append(env, corev1.EnvVar{Name: name, Value: value})
+	}
+	return env
+}
+
+// propagatedTelemetryHeadersEnvVar mirrors the controller's
+// OTEL_EXPORTER_OTLP_HEADERS configuration onto per-device pods as a
+// SecretKeyRef-backed env var when the chart has wired one. Returning nil
+// means "no headers propagation configured" — operators who need OTLP auth
+// must either set telemetry.otlp.headersSecret in the chart or inject the
+// env var manually on the per-device pod via custom workload tooling.
+//
+// Why not propagate the literal value: OTEL_EXPORTER_OTLP_HEADERS commonly
+// carries collector auth tokens; copying it as a literal `EnvVar.value` puts
+// those tokens into per-device pod specs that any holder of `get pod` on
+// the device's namespace can read.
+func propagatedTelemetryHeadersEnvVar() *corev1.EnvVar {
+	name := strings.TrimSpace(os.Getenv(envCVKOTLPHeadersSecretName))
+	if name == "" {
+		return nil
+	}
+	key := strings.TrimSpace(os.Getenv(envCVKOTLPHeadersSecretKey))
+	if key == "" {
+		key = envOTELExporterOTLPHeaders
+	}
+	return &corev1.EnvVar{
+		Name: envOTELExporterOTLPHeaders,
+		ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: name},
+				Key:                  key,
+			},
+		},
+	}
+}
+
+// opsPolicyEnv translates DeviceSpec.OpsPolicy into env vars on the per-device
+// VK pod. Centralising the translation here keeps the CRD the authoritative
+// source: imperative `kubectl set env` edits get reverted by the controller's
+// next reconcile, while flipping spec.opsPolicy persists.
+func opsPolicyEnv(policy *ciskov1.OpsPolicy) []corev1.EnvVar {
+	if policy == nil {
+		return nil
+	}
+	var env []corev1.EnvVar
+	if names := dedupeNonEmpty(policy.ConfigDiffAllowedNamespaces); len(names) > 0 {
+		env = append(env, corev1.EnvVar{
+			Name:  "CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES",
+			Value: strings.Join(names, ","),
+		})
+	}
+	return env
+}
+
+func dedupeNonEmpty(in []string) []string {
+	if len(in) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(in))
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
 }
 
 func matchesPerDeviceLabels(labels map[string]string, deviceName string) bool {
