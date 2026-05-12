@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -249,7 +250,7 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 	if validated == nil {
 		return r.handleInstallErr(ctx, up, errors.New("gnoi Install: stream ended without Validated"), now)
 	}
-	if validated.Version != "" && validated.Version != up.Spec.TargetVersion {
+	if validated.Version != "" && !versionMatches(validated.Version, up.Spec.TargetVersion) {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "VersionMismatch",
 			fmt.Sprintf("device validated version %q but spec targets %q", validated.Version, up.Spec.TargetVersion), now)
 	}
@@ -354,7 +355,7 @@ func (r *Reconciler) runVerifying(ctx context.Context, up *opsv1alpha1.IOSXESoft
 	if err != nil {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "VerifyFailed", err.Error(), now)
 	}
-	if res.Version != up.Spec.TargetVersion {
+	if !versionMatches(res.Version, up.Spec.TargetVersion) {
 		rollback := up.Spec.RollbackOnFailure == nil || *up.Spec.RollbackOnFailure
 		if rollback {
 			return r.advance(ctx, up, opsv1alpha1.UpgradePhaseRollingBack, "VerifyMismatch",
@@ -523,6 +524,27 @@ func validateImageSource(src opsv1alpha1.UpgradeImageSource) error {
 		return errors.New("imageSource.url requires imageSource.sha256 for integrity verification")
 	}
 	return nil
+}
+
+// versionMatches reports whether a device-reported version matches the
+// operator-supplied target. IOS-XE returns versions in several shapes
+// (release-format "17.15.01a", short build "26.01.01", full install-
+// summary form "26.01.01.0.340", oper-data form "17.18.02.0.4112.NNN");
+// the operator may legitimately supply the shortest unambiguous prefix
+// rather than copying the exact device string. A device-side version
+// matches the target when either:
+//   - they are byte-equal, or
+//   - the device version begins with target + "." (target is a strict
+//     prefix on a dotted-segment boundary, so "26.01.01" matches
+//     "26.01.01.0.340" but not "26.01.011" or "26.01.01a").
+//
+// Empty target is rejected by CRD validation; the function only sees
+// non-empty target values from the reconciler.
+func versionMatches(deviceVersion, target string) bool {
+	if deviceVersion == target {
+		return true
+	}
+	return strings.HasPrefix(deviceVersion, target+".")
 }
 
 func backoff(retryCount int32) time.Duration {

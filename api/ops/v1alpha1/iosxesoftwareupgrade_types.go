@@ -111,13 +111,25 @@ type IOSXESoftwareUpgradeSpec struct {
 	// +kubebuilder:validation:Required
 	ImageSource UpgradeImageSource `json:"imageSource"`
 
-	// TargetVersion is the SPA bundle version this upgrade installs
-	// (e.g. "17.15.01a"). The reconciler:
-	//   - rejects in Pending if the device already runs this version
+	// TargetVersion is the version string the device's gNOI OS server
+	// uses to identify the staged image. The reconciler:
 	//   - asserts the Validated message names this version
-	//   - cross-checks gNMI Cisco-IOS-XE-native:native/version in Verifying
+	//   - passes it to gNOI OS.Activate as the version parameter
+	//   - cross-checks via OS.Verify in the Verifying phase
+	//
+	// IOS-XE reports image versions in several shapes depending on the
+	// release and CLI surface. Examples that this field accepts:
+	//   - "17.15.01a" (release-format)
+	//   - "26.01.01"  (build-number trimmed)
+	//   - "26.01.01.0.340" (full "show install summary" form)
+	//   - "17.18.02.0.4112.1766116039" (oper-data form)
+	//
+	// The reconciler matches the device-reported version with a prefix-
+	// aware comparison (Verify result == TargetVersion, or starts with
+	// TargetVersion + "."), so operators may specify the shortest form
+	// that's still unambiguous within the device's installed images.
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Pattern=`^[0-9]+\.[0-9]+(\.[0-9]+([a-z])?)?$`
+	// +kubebuilder:validation:Pattern=`^[0-9]+(\.[0-9]+)+([a-z])?$`
 	TargetVersion string `json:"targetVersion"`
 
 	// Strategy controls whether Activate performs the reload itself

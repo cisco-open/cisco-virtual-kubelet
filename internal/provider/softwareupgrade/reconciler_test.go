@@ -380,3 +380,26 @@ func TestFinalizerAddedThenClearedOnDelete(t *testing.T) {
 		}
 	}
 }
+
+func TestVersionMatches(t *testing.T) {
+	cases := []struct {
+		device, target string
+		want           bool
+	}{
+		{"26.01.01.0.340", "26.01.01.0.340", true},     // exact
+		{"26.01.01.0.340", "26.01.01", true},           // short-form prefix
+		{"17.18.02.0.4112.1766116039", "17.18.02", true}, // long oper-data form
+		{"26.01.01.0.340", "26.01", true},              // even shorter prefix
+		{"26.01.011", "26.01.01", false},               // suffix-extension, not dot boundary
+		{"26.01.01a", "26.01.01", false},               // letter-suffix not on dot boundary
+		{"17.15.01a", "17.15.01a", true},               // exact release-format
+		{"17.15.01", "17.15.01a", false},               // missing trailing letter
+		{"", "26.01.01", false},
+	}
+	for _, c := range cases {
+		got := versionMatches(c.device, c.target)
+		if got != c.want {
+			t.Errorf("versionMatches(%q, %q) = %v, want %v", c.device, c.target, got, c.want)
+		}
+	}
+}
