@@ -86,6 +86,14 @@ type ConfigDriverContext struct {
 	// its periodic ticker.
 	SubscribePaths []string
 
+	// DeviceVersion is the IOS-XE software version string reported
+	// by the device (e.g. "17.16.01a"). When non-empty, the startup
+	// code passes this to writers.SetDeviceVersion so version-
+	// conditional YANG transforms can branch. The factory may leave
+	// this empty if the version isn't known at construction time;
+	// it will be set lazily on the first successful device query.
+	DeviceVersion string
+
 	// FamilyOrder is the optional cross-family ordering hook the
 	// engine consults during Wave 10.3 atomic-replace reconciles.
 	// Platforms that ship a topo-sortable schema (IOS-XE families.yaml

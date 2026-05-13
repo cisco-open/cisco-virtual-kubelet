@@ -92,10 +92,11 @@ type nestedKeyedListWriter struct {
 	// non-nil.
 	nested []nestedListSpec
 
-	nestedLeaf      string                              // alias for one-spec usage
-	nestedKeyField  string                              // alias for one-spec usage
-	nestedYANGInner string                              // alias for one-spec usage
-	nestedBodyShape func(map[string]any) map[string]any // alias for one-spec usage
+	nestedLeaf          string                              // alias for one-spec usage
+	nestedKeyField      string                              // alias for one-spec usage
+	nestedYANGInner     string                              // alias for one-spec usage
+	nestedYANGInnerFunc func() string                       // runtime override for version-conditional YANG inner name
+	nestedBodyShape     func(map[string]any) map[string]any // alias for one-spec usage
 }
 
 // specs returns the nested-leaf specifications normalized into the
@@ -109,10 +110,14 @@ func (w nestedKeyedListWriter) specs() []nestedListSpec {
 	if w.nestedLeaf == "" {
 		return nil
 	}
+	yangInner := w.nestedYANGInner
+	if w.nestedYANGInnerFunc != nil {
+		yangInner = w.nestedYANGInnerFunc()
+	}
 	return []nestedListSpec{{
 		Leaf:      w.nestedLeaf,
 		KeyField:  w.nestedKeyField,
-		YANGInner: w.nestedYANGInner,
+		YANGInner: yangInner,
 		BodyShape: w.nestedBodyShape,
 	}}
 }

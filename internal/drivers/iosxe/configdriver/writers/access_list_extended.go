@@ -170,7 +170,17 @@ func aclRuleToYANG(flat map[string]any) map[string]any {
 	}
 
 	if len(ace) > 0 {
-		out["ace-rule"] = ace
+		// On IOS-XE < 17.18 the ace-rule container doesn't exist;
+		// ACE fields live flat under access-list-seq-rule.
+		// On >= 17.18 (e.g. C9300 17.18.2) the ace-rule wrapper
+		// is required.
+		if DeviceVersionAtLeast(17, 18) {
+			out["ace-rule"] = ace
+		} else {
+			for k, v := range ace {
+				out[k] = v
+			}
+		}
 	}
 	return out
 }

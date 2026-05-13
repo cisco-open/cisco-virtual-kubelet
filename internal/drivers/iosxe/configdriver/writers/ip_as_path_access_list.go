@@ -17,6 +17,11 @@ package writers
 // BGP AS-path access-list Phase-3 writer.
 
 func init() {
+	// On IOS-XE < 17.18, `action-list` is unknown. The YANG element
+	// name is `as-path-access-list-entry` on older versions. Both
+	// leaf names are included in managedLeaves so the writer manages
+	// whichever form the device returns. The version-conditional
+	// transform happens at Diff time via yangBodyShape.
 	Override(keyedListWriter{
 		family:      "ip_as_path_access_list",
 		yangPath:    "/Cisco-IOS-XE-native:native/ip/as-path/access-list",
@@ -25,6 +30,7 @@ func init() {
 		keyField:    "name",
 		managedLeaves: []string{
 			"action-list",
+			"as-path-access-list-entry",
 		},
 	})
 }

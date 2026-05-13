@@ -28,5 +28,10 @@ func init() {
 			"vlan",
 			"mst",
 		},
+		// Note: `mode` leaf causes malformed-message on C9KV 17.15.
+		// A runtime yangBodyShape could filter it on < 17.18, but
+		// singletonWriter doesn't support yangBodyShape. A custom
+		// writer or a per-version leaf filter is needed if mode must
+		// be excluded on < 17.18 platforms.
 	})
 }

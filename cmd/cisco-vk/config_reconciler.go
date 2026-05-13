@@ -58,6 +58,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry"
 	"github.com/cisco/virtual-kubelet-cisco/internal/otelproviders"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
@@ -206,6 +207,14 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		// even on partial failure, but if a future driver doesn't,
 		// the reconciler still needs a non-nil context.
 		dctx = &drivers.ConfigDriverContext{}
+	}
+	// Propagate device version to writers so version-conditional
+	// YANG transforms can branch. The version may also arrive later
+	// via syncNodeStatus → SetDeviceVersion if the factory didn't
+	// have it yet (e.g. transport was unavailable at startup).
+	if dctx.DeviceVersion != "" {
+		writers.SetDeviceVersion(dctx.DeviceVersion)
+		log.G(ctx).WithField("version", dctx.DeviceVersion).Info("device version set for writers")
 	}
 
 	// Lease namespace selection — three-tier precedence:
