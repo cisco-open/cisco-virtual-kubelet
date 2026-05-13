@@ -95,17 +95,21 @@ func fetchDeviceVersion(ctx context.Context, t transport.Interface) string {
 	raw, err := t.Fetch(ctx,
 		"/restconf/data/Cisco-IOS-XE-device-hardware-oper:device-hardware-data/device-hardware/device-system-data/software-version")
 	if err != nil {
-		log.G(ctx).WithError(err).Debug("config driver: could not fetch device version")
+		log.G(ctx).WithError(err).Warn("config driver: could not fetch device version")
 		return ""
 	}
 	// Response is JSON: {"Cisco-IOS-XE-device-hardware-oper:software-version": "..."}
 	var envelope map[string]string
 	if err := json.Unmarshal(raw, &envelope); err != nil {
+		log.G(ctx).WithError(err).Warn("config driver: could not parse device version response")
 		return ""
 	}
 	for _, v := range envelope {
-		return extractVersion(v)
+		ver := extractVersion(v)
+		log.G(ctx).WithField("version", ver).Info("config driver: fetched device version")
+		return ver
 	}
+	log.G(ctx).Warn("config driver: empty device version response")
 	return ""
 }
 
