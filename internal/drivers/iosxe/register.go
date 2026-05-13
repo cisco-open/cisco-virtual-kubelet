@@ -93,23 +93,30 @@ func fetchDeviceVersion(ctx context.Context, t transport.Interface) string {
 		return ""
 	}
 	raw, err := t.Fetch(ctx,
-		"/restconf/data/Cisco-IOS-XE-device-hardware-oper:device-hardware-data/device-hardware/device-system-data/software-version")
+		"/restconf/data/Cisco-IOS-XE-device-hardware-oper:device-hardware-data/device-hardware/device-system-data")
 	if err != nil {
-		log.G(ctx).WithError(err).Warn("config driver: could not fetch device version")
+		log.G(ctx).WithError(err).Warn("config driver: could not fetch device system data")
 		return ""
 	}
-	// Response is JSON: {"Cisco-IOS-XE-device-hardware-oper:software-version": "..."}
-	var envelope map[string]string
-	if err := json.Unmarshal(raw, &envelope); err != nil {
-		log.G(ctx).WithError(err).Warn("config driver: could not parse device version response")
+	// Response wraps in module prefix:
+	// {"Cisco-IOS-XE-device-hardware-oper:device-system-data": {"software-version": "...", ...}}
+	var outer map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &outer); err != nil {
+		log.G(ctx).WithError(err).Warn("config driver: could not parse device system data")
 		return ""
 	}
-	for _, v := range envelope {
-		ver := extractVersion(v)
-		log.G(ctx).WithField("version", ver).Info("config driver: fetched device version")
-		return ver
+	for _, innerRaw := range outer {
+		var inner map[string]any
+		if err := json.Unmarshal(innerRaw, &inner); err != nil {
+			continue
+		}
+		if sv, ok := inner["software-version"].(string); ok {
+			ver := extractVersion(sv)
+			log.G(ctx).WithField("version", ver).Info("config driver: fetched device version")
+			return ver
+		}
 	}
-	log.G(ctx).Warn("config driver: empty device version response")
+	log.G(ctx).Warn("config driver: software-version not found in device-system-data")
 	return ""
 }
 
