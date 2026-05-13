@@ -151,10 +151,23 @@ func (w keyedListWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		if err != nil {
 			return nil, err
 		}
+		// When the entry doesn't exist on the device, MERGE to
+		// the parent list path (no =key suffix). IOS-XE RESTCONF
+		// rejects PATCH to a nonexistent entry path with 404; the
+		// parent path creates the entry as part of the MERGE.
+		// Caught against C8000V 17.16.01a for prefix_list.
+		opPath := w.yangPath + "=" + k
+		var pathSpec []transport.PathElement
+		if inDevice {
+			pathSpec = pathSpecForKeyedListEntry(w.yangPath, w.keyField, k)
+		} else {
+			opPath = w.yangPath
+			pathSpec = pathSpecForKeyedListParent(w.yangPath)
+		}
 		ops = append(ops, transport.Op{
 			Verb:     transport.VerbMerge,
-			Path:     w.yangPath + "=" + k,
-			PathSpec: pathSpecForKeyedListEntry(w.yangPath, w.keyField, k),
+			Path:     opPath,
+			PathSpec: pathSpec,
 			Body:     body,
 		})
 	}
@@ -267,6 +280,21 @@ func pathSpecForKeyedListEntry(yangPath, keyField, keyValue string) []transport.
 		out[i] = transport.PathElement{Name: seg}
 	}
 	out[len(out)-1].Keys = map[string]string{keyField: keyValue}
+	return out
+}
+
+// pathSpecForKeyedListParent builds a structured PathSpec for the
+// parent list path (no key). Used when creating new entries via
+// MERGE to the list path rather than to a specific entry path.
+func pathSpecForKeyedListParent(yangPath string) []transport.PathElement {
+	segments := splitYANGPathSegments(yangPath)
+	if len(segments) == 0 {
+		return nil
+	}
+	out := make([]transport.PathElement, len(segments))
+	for i, seg := range segments {
+		out[i] = transport.PathElement{Name: seg}
+	}
 	return out
 }
 

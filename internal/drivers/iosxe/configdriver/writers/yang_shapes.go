@@ -81,6 +81,15 @@ func interfaceIPv4VRFToYANG(flat map[string]any) map[string]any {
 				continue
 			}
 			ensureIPAccessGroup(out, "out")["acl-name"] = s
+		case "shutdown":
+			// YANG type empty: presence = shut, absence = no shut.
+			// RFC 7951 encodes empty leaves as [null].
+			// Caught against C8000V 17.16.01a: {"shutdown":false}
+			// rejected with invalid-value.
+			if isTrue(v) {
+				out["shutdown"] = []any{nil}
+			}
+			// false / nil → omit the leaf entirely (no shutdown)
 		default:
 			out[k] = v
 		}
@@ -158,9 +167,19 @@ func interfaceIPv4VRFFromYANG(yang map[string]any) map[string]any {
 			if fwd, ok := vrf["forwarding"]; ok {
 				out["vrf"] = fwd
 			}
+		case "shutdown":
+			// YANG empty leaf: presence → true, absence → false.
+			// Device returns "shutdown": [null] when the interface
+			// is shut; the key is absent when it's not shut.
+			out["shutdown"] = true
 		default:
 			out[k] = v
 		}
+	}
+	// If the device didn't return "shutdown", the interface is not
+	// shut — normalise to false so leavesEqual can compare.
+	if _, has := out["shutdown"]; !has {
+		out["shutdown"] = false
 	}
 	return out
 }

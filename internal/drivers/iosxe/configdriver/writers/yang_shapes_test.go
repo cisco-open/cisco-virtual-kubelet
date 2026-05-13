@@ -89,8 +89,19 @@ func TestInterfaceIPv4VRFToYANGShape(t *testing.T) {
 			want: map[string]any{
 				"name":        "Po10",
 				"description": "uplink",
-				"shutdown":    false,
-				"mtu":         1500.0,
+				// shutdown: false → omitted (YANG empty leaf absent = no shutdown)
+				"mtu": 1500.0,
+			},
+		},
+		{
+			name: "shutdown true becomes empty leaf",
+			in: map[string]any{
+				"name":     "Gi0/0",
+				"shutdown": true,
+			},
+			want: map[string]any{
+				"name":     "Gi0/0",
+				"shutdown": []any{nil},
 			},
 		},
 	}
@@ -134,6 +145,7 @@ func TestInterfaceIPv4VRFFromYANGShape(t *testing.T) {
 				"ipv4_address":      "10.255.255.97",
 				"ipv4_address_mask": "255.255.255.255",
 				"vrf":               "MGMT",
+				"shutdown":          false,
 			},
 		},
 		{
@@ -142,7 +154,7 @@ func TestInterfaceIPv4VRFFromYANGShape(t *testing.T) {
 				"name": 1.0,
 				"ip":   map[string]any{"address": map[string]any{"primary": map[string]any{}}},
 			},
-			want: map[string]any{"name": 1.0},
+			want: map[string]any{"name": 1.0, "shutdown": false},
 		},
 		{
 			name: "no ip / vrf containers",
@@ -152,12 +164,12 @@ func TestInterfaceIPv4VRFFromYANGShape(t *testing.T) {
 		{
 			name: "ip container malformed — pass through ignored, no panic",
 			in:   map[string]any{"name": 1.0, "ip": "not-an-object"},
-			want: map[string]any{"name": 1.0},
+			want: map[string]any{"name": 1.0, "shutdown": false},
 		},
 		{
 			name: "vrf already flat (test fixture path)",
 			in:   map[string]any{"name": 1.0, "vrf": "MGMT"},
-			want: map[string]any{"name": 1.0, "vrf": "MGMT"},
+			want: map[string]any{"name": 1.0, "vrf": "MGMT", "shutdown": false},
 		},
 	}
 	for _, tc := range cases {

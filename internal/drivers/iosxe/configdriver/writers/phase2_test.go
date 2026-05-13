@@ -134,8 +134,10 @@ func TestNTPServersDiffCreatesMissing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Diff: %v", err)
 	}
-	if len(ops) != 1 || !strings.Contains(ops[0].Path, "=192.0.2.1") {
-		t.Fatalf("ops=%+v, want 1 op keyed on 192.0.2.1", ops)
+	// New entries MERGE to the parent list path (no =key suffix)
+	// so the device creates the entry.
+	if len(ops) != 1 || strings.Contains(ops[0].Path, "=") {
+		t.Fatalf("ops=%+v, want 1 op to parent path (no =key)", ops)
 	}
 }
 
@@ -149,8 +151,9 @@ func TestStaticRouteDiffByPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Diff: %v", err)
 	}
-	if len(ops) != 1 || !strings.Contains(ops[0].Path, "=0.0.0.0") {
-		t.Fatalf("ops=%+v", ops)
+	// New entries MERGE to the parent list path.
+	if len(ops) != 1 || strings.Contains(ops[0].Path, "=") {
+		t.Fatalf("ops=%+v, want 1 op to parent path (no =key)", ops)
 	}
 }
 

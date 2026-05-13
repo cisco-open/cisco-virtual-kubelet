@@ -40,8 +40,9 @@ func TestVRFDiffCreatesMissing(t *testing.T) {
 	if len(ops) != 1 {
 		t.Fatalf("got %d ops, want 1", len(ops))
 	}
-	if !strings.Contains(ops[0].Path, "=MGMT") {
-		t.Errorf("op path=%q, want =MGMT suffix", ops[0].Path)
+	// New entries MERGE to the parent list path.
+	if strings.Contains(ops[0].Path, "=") {
+		t.Errorf("op path=%q, want parent path (no =key) for new entry", ops[0].Path)
 	}
 }
 
@@ -97,9 +98,9 @@ func TestVPGDiffSortsByID(t *testing.T) {
 	if len(ops) != 2 {
 		t.Fatalf("got %d ops, want 2", len(ops))
 	}
-	// Both differ from the empty observed → 2 ops, ordered lex by key.
-	if !strings.HasSuffix(ops[0].Path, "=1") || !strings.HasSuffix(ops[1].Path, "=2") {
-		t.Errorf("op paths not sorted: %v, %v", ops[0].Path, ops[1].Path)
+	// Both are new entries → MERGE to parent path.
+	if strings.Contains(ops[0].Path, "=") || strings.Contains(ops[1].Path, "=") {
+		t.Errorf("op paths should be parent paths for new entries: %v, %v", ops[0].Path, ops[1].Path)
 	}
 }
 
