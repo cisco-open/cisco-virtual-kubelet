@@ -32,17 +32,6 @@ package writers
 // matters here too — a single match/set tweak on entry 10 must not
 // rewrite a 200-entry route-map.
 
-// routeMapSeqContainer returns the correct YANG container name for
-// the route-map sequence list based on the device version. Called at
-// Diff/Fetch time (not init time) because the device version is
-// not known until after transport connects.
-func routeMapSeqContainer() string {
-	if DeviceVersionAtLeast(17, 18) {
-		return "route-map-without-order-seq"
-	}
-	return "route-map-seq"
-}
-
 func init() {
 	Override(nestedKeyedListWriter{
 		base: keyedListWriter{
@@ -60,9 +49,10 @@ func init() {
 		},
 		nestedLeaf:     "entries",
 		nestedKeyField: "seq",
-		// nestedYANGInner is resolved at Diff time via the
-		// nestedYANGInnerFunc if set, falling back to static.
-		nestedYANGInner:     "route-map-without-order-seq",
-		nestedYANGInnerFunc: routeMapSeqContainer,
+		// nestedYANGInner is the baseline (17.18+) name; on < 17.18
+		// the override table replaces it with the module-prefixed
+		// "Cisco-IOS-XE-route-map:route-map-seq" via
+		// NestedYANGInnerOverride.
+		nestedYANGInner: "route-map-without-order-seq",
 	})
 }

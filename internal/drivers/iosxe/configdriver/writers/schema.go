@@ -159,6 +159,11 @@ var handWrittenSchemas = map[string]FamilySchema{
 		Shape:         "singleton",
 		ManagedLeaves: snmpManagedLeaves,
 	},
+	"ip_community_list": {
+		Family:        "ip_community_list",
+		Shape:         "singleton",
+		ManagedLeaves: communityListManagedLeaves,
+	},
 }
 
 // systemManagedLeaves is a helper that returns the system writer's

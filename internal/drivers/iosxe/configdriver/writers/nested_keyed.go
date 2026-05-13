@@ -77,6 +77,12 @@ type nestedListSpec struct {
 	// to the empty-leaf `dst-any`. Leave nil for families whose
 	// netascode shape passes through verbatim.
 	BodyShape func(map[string]any) map[string]any
+
+	// FetchShape, if set, is applied to every observed-side entry
+	// during Diff normalisation — converting the YANG-decoded
+	// shape back into the flat netascode shape so the comparison
+	// against desired entries works correctly.
+	FetchShape func(map[string]any) map[string]any
 }
 
 // nestedKeyedListWriter wraps keyedListWriter and adds per-inner-key
@@ -97,6 +103,7 @@ type nestedKeyedListWriter struct {
 	nestedYANGInner     string                              // alias for one-spec usage
 	nestedYANGInnerFunc func() string                       // runtime override for version-conditional YANG inner name
 	nestedBodyShape     func(map[string]any) map[string]any // alias for one-spec usage
+	nestedFetchShape    func(map[string]any) map[string]any // alias for one-spec usage
 }
 
 // specs returns the nested-leaf specifications normalized into the
@@ -114,11 +121,16 @@ func (w nestedKeyedListWriter) specs() []nestedListSpec {
 	if w.nestedYANGInnerFunc != nil {
 		yangInner = w.nestedYANGInnerFunc()
 	}
+	// Version override table takes precedence over both static and
+	// func-based inner names. This allows the override table to
+	// inject module prefixes without touching individual writer files.
+	yangInner = ResolvedNestedYANGInner(w.base.family, yangInner)
 	return []nestedListSpec{{
-		Leaf:      w.nestedLeaf,
-		KeyField:  w.nestedKeyField,
-		YANGInner: yangInner,
-		BodyShape: w.nestedBodyShape,
+		Leaf:       w.nestedLeaf,
+		KeyField:   w.nestedKeyField,
+		YANGInner:  yangInner,
+		BodyShape:  w.nestedBodyShape,
+		FetchShape: w.nestedFetchShape,
 	}}
 }
 
@@ -324,6 +336,44 @@ func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, erro
 		specByLeaf[s.Leaf] = s
 	}
 
+	// Normalize observed entries: the device returns inner lists under
+	// the YANG element name (e.g. "Cisco-IOS-XE-route-map:route-map-seq")
+	// but the Diff comparison uses the netascode leaf name ("entries").
+	// Rename YANG inner keys to netascode leaf names, and reverse any
+	// version-conditional element renames on inner entries so that key
+	// fields match the desired-side names.
+	override := GetOverride(w.base.family)
+	for _, spec := range specs {
+		if spec.YANGInner == "" || spec.YANGInner == spec.Leaf {
+			continue
+		}
+		for k := range got {
+			entry := got[k]
+			if inner, ok := entry[spec.YANGInner]; ok {
+				entry[spec.Leaf] = inner
+				delete(entry, spec.YANGInner)
+			}
+			if innerVal, ok := entry[spec.Leaf]; ok {
+				if innerList, ok := innerVal.([]any); ok {
+					for i, el := range innerList {
+						if m, ok := el.(map[string]any); ok {
+							// Reverse element map (e.g. ordering-seq → seq).
+							if override != nil && len(override.ElementMap) > 0 {
+								m = ReverseElementMap(m, override.ElementMap)
+							}
+							// Apply FetchShape to normalise YANG → netascode
+							// (e.g. std ACL permit/deny/std-ace → flat action/fields).
+							if spec.FetchShape != nil {
+								m = spec.FetchShape(m)
+							}
+							innerList[i] = m
+						}
+					}
+				}
+			}
+		}
+	}
+
 	var ops []transport.Op
 	for _, k := range keyOrder {
 		desiredEntry := want[k]
@@ -386,6 +436,11 @@ func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, erro
 			} else {
 				body[leaf] = changed
 			}
+		}
+		// Apply version-conditional overrides (element renames,
+		// empty-leaf encoding, body transforms).
+		if o := GetOverride(w.base.family); o != nil {
+			body = ApplyOverrideToBody(body, o)
 		}
 		payload, err := wrapYANGPayload(w.base.envelopeKey, []any{body})
 		if err != nil {

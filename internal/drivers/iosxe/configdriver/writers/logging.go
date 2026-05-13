@@ -77,8 +77,11 @@ func (w loggingWriter) Fetch(ctx context.Context, c transport.Interface) (any, e
 		return observed, nil
 	}
 	// Normalise: YANG {buffered: {size: N}} → netascode {buffered: N}
+	// On 17.16, the sub-element is "size-value" instead of "size".
 	if buf, ok := m["buffered"].(map[string]any); ok {
 		if size, ok := buf["size"]; ok {
+			m["buffered"] = size
+		} else if size, ok := buf["size-value"]; ok {
 			m["buffered"] = size
 		}
 	}
@@ -114,6 +117,10 @@ func (w loggingWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		default:
 			return nil, fmt.Errorf("logging: buffered: unsupported type %T", buf)
 		}
+	}
+	// Apply version-conditional overrides (module prefix renames).
+	if o := GetOverride("logging"); o != nil {
+		proj = ApplyOverrideToBody(proj, o)
 	}
 	body, err := wrapYANGPayload("Cisco-IOS-XE-native:logging", proj)
 	if err != nil {

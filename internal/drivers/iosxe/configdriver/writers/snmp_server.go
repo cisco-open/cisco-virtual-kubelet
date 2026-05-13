@@ -52,10 +52,11 @@ func (snmpWriter) Family() string      { return "snmp_server" }
 func (snmpWriter) YANGPaths() []string { return []string{"/Cisco-IOS-XE-native:native/snmp-server"} }
 
 func (w snmpWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
+	envKey := ResolvedEnvelopeKey("snmp_server", "Cisco-IOS-XE-snmp:snmp-server")
 	sw := singletonWriter{
 		family:        "snmp_server",
 		yangPath:      "/Cisco-IOS-XE-native:native/snmp-server",
-		envelopeKey:   "Cisco-IOS-XE-snmp:snmp-server",
+		envelopeKey:   envKey,
 		managedLeaves: snmpManagedLeaves,
 	}
 	observed, err := sw.Fetch(ctx, c)
@@ -66,7 +67,12 @@ func (w snmpWriter) Fetch(ctx context.Context, c transport.Interface) (any, erro
 	if m == nil {
 		return observed, nil
 	}
-	// Normalise community entries: YANG RO/RW → netascode access.
+	// Reverse version-conditional element renames (e.g. Cisco-IOS-XE-snmp:contact → contact).
+	if o := GetOverride("snmp_server"); o != nil {
+		m = ReverseElementMap(m, o.ElementMap)
+	}
+	// Normalise community entries: YANG RO/RW → netascode access (17.18),
+	// or community-config[{permission}] → community[{access}] (17.16).
 	if comms, ok := m["community"].([]any); ok {
 		for i, c := range comms {
 			entry, ok := c.(map[string]any)
@@ -75,6 +81,26 @@ func (w snmpWriter) Fetch(ctx context.Context, c transport.Interface) (any, erro
 			}
 			comms[i] = snmpCommunityFromYANG(entry)
 		}
+	}
+	// 17.16: community-config → community (reverse of the BodyTransform).
+	if configs, ok := m["Cisco-IOS-XE-snmp:community-config"].([]any); ok {
+		comms := make([]any, 0, len(configs))
+		for _, c := range configs {
+			entry, ok := c.(map[string]any)
+			if !ok {
+				continue
+			}
+			out := map[string]any{}
+			if n, ok := entry["name"]; ok {
+				out["name"] = n
+			}
+			if p, ok := entry["permission"].(string); ok {
+				out["access"] = p
+			}
+			comms = append(comms, out)
+		}
+		m["community"] = comms
+		delete(m, "Cisco-IOS-XE-snmp:community-config")
 	}
 	return m, nil
 }
@@ -111,7 +137,12 @@ func (w snmpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		}
 		proj["community"] = fixed
 	}
-	body, err := wrapYANGPayload("Cisco-IOS-XE-snmp:snmp-server", proj)
+	// Apply version-conditional overrides (module prefix renames).
+	if o := GetOverride("snmp_server"); o != nil {
+		proj = ApplyOverrideToBody(proj, o)
+	}
+	envKey := ResolvedEnvelopeKey("snmp_server", "Cisco-IOS-XE-snmp:snmp-server")
+	body, err := wrapYANGPayload(envKey, proj)
 	if err != nil {
 		return nil, err
 	}
@@ -131,8 +162,12 @@ func (w snmpWriter) Apply(ctx context.Context, c transport.Interface, ops []tran
 
 var snmpManagedLeaves = []string{
 	"community",
+	"community-config",
+	"Cisco-IOS-XE-snmp:community-config",
 	"location",
 	"contact",
+	"Cisco-IOS-XE-snmp:contact",
+	"Cisco-IOS-XE-snmp:location",
 	"trap-source",
 	"host",
 }
@@ -155,6 +190,36 @@ func snmpCommunityToYANG(entry map[string]any) map[string]any {
 		out[k] = v
 	}
 	return out
+}
+
+// snmpBodyTransform1716 converts the 17.18 community shape
+// (community[{name, RO:[null]}]) to the 17.16 shape
+// (Cisco-IOS-XE-snmp:community-config[{name, permission:"ro"}]).
+func snmpBodyTransform1716(body map[string]any) map[string]any {
+	if comms, ok := body["community"]; ok {
+		if arr, ok := comms.([]any); ok {
+			configs := make([]any, 0, len(arr))
+			for _, c := range arr {
+				entry, ok := c.(map[string]any)
+				if !ok {
+					continue
+				}
+				cfg := map[string]any{}
+				if n, ok := entry["name"]; ok {
+					cfg["name"] = n
+				}
+				if _, ok := entry["RO"]; ok {
+					cfg["permission"] = "ro"
+				} else if _, ok := entry["RW"]; ok {
+					cfg["permission"] = "rw"
+				}
+				configs = append(configs, cfg)
+			}
+			body["Cisco-IOS-XE-snmp:community-config"] = configs
+		}
+		delete(body, "community")
+	}
+	return body
 }
 
 // snmpCommunityFromYANG inverts the transform for observed state.

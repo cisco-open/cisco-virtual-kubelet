@@ -362,6 +362,11 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 		yangVersion = r.DefaultYANGVersion
 	}
 
+	// Fix YAML 1.1 boolean key mangling. sigs.k8s.io/yaml (YAML 1.1)
+	// converts bare "no" map keys to "false". Walk the fully-merged
+	// tree once to rename them back to their canonical YANG names.
+	FixYAML11BoolKeys(configuration)
+
 	return &ResolvedIntent{
 		DeviceName:             device,
 		ManagedFamilies:        append([]string(nil), cr.Spec.ManagedFamilies...),

@@ -1,0 +1,208 @@
+// Copyright © 2026 Cisco Systems Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package writers
+
+// ──────────────────────────────────────────────────────────────────
+// Override table: version-conditional YANG behaviour for IOS-XE.
+//
+// Each entry targets a specific family + version range. Entries are
+// evaluated in order; the first match per family wins. Version
+// ranges use inclusive MinVersion and exclusive MaxVersion:
+//
+//     MinVersion: {17, 0}, MaxVersion: {17, 18}
+//     means: "17.0 ≤ version < 17.18"
+//
+// The baseline (17.18+) needs no entries — writers are authored for
+// that version. Overrides handle only divergences from baseline.
+//
+// To add support for a new IOS-XE release:
+//   1. Add an entry below for each family that diverges.
+//   2. Run unit tests (yang_version_overrides_test.go).
+//   3. Run integration tests on a device of that version.
+// ──────────────────────────────────────────────────────────────────
+
+// overrideTable is the ordered list of version overrides. Populated
+// at package init time; ResolveForVersion iterates it at startup.
+var overrideTable = []VersionOverride{
+
+	// ── route_map: IOS-XE < 17.18 ────────────────────────────────
+	// Inner container is "route-map-seq" (not "route-map-without-
+	// order-seq"), and on < 17.18 the module prefix is mandatory.
+	// Key field inside each seq entry is "ordering-seq" (not "seq").
+	{
+		Family:     "route_map",
+		MinVersion: [2]int{17, 0},
+		MaxVersion: [2]int{17, 18},
+		ElementMap: map[string]string{
+			"route-map-without-order-seq": "Cisco-IOS-XE-route-map:route-map-seq",
+			"seq":                         "ordering-seq",
+		},
+		NestedYANGInnerOverride: "Cisco-IOS-XE-route-map:route-map-seq",
+	},
+
+	// ── ntp: IOS-XE < 17.18 ──────────────────────────────────────
+	// "prefer" is a YANG empty leaf, not boolean.
+	{
+		Family:      "ntp",
+		MinVersion:  [2]int{17, 0},
+		MaxVersion:  [2]int{17, 18},
+		EmptyLeaves: []string{"prefer"},
+	},
+
+	// ── logging: IOS-XE < 17.18 ──────────────────────────────────
+	// The loggingWriter already transforms: {buffered: N} →
+	// {buffered: {size: N}}. On 17.16, the sub-element under
+	// "buffered" is "size-value" (not "size"). No module prefix
+	// needed on "buffered" itself (it's in the native module).
+	{
+		Family:     "logging",
+		MinVersion: [2]int{17, 0},
+		MaxVersion: [2]int{17, 18},
+		BodyTransform: func(body map[string]any) map[string]any {
+			// Rename: buffered.size → buffered.size-value
+			if buf, ok := body["buffered"].(map[string]any); ok {
+				if sz, ok := buf["size"]; ok {
+					delete(buf, "size")
+					buf["size-value"] = sz
+					body["buffered"] = buf
+				}
+			}
+			return body
+		},
+	},
+
+	// ── snmp_server: IOS-XE < 17.18 ──────────────────────────────
+	// On 17.16 the envelope key is "Cisco-IOS-XE-native:snmp-server"
+	// (not "Cisco-IOS-XE-snmp:snmp-server"), all sub-elements need
+	// the "Cisco-IOS-XE-snmp:" prefix, and the community structure
+	// changes from community[{name, RO:[null]}] to
+	// community-config[{name, permission:"ro"}].
+	{
+		Family:              "snmp_server",
+		MinVersion:          [2]int{17, 0},
+		MaxVersion:          [2]int{17, 18},
+		EnvelopeKeyOverride: "Cisco-IOS-XE-native:snmp-server",
+		ElementMap: map[string]string{
+			"contact":  "Cisco-IOS-XE-snmp:contact",
+			"location": "Cisco-IOS-XE-snmp:location",
+		},
+		BodyTransform: snmpBodyTransform1716,
+	},
+
+	// ── access_list_extended: IOS-XE < 17.18 ─────────────────────
+	// On < 17.18 the inner list element requires the module prefix.
+	// ace-rule wrapper exists on 17.16 (confirmed by device probing).
+	{
+		Family:     "access_list_extended",
+		MinVersion: [2]int{17, 0},
+		MaxVersion: [2]int{17, 18},
+		ElementMap: map[string]string{
+			"access-list-seq-rule": "Cisco-IOS-XE-acl:access-list-seq-rule",
+		},
+	},
+
+	// ── access_list_standard: IOS-XE < 17.18 ─────────────────────
+	// Standard ACL uses permit/deny → std-ace wrapper instead of
+	// ace-rule. Body/Fetch shapes handle the conversion. Module
+	// prefix is still required on the inner list element.
+	{
+		Family:     "access_list_standard",
+		MinVersion: [2]int{17, 0},
+		MaxVersion: [2]int{17, 18},
+		ElementMap: map[string]string{
+			"access-list-seq-rule": "Cisco-IOS-XE-acl:access-list-seq-rule",
+		},
+	},
+
+	// ── bgp: IOS-XE < 17.18 ──────────────────────────────────────
+	// On 17.16, BGP is a keyed list (Cisco-IOS-XE-bgp:bgp) under
+	// /router, not a container (router-bgp). Transform logic lives
+	// in the bgpWriter; this entry drives path/envelope selection.
+	{
+		Family:              "bgp",
+		MinVersion:          [2]int{17, 0},
+		MaxVersion:          [2]int{17, 18},
+		YANGPathOverride:    "/Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-bgp:bgp",
+		EnvelopeKeyOverride: "Cisco-IOS-XE-bgp:bgp",
+	},
+
+	// ── prefix_list: IOS-XE < 17.18 ──────────────────────────────
+	// On 17.16 the YANG path is /ip/prefix-lists (plural) with a
+	// flat compound-keyed prefixes[name, no] list, plus a separate
+	// prefix-list-description[name] list. Transform logic lives in
+	// the prefixListWriter; this entry drives path/envelope selection.
+	{
+		Family:              "prefix_list",
+		MinVersion:          [2]int{17, 0},
+		MaxVersion:          [2]int{17, 18},
+		YANGPathOverride:    "/Cisco-IOS-XE-native:native/ip/prefix-lists",
+		EnvelopeKeyOverride: "Cisco-IOS-XE-native:prefix-lists",
+	},
+
+	// ── ip_community_list: IOS-XE < 17.18 ────────────────────────
+	// On 17.16 the community-list uses deprecated groupings
+	// (permit/deny-list, extended-grouping). Transform logic lives
+	// in the communityListWriter. Path/envelope are the same across
+	// versions so no path override needed — this entry is a
+	// sentinel for IsLegacyVersion().
+	{
+		Family:     "ip_community_list",
+		MinVersion: [2]int{17, 0},
+		MaxVersion: [2]int{17, 18},
+	},
+
+	// ── spanning_tree: IOS-XE < 17.18 ────────────────────────────
+	// The "mode" leaf needs the module prefix on C9KV 17.15.
+	{
+		Family:     "spanning_tree",
+		MinVersion: [2]int{17, 0},
+		MaxVersion: [2]int{17, 18},
+		ElementMap: map[string]string{
+			"mode": "Cisco-IOS-XE-spanning-tree:mode",
+		},
+	},
+
+	// ── event_manager: IOS-XE < 17.18 ────────────────────────────
+	// EEM action "cli" element is unknown on 17.16; needs module
+	// prefix "Cisco-IOS-XE-eem:cli".
+	{
+		Family:     "event_manager",
+		MinVersion: [2]int{17, 0},
+		MaxVersion: [2]int{17, 18},
+		ElementMap: map[string]string{
+			"cli": "Cisco-IOS-XE-eem:cli",
+		},
+	},
+
+	// ── crypto_ipsec_transform_set: already handled ──────────────
+	// The transformSetToYANG function in crypto.go already encodes
+	// tunnel/transport as empty leaves. No override needed.
+
+	// ── ospf: IOS-XE < 17.18 ─────────────────────────────────────
+	// Area nested list uses YANG key "area-id" (not "id").
+	// Network nested list uses YANG key "ip" which matches the
+	// netascode shape. Only the area keyField needs override.
+	// NOTE: This requires the nestedKeyedListWriter to support
+	// per-nestedSpec keyField overrides, or the ospf writer to
+	// use the override table in its custom Diff.
+	{
+		Family:     "ospf",
+		MinVersion: [2]int{17, 0},
+		MaxVersion: [2]int{17, 18},
+		// The ospf writer has a custom Diff — this override signals
+		// to use "area-id" as the key for area entries. The writer
+		// checks GetOverride("ospf") at Diff time.
+	},
+}

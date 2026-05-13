@@ -27,8 +27,8 @@ import (
 // Writers call DeviceVersion() or the convenience helpers to branch.
 
 var (
-	deviceVersionMu   sync.RWMutex
-	deviceVersionStr  string
+	deviceVersionMu    sync.RWMutex
+	deviceVersionStr   string
 	deviceVersionMajor int
 	deviceVersionMinor int
 )
@@ -41,6 +41,8 @@ func SetDeviceVersion(ver string) {
 	defer deviceVersionMu.Unlock()
 	deviceVersionStr = ver
 	deviceVersionMajor, deviceVersionMinor = parseVersion(ver)
+	// Resolve version-conditional YANG overrides for all families.
+	ResolveForVersion(deviceVersionMajor, deviceVersionMinor)
 }
 
 // DeviceVersion returns the raw version string set by

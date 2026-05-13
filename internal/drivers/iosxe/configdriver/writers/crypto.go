@@ -73,7 +73,8 @@ func init() {
 			"ah",
 			"mode",
 		},
-		yangBodyShape: transformSetToYANG,
+		yangBodyShape:  transformSetToYANG,
+		yangFetchShape: transformSetFromYANG,
 	})
 
 	// IPsec profiles.
@@ -102,6 +103,38 @@ func init() {
 			"local-address",
 		},
 	})
+}
+
+// transformSetFromYANG inverts the empty-leaf encoding for Fetch:
+// [null] → true for mode.tunnel and mode.transport.
+func transformSetFromYANG(yang map[string]any) map[string]any {
+	out := make(map[string]any, len(yang))
+	for k, v := range yang {
+		if k == "mode" {
+			mode, ok := v.(map[string]any)
+			if !ok {
+				out[k] = v
+				continue
+			}
+			fixed := make(map[string]any, len(mode))
+			for mk, mv := range mode {
+				switch mk {
+				case "tunnel", "transport":
+					if isTrue(mv) {
+						fixed[mk] = true
+					}
+				case "tunnel-choice", "transport-choice":
+					// YANG internal choice markers — drop.
+				default:
+					fixed[mk] = mv
+				}
+			}
+			out[k] = fixed
+			continue
+		}
+		out[k] = v
+	}
+	return out
 }
 
 // transformSetToYANG converts boolean empty-leaf children of the

@@ -16,6 +16,8 @@ package writers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 )
@@ -59,8 +61,13 @@ import (
 // router-bgp → 404.
 
 const (
+	// 17.18+ YANG shape: router-bgp is a container under /router.
 	bgpYANGPath    = "/Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-bgp:router-bgp"
 	bgpEnvelopeKey = "Cisco-IOS-XE-bgp:router-bgp"
+
+	// 17.16 YANG shape: bgp is a keyed list under /router.
+	bgpYANGPathLegacy    = "/Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-bgp:bgp"
+	bgpEnvelopeKeyLegacy = "Cisco-IOS-XE-bgp:bgp"
 )
 
 var bgpManagedLeaves = []string{
@@ -77,10 +84,15 @@ func init() {
 
 type bgpWriter struct{}
 
-func (bgpWriter) Family() string      { return "bgp" }
-func (bgpWriter) YANGPaths() []string { return []string{bgpYANGPath} }
+func (bgpWriter) Family() string { return "bgp" }
+func (bgpWriter) YANGPaths() []string {
+	return []string{ResolvedYANGPath("bgp", bgpYANGPath)}
+}
 
 func (w bgpWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
+	if IsLegacyVersion("bgp") {
+		return w.fetchLegacy(ctx, c)
+	}
 	sw := singletonWriter{
 		family:        "bgp",
 		yangPath:      bgpYANGPath,
@@ -88,6 +100,31 @@ func (w bgpWriter) Fetch(ctx context.Context, c transport.Interface) (any, error
 		managedLeaves: bgpManagedLeaves,
 	}
 	return sw.Fetch(ctx, c)
+}
+
+// fetchLegacy handles the 17.16 YANG shape where BGP is a keyed list
+// under /router/Cisco-IOS-XE-bgp:bgp.
+func (w bgpWriter) fetchLegacy(ctx context.Context, c transport.Interface) (any, error) {
+	raw, err := c.Fetch(ctx, bgpYANGPathLegacy)
+	if err != nil {
+		if isRESTCONF404(err) {
+			return map[string]any{}, nil
+		}
+		return nil, err
+	}
+	body, err := unwrapYANGEnvelope(raw, bgpEnvelopeKeyLegacy)
+	if err != nil || body == nil {
+		return map[string]any{}, err
+	}
+	// bgp is a list — take the first entry.
+	var list []map[string]any
+	if err := json.Unmarshal(body, &list); err != nil {
+		return nil, fmt.Errorf("bgp: decode list: %w", err)
+	}
+	if len(list) == 0 {
+		return map[string]any{}, nil
+	}
+	return list[0], nil
 }
 
 func (w bgpWriter) Diff(desired, observed any) ([]transport.Op, error) {
@@ -108,6 +145,9 @@ func (w bgpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	if leavesEqual(desiredMap, observedMap, bgpManagedLeaves) {
 		return nil, nil
 	}
+	if IsLegacyVersion("bgp") {
+		return w.diffLegacy(desiredMap, observedMap)
+	}
 	proj := projectManagedLeaves(desiredMap, bgpManagedLeaves)
 	body, err := wrapYANGPayload(bgpEnvelopeKey, proj)
 	if err != nil {
@@ -121,6 +161,24 @@ func (w bgpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	return []transport.Op{{
 		Verb: verb,
 		Path: bgpYANGPath,
+		Body: body,
+	}}, nil
+}
+
+// diffLegacy builds a MERGE op for the 17.16 YANG shape.
+// BGP is a keyed list: MERGE to /router with {router: {bgp: [{...}]}}.
+func (w bgpWriter) diffLegacy(desired, observed map[string]any) ([]transport.Op, error) {
+	proj := projectManagedLeaves(desired, bgpManagedLeaves)
+	// Wrap as list entry inside the /router container.
+	bgpList := []any{proj}
+	router := map[string]any{bgpEnvelopeKeyLegacy: bgpList}
+	body, err := json.Marshal(map[string]any{"Cisco-IOS-XE-native:router": router})
+	if err != nil {
+		return nil, fmt.Errorf("bgp: marshal: %w", err)
+	}
+	return []transport.Op{{
+		Verb: transport.VerbMerge,
+		Path: "/Cisco-IOS-XE-native:native/router",
 		Body: body,
 	}}, nil
 }

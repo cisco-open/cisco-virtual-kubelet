@@ -177,10 +177,8 @@ func interfaceIPv4VRFFromYANG(yang map[string]any) map[string]any {
 		}
 	}
 	// If the device didn't return "shutdown", the interface is not
-	// shut — normalise to false so leavesEqual can compare.
-	if _, has := out["shutdown"]; !has {
-		out["shutdown"] = false
-	}
+	// shut — leave the key absent so leavesEqual treats it as equal
+	// to a desired map that also omits "shutdown".
 	return out
 }
 

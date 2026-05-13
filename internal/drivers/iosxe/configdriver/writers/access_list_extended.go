@@ -43,10 +43,11 @@ func init() {
 			keyField:      aclExtKeyField,
 			managedLeaves: []string{"rules"},
 		},
-		nestedLeaf:      "rules",
-		nestedKeyField:  "sequence",
-		nestedYANGInner: "access-list-seq-rule",
-		nestedBodyShape: aclRuleToYANG,
+		nestedLeaf:       "rules",
+		nestedKeyField:   "sequence",
+		nestedYANGInner:  "access-list-seq-rule",
+		nestedBodyShape:  aclRuleToYANG,
+		nestedFetchShape: extAclRuleFromYANG,
 	})
 }
 
@@ -170,16 +171,84 @@ func aclRuleToYANG(flat map[string]any) map[string]any {
 	}
 
 	if len(ace) > 0 {
-		// On IOS-XE < 17.18 the ace-rule container doesn't exist;
-		// ACE fields live flat under access-list-seq-rule.
-		// On >= 17.18 (e.g. C9300 17.18.2) the ace-rule wrapper
-		// is required.
-		if DeviceVersionAtLeast(17, 18) {
-			out["ace-rule"] = ace
-		} else {
-			for k, v := range ace {
-				out[k] = v
+		// ace-rule wrapper is required on all tested IOS-XE
+		// versions (17.16+). Earlier code version-branched this
+		// but device probing confirmed ace-rule is used on 17.16.
+		out["ace-rule"] = ace
+	}
+	return out
+}
+
+// extAclRuleFromYANG inverts aclRuleToYANG for the Fetch path.
+// Converts the device's {sequence, ace-rule: {action, protocol, ...}}
+// back to the flat netascode shape {sequence, action, protocol, src_*, dst_*}.
+func extAclRuleFromYANG(yang map[string]any) map[string]any {
+	out := map[string]any{}
+	if seq, ok := yang["sequence"]; ok {
+		out["sequence"] = seq
+	}
+	if remarks, ok := yang["remarks"]; ok {
+		if list, ok := remarks.([]any); ok && len(list) > 0 {
+			out["remark"] = list[0]
+		}
+		return out
+	}
+	aceRaw, ok := yang["ace-rule"]
+	if !ok {
+		return out
+	}
+	ace, ok := aceRaw.(map[string]any)
+	if !ok {
+		return out
+	}
+	for k, v := range ace {
+		switch k {
+		case "action":
+			out["action"] = v
+		case "protocol":
+			out["protocol"] = v
+		case "host-address":
+			out["src_host"] = v
+		case "any":
+			if isTrue(v) {
+				out["src_any"] = true
 			}
+		case "ipv4-address":
+			out["src_prefix"] = v
+		case "mask":
+			out["src_wildcard"] = v
+		case "dst-host-address":
+			out["dst_host"] = v
+		case "dst-any":
+			if isTrue(v) {
+				out["dst_any"] = true
+			}
+		case "dest-ipv4-address":
+			out["dst_prefix"] = v
+		case "dest-mask":
+			out["dst_wildcard"] = v
+		case "src-eq":
+			out["src_eq"] = v
+		case "src-gt":
+			out["src_gt"] = v
+		case "src-lt":
+			out["src_lt"] = v
+		case "src-neq":
+			out["src_neq"] = v
+		case "dst-eq":
+			out["dst_eq"] = v
+		case "dst-gt":
+			out["dst_gt"] = v
+		case "dst-lt":
+			out["dst_lt"] = v
+		case "dst-neq":
+			out["dst_neq"] = v
+		case "log":
+			if isTrue(v) {
+				out["log"] = true
+			}
+		default:
+			out[k] = v
 		}
 	}
 	return out

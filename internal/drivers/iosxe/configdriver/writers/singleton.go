@@ -85,7 +85,13 @@ func (w singletonWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	if leavesEqual(desiredMap, observedMap, w.managedLeaves) {
 		return nil, nil
 	}
-	body, err := wrapYANGPayload(w.envelopeKey, projectManagedLeaves(desiredMap, w.managedLeaves))
+	proj := projectManagedLeaves(desiredMap, w.managedLeaves)
+	// Apply version-conditional overrides (element renames,
+	// empty-leaf encoding, body transforms).
+	if o := GetOverride(w.family); o != nil {
+		proj = ApplyOverrideToBody(proj, o)
+	}
+	body, err := wrapYANGPayload(w.envelopeKey, proj)
 	if err != nil {
 		return nil, err
 	}

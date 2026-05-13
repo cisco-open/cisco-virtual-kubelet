@@ -147,6 +147,11 @@ func (w keyedListWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		if w.yangBodyShape != nil {
 			proj = w.yangBodyShape(proj)
 		}
+		// Apply version-conditional overrides (element renames,
+		// empty-leaf encoding, body transforms).
+		if o := GetOverride(w.family); o != nil {
+			proj = ApplyOverrideToBody(proj, o)
+		}
 		body, err := wrapYANGPayload(w.envelopeKey, []any{proj})
 		if err != nil {
 			return nil, err

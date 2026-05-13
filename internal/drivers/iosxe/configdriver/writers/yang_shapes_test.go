@@ -145,7 +145,6 @@ func TestInterfaceIPv4VRFFromYANGShape(t *testing.T) {
 				"ipv4_address":      "10.255.255.97",
 				"ipv4_address_mask": "255.255.255.255",
 				"vrf":               "MGMT",
-				"shutdown":          false,
 			},
 		},
 		{
@@ -154,7 +153,7 @@ func TestInterfaceIPv4VRFFromYANGShape(t *testing.T) {
 				"name": 1.0,
 				"ip":   map[string]any{"address": map[string]any{"primary": map[string]any{}}},
 			},
-			want: map[string]any{"name": 1.0, "shutdown": false},
+			want: map[string]any{"name": 1.0},
 		},
 		{
 			name: "no ip / vrf containers",
@@ -164,12 +163,12 @@ func TestInterfaceIPv4VRFFromYANGShape(t *testing.T) {
 		{
 			name: "ip container malformed — pass through ignored, no panic",
 			in:   map[string]any{"name": 1.0, "ip": "not-an-object"},
-			want: map[string]any{"name": 1.0, "shutdown": false},
+			want: map[string]any{"name": 1.0},
 		},
 		{
 			name: "vrf already flat (test fixture path)",
 			in:   map[string]any{"name": 1.0, "vrf": "MGMT"},
-			want: map[string]any{"name": 1.0, "vrf": "MGMT", "shutdown": false},
+			want: map[string]any{"name": 1.0, "vrf": "MGMT"},
 		},
 	}
 	for _, tc := range cases {
@@ -189,13 +188,16 @@ func TestInterfaceIPv4VRFFromYANGShape(t *testing.T) {
 // portion of the desired-state (flat) so the reconciler does not
 // see phantom drift after a successful apply.
 func TestInterfaceIPv4VRFRoundTrip(t *testing.T) {
+	// shutdown:false is omitted from toYANG (nothing sent to device),
+	// and fromYANG no longer synthesises it, so the round-trip for an
+	// explicitly-false shutdown is not bijective. Test the common case
+	// where shutdown is absent.
 	flat := map[string]any{
 		"name":              9997.0,
 		"description":       "ut",
 		"ipv4_address":      "10.255.255.97",
 		"ipv4_address_mask": "255.255.255.255",
 		"vrf":               "MGMT",
-		"shutdown":          false,
 	}
 	roundTripped := interfaceIPv4VRFFromYANG(interfaceIPv4VRFToYANG(flat))
 	if !reflect.DeepEqual(flat, roundTripped) {
