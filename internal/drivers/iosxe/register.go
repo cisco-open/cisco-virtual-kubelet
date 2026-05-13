@@ -16,12 +16,15 @@ package iosxe
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"regexp"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/iosxebuilder"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	log "github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
 // init wires IOS-XE into both the apphosting and configdriver
@@ -75,5 +78,43 @@ func buildXEConfigDriverContext(
 	if err != nil {
 		return out, err
 	}
+	// Best-effort version fetch for version-aware writers. If the
+	// transport dialled successfully we can reach the device.
+	if ver := fetchDeviceVersion(ctx, t); ver != "" {
+		out.DeviceVersion = ver
+	}
 	return out, nil
+}
+
+// fetchDeviceVersion makes a lightweight RESTCONF GET for the
+// software-version field. Returns "" on any error.
+func fetchDeviceVersion(ctx context.Context, t transport.Interface) string {
+	if t == nil {
+		return ""
+	}
+	raw, err := t.Fetch(ctx,
+		"/restconf/data/Cisco-IOS-XE-device-hardware-oper:device-hardware-data/device-hardware/device-system-data/software-version")
+	if err != nil {
+		log.G(ctx).WithError(err).Debug("config driver: could not fetch device version")
+		return ""
+	}
+	// Response is JSON: {"Cisco-IOS-XE-device-hardware-oper:software-version": "..."}
+	var envelope map[string]string
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return ""
+	}
+	for _, v := range envelope {
+		return extractVersion(v)
+	}
+	return ""
+}
+
+var versionRe = regexp.MustCompile(`Version\s+(\d+\.\d+\.\d+)`)
+
+func extractVersion(full string) string {
+	m := versionRe.FindStringSubmatch(full)
+	if len(m) > 1 {
+		return m[1]
+	}
+	return full
 }
