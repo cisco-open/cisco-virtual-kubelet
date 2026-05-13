@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
@@ -93,39 +92,21 @@ func fetchDeviceVersion(ctx context.Context, t transport.Interface) string {
 		return ""
 	}
 	raw, err := t.Fetch(ctx,
-		"/restconf/data/Cisco-IOS-XE-device-hardware-oper:device-hardware-data/device-hardware/device-system-data")
+		"/Cisco-IOS-XE-native:native/version")
 	if err != nil {
-		log.G(ctx).WithError(err).Warn("config driver: could not fetch device system data")
+		log.G(ctx).WithError(err).Warn("config driver: could not fetch device version")
 		return ""
 	}
-	// Response wraps in module prefix:
-	// {"Cisco-IOS-XE-device-hardware-oper:device-system-data": {"software-version": "...", ...}}
-	var outer map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &outer); err != nil {
-		log.G(ctx).WithError(err).Warn("config driver: could not parse device system data")
+	// Response: {"Cisco-IOS-XE-native:version": "17.16"}
+	var envelope map[string]string
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		log.G(ctx).WithError(err).Warn("config driver: could not parse version response")
 		return ""
 	}
-	for _, innerRaw := range outer {
-		var inner map[string]any
-		if err := json.Unmarshal(innerRaw, &inner); err != nil {
-			continue
-		}
-		if sv, ok := inner["software-version"].(string); ok {
-			ver := extractVersion(sv)
-			log.G(ctx).WithField("version", ver).Info("config driver: fetched device version")
-			return ver
-		}
+	for _, v := range envelope {
+		log.G(ctx).WithField("version", v).Info("config driver: fetched device version")
+		return v
 	}
-	log.G(ctx).Warn("config driver: software-version not found in device-system-data")
+	log.G(ctx).Warn("config driver: empty version response")
 	return ""
-}
-
-var versionRe = regexp.MustCompile(`Version\s+(\d+\.\d+\.\d+)`)
-
-func extractVersion(full string) string {
-	m := versionRe.FindStringSubmatch(full)
-	if len(m) > 1 {
-		return m[1]
-	}
-	return full
 }
