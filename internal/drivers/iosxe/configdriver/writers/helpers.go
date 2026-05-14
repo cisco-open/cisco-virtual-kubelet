@@ -169,6 +169,23 @@ func scalarEqual(a, b any) bool {
 		if reflect.DeepEqual(a, b) {
 			return true
 		}
+		// For nested maps apply the same desired-⊆-observed rule that
+		// leavesEqual uses at the top level: every key in a (desired)
+		// must exist and match in b (observed); extra keys in b are OK
+		// because writers use MERGE and cannot remove observed-only fields.
+		// This prevents drift loops when the device stores default sub-fields
+		// (e.g. clock.timezone.minutes: 0) that the desired config omits.
+		if am, aOk := a.(map[string]any); aOk {
+			if bm, bOk := b.(map[string]any); bOk {
+				for k, av := range am {
+					bv, exists := bm[k]
+					if !exists || !scalarEqual(av, bv) {
+						return false
+					}
+				}
+				return true
+			}
+		}
 		return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 	}
 	if a == b {

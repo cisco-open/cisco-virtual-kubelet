@@ -141,7 +141,19 @@ func (w snmpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	// that device-side ordering differences don't cause drift loops.
 	snmpSortCommunities(desiredMap)
 	snmpSortCommunities(observedMap)
-	if leavesEqual(desiredMap, observedMap, snmpManagedLeaves) {
+	// Community uses set-membership semantics: every desired community must
+	// exist and match in the observed set; extra observed communities are not
+	// drift because the writer uses MERGE and cannot remove them.
+	// All other managed leaves use the standard leavesEqual check.
+	nonCommLeaves := make([]string, 0, len(snmpManagedLeaves))
+	for _, l := range snmpManagedLeaves {
+		if l != "community" && l != "community-config" && l != "Cisco-IOS-XE-snmp:community-config" {
+			nonCommLeaves = append(nonCommLeaves, l)
+		}
+	}
+	if !leavesEqual(desiredMap, observedMap, nonCommLeaves) {
+		// Non-community leaf differs — fall through to emit op.
+	} else if snmpCommunitiesMatch(desiredMap, observedMap) {
 		return nil, nil
 	}
 	proj := projectManagedLeaves(desiredMap, snmpManagedLeaves)
@@ -242,6 +254,42 @@ func snmpBodyTransform1716(body map[string]any) map[string]any {
 		delete(body, "community")
 	}
 	return body
+}
+
+// snmpCommunitiesMatch reports true when every desired community exists
+// and matches in the observed set. Extra observed communities are ignored
+// (the writer uses MERGE and cannot remove them).
+func snmpCommunitiesMatch(desired, observed map[string]any) bool {
+	wantList, _ := desired["community"].([]any)
+	haveList, _ := observed["community"].([]any)
+	// Index observed communities by name for O(1) lookup.
+	haveByName := make(map[string]map[string]any, len(haveList))
+	for _, e := range haveList {
+		if m, ok := e.(map[string]any); ok {
+			if n, ok := m["name"].(string); ok {
+				haveByName[n] = m
+			}
+		}
+	}
+	for _, e := range wantList {
+		wm, ok := e.(map[string]any)
+		if !ok {
+			return false
+		}
+		name, _ := wm["name"].(string)
+		hm, exists := haveByName[name]
+		if !exists {
+			return false
+		}
+		// Check every desired field matches observed.
+		for k, wv := range wm {
+			hv, ok := hm[k]
+			if !ok || !scalarEqual(wv, hv) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // snmpSortCommunities sorts the community slice in-place by the "name"
