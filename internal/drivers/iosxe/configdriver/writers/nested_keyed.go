@@ -367,9 +367,18 @@ func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, erro
 		for k := range got {
 			entry := got[k]
 			if needsRename {
-				if inner, ok := entry[spec.YANGInner]; ok {
+				// The YANG inner key may already have been reversed to its
+				// baseline name by keyedListWriter.Fetch → AutoReverseObservedBody
+				// (which runs ReverseElementMap recursively on outer entries).
+				// Try spec.YANGInner first (raw-from-device path), then fall
+				// back to the static nestedYANGInner (post-AutoReverse path).
+				innerKey := spec.YANGInner
+				if _, ok := entry[innerKey]; !ok && w.nestedYANGInner != "" && w.nestedYANGInner != innerKey {
+					innerKey = w.nestedYANGInner
+				}
+				if inner, ok := entry[innerKey]; ok {
 					entry[spec.Leaf] = inner
-					delete(entry, spec.YANGInner)
+					delete(entry, innerKey)
 				}
 			}
 			if innerVal, ok := entry[spec.Leaf]; ok {
