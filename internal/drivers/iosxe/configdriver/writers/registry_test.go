@@ -95,6 +95,8 @@ var phase3Families = []string{
 	"tacacs_server",
 	"track",
 	"username",
+	"pim",
+	"ipv6_pim",
 }
 
 func TestPhase1FamiliesRegistered(t *testing.T) {

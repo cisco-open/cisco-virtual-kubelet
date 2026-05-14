@@ -164,6 +164,20 @@ var handWrittenSchemas = map[string]FamilySchema{
 		Shape:         "singleton",
 		ManagedLeaves: communityListManagedLeaves,
 	},
+	"aaa": {
+		Family: "aaa", Shape: "singleton",
+		ManagedLeaves: aaaManagedLeaves(),
+	},
+	"pim": {
+		Family:        "pim",
+		Shape:         "singleton",
+		ManagedLeaves: pimManagedLeaves(),
+	},
+	"ipv6_pim": {
+		Family:        "ipv6_pim",
+		Shape:         "singleton",
+		ManagedLeaves: ipv6PimManagedLeaves(),
+	},
 }
 
 // systemManagedLeaves is a helper that returns the system writer's
