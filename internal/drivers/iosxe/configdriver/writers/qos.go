@@ -28,6 +28,7 @@ func init() {
 		keyField:    "name",
 		managedLeaves: []string{
 			"description",
+			"prematch",
 			"match",
 			"match-type",
 		},

@@ -85,6 +85,12 @@ type VersionOverride struct {
 	// expressed as simple key renames.
 	BodyTransform func(body map[string]any) map[string]any
 
+	// FetchBodyTransform, if non-nil, is applied on the Fetch path
+	// AFTER ReverseElementMap. It is the structural inverse of
+	// BodyTransform — converting observed YANG body shapes back to
+	// netascode canonical shapes for Diff comparison.
+	FetchBodyTransform func(body map[string]any) map[string]any
+
 	// NeedParentCreation, if true, signals that VerbReplace (PUT)
 	// to this family's path may 404 because an intermediate parent
 	// container doesn't exist. The transport or writer should
@@ -308,7 +314,8 @@ func ReverseElementMap(body map[string]any, emap map[string]string) map[string]a
 }
 
 // ReverseOverrideFromBody applies the full reverse chain of override
-// transforms to an observed body: reverse ElementMap → DecodeEmptyLeaves.
+// transforms to an observed body: reverse ElementMap → DecodeEmptyLeaves
+// → FetchBodyTransform.
 func ReverseOverrideFromBody(body map[string]any, o *VersionOverride) map[string]any {
 	if o == nil {
 		return body
@@ -318,6 +325,9 @@ func ReverseOverrideFromBody(body map[string]any, o *VersionOverride) map[string
 	}
 	if len(o.EmptyLeaves) > 0 {
 		body = DecodeEmptyLeaves(body, o.EmptyLeaves)
+	}
+	if o.FetchBodyTransform != nil {
+		body = o.FetchBodyTransform(body)
 	}
 	return body
 }
@@ -417,9 +427,13 @@ func (r *OverrideResolver) AutoReverseObservedBody(family string, body map[strin
 		return body
 	}
 	if o.BodyTransform != nil {
-		// Manual reverse path required — leave the body alone so
-		// the writer's custom Fetch logic can run on the raw
-		// device-shaped data.
+		// BodyTransform is one-way; if FetchBodyTransform is also
+		// provided it is the structural inverse and should run here.
+		// Otherwise leave the body alone — the writer implements a
+		// manual Fetch-side reverse (e.g. snmp_server, logging).
+		if o.FetchBodyTransform != nil {
+			body = o.FetchBodyTransform(body)
+		}
 		return body
 	}
 	if len(o.ElementMap) > 0 {

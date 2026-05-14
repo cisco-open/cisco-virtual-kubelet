@@ -164,45 +164,62 @@ var overrideTable = []VersionOverride{
 	},
 
 	// ── spanning_tree: IOS-XE < 17.18 ────────────────────────────
-	// The "mode" leaf needs the module prefix on C9KV 17.15.
+	// On < 17.18 the envelope key is "Cisco-IOS-XE-native:spanning-tree"
+	// (not "Cisco-IOS-XE-spanning-tree:spanning-tree"), and
+	// augmented leaves need the "Cisco-IOS-XE-spanning-tree:" prefix.
 	{
-		Family:     "spanning_tree",
-		MinVersion: [2]int{17, 0},
-		MaxVersion: [2]int{17, 18},
+		Family:              "spanning_tree",
+		MinVersion:          [2]int{17, 0},
+		MaxVersion:          [2]int{17, 18},
+		EnvelopeKeyOverride: "Cisco-IOS-XE-native:spanning-tree",
 		ElementMap: map[string]string{
-			"mode": "Cisco-IOS-XE-spanning-tree:mode",
+			"mode":   "Cisco-IOS-XE-spanning-tree:mode",
+			"extend": "Cisco-IOS-XE-spanning-tree:extend",
 		},
 	},
 
-	// ── event_manager: IOS-XE < 17.18 ────────────────────────────
-	// EEM action "cli" element is unknown on 17.16; needs module
-	// prefix "Cisco-IOS-XE-eem:cli".
+	// ── interface_switchport: IOS-XE < 17.18 ─────────────────────
+	// On < 17.18 the switchport sub-container elements need the
+	// "Cisco-IOS-XE-switch:" module prefix, and the access VLAN
+	// shape is double-nested: access.vlan.vlan (not access.vlan).
 	{
-		Family:     "event_manager",
+		Family:     "interface_switchport",
 		MinVersion: [2]int{17, 0},
 		MaxVersion: [2]int{17, 18},
 		ElementMap: map[string]string{
-			"cli": "Cisco-IOS-XE-eem:cli",
+			"mode":   "Cisco-IOS-XE-switch:mode",
+			"access": "Cisco-IOS-XE-switch:access",
+			"trunk":  "Cisco-IOS-XE-switch:trunk",
 		},
+		BodyTransform: switchportBodyTransform1716,
+	},
+
+	// ── event_manager: IOS-XE < 17.18 ────────────────────────────
+	// On 17.16 the EEM YANG model differs structurally from 17.18:
+	//   - event sub-containers use *-choice suffix (timer-choice,
+	//     syslog-choice, track-choice, none-choice) and need the
+	//     Cisco-IOS-XE-eem: module prefix.
+	//   - actions live under action-config.action[] (not action[])
+	//     and the action-type containers are renamed (cli→cli-choice,
+	//     syslog→syslog-option).
+	// BodyTransform handles all renames + prefix additions in one
+	// pass (ElementMap is empty because it runs BEFORE BodyTransform
+	// and would rename the 17.18 keys before the transform can act).
+	// FetchBodyTransform reverses the structural changes on Fetch.
+	{
+		Family:             "event_manager",
+		MinVersion:         [2]int{17, 0},
+		MaxVersion:         [2]int{17, 18},
+		BodyTransform:      eemBodyTransform1716,
+		FetchBodyTransform: eemFetchTransform1716,
 	},
 
 	// ── crypto_ipsec_transform_set: already handled ──────────────
 	// The transformSetToYANG function in crypto.go already encodes
 	// tunnel/transport as empty leaves. No override needed.
 
-	// ── ospf: IOS-XE < 17.18 ─────────────────────────────────────
-	// Area nested list uses YANG key "area-id" (not "id").
-	// Network nested list uses YANG key "ip" which matches the
-	// netascode shape. Only the area keyField needs override.
-	// NOTE: This requires the nestedKeyedListWriter to support
-	// per-nestedSpec keyField overrides, or the ospf writer to
-	// use the override table in its custom Diff.
-	{
-		Family:     "ospf",
-		MinVersion: [2]int{17, 0},
-		MaxVersion: [2]int{17, 18},
-		// The ospf writer has a custom Diff — this override signals
-		// to use "area-id" as the key for area entries. The writer
-		// checks GetOverride("ospf") at Diff time.
-	},
+	// ── ospf: no version override needed ────────────────────────
+	// The ospf writer uses KeyField: "area-id" for area entries
+	// (matching the YANG model on all versions). The netascode
+	// fixture uses "area-id" as the canonical key. No override.
 }

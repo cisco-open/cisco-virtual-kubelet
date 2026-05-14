@@ -359,14 +359,18 @@ func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, erro
 		override = o
 	}
 	for _, spec := range specs {
-		if spec.YANGInner == "" || spec.YANGInner == spec.Leaf {
+		needsRename := spec.YANGInner != "" && spec.YANGInner != spec.Leaf
+		needsFetch := (override != nil && len(override.ElementMap) > 0) || spec.FetchShape != nil
+		if !needsRename && !needsFetch {
 			continue
 		}
 		for k := range got {
 			entry := got[k]
-			if inner, ok := entry[spec.YANGInner]; ok {
-				entry[spec.Leaf] = inner
-				delete(entry, spec.YANGInner)
+			if needsRename {
+				if inner, ok := entry[spec.YANGInner]; ok {
+					entry[spec.Leaf] = inner
+					delete(entry, spec.YANGInner)
+				}
 			}
 			if innerVal, ok := entry[spec.Leaf]; ok {
 				if innerList, ok := innerVal.([]any); ok {
@@ -567,12 +571,12 @@ func leavesEqualExcept(desired, observed map[string]any, managed []string, excep
 			continue
 		}
 		dv, dHas := desired[key]
-		ov, oHas := observed[key]
-		if dHas != oHas {
-			return false
-		}
 		if !dHas {
 			continue
+		}
+		ov, oHas := observed[key]
+		if !oHas {
+			return false
 		}
 		if !scalarEqual(dv, ov) {
 			return false

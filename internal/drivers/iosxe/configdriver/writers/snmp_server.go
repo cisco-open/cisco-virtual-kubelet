@@ -16,6 +16,7 @@ package writers
 
 import (
 	"context"
+	"sort"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 )
@@ -115,6 +116,9 @@ func (w snmpWriter) Fetch(ctx context.Context, c transport.Interface) (any, erro
 		m["community"] = comms
 		delete(m, "Cisco-IOS-XE-snmp:community-config")
 	}
+	// Sort community list by name for stable comparison (device may
+	// return entries in a different order than desired).
+	snmpSortCommunities(m)
 	return m, nil
 }
 
@@ -133,6 +137,10 @@ func (w snmpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	if observedMap == nil {
 		observedMap = map[string]any{}
 	}
+	// Normalise community order on both sides before comparison so
+	// that device-side ordering differences don't cause drift loops.
+	snmpSortCommunities(desiredMap)
+	snmpSortCommunities(observedMap)
 	if leavesEqual(desiredMap, observedMap, snmpManagedLeaves) {
 		return nil, nil
 	}
@@ -234,6 +242,23 @@ func snmpBodyTransform1716(body map[string]any) map[string]any {
 		delete(body, "community")
 	}
 	return body
+}
+
+// snmpSortCommunities sorts the community slice in-place by the "name"
+// field. IOS-XE may return communities in alphabetical or insertion
+// order that differs from the desired list, causing spurious drift.
+func snmpSortCommunities(m map[string]any) {
+	comms, ok := m["community"].([]any)
+	if !ok || len(comms) < 2 {
+		return
+	}
+	sort.SliceStable(comms, func(i, j int) bool {
+		a, _ := comms[i].(map[string]any)
+		b, _ := comms[j].(map[string]any)
+		an, _ := a["name"].(string)
+		bn, _ := b["name"].(string)
+		return an < bn
+	})
 }
 
 // snmpCommunityFromYANG inverts the transform for observed state.

@@ -50,11 +50,22 @@ var switchportManagedLeaves = []string{
 	"trunk",
 }
 
-type switchportWriter struct{}
+type switchportWriter struct {
+	resolver *OverrideResolver
+}
 
 func init() { Override(switchportWriter{}) }
 
 func (switchportWriter) Family() string { return "interface_switchport" }
+
+func (w switchportWriter) withResolver(r *OverrideResolver) SectionWriter {
+	w.resolver = r
+	return w
+}
+
+func (w switchportWriter) resolverForUse() *OverrideResolver {
+	return ensureResolver(w.resolver)
+}
 
 func (switchportWriter) YANGPaths() []string {
 	out := make([]string, 0, len(ethernetTypes))
@@ -64,7 +75,7 @@ func (switchportWriter) YANGPaths() []string {
 	return out
 }
 
-func (switchportWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
+func (w switchportWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
 	var combined []map[string]any
 	for _, t := range ethernetTypes {
 		// We cannot list "all switchport containers" in one shot — the
@@ -101,13 +112,38 @@ func (switchportWriter) Fetch(ctx context.Context, c transport.Interface) (any, 
 			for k, v := range sw {
 				row[k] = v
 			}
+			if o, ok := w.resolverForUse().GetOverride("interface_switchport"); ok {
+				row = ReverseOverrideFromBody(row, o)
+			}
+			// Flatten mode choice container → string on legacy versions.
+			// Device returns mode: {access: {}} → mode: "access"
+			if modeMap, ok := row["mode"].(map[string]any); ok {
+				for k := range modeMap {
+					row["mode"] = k
+					break
+				}
+			}
+			// Flatten access.vlan.vlan → access.vlan on legacy versions.
+			if acc, ok := row["access"].(map[string]any); ok {
+				if vlanC, ok := acc["vlan"].(map[string]any); ok {
+					if v, ok := vlanC["vlan"]; ok {
+						acc["vlan"] = v
+					}
+				}
+			}
+			// Strip trunk.native.vlan-config (device-only, not in fixture).
+			if trunk, ok := row["trunk"].(map[string]any); ok {
+				if native, ok := trunk["native"].(map[string]any); ok {
+					delete(native, "vlan-config")
+				}
+			}
 			combined = append(combined, row)
 		}
 	}
 	return combined, nil
 }
 
-func (switchportWriter) Diff(desired, observed any) ([]transport.Op, error) {
+func (w switchportWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	desiredList, err := coerceSwitchportBlock(desired, "desired")
 	if err != nil {
 		return nil, err
@@ -156,8 +192,12 @@ func (switchportWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		if inDevice && leavesEqual(entry, observedEntry, switchportManagedLeaves) {
 			continue
 		}
+		proj := projectManagedLeaves(entry, switchportManagedLeaves)
+		if o, ok := w.resolverForUse().GetOverride("interface_switchport"); ok {
+			proj = ApplyOverrideToBody(proj, o)
+		}
 		body, err := json.Marshal(map[string]any{
-			"Cisco-IOS-XE-native:switchport": projectManagedLeaves(entry, switchportManagedLeaves),
+			"Cisco-IOS-XE-native:switchport": proj,
 		})
 		if err != nil {
 			return nil, err
@@ -172,11 +212,38 @@ func (switchportWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	return ops, nil
 }
 
-func (switchportWriter) Apply(ctx context.Context, c transport.Interface, ops []transport.Op) error {
+func (w switchportWriter) Apply(ctx context.Context, c transport.Interface, ops []transport.Op) error {
 	if len(ops) == 0 {
 		return nil
 	}
 	return c.Mutate(ctx, "", ops)
+}
+
+// switchportBodyTransform1716 adjusts the access VLAN shape for
+// IOS-XE < 17.18: {access: {vlan: N}} → {access: {vlan: {vlan: N}}}.
+// Called after ElementMap renames, so the key is already prefixed.
+func switchportBodyTransform1716(body map[string]any) map[string]any {
+	// Transform mode string → YANG choice container:
+	//   "access" → {access: {}}     "trunk" → {trunk: {}}
+	modeKey := "Cisco-IOS-XE-switch:mode"
+	if modeVal, ok := body[modeKey]; ok {
+		if s, ok := modeVal.(string); ok {
+			body[modeKey] = map[string]any{s: map[string]any{}}
+		}
+	}
+	// Transform access.vlan: N → access.vlan: {vlan: N}
+	accKey := "Cisco-IOS-XE-switch:access"
+	if acc, ok := body[accKey].(map[string]any); ok {
+		if vlan, ok := acc["vlan"]; ok {
+			switch vlan.(type) {
+			case map[string]any:
+				// Already in nested shape — pass through.
+			default:
+				acc["vlan"] = map[string]any{"vlan": vlan}
+			}
+		}
+	}
+	return body
 }
 
 func coerceSwitchportBlock(v any, origin string) ([]map[string]any, error) {

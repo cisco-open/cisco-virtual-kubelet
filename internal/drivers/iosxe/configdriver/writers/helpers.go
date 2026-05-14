@@ -120,12 +120,15 @@ func wrapYANGPayload(envelopeKey string, body any) ([]byte, error) {
 func leavesEqual(desired, observed map[string]any, managed []string) bool {
 	for _, key := range managed {
 		dv, dHas := desired[key]
-		ov, oHas := observed[key]
-		if dHas != oHas {
-			return false
-		}
 		if !dHas {
+			// Desired doesn't specify this leaf — skip it.
+			// The writer is additive (MERGE), so observed-only
+			// leaves are not drift.
 			continue
+		}
+		ov, oHas := observed[key]
+		if !oHas {
+			return false
 		}
 		if !scalarEqual(dv, ov) {
 			return false
