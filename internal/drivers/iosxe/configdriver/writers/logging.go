@@ -47,10 +47,21 @@ func init() {
 	Override(loggingWriter{})
 }
 
-type loggingWriter struct{}
+type loggingWriter struct {
+	resolver *OverrideResolver
+}
 
 func (loggingWriter) Family() string      { return "logging" }
 func (loggingWriter) YANGPaths() []string { return []string{"/Cisco-IOS-XE-native:native/logging"} }
+
+func (w loggingWriter) withResolver(r *OverrideResolver) SectionWriter {
+	w.resolver = r
+	return w
+}
+
+func (w loggingWriter) resolverForUse() *OverrideResolver {
+	return ensureResolver(w.resolver)
+}
 
 var loggingManagedLeaves = []string{
 	"buffered",
@@ -67,6 +78,7 @@ func (w loggingWriter) Fetch(ctx context.Context, c transport.Interface) (any, e
 		yangPath:      "/Cisco-IOS-XE-native:native/logging",
 		envelopeKey:   "Cisco-IOS-XE-native:logging",
 		managedLeaves: loggingManagedLeaves,
+		resolver:      w.resolverForUse(),
 	}
 	observed, err := sw.Fetch(ctx, c)
 	if err != nil {
@@ -119,7 +131,7 @@ func (w loggingWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		}
 	}
 	// Apply version-conditional overrides (module prefix renames).
-	if o := GetOverride("logging"); o != nil {
+	if o, ok := w.resolverForUse().GetOverride("logging"); ok {
 		proj = ApplyOverrideToBody(proj, o)
 	}
 	body, err := wrapYANGPayload("Cisco-IOS-XE-native:logging", proj)

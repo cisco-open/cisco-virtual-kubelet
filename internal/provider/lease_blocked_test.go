@@ -385,7 +385,7 @@ func TestReconcile_AllBlockedReturnsSubTTLRequeueAndLeaseBlockedPhase(t *testing
 		Transport:  &noCallTransport{t: t},
 		Leaser:     leaser,
 		RuntimeID:  "our-pod",
-		Lookup:     func(string) writers.SectionWriter { return nil },
+		Lookup:     func(string, string) writers.SectionWriter { return nil },
 	}
 
 	res, err := r.Reconcile(t.Context(), reconcile.Request{

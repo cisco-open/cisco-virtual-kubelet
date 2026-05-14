@@ -159,6 +159,43 @@ func TestMatchingCRGetsPendingWhenNoTransport(t *testing.T) {
 	}
 }
 
+func TestReconcileOnePendingWhenDeviceVersionRequiredButEmpty(t *testing.T) {
+	scheme := newTestScheme(t)
+	cr := newCR("edge-version", "edge-01")
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(newDevice("edge-01"), cr).
+		WithStatusSubresource(&configv1alpha1.IOSXEConfig{}).
+		Build()
+
+	r := &ConfigReconciler{
+		Client:               c,
+		DeviceName:           "edge-01",
+		RequireDeviceVersion: true,
+	}
+	resolver := &intent.Resolver{Client: c}
+	eng := &engine.Engine{}
+
+	result, err := r.reconcileOne(context.Background(), nil, resolver, eng, cr, nil, triggerEvent)
+	if err != nil {
+		t.Fatalf("reconcileOne: %v", err)
+	}
+	if result.Phase != engine.PhasePending {
+		t.Fatalf("result phase=%q, want Pending", result.Phase)
+	}
+
+	var got configv1alpha1.IOSXEConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: cr.Namespace, Name: cr.Name}, &got); err != nil {
+		t.Fatalf("get config: %v", err)
+	}
+	if got.Status.Phase != engine.PhasePending {
+		t.Fatalf("status phase=%q, want Pending", got.Status.Phase)
+	}
+	if !conditionIs(got.Status.Conditions, "Ready", metav1.ConditionFalse, "DeviceVersionPending") {
+		t.Fatalf("Ready condition missing/DeviceVersionPending:\n%#v", got.Status.Conditions)
+	}
+}
+
 func TestRunRejectsNilDependencies(t *testing.T) {
 	ctx := context.Background()
 	scheme := newTestScheme(t)

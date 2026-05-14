@@ -14,8 +14,6 @@
 
 package writers
 
-import "sync"
-
 // ──────────────────────────────────────────────────────────────────
 // YANG Version Override System
 //
@@ -32,8 +30,9 @@ import "sync"
 // Rather than scattering if/else trees across ~60 writer files, this
 // file provides a data-driven override table. Each entry describes
 // version-conditional mutations to a family's YANG configuration.
-// The table is resolved once per process when SetDeviceVersion is
-// called, and writers query the resolved state at Diff/Apply time.
+// Each device gets an OverrideResolver built from its reported
+// software release, and writers query that captured resolver at
+// Fetch/Diff time.
 //
 // Adding support for a new IOS-XE release is a table entry, not a
 // code change in the writer.
@@ -114,23 +113,46 @@ func (o *VersionOverride) versionInRange(major, minor int) bool {
 	return true
 }
 
-// ──────────────────────────────────────────────────────────────────
-// Resolved override state — populated once by ResolveForVersion
-// ──────────────────────────────────────────────────────────────────
+// OverrideResolver is the immutable per-device view of the override
+// table. It is built once for a device software version and then
+// captured by every writer instance returned for that device.
+type OverrideResolver struct {
+	deviceVersion string
+	major         int
+	minor         int
+	releaseTag    string
+	resolved      map[string]*VersionOverride
+}
 
-var (
-	overrideMu sync.RWMutex
-	// resolved maps family → the single matching override (or nil).
-	resolved = map[string]*VersionOverride{}
-)
+// NewOverrideResolver validates a device-reported IOS-XE software
+// version and resolves the matching override entry per family. Empty
+// version means "unknown yet" and returns a baseline resolver; callers
+// that require version discovery should fail closed before writes run.
+func NewOverrideResolver(version string) (*OverrideResolver, error) {
+	if version == "" {
+		return newOverrideResolverForVersion("", 0, 0, ""), nil
+	}
+	major, minor, ok := parseVersionStrict(version)
+	if !ok {
+		return nil, &ErrMalformedDeviceVersion{Version: version}
+	}
+	releaseTag, mapped := ReleaseTagForDeviceVersion(major, minor)
+	if !mapped {
+		return nil, &ErrUnsupportedDeviceVersion{Version: version}
+	}
+	return newOverrideResolverForVersion(version, major, minor, releaseTag), nil
+}
 
-// ResolveForVersion selects the matching override for each family
-// given the device's IOS-XE version. Called once from
-// SetDeviceVersion after parsing the version string.
-func ResolveForVersion(major, minor int) {
-	overrideMu.Lock()
-	defer overrideMu.Unlock()
-	resolved = make(map[string]*VersionOverride, len(overrideTable))
+// NewOverrideResolverForMajorMinor constructs a resolver for tests
+// that want to exercise a raw major.minor pair without going through
+// the production device-version support gate.
+func NewOverrideResolverForMajorMinor(major, minor int) *OverrideResolver {
+	releaseTag, _ := ReleaseTagForDeviceVersion(major, minor)
+	return newOverrideResolverForVersion("", major, minor, releaseTag)
+}
+
+func newOverrideResolverForVersion(deviceVersion string, major, minor int, releaseTag string) *OverrideResolver {
+	resolved := make(map[string]*VersionOverride, len(overrideTable))
 	for i := range overrideTable {
 		o := &overrideTable[i]
 		if o.versionInRange(major, minor) {
@@ -140,14 +162,63 @@ func ResolveForVersion(major, minor int) {
 			}
 		}
 	}
+	return &OverrideResolver{
+		deviceVersion: deviceVersion,
+		major:         major,
+		minor:         minor,
+		releaseTag:    releaseTag,
+		resolved:      resolved,
+	}
 }
 
-// GetOverride returns the resolved override for a family, or nil if
-// the device version doesn't require any overrides for that family.
-func GetOverride(family string) *VersionOverride {
-	overrideMu.RLock()
-	defer overrideMu.RUnlock()
-	return resolved[family]
+func baselineResolver() *OverrideResolver {
+	return newOverrideResolverForVersion("", 0, 0, "")
+}
+
+func ensureResolver(r *OverrideResolver) *OverrideResolver {
+	if r != nil {
+		return r
+	}
+	return baselineResolver()
+}
+
+// DeviceVersion returns the device software version used to build
+// this resolver. Empty means "unknown/baseline".
+func (r *OverrideResolver) DeviceVersion() string {
+	if r == nil {
+		return ""
+	}
+	return r.deviceVersion
+}
+
+// DeviceVersionAtLeast returns true if this resolver was built for a
+// device version >= the supplied major.minor.
+func (r *OverrideResolver) DeviceVersionAtLeast(major, minor int) bool {
+	if r == nil || r.deviceVersion == "" {
+		return false
+	}
+	if r.major != major {
+		return r.major > major
+	}
+	return r.minor >= minor
+}
+
+// ReleaseTag returns the mapped YANG release tag for this resolver's
+// device software version. Empty means no mapped release was used.
+func (r *OverrideResolver) ReleaseTag() string {
+	if r == nil {
+		return ""
+	}
+	return r.releaseTag
+}
+
+// GetOverride returns the resolved override for a family.
+func (r *OverrideResolver) GetOverride(family string) (*VersionOverride, bool) {
+	if r == nil || r.resolved == nil {
+		return nil, false
+	}
+	o, ok := r.resolved[family]
+	return o, ok
 }
 
 // ApplyElementMap rewrites JSON body keys according to the override's
@@ -273,9 +344,9 @@ func DecodeEmptyLeaves(body map[string]any, leaves []string) map[string]any {
 // ResolvedNestedYANGInner returns the version-overridden inner
 // element name for a nested keyed-list family. Falls back to the
 // static default if no override exists.
-func ResolvedNestedYANGInner(family, defaultInner string) string {
-	o := GetOverride(family)
-	if o != nil && o.NestedYANGInnerOverride != "" {
+func (r *OverrideResolver) ResolvedNestedYANGInner(family, defaultInner string) string {
+	o, ok := r.GetOverride(family)
+	if ok && o.NestedYANGInnerOverride != "" {
 		return o.NestedYANGInnerOverride
 	}
 	return defaultInner
@@ -283,9 +354,9 @@ func ResolvedNestedYANGInner(family, defaultInner string) string {
 
 // ResolvedKeyField returns the version-overridden key field for a
 // family. Falls back to the static default if no override exists.
-func ResolvedKeyField(family, defaultKey string) string {
-	o := GetOverride(family)
-	if o != nil && o.KeyFieldOverride != "" {
+func (r *OverrideResolver) ResolvedKeyField(family, defaultKey string) string {
+	o, ok := r.GetOverride(family)
+	if ok && o.KeyFieldOverride != "" {
 		return o.KeyFieldOverride
 	}
 	return defaultKey
@@ -296,15 +367,16 @@ func ResolvedKeyField(family, defaultKey string) string {
 // pre-baseline version that requires version-specific transforms.
 // Custom writers use this instead of calling DeviceVersionAtLeast
 // directly, keeping the version threshold in the table.
-func IsLegacyVersion(family string) bool {
-	return GetOverride(family) != nil
+func (r *OverrideResolver) IsLegacyVersion(family string) bool {
+	_, ok := r.GetOverride(family)
+	return ok
 }
 
 // ResolvedYANGPath returns the version-overridden YANG path for a
 // family. Falls back to the static default if no override exists.
-func ResolvedYANGPath(family, defaultPath string) string {
-	o := GetOverride(family)
-	if o != nil && o.YANGPathOverride != "" {
+func (r *OverrideResolver) ResolvedYANGPath(family, defaultPath string) string {
+	o, ok := r.GetOverride(family)
+	if ok && o.YANGPathOverride != "" {
 		return o.YANGPathOverride
 	}
 	return defaultPath
@@ -312,10 +384,49 @@ func ResolvedYANGPath(family, defaultPath string) string {
 
 // ResolvedEnvelopeKey returns the version-overridden envelope key
 // for a family. Falls back to the static default if no override exists.
-func ResolvedEnvelopeKey(family, defaultKey string) string {
-	o := GetOverride(family)
-	if o != nil && o.EnvelopeKeyOverride != "" {
+func (r *OverrideResolver) ResolvedEnvelopeKey(family, defaultKey string) string {
+	o, ok := r.GetOverride(family)
+	if ok && o.EnvelopeKeyOverride != "" {
 		return o.EnvelopeKeyOverride
 	}
 	return defaultKey
+}
+
+// AutoReverseObservedBody is the shared Fetch-side counterpart to
+// ApplyOverrideToBody. It runs the *auto-reversible* parts of the
+// override chain — ReverseElementMap and DecodeEmptyLeaves — so that
+// data fetched from a legacy-version device is comparable against
+// the netascode-shaped desired body in leavesEqual.
+//
+// When the family's override carries a BodyTransform, this function
+// is a no-op: BodyTransform is intrinsically one-way (no automatic
+// inverse) and the writer must implement a manual reverse path. The
+// snmp_server and logging writers do exactly that today.
+//
+// Both ReverseElementMap and DecodeEmptyLeaves are idempotent, so it
+// is safe to call this even when the writer also reverses manually
+// downstream (e.g. ntp.go calls DecodeEmptyLeaves inside its own
+// yangFetchShape; AutoReverseObservedBody runs first and the second
+// call is a no-op).
+func (r *OverrideResolver) AutoReverseObservedBody(family string, body map[string]any) map[string]any {
+	if body == nil {
+		return body
+	}
+	o, ok := r.GetOverride(family)
+	if !ok {
+		return body
+	}
+	if o.BodyTransform != nil {
+		// Manual reverse path required — leave the body alone so
+		// the writer's custom Fetch logic can run on the raw
+		// device-shaped data.
+		return body
+	}
+	if len(o.ElementMap) > 0 {
+		body = ReverseElementMap(body, o.ElementMap)
+	}
+	if len(o.EmptyLeaves) > 0 {
+		body = DecodeEmptyLeaves(body, o.EmptyLeaves)
+	}
+	return body
 }

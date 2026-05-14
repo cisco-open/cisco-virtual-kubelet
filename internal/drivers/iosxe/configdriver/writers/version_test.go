@@ -19,52 +19,126 @@ import (
 	"testing"
 )
 
-// TestMain sets a default device version for the writer test suite.
-// All existing tests were developed against C9300 17.18.2, so the
-// version is set accordingly. Individual tests may override.
+// TestMain validates the default device version used by the writer
+// test suite. Version-specific state is per resolver, not global.
 func TestMain(m *testing.M) {
-	SetDeviceVersion("17.18.2")
+	if err := SetDeviceVersion("17.18.2"); err != nil {
+		panic("TestMain: SetDeviceVersion: " + err.Error())
+	}
 	os.Exit(m.Run())
 }
 
-func TestParseVersion(t *testing.T) {
+// mustSetDeviceVersion is a test helper that fails the test on
+// SetDeviceVersion error. Centralises the boilerplate so individual
+// tests stay readable.
+func mustSetDeviceVersion(t *testing.T, ver string) {
+	t.Helper()
+	if err := SetDeviceVersion(ver); err != nil {
+		t.Fatalf("SetDeviceVersion(%q): %v", ver, err)
+	}
+}
+
+func TestParseVersionStrict(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		in          string
-		wantMajor   int
-		wantMinor   int
+		in        string
+		wantMajor int
+		wantMinor int
+		wantOK    bool
 	}{
-		{"17.16.01a", 17, 16},
-		{"17.18.2", 17, 18},
-		{"17.15.03", 17, 15},
-		{"", 0, 0},
-		{"17", 0, 0},
-		{"17.", 17, 0},
+		{"17.16.01a", 17, 16, true},
+		{"17.18.2", 17, 18, true},
+		{"17.15", 17, 15, true},
+		{"", 0, 0, false},
+		{"17", 0, 0, false},
+		{"17.", 0, 0, false},
+		{".17", 0, 0, false},
+		{"abc.def", 0, 0, false},
 	}
 	for _, tc := range cases {
-		maj, min := parseVersion(tc.in)
-		if maj != tc.wantMajor || min != tc.wantMinor {
-			t.Errorf("parseVersion(%q) = (%d, %d), want (%d, %d)",
-				tc.in, maj, min, tc.wantMajor, tc.wantMinor)
+		maj, min, ok := parseVersionStrict(tc.in)
+		if ok != tc.wantOK || (ok && (maj != tc.wantMajor || min != tc.wantMinor)) {
+			t.Errorf("parseVersionStrict(%q) = (%d, %d, %v), want (%d, %d, %v)",
+				tc.in, maj, min, ok, tc.wantMajor, tc.wantMinor, tc.wantOK)
+		}
+	}
+}
+
+func TestSetDeviceVersionRejectsMalformed(t *testing.T) {
+	// Cannot t.Parallel — touches the package global on success and
+	// must restore via TestMain's default of 17.18.2.
+	defer func() {
+		if err := SetDeviceVersion("17.18.2"); err != nil {
+			t.Fatalf("restore: %v", err)
+		}
+	}()
+	for _, in := range []string{"", "17", "17.", "abc", ".17"} {
+		if err := SetDeviceVersion(in); err == nil {
+			t.Errorf("SetDeviceVersion(%q) returned nil; expected error", in)
+		}
+	}
+}
+
+func TestSetDeviceVersionRejectsUnsupported(t *testing.T) {
+	defer func() {
+		if err := SetDeviceVersion("17.18.2"); err != nil {
+			t.Fatalf("restore: %v", err)
+		}
+	}()
+	// Versions that parse cleanly but are not in the supported map.
+	// 17.21 / 17.24 are real Cisco releases we have not validated yet.
+	cases := []string{"17.21.1", "17.24.0", "18.0", "16.12.5"}
+	for _, in := range cases {
+		err := SetDeviceVersion(in)
+		if err == nil {
+			t.Errorf("SetDeviceVersion(%q) returned nil; expected ErrUnsupportedDeviceVersion", in)
+			continue
+		}
+		if !IsUnsupportedDeviceVersion(err) {
+			t.Errorf("SetDeviceVersion(%q) = %v (%T); expected ErrUnsupportedDeviceVersion", in, err, err)
+		}
+	}
+}
+
+func TestReleaseTagForDeviceVersion(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		ver  string
+		tag  string
+		want bool
+	}{
+		{"17.9.1", "1791", true},
+		{"17.15.03", "1715", true},
+		{"17.16.01a", "1716", true},
+		{"17.18.2", "1718", true},
+		{"17.21.0", "", false},
+		{"", "", false},
+	}
+	for _, tc := range cases {
+		tag, ok := ReleaseTagForDeviceVersionString(tc.ver)
+		if ok != tc.want || tag != tc.tag {
+			t.Errorf("ReleaseTagForDeviceVersionString(%q) = (%q, %v), want (%q, %v)",
+				tc.ver, tag, ok, tc.tag, tc.want)
 		}
 	}
 }
 
 func TestDeviceVersionAtLeast(t *testing.T) {
 	t.Parallel()
-	SetDeviceVersion("17.16.01a")
-	defer SetDeviceVersion("17.18.2") // restore for other tests
-
-	if DeviceVersionAtLeast(17, 18) {
+	r, err := NewOverrideResolver("17.16.01a")
+	if err != nil {
+		t.Fatalf("NewOverrideResolver: %v", err)
+	}
+	if r.DeviceVersionAtLeast(17, 18) {
 		t.Error("17.16 should not be >= 17.18")
 	}
-	if !DeviceVersionAtLeast(17, 16) {
+	if !r.DeviceVersionAtLeast(17, 16) {
 		t.Error("17.16 should be >= 17.16")
 	}
-	if !DeviceVersionAtLeast(17, 15) {
+	if !r.DeviceVersionAtLeast(17, 15) {
 		t.Error("17.16 should be >= 17.15")
 	}
-	if DeviceVersionAtLeast(18, 0) {
+	if r.DeviceVersionAtLeast(18, 0) {
 		t.Error("17.16 should not be >= 18.0")
 	}
 }

@@ -83,9 +83,5 @@ func ntpServerFromYANG(yang map[string]any) map[string]any {
 			out[k] = v
 		}
 	}
-	// Decode empty-leaf encoding from the device: [null] → true.
-	if o := GetOverride("ntp"); o != nil {
-		out = DecodeEmptyLeaves(out, o.EmptyLeaves)
-	}
 	return out
 }

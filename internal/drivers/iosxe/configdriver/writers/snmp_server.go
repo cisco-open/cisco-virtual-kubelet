@@ -46,18 +46,31 @@ func init() {
 	Override(snmpWriter{})
 }
 
-type snmpWriter struct{}
+type snmpWriter struct {
+	resolver *OverrideResolver
+}
 
 func (snmpWriter) Family() string      { return "snmp_server" }
 func (snmpWriter) YANGPaths() []string { return []string{"/Cisco-IOS-XE-native:native/snmp-server"} }
 
+func (w snmpWriter) withResolver(r *OverrideResolver) SectionWriter {
+	w.resolver = r
+	return w
+}
+
+func (w snmpWriter) resolverForUse() *OverrideResolver {
+	return ensureResolver(w.resolver)
+}
+
 func (w snmpWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
-	envKey := ResolvedEnvelopeKey("snmp_server", "Cisco-IOS-XE-snmp:snmp-server")
+	resolver := w.resolverForUse()
+	envKey := resolver.ResolvedEnvelopeKey("snmp_server", "Cisco-IOS-XE-snmp:snmp-server")
 	sw := singletonWriter{
 		family:        "snmp_server",
 		yangPath:      "/Cisco-IOS-XE-native:native/snmp-server",
 		envelopeKey:   envKey,
 		managedLeaves: snmpManagedLeaves,
+		resolver:      resolver,
 	}
 	observed, err := sw.Fetch(ctx, c)
 	if err != nil {
@@ -68,7 +81,7 @@ func (w snmpWriter) Fetch(ctx context.Context, c transport.Interface) (any, erro
 		return observed, nil
 	}
 	// Reverse version-conditional element renames (e.g. Cisco-IOS-XE-snmp:contact → contact).
-	if o := GetOverride("snmp_server"); o != nil {
+	if o, ok := resolver.GetOverride("snmp_server"); ok {
 		m = ReverseElementMap(m, o.ElementMap)
 	}
 	// Normalise community entries: YANG RO/RW → netascode access (17.18),
@@ -138,10 +151,11 @@ func (w snmpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		proj["community"] = fixed
 	}
 	// Apply version-conditional overrides (module prefix renames).
-	if o := GetOverride("snmp_server"); o != nil {
+	resolver := w.resolverForUse()
+	if o, ok := resolver.GetOverride("snmp_server"); ok {
 		proj = ApplyOverrideToBody(proj, o)
 	}
-	envKey := ResolvedEnvelopeKey("snmp_server", "Cisco-IOS-XE-snmp:snmp-server")
+	envKey := resolver.ResolvedEnvelopeKey("snmp_server", "Cisco-IOS-XE-snmp:snmp-server")
 	body, err := wrapYANGPayload(envKey, proj)
 	if err != nil {
 		return nil, err

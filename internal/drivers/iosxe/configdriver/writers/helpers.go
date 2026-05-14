@@ -191,12 +191,16 @@ func isComparable(v any) bool {
 	}
 }
 
-// projectManagedLeaves returns a copy of src containing only the keys
-// listed in managed. Writers use it to send a merge-shaped payload that
-// does not overwrite leaves the device has configured outside CVK's
-// scope.
+// projectManagedLeaves returns a copy of src suitable for a merge-shaped
+// payload. Leaves explicitly present in desired intent pass through even
+// when this writer has no typed knowledge of them; this keeps current
+// untyped writers from dropping operator-owned leaves and gives the typed
+// writer migration a concrete passthrough invariant to preserve.
 func projectManagedLeaves(src map[string]any, managed []string) map[string]any {
-	out := map[string]any{}
+	out := make(map[string]any, len(src))
+	for key, v := range src {
+		out[key] = v
+	}
 	for _, key := range managed {
 		if v, ok := src[key]; ok {
 			out[key] = v

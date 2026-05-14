@@ -323,8 +323,9 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 	// ConfigMap or git-tracked source. Fail closed on missing
 	// Secret / missing key / non-managed family so a typo doesn't
 	// silently leave credentials out of the apply.
+	managedFamilies := inferManagedFamilies(cr.Spec.ManagedFamilies, configuration)
 	managedSet := map[string]struct{}{}
-	for _, fam := range cr.Spec.ManagedFamilies {
+	for _, fam := range managedFamilies {
 		managedSet[fam] = struct{}{}
 	}
 	for i, sr := range cr.Spec.SecretRefs {
@@ -369,7 +370,7 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 
 	return &ResolvedIntent{
 		DeviceName:             device,
-		ManagedFamilies:        append([]string(nil), cr.Spec.ManagedFamilies...),
+		ManagedFamilies:        managedFamilies,
 		Configuration:          configuration,
 		Transactional:          cr.Spec.Transactional,
 		DriftPolicy:            policy,
@@ -382,6 +383,18 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 		CLIBlocks:              cliBlocks,
 		SourceCR:               cr.DeepCopy(),
 	}, nil
+}
+
+func inferManagedFamilies(explicit []string, configuration map[string]any) []string {
+	if len(explicit) > 0 {
+		return append([]string(nil), explicit...)
+	}
+	out := make([]string, 0, len(configuration))
+	for family := range configuration {
+		out = append(out, family)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func (r *Resolver) loadDevice(ctx context.Context, ns, name string) (*ciskov1.CiscoDevice, error) {

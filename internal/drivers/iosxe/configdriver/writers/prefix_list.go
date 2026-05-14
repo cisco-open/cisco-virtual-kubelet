@@ -77,18 +77,35 @@ func init() {
 	Override(prefixListWriter{})
 }
 
-type prefixListWriter struct{}
+type prefixListWriter struct {
+	resolver *OverrideResolver
+}
 
 func (w prefixListWriter) Family() string { return prefixListFamily }
 func (w prefixListWriter) YANGPaths() []string {
-	return []string{ResolvedYANGPath(prefixListFamily, prefixListYANGPath1718)}
+	return []string{w.resolverForUse().ResolvedYANGPath(prefixListFamily, prefixListYANGPath1718)}
+}
+
+func (w prefixListWriter) withResolver(r *OverrideResolver) SectionWriter {
+	w.resolver = r
+	return w
+}
+
+func (w prefixListWriter) resolverForUse() *OverrideResolver {
+	return ensureResolver(w.resolver)
+}
+
+func (w prefixListWriter) nested1718() nestedKeyedListWriter {
+	n := prefixListNested1718
+	n.base.resolver = w.resolverForUse()
+	return n
 }
 
 // ── Fetch ───────────────────────────────────────────────────────
 
 func (w prefixListWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
-	if !IsLegacyVersion(prefixListFamily) {
-		return prefixListNested1718.Fetch(ctx, c)
+	if !w.resolverForUse().IsLegacyVersion(prefixListFamily) {
+		return w.nested1718().Fetch(ctx, c)
 	}
 	return w.fetchLegacy(ctx, c)
 }
@@ -117,14 +134,14 @@ func (w prefixListWriter) fetchLegacy(ctx context.Context, c transport.Interface
 // ── Diff ────────────────────────────────────────────────────────
 
 func (w prefixListWriter) Diff(desired, observed any) ([]transport.Op, error) {
-	if !IsLegacyVersion(prefixListFamily) {
-		return prefixListNested1718.Diff(desired, observed)
+	if !w.resolverForUse().IsLegacyVersion(prefixListFamily) {
+		return w.nested1718().Diff(desired, observed)
 	}
 	return w.diffLegacy(desired, observed)
 }
 
 func (w prefixListWriter) diffLegacy(desired, observed any) ([]transport.Op, error) {
-	desiredList, err := prefixListNested1718.base.coerceBlock(desired, "desired")
+	desiredList, err := w.nested1718().base.coerceBlock(desired, "desired")
 	if err != nil {
 		return nil, err
 	}

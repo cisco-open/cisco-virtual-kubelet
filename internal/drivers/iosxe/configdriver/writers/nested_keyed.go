@@ -124,7 +124,7 @@ func (w nestedKeyedListWriter) specs() []nestedListSpec {
 	// Version override table takes precedence over both static and
 	// func-based inner names. This allows the override table to
 	// inject module prefixes without touching individual writer files.
-	yangInner = ResolvedNestedYANGInner(w.base.family, yangInner)
+	yangInner = w.resolverForUse().ResolvedNestedYANGInner(w.base.family, yangInner)
 	return []nestedListSpec{{
 		Leaf:       w.nestedLeaf,
 		KeyField:   w.nestedKeyField,
@@ -136,6 +136,15 @@ func (w nestedKeyedListWriter) specs() []nestedListSpec {
 
 func (w nestedKeyedListWriter) Family() string      { return w.base.Family() }
 func (w nestedKeyedListWriter) YANGPaths() []string { return w.base.YANGPaths() }
+
+func (w nestedKeyedListWriter) withResolver(r *OverrideResolver) SectionWriter {
+	w.base.resolver = r
+	return w
+}
+
+func (w nestedKeyedListWriter) resolverForUse() *OverrideResolver {
+	return w.base.resolverForUse()
+}
 
 // KeysOf delegates to the base keyedListWriter — nested writers key
 // the OUTER entry by the same field (e.g. ACL by name, route-map by
@@ -247,14 +256,17 @@ func (w nestedKeyedListWriter) PruneDiff(desired, observed any) ([]transport.Op,
 		if !hasOrphan {
 			continue
 		}
-		payload, err := wrapYANGPayload(w.base.envelopeKey, []any{body})
+		resolver := w.resolverForUse()
+		envelopeKey := resolver.ResolvedEnvelopeKey(w.base.family, w.base.envelopeKey)
+		yangPath := resolver.ResolvedYANGPath(w.base.family, w.base.yangPath)
+		payload, err := wrapYANGPayload(envelopeKey, []any{body})
 		if err != nil {
 			return nil, err
 		}
 		innerOps = append(innerOps, transport.Op{
 			Verb:     transport.VerbReplace,
-			Path:     w.base.yangPath + "=" + k,
-			PathSpec: pathSpecForKeyedListEntry(w.base.yangPath, w.base.keyField, k),
+			Path:     yangPath + "=" + k,
+			PathSpec: pathSpecForKeyedListEntry(yangPath, w.base.keyField, k),
 			Body:     payload,
 		})
 	}
@@ -342,7 +354,10 @@ func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, erro
 	// Rename YANG inner keys to netascode leaf names, and reverse any
 	// version-conditional element renames on inner entries so that key
 	// fields match the desired-side names.
-	override := GetOverride(w.base.family)
+	var override *VersionOverride
+	if o, ok := w.resolverForUse().GetOverride(w.base.family); ok {
+		override = o
+	}
 	for _, spec := range specs {
 		if spec.YANGInner == "" || spec.YANGInner == spec.Leaf {
 			continue
@@ -439,17 +454,20 @@ func (w nestedKeyedListWriter) Diff(desired, observed any) ([]transport.Op, erro
 		}
 		// Apply version-conditional overrides (element renames,
 		// empty-leaf encoding, body transforms).
-		if o := GetOverride(w.base.family); o != nil {
+		resolver := w.resolverForUse()
+		if o, ok := resolver.GetOverride(w.base.family); ok {
 			body = ApplyOverrideToBody(body, o)
 		}
-		payload, err := wrapYANGPayload(w.base.envelopeKey, []any{body})
+		envelopeKey := resolver.ResolvedEnvelopeKey(w.base.family, w.base.envelopeKey)
+		yangPath := resolver.ResolvedYANGPath(w.base.family, w.base.yangPath)
+		payload, err := wrapYANGPayload(envelopeKey, []any{body})
 		if err != nil {
 			return nil, err
 		}
 		ops = append(ops, transport.Op{
 			Verb:     transport.VerbMerge,
-			Path:     w.base.yangPath + "=" + k,
-			PathSpec: pathSpecForKeyedListEntry(w.base.yangPath, w.base.keyField, k),
+			Path:     yangPath + "=" + k,
+			PathSpec: pathSpecForKeyedListEntry(yangPath, w.base.keyField, k),
 			Body:     payload,
 		})
 	}

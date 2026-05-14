@@ -155,6 +155,26 @@ func TestGetReturnsNilForUnknown(t *testing.T) {
 	}
 }
 
+func TestOverrideTableFamiliesAreResolverBindable(t *testing.T) {
+	t.Parallel()
+	seen := map[string]struct{}{}
+	for _, o := range overrideTable {
+		if _, done := seen[o.Family]; done {
+			continue
+		}
+		seen[o.Family] = struct{}{}
+		mu.RLock()
+		w := registry[o.Family]
+		mu.RUnlock()
+		if w == nil {
+			t.Fatalf("override table family %q has no registered writer", o.Family)
+		}
+		if _, ok := w.(resolverBindable); !ok {
+			t.Fatalf("override table family %q writer %T is not resolver-bindable", o.Family, w)
+		}
+	}
+}
+
 // TestSkeletonWritePathReturnsSentinel pins the contract that every
 // skeleton error is errors.Is-matchable against configdriver.ErrNotImplemented
 // so provider status code can distinguish scaffold from live device failures.

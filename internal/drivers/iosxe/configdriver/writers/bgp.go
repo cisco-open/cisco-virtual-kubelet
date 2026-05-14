@@ -82,15 +82,27 @@ func init() {
 	Override(bgpWriter{})
 }
 
-type bgpWriter struct{}
+type bgpWriter struct {
+	resolver *OverrideResolver
+}
 
 func (bgpWriter) Family() string { return "bgp" }
-func (bgpWriter) YANGPaths() []string {
-	return []string{ResolvedYANGPath("bgp", bgpYANGPath)}
+func (w bgpWriter) YANGPaths() []string {
+	return []string{w.resolverForUse().ResolvedYANGPath("bgp", bgpYANGPath)}
+}
+
+func (w bgpWriter) withResolver(r *OverrideResolver) SectionWriter {
+	w.resolver = r
+	return w
+}
+
+func (w bgpWriter) resolverForUse() *OverrideResolver {
+	return ensureResolver(w.resolver)
 }
 
 func (w bgpWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
-	if IsLegacyVersion("bgp") {
+	resolver := w.resolverForUse()
+	if resolver.IsLegacyVersion("bgp") {
 		return w.fetchLegacy(ctx, c)
 	}
 	sw := singletonWriter{
@@ -98,6 +110,7 @@ func (w bgpWriter) Fetch(ctx context.Context, c transport.Interface) (any, error
 		yangPath:      bgpYANGPath,
 		envelopeKey:   bgpEnvelopeKey,
 		managedLeaves: bgpManagedLeaves,
+		resolver:      resolver,
 	}
 	return sw.Fetch(ctx, c)
 }
@@ -145,7 +158,7 @@ func (w bgpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	if leavesEqual(desiredMap, observedMap, bgpManagedLeaves) {
 		return nil, nil
 	}
-	if IsLegacyVersion("bgp") {
+	if w.resolverForUse().IsLegacyVersion("bgp") {
 		return w.diffLegacy(desiredMap, observedMap)
 	}
 	proj := projectManagedLeaves(desiredMap, bgpManagedLeaves)

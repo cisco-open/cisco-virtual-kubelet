@@ -57,10 +57,21 @@ func init() {
 	Override(communityListWriter{})
 }
 
-type communityListWriter struct{}
+type communityListWriter struct {
+	resolver *OverrideResolver
+}
 
 func (w communityListWriter) Family() string      { return communityListFamily }
 func (w communityListWriter) YANGPaths() []string { return []string{communityListYANGPath} }
+
+func (w communityListWriter) withResolver(r *OverrideResolver) SectionWriter {
+	w.resolver = r
+	return w
+}
+
+func (w communityListWriter) resolverForUse() *OverrideResolver {
+	return ensureResolver(w.resolver)
+}
 
 func (w communityListWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
 	sw := singletonWriter{
@@ -68,12 +79,13 @@ func (w communityListWriter) Fetch(ctx context.Context, c transport.Interface) (
 		yangPath:      communityListYANGPath,
 		envelopeKey:   communityListEnvelopeKey,
 		managedLeaves: communityListManagedLeaves,
+		resolver:      w.resolverForUse(),
 	}
 	observed, err := sw.Fetch(ctx, c)
 	if err != nil {
 		return nil, err
 	}
-	if IsLegacyVersion(communityListFamily) {
+	if w.resolverForUse().IsLegacyVersion(communityListFamily) {
 		m, ok := observed.(map[string]any)
 		if ok {
 			observed = communityListFromYANG1716(m)
@@ -101,10 +113,10 @@ func (w communityListWriter) Diff(desired, observed any) ([]transport.Op, error)
 		return nil, nil
 	}
 	proj := projectManagedLeaves(desiredMap, communityListManagedLeaves)
-	if IsLegacyVersion(communityListFamily) {
+	if w.resolverForUse().IsLegacyVersion(communityListFamily) {
 		proj = communityListToYANG1716(proj)
 	}
-	if o := GetOverride(communityListFamily); o != nil {
+	if o, ok := w.resolverForUse().GetOverride(communityListFamily); ok {
 		proj = ApplyOverrideToBody(proj, o)
 	}
 	body, err := wrapYANGPayload(communityListEnvelopeKey, proj)

@@ -72,6 +72,7 @@ func buildXEConfigDriverContext(
 		DefaultYANGVersion:    defaultVer,
 		LookupWriter:          iosxebuilder.LookupWriter,
 		SubscribePaths:        iosxebuilder.UnionWriterPaths(),
+		FetchDeviceVersion:    FetchDeviceVersion,
 		FamilyOrder:           iosxebuilder.FamilyOrderForXE(),
 	}
 	if err != nil {
@@ -79,15 +80,19 @@ func buildXEConfigDriverContext(
 	}
 	// Best-effort version fetch for version-aware writers. If the
 	// transport dialled successfully we can reach the device.
-	if ver := fetchDeviceVersion(ctx, t); ver != "" {
+	if ver := FetchDeviceVersion(ctx, t); ver != "" {
 		out.DeviceVersion = ver
 	}
 	return out, nil
 }
 
-// fetchDeviceVersion makes a lightweight RESTCONF GET for the
+// FetchDeviceVersion makes a lightweight RESTCONF GET for the
 // software-version field. Returns "" on any error.
-func fetchDeviceVersion(ctx context.Context, t transport.Interface) string {
+//
+// Exported so cisco-vk's deferred-dial retry loop can rebind the
+// device version after a startup race recovers — see the comment in
+// cmd/cisco-vk/config_reconciler.go retryConfigDriverDial.
+func FetchDeviceVersion(ctx context.Context, t transport.Interface) string {
 	if t == nil {
 		return ""
 	}

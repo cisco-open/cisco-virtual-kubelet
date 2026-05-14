@@ -14,74 +14,71 @@
 
 package writers
 
-import (
-	"strings"
-	"sync"
-)
+import "strings"
 
 // Device version support for YANG version-conditional writers.
 //
-// Each VK process handles exactly one device, so a package-level
-// singleton is appropriate. The factory (register.go) calls
-// SetDeviceVersion once during ConfigDriverContext construction.
-// Writers call DeviceVersion() or the convenience helpers to branch.
+// Writer instances capture an OverrideResolver per device. The helper in
+// this file validates a reported version before the reconciler allows
+// writes to run; it does not mutate process-global writer state.
 
-var (
-	deviceVersionMu    sync.RWMutex
-	deviceVersionStr   string
-	deviceVersionMajor int
-	deviceVersionMinor int
-)
-
-// SetDeviceVersion records the IOS-XE software version string
-// reported by the device (e.g. "17.16.01a", "17.15.03", "17.18.2").
-// The string is parsed into major.minor for comparison helpers.
-func SetDeviceVersion(ver string) {
-	deviceVersionMu.Lock()
-	defer deviceVersionMu.Unlock()
-	deviceVersionStr = ver
-	deviceVersionMajor, deviceVersionMinor = parseVersion(ver)
-	// Resolve version-conditional YANG overrides for all families.
-	ResolveForVersion(deviceVersionMajor, deviceVersionMinor)
-}
-
-// DeviceVersion returns the raw version string set by
-// SetDeviceVersion. Empty if not yet set.
-func DeviceVersion() string {
-	deviceVersionMu.RLock()
-	defer deviceVersionMu.RUnlock()
-	return deviceVersionStr
-}
-
-// DeviceVersionAtLeast returns true if the device version is ≥
-// the given major.minor. Returns false if no version has been set.
-func DeviceVersionAtLeast(major, minor int) bool {
-	deviceVersionMu.RLock()
-	defer deviceVersionMu.RUnlock()
-	if deviceVersionStr == "" {
-		return false
-	}
-	if deviceVersionMajor != major {
-		return deviceVersionMajor > major
-	}
-	return deviceVersionMinor >= minor
-}
-
-// parseVersion extracts the first two numeric segments from a
-// Cisco IOS-XE version string. Examples:
+// SetDeviceVersion validates the IOS-XE software version string reported
+// by the device (e.g. "17.16.01a", "17.15.03", "17.18.2"). Historical
+// name aside, it no longer records process-global writer state.
 //
-//	"17.16.01a" → (17, 16)
-//	"17.18.2"   → (17, 18)
-//	"17.15.03"  → (17, 15)
-//	""          → (0, 0)
-func parseVersion(s string) (major, minor int) {
+// Returns an error if ver is empty or has no parseable major.minor
+// prefix. Callers in production MUST propagate this error rather than
+// silently letting the writers fall through to baseline behavior on an
+// unknown device.
+func SetDeviceVersion(ver string) error {
+	if ver == "" {
+		return &ErrMalformedDeviceVersion{Version: ver}
+	}
+	major, minor, ok := parseVersionStrict(ver)
+	if !ok {
+		return &ErrMalformedDeviceVersion{Version: ver}
+	}
+	// Reject device versions that aren't in the explicit
+	// device-version → release-tag mapping. The reconciler surfaces
+	// this as an UnsupportedDevice condition on the CR rather than
+	// silently running baseline-shape writers against a device whose
+	// schema diverges. Tests can opt out by calling SetDeviceVersion
+	// with a known version (17.18.2 by default) and using
+	// ResolveForVersion directly when they need a manually picked
+	// (major, minor) outside the supported set.
+	if _, mapped := ReleaseTagForDeviceVersion(major, minor); !mapped {
+		return &ErrUnsupportedDeviceVersion{Version: ver}
+	}
+	return nil
+}
+
+// parseVersionStrict is the strict form: returns ok=false if the
+// string has fewer than two numeric segments or either of the first
+// two segments has no leading digits. Empty string is rejected.
+func parseVersionStrict(s string) (major, minor int, ok bool) {
+	if s == "" {
+		return 0, 0, false
+	}
 	parts := strings.SplitN(s, ".", 3)
 	if len(parts) < 2 {
-		return 0, 0
+		return 0, 0, false
 	}
-	major = parseIntPrefix(parts[0])
-	minor = parseIntPrefix(parts[1])
-	return major, minor
+	majorN, majorOK := parseIntPrefixStrict(parts[0])
+	minorN, minorOK := parseIntPrefixStrict(parts[1])
+	if !majorOK || !minorOK {
+		return 0, 0, false
+	}
+	return majorN, minorN, true
+}
+
+// parseIntPrefixStrict is parseIntPrefix but reports whether at least
+// one leading digit was consumed. The empty string and a string with
+// no leading digit return ok=false.
+func parseIntPrefixStrict(s string) (int, bool) {
+	if s == "" || s[0] < '0' || s[0] > '9' {
+		return 0, false
+	}
+	return parseIntPrefix(s), true
 }
 
 // parseIntPrefix reads the leading decimal digits of s. Stops at

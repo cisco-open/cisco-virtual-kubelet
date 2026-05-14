@@ -19,16 +19,6 @@ import (
 	"testing"
 )
 
-// resetVersion restores the global device version to the default
-// state (empty / no overrides) so tests that mutate it don't leak
-// into other tests running in the same process.
-func resetVersion(t *testing.T) {
-	t.Helper()
-	t.Cleanup(func() {
-		SetDeviceVersion("")
-	})
-}
-
 func TestVersionOverride_versionInRange(t *testing.T) {
 	o := VersionOverride{
 		MinVersion: [2]int{17, 0},
@@ -56,11 +46,10 @@ func TestVersionOverride_versionInRange(t *testing.T) {
 }
 
 func TestResolveForVersion_routeMap(t *testing.T) {
-	resetVersion(t)
 	// Simulate 17.16 device
-	ResolveForVersion(17, 16)
-	o := GetOverride("route_map")
-	if o == nil {
+	r := NewOverrideResolverForMajorMinor(17, 16)
+	o, ok := r.GetOverride("route_map")
+	if !ok {
 		t.Fatal("expected override for route_map on 17.16, got nil")
 	}
 	if o.NestedYANGInnerOverride != "Cisco-IOS-XE-route-map:route-map-seq" {
@@ -69,18 +58,16 @@ func TestResolveForVersion_routeMap(t *testing.T) {
 	}
 
 	// Simulate 17.18 device — no override expected
-	ResolveForVersion(17, 18)
-	o = GetOverride("route_map")
-	if o != nil {
+	r = NewOverrideResolverForMajorMinor(17, 18)
+	if o, ok := r.GetOverride("route_map"); ok {
 		t.Errorf("expected no override for route_map on 17.18, got %+v", o)
 	}
 }
 
 func TestResolveForVersion_ntp(t *testing.T) {
-	resetVersion(t)
-	ResolveForVersion(17, 15)
-	o := GetOverride("ntp")
-	if o == nil {
+	r := NewOverrideResolverForMajorMinor(17, 15)
+	o, ok := r.GetOverride("ntp")
+	if !ok {
 		t.Fatal("expected override for ntp on 17.15, got nil")
 	}
 	if len(o.EmptyLeaves) != 1 || o.EmptyLeaves[0] != "prefer" {
@@ -91,10 +78,9 @@ func TestResolveForVersion_ntp(t *testing.T) {
 func TestResolveForVersion_bgpOverride(t *testing.T) {
 	// BGP has an override entry on < 17.18 for path/envelope
 	// selection; transform logic is in the writer.
-	resetVersion(t)
-	ResolveForVersion(17, 16)
-	o := GetOverride("bgp")
-	if o == nil {
+	r := NewOverrideResolverForMajorMinor(17, 16)
+	o, ok := r.GetOverride("bgp")
+	if !ok {
 		t.Fatal("expected override for bgp on 17.16, got nil")
 	}
 	if o.YANGPathOverride != bgpYANGPathLegacy {
@@ -105,21 +91,20 @@ func TestResolveForVersion_bgpOverride(t *testing.T) {
 	}
 
 	// No override on 17.18.
-	ResolveForVersion(17, 18)
-	if o := GetOverride("bgp"); o != nil {
+	r = NewOverrideResolverForMajorMinor(17, 18)
+	if o, ok := r.GetOverride("bgp"); ok {
 		t.Errorf("expected no override for bgp on 17.18, got %+v", o)
 	}
 }
 
 func TestResolveForVersion_noOverrideOn1718(t *testing.T) {
-	resetVersion(t)
-	ResolveForVersion(17, 18)
+	r := NewOverrideResolverForMajorMinor(17, 18)
 	families := []string{
 		"route_map", "ntp", "logging", "snmp_server",
 		"access_list_extended", "spanning_tree",
 	}
 	for _, f := range families {
-		if o := GetOverride(f); o != nil {
+		if o, ok := r.GetOverride(f); ok {
 			t.Errorf("expected no override for %s on 17.18, got %+v", f, o)
 		}
 	}
@@ -228,33 +213,31 @@ func TestApplyOverrideToBody_fullChain(t *testing.T) {
 }
 
 func TestResolvedNestedYANGInner(t *testing.T) {
-	resetVersion(t)
-	ResolveForVersion(17, 16)
-	got := ResolvedNestedYANGInner("route_map", "route-map-without-order-seq")
+	r := NewOverrideResolverForMajorMinor(17, 16)
+	got := r.ResolvedNestedYANGInner("route_map", "route-map-without-order-seq")
 	want := "Cisco-IOS-XE-route-map:route-map-seq"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 
-	ResolveForVersion(17, 18)
-	got = ResolvedNestedYANGInner("route_map", "route-map-without-order-seq")
+	r = NewOverrideResolverForMajorMinor(17, 18)
+	got = r.ResolvedNestedYANGInner("route_map", "route-map-without-order-seq")
 	if got != "route-map-without-order-seq" {
 		t.Errorf("got %q, want default on 17.18", got)
 	}
 }
 
 func TestNTPOverride_emptyLeafInKeyedWriter(t *testing.T) {
-	resetVersion(t)
 	// Simulate what keyedListWriter.Diff does for NTP on 17.16:
 	// after ntpServerToYANG, we get {ip-address: "10.1.1.1", prefer: true}
 	// The override should convert prefer: true → prefer: [null]
-	ResolveForVersion(17, 16)
+	r := NewOverrideResolverForMajorMinor(17, 16)
 
 	proj := map[string]any{
 		"ip-address": "10.1.1.1",
 		"prefer":     true,
 	}
-	if o := GetOverride("ntp"); o != nil {
+	if o, ok := r.GetOverride("ntp"); ok {
 		proj = ApplyOverrideToBody(proj, o)
 	}
 

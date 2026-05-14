@@ -329,10 +329,7 @@ func TestCommunityNumToString(t *testing.T) {
 // ── BGP version-branched Diff ───────────────────────────────────
 
 func TestBGPDiffLegacy(t *testing.T) {
-	resetVersion(t)
-	SetDeviceVersion("17.16.01a")
-
-	w := bgpWriter{}
+	w := bgpWriter{resolver: NewOverrideResolverForMajorMinor(17, 16)}
 	desired := map[string]any{
 		"id": float64(65000),
 		"bgp": map[string]any{
@@ -366,10 +363,7 @@ func TestBGPDiffLegacy(t *testing.T) {
 }
 
 func TestBGPDiff1718(t *testing.T) {
-	resetVersion(t)
-	SetDeviceVersion("17.18.2")
-
-	w := bgpWriter{}
+	w := bgpWriter{resolver: NewOverrideResolverForMajorMinor(17, 18)}
 	desired := map[string]any{
 		"id": float64(65000),
 		"bgp": map[string]any{
@@ -393,10 +387,7 @@ func TestBGPDiff1718(t *testing.T) {
 }
 
 func TestBGPDiffNoChange(t *testing.T) {
-	resetVersion(t)
-	SetDeviceVersion("17.18.2")
-
-	w := bgpWriter{}
+	w := bgpWriter{resolver: NewOverrideResolverForMajorMinor(17, 18)}
 	data := map[string]any{
 		"id":  float64(65000),
 		"bgp": map[string]any{"router-id": "10.255.255.1"},
@@ -442,10 +433,9 @@ func TestSNMPBodyTransform1716(t *testing.T) {
 // ── logging body transform ──────────────────────────────────────
 
 func TestLoggingBodyTransform1716(t *testing.T) {
-	resetVersion(t)
-	ResolveForVersion(17, 16)
-	o := GetOverride("logging")
-	if o == nil || o.BodyTransform == nil {
+	r := NewOverrideResolverForMajorMinor(17, 16)
+	o, ok := r.GetOverride("logging")
+	if !ok || o.BodyTransform == nil {
 		t.Fatal("expected logging override with BodyTransform on 17.16")
 	}
 	body := map[string]any{
@@ -464,42 +454,79 @@ func TestLoggingBodyTransform1716(t *testing.T) {
 // ── IsLegacyVersion / table-driven path resolution ──────────────
 
 func TestIsLegacyVersion(t *testing.T) {
-	resetVersion(t)
-
 	// On 17.16, all 3 custom writers should report legacy.
-	SetDeviceVersion("17.16.01a")
+	r := NewOverrideResolverForMajorMinor(17, 16)
 	for _, fam := range []string{"bgp", "prefix_list", "ip_community_list"} {
-		if !IsLegacyVersion(fam) {
+		if !r.IsLegacyVersion(fam) {
 			t.Errorf("IsLegacyVersion(%q) = false on 17.16, want true", fam)
 		}
 	}
 
 	// On 17.18, none should.
-	SetDeviceVersion("17.18.2")
+	r = NewOverrideResolverForMajorMinor(17, 18)
 	for _, fam := range []string{"bgp", "prefix_list", "ip_community_list"} {
-		if IsLegacyVersion(fam) {
+		if r.IsLegacyVersion(fam) {
 			t.Errorf("IsLegacyVersion(%q) = true on 17.18, want false", fam)
 		}
 	}
 }
 
 func TestResolvedYANGPathFromTable(t *testing.T) {
-	resetVersion(t)
-
-	SetDeviceVersion("17.16.01a")
-	if got := ResolvedYANGPath("bgp", bgpYANGPath); got != bgpYANGPathLegacy {
+	r := NewOverrideResolverForMajorMinor(17, 16)
+	if got := r.ResolvedYANGPath("bgp", bgpYANGPath); got != bgpYANGPathLegacy {
 		t.Errorf("bgp path on 17.16 = %q, want %q", got, bgpYANGPathLegacy)
 	}
-	if got := ResolvedYANGPath("prefix_list", prefixListYANGPath1718); got != prefixListYANGPath1716 {
+	if got := r.ResolvedYANGPath("prefix_list", prefixListYANGPath1718); got != prefixListYANGPath1716 {
 		t.Errorf("prefix_list path on 17.16 = %q, want %q", got, prefixListYANGPath1716)
 	}
 
-	SetDeviceVersion("17.18.2")
-	if got := ResolvedYANGPath("bgp", bgpYANGPath); got != bgpYANGPath {
+	r = NewOverrideResolverForMajorMinor(17, 18)
+	if got := r.ResolvedYANGPath("bgp", bgpYANGPath); got != bgpYANGPath {
 		t.Errorf("bgp path on 17.18 = %q, want %q (baseline)", got, bgpYANGPath)
 	}
-	if got := ResolvedYANGPath("prefix_list", prefixListYANGPath1718); got != prefixListYANGPath1718 {
+	if got := r.ResolvedYANGPath("prefix_list", prefixListYANGPath1718); got != prefixListYANGPath1718 {
 		t.Errorf("prefix_list path on 17.18 = %q, want %q (baseline)", got, prefixListYANGPath1718)
+	}
+}
+
+// ── Fetch-side symmetry (Codex finding #7) ──────────────────────
+
+// TestAutoReverseObservedBody_SingletonFamily verifies that an
+// observed body fetched from a 17.16 device — where the YANG keys
+// carry module prefixes — round-trips through AutoReverseObservedBody
+// to the bare netascode-shape keys the desired body uses. Pre-fix
+// this asymmetry produced eternal reconcile churn on spanning_tree,
+// event_manager, and the two access-list families.
+func TestAutoReverseObservedBody_SingletonFamily(t *testing.T) {
+	r := NewOverrideResolverForMajorMinor(17, 16)
+
+	// Spanning_tree on 17.16: ElementMap renames mode → Cisco-IOS-XE-spanning-tree:mode.
+	observed := map[string]any{
+		"Cisco-IOS-XE-spanning-tree:mode": "rapid-pvst",
+	}
+	got := r.AutoReverseObservedBody("spanning_tree", observed)
+	if got["mode"] != "rapid-pvst" {
+		t.Errorf("expected mode=rapid-pvst after reverse, got %v", got)
+	}
+	if _, present := got["Cisco-IOS-XE-spanning-tree:mode"]; present {
+		t.Error("YANG-prefixed key should be stripped after reverse")
+	}
+}
+
+// TestAutoReverseObservedBody_BodyTransformFamily verifies that
+// families carrying a BodyTransform (snmp_server, logging) are NOT
+// auto-reversed — they own their reverse logic and a double-apply
+// would corrupt the body.
+func TestAutoReverseObservedBody_BodyTransformFamily(t *testing.T) {
+	r := NewOverrideResolverForMajorMinor(17, 16)
+
+	// snmp_server has BodyTransform — auto-reverse must be a no-op.
+	observed := map[string]any{
+		"Cisco-IOS-XE-snmp:contact": "noc@example",
+	}
+	got := r.AutoReverseObservedBody("snmp_server", observed)
+	if got["Cisco-IOS-XE-snmp:contact"] != "noc@example" {
+		t.Errorf("BodyTransform family must NOT auto-reverse; got %v", got)
 	}
 }
 
