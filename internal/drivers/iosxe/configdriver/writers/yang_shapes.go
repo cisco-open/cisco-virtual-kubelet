@@ -81,6 +81,17 @@ func interfaceIPv4VRFToYANG(flat map[string]any) map[string]any {
 				continue
 			}
 			ensureIPAccessGroup(out, "out")["acl-name"] = s
+		case "ip_helper_address":
+			s, ok := v.(string)
+			if !ok || s == "" {
+				continue
+			}
+			ip, ok := out["ip"].(map[string]any)
+			if !ok {
+				ip = map[string]any{}
+				out["ip"] = ip
+			}
+			ip["helper-address"] = []any{map[string]any{"address": s}}
 		case "shutdown":
 			// YANG type empty: presence = shut, absence = no shut.
 			// RFC 7951 encodes empty leaves as [null].
@@ -116,6 +127,18 @@ func interfaceVPGToYANG(flat map[string]any) map[string]any {
 		flat = dup
 	}
 	return interfaceIPv4VRFToYANG(flat)
+}
+
+// interfaceVPGFromYANG is the VirtualPortGroup-specific fetch shape.
+// It wraps interfaceIPv4VRFFromYANG and renames "name" back to "id"
+// so the keyed-list writer can match entries by the netascode key.
+func interfaceVPGFromYANG(yang map[string]any) map[string]any {
+	out := interfaceIPv4VRFFromYANG(yang)
+	if name, ok := out["name"]; ok {
+		out["id"] = name
+		delete(out, "name")
+	}
+	return out
 }
 
 // interfaceIPv4VRFFromYANG inverts the above so observed-state and
@@ -154,6 +177,13 @@ func interfaceIPv4VRFFromYANG(yang map[string]any) map[string]any {
 					}
 					if name, ok := acl["acl-name"]; ok {
 						out["ip_access_group_"+dir] = name
+					}
+				}
+			}
+			if helpers, ok := ip["helper-address"].([]any); ok && len(helpers) > 0 {
+				if h, ok := helpers[0].(map[string]any); ok {
+					if addr, ok := h["address"]; ok {
+						out["ip_helper_address"] = addr
 					}
 				}
 			}

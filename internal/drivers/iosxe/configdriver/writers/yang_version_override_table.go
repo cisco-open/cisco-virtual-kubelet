@@ -218,6 +218,25 @@ var overrideTable = []VersionOverride{
 	// The transformSetToYANG function in crypto.go already encodes
 	// tunnel/transport as empty leaves. No override needed.
 
+	// ── dhcp: IOS-XE < 17.18 ────────────────────────────────────
+	// On 17.15/17.16 the DHCP pool YANG model uses "id" as the list
+	// key (not "name"), nests network under primary-network, wraps
+	// default-router in a list, and requires the Cisco-IOS-XE-dhcp:
+	// module prefix on the envelope key. Parent container /ip/dhcp
+	// must be created before the pool PUT.
+	{
+		Family:              "dhcp",
+		MinVersion:          [2]int{17, 0},
+		MaxVersion:          [2]int{17, 18},
+		EnvelopeKeyOverride: "Cisco-IOS-XE-dhcp:pool",
+		KeyFieldOverride:    "id",
+		NeedParentCreation:  true,
+		ParentPath:          "/Cisco-IOS-XE-native:native/ip/dhcp",
+		ParentBody:          []byte(`{"Cisco-IOS-XE-native:dhcp":{}}`),
+		BodyTransform:       dhcpBodyTransformPre1718,
+		FetchBodyTransform:  dhcpFetchTransformPre1718,
+	},
+
 	// ── ospf: no version override needed ────────────────────────
 	// The ospf writer uses KeyField: "area-id" for area entries
 	// (matching the YANG model on all versions). The netascode

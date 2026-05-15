@@ -44,8 +44,9 @@ func init() {
 			"ipv4_address",
 			"ipv4_address_mask",
 			"shutdown",
+			"ip_helper_address",
 		},
 		yangBodyShape:  interfaceVPGToYANG,
-		yangFetchShape: interfaceIPv4VRFFromYANG,
+		yangFetchShape: interfaceVPGFromYANG,
 	})
 }
