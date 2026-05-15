@@ -200,7 +200,7 @@ func TestGetContainerStatus_Installing(t *testing.T) {
 	}
 }
 
-func TestGetContainerStatus_InstallingPkgPolicyInvalid_SigningRequired(t *testing.T) {
+func TestGetContainerStatus_InstallingPkgPolicyInvalid_SigningRequiredStillTransient(t *testing.T) {
 	d := &XEDriver{config: &v1alpha1.DeviceSpec{Address: "10.0.0.1", AllowUnsignedApps: false}}
 	pod := statusTestPod("app")
 	containers := map[string]string{"app": "app-id"}
@@ -215,11 +215,11 @@ func TestGetContainerStatus_InstallingPkgPolicyInvalid_SigningRequired(t *testin
 	}
 
 	cs := pod.Status.ContainerStatuses[0]
-	if cs.State.Terminated == nil || cs.State.Terminated.Reason != "PackagePolicyInvalid" {
-		t.Error("expected Terminated/PackagePolicyInvalid for invalid pkg-policy when signing required")
+	if cs.State.Waiting == nil || cs.State.Waiting.Reason != "ContainerCreating" {
+		t.Error("expected Waiting/ContainerCreating for invalid pkg-policy during INSTALLING")
 	}
-	if pod.Status.Phase != v1.PodFailed {
-		t.Errorf("expected PodFailed, got %s", pod.Status.Phase)
+	if pod.Status.Phase != v1.PodPending {
+		t.Errorf("expected PodPending, got %s", pod.Status.Phase)
 	}
 }
 
