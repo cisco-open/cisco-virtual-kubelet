@@ -116,16 +116,24 @@ func (w dhcpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 
 	want := map[string]map[string]any{}
 	for _, p := range desiredPools {
-		name, ok := p["name"].(string)
-		if !ok || name == "" {
+		rawName, ok := p["name"]
+		if !ok {
 			return nil, fmt.Errorf("dhcp: desired pool missing name")
 		}
+		name := fmt.Sprint(rawName)
+		if name == "" {
+			return nil, fmt.Errorf("dhcp: desired pool has empty name")
+		}
+		p["name"] = name // normalise to string for downstream consumers
 		want[name] = p
 	}
 	got := map[string]map[string]any{}
 	for _, p := range observedPools {
-		if name, ok := p["name"].(string); ok {
-			got[name] = p
+		if rawName, ok := p["name"]; ok {
+			name := fmt.Sprint(rawName)
+			if name != "" {
+				got[name] = p
+			}
 		}
 	}
 	names := make([]string, 0, len(want))
@@ -200,8 +208,11 @@ func (w dhcpWriter) KeysOf(v any) []string {
 	}
 	keys := make([]string, 0, len(list))
 	for _, p := range list {
-		if name, ok := p["name"].(string); ok && name != "" {
-			keys = append(keys, name)
+		if rawName, ok := p["name"]; ok {
+			name := fmt.Sprint(rawName)
+			if name != "" {
+				keys = append(keys, name)
+			}
 		}
 	}
 	sort.Strings(keys)
@@ -220,15 +231,21 @@ func (w dhcpWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
 	}
 	want := map[string]struct{}{}
 	for _, p := range desiredPools {
-		if name, ok := p["name"].(string); ok && name != "" {
-			want[name] = struct{}{}
+		if rawName, ok := p["name"]; ok {
+			name := fmt.Sprint(rawName)
+			if name != "" {
+				want[name] = struct{}{}
+			}
 		}
 	}
 	names := make([]string, 0, len(observedPools))
 	for _, p := range observedPools {
-		if name, ok := p["name"].(string); ok && name != "" {
-			if _, kept := want[name]; !kept {
-				names = append(names, name)
+		if rawName, ok := p["name"]; ok {
+			name := fmt.Sprint(rawName)
+			if name != "" {
+				if _, kept := want[name]; !kept {
+					names = append(names, name)
+				}
 			}
 		}
 	}
