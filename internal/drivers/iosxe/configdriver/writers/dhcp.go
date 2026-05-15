@@ -17,7 +17,9 @@ package writers
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
+	"strconv"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 )
@@ -120,7 +122,7 @@ func (w dhcpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		if !ok {
 			return nil, fmt.Errorf("dhcp: desired pool missing name")
 		}
-		name := fmt.Sprint(rawName)
+		name := sprintPoolName(rawName)
 		if name == "" {
 			return nil, fmt.Errorf("dhcp: desired pool has empty name")
 		}
@@ -130,7 +132,7 @@ func (w dhcpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	got := map[string]map[string]any{}
 	for _, p := range observedPools {
 		if rawName, ok := p["name"]; ok {
-			name := fmt.Sprint(rawName)
+			name := sprintPoolName(rawName)
 			if name != "" {
 				got[name] = p
 			}
@@ -209,7 +211,7 @@ func (w dhcpWriter) KeysOf(v any) []string {
 	keys := make([]string, 0, len(list))
 	for _, p := range list {
 		if rawName, ok := p["name"]; ok {
-			name := fmt.Sprint(rawName)
+			name := sprintPoolName(rawName)
 			if name != "" {
 				keys = append(keys, name)
 			}
@@ -232,7 +234,7 @@ func (w dhcpWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
 	want := map[string]struct{}{}
 	for _, p := range desiredPools {
 		if rawName, ok := p["name"]; ok {
-			name := fmt.Sprint(rawName)
+			name := sprintPoolName(rawName)
 			if name != "" {
 				want[name] = struct{}{}
 			}
@@ -241,7 +243,7 @@ func (w dhcpWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
 	names := make([]string, 0, len(observedPools))
 	for _, p := range observedPools {
 		if rawName, ok := p["name"]; ok {
-			name := fmt.Sprint(rawName)
+			name := sprintPoolName(rawName)
 			if name != "" {
 				if _, kept := want[name]; !kept {
 					names = append(names, name)
@@ -261,6 +263,30 @@ func (w dhcpWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
 		})
 	}
 	return ops, nil
+}
+
+// sprintPoolName coerces a YAML-decoded pool name to a flat string.
+// YAML 1.1 interprets names like "198_18_100_0" as integers (198181000)
+// which may arrive as int or float64 depending on the unmarshal path.
+// fmt.Sprint on float64 produces scientific notation (1.98181e+08) which
+// is not a valid RESTCONF key.  This helper formats integers and
+// integer-valued floats with %d to recover a usable string.
+func sprintPoolName(v any) string {
+	switch n := v.(type) {
+	case string:
+		return n
+	case int:
+		return strconv.Itoa(n)
+	case int64:
+		return strconv.FormatInt(n, 10)
+	case float64:
+		if n == math.Trunc(n) && !math.IsInf(n, 0) {
+			return strconv.FormatInt(int64(n), 10)
+		}
+		return fmt.Sprint(n)
+	default:
+		return fmt.Sprint(v)
+	}
 }
 
 // coerceDHCPBlock accepts either the nested netascode shape
