@@ -308,6 +308,46 @@ func TestEnvtest_IOSXESoftwareUpgradeImageSourcePathPattern(t *testing.T) {
 	}
 }
 
+// TestEnvtest_IOSXESoftwareUpgradeImageSourceURLSchemePattern pins the
+// URL schemes accepted by the CRD. The reconciler still requires SHA256
+// for every URL source and streams all fetched bytes through gNOI
+// OS.Install; this test only protects admission-level scheme support.
+func TestEnvtest_IOSXESoftwareUpgradeImageSourceURLSchemePattern(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-upgrade-url-scheme")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	validSHA := strings.Repeat("a", 64)
+	cases := []struct {
+		name     string
+		url      string
+		wantPass bool
+	}{
+		{"valid-http", "http://images.example.com/cat9k.bin", true},
+		{"valid-https", "https://images.example.com/cat9k.bin", true},
+		{"valid-tftp", "tftp://198.51.100.20/images/cat9k.bin", true},
+		{"valid-ftp", "ftp://images.example.com/cat9k.bin", true},
+		{"valid-scp", "scp://images.example.com/home/images/cat9k.bin", true},
+		{"valid-sftp", "sftp://images.example.com/home/images/cat9k.bin", true},
+		{"invalid-file", "file:///home/cisco/images/cat9k.bin", false},
+		{"invalid-rsync", "rsync://images.example.com/cat9k.bin", false},
+	}
+	for _, tc := range cases {
+		up := newUpgrade(tc.name, "envtest-upgrade-url-scheme", "26.01.01")
+		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{URL: tc.url, SHA256: validSHA}
+		err := c.Create(ctx, up)
+		switch {
+		case tc.wantPass && err != nil:
+			t.Errorf("%s: URL %q rejected: %v", tc.name, tc.url, err)
+		case !tc.wantPass && err == nil:
+			t.Errorf("%s: URL %q admitted but should be rejected", tc.name, tc.url)
+		}
+	}
+}
+
 // --- IOSXEOperationalAction ---
 
 // TestEnvtest_IOSXEOperationalActionConfirmRequired pins the

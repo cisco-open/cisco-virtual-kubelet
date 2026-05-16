@@ -23,7 +23,9 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -64,14 +66,19 @@ func (f *fakeOS) Activate(context.Context, *ospb.ActivateRequest) (*ospb.Activat
 
 type fakeSys struct {
 	syspb.UnimplementedSystemServer
+	timeErr error
 }
 
-func (fakeSys) Time(context.Context, *syspb.TimeRequest) (*syspb.TimeResponse, error) {
+func (f *fakeSys) Time(context.Context, *syspb.TimeRequest) (*syspb.TimeResponse, error) {
+	if f.timeErr != nil {
+		return nil, f.timeErr
+	}
 	return &syspb.TimeResponse{Time: uint64(time.Now().UnixNano())}, nil
 }
 
 type rig struct {
 	os     *fakeOS
+	sys    *fakeSys
 	client *gnoi.Client
 }
 
@@ -79,9 +86,9 @@ func newRig(t *testing.T) *rig {
 	t.Helper()
 	lis := bufconn.Listen(1 << 20)
 	srv := grpc.NewServer()
-	r := &rig{os: &fakeOS{verifyVersion: "17.15.01a"}}
+	r := &rig{os: &fakeOS{verifyVersion: "17.15.01a"}, sys: &fakeSys{}}
 	ospb.RegisterOSServer(srv, r.os)
-	syspb.RegisterSystemServer(srv, fakeSys{})
+	syspb.RegisterSystemServer(srv, r.sys)
 	filepb.RegisterFileServer(srv, filepb.UnimplementedFileServer{})
 	certpb.RegisterCertificateManagementServer(srv, certpb.UnimplementedCertificateManagementServer{})
 	resetpb.RegisterFactoryResetServer(srv, resetpb.UnimplementedFactoryResetServer{})
@@ -245,6 +252,36 @@ func TestNoRebootStrategyStopsAtActivate(t *testing.T) {
 	}
 }
 
+func TestUnsupportedSystemServiceStillVerifiesAfterActivation(t *testing.T) {
+	rig := newRig(t)
+	rig.sys.timeErr = status.Error(codes.Unimplemented, "")
+	up := newUpgrade("upgrade-system-unsupported", nil)
+	r := newReconciler(t, rig, up)
+	got := runReconcile(t, r, up, 12)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseSucceeded {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if got.Status.RunningVersion != "17.15.01a" {
+		t.Fatalf("RunningVersion=%q", got.Status.RunningVersion)
+	}
+}
+
+func TestMarkTransferCompleteSetsTerminalProgress(t *testing.T) {
+	up := newUpgrade("upgrade-progress", nil)
+	up.Status.TransferProgress = &opsv1alpha1.UpgradeTransferProgress{
+		BytesTransferred: 999,
+		TotalBytes:       1000,
+		Percent:          99,
+	}
+	markTransferComplete(up)
+	if up.Status.TransferProgress.BytesTransferred != 1000 {
+		t.Fatalf("BytesTransferred=%d", up.Status.TransferProgress.BytesTransferred)
+	}
+	if up.Status.TransferProgress.Percent != 100 {
+		t.Fatalf("Percent=%d", up.Status.TransferProgress.Percent)
+	}
+}
+
 func TestVerifyMismatchTriggersRollback(t *testing.T) {
 	rig := newRig(t)
 	rig.os.verifyVersion = "17.14.01a" // doesn't match target 17.15.01a
@@ -386,14 +423,14 @@ func TestVersionMatches(t *testing.T) {
 		device, target string
 		want           bool
 	}{
-		{"26.01.01.0.340", "26.01.01.0.340", true},     // exact
-		{"26.01.01.0.340", "26.01.01", true},           // short-form prefix
+		{"26.01.01.0.340", "26.01.01.0.340", true},       // exact
+		{"26.01.01.0.340", "26.01.01", true},             // short-form prefix
 		{"17.18.02.0.4112.1766116039", "17.18.02", true}, // long oper-data form
-		{"26.01.01.0.340", "26.01", true},              // even shorter prefix
-		{"26.01.011", "26.01.01", false},               // suffix-extension, not dot boundary
-		{"26.01.01a", "26.01.01", false},               // letter-suffix not on dot boundary
-		{"17.15.01a", "17.15.01a", true},               // exact release-format
-		{"17.15.01", "17.15.01a", false},               // missing trailing letter
+		{"26.01.01.0.340", "26.01", true},                // even shorter prefix
+		{"26.01.011", "26.01.01", false},                 // suffix-extension, not dot boundary
+		{"26.01.01a", "26.01.01", false},                 // letter-suffix not on dot boundary
+		{"17.15.01a", "17.15.01a", true},                 // exact release-format
+		{"17.15.01", "17.15.01a", false},                 // missing trailing letter
 		{"", "26.01.01", false},
 	}
 	for _, c := range cases {

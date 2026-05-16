@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -323,10 +325,22 @@ func (r *Reconciler) runAwaitingReachability(ctx context.Context, up *opsv1alpha
 		return r.requeueAwaitingReachability(ctx, up, err, now)
 	}
 	if _, err := client.Time(ctx); err != nil {
+		if isUnsupportedSystemService(err) {
+			return r.advance(ctx, up, opsv1alpha1.UpgradePhaseVerifying, "DeviceReachable",
+				"device gNOI endpoint is reachable; system service unsupported, verifying installed version")
+		}
 		return r.requeueAwaitingReachability(ctx, up, err, now)
 	}
 	return r.advance(ctx, up, opsv1alpha1.UpgradePhaseVerifying, "DeviceReachable",
 		"device is reachable, verifying installed version")
+}
+
+func isUnsupportedSystemService(err error) bool {
+	var svcErr *gnoi.ErrServiceUnsupported
+	if errors.As(err, &svcErr) {
+		return svcErr.Service == gnoi.ServiceSystem
+	}
+	return status.Code(err) == codes.Unimplemented
 }
 
 func (r *Reconciler) requeueAwaitingReachability(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, err error, now time.Time) (reconcile.Result, error) {
@@ -375,6 +389,7 @@ func (r *Reconciler) runVerifying(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		cur.Status.RunningVersion = res.Version
 		cur.Status.CompletionTime = &metav1.Time{Time: now}
 		cur.Status.Message = "upgrade complete"
+		markTransferComplete(cur)
 		r.setReady(cur, metav1.ConditionTrue, "Succeeded", "upgrade complete", now)
 	}, reconcile.Result{})
 }
@@ -434,9 +449,18 @@ func (r *Reconciler) terminal(ctx context.Context, up *opsv1alpha1.IOSXESoftware
 		condStatus := metav1.ConditionFalse
 		if phase == opsv1alpha1.UpgradePhaseSucceeded {
 			condStatus = metav1.ConditionTrue
+			markTransferComplete(cur)
 		}
 		r.setReady(cur, condStatus, reason, message, now)
 	}, reconcile.Result{})
+}
+
+func markTransferComplete(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+	if up.Status.TransferProgress == nil || up.Status.TransferProgress.TotalBytes <= 0 {
+		return
+	}
+	up.Status.TransferProgress.BytesTransferred = up.Status.TransferProgress.TotalBytes
+	up.Status.TransferProgress.Percent = 100
 }
 
 func (r *Reconciler) updateTransferProgress(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, bytesReceived uint64, total int64, now time.Time) {

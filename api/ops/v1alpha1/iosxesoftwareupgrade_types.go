@@ -179,17 +179,28 @@ type IOSXESoftwareUpgradeSpec struct {
 // sources. Exactly one of URL, ConfigMapRef, or LocalPath should be
 // set. The reconciler rejects spec violations in Pending preflight.
 type UpgradeImageSource struct {
-	// URL is an HTTPS URL the reconciler GETs the image from. Required
-	// SHA256 verification — declared via SHA256 below.
+	// URL is a remote image URI the reconciler fetches before streaming
+	// the bytes to the device with gNOI OS.Install. Supported schemes are
+	// http, https, tftp, ftp, scp, and sftp. Required SHA256 verification
+	// — declared via SHA256 below.
 	// +optional
-	// +kubebuilder:validation:Pattern=`^https?://`
+	// +kubebuilder:validation:Pattern=`^(https?|tftp|ftp|scp|sftp)://`
 	URL string `json:"url,omitempty"`
 
 	// SHA256 is the lowercase hex SHA-256 digest the reconciler asserts
-	// after GETting the URL. Required when URL is set.
+	// after fetching the URL. Required when URL is set.
 	// +optional
 	// +kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
 	SHA256 string `json:"sha256,omitempty"`
+
+	// URLSecretRef optionally names a Secret in the same namespace with
+	// transfer credentials. FTP may use username/password; SCP and SFTP
+	// may use username/password or username/privateKey/passphrase. SCP
+	// and SFTP host-key verification uses knownHosts or known_hosts from
+	// this Secret unless the URL query includes insecureSkipHostKey=true.
+	// URL-embedded userinfo takes precedence over Secret credentials.
+	// +optional
+	URLSecretRef *corev1.LocalObjectReference `json:"urlSecretRef,omitempty"`
 
 	// ConfigMapRef names a ConfigMap whose binaryData["image"] holds
 	// the bytes. Capped at ~900 KiB by Kubernetes — testing only.

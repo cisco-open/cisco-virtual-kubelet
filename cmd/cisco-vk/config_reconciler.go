@@ -229,14 +229,21 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	// can start. Empty means the transport/version fetch is not ready
 	// yet; the reconciler starts in Pending and the retry loop will
 	// unblock writes only after a valid version is acquired.
+	//
+	// gNOI-backed lifecycle operations are intentionally decoupled
+	// from the IOSXEConfig writer matrix. A device may be running a
+	// release that is not yet supported by the NetAsCode writers, and
+	// the software upgrade reconciler may be the exact tool needed to
+	// move it back to a supported train.
+	configWritesEnabled := true
 	if err := dctx.ValidateDeviceVersion(); err != nil {
 		entry := log.G(ctx).WithError(err).WithField("version", dctx.DeviceVersion)
 		reason := "MalformedDeviceVersion"
 		if drivers.IsUnsupportedDeviceVersionError(err) {
 			reason = "UnsupportedDeviceVersion"
-			entry.Error("device version is not in the supported release set; IOSXEConfig reconciler will not start")
+			entry.Error("device version is not in the supported release set; IOSXEConfig writes disabled")
 		} else {
-			entry.Error("device version is malformed; IOSXEConfig reconciler will not start")
+			entry.Error("device version is malformed; IOSXEConfig writes disabled")
 		}
 		recorder.Eventf(&ciskov1.CiscoDevice{
 			ObjectMeta: metav1.ObjectMeta{
@@ -245,7 +252,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 			},
 		}, corev1.EventTypeWarning, reason,
 			"device version %q rejected by writers: %v", dctx.DeviceVersion, err)
-		return fmt.Errorf("%s: %w", reason, err)
+		configWritesEnabled = false
 	} else if dctx.DeviceVersion != "" {
 		log.G(ctx).WithField("version", dctx.DeviceVersion).Info("device version set for writers")
 	} else {
@@ -354,8 +361,12 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		}()
 	}
 
-	if err := r.SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("SetupWithManager: %w", err)
+	if configWritesEnabled {
+		if err := r.SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("SetupWithManager: %w", err)
+		}
+	} else {
+		log.G(ctx).Warn("IOSXEConfig reconciler not registered; continuing with diagnostics and gNOI lifecycle controllers")
 	}
 
 	// Diagnostics-RFC Phase B: the IOSXEDiagnostic reconciler runs in

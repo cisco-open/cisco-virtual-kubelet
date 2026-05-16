@@ -4,11 +4,14 @@ go 1.25.0
 
 require (
 	github.com/go-logr/logr v1.4.3
+	github.com/jlaffaye/ftp v0.2.0
 	github.com/nikolalohinski/gonja/v2 v2.8.0
 	github.com/openconfig/gnmi v0.14.1
 	github.com/openconfig/gnoi v0.8.0
 	github.com/openconfig/goyang v1.6.3
 	github.com/openconfig/ygot v0.34.0
+	github.com/pin/tftp/v3 v3.2.0
+	github.com/pkg/sftp v1.13.10
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/sirupsen/logrus v1.9.4
@@ -78,9 +81,12 @@ require (
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/kr/fs v0.1.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/moby/spdystream v0.5.1 // indirect
