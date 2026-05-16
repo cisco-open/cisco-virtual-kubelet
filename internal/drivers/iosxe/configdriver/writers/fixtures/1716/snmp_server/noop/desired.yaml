@@ -1,0 +1,10 @@
+# When desired and observed already match (after the writer's
+# reverse-mapping has put observed into netascode shape), Diff must
+# emit zero ops. This is the no-op assertion the action plan calls
+# "idempotency": a reconcile tick that finds the device already in
+# the desired state must not write anything.
+community:
+  - name: public
+    access: ro
+location: lab-rack-1
+contact: noc@example.com

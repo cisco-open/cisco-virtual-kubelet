@@ -1,0 +1,54 @@
+# Copyright 2026 Cisco Systems, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: yang-drift
+
+on:
+  workflow_dispatch: {}
+  # Production cron remains disabled until Phase 3.3/3.4 are stable.
+  # schedule:
+  #   - cron: '0 8 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  check-1718:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vendor latest upstream 1718 YANG
+        run: |
+          latest="$(git ls-remote https://github.com/YangModels/yang.git HEAD | awk '{print $1}')"
+          YANG_MODELS_COMMIT="${latest}" make vendor-yang RELEASE=1718
+
+      - name: Diff checked-in YANG
+        run: |
+          git diff -- internal/drivers/iosxe/configdriver/schema/yang/1718 > yang-drift.diff || true
+          if [ -s yang-drift.diff ]; then
+            echo "YANG drift detected against latest YangModels/yang HEAD."
+            git diff --stat -- internal/drivers/iosxe/configdriver/schema/yang/1718
+            exit 1
+          fi
+          echo "No YANG drift detected."
+
+      - name: Upload drift diff
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yang-drift-1718
+          path: yang-drift.diff
+          if-no-files-found: ignore

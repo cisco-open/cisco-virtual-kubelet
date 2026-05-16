@@ -56,6 +56,7 @@ import (
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
@@ -224,6 +225,32 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		// the reconciler still needs a non-nil context.
 		dctx = &drivers.ConfigDriverContext{}
 	}
+	// Validate the device version before any IOSXEConfig write path
+	// can start. Empty means the transport/version fetch is not ready
+	// yet; the reconciler starts in Pending and the retry loop will
+	// unblock writes only after a valid version is acquired.
+	if err := dctx.ValidateDeviceVersion(); err != nil {
+		entry := log.G(ctx).WithError(err).WithField("version", dctx.DeviceVersion)
+		reason := "MalformedDeviceVersion"
+		if drivers.IsUnsupportedDeviceVersionError(err) {
+			reason = "UnsupportedDeviceVersion"
+			entry.Error("device version is not in the supported release set; IOSXEConfig reconciler will not start")
+		} else {
+			entry.Error("device version is malformed; IOSXEConfig reconciler will not start")
+		}
+		recorder.Eventf(&ciskov1.CiscoDevice{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      deviceName,
+				Namespace: operationNamespace(),
+			},
+		}, corev1.EventTypeWarning, reason,
+			"device version %q rejected by writers: %v", dctx.DeviceVersion, err)
+		return fmt.Errorf("%s: %w", reason, err)
+	} else if dctx.DeviceVersion != "" {
+		log.G(ctx).WithField("version", dctx.DeviceVersion).Info("device version set for writers")
+	} else {
+		log.G(ctx).Warn("device version not available yet; IOSXEConfig writes remain pending until version is acquired")
+	}
 
 	// Lease namespace selection — three-tier precedence:
 	//   1. CONFIG_LEASE_NAMESPACE env (operator opt-in to a shared
@@ -273,6 +300,8 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		Client:                mgr.GetClient(),
 		DeviceName:            deviceName,
 		Transport:             dctx.Transport,
+		DeviceVersion:         dctx.DeviceVersion,
+		RequireDeviceVersion:  true,
 		KeyRules:              dctx.KeyRules,
 		SupportedYANGVersions: dctx.SupportedYANGVersions,
 		DefaultYANGVersion:    dctx.DefaultYANGVersion,
@@ -518,7 +547,9 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	// bound — operators get a clear "config driver came online after
 	// N attempts" log when the race resolves. Cancelled by ctx.
 	if dctx.Transport == nil {
-		go retryConfigDriverDial(ctx, opts, r)
+		go retryConfigDriverDial(ctx, opts, r, dctx)
+	} else if dctx.DeviceVersion == "" {
+		go retryDeviceVersion(ctx, r, dctx, dctx.Transport)
 	}
 
 	return nil
@@ -529,6 +560,40 @@ func operationNamespace() string {
 		return ns
 	}
 	return "default"
+}
+
+func retryDeviceVersion(ctx context.Context, r *provider.ConfigReconciler, dctx *drivers.ConfigDriverContext, t transport.Interface) {
+	const interval = 30 * time.Second
+	tick := time.NewTicker(interval)
+	defer tick.Stop()
+	for attempt := 1; ; attempt++ {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+		ver := iosxe.FetchDeviceVersion(ctx, t)
+		if ver == "" {
+			log.G(ctx).
+				WithField("attempt", attempt).
+				Info("device version still unavailable; config writes remain blocked")
+			continue
+		}
+		dctx.DeviceVersion = ver
+		if err := dctx.ValidateDeviceVersion(); err != nil {
+			r.SetDeviceVersionState(ver, err)
+			log.G(ctx).WithError(err).WithField("version", ver).
+				Warn("device version retry produced rejected version; config writes remain blocked")
+			if drivers.IsRetryableDeviceVersionError(err) {
+				continue
+			}
+			return
+		}
+		r.SetDeviceVersionState(ver, nil)
+		log.G(ctx).WithField("version", ver).
+			Info("device version bound to writers after retry")
+		return
+	}
 }
 
 // retryConfigDriverDial attempts to build a real device transport
@@ -547,7 +612,7 @@ func operationNamespace() string {
 // the only material difference. Build the transport in isolation
 // here; the rest of the dctx (KeyRules, YANG versions, etc.) is
 // loaded once at startup and is unaffected by the dial race.
-func retryConfigDriverDial(ctx context.Context, opts configReconcilerOptions, r *provider.ConfigReconciler) {
+func retryConfigDriverDial(ctx context.Context, opts configReconcilerOptions, r *provider.ConfigReconciler, dctx *drivers.ConfigDriverContext) {
 	const interval = 30 * time.Second
 	tick := time.NewTicker(interval)
 	defer tick.Stop()
@@ -561,8 +626,37 @@ func retryConfigDriverDial(ctx context.Context, opts configReconcilerOptions, r 
 			SessionLock: opts.SessionLock,
 		})
 		if err == nil && t != nil {
-			r.SetTransport(t)
-			log.G(ctx).Infof("config driver transport acquired after %d retry attempt(s)", attempt)
+			// Now that we have a live transport, refetch the device
+			// version and reapply it to writers. Without this the
+			// version-conditional writer dispatch stays at whatever
+			// state it was in at startup — which is "empty" if the
+			// factory's own version fetch failed against the same
+			// startup race.
+			if ver := iosxe.FetchDeviceVersion(ctx, t); ver != "" {
+				if dctx != nil {
+					dctx.DeviceVersion = ver
+				}
+				if verr := dctx.ValidateDeviceVersion(); verr != nil {
+					log.G(ctx).WithError(verr).WithField("version", ver).
+						Warn("post-dial ValidateDeviceVersion rejected version; config writes remain blocked")
+					r.SetDeviceVersionState(ver, verr)
+					_ = t.Close()
+					if drivers.IsRetryableDeviceVersionError(verr) {
+						continue
+					}
+					return
+				} else {
+					r.SetDeviceVersionState(ver, nil)
+					r.SetTransport(t)
+					log.G(ctx).Infof("config driver transport acquired after %d retry attempt(s)", attempt)
+					log.G(ctx).WithField("version", ver).
+						Info("device version bound to writers after deferred dial success")
+				}
+			} else {
+				log.G(ctx).Warn("deferred dial succeeded but version refetch returned empty; config writes remain blocked and dial will retry")
+				_ = t.Close()
+				continue
+			}
 			return
 		}
 		log.G(ctx).WithError(err).

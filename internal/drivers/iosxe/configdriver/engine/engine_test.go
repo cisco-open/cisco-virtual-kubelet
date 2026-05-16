@@ -163,7 +163,7 @@ func TestReconcileInSyncWhenDiffEmpty(t *testing.T) {
 	w := &fakeWriter{family: "vlan"} // no ops → InSync
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup:    func(f string) writers.SectionWriter { return w },
+		Lookup:    func(f, _ string) writers.SectionWriter { return w },
 	}
 	res := &intent.ResolvedIntent{
 		DeviceName: "edge-01", ManagedFamilies: []string{"vlan"},
@@ -187,7 +187,7 @@ func TestReconcileAppliesAndVerifies(t *testing.T) {
 	}
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup:    func(f string) writers.SectionWriter { return w },
+		Lookup:    func(f, _ string) writers.SectionWriter { return w },
 	}
 	res := &intent.ResolvedIntent{
 		DeviceName: "edge-01", ManagedFamilies: []string{"vlan"},
@@ -219,7 +219,7 @@ func TestReconcileReportPolicyDoesNotApply(t *testing.T) {
 	}
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup:    func(f string) writers.SectionWriter { return w },
+		Lookup:    func(f, _ string) writers.SectionWriter { return w },
 	}
 	res := &intent.ResolvedIntent{
 		DeviceName: "edge-01", ManagedFamilies: []string{"vlan"},
@@ -249,7 +249,7 @@ func TestReconcilePruneOnRelinquishCallsPruneDiff(t *testing.T) {
 	}
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup:    func(f string) writers.SectionWriter { return pw },
+		Lookup:    func(f string, _ string) writers.SectionWriter { return pw },
 	}
 	res := &intent.ResolvedIntent{
 		DeviceName: "edge-01", ManagedFamilies: []string{"vlan"},
@@ -281,7 +281,7 @@ func TestReconcilePruneOnRelinquishSkippedWhenWriterNotCapable(t *testing.T) {
 	}
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup:    func(f string) writers.SectionWriter { return w },
+		Lookup:    func(f, _ string) writers.SectionWriter { return w },
 	}
 	res := &intent.ResolvedIntent{
 		DeviceName: "edge-01", ManagedFamilies: []string{"vlan"},
@@ -329,7 +329,7 @@ func TestReconcilePruneOnRelinquishWithoutAtomicReplaceIsScoped(t *testing.T) {
 	}
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup:    func(f string) writers.SectionWriter { return pw },
+		Lookup:    func(f string, _ string) writers.SectionWriter { return pw },
 	}
 	res := &intent.ResolvedIntent{
 		DeviceName: "edge-01", ManagedFamilies: []string{family},
@@ -384,7 +384,7 @@ func TestReconcilePruneOnRelinquishUnsupportedWhenNotKeyExtractable(t *testing.T
 	}
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup:    func(f string) writers.SectionWriter { return w },
+		Lookup:    func(f, _ string) writers.SectionWriter { return w },
 	}
 	res := &intent.ResolvedIntent{
 		DeviceName: "edge-01", ManagedFamilies: []string{"vlan"},
@@ -406,7 +406,7 @@ func TestReconcilePausePolicyReturnsEarly(t *testing.T) {
 	w := &fakeWriter{family: "vlan", ops: []transport.Op{{Verb: transport.VerbMerge, Path: "/x"}}}
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup:    func(f string) writers.SectionWriter { return w },
+		Lookup:    func(f, _ string) writers.SectionWriter { return w },
 	}
 	res := &intent.ResolvedIntent{
 		DeviceName: "edge-01", ManagedFamilies: []string{"vlan"},
@@ -429,7 +429,7 @@ func TestReconcileApplyErrorSurfacesOnStatus(t *testing.T) {
 	}
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup:    func(f string) writers.SectionWriter { return w },
+		Lookup:    func(f, _ string) writers.SectionWriter { return w },
 	}
 	res := &intent.ResolvedIntent{
 		DeviceName: "edge-01", ManagedFamilies: []string{"vlan"},
@@ -454,7 +454,7 @@ func TestReconcileResidualDriftAfterRevertFails(t *testing.T) {
 	}
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup:    func(f string) writers.SectionWriter { return w },
+		Lookup:    func(f, _ string) writers.SectionWriter { return w },
 	}
 	res := &intent.ResolvedIntent{
 		DeviceName: "edge-01", ManagedFamilies: []string{"vlan"},
@@ -472,7 +472,7 @@ func TestReconcileResidualDriftAfterRevertFails(t *testing.T) {
 func TestReconcileUnsupportedFamily(t *testing.T) {
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup:    func(f string) writers.SectionWriter { return nil },
+		Lookup:    func(f string, _ string) writers.SectionWriter { return nil },
 	}
 	res := &intent.ResolvedIntent{
 		DeviceName: "edge-01", ManagedFamilies: []string{"not-a-family"},
@@ -509,7 +509,7 @@ func TestConflictCheckReportsOverlap(t *testing.T) {
 }
 
 func TestReconcileNilIntent(t *testing.T) {
-	e := &Engine{Transport: &stubTransport{}, Lookup: func(string) writers.SectionWriter { return nil }}
+	e := &Engine{Transport: &stubTransport{}, Lookup: func(string, string) writers.SectionWriter { return nil }}
 	r := e.Reconcile(context.Background(), nil)
 	if r.Phase != PhaseFailed || r.Err == nil {
 		t.Fatalf("nil intent should fail: %+v", r)
@@ -517,7 +517,7 @@ func TestReconcileNilIntent(t *testing.T) {
 }
 
 func TestReconcileValidationRejectsEmptyTransport(t *testing.T) {
-	e := &Engine{Lookup: func(string) writers.SectionWriter { return nil }}
+	e := &Engine{Lookup: func(string, string) writers.SectionWriter { return nil }}
 	res := &intent.ResolvedIntent{
 		DeviceName: "x", ManagedFamilies: []string{"vlan"},
 	}
@@ -553,7 +553,7 @@ func TestCLIBlocksAppliedAfterFamilies(t *testing.T) {
 
 	e := &Engine{
 		Transport: mock,
-		Lookup:    func(string) writers.SectionWriter { return w },
+		Lookup:    func(string, string) writers.SectionWriter { return w },
 	}
 	res := &intent.ResolvedIntent{
 		DeviceName:      "edge-01",
@@ -619,7 +619,7 @@ func TestCLIBlocksSkippedUnderReportPolicy(t *testing.T) {
 			return nil
 		},
 	}
-	e := &Engine{Transport: mock, Lookup: func(string) writers.SectionWriter { return w }}
+	e := &Engine{Transport: mock, Lookup: func(string, string) writers.SectionWriter { return w }}
 	res := &intent.ResolvedIntent{
 		DeviceName:      "edge-01",
 		ManagedFamilies: []string{"vlan"},
@@ -669,7 +669,7 @@ func TestCLIBlocksSkippedWhenFamiliesFailed(t *testing.T) {
 			return nil
 		},
 	}
-	e := &Engine{Transport: mock, Lookup: func(string) writers.SectionWriter { return w }}
+	e := &Engine{Transport: mock, Lookup: func(string, string) writers.SectionWriter { return w }}
 	res := &intent.ResolvedIntent{
 		DeviceName:      "edge-01",
 		ManagedFamilies: []string{"vlan"},
@@ -705,7 +705,7 @@ func TestReconcileAtomicReplaceImpliesPrune(t *testing.T) {
 	}
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup:    func(string) writers.SectionWriter { return pw },
+		Lookup:    func(string, string) writers.SectionWriter { return pw },
 	}
 	res := &intent.ResolvedIntent{
 		DeviceName:      "edge-01",
@@ -732,7 +732,7 @@ func TestReconcileAtomicReplaceImpliesPrune(t *testing.T) {
 // hook is honored.
 func TestReconcileFamilyOrderHookIsApplied(t *testing.T) {
 	var seen []string
-	w := func(family string) writers.SectionWriter {
+	w := func(family string, _ string) writers.SectionWriter {
 		return &fakeWriter{
 			family: family,
 			// Record processing order via a closure on `seen`.
@@ -746,9 +746,9 @@ func TestReconcileFamilyOrderHookIsApplied(t *testing.T) {
 	// gives us the exact iteration order.
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup: func(family string) writers.SectionWriter {
+		Lookup: func(family string, _ string) writers.SectionWriter {
 			seen = append(seen, family)
-			return w(family)
+			return w(family, "")
 		},
 		// Reverse the operator-given order — exposes whether the
 		// hook is applied.
@@ -782,7 +782,7 @@ func TestReconcileFamilyOrderHookNilPreservesInputOrder(t *testing.T) {
 	var seen []string
 	e := &Engine{
 		Transport: &stubTransport{},
-		Lookup: func(family string) writers.SectionWriter {
+		Lookup: func(family string, _ string) writers.SectionWriter {
 			seen = append(seen, family)
 			return &fakeWriter{
 				family: family,

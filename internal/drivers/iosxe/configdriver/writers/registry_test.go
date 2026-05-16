@@ -95,6 +95,8 @@ var phase3Families = []string{
 	"tacacs_server",
 	"track",
 	"username",
+	"pim",
+	"ipv6_pim",
 }
 
 func TestPhase1FamiliesRegistered(t *testing.T) {
@@ -152,6 +154,26 @@ func TestGetReturnsNilForUnknown(t *testing.T) {
 	t.Parallel()
 	if w := Get("not-a-real-family"); w != nil {
 		t.Fatalf("Get(unknown) = %v, want nil", w)
+	}
+}
+
+func TestOverrideTableFamiliesAreResolverBindable(t *testing.T) {
+	t.Parallel()
+	seen := map[string]struct{}{}
+	for _, o := range overrideTable {
+		if _, done := seen[o.Family]; done {
+			continue
+		}
+		seen[o.Family] = struct{}{}
+		mu.RLock()
+		w := registry[o.Family]
+		mu.RUnlock()
+		if w == nil {
+			t.Fatalf("override table family %q has no registered writer", o.Family)
+		}
+		if _, ok := w.(resolverBindable); !ok {
+			t.Fatalf("override table family %q writer %T is not resolver-bindable", o.Family, w)
+		}
 	}
 }
 

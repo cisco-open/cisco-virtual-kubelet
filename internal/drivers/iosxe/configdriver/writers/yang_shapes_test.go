@@ -89,8 +89,19 @@ func TestInterfaceIPv4VRFToYANGShape(t *testing.T) {
 			want: map[string]any{
 				"name":        "Po10",
 				"description": "uplink",
-				"shutdown":    false,
-				"mtu":         1500.0,
+				// shutdown: false → omitted (YANG empty leaf absent = no shutdown)
+				"mtu": 1500.0,
+			},
+		},
+		{
+			name: "shutdown true becomes empty leaf",
+			in: map[string]any{
+				"name":     "Gi0/0",
+				"shutdown": true,
+			},
+			want: map[string]any{
+				"name":     "Gi0/0",
+				"shutdown": []any{nil},
 			},
 		},
 	}
@@ -177,13 +188,16 @@ func TestInterfaceIPv4VRFFromYANGShape(t *testing.T) {
 // portion of the desired-state (flat) so the reconciler does not
 // see phantom drift after a successful apply.
 func TestInterfaceIPv4VRFRoundTrip(t *testing.T) {
+	// shutdown:false is omitted from toYANG (nothing sent to device),
+	// and fromYANG no longer synthesises it, so the round-trip for an
+	// explicitly-false shutdown is not bijective. Test the common case
+	// where shutdown is absent.
 	flat := map[string]any{
 		"name":              9997.0,
 		"description":       "ut",
 		"ipv4_address":      "10.255.255.97",
 		"ipv4_address_mask": "255.255.255.255",
 		"vrf":               "MGMT",
-		"shutdown":          false,
 	}
 	roundTripped := interfaceIPv4VRFFromYANG(interfaceIPv4VRFToYANG(flat))
 	if !reflect.DeepEqual(flat, roundTripped) {

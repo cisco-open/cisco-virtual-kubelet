@@ -44,10 +44,15 @@ func init() {
 				"description",
 				"entries",
 				"route-map-without-order-seq",
+				"route-map-seq",
 			},
 		},
-		nestedLeaf:      "entries",
-		nestedKeyField:  "seq",
+		nestedLeaf:     "entries",
+		nestedKeyField: "seq",
+		// nestedYANGInner is the baseline (17.18+) name; on < 17.18
+		// the override table replaces it with the module-prefixed
+		// "Cisco-IOS-XE-route-map:route-map-seq" via
+		// NestedYANGInnerOverride.
 		nestedYANGInner: "route-map-without-order-seq",
 	})
 }

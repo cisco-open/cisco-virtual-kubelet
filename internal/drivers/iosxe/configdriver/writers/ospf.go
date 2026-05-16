@@ -23,7 +23,7 @@ package writers
 //       - id: 1
 //         router_id: 10.255.255.1
 //         networks:
-//           - prefix: 10.0.0.0
+//           - ip: 10.0.0.0
 //             wildcard: 0.0.0.255
 //             area: 0
 //         redistribute:
@@ -32,7 +32,61 @@ package writers
 //
 // YANG: /Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-ospf:router-ospf/ospf
 // Outer key: id (process number).
-// Inner keyed lists: `network` keyed by prefix, `area` keyed by id.
+// Inner keyed lists: `network` keyed by ip, `area` keyed by area-id.
+//
+// Caught against C8000V 17.16.01a:
+//   - network list YANG key is "ip", not "prefix"
+//   - area list YANG key is "area-id", not "id"
+
+// ospfAreaEmptyLeaves are YANG type empty; they must be encoded as
+// [null] on the wire, not as boolean true. The fixture/netascode
+// canonical form uses bool true to signal presence.
+var ospfAreaEmptyLeaves = []string{"stub", "nssa", "default-information-originate"}
+
+// ospfAreaBodyShape converts netascode bool-presence leaves to the
+// YANG empty-leaf wire encoding ([null]) before RESTCONF PATCH.
+func ospfAreaBodyShape(entry map[string]any) map[string]any {
+	for _, leaf := range ospfAreaEmptyLeaves {
+		v, ok := entry[leaf]
+		if !ok {
+			continue
+		}
+		if isTrue(v) {
+			entry[leaf] = []any{nil}
+		} else {
+			delete(entry, leaf)
+		}
+	}
+	return entry
+}
+
+// ospfAreaFetchShape reverses ospfAreaBodyShape for the Diff path:
+// [null] (or any truthy value) → true, absent → left absent.
+func ospfAreaFetchShape(entry map[string]any) map[string]any {
+	for _, leaf := range ospfAreaEmptyLeaves {
+		v, ok := entry[leaf]
+		if !ok {
+			continue
+		}
+		switch tv := v.(type) {
+		case bool:
+			entry[leaf] = tv
+		case nil:
+			entry[leaf] = true
+		case []any:
+			entry[leaf] = true
+		case map[string]any:
+			if len(tv) == 0 {
+				entry[leaf] = true
+			}
+		default:
+			if isTrue(v) {
+				entry[leaf] = true
+			}
+		}
+	}
+	return entry
+}
 
 func init() {
 	Override(nestedKeyedListWriter{
@@ -52,8 +106,8 @@ func init() {
 			},
 		},
 		nested: []nestedListSpec{
-			{Leaf: "network", KeyField: "prefix"},
-			{Leaf: "area", KeyField: "id"},
+			{Leaf: "network", KeyField: "ip"},
+			{Leaf: "area", KeyField: "area-id", BodyShape: ospfAreaBodyShape, FetchShape: ospfAreaFetchShape},
 		},
 	})
 }

@@ -1,0 +1,18 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/snmp-server",
+    "body": {
+      "Cisco-IOS-XE-native:snmp-server": {
+        "Cisco-IOS-XE-snmp:community-config": [
+          {
+            "name": "public",
+            "permission": "ro"
+          }
+        ],
+        "Cisco-IOS-XE-snmp:contact": "noc@example.com",
+        "Cisco-IOS-XE-snmp:location": "lab-rack-1"
+      }
+    }
+  }
+]

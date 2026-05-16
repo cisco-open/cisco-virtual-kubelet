@@ -159,11 +159,16 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 		for _, name := range names {
 			target := filepath.Join(f.outWriters, name+".go")
 			status := "skeleton (new)"
-			if _, err := os.Stat(target); err == nil {
+			targetExists := fileExists(target)
+			groupedExists := !targetExists && familyRegisteredInWriterDir(f.outWriters, name)
+			switch {
+			case targetExists:
 				status = "preserved (exists)"
 				if f.force {
 					status = "OVERWRITE (--force)"
 				}
+			case groupedExists:
+				status = "preserved (registered in grouped writer)"
 			}
 			fmt.Fprintf(stdout, "  - %s -> %s  [%s]\n", name, target, status)
 		}
@@ -180,11 +185,14 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 	var created, skipped, overwritten int
 	for _, name := range names {
 		target := filepath.Join(f.outWriters, name+".go")
-		exists := false
-		if _, err := os.Stat(target); err == nil {
-			exists = true
+		targetExists := fileExists(target)
+		groupedExists := !targetExists && familyRegisteredInWriterDir(f.outWriters, name)
+		if groupedExists {
+			skipped++
+			fmt.Fprintf(stdout, "  skip  %s (registered in grouped writer)\n", target)
+			continue
 		}
-		if exists && !f.force {
+		if targetExists && !f.force {
 			skipped++
 			fmt.Fprintf(stdout, "  skip  %s (exists)\n", target)
 			continue
@@ -193,7 +201,7 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 			fmt.Fprintf(stderr, "ERROR: write %s: %v\n", target, err)
 			return exitBadInput
 		}
-		if exists {
+		if targetExists {
 			overwritten++
 			fmt.Fprintf(stdout, "  write %s (overwritten)\n", target)
 		} else {
@@ -222,6 +230,40 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 	}
 
 	return exitOK
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func familyRegisteredInWriterDir(dir, family string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	needles := []string{
+		`family: "` + family + `"`,
+		`family:      "` + family + `"`,
+		`return "` + family + `"`,
+		`registerSkeleton("` + family + `"`,
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
+			continue
+		}
+		raw, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+		if err != nil {
+			continue
+		}
+		body := string(raw)
+		for _, needle := range needles {
+			if strings.Contains(body, needle) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // runYgot invokes the ygot generator against f.yangDir, producing
@@ -287,10 +329,19 @@ func buildYgotArgs(f flags, _ []string) (ygotInvocation, error) {
 			"github.com/openconfig/ygot/generator@v0.34.0",
 		}
 	}
+	// Per-release output layout, gated on f.yangVersion. When the
+	// caller passes an explicit release tag the generator emits
+	// outTypes/<release>/iosxe_config.go with package name
+	// xe<release>, so a single repo can carry multiple release
+	// packages side-by-side under the same outTypes root. An empty
+	// yangVersion preserves the legacy single-package layout
+	// (package generated, file outTypes/iosxe_config.go) so existing
+	// callers and tests are not broken.
+	pkgName, outFile := ygotOutputLayout(f.yangVersion, f.outTypes)
 	realArgs = append(realArgs,
 		"-path="+f.yangDir,
-		"-output_file="+filepath.Join(f.outTypes, "iosxe_config.go"),
-		"-package_name=generated",
+		"-output_file="+outFile,
+		"-package_name="+pkgName,
 		"-generate_fakeroot",
 		"-fakeroot_name=IOSXE",
 		"-compress_paths=false",
@@ -312,6 +363,19 @@ func buildYgotArgs(f flags, _ []string) (ygotInvocation, error) {
 		realArgs = append(realArgs, filepath.Join(f.yangDir, e.Name()))
 	}
 	return ygotInvocation{bin: bin, args: realArgs}, nil
+}
+
+// ygotOutputLayout returns the ygot generator's package name and
+// output-file path for the given release tag. Empty yangVersion
+// preserves the pre-existing single-package layout for
+// backward-compatibility; any concrete tag produces a per-release
+// nested layout suitable for the runtime release-aware dispatch
+// the action plan adds in Phase 4.
+func ygotOutputLayout(yangVersion, outTypes string) (pkgName, outFile string) {
+	if yangVersion == "" {
+		return "generated", filepath.Join(outTypes, "iosxe_config.go")
+	}
+	return "xe" + yangVersion, filepath.Join(outTypes, yangVersion, "iosxe_config.go")
 }
 
 // loadIndex reads families.yaml and decodes it into the tool's internal

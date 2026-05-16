@@ -57,18 +57,18 @@ func TestRegisterTransportMetricsExposesCounter(t *testing.T) {
 			Name: "cisco_vk_config_subscribe_events_dropped_total",
 			Help: "test-local copy of the production counter",
 		},
-		[]string{"device"},
+		[]string{"device", "release"},
 	)
 	reg.MustRegister(c)
 
-	c.WithLabelValues("edge-01").Inc()
-	c.WithLabelValues("edge-01").Inc()
-	c.WithLabelValues("edge-02").Inc()
+	c.WithLabelValues("edge-01", "1718").Inc()
+	c.WithLabelValues("edge-01", "1718").Inc()
+	c.WithLabelValues("edge-02", "unknown").Inc()
 
-	if got := testutil.ToFloat64(c.WithLabelValues("edge-01")); got != 2 {
+	if got := testutil.ToFloat64(c.WithLabelValues("edge-01", "1718")); got != 2 {
 		t.Errorf("edge-01 count=%v, want 2", got)
 	}
-	if got := testutil.ToFloat64(c.WithLabelValues("edge-02")); got != 1 {
+	if got := testutil.ToFloat64(c.WithLabelValues("edge-02", "unknown")); got != 1 {
 		t.Errorf("edge-02 count=%v, want 1", got)
 	}
 }

@@ -128,6 +128,9 @@ func isTrue(v any) bool {
 		return t != 0
 	case float64:
 		return t != 0
+	case []any:
+		// YANG empty-leaf encoding: [null] is truthy.
+		return len(t) == 1 && t[0] == nil
 	default:
 		return false
 	}

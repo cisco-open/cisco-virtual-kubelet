@@ -165,9 +165,12 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 	if tr == nil {
 		return fmt.Errorf("relinquish: transport not yet available")
 	}
+	if blocked, reason, msg := r.deviceVersionBlocked(); blocked {
+		return fmt.Errorf("relinquish: %s: %s", reason, msg)
+	}
 	lookup := r.Lookup
 	if lookup == nil {
-		lookup = writers.Get
+		lookup = writers.GetForRelease
 	}
 
 	// Per-family AcquireIfFree. Only families we successfully claim
@@ -222,10 +225,12 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 		return nil
 	}
 
+	deviceVersion, _ := r.deviceVersionState()
 	eng := &engine.Engine{
-		Transport:   tr,
-		Lookup:      lookup,
-		FamilyOrder: r.FamilyOrder,
+		Transport:     tr,
+		Lookup:        lookup,
+		DeviceVersion: deviceVersion,
+		FamilyOrder:   r.FamilyOrder,
 	}
 	// Build empty desired for each owned family. coerceList in the
 	// writer side accepts a missing/empty entry as "no entries
@@ -444,12 +449,14 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	}
 	lookup := r.Lookup
 	if lookup == nil {
-		lookup = writers.Get
+		lookup = writers.GetForRelease
 	}
+	deviceVersion, _ := r.deviceVersionState()
 	eng := &engine.Engine{
-		Transport:   r.GetTransport(),
-		Lookup:      lookup,
-		FamilyOrder: r.FamilyOrder,
+		Transport:     r.GetTransport(),
+		Lookup:        lookup,
+		DeviceVersion: deviceVersion,
+		FamilyOrder:   r.FamilyOrder,
 	}
 
 	// Compute conflicts across every CR targeting this device. Listing

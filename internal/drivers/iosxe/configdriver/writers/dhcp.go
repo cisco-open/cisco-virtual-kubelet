@@ -17,7 +17,9 @@ package writers
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
+	"strconv"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 )
@@ -34,13 +36,12 @@ import (
 //         default_router: 192.168.10.1
 //
 // YANG path: /Cisco-IOS-XE-native:native/ip/dhcp/pool
-// Key: name.
+// Key: name (baseline 17.18); overridden to "id" on < 17.18.
 //
 // DHCP is cataloged in families.yaml as a singleton family because the
 // netascode block owns the whole /ip/dhcp container. The writer
 // operates on the pool keyed list under it — which is the only leaf
-// we manage in Phase 1. Other DHCP leaves (excluded-address, remember,
-// conflict-logging) are left to future phases.
+// we manage in Phase 1.
 
 const (
 	dhcpPoolListPath    = "/Cisco-IOS-XE-native:native/ip/dhcp/pool"
@@ -53,14 +54,32 @@ var dhcpPoolManagedLeaves = []string{
 	"default_router",
 }
 
-type dhcpWriter struct{}
+type dhcpWriter struct {
+	resolver *OverrideResolver
+}
 
 func init() { Override(dhcpWriter{}) }
 
-func (dhcpWriter) Family() string      { return "dhcp" }
-func (dhcpWriter) YANGPaths() []string { return []string{dhcpPoolListPath} }
+func (w dhcpWriter) Family() string      { return "dhcp" }
+func (w dhcpWriter) YANGPaths() []string { return []string{dhcpPoolListPath} }
 
-func (dhcpWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
+// withResolver implements resolverBindable so the registry can inject
+// the per-device OverrideResolver.
+func (w dhcpWriter) withResolver(r *OverrideResolver) SectionWriter {
+	return dhcpWriter{resolver: r}
+}
+
+// resolvedEnvelopeKey returns the version-appropriate envelope key.
+func (w dhcpWriter) resolvedEnvelopeKey() string {
+	return ensureResolver(w.resolver).ResolvedEnvelopeKey("dhcp", dhcpPoolEnvelopeKey)
+}
+
+// resolvedKeyField returns the version-appropriate list key name.
+func (w dhcpWriter) resolvedKeyField() string {
+	return ensureResolver(w.resolver).ResolvedKeyField("dhcp", "name")
+}
+
+func (w dhcpWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
 	raw, err := c.Fetch(ctx, dhcpPoolListPath)
 	if err != nil {
 		if isRESTCONF404(err) {
@@ -68,7 +87,7 @@ func (dhcpWriter) Fetch(ctx context.Context, c transport.Interface) (any, error)
 		}
 		return nil, err
 	}
-	body, err := unwrapYANGEnvelope(raw, dhcpPoolEnvelopeKey)
+	body, err := unwrapYANGEnvelope(raw, w.resolvedEnvelopeKey())
 	if err != nil || body == nil {
 		return []map[string]any{}, err
 	}
@@ -76,10 +95,16 @@ func (dhcpWriter) Fetch(ctx context.Context, c transport.Interface) (any, error)
 	if err != nil {
 		return nil, fmt.Errorf("dhcp: decode pool list: %w", err)
 	}
+	// Apply fetch-side reverse transform so observed data matches
+	// netascode canonical shape for Diff comparison.
+	r := ensureResolver(w.resolver)
+	for i, entry := range list {
+		list[i] = r.AutoReverseObservedBody("dhcp", entry)
+	}
 	return list, nil
 }
 
-func (dhcpWriter) Diff(desired, observed any) ([]transport.Op, error) {
+func (w dhcpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	desiredPools, err := coerceDHCPBlock(desired, "desired")
 	if err != nil {
 		return nil, err
@@ -89,18 +114,28 @@ func (dhcpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		return nil, err
 	}
 
+	keyField := w.resolvedKeyField()
+
 	want := map[string]map[string]any{}
 	for _, p := range desiredPools {
-		name, ok := p["name"].(string)
-		if !ok || name == "" {
+		rawName, ok := p["name"]
+		if !ok {
 			return nil, fmt.Errorf("dhcp: desired pool missing name")
 		}
+		name := sprintPoolName(rawName)
+		if name == "" {
+			return nil, fmt.Errorf("dhcp: desired pool has empty name")
+		}
+		p["name"] = name // normalise to string for downstream consumers
 		want[name] = p
 	}
 	got := map[string]map[string]any{}
 	for _, p := range observedPools {
-		if name, ok := p["name"].(string); ok {
-			got[name] = p
+		if rawName, ok := p["name"]; ok {
+			name := sprintPoolName(rawName)
+			if name != "" {
+				got[name] = p
+			}
 		}
 	}
 	names := make([]string, 0, len(want))
@@ -108,6 +143,9 @@ func (dhcpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		names = append(names, n)
 	}
 	sort.Strings(names)
+
+	r := ensureResolver(w.resolver)
+	override, _ := r.GetOverride("dhcp")
 
 	ops := make([]transport.Op, 0, len(names))
 	for _, name := range names {
@@ -118,62 +156,73 @@ func (dhcpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		}
 		entry := projectManagedLeaves(desired, dhcpPoolManagedLeaves)
 		entry["name"] = name
-		body, err := wrapYANGPayload(dhcpPoolEnvelopeKey, []any{entry})
+
+		// Apply version-conditional body transforms.
+		entry = ApplyOverrideToBody(entry, override)
+
+		// Determine the key value for the RESTCONF path. After
+		// BodyTransform, the key field may have been renamed
+		// (e.g. "name" → "id").
+		pathKey := name
+		if override != nil && override.KeyFieldOverride != "" {
+			if v, ok := entry[override.KeyFieldOverride]; ok {
+				pathKey = fmt.Sprint(v)
+			}
+		}
+
+		body, err := wrapYANGPayload(w.resolvedEnvelopeKey(), []any{entry})
 		if err != nil {
 			return nil, err
 		}
 		ops = append(ops, transport.Op{
 			Verb:     transport.VerbMerge,
-			Path:     dhcpPoolListPath + "=" + name,
-			PathSpec: pathSpecForKeyedListEntry(dhcpPoolListPath, "name", name),
+			Path:     dhcpPoolListPath + "=" + pathKey,
+			PathSpec: pathSpecForKeyedListEntry(dhcpPoolListPath, keyField, pathKey),
 			Body:     body,
 		})
 	}
+
+	// If parent creation is needed, prepend a parent-create op.
+	if override != nil && override.NeedParentCreation && len(ops) > 0 {
+		parentOp := transport.Op{
+			Verb: transport.VerbMerge,
+			Path: override.ParentPath,
+			Body: override.ParentBody,
+		}
+		ops = append([]transport.Op{parentOp}, ops...)
+	}
+
 	return ops, nil
 }
 
-func (dhcpWriter) Apply(ctx context.Context, c transport.Interface, ops []transport.Op) error {
+func (w dhcpWriter) Apply(ctx context.Context, c transport.Interface, ops []transport.Op) error {
 	if len(ops) == 0 {
 		return nil
 	}
 	return c.Mutate(ctx, "", ops)
 }
 
-// KeysOf implements KeyExtractable. Returns the pool names in the
-// supplied dhcp block. Required so the engine's pruneOnRelinquish
-// path can scope deletes to the keys this CR has owned rather than
-// every pool on the device. A3 fix (2026-05-01): without this hook
-// the engine silently skips pruneOnRelinquish for the dhcp family
-// while reporting InSync — operators couldn't tell the prune never
-// ran.
-func (dhcpWriter) KeysOf(v any) []string {
+// KeysOf implements KeyExtractable.
+func (w dhcpWriter) KeysOf(v any) []string {
 	list, err := coerceDHCPBlock(v, "keysOf")
 	if err != nil || len(list) == 0 {
 		return nil
 	}
 	keys := make([]string, 0, len(list))
 	for _, p := range list {
-		if name, ok := p["name"].(string); ok && name != "" {
-			keys = append(keys, name)
+		if rawName, ok := p["name"]; ok {
+			name := sprintPoolName(rawName)
+			if name != "" {
+				keys = append(keys, name)
+			}
 		}
 	}
 	sort.Strings(keys)
 	return keys
 }
 
-// PruneDiff implements PruneCapable: a VerbDelete op for every
-// pool present on the device but absent from the desired intent.
-// Required because dhcp is one of the apphosting-prerequisite
-// families (interface_virtual_port_group, dhcp, access_list_extended)
-// and Wave 4A-fu's teardown semantics depend on every prereq family
-// being prunable. The non-prune fast-path stays via Diff for the
-// normal apply loop.
-//
-// The implementation mirrors keyedListWriter.PruneDiff: build the
-// set of desired names, walk observed, emit VerbDelete for each
-// entry not in the desired set. dhcp pools are keyed by `name`,
-// matching the families.yaml entry.
-func (dhcpWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
+// PruneDiff implements PruneCapable.
+func (w dhcpWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
 	desiredPools, err := coerceDHCPBlock(desired, "desired")
 	if err != nil {
 		return nil, err
@@ -184,34 +233,64 @@ func (dhcpWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
 	}
 	want := map[string]struct{}{}
 	for _, p := range desiredPools {
-		if name, ok := p["name"].(string); ok && name != "" {
-			want[name] = struct{}{}
+		if rawName, ok := p["name"]; ok {
+			name := sprintPoolName(rawName)
+			if name != "" {
+				want[name] = struct{}{}
+			}
 		}
 	}
-	// Sort observed names so the resulting op list is deterministic
-	// — the engine's status writes are easier to diff under that.
 	names := make([]string, 0, len(observedPools))
 	for _, p := range observedPools {
-		if name, ok := p["name"].(string); ok && name != "" {
-			if _, kept := want[name]; !kept {
-				names = append(names, name)
+		if rawName, ok := p["name"]; ok {
+			name := sprintPoolName(rawName)
+			if name != "" {
+				if _, kept := want[name]; !kept {
+					names = append(names, name)
+				}
 			}
 		}
 	}
 	sort.Strings(names)
+
+	keyField := w.resolvedKeyField()
 	ops := make([]transport.Op, 0, len(names))
 	for _, name := range names {
 		ops = append(ops, transport.Op{
 			Verb:     transport.VerbDelete,
 			Path:     dhcpPoolListPath + "=" + name,
-			PathSpec: pathSpecForKeyedListEntry(dhcpPoolListPath, "name", name),
+			PathSpec: pathSpecForKeyedListEntry(dhcpPoolListPath, keyField, name),
 		})
 	}
 	return ops, nil
 }
 
+// sprintPoolName coerces a YAML-decoded pool name to a flat string.
+// YAML 1.1 interprets names like "198_18_100_0" as integers (198181000)
+// which may arrive as int or float64 depending on the unmarshal path.
+// fmt.Sprint on float64 produces scientific notation (1.98181e+08) which
+// is not a valid RESTCONF key.  This helper formats integers and
+// integer-valued floats with %d to recover a usable string.
+func sprintPoolName(v any) string {
+	switch n := v.(type) {
+	case string:
+		return n
+	case int:
+		return strconv.Itoa(n)
+	case int64:
+		return strconv.FormatInt(n, 10)
+	case float64:
+		if n == math.Trunc(n) && !math.IsInf(n, 0) {
+			return strconv.FormatInt(int64(n), 10)
+		}
+		return fmt.Sprint(n)
+	default:
+		return fmt.Sprint(v)
+	}
+}
+
 // coerceDHCPBlock accepts either the nested netascode shape
-// {"pools":[...]} or a bare list (e.g. from a narrow test fixture).
+// {"pools":[...]} or a bare list.
 func coerceDHCPBlock(v any, origin string) ([]map[string]any, error) {
 	if m, ok := v.(map[string]any); ok {
 		if inner, ok := m["pools"]; ok {

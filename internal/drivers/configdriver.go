@@ -77,7 +77,7 @@ type ConfigDriverContext struct {
 	// LookupWriter is the per-platform writer registry's Get
 	// function. NX-OS and IOS-XE writer registries are independent
 	// even though they share the writers.SectionWriter contract.
-	LookupWriter func(family string) writers.SectionWriter
+	LookupWriter func(family, release string) writers.SectionWriter
 
 	// SubscribePaths is the union of YANG paths the platform's
 	// writers care about. The drift-detect Subscribe watcher
@@ -85,6 +85,19 @@ type ConfigDriverContext struct {
 	// disables the subscribe fast path; the reconciler stays on
 	// its periodic ticker.
 	SubscribePaths []string
+
+	// DeviceVersion is the IOS-XE software version string reported
+	// by the device (e.g. "17.16.01a"). When non-empty, the startup
+	// code validates this against the version-conditional writer
+	// support table. The factory may leave this empty if the version
+	// isn't known at construction time; retry loops set it lazily on
+	// the first successful device query.
+	DeviceVersion string
+
+	// FetchDeviceVersion optionally refreshes DeviceVersion from the
+	// live transport. Aggregator mode uses this to retry startup-time
+	// empty version reads without importing platform-specific packages.
+	FetchDeviceVersion func(context.Context, transport.Interface) string
 
 	// FamilyOrder is the optional cross-family ordering hook the
 	// engine consults during Wave 10.3 atomic-replace reconciles.
@@ -96,6 +109,49 @@ type ConfigDriverContext struct {
 	// default) and is the safe fallback when a platform's schema
 	// doesn't declare dependencies.
 	FamilyOrder func([]string) []string
+}
+
+// ValidateDeviceVersion validates DeviceVersion against the version-
+// conditional writer support table. It does not mutate writer state;
+// writer instances bind immutable per-device resolvers at lookup time.
+// No-op when DeviceVersion is empty. Returns the error from
+// writers.SetDeviceVersion (typically an unparseable version string or
+// one outside the supported set) so callers can halt reconciliation
+// before any config write path runs.
+//
+// Both startup paths (cmd/cisco-vk and the aggregator) call this
+// after constructing the context. The function lives on the context
+// rather than in cisco-vk so the aggregator can stay free of any
+// platform-specific imports — only this drivers package needs to
+// know about writers.SetDeviceVersion.
+func (c *ConfigDriverContext) ValidateDeviceVersion() error {
+	if c == nil || c.DeviceVersion == "" {
+		return nil
+	}
+	return writers.SetDeviceVersion(c.DeviceVersion)
+}
+
+// IsUnsupportedDeviceVersionError reports whether err is the
+// "device version is not in the supported release set" sentinel.
+// Re-exported from the writers package so non-platform-specific
+// callers (the aggregator) can branch on the error class without
+// importing writers directly.
+func IsUnsupportedDeviceVersionError(err error) bool {
+	return writers.IsUnsupportedDeviceVersion(err)
+}
+
+// IsMalformedDeviceVersionError reports whether err means the device
+// version string could not be parsed as major.minor.
+func IsMalformedDeviceVersionError(err error) bool {
+	return writers.IsMalformedDeviceVersion(err)
+}
+
+// IsRetryableDeviceVersionError reports validation failures that can be
+// transient during device boot or image upgrade. Callers should keep
+// retrying version discovery instead of pinning the reconciler until a
+// pod restart.
+func IsRetryableDeviceVersionError(err error) bool {
+	return IsUnsupportedDeviceVersionError(err) || IsMalformedDeviceVersionError(err)
 }
 
 // ConfigDriverFactory is the per-platform constructor signature.

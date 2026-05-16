@@ -99,6 +99,19 @@ func (m *StreamManager) SetReconnectConfig(cfg *configv1alpha1.ReconnectConfig) 
 	m.reconnect = cfg
 }
 
+func (m *StreamManager) reconnectSnapshot() *configv1alpha1.ReconnectConfig {
+	if m == nil {
+		return nil
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.reconnect == nil {
+		return nil
+	}
+	cfg := *m.reconnect
+	return &cfg
+}
+
 func (m *StreamManager) Stop() {
 	if m == nil {
 		return
@@ -186,7 +199,7 @@ func (m *StreamManager) rebuildLocked() {
 }
 
 func (m *StreamManager) runStream(ctx context.Context, h *streamHandle) {
-	backoff := NewReconnectState(m.reconnect)
+	backoff := NewReconnectState(m.reconnectSnapshot())
 	for {
 		err := m.openAndDrain(ctx, h)
 		if err == nil {

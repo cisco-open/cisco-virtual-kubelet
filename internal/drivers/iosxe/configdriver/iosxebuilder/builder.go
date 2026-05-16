@@ -121,10 +121,26 @@ func RegisterGNMIPathKeysForXE() {
 }
 
 // LoadYANGReleaseTags reads schema/yang-versions.yaml and returns
-// the set of release tags as a closed validator (set semantics)
-// plus the default tag. Failure to load is non-fatal; we log via
-// the context-bound logger and return empty maps so
-// spec.targetYangVersion validation simply disables.
+// the set of release tags valid for spec.targetYangVersion plus the
+// default tag.
+//
+// The set honours the per-release `status:` field:
+//
+//	supported    → enters the validator set (default-eligible)
+//	experimental → enters the validator set with a logged warning
+//	deprecated   → enters the validator set with a logged warning
+//	(anything else, including missing) → REJECTED with a logged warning
+//
+// "Supported" alone would block experimental rollouts; "every status"
+// would silently accept releases the team has explicitly disowned.
+// The middle path mirrors how operators actually use the file:
+// experimental for soak, deprecated for one-release-warning before
+// removal, unknown for typos that should fail the load loudly.
+//
+// Failure to load is non-fatal; we log via the context-bound logger
+// and return empty maps so spec.targetYangVersion validation simply
+// disables — preferable to a hard startup abort when the cisco-vk
+// pod has otherwise come up clean.
 func LoadYANGReleaseTags(ctx context.Context) (map[string]struct{}, string) {
 	logger := log.G(ctx).WithField("component", "iosxe-configdriver")
 	releases, err := schema.LoadYANGReleases()
@@ -136,8 +152,27 @@ func LoadYANGReleaseTags(ctx context.Context) (map[string]struct{}, string) {
 	supported := make(map[string]struct{}, len(releases))
 	var def string
 	for _, r := range releases {
-		supported[r.Version] = struct{}{}
+		entryLog := logger.WithField("release", r.Version).WithField("status", r.Status)
+		switch r.Status {
+		case "supported":
+			supported[r.Version] = struct{}{}
+		case "experimental":
+			supported[r.Version] = struct{}{}
+			entryLog.Warn("YANG release is marked experimental; integration coverage may be incomplete")
+		case "deprecated":
+			supported[r.Version] = struct{}{}
+			entryLog.Warn("YANG release is deprecated; remove from yang-versions.yaml on the next CVK release")
+		default:
+			// Unknown status (typo, missing) — refuse to admit it.
+			// A loud warning beats silent acceptance of a release the
+			// team didn't intentionally bless.
+			entryLog.Warn("YANG release has unknown status; rejecting from validator set")
+			continue
+		}
 		if r.Default {
+			if r.Status != "supported" {
+				entryLog.Warn("YANG release marked default but status != supported; honouring default to avoid breaking existing CRs")
+			}
 			def = r.Version
 		}
 	}
@@ -147,8 +182,8 @@ func LoadYANGReleaseTags(ctx context.Context) (map[string]struct{}, string) {
 // LookupWriter is the platform-scoped writer-registry accessor
 // the platform-agnostic ConfigReconciler needs. Wraps writers.Get
 // so the registry stays an internal detail of the iosxe package.
-func LookupWriter(family string) writers.SectionWriter {
-	return writers.Get(family)
+func LookupWriter(family, release string) writers.SectionWriter {
+	return writers.GetForRelease(family, release)
 }
 
 // FamilyOrderForXE returns a function suitable for
@@ -253,12 +288,21 @@ func FamilyOrderForXE() func([]string) []string {
 func UnionWriterPaths() []string {
 	seen := map[string]struct{}{}
 	for _, fam := range writers.Families() {
-		w := writers.Get(fam)
+		w := writers.GetForRelease(fam, "")
 		if w == nil {
 			continue
 		}
 		for _, p := range w.YANGPaths() {
 			seen[p] = struct{}{}
+		}
+		for _, version := range writers.SupportedDeviceVersions() {
+			w := writers.GetForRelease(fam, version)
+			if w == nil {
+				continue
+			}
+			for _, p := range w.YANGPaths() {
+				seen[p] = struct{}{}
+			}
 		}
 	}
 	out := make([]string, 0, len(seen))

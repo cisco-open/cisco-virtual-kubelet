@@ -1,0 +1,8 @@
+# Netascode-shaped desired body for snmp_server on IOS-XE 17.16.
+# Mirrors the fragment a kubectl-applied IOSXEConfig CR would
+# carry under spec.configuration.snmp_server.
+community:
+  - name: public
+    access: ro
+location: lab-rack-1
+contact: noc@example.com

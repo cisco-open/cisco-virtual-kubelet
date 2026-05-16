@@ -137,6 +137,52 @@ func TestResolveScopePrecedence(t *testing.T) {
 	}
 }
 
+func TestResolveInfersManagedFamiliesWhenEmpty(t *testing.T) {
+	t.Parallel()
+	device := mkDevice("edge-01", nil)
+	cr := mkCR("edge-01", "edge-01", nil,
+		`{"vlan":{"vlans":[{"id":10}]},"system":{"hostname":"edge-01"}}`)
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, cr).
+		Build()
+	r := &Resolver{Client: c}
+
+	got, err := r.Resolve(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+
+	want := []string{"system", "vlan"}
+	if !reflect.DeepEqual(got.ManagedFamilies, want) {
+		t.Fatalf("ManagedFamilies = %#v, want %#v", got.ManagedFamilies, want)
+	}
+}
+
+func TestResolveExplicitManagedFamiliesOverrideInference(t *testing.T) {
+	t.Parallel()
+	device := mkDevice("edge-01", nil)
+	cr := mkCR("edge-01", "edge-01", []string{"system"},
+		`{"vlan":{"vlans":[{"id":10}]},"system":{"hostname":"edge-01"}}`)
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, cr).
+		Build()
+	r := &Resolver{Client: c}
+
+	got, err := r.Resolve(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+
+	want := []string{"system"}
+	if !reflect.DeepEqual(got.ManagedFamilies, want) {
+		t.Fatalf("ManagedFamilies = %#v, want explicit %#v", got.ManagedFamilies, want)
+	}
+}
+
 func TestResolveRejectsDeviceNotInGroup(t *testing.T) {
 	t.Parallel()
 	device := mkDevice("core-01", map[string]string{"role": "core"})

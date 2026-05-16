@@ -46,7 +46,7 @@ func RegisterTransportMetrics(reg prometheus.Registerer) {
 				Name: "cisco_vk_config_subscribe_events_dropped_total",
 				Help: "Number of gNMI Subscribe events dropped because the transport's outbound channel was full. A non-zero rate means the reconcile-side consumer is slower than the device's notification cadence; alert on rate, not absolute value.",
 			},
-			[]string{"device"},
+			[]string{"device", "release"},
 		)
 		reg.MustRegister(subscribeEventsDropped)
 	})
@@ -61,5 +61,12 @@ func recordSubscribeDropped(device string) {
 	if subscribeEventsDropped == nil {
 		return
 	}
-	subscribeEventsDropped.WithLabelValues(device).Inc()
+	subscribeEventsDropped.WithLabelValues(device, releaseLabel("")).Inc()
+}
+
+func releaseLabel(release string) string {
+	if release == "" {
+		return "unknown"
+	}
+	return release
 }

@@ -58,6 +58,10 @@ func init() {
 	})
 
 	// IPsec transform-sets.
+	// The "mode" container contains empty-leaf children (tunnel,
+	// transport) — YANG `type empty;`. Caught against C8000V
+	// 17.16.01a: {"mode":{"tunnel":true}} rejected; device expects
+	// {"mode":{"tunnel":[null]}}.
 	Override(keyedListWriter{
 		family:      "crypto_ipsec_transform_set",
 		yangPath:    "/Cisco-IOS-XE-native:native/crypto/ipsec/transform-set",
@@ -69,6 +73,8 @@ func init() {
 			"ah",
 			"mode",
 		},
+		yangBodyShape:  transformSetToYANG,
+		yangFetchShape: transformSetFromYANG,
 	})
 
 	// IPsec profiles.
@@ -97,4 +103,66 @@ func init() {
 			"local-address",
 		},
 	})
+}
+
+// transformSetFromYANG inverts the empty-leaf encoding for Fetch:
+// [null] → true for mode.tunnel and mode.transport.
+func transformSetFromYANG(yang map[string]any) map[string]any {
+	out := make(map[string]any, len(yang))
+	for k, v := range yang {
+		if k == "mode" {
+			mode, ok := v.(map[string]any)
+			if !ok {
+				out[k] = v
+				continue
+			}
+			fixed := make(map[string]any, len(mode))
+			for mk, mv := range mode {
+				switch mk {
+				case "tunnel", "transport":
+					if isTrue(mv) {
+						fixed[mk] = true
+					}
+				case "tunnel-choice", "transport-choice":
+					// YANG internal choice markers — drop.
+				default:
+					fixed[mk] = mv
+				}
+			}
+			out[k] = fixed
+			continue
+		}
+		out[k] = v
+	}
+	return out
+}
+
+// transformSetToYANG converts boolean empty-leaf children of the
+// "mode" container to RFC 7951 [null] encoding.
+func transformSetToYANG(flat map[string]any) map[string]any {
+	out := make(map[string]any, len(flat))
+	for k, v := range flat {
+		if k == "mode" {
+			mode, ok := v.(map[string]any)
+			if !ok {
+				out[k] = v
+				continue
+			}
+			fixed := make(map[string]any, len(mode))
+			for mk, mv := range mode {
+				switch mk {
+				case "tunnel", "transport":
+					if isTrue(mv) {
+						fixed[mk] = []any{nil}
+					}
+				default:
+					fixed[mk] = mv
+				}
+			}
+			out[k] = fixed
+			continue
+		}
+		out[k] = v
+	}
+	return out
 }

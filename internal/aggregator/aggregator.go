@@ -52,8 +52,11 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	log "github.com/virtual-kubelet/virtual-kubelet/log"
 	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
 )
+
+var deviceVersionRetryInterval = 30 * time.Second
 
 // AggregatedReconciler watches CiscoDevices and runs one in-process
 // ConfigReconciler per device that has a registered config driver
@@ -245,6 +248,22 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 		return fmt.Errorf("config driver context: returned nil for kind %q", dev.Spec.Driver)
 	}
 
+	// Validate the device version before spawning a reconciler
+	// goroutine. Unsupported or malformed versions fail closed so
+	// this device stays Pending and no IOSXEConfig write path can run.
+	if verr := dctx.ValidateDeviceVersion(); verr != nil {
+		reason := "AggregatorMalformedDeviceVersion"
+		msg := "device version %q failed to parse: %v"
+		if drivers.IsUnsupportedDeviceVersionError(verr) {
+			reason = "AggregatorUnsupportedDeviceVersion"
+			msg = "device version %q is not in the supported release set: %v"
+		}
+		if r.Recorder != nil {
+			r.Recorder.Eventf(dev, corev1.EventTypeWarning, reason, msg, dctx.DeviceVersion, verr)
+		}
+		return fmt.Errorf("%s: %w", reason, verr)
+	}
+
 	leaseNs := r.LeaseNamespace
 	if leaseNs == "" {
 		leaseNs = dev.Namespace
@@ -258,6 +277,8 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 		Client:                r.Client,
 		DeviceName:            dev.Name,
 		Transport:             dctx.Transport,
+		DeviceVersion:         dctx.DeviceVersion,
+		RequireDeviceVersion:  true,
 		KeyRules:              dctx.KeyRules,
 		SupportedYANGVersions: dctx.SupportedYANGVersions,
 		DefaultYANGVersion:    dctx.DefaultYANGVersion,
@@ -281,6 +302,9 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 	r.mu.Unlock()
 
 	transport := dctx.Transport
+	if dctx.Transport != nil && dctx.DeviceVersion == "" && dctx.FetchDeviceVersion != nil {
+		go retryDeviceVersion(devCtx, rec, dctx)
+	}
 	go func() {
 		defer func() {
 			if transport != nil {
@@ -295,6 +319,42 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 		}
 	}()
 	return nil
+}
+
+func retryDeviceVersion(ctx context.Context, r *provider.ConfigReconciler, dctx *drivers.ConfigDriverContext) {
+	if dctx == nil || dctx.Transport == nil || dctx.FetchDeviceVersion == nil {
+		return
+	}
+	tick := time.NewTicker(deviceVersionRetryInterval)
+	defer tick.Stop()
+	for attempt := 1; ; attempt++ {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+		ver := dctx.FetchDeviceVersion(ctx, dctx.Transport)
+		if ver == "" {
+			log.G(ctx).
+				WithField("attempt", attempt).
+				Info("aggregator device version still unavailable; config writes remain blocked")
+			continue
+		}
+		dctx.DeviceVersion = ver
+		if err := dctx.ValidateDeviceVersion(); err != nil {
+			r.SetDeviceVersionState(ver, err)
+			log.G(ctx).WithError(err).WithField("version", ver).
+				Warn("aggregator device version retry produced rejected version; config writes remain blocked")
+			if drivers.IsRetryableDeviceVersionError(err) {
+				continue
+			}
+			return
+		}
+		r.SetDeviceVersionState(ver, nil)
+		log.G(ctx).WithField("version", ver).
+			Info("aggregator device version bound to writers after retry")
+		return
+	}
 }
 
 func (r *AggregatedReconciler) stopWorker(key string) {

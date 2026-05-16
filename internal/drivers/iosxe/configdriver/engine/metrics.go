@@ -76,7 +76,17 @@ func RecordDriftTruncated(device string, dropped int) {
 	if driftEntriesTruncated == nil || dropped <= 0 {
 		return
 	}
-	driftEntriesTruncated.WithLabelValues(device).Add(float64(dropped))
+	driftEntriesTruncated.WithLabelValues(device, releaseLabel("")).Add(float64(dropped))
+}
+
+// RecordDriftTruncatedForRelease bumps the truncation counter with an
+// explicit YANG release label. Older callers use RecordDriftTruncated
+// and land on release=unknown.
+func RecordDriftTruncatedForRelease(device, release string, dropped int) {
+	if driftEntriesTruncated == nil || dropped <= 0 {
+		return
+	}
+	driftEntriesTruncated.WithLabelValues(device, releaseLabel(release)).Add(float64(dropped))
 }
 
 // RegisterMetrics registers the engine's metric set on reg. It is
@@ -90,7 +100,7 @@ func RegisterMetrics(reg prometheus.Registerer) {
 				Help:    "Duration of one IOSXEConfig reconcile tick (engine.Reconcile).",
 				Buckets: []float64{0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30},
 			},
-			[]string{"device", "phase"},
+			[]string{"device", "release", "phase"},
 		)
 		applyDuration = prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
@@ -98,63 +108,63 @@ func RegisterMetrics(reg prometheus.Registerer) {
 				Help:    "Duration of per-family Apply calls.",
 				Buckets: []float64{0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30},
 			},
-			[]string{"device", "family"},
+			[]string{"device", "release", "family"},
 		)
 		driftDetected = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "cisco_vk_config_drift_detected_total",
 				Help: "Number of reconcile ticks where a family was found drifted.",
 			},
-			[]string{"device", "family"},
+			[]string{"device", "release", "family"},
 		)
 		driftCorrected = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "cisco_vk_config_drift_corrected_total",
 				Help: "Number of reconcile ticks where drift was corrected (apply succeeded and verify was clean).",
 			},
-			[]string{"device", "family"},
+			[]string{"device", "release", "family"},
 		)
 		driftEntriesTruncated = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "cisco_vk_config_drift_entries_truncated_total",
 				Help: "Number of drift entries dropped when status.drift[] was capped at MaxDriftEntries on the CR.",
 			},
-			[]string{"device"},
+			[]string{"device", "release"},
 		)
 		applyErrors = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "cisco_vk_config_apply_errors_total",
 				Help: "Number of per-family apply errors (Fetch / Diff / Apply / Verify).",
 			},
-			[]string{"device", "family", "stage"},
+			[]string{"device", "release", "family", "stage"},
 		)
 		familyState = prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Name: "cisco_vk_config_family_state",
 				Help: "Current per-family state (0=InSync, 1=Drifted, 2=ApplyError, 3=Skipped, 4=Unsupported).",
 			},
-			[]string{"device", "family"},
+			[]string{"device", "release", "family"},
 		)
 		transactionsTotal = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "cisco_vk_config_transactions_total",
 				Help: "Transactional reconcile lifecycle outcomes. outcome=commit when the engine successfully committed a candidate datastore; discard when the deferred cleanup ran (apply failure or non-clean phase); start_failed / commit_failed for the corresponding RPC errors. Live tests use this to prove the NETCONF candidate path actually ran instead of the engine silently degrading to a non-transactional apply.",
 			},
-			[]string{"device", "transport", "outcome"},
+			[]string{"device", "release", "transport", "outcome"},
 		)
 		saveStartupTotal = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "cisco_vk_config_save_startup_total",
 				Help: "Outcomes of the post-apply running-to-startup copy. Only fires when spec.writeStartup is true AND the transport reports SupportsSaveStartup AND the apply phase reached InSync. outcome=ok or failed.",
 			},
-			[]string{"device", "transport", "outcome"},
+			[]string{"device", "release", "transport", "outcome"},
 		)
 		mutateOpsTotal = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "cisco_vk_config_mutate_ops_total",
 				Help: "Per-verb count of mutation ops the engine emitted into the transport (REPLACE, MERGE, DELETE, CLI). Labelled by transport kind so live tests can assert the verbs landed on the intended wire format. Pure-read reconciles (Phase=InSync with no drift) increment nothing.",
 			},
-			[]string{"device", "transport", "verb"},
+			[]string{"device", "release", "transport", "verb"},
 		)
 
 		reg.MustRegister(
@@ -174,30 +184,30 @@ func RegisterMetrics(reg prometheus.Registerer) {
 
 // recordTransaction bumps the transactional-lifecycle counter. No-op
 // when metrics are unregistered (unit tests).
-func recordTransaction(device, transportKind, outcome string) {
+func recordTransaction(device, release, transportKind, outcome string) {
 	if transactionsTotal == nil {
 		return
 	}
-	transactionsTotal.WithLabelValues(device, transportKind, outcome).Inc()
+	transactionsTotal.WithLabelValues(device, releaseLabel(release), transportKind, outcome).Inc()
 }
 
 // recordSaveStartup bumps the save-startup counter. No-op when
 // metrics are unregistered.
-func recordSaveStartup(device, transportKind, outcome string) {
+func recordSaveStartup(device, release, transportKind, outcome string) {
 	if saveStartupTotal == nil {
 		return
 	}
-	saveStartupTotal.WithLabelValues(device, transportKind, outcome).Inc()
+	saveStartupTotal.WithLabelValues(device, releaseLabel(release), transportKind, outcome).Inc()
 }
 
 // recordMutateOps bumps the per-verb mutation-ops counter once per
 // op in the slice. No-op when metrics are unregistered.
-func recordMutateOps(device, transportKind string, ops []transport.Op) {
+func recordMutateOps(device, release, transportKind string, ops []transport.Op) {
 	if mutateOpsTotal == nil {
 		return
 	}
 	for _, op := range ops {
-		mutateOpsTotal.WithLabelValues(device, transportKind, string(op.Verb)).Inc()
+		mutateOpsTotal.WithLabelValues(device, releaseLabel(release), transportKind, string(op.Verb)).Inc()
 	}
 }
 
@@ -212,6 +222,13 @@ func transportKindLabel(t transport.Interface) string {
 	return string(t.Capabilities().Kind)
 }
 
+func releaseLabel(release string) string {
+	if release == "" {
+		return "unknown"
+	}
+	return release
+}
+
 // recordResult folds a Result into the registered metric set. It is a
 // no-op when RegisterMetrics has not been called, so unit tests do not
 // need to worry about registration bookkeeping.
@@ -219,19 +236,20 @@ func recordResult(device string, r Result, duration float64) {
 	if reconcileDuration == nil {
 		return
 	}
-	reconcileDuration.WithLabelValues(device, r.Phase).Observe(duration)
+	release := releaseLabel(r.YangVersion)
+	reconcileDuration.WithLabelValues(device, release, r.Phase).Observe(duration)
 	for _, fs := range r.FamilyStatuses {
-		familyState.WithLabelValues(device, fs.Name).Set(familyStateValue(fs.State))
+		familyState.WithLabelValues(device, release, fs.Name).Set(familyStateValue(fs.State))
 		switch fs.State {
 		case "Drifted":
-			driftDetected.WithLabelValues(device, fs.Name).Inc()
+			driftDetected.WithLabelValues(device, release, fs.Name).Inc()
 		case "InSync":
 			// Only count as corrected when the tick actually wrote.
 			if fs.OpCount > 0 {
-				driftCorrected.WithLabelValues(device, fs.Name).Inc()
+				driftCorrected.WithLabelValues(device, release, fs.Name).Inc()
 			}
 		case "ApplyError":
-			applyErrors.WithLabelValues(device, fs.Name, stageFromMessage(fs.Message)).Inc()
+			applyErrors.WithLabelValues(device, release, fs.Name, stageFromMessage(fs.Message)).Inc()
 		}
 	}
 }

@@ -179,7 +179,7 @@ func newTxFixture(supportsTx, supportsSave bool, writeStartup, transactional boo
 	tw := &txWriter{}
 	e := &Engine{
 		Transport: tt,
-		Lookup: func(family string) writers.SectionWriter {
+		Lookup: func(family string, _ string) writers.SectionWriter {
 			if family == "system" {
 				return tw
 			}
@@ -226,7 +226,7 @@ func TestTransactionalApplyDiscardsOnApplyError(t *testing.T) {
 	t.Parallel()
 	e, tt, res := newTxFixture(true, false, false, true)
 	// Override Diff to push a verify-side residual that flips Phase to Failed.
-	e.Lookup = func(family string) writers.SectionWriter {
+	e.Lookup = func(family string, _ string) writers.SectionWriter {
 		return failingApplyWriter{}
 	}
 
@@ -516,7 +516,7 @@ func TestConfirmedCommitAutoRevertOnVerifyFailure(t *testing.T) {
 	w := &runningDirtyWriter{}
 	e := &Engine{
 		Transport: tt,
-		Lookup: func(family string) writers.SectionWriter {
+		Lookup: func(family string, _ string) writers.SectionWriter {
 			if family == "system" {
 				return w
 			}
@@ -572,7 +572,7 @@ func TestConfirmedCommitFallbackWhenTransportLacksInterface(t *testing.T) {
 	w := &txWriter{}
 	e := &Engine{
 		Transport: tt,
-		Lookup: func(family string) writers.SectionWriter {
+		Lookup: func(family string, _ string) writers.SectionWriter {
 			if family == "system" {
 				return w
 			}

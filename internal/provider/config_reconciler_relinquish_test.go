@@ -92,8 +92,8 @@ func (w *noopWriter) KeysOf(any) []string                        { return nil }
 // lookupFromMap returns a writers.SectionWriter lookup closure
 // backed by the supplied map. Keys are family names; missing
 // families return nil (engine treats as Unsupported).
-func lookupFromMap(m map[string]*noopWriter) func(string) writers.SectionWriter {
-	return func(family string) writers.SectionWriter {
+func lookupFromMap(m map[string]*noopWriter) func(string, string) writers.SectionWriter {
+	return func(family string, _ string) writers.SectionWriter {
 		if w, ok := m[family]; ok {
 			return w
 		}

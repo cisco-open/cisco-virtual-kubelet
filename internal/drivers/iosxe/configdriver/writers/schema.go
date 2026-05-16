@@ -144,6 +144,40 @@ var handWrittenSchemas = map[string]FamilySchema{
 		ManagedLeaves: []string{"description", "class", "type"},
 		InnerKey:      "policy_maps", KeyField: "name",
 	},
+	"bgp": {
+		Family:        "bgp",
+		Shape:         "singleton",
+		ManagedLeaves: bgpManagedLeaves,
+	},
+	"logging": {
+		Family:        "logging",
+		Shape:         "singleton",
+		ManagedLeaves: loggingManagedLeaves,
+	},
+	"snmp_server": {
+		Family:        "snmp_server",
+		Shape:         "singleton",
+		ManagedLeaves: snmpManagedLeaves,
+	},
+	"ip_community_list": {
+		Family:        "ip_community_list",
+		Shape:         "singleton",
+		ManagedLeaves: communityListManagedLeaves,
+	},
+	"aaa": {
+		Family: "aaa", Shape: "singleton",
+		ManagedLeaves: aaaManagedLeaves(),
+	},
+	"pim": {
+		Family:        "pim",
+		Shape:         "singleton",
+		ManagedLeaves: pimManagedLeaves(),
+	},
+	"ipv6_pim": {
+		Family:        "ipv6_pim",
+		Shape:         "singleton",
+		ManagedLeaves: ipv6PimManagedLeaves(),
+	},
 }
 
 // systemManagedLeaves is a helper that returns the system writer's

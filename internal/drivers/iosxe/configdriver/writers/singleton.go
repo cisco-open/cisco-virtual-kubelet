@@ -43,20 +43,35 @@ type singletonWriter struct {
 	yangPath      string
 	envelopeKey   string
 	managedLeaves []string
+	resolver      *OverrideResolver
 }
 
-func (w singletonWriter) Family() string      { return w.family }
-func (w singletonWriter) YANGPaths() []string { return []string{w.yangPath} }
+func (w singletonWriter) Family() string { return w.family }
+func (w singletonWriter) YANGPaths() []string {
+	return []string{w.resolverForUse().ResolvedYANGPath(w.family, w.yangPath)}
+}
+
+func (w singletonWriter) withResolver(r *OverrideResolver) SectionWriter {
+	w.resolver = r
+	return w
+}
+
+func (w singletonWriter) resolverForUse() *OverrideResolver {
+	return ensureResolver(w.resolver)
+}
 
 func (w singletonWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
-	raw, err := c.Fetch(ctx, w.yangPath)
+	resolver := w.resolverForUse()
+	yangPath := resolver.ResolvedYANGPath(w.family, w.yangPath)
+	envelopeKey := resolver.ResolvedEnvelopeKey(w.family, w.envelopeKey)
+	raw, err := c.Fetch(ctx, yangPath)
 	if err != nil {
 		if isRESTCONF404(err) {
 			return map[string]any{}, nil
 		}
 		return nil, err
 	}
-	body, err := unwrapYANGEnvelope(raw, w.envelopeKey)
+	body, err := unwrapYANGEnvelope(raw, envelopeKey)
 	if err != nil || body == nil {
 		return map[string]any{}, err
 	}
@@ -64,6 +79,12 @@ func (w singletonWriter) Fetch(ctx context.Context, c transport.Interface) (any,
 	if err := json.Unmarshal(body, &out); err != nil {
 		return nil, fmt.Errorf("%s: decode container: %w", w.family, err)
 	}
+	// Apply the Fetch-side counterpart of the version override —
+	// ReverseElementMap + DecodeEmptyLeaves — so leavesEqual can
+	// compare a YANG-shape observed body against the netascode-shape
+	// desired body. Skipped automatically when the override carries
+	// a BodyTransform (those writers reverse manually).
+	out = resolver.AutoReverseObservedBody(w.family, out)
 	return out, nil
 }
 
@@ -85,13 +106,21 @@ func (w singletonWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	if leavesEqual(desiredMap, observedMap, w.managedLeaves) {
 		return nil, nil
 	}
-	body, err := wrapYANGPayload(w.envelopeKey, projectManagedLeaves(desiredMap, w.managedLeaves))
+	proj := projectManagedLeaves(desiredMap, w.managedLeaves)
+	// Apply version-conditional overrides (element renames,
+	// empty-leaf encoding, body transforms).
+	resolver := w.resolverForUse()
+	if o, ok := resolver.GetOverride(w.family); ok {
+		proj = ApplyOverrideToBody(proj, o)
+	}
+	envelopeKey := resolver.ResolvedEnvelopeKey(w.family, w.envelopeKey)
+	body, err := wrapYANGPayload(envelopeKey, proj)
 	if err != nil {
 		return nil, err
 	}
 	return []transport.Op{{
 		Verb: transport.VerbMerge,
-		Path: w.yangPath,
+		Path: resolver.ResolvedYANGPath(w.family, w.yangPath),
 		Body: body,
 	}}, nil
 }

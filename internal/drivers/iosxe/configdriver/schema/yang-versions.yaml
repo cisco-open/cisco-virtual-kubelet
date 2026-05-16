@@ -19,3 +19,27 @@ releases:
       Phase-1 scaffold runs against the 17.9.1 YANG modules.
       Device software versions 17.9.x are expected to be
       functionally compatible for the Phase-1 family set.
+
+  - version: "1715"      # IOS-XE 17.15 — C9KV legacy
+    status: experimental
+    notes: >
+      Custom-writer divergences are encoded in the writers package
+      version override table; per-release YANG modules and ygot
+      types are not yet vendored under schema/yang/1715/. Treat as
+      an integration target until Phase 3 of the YANG-version
+      action plan completes.
+
+  - version: "1716"      # IOS-XE 17.16 — C8000V
+    status: experimental
+    notes: >
+      Same status as 1715: writer support for the BGP / prefix-list /
+      ip-community-list legacy YANG shapes is in place, but the
+      per-release YANG bundle and ygot-generated types remain to be
+      vendored under schema/yang/1716/.
+
+  - version: "1718"      # IOS-XE 17.18 — C9300-24P baseline
+    status: supported
+    notes: >
+      Baseline release the writers are authored against. Override
+      table entries do not apply at this release; writers run
+      their unconditional shape.

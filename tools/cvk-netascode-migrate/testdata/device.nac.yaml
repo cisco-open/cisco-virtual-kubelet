@@ -1,0 +1,14 @@
+iosxe:
+  devices:
+    - name: edge-01
+      configuration:
+        system:
+          hostname: edge-01
+        vlan:
+          vlans:
+            - id: 10
+              name: users
+        snmp_server:
+          location: lab-a
+        bespoke_feature:
+          enabled: true

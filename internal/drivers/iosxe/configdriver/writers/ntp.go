@@ -27,12 +27,18 @@ package writers
 //       Loopback: "0"
 //
 // YANG: /Cisco-IOS-XE-native:native/ntp/server/server-list
-// Key: name (IP address or hostname).
+// Key: ip-address (the YANG list key).
 //
 // Phase-2 manages only the server list here — the broader NTP
 // container (authentication, source-interface, master) is a
 // follow-up. Treating servers as the identity of the family keeps
 // the common case simple for operators.
+//
+// The netascode input uses "name" to hold the server IP/hostname,
+// but the YANG list key is "ip-address". The yangBodyShape and
+// yangFetchShape transforms bridge this mismatch.
+// Caught against C8000V 17.16.01a: RESTCONF rejected
+// {"name":"10.1.1.1"} with missing-element: ip-address.
 
 func init() {
 	Override(keyedListWriter{
@@ -47,5 +53,35 @@ func init() {
 			"key",
 			"version",
 		},
+		yangBodyShape:  ntpServerToYANG,
+		yangFetchShape: ntpServerFromYANG,
 	})
+}
+
+// ntpServerToYANG renames the netascode "name" key to the YANG
+// list key "ip-address" for the outbound RESTCONF payload.
+func ntpServerToYANG(flat map[string]any) map[string]any {
+	out := make(map[string]any, len(flat))
+	for k, v := range flat {
+		if k == "name" {
+			out["ip-address"] = v
+		} else {
+			out[k] = v
+		}
+	}
+	return out
+}
+
+// ntpServerFromYANG inverts the rename so observed state matches
+// the netascode shape for leavesEqual comparison.
+func ntpServerFromYANG(yang map[string]any) map[string]any {
+	out := make(map[string]any, len(yang))
+	for k, v := range yang {
+		if k == "ip-address" {
+			out["name"] = v
+		} else {
+			out[k] = v
+		}
+	}
+	return out
 }
