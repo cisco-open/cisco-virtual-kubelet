@@ -101,6 +101,18 @@ spec:
               value: {{ .Values.config.yangValidationMode | quote }}
             - name: CVK_RESOURCE_ATTRIBUTES
               value: {{ .Values.telemetry.resourceAttributes | toJson | quote }}
+            {{- if .Values.gnoi.insecure }}
+            - name: CISCO_VK_GNOI_INSECURE
+              value: "1"
+            {{- end }}
+            {{- if .Values.gnoi.port }}
+            - name: CISCO_VK_GNOI_PORT
+              value: {{ .Values.gnoi.port | quote }}
+            {{- end }}
+            {{- if .Values.gnoi.disabled }}
+            - name: CISCO_VK_GNOI_DISABLED
+              value: "1"
+            {{- end }}
             {{- if .Values.config.leaseNamespace }}
             # Shared cluster namespace for the per-(device,family)
             # arbitration leases. When set, every cisco-vk pod the

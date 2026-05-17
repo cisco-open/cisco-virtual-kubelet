@@ -202,6 +202,53 @@ func (r *Reconciler) runPending(ctx context.Context, up *opsv1alpha1.IOSXESoftwa
 }
 
 func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
+	if r.GNOI != nil {
+		client, err := r.GNOI.GNOIClient(ctx)
+		if err != nil {
+			return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+				if cur.Status.StartTime == nil {
+					cur.Status.StartTime = &metav1.Time{Time: now}
+				}
+				cur.Status.Phase = opsv1alpha1.UpgradePhaseResolving
+				cur.Status.Message = fmt.Sprintf("waiting for gNOI OS.Verify before image resolution: %s", err.Error())
+				cur.Status.FailureReason = ""
+				r.setReady(cur, metav1.ConditionFalse, "DeviceUnreachable", cur.Status.Message, now)
+			}, reconcile.Result{RequeueAfter: awaitingReachabilityPoll})
+		}
+		if res, err := client.Verify(ctx); err != nil {
+			return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+				if cur.Status.StartTime == nil {
+					cur.Status.StartTime = &metav1.Time{Time: now}
+				}
+				cur.Status.Phase = opsv1alpha1.UpgradePhaseResolving
+				cur.Status.Message = fmt.Sprintf("waiting for gNOI OS.Verify before image resolution: %s", err.Error())
+				cur.Status.FailureReason = ""
+				r.setReady(cur, metav1.ConditionFalse, "VerifyPending", cur.Status.Message, now)
+			}, reconcile.Result{RequeueAfter: awaitingReachabilityPoll})
+		} else if versionMatches(res.Version, up.Spec.TargetVersion) {
+			return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+				if cur.Status.StartTime == nil {
+					cur.Status.StartTime = &metav1.Time{Time: now}
+				}
+				cur.Status.Phase = opsv1alpha1.UpgradePhaseSucceeded
+				cur.Status.RunningVersion = res.Version
+				cur.Status.Message = fmt.Sprintf("target version %s already running; image transfer skipped", res.Version)
+				cur.Status.FailureReason = ""
+				cur.Status.CompletionTime = &metav1.Time{Time: now}
+				r.setCondition(cur, conditionTypeImageResolved, metav1.ConditionTrue, "AlreadyRunning",
+					"image resolution skipped because the device is already on the target version", now)
+				r.setCondition(cur, conditionTypeTransferred, metav1.ConditionTrue, "AlreadyRunning",
+					"image transfer skipped because the device is already on the target version", now)
+				r.setCondition(cur, conditionTypeActivated, metav1.ConditionTrue, "AlreadyRunning",
+					"activation skipped because the device is already on the target version", now)
+				r.setCondition(cur, conditionTypeDeviceReachable, metav1.ConditionTrue, "AlreadyRunning",
+					fmt.Sprintf("device is reachable on target version %s", res.Version), now)
+				r.setCondition(cur, conditionTypeVerified, metav1.ConditionTrue, "AlreadyRunning",
+					fmt.Sprintf("gNOI OS.Verify reports target version %s", res.Version), now)
+				r.setReady(cur, metav1.ConditionTrue, "AlreadyRunning", cur.Status.Message, now)
+			}, reconcile.Result{})
+		}
+	}
 	if r.ImageResolver == nil {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "NoImageResolver",
 			"image resolver not configured on reconciler", now)

@@ -52,6 +52,8 @@ import (
 type fakeOS struct {
 	ospb.UnimplementedOSServer
 	verifyVersion       string
+	verifyVersions      []string
+	verifyCalls         int
 	verifyErr           error
 	activateErr         error
 	activateWantVersion string
@@ -63,6 +65,14 @@ type fakeOS struct {
 func (f *fakeOS) Verify(context.Context, *ospb.VerifyRequest) (*ospb.VerifyResponse, error) {
 	if f.verifyErr != nil {
 		return nil, f.verifyErr
+	}
+	if len(f.verifyVersions) > 0 {
+		idx := f.verifyCalls
+		if idx >= len(f.verifyVersions) {
+			idx = len(f.verifyVersions) - 1
+		}
+		f.verifyCalls++
+		return &ospb.VerifyResponse{Version: f.verifyVersions[idx]}, nil
 	}
 	return &ospb.VerifyResponse{Version: f.verifyVersion}, nil
 }
@@ -130,6 +140,10 @@ func (f *fakeOS) Install(stream grpc.BidiStreamingServer[ospb.InstallRequest, os
 		}
 	}
 }
+
+type unavailableGNOI struct{ err error }
+
+func (u unavailableGNOI) GNOIClient(context.Context) (*gnoi.Client, error) { return nil, u.err }
 
 type fakeSys struct {
 	syspb.UnimplementedSystemServer
@@ -336,6 +350,7 @@ func newReconciler(t *testing.T, rig *rig, up *opsv1alpha1.IOSXESoftwareUpgrade)
 
 func TestHappyPathLocalPathReloadStrategy(t *testing.T) {
 	rig := newRig(t)
+	rig.os.verifyVersions = []string{"17.14.01a", "17.15.01a"}
 	up := newUpgrade("upgrade-1", nil)
 	r := newReconciler(t, rig, up)
 	got := runReconcile(t, r, up, 12)
@@ -352,6 +367,7 @@ func TestHappyPathLocalPathReloadStrategy(t *testing.T) {
 
 func TestNoRebootStrategyStopsAtActivate(t *testing.T) {
 	rig := newRig(t)
+	rig.os.verifyVersions = []string{"17.14.01a"}
 	up := newUpgrade("upgrade-noreboot", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 		up.Spec.Strategy = opsv1alpha1.UpgradeStrategyNoReboot
 	})
@@ -367,6 +383,7 @@ func TestNoRebootStrategyStopsAtActivate(t *testing.T) {
 
 func TestUnsupportedSystemServiceStillVerifiesAfterActivation(t *testing.T) {
 	rig := newRig(t)
+	rig.os.verifyVersions = []string{"17.14.01a", "17.15.01a"}
 	rig.sys.timeErr = status.Error(codes.Unimplemented, "")
 	up := newUpgrade("upgrade-system-unsupported", nil)
 	r := newReconciler(t, rig, up)
@@ -376,6 +393,61 @@ func TestUnsupportedSystemServiceStillVerifiesAfterActivation(t *testing.T) {
 	}
 	if got.Status.RunningVersion != "17.15.01a" {
 		t.Fatalf("RunningVersion=%q", got.Status.RunningVersion)
+	}
+}
+
+func TestResolvingSucceedsWhenTargetAlreadyRunning(t *testing.T) {
+	rig := newRig(t)
+	up := newUpgrade("upgrade-already-running", nil)
+	r := newReconciler(t, rig, up)
+	resolver := &countingImageResolver{}
+	r.ImageResolver = resolver
+
+	got := runReconcile(t, r, up, 4)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseSucceeded {
+		t.Fatalf("phase=%q msg=%q reason=%q", got.Status.Phase, got.Status.Message, got.Status.FailureReason)
+	}
+	if resolver.calls != 0 {
+		t.Fatalf("image resolver called %d time(s), want 0", resolver.calls)
+	}
+	if got.Status.RunningVersion != "17.15.01a" {
+		t.Fatalf("RunningVersion=%q", got.Status.RunningVersion)
+	}
+	if reason := conditionReason(got.Status.Conditions, "Ready"); reason != "AlreadyRunning" {
+		t.Fatalf("Ready reason=%q", reason)
+	}
+}
+
+func TestResolvingWaitsForGNOIReachabilityBeforeImageResolution(t *testing.T) {
+	rig := newRig(t)
+	up := newUpgrade("upgrade-resolve-waits-gnoi", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Status.Phase = opsv1alpha1.UpgradePhaseResolving
+	})
+	r := newReconciler(t, rig, up)
+	r.GNOI = unavailableGNOI{err: errors.New("connection refused")}
+	resolver := &countingImageResolver{}
+	r.ImageResolver = resolver
+
+	res, err := r.Reconcile(context.Background(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: up.Namespace, Name: up.Name}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if res.RequeueAfter != awaitingReachabilityPoll {
+		t.Fatalf("RequeueAfter=%v, want %v", res.RequeueAfter, awaitingReachabilityPoll)
+	}
+	if resolver.calls != 0 {
+		t.Fatalf("image resolver called %d time(s), want 0", resolver.calls)
+	}
+	var got opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), types.NamespacedName{Namespace: up.Namespace, Name: up.Name}, &got); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseResolving {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if reason := conditionReason(got.Status.Conditions, "Ready"); reason != "DeviceUnreachable" {
+		t.Fatalf("Ready reason=%q", reason)
 	}
 }
 
@@ -619,6 +691,7 @@ func TestMaintenanceWindowExpiredTerminal(t *testing.T) {
 
 func TestImageResolveErrorTerminalFails(t *testing.T) {
 	rig := newRig(t)
+	rig.os.verifyVersion = "17.14.01a"
 	up := newUpgrade("upgrade-resolve-err", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{URL: "https://example.invalid/img.bin", SHA256: "deadbeef" + strings.Repeat("0", 56)}
 	})
@@ -662,7 +735,10 @@ func TestTransferPreflightsGNOIBeforeResolvingImage(t *testing.T) {
 
 func TestActivatesDeviceValidatedVersion(t *testing.T) {
 	rig := newRig(t)
-	rig.os.verifyVersion = "17.18.03.0.5000.1234567890"
+	rig.os.verifyVersions = []string{
+		"17.18.02.0.4112.1766116039",
+		"17.18.03.0.5000.1234567890",
+	}
 	rig.os.validatedVersion = "17.18.03"
 	rig.os.activateWantVersion = "17.18.03.0.5000.1234567890"
 	up := newUpgrade("upgrade-validated-version", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {

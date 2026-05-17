@@ -131,6 +131,25 @@
         }
       }
     },
+    "gnoi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["insecure", "port", "disabled"],
+      "properties": {
+        "insecure": {
+          "type": "boolean",
+          "description": "Force CVK to dial the insecure IOS-XE gnxi/gNOI listener instead of inferring TLS from the CiscoDevice transport."
+        },
+        "port": {
+          "type": ["string", "integer"],
+          "description": "Optional device-side gNOI listener port. Empty lets CVK infer 50052 for insecure or 9339 for secure."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Disable the per-device gNOI client even when the binary includes gNOI support."
+        }
+      }
+    },
     "collector": {
       "type": "object",
       "additionalProperties": false,
