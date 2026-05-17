@@ -126,6 +126,12 @@ type ConfigReconciler struct {
 	// used to select per-device writer override resolvers.
 	DeviceVersion string
 
+	// FetchDeviceVersion refreshes DeviceVersion from the live device.
+	// Production IOS-XE config reconcilers wire this to a lightweight
+	// RESTCONF read so config writers follow the new YANG profile after
+	// an in-place software upgrade without waiting for a pod restart.
+	FetchDeviceVersion func(context.Context, transport.Interface) string
+
 	// RequireDeviceVersion, when true, makes reconcile ticks stay in
 	// Pending until DeviceVersion is known and valid. Production IOS-XE
 	// paths set this; tests that do not exercise version gating can
@@ -260,6 +266,33 @@ func (r *ConfigReconciler) deviceVersionState() (string, error) {
 	return r.DeviceVersion, r.DeviceVersionError
 }
 
+func (r *ConfigReconciler) refreshDeviceVersion(ctx context.Context) {
+	if r == nil || r.FetchDeviceVersion == nil || r.GetTransport() == nil {
+		return
+	}
+	ver := r.FetchDeviceVersion(ctx, r.GetTransport())
+	if ver == "" {
+		return
+	}
+	current, currentErr := r.deviceVersionState()
+	if ver == current && currentErr == nil {
+		return
+	}
+	r.SetDeviceVersionState(ver, writers.SetDeviceVersion(ver))
+}
+
+func (r *ConfigReconciler) defaultYANGVersionForDeviceVersion(deviceVersion string) string {
+	if tag, ok := writers.ReleaseTagForDeviceVersionString(deviceVersion); ok {
+		if len(r.SupportedYANGVersions) == 0 {
+			return tag
+		}
+		if _, supported := r.SupportedYANGVersions[tag]; supported {
+			return tag
+		}
+	}
+	return r.DefaultYANGVersion
+}
+
 // GetTransport returns the current transport, preferring the atomic
 // slot when set. Falls through to the bare Transport field so existing
 // callers (tests, fixtures) that build a reconciler with the field
@@ -377,6 +410,7 @@ func (r *ConfigReconciler) Run(ctx context.Context) error {
 // forwarded to reconcileOne so a subscribe-driven tick bypasses the
 // hash short-circuit; a periodic tick respects it.
 func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, trigger reconcileTrigger) {
+	r.refreshDeviceVersion(ctx)
 	var list configv1alpha1.IOSXEConfigList
 	if err := r.Client.List(ctx, &list); err != nil {
 		logger.WithError(err).Warn("list IOSXEConfig failed; skipping tick")
@@ -391,17 +425,17 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, 
 	}
 	conflicts := engine.ConflictCheck(r.DeviceName, forDevice)
 
+	deviceVersion, _ := r.deviceVersionState()
 	resolver := &intent.Resolver{
 		Client:                r.Client,
 		KeyRules:              r.KeyRules,
 		SupportedYANGVersions: r.SupportedYANGVersions,
-		DefaultYANGVersion:    r.DefaultYANGVersion,
+		DefaultYANGVersion:    r.defaultYANGVersionForDeviceVersion(deviceVersion),
 	}
 	lookup := r.Lookup
 	if lookup == nil {
 		lookup = writers.GetForRelease
 	}
-	deviceVersion, _ := r.deviceVersionState()
 	eng := &engine.Engine{
 		Transport:     r.GetTransport(),
 		Lookup:        lookup,

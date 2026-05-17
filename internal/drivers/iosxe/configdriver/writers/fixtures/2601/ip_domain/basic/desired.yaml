@@ -1,0 +1,5 @@
+# NetAsCode-shaped desired body for ip_domain on IOS-XE 26.01.
+# The writer must keep this canonical shape stable even though the
+# RESTCONF wire body nests the domain name under name-container.
+name: dmz.cisco.com
+lookup: true

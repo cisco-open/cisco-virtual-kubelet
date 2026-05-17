@@ -110,6 +110,46 @@ func TestResolveForVersion_noOverrideOn1718(t *testing.T) {
 	}
 }
 
+func TestResolveForVersion_ipDomain2601(t *testing.T) {
+	r := NewOverrideResolverForMajorMinor(26, 1)
+	o, ok := r.GetOverride("ip_domain")
+	if !ok {
+		t.Fatal("expected override for ip_domain on 26.01, got nil")
+	}
+
+	body := map[string]any{
+		"name":   "dmz.cisco.com",
+		"lookup": true,
+	}
+	body = ApplyOverrideToBody(body, o)
+	container, ok := body["name-container"].(map[string]any)
+	if !ok {
+		t.Fatalf("name-container missing or wrong type: %#v", body["name-container"])
+	}
+	if container["name-no-vrf"] != "dmz.cisco.com" {
+		t.Fatalf("name-no-vrf=%#v, want dmz.cisco.com", container["name-no-vrf"])
+	}
+	if _, ok := body["name"]; ok {
+		t.Fatal("canonical name leaf should not be present in 26.01 YANG body")
+	}
+	if body["lookup"] != true {
+		t.Fatal("unrelated leaves should be preserved")
+	}
+
+	observed := map[string]any{
+		"name-container": map[string]any{
+			"name-no-vrf": "dmz.cisco.com",
+		},
+	}
+	observed = r.AutoReverseObservedBody("ip_domain", observed)
+	if observed["name"] != "dmz.cisco.com" {
+		t.Fatalf("reversed name=%#v, want dmz.cisco.com", observed["name"])
+	}
+	if _, ok := observed["name-container"]; ok {
+		t.Fatal("YANG name-container should be removed after fetch transform")
+	}
+}
+
 func TestApplyElementMap(t *testing.T) {
 	body := map[string]any{
 		"name": "MY-MAP",

@@ -23,6 +23,8 @@ import (
 )
 
 func Load(filePath ...string) (*Config, error) {
+	viper.SetOptions(viper.KeyDelimiter("::"))
+
 	if len(filePath) > 0 && filePath[0] != "" {
 		viper.SetConfigFile(filePath[0])
 	} else {
@@ -33,7 +35,7 @@ func Load(filePath ...string) (*Config, error) {
 	}
 
 	// Setup Environment Variables
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // allow SERVER_PORT for server.port
+	viper.SetEnvKeyReplacer(strings.NewReplacer("::", "_", ".", "_")) // allow DEVICE_ADDRESS for device::address
 	viper.AutomaticEnv()
 
 	// Read the config file

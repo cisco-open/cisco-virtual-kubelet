@@ -278,6 +278,7 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 		DeviceName:            dev.Name,
 		Transport:             dctx.Transport,
 		DeviceVersion:         dctx.DeviceVersion,
+		FetchDeviceVersion:    dctx.FetchDeviceVersion,
 		RequireDeviceVersion:  true,
 		KeyRules:              dctx.KeyRules,
 		SupportedYANGVersions: dctx.SupportedYANGVersions,

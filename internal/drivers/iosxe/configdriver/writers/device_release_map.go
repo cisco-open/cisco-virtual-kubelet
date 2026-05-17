@@ -61,6 +61,7 @@ var deviceVersionToReleaseTag = map[releaseKey]string{
 	{17, 15}: "1715", // C9KV legacy ('ace-rule' wrapper exists, mode leaf differs)
 	{17, 16}: "1716", // C8000V Phase-2 (custom legacy writers for bgp/prefix-list/etc.)
 	{17, 18}: "1718", // C9300-24P baseline
+	{26, 1}:  "2601", // C9300-24P IOS-XE 26.01 compatibility profile
 }
 
 // ReleaseTagForDeviceVersion returns the YANG release tag matching

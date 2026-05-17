@@ -201,6 +201,28 @@ func TestAuthFromSecret_DockerConfigJSON_IdentityTokenPreferred(t *testing.T) {
 	}
 }
 
+func TestRestconfUnmarshallerIgnoresForwardCompatibleOperFields(t *testing.T) {
+	d := &XEDriver{}
+	var root Cisco_IOS_XEAppHostingOper_AppHostingOperData
+	raw := []byte(`{
+		"Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data": {
+			"app-globals": {
+				"iox-enabled": true,
+				"iox-version": "26.01",
+				"iox-dir": "flash:/iox",
+				"iox-dockerd-status": "running"
+			}
+		}
+	}`)
+
+	if err := d.getRestconfUnmarshaller()(raw, &root); err != nil {
+		t.Fatalf("unmarshal with extra IOS XE oper fields: %v", err)
+	}
+	if root.AppGlobals == nil || root.AppGlobals.IoxEnabled == nil || !*root.AppGlobals.IoxEnabled {
+		t.Fatalf("expected known iox-enabled field to be preserved, got %#v", root.AppGlobals)
+	}
+}
+
 // ── Install / recovery integration tests ─────────────────────────────────────
 
 func TestCreateAppHostingApp_PrimaryPullSucceeds(t *testing.T) {
@@ -347,8 +369,8 @@ func minimalDockerResourceConfig(imagePath string, policy v1.PullPolicy, timeout
 func TestCreateAppHostingApp_DockerResource_FlashImage(t *testing.T) {
 	// DockerResource + flash path: wait DEPLOYED → ActivateApp → StartApp → RUNNING
 	var (
-		mu       sync.Mutex
-		rpcOrder []string
+		mu        sync.Mutex
+		rpcOrder  []string
 		activated bool
 	)
 	rpcPath := "/restconf/operations/Cisco-IOS-XE-rpc:app-hosting"
@@ -405,8 +427,8 @@ func TestCreateAppHostingApp_DockerResource_FlashImage(t *testing.T) {
 func TestCreateAppHostingApp_DockerResource_HTTPPrimarySuccess(t *testing.T) {
 	// DockerResource + HTTP: device pull succeeds → DEPLOYED → ActivateApp → StartApp → RUNNING
 	var (
-		mu       sync.Mutex
-		rpcOrder []string
+		mu        sync.Mutex
+		rpcOrder  []string
 		activated bool
 	)
 	rpcPath := "/restconf/operations/Cisco-IOS-XE-rpc:app-hosting"

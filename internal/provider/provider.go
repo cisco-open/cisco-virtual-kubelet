@@ -866,16 +866,32 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 		}
 	}
 
+	labels := map[string]string{
+		"kubernetes.io/hostname":        a.nodeName,
+		"type":                          "virtual-kubelet",
+		"topology.kubernetes.io/zone":   "cisco-iosxe",
+		"topology.kubernetes.io/region": "cisco-iosxe",
+	}
+	if a.deviceSpec.Zone != "" {
+		labels["topology.kubernetes.io/zone"] = a.deviceSpec.Zone
+	}
+	if a.deviceSpec.Region != "" {
+		labels["topology.kubernetes.io/region"] = a.deviceSpec.Region
+	}
+	for k, v := range a.deviceSpec.Labels {
+		labels[k] = v
+	}
+
+	taints := append([]v1.Taint(nil), a.deviceSpec.Taints...)
+
 	// Create a node update with device info and addresses
 	nodeUpdate := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				"kubernetes.io/hostname":        a.nodeName,
-				"type":                          "virtual-kubelet",
-				"topology.kubernetes.io/zone":   "cisco-iosxe",
-				"topology.kubernetes.io/region": "cisco-iosxe",
-			},
+			Labels:      labels,
 			Annotations: annotations,
+		},
+		Spec: v1.NodeSpec{
+			Taints: taints,
 		},
 		Status: v1.NodeStatus{
 			NodeInfo: v1.NodeSystemInfo{

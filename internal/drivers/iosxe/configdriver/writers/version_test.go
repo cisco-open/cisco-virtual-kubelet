@@ -49,6 +49,7 @@ func TestParseVersionStrict(t *testing.T) {
 		{"17.16.01a", 17, 16, true},
 		{"17.18.2", 17, 18, true},
 		{"17.15", 17, 15, true},
+		{"26.01.01", 26, 1, true},
 		{"", 0, 0, false},
 		{"17", 0, 0, false},
 		{"17.", 0, 0, false},
@@ -111,6 +112,7 @@ func TestReleaseTagForDeviceVersion(t *testing.T) {
 		{"17.15.03", "1715", true},
 		{"17.16.01a", "1716", true},
 		{"17.18.2", "1718", true},
+		{"26.01.01", "2601", true},
 		{"17.21.0", "", false},
 		{"", "", false},
 	}

@@ -178,6 +178,18 @@ var overrideTable = []VersionOverride{
 		},
 	},
 
+	// ── ip_domain: IOS-XE 26.01 ─────────────────────────────────
+	// On 26.01 the domain name leaf moved from domain.name to
+	// domain.name-container.name-no-vrf. NetAsCode remains stable as
+	// ip_domain.name; the writer translates on the way in and out.
+	{
+		Family:             "ip_domain",
+		MinVersion:         [2]int{26, 1},
+		MaxVersion:         [2]int{27, 0},
+		BodyTransform:      ipDomainBodyTransform2601,
+		FetchBodyTransform: ipDomainFetchTransform2601,
+	},
+
 	// ── interface_switchport: IOS-XE < 17.18 ─────────────────────
 	// On < 17.18 the switchport sub-container elements need the
 	// "Cisco-IOS-XE-switch:" module prefix, and the access VLAN

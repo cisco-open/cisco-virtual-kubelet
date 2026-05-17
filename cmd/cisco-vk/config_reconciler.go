@@ -308,6 +308,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		DeviceName:            deviceName,
 		Transport:             dctx.Transport,
 		DeviceVersion:         dctx.DeviceVersion,
+		FetchDeviceVersion:    dctx.FetchDeviceVersion,
 		RequireDeviceVersion:  true,
 		KeyRules:              dctx.KeyRules,
 		SupportedYANGVersions: dctx.SupportedYANGVersions,

@@ -43,3 +43,11 @@ releases:
       Baseline release the writers are authored against. Override
       table entries do not apply at this release; writers run
       their unconditional shape.
+
+  - version: "2601"      # IOS-XE 26.01 — C9300-24P major-release profile
+    status: experimental
+    notes: >
+      Compatibility profile for IOS-XE 26.01. The NetAsCode model
+      remains canonical; version-specific YANG deltas are handled in
+      writer overrides. Initial live-device coverage identified the
+      ip_domain name leaf moving under name-container/name-no-vrf.

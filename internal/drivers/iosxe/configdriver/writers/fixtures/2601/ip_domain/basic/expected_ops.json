@@ -1,0 +1,14 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ip/domain",
+    "body": {
+      "Cisco-IOS-XE-native:domain": {
+        "lookup": true,
+        "name-container": {
+          "name-no-vrf": "dmz.cisco.com"
+        }
+      }
+    }
+  }
+]
