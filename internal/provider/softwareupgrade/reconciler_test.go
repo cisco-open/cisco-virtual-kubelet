@@ -615,7 +615,7 @@ func TestVerifyMismatchWaitsWhenTargetStillStaged(t *testing.T) {
 		  "Cisco-IOS-XE-install-oper:install-location-information": [
 		    {
 		      "install-version-info": [
-		        {"version": "17.18.03.0.5496", "version-extension": "1776157760", "current": "install-version-state-provisioned-committed"}
+		        {"version": "17.18.03.0.5496", "version-extension": "1776157760", "current": "install-version-state-provisioned-uncommitted"}
 		      ]
 		    }
 		  ]
@@ -703,6 +703,41 @@ func TestImageResolveErrorTerminalFails(t *testing.T) {
 	}
 	if got.Status.FailureReason != "ImageResolveFailed" {
 		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
+	}
+}
+
+func TestResolvingDoesNotTreatCommittedInstallOperVersionAsStaged(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyVersion = "26.01.1"
+	up := newUpgrade("upgrade-committed-not-staged", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Spec.TargetVersion = "17.18.02"
+		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{
+			URL:    "https://example.invalid/cat9k.bin",
+			SHA256: "deadbeef" + strings.Repeat("0", 56),
+		}
+	})
+	r := newReconciler(t, rig, up)
+	resolver := &countingImageResolver{}
+	r.ImageResolver = resolver
+	r.TP = &staticTP{tr: &fakeTransport{
+		caps: transport.Capabilities{Kind: transport.KindRESTCONF},
+		raw: []byte(`{
+		  "Cisco-IOS-XE-install-oper:install-location-information": [
+		    {
+		      "install-version-info": [
+		        {"version": "17.18.02.0.4112", "version-extension": "1766116039", "current": "install-version-state-provisioned-committed"}
+		      ]
+		    }
+		  ]
+		}`),
+	}}
+
+	got := runReconcile(t, r, up, 3)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseTransferring {
+		t.Fatalf("phase=%q msg=%q reason=%q", got.Status.Phase, got.Status.Message, got.Status.FailureReason)
+	}
+	if resolver.calls != 1 {
+		t.Fatalf("image resolver called %d time(s), want transfer path", resolver.calls)
 	}
 }
 
@@ -800,7 +835,7 @@ func TestActivatingFallsBackToTargetVersionWhenStagedVersionRejected(t *testing.
 		  "Cisco-IOS-XE-install-oper:install-location-information": [
 		    {
 		      "install-version-info": [
-		        {"version": "17.18.02.0.4112", "version-extension": "1766116039", "current": "install-version-state-provisioned-committed"}
+		        {"version": "17.18.02.0.4112", "version-extension": "1766116039", "current": "install-version-state-in-progress"}
 		      ]
 		    }
 		  ]

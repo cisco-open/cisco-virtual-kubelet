@@ -987,10 +987,6 @@ func installVersionPriority(state string) int {
 		return 3
 	case "install-version-state-provisioned-uncommitted":
 		return 2
-	case "install-version-state-present":
-		return 1
-	case "install-version-state-provisioned-committed":
-		return 1
 	default:
 		return 0
 	}
