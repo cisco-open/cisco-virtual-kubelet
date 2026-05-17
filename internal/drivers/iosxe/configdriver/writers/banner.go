@@ -28,9 +28,11 @@ package writers
 
 func init() {
 	Override(singletonWriter{
-		family:        "banner",
-		yangPath:      "/Cisco-IOS-XE-native:native/banner",
-		envelopeKey:   "Cisco-IOS-XE-native:banner",
-		managedLeaves: []string{"login", "motd", "exec", "incoming"},
+		family:         "banner",
+		yangPath:       "/Cisco-IOS-XE-native:native/banner",
+		envelopeKey:    "Cisco-IOS-XE-native:banner",
+		managedLeaves:  []string{"login", "motd", "exec", "incoming"},
+		yangBodyShape:  bannerToYANG,
+		yangFetchShape: bannerFromYANG,
 	})
 }

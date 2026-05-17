@@ -39,11 +39,13 @@ import (
 // helper — the single PATCH payload forces everything to share one
 // containing YANG element.
 type singletonWriter struct {
-	family        string
-	yangPath      string
-	envelopeKey   string
-	managedLeaves []string
-	resolver      *OverrideResolver
+	family         string
+	yangPath       string
+	envelopeKey    string
+	managedLeaves  []string
+	yangBodyShape  func(flat map[string]any) map[string]any
+	yangFetchShape func(yang map[string]any) map[string]any
+	resolver       *OverrideResolver
 }
 
 func (w singletonWriter) Family() string { return w.family }
@@ -85,6 +87,9 @@ func (w singletonWriter) Fetch(ctx context.Context, c transport.Interface) (any,
 	// desired body. Skipped automatically when the override carries
 	// a BodyTransform (those writers reverse manually).
 	out = resolver.AutoReverseObservedBody(w.family, out)
+	if w.yangFetchShape != nil {
+		out = w.yangFetchShape(out)
+	}
 	return out, nil
 }
 
@@ -107,6 +112,9 @@ func (w singletonWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		return nil, nil
 	}
 	proj := projectManagedLeaves(desiredMap, w.managedLeaves)
+	if w.yangBodyShape != nil {
+		proj = w.yangBodyShape(proj)
+	}
 	// Apply version-conditional overrides (element renames,
 	// empty-leaf encoding, body transforms).
 	resolver := w.resolverForUse()

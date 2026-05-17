@@ -335,6 +335,13 @@ spec:
                   RunningVersion is the device-reported running OS version after
                   Verifying.
                 type: string
+              validatedVersion:
+                description: |-
+                  ValidatedVersion is the exact device-reported OS version returned
+                  by gNOI OS.Install Validated. IOS XE may require this exact value
+                  on OS.Activate even when the requested TargetVersion is a shorter
+                  release prefix.
+                type: string
               startTime:
                 description: StartTime is when the reconciler first transitioned out
                   of Pending.

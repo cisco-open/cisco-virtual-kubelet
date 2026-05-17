@@ -113,6 +113,7 @@ func (vlanWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		}
 		entry := projectManagedLeaves(desiredVLAN, vlanManagedLeaves)
 		entry["id"] = id
+		entry = vlanBodyToYANG(entry)
 		body, err := wrapYANGPayload(vlanEnvelopeKey, []any{entry})
 		if err != nil {
 			return nil, err
@@ -240,4 +241,16 @@ func vlanID(v map[string]any) (int, error) {
 	default:
 		return 0, fmt.Errorf("vlan id %v has unsupported type %T", raw, raw)
 	}
+}
+
+func vlanBodyToYANG(entry map[string]any) map[string]any {
+	out := copyMap(entry)
+	if shutdown, ok := out["shutdown"]; ok {
+		if isTrue(shutdown) {
+			out["shutdown"] = []any{nil}
+		} else {
+			delete(out, "shutdown")
+		}
+	}
+	return out
 }

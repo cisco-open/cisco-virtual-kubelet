@@ -17,6 +17,7 @@ package softwareupgrade
 import (
 	"context"
 	"errors"
+	"io"
 	"net"
 	"strings"
 	"testing"
@@ -42,6 +43,7 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 )
 
@@ -49,19 +51,84 @@ import (
 
 type fakeOS struct {
 	ospb.UnimplementedOSServer
-	verifyVersion string
-	activateErr   error
+	verifyVersion       string
+	verifyErr           error
+	activateErr         error
+	activateWantVersion string
+	activateVersion     string
+	validatedVersion    string
+	installBytes        int
 }
 
 func (f *fakeOS) Verify(context.Context, *ospb.VerifyRequest) (*ospb.VerifyResponse, error) {
+	if f.verifyErr != nil {
+		return nil, f.verifyErr
+	}
 	return &ospb.VerifyResponse{Version: f.verifyVersion}, nil
 }
 
-func (f *fakeOS) Activate(context.Context, *ospb.ActivateRequest) (*ospb.ActivateResponse, error) {
+func (f *fakeOS) Activate(_ context.Context, req *ospb.ActivateRequest) (*ospb.ActivateResponse, error) {
+	f.activateVersion = req.Version
 	if f.activateErr != nil {
 		return nil, f.activateErr
 	}
+	if f.activateWantVersion != "" && req.Version != f.activateWantVersion {
+		return &ospb.ActivateResponse{Response: &ospb.ActivateResponse_ActivateError{
+			ActivateError: &ospb.ActivateError{Detail: "Version not present on device"},
+		}}, nil
+	}
 	return &ospb.ActivateResponse{Response: &ospb.ActivateResponse_ActivateOk{ActivateOk: &ospb.ActivateOK{}}}, nil
+}
+
+func (f *fakeOS) Install(stream grpc.BidiStreamingServer[ospb.InstallRequest, ospb.InstallResponse]) error {
+	first, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	req := first.GetTransferRequest()
+	if req == nil {
+		return status.Error(codes.InvalidArgument, "expected transfer request")
+	}
+	if err := stream.Send(&ospb.InstallResponse{
+		Response: &ospb.InstallResponse_TransferReady{TransferReady: &ospb.TransferReady{}},
+	}); err != nil {
+		return err
+	}
+	for {
+		next, err := stream.Recv()
+		if err != nil {
+			return err
+		}
+		switch r := next.Request.(type) {
+		case *ospb.InstallRequest_TransferContent:
+			f.installBytes += len(r.TransferContent)
+			if err := stream.Send(&ospb.InstallResponse{
+				Response: &ospb.InstallResponse_TransferProgress{
+					TransferProgress: &ospb.TransferProgress{BytesReceived: uint64(f.installBytes)},
+				},
+			}); err != nil {
+				return err
+			}
+		case *ospb.InstallRequest_TransferEnd:
+			if _, err := stream.Recv(); err != io.EOF {
+				if err == nil {
+					return status.Error(codes.FailedPrecondition, "expected client half-close")
+				}
+				return err
+			}
+			version := f.validatedVersion
+			if version == "" {
+				version = req.Version
+			}
+			return stream.Send(&ospb.InstallResponse{
+				Response: &ospb.InstallResponse_Validated{
+					Validated: &ospb.Validated{Version: version, Description: "validated"},
+				},
+			})
+		default:
+			return status.Errorf(codes.InvalidArgument, "unexpected install request %T", r)
+		}
+	}
 }
 
 type fakeSys struct {
@@ -117,6 +184,30 @@ type staticGNOI struct{ c *gnoi.Client }
 
 func (s *staticGNOI) GNOIClient(context.Context) (*gnoi.Client, error) { return s.c, nil }
 
+type staticTP struct{ tr transport.Interface }
+
+func (s *staticTP) GetTransport() transport.Interface { return s.tr }
+
+type fakeTransport struct {
+	caps transport.Capabilities
+	raw  []byte
+}
+
+func (f *fakeTransport) Capabilities() transport.Capabilities { return f.caps }
+func (f *fakeTransport) Fetch(context.Context, string) ([]byte, error) {
+	return f.raw, nil
+}
+func (f *fakeTransport) StartTransaction(context.Context) (transport.TxHandle, error) {
+	return "", transport.ErrUnsupported
+}
+func (f *fakeTransport) Mutate(context.Context, transport.TxHandle, []transport.Op) error {
+	return transport.ErrUnsupported
+}
+func (f *fakeTransport) Commit(context.Context, transport.TxHandle) error  { return nil }
+func (f *fakeTransport) Discard(context.Context, transport.TxHandle) error { return nil }
+func (f *fakeTransport) SaveStartup(context.Context) error                 { return nil }
+func (f *fakeTransport) Close() error                                      { return nil }
+
 type localImageResolver struct{}
 
 func (localImageResolver) Resolve(context.Context, string, opsv1alpha1.UpgradeImageSource) (*ResolvedImage, error) {
@@ -127,6 +218,19 @@ type erroringImageResolver struct{ err error }
 
 func (e erroringImageResolver) Resolve(context.Context, string, opsv1alpha1.UpgradeImageSource) (*ResolvedImage, error) {
 	return nil, e.err
+}
+
+type countingImageResolver struct {
+	calls int
+}
+
+func (r *countingImageResolver) Resolve(context.Context, string, opsv1alpha1.UpgradeImageSource) (*ResolvedImage, error) {
+	r.calls++
+	return &ResolvedImage{
+		Reader:  strings.NewReader("image"),
+		Size:    int64(len("image")),
+		Cleanup: func() error { return nil },
+	}, nil
 }
 
 func newScheme(t *testing.T) *runtime.Scheme {
@@ -313,6 +417,52 @@ func TestVerifyMismatchWithoutRollbackFails(t *testing.T) {
 	}
 }
 
+func TestVerifyMismatchWaitsWhenTargetStillStaged(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyVersion = "17.18.02.0.4112.1766116039"
+	start := metav1.Time{Time: time.Unix(1_700_000_000, 0).UTC()}
+	up := newUpgrade("upgrade-verify-staged", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Spec.TargetVersion = "17.18.03"
+		up.Status.Phase = opsv1alpha1.UpgradePhaseVerifying
+		up.Status.StartTime = &start
+	})
+	r := newReconciler(t, rig, up)
+	r.TP = &staticTP{tr: &fakeTransport{
+		caps: transport.Capabilities{Kind: transport.KindRESTCONF},
+		raw: []byte(`{
+		  "Cisco-IOS-XE-install-oper:install-location-information": [
+		    {
+		      "install-version-info": [
+		        {"version": "17.18.03.0.5496", "version-extension": "1776157760", "current": "install-version-state-provisioned-committed"}
+		      ]
+		    }
+		  ]
+		}`),
+	}}
+
+	res, err := r.Reconcile(context.Background(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: up.Namespace, Name: up.Name}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if res.RequeueAfter != 30*time.Second {
+		t.Fatalf("RequeueAfter=%v, want 30s", res.RequeueAfter)
+	}
+	var got opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), types.NamespacedName{Namespace: up.Namespace, Name: up.Name}, &got); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseVerifying {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if got.Status.FailureReason != "" {
+		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
+	}
+	if got.Status.ValidatedVersion != "17.18.03.0.5496.1776157760" {
+		t.Fatalf("ValidatedVersion=%q", got.Status.ValidatedVersion)
+	}
+}
+
 func TestInvalidImageSourceFailsPreflight(t *testing.T) {
 	rig := newRig(t)
 	up := newUpgrade("upgrade-bad-src", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
@@ -371,6 +521,77 @@ func TestImageResolveErrorTerminalFails(t *testing.T) {
 	}
 	if got.Status.FailureReason != "ImageResolveFailed" {
 		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
+	}
+}
+
+func TestTransferPreflightsGNOIBeforeResolvingImage(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyErr = status.Error(codes.Unavailable, "connect: connection refused")
+	up := newUpgrade("upgrade-gnoi-preflight", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Spec.MaxRetries = 1
+		up.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+		up.Status.RetryCount = 1
+	})
+	r := newReconciler(t, rig, up)
+	resolver := &countingImageResolver{}
+	r.ImageResolver = resolver
+
+	got := runReconcile(t, r, up, 3)
+	if resolver.calls != 0 {
+		t.Fatalf("image resolver called %d time(s), want 0", resolver.calls)
+	}
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseFailed {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if got.Status.FailureReason != "TransferMaxRetries" {
+		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
+	}
+	if !strings.Contains(got.Status.Message, "gnoi OS.Verify preflight") {
+		t.Fatalf("expected preflight error in message, got %q", got.Status.Message)
+	}
+}
+
+func TestActivatesDeviceValidatedVersion(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyVersion = "17.18.03.0.5000.1234567890"
+	rig.os.validatedVersion = "17.18.03"
+	rig.os.activateWantVersion = "17.18.03.0.5000.1234567890"
+	up := newUpgrade("upgrade-validated-version", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Spec.TargetVersion = "17.18.03"
+		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{
+			URL:    "https://example.invalid/cat9k.bin",
+			SHA256: "deadbeef" + strings.Repeat("0", 56),
+		}
+	})
+	r := newReconciler(t, rig, up)
+	resolver := &countingImageResolver{}
+	r.ImageResolver = resolver
+	r.TP = &staticTP{tr: &fakeTransport{
+		caps: transport.Capabilities{Kind: transport.KindRESTCONF},
+		raw: []byte(`{
+		  "Cisco-IOS-XE-install-oper:install-location-information": [
+		    {
+		      "install-version-info": [
+		        {"version": "17.18.02.0.4112", "version-extension": "1766116039", "current": "install-version-state-provisioned-committed"},
+		        {"version": "17.18.03.0.5000", "version-extension": "1234567890", "current": "install-version-state-in-progress"}
+		      ]
+		    }
+		  ]
+		}`),
+	}}
+
+	got := runReconcile(t, r, up, 12)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseSucceeded {
+		t.Fatalf("phase=%q msg=%q reason=%q", got.Status.Phase, got.Status.Message, got.Status.FailureReason)
+	}
+	if rig.os.activateVersion != "17.18.03.0.5000.1234567890" {
+		t.Fatalf("Activate version=%q, want validated version", rig.os.activateVersion)
+	}
+	if got.Status.ValidatedVersion != "17.18.03.0.5000.1234567890" {
+		t.Fatalf("ValidatedVersion=%q", got.Status.ValidatedVersion)
+	}
+	if resolver.calls != 0 {
+		t.Fatalf("image resolver called %d time(s), want staged-version shortcut", resolver.calls)
 	}
 }
 

@@ -132,6 +132,10 @@ func (aaaWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) 
 		if err := json.Unmarshal(body, &v); err != nil {
 			return nil, fmt.Errorf("aaa: decode %s leaf: %w", l.netKey, err)
 		}
+		if l.netKey == "new-model" {
+			out[l.netKey] = isTrue(v)
+			continue
+		}
 		out[l.netKey] = v
 	}
 	return out, nil
@@ -160,6 +164,30 @@ func (aaaWriter) Diff(desired, observed any) ([]transport.Op, error) {
 			continue
 		}
 		ov, oHas := observedMap[l.netKey]
+		if l.netKey == "new-model" {
+			want := isTrue(dv)
+			have := oHas && isTrue(ov)
+			if want == have {
+				continue
+			}
+			if !want {
+				ops = append(ops, transport.Op{
+					Verb: transport.VerbDelete,
+					Path: l.yangPath,
+				})
+				continue
+			}
+			body, err := json.Marshal(map[string]any{l.yangField: []any{nil}})
+			if err != nil {
+				return nil, err
+			}
+			ops = append(ops, transport.Op{
+				Verb: transport.VerbMerge,
+				Path: l.yangPath,
+				Body: body,
+			})
+			continue
+		}
 		if oHas && scalarEqual(dv, ov) {
 			continue
 		}

@@ -257,6 +257,13 @@ type IOSXESoftwareUpgradeStatus struct {
 	// +optional
 	RunningVersion string `json:"runningVersion,omitempty"`
 
+	// ValidatedVersion is the exact device-reported OS version returned
+	// by gNOI OS.Install Validated. IOS XE may require this exact value
+	// on OS.Activate even when the requested TargetVersion is a shorter
+	// release prefix.
+	// +optional
+	ValidatedVersion string `json:"validatedVersion,omitempty"`
+
 	// StartTime is when the reconciler first transitioned out of Pending.
 	// +optional
 	StartTime *metav1.Time `json:"startTime,omitempty"`

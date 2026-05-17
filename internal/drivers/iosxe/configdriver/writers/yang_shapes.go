@@ -53,6 +53,11 @@ func interfaceIPv4VRFToYANG(flat map[string]any) map[string]any {
 	out := make(map[string]any, len(flat))
 	for k, v := range flat {
 		switch k {
+		case "type":
+			// `type` is a NetAsCode/CVK discriminator used to pick
+			// the physical-interface subtree. It is not a leaf under
+			// the keyed IOS-XE interface list entry.
+			continue
 		case "ipv4_address":
 			if v == nil {
 				continue
@@ -104,6 +109,217 @@ func interfaceIPv4VRFToYANG(flat map[string]any) map[string]any {
 		default:
 			out[k] = v
 		}
+	}
+	return out
+}
+
+func bannerToYANG(flat map[string]any) map[string]any {
+	out := make(map[string]any, len(flat))
+	for k, v := range flat {
+		switch k {
+		case "login", "motd", "exec", "incoming":
+			if _, already := v.(map[string]any); already {
+				out[k] = v
+				continue
+			}
+			if v != nil {
+				out[k] = map[string]any{"banner": fmt.Sprint(v)}
+			}
+		default:
+			out[k] = v
+		}
+	}
+	return out
+}
+
+func bannerFromYANG(yang map[string]any) map[string]any {
+	out := make(map[string]any, len(yang))
+	for k, v := range yang {
+		if m, ok := v.(map[string]any); ok {
+			if text, ok := m["banner"]; ok {
+				out[k] = text
+				continue
+			}
+		}
+		out[k] = v
+	}
+	return out
+}
+
+func usernameToYANG(flat map[string]any) map[string]any {
+	out := copyMap(flat)
+	secret, ok := out["secret"].(map[string]any)
+	if !ok {
+		return out
+	}
+	shaped := copyMap(secret)
+	if typ, ok := shaped["type"]; ok {
+		shaped["encryption"] = fmt.Sprint(typ)
+		delete(shaped, "type")
+	}
+	out["secret"] = shaped
+	return out
+}
+
+func usernameFromYANG(yang map[string]any) map[string]any {
+	out := copyMap(yang)
+	secret, ok := out["secret"].(map[string]any)
+	if !ok {
+		return out
+	}
+	shaped := copyMap(secret)
+	if enc, ok := shaped["encryption"]; ok {
+		shaped["type"] = enc
+		delete(shaped, "encryption")
+	}
+	out["secret"] = shaped
+	return out
+}
+
+func lineToYANG(flat map[string]any) map[string]any {
+	out := copyMap(flat)
+	transportMap, ok := out["transport"].(map[string]any)
+	if !ok {
+		return out
+	}
+	transport := copyMap(transportMap)
+	if input, ok := transport["input"]; ok {
+		if _, already := input.(map[string]any); !already {
+			transport["input"] = map[string]any{"input": input}
+		}
+	}
+	out["transport"] = transport
+	return out
+}
+
+func lineFromYANG(yang map[string]any) map[string]any {
+	out := copyMap(yang)
+	transportMap, ok := out["transport"].(map[string]any)
+	if !ok {
+		return out
+	}
+	transport := copyMap(transportMap)
+	if inputMap, ok := transport["input"].(map[string]any); ok {
+		if input, ok := inputMap["input"]; ok {
+			transport["input"] = input
+		}
+	}
+	out["transport"] = transport
+	return out
+}
+
+func ipHTTPToYANG(flat map[string]any) map[string]any {
+	out := copyMap(flat)
+	clientMap, ok := out["client"].(map[string]any)
+	if !ok {
+		return out
+	}
+	client := copyMap(clientMap)
+	if sourceInterface, ok := client["source-interface"]; ok {
+		if shaped, changed := interfaceSelectorToString(sourceInterface); changed {
+			client["source-interface"] = shaped
+		}
+	}
+	out["client"] = client
+	return out
+}
+
+func ipSSHToYANG(flat map[string]any) map[string]any {
+	out := copyMap(flat)
+	serverMap, ok := out["server"].(map[string]any)
+	if !ok {
+		return out
+	}
+	server := copyMap(serverMap)
+	delete(server, "v2")
+	if len(server) == 0 {
+		delete(out, "server")
+	} else {
+		out["server"] = server
+	}
+	return out
+}
+
+func spanningTreeToYANG(flat map[string]any) map[string]any {
+	out := make(map[string]any, len(flat))
+	for k, v := range flat {
+		switch k {
+		case "mode", "extend", "portfast", "vlan", "mst":
+			out["Cisco-IOS-XE-spanning-tree:"+k] = v
+		default:
+			out[k] = v
+		}
+	}
+	return out
+}
+
+func spanningTreeFromYANG(yang map[string]any) map[string]any {
+	out := make(map[string]any, len(yang))
+	for k, v := range yang {
+		out[stripModulePrefix(k)] = stripModulePrefixes(v)
+	}
+	return out
+}
+
+func interfaceSelectorToString(v any) (string, bool) {
+	if s, ok := v.(string); ok {
+		return s, false
+	}
+	m, ok := v.(map[string]any)
+	if !ok {
+		return "", false
+	}
+	for _, prefix := range []string{
+		"GigabitEthernet",
+		"TwoGigabitEthernet",
+		"FiveGigabitEthernet",
+		"TenGigabitEthernet",
+		"TwentyFiveGigE",
+		"FortyGigabitEthernet",
+		"HundredGigE",
+		"Loopback",
+		"Vlan",
+	} {
+		if name, ok := m[prefix]; ok {
+			return prefix + fmt.Sprint(name), true
+		}
+	}
+	for prefix, name := range m {
+		return prefix + fmt.Sprint(name), true
+	}
+	return "", false
+}
+
+func stripModulePrefixes(v any) any {
+	switch tv := v.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(tv))
+		for k, value := range tv {
+			out[stripModulePrefix(k)] = stripModulePrefixes(value)
+		}
+		return out
+	case []any:
+		out := make([]any, len(tv))
+		for i, value := range tv {
+			out[i] = stripModulePrefixes(value)
+		}
+		return out
+	default:
+		return v
+	}
+}
+
+func stripModulePrefix(k string) string {
+	if i := indexByte(k, ':'); i > 0 {
+		return k[i+1:]
+	}
+	return k
+}
+
+func copyMap(src map[string]any) map[string]any {
+	out := make(map[string]any, len(src))
+	for k, v := range src {
+		out[k] = v
 	}
 	return out
 }

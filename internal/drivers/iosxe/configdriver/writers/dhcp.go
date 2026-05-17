@@ -16,6 +16,7 @@ package writers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"sort"
@@ -44,8 +45,9 @@ import (
 // we manage in Phase 1.
 
 const (
-	dhcpPoolListPath    = "/Cisco-IOS-XE-native:native/ip/dhcp/pool"
-	dhcpPoolEnvelopeKey = "Cisco-IOS-XE-native:pool"
+	dhcpParentPath        = "/Cisco-IOS-XE-native:native/ip/dhcp"
+	dhcpParentEnvelopeKey = "Cisco-IOS-XE-native:dhcp"
+	dhcpPoolEnvelopeKey   = "Cisco-IOS-XE-dhcp:pool"
 )
 
 var dhcpPoolManagedLeaves = []string{
@@ -61,7 +63,7 @@ type dhcpWriter struct {
 func init() { Override(dhcpWriter{}) }
 
 func (w dhcpWriter) Family() string      { return "dhcp" }
-func (w dhcpWriter) YANGPaths() []string { return []string{dhcpPoolListPath} }
+func (w dhcpWriter) YANGPaths() []string { return []string{dhcpParentPath} }
 
 // withResolver implements resolverBindable so the registry can inject
 // the per-device OverrideResolver.
@@ -80,18 +82,33 @@ func (w dhcpWriter) resolvedKeyField() string {
 }
 
 func (w dhcpWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
-	raw, err := c.Fetch(ctx, dhcpPoolListPath)
+	raw, err := c.Fetch(ctx, dhcpParentPath)
 	if err != nil {
 		if isRESTCONF404(err) {
 			return []map[string]any{}, nil
 		}
 		return nil, err
 	}
-	body, err := unwrapYANGEnvelope(raw, w.resolvedEnvelopeKey())
+	body, err := unwrapYANGEnvelope(raw, dhcpParentEnvelopeKey)
 	if err != nil || body == nil {
 		return []map[string]any{}, err
 	}
-	list, err := decodeYANGList(body)
+	var parent map[string]any
+	if err := json.Unmarshal(body, &parent); err != nil {
+		return nil, fmt.Errorf("dhcp: decode parent: %w", err)
+	}
+	pools, ok := parent[w.resolvedEnvelopeKey()]
+	if !ok {
+		pools, ok = parent["pool"]
+	}
+	if !ok {
+		return []map[string]any{}, nil
+	}
+	poolBody, err := json.Marshal(pools)
+	if err != nil {
+		return nil, fmt.Errorf("dhcp: encode pool list: %w", err)
+	}
+	list, err := decodeYANGList(poolBody)
 	if err != nil {
 		return nil, fmt.Errorf("dhcp: decode pool list: %w", err)
 	}
@@ -100,6 +117,7 @@ func (w dhcpWriter) Fetch(ctx context.Context, c transport.Interface) (any, erro
 	r := ensureResolver(w.resolver)
 	for i, entry := range list {
 		list[i] = r.AutoReverseObservedBody("dhcp", entry)
+		list[i] = dhcpFetchTransformPre1718(list[i])
 	}
 	return list, nil
 }
@@ -113,8 +131,6 @@ func (w dhcpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	keyField := w.resolvedKeyField()
 
 	want := map[string]map[string]any{}
 	for _, p := range desiredPools {
@@ -144,9 +160,6 @@ func (w dhcpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	}
 	sort.Strings(names)
 
-	r := ensureResolver(w.resolver)
-	override, _ := r.GetOverride("dhcp")
-
 	ops := make([]transport.Op, 0, len(names))
 	for _, name := range names {
 		desired := want[name]
@@ -157,39 +170,22 @@ func (w dhcpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		entry := projectManagedLeaves(desired, dhcpPoolManagedLeaves)
 		entry["name"] = name
 
-		// Apply version-conditional body transforms.
-		entry = ApplyOverrideToBody(entry, override)
+		// IOS-XE 17.x exposes DHCP pools under the /ip/dhcp parent
+		// container with a Cisco-IOS-XE-dhcp:pool list keyed by id.
+		// Sending to /ip/dhcp/pool is rejected by 17.18.03 on C9300.
+		entry = dhcpBodyTransformPre1718(entry)
 
-		// Determine the key value for the RESTCONF path. After
-		// BodyTransform, the key field may have been renamed
-		// (e.g. "name" → "id").
-		pathKey := name
-		if override != nil && override.KeyFieldOverride != "" {
-			if v, ok := entry[override.KeyFieldOverride]; ok {
-				pathKey = fmt.Sprint(v)
-			}
-		}
-
-		body, err := wrapYANGPayload(w.resolvedEnvelopeKey(), []any{entry})
+		body, err := wrapYANGPayload(dhcpParentEnvelopeKey, map[string]any{
+			w.resolvedEnvelopeKey(): []any{entry},
+		})
 		if err != nil {
 			return nil, err
 		}
 		ops = append(ops, transport.Op{
-			Verb:     transport.VerbMerge,
-			Path:     dhcpPoolListPath + "=" + pathKey,
-			PathSpec: pathSpecForKeyedListEntry(dhcpPoolListPath, keyField, pathKey),
-			Body:     body,
-		})
-	}
-
-	// If parent creation is needed, prepend a parent-create op.
-	if override != nil && override.NeedParentCreation && len(ops) > 0 {
-		parentOp := transport.Op{
 			Verb: transport.VerbMerge,
-			Path: override.ParentPath,
-			Body: override.ParentBody,
-		}
-		ops = append([]transport.Op{parentOp}, ops...)
+			Path: dhcpParentPath,
+			Body: body,
+		})
 	}
 
 	return ops, nil
@@ -253,13 +249,12 @@ func (w dhcpWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
 	}
 	sort.Strings(names)
 
-	keyField := w.resolvedKeyField()
 	ops := make([]transport.Op, 0, len(names))
 	for _, name := range names {
 		ops = append(ops, transport.Op{
 			Verb:     transport.VerbDelete,
-			Path:     dhcpPoolListPath + "=" + name,
-			PathSpec: pathSpecForKeyedListEntry(dhcpPoolListPath, keyField, name),
+			Path:     dhcpParentPath + "/" + w.resolvedEnvelopeKey() + "=" + name,
+			PathSpec: pathSpecForKeyedListEntry(dhcpParentPath+"/"+w.resolvedEnvelopeKey(), "id", name),
 		})
 	}
 	return ops, nil

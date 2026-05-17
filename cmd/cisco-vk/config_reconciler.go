@@ -428,6 +428,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 			DeviceName:      deviceName,
 			DeviceNamespace: operationNamespace(),
 			GNOI:            gnoiProv,
+			TP:              r,
 			ImageResolver:   softwareupgrade.NewDefaultImageResolver(mgr.GetClient(), nil),
 		}
 		if err := upgradeReconciler.SetupWithManager(mgr); err != nil {

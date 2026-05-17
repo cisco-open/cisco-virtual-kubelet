@@ -36,8 +36,10 @@ func init() {
 			"time-out",
 			"authentication-retries",
 			"source-interface",
+			"bulk-mode",
 			"rsa",
 			"server",
 		},
+		yangBodyShape: ipSSHToYANG,
 	})
 }

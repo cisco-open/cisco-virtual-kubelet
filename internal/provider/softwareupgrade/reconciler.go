@@ -16,6 +16,7 @@ package softwareupgrade
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -34,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 )
 
@@ -57,6 +59,12 @@ type GNOIProvider interface {
 	GNOIClient(ctx context.Context) (*gnoi.Client, error)
 }
 
+// TransportProvider exposes the per-device config transport for
+// install-oper reads that complement gNOI lifecycle RPCs.
+type TransportProvider interface {
+	GetTransport() transport.Interface
+}
+
 // Reconciler advances IOSXESoftwareUpgrade CRs through the upgrade
 // state machine. Exactly one transition per Reconcile call.
 type Reconciler struct {
@@ -67,6 +75,7 @@ type Reconciler struct {
 	DeviceName      string
 	DeviceNamespace string
 	GNOI            GNOIProvider
+	TP              TransportProvider
 	ImageResolver   ImageResolver
 
 	// Now is injected for tests. nil means time.Now.
@@ -184,6 +193,18 @@ func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "NoImageResolver",
 			"image resolver not configured on reconciler", now)
 	}
+	if stagedVersion, err := r.resolveStagedVersion(ctx, up.Spec.TargetVersion); err == nil && stagedVersion != "" {
+		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+			if cur.Status.StartTime == nil {
+				cur.Status.StartTime = &metav1.Time{Time: now}
+			}
+			cur.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+			cur.Status.ValidatedVersion = stagedVersion
+			cur.Status.Message = fmt.Sprintf("device already has staged version %s, activating", stagedVersion)
+			cur.Status.FailureReason = ""
+			r.setReady(cur, metav1.ConditionFalse, "StagedVersionResolved", cur.Status.Message, now)
+		}, reconcile.Result{RequeueAfter: time.Second})
+	}
 	resolved, err := r.ImageResolver.Resolve(ctx, up.Namespace, up.Spec.ImageSource)
 	if err != nil {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ImageResolveFailed", err.Error(), now)
@@ -216,6 +237,9 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 	client, err := r.GNOI.GNOIClient(ctx)
 	if err != nil {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "GNOIClient", err.Error(), now)
+	}
+	if _, err := client.Verify(ctx); err != nil {
+		return r.handleInstallErr(ctx, up, fmt.Errorf("gnoi OS.Verify preflight: %w", err), now)
 	}
 	resolved, err := r.ImageResolver.Resolve(ctx, up.Namespace, up.Spec.ImageSource)
 	if err != nil {
@@ -256,8 +280,17 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "VersionMismatch",
 			fmt.Sprintf("device validated version %q but spec targets %q", validated.Version, up.Spec.TargetVersion), now)
 	}
-	return r.advance(ctx, up, opsv1alpha1.UpgradePhaseActivating, "Validated",
-		fmt.Sprintf("device validated %s, activating", validated.Version))
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		if cur.Status.StartTime == nil {
+			cur.Status.StartTime = &metav1.Time{Time: now}
+		}
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+		cur.Status.ValidatedVersion = validated.Version
+		cur.Status.Message = fmt.Sprintf("device validated %s, activating", validated.Version)
+		cur.Status.FailureReason = ""
+		markTransferComplete(cur)
+		r.setReady(cur, metav1.ConditionFalse, "Validated", cur.Status.Message, now)
+	}, reconcile.Result{RequeueAfter: time.Second})
 }
 
 func (r *Reconciler) handleInstallErr(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, err error, now time.Time) (reconcile.Result, error) {
@@ -307,7 +340,19 @@ func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESof
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "GNOIClient", err.Error(), now)
 	}
 	noReboot := up.Spec.Strategy == opsv1alpha1.UpgradeStrategyNoReboot
-	if err := client.Activate(ctx, gnoi.ActivateOpts{Version: up.Spec.TargetVersion, NoReboot: noReboot}); err != nil {
+	activateVersion := up.Status.ValidatedVersion
+	if activateVersion == "" {
+		activateVersion = up.Spec.TargetVersion
+	}
+	if stagedVersion, err := r.resolveStagedVersion(ctx, up.Spec.TargetVersion); err == nil && stagedVersion != "" && stagedVersion != activateVersion {
+		activateVersion = stagedVersion
+		_, _ = r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+			cur.Status.ValidatedVersion = stagedVersion
+			cur.Status.Message = fmt.Sprintf("device staged %s, activating", stagedVersion)
+			r.setReady(cur, metav1.ConditionFalse, "StagedVersionResolved", cur.Status.Message, now)
+		}, reconcile.Result{})
+	}
+	if err := client.Activate(ctx, gnoi.ActivateOpts{Version: activateVersion, NoReboot: noReboot}); err != nil {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivateFailed", err.Error(), now)
 	}
 	if noReboot {
@@ -333,6 +378,21 @@ func (r *Reconciler) runAwaitingReachability(ctx context.Context, up *opsv1alpha
 	}
 	return r.advance(ctx, up, opsv1alpha1.UpgradePhaseVerifying, "DeviceReachable",
 		"device is reachable, verifying installed version")
+}
+
+func (r *Reconciler) resolveStagedVersion(ctx context.Context, target string) (string, error) {
+	if r.TP == nil {
+		return "", nil
+	}
+	tr := r.TP.GetTransport()
+	if tr == nil || tr.Capabilities().Kind != transport.KindRESTCONF {
+		return "", nil
+	}
+	raw, err := tr.Fetch(ctx, "/Cisco-IOS-XE-install-oper:install-oper-data/install-location-information")
+	if err != nil {
+		return "", err
+	}
+	return stagedVersionFromInstallOper(raw, target), nil
 }
 
 func isUnsupportedSystemService(err error) bool {
@@ -370,6 +430,17 @@ func (r *Reconciler) runVerifying(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "VerifyFailed", err.Error(), now)
 	}
 	if !versionMatches(res.Version, up.Spec.TargetVersion) {
+		if stagedVersion, err := r.resolveStagedVersion(ctx, up.Spec.TargetVersion); err == nil && stagedVersion != "" && !upgradeTimedOut(up, now) {
+			return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+				cur.Status.Phase = opsv1alpha1.UpgradePhaseVerifying
+				cur.Status.RunningVersion = res.Version
+				cur.Status.ValidatedVersion = stagedVersion
+				cur.Status.Message = fmt.Sprintf("device reports %s while target %s is staged as %s; waiting for activation to settle",
+					res.Version, up.Spec.TargetVersion, stagedVersion)
+				cur.Status.FailureReason = ""
+				r.setReady(cur, metav1.ConditionFalse, "VerifyPending", cur.Status.Message, now)
+			}, reconcile.Result{RequeueAfter: 30 * time.Second})
+		}
 		rollback := up.Spec.RollbackOnFailure == nil || *up.Spec.RollbackOnFailure
 		if rollback {
 			return r.advance(ctx, up, opsv1alpha1.UpgradePhaseRollingBack, "VerifyMismatch",
@@ -392,6 +463,14 @@ func (r *Reconciler) runVerifying(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		markTransferComplete(cur)
 		r.setReady(cur, metav1.ConditionTrue, "Succeeded", "upgrade complete", now)
 	}, reconcile.Result{})
+}
+
+func upgradeTimedOut(up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) bool {
+	timeoutSec := up.Spec.RebootTimeoutSeconds
+	if timeoutSec == 0 {
+		timeoutSec = 1800
+	}
+	return up.Status.StartTime != nil && now.Sub(up.Status.StartTime.Time) > time.Duration(timeoutSec)*time.Second
 }
 
 func (r *Reconciler) handleDelete(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
@@ -548,6 +627,67 @@ func validateImageSource(src opsv1alpha1.UpgradeImageSource) error {
 		return errors.New("imageSource.url requires imageSource.sha256 for integrity verification")
 	}
 	return nil
+}
+
+type installLocationInfo struct {
+	Versions []installVersionInfo `json:"install-version-info"`
+}
+
+type installVersionInfo struct {
+	Version          string `json:"version"`
+	VersionExtension string `json:"version-extension"`
+	Current          string `json:"current"`
+}
+
+func stagedVersionFromInstallOper(raw []byte, target string) string {
+	var root map[string][]installLocationInfo
+	if err := json.Unmarshal(raw, &root); err != nil {
+		return ""
+	}
+	var best string
+	bestPriority := 0
+	for key, locations := range root {
+		if !strings.HasSuffix(key, "install-location-information") {
+			continue
+		}
+		for _, loc := range locations {
+			for _, version := range loc.Versions {
+				if version.Version == "" || !versionMatches(version.Version, target) {
+					continue
+				}
+				priority := installVersionPriority(version.Current)
+				if priority > bestPriority {
+					best = version.activationVersion()
+					bestPriority = priority
+				}
+			}
+		}
+	}
+	return best
+}
+
+func (v installVersionInfo) activationVersion() string {
+	if v.VersionExtension == "" || strings.HasSuffix(v.Version, "."+v.VersionExtension) {
+		return v.Version
+	}
+	return v.Version + "." + v.VersionExtension
+}
+
+func installVersionPriority(state string) int {
+	switch state {
+	case "install-version-state-in-progress":
+		return 4
+	case "install-version-state-installed":
+		return 3
+	case "install-version-state-provisioned-uncommitted":
+		return 2
+	case "install-version-state-present":
+		return 1
+	case "install-version-state-provisioned-committed":
+		return 1
+	default:
+		return 0
+	}
 }
 
 // versionMatches reports whether a device-reported version matches the

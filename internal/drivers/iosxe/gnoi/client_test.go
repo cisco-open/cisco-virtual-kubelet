@@ -15,6 +15,7 @@
 package gnoi
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -100,12 +101,65 @@ func (f *fakeCert) CanGenerateCSR(context.Context, *certpb.CanGenerateCSRRequest
 
 type fakeOS struct {
 	ospb.UnimplementedOSServer
-	verifyResp *ospb.VerifyResponse
-	verifyErr  error
+	verifyResp          *ospb.VerifyResponse
+	verifyErr           error
+	installRequireClose bool
+	installEOFSeen      bool
+	installBytes        int
 }
 
 func (f *fakeOS) Verify(context.Context, *ospb.VerifyRequest) (*ospb.VerifyResponse, error) {
 	return f.verifyResp, f.verifyErr
+}
+
+func (f *fakeOS) Install(stream grpc.BidiStreamingServer[ospb.InstallRequest, ospb.InstallResponse]) error {
+	first, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	req := first.GetTransferRequest()
+	if req == nil {
+		return status.Error(codes.InvalidArgument, "expected transfer request")
+	}
+	if err := stream.Send(&ospb.InstallResponse{
+		Response: &ospb.InstallResponse_TransferReady{TransferReady: &ospb.TransferReady{}},
+	}); err != nil {
+		return err
+	}
+	for {
+		next, err := stream.Recv()
+		if err != nil {
+			return err
+		}
+		switch r := next.Request.(type) {
+		case *ospb.InstallRequest_TransferContent:
+			f.installBytes += len(r.TransferContent)
+			if err := stream.Send(&ospb.InstallResponse{
+				Response: &ospb.InstallResponse_TransferProgress{
+					TransferProgress: &ospb.TransferProgress{BytesReceived: uint64(f.installBytes)},
+				},
+			}); err != nil {
+				return err
+			}
+		case *ospb.InstallRequest_TransferEnd:
+			if f.installRequireClose {
+				if _, err := stream.Recv(); err != io.EOF {
+					if err == nil {
+						return status.Error(codes.FailedPrecondition, "expected client half-close")
+					}
+					return err
+				}
+				f.installEOFSeen = true
+			}
+			return stream.Send(&ospb.InstallResponse{
+				Response: &ospb.InstallResponse_Validated{
+					Validated: &ospb.Validated{Version: req.Version, Description: "validated"},
+				},
+			})
+		default:
+			return status.Errorf(codes.InvalidArgument, "unexpected install request %T", r)
+		}
+	}
 }
 
 type fakeReset struct {
@@ -285,6 +339,40 @@ func TestVerify(t *testing.T) {
 	}
 	if res.Version != "17.15.01a" {
 		t.Fatalf("Verify version: %q", res.Version)
+	}
+}
+
+func TestInstallClosesSendAfterTransferEnd(t *testing.T) {
+	ts := newTestServer(t)
+	ts.OS.installRequireClose = true
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	progress, err := ts.client(t).Install(ctx, bytes.NewReader([]byte("image")), InstallOpts{
+		Version:     "17.18.03",
+		PackageSize: 5,
+		ChunkSize:   2,
+	})
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	var validated *InstallValidated
+	for ev := range progress {
+		if ev.Err != nil {
+			t.Fatalf("Install progress error: %v", ev.Err)
+		}
+		if ev.Validated != nil {
+			validated = ev.Validated
+		}
+	}
+	if validated == nil || validated.Version != "17.18.03" {
+		t.Fatalf("validated=%+v, want version 17.18.03", validated)
+	}
+	if !ts.OS.installEOFSeen {
+		t.Fatal("server did not observe client half-close")
+	}
+	if ts.OS.installBytes != 5 {
+		t.Fatalf("installBytes=%d, want 5", ts.OS.installBytes)
 	}
 }
 

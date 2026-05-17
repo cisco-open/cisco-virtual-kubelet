@@ -67,9 +67,16 @@ type ImageResolver interface {
 // binaryData["image"]; LocalPath → no resolution, the reconciler jumps
 // to Activating.
 type DefaultImageResolver struct {
-	HTTPClient *http.Client
-	K8sClient  client.Client
+	HTTPClient    *http.Client
+	K8sClient     client.Client
+	TFTPBlockSize int
 }
+
+const (
+	defaultTFTPBlockSize = 8192
+	defaultTFTPRetries   = 10
+	defaultTFTPTimeout   = 10 * time.Second
+)
 
 // NewDefaultImageResolver constructs a resolver with sensible
 // defaults. K8s is mandatory (for ConfigMap reads); httpClient may be
@@ -78,7 +85,11 @@ func NewDefaultImageResolver(k8s client.Client, httpClient *http.Client) *Defaul
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
-	return &DefaultImageResolver{HTTPClient: httpClient, K8sClient: k8s}
+	return &DefaultImageResolver{
+		HTTPClient:    httpClient,
+		K8sClient:     k8s,
+		TFTPBlockSize: defaultTFTPBlockSize,
+	}
 }
 
 func (r *DefaultImageResolver) Resolve(ctx context.Context, namespace string, src opsv1alpha1.UpgradeImageSource) (*ResolvedImage, error) {
@@ -149,9 +160,13 @@ func (r *DefaultImageResolver) resolveTFTPURL(ctx context.Context, u *url.URL, s
 	if err != nil {
 		return nil, fmt.Errorf("image source TFTP client: %w", err)
 	}
-	c.SetBlockSize(1468)
-	c.SetRetries(10)
-	c.SetTimeout(10 * time.Second)
+	blockSize := r.TFTPBlockSize
+	if blockSize <= 0 {
+		blockSize = defaultTFTPBlockSize
+	}
+	c.SetBlockSize(blockSize)
+	c.SetRetries(defaultTFTPRetries)
+	c.SetTimeout(defaultTFTPTimeout)
 	c.RequestTSize(true)
 
 	return materializeRemoteImage("image source TFTP", sha256Hex, func(w io.Writer) (int64, error) {

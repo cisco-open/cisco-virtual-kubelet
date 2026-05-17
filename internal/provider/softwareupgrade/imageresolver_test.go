@@ -86,6 +86,43 @@ func TestDefaultImageResolverTFTPURL(t *testing.T) {
 	}
 }
 
+func TestDefaultImageResolverTFTPURLRequestsDefaultBlockSize(t *testing.T) {
+	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen udp: %v", err)
+	}
+	defer pc.Close()
+
+	rrqCh := make(chan []byte, 1)
+	go func() {
+		buf := make([]byte, 1024)
+		n, addr, err := pc.ReadFrom(buf)
+		if err != nil {
+			return
+		}
+		rrqCh <- append([]byte(nil), buf[:n]...)
+		_, _ = pc.WriteTo([]byte{0, 5, 0, 1, 's', 't', 'o', 'p', 0}, addr)
+	}()
+
+	src := opsv1alpha1.UpgradeImageSource{
+		URL:    "tftp://" + pc.LocalAddr().String() + "/images/cat9k.bin",
+		SHA256: strings.Repeat("0", 64),
+	}
+	_, err = NewDefaultImageResolver(nil, nil).Resolve(context.Background(), "default", src)
+	if err == nil {
+		t.Fatal("Resolve succeeded, want test server error")
+	}
+
+	select {
+	case rrq := <-rrqCh:
+		if !bytes.Contains(rrq, []byte("blksize\x008192")) {
+			t.Fatalf("RRQ %q does not request default block size 8192", string(rrq))
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for RRQ")
+	}
+}
+
 func TestDefaultImageResolverSCPRequiresHostKeyPolicy(t *testing.T) {
 	src := opsv1alpha1.UpgradeImageSource{
 		URL:    "scp://user:pass@127.0.0.1/tmp/cat9k.bin",

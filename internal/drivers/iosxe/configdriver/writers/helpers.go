@@ -128,6 +128,14 @@ func leavesEqual(desired, observed map[string]any, managed []string) bool {
 		}
 		ov, oHas := observed[key]
 		if !oHas {
+			// IOS-XE models many CLI booleans as YANG empty leaves:
+			// presence means true, absence means false. Treat an
+			// explicit desired false as equal to an absent observed
+			// value so writers do not enter a drift loop by trying to
+			// PATCH false into an empty leaf.
+			if isExplicitFalse(dv) {
+				continue
+			}
 			return false
 		}
 		if !scalarEqual(dv, ov) {
@@ -208,6 +216,23 @@ func isComparable(v any) bool {
 		return false
 	default:
 		return true
+	}
+}
+
+func isExplicitFalse(v any) bool {
+	switch t := v.(type) {
+	case bool:
+		return !t
+	case string:
+		return t == "false" || t == "no" || t == "0"
+	case int:
+		return t == 0
+	case int64:
+		return t == 0
+	case float64:
+		return t == 0
+	default:
+		return false
 	}
 }
 

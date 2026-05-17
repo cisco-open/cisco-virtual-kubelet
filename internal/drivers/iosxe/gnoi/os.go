@@ -254,6 +254,12 @@ func (c *Client) pumpInstall(
 					doneSend <- fmt.Errorf("gnoi OS.Install send TransferEnd: %w", serr)
 					return
 				}
+				// IOS XE waits for the client half-close before emitting
+				// the terminal Validated response on some releases.
+				if cerr := stream.CloseSend(); cerr != nil {
+					doneSend <- fmt.Errorf("gnoi OS.Install close send: %w", cerr)
+					return
+				}
 				doneSend <- nil
 				return
 			}
