@@ -305,6 +305,15 @@ func isTerminal(p opsv1alpha1.UpgradePhase) bool {
 	return false
 }
 
+func conditionReason(conditions []metav1.Condition, typ string) string {
+	for _, cond := range conditions {
+		if cond.Type == typ {
+			return cond.Reason
+		}
+	}
+	return ""
+}
+
 func newReconciler(t *testing.T, rig *rig, up *opsv1alpha1.IOSXESoftwareUpgrade) *Reconciler {
 	t.Helper()
 	scheme := newScheme(t)
@@ -389,7 +398,12 @@ func TestMarkTransferCompleteSetsTerminalProgress(t *testing.T) {
 func TestVerifyMismatchTriggersRollback(t *testing.T) {
 	rig := newRig(t)
 	rig.os.verifyVersion = "17.14.01a" // doesn't match target 17.15.01a
-	up := newUpgrade("upgrade-mismatch", nil)
+	start := metav1.Time{Time: time.Unix(1_700_000_000, 0).UTC()}
+	up := newUpgrade("upgrade-mismatch", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Status.Phase = opsv1alpha1.UpgradePhaseVerifying
+		up.Status.StartTime = &start
+	})
 	r := newReconciler(t, rig, up)
 	got := runReconcile(t, r, up, 12)
 	if got.Status.Phase != opsv1alpha1.UpgradePhaseRolledBack {
@@ -404,8 +418,12 @@ func TestVerifyMismatchWithoutRollbackFails(t *testing.T) {
 	rig := newRig(t)
 	rig.os.verifyVersion = "17.14.01a"
 	rollbackOff := false
+	start := metav1.Time{Time: time.Unix(1_700_000_000, 0).UTC()}
 	up := newUpgrade("upgrade-mismatch-norollback", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
 		up.Spec.RollbackOnFailure = &rollbackOff
+		up.Status.Phase = opsv1alpha1.UpgradePhaseVerifying
+		up.Status.StartTime = &start
 	})
 	r := newReconciler(t, rig, up)
 	got := runReconcile(t, r, up, 12)
@@ -413,6 +431,97 @@ func TestVerifyMismatchWithoutRollbackFails(t *testing.T) {
 		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
 	}
 	if got.Status.FailureReason != "VerifyMismatch" {
+		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
+	}
+}
+
+func TestAwaitingReachabilityWaitsWhenDeviceStillRunsOldVersion(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyVersion = "17.18.03.0.5496.1776157760"
+	start := metav1.Time{Time: time.Unix(1_700_000_000, 0).UTC()}
+	up := newUpgrade("upgrade-activation-settling", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Spec.TargetVersion = "17.18.02"
+		up.Status.Phase = opsv1alpha1.UpgradePhaseAwaitingReachability
+		up.Status.StartTime = &start
+	})
+	r := newReconciler(t, rig, up)
+
+	res, err := r.Reconcile(context.Background(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: up.Namespace, Name: up.Name}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if res.RequeueAfter != awaitingReachabilityPoll {
+		t.Fatalf("RequeueAfter=%v, want %v", res.RequeueAfter, awaitingReachabilityPoll)
+	}
+	var got opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), types.NamespacedName{Namespace: up.Namespace, Name: up.Name}, &got); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseAwaitingReachability {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if got.Status.RunningVersion != "17.18.03.0.5496.1776157760" {
+		t.Fatalf("RunningVersion=%q", got.Status.RunningVersion)
+	}
+	if got.Status.FailureReason != "" {
+		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
+	}
+	if reason := conditionReason(got.Status.Conditions, "Verified"); reason != "VersionPending" {
+		t.Fatalf("Verified reason=%q", reason)
+	}
+}
+
+func TestAwaitingReachabilityFailsOldVersionAfterTimeout(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyVersion = "17.18.03.0.5496.1776157760"
+	start := metav1.Time{Time: time.Unix(1_699_990_000, 0).UTC()}
+	up := newUpgrade("upgrade-activation-timeout", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Spec.TargetVersion = "17.18.02"
+		up.Spec.RebootTimeoutSeconds = 60
+		up.Status.Phase = opsv1alpha1.UpgradePhaseAwaitingReachability
+		up.Status.StartTime = &start
+	})
+	r := newReconciler(t, rig, up)
+
+	got := runReconcile(t, r, up, 2)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseFailed {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if got.Status.FailureReason != "ActivationDidNotConverge" {
+		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
+	}
+}
+
+func TestAwaitingReachabilityTimeoutUsesActivationTime(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyVersion = "17.18.03.0.5496.1776157760"
+	start := metav1.Time{Time: time.Unix(1_699_990_000, 0).UTC()}
+	activated := metav1.Time{Time: time.Unix(1_699_999_980, 0).UTC()}
+	up := newUpgrade("upgrade-activation-time-reference", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Spec.TargetVersion = "17.18.02"
+		up.Spec.RebootTimeoutSeconds = 60
+		up.Status.Phase = opsv1alpha1.UpgradePhaseAwaitingReachability
+		up.Status.StartTime = &start
+		up.Status.Conditions = []metav1.Condition{
+			{
+				Type:               "Activated",
+				Status:             metav1.ConditionTrue,
+				Reason:             "Activated",
+				Message:            "activate accepted",
+				LastTransitionTime: activated,
+			},
+		}
+	})
+	r := newReconciler(t, rig, up)
+
+	got := runReconcile(t, r, up, 1)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseAwaitingReachability {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if got.Status.FailureReason != "" {
 		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
 	}
 }

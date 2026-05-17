@@ -24,6 +24,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -51,7 +52,19 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 // image bytes).
 const Finalizer = "ops.cisco.vk/iosxesoftwareupgrade-cleanup"
 
-const conditionTypeReady = "Ready"
+const (
+	conditionTypeReady           = "Ready"
+	conditionTypeImageResolved   = "ImageResolved"
+	conditionTypeTransferred     = "Transferred"
+	conditionTypeValidated       = "Validated"
+	conditionTypeActivated       = "Activated"
+	conditionTypeDeviceReachable = "DeviceReachable"
+	conditionTypeVerified        = "Verified"
+)
+
+const (
+	awaitingReachabilityPoll = 30 * time.Second
+)
 
 // GNOIProvider exposes the per-device gNOI client. Set on the
 // reconciler at startup.
@@ -202,6 +215,14 @@ func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoft
 			cur.Status.ValidatedVersion = stagedVersion
 			cur.Status.Message = fmt.Sprintf("device already has staged version %s, activating", stagedVersion)
 			cur.Status.FailureReason = ""
+			r.setCondition(cur, conditionTypeImageResolved, metav1.ConditionTrue, "StagedVersionResolved",
+				fmt.Sprintf("target version %s is already staged on the device", stagedVersion), now)
+			r.setCondition(cur, conditionTypeTransferred, metav1.ConditionTrue, "StagedVersionResolved",
+				"image transfer skipped because the target version is already staged", now)
+			r.setCondition(cur, conditionTypeValidated, metav1.ConditionTrue, "StagedVersionResolved",
+				fmt.Sprintf("device reports staged target version %s", stagedVersion), now)
+			r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, "ActivationPending",
+				"waiting to submit gNOI OS.Activate", now)
 			r.setReady(cur, metav1.ConditionFalse, "StagedVersionResolved", cur.Status.Message, now)
 		}, reconcile.Result{RequeueAfter: time.Second})
 	}
@@ -214,8 +235,21 @@ func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		if resolved.Cleanup != nil {
 			_ = resolved.Cleanup()
 		}
-		return r.advance(ctx, up, opsv1alpha1.UpgradePhaseActivating, "ImageResolved",
-			"using image already on device flash")
+		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+			if cur.Status.StartTime == nil {
+				cur.Status.StartTime = &metav1.Time{Time: now}
+			}
+			cur.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+			cur.Status.Message = "using image already on device flash"
+			cur.Status.FailureReason = ""
+			r.setCondition(cur, conditionTypeImageResolved, metav1.ConditionTrue, "LocalPath",
+				"image source is already present on device flash", now)
+			r.setCondition(cur, conditionTypeTransferred, metav1.ConditionTrue, "LocalPath",
+				"image transfer skipped for localPath source", now)
+			r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, "ActivationPending",
+				"waiting to submit gNOI OS.Activate", now)
+			r.setReady(cur, metav1.ConditionFalse, "ImageResolved", cur.Status.Message, now)
+		}, reconcile.Result{RequeueAfter: time.Second})
 	}
 	// Phase C invariant: bulk-transfer streams happen inline within
 	// runTransferring. We do not stash the resolved image on the CR;
@@ -225,8 +259,19 @@ func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoft
 	if resolved.Cleanup != nil {
 		_ = resolved.Cleanup()
 	}
-	return r.advance(ctx, up, opsv1alpha1.UpgradePhaseTransferring, "ImageResolved",
-		fmt.Sprintf("image resolved (%d bytes), transferring to device", resolved.Size))
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		if cur.Status.StartTime == nil {
+			cur.Status.StartTime = &metav1.Time{Time: now}
+		}
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+		cur.Status.Message = fmt.Sprintf("image resolved (%d bytes), transferring to device", resolved.Size)
+		cur.Status.FailureReason = ""
+		r.setCondition(cur, conditionTypeImageResolved, metav1.ConditionTrue, "ImageResolved",
+			fmt.Sprintf("image source resolved to %d bytes", resolved.Size), now)
+		r.setCondition(cur, conditionTypeTransferred, metav1.ConditionFalse, "TransferPending",
+			"waiting to stream image bytes with gNOI OS.Install", now)
+		r.setReady(cur, metav1.ConditionFalse, "ImageResolved", cur.Status.Message, now)
+	}, reconcile.Result{RequeueAfter: time.Second})
 }
 
 func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
@@ -289,6 +334,12 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		cur.Status.Message = fmt.Sprintf("device validated %s, activating", validated.Version)
 		cur.Status.FailureReason = ""
 		markTransferComplete(cur)
+		r.setCondition(cur, conditionTypeTransferred, metav1.ConditionTrue, "Transferred",
+			"image transfer completed and the install stream closed cleanly", now)
+		r.setCondition(cur, conditionTypeValidated, metav1.ConditionTrue, "Validated",
+			fmt.Sprintf("device validated image version %s", validated.Version), now)
+		r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, "ActivationPending",
+			"waiting to submit gNOI OS.Activate", now)
 		r.setReady(cur, metav1.ConditionFalse, "Validated", cur.Status.Message, now)
 	}, reconcile.Result{RequeueAfter: time.Second})
 }
@@ -349,18 +400,57 @@ func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESof
 		_, _ = r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 			cur.Status.ValidatedVersion = stagedVersion
 			cur.Status.Message = fmt.Sprintf("device staged %s, activating", stagedVersion)
+			r.setCondition(cur, conditionTypeValidated, metav1.ConditionTrue, "StagedVersionResolved",
+				fmt.Sprintf("device staged %s for activation", stagedVersion), now)
 			r.setReady(cur, metav1.ConditionFalse, "StagedVersionResolved", cur.Status.Message, now)
 		}, reconcile.Result{})
 	}
+	activationMessage := fmt.Sprintf("submitting gNOI OS.Activate for version %s", activateVersion)
+	if noReboot {
+		activationMessage += " with NoReboot=true"
+	} else {
+		activationMessage += "; reload expected"
+	}
+	if _, err := r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+		cur.Status.Message = activationMessage
+		cur.Status.FailureReason = ""
+		r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, "ActivationRequested", activationMessage, now)
+		r.setReady(cur, metav1.ConditionFalse, "ActivationRequested", activationMessage, now)
+	}, reconcile.Result{}); err != nil {
+		return reconcile.Result{}, err
+	}
+	r.emitEvent(up, corev1.EventTypeNormal, "ActivationRequested", activationMessage)
 	if err := client.Activate(ctx, gnoi.ActivateOpts{Version: activateVersion, NoReboot: noReboot}); err != nil {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivateFailed", err.Error(), now)
 	}
 	if noReboot {
-		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseSucceeded, "Activated",
-			"activate complete; device not rebooted (strategy=NoReboot)", now)
+		message := "activate complete; device not rebooted (strategy=NoReboot)"
+		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+			cur.Status.Phase = opsv1alpha1.UpgradePhaseSucceeded
+			cur.Status.FailureReason = ""
+			cur.Status.Message = message
+			cur.Status.CompletionTime = &metav1.Time{Time: now}
+			r.setCondition(cur, conditionTypeActivated, metav1.ConditionTrue, "Activated", message, now)
+			r.setReady(cur, metav1.ConditionTrue, "Activated", message, now)
+		}, reconcile.Result{})
 	}
-	return r.advance(ctx, up, opsv1alpha1.UpgradePhaseAwaitingReachability, "Rebooting",
-		"activate complete; awaiting device reachability after reboot")
+	timeout := up.Spec.RebootTimeoutSeconds
+	if timeout == 0 {
+		timeout = 1800
+	}
+	message := fmt.Sprintf("activate accepted for version %s; waiting up to %ds for reload and target version", activateVersion, timeout)
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseAwaitingReachability
+		cur.Status.Message = message
+		cur.Status.FailureReason = ""
+		r.setCondition(cur, conditionTypeActivated, metav1.ConditionTrue, "Activated", message, now)
+		r.setCondition(cur, conditionTypeDeviceReachable, metav1.ConditionFalse, "ReloadExpected",
+			"waiting for device to reload and return on the target version", now)
+		r.setCondition(cur, conditionTypeVerified, metav1.ConditionFalse, "VerifyPending",
+			"waiting for post-activation version verification", now)
+		r.setReady(cur, metav1.ConditionFalse, "Rebooting", message, now)
+	}, reconcile.Result{RequeueAfter: awaitingReachabilityPoll})
 }
 
 func (r *Reconciler) runAwaitingReachability(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
@@ -371,13 +461,56 @@ func (r *Reconciler) runAwaitingReachability(ctx context.Context, up *opsv1alpha
 	}
 	if _, err := client.Time(ctx); err != nil {
 		if isUnsupportedSystemService(err) {
-			return r.advance(ctx, up, opsv1alpha1.UpgradePhaseVerifying, "DeviceReachable",
-				"device gNOI endpoint is reachable; system service unsupported, verifying installed version")
+			return r.verifyReachableDevice(ctx, up, client, "device gNOI endpoint is reachable; system service unsupported", now)
 		}
 		return r.requeueAwaitingReachability(ctx, up, err, now)
 	}
-	return r.advance(ctx, up, opsv1alpha1.UpgradePhaseVerifying, "DeviceReachable",
-		"device is reachable, verifying installed version")
+	return r.verifyReachableDevice(ctx, up, client, "device is reachable", now)
+}
+
+func (r *Reconciler) verifyReachableDevice(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	client *gnoi.Client,
+	reachableMessage string,
+	now time.Time,
+) (reconcile.Result, error) {
+	res, err := client.Verify(ctx)
+	if err != nil {
+		return r.requeueAwaitingReachability(ctx, up, fmt.Errorf("%s but OS.Verify is not ready: %w", reachableMessage, err), now)
+	}
+	if versionMatches(res.Version, up.Spec.TargetVersion) {
+		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+			cur.Status.Phase = opsv1alpha1.UpgradePhaseVerifying
+			cur.Status.RunningVersion = res.Version
+			cur.Status.Message = fmt.Sprintf("%s on target version %s; running final verification", reachableMessage, res.Version)
+			cur.Status.FailureReason = ""
+			r.setCondition(cur, conditionTypeDeviceReachable, metav1.ConditionTrue, "DeviceReachable",
+				fmt.Sprintf("device is reachable on target version %s", res.Version), now)
+			r.setCondition(cur, conditionTypeVerified, metav1.ConditionFalse, "VerifyPending",
+				"running final gNOI OS.Verify", now)
+			r.setReady(cur, metav1.ConditionFalse, "DeviceReachable", cur.Status.Message, now)
+		}, reconcile.Result{RequeueAfter: time.Second})
+	}
+	if !upgradeTimedOut(up, now) {
+		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+			cur.Status.Phase = opsv1alpha1.UpgradePhaseAwaitingReachability
+			cur.Status.RunningVersion = res.Version
+			cur.Status.Message = fmt.Sprintf("%s but still running %s; waiting for reload/activation to settle toward target %s",
+				reachableMessage, res.Version, up.Spec.TargetVersion)
+			cur.Status.FailureReason = ""
+			r.setCondition(cur, conditionTypeDeviceReachable, metav1.ConditionTrue, "ReachableOldVersion",
+				fmt.Sprintf("device is reachable but still reports %s", res.Version), now)
+			r.setCondition(cur, conditionTypeVerified, metav1.ConditionFalse, "VersionPending", cur.Status.Message, now)
+			r.setReady(cur, metav1.ConditionFalse, "ActivationSettling", cur.Status.Message, now)
+		}, reconcile.Result{RequeueAfter: awaitingReachabilityPoll})
+	}
+	timeoutSec := up.Spec.RebootTimeoutSeconds
+	if timeoutSec == 0 {
+		timeoutSec = 1800
+	}
+	return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivationDidNotConverge",
+		fmt.Sprintf("device stayed on %s; target %s was not reached within %ds after activation", res.Version, up.Spec.TargetVersion, timeoutSec), now)
 }
 
 func (r *Reconciler) resolveStagedVersion(ctx context.Context, target string) (string, error) {
@@ -408,15 +541,16 @@ func (r *Reconciler) requeueAwaitingReachability(ctx context.Context, up *opsv1a
 	if timeoutSec == 0 {
 		timeoutSec = 1800
 	}
-	if up.Status.StartTime != nil && now.Sub(up.Status.StartTime.Time) > time.Duration(timeoutSec)*time.Second {
+	if upgradeTimedOut(up, now) {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseRebootTimeout, "RebootTimeout",
-			fmt.Sprintf("device did not become reachable within %ds", timeoutSec), now)
+			fmt.Sprintf("device did not become reachable within %ds after activation", timeoutSec), now)
 	}
-	delay := backoff(up.Status.RetryCount)
+	delay := awaitingReachabilityPoll
 	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 		cur.Status.Phase = opsv1alpha1.UpgradePhaseAwaitingReachability
-		cur.Status.Message = fmt.Sprintf("device unreachable: %s", err.Error())
-		r.setReady(cur, metav1.ConditionFalse, "DeviceUnreachable", err.Error(), now)
+		cur.Status.Message = fmt.Sprintf("waiting for device after activation: %s", err.Error())
+		r.setCondition(cur, conditionTypeDeviceReachable, metav1.ConditionFalse, "DeviceUnreachable", err.Error(), now)
+		r.setReady(cur, metav1.ConditionFalse, "DeviceUnreachable", cur.Status.Message, now)
 	}, reconcile.Result{RequeueAfter: delay})
 }
 
@@ -438,6 +572,7 @@ func (r *Reconciler) runVerifying(ctx context.Context, up *opsv1alpha1.IOSXESoft
 				cur.Status.Message = fmt.Sprintf("device reports %s while target %s is staged as %s; waiting for activation to settle",
 					res.Version, up.Spec.TargetVersion, stagedVersion)
 				cur.Status.FailureReason = ""
+				r.setCondition(cur, conditionTypeVerified, metav1.ConditionFalse, "VerifyPending", cur.Status.Message, now)
 				r.setReady(cur, metav1.ConditionFalse, "VerifyPending", cur.Status.Message, now)
 			}, reconcile.Result{RequeueAfter: 30 * time.Second})
 		}
@@ -452,6 +587,7 @@ func (r *Reconciler) runVerifying(ctx context.Context, up *opsv1alpha1.IOSXESoft
 			cur.Status.FailureReason = "VerifyMismatch"
 			cur.Status.CompletionTime = &metav1.Time{Time: now}
 			cur.Status.Message = fmt.Sprintf("device runs %s; target was %s", res.Version, up.Spec.TargetVersion)
+			r.setCondition(cur, conditionTypeVerified, metav1.ConditionFalse, "VerifyMismatch", cur.Status.Message, now)
 			r.setReady(cur, metav1.ConditionFalse, "VerifyMismatch", cur.Status.Message, now)
 		}, reconcile.Result{})
 	}
@@ -461,6 +597,10 @@ func (r *Reconciler) runVerifying(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		cur.Status.CompletionTime = &metav1.Time{Time: now}
 		cur.Status.Message = "upgrade complete"
 		markTransferComplete(cur)
+		r.setCondition(cur, conditionTypeDeviceReachable, metav1.ConditionTrue, "DeviceReachable",
+			fmt.Sprintf("device is reachable on target version %s", res.Version), now)
+		r.setCondition(cur, conditionTypeVerified, metav1.ConditionTrue, "Verified",
+			fmt.Sprintf("gNOI OS.Verify reports target version %s", res.Version), now)
 		r.setReady(cur, metav1.ConditionTrue, "Succeeded", "upgrade complete", now)
 	}, reconcile.Result{})
 }
@@ -470,7 +610,20 @@ func upgradeTimedOut(up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) bool {
 	if timeoutSec == 0 {
 		timeoutSec = 1800
 	}
-	return up.Status.StartTime != nil && now.Sub(up.Status.StartTime.Time) > time.Duration(timeoutSec)*time.Second
+	since := upgradeWaitStart(up)
+	return since != nil && now.Sub(*since) > time.Duration(timeoutSec)*time.Second
+}
+
+func upgradeWaitStart(up *opsv1alpha1.IOSXESoftwareUpgrade) *time.Time {
+	for _, cond := range up.Status.Conditions {
+		if cond.Type == conditionTypeActivated && cond.Status == metav1.ConditionTrue {
+			return &cond.LastTransitionTime.Time
+		}
+	}
+	if up.Status.StartTime != nil {
+		return &up.Status.StartTime.Time
+	}
+	return nil
 }
 
 func (r *Reconciler) handleDelete(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
@@ -564,8 +717,12 @@ func (r *Reconciler) updateTransferProgress(ctx context.Context, up *opsv1alpha1
 }
 
 func (r *Reconciler) setReady(up *opsv1alpha1.IOSXESoftwareUpgrade, status metav1.ConditionStatus, reason, message string, now time.Time) {
+	r.setCondition(up, conditionTypeReady, status, reason, message, now)
+}
+
+func (r *Reconciler) setCondition(up *opsv1alpha1.IOSXESoftwareUpgrade, condType string, status metav1.ConditionStatus, reason, message string, now time.Time) {
 	cond := metav1.Condition{
-		Type:               conditionTypeReady,
+		Type:               condType,
 		Status:             status,
 		Reason:             reason,
 		Message:            message,
@@ -587,6 +744,8 @@ func (r *Reconciler) setReady(up *opsv1alpha1.IOSXESoftwareUpgrade, status metav
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, mutate func(*opsv1alpha1.IOSXESoftwareUpgrade), result reconcile.Result) (reconcile.Result, error) {
+	var beforePhase, afterPhase opsv1alpha1.UpgradePhase
+	var afterReason, afterMessage string
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		var cur opsv1alpha1.IOSXESoftwareUpgrade
 		reader := r.Reader
@@ -596,14 +755,61 @@ func (r *Reconciler) updateStatus(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		if err := reader.Get(ctx, client.ObjectKeyFromObject(up), &cur); err != nil {
 			return err
 		}
+		beforePhase = cur.Status.Phase
 		mutate(&cur)
 		cur.Status.ObservedGeneration = cur.Generation
+		afterPhase = cur.Status.Phase
+		afterMessage = cur.Status.Message
+		afterReason = readyReason(cur.Status.Conditions)
 		return r.Client.Status().Update(ctx, &cur)
 	})
 	if err != nil {
 		return result, fmt.Errorf("update upgrade status: %w", err)
 	}
+	if afterPhase != "" && afterPhase != beforePhase {
+		eventType := corev1.EventTypeNormal
+		if isTerminalFailurePhase(afterPhase) {
+			eventType = corev1.EventTypeWarning
+		}
+		if afterReason == "" {
+			afterReason = string(afterPhase)
+		}
+		r.emitEvent(up, eventType, afterReason, afterMessage)
+	}
 	return result, nil
+}
+
+func readyReason(conditions []metav1.Condition) string {
+	for _, cond := range conditions {
+		if cond.Type == conditionTypeReady {
+			return cond.Reason
+		}
+	}
+	return ""
+}
+
+func isTerminalFailurePhase(phase opsv1alpha1.UpgradePhase) bool {
+	switch phase {
+	case opsv1alpha1.UpgradePhaseFailed,
+		opsv1alpha1.UpgradePhasePreflightFailed,
+		opsv1alpha1.UpgradePhaseValidationFailed,
+		opsv1alpha1.UpgradePhaseRolledBack,
+		opsv1alpha1.UpgradePhaseRebootTimeout,
+		opsv1alpha1.UpgradePhaseCancelled:
+		return true
+	default:
+		return false
+	}
+}
+
+func (r *Reconciler) emitEvent(up *opsv1alpha1.IOSXESoftwareUpgrade, eventType, reason, message string) {
+	if r.Recorder == nil {
+		return
+	}
+	if message == "" {
+		message = string(up.Status.Phase)
+	}
+	r.Recorder.Event(up, eventType, reason, message)
 }
 
 func validateImageSource(src opsv1alpha1.UpgradeImageSource) error {

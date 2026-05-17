@@ -92,6 +92,8 @@ const (
 // +kubebuilder:printcolumn:name="Target",type=string,JSONPath=`.spec.targetVersion`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Running",type=string,JSONPath=`.status.runningVersion`
+// +kubebuilder:printcolumn:name="Progress",type=integer,JSONPath=`.status.transferProgress.percent`,priority=1
+// +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`,priority=1
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 type IOSXESoftwareUpgrade struct {
 	metav1.TypeMeta   `json:",inline"`
