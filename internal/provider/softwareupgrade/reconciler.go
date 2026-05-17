@@ -452,7 +452,8 @@ func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESof
 			r.setReady(cur, metav1.ConditionFalse, "StagedVersionResolved", cur.Status.Message, now)
 		}, reconcile.Result{})
 	}
-	activationMessage := fmt.Sprintf("submitting gNOI OS.Activate for version %s", activateVersion)
+	activateCandidates := activationVersionCandidates(activateVersion, up.Spec.TargetVersion)
+	activationMessage := fmt.Sprintf("submitting gNOI OS.Activate for version %s", activateCandidates[0])
 	if noReboot {
 		activationMessage += " with NoReboot=true"
 	} else {
@@ -468,8 +469,30 @@ func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESof
 		return reconcile.Result{}, err
 	}
 	r.emitEvent(up, corev1.EventTypeNormal, "ActivationRequested", activationMessage)
-	if err := client.Activate(ctx, gnoi.ActivateOpts{Version: activateVersion, NoReboot: noReboot}); err != nil {
-		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivateFailed", err.Error(), now)
+	var activateErr error
+	acceptedVersion := ""
+	for idx, candidate := range activateCandidates {
+		if idx > 0 {
+			fallbackMessage := fmt.Sprintf("retrying gNOI OS.Activate with version %s after IOS XE rejected %s",
+				candidate, activateCandidates[idx-1])
+			_, _ = r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+				cur.Status.Message = fallbackMessage
+				r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, "ActivationRetry", fallbackMessage, now)
+				r.setReady(cur, metav1.ConditionFalse, "ActivationRetry", fallbackMessage, now)
+			}, reconcile.Result{})
+			r.emitEvent(up, corev1.EventTypeNormal, "ActivationRetry", fallbackMessage)
+		}
+		activateErr = client.Activate(ctx, gnoi.ActivateOpts{Version: candidate, NoReboot: noReboot})
+		if activateErr == nil {
+			acceptedVersion = candidate
+			break
+		}
+		if !isActivateVersionNotPresent(activateErr) {
+			break
+		}
+	}
+	if activateErr != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivateFailed", activateErr.Error(), now)
 	}
 	if noReboot {
 		message := "activate complete; device not rebooted (strategy=NoReboot)"
@@ -486,7 +509,7 @@ func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESof
 	if timeout == 0 {
 		timeout = 1800
 	}
-	message := fmt.Sprintf("activate accepted for version %s; waiting up to %ds for reload and target version", activateVersion, timeout)
+	message := fmt.Sprintf("activate accepted for version %s; waiting up to %ds for reload and target version", acceptedVersion, timeout)
 	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 		cur.Status.Phase = opsv1alpha1.UpgradePhaseAwaitingReachability
 		cur.Status.Message = message
@@ -924,6 +947,36 @@ func (v installVersionInfo) activationVersion() string {
 		return v.Version
 	}
 	return v.Version + "." + v.VersionExtension
+}
+
+func activationVersionCandidates(validatedVersion, targetVersion string) []string {
+	seen := map[string]bool{}
+	candidates := make([]string, 0, 2)
+	for _, candidate := range []string{validatedVersion, targetVersion} {
+		if candidate == "" || seen[candidate] {
+			continue
+		}
+		seen[candidate] = true
+		candidates = append(candidates, candidate)
+	}
+	return candidates
+}
+
+func isActivateVersionNotPresent(err error) bool {
+	if err == nil {
+		return false
+	}
+	var activateErr *gnoi.ActivateError
+	if errors.As(err, &activateErr) {
+		detail := strings.ToLower(activateErr.Detail)
+		return strings.Contains(detail, "version not present") ||
+			strings.Contains(detail, "non-existent") ||
+			strings.Contains(detail, "non existent")
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "version not present") ||
+		strings.Contains(message, "non-existent") ||
+		strings.Contains(message, "non existent")
 }
 
 func installVersionPriority(state string) int {
