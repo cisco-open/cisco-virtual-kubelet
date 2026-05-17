@@ -64,6 +64,7 @@ const (
 
 const (
 	awaitingReachabilityPoll = 30 * time.Second
+	activationRPCTimeout     = 90 * time.Second
 )
 
 // GNOIProvider exposes the per-device gNOI client. Set on the
@@ -435,6 +436,10 @@ func (r *Reconciler) runTransferInterrupted(ctx context.Context, up *opsv1alpha1
 func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
 	client, err := r.GNOI.GNOIClient(ctx)
 	if err != nil {
+		if activationRequestSubmitted(up) {
+			return r.activationLikelyStarted(ctx, up, up.Status.ValidatedVersion,
+				fmt.Sprintf("waiting for device after activation request: %s", err.Error()), now)
+		}
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "GNOIClient", err.Error(), now)
 	}
 	noReboot := up.Spec.Strategy == opsv1alpha1.UpgradeStrategyNoReboot
@@ -482,10 +487,16 @@ func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESof
 			}, reconcile.Result{})
 			r.emitEvent(up, corev1.EventTypeNormal, "ActivationRetry", fallbackMessage)
 		}
-		activateErr = client.Activate(ctx, gnoi.ActivateOpts{Version: candidate, NoReboot: noReboot})
+		activateCtx, cancel := context.WithTimeout(ctx, activationRPCTimeout)
+		activateErr = client.Activate(activateCtx, gnoi.ActivateOpts{Version: candidate, NoReboot: noReboot})
+		cancel()
 		if activateErr == nil {
 			acceptedVersion = candidate
 			break
+		}
+		if activationMayHaveStarted(activateErr) {
+			return r.activationLikelyStarted(ctx, up, candidate,
+				fmt.Sprintf("gNOI OS.Activate did not return cleanly after requesting version %s: %s", candidate, activateErr.Error()), now)
 		}
 		if !isActivateVersionNotPresent(activateErr) {
 			break
@@ -515,6 +526,36 @@ func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESof
 		cur.Status.Message = message
 		cur.Status.FailureReason = ""
 		r.setCondition(cur, conditionTypeActivated, metav1.ConditionTrue, "Activated", message, now)
+		r.setCondition(cur, conditionTypeDeviceReachable, metav1.ConditionFalse, "ReloadExpected",
+			"waiting for device to reload and return on the target version", now)
+		r.setCondition(cur, conditionTypeVerified, metav1.ConditionFalse, "VerifyPending",
+			"waiting for post-activation version verification", now)
+		r.setReady(cur, metav1.ConditionFalse, "Rebooting", message, now)
+	}, reconcile.Result{RequeueAfter: awaitingReachabilityPoll})
+}
+
+func (r *Reconciler) activationLikelyStarted(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	version string,
+	message string,
+	now time.Time,
+) (reconcile.Result, error) {
+	if version == "" {
+		version = up.Spec.TargetVersion
+	}
+	timeout := up.Spec.RebootTimeoutSeconds
+	if timeout == 0 {
+		timeout = 1800
+	}
+	message = fmt.Sprintf("%s; treating activation as submitted and waiting up to %ds for reload and target version",
+		message, timeout)
+	r.emitEvent(up, corev1.EventTypeNormal, "ActivationResponseLost", message)
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseAwaitingReachability
+		cur.Status.Message = message
+		cur.Status.FailureReason = ""
+		r.setCondition(cur, conditionTypeActivated, metav1.ConditionTrue, "ActivationResponseLost", message, now)
 		r.setCondition(cur, conditionTypeDeviceReachable, metav1.ConditionFalse, "ReloadExpected",
 			"waiting for device to reload and return on the target version", now)
 		r.setCondition(cur, conditionTypeVerified, metav1.ConditionFalse, "VerifyPending",
@@ -977,6 +1018,34 @@ func isActivateVersionNotPresent(err error) bool {
 	return strings.Contains(message, "version not present") ||
 		strings.Contains(message, "non-existent") ||
 		strings.Contains(message, "non existent")
+}
+
+func activationMayHaveStarted(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		return true
+	}
+	switch status.Code(err) {
+	case codes.DeadlineExceeded, codes.Canceled, codes.Unavailable:
+		return true
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "context deadline exceeded") ||
+		strings.Contains(message, "transport is closing") ||
+		strings.Contains(message, "connection reset") ||
+		strings.Contains(message, "client connection closing") ||
+		strings.Contains(message, "eof")
+}
+
+func activationRequestSubmitted(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	for _, cond := range up.Status.Conditions {
+		if cond.Type == conditionTypeActivated && cond.Reason == "ActivationRequested" {
+			return true
+		}
+	}
+	return false
 }
 
 func installVersionPriority(state string) int {

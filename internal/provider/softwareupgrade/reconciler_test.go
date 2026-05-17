@@ -396,6 +396,74 @@ func TestUnsupportedSystemServiceStillVerifiesAfterActivation(t *testing.T) {
 	}
 }
 
+func TestActivateTransportLossMovesToAwaitingReachability(t *testing.T) {
+	rig := newRig(t)
+	rig.os.activateErr = status.Error(codes.Unavailable, "transport is closing")
+	start := metav1.Time{Time: time.Unix(1_700_000_000, 0).UTC()}
+	up := newUpgrade("upgrade-activate-transport-loss", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+		up.Status.StartTime = &start
+		up.Status.ValidatedVersion = "17.15.01a"
+	})
+	r := newReconciler(t, rig, up)
+
+	res, err := r.Reconcile(context.Background(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: up.Namespace, Name: up.Name}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if res.RequeueAfter != awaitingReachabilityPoll {
+		t.Fatalf("RequeueAfter=%v, want %v", res.RequeueAfter, awaitingReachabilityPoll)
+	}
+	var got opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), types.NamespacedName{Namespace: up.Namespace, Name: up.Name}, &got); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseAwaitingReachability {
+		t.Fatalf("phase=%q msg=%q reason=%q", got.Status.Phase, got.Status.Message, got.Status.FailureReason)
+	}
+	if reason := conditionReason(got.Status.Conditions, "Activated"); reason != "ActivationResponseLost" {
+		t.Fatalf("Activated reason=%q", reason)
+	}
+}
+
+func TestActivatingReconnectFailureAfterSubmittedWaitsForReachability(t *testing.T) {
+	rig := newRig(t)
+	start := metav1.Time{Time: time.Unix(1_700_000_000, 0).UTC()}
+	up := newUpgrade("upgrade-activate-reconnect-failure", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+		up.Status.StartTime = &start
+		up.Status.ValidatedVersion = "17.15.01a"
+		up.Status.Conditions = []metav1.Condition{
+			{
+				Type:               "Activated",
+				Status:             metav1.ConditionFalse,
+				Reason:             "ActivationRequested",
+				Message:            "submitting gNOI OS.Activate",
+				LastTransitionTime: start,
+			},
+		}
+	})
+	r := newReconciler(t, rig, up)
+	r.GNOI = unavailableGNOI{err: errors.New("connection refused")}
+
+	res, err := r.Reconcile(context.Background(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: up.Namespace, Name: up.Name}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if res.RequeueAfter != awaitingReachabilityPoll {
+		t.Fatalf("RequeueAfter=%v, want %v", res.RequeueAfter, awaitingReachabilityPoll)
+	}
+	var got opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), types.NamespacedName{Namespace: up.Namespace, Name: up.Name}, &got); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseAwaitingReachability {
+		t.Fatalf("phase=%q msg=%q reason=%q", got.Status.Phase, got.Status.Message, got.Status.FailureReason)
+	}
+}
+
 func TestResolvingSucceedsWhenTargetAlreadyRunning(t *testing.T) {
 	rig := newRig(t)
 	up := newUpgrade("upgrade-already-running", nil)
