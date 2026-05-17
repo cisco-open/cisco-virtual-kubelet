@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
 )
 
 // ──────────────────────────────────────────────────────────────────
@@ -144,6 +145,18 @@ func runFixtureCase(t *testing.T, fc fixtureCase) {
 	gotOps, err := w.Diff(desired, observed)
 	if err != nil {
 		t.Fatalf("writer.Diff: %v", err)
+	}
+	validator := validation.NewStructuralValidator()
+	vctx := validation.Context{
+		Family:        fc.family,
+		DeviceVersion: dev,
+		ReleaseTag:    fc.releaseTag,
+		AllowedPaths:  w.YANGPaths(),
+	}
+	for i, op := range gotOps {
+		if err := validator.ValidateOperation(vctx, op); err != nil {
+			t.Fatalf("generated op[%d] failed YANG validation: %v", i, err)
+		}
 	}
 
 	if len(gotOps) != len(expected) {

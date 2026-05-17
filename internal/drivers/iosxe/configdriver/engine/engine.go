@@ -24,8 +24,10 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
 )
 
@@ -128,6 +130,13 @@ type Engine struct {
 	// reconciles process parent families before dependent ones.
 	// Tests pass an explicit ordering to assert the wiring.
 	FamilyOrder func([]string) []string
+
+	// YANGValidator validates writer-produced transport operations after
+	// NetAsCode intent has been translated into IOS-XE YANG JSON. Nil disables
+	// the boundary. The mode decides whether failures are warnings or hard
+	// reconcile errors.
+	YANGValidator      validation.Validator
+	YANGValidationMode validation.Mode
 
 	// RetryPolicy controls truncated exponential backoff applied to
 	// idempotent transport calls (Fetch, Verify re-Fetch). Apply /
@@ -900,6 +909,15 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 			ops = append(ops, pruneOps...)
 		}
 	}
+	if err := e.validateYANGOps(ctx, family, res, w, ops); err != nil {
+		planSpan.SetStatus(err)
+		planSpan.End()
+		familySpan.SetStatus(err)
+		return FamilyStatus{
+			Name: family, State: "ApplyError",
+			Message: safeMsg("YANG validation: %v", err),
+		}
+	}
 	planSpan.End()
 
 	// No-op: nothing to apply, nothing to verify. Family is InSync by
@@ -1057,6 +1075,44 @@ func (e *Engine) lookupWriter(family string) writers.SectionWriter {
 		return nil
 	}
 	return e.Lookup(family, e.DeviceVersion)
+}
+
+func (e *Engine) validateYANGOps(
+	ctx context.Context,
+	family string,
+	res *intent.ResolvedIntent,
+	w writers.SectionWriter,
+	ops []transport.Op,
+) error {
+	if len(ops) == 0 || e.YANGValidator == nil || e.YANGValidationMode == "" || e.YANGValidationMode == validation.ModeDisabled {
+		return nil
+	}
+	releaseTag := ""
+	if res != nil {
+		releaseTag = res.TargetYangVersion
+	}
+	vctx := validation.Context{
+		Family:        family,
+		DeviceVersion: e.DeviceVersion,
+		ReleaseTag:    releaseTag,
+		AllowedPaths:  w.YANGPaths(),
+	}
+	for i, op := range ops {
+		if err := e.YANGValidator.ValidateOperation(vctx, op); err != nil {
+			err = fmt.Errorf("op[%d]: %w", i, err)
+			if e.YANGValidationMode == validation.ModeWarn {
+				log.G(ctx).
+					WithError(err).
+					WithField("family", family).
+					WithField("deviceVersion", e.DeviceVersion).
+					WithField("yangRelease", releaseTag).
+					Warn("IOS-XE YANG validation warning")
+				continue
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 // allFamiliesEmpty reports whether every family in `families` has no

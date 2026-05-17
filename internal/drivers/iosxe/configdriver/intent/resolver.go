@@ -186,6 +186,9 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 	if device == "" {
 		return nil, fmt.Errorf("Resolve: spec.deviceRef.name is empty")
 	}
+	if err := validateModelSource(cr); err != nil {
+		return nil, err
+	}
 
 	// 1) Cluster-scoped defaults, merged in deterministic (name) order.
 	var defaultsList configv1alpha1.IOSXEConfigDefaultsList
@@ -383,6 +386,24 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 		CLIBlocks:              cliBlocks,
 		SourceCR:               cr.DeepCopy(),
 	}, nil
+}
+
+func validateModelSource(cr *configv1alpha1.IOSXEConfig) error {
+	src := cr.Spec.ModelSource
+	if src == nil {
+		return nil
+	}
+	if src.Format != configv1alpha1.NetAsCodeModelFormatIOSXE {
+		return fmt.Errorf(
+			"IOSXEConfig %s/%s: spec.modelSource.format %q is not supported",
+			cr.Namespace, cr.Name, src.Format)
+	}
+	if !src.Resolved {
+		return fmt.Errorf(
+			"IOSXEConfig %s/%s: spec.modelSource.resolved=false is not supported for production import; export a resolved NetAsCode model first",
+			cr.Namespace, cr.Name)
+	}
+	return nil
 }
 
 func inferManagedFamilies(explicit []string, configuration map[string]any) []string {

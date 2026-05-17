@@ -23,6 +23,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/iosxebuilder"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
 	log "github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
@@ -65,6 +66,10 @@ func buildXEConfigDriverContext(
 		SessionLock: opts.SessionLock,
 	})
 	supported, defaultVer := iosxebuilder.LoadYANGReleaseTags(ctx)
+	validationMode, validationModeErr := validation.ModeFromEnv()
+	if validationModeErr != nil {
+		log.G(ctx).WithError(validationModeErr).Warn("config driver: disabling YANG validation")
+	}
 	out := &drivers.ConfigDriverContext{
 		Transport:             t,
 		KeyRules:              iosxebuilder.KeyRulesForXE(),
@@ -74,6 +79,8 @@ func buildXEConfigDriverContext(
 		SubscribePaths:        iosxebuilder.UnionWriterPaths(),
 		FetchDeviceVersion:    FetchDeviceVersion,
 		FamilyOrder:           iosxebuilder.FamilyOrderForXE(),
+		YANGValidator:         validation.NewStructuralValidator(),
+		YANGValidationMode:    validationMode,
 	}
 	if err != nil {
 		return out, err

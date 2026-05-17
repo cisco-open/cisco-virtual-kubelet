@@ -80,10 +80,14 @@ const (
 	envCVKGNOIInsecure          = "CISCO_VK_GNOI_INSECURE"
 	envCVKGNOIPort              = "CISCO_VK_GNOI_PORT"
 	envCVKGNOIDisabled          = "CISCO_VK_GNOI_DISABLED"
+	envConfigYANGValidation     = "CONFIG_YANG_VALIDATION"
 )
 
-// telemetryEnvPropagationNames is the set of env vars whose literal values
-// the controller copies into every per-device VK pod's env block.
+// telemetryEnvPropagationNames is the legacy name for the set of controller
+// env vars whose literal values are copied into every per-device VK pod's env
+// block. Most entries are telemetry-related; CONFIG_YANG_VALIDATION is also
+// propagated so the NetAsCode -> YANG validation policy is identical in
+// controller/aggregator mode and per-device-pod mode.
 //
 // OTEL_EXPORTER_OTLP_HEADERS is intentionally excluded — those values can
 // carry collector auth tokens and copying them as literal `EnvVar.value`
@@ -103,6 +107,7 @@ var telemetryEnvPropagationNames = []string{
 	envCVKGNOIInsecure,
 	envCVKGNOIPort,
 	envCVKGNOIDisabled,
+	envConfigYANGValidation,
 }
 
 const (

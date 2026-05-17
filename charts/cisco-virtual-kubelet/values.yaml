@@ -125,6 +125,12 @@ collector:
   affinity: {}
 
 config:
+  # yangValidationMode controls the NetAsCode -> IOS-XE YANG validation
+  # boundary before a config mutation is sent to the device. Valid values:
+  # disabled, warn, strict. disabled preserves historical behaviour; warn logs
+  # validation mismatches; strict blocks the reconcile before mutation.
+  yangValidationMode: disabled
+
   # leaseNamespace is the shared namespace for per-(device, family)
   # arbitration leases. Set this when IOSXEConfig CRs in different
   # tenant namespaces target the same device — they will arbitrate

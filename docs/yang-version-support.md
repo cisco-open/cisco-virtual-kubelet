@@ -14,6 +14,68 @@ C9300-24P). Earlier versions (17.15, 17.16) diverge in several ways:
 
 ## Architecture
 
+### Intent, Translation, Validation Boundary
+
+CVK keeps the public `IOSXEConfig.spec.source` payload in the canonical
+NetAsCode shape. That shape is intentionally release-stable: operators should
+not have to change day-0 YAML just because IOS-XE moved a leaf or renamed an
+augmented container between 17.18 and 26.01.
+
+The release-specific boundary is therefore:
+
+```text
+NetAsCode intent
+  -> family writer
+  -> version override / body transform
+  -> IOS-XE YANG JSON op
+  -> validation boundary
+  -> RESTCONF / NETCONF / gNMI transport
+```
+
+`internal/drivers/iosxe/configdriver/validation` owns the validation boundary.
+It runs after writers emit `transport.Op` values and before the engine calls
+`Apply`. The default `StructuralValidator` checks common op invariants
+(path scope, JSON envelope shape, body presence) and hosts narrow release
+profiles for known divergences. IOS-XE 26.01 currently validates that
+`ip_domain.name` has been translated to
+`name-container.name-no-vrf` before mutation.
+
+This is the seam where generated ygot/ytypes validators belong once per-release
+config model packages are available. ygot should validate the device-facing
+YANG payload, not replace the public NetAsCode intent model.
+
+Validation is deployment-policy controlled:
+
+| Mode | Effect |
+|------|--------|
+| `CONFIG_YANG_VALIDATION=disabled` | default; no validation gate |
+| `CONFIG_YANG_VALIDATION=warn` | log validation failures and continue |
+| `CONFIG_YANG_VALIDATION=strict` | fail the family before mutation |
+
+The Helm value is `config.yangValidationMode`. The controller propagates it to
+per-device VK pods so aggregator mode and per-pod mode use the same policy.
+
+### Stable NetAsCode Import Contract
+
+For customer migrations from Terraform-based NetAsCode, CVK imports the
+resolved NetAsCode IOS-XE model and records provenance in
+`IOSXEConfig.spec.modelSource`. This keeps the public intent model stable while
+the writer layer handles IOS-XE release differences.
+
+```yaml
+spec:
+  modelSource:
+    format: netascode-iosxe
+    resolved: true
+    exporter: terraform-iosxe-nac-iosxe write_model_file
+```
+
+`resolved: false` is rejected by the resolver. If a future NetAsCode release
+adds fields, CVK should first accept the canonical data model shape, then
+either translate the field for the target YANG release or report it as an
+unsupported family/field through migration tooling and validation. The CRD
+should not fork by IOS-XE release.
+
 ### Override Table (`yang_version_override_table.go`)
 
 The **declarative override table** is the central registry of version-
@@ -129,6 +191,8 @@ Add an entry to `yang_version_override_table.go`:
 
 - Add transform tests to `version_transforms_test.go`
 - Add override resolution tests to `yang_version_overrides_test.go`
+- Add structural validation coverage for any release-specific YANG payload
+  shape in `internal/drivers/iosxe/configdriver/validation`
 - Run integration tests on a device of that version
 
 ### 5. Verify
@@ -136,6 +200,7 @@ Add an entry to `yang_version_override_table.go`:
 ```bash
 # Unit tests
 go test ./internal/drivers/iosxe/configdriver/writers/ -v
+go test ./internal/drivers/iosxe/configdriver/validation -v
 
 # Full build
 go build ./...

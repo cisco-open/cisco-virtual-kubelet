@@ -83,6 +83,13 @@ type IOSXEConfigTemplateSpec struct {
 	// +kubebuilder:validation:Required
 	Source ConfigurationSource `json:"source"`
 
+	// ModelSource records the external NetAsCode model/export that produced
+	// Source. It is deliberately metadata-only: CVK reconciles the canonical
+	// payload in Source, while this field lets operators audit lateral
+	// migrations from Terraform NetAsCode or future NetAsCode exporters.
+	// +optional
+	ModelSource *NetAsCodeModelSource `json:"modelSource,omitempty"`
+
 	// Transactional requests a candidate-datastore + commit apply when the
 	// transport supports it (NETCONF). Ignored with a warning on RESTCONF,
 	// which has no candidate datastore; Phase-2 lifts this limitation.

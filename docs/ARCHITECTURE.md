@@ -144,6 +144,80 @@ The IOS-XE driver implements it. Drivers without topology support still work —
 | `topology.go` | `TopologyProvider` implementation — CDP, OSPF, interfaces |
 | `models.go` | YANG structs, auto-generated via [ygot](https://github.com/openconfig/ygot) |
 
+### IOS-XE Config Driver and NetAsCode
+
+The IOS-XE configuration plane is separate from App Hosting. `IOSXEConfig`
+resources carry NetAsCode-shaped intent, and the configdriver resolves the same
+kind of hierarchy NetAsCode uses: defaults, device groups, interface groups,
+templates, and per-device configuration. The resolved intent remains plain
+YAML/JSON data until a family writer owns it.
+
+Family writers are the translation boundary. They take canonical NetAsCode
+fields, apply release-aware overrides, and emit `transport.Op` values addressed
+to IOS-XE YANG paths. The engine then validates and applies those operations
+over RESTCONF, NETCONF, or gNMI.
+
+```text
+IOSXEConfig / NetAsCode source
+  -> intent resolver
+  -> family writer
+  -> version override table
+  -> YANG validation boundary
+  -> transport
+  -> device
+```
+
+The validation boundary is deliberately device-facing. `CONFIG_YANG_VALIDATION`
+controls it:
+
+| Value | Behaviour |
+|---|---|
+| `disabled` | no validation gate; default for backward compatibility |
+| `warn` | log validation failures and continue |
+| `strict` | fail before mutation |
+
+This preserves NetAsCode as the stable public model while giving CVK a place to
+use release-specific ygot/ytypes validation as those generated model packages
+are added.
+
+### NetAsCode migration contract
+
+CVK supports lateral migration from Terraform-driven NetAsCode by importing the
+**resolved** NetAsCode IOS-XE model, not Terraform state and not provider
+internal resources. The source toolchain should expand defaults, templates,
+device groups, and inheritance first, then CVK receives one per-device
+configuration block.
+
+`IOSXEConfig.spec.modelSource` records that provenance:
+
+```yaml
+spec:
+  modelSource:
+    format: netascode-iosxe
+    modelVersion: "1.2.3"
+    resolved: true
+    exporter: terraform-iosxe-nac-iosxe write_model_file
+    sourceRevision: 4fd62c1
+```
+
+The resolver rejects `resolved: false` because CVK does not attempt to replay
+Terraform's model expansion semantics during production import. This keeps the
+contract crisp: NetAsCode owns intent modelling; CVK owns continuous
+reconciliation, release-aware YANG translation, validation, and device apply.
+
+The recommended cutover is family-scoped:
+
+1. Export the resolved NetAsCode model from the existing pipeline.
+2. Generate an `IOSXEConfig` with `cvk-netascode-migrate emit-cr`.
+3. Start with `driftPolicy: report` so CVK observes but does not overwrite.
+4. Compare reported drift with the Terraform-managed device state.
+5. Move one family at a time from Terraform ownership to CVK ownership by
+   editing `managedFamilies`.
+6. Promote to `driftPolicy: revert` after the selected families are clean.
+
+Do not let Terraform and CVK manage the same device leaves at the same time.
+The `managedFamilies` list is the operational ownership boundary.
+
 ## Data flow
 
 ### Controller reconciliation

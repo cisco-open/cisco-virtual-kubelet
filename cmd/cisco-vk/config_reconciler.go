@@ -315,6 +315,8 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		DefaultYANGVersion:    dctx.DefaultYANGVersion,
 		Lookup:                dctx.LookupWriter,
 		FamilyOrder:           dctx.FamilyOrder,
+		YANGValidator:         dctx.YANGValidator,
+		YANGValidationMode:    dctx.YANGValidationMode,
 		Leaser: &engine.FamilyLeaser{
 			Client:    mgr.GetClient(),
 			Namespace: leaseNamespace,

@@ -38,6 +38,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
@@ -149,6 +150,12 @@ type ConfigReconciler struct {
 	// replace. Nil means operator-determined ordering — the
 	// pre-Wave-10 default.
 	FamilyOrder func([]string) []string
+
+	// YANGValidator validates writer-produced IOS-XE YANG payloads
+	// before they are applied. YANGValidationMode controls whether a
+	// validation failure is logged only or blocks the reconcile.
+	YANGValidator      validation.Validator
+	YANGValidationMode validation.Mode
 
 	// Leaser serialises per-family writes across IOSXEConfig CRs
 	// targeting the same device. Nil means advisory-only conflict
@@ -437,10 +444,12 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, 
 		lookup = writers.GetForRelease
 	}
 	eng := &engine.Engine{
-		Transport:     r.GetTransport(),
-		Lookup:        lookup,
-		DeviceVersion: deviceVersion,
-		FamilyOrder:   r.FamilyOrder,
+		Transport:          r.GetTransport(),
+		Lookup:             lookup,
+		DeviceVersion:      deviceVersion,
+		FamilyOrder:        r.FamilyOrder,
+		YANGValidator:      r.YANGValidator,
+		YANGValidationMode: r.YANGValidationMode,
 	}
 
 	for _, cr := range forDevice {

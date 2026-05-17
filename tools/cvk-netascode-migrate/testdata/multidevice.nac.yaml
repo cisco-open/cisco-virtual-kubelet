@@ -1,0 +1,14 @@
+iosxe:
+  devices:
+    - name: edge-01
+      configuration:
+        system:
+          hostname: edge-01
+    - name: edge-02
+      configuration:
+        system:
+          hostname: edge-02
+        vlan:
+          vlans:
+            - id: 20
+              name: servers

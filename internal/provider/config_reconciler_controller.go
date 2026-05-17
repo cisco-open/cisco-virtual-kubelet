@@ -228,10 +228,12 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 
 	deviceVersion, _ := r.deviceVersionState()
 	eng := &engine.Engine{
-		Transport:     tr,
-		Lookup:        lookup,
-		DeviceVersion: deviceVersion,
-		FamilyOrder:   r.FamilyOrder,
+		Transport:          tr,
+		Lookup:             lookup,
+		DeviceVersion:      deviceVersion,
+		FamilyOrder:        r.FamilyOrder,
+		YANGValidator:      r.YANGValidator,
+		YANGValidationMode: r.YANGValidationMode,
 	}
 	// Build empty desired for each owned family. coerceList in the
 	// writer side accepts a missing/empty entry as "no entries
@@ -455,10 +457,12 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		lookup = writers.GetForRelease
 	}
 	eng := &engine.Engine{
-		Transport:     r.GetTransport(),
-		Lookup:        lookup,
-		DeviceVersion: deviceVersion,
-		FamilyOrder:   r.FamilyOrder,
+		Transport:          r.GetTransport(),
+		Lookup:             lookup,
+		DeviceVersion:      deviceVersion,
+		FamilyOrder:        r.FamilyOrder,
+		YANGValidator:      r.YANGValidator,
+		YANGValidationMode: r.YANGValidationMode,
 	}
 
 	// Compute conflicts across every CR targeting this device. Listing

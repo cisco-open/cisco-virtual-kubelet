@@ -26,6 +26,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 )
 
@@ -177,6 +178,45 @@ func TestReconcileInSyncWhenDiffEmpty(t *testing.T) {
 	}
 	if w.applies != 0 {
 		t.Fatalf("Apply called %d times on no-op", w.applies)
+	}
+}
+
+func TestReconcileStrictYANGValidationBlocksApply(t *testing.T) {
+	w := &fakeWriter{
+		family: "vlan",
+		ops: []transport.Op{{
+			Verb: transport.VerbMerge,
+			Path: "/outside-writer-scope",
+			Body: []byte(`{"Cisco-IOS-XE-native:outside":{}}`),
+		}},
+	}
+	tr := &stubTransport{}
+	e := &Engine{
+		Transport:          tr,
+		Lookup:             func(f, _ string) writers.SectionWriter { return w },
+		YANGValidator:      validation.NewStructuralValidator(),
+		YANGValidationMode: validation.ModeStrict,
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:        "edge-01",
+		ManagedFamilies:   []string{"vlan"},
+		Configuration:     map[string]any{"vlan": map[string]any{}},
+		DriftPolicy:       configv1alpha1.DriftPolicyRevert,
+		TargetYangVersion: "1718",
+	}
+
+	r := e.Reconcile(context.Background(), res)
+	if r.Phase != PhaseFailed {
+		t.Fatalf("Phase=%s, want Failed", r.Phase)
+	}
+	if w.applies != 0 {
+		t.Fatalf("Apply called %d times; strict validation should block before apply", w.applies)
+	}
+	if tr.mutated != 0 {
+		t.Fatalf("transport Mutate called %d times; strict validation should block before mutation", tr.mutated)
+	}
+	if len(r.FamilyStatuses) != 1 || !strings.Contains(r.FamilyStatuses[0].Message, "YANG validation") {
+		t.Fatalf("family status missing validation message: %#v", r.FamilyStatuses)
 	}
 }
 

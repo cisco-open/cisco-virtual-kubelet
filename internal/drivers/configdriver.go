@@ -38,6 +38,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 )
 
@@ -109,6 +110,13 @@ type ConfigDriverContext struct {
 	// default) and is the safe fallback when a platform's schema
 	// doesn't declare dependencies.
 	FamilyOrder func([]string) []string
+
+	// YANGValidator validates writer-produced IOS-XE YANG payloads
+	// before mutation. The validation package keeps the canonical
+	// NetAsCode model stable while allowing release-specific YANG
+	// profiles and future ygot/ytypes validators at the device boundary.
+	YANGValidator      validation.Validator
+	YANGValidationMode validation.Mode
 }
 
 // ValidateDeviceVersion validates DeviceVersion against the version-

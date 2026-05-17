@@ -162,6 +162,11 @@
         "leaseNamespace": {
           "type": "string",
           "description": "Shared namespace for per-(device, family) arbitration leases. Empty falls back to per-pod-namespace behaviour."
+        },
+        "yangValidationMode": {
+          "type": "string",
+          "enum": ["disabled", "warn", "strict"],
+          "description": "Controls IOS-XE NetAsCode-to-YANG operation validation before config mutations."
         }
       }
     },

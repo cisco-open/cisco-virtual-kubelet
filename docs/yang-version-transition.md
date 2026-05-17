@@ -20,6 +20,7 @@ done, what is gated, and what each gate needs.
 | 1.5   | Device-version → release-tag mapping table         | shipped    |
 | 1.6   | UnsupportedDevice event surface (cisco-vk + aggregator) | shipped |
 | 2     | Per-release golden-file fixture harness            | shipped    |
+| 2.1   | NetAsCode-to-YANG validation boundary              | shipped    |
 | 3.1   | Status-aware `LoadYANGReleaseTags`                 | shipped    |
 | 3.2   | `cisco-vk-yang-sync` per-release output layout     | shipped    |
 | 3.3   | Vendor YANG modules under `schema/yang/<tag>/`     | shipped for 1718 |
@@ -60,12 +61,21 @@ done, what is gated, and what each gate needs.
   is walked by `TestFixturesAgainstRegisteredWriters`. Two
   fixtures (`1716/snmp_server/basic` and `1716/snmp_server/noop`)
   prove the mechanism; adding a fixture is a no-code change.
+- **Validation boundary.** `internal/drivers/iosxe/configdriver/validation`
+  validates writer-produced `transport.Op` payloads after NetAsCode intent is
+  translated to IOS-XE YANG JSON and before mutation. The initial validator is
+  structural and release-profile based, with a 26.01 `ip_domain` guard for the
+  `name-container.name-no-vrf` shape. It is controlled by
+  `CONFIG_YANG_VALIDATION=disabled|warn|strict` and is the intended insertion
+  point for future generated ygot/ytypes validation.
 - **Migration readiness.** `tools/cvk-netascode-migrate` inspects
   netascode-shaped YAML, reports which top-level families CVK manages
-  from `schema/families.yaml`, and leaves unsupported top-level
-  families as silent passthrough. Its `emit-cr` subcommand emits a
-  starter `IOSXEConfig` with `managedFamilies` inferred from supported
-  families in the input.
+  from `schema/families.yaml`, and requires explicit `--device`
+  selection for multi-device `iosxe.devices[]` files. Its `emit-cr`
+  subcommand emits a report-mode starter `IOSXEConfig` with
+  `managedFamilies` inferred from supported families in the selected
+  device input, plus `spec.modelSource` provenance metadata for audited
+  Terraform NetAsCode cutovers.
 - **Parity matrix.** `make parity-matrix` regenerates
   `docs/family-parity.md` from `schema/families.yaml`;
   `make check-parity-matrix` fails when the checked-in matrix is stale.
@@ -79,16 +89,22 @@ done, what is gated, and what each gate needs.
 The migration surface is intentionally additive. Operators can run:
 
 ```text
-cvk-netascode-migrate path/to/device.nac.yaml
-cvk-netascode-migrate emit-cr --name edge-01 path/to/device.nac.yaml
+cvk-netascode-migrate --device edge-01 path/to/resolved.nac.yaml
+cvk-netascode-migrate emit-cr --device edge-01 --name edge-01-nac path/to/resolved.nac.yaml
 cvk-netascode-migrate matrix --output docs/family-parity.md
 ```
 
 The report separates supported families from unsupported passthrough
-families. `emit-cr` uses only the supported set for
-`spec.managedFamilies` while keeping the source body intact under
-`spec.source.inline`, so non-CVK data is not silently converted into a
-managed family.
+families. `emit-cr` uses only the supported set for `spec.managedFamilies`.
+By default it keeps the selected source body intact under `spec.source.inline`
+so non-CVK data is not silently discarded; production imports can pass
+`--strict` to fail on unsupported families or `--drop-unsupported` to omit
+them from the emitted source after a deliberate ownership decision.
+
+`IOSXEConfig.spec.modelSource` is now the migration provenance contract.
+The resolver accepts only `format: netascode-iosxe` and rejects
+`resolved: false`, because CVK applies resolved NetAsCode intent and does not
+reimplement Terraform NetAsCode expansion logic.
 
 When `spec.managedFamilies` is empty, the resolver now infers it from
 the top-level keys of the resolved configuration. An explicit list still
@@ -158,6 +174,26 @@ These remain straightforward once Phases 3.3–4 are in place. The action
 plan in the review conversation gives the per-family migration order
 (simple ElementMap-only first, BodyTransform last, bgp + prefix_list
 absolute last).
+
+## NetAsCode and ygot boundary decision
+
+The canonical `IOSXEConfig.spec.source` model stays NetAsCode-shaped and
+schemaless at the CRD boundary. This matches the upstream NetAsCode/Terraform
+module pattern: YAML and `map(any)` intent is merged through global, device
+group, interface group, template, and device scopes before provider resources
+translate it to IOS-XE API calls.
+
+ygot is therefore a device-facing validation and marshal/decode tool, not the
+public intent schema. Generated per-release ygot models should be introduced
+behind the validation boundary:
+
+```text
+NetAsCode map -> writer transform -> YANG JSON -> ygot/ytypes validate -> transport
+transport fetch -> ygot/ytypes decode -> reverse transform -> NetAsCode map
+```
+
+That keeps operator YAML identical across releases while giving CVK release
+specific safety at the YANG edge.
 
 ## What does NOT change as part of this transition
 

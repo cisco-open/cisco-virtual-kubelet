@@ -43,7 +43,7 @@ INSTALL_DIR=$(PREFIX)/bin
 CONFIG_DIR=/etc/cisco-vk
 SYSTEMD_DIR=/etc/systemd/system
 
-.PHONY: all build clean install uninstall test test-envtest lint fmt deps help generate manifests crd-gen deepcopy-gen rbac-gen helm-sync-crds config-lint config-docs yang-sync migrate-tool parity-matrix check-parity-matrix vendor-yang apphosting-ygot-gen
+.PHONY: all build clean install uninstall test test-envtest lint fmt deps help generate manifests crd-gen deepcopy-gen rbac-gen helm-sync-crds config-lint netascode-migrate config-docs yang-sync migrate-tool parity-matrix check-parity-matrix vendor-yang apphosting-ygot-gen
 
 all: build
 
@@ -135,6 +135,9 @@ vet: ## Run go vet
 
 config-lint: ## Run cisco-vk-config-lint (pass arguments with ARGS="...")
 	$(GO_BIN) run ./tools/cisco-vk-config-lint $(ARGS)
+
+netascode-migrate: ## Inspect or emit IOSXEConfig from NetAsCode input (pass arguments with ARGS="...")
+	$(GO_BIN) run ./tools/cvk-netascode-migrate $(ARGS)
 
 config-docs: ## Generate IOS-XE config family reference docs
 	$(GO_BIN) run ./tools/cisco-vk-config-docs $(ARGS)
