@@ -120,12 +120,23 @@ func wrapYANGPayload(envelopeKey string, body any) ([]byte, error) {
 func leavesEqual(desired, observed map[string]any, managed []string) bool {
 	for _, key := range managed {
 		dv, dHas := desired[key]
-		ov, oHas := observed[key]
-		if dHas != oHas {
-			return false
-		}
 		if !dHas {
+			// Desired doesn't specify this leaf — skip it.
+			// The writer is additive (MERGE), so observed-only
+			// leaves are not drift.
 			continue
+		}
+		ov, oHas := observed[key]
+		if !oHas {
+			// IOS-XE models many CLI booleans as YANG empty leaves:
+			// presence means true, absence means false. Treat an
+			// explicit desired false as equal to an absent observed
+			// value so writers do not enter a drift loop by trying to
+			// PATCH false into an empty leaf.
+			if isExplicitFalse(dv) {
+				continue
+			}
+			return false
 		}
 		if !scalarEqual(dv, ov) {
 			return false
@@ -166,6 +177,23 @@ func scalarEqual(a, b any) bool {
 		if reflect.DeepEqual(a, b) {
 			return true
 		}
+		// For nested maps apply the same desired-⊆-observed rule that
+		// leavesEqual uses at the top level: every key in a (desired)
+		// must exist and match in b (observed); extra keys in b are OK
+		// because writers use MERGE and cannot remove observed-only fields.
+		// This prevents drift loops when the device stores default sub-fields
+		// (e.g. clock.timezone.minutes: 0) that the desired config omits.
+		if am, aOk := a.(map[string]any); aOk {
+			if bm, bOk := b.(map[string]any); bOk {
+				for k, av := range am {
+					bv, exists := bm[k]
+					if !exists || !scalarEqual(av, bv) {
+						return false
+					}
+				}
+				return true
+			}
+		}
 		return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 	}
 	if a == b {
@@ -191,12 +219,33 @@ func isComparable(v any) bool {
 	}
 }
 
-// projectManagedLeaves returns a copy of src containing only the keys
-// listed in managed. Writers use it to send a merge-shaped payload that
-// does not overwrite leaves the device has configured outside CVK's
-// scope.
+func isExplicitFalse(v any) bool {
+	switch t := v.(type) {
+	case bool:
+		return !t
+	case string:
+		return t == "false" || t == "no" || t == "0"
+	case int:
+		return t == 0
+	case int64:
+		return t == 0
+	case float64:
+		return t == 0
+	default:
+		return false
+	}
+}
+
+// projectManagedLeaves returns a copy of src suitable for a merge-shaped
+// payload. Leaves explicitly present in desired intent pass through even
+// when this writer has no typed knowledge of them; this keeps current
+// untyped writers from dropping operator-owned leaves and gives the typed
+// writer migration a concrete passthrough invariant to preserve.
 func projectManagedLeaves(src map[string]any, managed []string) map[string]any {
-	out := map[string]any{}
+	out := make(map[string]any, len(src))
+	for key, v := range src {
+		out[key] = v
+	}
 	for _, key := range managed {
 		if v, ok := src[key]; ok {
 			out[key] = v

@@ -201,6 +201,53 @@ func TestAuthFromSecret_DockerConfigJSON_IdentityTokenPreferred(t *testing.T) {
 	}
 }
 
+func TestRestconfUnmarshallerDecodesIOSXE2601AppHostingOperFields(t *testing.T) {
+	d := &XEDriver{}
+	var root Cisco_IOS_XEAppHostingOper_AppHostingOperData
+	raw := []byte(`{
+		"Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data": {
+			"app-globals": {
+				"iox-enabled": true,
+				"iox-version": "26.01",
+				"iox-dir": "flash:/iox",
+				"iox-dockerd-status": "iox-stat-run",
+				"iox-caf-health": "ioxcaf-stat-stbl",
+				"iox-app-sign-verify": "iox-app-sign-stat-en"
+			}
+		}
+	}`)
+
+	if err := d.getRestconfUnmarshaller()(raw, &root); err != nil {
+		t.Fatalf("unmarshal IOS XE 26.01 app-hosting oper fields: %v", err)
+	}
+	if root.AppGlobals == nil || root.AppGlobals.IoxEnabled == nil || !*root.AppGlobals.IoxEnabled {
+		t.Fatalf("expected known iox-enabled field to be preserved, got %#v", root.AppGlobals)
+	}
+	if root.AppGlobals.IoxVersion == nil || *root.AppGlobals.IoxVersion != "26.01" {
+		got := "<nil>"
+		if root.AppGlobals.IoxVersion != nil {
+			got = *root.AppGlobals.IoxVersion
+		}
+		t.Fatalf("IoxVersion=%q, want 26.01", got)
+	}
+	if root.AppGlobals.IoxDir == nil || *root.AppGlobals.IoxDir != "flash:/iox" {
+		got := "<nil>"
+		if root.AppGlobals.IoxDir != nil {
+			got = *root.AppGlobals.IoxDir
+		}
+		t.Fatalf("IoxDir=%q, want flash:/iox", got)
+	}
+	if got := root.AppGlobals.IoxDockerdStatus; got != Cisco_IOS_XEAppHostingOper_IoxRunStatus_iox_stat_run {
+		t.Fatalf("IoxDockerdStatus=%v, want iox-stat-run", got)
+	}
+	if got := root.AppGlobals.IoxCafHealth; got != Cisco_IOS_XEAppHostingOper_IoxHealthStatus_ioxcaf_stat_stbl {
+		t.Fatalf("IoxCafHealth=%v, want ioxcaf-stat-stbl", got)
+	}
+	if got := root.AppGlobals.IoxAppSignVerify; got != Cisco_IOS_XEAppHostingOper_IoxAppSignStatus_iox_app_sign_stat_en {
+		t.Fatalf("IoxAppSignVerify=%v, want iox-app-sign-stat-en", got)
+	}
+}
+
 // ── Install / recovery integration tests ─────────────────────────────────────
 
 func TestCreateAppHostingApp_PrimaryPullSucceeds(t *testing.T) {
@@ -347,8 +394,8 @@ func minimalDockerResourceConfig(imagePath string, policy v1.PullPolicy, timeout
 func TestCreateAppHostingApp_DockerResource_FlashImage(t *testing.T) {
 	// DockerResource + flash path: wait DEPLOYED → ActivateApp → StartApp → RUNNING
 	var (
-		mu       sync.Mutex
-		rpcOrder []string
+		mu        sync.Mutex
+		rpcOrder  []string
 		activated bool
 	)
 	rpcPath := "/restconf/operations/Cisco-IOS-XE-rpc:app-hosting"
@@ -405,8 +452,8 @@ func TestCreateAppHostingApp_DockerResource_FlashImage(t *testing.T) {
 func TestCreateAppHostingApp_DockerResource_HTTPPrimarySuccess(t *testing.T) {
 	// DockerResource + HTTP: device pull succeeds → DEPLOYED → ActivateApp → StartApp → RUNNING
 	var (
-		mu       sync.Mutex
-		rpcOrder []string
+		mu        sync.Mutex
+		rpcOrder  []string
 		activated bool
 	)
 	rpcPath := "/restconf/operations/Cisco-IOS-XE-rpc:app-hosting"

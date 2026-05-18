@@ -32,6 +32,7 @@ import (
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/devicegrpc"
 )
 
 // SubscribeClientFactory creates the dedicated gRPC client used by the
@@ -46,6 +47,16 @@ type SubscribeClient struct {
 	Conn        *grpc.ClientConn
 	Client      gpb.GNMIClient
 	AuthContext func(context.Context) context.Context
+
+	// Release, when non-nil, is invoked by Subscriber.Stop in place
+	// of Conn.Close(). Pool-backed factories set it to the pool
+	// Lease's Release function so the underlying conn stays alive
+	// for other consumers (gNMI Set, gNOI unary RPCs) until the
+	// last lease is released. Owner-conn factories leave it nil
+	// and the subscriber falls back to Conn.Close() — preserving
+	// the long-standing "telemetry owns its dial" contract for
+	// callers that haven't migrated to the pool.
+	Release func()
 }
 
 // DefaultSubscribeClientFactory builds a fresh *grpc.ClientConn using the same
@@ -131,6 +142,57 @@ func (f *DefaultSubscribeClientFactory) NewClient(_ context.Context) (*Subscribe
 		Conn:        conn,
 		Client:      gpb.NewGNMIClient(conn),
 		AuthContext: authContextFunc(cfg.Username, cfg.Password),
+	}, nil
+}
+
+// PooledSubscribeClientFactory dials via a shared devicegrpc.Pool,
+// leasing the gNMI Subscribe stream's conn under ClassTelemetry. The
+// Lease is held for the lifetime of the SubscribeClient and released
+// when Subscriber.Stop is called — the pool refcounts so other
+// consumers (gNMI Set, gNOI unary RPCs) on the same WorkloadClass
+// keep working.
+//
+// Use this factory when you want telemetry and the rest of the gRPC
+// pillars to share TLS material and auth via a single source of
+// truth. The env-var override path (CISCO_VK_TELEMETRY_INSECURE /
+// CISCO_VK_TELEMETRY_PORT) is intentionally NOT honoured here —
+// operators using those escapes should stay on the existing
+// DefaultSubscribeClientFactory, which keeps its dedicated dial.
+type PooledSubscribeClientFactory struct {
+	Pool        devicegrpc.Pool
+	Key         devicegrpc.DeviceKey
+	AuthContext func(context.Context) context.Context
+}
+
+// NewPooledSubscribeClientFactory wires a pooled factory using the
+// authentication context derived from the supplied username/password
+// pair. AuthContext follows the same Basic-auth shape IOS-XE's
+// gnxi-server accepts.
+func NewPooledSubscribeClientFactory(pool devicegrpc.Pool, key devicegrpc.DeviceKey, username, password string) *PooledSubscribeClientFactory {
+	return &PooledSubscribeClientFactory{
+		Pool:        pool,
+		Key:         key,
+		AuthContext: authContextFunc(username, password),
+	}
+}
+
+func (f *PooledSubscribeClientFactory) NewClient(ctx context.Context) (*SubscribeClient, error) {
+	if f == nil || f.Pool == nil {
+		return nil, errors.New("telemetry: PooledSubscribeClientFactory requires a non-nil Pool")
+	}
+	lease, err := f.Pool.Lease(ctx, f.Key, devicegrpc.ClassTelemetry)
+	if err != nil {
+		return nil, fmt.Errorf("telemetry: lease ClassTelemetry: %w", err)
+	}
+	auth := f.AuthContext
+	if auth == nil {
+		auth = func(ctx context.Context) context.Context { return ctx }
+	}
+	return &SubscribeClient{
+		Conn:        lease.Conn,
+		Client:      gpb.NewGNMIClient(lease.Conn),
+		AuthContext: auth,
+		Release:     lease.Release,
 	}, nil
 }
 

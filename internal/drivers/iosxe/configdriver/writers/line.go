@@ -46,5 +46,7 @@ func init() {
 			"login",
 			"password",
 		},
+		yangBodyShape:  lineToYANG,
+		yangFetchShape: lineFromYANG,
 	})
 }

@@ -55,26 +55,49 @@ type keyedListWriter struct {
 	// response back to the flat managed-leaf shape so leavesEqual
 	// can compare desired vs observed without per-family branching.
 	yangFetchShape func(yang map[string]any) map[string]any
+
+	resolver *OverrideResolver
 }
 
-func (w keyedListWriter) Family() string      { return w.family }
-func (w keyedListWriter) YANGPaths() []string { return []string{w.yangPath} }
+func (w keyedListWriter) Family() string { return w.family }
+func (w keyedListWriter) YANGPaths() []string {
+	return []string{w.resolverForUse().ResolvedYANGPath(w.family, w.yangPath)}
+}
+
+func (w keyedListWriter) withResolver(r *OverrideResolver) SectionWriter {
+	w.resolver = r
+	return w
+}
+
+func (w keyedListWriter) resolverForUse() *OverrideResolver {
+	return ensureResolver(w.resolver)
+}
 
 func (w keyedListWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
-	raw, err := c.Fetch(ctx, w.yangPath)
+	resolver := w.resolverForUse()
+	yangPath := resolver.ResolvedYANGPath(w.family, w.yangPath)
+	envelopeKey := resolver.ResolvedEnvelopeKey(w.family, w.envelopeKey)
+	raw, err := c.Fetch(ctx, yangPath)
 	if err != nil {
 		if isRESTCONF404(err) {
 			return []map[string]any{}, nil
 		}
 		return nil, err
 	}
-	body, err := unwrapYANGEnvelope(raw, w.envelopeKey)
+	body, err := unwrapYANGEnvelope(raw, envelopeKey)
 	if err != nil || body == nil {
 		return []map[string]any{}, err
 	}
 	list, err := decodeYANGList(body)
 	if err != nil {
 		return nil, fmt.Errorf("%s: decode list: %w", w.family, err)
+	}
+	// Auto-reverse the override (ElementMap + EmptyLeaves) before
+	// yangFetchShape, so the family's custom shape transform sees a
+	// netascode-keyed entry rather than a YANG-prefixed one. No-op
+	// when the family has no override or carries a BodyTransform.
+	for i := range list {
+		list[i] = resolver.AutoReverseObservedBody(w.family, list[i])
 	}
 	if w.yangFetchShape != nil {
 		for i := range list {
@@ -133,6 +156,9 @@ func (w keyedListWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	// it when keys are non-scalar but for scalars sort.Strings is safer.
 	sort.Strings(keyOrder)
 
+	resolver := w.resolverForUse()
+	yangPath := resolver.ResolvedYANGPath(w.family, w.yangPath)
+	envelopeKey := resolver.ResolvedEnvelopeKey(w.family, w.envelopeKey)
 	ops := make([]transport.Op, 0, len(keyOrder))
 	for _, k := range keyOrder {
 		entry := want[k]
@@ -147,14 +173,32 @@ func (w keyedListWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		if w.yangBodyShape != nil {
 			proj = w.yangBodyShape(proj)
 		}
-		body, err := wrapYANGPayload(w.envelopeKey, []any{proj})
+		// Apply version-conditional overrides (element renames,
+		// empty-leaf encoding, body transforms).
+		if o, ok := resolver.GetOverride(w.family); ok {
+			proj = ApplyOverrideToBody(proj, o)
+		}
+		body, err := wrapYANGPayload(envelopeKey, []any{proj})
 		if err != nil {
 			return nil, err
 		}
+		// When the entry doesn't exist on the device, MERGE to
+		// the parent list path (no =key suffix). IOS-XE RESTCONF
+		// rejects PATCH to a nonexistent entry path with 404; the
+		// parent path creates the entry as part of the MERGE.
+		// Caught against C8000V 17.16.01a for prefix_list.
+		opPath := yangPath + "=" + k
+		var pathSpec []transport.PathElement
+		if inDevice {
+			pathSpec = pathSpecForKeyedListEntry(yangPath, w.keyField, k)
+		} else {
+			opPath = yangPath
+			pathSpec = pathSpecForKeyedListParent(yangPath)
+		}
 		ops = append(ops, transport.Op{
 			Verb:     transport.VerbMerge,
-			Path:     w.yangPath + "=" + k,
-			PathSpec: pathSpecForKeyedListEntry(w.yangPath, w.keyField, k),
+			Path:     opPath,
+			PathSpec: pathSpec,
 			Body:     body,
 		})
 	}
@@ -236,11 +280,12 @@ func (w keyedListWriter) PruneDiff(desired, observed any) ([]transport.Op, error
 	sort.Strings(orphans)
 
 	ops := make([]transport.Op, 0, len(orphans))
+	yangPath := w.resolverForUse().ResolvedYANGPath(w.family, w.yangPath)
 	for _, k := range orphans {
 		ops = append(ops, transport.Op{
 			Verb:     transport.VerbDelete,
-			Path:     w.yangPath + "=" + k,
-			PathSpec: pathSpecForKeyedListEntry(w.yangPath, w.keyField, k),
+			Path:     yangPath + "=" + k,
+			PathSpec: pathSpecForKeyedListEntry(yangPath, w.keyField, k),
 		})
 	}
 	return ops, nil
@@ -267,6 +312,21 @@ func pathSpecForKeyedListEntry(yangPath, keyField, keyValue string) []transport.
 		out[i] = transport.PathElement{Name: seg}
 	}
 	out[len(out)-1].Keys = map[string]string{keyField: keyValue}
+	return out
+}
+
+// pathSpecForKeyedListParent builds a structured PathSpec for the
+// parent list path (no key). Used when creating new entries via
+// MERGE to the list path rather than to a specific entry path.
+func pathSpecForKeyedListParent(yangPath string) []transport.PathElement {
+	segments := splitYANGPathSegments(yangPath)
+	if len(segments) == 0 {
+		return nil
+	}
+	out := make([]transport.PathElement, len(segments))
+	for i, seg := range segments {
+		out[i] = transport.PathElement{Name: seg}
+	}
 	return out
 }
 

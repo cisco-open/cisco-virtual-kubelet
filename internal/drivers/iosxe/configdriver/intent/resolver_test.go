@@ -137,6 +137,104 @@ func TestResolveScopePrecedence(t *testing.T) {
 	}
 }
 
+func TestResolveInfersManagedFamiliesWhenEmpty(t *testing.T) {
+	t.Parallel()
+	device := mkDevice("edge-01", nil)
+	cr := mkCR("edge-01", "edge-01", nil,
+		`{"vlan":{"vlans":[{"id":10}]},"system":{"hostname":"edge-01"}}`)
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, cr).
+		Build()
+	r := &Resolver{Client: c}
+
+	got, err := r.Resolve(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+
+	want := []string{"system", "vlan"}
+	if !reflect.DeepEqual(got.ManagedFamilies, want) {
+		t.Fatalf("ManagedFamilies = %#v, want %#v", got.ManagedFamilies, want)
+	}
+}
+
+func TestResolveExplicitManagedFamiliesOverrideInference(t *testing.T) {
+	t.Parallel()
+	device := mkDevice("edge-01", nil)
+	cr := mkCR("edge-01", "edge-01", []string{"system"},
+		`{"vlan":{"vlans":[{"id":10}]},"system":{"hostname":"edge-01"}}`)
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, cr).
+		Build()
+	r := &Resolver{Client: c}
+
+	got, err := r.Resolve(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+
+	want := []string{"system"}
+	if !reflect.DeepEqual(got.ManagedFamilies, want) {
+		t.Fatalf("ManagedFamilies = %#v, want explicit %#v", got.ManagedFamilies, want)
+	}
+}
+
+func TestResolveRejectsUnresolvedModelSource(t *testing.T) {
+	t.Parallel()
+	device := mkDevice("edge-01", nil)
+	cr := mkCR("edge-01", "edge-01", []string{"system"},
+		`{"system":{"hostname":"edge-01"}}`)
+	cr.Spec.ModelSource = &configv1alpha1.NetAsCodeModelSource{
+		Format:   configv1alpha1.NetAsCodeModelFormatIOSXE,
+		Resolved: false,
+	}
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, cr).
+		Build()
+	r := &Resolver{Client: c}
+
+	_, err := r.Resolve(context.Background(), cr)
+	if err == nil || !strings.Contains(err.Error(), "spec.modelSource.resolved=false") {
+		t.Fatalf("Resolve error = %v, want unresolved modelSource rejection", err)
+	}
+}
+
+func TestResolveAcceptsResolvedModelSource(t *testing.T) {
+	t.Parallel()
+	device := mkDevice("edge-01", nil)
+	cr := mkCR("edge-01", "edge-01", []string{"system"},
+		`{"system":{"hostname":"edge-01"}}`)
+	cr.Spec.ModelSource = &configv1alpha1.NetAsCodeModelSource{
+		Format:       configv1alpha1.NetAsCodeModelFormatIOSXE,
+		ModelVersion: "1.2.3",
+		Resolved:     true,
+		Exporter:     "terraform-iosxe-nac-iosxe write_model_file",
+	}
+
+	c := fake.NewClientBuilder().
+		WithScheme(resolverScheme(t)).
+		WithObjects(device, cr).
+		Build()
+	r := &Resolver{Client: c}
+
+	got, err := r.Resolve(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	if got.SourceCR == nil || got.SourceCR.Spec.ModelSource == nil {
+		t.Fatalf("resolved intent did not preserve source CR modelSource")
+	}
+	if got.SourceCR.Spec.ModelSource.ModelVersion != "1.2.3" {
+		t.Fatalf("modelSource version = %q", got.SourceCR.Spec.ModelSource.ModelVersion)
+	}
+}
+
 func TestResolveRejectsDeviceNotInGroup(t *testing.T) {
 	t.Parallel()
 	device := mkDevice("core-01", map[string]string{"role": "core"})

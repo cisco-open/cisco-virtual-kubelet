@@ -104,12 +104,123 @@ spec:
                       type: string
                     maxItems: 64
                     type: array
+                  gnoi:
+                    description: |-
+                      GNOI carries typed parameters for gNOI-backed operation kinds.
+                      Ignored by ShowCommand/ConfigDiff/PacketCapture.
+                    properties:
+                      cert:
+                        description: |-
+                          Cert carries parameters for OperationKindGNOICanGenerateCSR.
+                          (OperationKindGNOICertGet takes no inputs.)
+                        properties:
+                          certificateType:
+                            enum:
+                            - CT_X509
+                            type: string
+                          keySize:
+                            format: int32
+                            maximum: 8192
+                            minimum: 1024
+                            type: integer
+                          keyType:
+                            enum:
+                            - RT_RSA
+                            type: string
+                        type: object
+                      file:
+                        description: |-
+                          File carries parameters for OperationKindGNOIFileGet and
+                          OperationKindGNOIFileStat.
+                        properties:
+                          maxBytes:
+                            description: |-
+                              MaxBytes caps the inlined output of FileGet. Files larger than
+                              this are spilled to a ConfigMap (reusing the existing artefact-
+                              spill path); 0 means use the reconciler default (256 KiB).
+                            format: int64
+                            minimum: 0
+                            type: integer
+                          path:
+                            description: |-
+                              Path is the absolute IOS-XE filesystem path (e.g.
+                              "flash:cat9k.bin"). Required; rejected when missing a recognised
+                              filesystem prefix.
+                            pattern: '^(flash|bootflash|harddisk|usbflash0|usbflash1|crashinfo|nvram|webui):'
+                            type: string
+                        required:
+                        - path
+                        type: object
+                      ping:
+                        description: Ping carries parameters for OperationKindGNOIPing.
+                        properties:
+                          count:
+                            format: int32
+                            maximum: 1000
+                            minimum: 1
+                            type: integer
+                          destination:
+                            type: string
+                          intervalMillis:
+                            description: IntervalMillis between probes; 0 = device
+                              default.
+                            format: int32
+                            minimum: 0
+                            type: integer
+                          size:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                          source:
+                            type: string
+                          waitMillis:
+                            description: WaitMillis per probe; 0 = device default.
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - destination
+                        type: object
+                      traceroute:
+                        description: Traceroute carries parameters for OperationKindGNOITraceroute.
+                        properties:
+                          destination:
+                            type: string
+                          maxHops:
+                            format: int32
+                            maximum: 255
+                            minimum: 1
+                            type: integer
+                          protocol:
+                            enum:
+                            - ICMP
+                            - UDP
+                            - TCP
+                            type: string
+                          source:
+                            type: string
+                          waitMillis:
+                            format: int32
+                            type: integer
+                        required:
+                        - destination
+                        type: object
+                    type: object
                   kind:
                     description: Kind names the read-only operation.
                     enum:
                     - ShowCommand
                     - ConfigDiff
                     - PacketCapture
+                    - GNOIPing
+                    - GNOITraceroute
+                    - GNOITime
+                    - GNOIFileGet
+                    - GNOIFileStat
+                    - GNOICertGet
+                    - GNOICanGenerateCSR
+                    - GNOIRebootStatus
+                    - GNOIOSVerify
                     type: string
                 required:
                 - kind

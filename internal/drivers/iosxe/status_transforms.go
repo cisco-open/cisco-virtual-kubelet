@@ -59,7 +59,6 @@ func (d *XEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod,
 
 	allReady := true
 	anyRunning := false
-	anyFailed := false
 
 	for containerName, appID := range discoveredContainers {
 		var containerSpec *v1.Container
@@ -106,24 +105,18 @@ func (d *XEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod,
 				}
 				allReady = false
 			case "INSTALLING":
-				if operData.PkgPolicy == Cisco_IOS_XEAppHostingOper_IoxPkgPolicy_iox_pkg_policy_invalid &&
-					!d.config.AllowUnsignedApps {
-					containerStatus.State = v1.ContainerState{
-						Terminated: &v1.ContainerStateTerminated{
-							ExitCode:   1,
-							Reason:     "PackagePolicyInvalid",
-							Message:    "Install blocked: unsigned package on a device requiring signed packages",
-							FinishedAt: now,
-						},
-					}
-					anyFailed = true
-				} else {
-					containerStatus.State = v1.ContainerState{
-						Waiting: &v1.ContainerStateWaiting{
-							Reason:  "ContainerCreating",
-							Message: fmt.Sprintf("App state: %s", state),
-						},
-					}
+				// INSTALLING is always transient — the device is still
+				// processing the package.  Do NOT check PkgPolicy here:
+				// the oper-data field may return a stale/default value
+				// while the install is in progress, leading to a false
+				// terminal failure that Kubernetes cannot recover from.
+				// Policy violations surface as a transition to STOPPED
+				// or an explicit install error, handled elsewhere.
+				containerStatus.State = v1.ContainerState{
+					Waiting: &v1.ContainerStateWaiting{
+						Reason:  "ContainerCreating",
+						Message: fmt.Sprintf("App state: %s (installing)", state),
+					},
 				}
 				allReady = false
 			case "STOPPED", "Uninstalled":
@@ -185,11 +178,7 @@ func (d *XEDriver) GetContainerStatus(ctx context.Context, pod *v1.Pod,
 		allReady = false
 	}
 
-	if anyFailed && !anyRunning {
-		pod.Status.Phase = v1.PodFailed
-		pod.Status.Reason = "PackagePolicyInvalid"
-		pod.Status.Message = "Install blocked: unsigned package on a device requiring signed packages"
-	} else if anyRunning && allReady {
+	if anyRunning && allReady {
 		pod.Status.Phase = v1.PodRunning
 		for i := range pod.Status.Conditions {
 			if pod.Status.Conditions[i].Type == v1.PodReady ||

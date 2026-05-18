@@ -53,6 +53,11 @@ func interfaceIPv4VRFToYANG(flat map[string]any) map[string]any {
 	out := make(map[string]any, len(flat))
 	for k, v := range flat {
 		switch k {
+		case "type":
+			// `type` is a NetAsCode/CVK discriminator used to pick
+			// the physical-interface subtree. It is not a leaf under
+			// the keyed IOS-XE interface list entry.
+			continue
 		case "ipv4_address":
 			if v == nil {
 				continue
@@ -81,9 +86,240 @@ func interfaceIPv4VRFToYANG(flat map[string]any) map[string]any {
 				continue
 			}
 			ensureIPAccessGroup(out, "out")["acl-name"] = s
+		case "ip_helper_address":
+			s, ok := v.(string)
+			if !ok || s == "" {
+				continue
+			}
+			ip, ok := out["ip"].(map[string]any)
+			if !ok {
+				ip = map[string]any{}
+				out["ip"] = ip
+			}
+			ip["helper-address"] = []any{map[string]any{"address": s}}
+		case "shutdown":
+			// YANG type empty: presence = shut, absence = no shut.
+			// RFC 7951 encodes empty leaves as [null].
+			// Caught against C8000V 17.16.01a: {"shutdown":false}
+			// rejected with invalid-value.
+			if isTrue(v) {
+				out["shutdown"] = []any{nil}
+			}
+			// false / nil → omit the leaf entirely (no shutdown)
 		default:
 			out[k] = v
 		}
+	}
+	return out
+}
+
+func bannerToYANG(flat map[string]any) map[string]any {
+	out := make(map[string]any, len(flat))
+	for k, v := range flat {
+		switch k {
+		case "login", "motd", "exec", "incoming":
+			if _, already := v.(map[string]any); already {
+				out[k] = v
+				continue
+			}
+			if v != nil {
+				out[k] = map[string]any{"banner": fmt.Sprint(v)}
+			}
+		default:
+			out[k] = v
+		}
+	}
+	return out
+}
+
+func bannerFromYANG(yang map[string]any) map[string]any {
+	out := make(map[string]any, len(yang))
+	for k, v := range yang {
+		if m, ok := v.(map[string]any); ok {
+			if text, ok := m["banner"]; ok {
+				out[k] = text
+				continue
+			}
+		}
+		out[k] = v
+	}
+	return out
+}
+
+func usernameToYANG(flat map[string]any) map[string]any {
+	out := copyMap(flat)
+	secret, ok := out["secret"].(map[string]any)
+	if !ok {
+		return out
+	}
+	shaped := copyMap(secret)
+	if typ, ok := shaped["type"]; ok {
+		shaped["encryption"] = fmt.Sprint(typ)
+		delete(shaped, "type")
+	}
+	out["secret"] = shaped
+	return out
+}
+
+func usernameFromYANG(yang map[string]any) map[string]any {
+	out := copyMap(yang)
+	secret, ok := out["secret"].(map[string]any)
+	if !ok {
+		return out
+	}
+	shaped := copyMap(secret)
+	if enc, ok := shaped["encryption"]; ok {
+		shaped["type"] = enc
+		delete(shaped, "encryption")
+	}
+	out["secret"] = shaped
+	return out
+}
+
+func lineToYANG(flat map[string]any) map[string]any {
+	out := copyMap(flat)
+	transportMap, ok := out["transport"].(map[string]any)
+	if !ok {
+		return out
+	}
+	transport := copyMap(transportMap)
+	if input, ok := transport["input"]; ok {
+		if _, already := input.(map[string]any); !already {
+			transport["input"] = map[string]any{"input": input}
+		}
+	}
+	out["transport"] = transport
+	return out
+}
+
+func lineFromYANG(yang map[string]any) map[string]any {
+	out := copyMap(yang)
+	transportMap, ok := out["transport"].(map[string]any)
+	if !ok {
+		return out
+	}
+	transport := copyMap(transportMap)
+	if inputMap, ok := transport["input"].(map[string]any); ok {
+		if input, ok := inputMap["input"]; ok {
+			transport["input"] = input
+		}
+	}
+	out["transport"] = transport
+	return out
+}
+
+func ipHTTPToYANG(flat map[string]any) map[string]any {
+	out := copyMap(flat)
+	clientMap, ok := out["client"].(map[string]any)
+	if !ok {
+		return out
+	}
+	client := copyMap(clientMap)
+	if sourceInterface, ok := client["source-interface"]; ok {
+		if shaped, changed := interfaceSelectorToString(sourceInterface); changed {
+			client["source-interface"] = shaped
+		}
+	}
+	out["client"] = client
+	return out
+}
+
+func ipSSHToYANG(flat map[string]any) map[string]any {
+	out := copyMap(flat)
+	serverMap, ok := out["server"].(map[string]any)
+	if !ok {
+		return out
+	}
+	server := copyMap(serverMap)
+	delete(server, "v2")
+	if len(server) == 0 {
+		delete(out, "server")
+	} else {
+		out["server"] = server
+	}
+	return out
+}
+
+func spanningTreeToYANG(flat map[string]any) map[string]any {
+	out := make(map[string]any, len(flat))
+	for k, v := range flat {
+		switch k {
+		case "mode", "extend", "portfast", "vlan", "mst":
+			out["Cisco-IOS-XE-spanning-tree:"+k] = v
+		default:
+			out[k] = v
+		}
+	}
+	return out
+}
+
+func spanningTreeFromYANG(yang map[string]any) map[string]any {
+	out := make(map[string]any, len(yang))
+	for k, v := range yang {
+		out[stripModulePrefix(k)] = stripModulePrefixes(v)
+	}
+	return out
+}
+
+func interfaceSelectorToString(v any) (string, bool) {
+	if s, ok := v.(string); ok {
+		return s, false
+	}
+	m, ok := v.(map[string]any)
+	if !ok {
+		return "", false
+	}
+	for _, prefix := range []string{
+		"GigabitEthernet",
+		"TwoGigabitEthernet",
+		"FiveGigabitEthernet",
+		"TenGigabitEthernet",
+		"TwentyFiveGigE",
+		"FortyGigabitEthernet",
+		"HundredGigE",
+		"Loopback",
+		"Vlan",
+	} {
+		if name, ok := m[prefix]; ok {
+			return prefix + fmt.Sprint(name), true
+		}
+	}
+	for prefix, name := range m {
+		return prefix + fmt.Sprint(name), true
+	}
+	return "", false
+}
+
+func stripModulePrefixes(v any) any {
+	switch tv := v.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(tv))
+		for k, value := range tv {
+			out[stripModulePrefix(k)] = stripModulePrefixes(value)
+		}
+		return out
+	case []any:
+		out := make([]any, len(tv))
+		for i, value := range tv {
+			out[i] = stripModulePrefixes(value)
+		}
+		return out
+	default:
+		return v
+	}
+}
+
+func stripModulePrefix(k string) string {
+	if i := indexByte(k, ':'); i > 0 {
+		return k[i+1:]
+	}
+	return k
+}
+
+func copyMap(src map[string]any) map[string]any {
+	out := make(map[string]any, len(src))
+	for k, v := range src {
+		out[k] = v
 	}
 	return out
 }
@@ -107,6 +343,18 @@ func interfaceVPGToYANG(flat map[string]any) map[string]any {
 		flat = dup
 	}
 	return interfaceIPv4VRFToYANG(flat)
+}
+
+// interfaceVPGFromYANG is the VirtualPortGroup-specific fetch shape.
+// It wraps interfaceIPv4VRFFromYANG and renames "name" back to "id"
+// so the keyed-list writer can match entries by the netascode key.
+func interfaceVPGFromYANG(yang map[string]any) map[string]any {
+	out := interfaceIPv4VRFFromYANG(yang)
+	if name, ok := out["name"]; ok {
+		out["id"] = name
+		delete(out, "name")
+	}
+	return out
 }
 
 // interfaceIPv4VRFFromYANG inverts the above so observed-state and
@@ -148,6 +396,13 @@ func interfaceIPv4VRFFromYANG(yang map[string]any) map[string]any {
 					}
 				}
 			}
+			if helpers, ok := ip["helper-address"].([]any); ok && len(helpers) > 0 {
+				if h, ok := helpers[0].(map[string]any); ok {
+					if addr, ok := h["address"]; ok {
+						out["ip_helper_address"] = addr
+					}
+				}
+			}
 		case "vrf":
 			vrf, ok := v.(map[string]any)
 			if !ok {
@@ -158,10 +413,18 @@ func interfaceIPv4VRFFromYANG(yang map[string]any) map[string]any {
 			if fwd, ok := vrf["forwarding"]; ok {
 				out["vrf"] = fwd
 			}
+		case "shutdown":
+			// YANG empty leaf: presence → true, absence → false.
+			// Device returns "shutdown": [null] when the interface
+			// is shut; the key is absent when it's not shut.
+			out["shutdown"] = true
 		default:
 			out[k] = v
 		}
 	}
+	// If the device didn't return "shutdown", the interface is not
+	// shut — leave the key absent so leavesEqual treats it as equal
+	// to a desired map that also omits "shutdown".
 	return out
 }
 

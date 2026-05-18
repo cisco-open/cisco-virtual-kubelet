@@ -45,5 +45,7 @@ func init() {
 			"description",
 			"view",
 		},
+		yangBodyShape:  usernameToYANG,
+		yangFetchShape: usernameFromYANG,
 	})
 }

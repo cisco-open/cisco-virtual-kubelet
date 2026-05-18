@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 )
@@ -82,6 +83,64 @@ func makeOperData(state string) *Cisco_IOS_XEAppHostingOper_AppHostingOperData_A
 	}
 }
 
+func makeOperDataWithPkgPolicy(state string, policy E_Cisco_IOS_XEAppHostingOper_IoxPkgPolicy) *Cisco_IOS_XEAppHostingOper_AppHostingOperData_App {
+	operData := makeOperData(state)
+	operData.PkgPolicy = policy
+	return operData
+}
+
+func newReconcilePkgPolicyTestDriver(t *testing.T, allowUnsignedApps bool, operData *Cisco_IOS_XEAppHostingOper_AppHostingOperData_App, notification string) *XEDriver {
+	t.Helper()
+	const appID = "app1"
+	fc := &fakeNetworkClient{
+		getHook: func(path string, result any) error {
+			root, ok := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData)
+			if !ok {
+				t.Fatalf("unexpected GET result type %T", result)
+			}
+
+			switch path {
+			case "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data?fields=app":
+				root.App = map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App{
+					appID: operData,
+				}
+			case "/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data?fields=app-notifications":
+				if notification == "" {
+					return nil
+				}
+				name := "install-note-1"
+				appName := appID
+				msg := notification
+				root.AppNotifications = map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_AppNotifications{
+					name: {
+						Name:    &name,
+						AppId:   &appName,
+						Message: &msg,
+					},
+				}
+			default:
+				t.Fatalf("unexpected GET path %q", path)
+			}
+			return nil
+		},
+	}
+	return &XEDriver{
+		config: &v1alpha1.DeviceSpec{
+			Address:           "10.0.0.1",
+			AllowUnsignedApps: allowUnsignedApps,
+		},
+		client: fc,
+	}
+}
+
+func newRunningAppConfig(appID string) *AppHostingConfig {
+	return &AppHostingConfig{
+		Metadata: AppHostingMetadata{AppName: appID},
+		Spec:     AppHostingSpec{DesiredState: AppDesiredStateRunning, ImagePath: "app.tar"},
+		Status:   AppHostingStatus{Phase: AppPhaseConverging},
+	}
+}
+
 // TestReconcileApp_RunningDesiredRunning_IsReady verifies that an app already
 // in RUNNING state with desired=Running is marked Ready with no RPCs issued.
 // (We can't easily inject a fake getAppObservation here without a mock client, so
@@ -142,6 +201,38 @@ func TestReconcileApp_DeletedDesired_NoOperData_AttemptsConfigDelete(t *testing.
 		}
 	}()
 	d.ReconcileApp(testCtx(), appCfg)
+}
+
+func TestReconcileApp_InstallingPkgPolicyInvalidWithoutNotification_Waits(t *testing.T) {
+	d := newReconcilePkgPolicyTestDriver(t, false,
+		makeOperDataWithPkgPolicy("INSTALLING", Cisco_IOS_XEAppHostingOper_IoxPkgPolicy_iox_pkg_policy_invalid),
+		"")
+	appCfg := newRunningAppConfig("app1")
+
+	d.ReconcileApp(testCtx(), appCfg)
+
+	if appCfg.Status.Phase != AppPhaseConverging {
+		t.Errorf("expected phase Converging, got %s", appCfg.Status.Phase)
+	}
+	if appCfg.Status.Message != "Install in progress, waiting" {
+		t.Errorf("expected install-wait message, got %q", appCfg.Status.Message)
+	}
+}
+
+func TestReconcileApp_InstallingPkgPolicyInvalidWithNotification_Fails(t *testing.T) {
+	d := newReconcilePkgPolicyTestDriver(t, false,
+		makeOperDataWithPkgPolicy("INSTALLING", Cisco_IOS_XEAppHostingOper_IoxPkgPolicy_iox_pkg_policy_invalid),
+		"signature validation failed")
+	appCfg := newRunningAppConfig("app1")
+
+	d.ReconcileApp(testCtx(), appCfg)
+
+	if appCfg.Status.Phase != AppPhaseError {
+		t.Errorf("expected phase Error, got %s", appCfg.Status.Phase)
+	}
+	if appCfg.Status.Message != "install blocked: signature validation failed" {
+		t.Errorf("expected install-blocked message, got %q", appCfg.Status.Message)
+	}
 }
 
 func TestReconcileApp_ObservedStateUpdated(t *testing.T) {

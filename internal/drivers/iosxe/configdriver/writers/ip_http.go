@@ -39,5 +39,6 @@ func init() {
 			"timeout-policy",
 			"client",
 		},
+		yangBodyShape: ipHTTPToYANG,
 	})
 }

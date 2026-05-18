@@ -15,6 +15,7 @@
 package config
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -125,5 +126,40 @@ func TestLoad_InterfaceConfigValidation(t *testing.T) {
 	_, err := Load()
 	if err == nil {
 		t.Fatal("expected error for invalid interface config, got nil")
+	}
+}
+
+func TestLoad_PreservesDottedDeviceLabelKeys(t *testing.T) {
+	viper.Reset()
+
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	configYAML := []byte(`
+device:
+  address: 1.1.1.1
+  driver: XE
+  labels:
+    cisco.io/device-type: iosxe-apphosting
+    workload: edge
+  xe:
+    networking:
+      interface:
+        type: AppGigabitEthernet
+        appGigabitEthernet:
+          mode: trunk
+`)
+	if err := os.WriteFile(configPath, configYAML, 0o600); err != nil {
+		t.Fatalf("failed to write config fixture: %v", err)
+	}
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("Load() failed: %v", err)
+	}
+
+	if got := cfg.Device.Labels["cisco.io/device-type"]; got != "iosxe-apphosting" {
+		t.Fatalf("expected dotted label key to be preserved, got %q", got)
+	}
+	if got := cfg.Device.Labels["workload"]; got != "edge" {
+		t.Fatalf("expected workload label to be preserved, got %q", got)
 	}
 }

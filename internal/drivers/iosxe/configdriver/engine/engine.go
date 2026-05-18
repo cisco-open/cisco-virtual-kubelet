@@ -24,8 +24,10 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
 )
 
@@ -101,7 +103,12 @@ type Engine struct {
 	// Lookup returns the writer registered for a family, or nil if
 	// none is registered. Injected (rather than calling writers.Get
 	// directly) so tests can supply a fake writer set.
-	Lookup func(family string) writers.SectionWriter
+	Lookup func(family, release string) writers.SectionWriter
+
+	// DeviceVersion is the device-reported IOS-XE software release.
+	// It is passed into Lookup so each writer instance captures the
+	// correct per-device override resolver.
+	DeviceVersion string
 
 	// applyTransport is the transport handed to writers during the
 	// apply loop. When the tick is non-transactional it equals
@@ -123,6 +130,13 @@ type Engine struct {
 	// reconciles process parent families before dependent ones.
 	// Tests pass an explicit ordering to assert the wiring.
 	FamilyOrder func([]string) []string
+
+	// YANGValidator validates writer-produced transport operations after
+	// NetAsCode intent has been translated into IOS-XE YANG JSON. Nil disables
+	// the boundary. The mode decides whether failures are warnings or hard
+	// reconcile errors.
+	YANGValidator      validation.Validator
+	YANGValidationMode validation.Mode
 
 	// RetryPolicy controls truncated exponential backoff applied to
 	// idempotent transport calls (Fetch, Verify re-Fetch). Apply /
@@ -304,13 +318,13 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	})
 
 	if res.DriftPolicy == configv1alpha1.DriftPolicyPause {
-		r := Result{Phase: PhasePaused}
+		r := Result{Phase: PhasePaused, YangVersion: res.TargetYangVersion}
 		recordResult(res.DeviceName, r, time.Since(start).Seconds())
 		return r
 	}
 
 	if err := e.validate(res); err != nil {
-		r := Result{Phase: PhaseFailed, Err: fmt.Errorf("Validating: %w", err)}
+		r := Result{Phase: PhaseFailed, Err: fmt.Errorf("Validating: %w", err), YangVersion: res.TargetYangVersion}
 		span.SetStatus(r.Err)
 		recordResult(res.DeviceName, r, time.Since(start).Seconds())
 		return r
@@ -353,8 +367,9 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	// can run.
 	if transactional && len(res.CLIBlocks) > 0 {
 		r := Result{
-			Phase: PhaseFailed,
-			Err:   ErrTransactionalCLIUnsupported,
+			Phase:       PhaseFailed,
+			Err:         ErrTransactionalCLIUnsupported,
+			YangVersion: res.TargetYangVersion,
 		}
 		span.SetStatus(r.Err)
 		recordResult(res.DeviceName, r, time.Since(start).Seconds())
@@ -368,8 +383,8 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	if transactional {
 		h, err := e.Transport.StartTransaction(ctx)
 		if err != nil {
-			recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "start_failed")
-			r := Result{Phase: PhaseFailed, Err: fmt.Errorf("StartTransaction: %w", err)}
+			recordTransaction(res.DeviceName, res.TargetYangVersion, transportKindLabel(e.Transport), "start_failed")
+			r := Result{Phase: PhaseFailed, Err: fmt.Errorf("StartTransaction: %w", err), YangVersion: res.TargetYangVersion}
 			span.SetStatus(r.Err)
 			recordResult(res.DeviceName, r, time.Since(start).Seconds())
 			return r
@@ -385,7 +400,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 			// recovery is the operator's lever.
 			if !txCommitted {
 				_ = e.Transport.Discard(ctx, txHandle)
-				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "discard")
+				recordTransaction(res.DeviceName, res.TargetYangVersion, transportKindLabel(e.Transport), "discard")
 			}
 			e.applyTransport = nil
 		}()
@@ -558,7 +573,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 			if err := cc.CommitConfirmed(ctx, txHandle, timeout); err != nil {
 				result.Phase = PhaseFailed
 				result.Err = fmt.Errorf("CommitConfirmed: %w", err)
-				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "commit_failed")
+				recordTransaction(res.DeviceName, res.TargetYangVersion, transportKindLabel(e.Transport), "commit_failed")
 			} else if !e.runningVerify(ctx, res) {
 				// running-Verify failed: do NOT call ConfirmCommit.
 				// Deferred Discard cleans up the candidate lock; the
@@ -567,28 +582,28 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 				// the deferred Discard runs.
 				result.Phase = PhaseFailed
 				result.Err = errors.New("running-verify failed after CommitConfirmed; device will auto-revert at confirm-timeout")
-				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "auto_reverted")
+				recordTransaction(res.DeviceName, res.TargetYangVersion, transportKindLabel(e.Transport), "auto_reverted")
 			} else if err := cc.ConfirmCommit(ctx); err != nil {
 				// CommitConfirmed succeeded but the follow-up
 				// confirm RPC failed. The device will auto-revert
 				// at the timeout — this is the safe failure mode.
 				result.Phase = PhaseFailed
 				result.Err = fmt.Errorf("ConfirmCommit: %w", err)
-				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "auto_reverted")
+				recordTransaction(res.DeviceName, res.TargetYangVersion, transportKindLabel(e.Transport), "auto_reverted")
 			} else {
 				txCommitted = true
 				result.ConfirmedCommitUsed = true
-				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "confirmed")
+				recordTransaction(res.DeviceName, res.TargetYangVersion, transportKindLabel(e.Transport), "confirmed")
 			}
 		} else {
 			result.ConfirmedCommitFallback = fallbackReason
 			if err := e.Transport.Commit(ctx, txHandle); err != nil {
 				result.Phase = PhaseFailed
 				result.Err = fmt.Errorf("Commit: %w", err)
-				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "commit_failed")
+				recordTransaction(res.DeviceName, res.TargetYangVersion, transportKindLabel(e.Transport), "commit_failed")
 			} else {
 				txCommitted = true
-				recordTransaction(res.DeviceName, transportKindLabel(e.Transport), "commit")
+				recordTransaction(res.DeviceName, res.TargetYangVersion, transportKindLabel(e.Transport), "commit")
 			}
 		}
 	} else if !transactional && res.ConfirmTimeoutSeconds > 0 {
@@ -609,10 +624,10 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	if result.Phase == PhaseInSync && res.WriteStartup && caps.SupportsSaveStartup {
 		if err := e.Transport.SaveStartup(ctx); err != nil {
 			result.SaveStartupErr = err
-			recordSaveStartup(res.DeviceName, transportKindLabel(e.Transport), "failed")
+			recordSaveStartup(res.DeviceName, res.TargetYangVersion, transportKindLabel(e.Transport), "failed")
 		} else {
 			result.SaveStartupOK = true
-			recordSaveStartup(res.DeviceName, transportKindLabel(e.Transport), "ok")
+			recordSaveStartup(res.DeviceName, res.TargetYangVersion, transportKindLabel(e.Transport), "ok")
 		}
 	}
 
@@ -697,7 +712,7 @@ func (e *Engine) runningVerify(ctx context.Context, res *intent.ResolvedIntent) 
 		if e.Lookup == nil {
 			return false
 		}
-		w := e.Lookup(family)
+		w := e.lookupWriter(family)
 		if w == nil {
 			// Writer not shipped for this family — skip,
 			// mirroring reconcileFamily's behaviour.
@@ -764,7 +779,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		semconv.CvkTaskName:     "family.reconcile",
 	})
 	defer familySpan.End()
-	w := e.Lookup(family)
+	w := e.lookupWriter(family)
 	if w == nil {
 		return FamilyStatus{
 			Name: family, State: "Unsupported",
@@ -894,6 +909,15 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 			ops = append(ops, pruneOps...)
 		}
 	}
+	if err := e.validateYANGOps(ctx, family, res, w, ops); err != nil {
+		planSpan.SetStatus(err)
+		planSpan.End()
+		familySpan.SetStatus(err)
+		return FamilyStatus{
+			Name: family, State: "ApplyError",
+			Message: safeMsg("YANG validation: %v", err),
+		}
+	}
 	planSpan.End()
 
 	// No-op: nothing to apply, nothing to verify. Family is InSync by
@@ -944,10 +968,10 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// kind (RESTCONF / NETCONF / gNMI), not the transactionalView
 	// wrapper, so the counter still labels the wire correctly under
 	// transactional reconciles.
-	recordMutateOps(res.DeviceName, transportKindLabel(e.Transport), ops)
+	recordMutateOps(res.DeviceName, res.TargetYangVersion, transportKindLabel(e.Transport), ops)
 	if err := w.Apply(applyCtx, at, ops); err != nil {
 		if applyDuration != nil {
-			applyDuration.WithLabelValues(res.DeviceName, family).Observe(time.Since(applyStart).Seconds())
+			applyDuration.WithLabelValues(res.DeviceName, releaseLabel(res.TargetYangVersion), family).Observe(time.Since(applyStart).Seconds())
 		}
 		applySpan.SetStatus(err)
 		familySpan.SetStatus(err)
@@ -958,7 +982,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		}
 	}
 	if applyDuration != nil {
-		applyDuration.WithLabelValues(res.DeviceName, family).Observe(time.Since(applyStart).Seconds())
+		applyDuration.WithLabelValues(res.DeviceName, releaseLabel(res.TargetYangVersion), family).Observe(time.Since(applyStart).Seconds())
 	}
 
 	// Verify: re-fetch and re-diff. Reads through the same view we
@@ -1044,6 +1068,51 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		}
 	}
 	return FamilyStatus{Name: family, State: "InSync", OpCount: len(ops), OwnedKeys: ownedKeysForFamily}
+}
+
+func (e *Engine) lookupWriter(family string) writers.SectionWriter {
+	if e.Lookup == nil {
+		return nil
+	}
+	return e.Lookup(family, e.DeviceVersion)
+}
+
+func (e *Engine) validateYANGOps(
+	ctx context.Context,
+	family string,
+	res *intent.ResolvedIntent,
+	w writers.SectionWriter,
+	ops []transport.Op,
+) error {
+	if len(ops) == 0 || e.YANGValidator == nil || e.YANGValidationMode == "" || e.YANGValidationMode == validation.ModeDisabled {
+		return nil
+	}
+	releaseTag := ""
+	if res != nil {
+		releaseTag = res.TargetYangVersion
+	}
+	vctx := validation.Context{
+		Family:        family,
+		DeviceVersion: e.DeviceVersion,
+		ReleaseTag:    releaseTag,
+		AllowedPaths:  w.YANGPaths(),
+	}
+	for i, op := range ops {
+		if err := e.YANGValidator.ValidateOperation(vctx, op); err != nil {
+			err = fmt.Errorf("op[%d]: %w", i, err)
+			if e.YANGValidationMode == validation.ModeWarn {
+				log.G(ctx).
+					WithError(err).
+					WithField("family", family).
+					WithField("deviceVersion", e.DeviceVersion).
+					WithField("yangRelease", releaseTag).
+					Warn("IOS-XE YANG validation warning")
+				continue
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 // allFamiliesEmpty reports whether every family in `families` has no
@@ -1239,10 +1308,10 @@ func (e *Engine) applyCLIBlock(ctx context.Context, block intent.CLIBlock, res *
 	// before issuing the wire call. CLI is a distinct verb from
 	// the structured REPLACE/MERGE/DELETE so live tests can
 	// detect whether a CLI block actually fired.
-	recordMutateOps(res.DeviceName, transportKindLabel(e.Transport), []transport.Op{op})
+	recordMutateOps(res.DeviceName, res.TargetYangVersion, transportKindLabel(e.Transport), []transport.Op{op})
 	err := at.Mutate(ctx, "", []transport.Op{op})
 	if applyDuration != nil {
-		applyDuration.WithLabelValues(res.DeviceName, famName).Observe(time.Since(applyStart).Seconds())
+		applyDuration.WithLabelValues(res.DeviceName, releaseLabel(res.TargetYangVersion), famName).Observe(time.Since(applyStart).Seconds())
 	}
 	if err != nil {
 		span.SetStatus(err)

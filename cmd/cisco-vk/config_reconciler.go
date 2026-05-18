@@ -56,18 +56,36 @@ import (
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry"
 	"github.com/cisco/virtual-kubelet-cisco/internal/otelproviders"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/deviceoperation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/operationalaction"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	telemetrystate "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
 	telemetryyang "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/yang"
 )
+
+// staticGNOIProvider adapts a pre-built *gnoi.Client into the
+// {deviceoperation,softwareupgrade,operationalaction}.GNOIProvider
+// interfaces. The same client is shared across all three reconcilers
+// — the gNOI service stubs are stateless and the underlying conn is
+// pool-managed.
+type staticGNOIProvider struct{ c *gnoi.Client }
+
+func (s *staticGNOIProvider) GNOIClient(context.Context) (*gnoi.Client, error) {
+	if s == nil || s.c == nil {
+		return nil, fmt.Errorf("gnoi client not initialized")
+	}
+	return s.c, nil
+}
 
 // configReconcilerOptions is what startConfigReconciler needs from the
 // surrounding cisco-vk-run setup: device spec (for transport build) and
@@ -207,6 +225,39 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		// the reconciler still needs a non-nil context.
 		dctx = &drivers.ConfigDriverContext{}
 	}
+	// Validate the device version before any IOSXEConfig write path
+	// can start. Empty means the transport/version fetch is not ready
+	// yet; the reconciler starts in Pending and the retry loop will
+	// unblock writes only after a valid version is acquired.
+	//
+	// gNOI-backed lifecycle operations are intentionally decoupled
+	// from the IOSXEConfig writer matrix. A device may be running a
+	// release that is not yet supported by the NetAsCode writers, and
+	// the software upgrade reconciler may be the exact tool needed to
+	// move it back to a supported train.
+	configWritesEnabled := true
+	if err := dctx.ValidateDeviceVersion(); err != nil {
+		entry := log.G(ctx).WithError(err).WithField("version", dctx.DeviceVersion)
+		reason := "MalformedDeviceVersion"
+		if drivers.IsUnsupportedDeviceVersionError(err) {
+			reason = "UnsupportedDeviceVersion"
+			entry.Error("device version is not in the supported release set; IOSXEConfig writes disabled")
+		} else {
+			entry.Error("device version is malformed; IOSXEConfig writes disabled")
+		}
+		recorder.Eventf(&ciskov1.CiscoDevice{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      deviceName,
+				Namespace: operationNamespace(),
+			},
+		}, corev1.EventTypeWarning, reason,
+			"device version %q rejected by writers: %v", dctx.DeviceVersion, err)
+		configWritesEnabled = false
+	} else if dctx.DeviceVersion != "" {
+		log.G(ctx).WithField("version", dctx.DeviceVersion).Info("device version set for writers")
+	} else {
+		log.G(ctx).Warn("device version not available yet; IOSXEConfig writes remain pending until version is acquired")
+	}
 
 	// Lease namespace selection — three-tier precedence:
 	//   1. CONFIG_LEASE_NAMESPACE env (operator opt-in to a shared
@@ -256,11 +307,16 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		Client:                mgr.GetClient(),
 		DeviceName:            deviceName,
 		Transport:             dctx.Transport,
+		DeviceVersion:         dctx.DeviceVersion,
+		FetchDeviceVersion:    dctx.FetchDeviceVersion,
+		RequireDeviceVersion:  true,
 		KeyRules:              dctx.KeyRules,
 		SupportedYANGVersions: dctx.SupportedYANGVersions,
 		DefaultYANGVersion:    dctx.DefaultYANGVersion,
 		Lookup:                dctx.LookupWriter,
 		FamilyOrder:           dctx.FamilyOrder,
+		YANGValidator:         dctx.YANGValidator,
+		YANGValidationMode:    dctx.YANGValidationMode,
 		Leaser: &engine.FamilyLeaser{
 			Client:    mgr.GetClient(),
 			Namespace: leaseNamespace,
@@ -308,8 +364,12 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		}()
 	}
 
-	if err := r.SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("SetupWithManager: %w", err)
+	if configWritesEnabled {
+		if err := r.SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("SetupWithManager: %w", err)
+		}
+	} else {
+		log.G(ctx).Warn("IOSXEConfig reconciler not registered; continuing with diagnostics and gNOI lifecycle controllers")
 	}
 
 	// Diagnostics-RFC Phase B: the IOSXEDiagnostic reconciler runs in
@@ -327,6 +387,22 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		return fmt.Errorf("diagnostic SetupWithManager: %w", err)
 	}
 
+	// gNOI pillar: build a per-device gRPC pool and gNOI client, then
+	// wire the three reconcilers that consume it.
+	//
+	// Pool lifetime is bound to the surrounding ctx (the VK pod's run
+	// context). Control + bulk-transfer leases are held for the pod
+	// lifetime; releases fire on ctx.Done. If the gNOI server is not
+	// reachable at startup the dial is lazy — the conn materialises
+	// on first RPC, so a device that comes up after the VK pod is fine.
+	gnoiProv, gnoiCleanup := setupGNOI(ctx, opts)
+	if gnoiCleanup != nil {
+		go func() {
+			<-ctx.Done()
+			gnoiCleanup()
+		}()
+	}
+
 	operationReconciler := &deviceoperation.Reconciler{
 		Client:   mgr.GetClient(),
 		Reader:   mgr.GetAPIReader(),
@@ -340,9 +416,40 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		DeviceName:      deviceName,
 		DeviceNamespace: operationNamespace(),
 		TP:              r,
+		GNOI:            gnoiProv,
 	}
 	if err := operationReconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("device operation SetupWithManager: %w", err)
+	}
+
+	if gnoiProv != nil {
+		upgradeReconciler := &softwareupgrade.Reconciler{
+			Client:          mgr.GetClient(),
+			Reader:          mgr.GetAPIReader(),
+			Recorder:        recorder,
+			Scheme:          mgr.GetScheme(),
+			DeviceName:      deviceName,
+			DeviceNamespace: operationNamespace(),
+			GNOI:            gnoiProv,
+			TP:              r,
+			ImageResolver:   softwareupgrade.NewDefaultImageResolver(mgr.GetClient(), nil),
+		}
+		if err := upgradeReconciler.SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("software upgrade SetupWithManager: %w", err)
+		}
+
+		actionReconciler := &operationalaction.Reconciler{
+			Client:          mgr.GetClient(),
+			Reader:          mgr.GetAPIReader(),
+			Recorder:        recorder,
+			Scheme:          mgr.GetScheme(),
+			DeviceName:      deviceName,
+			DeviceNamespace: operationNamespace(),
+			GNOI:            gnoiProv,
+		}
+		if err := actionReconciler.SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("operational action SetupWithManager: %w", err)
+		}
 	}
 
 	telemetryFactory, err := telemetry.NewDefaultSubscribeClientFactoryForDevice(opts.Spec, opts.Password)
@@ -455,7 +562,9 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	// bound — operators get a clear "config driver came online after
 	// N attempts" log when the race resolves. Cancelled by ctx.
 	if dctx.Transport == nil {
-		go retryConfigDriverDial(ctx, opts, r)
+		go retryConfigDriverDial(ctx, opts, r, dctx)
+	} else if dctx.DeviceVersion == "" {
+		go retryDeviceVersion(ctx, r, dctx, dctx.Transport)
 	}
 
 	return nil
@@ -466,6 +575,40 @@ func operationNamespace() string {
 		return ns
 	}
 	return "default"
+}
+
+func retryDeviceVersion(ctx context.Context, r *provider.ConfigReconciler, dctx *drivers.ConfigDriverContext, t transport.Interface) {
+	const interval = 30 * time.Second
+	tick := time.NewTicker(interval)
+	defer tick.Stop()
+	for attempt := 1; ; attempt++ {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+		ver := iosxe.FetchDeviceVersion(ctx, t)
+		if ver == "" {
+			log.G(ctx).
+				WithField("attempt", attempt).
+				Info("device version still unavailable; config writes remain blocked")
+			continue
+		}
+		dctx.DeviceVersion = ver
+		if err := dctx.ValidateDeviceVersion(); err != nil {
+			r.SetDeviceVersionState(ver, err)
+			log.G(ctx).WithError(err).WithField("version", ver).
+				Warn("device version retry produced rejected version; config writes remain blocked")
+			if drivers.IsRetryableDeviceVersionError(err) {
+				continue
+			}
+			return
+		}
+		r.SetDeviceVersionState(ver, nil)
+		log.G(ctx).WithField("version", ver).
+			Info("device version bound to writers after retry")
+		return
+	}
 }
 
 // retryConfigDriverDial attempts to build a real device transport
@@ -484,7 +627,7 @@ func operationNamespace() string {
 // the only material difference. Build the transport in isolation
 // here; the rest of the dctx (KeyRules, YANG versions, etc.) is
 // loaded once at startup and is unaffected by the dial race.
-func retryConfigDriverDial(ctx context.Context, opts configReconcilerOptions, r *provider.ConfigReconciler) {
+func retryConfigDriverDial(ctx context.Context, opts configReconcilerOptions, r *provider.ConfigReconciler, dctx *drivers.ConfigDriverContext) {
 	const interval = 30 * time.Second
 	tick := time.NewTicker(interval)
 	defer tick.Stop()
@@ -498,8 +641,37 @@ func retryConfigDriverDial(ctx context.Context, opts configReconcilerOptions, r 
 			SessionLock: opts.SessionLock,
 		})
 		if err == nil && t != nil {
-			r.SetTransport(t)
-			log.G(ctx).Infof("config driver transport acquired after %d retry attempt(s)", attempt)
+			// Now that we have a live transport, refetch the device
+			// version and reapply it to writers. Without this the
+			// version-conditional writer dispatch stays at whatever
+			// state it was in at startup — which is "empty" if the
+			// factory's own version fetch failed against the same
+			// startup race.
+			if ver := iosxe.FetchDeviceVersion(ctx, t); ver != "" {
+				if dctx != nil {
+					dctx.DeviceVersion = ver
+				}
+				if verr := dctx.ValidateDeviceVersion(); verr != nil {
+					log.G(ctx).WithError(verr).WithField("version", ver).
+						Warn("post-dial ValidateDeviceVersion rejected version; config writes remain blocked")
+					r.SetDeviceVersionState(ver, verr)
+					_ = t.Close()
+					if drivers.IsRetryableDeviceVersionError(verr) {
+						continue
+					}
+					return
+				} else {
+					r.SetDeviceVersionState(ver, nil)
+					r.SetTransport(t)
+					log.G(ctx).Infof("config driver transport acquired after %d retry attempt(s)", attempt)
+					log.G(ctx).WithField("version", ver).
+						Info("device version bound to writers after deferred dial success")
+				}
+			} else {
+				log.G(ctx).Warn("deferred dial succeeded but version refetch returned empty; config writes remain blocked and dial will retry")
+				_ = t.Close()
+				continue
+			}
 			return
 		}
 		log.G(ctx).WithError(err).

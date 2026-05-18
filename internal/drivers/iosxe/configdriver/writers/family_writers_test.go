@@ -40,8 +40,9 @@ func TestVRFDiffCreatesMissing(t *testing.T) {
 	if len(ops) != 1 {
 		t.Fatalf("got %d ops, want 1", len(ops))
 	}
-	if !strings.Contains(ops[0].Path, "=MGMT") {
-		t.Errorf("op path=%q, want =MGMT suffix", ops[0].Path)
+	// New entries MERGE to the parent list path.
+	if strings.Contains(ops[0].Path, "=") {
+		t.Errorf("op path=%q, want parent path (no =key) for new entry", ops[0].Path)
 	}
 }
 
@@ -97,9 +98,9 @@ func TestVPGDiffSortsByID(t *testing.T) {
 	if len(ops) != 2 {
 		t.Fatalf("got %d ops, want 2", len(ops))
 	}
-	// Both differ from the empty observed → 2 ops, ordered lex by key.
-	if !strings.HasSuffix(ops[0].Path, "=1") || !strings.HasSuffix(ops[1].Path, "=2") {
-		t.Errorf("op paths not sorted: %v, %v", ops[0].Path, ops[1].Path)
+	// Both are new entries → MERGE to parent path.
+	if strings.Contains(ops[0].Path, "=") || strings.Contains(ops[1].Path, "=") {
+		t.Errorf("op paths should be parent paths for new entries: %v, %v", ops[0].Path, ops[1].Path)
 	}
 }
 
@@ -117,8 +118,16 @@ func TestDHCPDiffCreatesMissing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Diff: %v", err)
 	}
-	if len(ops) != 1 || !strings.Contains(ops[0].Path, "=IOX") {
-		t.Fatalf("got %+v, want one op with =IOX", ops)
+	if len(ops) != 1 || ops[0].Path != dhcpParentPath {
+		t.Fatalf("got %+v, want one op to DHCP parent", ops)
+	}
+	var body map[string]map[string][]map[string]any
+	if err := json.Unmarshal(ops[0].Body, &body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	pools := body[dhcpParentEnvelopeKey][dhcpPoolEnvelopeKey]
+	if len(pools) != 1 || pools[0]["id"] != "IOX" {
+		t.Fatalf("body=%s, want DHCP pool keyed by id", ops[0].Body)
 	}
 }
 
@@ -138,6 +147,55 @@ func TestDHCPDiffPreservesDeviceOnlyPools(t *testing.T) {
 	}
 	if len(ops) != 0 {
 		t.Fatalf("got %+v, want 0 ops (A equal, B not managed)", ops)
+	}
+}
+
+func TestUsernameSecretTypeShapesToEncryption(t *testing.T) {
+	t.Parallel()
+	w := Get("username")
+	desired := map[string]any{"users": []any{
+		map[string]any{"name": "admin", "secret": map[string]any{"type": 9, "secret": "$9$abc"}},
+	}}
+	ops, err := w.Diff(desired, []map[string]any{})
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if strings.Contains(string(ops[0].Body), `"type"`) {
+		t.Fatalf("body=%s, want type renamed before RESTCONF write", ops[0].Body)
+	}
+	if !strings.Contains(string(ops[0].Body), `"encryption":"9"`) {
+		t.Fatalf("body=%s, want encryption leaf", ops[0].Body)
+	}
+}
+
+func TestVLANDiffOmitsFalseShutdown(t *testing.T) {
+	t.Parallel()
+	w := Get("vlan")
+	desired := map[string]any{"vlans": []any{
+		map[string]any{"id": 99, "name": "VLAN0099", "shutdown": false},
+	}}
+	ops, err := w.Diff(desired, []map[string]any{})
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if strings.Contains(string(ops[0].Body), "shutdown") {
+		t.Fatalf("body=%s, want false shutdown omitted for YANG empty leaf", ops[0].Body)
+	}
+}
+
+func TestSpanningTreeFetchStripsPrefixedLeaves(t *testing.T) {
+	t.Parallel()
+	w := Get("spanning_tree")
+	cli, _ := newTestTransport(t, func(wt http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(wt, `{"Cisco-IOS-XE-native:spanning-tree":{"Cisco-IOS-XE-spanning-tree:mode":"rapid-pvst","Cisco-IOS-XE-spanning-tree:extend":{"system-id":[null]}}}`)
+	})
+	got, err := w.Fetch(context.Background(), cli)
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	m := got.(map[string]any)
+	if m["mode"] != "rapid-pvst" {
+		t.Fatalf("got=%v, want local mode key", got)
 	}
 }
 
@@ -218,6 +276,74 @@ func TestEthernetDiffOnCreate(t *testing.T) {
 	// Path percent-encodes "/" inside the key value per RFC 8040 §3.5.3.1.
 	if !strings.Contains(ops[0].Path, "GigabitEthernet=0%2F0%2F0") {
 		t.Errorf("op path=%q (want percent-encoded slashes inside the key value)", ops[0].Path)
+	}
+}
+
+func TestEthernetDiffDropsTypeFromBody(t *testing.T) {
+	t.Parallel()
+	w := Get("interface_ethernet")
+	desired := map[string]any{"interfaces": []any{
+		map[string]any{
+			"type":              "GigabitEthernet",
+			"name":              "0/0",
+			"vrf":               "Mgmt-vrf",
+			"ipv4_address":      "198.51.100.103",
+			"ipv4_address_mask": "255.255.255.0",
+			"shutdown":          false,
+		},
+	}}
+	ops, err := w.Diff(desired, []map[string]any{})
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	var body map[string][]map[string]any
+	if err := json.Unmarshal(ops[0].Body, &body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	entry := body["Cisco-IOS-XE-native:GigabitEthernet"][0]
+	if _, has := entry["type"]; has {
+		t.Fatalf("body contains NetAsCode-only type discriminator: %v", entry)
+	}
+	if _, has := entry["shutdown"]; has {
+		t.Fatalf("body contains false empty-leaf shutdown: %v", entry)
+	}
+}
+
+func TestEthernetFetchFlattensIPv4AndVRF(t *testing.T) {
+	t.Parallel()
+	w := Get("interface_ethernet")
+	cli, _ := newTestTransport(t, func(wt http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/GigabitEthernet") {
+			http.NotFound(wt, r)
+			return
+		}
+		_, _ = io.WriteString(wt, `{"Cisco-IOS-XE-native:GigabitEthernet":[{"name":"0/0","vrf":{"forwarding":"Mgmt-vrf"},"ip":{"address":{"primary":{"address":"198.51.100.103","mask":"255.255.255.0"}}}}]}`)
+	})
+	got, err := w.Fetch(context.Background(), cli)
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	list := got.([]map[string]any)
+	if len(list) != 1 {
+		t.Fatalf("got %#v, want one interface", list)
+	}
+	entry := list[0]
+	if entry["type"] != "GigabitEthernet" || entry["vrf"] != "Mgmt-vrf" || entry["ipv4_address"] != "198.51.100.103" {
+		t.Fatalf("got %#v, want flat NetAsCode shape", entry)
+	}
+}
+
+func TestIPSSHDiffAcceptsBulkMode(t *testing.T) {
+	t.Parallel()
+	w := Get("ip_ssh")
+	desired := map[string]any{"bulk-mode": map[string]any{"window-size": 131072}}
+	observed := map[string]any{"bulk-mode": map[string]any{"window-size": float64(131072)}}
+	ops, err := w.Diff(desired, observed)
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if len(ops) != 0 {
+		t.Fatalf("got %d ops, want InSync", len(ops))
 	}
 }
 

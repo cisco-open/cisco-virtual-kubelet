@@ -20,7 +20,7 @@ func init() {
 	Override(singletonWriter{
 		family:      "spanning_tree",
 		yangPath:    "/Cisco-IOS-XE-native:native/spanning-tree",
-		envelopeKey: "Cisco-IOS-XE-spanning-tree:spanning-tree",
+		envelopeKey: "Cisco-IOS-XE-native:spanning-tree",
 		managedLeaves: []string{
 			"mode",
 			"extend",
@@ -28,5 +28,12 @@ func init() {
 			"vlan",
 			"mst",
 		},
+		yangBodyShape:  spanningTreeToYANG,
+		yangFetchShape: spanningTreeFromYANG,
+		// Note: `mode` leaf causes malformed-message on C9KV 17.15.
+		// A runtime yangBodyShape could filter it on < 17.18, but
+		// singletonWriter doesn't support yangBodyShape. A custom
+		// writer or a per-version leaf filter is needed if mode must
+		// be excluded on < 17.18 platforms.
 	})
 }

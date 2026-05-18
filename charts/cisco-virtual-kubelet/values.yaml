@@ -107,6 +107,18 @@ telemetry:
   # into OTel resource attributes by the per-device VK process.
   resourceAttributes: {}
 
+gnoi:
+  # insecure forces the per-device gNOI client onto the insecure gnxi listener
+  # even when the CiscoDevice RESTCONF transport uses TLS. This is common on
+  # lab IOS-XE systems where RESTCONF runs on 443 and gNOI runs on 50052.
+  insecure: false
+  # port pins the device-side gNOI listener. Leave empty to let CVK infer
+  # 50052 for insecure and 9339 for secure gNOI.
+  port: ""
+  # disabled sets CISCO_VK_GNOI_DISABLED and prevents CVK from constructing
+  # the per-device gNOI client.
+  disabled: false
+
 collector:
   # enabled deploys a small in-cluster OpenTelemetry Collector intended for
   # smoke tests and lab installs. Production installs should usually point
@@ -125,6 +137,12 @@ collector:
   affinity: {}
 
 config:
+  # yangValidationMode controls the NetAsCode -> IOS-XE YANG validation
+  # boundary before a config mutation is sent to the device. Valid values:
+  # disabled, warn, strict. disabled preserves historical behaviour; warn logs
+  # validation mismatches; strict blocks the reconcile before mutation.
+  yangValidationMode: disabled
+
   # leaseNamespace is the shared namespace for per-(device, family)
   # arbitration leases. Set this when IOSXEConfig CRs in different
   # tenant namespaces target the same device — they will arbitrate

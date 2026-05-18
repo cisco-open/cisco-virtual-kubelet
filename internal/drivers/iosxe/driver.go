@@ -30,6 +30,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/openconfig/ygot/ygot"
+	"github.com/openconfig/ygot/ytypes"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
@@ -48,8 +49,8 @@ type XEDriver struct {
 
 	secretLister    corev1listers.SecretNamespaceLister
 	configMapLister corev1listers.ConfigMapNamespaceLister
-	recoveryMu     sync.RWMutex
-	recoveringPods map[string]bool // keyed by pod UID
+	recoveryMu      sync.RWMutex
+	recoveringPods  map[string]bool // keyed by pod UID
 
 	installMu       sync.Mutex
 	installInFlight map[string]bool // keyed by appID; prevents duplicate background recovery installs
@@ -192,7 +193,10 @@ func (d *XEDriver) getRestconfUnmarshaller() UnmarshalFunc {
 			return fmt.Errorf("target is not a ygot.GoStruct")
 		}
 
-		return Unmarshal(innerData, gs)
+		// IOS XE oper models can gain additional leaves between software
+		// releases. Keep typed fields we know about and ignore unknown extras
+		// so node/pod status remains usable after an image upgrade.
+		return Unmarshal(innerData, gs, &ytypes.IgnoreExtraFields{})
 	}
 }
 

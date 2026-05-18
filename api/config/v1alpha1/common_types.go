@@ -68,6 +68,49 @@ type ConfigurationSource struct {
 	ConfigMapRef *ConfigMapKeyRef `json:"configMapRef,omitempty"`
 }
 
+// NetAsCodeModelFormat names the external intent model carried by an
+// IOSXEConfig. CVK currently accepts Cisco IOS-XE NetAsCode intent.
+//
+// +kubebuilder:validation:Enum=netascode-iosxe
+type NetAsCodeModelFormat string
+
+const (
+	// NetAsCodeModelFormatIOSXE is the canonical Cisco IOS-XE NetAsCode
+	// data model used by the terraform-iosxe-nac-iosxe module.
+	NetAsCodeModelFormatIOSXE NetAsCodeModelFormat = "netascode-iosxe"
+)
+
+// NetAsCodeModelSource records where an IOSXEConfig's NetAsCode payload came
+// from. It is audit metadata, not desired device state; the resolver still
+// consumes spec.source as the source of truth.
+type NetAsCodeModelSource struct {
+	// Format identifies the model dialect.
+	// +kubebuilder:validation:Required
+	Format NetAsCodeModelFormat `json:"format"`
+
+	// ModelVersion is the upstream NetAsCode data-model version or module
+	// version when the source pipeline can provide one.
+	// +optional
+	ModelVersion string `json:"modelVersion,omitempty"`
+
+	// Resolved is true when the payload has already had defaults, templates,
+	// device groups, and inheritance expanded by the source NetAsCode toolchain.
+	// Production migrations should import resolved payloads so CVK only owns
+	// reconciliation, not Terraform's model-expansion semantics.
+	// +kubebuilder:default=true
+	Resolved bool `json:"resolved"`
+
+	// Exporter names the tool that produced the payload, such as
+	// terraform-iosxe-nac-iosxe write_model_file or cvk-netascode-migrate.
+	// +optional
+	Exporter string `json:"exporter,omitempty"`
+
+	// SourceRevision identifies the customer Git commit, Terraform plan ID,
+	// or other immutable source revision used for the import.
+	// +optional
+	SourceRevision string `json:"sourceRevision,omitempty"`
+}
+
 // ConfigMapKeyRef selects one key from a namespaced ConfigMap.
 type ConfigMapKeyRef struct {
 	// Name of the ConfigMap (same namespace as the CR).

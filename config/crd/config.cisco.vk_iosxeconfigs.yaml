@@ -182,6 +182,45 @@ spec:
                 minItems: 1
                 type: array
                 x-kubernetes-list-type: set
+              modelSource:
+                description: |-
+                  ModelSource records the external NetAsCode model/export that produced
+                  Source. It is deliberately metadata-only: CVK reconciles the canonical
+                  payload in Source, while this field lets operators audit lateral
+                  migrations from Terraform NetAsCode or future NetAsCode exporters.
+                properties:
+                  exporter:
+                    description: |-
+                      Exporter names the tool that produced the payload, such as
+                      terraform-iosxe-nac-iosxe write_model_file or cvk-netascode-migrate.
+                    type: string
+                  format:
+                    description: Format identifies the model dialect.
+                    enum:
+                    - netascode-iosxe
+                    type: string
+                  modelVersion:
+                    description: |-
+                      ModelVersion is the upstream NetAsCode data-model version or module
+                      version when the source pipeline can provide one.
+                    type: string
+                  resolved:
+                    default: true
+                    description: |-
+                      Resolved is true when the payload has already had defaults, templates,
+                      device groups, and inheritance expanded by the source NetAsCode toolchain.
+                      Production migrations should import resolved payloads so CVK only owns
+                      reconciliation, not Terraform's model-expansion semantics.
+                    type: boolean
+                  sourceRevision:
+                    description: |-
+                      SourceRevision identifies the customer Git commit, Terraform plan ID,
+                      or other immutable source revision used for the import.
+                    type: string
+                required:
+                - format
+                - resolved
+                type: object
               pruneOnRelinquish:
                 default: false
                 description: |-

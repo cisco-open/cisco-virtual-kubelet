@@ -140,6 +140,29 @@ rules:
   - apiGroups: ["ops.cisco.vk"]
     resources: ["deviceoperations/status"]
     verbs: ["get", "update", "patch"]
+  # IOSXESoftwareUpgrade CRD — multi-phase gNOI OS upgrade reconciler.
+  # update+patch on the main object are required for the finalizer; the
+  # reconciler writes phase progress through the status subresource.
+  # Gated by --enable-iosxesoftwareupgrade on the per-device VK pod.
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwareupgrades"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwareupgrades/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwareupgrades/finalizers"]
+    verbs: ["update"]
+  # IOSXEOperationalAction CRD — write-class destructive gNOI ops
+  # (Reboot, FactoryReset, FilePut/Remove, KillProcess, CancelReboot).
+  # Separate RBAC boundary from the read-only DeviceOperation; gated by
+  # --enable-write-class-gnoi on the per-device VK pod.
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxeoperationalactions"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxeoperationalactions/status"]
+    verbs: ["get", "update", "patch"]
 ---
 # ClusterRoleBinding for the VK service account.
 apiVersion: rbac.authorization.k8s.io/v1

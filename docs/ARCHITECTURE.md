@@ -144,6 +144,80 @@ The IOS-XE driver implements it. Drivers without topology support still work —
 | `topology.go` | `TopologyProvider` implementation — CDP, OSPF, interfaces |
 | `models.go` | YANG structs, auto-generated via [ygot](https://github.com/openconfig/ygot) |
 
+### IOS-XE Config Driver and NetAsCode
+
+The IOS-XE configuration plane is separate from App Hosting. `IOSXEConfig`
+resources carry NetAsCode-shaped intent, and the configdriver resolves the same
+kind of hierarchy NetAsCode uses: defaults, device groups, interface groups,
+templates, and per-device configuration. The resolved intent remains plain
+YAML/JSON data until a family writer owns it.
+
+Family writers are the translation boundary. They take canonical NetAsCode
+fields, apply release-aware overrides, and emit `transport.Op` values addressed
+to IOS-XE YANG paths. The engine then validates and applies those operations
+over RESTCONF, NETCONF, or gNMI.
+
+```text
+IOSXEConfig / NetAsCode source
+  -> intent resolver
+  -> family writer
+  -> version override table
+  -> YANG validation boundary
+  -> transport
+  -> device
+```
+
+The validation boundary is deliberately device-facing. `CONFIG_YANG_VALIDATION`
+controls it:
+
+| Value | Behaviour |
+|---|---|
+| `disabled` | no validation gate; default for backward compatibility |
+| `warn` | log validation failures and continue |
+| `strict` | fail before mutation |
+
+This preserves NetAsCode as the stable public model while giving CVK a place to
+use release-specific ygot/ytypes validation as those generated model packages
+are added.
+
+### NetAsCode migration contract
+
+CVK supports lateral migration from Terraform-driven NetAsCode by importing the
+**resolved** NetAsCode IOS-XE model, not Terraform state and not provider
+internal resources. The source toolchain should expand defaults, templates,
+device groups, and inheritance first, then CVK receives one per-device
+configuration block.
+
+`IOSXEConfig.spec.modelSource` records that provenance:
+
+```yaml
+spec:
+  modelSource:
+    format: netascode-iosxe
+    modelVersion: "1.2.3"
+    resolved: true
+    exporter: terraform-iosxe-nac-iosxe write_model_file
+    sourceRevision: 4fd62c1
+```
+
+The resolver rejects `resolved: false` because CVK does not attempt to replay
+Terraform's model expansion semantics during production import. This keeps the
+contract crisp: NetAsCode owns intent modelling; CVK owns continuous
+reconciliation, release-aware YANG translation, validation, and device apply.
+
+The recommended cutover is family-scoped:
+
+1. Export the resolved NetAsCode model from the existing pipeline.
+2. Generate an `IOSXEConfig` with `cvk-netascode-migrate emit-cr`.
+3. Start with `driftPolicy: report` so CVK observes but does not overwrite.
+4. Compare reported drift with the Terraform-managed device state.
+5. Move one family at a time from Terraform ownership to CVK ownership by
+   editing `managedFamilies`.
+6. Promote to `driftPolicy: revert` after the selected families are clean.
+
+Do not let Terraform and CVK manage the same device leaves at the same time.
+The `managedFamilies` list is the operational ownership boundary.
+
 ## Data flow
 
 ### Controller reconciliation
@@ -332,6 +406,68 @@ See [Observability](observability.md) for the full reference. At a high level:
 - **Kubernetes stats/summary** is served on `/stats/summary`, enabling `kubectl top node`.
 - **OpenTelemetry topology traces** are emitted on a configurable interval (default 60 s) and include a device root span with child link spans (one per CDP/OSPF neighbor) and app spans (one per hosted container).
 - **Node annotations** (`cisco.io/router-id`, `cisco.io/hostname`, `cisco.io/cdp-neighbor-count`, `cisco.io/ospf-neighbor-count`, `cisco.io/protocols`) make topology context queryable via `kubectl describe node`.
+
+## gNOI pillar
+
+The gNOI (gRPC Network Operations Interface) pillar handles imperative
+device operations: software upgrades, reboots, file transfers, certificate
+management, and factory reset. It sits alongside the configuration,
+diagnostics, and operations pillars and shares the same gNxI-server TLS
+listener IOS-XE already exposes for gNMI.
+
+**Connection management.** A workload-classed pool
+(`internal/drivers/iosxe/devicegrpc/`) hands out `*grpc.ClientConn`
+leases keyed on `(DeviceKey, WorkloadClass)`. Three classes
+isolate stream lifetimes: `ClassControl` for unary RPCs, `ClassTelemetry`
+for the gNMI Subscribe stream, and `ClassBulkTransfer` for OS.Install
+and File.Put/Get. Separate connections per class avoid HTTP/2 head-of-
+line blocking — a 500 MB image upload cannot back-pressure live
+telemetry on the same TCP socket.
+
+**Client.** `internal/drivers/iosxe/gnoi/` wraps the openconfig protos
+with ergonomic Go methods, mandatory IOS-XE filesystem-prefix validation
+on file paths, and a per-service `CapabilityCache`. Each RPC observes
+its outcome; `codes.Unimplemented` flips the service to unsupported
+and short-circuits subsequent calls with a typed `*ErrServiceUnsupported`.
+
+**CRD surface.** Three CRDs distribute the operation set by trust level:
+
+| CRD | Purpose | RBAC class |
+|-----|---------|------------|
+| `DeviceOperation` (extended) | Read-only RPCs: Ping, Traceroute, Time, FileGet, FileStat, CertGet, CanGenerateCSR, RebootStatus, OSVerify | low-trust |
+| `IOSXESoftwareUpgrade` | Multi-phase OS upgrade state machine (Install → Activate → Verify, with rollback) | upgrade |
+| `IOSXEOperationalAction` | Write-class one-shots: Reboot, CancelReboot, KillProcess, FilePut, FileRemove, FactoryReset | destructive |
+
+The split lets operators grant `DeviceOperation` access to dashboards
+or low-trust automation without giving them mutation power on the
+device. The write-class `IOSXEOperationalAction` is gated by
+`--enable-write-class-gnoi` on the per-device VK pod and requires a
+`spec.confirm` field matching the target device's name as a typo guard.
+
+**Software upgrade state machine** (IOSXESoftwareUpgrade):
+
+```
+Pending → Resolving → Transferring → Activating → AwaitingReachability → Verifying → Succeeded
+   │            │           │            │                 │                 │
+   ↓            ↓           ↓            ↓                 ↓                 ↓
+PreflightFailed │      TransferInterrupted ─┘         RebootTimeout      RollingBack → RolledBack
+              Failed                                                          ↓
+                                                                            Failed
+```
+
+`OS.Activate` reboots the device itself per the gNOI spec; the
+reconciler does *not* follow with `System.Reboot`. The `NoReboot`
+strategy short-circuits to Succeeded; the `Reload` strategy enters
+`AwaitingReachability` and polls `System.Time` until the device is
+back, then runs `OS.Verify`. Verify mismatch with `RollbackOnFailure=true`
+enters `RollingBack` (boot-variable rewrite is a Phase D follow-up).
+
+**IOS-XE capability matrix.** Per the IOS-XE 17.15 Programmability
+Guide, only OS, Cert, Bootstrapping, and FactoryReset are
+documented as supported services. System and File are wired but
+gated behind a runtime probe + `CiscoDevice.spec.capabilities.gnoi.services`
+opt-in; reconcilers fail fast with `*ErrServiceUnsupported` if the
+device returns `codes.Unimplemented`.
 
 ## RESTCONF endpoints
 

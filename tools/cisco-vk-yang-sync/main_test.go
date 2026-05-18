@@ -149,6 +149,42 @@ func TestNonDryRunPreservesExistingFiles(t *testing.T) {
 	}
 }
 
+func TestNonDryRunSkipsGroupedWriterRegistrations(t *testing.T) {
+	idx := writeTempIndex(t, sampleFamilies)
+	outDir := t.TempDir()
+
+	grouped := []byte(`package writers
+
+func init() {
+	Override(keyedListWriter{
+		family: "vlan",
+	})
+}
+`)
+	if err := os.WriteFile(filepath.Join(outDir, "switching.go"), grouped, 0o644); err != nil {
+		t.Fatalf("seed grouped writer: %v", err)
+	}
+
+	var out, errBuf bytes.Buffer
+	code := run([]string{
+		"--family-index", idx,
+		"--out-writers", outDir,
+		"--dry-run=false",
+	}, &out, &errBuf)
+	if code != exitOK {
+		t.Fatalf("exit=%d stderr=%s", code, errBuf.String())
+	}
+	if _, err := os.Stat(filepath.Join(outDir, "vlan.go")); !os.IsNotExist(err) {
+		t.Fatalf("vlan.go should not be generated when a grouped writer registers vlan; err=%v", err)
+	}
+	if !strings.Contains(out.String(), "registered in grouped writer") {
+		t.Fatalf("stdout missing grouped-writer skip:\n%s", out.String())
+	}
+	if _, err := os.Stat(filepath.Join(outDir, "vrf.go")); err != nil {
+		t.Fatalf("vrf.go should still be generated: %v", err)
+	}
+}
+
 func TestRunAgainstCommittedFamilyIndex(t *testing.T) {
 	// Exercising the real checked-in index guards against accidental
 	// YAML breakage. Lower bound is the Phase-1 family count (8); no
@@ -234,6 +270,48 @@ func TestBuildYgotArgsIncludesAllYangFiles(t *testing.T) {
 	}
 	if strings.Contains(joined, "readme.md") {
 		t.Errorf("non-.yang file leaked into args: %v", got.args)
+	}
+}
+
+func TestBuildYgotArgsPerReleaseLayout(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.yang"), []byte("module a { yang-version 1.1; }\n"), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	got, err := buildYgotArgs(flags{yangDir: dir, outTypes: "out", yangVersion: "1716"}, nil)
+	if err != nil {
+		t.Fatalf("buildYgotArgs: %v", err)
+	}
+	joined := strings.Join(got.args, " ")
+	if !strings.Contains(joined, "-package_name=xe1716") {
+		t.Errorf("expected package_name=xe1716, got args: %v", got.args)
+	}
+	wantOut := filepath.Join("out", "1716", "iosxe_config.go")
+	if !strings.Contains(joined, "-output_file="+wantOut) {
+		t.Errorf("expected output_file=%s, got args: %v", wantOut, got.args)
+	}
+}
+
+func TestYgotOutputLayout(t *testing.T) {
+	cases := []struct {
+		version    string
+		outTypes   string
+		wantPkg    string
+		wantSuffix string
+	}{
+		{"", "out", "generated", filepath.Join("out", "iosxe_config.go")},
+		{"1716", "out", "xe1716", filepath.Join("out", "1716", "iosxe_config.go")},
+		{"1791", "internal/drivers/iosxe/configdriver/generated", "xe1791",
+			filepath.Join("internal/drivers/iosxe/configdriver/generated", "1791", "iosxe_config.go")},
+	}
+	for _, tc := range cases {
+		pkg, file := ygotOutputLayout(tc.version, tc.outTypes)
+		if pkg != tc.wantPkg {
+			t.Errorf("ygotOutputLayout(%q, %q) pkg = %q, want %q", tc.version, tc.outTypes, pkg, tc.wantPkg)
+		}
+		if file != tc.wantSuffix {
+			t.Errorf("ygotOutputLayout(%q, %q) file = %q, want %q", tc.version, tc.outTypes, file, tc.wantSuffix)
+		}
 	}
 }
 

@@ -64,6 +64,9 @@ func TestBannerDiffChangesSelectedLeaf(t *testing.T) {
 	if len(ops) != 1 {
 		t.Fatalf("got %d ops, want 1", len(ops))
 	}
+	if !strings.Contains(string(ops[0].Body), `"banner":"new"`) {
+		t.Fatalf("body=%s, want banner text container", ops[0].Body)
+	}
 }
 
 func TestLoggingDiffIgnoresUnmanagedLeaves(t *testing.T) {
@@ -106,6 +109,9 @@ func TestAAADiffOnChangedLeaf(t *testing.T) {
 	if len(ops) != 1 {
 		t.Fatalf("got %d ops, want 1", len(ops))
 	}
+	if !strings.Contains(string(ops[0].Body), `[null]`) {
+		t.Fatalf("body=%s, want YANG empty leaf encoding", ops[0].Body)
+	}
 }
 
 func TestBGPDiffOnManagedSubtree(t *testing.T) {
@@ -134,8 +140,10 @@ func TestNTPServersDiffCreatesMissing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Diff: %v", err)
 	}
-	if len(ops) != 1 || !strings.Contains(ops[0].Path, "=192.0.2.1") {
-		t.Fatalf("ops=%+v, want 1 op keyed on 192.0.2.1", ops)
+	// New entries MERGE to the parent list path (no =key suffix)
+	// so the device creates the entry.
+	if len(ops) != 1 || strings.Contains(ops[0].Path, "=") {
+		t.Fatalf("ops=%+v, want 1 op to parent path (no =key)", ops)
 	}
 }
 
@@ -149,8 +157,9 @@ func TestStaticRouteDiffByPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Diff: %v", err)
 	}
-	if len(ops) != 1 || !strings.Contains(ops[0].Path, "=0.0.0.0") {
-		t.Fatalf("ops=%+v", ops)
+	// New entries MERGE to the parent list path.
+	if len(ops) != 1 || strings.Contains(ops[0].Path, "=") {
+		t.Fatalf("ops=%+v, want 1 op to parent path (no =key)", ops)
 	}
 }
 
@@ -196,6 +205,21 @@ func TestLineDiffByFirst(t *testing.T) {
 	}
 	if len(ops) != 1 {
 		t.Fatalf("got %d ops", len(ops))
+	}
+}
+
+func TestLineTransportInputShapesNestedYANG(t *testing.T) {
+	t.Parallel()
+	w := Get("line")
+	desired := map[string]any{"vty": []any{
+		map[string]any{"first": 0, "last": 4, "transport": map[string]any{"input": []any{"ssh"}}},
+	}}
+	ops, err := w.Diff(desired, []map[string]any{})
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if !strings.Contains(string(ops[0].Body), `"input":{"input":["ssh"]}`) {
+		t.Fatalf("body=%s, want nested transport input", ops[0].Body)
 	}
 }
 

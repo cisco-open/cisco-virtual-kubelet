@@ -126,8 +126,8 @@ func TestRecordTransactionNoOpWhenUnregistered(t *testing.T) {
 			t.Fatalf("recordTransaction panicked when metric nil: %v", r)
 		}
 	}()
-	recordTransaction("dev0", "netconf", "commit")
-	recordTransaction("dev0", "netconf", "discard")
+	recordTransaction("dev0", "1718", "netconf", "commit")
+	recordTransaction("dev0", "1718", "netconf", "discard")
 }
 
 func TestRecordSaveStartupNoOpWhenUnregistered(t *testing.T) {
@@ -140,7 +140,7 @@ func TestRecordSaveStartupNoOpWhenUnregistered(t *testing.T) {
 			t.Fatalf("recordSaveStartup panicked when metric nil: %v", r)
 		}
 	}()
-	recordSaveStartup("dev0", "restconf", "ok")
+	recordSaveStartup("dev0", "1718", "restconf", "ok")
 }
 
 func TestRecordMutateOpsNoOpWhenUnregistered(t *testing.T) {
@@ -153,12 +153,12 @@ func TestRecordMutateOpsNoOpWhenUnregistered(t *testing.T) {
 			t.Fatalf("recordMutateOps panicked when metric nil: %v", r)
 		}
 	}()
-	recordMutateOps("dev0", "gnmi", []transport.Op{
+	recordMutateOps("dev0", "1718", "gnmi", []transport.Op{
 		{Verb: transport.VerbReplace},
 		{Verb: transport.VerbMerge},
 	})
 	// Empty slice path.
-	recordMutateOps("dev0", "gnmi", nil)
+	recordMutateOps("dev0", "1718", "gnmi", nil)
 }
 
 // TestTransportAwareCountersWireOnTransactionalSuccess is the
@@ -198,15 +198,15 @@ func TestTransportAwareCountersWireOnTransactionalSuccess(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	transactionsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "test_transactions_total"},
-		[]string{"device", "transport", "outcome"},
+		[]string{"device", "release", "transport", "outcome"},
 	)
 	saveStartupTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "test_save_startup_total"},
-		[]string{"device", "transport", "outcome"},
+		[]string{"device", "release", "transport", "outcome"},
 	)
 	mutateOpsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "test_mutate_ops_total"},
-		[]string{"device", "transport", "verb"},
+		[]string{"device", "release", "transport", "verb"},
 	)
 	reg.MustRegister(transactionsTotal, saveStartupTotal, mutateOpsTotal)
 
@@ -215,6 +215,7 @@ func TestTransportAwareCountersWireOnTransactionalSuccess(t *testing.T) {
 	// (the txTransport stub doesn't set Kind by default).
 	e, tt, res := newTxFixture(true /*supportsTx*/, true /*supportsSave*/, true /*writeStartup*/, true /*transactional*/)
 	tt.caps.Kind = transport.KindNETCONF
+	res.TargetYangVersion = "1718"
 
 	r := e.Reconcile(context.Background(), res)
 
@@ -227,19 +228,19 @@ func TestTransportAwareCountersWireOnTransactionalSuccess(t *testing.T) {
 
 	// Headline assertions: each new counter has a non-zero value
 	// for the expected label set.
-	if got := testutil.ToFloat64(transactionsTotal.WithLabelValues("test-dev", "netconf", "commit")); got != 1 {
+	if got := testutil.ToFloat64(transactionsTotal.WithLabelValues("test-dev", "1718", "netconf", "commit")); got != 1 {
 		t.Errorf("transactions_total{commit,netconf} = %v, want 1", got)
 	}
-	if got := testutil.ToFloat64(transactionsTotal.WithLabelValues("test-dev", "netconf", "discard")); got != 0 {
+	if got := testutil.ToFloat64(transactionsTotal.WithLabelValues("test-dev", "1718", "netconf", "discard")); got != 0 {
 		t.Errorf("transactions_total{discard,netconf} = %v, want 0 on a clean commit", got)
 	}
-	if got := testutil.ToFloat64(saveStartupTotal.WithLabelValues("test-dev", "netconf", "ok")); got != 1 {
+	if got := testutil.ToFloat64(saveStartupTotal.WithLabelValues("test-dev", "1718", "netconf", "ok")); got != 1 {
 		t.Errorf("save_startup_total{ok,netconf} = %v, want 1", got)
 	}
 	// txWriter emits one VerbReplace op on the first Diff. The
 	// counter is incremented before Apply, so a clean reconcile
 	// records exactly one REPLACE.
-	if got := testutil.ToFloat64(mutateOpsTotal.WithLabelValues("test-dev", "netconf", string(transport.VerbReplace))); got != 1 {
+	if got := testutil.ToFloat64(mutateOpsTotal.WithLabelValues("test-dev", "1718", "netconf", string(transport.VerbReplace))); got != 1 {
 		t.Errorf("mutate_ops_total{REPLACE,netconf} = %v, want 1", got)
 	}
 }
@@ -255,26 +256,27 @@ func TestTransportAwareCountersDiscardPathOnCommitFailure(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	transactionsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "test_tx_total_v2"},
-		[]string{"device", "transport", "outcome"},
+		[]string{"device", "release", "transport", "outcome"},
 	)
 	reg.MustRegister(transactionsTotal)
 
 	e, tt, res := newTxFixture(true, false, false, true)
 	tt.caps.Kind = transport.KindNETCONF
 	tt.commitErr = fmt.Errorf("simulated commit RPC failure")
+	res.TargetYangVersion = "1718"
 
 	r := e.Reconcile(context.Background(), res)
 
 	if r.Phase != PhaseFailed {
 		t.Fatalf("phase = %q, want Failed (commit returned error); err=%v", r.Phase, r.Err)
 	}
-	if got := testutil.ToFloat64(transactionsTotal.WithLabelValues("test-dev", "netconf", "commit_failed")); got != 1 {
+	if got := testutil.ToFloat64(transactionsTotal.WithLabelValues("test-dev", "1718", "netconf", "commit_failed")); got != 1 {
 		t.Errorf("transactions_total{commit_failed} = %v, want 1", got)
 	}
-	if got := testutil.ToFloat64(transactionsTotal.WithLabelValues("test-dev", "netconf", "discard")); got != 1 {
+	if got := testutil.ToFloat64(transactionsTotal.WithLabelValues("test-dev", "1718", "netconf", "discard")); got != 1 {
 		t.Errorf("transactions_total{discard} = %v, want 1 (deferred cleanup ran)", got)
 	}
-	if got := testutil.ToFloat64(transactionsTotal.WithLabelValues("test-dev", "netconf", "commit")); got != 0 {
+	if got := testutil.ToFloat64(transactionsTotal.WithLabelValues("test-dev", "1718", "netconf", "commit")); got != 0 {
 		t.Errorf("transactions_total{commit} = %v, want 0 on commit failure", got)
 	}
 }

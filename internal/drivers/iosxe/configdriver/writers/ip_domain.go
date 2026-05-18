@@ -33,3 +33,38 @@ func init() {
 		managedLeaves: []string{"name", "lookup", "list"},
 	})
 }
+
+// ipDomainBodyTransform2601 converts the canonical NetAsCode
+// ip_domain.name leaf to the IOS-XE 26.01 YANG shape observed on
+// Catalyst 9300:
+//
+//	name → name-container.name-no-vrf
+//
+// lookup and list keep their baseline shape.
+func ipDomainBodyTransform2601(body map[string]any) map[string]any {
+	name, ok := body["name"]
+	if !ok {
+		return body
+	}
+	delete(body, "name")
+	body["name-container"] = map[string]any{
+		"name-no-vrf": name,
+	}
+	return body
+}
+
+// ipDomainFetchTransform2601 is the inverse of
+// ipDomainBodyTransform2601. It maps IOS-XE 26.01 observed state back
+// to the canonical NetAsCode shape so drift comparison remains stable
+// across software releases.
+func ipDomainFetchTransform2601(body map[string]any) map[string]any {
+	container, ok := body["name-container"].(map[string]any)
+	if !ok {
+		return body
+	}
+	if name, ok := container["name-no-vrf"]; ok {
+		body["name"] = name
+	}
+	delete(body, "name-container")
+	return body
+}

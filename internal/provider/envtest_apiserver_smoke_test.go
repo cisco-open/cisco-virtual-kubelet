@@ -53,6 +53,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 )
 
@@ -96,6 +98,8 @@ func startEnvtest(t *testing.T) (client.Client, func()) {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(configv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(opsv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(ciskov1.AddToScheme(scheme))
 	utilruntime.Must(coordv1.AddToScheme(scheme))
 	c, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {

@@ -15,9 +15,13 @@
 package writers
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"sync"
+
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 )
 
 // registry is a process-global lookup of family → writer. Writers
@@ -74,9 +78,27 @@ func Override(w SectionWriter) {
 // driver has not yet been taught; the caller reports it as Unsupported
 // in the family status.
 func Get(family string) SectionWriter {
+	return GetForRelease(family, "")
+}
+
+// GetForRelease returns a per-device writer instance for family. The
+// returned writer captures an immutable OverrideResolver built from the
+// device-reported IOS-XE software version.
+func GetForRelease(family, release string) SectionWriter {
 	mu.RLock()
-	defer mu.RUnlock()
-	return registry[family]
+	w := registry[family]
+	mu.RUnlock()
+	if w == nil {
+		return nil
+	}
+	resolver, err := NewOverrideResolver(release)
+	if err != nil {
+		return versionErrorWriter{
+			family: family,
+			err:    err,
+		}
+	}
+	return bindResolver(w, resolver)
 }
 
 // Families returns a sorted snapshot of registered family names. The
@@ -99,4 +121,36 @@ func Len() int {
 	mu.RLock()
 	defer mu.RUnlock()
 	return len(registry)
+}
+
+type resolverBindable interface {
+	withResolver(*OverrideResolver) SectionWriter
+}
+
+func bindResolver(w SectionWriter, r *OverrideResolver) SectionWriter {
+	if b, ok := w.(resolverBindable); ok {
+		return b.withResolver(r)
+	}
+	return w
+}
+
+type versionErrorWriter struct {
+	family string
+	err    error
+}
+
+func (w versionErrorWriter) Family() string { return w.family }
+
+func (w versionErrorWriter) YANGPaths() []string { return nil }
+
+func (w versionErrorWriter) Fetch(context.Context, configdriver.TransportClient) (any, error) {
+	return nil, w.err
+}
+
+func (w versionErrorWriter) Diff(any, any) ([]transport.Op, error) {
+	return nil, w.err
+}
+
+func (w versionErrorWriter) Apply(context.Context, configdriver.TransportClient, []transport.Op) error {
+	return w.err
 }

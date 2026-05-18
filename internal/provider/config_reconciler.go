@@ -38,6 +38,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
@@ -120,13 +121,41 @@ type ConfigReconciler struct {
 
 	// Lookup overrides the writer lookup for tests. Nil means the
 	// process-global writers registry.
-	Lookup func(family string) writers.SectionWriter
+	Lookup func(family, release string) writers.SectionWriter
+
+	// DeviceVersion is the device-reported IOS-XE software version
+	// used to select per-device writer override resolvers.
+	DeviceVersion string
+
+	// FetchDeviceVersion refreshes DeviceVersion from the live device.
+	// Production IOS-XE config reconcilers wire this to a lightweight
+	// RESTCONF read so config writers follow the new YANG profile after
+	// an in-place software upgrade without waiting for a pod restart.
+	FetchDeviceVersion func(context.Context, transport.Interface) string
+
+	// RequireDeviceVersion, when true, makes reconcile ticks stay in
+	// Pending until DeviceVersion is known and valid. Production IOS-XE
+	// paths set this; tests that do not exercise version gating can
+	// leave it false.
+	RequireDeviceVersion bool
+
+	// DeviceVersionError is the validation error for DeviceVersion.
+	// When set, reconcile ticks fail closed before device I/O.
+	DeviceVersionError error
+
+	versionMu sync.RWMutex
 
 	// FamilyOrder is the optional cross-family ordering hook
 	// forwarded to engine.Engine.FamilyOrder for Wave 10.3 atomic
 	// replace. Nil means operator-determined ordering — the
 	// pre-Wave-10 default.
 	FamilyOrder func([]string) []string
+
+	// YANGValidator validates writer-produced IOS-XE YANG payloads
+	// before they are applied. YANGValidationMode controls whether a
+	// validation failure is logged only or blocks the reconcile.
+	YANGValidator      validation.Validator
+	YANGValidationMode validation.Mode
 
 	// Leaser serialises per-family writes across IOSXEConfig CRs
 	// targeting the same device. Nil means advisory-only conflict
@@ -226,6 +255,49 @@ func (r *ConfigReconciler) SetTransport(t transport.Interface) {
 		return
 	}
 	r.transportSlot.Store(&t)
+}
+
+// SetDeviceVersionState updates the per-device software version used
+// for writer lookup. Safe for the deferred-dial goroutine to call
+// while reconcile ticks are reading it.
+func (r *ConfigReconciler) SetDeviceVersionState(version string, err error) {
+	r.versionMu.Lock()
+	defer r.versionMu.Unlock()
+	r.DeviceVersion = version
+	r.DeviceVersionError = err
+}
+
+func (r *ConfigReconciler) deviceVersionState() (string, error) {
+	r.versionMu.RLock()
+	defer r.versionMu.RUnlock()
+	return r.DeviceVersion, r.DeviceVersionError
+}
+
+func (r *ConfigReconciler) refreshDeviceVersion(ctx context.Context) {
+	if r == nil || r.FetchDeviceVersion == nil || r.GetTransport() == nil {
+		return
+	}
+	ver := r.FetchDeviceVersion(ctx, r.GetTransport())
+	if ver == "" {
+		return
+	}
+	current, currentErr := r.deviceVersionState()
+	if ver == current && currentErr == nil {
+		return
+	}
+	r.SetDeviceVersionState(ver, writers.SetDeviceVersion(ver))
+}
+
+func (r *ConfigReconciler) defaultYANGVersionForDeviceVersion(deviceVersion string) string {
+	if tag, ok := writers.ReleaseTagForDeviceVersionString(deviceVersion); ok {
+		if len(r.SupportedYANGVersions) == 0 {
+			return tag
+		}
+		if _, supported := r.SupportedYANGVersions[tag]; supported {
+			return tag
+		}
+	}
+	return r.DefaultYANGVersion
 }
 
 // GetTransport returns the current transport, preferring the atomic
@@ -345,6 +417,7 @@ func (r *ConfigReconciler) Run(ctx context.Context) error {
 // forwarded to reconcileOne so a subscribe-driven tick bypasses the
 // hash short-circuit; a periodic tick respects it.
 func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, trigger reconcileTrigger) {
+	r.refreshDeviceVersion(ctx)
 	var list configv1alpha1.IOSXEConfigList
 	if err := r.Client.List(ctx, &list); err != nil {
 		logger.WithError(err).Warn("list IOSXEConfig failed; skipping tick")
@@ -359,20 +432,24 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, 
 	}
 	conflicts := engine.ConflictCheck(r.DeviceName, forDevice)
 
+	deviceVersion, _ := r.deviceVersionState()
 	resolver := &intent.Resolver{
 		Client:                r.Client,
 		KeyRules:              r.KeyRules,
 		SupportedYANGVersions: r.SupportedYANGVersions,
-		DefaultYANGVersion:    r.DefaultYANGVersion,
+		DefaultYANGVersion:    r.defaultYANGVersionForDeviceVersion(deviceVersion),
 	}
 	lookup := r.Lookup
 	if lookup == nil {
-		lookup = writers.Get
+		lookup = writers.GetForRelease
 	}
 	eng := &engine.Engine{
-		Transport:   r.GetTransport(),
-		Lookup:      lookup,
-		FamilyOrder: r.FamilyOrder,
+		Transport:          r.GetTransport(),
+		Lookup:             lookup,
+		DeviceVersion:      deviceVersion,
+		FamilyOrder:        r.FamilyOrder,
+		YANGValidator:      r.YANGValidator,
+		YANGValidationMode: r.YANGValidationMode,
 	}
 
 	for _, cr := range forDevice {
@@ -466,6 +543,13 @@ func (r *ConfigReconciler) reconcileOne(
 	trigger reconcileTrigger,
 ) (engine.Result, error) {
 	tickStart := time.Now()
+	if blocked, reason, msg := r.deviceVersionBlocked(); blocked {
+		if recordErr := r.recordDeviceVersionBlocked(ctx, cr, reason, msg); recordErr != nil {
+			return engine.Result{Phase: engine.PhasePending, Err: recordErr}, recordErr
+		}
+		r.patchTraceAnnotations(ctx, cr, engine.PhasePending, time.Since(tickStart))
+		return engine.Result{Phase: engine.PhasePending}, nil
+	}
 	intentCtx, intentSpan := otel.Tracer(reconcileTracerName).Start(ctx, "cvk.config.intent",
 		oteltrace.WithAttributes(
 			attribute.String("config.cisco.vk.iosxeconfig.namespace", cr.Namespace),
@@ -713,6 +797,34 @@ func (r *ConfigReconciler) acquireLeases(
 	return &filtered, conflicts
 }
 
+func (r *ConfigReconciler) deviceVersionBlocked() (bool, string, string) {
+	version, err := r.deviceVersionState()
+	if err != nil {
+		reason := "MalformedDeviceVersion"
+		if writers.IsUnsupportedDeviceVersion(err) {
+			reason = "UnsupportedDeviceVersion"
+		}
+		return true, reason, fmt.Sprintf("device version %q rejected by writers: %v", version, err)
+	}
+	if r.RequireDeviceVersion && version == "" {
+		return true, "DeviceVersionPending", "waiting for device software version before running config writers"
+	}
+	return false, "", ""
+}
+
+func (r *ConfigReconciler) recordDeviceVersionBlocked(ctx context.Context, cr *configv1alpha1.IOSXEConfig, reason, msg string) error {
+	updated := cr.DeepCopy()
+	updated.Status.Phase = engine.PhasePending
+	updated.Status.ObservedGeneration = cr.Generation
+	setCondition(&updated.Status, metav1.Condition{
+		Type:    "Ready",
+		Status:  metav1.ConditionFalse,
+		Reason:  reason,
+		Message: msg,
+	})
+	return ignoreConflict(r.Client.Status().Update(ctx, updated))
+}
+
 // recordPending is the Phase-0 fallback when no transport is wired.
 func (r *ConfigReconciler) recordPending(ctx context.Context, cr *configv1alpha1.IOSXEConfig) error {
 	if cr.Status.Phase == engine.PhasePending && cr.Status.ObservedGeneration == cr.Generation {
@@ -939,7 +1051,7 @@ func (r *ConfigReconciler) recordResult(
 		})
 	}
 	if dropped > 0 {
-		engine.RecordDriftTruncated(cr.Spec.DeviceRef.Name, dropped)
+		engine.RecordDriftTruncatedForRelease(cr.Spec.DeviceRef.Name, result.YangVersion, dropped)
 	}
 
 	readyStatus := metav1.ConditionTrue

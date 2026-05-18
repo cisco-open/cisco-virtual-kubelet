@@ -1,0 +1,5 @@
+FROM gcr.io/distroless/static-debian12
+COPY bin/cisco-vk-linux-amd64 /usr/local/bin/cisco-vk
+USER nonroot:nonroot
+
+ENTRYPOINT ["/usr/local/bin/cisco-vk"]

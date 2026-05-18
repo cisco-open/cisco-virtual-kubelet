@@ -63,6 +63,9 @@ var ethernetTypes = []string{
 var ethernetManagedLeaves = []string{
 	"description",
 	"shutdown",
+	"vrf",
+	"ipv4_address",
+	"ipv4_address_mask",
 	"mtu",
 	"ip_access_group_in",
 	"ip_access_group_out",
@@ -109,6 +112,7 @@ func (ethernetWriter) Fetch(ctx context.Context, c transport.Interface) (any, er
 			return nil, fmt.Errorf("interface_ethernet: decode %s list: %w", t, err)
 		}
 		for _, el := range list {
+			el = interfaceIPv4VRFFromYANG(el)
 			el["type"] = t
 			combined = append(combined, el)
 		}

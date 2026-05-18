@@ -31,6 +31,14 @@ module Cisco-IOS-XE-app-hosting-oper {
      Copyright (c) 2016-2020, 2022 by Cisco Systems, Inc.
      All rights reserved.";
 
+  revision 2026-02-01 {
+    description
+      "- Added disk utilization information to the utilization container.
+       - Added IOX service status, health, and version details to app-global, including new enumerations for IOX status, health, and synchronization.";
+    reference
+      "3.9.0";
+    cisco-semver:module-version "3.9.0";
+  }
   revision 2023-03-01 {
     description
       "- Added CPU percent support for platform resource profiles.
@@ -124,6 +132,131 @@ module Cisco-IOS-XE-app-hosting-oper {
     reference
       "1.0.0";
     cisco-semver:module-version "1.0.0";
+  }
+
+  typedef ioxman-run-status {
+    type enumeration {
+      enum ioxm-stat-run {
+        value 0;
+        description
+          "IOXMAN is running";
+      }
+      enum ioxm-stat-no-run {
+        value 1;
+        description
+          "IOXMAN is not running";
+      }
+      enum ioxm-stat-not-ready {
+        value 2;
+        description
+          "IOXMAN is not ready";
+      }
+      enum ioxm-stat-na {
+        value 3;
+        description
+          "IOXMAN is not supported";
+      }
+    }
+    description
+      "IOXMAN run status";
+  }
+
+  typedef iox-run-status {
+    type enumeration {
+      enum iox-stat-run {
+        value 0;
+        description
+          "IOX is running";
+      }
+      enum iox-stat-no-run {
+        value 1;
+        description
+          "IOX is not running";
+      }
+      enum iox-stat-na {
+        value 2;
+        description
+          "IOX is not supported";
+      }
+    }
+    description
+      "IOX run status";
+  }
+
+  typedef iox-health-status {
+    type enumeration {
+      enum ioxcaf-stat-stbl {
+        value 0;
+        description
+          "IOX CAF is stable";
+      }
+      enum ioxcaf-stat-unstb {
+        value 1;
+        description
+          "IOX CAF is unstable";
+      }
+      enum ioxcaf-stat-na {
+        value 2;
+        description
+          "IOX CAF is not set";
+      }
+    }
+    description
+      "IOX health status";
+  }
+
+  typedef iox-app-sign-status {
+    type enumeration {
+      enum iox-app-sign-stat-en {
+        value 0;
+        description
+          "IOX App Signature Verification is enabled";
+      }
+      enum iox-app-sign-stat-dis {
+        value 1;
+        description
+          "IOX App Signature Verification is disabled";
+      }
+      enum iox-app-sign-stat-na {
+        value 2;
+        description
+          "IOX App Signature Verification is not set";
+      }
+    }
+    description
+      "IOX app signature verification status";
+  }
+
+  typedef iox-ha-sync-status {
+    type enumeration {
+      enum iox-ha-sync-stat-succ {
+        value 0;
+        description
+          "IOX HA sync is successful";
+      }
+      enum iox-ha-sync-stat-fail {
+        value 1;
+        description
+          "IOX HA sync failed";
+      }
+      enum iox-ha-sync-stat-stby-unav {
+        value 2;
+        description
+          "IOX HA sync standby is unavailable";
+      }
+      enum iox-ha-sync-stat-inprog {
+        value 3;
+        description
+          "IOX HA sync is in progress";
+      }
+      enum iox-ha-sync-stat-dis {
+        value 4;
+        description
+          "IOX HA sync is disabled";
+      }
+    }
+    description
+      "IOX HA sync status";
   }
 
   typedef iox-pkg-policy {
@@ -671,6 +804,25 @@ module Cisco-IOS-XE-app-hosting-oper {
     }
   }
 
+  grouping disk-util-val {
+    description
+      "Disk utilization information";
+    leaf disk-alloc {
+      type uint64;
+      units "Megabytes";
+      description
+        "Amount of disk allocated for the virtual service in MB";
+    }
+    leaf disk-used {
+      type decimal64 {
+        fraction-digits 2;
+      }
+      units "Megabytes";
+      description
+        "Amount of used disk for the virtual service in MB";
+    }
+  }
+
   grouping network-util {
     description
       "Network utilization information";
@@ -793,6 +945,11 @@ module Cisco-IOS-XE-app-hosting-oper {
       description
         "Memory utilization information";
       uses app-hosting-ios-xe-oper:memory-util;
+    }
+    container disk-util {
+      description
+        "Disk utilization information";
+      uses app-hosting-ios-xe-oper:disk-util-val;
     }
   }
 
@@ -1093,7 +1250,72 @@ module Cisco-IOS-XE-app-hosting-oper {
     leaf iox-enabled {
       type boolean;
       description
-        "Is IOX enabled";
+        "IOX enabled or disabled";
+    }
+    leaf iox-version {
+      type string;
+      description
+        "Specifies the version of IOX running on the device.";
+    }
+    leaf iox-dir {
+      type string;
+      description
+        "Indicates the working directory used by IOX on the device.";
+    }
+    leaf iox-app-sign-verify {
+      type app-hosting-ios-xe-oper:iox-app-sign-status;
+      description
+        "Specifies whether IOX application signature verification is enabled on the device.";
+    }
+    leaf iox-caf-status {
+      type app-hosting-ios-xe-oper:iox-run-status;
+      description
+        "Represents the operational status of the Cisco Application Framework (CAF) on the device.";
+    }
+    leaf iox-caf-health {
+      type app-hosting-ios-xe-oper:iox-health-status;
+      description
+        "Represents the health of the Cisco Application Framework (CAF) on the device.";
+    }
+    leaf iox-ha-status {
+      type app-hosting-ios-xe-oper:iox-run-status;
+      description
+        "Represents the operational status of the High Availability (HA) on the device.";
+    }
+    leaf iox-ioxman-status {
+      type app-hosting-ios-xe-oper:ioxman-run-status;
+      description
+        "Represents the operational status of IOX Management (IOXMAN) on the device.";
+    }
+    leaf iox-sec-storage-status {
+      type app-hosting-ios-xe-oper:iox-run-status;
+      description
+        "Represents the operational status of IOX Secondary Storage on the device.";
+    }
+    leaf iox-libvirtd-status {
+      type app-hosting-ios-xe-oper:iox-run-status;
+      description
+        "Represents the operational status of IOX libvirtd on the device.";
+    }
+    leaf iox-libvirtd-version {
+      type string;
+      description
+        "Specifies the version of the libvirtd infrastructure used by IOX.";
+    }
+    leaf iox-dockerd-status {
+      type app-hosting-ios-xe-oper:iox-run-status;
+      description
+        "Represents the operational status of IOX dockerd on the device.";
+    }
+    leaf iox-dockerd-version {
+      type string;
+      description
+        "Specifies the version of the Docker daemon (dockerd) infrastructure used by IOX.";
+    }
+    leaf iox-ha-sync-status {
+      type app-hosting-ios-xe-oper:iox-ha-sync-status;
+      description
+        "Specifies the IOX High Availability (HA) synchronization status on the device.";
     }
   }
 

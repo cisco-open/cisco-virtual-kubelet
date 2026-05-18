@@ -16,12 +16,15 @@ package iosxe
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/iosxebuilder"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
+	log "github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
 // init wires IOS-XE into both the apphosting and configdriver
@@ -63,6 +66,10 @@ func buildXEConfigDriverContext(
 		SessionLock: opts.SessionLock,
 	})
 	supported, defaultVer := iosxebuilder.LoadYANGReleaseTags(ctx)
+	validationMode, validationModeErr := validation.ModeFromEnv()
+	if validationModeErr != nil {
+		log.G(ctx).WithError(validationModeErr).Warn("config driver: disabling YANG validation")
+	}
 	out := &drivers.ConfigDriverContext{
 		Transport:             t,
 		KeyRules:              iosxebuilder.KeyRulesForXE(),
@@ -70,10 +77,48 @@ func buildXEConfigDriverContext(
 		DefaultYANGVersion:    defaultVer,
 		LookupWriter:          iosxebuilder.LookupWriter,
 		SubscribePaths:        iosxebuilder.UnionWriterPaths(),
+		FetchDeviceVersion:    FetchDeviceVersion,
 		FamilyOrder:           iosxebuilder.FamilyOrderForXE(),
+		YANGValidator:         validation.NewStructuralValidator(),
+		YANGValidationMode:    validationMode,
 	}
 	if err != nil {
 		return out, err
 	}
+	// Best-effort version fetch for version-aware writers. If the
+	// transport dialled successfully we can reach the device.
+	if ver := FetchDeviceVersion(ctx, t); ver != "" {
+		out.DeviceVersion = ver
+	}
 	return out, nil
+}
+
+// FetchDeviceVersion makes a lightweight RESTCONF GET for the
+// software-version field. Returns "" on any error.
+//
+// Exported so cisco-vk's deferred-dial retry loop can rebind the
+// device version after a startup race recovers — see the comment in
+// cmd/cisco-vk/config_reconciler.go retryConfigDriverDial.
+func FetchDeviceVersion(ctx context.Context, t transport.Interface) string {
+	if t == nil {
+		return ""
+	}
+	raw, err := t.Fetch(ctx,
+		"/Cisco-IOS-XE-native:native/version")
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("config driver: could not fetch device version")
+		return ""
+	}
+	// Response: {"Cisco-IOS-XE-native:version": "17.16"}
+	var envelope map[string]string
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		log.G(ctx).WithError(err).Warn("config driver: could not parse version response")
+		return ""
+	}
+	for _, v := range envelope {
+		log.G(ctx).WithField("version", v).Info("config driver: fetched device version")
+		return v
+	}
+	log.G(ctx).Warn("config driver: empty version response")
+	return ""
 }

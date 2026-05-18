@@ -165,9 +165,13 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 	if tr == nil {
 		return fmt.Errorf("relinquish: transport not yet available")
 	}
+	r.refreshDeviceVersion(ctx)
+	if blocked, reason, msg := r.deviceVersionBlocked(); blocked {
+		return fmt.Errorf("relinquish: %s: %s", reason, msg)
+	}
 	lookup := r.Lookup
 	if lookup == nil {
-		lookup = writers.Get
+		lookup = writers.GetForRelease
 	}
 
 	// Per-family AcquireIfFree. Only families we successfully claim
@@ -222,10 +226,14 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 		return nil
 	}
 
+	deviceVersion, _ := r.deviceVersionState()
 	eng := &engine.Engine{
-		Transport:   tr,
-		Lookup:      lookup,
-		FamilyOrder: r.FamilyOrder,
+		Transport:          tr,
+		Lookup:             lookup,
+		DeviceVersion:      deviceVersion,
+		FamilyOrder:        r.FamilyOrder,
+		YANGValidator:      r.YANGValidator,
+		YANGValidationMode: r.YANGValidationMode,
 	}
 	// Build empty desired for each owned family. coerceList in the
 	// writer side accepts a missing/empty entry as "no entries
@@ -427,6 +435,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 			cr.ResourceVersion = updated.ResourceVersion
 		}
 	}
+	r.refreshDeviceVersion(ctx)
 
 	// Build the same resolver + engine the polling path uses so
 	// behaviour stays identical regardless of how we were triggered.
@@ -436,20 +445,24 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	// spec.targetYangVersion value and never recorded
 	// status.sourceYangVersion, while the polling/aggregator paths
 	// did both. The two topologies must agree.
+	deviceVersion, _ := r.deviceVersionState()
 	resolver := &intent.Resolver{
 		Client:                r.Client,
 		KeyRules:              r.KeyRules,
 		SupportedYANGVersions: r.SupportedYANGVersions,
-		DefaultYANGVersion:    r.DefaultYANGVersion,
+		DefaultYANGVersion:    r.defaultYANGVersionForDeviceVersion(deviceVersion),
 	}
 	lookup := r.Lookup
 	if lookup == nil {
-		lookup = writers.Get
+		lookup = writers.GetForRelease
 	}
 	eng := &engine.Engine{
-		Transport:   r.GetTransport(),
-		Lookup:      lookup,
-		FamilyOrder: r.FamilyOrder,
+		Transport:          r.GetTransport(),
+		Lookup:             lookup,
+		DeviceVersion:      deviceVersion,
+		FamilyOrder:        r.FamilyOrder,
+		YANGValidator:      r.YANGValidator,
+		YANGValidationMode: r.YANGValidationMode,
 	}
 
 	// Compute conflicts across every CR targeting this device. Listing

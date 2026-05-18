@@ -65,6 +65,7 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   controller image: {{ .Values.controllerImage.repository | default .Values.image.repository }}:{{ .Values.controllerImage.tag | default .Values.image.tag }}
   vk image:         {{ .Values.vkImage.repository | default .Values.image.repository }}:{{ .Values.vkImage.tag | default .Values.image.tag }}
   metrics:          {{ .Values.controller.metricsBindAddress }}
+  gNOI:             {{ if .Values.gnoi.disabled }}disabled{{ else if .Values.gnoi.insecure }}insecure{{ else }}auto{{ end }}{{ if .Values.gnoi.port }} on port {{ .Values.gnoi.port }}{{ end }}
   diag admin:       {{ if .Values.aggregator.enabled }}(disabled in aggregator-mode){{ else }}127.0.0.1:8082 inside each per-device pod{{ end }}
 
 {{- if and .Values.telemetry.otlp.headers (not (eq (.Values.telemetry.otlp.headers | toJson) "{}")) (not .Values.telemetry.otlp.headersSecret.name) }}
