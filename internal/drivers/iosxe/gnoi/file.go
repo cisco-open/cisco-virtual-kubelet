@@ -43,10 +43,27 @@ var IOSXEFilesystemPrefixes = []string{
 }
 
 // ValidateIOSXEPath returns nil when path begins with a recognised
-// IOS-XE filesystem prefix.
+// IOS-XE filesystem prefix and does not escape into another filesystem.
 func ValidateIOSXEPath(path string) error {
 	for _, p := range IOSXEFilesystemPrefixes {
 		if strings.HasPrefix(path, p) {
+			rest := strings.TrimPrefix(path, p)
+			if strings.HasPrefix(rest, "/") {
+				rest = strings.TrimPrefix(rest, "/")
+			}
+			if rest == "" {
+				return fmt.Errorf("gnoi: path %q has no file component after IOS-XE filesystem prefix %q", path, p)
+			}
+			for _, segment := range strings.Split(rest, "/") {
+				if segment == "" || segment == "." || segment == ".." {
+					return fmt.Errorf("gnoi: path %q contains invalid segment %q", path, segment)
+				}
+				for _, other := range IOSXEFilesystemPrefixes {
+					if strings.Contains(segment, other) {
+						return fmt.Errorf("gnoi: path %q contains nested IOS-XE filesystem prefix %q", path, other)
+					}
+				}
+			}
 			return nil
 		}
 	}
@@ -117,6 +134,9 @@ func (c *Client) Put(ctx context.Context, path string, r io.Reader, opts PutOpts
 	}
 	if opts.Permissions == 0 {
 		opts.Permissions = 0o644
+	}
+	if opts.Permissions > 0o777 {
+		return fmt.Errorf("gnoi File.Put: Permissions=%#o exceeds 0777", opts.Permissions)
 	}
 	if opts.ChunkSize == 0 {
 		opts.ChunkSize = 64 * 1024

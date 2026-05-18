@@ -72,7 +72,18 @@ func NewCapabilityCache(now func() time.Time) *CapabilityCache {
 // the TTL and are not overwritten by Observe; callers that pin
 // supported=true and then encounter codes.Unimplemented still get
 // the wrapped error from method calls but the cache remains pinned.
+//
+// Production callers should only invoke Pin from the wiring boundary
+// that translates explicit operator policy into client options. Do not
+// call it from reconcilers or request handlers as a shortcut around an
+// Unimplemented response; that would bypass the fail-fast safety gate
+// for unsupported destructive RPCs.
 func (c *CapabilityCache) Pin(svc Service, supported bool) {
+	if supported {
+		recordCapabilityEvent(svc, "pin_supported")
+	} else {
+		recordCapabilityEvent(svc, "pin_unsupported")
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.entries[svc] = capEntry{
@@ -88,6 +99,7 @@ func (c *CapabilityCache) Pin(svc Service, supported bool) {
 // transient and would otherwise pin a stale verdict on a transient
 // blip.
 func (c *CapabilityCache) Observe(svc Service, err error) {
+	recordRPC(svc, err)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	e := c.entries[svc]
@@ -116,13 +128,25 @@ func (c *CapabilityCache) Supported(svc Service) (supported, known bool, lastErr
 	defer c.mu.RUnlock()
 	e, ok := c.entries[svc]
 	if !ok {
+		recordCapabilityEvent(svc, "miss")
 		return true, false, nil
 	}
 	if e.pinned {
+		if e.supported {
+			recordCapabilityEvent(svc, "hit_pinned_supported")
+		} else {
+			recordCapabilityEvent(svc, "hit_pinned_unsupported")
+		}
 		return e.supported, true, e.lastErr
 	}
 	if c.now().Sub(e.checkedAt) > capabilityTTL {
+		recordCapabilityEvent(svc, "expired")
 		return true, false, nil
+	}
+	if e.supported {
+		recordCapabilityEvent(svc, "hit_supported")
+	} else {
+		recordCapabilityEvent(svc, "hit_unsupported")
 	}
 	return e.supported, true, e.lastErr
 }
@@ -133,6 +157,7 @@ func (c *CapabilityCache) Supported(svc Service) (supported, known bool, lastErr
 func (c *CapabilityCache) ensureSupported(svc Service) error {
 	supported, known, lastErr := c.Supported(svc)
 	if known && !supported {
+		recordCapabilityEvent(svc, "fail_fast")
 		cause := lastErr
 		if cause == nil {
 			cause = errors.New("device reported codes.Unimplemented")

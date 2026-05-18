@@ -126,8 +126,44 @@ func TestDHCPDiffCreatesMissing(t *testing.T) {
 		t.Fatalf("decode body: %v", err)
 	}
 	pools := body[dhcpParentEnvelopeKey][dhcpPoolEnvelopeKey]
-	if len(pools) != 1 || pools[0]["id"] != "IOX" {
-		t.Fatalf("body=%s, want DHCP pool keyed by id", ops[0].Body)
+	if len(pools) != 1 || pools[0]["name"] != "IOX" {
+		t.Fatalf("body=%s, want baseline DHCP pool keyed by name", ops[0].Body)
+	}
+}
+
+func TestDHCPDiffLegacyUsesResolverTransform(t *testing.T) {
+	t.Parallel()
+	w := dhcpWriter{resolver: NewOverrideResolverForMajorMinor(17, 16)}
+	desired := map[string]any{"pools": []any{
+		map[string]any{
+			"name": float64(198181000), "network": "198.18.100.0", "prefix_length": 24, "default_router": "198.18.100.1",
+		},
+	}}
+	ops, err := w.Diff(desired, []map[string]any{})
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if len(ops) != 1 || ops[0].Path != dhcpParentPath {
+		t.Fatalf("got %+v, want one op to DHCP parent", ops)
+	}
+	var body map[string]map[string][]map[string]any
+	if err := json.Unmarshal(ops[0].Body, &body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	pools := body[dhcpParentEnvelopeKey][dhcpPoolEnvelopeKey]
+	if len(pools) != 1 || pools[0]["id"] != "198181000" {
+		t.Fatalf("body=%s, want legacy DHCP pool keyed by normalized id", ops[0].Body)
+	}
+	if _, ok := pools[0]["name"]; ok {
+		t.Fatalf("body=%s, legacy body must not carry name key", ops[0].Body)
+	}
+	network, ok := pools[0]["network"].(map[string]any)
+	if !ok {
+		t.Fatalf("body=%s, want legacy nested network", ops[0].Body)
+	}
+	primary, ok := network["primary-network"].(map[string]any)
+	if !ok || primary["mask"] != "255.255.255.0" {
+		t.Fatalf("body=%s, want legacy primary-network mask", ops[0].Body)
 	}
 }
 

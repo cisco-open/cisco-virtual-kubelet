@@ -94,6 +94,7 @@ spec:
                       permissions:
                         description: Permissions is the UNIX octal mode (default 0o644).
                         format: int32
+                        maximum: 511
                         type: integer
                     required:
                     - configMapName
@@ -144,6 +145,7 @@ spec:
                         description: DelaySeconds before the reboot fires. Zero means
                           immediate.
                         format: int64
+                        maximum: 604800
                         minimum: 0
                         type: integer
                       force:
@@ -163,6 +165,19 @@ spec:
                 required:
                 - kind
                 type: object
+                x-kubernetes-validations:
+                - message: kind Reboot requires only the reboot args block
+                  rule: (self.kind == 'Reboot') == has(self.reboot)
+                - message: kind CancelReboot requires only the cancelReboot args block
+                  rule: (self.kind == 'CancelReboot') == has(self.cancelReboot)
+                - message: kind KillProcess requires only the killProcess args block
+                  rule: (self.kind == 'KillProcess') == has(self.killProcess)
+                - message: kind FilePut requires only the filePut args block
+                  rule: (self.kind == 'FilePut') == has(self.filePut)
+                - message: kind FileRemove requires only the fileRemove args block
+                  rule: (self.kind == 'FileRemove') == has(self.fileRemove)
+                - message: kind FactoryReset requires only the factoryReset args block
+                  rule: (self.kind == 'FactoryReset') == has(self.factoryReset)
               confirm:
                 description: |-
                   Confirm must equal the target device's metadata.name. This is a
@@ -185,6 +200,9 @@ spec:
             - confirm
             - deviceRef
             type: object
+            x-kubernetes-validations:
+            - message: IOSXEOperationalAction spec is immutable after creation
+              rule: self == oldSelf
           status:
             description: IOSXEOperationalActionStatus carries observed state.
             properties:
@@ -248,6 +266,12 @@ spec:
                   type: object
                 type: array
               failureReason:
+                type: string
+              invocationID:
+                description: |-
+                  InvocationID is set before the device-side RPC is dispatched. If the
+                  controller crashes while phase=Running, the next reconcile treats the
+                  action as already invoked and will not dispatch a second destructive RPC.
                 type: string
               message:
                 type: string

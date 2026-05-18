@@ -76,6 +76,8 @@ const (
 	defaultTFTPBlockSize = 8192
 	defaultTFTPRetries   = 10
 	defaultTFTPTimeout   = 10 * time.Second
+
+	envAllowInsecureSSH = "CISCO_VK_UPGRADE_ALLOW_INSECURE_SSH"
 )
 
 // NewDefaultImageResolver constructs a resolver with sensible
@@ -111,7 +113,7 @@ func (r *DefaultImageResolver) resolveURL(ctx context.Context, namespace string,
 	}
 	u, err := url.Parse(src.URL)
 	if err != nil {
-		return nil, fmt.Errorf("image source URL: %w", err)
+		return nil, fmt.Errorf("image source URL %s: %w", redactRawURL(src.URL), err)
 	}
 	switch strings.ToLower(u.Scheme) {
 	case "http", "https":
@@ -182,17 +184,18 @@ func (r *DefaultImageResolver) resolveTFTPURL(ctx context.Context, u *url.URL, s
 }
 
 func (r *DefaultImageResolver) resolveFTPURL(ctx context.Context, namespace string, u *url.URL, src opsv1alpha1.UpgradeImageSource) (*ResolvedImage, error) {
+	label := fmt.Sprintf("image source FTP %s", redactURL(u))
 	path, err := requiredRemotePath(u, "FTP")
 	if err != nil {
 		return nil, err
 	}
 	addr, err := hostPort(u, "21")
 	if err != nil {
-		return nil, fmt.Errorf("image source FTP: %w", err)
+		return nil, fmt.Errorf("%s: %w", label, err)
 	}
 	creds, err := r.urlCredentials(ctx, namespace, u, src.URLSecretRef)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", label, err)
 	}
 	username := creds.Username
 	password := creds.Password
@@ -204,61 +207,63 @@ func (r *DefaultImageResolver) resolveFTPURL(ctx context.Context, namespace stri
 	}
 	conn, err := ftp.Dial(addr, ftp.DialWithContext(ctx), ftp.DialWithTimeout(30*time.Second))
 	if err != nil {
-		return nil, fmt.Errorf("image source FTP dial: %w", err)
+		return nil, fmt.Errorf("%s dial: %w", label, err)
 	}
 	defer func() { _ = conn.Quit() }()
 	if err := conn.Login(username, password); err != nil {
-		return nil, fmt.Errorf("image source FTP login: %w", err)
+		return nil, fmt.Errorf("%s login: %w", label, err)
 	}
 	if err := conn.Type(ftp.TransferTypeBinary); err != nil {
-		return nil, fmt.Errorf("image source FTP binary mode: %w", err)
+		return nil, fmt.Errorf("%s binary mode: %w", label, err)
 	}
 	resp, err := conn.Retr(path)
 	if err != nil {
-		return nil, fmt.Errorf("image source FTP retrieve %s: %w", path, err)
+		return nil, fmt.Errorf("%s retrieve %s: %w", label, path, err)
 	}
 	defer func() { _ = resp.Close() }()
-	return materializeRemoteImage("image source FTP", src.SHA256, func(w io.Writer) (int64, error) {
+	return materializeRemoteImage(label, src.SHA256, func(w io.Writer) (int64, error) {
 		return io.Copy(w, resp)
 	})
 }
 
 func (r *DefaultImageResolver) resolveSCPURL(ctx context.Context, namespace string, u *url.URL, src opsv1alpha1.UpgradeImageSource) (*ResolvedImage, error) {
+	label := fmt.Sprintf("image source SCP %s", redactURL(u))
 	path, err := requiredRemotePath(u, "SCP")
 	if err != nil {
 		return nil, err
 	}
 	client, err := r.sshClient(ctx, namespace, u, src.URLSecretRef)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", label, err)
 	}
 	defer func() { _ = client.Close() }()
-	return materializeRemoteImage("image source SCP", src.SHA256, func(w io.Writer) (int64, error) {
+	return materializeRemoteImage(label, src.SHA256, func(w io.Writer) (int64, error) {
 		return scpDownload(ctx, client, path, w)
 	})
 }
 
 func (r *DefaultImageResolver) resolveSFTPURL(ctx context.Context, namespace string, u *url.URL, src opsv1alpha1.UpgradeImageSource) (*ResolvedImage, error) {
+	label := fmt.Sprintf("image source SFTP %s", redactURL(u))
 	path, err := requiredRemotePath(u, "SFTP")
 	if err != nil {
 		return nil, err
 	}
 	client, err := r.sshClient(ctx, namespace, u, src.URLSecretRef)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", label, err)
 	}
 	defer func() { _ = client.Close() }()
 	sftpClient, err := sftp.NewClient(client)
 	if err != nil {
-		return nil, fmt.Errorf("image source SFTP client: %w", err)
+		return nil, fmt.Errorf("%s client: %w", label, err)
 	}
 	defer func() { _ = sftpClient.Close() }()
 	file, err := sftpClient.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("image source SFTP open %s: %w", path, err)
+		return nil, fmt.Errorf("%s open %s: %w", label, path, err)
 	}
 	defer func() { _ = file.Close() }()
-	return materializeRemoteImage("image source SFTP", src.SHA256, func(w io.Writer) (int64, error) {
+	return materializeRemoteImage(label, src.SHA256, func(w io.Writer) (int64, error) {
 		return io.Copy(w, file)
 	})
 }
@@ -410,6 +415,10 @@ func sshAuthMethods(creds *transferCredentials) ([]ssh.AuthMethod, error) {
 
 func sshHostKeyCallback(u *url.URL, creds *transferCredentials) (ssh.HostKeyCallback, error) {
 	if queryBool(u, "insecureSkipHostKey") || queryBool(u, "insecure") {
+		allowed, _ := strconv.ParseBool(os.Getenv(envAllowInsecureSSH))
+		if !allowed {
+			return nil, fmt.Errorf("image source SSH: insecure host key verification requires %s=true", envAllowInsecureSSH)
+		}
 		return ssh.InsecureIgnoreHostKey(), nil //nolint:gosec // explicit per-URL lab escape hatch
 	}
 	if len(creds.KnownHosts) == 0 {
@@ -584,6 +593,19 @@ func redactURL(u *url.URL) string {
 		redacted.User = url.User(redacted.User.Username())
 	}
 	return redacted.String()
+}
+
+func redactRawURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		at := strings.LastIndex(raw, "@")
+		scheme := strings.Index(raw, "://")
+		if scheme >= 0 && at > scheme {
+			return raw[:scheme+3] + "xxxxx@" + raw[at+1:]
+		}
+		return raw
+	}
+	return redactURL(u)
 }
 
 func shellQuote(s string) string {

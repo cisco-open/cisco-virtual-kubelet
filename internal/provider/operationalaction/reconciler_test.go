@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -238,6 +239,9 @@ func TestRebootHappyPath(t *testing.T) {
 	if rig.sys.rebootCalls.Load() != 1 {
 		t.Fatalf("Reboot call count=%d", rig.sys.rebootCalls.Load())
 	}
+	if len(got.Finalizers) != 0 {
+		t.Fatalf("finalizers retained after terminal phase: %v", got.Finalizers)
+	}
 }
 
 func TestConfirmMismatchRejected(t *testing.T) {
@@ -288,6 +292,75 @@ func TestKillProcessRequiresPIDOrName(t *testing.T) {
 	}
 	if !strings.Contains(got.Status.Message, "PID or Name") {
 		t.Fatalf("expected PID-or-Name required error, got %q", got.Status.Message)
+	}
+}
+
+func TestRebootRequiresMatchingArgsBlock(t *testing.T) {
+	rig := newRig(t)
+	a := newAction("reboot-no-args", func(a *opsv1alpha1.IOSXEOperationalAction) {
+		a.Spec.Action = opsv1alpha1.ActionRequest{Kind: opsv1alpha1.ActionKindReboot}
+	})
+	r := newReconciler(t, rig, a)
+	got := runReconcile(t, r, a)
+	if got.Status.Phase != opsv1alpha1.ActionPhaseRejected {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if rig.sys.rebootCalls.Load() != 0 {
+		t.Fatalf("Reboot dispatched despite missing args block; calls=%d", rig.sys.rebootCalls.Load())
+	}
+}
+
+func TestKindArgsMismatchRejected(t *testing.T) {
+	rig := newRig(t)
+	a := newAction("reboot-wrong-args", func(a *opsv1alpha1.IOSXEOperationalAction) {
+		a.Spec.Action = opsv1alpha1.ActionRequest{
+			Kind:       opsv1alpha1.ActionKindReboot,
+			FileRemove: &opsv1alpha1.FileRemoveArgs{Path: "flash:old.bin"},
+		}
+	})
+	r := newReconciler(t, rig, a)
+	got := runReconcile(t, r, a)
+	if got.Status.Phase != opsv1alpha1.ActionPhaseRejected {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if rig.sys.rebootCalls.Load() != 0 || rig.file.removeCalls.Load() != 0 {
+		t.Fatalf("mismatched action dispatched: reboot=%d remove=%d", rig.sys.rebootCalls.Load(), rig.file.removeCalls.Load())
+	}
+}
+
+func TestRunningActionDoesNotRedispatch(t *testing.T) {
+	rig := newRig(t)
+	a := newAction("reboot-running", nil)
+	a.Status = opsv1alpha1.IOSXEOperationalActionStatus{
+		Phase:        opsv1alpha1.ActionPhaseRunning,
+		InvocationID: "already-invoked",
+	}
+	r := newReconciler(t, rig, a)
+	got := runReconcile(t, r, a)
+	if got.Status.Phase != opsv1alpha1.ActionPhaseRunning {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if rig.sys.rebootCalls.Load() != 0 {
+		t.Fatalf("running action re-dispatched reboot; calls=%d", rig.sys.rebootCalls.Load())
+	}
+}
+
+func TestOperationalActionEvents(t *testing.T) {
+	rig := newRig(t)
+	a := newAction("reboot-events", nil)
+	r := newReconciler(t, rig, a)
+	recorder := record.NewFakeRecorder(4)
+	r.Recorder = recorder
+	_ = runReconcile(t, r, a)
+	for _, want := range []string{"Normal Running", "Normal Succeeded"} {
+		select {
+		case got := <-recorder.Events:
+			if !strings.Contains(got, want) {
+				t.Fatalf("event=%q, want %q", got, want)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("timed out waiting for %q event", want)
+		}
 	}
 }
 

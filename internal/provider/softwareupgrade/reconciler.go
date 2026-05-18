@@ -16,12 +16,16 @@ package softwareupgrade
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
+	commonpb "github.com/openconfig/gnoi/types"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
@@ -164,12 +168,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	case opsv1alpha1.UpgradePhaseVerifying:
 		return r.runVerifying(ctx, &up, now)
 	case opsv1alpha1.UpgradePhaseRollingBack:
-		// Phase C ships RollingBack as a terminal placeholder — the
-		// reconciler records the rollback decision but does not yet
-		// trigger the boot-variable rewrite. Phase D follow-up wires
-		// the gNMI Set + System.Reboot pair.
-		return r.terminal(ctx, &up, opsv1alpha1.UpgradePhaseRolledBack, "RolledBack",
-			"rollback pending: boot-variable rewrite not yet implemented in Phase C", now)
+		return r.terminal(ctx, &up, opsv1alpha1.UpgradePhaseFailed, "RollbackNotImplemented",
+			"rollbackOnFailure requested, but boot-variable rewrite rollback is not implemented", now)
 	default:
 		// Terminal phases: nothing to do.
 		return reconcile.Result{}, nil
@@ -283,6 +283,28 @@ func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		if resolved.Cleanup != nil {
 			_ = resolved.Cleanup()
 		}
+		if sha := up.Spec.ImageSource.LocalPathSHA256; sha != "" {
+			if r.GNOI == nil {
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "NoGNOIProvider",
+					"gnoi provider is required to verify localPathSHA256", now)
+			}
+			gnoiClient, err := r.GNOI.GNOIClient(ctx)
+			if err != nil {
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "GNOIClient", err.Error(), now)
+			}
+			hash, err := gnoiClient.Get(ctx, up.Spec.ImageSource.LocalPath, io.Discard)
+			if err != nil {
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "LocalPathHashFailed", err.Error(), now)
+			}
+			if hash.GetMethod() != commonpb.HashType_SHA256 {
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "LocalPathHashUnsupported",
+					fmt.Sprintf("device returned hash method %s, want SHA256", hash.GetMethod().String()), now)
+			}
+			if got := hex.EncodeToString(hash.GetHash()); got != sha {
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "LocalPathHashMismatch",
+					fmt.Sprintf("localPathSHA256 mismatch: got %s want %s", got, sha), now)
+			}
+		}
 		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 			if cur.Status.StartTime == nil {
 				cur.Status.StartTime = &metav1.Time{Time: now}
@@ -327,11 +349,11 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "NoGNOIProvider",
 			"gnoi provider not configured on reconciler", now)
 	}
-	client, err := r.GNOI.GNOIClient(ctx)
+	gnoiClient, err := r.GNOI.GNOIClient(ctx)
 	if err != nil {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "GNOIClient", err.Error(), now)
 	}
-	if _, err := client.Verify(ctx); err != nil {
+	if _, err := gnoiClient.Verify(ctx); err != nil {
 		return r.handleInstallErr(ctx, up, fmt.Errorf("gnoi OS.Verify preflight: %w", err), now)
 	}
 	resolved, err := r.ImageResolver.Resolve(ctx, up.Namespace, up.Spec.ImageSource)
@@ -348,7 +370,10 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		return r.advance(ctx, up, opsv1alpha1.UpgradePhaseActivating, "ImageResolved",
 			"image already on device flash")
 	}
-	progress, err := client.Install(ctx, resolved.Reader, gnoi.InstallOpts{
+	log.G(ctx).WithField("softwareUpgrade", client.ObjectKeyFromObject(up).String()).
+		WithField("targetVersion", up.Spec.TargetVersion).
+		Warn("dispatching gNOI OS.Install")
+	progress, err := gnoiClient.Install(ctx, resolved.Reader, gnoi.InstallOpts{
 		Version:     up.Spec.TargetVersion,
 		PackageSize: uint64(resolved.Size),
 	})
@@ -434,7 +459,7 @@ func (r *Reconciler) runTransferInterrupted(ctx context.Context, up *opsv1alpha1
 }
 
 func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
-	client, err := r.GNOI.GNOIClient(ctx)
+	gnoiClient, err := r.GNOI.GNOIClient(ctx)
 	if err != nil {
 		if activationRequestSubmitted(up) {
 			return r.activationLikelyStarted(ctx, up, up.Status.ValidatedVersion,
@@ -488,7 +513,11 @@ func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESof
 			r.emitEvent(up, corev1.EventTypeNormal, "ActivationRetry", fallbackMessage)
 		}
 		activateCtx, cancel := context.WithTimeout(ctx, activationRPCTimeout)
-		activateErr = client.Activate(activateCtx, gnoi.ActivateOpts{Version: candidate, NoReboot: noReboot})
+		log.G(ctx).WithField("softwareUpgrade", client.ObjectKeyFromObject(up).String()).
+			WithField("version", candidate).
+			WithField("noReboot", noReboot).
+			Warn("dispatching gNOI OS.Activate")
+		activateErr = gnoiClient.Activate(activateCtx, gnoi.ActivateOpts{Version: candidate, NoReboot: noReboot})
 		cancel()
 		if activateErr == nil {
 			acceptedVersion = candidate
@@ -689,8 +718,9 @@ func (r *Reconciler) runVerifying(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		}
 		rollback := up.Spec.RollbackOnFailure == nil || *up.Spec.RollbackOnFailure
 		if rollback {
-			return r.advance(ctx, up, opsv1alpha1.UpgradePhaseRollingBack, "VerifyMismatch",
-				fmt.Sprintf("device runs %s but spec targets %s; rolling back", res.Version, up.Spec.TargetVersion))
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "RollbackNotImplemented",
+				fmt.Sprintf("device runs %s but spec targets %s; rollbackOnFailure requested, but boot-variable rewrite rollback is not implemented",
+					res.Version, up.Spec.TargetVersion), now)
 		}
 		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 			cur.Status.Phase = opsv1alpha1.UpgradePhaseFailed
@@ -885,6 +915,12 @@ func (r *Reconciler) updateStatus(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		if afterReason == "" {
 			afterReason = string(afterPhase)
 		}
+		log.G(ctx).WithField("softwareUpgrade", client.ObjectKeyFromObject(up).String()).
+			WithField("from", beforePhase).
+			WithField("to", afterPhase).
+			WithField("reason", afterReason).
+			Info("IOSXESoftwareUpgrade phase advanced")
+		recordPhaseTransition(r.DeviceName, up.Spec.TargetVersion, string(beforePhase), string(afterPhase), afterReason)
 		r.emitEvent(up, eventType, afterReason, afterMessage)
 	}
 	return result, nil

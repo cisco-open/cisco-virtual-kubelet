@@ -535,7 +535,7 @@ func TestMarkTransferCompleteSetsTerminalProgress(t *testing.T) {
 	}
 }
 
-func TestVerifyMismatchTriggersRollback(t *testing.T) {
+func TestVerifyMismatchWithRollbackFailsClosedUntilRollbackImplemented(t *testing.T) {
 	rig := newRig(t)
 	rig.os.verifyVersion = "17.14.01a" // doesn't match target 17.15.01a
 	start := metav1.Time{Time: time.Unix(1_700_000_000, 0).UTC()}
@@ -546,10 +546,10 @@ func TestVerifyMismatchTriggersRollback(t *testing.T) {
 	})
 	r := newReconciler(t, rig, up)
 	got := runReconcile(t, r, up, 12)
-	if got.Status.Phase != opsv1alpha1.UpgradePhaseRolledBack {
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseFailed {
 		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
 	}
-	if got.Status.FailureReason != "RolledBack" {
+	if got.Status.FailureReason != "RollbackNotImplemented" {
 		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
 	}
 }

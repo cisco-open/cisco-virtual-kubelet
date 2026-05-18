@@ -106,6 +106,14 @@ spec:
                       Path must be an absolute IOS-XE filesystem path.
                     pattern: '^(flash|bootflash|harddisk):'
                     type: string
+                  localPathSHA256:
+                    description: |-
+                      LocalPathSHA256 optionally verifies the staged flash image before
+                      activation by reading it through gNOI File.Get and comparing the
+                      device-supplied SHA256. Strongly recommended for production LocalPath
+                      upgrades.
+                    pattern: ^[a-f0-9]{64}$
+                    type: string
                   sha256:
                     description: |-
                       SHA256 is the lowercase hex SHA-256 digest the reconciler asserts
@@ -187,10 +195,10 @@ spec:
               rollbackOnFailure:
                 default: true
                 description: |-
-                  RollbackOnFailure, when true, drives the RollingBack phase if
-                  post-Verify the device is running a different version. The
-                  fallback uses the device's prior boot variable plus one
-                  System.Reboot. Default true.
+                  RollbackOnFailure, when true, currently fails closed with
+                  RollbackNotImplemented if post-Verify the device is running a
+                  different version. Future releases will wire boot-variable rewrite
+                  plus System.Reboot behind this field. Default true.
                 type: boolean
               strategy:
                 default: Reload

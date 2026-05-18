@@ -117,7 +117,6 @@ func (w dhcpWriter) Fetch(ctx context.Context, c transport.Interface) (any, erro
 	r := ensureResolver(w.resolver)
 	for i, entry := range list {
 		list[i] = r.AutoReverseObservedBody("dhcp", entry)
-		list[i] = dhcpFetchTransformPre1718(list[i])
 	}
 	return list, nil
 }
@@ -170,10 +169,10 @@ func (w dhcpWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		entry := projectManagedLeaves(desired, dhcpPoolManagedLeaves)
 		entry["name"] = name
 
-		// IOS-XE 17.x exposes DHCP pools under the /ip/dhcp parent
-		// container with a Cisco-IOS-XE-dhcp:pool list keyed by id.
-		// Sending to /ip/dhcp/pool is rejected by 17.18.03 on C9300.
-		entry = dhcpBodyTransformPre1718(entry)
+		r := ensureResolver(w.resolver)
+		if o, ok := r.GetOverride("dhcp"); ok {
+			entry = ApplyOverrideToBody(entry, o)
+		}
 
 		body, err := wrapYANGPayload(dhcpParentEnvelopeKey, map[string]any{
 			w.resolvedEnvelopeKey(): []any{entry},
@@ -251,10 +250,11 @@ func (w dhcpWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
 
 	ops := make([]transport.Op, 0, len(names))
 	for _, name := range names {
+		keyField := w.resolvedKeyField()
 		ops = append(ops, transport.Op{
 			Verb:     transport.VerbDelete,
 			Path:     dhcpParentPath + "/" + w.resolvedEnvelopeKey() + "=" + name,
-			PathSpec: pathSpecForKeyedListEntry(dhcpParentPath+"/"+w.resolvedEnvelopeKey(), "id", name),
+			PathSpec: pathSpecForKeyedListEntry(dhcpParentPath+"/"+w.resolvedEnvelopeKey(), keyField, name),
 		})
 	}
 	return ops, nil

@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,13 +37,17 @@ import (
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 )
 
-const conditionTypeReady = "Ready"
+const (
+	conditionTypeReady = "Ready"
+	finalizerName      = "ops.cisco.vk/iosxeoperationalaction-finalizer"
+)
 
 // GNOIProvider exposes the per-device gNOI client.
 type GNOIProvider interface {
@@ -99,9 +104,37 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if r.DeviceNamespace != "" && act.Namespace != r.DeviceNamespace {
 		return reconcile.Result{}, nil
 	}
+	logger := log.G(ctx).WithField("operationalAction", req.NamespacedName.String()).
+		WithField("kind", act.Spec.Action.Kind).
+		WithField("device", act.Spec.DeviceRef.Name)
+
 	// Terminal phases are no-ops — actions execute exactly once.
 	switch act.Status.Phase {
 	case opsv1alpha1.ActionPhaseSucceeded, opsv1alpha1.ActionPhaseFailed, opsv1alpha1.ActionPhaseRejected:
+		if err := r.removeFinalizer(ctx, &act); err != nil {
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, nil
+	}
+	if !act.DeletionTimestamp.IsZero() {
+		if act.Status.Phase == opsv1alpha1.ActionPhaseRunning || act.Status.InvocationID != "" {
+			logger.WithField("invocationID", act.Status.InvocationID).
+				Warn("IOSXEOperationalAction deletion requested after invocation; preserving CR to avoid losing destructive-operation audit trail")
+			r.recordEvent(&act, corev1.EventTypeWarning, "DeletionPending",
+				"delete requested after device-side action was invoked; CR is retained for audit")
+			return reconcile.Result{}, nil
+		}
+		if err := r.removeFinalizer(ctx, &act); err != nil {
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, nil
+	}
+	if err := r.ensureFinalizer(ctx, &act); err != nil {
+		return reconcile.Result{}, err
+	}
+	if act.Status.Phase == opsv1alpha1.ActionPhaseRunning {
+		logger.WithField("invocationID", act.Status.InvocationID).
+			Info("IOSXEOperationalAction already running; refusing duplicate dispatch")
 		return reconcile.Result{}, nil
 	}
 
@@ -113,12 +146,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			fmt.Sprintf("spec.confirm=%q does not match spec.deviceRef.name=%q",
 				act.Spec.Confirm, act.Spec.DeviceRef.Name), nil, now)
 	}
+	if err := validateActionRequest(act.Spec.Action); err != nil {
+		return r.terminal(ctx, &act, opsv1alpha1.ActionPhaseRejected, "InvalidAction", err.Error(), nil, now)
+	}
 
 	if r.GNOI == nil {
 		return r.terminal(ctx, &act, opsv1alpha1.ActionPhaseFailed, "NoGNOIProvider",
 			"gnoi provider not configured on reconciler", nil, now)
 	}
-	client, err := r.GNOI.GNOIClient(ctx)
+	gnoiClient, err := r.GNOI.GNOIClient(ctx)
 	if err != nil {
 		return r.terminal(ctx, &act, opsv1alpha1.ActionPhaseFailed, "GNOIClient", err.Error(), nil, now)
 	}
@@ -128,7 +164,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
-	result, kindErr := r.dispatch(ctx, &act, client)
+	logger.Warn("dispatching IOSXEOperationalAction gNOI RPC")
+	result, kindErr := r.dispatch(ctx, &act, gnoiClient)
 	if kindErr != nil {
 		return r.terminal(ctx, &act, opsv1alpha1.ActionPhaseFailed, "ActionFailed", kindErr.Error(), result, now)
 	}
@@ -159,7 +196,7 @@ func (r *Reconciler) dispatch(ctx context.Context, act *opsv1alpha1.IOSXEOperati
 func (r *Reconciler) runReboot(ctx context.Context, act *opsv1alpha1.IOSXEOperationalAction, gc *gnoi.Client) ([]byte, error) {
 	args := act.Spec.Action.Reboot
 	if args == nil {
-		args = &opsv1alpha1.RebootActionArgs{}
+		return nil, errors.New("action.reboot is required")
 	}
 	return nil, gc.Reboot(ctx, gnoi.RebootOpts{
 		Method:  args.Method,
@@ -223,7 +260,7 @@ func (r *Reconciler) runFileRemove(ctx context.Context, act *opsv1alpha1.IOSXEOp
 func (r *Reconciler) runFactoryReset(ctx context.Context, act *opsv1alpha1.IOSXEOperationalAction, gc *gnoi.Client) ([]byte, error) {
 	args := act.Spec.Action.FactoryReset
 	if args == nil {
-		args = &opsv1alpha1.FactoryResetArgs{}
+		return nil, errors.New("action.factoryReset is required")
 	}
 	retainCerts := true
 	if args.RetainCerts != nil {
@@ -241,15 +278,27 @@ func (r *Reconciler) runFactoryReset(ctx context.Context, act *opsv1alpha1.IOSXE
 func (r *Reconciler) markRunning(ctx context.Context, act *opsv1alpha1.IOSXEOperationalAction, now time.Time) error {
 	_, err := r.updateStatus(ctx, act, func(cur *opsv1alpha1.IOSXEOperationalAction) {
 		cur.Status.Phase = opsv1alpha1.ActionPhaseRunning
-		cur.Status.StartTime = &metav1.Time{Time: now}
+		if cur.Status.StartTime == nil {
+			cur.Status.StartTime = &metav1.Time{Time: now}
+		}
+		if cur.Status.InvocationID == "" {
+			cur.Status.InvocationID = invocationID(cur)
+		}
 		cur.Status.Message = "action running"
 		r.setReady(cur, metav1.ConditionFalse, "Running", "action running", now)
 	}, reconcile.Result{})
+	if err == nil {
+		log.G(ctx).WithField("operationalAction", client.ObjectKeyFromObject(act).String()).
+			WithField("kind", act.Spec.Action.Kind).
+			Info("IOSXEOperationalAction phase advanced to Running")
+		recordActionTransition(act.Spec.DeviceRef.Name, string(act.Spec.Action.Kind), string(opsv1alpha1.ActionPhaseRunning), "Running")
+		r.recordEvent(act, corev1.EventTypeNormal, "Running", r.actionSummary(act))
+	}
 	return err
 }
 
 func (r *Reconciler) terminal(ctx context.Context, act *opsv1alpha1.IOSXEOperationalAction, phase opsv1alpha1.ActionPhase, reason, message string, result []byte, now time.Time) (reconcile.Result, error) {
-	return r.updateStatus(ctx, act, func(cur *opsv1alpha1.IOSXEOperationalAction) {
+	res, err := r.updateStatus(ctx, act, func(cur *opsv1alpha1.IOSXEOperationalAction) {
 		cur.Status.Phase = phase
 		cur.Status.FailureReason = reason
 		cur.Status.Message = message
@@ -264,6 +313,24 @@ func (r *Reconciler) terminal(ctx context.Context, act *opsv1alpha1.IOSXEOperati
 		}
 		r.setReady(cur, condStatus, reason, message, now)
 	}, reconcile.Result{})
+	if err != nil {
+		return res, err
+	}
+	eventType := corev1.EventTypeWarning
+	if phase == opsv1alpha1.ActionPhaseSucceeded {
+		eventType = corev1.EventTypeNormal
+	}
+	log.G(ctx).WithField("operationalAction", client.ObjectKeyFromObject(act).String()).
+		WithField("kind", act.Spec.Action.Kind).
+		WithField("phase", phase).
+		WithField("reason", reason).
+		Info("IOSXEOperationalAction reached terminal phase")
+	recordActionTransition(act.Spec.DeviceRef.Name, string(act.Spec.Action.Kind), string(phase), reason)
+	r.recordEvent(act, eventType, string(phase), r.actionSummary(act)+": "+message)
+	if err := r.removeFinalizer(ctx, act); err != nil {
+		return res, err
+	}
+	return res, nil
 }
 
 func (r *Reconciler) setReady(act *opsv1alpha1.IOSXEOperationalAction, status metav1.ConditionStatus, reason, message string, now time.Time) {
@@ -307,6 +374,156 @@ func (r *Reconciler) updateStatus(ctx context.Context, act *opsv1alpha1.IOSXEOpe
 		return result, fmt.Errorf("update action status: %w", err)
 	}
 	return result, nil
+}
+
+func (r *Reconciler) ensureFinalizer(ctx context.Context, act *opsv1alpha1.IOSXEOperationalAction) error {
+	if controllerutil.ContainsFinalizer(act, finalizerName) {
+		return nil
+	}
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		var cur opsv1alpha1.IOSXEOperationalAction
+		reader := r.Reader
+		if reader == nil {
+			reader = r.Client
+		}
+		if err := reader.Get(ctx, client.ObjectKeyFromObject(act), &cur); err != nil {
+			return err
+		}
+		if controllerutil.ContainsFinalizer(&cur, finalizerName) {
+			return nil
+		}
+		controllerutil.AddFinalizer(&cur, finalizerName)
+		return r.Client.Update(ctx, &cur)
+	})
+}
+
+func (r *Reconciler) removeFinalizer(ctx context.Context, act *opsv1alpha1.IOSXEOperationalAction) error {
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		var cur opsv1alpha1.IOSXEOperationalAction
+		reader := r.Reader
+		if reader == nil {
+			reader = r.Client
+		}
+		if err := reader.Get(ctx, client.ObjectKeyFromObject(act), &cur); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+		if !controllerutil.ContainsFinalizer(&cur, finalizerName) {
+			return nil
+		}
+		controllerutil.RemoveFinalizer(&cur, finalizerName)
+		return r.Client.Update(ctx, &cur)
+	})
+}
+
+func validateActionRequest(action opsv1alpha1.ActionRequest) error {
+	argsBlocks := 0
+	if action.Reboot != nil {
+		argsBlocks++
+	}
+	if action.CancelReboot != nil {
+		argsBlocks++
+	}
+	if action.KillProcess != nil {
+		argsBlocks++
+	}
+	if action.FilePut != nil {
+		argsBlocks++
+	}
+	if action.FileRemove != nil {
+		argsBlocks++
+	}
+	if action.FactoryReset != nil {
+		argsBlocks++
+	}
+	if argsBlocks != 1 {
+		return fmt.Errorf("action.kind %q requires exactly one matching args block; got %d", action.Kind, argsBlocks)
+	}
+	switch action.Kind {
+	case opsv1alpha1.ActionKindReboot:
+		if action.Reboot == nil {
+			return errors.New("action.kind Reboot requires action.reboot")
+		}
+	case opsv1alpha1.ActionKindCancelReboot:
+		if action.CancelReboot == nil {
+			return errors.New("action.kind CancelReboot requires action.cancelReboot")
+		}
+	case opsv1alpha1.ActionKindKillProcess:
+		if action.KillProcess == nil {
+			return errors.New("action.kind KillProcess requires action.killProcess")
+		}
+	case opsv1alpha1.ActionKindFilePut:
+		if action.FilePut == nil {
+			return errors.New("action.kind FilePut requires action.filePut")
+		}
+	case opsv1alpha1.ActionKindFileRemove:
+		if action.FileRemove == nil {
+			return errors.New("action.kind FileRemove requires action.fileRemove")
+		}
+	case opsv1alpha1.ActionKindFactoryReset:
+		if action.FactoryReset == nil {
+			return errors.New("action.kind FactoryReset requires action.factoryReset")
+		}
+	default:
+		return fmt.Errorf("unsupported action kind %q", action.Kind)
+	}
+	return nil
+}
+
+func invocationID(act *opsv1alpha1.IOSXEOperationalAction) string {
+	if act.UID != "" {
+		return fmt.Sprintf("%s/%d", act.UID, act.Generation)
+	}
+	return fmt.Sprintf("%s/%s/%d", act.Namespace, act.Name, act.Generation)
+}
+
+func (r *Reconciler) recordEvent(act *opsv1alpha1.IOSXEOperationalAction, eventType, reason, message string) {
+	if r.Recorder == nil {
+		return
+	}
+	r.Recorder.Event(act, eventType, reason, message)
+}
+
+func (r *Reconciler) actionSummary(act *opsv1alpha1.IOSXEOperationalAction) string {
+	action := act.Spec.Action
+	base := fmt.Sprintf("%s device=%s", action.Kind, act.Spec.DeviceRef.Name)
+	switch action.Kind {
+	case opsv1alpha1.ActionKindReboot:
+		if action.Reboot == nil {
+			return base
+		}
+		return fmt.Sprintf("%s method=%s delaySeconds=%d force=%t", base, action.Reboot.Method, action.Reboot.DelaySeconds, action.Reboot.Force)
+	case opsv1alpha1.ActionKindCancelReboot:
+		return base
+	case opsv1alpha1.ActionKindKillProcess:
+		if action.KillProcess == nil {
+			return base
+		}
+		return fmt.Sprintf("%s pid=%d name=%q signal=%s restart=%t", base, action.KillProcess.PID, action.KillProcess.Name, action.KillProcess.Signal, action.KillProcess.Restart)
+	case opsv1alpha1.ActionKindFilePut:
+		if action.FilePut == nil {
+			return base
+		}
+		return fmt.Sprintf("%s path=%s configMap=%s", base, action.FilePut.Path, action.FilePut.ConfigMapName)
+	case opsv1alpha1.ActionKindFileRemove:
+		if action.FileRemove == nil {
+			return base
+		}
+		return fmt.Sprintf("%s path=%s", base, action.FileRemove.Path)
+	case opsv1alpha1.ActionKindFactoryReset:
+		if action.FactoryReset == nil {
+			return base
+		}
+		retain := "default"
+		if action.FactoryReset.RetainCerts != nil {
+			retain = fmt.Sprintf("%t", *action.FactoryReset.RetainCerts)
+		}
+		return fmt.Sprintf("%s factoryOS=%t zeroFill=%t retainCerts=%s", base, action.FactoryReset.FactoryOS, action.FactoryReset.ZeroFill, retain)
+	default:
+		return base
+	}
 }
 
 // jsonResult is a helper for kinds that want to surface device-side

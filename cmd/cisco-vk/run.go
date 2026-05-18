@@ -22,6 +22,7 @@ import (
 	"os/signal"
 	"path"
 	"runtime"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -62,6 +63,14 @@ var (
 	nodeName    string
 	tlsCertFile string
 	tlsKeyFile  string
+
+	enableWriteClassGNOI       bool
+	enableIOSXESoftwareUpgrade bool
+)
+
+const (
+	envEnableWriteClassGNOI       = "CISCO_VK_ENABLE_WRITE_CLASS_GNOI"
+	envEnableIOSXESoftwareUpgrade = "CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE"
 )
 
 var runCmd = &cobra.Command{
@@ -85,6 +94,10 @@ func init() {
 		fmt.Sprintf("path to TLS certificate for the kubelet HTTPS listener (default: %s)", tlsutil.DefaultCertFile))
 	runCmd.Flags().StringVar(&tlsKeyFile, "tls-key-file", "",
 		fmt.Sprintf("path to TLS private key for the kubelet HTTPS listener (default: %s)", tlsutil.DefaultKeyFile))
+	runCmd.Flags().BoolVar(&enableWriteClassGNOI, "enable-write-class-gnoi", false,
+		"enable write-class gNOI reconcilers such as IOSXEOperationalAction (default: false)")
+	runCmd.Flags().BoolVar(&enableIOSXESoftwareUpgrade, "enable-iosxesoftwareupgrade", false,
+		"enable IOSXESoftwareUpgrade gNOI OS upgrade reconciler (default: false)")
 }
 
 // validateConfig checks if the config file exists at the given path
@@ -103,6 +116,18 @@ func validateLogLevel(level string) error {
 	default:
 		return fmt.Errorf("invalid log level: %q\n\nValid options are: debug, info, warn, error", level)
 	}
+}
+
+func flagOrEnvBool(flagValue bool, envName string) bool {
+	if flagValue {
+		return true
+	}
+	raw := os.Getenv(envName)
+	if raw == "" {
+		return false
+	}
+	parsed, err := strconv.ParseBool(raw)
+	return err == nil && parsed
 }
 
 func GetKubeConfig(kubeconfigFlag string) (*rest.Config, error) {
@@ -388,12 +413,14 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	if v := os.Getenv("DISABLE_IN_POD_CONFIG_RECONCILER"); v == "true" || v == "1" {
 		log.G(ctx).Info("DISABLE_IN_POD_CONFIG_RECONCILER set; skipping in-pod ConfigReconciler (aggregator-mode topology)")
 	} else if err := startConfigReconciler(ctx, kubeconfigCfg, effectiveNodeName, configReconcilerOptions{
-		Spec:               &appCfg.Device,
-		Password:           appCfg.Device.Password,
-		TelemetryProviders: telemetryProviders,
-		StateCache:         mdtStateCache,
-		AppEventConsumer:   appEventConsumer,
-		CorrelationCache:   traceCorrelationCache,
+		Spec:                       &appCfg.Device,
+		Password:                   appCfg.Device.Password,
+		EnableWriteClassGNOI:       flagOrEnvBool(enableWriteClassGNOI, envEnableWriteClassGNOI),
+		EnableIOSXESoftwareUpgrade: flagOrEnvBool(enableIOSXESoftwareUpgrade, envEnableIOSXESoftwareUpgrade),
+		TelemetryProviders:         telemetryProviders,
+		StateCache:                 mdtStateCache,
+		AppEventConsumer:           appEventConsumer,
+		CorrelationCache:           traceCorrelationCache,
 	}); err != nil {
 		log.G(ctx).WithError(err).Warn("IOSXEConfig reconciler not started; continuing without declarative config")
 	}

@@ -30,7 +30,7 @@ import (
 // Activating → gNOI OS.Activate; per spec this reboots the device unless NoReboot
 // AwaitingReachability → device unreachable while it boots the new image
 // Verifying → gNOI OS.Verify + gNMI cross-check
-// RollingBack → set boot variable to prior image and reload once
+// RollingBack → reserved for future boot-variable rollback implementation
 // Terminal phases: Succeeded, Failed, PreflightFailed, ValidationFailed,
 // RolledBack, RebootTimeout, Cancelled.
 //
@@ -141,10 +141,10 @@ type IOSXESoftwareUpgradeSpec struct {
 	// +kubebuilder:default=Reload
 	Strategy UpgradeStrategy `json:"strategy,omitempty"`
 
-	// RollbackOnFailure, when true, drives the RollingBack phase if
-	// post-Verify the device is running a different version. The
-	// fallback uses the device's prior boot variable plus one
-	// System.Reboot. Default true.
+	// RollbackOnFailure, when true, currently fails closed with
+	// RollbackNotImplemented if post-Verify the device is running a
+	// different version. Future releases will wire boot-variable rewrite
+	// plus System.Reboot behind this field. Default true.
 	// +optional
 	// +kubebuilder:default=true
 	RollbackOnFailure *bool `json:"rollbackOnFailure,omitempty"`
@@ -215,6 +215,14 @@ type UpgradeImageSource struct {
 	// +optional
 	// +kubebuilder:validation:Pattern=`^(flash|bootflash|harddisk):`
 	LocalPath string `json:"localPath,omitempty"`
+
+	// LocalPathSHA256 optionally verifies the staged flash image before
+	// activation by reading it through gNOI File.Get and comparing the
+	// device-supplied SHA256. Strongly recommended for production LocalPath
+	// upgrades.
+	// +optional
+	// +kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+	LocalPathSHA256 string `json:"localPathSHA256,omitempty"`
 }
 
 // UpgradeWindow bounds when the upgrade may proceed past Pending.

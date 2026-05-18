@@ -80,6 +80,8 @@ const (
 	envCVKGNOIInsecure          = "CISCO_VK_GNOI_INSECURE"
 	envCVKGNOIPort              = "CISCO_VK_GNOI_PORT"
 	envCVKGNOIDisabled          = "CISCO_VK_GNOI_DISABLED"
+	envCVKEnableWriteClassGNOI  = "CISCO_VK_ENABLE_WRITE_CLASS_GNOI"
+	envCVKEnableSoftwareUpgrade = "CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE"
 	envConfigYANGValidation     = "CONFIG_YANG_VALIDATION"
 )
 
@@ -107,6 +109,8 @@ var telemetryEnvPropagationNames = []string{
 	envCVKGNOIInsecure,
 	envCVKGNOIPort,
 	envCVKGNOIDisabled,
+	envCVKEnableWriteClassGNOI,
+	envCVKEnableSoftwareUpgrade,
 	envConfigYANGValidation,
 }
 

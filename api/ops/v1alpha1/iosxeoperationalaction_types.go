@@ -73,6 +73,8 @@ type IOSXEOperationalAction struct {
 }
 
 // IOSXEOperationalActionSpec declares a write-class operation.
+//
+// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="IOSXEOperationalAction spec is immutable after creation"
 type IOSXEOperationalActionSpec struct {
 	// DeviceRef targets the CiscoDevice the action runs against.
 	// +kubebuilder:validation:Required
@@ -91,6 +93,13 @@ type IOSXEOperationalActionSpec struct {
 }
 
 // ActionRequest carries the kind + typed inputs.
+//
+// +kubebuilder:validation:XValidation:rule="(self.kind == 'Reboot') == has(self.reboot)",message="kind Reboot requires only the reboot args block"
+// +kubebuilder:validation:XValidation:rule="(self.kind == 'CancelReboot') == has(self.cancelReboot)",message="kind CancelReboot requires only the cancelReboot args block"
+// +kubebuilder:validation:XValidation:rule="(self.kind == 'KillProcess') == has(self.killProcess)",message="kind KillProcess requires only the killProcess args block"
+// +kubebuilder:validation:XValidation:rule="(self.kind == 'FilePut') == has(self.filePut)",message="kind FilePut requires only the filePut args block"
+// +kubebuilder:validation:XValidation:rule="(self.kind == 'FileRemove') == has(self.fileRemove)",message="kind FileRemove requires only the fileRemove args block"
+// +kubebuilder:validation:XValidation:rule="(self.kind == 'FactoryReset') == has(self.factoryReset)",message="kind FactoryReset requires only the factoryReset args block"
 type ActionRequest struct {
 	// Kind names the action variant.
 	// +kubebuilder:validation:Required
@@ -130,6 +139,7 @@ type RebootActionArgs struct {
 	// DelaySeconds before the reboot fires. Zero means immediate.
 	// +optional
 	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=604800
 	DelaySeconds int64 `json:"delaySeconds,omitempty"`
 	// +optional
 	Message string `json:"message,omitempty"`
@@ -174,6 +184,7 @@ type FilePutArgs struct {
 
 	// Permissions is the UNIX octal mode (default 0o644).
 	// +optional
+	// +kubebuilder:validation:Maximum=511
 	Permissions uint32 `json:"permissions,omitempty"`
 }
 
@@ -214,6 +225,11 @@ type IOSXEOperationalActionStatus struct {
 	Message string `json:"message,omitempty"`
 	// +optional
 	FailureReason string `json:"failureReason,omitempty"`
+	// InvocationID is set before the device-side RPC is dispatched. If the
+	// controller crashes while phase=Running, the next reconcile treats the
+	// action as already invoked and will not dispatch a second destructive RPC.
+	// +optional
+	InvocationID string `json:"invocationID,omitempty"`
 	// Result holds structured device-side output where applicable
 	// (e.g. RebootStatus snapshot post-CancelReboot). JSON-encoded.
 	// +optional

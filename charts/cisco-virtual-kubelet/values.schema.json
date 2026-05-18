@@ -134,7 +134,7 @@
     "gnoi": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["insecure", "port", "disabled"],
+      "required": ["insecure", "port", "disabled", "enableSoftwareUpgrade", "enableWriteClass"],
       "properties": {
         "insecure": {
           "type": "boolean",
@@ -147,6 +147,14 @@
         "disabled": {
           "type": "boolean",
           "description": "Disable the per-device gNOI client even when the binary includes gNOI support."
+        },
+        "enableSoftwareUpgrade": {
+          "type": "boolean",
+          "description": "Enable the IOSXESoftwareUpgrade gNOI OS install/activate reconciler on per-device VK pods."
+        },
+        "enableWriteClass": {
+          "type": "boolean",
+          "description": "Enable write-class IOSXEOperationalAction gNOI operations such as Reboot, FactoryReset, FilePut, and FileRemove."
         }
       }
     },

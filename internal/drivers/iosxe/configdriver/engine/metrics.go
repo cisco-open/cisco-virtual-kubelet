@@ -81,7 +81,7 @@ func RecordDriftTruncated(device string, dropped int) {
 
 // RecordDriftTruncatedForRelease bumps the truncation counter with an
 // explicit YANG release label. Older callers use RecordDriftTruncated
-// and land on release=unknown.
+// and land on an empty release label.
 func RecordDriftTruncatedForRelease(device, release string, dropped int) {
 	if driftEntriesTruncated == nil || dropped <= 0 {
 		return
@@ -224,7 +224,7 @@ func transportKindLabel(t transport.Interface) string {
 
 func releaseLabel(release string) string {
 	if release == "" {
-		return "unknown"
+		return ""
 	}
 	return release
 }

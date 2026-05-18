@@ -59,6 +59,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/devicegrpc"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry"
 	"github.com/cisco/virtual-kubelet-cisco/internal/otelproviders"
@@ -93,6 +94,13 @@ func (s *staticGNOIProvider) GNOIClient(context.Context) (*gnoi.Client, error) {
 type configReconcilerOptions struct {
 	Spec     *ciskov1.DeviceSpec
 	Password string
+	// EnableWriteClassGNOI opt-ins destructive IOSXEOperationalAction
+	// handling. Default false keeps a gNOI-enabled read-only deployment
+	// from gaining reboot/factory-reset/file-write authority implicitly.
+	EnableWriteClassGNOI bool
+	// EnableIOSXESoftwareUpgrade opt-ins the multi-phase gNOI OS upgrade
+	// reconciler. Default false keeps upgrade RBAC and behavior explicit.
+	EnableIOSXESoftwareUpgrade bool
 	// SessionLock optionally serialises config-driver traffic
 	// against the apphosting driver. Recommended in production.
 	SessionLock *sync.Mutex
@@ -152,6 +160,10 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	// in-process callers) won't double-register.
 	engine.RegisterMetrics(metrics.Registry)
 	transport.RegisterTransportMetrics(metrics.Registry)
+	gnoi.RegisterMetrics(metrics.Registry)
+	devicegrpc.RegisterMetrics(metrics.Registry)
+	softwareupgrade.RegisterMetrics(metrics.Registry)
+	operationalaction.RegisterMetrics(metrics.Registry)
 
 	// Event recorder: the reconciler emits one event per non-trivial
 	// per-family outcome and a terminal event per tick. The broadcaster
@@ -422,7 +434,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		return fmt.Errorf("device operation SetupWithManager: %w", err)
 	}
 
-	if gnoiProv != nil {
+	if gnoiProv != nil && opts.EnableIOSXESoftwareUpgrade {
 		upgradeReconciler := &softwareupgrade.Reconciler{
 			Client:          mgr.GetClient(),
 			Reader:          mgr.GetAPIReader(),
@@ -437,7 +449,11 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		if err := upgradeReconciler.SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("software upgrade SetupWithManager: %w", err)
 		}
+	} else if gnoiProv != nil {
+		log.G(ctx).Info("IOSXESoftwareUpgrade reconciler not registered; enable with --enable-iosxesoftwareupgrade or CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=true")
+	}
 
+	if gnoiProv != nil && opts.EnableWriteClassGNOI {
 		actionReconciler := &operationalaction.Reconciler{
 			Client:          mgr.GetClient(),
 			Reader:          mgr.GetAPIReader(),
@@ -450,6 +466,8 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		if err := actionReconciler.SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("operational action SetupWithManager: %w", err)
 		}
+	} else if gnoiProv != nil {
+		log.G(ctx).Info("IOSXEOperationalAction reconciler not registered; enable with --enable-write-class-gnoi or CISCO_VK_ENABLE_WRITE_CLASS_GNOI=true")
 	}
 
 	telemetryFactory, err := telemetry.NewDefaultSubscribeClientFactoryForDevice(opts.Spec, opts.Password)
