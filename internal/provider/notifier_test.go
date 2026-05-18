@@ -26,6 +26,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -124,8 +125,9 @@ func TestPodNotifierOverflowDropsAndSelfMetric(t *testing.T) {
 
 type notifierDriver struct {
 	fakeTopologyDriver
-	status v1.PodStatus
-	calls  int
+	status   v1.PodStatus
+	listPods []*v1.Pod
+	calls    int
 }
 
 func (d *notifierDriver) GetPodStatus(_ context.Context, pod *v1.Pod) (*v1.Pod, error) {
@@ -133,6 +135,44 @@ func (d *notifierDriver) GetPodStatus(_ context.Context, pod *v1.Pod) (*v1.Pod, 
 	out := pod.DeepCopy()
 	out.Status = d.status
 	return out, nil
+}
+
+func (d *notifierDriver) ListPods(context.Context) ([]*v1.Pod, error) {
+	return d.listPods, nil
+}
+
+func TestGetPodUsesProviderListForExistence(t *testing.T) {
+	ctx := context.Background()
+	pod := notifierPod("pending-create", "55555555-5555-5555-5555-555555555555")
+	driver := &notifierDriver{status: notifierPodStatus(v1.PodRunning, true)}
+	provider, err := NewAppHostingProvider(ctx,
+		&ciskov1.DeviceSpec{},
+		nodeutil.ProviderConfig{Pods: podLister(t, pod)},
+		driver,
+		nil,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("NewAppHostingProvider: %v", err)
+	}
+
+	if got, err := provider.GetPod(ctx, pod.Namespace, pod.Name); !errdefs.IsNotFound(err) || got != nil {
+		t.Fatalf("GetPod before provider create = (%v, %v), want NotFound nil", got, err)
+	}
+	if driver.calls != 0 {
+		t.Fatalf("GetPod used GetPodStatus as existence check %d time(s)", driver.calls)
+	}
+
+	devicePod := pod.DeepCopy()
+	devicePod.Status = notifierPodStatus(v1.PodRunning, true)
+	driver.listPods = []*v1.Pod{devicePod}
+	got, err := provider.GetPod(ctx, pod.Namespace, pod.Name)
+	if err != nil {
+		t.Fatalf("GetPod after provider list match: %v", err)
+	}
+	if got == nil || got.UID != pod.UID || got.Status.Phase != v1.PodRunning {
+		t.Fatalf("GetPod returned %#v, want provider-listed running pod", got)
+	}
 }
 
 // TestPodNotifierPollDrivesCallbackWithoutMDT covers the regression that
