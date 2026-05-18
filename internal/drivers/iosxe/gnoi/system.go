@@ -16,6 +16,7 @@ package gnoi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -83,7 +84,7 @@ func (c *Client) Ping(ctx context.Context, destination string, opts PingOpts) (*
 	res := &PingResult{}
 	for {
 		resp, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -168,7 +169,7 @@ func (c *Client) Traceroute(ctx context.Context, destination string, opts Tracer
 	res := &TracerouteResult{Destination: destination}
 	for {
 		resp, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

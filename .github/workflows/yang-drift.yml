@@ -16,9 +16,8 @@ name: yang-drift
 
 on:
   workflow_dispatch: {}
-  # Production cron remains disabled until Phase 3.3/3.4 are stable.
-  # schedule:
-  #   - cron: '0 8 * * 1'
+  schedule:
+    - cron: '0 8 * * 1'
 
 permissions:
   contents: read

@@ -169,8 +169,14 @@ func (c *Client) Install(ctx context.Context, r io.Reader, opts InstallOpts) (<-
 	if opts.ChunkSize > 1024*1024 {
 		return nil, fmt.Errorf("gnoi OS.Install: ChunkSize=%d exceeds 1 MiB cap", opts.ChunkSize)
 	}
-	stream, err := c.osBulk.Install(c.authCtx(ctx))
+	osClient, releaseBulk, err := c.bulkOSClient(ctx)
 	if err != nil {
+		c.cap.Observe(ServiceOS, err)
+		return nil, fmt.Errorf("gnoi OS.Install bulk lease: %w", err)
+	}
+	stream, err := osClient.Install(c.authCtx(ctx))
+	if err != nil {
+		releaseBulk()
 		c.cap.Observe(ServiceOS, err)
 		return nil, fmt.Errorf("gnoi OS.Install open: %w", err)
 	}
@@ -186,12 +192,16 @@ func (c *Client) Install(ctx context.Context, r io.Reader, opts InstallOpts) (<-
 		},
 	}); err != nil {
 		_ = stream.CloseSend()
+		releaseBulk()
 		c.cap.Observe(ServiceOS, err)
 		return nil, fmt.Errorf("gnoi OS.Install send TransferRequest: %w", err)
 	}
 
 	out := make(chan InstallProgress, 4)
-	go c.pumpInstall(ctx, stream, r, opts, out)
+	go func() {
+		defer releaseBulk()
+		c.pumpInstall(ctx, stream, r, opts, out)
+	}()
 	return out, nil
 }
 
@@ -269,7 +279,7 @@ func (c *Client) pumpInstall(
 					return
 				}
 			}
-			if rerr == io.EOF {
+			if errors.Is(rerr, io.EOF) {
 				// Terminator.
 				if serr := stream.Send(&ospb.InstallRequest{
 					Request: &ospb.InstallRequest_TransferEnd{TransferEnd: &ospb.TransferEnd{}},
@@ -296,7 +306,7 @@ func (c *Client) pumpInstall(
 	// Recv loop until Validated or InstallError.
 	for {
 		resp, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			// Wait for the sender to finish before treating as terminal.
 			if serr := <-doneSend; serr != nil {
 				emitInstallErr(serr)
@@ -393,11 +403,20 @@ type ActivateOpts struct {
 	NoReboot bool
 }
 
+// ActivateErrorType mirrors the device-side ActivateError.Type enum.
+type ActivateErrorType string
+
+const (
+	ActivateErrorUnspecified          ActivateErrorType = "UNSPECIFIED"
+	ActivateErrorNonExistentVersion   ActivateErrorType = "NON_EXISTENT_VERSION"
+	ActivateErrorNotSupportedOnBackup ActivateErrorType = "NOT_SUPPORTED_ON_BACKUP"
+)
+
 // ActivateError wraps a device-side ActivateError so reconcilers can
-// classify failures (NON_EXISTENT_VERSION → terminal preflight bug;
-// NOT_SUPPORTED_ON_BACKUP → operator config issue).
+// classify failures (NON_EXISTENT_VERSION → retry alternate version
+// spelling; NOT_SUPPORTED_ON_BACKUP → operator config issue).
 type ActivateError struct {
-	Type   string
+	Type   ActivateErrorType
 	Detail string
 }
 
@@ -430,7 +449,18 @@ func (c *Client) Activate(ctx context.Context, opts ActivateOpts) error {
 	case *ospb.ActivateResponse_ActivateOk:
 		return nil
 	case *ospb.ActivateResponse_ActivateError:
-		return &ActivateError{Type: r.ActivateError.Type.String(), Detail: r.ActivateError.Detail}
+		return &ActivateError{Type: activateErrorTypeFromProto(r.ActivateError.Type), Detail: r.ActivateError.Detail}
 	}
 	return fmt.Errorf("gnoi OS.Activate: unexpected response %T", resp.Response)
+}
+
+func activateErrorTypeFromProto(t ospb.ActivateError_Type) ActivateErrorType {
+	switch t {
+	case ospb.ActivateError_NON_EXISTENT_VERSION:
+		return ActivateErrorNonExistentVersion
+	case ospb.ActivateError_NOT_SUPPORTED_ON_BACKUP:
+		return ActivateErrorNotSupportedOnBackup
+	default:
+		return ActivateErrorUnspecified
+	}
 }

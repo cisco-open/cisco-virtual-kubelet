@@ -84,7 +84,10 @@ func (f *fakeOS) Activate(_ context.Context, req *ospb.ActivateRequest) (*ospb.A
 	}
 	if f.activateWantVersion != "" && req.Version != f.activateWantVersion {
 		return &ospb.ActivateResponse{Response: &ospb.ActivateResponse_ActivateError{
-			ActivateError: &ospb.ActivateError{Detail: "Version not present on device"},
+			ActivateError: &ospb.ActivateError{
+				Type:   ospb.ActivateError_NON_EXISTENT_VERSION,
+				Detail: "Version not present on device",
+			},
 		}}, nil
 	}
 	return &ospb.ActivateResponse{Response: &ospb.ActivateResponse_ActivateOk{ActivateOk: &ospb.ActivateOK{}}}, nil
@@ -535,22 +538,27 @@ func TestMarkTransferCompleteSetsTerminalProgress(t *testing.T) {
 	}
 }
 
-func TestVerifyMismatchWithRollbackFailsClosedUntilRollbackImplemented(t *testing.T) {
+func TestVerifyMismatchWithRollbackReactivatesPreviousVersion(t *testing.T) {
 	rig := newRig(t)
-	rig.os.verifyVersion = "17.14.01a" // doesn't match target 17.15.01a
+	rig.os.verifyVersions = []string{"17.14.01a", "17.13.01a"}
+	rig.os.activateWantVersion = "17.13.01a"
 	start := metav1.Time{Time: time.Unix(1_700_000_000, 0).UTC()}
 	up := newUpgrade("upgrade-mismatch", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 		up.Finalizers = []string{Finalizer}
 		up.Status.Phase = opsv1alpha1.UpgradePhaseVerifying
 		up.Status.StartTime = &start
+		up.Status.PreviousVersion = "17.13.01a"
 	})
 	r := newReconciler(t, rig, up)
 	got := runReconcile(t, r, up, 12)
-	if got.Status.Phase != opsv1alpha1.UpgradePhaseFailed {
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseRolledBack {
 		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
 	}
-	if got.Status.FailureReason != "RollbackNotImplemented" {
+	if got.Status.FailureReason != "RolledBack" {
 		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
+	}
+	if rig.os.activateVersion != "17.13.01a" {
+		t.Fatalf("activated version=%q, want previous version", rig.os.activateVersion)
 	}
 }
 

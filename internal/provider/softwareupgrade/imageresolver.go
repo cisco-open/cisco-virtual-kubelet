@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -70,6 +71,7 @@ type DefaultImageResolver struct {
 	HTTPClient    *http.Client
 	K8sClient     client.Client
 	TFTPBlockSize int
+	CacheDir      string
 }
 
 const (
@@ -99,12 +101,68 @@ func (r *DefaultImageResolver) Resolve(ctx context.Context, namespace string, sr
 	case src.LocalPath != "":
 		return &ResolvedImage{Local: true}, nil
 	case src.URL != "":
-		return r.resolveURL(ctx, namespace, src)
+		return r.resolveCachedURL(ctx, namespace, src)
 	case src.ConfigMapRef != nil:
 		return r.resolveConfigMap(ctx, namespace, src.ConfigMapRef.Name)
 	default:
 		return nil, errors.New("image source: one of url, configMapRef, or localPath is required")
 	}
+}
+
+func (r *DefaultImageResolver) resolveCachedURL(ctx context.Context, namespace string, src opsv1alpha1.UpgradeImageSource) (*ResolvedImage, error) {
+	if src.SHA256 == "" {
+		return r.resolveURL(ctx, namespace, src)
+	}
+	cacheDir := r.CacheDir
+	if cacheDir == "" {
+		cacheDir = filepath.Join(os.TempDir(), "cvk-upgrade-cache")
+	}
+	cachePath := filepath.Join(cacheDir, src.SHA256+".bin")
+	if cached, err := openCachedImage(cachePath, src.SHA256); err == nil {
+		return cached, nil
+	}
+
+	resolved, err := r.resolveURL(ctx, namespace, src)
+	if err != nil {
+		return nil, err
+	}
+	if resolved == nil || resolved.Local {
+		return resolved, nil
+	}
+	defer func() {
+		if resolved.Cleanup != nil {
+			_ = resolved.Cleanup()
+		}
+	}()
+
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		return nil, fmt.Errorf("image source cache: mkdir %s: %w", cacheDir, err)
+	}
+	tmp, err := os.CreateTemp(cacheDir, ".cvk-upgrade-cache-*")
+	if err != nil {
+		return nil, fmt.Errorf("image source cache: temp file: %w", err)
+	}
+	tmpName := tmp.Name()
+	hash := sha256.New()
+	n, copyErr := io.Copy(io.MultiWriter(tmp, hash), resolved.Reader)
+	closeErr := tmp.Close()
+	if copyErr != nil {
+		_ = os.Remove(tmpName)
+		return nil, fmt.Errorf("image source cache: copy: %w", copyErr)
+	}
+	if closeErr != nil {
+		_ = os.Remove(tmpName)
+		return nil, fmt.Errorf("image source cache: close: %w", closeErr)
+	}
+	if got := hex.EncodeToString(hash.Sum(nil)); got != src.SHA256 {
+		_ = os.Remove(tmpName)
+		return nil, fmt.Errorf("image source cache: SHA256 mismatch: got %s want %s", got, src.SHA256)
+	}
+	if err := os.Rename(tmpName, cachePath); err != nil {
+		_ = os.Remove(tmpName)
+		return nil, fmt.Errorf("image source cache: store: %w", err)
+	}
+	return openCachedImageWithSize(cachePath, src.SHA256, n)
 }
 
 func (r *DefaultImageResolver) resolveURL(ctx context.Context, namespace string, src opsv1alpha1.UpgradeImageSource) (*ResolvedImage, error) {
@@ -295,6 +353,40 @@ func materializeRemoteImage(label, sha256Hex string, fetch func(io.Writer) (int6
 		return os.Remove(tmp.Name())
 	}
 	return &ResolvedImage{Reader: tmp, Size: n, Cleanup: cleanup}, nil
+}
+
+func openCachedImage(path, sha256Hex string) (*ResolvedImage, error) {
+	return openCachedImageWithSize(path, sha256Hex, 0)
+}
+
+func openCachedImageWithSize(path, sha256Hex string, knownSize int64) (*ResolvedImage, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	hash := sha256.New()
+	n, err := io.Copy(hash, f)
+	if err != nil {
+		_ = f.Close()
+		return nil, err
+	}
+	if knownSize > 0 && n != knownSize {
+		_ = f.Close()
+		return nil, fmt.Errorf("cache size changed: got %d want %d", n, knownSize)
+	}
+	if got := hex.EncodeToString(hash.Sum(nil)); got != sha256Hex {
+		_ = f.Close()
+		return nil, fmt.Errorf("cache SHA256 mismatch: got %s want %s", got, sha256Hex)
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		_ = f.Close()
+		return nil, err
+	}
+	return &ResolvedImage{
+		Reader:  f,
+		Size:    n,
+		Cleanup: f.Close,
+	}, nil
 }
 
 type transferCredentials struct {

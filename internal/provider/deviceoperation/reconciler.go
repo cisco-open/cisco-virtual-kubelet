@@ -78,15 +78,6 @@ type TransportProvider interface {
 	GetTransport() transport.Interface
 }
 
-// GNOIProvider exposes the per-device gNOI client. The reconciler
-// dispatches read-only gNOI operation kinds (Ping, Traceroute, Time,
-// FileGet, FileStat, CertGet, CanGenerateCSR, RebootStatus, OSVerify)
-// to this client when set; absent it, gNOI kinds fail fast with
-// reason GNOIUnsupported.
-type GNOIProvider interface {
-	GNOIClient(ctx context.Context) (*gnoi.Client, error)
-}
-
 // Reconciler watches DeviceOperation CRs for one device and executes the
 // supported read-only operation kinds.
 type Reconciler struct {
@@ -110,7 +101,7 @@ type Reconciler struct {
 
 	// GNOI is the optional per-device gNOI client provider. When nil,
 	// gNOI operation kinds fail fast with reason GNOIUnsupported.
-	GNOI GNOIProvider
+	GNOI gnoi.Provider
 
 	// Now is injected for tests. nil means time.Now.
 	Now func() time.Time

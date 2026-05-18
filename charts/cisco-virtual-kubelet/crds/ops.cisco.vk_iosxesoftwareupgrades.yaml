@@ -195,10 +195,9 @@ spec:
               rollbackOnFailure:
                 default: true
                 description: |-
-                  RollbackOnFailure, when true, currently fails closed with
-                  RollbackNotImplemented if post-Verify the device is running a
-                  different version. Future releases will wire boot-variable rewrite
-                  plus System.Reboot behind this field. Default true.
+                  RollbackOnFailure, when true, attempts to reactivate the version
+                  that was running before this upgrade began when post-Verify reports
+                  a different version than TargetVersion. Default true.
                 type: boolean
               strategy:
                 default: Reload
@@ -341,6 +340,12 @@ spec:
                 - RolledBack
                 - RebootTimeout
                 - Cancelled
+                type: string
+              previousVersion:
+                description: |-
+                  PreviousVersion is the device-reported OS version captured before
+                  image activation. It is used as the rollback target when
+                  RollbackOnFailure is enabled.
                 type: string
               retryCount:
                 description: RetryCount tracks TransferInterrupted retries.

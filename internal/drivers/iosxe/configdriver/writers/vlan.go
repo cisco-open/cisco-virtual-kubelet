@@ -45,22 +45,36 @@ const (
 
 var vlanManagedLeaves = []string{"name", "shutdown"}
 
-type vlanWriter struct{}
+type vlanWriter struct {
+	resolver *OverrideResolver
+}
 
 func init() { Override(vlanWriter{}) }
 
-func (vlanWriter) Family() string      { return "vlan" }
-func (vlanWriter) YANGPaths() []string { return []string{vlanListPath} }
+func (w vlanWriter) withResolver(r *OverrideResolver) SectionWriter {
+	w.resolver = r
+	return w
+}
 
-func (vlanWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
-	raw, err := c.Fetch(ctx, vlanListPath)
+func (w vlanWriter) resolverForUse() *OverrideResolver { return ensureResolver(w.resolver) }
+
+func (vlanWriter) Family() string { return "vlan" }
+func (w vlanWriter) YANGPaths() []string {
+	return []string{w.resolverForUse().ResolvedYANGPath("vlan", vlanListPath)}
+}
+
+func (w vlanWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
+	resolver := w.resolverForUse()
+	path := resolver.ResolvedYANGPath("vlan", vlanListPath)
+	envelope := resolver.ResolvedEnvelopeKey("vlan", vlanEnvelopeKey)
+	raw, err := c.Fetch(ctx, path)
 	if err != nil {
 		if isRESTCONF404(err) {
 			return []map[string]any{}, nil
 		}
 		return nil, err
 	}
-	body, err := unwrapYANGEnvelope(raw, vlanEnvelopeKey)
+	body, err := unwrapYANGEnvelope(raw, envelope)
 	if err != nil || body == nil {
 		return []map[string]any{}, err
 	}
@@ -68,10 +82,16 @@ func (vlanWriter) Fetch(ctx context.Context, c transport.Interface) (any, error)
 	if err != nil {
 		return nil, fmt.Errorf("vlan: decode vlan-list: %w", err)
 	}
+	for i := range list {
+		list[i] = resolver.AutoReverseObservedBody("vlan", list[i])
+	}
 	return list, nil
 }
 
-func (vlanWriter) Diff(desired, observed any) ([]transport.Op, error) {
+func (w vlanWriter) Diff(desired, observed any) ([]transport.Op, error) {
+	resolver := w.resolverForUse()
+	path := resolver.ResolvedYANGPath("vlan", vlanListPath)
+	envelope := resolver.ResolvedEnvelopeKey("vlan", vlanEnvelopeKey)
 	desiredList, err := coerceVLANBlock(desired, "desired")
 	if err != nil {
 		return nil, err
@@ -114,20 +134,23 @@ func (vlanWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		entry := projectManagedLeaves(desiredVLAN, vlanManagedLeaves)
 		entry["id"] = id
 		entry = vlanBodyToYANG(entry)
-		body, err := wrapYANGPayload(vlanEnvelopeKey, []any{entry})
+		if o, ok := resolver.GetOverride("vlan"); ok {
+			entry = ApplyOverrideToBody(entry, o)
+		}
+		body, err := wrapYANGPayload(envelope, []any{entry})
 		if err != nil {
 			return nil, err
 		}
 		ops = append(ops, transport.Op{
 			Verb: transport.VerbMerge,
-			Path: fmt.Sprintf("%s=%d", vlanListPath, id),
+			Path: fmt.Sprintf("%s=%d", path, id),
 			// 88ac685-fu: NETCONF builder needs PathSpec to emit
 			// `<vlan-list><id>998</id>...` instead of the literal
 			// `<vlan-list=998>` element. The vlanWriter is hand-
 			// written (not the keyed-list base writer) so it
 			// previously missed the PathSpec wire-up; live retest
 			// 09 phase 1 surfaced `unknown-element vlan-list=998`.
-			PathSpec: pathSpecForKeyedListEntry(vlanListPath, "id", fmt.Sprintf("%d", id)),
+			PathSpec: pathSpecForKeyedListEntry(path, resolver.ResolvedKeyField("vlan", "id"), fmt.Sprintf("%d", id)),
 			Body:     body,
 		})
 	}
@@ -167,7 +190,9 @@ func (vlanWriter) Apply(ctx context.Context, c transport.Interface, ops []transp
 // device but absent from desired. Implements PruneCapable; the
 // engine consults this only when the CR opts in via
 // spec.pruneOnRelinquish: true.
-func (vlanWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
+func (w vlanWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
+	resolver := w.resolverForUse()
+	path := resolver.ResolvedYANGPath("vlan", vlanListPath)
 	desiredList, err := coerceVLANBlock(desired, "desired")
 	if err != nil {
 		return nil, err
@@ -200,8 +225,8 @@ func (vlanWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
 	for _, id := range orphans {
 		ops = append(ops, transport.Op{
 			Verb:     transport.VerbDelete,
-			Path:     fmt.Sprintf("%s=%d", vlanListPath, id),
-			PathSpec: pathSpecForKeyedListEntry(vlanListPath, "id", fmt.Sprintf("%d", id)),
+			Path:     fmt.Sprintf("%s=%d", path, id),
+			PathSpec: pathSpecForKeyedListEntry(path, resolver.ResolvedKeyField("vlan", "id"), fmt.Sprintf("%d", id)),
 		})
 	}
 	return ops, nil

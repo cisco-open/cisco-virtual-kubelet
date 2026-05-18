@@ -463,8 +463,9 @@ reconciler does *not* follow with `System.Reboot`. The `NoReboot`
 strategy short-circuits to Succeeded; the `Reload` strategy enters
 `AwaitingReachability` and polls `System.Time` until the device is
 back, then runs `OS.Verify`. Verify mismatch with
-`RollbackOnFailure=true` fails closed with `RollbackNotImplemented`
-until boot-variable rewrite rollback is implemented.
+`RollbackOnFailure=true` enters `RollingBack`, re-activates the
+previously observed running version, and verifies that version before
+terminating as `RolledBack`.
 
 **IOS-XE capability matrix.** Per the IOS-XE 17.15 Programmability
 Guide, only OS, Cert, Bootstrapping, and FactoryReset are

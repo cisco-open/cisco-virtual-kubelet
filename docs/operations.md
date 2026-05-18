@@ -136,11 +136,10 @@ For `localPath`, use `localPathSHA256` when the device supports gNOI File.Get
 hash reporting. Without that field, CVK can activate a staged image but cannot
 verify the local flash file before activation.
 
-Rollback is intentionally fail-closed today. If `rollbackOnFailure` is true
-and post-activation verification does not converge, the reconciler reports
-`RollbackNotImplemented` instead of pretending to have rewritten boot
-variables. Treat rollback as an operator-run recovery step until boot-variable
-rollback is implemented.
+If `rollbackOnFailure` is true and post-activation verification reports a
+different running version than the requested target, the reconciler enters
+`RollingBack`, re-activates the previously observed running version, and
+terminates as `RolledBack` once `OS.Verify` confirms that version.
 
 ## RBAC
 
@@ -175,5 +174,5 @@ surface:
 - Conversion webhook scaffolding before promotion beyond `v1alpha1`.
 - External artifact sinks beyond the in-namespace ConfigMap backing for large
   packet-capture output.
-- Automatic software-upgrade rollback. Current behavior is fail-closed with
-  `RollbackNotImplemented`.
+- Cross-device or multi-supervisor rollback policy beyond re-activating the
+  previously observed single-device version.

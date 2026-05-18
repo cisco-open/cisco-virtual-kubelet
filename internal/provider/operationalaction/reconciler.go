@@ -50,11 +50,6 @@ const (
 	finalizerName      = "ops.cisco.vk/iosxeoperationalaction-finalizer"
 )
 
-// GNOIProvider exposes the per-device gNOI client.
-type GNOIProvider interface {
-	GNOIClient(ctx context.Context) (*gnoi.Client, error)
-}
-
 // Reconciler executes IOSXEOperationalAction CRs exactly once.
 //
 // Each kind is destructive or near-destructive, so we do NOT retry on
@@ -66,7 +61,7 @@ type Reconciler struct {
 	Scheme          *runtime.Scheme
 	DeviceName      string
 	DeviceNamespace string
-	GNOI            GNOIProvider
+	GNOI            gnoi.Provider
 
 	// Now is injected for tests.
 	Now func() time.Time

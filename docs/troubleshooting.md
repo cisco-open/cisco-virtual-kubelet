@@ -243,8 +243,9 @@ File.Get. A mismatch fails before activation with `LocalPathHashMismatch`.
 Transfer interruptions move to `TransferInterrupted` and retry according to
 `spec.maxRetries` unless `spec.resumePolicy: Abort` is set.
 
-Rollback is not automatic. A verify mismatch with `rollbackOnFailure: true`
-currently fails closed with `RollbackNotImplemented`.
+With `rollbackOnFailure: true`, a verify mismatch enters `RollingBack` and
+attempts to re-activate the previously observed running version. If no previous
+version was captured, the CR fails with `RollbackVersionMissing`.
 
 **If the raw endpoint returns metrics but Prometheus doesn't see them:**
 

@@ -17,11 +17,14 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"google.golang.org/grpc"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/devicegrpc"
@@ -44,20 +47,21 @@ const gNOIPortEnv = "CISCO_VK_GNOI_PORT"
 // `gnxi server` (insecure) line rather than `gnxi secure-server`.
 const gNOIInsecureEnv = "CISCO_VK_GNOI_INSECURE"
 
-// setupGNOI builds the per-device gRPC pool, leases the ClassControl
-// and ClassBulkTransfer connections, and assembles a *gnoi.Client.
-// The returned cleanup function releases both leases and closes the
-// pool; it is invoked by the caller when the surrounding ctx is done.
+// setupGNOI builds the per-device gRPC pool and returns a lazy,
+// resettable gNOI provider. The provider leases ClassControl on first
+// use and ClassBulkTransfer only for the duration of File.Get/Put or
+// OS.Install streams. The returned cleanup function releases leases
+// and closes the pool when the surrounding ctx is done.
 //
 // Returns (nil, nil) when:
 //   - The device spec is missing the address (defensive — usually
 //     caught earlier in startup).
 //   - Operators have set CISCO_VK_GNOI_DISABLED=1 to opt out.
 //
-// A nil GNOIProvider signals to the reconcilers that the gNOI
+// A nil gnoi.Provider signals to the reconcilers that the gNOI
 // dispatch path is unavailable; they fail fast with reason
 // GNOIUnsupported on any CR they receive.
-func setupGNOI(ctx context.Context, opts configReconcilerOptions) (*staticGNOIProvider, func()) {
+func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider, func()) {
 	if v := os.Getenv(gNOIDisabledEnv); v == "1" || strings.EqualFold(v, "true") {
 		log.G(ctx).Info("gNOI pillar disabled by CISCO_VK_GNOI_DISABLED")
 		return nil, nil
@@ -87,45 +91,88 @@ func setupGNOI(ctx context.Context, opts configReconcilerOptions) (*staticGNOIPr
 	pool := devicegrpc.New(dialCfg, nil)
 	key := devicegrpc.DeviceKey{Address: opts.Spec.Address, Port: port}
 
-	// Lease the two conns we hold for the lifetime of the VK pod.
-	// Bulk transfer is leased eagerly so OS.Install / File.Put can
-	// stream into it without re-dialing; the gRPC layer holds the
-	// underlying TCP connection idle until first use, so the cost
-	// of a held-but-unused lease is just a map entry.
-	controlLease, err := pool.Lease(ctx, key, devicegrpc.ClassControl)
-	if err != nil {
-		log.G(ctx).WithError(err).Warn("gNOI: ClassControl lease failed; gNOI pillar disabled for this device")
-		_ = pool.Close()
-		return nil, nil
-	}
-	bulkLease, err := pool.Lease(ctx, key, devicegrpc.ClassBulkTransfer)
-	if err != nil {
-		controlLease.Release()
-		_ = pool.Close()
-		log.G(ctx).WithError(err).Warn("gNOI: ClassBulkTransfer lease failed; gNOI pillar disabled for this device")
-		return nil, nil
+	provider := &pooledGNOIProvider{
+		pool:    pool,
+		key:     key,
+		auth:    dialCfg.AuthContext(),
+		address: opts.Spec.Address,
+		port:    port,
+		tls:     dialCfg.TLSConfig != nil,
 	}
 
+	log.G(ctx).Infof("gNOI: pillar enabled (%s:%d, tls=%v, lazy_bulk=true)", opts.Spec.Address, port, dialCfg.TLSConfig != nil)
+	return provider, provider.Close
+}
+
+type pooledGNOIProvider struct {
+	mu      sync.Mutex
+	pool    devicegrpc.Pool
+	key     devicegrpc.DeviceKey
+	auth    gnoi.AuthContext
+	address string
+	port    int
+	tls     bool
+
+	controlLease *devicegrpc.Lease
+	client       *gnoi.Client
+	closed       bool
+}
+
+func (p *pooledGNOIProvider) GNOIClient(ctx context.Context) (*gnoi.Client, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.closed {
+		return nil, fmt.Errorf("gnoi provider closed")
+	}
+	if p.client != nil {
+		return p.client, nil
+	}
+	controlLease, err := p.pool.Lease(ctx, p.key, devicegrpc.ClassControl)
+	if err != nil {
+		return nil, fmt.Errorf("gnoi ClassControl lease: %w", err)
+	}
 	client, err := gnoi.New(controlLease.Conn, gnoi.Options{
-		Auth:     dialCfg.AuthContext(),
-		BulkConn: bulkLease.Conn,
+		Auth:             p.auth,
+		BulkConnProvider: p.bulkConn,
 	})
 	if err != nil {
 		controlLease.Release()
-		bulkLease.Release()
-		_ = pool.Close()
-		log.G(ctx).WithError(err).Warn("gNOI: client construct failed; gNOI pillar disabled for this device")
-		return nil, nil
+		return nil, fmt.Errorf("gnoi client construct: %w", err)
 	}
+	p.controlLease = controlLease
+	p.client = client
+	return client, nil
+}
 
-	log.G(ctx).Infof("gNOI: pillar enabled (%s:%d, tls=%v)", opts.Spec.Address, port, dialCfg.TLSConfig != nil)
-
-	cleanup := func() {
-		controlLease.Release()
-		bulkLease.Release()
-		_ = pool.Close()
+func (p *pooledGNOIProvider) ResetGNOIClient(ctx context.Context) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.controlLease != nil {
+		p.controlLease.Release()
+		p.controlLease = nil
 	}
-	return &staticGNOIProvider{c: client}, cleanup
+	p.client = nil
+	log.G(ctx).Infof("gNOI: reset client leases for %s:%d", p.address, p.port)
+}
+
+func (p *pooledGNOIProvider) Close() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.closed = true
+	if p.controlLease != nil {
+		p.controlLease.Release()
+		p.controlLease = nil
+	}
+	p.client = nil
+	_ = p.pool.Close()
+}
+
+func (p *pooledGNOIProvider) bulkConn(ctx context.Context) (*grpc.ClientConn, func(), error) {
+	lease, err := p.pool.Lease(ctx, p.key, devicegrpc.ClassBulkTransfer)
+	if err != nil {
+		return nil, nil, fmt.Errorf("gnoi ClassBulkTransfer lease: %w", err)
+	}
+	return lease.Conn, lease.Release, nil
 }
 
 // gnoiPortForSpec picks the device-side gNOI port. Same heuristic the

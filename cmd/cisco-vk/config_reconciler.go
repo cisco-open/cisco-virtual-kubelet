@@ -74,20 +74,6 @@ import (
 	telemetryyang "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/yang"
 )
 
-// staticGNOIProvider adapts a pre-built *gnoi.Client into the
-// {deviceoperation,softwareupgrade,operationalaction}.GNOIProvider
-// interfaces. The same client is shared across all three reconcilers
-// — the gNOI service stubs are stateless and the underlying conn is
-// pool-managed.
-type staticGNOIProvider struct{ c *gnoi.Client }
-
-func (s *staticGNOIProvider) GNOIClient(context.Context) (*gnoi.Client, error) {
-	if s == nil || s.c == nil {
-		return nil, fmt.Errorf("gnoi client not initialized")
-	}
-	return s.c, nil
-}
-
 // configReconcilerOptions is what startConfigReconciler needs from the
 // surrounding cisco-vk-run setup: device spec (for transport build) and
 // resolved password.
@@ -403,10 +389,11 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	// wire the three reconcilers that consume it.
 	//
 	// Pool lifetime is bound to the surrounding ctx (the VK pod's run
-	// context). Control + bulk-transfer leases are held for the pod
-	// lifetime; releases fire on ctx.Done. If the gNOI server is not
-	// reachable at startup the dial is lazy — the conn materialises
-	// on first RPC, so a device that comes up after the VK pod is fine.
+	// context). Control is leased on first use, and bulk-transfer
+	// conns are leased only for File.Get/Put and OS.Install streams.
+	// If the gNOI server is not reachable at startup the dial is lazy
+	// — the conn materialises on first RPC, so a device that comes up
+	// after the VK pod is fine.
 	gnoiProv, gnoiCleanup := setupGNOI(ctx, opts)
 	if gnoiCleanup != nil {
 		go func() {
