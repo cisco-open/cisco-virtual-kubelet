@@ -32,9 +32,10 @@ import (
 // ── Test infrastructure ───────────────────────────────────────────────────────
 
 type fakeNetworkClient struct {
-	mu       sync.Mutex
-	postHook func(path string, payload any) error
-	getHook  func(path string, result any) error
+	mu         sync.Mutex
+	postHook   func(path string, payload any) error
+	getHook    func(path string, result any) error
+	deleteHook func(path string) error
 }
 
 func (f *fakeNetworkClient) Post(_ context.Context, path string, payload any, _ func(any) ([]byte, error)) error {
@@ -61,7 +62,13 @@ func (f *fakeNetworkClient) Patch(_ context.Context, _ string, _ any, _ func(any
 	return nil
 }
 
-func (f *fakeNetworkClient) Delete(_ context.Context, _ string) error {
+func (f *fakeNetworkClient) Delete(_ context.Context, path string) error {
+	f.mu.Lock()
+	h := f.deleteHook
+	f.mu.Unlock()
+	if h != nil {
+		return h(path)
+	}
 	return nil
 }
 

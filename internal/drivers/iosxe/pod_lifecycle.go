@@ -67,6 +67,11 @@ func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister core
 // Apps that are already RUNNING are left untouched (benign metadata-only change).
 // Apps in any other state (or missing) are deleted and redeployed.
 func (d *XEDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
+	if pod.DeletionTimestamp != nil {
+		log.G(ctx).Infof("UpdatePod: pod %s/%s is deleting; driving cleanup instead of redeploy", pod.Namespace, pod.Name)
+		return d.DeletePod(ctx, pod)
+	}
+
 	discoveredContainers, err := d.GetPodContainers(ctx, pod)
 	if err != nil || len(discoveredContainers) == 0 {
 		log.G(ctx).Infof("UpdatePod: no existing apps found for pod %s/%s, deploying fresh", pod.Namespace, pod.Name)
@@ -280,10 +285,11 @@ func (d *XEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 		log.G(ctx).Warnf("Failed to get all containers for pod %s/%s: %v. Continuing with partial deletion.", pod.Namespace, pod.Name, err)
 		// Don't return error here - we'll delete what we found
 	}
+	deletionTargets := podDeletionTargets(ctx, pod, discoveredContainers)
 
 	deletionErrors := []string{}
 
-	for containerName, appID := range discoveredContainers {
+	for containerName, appID := range deletionTargets {
 		log.G(ctx).Infof("Deleting container %s (app: %s)", containerName, appID)
 
 		err = d.DeleteApp(ctx, appID)
@@ -448,6 +454,11 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 // the necessary env-var resolution would fail. The next status cycle will
 // retry once listers are wired up.
 func (d *XEDriver) recoverMissingContainers(ctx context.Context, pod *v1.Pod, discoveredContainers map[string]string) {
+	if pod.DeletionTimestamp != nil {
+		log.G(ctx).Debugf("Recovery: pod %s/%s is deleting; skipping missing-container recovery", pod.Namespace, pod.Name)
+		return
+	}
+
 	var missingNames []string
 	for i := range pod.Spec.Containers {
 		name := pod.Spec.Containers[i].Name
@@ -505,6 +516,27 @@ func (d *XEDriver) recoverMissingContainers(ctx context.Context, pod *v1.Pod, di
 				cfgCopy.ContainerName(), pod.Namespace, pod.Name)
 		}()
 	}
+}
+
+func podDeletionTargets(ctx context.Context, pod *v1.Pod, discoveredContainers map[string]string) map[string]string {
+	targets := make(map[string]string, len(discoveredContainers)+len(pod.Spec.Containers))
+	seenAppIDs := make(map[string]struct{}, len(discoveredContainers)+len(pod.Spec.Containers))
+
+	for containerName, appID := range discoveredContainers {
+		targets[containerName] = appID
+		seenAppIDs[appID] = struct{}{}
+	}
+
+	for containerName, appID := range common.GenerateContainerAppIDs(pod) {
+		if _, seen := seenAppIDs[appID]; seen {
+			continue
+		}
+		log.G(ctx).Infof("DeletePod: adding deterministic cleanup target for container %s (app: %s)", containerName, appID)
+		targets[containerName] = appID
+		seenAppIDs[appID] = struct{}{}
+	}
+
+	return targets
 }
 
 // ListPods discovers all pods currently running on the device by analyzing app configurations.
