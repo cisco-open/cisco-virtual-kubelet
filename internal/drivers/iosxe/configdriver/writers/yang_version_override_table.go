@@ -226,6 +226,24 @@ var overrideTable = []VersionOverride{
 		FetchBodyTransform: eemFetchTransform1716,
 	},
 
+	// ── dhcp: IOS-XE 26.01 ──────────────────────────────────────
+	// Live 26.01 C9300 DHCP pool writes use the id-keyed IPv4 pool
+	// YANG shape and nested default-router/network containers. Keep
+	// NetAsCode's canonical pool shape stable and translate at the
+	// resolver boundary.
+	{
+		Family:              "dhcp",
+		MinVersion:          [2]int{26, 1},
+		MaxVersion:          [2]int{26, 2},
+		EnvelopeKeyOverride: "Cisco-IOS-XE-dhcp:pool",
+		KeyFieldOverride:    "id",
+		NeedParentCreation:  true,
+		ParentPath:          "/Cisco-IOS-XE-native:native/ip/dhcp",
+		ParentBody:          []byte(`{"Cisco-IOS-XE-native:dhcp":{}}`),
+		BodyTransform:       dhcpBodyTransformPre1718,
+		FetchBodyTransform:  dhcpFetchTransformPre1718,
+	},
+
 	// ── crypto_ipsec_transform_set: already handled ──────────────
 	// The transformSetToYANG function in crypto.go already encodes
 	// tunnel/transport as empty leaves. No override needed.
