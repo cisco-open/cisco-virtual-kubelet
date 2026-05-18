@@ -14,7 +14,11 @@
 
 package transport
 
-import "testing"
+import (
+	"strings"
+	"testing"
+	"time"
+)
 
 // TestIsCiscoPrompt covers the prompt patterns the SSH-CLI helper
 // matches against to decide where one command's output ends.
@@ -97,5 +101,16 @@ func TestTrimEchoAndPrompt(t *testing.T) {
 				t.Errorf("got:\n%q\nwant:\n%q", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestReadUntilPromptRequiresFinalPrompt(t *testing.T) {
+	rb := newSSHReadBuffer(strings.NewReader("Edge-9K#\nCisco IOS XE Software, Version 17.18.2\nEdge-9K#"), time.Second)
+	got, err := rb.readUntilPromptOrTimeout(iosPromptAtEndRe)
+	if err != nil {
+		t.Fatalf("readUntilPromptOrTimeout: %v", err)
+	}
+	if !strings.Contains(got, "Cisco IOS XE Software") {
+		t.Fatalf("read stopped before command output; got %q", got)
 	}
 }

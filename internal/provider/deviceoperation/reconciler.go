@@ -261,6 +261,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			reason = "Failed"
 		}
 	}
+	if terminalPhase == opsv1alpha1.OperationPhaseSucceeded {
+		if validateErr := validateDiagnosticOutputs(op.Spec.Operation.Kind, commands, outputs); validateErr != nil {
+			terminalPhase = opsv1alpha1.OperationPhaseFailed
+			message = validateErr.Error()
+			reason = "Failed"
+		}
+	}
 	if terminalPhase == opsv1alpha1.OperationPhaseSucceeded &&
 		op.Spec.Operation.Kind == opsv1alpha1.OperationKindPacketCapture {
 		var artifactErr *operationArtifactError
@@ -882,6 +889,29 @@ func commandOutputs(results []transport.CommandResult) []opsv1alpha1.DeviceOpera
 		outputs = append(outputs, out)
 	}
 	return outputs
+}
+
+func validateDiagnosticOutputs(kind opsv1alpha1.OperationKind, commands []string, outputs []opsv1alpha1.DeviceOperationOutput) error {
+	if len(outputs) != len(commands) {
+		return fmt.Errorf("transport returned %d output(s) for %d command(s)", len(outputs), len(commands))
+	}
+	if kind != opsv1alpha1.OperationKindShowCommand {
+		return nil
+	}
+	for i, cmd := range commands {
+		if !showCommandRequiresOutput(cmd) {
+			continue
+		}
+		if strings.TrimSpace(outputs[i].Output) == "" && strings.TrimSpace(outputs[i].Err) == "" {
+			return fmt.Errorf("show command %q returned empty output", cmd)
+		}
+	}
+	return nil
+}
+
+func showCommandRequiresOutput(cmd string) bool {
+	normalized := strings.ToLower(strings.Join(strings.Fields(cmd), " "))
+	return normalized == "show version"
 }
 
 func lineDiff(baseline, observed string) string {
