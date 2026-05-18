@@ -37,7 +37,9 @@ import (
 //         default_router: 192.168.10.1
 //
 // YANG path: /Cisco-IOS-XE-native:native/ip/dhcp/pool
-// Key: name (baseline 17.18); overridden to "id" on < 17.18.
+// Key: name for the generic fallback shape; overridden to "id" on
+// validated IOS-XE releases whose DHCP YANG model uses the id-keyed pool
+// list, including 17.18.x and 26.01.
 //
 // DHCP is cataloged in families.yaml as a singleton family because the
 // netascode block owns the whole /ip/dhcp container. The writer

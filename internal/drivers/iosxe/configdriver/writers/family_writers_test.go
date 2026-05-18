@@ -168,6 +168,39 @@ func TestDHCPDiffLegacyUsesResolverTransform(t *testing.T) {
 	}
 }
 
+func TestDHCPDiff1718UsesResolverTransform(t *testing.T) {
+	t.Parallel()
+	w := dhcpWriter{resolver: NewOverrideResolverForMajorMinor(17, 18)}
+	desired := map[string]any{"pools": []any{
+		map[string]any{
+			"name": "192_168_99.0", "network": "192.168.99.0", "prefix_length": 24, "default_router": "192.168.99.1",
+		},
+	}}
+	ops, err := w.Diff(desired, []map[string]any{})
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if len(ops) != 1 || ops[0].Path != dhcpParentPath {
+		t.Fatalf("got %+v, want one op to DHCP parent", ops)
+	}
+	var body map[string]map[string][]map[string]any
+	if err := json.Unmarshal(ops[0].Body, &body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	pools := body[dhcpParentEnvelopeKey][dhcpPoolEnvelopeKey]
+	if len(pools) != 1 || pools[0]["id"] != "192_168_99.0" {
+		t.Fatalf("body=%s, want 17.18 DHCP pool keyed by id", ops[0].Body)
+	}
+	if _, ok := pools[0]["default_router"]; ok {
+		t.Fatalf("body=%s, 17.18 body must not carry canonical default_router key", ops[0].Body)
+	}
+	if dr, ok := pools[0]["default-router"].(map[string]any); !ok {
+		t.Fatalf("body=%s, want 17.18 nested default-router", ops[0].Body)
+	} else if got := dr["default-router-list"]; !reflect.DeepEqual(got, []any{"192.168.99.1"}) {
+		t.Fatalf("default-router-list=%#v, want [192.168.99.1]", got)
+	}
+}
+
 func TestDHCPDiff2601UsesResolverTransform(t *testing.T) {
 	t.Parallel()
 	w := dhcpWriter{resolver: NewOverrideResolverForMajorMinor(26, 1)}

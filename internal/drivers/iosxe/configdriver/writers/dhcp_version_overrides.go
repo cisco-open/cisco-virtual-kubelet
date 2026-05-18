@@ -21,9 +21,10 @@ import (
 )
 
 // ──────────────────────────────────────────────────────────────────
-// DHCP version-override transforms (IOS-XE < 17.18)
+// DHCP version-override transforms (IOS-XE 17.x through 17.18, and 26.01)
 //
-// On 17.15/17.16, the DHCP pool YANG model differs from 17.18:
+// On these releases, the DHCP pool YANG model differs from the generic
+// fallback shape:
 //   - List key is "id" (not "name")
 //   - Network uses nested: network.primary-network.{number, mask}
 //     (not flat network/prefix_length)
@@ -32,10 +33,10 @@ import (
 //   - Parent container /ip/dhcp must be created before pool PUT
 // ──────────────────────────────────────────────────────────────────
 
-// dhcpBodyTransformPre1718 converts the 17.18-baseline DHCP pool body
-// to the 17.15/17.16 YANG shape.
+// dhcpBodyTransformPre1718 converts the canonical NetAsCode DHCP pool
+// body to the id-keyed IOS-XE DHCP YANG shape.
 func dhcpBodyTransformPre1718(body map[string]any) map[string]any {
-	// Rename name → id (YANG list key on < 17.18)
+	// Rename name → id.
 	if name, ok := body["name"]; ok {
 		body["id"] = name
 		delete(body, "name")
@@ -66,7 +67,7 @@ func dhcpBodyTransformPre1718(body map[string]any) map[string]any {
 	return body
 }
 
-// dhcpFetchTransformPre1718 is the inverse: converts the 17.15 device
+// dhcpFetchTransformPre1718 is the inverse: converts the id-keyed device
 // response back to netascode canonical shape for Diff comparison.
 func dhcpFetchTransformPre1718(body map[string]any) map[string]any {
 	// Rename id → name
