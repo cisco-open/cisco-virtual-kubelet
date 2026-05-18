@@ -30,6 +30,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -334,26 +335,14 @@ func (r *Reconciler) terminal(ctx context.Context, act *opsv1alpha1.IOSXEOperati
 }
 
 func (r *Reconciler) setReady(act *opsv1alpha1.IOSXEOperationalAction, status metav1.ConditionStatus, reason, message string, now time.Time) {
-	cond := metav1.Condition{
+	apimeta.SetStatusCondition(&act.Status.Conditions, metav1.Condition{
 		Type:               conditionTypeReady,
 		Status:             status,
 		Reason:             reason,
 		Message:            message,
 		LastTransitionTime: metav1.Time{Time: now},
 		ObservedGeneration: act.Generation,
-	}
-	conds := act.Status.Conditions
-	for i, c := range conds {
-		if c.Type == cond.Type {
-			if c.Status == cond.Status && c.Reason == cond.Reason && c.Message == cond.Message {
-				return
-			}
-			conds[i] = cond
-			act.Status.Conditions = conds
-			return
-		}
-	}
-	act.Status.Conditions = append(conds, cond)
+	})
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, act *opsv1alpha1.IOSXEOperationalAction, mutate func(*opsv1alpha1.IOSXEOperationalAction), result reconcile.Result) (reconcile.Result, error) {

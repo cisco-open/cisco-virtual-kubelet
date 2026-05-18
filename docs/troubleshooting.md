@@ -179,6 +179,73 @@ Expected setup: your Prometheus is already scraping kubelets (`kube-prometheus-s
 kubectl get --raw "/api/v1/nodes/<name>/proxy/metrics/resource" | grep cisco_device
 ```
 
+---
+
+## gNOI actions or software upgrades do nothing
+
+Both write-class gNOI surfaces are opt-in on the per-device VK pod:
+
+- `IOSXEOperationalAction` requires `--enable-write-class-gnoi` or
+  `CISCO_VK_ENABLE_WRITE_CLASS_GNOI=true`.
+- `IOSXESoftwareUpgrade` requires `--enable-iosxesoftwareupgrade` or
+  `CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=true`.
+
+Check the VK pod args and logs:
+
+```bash
+kubectl -n <device-namespace> get deploy <device-name>-vk -o yaml | grep -E "enable-write-class-gnoi|enable-iosxesoftwareupgrade"
+kubectl -n <device-namespace> logs deploy/<device-name>-vk --tail=200 | grep -i gnoi
+```
+
+If the CR remains untouched, verify the `spec.deviceRef.name` matches the
+device worker's `CiscoDevice` name and that the VK service account can update
+the CR status and finalizer subresources.
+
+---
+
+## IOSXEOperationalAction is rejected
+
+Common rejection reasons:
+
+- `ConfirmMismatch` — `spec.confirm` must exactly equal
+  `spec.deviceRef.name`.
+- `InvalidAction` — exactly one typed args block must match
+  `spec.action.kind`.
+- Kubernetes admission rejects updates because `spec` is immutable after
+  creation. Create a new action CR for a changed request.
+
+For actions that reach `Running` and then fail, inspect both events and status:
+
+```bash
+kubectl describe iosxeoperationalaction <name>
+kubectl get events --field-selector involvedObject.name=<name>
+```
+
+`Running` means the controller may already have invoked the device-side RPC.
+The reconciler will not dispatch the same CR again after a restart.
+
+---
+
+## IOSXESoftwareUpgrade fails during image resolution or transfer
+
+For URL sources, `imageSource.sha256` is required. Credential-bearing URLs are
+redacted before they are written to CR status, events, or logs. For SCP/SFTP,
+host-key verification is required unless the operator explicitly enables the
+lab-only escape hatch:
+
+```bash
+CISCO_VK_UPGRADE_ALLOW_INSECURE_SSH=true
+```
+
+When using `localPath`, add `localPathSHA256` if the device supports gNOI
+File.Get. A mismatch fails before activation with `LocalPathHashMismatch`.
+
+Transfer interruptions move to `TransferInterrupted` and retry according to
+`spec.maxRetries` unless `spec.resumePolicy: Abort` is set.
+
+Rollback is not automatic. A verify mismatch with `rollbackOnFailure: true`
+currently fails closed with `RollbackNotImplemented`.
+
 **If the raw endpoint returns metrics but Prometheus doesn't see them:**
 
 - The node ServiceMonitor isn't matching (check labels).

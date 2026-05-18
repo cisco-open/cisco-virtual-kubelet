@@ -17,6 +17,7 @@ package gnoi
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"io"
 	"net"
@@ -35,6 +36,7 @@ import (
 	filepb "github.com/openconfig/gnoi/file"
 	ospb "github.com/openconfig/gnoi/os"
 	syspb "github.com/openconfig/gnoi/system"
+	commonpb "github.com/openconfig/gnoi/types"
 )
 
 // --- fake server hooks ---
@@ -73,12 +75,34 @@ func (f *fakeSystem) RebootStatus(context.Context, *syspb.RebootStatusRequest) (
 
 type fakeFile struct {
 	filepb.UnimplementedFileServer
-	statResp *filepb.StatResponse
-	statErr  error
+	statResp  *filepb.StatResponse
+	statErr   error
+	getChunks [][]byte
+	getHash   *commonpb.HashType
+	getErr    error
 }
 
 func (f *fakeFile) Stat(context.Context, *filepb.StatRequest) (*filepb.StatResponse, error) {
 	return f.statResp, f.statErr
+}
+
+func (f *fakeFile) Get(_ *filepb.GetRequest, stream grpc.ServerStreamingServer[filepb.GetResponse]) error {
+	if f.getErr != nil {
+		return f.getErr
+	}
+	for _, chunk := range f.getChunks {
+		if err := stream.Send(&filepb.GetResponse{
+			Response: &filepb.GetResponse_Contents{Contents: chunk},
+		}); err != nil {
+			return err
+		}
+	}
+	if f.getHash != nil {
+		return stream.Send(&filepb.GetResponse{
+			Response: &filepb.GetResponse_Hash{Hash: f.getHash},
+		})
+	}
+	return nil
 }
 
 type fakeCert struct {
@@ -104,6 +128,8 @@ type fakeOS struct {
 	verifyResp          *ospb.VerifyResponse
 	verifyErr           error
 	installRequireClose bool
+	installFirstResp    *ospb.InstallResponse
+	installSendSync     bool
 	installEOFSeen      bool
 	installBytes        int
 }
@@ -121,10 +147,17 @@ func (f *fakeOS) Install(stream grpc.BidiStreamingServer[ospb.InstallRequest, os
 	if req == nil {
 		return status.Error(codes.InvalidArgument, "expected transfer request")
 	}
-	if err := stream.Send(&ospb.InstallResponse{
-		Response: &ospb.InstallResponse_TransferReady{TransferReady: &ospb.TransferReady{}},
-	}); err != nil {
+	firstResp := f.installFirstResp
+	if firstResp == nil {
+		firstResp = &ospb.InstallResponse{
+			Response: &ospb.InstallResponse_TransferReady{TransferReady: &ospb.TransferReady{}},
+		}
+	}
+	if err := stream.Send(firstResp); err != nil {
 		return err
+	}
+	if _, ok := firstResp.Response.(*ospb.InstallResponse_TransferReady); !ok {
+		return nil
 	}
 	for {
 		next, err := stream.Recv()
@@ -140,6 +173,15 @@ func (f *fakeOS) Install(stream grpc.BidiStreamingServer[ospb.InstallRequest, os
 				},
 			}); err != nil {
 				return err
+			}
+			if f.installSendSync {
+				if err := stream.Send(&ospb.InstallResponse{
+					Response: &ospb.InstallResponse_SyncProgress{
+						SyncProgress: &ospb.SyncProgress{PercentageTransferred: 42},
+					},
+				}); err != nil {
+					return err
+				}
 			}
 		case *ospb.InstallRequest_TransferEnd:
 			if f.installRequireClose {
@@ -289,6 +331,36 @@ func TestStatAcceptsFlashPath(t *testing.T) {
 	}
 }
 
+func TestGetStreamsContentsAndHash(t *testing.T) {
+	ts := newTestServer(t)
+	sum := sha256.Sum256([]byte("hello flash"))
+	ts.File.getChunks = [][]byte{[]byte("hello "), []byte("flash")}
+	ts.File.getHash = &commonpb.HashType{Method: commonpb.HashType_SHA256, Hash: sum[:]}
+
+	var buf bytes.Buffer
+	hash, err := ts.client(t).Get(context.Background(), "flash:hello-app.iosxe.tar", &buf)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if buf.String() != "hello flash" {
+		t.Fatalf("streamed contents=%q", buf.String())
+	}
+	if hash.GetMethod() != commonpb.HashType_SHA256 || !bytes.Equal(hash.GetHash(), sum[:]) {
+		t.Fatalf("hash=%+v, want SHA256 %x", hash, sum)
+	}
+}
+
+func TestGetMissingHashFails(t *testing.T) {
+	ts := newTestServer(t)
+	ts.File.getChunks = [][]byte{[]byte("payload")}
+
+	var buf bytes.Buffer
+	_, err := ts.client(t).Get(context.Background(), "flash:payload.bin", &buf)
+	if err == nil || !strings.Contains(err.Error(), "no terminal hash") {
+		t.Fatalf("expected missing-hash error, got %v", err)
+	}
+}
+
 // --- cert ---
 
 func TestGetCertificates(t *testing.T) {
@@ -373,6 +445,87 @@ func TestInstallClosesSendAfterTransferEnd(t *testing.T) {
 	}
 	if ts.OS.installBytes != 5 {
 		t.Fatalf("installBytes=%d, want 5", ts.OS.installBytes)
+	}
+}
+
+func TestInstallSurfacesDeviceInstallError(t *testing.T) {
+	ts := newTestServer(t)
+	ts.OS.installFirstResp = &ospb.InstallResponse{
+		Response: &ospb.InstallResponse_InstallError{
+			InstallError: &ospb.InstallError{Type: ospb.InstallError_INTEGRITY_FAIL, Detail: "bad sha"},
+		},
+	}
+
+	progress, err := ts.client(t).Install(context.Background(), bytes.NewReader([]byte("image")), InstallOpts{
+		Version:     "17.18.03",
+		PackageSize: 5,
+	})
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	var gotErr error
+	for ev := range progress {
+		if ev.Err != nil {
+			gotErr = ev.Err
+		}
+	}
+	var installErr *InstallError
+	if !errors.As(gotErr, &installErr) {
+		t.Fatalf("expected *InstallError, got %T %v", gotErr, gotErr)
+	}
+	if installErr.Type != InstallErrorIntegrityFail {
+		t.Fatalf("InstallError.Type=%q", installErr.Type)
+	}
+}
+
+func TestInstallEmitsSyncProgress(t *testing.T) {
+	ts := newTestServer(t)
+	ts.OS.installSendSync = true
+
+	progress, err := ts.client(t).Install(context.Background(), bytes.NewReader([]byte("image")), InstallOpts{
+		Version:     "17.18.03",
+		PackageSize: 5,
+	})
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	var syncPct uint32
+	for ev := range progress {
+		if ev.Err != nil {
+			t.Fatalf("Install progress error: %v", ev.Err)
+		}
+		if ev.SyncProgress != nil {
+			syncPct = ev.SyncProgress.PercentageTransferred
+		}
+	}
+	if syncPct != 42 {
+		t.Fatalf("SyncProgress=%d, want 42", syncPct)
+	}
+}
+
+func TestInstallRejectsUnexpectedFirstResponse(t *testing.T) {
+	ts := newTestServer(t)
+	ts.OS.installFirstResp = &ospb.InstallResponse{
+		Response: &ospb.InstallResponse_TransferProgress{
+			TransferProgress: &ospb.TransferProgress{BytesReceived: 1},
+		},
+	}
+
+	progress, err := ts.client(t).Install(context.Background(), bytes.NewReader([]byte("image")), InstallOpts{
+		Version:     "17.18.03",
+		PackageSize: 5,
+	})
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	var gotErr error
+	for ev := range progress {
+		if ev.Err != nil {
+			gotErr = ev.Err
+		}
+	}
+	if gotErr == nil || !strings.Contains(gotErr.Error(), "unexpected first response") {
+		t.Fatalf("expected unexpected-first-response error, got %v", gotErr)
 	}
 }
 

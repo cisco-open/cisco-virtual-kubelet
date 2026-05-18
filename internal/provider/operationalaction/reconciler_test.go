@@ -108,11 +108,19 @@ type fakeReset struct {
 	resetpb.UnimplementedFactoryResetServer
 	calls       atomic.Int64
 	lastFactory bool
+	resp        *resetpb.StartResponse
+	err         error
 }
 
 func (f *fakeReset) Start(_ context.Context, req *resetpb.StartRequest) (*resetpb.StartResponse, error) {
 	f.calls.Add(1)
 	f.lastFactory = req.FactoryOs
+	if f.err != nil {
+		return nil, f.err
+	}
+	if f.resp != nil {
+		return f.resp, nil
+	}
 	return &resetpb.StartResponse{Response: &resetpb.StartResponse_ResetSuccess{ResetSuccess: &resetpb.ResetSuccess{}}}, nil
 }
 
@@ -328,6 +336,27 @@ func TestKindArgsMismatchRejected(t *testing.T) {
 	}
 }
 
+func TestUnknownActionKindRejected(t *testing.T) {
+	rig := newRig(t)
+	a := newAction("unknown-kind", func(a *opsv1alpha1.IOSXEOperationalAction) {
+		a.Spec.Action = opsv1alpha1.ActionRequest{
+			Kind:   opsv1alpha1.ActionKind("PowerCycle"),
+			Reboot: &opsv1alpha1.RebootActionArgs{Method: "COLD"},
+		}
+	})
+	r := newReconciler(t, rig, a)
+	got := runReconcile(t, r, a)
+	if got.Status.Phase != opsv1alpha1.ActionPhaseRejected {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if !strings.Contains(got.Status.Message, "unsupported action kind") {
+		t.Fatalf("expected unsupported-kind message, got %q", got.Status.Message)
+	}
+	if rig.sys.rebootCalls.Load() != 0 {
+		t.Fatalf("unknown action dispatched reboot; calls=%d", rig.sys.rebootCalls.Load())
+	}
+}
+
 func TestRunningActionDoesNotRedispatch(t *testing.T) {
 	rig := newRig(t)
 	a := newAction("reboot-running", nil)
@@ -389,6 +418,54 @@ func TestFilePutHappyPath(t *testing.T) {
 	}
 }
 
+func TestFilePutMissingConfigMapFails(t *testing.T) {
+	rig := newRig(t)
+	a := newAction("put-missing-cm", func(a *opsv1alpha1.IOSXEOperationalAction) {
+		a.Spec.Action = opsv1alpha1.ActionRequest{
+			Kind:    opsv1alpha1.ActionKindFilePut,
+			FilePut: &opsv1alpha1.FilePutArgs{Path: "flash:dropoff.bin", ConfigMapName: "missing-cm", Permissions: 0o644},
+		}
+	})
+	r := newReconciler(t, rig, a)
+	got := runReconcile(t, r, a)
+	if got.Status.Phase != opsv1alpha1.ActionPhaseFailed {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if !strings.Contains(got.Status.Message, "get ConfigMap") {
+		t.Fatalf("expected ConfigMap lookup error, got %q", got.Status.Message)
+	}
+	if rig.file.putCalls.Load() != 0 {
+		t.Fatalf("File.Put called despite missing ConfigMap; calls=%d", rig.file.putCalls.Load())
+	}
+}
+
+func TestFilePutMissingContentKeyFails(t *testing.T) {
+	rig := newRig(t)
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "payload-cm"},
+		BinaryData: map[string][]byte{
+			"other": []byte("wrong key"),
+		},
+	}
+	a := newAction("put-missing-key", func(a *opsv1alpha1.IOSXEOperationalAction) {
+		a.Spec.Action = opsv1alpha1.ActionRequest{
+			Kind:    opsv1alpha1.ActionKindFilePut,
+			FilePut: &opsv1alpha1.FilePutArgs{Path: "flash:dropoff.bin", ConfigMapName: "payload-cm", Permissions: 0o644},
+		}
+	})
+	r := newReconciler(t, rig, a, cm)
+	got := runReconcile(t, r, a)
+	if got.Status.Phase != opsv1alpha1.ActionPhaseFailed {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if !strings.Contains(got.Status.Message, "binaryData[\"content\"]") {
+		t.Fatalf("expected missing binaryData content error, got %q", got.Status.Message)
+	}
+	if rig.file.putCalls.Load() != 0 {
+		t.Fatalf("File.Put called despite missing content key; calls=%d", rig.file.putCalls.Load())
+	}
+}
+
 func TestFileRemoveRejectsBarePath(t *testing.T) {
 	rig := newRig(t)
 	a := newAction("rm-bad", func(a *opsv1alpha1.IOSXEOperationalAction) {
@@ -419,6 +496,32 @@ func TestFactoryResetDefaultsRetainCertsTrue(t *testing.T) {
 	}
 	if rig.reset.calls.Load() != 1 {
 		t.Fatalf("FactoryReset call count=%d", rig.reset.calls.Load())
+	}
+}
+
+func TestFactoryResetDeviceErrorFailsWithClassifier(t *testing.T) {
+	rig := newRig(t)
+	rig.reset.resp = &resetpb.StartResponse{
+		Response: &resetpb.StartResponse_ResetError{
+			ResetError: &resetpb.ResetError{
+				Detail:               "factory OS unsupported on this platform",
+				FactoryOsUnsupported: true,
+			},
+		},
+	}
+	a := newAction("fr-device-error", func(a *opsv1alpha1.IOSXEOperationalAction) {
+		a.Spec.Action = opsv1alpha1.ActionRequest{
+			Kind:         opsv1alpha1.ActionKindFactoryReset,
+			FactoryReset: &opsv1alpha1.FactoryResetArgs{FactoryOS: true},
+		}
+	})
+	r := newReconciler(t, rig, a)
+	got := runReconcile(t, r, a)
+	if got.Status.Phase != opsv1alpha1.ActionPhaseFailed {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if !strings.Contains(got.Status.Message, "factory_os_unsupported") {
+		t.Fatalf("expected classifier in message, got %q", got.Status.Message)
 	}
 }
 

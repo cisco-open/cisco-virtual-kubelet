@@ -127,6 +127,23 @@ All metrics are type `gauge`. The base set works on any driver; the topology-der
 | `cisco_device_storage_used_bytes` | — | IOx subsystem storage in use |
 | `cisco_device_storage_total_bytes` | — | IOx subsystem storage quota |
 
+#### gNOI lifecycle metrics
+
+These metrics are registered when the corresponding controllers and gNOI
+client packages are linked into the process. The write-class and software
+upgrade reconcilers still require their enablement flags before they act on
+CRs.
+
+| Metric | Labels | Notes |
+|---|---|---|
+| `cisco_vk_gnoi_rpc_total` | `service`, `outcome` | gNOI RPC outcomes, including `ok`, `unimplemented`, `unavailable`, and other error classes. |
+| `cisco_vk_gnoi_capability_cache_total` | `service`, `result` | Capability cache hit, miss, expiration, pin, and fail-fast decisions. |
+| `cisco_vk_devicegrpc_lease_events_total` | `class`, `event` | Workload-classed gRPC pool lease and release events. |
+| `cisco_vk_devicegrpc_outstanding_leases` | `class` | Current outstanding gRPC pool leases. |
+| `cisco_vk_devicegrpc_close_leak_detected_total` | `class` | Outstanding leases observed when a pool closes. |
+| `cisco_vk_iosxe_software_upgrade_phase_transitions_total` | `device`, `target_version`, `from`, `to`, `reason` | Software upgrade state transitions. |
+| `cisco_vk_iosxe_operational_action_transitions_total` | `device`, `kind`, `phase`, `reason` | Write-class action phase transitions and terminal outcomes. |
+
 #### Interfaces (TopologyProvider)
 
 | Metric | Labels | Notes |
