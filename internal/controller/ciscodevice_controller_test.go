@@ -196,6 +196,21 @@ func TestReconcile_CreatesDeployment(t *testing.T) {
 	if got := deploy.Spec.Template.Spec.ServiceAccountName; got != "test-sa" {
 		t.Errorf("expected service account test-sa, got %q", got)
 	}
+	affinity := deploy.Spec.Template.Spec.Affinity
+	if affinity == nil ||
+		affinity.NodeAffinity == nil ||
+		affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil ||
+		len(affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms) != 1 ||
+		len(affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions) != 1 {
+		t.Fatalf("expected per-device VK pod to exclude virtual-kubelet nodes, got affinity=%#v", affinity)
+	}
+	requirement := affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0]
+	if requirement.Key != virtualKubeletNodeLabelKey ||
+		requirement.Operator != corev1.NodeSelectorOpNotIn ||
+		len(requirement.Values) != 1 ||
+		requirement.Values[0] != virtualKubeletNodeLabelValue {
+		t.Fatalf("unexpected virtual-kubelet node exclusion requirement: %#v", requirement)
+	}
 	args := deploy.Spec.Template.Spec.Containers[0].Args
 	if len(args) == 0 || args[0] != "run" {
 		t.Errorf("expected first arg to be 'run', got %v", args)
