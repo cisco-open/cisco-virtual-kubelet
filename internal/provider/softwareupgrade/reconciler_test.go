@@ -809,7 +809,7 @@ func TestResolvingDoesNotTreatCommittedInstallOperVersionAsStaged(t *testing.T) 
 	}
 }
 
-func TestTransferPreflightsGNOIBeforeResolvingImage(t *testing.T) {
+func TestTransferPreflightVerifyWaitsBeforeResolvingImage(t *testing.T) {
 	rig := newRig(t)
 	rig.os.verifyErr = status.Error(codes.Unavailable, "connect: connection refused")
 	up := newUpgrade("upgrade-gnoi-preflight", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
@@ -825,14 +825,53 @@ func TestTransferPreflightsGNOIBeforeResolvingImage(t *testing.T) {
 	if resolver.calls != 0 {
 		t.Fatalf("image resolver called %d time(s), want 0", resolver.calls)
 	}
-	if got.Status.Phase != opsv1alpha1.UpgradePhaseFailed {
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseTransferring {
 		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
 	}
-	if got.Status.FailureReason != "TransferMaxRetries" {
+	if got.Status.FailureReason != "" {
 		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
 	}
-	if !strings.Contains(got.Status.Message, "gnoi OS.Verify preflight") {
-		t.Fatalf("expected preflight error in message, got %q", got.Status.Message)
+	if got.Status.RetryCount != 1 {
+		t.Fatalf("RetryCount=%d, want unchanged 1", got.Status.RetryCount)
+	}
+	if !strings.Contains(got.Status.Message, "waiting for gNOI OS.Verify before image transfer") {
+		t.Fatalf("expected preflight wait in message, got %q", got.Status.Message)
+	}
+	if gotReason := conditionReason(got.Status.Conditions, "Ready"); gotReason != "VerifyPending" {
+		t.Fatalf("Ready reason=%q, want VerifyPending", gotReason)
+	}
+}
+
+func TestTransferPreflightGNOIClientWaitsBeforeResolvingImage(t *testing.T) {
+	rig := newRig(t)
+	up := newUpgrade("upgrade-gnoi-client-preflight", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Spec.MaxRetries = 1
+		up.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+		up.Status.RetryCount = 1
+	})
+	r := newReconciler(t, rig, up)
+	r.GNOI = unavailableGNOI{err: status.Error(codes.Unavailable, "connect: connection refused")}
+	resolver := &countingImageResolver{}
+	r.ImageResolver = resolver
+
+	got := runReconcile(t, r, up, 3)
+	if resolver.calls != 0 {
+		t.Fatalf("image resolver called %d time(s), want 0", resolver.calls)
+	}
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseTransferring {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if got.Status.FailureReason != "" {
+		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
+	}
+	if got.Status.RetryCount != 1 {
+		t.Fatalf("RetryCount=%d, want unchanged 1", got.Status.RetryCount)
+	}
+	if !strings.Contains(got.Status.Message, "waiting for gNOI client before image transfer") {
+		t.Fatalf("expected preflight wait in message, got %q", got.Status.Message)
+	}
+	if gotReason := conditionReason(got.Status.Conditions, "Ready"); gotReason != "DeviceUnreachable" {
+		t.Fatalf("Ready reason=%q, want DeviceUnreachable", gotReason)
 	}
 }
 

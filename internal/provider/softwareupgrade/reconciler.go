@@ -352,10 +352,12 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 	}
 	gnoiClient, err := r.GNOI.GNOIClient(ctx)
 	if err != nil {
-		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "GNOIClient", err.Error(), now)
+		return r.waitForTransferPreflight(ctx, up, "DeviceUnreachable",
+			fmt.Sprintf("waiting for gNOI client before image transfer: %s", err.Error()), now)
 	}
 	if _, err := gnoiClient.Verify(ctx); err != nil {
-		return r.handleInstallErr(ctx, up, fmt.Errorf("gnoi OS.Verify preflight: %w", err), now)
+		return r.waitForTransferPreflight(ctx, up, "VerifyPending",
+			fmt.Sprintf("waiting for gNOI OS.Verify before image transfer: %s", err.Error()), now)
 	}
 	resolved, err := r.ImageResolver.Resolve(ctx, up.Namespace, up.Spec.ImageSource)
 	if err != nil {
@@ -416,6 +418,19 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 			"waiting to submit gNOI OS.Activate", now)
 		r.setReady(cur, metav1.ConditionFalse, "Validated", cur.Status.Message, now)
 	}, reconcile.Result{RequeueAfter: time.Second})
+}
+
+func (r *Reconciler) waitForTransferPreflight(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, reason, message string, now time.Time) (reconcile.Result, error) {
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		if cur.Status.StartTime == nil {
+			cur.Status.StartTime = &metav1.Time{Time: now}
+		}
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+		cur.Status.Message = message
+		cur.Status.FailureReason = ""
+		r.setCondition(cur, conditionTypeTransferred, metav1.ConditionFalse, reason, message, now)
+		r.setReady(cur, metav1.ConditionFalse, reason, message, now)
+	}, reconcile.Result{RequeueAfter: awaitingReachabilityPoll})
 }
 
 func (r *Reconciler) handleInstallErr(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, err error, now time.Time) (reconcile.Result, error) {
