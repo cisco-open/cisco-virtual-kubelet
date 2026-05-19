@@ -66,7 +66,7 @@ func recordSubscribeDropped(device string) {
 
 func releaseLabel(release string) string {
 	if release == "" {
-		return "unknown"
+		return ""
 	}
 	return release
 }

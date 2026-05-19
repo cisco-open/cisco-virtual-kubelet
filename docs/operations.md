@@ -52,7 +52,10 @@ truncated preview in `.status.outputs[].output` and records
 `configmap://default/capture-output/output`. Captures larger than 900 KiB are
 rejected with `Ready=False, reason=ArtifactTooLarge`.
 
-Write-class operations such as reload, factory reset, and config push are intentionally not implemented. They require the later multi-tenancy, admission, and RBAC split described in the unified architecture plan.
+Write-class gNOI operations are implemented as a separate
+`IOSXEOperationalAction` CRD. They are disabled unless the per-device VK is
+started with `--enable-write-class-gnoi` / `CISCO_VK_ENABLE_WRITE_CLASS_GNOI`.
+Keep the flag off for read-only DeviceOperation deployments.
 
 ## Implementation Boundary
 
@@ -60,11 +63,83 @@ The v1alpha1 controller intentionally keeps the three read-only kinds in one
 small reconciler because they share the same validation, transport, redaction,
 inline output, TTL, and status machinery.
 
-That is not the intended shape for write-class operations. Before any operation
-can change device state, each kind must move behind its own reconciler or
-capability-specific dispatcher with independent validation, RBAC, audit policy,
-idempotency, cancellation, and artifact handling. This is the planned split for
-reload, config push, factory reset, and future packet-capture setup flows.
+Write-class operations intentionally do not reuse this reconciler. They are
+handled by `IOSXEOperationalAction`, which has its own RBAC, finalizer,
+confirmation guard, invocation ID, Kubernetes events, and one-shot dispatch
+rules.
+
+## Write-Class Actions
+
+`IOSXEOperationalAction` supports:
+
+- `Reboot`
+- `CancelReboot`
+- `KillProcess`
+- `FilePut`
+- `FileRemove`
+- `FactoryReset`
+
+Every action targets exactly one `CiscoDevice` and must set
+`spec.confirm` to the target device name. The spec is immutable after create,
+and the action request must contain exactly the args block matching
+`spec.action.kind`.
+
+Example reboot:
+
+```yaml
+apiVersion: ops.cisco.vk/v1alpha1
+kind: IOSXEOperationalAction
+metadata:
+  name: reload-cat9k-smoke
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  confirm: cat9k-smoke
+  action:
+    kind: Reboot
+    reboot:
+      method: COLD
+      delaySeconds: 0
+      message: "maintenance reload"
+```
+
+Lifecycle:
+
+- `Pending` action CRs are validated and marked `Running` before the gNOI RPC
+  is dispatched.
+- A `Running` action is never dispatched a second time. If the controller dies
+  after the device-side invocation, operators must create a new CR to retry.
+- Terminal phases are `Succeeded`, `Failed`, and `Rejected`.
+- The finalizer is retained while an invocation is in progress so a delete
+  request cannot erase the audit trail before completion.
+- Normal events are emitted for `Running` and `Succeeded`; Warning events are
+  emitted for `Rejected`, `Failed`, and delete-pending audit preservation.
+
+`FactoryReset` should be enabled last in any rollout. Prefer namespace-scoped
+RBAC for the operators allowed to create these CRs, and keep read-only
+`DeviceOperation` RBAC separate from write-class action RBAC.
+
+## Software Upgrades
+
+`IOSXESoftwareUpgrade` drives the gNOI OS install, activate, reachability, and
+verify flow. It is disabled unless the per-device VK is started with
+`--enable-iosxesoftwareupgrade` /
+`CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE`.
+
+Use exactly one image source:
+
+- `url` plus `sha256`
+- `configMapRef`
+- `localPath`
+
+For `localPath`, use `localPathSHA256` when the device supports gNOI File.Get
+hash reporting. Without that field, CVK can activate a staged image but cannot
+verify the local flash file before activation.
+
+If `rollbackOnFailure` is true and post-activation verification reports a
+different running version than the requested target, the reconciler enters
+`RollingBack`, re-activates the previously observed running version, and
+terminates as `RolledBack` once `OS.Verify` confirms that version.
 
 ## RBAC
 
@@ -75,9 +150,8 @@ only for `ttlSecondsAfterFinished` cleanup. Operation results are written
 through `deviceoperations/status`.
 
 Operators who create `DeviceOperation` objects directly should receive their
-own namespace-scoped RBAC. Write-class operations will require separate
-resources or verbs plus admission policy; they should not reuse the read-only
-v1alpha1 permission set.
+own namespace-scoped RBAC. Write-class actions and software upgrades use
+separate CRDs and should receive separate RBAC grants.
 
 ## Admin Exec Wrapper
 
@@ -95,8 +169,10 @@ completion.
 The following items are deliberately outside the current read-only v1alpha1
 surface:
 
-- Per-kind reconcilers and capability maps before write operations.
-- Tenant ownership/admission checks before write-class CRDs.
+- Tenant ownership/admission checks before promoting write-class CRDs beyond
+  tightly controlled namespaces.
 - Conversion webhook scaffolding before promotion beyond `v1alpha1`.
 - External artifact sinks beyond the in-namespace ConfigMap backing for large
   packet-capture output.
+- Cross-device or multi-supervisor rollback policy beyond re-activating the
+  previously observed single-device version.

@@ -97,6 +97,10 @@ func interfaceIPv4VRFToYANG(flat map[string]any) map[string]any {
 				out["ip"] = ip
 			}
 			ip["helper-address"] = []any{map[string]any{"address": s}}
+		case "ip_pim_sparse_mode":
+			// Handled separately — PIM on interface must be applied at its
+			// own sub-path, not merged into the interface body.
+			continue
 		case "shutdown":
 			// YANG type empty: presence = shut, absence = no shut.
 			// RFC 7951 encodes empty leaves as [null].
@@ -400,6 +404,19 @@ func interfaceIPv4VRFFromYANG(yang map[string]any) map[string]any {
 				if h, ok := helpers[0].(map[string]any); ok {
 					if addr, ok := h["address"]; ok {
 						out["ip_helper_address"] = addr
+					}
+				}
+			}
+			if pim, ok := ip["Cisco-IOS-XE-multicast:pim"].(map[string]any); ok {
+				if cfg, ok := pim["Cisco-IOS-XE-multicast:pim-mode-choice-cfg"].(map[string]any); ok {
+					if _, ok := cfg["sparse-mode"]; ok {
+						out["ip_pim_sparse_mode"] = true
+					}
+				}
+			} else if pim, ok := ip["pim"].(map[string]any); ok {
+				if cfg, ok := pim["Cisco-IOS-XE-multicast:pim-mode-choice-cfg"].(map[string]any); ok {
+					if _, ok := cfg["sparse-mode"]; ok {
+						out["ip_pim_sparse_mode"] = true
 					}
 				}
 			}

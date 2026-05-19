@@ -43,10 +43,27 @@ var IOSXEFilesystemPrefixes = []string{
 }
 
 // ValidateIOSXEPath returns nil when path begins with a recognised
-// IOS-XE filesystem prefix.
+// IOS-XE filesystem prefix and does not escape into another filesystem.
 func ValidateIOSXEPath(path string) error {
 	for _, p := range IOSXEFilesystemPrefixes {
 		if strings.HasPrefix(path, p) {
+			rest := strings.TrimPrefix(path, p)
+			if strings.HasPrefix(rest, "/") {
+				rest = strings.TrimPrefix(rest, "/")
+			}
+			if rest == "" {
+				return fmt.Errorf("gnoi: path %q has no file component after IOS-XE filesystem prefix %q", path, p)
+			}
+			for _, segment := range strings.Split(rest, "/") {
+				if segment == "" || segment == "." || segment == ".." {
+					return fmt.Errorf("gnoi: path %q contains invalid segment %q", path, segment)
+				}
+				for _, other := range IOSXEFilesystemPrefixes {
+					if strings.Contains(segment, other) {
+						return fmt.Errorf("gnoi: path %q contains nested IOS-XE filesystem prefix %q", path, other)
+					}
+				}
+			}
 			return nil
 		}
 	}
@@ -118,6 +135,9 @@ func (c *Client) Put(ctx context.Context, path string, r io.Reader, opts PutOpts
 	if opts.Permissions == 0 {
 		opts.Permissions = 0o644
 	}
+	if opts.Permissions > 0o777 {
+		return fmt.Errorf("gnoi File.Put: Permissions=%#o exceeds 0777", opts.Permissions)
+	}
 	if opts.ChunkSize == 0 {
 		opts.ChunkSize = 64 * 1024
 	}
@@ -125,7 +145,14 @@ func (c *Client) Put(ctx context.Context, path string, r io.Reader, opts PutOpts
 		return fmt.Errorf("gnoi File.Put: ChunkSize=%d exceeds 1 MiB cap", opts.ChunkSize)
 	}
 
-	stream, err := c.fileBulk.Put(c.authCtx(ctx))
+	fileClient, releaseBulk, err := c.bulkFileClient(ctx)
+	if err != nil {
+		c.cap.Observe(ServiceFile, err)
+		return fmt.Errorf("gnoi File.Put bulk lease: %w", err)
+	}
+	defer releaseBulk()
+
+	stream, err := fileClient.Put(c.authCtx(ctx))
 	if err != nil {
 		c.cap.Observe(ServiceFile, err)
 		return fmt.Errorf("gnoi File.Put open: %w", err)
@@ -151,7 +178,7 @@ func (c *Client) Put(ctx context.Context, path string, r io.Reader, opts PutOpts
 				return fmt.Errorf("gnoi File.Put send chunk: %w", err)
 			}
 		}
-		if rerr == io.EOF {
+		if errors.Is(rerr, io.EOF) {
 			break
 		}
 		if rerr != nil {
@@ -206,7 +233,14 @@ func (c *Client) Get(ctx context.Context, path string, w io.Writer) (*commonpb.H
 	if err := ValidateIOSXEPath(path); err != nil {
 		return nil, err
 	}
-	stream, err := c.fileBulk.Get(c.authCtx(ctx), &filepb.GetRequest{RemoteFile: path})
+	fileClient, releaseBulk, err := c.bulkFileClient(ctx)
+	if err != nil {
+		c.cap.Observe(ServiceFile, err)
+		return nil, fmt.Errorf("gnoi File.Get bulk lease: %w", err)
+	}
+	defer releaseBulk()
+
+	stream, err := fileClient.Get(c.authCtx(ctx), &filepb.GetRequest{RemoteFile: path})
 	if err != nil {
 		c.cap.Observe(ServiceFile, err)
 		return nil, fmt.Errorf("gnoi File.Get: %w", err)
@@ -214,7 +248,7 @@ func (c *Client) Get(ctx context.Context, path string, w io.Writer) (*commonpb.H
 	var serverHash *commonpb.HashType
 	for {
 		resp, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

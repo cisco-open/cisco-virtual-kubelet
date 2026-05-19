@@ -64,7 +64,14 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 	cfgPath := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
 
 	if err := d.client.Post(ctx, cfgPath, appConfig.Spec.DeviceConfig, d.marshaller); err != nil {
-		return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName(), err)
+		if isRESTCONFDataExists(err) {
+			log.G(ctx).Infof("AppHosting config for app %s already exists; reconciling existing app", appConfig.AppName())
+			if handled, convergeErr := d.convergeExistingApp(ctx, appConfig, timeout); handled {
+				return convergeErr
+			}
+		} else {
+			return fmt.Errorf("AppHosting config failed for app %s: %w", appConfig.AppName(), err)
+		}
 	}
 
 	// For all paths (local and HTTP), call InstallApp
@@ -164,6 +171,43 @@ func (d *XEDriver) activateAndStart(ctx context.Context, appConfig *AppHostingCo
 		return fmt.Errorf("app %s did not reach RUNNING: %w", appConfig.AppName(), err)
 	}
 	return nil
+}
+
+func (d *XEDriver) startAndWait(ctx context.Context, appConfig *AppHostingConfig, timeout time.Duration) error {
+	if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
+		return fmt.Errorf("failed to start app %s: %w", appConfig.AppName(), err)
+	}
+	if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout); err != nil {
+		return fmt.Errorf("app %s did not reach RUNNING after start: %w", appConfig.AppName(), err)
+	}
+	return nil
+}
+
+func (d *XEDriver) convergeExistingApp(ctx context.Context, appConfig *AppHostingConfig, timeout time.Duration) (bool, error) {
+	obs := d.getAppObservation(ctx, appConfig.AppName())
+	switch obs.State {
+	case "RUNNING":
+		return true, nil
+	case "ACTIVATED", "STOPPED":
+		return true, d.startAndWait(ctx, appConfig, timeout)
+	case "DEPLOYED":
+		return true, d.activateAndStart(ctx, appConfig, timeout)
+	case "INSTALLING":
+		if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout); err != nil {
+			return true, fmt.Errorf("app %s did not reach DEPLOYED while reconciling existing config: %w", appConfig.AppName(), err)
+		}
+		return true, d.activateAndStart(ctx, appConfig, timeout)
+	default:
+		return false, nil
+	}
+}
+
+func isRESTCONFDataExists(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "409 Conflict") && strings.Contains(msg, "data-exists")
 }
 
 // copyFallbackToFlash performs the HTTP-to-flash copy fallback sequence:

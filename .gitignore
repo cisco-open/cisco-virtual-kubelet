@@ -6,3 +6,5 @@ bin
 .claude/
 site/
 /cisco-vk
+0001-fix-normalize-desired-through-yangFetchShape-before-.patch
+kubectl-ciscovk

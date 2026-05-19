@@ -97,6 +97,7 @@ var phase3Families = []string{
 	"username",
 	"pim",
 	"ipv6_pim",
+	"multicast_routing",
 }
 
 func TestPhase1FamiliesRegistered(t *testing.T) {

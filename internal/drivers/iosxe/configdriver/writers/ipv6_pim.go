@@ -14,39 +14,69 @@
 
 package writers
 
-// IPv6 PIM global Phase-3 writer.
+import (
+	"fmt"
+	"strings"
+)
+
+// IPv6 PIM writer.
 //
-// netascode shape (YANG keys used directly):
+// netascode shape:
 //
 //	ipv6_pim:
-//	  rp-address:
-//	    - address: 2001:db8::100
-//	      access-list: ff70::/12
-//	      bidir: {}
-//	  vrfs:
-//	    - name: IPV6_PIM_VRF
-//	      rp-address:
-//	        - address: 2001:db8:154::1
-//	          access-list: ff71::/12
+//	  rp-address: "2001:DB8::100"
 //
-// YANG: /Cisco-IOS-XE-native:native/ipv6/Cisco-IOS-XE-multicast:pim
-//
-// NOTE: Requires ipv6 multicast-routing to be enabled on the device.
-// On virtual C8000V/C9KV lab instances the YANG path may not be present.
-// Tested against physical hardware with IP Services licence.
+// YANG: /Cisco-IOS-XE-native:native/ipv6/pim (augmented by Cisco-IOS-XE-multicast)
 
-var ipv6PimLeaves = []string{
+var ipv6PIMLeaves = []string{
 	"rp-address",
-	"vrfs",
+}
+
+func ipv6PIMBodyShape(flat map[string]any) map[string]any {
+	const prefix = "Cisco-IOS-XE-multicast:"
+	out := make(map[string]any)
+
+	if v, ok := flat["rp-address"]; ok {
+		out[prefix+"rp-address"] = map[string]any{"address": fmt.Sprintf("%v", v)}
+	}
+
+	return out
+}
+
+func ipv6PIMFetchShape(fetched map[string]any) map[string]any {
+	const prefix = "Cisco-IOS-XE-multicast:"
+	out := make(map[string]any)
+
+	for k, v := range fetched {
+		key := k
+		if strings.HasPrefix(k, prefix) {
+			key = k[len(prefix):]
+		}
+		switch key {
+		case "rp-address":
+			if m, ok := v.(map[string]any); ok {
+				if addr, ok := m["address"]; ok {
+					out["rp-address"] = addr
+				}
+			}
+		default:
+			out[key] = v
+		}
+	}
+	return out
 }
 
 func init() {
 	Override(singletonWriter{
-		family:        "ipv6_pim",
-		yangPath:      "/Cisco-IOS-XE-native:native/ipv6/Cisco-IOS-XE-multicast:pim",
-		envelopeKey:   "Cisco-IOS-XE-multicast:pim",
-		managedLeaves: ipv6PimLeaves,
+		family:         "ipv6_pim",
+		yangPath:       "/Cisco-IOS-XE-native:native/ipv6/pim",
+		envelopeKey:    "Cisco-IOS-XE-native:pim",
+		managedLeaves:  ipv6PIMLeaves,
+		yangBodyShape:  ipv6PIMBodyShape,
+		yangFetchShape: ipv6PIMFetchShape,
 	})
 }
 
-func ipv6PimManagedLeaves() []string { return append([]string(nil), ipv6PimLeaves...) }
+func ipv6PimManagedLeaves() []string {
+	return append([]string(nil), ipv6PIMLeaves...)
+}

@@ -1381,3 +1381,76 @@ func TestConvertPodToAppConfigs_NoEnvVars_NoDockerResource(t *testing.T) {
 		t.Error("Expected RunOpts to contain --hostname=app even without env vars")
 	}
 }
+
+func TestConvertPodToAppConfigs_MultiContainerUsesConsistentTwoPhaseStart(t *testing.T) {
+	driver := &XEDriver{
+		config: &v1alpha1.DeviceSpec{
+			PodCIDR: "10.0.0.0/24",
+			XE: &v1alpha1.XEConfig{
+				Networking: v1alpha1.XENetworkConfig{
+					Interface: &v1alpha1.XEInterfaceConfig{
+						Type: v1alpha1.XEInterfaceTypeVirtualPortGroup,
+						VirtualPortGroup: &v1alpha1.XEVirtualPortGroupConfig{
+							Dhcp:      true,
+							Interface: "0",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "multi-app",
+			Namespace: "default",
+			UID:       "abcdef12-3456-7890-abcd-ef1234567890",
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Name:  "alpha",
+					Image: "flash:/hello-app.iosxe.tar",
+					Env: []v1.EnvVar{
+						{Name: "ROLE", Value: "alpha"},
+					},
+				},
+				{
+					Name:  "beta",
+					Image: "flash:/hello-app.iosxe.tar",
+				},
+			},
+		},
+	}
+
+	configs, err := driver.ConvertPodToAppConfigs(pod)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if len(configs) != 2 {
+		t.Fatalf("Expected 2 configs, got %d", len(configs))
+	}
+
+	for _, config := range configs {
+		if !config.Spec.RequiresTwoPhaseStart {
+			t.Fatalf("%s: expected RequiresTwoPhaseStart=true for all multi-container apps", config.ContainerName())
+		}
+		var app *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App
+		for _, a := range config.Spec.DeviceConfig.App {
+			app = a
+			break
+		}
+		if app == nil {
+			t.Fatalf("%s: missing app config", config.ContainerName())
+		}
+		if app.DockerResource == nil || !*app.DockerResource {
+			t.Fatalf("%s: expected DockerResource=true", config.ContainerName())
+		}
+		if app.PrependPkgOpts == nil || !*app.PrependPkgOpts {
+			t.Fatalf("%s: expected PrependPkgOpts=true", config.ContainerName())
+		}
+		if app.Start == nil || *app.Start {
+			t.Fatalf("%s: expected Start=false for two-phase app", config.ContainerName())
+		}
+	}
+}

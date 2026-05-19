@@ -65,6 +65,12 @@ const (
 	DefaultImage = "ghcr.io/cisco/virtual-kubelet-cisco:latest"
 	// DefaultServiceAccount is the shared service account used by all VK deployments.
 	DefaultServiceAccount = "cisco-virtual-kubelet"
+	// virtualKubeletNodeLabelKey/Value are applied to nodes registered by the
+	// per-device VK process. The controller-created per-device VK pods must
+	// avoid those nodes or Kubernetes can recursively schedule one device's VK
+	// process as an app-hosted workload on another device.
+	virtualKubeletNodeLabelKey   = "type"
+	virtualKubeletNodeLabelValue = "virtual-kubelet"
 	// ForcePrereqsSkipAnnotation lets an operator unblock CiscoDevice deletion
 	// when prereq relinquish cannot converge and accepted orphaned config.
 	ForcePrereqsSkipAnnotation    = "config.cisco.vk/force-prereqs-skip"
@@ -80,6 +86,8 @@ const (
 	envCVKGNOIInsecure          = "CISCO_VK_GNOI_INSECURE"
 	envCVKGNOIPort              = "CISCO_VK_GNOI_PORT"
 	envCVKGNOIDisabled          = "CISCO_VK_GNOI_DISABLED"
+	envCVKEnableWriteClassGNOI  = "CISCO_VK_ENABLE_WRITE_CLASS_GNOI"
+	envCVKEnableSoftwareUpgrade = "CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE"
 	envConfigYANGValidation     = "CONFIG_YANG_VALIDATION"
 )
 
@@ -107,6 +115,8 @@ var telemetryEnvPropagationNames = []string{
 	envCVKGNOIInsecure,
 	envCVKGNOIPort,
 	envCVKGNOIDisabled,
+	envCVKEnableWriteClassGNOI,
+	envCVKEnableSoftwareUpgrade,
 	envConfigYANGValidation,
 }
 
@@ -487,6 +497,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			},
 			// Use shared service account with VK RBAC permissions
 			ServiceAccountName: serviceAccount,
+			Affinity:           perDeviceVKNodeAffinity(),
 		}
 
 		return controllerutil.SetControllerReference(&device, deploy, r.Scheme)
@@ -596,6 +607,26 @@ func perDeviceDeploymentLabels(deviceName string) map[string]string {
 		"app.kubernetes.io/name":       "cisco-vk",
 		"app.kubernetes.io/instance":   deviceName,
 		"app.kubernetes.io/managed-by": "ciscodevice-controller",
+	}
+}
+
+func perDeviceVKNodeAffinity() *corev1.Affinity {
+	return &corev1.Affinity{
+		NodeAffinity: &corev1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+				NodeSelectorTerms: []corev1.NodeSelectorTerm{
+					{
+						MatchExpressions: []corev1.NodeSelectorRequirement{
+							{
+								Key:      virtualKubeletNodeLabelKey,
+								Operator: corev1.NodeSelectorOpNotIn,
+								Values:   []string{virtualKubeletNodeLabelValue},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

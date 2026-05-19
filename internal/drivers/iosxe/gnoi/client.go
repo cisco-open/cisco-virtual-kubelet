@@ -62,6 +62,24 @@ func (e *ErrServiceUnsupported) Unwrap() error { return e.Cause }
 // own at the call site.
 type AuthContext func(context.Context) context.Context
 
+// Provider exposes a per-device gNOI client to reconcilers.
+type Provider interface {
+	GNOIClient(ctx context.Context) (*Client, error)
+}
+
+// ResetProvider is implemented by providers that can drop their
+// current gRPC leases and build a fresh client after a transient
+// transport failure.
+type ResetProvider interface {
+	Provider
+	ResetGNOIClient(ctx context.Context)
+}
+
+// BulkConnProvider lazily leases the bulk-transfer gRPC connection
+// used by OS.Install and File.Put/Get. The returned release function
+// must be called once the bulk RPC has completed.
+type BulkConnProvider func(ctx context.Context) (*grpc.ClientConn, func(), error)
+
 // Options carries optional inputs to New. Defaults are sensible for
 // IOS-XE; tests substitute fake clients via the With* hooks.
 type Options struct {
@@ -75,6 +93,11 @@ type Options struct {
 	// WorkloadClass ClassBulkTransfer so a 500 MB image transfer
 	// cannot HOL-block control RPCs.
 	BulkConn *grpc.ClientConn
+
+	// BulkConnProvider lazily leases a bulk-transfer conn per bulk RPC.
+	// Prefer this in production so idle per-device VK pods do not hold
+	// ClassBulkTransfer leases until an OS/file transfer actually runs.
+	BulkConnProvider BulkConnProvider
 
 	// Now is the clock used by the capability cache. nil means time.Now.
 	Now func() time.Time
@@ -95,8 +118,9 @@ type Client struct {
 	cert   certpb.CertificateManagementClient
 	reset  resetpb.FactoryResetClient
 
-	osBulk   ospb.OSClient
-	fileBulk filepb.FileClient
+	osBulk       ospb.OSClient
+	fileBulk     filepb.FileClient
+	bulkProvider BulkConnProvider
 
 	cap *CapabilityCache
 }
@@ -126,8 +150,9 @@ func New(conn *grpc.ClientConn, opts Options) (*Client, error) {
 		cert:   certpb.NewCertificateManagementClient(conn),
 		reset:  resetpb.NewFactoryResetClient(conn),
 
-		osBulk:   ospb.NewOSClient(bulk),
-		fileBulk: filepb.NewFileClient(bulk),
+		osBulk:       ospb.NewOSClient(bulk),
+		fileBulk:     filepb.NewFileClient(bulk),
+		bulkProvider: opts.BulkConnProvider,
 
 		cap: NewCapabilityCache(opts.Now),
 	}
@@ -141,6 +166,34 @@ func New(conn *grpc.ClientConn, opts Options) (*Client, error) {
 // pre-probe by invoking the cache directly or rely on lazy probing
 // on first method call.
 func (c *Client) Capabilities() *CapabilityCache { return c.cap }
+
+func (c *Client) bulkOSClient(ctx context.Context) (ospb.OSClient, func(), error) {
+	if c.bulkProvider == nil {
+		return c.osBulk, func() {}, nil
+	}
+	conn, release, err := c.bulkProvider(ctx)
+	if err != nil {
+		return nil, func() {}, err
+	}
+	if release == nil {
+		release = func() {}
+	}
+	return ospb.NewOSClient(conn), release, nil
+}
+
+func (c *Client) bulkFileClient(ctx context.Context) (filepb.FileClient, func(), error) {
+	if c.bulkProvider == nil {
+		return c.fileBulk, func() {}, nil
+	}
+	conn, release, err := c.bulkProvider(ctx)
+	if err != nil {
+		return nil, func() {}, err
+	}
+	if release == nil {
+		release = func() {}
+	}
+	return filepb.NewFileClient(conn), release, nil
+}
 
 // authCtx applies the configured AuthContext to ctx.
 func (c *Client) authCtx(ctx context.Context) context.Context {

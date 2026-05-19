@@ -135,6 +135,38 @@ func TestDefaultImageResolverSCPRequiresHostKeyPolicy(t *testing.T) {
 	if !strings.Contains(err.Error(), "knownHosts") {
 		t.Fatalf("expected host-key policy error, got %v", err)
 	}
+	if strings.Contains(err.Error(), "pass") {
+		t.Fatalf("error leaked URL password: %v", err)
+	}
+}
+
+func TestDefaultImageResolverSCPInsecureRequiresOperatorEnv(t *testing.T) {
+	t.Setenv(envAllowInsecureSSH, "")
+	src := opsv1alpha1.UpgradeImageSource{
+		URL:    "scp://user:pass@127.0.0.1/tmp/cat9k.bin?insecureSkipHostKey=true",
+		SHA256: strings.Repeat("a", 64),
+	}
+	_, err := NewDefaultImageResolver(nil, nil).Resolve(context.Background(), "default", src)
+	if err == nil {
+		t.Fatal("Resolve admitted insecure SCP host-key bypass without operator env gate")
+	}
+	if !strings.Contains(err.Error(), envAllowInsecureSSH) {
+		t.Fatalf("expected env-gate error, got %v", err)
+	}
+	if strings.Contains(err.Error(), "pass") {
+		t.Fatalf("error leaked URL password: %v", err)
+	}
+}
+
+func TestRedactURLPreservesUsernameAndDropsPassword(t *testing.T) {
+	raw := "sftp://user:secret@example.com/images/cat9k.bin"
+	got := redactRawURL(raw)
+	if !strings.Contains(got, "user@example.com") {
+		t.Fatalf("redacted URL %q did not preserve username and host", got)
+	}
+	if strings.Contains(got, "secret") {
+		t.Fatalf("redacted URL leaked password: %q", got)
+	}
 }
 
 func sha256Hex(b []byte) string {

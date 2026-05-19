@@ -118,6 +118,14 @@ gnoi:
   # disabled sets CISCO_VK_GNOI_DISABLED and prevents CVK from constructing
   # the per-device gNOI client.
   disabled: false
+  # enableSoftwareUpgrade opts per-device VK pods into the IOSXESoftwareUpgrade
+  # reconciler. Disabled by default so a read-only gNOI deployment does not
+  # implicitly gain OS install/activate authority.
+  enableSoftwareUpgrade: false
+  # enableWriteClass opts per-device VK pods into IOSXEOperationalAction
+  # destructive/write-class gNOI operations such as Reboot, FactoryReset,
+  # FilePut, and FileRemove. Disabled by default.
+  enableWriteClass: false
 
 collector:
   # enabled deploys a small in-cluster OpenTelemetry Collector intended for

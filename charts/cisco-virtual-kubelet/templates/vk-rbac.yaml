@@ -159,10 +159,13 @@ rules:
   # --enable-write-class-gnoi on the per-device VK pod.
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxeoperationalactions"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "update", "patch"]
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxeoperationalactions/status"]
     verbs: ["get", "update", "patch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxeoperationalactions/finalizers"]
+    verbs: ["update"]
 ---
 # ClusterRoleBinding for the VK service account.
 apiVersion: rbac.authorization.k8s.io/v1

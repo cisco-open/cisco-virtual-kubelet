@@ -69,18 +69,29 @@ var ethernetManagedLeaves = []string{
 	"mtu",
 	"ip_access_group_in",
 	"ip_access_group_out",
+	"ip_pim_sparse_mode",
 }
 
-type ethernetWriter struct{}
+type ethernetWriter struct {
+	resolver *OverrideResolver
+}
 
 func init() { Override(ethernetWriter{}) }
 
+func (w ethernetWriter) withResolver(r *OverrideResolver) SectionWriter {
+	w.resolver = r
+	return w
+}
+
+func (w ethernetWriter) resolverForUse() *OverrideResolver { return ensureResolver(w.resolver) }
+
 func (ethernetWriter) Family() string { return "interface_ethernet" }
 
-func (ethernetWriter) YANGPaths() []string {
+func (w ethernetWriter) YANGPaths() []string {
+	resolver := w.resolverForUse()
 	out := make([]string, 0, len(ethernetTypes))
 	for _, t := range ethernetTypes {
-		out = append(out, "/Cisco-IOS-XE-native:native/interface/"+t)
+		out = append(out, resolver.ResolvedYANGPath("interface_ethernet", "/Cisco-IOS-XE-native:native/interface/"+t))
 	}
 	return out
 }
@@ -89,10 +100,12 @@ func (ethernetWriter) YANGPaths() []string {
 // for Phase-1 to keep the transport lock simple), concatenating the
 // per-type lists into a single observed slice. Each entry is tagged
 // with its type so Diff can locate it later.
-func (ethernetWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
+func (w ethernetWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
+	resolver := w.resolverForUse()
 	var combined []map[string]any
 	for _, t := range ethernetTypes {
 		path := "/Cisco-IOS-XE-native:native/interface/" + t
+		path = resolver.ResolvedYANGPath("interface_ethernet", path)
 		raw, err := c.Fetch(ctx, path)
 		if err != nil {
 			if isRESTCONF404(err) {
@@ -112,6 +125,7 @@ func (ethernetWriter) Fetch(ctx context.Context, c transport.Interface) (any, er
 			return nil, fmt.Errorf("interface_ethernet: decode %s list: %w", t, err)
 		}
 		for _, el := range list {
+			el = resolver.AutoReverseObservedBody("interface_ethernet", el)
 			el = interfaceIPv4VRFFromYANG(el)
 			el["type"] = t
 			combined = append(combined, el)
@@ -120,7 +134,8 @@ func (ethernetWriter) Fetch(ctx context.Context, c transport.Interface) (any, er
 	return combined, nil
 }
 
-func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
+func (w ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
+	resolver := w.resolverForUse()
 	desiredList, err := coerceEthernetBlock(desired, "desired")
 	if err != nil {
 		return nil, err
@@ -172,6 +187,11 @@ func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		proj := projectManagedLeaves(entry, ethernetManagedLeaves)
 		proj["name"] = k.name
 		proj = interfaceIPv4VRFToYANG(proj)
+		if o, ok := resolver.GetOverride("interface_ethernet"); ok {
+			proj = ApplyOverrideToBody(proj, o)
+		}
+		path := resolver.ResolvedYANGPath("interface_ethernet",
+			fmt.Sprintf("/Cisco-IOS-XE-native:native/interface/%s", k.typ))
 		body, err := json.Marshal(map[string]any{
 			"Cisco-IOS-XE-native:" + k.typ: []any{proj},
 		})
@@ -185,10 +205,32 @@ func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 			// builder doesn't split the key on the embedded slash.
 			// PathSpec carries the raw key value for the XML body
 			// (and gNMI Set/Delete via opToGNMIPath).
-			Path:     fmt.Sprintf("/Cisco-IOS-XE-native:native/interface/%s=%s", k.typ, encodeKeyValue(k.name)),
+			Path:     fmt.Sprintf("%s=%s", path, encodeKeyValue(k.name)),
 			PathSpec: pathSpecForInterface(k.typ, k.name),
 			Body:     body,
 		})
+
+		// PIM sparse-mode must be applied at its own sub-path; IOS-XE
+		// rejects the pim augmentation when merged at the interface level.
+		if isTrue(entry["ip_pim_sparse_mode"]) {
+			pimPath := fmt.Sprintf("/Cisco-IOS-XE-native:native/interface/%s=%s/ip/pim",
+				k.typ, encodeKeyValue(k.name))
+			pimBody, err := json.Marshal(map[string]any{
+				"Cisco-IOS-XE-native:pim": map[string]any{
+					"Cisco-IOS-XE-multicast:pim-mode-choice-cfg": map[string]any{
+						"sparse-mode": []any{nil},
+					},
+				},
+			})
+			if err != nil {
+				return nil, err
+			}
+			ops = append(ops, transport.Op{
+				Verb: transport.VerbMerge,
+				Path: pimPath,
+				Body: pimBody,
+			})
+		}
 	}
 	return ops, nil
 }

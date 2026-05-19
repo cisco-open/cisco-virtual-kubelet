@@ -84,7 +84,10 @@ func (f *fakeOS) Activate(_ context.Context, req *ospb.ActivateRequest) (*ospb.A
 	}
 	if f.activateWantVersion != "" && req.Version != f.activateWantVersion {
 		return &ospb.ActivateResponse{Response: &ospb.ActivateResponse_ActivateError{
-			ActivateError: &ospb.ActivateError{Detail: "Version not present on device"},
+			ActivateError: &ospb.ActivateError{
+				Type:   ospb.ActivateError_NON_EXISTENT_VERSION,
+				Detail: "Version not present on device",
+			},
 		}}, nil
 	}
 	return &ospb.ActivateResponse{Response: &ospb.ActivateResponse_ActivateOk{ActivateOk: &ospb.ActivateOK{}}}, nil
@@ -535,14 +538,16 @@ func TestMarkTransferCompleteSetsTerminalProgress(t *testing.T) {
 	}
 }
 
-func TestVerifyMismatchTriggersRollback(t *testing.T) {
+func TestVerifyMismatchWithRollbackReactivatesPreviousVersion(t *testing.T) {
 	rig := newRig(t)
-	rig.os.verifyVersion = "17.14.01a" // doesn't match target 17.15.01a
+	rig.os.verifyVersions = []string{"17.14.01a", "17.13.01a"}
+	rig.os.activateWantVersion = "17.13.01a"
 	start := metav1.Time{Time: time.Unix(1_700_000_000, 0).UTC()}
 	up := newUpgrade("upgrade-mismatch", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 		up.Finalizers = []string{Finalizer}
 		up.Status.Phase = opsv1alpha1.UpgradePhaseVerifying
 		up.Status.StartTime = &start
+		up.Status.PreviousVersion = "17.13.01a"
 	})
 	r := newReconciler(t, rig, up)
 	got := runReconcile(t, r, up, 12)
@@ -551,6 +556,9 @@ func TestVerifyMismatchTriggersRollback(t *testing.T) {
 	}
 	if got.Status.FailureReason != "RolledBack" {
 		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
+	}
+	if rig.os.activateVersion != "17.13.01a" {
+		t.Fatalf("activated version=%q, want previous version", rig.os.activateVersion)
 	}
 }
 
@@ -809,7 +817,7 @@ func TestResolvingDoesNotTreatCommittedInstallOperVersionAsStaged(t *testing.T) 
 	}
 }
 
-func TestTransferPreflightsGNOIBeforeResolvingImage(t *testing.T) {
+func TestTransferPreflightVerifyWaitsBeforeResolvingImage(t *testing.T) {
 	rig := newRig(t)
 	rig.os.verifyErr = status.Error(codes.Unavailable, "connect: connection refused")
 	up := newUpgrade("upgrade-gnoi-preflight", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
@@ -825,14 +833,53 @@ func TestTransferPreflightsGNOIBeforeResolvingImage(t *testing.T) {
 	if resolver.calls != 0 {
 		t.Fatalf("image resolver called %d time(s), want 0", resolver.calls)
 	}
-	if got.Status.Phase != opsv1alpha1.UpgradePhaseFailed {
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseTransferring {
 		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
 	}
-	if got.Status.FailureReason != "TransferMaxRetries" {
+	if got.Status.FailureReason != "" {
 		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
 	}
-	if !strings.Contains(got.Status.Message, "gnoi OS.Verify preflight") {
-		t.Fatalf("expected preflight error in message, got %q", got.Status.Message)
+	if got.Status.RetryCount != 1 {
+		t.Fatalf("RetryCount=%d, want unchanged 1", got.Status.RetryCount)
+	}
+	if !strings.Contains(got.Status.Message, "waiting for gNOI OS.Verify before image transfer") {
+		t.Fatalf("expected preflight wait in message, got %q", got.Status.Message)
+	}
+	if gotReason := conditionReason(got.Status.Conditions, "Ready"); gotReason != "VerifyPending" {
+		t.Fatalf("Ready reason=%q, want VerifyPending", gotReason)
+	}
+}
+
+func TestTransferPreflightGNOIClientWaitsBeforeResolvingImage(t *testing.T) {
+	rig := newRig(t)
+	up := newUpgrade("upgrade-gnoi-client-preflight", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Spec.MaxRetries = 1
+		up.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+		up.Status.RetryCount = 1
+	})
+	r := newReconciler(t, rig, up)
+	r.GNOI = unavailableGNOI{err: status.Error(codes.Unavailable, "connect: connection refused")}
+	resolver := &countingImageResolver{}
+	r.ImageResolver = resolver
+
+	got := runReconcile(t, r, up, 3)
+	if resolver.calls != 0 {
+		t.Fatalf("image resolver called %d time(s), want 0", resolver.calls)
+	}
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseTransferring {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if got.Status.FailureReason != "" {
+		t.Fatalf("FailureReason=%q", got.Status.FailureReason)
+	}
+	if got.Status.RetryCount != 1 {
+		t.Fatalf("RetryCount=%d, want unchanged 1", got.Status.RetryCount)
+	}
+	if !strings.Contains(got.Status.Message, "waiting for gNOI client before image transfer") {
+		t.Fatalf("expected preflight wait in message, got %q", got.Status.Message)
+	}
+	if gotReason := conditionReason(got.Status.Conditions, "Ready"); gotReason != "DeviceUnreachable" {
+		t.Fatalf("Ready reason=%q, want DeviceUnreachable", gotReason)
 	}
 }
 

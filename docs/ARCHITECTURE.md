@@ -441,8 +441,12 @@ and short-circuits subsequent calls with a typed `*ErrServiceUnsupported`.
 The split lets operators grant `DeviceOperation` access to dashboards
 or low-trust automation without giving them mutation power on the
 device. The write-class `IOSXEOperationalAction` is gated by
-`--enable-write-class-gnoi` on the per-device VK pod and requires a
-`spec.confirm` field matching the target device's name as a typo guard.
+`--enable-write-class-gnoi` / Helm `gnoi.enableWriteClass` on the
+per-device VK pod and requires a `spec.confirm` field matching the
+target device's name as a typo guard. `IOSXESoftwareUpgrade` is gated
+separately by `--enable-iosxesoftwareupgrade` / Helm
+`gnoi.enableSoftwareUpgrade`, so read-only gNOI access does not
+implicitly enable reboot, factory-reset, file-write, or OS activation.
 
 **Software upgrade state machine** (IOSXESoftwareUpgrade):
 
@@ -450,17 +454,18 @@ device. The write-class `IOSXEOperationalAction` is gated by
 Pending → Resolving → Transferring → Activating → AwaitingReachability → Verifying → Succeeded
    │            │           │            │                 │                 │
    ↓            ↓           ↓            ↓                 ↓                 ↓
-PreflightFailed │      TransferInterrupted ─┘         RebootTimeout      RollingBack → RolledBack
-              Failed                                                          ↓
-                                                                            Failed
+PreflightFailed │      TransferInterrupted ─┘         RebootTimeout       Failed
+              Failed                                                   (rollback pending)
 ```
 
 `OS.Activate` reboots the device itself per the gNOI spec; the
 reconciler does *not* follow with `System.Reboot`. The `NoReboot`
 strategy short-circuits to Succeeded; the `Reload` strategy enters
 `AwaitingReachability` and polls `System.Time` until the device is
-back, then runs `OS.Verify`. Verify mismatch with `RollbackOnFailure=true`
-enters `RollingBack` (boot-variable rewrite is a Phase D follow-up).
+back, then runs `OS.Verify`. Verify mismatch with
+`RollbackOnFailure=true` enters `RollingBack`, re-activates the
+previously observed running version, and verifies that version before
+terminating as `RolledBack`.
 
 **IOS-XE capability matrix.** Per the IOS-XE 17.15 Programmability
 Guide, only OS, Cert, Bootstrapping, and FactoryReset are

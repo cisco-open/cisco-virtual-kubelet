@@ -134,11 +134,10 @@ func runShowCommandsViaSSH(cfg sshCLIConfig, commands []string) ([]CommandResult
 		return nil, fmt.Errorf("ssh-cli: shell: %w", err)
 	}
 
-	// Match the IOS prompt at end-of-line. IOS prompts look like
-	// `Edge-9K#` or `Edge-9K(config)#`; we accept both. Anchor on
-	// `\n<word>(...)#?\s*$` (or `>` for non-enable) and tolerate
-	// trailing whitespace.
-	promptRe := regexp.MustCompile(`(?m)^[A-Za-z0-9._-]+(?:\([^)]+\))?[#>]\s*$`)
+	// Match only a prompt on the final line of the accumulated buffer.
+	// Using multiline `$` here lets a stale prompt at the top of a PTY
+	// transcript terminate the read before the command output arrives.
+	promptRe := iosPromptAtEndRe
 
 	rb := newSSHReadBuffer(stdout, timeout)
 
@@ -291,5 +290,6 @@ func trimEchoAndPrompt(body, cmd string) string {
 }
 
 var ciscoPromptRe = regexp.MustCompile(`^[A-Za-z0-9._-]+(?:\([^)]+\))?[#>]\s*$`)
+var iosPromptAtEndRe = regexp.MustCompile(`(?:^|\r?\n)[A-Za-z0-9._-]+(?:\([^)]+\))?[#>][ \t\r\n]*$`)
 
 func isCiscoPrompt(line string) bool { return ciscoPromptRe.MatchString(line) }

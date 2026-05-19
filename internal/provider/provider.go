@@ -432,6 +432,9 @@ func (p *AppHostingProvider) findPodByAppID(ctx context.Context, appID string) *
 		return nil
 	}
 	for _, pod := range pods {
+		if pod.DeletionTimestamp != nil {
+			continue
+		}
 		if strings.ReplaceAll(string(pod.UID), "-", "") == cleanUID {
 			return pod.DeepCopy()
 		}
@@ -504,8 +507,24 @@ func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string)
 	// Fast path: fetch pod spec from informer cache (desired state)
 	pod, err := p.podsLister.Pods(namespace).Get(name)
 	if err == nil {
-		// Pod exists in K8s — get live status from device
-		return p.driver.GetPodStatus(p.ctx, pod)
+		devicePods, listErr := p.driver.ListPods(p.ctx)
+		if listErr != nil {
+			log.G(p.ctx).WithError(listErr).WithFields(log.Fields{
+				"name":      name,
+				"namespace": namespace,
+			}).Debug("GetPod: failed to list device pods while checking provider existence")
+			return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found on device", namespace, name))
+		}
+		for _, devicePod := range devicePods {
+			if devicePod == nil || devicePod.Namespace != namespace || devicePod.Name != name {
+				continue
+			}
+			if devicePod.UID != "" && pod.UID != "" && devicePod.UID != pod.UID {
+				continue
+			}
+			return devicePod.DeepCopy(), nil
+		}
+		return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found on device", namespace, name))
 	}
 
 	// Pod not in K8s — check if it still exists on the device.

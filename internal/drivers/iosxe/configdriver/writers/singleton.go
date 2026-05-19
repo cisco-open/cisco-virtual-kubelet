@@ -105,6 +105,14 @@ func (w singletonWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	if desiredMap == nil {
 		return nil, nil
 	}
+	// Normalize desired through yangFetchShape so comparison uses the
+	// same representation as the fetched observed state. Without this,
+	// families whose yangFetchShape unwraps nested sub-containers (e.g.
+	// banner: {login: {banner: "text"}} -> {login: "text"}) would
+	// always detect drift when the source uses YANG-nested form.
+	if w.yangFetchShape != nil && desiredMap != nil {
+		desiredMap = w.yangFetchShape(desiredMap)
+	}
 	if observedMap == nil {
 		observedMap = map[string]any{}
 	}

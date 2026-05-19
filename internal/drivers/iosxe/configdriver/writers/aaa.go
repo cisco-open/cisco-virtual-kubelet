@@ -93,24 +93,36 @@ var aaaLeaves = []aaaLeaf{
 	},
 }
 
-type aaaWriter struct{}
+type aaaWriter struct {
+	resolver *OverrideResolver
+}
 
 func init() { Override(aaaWriter{}) }
 
+func (w aaaWriter) withResolver(r *OverrideResolver) SectionWriter {
+	w.resolver = r
+	return w
+}
+
+func (w aaaWriter) resolverForUse() *OverrideResolver { return ensureResolver(w.resolver) }
+
 func (aaaWriter) Family() string { return "aaa" }
 
-func (aaaWriter) YANGPaths() []string {
+func (w aaaWriter) YANGPaths() []string {
+	resolver := w.resolverForUse()
 	out := make([]string, 0, len(aaaLeaves))
 	for _, l := range aaaLeaves {
-		out = append(out, l.yangPath)
+		out = append(out, resolver.ResolvedYANGPath("aaa", l.yangPath))
 	}
 	return out
 }
 
-func (aaaWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
+func (w aaaWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
+	resolver := w.resolverForUse()
 	out := map[string]any{}
 	for _, l := range aaaLeaves {
-		raw, err := c.Fetch(ctx, l.yangPath)
+		path := resolver.ResolvedYANGPath("aaa", l.yangPath)
+		raw, err := c.Fetch(ctx, path)
 		if err != nil {
 			if isRESTCONF404(err) {
 				continue
@@ -132,6 +144,9 @@ func (aaaWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) 
 		if err := json.Unmarshal(body, &v); err != nil {
 			return nil, fmt.Errorf("aaa: decode %s leaf: %w", l.netKey, err)
 		}
+		if m, ok := v.(map[string]any); ok {
+			v = resolver.AutoReverseObservedBody("aaa", m)
+		}
 		if l.netKey == "new-model" {
 			out[l.netKey] = isTrue(v)
 			continue
@@ -141,7 +156,8 @@ func (aaaWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) 
 	return out, nil
 }
 
-func (aaaWriter) Diff(desired, observed any) ([]transport.Op, error) {
+func (w aaaWriter) Diff(desired, observed any) ([]transport.Op, error) {
+	resolver := w.resolverForUse()
 	desiredMap, err := coerceMap(desired, "aaa.desired")
 	if err != nil {
 		return nil, err
@@ -173,7 +189,7 @@ func (aaaWriter) Diff(desired, observed any) ([]transport.Op, error) {
 			if !want {
 				ops = append(ops, transport.Op{
 					Verb: transport.VerbDelete,
-					Path: l.yangPath,
+					Path: resolver.ResolvedYANGPath("aaa", l.yangPath),
 				})
 				continue
 			}
@@ -183,7 +199,7 @@ func (aaaWriter) Diff(desired, observed any) ([]transport.Op, error) {
 			}
 			ops = append(ops, transport.Op{
 				Verb: transport.VerbMerge,
-				Path: l.yangPath,
+				Path: resolver.ResolvedYANGPath("aaa", l.yangPath),
 				Body: body,
 			})
 			continue
@@ -191,13 +207,17 @@ func (aaaWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		if oHas && scalarEqual(dv, ov) {
 			continue
 		}
-		body, err := json.Marshal(map[string]any{l.yangField: dv})
+		projected := map[string]any{l.yangField: dv}
+		if o, ok := resolver.GetOverride("aaa"); ok {
+			projected = ApplyOverrideToBody(projected, o)
+		}
+		body, err := json.Marshal(projected)
 		if err != nil {
 			return nil, err
 		}
 		ops = append(ops, transport.Op{
 			Verb: transport.VerbMerge,
-			Path: l.yangPath,
+			Path: resolver.ResolvedYANGPath("aaa", l.yangPath),
 			Body: body,
 		})
 	}

@@ -16,16 +16,21 @@ package softwareupgrade
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
+	commonpb "github.com/openconfig/gnoi/types"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -60,18 +65,13 @@ const (
 	conditionTypeActivated       = "Activated"
 	conditionTypeDeviceReachable = "DeviceReachable"
 	conditionTypeVerified        = "Verified"
+	conditionTypeRollback        = "Rollback"
 )
 
 const (
 	awaitingReachabilityPoll = 30 * time.Second
 	activationRPCTimeout     = 90 * time.Second
 )
-
-// GNOIProvider exposes the per-device gNOI client. Set on the
-// reconciler at startup.
-type GNOIProvider interface {
-	GNOIClient(ctx context.Context) (*gnoi.Client, error)
-}
 
 // TransportProvider exposes the per-device config transport for
 // install-oper reads that complement gNOI lifecycle RPCs.
@@ -88,7 +88,7 @@ type Reconciler struct {
 	Scheme          *runtime.Scheme
 	DeviceName      string
 	DeviceNamespace string
-	GNOI            GNOIProvider
+	GNOI            gnoi.Provider
 	TP              TransportProvider
 	ImageResolver   ImageResolver
 
@@ -164,12 +164,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	case opsv1alpha1.UpgradePhaseVerifying:
 		return r.runVerifying(ctx, &up, now)
 	case opsv1alpha1.UpgradePhaseRollingBack:
-		// Phase C ships RollingBack as a terminal placeholder — the
-		// reconciler records the rollback decision but does not yet
-		// trigger the boot-variable rewrite. Phase D follow-up wires
-		// the gNMI Set + System.Reboot pair.
-		return r.terminal(ctx, &up, opsv1alpha1.UpgradePhaseRolledBack, "RolledBack",
-			"rollback pending: boot-variable rewrite not yet implemented in Phase C", now)
+		return r.runRollingBack(ctx, &up, now)
 	default:
 		// Terminal phases: nothing to do.
 		return reconcile.Result{}, nil
@@ -203,8 +198,9 @@ func (r *Reconciler) runPending(ctx context.Context, up *opsv1alpha1.IOSXESoftwa
 }
 
 func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
+	previousVersion := up.Status.PreviousVersion
 	if r.GNOI != nil {
-		client, err := r.GNOI.GNOIClient(ctx)
+		gnoiClient, err := r.GNOI.GNOIClient(ctx)
 		if err != nil {
 			return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 				if cur.Status.StartTime == nil {
@@ -216,7 +212,8 @@ func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoft
 				r.setReady(cur, metav1.ConditionFalse, "DeviceUnreachable", cur.Status.Message, now)
 			}, reconcile.Result{RequeueAfter: awaitingReachabilityPoll})
 		}
-		if res, err := client.Verify(ctx); err != nil {
+		if res, err := gnoiClient.Verify(ctx); err != nil {
+			r.resetGNOIClientIfTransient(ctx, err)
 			return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 				if cur.Status.StartTime == nil {
 					cur.Status.StartTime = &metav1.Time{Time: now}
@@ -248,6 +245,8 @@ func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoft
 					fmt.Sprintf("gNOI OS.Verify reports target version %s", res.Version), now)
 				r.setReady(cur, metav1.ConditionTrue, "AlreadyRunning", cur.Status.Message, now)
 			}, reconcile.Result{})
+		} else if res.Version != "" {
+			previousVersion = res.Version
 		}
 	}
 	if r.ImageResolver == nil {
@@ -260,6 +259,7 @@ func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoft
 				cur.Status.StartTime = &metav1.Time{Time: now}
 			}
 			cur.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+			rememberPreviousVersion(cur, previousVersion)
 			cur.Status.ValidatedVersion = stagedVersion
 			cur.Status.Message = fmt.Sprintf("device already has staged version %s, activating", stagedVersion)
 			cur.Status.FailureReason = ""
@@ -283,11 +283,34 @@ func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		if resolved.Cleanup != nil {
 			_ = resolved.Cleanup()
 		}
+		if sha := up.Spec.ImageSource.LocalPathSHA256; sha != "" {
+			if r.GNOI == nil {
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "NoGNOIProvider",
+					"gnoi provider is required to verify localPathSHA256", now)
+			}
+			gnoiClient, err := r.GNOI.GNOIClient(ctx)
+			if err != nil {
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "GNOIClient", err.Error(), now)
+			}
+			hash, err := gnoiClient.Get(ctx, up.Spec.ImageSource.LocalPath, io.Discard)
+			if err != nil {
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "LocalPathHashFailed", err.Error(), now)
+			}
+			if hash.GetMethod() != commonpb.HashType_SHA256 {
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "LocalPathHashUnsupported",
+					fmt.Sprintf("device returned hash method %s, want SHA256", hash.GetMethod().String()), now)
+			}
+			if got := hex.EncodeToString(hash.GetHash()); got != sha {
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "LocalPathHashMismatch",
+					fmt.Sprintf("localPathSHA256 mismatch: got %s want %s", got, sha), now)
+			}
+		}
 		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 			if cur.Status.StartTime == nil {
 				cur.Status.StartTime = &metav1.Time{Time: now}
 			}
 			cur.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+			rememberPreviousVersion(cur, previousVersion)
 			cur.Status.Message = "using image already on device flash"
 			cur.Status.FailureReason = ""
 			r.setCondition(cur, conditionTypeImageResolved, metav1.ConditionTrue, "LocalPath",
@@ -312,6 +335,7 @@ func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoft
 			cur.Status.StartTime = &metav1.Time{Time: now}
 		}
 		cur.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+		rememberPreviousVersion(cur, previousVersion)
 		cur.Status.Message = fmt.Sprintf("image resolved (%d bytes), transferring to device", resolved.Size)
 		cur.Status.FailureReason = ""
 		r.setCondition(cur, conditionTypeImageResolved, metav1.ConditionTrue, "ImageResolved",
@@ -327,12 +351,16 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "NoGNOIProvider",
 			"gnoi provider not configured on reconciler", now)
 	}
-	client, err := r.GNOI.GNOIClient(ctx)
+	gnoiClient, err := r.GNOI.GNOIClient(ctx)
 	if err != nil {
-		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "GNOIClient", err.Error(), now)
+		r.resetGNOIClientIfTransient(ctx, err)
+		return r.waitForTransferPreflight(ctx, up, "DeviceUnreachable",
+			fmt.Sprintf("waiting for gNOI client before image transfer: %s", err.Error()), now)
 	}
-	if _, err := client.Verify(ctx); err != nil {
-		return r.handleInstallErr(ctx, up, fmt.Errorf("gnoi OS.Verify preflight: %w", err), now)
+	if _, err := gnoiClient.Verify(ctx); err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
+		return r.waitForTransferPreflight(ctx, up, "VerifyPending",
+			fmt.Sprintf("waiting for gNOI OS.Verify before image transfer: %s", err.Error()), now)
 	}
 	resolved, err := r.ImageResolver.Resolve(ctx, up.Namespace, up.Spec.ImageSource)
 	if err != nil {
@@ -348,17 +376,22 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		return r.advance(ctx, up, opsv1alpha1.UpgradePhaseActivating, "ImageResolved",
 			"image already on device flash")
 	}
-	progress, err := client.Install(ctx, resolved.Reader, gnoi.InstallOpts{
+	log.G(ctx).WithField("softwareUpgrade", client.ObjectKeyFromObject(up).String()).
+		WithField("targetVersion", up.Spec.TargetVersion).
+		Warn("dispatching gNOI OS.Install")
+	progress, err := gnoiClient.Install(ctx, resolved.Reader, gnoi.InstallOpts{
 		Version:     up.Spec.TargetVersion,
 		PackageSize: uint64(resolved.Size),
 	})
 	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
 		return r.handleInstallErr(ctx, up, err, now)
 	}
 	var validated *gnoi.InstallValidated
 	for ev := range progress {
 		switch {
 		case ev.Err != nil:
+			r.resetGNOIClientIfTransient(ctx, ev.Err)
 			return r.handleInstallErr(ctx, up, ev.Err, now)
 		case ev.TransferProgress != nil:
 			r.updateTransferProgress(ctx, up, ev.TransferProgress.BytesReceived, resolved.Size, now)
@@ -390,6 +423,19 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 			"waiting to submit gNOI OS.Activate", now)
 		r.setReady(cur, metav1.ConditionFalse, "Validated", cur.Status.Message, now)
 	}, reconcile.Result{RequeueAfter: time.Second})
+}
+
+func (r *Reconciler) waitForTransferPreflight(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, reason, message string, now time.Time) (reconcile.Result, error) {
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		if cur.Status.StartTime == nil {
+			cur.Status.StartTime = &metav1.Time{Time: now}
+		}
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+		cur.Status.Message = message
+		cur.Status.FailureReason = ""
+		r.setCondition(cur, conditionTypeTransferred, metav1.ConditionFalse, reason, message, now)
+		r.setReady(cur, metav1.ConditionFalse, reason, message, now)
+	}, reconcile.Result{RequeueAfter: awaitingReachabilityPoll})
 }
 
 func (r *Reconciler) handleInstallErr(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, err error, now time.Time) (reconcile.Result, error) {
@@ -434,8 +480,9 @@ func (r *Reconciler) runTransferInterrupted(ctx context.Context, up *opsv1alpha1
 }
 
 func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
-	client, err := r.GNOI.GNOIClient(ctx)
+	gnoiClient, err := r.GNOI.GNOIClient(ctx)
 	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
 		if activationRequestSubmitted(up) {
 			return r.activationLikelyStarted(ctx, up, up.Status.ValidatedVersion,
 				fmt.Sprintf("waiting for device after activation request: %s", err.Error()), now)
@@ -449,13 +496,15 @@ func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESof
 	}
 	if stagedVersion, err := r.resolveStagedVersion(ctx, up.Spec.TargetVersion); err == nil && stagedVersion != "" && stagedVersion != activateVersion {
 		activateVersion = stagedVersion
-		_, _ = r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		if _, err := r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 			cur.Status.ValidatedVersion = stagedVersion
 			cur.Status.Message = fmt.Sprintf("device staged %s, activating", stagedVersion)
 			r.setCondition(cur, conditionTypeValidated, metav1.ConditionTrue, "StagedVersionResolved",
 				fmt.Sprintf("device staged %s for activation", stagedVersion), now)
 			r.setReady(cur, metav1.ConditionFalse, "StagedVersionResolved", cur.Status.Message, now)
-		}, reconcile.Result{})
+		}, reconcile.Result{}); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 	activateCandidates := activationVersionCandidates(activateVersion, up.Spec.TargetVersion)
 	activationMessage := fmt.Sprintf("submitting gNOI OS.Activate for version %s", activateCandidates[0])
@@ -480,21 +529,28 @@ func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESof
 		if idx > 0 {
 			fallbackMessage := fmt.Sprintf("retrying gNOI OS.Activate with version %s after IOS XE rejected %s",
 				candidate, activateCandidates[idx-1])
-			_, _ = r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+			if _, err := r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 				cur.Status.Message = fallbackMessage
 				r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, "ActivationRetry", fallbackMessage, now)
 				r.setReady(cur, metav1.ConditionFalse, "ActivationRetry", fallbackMessage, now)
-			}, reconcile.Result{})
+			}, reconcile.Result{}); err != nil {
+				return reconcile.Result{}, err
+			}
 			r.emitEvent(up, corev1.EventTypeNormal, "ActivationRetry", fallbackMessage)
 		}
 		activateCtx, cancel := context.WithTimeout(ctx, activationRPCTimeout)
-		activateErr = client.Activate(activateCtx, gnoi.ActivateOpts{Version: candidate, NoReboot: noReboot})
+		log.G(ctx).WithField("softwareUpgrade", client.ObjectKeyFromObject(up).String()).
+			WithField("version", candidate).
+			WithField("noReboot", noReboot).
+			Warn("dispatching gNOI OS.Activate")
+		activateErr = gnoiClient.Activate(activateCtx, gnoi.ActivateOpts{Version: candidate, NoReboot: noReboot})
 		cancel()
 		if activateErr == nil {
 			acceptedVersion = candidate
 			break
 		}
 		if activationMayHaveStarted(activateErr) {
+			r.resetGNOIClientIfTransient(ctx, activateErr)
 			return r.activationLikelyStarted(ctx, up, candidate,
 				fmt.Sprintf("gNOI OS.Activate did not return cleanly after requesting version %s: %s", candidate, activateErr.Error()), now)
 		}
@@ -503,6 +559,7 @@ func (r *Reconciler) runActivating(ctx context.Context, up *opsv1alpha1.IOSXESof
 		}
 	}
 	if activateErr != nil {
+		r.resetGNOIClientIfTransient(ctx, activateErr)
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivateFailed", activateErr.Error(), now)
 	}
 	if noReboot {
@@ -565,18 +622,20 @@ func (r *Reconciler) activationLikelyStarted(
 }
 
 func (r *Reconciler) runAwaitingReachability(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
-	client, err := r.GNOI.GNOIClient(ctx)
+	gnoiClient, err := r.GNOI.GNOIClient(ctx)
 	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
 		// Conn missing usually means the device is still rebooting; backoff.
 		return r.requeueAwaitingReachability(ctx, up, err, now)
 	}
-	if _, err := client.Time(ctx); err != nil {
+	if _, err := gnoiClient.Time(ctx); err != nil {
 		if isUnsupportedSystemService(err) {
-			return r.verifyReachableDevice(ctx, up, client, "device gNOI endpoint is reachable; system service unsupported", now)
+			return r.verifyReachableDevice(ctx, up, gnoiClient, "device gNOI endpoint is reachable; system service unsupported", now)
 		}
+		r.resetGNOIClientIfTransient(ctx, err)
 		return r.requeueAwaitingReachability(ctx, up, err, now)
 	}
-	return r.verifyReachableDevice(ctx, up, client, "device is reachable", now)
+	return r.verifyReachableDevice(ctx, up, gnoiClient, "device is reachable", now)
 }
 
 func (r *Reconciler) verifyReachableDevice(
@@ -588,6 +647,7 @@ func (r *Reconciler) verifyReachableDevice(
 ) (reconcile.Result, error) {
 	res, err := client.Verify(ctx)
 	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
 		return r.requeueAwaitingReachability(ctx, up, fmt.Errorf("%s but OS.Verify is not ready: %w", reachableMessage, err), now)
 	}
 	if versionMatches(res.Version, up.Spec.TargetVersion) {
@@ -666,12 +726,14 @@ func (r *Reconciler) requeueAwaitingReachability(ctx context.Context, up *opsv1a
 }
 
 func (r *Reconciler) runVerifying(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
-	client, err := r.GNOI.GNOIClient(ctx)
+	gnoiClient, err := r.GNOI.GNOIClient(ctx)
 	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "GNOIClient", err.Error(), now)
 	}
-	res, err := client.Verify(ctx)
+	res, err := gnoiClient.Verify(ctx)
 	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "VerifyFailed", err.Error(), now)
 	}
 	if !versionMatches(res.Version, up.Spec.TargetVersion) {
@@ -689,8 +751,22 @@ func (r *Reconciler) runVerifying(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		}
 		rollback := up.Spec.RollbackOnFailure == nil || *up.Spec.RollbackOnFailure
 		if rollback {
-			return r.advance(ctx, up, opsv1alpha1.UpgradePhaseRollingBack, "VerifyMismatch",
-				fmt.Sprintf("device runs %s but spec targets %s; rolling back", res.Version, up.Spec.TargetVersion))
+			if up.Status.PreviousVersion == "" {
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "RollbackVersionMissing",
+					fmt.Sprintf("device runs %s but spec targets %s; rollbackOnFailure requested, but no previous version was captured",
+						res.Version, up.Spec.TargetVersion), now)
+			}
+			return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+				cur.Status.Phase = opsv1alpha1.UpgradePhaseRollingBack
+				cur.Status.RunningVersion = res.Version
+				cur.Status.FailureReason = ""
+				cur.Status.Message = fmt.Sprintf("device runs %s but target is %s; rolling back to previous version %s",
+					res.Version, up.Spec.TargetVersion, cur.Status.PreviousVersion)
+				r.setCondition(cur, conditionTypeVerified, metav1.ConditionFalse, "VerifyMismatch", cur.Status.Message, now)
+				r.setCondition(cur, conditionTypeRollback, metav1.ConditionFalse, "RollbackPending",
+					fmt.Sprintf("waiting to activate previous version %s", cur.Status.PreviousVersion), now)
+				r.setReady(cur, metav1.ConditionFalse, "RollbackPending", cur.Status.Message, now)
+			}, reconcile.Result{RequeueAfter: time.Second})
 		}
 		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 			cur.Status.Phase = opsv1alpha1.UpgradePhaseFailed
@@ -716,6 +792,84 @@ func (r *Reconciler) runVerifying(ctx context.Context, up *opsv1alpha1.IOSXESoft
 	}, reconcile.Result{})
 }
 
+func (r *Reconciler) runRollingBack(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
+	previous := up.Status.PreviousVersion
+	if previous == "" {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "RollbackVersionMissing",
+			"rollback requested, but no previous version was captured before activation", now)
+	}
+	gnoiClient, err := r.GNOI.GNOIClient(ctx)
+	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
+		return r.requeueRollback(ctx, up, fmt.Errorf("waiting for device before rollback: %w", err), now)
+	}
+
+	if rollbackRequestSubmitted(up) {
+		res, err := gnoiClient.Verify(ctx)
+		if err != nil {
+			r.resetGNOIClientIfTransient(ctx, err)
+			return r.requeueRollback(ctx, up, fmt.Errorf("waiting for device after rollback activation: %w", err), now)
+		}
+		if versionMatches(res.Version, previous) {
+			return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+				cur.Status.Phase = opsv1alpha1.UpgradePhaseRolledBack
+				cur.Status.RunningVersion = res.Version
+				cur.Status.FailureReason = "RolledBack"
+				cur.Status.CompletionTime = &metav1.Time{Time: now}
+				cur.Status.Message = fmt.Sprintf("rollback complete; device is running previous version %s", res.Version)
+				r.setCondition(cur, conditionTypeRollback, metav1.ConditionTrue, "RolledBack", cur.Status.Message, now)
+				r.setReady(cur, metav1.ConditionFalse, "RolledBack", cur.Status.Message, now)
+			}, reconcile.Result{})
+		}
+		return r.requeueRollback(ctx, up,
+			fmt.Errorf("device is reachable on %s while rollback target is %s", res.Version, previous), now)
+	}
+
+	message := fmt.Sprintf("submitting gNOI OS.Activate rollback to previous version %s", previous)
+	r.emitEvent(up, corev1.EventTypeWarning, "RollbackRequested", message)
+	activateCtx, cancel := context.WithTimeout(ctx, activationRPCTimeout)
+	log.G(ctx).WithField("softwareUpgrade", client.ObjectKeyFromObject(up).String()).
+		WithField("version", previous).
+		Warn("dispatching gNOI OS.Activate rollback")
+	activateErr := gnoiClient.Activate(activateCtx, gnoi.ActivateOpts{Version: previous})
+	cancel()
+	if activateErr != nil && !activationMayHaveStarted(activateErr) {
+		r.resetGNOIClientIfTransient(ctx, activateErr)
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "RollbackActivateFailed", activateErr.Error(), now)
+	}
+	if activateErr != nil {
+		r.resetGNOIClientIfTransient(ctx, activateErr)
+		message = fmt.Sprintf("%s; device connection closed during rollback activation: %s", message, activateErr.Error())
+	}
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseRollingBack
+		cur.Status.ValidatedVersion = previous
+		cur.Status.Message = message
+		cur.Status.FailureReason = ""
+		r.setCondition(cur, conditionTypeRollback, metav1.ConditionFalse, "RollbackRequested", message, now)
+		r.setReady(cur, metav1.ConditionFalse, "RollbackRequested", message, now)
+	}, reconcile.Result{RequeueAfter: awaitingReachabilityPoll})
+}
+
+func (r *Reconciler) requeueRollback(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, err error, now time.Time) (reconcile.Result, error) {
+	timeoutSec := up.Spec.RebootTimeoutSeconds
+	if timeoutSec == 0 {
+		timeoutSec = 1800
+	}
+	if rollbackTimedOut(up, now) {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "RollbackDidNotConverge",
+			fmt.Sprintf("rollback to %s did not converge within %ds: %s", up.Status.PreviousVersion, timeoutSec, err.Error()), now)
+	}
+	message := err.Error()
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseRollingBack
+		cur.Status.Message = message
+		cur.Status.FailureReason = ""
+		r.setCondition(cur, conditionTypeRollback, metav1.ConditionFalse, "RollbackWaiting", message, now)
+		r.setReady(cur, metav1.ConditionFalse, "RollbackWaiting", message, now)
+	}, reconcile.Result{RequeueAfter: awaitingReachabilityPoll})
+}
+
 func upgradeTimedOut(up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) bool {
 	timeoutSec := up.Spec.RebootTimeoutSeconds
 	if timeoutSec == 0 {
@@ -723,6 +877,53 @@ func upgradeTimedOut(up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) bool {
 	}
 	since := upgradeWaitStart(up)
 	return since != nil && now.Sub(*since) > time.Duration(timeoutSec)*time.Second
+}
+
+func rollbackTimedOut(up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) bool {
+	timeoutSec := up.Spec.RebootTimeoutSeconds
+	if timeoutSec == 0 {
+		timeoutSec = 1800
+	}
+	since := rollbackWaitStart(up)
+	return since != nil && now.Sub(*since) > time.Duration(timeoutSec)*time.Second
+}
+
+func rollbackWaitStart(up *opsv1alpha1.IOSXESoftwareUpgrade) *time.Time {
+	for _, cond := range up.Status.Conditions {
+		if cond.Type == conditionTypeRollback && cond.Reason == "RollbackRequested" {
+			return &cond.LastTransitionTime.Time
+		}
+	}
+	if up.Status.StartTime != nil {
+		return &up.Status.StartTime.Time
+	}
+	return nil
+}
+
+func rollbackRequestSubmitted(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	for _, cond := range up.Status.Conditions {
+		if cond.Type == conditionTypeRollback && cond.Reason == "RollbackRequested" {
+			return true
+		}
+	}
+	return false
+}
+
+func rememberPreviousVersion(up *opsv1alpha1.IOSXESoftwareUpgrade, previous string) {
+	if up.Status.PreviousVersion == "" && previous != "" {
+		up.Status.PreviousVersion = previous
+	}
+}
+
+func (r *Reconciler) resetGNOIClientIfTransient(ctx context.Context, err error) {
+	if err == nil || !isTransientGNOIError(err) {
+		return
+	}
+	resetter, ok := r.GNOI.(gnoi.ResetProvider)
+	if !ok {
+		return
+	}
+	resetter.ResetGNOIClient(ctx)
 }
 
 func upgradeWaitStart(up *opsv1alpha1.IOSXESoftwareUpgrade) *time.Time {
@@ -813,7 +1014,7 @@ func (r *Reconciler) updateTransferProgress(ctx context.Context, up *opsv1alpha1
 			return
 		}
 	}
-	_, _ = r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+	if _, err := r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 		percent := int32(0)
 		if total > 0 {
 			percent = int32(bytesReceived * 100 / uint64(total))
@@ -824,7 +1025,9 @@ func (r *Reconciler) updateTransferProgress(ctx context.Context, up *opsv1alpha1
 			Percent:          percent,
 		}
 		cur.Status.Message = fmt.Sprintf("transferring: %d/%d bytes (%d%%)", bytesReceived, total, percent)
-	}, reconcile.Result{})
+	}, reconcile.Result{}); err != nil {
+		log.G(ctx).WithError(err).Warn("IOSXESoftwareUpgrade transfer progress status update failed")
+	}
 }
 
 func (r *Reconciler) setReady(up *opsv1alpha1.IOSXESoftwareUpgrade, status metav1.ConditionStatus, reason, message string, now time.Time) {
@@ -832,26 +1035,14 @@ func (r *Reconciler) setReady(up *opsv1alpha1.IOSXESoftwareUpgrade, status metav
 }
 
 func (r *Reconciler) setCondition(up *opsv1alpha1.IOSXESoftwareUpgrade, condType string, status metav1.ConditionStatus, reason, message string, now time.Time) {
-	cond := metav1.Condition{
+	apimeta.SetStatusCondition(&up.Status.Conditions, metav1.Condition{
 		Type:               condType,
 		Status:             status,
 		Reason:             reason,
 		Message:            message,
 		LastTransitionTime: metav1.Time{Time: now},
 		ObservedGeneration: up.Generation,
-	}
-	conds := up.Status.Conditions
-	for i, c := range conds {
-		if c.Type == cond.Type {
-			if c.Status == cond.Status && c.Reason == cond.Reason && c.Message == cond.Message {
-				return
-			}
-			conds[i] = cond
-			up.Status.Conditions = conds
-			return
-		}
-	}
-	up.Status.Conditions = append(conds, cond)
+	})
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, mutate func(*opsv1alpha1.IOSXESoftwareUpgrade), result reconcile.Result) (reconcile.Result, error) {
@@ -885,6 +1076,12 @@ func (r *Reconciler) updateStatus(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		if afterReason == "" {
 			afterReason = string(afterPhase)
 		}
+		log.G(ctx).WithField("softwareUpgrade", client.ObjectKeyFromObject(up).String()).
+			WithField("from", beforePhase).
+			WithField("to", afterPhase).
+			WithField("reason", afterReason).
+			Info("IOSXESoftwareUpgrade phase advanced")
+		recordPhaseTransition(r.DeviceName, up.Spec.TargetVersion, string(beforePhase), string(afterPhase), afterReason)
 		r.emitEvent(up, eventType, afterReason, afterMessage)
 	}
 	return result, nil
@@ -1009,34 +1206,42 @@ func isActivateVersionNotPresent(err error) bool {
 	}
 	var activateErr *gnoi.ActivateError
 	if errors.As(err, &activateErr) {
-		detail := strings.ToLower(activateErr.Detail)
-		return strings.Contains(detail, "version not present") ||
-			strings.Contains(detail, "non-existent") ||
-			strings.Contains(detail, "non existent")
+		return activateErr.Type == gnoi.ActivateErrorNonExistentVersion
 	}
-	message := strings.ToLower(err.Error())
-	return strings.Contains(message, "version not present") ||
-		strings.Contains(message, "non-existent") ||
-		strings.Contains(message, "non existent")
+	return false
 }
 
 func activationMayHaveStarted(err error) bool {
 	if err == nil {
 		return false
 	}
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+	if errors.Is(err, context.DeadlineExceeded) ||
+		errors.Is(err, context.Canceled) ||
+		errors.Is(err, io.EOF) {
 		return true
 	}
 	switch status.Code(err) {
 	case codes.DeadlineExceeded, codes.Canceled, codes.Unavailable:
 		return true
 	}
-	message := strings.ToLower(err.Error())
-	return strings.Contains(message, "context deadline exceeded") ||
-		strings.Contains(message, "transport is closing") ||
-		strings.Contains(message, "connection reset") ||
-		strings.Contains(message, "client connection closing") ||
-		strings.Contains(message, "eof")
+	return false
+}
+
+func isTransientGNOIError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) ||
+		errors.Is(err, context.Canceled) ||
+		errors.Is(err, io.EOF) {
+		return true
+	}
+	switch status.Code(err) {
+	case codes.DeadlineExceeded, codes.Canceled, codes.Unavailable, codes.ResourceExhausted, codes.Aborted:
+		return true
+	default:
+		return false
+	}
 }
 
 func activationRequestSubmitted(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {

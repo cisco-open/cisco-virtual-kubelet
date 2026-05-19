@@ -110,6 +110,8 @@ func (w switchportWriter) Fetch(ctx context.Context, c transport.Interface) (any
 			name, _ := ifr["name"].(string)
 			row := map[string]any{"type": t, "name": name}
 			for k, v := range sw {
+				// Strip module prefix so observed keys match desired.
+				k = stripSwitchPrefix(k)
 				row[k] = v
 			}
 			if o, ok := w.resolverForUse().GetOverride("interface_switchport"); ok {
@@ -121,6 +123,14 @@ func (w switchportWriter) Fetch(ctx context.Context, c transport.Interface) (any
 				for k := range modeMap {
 					row["mode"] = k
 					break
+				}
+			}
+			// Infer mode from presence of access/trunk if no explicit mode.
+			if _, hasMode := row["mode"]; !hasMode {
+				if _, ok := row["access"]; ok {
+					row["mode"] = "access"
+				} else if _, ok := row["trunk"]; ok {
+					row["mode"] = "trunk"
 				}
 			}
 			// Flatten access.vlan.vlan → access.vlan on legacy versions.
@@ -193,9 +203,12 @@ func (w switchportWriter) Diff(desired, observed any) ([]transport.Op, error) {
 			continue
 		}
 		proj := projectManagedLeaves(entry, switchportManagedLeaves)
+		delete(proj, "type")
+		delete(proj, "name")
 		if o, ok := w.resolverForUse().GetOverride("interface_switchport"); ok {
 			proj = ApplyOverrideToBody(proj, o)
 		}
+		proj = switchportToYANG(proj)
 		body, err := json.Marshal(map[string]any{
 			"Cisco-IOS-XE-native:switchport": proj,
 		})
@@ -244,6 +257,59 @@ func switchportBodyTransform1716(body map[string]any) map[string]any {
 		}
 	}
 	return body
+}
+
+// stripSwitchPrefix removes the Cisco-IOS-XE-switch: module prefix.
+func stripSwitchPrefix(k string) string {
+	const prefix = "Cisco-IOS-XE-switch:"
+	if len(k) > len(prefix) && k[:len(prefix)] == prefix {
+		return k[len(prefix):]
+	}
+	return k
+}
+
+// switchportToYANG transforms the flat desired payload into YANG wire format:
+//   - Adds Cisco-IOS-XE-switch: prefix to mode, access, trunk keys
+//   - Transforms mode string → choice container: "access" → {access: {}}
+//   - Transforms access.vlan: N → access.vlan: {vlan: N}
+func switchportToYANG(proj map[string]any) map[string]any {
+	out := make(map[string]any, len(proj))
+	for k, v := range proj {
+		switch k {
+		case "mode":
+			// mode: "access" → Cisco-IOS-XE-switch:mode: {access: {}}
+			if s, ok := v.(string); ok {
+				out["Cisco-IOS-XE-switch:mode"] = map[string]any{s: map[string]any{}}
+			} else {
+				out["Cisco-IOS-XE-switch:mode"] = v
+			}
+		case "access":
+			// Wrap vlan value: access.vlan: N → access.vlan: {vlan: N}
+			if acc, ok := v.(map[string]any); ok {
+				accCopy := make(map[string]any, len(acc))
+				for ak, av := range acc {
+					if ak == "vlan" {
+						switch av.(type) {
+						case map[string]any:
+							accCopy[ak] = av
+						default:
+							accCopy[ak] = map[string]any{"vlan": av}
+						}
+					} else {
+						accCopy[ak] = av
+					}
+				}
+				out["Cisco-IOS-XE-switch:access"] = accCopy
+			} else {
+				out["Cisco-IOS-XE-switch:access"] = v
+			}
+		case "trunk":
+			out["Cisco-IOS-XE-switch:trunk"] = v
+		default:
+			out[k] = v
+		}
+	}
+	return out
 }
 
 func coerceSwitchportBlock(v any, origin string) ([]map[string]any, error) {

@@ -189,8 +189,9 @@ type entryKey struct {
 }
 
 type entry struct {
-	conn *grpc.ClientConn
-	refs int
+	conn  *grpc.ClientConn
+	refs  int
+	class WorkloadClass
 }
 
 type pool struct {
@@ -218,10 +219,11 @@ func (p *pool) Lease(ctx context.Context, key DeviceKey, class WorkloadClass) (*
 		if err != nil {
 			return nil, fmt.Errorf("devicegrpc: dial %s (%s): %w", key.Target(), class, err)
 		}
-		e = &entry{conn: conn}
+		e = &entry{conn: conn, class: class}
 		p.entries[k] = e
 	}
 	e.refs++
+	recordLease(class)
 	return &Lease{
 		Conn:    e.conn,
 		release: func() { p.release(k) },
@@ -236,6 +238,7 @@ func (p *pool) release(k entryKey) {
 		return
 	}
 	e.refs--
+	recordRelease(e.class)
 	if e.refs <= 0 {
 		_ = e.conn.Close()
 		delete(p.entries, k)
@@ -253,6 +256,7 @@ func (p *pool) Close() error {
 	for k, e := range p.entries {
 		if e.refs > 0 {
 			outstanding += e.refs
+			recordCloseLeaks(e.class, e.refs)
 		}
 		_ = e.conn.Close()
 		delete(p.entries, k)

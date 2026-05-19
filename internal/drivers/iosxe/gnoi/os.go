@@ -169,8 +169,14 @@ func (c *Client) Install(ctx context.Context, r io.Reader, opts InstallOpts) (<-
 	if opts.ChunkSize > 1024*1024 {
 		return nil, fmt.Errorf("gnoi OS.Install: ChunkSize=%d exceeds 1 MiB cap", opts.ChunkSize)
 	}
-	stream, err := c.osBulk.Install(c.authCtx(ctx))
+	osClient, releaseBulk, err := c.bulkOSClient(ctx)
 	if err != nil {
+		c.cap.Observe(ServiceOS, err)
+		return nil, fmt.Errorf("gnoi OS.Install bulk lease: %w", err)
+	}
+	stream, err := osClient.Install(c.authCtx(ctx))
+	if err != nil {
+		releaseBulk()
 		c.cap.Observe(ServiceOS, err)
 		return nil, fmt.Errorf("gnoi OS.Install open: %w", err)
 	}
@@ -186,12 +192,16 @@ func (c *Client) Install(ctx context.Context, r io.Reader, opts InstallOpts) (<-
 		},
 	}); err != nil {
 		_ = stream.CloseSend()
+		releaseBulk()
 		c.cap.Observe(ServiceOS, err)
 		return nil, fmt.Errorf("gnoi OS.Install send TransferRequest: %w", err)
 	}
 
 	out := make(chan InstallProgress, 4)
-	go c.pumpInstall(ctx, stream, r, opts, out)
+	go func() {
+		defer releaseBulk()
+		c.pumpInstall(ctx, stream, r, opts, out)
+	}()
 	return out, nil
 }
 
@@ -206,29 +216,46 @@ func (c *Client) pumpInstall(
 	out chan<- InstallProgress,
 ) {
 	defer close(out)
-	defer c.cap.Observe(ServiceOS, nil) // best-effort positive observe; pump exits on success
+	emitInstallErr := func(err error) {
+		c.cap.Observe(ServiceOS, err)
+		emitErr(out, ctx, err)
+	}
+	emitInstall := func(p InstallProgress) bool {
+		if emit(out, ctx, p) {
+			return true
+		}
+		if err := ctx.Err(); err != nil {
+			c.cap.Observe(ServiceOS, err)
+		}
+		return false
+	}
+	emitValidated := func(v *InstallValidated) {
+		if emitInstall(InstallProgress{Validated: v}) {
+			c.cap.Observe(ServiceOS, nil)
+		}
+	}
 
 	// First device response: TransferReady, or — if the device already
 	// has the version staged — Validated directly.
 	resp, err := stream.Recv()
 	if err != nil {
-		emitErr(out, ctx, fmt.Errorf("gnoi OS.Install recv first: %w", err))
+		emitInstallErr(fmt.Errorf("gnoi OS.Install recv first: %w", err))
 		return
 	}
 	switch r := resp.Response.(type) {
 	case *ospb.InstallResponse_Validated:
-		out <- InstallProgress{Validated: &InstallValidated{Version: r.Validated.Version, Description: r.Validated.Description}}
+		emitValidated(&InstallValidated{Version: r.Validated.Version, Description: r.Validated.Description})
 		return
 	case *ospb.InstallResponse_InstallError:
-		emitErr(out, ctx, &InstallError{Type: installErrorTypeFromProto(r.InstallError.Type), Detail: r.InstallError.Detail})
+		emitInstallErr(&InstallError{Type: installErrorTypeFromProto(r.InstallError.Type), Detail: r.InstallError.Detail})
 		return
 	case *ospb.InstallResponse_TransferReady:
 		// proceed to stream bytes
 	default:
-		emitErr(out, ctx, fmt.Errorf("gnoi OS.Install: unexpected first response %T", r))
+		emitInstallErr(fmt.Errorf("gnoi OS.Install: unexpected first response %T", r))
 		return
 	}
-	if !emit(out, ctx, InstallProgress{TransferReady: true}) {
+	if !emitInstall(InstallProgress{TransferReady: true}) {
 		return
 	}
 
@@ -237,6 +264,12 @@ func (c *Client) pumpInstall(
 	go func() {
 		buf := make([]byte, opts.ChunkSize)
 		for {
+			select {
+			case <-ctx.Done():
+				doneSend <- ctx.Err()
+				return
+			default:
+			}
 			n, rerr := r.Read(buf)
 			if n > 0 {
 				if serr := stream.Send(&ospb.InstallRequest{
@@ -246,7 +279,7 @@ func (c *Client) pumpInstall(
 					return
 				}
 			}
-			if rerr == io.EOF {
+			if errors.Is(rerr, io.EOF) {
 				// Terminator.
 				if serr := stream.Send(&ospb.InstallRequest{
 					Request: &ospb.InstallRequest_TransferEnd{TransferEnd: &ospb.TransferEnd{}},
@@ -273,41 +306,44 @@ func (c *Client) pumpInstall(
 	// Recv loop until Validated or InstallError.
 	for {
 		resp, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			// Wait for the sender to finish before treating as terminal.
 			if serr := <-doneSend; serr != nil {
-				emitErr(out, ctx, serr)
+				emitInstallErr(serr)
 			} else {
-				emitErr(out, ctx, errors.New("gnoi OS.Install: stream closed before Validated"))
+				emitInstallErr(errors.New("gnoi OS.Install: stream closed before Validated"))
 			}
 			return
 		}
 		if err != nil {
-			emitErr(out, ctx, fmt.Errorf("gnoi OS.Install recv: %w", err))
+			_ = stream.CloseSend()
+			emitInstallErr(fmt.Errorf("gnoi OS.Install recv: %w", err))
 			return
 		}
 		switch r := resp.Response.(type) {
 		case *ospb.InstallResponse_TransferProgress:
-			if !emit(out, ctx, InstallProgress{TransferProgress: &InstallTransferProgress{BytesReceived: r.TransferProgress.BytesReceived}}) {
+			if !emitInstall(InstallProgress{TransferProgress: &InstallTransferProgress{BytesReceived: r.TransferProgress.BytesReceived}}) {
 				return
 			}
 		case *ospb.InstallResponse_SyncProgress:
-			if !emit(out, ctx, InstallProgress{SyncProgress: &InstallSyncProgress{PercentageTransferred: r.SyncProgress.PercentageTransferred}}) {
+			if !emitInstall(InstallProgress{SyncProgress: &InstallSyncProgress{PercentageTransferred: r.SyncProgress.PercentageTransferred}}) {
 				return
 			}
 		case *ospb.InstallResponse_Validated:
 			// drain sender before signalling success
 			if serr := <-doneSend; serr != nil {
-				emitErr(out, ctx, serr)
+				emitInstallErr(serr)
 				return
 			}
-			out <- InstallProgress{Validated: &InstallValidated{Version: r.Validated.Version, Description: r.Validated.Description}}
+			emitValidated(&InstallValidated{Version: r.Validated.Version, Description: r.Validated.Description})
 			return
 		case *ospb.InstallResponse_InstallError:
-			emitErr(out, ctx, &InstallError{Type: installErrorTypeFromProto(r.InstallError.Type), Detail: r.InstallError.Detail})
+			_ = stream.CloseSend()
+			emitInstallErr(&InstallError{Type: installErrorTypeFromProto(r.InstallError.Type), Detail: r.InstallError.Detail})
 			return
 		default:
-			emitErr(out, ctx, fmt.Errorf("gnoi OS.Install: unexpected response %T", r))
+			_ = stream.CloseSend()
+			emitInstallErr(fmt.Errorf("gnoi OS.Install: unexpected response %T", r))
 			return
 		}
 	}
@@ -367,11 +403,20 @@ type ActivateOpts struct {
 	NoReboot bool
 }
 
+// ActivateErrorType mirrors the device-side ActivateError.Type enum.
+type ActivateErrorType string
+
+const (
+	ActivateErrorUnspecified          ActivateErrorType = "UNSPECIFIED"
+	ActivateErrorNonExistentVersion   ActivateErrorType = "NON_EXISTENT_VERSION"
+	ActivateErrorNotSupportedOnBackup ActivateErrorType = "NOT_SUPPORTED_ON_BACKUP"
+)
+
 // ActivateError wraps a device-side ActivateError so reconcilers can
-// classify failures (NON_EXISTENT_VERSION → terminal preflight bug;
-// NOT_SUPPORTED_ON_BACKUP → operator config issue).
+// classify failures (NON_EXISTENT_VERSION → retry alternate version
+// spelling; NOT_SUPPORTED_ON_BACKUP → operator config issue).
 type ActivateError struct {
-	Type   string
+	Type   ActivateErrorType
 	Detail string
 }
 
@@ -404,7 +449,18 @@ func (c *Client) Activate(ctx context.Context, opts ActivateOpts) error {
 	case *ospb.ActivateResponse_ActivateOk:
 		return nil
 	case *ospb.ActivateResponse_ActivateError:
-		return &ActivateError{Type: r.ActivateError.Type.String(), Detail: r.ActivateError.Detail}
+		return &ActivateError{Type: activateErrorTypeFromProto(r.ActivateError.Type), Detail: r.ActivateError.Detail}
 	}
 	return fmt.Errorf("gnoi OS.Activate: unexpected response %T", resp.Response)
+}
+
+func activateErrorTypeFromProto(t ospb.ActivateError_Type) ActivateErrorType {
+	switch t {
+	case ospb.ActivateError_NON_EXISTENT_VERSION:
+		return ActivateErrorNonExistentVersion
+	case ospb.ActivateError_NOT_SUPPORTED_ON_BACKUP:
+		return ActivateErrorNotSupportedOnBackup
+	default:
+		return ActivateErrorUnspecified
+	}
 }

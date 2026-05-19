@@ -226,20 +226,36 @@ var overrideTable = []VersionOverride{
 		FetchBodyTransform: eemFetchTransform1716,
 	},
 
+	// ── dhcp: IOS-XE 26.01 ──────────────────────────────────────
+	// Live 26.01 C9300 DHCP pool writes use the id-keyed IPv4 pool
+	// YANG shape and nested default-router/network containers. Keep
+	// NetAsCode's canonical pool shape stable and translate at the
+	// resolver boundary.
+	{
+		Family:              "dhcp",
+		MinVersion:          [2]int{26, 1},
+		MaxVersion:          [2]int{26, 2},
+		EnvelopeKeyOverride: "Cisco-IOS-XE-dhcp:pool",
+		KeyFieldOverride:    "id",
+		NeedParentCreation:  true,
+		ParentPath:          "/Cisco-IOS-XE-native:native/ip/dhcp",
+		ParentBody:          []byte(`{"Cisco-IOS-XE-native:dhcp":{}}`),
+		BodyTransform:       dhcpBodyTransformPre1718,
+		FetchBodyTransform:  dhcpFetchTransformPre1718,
+	},
+
 	// ── crypto_ipsec_transform_set: already handled ──────────────
 	// The transformSetToYANG function in crypto.go already encodes
 	// tunnel/transport as empty leaves. No override needed.
 
-	// ── dhcp: IOS-XE < 17.18 ────────────────────────────────────
-	// On 17.15/17.16 the DHCP pool YANG model uses "id" as the list
-	// key (not "name"), nests network under primary-network, wraps
-	// default-router in a list, and requires the Cisco-IOS-XE-dhcp:
-	// module prefix on the envelope key. Parent container /ip/dhcp
-	// must be created before the pool PUT.
+	// ── dhcp: IOS-XE 17.x through 17.18 ──────────────────────────
+	// Live C9300 devices on 17.18.x still use the id-keyed DHCP pool
+	// YANG shape: network is nested under primary-network and
+	// default-router is a list. Keep this active through 17.18.x.
 	{
 		Family:              "dhcp",
 		MinVersion:          [2]int{17, 0},
-		MaxVersion:          [2]int{17, 18},
+		MaxVersion:          [2]int{17, 19},
 		EnvelopeKeyOverride: "Cisco-IOS-XE-dhcp:pool",
 		KeyFieldOverride:    "id",
 		NeedParentCreation:  true,

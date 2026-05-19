@@ -32,9 +32,10 @@ import (
 // ── Test infrastructure ───────────────────────────────────────────────────────
 
 type fakeNetworkClient struct {
-	mu       sync.Mutex
-	postHook func(path string, payload any) error
-	getHook  func(path string, result any) error
+	mu         sync.Mutex
+	postHook   func(path string, payload any) error
+	getHook    func(path string, result any) error
+	deleteHook func(path string) error
 }
 
 func (f *fakeNetworkClient) Post(_ context.Context, path string, payload any, _ func(any) ([]byte, error)) error {
@@ -61,7 +62,13 @@ func (f *fakeNetworkClient) Patch(_ context.Context, _ string, _ any, _ func(any
 	return nil
 }
 
-func (f *fakeNetworkClient) Delete(_ context.Context, _ string) error {
+func (f *fakeNetworkClient) Delete(_ context.Context, path string) error {
+	f.mu.Lock()
+	h := f.deleteHook
+	f.mu.Unlock()
+	if h != nil {
+		return h(path)
+	}
 	return nil
 }
 
@@ -446,6 +453,59 @@ func TestCreateAppHostingApp_DockerResource_FlashImage(t *testing.T) {
 	mu.Unlock()
 	if len(order) < 2 || order[0] != "activate" || order[1] != "start" {
 		t.Errorf("expected RPC order [activate, start], got %v", order)
+	}
+}
+
+func TestCreateAppHostingApp_ConfigAlreadyExistsActivatedStartsAndWaits(t *testing.T) {
+	var (
+		mu      sync.Mutex
+		started bool
+	)
+	cfgPath := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
+	rpcPath := "/restconf/operations/Cisco-IOS-XE-rpc:app-hosting"
+
+	fc := &fakeNetworkClient{}
+	fc.postHook = func(path string, payload any) error {
+		mu.Lock()
+		defer mu.Unlock()
+		if path == cfgPath {
+			return errors.New(`request failed with status 409 Conflict: {"ietf-restconf:errors":{"error":[{"error-tag":"data-exists"}]}}`)
+		}
+		if path == rpcPath {
+			if m, ok := payload.(map[string]interface{}); ok {
+				if _, isStart := m["start"]; isStart {
+					started = true
+				}
+			}
+		}
+		return nil
+	}
+	fc.getHook = func(_ string, result any) error {
+		root, ok := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData)
+		if !ok {
+			return nil
+		}
+		mu.Lock()
+		s := started
+		mu.Unlock()
+		if s {
+			*root = *operResponse("test-app", "RUNNING")
+		} else {
+			*root = *operResponse("test-app", "ACTIVATED")
+		}
+		return nil
+	}
+
+	d := newTestDriver(fc)
+	cfg := minimalDockerResourceConfig("flash:app.tar", v1.PullIfNotPresent, 200*time.Millisecond)
+
+	if err := d.CreateAppHostingApp(context.Background(), cfg); err != nil {
+		t.Fatalf("CreateAppHostingApp: %v", err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if !started {
+		t.Fatal("expected existing ACTIVATED app to be started")
 	}
 }
 

@@ -122,6 +122,52 @@ func TestReconcileShowCommand(t *testing.T) {
 	}
 }
 
+func TestReconcileShowVersionFailsOnEmptyOutput(t *testing.T) {
+	ctx := context.Background()
+	scheme := newScheme(t)
+	op := newOperation("empty-show-version", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Commands = []string{"show version"}
+	})
+	tr := &fakeTransport{
+		caps: transport.Capabilities{
+			Kind:                   transport.KindNETCONF,
+			SupportsDiagnosticExec: true,
+		},
+		results: []transport.CommandResult{{
+			Command: "show version",
+			Output:  "",
+		}},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+	r := &Reconciler{
+		Client:     c,
+		DeviceName: "dev1",
+		TP:         &staticTP{tr: tr},
+		Now:        func() time.Time { return time.Unix(100, 0).UTC() },
+	}
+	_, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := c.Get(ctx, types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
+		t.Fatalf("get operation: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhaseFailed {
+		t.Fatalf("phase=%q want %q", got.Status.Phase, opsv1alpha1.OperationPhaseFailed)
+	}
+	if !strings.Contains(got.Status.Message, "empty output") {
+		t.Fatalf("message=%q want empty output reason", got.Status.Message)
+	}
+}
+
 func TestReconcileRejectsWriteCommandBeforeTransportExec(t *testing.T) {
 	ctx := context.Background()
 	scheme := newScheme(t)

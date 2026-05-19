@@ -109,6 +109,7 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 		return nil, err
 	}
 	packageTimeout := getPackageTimeout(pod)
+	podRequiresTwoPhaseStart := len(pod.Spec.Containers) > 1
 
 	for _, container := range pod.Spec.Containers {
 		appName := containerAppIDs[container.Name]
@@ -260,13 +261,14 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 			RunOpts: runOptsMap,
 		}
 
-		// Enable docker resource when we have environment variables
-		// This is required for RunOpts to take effect on the device
-		hasDockerResource := false
-		if len(envOpts) > 0 {
+		// Enable DockerResource when RunOpts need device-side package option
+		// expansion. Mixed multi-container pods must use one lifecycle shape
+		// across every generated app; otherwise IOS-XE can leave a sibling
+		// app in ACTIVATED while the kubelet waits forever for RUNNING.
+		hasDockerResource := podRequiresTwoPhaseStart || len(envOpts) > 0
+		if hasDockerResource {
 			gapp.DockerResource = ygot.Bool(true)
 			gapp.PrependPkgOpts = ygot.Bool(true)
-			hasDockerResource = true
 		}
 
 		// Configure resource profile
@@ -629,7 +631,7 @@ func distributeRunOpts(baseOpts []string, envOpts []string) (map[uint16]*Cisco_I
 			return fmt.Errorf("too many RunOpts lines needed (max %d), consider reducing environment variables", MaxRunOptsLines)
 		}
 		runOptsMap[lineIndex] = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss_RunOpts{
-			LineIndex: ygot.Uint16(lineIndex),
+			LineIndex:   ygot.Uint16(lineIndex),
 			LineRunOpts: ygot.String(strings.TrimSpace(currentLine.String())),
 		}
 		lineIndex++
@@ -686,7 +688,7 @@ func distributeRunOpts(baseOpts []string, envOpts []string) (map[uint16]*Cisco_I
 	// Ensure we have at least one line (even if empty, for backward compatibility)
 	if len(runOptsMap) == 0 {
 		runOptsMap[1] = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss_RunOpts{
-			LineIndex: ygot.Uint16(1),
+			LineIndex:   ygot.Uint16(1),
 			LineRunOpts: ygot.String(""),
 		}
 	}

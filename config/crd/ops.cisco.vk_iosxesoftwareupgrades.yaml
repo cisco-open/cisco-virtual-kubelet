@@ -106,6 +106,14 @@ spec:
                       Path must be an absolute IOS-XE filesystem path.
                     pattern: '^(flash|bootflash|harddisk):'
                     type: string
+                  localPathSHA256:
+                    description: |-
+                      LocalPathSHA256 optionally verifies the staged flash image before
+                      activation by reading it through gNOI File.Get and comparing the
+                      device-supplied SHA256. Strongly recommended for production LocalPath
+                      upgrades.
+                    pattern: ^[a-f0-9]{64}$
+                    type: string
                   sha256:
                     description: |-
                       SHA256 is the lowercase hex SHA-256 digest the reconciler asserts
@@ -187,10 +195,9 @@ spec:
               rollbackOnFailure:
                 default: true
                 description: |-
-                  RollbackOnFailure, when true, drives the RollingBack phase if
-                  post-Verify the device is running a different version. The
-                  fallback uses the device's prior boot variable plus one
-                  System.Reboot. Default true.
+                  RollbackOnFailure, when true, attempts to reactivate the version
+                  that was running before this upgrade began when post-Verify reports
+                  a different version than TargetVersion. Default true.
                 type: boolean
               strategy:
                 default: Reload
@@ -333,6 +340,12 @@ spec:
                 - RolledBack
                 - RebootTimeout
                 - Cancelled
+                type: string
+              previousVersion:
+                description: |-
+                  PreviousVersion is the device-reported OS version captured before
+                  image activation. It is used as the rollback target when
+                  RollbackOnFailure is enabled.
                 type: string
               retryCount:
                 description: RetryCount tracks TransferInterrupted retries.
