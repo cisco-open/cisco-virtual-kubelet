@@ -69,6 +69,7 @@ var ethernetManagedLeaves = []string{
 	"mtu",
 	"ip_access_group_in",
 	"ip_access_group_out",
+	"ip_pim_sparse_mode",
 }
 
 type ethernetWriter struct {
@@ -208,6 +209,28 @@ func (w ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 			PathSpec: pathSpecForInterface(k.typ, k.name),
 			Body:     body,
 		})
+
+		// PIM sparse-mode must be applied at its own sub-path; IOS-XE
+		// rejects the pim augmentation when merged at the interface level.
+		if isTrue(entry["ip_pim_sparse_mode"]) {
+			pimPath := fmt.Sprintf("/Cisco-IOS-XE-native:native/interface/%s=%s/ip/pim",
+				k.typ, encodeKeyValue(k.name))
+			pimBody, err := json.Marshal(map[string]any{
+				"Cisco-IOS-XE-native:pim": map[string]any{
+					"Cisco-IOS-XE-multicast:pim-mode-choice-cfg": map[string]any{
+						"sparse-mode": []any{nil},
+					},
+				},
+			})
+			if err != nil {
+				return nil, err
+			}
+			ops = append(ops, transport.Op{
+				Verb: transport.VerbMerge,
+				Path: pimPath,
+				Body: pimBody,
+			})
+		}
 	}
 	return ops, nil
 }
