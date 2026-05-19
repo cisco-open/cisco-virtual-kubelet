@@ -35,12 +35,9 @@ package writers
 //	    range: ACL1
 //	  register-source: Loopback152
 //
-// YANG: /Cisco-IOS-XE-native:native/ip/Cisco-IOS-XE-multicast:pim
+// YANG: /Cisco-IOS-XE-native:native/ip/pim (augmented by Cisco-IOS-XE-multicast)
 //
 // NOTE: Requires ip multicast-routing to be enabled on the device.
-// On virtual C8000V/C9KV lab instances the YANG path may not be present
-// (returns "uri keypath not found"). Tested against physical Cat9k/ISR
-// hardware with IP Services / IP Multicast licence.
 
 var pimLeaves = []string{
 	"autorp",
@@ -54,12 +51,41 @@ var pimLeaves = []string{
 	"vrfs",
 }
 
+// pimBodyShape adds the Cisco-IOS-XE-multicast: module prefix to
+// each key in the flat map, since these leaves come from an augment
+// of the Cisco-IOS-XE-multicast module into /native/ip/pim.
+func pimBodyShape(flat map[string]any) map[string]any {
+	const prefix = "Cisco-IOS-XE-multicast:"
+	out := make(map[string]any, len(flat))
+	for k, v := range flat {
+		out[prefix+k] = v
+	}
+	return out
+}
+
+// pimFetchShape strips the Cisco-IOS-XE-multicast: module prefix
+// from fetched keys so comparison uses the flat user-facing names.
+func pimFetchShape(fetched map[string]any) map[string]any {
+	const prefix = "Cisco-IOS-XE-multicast:"
+	out := make(map[string]any, len(fetched))
+	for k, v := range fetched {
+		if len(k) > len(prefix) && k[:len(prefix)] == prefix {
+			out[k[len(prefix):]] = v
+		} else {
+			out[k] = v
+		}
+	}
+	return out
+}
+
 func init() {
 	Override(singletonWriter{
-		family:        "pim",
-		yangPath:      "/Cisco-IOS-XE-native:native/ip/Cisco-IOS-XE-multicast:pim",
-		envelopeKey:   "Cisco-IOS-XE-multicast:pim",
-		managedLeaves: pimLeaves,
+		family:         "pim",
+		yangPath:       "/Cisco-IOS-XE-native:native/ip/pim",
+		envelopeKey:    "Cisco-IOS-XE-native:pim",
+		managedLeaves:  pimLeaves,
+		yangBodyShape:  pimBodyShape,
+		yangFetchShape: pimFetchShape,
 	})
 }
 

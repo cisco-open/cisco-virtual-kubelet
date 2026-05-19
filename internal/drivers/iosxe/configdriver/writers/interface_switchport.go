@@ -193,6 +193,8 @@ func (w switchportWriter) Diff(desired, observed any) ([]transport.Op, error) {
 			continue
 		}
 		proj := projectManagedLeaves(entry, switchportManagedLeaves)
+		delete(proj, "type")
+		delete(proj, "name")
 		if o, ok := w.resolverForUse().GetOverride("interface_switchport"); ok {
 			proj = ApplyOverrideToBody(proj, o)
 		}
