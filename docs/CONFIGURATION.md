@@ -60,7 +60,7 @@ Runtime settings are **not** in the config file — they are passed as flags or 
 
 | Field | Type | Required | Default | Notes |
 |---|---|---|---|---|
-| `driver` | enum | yes | — | `XE`, `XR`, `NXOS`, `FAKE`. Only `XE` and `FAKE` are production-usable today. |
+| `driver` | enum | yes | — | `XE`, `XR`, `NXOS`, `OPENCONFIG`, `FAKE`. Only `XE` and `FAKE` are production-usable today. |
 | `address` | string | yes | — | Management IP or hostname |
 | `port` | int (1–65535) | no | 443 (TLS) / 80 | RESTCONF port |
 | `username` | string | yes | — | Device username |
