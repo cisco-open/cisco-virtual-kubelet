@@ -1,6 +1,11 @@
 # API Reference
 
-This page documents the two API surfaces you may interact with as a user or operator:
+This page documents the device and kubelet-facing API surfaces you may interact
+with while troubleshooting. For the Kubernetes custom resources, start with the
+[CRD Reference](crds.md). For gNOI operation and software-upgrade APIs, see
+[gNOI and Software Lifecycle](gnoi-software-lifecycle.md).
+
+The two runtime surfaces covered here are:
 
 1. **Device-side RESTCONF** — the HTTP/JSON management API exposed by IOS-XE, which Cisco Virtual Kubelet uses to configure and observe App-Hosting. Useful to know about for troubleshooting with `curl`, and for understanding which YANG models are involved.
 2. **VK-side kubelet endpoints** — the HTTPS endpoints each VK pod exposes on `:10250`. These are what `kubectl top node`, metrics-server, and Prometheus talk to.

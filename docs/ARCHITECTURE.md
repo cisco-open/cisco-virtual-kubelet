@@ -18,21 +18,21 @@ This split keeps device credentials and per-device logic out of the controller. 
 ## Component architecture
 
 ```mermaid
-graph TB
-    subgraph Cluster["Kubernetes Cluster"]
-        API[API Server]
-        CRD[CiscoDevice CR]
-        Controller[CiscoDevice Controller<br/>cisco-vk manager]
-        CM[ConfigMap<br/>device-config]
-        Dep[Deployment<br/>device-vk]
-        VK[VK Pod<br/>cisco-vk run]
-        Node[Virtual Node]
-        Pod[User Pod]
+flowchart TB
+    subgraph Cluster["Kubernetes cluster"]
+        API["API server"]
+        CRD["CiscoDevice CR"]
+        Controller["CiscoDevice controller / cisco-vk manager"]
+        CM["ConfigMap / device config"]
+        Dep["Deployment / device VK"]
+        VK["VK pod / cisco-vk run"]
+        Node["Virtual node"]
+        Pod["User pod"]
     end
 
-    subgraph Device["Cisco IOS-XE Device"]
-        IOx[IOx Platform]
-        Container[App-Hosting Container]
+    subgraph IOSXE["Cisco IOS-XE device"]
+        IOx["IOx platform"]
+        Container["App-hosting container"]
     end
 
     API --> CRD
@@ -41,13 +41,15 @@ graph TB
     Controller --> Dep
     Dep --> VK
     VK --> Node
-    Pod -.scheduled to.-> Node
-    VK -->|RESTCONF/HTTPS| IOx
+    Pod -->|"scheduled to"| Node
+    VK -->|"RESTCONF over HTTPS"| IOx
     IOx --> Container
 
-    style Controller fill:#6b5ce7,stroke:#333,color:#fff
-    style VK fill:#00bceb,stroke:#333,color:#fff
-    style Device fill:#1a2332,stroke:#333,color:#fff
+    style Controller fill:#ede9fe,stroke:#7c3aed,color:#1f1147
+    style VK fill:#e0f2fe,stroke:#0284c7,color:#083344
+    style IOx fill:#dcfce7,stroke:#16a34a,color:#052e16
+    style Container fill:#dcfce7,stroke:#16a34a,color:#052e16
+    style IOSXE fill:#f8fafc,stroke:#16a34a,color:#0f172a
 ```
 
 ## Core components
@@ -94,7 +96,7 @@ Selects a driver based on `spec.Driver`:
 
 - `XE` → IOS-XE driver (production)
 - `FAKE` → mock driver for testing
-- `XR`, `NXOS` → placeholders, currently unsupported
+- `XR`, `NXOS`, `OPENCONFIG` → placeholders, currently unsupported
 
 ### Driver interfaces
 
@@ -158,13 +160,14 @@ to IOS-XE YANG paths. The engine then validates and applies those operations
 over RESTCONF, NETCONF, or gNMI.
 
 ```text
-IOSXEConfig / NetAsCode source
+IOSXEConfig source
   -> intent resolver
   -> family writer
   -> version override table
   -> YANG validation boundary
-  -> transport
-  -> device
+  -> RESTCONF, NETCONF, or gNMI transport
+  -> IOS-XE device
+  -> status, revision, and apply log
 ```
 
 The validation boundary is deliberately device-facing. `CONFIG_YANG_VALIDATION`
@@ -179,44 +182,6 @@ controls it:
 This preserves NetAsCode as the stable public model while giving CVK a place to
 use release-specific ygot/ytypes validation as those generated model packages
 are added.
-
-### NetAsCode migration contract
-
-CVK supports lateral migration from Terraform-driven NetAsCode by importing the
-**resolved** NetAsCode IOS-XE model, not Terraform state and not provider
-internal resources. The source toolchain should expand defaults, templates,
-device groups, and inheritance first, then CVK receives one per-device
-configuration block.
-
-`IOSXEConfig.spec.modelSource` records that provenance:
-
-```yaml
-spec:
-  modelSource:
-    format: netascode-iosxe
-    modelVersion: "1.2.3"
-    resolved: true
-    exporter: terraform-iosxe-nac-iosxe write_model_file
-    sourceRevision: 4fd62c1
-```
-
-The resolver rejects `resolved: false` because CVK does not attempt to replay
-Terraform's model expansion semantics during production import. This keeps the
-contract crisp: NetAsCode owns intent modelling; CVK owns continuous
-reconciliation, release-aware YANG translation, validation, and device apply.
-
-The recommended cutover is family-scoped:
-
-1. Export the resolved NetAsCode model from the existing pipeline.
-2. Generate an `IOSXEConfig` with `cvk-netascode-migrate emit-cr`.
-3. Start with `driftPolicy: report` so CVK observes but does not overwrite.
-4. Compare reported drift with the Terraform-managed device state.
-5. Move one family at a time from Terraform ownership to CVK ownership by
-   editing `managedFamilies`.
-6. Promote to `driftPolicy: revert` after the selected families are clean.
-
-Do not let Terraform and CVK manage the same device leaves at the same time.
-The `managedFamilies` list is the operational ownership boundary.
 
 ## Data flow
 
@@ -235,7 +200,7 @@ sequenceDiagram
     API->>Ctrl: Reconcile event
     Ctrl->>Ctrl: Render device config (strip password + secretRef)
     Ctrl->>CM: Create/Update {name}-config
-    Ctrl->>Dep: Create/Update {name}-vk<br/>(env: VK_DEVICE_PASSWORD from Secret)
+    Ctrl->>Dep: Create or update {name}-vk with VK_DEVICE_PASSWORD from Secret
     Dep->>VK: Start pod
     VK->>API: Register virtual node
 ```
@@ -247,37 +212,30 @@ The controller **never persists credentials**. `password` and `credentialSecretR
 ```mermaid
 sequenceDiagram
     actor User
+    participant API as Kubernetes API
     participant VK as AppHostingProvider
-    participant Drv as XEDriver
-    participant Dev as IOS-XE Device
+    participant Drv as IOS-XE driver
+    participant Dev as IOS-XE device
 
-    User->>VK: CreatePod
+    User->>API: Create Pod targeting the virtual node
+    API->>VK: CreatePod
     VK->>Drv: DeployPod
-    Drv->>Dev: POST app-hosting-cfg (RESTCONF)
-    Drv->>Dev: RPC install (image path or HTTP URL)
+    Drv->>Dev: POST app-hosting config with RESTCONF
 
-    alt Flash path (image: flash:/...)
-        alt No env vars (Start=true)
-            Note over Drv,Dev: Device auto-advances DEPLOYED→RUNNING<br/>via Start=true in config
-            Dev-->>Drv: RUNNING
-        else DockerResource (env vars present, Start=false)
-            Dev-->>Drv: DEPLOYED
-            Drv->>Dev: RPC activate
-            Drv->>Dev: RPC start
-            Dev-->>Drv: RUNNING
-        end
-    else HTTP primary path (device-native pull)
-        Note over Drv,Dev: Device pulls image itself<br/>(platforms that support it)
+    alt Flash package already on the device
+        Drv->>Dev: Install from flash path
+        Dev-->>Drv: DEPLOYED or RUNNING
+    else HTTP URL supported by the device
+        Drv->>Dev: Install from HTTP URL
         Dev-->>Drv: DEPLOYED
-        Drv->>Dev: RPC activate
-        Drv->>Dev: RPC start
-        Dev-->>Drv: RUNNING
-    else HTTP fallback path (copy-then-install)
-        Note over Drv,Dev: Device cannot pull; VK downloads image
-        Drv->>Dev: copy RPC — downloads image to flash<br/>(synchronous, may take minutes)
-        Note over Drv: GetPodStatus returns Waiting{PullingImage}<br/>during this period
-        Drv->>Dev: RPC install from flash path
+    else HTTP URL requires copy fallback
+        Drv->>Dev: Copy image to flash
+        Note over VK,Drv: Pod status reports PullingImage while the copy runs
+        Drv->>Dev: Install from copied flash path
         Dev-->>Drv: DEPLOYED
+    end
+
+    opt App is not already running
         Drv->>Dev: RPC activate
         Drv->>Dev: RPC start
         Dev-->>Drv: RUNNING
@@ -407,72 +365,21 @@ See [Observability](observability.md) for the full reference. At a high level:
 - **OpenTelemetry topology traces** are emitted on a configurable interval (default 60 s) and include a device root span with child link spans (one per CDP/OSPF neighbor) and app spans (one per hosted container).
 - **Node annotations** (`cisco.io/router-id`, `cisco.io/hostname`, `cisco.io/cdp-neighbor-count`, `cisco.io/ospf-neighbor-count`, `cisco.io/protocols`) make topology context queryable via `kubectl describe node`.
 
-## gNOI pillar
+## gNOI and software lifecycle
 
-The gNOI (gRPC Network Operations Interface) pillar handles imperative
-device operations: software upgrades, reboots, file transfers, certificate
-management, and factory reset. It sits alongside the configuration,
-diagnostics, and operations pillars and shares the same gNxI-server TLS
-listener IOS-XE already exposes for gNMI.
+gNOI operations and IOS-XE software lifecycle management have their own
+operator-facing section: [gNOI and Software Lifecycle](gnoi-software-lifecycle.md).
+At the architecture level, the important boundary is that read-only operations,
+write-class actions, and software upgrades use separate CRDs, separate runtime
+gates, and separate RBAC grants. Read-only gNOI access does not implicitly
+enable reboot, file write, factory reset, or OS activation.
 
-**Connection management.** A workload-classed pool
-(`internal/drivers/iosxe/devicegrpc/`) hands out `*grpc.ClientConn`
-leases keyed on `(DeviceKey, WorkloadClass)`. Three classes
-isolate stream lifetimes: `ClassControl` for unary RPCs, `ClassTelemetry`
-for the gNMI Subscribe stream, and `ClassBulkTransfer` for OS.Install
-and File.Put/Get. Separate connections per class avoid HTTP/2 head-of-
-line blocking — a 500 MB image upload cannot back-pressure live
-telemetry on the same TCP socket.
-
-**Client.** `internal/drivers/iosxe/gnoi/` wraps the openconfig protos
-with ergonomic Go methods, mandatory IOS-XE filesystem-prefix validation
-on file paths, and a per-service `CapabilityCache`. Each RPC observes
-its outcome; `codes.Unimplemented` flips the service to unsupported
-and short-circuits subsequent calls with a typed `*ErrServiceUnsupported`.
-
-**CRD surface.** Three CRDs distribute the operation set by trust level:
-
-| CRD | Purpose | RBAC class |
-|-----|---------|------------|
-| `DeviceOperation` (extended) | Read-only RPCs: Ping, Traceroute, Time, FileGet, FileStat, CertGet, CanGenerateCSR, RebootStatus, OSVerify | low-trust |
-| `IOSXESoftwareUpgrade` | Multi-phase OS upgrade state machine (Install → Activate → Verify, with rollback) | upgrade |
-| `IOSXEOperationalAction` | Write-class one-shots: Reboot, CancelReboot, KillProcess, FilePut, FileRemove, FactoryReset | destructive |
-
-The split lets operators grant `DeviceOperation` access to dashboards
-or low-trust automation without giving them mutation power on the
-device. The write-class `IOSXEOperationalAction` is gated by
-`--enable-write-class-gnoi` / Helm `gnoi.enableWriteClass` on the
-per-device VK pod and requires a `spec.confirm` field matching the
-target device's name as a typo guard. `IOSXESoftwareUpgrade` is gated
-separately by `--enable-iosxesoftwareupgrade` / Helm
-`gnoi.enableSoftwareUpgrade`, so read-only gNOI access does not
-implicitly enable reboot, factory-reset, file-write, or OS activation.
-
-**Software upgrade state machine** (IOSXESoftwareUpgrade):
-
-```
-Pending → Resolving → Transferring → Activating → AwaitingReachability → Verifying → Succeeded
-   │            │           │            │                 │                 │
-   ↓            ↓           ↓            ↓                 ↓                 ↓
-PreflightFailed │      TransferInterrupted ─┘         RebootTimeout       Failed
-              Failed                                                   (rollback pending)
-```
-
-`OS.Activate` reboots the device itself per the gNOI spec; the
-reconciler does *not* follow with `System.Reboot`. The `NoReboot`
-strategy short-circuits to Succeeded; the `Reload` strategy enters
-`AwaitingReachability` and polls `System.Time` until the device is
-back, then runs `OS.Verify`. Verify mismatch with
-`RollbackOnFailure=true` enters `RollingBack`, re-activates the
-previously observed running version, and verifies that version before
-terminating as `RolledBack`.
-
-**IOS-XE capability matrix.** Per the IOS-XE 17.15 Programmability
-Guide, only OS, Cert, Bootstrapping, and FactoryReset are
-documented as supported services. System and File are wired but
-gated behind a runtime probe + `CiscoDevice.spec.capabilities.gnoi.services`
-opt-in; reconcilers fail fast with `*ErrServiceUnsupported` if the
-device returns `codes.Unimplemented`.
+The per-device gNOI client uses a workload-classed gRPC connection pool so
+small control RPCs, gNMI telemetry streams, and bulk OS/file transfers do not
+block each other. The client also caches per-service capability probes: when a
+device returns `codes.Unimplemented`, later calls to that service fail fast
+with `ErrServiceUnsupported` instead of repeatedly attempting an unsupported
+RPC.
 
 ## RESTCONF endpoints
 
@@ -501,7 +408,9 @@ device returns `codes.Unimplemented`.
 
 ```
 cisco-virtual-kubelet/
-├── api/v1alpha1/              # CRD-ready API types (DeviceSpec, XEConfig, OTELConfig)
+├── api/v1alpha1/              # CiscoDevice API types (DeviceSpec, XEConfig, OTELConfig)
+├── api/config/v1alpha1/       # IOS-XE config, telemetry, diagnostic API types
+├── api/ops/v1alpha1/          # DeviceOperation, gNOI action, and software-upgrade API types
 ├── cmd/cisco-vk/              # Unified binary
 │   ├── main.go                # cobra root
 │   ├── run.go                 # 'run' subcommand — the VK provider

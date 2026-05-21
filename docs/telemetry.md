@@ -364,9 +364,9 @@ spec:
 
 Ready-to-apply IOSXETelemetry CRs for common C9300X MDT-over-gNMI use cases:
 
-- [Environmental sensors](../examples/iosxetelemetry/c9300x-environmental.yaml)
-- [Interface counters and oper-status transitions](../examples/iosxetelemetry/c9300x-interfaces-counters.yaml)
-- [BGP and OSPF counters plus adjacency transitions](../examples/iosxetelemetry/c9300x-bgp-and-ospf.yaml)
+- [Environmental sensors](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/iosxetelemetry/c9300x-environmental.yaml)
+- [Interface counters and oper-status transitions](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/iosxetelemetry/c9300x-interfaces-counters.yaml)
+- [BGP and OSPF counters plus adjacency transitions](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/iosxetelemetry/c9300x-bgp-and-ospf.yaml)
 
 ## Future work
 

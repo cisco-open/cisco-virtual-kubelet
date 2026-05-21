@@ -37,12 +37,23 @@ nav:
 - Architecture: 'ARCHITECTURE.md'
 - Configuration:
   - Reference: 'CONFIGURATION.md'
+  - CRD Reference: 'crds.md'
+  - Family Reference: 'reference/families/README.md'
   - Catalyst 8000V: 'configuration-cat8000v.md'
   - Catalyst 9000: 'configuration-cat9000.md'
-- Observability: 'observability.md'
+  - YANG Version Support: 'yang-version-support.md'
+  - Environment Variables: 'environment-variables.md'
+- 'gNOI & Software Lifecycle':
+  - Overview: 'gnoi-software-lifecycle.md'
+- Operations:
+  - Operations Runbook: 'operations.md'
+  - Lifecycle: 'lifecycle.md'
+  - Telemetry: 'telemetry.md'
+  - Telemetry Cardinality: 'telemetry-cardinality.md'
+  - Observability: 'observability.md'
+  - Troubleshooting: 'troubleshooting.md'
 - Security: 'security.md'
 - API Reference: 'API.md'
-- Troubleshooting: 'troubleshooting.md'
 theme:
   name: material
   features:
@@ -59,4 +70,11 @@ docs_dir: docs
 site_dir: site
 exclude_docs: |
   website/
+  cvk-unified-architecture-plan.md
+  family-parity.md
+  gnoi-pilot-c9k4-upgrade-evidence.md
+  netascode-migration.md
+  telemetry-branch-review.md
+  telemetry-trace-convergence-roadmap.md
+  yang-version-transition.md
 use_directory_urls: true
