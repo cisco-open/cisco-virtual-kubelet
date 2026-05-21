@@ -163,6 +163,25 @@ var overrideTable = []VersionOverride{
 		MaxVersion: [2]int{17, 18},
 	},
 
+	// ── cdp: IOS-XE < 17.18 ──────────────────────────────────────
+	// The cdp container lives in Cisco-IOS-XE-native, but its config
+	// leaves are augmented in from Cisco-IOS-XE-cdp. On < 17.18 those
+	// augmented leaves need the "Cisco-IOS-XE-cdp:" module prefix in
+	// the RESTCONF body; without it the device rejects the PATCH. The
+	// envelope key stays Cisco-IOS-XE-native:cdp (the container itself
+	// is native), so only the leaves are prefixed. The netascode →
+	// run-enable / advertise-v2 rename happens first in cdpToYANG;
+	// this ElementMap stacks the release-conditional prefix on top.
+	{
+		Family:     "cdp",
+		MinVersion: [2]int{17, 0},
+		MaxVersion: [2]int{17, 18},
+		ElementMap: map[string]string{
+			"run-enable":   "Cisco-IOS-XE-cdp:run-enable",
+			"advertise-v2": "Cisco-IOS-XE-cdp:advertise-v2",
+		},
+	},
+
 	// ── spanning_tree: IOS-XE < 17.18 ────────────────────────────
 	// On < 17.18 the envelope key is "Cisco-IOS-XE-native:spanning-tree"
 	// (not "Cisco-IOS-XE-spanning-tree:spanning-tree"), and
