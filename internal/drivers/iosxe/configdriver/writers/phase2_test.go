@@ -16,6 +16,7 @@ package writers
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -25,6 +26,21 @@ import (
 )
 
 // --- Singleton writers (cdp, lldp, banner, logging, snmp, aaa, bgp) --------
+
+// cdpBody decodes a cdp writer op body and returns the inner
+// Cisco-IOS-XE-native:cdp container.
+func cdpBody(t *testing.T, raw []byte) map[string]any {
+	t.Helper()
+	var env map[string]any
+	if err := json.Unmarshal(raw, &env); err != nil {
+		t.Fatalf("decode body %s: %v", raw, err)
+	}
+	cdp, ok := env["Cisco-IOS-XE-native:cdp"].(map[string]any)
+	if !ok {
+		t.Fatalf("body %s: missing Cisco-IOS-XE-native:cdp envelope", raw)
+	}
+	return cdp
+}
 
 func TestCDPDiffOnTransition(t *testing.T) {
 	t.Parallel()
@@ -40,6 +56,174 @@ func TestCDPDiffOnTransition(t *testing.T) {
 	}
 	if ops[0].Verb != transport.VerbMerge {
 		t.Errorf("verb=%v, want MERGE", ops[0].Verb)
+	}
+	// The netascode `run` leaf must be emitted as the YANG `run-enable`
+	// boolean leaf — the bare `run` leaf is `status obsolete` and is
+	// rejected by RESTCONF on 17.15/17.16. Regression guard for #124.
+	cdp := cdpBody(t, ops[0].Body)
+	if cdp["run-enable"] != true {
+		t.Errorf("body=%s, want run-enable:true (boolean)", ops[0].Body)
+	}
+	if _, has := cdp["run"]; has {
+		t.Errorf("body=%s, must not emit the obsolete bare `run` leaf", ops[0].Body)
+	}
+}
+
+// TestCDPDiffInSyncWhenEnabled confirms the writer reports InSync only
+// when CDP is genuinely enabled — the inverse of the #124 false-InSync
+// symptom.
+func TestCDPDiffInSyncWhenEnabled(t *testing.T) {
+	t.Parallel()
+	w := Get("cdp")
+	same := map[string]any{"run": true}
+	ops, err := w.Diff(same, same)
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if len(ops) != 0 {
+		t.Fatalf("got %d ops, want 0 (InSync)", len(ops))
+	}
+}
+
+// TestCDPDiffAdvertiseV2Hyphenated confirms the netascode advertise_v2
+// leaf is emitted under its hyphenated YANG name advertise-v2.
+func TestCDPDiffAdvertiseV2Hyphenated(t *testing.T) {
+	t.Parallel()
+	w := Get("cdp")
+	desired := map[string]any{"advertise_v2": true}
+	ops, err := w.Diff(desired, map[string]any{})
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if len(ops) != 1 {
+		t.Fatalf("got %d ops, want 1", len(ops))
+	}
+	cdp := cdpBody(t, ops[0].Body)
+	if cdp["advertise-v2"] != true {
+		t.Errorf("body=%s, want hyphenated advertise-v2:true", ops[0].Body)
+	}
+	if _, has := cdp["advertise_v2"]; has {
+		t.Errorf("body=%s, must not emit the underscore netascode key", ops[0].Body)
+	}
+}
+
+// TestCDPFetchMapsRunEnableToCanonical confirms the Fetch path lifts
+// the device's YANG leaf names back to the netascode canonical shape so
+// drift comparison compares like with like.
+func TestCDPFetchMapsRunEnableToCanonical(t *testing.T) {
+	t.Parallel()
+	w := Get("cdp")
+	cli, _ := newTestTransport(t, func(wt http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(wt, `{"Cisco-IOS-XE-native:cdp":{"run-enable":true,"advertise-v2":false}}`)
+	})
+	got, err := w.Fetch(context.Background(), cli)
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	m := got.(map[string]any)
+	if m["run"] != true {
+		t.Errorf("got %#v, want canonical run:true from device run-enable", m)
+	}
+	if m["advertise_v2"] != false {
+		t.Errorf("got %#v, want canonical advertise_v2:false", m)
+	}
+	if _, has := m["run-enable"]; has {
+		t.Errorf("got %#v, YANG run-enable leaked into canonical shape", m)
+	}
+}
+
+// TestCDPFetchPrefersRunEnableOverObsoleteRun confirms that when a
+// device reports both the obsolete `run` empty leaf and the current
+// `run-enable` boolean leaf, run-enable is authoritative.
+func TestCDPFetchPrefersRunEnableOverObsoleteRun(t *testing.T) {
+	t.Parallel()
+	w := Get("cdp")
+	cli, _ := newTestTransport(t, func(wt http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(wt, `{"Cisco-IOS-XE-native:cdp":{"run":[null],"run-enable":false}}`)
+	})
+	got, err := w.Fetch(context.Background(), cli)
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	m := got.(map[string]any)
+	if m["run"] != false {
+		t.Errorf("got %#v, want run:false (run-enable wins over obsolete run)", m)
+	}
+}
+
+// TestCDPDiffLegacyPrefixesAugmentedLeaves confirms that on IOS-XE
+// < 17.18 the augmented cdp leaves carry the Cisco-IOS-XE-cdp: module
+// prefix in the RESTCONF body — without it the device rejects the
+// PATCH. Codex adversarial-review finding on the #124 fix.
+func TestCDPDiffLegacyPrefixesAugmentedLeaves(t *testing.T) {
+	t.Parallel()
+	w := GetForRelease("cdp", "17.16.01a")
+	if w == nil {
+		t.Fatal("GetForRelease(cdp, 17.16.01a) returned nil")
+	}
+	desired := map[string]any{"run": true, "advertise_v2": true}
+	ops, err := w.Diff(desired, map[string]any{})
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if len(ops) != 1 {
+		t.Fatalf("got %d ops, want 1", len(ops))
+	}
+	cdp := cdpBody(t, ops[0].Body)
+	if cdp["Cisco-IOS-XE-cdp:run-enable"] != true {
+		t.Errorf("body=%s, want module-prefixed Cisco-IOS-XE-cdp:run-enable", ops[0].Body)
+	}
+	if cdp["Cisco-IOS-XE-cdp:advertise-v2"] != true {
+		t.Errorf("body=%s, want module-prefixed Cisco-IOS-XE-cdp:advertise-v2", ops[0].Body)
+	}
+	if _, has := cdp["run-enable"]; has {
+		t.Errorf("body=%s, unprefixed run-enable leaks on a < 17.18 device", ops[0].Body)
+	}
+}
+
+// TestCDPFetchLegacyStripsModulePrefix confirms the Fetch path on a
+// < 17.18 device reverses the Cisco-IOS-XE-cdp: prefix back to the
+// netascode canonical shape so drift comparison compares like with like.
+func TestCDPFetchLegacyStripsModulePrefix(t *testing.T) {
+	t.Parallel()
+	w := GetForRelease("cdp", "17.16.01a")
+	if w == nil {
+		t.Fatal("GetForRelease(cdp, 17.16.01a) returned nil")
+	}
+	cli, _ := newTestTransport(t, func(wt http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(wt, `{"Cisco-IOS-XE-native:cdp":{"Cisco-IOS-XE-cdp:run-enable":true,"Cisco-IOS-XE-cdp:advertise-v2":false}}`)
+	})
+	got, err := w.Fetch(context.Background(), cli)
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	m := got.(map[string]any)
+	if m["run"] != true {
+		t.Errorf("got %#v, want canonical run:true", m)
+	}
+	if m["advertise_v2"] != false {
+		t.Errorf("got %#v, want canonical advertise_v2:false", m)
+	}
+}
+
+// TestCDPFetchDecodesObsoleteRunEmptyLeaf confirms a device that
+// reports only the obsolete `run` empty leaf ([null]) is decoded to a
+// canonical boolean — otherwise leavesEqual compares a bool against a
+// slice and reconcile loops on false drift. Codex adversarial-review
+// finding on the #124 fix.
+func TestCDPFetchDecodesObsoleteRunEmptyLeaf(t *testing.T) {
+	t.Parallel()
+	w := Get("cdp")
+	cli, _ := newTestTransport(t, func(wt http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(wt, `{"Cisco-IOS-XE-native:cdp":{"run":[null]}}`)
+	})
+	got, err := w.Fetch(context.Background(), cli)
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	m := got.(map[string]any)
+	if m["run"] != true {
+		t.Errorf("got %#v (%T for run), want canonical run:true", m, m["run"])
 	}
 }
 
