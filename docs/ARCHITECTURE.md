@@ -46,16 +46,16 @@ flowchart TB
     VK -->|"RESTCONF over HTTPS"| IOx
     IOx --> Container
 
-    style Controller fill:#7c3aed,stroke:#5b21b6,color:#ffffff
-    style VK fill:#0284c7,stroke:#0369a1,color:#ffffff
-    style IOx fill:#059669,stroke:#047857,color:#ffffff
-    style Container fill:#059669,stroke:#047857,color:#ffffff
-    style API fill:#475569,stroke:#334155,color:#ffffff
-    style CRD fill:#475569,stroke:#334155,color:#ffffff
-    style CM fill:#475569,stroke:#334155,color:#ffffff
-    style Dep fill:#475569,stroke:#334155,color:#ffffff
-    style Node fill:#475569,stroke:#334155,color:#ffffff
-    style Pod fill:#64748b,stroke:#475569,color:#ffffff
+    style Controller fill:#ede9fe,stroke:#7c3aed,color:#3b0764
+    style VK fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    style IOx fill:#dcfce7,stroke:#16a34a,color:#14532d
+    style Container fill:#d1fae5,stroke:#059669,color:#064e3b
+    style API fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style CRD fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style CM fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style Dep fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style Node fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style Pod fill:#e2e8f0,stroke:#94a3b8,color:#334155
 ```
 
 ## Core components
