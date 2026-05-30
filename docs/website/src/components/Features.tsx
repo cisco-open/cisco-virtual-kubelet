@@ -50,14 +50,6 @@ const features = [
     glowColor: "success",
   },
   {
-    icon: LineChart,
-    title: "Observability & Topology",
-    description:
-      "Prometheus metrics for device and interface health, plus OpenTelemetry topology traces with CDP/OSPF neighbors and hosted apps.",
-    color: "from-primary-light to-primary",
-    glowColor: "primary",
-  },
-  {
     icon: Network,
     title: "Flexible Networking",
     description:
@@ -72,6 +64,42 @@ const features = [
       "Device credentials injected from Kubernetes Secrets via secretKeyRef. Passwords never touch ConfigMaps or etcd in plaintext.",
     color: "from-success to-teal-400",
     glowColor: "success",
+  },
+  {
+    icon: LineChart,
+    title: "Observability & Topology",
+    description:
+      "Prometheus metrics for device and interface health, plus OpenTelemetry topology traces with CDP/OSPF neighbors and hosted apps.",
+    color: "from-primary-light to-primary",
+    glowColor: "primary",
+    beta: true,
+  },
+  {
+    icon: Network,
+    title: "Network as Code",
+    description:
+      "Declarative IOS-XE configuration via Kubernetes CRDs. Express VLAN, routing, AAA, and more as version-controlled intent with drift detection and rollback.",
+    color: "from-accent to-accent-light",
+    glowColor: "accent",
+    beta: true,
+  },
+  {
+    icon: Activity,
+    title: "Device Operations & gNOI",
+    description:
+      "Read-only diagnostics and gNOI probes via DeviceOperation. Write-class actions (reboot, file, factory reset) available behind an explicit runtime gate.",
+    color: "from-primary to-primary-dark",
+    glowColor: "primary",
+    beta: true,
+  },
+  {
+    icon: Layers,
+    title: "Software Lifecycle",
+    description:
+      "Multi-phase IOS-XE OS upgrades driven from Kubernetes: install, activate, verify, and rollback via gNOI with full audit trail and maintenance-window support.",
+    color: "from-success to-emerald-400",
+    glowColor: "success",
+    beta: true,
   },
 ];
 
@@ -121,7 +149,62 @@ export default function Features() {
           </p>
         </motion.div>
 
-        {/* Feature grid */}
+        {/* Feature grid — stable */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6"
+        >
+          {features.filter((f) => !f.beta).map((feature) => (
+            <motion.div
+              key={feature.title}
+              variants={itemVariants}
+              className="card-hover group relative p-6 rounded-2xl bg-surface/60 backdrop-blur-sm border border-border"
+            >
+              <div
+                className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${feature.color} mb-5`}
+              >
+                <feature.icon className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-xl font-semibold text-foreground">
+                  {feature.title}
+                </h3>
+              </div>
+              <p className="text-text-muted leading-relaxed">
+                {feature.description}
+              </p>
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity blur-xl`}
+              />
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Beta feature divider */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="flex items-center gap-4 mb-6"
+        >
+          <div className="flex-1 h-px bg-border" />
+          <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-xs font-semibold text-amber-400">
+            Beta Features
+          </span>
+          <div className="flex-1 h-px bg-border" />
+        </motion.div>
+        <p className="text-center text-sm text-text-muted mb-8 max-w-xl mx-auto">
+          These features are functional and tested but carry{" "}
+          <code className="text-xs bg-surface px-1 py-0.5 rounded">v1alpha1</code>{" "}
+          API versions. Schemas may evolve between releases.
+        </p>
+
+        {/* Feature grid — beta */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -129,7 +212,7 @@ export default function Features() {
           viewport={{ once: true, margin: "-50px" }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {features.map((feature) => (
+          {features.filter((f) => f.beta).map((feature) => (
             <motion.div
               key={feature.title}
               variants={itemVariants}
@@ -143,9 +226,16 @@ export default function Features() {
               </div>
 
               {/* Content */}
-              <h3 className="text-xl font-semibold mb-3 text-foreground">
-                {feature.title}
-              </h3>
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-xl font-semibold text-foreground">
+                  {feature.title}
+                </h3>
+                {feature.beta && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/25 shrink-0">
+                    Beta
+                  </span>
+                )}
+              </div>
               <p className="text-text-muted leading-relaxed">
                 {feature.description}
               </p>

@@ -215,9 +215,14 @@ export default function Architecture() {
               03
             </div>
             <div className="relative pt-12">
-              <h3 className="text-xl font-semibold mb-3 text-foreground">
-                Observe at the Edge
-              </h3>
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-xl font-semibold text-foreground">
+                  Observe at the Edge
+                </h3>
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/25 shrink-0">
+                  Beta
+                </span>
+              </div>
               <p className="text-text-muted leading-relaxed">
                 Prometheus metrics, OpenTelemetry topology traces, and
                 cisco.io/* node annotations surface device health, CDP/OSPF
