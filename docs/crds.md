@@ -25,22 +25,30 @@ iosxeoperationalactions      xeop            ops.cisco.vk/v1alpha1      true    
 iosxesoftwareupgrades        xeupgrade       ops.cisco.vk/v1alpha1      true         IOSXESoftwareUpgrade
 ```
 
-| Kind | Scope | Primary use |
-|---|---:|---|
-| `CiscoDevice` | Namespaced | Declares one managed device and drives the per-device VK deployment. |
-| `IOSXEConfigDefaults` | Cluster | Fleet-wide baseline configuration merged into device intent. |
-| `IOSXEDeviceGroupConfig` | Namespaced | Shared configuration for selected devices. |
-| `IOSXEInterfaceGroupConfig` | Namespaced | Shared configuration for selected interfaces on selected devices. |
-| `IOSXETemplate` | Namespaced | Reusable parameterized configuration fragments. |
-| `IOSXEConfig` | Namespaced | Per-device Network as Code intent, drift detection, apply, and rollback. |
-| `IOSXEConfigBundle` | Namespaced | Fans one config template out across selected devices. |
-| `IOSXEConfigRevision` | Namespaced | Immutable resolved-intent history used for rollback and audit. |
-| `IOSXEConfigApplyLog` | Namespaced | Per-apply audit entries with family and diff metadata. |
-| `IOSXEDiagnostic` | Namespaced | Read-only command capture, one-shot or scheduled. |
-| `IOSXETelemetry` | Namespaced | gNMI subscriptions mapped to OpenTelemetry signals. |
-| `DeviceOperation` | Namespaced | Auditable read-only operational requests, including gNOI probes. |
-| `IOSXEOperationalAction` | Namespaced | One-shot write-class gNOI actions with confirmation and events. |
-| `IOSXESoftwareUpgrade` | Namespaced | Multi-phase gNOI software install, activate, verify, and rollback. |
+!!! warning "Beta CRDs"
+    All CRDs are currently versioned `v1alpha1`. CRDs marked **Beta** below
+    cover feature areas that are functional and tested but whose schemas and
+    behaviours are still stabilising. Evaluate them in non-production
+    environments before broader rollout. CRDs marked **Stable** cover the
+    core pod-hosting and device-management surface that has been in service
+    across multiple releases.
+
+| Kind | Scope | Maturity | Primary use |
+|---|---:|---|---|
+| `CiscoDevice` | Namespaced | **Stable** | Declares one managed device and drives the per-device VK deployment. |
+| `IOSXEConfigDefaults` | Cluster | **Beta** | Fleet-wide baseline configuration merged into device intent. |
+| `IOSXEDeviceGroupConfig` | Namespaced | **Beta** | Shared configuration for selected devices. |
+| `IOSXEInterfaceGroupConfig` | Namespaced | **Beta** | Shared configuration for selected interfaces on selected devices. |
+| `IOSXETemplate` | Namespaced | **Beta** | Reusable parameterized configuration fragments. |
+| `IOSXEConfig` | Namespaced | **Beta** | Per-device Network as Code intent, drift detection, apply, and rollback. |
+| `IOSXEConfigBundle` | Namespaced | **Beta** | Fans one config template out across selected devices. |
+| `IOSXEConfigRevision` | Namespaced | **Beta** | Immutable resolved-intent history used for rollback and audit. |
+| `IOSXEConfigApplyLog` | Namespaced | **Beta** | Per-apply audit entries with family and diff metadata. |
+| `IOSXEDiagnostic` | Namespaced | **Beta** | Read-only command capture, one-shot or scheduled. |
+| `IOSXETelemetry` | Namespaced | **Beta** | gNMI subscriptions mapped to OpenTelemetry signals. |
+| `DeviceOperation` | Namespaced | **Beta** | Auditable read-only operational requests, including gNOI probes. |
+| `IOSXEOperationalAction` | Namespaced | **Beta** | One-shot write-class gNOI actions with confirmation and events. Requires `--enable-write-class-gnoi`. |
+| `IOSXESoftwareUpgrade` | Namespaced | **Beta** | Multi-phase gNOI software install, activate, verify, and rollback. Requires `--enable-iosxesoftwareupgrade`. |
 
 ## CiscoDevice
 
@@ -93,6 +101,11 @@ cat9300-4   Ready    agent   41m   v1.30.0-vk
 ```
 
 ## Configuration CRDs
+
+!!! warning "Beta"
+    All configuration CRDs are **Beta** (`v1alpha1`). The schema, managed
+    families, and drift-detection behaviour are still expanding.
+    Evaluate in non-production environments before broader rollout.
 
 The configuration CRDs work together. Defaults, groups, interface groups,
 templates, and per-device source are resolved into canonical intent. The config
@@ -250,6 +263,11 @@ Use the generated family reference when building configuration payloads:
 
 ## Diagnostics and Telemetry
 
+!!! warning "Beta"
+    `IOSXEDiagnostic` and `IOSXETelemetry` are **Beta** (`v1alpha1`).
+    Diagnostic command output and telemetry subscription schemas may
+    change between releases.
+
 `IOSXEDiagnostic` runs read-only IOS-XE commands. It can run once, on a
 schedule, or inside a maintenance window. Output can stay inline or spill to
 ConfigMaps for larger captures.
@@ -260,6 +278,13 @@ the per-device VK. See [Telemetry](telemetry.md) and
 [Telemetry Cardinality](telemetry-cardinality.md).
 
 ## Operation CRDs
+
+!!! warning "Beta"
+    All operation CRDs are **Beta** (`v1alpha1`). `DeviceOperation` is the
+    most mature surface. `IOSXEOperationalAction` and `IOSXESoftwareUpgrade`
+    require explicit runtime gates and carry higher operational risk.
+    See [gNOI and Software Lifecycle](gnoi-software-lifecycle.md) for
+    prerequisites and safety guidance.
 
 Operation CRDs are separated by trust level. `DeviceOperation` and
 `IOSXEDiagnostic` are read-only. `IOSXEOperationalAction` and

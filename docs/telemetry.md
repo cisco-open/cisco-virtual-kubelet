@@ -1,5 +1,11 @@
 # IOS-XE Telemetry
 
+!!! warning "Beta"
+    `IOSXETelemetry` is **Beta** (`v1alpha1`). The MDT pipeline architecture
+    and gNMI subscription mechanics are stable; the subscription schema and
+    OpenTelemetry output shapes may change between releases. Evaluate in
+    non-production environments before broader rollout.
+
 The `IOSXETelemetry` CRD declares MDT-over-gNMI subscriptions for one
 `CiscoDevice` and converts them into OpenTelemetry signals.
 

@@ -87,6 +87,28 @@ This project is under active development and is published as open source under
   Build locally from a release tag or `main`, then push to a registry your
   cluster can pull from. See [Getting Started](getting-started.md).
 
+### Feature Maturity
+
+Not all feature areas have the same level of maturity. The table below
+summarises the current state for the June 2026 release.
+
+| Feature area | Maturity | Notes |
+|---|---|---|
+| Pod lifecycle (App-Hosting create / update / delete) | **Stable** | Supported on Catalyst 8000V 17.15+ and Catalyst 9000 17.18+. |
+| `CiscoDevice` and VK deployment lifecycle | **Stable** | Controller-managed per-device VK pods. |
+| **Network as Code config driver** (`IOSXEConfig` family) | **Beta** | Declarative IOS-XE config CRDs with drift detection, bundles, revisions, and apply logs. Schema is `v1alpha1`; family coverage and wire-format behaviour are still expanding. |
+| **Operations** (`DeviceOperation`, `IOSXEOperationalAction`) | **Beta** | Read-only diagnostics and gNOI probes are stable in intent; write-class actions require an explicit runtime gate and carry additional operational risk. |
+| **Software Lifecycle** (`IOSXESoftwareUpgrade`) | **Beta** | Multi-phase gNOI OS install/activate/verify. Disabled by default; requires `--enable-iosxesoftwareupgrade`. Tested on limited platforms. |
+| **Telemetry** (`IOSXETelemetry`) | **Beta** | MDT-over-gNMI subscriptions converted to OpenTelemetry signals. Pipeline architecture is stable; subscription schema is `v1alpha1`. |
+| Observability (Prometheus metrics, OTEL topology traces) | **Beta** | Metrics catalog and trace shapes may change between releases. |
+
+!!! warning "Beta features"
+    Features marked **Beta** are functional and tested but carry `v1alpha1` API
+    versions. Breaking schema changes are still possible. They should be
+    evaluated in non-production environments before broader rollout. Runtime
+    gates exist for the highest-risk surfaces (write-class gNOI, software
+    upgrades) and must be opted into explicitly.
+
 ## Where to next
 
 - [Getting Started](getting-started.md) - first deployment path

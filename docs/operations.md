@@ -1,5 +1,12 @@
 # DeviceOperation
 
+!!! warning "Beta"
+    All CRDs and features documented on this page are **Beta** (`v1alpha1`).
+    Read-only `DeviceOperation` and gNOI probes are the most mature surface;
+    write-class `IOSXEOperationalAction` and `IOSXESoftwareUpgrade` are newer,
+    require explicit runtime gates, and should be tested thoroughly in
+    non-production environments before use in production.
+
 `DeviceOperation` is the sibling-CRD path for auditable, asynchronous,
 non-Pod operations. For the higher-level gNOI architecture, runtime gates,
 RBAC split, and IOS-XE software lifecycle model, see
@@ -92,6 +99,13 @@ rules.
 
 ## Write-Class Actions
 
+!!! danger "Beta — requires runtime gate"
+    Write-class actions are **Beta** and **disabled by default**. The per-device
+    VK pod must be started with `--enable-write-class-gnoi` or
+    `CISCO_VK_ENABLE_WRITE_CLASS_GNOI=1`. These operations mutate device state
+    (reboot, file write, factory reset) and are irreversible. Apply strict
+    namespace-scoped RBAC before enabling.
+
 `IOSXEOperationalAction` supports:
 
 - `Reboot`
@@ -142,6 +156,13 @@ RBAC for the operators allowed to create these CRs, and keep read-only
 `DeviceOperation` RBAC separate from write-class action RBAC.
 
 ## Software Upgrades
+
+!!! danger "Beta — requires runtime gate"
+    Software upgrades are **Beta** and **disabled by default**. The per-device
+    VK pod must be started with `--enable-iosxesoftwareupgrade` or
+    `CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=1`. Activation reboots the device
+    when `strategy: Reload` is used (the default). Test thoroughly on
+    non-production devices first.
 
 `IOSXESoftwareUpgrade` drives the gNOI OS install, activate, reachability, and
 verify flow. It is disabled unless the per-device VK is started with
