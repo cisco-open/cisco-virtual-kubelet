@@ -45,8 +45,7 @@ nav:
   - Catalyst 9000: 'configuration-cat9000.md'
   - YANG Version Support: 'yang-version-support.md'
   - Environment Variables: 'environment-variables.md'
-  - NetAsCode Migration: 'netascode-migration.md'
-- 'gNOI & Software Lifecycle':
+- 'Software Lifecycle':
   - Overview: 'gnoi-software-lifecycle.md'
   - Operations Runbook: 'operations.md'
 - Telemetry:
