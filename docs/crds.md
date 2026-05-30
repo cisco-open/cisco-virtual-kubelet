@@ -251,6 +251,79 @@ NAME                 DEVICE      PHASE    DRIFT   AGE
 cat9300-4-network    cat9300-4   InSync   none    17m
 ```
 
+Full status when in sync:
+
+```bash
+$ kubectl describe iosxeconfig cat9300-4-network
+...
+Status:
+  Conditions:
+    Last Transition Time:  2026-05-30T10:00:42Z
+    Message:               all managed families in sync
+    Reason:                InSync
+    Status:                True
+    Type:                  Ready
+  Family Statuses:
+    - Family:   dhcp
+      Phase:    InSync
+    - Family:   vlan
+      Phase:    InSync
+  Phase:        InSync
+  Revision Ref:
+    Name:  cat9300-4-network-v4
+Events:
+  Type    Reason   Age   Message
+  ----    ------   ----  -------
+  Normal  Applied  17m   families [dhcp vlan] applied in 1.2s, 0 drift
+```
+
+When drift is detected with `driftPolicy: report`:
+
+```bash
+$ kubectl get iosxecfg
+NAME                 DEVICE      PHASE    DRIFT     AGE
+cat9300-4-network    cat9300-4   Drifted  [vlan]    23m
+
+$ kubectl describe iosxeconfig cat9300-4-network
+...
+Status:
+  Family Statuses:
+    - Family:  dhcp
+      Phase:   InSync
+    - Family:  vlan
+      Phase:   Drifted
+      Drift Summary: |
+        observed vlan 300 name: "changed-externally"
+        desired  vlan 300 name: "APP_HOSTING"
+  Phase:  Drifted
+Events:
+  Type     Reason   Age  Message
+  ----     ------   ---  -------
+  Warning  Drifted  2m   family vlan: 1 leaf divergence detected (driftPolicy=report, no patch sent)
+```
+
+`IOSXEConfigApplyLog` records each apply attempt for audit:
+
+```bash
+$ kubectl get iosxelog -l config.cisco.vk/config=cat9300-4-network
+NAME                         DEVICE      FAMILIES   RESULT    AGE
+cat9300-4-network-20260530   cat9300-4   dhcp,vlan   Applied   17m
+
+$ kubectl describe iosxeconfigapplylog cat9300-4-network-20260530
+...
+Spec:
+  Config Ref:  cat9300-4-network
+  Device Ref:  cat9300-4
+  Families:    [dhcp, vlan]
+Status:
+  Applied At:  2026-05-30T10:00:42Z
+  Duration:    1.2s
+  Op Count:    3
+  Result:      Applied
+  Revision Ref:
+    Name:  cat9300-4-network-v4
+```
+
 ### IOSXEConfigBundle, Revision, and ApplyLog
 
 `IOSXEConfigBundle` fans one `IOSXEConfig` template out across selected

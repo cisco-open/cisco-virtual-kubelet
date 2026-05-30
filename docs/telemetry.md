@@ -374,6 +374,85 @@ Ready-to-apply IOSXETelemetry CRs for common C9300X MDT-over-gNMI use cases:
 - [Interface counters and oper-status transitions](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/iosxetelemetry/c9300x-interfaces-counters.yaml)
 - [BGP and OSPF counters plus adjacency transitions](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/iosxetelemetry/c9300x-bgp-and-ospf.yaml)
 
+## Status output examples
+
+After applying an `IOSXETelemetry` CR, watch the subscription come up:
+
+```bash
+$ kubectl get iosxetelemetry -w
+NAME               DEVICE        PHASE     AGE
+cat9k-interfaces   cat9k-smoke   Active    8s
+```
+
+Full status showing per-subscription health and buffer stats:
+
+```bash
+$ kubectl describe iosxetelemetry cat9k-interfaces
+Name:         cat9k-interfaces
+Namespace:    default
+API Version:  config.cisco.vk/v1alpha1
+Kind:         IOSXETelemetry
+Spec:
+  Device Ref:
+    Name:  cat9k-smoke
+  Subscriptions:
+    Paths:
+      /interfaces/interface/state/counters
+    Sample Interval:  30000000000
+Status:
+  Conditions:
+    Last Transition Time:  2026-05-30T10:00:08Z
+    Message:               1 subscription active
+    Reason:                Active
+    Status:                True
+    Type:                  Ready
+  Phase:  Active
+  Subscription Stats:
+    Active Subscriptions:  1
+    Buffer Overflow Total: 0
+    Notifications Total:   142
+Events:
+  Type    Reason     Age   Message
+  ----    ------     ----  -------
+  Normal  Subscribed  8s   gNMI Subscribe stream established for /interfaces/interface/state/counters
+```
+
+When a subscription error occurs the phase transitions to `Degraded` and
+the condition message carries the gRPC status code:
+
+```bash
+$ kubectl describe iosxetelemetry cat9k-interfaces
+...
+Status:
+  Conditions:
+    Last Transition Time:  2026-05-30T10:05:32Z
+    Message:               rpc error: code = Unavailable desc = transport is closing
+    Reason:                SubscriptionError
+    Status:                False
+    Type:                  Ready
+  Phase:  Degraded
+Events:
+  Type     Reason       Age   Message
+  ----     ------       ----  -------
+  Warning  StreamError  12s   gNMI stream lost, reconnecting (attempt 1/5, backoff 2s)
+  Normal   Subscribed   8s    gNMI Subscribe stream re-established
+```
+
+Metrics emitted to your OpenTelemetry collector carry the device name and
+subscription path as attributes, for example:
+
+```
+# Prometheus remote-write preview (interface counters)
+interfaces_interface_state_counters_in_octets{
+  device="cat9k-smoke",
+  interface_name="GigabitEthernet1/0/1"
+} 1234567890 1748599200000
+interfaces_interface_state_counters_out_octets{
+  device="cat9k-smoke",
+  interface_name="GigabitEthernet1/0/1"
+} 987654321 1748599200000
+```
+
 ## Future work
 
 - Add curated transition presets for common IOS-XE and OpenConfig

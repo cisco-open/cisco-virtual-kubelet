@@ -212,6 +212,152 @@ Results are written to `.status.outputs[]`; large packet captures may also set
 `Cancelled`. `ttlSecondsAfterFinished` requests best-effort cleanup after
 completion.
 
+### DeviceOperation — example output
+
+After applying a `ShowCommand` operation, watch the phase:
+
+```bash
+$ kubectl get deviceoperation show-version -w
+NAME           PHASE       AGE
+show-version   Pending     0s
+show-version   Running     1s
+show-version   Succeeded   3s
+```
+
+Full status after completion:
+
+```bash
+$ kubectl describe deviceoperation show-version
+Name:         show-version
+Namespace:    default
+Labels:       <none>
+API Version:  ops.cisco.vk/v1alpha1
+Kind:         DeviceOperation
+Spec:
+  Device Ref:
+    Name:  cat9k-smoke
+  Operation:
+    Commands:
+      show version
+    Kind:  ShowCommand
+  Ttl Seconds After Finished:  300
+Status:
+  Conditions:
+    Last Transition Time:  2026-05-30T10:14:03Z
+    Message:               operation succeeded
+    Reason:                Succeeded
+    Status:                True
+    Type:                  Ready
+  Outputs:
+    - Name:    show-version
+      Output:  |
+        Cisco IOS XE Software, Version 17.18.02
+        Technical Support: http://www.cisco.com/techsupport
+        ...
+        cisco C9300-24P (X86) processor with 1392928K/6147K bytes of memory.
+        Processor board ID FCW2144L0GH
+        ...
+        Configuration register is 0x102
+  Phase:  Succeeded
+Events:
+  Type    Reason     Age  From                Message
+  ----    ------     ---  ----                -------
+  Normal  Running    3s   device-operation    dispatching ShowCommand to cat9k-smoke
+  Normal  Succeeded  1s   device-operation    operation completed in 2.1s
+```
+
+For a `GNOIPing` probe:
+
+```bash
+$ kubectl describe deviceoperation ping-gateway
+...
+Status:
+  Outputs:
+    - Name:    ping-result
+      Output:  |
+        Source: 10.0.0.1
+        Time: 4ms  [10.0.0.254 -> 10.0.0.1]
+        Time: 3ms  [10.0.0.254 -> 10.0.0.1]
+        Time: 4ms  [10.0.0.254 -> 10.0.0.1]
+        Stats: Sent=3  Received=3  MinTime=3ms  AvgTime=3ms  MaxTime=4ms
+  Phase:  Succeeded
+```
+
+### IOSXEOperationalAction — example output
+
+```bash
+$ kubectl get iosxeoperationalaction
+NAME              PHASE      AGE
+reload-cat9k      Succeeded  12m
+```
+
+```bash
+$ kubectl describe iosxeoperationalaction reload-cat9k
+...
+Status:
+  Conditions:
+    Last Transition Time:  2026-05-30T10:00:00Z
+    Reason:                Succeeded
+    Status:                True
+    Type:                  Ready
+  Invocation ID:           a3f2e1d0-8c7b-4a5f-9e6d-1b2c3d4e5f60
+  Phase:                   Succeeded
+Events:
+  Type    Reason     Age   From                         Message
+  ----    ------     ----  ----                         -------
+  Normal  Running    12m   iosxe-operational-action     dispatching Reboot to cat9k-smoke
+  Normal  Succeeded  10m   iosxe-operational-action     gNOI Reboot RPC accepted
+```
+
+### IOSXESoftwareUpgrade — example output
+
+```bash
+$ kubectl get iosxesoftwareupgrade -w
+NAME            PHASE          AGE
+upgrade-cat9k   Pending        0s
+upgrade-cat9k   Resolving      2s
+upgrade-cat9k   Transferring   8s
+upgrade-cat9k   Validating     4m31s
+upgrade-cat9k   Activating     4m45s
+upgrade-cat9k   AwaitingReachability  4m51s
+upgrade-cat9k   Verifying      17m
+upgrade-cat9k   Succeeded      17m
+```
+
+```bash
+$ kubectl describe iosxesoftwareupgrade upgrade-cat9k
+...
+Spec:
+  Device Ref:
+    Name:  cat9k-smoke
+  Image Source:
+    Local Path:          bootflash:cat9k_iosxe.17.18.02.SPA.bin
+    Local Path SHA256:   a3f2e1d0...
+  Rollback On Failure:   true
+  Strategy:              Reload
+  Target Version:        17.18.02
+Status:
+  Completed At:          2026-05-30T10:28:32Z
+  Conditions:
+    Last Transition Time:  2026-05-30T10:28:32Z
+    Reason:                Succeeded
+    Status:                True
+    Type:                  Ready
+  Phase:                   Succeeded
+  Running Version:         17.18.02.0.4112.1766116039
+  Started At:              2026-05-30T10:00:00Z
+Events:
+  Type    Reason                Age   Message
+  ----    ------                ----  -------
+  Normal  Resolving             28m   resolved target version 17.18.02
+  Normal  Transferring          28m   skipping transfer: localPath source
+  Normal  Validating            23m   staged image validated: sha256 match
+  Normal  Activating            23m   gNOI OS.Activate requested (strategy: Reload)
+  Normal  AwaitingReachability  23m   device rebooting; polling for reachability
+  Normal  Verifying             11m   device reachable; verifying running version
+  Normal  Succeeded             11m   running version 17.18.02.0.4112 matches target
+```
+
 ## Roadmap Gates
 
 The following items are deliberately outside the current read-only v1alpha1

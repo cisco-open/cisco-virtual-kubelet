@@ -43,6 +43,7 @@ nav:
   - Catalyst 9000: 'configuration-cat9000.md'
   - YANG Version Support: 'yang-version-support.md'
   - Environment Variables: 'environment-variables.md'
+  - NetAsCode Migration: 'netascode-migration.md'
 - 'gNOI & Software Lifecycle':
   - Overview: 'gnoi-software-lifecycle.md'
 - Operations:
@@ -70,11 +71,4 @@ docs_dir: docs
 site_dir: site
 exclude_docs: |
   website/
-  cvk-unified-architecture-plan.md
-  family-parity.md
-  gnoi-pilot-c9k4-upgrade-evidence.md
-  netascode-migration.md
-  telemetry-branch-review.md
-  telemetry-trace-convergence-roadmap.md
-  yang-version-transition.md
 use_directory_urls: true
