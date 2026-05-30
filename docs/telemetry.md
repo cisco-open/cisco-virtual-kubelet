@@ -9,6 +9,169 @@
 The `IOSXETelemetry` CRD declares MDT-over-gNMI subscriptions for one
 `CiscoDevice` and converts them into OpenTelemetry signals.
 
+---
+
+## Deploying MDT with Cisco Virtual Kubelet
+
+### Prerequisites
+
+1. The target device must have gNMI enabled. For IOS-XE:
+
+    ```
+    gnxi
+     server
+     secure-allow-self-signed-trustpoint
+    !
+    ```
+
+2. CVK must be configured with an OTLP endpoint — set on the `CiscoDevice`
+   CR or as an environment variable on the VK pod:
+
+    ```yaml
+    spec:
+      otelConfig:
+        endpoint: otelcol.observability:4317
+        insecure: true
+        interval: 60s
+    ```
+
+    Or via Helm values:
+
+    ```yaml
+    otel:
+      endpoint: "otelcol.observability:4317"
+      insecure: true
+    ```
+
+3. The `IOSXETelemetry` CRD must be installed. Verify with:
+
+    ```bash
+    kubectl get crd iosxetelemetries.config.cisco.vk
+    ```
+
+### Step 1 — Create an IOSXETelemetry CR
+
+Each `IOSXETelemetry` CR attaches one or more gNMI subscriptions to a
+single device. CVK handles stream multiplexing, reconnect, and
+notification routing.
+
+**Interface counters via OpenConfig:**
+
+```yaml
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXETelemetry
+metadata:
+  name: cat9k-interfaces
+  namespace: default
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  subscriptions:
+    - paths:
+        - /interfaces/interface/state/counters
+      sampleInterval: 30000000000
+```
+
+**IOS-XE native YANG (app-hosting oper-data):**
+
+For IOS-XE native paths, set `preservePathPrefix: true` — IOS-XE rejects
+module names in `Path.Origin` and expects them inline on the first path
+element instead:
+
+```yaml
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXETelemetry
+metadata:
+  name: cat9k-apps
+  namespace: default
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  subscriptions:
+    - paths:
+        - /Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/apps
+      sampleInterval: 10000000000
+      preservePathPrefix: true
+```
+
+**On-change subscription for link state:**
+
+```yaml
+spec:
+  subscriptions:
+    - paths:
+        - /interfaces/interface/state/oper-status
+      streamMode: ON_CHANGE
+```
+
+### Step 2 — Watch subscription health
+
+```bash
+$ kubectl get iosxetelemetry -w
+NAME              DEVICE        PHASE    AGE
+cat9k-interfaces  cat9k-smoke   Active   8s
+cat9k-apps        cat9k-smoke   Active   3s
+```
+
+Check detailed status:
+
+```bash
+$ kubectl describe iosxetelemetry cat9k-interfaces
+...
+Status:
+  Phase:  Active
+  Subscription Stats:
+    Active Subscriptions:   1
+    Notifications Total:    142
+    Buffer Overflow Total:  0
+Events:
+  Normal  Subscribed  8s  gNMI Subscribe stream established
+```
+
+If a stream drops, CVK reconnects with exponential backoff and emits a
+`Warning StreamError` event. The phase transitions to `Degraded` until
+the stream recovers.
+
+### Step 3 — Verify data in your collector
+
+CVK emits each MDT notification as one of:
+
+- **OTel log records** — for string/state-change leaves (e.g. oper-status transitions)
+- **OTel metrics** — for numeric leaves (e.g. counter, gauge readings)
+
+All records carry `cisco.device.name` and `cisco.subscription.path` as
+resource attributes.
+
+Example Prometheus remote-write output from interface counters:
+
+```
+interfaces_interface_state_counters_in_octets{
+  cisco_device_name="cat9k-smoke",
+  interface_name="GigabitEthernet1/0/1"
+} 1234567890
+interfaces_interface_state_counters_out_octets{
+  cisco_device_name="cat9k-smoke",
+  interface_name="GigabitEthernet1/0/1"
+} 987654321
+```
+
+### Path quick reference
+
+| What to monitor | YANG path | Style |
+|---|---|---|
+| Interface counters | `/interfaces/interface/state/counters` | OpenConfig |
+| Interface oper-status | `/interfaces/interface/state/oper-status` | OpenConfig |
+| BGP neighbors | `/network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state` | OpenConfig |
+| OSPF neighbors | `/network-instances/network-instance/protocols/protocol/ospf/areas/area/interfaces/interface/neighbors/neighbor/state` | OpenConfig |
+| CPU utilization | `/Cisco-IOS-XE-process-cpu-oper:cpu-usage/cpu-utilization` | IOS-XE native (preservePathPrefix) |
+| Memory | `/Cisco-IOS-XE-memory-oper:memory-statistics/memory-statistic` | IOS-XE native (preservePathPrefix) |
+| App-hosting apps | `/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/apps` | IOS-XE native (preservePathPrefix) |
+| Environment sensors | `/Cisco-IOS-XE-environment-oper:environment-sensors` | IOS-XE native (preservePathPrefix) |
+
+For ready-to-apply example CRs see the [Worked examples](#worked-examples) section below.
+
+---
+
 ## Phase 1 — Subscription lifecycle
 
 - `IOSXETelemetry` CRD: create, update, delete, status reporting

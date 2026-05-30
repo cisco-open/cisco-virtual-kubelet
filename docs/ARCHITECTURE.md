@@ -45,11 +45,18 @@ flowchart TB
     VK -->|"RESTCONF over HTTPS"| IOx
     IOx --> Container
 
-    style Controller fill:#ede9fe,stroke:#7c3aed,color:#1f1147
-    style VK fill:#e0f2fe,stroke:#0284c7,color:#083344
-    style IOx fill:#dcfce7,stroke:#16a34a,color:#052e16
-    style Container fill:#dcfce7,stroke:#16a34a,color:#052e16
-    style IOSXE fill:#f8fafc,stroke:#16a34a,color:#0f172a
+    style Controller fill:#7c3aed,stroke:#a78bfa,color:#ffffff
+    style VK fill:#0369a1,stroke:#38bdf8,color:#ffffff
+    style IOx fill:#047857,stroke:#34d399,color:#ffffff
+    style Container fill:#065f46,stroke:#34d399,color:#ffffff
+    style API fill:#1e3a5f,stroke:#60a5fa,color:#e0f2fe
+    style CRD fill:#1e3a5f,stroke:#60a5fa,color:#e0f2fe
+    style CM fill:#1e3a5f,stroke:#60a5fa,color:#e0f2fe
+    style Dep fill:#1e3a5f,stroke:#60a5fa,color:#e0f2fe
+    style Node fill:#1e3a5f,stroke:#60a5fa,color:#e0f2fe
+    style Pod fill:#374151,stroke:#9ca3af,color:#f3f4f6
+    style Cluster fill:#1e1b4b,stroke:#818cf8,color:#e0e7ff
+    style IOSXE fill:#052e16,stroke:#34d399,color:#d1fae5
 ```
 
 ## Core components
