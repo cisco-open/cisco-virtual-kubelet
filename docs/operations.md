@@ -1,4 +1,69 @@
-# DeviceOperation
+# Operations Runbook
+
+## Upgrading CRDs
+
+Cisco Virtual Kubelet ships CRD manifests alongside the Helm chart. When
+upgrading to a new CVK version, apply the updated CRDs before upgrading the
+chart — Helm does not manage CRD updates automatically.
+
+```bash
+# 1. Apply updated CRD manifests from the new chart version:
+kubectl apply -f charts/cisco-virtual-kubelet/crds/
+
+# 2. Verify all CRDs registered at the new schema version:
+kubectl get crds | grep cisco
+
+NAME                                    CREATED AT
+ciscodevices.cisco.vk                   2026-01-10T09:00:00Z
+deviceoperations.ops.cisco.vk           2026-01-10T09:00:00Z
+iosxeconfigs.config.cisco.vk            2026-01-10T09:00:00Z
+iosxesoftwareupgrades.ops.cisco.vk      2026-01-10T09:00:00Z
+iosxeoperationalactions.ops.cisco.vk    2026-01-10T09:00:00Z
+
+# 3. Upgrade the Helm release:
+helm upgrade cisco-vk ./charts/cisco-virtual-kubelet \
+  --namespace cisco-vk \
+  --set image.tag=<new-version>
+
+# 4. Confirm manager pod is running the new image:
+kubectl rollout status deployment/cisco-vk-manager -n cisco-vk
+```
+
+### What to expect after a CRD upgrade
+
+- **Existing CRs are preserved.** Kubernetes retains all existing
+  `DeviceOperation`, `IOSXEConfig`, `CiscoDevice`, and related CRs through
+  a schema version update. New optional fields default to their zero values.
+- **New required fields.** If a release adds a required field, existing CRs
+  that omit it will fail validation on the next write. Check the release notes
+  for breaking schema changes before upgrading production clusters.
+- **`v1alpha1` caveat.** While the CRDs carry `v1alpha1` versions, field
+  additions are additive. Structural breaking changes (renames, removals) are
+  noted explicitly in the release changelog and require manual CR migration
+  before the old controller is shut down.
+
+### Rolling back a CRD upgrade
+
+CRD rollback is not directly supported by Kubernetes. If a CRD upgrade must be
+reverted:
+
+```bash
+# Re-apply CRD manifests from the previous chart version:
+kubectl apply -f charts/cisco-virtual-kubelet-<prev-version>/crds/
+
+# Downgrade the Helm release:
+helm upgrade cisco-vk ./charts/cisco-virtual-kubelet-<prev-version> \
+  --namespace cisco-vk
+```
+
+!!! warning
+    Rolling back a CRD schema that added new fields leaves any CRs that used
+    those fields in an unknown state. Review and patch affected CRs before
+    restarting the controller.
+
+---
+
+## DeviceOperation
 
 !!! warning "Beta"
     All CRDs and features documented on this page are **Beta** (`v1alpha1`).

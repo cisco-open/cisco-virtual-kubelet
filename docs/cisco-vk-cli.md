@@ -137,7 +137,10 @@ Verify:
 kubectl ciscovk --help
 ```
 
-The plugin uses the same `KUBECONFIG` and active context as `kubectl`.
+!!! note
+    The plugin uses the same `KUBECONFIG` and active context as `kubectl`.
+    Switch clusters or namespaces the same way you would for any `kubectl`
+    command: `--context`, `--namespace`, or by setting `KUBECONFIG`.
 
 ### Fleet and node commands
 
@@ -205,6 +208,19 @@ invocation is only needed for local development.
 | `CISCO_VK_GNOI_DISABLED` | `1` to skip gNOI client construction entirely. |
 | `CONFIG_YANG_VALIDATION` | Config-driver YANG validation: `disabled` (default), `warn`, or `strict`. |
 
+Example one-liners (useful for development or a single ad-hoc run):
+
+```bash
+# Use the insecure gNxI listener (lab/dev without TLS):
+CISCO_VK_GNOI_INSECURE=1 cisco-vk run --config /etc/cisco-vk/cat9300-1.yaml
+
+# Enable the software upgrade reconciler:
+CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=1 cisco-vk run --config /etc/cisco-vk/cat9300-1.yaml
+
+# Disable gNOI client entirely (device has no gNxI listener):
+CISCO_VK_GNOI_DISABLED=1 cisco-vk run --config /etc/cisco-vk/cat9300-1.yaml
+```
+
 ---
 
 ## cisco-vk manager
@@ -230,7 +246,18 @@ resources and creates a ConfigMap + Deployment for each one. Also runs the
 
 ## Helm chart values
 
-Key values that map to the above flags:
+Install or upgrade with the bundled chart:
+
+```bash
+helm upgrade --install cisco-vk ./charts/cisco-virtual-kubelet \
+  --namespace cisco-vk \
+  --create-namespace \
+  --set image.tag=v1.2.0 \
+  --set manager.leaderElect=true \
+  --set gnoi.enableSoftwareUpgrade=false
+```
+
+Key values:
 
 ```yaml
 image:
