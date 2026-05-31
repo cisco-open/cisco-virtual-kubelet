@@ -172,7 +172,7 @@ For ready-to-apply example CRs see the [Worked examples](#worked-examples) secti
 
 ---
 
-## Phase 1 — Subscription lifecycle
+## Subscription Mechanics
 
 - `IOSXETelemetry` CRD: create, update, delete, status reporting
 - Per-device subscriber in the `cvk-<device>` pod
@@ -198,11 +198,11 @@ For ready-to-apply example CRs see the [Worked examples](#worked-examples) secti
   | OpenConfig | `paths: ["/interfaces/interface/state"]` and `origin: openconfig` |
   | IOS-XE native | `paths: ["/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/apps"]` and `preservePathPrefix: true` |
 
-## Phase 2 — Mapper, log emission, and OTel provider stack
+## OpenTelemetry Output
 
-Phase 2 adds the data path that turns each gNMI notification into an
-OpenTelemetry record. Phase 2 shipped logs; Phase 3 extends the same
-mapper output to metrics.
+Each gNMI notification is converted into an OpenTelemetry record by the
+mapper pipeline. CVK can emit logs, metrics, and traces — controlled by
+`output.signal` in the CR spec.
 
 ### Mapper
 
@@ -249,7 +249,7 @@ TLS are read from the standard SDK environment:
 - `OTEL_EXPORTER_OTLP_ENDPOINT` (e.g. `otelcol.observability:4317`)
 - `OTEL_EXPORTER_OTLP_INSECURE=true` to disable TLS
 
-Phase 2 wires `Providers.Logger` to the `IOSXETelemetryReconciler` so
+`Providers.Logger` is wired to the `IOSXETelemetryReconciler` so
 each subscriber emits log records via the shared exporter.
 
 When `OTEL_EXPORTER_OTLP_ENDPOINT` is unset the providers are nil and
@@ -260,9 +260,9 @@ the emitters fall back to noop providers (no records leave the process).
 `status.observedSubscriptionState[].logRecordsEmitted` reports the
 running count of OTel log records emitted for that subscription.
 
-## Phase 3 — Metrics GA
+### Metrics
 
-Phase 3 emits numeric MDT leaves as OpenTelemetry metrics. The mapper
+Numeric MDT leaves are emitted as OpenTelemetry metrics. The mapper
 creates `MappedEvent{Signal: metrics}` for `IntVal`, `UintVal`,
 `FloatVal`, `DoubleVal`, `DecimalVal`, and JSON/JSON-IETF values whose
 root value is numeric.
@@ -314,11 +314,10 @@ The metrics path registers these counters on `Providers.Meter`:
 `status.observedSubscriptionState[].metricPointsEmitted` and
 `GET /telemetry/health` report metric points emitted per subscription.
 
-## Phase 4 — YANG classification and transition traces
+## State-Transition Traces and YANG Classification
 
-Phase 4 adds optional YANG-driven metric classification, recovery spans
-for watched state transitions, and a shared trace provider path for
-topology spans.
+Optional YANG-driven metric classification, recovery spans for watched
+state transitions, and a shared trace provider for topology spans.
 
 ### YANG-driven classification
 
@@ -378,7 +377,7 @@ shutdown are owned by `internal/otelproviders`; topology-specific data
 remains on span attributes and scope name rather than a separate
 topology-only resource.
 
-## Phase 2 example
+## Example: Logs only
 
 ```yaml
 apiVersion: config.cisco.vk/v1alpha1
@@ -426,7 +425,7 @@ spec:
       - logs
 ```
 
-## Phase 3 example
+## Example: Metrics
 
 ```yaml
 apiVersion: config.cisco.vk/v1alpha1
@@ -470,7 +469,7 @@ spec:
       - metrics
 ```
 
-## Phase 4 example
+## Example: Full OpenTelemetry — logs, metrics, and traces
 
 ```yaml
 apiVersion: config.cisco.vk/v1alpha1
