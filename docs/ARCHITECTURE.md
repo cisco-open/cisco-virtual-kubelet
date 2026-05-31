@@ -18,6 +18,7 @@ This split keeps device credentials and per-device logic out of the controller. 
 ## Component architecture
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'background': '#ffffff', 'mainBkg': '#f8fafc', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#94a3b8', 'lineColor': '#64748b', 'edgeLabelBackground': '#f8fafc', 'titleColor': '#1e293b'}}}%%
 flowchart TB
     subgraph Cluster["Kubernetes cluster"]
         API["API server"]
@@ -45,11 +46,16 @@ flowchart TB
     VK -->|"RESTCONF over HTTPS"| IOx
     IOx --> Container
 
-    style Controller fill:#ede9fe,stroke:#7c3aed,color:#1f1147
-    style VK fill:#e0f2fe,stroke:#0284c7,color:#083344
-    style IOx fill:#dcfce7,stroke:#16a34a,color:#052e16
-    style Container fill:#dcfce7,stroke:#16a34a,color:#052e16
-    style IOSXE fill:#f8fafc,stroke:#16a34a,color:#0f172a
+    style Controller fill:#ede9fe,stroke:#7c3aed,color:#3b0764
+    style VK fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    style IOx fill:#dcfce7,stroke:#16a34a,color:#14532d
+    style Container fill:#d1fae5,stroke:#059669,color:#064e3b
+    style API fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style CRD fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style CM fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style Dep fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style Node fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style Pod fill:#e2e8f0,stroke:#94a3b8,color:#334155
 ```
 
 ## Core components

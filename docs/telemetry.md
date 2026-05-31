@@ -1,7 +1,176 @@
 # IOS-XE Telemetry
 
+!!! warning "Beta"
+    `IOSXETelemetry` is **Beta** (`v1alpha1`). The MDT pipeline architecture
+    and gNMI subscription mechanics are stable; the subscription schema and
+    OpenTelemetry output shapes may change between releases. Evaluate in
+    non-production environments before broader rollout.
+
 The `IOSXETelemetry` CRD declares MDT-over-gNMI subscriptions for one
 `CiscoDevice` and converts them into OpenTelemetry signals.
+
+---
+
+## Deploying MDT with Cisco Virtual Kubelet
+
+### Prerequisites
+
+1. The target device must have gNMI enabled. For IOS-XE:
+
+    ```
+    gnxi
+     server
+     secure-allow-self-signed-trustpoint
+    !
+    ```
+
+2. CVK must be configured with an OTLP endpoint — set on the `CiscoDevice`
+   CR or as an environment variable on the VK pod:
+
+    ```yaml
+    spec:
+      otelConfig:
+        endpoint: otelcol.observability:4317
+        insecure: true
+        interval: 60s
+    ```
+
+    Or via Helm values:
+
+    ```yaml
+    otel:
+      endpoint: "otelcol.observability:4317"
+      insecure: true
+    ```
+
+3. The `IOSXETelemetry` CRD must be installed. Verify with:
+
+    ```bash
+    kubectl get crd iosxetelemetries.config.cisco.vk
+    ```
+
+### Step 1 — Create an IOSXETelemetry CR
+
+Each `IOSXETelemetry` CR attaches one or more gNMI subscriptions to a
+single device. CVK handles stream multiplexing, reconnect, and
+notification routing.
+
+**Interface counters via OpenConfig:**
+
+```yaml
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXETelemetry
+metadata:
+  name: cat9k-interfaces
+  namespace: default
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  subscriptions:
+    - paths:
+        - /interfaces/interface/state/counters
+      sampleInterval: 30000000000
+```
+
+**IOS-XE native YANG (app-hosting oper-data):**
+
+For IOS-XE native paths, set `preservePathPrefix: true` — IOS-XE rejects
+module names in `Path.Origin` and expects them inline on the first path
+element instead:
+
+```yaml
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXETelemetry
+metadata:
+  name: cat9k-apps
+  namespace: default
+spec:
+  deviceRef:
+    name: cat9k-smoke
+  subscriptions:
+    - paths:
+        - /Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/apps
+      sampleInterval: 10000000000
+      preservePathPrefix: true
+```
+
+**On-change subscription for link state:**
+
+```yaml
+spec:
+  subscriptions:
+    - paths:
+        - /interfaces/interface/state/oper-status
+      streamMode: ON_CHANGE
+```
+
+### Step 2 — Watch subscription health
+
+```bash
+$ kubectl get iosxetelemetry -w
+NAME              DEVICE        PHASE    AGE
+cat9k-interfaces  cat9k-smoke   Active   8s
+cat9k-apps        cat9k-smoke   Active   3s
+```
+
+Check detailed status:
+
+```bash
+$ kubectl describe iosxetelemetry cat9k-interfaces
+...
+Status:
+  Phase:  Active
+  Subscription Stats:
+    Active Subscriptions:   1
+    Notifications Total:    142
+    Buffer Overflow Total:  0
+Events:
+  Normal  Subscribed  8s  gNMI Subscribe stream established
+```
+
+If a stream drops, CVK reconnects with exponential backoff and emits a
+`Warning StreamError` event. The phase transitions to `Degraded` until
+the stream recovers.
+
+### Step 3 — Verify data in your collector
+
+CVK emits each MDT notification as one of:
+
+- **OTel log records** — for string/state-change leaves (e.g. oper-status transitions)
+- **OTel metrics** — for numeric leaves (e.g. counter, gauge readings)
+
+All records carry `cisco.device.name` and `cisco.subscription.path` as
+resource attributes.
+
+Example Prometheus remote-write output from interface counters:
+
+```
+interfaces_interface_state_counters_in_octets{
+  cisco_device_name="cat9k-smoke",
+  interface_name="GigabitEthernet1/0/1"
+} 1234567890
+interfaces_interface_state_counters_out_octets{
+  cisco_device_name="cat9k-smoke",
+  interface_name="GigabitEthernet1/0/1"
+} 987654321
+```
+
+### Path quick reference
+
+| What to monitor | YANG path | Style |
+|---|---|---|
+| Interface counters | `/interfaces/interface/state/counters` | OpenConfig |
+| Interface oper-status | `/interfaces/interface/state/oper-status` | OpenConfig |
+| BGP neighbors | `/network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state` | OpenConfig |
+| OSPF neighbors | `/network-instances/network-instance/protocols/protocol/ospf/areas/area/interfaces/interface/neighbors/neighbor/state` | OpenConfig |
+| CPU utilization | `/Cisco-IOS-XE-process-cpu-oper:cpu-usage/cpu-utilization` | IOS-XE native (preservePathPrefix) |
+| Memory | `/Cisco-IOS-XE-memory-oper:memory-statistics/memory-statistic` | IOS-XE native (preservePathPrefix) |
+| App-hosting apps | `/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/apps` | IOS-XE native (preservePathPrefix) |
+| Environment sensors | `/Cisco-IOS-XE-environment-oper:environment-sensors` | IOS-XE native (preservePathPrefix) |
+
+For ready-to-apply example CRs see the [Worked examples](#worked-examples) section below.
+
+---
 
 ## Phase 1 — Subscription lifecycle
 
@@ -367,6 +536,85 @@ Ready-to-apply IOSXETelemetry CRs for common C9300X MDT-over-gNMI use cases:
 - [Environmental sensors](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/iosxetelemetry/c9300x-environmental.yaml)
 - [Interface counters and oper-status transitions](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/iosxetelemetry/c9300x-interfaces-counters.yaml)
 - [BGP and OSPF counters plus adjacency transitions](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/iosxetelemetry/c9300x-bgp-and-ospf.yaml)
+
+## Status output examples
+
+After applying an `IOSXETelemetry` CR, watch the subscription come up:
+
+```bash
+$ kubectl get iosxetelemetry -w
+NAME               DEVICE        PHASE     AGE
+cat9k-interfaces   cat9k-smoke   Active    8s
+```
+
+Full status showing per-subscription health and buffer stats:
+
+```bash
+$ kubectl describe iosxetelemetry cat9k-interfaces
+Name:         cat9k-interfaces
+Namespace:    default
+API Version:  config.cisco.vk/v1alpha1
+Kind:         IOSXETelemetry
+Spec:
+  Device Ref:
+    Name:  cat9k-smoke
+  Subscriptions:
+    Paths:
+      /interfaces/interface/state/counters
+    Sample Interval:  30000000000
+Status:
+  Conditions:
+    Last Transition Time:  2026-05-30T10:00:08Z
+    Message:               1 subscription active
+    Reason:                Active
+    Status:                True
+    Type:                  Ready
+  Phase:  Active
+  Subscription Stats:
+    Active Subscriptions:  1
+    Buffer Overflow Total: 0
+    Notifications Total:   142
+Events:
+  Type    Reason     Age   Message
+  ----    ------     ----  -------
+  Normal  Subscribed  8s   gNMI Subscribe stream established for /interfaces/interface/state/counters
+```
+
+When a subscription error occurs the phase transitions to `Degraded` and
+the condition message carries the gRPC status code:
+
+```bash
+$ kubectl describe iosxetelemetry cat9k-interfaces
+...
+Status:
+  Conditions:
+    Last Transition Time:  2026-05-30T10:05:32Z
+    Message:               rpc error: code = Unavailable desc = transport is closing
+    Reason:                SubscriptionError
+    Status:                False
+    Type:                  Ready
+  Phase:  Degraded
+Events:
+  Type     Reason       Age   Message
+  ----     ------       ----  -------
+  Warning  StreamError  12s   gNMI stream lost, reconnecting (attempt 1/5, backoff 2s)
+  Normal   Subscribed   8s    gNMI Subscribe stream re-established
+```
+
+Metrics emitted to your OpenTelemetry collector carry the device name and
+subscription path as attributes, for example:
+
+```
+# Prometheus remote-write preview (interface counters)
+interfaces_interface_state_counters_in_octets{
+  device="cat9k-smoke",
+  interface_name="GigabitEthernet1/0/1"
+} 1234567890 1748599200000
+interfaces_interface_state_counters_out_octets{
+  device="cat9k-smoke",
+  interface_name="GigabitEthernet1/0/1"
+} 987654321 1748599200000
+```
 
 ## Future work
 

@@ -1,25 +1,27 @@
 # Cisco Virtual Kubelet Provider
 
-[![Go Version](https://img.shields.io/badge/Go-1.23+-blue.svg)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-1.25+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 A [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider that enables [Kubernetes](https://kubernetes.io/docs/home/) to schedule container workloads on Cisco Catalyst series switches and other IOS-XE devices with [App-Hosting](https://developer.cisco.com/docs/app-hosting/) capabilities.
 
 ## Overview
 
-This provider allows Kubernetes pods to be deployed as containers directly on Cisco devices, enabling edge computing scenarios where compute workloads run on network infrastructure. The provider communicates with Cisco devices via RESTCONF APIs to manage the container lifecycle.
+This provider allows Kubernetes pods to be deployed as containers directly on Cisco devices, enabling edge computing scenarios where compute workloads run on network infrastructure. The provider communicates with Cisco devices via RESTCONF APIs to manage the full container and device lifecycle.
 
 ### Key Features
 
-- **Native Kubernetes Integration**: Deploy containers to Cisco devices using standard `kubectl` commands
-- **Driver-Based Architecture**: Extensible driver pattern currently supporting IOS-XE devices
-- **Full Lifecycle Management**: Create, monitor, and delete containers via RESTCONF
-- **Health Monitoring**: Continuous node health checks and status reporting
-- **IOS-XE Telemetry CRD**: Declare MDT-over-gNMI subscriptions and emit OpenTelemetry metrics, logs, and state-transition traces
-- **Resource Management**: CPU, memory, and storage allocation per container
-- **Environment Variables**: Full support for container environment variables from direct values, Secrets, and ConfigMaps
-- **Flexible Networking**: Support both DHCP IP allocation via Virtual Port Groups or AppGigabitEthernet
-- **DHCP Integration**: Automatic IP discovery from device operational data or ARP tables
+- **Native Kubernetes Integration** — deploy containers to Cisco devices using standard `kubectl` commands
+- **Driver-Based Architecture** — extensible driver pattern currently supporting IOS-XE devices
+- **Full App-Hosting Lifecycle** — create, monitor, and delete containers via RESTCONF
+- **Network as Code** — declare IOS-XE device configuration in Kubernetes (`IOSXEConfig` CRD) with continuous drift detection and transactional apply
+- **Software Lifecycle** *(Beta)* — drive IOS-XE software upgrades via the `IOSXESoftwareUpgrade` CRD using gNOI OS install/activate/verify
+- **Device Operations** *(Beta)* — run auditable `show` commands and read-only gNOI probes from Kubernetes via `DeviceOperation` CRD
+- **IOS-XE Telemetry** *(Beta)* — declare MDT-over-gNMI subscriptions and emit OpenTelemetry metrics, logs, and state-transition traces
+- **Topology Observability** *(Beta)* — emit CDP/OSPF topology and hosted-app traces to any OTLP-compatible backend
+- **Health Monitoring** — continuous node health checks, kubelet metrics (`/stats/summary`, `/metrics/resource`), and device annotations
+- **Resource Management** — CPU, memory, and storage allocation per container
+- **Flexible Networking** — DHCP via Virtual Port Groups or AppGigabitEthernet; automatic IP discovery from device operational data
 
 ### Supported Devices
 
@@ -99,6 +101,16 @@ helm install cvk ./charts/cisco-virtual-kubelet \
   --set vkImage.tag=latest
 ```
 
+### Create device credentials
+
+Store device credentials in a Kubernetes Secret before creating the `CiscoDevice` CR:
+
+```bash
+kubectl create secret generic cat9000-1-creds \
+  --from-literal=username=admin \
+  --from-literal=password=<device-password>
+```
+
 ### Create a CiscoDevice CR
 
 Once the controller is running, create a `CiscoDevice` resource to provision a VK node:
@@ -113,8 +125,8 @@ spec:
   driver: XE
   address: "192.168.1.100"
   port: 443
-  username: admin
-  password: cisco123
+  credentialSecretRef:
+    name: cat9000-1-creds
   tls:
     enabled: true
     insecureSkipVerify: true
@@ -128,37 +140,52 @@ spec:
           guestInterface: 0
 ```
 
-The controller will create a VK deployment and a matching Kubernetes node. Pods scheduled to that node are deployed to the device via AppHosting.
+The controller creates a VK Deployment and a matching Kubernetes virtual node. Pods scheduled to that node are deployed to the device via App-Hosting.
 
 ## Documentation
 
-- [Configuration Reference](docs/CONFIGURATION.md) - Configuration options and device setup
-- [Architecture](docs/ARCHITECTURE.md) - Technical architecture details
-- [API Reference](docs/API.md) - RESTCONF API details
-- [Environment Variables](docs/environment-variables.md) - Complete guide to environment variable support
+- [Getting Started](docs/getting-started.md) — Installation, first device, and first pod
+- [Architecture](docs/ARCHITECTURE.md) — Technical architecture and component deep-dive
+- [Configuration Reference](docs/CONFIGURATION.md) — `CiscoDevice` spec options and device setup
+- [Network as Code](docs/netascode-config.md) — Declarative `IOSXEConfig`, drift detection, and transactional apply
+- [CLI & Plugin Reference](docs/cisco-vk-cli.md) — `cisco-vk` binary and `kubectl-ciscovk` plugin
+- [Software Lifecycle](docs/gnoi-software-lifecycle.md) *(Beta)* — IOS-XE upgrades via `IOSXESoftwareUpgrade`
+- [Operations Runbook](docs/operations.md) — `DeviceOperation` show commands, CRD upgrade guide
+- [Telemetry](docs/telemetry.md) *(Beta)* — MDT-over-gNMI subscriptions and OpenTelemetry
+- [Observability](docs/observability.md) — Metrics, traces, and Splunk integration
+- [CRD Reference](docs/crds.md) — All custom resource definitions
+- [API Reference](docs/API.md) — RESTCONF and kubelet endpoint reference
+- [Environment Variables](docs/environment-variables.md) — Complete environment variable reference
+- [Security](docs/security.md) — TLS, RBAC, and credential management
+- [Troubleshooting](docs/troubleshooting.md) — Common issues and debug techniques
 
 ## Project Structure
 
 ```
 cisco-virtual-kubelet/
 ├── api/
-│   └── v1alpha1/               # CRD API types (DeviceSpec, CiscoDevice)
+│   ├── v1alpha1/               # Core CRDs: CiscoDevice, XEConfig
+│   ├── config/v1alpha1/        # Config CRDs: IOSXEConfig, IOSXEConfigBundle, IOSXETelemetry
+│   └── ops/v1alpha1/           # Ops CRDs: DeviceOperation, IOSXESoftwareUpgrade, IOSXEOperationalAction
 ├── cmd/
 │   └── cisco-vk/               # Unified binary entry point
 │       ├── main.go             # cobra root command
-│       ├── run.go              # 'run' subcommand — standalone VK provider
+│       ├── run.go              # 'run' subcommand — per-device VK provider
 │       └── manager.go          # 'manager' subcommand — CRD controller manager
 ├── charts/
-│   └── cisco-virtual-kubelet/  # Helm chart for controller deployment
-│       ├── crds/               # CRD (synced from config/crd by make generate)
-│       └── templates/          # RBAC, Deployment (role.yaml auto-generated)
+│   └── cisco-virtual-kubelet/  # Helm chart
+│       ├── crds/               # CRD manifests (synced by make generate)
+│       └── templates/          # RBAC, Deployments, ServiceAccounts
 ├── config/
-│   └── crd/                    # Generated CRDs (source of truth for make generate)
+│   └── crd/                    # Generated CRDs (source of truth)
 ├── internal/
-│   ├── config/                 # YAML/viper config loader
-│   ├── controller/             # CiscoDevice reconciler (+kubebuilder:rbac markers)
-│   ├── provider/               # Virtual Kubelet provider implementation
-│   └── drivers/                # Device driver implementations (XE, fake)
+│   ├── aggregator/             # In-process config aggregator (experimental)
+│   ├── controller/             # CiscoDevice and IOSXEConfigBundle reconcilers
+│   ├── drivers/                # Device driver implementations (IOS-XE, fake)
+│   │   └── iosxe/
+│   │       └── configdriver/   # Network as Code engine, writers, intent resolver
+│   ├── provider/               # Virtual Kubelet provider, config reconciler, telemetry
+│   └── telemetry/              # MDT gNMI mapper, OTel emit, classifier, correlation
 ├── examples/
 ├── dev/                        # Development configs and test resources
 ├── docs/
@@ -192,10 +219,12 @@ The device config file follows the same schema as the `CiscoDevice` CR `spec`. S
 
 | Flag | Env Var | Default | Description |
 |------|---------|---------|-------------|
-| `--nodename` | `VKUBELET_NODE_NAME` | `cisco-virtual-kubelet` | Kubernetes node name |
-| `--config` / `-c` | - | `/etc/virtual-kubelet/config.yaml` | Path to device config file |
-| `--kubeconfig` | `KUBECONFIG` | _(in-cluster)_ | Path to kubeconfig file |
-| `--log-level` | `LOG_LEVEL` | `info` | Log level: debug, info, warn, error |
+| `--nodename` | `VK_NODE_NAME` | from config | Kubernetes virtual node name |
+| `--config` / `-c` | — | (required) | Path to device config YAML |
+| `--kubeconfig` | `KUBECONFIG` | in-cluster | Path to kubeconfig file |
+| `--log-level` | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error` |
+
+See [CLI Reference](docs/cisco-vk-cli.md) for the full flag and environment variable reference.
 
 ### Regenerate RBAC and CRDs
 
