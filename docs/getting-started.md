@@ -12,7 +12,7 @@ You'll install the Helm chart, which deploys a Kubernetes controller. The contro
 | Helm v3 | For installing the chart |
 | Docker (or compatible) | For building the VK image locally |
 | Container registry | Accessible from your cluster (Docker Hub, GHCR, internal, or sideload into KIND/minikube) |
-| Cisco IOS-XE device | Catalyst 8000V (17.15.4c+) or Catalyst 9000 (17.18.2+) |
+| Cisco IOS-XE device | Catalyst 8000V (17.15.4c+), Catalyst 9000 (17.18.2+), or IR1100 Series (17.12.4+) |
 | `kubectl` | Configured to talk to your cluster |
 
 On the device you need:
@@ -20,9 +20,9 @@ On the device you need:
 - `iox` configured — Cisco's on-device container runtime.
 - `restconf` enabled on the HTTPS listener.
 - App-hosting support (standard on Catalyst 8000V and 9000).
-- A signed container tar on device flash (e.g. `flash:/hello-app.iosxe.tar`) unless you explicitly allow unsigned packages.
+- A signed container tar on device flash (e.g. `flash:/hello-app.iosxe.tar` on Cat8000V/Cat9000, or `bootflash:/hello-app.iosxe.tar` on IR1100) unless you explicitly allow unsigned packages.
 
-See the platform-specific install guide for the exact IOS-XE CLI snippets: [Catalyst 8000V](configuration-cat8000v.md) or [Catalyst 9000](configuration-cat9000.md).
+See the platform-specific install guide for the exact IOS-XE CLI snippets: [Catalyst 8000V](configuration-cat8000v.md), [Catalyst 9000](configuration-cat9000.md), or [IR1100 Series](configuration-ir1101.md).
 
 ## 1. Build and push the image
 
@@ -172,7 +172,7 @@ spec:
     operator: Exists
   containers:
   - name: hello
-    image: flash:/hello-app.iosxe.tar   # path on device flash
+    image: flash:/hello-app.iosxe.tar   # path on device flash (use bootflash: on IR1100)
     resources:
       requests:
         memory: "512Mi"

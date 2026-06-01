@@ -43,6 +43,7 @@ nav:
   - Family Reference: 'reference/families/README.md'
   - Catalyst 8000V: 'configuration-cat8000v.md'
   - Catalyst 9000: 'configuration-cat9000.md'
+  - IR1100 Series: 'configuration-ir1101.md'
   - YANG Version Support: 'yang-version-support.md'
   - Environment Variables: 'environment-variables.md'
 - 'Software Lifecycle':
