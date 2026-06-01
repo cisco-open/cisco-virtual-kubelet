@@ -1,5 +1,5 @@
 upstream: https://github.com/YangModels/yang.git
-commit: 2abb0f4cdf7862a837a2308d5975fc7955e65ae8
-fetchDate: 2026-05-14T17:29:16Z
+commit: 647250f1c8f59aaf1ecdcf1d908fde96c036b1ba
+fetchDate: 2026-06-01T09:48:00Z
 release: "1718"
 upstreamRelease: "17181"

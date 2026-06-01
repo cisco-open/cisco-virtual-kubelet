@@ -36,10 +36,13 @@ jobs:
 
       - name: Diff checked-in YANG
         run: |
-          git diff -- internal/drivers/iosxe/configdriver/schema/yang/1718 > yang-drift.diff || true
+          git diff -- internal/drivers/iosxe/configdriver/schema/yang/1718 \
+            ':(exclude)internal/drivers/iosxe/configdriver/schema/yang/1718/.provenance.yaml' \
+            > yang-drift.diff || true
           if [ -s yang-drift.diff ]; then
             echo "YANG drift detected against latest YangModels/yang HEAD."
-            git diff --stat -- internal/drivers/iosxe/configdriver/schema/yang/1718
+            git diff --stat -- internal/drivers/iosxe/configdriver/schema/yang/1718 \
+              ':(exclude)internal/drivers/iosxe/configdriver/schema/yang/1718/.provenance.yaml'
             exit 1
           fi
           echo "No YANG drift detected."
