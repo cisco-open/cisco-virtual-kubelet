@@ -35,22 +35,25 @@ nav:
 - Welcome: 'index.md'
 - Getting Started: 'getting-started.md'
 - Architecture: 'ARCHITECTURE.md'
+- CLI Reference: 'cisco-vk-cli.md'
 - Configuration:
-  - Reference: 'CONFIGURATION.md'
+  - CiscoDevice Reference: 'CONFIGURATION.md'
+  - Network as Code: 'netascode-config.md'
   - CRD Reference: 'crds.md'
   - Family Reference: 'reference/families/README.md'
   - Catalyst 8000V: 'configuration-cat8000v.md'
   - Catalyst 9000: 'configuration-cat9000.md'
   - YANG Version Support: 'yang-version-support.md'
   - Environment Variables: 'environment-variables.md'
-- 'gNOI & Software Lifecycle':
+- 'Software Lifecycle':
   - Overview: 'gnoi-software-lifecycle.md'
-- Operations:
   - Operations Runbook: 'operations.md'
-  - Lifecycle: 'lifecycle.md'
-  - Telemetry: 'telemetry.md'
-  - Telemetry Cardinality: 'telemetry-cardinality.md'
-  - Observability: 'observability.md'
+- Telemetry:
+  - MDT Subscriptions: 'telemetry.md'
+  - Cardinality Management: 'telemetry-cardinality.md'
+  - Lifecycle Correlation: 'lifecycle.md'
+- Observability:
+  - Overview: 'observability.md'
   - Troubleshooting: 'troubleshooting.md'
 - Security: 'security.md'
 - API Reference: 'API.md'
@@ -70,11 +73,4 @@ docs_dir: docs
 site_dir: site
 exclude_docs: |
   website/
-  cvk-unified-architecture-plan.md
-  family-parity.md
-  gnoi-pilot-c9k4-upgrade-evidence.md
-  netascode-migration.md
-  telemetry-branch-review.md
-  telemetry-trace-convergence-roadmap.md
-  yang-version-transition.md
 use_directory_urls: true

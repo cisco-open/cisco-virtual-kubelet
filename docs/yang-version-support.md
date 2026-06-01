@@ -14,6 +14,34 @@ C9300-24P). Earlier versions (17.15, 17.16) diverge in several ways:
 
 ## Architecture
 
+!!! note "Future direction: ygot-typed bindings"
+    The current architecture uses a **hand-maintained runtime override table**
+    (`yang_version_override_table.go`) to handle YANG model differences across
+    IOS-XE versions. This approach works well for a bounded set of managed
+    families but does not scale linearly as the number of families, versions,
+    and divergence types grows — each new combination requires a new table
+    entry and associated body-transform function.
+
+    In a future release, CVK anticipates a shift to
+    **[ygot](https://github.com/openconfig/ygot)-generated typed Go bindings**
+    per IOS-XE release family. ygot would generate structs directly from the
+    Cisco YANG models and provide compile-time safety, automated serialisation,
+    and structural validation without manual `ElementMap` entries. The
+    validation boundary at
+    `internal/drivers/iosxe/configdriver/validation` is already designed as the
+    seam for this migration: ygot validators would plug in there and validate
+    the device-facing YANG payload, leaving the public NetAsCode intent model
+    unchanged.
+
+    **What this means for operators and contributors today:**
+    - The public `IOSXEConfig.spec.source` NetAsCode intent shape will remain
+      stable across this migration — you will not need to change your intent
+      YAML when the internal transport layer moves to ygot.
+    - New family contributions should continue using the override table pattern
+      described in this document until the ygot migration lands.
+    - Track progress and participate in design discussion on
+      [GitHub Discussions](https://github.com/cisco-open/cisco-virtual-kubelet/discussions).
+
 ### Intent, Translation, Validation Boundary
 
 CVK keeps the public `IOSXEConfig.spec.source` payload in the canonical

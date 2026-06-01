@@ -1,4 +1,12 @@
-# gNOI and Software Lifecycle Management
+# Software Lifecycle Management
+
+!!! warning "Beta"
+    The gNOI operations, write-class actions, and software lifecycle features
+    described on this page are **Beta**. They are functional and tested on
+    supported platforms but carry `v1alpha1` API versions and schemas that
+    may change between releases. Write-class gNOI actions and software
+    upgrades are disabled by default and require explicit runtime gates before
+    use. Evaluate in non-production environments first.
 
 !!! warning "Beta"
     The gNOI operations, write-class actions, and software lifecycle features
@@ -155,16 +163,203 @@ Important defaults:
 uses a prefix-aware comparison, so operators may use the shortest unambiguous
 form for the staged image.
 
+## Upgrade Manifest Walkthrough
+
+Each upgrade is a single Kubernetes CR. Create one manifest per device and
+apply it when ready — the upgrade begins immediately and the CR records the
+full audit trail.
+
+### Preparing the image
+
+Before creating the manifest, collect the image hash. Use the sha256 digest
+for `imageSource.sha256`. The MD5 is included as a human-reference annotation
+but CVK uses sha256 exclusively for verification:
+
+```bash
+# On a Linux host that holds the image:
+sha256sum cat9k_iosxe.26.01.01.SPA.bin
+md5sum    cat9k_iosxe.26.01.01.SPA.bin
+stat --format='%s' cat9k_iosxe.26.01.01.SPA.bin
+```
+
+Serve the image from a source the device can reach — TFTP and HTTP are the
+most common options in lab and production environments respectively.
+
+### Example — TFTP upgrade (Catalyst 9300, IOS-XE 26.01.01)
+
+This is a real-world production manifest. The in-cluster TFTP service
+(`rust-tftp-otel-headless`) serves images to devices over the management
+network. Labels and annotations carry out-of-band metadata that is useful
+for audit queries, dashboards, and GitOps tooling — they are not processed
+by CVK.
+
+```yaml
+# 9300-4 IOS-XE upgrade manifest for Cisco Virtual Kubelet software lifecycle.
+#
+# Target device:
+#   CiscoDevice: default/cat9000-4
+#   Management IP: 198.51.100.103
+#   Hardware: C9300-24P, serial FOC2416U0MV
+#
+# Image source served by the in-cluster TFTP service:
+#   tftp://rust-tftp-otel-headless.ng-pnp.svc.cluster.local:6969/images/cat9k_iosxe.26.01.01.SPA.bin
+#   size:   1260618344 bytes
+#   md5:    fd4a41c41a7de1a9d907c4f35f46e334
+#   sha256: 7de3c6875e3c1c96d5920e8542c72b1bcb5d913d99645ef5687f44dd4024cdf4
+#
+# Apply when ready to perform the upgrade/reload:
+#   kubectl apply -f 9300-4-upgrade-26.01.01.yaml
+#   kubectl get iosxesoftwareupgrade upgrade-cat9000-4-26-01-01 -n default -o wide -w
+apiVersion: ops.cisco.vk/v1alpha1
+kind: IOSXESoftwareUpgrade
+metadata:
+  name: upgrade-cat9000-4-26-01-01
+  namespace: default
+  labels:
+    app.kubernetes.io/part-of: lifecycle-mgmt
+    lifecycle.cisco.com/device: cat9000-4
+    lifecycle.cisco.com/operation: iosxe-upgrade
+  annotations:
+    lifecycle.cisco.com/source-protocol: tftp
+    lifecycle.cisco.com/tftp-url: tftp://rust-tftp-otel-headless.ng-pnp.svc.cluster.local:6969/images/cat9k_iosxe.26.01.01.SPA.bin
+    lifecycle.cisco.com/image-file: cat9k_iosxe.26.01.01.SPA.bin
+    lifecycle.cisco.com/image-size-bytes: "1260618344"
+    lifecycle.cisco.com/image-md5: fd4a41c41a7de1a9d907c4f35f46e334
+    lifecycle.cisco.com/image-sha256: 7de3c6875e3c1c96d5920e8542c72b1bcb5d913d99645ef5687f44dd4024cdf4
+spec:
+  deviceRef:
+    name: cat9000-4
+  imageSource:
+    url: tftp://rust-tftp-otel-headless.ng-pnp.svc.cluster.local:6969/images/cat9k_iosxe.26.01.01.SPA.bin
+    sha256: 7de3c6875e3c1c96d5920e8542c72b1bcb5d913d99645ef5687f44dd4024cdf4
+  targetVersion: 26.01.01
+  strategy: Reload
+  rollbackOnFailure: false
+  resumePolicy: Retry
+  maxRetries: 3
+  rebootTimeoutSeconds: 3600
+```
+
+**Field notes:**
+
+- `targetVersion: 26.01.01` — shortest unambiguous prefix. CVK's prefix-aware
+  comparison will match `26.01.01.0.340` or `26.01.01.0.340.1766116039`.
+- `strategy: Reload` — OS.Activate is called with reboot allowed; CVK waits
+  for the device to come back (up to `rebootTimeoutSeconds`) and then verifies
+  the running version.
+- `rollbackOnFailure: false` — the device is left on whatever version it
+  landed on after a verify mismatch. Set to `true` in environments where
+  automatic rollback is preferred.
+- `rebootTimeoutSeconds: 3600` — allow a full hour for the device to reload.
+  This is appropriate for Catalyst 9000; set to 1800 for faster platforms.
+
+### Monitoring the upgrade
+
+```bash
+# Watch the phase progress in real time:
+kubectl get iosxesoftwareupgrade upgrade-cat9000-4-26-01-01 -n default -o wide -w
+
+NAME                          DEVICE      PHASE              TARGET     AGE
+upgrade-cat9000-4-26-01-01    cat9000-4   Pending            26.01.01   0s
+upgrade-cat9000-4-26-01-01    cat9000-4   Resolving          26.01.01   2s
+upgrade-cat9000-4-26-01-01    cat9000-4   Transferring       26.01.01   8s
+upgrade-cat9000-4-26-01-01    cat9000-4   Validating         26.01.01   4m22s
+upgrade-cat9000-4-26-01-01    cat9000-4   Activating         26.01.01   4m35s
+upgrade-cat9000-4-26-01-01    cat9000-4   AwaitingReachability 26.01.01 4m38s
+upgrade-cat9000-4-26-01-01    cat9000-4   Verifying          26.01.01   16m14s
+upgrade-cat9000-4-26-01-01    cat9000-4   Succeeded          26.01.01   16m31s
+```
+
+```bash
+# See full status detail including conditions:
+kubectl describe iosxesoftwareupgrade upgrade-cat9000-4-26-01-01
+
+...
+Status:
+  Phase:           Succeeded
+  Target Version:  26.01.01
+  Running Version: 26.01.01.0.340
+  Conditions:
+    Type                Status  Reason
+    ----                ------  ------
+    TransferComplete    True    ImageTransferred
+    ValidationPassed    True    PrefligthOK
+    ActivationComplete  True    OSActivated
+    VerificationPassed  True    VersionMatch
+Events:
+  Normal  PhaseTransition  16m  Transferring → Validating: image hash verified
+  Normal  PhaseTransition  11m  Activating → AwaitingReachability: OS.Activate sent
+  Normal  PhaseTransition  0s   Verifying → Succeeded: running 26.01.01.0.340
+```
+
+### Example — local flash path (image already on device)
+
+Use `localPath` when the image has been pre-staged to device storage (e.g.
+via ZTP or a previous TFTP transfer):
+
+```yaml
+spec:
+  deviceRef:
+    name: cat9000-3
+  imageSource:
+    localPath: flash:cat9k_iosxe.17.18.02.SPA.bin
+    localPathSHA256: a1b2c3d4e5f6...  # optional; from gNOI File.Get
+  targetVersion: 17.18.02
+  strategy: Reload
+  rollbackOnFailure: true
+  rebootTimeoutSeconds: 1800
+```
+
+### Example — stage only, reload later (NoReboot)
+
+`NoReboot` stages the image for activation without triggering an immediate
+reload. Schedule the reload separately through `IOSXEOperationalAction` during
+a maintenance window:
+
+```yaml
+spec:
+  deviceRef:
+    name: cat9000-5
+  imageSource:
+    url: tftp://rust-tftp-otel-headless.ng-pnp.svc.cluster.local:6969/images/cat9k_iosxe.26.01.01.SPA.bin
+    sha256: 7de3c6875e3c1c96d5920e8542c72b1bcb5d913d99645ef5687f44dd4024cdf4
+  targetVersion: 26.01.01
+  strategy: NoReboot          # stage only; does not reboot
+  rebootTimeoutSeconds: 0     # not applicable for NoReboot
+```
+
+The CR ends in `Succeeded` once the image is staged and activated
+(without reload). Trigger the reload during maintenance:
+
+```yaml
+apiVersion: ops.cisco.vk/v1alpha1
+kind: IOSXEOperationalAction
+metadata:
+  name: reload-cat9000-5-maint-window
+  namespace: default
+spec:
+  deviceRef:
+    name: cat9000-5
+  confirm: cat9000-5          # must match deviceRef.name exactly
+  action:
+    kind: Reboot
+    reboot:
+      message: "Scheduled maintenance window reload"
+      delay: 0
+```
+
 ## Operator Workflow
 
-1. Confirm the device exposes the required gNxI/gNOI listener.
-2. Enable only the required runtime gate on the per-device VK pod.
-3. Grant RBAC by CRD type: read-only users get `DeviceOperation`, upgrade
-   operators get `IOSXESoftwareUpgrade`, and break-glass operators get
-   `IOSXEOperationalAction`.
-4. Create one operation CR per device operation.
-5. Watch `.status.phase`, `.status.conditions`, Kubernetes events, and the
-   gNOI lifecycle metrics in [Observability](observability.md#gnoi-lifecycle-metrics).
+1. Confirm the device exposes the gNxI listener (`gnxi server` is enabled).
+2. Enable the software upgrade gate on the per-device VK pod via Helm
+   (`gnoi.enableSoftwareUpgrade: true`) or the env var
+   `CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=1`.
+3. Grant RBAC: upgrade operators need `create`/`get`/`watch` on
+   `IOSXESoftwareUpgrade`. Read-only users get `DeviceOperation` only.
+4. Compute the image sha256 and prepare the manifest (see examples above).
+5. Apply the manifest and monitor with `kubectl get iosxesoftwareupgrade -w`.
+6. After `Succeeded`, delete the CR when the audit record is no longer needed,
+   or retain it as an immutable upgrade record.
 
-For concrete YAML examples and status output, see the
-[DeviceOperation runbook](operations.md).
+For `DeviceOperation` show-command and diagnostic examples see the
+[Operations Runbook](operations.md).

@@ -50,14 +50,6 @@ const features = [
     glowColor: "success",
   },
   {
-    icon: LineChart,
-    title: "Observability & Topology",
-    description:
-      "Prometheus metrics for device and interface health, plus OpenTelemetry topology traces with CDP/OSPF neighbors and hosted apps.",
-    color: "from-primary-light to-primary",
-    glowColor: "primary",
-  },
-  {
     icon: Network,
     title: "Flexible Networking",
     description:
@@ -72,6 +64,15 @@ const features = [
       "Device credentials injected from Kubernetes Secrets via secretKeyRef. Passwords never touch ConfigMaps or etcd in plaintext.",
     color: "from-success to-teal-400",
     glowColor: "success",
+  },
+  {
+    icon: LineChart,
+    title: "Observability & Topology",
+    description:
+      "Prometheus metrics for device and interface health, plus OpenTelemetry topology traces with CDP/OSPF neighbors and hosted apps.",
+    color: "from-primary-light to-primary",
+    glowColor: "primary",
+    beta: true,
   },
 ];
 
@@ -143,9 +144,16 @@ export default function Features() {
               </div>
 
               {/* Content */}
-              <h3 className="text-xl font-semibold mb-3 text-foreground">
-                {feature.title}
-              </h3>
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-xl font-semibold text-foreground">
+                  {feature.title}
+                </h3>
+                {feature.beta && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/25 shrink-0">
+                    Beta
+                  </span>
+                )}
+              </div>
               <p className="text-text-muted leading-relaxed">
                 {feature.description}
               </p>
