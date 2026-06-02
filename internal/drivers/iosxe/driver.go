@@ -133,6 +133,12 @@ func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*XEDri
 		"platform": "IOS-XE",
 	}).Info("Connected to IOSXE device")
 
+	if spec.AllowUnsignedApps {
+		if err := d.ConfigureSignVerification(ctx, false); err != nil {
+			log.G(ctx).WithError(err).Warn("allowUnsignedApps=true but failed to disable sign-verification on device; unsigned installs may be blocked")
+		}
+	}
+
 	return d, nil
 }
 

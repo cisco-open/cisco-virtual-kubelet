@@ -72,6 +72,13 @@ helm upgrade cisco-vk ./charts/cisco-virtual-kubelet-<prev-version> \
     require explicit runtime gates, and should be tested thoroughly in
     non-production environments before use in production.
 
+!!! warning "Beta"
+    All CRDs and features documented on this page are **Beta** (`v1alpha1`).
+    Read-only `DeviceOperation` and gNOI probes are the most mature surface;
+    write-class `IOSXEOperationalAction` and `IOSXESoftwareUpgrade` are newer,
+    require explicit runtime gates, and should be tested thoroughly in
+    non-production environments before use in production.
+
 `DeviceOperation` is the sibling-CRD path for auditable, asynchronous,
 non-Pod operations. For the higher-level gNOI architecture, runtime gates,
 RBAC split, and IOS-XE software lifecycle model, see

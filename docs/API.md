@@ -139,13 +139,15 @@ The oper-data also exposes `pkg-policy`. Values:
 | Value | Meaning |
 |---|---|
 | `iox-pkg-policy-signed` | Package passed signature verification |
-| `iox-pkg-policy-unsigned` | Package unsigned, but device allows unsigned (`no app-hosting signed-verification`) |
+| `iox-pkg-policy-unsigned` | Package unsigned, and device allows unsigned — set via `no app-hosting signed-verification` (CLI) or automatically by `spec.allowUnsignedApps: true` (CRD) |
 | `iox-pkg-policy-invalid` | **Ambiguous** — either the package failed verification, **or** the YANG default during the first seconds of every install before validation completes |
 
 The reconciler treats `iox-pkg-policy-invalid` as a fatal install blocker only when:
 
 1. `spec.allowUnsignedApps = false` (the default), **and**
 2. A confirming install notification has been received from the device.
+
+When `spec.allowUnsignedApps = true`, CVK also disables device-level signing via RESTCONF on first connect (see [Configuration → App packaging](CONFIGURATION.md#app-packaging)).
 
 The kubelet-exposed pod `status.reason` for this case is **`PackagePolicyInvalid`**.
 

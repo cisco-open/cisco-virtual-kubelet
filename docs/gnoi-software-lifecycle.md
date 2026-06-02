@@ -8,6 +8,14 @@
     upgrades are disabled by default and require explicit runtime gates before
     use. Evaluate in non-production environments first.
 
+!!! warning "Beta"
+    The gNOI operations, write-class actions, and software lifecycle features
+    described on this page are **Beta**. They are functional and tested on
+    supported platforms but carry `v1alpha1` API versions and schemas that
+    may change between releases. Write-class gNOI actions and software
+    upgrades are disabled by default and require explicit runtime gates before
+    use. Evaluate in non-production environments first.
+
 This section covers the gNOI control plane for device operations and IOS-XE
 software lifecycle management. It is separate from the pod app-hosting
 lifecycle: pods still use RESTCONF app-hosting RPCs, while gNOI handles

@@ -16,6 +16,7 @@ package iosxe
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 
@@ -106,6 +107,41 @@ func (d *XEDriver) GetDeviceResources(ctx context.Context) (*v1.ResourceList, er
 	}
 
 	return &resources, nil
+}
+
+const signVerificationPath = "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/controls"
+
+// appHostingControls is the raw JSON payload for the app-hosting controls container.
+// We use a plain map rather than a ygot struct because the generated model does not
+// expose the presence-container wrapper that IOS-XE RESTCONF expects.
+type appHostingControls struct {
+	Controls struct {
+		SignVerification bool `json:"sign-verification"`
+	} `json:"Cisco-IOS-XE-app-hosting-cfg:controls"`
+}
+
+// jsonMarshal is a simple marshaller for plain Go structs (not ygot) used by
+// ConfigureSignVerification.
+func jsonMarshal(v any) ([]byte, error) {
+	return json.Marshal(v)
+}
+
+// ConfigureSignVerification applies the global app-hosting signature-verification
+// setting to the device via RESTCONF.  When enabled is false the device will
+// accept unsigned application packages.
+//
+// IOS-XE stores this in a presence container
+// (app-hosting-cfg-data/controls); PUT is used so the container is created
+// if it does not yet exist, and re-applied idempotently if it does.
+func (d *XEDriver) ConfigureSignVerification(ctx context.Context, enabled bool) error {
+	payload := appHostingControls{}
+	payload.Controls.SignVerification = enabled
+
+	if err := d.client.Put(ctx, signVerificationPath, payload, jsonMarshal); err != nil {
+		return fmt.Errorf("failed to configure app-hosting sign-verification=%v: %w", enabled, err)
+	}
+	log.G(ctx).Infof("app-hosting sign-verification set to %v", enabled)
+	return nil
 }
 
 // GetGlobalOperationalData queries the device for global AppHosting operational data.
