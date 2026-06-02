@@ -16,7 +16,7 @@ Four ideas you'll see referenced throughout the docs:
   handles pod lifecycle however it likes. This project is a provider for Cisco
   devices.
 - **IOx / App-Hosting** - Cisco's on-device container runtime, available on
-  Catalyst 8000V, Catalyst 9000, and IR1100 Series platforms. It runs OCI-like
+  Catalyst 8000V, Catalyst 9000, IR1100 Series, and IE3500 Series platforms. It runs OCI-like
   container packages (`.tar` files) directly on the device alongside normal
   network functions.
 - **Network as Code CRDs** - Kubernetes resources such as `IOSXEConfig`,
@@ -50,7 +50,7 @@ Kubernetes API
 - **Native Kubernetes integration** - deploy to Cisco devices with standard
   `kubectl apply`. No separate lifecycle is required for app-hosted pods.
 - **Driver-based architecture** - extensible driver pattern with IOS-XE
-  (Catalyst 8000V, Catalyst 9000, and IR1100 Series) available today.
+  (Catalyst 8000V, Catalyst 9000, IR1100 Series, and IE3500 Series) available today.
 - **Full pod lifecycle** - create, update, recover, and delete containers via
   RESTCONF, with automatic state reconciliation and pod recovery.
 - **Network as Code** - declarative IOS-XE configuration CRDs with defaults,
@@ -94,7 +94,7 @@ summarises the current state for the June 2026 release.
 
 | Feature area | Maturity | Notes |
 |---|---|---|
-| Pod lifecycle (App-Hosting create / update / delete) | **Stable** | Supported on Catalyst 8000V 17.15+, Catalyst 9000 17.18+, and IR1100 Series 17.12+. |
+| Pod lifecycle (App-Hosting create / update / delete) | **Stable** | Supported on Catalyst 8000V 17.15+, Catalyst 9000 17.18+, IR1100 Series 17.12+, and IE3500 Series 17.18+. |
 | `CiscoDevice` and VK deployment lifecycle | **Stable** | Controller-managed per-device VK pods. |
 | **Network as Code config driver** (`IOSXEConfig` family) | **Beta** | Declarative IOS-XE config CRDs with drift detection, bundles, revisions, and apply logs. Schema is `v1alpha1`; family coverage and wire-format behaviour are still expanding. |
 | **Operations** (`DeviceOperation`, `IOSXEOperationalAction`) | **Beta** | Read-only diagnostics and gNOI probes are stable in intent; write-class actions require an explicit runtime gate and carry additional operational risk. |
