@@ -85,6 +85,10 @@ func (c *RestconfClient) Patch(ctx context.Context, path string, payload any, ma
 	return c.doRequest(ctx, "PATCH", path, payload, nil, marshal, nil)
 }
 
+func (c *RestconfClient) Put(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error {
+	return c.doRequest(ctx, "PUT", path, payload, nil, marshal, nil)
+}
+
 func (c *RestconfClient) Delete(ctx context.Context, path string) error {
 	return c.doRequest(ctx, "DELETE", path, nil, nil, nil, nil)
 }

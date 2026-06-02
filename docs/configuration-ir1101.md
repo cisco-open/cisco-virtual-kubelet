@@ -93,8 +93,10 @@ iox
 ip http secure-server
 restconf
 
-! Required if you plan to run unsigned container packages.
-! Alternatively, enforce per-device via spec.allowUnsignedApps: true.
+! Required if you plan to run unsigned container packages on IOS-XE 17.12.
+! Note: spec.allowUnsignedApps: true will attempt to configure this via RESTCONF,
+! but IOS-XE 17.12 may not support the sign-verification YANG leaf — apply
+! these CLI commands manually to ensure unsigned installs are permitted.
 app-hosting verification disable
 no app-hosting signed-verification
 ```

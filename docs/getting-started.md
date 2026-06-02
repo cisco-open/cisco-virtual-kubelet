@@ -125,9 +125,9 @@ spec:
   tls:
     enabled: true
     insecureSkipVerify: true    # acceptable for lab; use caFile in production
-  # allowUnsignedApps: true     # uncomment when running unsigned packages
-                                 # (your own builds, or devices without
-                                 # signed-verification enforcement)
+  # allowUnsignedApps: true     # uncomment for unsigned packages (own builds /
+                                 # test images). CVK disables device signing via
+                                 # RESTCONF and relaxes the reconciler guard.
   xe:
     networking:
       interface:

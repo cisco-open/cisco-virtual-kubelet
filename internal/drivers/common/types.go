@@ -69,6 +69,7 @@ type NetworkClient interface {
 	Get(ctx context.Context, path string, result any, unmarshal func([]byte, any) error) error
 	Post(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error
 	Patch(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error
+	Put(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error
 	Delete(ctx context.Context, path string) error
 }
 
