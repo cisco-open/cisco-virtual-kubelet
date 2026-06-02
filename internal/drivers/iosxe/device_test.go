@@ -16,6 +16,8 @@ package iosxe
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
@@ -111,6 +113,76 @@ func TestGetDeviceInfo_Populated(t *testing.T) {
 	}
 	if info.ProductID != "C8200L-1N-4T" {
 		t.Errorf("ProductID = %q, want C8200L-1N-4T", info.ProductID)
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ConfigureSignVerification
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestConfigureSignVerification_Disabled(t *testing.T) {
+	var capturedPath string
+	var capturedPayload any
+	fc := &fakeNetworkClient{
+		putHook: func(path string, payload any) error {
+			capturedPath = path
+			capturedPayload = payload
+			return nil
+		},
+	}
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{}, client: fc}
+
+	if err := d.ConfigureSignVerification(testCtx(), false); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if capturedPath != signVerificationPath {
+		t.Errorf("PUT path = %q, want %q", capturedPath, signVerificationPath)
+	}
+	ctrl, ok := capturedPayload.(appHostingControls)
+	if !ok {
+		t.Fatalf("payload type = %T, want appHostingControls", capturedPayload)
+	}
+	if ctrl.Controls.SignVerification != false {
+		t.Error("expected sign-verification=false for allowUnsignedApps path")
+	}
+}
+
+func TestConfigureSignVerification_Enabled(t *testing.T) {
+	var capturedPayload any
+	fc := &fakeNetworkClient{
+		putHook: func(_ string, payload any) error {
+			capturedPayload = payload
+			return nil
+		},
+	}
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{}, client: fc}
+
+	if err := d.ConfigureSignVerification(testCtx(), true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	ctrl, ok := capturedPayload.(appHostingControls)
+	if !ok {
+		t.Fatalf("payload type = %T, want appHostingControls", capturedPayload)
+	}
+	if ctrl.Controls.SignVerification != true {
+		t.Error("expected sign-verification=true")
+	}
+}
+
+func TestConfigureSignVerification_PutError(t *testing.T) {
+	fc := &fakeNetworkClient{
+		putHook: func(_ string, _ any) error {
+			return fmt.Errorf("request failed with status 500 Internal Server Error")
+		},
+	}
+	d := &XEDriver{config: &v1alpha1.DeviceSpec{}, client: fc}
+
+	err := d.ConfigureSignVerification(testCtx(), false)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "sign-verification") {
+		t.Errorf("error %q does not mention sign-verification", err.Error())
 	}
 }
 

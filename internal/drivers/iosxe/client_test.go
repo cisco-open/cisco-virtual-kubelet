@@ -35,6 +35,8 @@ type fakeNetworkClient struct {
 	mu         sync.Mutex
 	postHook   func(path string, payload any) error
 	getHook    func(path string, result any) error
+	patchHook  func(path string, payload any) error
+	putHook    func(path string, payload any) error
 	deleteHook func(path string) error
 }
 
@@ -58,7 +60,23 @@ func (f *fakeNetworkClient) Get(_ context.Context, path string, result any, _ fu
 	return nil
 }
 
-func (f *fakeNetworkClient) Patch(_ context.Context, _ string, _ any, _ func(any) ([]byte, error)) error {
+func (f *fakeNetworkClient) Patch(_ context.Context, path string, payload any, _ func(any) ([]byte, error)) error {
+	f.mu.Lock()
+	h := f.patchHook
+	f.mu.Unlock()
+	if h != nil {
+		return h(path, payload)
+	}
+	return nil
+}
+
+func (f *fakeNetworkClient) Put(_ context.Context, path string, payload any, _ func(any) ([]byte, error)) error {
+	f.mu.Lock()
+	h := f.putHook
+	f.mu.Unlock()
+	if h != nil {
+		return h(path, payload)
+	}
 	return nil
 }
 
