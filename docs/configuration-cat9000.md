@@ -23,8 +23,8 @@ iox
 ! Enable the RESTCONF HTTPS listener
 restconf
 
-! Required if you plan to run unsigned container packages.
-! Alternatively, enforce per-device via spec.allowUnsignedApps: true.
+! Only required if NOT using spec.allowUnsignedApps: true in the CiscoDevice spec.
+! When allowUnsignedApps: true, CVK applies this automatically via RESTCONF.
 app-hosting verification disable
 no app-hosting signed-verification
 ```

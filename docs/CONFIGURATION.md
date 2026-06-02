@@ -135,7 +135,7 @@ The `logLevel` field is passed to the VK pod as the `--log-level` flag on the co
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `allowUnsignedApps` | bool | `false` | When `true`, the reconciler skips the `pkg-policy-invalid` guard and treats the transient YANG default as an install-in-progress signal. Enable this when you're running unsigned container packages — most commonly your own custom application builds, or on devices where signed-verification is not enforced. See [Troubleshooting → PackagePolicyInvalid](troubleshooting.md#packagepolicyinvalid-false-positives). |
+| `allowUnsignedApps` | bool | `false` | When `true`, CVK performs two actions: **(1)** on first connect it PUTs `Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/controls` with `sign-verification: false`, disabling the device-level package signature check; **(2)** the reconciler treats `iox-pkg-policy-invalid` during `INSTALLING` as a transient signal rather than a fatal error. Enable for unsigned packages (custom builds or test images). If the device-side PUT fails, a warning is logged and installs may still be blocked by device policy. See [Troubleshooting → PackagePolicyInvalid](troubleshooting.md#packagepolicyinvalid-false-positives). |
 
 ### OpenTelemetry topology
 
@@ -230,7 +230,7 @@ spec:
     - **A flash path** (`flash:/...`, `bootflash:/...`) — image tar must be pre-loaded on the device.
     - **An HTTP(S) URL** — the VK attempts a device-native pull first; if the platform cannot pull, it downloads the image itself and installs from flash (see [Image delivery](#image-delivery) below).
 
-    Package policy (signed vs unsigned) is controlled by the device config (`no app-hosting signed-verification`) or by the CRD (`spec.allowUnsignedApps: true`).
+    Package policy (signed vs unsigned) can be managed via `spec.allowUnsignedApps: true` in the `CiscoDevice` spec — CVK configures the device and adjusts reconciler behaviour automatically. The equivalent IOS-XE CLI is `no app-hosting signed-verification`.
 
 ## Image delivery
 

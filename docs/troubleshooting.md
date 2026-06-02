@@ -93,14 +93,19 @@ IOS-XE reports `pkg-policy = iox-pkg-policy-invalid` as the YANG default during 
 
 ### Fix
 
-If you're running unsigned packages on purpose — your own custom application builds, or a device that doesn't enforce signed-verification:
+If you're running unsigned packages on purpose — your own custom application builds or test images:
 
 ```yaml
 spec:
   allowUnsignedApps: true
 ```
 
-This tells the reconciler to skip the pkg-policy check entirely during INSTALLING.
+This does two things:
+
+1. **Device-side** — CVK PUTs `app-hosting-cfg-data/controls` with `sign-verification: false` on first connect, disabling the IOS-XE package signature check. Equivalent to `no app-hosting signed-verification`.
+2. **Reconciler-side** — treats `iox-pkg-policy-invalid` during `INSTALLING` as a transient (non-fatal) signal.
+
+If the device-side PUT fails (e.g. platform does not support the YANG leaf, or insufficient privilege), CVK logs a warning and the device policy may still block unsigned installs.
 
 If you want signing enforced:
 
