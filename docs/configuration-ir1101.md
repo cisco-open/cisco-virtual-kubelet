@@ -23,7 +23,7 @@ Other IOS-XE versions with App Hosting may work but are not validated.
     App-hosting pod lifecycle (create, update, delete) works normally — only the declarative
     config CRDs (`IOSXEConfig`, bundles, templates, etc.) are affected.
     The [VirtualPortGroup and DHCP pool](#device-prerequisites) must be created manually
-    before deploying pods. See [Manual RESTCONF setup](#manual-restconf-setup-17-12) below.
+    before deploying pods. See [Manual RESTCONF setup](#manual-restconf-setup-1712) below.
 
 ## Platform notes
 
