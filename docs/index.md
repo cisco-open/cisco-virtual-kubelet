@@ -81,8 +81,9 @@ This project is under active development and is published as open source under
 - **CRD versions** - `cisco.vk/v1alpha1`, `config.cisco.vk/v1alpha1`, and
   `ops.cisco.vk/v1alpha1`. Breaking changes are still possible as the schemas
   stabilise.
-- **Drivers** - `XE` is production-focused; `FAKE` is for testing; `XR`,
-  `NXOS`, and `OPENCONFIG` are reserved driver names in the API surface.
+- **Drivers** - `XE` is production-focused; `NXOS` supports NX-OS
+  app-hosting through NX-API; `FAKE` is for testing; `XR` and `OPENCONFIG`
+  remain reserved driver names in the API surface.
 - **Images** - images are not yet published to a public container registry.
   Build locally from a release tag or `main`, then push to a registry your
   cluster can pull from. See [Getting Started](getting-started.md).

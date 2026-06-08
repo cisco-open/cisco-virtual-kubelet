@@ -205,9 +205,9 @@ type DeviceSpec struct {
 	// +kubebuilder:validation:Optional
 	// XR *XRConfig `json:"xr,omitempty" mapstructure:"xr,omitempty"`
 
-	// NXOS holds NX-OS specific networking configuration (future).
+	// NXOS holds NX-OS specific networking configuration.
 	// +kubebuilder:validation:Optional
-	// NXOS *NXOSConfig `json:"nxos,omitempty" mapstructure:"nxos,omitempty"`
+	NXOS *NXOSConfig `json:"nxos,omitempty" mapstructure:"nxos,omitempty"`
 }
 
 // OpsPolicy carries per-device DeviceOperation gates the CiscoDevice

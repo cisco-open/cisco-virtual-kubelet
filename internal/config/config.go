@@ -77,7 +77,7 @@ func validateDeviceSpec(spec *v1alpha1.DeviceSpec) error {
 	case v1alpha1.DeviceDriverFAKE:
 		// No extra validation needed
 	default:
-		// Future drivers: XR, NXOS
+		// Future config drivers: XR, NXOS, OPENCONFIG
 	}
 	return nil
 }

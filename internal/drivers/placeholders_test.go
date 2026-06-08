@@ -36,7 +36,6 @@ import (
 func TestPlaceholderPackagesDoNotRegister(t *testing.T) {
 	t.Parallel()
 	for _, kind := range []v1alpha1.DeviceDriver{
-		v1alpha1.DeviceDriverNXOS,
 		v1alpha1.DeviceDriverXR,
 		v1alpha1.DeviceDriverOPENCONFIG,
 	} {
@@ -46,6 +45,12 @@ func TestPlaceholderPackagesDoNotRegister(t *testing.T) {
 		if drivers.ConfigDriverRegistered(kind) {
 			t.Errorf("placeholder config driver %q is registered; the placeholder must NOT register until a real implementation lands", kind)
 		}
+	}
+	if !drivers.Registered(v1alpha1.DeviceDriverNXOS) {
+		t.Error("NXOS apphosting driver is not registered")
+	}
+	if drivers.ConfigDriverRegistered(v1alpha1.DeviceDriverNXOS) {
+		t.Error("NXOS config driver should not be registered until an NX-OS writer set lands")
 	}
 }
 
@@ -66,8 +71,7 @@ func TestRegistryEnumeratesOnlyRealDrivers(t *testing.T) {
 	got := drivers.RegisteredKinds()
 	for _, k := range got {
 		switch k {
-		case v1alpha1.DeviceDriverNXOS,
-			v1alpha1.DeviceDriverXR,
+		case v1alpha1.DeviceDriverXR,
 			v1alpha1.DeviceDriverOPENCONFIG:
 			t.Errorf("placeholder kind %q appears in RegisteredKinds()=%v", k, got)
 		}

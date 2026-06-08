@@ -38,7 +38,7 @@ import (
 	// internal/drivers/<name>/ but stay un-imported until a real
 	// implementation lands.
 	//
-	// _ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos"
+	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos"
 	// _ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxr"
 	// _ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/openconfig"
 )

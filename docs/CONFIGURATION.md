@@ -60,7 +60,7 @@ Runtime settings are **not** in the config file — they are passed as flags or 
 
 | Field | Type | Required | Default | Notes |
 |---|---|---|---|---|
-| `driver` | enum | yes | — | `XE`, `XR`, `NXOS`, `OPENCONFIG`, `FAKE`. Only `XE` and `FAKE` are production-usable today. |
+| `driver` | enum | yes | — | `XE`, `XR`, `NXOS`, `OPENCONFIG`, `FAKE`. `XE`, `NXOS`, and `FAKE` support app-hosting today; `XR` and `OPENCONFIG` are reserved. |
 | `address` | string | yes | — | Management IP or hostname |
 | `port` | int (1–65535) | no | 443 (TLS) / 80 | RESTCONF port |
 | `username` | string | yes | — | Device username |
@@ -76,6 +76,23 @@ tls:
   certFile: /path/to/client.crt
   keyFile: /path/to/client.key
   caFile:  /path/to/ca.crt
+```
+
+### NX-OS
+
+NX-OS app-hosting is driven through NX-API CLI. The default management endpoint
+is HTTP port 80, or HTTPS port 443 when `tls.enabled` is true.
+
+```yaml
+driver: NXOS
+address: 192.0.2.64
+username: cvk
+nxos:
+  networking:
+    interface:
+      type: Management
+      management:
+        guestInterface: 0
 ```
 
 | Field | Type | Default | Notes |

@@ -274,10 +274,13 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		http.Error(w, "provider not yet initialised", http.StatusServiceUnavailable)
 	})
 
+	initialNode := provider.GetInitialNodeSpec(effectiveNodeName, appCfg.Device.Address)
+	initialNode.Spec.Taints = append(initialNode.Spec.Taints, appCfg.Device.Taints...)
+
 	opts := []nodeutil.NodeOpt{
 		nodeutil.WithNodeConfig(nodeutil.NodeConfig{
 			Client:         clientset,
-			NodeSpec:       provider.GetInitialNodeSpec(effectiveNodeName, appCfg.Device.Address),
+			NodeSpec:       initialNode,
 			HTTPListenAddr: ":10250",
 			NumWorkers:     5,
 			TLSConfig:      tlsCfg,

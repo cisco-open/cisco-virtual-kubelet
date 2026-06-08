@@ -146,6 +146,41 @@ spec:
                   host.
                 format: int32
                 type: integer
+              nxos:
+                description: NXOS holds NX-OS specific networking configuration.
+                properties:
+                  networking:
+                    description: Networking configures the guest interface passed
+                      to NX-OS app-hosting.
+                    properties:
+                      interface:
+                        description: Interface is the app-hosting attachment declaration.
+                        properties:
+                          management:
+                            description: Management holds management-network app-hosting
+                              settings.
+                            properties:
+                              guestInterface:
+                                default: 0
+                                description: GuestInterface is the guest interface
+                                  index used by app-hosting.
+                                maximum: 7
+                                minimum: 0
+                                type: integer
+                            type: object
+                          type:
+                            allOf:
+                            - enum:
+                              - Management
+                            - enum:
+                              - Management
+                            default: Management
+                            description: Type selects the interface family. Management
+                              is the initial supported mode.
+                            type: string
+                        type: object
+                    type: object
+                type: object
               opsPolicy:
                 description: |-
                   OpsPolicy declares per-device DeviceOperation gates the controller

@@ -9,7 +9,11 @@
 package nxos
 
 import (
+	"context"
 	"errors"
+
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 )
 
 // ErrNotYetImplemented is the sentinel every NX-OS code path
@@ -20,21 +24,12 @@ import (
 // honest with the API.
 var ErrNotYetImplemented = errors.New("nxos: driver not yet implemented")
 
-// init is intentionally empty — the placeholder MUST NOT register.
-// A binary that blank-imports this package today will see
-// "driver kind \"NXOS\" is not registered" if a CiscoDevice with
-// that kind is created, which is exactly what we want until the
-// real implementation lands.
-//
-// When the real driver lands, replace this comment with:
-//
-//	func init() {
-//	  drivers.Register(v1alpha1.DeviceDriverNXOS,
-//	    func(ctx, spec) (drivers.CiscoKubernetesDeviceDriver, error) {
-//	      return NewAppHostingDriver(ctx, spec)
-//	    })
-//	  drivers.RegisterConfigDriver(v1alpha1.DeviceDriverNXOS,
-//	    buildNXOSConfigDriverContext)
-//	}
-//
-// then drop a blank import in cmd/cisco-vk/drivers_register.go.
+// init wires NX-OS into the apphosting registry. NX-OS declarative config
+// writers are intentionally not registered yet; the configdriver registry stays
+// empty for this kind until a real NX-OS writer set lands.
+func init() {
+	drivers.Register(v1alpha1.DeviceDriverNXOS,
+		func(ctx context.Context, spec *v1alpha1.DeviceSpec) (drivers.CiscoKubernetesDeviceDriver, error) {
+			return NewAppHostingDriver(ctx, spec)
+		})
+}
