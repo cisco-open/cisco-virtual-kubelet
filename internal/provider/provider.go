@@ -746,7 +746,14 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 	readyReason := "KubeletReady"
 	readyMessage := "Cisco IOx is enabled and reachable"
 
-	if operData != nil && !operData.IoxEnabled {
+	appHostingUnsupported := operData != nil && operData.AppHostingUnsupported
+	if appHostingUnsupported {
+		readyReason = "DeviceReady"
+		readyMessage = "Cisco device is reachable; app-hosting is not supported by this platform"
+		if operData.AppHostingMessage != "" {
+			readyMessage = operData.AppHostingMessage
+		}
+	} else if operData != nil && !operData.IoxEnabled {
 		newReadyStatus = v1.ConditionFalse
 		readyReason = "IOxDisabled"
 		readyMessage = "IOx hosting is disabled on device"
@@ -817,6 +824,12 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 
 	// Discover deployed pods to calculate available pod slots
 	var maxPods int64 = 16
+	if a.deviceSpec.MaxPods > 0 {
+		maxPods = int64(a.deviceSpec.MaxPods)
+	}
+	if appHostingUnsupported {
+		maxPods = 0
+	}
 	var deployedPodCount int64
 	pods, podErr := a.driver.ListPods(ctx)
 	if podErr != nil {
@@ -885,11 +898,12 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 		}
 	}
 
+	defaultTopology := topologyLabelForDriver(a.deviceSpec.Driver)
 	labels := map[string]string{
 		"kubernetes.io/hostname":        a.nodeName,
 		"type":                          "virtual-kubelet",
-		"topology.kubernetes.io/zone":   "cisco-iosxe",
-		"topology.kubernetes.io/region": "cisco-iosxe",
+		"topology.kubernetes.io/zone":   defaultTopology,
+		"topology.kubernetes.io/region": defaultTopology,
 	}
 	if a.deviceSpec.Zone != "" {
 		labels["topology.kubernetes.io/zone"] = a.deviceSpec.Zone
@@ -918,7 +932,7 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 				SystemUUID:      deviceInfo.SerialNumber,
 				KernelVersion:   deviceInfo.SoftwareVersion,
 				KubeletVersion:  getVirtualKubeletVersion(),
-				OSImage:         "IOS-XE",
+				OSImage:         osImageForDriver(a.deviceSpec.Driver),
 				Architecture:    deviceInfo.ProductID,
 				OperatingSystem: "Cisco",
 			},
@@ -935,4 +949,41 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 	}
 
 	cb(nodeUpdate)
+}
+
+func topologyLabelForDriver(driver v1alpha1.DeviceDriver) string {
+	switch driver {
+	case v1alpha1.DeviceDriverXE:
+		return "cisco-iosxe"
+	case v1alpha1.DeviceDriverNXOS:
+		return "cisco-nxos"
+	case v1alpha1.DeviceDriverFTD:
+		return "cisco-ftd"
+	case v1alpha1.DeviceDriverXR:
+		return "cisco-iosxr"
+	case v1alpha1.DeviceDriverOPENCONFIG:
+		return "openconfig"
+	default:
+		return "cisco"
+	}
+}
+
+func osImageForDriver(driver v1alpha1.DeviceDriver) string {
+	switch driver {
+	case v1alpha1.DeviceDriverXE:
+		return "IOS-XE"
+	case v1alpha1.DeviceDriverNXOS:
+		return "NX-OS"
+	case v1alpha1.DeviceDriverFTD:
+		return "FTD"
+	case v1alpha1.DeviceDriverXR:
+		return "IOS-XR"
+	case v1alpha1.DeviceDriverOPENCONFIG:
+		return "OpenConfig"
+	default:
+		if driver == "" {
+			return "Cisco"
+		}
+		return string(driver)
+	}
 }

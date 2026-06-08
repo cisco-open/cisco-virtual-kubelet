@@ -149,7 +149,18 @@ type HostedApp struct {
 
 // AppHostingOperData contains global operational data including resources and notifications
 type AppHostingOperData struct {
-	IoxEnabled    bool
+	IoxEnabled bool
+
+	// AppHostingUnsupported is true for platforms that CVK can onboard for
+	// health, operations, and telemetry but cannot use for application hosting.
+	// When true, providers should keep the device node Ready while advertising
+	// zero pod capacity.
+	AppHostingUnsupported bool
+
+	// AppHostingMessage is an optional platform-specific readiness message
+	// explaining the app-hosting capability state.
+	AppHostingMessage string
+
 	SystemCPU     AppResource
 	Memory        AppResource
 	Storage       AppResource

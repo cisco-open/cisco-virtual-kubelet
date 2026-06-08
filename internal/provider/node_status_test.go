@@ -43,6 +43,29 @@ func (nodeStatusTestDriver) GetGlobalOperationalData(context.Context) (*common.A
 	return &common.AppHostingOperData{IoxEnabled: true}, nil
 }
 
+type healthOnlyNodeStatusDriver struct {
+	nodeStatusTestDriver
+}
+
+func (healthOnlyNodeStatusDriver) GetDeviceInfo(context.Context) (*common.DeviceInfo, error) {
+	return &common.DeviceInfo{
+		SerialNumber:    "937334c4-6359-11f1-96bf-b789d20e4b89",
+		SoftwareVersion: "7.6.4-69",
+		ProductID:       "Cisco Secure Firewall Threat Defense for KVM",
+		Hostname:        "ftdv-01.localdomain",
+	}, nil
+}
+
+func (healthOnlyNodeStatusDriver) GetGlobalOperationalData(context.Context) (*common.AppHostingOperData, error) {
+	return &common.AppHostingOperData{
+		IoxEnabled:            false,
+		AppHostingUnsupported: true,
+		AppHostingMessage:     "Cisco FTD is reachable; app-hosting is not supported on this platform",
+		SystemCPU:             common.AppResource{Quota: 4, Available: 4, Unit: "cores"},
+		Memory:                common.AppResource{Quota: 8192, Available: 8192, Unit: "MB"},
+	}, nil
+}
+
 func TestSyncNodeStatusAppliesDeviceLabelsAndTaints(t *testing.T) {
 	ctx := context.Background()
 	node := NewAppHostingNode(ctx, "cat9000-4", &v1alpha1.DeviceSpec{
@@ -78,5 +101,41 @@ func TestSyncNodeStatusAppliesDeviceLabelsAndTaints(t *testing.T) {
 	}
 	if got.Spec.Taints[0].Key != "workload" || got.Spec.Taints[0].Value != "edge" || got.Spec.Taints[0].Effect != v1.TaintEffectNoSchedule {
 		t.Fatalf("unexpected taint: %#v", got.Spec.Taints[0])
+	}
+}
+
+func TestSyncNodeStatusHealthOnlyDriverReadyWithZeroPodCapacity(t *testing.T) {
+	ctx := context.Background()
+	node := NewAppHostingNode(ctx, "ftdv-01", &v1alpha1.DeviceSpec{
+		Driver:  v1alpha1.DeviceDriverFTD,
+		Address: "192.0.2.65",
+	}, healthOnlyNodeStatusDriver{})
+
+	var got *v1.Node
+	node.syncNodeStatus(ctx, func(n *v1.Node) {
+		got = n
+	})
+
+	if got == nil {
+		t.Fatal("expected node status callback")
+	}
+	var ready *v1.NodeCondition
+	for i := range got.Status.Conditions {
+		if got.Status.Conditions[i].Type == v1.NodeReady {
+			ready = &got.Status.Conditions[i]
+			break
+		}
+	}
+	if ready == nil || ready.Status != v1.ConditionTrue || ready.Reason != "DeviceReady" {
+		t.Fatalf("unexpected ready condition: %#v", ready)
+	}
+	if got.Status.Capacity.Pods().Value() != 0 || got.Status.Allocatable.Pods().Value() != 0 {
+		t.Fatalf("expected zero pod capacity, capacity=%v allocatable=%v", got.Status.Capacity, got.Status.Allocatable)
+	}
+	if got.Status.NodeInfo.OSImage != "FTD" {
+		t.Fatalf("OSImage=%q", got.Status.NodeInfo.OSImage)
+	}
+	if got.Labels["topology.kubernetes.io/region"] != "cisco-ftd" || got.Labels["topology.kubernetes.io/zone"] != "cisco-ftd" {
+		t.Fatalf("unexpected topology labels: %v", got.Labels)
 	}
 }

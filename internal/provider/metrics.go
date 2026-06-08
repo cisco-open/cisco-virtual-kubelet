@@ -132,7 +132,7 @@ func (p *AppHostingProvider) buildMetricsResource(ctx context.Context) ([]*io_pr
 		usedPct := float64(operData.SystemCPU.Quota-operData.SystemCPU.Available) / float64(operData.SystemCPU.Quota) * 100
 		families = append(families, &io_prometheus_client.MetricFamily{
 			Name: proto.String("cisco_device_cpu_usage_percent"),
-			Help: proto.String("CPU usage percentage of the Cisco device IOx subsystem"),
+			Help: proto.String("CPU usage percentage reported by the Cisco device driver"),
 			Type: &gaugeType,
 			Metric: []*io_prometheus_client.Metric{
 				{Gauge: &io_prometheus_client.Gauge{Value: &usedPct}},
@@ -147,7 +147,7 @@ func (p *AppHostingProvider) buildMetricsResource(ctx context.Context) ([]*io_pr
 		families = append(families,
 			&io_prometheus_client.MetricFamily{
 				Name: proto.String("cisco_device_memory_used_bytes"),
-				Help: proto.String("Memory used in bytes on the Cisco device IOx subsystem"),
+				Help: proto.String("Memory used in bytes reported by the Cisco device driver"),
 				Type: &gaugeType,
 				Metric: []*io_prometheus_client.Metric{
 					{Gauge: &io_prometheus_client.Gauge{Value: &usedBytes}},
@@ -155,7 +155,7 @@ func (p *AppHostingProvider) buildMetricsResource(ctx context.Context) ([]*io_pr
 			},
 			&io_prometheus_client.MetricFamily{
 				Name: proto.String("cisco_device_memory_total_bytes"),
-				Help: proto.String("Total memory in bytes on the Cisco device IOx subsystem"),
+				Help: proto.String("Total memory in bytes reported by the Cisco device driver"),
 				Type: &gaugeType,
 				Metric: []*io_prometheus_client.Metric{
 					{Gauge: &io_prometheus_client.Gauge{Value: &totalBytes}},
@@ -171,7 +171,7 @@ func (p *AppHostingProvider) buildMetricsResource(ctx context.Context) ([]*io_pr
 		families = append(families,
 			&io_prometheus_client.MetricFamily{
 				Name: proto.String("cisco_device_storage_used_bytes"),
-				Help: proto.String("Storage used in bytes on the Cisco device IOx subsystem"),
+				Help: proto.String("Storage used in bytes reported by the Cisco device driver"),
 				Type: &gaugeType,
 				Metric: []*io_prometheus_client.Metric{
 					{Gauge: &io_prometheus_client.Gauge{Value: &usedBytes}},
@@ -179,7 +179,7 @@ func (p *AppHostingProvider) buildMetricsResource(ctx context.Context) ([]*io_pr
 			},
 			&io_prometheus_client.MetricFamily{
 				Name: proto.String("cisco_device_storage_total_bytes"),
-				Help: proto.String("Total storage in bytes on the Cisco device IOx subsystem"),
+				Help: proto.String("Total storage in bytes reported by the Cisco device driver"),
 				Type: &gaugeType,
 				Metric: []*io_prometheus_client.Metric{
 					{Gauge: &io_prometheus_client.Gauge{Value: &totalBytes}},

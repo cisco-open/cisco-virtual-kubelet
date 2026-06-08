@@ -60,9 +60,9 @@ Runtime settings are **not** in the config file — they are passed as flags or 
 
 | Field | Type | Required | Default | Notes |
 |---|---|---|---|---|
-| `driver` | enum | yes | — | `XE`, `XR`, `NXOS`, `OPENCONFIG`, `FAKE`. `XE`, `NXOS`, and `FAKE` support app-hosting today; `XR` and `OPENCONFIG` are reserved. |
+| `driver` | enum | yes | — | `XE`, `XR`, `NXOS`, `FTD`, `OPENCONFIG`, `FAKE`. `XE`, `NXOS`, and `FAKE` support app-hosting today; `FTD` is health/operations/telemetry only; `XR` and `OPENCONFIG` are reserved. |
 | `address` | string | yes | — | Management IP or hostname |
-| `port` | int (1–65535) | no | 443 (TLS) / 80 | RESTCONF port |
+| `port` | int (1–65535) | no | 443 (TLS) / 80 | Device management port. For FTD SSH, `spec.ftd.management.sshPort` takes precedence, then `port`, then 22. |
 | `username` | string | yes | — | Device username |
 | `password` | string | no | — | Device password. **Do not set in controller mode** — use `credentialSecretRef` instead. |
 | `credentialSecretRef` | LocalObjectReference | no | — | Reference to a `Secret` in the same namespace containing key `password`. See [Security](security.md#credential-injection). |
@@ -102,6 +102,40 @@ nxos:
 | `tls.certFile` | string | — | Client certificate path |
 | `tls.keyFile` | string | — | Client key path |
 | `tls.caFile` | string | — | CA bundle path |
+
+### FTD
+
+Cisco Secure Firewall Threat Defense is onboarded as a CVK health, operations,
+and telemetry node. FTD 7.6 does not support Cisco app-hosting, so the driver
+advertises zero pod capacity and rejects workload scheduling while still
+publishing device identity, readiness, interface IP/state, stats-summary data,
+and Prometheus metrics.
+
+```yaml
+driver: FTD
+address: 192.0.2.65
+port: 22
+username: cvk
+maxPods: 0
+ftd:
+  management:
+    sshPort: 22
+    connectTimeoutSeconds: 15
+    commandTimeoutSeconds: 45
+  resources:
+    cpuCores: 4
+    memoryMB: 8192
+    storageMB: 0
+```
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `ftd.management.sshPort` | int | `22` | FTD CLI SSH port |
+| `ftd.management.connectTimeoutSeconds` | int | `15` | TCP/SSH handshake timeout |
+| `ftd.management.commandTimeoutSeconds` | int | `45` | Per-command timeout for FTD CLI health queries |
+| `ftd.resources.cpuCores` | int64 | `4` | vCPU cores reported for appliance observability |
+| `ftd.resources.memoryMB` | int64 | `8192` | Memory reported for appliance observability |
+| `ftd.resources.storageMB` | int64 | `0` | Optional storage capacity reported for observability |
 
 ### Node and pod topology
 
@@ -173,7 +207,7 @@ otel:
 | `otel.serviceName` | string | `"cisco-network"` | Base service name. The device hostname is appended → `"cisco-network.<hostname>"`. |
 | `otel.intervalSecs` | int (min 10) | `60` | Interval between trace emissions |
 
-OTEL export only happens when the driver implements `TopologyProvider` (the IOS-XE driver does). See [Observability → OpenTelemetry](observability.md#opentelemetry-topology-export).
+OTEL export only happens when the driver implements `TopologyProvider` (IOS-XE, NX-OS, and FTD do). See [Observability → OpenTelemetry](observability.md#opentelemetry-topology-export).
 
 ### XEConfig — IOS-XE networking
 

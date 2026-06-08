@@ -20,13 +20,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE
+// +kubebuilder:validation:Enum=XE;XR;NXOS;FTD;OPENCONFIG;FAKE
 type DeviceDriver string
 
 const (
 	DeviceDriverXE         DeviceDriver = "XE"
 	DeviceDriverXR         DeviceDriver = "XR"
 	DeviceDriverNXOS       DeviceDriver = "NXOS"
+	DeviceDriverFTD        DeviceDriver = "FTD"
 	DeviceDriverOPENCONFIG DeviceDriver = "OPENCONFIG"
 	DeviceDriverFAKE       DeviceDriver = "FAKE"
 )
@@ -80,7 +81,7 @@ type CiscoDeviceList struct {
 // configuration lives under the corresponding driver section (XE, XR, etc.).
 type DeviceSpec struct {
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE
+	// +kubebuilder:validation:Enum=XE;XR;NXOS;FTD;OPENCONFIG;FAKE
 	Driver DeviceDriver `json:"driver" mapstructure:"driver"`
 
 	// Address is the management IP or hostname of the device.
@@ -208,6 +209,12 @@ type DeviceSpec struct {
 	// NXOS holds NX-OS specific networking configuration.
 	// +kubebuilder:validation:Optional
 	NXOS *NXOSConfig `json:"nxos,omitempty" mapstructure:"nxos,omitempty"`
+
+	// FTD holds Cisco Secure Firewall Threat Defense specific management
+	// configuration. FTD does not support IOS-XE/NX-OS app-hosting; the
+	// driver presents a health, operations, and observability node.
+	// +kubebuilder:validation:Optional
+	FTD *FTDConfig `json:"ftd,omitempty" mapstructure:"ftd,omitempty"`
 }
 
 // OpsPolicy carries per-device DeviceOperation gates the CiscoDevice

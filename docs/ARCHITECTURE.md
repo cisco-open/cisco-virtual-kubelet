@@ -4,7 +4,7 @@ This document describes the technical architecture of Cisco Virtual Kubelet.
 
 ## Overview
 
-Cisco Virtual Kubelet implements the [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider interface so Kubernetes can treat Cisco IOS-XE devices as compute nodes. Each device appears as a node in the cluster; pods scheduled to that node are deployed as IOx App-Hosting containers on the device over RESTCONF.
+Cisco Virtual Kubelet implements the [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider interface so Kubernetes can treat Cisco IOS-XE and NX-OS devices as compute nodes. Each app-hosting capable device appears as a node in the cluster; pods scheduled to that node are deployed as device-native App-Hosting containers. Platforms without app-hosting, such as Cisco Secure Firewall Threat Defense, can still be onboarded as health, operations, telemetry, and observability nodes with zero pod capacity.
 
 ### The two-binary split
 
@@ -85,11 +85,11 @@ Implements `node.NodeProvider` for node registration, heartbeat, and status.
 - `NotifyNodeStatus(cb)` — fires the callback whenever node status changes (labels, annotations, capacity, conditions)
 - `ForceStatusUpdate()` — called after every pod lifecycle event so resource accounting stays fresh
 
-The node's `Labels` include standard topology (`topology.kubernetes.io/zone=cisco-iosxe`, `region=cisco-iosxe`) plus `type=virtual-kubelet`. Node **annotations** are populated dynamically on every status sync from the driver's `TopologyProvider` data — see [Observability → Node annotations](observability.md#node-annotations).
+The node's `Labels` include standard topology (`topology.kubernetes.io/zone=cisco-iosxe`, `region=cisco-iosxe`, or the platform-specific equivalent) plus `type=virtual-kubelet`. Node **annotations** are populated dynamically on every status sync from the driver's `TopologyProvider` data — see [Observability → Node annotations](observability.md#node-annotations).
 
 Conditions published:
 
-- `Ready` — true when IOx is enabled on the device
+- `Ready` — true when the device is reachable and either app-hosting is enabled or the platform is explicitly health/telemetry-only
 - `DiskPressure` — true when device storage < 5% available
 
 ### Driver factory
@@ -102,6 +102,7 @@ Selects a driver based on `spec.Driver`:
 
 - `XE` → IOS-XE driver (production)
 - `NXOS` → NX-OS app-hosting driver
+- `FTD` → Cisco Secure Firewall Threat Defense health/operations/telemetry driver (zero pod capacity)
 - `FAKE` → mock driver for testing
 - `XR`, `OPENCONFIG` → placeholders, currently unsupported
 
@@ -134,7 +135,7 @@ type TopologyProvider interface {
 }
 ```
 
-The IOS-XE driver implements it. Drivers without topology support still work — their VKs just skip the optional metrics/traces/annotations.
+The IOS-XE, NX-OS, and FTD drivers implement it. Drivers without topology support still work — their VKs just skip the optional metrics/traces/annotations.
 
 ### IOS-XE driver — internal layering
 
