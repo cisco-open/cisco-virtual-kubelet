@@ -85,14 +85,22 @@ func validateDeviceSpec(spec *v1alpha1.DeviceSpec) error {
 func SetDeviceDefaults(spec *v1alpha1.DeviceSpec) error {
 	// Apply default if Port is not explicitly set (is 0)
 	if spec.Port == 0 {
-		if spec.TLS == nil || !spec.TLS.Enabled {
+		switch spec.Driver {
+		case v1alpha1.DeviceDriverXR, v1alpha1.DeviceDriverFTD:
 			spec.TLS = &v1alpha1.TLSConfig{
 				Enabled: false,
 			}
-			spec.Port = 80
-		} else {
-			spec.TLS.Enabled = true
-			spec.Port = 443
+			spec.Port = 22
+		default:
+			if spec.TLS == nil || !spec.TLS.Enabled {
+				spec.TLS = &v1alpha1.TLSConfig{
+					Enabled: false,
+				}
+				spec.Port = 80
+			} else {
+				spec.TLS.Enabled = true
+				spec.Port = 443
+			}
 		}
 	}
 

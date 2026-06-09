@@ -8,12 +8,16 @@
 
 package iosxr
 
-import "errors"
+import (
+	"context"
 
-// ErrNotYetImplemented is the sentinel every IOS-XR code path
-// returns until the platform's real implementation lands.
-var ErrNotYetImplemented = errors.New("iosxr: driver not yet implemented")
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+)
 
-// init is intentionally empty — the placeholder MUST NOT register.
-// See drivers/nxos/register.go for the activation recipe; the same
-// pattern applies here verbatim with DeviceDriverXR as the kind constant.
+func init() {
+	drivers.Register(v1alpha1.DeviceDriverXR,
+		func(ctx context.Context, spec *v1alpha1.DeviceSpec) (drivers.CiscoKubernetesDeviceDriver, error) {
+			return NewAppHostingDriver(ctx, spec)
+		})
+}

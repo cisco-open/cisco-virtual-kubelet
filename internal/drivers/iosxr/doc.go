@@ -6,23 +6,12 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 
-// Package iosxr is the IOS-XR platform driver placeholder. It exists
-// so the Phase-9 plug-in pattern is observable end-to-end: the
-// directory layout, the register.go shape, and the Driver enum
-// constant (DeviceDriverXR) are all in place, ready for the real
-// implementation to land without any foundation edits.
+// Package iosxr implements IOS XR app-hosting through XR appmgr over SSH CLI.
 //
-// Status: not registered. Importing this package compiles but
-// neither the apphosting nor the config-driver factories register
-// — every entrypoint returns ErrNotYetImplemented. To activate:
-//
-//  1. Implement NewAppHostingDriver and the configdriver
-//     equivalent (transport setup, family writers, schema).
-//  2. Uncomment the drivers.Register / drivers.RegisterConfigDriver
-//     calls in register.go below.
-//  3. Add `_ "…/internal/drivers/iosxr"` to
-//     `cmd/cisco-vk/drivers_register.go`.
-//
-// See `docs/rfcs/driver-extension-guide.md` for the full
-// walk-through.
+// IOS XR appmgr manages Docker applications as RPM-backed sources. The driver
+// therefore expects pod images to name an appmgr RPM already present on the
+// router, for example /harddisk:/hello-app-0.1.0-ThinXR_26.1.1.x86_64.rpm, or
+// to name a pre-installed appmgr source. The package is deliberately split into
+// transport, lifecycle, parsing, and topology files so future IOS XR NetAsCode,
+// gNOI, and telemetry work can extend the same management channel cleanly.
 package iosxr

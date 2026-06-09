@@ -524,6 +524,95 @@ spec:
                 required:
                 - networking
                 type: object
+              xr:
+                description: XR holds IOS-XR specific management and appmgr configuration.
+                properties:
+                  appHosting:
+                    description: AppHosting configures IOS XR appmgr defaults for
+                      Docker applications.
+                    properties:
+                      defaultRunOptions:
+                        description: |-
+                          DefaultRunOptions are appended to each appmgr docker-run-opts string
+                          before pod labels and environment variables. The default is
+                          ["--network host"].
+                        items:
+                          type: string
+                        type: array
+                      defaultSource:
+                        description: |-
+                          DefaultSource is used when a pod container image does not point to an
+                          appmgr RPM and no source can be inferred. The source must already be
+                          present in `show appmgr source-table`.
+                        type: string
+                      enableDockerCommand:
+                        default: run systemctl start docker
+                        description: |-
+                          EnableDockerCommand starts the IOS XR docker daemon before appmgr
+                          operations.
+                        type: string
+                      packageInstallPath:
+                        default: '/harddisk:'
+                        description: |-
+                          PackageInstallPath is the IOS XR filesystem prefix used when a pod image
+                          names only an RPM basename. Defaults to /harddisk:.
+                        type: string
+                    type: object
+                  management:
+                    description: |-
+                      Management configures the IOS XR SSH CLI channel used for appmgr,
+                      operations, troubleshooting, and observability.
+                    properties:
+                      commandTimeoutSeconds:
+                        default: 180
+                        description: CommandTimeoutSeconds bounds a single IOS XR
+                          CLI command.
+                        maximum: 900
+                        minimum: 1
+                        type: integer
+                      connectTimeoutSeconds:
+                        default: 20
+                        description: ConnectTimeoutSeconds bounds TCP and SSH handshake
+                          setup.
+                        maximum: 300
+                        minimum: 1
+                        type: integer
+                      sshPort:
+                        default: 22
+                        description: SSHPort is the IOS XR CLI SSH port. If omitted,
+                          spec.port is used, then 22.
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                    type: object
+                  resources:
+                    description: |-
+                      Resources overrides the virtual router resource shape advertised to
+                      Kubernetes.
+                    properties:
+                      cpuCores:
+                        default: 4
+                        description: CPUCores is the number of vCPU cores assigned
+                          to the virtual router.
+                        format: int64
+                        minimum: 1
+                        type: integer
+                      memoryMB:
+                        default: 16384
+                        description: MemoryMB is the amount of memory assigned to
+                          the virtual router.
+                        format: int64
+                        minimum: 1
+                        type: integer
+                      storageMB:
+                        default: 1500
+                        description: StorageMB is the app-hosting storage capacity
+                          reported for scheduling.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                    type: object
+                type: object
               zone:
                 description: Zone for node topology.
                 type: string

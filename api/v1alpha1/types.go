@@ -202,9 +202,9 @@ type DeviceSpec struct {
 	// +kubebuilder:validation:Optional
 	XE *XEConfig `json:"xe,omitempty" mapstructure:"xe,omitempty"`
 
-	// XR holds IOS-XR specific networking configuration (future).
+	// XR holds IOS-XR specific management and appmgr configuration.
 	// +kubebuilder:validation:Optional
-	// XR *XRConfig `json:"xr,omitempty" mapstructure:"xr,omitempty"`
+	XR *XRConfig `json:"xr,omitempty" mapstructure:"xr,omitempty"`
 
 	// NXOS holds NX-OS specific networking configuration.
 	// +kubebuilder:validation:Optional
