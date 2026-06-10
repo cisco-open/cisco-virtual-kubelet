@@ -115,6 +115,7 @@ spec:
                   - XE
                   - XR
                   - NXOS
+                  - ISE
                   - FTD
                   - OPENCONFIG
                   - FAKE
@@ -122,6 +123,7 @@ spec:
                   - XE
                   - XR
                   - NXOS
+                  - ISE
                   - FTD
                   - OPENCONFIG
                   - FAKE
@@ -183,6 +185,99 @@ spec:
                         description: |-
                           StorageMB is the storage capacity reported for observability. It is not
                           used for workload scheduling because FTD app-hosting is unsupported.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                    type: object
+                type: object
+              ise:
+                description: |-
+                  ISE holds Cisco Identity Services Engine management and API settings.
+                  ISE does not support Cisco app-hosting; the driver presents a health,
+                  operations, telemetry, and NetAsCode configuration node.
+                properties:
+                  api:
+                    description: API configures the ISE REST/ERS channel used by ISEConfig
+                      reconciliation.
+                    properties:
+                      baseUrl:
+                        description: |-
+                          BaseURL overrides the generated API endpoint, for example
+                          https://ise.example.com:9060. When empty, the driver builds one from
+                          spec.address and Port.
+                        type: string
+                      insecureSkipVerify:
+                        default: true
+                        description: |-
+                          InsecureSkipVerify disables TLS certificate verification. Lab ISE images
+                          commonly start with a self-signed certificate, so the default is true.
+                        type: boolean
+                      port:
+                        default: 443
+                        description: Port is the HTTPS API/ERS port. If omitted, spec.port
+                          is used, then 443.
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                      requestTimeoutSeconds:
+                        default: 60
+                        description: RequestTimeoutSeconds bounds a single REST/ERS
+                          request.
+                        maximum: 900
+                        minimum: 1
+                        type: integer
+                    type: object
+                  management:
+                    description: |-
+                      Management configures the CLI management channel used for health,
+                      troubleshooting, and topology collection.
+                    properties:
+                      commandTimeoutSeconds:
+                        default: 120
+                        description: CommandTimeoutSeconds bounds a single ISE CLI
+                          command.
+                        maximum: 900
+                        minimum: 1
+                        type: integer
+                      connectTimeoutSeconds:
+                        default: 20
+                        description: ConnectTimeoutSeconds bounds TCP and SSH handshake
+                          setup.
+                        maximum: 300
+                        minimum: 1
+                        type: integer
+                      sshPort:
+                        default: 22
+                        description: SSHPort is the ISE CLI SSH port. If omitted,
+                          spec.port is used, then 22.
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                    type: object
+                  resources:
+                    description: |-
+                      Resources overrides the virtual appliance resource shape reported to
+                      Kubernetes for observability. Defaults match the lab KubeVirt ISE profile.
+                    properties:
+                      cpuCores:
+                        default: 16
+                        description: CPUCores is the number of vCPU cores assigned
+                          to the virtual appliance.
+                        format: int64
+                        minimum: 1
+                        type: integer
+                      memoryMB:
+                        default: 32768
+                        description: MemoryMB is the amount of memory assigned to
+                          the virtual appliance.
+                        format: int64
+                        minimum: 1
+                        type: integer
+                      storageMB:
+                        default: 300000
+                        description: |-
+                          StorageMB is the storage capacity reported for observability. It is not
+                          used for workload scheduling because ISE app-hosting is unsupported.
                         format: int64
                         minimum: 0
                         type: integer

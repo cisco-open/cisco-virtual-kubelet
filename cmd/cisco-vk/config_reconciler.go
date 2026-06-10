@@ -120,6 +120,10 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		return fmt.Errorf("nil DeviceSpec")
 	}
 
+	if opts.Spec.Driver == ciskov1.DeviceDriverISE {
+		return startISEConfigReconciler(ctx, cfg, deviceName, opts)
+	}
+
 	if !drivers.ConfigDriverRegistered(opts.Spec.Driver) {
 		log.G(ctx).WithField("driver", opts.Spec.Driver).
 			Debug("no config driver registered for this device kind; skipping config reconciler")

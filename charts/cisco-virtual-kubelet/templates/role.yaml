@@ -102,6 +102,7 @@ rules:
   - iosxeconfigbundles/status
   - iosxeconfigrevisions/status
   - iosxeconfigs/status
+  - iseconfigs/status
   verbs:
   - get
   - patch
@@ -110,6 +111,7 @@ rules:
   - config.cisco.vk
   resources:
   - iosxeconfigbundles
+  - iseconfigs
   verbs:
   - get
   - list

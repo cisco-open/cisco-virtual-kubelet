@@ -87,6 +87,14 @@ rules:
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigs/status"]
     verbs: ["get", "update", "patch"]
+  # ISEConfig CRD - the per-device ISE reconciler watches ISE
+  # Network as Code intent for its device and writes status.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iseconfigs"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iseconfigs/status"]
+    verbs: ["get", "update", "patch"]
   # IOSXEConfigApplyLog CRD — Phase 7 audit log; the reconciler appends
   # ApplyLogEntry objects after every apply pass and reads back during
   # the time-travel replay path. List/watch needed for the in-pod

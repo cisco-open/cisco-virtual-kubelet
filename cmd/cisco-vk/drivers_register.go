@@ -40,6 +40,7 @@ import (
 	//
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/ftd"
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxr"
+	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/ise"
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos"
 	// _ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/openconfig"
 )
