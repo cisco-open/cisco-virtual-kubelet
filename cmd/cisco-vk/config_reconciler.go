@@ -123,6 +123,9 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	if opts.Spec.Driver == ciskov1.DeviceDriverISE {
 		return startISEConfigReconciler(ctx, cfg, deviceName, opts)
 	}
+	if opts.Spec.Driver == ciskov1.DeviceDriverFMC {
+		return startFMCConfigReconciler(ctx, cfg, deviceName, opts)
+	}
 
 	if !drivers.ConfigDriverRegistered(opts.Spec.Driver) {
 		log.G(ctx).WithField("driver", opts.Spec.Driver).

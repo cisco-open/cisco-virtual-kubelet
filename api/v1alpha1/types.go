@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// +kubebuilder:validation:Enum=XE;XR;NXOS;ISE;FTD;OPENCONFIG;FAKE
+// +kubebuilder:validation:Enum=XE;XR;NXOS;ISE;FTD;FMC;OPENCONFIG;FAKE
 type DeviceDriver string
 
 const (
@@ -29,6 +29,7 @@ const (
 	DeviceDriverNXOS       DeviceDriver = "NXOS"
 	DeviceDriverFTD        DeviceDriver = "FTD"
 	DeviceDriverISE        DeviceDriver = "ISE"
+	DeviceDriverFMC        DeviceDriver = "FMC"
 	DeviceDriverOPENCONFIG DeviceDriver = "OPENCONFIG"
 	DeviceDriverFAKE       DeviceDriver = "FAKE"
 )
@@ -82,7 +83,7 @@ type CiscoDeviceList struct {
 // configuration lives under the corresponding driver section (XE, XR, etc.).
 type DeviceSpec struct {
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=XE;XR;NXOS;ISE;FTD;OPENCONFIG;FAKE
+	// +kubebuilder:validation:Enum=XE;XR;NXOS;ISE;FTD;FMC;OPENCONFIG;FAKE
 	Driver DeviceDriver `json:"driver" mapstructure:"driver"`
 
 	// Address is the management IP or hostname of the device.
@@ -216,6 +217,12 @@ type DeviceSpec struct {
 	// driver presents a health, operations, and observability node.
 	// +kubebuilder:validation:Optional
 	FTD *FTDConfig `json:"ftd,omitempty" mapstructure:"ftd,omitempty"`
+
+	// FMC holds Cisco Secure Firewall Management Center API settings. FMC does
+	// not support Cisco app-hosting; the driver presents a health, operations,
+	// telemetry, and NetAsCode configuration node.
+	// +kubebuilder:validation:Optional
+	FMC *FMCConfig `json:"fmc,omitempty" mapstructure:"fmc,omitempty"`
 
 	// ISE holds Cisco Identity Services Engine management and API settings.
 	// ISE does not support Cisco app-hosting; the driver presents a health,

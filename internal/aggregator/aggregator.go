@@ -99,6 +99,8 @@ type deviceWorker struct {
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iseconfigs,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iseconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=fmcconfigs,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=fmcconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigdefaults,verbs=get;list;watch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxedevicegroupconfigs,verbs=get;list;watch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeinterfacegroupconfigs,verbs=get;list;watch
@@ -244,6 +246,9 @@ func aggregatedReconcileResultAttribute(result ctrl.Result) string {
 func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, hash string) error {
 	if dev.Spec.Driver == ciskov1.DeviceDriverISE {
 		return r.startISEWorker(dev, password, hash)
+	}
+	if dev.Spec.Driver == ciskov1.DeviceDriverFMC {
+		return r.startFMCWorker(dev, password, hash)
 	}
 	dctx, err := drivers.NewConfigDriver(r.rootCtx, &dev.Spec, password, drivers.ConfigDriverOptions{})
 	if err != nil && (dctx == nil || dctx.Transport == nil) {

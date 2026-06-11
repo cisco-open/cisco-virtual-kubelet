@@ -87,9 +87,10 @@ rules:
 - apiGroups:
   - config.cisco.vk
   resources:
-  - iosxeconfigapplylogs
+  - fmcconfigs
+  - iosxeconfigbundles
+  - iseconfigs
   verbs:
-  - create
   - get
   - list
   - patch
@@ -98,6 +99,7 @@ rules:
 - apiGroups:
   - config.cisco.vk
   resources:
+  - fmcconfigs/status
   - iosxeconfigapplylogs/status
   - iosxeconfigbundles/status
   - iosxeconfigrevisions/status
@@ -110,9 +112,9 @@ rules:
 - apiGroups:
   - config.cisco.vk
   resources:
-  - iosxeconfigbundles
-  - iseconfigs
+  - iosxeconfigapplylogs
   verbs:
+  - create
   - get
   - list
   - patch

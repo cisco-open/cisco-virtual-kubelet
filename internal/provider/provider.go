@@ -901,6 +901,8 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 	defaultTopology := topologyLabelForDriver(a.deviceSpec.Driver)
 	labels := map[string]string{
 		"kubernetes.io/hostname":        a.nodeName,
+		"platform":                      defaultTopology,
+		"provider":                      "cisco-virtual-kubelet",
 		"type":                          "virtual-kubelet",
 		"topology.kubernetes.io/zone":   defaultTopology,
 		"topology.kubernetes.io/region": defaultTopology,
@@ -959,6 +961,8 @@ func topologyLabelForDriver(driver v1alpha1.DeviceDriver) string {
 		return "cisco-nxos"
 	case v1alpha1.DeviceDriverFTD:
 		return "cisco-ftd"
+	case v1alpha1.DeviceDriverFMC:
+		return "cisco-fmc"
 	case v1alpha1.DeviceDriverXR:
 		return "cisco-iosxr"
 	case v1alpha1.DeviceDriverOPENCONFIG:
@@ -976,6 +980,8 @@ func osImageForDriver(driver v1alpha1.DeviceDriver) string {
 		return "NX-OS"
 	case v1alpha1.DeviceDriverFTD:
 		return "FTD"
+	case v1alpha1.DeviceDriverFMC:
+		return "FMC"
 	case v1alpha1.DeviceDriverXR:
 		return "IOS-XR"
 	case v1alpha1.DeviceDriverOPENCONFIG:

@@ -4,16 +4,16 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: iseconfigs.config.cisco.vk
+  name: fmcconfigs.config.cisco.vk
 spec:
   group: config.cisco.vk
   names:
-    kind: ISEConfig
-    listKind: ISEConfigList
-    plural: iseconfigs
+    kind: FMCConfig
+    listKind: FMCConfigList
+    plural: fmcconfigs
     shortNames:
-    - isecfg
-    singular: iseconfig
+    - fmccfg
+    singular: fmcconfig
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -32,8 +32,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ISEConfig is the per-device desired-configuration CR for Cisco
-          ISE.
+        description: FMCConfig is the per-controller desired-configuration CR for
+          Cisco FMC.
         properties:
           apiVersion:
             description: |-
@@ -54,9 +54,11 @@ spec:
             type: object
           spec:
             description: |-
-              ISEConfigSpec declares the desired ISE configuration for a single CiscoDevice.
-              The source payload follows the Network as Code ISE model: either a full
-              `ise:` envelope or the inner configuration block can be supplied.
+              FMCConfigSpec declares the desired FMC configuration for a single CiscoDevice.
+              The source payload follows the Network as Code FMC model: either a full
+              `fmc:` envelope or the inner FMC configuration block can be supplied. When a
+              full model includes top-level `existing.fmc`, that read-only reference model
+              is preserved under the canonical `existing` family for resolvers.
             properties:
               deviceRef:
                 description: DeviceRef targets the CiscoDevice this configuration
@@ -74,7 +76,7 @@ spec:
                 description: |-
                   DriftDetectInterval is the cadence at which the driver re-fetches and
                   compares observed state to intent when the spec is otherwise quiescent.
-                  Parsed as a Go duration; minimum 30s to avoid device hammering.
+                  Parsed as a Go duration; minimum 30s to avoid controller/API hammering.
                 type: string
               driftPolicy:
                 default: revert
@@ -86,10 +88,9 @@ spec:
                 type: string
               managedFamilies:
                 description: |-
-                  ManagedFamilies is the closed list of NetAsCode ISE top-level families
-                  this CR owns. Supported families are identity_management,
-                  network_resources, network_access, device_administration, trust_sec, and
-                  system.
+                  ManagedFamilies is the closed list of NetAsCode FMC top-level families
+                  this CR owns. Supported families are nac_configuration, existing, system,
+                  domains, devices, objects, policies, vpns, and integrations.
                 items:
                   type: string
                 minItems: 1
@@ -138,8 +139,8 @@ spec:
               secretRefs:
                 description: |-
                   SecretRefs lets the resolver merge sensitive configuration into the
-                  resolved ISE intent from Kubernetes Secrets, so shared secrets and user
-                  passwords never need to live in a ConfigMap or git-tracked YAML.
+                  resolved FMC intent from Kubernetes Secrets, so shared secrets and API
+                  credentials never need to live in a ConfigMap or git-tracked YAML.
                 items:
                   description: |-
                     FamilySecretRef binds a Kubernetes Secret to a family's intent
@@ -178,8 +179,8 @@ spec:
                   type: object
                 type: array
               source:
-                description: Source carries the per-device NetAsCode ISE configuration
-                  payload.
+                description: Source carries the per-controller Network as Code FMC
+                  configuration payload.
                 properties:
                   configMapRef:
                     description: |-
@@ -214,7 +215,7 @@ spec:
             - source
             type: object
           status:
-            description: ISEConfigStatus reports reconciliation state to users and
+            description: FMCConfigStatus reports reconciliation state to users and
               GitOps agents.
             properties:
               conditions:
@@ -280,7 +281,7 @@ spec:
                 x-kubernetes-list-type: map
               drift:
                 description: Drift lists the currently known divergences between intent
-                  and device.
+                  and controller.
                 items:
                   description: |-
                     DriftEntry records a single observed-vs-desired divergence. Paths are YANG
@@ -370,7 +371,7 @@ spec:
                 type: string
               lastDeviceCheck:
                 description: LastDeviceCheck records the most recent reconcile tick
-                  that reached ISE.
+                  that reached FMC.
                 format: date-time
                 type: string
               observedGeneration:

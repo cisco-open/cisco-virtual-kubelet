@@ -199,6 +199,7 @@ spec:
                     enum:
                     - netascode-iosxe
                     - netascode-ise
+                    - netascode-fmc
                     type: string
                   modelVersion:
                     description: |-

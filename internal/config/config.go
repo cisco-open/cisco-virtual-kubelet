@@ -91,6 +91,11 @@ func SetDeviceDefaults(spec *v1alpha1.DeviceSpec) error {
 				Enabled: false,
 			}
 			spec.Port = 22
+		case v1alpha1.DeviceDriverFMC:
+			spec.TLS = &v1alpha1.TLSConfig{
+				Enabled: true,
+			}
+			spec.Port = 443
 		default:
 			if spec.TLS == nil || !spec.TLS.Enabled {
 				spec.TLS = &v1alpha1.TLSConfig{
