@@ -1,10 +1,42 @@
+# Build outputs
 bin
+/cisco-vk
+kubectl-ciscovk
+site/
+
+# Go test / coverage artifacts
+coverage.out
+coverage.html
+*.coverprofile
+*.test
+*.prof
+
+# Patches
+*.patch
+
+# Python caches (tests/yang/scripts)
+__pycache__/
+*.pyc
+*.pyo
+
+# Node / Next.js (defensive; docs/website has its own .gitignore)
+node_modules/
+.next/
+
+# Local env and secrets
+.env
+.env.*
+!.env.example
+
+# Editors and OS
 .DS_Store
 .stignore
-.env
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Tooling caches
 .venv/
 .claude/
-site/
-/cisco-vk
-0001-fix-normalize-desired-through-yangFetchShape-before-.patch
-kubectl-ciscovk
