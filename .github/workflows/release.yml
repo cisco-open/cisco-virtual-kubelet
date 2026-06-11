@@ -45,8 +45,9 @@ on:
 permissions:
   contents: write
   packages: write
-  id-token: write   # required for cosign keyless signing
+  id-token: write          # required for cosign keyless signing
   attestations: write
+  security-events: write   # required to upload the Trivy SARIF to code-scanning
 
 env:
   REGISTRY: ghcr.io
@@ -55,7 +56,9 @@ env:
 jobs:
   build-and-sign:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Native cross-compilation (see Dockerfile) keeps this well under 30m, but
+    # leave headroom for the Trivy scan, SBOM generation, and cosign round-trips.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -93,6 +96,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
           sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Install Trivy
         uses: aquasecurity/setup-trivy@v0.2.6
