@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// +kubebuilder:validation:Enum=XE;XR;NXOS;ISE;FTD;FMC;OPENCONFIG;FAKE
+// +kubebuilder:validation:Enum=XE;XR;NXOS;ISE;FTD;FMC;ACI;OPENCONFIG;FAKE
 type DeviceDriver string
 
 const (
@@ -30,6 +30,7 @@ const (
 	DeviceDriverFTD        DeviceDriver = "FTD"
 	DeviceDriverISE        DeviceDriver = "ISE"
 	DeviceDriverFMC        DeviceDriver = "FMC"
+	DeviceDriverACI        DeviceDriver = "ACI"
 	DeviceDriverOPENCONFIG DeviceDriver = "OPENCONFIG"
 	DeviceDriverFAKE       DeviceDriver = "FAKE"
 )
@@ -83,7 +84,7 @@ type CiscoDeviceList struct {
 // configuration lives under the corresponding driver section (XE, XR, etc.).
 type DeviceSpec struct {
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=XE;XR;NXOS;ISE;FTD;FMC;OPENCONFIG;FAKE
+	// +kubebuilder:validation:Enum=XE;XR;NXOS;ISE;FTD;FMC;ACI;OPENCONFIG;FAKE
 	Driver DeviceDriver `json:"driver" mapstructure:"driver"`
 
 	// Address is the management IP or hostname of the device.
@@ -223,6 +224,12 @@ type DeviceSpec struct {
 	// telemetry, and NetAsCode configuration node.
 	// +kubebuilder:validation:Optional
 	FMC *FMCConfig `json:"fmc,omitempty" mapstructure:"fmc,omitempty"`
+
+	// APIC holds Cisco APIC / ACI controller API settings. APIC does not
+	// support Cisco app-hosting; the driver presents a health, operations,
+	// telemetry, and NetAsCode configuration node.
+	// +kubebuilder:validation:Optional
+	APIC *APICConfig `json:"apic,omitempty" mapstructure:"apic,omitempty"`
 
 	// ISE holds Cisco Identity Services Engine management and API settings.
 	// ISE does not support Cisco app-hosting; the driver presents a health,

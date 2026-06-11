@@ -103,6 +103,14 @@ rules:
   - apiGroups: ["config.cisco.vk"]
     resources: ["fmcconfigs/status"]
     verbs: ["get", "update", "patch"]
+  # APICConfig CRD - the per-device APIC reconciler watches APIC
+  # Network as Code intent for its controller and writes status.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["apicconfigs"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["apicconfigs/status"]
+    verbs: ["get", "update", "patch"]
   # IOSXEConfigApplyLog CRD — Phase 7 audit log; the reconciler appends
   # ApplyLogEntry objects after every apply pass and reads back during
   # the time-travel replay path. List/watch needed for the in-pod

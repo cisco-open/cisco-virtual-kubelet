@@ -38,6 +38,7 @@ import (
 	// internal/drivers/<name>/ but stay un-imported until a real
 	// implementation lands.
 	//
+	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/aci"
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/fmc"
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/ftd"
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxr"

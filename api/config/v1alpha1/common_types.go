@@ -71,7 +71,7 @@ type ConfigurationSource struct {
 // NetAsCodeModelFormat names the external intent model carried by an
 // IOSXEConfig. CVK currently accepts Cisco IOS-XE NetAsCode intent.
 //
-// +kubebuilder:validation:Enum=netascode-iosxe;netascode-ise;netascode-fmc
+// +kubebuilder:validation:Enum=netascode-iosxe;netascode-ise;netascode-fmc;netascode-apic
 type NetAsCodeModelFormat string
 
 const (
@@ -86,6 +86,10 @@ const (
 	// NetAsCodeModelFormatFMC is the canonical Cisco FMC Network as Code
 	// data model used by the terraform-fmc-nac-fmc module.
 	NetAsCodeModelFormatFMC NetAsCodeModelFormat = "netascode-fmc"
+
+	// NetAsCodeModelFormatAPIC is the canonical Cisco APIC Network as Code
+	// data model used by the terraform-aci-nac-aci module.
+	NetAsCodeModelFormatAPIC NetAsCodeModelFormat = "netascode-apic"
 )
 
 // NetAsCodeModelSource records where a NetAsCode payload came from. It is

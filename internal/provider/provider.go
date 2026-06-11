@@ -963,6 +963,8 @@ func topologyLabelForDriver(driver v1alpha1.DeviceDriver) string {
 		return "cisco-ftd"
 	case v1alpha1.DeviceDriverFMC:
 		return "cisco-fmc"
+	case v1alpha1.DeviceDriverACI:
+		return "cisco-aci"
 	case v1alpha1.DeviceDriverXR:
 		return "cisco-iosxr"
 	case v1alpha1.DeviceDriverOPENCONFIG:
@@ -982,6 +984,8 @@ func osImageForDriver(driver v1alpha1.DeviceDriver) string {
 		return "FTD"
 	case v1alpha1.DeviceDriverFMC:
 		return "FMC"
+	case v1alpha1.DeviceDriverACI:
+		return "ACI"
 	case v1alpha1.DeviceDriverXR:
 		return "IOS-XR"
 	case v1alpha1.DeviceDriverOPENCONFIG:

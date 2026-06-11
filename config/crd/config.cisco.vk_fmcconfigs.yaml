@@ -113,6 +113,7 @@ spec:
                     - netascode-iosxe
                     - netascode-ise
                     - netascode-fmc
+                    - netascode-apic
                     type: string
                   modelVersion:
                     description: |-
