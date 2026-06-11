@@ -91,6 +91,7 @@ rules:
   - fmcconfigs
   - iosxeconfigbundles
   - iseconfigs
+  - sonicconfigs
   verbs:
   - get
   - list
@@ -107,6 +108,7 @@ rules:
   - iosxeconfigrevisions/status
   - iosxeconfigs/status
   - iseconfigs/status
+  - sonicconfigs/status
   verbs:
   - get
   - patch

@@ -69,9 +69,10 @@ type ConfigurationSource struct {
 }
 
 // NetAsCodeModelFormat names the external intent model carried by an
-// IOSXEConfig. CVK currently accepts Cisco IOS-XE NetAsCode intent.
+// IOSXEConfig. CVK accepts platform-specific Network as Code payloads and
+// OpenConfig operation payloads for SONiC.
 //
-// +kubebuilder:validation:Enum=netascode-iosxe;netascode-ise;netascode-fmc;netascode-apic
+// +kubebuilder:validation:Enum=netascode-iosxe;netascode-ise;netascode-fmc;netascode-apic;openconfig
 type NetAsCodeModelFormat string
 
 const (
@@ -90,6 +91,10 @@ const (
 	// NetAsCodeModelFormatAPIC is the canonical Cisco APIC Network as Code
 	// data model used by the terraform-aci-nac-aci module.
 	NetAsCodeModelFormatAPIC NetAsCodeModelFormat = "netascode-apic"
+
+	// NetAsCodeModelFormatOpenConfig identifies an OpenConfig/gNMI operation
+	// payload. SONICConfig uses it to record intent provenance for SONiC.
+	NetAsCodeModelFormatOpenConfig NetAsCodeModelFormat = "openconfig"
 )
 
 // NetAsCodeModelSource records where a NetAsCode payload came from. It is

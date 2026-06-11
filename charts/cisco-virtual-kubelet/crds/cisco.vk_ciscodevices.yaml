@@ -181,6 +181,7 @@ spec:
                   - XE
                   - XR
                   - NXOS
+                  - SONIC
                   - ISE
                   - FTD
                   - FMC
@@ -191,6 +192,7 @@ spec:
                   - XE
                   - XR
                   - NXOS
+                  - SONIC
                   - ISE
                   - FTD
                   - FMC
@@ -584,6 +586,102 @@ spec:
                   others:
                     additionalProperties:
                       type: string
+                    type: object
+                type: object
+              sonic:
+                description: |-
+                  SONIC holds Cisco SONiC OpenConfig/gNMI management settings. SONiC does
+                  not support Cisco app-hosting; the driver presents a health, operations,
+                  telemetry, and OpenConfig configuration node.
+                properties:
+                  management:
+                    description: |-
+                      Management configures the optional SSH troubleshooting channel. gNMI is the
+                      source of truth for health and configuration; SSH is used only to enrich
+                      device info and run read-only operational commands.
+                    properties:
+                      commandTimeoutSeconds:
+                        default: 45
+                        description: CommandTimeoutSeconds bounds a single SONiC operational
+                          command.
+                        maximum: 600
+                        minimum: 1
+                        type: integer
+                      connectTimeoutSeconds:
+                        default: 15
+                        description: ConnectTimeoutSeconds bounds TCP and SSH handshake
+                          setup.
+                        maximum: 300
+                        minimum: 1
+                        type: integer
+                      sshPort:
+                        default: 22
+                        description: SSHPort is the SONiC CLI SSH port. If omitted,
+                          22 is used.
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                    type: object
+                  openConfig:
+                    description: OpenConfig configures the gNMI/OpenConfig management
+                      channel.
+                    properties:
+                      gnmiPort:
+                        default: 57400
+                        description: |-
+                          GNMIPort is the gNMI listener port. If omitted, spec.port is used, then
+                          57400. Lab SONiC images commonly proxy gNMI to 57400 without TLS.
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                      insecureSkipVerify:
+                        default: false
+                        description: |-
+                          InsecureSkipVerify disables gNMI server certificate verification when TLS
+                          is enabled. This should remain false for production unless a lab image uses
+                          self-signed certificates.
+                        type: boolean
+                      requestTimeoutSeconds:
+                        default: 30
+                        description: RequestTimeoutSeconds bounds a single gNMI request.
+                        maximum: 900
+                        minimum: 1
+                        type: integer
+                      tls:
+                        default: false
+                        description: |-
+                          TLS enables TLS for gNMI. The default is false for the SONiC VXR images
+                          used by the lab; set true for production devices with secure gNMI.
+                        type: boolean
+                    type: object
+                  resources:
+                    description: |-
+                      Resources overrides the virtual appliance resource shape reported to
+                      Kubernetes for observability. Pods remain zero-capacity because SONiC does
+                      not expose Cisco app-hosting.
+                    properties:
+                      cpuCores:
+                        default: 4
+                        description: CPUCores is the number of vCPU cores assigned
+                          to the virtual switch.
+                        format: int64
+                        minimum: 1
+                        type: integer
+                      memoryMB:
+                        default: 20480
+                        description: MemoryMB is the amount of memory assigned to
+                          the virtual switch.
+                        format: int64
+                        minimum: 1
+                        type: integer
+                      storageMB:
+                        default: 0
+                        description: |-
+                          StorageMB is the storage capacity reported for observability. It is not
+                          used for workload scheduling because SONiC app-hosting is unsupported.
+                        format: int64
+                        minimum: 0
+                        type: integer
                     type: object
                 type: object
               taints:

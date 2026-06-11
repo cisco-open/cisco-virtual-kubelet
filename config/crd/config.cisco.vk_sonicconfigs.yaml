@@ -4,16 +4,16 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: apicconfigs.config.cisco.vk
+  name: sonicconfigs.config.cisco.vk
 spec:
   group: config.cisco.vk
   names:
-    kind: APICConfig
-    listKind: APICConfigList
-    plural: apicconfigs
+    kind: SONICConfig
+    listKind: SONICConfigList
+    plural: sonicconfigs
     shortNames:
-    - apiccfg
-    singular: apicconfig
+    - soniccfg
+    singular: sonicconfig
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -32,8 +32,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: APICConfig is the per-controller desired-configuration CR for
-          Cisco APIC.
+        description: SONICConfig is the per-device OpenConfig desired-state CR for
+          Cisco SONiC.
         properties:
           apiVersion:
             description: |-
@@ -54,11 +54,11 @@ spec:
             type: object
           spec:
             description: |-
-              APICConfigSpec declares the desired APIC configuration for a single CiscoDevice.
-              The source payload follows the Network as Code APIC model: either a full
-              `apic:` envelope or the inner APIC configuration block can be supplied. When a
-              full model includes top-level `existing.apic`, that read-only reference model
-              is preserved under the canonical `existing` family for resolvers.
+              SONICConfigSpec declares OpenConfig desired state for one SONiC CiscoDevice.
+              The source payload accepts either an `openconfig:` envelope or the inner
+              operation set directly. Supported operation keys are replace, update, and
+              delete. replace/update may be lists of {path,value} objects or a map of
+              path-to-value; delete may be a list of paths or {path} objects.
             properties:
               deviceRef:
                 description: DeviceRef targets the CiscoDevice this configuration
@@ -74,24 +74,23 @@ spec:
               driftDetectInterval:
                 default: 5m
                 description: |-
-                  DriftDetectInterval is the cadence at which the driver re-fetches and
-                  compares observed state to intent when the spec is otherwise quiescent.
-                  Parsed as a Go duration; minimum 30s to avoid controller/API hammering.
+                  DriftDetectInterval is the cadence at which the driver re-checks the device
+                  when the spec is otherwise quiescent. Parsed as a Go duration; minimum 30s.
                 type: string
               driftPolicy:
                 default: revert
-                description: DriftPolicy controls what happens when drift is found.
+                description: |-
+                  DriftPolicy controls write behaviour. report records planned operations
+                  without writing; pause disables reconciliation; revert applies intent.
                 enum:
                 - revert
                 - report
                 - pause
                 type: string
-              managedFamilies:
+              managedPaths:
                 description: |-
-                  ManagedFamilies is the closed list of NetAsCode APIC top-level families
-                  this CR owns. Supported families are bootstrap, fabric_policies,
-                  access_policies, pod_policies, node_policies, interface_policies,
-                  tenants, and existing.
+                  ManagedPaths are the OpenConfig path prefixes this CR owns. Every operation
+                  path must be equal to or below one of these prefixes.
                 items:
                   type: string
                 minItems: 1
@@ -99,9 +98,8 @@ spec:
                 x-kubernetes-list-type: set
               modelSource:
                 description: |-
-                  ModelSource records the external Network as Code model/export that
-                  produced Source. It is deliberately metadata-only: CVK reconciles the
-                  canonical payload in Source.
+                  ModelSource records the external model/export that produced Source. It is
+                  metadata only; CVK reconciles the canonical payload in Source.
                 properties:
                   exporter:
                     description: |-
@@ -139,51 +137,8 @@ spec:
                 - format
                 - resolved
                 type: object
-              secretRefs:
-                description: |-
-                  SecretRefs lets the resolver merge sensitive configuration into the
-                  resolved APIC intent from Kubernetes Secrets, so shared secrets and API
-                  credentials never need to live in a ConfigMap or git-tracked YAML.
-                items:
-                  description: |-
-                    FamilySecretRef binds a Kubernetes Secret to a family's intent
-                    block. The named Secret is read from the same namespace as the
-                    IOSXEConfig CR; cross-namespace references are deliberately
-                    disallowed to keep RBAC trivial. Shape mirrors ConfigMapKeyRef
-                    so operators have one mental model for both kinds of external
-                    payload.
-                  properties:
-                    family:
-                      description: |-
-                        Family is the netascode family the snippet merges into. Must
-                        be one of the names in ManagedFamilies; resolution fails if
-                        it isn't, so a typo doesn't quietly produce a no-op.
-                      minLength: 1
-                      type: string
-                    key:
-                      description: |-
-                        Key is the entry inside Secret.Data whose value is parsed as
-                        a YAML/JSON snippet and merged into the family's intent. The
-                        snippet must shape itself to fit under the family root —
-                        `{"neighbors":[...]}` for bgp, `{"communities":[...]}` for
-                        snmp_server — exactly as it would appear in a per-device
-                        source.
-                      minLength: 1
-                      type: string
-                    name:
-                      description: Name of the Secret in the same namespace as the
-                        CR.
-                      minLength: 1
-                      type: string
-                  required:
-                  - family
-                  - key
-                  - name
-                  type: object
-                type: array
               source:
-                description: Source carries the per-controller Network as Code APIC
-                  configuration payload.
+                description: Source carries the OpenConfig operation payload.
                 properties:
                   configMapRef:
                     description: |-
@@ -214,12 +169,11 @@ spec:
                 type: object
             required:
             - deviceRef
-            - managedFamilies
+            - managedPaths
             - source
             type: object
           status:
-            description: APICConfigStatus reports reconciliation state to users and
-              GitOps agents.
+            description: SONICConfigStatus reports OpenConfig reconciliation state.
             properties:
               conditions:
                 description: Conditions follows the standard Kubernetes conditions
@@ -283,8 +237,7 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               drift:
-                description: Drift lists the currently known divergences between intent
-                  and controller.
+                description: Drift lists planned or observed OpenConfig differences.
                 items:
                   description: |-
                     DriftEntry records a single observed-vs-desired divergence. Paths are YANG
@@ -318,8 +271,9 @@ spec:
                 maxItems: 50
                 type: array
               familyStatus:
-                description: FamilyStatus reports per-family state for each family
-                  in ManagedFamilies.
+                description: |-
+                  FamilyStatus reports per-managed-path state. The common FamilyStatus type
+                  is reused, with Name containing the OpenConfig path prefix.
                 items:
                   description: FamilyStatus reports per-family reconciliation state.
                   properties:
@@ -365,7 +319,7 @@ spec:
                 - name
                 x-kubernetes-list-type: map
               lastAppliedHash:
-                description: LastAppliedHash is a stable SHA-256 over the canonicalised
+                description: LastAppliedHash is a stable SHA-256 over the canonical
                   resolved intent.
                 type: string
               lastAppliedTime:
@@ -374,7 +328,7 @@ spec:
                 type: string
               lastDeviceCheck:
                 description: LastDeviceCheck records the most recent reconcile tick
-                  that reached APIC.
+                  that reached SONiC.
                 format: date-time
                 type: string
               observedGeneration:

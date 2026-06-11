@@ -91,6 +91,11 @@ func SetDeviceDefaults(spec *v1alpha1.DeviceSpec) error {
 				Enabled: false,
 			}
 			spec.Port = 22
+		case v1alpha1.DeviceDriverSONIC:
+			spec.TLS = &v1alpha1.TLSConfig{
+				Enabled: false,
+			}
+			spec.Port = 57400
 		case v1alpha1.DeviceDriverFMC, v1alpha1.DeviceDriverACI:
 			spec.TLS = &v1alpha1.TLSConfig{
 				Enabled: true,

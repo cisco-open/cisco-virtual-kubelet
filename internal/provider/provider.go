@@ -959,6 +959,8 @@ func topologyLabelForDriver(driver v1alpha1.DeviceDriver) string {
 		return "cisco-iosxe"
 	case v1alpha1.DeviceDriverNXOS:
 		return "cisco-nxos"
+	case v1alpha1.DeviceDriverSONIC:
+		return "cisco-sonic"
 	case v1alpha1.DeviceDriverFTD:
 		return "cisco-ftd"
 	case v1alpha1.DeviceDriverFMC:
@@ -980,6 +982,8 @@ func osImageForDriver(driver v1alpha1.DeviceDriver) string {
 		return "IOS-XE"
 	case v1alpha1.DeviceDriverNXOS:
 		return "NX-OS"
+	case v1alpha1.DeviceDriverSONIC:
+		return "SONiC"
 	case v1alpha1.DeviceDriverFTD:
 		return "FTD"
 	case v1alpha1.DeviceDriverFMC:

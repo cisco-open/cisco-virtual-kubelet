@@ -103,6 +103,8 @@ type deviceWorker struct {
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=fmcconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=apicconfigs,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=apicconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=sonicconfigs,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=sonicconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigdefaults,verbs=get;list;watch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxedevicegroupconfigs,verbs=get;list;watch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeinterfacegroupconfigs,verbs=get;list;watch
@@ -254,6 +256,9 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 	}
 	if dev.Spec.Driver == ciskov1.DeviceDriverACI {
 		return r.startAPICWorker(dev, password, hash)
+	}
+	if dev.Spec.Driver == ciskov1.DeviceDriverSONIC {
+		return r.startSONICWorker(dev, password, hash)
 	}
 	dctx, err := drivers.NewConfigDriver(r.rootCtx, &dev.Spec, password, drivers.ConfigDriverOptions{})
 	if err != nil && (dctx == nil || dctx.Transport == nil) {

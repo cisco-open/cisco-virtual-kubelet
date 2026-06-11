@@ -20,13 +20,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// +kubebuilder:validation:Enum=XE;XR;NXOS;ISE;FTD;FMC;ACI;OPENCONFIG;FAKE
+// +kubebuilder:validation:Enum=XE;XR;NXOS;SONIC;ISE;FTD;FMC;ACI;OPENCONFIG;FAKE
 type DeviceDriver string
 
 const (
 	DeviceDriverXE         DeviceDriver = "XE"
 	DeviceDriverXR         DeviceDriver = "XR"
 	DeviceDriverNXOS       DeviceDriver = "NXOS"
+	DeviceDriverSONIC      DeviceDriver = "SONIC"
 	DeviceDriverFTD        DeviceDriver = "FTD"
 	DeviceDriverISE        DeviceDriver = "ISE"
 	DeviceDriverFMC        DeviceDriver = "FMC"
@@ -84,7 +85,7 @@ type CiscoDeviceList struct {
 // configuration lives under the corresponding driver section (XE, XR, etc.).
 type DeviceSpec struct {
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=XE;XR;NXOS;ISE;FTD;FMC;ACI;OPENCONFIG;FAKE
+	// +kubebuilder:validation:Enum=XE;XR;NXOS;SONIC;ISE;FTD;FMC;ACI;OPENCONFIG;FAKE
 	Driver DeviceDriver `json:"driver" mapstructure:"driver"`
 
 	// Address is the management IP or hostname of the device.
@@ -212,6 +213,12 @@ type DeviceSpec struct {
 	// NXOS holds NX-OS specific networking configuration.
 	// +kubebuilder:validation:Optional
 	NXOS *NXOSConfig `json:"nxos,omitempty" mapstructure:"nxos,omitempty"`
+
+	// SONIC holds Cisco SONiC OpenConfig/gNMI management settings. SONiC does
+	// not support Cisco app-hosting; the driver presents a health, operations,
+	// telemetry, and OpenConfig configuration node.
+	// +kubebuilder:validation:Optional
+	SONIC *SONICConfig `json:"sonic,omitempty" mapstructure:"sonic,omitempty"`
 
 	// FTD holds Cisco Secure Firewall Threat Defense specific management
 	// configuration. FTD does not support IOS-XE/NX-OS app-hosting; the

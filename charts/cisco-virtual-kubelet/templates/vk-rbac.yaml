@@ -111,6 +111,14 @@ rules:
   - apiGroups: ["config.cisco.vk"]
     resources: ["apicconfigs/status"]
     verbs: ["get", "update", "patch"]
+  # SONICConfig CRD - the per-device SONiC reconciler watches OpenConfig
+  # intent for its switch and writes reconciliation status.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["sonicconfigs"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["sonicconfigs/status"]
+    verbs: ["get", "update", "patch"]
   # IOSXEConfigApplyLog CRD — Phase 7 audit log; the reconciler appends
   # ApplyLogEntry objects after every apply pass and reads back during
   # the time-travel replay path. List/watch needed for the in-pod

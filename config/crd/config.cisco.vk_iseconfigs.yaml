@@ -113,6 +113,7 @@ spec:
                     - netascode-ise
                     - netascode-fmc
                     - netascode-apic
+                    - openconfig
                     type: string
                   modelVersion:
                     description: |-
