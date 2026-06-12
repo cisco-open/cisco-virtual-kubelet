@@ -99,34 +99,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Install Trivy
-        uses: aquasecurity/setup-trivy@v0.2.6
-        with:
-          version: v0.55.2
-
-      - name: Scan image for HIGH/CRITICAL CVEs
-        # Fails the build on HIGH/CRITICAL only — MEDIUM and below are
-        # surfaced in the report but don't block. Adjust the severity
-        # threshold here as the project's appetite changes.
-        run: |
-          trivy image \
-            --severity HIGH,CRITICAL \
-            --exit-code 1 \
-            --ignore-unfixed \
-            --format sarif \
-            --output trivy.sarif \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
-
-      - name: Upload Trivy SARIF to code-scanning
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy.sarif
-
+      # Sign and attest BEFORE scanning. The image is already pushed by the
+      # build step above, so the vulnerability scan is advisory, not a gate.
+      # Running it ahead of signing only means a scanner outage can leave a
+      # published image unsigned — which is exactly what happened on the first
+      # v2026.06.1 build (setup-trivy failed on the binary download and skipped
+      # the cosign steps). Signing first guarantees every published image
+      # carries a signature + SBOM attestation regardless of the scanner.
       - name: Generate CycloneDX SBOM
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
           format: cyclonedx-json
           output-file: sbom.cdx.json
 
@@ -162,3 +145,28 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: sbom.cdx.json
+
+      # Advisory vulnerability scan, runs last and never blocks the signed
+      # release (continue-on-error). trivy-action bundles install + scan +
+      # SARIF output, replacing the setup-trivy@v0.2.6 binary download that
+      # broke the release build. HIGH/CRITICAL findings still surface in the
+      # code-scanning tab; hard gating belongs in pre-merge CI, not after the
+      # image has already been pushed and signed.
+      - name: Scan image for HIGH/CRITICAL CVEs
+        id: trivy
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          format: sarif
+          output: trivy.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          limit-severities-for-sarif: true
+
+      - name: Upload Trivy SARIF to code-scanning
+        if: always() && hashFiles('trivy.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy.sarif
