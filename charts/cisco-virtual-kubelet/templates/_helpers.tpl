@@ -54,7 +54,7 @@ Falls back to .Values.image when controllerImage.repository is empty.
 */}}
 {{- define "cisco-virtual-kubelet.controllerImage" -}}
 {{- $repo := .Values.controllerImage.repository | default .Values.image.repository }}
-{{- $tag  := .Values.controllerImage.tag        | default .Values.image.tag }}
+{{- $tag  := .Values.controllerImage.tag        | default .Values.image.tag | default .Chart.AppVersion }}
 {{- printf "%s:%s" $repo $tag }}
 {{- end }}
 
@@ -72,7 +72,7 @@ Falls back to .Values.image when vkImage.repository is empty.
 */}}
 {{- define "cisco-virtual-kubelet.vkImage" -}}
 {{- $repo := .Values.vkImage.repository | default .Values.image.repository }}
-{{- $tag  := .Values.vkImage.tag        | default .Values.image.tag }}
+{{- $tag  := .Values.vkImage.tag        | default .Values.image.tag | default .Chart.AppVersion }}
 {{- printf "%s:%s" $repo $tag }}
 {{- end }}
 

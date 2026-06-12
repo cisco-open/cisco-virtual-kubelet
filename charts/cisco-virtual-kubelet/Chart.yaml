@@ -2,15 +2,18 @@ apiVersion: v2
 name: cisco-virtual-kubelet
 description: Helm chart for the Cisco Virtual Kubelet controller manager
 type: application
+# version (chart SemVer) and appVersion (released app/image tag) are stamped
+# from the git tag by the release workflow; the values below are the
+# source-tree defaults used for local installs.
 version: 0.1.0
-appVersion: "1.0.0"
+appVersion: "v2026.06.1"
 keywords:
   - cisco
   - virtual-kubelet
   - operator
-home: https://github.com/cisco/virtual-kubelet-cisco
+home: https://github.com/cisco-open/cisco-virtual-kubelet
 sources:
-  - https://github.com/cisco/virtual-kubelet-cisco
+  - https://github.com/cisco-open/cisco-virtual-kubelet
 maintainers:
   - name: Cisco Systems
 dependencies:
