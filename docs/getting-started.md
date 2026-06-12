@@ -58,7 +58,19 @@ minikube image load <your-registry>/cisco-vk:"$LATEST"
 
 ## 2. Install the controller
 
-The controller watches `CiscoDevice` custom resources and creates a Virtual Kubelet deployment for each one. The chart lives in-repo — point it at the image you just built.
+The controller watches `CiscoDevice` custom resources and creates a Virtual Kubelet deployment for each one.
+
+**Published chart (recommended)** — the chart and image are released to GHCR, so steps 1's build/push are optional and you can install directly:
+
+```bash
+helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
+  --version 2026.6.1 \
+  --namespace cvk-system --create-namespace
+```
+
+This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` is the release normalised to SemVer (e.g. `v2026.06.1` → `2026.6.1`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
+
+**From source with a custom image** — to run the build from step 1 instead:
 
 ```bash
 helm install cvk ./charts/cisco-virtual-kubelet \
