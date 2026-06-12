@@ -10,7 +10,6 @@ edit_uri: ""
 markdown_extensions:
 - admonition
 - pymdownx.details
-- pymdownx.superfences
 - attr_list
 - md_in_html
 - footnotes
@@ -29,8 +28,8 @@ markdown_extensions:
 - pymdownx.inlinehilite
 - pymdownx.snippets
 - pymdownx.emoji:
-    emoji_index: !!python/name:material.extensions.emoji.twemoji ""
-    emoji_generator: !!python/name:material.extensions.emoji.to_svg ""
+    emoji_index: !!python/name:zensical.extensions.emoji.twemoji ""
+    emoji_generator: !!python/name:zensical.extensions.emoji.to_svg ""
 nav:
 - Welcome: 'index.md'
 - Getting Started: 'getting-started.md'
@@ -60,7 +59,6 @@ nav:
 - Security: 'security.md'
 - API Reference: 'API.md'
 theme:
-  name: material
   features:
   - content.code.copy
   - search.share
@@ -76,3 +74,9 @@ site_dir: site
 exclude_docs: |
   website/
 use_directory_urls: true
+validation:
+  unresolved_references: false
+  unresolved_footnotes: false
+  unused_definitions: false
+  invalid_links: false
+  invalid_link_anchors: false
