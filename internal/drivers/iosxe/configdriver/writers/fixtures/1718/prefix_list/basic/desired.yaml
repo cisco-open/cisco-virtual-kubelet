@@ -1,0 +1,7 @@
+# Prefix-list permitting 10.0.0.0/8.
+prefixes:
+  - name: PL-TEST
+    sequences:
+      - no: 10
+        action: permit
+        ip: "10.0.0.0/8"

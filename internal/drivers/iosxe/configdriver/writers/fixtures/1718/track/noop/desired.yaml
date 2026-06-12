@@ -1,0 +1,7 @@
+# Already-converged: track object 1 already configured.
+tracks:
+  - name: "1"
+    interface:
+      name: GigabitEthernet1
+      protocol:
+        routing: {}

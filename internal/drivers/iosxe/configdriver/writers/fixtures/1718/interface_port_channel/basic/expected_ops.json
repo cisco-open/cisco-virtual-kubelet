@@ -1,0 +1,14 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/interface/Port-channel",
+    "body": {
+      "Cisco-IOS-XE-native:Port-channel": [
+        {
+          "description": "bond0",
+          "name": "1"
+        }
+      ]
+    }
+  }
+]

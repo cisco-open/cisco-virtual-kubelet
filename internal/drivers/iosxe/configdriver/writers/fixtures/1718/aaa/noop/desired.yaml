@@ -1,0 +1,7 @@
+# Already-converged: AAA authentication already configured.
+authentication:
+  login:
+    - name: default
+      a1:
+        local:
+          - ~

@@ -1,0 +1,22 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/crypto/ipsec/transform-set",
+    "body": {
+      "Cisco-IOS-XE-crypto:transform-set": [
+        {
+          "esp": {
+            "encryption": "esp-aes",
+            "hash": "esp-sha-hmac"
+          },
+          "mode": {
+            "tunnel": [
+              null
+            ]
+          },
+          "tag": "ESP-AES-SHA"
+        }
+      ]
+    }
+  }
+]

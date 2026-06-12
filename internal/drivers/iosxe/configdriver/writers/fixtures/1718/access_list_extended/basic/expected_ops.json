@@ -1,0 +1,13 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ip/access-list/Cisco-IOS-XE-acl:extended=ACL-IN",
+    "body": {
+      "Cisco-IOS-XE-acl:extended": [
+        {
+          "name": "ACL-IN"
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,2 @@
+# Enable IP multicast routing in distributed mode.
+distributed: true

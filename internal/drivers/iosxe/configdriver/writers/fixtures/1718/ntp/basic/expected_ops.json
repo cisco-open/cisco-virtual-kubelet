@@ -1,0 +1,13 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ntp/server/server-list",
+    "body": {
+      "Cisco-IOS-XE-ntp:server-list": [
+        {
+          "ip-address": "192.0.2.1"
+        }
+      ]
+    }
+  }
+]

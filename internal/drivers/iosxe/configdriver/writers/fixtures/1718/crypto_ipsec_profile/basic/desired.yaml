@@ -1,0 +1,4 @@
+- name: IPSEC-PROF1
+  set:
+    transform-set:
+      - ESP-AES-SHA

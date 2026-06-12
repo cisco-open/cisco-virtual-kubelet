@@ -1,0 +1,3 @@
+# Set DNS domain name and enable DNS lookup.
+name: lab.cisco.com
+lookup: true

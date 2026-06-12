@@ -1,0 +1,15 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/crypto/pki/trustpoint",
+    "body": {
+      "Cisco-IOS-XE-crypto:trustpoint": [
+        {
+          "enrollment": "terminal",
+          "id": "CISCO-CA",
+          "revocation-check": "none"
+        }
+      ]
+    }
+  }
+]

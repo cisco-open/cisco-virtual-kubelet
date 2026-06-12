@@ -1,0 +1,23 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/event/manager",
+    "body": {
+      "Cisco-IOS-XE-eem:manager": {
+        "applet": [
+          {
+            "event": {
+              "snmp": {
+                "entry-op": "gt",
+                "entry-val": 0,
+                "oid": "1.3.6.1.2.1.1.3.0",
+                "oid-type": "counter"
+              }
+            },
+            "name": "RELOAD-TRAP"
+          }
+        ]
+      }
+    }
+  }
+]

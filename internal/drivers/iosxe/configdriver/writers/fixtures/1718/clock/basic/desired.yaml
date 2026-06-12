@@ -1,0 +1,4 @@
+# Set clock timezone to UTC with zero offset.
+timezone:
+  zone: UTC
+  offset: 0

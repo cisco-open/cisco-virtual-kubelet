@@ -1,0 +1,8 @@
+# OSPF process 1 with router-ID and area 0 network.
+processes:
+  - id: 1
+    router-id: "10.0.0.1"
+    network:
+      - ip: "10.0.0.0"
+        mask: "0.0.0.255"
+        area: 0

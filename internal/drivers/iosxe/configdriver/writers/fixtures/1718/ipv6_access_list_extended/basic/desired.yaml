@@ -1,0 +1,7 @@
+# IPv6 extended ACL permitting all IPv6 traffic.
+acls:
+  - name: IPV6-ACL-IN
+    rule:
+      - sequence: 10
+        action: permit
+        protocol: ipv6

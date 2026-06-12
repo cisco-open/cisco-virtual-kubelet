@@ -1,0 +1,17 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-isis:router-isis",
+    "body": {
+      "Cisco-IOS-XE-isis:router-isis": [
+        {
+          "is-type": "level-2-only",
+          "net": [
+            "49.0000.0000.0001.00"
+          ],
+          "tag": "1"
+        }
+      ]
+    }
+  }
+]

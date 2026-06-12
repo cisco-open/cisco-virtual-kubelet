@@ -1,0 +1,4 @@
+# Already-converged: SSH settings match desired.
+version: 2
+time-out: 60
+authentication-retries: 3

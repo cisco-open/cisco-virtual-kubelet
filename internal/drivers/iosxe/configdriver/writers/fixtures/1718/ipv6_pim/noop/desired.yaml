@@ -1,0 +1,2 @@
+# Already-converged: IPv6 PIM RP already configured.
+rp-address: "2001:db8::2"

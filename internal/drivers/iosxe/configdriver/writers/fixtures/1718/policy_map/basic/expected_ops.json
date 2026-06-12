@@ -1,0 +1,23 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/policy/Cisco-IOS-XE-policy:policy-map=POLICY1",
+    "body": {
+      "Cisco-IOS-XE-policy:policy-map": [
+        {
+          "class": [
+            {
+              "actions": {
+                "priority": {
+                  "level": 1
+                }
+              },
+              "name": "MATCH-DSCP-EF"
+            }
+          ],
+          "name": "POLICY1"
+        }
+      ]
+    }
+  }
+]

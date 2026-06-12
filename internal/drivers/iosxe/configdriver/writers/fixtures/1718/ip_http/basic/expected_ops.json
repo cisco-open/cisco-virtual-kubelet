@@ -1,0 +1,12 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ip/http",
+    "body": {
+      "Cisco-IOS-XE-http:http": {
+        "secure-server": true,
+        "server": false
+      }
+    }
+  }
+]

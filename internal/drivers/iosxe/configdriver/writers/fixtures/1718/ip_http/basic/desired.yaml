@@ -1,0 +1,3 @@
+# Disable plain HTTP, enable HTTPS only.
+server: false
+secure-server: true

@@ -1,0 +1,4 @@
+# Already-converged: trustpoint already on device.
+- id: CISCO-CA
+  enrollment: terminal
+  revocation-check: none

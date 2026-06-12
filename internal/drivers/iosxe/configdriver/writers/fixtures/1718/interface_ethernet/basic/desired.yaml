@@ -1,0 +1,5 @@
+# GigabitEthernet1 uplink interface.
+interfaces:
+  - name: "1"
+    type: GigabitEthernet
+    description: uplink

@@ -1,0 +1,20 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ipv6/access-list",
+    "body": {
+      "Cisco-IOS-XE-acl:access-list": [
+        {
+          "name": "IPV6-ACL-MGMT",
+          "rule": [
+            {
+              "action": "permit",
+              "ipv6-prefix": "2001:db8::/32",
+              "sequence": 10
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

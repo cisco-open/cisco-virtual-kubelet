@@ -1,0 +1,22 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/interface/Loopback",
+    "body": {
+      "Cisco-IOS-XE-native:Loopback": [
+        {
+          "description": "mgmt-loopback",
+          "ip": {
+            "address": {
+              "primary": {
+                "address": "10.0.0.1",
+                "mask": "255.255.255.255"
+              }
+            }
+          },
+          "name": "0"
+        }
+      ]
+    }
+  }
+]

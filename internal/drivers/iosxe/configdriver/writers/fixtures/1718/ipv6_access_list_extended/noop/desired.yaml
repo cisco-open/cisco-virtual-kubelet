@@ -1,0 +1,7 @@
+# Already-converged: IPV6-ACL-IN already present.
+acls:
+  - name: IPV6-ACL-IN
+    rule:
+      - sequence: 10
+        action: permit
+        protocol: ipv6

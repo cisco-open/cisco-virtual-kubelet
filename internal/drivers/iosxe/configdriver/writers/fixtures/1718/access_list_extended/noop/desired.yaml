@@ -1,0 +1,12 @@
+# Already-converged: ACL-IN already present.
+extended:
+  - name: ACL-IN
+    rule:
+      - sequence: 10
+        action: permit
+        protocol: ip
+        source:
+          network: "10.0.0.0"
+          wildcard: "0.0.0.255"
+        destination:
+          any: {}

@@ -1,0 +1,4 @@
+# Already-converged: Port-channel1 already configured.
+interfaces:
+  - name: "1"
+    description: bond0

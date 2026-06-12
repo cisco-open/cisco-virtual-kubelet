@@ -1,0 +1,22 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/interface/Vlan",
+    "body": {
+      "Cisco-IOS-XE-native:Vlan": [
+        {
+          "description": "native-vlan",
+          "ip": {
+            "address": {
+              "primary": {
+                "address": "192.168.1.1",
+                "mask": "255.255.255.0"
+              }
+            }
+          },
+          "name": "1"
+        }
+      ]
+    }
+  }
+]

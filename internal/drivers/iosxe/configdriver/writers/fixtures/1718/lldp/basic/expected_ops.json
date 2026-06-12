@@ -1,0 +1,13 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/lldp",
+    "body": {
+      "Cisco-IOS-XE-lldp:lldp": {
+        "holdtime": 120,
+        "run": null,
+        "timer": 30
+      }
+    }
+  }
+]

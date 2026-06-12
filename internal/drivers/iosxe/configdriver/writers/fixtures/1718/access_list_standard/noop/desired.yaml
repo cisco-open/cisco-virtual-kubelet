@@ -1,0 +1,9 @@
+# Already-converged: ACL-MGMT already present.
+standard:
+  - name: ACL-MGMT
+    rule:
+      - sequence: 10
+        action: permit
+        std-ace:
+          ipv4-prefix: "10.0.0.0"
+          mask: "0.0.0.255"

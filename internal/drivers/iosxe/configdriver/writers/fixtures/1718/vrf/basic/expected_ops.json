@@ -1,0 +1,14 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/vrf/definition",
+    "body": {
+      "Cisco-IOS-XE-native:definition": [
+        {
+          "name": "MGMT",
+          "rd": "65000:1"
+        }
+      ]
+    }
+  }
+]

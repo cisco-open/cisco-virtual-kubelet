@@ -43,7 +43,7 @@ INSTALL_DIR=$(PREFIX)/bin
 CONFIG_DIR=/etc/cisco-vk
 SYSTEMD_DIR=/etc/systemd/system
 
-.PHONY: all build clean install uninstall test test-envtest lint fmt deps help generate manifests crd-gen deepcopy-gen rbac-gen helm-sync-crds config-lint netascode-migrate config-docs yang-sync migrate-tool parity-matrix check-parity-matrix vendor-yang apphosting-ygot-gen
+.PHONY: all build clean install uninstall test test-envtest lint fmt deps help generate manifests crd-gen deepcopy-gen rbac-gen helm-sync-crds config-lint netascode-migrate config-docs yang-sync migrate-tool parity-matrix check-parity-matrix vendor-yang apphosting-ygot-gen ygot-validate-gen
 
 all: build
 
@@ -273,6 +273,18 @@ apphosting-ygot-gen: ## Regenerate apphosting ygot Go structs from tests/yang
 		tests/yang/Cisco-IOS-XE-cdp-oper.yang \
 		tests/yang/Cisco-IOS-XE-ospf-oper.yang \
 		tests/yang/Cisco-IOS-XE-interfaces-oper.yang
+
+ygot-validate-gen: ## Generate per-family ygot schema packages for CI validation (requires RELEASE=<tag>)
+	@if [ -z "$(RELEASE)" ]; then \
+		echo "ERROR: RELEASE is required. Example: make ygot-validate-gen RELEASE=1718"; \
+		exit 1; \
+	fi
+	@echo "Generating per-family ygot schema packages for RELEASE=$(RELEASE)..."
+	$(GO_BIN) run ./tools/cisco-vk-yang-sync \
+		--yang-version=$(RELEASE) \
+		--yang-dir=$(YANG_SCHEMA_DIR)/$(RELEASE) \
+		--per-family \
+		--dry-run=false
 
 ## Utility targets
 

@@ -1,0 +1,11 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/spanning-tree",
+    "body": {
+      "Cisco-IOS-XE-native:spanning-tree": {
+        "Cisco-IOS-XE-spanning-tree:mode": "rapid-pvst"
+      }
+    }
+  }
+]

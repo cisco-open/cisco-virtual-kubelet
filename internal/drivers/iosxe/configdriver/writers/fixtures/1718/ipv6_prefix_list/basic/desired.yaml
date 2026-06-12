@@ -1,0 +1,8 @@
+# IPv6 prefix-list permitting 2001:db8::/32.
+# Note: "no" must be quoted to avoid YAML 1.1 boolean coercion (no → false).
+prefixes:
+  - name: PL6-TEST
+    sequences:
+      - "no": 10
+        action: permit
+        ipv6-prefix: "2001:db8::/32"

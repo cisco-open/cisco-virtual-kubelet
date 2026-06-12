@@ -1,0 +1,13 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/banner",
+    "body": {
+      "Cisco-IOS-XE-native:banner": {
+        "motd": {
+          "banner": "Authorized access only"
+        }
+      }
+    }
+  }
+]

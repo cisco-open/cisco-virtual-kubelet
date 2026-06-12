@@ -1,0 +1,20 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ipv6/access-list",
+    "body": {
+      "Cisco-IOS-XE-acl:access-list": [
+        {
+          "name": "IPV6-ACL-IN",
+          "rule": [
+            {
+              "action": "permit",
+              "protocol": "ipv6",
+              "sequence": 10
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

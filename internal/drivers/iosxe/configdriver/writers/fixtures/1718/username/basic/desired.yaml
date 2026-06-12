@@ -1,0 +1,7 @@
+# Create admin user with level-15 privilege.
+users:
+  - name: admin
+    privilege: 15
+    secret:
+      type: 9
+      secret: "$9$abc"

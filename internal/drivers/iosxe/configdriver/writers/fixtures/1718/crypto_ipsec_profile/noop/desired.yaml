@@ -1,0 +1,5 @@
+# Already-converged: IPsec profile already on device.
+- name: IPSEC-PROF1
+  set:
+    transform-set:
+      - ESP-AES-SHA

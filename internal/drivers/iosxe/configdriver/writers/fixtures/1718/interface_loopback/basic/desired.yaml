@@ -1,0 +1,6 @@
+# Loopback0 with /32 IPv4 address for router-ID use.
+interfaces:
+  - name: "0"
+    description: mgmt-loopback
+    ipv4_address: "10.0.0.1"
+    ipv4_address_mask: "255.255.255.255"

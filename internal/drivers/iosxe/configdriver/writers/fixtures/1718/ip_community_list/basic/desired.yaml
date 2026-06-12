@@ -1,0 +1,6 @@
+# BGP community list permitting community 65001:100.
+standard:
+  - name: CL-ACCEPT
+    community-list-entry:
+      - action: permit
+        community: "65001:100"

@@ -68,22 +68,55 @@ jobs:
       - name: Unit tests
         run: go test -race -count=1 ./...
 
+  ygot-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    # Only run when YANG modules are present (1718 is the baseline vendored release).
+    if: ${{ hashFiles('internal/drivers/iosxe/configdriver/schema/yang/1718/*.yang') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Per-family ygot schema generation
+        # Regenerates all 50 per-family schema packages from the vendored YANG
+        # modules.  Uses `go run` to invoke the ygot generator so no external
+        # binary is required; the generator module is downloaded and cached by
+        # the Go toolchain on first run.
+        run: |
+          go run ./tools/cisco-vk-yang-sync \
+            --yang-version=1718 \
+            --yang-dir=internal/drivers/iosxe/configdriver/schema/yang/1718 \
+            --per-family \
+            --dry-run=false
+
       - name: Generated artefact drift check
-        # Per pre-pr-test-enrichment-plan §6: regenerate the CRDs
-        # and DeepCopy methods, then assert no drift. A non-empty
-        # `git status` here means the source-of-truth markers and
-        # the committed artefacts have diverged. The ygot regen
-        # is deliberately excluded because its drift is currently
-        # owned as a separate apphosting cleanup item.
+        # Regenerate CRDs, DeepCopy, RBAC, and Helm CRDs, then assert no
+        # drift in any generated tree.  A non-empty diff means the committed
+        # artefacts have diverged from their sources.
         run: |
           make crd-gen deepcopy-gen rbac-gen helm-sync-crds
+          drift=0
+          if ! git diff --quiet -- internal/drivers/iosxe/configdriver/generated/; then
+            echo "ygot per-family schemas drifted from YANG sources:"
+            git diff --stat -- internal/drivers/iosxe/configdriver/generated/
+            git diff -- internal/drivers/iosxe/configdriver/generated/ | head -200
+            drift=1
+          fi
           if ! git diff --quiet -- api/ config/crd/ charts/cisco-virtual-kubelet/; then
             echo "Generated CRDs / DeepCopy / RBAC drifted from sources:"
             git diff --stat -- api/ config/crd/ charts/cisco-virtual-kubelet/
             git diff -- api/ config/crd/ charts/cisco-virtual-kubelet/ | head -200
-            exit 1
+            drift=1
           fi
-          echo "Generated artefacts in sync with sources."
+          if [ "$drift" -eq 1 ]; then exit 1; fi
+          echo "All generated artefacts in sync with sources."
 
       - name: CRD / Helm chart sync check
         # Belt-and-suspenders for the diff above: explicitly enumerate

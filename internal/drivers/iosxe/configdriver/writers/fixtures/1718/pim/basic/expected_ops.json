@@ -1,0 +1,13 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ip/pim",
+    "body": {
+      "Cisco-IOS-XE-native:pim": {
+        "Cisco-IOS-XE-multicast:rp-address-conf": {
+          "address": "10.0.0.2"
+        }
+      }
+    }
+  }
+]

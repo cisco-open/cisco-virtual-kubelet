@@ -1,0 +1,4 @@
+# Already-converged: UTC timezone already set.
+timezone:
+  zone: UTC
+  offset: 0

@@ -1,0 +1,18 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/crypto/ipsec/profile",
+    "body": {
+      "Cisco-IOS-XE-crypto:profile": [
+        {
+          "name": "IPSEC-PROF1",
+          "set": {
+            "transform-set": [
+              "ESP-AES-SHA"
+            ]
+          }
+        }
+      ]
+    }
+  }
+]

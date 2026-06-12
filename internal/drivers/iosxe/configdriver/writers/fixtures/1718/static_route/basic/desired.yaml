@@ -1,0 +1,6 @@
+# Default static route via 192.0.2.1.
+routes:
+  - prefix: "0.0.0.0"
+    mask: "0.0.0.0"
+    fwd-list:
+      - "192.0.2.1"

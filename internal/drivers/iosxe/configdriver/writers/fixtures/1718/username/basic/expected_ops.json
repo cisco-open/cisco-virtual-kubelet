@@ -1,0 +1,18 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/username",
+    "body": {
+      "Cisco-IOS-XE-native:username": [
+        {
+          "name": "admin",
+          "privilege": 15,
+          "secret": {
+            "encryption": "9",
+            "secret": "$9$abc"
+          }
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ip/route/ip-route-interface-forwarding-list",
+    "body": {
+      "Cisco-IOS-XE-native:ip-route-interface-forwarding-list": [
+        {
+          "fwd-list": [
+            "192.0.2.1"
+          ],
+          "mask": "0.0.0.0",
+          "prefix": "0.0.0.0"
+        }
+      ]
+    }
+  }
+]

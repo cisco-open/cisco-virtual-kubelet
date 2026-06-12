@@ -1,0 +1,18 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/interface/GigabitEthernet=1/switchport",
+    "body": {
+      "Cisco-IOS-XE-native:switchport": {
+        "Cisco-IOS-XE-switch:access": {
+          "vlan": {
+            "vlan": 10
+          }
+        },
+        "Cisco-IOS-XE-switch:mode": {
+          "access": {}
+        }
+      }
+    }
+  }
+]

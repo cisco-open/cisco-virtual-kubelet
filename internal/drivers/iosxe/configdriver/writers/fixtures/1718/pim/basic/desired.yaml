@@ -1,0 +1,2 @@
+# IPv4 PIM with static RP address 10.0.0.2.
+rp-address: "10.0.0.2"

@@ -1,0 +1,7 @@
+# Track object 1 monitors GigabitEthernet1 routing protocol.
+tracks:
+  - name: "1"
+    interface:
+      name: GigabitEthernet1
+      protocol:
+        routing: {}

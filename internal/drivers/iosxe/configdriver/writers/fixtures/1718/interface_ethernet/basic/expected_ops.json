@@ -1,0 +1,14 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/interface/GigabitEthernet=1",
+    "body": {
+      "Cisco-IOS-XE-native:GigabitEthernet": [
+        {
+          "description": "uplink",
+          "name": "1"
+        }
+      ]
+    }
+  }
+]

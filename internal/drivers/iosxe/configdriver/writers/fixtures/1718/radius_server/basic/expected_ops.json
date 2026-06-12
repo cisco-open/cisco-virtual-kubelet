@@ -1,0 +1,20 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/radius/server",
+    "body": {
+      "Cisco-IOS-XE-aaa:server": [
+        {
+          "address": {
+            "ipv4": "10.0.0.50"
+          },
+          "id": "ISE-1",
+          "key": {
+            "key": "secret123",
+            "type": 0
+          }
+        }
+      ]
+    }
+  }
+]
