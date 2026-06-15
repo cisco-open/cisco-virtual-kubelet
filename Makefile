@@ -168,7 +168,8 @@ check-parity-matrix: ## Fail if docs/family-parity.md is stale
 vendor-yang: ## Vendor Cisco IOS-XE YANG modules for RELEASE (default 1718)
 	@dest="$(YANG_SCHEMA_DIR)/$(YANG_RELEASE)"; \
 	prov="$$dest/.provenance.yaml"; \
-	if [ -f "$$prov" ] && grep -q '^commit: $(YANG_MODELS_COMMIT)$$' "$$prov"; then \
+	if [ -f "$$prov" ] && grep -q '^commit: $(YANG_MODELS_COMMIT)$$' "$$prov" \
+	   && [ -n "$$(find "$$dest" -name '*.yang' -print -quit 2>/dev/null)" ]; then \
 		echo "$$dest already matches $(YANG_MODELS_COMMIT); skipping"; \
 		exit 0; \
 	fi; \
