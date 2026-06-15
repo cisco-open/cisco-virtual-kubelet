@@ -62,8 +62,8 @@
 
 The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{{ end }} topology is configured.
 
-  controller image: {{ .Values.controllerImage.repository | default .Values.image.repository }}:{{ .Values.controllerImage.tag | default .Values.image.tag }}
-  vk image:         {{ .Values.vkImage.repository | default .Values.image.repository }}:{{ .Values.vkImage.tag | default .Values.image.tag }}
+  controller image: {{ include "cisco-virtual-kubelet.controllerImage" . }}
+  vk image:         {{ include "cisco-virtual-kubelet.vkImage" . }}
   metrics:          {{ .Values.controller.metricsBindAddress }}
   gNOI:             {{ if .Values.gnoi.disabled }}disabled{{ else if .Values.gnoi.insecure }}insecure{{ else }}auto{{ end }}{{ if .Values.gnoi.port }} on port {{ .Values.gnoi.port }}{{ end }}
   diag admin:       {{ if .Values.aggregator.enabled }}(disabled in aggregator-mode){{ else }}127.0.0.1:8082 inside each per-device pod{{ end }}

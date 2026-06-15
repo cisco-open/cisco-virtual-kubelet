@@ -70,6 +70,28 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 
 The controller watches `CiscoDevice` CRs and automatically creates a VK pod per device. Deploy it via the included Helm chart.
 
+### Install the published chart (recommended)
+
+The chart and its container image are published to GitHub Container Registry with every release — no clone or custom build required:
+
+```bash
+helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
+  --version 2026.6.1 \
+  --namespace cvk-system --create-namespace
+```
+
+This deploys the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default — no `--set image.*` needed. The chart `--version` is the release normalised to SemVer (e.g. `v2026.06.1` → `2026.6.1`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current version.
+
+Optionally verify the chart signature before installing:
+
+```bash
+cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.6.1 \
+  --certificate-identity-regexp "https://github.com/cisco-open/cisco-virtual-kubelet/.github/workflows/release.yml@refs/tags/v.*" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+> **Upgrades:** Helm installs CRDs only on first install. When upgrading across releases that change CRD schemas, apply the CRDs once after `helm upgrade` — see the post-install notes (`helm get notes cvk -n cvk-system`).
+
 ### Build and push a custom image
 
 ```bash
@@ -80,7 +102,9 @@ docker build -t <your-registry>/cisco-vk:latest .
 docker push <your-registry>/cisco-vk:latest
 ```
 
-### Install the Helm chart
+### Install from source with a custom image
+
+For development, or to run your own build instead of the published image, install the chart from the source tree and point it at your registry:
 
 ```bash
 # Install CRDs and the controller into the cvk-system namespace

@@ -2,10 +2,11 @@
 
 # image is the shared default image for both the controller and VK pods.
 # Individual overrides (controllerImage / vkImage) take precedence when set.
+# tag defaults to the chart appVersion (the released image tag) when left empty.
 image:
-  repository: cunningr/cisco-vk
-  tag: latest
-  pullPolicy: Always
+  repository: ghcr.io/cisco-open/cisco-virtual-kubelet
+  tag: ""
+  pullPolicy: IfNotPresent
 
 # controllerImage overrides the image used for the controller Deployment.
 # When not set (repository: ""), the shared `image` above is used.
