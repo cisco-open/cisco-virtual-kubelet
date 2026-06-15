@@ -185,11 +185,11 @@ vendor-yang: ## Vendor Cisco IOS-XE YANG modules for RELEASE (default 1718)
 	git fetch --depth=1 origin "$(YANG_MODELS_COMMIT)"; \
 	git checkout -q FETCH_HEAD; \
 	upstream_release="$(YANG_RELEASE)"; \
-	src="$$tmp/yang/vendor/cisco/xe/$$upstream_release"; \
-	if [ ! -d "$$src" ] && [ -d "$$tmp/yang/vendor/cisco/xe/$(YANG_RELEASE)1" ]; then \
-		upstream_release="$(YANG_RELEASE)1"; \
-		src="$$tmp/yang/vendor/cisco/xe/$$upstream_release"; \
+	if [ -f "$$prov" ]; then \
+		_prov_up="$$(grep '^upstreamRelease:' "$$prov" | awk '{print $$2}' | tr -d '"')"; \
+		if [ -n "$$_prov_up" ]; then upstream_release="$$_prov_up"; fi; \
 	fi; \
+	src="$$tmp/yang/vendor/cisco/xe/$$upstream_release"; \
 	if [ ! -d "$$src" ]; then \
 		echo "missing upstream Cisco IOS-XE YANG directory: $$src"; \
 		exit 1; \
