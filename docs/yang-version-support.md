@@ -14,33 +14,70 @@ C9300-24P). Earlier versions (17.15, 17.16) diverge in several ways:
 
 ## Architecture
 
-!!! note "Future direction: ygot-typed bindings"
-    The current architecture uses a **hand-maintained runtime override table**
-    (`yang_version_override_table.go`) to handle YANG model differences across
-    IOS-XE versions. This approach works well for a bounded set of managed
-    families but does not scale linearly as the number of families, versions,
-    and divergence types grows — each new combination requires a new table
-    entry and associated body-transform function.
+### Per-family ygot schema validation
 
-    In a future release, CVK anticipates a shift to
-    **[ygot](https://github.com/openconfig/ygot)-generated typed Go bindings**
-    per IOS-XE release family. ygot would generate structs directly from the
-    Cisco YANG models and provide compile-time safety, automated serialisation,
-    and structural validation without manual `ElementMap` entries. The
-    validation boundary at
-    `internal/drivers/iosxe/configdriver/validation` is already designed as the
-    seam for this migration: ygot validators would plug in there and validate
-    the device-facing YANG payload, leaving the public NetAsCode intent model
-    unchanged.
+CVK uses **[ygot](https://github.com/openconfig/ygot)-generated, per-family
+Go schema packages** as CI-time validators. This isolates ygot generation per
+config family against a minimal YANG module closure, rather than a single
+whole-bundle generation.
 
-    **What this means for operators and contributors today:**
-    - The public `IOSXEConfig.spec.source` NetAsCode intent shape will remain
-      stable across this migration — you will not need to change your intent
-      YAML when the internal transport layer moves to ygot.
-    - New family contributions should continue using the override table pattern
-      described in this document until the ygot migration lands.
-    - Track progress and participate in design discussion on
-      [GitHub Discussions](https://github.com/cisco-open/cisco-virtual-kubelet/discussions).
+**Runtime is unchanged.** The override table, map-shaped writers, and engine
+are not modified by this system. The generated packages are never imported at
+runtime — they register a `cfgvalidation.FamilySchemaValidator` from their
+`init()` function, and the fixture harness calls `Lookup(family, releaseTag)`
+to validate every op body against the schema during `go test`.
+
+```
+BUILD / CI TIME
+  families.yaml (yang_paths per family)
+      │
+      ▼
+  computeModuleClosure() — goyang BFS over import+include graph
+      │  produces minimal isolated YANG dir per family
+      ▼
+  ygot generator × 54 families × supported releases
+      │
+      ▼
+  internal/drivers/iosxe/configdriver/generated/<release>/<family>/
+    schema.go    (ygot-generated, compressed)
+    register.go  (calls cfgvalidation.Register from init())
+
+CI VALIDATOR (fixture_test.go)
+  writer.Diff() → expected_ops.json op bodies
+      │
+      ▼
+  validateOpsAgainstGeneratedSchema()
+      │
+      ├── validator registered  → ytypes.Unmarshal() — fails test on mismatch
+      └── no validator          → silently skipped (incremental rollout)
+```
+
+**Generated packages** live under
+`internal/drivers/iosxe/configdriver/generated/`. They are committed to the
+repo so CI can verify drift without re-running the full YANG toolchain on every
+PR. The `make ygot-validate-gen RELEASE=<tag>` target regenerates them.
+
+**Augment collisions** (two modules augmenting the same YANG path) are handled
+per-family: a family whose closure causes an `augment: already set` in ygot is
+added to `generated/SKIPLIST.md` with the reason; the fixture harness skips
+schema validation for that family only, and all other families continue
+unaffected. The current skip-list has one entry (`eigrp`, release 1718).
+
+**`patch.go`** post-processes the ygot output to fix two Cisco YANG bundle
+defects that would otherwise prevent the generated file from compiling:
+duplicate enum constants (two enum values that reduce to the same Go
+identifier) and Validate field/method conflicts (a YANG container child named
+`validate` collides with the `Validate()` method ygot emits on every struct).
+
+**What this means for operators and contributors today:**
+- The public `IOSXEConfig.spec.source` NetAsCode intent shape is stable and is
+  not affected by this system.
+- New family contributions should add a fixture under
+  `writers/fixtures/<release>/<family>/` so the schema validator exercises the
+  new writer automatically.
+- To add a new YANG release to schema validation, vendor the YANG modules under
+  `internal/drivers/iosxe/configdriver/schema/yang/<release>/` and run
+  `make ygot-validate-gen RELEASE=<release>`.
 
 ### Intent, Translation, Validation Boundary
 

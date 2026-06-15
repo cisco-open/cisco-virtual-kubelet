@@ -70,11 +70,9 @@ jobs:
 
   ygot-validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: read
-    # Only run when YANG modules are present (1718 is the baseline vendored release).
-    if: ${{ hashFiles('internal/drivers/iosxe/configdriver/schema/yang/1718/*.yang') != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -84,17 +82,19 @@ jobs:
           go-version: '1.25'
           cache: true
 
-      - name: Per-family ygot schema generation
-        # Regenerates all 50 per-family schema packages from the vendored YANG
-        # modules.  Uses `go run` to invoke the ygot generator so no external
-        # binary is required; the generator module is downloaded and cached by
-        # the Go toolchain on first run.
+      - name: Download YANG modules
         run: |
-          go run ./tools/cisco-vk-yang-sync \
-            --yang-version=1718 \
-            --yang-dir=internal/drivers/iosxe/configdriver/schema/yang/1718 \
-            --per-family \
-            --dry-run=false
+          for release in 1715 1716 1718 1791 2601; do
+            make vendor-yang RELEASE=$release
+          done
+
+      - name: Per-family ygot schema generation
+        # Regenerates per-family schema packages for every supported YANG release.
+        run: |
+          for release in 1715 1716 1718 1791 2601; do
+            echo "--- generating release ${release} ---"
+            make ygot-validate-gen RELEASE=${release}
+          done
 
       - name: Generated artefact drift check
         # Regenerate CRDs, DeepCopy, RBAC, and Helm CRDs, then assert no

@@ -13,11 +13,15 @@ The fixture harness silently skips schema validation for families listed here �
 
 **Gate**: Phase 2 completion requires fewer than 10 entries in this file.
 
-## Active Skips (release 1718)
+## Active Skips
 
 | Release | Family | Reason | Detail | Date Added |
 |---------|--------|--------|--------|------------|
+| 1715 | eigrp | augment-collision | Same root cause as 1718 — present across all vendored releases. See 1718 row below. | 2026-06-12 |
+| 1716 | eigrp | augment-collision | Same root cause as 1718 — present across all vendored releases. See 1718 row below. | 2026-06-12 |
 | 1718 | eigrp | augment-collision | `Cisco-IOS-XE-eigrp` augments 15+ interface `ip/summary-address` paths with `config-eigrp-interface-summary-address-ipv4-grouping` (defines an `eigrp` list), but `Cisco-IOS-XE-interfaces` (native submodule, always in closure) already defines an obsolete `eigrp` list at the same `summary-address` node. ygot sees the node twice. Resolution requires either: (a) a ~4000-line eigrp stub with interface augments stripped (impractical), or (b) ygot support for per-path collision suppression (upstream feature). The eigrp writer only targets `/native/router/eigrp` so the interface schema is irrelevant for validation. | 2026-06-12 |
+| 1791 | eigrp | augment-collision | Same root cause as 1718 — present across all vendored releases. See 1718 row above. | 2026-06-12 |
+| 2601 | eigrp | augment-collision | Same root cause as 1718 — present across all vendored releases. See 1718 row above. YANG sourced from YangModels/yang `2611` directory. | 2026-06-15 |
 
 ## Resolved Skips
 

@@ -6,9 +6,12 @@ VERSION?=1.0.0
 BUILD_TIME=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 YANG_MODELS_URL=https://github.com/YangModels/yang.git
-YANG_MODELS_COMMIT?=2abb0f4cdf7862a837a2308d5975fc7955e65ae8
-YANG_RELEASE=$(if $(RELEASE),$(RELEASE),1718)
 YANG_SCHEMA_DIR=internal/drivers/iosxe/configdriver/schema/yang
+YANG_RELEASE=$(if $(RELEASE),$(RELEASE),1718)
+# Per-release commit pin: read from .provenance.yaml when not explicitly overridden.
+YANG_MODELS_COMMIT ?= $(shell grep '^commit:' \
+  $(YANG_SCHEMA_DIR)/$(YANG_RELEASE)/.provenance.yaml 2>/dev/null \
+  | awk '{print $$2}')
 
 # Detect Go installation method and set appropriate paths
 SNAP_GO_PATH=/snap/go/current
@@ -168,6 +171,10 @@ vendor-yang: ## Vendor Cisco IOS-XE YANG modules for RELEASE (default 1718)
 	if [ -f "$$prov" ] && grep -q '^commit: $(YANG_MODELS_COMMIT)$$' "$$prov"; then \
 		echo "$$dest already matches $(YANG_MODELS_COMMIT); skipping"; \
 		exit 0; \
+	fi; \
+	if [ -z "$(YANG_MODELS_COMMIT)" ]; then \
+		echo "error: YANG_MODELS_COMMIT is not set and no provenance file found for $(YANG_RELEASE)"; \
+		exit 1; \
 	fi; \
 	tmp="$$(mktemp -d)"; \
 	trap 'rm -rf "$$tmp"' EXIT; \

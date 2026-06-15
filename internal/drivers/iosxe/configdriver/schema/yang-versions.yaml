@@ -16,33 +16,41 @@ releases:
     status: supported
     default: true
     notes: >
-      Phase-1 scaffold runs against the 17.9.1 YANG modules.
-      Device software versions 17.9.x are expected to be
-      functionally compatible for the Phase-1 family set.
+      Phase-1 scaffold runs against the 17.9.1 YANG modules. YANG modules
+      sourced from YangModels/yang `1791` directory (701 modules). Per-family
+      ygot schema packages are generated and committed under generated/1791/
+      (53 of 54 families; eigrp skip-listed). Regenerate with
+      `make ygot-validate-gen RELEASE=1791`.
 
   - version: "1715"      # IOS-XE 17.15 — C9KV legacy
     status: experimental
     notes: >
       Custom-writer divergences are encoded in the writers package
-      version override table; per-release YANG modules and ygot
-      types are not yet vendored under schema/yang/1715/. Treat as
-      an integration target until Phase 3 of the YANG-version
-      action plan completes.
+      version override table. YANG modules sourced from YangModels/yang
+      `17151` directory (799 modules). Per-family ygot schema packages
+      are generated and committed under generated/1715/ (53 of 54
+      families; eigrp skip-listed). Regenerate with
+      `make ygot-validate-gen RELEASE=1715`.
 
   - version: "1716"      # IOS-XE 17.16 — C8000V
     status: experimental
     notes: >
-      Same status as 1715: writer support for the BGP / prefix-list /
-      ip-community-list legacy YANG shapes is in place, but the
-      per-release YANG bundle and ygot-generated types remain to be
-      vendored under schema/yang/1716/.
+      Writer support for BGP / prefix-list / ip-community-list legacy
+      YANG shapes is in place. YANG modules sourced from YangModels/yang
+      `17161` directory (819 modules). Per-family ygot schema packages
+      are generated and committed under generated/1716/ (53 of 54
+      families; eigrp skip-listed). Regenerate with
+      `make ygot-validate-gen RELEASE=1716`.
 
   - version: "1718"      # IOS-XE 17.18 — C9300-24P baseline
     status: supported
     notes: >
       Baseline release the writers are authored against. Override
       table entries do not apply at this release; writers run
-      their unconditional shape.
+      their unconditional shape. Per-family ygot schema packages are
+      generated and committed under generated/1718/ (53 of 54 families;
+      eigrp is skip-listed due to an augment-collision in its module
+      closure). Regenerate with `make ygot-validate-gen RELEASE=1718`.
 
   - version: "2601"      # IOS-XE 26.01 — C9300-24P major-release profile
     status: experimental
@@ -51,3 +59,7 @@ releases:
       remains canonical; version-specific YANG deltas are handled in
       writer overrides. Initial live-device coverage identified the
       ip_domain name leaf moving under name-container/name-no-vrf.
+      YANG modules sourced from YangModels/yang `2611` directory (887
+      modules). Per-family ygot schema packages are generated and
+      committed under generated/2601/ (53 of 54 families; eigrp
+      skip-listed). Regenerate with `make ygot-validate-gen RELEASE=2601`.
