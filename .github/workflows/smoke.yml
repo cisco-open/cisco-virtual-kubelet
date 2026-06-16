@@ -68,34 +68,6 @@ jobs:
       - name: Unit tests
         run: go test -race -count=1 ./...
 
-  ygot-validate:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: true
-
-      - name: Download YANG modules
-        run: |
-          for release in 1715 1716 1718 1791 2601; do
-            make vendor-yang RELEASE=$release
-          done
-
-      - name: Per-family ygot schema generation
-        # Regenerates per-family schema packages for every supported YANG release.
-        run: |
-          for release in 1715 1716 1718 1791 2601; do
-            echo "--- generating release ${release} ---"
-            make ygot-validate-gen RELEASE=${release}
-          done
-
       - name: Generated artefact drift check
         # Regenerate CRDs, DeepCopy, RBAC, and Helm CRDs, then assert no
         # drift in any generated tree.  A non-empty diff means the committed
@@ -345,3 +317,31 @@ jobs:
           kubectl -n cisco-vk-smoke describe ciscodevice smoke || true
           kubectl -n cisco-vk-smoke describe iosxeconfig smoke || true
           kubectl -n cisco-vk-smoke get events --sort-by=.lastTimestamp || true
+
+  ygot-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Download YANG modules
+        run: |
+          for release in 1715 1716 1718 1791 2601; do
+            make vendor-yang RELEASE=$release
+          done
+
+      - name: Per-family ygot schema generation
+        # Regenerates per-family schema packages for every supported YANG release.
+        run: |
+          for release in 1715 1716 1718 1791 2601; do
+            echo "--- generating release ${release} ---"
+            make ygot-validate-gen RELEASE=${release}
+          done
