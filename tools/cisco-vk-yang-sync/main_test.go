@@ -1001,6 +1001,14 @@ func TestWriteRegisterFile(t *testing.T) {
 	if !strings.Contains(s, "Unmarshal(") {
 		t.Errorf("missing Unmarshal call:\n%s", s)
 	}
+	// Must include the strictness gate.
+	if !strings.Contains(s, "isStrictValidation()") {
+		t.Errorf("missing isStrictValidation call:\n%s", s)
+	}
+	// Must read CVK_SCHEMA_VALIDATION to implement the strict mode gate.
+	if !strings.Contains(s, "CVK_SCHEMA_VALIDATION") {
+		t.Errorf("missing CVK_SCHEMA_VALIDATION env var reference:\n%s", s)
+	}
 	// Must include the FamilyRoot empty-schema guard (skip when no Dir children).
 	if !strings.Contains(s, `st["FamilyRoot"]`) {
 		t.Errorf("missing FamilyRoot empty-schema guard:\n%s", s)

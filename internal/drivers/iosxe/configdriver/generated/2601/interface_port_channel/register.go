@@ -6,6 +6,7 @@ package cfgval_interface_port_channel_2601
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/openconfig/goyang/pkg/yang"
@@ -22,6 +23,13 @@ type validator struct{}
 // validates the inner payload against the matching schema entry. When path is
 // non-empty, the schema entry is resolved by walking the path segments first;
 // the local-name scan is used as a fallback when path resolution fails.
+//
+// Strictness is controlled by the CVK_SCHEMA_VALIDATION environment variable:
+//   - unset / any other value: lenient — unknown fields and type mismatches are
+//     skipped so fixtures that use deprecated or augment-outside-closure fields
+//     do not fail CI.
+//   - "strict": unknown fields and structural type mismatches are hard errors,
+//     exposing YANG schema discrepancies in fixture data.
 func (validator) ValidateBody(path string, body json.RawMessage) error {
 	// Decode envelope: expect {"<module>:<name>": <value>}
 	var envelope map[string]json.RawMessage
@@ -66,8 +74,18 @@ func (validator) ValidateBody(path string, body json.RawMessage) error {
 	return nil
 }
 
+// isStrictValidation reports whether CVK_SCHEMA_VALIDATION=strict is set.
+// In strict mode validateJSONEntry returns errors for unknown fields and
+// structural type mismatches; in lenient mode (default) they are skipped.
+// Set CVK_SCHEMA_VALIDATION=strict in your test environment to surface
+// discrepancies between fixture data and the YANG schema.
+func isStrictValidation() bool {
+	return os.Getenv("CVK_SCHEMA_VALIDATION") == "strict"
+}
+
 // validateJSONEntry checks val against the yang.Entry schema tree.
-// For containers and lists it verifies that field names exist in schema.Dir.
+// For containers and lists it verifies structural consistency and, in strict
+// mode, rejects unknown fields.
 func validateJSONEntry(schema *yang.Entry, val interface{}) error {
 	if val == nil || schema == nil {
 		return nil
@@ -76,9 +94,11 @@ func validateJSONEntry(schema *yang.Entry, val interface{}) error {
 	case schema.IsList():
 		arr, ok := val.([]interface{})
 		if !ok {
-			// Schema says list but val is not an array. This can happen
-			// with deprecated YANG schemas or RESTCONF extensions not in YANG.
-			// Skip rather than error.
+			// Schema says list but val is not an array. Common with deprecated
+			// YANG schemas or RESTCONF extensions not yet in the YANG model.
+			if isStrictValidation() {
+				return fmt.Errorf("%s: expected JSON array for list, got %T", schema.Name, val)
+			}
 			return nil
 		}
 		for _, elem := range arr {
@@ -92,18 +112,21 @@ func validateJSONEntry(schema *yang.Entry, val interface{}) error {
 	return nil
 }
 
-// validateContainerFields checks that each key in obj exists in schema.Dir and
-// recursively validates nested containers/lists.
+// validateContainerFields checks structural consistency of obj against schema.
+// In strict mode it also rejects fields not present in schema.Dir.
 func validateContainerFields(schema *yang.Entry, val interface{}) error {
 	obj, ok := val.(map[string]interface{})
 	if !ok {
-		// Schema says container but val is not a JSON object (e.g. array or
-		// scalar). This can happen with deprecated YANG schemas or
-		// RESTCONF extensions not modelled in YANG. Skip to avoid false positives.
+		// Schema says container but val is not a JSON object. Common with
+		// deprecated YANG schemas where list semantics changed.
+		if isStrictValidation() {
+			return fmt.Errorf("%s: expected JSON object, got %T", schema.Name, val)
+		}
 		return nil
 	}
-	// If Dir is empty the augmenting modules for this container were not included
-	// in the schema closure. Skip field validation to avoid false positives.
+	// If Dir is empty, augmenting modules were not included in the schema
+	// closure — skip field validation regardless of strictness mode to avoid
+	// false positives caused by a coverage gap, not a fixture defect.
 	if len(schema.Dir) == 0 {
 		return nil
 	}
@@ -114,8 +137,12 @@ func validateContainerFields(schema *yang.Entry, val interface{}) error {
 		}
 		child := schema.Dir[localName]
 		if child == nil {
-			// Unknown field: skip (IgnoreExtraFields semantics). Fields from
-			// deprecated schemas or augments outside the closure are common.
+			// Field not found in schema. In lenient mode skip it: the field may
+			// come from a deprecated schema, an augmenting module outside the
+			// closure, or a RESTCONF extension not modelled in YANG.
+			if isStrictValidation() {
+				return fmt.Errorf("%s: unknown field %q", schema.Name, k)
+			}
 			continue
 		}
 		if err := validateJSONEntry(child, v); err != nil {

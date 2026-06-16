@@ -14,12 +14,14 @@ C9300-24P). Earlier versions (17.15, 17.16) diverge in several ways:
 
 ## Architecture
 
-### Per-family ygot schema validation
+### Per-family schema validation
 
-CVK uses **[ygot](https://github.com/openconfig/ygot)-generated, per-family
-Go schema packages** as CI-time validators. This isolates ygot generation per
-config family against a minimal YANG module closure, rather than a single
-whole-bundle generation.
+CVK uses **goyang-extracted, per-family Go schema packages** as CI-time
+validators. For each config family the generator navigates the resolved native
+YANG entry tree to the terminal container or list declared in `yang_paths`,
+serialises that sub-tree to a gzip-JSON blob, and embeds it as a `ySchema`
+byte literal in `schema.go`. This approach avoids ygot code generation
+entirely — no 125 MB generated files, no 32 GB memory peaks.
 
 **Runtime is unchanged.** The override table, map-shaped writers, and engine
 are not modified by this system. The generated packages are never imported at
@@ -33,13 +35,16 @@ BUILD / CI TIME
       │
       ▼
   computeModuleClosure() — goyang BFS over import+include graph
-      │  produces minimal isolated YANG dir per family
+      │  produces minimal module set per family
       ▼
-  ygot generator × 54 families × supported releases
+  extractFamilySchemaEntries() — ms.Process() resolves augments;
+      │  navigates nativeEntry.Dir to terminal container/list
+      ▼
+  buildFamilyYSchema() — gzip-JSON blob of the terminal entry sub-tree
       │
       ▼
   internal/drivers/iosxe/configdriver/generated/<release>/<family>/
-    schema.go    (ygot-generated, compressed)
+    schema.go    (goyang-based gzip blob, UnzipSchema function)
     register.go  (calls cfgvalidation.Register from init())
 
 CI VALIDATOR (fixture_test.go)
@@ -48,7 +53,7 @@ CI VALIDATOR (fixture_test.go)
       ▼
   validateOpsAgainstGeneratedSchema()
       │
-      ├── validator registered  → ytypes.Unmarshal() — fails test on mismatch
+      ├── validator registered  → validateJSONEntry() — structural check
       └── no validator          → silently skipped (incremental rollout)
 ```
 
@@ -57,29 +62,41 @@ CI VALIDATOR (fixture_test.go)
 repo so CI can verify drift without re-running the full YANG toolchain on every
 PR. The `make ygot-validate-gen RELEASE=<tag>` target regenerates them.
 
-**Augment collisions** (two modules augmenting the same YANG path) are handled
-per-family: a family whose closure causes an `augment: already set` in ygot is
-added to `generated/SKIPLIST.md` with the reason; the fixture harness skips
-schema validation for that family only, and all other families continue
-unaffected. The current skip-list has five entries (`eigrp` across all vendored
-releases: 1715, 1716, 1718, 1791, 2601) due to an augment-collision in the
-eigrp/interfaces module pair. See `generated/SKIPLIST.md` for the full rationale.
+**Schema coverage limitations.** Each family's schema is extracted from a
+module closure computed by tracing import/include graphs outward from the
+modules named in `yang_paths`. Modules that *augment* the native tree
+(e.g. `Cisco-IOS-XE-aaa`) are not found by this traversal unless they appear
+as a `Module:` prefix in the family's `yang_paths`. When augmenting modules
+are absent the terminal entry's `Dir` is empty and the validator skips that
+container rather than producing false positives.
 
-**`patch.go`** post-processes the ygot output to fix two Cisco YANG bundle
-defects that would otherwise prevent the generated file from compiling:
-duplicate enum constants (two enum values that reduce to the same Go
-identifier) and Validate field/method conflicts (a YANG container child named
-`validate` collides with the `Validate()` method ygot emits on every struct).
+**Skip policy.** A family is skipped (emits a compilable stub schema.go) when:
+- its `yang_paths` resolve to no module prefixes in the YANG directory,
+- the extracted schema blob exceeds 512 KB (e.g. `system` with `/native` as
+  its target — the entire native tree), or
+- the path is not present in the YANG model for that release.
+Skipped families are listed in `generated/SKIPLIST.md`.
 
-**What this means for operators and contributors today:**
-- The public `IOSXEConfig.spec.source` NetAsCode intent shape is stable and is
-  not affected by this system.
-- New family contributions should add a fixture under
-  `writers/fixtures/<release>/<family>/` so the schema validator exercises the
-  new writer automatically.
-- To add a new YANG release to schema validation, vendor the YANG modules under
-  `internal/drivers/iosxe/configdriver/schema/yang/<release>/` and run
-  `make ygot-validate-gen RELEASE=<release>`.
+**Validation strictness mode.** By default the validator is lenient: unknown
+fields and structural type mismatches are silently skipped so fixtures that
+reference deprecated YANG paths or fields from augmenting modules outside the
+closure do not fail CI. Set `CVK_SCHEMA_VALIDATION=strict` to enable strict
+mode, which reports these discrepancies as hard errors:
+
+```bash
+# Surface all YANG schema discrepancies in fixture data:
+CVK_SCHEMA_VALIDATION=strict \
+  go test ./internal/drivers/iosxe/configdriver/writers/... -run TestFixtures
+```
+
+Strict-mode failures indicate one of:
+- a fixture uses a field name not present in the YANG schema for that release
+  (e.g. a deprecated or augmented field — fix by updating the fixture),
+- the schema closure is incomplete and the augmenting module needs to be added
+  to the family's `yang_paths` (e.g. a `Module:field` prefix is missing).
+
+The default lenient mode keeps CI green while these root causes are addressed
+incrementally. See `generated/SKIPLIST.md` for the current skip list.
 
 ### Intent, Translation, Validation Boundary
 
