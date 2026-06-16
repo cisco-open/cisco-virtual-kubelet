@@ -199,6 +199,17 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" \
             | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
+      # cosign reads ~/.docker/config.json, which `helm registry login` does not
+      # write — so the chart signature push needs a docker-style login too.
+      # Without this the Keyless sign chart step fails with UNAUTHORIZED even
+      # though the chart push above succeeds.
+      - name: Log in to ghcr.io (Docker config for cosign)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Derive chart and app versions from the tag
         id: ver
         run: |
