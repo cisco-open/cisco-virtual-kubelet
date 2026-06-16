@@ -296,7 +296,7 @@ func validateOpsAgainstGeneratedSchema(t *testing.T, family, releaseTag string, 
 		if op.Verb == transport.VerbDelete || len(op.Body) == 0 {
 			continue
 		}
-		if err := v.ValidateBody(op.Body); err != nil {
+		if err := v.ValidateBody(op.Path, op.Body); err != nil {
 			t.Errorf("op[%d] body failed ygot schema validation (family=%s release=%s): %v",
 				i, family, releaseTag, err)
 		}

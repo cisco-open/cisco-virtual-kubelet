@@ -32,9 +32,11 @@ import (
 // the generated ygot schema for a (family, releaseTag) pair.
 type FamilySchemaValidator interface {
 	// ValidateBody unmarshals the JSON body against the family's ygot schema.
-	// Returns nil when the body is structurally valid; a non-nil error contains
-	// the path and reason for the first validation failure.
-	ValidateBody(body json.RawMessage) error
+	// path is the RESTCONF resource path (e.g. "/Cisco-IOS-XE-bgp:router-bgp");
+	// when non-empty it is used to resolve the schema entry before falling back
+	// to a local-name scan. Returns nil when the body is structurally valid; a
+	// non-nil error contains the path and reason for the first validation failure.
+	ValidateBody(path string, body json.RawMessage) error
 }
 
 // key identifies a (family, releaseTag) pair.

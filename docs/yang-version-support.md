@@ -61,7 +61,9 @@ PR. The `make ygot-validate-gen RELEASE=<tag>` target regenerates them.
 per-family: a family whose closure causes an `augment: already set` in ygot is
 added to `generated/SKIPLIST.md` with the reason; the fixture harness skips
 schema validation for that family only, and all other families continue
-unaffected. The current skip-list has one entry (`eigrp`, release 1718).
+unaffected. The current skip-list has five entries (`eigrp` across all vendored
+releases: 1715, 1716, 1718, 1791, 2601) due to an augment-collision in the
+eigrp/interfaces module pair. See `generated/SKIPLIST.md` for the full rationale.
 
 **`patch.go`** post-processes the ygot output to fix two Cisco YANG bundle
 defects that would otherwise prevent the generated file from compiling:

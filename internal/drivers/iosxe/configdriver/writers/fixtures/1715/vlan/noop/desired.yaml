@@ -1,0 +1,4 @@
+# Already-converged state: desired matches observed exactly.
+vlans:
+  - id: 10
+    name: users

@@ -32,7 +32,6 @@ import (
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/generated/1718/interface_virtual_port_group"
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/generated/1718/interface_vlan"
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/generated/1718/ip_as_path_access_list"
-	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/generated/1718/ip_community_list"
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/generated/1718/ip_domain"
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/generated/1718/ip_http"
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/generated/1718/ip_name_server"

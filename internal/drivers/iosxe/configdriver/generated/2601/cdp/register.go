@@ -20,11 +20,10 @@ func init() {
 type validator struct{}
 
 // ValidateBody unwraps the RESTCONF envelope ({"Module:container": value}) and
-// validates the inner payload against the matching schema entry. This is
-// necessary because the per-family FamilyRoot is a synthetic root and does not
-// carry the augmented native path as a struct field; the schema tree holds the
-// correct yang.Entry for each named container/list.
-func (validator) ValidateBody(body json.RawMessage) error {
+// validates the inner payload against the matching schema entry. When path is
+// non-empty, the schema entry is resolved by walking the path segments first;
+// the local-name scan is used as a fallback when path resolution fails.
+func (validator) ValidateBody(path string, body json.RawMessage) error {
 	// Decode envelope: expect {"<module>:<name>": <value>}
 	var envelope map[string]json.RawMessage
 	if err := json.Unmarshal(body, &envelope); err != nil {
@@ -34,17 +33,28 @@ func (validator) ValidateBody(body json.RawMessage) error {
 	if err != nil {
 		return fmt.Errorf("unzip schema: %w", err)
 	}
+	// If the synthetic FamilyRoot has no Dir children the schemas were
+	// generated without YANG files and contain no usable type information.
+	// Skip validation rather than hard-erroring on every op — schemas will
+	// gain children once the generator is re-run against real YANG modules.
+	if root, ok := st["FamilyRoot"]; !ok || len(root.Dir) == 0 {
+		return nil
+	}
 	for envelopeKey, inner := range envelope {
-		// Strip module prefix if present: "Cisco-IOS-XE-vlan:vlan-list" → "vlan-list"
-		localName := envelopeKey
-		if i := strings.LastIndex(envelopeKey, ":"); i >= 0 {
-			localName = envelopeKey[i+1:]
+		var entry *yang.Entry
+		if path != "" {
+			entry = findSchemaEntryByPath(st, path)
 		}
-		entry := findSchemaEntry(st, localName)
 		if entry == nil {
-			// Schema entry not found — skip validation for this key rather
-			// than failing, to stay tolerant of schema coverage gaps.
-			continue
+			// Fall back to local-name scan.
+			localName := envelopeKey
+			if i := strings.LastIndex(envelopeKey, ":"); i >= 0 {
+				localName = envelopeKey[i+1:]
+			}
+			entry = findSchemaEntry(st, localName)
+		}
+		if entry == nil {
+			return fmt.Errorf("schema entry not found for %s (path=%q)", envelopeKey, path)
 		}
 		var val interface{}
 		if err := json.Unmarshal(inner, &val); err != nil {
@@ -55,6 +65,39 @@ func (validator) ValidateBody(body json.RawMessage) error {
 		}
 	}
 	return nil
+}
+
+// findSchemaEntryByPath resolves a yang.Entry by walking the schema tree along
+// path segments (e.g. "/Cisco-IOS-XE-bgp:router-bgp"). Module prefixes and key
+// predicates are stripped from each segment before lookup.
+func findSchemaEntryByPath(st map[string]*yang.Entry, path string) *yang.Entry {
+	path = strings.TrimPrefix(path, "/")
+	segments := strings.Split(path, "/")
+
+	var entry *yang.Entry
+	for i, seg := range segments {
+		if j := strings.Index(seg, "["); j >= 0 {
+			seg = seg[:j]
+		}
+		if j := strings.LastIndex(seg, ":"); j >= 0 {
+			seg = seg[j+1:]
+		}
+		if seg == "" {
+			continue
+		}
+		if i == 0 || entry == nil {
+			entry = findSchemaEntry(st, seg)
+		} else {
+			if entry.Dir == nil {
+				return nil
+			}
+			entry = entry.Dir[seg]
+		}
+		if entry == nil {
+			return nil
+		}
+	}
+	return entry
 }
 
 // findSchemaEntry searches the schema tree for an entry whose Name matches

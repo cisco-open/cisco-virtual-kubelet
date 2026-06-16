@@ -66,6 +66,8 @@ const (
 	exitBadInput exitCode = 4
 )
 
+const goModulePath = "github.com/cisco/virtual-kubelet-cisco"
+
 type flags struct {
 	yangVersion string
 	yangDir     string
@@ -584,6 +586,7 @@ func runYgotPerFamily(stdout, stderr io.Writer, f flags, families map[string]fam
 	sort.Strings(names)
 
 	var succeeded, skipped int
+	var registeredPackages []string
 	for _, name := range names {
 		fam := families[name]
 		pkgName, outFile := ygotFamilyOutputLayout(f.yangVersion, name, f.outTypes)
@@ -662,12 +665,20 @@ func runYgotPerFamily(stdout, stderr io.Writer, f flags, families map[string]fam
 		registerFile := filepath.Join(filepath.Dir(outFile), "register.go")
 		if wErr := writeRegisterFile(registerFile, pkgName, name, f.yangVersion); wErr != nil {
 			fmt.Fprintf(stderr, "  warn: write register %s: %v\n", registerFile, wErr)
+		} else {
+			registeredPackages = append(registeredPackages,
+				goModulePath+"/"+filepath.ToSlash(f.outTypes)+"/"+f.yangVersion+"/"+name)
 		}
 
 		succeeded++
 	}
 
 	fmt.Fprintf(stdout, "\nper-family ygot: %d generated, %d skipped\n", succeeded, skipped)
+	if !f.dryRun {
+		if wErr := writeSchemaValidatorsFile(f.outTypes, f.yangVersion, registeredPackages); wErr != nil {
+			fmt.Fprintf(stderr, "  warn: write schema validators: %v\n", wErr)
+		}
+	}
 	return nil
 }
 
@@ -1012,16 +1023,17 @@ func buildConflictStubs(allFiles []string) map[string]string {
 
 // buildNativeSubmoduleStubs returns minimal stub content for every submodule
 // of Cisco-IOS-XE-native that is NOT referenced by the family's YANG paths.
-// Stubbing these submodules prevents ygot from generating the full native type
-// tree for families that only need a small slice of it, keeping schema.go
-// manageable in size.
+// The stubs re-declare each grouping from the real submodule file as an empty
+// body, so that `uses <grouping>` references in native's main file resolve
+// without generating the full submodule type definitions.
 //
-// The function reads the native module's include statements from yangDir to
-// discover which submodules exist, extracts the module-name prefixes from
-// yangPaths (e.g. "Cisco-IOS-XE-logging" from
-// "/Cisco-IOS-XE-native:native/.../Cisco-IOS-XE-logging:..."), and stubs out
-// any native submodule whose name is not in that prefix set AND whose filename
-// is present in allFiles (the closure).
+// This function is NOT currently wired into the generation path. Including
+// Cisco-IOS-XE-native as a ygot target — which would be required for the stubs
+// to have any effect — causes ygot to build the entire native schema graph in
+// memory (tens of GiB), making per-family generation impractical.
+//
+// The function and its tests are retained as the building block for a future
+// approach once a viable native scoping strategy is found.
 func buildNativeSubmoduleStubs(yangDir string, allFiles []string, yangPaths []string) map[string]string {
 	const nativeModule = "Cisco-IOS-XE-native"
 	nativeFile := filepath.Join(yangDir, nativeModule+".yang")
@@ -1065,9 +1077,16 @@ func buildNativeSubmoduleStubs(yangDir string, allFiles []string, yangPaths []st
 		fileSet[f] = true
 	}
 
-	// For each native submodule that is in the closure but NOT referenced,
-	// emit a minimal stub that satisfies the belongs-to declaration without
-	// carrying any type definitions.
+	// For each native submodule that is in the closure but NOT referenced by
+	// the family's YANG paths, emit a stub. The stub re-declares each grouping
+	// as an empty body so that any `uses` reference in native.yang resolves
+	// without generating type definitions for that submodule.
+	//
+	// Families that augment paths defined by those stubbed groupings (e.g. bgp
+	// augmenting /ios:native/ios:ip which comes from config-ip-grouping) will
+	// fail ygot generation and be skip-listed. The scoped schema goal is to
+	// generate small, family-specific packages; those families are accepted as
+	// not yet supported via ygot validation.
 	stubs := map[string]string{}
 	for subName := range nativeIncludes {
 		if referenced[subName] {
@@ -1077,12 +1096,45 @@ func buildNativeSubmoduleStubs(yangDir string, allFiles []string, yangPaths []st
 		if !fileSet[fname] {
 			continue // not in the closure — nothing to stub
 		}
-		stubs[fname] = fmt.Sprintf(
-			"submodule %s {\n  yang-version 1.1;\n  belongs-to %s { prefix ios; }\n}\n",
-			subName, nativeModule,
-		)
+		// Preserve grouping names so native can resolve `uses` references, but
+		// emit empty bodies to avoid generating the full submodule types.
+		groupings := extractGroupingNames(filepath.Join(yangDir, fname))
+		var gb strings.Builder
+		gb.WriteString(fmt.Sprintf("submodule %s {\n  yang-version 1.1;\n  belongs-to %s { prefix ios; }\n", subName, nativeModule))
+		for _, g := range groupings {
+			gb.WriteString(fmt.Sprintf("  grouping %s {}\n", g))
+		}
+		gb.WriteString("}\n")
+		stubs[fname] = gb.String()
 	}
 	return stubs
+}
+
+// extractGroupingNames returns the names of all groupings declared in the
+// given YANG file. Used to synthesise empty stub declarations so that
+// `uses <grouping>` references in native's main file are resolvable even
+// when the submodule is replaced by a stub.
+func extractGroupingNames(path string) []string {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var names []string
+	for _, line := range strings.Split(string(raw), "\n") {
+		trimmed := strings.TrimSpace(line)
+		const prefix = "grouping "
+		if !strings.HasPrefix(trimmed, prefix) {
+			continue
+		}
+		rest := strings.TrimPrefix(trimmed, prefix)
+		parts := strings.FieldsFunc(rest, func(r rune) bool {
+			return r == ' ' || r == '\t' || r == '{'
+		})
+		if len(parts) > 0 && parts[0] != "" {
+			names = append(names, parts[0])
+		}
+	}
+	return names
 }
 
 // familyYgotScope is the pair of values buildFamilyYgotScope returns.
@@ -1102,8 +1154,10 @@ type familyYgotScope struct {
 // explicit ygot args) and exclude-only modules (pass via -exclude_modules).
 //
 // Strategy:
-//  1. Cisco-IOS-XE-native is always excluded (dependency-only; its types are
-//     too broad for per-family generation).
+//  1. Cisco-IOS-XE-native is always excluded (dependency-only; including it
+//     as a target causes ygot to build the full native schema graph in memory
+//     — an order-of-magnitude more work than any per-family module alone —
+//     which makes generation impractical regardless of submodule stubbing).
 //  2. "Safe utility" modules — IETF standards libs, cisco-semver, IOS-XE type/
 //     feature libraries — are excluded. Ygot resolves their types correctly when
 //     they appear in -path but are absent from the generated output.
@@ -1116,19 +1170,24 @@ type familyYgotScope struct {
 // Note: native submodules (Cisco-IOS-XE-parser, Cisco-IOS-XE-interfaces, etc.)
 // are never in topLevelFiles; they are handled by the -path flag. They must not
 // appear in ExcludeModules either because ygot loads them automatically.
+//
+// Consequence: with native excluded, the FamilyRoot synthetic root has no
+// fields (the augmented paths have no owner struct). ValidateBody detects this
+// via the FamilyRoot.Dir emptiness guard and skips validation until native can
+// be scoped into generation without a memory explosion.
 func buildFamilyYgotScope(yangPaths []string, topLevelFiles []string) familyYgotScope {
 	const nativeModule = "Cisco-IOS-XE-native"
 
 	// safeExcludes are modules that ygot processes for type resolution but
 	// whose generated output we never need in a per-family schema package.
 	safeExcludes := map[string]bool{
-		"ietf-inet-types":           true,
-		"ietf-yang-types":           true,
-		"ietf-interfaces":           true,
-		"ietf-routing":              true,
-		"cisco-semver":              true,
-		"Cisco-IOS-XE-types":        true,
-		"Cisco-IOS-XE-features":     true,
+		"ietf-inet-types":               true,
+		"ietf-yang-types":               true,
+		"ietf-interfaces":               true,
+		"ietf-routing":                  true,
+		"cisco-semver":                  true,
+		"Cisco-IOS-XE-types":            true,
+		"Cisco-IOS-XE-features":         true,
 		"Cisco-IOS-XE-interface-common": true,
 	}
 
@@ -1247,11 +1306,10 @@ func init() {
 type validator struct{}
 
 // ValidateBody unwraps the RESTCONF envelope ({"Module:container": value}) and
-// validates the inner payload against the matching schema entry. This is
-// necessary because the per-family FamilyRoot is a synthetic root and does not
-// carry the augmented native path as a struct field; the schema tree holds the
-// correct yang.Entry for each named container/list.
-func (validator) ValidateBody(body json.RawMessage) error {
+// validates the inner payload against the matching schema entry. When path is
+// non-empty, the schema entry is resolved by walking the path segments first;
+// the local-name scan is used as a fallback when path resolution fails.
+func (validator) ValidateBody(path string, body json.RawMessage) error {
 	// Decode envelope: expect {"<module>:<name>": <value>}
 	var envelope map[string]json.RawMessage
 	if err := json.Unmarshal(body, &envelope); err != nil {
@@ -1261,17 +1319,28 @@ func (validator) ValidateBody(body json.RawMessage) error {
 	if err != nil {
 		return fmt.Errorf("unzip schema: %w", err)
 	}
+	// If the synthetic FamilyRoot has no Dir children the schemas were
+	// generated without YANG files and contain no usable type information.
+	// Skip validation rather than hard-erroring on every op — schemas will
+	// gain children once the generator is re-run against real YANG modules.
+	if root, ok := st["FamilyRoot"]; !ok || len(root.Dir) == 0 {
+		return nil
+	}
 	for envelopeKey, inner := range envelope {
-		// Strip module prefix if present: "Cisco-IOS-XE-vlan:vlan-list" → "vlan-list"
-		localName := envelopeKey
-		if i := strings.LastIndex(envelopeKey, ":"); i >= 0 {
-			localName = envelopeKey[i+1:]
+		var entry *yang.Entry
+		if path != "" {
+			entry = findSchemaEntryByPath(st, path)
 		}
-		entry := findSchemaEntry(st, localName)
 		if entry == nil {
-			// Schema entry not found — skip validation for this key rather
-			// than failing, to stay tolerant of schema coverage gaps.
-			continue
+			// Fall back to local-name scan.
+			localName := envelopeKey
+			if i := strings.LastIndex(envelopeKey, ":"); i >= 0 {
+				localName = envelopeKey[i+1:]
+			}
+			entry = findSchemaEntry(st, localName)
+		}
+		if entry == nil {
+			return fmt.Errorf("schema entry not found for %s (path=%q)", envelopeKey, path)
 		}
 		var val interface{}
 		if err := json.Unmarshal(inner, &val); err != nil {
@@ -1282,6 +1351,39 @@ func (validator) ValidateBody(body json.RawMessage) error {
 		}
 	}
 	return nil
+}
+
+// findSchemaEntryByPath resolves a yang.Entry by walking the schema tree along
+// path segments (e.g. "/Cisco-IOS-XE-bgp:router-bgp"). Module prefixes and key
+// predicates are stripped from each segment before lookup.
+func findSchemaEntryByPath(st map[string]*yang.Entry, path string) *yang.Entry {
+	path = strings.TrimPrefix(path, "/")
+	segments := strings.Split(path, "/")
+
+	var entry *yang.Entry
+	for i, seg := range segments {
+		if j := strings.Index(seg, "["); j >= 0 {
+			seg = seg[:j]
+		}
+		if j := strings.LastIndex(seg, ":"); j >= 0 {
+			seg = seg[j+1:]
+		}
+		if seg == "" {
+			continue
+		}
+		if i == 0 || entry == nil {
+			entry = findSchemaEntry(st, seg)
+		} else {
+			if entry.Dir == nil {
+				return nil
+			}
+			entry = entry.Dir[seg]
+		}
+		if entry == nil {
+			return nil
+		}
+	}
+	return entry
 }
 
 // findSchemaEntry searches the schema tree for an entry whose Name matches
@@ -1297,6 +1399,44 @@ func findSchemaEntry(st map[string]*yang.Entry, localName string) *yang.Entry {
 	}
 	return nil
 }
+`))
+
+// writeSchemaValidatorsFile emits a schema_validators_<release>_test.go file
+// under <outTypesDir>/../writers/. The file blank-imports every registered
+// per-family schema package so their init() functions fire during test runs.
+func writeSchemaValidatorsFile(outTypesDir, release string, pkgs []string) error {
+	outDir := filepath.Join(outTypesDir, "..", "writers")
+	outPath := filepath.Join(outDir, "schema_validators_"+release+"_test.go")
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return err
+	}
+	sorted := make([]string, len(pkgs))
+	copy(sorted, pkgs)
+	sort.Strings(sorted)
+	type svData struct {
+		Release  string
+		Packages []string
+	}
+	var buf strings.Builder
+	if err := schemaValidatorsTemplate.Execute(&buf, svData{Release: release, Packages: sorted}); err != nil {
+		return fmt.Errorf("render schema validators template: %w", err)
+	}
+	return os.WriteFile(outPath, []byte(buf.String()), 0o644)
+}
+
+var schemaValidatorsTemplate = template.Must(template.New("schema_validators").Parse(
+	`// Code generated by cisco-vk-yang-sync. DO NOT EDIT.
+//
+// Blank-imports all per-family ygot schema packages for release {{ .Release }} so their
+// init() functions fire and register with cfgvalidation. This activates ygot
+// schema validation in the fixture harness for every family whose schema was
+// successfully generated (skip-listed families are absent).
+
+package writers
+
+import (
+{{ range .Packages }}	_ "{{ . }}"
+{{ end }})
 `))
 
 // writeSkipStub writes a Go source file that marks a family as skipped by the
