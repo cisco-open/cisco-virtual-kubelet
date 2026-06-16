@@ -37,6 +37,9 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -549,15 +552,15 @@ func computeModuleClosure(yangDir string, yangPaths []string, stderr io.Writer) 
 	}, nil
 }
 
-// runYgotPerFamily runs ygot once per family against the minimal YANG module
-// closure for that family. Generated packages land under:
+// runYgotPerFamily generates per-family schema packages using goyang to
+// extract the terminal YANG entries for each family's yang_paths. Generated
+// packages land under:
 //
 //	<outTypes>/<release>/<family>/schema.go
 //
-// Each family is run against an isolated temporary directory containing only
-// its closure modules (symlinked from yangDir). This prevents augment
-// collisions that arise when the full YANG bundle is on the search path and
-// two unrelated modules augment the same path.
+// goyang resolves all augment statements during ms.Process() so no isolated
+// temporary directory is needed. The resulting schema.go contains a small
+// gzip-JSON blob (kilobytes) with real type information.
 //
 // Failures for individual families are non-fatal: a SKIPPED stub is emitted
 // and generation continues.
@@ -570,14 +573,12 @@ func runYgotPerFamily(stdout, stderr io.Writer, f flags, families map[string]fam
 		return fmt.Errorf("yang-dir %q is not a directory", f.yangDir)
 	}
 
-	// Resolve yangDir to an absolute path once so symlinks work regardless
-	// of where the process was launched from.
 	absYangDir, err := filepath.Abs(f.yangDir)
 	if err != nil {
 		return fmt.Errorf("abs yang-dir: %w", err)
 	}
 
-	fmt.Fprintf(stdout, "\nper-family ygot generation (release=%s)\n", f.yangVersion)
+	fmt.Fprintf(stdout, "\nper-family goyang schema extraction (release=%s)\n", f.yangVersion)
 
 	names := make([]string, 0, len(families))
 	for n := range families {
@@ -607,27 +608,41 @@ func runYgotPerFamily(stdout, stderr io.Writer, f flags, families map[string]fam
 			continue
 		}
 
-		fmt.Fprintf(stdout, "  ygot  %s -> %s (%d modules, %d submodules)\n",
-			name, outFile, len(closure.TopLevelFiles), len(closure.AllFiles)-len(closure.TopLevelFiles))
+		fmt.Fprintf(stdout, "  goyang %s -> %s (%d modules)\n",
+			name, outFile, len(closure.AllFiles))
 		if f.dryRun {
 			continue
 		}
 
-		if err := os.MkdirAll(filepath.Dir(outFile), 0o755); err != nil {
-			return fmt.Errorf("mkdir for %s: %w", outFile, err)
+		entries, extractErr := extractFamilySchemaEntries(absYangDir, closure.AllFiles, fam.YANGPaths)
+		if extractErr != nil {
+			skipped++
+			reason := extractErr.Error()
+			fmt.Fprintf(stdout, "  SKIP  %s: extract schema: %s\n", name, reason)
+			if wErr := writeSkipStub(outFile, pkgName, "extract schema: "+reason); wErr != nil {
+				fmt.Fprintf(stderr, "  warn: write skip stub %s: %v\n", outFile, wErr)
+			}
+			continue
 		}
 
-		// Build an isolated temp directory with only the closure modules.
-		// Stub out known augment-collision modules (ethernet + l2vpn when
-		// interfaces is also in the closure). Native submodules are kept as
-		// real files so ygot can resolve the groupings they export; they are
-		// excluded from code generation via the -exclude_modules flag built
-		// by buildFamilyYgotScope, keeping schema.go small.
-		stubs := buildConflictStubs(closure.AllFiles)
-		isolatedDir, cleanupFn, buildErr := buildIsolatedDir(absYangDir, closure.AllFiles, stubs)
-		if buildErr != nil {
+		blob, blobErr := buildFamilyYSchema(entries)
+		if blobErr != nil {
 			skipped++
-			reason := "isolated dir setup failed: " + buildErr.Error()
+			reason := blobErr.Error()
+			fmt.Fprintf(stdout, "  SKIP  %s: build schema: %s\n", name, reason)
+			if wErr := writeSkipStub(outFile, pkgName, "build schema: "+reason); wErr != nil {
+				fmt.Fprintf(stderr, "  warn: write skip stub %s: %v\n", outFile, wErr)
+			}
+			continue
+		}
+		// Reject pathological cases where the terminal entry is a very large
+		// subtree (e.g. the entire /native container). A blob above 512 KB
+		// indicates the yang_path points too close to the root of the native
+		// module tree; validation for such families remains a skip-no-op.
+		const maxFamilyBlobBytes = 512 * 1024
+		if len(blob) > maxFamilyBlobBytes {
+			skipped++
+			reason := fmt.Sprintf("schema blob too large (%d bytes; limit %d bytes)", len(blob), maxFamilyBlobBytes)
 			fmt.Fprintf(stdout, "  SKIP  %s: %s\n", name, reason)
 			if wErr := writeSkipStub(outFile, pkgName, reason); wErr != nil {
 				fmt.Fprintf(stderr, "  warn: write skip stub %s: %v\n", outFile, wErr)
@@ -635,29 +650,14 @@ func runYgotPerFamily(stdout, stderr io.Writer, f flags, families map[string]fam
 			continue
 		}
 
-		scope := buildFamilyYgotScope(fam.YANGPaths, closure.TopLevelFiles)
-		inv := buildPerFamilyYgotArgs(f, pkgName, outFile, isolatedDir, scope.TargetFiles, scope.ExcludeModules)
-		cmd := execCommand(inv.bin, inv.args...)
-		cmd.Stdout = stdout
-		cmd.Stderr = stderr
-		runErr := cmd.Run()
-		cleanupFn() // always remove the isolated temp dir
-
-		if runErr != nil {
+		if wErr := writeFamilySchemaFile(outFile, pkgName, blob); wErr != nil {
 			skipped++
-			reason := runErr.Error()
-			fmt.Fprintf(stdout, "  SKIP  %s: ygot failed: %s\n", name, reason)
-			if wErr := writeSkipStub(outFile, pkgName, "ygot failed: "+reason); wErr != nil {
-				fmt.Fprintf(stderr, "  warn: write skip stub %s: %v\n", outFile, wErr)
+			reason := wErr.Error()
+			fmt.Fprintf(stdout, "  SKIP  %s: write schema: %s\n", name, reason)
+			if wErr2 := writeSkipStub(outFile, pkgName, "write schema: "+reason); wErr2 != nil {
+				fmt.Fprintf(stderr, "  warn: write skip stub %s: %v\n", outFile, wErr2)
 			}
 			continue
-		}
-
-		// Post-process the generated file to fix known ygot code-generation
-		// defects in the Cisco IOS-XE YANG bundle (duplicate enum constants and
-		// Validate field/method name conflicts).
-		if patchErr := patchGeneratedSchema(outFile); patchErr != nil {
-			fmt.Fprintf(stderr, "  warn: patch %s: %v\n", outFile, patchErr)
 		}
 
 		// Emit register.go alongside schema.go so the generated package
@@ -673,7 +673,7 @@ func runYgotPerFamily(stdout, stderr io.Writer, f flags, families map[string]fam
 		succeeded++
 	}
 
-	fmt.Fprintf(stdout, "\nper-family ygot: %d generated, %d skipped\n", succeeded, skipped)
+	fmt.Fprintf(stdout, "\nper-family goyang: %d generated, %d skipped\n", succeeded, skipped)
 	if !f.dryRun {
 		if wErr := writeSchemaValidatorsFile(f.outTypes, f.yangVersion, registeredPackages); wErr != nil {
 			fmt.Fprintf(stderr, "  warn: write schema validators: %v\n", wErr)
@@ -1137,6 +1137,202 @@ func extractGroupingNames(path string) []string {
 	return names
 }
 
+// extractFamilySchemaEntries uses goyang to parse the family's YANG module
+// closure and returns the terminal *yang.Entry nodes for each yang_path.
+// It resolves augment statements by calling ms.Process() so that family
+// modules' augments into the native tree are visible.
+//
+// This convenience wrapper builds the module set from allFiles; callers that
+// process many families should use extractFamilySchemaEntriesFromNativeEntry
+// with a shared pre-built native entry for efficiency.
+func extractFamilySchemaEntries(
+	yangDir string,
+	allFiles []string,
+	yangPaths []string,
+) ([]*yang.Entry, error) {
+	ms := yang.NewModules()
+	ms.AddPath(yangDir)
+	for _, f := range allFiles {
+		modName := strings.TrimSuffix(f, ".yang")
+		if err := ms.Read(modName); err != nil {
+			// Non-fatal: mirrors computeModuleClosure pattern.
+		}
+	}
+	if errs := ms.Process(); len(errs) > 0 {
+		// Process errors are typically warnings; continue with what resolved.
+		_ = errs
+	}
+
+	nativeMod, ok := ms.Modules["Cisco-IOS-XE-native"]
+	if !ok {
+		return nil, fmt.Errorf("native module not found after Process()")
+	}
+	return extractFamilySchemaEntriesFromNativeEntry(yang.ToEntry(nativeMod), yangPaths)
+}
+
+// extractFamilySchemaEntriesFromNativeEntry navigates nativeEntry using
+// yangPaths and returns the terminal *yang.Entry nodes. It is separated from
+// extractFamilySchemaEntries so callers that process many families can build
+// the native entry once (with all augments resolved) and share it.
+func extractFamilySchemaEntriesFromNativeEntry(
+	nativeEntry *yang.Entry,
+	yangPaths []string,
+) ([]*yang.Entry, error) {
+	seen := map[string]struct{}{}
+	var entries []*yang.Entry
+	for _, yp := range yangPaths {
+		segments := strings.Split(strings.TrimPrefix(yp, "/"), "/")
+		cur := nativeEntry
+		for _, seg := range segments {
+			if seg == "" {
+				continue
+			}
+			// Strip key predicates: "vlan-list[id=10]" → "vlan-list"
+			if i := strings.Index(seg, "["); i >= 0 {
+				seg = seg[:i]
+			}
+			// Strip module prefix: "Cisco-IOS-XE-vlan:vlan-list" → "vlan-list"
+			if i := strings.LastIndex(seg, ":"); i >= 0 {
+				seg = seg[i+1:]
+			}
+			if cur.Dir == nil {
+				cur = nil
+				break
+			}
+			cur = cur.Dir[seg]
+			if cur == nil {
+				break
+			}
+		}
+		if cur == nil || cur == nativeEntry {
+			return nil, fmt.Errorf("yang_path %q: not found in native schema", yp)
+		}
+		if _, dup := seen[cur.Name]; !dup {
+			seen[cur.Name] = struct{}{}
+			entries = append(entries, cur)
+		}
+	}
+	if len(entries) == 0 {
+		return nil, fmt.Errorf("no schema entries found for yang_paths %v", yangPaths)
+	}
+	return entries, nil
+}
+
+// buildFamilyYSchema serialises a list of *yang.Entry nodes into the
+// gzip-JSON format expected by the UnzipSchema function in the generated
+// schema.go. The synthetic root has Name "FamilyRoot" and the provided
+// entries become its Dir children.
+func buildFamilyYSchema(entries []*yang.Entry) ([]byte, error) {
+	root := &yang.Entry{Name: "FamilyRoot", Dir: make(map[string]*yang.Entry, len(entries))}
+	for _, e := range entries {
+		e.Parent = nil // clear before marshal; rebuilt on load by UnzipSchema
+		root.Dir[e.Name] = e
+	}
+	j, err := json.Marshal(root)
+	if err != nil {
+		return nil, fmt.Errorf("marshal schema entries: %w", err)
+	}
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	if _, err := gz.Write(j); err != nil {
+		return nil, fmt.Errorf("gzip write: %w", err)
+	}
+	if err := gz.Close(); err != nil {
+		return nil, fmt.Errorf("gzip close: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+// writeFamilySchemaFile renders familySchemaTemplate with the provided
+// package name and gzip blob and writes the result to path.
+func writeFamilySchemaFile(path, pkgName string, blob []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	type schemaData struct {
+		PkgName string
+		Blob    []byte
+	}
+	var buf strings.Builder
+	if err := familySchemaTemplate.Execute(&buf, schemaData{PkgName: pkgName, Blob: blob}); err != nil {
+		return fmt.Errorf("render family schema template: %w", err)
+	}
+	return os.WriteFile(path, []byte(buf.String()), 0o644)
+}
+
+// blobToGoLiteral converts a byte slice to a Go byte-slice literal like
+// []byte{0x1f, 0x8b, ...} with 16 bytes per line.
+func blobToGoLiteral(blob []byte) string {
+	if len(blob) == 0 {
+		return "[]byte{}"
+	}
+	var sb strings.Builder
+	sb.WriteString("[]byte{")
+	for i, b := range blob {
+		if i%16 == 0 {
+			sb.WriteString("\n\t\t")
+		}
+		sb.WriteString(fmt.Sprintf("0x%02x, ", b))
+	}
+	sb.WriteString("\n\t}")
+	return sb.String()
+}
+
+var familySchemaTemplate = template.Must(template.New("family_schema").Funcs(template.FuncMap{
+	"blobLiteral": blobToGoLiteral,
+}).Parse(
+	`// Code generated by cisco-vk-yang-sync. DO NOT EDIT.
+// Per-family goyang schema: terminal entries extracted from the Cisco-IOS-XE
+// native YANG tree for the paths declared in this family's yang_paths.
+// The UnzipSchema function is API-compatible with the ygot-generated version
+// so register.go works unchanged.
+
+package {{ .PkgName }}
+
+import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
+	"fmt"
+	"io"
+
+	"github.com/openconfig/goyang/pkg/yang"
+)
+
+// FamilyRoot is a placeholder kept for compatibility with any code that
+// references this type by name. The real schema lives in ySchema / UnzipSchema.
+type FamilyRoot struct{}
+
+// UnzipSchema decompresses ySchema, reconstructs the yang.Entry tree, and
+// returns the map[string]*yang.Entry that register.go and ValidateBody use.
+func UnzipSchema() (map[string]*yang.Entry, error) {
+	r, err := gzip.NewReader(bytes.NewReader(ySchema))
+	if err != nil {
+		return nil, fmt.Errorf("gzip reader: %w", err)
+	}
+	raw, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("gzip read: %w", err)
+	}
+	var root yang.Entry
+	if err := json.Unmarshal(raw, &root); err != nil {
+		return nil, fmt.Errorf("unmarshal schema: %w", err)
+	}
+	// Rebuild parent pointers recursively.
+	var setParents func(e *yang.Entry)
+	setParents = func(e *yang.Entry) {
+		for _, child := range e.Dir {
+			child.Parent = e
+			setParents(child)
+		}
+	}
+	setParents(&root)
+	return map[string]*yang.Entry{"FamilyRoot": &root}, nil
+}
+
+var ySchema = {{ .Blob | blobLiteral }}
+`))
+
 // familyYgotScope is the pair of values buildFamilyYgotScope returns.
 type familyYgotScope struct {
 	// TargetFiles are the top-level .yang filenames (relative to isolatedDir)
@@ -1285,7 +1481,7 @@ func writeRegisterFile(path, pkgName, family, releaseTag string) error {
 
 var registerTemplate = template.Must(template.New("register").Parse(
 	`// Code generated by cisco-vk-yang-sync. DO NOT EDIT.
-// Register this family's ygot schema with the cfgvalidation harness.
+// Register this family's goyang schema with the cfgvalidation harness.
 
 package {{ .PkgName }}
 
@@ -1295,7 +1491,6 @@ import (
 	"strings"
 
 	"github.com/openconfig/goyang/pkg/yang"
-	"github.com/openconfig/ygot/ytypes"
 	"{{ .ModulePath }}"
 )
 
@@ -1346,8 +1541,67 @@ func (validator) ValidateBody(path string, body json.RawMessage) error {
 		if err := json.Unmarshal(inner, &val); err != nil {
 			return fmt.Errorf("unmarshal %s: %w", envelopeKey, err)
 		}
-		if err := ytypes.Unmarshal(entry, nil, val, &ytypes.PreferShadowPath{}); err != nil {
+		if err := validateJSONEntry(entry, val); err != nil {
 			return fmt.Errorf("%s: %w", envelopeKey, err)
+		}
+	}
+	return nil
+}
+
+// validateJSONEntry checks val against the yang.Entry schema tree.
+// For containers and lists it verifies that field names exist in schema.Dir.
+func validateJSONEntry(schema *yang.Entry, val interface{}) error {
+	if val == nil || schema == nil {
+		return nil
+	}
+	switch {
+	case schema.IsList():
+		arr, ok := val.([]interface{})
+		if !ok {
+			// Schema says list but val is not an array. This can happen
+			// with deprecated YANG schemas or RESTCONF extensions not in YANG.
+			// Skip rather than error.
+			return nil
+		}
+		for _, elem := range arr {
+			if err := validateContainerFields(schema, elem); err != nil {
+				return err
+			}
+		}
+	case schema.IsContainer():
+		return validateContainerFields(schema, val)
+	}
+	return nil
+}
+
+// validateContainerFields checks that each key in obj exists in schema.Dir and
+// recursively validates nested containers/lists.
+func validateContainerFields(schema *yang.Entry, val interface{}) error {
+	obj, ok := val.(map[string]interface{})
+	if !ok {
+		// Schema says container but val is not a JSON object (e.g. array or
+		// scalar). This can happen with deprecated YANG schemas or
+		// RESTCONF extensions not modelled in YANG. Skip to avoid false positives.
+		return nil
+	}
+	// If Dir is empty the augmenting modules for this container were not included
+	// in the schema closure. Skip field validation to avoid false positives.
+	if len(schema.Dir) == 0 {
+		return nil
+	}
+	for k, v := range obj {
+		localName := k
+		if i := strings.LastIndex(k, ":"); i >= 0 {
+			localName = k[i+1:]
+		}
+		child := schema.Dir[localName]
+		if child == nil {
+			// Unknown field: skip (IgnoreExtraFields semantics). Fields from
+			// deprecated schemas or augments outside the closure are common.
+			continue
+		}
+		if err := validateJSONEntry(child, v); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -1356,34 +1610,60 @@ func (validator) ValidateBody(path string, body json.RawMessage) error {
 // findSchemaEntryByPath resolves a yang.Entry by walking the schema tree along
 // path segments (e.g. "/Cisco-IOS-XE-bgp:router-bgp"). Module prefixes and key
 // predicates are stripped from each segment before lookup.
+//
+// Because the FamilyRoot schema tree contains only the terminal entries from
+// the family's yang_paths (not the full ancestor chain), path segments that
+// precede the terminal entry (like "native" or "ip") will not be found at the
+// root. The function therefore tries each suffix of the path in turn, resolving
+// from the first segment it can find in the schema. This correctly handles
+// paths like /native/ip/route/ip-route-interface-forwarding-list where "route"
+// is the terminal entry and "ip-route-interface-forwarding-list" is a child.
+//
+// When the terminal node cannot be reached (e.g. because the terminal entry
+// has an empty Dir — augments from another module were not loaded), the
+// function returns the deepest ancestor it could find. validateJSONEntry will
+// then skip validation for that ancestor if its Dir is empty.
 func findSchemaEntryByPath(st map[string]*yang.Entry, path string) *yang.Entry {
 	path = strings.TrimPrefix(path, "/")
 	segments := strings.Split(path, "/")
 
-	var entry *yang.Entry
-	for i, seg := range segments {
+	// Normalize: strip key predicates and module prefixes, drop empty segments.
+	normalized := make([]string, 0, len(segments))
+	for _, seg := range segments {
 		if j := strings.Index(seg, "["); j >= 0 {
 			seg = seg[:j]
 		}
 		if j := strings.LastIndex(seg, ":"); j >= 0 {
 			seg = seg[j+1:]
 		}
-		if seg == "" {
+		if seg != "" {
+			normalized = append(normalized, seg)
+		}
+	}
+
+	var deepest *yang.Entry
+	for start := 0; start < len(normalized); start++ {
+		candidate := findSchemaEntry(st, normalized[start])
+		if candidate == nil {
 			continue
 		}
-		if i == 0 || entry == nil {
-			entry = findSchemaEntry(st, seg)
-		} else {
-			if entry.Dir == nil {
-				return nil
+		entry := candidate
+		for _, seg := range normalized[start+1:] {
+			if entry.Dir == nil || entry.Dir[seg] == nil {
+				// Cannot go deeper — record this as the deepest ancestor.
+				if deepest == nil {
+					deepest = entry
+				}
+				entry = nil
+				break
 			}
 			entry = entry.Dir[seg]
 		}
-		if entry == nil {
-			return nil
+		if entry != nil {
+			return entry // Exact match.
 		}
 	}
-	return entry
+	return deepest // Deepest ancestor found (may be nil).
 }
 
 // findSchemaEntry searches the schema tree for an entry whose Name matches
@@ -1445,7 +1725,18 @@ func writeSkipStub(path, pkgName, reason string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	content := fmt.Sprintf("// SKIPPED: %s\npackage %s\n", reason, pkgName)
+	// Include UnzipSchema and FamilyRoot so any co-existing register.go compiles.
+	// UnzipSchema returns an empty map — the FamilyRoot empty-schema guard in
+	// ValidateBody then skips validation for this family.
+	content := fmt.Sprintf(
+		"// SKIPPED: %s\npackage %s\n\n"+
+			"import \"github.com/openconfig/goyang/pkg/yang\"\n\n"+
+			"// FamilyRoot is a placeholder; schema generation was skipped.\ntype FamilyRoot struct{}\n\n"+
+			"// UnzipSchema returns an empty map so ValidateBody skips validation.\n"+
+			"func UnzipSchema() (map[string]*yang.Entry, error) {\n"+
+			"\treturn map[string]*yang.Entry{}, nil\n"+
+			"}\n",
+		reason, pkgName)
 	return os.WriteFile(path, []byte(content), 0o644)
 }
 

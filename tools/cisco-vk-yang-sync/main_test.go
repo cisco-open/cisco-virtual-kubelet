@@ -16,10 +16,15 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
+	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/openconfig/goyang/pkg/yang"
 )
 
 const sampleFamilies = `
@@ -665,7 +670,7 @@ func TestRunPerFamilyDryRun(t *testing.T) {
 	// itself must not crash: non-zero exit is acceptable here, but the
 	// per-family logic must at least start.
 	_ = code
-	if !strings.Contains(out.String(), "per-family ygot generation") {
+	if !strings.Contains(out.String(), "per-family goyang schema extraction") {
 		t.Errorf("per-family header missing from output:\n%s", out.String())
 	}
 }
@@ -992,7 +997,7 @@ func TestWriteRegisterFile(t *testing.T) {
 	if !strings.Contains(s, "findSchemaEntryByPath") {
 		t.Errorf("missing findSchemaEntryByPath:\n%s", s)
 	}
-	// Must use ytypes.Unmarshal for ygot schema validation.
+	// Must include a JSON Unmarshal call for payload decoding.
 	if !strings.Contains(s, "Unmarshal(") {
 		t.Errorf("missing Unmarshal call:\n%s", s)
 	}
@@ -1056,3 +1061,162 @@ func TestWriteSchemaValidatorsFile(t *testing.T) {
 	}
 }
 
+func TestExtractFamilySchemaEntries(t *testing.T) {
+	dir := t.TempDir()
+	native := `module Cisco-IOS-XE-native {
+  yang-version 1.1;
+  namespace "urn:cisco:params:xml:ns:yang:Cisco-IOS-XE-native";
+  prefix ios;
+  container native {
+    container vlan {
+      list vlan-list {
+        key "id";
+        leaf id {
+          type uint16 {
+            range "1..4094";
+          }
+        }
+        leaf name {
+          type string;
+        }
+      }
+    }
+  }
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "Cisco-IOS-XE-native.yang"), []byte(native), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	allFiles := []string{"Cisco-IOS-XE-native.yang"}
+	yangPaths := []string{"/Cisco-IOS-XE-native:native/vlan/vlan-list"}
+
+	entries, err := extractFamilySchemaEntries(dir, allFiles, yangPaths)
+	if err != nil {
+		t.Fatalf("extractFamilySchemaEntries: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Name != "vlan-list" {
+		t.Errorf("entry Name = %q, want %q", entries[0].Name, "vlan-list")
+	}
+	if entries[0].Key != "id" {
+		t.Errorf("entry Key = %q, want %q", entries[0].Key, "id")
+	}
+}
+
+func TestBuildFamilyYSchema(t *testing.T) {
+	entry := &yang.Entry{
+		Name: "test-container",
+		Kind: yang.DirectoryEntry,
+		Dir: map[string]*yang.Entry{
+			"leaf-a": {Name: "leaf-a", Kind: yang.LeafEntry},
+		},
+	}
+
+	blob, err := buildFamilyYSchema([]*yang.Entry{entry})
+	if err != nil {
+		t.Fatalf("buildFamilyYSchema: %v", err)
+	}
+	if len(blob) == 0 {
+		t.Fatal("blob is empty")
+	}
+
+	// Decompress and verify the gzip-JSON round-trip.
+	gr, err := gzip.NewReader(bytes.NewReader(blob))
+	if err != nil {
+		t.Fatalf("gzip.NewReader: %v", err)
+	}
+	raw, err := io.ReadAll(gr)
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	var root yang.Entry
+	if err := json.Unmarshal(raw, &root); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	if root.Name != "FamilyRoot" {
+		t.Errorf("root Name = %q, want %q", root.Name, "FamilyRoot")
+	}
+	if _, ok := root.Dir["test-container"]; !ok {
+		t.Errorf("root.Dir missing %q; keys: %v", "test-container", dirKeys(root.Dir))
+	}
+}
+
+func TestFamilySchemaValidation(t *testing.T) {
+	dir := t.TempDir()
+	native := `module Cisco-IOS-XE-native {
+  yang-version 1.1;
+  namespace "urn:cisco:params:xml:ns:yang:Cisco-IOS-XE-native";
+  prefix ios;
+  container native {
+    list interface {
+      key "name";
+      leaf name { type string; }
+      leaf description { type string; }
+    }
+  }
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "Cisco-IOS-XE-native.yang"), []byte(native), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	yangPaths := []string{"/Cisco-IOS-XE-native:native/interface"}
+	allFiles := []string{"Cisco-IOS-XE-native.yang"}
+
+	entries, err := extractFamilySchemaEntries(dir, allFiles, yangPaths)
+	if err != nil {
+		t.Fatalf("extractFamilySchemaEntries: %v", err)
+	}
+
+	blob, err := buildFamilyYSchema(entries)
+	if err != nil {
+		t.Fatalf("buildFamilyYSchema: %v", err)
+	}
+
+	// Decompress and reconstruct the schema map (mirrors UnzipSchema in the template).
+	gr, err := gzip.NewReader(bytes.NewReader(blob))
+	if err != nil {
+		t.Fatalf("gzip.NewReader: %v", err)
+	}
+	raw, err := io.ReadAll(gr)
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	var root yang.Entry
+	if err := json.Unmarshal(raw, &root); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	st := map[string]*yang.Entry{"FamilyRoot": &root}
+
+	// FamilyRoot guard: Dir must be non-empty now.
+	famRoot, ok := st["FamilyRoot"]
+	if !ok {
+		t.Fatal("st missing FamilyRoot")
+	}
+	if len(famRoot.Dir) == 0 {
+		t.Fatal("FamilyRoot.Dir is empty — schema guard would skip validation")
+	}
+
+	// The terminal entry must be findable by local name via Dir lookup.
+	iface, ok := famRoot.Dir["interface"]
+	if !ok {
+		t.Fatalf("famRoot.Dir missing %q; keys: %v", "interface", dirKeys(famRoot.Dir))
+	}
+	if iface.Name != "interface" {
+		t.Errorf("entry Name = %q, want %q", iface.Name, "interface")
+	}
+	if iface.Key != "name" {
+		t.Errorf("entry Key = %q, want %q", iface.Key, "name")
+	}
+}
+
+func dirKeys(dir map[string]*yang.Entry) []string {
+	keys := make([]string, 0, len(dir))
+	for k := range dir {
+		keys = append(keys, k)
+	}
+	return keys
+}
