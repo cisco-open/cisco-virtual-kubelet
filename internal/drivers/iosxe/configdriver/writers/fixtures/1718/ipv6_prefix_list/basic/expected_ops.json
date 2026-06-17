@@ -1,0 +1,20 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ipv6/prefix-list/prefixes",
+    "body": {
+      "Cisco-IOS-XE-native:prefixes": [
+        {
+          "name": "PL6-TEST",
+          "sequences": [
+            {
+              "action": "permit",
+              "ipv6-prefix": "2001:db8::/32",
+              "no": 10
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

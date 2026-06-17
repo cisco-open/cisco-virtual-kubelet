@@ -1,0 +1,7 @@
+# Already-converged: transform-set already on device.
+- tag: ESP-AES-SHA
+  esp:
+    encryption: esp-aes
+    hash: esp-sha-hmac
+  mode:
+    tunnel: true

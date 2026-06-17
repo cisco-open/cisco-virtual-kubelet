@@ -1,0 +1,20 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ip/as-path/access-list",
+    "body": {
+      "Cisco-IOS-XE-bgp:access-list": [
+        {
+          "action-list": [
+            {
+              "action": "permit",
+              "as-path": "^65001_",
+              "seq_num": 10
+            }
+          ],
+          "name": "1"
+        }
+      ]
+    }
+  }
+]

@@ -6,9 +6,12 @@ VERSION?=1.0.0
 BUILD_TIME=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 YANG_MODELS_URL=https://github.com/YangModels/yang.git
-YANG_MODELS_COMMIT?=2abb0f4cdf7862a837a2308d5975fc7955e65ae8
-YANG_RELEASE=$(if $(RELEASE),$(RELEASE),1718)
 YANG_SCHEMA_DIR=internal/drivers/iosxe/configdriver/schema/yang
+YANG_RELEASE=$(if $(RELEASE),$(RELEASE),1718)
+# Per-release commit pin: read from .provenance.yaml when not explicitly overridden.
+YANG_MODELS_COMMIT ?= $(shell grep '^commit:' \
+  $(YANG_SCHEMA_DIR)/$(YANG_RELEASE)/.provenance.yaml 2>/dev/null \
+  | awk '{print $$2}')
 
 # Detect Go installation method and set appropriate paths
 SNAP_GO_PATH=/snap/go/current
@@ -43,7 +46,7 @@ INSTALL_DIR=$(PREFIX)/bin
 CONFIG_DIR=/etc/cisco-vk
 SYSTEMD_DIR=/etc/systemd/system
 
-.PHONY: all build clean install uninstall test test-envtest lint fmt deps help generate manifests crd-gen deepcopy-gen rbac-gen helm-sync-crds config-lint netascode-migrate config-docs yang-sync migrate-tool parity-matrix check-parity-matrix vendor-yang apphosting-ygot-gen
+.PHONY: all build clean install uninstall test test-envtest lint fmt deps help generate manifests crd-gen deepcopy-gen rbac-gen helm-sync-crds config-lint netascode-migrate config-docs yang-sync migrate-tool parity-matrix check-parity-matrix vendor-yang apphosting-ygot-gen ygot-validate-gen
 
 all: build
 
@@ -165,9 +168,19 @@ check-parity-matrix: ## Fail if docs/family-parity.md is stale
 vendor-yang: ## Vendor Cisco IOS-XE YANG modules for RELEASE (default 1718)
 	@dest="$(YANG_SCHEMA_DIR)/$(YANG_RELEASE)"; \
 	prov="$$dest/.provenance.yaml"; \
-	if [ -f "$$prov" ] && grep -q '^commit: $(YANG_MODELS_COMMIT)$$' "$$prov"; then \
+	if [ -f "$$prov" ] && grep -q '^commit: $(YANG_MODELS_COMMIT)$$' "$$prov" \
+	   && [ -n "$$(find "$$dest" -name '*.yang' -print -quit 2>/dev/null)" ]; then \
 		echo "$$dest already matches $(YANG_MODELS_COMMIT); skipping"; \
 		exit 0; \
+	fi; \
+	if [ -z "$(YANG_MODELS_COMMIT)" ]; then \
+		echo "error: YANG_MODELS_COMMIT is not set and no provenance file found for $(YANG_RELEASE)"; \
+		exit 1; \
+	fi; \
+	upstream_release="$(YANG_RELEASE)"; \
+	if [ -f "$$prov" ]; then \
+		_prov_up="$$(grep '^upstreamRelease:' "$$prov" | awk '{print $$2}' | tr -d '"')"; \
+		if [ -n "$$_prov_up" ]; then upstream_release="$$_prov_up"; fi; \
 	fi; \
 	tmp="$$(mktemp -d)"; \
 	trap 'rm -rf "$$tmp"' EXIT; \
@@ -176,12 +189,7 @@ vendor-yang: ## Vendor Cisco IOS-XE YANG modules for RELEASE (default 1718)
 	git remote add origin "$(YANG_MODELS_URL)"; \
 	git fetch --depth=1 origin "$(YANG_MODELS_COMMIT)"; \
 	git checkout -q FETCH_HEAD; \
-	upstream_release="$(YANG_RELEASE)"; \
 	src="$$tmp/yang/vendor/cisco/xe/$$upstream_release"; \
-	if [ ! -d "$$src" ] && [ -d "$$tmp/yang/vendor/cisco/xe/$(YANG_RELEASE)1" ]; then \
-		upstream_release="$(YANG_RELEASE)1"; \
-		src="$$tmp/yang/vendor/cisco/xe/$$upstream_release"; \
-	fi; \
 	if [ ! -d "$$src" ]; then \
 		echo "missing upstream Cisco IOS-XE YANG directory: $$src"; \
 		exit 1; \
@@ -273,6 +281,18 @@ apphosting-ygot-gen: ## Regenerate apphosting ygot Go structs from tests/yang
 		tests/yang/Cisco-IOS-XE-cdp-oper.yang \
 		tests/yang/Cisco-IOS-XE-ospf-oper.yang \
 		tests/yang/Cisco-IOS-XE-interfaces-oper.yang
+
+ygot-validate-gen: ## Generate per-family ygot schema packages for CI validation (requires RELEASE=<tag>)
+	@if [ -z "$(RELEASE)" ]; then \
+		echo "ERROR: RELEASE is required. Example: make ygot-validate-gen RELEASE=1718"; \
+		exit 1; \
+	fi
+	@echo "Generating per-family ygot schema packages for RELEASE=$(RELEASE)..."
+	$(GO_BIN) run ./tools/cisco-vk-yang-sync \
+		--yang-version=$(RELEASE) \
+		--yang-dir=$(YANG_SCHEMA_DIR)/$(RELEASE) \
+		--per-family \
+		--dry-run=false
 
 ## Utility targets
 

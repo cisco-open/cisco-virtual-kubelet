@@ -27,6 +27,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/cfgvalidation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
 )
@@ -185,6 +186,12 @@ func runFixtureCase(t *testing.T, fc fixtureCase) {
 				i, marshalIndent(gotBody), marshalIndent(wantBodyNorm))
 		}
 	}
+
+	// ygot schema validation: if a generated schema package has been
+	// registered for this (family, releaseTag) pair, validate every op body
+	// against it. Families without a registered validator are silently
+	// skipped, allowing incremental rollout.
+	validateOpsAgainstGeneratedSchema(t, fc.family, fc.releaseTag, gotOps)
 }
 
 // mustLoadYAML loads an embedded YAML file as any (map[string]any
@@ -273,4 +280,25 @@ func dumpOps(ops []transport.Op) string {
 func dumpFixtureOps(ops []fixtureOp) string {
 	b, _ := json.Marshal(ops)
 	return string(b)
+}
+
+// validateOpsAgainstGeneratedSchema checks each op body against the ygot
+// schema registered for (family, releaseTag). When no validator is registered
+// the function is a no-op, allowing incremental rollout without breaking
+// fixtures for families whose generated schema packages are not yet present.
+func validateOpsAgainstGeneratedSchema(t *testing.T, family, releaseTag string, ops []transport.Op) {
+	t.Helper()
+	v := cfgvalidation.Lookup(family, releaseTag)
+	if v == nil {
+		return
+	}
+	for i, op := range ops {
+		if op.Verb == transport.VerbDelete || len(op.Body) == 0 {
+			continue
+		}
+		if err := v.ValidateBody(op.Path, op.Body); err != nil {
+			t.Errorf("op[%d] body failed ygot schema validation (family=%s release=%s): %v",
+				i, family, releaseTag, err)
+		}
+	}
 }

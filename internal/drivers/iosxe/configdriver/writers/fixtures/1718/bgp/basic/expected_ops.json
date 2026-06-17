@@ -1,0 +1,23 @@
+[
+  {
+    "verb": "REPLACE",
+    "path": "/Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-bgp:router-bgp",
+    "body": {
+      "Cisco-IOS-XE-bgp:router-bgp": {
+        "bgp": {
+          "log-neighbor-changes": null,
+          "router-id": {
+            "ip-id": "10.255.255.1"
+          }
+        },
+        "id": "65000",
+        "neighbor": [
+          {
+            "id": "192.0.2.2",
+            "remote-as": "65001"
+          }
+        ]
+      }
+    }
+  }
+]

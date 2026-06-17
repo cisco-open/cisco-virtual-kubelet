@@ -1,0 +1,2 @@
+# NetAsCode desired body for ntp on IOS-XE 17.18.
+- name: 192.0.2.1

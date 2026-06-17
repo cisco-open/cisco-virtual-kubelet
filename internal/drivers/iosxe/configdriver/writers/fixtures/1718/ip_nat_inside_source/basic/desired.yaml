@@ -1,0 +1,6 @@
+# NAT inside source list 1 overloading on GigabitEthernet1.
+list:
+  - id: "1"
+    interface:
+      name: GigabitEthernet1
+      overload: true

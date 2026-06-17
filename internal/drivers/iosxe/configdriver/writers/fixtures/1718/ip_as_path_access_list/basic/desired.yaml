@@ -1,0 +1,7 @@
+# BGP AS-path access-list permitting routes from AS 65001.
+as_path_access_lists:
+  - name: "1"
+    action-list:
+      - seq_num: 10
+        action: permit
+        as-path: "^65001_"

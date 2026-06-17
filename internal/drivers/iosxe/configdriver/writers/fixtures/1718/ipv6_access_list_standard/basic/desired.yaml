@@ -1,0 +1,7 @@
+# IPv6 standard ACL permitting 2001:db8::/32.
+acls:
+  - name: IPV6-ACL-MGMT
+    rule:
+      - sequence: 10
+        action: permit
+        ipv6-prefix: "2001:db8::/32"

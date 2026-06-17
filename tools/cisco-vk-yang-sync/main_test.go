@@ -16,10 +16,15 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
+	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/openconfig/goyang/pkg/yang"
 )
 
 const sampleFamilies = `
@@ -344,4 +349,882 @@ func TestRunSkipsYgotWhenYangDirUnset(t *testing.T) {
 	if !strings.Contains(out.String(), "skipping ygot") {
 		t.Errorf("expected skip notice, got:\n%s", out.String())
 	}
+}
+
+func TestYgotFamilyOutputLayout(t *testing.T) {
+	cases := []struct {
+		version  string
+		family   string
+		outTypes string
+		wantPkg  string
+		wantFile string
+	}{
+		{"1718", "vlan", "out", "cfgval_vlan_1718", filepath.Join("out", "1718", "vlan", "schema.go")},
+		{"1791", "ip_domain", "types", "cfgval_ip_domain_1791", filepath.Join("types", "1791", "ip_domain", "schema.go")},
+		{"2601", "static-route", "out", "cfgval_static_route_2601", filepath.Join("out", "2601", "static-route", "schema.go")},
+	}
+	for _, tc := range cases {
+		pkg, file := ygotFamilyOutputLayout(tc.version, tc.family, tc.outTypes)
+		if pkg != tc.wantPkg {
+			t.Errorf("ygotFamilyOutputLayout(%q,%q,%q) pkg=%q want %q", tc.version, tc.family, tc.outTypes, pkg, tc.wantPkg)
+		}
+		if file != tc.wantFile {
+			t.Errorf("ygotFamilyOutputLayout(%q,%q,%q) file=%q want %q", tc.version, tc.family, tc.outTypes, file, tc.wantFile)
+		}
+	}
+}
+
+func TestBuildPerFamilyYgotArgs(t *testing.T) {
+	// Create a small isolated dir with two .yang files.
+	isolatedDir := t.TempDir()
+	for _, f := range []string{"mod-a.yang", "mod-b.yang"} {
+		if err := os.WriteFile(filepath.Join(isolatedDir, f), []byte("module "+f+" {}"), 0o600); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+	}
+	targetFiles := []string{"mod-a.yang", "mod-b.yang"}
+	excludes := []string{"cisco-semver", "ietf-inet-types"}
+	inv := buildPerFamilyYgotArgs(
+		flags{yangDir: "/yang", outTypes: "out", yangVersion: "1718"},
+		"cfgval_vlan_1718",
+		"out/1718/vlan/schema.go",
+		isolatedDir,
+		targetFiles,
+		excludes,
+	)
+	if inv.bin != "go" {
+		t.Errorf("bin=%q want 'go'", inv.bin)
+	}
+	joined := strings.Join(inv.args, " ")
+	for _, want := range []string{
+		"-package_name=cfgval_vlan_1718",
+		"-fakeroot_name=FamilyRoot",
+		"-output_file=out/1718/vlan/schema.go",
+		"-path=" + isolatedDir,
+		"-generate_simple_unions",
+		"-shorten_enum_leaf_names=true",
+		"-exclude_modules=cisco-semver,ietf-inet-types",
+		filepath.Join(isolatedDir, "mod-a.yang"),
+		filepath.Join(isolatedDir, "mod-b.yang"),
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("args missing %q:\n%v", want, inv.args)
+		}
+	}
+}
+
+func TestBuildPerFamilyYgotArgsBinOverride(t *testing.T) {
+	isolatedDir := t.TempDir()
+	inv := buildPerFamilyYgotArgs(
+		flags{yangDir: "/y", ygotBin: "/opt/generator"},
+		"cfgval_x_1718",
+		"out/schema.go",
+		isolatedDir,
+		nil,
+		nil,
+	)
+	if inv.bin != "/opt/generator" {
+		t.Errorf("bin=%q want override", inv.bin)
+	}
+	if len(inv.args) > 0 && inv.args[0] == "run" {
+		t.Errorf("unexpected 'run' in args with explicit ygotBin")
+	}
+}
+
+func TestBuildFamilyYgotScope_VlanPattern(t *testing.T) {
+	// vlan path: /Cisco-IOS-XE-native:native/vlan/Cisco-IOS-XE-vlan:vlan-list
+	// native → exclude; types/semver/features → safe excludes; vlan → target
+	yangPaths := []string{"/Cisco-IOS-XE-native:native/vlan/Cisco-IOS-XE-vlan:vlan-list"}
+	topLevelFiles := []string{
+		"Cisco-IOS-XE-native.yang",
+		"Cisco-IOS-XE-vlan.yang",
+		"Cisco-IOS-XE-types.yang",
+		"Cisco-IOS-XE-features.yang",
+		"cisco-semver.yang",
+	}
+	scope := buildFamilyYgotScope(yangPaths, topLevelFiles)
+
+	if len(scope.TargetFiles) != 1 || scope.TargetFiles[0] != "Cisco-IOS-XE-vlan.yang" {
+		t.Errorf("TargetFiles=%v, want [Cisco-IOS-XE-vlan.yang]", scope.TargetFiles)
+	}
+	for _, excluded := range []string{"Cisco-IOS-XE-native", "Cisco-IOS-XE-types", "cisco-semver", "Cisco-IOS-XE-features"} {
+		found := false
+		for _, e := range scope.ExcludeModules {
+			if e == excluded {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("ExcludeModules missing %q; got %v", excluded, scope.ExcludeModules)
+		}
+	}
+	// vlan must NOT be in excludes
+	for _, e := range scope.ExcludeModules {
+		if e == "Cisco-IOS-XE-vlan" {
+			t.Errorf("target module Cisco-IOS-XE-vlan must not be in ExcludeModules")
+		}
+	}
+}
+
+func TestBuildFamilyYgotScope_NativeOnlyPath(t *testing.T) {
+	// When only native is referenced, fallback: all non-native files are targets.
+	yangPaths := []string{"/Cisco-IOS-XE-native:native/system"}
+	topLevelFiles := []string{
+		"Cisco-IOS-XE-native.yang",
+		"Cisco-IOS-XE-types.yang",
+		"cisco-semver.yang",
+	}
+	scope := buildFamilyYgotScope(yangPaths, topLevelFiles)
+	// Fallback: targets = all non-native, excludes = [native]
+	if len(scope.TargetFiles) == 0 {
+		t.Errorf("fallback should have non-empty TargetFiles")
+	}
+	for _, f := range scope.TargetFiles {
+		if f == "Cisco-IOS-XE-native.yang" {
+			t.Errorf("native must never be in TargetFiles")
+		}
+	}
+}
+
+func TestBuildFamilyYgotScope_MultiImportModules(t *testing.T) {
+	// bgp-like: target module imports route-map and ospfv3.
+	// Both should be targets (not excluded) so ygot can resolve their types.
+	yangPaths := []string{"/Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-bgp:router-bgp"}
+	topLevelFiles := []string{
+		"Cisco-IOS-XE-native.yang",
+		"Cisco-IOS-XE-bgp.yang",
+		"Cisco-IOS-XE-route-map.yang",
+		"Cisco-IOS-XE-ospfv3.yang",
+		"Cisco-IOS-XE-types.yang",
+		"cisco-semver.yang",
+	}
+	scope := buildFamilyYgotScope(yangPaths, topLevelFiles)
+
+	// bgp, route-map, ospfv3 must all be targets
+	for _, want := range []string{"Cisco-IOS-XE-bgp.yang", "Cisco-IOS-XE-route-map.yang", "Cisco-IOS-XE-ospfv3.yang"} {
+		found := false
+		for _, tf := range scope.TargetFiles {
+			if tf == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("TargetFiles missing %q; got %v", want, scope.TargetFiles)
+		}
+	}
+	// native must be excluded
+	foundNative := false
+	for _, e := range scope.ExcludeModules {
+		if e == "Cisco-IOS-XE-native" {
+			foundNative = true
+			break
+		}
+	}
+	if !foundNative {
+		t.Errorf("native must be in ExcludeModules; got %v", scope.ExcludeModules)
+	}
+}
+
+func TestComputeModuleClosureBasic(t *testing.T) {
+	// Write a small YANG module tree: root imports dep1, dep1 imports dep2.
+	// root also includes submod1 (a submodule), and submod1 imports dep3.
+	dir := t.TempDir()
+	modules := map[string]string{
+		"Cisco-IOS-XE-root.yang": `module Cisco-IOS-XE-root {
+  yang-version 1.1;
+  namespace "urn:cisco:root";
+  prefix root;
+  import Cisco-IOS-XE-dep1 { prefix d1; }
+  include Cisco-IOS-XE-submod1;
+}`,
+		"Cisco-IOS-XE-submod1.yang": `submodule Cisco-IOS-XE-submod1 {
+  yang-version 1.1;
+  belongs-to Cisco-IOS-XE-root { prefix root; }
+  import Cisco-IOS-XE-dep3 { prefix d3; }
+}`,
+		"Cisco-IOS-XE-dep1.yang": `module Cisco-IOS-XE-dep1 {
+  yang-version 1.1;
+  namespace "urn:cisco:dep1";
+  prefix d1;
+  import Cisco-IOS-XE-dep2 { prefix d2; }
+}`,
+		"Cisco-IOS-XE-dep2.yang": `module Cisco-IOS-XE-dep2 {
+  yang-version 1.1;
+  namespace "urn:cisco:dep2";
+  prefix d2;
+}`,
+		"Cisco-IOS-XE-dep3.yang": `module Cisco-IOS-XE-dep3 {
+  yang-version 1.1;
+  namespace "urn:cisco:dep3";
+  prefix d3;
+}`,
+		"Cisco-IOS-XE-unrelated.yang": `module Cisco-IOS-XE-unrelated {
+  yang-version 1.1;
+  namespace "urn:cisco:unrelated";
+  prefix u;
+}`,
+	}
+	for name, content := range modules {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600); err != nil {
+			t.Fatalf("seed %s: %v", name, err)
+		}
+	}
+
+	yangPaths := []string{"/Cisco-IOS-XE-root:native/something"}
+	var errBuf bytes.Buffer
+	got, err := computeModuleClosure(dir, yangPaths, &errBuf)
+	if err != nil {
+		t.Fatalf("computeModuleClosure: %v", err)
+	}
+
+	// AllFiles must include root, submod1 (submodule), dep1, dep2, dep3.
+	// TopLevelFiles must include root, dep1, dep2, dep3 but NOT submod1.
+	gotAll := map[string]bool{}
+	for _, f := range got.AllFiles { gotAll[f] = true }
+	gotTop := map[string]bool{}
+	for _, f := range got.TopLevelFiles { gotTop[f] = true }
+
+	for _, want := range []string{
+		"Cisco-IOS-XE-root.yang",
+		"Cisco-IOS-XE-submod1.yang",
+		"Cisco-IOS-XE-dep1.yang",
+		"Cisco-IOS-XE-dep2.yang",
+		"Cisco-IOS-XE-dep3.yang",
+	} {
+		if !gotAll[want] {
+			t.Errorf("AllFiles missing %q; got %v", want, got.AllFiles)
+		}
+	}
+	if gotAll["Cisco-IOS-XE-unrelated.yang"] {
+		t.Errorf("unrelated module should not be in AllFiles; got %v", got.AllFiles)
+	}
+	// submod1 is a submodule — must NOT be in TopLevelFiles
+	if gotTop["Cisco-IOS-XE-submod1.yang"] {
+		t.Errorf("submodule should not be in TopLevelFiles; got %v", got.TopLevelFiles)
+	}
+	// root is a top-level module — must be in TopLevelFiles
+	if !gotTop["Cisco-IOS-XE-root.yang"] {
+		t.Errorf("top-level module root missing from TopLevelFiles; got %v", got.TopLevelFiles)
+	}
+}
+
+func TestBuildIsolatedDir(t *testing.T) {
+	srcDir := t.TempDir()
+	for _, f := range []string{"mod-a.yang", "mod-b.yang", "unrelated.yang"} {
+		if err := os.WriteFile(filepath.Join(srcDir, f), []byte("content"), 0o600); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+	}
+	closure := []string{"mod-a.yang", "mod-b.yang"}
+	dir, cleanup, err := buildIsolatedDir(srcDir, closure, nil)
+	if err != nil {
+		t.Fatalf("buildIsolatedDir: %v", err)
+	}
+	defer cleanup()
+
+	// closure files should be present as symlinks
+	for _, f := range closure {
+		fi, statErr := os.Lstat(filepath.Join(dir, f))
+		if statErr != nil {
+			t.Errorf("expected %s in isolated dir: %v", f, statErr)
+			continue
+		}
+		if fi.Mode()&os.ModeSymlink == 0 {
+			t.Errorf("%s is not a symlink", f)
+		}
+	}
+	// unrelated file should NOT be present
+	if _, err := os.Lstat(filepath.Join(dir, "unrelated.yang")); err == nil {
+		t.Errorf("unrelated.yang should not be in isolated dir")
+	}
+}
+
+func TestComputeModuleClosureEmptyPaths(t *testing.T) {
+	dir := t.TempDir()
+	var errBuf bytes.Buffer
+	_, err := computeModuleClosure(dir, nil, &errBuf)
+	if err == nil {
+		t.Error("expected error for empty yang_paths, got nil")
+	}
+}
+func TestRunPerFamilyDryRun(t *testing.T) {
+	idx := writeTempIndex(t, sampleFamilies)
+	dir := t.TempDir()
+	// Write a stub YANG file so yang-dir is a valid directory.
+	if err := os.WriteFile(filepath.Join(dir, "stub.yang"), []byte("module stub { yang-version 1.1; }\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var out, errBuf bytes.Buffer
+	code := run([]string{
+		"--family-index", idx,
+		"--yang-dir", dir,
+		"--yang-version", "1718",
+		"--per-family",
+		"--dry-run=false",
+		"--out-writers", t.TempDir(),
+		"--out-types", t.TempDir(),
+	}, &out, &errBuf)
+	// ygot invocations will fail (no real generator), but the driver
+	// itself must not crash: non-zero exit is acceptable here, but the
+	// per-family logic must at least start.
+	_ = code
+	if !strings.Contains(out.String(), "per-family goyang schema extraction") {
+		t.Errorf("per-family header missing from output:\n%s", out.String())
+	}
+}
+
+func TestBuildConflictStubs_NoConflict(t *testing.T) {
+	stubs := buildConflictStubs([]string{"Cisco-IOS-XE-native.yang", "Cisco-IOS-XE-vlan.yang"})
+	if len(stubs) != 0 {
+		t.Errorf("expected no stubs when no conflict; got %v", stubs)
+	}
+}
+
+func TestBuildConflictStubs_WithConflict(t *testing.T) {
+	files := []string{
+		"Cisco-IOS-XE-native.yang",
+		"Cisco-IOS-XE-interfaces.yang",
+		"Cisco-IOS-XE-ethernet.yang",
+		"Cisco-IOS-XE-ethernet-oam.yang",
+		"Cisco-IOS-XE-l2vpn.yang",
+	}
+	stubs := buildConflictStubs(files)
+	for _, want := range []string{
+		"Cisco-IOS-XE-ethernet.yang",
+		"Cisco-IOS-XE-ethernet-oam.yang",
+		"Cisco-IOS-XE-l2vpn.yang",
+	} {
+		if _, ok := stubs[want]; !ok {
+			t.Errorf("expected stub for %s; got stubs=%v", want, stubs)
+		}
+	}
+	// cfm-efp stub must declare the service/instance grouping so l2vpn can
+	// resolve ios-eth:service/ios-eth:instance augment targets (when atm is
+	// present). It must NOT contain YANG augment statements (those are in the
+	// ethernet module stub, not here).
+	cfmEfp := stubs["Cisco-IOS-XE-ethernet-cfm-efp.yang"]
+	if !strings.Contains(cfmEfp, "grouping config-interface-ethernet-cfm-efp-grouping") {
+		t.Errorf("cfm-efp stub must declare config-interface-ethernet-cfm-efp-grouping; got: %s", cfmEfp)
+	}
+	// Check for YANG augment statement (starts at line start after whitespace),
+	// not the word "augment" in comments.
+	for _, line := range strings.Split(cfmEfp, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "augment ") {
+			t.Errorf("cfm-efp stub must not contain YANG augment statements; found: %s", line)
+		}
+	}
+	// Ethernet and l2vpn stubs must not contain augment statements in the
+	// non-atm case (l2vpn is fully stubbed, ethernet has no augments).
+	for _, name := range []string{"Cisco-IOS-XE-ethernet.yang", "Cisco-IOS-XE-l2vpn.yang"} {
+		for _, line := range strings.Split(stubs[name], "\n") {
+			if strings.HasPrefix(strings.TrimSpace(line), "augment ") {
+				t.Errorf("stub %s must not contain augment statements in the non-atm case; found: %s", name, line)
+			}
+		}
+	}
+}
+
+func TestBuildConflictStubs_EthernetConflictWithAtm_L2vpnStubbed(t *testing.T) {
+	// When atm is in the closure, l2vpn MUST be stubbed with a restricted stub
+	// that provides config-interface-efp-xconnect-grouping (used by atm) but
+	// omits the service/instance augments that would fail because ethernet is
+	// stubbed without those paths.
+	files := []string{
+		"Cisco-IOS-XE-native.yang",
+		"Cisco-IOS-XE-interfaces.yang",
+		"Cisco-IOS-XE-ethernet.yang",
+		"Cisco-IOS-XE-l2vpn.yang",
+		"Cisco-IOS-XE-atm.yang",
+	}
+	stubs := buildConflictStubs(files)
+	l2vpnStub, ok := stubs["Cisco-IOS-XE-l2vpn.yang"]
+	if !ok {
+		t.Errorf("l2vpn must be stubbed when atm is in the closure; got stubs=%v", stubs)
+	}
+	// The stub must provide the grouping atm depends on.
+	if !strings.Contains(l2vpnStub, "grouping config-interface-efp-xconnect-grouping") {
+		t.Errorf("l2vpn stub must contain config-interface-efp-xconnect-grouping; got: %s", l2vpnStub)
+	}
+	// The stub must not contain augment statements (those are what caused the
+	// service/instance "not found" errors when the real l2vpn was used).
+	if strings.Contains(l2vpnStub, "augment ") {
+		t.Errorf("l2vpn stub must not contain augment statements")
+	}
+	// atm must also be stubbed (ip/load-interval collision with interfaces).
+	if _, ok := stubs["Cisco-IOS-XE-atm.yang"]; !ok {
+		t.Errorf("atm must be stubbed when atm+interfaces are in the closure")
+	}
+	// ethernet should still be stubbed.
+	if _, ok := stubs["Cisco-IOS-XE-ethernet.yang"]; !ok {
+		t.Errorf("ethernet should still be stubbed; got stubs=%v", stubs)
+	}
+}
+
+func TestBuildConflictStubs_BgpSnmpConflict(t *testing.T) {
+	// bgp + snmp: both define a "bgp" node in the traps container.
+	// snmp should be stubbed when bgp is in the closure.
+	files := []string{
+		"Cisco-IOS-XE-native.yang",
+		"Cisco-IOS-XE-bgp.yang",
+		"Cisco-IOS-XE-snmp.yang",
+	}
+	stubs := buildConflictStubs(files)
+	stub, ok := stubs["Cisco-IOS-XE-snmp.yang"]
+	if !ok {
+		t.Errorf("snmp should be stubbed when bgp is in the closure; got stubs=%v", stubs)
+	}
+	// The stub must include the three groupings that Cisco-IOS-XE-isis
+	// (in bgp's module closure) needs via ios-snmp: prefix.
+	for _, must := range []string{
+		"grouping router-snmp-grouping",
+		"grouping config-priv-grouping",
+		"grouping config-access-grouping",
+	} {
+		if !strings.Contains(stub, must) {
+			t.Errorf("snmp stub must contain %q so isis can resolve its uses statements", must)
+		}
+	}
+	// The stub must provide a traps container anchor so bgp's augment to
+	// /native/snmp-server/enable/enable-choice/traps resolves cleanly.
+	// It must NOT include any bgp-specific trap nodes (those are what
+	// caused the original duplicate-node collision).
+	if !strings.Contains(stub, "container traps") {
+		t.Errorf("snmp stub must contain a traps container anchor for bgp's augment target")
+	}
+	for _, banned := range []string{
+		"snmp-server-trap-bgp",
+		"grouping snmp-server-trap-bgp-grouping",
+		"container bgp-traps",
+		"leaf bgp {",
+	} {
+		if strings.Contains(stub, banned) {
+			t.Errorf("snmp stub must not contain %q (collides with bgp's augment content)", banned)
+		}
+	}
+}
+
+func TestBuildNativeSubmoduleStubs_NoNative(t *testing.T) {
+	// Without a native module, function returns nil.
+	dir := t.TempDir()
+	stubs := buildNativeSubmoduleStubs(dir, []string{"Cisco-IOS-XE-vlan.yang"}, []string{"/Cisco-IOS-XE-native:native/vlan"})
+	if stubs != nil {
+		t.Errorf("expected nil when native absent, got %v", stubs)
+	}
+}
+
+func TestBuildNativeSubmoduleStubs_StubsUnreferencedSubmodules(t *testing.T) {
+	dir := t.TempDir()
+
+	// Write a minimal native module that includes logging and interfaces.
+	nativeContent := `module Cisco-IOS-XE-native {
+  yang-version 1.1;
+  namespace "urn:cisco:native";
+  prefix ios;
+  include Cisco-IOS-XE-logging;
+  include Cisco-IOS-XE-interfaces;
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "Cisco-IOS-XE-native.yang"), []byte(nativeContent), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// Both submodule files are present in the closure.
+	allFiles := []string{
+		"Cisco-IOS-XE-native.yang",
+		"Cisco-IOS-XE-logging.yang",
+		"Cisco-IOS-XE-interfaces.yang",
+	}
+
+	// Family only references logging in its YANG paths.
+	yangPaths := []string{"/Cisco-IOS-XE-native:native/logging/Cisco-IOS-XE-logging:something"}
+
+	stubs := buildNativeSubmoduleStubs(dir, allFiles, yangPaths)
+
+	// interfaces is unreferenced → should be stubbed.
+	if _, ok := stubs["Cisco-IOS-XE-interfaces.yang"]; !ok {
+		t.Errorf("expected stub for Cisco-IOS-XE-interfaces.yang; got stubs=%v", stubs)
+	}
+	// logging is referenced → must NOT be stubbed.
+	if _, ok := stubs["Cisco-IOS-XE-logging.yang"]; ok {
+		t.Errorf("referenced submodule Cisco-IOS-XE-logging.yang should not be stubbed; got stubs=%v", stubs)
+	}
+	// Stub must be a valid minimal submodule.
+	stub := stubs["Cisco-IOS-XE-interfaces.yang"]
+	if !strings.Contains(stub, "submodule Cisco-IOS-XE-interfaces") {
+		t.Errorf("stub missing submodule declaration:\n%s", stub)
+	}
+	if !strings.Contains(stub, "belongs-to Cisco-IOS-XE-native") {
+		t.Errorf("stub missing belongs-to:\n%s", stub)
+	}
+	if strings.Contains(stub, "augment ") || strings.Contains(stub, "container ") {
+		t.Errorf("stub must carry no type definitions:\n%s", stub)
+	}
+}
+
+func TestBuildNativeSubmoduleStubs_SubmoduleNotInClosure(t *testing.T) {
+	dir := t.TempDir()
+
+	nativeContent := `module Cisco-IOS-XE-native {
+  yang-version 1.1;
+  namespace "urn:cisco:native";
+  prefix ios;
+  include Cisco-IOS-XE-logging;
+  include Cisco-IOS-XE-interfaces;
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "Cisco-IOS-XE-native.yang"), []byte(nativeContent), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// Only logging is in the closure (interfaces was not pulled in).
+	allFiles := []string{
+		"Cisco-IOS-XE-native.yang",
+		"Cisco-IOS-XE-logging.yang",
+	}
+	yangPaths := []string{"/Cisco-IOS-XE-native:native/vlan"}
+
+	stubs := buildNativeSubmoduleStubs(dir, allFiles, yangPaths)
+
+	// logging is in closure but unreferenced → stubbed.
+	if _, ok := stubs["Cisco-IOS-XE-logging.yang"]; !ok {
+		t.Errorf("expected stub for logging; got %v", stubs)
+	}
+	// interfaces is NOT in closure → must not be in stubs.
+	if _, ok := stubs["Cisco-IOS-XE-interfaces.yang"]; ok {
+		t.Errorf("interfaces not in closure, must not be in stubs; got %v", stubs)
+	}
+}
+
+func TestPatchGeneratedSchema(t *testing.T) {
+	// Write a small Go file that has both known ygot defects.
+	input := `package cfgval_test_1718
+
+import "github.com/openconfig/ygot/ygot"
+
+type E_MyEnum int
+
+const (
+	E_MyEnum_UNSET E_MyEnum = 0
+	E_MyEnum__ E_MyEnum = 1
+	E_MyEnum__ E_MyEnum = 2
+	E_MyEnum__COLON E_MyEnum = 3
+)
+
+type HasValidateField struct {
+	Validate *string ` + "`" + `path:"validate" module:"m"` + "`" + `
+}
+
+func (t *HasValidateField) ΛValidate(opts ...ygot.ValidationOption) error { return nil }
+
+// Validate validates s against the YANG schema corresponding to its type.
+func (t *HasValidateField) Validate(opts ...ygot.ValidationOption) error {
+	return t.ΛValidate(opts...)
+}
+
+type NoValidateField struct{}
+
+func (t *NoValidateField) ΛValidate(opts ...ygot.ValidationOption) error { return nil }
+
+// Validate validates s against the YANG schema corresponding to its type.
+func (t *NoValidateField) Validate(opts ...ygot.ValidationOption) error {
+	return t.ΛValidate(opts...)
+}
+`
+	tmp := filepath.Join(t.TempDir(), "schema.go")
+	if err := os.WriteFile(tmp, []byte(input), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	if err := patchGeneratedSchema(tmp); err != nil {
+		t.Fatalf("patchGeneratedSchema: %v", err)
+	}
+	patched, err := os.ReadFile(tmp)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	body := string(patched)
+
+	// Duplicate constant should be renamed
+	if strings.Count(body, "\tE_MyEnum__ E_MyEnum") > 1 {
+		t.Errorf("duplicate constant not renamed:\n%s", body)
+	}
+	if !strings.Contains(body, "\tE_MyEnum__ E_MyEnum = 1") {
+		t.Errorf("first enum constant should be preserved unchanged:\n%s", body)
+	}
+	if !strings.Contains(body, "E_MyEnum___2") {
+		t.Errorf("second enum constant should be renamed to __2:\n%s", body)
+	}
+
+	// Validate() method for HasValidateField should be removed
+	if strings.Contains(body, "func (t *HasValidateField) Validate(") {
+		t.Errorf("Validate() method for HasValidateField should have been removed:\n%s", body)
+	}
+	// Validate() method for NoValidateField must be preserved
+	if !strings.Contains(body, "func (t *NoValidateField) Validate(") {
+		t.Errorf("Validate() method for NoValidateField should be preserved:\n%s", body)
+	}
+}
+
+func TestWriteRegisterFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "register.go")
+	if err := writeRegisterFile(path, "cfgval_vlan_1718", "vlan", "1718"); err != nil {
+		t.Fatalf("writeRegisterFile: %v", err)
+	}
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	s := string(body)
+
+	// Must declare the correct package.
+	if !strings.Contains(s, "package cfgval_vlan_1718") {
+		t.Errorf("missing package declaration:\n%s", s)
+	}
+	// Must import cfgvalidation.
+	if !strings.Contains(s, "cfgvalidation") {
+		t.Errorf("missing cfgvalidation import:\n%s", s)
+	}
+	// Must register with the correct family and release tag.
+	if !strings.Contains(s, `cfgvalidation.Register("vlan", "1718"`) {
+		t.Errorf("missing Register call:\n%s", s)
+	}
+	// Must have path-aware ValidateBody signature.
+	if !strings.Contains(s, "ValidateBody(path string, body json.RawMessage)") {
+		t.Errorf("missing path-aware ValidateBody signature:\n%s", s)
+	}
+	// Must include findSchemaEntryByPath for path-based resolution.
+	if !strings.Contains(s, "findSchemaEntryByPath") {
+		t.Errorf("missing findSchemaEntryByPath:\n%s", s)
+	}
+	// Must include a JSON Unmarshal call for payload decoding.
+	if !strings.Contains(s, "Unmarshal(") {
+		t.Errorf("missing Unmarshal call:\n%s", s)
+	}
+	// Must include the strictness gate.
+	if !strings.Contains(s, "isStrictValidation()") {
+		t.Errorf("missing isStrictValidation call:\n%s", s)
+	}
+	// Must read CVK_SCHEMA_VALIDATION to implement the strict mode gate.
+	if !strings.Contains(s, "CVK_SCHEMA_VALIDATION") {
+		t.Errorf("missing CVK_SCHEMA_VALIDATION env var reference:\n%s", s)
+	}
+	// Must include the FamilyRoot empty-schema guard (skip when no Dir children).
+	if !strings.Contains(s, `st["FamilyRoot"]`) {
+		t.Errorf("missing FamilyRoot empty-schema guard:\n%s", s)
+	}
+	// Must hard-error on missing schema entry.
+	if !strings.Contains(s, "schema entry not found for") {
+		t.Errorf("register.go must hard-error on missing schema entry:\n%s", s)
+	}
+	// Must not contain YANG augment statements (as opposed to prose using "augment").
+	if strings.Contains(s, "\naugment ") || strings.Contains(s, " augment /") {
+		t.Errorf("register.go must not contain YANG augment statements:\n%s", s)
+	}
+}
+
+func TestWriteSchemaValidatorsFile(t *testing.T) {
+	dir := t.TempDir()
+	// Simulate outTypesDir = dir/generated; writers dir = dir/writers
+	outTypesDir := filepath.Join(dir, "generated")
+	if err := os.MkdirAll(outTypesDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	pkgs := []string{
+		"github.com/cisco/virtual-kubelet-cisco/internal/generated/1718/bgp",
+		"github.com/cisco/virtual-kubelet-cisco/internal/generated/1718/vlan",
+		"github.com/cisco/virtual-kubelet-cisco/internal/generated/1718/aaa",
+	}
+	if err := writeSchemaValidatorsFile(outTypesDir, "1718", pkgs); err != nil {
+		t.Fatalf("writeSchemaValidatorsFile: %v", err)
+	}
+
+	outPath := filepath.Join(dir, "writers", "schema_validators_1718_test.go")
+	body, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	s := string(body)
+
+	// Must have the generated-code header.
+	if !strings.Contains(s, "// Code generated by cisco-vk-yang-sync. DO NOT EDIT.") {
+		t.Errorf("missing generated header:\n%s", s)
+	}
+	// Must declare package writers.
+	if !strings.Contains(s, "package writers") {
+		t.Errorf("missing package writers declaration:\n%s", s)
+	}
+	// Must include blank imports for all provided packages (sorted).
+	for _, pkg := range pkgs {
+		if !strings.Contains(s, `_ "`+pkg+`"`) {
+			t.Errorf("missing import for %s:\n%s", pkg, s)
+		}
+	}
+	// Packages must be sorted: aaa before bgp before vlan.
+	posAAA := strings.Index(s, "aaa")
+	posBGP := strings.Index(s, "bgp")
+	posVLAN := strings.Index(s, "vlan")
+	if posAAA > posBGP || posBGP > posVLAN {
+		t.Errorf("packages not sorted: aaa=%d bgp=%d vlan=%d", posAAA, posBGP, posVLAN)
+	}
+}
+
+func TestExtractFamilySchemaEntries(t *testing.T) {
+	dir := t.TempDir()
+	native := `module Cisco-IOS-XE-native {
+  yang-version 1.1;
+  namespace "urn:cisco:params:xml:ns:yang:Cisco-IOS-XE-native";
+  prefix ios;
+  container native {
+    container vlan {
+      list vlan-list {
+        key "id";
+        leaf id {
+          type uint16 {
+            range "1..4094";
+          }
+        }
+        leaf name {
+          type string;
+        }
+      }
+    }
+  }
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "Cisco-IOS-XE-native.yang"), []byte(native), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	allFiles := []string{"Cisco-IOS-XE-native.yang"}
+	yangPaths := []string{"/Cisco-IOS-XE-native:native/vlan/vlan-list"}
+
+	entries, err := extractFamilySchemaEntries(dir, allFiles, yangPaths)
+	if err != nil {
+		t.Fatalf("extractFamilySchemaEntries: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Name != "vlan-list" {
+		t.Errorf("entry Name = %q, want %q", entries[0].Name, "vlan-list")
+	}
+	if entries[0].Key != "id" {
+		t.Errorf("entry Key = %q, want %q", entries[0].Key, "id")
+	}
+}
+
+func TestBuildFamilyYSchema(t *testing.T) {
+	entry := &yang.Entry{
+		Name: "test-container",
+		Kind: yang.DirectoryEntry,
+		Dir: map[string]*yang.Entry{
+			"leaf-a": {Name: "leaf-a", Kind: yang.LeafEntry},
+		},
+	}
+
+	blob, err := buildFamilyYSchema([]*yang.Entry{entry})
+	if err != nil {
+		t.Fatalf("buildFamilyYSchema: %v", err)
+	}
+	if len(blob) == 0 {
+		t.Fatal("blob is empty")
+	}
+
+	// Decompress and verify the gzip-JSON round-trip.
+	gr, err := gzip.NewReader(bytes.NewReader(blob))
+	if err != nil {
+		t.Fatalf("gzip.NewReader: %v", err)
+	}
+	raw, err := io.ReadAll(gr)
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	var root yang.Entry
+	if err := json.Unmarshal(raw, &root); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	if root.Name != "FamilyRoot" {
+		t.Errorf("root Name = %q, want %q", root.Name, "FamilyRoot")
+	}
+	if _, ok := root.Dir["test-container"]; !ok {
+		t.Errorf("root.Dir missing %q; keys: %v", "test-container", dirKeys(root.Dir))
+	}
+}
+
+func TestFamilySchemaValidation(t *testing.T) {
+	dir := t.TempDir()
+	native := `module Cisco-IOS-XE-native {
+  yang-version 1.1;
+  namespace "urn:cisco:params:xml:ns:yang:Cisco-IOS-XE-native";
+  prefix ios;
+  container native {
+    list interface {
+      key "name";
+      leaf name { type string; }
+      leaf description { type string; }
+    }
+  }
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "Cisco-IOS-XE-native.yang"), []byte(native), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	yangPaths := []string{"/Cisco-IOS-XE-native:native/interface"}
+	allFiles := []string{"Cisco-IOS-XE-native.yang"}
+
+	entries, err := extractFamilySchemaEntries(dir, allFiles, yangPaths)
+	if err != nil {
+		t.Fatalf("extractFamilySchemaEntries: %v", err)
+	}
+
+	blob, err := buildFamilyYSchema(entries)
+	if err != nil {
+		t.Fatalf("buildFamilyYSchema: %v", err)
+	}
+
+	// Decompress and reconstruct the schema map (mirrors UnzipSchema in the template).
+	gr, err := gzip.NewReader(bytes.NewReader(blob))
+	if err != nil {
+		t.Fatalf("gzip.NewReader: %v", err)
+	}
+	raw, err := io.ReadAll(gr)
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	var root yang.Entry
+	if err := json.Unmarshal(raw, &root); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	st := map[string]*yang.Entry{"FamilyRoot": &root}
+
+	// FamilyRoot guard: Dir must be non-empty now.
+	famRoot, ok := st["FamilyRoot"]
+	if !ok {
+		t.Fatal("st missing FamilyRoot")
+	}
+	if len(famRoot.Dir) == 0 {
+		t.Fatal("FamilyRoot.Dir is empty — schema guard would skip validation")
+	}
+
+	// The terminal entry must be findable by local name via Dir lookup.
+	iface, ok := famRoot.Dir["interface"]
+	if !ok {
+		t.Fatalf("famRoot.Dir missing %q; keys: %v", "interface", dirKeys(famRoot.Dir))
+	}
+	if iface.Name != "interface" {
+		t.Errorf("entry Name = %q, want %q", iface.Name, "interface")
+	}
+	if iface.Key != "name" {
+		t.Errorf("entry Key = %q, want %q", iface.Key, "name")
+	}
+}
+
+func dirKeys(dir map[string]*yang.Entry) []string {
+	keys := make([]string, 0, len(dir))
+	for k := range dir {
+		keys = append(keys, k)
+	}
+	return keys
 }

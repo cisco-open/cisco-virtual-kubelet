@@ -1,0 +1,6 @@
+# Already-converged: CL-ACCEPT already configured.
+standard:
+  - name: CL-ACCEPT
+    community-list-entry:
+      - action: permit
+        community: "65001:100"

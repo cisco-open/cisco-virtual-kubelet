@@ -1,0 +1,14 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/interface/Tunnel",
+    "body": {
+      "Cisco-IOS-XE-native:Tunnel": [
+        {
+          "description": "mgmt-tunnel",
+          "name": "0"
+        }
+      ]
+    }
+  }
+]

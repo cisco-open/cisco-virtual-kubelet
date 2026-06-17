@@ -1,0 +1,7 @@
+# Already-converged: GigabitEthernet1 switchport already in access mode on VLAN 10.
+interfaces:
+  - name: "1"
+    type: GigabitEthernet
+    mode: access
+    access:
+      vlan: 10

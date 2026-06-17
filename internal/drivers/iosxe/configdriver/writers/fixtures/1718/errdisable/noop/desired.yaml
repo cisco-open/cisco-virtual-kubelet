@@ -1,0 +1,7 @@
+# Already-converged: errdisable recovery matches desired.
+recovery:
+  cause:
+    - name: bpduguard
+      interval: 30
+    - name: udld
+      interval: 30

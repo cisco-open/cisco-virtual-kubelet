@@ -1,0 +1,7 @@
+# Errdisable recovery for bpduguard and udld, 30-second recovery interval each.
+recovery:
+  cause:
+    - name: bpduguard
+      interval: 30
+    - name: udld
+      interval: 30

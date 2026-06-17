@@ -1,0 +1,13 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ip/prefix-list/prefixes=PL-TEST",
+    "body": {
+      "Cisco-IOS-XE-native:prefixes": [
+        {
+          "name": "PL-TEST"
+        }
+      ]
+    }
+  }
+]

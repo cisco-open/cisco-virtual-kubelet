@@ -1,0 +1,9 @@
+[
+  {
+    "verb": "REPLACE",
+    "path": "/Cisco-IOS-XE-native:native/hostname",
+    "body": {
+      "Cisco-IOS-XE-native:hostname": "router1"
+    }
+  }
+]

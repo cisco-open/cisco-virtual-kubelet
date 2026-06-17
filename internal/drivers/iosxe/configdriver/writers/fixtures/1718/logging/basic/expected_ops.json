@@ -1,0 +1,14 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/logging",
+    "body": {
+      "Cisco-IOS-XE-native:logging": {
+        "buffered": {
+          "severity": "informational",
+          "size": 16384
+        }
+      }
+    }
+  }
+]

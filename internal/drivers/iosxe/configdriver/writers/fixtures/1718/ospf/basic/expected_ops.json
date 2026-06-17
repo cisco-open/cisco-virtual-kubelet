@@ -1,0 +1,21 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/router/Cisco-IOS-XE-ospf:router-ospf/ospf/process-id=1",
+    "body": {
+      "Cisco-IOS-XE-ospf:process-id": [
+        {
+          "id": 1,
+          "network": [
+            {
+              "area": 0,
+              "ip": "10.0.0.0",
+              "mask": "0.0.0.255"
+            }
+          ],
+          "router-id": "10.0.0.1"
+        }
+      ]
+    }
+  }
+]

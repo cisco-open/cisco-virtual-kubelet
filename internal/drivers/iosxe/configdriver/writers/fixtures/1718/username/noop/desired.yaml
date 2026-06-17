@@ -1,0 +1,7 @@
+# Already-converged: admin user already exists with correct settings.
+users:
+  - name: admin
+    privilege: 15
+    secret:
+      type: 9
+      secret: "$9$abc"

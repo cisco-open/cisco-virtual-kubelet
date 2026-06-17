@@ -1,0 +1,6 @@
+# Already-converged: class-map already on device.
+- name: MATCH-DSCP-EF
+  match-type: match-all
+  match:
+    dscp:
+      - ef

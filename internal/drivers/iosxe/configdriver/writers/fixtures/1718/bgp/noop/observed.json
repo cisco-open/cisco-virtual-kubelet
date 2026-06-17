@@ -1,0 +1,1 @@
+{"id": "65000", "bgp": {"router-id": {"ip-id": "10.255.255.1"}, "log-neighbor-changes": null}, "neighbor": [{"id": "192.0.2.2", "remote-as": "65001"}]}

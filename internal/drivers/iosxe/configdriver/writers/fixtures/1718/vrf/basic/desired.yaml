@@ -1,0 +1,3 @@
+# NetAsCode desired body for vrf on IOS-XE 17.18.
+- name: MGMT
+  rd: "65000:1"

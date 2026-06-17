@@ -1,0 +1,7 @@
+# GigabitEthernet1 configured as access port on VLAN 10.
+interfaces:
+  - name: "1"
+    type: GigabitEthernet
+    mode: access
+    access:
+      vlan: 10

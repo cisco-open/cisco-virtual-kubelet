@@ -1,0 +1,19 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/policy/Cisco-IOS-XE-policy:class-map",
+    "body": {
+      "Cisco-IOS-XE-policy:class-map": [
+        {
+          "match": {
+            "dscp": [
+              "ef"
+            ]
+          },
+          "match-type": "match-all",
+          "name": "MATCH-DSCP-EF"
+        }
+      ]
+    }
+  }
+]

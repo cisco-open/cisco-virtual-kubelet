@@ -1,0 +1,12 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/cdp",
+    "body": {
+      "Cisco-IOS-XE-native:cdp": {
+        "advertise-v2": null,
+        "run-enable": false
+      }
+    }
+  }
+]

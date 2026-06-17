@@ -1,0 +1,16 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ip/nat/pool",
+    "body": {
+      "Cisco-IOS-XE-nat:pool": [
+        {
+          "end-address": "203.0.113.10",
+          "id": "NAT-POOL",
+          "prefix-length": 24,
+          "start-address": "203.0.113.1"
+        }
+      ]
+    }
+  }
+]

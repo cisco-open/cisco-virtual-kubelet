@@ -1,0 +1,19 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/track",
+    "body": {
+      "Cisco-IOS-XE-track:track": [
+        {
+          "interface": {
+            "name": "GigabitEthernet1",
+            "protocol": {
+              "routing": {}
+            }
+          },
+          "name": "1"
+        }
+      ]
+    }
+  }
+]

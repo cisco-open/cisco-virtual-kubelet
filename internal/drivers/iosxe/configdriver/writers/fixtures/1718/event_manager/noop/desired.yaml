@@ -1,0 +1,9 @@
+# Already-converged: EEM applet already configured.
+applet:
+  - name: RELOAD-TRAP
+    event:
+      snmp:
+        oid: "1.3.6.1.2.1.1.3.0"
+        oid-type: counter
+        entry-op: gt
+        entry-val: 0

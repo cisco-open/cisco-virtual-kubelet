@@ -1,0 +1,1 @@
+[{"name": "IPV6-ACL-MGMT", "rule": [{"sequence": 10, "action": "permit", "ipv6-prefix": "2001:db8::/32"}]}]

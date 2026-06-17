@@ -1,0 +1,19 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/crypto/map",
+    "body": {
+      "Cisco-IOS-XE-crypto:map": [
+        {
+          "name": "CMAP1",
+          "sequences": [
+            {
+              "seq": 10,
+              "type": "ipsec-isakmp"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

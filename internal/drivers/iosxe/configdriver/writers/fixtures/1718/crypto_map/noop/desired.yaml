@@ -1,0 +1,5 @@
+# Already-converged: crypto map already on device.
+- name: CMAP1
+  sequences:
+    - seq: 10
+      type: ipsec-isakmp

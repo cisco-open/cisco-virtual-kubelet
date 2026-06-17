@@ -1,0 +1,6 @@
+# VirtualPortGroup0 for app-hosting network.
+interfaces:
+  - id: "0"
+    description: app-hosting
+    ipv4_address: "192.168.1.1"
+    ipv4_address_mask: "255.255.255.0"

@@ -1,0 +1,4 @@
+# NetAsCode desired body for logging on IOS-XE 17.18.
+buffered:
+  size: 16384
+  severity: informational

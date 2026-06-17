@@ -1,0 +1,7 @@
+# AAA authentication login default using local database.
+authentication:
+  login:
+    - name: default
+      a1:
+        local:
+          - ~

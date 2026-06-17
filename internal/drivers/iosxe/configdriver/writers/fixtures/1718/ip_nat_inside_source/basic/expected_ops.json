@@ -1,0 +1,19 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ip/nat/inside/source",
+    "body": {
+      "Cisco-IOS-XE-nat:source": {
+        "list": [
+          {
+            "id": "1",
+            "interface": {
+              "name": "GigabitEthernet1",
+              "overload": true
+            }
+          }
+        ]
+      }
+    }
+  }
+]

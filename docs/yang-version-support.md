@@ -14,33 +14,89 @@ C9300-24P). Earlier versions (17.15, 17.16) diverge in several ways:
 
 ## Architecture
 
-!!! note "Future direction: ygot-typed bindings"
-    The current architecture uses a **hand-maintained runtime override table**
-    (`yang_version_override_table.go`) to handle YANG model differences across
-    IOS-XE versions. This approach works well for a bounded set of managed
-    families but does not scale linearly as the number of families, versions,
-    and divergence types grows — each new combination requires a new table
-    entry and associated body-transform function.
+### Per-family schema validation
 
-    In a future release, CVK anticipates a shift to
-    **[ygot](https://github.com/openconfig/ygot)-generated typed Go bindings**
-    per IOS-XE release family. ygot would generate structs directly from the
-    Cisco YANG models and provide compile-time safety, automated serialisation,
-    and structural validation without manual `ElementMap` entries. The
-    validation boundary at
-    `internal/drivers/iosxe/configdriver/validation` is already designed as the
-    seam for this migration: ygot validators would plug in there and validate
-    the device-facing YANG payload, leaving the public NetAsCode intent model
-    unchanged.
+CVK uses **goyang-extracted, per-family Go schema packages** as CI-time
+validators. For each config family the generator navigates the resolved native
+YANG entry tree to the terminal container or list declared in `yang_paths`,
+serialises that sub-tree to a gzip-JSON blob, and embeds it as a `ySchema`
+byte literal in `schema.go`. This approach avoids ygot code generation
+entirely — no 125 MB generated files, no 32 GB memory peaks.
 
-    **What this means for operators and contributors today:**
-    - The public `IOSXEConfig.spec.source` NetAsCode intent shape will remain
-      stable across this migration — you will not need to change your intent
-      YAML when the internal transport layer moves to ygot.
-    - New family contributions should continue using the override table pattern
-      described in this document until the ygot migration lands.
-    - Track progress and participate in design discussion on
-      [GitHub Discussions](https://github.com/cisco-open/cisco-virtual-kubelet/discussions).
+**Runtime is unchanged.** The override table, map-shaped writers, and engine
+are not modified by this system. The generated packages are never imported at
+runtime — they register a `cfgvalidation.FamilySchemaValidator` from their
+`init()` function, and the fixture harness calls `Lookup(family, releaseTag)`
+to validate every op body against the schema during `go test`.
+
+```
+BUILD / CI TIME
+  families.yaml (yang_paths per family)
+      │
+      ▼
+  computeModuleClosure() — goyang BFS over import+include graph
+      │  produces minimal module set per family
+      ▼
+  extractFamilySchemaEntries() — ms.Process() resolves augments;
+      │  navigates nativeEntry.Dir to terminal container/list
+      ▼
+  buildFamilyYSchema() — gzip-JSON blob of the terminal entry sub-tree
+      │
+      ▼
+  internal/drivers/iosxe/configdriver/generated/<release>/<family>/
+    schema.go    (goyang-based gzip blob, UnzipSchema function)
+    register.go  (calls cfgvalidation.Register from init())
+
+CI VALIDATOR (fixture_test.go)
+  writer.Diff() → expected_ops.json op bodies
+      │
+      ▼
+  validateOpsAgainstGeneratedSchema()
+      │
+      ├── validator registered  → validateJSONEntry() — structural check
+      └── no validator          → silently skipped (incremental rollout)
+```
+
+**Generated packages** live under
+`internal/drivers/iosxe/configdriver/generated/`. They are committed to the
+repo so CI can verify drift without re-running the full YANG toolchain on every
+PR. The `make ygot-validate-gen RELEASE=<tag>` target regenerates them.
+
+**Schema coverage limitations.** Each family's schema is extracted from a
+module closure computed by tracing import/include graphs outward from the
+modules named in `yang_paths`. Modules that *augment* the native tree
+(e.g. `Cisco-IOS-XE-aaa`) are not found by this traversal unless they appear
+as a `Module:` prefix in the family's `yang_paths`. When augmenting modules
+are absent the terminal entry's `Dir` is empty and the validator skips that
+container rather than producing false positives.
+
+**Skip policy.** A family is skipped (emits a compilable stub schema.go) when:
+- its `yang_paths` resolve to no module prefixes in the YANG directory,
+- the extracted schema blob exceeds 512 KB (e.g. `system` with `/native` as
+  its target — the entire native tree), or
+- the path is not present in the YANG model for that release.
+Skipped families are listed in `generated/SKIPLIST.md`.
+
+**Validation strictness mode.** By default the validator is lenient: unknown
+fields and structural type mismatches are silently skipped so fixtures that
+reference deprecated YANG paths or fields from augmenting modules outside the
+closure do not fail CI. Set `CVK_SCHEMA_VALIDATION=strict` to enable strict
+mode, which reports these discrepancies as hard errors:
+
+```bash
+# Surface all YANG schema discrepancies in fixture data:
+CVK_SCHEMA_VALIDATION=strict \
+  go test ./internal/drivers/iosxe/configdriver/writers/... -run TestFixtures
+```
+
+Strict-mode failures indicate one of:
+- a fixture uses a field name not present in the YANG schema for that release
+  (e.g. a deprecated or augmented field — fix by updating the fixture),
+- the schema closure is incomplete and the augmenting module needs to be added
+  to the family's `yang_paths` (e.g. a `Module:field` prefix is missing).
+
+The default lenient mode keeps CI green while these root causes are addressed
+incrementally. See `generated/SKIPLIST.md` for the current skip list.
 
 ### Intent, Translation, Validation Boundary
 

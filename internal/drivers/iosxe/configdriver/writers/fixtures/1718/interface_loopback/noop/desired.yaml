@@ -1,0 +1,6 @@
+# Already-converged: Loopback0 already configured.
+interfaces:
+  - name: "0"
+    description: mgmt-loopback
+    ipv4_address: "10.0.0.1"
+    ipv4_address_mask: "255.255.255.255"

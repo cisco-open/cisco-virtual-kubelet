@@ -1,0 +1,13 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ip/ssh",
+    "body": {
+      "Cisco-IOS-XE-native:ssh": {
+        "authentication-retries": 3,
+        "time-out": 60,
+        "version": 2
+      }
+    }
+  }
+]

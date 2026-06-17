@@ -1,0 +1,4 @@
+# NetAsCode desired body for ip_name_server on IOS-XE 17.18.
+no-vrf:
+  - 8.8.8.8
+  - 8.8.4.4

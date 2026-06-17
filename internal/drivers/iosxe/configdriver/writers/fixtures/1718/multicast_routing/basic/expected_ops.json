@@ -1,0 +1,11 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ip/Cisco-IOS-XE-multicast:multicast-routing",
+    "body": {
+      "Cisco-IOS-XE-multicast:multicast-routing": {
+        "distributed": true
+      }
+    }
+  }
+]

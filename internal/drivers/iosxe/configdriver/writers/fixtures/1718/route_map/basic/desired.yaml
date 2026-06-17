@@ -1,0 +1,6 @@
+# Permit route-map with one sequence entry.
+route_maps:
+  - name: RM-TEST
+    sequence:
+      - sequence: 10
+        operation: permit

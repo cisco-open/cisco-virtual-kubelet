@@ -1,0 +1,20 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/aaa/Cisco-IOS-XE-aaa:authentication",
+    "body": {
+      "Cisco-IOS-XE-aaa:authentication": {
+        "login": [
+          {
+            "a1": {
+              "local": [
+                null
+              ]
+            },
+            "name": "default"
+          }
+        ]
+      }
+    }
+  }
+]

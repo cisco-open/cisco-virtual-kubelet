@@ -1,0 +1,7 @@
+# TACACS+ server with IPv4 address and pre-shared key.
+servers:
+  - name: TACACS-1
+    address-ipv4: "10.0.0.51"
+    key:
+      type: 0
+      key: secret456

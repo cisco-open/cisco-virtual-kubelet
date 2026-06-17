@@ -54,10 +54,15 @@ func ipv6PIMFetchShape(fetched map[string]any) map[string]any {
 		}
 		switch key {
 		case "rp-address":
-			if m, ok := v.(map[string]any); ok {
-				if addr, ok := m["address"]; ok {
+			switch tv := v.(type) {
+			case map[string]any:
+				// Device wire format: {address: "..."}
+				if addr, ok := tv["address"]; ok {
 					out["rp-address"] = addr
 				}
+			default:
+				// Canonical desired format: scalar string; pass through unchanged.
+				out["rp-address"] = v
 			}
 		default:
 			out[key] = v

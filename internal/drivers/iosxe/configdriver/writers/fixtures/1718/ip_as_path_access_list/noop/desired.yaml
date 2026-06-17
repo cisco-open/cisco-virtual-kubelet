@@ -1,0 +1,7 @@
+# Already-converged: AS-path ACL 1 already present.
+as_path_access_lists:
+  - name: "1"
+    action-list:
+      - seq_num: 10
+        action: permit
+        as-path: "^65001_"

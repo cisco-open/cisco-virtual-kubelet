@@ -1,0 +1,6 @@
+# Vlan1 interface with IPv4 address for management.
+interfaces:
+  - name: "1"
+    description: native-vlan
+    ipv4_address: "192.168.1.1"
+    ipv4_address_mask: "255.255.255.0"

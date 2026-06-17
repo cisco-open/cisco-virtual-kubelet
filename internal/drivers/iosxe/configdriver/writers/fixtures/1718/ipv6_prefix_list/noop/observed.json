@@ -1,0 +1,1 @@
+[{"name": "PL6-TEST", "sequences": [{"no": 10, "action": "permit", "ipv6-prefix": "2001:db8::/32"}]}]

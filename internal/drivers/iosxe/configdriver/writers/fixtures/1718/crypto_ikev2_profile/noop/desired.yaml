@@ -1,0 +1,6 @@
+# Already-converged: IKEv2 profile already on device.
+- name: IKE-PROF1
+  match:
+    identity:
+      remote:
+        any: null

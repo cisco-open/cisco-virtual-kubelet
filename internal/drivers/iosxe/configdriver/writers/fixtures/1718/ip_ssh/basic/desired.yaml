@@ -1,0 +1,4 @@
+# SSH version 2, 60-second timeout, 3 retries.
+version: 2
+time-out: 60
+authentication-retries: 3

@@ -1,0 +1,19 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/ip/dhcp",
+    "body": {
+      "Cisco-IOS-XE-native:dhcp": {
+        "Cisco-IOS-XE-dhcp:pool": [
+          {
+            "id": "MGMT",
+            "network": {
+              "mask": "255.255.255.0",
+              "number": "10.0.0.0"
+            }
+          }
+        ]
+      }
+    }
+  }
+]

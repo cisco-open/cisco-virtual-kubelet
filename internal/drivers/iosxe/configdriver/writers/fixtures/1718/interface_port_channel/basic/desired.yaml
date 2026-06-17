@@ -1,0 +1,4 @@
+# Port-channel1 for link aggregation.
+interfaces:
+  - name: "1"
+    description: bond0

@@ -1,0 +1,8 @@
+# NetAsCode-shaped desired body for vlan on IOS-XE 17.18.
+# Creates two VLANs: 10 (users) and 20 (voice, shutdown).
+vlans:
+  - id: 10
+    name: users
+  - id: 20
+    name: voice
+    shutdown: true

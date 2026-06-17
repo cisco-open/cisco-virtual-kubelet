@@ -1,0 +1,5 @@
+# Already-converged: GigabitEthernet1 already configured.
+interfaces:
+  - name: "1"
+    type: GigabitEthernet
+    description: uplink

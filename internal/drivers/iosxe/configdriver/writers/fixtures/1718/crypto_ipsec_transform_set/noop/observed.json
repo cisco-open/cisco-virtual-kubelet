@@ -1,0 +1,1 @@
+[{"tag": "ESP-AES-SHA", "esp": {"encryption": "esp-aes", "hash": "esp-sha-hmac"}, "mode": {"tunnel": true}}]

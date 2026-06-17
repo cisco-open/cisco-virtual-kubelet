@@ -1,0 +1,20 @@
+[
+  {
+    "verb": "MERGE",
+    "path": "/Cisco-IOS-XE-native:native/crypto/ikev2/profile",
+    "body": {
+      "Cisco-IOS-XE-crypto:profile": [
+        {
+          "match": {
+            "identity": {
+              "remote": {
+                "any": null
+              }
+            }
+          },
+          "name": "IKE-PROF1"
+        }
+      ]
+    }
+  }
+]
