@@ -10,6 +10,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -350,12 +351,12 @@ func (r *CommonConfigReconciler) reconcileOne(
 	resolved, err := r.resolveIntent(ctx, cr)
 	if err != nil {
 		recordErr := r.recordFailure(ctx, cr, fmt.Sprintf("resolve: %v", err))
-		return engine.Result{Phase: engine.PhaseFailed, Err: err}, recordErr
+		return engine.Result{Phase: engine.PhaseFailed, Err: err}, errors.Join(err, recordErr)
 	}
 	hash, err := intent.CanonicalHash(resolved)
 	if err != nil {
 		recordErr := r.recordFailure(ctx, cr, fmt.Sprintf("hash: %v", err))
-		return engine.Result{Phase: engine.PhaseFailed, Err: err}, recordErr
+		return engine.Result{Phase: engine.PhaseFailed, Err: err}, errors.Join(err, recordErr)
 	}
 	status := r.Platform.Status(cr)
 	if trigger != triggerSubscribe &&

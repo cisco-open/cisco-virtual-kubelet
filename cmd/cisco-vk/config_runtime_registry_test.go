@@ -9,6 +9,7 @@
 package main
 
 import (
+	"sync"
 	"testing"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
@@ -22,5 +23,13 @@ func TestConfigRuntimeRegistryHasDeviceCentricPlatforms(t *testing.T) {
 		if _, ok := lookupConfigRuntime(driver); !ok {
 			t.Fatalf("config runtime for %s is not registered; registered=%v", driver, registeredConfigRuntimes())
 		}
+	}
+}
+
+func TestConfigDriverBuildOptionsCarriesSessionLock(t *testing.T) {
+	lock := &sync.Mutex{}
+	opts := configDriverBuildOptions(configReconcilerOptions{SessionLock: lock})
+	if opts.SessionLock != lock {
+		t.Fatalf("SessionLock=%p, want %p", opts.SessionLock, lock)
 	}
 }

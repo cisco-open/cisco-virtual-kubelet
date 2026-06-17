@@ -103,6 +103,12 @@ type configReconcilerOptions struct {
 	CorrelationCache *correlation.Cache
 }
 
+func configDriverBuildOptions(opts configReconcilerOptions) drivers.ConfigDriverOptions {
+	return drivers.ConfigDriverOptions{
+		SessionLock: opts.SessionLock,
+	}
+}
+
 // startConfigReconciler builds a controller-runtime client, asks
 // the platform-agnostic registry for a ConfigDriverContext that
 // matches CiscoDevice.spec.driver, and starts the reconciler
@@ -230,9 +236,7 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	// Spawn an async loop instead and proceed with whatever the
 	// reconciler has now; SetTransport patches it in when the dial
 	// eventually succeeds.
-	dctx, dErr := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, drivers.ConfigDriverOptions{
-		SessionLock: opts.SessionLock,
-	})
+	dctx, dErr := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, configDriverBuildOptions(opts))
 	if dErr != nil {
 		log.G(ctx).WithError(dErr).Warn("config driver dial failed at startup; will retry in background")
 	}

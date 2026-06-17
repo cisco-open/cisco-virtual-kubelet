@@ -118,6 +118,47 @@ func TestNXOSConfigReconcilerRecordsInSync(t *testing.T) {
 	}
 }
 
+func TestNXOSConfigReconcilerReturnsResolveErrorAfterRecordingFailure(t *testing.T) {
+	scheme := newTestScheme(t)
+	cr := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: "network", Generation: 1},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies: []string{"system"},
+			ModelSource:     &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			Source: configv1alpha1.ConfigurationSource{
+				ConfigMapRef: &configv1alpha1.ConfigMapKeyRef{Name: "missing", Key: "config.yaml"},
+			},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+		WithObjects(cr).
+		Build()
+	r := &NXOSConfigReconciler{
+		Client:     c,
+		DeviceName: "leaf-01",
+	}
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}})
+	if err == nil {
+		t.Fatal("Reconcile error=nil, want resolve error returned to controller-runtime")
+	}
+	if !strings.Contains(err.Error(), "get ConfigMap network/missing") {
+		t.Fatalf("Reconcile error=%q, want missing ConfigMap context", err)
+	}
+	var got configv1alpha1.NXOSConfig
+	if getErr := c.Get(context.Background(), types.NamespacedName{Namespace: "network", Name: "leaf-config"}, &got); getErr != nil {
+		t.Fatalf("get updated: %v", getErr)
+	}
+	if got.Status.Phase != "Failed" {
+		t.Fatalf("phase=%q status=%#v", got.Status.Phase, got.Status)
+	}
+	if len(got.Status.Conditions) == 0 || got.Status.Conditions[0].Reason != "ReconcileFailed" {
+		t.Fatalf("conditions=%#v", got.Status.Conditions)
+	}
+}
+
 func TestNXOSConfigReconcilerRuntimeOptions(t *testing.T) {
 	scheme := newTestScheme(t)
 	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01"}}`)}

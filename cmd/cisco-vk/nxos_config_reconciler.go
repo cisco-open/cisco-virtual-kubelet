@@ -92,7 +92,7 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 		return fmt.Errorf("build NXOSConfig manager: %w", err)
 	}
 
-	dctx, dErr := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, drivers.ConfigDriverOptions{})
+	dctx, dErr := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, configDriverBuildOptions(opts))
 	if dErr != nil {
 		log.G(ctx).WithError(dErr).Warn("NXOSConfig driver transport failed at startup; reconciler will report Pending")
 	}
@@ -188,9 +188,7 @@ func retryNXOSConfigDriverDial(ctx context.Context, opts configReconcilerOptions
 			return
 		case <-tick.C:
 		}
-		next, err := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, drivers.ConfigDriverOptions{
-			SessionLock: opts.SessionLock,
-		})
+		next, err := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, configDriverBuildOptions(opts))
 		if err != nil || next == nil || next.Transport == nil {
 			log.G(ctx).WithError(err).
 				WithField("attempt", attempt).
