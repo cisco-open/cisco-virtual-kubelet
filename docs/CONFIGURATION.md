@@ -60,9 +60,9 @@ Runtime settings are **not** in the config file — they are passed as flags or 
 
 | Field | Type | Required | Default | Notes |
 |---|---|---|---|---|
-| `driver` | enum | yes | — | `XE`, `XR`, `NXOS`, `OPENCONFIG`, `FAKE`. Only `XE` and `FAKE` are production-usable today. |
+| `driver` | enum | yes | — | `XE`, `NXOS`, `XR`, `OPENCONFIG`, `FAKE`. `XE` is the broadest production driver. `NXOS` supports NX-API app-hosting plus the initial `NXOSConfig` Network as Code slice (`system`, `vlan`, `interface_ethernet`). `XR` and `OPENCONFIG` remain reserved placeholders. |
 | `address` | string | yes | — | Management IP or hostname |
-| `port` | int (1–65535) | no | 443 (TLS) / 80 | RESTCONF port |
+| `port` | int (1–65535) | no | 443 (TLS) / 80 | Device API port. IOS-XE uses RESTCONF/NETCONF/gNMI depending on transport; NX-OS uses NX-API over HTTP(S). |
 | `username` | string | yes | — | Device username |
 | `password` | string | no | — | Device password. **Do not set in controller mode** — use `credentialSecretRef` instead. |
 | `credentialSecretRef` | LocalObjectReference | no | — | Reference to a `Secret` in the same namespace containing key `password`. See [Security](security.md#credential-injection). |

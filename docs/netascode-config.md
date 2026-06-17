@@ -1,28 +1,31 @@
 # Network as Code — Configuration and Drift Detection
 
 !!! warning "Beta"
-    `IOSXEConfig` and the Network as Code feature set are **Beta**
+    `IOSXEConfig`, `NXOSConfig`, and the Network as Code feature set are **Beta**
     (`v1alpha1`). The family API, CRD schema, and drift semantics are
     functional and integration-tested. Schema fields may change between
     releases. Evaluate in non-production environments before broader rollout.
 
-Cisco Virtual Kubelet extends Kubernetes with declarative IOS-XE
-configuration management. You express network intent as plain YAML
-(`IOSXEConfig` CRs), and CVK reconciles the device to match — detecting
-drift, applying changes, and maintaining a revision trail.
+Cisco Virtual Kubelet extends Kubernetes with declarative device configuration
+management. You express network intent as plain YAML (`IOSXEConfig` or
+`NXOSConfig` CRs), and CVK reconciles the device to match — detecting drift,
+applying changes, and verifying observed state after apply. IOS-XE has the
+broadest family coverage and revision/apply-log history; NX-OS starts with a
+per-device NX-API slice for `system`, `vlan`, and `interface_ethernet`.
 
 ## Concepts
 
 ### Families
 
-A *family* is one independently managed slice of IOS-XE configuration —
-`vlan`, `bgp`, `ospf`, `aaa`, `prefix_list`, and so on. Each family has
-its own writer that knows how to fetch, diff, and patch the relevant YANG
-paths on the device.
+A *family* is one independently managed slice of device configuration:
+`vlan`, `bgp`, `ospf`, `aaa`, `prefix_list`, and so on for IOS-XE, and
+`system`, `vlan`, and `interface_ethernet` for the initial NX-OS slice. Each
+family has its own writer that knows how to fetch, diff, and patch the relevant
+device state.
 
-Each `IOSXEConfig` lists the families it owns via `managedFamilies`. CVK
-only touches those families; everything else on the device is left
-untouched.
+Each `IOSXEConfig` or `NXOSConfig` lists the families it owns via
+`managedFamilies`. CVK only touches those families; everything else on the
+device is left untouched.
 
 ### Intent hierarchy
 
@@ -53,7 +56,8 @@ triggers a `Drifted` phase. The `driftPolicy` field controls what happens:
 | `driftPolicy` | Behaviour |
 |---|---|
 | `report` | Log the diff and surface it in `status`; do not patch. |
-| `apply` | Re-apply the intended family config immediately. |
+| `revert` | Re-apply the intended family config immediately. |
+| `pause` | Stop reconciliation until the CR is changed or the pause is removed. |
 
 `driftDetectInterval` sets how frequently CVK polls for drift (default
 `5m`).
@@ -145,11 +149,11 @@ Events:
   Warning  Drifted  30s   family vlan: 1 leaf divergence (driftPolicy=report)
 ```
 
-Switch to `driftPolicy: apply` to have CVK automatically remediate:
+Switch to `driftPolicy: revert` to have CVK automatically remediate:
 
 ```bash
 kubectl patch iosxeconfig access-vlans \
-  --type=merge -p '{"spec":{"driftPolicy":"apply"}}'
+  --type=merge -p '{"spec":{"driftPolicy":"revert"}}'
 ```
 
 ---
@@ -172,7 +176,7 @@ spec:
     - spanning_tree
     - snmp_server
     - logging
-  driftPolicy: apply
+  driftPolicy: revert
   writeStartup: true
   source:
     inline:
@@ -221,7 +225,7 @@ spec:
     spec:
       managedFamilies:
         - vlan
-      driftPolicy: apply
+      driftPolicy: revert
       writeStartup: true
       source:
         inline:
@@ -393,11 +397,46 @@ iterative development to keep changes transient.
 
 ---
 
+## NX-OS quick start
+
+Use `NXOSConfig` for NX-OS devices. It uses the same common status and
+drift-policy fields as `IOSXEConfig`, but the first runtime slice is scoped to
+`system`, `vlan`, and `interface_ethernet` over NX-API.
+
+```yaml
+apiVersion: config.cisco.vk/v1alpha1
+kind: NXOSConfig
+metadata:
+  name: nexus9300v-system
+  namespace: default
+spec:
+  deviceRef:
+    name: nexus9300v-01
+  managedFamilies:
+    - system
+  driftPolicy: report
+  modelSource:
+    format: netascode-nxos
+    resolved: true
+  source:
+    inline:
+      system:
+        hostname: nexus9300v-01
+```
+
+```bash
+$ kubectl get nxosconfig
+NAME                  DEVICE          PHASE    DRIFT    AGE
+nexus9300v-system     nexus9300v-01   InSync   report   30s
+```
+
+---
+
 ## Available configuration families
 
-For a complete reference of all available families and their YAML shapes,
-see the [Family Reference](reference/families/README.md). For YANG version
-compatibility and the version override architecture, see
+For a complete reference of all available IOS-XE families and their YAML
+shapes, see the [Family Reference](reference/families/README.md). For YANG
+version compatibility and the version override architecture, see
 [YANG Version Support](yang-version-support.md).
 
 Key families available today:

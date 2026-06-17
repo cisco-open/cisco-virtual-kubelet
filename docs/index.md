@@ -1,8 +1,8 @@
 # Welcome to Cisco Virtual Kubelet
 
 A [Virtual Kubelet](https://virtual-kubelet.io/) provider that lets Kubernetes
-schedule container workloads directly onto Cisco Catalyst series switches and
-IOS-XE devices with App-Hosting capabilities.
+schedule container workloads directly onto Cisco IOS-XE and NX-OS devices with
+App-Hosting capabilities.
 
 **Make your network infrastructure a first-class Kubernetes citizen.**
 
@@ -16,17 +16,17 @@ Four ideas you'll see referenced throughout the docs:
   handles pod lifecycle however it likes. This project is a provider for Cisco
   devices.
 - **IOx / App-Hosting** - Cisco's on-device container runtime, available on
-  Catalyst 8000V, Catalyst 9000, IR1100 Series, and IE3500 Series platforms. It runs OCI-like
-  container packages (`.tar` files) directly on the device alongside normal
-  network functions.
+  Catalyst 8000V, Catalyst 9000, IR1100 Series, IE3500 Series, and supported
+  NX-OS platforms. It runs OCI-like container packages (`.tar` files) directly
+  on the device alongside normal network functions.
 - **Network as Code CRDs** - Kubernetes resources such as `IOSXEConfig`,
-  `IOSXEConfigBundle`, `IOSXETelemetry`, `DeviceOperation`, and
+  `NXOSConfig`, `IOSXEConfigBundle`, `IOSXETelemetry`, `DeviceOperation`, and
   `IOSXESoftwareUpgrade` that express device configuration, telemetry,
   diagnostics, and operations as Kubernetes API objects.
-- **RESTCONF, NETCONF, gNMI, and gNOI** - IOS-XE management protocols used by
-  the provider. App-hosting lifecycle still uses RESTCONF; declarative config
-  can use RESTCONF, NETCONF, or gNMI; telemetry and software operations use
-  gNMI/gNOI.
+- **RESTCONF, NETCONF, gNMI, gNOI, and NX-API** - management protocols used by
+  the provider. IOS-XE app-hosting lifecycle uses RESTCONF; NX-OS app-hosting
+  and configuration use NX-API; declarative IOS-XE config can use RESTCONF,
+  NETCONF, or gNMI; telemetry and software operations use gNMI/gNOI.
 
 Put those together: each Cisco device becomes a virtual node in your cluster.
 Pods scheduled to that node run as App-Hosting containers on the device, while
@@ -37,12 +37,12 @@ Kubernetes API
   -> CiscoDevice
   -> per-device cisco-vk pod
   -> virtual node
-  -> pods as IOS-XE app-hosting containers
+  -> pods as device app-hosting containers
 
 Kubernetes API
   -> config.cisco.vk and ops.cisco.vk CRDs
   -> config, telemetry, operation, and software lifecycle reconcilers
-  -> IOS-XE through RESTCONF, NETCONF, gNMI, and gNOI
+  -> devices through RESTCONF, NETCONF, gNMI, gNOI, or NX-API
 ```
 
 ## What it does
@@ -50,12 +50,15 @@ Kubernetes API
 - **Native Kubernetes integration** - deploy to Cisco devices with standard
   `kubectl apply`. No separate lifecycle is required for app-hosted pods.
 - **Driver-based architecture** - extensible driver pattern with IOS-XE
-  (Catalyst 8000V, Catalyst 9000, IR1100 Series, and IE3500 Series) available today.
+  (Catalyst 8000V, Catalyst 9000, IR1100 Series, and IE3500 Series) and the
+  initial NX-OS runtime slice available today.
 - **Full pod lifecycle** - create, update, recover, and delete containers via
-  RESTCONF, with automatic state reconciliation and pod recovery.
-- **Network as Code** - declarative IOS-XE configuration CRDs with defaults,
-  group targeting, templates, bundles, revisions, drift detection, and apply
-  logs.
+  the platform driver transport, with automatic state reconciliation and pod
+  recovery.
+- **Network as Code** - declarative IOS-XE and NX-OS configuration CRDs with
+  drift detection and verify-after-apply reconciliation. IOS-XE includes
+  defaults, group targeting, templates, bundles, revisions, and apply logs;
+  NX-OS starts with per-device `NXOSConfig` over NX-API.
 - **Operations and upgrades** - read-only diagnostics, gNOI probes,
   write-class operational actions, and multi-phase IOS-XE software upgrades
   behind explicit RBAC and runtime gates.
@@ -81,8 +84,9 @@ This project is under active development and is published as open source under
 - **CRD versions** - `cisco.vk/v1alpha1`, `config.cisco.vk/v1alpha1`, and
   `ops.cisco.vk/v1alpha1`. Breaking changes are still possible as the schemas
   stabilise.
-- **Drivers** - `XE` is production-focused; `FAKE` is for testing; `XR`,
-  `NXOS`, and `OPENCONFIG` are reserved driver names in the API surface.
+- **Drivers** - `XE` is production-focused; `NXOS` has a working NX-API
+  app-hosting and `NXOSConfig` runtime slice; `FAKE` is for testing; `XR` and
+  `OPENCONFIG` are reserved driver names in the API surface.
 - **Images** - images are not yet published to a public container registry.
   Build locally from a release tag or `main`, then push to a registry your
   cluster can pull from. See [Getting Started](getting-started.md).
@@ -96,7 +100,7 @@ summarises the current state for the June 2026 release.
 |---|---|---|
 | Pod lifecycle (App-Hosting create / update / delete) | **Stable** | Supported on Catalyst 8000V 17.15+, Catalyst 9000 17.18+, IR1100 Series 17.12+, and IE3500 Series 17.18+. |
 | `CiscoDevice` and VK deployment lifecycle | **Stable** | Controller-managed per-device VK pods. |
-| **Network as Code config driver** (`IOSXEConfig` family) | **Beta** | Declarative IOS-XE config CRDs with drift detection, bundles, revisions, and apply logs. Schema is `v1alpha1`; family coverage and wire-format behaviour are still expanding. |
+| **Network as Code config driver** (`IOSXEConfig`, `NXOSConfig`) | **Beta** | Declarative IOS-XE and NX-OS config CRDs with drift detection, revisions, and verification. IOS-XE has broader family coverage; NX-OS starts with `system`, `vlan`, and `interface_ethernet` over NX-API. Schema is `v1alpha1`; family coverage and wire-format behaviour are still expanding. |
 | **Operations** (`DeviceOperation`, `IOSXEOperationalAction`) | **Beta** | Read-only diagnostics and gNOI probes are stable in intent; write-class actions require an explicit runtime gate and carry additional operational risk. |
 | **Software Lifecycle** (`IOSXESoftwareUpgrade`) | **Beta** | Multi-phase gNOI OS install/activate/verify. Disabled by default; requires `--enable-iosxesoftwareupgrade`. Tested on limited platforms. |
 | **Telemetry** (`IOSXETelemetry`) | **Beta** | MDT-over-gNMI subscriptions converted to OpenTelemetry signals. Pipeline architecture is stable; subscription schema is `v1alpha1`. |
@@ -115,7 +119,7 @@ summarises the current state for the June 2026 release.
 - [Architecture](ARCHITECTURE.md) - how the pieces fit together
 - [Configuration](CONFIGURATION.md) - `CiscoDevice` and VK configuration fields
 - [CRD Reference](crds.md) - every shipped CRD and when to use it
-- [Family Reference](reference/families/README.md) - generated IOS-XE config family coverage
+- [Family Reference](reference/families/README.md) - generated Network as Code config family coverage
 - [gNOI and Software Lifecycle](gnoi-software-lifecycle.md) - device operations, write-class actions, and IOS-XE software upgrades
 - [Operations Runbook](operations.md) - DeviceOperation, operational actions, and upgrade examples
 - [Telemetry](telemetry.md) - gNMI subscriptions and OpenTelemetry output
@@ -134,7 +138,7 @@ summarises the current state for the June 2026 release.
 | **gNMI** | gRPC Network Management Interface, used for model-driven telemetry and optional config transport. |
 | **gNOI** | gRPC Network Operations Interface, used for read-only probes, file operations, reboot, factory reset, and software upgrade flows. |
 | **IOx** | Cisco's on-device application hosting framework, including App-Hosting. |
-| **Network as Code** | Declarative IOS-XE intent shape consumed by `IOSXEConfig` and related config CRDs. |
+| **Network as Code** | Declarative intent shape consumed by `IOSXEConfig`, `NXOSConfig`, and related config CRDs. |
 | **OTEL / OpenTelemetry** | Vendor-neutral observability framework; this project emits OTEL traces and metrics. |
 | **RESTCONF** | HTTP/JSON management API for network devices, defined by [RFC 8040](https://datatracker.ietf.org/doc/html/rfc8040), modeled by YANG. |
 | **Virtual Kubelet** | [Upstream project](https://virtual-kubelet.io/) letting any system appear as a Kubernetes node. |
