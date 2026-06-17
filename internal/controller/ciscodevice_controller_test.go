@@ -113,6 +113,15 @@ func findEnvVar(env []corev1.EnvVar, name string) (corev1.EnvVar, bool) {
 	return corev1.EnvVar{}, false
 }
 
+func findWorkerCapability(items []ciskov1.WorkerCapabilityStatus, name ciskov1.WorkerCapabilityName) (ciskov1.WorkerCapabilityStatus, bool) {
+	for _, item := range items {
+		if item.Name == name {
+			return item, true
+		}
+	}
+	return ciskov1.WorkerCapabilityStatus{}, false
+}
+
 func nonTelemetryEnv(env []corev1.EnvVar) []corev1.EnvVar {
 	out := make([]corev1.EnvVar, 0, len(env))
 	for _, item := range env {
@@ -227,6 +236,26 @@ func TestReconcile_CreatesDeployment(t *testing.T) {
 	}
 	if len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts) != 2 {
 		t.Errorf("expected 2 volume mounts (device-config, tls-gen), got %d", len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts))
+	}
+
+	var gotDevice ciskov1.CiscoDevice
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-b"}, &gotDevice); err != nil {
+		t.Fatalf("CiscoDevice not found after reconcile: %v", err)
+	}
+	if gotDevice.Status.WorkerTopology != ciskov1.WorkerTopologyPerDevice {
+		t.Fatalf("WorkerTopology=%q, want %q", gotDevice.Status.WorkerTopology, ciskov1.WorkerTopologyPerDevice)
+	}
+	capability, ok := findWorkerCapability(gotDevice.Status.WorkerCapabilities, ciskov1.WorkerCapabilityConfig)
+	if !ok {
+		t.Fatalf("status capabilities=%v missing config", gotDevice.Status.WorkerCapabilities)
+	}
+	if !capability.Enabled || capability.Runtime != ciskov1.WorkerRuntimePerDeviceWorker {
+		t.Fatalf("config capability=%+v, want enabled on per-device worker", capability)
+	}
+	if gotDevice.Status.NetAsCode == nil ||
+		gotDevice.Status.NetAsCode.Type != ciskov1.NetAsCodeModelDeviceCentric ||
+		gotDevice.Status.NetAsCode.Stripe != "iosxe" {
+		t.Fatalf("NetAsCode status=%+v, want iosxe device-centric", gotDevice.Status.NetAsCode)
 	}
 }
 

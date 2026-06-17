@@ -531,6 +531,36 @@ spec:
                   - type
                   type: object
                 type: array
+              netAsCode:
+                description: |-
+                  NetAsCode records the Network as Code model stripe this device should
+                  align with. It is descriptive status: the platform-specific config CRDs
+                  remain the source of desired intent.
+                properties:
+                  format:
+                    description: |-
+                      Format is the platform model format string used by config CRDs, for
+                      example netascode-iosxe or netascode-nxos.
+                    type: string
+                  sections:
+                    description: Sections names the high-level NetAsCode sections
+                      used for this stripe.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                  stripe:
+                    description: Stripe is the technology stripe, for example iosxe,
+                      nxos, ise, or fmc.
+                    type: string
+                  type:
+                    description: Type is the Network as Code model category.
+                    enum:
+                    - ControllerCentric
+                    - DeviceCentric
+                    - SolutionCentric
+                    type: string
+                type: object
               phase:
                 description: Phase represents the current lifecycle phase of the device.
                 enum:
@@ -539,6 +569,63 @@ spec:
                 - Ready
                 - Error
                 - Deleting
+                type: string
+              workerCapabilities:
+                description: |-
+                  WorkerCapabilities is a bounded summary of the runtimes the current
+                  topology exposes for this device. It gives later topology-aware
+                  orchestrators a stable read surface without moving execution out of
+                  per-device workers.
+                items:
+                  description: |-
+                    WorkerCapabilityStatus reports whether a device capability is active in
+                    the current execution topology.
+                  properties:
+                    enabled:
+                      description: Enabled is true when the current topology exposes
+                        this capability.
+                      type: boolean
+                    message:
+                      description: |-
+                        Message is a short human-readable explanation for disabled or shifted
+                        capabilities.
+                      type: string
+                    name:
+                      description: Name is the stable capability key.
+                      enum:
+                      - apphosting
+                      - config
+                      - telemetry
+                      - diagnostics
+                      - operations
+                      - lifecycle
+                      type: string
+                    runtime:
+                      description: Runtime names the process topology that owns the
+                        capability.
+                      enum:
+                      - per-device-worker
+                      - manager-aggregator
+                      type: string
+                  required:
+                  - enabled
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              workerTopology:
+                description: |-
+                  WorkerTopology records where device-local work is currently executed.
+                  The production default is PerDevice: one horizontally scheduled CVK
+                  worker owns apphosting, config, telemetry, diagnostics, and lifecycle
+                  actions for this device. Aggregated is reserved for opt-in manager-side
+                  config aggregation and must not be assumed by future orchestrators.
+                enum:
+                - PerDevice
+                - Aggregated
+                - None
                 type: string
             type: object
         required:

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -41,6 +42,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/platforms"
 	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
 )
 
@@ -1327,8 +1329,14 @@ func (r *CiscoDeviceReconciler) lookupCredentialResourceVersion(ctx context.Cont
 // updateStatus patches the CiscoDevice status based on the Deployment state.
 func (r *CiscoDeviceReconciler) updateStatus(ctx context.Context, device *ciskov1.CiscoDevice, deploy *appsv1.Deployment) error {
 	var phase string
+	topology := ciskov1.WorkerTopologyPerDevice
 	if deploy == nil {
 		phase = "Ready"
+		if r.AggregatorEnabled && drivers.ConfigDriverRegistered(device.Spec.Driver) {
+			topology = ciskov1.WorkerTopologyAggregated
+		} else {
+			topology = ciskov1.WorkerTopologyNone
+		}
 	} else {
 		// Re-fetch deployment to get latest status.
 		var current appsv1.Deployment
@@ -1341,8 +1349,21 @@ func (r *CiscoDeviceReconciler) updateStatus(ctx context.Context, device *ciskov
 		}
 	}
 
-	if device.Status.Phase != phase {
+	capabilities := platforms.WorkerCapabilityStatuses(device.Spec.Driver, topology)
+	var netAsCode *ciskov1.NetAsCodeModelStatus
+	if descriptor, ok := platforms.ForDriver(device.Spec.Driver); ok {
+		model := descriptor.NetAsCode
+		netAsCode = &model
+	}
+
+	if device.Status.Phase != phase ||
+		device.Status.WorkerTopology != topology ||
+		!reflect.DeepEqual(device.Status.WorkerCapabilities, capabilities) ||
+		!reflect.DeepEqual(device.Status.NetAsCode, netAsCode) {
 		device.Status.Phase = phase
+		device.Status.WorkerTopology = topology
+		device.Status.WorkerCapabilities = capabilities
+		device.Status.NetAsCode = netAsCode
 		if err := r.Status().Update(ctx, device); err != nil {
 			return fmt.Errorf("failed to update CiscoDevice status: %w", err)
 		}

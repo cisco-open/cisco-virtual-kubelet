@@ -252,6 +252,121 @@ type DeviceStatus struct {
 	// Conditions represent the latest available observations of the device's state.
 	// +kubebuilder:validation:Optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// WorkerTopology records where device-local work is currently executed.
+	// The production default is PerDevice: one horizontally scheduled CVK
+	// worker owns apphosting, config, telemetry, diagnostics, and lifecycle
+	// actions for this device. Aggregated is reserved for opt-in manager-side
+	// config aggregation and must not be assumed by future orchestrators.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=PerDevice;Aggregated;None
+	WorkerTopology WorkerTopology `json:"workerTopology,omitempty"`
+
+	// WorkerCapabilities is a bounded summary of the runtimes the current
+	// topology exposes for this device. It gives later topology-aware
+	// orchestrators a stable read surface without moving execution out of
+	// per-device workers.
+	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
+	WorkerCapabilities []WorkerCapabilityStatus `json:"workerCapabilities,omitempty"`
+
+	// NetAsCode records the Network as Code model stripe this device should
+	// align with. It is descriptive status: the platform-specific config CRDs
+	// remain the source of desired intent.
+	// +kubebuilder:validation:Optional
+	NetAsCode *NetAsCodeModelStatus `json:"netAsCode,omitempty"`
+}
+
+// WorkerTopology identifies the execution placement for per-device work.
+type WorkerTopology string
+
+const (
+	// WorkerTopologyPerDevice means a per-device CVK worker Deployment owns
+	// the device-local execution loops.
+	WorkerTopologyPerDevice WorkerTopology = "PerDevice"
+	// WorkerTopologyAggregated means the manager-side config aggregator owns
+	// config reconciliation for this device.
+	WorkerTopologyAggregated WorkerTopology = "Aggregated"
+	// WorkerTopologyNone means no CVK execution worker is active.
+	WorkerTopologyNone WorkerTopology = "None"
+)
+
+// WorkerCapabilityName is a stable, low-cardinality worker runtime name.
+type WorkerCapabilityName string
+
+const (
+	WorkerCapabilityAppHosting  WorkerCapabilityName = "apphosting"
+	WorkerCapabilityConfig      WorkerCapabilityName = "config"
+	WorkerCapabilityTelemetry   WorkerCapabilityName = "telemetry"
+	WorkerCapabilityDiagnostics WorkerCapabilityName = "diagnostics"
+	WorkerCapabilityOperations  WorkerCapabilityName = "operations"
+	WorkerCapabilityLifecycle   WorkerCapabilityName = "lifecycle"
+)
+
+// WorkerRuntime records the runtime that owns a capability.
+type WorkerRuntime string
+
+const (
+	WorkerRuntimePerDeviceWorker WorkerRuntime = "per-device-worker"
+	WorkerRuntimeAggregator      WorkerRuntime = "manager-aggregator"
+)
+
+// WorkerCapabilityStatus reports whether a device capability is active in
+// the current execution topology.
+type WorkerCapabilityStatus struct {
+	// Name is the stable capability key.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=apphosting;config;telemetry;diagnostics;operations;lifecycle
+	Name WorkerCapabilityName `json:"name"`
+
+	// Enabled is true when the current topology exposes this capability.
+	// +kubebuilder:validation:Required
+	Enabled bool `json:"enabled"`
+
+	// Runtime names the process topology that owns the capability.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=per-device-worker;manager-aggregator
+	Runtime WorkerRuntime `json:"runtime,omitempty"`
+
+	// Message is a short human-readable explanation for disabled or shifted
+	// capabilities.
+	// +kubebuilder:validation:Optional
+	Message string `json:"message,omitempty"`
+}
+
+// NetAsCodeModelType mirrors Network as Code's model categories: controller,
+// device, and solution centric.
+type NetAsCodeModelType string
+
+const (
+	NetAsCodeModelControllerCentric NetAsCodeModelType = "ControllerCentric"
+	NetAsCodeModelDeviceCentric     NetAsCodeModelType = "DeviceCentric"
+	NetAsCodeModelSolutionCentric   NetAsCodeModelType = "SolutionCentric"
+)
+
+// NetAsCodeModelStatus describes the Network as Code stripe aligned with a
+// platform. Keep this summary small; detailed family coverage belongs in the
+// platform config CRD and writer registry.
+type NetAsCodeModelStatus struct {
+	// Type is the Network as Code model category.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=ControllerCentric;DeviceCentric;SolutionCentric
+	Type NetAsCodeModelType `json:"type,omitempty"`
+
+	// Format is the platform model format string used by config CRDs, for
+	// example netascode-iosxe or netascode-nxos.
+	// +kubebuilder:validation:Optional
+	Format string `json:"format,omitempty"`
+
+	// Stripe is the technology stripe, for example iosxe, nxos, ise, or fmc.
+	// +kubebuilder:validation:Optional
+	Stripe string `json:"stripe,omitempty"`
+
+	// Sections names the high-level NetAsCode sections used for this stripe.
+	// +kubebuilder:validation:Optional
+	// +listType=set
+	Sections []string `json:"sections,omitempty"`
 }
 
 // TLSConfig represents TLS configuration for device communication.
