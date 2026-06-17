@@ -296,6 +296,22 @@ func TestReconcile_ProvisionsVKAccessInDeviceNamespace(t *testing.T) {
 	if subject.Kind != rbacv1.ServiceAccountKind || subject.Name != DefaultServiceAccount || subject.Namespace != "tenant-a" {
 		t.Fatalf("RoleBinding subject = %+v, want tenant ServiceAccount %s", subject, DefaultServiceAccount)
 	}
+
+	var crb rbacv1.ClusterRoleBinding
+	crbKey := types.NamespacedName{Name: vkAccessClusterRoleBindingName("tenant-a", DefaultServiceAccount)}
+	if err := r.Get(ctx, crbKey, &crb); err != nil {
+		t.Fatalf("ClusterRoleBinding not found after reconcile: %v", err)
+	}
+	if crb.RoleRef.APIGroup != rbacv1.GroupName || crb.RoleRef.Kind != "ClusterRole" || crb.RoleRef.Name != vkSharedClusterRole {
+		t.Fatalf("ClusterRoleBinding RoleRef = %+v, want ClusterRole %s", crb.RoleRef, vkSharedClusterRole)
+	}
+	if len(crb.Subjects) != 1 {
+		t.Fatalf("ClusterRoleBinding subjects = %+v, want exactly one ServiceAccount subject", crb.Subjects)
+	}
+	crbSubject := crb.Subjects[0]
+	if crbSubject.Kind != rbacv1.ServiceAccountKind || crbSubject.Name != DefaultServiceAccount || crbSubject.Namespace != "tenant-a" {
+		t.Fatalf("ClusterRoleBinding subject = %+v, want tenant ServiceAccount %s", crbSubject, DefaultServiceAccount)
+	}
 }
 
 func TestReconcile_DeploymentHasConfigHashAnnotation(t *testing.T) {

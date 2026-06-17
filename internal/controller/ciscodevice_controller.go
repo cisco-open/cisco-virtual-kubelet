@@ -183,9 +183,10 @@ type CiscoDeviceReconciler struct {
 // The controller spawns per-device cisco-vk Deployments in the device's
 // namespace and references a shared ServiceAccount. The chart only seeds that
 // ServiceAccount in the release namespace, so tenant namespaces need their own
-// local ServiceAccount and RoleBinding to the chart-supplied ClusterRole.
+// local ServiceAccount plus bindings to the chart-supplied ClusterRole.
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
 // Required by the API server's privilege-escalation check when binding the
 // chart-supplied ClusterRole into a tenant namespace.
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet,verbs=bind
@@ -232,6 +233,9 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			}
 
 			if err := r.deleteNode(ctx, device.Name); err != nil {
+				return ctrl.Result{}, err
+			}
+			if err := r.cleanupVKClusterAccess(ctx, &device, r.vkServiceAccountName()); err != nil {
 				return ctrl.Result{}, err
 			}
 			controllerutil.RemoveFinalizer(&device, ciscoDeviceFinalizer)
@@ -367,10 +371,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// -- 5b. Ensure VK SA + RoleBinding exist in the device's namespace --
-	serviceAccount := r.ServiceAccount
-	if serviceAccount == "" {
-		serviceAccount = DefaultServiceAccount
-	}
+	serviceAccount := r.vkServiceAccountName()
 	if err := r.ensureVKAccess(ctx, &device, serviceAccount); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure VK access: %w", err)
 	}
@@ -537,14 +538,32 @@ func reconcileResultAttribute(result ctrl.Result) string {
 }
 
 // vkSharedClusterRole is the cluster-scoped Role the chart ships with the VK
-// pod permissions baked in. The controller binds it into the device namespace
-// so per-device cisco-vk pods can run outside the chart release namespace.
+// pod permissions baked in. The controller binds it for per-device cisco-vk
+// pods so they can run outside the chart release namespace.
 const vkSharedClusterRole = "cisco-virtual-kubelet"
 
-// ensureVKAccess provisions the per-namespace bits the chart cannot: a
-// ServiceAccount and a RoleBinding to the chart-supplied ClusterRole. Both
-// objects are owned by the CiscoDevice so removing the device garbage-collects
-// them.
+func (r *CiscoDeviceReconciler) vkServiceAccountName() string {
+	if r.ServiceAccount != "" {
+		return r.ServiceAccount
+	}
+	return DefaultServiceAccount
+}
+
+func vkAccessClusterRoleBindingName(namespace, saName string) string {
+	raw := namespace + "-" + saName
+	suffix := "-" + shortHash(raw)
+	const prefix = "cisco-vk-"
+	maxRaw := 253 - len(prefix) - len(suffix)
+	if len(raw) > maxRaw {
+		raw = strings.TrimRight(raw[:maxRaw], "-")
+	}
+	return prefix + raw + suffix
+}
+
+// ensureVKAccess provisions the access bits the chart cannot: a ServiceAccount
+// in the device namespace, a namespaced RoleBinding for namespace-local
+// resources, and a ClusterRoleBinding for the cluster-scoped resources the VK
+// process owns (Nodes, Leases, and controller-runtime cluster watches).
 func (r *CiscoDeviceReconciler) ensureVKAccess(ctx context.Context, device *ciskov1.CiscoDevice, saName string) error {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -584,6 +603,46 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(ctx context.Context, device *cisk
 		return nil
 	}); err != nil {
 		return fmt.Errorf("RoleBinding %s/%s: %w", rb.Namespace, rb.Name, err)
+	}
+
+	crbName := vkAccessClusterRoleBindingName(device.Namespace, saName)
+	crb := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: crbName},
+	}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, crb, func() error {
+		crb.RoleRef = rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     vkSharedClusterRole,
+		}
+		crb.Subjects = []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      saName,
+			Namespace: device.Namespace,
+		}}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("ClusterRoleBinding %s: %w", crbName, err)
+	}
+	return nil
+}
+
+func (r *CiscoDeviceReconciler) cleanupVKClusterAccess(ctx context.Context, device *ciskov1.CiscoDevice, saName string) error {
+	var devices ciskov1.CiscoDeviceList
+	if err := r.List(ctx, &devices, client.InNamespace(device.Namespace)); err != nil {
+		return fmt.Errorf("list CiscoDevices for VK access cleanup: %w", err)
+	}
+	for i := range devices.Items {
+		other := &devices.Items[i]
+		if other.Name == device.Name || !other.DeletionTimestamp.IsZero() {
+			continue
+		}
+		return nil
+	}
+	crbName := vkAccessClusterRoleBindingName(device.Namespace, saName)
+	crb := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crbName}}
+	if err := r.Delete(ctx, crb); err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("delete ClusterRoleBinding %s: %w", crbName, err)
 	}
 	return nil
 }

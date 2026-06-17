@@ -158,6 +158,18 @@ rules:
   - watch
 - apiGroups:
   - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
   resourceNames:
   - cisco-virtual-kubelet
   resources:
