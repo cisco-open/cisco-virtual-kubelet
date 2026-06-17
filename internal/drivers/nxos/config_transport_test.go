@@ -24,6 +24,12 @@ func TestParseNXOSConfigFetchOutputs(t *testing.T) {
 	if got := parseNXOSHostname("hostname leaf-01\n"); got != "leaf-01" {
 		t.Fatalf("hostname=%q", got)
 	}
+	if got := parseNXOSHostname("leaf-01\n"); got != "leaf-01" {
+		t.Fatalf("show hostname output parsed as %q", got)
+	}
+	if got := parseNXOSHostname("{}"); got != "" {
+		t.Fatalf("empty NX-API object parsed as hostname %q", got)
+	}
 	vlans := parseNXOSVLANBrief(`
 VLAN Name                             Status    Ports
 ---- -------------------------------- --------- -------------------------------

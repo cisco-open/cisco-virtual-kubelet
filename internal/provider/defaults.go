@@ -19,6 +19,7 @@ import (
 	"runtime/debug"
 	"strings"
 
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -142,6 +143,25 @@ func InitNodeSystemInfo() v1.NodeSystemInfo {
 		KubeletVersion:          getVirtualKubeletVersion(),
 		ContainerRuntimeVersion: "unknown",
 		OSImage:                 "unknown",
+	}
+}
+
+type nodePlatformInfo struct {
+	Label    string
+	Topology string
+	OSImage  string
+}
+
+func nodePlatformMetadata(driver ciskov1.DeviceDriver) nodePlatformInfo {
+	switch driver {
+	case ciskov1.DeviceDriverNXOS:
+		return nodePlatformInfo{Label: "cisco-nxos", Topology: "cisco-nxos", OSImage: "NX-OS"}
+	case ciskov1.DeviceDriverXR:
+		return nodePlatformInfo{Label: "cisco-iosxr", Topology: "cisco-iosxr", OSImage: "IOS-XR"}
+	case ciskov1.DeviceDriverOPENCONFIG:
+		return nodePlatformInfo{Label: "openconfig", Topology: "openconfig", OSImage: "OpenConfig"}
+	default:
+		return nodePlatformInfo{Label: "cisco-ios-xe", Topology: "cisco-iosxe", OSImage: "IOS-XE"}
 	}
 }
 

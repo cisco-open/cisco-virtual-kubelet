@@ -80,3 +80,29 @@ func TestSyncNodeStatusAppliesDeviceLabelsAndTaints(t *testing.T) {
 		t.Fatalf("unexpected taint: %#v", got.Spec.Taints[0])
 	}
 }
+
+func TestSyncNodeStatusUsesDriverPlatformMetadata(t *testing.T) {
+	ctx := context.Background()
+	node := NewAppHostingNode(ctx, "nexus9300v-01", &v1alpha1.DeviceSpec{
+		Driver:  v1alpha1.DeviceDriverNXOS,
+		Address: "192.0.2.64",
+	}, nodeStatusTestDriver{})
+
+	var got *v1.Node
+	node.syncNodeStatus(ctx, func(n *v1.Node) {
+		got = n
+	})
+
+	if got == nil {
+		t.Fatal("expected node status callback")
+	}
+	if got.Labels["platform"] != "cisco-nxos" {
+		t.Fatalf("platform label=%q, want cisco-nxos", got.Labels["platform"])
+	}
+	if got.Labels["topology.kubernetes.io/region"] != "cisco-nxos" || got.Labels["topology.kubernetes.io/zone"] != "cisco-nxos" {
+		t.Fatalf("expected NX-OS topology labels, got labels=%v", got.Labels)
+	}
+	if got.Status.NodeInfo.OSImage != "NX-OS" {
+		t.Fatalf("OSImage=%q, want NX-OS", got.Status.NodeInfo.OSImage)
+	}
+}

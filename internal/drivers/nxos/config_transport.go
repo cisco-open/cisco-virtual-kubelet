@@ -71,7 +71,7 @@ func (t *nxapiConfigTransport) Capabilities() transport.Capabilities {
 func (t *nxapiConfigTransport) Fetch(ctx context.Context, path string) ([]byte, error) {
 	switch path {
 	case nxosschema.PathSystemHostname:
-		out, err := t.showWithRetry(ctx, `show running-config | include "^hostname "`)
+		out, err := t.showWithRetry(ctx, "show hostname")
 		if err != nil {
 			return nil, err
 		}
@@ -233,6 +233,13 @@ var nxosVersionRE = regexp.MustCompile(`(?im)(?:NXOS: version|system:\s+version|
 func parseNXOSHostname(out string) string {
 	if m := hostnameLineRE.FindStringSubmatch(out); len(m) > 1 {
 		return m[1]
+	}
+	trimmed := strings.TrimSpace(out)
+	if trimmed == "" || trimmed == "{}" {
+		return ""
+	}
+	if fields := strings.Fields(trimmed); len(fields) == 1 {
+		return fields[0]
 	}
 	return ""
 }

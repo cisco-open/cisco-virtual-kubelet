@@ -885,11 +885,14 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 		}
 	}
 
+	nodePlatform := nodePlatformMetadata(a.deviceSpec.Driver)
 	labels := map[string]string{
 		"kubernetes.io/hostname":        a.nodeName,
+		"platform":                      nodePlatform.Label,
+		"provider":                      "cisco-apphosting",
 		"type":                          "virtual-kubelet",
-		"topology.kubernetes.io/zone":   "cisco-iosxe",
-		"topology.kubernetes.io/region": "cisco-iosxe",
+		"topology.kubernetes.io/zone":   nodePlatform.Topology,
+		"topology.kubernetes.io/region": nodePlatform.Topology,
 	}
 	if a.deviceSpec.Zone != "" {
 		labels["topology.kubernetes.io/zone"] = a.deviceSpec.Zone
@@ -918,7 +921,7 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 				SystemUUID:      deviceInfo.SerialNumber,
 				KernelVersion:   deviceInfo.SoftwareVersion,
 				KubeletVersion:  getVirtualKubeletVersion(),
-				OSImage:         "IOS-XE",
+				OSImage:         nodePlatform.OSImage,
 				Architecture:    deviceInfo.ProductID,
 				OperatingSystem: "Cisco",
 			},
