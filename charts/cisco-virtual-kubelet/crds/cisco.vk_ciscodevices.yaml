@@ -146,6 +146,41 @@ spec:
                   host.
                 format: int32
                 type: integer
+              nxos:
+                description: NXOS holds NX-OS specific networking configuration.
+                properties:
+                  networking:
+                    description: Networking configures the guest interface passed
+                      to NX-OS app-hosting.
+                    properties:
+                      interface:
+                        description: Interface is the app-hosting attachment declaration.
+                        properties:
+                          management:
+                            description: Management holds management-network app-hosting
+                              settings.
+                            properties:
+                              guestInterface:
+                                default: 0
+                                description: GuestInterface is the guest interface
+                                  index used by app-hosting.
+                                maximum: 7
+                                minimum: 0
+                                type: integer
+                            type: object
+                          type:
+                            allOf:
+                            - enum:
+                              - Management
+                            - enum:
+                              - Management
+                            default: Management
+                            description: Type selects the interface family. Management
+                              is the initial supported mode.
+                            type: string
+                        type: object
+                    type: object
+                type: object
               opsPolicy:
                 description: |-
                   OpsPolicy declares per-device DeviceOperation gates the controller
@@ -299,15 +334,17 @@ spec:
               transport:
                 default: restconf
                 description: |-
-                  Transport selects the device channel used by the IOSXEConfig config
-                  driver. "restconf" is the default; "netconf" and "gnmi" select the
-                  corresponding transport implementations. Apphosting operations
-                  always use RESTCONF regardless of this field; it only affects
-                  declarative configuration.
+                  Transport selects the device channel used by declarative config
+                  drivers. IOS-XE defaults to RESTCONF and also supports NETCONF/gNMI.
+                  NX-OS uses NX-API; because this field has a historical global RESTCONF
+                  default, NX-OS treats an omitted/defaulted "restconf" value as NX-API
+                  unless "nxapi" is set explicitly. Apphosting operations always use the
+                  platform apphosting transport regardless of this field.
                 enum:
                 - restconf
                 - netconf
                 - gnmi
+                - nxapi
                 type: string
               username:
                 description: Username for device authentication.

@@ -1,0 +1,45 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: IOSXEConfig
+metadata:
+  name: cat9300-vlans
+  namespace: default
+spec:
+  deviceRef:
+    name: cat9300-4
+  managedFamilies:
+    - vlan
+  driftPolicy: revert
+  driftDetectInterval: 5m
+  writeStartup: true
+  modelSource:
+    format: netascode-iosxe
+    resolved: true
+  source:
+    inline:
+      vlan:
+        vlans:
+          - id: 300
+            name: APP_HOSTING
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: NXOSConfig
+metadata:
+  name: nexus9300v-vlans
+  namespace: default
+spec:
+  deviceRef:
+    name: nexus9300v-01
+  managedFamilies:
+    - vlan
+  driftPolicy: revert
+  driftDetectInterval: 5m
+  writeStartup: true
+  modelSource:
+    format: netascode-nxos
+    resolved: true
+  source:
+    inline:
+      vlan:
+        vlans:
+          - id: 3903
+            name: CVK_LAB

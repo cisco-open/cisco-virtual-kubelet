@@ -163,13 +163,14 @@ type DeviceSpec struct {
 	// +kubebuilder:default=false
 	AllowUnsignedApps bool `json:"allowUnsignedApps,omitempty" mapstructure:"allowUnsignedApps"`
 
-	// Transport selects the device channel used by the IOSXEConfig config
-	// driver. "restconf" is the default; "netconf" and "gnmi" select the
-	// corresponding transport implementations. Apphosting operations
-	// always use RESTCONF regardless of this field; it only affects
-	// declarative configuration.
+	// Transport selects the device channel used by declarative config
+	// drivers. IOS-XE defaults to RESTCONF and also supports NETCONF/gNMI.
+	// NX-OS uses NX-API; because this field has a historical global RESTCONF
+	// default, NX-OS treats an omitted/defaulted "restconf" value as NX-API
+	// unless "nxapi" is set explicitly. Apphosting operations always use the
+	// platform apphosting transport regardless of this field.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=restconf;netconf;gnmi
+	// +kubebuilder:validation:Enum=restconf;netconf;gnmi;nxapi
 	// +kubebuilder:default=restconf
 	Transport string `json:"transport,omitempty" mapstructure:"transport"`
 
@@ -205,9 +206,9 @@ type DeviceSpec struct {
 	// +kubebuilder:validation:Optional
 	// XR *XRConfig `json:"xr,omitempty" mapstructure:"xr,omitempty"`
 
-	// NXOS holds NX-OS specific networking configuration (future).
+	// NXOS holds NX-OS specific networking configuration.
 	// +kubebuilder:validation:Optional
-	// NXOS *NXOSConfig `json:"nxos,omitempty" mapstructure:"nxos,omitempty"`
+	NXOS *NXOSConfig `json:"nxos,omitempty" mapstructure:"nxos,omitempty"`
 }
 
 // OpsPolicy carries per-device DeviceOperation gates the CiscoDevice

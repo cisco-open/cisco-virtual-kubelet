@@ -68,21 +68,26 @@ type ConfigurationSource struct {
 	ConfigMapRef *ConfigMapKeyRef `json:"configMapRef,omitempty"`
 }
 
-// NetAsCodeModelFormat names the external intent model carried by an
-// IOSXEConfig. CVK currently accepts Cisco IOS-XE NetAsCode intent.
+// NetAsCodeModelFormat names the external intent model carried by a config CR.
+// CVK accepts Cisco Network as Code payloads for IOS-XE and NX-OS in this
+// runtime slice.
 //
-// +kubebuilder:validation:Enum=netascode-iosxe
+// +kubebuilder:validation:Enum=netascode-iosxe;netascode-nxos
 type NetAsCodeModelFormat string
 
 const (
 	// NetAsCodeModelFormatIOSXE is the canonical Cisco IOS-XE NetAsCode
 	// data model used by the terraform-iosxe-nac-iosxe module.
 	NetAsCodeModelFormatIOSXE NetAsCodeModelFormat = "netascode-iosxe"
+
+	// NetAsCodeModelFormatNXOS is the canonical Cisco NX-OS NetAsCode
+	// data model used by the NX-OS network-as-code module family.
+	NetAsCodeModelFormatNXOS NetAsCodeModelFormat = "netascode-nxos"
 )
 
-// NetAsCodeModelSource records where an IOSXEConfig's NetAsCode payload came
-// from. It is audit metadata, not desired device state; the resolver still
-// consumes spec.source as the source of truth.
+// NetAsCodeModelSource records where a NetAsCode payload came from. It is
+// audit metadata, not desired device state; reconcilers still consume
+// spec.source as the source of truth.
 type NetAsCodeModelSource struct {
 	// Format identifies the model dialect.
 	// +kubebuilder:validation:Required
@@ -122,6 +127,169 @@ type ConfigMapKeyRef struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	Key string `json:"key"`
+}
+
+// CommonConfigSpec is the shared desired-state contract for platform
+// configuration CRDs whose intent is expressed as named NetAsCode families.
+// Platform-specific CRDs reuse it as their concrete spec shape and document
+// their supported family set at the concrete type.
+type CommonConfigSpec struct {
+	// DeviceRef targets the CiscoDevice this configuration applies to.
+	// +kubebuilder:validation:Required
+	DeviceRef DeviceRef `json:"deviceRef"`
+
+	// ManagedFamilies is the closed list of NetAsCode families this CR owns.
+	// A family outside this list is not written by this CR even when the
+	// resolved intent contains values for it.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	// +listType=set
+	ManagedFamilies []string `json:"managedFamilies"`
+
+	// Source carries the per-device or per-controller NetAsCode
+	// configuration payload.
+	// +kubebuilder:validation:Required
+	Source ConfigurationSource `json:"source"`
+
+	// ModelSource records the external NetAsCode model/export that produced
+	// Source. It is deliberately metadata-only: CVK reconciles the canonical
+	// payload in Source.
+	// +optional
+	ModelSource *NetAsCodeModelSource `json:"modelSource,omitempty"`
+
+	// DriftDetectInterval is the cadence at which the driver re-fetches and
+	// compares observed state to intent when the spec is otherwise quiescent.
+	// Parsed as a Go duration; minimum 30s to avoid device/API hammering.
+	// +kubebuilder:default="5m"
+	// +optional
+	DriftDetectInterval string `json:"driftDetectInterval,omitempty"`
+
+	// DriftPolicy controls what happens when drift is found.
+	// +kubebuilder:default=revert
+	// +optional
+	DriftPolicy DriftPolicy `json:"driftPolicy,omitempty"`
+
+	// Transactional requests a candidate-datastore + commit apply when the
+	// selected platform transport supports transactions. Non-transactional
+	// transports apply directly to running config and surface a confirmed-
+	// commit fallback when confirmTimeoutSeconds is also set.
+	// +kubebuilder:default=false
+	// +optional
+	Transactional bool `json:"transactional,omitempty"`
+
+	// WriteStartup persists running configuration to startup configuration
+	// after a successful apply when the selected platform transport supports
+	// it. Unsupported transports simply leave the apply result green.
+	// +kubebuilder:default=false
+	// +optional
+	WriteStartup bool `json:"writeStartup,omitempty"`
+
+	// ConfirmTimeoutSeconds enables confirmed-commit auto-revert semantics on
+	// transports that support them. When unavailable, the engine falls back to
+	// the platform's normal commit behavior and records the fallback reason.
+	// +kubebuilder:default=0
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=300
+	// +optional
+	ConfirmTimeoutSeconds int32 `json:"confirmTimeoutSeconds,omitempty"`
+
+	// AtomicReplace treats the resolved intent as authoritative for this CR's
+	// managed families when paired with a transactional transport. It reuses
+	// the shared engine's replace/prune semantics.
+	// +kubebuilder:default=false
+	// +optional
+	AtomicReplace bool `json:"atomicReplace,omitempty"`
+
+	// PruneOnRelinquish asks capable family writers to delete device-side
+	// entries that are absent from this CR's resolved intent.
+	// +kubebuilder:default=false
+	// +optional
+	PruneOnRelinquish bool `json:"pruneOnRelinquish,omitempty"`
+
+	// TargetYangVersion pins the platform model or software release used by
+	// the writer registry. Empty lets the platform default decide.
+	// +optional
+	TargetYangVersion string `json:"targetYangVersion,omitempty"`
+
+	// SecretRefs lets the resolver merge sensitive configuration into the
+	// resolved intent from Kubernetes Secrets, so secret material never needs
+	// to live in a ConfigMap or git-tracked YAML.
+	// +optional
+	SecretRefs []FamilySecretRef `json:"secretRefs,omitempty"`
+}
+
+// CommonConfigStatus is the shared status contract for platform configuration
+// CRDs that use the common NetAsCode family reconciliation flow.
+type CommonConfigStatus struct {
+	// Phase is a coarse state summary: Pending, Validating, Planning,
+	// Applying, Verifying, InSync, Drifted, Failed, Paused, or LeaseBlocked.
+	// +kubebuilder:validation:Enum=Pending;Validating;Planning;Applying;Verifying;InSync;Drifted;Failed;Paused;LeaseBlocked
+	// +optional
+	Phase string `json:"phase,omitempty"`
+
+	// ObservedGeneration is the .metadata.generation the driver last acted on.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// LastAppliedHash is a stable SHA-256 over the canonicalised resolved
+	// intent.
+	// +optional
+	LastAppliedHash string `json:"lastAppliedHash,omitempty"`
+
+	// LastAppliedTime records the most recent successful apply.
+	// +optional
+	LastAppliedTime *metav1.Time `json:"lastAppliedTime,omitempty"`
+
+	// LastDeviceCheck records the most recent reconcile tick that fetched
+	// observed state from the device or controller.
+	// +optional
+	LastDeviceCheck *metav1.Time `json:"lastDeviceCheck,omitempty"`
+
+	// SourceYangVersion records the platform release/model version used by the
+	// writer registry on the last successful apply.
+	// +optional
+	SourceYangVersion string `json:"sourceYangVersion,omitempty"`
+
+	// PlannedOps is the number of transport operations produced by the last
+	// reconcile plan.
+	// +optional
+	PlannedOps int32 `json:"plannedOps,omitempty"`
+
+	// AppliedOps is the number of transport operations handed to writers by
+	// the last reconcile.
+	// +optional
+	AppliedOps int32 `json:"appliedOps,omitempty"`
+
+	// PostApplyObservedHash is a stable hash over the observed state fetched
+	// during verify after an apply.
+	// +optional
+	PostApplyObservedHash string `json:"postApplyObservedHash,omitempty"`
+
+	// VerifiedFamilies lists families that completed a post-apply verify pass.
+	// +optional
+	// +listType=set
+	VerifiedFamilies []string `json:"verifiedFamilies,omitempty"`
+
+	// FamilyStatus reports per-family state for each family in
+	// ManagedFamilies.
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	FamilyStatus []FamilyStatus `json:"familyStatus,omitempty"`
+
+	// Drift lists the currently known divergences between intent and observed
+	// state.
+	// +optional
+	// +kubebuilder:validation:MaxItems=50
+	Drift []DriftEntry `json:"drift,omitempty"`
+
+	// Conditions follows the standard Kubernetes conditions shape.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 // TemplateRef refers to an IOSXETemplate and supplies parameter values used

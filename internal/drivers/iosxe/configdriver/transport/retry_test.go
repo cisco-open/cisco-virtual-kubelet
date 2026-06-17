@@ -122,20 +122,17 @@ func TestRetryIdempotent_ContextCancelled(t *testing.T) {
 
 func TestRetryPolicy_Defaults(t *testing.T) {
 	t.Parallel()
-	p := RetryPolicy{}.normalised()
-	if p.MaxAttempts != 3 {
-		t.Errorf("MaxAttempts default = %d, want 3", p.MaxAttempts)
+	calls := 0
+	err := RetryIdempotent(context.Background(), RetryPolicy{
+		Initial: 1 * time.Millisecond,
+	}, func() error {
+		calls++
+		return errors.New("connection refused")
+	})
+	if err == nil {
+		t.Fatal("expected final transient error")
 	}
-	if p.Initial != 200*time.Millisecond {
-		t.Errorf("Initial default = %v, want 200ms", p.Initial)
-	}
-	if p.Growth != 2 {
-		t.Errorf("Growth default = %v, want 2", p.Growth)
-	}
-	if p.Cap != 2*time.Second {
-		t.Errorf("Cap default = %v, want 2s", p.Cap)
-	}
-	if p.JitterFraction != 0.2 {
-		t.Errorf("JitterFraction default = %v, want 0.2", p.JitterFraction)
+	if calls != 3 {
+		t.Errorf("zero-value MaxAttempts produced %d calls, want 3", calls)
 	}
 }

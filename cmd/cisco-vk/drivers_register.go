@@ -32,13 +32,15 @@ import (
 	// device; production deployments simply never set that on a
 	// CiscoDevice.
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/fake"
-	// Future platforms: the intent of Phase 9 is that adding NX-OS,
-	// IOS-XR, or the cross-vendor OpenConfig driver here is the only
-	// edit needed in the binary. Placeholder packages exist under
+
+	// NX-OS: NX-API app-hosting and declarative config runtime.
+	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos"
+	// Future platforms: the intent of Phase 9 is that adding IOS-XR
+	// or the cross-vendor OpenConfig driver here is the only edit
+	// needed in the binary. Placeholder packages exist under
 	// internal/drivers/<name>/ but stay un-imported until a real
 	// implementation lands.
 	//
-	// _ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos"
 	// _ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxr"
 	// _ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/openconfig"
 )

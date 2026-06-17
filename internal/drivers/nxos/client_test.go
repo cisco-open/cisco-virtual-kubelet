@@ -1,0 +1,90 @@
+// Copyright © 2026 Cisco Systems Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+package nxos
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+func TestParseNXAPIResponseSingleOutput(t *testing.T) {
+	raw := []byte(`{"ins_api":{"outputs":{"output":{"input":"show version","code":"200","msg":"Success","body":"NXOS: version 10.3(9)\n"}}}}`)
+	got, err := parseNXAPIResponse(raw)
+	if err != nil {
+		t.Fatalf("parseNXAPIResponse: %v", err)
+	}
+	if got != "NXOS: version 10.3(9)\n" {
+		t.Fatalf("unexpected body %q", got)
+	}
+}
+
+func TestParseAppList(t *testing.T) {
+	apps := parseAppList(`
+App id                                   State
+---------------------------------------------------------
+cvk0000_0123456789abcdef0123456789abcdef RUNNING
+guestshell+                              ACTIVATED
+`)
+	if len(apps) != 2 {
+		t.Fatalf("len(apps)=%d", len(apps))
+	}
+	if apps[0].ID != "cvk0000_0123456789abcdef0123456789abcdef" || apps[0].State != "RUNNING" {
+		t.Fatalf("unexpected first app: %#v", apps[0])
+	}
+}
+
+func TestParseAppDetailLabels(t *testing.T) {
+	app := parseAppDetail(`
+App id                 : cvk0000_0123456789abcdef0123456789abcdef
+State                  : RUNNING
+Package                : bootflash:/hello.tar
+IPv4 address           : 10.0.2.10
+Docker Run Options     : --label io.kubernetes.pod.name=hello
+Docker Run Options     : --label io.kubernetes.pod.namespace=default
+Docker Run Options     : --label io.kubernetes.pod.uid=01234567-89ab-cdef-0123-456789abcdef
+Docker Run Options     : --label io.kubernetes.container.name=hello
+`)
+	if app.State != "RUNNING" || app.IPv4 != "10.0.2.10" || app.ContainerName != "hello" {
+		t.Fatalf("unexpected app detail: %#v", app)
+	}
+}
+
+func TestConfigureSignVerificationDisable(t *testing.T) {
+	var got nxapiRequest
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("method=%s", r.Method)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		_, _ = w.Write([]byte(`{"ins_api":{"outputs":{"output":{"input":"configure terminal ; app-hosting signed-verification disable","code":"200","msg":"Success","body":""}}}}`))
+	}))
+	defer server.Close()
+
+	driver := &NXOSDriver{
+		client: &nxapiClient{
+			baseURL: server.URL,
+			client:  server.Client(),
+		},
+	}
+
+	if err := driver.ConfigureSignVerification(context.Background(), false); err != nil {
+		t.Fatalf("ConfigureSignVerification: %v", err)
+	}
+	if got.InsAPI.Type != "cli_conf" {
+		t.Fatalf("type=%q", got.InsAPI.Type)
+	}
+	if got.InsAPI.Input != "configure terminal ; app-hosting signed-verification disable" {
+		t.Fatalf("input=%q", got.InsAPI.Input)
+	}
+}

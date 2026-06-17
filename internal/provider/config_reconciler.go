@@ -35,11 +35,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/intent"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/validation"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 	"go.opentelemetry.io/otel"
@@ -404,7 +404,11 @@ func (r *ConfigReconciler) Run(ctx context.Context) error {
 			return ctx.Err()
 		case <-ticker.C:
 			runTick(triggerPoll)
-		case <-notify:
+		case _, ok := <-notify:
+			if !ok {
+				notify = nil
+				continue
+			}
 			logger.Debug("subscribe-notify fired; running off-cycle reconcile")
 			runTick(triggerSubscribe)
 		}
@@ -741,7 +745,16 @@ func (r *ConfigReconciler) reconcileOne(
 	}
 	recordErr := r.recordResult(ctx, cr, result, h, conflicts, resolved, rollbackTarget)
 	r.patchTraceAnnotations(ctx, cr, result.Phase, time.Since(tickStart))
-	return result, recordErr
+	if recordErr != nil {
+		return result, recordErr
+	}
+	if result.Phase == engine.PhaseFailed && result.Err != nil {
+		if logger != nil {
+			logger.WithError(result.Err).Warn("IOSXEConfig engine failed")
+		}
+		return result, result.Err
+	}
+	return result, nil
 }
 
 // acquireLeases filters resolved.ManagedFamilies to the ones this CR

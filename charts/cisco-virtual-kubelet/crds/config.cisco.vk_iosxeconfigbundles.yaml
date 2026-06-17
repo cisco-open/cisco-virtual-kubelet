@@ -261,6 +261,7 @@ spec:
                         description: Format identifies the model dialect.
                         enum:
                         - netascode-iosxe
+                        - netascode-nxos
                         type: string
                       modelVersion:
                         description: |-

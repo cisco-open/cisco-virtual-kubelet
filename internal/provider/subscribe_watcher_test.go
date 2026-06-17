@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 )
 
 // fakeSubscribeTransport is the smallest transport that

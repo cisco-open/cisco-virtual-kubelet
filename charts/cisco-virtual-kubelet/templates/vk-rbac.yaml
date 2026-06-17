@@ -87,6 +87,15 @@ rules:
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigs/status"]
     verbs: ["get", "update", "patch"]
+  # NXOSConfig CRD — the shared config reconciler running inside the
+  # per-device VK pod needs the same object/status permissions for
+  # status updates, drift reconciliation, and finalizer cleanup.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["nxosconfigs"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["nxosconfigs/status"]
+    verbs: ["get", "update", "patch"]
   # IOSXEConfigApplyLog CRD — Phase 7 audit log; the reconciler appends
   # ApplyLogEntry objects after every apply pass and reads back during
   # the time-travel replay path. List/watch needed for the in-pod

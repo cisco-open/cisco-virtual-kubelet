@@ -55,10 +55,11 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	iosxetransport "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/devicegrpc"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry"
@@ -120,12 +121,30 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		return fmt.Errorf("nil DeviceSpec")
 	}
 
-	if !drivers.ConfigDriverRegistered(opts.Spec.Driver) {
+	starter, ok := lookupConfigRuntime(opts.Spec.Driver)
+	if !ok {
 		log.G(ctx).WithField("driver", opts.Spec.Driver).
-			Debug("no config driver registered for this device kind; skipping config reconciler")
+			Debug("no config runtime registered for this device kind; skipping config reconciler")
 		return nil
 	}
+	return starter(ctx, cfg, deviceName, opts)
+}
 
+func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName string, opts configReconcilerOptions) error {
+	if cfg == nil {
+		return fmt.Errorf("nil rest.Config")
+	}
+	if deviceName == "" {
+		return fmt.Errorf("empty device name")
+	}
+	if opts.Spec == nil {
+		return fmt.Errorf("nil DeviceSpec")
+	}
+	if !drivers.ConfigDriverRegistered(opts.Spec.Driver) {
+		log.G(ctx).WithField("driver", opts.Spec.Driver).
+			Debug("no config driver registered for this device kind; skipping IOSXEConfig reconciler")
+		return nil
+	}
 	scheme := k8sruntime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(configv1alpha1.AddToScheme(scheme))
@@ -621,7 +640,7 @@ func retryDeviceVersion(ctx context.Context, r *provider.ConfigReconciler, dctx 
 // patches r.SetTransport so the reconciler picks up the live
 // transport on its next tick.
 //
-// IMPORTANT: this calls `transport.For` directly rather than
+// IMPORTANT: this calls `iosxetransport.For` directly rather than
 // drivers.NewConfigDriver. The latter pulls iosxebuilder.LoadYANGReleaseTags
 // on every invocation, which produces a burst of disk I/O + goroutine
 // activity each retry tick — which is exactly the kind of runtime
@@ -642,7 +661,7 @@ func retryConfigDriverDial(ctx context.Context, opts configReconcilerOptions, r 
 			return
 		case <-tick.C:
 		}
-		t, err := transport.For(opts.Spec, opts.Password, transport.FactoryOptions{
+		t, err := iosxetransport.For(opts.Spec, opts.Password, iosxetransport.FactoryOptions{
 			SessionLock: opts.SessionLock,
 		})
 		if err == nil && t != nil {

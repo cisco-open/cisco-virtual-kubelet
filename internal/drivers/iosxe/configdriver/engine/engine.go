@@ -16,6 +16,8 @@ package engine
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -256,6 +258,23 @@ type Result struct {
 	// actually exercise the safety net" assertion in live tests.
 	// Wave 10.
 	ConfirmedCommitUsed bool
+
+	// PlannedOps is the total number of transport operations produced by
+	// family Diff/PruneDiff before policy decisions are applied. In report
+	// mode these are observed but not sent.
+	PlannedOps int
+
+	// AppliedOps is the total number of transport operations handed to
+	// writers' Apply methods.
+	AppliedOps int
+
+	// PostApplyObservedHash is a stable hash over the observed state fetched
+	// during family verification. Empty when no family reached verification.
+	PostApplyObservedHash string
+
+	// VerifiedFamilies lists families that completed a fetch/diff
+	// verification pass in this tick.
+	VerifiedFamilies []string
 }
 
 // FamilyStatus is the per-family outcome of a tick.
@@ -265,6 +284,20 @@ type FamilyStatus struct {
 	Entries int32
 	Message string
 	OpCount int
+
+	// PlannedOps is the number of operations Diff/PruneDiff planned.
+	PlannedOps int
+
+	// AppliedOps is the number of operations handed to Apply.
+	AppliedOps int
+
+	// Verified is true when the family completed an observed-state
+	// verification pass in this tick.
+	Verified bool
+
+	// ObservedHash is a stable hash over the observed state used for the
+	// verification decision.
+	ObservedHash string
 
 	// OwnedKeys carries the list-key values this CR owns for this
 	// family after the tick. Populated only when the intent has
@@ -465,9 +498,18 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 		}
 		families = reversed
 	}
+	verifiedHashes := map[string]string{}
 	for _, family := range families {
 		fs := e.reconcileFamily(ctx, family, res)
 		result.FamilyStatuses = append(result.FamilyStatuses, fs)
+		result.PlannedOps += fs.PlannedOps
+		result.AppliedOps += fs.AppliedOps
+		if fs.Verified {
+			result.VerifiedFamilies = append(result.VerifiedFamilies, fs.Name)
+			if fs.ObservedHash != "" {
+				verifiedHashes[fs.Name] = fs.ObservedHash
+			}
+		}
 		switch fs.State {
 		case "Drifted":
 			anyDrift = true
@@ -490,6 +532,9 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 			}
 			result.AtomicReplaceOwnedKeys[family] = fs.OwnedKeys
 		}
+	}
+	if len(verifiedHashes) > 0 {
+		result.PostApplyObservedHash = stableHash(verifiedHashes)
 	}
 
 	// Apply CLI-template blocks after every family has converged.
@@ -923,16 +968,24 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// No-op: nothing to apply, nothing to verify. Family is InSync by
 	// the writer's own definition of equivalence.
 	if len(ops) == 0 {
-		return FamilyStatus{Name: family, State: "InSync", OwnedKeys: ownedKeysForFamily}
+		return FamilyStatus{
+			Name:         family,
+			State:        "InSync",
+			Verified:     true,
+			ObservedHash: stableHash(observed),
+			OwnedKeys:    ownedKeysForFamily,
+		}
 	}
 
 	// Report-policy short-circuit: we've observed drift, but the CR
 	// opts into read-only mode. Surface it rather than applying.
 	if res.DriftPolicy == configv1alpha1.DriftPolicyReport {
 		return FamilyStatus{
-			Name: family, State: "Drifted",
-			OpCount: len(ops),
-			Message: safeMsg("driftPolicy=report: %d op(s) detected as drift but not applied; switch to driftPolicy=revert to reconcile", len(ops)),
+			Name:       family,
+			State:      "Drifted",
+			OpCount:    len(ops),
+			PlannedOps: len(ops),
+			Message:    safeMsg("driftPolicy=report: %d op(s) detected as drift but not applied; switch to driftPolicy=revert to reconcile", len(ops)),
 		}
 	}
 
@@ -976,9 +1029,12 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		applySpan.SetStatus(err)
 		familySpan.SetStatus(err)
 		return FamilyStatus{
-			Name: family, State: "ApplyError",
-			OpCount: len(ops),
-			Message: safeMsg("Apply: %v", err),
+			Name:       family,
+			State:      "ApplyError",
+			OpCount:    len(ops),
+			PlannedOps: len(ops),
+			AppliedOps: len(ops),
+			Message:    safeMsg("Apply: %v", err),
 		}
 	}
 	if applyDuration != nil {
@@ -1017,9 +1073,12 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		verifySpan.SetStatus(err)
 		familySpan.SetStatus(err)
 		return FamilyStatus{
-			Name: family, State: "ApplyError",
-			OpCount: len(ops),
-			Message: safeMsg("Verify: re-fetch failed: %v", err),
+			Name:       family,
+			State:      "ApplyError",
+			OpCount:    len(ops),
+			PlannedOps: len(ops),
+			AppliedOps: len(ops),
+			Message:    safeMsg("Verify: re-fetch failed: %v", err),
 		}
 	}
 	residual, err := w.Diff(desired, verify)
@@ -1027,9 +1086,12 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		verifySpan.SetStatus(err)
 		familySpan.SetStatus(err)
 		return FamilyStatus{
-			Name: family, State: "ApplyError",
-			OpCount: len(ops),
-			Message: safeMsg("Verify: re-diff failed: %v", err),
+			Name:       family,
+			State:      "ApplyError",
+			OpCount:    len(ops),
+			PlannedOps: len(ops),
+			AppliedOps: len(ops),
+			Message:    safeMsg("Verify: re-diff failed: %v", err),
 		}
 	}
 	// Verify against prune too — otherwise a pruned entry that the
@@ -1049,9 +1111,12 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 					verifySpan.SetStatus(err)
 					familySpan.SetStatus(err)
 					return FamilyStatus{
-						Name: family, State: "ApplyError",
-						OpCount: len(ops),
-						Message: safeMsg("Verify: prune re-diff failed: %v", err),
+						Name:       family,
+						State:      "ApplyError",
+						OpCount:    len(ops),
+						PlannedOps: len(ops),
+						AppliedOps: len(ops),
+						Message:    safeMsg("Verify: prune re-diff failed: %v", err),
 					}
 				}
 				residual = append(residual, residualPrune...)
@@ -1061,13 +1126,27 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	if len(residual) > 0 {
 		verifySpan.SetStatus(errors.New("residual drift after apply"))
 		return FamilyStatus{
-			Name: family, State: "Drifted",
-			OpCount:   len(ops),
-			Message:   fmt.Sprintf("%d op(s) applied but %d still pending", len(ops), len(residual)),
-			OwnedKeys: ownedKeysForFamily,
+			Name:         family,
+			State:        "Drifted",
+			OpCount:      len(ops),
+			PlannedOps:   len(ops),
+			AppliedOps:   len(ops),
+			Verified:     true,
+			ObservedHash: stableHash(verify),
+			Message:      fmt.Sprintf("%d op(s) applied but %d still pending", len(ops), len(residual)),
+			OwnedKeys:    ownedKeysForFamily,
 		}
 	}
-	return FamilyStatus{Name: family, State: "InSync", OpCount: len(ops), OwnedKeys: ownedKeysForFamily}
+	return FamilyStatus{
+		Name:         family,
+		State:        "InSync",
+		OpCount:      len(ops),
+		PlannedOps:   len(ops),
+		AppliedOps:   len(ops),
+		Verified:     true,
+		ObservedHash: stableHash(verify),
+		OwnedKeys:    ownedKeysForFamily,
+	}
 }
 
 func (e *Engine) lookupWriter(family string) writers.SectionWriter {
@@ -1075,6 +1154,15 @@ func (e *Engine) lookupWriter(family string) writers.SectionWriter {
 		return nil
 	}
 	return e.Lookup(family, e.DeviceVersion)
+}
+
+func stableHash(v any) string {
+	raw, err := json.Marshal(v)
+	if err != nil {
+		raw = []byte(fmt.Sprintf("%#v", v))
+	}
+	sum := sha256.Sum256(raw)
+	return fmt.Sprintf("sha256:%x", sum[:])
 }
 
 func (e *Engine) validateYANGOps(

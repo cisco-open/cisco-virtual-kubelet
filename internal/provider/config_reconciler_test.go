@@ -29,8 +29,10 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/intent"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 )
 
 func newTestScheme(t *testing.T) *runtime.Scheme {
@@ -193,6 +195,51 @@ func TestReconcileOnePendingWhenDeviceVersionRequiredButEmpty(t *testing.T) {
 	}
 	if !conditionIs(got.Status.Conditions, "Ready", metav1.ConditionFalse, "DeviceVersionPending") {
 		t.Fatalf("Ready condition missing/DeviceVersionPending:\n%#v", got.Status.Conditions)
+	}
+}
+
+type fetchErrorWriter struct{}
+
+func (fetchErrorWriter) Family() string      { return "vlan" }
+func (fetchErrorWriter) YANGPaths() []string { return []string{"/vlan"} }
+func (fetchErrorWriter) Fetch(context.Context, transport.Interface) (any, error) {
+	return nil, errors.New("connection refused")
+}
+func (fetchErrorWriter) Diff(any, any) ([]transport.Op, error) { return nil, nil }
+func (fetchErrorWriter) Apply(context.Context, transport.Interface, []transport.Op) error {
+	return nil
+}
+
+func TestReconcileOneTransientTransportFailureReturnsError(t *testing.T) {
+	scheme := newTestScheme(t)
+	cr := newCR("edge-transient", "edge-01")
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(newDevice("edge-01"), cr).
+		WithStatusSubresource(&configv1alpha1.IOSXEConfig{}).
+		Build()
+	tr := newReachableTransport()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01", Transport: tr}
+	resolver := &intent.Resolver{Client: c}
+	eng := &engine.Engine{
+		Transport:   tr,
+		Lookup:      func(string, string) writers.SectionWriter { return fetchErrorWriter{} },
+		RetryPolicy: transport.RetryPolicy{MaxAttempts: 1},
+	}
+
+	result, err := r.reconcileOne(context.Background(), nil, resolver, eng, cr, nil, triggerEvent)
+	if err == nil {
+		t.Fatal("reconcileOne error=nil, want transient transport error")
+	}
+	if result.Phase != engine.PhaseFailed {
+		t.Fatalf("phase=%q, want Failed", result.Phase)
+	}
+	var got configv1alpha1.IOSXEConfig
+	if getErr := c.Get(context.Background(), types.NamespacedName{Namespace: cr.Namespace, Name: cr.Name}, &got); getErr != nil {
+		t.Fatalf("get config: %v", getErr)
+	}
+	if got.Status.Phase != engine.PhaseFailed {
+		t.Fatalf("status phase=%q, want Failed", got.Status.Phase)
 	}
 }
 
