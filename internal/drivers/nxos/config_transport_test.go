@@ -35,9 +35,18 @@ VLAN Name                             Status    Ports
 ---- -------------------------------- --------- -------------------------------
 1    default                          active    Eth1/1
 101  cvk_probe                        active
+102  cvk_unsup                        act/unsup Eth1/2, Eth1/3
+                                             Eth1/4, Eth1/5
+200  vlan with spaces                 active    Eth1/6
 `)
-	if len(vlans) != 2 || vlans[1]["id"] != 101 || vlans[1]["name"] != "cvk_probe" {
+	if len(vlans) != 4 || vlans[1]["id"] != 101 || vlans[1]["name"] != "cvk_probe" {
 		t.Fatalf("vlans=%#v", vlans)
+	}
+	if vlans[2]["id"] != 102 || vlans[2]["status"] != "act/unsup" {
+		t.Fatalf("NX-OS status token not parsed: %#v", vlans[2])
+	}
+	if vlans[3]["id"] != 200 || vlans[3]["name"] != "vlan with spaces" {
+		t.Fatalf("wrapped/active-port VLAN output confused parser: %#v", vlans[3])
 	}
 	intfs := parseNXOSEthernetRunning(`
 interface Ethernet1/1

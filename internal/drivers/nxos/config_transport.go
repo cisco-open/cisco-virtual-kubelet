@@ -262,13 +262,30 @@ func parseNXOSVLANBrief(out string) []map[string]any {
 		if err != nil {
 			continue
 		}
+		statusIdx := 2
+		for i := 2; i < len(fields); i++ {
+			if isNXOSVLANStatus(fields[i]) {
+				statusIdx = i
+				break
+			}
+		}
+		name := strings.Join(fields[1:statusIdx], " ")
 		vlans = append(vlans, map[string]any{
 			"id":     id,
-			"name":   fields[1],
-			"status": fields[2],
+			"name":   name,
+			"status": fields[statusIdx],
 		})
 	}
 	return vlans
+}
+
+func isNXOSVLANStatus(field string) bool {
+	switch lower := strings.ToLower(strings.TrimSpace(field)); lower {
+	case "active", "suspend", "suspended", "shutdown", "act/unsup", "act/lshut", "act/ishut":
+		return true
+	default:
+		return strings.HasPrefix(lower, "act/")
+	}
 }
 
 func parseNXOSEthernetRunning(out string) []map[string]any {

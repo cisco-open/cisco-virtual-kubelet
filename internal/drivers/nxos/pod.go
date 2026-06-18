@@ -32,9 +32,6 @@ import (
 const defaultAppWaitTimeout = 5 * time.Minute
 
 func (d *NXOSDriver) DeployPod(ctx context.Context, pod *v1.Pod, _ corev1listers.SecretNamespaceLister, _ corev1listers.ConfigMapNamespaceLister) error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
 	appIDs := common.GenerateContainerAppIDs(pod)
 	for _, container := range pod.Spec.Containers {
 		appID := appIDs[container.Name]
@@ -43,7 +40,7 @@ func (d *NXOSDriver) DeployPod(ctx context.Context, pod *v1.Pod, _ corev1listers
 		}
 		state, _ := d.appState(ctx, appID)
 		if state == "" {
-			if _, err := d.client.show(ctx, fmt.Sprintf("app-hosting install appid %s package %s", appID, container.Image)); err != nil {
+			if err := d.appCommand(ctx, fmt.Sprintf("app-hosting install appid %s package %s", appID, container.Image)); err != nil {
 				return fmt.Errorf("nxos install app %s: %w", appID, err)
 			}
 			if err := d.waitForState(ctx, appID, defaultAppWaitTimeout, "DEPLOYED", "ACTIVATED", "RUNNING"); err != nil {
@@ -52,7 +49,7 @@ func (d *NXOSDriver) DeployPod(ctx context.Context, pod *v1.Pod, _ corev1listers
 		}
 		state, _ = d.appState(ctx, appID)
 		if state == "DEPLOYED" {
-			if _, err := d.client.show(ctx, fmt.Sprintf("app-hosting activate appid %s", appID)); err != nil {
+			if err := d.appCommand(ctx, fmt.Sprintf("app-hosting activate appid %s", appID)); err != nil {
 				return fmt.Errorf("nxos activate app %s: %w", appID, err)
 			}
 			if err := d.waitForState(ctx, appID, defaultAppWaitTimeout, "ACTIVATED", "RUNNING"); err != nil {
@@ -61,7 +58,7 @@ func (d *NXOSDriver) DeployPod(ctx context.Context, pod *v1.Pod, _ corev1listers
 		}
 		state, _ = d.appState(ctx, appID)
 		if state != "RUNNING" {
-			if _, err := d.client.show(ctx, fmt.Sprintf("app-hosting start appid %s", appID)); err != nil {
+			if err := d.appCommand(ctx, fmt.Sprintf("app-hosting start appid %s", appID)); err != nil {
 				return fmt.Errorf("nxos start app %s: %w", appID, err)
 			}
 			if err := d.waitForState(ctx, appID, defaultAppWaitTimeout, "RUNNING"); err != nil {
@@ -87,9 +84,6 @@ func (d *NXOSDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 }
 
 func (d *NXOSDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
 	var errs []string
 	for _, appID := range common.GenerateContainerAppIDs(pod) {
 		if err := d.deleteApp(ctx, appID); err != nil {
@@ -182,10 +176,17 @@ func (d *NXOSDriver) ensureAppConfig(ctx context.Context, pod *v1.Pod, container
 	for i, opt := range runOpts {
 		commands = append(commands, fmt.Sprintf("run-opts %d %q", i+1, opt))
 	}
-	if _, err := d.client.conf(ctx, commands...); err != nil {
+	if err := d.appCommand(ctx, commands...); err != nil {
 		return fmt.Errorf("nxos configure app %s: %w", appID, err)
 	}
 	return nil
+}
+
+func (d *NXOSDriver) appCommand(ctx context.Context, commands ...string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	_, err := d.client.conf(ctx, commands...)
+	return err
 }
 
 func dockerLabelRunOpts(pod *v1.Pod, container v1.Container) []string {
@@ -211,17 +212,17 @@ func (d *NXOSDriver) deleteApp(ctx context.Context, appID string) error {
 	}
 	var errs []string
 	if state == "RUNNING" {
-		if _, err := d.client.show(ctx, fmt.Sprintf("app-hosting stop appid %s", appID)); err != nil {
+		if err := d.appCommand(ctx, fmt.Sprintf("app-hosting stop appid %s", appID)); err != nil {
 			errs = append(errs, err.Error())
 		}
 	}
-	if _, err := d.client.show(ctx, fmt.Sprintf("app-hosting deactivate appid %s", appID)); err != nil {
+	if err := d.appCommand(ctx, fmt.Sprintf("app-hosting deactivate appid %s", appID)); err != nil {
 		errs = append(errs, err.Error())
 	}
-	if _, err := d.client.show(ctx, fmt.Sprintf("app-hosting uninstall appid %s", appID)); err != nil {
+	if err := d.appCommand(ctx, fmt.Sprintf("app-hosting uninstall appid %s", appID)); err != nil {
 		errs = append(errs, err.Error())
 	}
-	if _, err := d.client.conf(ctx, "configure terminal", fmt.Sprintf("no app-hosting appid %s", appID)); err != nil {
+	if err := d.appCommand(ctx, "configure terminal", fmt.Sprintf("no app-hosting appid %s", appID)); err != nil {
 		errs = append(errs, err.Error())
 	}
 	if len(errs) > 0 {

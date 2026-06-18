@@ -138,6 +138,10 @@ func (c *nxapiClient) conf(ctx context.Context, commands ...string) (string, err
 }
 
 func (c *nxapiClient) exec(ctx context.Context, typ, input string) (string, error) {
+	if c.sessionLock != nil {
+		c.sessionLock.Lock()
+		defer c.sessionLock.Unlock()
+	}
 	payload := nxapiRequest{InsAPI: nxapiRequestBody{
 		Version:      nxapiVersion,
 		Type:         typ,
@@ -158,10 +162,6 @@ func (c *nxapiClient) exec(ctx context.Context, typ, input string) (string, erro
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	if c.sessionLock != nil {
-		c.sessionLock.Lock()
-		defer c.sessionLock.Unlock()
-	}
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("nxapi %s %q: %w", typ, input, err)

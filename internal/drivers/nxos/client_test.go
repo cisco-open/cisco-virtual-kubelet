@@ -13,7 +13,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestParseNXAPIResponseSingleOutput(t *testing.T) {
@@ -24,6 +27,40 @@ func TestParseNXAPIResponseSingleOutput(t *testing.T) {
 	}
 	if got != "NXOS: version 10.3(9)\n" {
 		t.Fatalf("unexpected body %q", got)
+	}
+}
+
+func TestNXAPIExecSessionLockCoversRequestConstruction(t *testing.T) {
+	lock := &sync.Mutex{}
+	lock.Lock()
+	c := &nxapiClient{
+		baseURL:     "http://[::1",
+		client:      http.DefaultClient,
+		sessionLock: lock,
+	}
+	done := make(chan error, 1)
+	go func() {
+		_, err := c.exec(context.Background(), "cli_show_ascii", "show version")
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		t.Fatalf("exec returned before session lock was released: %v", err)
+	case <-time.After(100 * time.Millisecond):
+	}
+	lock.Unlock()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("exec returned nil error for invalid URL")
+		}
+		if !strings.Contains(err.Error(), "missing ']'") {
+			t.Fatalf("exec error=%q, want invalid URL parse error", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("exec did not return after session lock was released")
 	}
 }
 
