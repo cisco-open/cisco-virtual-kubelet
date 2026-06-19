@@ -255,6 +255,51 @@ func TestNXOSConfigReconcilerRuntimeOptions(t *testing.T) {
 	}
 }
 
+func TestNXOSConfigReconcilerRecordsConfirmedCommitFallback(t *testing.T) {
+	scheme := newTestScheme(t)
+	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01"}}`)}
+	cr := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: "network", Generation: 1},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:             configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies:       []string{"system"},
+			ModelSource:           &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			Source:                configv1alpha1.ConfigurationSource{Inline: &raw},
+			Transactional:         true,
+			ConfirmTimeoutSeconds: 60,
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+		WithObjects(cr).
+		Build()
+	r := &NXOSConfigReconciler{
+		Client:     c,
+		DeviceName: "leaf-01",
+		Transport:  &fakeNXOSTransport{hostname: "old"},
+		Lookup:     nxoswriters.GetForRelease,
+	}
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	var got configv1alpha1.NXOSConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "network", Name: "leaf-config"}, &got); err != nil {
+		t.Fatalf("get updated: %v", err)
+	}
+	if got.Status.Phase != "InSync" {
+		t.Fatalf("phase=%q status=%#v", got.Status.Phase, got.Status)
+	}
+	if len(got.Status.TransportFallbacks) != 1 {
+		t.Fatalf("transportFallbacks=%#v, want confirmed-commit fallback", got.Status.TransportFallbacks)
+	}
+	fallback := got.Status.TransportFallbacks[0]
+	if fallback.Type != "ConfirmedCommit" || fallback.Reason != "non-transactional reconcile" {
+		t.Fatalf("fallback=%#v", fallback)
+	}
+}
+
 func TestNXOSConfigReconcilerSubscribeBypassesHashShortCircuit(t *testing.T) {
 	scheme := newTestScheme(t)
 	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01"}}`)}

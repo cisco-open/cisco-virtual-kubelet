@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -60,6 +61,57 @@ type RESTResponse struct {
 	Status     string
 	Header     http.Header
 	Body       []byte
+}
+
+// RESTError classifies a non-2xx REST response without forcing platform
+// adapters to parse formatted error strings.
+type RESTError struct {
+	Method     string
+	Path       string
+	Status     string
+	StatusCode int
+	Body       string
+}
+
+func (e *RESTError) Error() string {
+	if e == nil {
+		return "<nil>"
+	}
+	if e.Body != "" {
+		return fmt.Sprintf("REST %s %s failed with status %s: %s",
+			e.Method, e.Path, e.Status, RedactCredentials(e.Body))
+	}
+	return fmt.Sprintf("REST %s %s failed with status %s", e.Method, e.Path, e.Status)
+}
+
+// Retryable reports status codes that are usually worth retrying at the
+// platform adapter or controller-runtime layer.
+func (e *RESTError) Retryable() bool {
+	if e == nil {
+		return false
+	}
+	return e.StatusCode == http.StatusTooManyRequests || e.StatusCode >= 500
+}
+
+// AuthFailure reports whether this error represents authentication or
+// authorization failure.
+func (e *RESTError) AuthFailure() bool {
+	if e == nil {
+		return false
+	}
+	return e.StatusCode == http.StatusUnauthorized || e.StatusCode == http.StatusForbidden
+}
+
+// IsRetryableRESTError reports whether err wraps a retryable RESTError.
+func IsRetryableRESTError(err error) bool {
+	var restErr *RESTError
+	return errors.As(err, &restErr) && restErr.Retryable()
+}
+
+// IsAuthRESTError reports whether err wraps a RESTError caused by authn/authz.
+func IsAuthRESTError(err error) bool {
+	var restErr *RESTError
+	return errors.As(err, &restErr) && restErr.AuthFailure()
 }
 
 // RESTClient provides protocol-neutral REST request mechanics for platform
@@ -190,11 +242,16 @@ func (c *RESTClient) DoRaw(ctx context.Context, req RESTRequest) (*RESTResponse,
 		Body:       data,
 	}
 	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
-		if len(data) > 0 {
-			return resp, fmt.Errorf("REST %s %s failed with status %s: %s",
-				method, req.Path, httpResp.Status, RedactCredentials(string(data)))
+		restErr := &RESTError{
+			Method:     method,
+			Path:       req.Path,
+			Status:     httpResp.Status,
+			StatusCode: httpResp.StatusCode,
 		}
-		return resp, fmt.Errorf("REST %s %s failed with status %s", method, req.Path, httpResp.Status)
+		if len(data) > 0 {
+			restErr.Body = string(data)
+		}
+		return resp, restErr
 	}
 	return resp, nil
 }

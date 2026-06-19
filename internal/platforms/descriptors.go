@@ -82,6 +82,24 @@ var NetAsCodeCatalog = map[string]ciskov1.NetAsCodeModelStatus{
 		Stripe:   "fmc",
 		Sections: []string{"nac_configuration", "existing_configuration", "system", "domains", "devices", "objects", "policies", "vpn"},
 	},
+	"ftd": {
+		Type:     ciskov1.NetAsCodeModelControllerCentric,
+		Format:   "netascode-fmc",
+		Stripe:   "ftd",
+		Sections: []string{"fmc-managed-devices", "objects", "policies", "deployments", "policy-assignment"},
+	},
+	"catalyst_center": {
+		Type:     ciskov1.NetAsCodeModelControllerCentric,
+		Format:   "netascode-catalyst-center",
+		Stripe:   "catalyst_center",
+		Sections: []string{"sites", "fabric", "wireless", "inventory", "templates"},
+	},
+	"hyperfabric": {
+		Type:     ciskov1.NetAsCodeModelSolutionCentric,
+		Format:   "netascode-hyperfabric",
+		Stripe:   "hyperfabric",
+		Sections: []string{"system", "fabric"},
+	},
 	"iosxr": {
 		Type:     ciskov1.NetAsCodeModelDeviceCentric,
 		Format:   "netascode-iosxr",
@@ -94,11 +112,23 @@ var NetAsCodeCatalog = map[string]ciskov1.NetAsCodeModelStatus{
 		Stripe:   "ise",
 		Sections: []string{"identity_management", "network_resources", "network_access", "device_administration", "trustsec", "system"},
 	},
+	"meraki": {
+		Type:     ciskov1.NetAsCodeModelControllerCentric,
+		Format:   "netascode-meraki",
+		Stripe:   "meraki",
+		Sections: []string{"organizations", "networks", "devices", "templates"},
+	},
 	"ndo": {
 		Type:     ciskov1.NetAsCodeModelControllerCentric,
 		Format:   "netascode-ndo",
 		Stripe:   "ndo",
 		Sections: []string{"system", "schema", "tenant_templates"},
+	},
+	"sonic": {
+		Type:     ciskov1.NetAsCodeModelDeviceCentric,
+		Format:   "openconfig",
+		Stripe:   "sonic",
+		Sections: []string{"openconfig"},
 	},
 	"sdwan": {
 		Type:     ciskov1.NetAsCodeModelControllerCentric,

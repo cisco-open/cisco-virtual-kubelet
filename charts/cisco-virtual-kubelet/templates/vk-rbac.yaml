@@ -1,3 +1,4 @@
+{{- $strictRBAC := eq .Values.rbac.profile "strict" }}
 ---
 # Service account used by all Virtual Kubelet Deployments spawned by the controller.
 apiVersion: v1
@@ -45,12 +46,14 @@ rules:
     resources: ["services"]
     verbs: ["get", "list", "watch"]
   # PersistentVolumeClaim/PersistentVolume operations
+  {{- if not $strictRBAC }}
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["persistentvolumes"]
     verbs: ["get", "list", "watch"]
+  {{- end }}
   # Events (for logging pod events)
   - apiGroups: [""]
     resources: ["events"]
@@ -149,6 +152,7 @@ rules:
   - apiGroups: ["ops.cisco.vk"]
     resources: ["deviceoperations/status"]
     verbs: ["get", "update", "patch"]
+  {{- if or (not $strictRBAC) .Values.gnoi.enableSoftwareUpgrade }}
   # IOSXESoftwareUpgrade CRD — multi-phase gNOI OS upgrade reconciler.
   # update+patch on the main object are required for the finalizer; the
   # reconciler writes phase progress through the status subresource.
@@ -162,6 +166,8 @@ rules:
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades/finalizers"]
     verbs: ["update"]
+  {{- end }}
+  {{- if or (not $strictRBAC) .Values.gnoi.enableWriteClass }}
   # IOSXEOperationalAction CRD — write-class destructive gNOI ops
   # (Reboot, FactoryReset, FilePut/Remove, KillProcess, CancelReboot).
   # Separate RBAC boundary from the read-only DeviceOperation; gated by
@@ -175,6 +181,7 @@ rules:
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxeoperationalactions/finalizers"]
     verbs: ["update"]
+  {{- end }}
 ---
 # ClusterRoleBinding for the VK service account.
 apiVersion: rbac.authorization.k8s.io/v1

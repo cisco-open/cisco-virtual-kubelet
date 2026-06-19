@@ -36,6 +36,14 @@ serviceAccount:
   # Name of the VK ServiceAccount created by this chart (used by VK pods).
   vkName: cisco-virtual-kubelet
 
+rbac:
+  # profile controls how broad the per-device VK ClusterRole is.
+  #
+  # default preserves the historical all-capabilities role for compatibility.
+  # strict removes reserved volume reads and high-risk write-class operation
+  # permissions unless the matching runtime gate is enabled.
+  profile: default
+
 controller:
   # leaderElect enables leader election (recommended for multi-replica, keep
   # false for single replica).

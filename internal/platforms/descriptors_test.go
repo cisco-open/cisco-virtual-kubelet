@@ -51,7 +51,17 @@ func TestWorkerCapabilityStatusesAggregatedIsConfigOnly(t *testing.T) {
 }
 
 func TestNetAsCodeCatalogIncludesControllerAndSolutionStripes(t *testing.T) {
-	for _, stripe := range []string{"fmc", "ise", "apic", "vxlan"} {
+	for _, stripe := range []string{
+		"fmc",
+		"ftd",
+		"ise",
+		"apic",
+		"catalyst_center",
+		"meraki",
+		"ndo",
+		"hyperfabric",
+		"vxlan",
+	} {
 		model, ok := NetAsCodeCatalog[stripe]
 		if !ok {
 			t.Fatalf("NetAsCodeCatalog missing %q", stripe)
@@ -68,5 +78,21 @@ func TestNetAsCodeCatalogIncludesControllerAndSolutionStripes(t *testing.T) {
 	}
 	if NetAsCodeCatalog["ise"].Type != ciskov1.NetAsCodeModelControllerCentric {
 		t.Fatalf("ise type=%q, want controller-centric", NetAsCodeCatalog["ise"].Type)
+	}
+	if NetAsCodeCatalog["ftd"].Format != "netascode-fmc" {
+		t.Fatalf("ftd format=%q, want FMC-managed model", NetAsCodeCatalog["ftd"].Format)
+	}
+}
+
+func TestNetAsCodeCatalogKeepsSONICOpenConfigUntilNativeStripeExists(t *testing.T) {
+	model, ok := NetAsCodeCatalog["sonic"]
+	if !ok {
+		t.Fatal("NetAsCodeCatalog missing sonic placeholder")
+	}
+	if model.Format != "openconfig" {
+		t.Fatalf("sonic format=%q, want openconfig", model.Format)
+	}
+	if model.Type != ciskov1.NetAsCodeModelDeviceCentric {
+		t.Fatalf("sonic type=%q, want device-centric", model.Type)
 	}
 }

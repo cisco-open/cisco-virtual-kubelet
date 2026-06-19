@@ -456,6 +456,48 @@ NAME                  DEVICE          PHASE    DRIFT    AGE
 nexus9300v-system     nexus9300v-01   InSync   report   30s
 ```
 
+### NX-OS runtime coverage
+
+NX-OS uses the Network as Code `nxos` model shape, but CVK only writes the
+fields listed below today. Unsupported fields fail closed instead of being
+silently ignored.
+
+| Family | Supported fields | Not supported in this slice |
+|---|---|---|
+| `system` | `system.hostname` | `system.mtu` |
+| `vlan` | `vlan.vlans[].id`, `vlan.vlans[].name` | VNI / VXLAN leaves such as `vni` or `vn_segment` |
+| `interface_ethernet` | `interfaces.ethernets[].id`, `description`, `shutdown`, `mtu` | switchport, IP/IPv6, channel-group, OSPF, PIM, ACL/NAT attachments |
+
+Planned NX-OS family waves are tracked in
+[Production Readiness](production-readiness.md). The next practical additions
+are `interface_switchport`, `interface_vlan`, `interface_loopback`, `vrf`,
+`static_route`, `ntp`, `logging`, and `snmp_server`.
+
+### NX-OS REST/DME semantics
+
+`NXOSConfig` writes through NX-API REST/DME and reports the shared transport
+kind as `rest`. It does not use NETCONF candidate datastores, gNMI
+transactions, or confirmed commit. That means:
+
+- `spec.transactional` cannot make an NX-OS DME apply atomic.
+- `spec.confirmTimeoutSeconds` cannot provide device-native auto-revert.
+- CVK relies on Fetch -> Diff -> Apply -> Verify for every supported family.
+- `writeStartup: true` is safe only after every managed family verifies.
+- Rollback for NX-OS DME is compensating configuration, not a native protocol
+  transaction.
+
+When a CR requests confirmed-commit behavior that the selected transport cannot
+provide, CVK records a warning event and a stable status entry under
+`status.transportFallbacks`, for example:
+
+```yaml
+status:
+  transportFallbacks:
+    - type: ConfirmedCommit
+      reason: non-transactional reconcile
+      message: spec.confirmTimeoutSeconds set but auto-revert path is unavailable on this transport
+```
+
 ---
 
 ## Available configuration families

@@ -270,6 +270,14 @@ type CommonConfigStatus struct {
 	// +listType=set
 	VerifiedFamilies []string `json:"verifiedFamilies,omitempty"`
 
+	// TransportFallbacks records requested transport semantics that could not
+	// be honored by the selected platform/protocol. For example, NX-API
+	// REST/DME cannot provide NETCONF-style confirmed commit.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	TransportFallbacks []TransportFallbackStatus `json:"transportFallbacks,omitempty"`
+
 	// FamilyStatus reports per-family state for each family in
 	// ManagedFamilies.
 	// +optional
@@ -290,6 +298,22 @@ type CommonConfigStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+}
+
+// TransportFallbackStatus describes one protocol feature the reconciler had to
+// degrade because the selected platform transport cannot provide it.
+type TransportFallbackStatus struct {
+	// Type names the fallback category.
+	// +kubebuilder:validation:Enum=ConfirmedCommit
+	Type string `json:"type"`
+
+	// Reason is the stable machine-readable fallback reason.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+
+	// Message is a concise human-readable explanation.
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 // TemplateRef refers to an IOSXETemplate and supplies parameter values used

@@ -10,6 +10,7 @@ package transport
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -123,6 +124,53 @@ func TestRESTClientRedactsErrorBody(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), "cleartext") || !strings.Contains(err.Error(), "***REDACTED***") {
 		t.Fatalf("error was not redacted: %v", err)
+	}
+	var restErr *RESTError
+	if !errors.As(err, &restErr) {
+		t.Fatalf("error %T does not wrap RESTError", err)
+	}
+	if restErr.StatusCode != http.StatusBadRequest {
+		t.Fatalf("statusCode=%d", restErr.StatusCode)
+	}
+	if restErr.Retryable() || restErr.AuthFailure() {
+		t.Fatalf("bad request classified incorrectly: retryable=%v auth=%v", restErr.Retryable(), restErr.AuthFailure())
+	}
+}
+
+func TestRESTErrorClassification(t *testing.T) {
+	tests := []struct {
+		status    int
+		retryable bool
+		auth      bool
+	}{
+		{status: http.StatusUnauthorized, auth: true},
+		{status: http.StatusForbidden, auth: true},
+		{status: http.StatusTooManyRequests, retryable: true},
+		{status: http.StatusInternalServerError, retryable: true},
+		{status: http.StatusBadRequest},
+	}
+	for _, tt := range tests {
+		t.Run(http.StatusText(tt.status), func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.status)
+			}))
+			defer server.Close()
+
+			client, err := NewRESTClient(server.URL, RESTClientOptions{HTTPClient: server.Client()})
+			if err != nil {
+				t.Fatalf("NewRESTClient: %v", err)
+			}
+			_, err = client.Do(context.Background(), RESTRequest{Path: "/classify"})
+			if err == nil {
+				t.Fatal("Do error=nil, want HTTP error")
+			}
+			if got := IsRetryableRESTError(err); got != tt.retryable {
+				t.Fatalf("retryable=%v, want %v", got, tt.retryable)
+			}
+			if got := IsAuthRESTError(err); got != tt.auth {
+				t.Fatalf("auth=%v, want %v", got, tt.auth)
+			}
+		})
 	}
 }
 

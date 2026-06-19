@@ -11,6 +11,7 @@ package nxos
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,6 +21,48 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 )
+
+func TestNXAPIConfigTransportCapabilitiesAreRESTDME(t *testing.T) {
+	tr := &nxapiConfigTransport{}
+	caps := tr.Capabilities()
+	if caps.Kind != transport.KindREST {
+		t.Fatalf("kind=%q, want neutral REST", caps.Kind)
+	}
+	if caps.SupportsTransactions {
+		t.Fatal("NX-OS DME REST must not advertise transactions")
+	}
+	if caps.SupportsConfirmedCommit {
+		t.Fatal("NX-OS DME REST must not advertise confirmed-commit")
+	}
+	if !caps.SupportsWritableRunning {
+		t.Fatal("NX-OS DME REST should advertise direct running writes")
+	}
+	if !caps.SupportsSaveStartup {
+		t.Fatal("NX-OS transport should advertise startup save support")
+	}
+	if !caps.SupportsDiagnosticExec {
+		t.Fatal("NX-OS transport should advertise diagnostic exec support")
+	}
+}
+
+func TestNXAPIConfigTransportRejectsTransactions(t *testing.T) {
+	tr := &nxapiConfigTransport{}
+	if tx, err := tr.StartTransaction(context.Background()); !errors.Is(err, transport.ErrUnsupported) || tx != "" {
+		t.Fatalf("StartTransaction tx=%q err=%v, want ErrUnsupported", tx, err)
+	}
+	if err := tr.Commit(context.Background(), "tx-1"); !errors.Is(err, transport.ErrUnsupported) {
+		t.Fatalf("Commit(non-empty tx) err=%v, want ErrUnsupported", err)
+	}
+	if err := tr.Discard(context.Background(), "tx-1"); !errors.Is(err, transport.ErrUnsupported) {
+		t.Fatalf("Discard(non-empty tx) err=%v, want ErrUnsupported", err)
+	}
+	if err := tr.Commit(context.Background(), ""); err != nil {
+		t.Fatalf("Commit(empty tx) err=%v, want nil", err)
+	}
+	if err := tr.Discard(context.Background(), ""); err != nil {
+		t.Fatalf("Discard(empty tx) err=%v, want nil", err)
+	}
+}
 
 func TestParseNXOSConfigFetchOutputs(t *testing.T) {
 	if got := parseNXOSHostname("hostname leaf-01\n"); got != "leaf-01" {

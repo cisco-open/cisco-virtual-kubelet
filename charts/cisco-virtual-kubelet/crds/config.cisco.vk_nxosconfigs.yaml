@@ -464,6 +464,35 @@ spec:
                   SourceYangVersion records the platform release/model version used by the
                   writer registry on the last successful apply.
                 type: string
+              transportFallbacks:
+                description: |-
+                  TransportFallbacks records requested transport semantics that could not
+                  be honored by the selected platform/protocol. For example, NX-API
+                  REST/DME cannot provide NETCONF-style confirmed commit.
+                items:
+                  description: |-
+                    TransportFallbackStatus describes one protocol feature the reconciler had to
+                    degrade because the selected platform transport cannot provide it.
+                  properties:
+                    message:
+                      description: Message is a concise human-readable explanation.
+                      type: string
+                    reason:
+                      description: Reason is the stable machine-readable fallback
+                        reason.
+                      type: string
+                    type:
+                      description: Type names the fallback category.
+                      enum:
+                      - ConfirmedCommit
+                      type: string
+                  required:
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               verifiedFamilies:
                 description: VerifiedFamilies lists families that completed a post-apply
                   verify pass.

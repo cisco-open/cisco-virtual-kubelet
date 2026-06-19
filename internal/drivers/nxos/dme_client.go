@@ -288,6 +288,9 @@ func isDMEAuthError(err error) bool {
 	if err == nil {
 		return false
 	}
+	if configtransport.IsAuthRESTError(err) {
+		return true
+	}
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "unauthorized") ||
 		strings.Contains(msg, "forbidden") ||

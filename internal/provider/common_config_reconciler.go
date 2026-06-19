@@ -612,6 +612,14 @@ func (r *CommonConfigReconciler) recordResult(
 	status.AppliedOps = int32(result.AppliedOps)
 	status.PostApplyObservedHash = result.PostApplyObservedHash
 	status.VerifiedFamilies = append(status.VerifiedFamilies[:0], result.VerifiedFamilies...)
+	status.TransportFallbacks = status.TransportFallbacks[:0]
+	if result.ConfirmedCommitFallback != "" {
+		status.TransportFallbacks = append(status.TransportFallbacks, configv1alpha1.TransportFallbackStatus{
+			Type:    "ConfirmedCommit",
+			Reason:  result.ConfirmedCommitFallback,
+			Message: "spec.confirmTimeoutSeconds set but auto-revert path is unavailable on this transport",
+		})
+	}
 	status.FamilyStatus = status.FamilyStatus[:0]
 	for _, fs := range result.FamilyStatuses {
 		status.FamilyStatus = append(status.FamilyStatus, configv1alpha1.FamilyStatus{
@@ -667,7 +675,7 @@ func (r *CommonConfigReconciler) recordResult(
 		}
 		if result.ConfirmedCommitFallback != "" {
 			r.Recorder.Eventf(cr, corev1.EventTypeWarning, "ConfirmedCommitFallback",
-				"spec.confirmTimeoutSeconds set but auto-revert path unavailable: %s; fell back to plain commit",
+				"spec.confirmTimeoutSeconds set but auto-revert path unavailable: %s; continuing without transport auto-revert",
 				result.ConfirmedCommitFallback)
 		} else if result.ConfirmedCommitUsed {
 			r.Recorder.Eventf(cr, corev1.EventTypeNormal, "ConfirmedCommitUsed", "confirmed-commit auto-revert path used")

@@ -289,6 +289,44 @@ Used by each VK pod. Permissions:
 | `events` | create, patch | Emit pod lifecycle events |
 | `leases` (in `kube-node-lease`) | get, list, watch, create, update, patch, delete | Node heartbeat via Lease API |
 
+### Production RBAC hardening
+
+The default chart preserves the broad Virtual Kubelet permissions needed by the
+current per-device runtime, including pod lifecycle, node registration,
+configuration CR access, and operations CR access. Before declaring the NX-OS
+runtime production-grade, split this into explicit profiles:
+
+| Profile | Intended scope |
+|---|---|
+| Controller | Watches `CiscoDevice`, creates Deployments/ConfigMaps, manages finalizers and virtual node cleanup. |
+| Per-device runtime | Owns pod lifecycle and node status for one device worker. |
+| Config writer | Reads/writes only the config CRDs required by the enabled platform. |
+| Diagnostics | Creates and updates read-only `DeviceOperation` requests and artifacts. |
+| Lifecycle operations | Opt-in profile for software upgrades and other write-class operations. |
+
+Strict production installs should prefer namespaced Roles for pod, config,
+operation, and artifact surfaces, keeping ClusterRoles only where Kubernetes
+requires cluster scope, such as `nodes` and cluster-scoped CRDs. Additions to
+cluster-wide verbs should carry a rationale in this page and a regression test
+so RBAC broadening is visible during review.
+
+The chart exposes the first strict-profile control as:
+
+```yaml
+rbac:
+  profile: strict
+```
+
+`profile: default` preserves the historical VK ClusterRole. `profile: strict`
+removes reserved persistent volume reads and withholds write-class gNOI and
+software-upgrade CRD permissions unless the matching runtime gates are enabled:
+
+```yaml
+gnoi:
+  enableSoftwareUpgrade: true
+  enableWriteClass: true
+```
+
 ### Finalizer and deletion
 
 The controller adds the finalizer `cisco.vk/device-cleanup` to every `CiscoDevice`. On deletion:
