@@ -15,15 +15,15 @@
 package nxos
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
+
+	configtransport "github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 )
 
 const (
@@ -100,31 +100,27 @@ func (c *nxapiClient) dmeLoginLocked(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.rootEndpoint(dmeLoginPath), bytes.NewReader(body))
+	rest, err := c.restClient()
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	if c.username != "" || c.password != "" {
-		req.SetBasicAuth(c.username, c.password)
-	}
-	resp, err := c.httpClient().Do(req)
+	resp, err := rest.DoRaw(ctx, configtransport.RESTRequest{
+		Method: http.MethodPost,
+		Path:   dmeLoginPath,
+		Body:   body,
+		Headers: map[string]string{
+			"Accept":       "application/json",
+			"Content-Type": "application/json",
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("nxapi dme login: %w", err)
 	}
-	defer resp.Body.Close()
-	raw, readErr := io.ReadAll(resp.Body)
-	if readErr != nil {
-		return fmt.Errorf("nxapi dme login: read response: %w", readErr)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("nxapi dme login: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(raw)))
-	}
+	raw := resp.Body
 	if err := dmeResponseError(raw); err != nil {
 		return fmt.Errorf("nxapi dme login: %w", err)
 	}
-	c.dmeCookies = resp.Cookies()
+	c.dmeCookies = (&http.Response{Header: resp.Header}).Cookies()
 	if len(c.dmeCookies) == 0 {
 		if token := dmeLoginToken(raw); token != "" {
 			c.dmeCookies = []*http.Cookie{
@@ -137,35 +133,30 @@ func (c *nxapiClient) dmeLoginLocked(ctx context.Context) error {
 }
 
 func (c *nxapiClient) dmeRequestLocked(ctx context.Context, method, dn string, query url.Values, body []byte) ([]byte, error) {
-	u, err := c.dmeURL(dn, query)
+	path, err := dmePath(dn)
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, method, u, bytes.NewReader(body))
+	rest, err := c.restClient()
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept", "application/json")
+	headers := map[string]string{"Accept": "application/json"}
 	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+		headers["Content-Type"] = "application/json"
 	}
-	if c.username != "" || c.password != "" {
-		req.SetBasicAuth(c.username, c.password)
+	if cookieHeader := dmeCookieHeader(c.dmeCookies); cookieHeader != "" {
+		headers["Cookie"] = cookieHeader
 	}
-	for _, cookie := range c.dmeCookies {
-		req.AddCookie(cookie)
-	}
-	resp, err := c.httpClient().Do(req)
+	raw, err := rest.Do(ctx, configtransport.RESTRequest{
+		Method:  method,
+		Path:    path,
+		Query:   query,
+		Body:    body,
+		Headers: headers,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("nxapi dme %s %s: %w", method, dn, err)
-	}
-	defer resp.Body.Close()
-	raw, readErr := io.ReadAll(resp.Body)
-	if readErr != nil {
-		return nil, fmt.Errorf("nxapi dme %s %s: read response: %w", method, dn, readErr)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("nxapi dme %s %s: HTTP %d: %s", method, dn, resp.StatusCode, strings.TrimSpace(string(raw)))
 	}
 	if err := dmeResponseError(raw); err != nil {
 		return nil, fmt.Errorf("nxapi dme %s %s: %w", method, dn, err)
@@ -173,14 +164,36 @@ func (c *nxapiClient) dmeRequestLocked(ctx context.Context, method, dn string, q
 	return raw, nil
 }
 
-func (c *nxapiClient) dmeURL(dn string, query url.Values) (string, error) {
+func (c *nxapiClient) restClient() (*configtransport.RESTClient, error) {
+	root := strings.TrimRight(c.rootURL, "/")
+	if root == "" {
+		root = strings.TrimSuffix(strings.TrimRight(c.baseURL, "/"), nxapiPath)
+	}
+	return configtransport.NewRESTClient(root, configtransport.RESTClientOptions{
+		HTTPClient: c.httpClient(),
+		Auth: configtransport.RESTAuth{
+			Username: c.username,
+			Password: c.password,
+		},
+	})
+}
+
+func dmePath(dn string) (string, error) {
 	dn = strings.TrimSpace(dn)
 	if dn == "" {
 		return "", fmt.Errorf("nxapi dme: empty DN")
 	}
 	dn = strings.TrimPrefix(strings.TrimPrefix(dn, "/"), "api/mo/")
 	dn = strings.TrimSuffix(dn, ".json")
-	u, err := url.Parse(c.rootEndpoint(dmeMOPath + dn + ".json"))
+	return dmeMOPath + dn + ".json", nil
+}
+
+func (c *nxapiClient) dmeURL(dn string, query url.Values) (string, error) {
+	path, err := dmePath(dn)
+	if err != nil {
+		return "", err
+	}
+	u, err := url.Parse(c.rootEndpoint(path))
 	if err != nil {
 		return "", err
 	}
@@ -188,6 +201,17 @@ func (c *nxapiClient) dmeURL(dn string, query url.Values) (string, error) {
 		u.RawQuery = query.Encode()
 	}
 	return u.String(), nil
+}
+
+func dmeCookieHeader(cookies []*http.Cookie) string {
+	parts := make([]string, 0, len(cookies))
+	for _, cookie := range cookies {
+		if cookie == nil || cookie.Name == "" {
+			continue
+		}
+		parts = append(parts, cookie.Name+"="+cookie.Value)
+	}
+	return strings.Join(parts, "; ")
 }
 
 func dmeResponseError(raw []byte) error {

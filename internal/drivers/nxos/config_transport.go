@@ -417,6 +417,9 @@ func parseDMEEthernetInterfaces(raw []byte) []map[string]any {
 		case "up":
 			item["shutdown"] = false
 		}
+		if mtu, err := strconv.Atoi(stringAttr(attrs, "mtu")); err == nil && mtu > 0 {
+			item["mtu"] = mtu
+		}
 		interfaces = append(interfaces, item)
 	}
 	return interfaces

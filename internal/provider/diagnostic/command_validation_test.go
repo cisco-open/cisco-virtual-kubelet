@@ -95,3 +95,33 @@ func TestValidateCommands(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateCommandsForPlatformNXOS(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		cmds    []string
+		wantErr bool
+	}{
+		{"show-version", []string{"show version"}, false},
+		{"show-vlan", []string{"show vlan brief"}, false},
+		{"terminal-length", []string{"terminal length 0"}, false},
+		{"terminal-no-monitor", []string{"terminal no monitor"}, true},
+		{"monitor-capture", []string{"monitor capture cvkcap buffer dump"}, true},
+		{"namespace", []string{"namespace foo show ip route"}, true},
+		{"configure-terminal", []string{"configure terminal"}, true},
+		{"copy-running-startup", []string{"copy running-config startup-config"}, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateCommandsForPlatform(CommandPlatformNXOS, tc.cmds)
+			gotErr := err != nil
+			if gotErr != tc.wantErr {
+				t.Fatalf("got err=%v, wantErr=%v (cmds=%v)", err, tc.wantErr, tc.cmds)
+			}
+			if gotErr && !errors.Is(err, ErrCommandDisallowed) {
+				t.Errorf("expected error to wrap ErrCommandDisallowed; got %v", err)
+			}
+		})
+	}
+}

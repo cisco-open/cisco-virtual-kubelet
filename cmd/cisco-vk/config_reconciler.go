@@ -402,6 +402,7 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		Recorder:   recorder,
 		Scheme:     mgr.GetScheme(),
 		DeviceName: deviceName,
+		Platform:   diagnostic.CommandPlatformIOSXE,
 		TP:         r,
 	}
 	if err := diagReconciler.SetupWithManager(mgr); err != nil {
@@ -437,6 +438,7 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		// uses it to refuse cross-namespace DeviceOperation requests.
 		DeviceName:      deviceName,
 		DeviceNamespace: operationNamespace(),
+		Platform:        diagnostic.CommandPlatformIOSXE,
 		TP:              r,
 		GNOI:            gnoiProv,
 	}
@@ -561,6 +563,7 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 			OperationClient:    mgr.GetClient(),
 			OperationReader:    mgr.GetAPIReader(),
 			OperationNamespace: operationNamespace(),
+			Platform:           diagnostic.CommandPlatformIOSXE,
 			BindAddr:           adminAddr,
 			TelemetrySource:    telemetryReconciler.TelemetryHealthSnapshot,
 		}

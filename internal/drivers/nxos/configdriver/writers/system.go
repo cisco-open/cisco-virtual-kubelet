@@ -51,6 +51,9 @@ func (systemWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	if got == nil {
 		got = map[string]any{}
 	}
+	if err := rejectUnsupportedKeys(want, "system", "hostname"); err != nil {
+		return nil, err
+	}
 	hostname, ok := want["hostname"]
 	if !ok {
 		return nil, nil

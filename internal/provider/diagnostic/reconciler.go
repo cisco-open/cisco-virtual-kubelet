@@ -75,6 +75,7 @@ type Reconciler struct {
 	Recorder   record.EventRecorder
 	Scheme     *runtime.Scheme
 	DeviceName string
+	Platform   CommandPlatform
 
 	// TP is the per-device-pod's transport source. The diagnostic
 	// reconciler does not dial — it borrows the configdriver's live
@@ -277,7 +278,7 @@ func (r *Reconciler) runBatch(
 	// validation; a user with create-IOSXEDiagnostic RBAC could
 	// bypass the kubectl plugin's denylist and submit configure-mode
 	// or destructive CLI through the same device credentials.
-	if err := ValidateCommands(diag.Spec.Commands); err != nil {
+	if err := ValidateCommandsForPlatform(r.Platform, diag.Spec.Commands); err != nil {
 		capture.TransportError = err.Error()
 		return capture
 	}

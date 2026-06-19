@@ -43,9 +43,20 @@ var ErrCommandDisallowed = errors.New("diagnostic command not allowed")
 // admins enable it.
 //
 // Wave 10 release-readiness P0 fix (2026-04-28).
+type CommandPlatform string
+
+const (
+	CommandPlatformIOSXE CommandPlatform = "iosxe"
+	CommandPlatformNXOS  CommandPlatform = "nxos"
+)
+
 func ValidateCommands(cmds []string) error {
+	return ValidateCommandsForPlatform("", cmds)
+}
+
+func ValidateCommandsForPlatform(platform CommandPlatform, cmds []string) error {
 	for i, raw := range cmds {
-		if err := validateOne(raw); err != nil {
+		if err := validateOne(platform, raw); err != nil {
 			return fmt.Errorf("commands[%d] %q: %w", i, raw, err)
 		}
 	}
@@ -55,7 +66,7 @@ func ValidateCommands(cmds []string) error {
 // validateOne returns nil if `raw` is on the read-only allowlist;
 // ErrCommandDisallowed otherwise. The check is conservative — when in
 // doubt, deny and surface the user-friendly error to the operator.
-func validateOne(raw string) error {
+func validateOne(platform CommandPlatform, raw string) error {
 	cmd := strings.TrimSpace(raw)
 	if cmd == "" {
 		return fmt.Errorf("%w: empty command", ErrCommandDisallowed)
@@ -71,7 +82,7 @@ func validateOne(raw string) error {
 	}
 	// Lowercase head-word for the allowlist check.
 	lower := strings.ToLower(cmd)
-	for _, h := range allowedHeads {
+	for _, h := range allowedHeadsForPlatform(platform) {
 		if lower != h.head && !strings.HasPrefix(lower, h.head+" ") {
 			continue
 		}
@@ -118,11 +129,20 @@ type allowedHead struct {
 	deniedSubcommandTokens []string
 }
 
-// allowedHeads is the closed set of CLI head-words the diagnostic
+func allowedHeadsForPlatform(platform CommandPlatform) []allowedHead {
+	switch platform {
+	case CommandPlatformNXOS:
+		return nxosAllowedHeads
+	default:
+		return iosxeAllowedHeads
+	}
+}
+
+// iosxeAllowedHeads is the closed set of CLI head-words the diagnostic
 // subsystem accepts. Every entry must be a user-mode read-only
 // command on Cisco IOS-XE; adding a new entry requires explicit
 // review. Sorted by frequency-of-use.
-var allowedHeads = []allowedHead{
+var iosxeAllowedHeads = []allowedHead{
 	{head: "show"},
 	{head: "more"},
 	{head: "dir"},
@@ -165,6 +185,28 @@ var allowedHeads = []allowedHead{
 		},
 	},
 	{head: "namespace"}, // ip vrf-name display
+}
+
+// nxosAllowedHeads keeps NX-API CLI diagnostics deliberately narrower
+// than the IOS-XE allowlist. NX-API CLI has both show and config
+// channels; read-only CRD/admin execution should stay on operational
+// commands while write-class changes go through config writers or
+// explicit operational APIs.
+var nxosAllowedHeads = []allowedHead{
+	{head: "show"},
+	{head: "more"},
+	{head: "dir"},
+	{head: "ping"},
+	{head: "ping6"},
+	{head: "traceroute"},
+	{head: "traceroute6"},
+	{head: "verify"},
+	{
+		head: "terminal",
+		allowedSubcommandPatterns: []string{
+			"length ", "width ",
+		},
+	},
 }
 
 // headAllowsBody returns true if the lowercased command body satisfies

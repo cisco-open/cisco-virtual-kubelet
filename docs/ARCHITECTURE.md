@@ -197,6 +197,29 @@ This preserves NetAsCode as the stable public model while giving CVK a place to
 use release-specific ygot/ytypes validation as those generated model packages
 are added.
 
+### NX-OS Config Driver
+
+NX-OS uses the same common config runtime and status contract, but the
+device-facing boundary is NX-API REST/DME rather than YANG. The NX-OS adapter
+preserves the full NetAsCode `nxos:` envelope long enough to resolve
+`global`, `device_groups`, `devices`, model `templates`, `variables`, and
+`interface_groups`, then normalizes supported families into the writer contract.
+
+```text
+NXOSConfig source
+  -> NetAsCode envelope resolver
+  -> family writer
+  -> DME object payload
+  -> neutral REST helper
+  -> NX-API REST/DME transport
+  -> NX-OS device
+  -> common status and apply result
+```
+
+The same transport contract also exposes a read-only diagnostic execution path.
+For NX-OS that path intentionally uses NX-API CLI, while declarative
+configuration writes use NX-API REST/DME.
+
 ## Data flow
 
 ### Controller reconciliation

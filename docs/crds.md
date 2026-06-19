@@ -340,6 +340,10 @@ Status:
 the common config runtime, fetches observed state through NX-API, applies
 managed families, and verifies the post-apply state before reporting `InSync`.
 The first supported families are `system`, `vlan`, and `interface_ethernet`.
+The source can be either a direct resolved family map or a full `nxos:`
+NetAsCode envelope with `global`, `device_groups`, `devices`, model
+`templates`, `variables`, and `interface_groups`. Unsupported fields inside the
+implemented families fail closed at writer diff time.
 
 ```yaml
 apiVersion: config.cisco.vk/v1alpha1
@@ -358,12 +362,22 @@ spec:
     resolved: true
   source:
     inline:
-      system:
-        hostname: nexus9300v-01
-      vlan:
-        vlans:
-          - id: 3903
-            name: CVK_LAB
+      nxos:
+        devices:
+          - name: nexus9300v-01
+            configuration:
+              system:
+                hostname: nexus9300v-01
+              vlan:
+                vlans:
+                  - id: 3903
+                    name: CVK_LAB
+              interfaces:
+                ethernets:
+                  - id: 1/1
+                    description: CVK uplink
+                    shutdown: false
+                    mtu: 9216
 ```
 
 ```bash

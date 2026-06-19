@@ -44,6 +44,9 @@ import (
 	configtransport "github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/deviceoperation"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
@@ -162,6 +165,44 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 	}
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("NXOSConfig SetupWithManager: %w", err)
+	}
+	operationReconciler := &deviceoperation.Reconciler{
+		Client:          mgr.GetClient(),
+		Reader:          mgr.GetAPIReader(),
+		Recorder:        recorder,
+		Scheme:          mgr.GetScheme(),
+		DeviceName:      deviceName,
+		DeviceNamespace: operationNamespace(),
+		Platform:        diagnostic.CommandPlatformNXOS,
+		TP:              r,
+	}
+	if err := operationReconciler.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("NXOS DeviceOperation SetupWithManager: %w", err)
+	}
+	adminAddr := os.Getenv("CONFIG_DIAG_ADMIN_ADDR")
+	if adminAddr == "" {
+		adminAddr = adminserver.DefaultBindAddr
+	}
+	if adminAddr != "0" {
+		admSrv := &adminserver.Server{
+			DeviceName:         deviceName,
+			TP:                 r,
+			OperationClient:    mgr.GetClient(),
+			OperationReader:    mgr.GetAPIReader(),
+			OperationNamespace: operationNamespace(),
+			Platform:           diagnostic.CommandPlatformNXOS,
+			BindAddr:           adminAddr,
+		}
+		stop := make(chan struct{})
+		go func() {
+			<-ctx.Done()
+			close(stop)
+		}()
+		go func() {
+			if err := admSrv.ListenAndServe(stop); err != nil {
+				log.G(ctx).WithError(err).Warn("NXOS diagnostic admin server exited")
+			}
+		}()
 	}
 	if dctx.Transport == nil {
 		recorder.Eventf(&ciskov1.CiscoDevice{

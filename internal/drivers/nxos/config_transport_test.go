@@ -112,7 +112,7 @@ func TestNXAPIConfigTransportFetchesDMEObservedState(t *testing.T) {
 			if r.URL.Query().Get("target-subtree-class") != "l1PhysIf" {
 				t.Fatalf("query=%s", r.URL.RawQuery)
 			}
-			_, _ = w.Write([]byte(`{"totalCount":"1","imdata":[{"l1PhysIf":{"attributes":{"id":"eth1/1","descr":"uplink","adminSt":"up"}}}]}`))
+			_, _ = w.Write([]byte(`{"totalCount":"1","imdata":[{"l1PhysIf":{"attributes":{"id":"eth1/1","descr":"uplink","adminSt":"up","mtu":"9216"}}}]}`))
 		default:
 			t.Fatalf("unexpected path %s", r.URL.Path)
 		}
@@ -159,7 +159,10 @@ func TestNXAPIConfigTransportFetchesDMEObservedState(t *testing.T) {
 	if err := json.Unmarshal(raw, &intfs); err != nil {
 		t.Fatalf("decode interfaces: %v", err)
 	}
-	if len(intfs["interfaces"]) != 1 || intfs["interfaces"][0]["name"] != "1/1" || intfs["interfaces"][0]["shutdown"] != false {
+	if len(intfs["interfaces"]) != 1 ||
+		intfs["interfaces"][0]["name"] != "1/1" ||
+		intfs["interfaces"][0]["shutdown"] != false ||
+		intfs["interfaces"][0]["mtu"] != float64(9216) {
 		t.Fatalf("interfaces=%#v", intfs)
 	}
 	if loginCount != 1 {

@@ -115,6 +115,20 @@ func scalarEqual(a, b any) bool {
 	return reflect.DeepEqual(normalScalar(a), normalScalar(b))
 }
 
+func rejectUnsupportedKeys(m map[string]any, origin string, supported ...string) error {
+	allowed := make(map[string]struct{}, len(supported))
+	for _, key := range supported {
+		allowed[key] = struct{}{}
+	}
+	for _, key := range sortedKeys(m) {
+		if _, ok := allowed[key]; ok {
+			continue
+		}
+		return fmt.Errorf("%s: field %q is not supported by the NX-OS DME writer yet", origin, key)
+	}
+	return nil
+}
+
 func normalScalar(v any) any {
 	switch x := v.(type) {
 	case int:

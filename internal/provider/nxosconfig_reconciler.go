@@ -121,12 +121,14 @@ func (r *NXOSConfigReconciler) common() *CommonConfigReconciler {
 // spec/status reconciler.
 func NXOSCommonConfigPlatform() CommonConfigPlatform {
 	return CommonConfigPlatform{
-		Name:           "nxos",
-		Kind:           "NXOSConfig",
-		ControllerName: "nxosconfig",
-		SourceEnvelope: "nxos",
-		ModelFormat:    configv1alpha1.NetAsCodeModelFormatNXOS,
-		Finalizer:      nxosConfigFinalizer,
+		Name:             "nxos",
+		Kind:             "NXOSConfig",
+		ControllerName:   "nxosconfig",
+		SourceEnvelope:   "nxos",
+		ModelFormat:      configv1alpha1.NetAsCodeModelFormatNXOS,
+		Finalizer:        nxosConfigFinalizer,
+		PreserveEnvelope: true,
+		NormalizeSource:  normalizeNXOSNetAsCodeSource,
 		NewObject: func() client.Object {
 			return &configv1alpha1.NXOSConfig{}
 		},

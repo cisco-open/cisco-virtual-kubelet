@@ -403,6 +403,14 @@ Use `NXOSConfig` for NX-OS devices. It uses the same common status and
 drift-policy fields as `IOSXEConfig`, but the first runtime slice is scoped to
 `system`, `vlan`, and `interface_ethernet` over NX-API REST/DME.
 
+`NXOSConfig` accepts either a direct resolved family map or a full
+`nxos:` NetAsCode envelope. When a full envelope is supplied, CVK resolves
+`global`, matching `device_groups`, the selected `devices` entry, model
+`templates`, `variables`, and `interface_groups` before normalizing
+`interfaces.ethernets` into the runtime `interface_ethernet` family. Template
+types other than `model` are rejected; render CLI separately and submit only
+resolved model intent.
+
 ```yaml
 apiVersion: config.cisco.vk/v1alpha1
 kind: NXOSConfig
@@ -420,8 +428,26 @@ spec:
     resolved: true
   source:
     inline:
-      system:
-        hostname: nexus9300v-01
+      nxos:
+        global:
+          variables:
+            uplink_mtu: 9216
+        interface_groups:
+          - name: routed-uplinks
+            configuration:
+              mtu: ${uplink_mtu}
+              shutdown: false
+        devices:
+          - name: nexus9300v-01
+            configuration:
+              system:
+                hostname: nexus9300v-01
+              interfaces:
+                ethernets:
+                  - id: 1/1
+                    interface_groups:
+                      - routed-uplinks
+                    description: CVK uplink
 ```
 
 ```bash

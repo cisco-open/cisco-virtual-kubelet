@@ -57,6 +57,10 @@ func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	}
 	desiredByName := map[string]map[string]any{}
 	for _, item := range wantList {
+		if err := rejectUnsupportedKeys(item, "interface_ethernet.interfaces[]",
+			"id", "type", "name", "description", "shutdown", "mtu"); err != nil {
+			return nil, err
+		}
 		_, _, full, err := ethernetName(item)
 		if err != nil {
 			return nil, err
@@ -89,6 +93,16 @@ func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 			}
 			attrs["userCfgdFlags"] = "admin_state"
 			if gotItem == nil || !scalarEqual(shutdown, gotItem["shutdown"]) {
+				changed = true
+			}
+		}
+		if mtuRaw, ok := item["mtu"]; ok {
+			mtu, valid := intLeaf(mtuRaw)
+			if !valid || mtu < 576 || mtu > 9216 {
+				return nil, fmt.Errorf("%s mtu must be an integer between 576 and 9216", full)
+			}
+			attrs["mtu"] = fmt.Sprintf("%d", mtu)
+			if gotItem == nil || !scalarEqual(mtu, gotItem["mtu"]) {
 				changed = true
 			}
 		}
@@ -128,14 +142,23 @@ func (ethernetWriter) Apply(ctx context.Context, c transport.Interface, ops []tr
 }
 
 func ethernetName(item map[string]any) (typ, name, full string, err error) {
-	typ = strings.TrimSpace(stringLeaf(item["type"]))
+	if raw, ok := item["type"]; ok {
+		typ = strings.TrimSpace(stringLeaf(raw))
+	}
 	if typ == "" {
 		typ = "Ethernet"
 	}
 	if !strings.EqualFold(typ, "Ethernet") {
 		return "", "", "", fmt.Errorf("interface_ethernet: unsupported type %q", typ)
 	}
-	name = strings.TrimSpace(stringLeaf(item["name"]))
+	if raw, ok := item["name"]; ok {
+		name = strings.TrimSpace(stringLeaf(raw))
+	}
+	if name == "" {
+		if raw, ok := item["id"]; ok {
+			name = strings.TrimSpace(stringLeaf(raw))
+		}
+	}
 	if name == "" {
 		return "", "", "", fmt.Errorf("interface_ethernet: missing name")
 	}

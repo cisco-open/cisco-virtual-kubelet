@@ -80,6 +80,26 @@ func TestEthernetDiffEmitsDescriptionAndShutdownDME(t *testing.T) {
 	}
 }
 
+func TestEthernetDiffAcceptsNetAsCodeID(t *testing.T) {
+	w := Get("interface_ethernet")
+	ops, err := w.Diff(
+		map[string]any{"interfaces": []any{map[string]any{"id": "1/1", "description": "uplink", "mtu": 9216}}},
+		map[string]any{"interfaces": []any{map[string]any{"name": "1/1", "description": "old", "mtu": 1500}}},
+	)
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if len(ops) != 1 {
+		t.Fatalf("ops=%#v", ops)
+	}
+	raw := mustJSON(t, requireDMEOp(t, ops[0], transport.VerbMerge, nxosschema.DNInterfaceEntity))
+	for _, want := range []string{`"id":"eth1/1"`, `"descr":"uplink"`, `"mtu":"9216"`} {
+		if !strings.Contains(raw, want) {
+			t.Fatalf("payload %s missing %s", raw, want)
+		}
+	}
+}
+
 func TestNXOSWritersNoOpWhenDesiredMatchesObserved(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -126,6 +146,46 @@ func TestVLANDiffRejectsInvalidInput(t *testing.T) {
 	}
 	if _, err := w.Diff(map[string]any{"vlans": []any{map[string]any{"id": 101, "name": ""}}}, nil); err == nil {
 		t.Fatal("Diff accepted empty VLAN name")
+	}
+	if _, err := w.Diff(map[string]any{"vlans": []any{map[string]any{"id": 101, "vni": 10101}}}, nil); err == nil {
+		t.Fatal("Diff accepted unsupported VLAN VNI")
+	}
+}
+
+func TestEthernetDiffRejectsInvalidMTU(t *testing.T) {
+	w := Get("interface_ethernet")
+	if _, err := w.Diff(map[string]any{"interfaces": []any{
+		map[string]any{"id": "1/1", "mtu": 100},
+	}}, nil); err == nil {
+		t.Fatal("Diff accepted invalid MTU")
+	}
+}
+
+func TestNXOSWritersRejectUnsupportedFields(t *testing.T) {
+	tests := []struct {
+		name    string
+		family  string
+		desired any
+	}{
+		{
+			name:    "system-mtu",
+			family:  "system",
+			desired: map[string]any{"hostname": "leaf-01", "mtu": 9216},
+		},
+		{
+			name:   "ethernet-switchport",
+			family: "interface_ethernet",
+			desired: map[string]any{"interfaces": []any{
+				map[string]any{"id": "1/1", "switchport": map[string]any{"enabled": false}},
+			}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := Get(tt.family).Diff(tt.desired, nil); err == nil {
+				t.Fatalf("Diff accepted unsupported fields for %s", tt.family)
+			}
+		})
 	}
 }
 

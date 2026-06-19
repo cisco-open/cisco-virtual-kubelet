@@ -45,12 +45,14 @@ import (
 // CommonConfigStatus. It is intentionally small: platform-specific transport
 // and writer mechanics still come from drivers.ConfigDriverContext.
 type CommonConfigPlatform struct {
-	Name           string
-	Kind           string
-	ControllerName string
-	SourceEnvelope string
-	ModelFormat    configv1alpha1.NetAsCodeModelFormat
-	Finalizer      string
+	Name             string
+	Kind             string
+	ControllerName   string
+	SourceEnvelope   string
+	ModelFormat      configv1alpha1.NetAsCodeModelFormat
+	Finalizer        string
+	PreserveEnvelope bool
+	NormalizeSource  func(config map[string]any, deviceName string) (map[string]any, error)
 
 	NewObject func() client.Object
 	NewList   func() client.ObjectList
@@ -422,7 +424,11 @@ func (r *CommonConfigReconciler) resolveIntent(ctx context.Context, cr client.Ob
 		return nil, fmt.Errorf("modelSource.format %q does not match %s format %q",
 			spec.ModelSource.Format, r.Platform.Kind, r.Platform.ModelFormat)
 	}
-	config, err := intent.LoadPlatformSource(ctx, r.Client, cr.GetNamespace(), device, r.Platform.SourceEnvelope, spec.Source)
+	sourceEnvelope := r.Platform.SourceEnvelope
+	if r.Platform.PreserveEnvelope {
+		sourceEnvelope = ""
+	}
+	config, err := intent.LoadPlatformSource(ctx, r.Client, cr.GetNamespace(), device, sourceEnvelope, spec.Source)
 	if err != nil {
 		return nil, fmt.Errorf("%s %s/%s: %w", r.Platform.Kind, cr.GetNamespace(), cr.GetName(), err)
 	}
@@ -442,6 +448,13 @@ func (r *CommonConfigReconciler) resolveIntent(ctx context.Context, cr client.Ob
 				r.Platform.Kind, cr.GetNamespace(), cr.GetName(), i, err)
 		}
 		config = commonAsMap(intent.Merge(config, map[string]any{sr.Family: snippet}))
+	}
+	if r.Platform.NormalizeSource != nil {
+		config, err = r.Platform.NormalizeSource(config, device)
+		if err != nil {
+			return nil, fmt.Errorf("%s %s/%s: normalize source: %w",
+				r.Platform.Kind, cr.GetNamespace(), cr.GetName(), err)
+		}
 	}
 	policy := spec.DriftPolicy
 	if policy == "" {

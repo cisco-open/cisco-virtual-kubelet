@@ -30,7 +30,9 @@ spec:
   deviceRef:
     name: nexus9300v-01
   managedFamilies:
+    - system
     - vlan
+    - interface_ethernet
   driftPolicy: revert
   driftDetectInterval: 5m
   writeStartup: true
@@ -39,7 +41,19 @@ spec:
     resolved: true
   source:
     inline:
-      vlan:
-        vlans:
-          - id: 3903
-            name: CVK_LAB
+      nxos:
+        devices:
+          - name: nexus9300v-01
+            configuration:
+              system:
+                hostname: nexus9300v-01
+              vlan:
+                vlans:
+                  - id: 3903
+                    name: CVK_LAB
+              interfaces:
+                ethernets:
+                  - id: 1/1
+                    description: CVK lab uplink
+                    shutdown: false
+                    mtu: 9216

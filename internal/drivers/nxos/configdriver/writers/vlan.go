@@ -55,6 +55,9 @@ func (vlanWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	}
 	desiredByID := map[string]map[string]any{}
 	for _, item := range wantList {
+		if err := rejectUnsupportedKeys(item, "vlan.vlans[]", "id", "name"); err != nil {
+			return nil, err
+		}
 		id, ok := intLeaf(item["id"])
 		if !ok || id < 1 || id > 4094 {
 			return nil, fmt.Errorf("vlan id %v is invalid", item["id"])
