@@ -34,7 +34,7 @@ type fakeNXOSTransport struct {
 }
 
 func (f *fakeNXOSTransport) Capabilities() transport.Capabilities {
-	return transport.Capabilities{Kind: transport.KindNXAPI, SupportsWritableRunning: true, SupportsSaveStartup: true}
+	return transport.Capabilities{Kind: transport.KindREST, SupportsWritableRunning: true, SupportsSaveStartup: true}
 }
 
 func (f *fakeNXOSTransport) Fetch(_ context.Context, path string) ([]byte, error) {
@@ -57,11 +57,14 @@ func (f *fakeNXOSTransport) StartTransaction(context.Context) (transport.TxHandl
 
 func (f *fakeNXOSTransport) Mutate(_ context.Context, _ transport.TxHandle, ops []transport.Op) error {
 	for _, op := range ops {
-		for _, line := range strings.Split(string(op.Body), "\n") {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "hostname ") {
-				f.hostname = strings.TrimSpace(strings.TrimPrefix(line, "hostname "))
-			}
+		var body map[string]any
+		if err := json.Unmarshal(op.Body, &body); err != nil {
+			return err
+		}
+		top, _ := body["topSystem"].(map[string]any)
+		attrs, _ := top["attributes"].(map[string]any)
+		if name, ok := attrs["name"].(string); ok {
+			f.hostname = name
 		}
 	}
 	return nil

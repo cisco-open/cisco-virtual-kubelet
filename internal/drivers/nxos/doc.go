@@ -9,6 +9,6 @@
 // Package nxos is the NX-OS platform driver. It drives NX-OS app-hosting
 // through NX-API CLI and registers DeviceDriverNXOS with the apphosting
 // registry. It also registers the NX-OS config driver, which reconciles the
-// NetAsCode NX-OS device-centric stripe through NX-API-backed fetch/apply/
-// verify adapters.
+// NetAsCode NX-OS device-centric stripe through NX-API REST/DME-backed
+// fetch/apply/verify adapters.
 package nxos

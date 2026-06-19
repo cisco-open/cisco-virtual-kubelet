@@ -66,20 +66,29 @@ func (vlanWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		item := desiredByID[key]
 		id, _ := intLeaf(item["id"])
 		gotItem := got[id]
-		lines := []string{fmt.Sprintf("vlan %d", id)}
 		changed := gotItem == nil
+		attrs := map[string]string{
+			"fabEncap": fmt.Sprintf("vlan-%d", id),
+			"pcTag":    "1",
+		}
 		if nameRaw, ok := item["name"]; ok {
 			name := stringLeaf(nameRaw)
 			if name == "" {
 				return nil, fmt.Errorf("vlan %d name must not be empty", id)
 			}
 			if gotItem == nil || !scalarEqual(name, gotItem["name"]) {
-				lines = append(lines, "name "+name)
+				attrs["name"] = name
 				changed = true
 			}
 		}
 		if changed {
-			ops = append(ops, cliOp(lines...))
+			op, err := dmeMergeOp(nxosschema.DNBridgeDomain, dmeObject("bdEntity", nil,
+				dmeObject("l2BD", attrs),
+			))
+			if err != nil {
+				return nil, err
+			}
+			ops = append(ops, op)
 		}
 	}
 	return ops, nil

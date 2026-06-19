@@ -70,13 +70,13 @@ func buildNXOSConfigDriverContext(
 func buildNXOSConfigTransport(spec *v1alpha1.DeviceSpec, opts drivers.ConfigDriverOptions) (transport.Interface, error) {
 	kind := strings.ToLower(strings.TrimSpace(spec.Transport))
 	switch kind {
-	case "", string(transport.KindRESTCONF), string(transport.KindNXAPI):
+	case "", string(transport.KindREST), string(transport.KindRESTCONF), string(transport.KindNXAPI):
 		return newNXAPIConfigTransportWithOptions(spec, NXAPIConfigTransportOptions{
 			SessionLock: opts.SessionLock,
 		})
 	case string(transport.KindNETCONF), string(transport.KindGNMI):
-		return nil, fmt.Errorf("nxos configdriver: transport %q is not implemented yet; supported transport is %q", spec.Transport, transport.KindNXAPI)
+		return nil, fmt.Errorf("nxos configdriver: transport %q is not implemented yet; supported transport is %q", spec.Transport, transport.KindREST)
 	default:
-		return nil, fmt.Errorf("nxos configdriver: unknown transport %q; supported transport is %q", spec.Transport, transport.KindNXAPI)
+		return nil, fmt.Errorf("nxos configdriver: unknown transport %q; supported transport is %q", spec.Transport, transport.KindREST)
 	}
 }

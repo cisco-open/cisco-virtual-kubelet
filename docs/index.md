@@ -25,8 +25,9 @@ Four ideas you'll see referenced throughout the docs:
   diagnostics, and operations as Kubernetes API objects.
 - **RESTCONF, NETCONF, gNMI, gNOI, and NX-API** - management protocols used by
   the provider. IOS-XE app-hosting lifecycle uses RESTCONF; NX-OS app-hosting
-  and configuration use NX-API; declarative IOS-XE config can use RESTCONF,
-  NETCONF, or gNMI; telemetry and software operations use gNMI/gNOI.
+  uses NX-API CLI and NX-OS configuration uses NX-API REST/DME; declarative
+  IOS-XE config can use RESTCONF, NETCONF, or gNMI; telemetry and software
+  operations use gNMI/gNOI.
 
 Put those together: each Cisco device becomes a virtual node in your cluster.
 Pods scheduled to that node run as App-Hosting containers on the device, while
@@ -58,7 +59,7 @@ Kubernetes API
 - **Network as Code** - declarative IOS-XE and NX-OS configuration CRDs with
   drift detection and verify-after-apply reconciliation. IOS-XE includes
   defaults, group targeting, templates, bundles, revisions, and apply logs;
-  NX-OS starts with per-device `NXOSConfig` over NX-API.
+  NX-OS starts with per-device `NXOSConfig` over NX-API REST/DME.
 - **Operations and upgrades** - read-only diagnostics, gNOI probes,
   write-class operational actions, and multi-phase IOS-XE software upgrades
   behind explicit RBAC and runtime gates.
@@ -84,9 +85,9 @@ This project is under active development and is published as open source under
 - **CRD versions** - `cisco.vk/v1alpha1`, `config.cisco.vk/v1alpha1`, and
   `ops.cisco.vk/v1alpha1`. Breaking changes are still possible as the schemas
   stabilise.
-- **Drivers** - `XE` is production-focused; `NXOS` has a working NX-API
-  app-hosting and `NXOSConfig` runtime slice; `FAKE` is for testing; `XR` and
-  `OPENCONFIG` are reserved driver names in the API surface.
+- **Drivers** - `XE` is production-focused; `NXOS` has working NX-API CLI
+  app-hosting and an NX-API REST/DME `NXOSConfig` runtime slice; `FAKE` is for
+  testing; `XR` and `OPENCONFIG` are reserved driver names in the API surface.
 - **Images** - images are not yet published to a public container registry.
   Build locally from a release tag or `main`, then push to a registry your
   cluster can pull from. See [Getting Started](getting-started.md).
@@ -100,7 +101,7 @@ summarises the current state for the June 2026 release.
 |---|---|---|
 | Pod lifecycle (App-Hosting create / update / delete) | **Stable** | Supported on Catalyst 8000V 17.15+, Catalyst 9000 17.18+, IR1100 Series 17.12+, and IE3500 Series 17.18+. |
 | `CiscoDevice` and VK deployment lifecycle | **Stable** | Controller-managed per-device VK pods. |
-| **Network as Code config driver** (`IOSXEConfig`, `NXOSConfig`) | **Beta** | Declarative IOS-XE and NX-OS config CRDs with drift detection, revisions, and verification. IOS-XE has broader family coverage; NX-OS starts with `system`, `vlan`, and `interface_ethernet` over NX-API. Schema is `v1alpha1`; family coverage and wire-format behaviour are still expanding. |
+| **Network as Code config driver** (`IOSXEConfig`, `NXOSConfig`) | **Beta** | Declarative IOS-XE and NX-OS config CRDs with drift detection, revisions, and verification. IOS-XE has broader family coverage; NX-OS starts with `system`, `vlan`, and `interface_ethernet` over NX-API REST/DME. Schema is `v1alpha1`; family coverage and wire-format behaviour are still expanding. |
 | **Operations** (`DeviceOperation`, `IOSXEOperationalAction`) | **Beta** | Read-only diagnostics and gNOI probes are stable in intent; write-class actions require an explicit runtime gate and carry additional operational risk. |
 | **Software Lifecycle** (`IOSXESoftwareUpgrade`) | **Beta** | Multi-phase gNOI OS install/activate/verify. Disabled by default; requires `--enable-iosxesoftwareupgrade`. Tested on limited platforms. |
 | **Telemetry** (`IOSXETelemetry`) | **Beta** | MDT-over-gNMI subscriptions converted to OpenTelemetry signals. Pipeline architecture is stable; subscription schema is `v1alpha1`. |

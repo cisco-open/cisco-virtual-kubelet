@@ -106,8 +106,9 @@ func NewDriver(ctx, spec) (CiscoKubernetesDeviceDriver, error)
 Selects a driver based on `spec.Driver`:
 
 - `XE` → IOS-XE driver (production)
-- `NXOS` → NX-OS driver (NX-API app-hosting and the initial Network as Code
-  config slice: `system`, `vlan`, `interface_ethernet`)
+- `NXOS` → NX-OS driver (NX-API CLI app-hosting and the initial NX-API
+  REST/DME Network as Code config slice: `system`, `vlan`,
+  `interface_ethernet`)
 - `FAKE` → mock driver for testing
 - `XR`, `OPENCONFIG` → placeholders, currently unsupported
 

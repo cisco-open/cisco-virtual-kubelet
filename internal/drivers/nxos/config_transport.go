@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -61,7 +62,7 @@ func newNXAPIConfigTransportWithOptions(spec *ciskov1.DeviceSpec, opts NXAPIConf
 
 func (t *nxapiConfigTransport) Capabilities() transport.Capabilities {
 	return transport.Capabilities{
-		Kind:                    transport.KindNXAPI,
+		Kind:                    transport.KindREST,
 		SupportsWritableRunning: true,
 		SupportsDiagnosticExec:  true,
 		SupportsSaveStartup:     true,
@@ -71,25 +72,31 @@ func (t *nxapiConfigTransport) Capabilities() transport.Capabilities {
 func (t *nxapiConfigTransport) Fetch(ctx context.Context, path string) ([]byte, error) {
 	switch path {
 	case nxosschema.PathSystemHostname:
-		out, err := t.showWithRetry(ctx, "show hostname")
+		raw, err := t.dmeGetWithRetry(ctx, nxosschema.DNSystem, nil)
 		if err != nil {
 			return nil, err
 		}
-		return json.Marshal(map[string]any{"hostname": parseNXOSHostname(out)})
+		return json.Marshal(map[string]any{"hostname": parseDMESystemHostname(raw)})
 	case nxosschema.PathVLANBrief:
-		out, err := t.showWithRetry(ctx, "show vlan brief")
+		raw, err := t.dmeGetWithRetry(ctx, nxosschema.DNBridgeDomain, url.Values{
+			"query-target":         []string{"children"},
+			"target-subtree-class": []string{"l2BD"},
+		})
 		if err != nil {
 			return nil, err
 		}
-		return json.Marshal(map[string]any{"vlans": parseNXOSVLANBrief(out)})
+		return json.Marshal(map[string]any{"vlans": parseDMEVLANs(raw)})
 	case nxosschema.PathInterfaceEthernet:
-		out, err := t.showWithRetry(ctx, `show running-config | section "^interface Ethernet"`)
+		raw, err := t.dmeGetWithRetry(ctx, nxosschema.DNInterfaceEntity, url.Values{
+			"query-target":         []string{"children"},
+			"target-subtree-class": []string{"l1PhysIf"},
+		})
 		if err != nil {
 			return nil, err
 		}
-		return json.Marshal(map[string]any{"interfaces": parseNXOSEthernetRunning(out)})
+		return json.Marshal(map[string]any{"interfaces": parseDMEEthernetInterfaces(raw)})
 	default:
-		return nil, fmt.Errorf("nxos nxapi fetch: unsupported path %q", path)
+		return nil, fmt.Errorf("nxos rest fetch: unsupported path %q", path)
 	}
 }
 
@@ -99,21 +106,25 @@ func (t *nxapiConfigTransport) StartTransaction(context.Context) (transport.TxHa
 
 func (t *nxapiConfigTransport) Mutate(ctx context.Context, _ transport.TxHandle, ops []transport.Op) error {
 	for _, op := range ops {
-		if op.Verb != transport.VerbCLI {
-			return fmt.Errorf("nxos nxapi mutate: unsupported verb %s", op.Verb)
-		}
-		cmds, err := cliCommands(op.Body)
-		if err != nil {
-			return err
-		}
-		if len(cmds) == 0 {
-			continue
-		}
-		if !strings.EqualFold(cmds[0], "configure terminal") {
-			cmds = append([]string{"configure terminal"}, cmds...)
-		}
-		if _, err := t.client.conf(ctx, cmds...); err != nil {
-			return redactNXAPIError(err)
+		switch op.Verb {
+		case transport.VerbCLI:
+			if err := t.mutateCLI(ctx, op.Body); err != nil {
+				return err
+			}
+		case transport.VerbMerge:
+			if err := t.client.dmePost(ctx, op.Path, op.Body); err != nil {
+				return redactNXAPIError(err)
+			}
+		case transport.VerbReplace:
+			if err := t.client.dmePut(ctx, op.Path, op.Body); err != nil {
+				return redactNXAPIError(err)
+			}
+		case transport.VerbDelete:
+			if err := t.client.dmeDelete(ctx, op.Path); err != nil {
+				return redactNXAPIError(err)
+			}
+		default:
+			return fmt.Errorf("nxos rest mutate: unsupported verb %s", op.Verb)
 		}
 	}
 	return nil
@@ -166,6 +177,36 @@ func (t *nxapiConfigTransport) showWithRetry(ctx context.Context, cmd string) (s
 		return err
 	})
 	return out, err
+}
+
+func (t *nxapiConfigTransport) dmeGetWithRetry(ctx context.Context, dn string, query url.Values) ([]byte, error) {
+	var raw []byte
+	err := transport.RetryIdempotent(ctx, t.retry, func() error {
+		var err error
+		raw, err = t.client.dmeGet(ctx, dn, query)
+		if err != nil {
+			err = redactNXAPIError(err)
+		}
+		return err
+	})
+	return raw, err
+}
+
+func (t *nxapiConfigTransport) mutateCLI(ctx context.Context, body []byte) error {
+	cmds, err := cliCommands(body)
+	if err != nil {
+		return err
+	}
+	if len(cmds) == 0 {
+		return nil
+	}
+	if !strings.EqualFold(cmds[0], "configure terminal") {
+		cmds = append([]string{"configure terminal"}, cmds...)
+	}
+	if _, err := t.client.conf(ctx, cmds...); err != nil {
+		return redactNXAPIError(err)
+	}
+	return nil
 }
 
 func redactNXAPIError(err error) error {
@@ -322,4 +363,74 @@ func parseNXOSEthernetRunning(out string) []map[string]any {
 	}
 	flush()
 	return interfaces
+}
+
+func parseDMESystemHostname(raw []byte) string {
+	for _, attrs := range collectDMEClassAttrs(raw, "topSystem") {
+		if name := stringAttr(attrs, "name"); name != "" {
+			return name
+		}
+	}
+	return ""
+}
+
+func parseDMEVLANs(raw []byte) []map[string]any {
+	var vlans []map[string]any
+	for _, attrs := range collectDMEClassAttrs(raw, "l2BD") {
+		id, ok := vlanIDFromEncap(stringAttr(attrs, "fabEncap"))
+		if !ok {
+			continue
+		}
+		item := map[string]any{"id": id}
+		if name := stringAttr(attrs, "name"); name != "" {
+			item["name"] = name
+		}
+		vlans = append(vlans, item)
+	}
+	return vlans
+}
+
+func vlanIDFromEncap(encap string) (int, bool) {
+	encap = strings.TrimSpace(strings.ToLower(encap))
+	if encap == "" {
+		return 0, false
+	}
+	encap = strings.TrimPrefix(encap, "vlan-")
+	id, err := strconv.Atoi(encap)
+	return id, err == nil
+}
+
+func parseDMEEthernetInterfaces(raw []byte) []map[string]any {
+	var interfaces []map[string]any
+	for _, attrs := range collectDMEClassAttrs(raw, "l1PhysIf") {
+		name, ok := ethernetNameFromDMEID(stringAttr(attrs, "id"))
+		if !ok {
+			continue
+		}
+		item := map[string]any{"type": "Ethernet", "name": name}
+		if desc := stringAttr(attrs, "descr"); desc != "" {
+			item["description"] = desc
+		}
+		switch strings.ToLower(stringAttr(attrs, "adminSt")) {
+		case "down":
+			item["shutdown"] = true
+		case "up":
+			item["shutdown"] = false
+		}
+		interfaces = append(interfaces, item)
+	}
+	return interfaces
+}
+
+func ethernetNameFromDMEID(id string) (string, bool) {
+	id = strings.TrimSpace(id)
+	lower := strings.ToLower(id)
+	switch {
+	case strings.HasPrefix(lower, "ethernet"):
+		return strings.TrimSpace(id[len("ethernet"):]), true
+	case strings.HasPrefix(lower, "eth"):
+		return strings.TrimSpace(id[len("eth"):]), true
+	default:
+		return "", false
+	}
 }

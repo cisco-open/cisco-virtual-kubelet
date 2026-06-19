@@ -67,15 +67,12 @@ func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	for _, full := range sortedKeys(desiredByName) {
 		item := desiredByName[full]
 		gotItem := got[full]
-		lines := []string{"interface " + full}
+		_, name, _, _ := ethernetName(item)
+		attrs := map[string]string{"id": "eth" + name}
 		changed := gotItem == nil
 		if descRaw, ok := item["description"]; ok {
 			desc := strings.TrimSpace(stringLeaf(descRaw))
-			if desc == "" {
-				lines = append(lines, "no description")
-			} else {
-				lines = append(lines, "description "+desc)
-			}
+			attrs["descr"] = desc
 			if gotItem == nil || !scalarEqual(desc, gotItem["description"]) {
 				changed = true
 			}
@@ -86,16 +83,23 @@ func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 				return nil, fmt.Errorf("%s shutdown must be boolean", full)
 			}
 			if shutdown {
-				lines = append(lines, "shutdown")
+				attrs["adminSt"] = "down"
 			} else {
-				lines = append(lines, "no shutdown")
+				attrs["adminSt"] = "up"
 			}
+			attrs["userCfgdFlags"] = "admin_state"
 			if gotItem == nil || !scalarEqual(shutdown, gotItem["shutdown"]) {
 				changed = true
 			}
 		}
 		if changed {
-			ops = append(ops, cliOp(lines...))
+			op, err := dmeMergeOp(nxosschema.DNInterfaceEntity, dmeObject("interfaceEntity", nil,
+				dmeObject("l1PhysIf", attrs),
+			))
+			if err != nil {
+				return nil, err
+			}
+			ops = append(ops, op)
 		}
 	}
 	return ops, nil

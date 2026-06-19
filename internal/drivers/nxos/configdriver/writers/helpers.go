@@ -140,6 +140,25 @@ func cliOp(lines ...string) transport.Op {
 	return transport.Op{Verb: transport.VerbCLI, Body: []byte(strings.Join(clean, "\n"))}
 }
 
+func dmeMergeOp(path string, payload any) (transport.Op, error) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return transport.Op{}, err
+	}
+	return transport.Op{Verb: transport.VerbMerge, Path: path, Body: body}, nil
+}
+
+func dmeObject(class string, attrs map[string]string, children ...map[string]any) map[string]any {
+	obj := map[string]any{}
+	if len(attrs) > 0 {
+		obj["attributes"] = attrs
+	}
+	if len(children) > 0 {
+		obj["children"] = children
+	}
+	return map[string]any{class: obj}
+}
+
 func sortedKeys[M ~map[string]V, V any](m M) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {

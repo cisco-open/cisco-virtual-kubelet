@@ -62,7 +62,13 @@ func (systemWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	if scalarEqual(name, got["hostname"]) {
 		return nil, nil
 	}
-	return []transport.Op{cliOp("hostname " + name)}, nil
+	op, err := dmeMergeOp(nxosschema.DNSystem, dmeObject("topSystem", map[string]string{
+		"name": name,
+	}))
+	if err != nil {
+		return nil, err
+	}
+	return []transport.Op{op}, nil
 }
 
 func (systemWriter) Apply(ctx context.Context, c transport.Interface, ops []transport.Op) error {

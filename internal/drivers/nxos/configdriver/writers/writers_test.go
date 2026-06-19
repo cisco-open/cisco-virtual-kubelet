@@ -9,23 +9,36 @@
 package writers
 
 import (
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 )
 
-func TestSystemDiffEmitsHostnameCLI(t *testing.T) {
+func TestSystemDiffEmitsHostnameDME(t *testing.T) {
 	w := Get("system")
 	ops, err := w.Diff(map[string]any{"hostname": "leaf-01"}, map[string]any{"hostname": "old"})
 	if err != nil {
 		t.Fatalf("Diff: %v", err)
 	}
-	if len(ops) != 1 || !strings.Contains(string(ops[0].Body), "hostname leaf-01") {
+	if len(ops) != 1 {
 		t.Fatalf("ops=%#v", ops)
+	}
+	body := requireDMEOp(t, ops[0], transport.VerbMerge, nxosschema.DNSystem)
+	top, ok := body["topSystem"].(map[string]any)
+	if !ok {
+		t.Fatalf("body=%#v", body)
+	}
+	attrs, _ := top["attributes"].(map[string]any)
+	if attrs["name"] != "leaf-01" {
+		t.Fatalf("attrs=%#v", attrs)
 	}
 }
 
-func TestVLANDiffEmitsNameCLI(t *testing.T) {
+func TestVLANDiffEmitsNameDME(t *testing.T) {
 	w := Get("vlan")
 	ops, err := w.Diff(
 		map[string]any{"vlans": []any{map[string]any{"id": 101, "name": "cvk_probe"}}},
@@ -34,12 +47,19 @@ func TestVLANDiffEmitsNameCLI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Diff: %v", err)
 	}
-	if len(ops) != 1 || !strings.Contains(string(ops[0].Body), "vlan 101") || !strings.Contains(string(ops[0].Body), "name cvk_probe") {
+	if len(ops) != 1 {
 		t.Fatalf("ops=%#v", ops)
+	}
+	body := requireDMEOp(t, ops[0], transport.VerbMerge, nxosschema.DNBridgeDomain)
+	raw := mustJSON(t, body)
+	for _, want := range []string{`"bdEntity"`, `"l2BD"`, `"fabEncap":"vlan-101"`, `"name":"cvk_probe"`, `"pcTag":"1"`} {
+		if !strings.Contains(raw, want) {
+			t.Fatalf("payload %s missing %s", raw, want)
+		}
 	}
 }
 
-func TestEthernetDiffEmitsDescriptionAndShutdownCLI(t *testing.T) {
+func TestEthernetDiffEmitsDescriptionAndShutdownDME(t *testing.T) {
 	w := Get("interface_ethernet")
 	ops, err := w.Diff(
 		map[string]any{"interfaces": []any{map[string]any{"type": "Ethernet", "name": "1/1", "description": "uplink", "shutdown": false}}},
@@ -48,9 +68,15 @@ func TestEthernetDiffEmitsDescriptionAndShutdownCLI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Diff: %v", err)
 	}
-	body := string(ops[0].Body)
-	if len(ops) != 1 || !strings.Contains(body, "interface Ethernet1/1") || !strings.Contains(body, "description uplink") || !strings.Contains(body, "no shutdown") {
+	if len(ops) != 1 {
 		t.Fatalf("ops=%#v", ops)
+	}
+	body := requireDMEOp(t, ops[0], transport.VerbMerge, nxosschema.DNInterfaceEntity)
+	raw := mustJSON(t, body)
+	for _, want := range []string{`"interfaceEntity"`, `"l1PhysIf"`, `"id":"eth1/1"`, `"descr":"uplink"`, `"adminSt":"up"`, `"userCfgdFlags":"admin_state"`} {
+		if !strings.Contains(raw, want) {
+			t.Fatalf("payload %s missing %s", raw, want)
+		}
 	}
 }
 
@@ -103,7 +129,7 @@ func TestVLANDiffRejectsInvalidInput(t *testing.T) {
 	}
 }
 
-func TestEthernetDiffEmptyDescriptionEmitsNoDescription(t *testing.T) {
+func TestEthernetDiffEmptyDescriptionClearsDescr(t *testing.T) {
 	w := Get("interface_ethernet")
 	ops, err := w.Diff(
 		map[string]any{"interfaces": []any{map[string]any{"type": "Ethernet", "name": "1/1", "description": ""}}},
@@ -112,8 +138,12 @@ func TestEthernetDiffEmptyDescriptionEmitsNoDescription(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Diff: %v", err)
 	}
-	if len(ops) != 1 || !strings.Contains(string(ops[0].Body), "no description") {
+	if len(ops) != 1 {
 		t.Fatalf("ops=%#v", ops)
+	}
+	raw := mustJSON(t, requireDMEOp(t, ops[0], transport.VerbMerge, nxosschema.DNInterfaceEntity))
+	if !strings.Contains(raw, `"descr":""`) {
+		t.Fatalf("payload %s missing empty descr", raw)
 	}
 }
 
@@ -139,4 +169,28 @@ func TestNXOSWritersKeysOf(t *testing.T) {
 	}}), []string{"Ethernet1/1", "Ethernet1/2"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("interface KeysOf=%#v, want %#v", got, want)
 	}
+}
+
+func requireDMEOp(t *testing.T, op transport.Op, verb transport.Verb, path string) map[string]any {
+	t.Helper()
+	if op.Verb != verb {
+		t.Fatalf("verb=%s, want %s", op.Verb, verb)
+	}
+	if op.Path != path {
+		t.Fatalf("path=%q, want %q", op.Path, path)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(op.Body, &body); err != nil {
+		t.Fatalf("unmarshal body: %v", err)
+	}
+	return body
+}
+
+func mustJSON(t *testing.T, v any) string {
+	t.Helper()
+	raw, err := json.Marshal(v)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	return string(raw)
 }

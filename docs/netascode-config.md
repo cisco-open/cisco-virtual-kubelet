@@ -401,7 +401,7 @@ iterative development to keep changes transient.
 
 Use `NXOSConfig` for NX-OS devices. It uses the same common status and
 drift-policy fields as `IOSXEConfig`, but the first runtime slice is scoped to
-`system`, `vlan`, and `interface_ethernet` over NX-API.
+`system`, `vlan`, and `interface_ethernet` over NX-API REST/DME.
 
 ```yaml
 apiVersion: config.cisco.vk/v1alpha1

@@ -64,6 +64,77 @@ func TestNXAPIExecSessionLockCoversRequestConstruction(t *testing.T) {
 	}
 }
 
+func TestNXAPIDMELoginTokenFallback(t *testing.T) {
+	var sawCookie bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/aaaLogin.json":
+			_, _ = w.Write([]byte(`{"aaaLogin":{"attributes":{"token":"token-from-body"}}}`))
+		case "/api/mo/sys.json":
+			cookie, err := r.Cookie("nxapi_auth")
+			if err != nil {
+				t.Fatalf("missing nxapi_auth cookie: %v", err)
+			}
+			if cookie.Value != "token-from-body" {
+				t.Fatalf("cookie=%q", cookie.Value)
+			}
+			sawCookie = true
+			_, _ = w.Write([]byte(`{"imdata":[{"topSystem":{"attributes":{"name":"leaf-01"}}}]}`))
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	c := &nxapiClient{
+		rootURL:  server.URL,
+		baseURL:  server.URL + "/ins",
+		username: "admin",
+		password: "pw",
+		client:   server.Client(),
+	}
+	raw, err := c.dmeGet(context.Background(), "sys", nil)
+	if err != nil {
+		t.Fatalf("dmeGet: %v", err)
+	}
+	if !sawCookie {
+		t.Fatal("DME request did not use login token cookie")
+	}
+	if got := parseDMESystemHostname(raw); got != "leaf-01" {
+		t.Fatalf("hostname=%q", got)
+	}
+}
+
+func TestNXAPIDMEReturnsErrorMO(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/aaaLogin.json":
+			http.SetCookie(w, &http.Cookie{Name: "nxapi_auth", Value: "token"})
+			_, _ = w.Write([]byte(`{"aaaLogin":{"attributes":{"token":"token"}}}`))
+		case "/api/mo/sys.json":
+			_, _ = w.Write([]byte(`{"imdata":[{"error":{"attributes":{"code":"400","text":"bad DME payload"}}}]}`))
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	c := &nxapiClient{
+		rootURL:  server.URL,
+		baseURL:  server.URL + "/ins",
+		username: "admin",
+		password: "pw",
+		client:   server.Client(),
+	}
+	err := c.dmePost(context.Background(), "sys", []byte(`{"topSystem":{"attributes":{"name":"leaf-01"}}}`))
+	if err == nil {
+		t.Fatal("dmePost accepted DME error response")
+	}
+	if !strings.Contains(err.Error(), "bad DME payload") || !strings.Contains(err.Error(), "code=400") {
+		t.Fatalf("error=%q", err)
+	}
+}
+
 func TestParseAppList(t *testing.T) {
 	apps := parseAppList(`
 App id                                   State

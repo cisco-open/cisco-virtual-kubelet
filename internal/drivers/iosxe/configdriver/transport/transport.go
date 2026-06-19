@@ -39,6 +39,7 @@ type (
 )
 
 const (
+	KindREST     Kind = configtransport.KindREST
 	KindRESTCONF Kind = configtransport.KindRESTCONF
 	KindNETCONF  Kind = configtransport.KindNETCONF
 	KindGNMI     Kind = configtransport.KindGNMI

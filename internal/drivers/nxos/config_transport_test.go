@@ -18,6 +18,7 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 )
 
 func TestParseNXOSConfigFetchOutputs(t *testing.T) {
@@ -89,6 +90,128 @@ func TestNXAPIConfigTransportMutateCLI(t *testing.T) {
 	}
 }
 
+func TestNXAPIConfigTransportFetchesDMEObservedState(t *testing.T) {
+	var loginCount int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/aaaLogin.json":
+			loginCount++
+			http.SetCookie(w, &http.Cookie{Name: "nxapi_auth", Value: "token"})
+			_, _ = w.Write([]byte(`{"aaaLogin":{"attributes":{"token":"token"}}}`))
+		case "/api/mo/sys.json":
+			assertDMECookie(t, r)
+			_, _ = w.Write([]byte(`{"totalCount":"1","imdata":[{"topSystem":{"attributes":{"name":"leaf-01"}}}]}`))
+		case "/api/mo/sys/bd.json":
+			assertDMECookie(t, r)
+			if r.URL.Query().Get("target-subtree-class") != "l2BD" {
+				t.Fatalf("query=%s", r.URL.RawQuery)
+			}
+			_, _ = w.Write([]byte(`{"totalCount":"1","imdata":[{"l2BD":{"attributes":{"fabEncap":"vlan-101","name":"cvk_probe"}}}]}`))
+		case "/api/mo/sys/intf.json":
+			assertDMECookie(t, r)
+			if r.URL.Query().Get("target-subtree-class") != "l1PhysIf" {
+				t.Fatalf("query=%s", r.URL.RawQuery)
+			}
+			_, _ = w.Write([]byte(`{"totalCount":"1","imdata":[{"l1PhysIf":{"attributes":{"id":"eth1/1","descr":"uplink","adminSt":"up"}}}]}`))
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	tr := &nxapiConfigTransport{client: &nxapiClient{
+		rootURL:  server.URL,
+		baseURL:  server.URL + "/ins",
+		username: "admin",
+		password: "pw",
+		client:   server.Client(),
+	}}
+
+	raw, err := tr.Fetch(context.Background(), nxosschema.PathSystemHostname)
+	if err != nil {
+		t.Fatalf("Fetch(system): %v", err)
+	}
+	var system map[string]any
+	if err := json.Unmarshal(raw, &system); err != nil {
+		t.Fatalf("decode system: %v", err)
+	}
+	if system["hostname"] != "leaf-01" {
+		t.Fatalf("system=%#v", system)
+	}
+
+	raw, err = tr.Fetch(context.Background(), nxosschema.PathVLANBrief)
+	if err != nil {
+		t.Fatalf("Fetch(vlan): %v", err)
+	}
+	var vlans map[string][]map[string]any
+	if err := json.Unmarshal(raw, &vlans); err != nil {
+		t.Fatalf("decode vlans: %v", err)
+	}
+	if len(vlans["vlans"]) != 1 || vlans["vlans"][0]["id"] != float64(101) || vlans["vlans"][0]["name"] != "cvk_probe" {
+		t.Fatalf("vlans=%#v", vlans)
+	}
+
+	raw, err = tr.Fetch(context.Background(), nxosschema.PathInterfaceEthernet)
+	if err != nil {
+		t.Fatalf("Fetch(interface): %v", err)
+	}
+	var intfs map[string][]map[string]any
+	if err := json.Unmarshal(raw, &intfs); err != nil {
+		t.Fatalf("decode interfaces: %v", err)
+	}
+	if len(intfs["interfaces"]) != 1 || intfs["interfaces"][0]["name"] != "1/1" || intfs["interfaces"][0]["shutdown"] != false {
+		t.Fatalf("interfaces=%#v", intfs)
+	}
+	if loginCount != 1 {
+		t.Fatalf("loginCount=%d, want 1", loginCount)
+	}
+}
+
+func TestNXAPIConfigTransportMutateDME(t *testing.T) {
+	var got map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/aaaLogin.json":
+			http.SetCookie(w, &http.Cookie{Name: "nxapi_auth", Value: "token"})
+			_, _ = w.Write([]byte(`{"aaaLogin":{"attributes":{"token":"token"}}}`))
+		case "/api/mo/sys.json":
+			if r.Method != http.MethodPost {
+				t.Fatalf("method=%s", r.Method)
+			}
+			assertDMECookie(t, r)
+			if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
+				t.Fatalf("decode request: %v", err)
+			}
+			_, _ = w.Write([]byte(`{"imdata":[]}`))
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	tr := &nxapiConfigTransport{client: &nxapiClient{
+		rootURL:  server.URL,
+		baseURL:  server.URL + "/ins",
+		username: "admin",
+		password: "pw",
+		client:   server.Client(),
+	}}
+	err := tr.Mutate(context.Background(), "", []transport.Op{
+		{Verb: transport.VerbMerge, Path: nxosschema.DNSystem, Body: []byte(`{"topSystem":{"attributes":{"name":"leaf-01"}}}`)},
+	})
+	if err != nil {
+		t.Fatalf("Mutate: %v", err)
+	}
+	top, ok := got["topSystem"].(map[string]any)
+	if !ok {
+		t.Fatalf("got=%#v", got)
+	}
+	attrs, _ := top["attributes"].(map[string]any)
+	if attrs["name"] != "leaf-01" {
+		t.Fatalf("attrs=%#v", attrs)
+	}
+}
+
 func TestNXAPIConfigTransportSaveStartup(t *testing.T) {
 	var got nxapiRequest
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -113,13 +236,13 @@ func TestNXAPIConfigTransportSaveStartup(t *testing.T) {
 
 func TestBuildNXOSConfigTransportSelection(t *testing.T) {
 	spec := &ciskov1.DeviceSpec{Address: "192.0.2.10", Username: "admin", Password: "pw"}
-	for _, transportName := range []string{"", "restconf", "nxapi"} {
+	for _, transportName := range []string{"", "rest", "restconf", "nxapi"} {
 		spec.Transport = transportName
 		tr, err := buildNXOSConfigTransport(spec, drivers.ConfigDriverOptions{})
 		if err != nil {
 			t.Fatalf("transport %q: %v", transportName, err)
 		}
-		if tr.Capabilities().Kind != transport.KindNXAPI {
+		if tr.Capabilities().Kind != transport.KindREST {
 			t.Fatalf("transport %q kind=%q", transportName, tr.Capabilities().Kind)
 		}
 		_ = tr.Close()
@@ -127,5 +250,16 @@ func TestBuildNXOSConfigTransportSelection(t *testing.T) {
 	spec.Transport = "gnmi"
 	if _, err := buildNXOSConfigTransport(spec, drivers.ConfigDriverOptions{}); err == nil {
 		t.Fatal("expected gnmi to be rejected until NX-OS gNMI config transport is implemented")
+	}
+}
+
+func assertDMECookie(t *testing.T, r *http.Request) {
+	t.Helper()
+	cookie, err := r.Cookie("nxapi_auth")
+	if err != nil {
+		t.Fatalf("missing nxapi_auth cookie: %v", err)
+	}
+	if cookie.Value != "token" {
+		t.Fatalf("cookie=%q", cookie.Value)
 	}
 }

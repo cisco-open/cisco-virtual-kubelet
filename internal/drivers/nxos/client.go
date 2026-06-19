@@ -37,11 +37,14 @@ const (
 )
 
 type nxapiClient struct {
+	rootURL     string
 	baseURL     string
 	username    string
 	password    string
 	client      *http.Client
 	sessionLock *sync.Mutex
+	mu          sync.Mutex
+	dmeCookies  []*http.Cookie
 }
 
 func newNXAPIClient(spec *v1alpha1.DeviceSpec) (*nxapiClient, error) {
@@ -74,11 +77,12 @@ func newNXAPIClientWithOptions(spec *v1alpha1.DeviceSpec, opts nxapiClientOption
 	if strings.Contains(host, ":") && !strings.HasPrefix(host, "[") {
 		host = "[" + host + "]"
 	}
-	u := url.URL{
+	root := url.URL{
 		Scheme: scheme,
 		Host:   host + ":" + strconv.Itoa(port),
-		Path:   nxapiPath,
 	}
+	u := root
+	u.Path = nxapiPath
 	httpClient := opts.HTTPClient
 	if httpClient == nil {
 		timeout := opts.DefaultTimeout
@@ -93,6 +97,7 @@ func newNXAPIClientWithOptions(spec *v1alpha1.DeviceSpec, opts nxapiClientOption
 		}
 	}
 	return &nxapiClient{
+		rootURL:     root.String(),
 		baseURL:     u.String(),
 		username:    spec.Username,
 		password:    spec.Password,
@@ -138,10 +143,8 @@ func (c *nxapiClient) conf(ctx context.Context, commands ...string) (string, err
 }
 
 func (c *nxapiClient) exec(ctx context.Context, typ, input string) (string, error) {
-	if c.sessionLock != nil {
-		c.sessionLock.Lock()
-		defer c.sessionLock.Unlock()
-	}
+	unlock := c.lockSession()
+	defer unlock()
 	payload := nxapiRequest{InsAPI: nxapiRequestBody{
 		Version:      nxapiVersion,
 		Type:         typ,
@@ -162,7 +165,7 @@ func (c *nxapiClient) exec(ctx context.Context, typ, input string) (string, erro
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := c.client.Do(req)
+	resp, err := c.httpClient().Do(req)
 	if err != nil {
 		return "", fmt.Errorf("nxapi %s %q: %w", typ, input, err)
 	}
@@ -205,6 +208,30 @@ func parseNXAPIResponse(raw []byte) (string, error) {
 		}
 	}
 	return strings.Join(parts, "\n"), nil
+}
+
+func (c *nxapiClient) lockSession() func() {
+	if c.sessionLock != nil {
+		c.sessionLock.Lock()
+		return c.sessionLock.Unlock
+	}
+	c.mu.Lock()
+	return c.mu.Unlock
+}
+
+func (c *nxapiClient) httpClient() *http.Client {
+	if c.client != nil {
+		return c.client
+	}
+	return http.DefaultClient
+}
+
+func (c *nxapiClient) rootEndpoint(path string) string {
+	root := strings.TrimRight(c.rootURL, "/")
+	if root == "" {
+		root = strings.TrimSuffix(strings.TrimRight(c.baseURL, "/"), nxapiPath)
+	}
+	return root + path
 }
 
 func decodeNXAPIOutputs(raw json.RawMessage) ([]nxapiOutput, error) {

@@ -42,7 +42,7 @@ iosxesoftwareupgrades        xeupgrade       ops.cisco.vk/v1alpha1      true    
 | `IOSXEInterfaceGroupConfig` | Namespaced | **Beta** | Shared configuration for selected interfaces on selected devices. |
 | `IOSXETemplate` | Namespaced | **Beta** | Reusable parameterized configuration fragments. |
 | `IOSXEConfig` | Namespaced | **Beta** | Per-device Network as Code intent, drift detection, apply, and rollback. |
-| `NXOSConfig` | Namespaced | **Beta** | Per-device NX-OS Network as Code intent over NX-API for `system`, `vlan`, and `interface_ethernet`. |
+| `NXOSConfig` | Namespaced | **Beta** | Per-device NX-OS Network as Code intent over NX-API REST/DME for `system`, `vlan`, and `interface_ethernet`. |
 | `IOSXEConfigBundle` | Namespaced | **Beta** | Fans one config template out across selected devices. |
 | `IOSXEConfigRevision` | Namespaced | **Beta** | Immutable resolved-intent history used for rollback and audit. |
 | `IOSXEConfigApplyLog` | Namespaced | **Beta** | Per-apply audit entries with family and diff metadata. |
@@ -113,7 +113,8 @@ The IOS-XE configuration CRDs work together. Defaults, groups, interface groups,
 templates, and per-device source are resolved into canonical intent. The config
 driver plans the change, applies managed families, verifies drift, and records
 history. `NXOSConfig` uses the same common reconciliation contract for
-per-device NX-OS intent, but starts with a narrower family set over NX-API.
+per-device NX-OS intent, but starts with a narrower family set over NX-API
+REST/DME.
 
 Typical flow:
 

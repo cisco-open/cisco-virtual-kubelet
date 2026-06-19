@@ -31,11 +31,12 @@ import (
 // Kind identifies a transport flavour. Concrete platform packages own
 // construction, but every transport reports one of these stable names.
 //
-// +kubebuilder:validation:Enum=restconf;netconf;gnmi;nxapi
+// +kubebuilder:validation:Enum=rest;restconf;netconf;gnmi;nxapi
 type Kind string
 
 // Supported transport kinds.
 const (
+	KindREST     Kind = "rest"
 	KindRESTCONF Kind = "restconf"
 	KindNETCONF  Kind = "netconf"
 	KindGNMI     Kind = "gnmi"

@@ -165,12 +165,14 @@ type DeviceSpec struct {
 
 	// Transport selects the device channel used by declarative config
 	// drivers. IOS-XE defaults to RESTCONF and also supports NETCONF/gNMI.
-	// NX-OS uses NX-API; because this field has a historical global RESTCONF
-	// default, NX-OS treats an omitted/defaulted "restconf" value as NX-API
-	// unless "nxapi" is set explicitly. Apphosting operations always use the
-	// platform apphosting transport regardless of this field.
+	// NX-OS declarative config uses NX-API REST/DME, selected with "rest";
+	// because this field has a historical global RESTCONF default, NX-OS treats
+	// an omitted/defaulted "restconf" value as REST/DME too. The legacy "nxapi"
+	// value remains accepted as an alias for existing manifests. Apphosting
+	// operations always use the platform apphosting transport regardless of
+	// this field.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=restconf;netconf;gnmi;nxapi
+	// +kubebuilder:validation:Enum=rest;restconf;netconf;gnmi;nxapi
 	// +kubebuilder:default=restconf
 	Transport string `json:"transport,omitempty" mapstructure:"transport"`
 

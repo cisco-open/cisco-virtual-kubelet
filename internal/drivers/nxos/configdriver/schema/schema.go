@@ -25,6 +25,10 @@ const (
 	PathSystemHostname    = "/nxos/system/hostname"
 	PathVLANBrief         = "/nxos/vlan/brief"
 	PathInterfaceEthernet = "/nxos/interface/ethernet"
+
+	DNSystem          = "sys"
+	DNBridgeDomain    = "sys/bd"
+	DNInterfaceEntity = "sys/intf"
 )
 
 var Families = []string{
