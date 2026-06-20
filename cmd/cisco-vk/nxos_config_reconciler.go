@@ -31,6 +31,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	crlog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -85,11 +87,37 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 	if metricsAddr == "" {
 		metricsAddr = ":8080"
 	}
+	deviceNamespace := operationNamespace()
+	// Leases live in the device namespace. Keying them per-namespace makes
+	// same-named devices in different namespaces use distinct lease objects
+	// (the lease name is device+family only), so a shared
+	// CONFIG_LEASE_NAMESPACE can no longer cause cross-namespace collisions.
+	leaseNamespace := os.Getenv("CONFIG_LEASE_NAMESPACE")
+	if leaseNamespace == "" {
+		leaseNamespace = deviceNamespace
+	}
+	if leaseNamespace == "" {
+		leaseNamespace = "default"
+	}
+	// Scope the per-device manager cache to the device namespace so the
+	// NXOSConfig / DeviceOperation informers are namespaced (matching the
+	// namespaced RoleBinding for config CRDs); a cluster-wide informer would
+	// be RBAC-forbidden. Leases get an explicit override in case a shared
+	// CONFIG_LEASE_NAMESPACE is configured.
+	configCache := cache.Options{
+		DefaultNamespaces: map[string]cache.Config{deviceNamespace: {}},
+	}
+	if leaseNamespace != deviceNamespace {
+		configCache.ByObject = map[client.Object]cache.ByObject{
+			&coordv1.Lease{}: {Namespaces: map[string]cache.Config{leaseNamespace: {}}},
+		}
+	}
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: "0",
 		LeaderElection:         false,
+		Cache:                  configCache,
 	})
 	if err != nil {
 		return fmt.Errorf("build NXOSConfig manager: %w", err)
@@ -113,18 +141,6 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 		}
 	}
 
-	deviceNamespace := operationNamespace()
-	// Leases live in the device namespace. Keying them per-namespace makes
-	// same-named devices in different namespaces use distinct lease objects
-	// (the lease name is device+family only), so a shared
-	// CONFIG_LEASE_NAMESPACE can no longer cause cross-namespace collisions.
-	leaseNamespace := os.Getenv("CONFIG_LEASE_NAMESPACE")
-	if leaseNamespace == "" {
-		leaseNamespace = deviceNamespace
-	}
-	if leaseNamespace == "" {
-		leaseNamespace = "default"
-	}
 	var subscribeEvents chan event.GenericEvent
 	r := &provider.NXOSConfigReconciler{
 		Client:             mgr.GetClient(),

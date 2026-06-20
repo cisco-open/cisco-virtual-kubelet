@@ -43,6 +43,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	crlog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -208,11 +210,41 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	if metricsAddr == "" {
 		metricsAddr = ":8080"
 	}
+	// Lease namespace selection — three-tier precedence:
+	//   1. CONFIG_LEASE_NAMESPACE env (operator opt-in to a shared
+	//      cluster namespace so IOSXEConfig CRs in different
+	//      tenant namespaces actually arbitrate against each other).
+	//   2. POD_NAMESPACE — historical default.
+	//   3. "default" — out-of-cluster dev fallback.
+	leaseNamespace := os.Getenv("CONFIG_LEASE_NAMESPACE")
+	if leaseNamespace == "" {
+		leaseNamespace = os.Getenv("POD_NAMESPACE")
+	}
+	if leaseNamespace == "" {
+		leaseNamespace = "default"
+	}
+	// Scope the per-device manager cache to the device namespace. The
+	// config/ops CRDs (IOSXEConfig, scope objects, diagnostics, operations,
+	// …) are device-namespace-scoped and bound via a namespaced RoleBinding,
+	// so a cluster-wide informer ListWatch would be RBAC-forbidden. Scoping
+	// the cache here makes every config informer namespaced (matching the
+	// RBAC) and is the umbrella enforcement of the same-namespace deviceRef
+	// contract. Leases may live in a shared CONFIG_LEASE_NAMESPACE, so they
+	// get an explicit per-object namespace override.
+	configCache := cache.Options{
+		DefaultNamespaces: map[string]cache.Config{operationNamespace(): {}},
+	}
+	if leaseNamespace != operationNamespace() {
+		configCache.ByObject = map[client.Object]cache.ByObject{
+			&coordv1.Lease{}: {Namespaces: map[string]cache.Config{leaseNamespace: {}}},
+		}
+	}
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: "0",
 		LeaderElection:         false,
+		Cache:                  configCache,
 	})
 	if err != nil {
 		return fmt.Errorf("build manager: %w", err)
@@ -278,20 +310,6 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		log.G(ctx).WithField("version", dctx.DeviceVersion).Info("device version set for writers")
 	} else {
 		log.G(ctx).Warn("device version not available yet; IOSXEConfig writes remain pending until version is acquired")
-	}
-
-	// Lease namespace selection — three-tier precedence:
-	//   1. CONFIG_LEASE_NAMESPACE env (operator opt-in to a shared
-	//      cluster namespace so IOSXEConfig CRs in different
-	//      tenant namespaces actually arbitrate against each other).
-	//   2. POD_NAMESPACE — historical default.
-	//   3. "default" — out-of-cluster dev fallback.
-	leaseNamespace := os.Getenv("CONFIG_LEASE_NAMESPACE")
-	if leaseNamespace == "" {
-		leaseNamespace = os.Getenv("POD_NAMESPACE")
-	}
-	if leaseNamespace == "" {
-		leaseNamespace = "default"
 	}
 
 	// Subscribe-based drift fast path: gNMI today; per-driver
