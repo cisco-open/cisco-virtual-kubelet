@@ -189,10 +189,13 @@ type CiscoDeviceReconciler struct {
 // local ServiceAccount plus bindings to the chart-supplied ClusterRole.
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
-// The controller only manages its own per-device ClusterRoleBindings named by
+// The controller manages its own per-device ClusterRoleBindings named by
 // vkAccessClusterRoleBindingName; resourceNames pinning is infeasible because
-// those names are derived dynamically from each device namespace and SA.
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;create;update;delete
+// those names are derived dynamically from each device namespace and SA. The
+// manager's cached client reads ClusterRoleBindings (CreateOrUpdate Get), which
+// starts a cluster-wide informer, so list+watch are required; only patch is
+// unused (CreateOrUpdate uses Update, not Patch).
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;update;delete
 // Required by the API server's privilege-escalation check when binding the
 // chart-supplied ClusterRole into a tenant namespace.
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet;cisco-virtual-kubelet-device,verbs=bind
@@ -586,9 +589,6 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(ctx context.Context, device *cisk
 		},
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, sa, func() error {
-		if len(sa.OwnerReferences) == 0 {
-			return controllerutil.SetControllerReference(device, sa, r.Scheme)
-		}
 		return nil
 	}); err != nil {
 		return fmt.Errorf("ServiceAccount %s/%s: %w", sa.Namespace, sa.Name, err)
@@ -626,9 +626,6 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(ctx context.Context, device *cisk
 			Name:      saName,
 			Namespace: device.Namespace,
 		}}
-		if len(rb.OwnerReferences) == 0 {
-			return controllerutil.SetControllerReference(device, rb, r.Scheme)
-		}
 		return nil
 	}); err != nil {
 		return fmt.Errorf("RoleBinding %s/%s: %w", rb.Namespace, rb.Name, err)
@@ -672,6 +669,24 @@ func (r *CiscoDeviceReconciler) cleanupVKClusterAccess(ctx context.Context, devi
 	crb := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crbName}}
 	if err := r.Delete(ctx, crb); err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("delete ClusterRoleBinding %s: %w", crbName, err)
+	}
+	rb := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      saName,
+			Namespace: device.Namespace,
+		},
+	}
+	if err := r.Delete(ctx, rb); err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("delete RoleBinding %s/%s: %w", rb.Namespace, rb.Name, err)
+	}
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      saName,
+			Namespace: device.Namespace,
+		},
+	}
+	if err := r.Delete(ctx, sa); err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("delete ServiceAccount %s/%s: %w", sa.Namespace, sa.Name, err)
 	}
 	return nil
 }

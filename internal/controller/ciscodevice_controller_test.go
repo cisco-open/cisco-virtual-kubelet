@@ -122,6 +122,62 @@ func findWorkerCapability(items []ciskov1.WorkerCapabilityStatus, name ciskov1.W
 	return ciskov1.WorkerCapabilityStatus{}, false
 }
 
+func deleteCiscoDeviceForTest(t *testing.T, ctx context.Context, r *CiscoDeviceReconciler, namespace, name string) {
+	t.Helper()
+	var device ciskov1.CiscoDevice
+	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &device); err != nil {
+		t.Fatalf("get CiscoDevice %s/%s for deletion: %v", namespace, name, err)
+	}
+	if err := r.Delete(ctx, &device); err != nil {
+		t.Fatalf("delete CiscoDevice %s/%s: %v", namespace, name, err)
+	}
+}
+
+func assertVKAccessExists(t *testing.T, ctx context.Context, r *CiscoDeviceReconciler, key types.NamespacedName) {
+	t.Helper()
+	var sa corev1.ServiceAccount
+	if err := r.Get(ctx, key, &sa); err != nil {
+		t.Fatalf("ServiceAccount %s/%s not found: %v", key.Namespace, key.Name, err)
+	}
+
+	var rb rbacv1.RoleBinding
+	if err := r.Get(ctx, key, &rb); err != nil {
+		t.Fatalf("RoleBinding %s/%s not found: %v", key.Namespace, key.Name, err)
+	}
+	if rb.RoleRef.APIGroup != rbacv1.GroupName || rb.RoleRef.Kind != "ClusterRole" || rb.RoleRef.Name != vkDeviceClusterRole {
+		t.Fatalf("RoleBinding RoleRef = %+v, want ClusterRole %s", rb.RoleRef, vkDeviceClusterRole)
+	}
+	if len(rb.Subjects) != 1 ||
+		rb.Subjects[0].Kind != rbacv1.ServiceAccountKind ||
+		rb.Subjects[0].Name != key.Name ||
+		rb.Subjects[0].Namespace != key.Namespace {
+		t.Fatalf("RoleBinding subjects = %+v, want ServiceAccount %s/%s", rb.Subjects, key.Namespace, key.Name)
+	}
+
+	var crb rbacv1.ClusterRoleBinding
+	crbKey := types.NamespacedName{Name: vkAccessClusterRoleBindingName(key.Namespace, key.Name)}
+	if err := r.Get(ctx, crbKey, &crb); err != nil {
+		t.Fatalf("ClusterRoleBinding %s not found: %v", crbKey.Name, err)
+	}
+}
+
+func assertVKAccessGone(t *testing.T, ctx context.Context, r *CiscoDeviceReconciler, key types.NamespacedName) {
+	t.Helper()
+	var sa corev1.ServiceAccount
+	if err := r.Get(ctx, key, &sa); !errors.IsNotFound(err) {
+		t.Fatalf("ServiceAccount %s/%s still present or get failed: %v", key.Namespace, key.Name, err)
+	}
+	var rb rbacv1.RoleBinding
+	if err := r.Get(ctx, key, &rb); !errors.IsNotFound(err) {
+		t.Fatalf("RoleBinding %s/%s still present or get failed: %v", key.Namespace, key.Name, err)
+	}
+	var crb rbacv1.ClusterRoleBinding
+	crbKey := types.NamespacedName{Name: vkAccessClusterRoleBindingName(key.Namespace, key.Name)}
+	if err := r.Get(ctx, crbKey, &crb); !errors.IsNotFound(err) {
+		t.Fatalf("ClusterRoleBinding %s still present or get failed: %v", crbKey.Name, err)
+	}
+}
+
 func nonTelemetryEnv(env []corev1.EnvVar) []corev1.EnvVar {
 	out := make([]corev1.EnvVar, 0, len(env))
 	for _, item := range env {
@@ -275,16 +331,16 @@ func TestReconcile_ProvisionsVKAccessInDeviceNamespace(t *testing.T) {
 	if err := r.Get(ctx, key, &sa); err != nil {
 		t.Fatalf("ServiceAccount not found after reconcile: %v", err)
 	}
-	if !metav1.IsControlledBy(&sa, device) {
-		t.Fatalf("ServiceAccount owner references = %+v, want controlled by CiscoDevice", sa.OwnerReferences)
+	if metav1.IsControlledBy(&sa, device) {
+		t.Fatalf("ServiceAccount owner references = %+v, want shared object not controlled by CiscoDevice", sa.OwnerReferences)
 	}
 
 	var rb rbacv1.RoleBinding
 	if err := r.Get(ctx, key, &rb); err != nil {
 		t.Fatalf("RoleBinding not found after reconcile: %v", err)
 	}
-	if !metav1.IsControlledBy(&rb, device) {
-		t.Fatalf("RoleBinding owner references = %+v, want controlled by CiscoDevice", rb.OwnerReferences)
+	if metav1.IsControlledBy(&rb, device) {
+		t.Fatalf("RoleBinding owner references = %+v, want shared object not controlled by CiscoDevice", rb.OwnerReferences)
 	}
 	if rb.RoleRef.APIGroup != rbacv1.GroupName || rb.RoleRef.Kind != "ClusterRole" || rb.RoleRef.Name != vkDeviceClusterRole {
 		t.Fatalf("RoleBinding RoleRef = %+v, want ClusterRole %s (namespaced config role)", rb.RoleRef, vkDeviceClusterRole)
@@ -312,6 +368,36 @@ func TestReconcile_ProvisionsVKAccessInDeviceNamespace(t *testing.T) {
 	if crbSubject.Kind != rbacv1.ServiceAccountKind || crbSubject.Name != DefaultServiceAccount || crbSubject.Namespace != "tenant-a" {
 		t.Fatalf("ClusterRoleBinding subject = %+v, want tenant ServiceAccount %s", crbSubject, DefaultServiceAccount)
 	}
+}
+
+func TestReconcile_SharedVKAccessSurvivesUntilLastDeviceDeleted(t *testing.T) {
+	first := newDevice("router-first", "tenant-shared")
+	first.UID = types.UID("router-first-uid")
+	second := newDevice("router-second", "tenant-shared")
+	second.UID = types.UID("router-second-uid")
+	r := reconcilerFor(t, first, second)
+	r.ServiceAccount = ""
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("tenant-shared", "router-first")); err != nil {
+		t.Fatalf("reconcile first device: %v", err)
+	}
+	if _, err := r.Reconcile(ctx, reconcileRequest("tenant-shared", "router-second")); err != nil {
+		t.Fatalf("reconcile second device: %v", err)
+	}
+
+	key := types.NamespacedName{Namespace: "tenant-shared", Name: DefaultServiceAccount}
+	deleteCiscoDeviceForTest(t, ctx, r, "tenant-shared", "router-first")
+	if _, err := r.Reconcile(ctx, reconcileRequest("tenant-shared", "router-first")); err != nil {
+		t.Fatalf("reconcile first device deletion: %v", err)
+	}
+	assertVKAccessExists(t, ctx, r, key)
+
+	deleteCiscoDeviceForTest(t, ctx, r, "tenant-shared", "router-second")
+	if _, err := r.Reconcile(ctx, reconcileRequest("tenant-shared", "router-second")); err != nil {
+		t.Fatalf("reconcile second device deletion: %v", err)
+	}
+	assertVKAccessGone(t, ctx, r, key)
 }
 
 func TestReconcile_DeploymentHasConfigHashAnnotation(t *testing.T) {
