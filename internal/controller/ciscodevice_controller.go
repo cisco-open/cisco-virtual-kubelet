@@ -679,15 +679,13 @@ func (r *CiscoDeviceReconciler) cleanupVKClusterAccess(ctx context.Context, devi
 	if err := r.Delete(ctx, rb); err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("delete RoleBinding %s/%s: %w", rb.Namespace, rb.Name, err)
 	}
-	sa := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      saName,
-			Namespace: device.Namespace,
-		},
-	}
-	if err := r.Delete(ctx, sa); err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("delete ServiceAccount %s/%s: %w", sa.Namespace, sa.Name, err)
-	}
+	// The shared ServiceAccount is intentionally NOT deleted. It is the identity
+	// the VK pods mount; deleting and recreating it invalidates the projected
+	// token of any running VK pod (Unauthorized), and the controller is not
+	// granted delete on serviceaccounts. Removing its ownerReferences (in
+	// ensureVKAccess) already prevents it being garbage-collected with a single
+	// device; a permission-less SA left after the last device is harmless and is
+	// re-bound by ensureVKAccess when a new device appears.
 	return nil
 }
 

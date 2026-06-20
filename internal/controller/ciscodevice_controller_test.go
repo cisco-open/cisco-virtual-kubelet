@@ -163,9 +163,12 @@ func assertVKAccessExists(t *testing.T, ctx context.Context, r *CiscoDeviceRecon
 
 func assertVKAccessGone(t *testing.T, ctx context.Context, r *CiscoDeviceReconciler, key types.NamespacedName) {
 	t.Helper()
+	// The shared ServiceAccount is intentionally retained even after the last
+	// device — deleting it would invalidate running VK pod tokens. Only the
+	// permission-granting bindings are removed.
 	var sa corev1.ServiceAccount
-	if err := r.Get(ctx, key, &sa); !errors.IsNotFound(err) {
-		t.Fatalf("ServiceAccount %s/%s still present or get failed: %v", key.Namespace, key.Name, err)
+	if err := r.Get(ctx, key, &sa); err != nil {
+		t.Fatalf("ServiceAccount %s/%s should be retained after last device: %v", key.Namespace, key.Name, err)
 	}
 	var rb rbacv1.RoleBinding
 	if err := r.Get(ctx, key, &rb); !errors.IsNotFound(err) {
