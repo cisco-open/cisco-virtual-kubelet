@@ -76,6 +76,15 @@ rules:
   - apiGroups: ["cisco.vk"]
     resources: ["ciscodevices"]
     verbs: ["get", "list", "watch"]
+  # IOSXEConfigDefaults is a CLUSTER-SCOPED CRD (a global default applied across
+  # the cluster), so its informer does a cluster-scoped ListWatch. A namespaced
+  # RoleBinding cannot grant a cluster-scoped resource, so this grant MUST live
+  # in the cluster-scoped role (bound via ClusterRoleBinding). The namespaced
+  # scope objects (devicegroups, interfacegroups, templates) stay in the
+  # -device role below.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigdefaults"]
+    verbs: ["get", "list", "watch"]
   # ConfigMap write access — diagnostic ConfigMap sink writes capture results.
   - apiGroups: [""]
     resources: ["configmaps"]
@@ -93,11 +102,12 @@ metadata:
   labels:
     {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
 rules:
-  # IOSXEConfig scope objects (defaults, device groups, interface groups,
-  # templates) the per-device ConfigReconciler reads.
+  # Namespaced IOSXEConfig scope objects (device groups, interface groups,
+  # templates) the per-device ConfigReconciler reads. iosxeconfigdefaults is
+  # CLUSTER-scoped and lives in the cluster role above — it cannot be granted
+  # via this namespaced RoleBinding.
   - apiGroups: ["config.cisco.vk"]
     resources:
-      - iosxeconfigdefaults
       - iosxedevicegroupconfigs
       - iosxeinterfacegroupconfigs
       - iosxetemplates
