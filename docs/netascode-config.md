@@ -11,7 +11,8 @@ management. You express network intent as plain YAML (`IOSXEConfig` or
 `NXOSConfig` CRs), and CVK reconciles the device to match — detecting drift,
 applying changes, and verifying observed state after apply. IOS-XE has the
 broadest family coverage and revision/apply-log history; NX-OS starts with a
-per-device NX-API slice for `system`, `vlan`, and `interface_ethernet`.
+per-device NX-API slice for `system`, `feature`, `feature_set`, `vlan`, and
+`interface_ethernet`.
 
 ## Concepts
 
@@ -19,7 +20,8 @@ per-device NX-API slice for `system`, `vlan`, and `interface_ethernet`.
 
 A *family* is one independently managed slice of device configuration:
 `vlan`, `bgp`, `ospf`, `aaa`, `prefix_list`, and so on for IOS-XE, and
-`system`, `vlan`, and `interface_ethernet` for the initial NX-OS slice. Each
+`system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` for the
+initial NX-OS slice. Each
 family has its own writer that knows how to fetch, diff, and patch the relevant
 device state.
 
@@ -401,7 +403,8 @@ iterative development to keep changes transient.
 
 Use `NXOSConfig` for NX-OS devices. It uses the same common status and
 drift-policy fields as `IOSXEConfig`, but the first runtime slice is scoped to
-`system`, `vlan`, and `interface_ethernet` over NX-API REST/DME.
+`system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` over
+NX-API REST/DME.
 
 `NXOSConfig` accepts either a direct resolved family map or a full
 `nxos:` NetAsCode envelope. When a full envelope is supplied, CVK resolves
@@ -460,18 +463,53 @@ nexus9300v-system     nexus9300v-01   InSync   report   30s
 
 NX-OS uses the Network as Code `nxos` model shape, but CVK only writes the
 fields listed below today. Unsupported fields fail closed instead of being
-silently ignored.
+silently ignored. If `spec.managedFamilies` names a family outside this
+supported table, the common runtime marks the CR `Failed` before contacting the
+device; planned families remain documentation until their writer and verify
+fixtures are present. `CiscoDevice.spec.configPrereqs` uses the same NX-OS
+family gate when it creates an owned `NXOSConfig`, so unsupported explicit or
+source-derived families fail at CiscoDevice reconciliation time.
 
 | Family | Supported fields | Not supported in this slice |
 |---|---|---|
-| `system` | `system.hostname` | `system.mtu` |
-| `vlan` | `vlan.vlans[].id`, `vlan.vlans[].name` | VNI / VXLAN leaves such as `vni` or `vn_segment` |
-| `interface_ethernet` | `interfaces.ethernets[].id`, `description`, `shutdown`, `mtu` | switchport, IP/IPv6, channel-group, OSPF, PIM, ACL/NAT attachments |
+| `system` | `system.hostname`, `system.mtu` | broader Ethernet defaults, boot, clock, NX-API, SSH, and platform subtrees |
+| `feature` | NetAsCode feature booleans: `analytics`, `bash_shell`, `bfd`, `bgp`, `dhcp`, `evpn`, `fabric_forwarding`, `grpc`, `hsrp`, `interface_vlan`, `isis`, `lacp`, `lldp`, `macsec`, `netflow`, `ngmvpn`, `ngoam`, `nv_overlay`, `nxapi`, `ospf`, `ospfv3`, `pim`, `private_vlan`, `ptp`, `scp_server`, `security_group`, `service_acceleration`, `sflow`, `sftp_server`, `ssh`, `tacacs`, `telemetry`, `telnet`, `udld`, `vn_segment_vlan_based`, `vpc` | provider aliases such as `hmm`, `pvlan`, and `vn_segment`; disabling `nxapi`, `ssh`, `scp_server`, `sftp_server`, or `tacacs` through `NXOSConfig` is rejected to avoid management lockout |
+| `feature_set` | `feature_set.fex`, `feature_set.mpls`, `feature_set.virtualization` | none in the NetAsCode boolean slice |
+| `vlan` | `vlan.vlans[].id`, `vlan.vlans[].name` | VNI / VXLAN leaves such as `vni` or `vn_segment`; prune deletes are supported for CR-owned VLANs except VLAN 1 |
+| `interface_ethernet` | `interfaces.ethernets[].id`, `description`, `shutdown`, `mtu` | switchport, IP/IPv6, channel-group, OSPF, PIM, ACL/NAT attachments; physical interface deletion/prune is intentionally unsupported |
 
 Planned NX-OS family waves are tracked in
-[Production Readiness](production-readiness.md). The next practical additions
-are `interface_switchport`, `interface_vlan`, `interface_loopback`, `vrf`,
-`static_route`, `ntp`, `logging`, and `snmp_server`.
+[Production Readiness](production-readiness.md). The parity target is the
+current Network as Code NX-OS data-model stripe, which is split into entity,
+device, and interface sections.
+
+Entity/source pattern coverage:
+
+| Pattern | Status |
+|---|---|
+| `devices`, `device_groups`, `global` | Supported for inline/resolved `NXOSConfig` intent. |
+| `variables`, `templates` with `type: model`, `interface_groups` | Supported before family normalization. |
+| `managed_devices`, `managed_device_groups` | Planned for a future source/orchestration layer; one `NXOSConfig` reconciles one selected device today. |
+| `yaml_files`, `yaml_directories`, file templates, `write_model_file` | Deferred; render these outside the controller and submit resolved intent. |
+| ordered `cli_templates` | Deferred for config reconciliation; use `DeviceOperation` for explicit NX-API CLI execution. |
+
+If an owned source-derived `NXOSConfig` prereq CR is externally deleted during
+teardown, the controller cannot reconstruct prior owned keys from the vanished
+status. It records `PrereqTeardownObserved=True` with a warning event instead
+of blocking device deletion indefinitely; operators should inspect the device
+for any orphaned prereq state.
+
+Full family parity is not claimed until each family has DME mapping,
+Fetch -> Diff -> Apply -> Verify behavior, fake transport tests, and an
+optional guarded live write test. The current target set is:
+
+| Wave | Families |
+|---|---|
+| Management/base | `aaa`, `banner`, `cdp`, `clock`, `dns`, `lldp`, `logging`, `ntp`, `nxapi`, `snmp`, `ssh`, `system`, `udld` |
+| L2 and interfaces | `arp`, `interface_ethernet`, `interface_loopback`, `interface_management`, `interface_port_channel`, `interface_subinterface`, `interface_vlan`, `spanning_tree`, `vlan`, `vpc` |
+| L3 and routing | `bfd`, `bgp`, `dhcp`, `hsrp`, `ip_route`, `ipv6_route`, `isis`, `nd`, `ospf`, `ospfv3`, `pim`, `ptp`, `vrf` |
+| Policy/security | `community_list`, `hypershield`, `ip_access_list`, `ip_prefix_list`, `ipv6_access_list`, `ipv6_prefix_list`, `key_chain`, `qos`, `route_map`, `security_group`, `span` |
+| Fabric and telemetry | `analytics`, `evpn`, `fabric_forwarding`, `interface_nve`, `netflow`, `sflow`, `telemetry` |
 
 ### NX-OS REST/DME semantics
 

@@ -45,14 +45,17 @@ import (
 // CommonConfigStatus. It is intentionally small: platform-specific transport
 // and writer mechanics still come from drivers.ConfigDriverContext.
 type CommonConfigPlatform struct {
-	Name             string
-	Kind             string
-	ControllerName   string
-	SourceEnvelope   string
-	ModelFormat      configv1alpha1.NetAsCodeModelFormat
-	Finalizer        string
-	PreserveEnvelope bool
-	NormalizeSource  func(config map[string]any, deviceName string) (map[string]any, error)
+	Name              string
+	Kind              string
+	ControllerName    string
+	SourceEnvelope    string
+	ModelFormat       configv1alpha1.NetAsCodeModelFormat
+	SupportedFamilies []string
+	Finalizer         string
+	PreserveEnvelope  bool
+	SupportsRevisions bool
+	SupportsRollback  bool
+	NormalizeSource   func(config map[string]any, deviceName string) (map[string]any, error)
 
 	NewObject func() client.Object
 	NewList   func() client.ObjectList
@@ -350,6 +353,10 @@ func (r *CommonConfigReconciler) reconcileOne(
 	conflicts map[string][]string,
 	trigger reconcileTrigger,
 ) (engine.Result, error) {
+	if err := r.validateFeatureIntent(cr); err != nil {
+		recordErr := r.recordFailure(ctx, cr, err.Error())
+		return engine.Result{Phase: engine.PhaseFailed, Err: err}, errors.Join(err, recordErr)
+	}
 	resolved, err := r.resolveIntent(ctx, cr)
 	if err != nil {
 		recordErr := r.recordFailure(ctx, cr, fmt.Sprintf("resolve: %v", err))
@@ -410,10 +417,61 @@ func (r *CommonConfigReconciler) reconcileOne(
 	return result, nil
 }
 
+func (r *CommonConfigReconciler) validateFeatureIntent(cr client.Object) error {
+	spec := r.Platform.Spec(cr)
+	if spec == nil {
+		return fmt.Errorf("nil %s spec", r.Platform.Kind)
+	}
+	seenFamilies := make(map[string]struct{}, len(spec.ManagedFamilies))
+	for i, family := range spec.ManagedFamilies {
+		family = strings.TrimSpace(family)
+		if family == "" {
+			return fmt.Errorf("%s %s/%s: spec.managedFamilies[%d] must not be empty",
+				r.Platform.Kind, cr.GetNamespace(), cr.GetName(), i)
+		}
+		if _, ok := seenFamilies[family]; ok {
+			return fmt.Errorf("%s %s/%s: spec.managedFamilies contains duplicate family %q",
+				r.Platform.Kind, cr.GetNamespace(), cr.GetName(), family)
+		}
+		seenFamilies[family] = struct{}{}
+	}
+	if strings.TrimSpace(spec.RollbackTo) != "" && !r.Platform.SupportsRollback {
+		return fmt.Errorf("%s %s/%s: spec.rollbackTo is not supported by this platform runtime yet",
+			r.Platform.Kind, cr.GetNamespace(), cr.GetName())
+	}
+	if spec.RevisionHistoryLimit != nil && *spec.RevisionHistoryLimit > 0 && !r.Platform.SupportsRevisions {
+		return fmt.Errorf("%s %s/%s: spec.revisionHistoryLimit is not supported by this platform runtime yet",
+			r.Platform.Kind, cr.GetNamespace(), cr.GetName())
+	}
+	if len(r.Platform.SupportedFamilies) > 0 {
+		supported := make(map[string]struct{}, len(r.Platform.SupportedFamilies))
+		for _, family := range r.Platform.SupportedFamilies {
+			supported[family] = struct{}{}
+		}
+		unsupported := make([]string, 0)
+		for _, family := range spec.ManagedFamilies {
+			if _, ok := supported[family]; !ok {
+				unsupported = append(unsupported, family)
+			}
+		}
+		if len(unsupported) > 0 {
+			sort.Strings(unsupported)
+			return fmt.Errorf("%s %s/%s: spec.managedFamilies contains unsupported families %q for this platform runtime",
+				r.Platform.Kind, cr.GetNamespace(), cr.GetName(), unsupported)
+		}
+	}
+	return nil
+}
+
 func (r *CommonConfigReconciler) resolveIntent(ctx context.Context, cr client.Object) (*intent.ResolvedIntent, error) {
 	spec := r.Platform.Spec(cr)
 	if spec == nil {
 		return nil, fmt.Errorf("nil %s spec", r.Platform.Kind)
+	}
+	status := r.Platform.Status(cr)
+	var ownedKeys map[string][]string
+	if status != nil {
+		ownedKeys = copyOwnedKeys(status.AtomicReplaceOwnedKeys)
 	}
 	device := spec.DeviceRef.Name
 	if device == "" {
@@ -475,16 +533,17 @@ func (r *CommonConfigReconciler) resolveIntent(ctx context.Context, cr client.Ob
 	}
 	intent.FixYAML11BoolKeys(config)
 	return &intent.ResolvedIntent{
-		DeviceName:            device,
-		ManagedFamilies:       managedFamilies,
-		Configuration:         config,
-		Transactional:         spec.Transactional,
-		DriftPolicy:           policy,
-		WriteStartup:          spec.WriteStartup,
-		PruneOnRelinquish:     spec.PruneOnRelinquish,
-		TargetYangVersion:     targetVersion,
-		ConfirmTimeoutSeconds: spec.ConfirmTimeoutSeconds,
-		AtomicReplace:         spec.AtomicReplace,
+		DeviceName:             device,
+		ManagedFamilies:        managedFamilies,
+		Configuration:          config,
+		Transactional:          spec.Transactional,
+		DriftPolicy:            policy,
+		WriteStartup:           spec.WriteStartup,
+		PruneOnRelinquish:      spec.PruneOnRelinquish,
+		TargetYangVersion:      targetVersion,
+		ConfirmTimeoutSeconds:  spec.ConfirmTimeoutSeconds,
+		AtomicReplace:          spec.AtomicReplace,
+		AtomicReplaceOwnedKeys: ownedKeys,
 	}, nil
 }
 
@@ -625,6 +684,14 @@ func (r *CommonConfigReconciler) recordResult(
 		status.FamilyStatus = append(status.FamilyStatus, configv1alpha1.FamilyStatus{
 			Name: fs.Name, State: fs.State, Entries: fs.Entries, OpCount: int32(fs.OpCount), Message: fs.Message,
 		})
+	}
+	if len(result.AtomicReplaceOwnedKeys) > 0 {
+		if status.AtomicReplaceOwnedKeys == nil {
+			status.AtomicReplaceOwnedKeys = map[string][]string{}
+		}
+		for fam, fresh := range result.AtomicReplaceOwnedKeys {
+			status.AtomicReplaceOwnedKeys[fam] = mergeOwnedKeys(status.AtomicReplaceOwnedKeys[fam], fresh)
+		}
 	}
 	status.Drift = status.Drift[:0]
 	capped, _ := engine.CapDrift(result.Drift)

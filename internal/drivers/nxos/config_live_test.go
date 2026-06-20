@@ -31,7 +31,7 @@ func TestLiveNXOSConfigSmoke(t *testing.T) {
 	if address == "" || username == "" || password == "" {
 		t.Fatal("NXOS_LIVE_ADDRESS, NXOS_LIVE_USERNAME, and NXOS_LIVE_PASSWORD are required")
 	}
-	port := 80
+	port := 0
 	if raw := os.Getenv("NXOS_LIVE_PORT"); raw != "" {
 		p, err := strconv.Atoi(raw)
 		if err != nil {
@@ -39,6 +39,8 @@ func TestLiveNXOSConfigSmoke(t *testing.T) {
 		}
 		port = p
 	}
+	tlsEnabled := liveBoolEnv(t, "NXOS_LIVE_TLS")
+	insecureSkipVerify := liveBoolEnv(t, "NXOS_LIVE_INSECURE_SKIP_VERIFY")
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 	tr, err := newNXAPIConfigTransport(&ciskov1.DeviceSpec{
@@ -47,6 +49,10 @@ func TestLiveNXOSConfigSmoke(t *testing.T) {
 		Port:     port,
 		Username: username,
 		Password: password,
+		TLS: &ciskov1.TLSConfig{
+			Enabled:            tlsEnabled,
+			InsecureSkipVerify: insecureSkipVerify,
+		},
 	})
 	if err != nil {
 		t.Fatalf("newNXAPIConfigTransport: %v", err)
@@ -55,6 +61,8 @@ func TestLiveNXOSConfigSmoke(t *testing.T) {
 
 	for _, path := range []string{
 		nxosschema.PathSystemHostname,
+		nxosschema.PathFeature,
+		nxosschema.PathFeatureSet,
 		nxosschema.PathVLANBrief,
 		nxosschema.PathInterfaceEthernet,
 	} {
@@ -107,6 +115,19 @@ func TestLiveNXOSConfigSmoke(t *testing.T) {
 	if ops, err := w.Diff(map[string]any{"vlans": []any{map[string]any{"id": vlanID, "name": name}}}, verify); err != nil || len(ops) != 0 {
 		t.Fatalf("vlan verify diff ops=%v err=%v", ops, err)
 	}
+}
+
+func liveBoolEnv(t *testing.T, key string) bool {
+	t.Helper()
+	raw := os.Getenv(key)
+	if raw == "" {
+		return false
+	}
+	v, err := strconv.ParseBool(raw)
+	if err != nil {
+		t.Fatalf("%s: %v", key, err)
+	}
+	return v
 }
 
 func vlanPresent(observed any, id int) bool {

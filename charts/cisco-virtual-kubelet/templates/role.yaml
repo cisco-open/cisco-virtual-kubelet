@@ -111,7 +111,6 @@ rules:
   - config.cisco.vk
   resources:
   - iosxeconfigbundles
-  - nxosconfigs
   verbs:
   - get
   - list
@@ -136,6 +135,7 @@ rules:
   - iosxeconfigs
   - iosxetelemetries
   - iosxetelemetries/status
+  - nxosconfigs
   verbs:
   - create
   - delete

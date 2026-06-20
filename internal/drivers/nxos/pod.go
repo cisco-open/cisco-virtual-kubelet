@@ -17,6 +17,7 @@ package nxos
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,54 +31,93 @@ import (
 )
 
 const defaultAppWaitTimeout = 5 * time.Minute
+const defaultNXOSMaxAppSlots = 4
+const nxosMaxAppsResourceKey = "maxApps"
 
-func (d *NXOSDriver) DeployPod(ctx context.Context, pod *v1.Pod, _ corev1listers.SecretNamespaceLister, _ corev1listers.ConfigMapNamespaceLister) error {
-	appIDs := common.GenerateContainerAppIDs(pod)
-	for _, container := range pod.Spec.Containers {
-		appID := appIDs[container.Name]
-		if err := d.ensureAppConfig(ctx, pod, container, appID); err != nil {
-			return err
-		}
-		state, _ := d.appState(ctx, appID)
-		if state == "" {
-			if err := d.appCommand(ctx, fmt.Sprintf("app-hosting install appid %s package %s", appID, container.Image)); err != nil {
-				return fmt.Errorf("nxos install app %s: %w", appID, err)
-			}
-			if err := d.waitForState(ctx, appID, defaultAppWaitTimeout, "DEPLOYED", "ACTIVATED", "RUNNING"); err != nil {
-				return err
-			}
-		}
-		state, _ = d.appState(ctx, appID)
-		if state == "DEPLOYED" {
-			if err := d.appCommand(ctx, fmt.Sprintf("app-hosting activate appid %s", appID)); err != nil {
-				return fmt.Errorf("nxos activate app %s: %w", appID, err)
-			}
-			if err := d.waitForState(ctx, appID, defaultAppWaitTimeout, "ACTIVATED", "RUNNING"); err != nil {
-				return err
-			}
-		}
-		state, _ = d.appState(ctx, appID)
-		if state != "RUNNING" {
-			if err := d.appCommand(ctx, fmt.Sprintf("app-hosting start appid %s", appID)); err != nil {
-				return fmt.Errorf("nxos start app %s: %w", appID, err)
-			}
-			if err := d.waitForState(ctx, appID, defaultAppWaitTimeout, "RUNNING"); err != nil {
-				return err
-			}
+func (d *NXOSDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister corev1listers.SecretNamespaceLister, configMapLister corev1listers.ConfigMapNamespaceLister) error {
+	d.secretLister = secretLister
+	d.configLister = configMapLister
+	appConfigs, err := d.convertPodToAppConfigs(pod)
+	if err != nil {
+		return fmt.Errorf("failed to convert pod to NX-OS app configs: %w", err)
+	}
+	if err := d.validateAppSlotCapacity(ctx, appConfigs); err != nil {
+		return err
+	}
+	for i := range appConfigs {
+		if err := d.createApp(ctx, &appConfigs[i]); err != nil {
+			return fmt.Errorf("failed to deploy NX-OS app for container %s: %w", appConfigs[i].Container, err)
 		}
 	}
 	return nil
+}
+
+func (d *NXOSDriver) validateAppSlotCapacity(ctx context.Context, appConfigs []nxosAppConfig) error {
+	maxSlots := d.maxAppSlots()
+	if maxSlots <= 0 {
+		return nil
+	}
+	desired := make(map[string]struct{}, len(appConfigs))
+	for _, cfg := range appConfigs {
+		desired[cfg.AppID] = struct{}{}
+	}
+	requiredNew := len(desired)
+	usedByOtherApps := 0
+	if apps, err := d.listApps(ctx); err == nil {
+		for _, app := range apps {
+			if _, isDesired := desired[app.ID]; isDesired {
+				requiredNew--
+				continue
+			}
+			usedByOtherApps++
+		}
+	} else {
+		log.G(ctx).WithError(err).Debug("NX-OS app slot preflight could not list apps; falling back to pod container count")
+	}
+	available := maxSlots - usedByOtherApps
+	if available < 0 {
+		available = 0
+	}
+	if requiredNew > available {
+		return fmt.Errorf("NX-OS app-hosting capacity exceeded: pod requires %d new app slots, %d available, max %d; each container consumes one NX-OS app-hosting slot (override with resourceLimits.others.%s when the device has a higher validated limit)", requiredNew, available, maxSlots, nxosMaxAppsResourceKey)
+	}
+	return nil
+}
+
+func (d *NXOSDriver) maxAppSlots() int {
+	if d == nil || d.config == nil {
+		return defaultNXOSMaxAppSlots
+	}
+	if raw := strings.TrimSpace(d.config.ResourceLimits.Others[nxosMaxAppsResourceKey]); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
+			return parsed
+		}
+	}
+	return defaultNXOSMaxAppSlots
 }
 
 func (d *NXOSDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	if pod.DeletionTimestamp != nil {
 		return d.DeletePod(ctx, pod)
 	}
-	for _, container := range pod.Spec.Containers {
-		appID := common.GenerateContainerAppIDs(pod)[container.Name]
-		state, err := d.appState(ctx, appID)
+	appConfigs, err := d.convertPodToAppConfigs(pod)
+	if err != nil {
+		return fmt.Errorf("failed to convert pod to NX-OS app configs: %w", err)
+	}
+	if err := d.validateAppSlotCapacity(ctx, appConfigs); err != nil {
+		return err
+	}
+	for i := range appConfigs {
+		cfg := &appConfigs[i]
+		state, err := d.appState(ctx, cfg.AppID)
 		if err != nil || state == "" {
-			return d.DeployPod(ctx, pod, nil, nil)
+			if err := d.createApp(ctx, cfg); err != nil {
+				return fmt.Errorf("failed to recover missing NX-OS app %s: %w", cfg.AppID, err)
+			}
+			continue
+		}
+		if err := d.convergeAppState(ctx, cfg, state); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -85,8 +125,9 @@ func (d *NXOSDriver) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 
 func (d *NXOSDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	var errs []string
+	timeout := getPackageTimeout(pod)
 	for _, appID := range common.GenerateContainerAppIDs(pod) {
-		if err := d.deleteApp(ctx, appID); err != nil {
+		if err := d.deleteApp(ctx, appID, timeout); err != nil {
 			errs = append(errs, err.Error())
 		}
 	}
@@ -98,20 +139,62 @@ func (d *NXOSDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 
 func (d *NXOSDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
 	observed := map[string]nxosApp{}
+	desiredConfigs, desiredErr := d.desiredConfigsByContainer(pod)
+	if desiredErr != nil {
+		log.G(ctx).WithError(desiredErr).Debugf("NX-OS status: failed to render desired config for pod %s/%s", pod.Namespace, pod.Name)
+	}
 	for containerName, appID := range common.GenerateContainerAppIDs(pod) {
 		app, err := d.appDetail(ctx, appID)
 		if err != nil {
 			log.G(ctx).WithError(err).Debugf("NX-OS app detail unavailable for %s", appID)
 			continue
 		}
+		if app.State == "" && app.Image == "" && len(app.RunOpts) == 0 {
+			continue
+		}
 		app.ContainerName = containerName
 		observed[containerName] = app
 	}
 	if len(observed) == 0 {
+		if pod.DeletionTimestamp == nil && d.secretLister != nil && d.configLister != nil {
+			d.recoverMissingContainers(ctx, pod, observed)
+			out := pod.DeepCopy()
+			setPodStatus(d.config.Address, out, observed)
+			return out, nil
+		}
 		return nil, apierrors.NewNotFound(schema.GroupResource{Group: "cisco.vk", Resource: "nxos-app"}, pod.Name)
+	}
+	if pod.DeletionTimestamp == nil {
+		d.recoverMissingContainers(ctx, pod, observed)
+		for _, app := range observed {
+			cfg, ok := desiredConfigs[app.ContainerName]
+			if !ok {
+				cfg = nxosAppConfig{
+					AppID:     app.ID,
+					Container: app.ContainerName,
+					ImagePath: app.Image,
+					Timeout:   defaultPackageTimeout,
+				}
+			}
+			if err := d.advanceAppState(ctx, &cfg, app.State); err != nil {
+				log.G(ctx).WithError(err).Warnf("NX-OS app %s convergence from status failed", app.ID)
+			}
+		}
 	}
 	out := pod.DeepCopy()
 	setPodStatus(d.config.Address, out, observed)
+	return out, nil
+}
+
+func (d *NXOSDriver) desiredConfigsByContainer(pod *v1.Pod) (map[string]nxosAppConfig, error) {
+	configs, err := d.convertPodToAppConfigs(pod)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]nxosAppConfig, len(configs))
+	for _, cfg := range configs {
+		out[cfg.Container] = cfg
+	}
 	return out, nil
 }
 
@@ -165,19 +248,80 @@ func (d *NXOSDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 	return out, nil
 }
 
-func (d *NXOSDriver) ensureAppConfig(ctx context.Context, pod *v1.Pod, container v1.Container, appID string) error {
-	runOpts := dockerLabelRunOpts(pod, container)
+func (d *NXOSDriver) createApp(ctx context.Context, cfg *nxosAppConfig) error {
+	if cfg.PullPolicy == v1.PullNever && isHTTPURL(cfg.ImagePath) {
+		return fmt.Errorf("app %s: imagePullPolicy is Never but image is an HTTP URL %q; image must be pre-loaded on bootflash", cfg.AppID, cfg.ImagePath)
+	}
+	state, _ := d.appState(ctx, cfg.AppID)
+	return d.advanceAppState(ctx, cfg, state)
+}
+
+func (d *NXOSDriver) convergeAppState(ctx context.Context, cfg *nxosAppConfig, state string) error {
+	return d.advanceAppState(ctx, cfg, state)
+}
+
+func (d *NXOSDriver) advanceAppState(ctx context.Context, cfg *nxosAppConfig, state string) error {
+	switch state {
+	case "RUNNING":
+		d.clearAppAction(cfg.AppID)
+		return nil
+	case "INSTALLING":
+		return nil
+	case "DEPLOYED":
+		return d.runAppAction(ctx, cfg.AppID, "activate", func(actionCtx context.Context) error {
+			if err := d.appCommand(actionCtx, fmt.Sprintf("app-hosting activate appid %s", cfg.AppID)); err != nil {
+				return fmt.Errorf("nxos activate app %s: %w", cfg.AppID, err)
+			}
+			return nil
+		})
+	case "ACTIVATED", "STOPPED":
+		return d.runAppAction(ctx, cfg.AppID, "start", func(actionCtx context.Context) error {
+			if err := d.appCommand(actionCtx, fmt.Sprintf("app-hosting start appid %s", cfg.AppID)); err != nil {
+				return fmt.Errorf("nxos start app %s: %w", cfg.AppID, err)
+			}
+			return nil
+		})
+	case "", "UNINSTALLED":
+		if cfg.ImagePath == "" {
+			return fmt.Errorf("nxos app %s has no observed state and no image path for install", cfg.AppID)
+		}
+		return d.runAppAction(ctx, cfg.AppID, "install", func(actionCtx context.Context) error {
+			if err := d.ensureAppConfig(actionCtx, cfg); err != nil {
+				return err
+			}
+			if err := d.appCommand(actionCtx, fmt.Sprintf("app-hosting install appid %s package %s", cfg.AppID, cfg.ImagePath)); err != nil {
+				return fmt.Errorf("nxos install app %s: %w", cfg.AppID, err)
+			}
+			return nil
+		})
+	default:
+		return fmt.Errorf("nxos app %s is in unsupported state %q", cfg.AppID, state)
+	}
+}
+
+func (d *NXOSDriver) ensureAppConfig(ctx context.Context, cfg *nxosAppConfig) error {
+	if err := d.appCommand(ctx,
+		"configure terminal",
+		fmt.Sprintf("app-hosting appid %s", cfg.AppID),
+		"no app-resource docker",
+	); err != nil {
+		log.G(ctx).WithError(err).Debugf("NX-OS app %s had no existing docker run-opts to clear", cfg.AppID)
+	}
 	commands := []string{
 		"configure terminal",
-		fmt.Sprintf("app-hosting appid %s", appID),
+		fmt.Sprintf("app-hosting appid %s", cfg.AppID),
 		fmt.Sprintf("app-vnic management guest-interface %d", nxosGuestInterface(d.config)),
+		"app-resource profile custom",
+		fmt.Sprintf("cpu %d", cfg.Resources.cpuUnits),
+		fmt.Sprintf("memory %d", cfg.Resources.memoryMB),
+		"exit",
 		"app-resource docker",
 	}
-	for i, opt := range runOpts {
+	for i, opt := range cfg.RunOpts {
 		commands = append(commands, fmt.Sprintf("run-opts %d %q", i+1, opt))
 	}
 	if err := d.appCommand(ctx, commands...); err != nil {
-		return fmt.Errorf("nxos configure app %s: %w", appID, err)
+		return fmt.Errorf("nxos configure app %s: %w", cfg.AppID, err)
 	}
 	return nil
 }
@@ -189,46 +333,124 @@ func (d *NXOSDriver) appCommand(ctx context.Context, commands ...string) error {
 	return err
 }
 
-func dockerLabelRunOpts(pod *v1.Pod, container v1.Container) []string {
-	labels := []string{
-		fmt.Sprintf("--label %s=%s", common.LabelPodName, pod.Name),
-		fmt.Sprintf("--label %s=%s", common.LabelPodNamespace, pod.Namespace),
-		fmt.Sprintf("--label %s=%s", common.LabelPodUID, pod.UID),
-		fmt.Sprintf("--label %s=%s", common.LabelContainerName, container.Name),
-	}
-	for _, env := range container.Env {
-		if env.Value == "" {
+func serviceLinkPrefixes(envs []v1.EnvVar) map[string]struct{} {
+	prefixes := map[string]struct{}{}
+	for _, env := range envs {
+		prefix, ok := strings.CutSuffix(env.Name, "_SERVICE_HOST")
+		if !ok || prefix == "" {
 			continue
 		}
-		labels = append(labels, fmt.Sprintf("--env %s=%s", env.Name, env.Value))
+		prefixes[prefix] = struct{}{}
 	}
-	return labels
+	return prefixes
 }
 
-func (d *NXOSDriver) deleteApp(ctx context.Context, appID string) error {
-	state, err := d.appState(ctx, appID)
-	if err != nil || state == "" {
-		return nil
-	}
-	var errs []string
-	if state == "RUNNING" {
-		if err := d.appCommand(ctx, fmt.Sprintf("app-hosting stop appid %s", appID)); err != nil {
-			errs = append(errs, err.Error())
+func isServiceLinkEnv(name string, prefixes map[string]struct{}) bool {
+	for prefix := range prefixes {
+		switch {
+		case name == prefix+"_SERVICE_HOST":
+			return true
+		case name == prefix+"_SERVICE_PORT":
+			return true
+		case strings.HasPrefix(name, prefix+"_SERVICE_PORT_"):
+			return true
+		case name == prefix+"_PORT":
+			return true
+		case strings.HasPrefix(name, prefix+"_PORT_"):
+			return true
 		}
 	}
-	if err := d.appCommand(ctx, fmt.Sprintf("app-hosting deactivate appid %s", appID)); err != nil {
-		errs = append(errs, err.Error())
+	return false
+}
+
+func (d *NXOSDriver) deleteApp(ctx context.Context, appID string, timeout time.Duration) error {
+	defer d.clearAppAction(appID)
+	if timeout <= 0 {
+		timeout = defaultPackageTimeout
 	}
-	if err := d.appCommand(ctx, fmt.Sprintf("app-hosting uninstall appid %s", appID)); err != nil {
-		errs = append(errs, err.Error())
+	deadline := time.Now().Add(timeout)
+	var lastErr error
+	for {
+		state, err := d.appState(ctx, appID)
+		if err != nil || state == "" || state == "UNINSTALLED" {
+			if cfgErr := d.removeAppConfig(ctx, appID); cfgErr != nil {
+				return fmt.Errorf("app %s: remove stale config: %w", appID, cfgErr)
+			}
+			return nil
+		}
+		switch state {
+		case "RUNNING":
+			if err := d.appCommand(ctx, fmt.Sprintf("app-hosting stop appid %s", appID)); err != nil {
+				lastErr = err
+			}
+		case "ACTIVATED", "STOPPED":
+			if err := d.appCommand(ctx, fmt.Sprintf("app-hosting deactivate appid %s", appID)); err != nil {
+				lastErr = err
+			}
+		case "DEPLOYED":
+			if err := d.appCommand(ctx, fmt.Sprintf("app-hosting uninstall appid %s", appID)); err != nil {
+				lastErr = err
+			}
+		case "INSTALLING":
+			// Wait for the install transaction to reach a removable state.
+		default:
+			if err := d.appCommand(ctx, fmt.Sprintf("app-hosting uninstall appid %s", appID)); err != nil {
+				lastErr = err
+			}
+		}
+		if time.Now().After(deadline) {
+			finalState, finalErr := d.appState(ctx, appID)
+			if finalErr != nil || finalState == "" || finalState == "UNINSTALLED" {
+				if cfgErr := d.removeAppConfig(ctx, appID); cfgErr != nil {
+					return fmt.Errorf("app %s: remove stale config after timeout: %w", appID, cfgErr)
+				}
+				return nil
+			}
+			if lastErr != nil {
+				return fmt.Errorf("app %s: timed out after %s deleting from state %q: %w", appID, timeout, finalState, lastErr)
+			}
+			return fmt.Errorf("app %s: timed out after %s deleting from state %q", appID, timeout, finalState)
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(5 * time.Second):
+		}
 	}
-	if err := d.appCommand(ctx, "configure terminal", fmt.Sprintf("no app-hosting appid %s", appID)); err != nil {
-		errs = append(errs, err.Error())
+}
+
+func (d *NXOSDriver) removeAppConfig(ctx context.Context, appID string) error {
+	return d.appCommand(ctx, "configure terminal", fmt.Sprintf("no app-hosting appid %s", appID))
+}
+
+func (d *NXOSDriver) recoverMissingContainers(ctx context.Context, pod *v1.Pod, observed map[string]nxosApp) {
+	if pod.DeletionTimestamp != nil {
+		return
 	}
-	if len(errs) > 0 {
-		return fmt.Errorf("app %s: %s", appID, strings.Join(errs, "; "))
+	appConfigs, err := d.convertPodToAppConfigs(pod)
+	if err != nil {
+		log.G(ctx).WithError(err).Warnf("NX-OS recovery: failed to render pod %s/%s", pod.Namespace, pod.Name)
+		return
 	}
-	return nil
+	missingConfigs := make([]nxosAppConfig, 0, len(appConfigs))
+	for _, cfg := range appConfigs {
+		if _, found := observed[cfg.Container]; !found {
+			missingConfigs = append(missingConfigs, cfg)
+		}
+	}
+	if len(missingConfigs) == 0 {
+		return
+	}
+	if err := d.validateAppSlotCapacity(ctx, missingConfigs); err != nil {
+		log.G(ctx).WithError(err).Warnf("NX-OS recovery: insufficient app-hosting slots for pod %s/%s", pod.Namespace, pod.Name)
+		return
+	}
+	for i := range missingConfigs {
+		cfg := missingConfigs[i]
+		if err := d.createApp(ctx, &cfg); err != nil {
+			log.G(ctx).WithError(err).Warnf("NX-OS recovery: failed to deploy missing container %s for pod %s/%s", cfg.Container, pod.Namespace, pod.Name)
+		}
+	}
 }
 
 func (d *NXOSDriver) waitForState(ctx context.Context, appID string, timeout time.Duration, states ...string) error {

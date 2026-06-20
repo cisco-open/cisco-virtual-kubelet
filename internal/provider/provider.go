@@ -39,6 +39,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -72,6 +73,9 @@ type AppHostingProvider struct {
 
 	lastNotifiedMu sync.Mutex
 	lastNotified   map[types.UID]string
+
+	deleteRecoveryMu       sync.Mutex
+	deleteRecoveryInFlight map[types.UID]struct{}
 }
 
 func NewAppHostingProvider(
@@ -92,17 +96,18 @@ func NewAppHostingProvider(
 		}
 	}
 	return &AppHostingProvider{
-		ctx:             ctx,
-		deviceSpec:      deviceSpec,
-		driver:          driver,
-		podsLister:      vkCfg.Pods,
-		configMapLister: vkCfg.ConfigMaps,
-		secretLister:    vkCfg.Secrets,
-		serviceLister:   vkCfg.Services,
-		nodeProvider:    nodeProvider,
-		notifyQueue:     make(chan state.AppEvent, defaultPodNotifierCapacity),
-		podPollInterval: defaultPodPollInterval,
-		lastNotified:    make(map[types.UID]string),
+		ctx:                    ctx,
+		deviceSpec:             deviceSpec,
+		driver:                 driver,
+		podsLister:             vkCfg.Pods,
+		configMapLister:        vkCfg.ConfigMaps,
+		secretLister:           vkCfg.Secrets,
+		serviceLister:          vkCfg.Services,
+		nodeProvider:           nodeProvider,
+		notifyQueue:            make(chan state.AppEvent, defaultPodNotifierCapacity),
+		podPollInterval:        defaultPodPollInterval,
+		lastNotified:           make(map[types.UID]string),
+		deleteRecoveryInFlight: make(map[types.UID]struct{}),
 	}, nil
 }
 
@@ -237,12 +242,17 @@ func (p *AppHostingProvider) pollAndNotifyAllPods(ctx context.Context) {
 		}
 	}
 	p.gcLastNotified(currentUIDs)
+	p.gcDeleteTracking(currentUIDs)
 
 	for _, pod := range pods {
-		if pod == nil || pod.DeletionTimestamp != nil {
+		if pod == nil {
 			continue
 		}
-		statusPod, err := p.driver.GetPodStatus(ctx, pod)
+		if pod.DeletionTimestamp != nil {
+			p.recoverDeletingPod(ctx, pod)
+			continue
+		}
+		statusPod, err := p.statusOrReconcilePod(ctx, pod)
 		if err != nil {
 			log.G(ctx).WithError(err).WithFields(log.Fields{
 				"pod":       pod.Name,
@@ -254,6 +264,90 @@ func (p *AppHostingProvider) pollAndNotifyAllPods(ctx context.Context) {
 			cb(statusPod.DeepCopy())
 		}
 	}
+}
+
+func (p *AppHostingProvider) recoverDeletingPod(ctx context.Context, pod *v1.Pod) {
+	if p == nil || pod == nil || p.driver == nil || pod.UID == "" {
+		return
+	}
+	if !p.beginDelete(pod) {
+		return
+	}
+
+	go func(podCopy *v1.Pod) {
+		if err := p.driver.DeletePod(ctx, podCopy); err != nil {
+			p.finishDelete(podCopy)
+			log.G(ctx).WithError(err).WithFields(log.Fields{
+				"pod":       podCopy.Name,
+				"namespace": podCopy.Namespace,
+			}).Warn("PodNotifier poll: delete recovery failed")
+			return
+		}
+		log.G(ctx).WithFields(log.Fields{
+			"pod":       podCopy.Name,
+			"namespace": podCopy.Namespace,
+		}).Info("PodNotifier poll: delete recovery completed")
+		if p.nodeProvider != nil {
+			p.nodeProvider.ForceStatusUpdate(p.ctx)
+		}
+	}(pod.DeepCopy())
+}
+
+func (p *AppHostingProvider) beginDelete(pod *v1.Pod) bool {
+	if p == nil || pod == nil || pod.UID == "" {
+		return true
+	}
+	p.deleteRecoveryMu.Lock()
+	defer p.deleteRecoveryMu.Unlock()
+	if p.deleteRecoveryInFlight == nil {
+		p.deleteRecoveryInFlight = make(map[types.UID]struct{})
+	}
+	if _, running := p.deleteRecoveryInFlight[pod.UID]; running {
+		return false
+	}
+	p.deleteRecoveryInFlight[pod.UID] = struct{}{}
+	return true
+}
+
+func (p *AppHostingProvider) finishDelete(pod *v1.Pod) {
+	if p == nil || pod == nil || pod.UID == "" {
+		return
+	}
+	p.deleteRecoveryMu.Lock()
+	delete(p.deleteRecoveryInFlight, pod.UID)
+	p.deleteRecoveryMu.Unlock()
+}
+
+func (p *AppHostingProvider) gcDeleteTracking(currentUIDs map[types.UID]struct{}) {
+	if p == nil {
+		return
+	}
+	p.deleteRecoveryMu.Lock()
+	defer p.deleteRecoveryMu.Unlock()
+	for uid := range p.deleteRecoveryInFlight {
+		if _, ok := currentUIDs[uid]; !ok {
+			delete(p.deleteRecoveryInFlight, uid)
+		}
+	}
+}
+
+func (p *AppHostingProvider) statusOrReconcilePod(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
+	statusPod, err := p.driver.GetPodStatus(ctx, pod)
+	if err == nil {
+		return statusPod, nil
+	}
+	if pod == nil || pod.DeletionTimestamp != nil ||
+		(!errdefs.IsNotFound(err) && !apierrors.IsNotFound(err)) {
+		return nil, err
+	}
+	log.G(ctx).WithError(err).WithFields(log.Fields{
+		"pod":       pod.Name,
+		"namespace": pod.Namespace,
+	}).Info("PodNotifier poll: pod missing from provider; reconciling desired state")
+	if deployErr := p.driver.DeployPod(ctx, pod, p.secretNamespaceLister(pod.Namespace), p.configMapNamespaceLister(pod.Namespace)); deployErr != nil {
+		return nil, deployErr
+	}
+	return p.driver.GetPodStatus(ctx, pod)
 }
 
 func (p *AppHostingProvider) notifyPodForAppEvent(ctx context.Context, ev state.AppEvent) {
@@ -277,6 +371,40 @@ func (p *AppHostingProvider) notifyPodForAppEvent(ctx context.Context, ev state.
 	if p.shouldNotifyPodStatus(statusPod) {
 		cb(statusPod.DeepCopy())
 	}
+}
+
+func (p *AppHostingProvider) notifyPodStatusSoon(pod *v1.Pod) {
+	if p == nil || pod == nil {
+		return
+	}
+	go func() {
+		statusPod, err := p.statusOrReconcilePod(p.ctx, pod.DeepCopy())
+		if err != nil {
+			log.G(p.ctx).WithError(err).WithFields(log.Fields{
+				"pod":       pod.Name,
+				"namespace": pod.Namespace,
+			}).Debug("PodNotifier immediate refresh skipped")
+			return
+		}
+		cb := p.currentNotifyFunc()
+		if cb != nil && p.shouldNotifyPodStatus(statusPod) {
+			cb(statusPod.DeepCopy())
+		}
+	}()
+}
+
+func (p *AppHostingProvider) secretNamespaceLister(namespace string) corev1listers.SecretNamespaceLister {
+	if p == nil || p.secretLister == nil {
+		return nil
+	}
+	return p.secretLister.Secrets(namespace)
+}
+
+func (p *AppHostingProvider) configMapNamespaceLister(namespace string) corev1listers.ConfigMapNamespaceLister {
+	if p == nil || p.configMapLister == nil {
+		return nil
+	}
+	return p.configMapLister.ConfigMaps(namespace)
 }
 
 func (p *AppHostingProvider) shouldNotifyPodStatus(pod *v1.Pod) bool {
@@ -446,7 +574,7 @@ func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	p.rememberPodTrace(ctx, pod)
 	// Deploy the container. This MUST be idempotent
 	// In future we can range over the pod.spec.containers
-	if err := p.driver.DeployPod(p.ctx, pod, p.secretLister.Secrets(pod.Namespace), p.configMapLister.ConfigMaps(pod.Namespace)); err != nil {
+	if err := p.driver.DeployPod(p.ctx, pod, p.secretNamespaceLister(pod.Namespace), p.configMapNamespaceLister(pod.Namespace)); err != nil {
 		return errdefs.AsInvalidInput(err)
 	}
 
@@ -454,6 +582,7 @@ func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	if p.nodeProvider != nil {
 		p.nodeProvider.ForceStatusUpdate(p.ctx)
 	}
+	p.notifyPodStatusSoon(pod)
 
 	return nil
 }
@@ -480,11 +609,19 @@ func (p *AppHostingProvider) rememberPodTrace(ctx context.Context, pod *v1.Pod) 
 
 func (p *AppHostingProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	// IOS-XE/XR may have limited "Update" support (e.g., changing resources requires a restart)
-	return p.driver.UpdatePod(p.ctx, pod)
+	if err := p.driver.UpdatePod(p.ctx, pod); err != nil {
+		return err
+	}
+	p.notifyPodStatusSoon(pod)
+	return nil
 }
 
 func (p *AppHostingProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
+	deleteOwner := p.beginDelete(pod)
 	err := p.driver.DeletePod(p.ctx, pod)
+	if deleteOwner && err != nil {
+		p.finishDelete(pod)
+	}
 	if pod != nil {
 		p.forgetLastNotified(pod.UID)
 	}

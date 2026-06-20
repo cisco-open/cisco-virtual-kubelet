@@ -14,6 +14,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
@@ -143,7 +144,19 @@ func TestNXAPIConfigTransportFetchesDMEObservedState(t *testing.T) {
 			_, _ = w.Write([]byte(`{"aaaLogin":{"attributes":{"token":"token"}}}`))
 		case "/api/mo/sys.json":
 			assertDMECookie(t, r)
-			_, _ = w.Write([]byte(`{"totalCount":"1","imdata":[{"topSystem":{"attributes":{"name":"leaf-01"}}}]}`))
+			if r.URL.Query().Get("rsp-subtree") != "full" {
+				t.Fatalf("query=%s", r.URL.RawQuery)
+			}
+			switch r.URL.Query().Get("rsp-subtree-class") {
+			case "ethpmEntity,ethpmInst":
+				_, _ = w.Write([]byte(`{"totalCount":"1","imdata":[{"topSystem":{"attributes":{"name":"leaf-01"},"children":[{"ethpmEntity":{"children":[{"ethpmInst":{"attributes":{"systemJumboMtu":"9216"}}}]}}]}}]}`))
+			case strings.Join(nxosschema.FeatureDMEClasses(), ","):
+				_, _ = w.Write([]byte(`{"totalCount":"1","imdata":[{"topSystem":{"attributes":{"name":"leaf-01"},"children":[{"fmEntity":{"attributes":{"rn":"fm"},"children":[{"fmLldp":{"attributes":{"rn":"lldp","adminSt":"enabled"}}},{"fmBgp":{"attributes":{"rn":"bgp","adminSt":"disabled"}}},{"fmHmm":{"attributes":{"rn":"hmm","adminSt":"enabled"}}},{"fmNxapi":{"attributes":{"rn":"nxapi","adminSt":"enabled"}}}]}},{"fsetFeatureSet":{"attributes":{"name":"fex","adminSt":"enabled"}}},{"fsetFeatureSet":{"attributes":{"rn":"fset-[mpls]","adminSt":"disabled"}}}]}}]}`))
+			case strings.Join(nxosschema.FeatureSetDMEClasses(), ","):
+				_, _ = w.Write([]byte(`{"totalCount":"1","imdata":[{"fsetFeatureSet":{"attributes":{"name":"fex","adminSt":"enabled"}}},{"fsetFeatureSet":{"attributes":{"rn":"fset-[mpls]","adminSt":"disabled"}}}]}`))
+			default:
+				t.Fatalf("query=%s", r.URL.RawQuery)
+			}
 		case "/api/mo/sys/bd.json":
 			assertDMECookie(t, r)
 			if r.URL.Query().Get("target-subtree-class") != "l2BD" {
@@ -178,7 +191,7 @@ func TestNXAPIConfigTransportFetchesDMEObservedState(t *testing.T) {
 	if err := json.Unmarshal(raw, &system); err != nil {
 		t.Fatalf("decode system: %v", err)
 	}
-	if system["hostname"] != "leaf-01" {
+	if system["hostname"] != "leaf-01" || system["mtu"] != float64(9216) {
 		t.Fatalf("system=%#v", system)
 	}
 
@@ -208,8 +221,83 @@ func TestNXAPIConfigTransportFetchesDMEObservedState(t *testing.T) {
 		intfs["interfaces"][0]["mtu"] != float64(9216) {
 		t.Fatalf("interfaces=%#v", intfs)
 	}
+	raw, err = tr.Fetch(context.Background(), nxosschema.PathFeature)
+	if err != nil {
+		t.Fatalf("Fetch(feature): %v", err)
+	}
+	var features map[string]any
+	if err := json.Unmarshal(raw, &features); err != nil {
+		t.Fatalf("decode features: %v", err)
+	}
+	if features["lldp"] != true ||
+		features["bgp"] != false ||
+		features["fabric_forwarding"] != true ||
+		features["nxapi"] != true {
+		t.Fatalf("features=%#v", features)
+	}
+
+	raw, err = tr.Fetch(context.Background(), nxosschema.PathFeatureSet)
+	if err != nil {
+		t.Fatalf("Fetch(feature_set): %v", err)
+	}
+	var featureSets map[string]any
+	if err := json.Unmarshal(raw, &featureSets); err != nil {
+		t.Fatalf("decode feature sets: %v", err)
+	}
+	if featureSets["fex"] != true || featureSets["mpls"] != false {
+		t.Fatalf("featureSets=%#v", featureSets)
+	}
 	if loginCount != 1 {
 		t.Fatalf("loginCount=%d, want 1", loginCount)
+	}
+}
+
+func TestNXAPIConfigTransportSkipsUnsupportedDMEFeatureClass(t *testing.T) {
+	var featureFetches int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/aaaLogin.json":
+			http.SetCookie(w, &http.Cookie{Name: "nxapi_auth", Value: "token"})
+			_, _ = w.Write([]byte(`{"aaaLogin":{"attributes":{"token":"token"}}}`))
+		case "/api/mo/sys.json":
+			assertDMECookie(t, r)
+			featureFetches++
+			classes := r.URL.Query().Get("rsp-subtree-class")
+			switch {
+			case strings.Contains(classes, "fmSecurityGroup"):
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"imdata":[{"error":{"attributes":{"code":"17","text":"Unknown class fmSecurityGroup"}}}]}`))
+			case classes == strings.Join(removeDMEClass(nxosschema.FeatureDMEClasses(), "fmSecurityGroup"), ","):
+				_, _ = w.Write([]byte(`{"totalCount":"1","imdata":[{"topSystem":{"children":[{"fmEntity":{"children":[{"fmLldp":{"attributes":{"adminSt":"enabled"}}},{"fmBgp":{"attributes":{"adminSt":"disabled"}}}]}}]}}]}`))
+			default:
+				t.Fatalf("query=%s", r.URL.RawQuery)
+			}
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	tr := &nxapiConfigTransport{client: &nxapiClient{
+		rootURL:  server.URL,
+		baseURL:  server.URL + "/ins",
+		username: "admin",
+		password: "pw",
+		client:   server.Client(),
+	}}
+	raw, err := tr.Fetch(context.Background(), nxosschema.PathFeature)
+	if err != nil {
+		t.Fatalf("Fetch(feature): %v", err)
+	}
+	var features map[string]any
+	if err := json.Unmarshal(raw, &features); err != nil {
+		t.Fatalf("decode features: %v", err)
+	}
+	if features["lldp"] != true || features["bgp"] != false {
+		t.Fatalf("features=%#v", features)
+	}
+	if featureFetches != 2 {
+		t.Fatalf("featureFetches=%d, want 2", featureFetches)
 	}
 }
 
@@ -243,7 +331,7 @@ func TestNXAPIConfigTransportMutateDME(t *testing.T) {
 		client:   server.Client(),
 	}}
 	err := tr.Mutate(context.Background(), "", []transport.Op{
-		{Verb: transport.VerbMerge, Path: nxosschema.DNSystem, Body: []byte(`{"topSystem":{"attributes":{"name":"leaf-01"}}}`)},
+		{Verb: transport.VerbMerge, Path: nxosschema.DNSystem, Body: []byte(`{"topSystem":{"attributes":{"name":"leaf-01"},"children":[{"ethpmEntity":{"children":[{"ethpmInst":{"attributes":{"systemJumboMtu":"9216"}}}]}}]}}`)},
 	})
 	if err != nil {
 		t.Fatalf("Mutate: %v", err)
@@ -255,6 +343,81 @@ func TestNXAPIConfigTransportMutateDME(t *testing.T) {
 	attrs, _ := top["attributes"].(map[string]any)
 	if attrs["name"] != "leaf-01" {
 		t.Fatalf("attrs=%#v", attrs)
+	}
+	raw, _ := json.Marshal(got)
+	if !strings.Contains(string(raw), `"systemJumboMtu":"9216"`) {
+		t.Fatalf("got=%s missing system MTU", raw)
+	}
+}
+
+func TestNXAPIConfigTransportMutateDMEDelete(t *testing.T) {
+	var sawDelete bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/aaaLogin.json":
+			http.SetCookie(w, &http.Cookie{Name: "nxapi_auth", Value: "token"})
+			_, _ = w.Write([]byte(`{"aaaLogin":{"attributes":{"token":"token"}}}`))
+		case "/api/mo/sys/bd/bd-[vlan-102].json":
+			if r.Method != http.MethodDelete {
+				t.Fatalf("method=%s", r.Method)
+			}
+			assertDMECookie(t, r)
+			sawDelete = true
+			_, _ = w.Write([]byte(`{"imdata":[]}`))
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	tr := &nxapiConfigTransport{client: &nxapiClient{
+		rootURL:  server.URL,
+		baseURL:  server.URL + "/ins",
+		username: "admin",
+		password: "pw",
+		client:   server.Client(),
+	}}
+	err := tr.Mutate(context.Background(), "", []transport.Op{
+		{Verb: transport.VerbDelete, Path: nxosschema.DNBridgeDomain + "/bd-[vlan-102]"},
+	})
+	if err != nil {
+		t.Fatalf("Mutate delete: %v", err)
+	}
+	if !sawDelete {
+		t.Fatal("DME DELETE was not sent")
+	}
+}
+
+func TestNXAPIConfigTransportRejectsInvalidMutationsBeforeHTTP(t *testing.T) {
+	var calls int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		t.Fatalf("unexpected HTTP request for invalid mutation: %s %s", r.Method, r.URL.Path)
+	}))
+	defer server.Close()
+
+	tr := &nxapiConfigTransport{client: &nxapiClient{
+		rootURL:  server.URL,
+		baseURL:  server.URL + "/ins",
+		username: "admin",
+		password: "pw",
+		client:   server.Client(),
+	}}
+
+	if err := tr.Mutate(context.Background(), "tx-1", []transport.Op{{Verb: transport.VerbMerge, Path: nxosschema.DNSystem}}); !errors.Is(err, transport.ErrUnsupported) {
+		t.Fatalf("Mutate(non-empty tx) err=%v, want ErrUnsupported", err)
+	}
+	if err := tr.Mutate(context.Background(), "", []transport.Op{{Verb: transport.VerbCLI, Body: []byte("  \n")}}); err == nil || !strings.Contains(err.Error(), "empty CLI operation") {
+		t.Fatalf("Mutate(empty CLI) err=%v, want empty CLI operation", err)
+	}
+	if err := tr.Mutate(context.Background(), "", []transport.Op{{Verb: transport.VerbMerge, Path: " "}}); err == nil || !strings.Contains(err.Error(), "empty DME DN") {
+		t.Fatalf("Mutate(empty merge DN) err=%v, want empty DME DN", err)
+	}
+	if err := tr.Mutate(context.Background(), "", []transport.Op{{Verb: transport.VerbDelete}}); err == nil || !strings.Contains(err.Error(), "empty DME DN") {
+		t.Fatalf("Mutate(empty delete DN) err=%v, want empty DME DN", err)
+	}
+	if calls != 0 {
+		t.Fatalf("invalid mutations made %d HTTP calls", calls)
 	}
 }
 

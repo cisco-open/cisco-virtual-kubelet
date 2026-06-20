@@ -72,11 +72,26 @@ func (t *nxapiConfigTransport) Capabilities() transport.Capabilities {
 func (t *nxapiConfigTransport) Fetch(ctx context.Context, path string) ([]byte, error) {
 	switch path {
 	case nxosschema.PathSystemHostname:
-		raw, err := t.dmeGetWithRetry(ctx, nxosschema.DNSystem, nil)
+		raw, err := t.dmeGetWithRetry(ctx, nxosschema.DNSystem, url.Values{
+			"rsp-subtree":       []string{"full"},
+			"rsp-subtree-class": []string{"ethpmEntity,ethpmInst"},
+		})
 		if err != nil {
 			return nil, err
 		}
-		return json.Marshal(map[string]any{"hostname": parseDMESystemHostname(raw)})
+		return json.Marshal(parseDMESystem(raw))
+	case nxosschema.PathFeature:
+		raw, err := t.dmeGetClassesWithFallback(ctx, nxosschema.DNSystem, nxosschema.FeatureDMEClasses())
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(parseDMEFeatures(raw))
+	case nxosschema.PathFeatureSet:
+		raw, err := t.dmeGetClassesWithFallback(ctx, nxosschema.DNSystem, nxosschema.FeatureSetDMEClasses())
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(parseDMEFeatureSets(raw))
 	case nxosschema.PathVLANBrief:
 		raw, err := t.dmeGetWithRetry(ctx, nxosschema.DNBridgeDomain, url.Values{
 			"query-target":         []string{"children"},
@@ -104,22 +119,37 @@ func (t *nxapiConfigTransport) StartTransaction(context.Context) (transport.TxHa
 	return "", transport.ErrUnsupported
 }
 
-func (t *nxapiConfigTransport) Mutate(ctx context.Context, _ transport.TxHandle, ops []transport.Op) error {
+func (t *nxapiConfigTransport) Mutate(ctx context.Context, tx transport.TxHandle, ops []transport.Op) error {
+	if tx != "" {
+		return transport.ErrUnsupported
+	}
 	for _, op := range ops {
 		switch op.Verb {
 		case transport.VerbCLI:
+			if strings.TrimSpace(string(op.Body)) == "" {
+				return fmt.Errorf("nxos rest mutate: empty CLI operation")
+			}
 			if err := t.mutateCLI(ctx, op.Body); err != nil {
 				return err
 			}
 		case transport.VerbMerge:
+			if strings.TrimSpace(op.Path) == "" {
+				return fmt.Errorf("nxos rest mutate: empty DME DN for %s", op.Verb)
+			}
 			if err := t.client.dmePost(ctx, op.Path, op.Body); err != nil {
 				return redactNXAPIError(err)
 			}
 		case transport.VerbReplace:
+			if strings.TrimSpace(op.Path) == "" {
+				return fmt.Errorf("nxos rest mutate: empty DME DN for %s", op.Verb)
+			}
 			if err := t.client.dmePut(ctx, op.Path, op.Body); err != nil {
 				return redactNXAPIError(err)
 			}
 		case transport.VerbDelete:
+			if strings.TrimSpace(op.Path) == "" {
+				return fmt.Errorf("nxos rest mutate: empty DME DN for %s", op.Verb)
+			}
 			if err := t.client.dmeDelete(ctx, op.Path); err != nil {
 				return redactNXAPIError(err)
 			}
@@ -190,6 +220,77 @@ func (t *nxapiConfigTransport) dmeGetWithRetry(ctx context.Context, dn string, q
 		return err
 	})
 	return raw, err
+}
+
+func (t *nxapiConfigTransport) dmeGetClassesWithFallback(ctx context.Context, dn string, classes []string) ([]byte, error) {
+	remaining := append([]string(nil), classes...)
+	for len(remaining) > 0 {
+		raw, err := t.dmeGetWithRetry(ctx, dn, dmeSubtreeClassQuery(remaining))
+		if err == nil {
+			return raw, nil
+		}
+		unknown := unknownDMEClass(err)
+		if unknown == "" {
+			return t.dmeGetClassesIndividually(ctx, dn, remaining)
+		}
+		next := removeDMEClass(remaining, unknown)
+		if len(next) == len(remaining) {
+			return t.dmeGetClassesIndividually(ctx, dn, remaining)
+		}
+		log.G(ctx).WithField("class", unknown).Debug("nxos config driver: skipping unsupported DME class")
+		remaining = next
+	}
+	return []byte(`{"imdata":[]}`), nil
+}
+
+func (t *nxapiConfigTransport) dmeGetClassesIndividually(ctx context.Context, dn string, classes []string) ([]byte, error) {
+	env := dmeEnvelope{}
+	for _, class := range classes {
+		raw, err := t.dmeGetWithRetry(ctx, dn, dmeSubtreeClassQuery([]string{class}))
+		if err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "unknown class") {
+				log.G(ctx).WithField("class", class).Debug("nxos config driver: skipping unsupported DME class")
+				continue
+			}
+			return nil, err
+		}
+		var partial dmeEnvelope
+		if err := json.Unmarshal(raw, &partial); err != nil {
+			return nil, fmt.Errorf("nxos dme decode %s: %w", class, err)
+		}
+		env.IMData = append(env.IMData, partial.IMData...)
+	}
+	env.TotalCount = strconv.Itoa(len(env.IMData))
+	return json.Marshal(env)
+}
+
+func dmeSubtreeClassQuery(classes []string) url.Values {
+	return url.Values{
+		"rsp-subtree":       []string{"full"},
+		"rsp-subtree-class": []string{strings.Join(classes, ",")},
+	}
+}
+
+func unknownDMEClass(err error) string {
+	if err == nil {
+		return ""
+	}
+	matches := regexp.MustCompile(`(?i)unknown class\s+([A-Za-z0-9_]+)`).FindStringSubmatch(err.Error())
+	if len(matches) < 2 {
+		return ""
+	}
+	return strings.TrimSpace(matches[1])
+}
+
+func removeDMEClass(classes []string, remove string) []string {
+	out := make([]string, 0, len(classes))
+	for _, class := range classes {
+		if strings.EqualFold(class, remove) {
+			continue
+		}
+		out = append(out, class)
+	}
+	return out
 }
 
 func (t *nxapiConfigTransport) mutateCLI(ctx context.Context, body []byte) error {
@@ -366,10 +467,82 @@ func parseNXOSEthernetRunning(out string) []map[string]any {
 }
 
 func parseDMESystemHostname(raw []byte) string {
+	return stringLeafFromDMESystem(parseDMESystem(raw), "hostname")
+}
+
+func parseDMESystem(raw []byte) map[string]any {
+	system := map[string]any{}
 	for _, attrs := range collectDMEClassAttrs(raw, "topSystem") {
 		if name := stringAttr(attrs, "name"); name != "" {
-			return name
+			system["hostname"] = name
+			break
 		}
+	}
+	for _, attrs := range collectDMEClassAttrs(raw, "ethpmInst") {
+		if mtu, err := strconv.Atoi(stringAttr(attrs, "systemJumboMtu")); err == nil && mtu > 0 {
+			system["mtu"] = mtu
+			break
+		}
+	}
+	return system
+}
+
+func parseDMEFeatures(raw []byte) map[string]any {
+	out := map[string]any{}
+	for _, mapping := range nxosschema.FeatureDMEMappings() {
+		for _, attrs := range collectDMEClassAttrs(raw, mapping.Class) {
+			if state := stringAttr(attrs, "adminSt"); state != "" {
+				out[mapping.Field] = normalizeDMEAdminState(state)
+				break
+			}
+		}
+	}
+	return out
+}
+
+func parseDMEFeatureSets(raw []byte) map[string]any {
+	out := map[string]any{}
+	allowed := map[string]struct{}{}
+	for _, field := range nxosschema.FeatureSetFields() {
+		allowed[field] = struct{}{}
+	}
+	for _, attrs := range collectDMEClassAttrs(raw, "fsetFeatureSet") {
+		name := stringAttr(attrs, "name")
+		if name == "" {
+			name = featureSetNameFromRN(stringAttr(attrs, "rn"))
+		}
+		if _, ok := allowed[name]; !ok {
+			continue
+		}
+		if state := stringAttr(attrs, "adminSt"); state != "" {
+			out[name] = normalizeDMEAdminState(state)
+		}
+	}
+	return out
+}
+
+func normalizeDMEAdminState(state string) any {
+	switch strings.ToLower(strings.TrimSpace(state)) {
+	case "enabled":
+		return true
+	case "disabled":
+		return false
+	default:
+		return strings.TrimSpace(state)
+	}
+}
+
+func featureSetNameFromRN(rn string) string {
+	rn = strings.TrimSpace(rn)
+	if strings.HasPrefix(rn, "fset-[") && strings.HasSuffix(rn, "]") {
+		return strings.TrimSuffix(strings.TrimPrefix(rn, "fset-["), "]")
+	}
+	return rn
+}
+
+func stringLeafFromDMESystem(system map[string]any, key string) string {
+	if v, ok := system[key].(string); ok {
+		return v
 	}
 	return ""
 }

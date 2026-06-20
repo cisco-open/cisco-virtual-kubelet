@@ -19,8 +19,8 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // NXOSConfigSpec declares desired NX-OS configuration for a single
 // CiscoDevice. The source payload follows the Network as Code NX-OS model:
 // either a full `nxos:` envelope or the inner per-device configuration block
-// can be supplied. The first supported families are system, vlan, and
-// interface_ethernet.
+// can be supplied. The first supported families are system, feature,
+// feature_set, vlan, and interface_ethernet.
 type NXOSConfigSpec CommonConfigSpec
 
 // NXOSConfigStatus reports reconciliation state to users and GitOps agents.

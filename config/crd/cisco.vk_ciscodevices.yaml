@@ -76,9 +76,11 @@ spec:
                 description: |-
                   ConfigPrereqs declares the network configuration this device requires
                   before pods can be hosted on it, for example a VirtualPortGroup
-                  interface, DHCP pool, or app egress ACL. When set, the controller
-                  materializes an owned IOSXEConfig whose managed families are limited to
-                  the apphosting prerequisite set.
+                  interface, DHCP pool, app egress ACL, or NX-OS apphosting prerequisite
+                  family. When set, the controller materializes the platform config CR
+                  described by the platform descriptor: IOS-XE keeps the legacy
+                  IOSXEConfig prereq family set, while NX-OS and future platforms derive
+                  managed families from the source payload unless explicitly supplied.
 
                   The payload carries the same netascode-shaped YAML as
                   IOSXEConfig.spec.source.inline. Operator-authored IOSXEConfig CRs may
@@ -88,8 +90,18 @@ spec:
                   configuration:
                     description: |-
                       Configuration is the netascode-shaped fragment. Same shape as
-                      IOSXEConfig.spec.source.inline.
+                      the target platform config CR's spec.source.inline.
                     x-kubernetes-preserve-unknown-fields: true
+                  managedFamilies:
+                    description: |-
+                      ManagedFamilies optionally overrides the platform prereq family policy.
+                      IOS-XE normally uses the legacy fixed apphosting prereq family set.
+                      NX-OS and future platforms derive this list from Configuration's
+                      top-level keys when it is omitted.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
                 required:
                 - configuration
                 type: object

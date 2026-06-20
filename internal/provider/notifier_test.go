@@ -17,6 +17,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -125,13 +126,26 @@ func TestPodNotifierOverflowDropsAndSelfMetric(t *testing.T) {
 
 type notifierDriver struct {
 	fakeTopologyDriver
-	status   v1.PodStatus
-	listPods []*v1.Pod
-	calls    int
+	status             v1.PodStatus
+	listPods           []*v1.Pod
+	calls              int
+	deployCalls        int
+	missingUntilDeploy bool
+	deleteCalls        int32
+	deleteBlock        <-chan struct{}
+	deleteDone         chan<- struct{}
+}
+
+func (d *notifierDriver) DeployPod(context.Context, *v1.Pod, corev1listers.SecretNamespaceLister, corev1listers.ConfigMapNamespaceLister) error {
+	d.deployCalls++
+	return nil
 }
 
 func (d *notifierDriver) GetPodStatus(_ context.Context, pod *v1.Pod) (*v1.Pod, error) {
 	d.calls++
+	if d.missingUntilDeploy && d.deployCalls == 0 {
+		return nil, errdefs.NotFound(fmt.Sprintf("pod %s/%s not found on device", pod.Namespace, pod.Name))
+	}
 	out := pod.DeepCopy()
 	out.Status = d.status
 	return out, nil
@@ -139,6 +153,20 @@ func (d *notifierDriver) GetPodStatus(_ context.Context, pod *v1.Pod) (*v1.Pod, 
 
 func (d *notifierDriver) ListPods(context.Context) ([]*v1.Pod, error) {
 	return d.listPods, nil
+}
+
+func (d *notifierDriver) DeletePod(context.Context, *v1.Pod) error {
+	atomic.AddInt32(&d.deleteCalls, 1)
+	if d.deleteBlock != nil {
+		<-d.deleteBlock
+	}
+	if d.deleteDone != nil {
+		select {
+		case d.deleteDone <- struct{}{}:
+		default:
+		}
+	}
+	return nil
 }
 
 func TestGetPodUsesProviderListForExistence(t *testing.T) {
@@ -225,6 +253,141 @@ func TestPodNotifierPollDrivesCallbackWithoutMDT(t *testing.T) {
 	}
 	if driver.calls == 0 {
 		t.Fatal("driver.GetPodStatus was not called")
+	}
+}
+
+func TestPodNotifierPollReconcilesMissingProviderPod(t *testing.T) {
+	ctx := context.Background()
+	pod := notifierPod("missed-watch", "99999999-9999-9999-9999-999999999999")
+	driver := &notifierDriver{
+		status:             notifierPodStatus(v1.PodRunning, true),
+		missingUntilDeploy: true,
+	}
+	provider, err := NewAppHostingProvider(ctx,
+		&ciskov1.DeviceSpec{},
+		nodeutil.ProviderConfig{Pods: podLister(t, pod)},
+		driver,
+		nil,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("NewAppHostingProvider: %v", err)
+	}
+
+	var seen []*v1.Pod
+	setNotifyFuncForTest(provider, func(pod *v1.Pod) {
+		seen = append(seen, pod)
+	})
+
+	provider.pollAndNotifyAllPods(ctx)
+
+	if driver.deployCalls != 1 {
+		t.Fatalf("DeployPod calls=%d, want 1", driver.deployCalls)
+	}
+	if driver.calls != 2 {
+		t.Fatalf("GetPodStatus calls=%d, want notfound then post-deploy status", driver.calls)
+	}
+	if len(seen) != 1 {
+		t.Fatalf("callbacks=%d want 1", len(seen))
+	}
+	if seen[0].Status.Phase != v1.PodRunning {
+		t.Fatalf("phase=%q want %q", seen[0].Status.Phase, v1.PodRunning)
+	}
+}
+
+func TestPodNotifierPollRecoversDeletingPodOnce(t *testing.T) {
+	ctx := context.Background()
+	pod := notifierPod("terminating", "aaaaaaaa-1111-2222-3333-aaaaaaaaaaaa")
+	now := metav1.Now()
+	pod.DeletionTimestamp = &now
+	deleteBlock := make(chan struct{})
+	deleteDone := make(chan struct{}, 1)
+	driver := &notifierDriver{deleteBlock: deleteBlock, deleteDone: deleteDone}
+	provider, err := NewAppHostingProvider(ctx,
+		&ciskov1.DeviceSpec{},
+		nodeutil.ProviderConfig{Pods: podLister(t, pod)},
+		driver,
+		nil,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("NewAppHostingProvider: %v", err)
+	}
+	setNotifyFuncForTest(provider, func(*v1.Pod) {})
+
+	provider.pollAndNotifyAllPods(ctx)
+	for i := 0; i < 50 && atomic.LoadInt32(&driver.deleteCalls) == 0; i++ {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if got := atomic.LoadInt32(&driver.deleteCalls); got != 1 {
+		t.Fatalf("DeletePod calls after first poll=%d want 1", got)
+	}
+
+	provider.pollAndNotifyAllPods(ctx)
+	if got := atomic.LoadInt32(&driver.deleteCalls); got != 1 {
+		t.Fatalf("DeletePod calls while recovery in-flight=%d want 1", got)
+	}
+	close(deleteBlock)
+	select {
+	case <-deleteDone:
+	case <-time.After(time.Second):
+		t.Fatal("recovery DeletePod did not finish after unblock")
+	}
+
+	provider.pollAndNotifyAllPods(ctx)
+	if got := atomic.LoadInt32(&driver.deleteCalls); got != 1 {
+		t.Fatalf("DeletePod calls after completed recovery=%d want 1", got)
+	}
+}
+
+func TestProviderDeleteSuppressesNotifierDeleteRecoveryWhileInFlight(t *testing.T) {
+	ctx := context.Background()
+	pod := notifierPod("normal-delete", "bbbbbbbb-1111-2222-3333-bbbbbbbbbbbb")
+	now := metav1.Now()
+	pod.DeletionTimestamp = &now
+	deleteBlock := make(chan struct{})
+	driver := &notifierDriver{deleteBlock: deleteBlock}
+	provider, err := NewAppHostingProvider(ctx,
+		&ciskov1.DeviceSpec{},
+		nodeutil.ProviderConfig{Pods: podLister(t, pod)},
+		driver,
+		nil,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("NewAppHostingProvider: %v", err)
+	}
+	setNotifyFuncForTest(provider, func(*v1.Pod) {})
+
+	done := make(chan error, 1)
+	go func() {
+		done <- provider.DeletePod(ctx, pod)
+	}()
+	for i := 0; i < 50 && atomic.LoadInt32(&driver.deleteCalls) == 0; i++ {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if got := atomic.LoadInt32(&driver.deleteCalls); got != 1 {
+		t.Fatalf("DeletePod calls after normal delete start=%d want 1", got)
+	}
+
+	provider.pollAndNotifyAllPods(ctx)
+	if got := atomic.LoadInt32(&driver.deleteCalls); got != 1 {
+		t.Fatalf("DeletePod calls after recovery poll=%d want normal delete only", got)
+	}
+
+	close(deleteBlock)
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("DeletePod returned error: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("DeletePod did not return after unblock")
+	}
+
+	provider.pollAndNotifyAllPods(ctx)
+	if got := atomic.LoadInt32(&driver.deleteCalls); got != 1 {
+		t.Fatalf("DeletePod calls after completed normal delete=%d want 1", got)
 	}
 }
 

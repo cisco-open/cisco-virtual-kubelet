@@ -216,6 +216,22 @@ type CommonConfigSpec struct {
 	// to live in a ConfigMap or git-tracked YAML.
 	// +optional
 	SecretRefs []FamilySecretRef `json:"secretRefs,omitempty"`
+
+	// RevisionHistoryLimit caps the number of platform config revision
+	// objects retained for this CR after successful applies. Unset (nil)
+	// defaults to the reconciler's platform policy; an explicit 0 disables
+	// revision creation where the platform implements revisions.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +optional
+	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
+
+	// RollbackTo names a platform config revision in the same namespace. When
+	// set on a platform that implements revision replay, the reconciler treats
+	// that revision's resolved intent as desired state and runs the normal
+	// plan/apply/verify flow.
+	// +optional
+	RollbackTo string `json:"rollbackTo,omitempty"`
 }
 
 // CommonConfigStatus is the shared status contract for platform configuration
@@ -239,6 +255,11 @@ type CommonConfigStatus struct {
 	// LastAppliedTime records the most recent successful apply.
 	// +optional
 	LastAppliedTime *metav1.Time `json:"lastAppliedTime,omitempty"`
+
+	// LastRollbackedTo records the most recent revision name that was
+	// successfully applied through spec.rollbackTo.
+	// +optional
+	LastRollbackedTo *string `json:"lastRollbackedTo,omitempty"`
 
 	// LastDeviceCheck records the most recent reconcile tick that fetched
 	// observed state from the device or controller.
@@ -290,6 +311,13 @@ type CommonConfigStatus struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=50
 	Drift []DriftEntry `json:"drift,omitempty"`
+
+	// AtomicReplaceOwnedKeys tracks, per managed family, the list-key values
+	// this CR has successfully owned. The common reconciler feeds these keys
+	// back into the engine so prune operations can be scoped to this CR's prior
+	// ownership instead of deleting unrelated baseline device state.
+	// +optional
+	AtomicReplaceOwnedKeys map[string][]string `json:"atomicReplaceOwnedKeys,omitempty"`
 
 	// Conditions follows the standard Kubernetes conditions shape.
 	// +optional

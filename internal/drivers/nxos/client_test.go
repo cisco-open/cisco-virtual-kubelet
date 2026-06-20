@@ -17,6 +17,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
 
 func TestParseNXAPIResponseSingleOutput(t *testing.T) {
@@ -132,6 +134,37 @@ func TestNXAPIDMEReturnsErrorMO(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "bad DME payload") || !strings.Contains(err.Error(), "code=400") {
 		t.Fatalf("error=%q", err)
+	}
+}
+
+func TestNewNXAPIClientHonorsTLSDefaultPort(t *testing.T) {
+	c, err := newNXAPIClient(&ciskov1.DeviceSpec{
+		Driver:  ciskov1.DeviceDriverNXOS,
+		Address: "leaf.example",
+		TLS: &ciskov1.TLSConfig{
+			Enabled:            true,
+			InsecureSkipVerify: true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("newNXAPIClient: %v", err)
+	}
+	if c.rootURL != "https://leaf.example:443" {
+		t.Fatalf("rootURL=%q, want HTTPS default port", c.rootURL)
+	}
+	if c.baseURL != "https://leaf.example:443/ins" {
+		t.Fatalf("baseURL=%q, want HTTPS /ins endpoint", c.baseURL)
+	}
+
+	c, err = newNXAPIClient(&ciskov1.DeviceSpec{
+		Driver:  ciskov1.DeviceDriverNXOS,
+		Address: "leaf.example",
+	})
+	if err != nil {
+		t.Fatalf("newNXAPIClient no TLS: %v", err)
+	}
+	if c.rootURL != "http://leaf.example:80" {
+		t.Fatalf("rootURL=%q, want HTTP default port", c.rootURL)
 	}
 }
 

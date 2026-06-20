@@ -24,6 +24,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
+	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 	"k8s.io/client-go/tools/record"
 )
 
@@ -121,11 +122,14 @@ func (r *NXOSConfigReconciler) common() *CommonConfigReconciler {
 // spec/status reconciler.
 func NXOSCommonConfigPlatform() CommonConfigPlatform {
 	return CommonConfigPlatform{
-		Name:             "nxos",
-		Kind:             "NXOSConfig",
-		ControllerName:   "nxosconfig",
-		SourceEnvelope:   "nxos",
-		ModelFormat:      configv1alpha1.NetAsCodeModelFormatNXOS,
+		Name:           "nxos",
+		Kind:           "NXOSConfig",
+		ControllerName: "nxosconfig",
+		SourceEnvelope: "nxos",
+		ModelFormat:    configv1alpha1.NetAsCodeModelFormatNXOS,
+		SupportedFamilies: append([]string(nil),
+			nxosschema.Families...,
+		),
 		Finalizer:        nxosConfigFinalizer,
 		PreserveEnvelope: true,
 		NormalizeSource:  normalizeNXOSNetAsCodeSource,

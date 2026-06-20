@@ -51,23 +51,40 @@ func (systemWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	if got == nil {
 		got = map[string]any{}
 	}
-	if err := rejectUnsupportedKeys(want, "system", "hostname"); err != nil {
+	if err := rejectUnsupportedKeys(want, "system", "hostname", "mtu"); err != nil {
 		return nil, err
 	}
-	hostname, ok := want["hostname"]
-	if !ok {
+
+	attrs := map[string]string{}
+	if hostname, ok := want["hostname"]; ok {
+		name := strings.TrimSpace(stringLeaf(hostname))
+		if name == "" {
+			return nil, fmt.Errorf("system.hostname must not be empty")
+		}
+		if !scalarEqual(name, got["hostname"]) {
+			attrs["name"] = name
+		}
+	}
+
+	var children []map[string]any
+	if mtuRaw, ok := want["mtu"]; ok {
+		mtu, valid := intLeaf(mtuRaw)
+		if !valid || mtu < 576 || mtu > 9216 {
+			return nil, fmt.Errorf("system.mtu must be an integer between 576 and 9216")
+		}
+		if !scalarEqual(mtu, got["mtu"]) {
+			children = append(children, dmeObject("ethpmEntity", nil,
+				dmeObject("ethpmInst", map[string]string{
+					"systemJumboMtu": fmt.Sprintf("%d", mtu),
+				}),
+			))
+		}
+	}
+
+	if len(attrs) == 0 && len(children) == 0 {
 		return nil, nil
 	}
-	name := strings.TrimSpace(stringLeaf(hostname))
-	if name == "" {
-		return nil, fmt.Errorf("system.hostname must not be empty")
-	}
-	if scalarEqual(name, got["hostname"]) {
-		return nil, nil
-	}
-	op, err := dmeMergeOp(nxosschema.DNSystem, dmeObject("topSystem", map[string]string{
-		"name": name,
-	}))
+	op, err := dmeMergeOp(nxosschema.DNSystem, dmeObject("topSystem", attrs, children...))
 	if err != nil {
 		return nil, err
 	}

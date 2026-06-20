@@ -60,7 +60,7 @@ Runtime settings are **not** in the config file — they are passed as flags or 
 
 | Field | Type | Required | Default | Notes |
 |---|---|---|---|---|
-| `driver` | enum | yes | — | `XE`, `NXOS`, `XR`, `OPENCONFIG`, `FAKE`. `XE` is the broadest production driver. `NXOS` supports NX-API CLI app-hosting plus the initial NX-API REST/DME `NXOSConfig` Network as Code slice (`system`, `vlan`, `interface_ethernet`). `XR` and `OPENCONFIG` remain reserved placeholders. |
+| `driver` | enum | yes | — | `XE`, `NXOS`, `XR`, `OPENCONFIG`, `FAKE`. `XE` is the broadest production driver. `NXOS` supports NX-API CLI app-hosting plus the initial NX-API REST/DME `NXOSConfig` Network as Code slice (`system`, `feature`, `feature_set`, `vlan`, `interface_ethernet`). `XR` and `OPENCONFIG` remain reserved placeholders. |
 | `address` | string | yes | — | Management IP or hostname |
 | `port` | int (1–65535) | no | 443 (TLS) / 80 | Device API port. IOS-XE uses RESTCONF/NETCONF/gNMI depending on transport; NX-OS uses NX-API CLI and NX-API REST/DME over HTTP(S). |
 | `username` | string | yes | — | Device username |
@@ -110,7 +110,7 @@ resourceLimits:
   maxMemory: "4Gi"
   maxStorage: "2Gi"
   others:
-    gpu: "1"
+    maxApps: "4"
 ```
 
 | Field | Type | Notes |
@@ -121,7 +121,15 @@ resourceLimits:
 | `resourceLimits.maxCPU` | string | Upper limit per container |
 | `resourceLimits.maxMemory` | string | Upper limit per container |
 | `resourceLimits.maxStorage` | string | Upper limit per container |
-| `resourceLimits.others` | map[string]string | Arbitrary custom resources |
+| `resourceLimits.others` | map[string]string | Arbitrary custom resources. For NX-OS, `maxApps` overrides the conservative app-hosting slot guard. |
+
+NX-OS maps each Kubernetes container to one NX-OS app-hosting app. CVK defaults
+the NX-OS app-slot guard to `4`, matching the observed Nexus 9300v lab ceiling,
+and rejects oversized pods before sending config. Raise `resourceLimits.others.maxApps`
+only after validating a higher platform-specific limit. NX-OS app-resource
+profile values are bounded to the platform's 16-bit CLI fields; CPU milli-units
+or memory MiB above `65535` are rejected before any app-hosting configuration is
+sent.
 
 ### Logging
 

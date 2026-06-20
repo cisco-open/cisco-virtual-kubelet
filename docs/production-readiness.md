@@ -13,8 +13,8 @@ claim. It adds:
 - NX-OS app-hosting through NX-API CLI.
 - `NXOSConfig` over the common config runtime.
 - NX-API REST/DME config transport.
-- Initial Fetch -> Diff -> Apply -> Verify writers for `system`, `vlan`, and
-  `interface_ethernet`.
+- Initial Fetch -> Diff -> Apply -> Verify writers for `system`, `feature`,
+  `feature_set`, `vlan`, and `interface_ethernet`.
 - A common REST helper under `internal/configengine/transport`.
 - NetAsCode device-centric envelope resolution for global, device group,
   device, variable, model-template, and interface-group scopes.
@@ -33,6 +33,7 @@ These items gate merging a branch that changes runtime behavior:
 | Build and smoke | GitHub `build-and-smoke` passes, including envtest and Helm checks. |
 | Existing IOS-XE labs | Cat8kv and Cat9k lab checks pass so NX-OS work does not regress IOS-XE. |
 | NX-OS read-only live check | DME login, DME system fetch, and NX-API CLI endpoint succeed against the virtual NX-OS node. |
+| NX-OS scale admission | Multi-container pods are tested against the driver, and live device app-slot limits are enforced before config is sent. |
 | Branch-image NX-OS deployment | The exact branch image is deployed to the lab cluster. |
 | NX-OS app-hosting lifecycle | A test pod reaches running state through install, activate, start, then is stopped, deactivated, uninstalled, and removed. |
 | NXOSConfig live write | A disposable VLAN or equivalent low-risk object is applied through DME, verified by Fetch/Diff, and cleaned up. |
@@ -108,20 +109,45 @@ The first supported families are:
 
 | Family | Current supported fields | Notes |
 |---|---|---|
-| `system` | `hostname` | `system.mtu` is not supported in the first slice. |
-| `vlan` | `vlans[].id`, `vlans[].name` | VNI/VXLAN leaves are deferred. |
-| `interface_ethernet` | `id`, `description`, `shutdown`, `mtu` | Switchport, L3, protocol, and port-channel leaves are planned. |
+| `system` | `hostname`, `mtu` | Broader Ethernet defaults, boot, clock, NX-API, SSH, and platform subtrees are still planned. |
+| `feature` | NetAsCode feature booleans | Maps to DME `fmEntity` children; disabling `nxapi`, `ssh`, `scp_server`, `sftp_server`, or `tacacs` is rejected to avoid management lockout. |
+| `feature_set` | `fex`, `mpls`, `virtualization` | Maps to DME `fsetFeatureSet` admin state. |
+| `vlan` | `vlans[].id`, `vlans[].name` | VNI/VXLAN leaves are deferred; scoped prune deletes are supported for CR-owned VLANs except VLAN 1. |
+| `interface_ethernet` | `id`, `description`, `shutdown`, `mtu` | Switchport, L3, protocol, and port-channel leaves are planned; physical interface deletion/prune is intentionally unsupported. |
+
+Only the supported families above are accepted in `NXOSConfig.spec.managedFamilies`.
+The runtime rejects planned/deferred families before device I/O, so the coverage
+matrix is the production gate rather than a best-effort hint. The same gate is
+applied when `CiscoDevice.spec.configPrereqs` derives an owned `NXOSConfig`
+from an inline `nxos:` envelope.
 
 Recommended next waves:
 
-1. L2 access/trunk: `interface_switchport`.
-2. L3 primitives: `vrf`, `interface_vlan`, `interface_loopback`,
-   `static_route`.
-3. Aggregation: `interface_port_channel` and LACP dependencies.
-4. Management: `ntp`, `logging`, `snmp_server`.
-5. Routing and policy: `ospf`, `bgp`, prefix lists, route maps, ACLs.
-6. Fabric/VXLAN: VLAN VNI, NVE, EVPN, and BGP EVPN as a coordinated wave, not
-   isolated writers.
+1. Management/base: `banner`, `clock`, `dns`, `logging`, `ntp`, `snmp`,
+   `ssh`, `nxapi`, `aaa`, `cdp`, `lldp`, and `udld`.
+   These should harden secret/reference handling and avoid disabling active
+   access paths.
+2. L2 and interface primitives: `interface_loopback`, `interface_vlan`,
+   `interface_management`, `interface_port_channel`, `interface_subinterface`,
+   `arp`, `spanning_tree`, and `vpc`. Port-channel and vPC require
+   topology-aware verification.
+3. L3 and routing: `vrf`, `ip_route`, `ipv6_route`, `bfd`, `ospf`, `ospfv3`,
+   `isis`, `bgp`, `pim`, `hsrp`, `dhcp`, `nd`, and `ptp`. These must land after
+   the required interface, feature, and policy primitives.
+4. Policy/security: `ip_access_list`, `ipv6_access_list`, `ip_prefix_list`,
+   `ipv6_prefix_list`, `community_list`, `route_map`, `key_chain`, `qos`,
+   `security_group`, `hypershield`, and `span`.
+5. Fabric and telemetry configuration: `fabric_forwarding`, `interface_nve`,
+   VLAN VNI leaves, `evpn`, BGP EVPN, `analytics`, `netflow`, `sflow`, and
+   `telemetry`. These should be delivered as coordinated fabric/observability
+   waves, not isolated one-off writers.
+
+The NetAsCode entity/source layer is also part of parity. Inline `devices`,
+`device_groups`, `global`, `variables`, model `templates`, and
+`interface_groups` are supported today. Terraform-specific filesystem inputs
+such as `yaml_files`, `yaml_directories`, `template_files`, and
+`write_model_file` should stay outside `NXOSConfig`; render them into resolved
+intent through GitOps or a future source controller.
 
 Each family requires:
 
@@ -195,10 +221,14 @@ NX-OS can be called production-ready only when all of the following are true:
 
 - Branch-image lab deployment is repeatable.
 - App-hosting lifecycle is tested against a real NX-OS target.
+- NX-OS app-hosting slot limits are documented per platform and reflected in
+  `resourceLimits.others.maxApps` before enabling higher pod density.
 - At least one DME write family is live-tested with cleanup in CI.
 - RBAC strict profile exists and is documented.
 - Non-transactional DME behavior is visible in status/events.
 - Supported/unsupported NetAsCode fields are documented per family.
+- Scoped prune behavior is documented and live-tested for each supported family
+  that can safely delete device objects.
 - Transport and reconcile metrics are available for DME, app-hosting, and
   DeviceOperation.
 - Rollback/compensation behavior is documented for every supported write

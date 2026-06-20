@@ -52,20 +52,33 @@ func sanitizeNodeName(value string) string {
 }
 
 // GetInitialNodeSpec builds the initial v1.Node using runtime parameters.
-func GetInitialNodeSpec(nodeName, deviceAddress string) v1.Node {
+func GetInitialNodeSpec(nodeName string, deviceSpec *ciskov1.DeviceSpec) v1.Node {
+	deviceAddress := ""
+	driver := ciskov1.DeviceDriver("")
+	var taints []v1.Taint
+	if deviceSpec != nil {
+		deviceAddress = deviceSpec.Address
+		driver = deviceSpec.Driver
+		taints = append([]v1.Taint(nil), deviceSpec.Taints...)
+	}
+	resolvedNodeName := GetNodeName(nodeName, deviceAddress)
+	nodeInfo := InitNodeSystemInfo()
+	nodePlatform := nodePlatformMetadata(driver)
+	nodeInfo.OSImage = nodePlatform.OSImage
+	nodeInfo.OperatingSystem = "Cisco"
 
 	return v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: GetNodeName(nodeName, deviceAddress),
-			Labels: map[string]string{
-				"platform": "cisco-ios-xe",
-				"provider": "cisco-apphosting",
-			},
+			Name:   resolvedNodeName,
+			Labels: initialNodeLabels(resolvedNodeName, deviceSpec),
+		},
+		Spec: v1.NodeSpec{
+			Taints: taints,
 		},
 		Status: v1.NodeStatus{
 			Phase:      v1.NodeRunning,
 			Conditions: InitNodeConditions(),
-			NodeInfo:   InitNodeSystemInfo(),
+			NodeInfo:   nodeInfo,
 			Capacity:   initNodeCapacity(),
 			Addresses: []v1.NodeAddress{
 				{
@@ -80,6 +93,35 @@ func GetInitialNodeSpec(nodeName, deviceAddress string) v1.Node {
 			},
 		},
 	}
+}
+
+func initialNodeLabels(nodeName string, deviceSpec *ciskov1.DeviceSpec) map[string]string {
+	driver := ciskov1.DeviceDriver("")
+	if deviceSpec != nil {
+		driver = deviceSpec.Driver
+	}
+	nodePlatform := nodePlatformMetadata(driver)
+	labels := map[string]string{
+		"kubernetes.io/hostname":        nodeName,
+		"platform":                      nodePlatform.Label,
+		"provider":                      "cisco-apphosting",
+		"type":                          "virtual-kubelet",
+		"topology.kubernetes.io/zone":   nodePlatform.Topology,
+		"topology.kubernetes.io/region": nodePlatform.Topology,
+	}
+	if deviceSpec == nil {
+		return labels
+	}
+	if deviceSpec.Zone != "" {
+		labels["topology.kubernetes.io/zone"] = deviceSpec.Zone
+	}
+	if deviceSpec.Region != "" {
+		labels["topology.kubernetes.io/region"] = deviceSpec.Region
+	}
+	for k, v := range deviceSpec.Labels {
+		labels[k] = v
+	}
+	return labels
 }
 
 func InitNodeConditions() []v1.NodeCondition {

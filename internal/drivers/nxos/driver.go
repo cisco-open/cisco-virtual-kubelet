@@ -21,20 +21,34 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 )
 
 // NXOSDriver drives NX-OS app-hosting through NX-API CLI.
 type NXOSDriver struct {
-	config     *v1alpha1.DeviceSpec
-	client     *nxapiClient
-	deviceInfo *common.DeviceInfo
-	mu         sync.Mutex
+	config       *v1alpha1.DeviceSpec
+	client       *nxapiClient
+	deviceInfo   *common.DeviceInfo
+	mu           sync.Mutex
+	secretLister corev1listers.SecretNamespaceLister
+	configLister corev1listers.ConfigMapNamespaceLister
+
+	asyncActions bool
+	actionMu     sync.Mutex
+	appActions   map[string]nxosAppAction
+}
+
+type nxosAppAction struct {
+	Action  string
+	At      time.Time
+	Running bool
 }
 
 func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*NXOSDriver, error) {
@@ -43,8 +57,10 @@ func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*NXOSD
 		return nil, err
 	}
 	d := &NXOSDriver{
-		config: spec,
-		client: client,
+		config:       spec,
+		client:       client,
+		asyncActions: true,
+		appActions:   make(map[string]nxosAppAction),
 	}
 	if err := d.CheckConnection(ctx); err != nil {
 		return nil, err
@@ -94,6 +110,21 @@ func (d *NXOSDriver) GetDeviceResources(ctx context.Context) (*v1.ResourceList, 
 	if pods <= 0 {
 		pods = 16
 	}
+	if observed, err := d.readAppHostingResources(ctx); err == nil && observed.hasCapacity() {
+		resources := v1.ResourceList{
+			v1.ResourcePods: *resource.NewQuantity(int64(pods), resource.DecimalSI),
+		}
+		if observed.CPUTotalMilli > 0 {
+			resources[v1.ResourceCPU] = *resource.NewMilliQuantity(observed.CPUTotalMilli, resource.DecimalSI)
+		}
+		if observed.MemoryTotalMB > 0 {
+			resources[v1.ResourceMemory] = *resource.NewQuantity(observed.MemoryTotalMB*1024*1024, resource.BinarySI)
+		}
+		if observed.StorageTotalMB > 0 {
+			resources[v1.ResourceStorage] = *resource.NewQuantity(observed.StorageTotalMB*1024*1024, resource.BinarySI)
+		}
+		return &resources, nil
+	}
 	resources := v1.ResourceList{
 		v1.ResourceCPU:     resource.MustParse("4"),
 		v1.ResourceMemory:  resource.MustParse("16Gi"),
@@ -109,6 +140,27 @@ func (d *NXOSDriver) GetGlobalOperationalData(ctx context.Context) (*common.AppH
 		return nil, err
 	}
 	enabled := strings.Contains(strings.ToLower(out), "enabled")
+	resources, resErr := d.readAppHostingResources(ctx)
+	if resErr == nil && resources.hasCapacity() {
+		return &common.AppHostingOperData{
+			IoxEnabled: enabled,
+			SystemCPU: common.AppResource{
+				Quota:     milliToWholeCores(resources.CPUTotalMilli),
+				Available: milliToWholeCores(resources.CPUAvailableMilli),
+				Unit:      "cores",
+			},
+			Memory: common.AppResource{
+				Quota:     resources.MemoryTotalMB,
+				Available: resources.MemoryAvailableMB,
+				Unit:      "MB",
+			},
+			Storage: common.AppResource{
+				Quota:     resources.StorageTotalMB,
+				Available: resources.StorageAvailableMB,
+				Unit:      "MB",
+			},
+		}, nil
+	}
 	return &common.AppHostingOperData{
 		IoxEnabled: enabled,
 		SystemCPU:  common.AppResource{Quota: 4, Available: 4, Unit: "cores"},
@@ -183,4 +235,92 @@ func nxosGuestInterface(spec *v1alpha1.DeviceSpec) uint8 {
 func parseInt64(s string) int64 {
 	v, _ := strconv.ParseInt(strings.TrimSpace(s), 10, 64)
 	return v
+}
+
+func milliToWholeCores(v int64) int64 {
+	if v <= 0 {
+		return 0
+	}
+	cores := v / 1000
+	if cores < 1 {
+		return 1
+	}
+	return cores
+}
+
+const nxosAppActionRetryInterval = 30 * time.Second
+
+func (d *NXOSDriver) runAppAction(ctx context.Context, appID, action string, fn func(context.Context) error) error {
+	if !d.markAppAction(appID, action) {
+		return nil
+	}
+	if !d.asyncActions {
+		if err := fn(ctx); err != nil {
+			d.clearAppAction(appID)
+			return err
+		}
+		d.completeAppAction(appID, action)
+		return nil
+	}
+	log.G(ctx).WithFields(log.Fields{
+		"appid":  appID,
+		"action": action,
+	}).Info("NX-OS app-hosting action scheduled")
+	go func() {
+		if err := fn(ctx); err != nil {
+			d.clearAppAction(appID)
+			log.G(ctx).WithError(err).WithFields(log.Fields{
+				"appid":  appID,
+				"action": action,
+			}).Warn("NX-OS app-hosting action failed")
+			return
+		}
+		d.completeAppAction(appID, action)
+		log.G(ctx).WithFields(log.Fields{
+			"appid":  appID,
+			"action": action,
+		}).Info("NX-OS app-hosting action completed")
+	}()
+	return nil
+}
+
+func (d *NXOSDriver) markAppAction(appID, action string) bool {
+	if d == nil || appID == "" || action == "" {
+		return false
+	}
+	d.actionMu.Lock()
+	defer d.actionMu.Unlock()
+	if d.appActions == nil {
+		d.appActions = make(map[string]nxosAppAction)
+	}
+	now := time.Now()
+	if previous, ok := d.appActions[appID]; ok &&
+		previous.Action == action &&
+		(previous.Running || now.Sub(previous.At) < nxosAppActionRetryInterval) {
+		return false
+	}
+	d.appActions[appID] = nxosAppAction{Action: action, At: now, Running: true}
+	return true
+}
+
+func (d *NXOSDriver) completeAppAction(appID, action string) {
+	if d == nil || appID == "" {
+		return
+	}
+	d.actionMu.Lock()
+	defer d.actionMu.Unlock()
+	if current, ok := d.appActions[appID]; ok && current.Action == action {
+		current.Running = false
+		current.At = time.Now()
+		d.appActions[appID] = current
+	}
+}
+
+func (d *NXOSDriver) clearAppAction(appID string) {
+	if d == nil || appID == "" {
+		return
+	}
+	d.actionMu.Lock()
+	defer d.actionMu.Unlock()
+	delete(d.appActions, appID)
 }

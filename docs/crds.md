@@ -42,7 +42,7 @@ iosxesoftwareupgrades        xeupgrade       ops.cisco.vk/v1alpha1      true    
 | `IOSXEInterfaceGroupConfig` | Namespaced | **Beta** | Shared configuration for selected interfaces on selected devices. |
 | `IOSXETemplate` | Namespaced | **Beta** | Reusable parameterized configuration fragments. |
 | `IOSXEConfig` | Namespaced | **Beta** | Per-device Network as Code intent, drift detection, apply, and rollback. |
-| `NXOSConfig` | Namespaced | **Beta** | Per-device NX-OS Network as Code intent over NX-API REST/DME for `system`, `vlan`, and `interface_ethernet`. |
+| `NXOSConfig` | Namespaced | **Beta** | Per-device NX-OS Network as Code intent over NX-API REST/DME for `system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet`. |
 | `IOSXEConfigBundle` | Namespaced | **Beta** | Fans one config template out across selected devices. |
 | `IOSXEConfigRevision` | Namespaced | **Beta** | Immutable resolved-intent history used for rollback and audit. |
 | `IOSXEConfigApplyLog` | Namespaced | **Beta** | Per-apply audit entries with family and diff metadata. |
@@ -339,7 +339,8 @@ Status:
 `NXOSConfig` is the per-device declarative configuration CRD for NX-OS. It uses
 the common config runtime, fetches observed state through NX-API, applies
 managed families, and verifies the post-apply state before reporting `InSync`.
-The first supported families are `system`, `vlan`, and `interface_ethernet`.
+The first supported families are `system`, `feature`, `feature_set`, `vlan`,
+and `interface_ethernet`.
 The source can be either a direct resolved family map or a full `nxos:`
 NetAsCode envelope with `global`, `device_groups`, `devices`, model
 `templates`, `variables`, and `interface_groups`. Unsupported fields inside the

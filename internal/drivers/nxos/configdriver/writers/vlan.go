@@ -97,6 +97,44 @@ func (vlanWriter) Diff(desired, observed any) ([]transport.Op, error) {
 	return ops, nil
 }
 
+func (vlanWriter) PruneDiff(desired, observed any) ([]transport.Op, error) {
+	wantList, err := coerceList(desired, "vlans", "vlan.prune.desired")
+	if err != nil {
+		return nil, err
+	}
+	gotList, err := coerceList(observed, "vlans", "vlan.prune.observed")
+	if err != nil {
+		return nil, err
+	}
+	desiredIDs := map[int]struct{}{}
+	for _, item := range wantList {
+		id, ok := intLeaf(item["id"])
+		if !ok || id < 1 || id > 4094 {
+			return nil, fmt.Errorf("vlan prune desired id %v is invalid", item["id"])
+		}
+		desiredIDs[id] = struct{}{}
+	}
+	observedIDs := map[int]struct{}{}
+	for _, item := range gotList {
+		id, ok := intLeaf(item["id"])
+		if !ok {
+			continue
+		}
+		observedIDs[id] = struct{}{}
+	}
+	var ops []transport.Op
+	for _, id := range sortedIntKeys(observedIDs) {
+		if _, wanted := desiredIDs[id]; wanted {
+			continue
+		}
+		if id == 1 {
+			return nil, fmt.Errorf("vlan 1 cannot be pruned through NXOSConfig")
+		}
+		ops = append(ops, dmeDeleteOp(vlanDMEPath(id)))
+	}
+	return ops, nil
+}
+
 func (vlanWriter) KeysOf(v any) []string {
 	list, err := coerceList(v, "vlans", "vlan.keys")
 	if err != nil {
@@ -116,4 +154,21 @@ func (vlanWriter) Apply(ctx context.Context, c transport.Interface, ops []transp
 		return nil
 	}
 	return c.Mutate(ctx, "", ops)
+}
+
+func vlanDMEPath(id int) string {
+	return fmt.Sprintf("%s/bd-[vlan-%d]", nxosschema.DNBridgeDomain, id)
+}
+
+func sortedIntKeys(m map[int]struct{}) []int {
+	out := make([]int, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	for i := 1; i < len(out); i++ {
+		for j := i; j > 0 && out[j-1] > out[j]; j-- {
+			out[j-1], out[j] = out[j], out[j-1]
+		}
+	}
+	return out
 }

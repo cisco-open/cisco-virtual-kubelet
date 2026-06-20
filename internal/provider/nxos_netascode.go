@@ -26,6 +26,12 @@ var (
 	nxosVariablePattern = regexp.MustCompile(`\$\{([A-Za-z0-9_.-]+)\}`)
 )
 
+// NormalizeNXOSNetAsCodeSource resolves the supported NX-OS NetAsCode source
+// shapes to the per-device family map consumed by NXOSConfig writers.
+func NormalizeNXOSNetAsCodeSource(config map[string]any, deviceName string) (map[string]any, error) {
+	return normalizeNXOSNetAsCodeSource(config, deviceName)
+}
+
 func normalizeNXOSNetAsCodeSource(config map[string]any, deviceName string) (map[string]any, error) {
 	if config == nil {
 		return map[string]any{}, nil

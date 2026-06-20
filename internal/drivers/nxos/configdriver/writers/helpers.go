@@ -52,6 +52,9 @@ func coerceList(v any, innerKey, origin string) ([]map[string]any, error) {
 			return coerceList(inner, innerKey, origin+"."+innerKey)
 		}
 	}
+	if list, ok := v.([]map[string]any); ok {
+		return list, nil
+	}
 	list, ok := v.([]any)
 	if !ok {
 		return nil, fmt.Errorf("%s: want list, got %T", origin, v)
@@ -160,6 +163,10 @@ func dmeMergeOp(path string, payload any) (transport.Op, error) {
 		return transport.Op{}, err
 	}
 	return transport.Op{Verb: transport.VerbMerge, Path: path, Body: body}, nil
+}
+
+func dmeDeleteOp(path string) transport.Op {
+	return transport.Op{Verb: transport.VerbDelete, Path: path}
 }
 
 func dmeObject(class string, attrs map[string]string, children ...map[string]any) map[string]any {

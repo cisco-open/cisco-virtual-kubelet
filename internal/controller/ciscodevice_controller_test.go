@@ -861,6 +861,170 @@ func TestReconcile_ConfigPrereqsCreatesOwnedIOSXEConfig(t *testing.T) {
 	}
 }
 
+func TestReconcile_ConfigPrereqsCreatesOwnedNXOSConfig(t *testing.T) {
+	device := newDevice("nxos-p", "default")
+	device.Spec.Driver = ciskov1.DeviceDriverNXOS
+	device.Spec.Transport = "rest"
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		Configuration: runtime.RawExtension{Raw: []byte(
+			`{"vlan":{"vlans":[{"id":123,"name":"apps"}]},"interface_ethernet":{"interfaces":[{"name":"Ethernet1/1"}]}}`,
+		)},
+	}
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "nxos-p")); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	var owned configv1alpha1.NXOSConfig
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "nxos-p-prereqs"}, &owned); err != nil {
+		t.Fatalf("expected owned NXOSConfig: %v", err)
+	}
+	if owned.Spec.DeviceRef.Name != "nxos-p" {
+		t.Errorf("deviceRef=%q", owned.Spec.DeviceRef.Name)
+	}
+	if len(owned.OwnerReferences) != 1 || owned.OwnerReferences[0].Name != "nxos-p" {
+		t.Errorf("owner references = %+v", owned.OwnerReferences)
+	}
+	want := []string{"interface_ethernet", "vlan"}
+	if len(owned.Spec.ManagedFamilies) != len(want) {
+		t.Fatalf("ManagedFamilies=%v, want %v", owned.Spec.ManagedFamilies, want)
+	}
+	for i := range want {
+		if owned.Spec.ManagedFamilies[i] != want[i] {
+			t.Fatalf("ManagedFamilies=%v, want %v", owned.Spec.ManagedFamilies, want)
+		}
+	}
+	if owned.Spec.Source.Inline == nil || !strings.Contains(string(owned.Spec.Source.Inline.Raw), `"vlan"`) {
+		t.Fatalf("owned source=%v, want original NX-OS prereq source", owned.Spec.Source.Inline)
+	}
+	if owned.Spec.PruneOnRelinquish {
+		t.Errorf("steady-state configPrereqs CR must not set PruneOnRelinquish")
+	}
+	var legacy configv1alpha1.IOSXEConfig
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "nxos-p-prereqs"}, &legacy); !errors.IsNotFound(err) {
+		t.Fatalf("expected no IOSXEConfig for NX-OS prereqs, got err=%v", err)
+	}
+}
+
+func TestReconcile_ConfigPrereqsNXOSManagedFamiliesOverride(t *testing.T) {
+	device := newDevice("nxos-override", "default")
+	device.Spec.Driver = ciskov1.DeviceDriverNXOS
+	device.Spec.Transport = "rest"
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		ManagedFamilies: []string{"vlan"},
+		Configuration: runtime.RawExtension{Raw: []byte(
+			`{"vlan":{"vlans":[{"id":123,"name":"apps"}]},"interface_ethernet":{"interfaces":[{"name":"Ethernet1/1"}]}}`,
+		)},
+	}
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "nxos-override")); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	var owned configv1alpha1.NXOSConfig
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "nxos-override-prereqs"}, &owned); err != nil {
+		t.Fatalf("expected owned NXOSConfig: %v", err)
+	}
+	if got, want := owned.Spec.ManagedFamilies, []string{"vlan"}; len(got) != 1 || got[0] != want[0] {
+		t.Fatalf("ManagedFamilies=%v, want %v", got, want)
+	}
+}
+
+func TestReconcile_ConfigPrereqsNXOSRejectsUnsupportedManagedFamilyOverride(t *testing.T) {
+	device := newDevice("nxos-bad-override", "default")
+	device.Spec.Driver = ciskov1.DeviceDriverNXOS
+	device.Spec.Transport = "rest"
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		ManagedFamilies: []string{"banner"},
+		Configuration: runtime.RawExtension{Raw: []byte(
+			`{"banner":{"motd":"planned later"}}`,
+		)},
+	}
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+	_, err := r.Reconcile(ctx, reconcileRequest("default", "nxos-bad-override"))
+	if err == nil || !strings.Contains(err.Error(), "unsupported families") || !strings.Contains(err.Error(), "banner") {
+		t.Fatalf("Reconcile error=%v, want unsupported banner family", err)
+	}
+	var owned configv1alpha1.NXOSConfig
+	if getErr := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "nxos-bad-override-prereqs"}, &owned); !errors.IsNotFound(getErr) {
+		t.Fatalf("unsupported prereqs should not create NXOSConfig, get err=%v", getErr)
+	}
+}
+
+func TestReconcile_ConfigPrereqsNXOSEnvelopeDerivesNormalizedFamilies(t *testing.T) {
+	device := newDevice("nxos-envelope", "default")
+	device.Spec.Driver = ciskov1.DeviceDriverNXOS
+	device.Spec.Transport = "rest"
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		Configuration: runtime.RawExtension{Raw: []byte(`{
+			"nxos": {
+				"global": {
+					"configuration": {
+						"system": {"hostname": "baseline"}
+					}
+				},
+				"devices": [{
+					"name": "nxos-envelope",
+					"configuration": {
+						"vlan": {"vlans": [{"id": 123, "name": "apps"}]},
+						"interfaces": {
+							"ethernets": [{"id": "Ethernet1/1", "description": "apps"}]
+						}
+					}
+				}]
+			}
+		}`)},
+	}
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "nxos-envelope")); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	var owned configv1alpha1.NXOSConfig
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "nxos-envelope-prereqs"}, &owned); err != nil {
+		t.Fatalf("expected owned NXOSConfig: %v", err)
+	}
+	want := []string{"interface_ethernet", "system", "vlan"}
+	if len(owned.Spec.ManagedFamilies) != len(want) {
+		t.Fatalf("ManagedFamilies=%v, want %v", owned.Spec.ManagedFamilies, want)
+	}
+	for i := range want {
+		if owned.Spec.ManagedFamilies[i] != want[i] {
+			t.Fatalf("ManagedFamilies=%v, want %v", owned.Spec.ManagedFamilies, want)
+		}
+	}
+}
+
+func TestReconcile_ConfigPrereqsNXOSEnvelopeRejectsUnsupportedDerivedFamily(t *testing.T) {
+	device := newDevice("nxos-bad-envelope", "default")
+	device.Spec.Driver = ciskov1.DeviceDriverNXOS
+	device.Spec.Transport = "rest"
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		Configuration: runtime.RawExtension{Raw: []byte(`{
+			"nxos": {
+				"devices": [{
+					"name": "nxos-bad-envelope",
+					"configuration": {
+						"banner": {"motd": "planned later"}
+					}
+				}]
+			}
+		}`)},
+	}
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+	_, err := r.Reconcile(ctx, reconcileRequest("default", "nxos-bad-envelope"))
+	if err == nil || !strings.Contains(err.Error(), "unsupported families") || !strings.Contains(err.Error(), "banner") {
+		t.Fatalf("Reconcile error=%v, want unsupported derived banner family", err)
+	}
+	var owned configv1alpha1.NXOSConfig
+	if getErr := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "nxos-bad-envelope-prereqs"}, &owned); !errors.IsNotFound(getErr) {
+		t.Fatalf("unsupported prereqs should not create NXOSConfig, get err=%v", getErr)
+	}
+}
+
 func TestReconcile_ConfigPrereqsRemovedDrivesEmptyIntentThenDeletes(t *testing.T) {
 	device := newDevice("router-prune", "default")
 	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
@@ -987,6 +1151,70 @@ func TestPrereqsTeardownExternalDeleteIsRecreated(t *testing.T) {
 		}
 	default:
 		t.Fatal("expected PrereqTeardownDeletedExternally event")
+	}
+}
+
+func TestNXOSPrereqsTeardownExternalDeleteSkipsWhenOwnershipStateGone(t *testing.T) {
+	device := newDevice("nxos-external", "default")
+	device.Spec.Driver = ciskov1.DeviceDriverNXOS
+	device.Spec.Transport = "rest"
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		Configuration: runtime.RawExtension{Raw: []byte(`{"vlan":{"vlans":[{"id":123,"name":"apps"}]}}`)},
+	}
+	recorder := record.NewFakeRecorder(10)
+	r := reconcilerFor(t, device)
+	r.Recorder = recorder
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", device.Name)); err != nil {
+		t.Fatalf("Reconcile create: %v", err)
+	}
+	ownedKey := types.NamespacedName{Namespace: "default", Name: ownedPrereqConfigName(device.Name)}
+	var owned configv1alpha1.NXOSConfig
+	if err := r.Get(ctx, ownedKey, &owned); err != nil {
+		t.Fatalf("expected owned NXOSConfig: %v", err)
+	}
+
+	var updated ciskov1.CiscoDevice
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: device.Name}, &updated); err != nil {
+		t.Fatalf("get device: %v", err)
+	}
+	updated.Spec.ConfigPrereqs = nil
+	if err := r.Update(ctx, &updated); err != nil {
+		t.Fatalf("remove configPrereqs: %v", err)
+	}
+	if err := r.Delete(ctx, &owned); err != nil {
+		t.Fatalf("external delete owned NXOSConfig: %v", err)
+	}
+
+	result, err := r.Reconcile(ctx, reconcileRequest("default", device.Name))
+	if err != nil {
+		t.Fatalf("Reconcile teardown after external delete: %v", err)
+	}
+	if result.RequeueAfter != 0 {
+		t.Fatalf("RequeueAfter=%v, want no blocked recreate loop", result.RequeueAfter)
+	}
+	var recreated configv1alpha1.NXOSConfig
+	if getErr := r.Get(ctx, ownedKey, &recreated); !errors.IsNotFound(getErr) {
+		t.Fatalf("NXOSConfig should not be recreated without ownership state, get err=%v", getErr)
+	}
+	var gotDevice ciskov1.CiscoDevice
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: device.Name}, &gotDevice); err != nil {
+		t.Fatalf("get device after skipped teardown: %v", err)
+	}
+	cond := meta.FindStatusCondition(gotDevice.Status.Conditions, ciskov1.CiscoDeviceConditionPrereqTeardownObserved)
+	if cond == nil || cond.Status != metav1.ConditionTrue || cond.Reason != "NXOSConfigDeletedExternally" {
+		t.Fatalf("PrereqTeardownObserved=%+v, want True/NXOSConfigDeletedExternally", cond)
+	}
+	sawSkipped := false
+	for len(recorder.Events) > 0 {
+		event := <-recorder.Events
+		if strings.Contains(event, "PrereqTeardownSkipped") {
+			sawSkipped = true
+		}
+	}
+	if !sawSkipped {
+		t.Fatal("expected PrereqTeardownSkipped event")
 	}
 }
 

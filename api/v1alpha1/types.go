@@ -178,9 +178,11 @@ type DeviceSpec struct {
 
 	// ConfigPrereqs declares the network configuration this device requires
 	// before pods can be hosted on it, for example a VirtualPortGroup
-	// interface, DHCP pool, or app egress ACL. When set, the controller
-	// materializes an owned IOSXEConfig whose managed families are limited to
-	// the apphosting prerequisite set.
+	// interface, DHCP pool, app egress ACL, or NX-OS apphosting prerequisite
+	// family. When set, the controller materializes the platform config CR
+	// described by the platform descriptor: IOS-XE keeps the legacy
+	// IOSXEConfig prereq family set, while NX-OS and future platforms derive
+	// managed families from the source payload unless explicitly supplied.
 	//
 	// The payload carries the same netascode-shaped YAML as
 	// IOSXEConfig.spec.source.inline. Operator-authored IOSXEConfig CRs may
@@ -232,12 +234,18 @@ type OpsPolicy struct {
 }
 
 // ConfigPrereqs is the inline netascode-shaped configuration block the
-// controller uses to auto-create an owned IOSXEConfig for a device. The
-// payload's top-level keys should be families in the apphosting-prerequisite
-// set; the controller-owned IOSXEConfig is scoped to that family set.
+// controller uses to auto-create an owned platform config CR for a device.
 type ConfigPrereqs struct {
+	// ManagedFamilies optionally overrides the platform prereq family policy.
+	// IOS-XE normally uses the legacy fixed apphosting prereq family set.
+	// NX-OS and future platforms derive this list from Configuration's
+	// top-level keys when it is omitted.
+	// +kubebuilder:validation:Optional
+	// +listType=set
+	ManagedFamilies []string `json:"managedFamilies,omitempty" mapstructure:"managedFamilies,omitempty"`
+
 	// Configuration is the netascode-shaped fragment. Same shape as
-	// IOSXEConfig.spec.source.inline.
+	// the target platform config CR's spec.source.inline.
 	//
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Schemaless
