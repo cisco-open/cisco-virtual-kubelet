@@ -86,8 +86,16 @@ func (p CommonConfigPlatform) validate() error {
 // CommonConfigReconciler is the reusable per-device reconciler for platform
 // CRDs that embed CommonConfigSpec/CommonConfigStatus.
 type CommonConfigReconciler struct {
-	Client                client.Client
-	DeviceName            string
+	Client     client.Client
+	DeviceName string
+	// DeviceNamespace is the namespace of the CiscoDevice this reconciler
+	// serves. CR.spec.deviceRef is same-namespace by contract (DeviceRef
+	// carries no namespace), so the reconciler must only ever list and act
+	// on CRs in this namespace — otherwise a per-device worker for
+	// tenant-a/leaf-01 could reconcile tenant-b/leaf-01's config against
+	// tenant-a's device. Empty disables the filter (unit tests / legacy
+	// single-namespace topologies).
+	DeviceNamespace       string
 	Transport             transport.Interface
 	Lookup                func(family, release string) enginewriters.SectionWriter
 	FamilyOrder           func([]string) []string
@@ -115,6 +123,7 @@ type CommonConfigReconciler struct {
 
 	transportSlot       atomic.Pointer[transport.Interface]
 	subscribeNotifyTime atomic.Int64
+	versionMu           sync.RWMutex
 }
 
 func (r *CommonConfigReconciler) SetTransport(t transport.Interface) {
@@ -130,6 +139,40 @@ func (r *CommonConfigReconciler) GetTransport() transport.Interface {
 		return *p
 	}
 	return r.Transport
+}
+
+// SetDeviceVersion / SetDefaultYANGVersion are called after a deferred
+// transport dial succeeds. They must be concurrency-safe against the
+// reconcile loop reading the version during resolveIntent.
+func (r *CommonConfigReconciler) SetDeviceVersion(v string) {
+	r.versionMu.Lock()
+	defer r.versionMu.Unlock()
+	r.DeviceVersion = v
+}
+
+func (r *CommonConfigReconciler) deviceVersion() string {
+	r.versionMu.RLock()
+	defer r.versionMu.RUnlock()
+	return r.DeviceVersion
+}
+
+func (r *CommonConfigReconciler) SetDefaultYANGVersion(v string) {
+	r.versionMu.Lock()
+	defer r.versionMu.Unlock()
+	r.DefaultYANGVersion = v
+}
+
+func (r *CommonConfigReconciler) defaultYANGVersion() string {
+	r.versionMu.RLock()
+	defer r.versionMu.RUnlock()
+	return r.DefaultYANGVersion
+}
+
+// inDeviceNamespace reports whether obj lives in this reconciler's device
+// namespace. Empty DeviceNamespace disables the check (unit tests / legacy
+// single-namespace topologies) and behaves as before.
+func (r *CommonConfigReconciler) inDeviceNamespace(obj interface{ GetNamespace() string }) bool {
+	return r.DeviceNamespace == "" || obj.GetNamespace() == r.DeviceNamespace
 }
 
 func (r *CommonConfigReconciler) notifyClock() *atomic.Int64 {
@@ -219,7 +262,7 @@ func (r *CommonConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	mapAll := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 		list := r.Platform.NewList()
-		if err := r.Client.List(ctx, list); err != nil {
+		if err := r.Client.List(ctx, list, client.InNamespace(r.DeviceNamespace)); err != nil {
 			crlog.FromContext(ctx).Error(err, "mapAll list "+r.Platform.Kind)
 			return nil
 		}
@@ -227,7 +270,7 @@ func (r *CommonConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		out := make([]reconcile.Request, 0, len(items))
 		for _, item := range items {
 			spec := r.Platform.Spec(item)
-			if spec == nil || spec.DeviceRef.Name != r.DeviceName {
+			if spec == nil || spec.DeviceRef.Name != r.DeviceName || !r.inDeviceNamespace(item) {
 				continue
 			}
 			out = append(out, reconcile.Request{
@@ -246,7 +289,7 @@ func (r *CommonConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
 				r.NotifySubscribeFired()
 				list := r.Platform.NewList()
-				if err := r.Client.List(ctx, list); err != nil {
+				if err := r.Client.List(ctx, list, client.InNamespace(r.DeviceNamespace)); err != nil {
 					crlog.FromContext(ctx).Error(err, "subscribe map list "+r.Platform.Kind)
 					return nil
 				}
@@ -254,7 +297,7 @@ func (r *CommonConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				out := make([]reconcile.Request, 0, len(items))
 				for _, item := range items {
 					spec := r.Platform.Spec(item)
-					if spec == nil || spec.DeviceRef.Name != r.DeviceName {
+					if spec == nil || spec.DeviceRef.Name != r.DeviceName || !r.inDeviceNamespace(item) {
 						continue
 					}
 					out = append(out, reconcile.Request{
@@ -280,11 +323,38 @@ func (r *CommonConfigReconciler) Reconcile(ctx context.Context, req reconcile.Re
 		return reconcile.Result{}, fmt.Errorf("get %s: %w", r.Platform.Kind, err)
 	}
 	spec := r.Platform.Spec(cr)
-	if spec == nil || spec.DeviceRef.Name != r.DeviceName {
+	if spec == nil || spec.DeviceRef.Name != r.DeviceName || !r.inDeviceNamespace(cr) {
 		return reconcile.Result{}, nil
 	}
 	if !cr.GetDeletionTimestamp().IsZero() {
 		if containsFinalizer(cr.GetFinalizers(), r.Platform.Finalizer) {
+			// Prune device-side owned keys before lease release +
+			// finalizer removal. Without this, a deleted CR that owns
+			// atomic-replace keys (e.g. a VLAN) orphans them on the
+			// device. Relinquish failure is retryable: return the error
+			// so controller-runtime requeues with the finalizer intact
+			// and status.atomicReplaceOwnedKeys preserved for the retry.
+			// Operators who accept the orphan set
+			// config.cisco.vk/force-relinquish-skip=true.
+			if spec := r.Platform.Spec(cr); spec != nil && spec.PruneOnRelinquish {
+				if status := r.Platform.Status(cr); status != nil && len(status.AtomicReplaceOwnedKeys) > 0 {
+					if cr.GetAnnotations()[ForceRelinquishSkipAnnotation] == "true" {
+						if r.Recorder != nil {
+							r.Recorder.Eventf(cr, corev1.EventTypeWarning, "RelinquishSkipped",
+								"force-relinquish-skip annotation set; orphaning %v on device %q",
+								status.AtomicReplaceOwnedKeys, r.DeviceName)
+						}
+					} else if err := r.relinquishOwnedKeys(ctx, cr); err != nil {
+						if r.Recorder != nil {
+							r.Recorder.Eventf(cr, corev1.EventTypeWarning, "RelinquishBlocked",
+								"deletion blocked while pruneOnRelinquish cleanup retries: %v "+
+									"(set annotation %s=true to give up)",
+								err, ForceRelinquishSkipAnnotation)
+						}
+						return reconcile.Result{}, fmt.Errorf("relinquish: %w", err)
+					}
+				}
+			}
 			if err := r.releaseLeasesForObject(ctx, cr); err != nil {
 				return reconcile.Result{}, fmt.Errorf("release %s leases: %w", r.Platform.Kind, err)
 			}
@@ -331,7 +401,7 @@ func (r *CommonConfigReconciler) reconcileAll(ctx context.Context, logger log.Lo
 
 func (r *CommonConfigReconciler) cohort(ctx context.Context, logger interface{ Error(error, string, ...any) }) ([]client.Object, map[string][]string) {
 	list := r.Platform.NewList()
-	if err := r.Client.List(ctx, list); err != nil {
+	if err := r.Client.List(ctx, list, client.InNamespace(r.DeviceNamespace)); err != nil {
 		logger.Error(err, "list "+r.Platform.Kind)
 		return nil, nil
 	}
@@ -339,7 +409,7 @@ func (r *CommonConfigReconciler) cohort(ctx context.Context, logger interface{ E
 	forDevice := make([]client.Object, 0, len(all))
 	for _, cr := range all {
 		spec := r.Platform.Spec(cr)
-		if spec != nil && spec.DeviceRef.Name == r.DeviceName {
+		if spec != nil && spec.DeviceRef.Name == r.DeviceName && r.inDeviceNamespace(cr) {
 			forDevice = append(forDevice, cr)
 		}
 	}
@@ -389,7 +459,7 @@ func (r *CommonConfigReconciler) reconcileOne(
 	eng := &engine.Engine{
 		Transport:     t,
 		Lookup:        lookup,
-		DeviceVersion: r.DeviceVersion,
+		DeviceVersion: r.deviceVersion(),
 		FamilyOrder:   r.FamilyOrder,
 	}
 	var result engine.Result
@@ -526,10 +596,10 @@ func (r *CommonConfigReconciler) resolveIntent(ctx context.Context, cr client.Ob
 		}
 	}
 	if targetVersion == "" {
-		targetVersion = r.DefaultYANGVersion
+		targetVersion = r.defaultYANGVersion()
 	}
 	if targetVersion == "" {
-		targetVersion = r.DeviceVersion
+		targetVersion = r.deviceVersion()
 	}
 	intent.FixYAML11BoolKeys(config)
 	return &intent.ResolvedIntent{
@@ -616,6 +686,116 @@ func (r *CommonConfigReconciler) releaseLeasesForObject(ctx context.Context, cr 
 		}
 	}
 	return nil
+}
+
+// relinquishOwnedKeys drops every list-key this CR owned (per
+// status.atomicReplaceOwnedKeys) from the device before the finalizer is
+// removed. Without it, deleting a CR that configured e.g. VLAN 4001 leaves
+// 4001 stranded on the device with no Kubernetes object tracking it. This
+// generalizes the IOS-XE relinquish path (config_reconciler_controller.go)
+// onto the shared reconciler so NX-OS and any future platform get it too.
+//
+// Lease discipline mirrors IOS-XE: AcquireIfFree (never takeover, so a
+// deleting CR can't prune a family whose holder is mid-write), and release
+// every acquired family on success OR failure so a stuck terminating CR
+// doesn't pin families for other CRs while it retries.
+func (r *CommonConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr client.Object) (returnedErr error) {
+	spec := r.Platform.Spec(cr)
+	status := r.Platform.Status(cr)
+	if spec == nil || status == nil {
+		return nil
+	}
+	t := r.GetTransport()
+	if t == nil {
+		return fmt.Errorf("relinquish: transport not yet available")
+	}
+	lookup := r.Lookup
+	if lookup == nil {
+		return fmt.Errorf("relinquish: nil writer lookup")
+	}
+	identity := cr.GetNamespace() + "/" + cr.GetName()
+	if r.RuntimeID != "" {
+		identity += "#" + r.RuntimeID
+	}
+	owned := make([]string, 0, len(spec.ManagedFamilies))
+	leaseBlocked := make([]string, 0, len(spec.ManagedFamilies))
+	if r.Leaser != nil {
+		for _, fam := range spec.ManagedFamilies {
+			res, err := r.Leaser.AcquireIfFree(ctx, r.DeviceName, fam, identity)
+			if err != nil {
+				r.releaseAcquiredFamilies(ctx, owned, identity)
+				return fmt.Errorf("relinquish: acquire lease for %s: %w", fam, err)
+			}
+			if !res.Owned {
+				leaseBlocked = append(leaseBlocked, fam)
+				continue
+			}
+			owned = append(owned, fam)
+		}
+	} else {
+		owned = append(owned, spec.ManagedFamilies...)
+	}
+	defer func() {
+		if r.Leaser != nil {
+			r.releaseAcquiredFamilies(ctx, owned, identity)
+		}
+	}()
+	if len(owned) == 0 {
+		if len(leaseBlocked) > 0 {
+			return fmt.Errorf("relinquish: every managed family is held by another CR: %v; will retry", leaseBlocked)
+		}
+		return nil
+	}
+	// Empty desired for each owned family. The engine's prune path then
+	// scopes deletion to {priorOwned ∪ desired} = {priorOwned}, so only
+	// this CR's owned keys are removed; baseline device state is untouched.
+	conf := make(map[string]any, len(owned))
+	for _, fam := range owned {
+		conf[fam] = []any{}
+	}
+	resIntent := &intent.ResolvedIntent{
+		DeviceName:             spec.DeviceRef.Name,
+		ManagedFamilies:        owned,
+		Configuration:          conf,
+		DriftPolicy:            configv1alpha1.DriftPolicyRevert,
+		PruneOnRelinquish:      true,
+		AtomicReplaceOwnedKeys: status.AtomicReplaceOwnedKeys,
+	}
+	eng := &engine.Engine{
+		Transport:     t,
+		Lookup:        lookup,
+		DeviceVersion: r.deviceVersion(),
+		FamilyOrder:   r.FamilyOrder,
+	}
+	out := eng.Reconcile(ctx, resIntent)
+	if out.Phase == engine.PhaseFailed {
+		for _, fs := range out.FamilyStatuses {
+			if fs.State == "ApplyError" || fs.State == "Unsupported" {
+				return fmt.Errorf("relinquish reconcile: family %s (%s): %s", fs.Name, fs.State, fs.Message)
+			}
+		}
+		return fmt.Errorf("relinquish reconcile failed: phase=%s", out.Phase)
+	}
+	if len(leaseBlocked) > 0 {
+		return fmt.Errorf("relinquish: %d/%d managed families relinquished; "+
+			"families still held by another CR: %v; will retry",
+			len(owned), len(owned)+len(leaseBlocked), leaseBlocked)
+	}
+	return nil
+}
+
+// releaseAcquiredFamilies releases every lease in families held by identity.
+// Best-effort: a per-family release error is logged, never returned.
+func (r *CommonConfigReconciler) releaseAcquiredFamilies(ctx context.Context, families []string, identity string) {
+	if r.Leaser == nil {
+		return
+	}
+	logger := crlog.FromContext(ctx)
+	for _, fam := range families {
+		if err := r.Leaser.Release(ctx, r.DeviceName, fam, identity); err != nil {
+			logger.Error(err, "release lease after relinquish attempt", "family", fam)
+		}
+	}
 }
 
 func (r *CommonConfigReconciler) recordPending(ctx context.Context, cr client.Object) error {
@@ -756,7 +936,7 @@ func (r *CommonConfigReconciler) targetsDevice(obj client.Object) bool {
 		return false
 	}
 	spec := r.Platform.Spec(obj)
-	return spec != nil && spec.DeviceRef.Name == r.DeviceName
+	return spec != nil && spec.DeviceRef.Name == r.DeviceName && r.inDeviceNamespace(obj)
 }
 
 func (r *CommonConfigReconciler) dueForDriftCheck(cr client.Object) bool {

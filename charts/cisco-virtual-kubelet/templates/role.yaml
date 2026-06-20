@@ -172,6 +172,7 @@ rules:
   - rbac.authorization.k8s.io
   resourceNames:
   - cisco-virtual-kubelet
+  - cisco-virtual-kubelet-device
   resources:
   - clusterroles
   verbs:

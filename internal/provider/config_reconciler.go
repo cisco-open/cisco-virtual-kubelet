@@ -79,6 +79,14 @@ type ConfigReconciler struct {
 	// DeviceName is the CiscoDevice this cisco-vk run owns.
 	DeviceName string
 
+	// DeviceNamespace is the namespace of the CiscoDevice this run owns.
+	// IOSXEConfig.spec.deviceRef is same-namespace by contract, so the
+	// reconciler must only list and act on CRs in this namespace; otherwise
+	// a per-device worker could reconcile another namespace's config for a
+	// same-named device. Empty disables the filter (unit tests / legacy
+	// single-namespace topologies).
+	DeviceNamespace string
+
 	// Transport is the device channel used by the engine. Nil is allowed
 	// in Phase 0/1 scaffolds where no transport has been constructed
 	// (e.g. stub driver path) — the reconciler records status but skips

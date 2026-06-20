@@ -703,6 +703,128 @@ func TestNXOSConfigReconcilerPrunesOwnedVLAN(t *testing.T) {
 	}
 }
 
+// B1: a per-device worker for tenant-a must never reconcile a same-named
+// device's config that lives in tenant-b, even though the deviceRef.name
+// matches. The cluster-wide cache would surface the foreign CR; the
+// namespace filter must drop it before any device write or status update.
+func TestNXOSConfigReconcilerIgnoresForeignNamespace(t *testing.T) {
+	scheme := newTestScheme(t)
+	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"attacker","mtu":1500}}`)}
+	foreign := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: "tenant-b", Generation: 1},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies: []string{"system"},
+			ModelSource:     &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+		WithObjects(foreign).
+		Build()
+	tr := &fakeNXOSTransport{hostname: "untouched", mtu: 9216}
+	r := &NXOSConfigReconciler{
+		Client:          c,
+		DeviceName:      "leaf-01",
+		DeviceNamespace: "tenant-a",
+		Transport:       tr,
+		Lookup:          nxoswriters.GetForRelease,
+	}
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "tenant-b", Name: "leaf-config"}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if tr.hostname != "untouched" {
+		t.Fatalf("foreign-namespace CR wrote to the device: hostname=%q", tr.hostname)
+	}
+	var got configv1alpha1.NXOSConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "tenant-b", Name: "leaf-config"}, &got); err != nil {
+		t.Fatalf("get foreign: %v", err)
+	}
+	if got.Status.Phase != "" {
+		t.Fatalf("foreign-namespace CR status was written: phase=%q", got.Status.Phase)
+	}
+}
+
+// B2: the facade must build and register ONE CommonConfigReconciler and
+// route SetTransport/SetDeviceVersion to that same instance. Before the fix
+// common() returned a fresh throwaway per call, so the manager registered a
+// throwaway while deferred-dial SetTransport mutated only the facade and a
+// device down at startup never recovered.
+func TestNXOSConfigReconcilerFacadeIsSingletonAndForwardsTransport(t *testing.T) {
+	r := &NXOSConfigReconciler{DeviceName: "leaf-01"}
+	if r.common() != r.common() {
+		t.Fatal("common() returned different instances; the registered reconciler would not see deferred SetTransport")
+	}
+	if r.GetTransport() != nil {
+		t.Fatalf("expected nil transport before dial, got %#v", r.GetTransport())
+	}
+	tr := &fakeNXOSTransport{hostname: "leaf-01"}
+	r.SetTransport(tr)
+	if r.common().GetTransport() != transport.Interface(tr) {
+		t.Fatal("SetTransport did not reach the registered common reconciler")
+	}
+	r.SetDeviceVersion("9.3(8)")
+	if got := r.common().deviceVersion(); got != "9.3(8)" {
+		t.Fatalf("SetDeviceVersion did not reach the registered common reconciler: %q", got)
+	}
+}
+
+// B3: deleting a CR that owns atomic-replace keys must prune them off the
+// device (relinquish) before the finalizer is removed, otherwise the owned
+// keys are orphaned on the device.
+func TestNXOSConfigReconcilerRelinquishesOwnedKeysOnDelete(t *testing.T) {
+	scheme := newTestScheme(t)
+	raw := runtime.RawExtension{Raw: []byte(`{"vlan":{"vlans":[{"id":101,"name":"keep"}]}}`)}
+	cr := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "leaf-config", Namespace: "network", Generation: 3,
+			Finalizers: []string{nxosConfigFinalizer},
+		},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:         configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies:   []string{"vlan"},
+			ModelSource:       &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			Source:            configv1alpha1.ConfigurationSource{Inline: &raw},
+			PruneOnRelinquish: true,
+		},
+		Status: configv1alpha1.NXOSConfigStatus{
+			AtomicReplaceOwnedKeys: map[string][]string{"vlan": {"101", "102"}},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+		WithObjects(cr).
+		Build()
+	if err := c.Delete(context.Background(), cr); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	tr := &fakeNXOSTransport{vlans: map[int]string{101: "keep", 102: "owned-orphan", 200: "baseline"}}
+	r := &NXOSConfigReconciler{
+		Client:      c,
+		DeviceName:  "leaf-01",
+		Transport:   tr,
+		Lookup:      nxoswriters.GetForRelease,
+		FamilyOrder: nxosschema.FamilyOrder,
+	}
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if _, ok := tr.vlans[102]; ok {
+		t.Fatalf("owned VLAN 102 was not relinquished on delete: %#v", tr.vlans)
+	}
+	if _, ok := tr.vlans[200]; !ok {
+		t.Fatalf("baseline VLAN 200 must not be pruned on delete: %#v", tr.vlans)
+	}
+	var got configv1alpha1.NXOSConfig
+	err := c.Get(context.Background(), types.NamespacedName{Namespace: "network", Name: "leaf-config"}, &got)
+	if err == nil && containsFinalizer(got.Finalizers, nxosConfigFinalizer) {
+		t.Fatalf("finalizer not removed after relinquish: %#v", got.Finalizers)
+	}
+}
+
 func TestNXOSConfigReconcilerRecordsConfirmedCommitFallback(t *testing.T) {
 	scheme := newTestScheme(t)
 	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01"}}`)}

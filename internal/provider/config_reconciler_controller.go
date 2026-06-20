@@ -342,10 +342,11 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	span.SetAttributes(attribute.String(semconv.CvkEntityID, configTelemetryEntityID(&cr)))
 
 	// Defence in depth: a CR reaching us that targets a different
-	// device is ignored. In production the predicate filter below
-	// prevents this entirely; the check stays because the polling
-	// Run() path does not install a predicate.
-	if cr.Spec.DeviceRef.Name != r.DeviceName {
+	// device — or that lives in another namespace (deviceRef is
+	// same-namespace by contract) — is ignored. In production the
+	// predicate filter below prevents this entirely; the check stays
+	// because the polling Run() path does not install a predicate.
+	if !crTargetsDevice(&cr, r.DeviceName, r.DeviceNamespace) {
 		span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "wrong-device"))
 		return reconcile.Result{}, nil
 	}
@@ -468,12 +469,12 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	// Compute conflicts across every CR targeting this device. Listing
 	// is cheap when backed by an informer cache.
 	var all configv1alpha1.IOSXEConfigList
-	if err := r.Client.List(ctx, &all); err != nil {
+	if err := r.Client.List(ctx, &all, client.InNamespace(r.DeviceNamespace)); err != nil {
 		logger.Error(err, "list IOSXEConfig")
 	}
 	forDevice := make([]*configv1alpha1.IOSXEConfig, 0, len(all.Items))
 	for i := range all.Items {
-		if all.Items[i].Spec.DeviceRef.Name == r.DeviceName {
+		if crTargetsDevice(&all.Items[i], r.DeviceName, r.DeviceNamespace) {
 			forDevice = append(forDevice, &all.Items[i])
 		}
 	}
@@ -577,13 +578,13 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Predicate for the primary watch — only IOSXEConfigs targeting
 	// this device ever enter the informer's work queue.
 	devicePredicate := predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool { return crTargetsDevice(e.Object, r.DeviceName) },
+		CreateFunc: func(e event.CreateEvent) bool { return crTargetsDevice(e.Object, r.DeviceName, r.DeviceNamespace) },
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return crTargetsDevice(e.ObjectNew, r.DeviceName) ||
-				crTargetsDevice(e.ObjectOld, r.DeviceName)
+			return crTargetsDevice(e.ObjectNew, r.DeviceName, r.DeviceNamespace) ||
+				crTargetsDevice(e.ObjectOld, r.DeviceName, r.DeviceNamespace)
 		},
-		DeleteFunc:  func(e event.DeleteEvent) bool { return crTargetsDevice(e.Object, r.DeviceName) },
-		GenericFunc: func(e event.GenericEvent) bool { return crTargetsDevice(e.Object, r.DeviceName) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return crTargetsDevice(e.Object, r.DeviceName, r.DeviceNamespace) },
+		GenericFunc: func(e event.GenericEvent) bool { return crTargetsDevice(e.Object, r.DeviceName, r.DeviceNamespace) },
 	}
 
 	// Map scope objects (Defaults, DeviceGroup, Template) and any
@@ -592,13 +593,14 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// cheap thanks to the canonical-hash short-circuit.
 	mapAll := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 		var list configv1alpha1.IOSXEConfigList
-		if err := r.Client.List(ctx, &list); err != nil {
+		if err := r.Client.List(ctx, &list, client.InNamespace(r.DeviceNamespace)); err != nil {
 			crlog.FromContext(ctx).Error(err, "mapAll list IOSXEConfig")
 			return nil
 		}
 		out := make([]reconcile.Request, 0, len(list.Items))
-		for _, cr := range list.Items {
-			if cr.Spec.DeviceRef.Name != r.DeviceName {
+		for i := range list.Items {
+			cr := &list.Items[i]
+			if !crTargetsDevice(cr, r.DeviceName, r.DeviceNamespace) {
 				continue
 			}
 			out = append(out, reconcile.Request{
@@ -647,12 +649,13 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				// behaviour, which also re-enumerates on each
 				// notify rather than carrying a CR-specific signal.
 				var list configv1alpha1.IOSXEConfigList
-				if err := r.Client.List(context.Background(), &list); err != nil {
+				if err := r.Client.List(context.Background(), &list, client.InNamespace(r.DeviceNamespace)); err != nil {
 					return nil
 				}
 				out := make([]reconcile.Request, 0, len(list.Items))
-				for _, cr := range list.Items {
-					if cr.Spec.DeviceRef.Name != r.DeviceName {
+				for i := range list.Items {
+					cr := &list.Items[i]
+					if !crTargetsDevice(cr, r.DeviceName, r.DeviceNamespace) {
 						continue
 					}
 					out = append(out, reconcile.Request{
@@ -671,9 +674,14 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // missing deviceRef are reported as false so the predicate filters
 // them out — scope objects reach the reconciler via the mapAll
 // handler.Funcs, not the primary watch.
-func crTargetsDevice(obj client.Object, name string) bool {
+func crTargetsDevice(obj client.Object, name, namespace string) bool {
 	cr, ok := obj.(*configv1alpha1.IOSXEConfig)
 	if !ok {
+		return false
+	}
+	// deviceRef is same-namespace by contract; a CR in another namespace
+	// never targets this device even if the names match.
+	if namespace != "" && cr.Namespace != namespace {
 		return false
 	}
 	return cr.Spec.DeviceRef.Name == name

@@ -37,22 +37,33 @@ import "regexp"
 // the pod log. Defense-in-depth: the redact step runs at the
 // engine boundary AND the transport boundary so a leak in either
 // layer is caught.
+// nsPrefix matches an optional XML/JSON namespace or module prefix
+// (e.g. `nxos:`, `Cisco-IOS-XE-native:`) so credential elements that
+// arrive namespace-qualified are redacted too. RESTCONF/NETCONF/DME
+// error bodies routinely carry such prefixes; without this the bare
+// `<password>` / `"password"` patterns silently miss them.
+const nsPrefix = `(?:[\w.-]+:)?`
+
 var credentialPatterns = []*regexp.Regexp{
-	// NETCONF / RESTCONF body shapes.
-	regexp.MustCompile(`(?i)<password[^>]*>([^<]*)</password>`),
-	regexp.MustCompile(`(?i)<encrypted-password[^>]*>([^<]*)</encrypted-password>`),
-	regexp.MustCompile(`(?i)<secret[^>]*>([^<]*)</secret>`),
-	regexp.MustCompile(`(?i)<key[^>]*>([^<]*)</key>`),
-	regexp.MustCompile(`(?i)<key-string[^>]*>([^<]*)</key-string>`),
-	regexp.MustCompile(`(?i)<shared-secret[^>]*>([^<]*)</shared-secret>`),
-	regexp.MustCompile(`(?i)<rsa-key[^>]*>([^<]*)</rsa-key>`),
-	regexp.MustCompile(`(?i)<pre-shared-key[^>]*>([^<]*)</pre-shared-key>`),
-	// JSON shapes (RFC 7951 RESTCONF).
-	regexp.MustCompile(`(?i)"password"\s*:\s*"([^"]*)"`),
-	regexp.MustCompile(`(?i)"secret"\s*:\s*"([^"]*)"`),
-	regexp.MustCompile(`(?i)"key"\s*:\s*"([^"]*)"`),
-	regexp.MustCompile(`(?i)"shared-secret"\s*:\s*"([^"]*)"`),
-	regexp.MustCompile(`(?i)"pre-shared-key"\s*:\s*"([^"]*)"`),
+	// NETCONF / RESTCONF body shapes (optionally namespace-prefixed,
+	// e.g. <nxos:password>).
+	regexp.MustCompile(`(?i)<` + nsPrefix + `password[^>]*>([^<]*)</` + nsPrefix + `password>`),
+	regexp.MustCompile(`(?i)<` + nsPrefix + `encrypted-password[^>]*>([^<]*)</` + nsPrefix + `encrypted-password>`),
+	regexp.MustCompile(`(?i)<` + nsPrefix + `secret[^>]*>([^<]*)</` + nsPrefix + `secret>`),
+	regexp.MustCompile(`(?i)<` + nsPrefix + `key[^>]*>([^<]*)</` + nsPrefix + `key>`),
+	regexp.MustCompile(`(?i)<` + nsPrefix + `key-string[^>]*>([^<]*)</` + nsPrefix + `key-string>`),
+	regexp.MustCompile(`(?i)<` + nsPrefix + `shared-secret[^>]*>([^<]*)</` + nsPrefix + `shared-secret>`),
+	regexp.MustCompile(`(?i)<` + nsPrefix + `rsa-key[^>]*>([^<]*)</` + nsPrefix + `rsa-key>`),
+	regexp.MustCompile(`(?i)<` + nsPrefix + `pre-shared-key[^>]*>([^<]*)</` + nsPrefix + `pre-shared-key>`),
+	// JSON shapes (RFC 7951 RESTCONF, optionally module-prefixed, e.g.
+	// "Cisco-IOS-XE-native:password"). "pwd" is the NX-OS DME aaaUser
+	// login field.
+	regexp.MustCompile(`(?i)"` + nsPrefix + `password"\s*:\s*"([^"]*)"`),
+	regexp.MustCompile(`(?i)"` + nsPrefix + `pwd"\s*:\s*"([^"]*)"`),
+	regexp.MustCompile(`(?i)"` + nsPrefix + `secret"\s*:\s*"([^"]*)"`),
+	regexp.MustCompile(`(?i)"` + nsPrefix + `key"\s*:\s*"([^"]*)"`),
+	regexp.MustCompile(`(?i)"` + nsPrefix + `shared-secret"\s*:\s*"([^"]*)"`),
+	regexp.MustCompile(`(?i)"` + nsPrefix + `pre-shared-key"\s*:\s*"([^"]*)"`),
 	// CLI keyword shapes that show up in echoed bad-element bodies.
 	regexp.MustCompile(`(?i)password\s+\d+\s+(\S+)`),
 	regexp.MustCompile(`(?i)secret\s+\d+\s+(\S+)`),

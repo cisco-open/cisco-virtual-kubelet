@@ -327,6 +327,7 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	r := &provider.ConfigReconciler{
 		Client:                mgr.GetClient(),
 		DeviceName:            deviceName,
+		DeviceNamespace:       operationNamespace(),
 		Transport:             dctx.Transport,
 		DeviceVersion:         dctx.DeviceVersion,
 		FetchDeviceVersion:    dctx.FetchDeviceVersion,
@@ -398,12 +399,13 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	// borrows the configdriver's transport via the GetTransport
 	// accessor — no separate dial, no separate auth.
 	diagReconciler := &diagnostic.Reconciler{
-		Client:     mgr.GetClient(),
-		Recorder:   recorder,
-		Scheme:     mgr.GetScheme(),
-		DeviceName: deviceName,
-		Platform:   diagnostic.CommandPlatformIOSXE,
-		TP:         r,
+		Client:          mgr.GetClient(),
+		Recorder:        recorder,
+		Scheme:          mgr.GetScheme(),
+		DeviceName:      deviceName,
+		DeviceNamespace: operationNamespace(),
+		Platform:        diagnostic.CommandPlatformIOSXE,
+		TP:              r,
 	}
 	if err := diagReconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("diagnostic SetupWithManager: %w", err)

@@ -513,7 +513,7 @@ func TestDeployPodManyContainersInitiatesAllApps(t *testing.T) {
 	assertNoLifecycleShow(t, requests)
 }
 
-func TestGetPodStatusAdvancesMixedStatesWithoutBlocking(t *testing.T) {
+func TestGetPodStatusConvergesMixedStatesAsync(t *testing.T) {
 	pod := nxosTestPod()
 	pod.Spec.Containers = []v1.Container{
 		{Name: "running", Image: "bootflash:/hello.tar"},
@@ -526,13 +526,17 @@ func TestGetPodStatusAdvancesMixedStatesWithoutBlocking(t *testing.T) {
 		appIDs["deployed"]:  "DEPLOYED",
 		appIDs["activated"]: "ACTIVATED",
 	}
+	var mu sync.Mutex
 	var requests []nxapiRequest
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req nxapiRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("decode request: %v", err)
+			t.Errorf("decode request: %v", err)
+			return
 		}
+		mu.Lock()
 		requests = append(requests, req)
+		mu.Unlock()
 		input := req.InsAPI.Input
 		body := ""
 		switch {
@@ -553,6 +557,7 @@ func TestGetPodStatusAdvancesMixedStatesWithoutBlocking(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetPodStatus: %v", err)
 	}
+	// GetPodStatus is a pure read: it reports the observed state...
 	if statusPod.Status.Phase != v1.PodRunning {
 		t.Fatalf("phase=%s, want Running because one container is running", statusPod.Status.Phase)
 	}
@@ -563,8 +568,12 @@ func TestGetPodStatusAdvancesMixedStatesWithoutBlocking(t *testing.T) {
 	if !ready["running"] || ready["deployed"] || ready["activated"] {
 		t.Fatalf("ready statuses=%v, want only running ready", ready)
 	}
-	assertNXAPILifecycleCommand(t, requests, "app-hosting activate appid "+appIDs["deployed"], "cli_conf")
-	assertNXAPILifecycleCommand(t, requests, "app-hosting start appid "+appIDs["activated"], "cli_conf")
+	// ...and kicks a detached convergence that advances the lagging apps
+	// off the read path.
+	waitForNXAPILifecycleCommand(t, &mu, &requests, "app-hosting activate appid "+appIDs["deployed"], "cli_conf")
+	waitForNXAPILifecycleCommand(t, &mu, &requests, "app-hosting start appid "+appIDs["activated"], "cli_conf")
+	mu.Lock()
+	defer mu.Unlock()
 	assertNXAPILifecycleCommandAbsent(t, requests, "app-hosting activate appid "+appIDs["running"])
 	assertNXAPILifecycleCommandAbsent(t, requests, "app-hosting start appid "+appIDs["running"])
 }
@@ -875,6 +884,33 @@ func assertNXAPILifecycleCommand(t *testing.T, requests []nxapiRequest, prefix, 
 		}
 	}
 	t.Fatalf("did not see lifecycle command prefix %q in %#v", prefix, requests)
+}
+
+// waitForNXAPILifecycleCommand polls the mutex-guarded requests slice until
+// a request with the given input prefix appears (or the deadline elapses).
+// Used to observe commands issued by the detached convergence goroutine that
+// GetPodStatus kicks.
+func waitForNXAPILifecycleCommand(t *testing.T, mu *sync.Mutex, requests *[]nxapiRequest, prefix, wantType string) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		mu.Lock()
+		for _, req := range *requests {
+			if strings.HasPrefix(req.InsAPI.Input, prefix) {
+				gotType := req.InsAPI.Type
+				mu.Unlock()
+				if gotType != wantType {
+					t.Fatalf("%q type=%q, want %q", prefix, gotType, wantType)
+				}
+				return
+			}
+		}
+		mu.Unlock()
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for lifecycle command prefix %q", prefix)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 }
 
 func assertNXAPILifecycleCommandAbsent(t *testing.T, requests []nxapiRequest, prefix string) {

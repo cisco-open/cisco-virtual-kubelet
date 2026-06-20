@@ -192,7 +192,7 @@ type CiscoDeviceReconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
 // Required by the API server's privilege-escalation check when binding the
 // chart-supplied ClusterRole into a tenant namespace.
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet,verbs=bind
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet;cisco-virtual-kubelet-device,verbs=bind
 
 // Reconcile ensures a ConfigMap and Deployment exist for each CiscoDevice.
 func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, retErr error) {
@@ -541,9 +541,15 @@ func reconcileResultAttribute(result ctrl.Result) string {
 }
 
 // vkSharedClusterRole is the cluster-scoped Role the chart ships with the VK
-// pod permissions baked in. The controller binds it for per-device cisco-vk
-// pods so they can run outside the chart release namespace.
+// pod's cluster-wide permissions (node, pod-hosting, leases, CiscoDevice
+// watch). The controller binds it cluster-wide for per-device cisco-vk pods.
 const vkSharedClusterRole = "cisco-virtual-kubelet"
+
+// vkDeviceClusterRole holds the config-management CRD permissions
+// (config.cisco.vk / ops.cisco.vk). It is bound with a namespaced
+// RoleBinding ONLY — never cluster-wide — so a per-device pod cannot read or
+// write another tenant namespace's config CRs.
+const vkDeviceClusterRole = vkSharedClusterRole + "-device"
 
 func (r *CiscoDeviceReconciler) vkServiceAccountName() string {
 	if r.ServiceAccount != "" {
@@ -564,9 +570,11 @@ func vkAccessClusterRoleBindingName(namespace, saName string) string {
 }
 
 // ensureVKAccess provisions the access bits the chart cannot: a ServiceAccount
-// in the device namespace, a namespaced RoleBinding for namespace-local
-// resources, and a ClusterRoleBinding for the cluster-scoped resources the VK
-// process owns (Nodes, Leases, and controller-runtime cluster watches).
+// in the device namespace, a namespaced RoleBinding to the config-management
+// role (vkDeviceClusterRole — so config CRD access is scoped to THIS device's
+// namespace, never cluster-wide), and a ClusterRoleBinding to the
+// cluster-scoped role (vkSharedClusterRole — Nodes, pod hosting, Leases, and
+// the CiscoDevice cluster watch).
 func (r *CiscoDeviceReconciler) ensureVKAccess(ctx context.Context, device *ciskov1.CiscoDevice, saName string) error {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -593,7 +601,7 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(ctx context.Context, device *cisk
 		rb.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     vkSharedClusterRole,
+			Name:     vkDeviceClusterRole,
 		}
 		rb.Subjects = []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,

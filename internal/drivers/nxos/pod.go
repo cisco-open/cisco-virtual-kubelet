@@ -137,12 +137,35 @@ func (d *NXOSDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
+// GetPodStatus is a pure read path: it observes device-side app state and
+// computes the pod status from that observation only. It performs NO
+// device configuration. Convergence (driving apps toward running, and
+// re-installing missing containers) is kicked out-of-band via
+// scheduleConvergence, which runs on a detached background ctx so the read
+// neither blocks on nor cancels the convergence work.
 func (d *NXOSDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
-	observed := map[string]nxosApp{}
-	desiredConfigs, desiredErr := d.desiredConfigsByContainer(pod)
-	if desiredErr != nil {
-		log.G(ctx).WithError(desiredErr).Debugf("NX-OS status: failed to render desired config for pod %s/%s", pod.Namespace, pod.Name)
+	observed := d.observePodApps(ctx, pod)
+	if len(observed) == 0 {
+		if pod.DeletionTimestamp == nil && d.secretLister != nil && d.configLister != nil {
+			d.scheduleConvergence(pod, observed)
+			out := pod.DeepCopy()
+			setPodStatus(d.config.Address, out, observed)
+			return out, nil
+		}
+		return nil, apierrors.NewNotFound(schema.GroupResource{Group: "cisco.vk", Resource: "nxos-app"}, pod.Name)
 	}
+	if pod.DeletionTimestamp == nil {
+		d.scheduleConvergence(pod, observed)
+	}
+	out := pod.DeepCopy()
+	setPodStatus(d.config.Address, out, observed)
+	return out, nil
+}
+
+// observePodApps reads the device-side app state for every container in
+// pod. Read-only: it issues only show/detail queries, never config.
+func (d *NXOSDriver) observePodApps(ctx context.Context, pod *v1.Pod) map[string]nxosApp {
+	observed := map[string]nxosApp{}
 	for containerName, appID := range common.GenerateContainerAppIDs(pod) {
 		app, err := d.appDetail(ctx, appID)
 		if err != nil {
@@ -155,35 +178,68 @@ func (d *NXOSDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, er
 		app.ContainerName = containerName
 		observed[containerName] = app
 	}
-	if len(observed) == 0 {
-		if pod.DeletionTimestamp == nil && d.secretLister != nil && d.configLister != nil {
-			d.recoverMissingContainers(ctx, pod, observed)
-			out := pod.DeepCopy()
-			setPodStatus(d.config.Address, out, observed)
-			return out, nil
-		}
-		return nil, apierrors.NewNotFound(schema.GroupResource{Group: "cisco.vk", Resource: "nxos-app"}, pod.Name)
+	return observed
+}
+
+// scheduleConvergence kicks a single detached convergence pass for pod and
+// returns immediately. All device interaction happens on a background ctx
+// in a goroutine that OUTLIVES the GetPodStatus call. At most one
+// convergence runs per pod UID at a time (convergingPods dedup), so the
+// poll cadence cannot stack goroutines.
+func (d *NXOSDriver) scheduleConvergence(pod *v1.Pod, observed map[string]nxosApp) {
+	uid := string(pod.UID)
+	d.convergeMu.Lock()
+	if d.convergingPods == nil {
+		d.convergingPods = make(map[string]struct{})
 	}
-	if pod.DeletionTimestamp == nil {
-		d.recoverMissingContainers(ctx, pod, observed)
-		for _, app := range observed {
-			cfg, ok := desiredConfigs[app.ContainerName]
-			if !ok {
-				cfg = nxosAppConfig{
-					AppID:     app.ID,
-					Container: app.ContainerName,
-					ImagePath: app.Image,
-					Timeout:   defaultPackageTimeout,
-				}
-			}
-			if err := d.advanceAppState(ctx, &cfg, app.State); err != nil {
-				log.G(ctx).WithError(err).Warnf("NX-OS app %s convergence from status failed", app.ID)
+	if _, busy := d.convergingPods[uid]; busy {
+		d.convergeMu.Unlock()
+		return
+	}
+	d.convergingPods[uid] = struct{}{}
+	d.convergeMu.Unlock()
+
+	podCopy := pod.DeepCopy()
+	observedCopy := make(map[string]nxosApp, len(observed))
+	for k, v := range observed {
+		observedCopy[k] = v
+	}
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), nxosAppActionTimeout)
+		defer cancel()
+		defer func() {
+			d.convergeMu.Lock()
+			delete(d.convergingPods, uid)
+			d.convergeMu.Unlock()
+		}()
+		d.convergePodApps(bgCtx, podCopy, observedCopy)
+	}()
+}
+
+// convergePodApps drives observed apps toward their desired running state
+// and (re)installs any missing containers. Invoked only from the detached
+// scheduleConvergence goroutine — never inline on the status read path.
+// Individual app actions are themselves dedup'd + async via runAppAction.
+func (d *NXOSDriver) convergePodApps(ctx context.Context, pod *v1.Pod, observed map[string]nxosApp) {
+	desiredConfigs, desiredErr := d.desiredConfigsByContainer(pod)
+	if desiredErr != nil {
+		log.G(ctx).WithError(desiredErr).Debugf("NX-OS converge: failed to render desired config for pod %s/%s", pod.Namespace, pod.Name)
+	}
+	d.recoverMissingContainers(ctx, pod, observed)
+	for _, app := range observed {
+		cfg, ok := desiredConfigs[app.ContainerName]
+		if !ok {
+			cfg = nxosAppConfig{
+				AppID:     app.ID,
+				Container: app.ContainerName,
+				ImagePath: app.Image,
+				Timeout:   defaultPackageTimeout,
 			}
 		}
+		if err := d.advanceAppState(ctx, &cfg, app.State); err != nil {
+			log.G(ctx).WithError(err).Warnf("NX-OS app %s convergence failed", app.ID)
+		}
 	}
-	out := pod.DeepCopy()
-	setPodStatus(d.config.Address, out, observed)
-	return out, nil
 }
 
 func (d *NXOSDriver) desiredConfigsByContainer(pod *v1.Pod) (map[string]nxosAppConfig, error) {

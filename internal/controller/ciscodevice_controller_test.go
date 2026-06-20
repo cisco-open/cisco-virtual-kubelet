@@ -286,8 +286,8 @@ func TestReconcile_ProvisionsVKAccessInDeviceNamespace(t *testing.T) {
 	if !metav1.IsControlledBy(&rb, device) {
 		t.Fatalf("RoleBinding owner references = %+v, want controlled by CiscoDevice", rb.OwnerReferences)
 	}
-	if rb.RoleRef.APIGroup != rbacv1.GroupName || rb.RoleRef.Kind != "ClusterRole" || rb.RoleRef.Name != vkSharedClusterRole {
-		t.Fatalf("RoleBinding RoleRef = %+v, want ClusterRole %s", rb.RoleRef, vkSharedClusterRole)
+	if rb.RoleRef.APIGroup != rbacv1.GroupName || rb.RoleRef.Kind != "ClusterRole" || rb.RoleRef.Name != vkDeviceClusterRole {
+		t.Fatalf("RoleBinding RoleRef = %+v, want ClusterRole %s (namespaced config role)", rb.RoleRef, vkDeviceClusterRole)
 	}
 	if len(rb.Subjects) != 1 {
 		t.Fatalf("RoleBinding subjects = %+v, want exactly one ServiceAccount subject", rb.Subjects)

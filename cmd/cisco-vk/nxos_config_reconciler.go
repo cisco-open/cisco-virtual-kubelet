@@ -113,9 +113,14 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 		}
 	}
 
+	deviceNamespace := operationNamespace()
+	// Leases live in the device namespace. Keying them per-namespace makes
+	// same-named devices in different namespaces use distinct lease objects
+	// (the lease name is device+family only), so a shared
+	// CONFIG_LEASE_NAMESPACE can no longer cause cross-namespace collisions.
 	leaseNamespace := os.Getenv("CONFIG_LEASE_NAMESPACE")
 	if leaseNamespace == "" {
-		leaseNamespace = os.Getenv("POD_NAMESPACE")
+		leaseNamespace = deviceNamespace
 	}
 	if leaseNamespace == "" {
 		leaseNamespace = "default"
@@ -124,6 +129,7 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 	r := &provider.NXOSConfigReconciler{
 		Client:             mgr.GetClient(),
 		DeviceName:         deviceName,
+		DeviceNamespace:    deviceNamespace,
 		Transport:          dctx.Transport,
 		Lookup:             dctx.LookupWriter,
 		FamilyOrder:        dctx.FamilyOrder,
@@ -238,6 +244,7 @@ func retryNXOSConfigDriverDial(ctx context.Context, opts configReconcilerOptions
 		}
 		r.SetTransport(next.Transport)
 		r.SetDeviceVersion(next.DeviceVersion)
+		r.SetDefaultYANGVersion(next.DefaultYANGVersion)
 		if current != nil {
 			current.Transport = next.Transport
 			current.DeviceVersion = next.DeviceVersion

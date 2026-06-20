@@ -9,7 +9,13 @@ metadata:
   labels:
     {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
 ---
-# ClusterRole defining the permissions required by Virtual Kubelet pods.
+# Cluster-scoped ClusterRole for Virtual Kubelet pods. This carries only the
+# permissions a VK node genuinely needs cluster-wide: it hosts pods scheduled
+# from ANY namespace (so pod/configmap/secret/service access is cluster-wide),
+# registers a Node, holds node-heartbeat + config Leases, and watches
+# CiscoDevice cluster-wide to resolve its device-spec. Tenant config CRDs are
+# NOT here — they live in the namespaced "-device" role below so a per-device
+# pod cannot read another tenant's config/intent.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -37,7 +43,7 @@ rules:
   - apiGroups: [""]
     resources: ["nodes/status"]
     verbs: ["get", "update", "patch"]
-  # ConfigMap and Secret access (for pod volumes)
+  # ConfigMap and Secret access (for pod volumes — pods may be in any namespace)
   - apiGroups: [""]
     resources: ["configmaps", "secrets"]
     verbs: ["get", "list", "watch"]
@@ -58,7 +64,9 @@ rules:
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["create", "patch"]
-  # Node leases (required for node heartbeat in kube-node-lease namespace)
+  # Node leases (required for node heartbeat in kube-node-lease namespace) and
+  # the FamilyLeaser config leases. Leases span namespaces (kube-node-lease +
+  # the device namespace), so this stays cluster-wide.
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
@@ -68,10 +76,25 @@ rules:
   - apiGroups: ["cisco.vk"]
     resources: ["ciscodevices"]
     verbs: ["get", "list", "watch"]
-  # IOSXEConfig CRDs (config.cisco.vk/v1alpha1) — the per-device
-  # ConfigReconciler running inside cisco-vk run reads scope objects
-  # (defaults, device groups, interface groups, templates) and reads
-  # the IOSXEConfig CRs targeting its device.
+  # ConfigMap write access — diagnostic ConfigMap sink writes capture results.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+# Namespaced ClusterRole for the per-device VK pod's CONFIG management. These
+# config.cisco.vk / ops.cisco.vk CRDs are device-namespace-scoped: a per-device
+# pod (with reconciler namespace isolation) only ever lists/acts on CRs in its
+# own namespace. The controller binds this role with a namespaced RoleBinding,
+# NOT a ClusterRoleBinding, so the pod cannot read another tenant's config.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cisco-virtual-kubelet.vkServiceAccountName" . }}-device
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+rules:
+  # IOSXEConfig scope objects (defaults, device groups, interface groups,
+  # templates) the per-device ConfigReconciler reads.
   - apiGroups: ["config.cisco.vk"]
     resources:
       - iosxeconfigdefaults
@@ -81,9 +104,7 @@ rules:
     verbs: ["get", "list", "watch"]
   # IOSXEConfig itself needs patch/update in addition to read/watch:
   # after a successful Phase-7 replay, recordResult clears the
-  # config.cisco.vk/replay-from-log annotation by patching the parent
-  # CR. Without this verb the annotation stays put and the replay
-  # repeats on every tick. (Wave 2A — external-review Finding #5.)
+  # config.cisco.vk/replay-from-log annotation by patching the parent CR.
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigs"]
     verbs: ["get", "list", "watch", "patch", "update"]
@@ -91,61 +112,44 @@ rules:
     resources: ["iosxeconfigs/status"]
     verbs: ["get", "update", "patch"]
   # NXOSConfig CRD — the shared config reconciler running inside the
-  # per-device VK pod needs the same object/status permissions for
-  # status updates, drift reconciliation, and finalizer cleanup.
+  # per-device VK pod needs object/status permissions for status updates,
+  # drift reconciliation, and finalizer cleanup.
   - apiGroups: ["config.cisco.vk"]
     resources: ["nxosconfigs"]
     verbs: ["get", "list", "watch", "patch", "update"]
   - apiGroups: ["config.cisco.vk"]
     resources: ["nxosconfigs/status"]
     verbs: ["get", "update", "patch"]
-  # IOSXEConfigApplyLog CRD — Phase 7 audit log; the reconciler appends
-  # ApplyLogEntry objects after every apply pass and reads back during
-  # the time-travel replay path. List/watch needed for the in-pod
-  # informer cache.
+  # IOSXEConfigApplyLog CRD — Phase 7 audit log.
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigapplylogs"]
     verbs: ["get", "list", "watch", "create", "update", "patch"]
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigapplylogs/status"]
     verbs: ["get", "update", "patch"]
-  # IOSXEConfigRevision CRD — durable resolved-intent history used by
-  # rollbackTo. Reconciler creates revisions after successful applies,
-  # reads them during rollback, and garbage-collects old entries.
+  # IOSXEConfigRevision CRD — durable resolved-intent history used by rollbackTo.
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigrevisions"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigrevisions/status"]
     verbs: ["get", "update", "patch"]
-  # IOSXETelemetry CRD — per-device MDT-over-gNMI controller running
-  # inside the VK pod watches telemetry specs for its device and reports
-  # stream state back to status.
+  # IOSXETelemetry CRD — per-device MDT-over-gNMI controller.
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxetelemetries"]
     verbs: ["get", "list", "watch", "patch", "update"]
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxetelemetries/status"]
     verbs: ["get", "update", "patch"]
-  # IOSXEDiagnostic CRD — diagnostics-RFC Phase B. The reconciler
-  # watches CRs targeting this device and appends capture results
-  # to status. The ConfigMap sink (Phase D) writes a fresh
-  # ConfigMap per capture in either the CR's namespace or the
-  # operator-chosen namespace, then trims oldest by label.
+  # IOSXEDiagnostic CRD — diagnostics-RFC Phase B.
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxediagnostics"]
     verbs: ["get", "list", "watch", "patch", "update"]
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxediagnostics/status"]
     verbs: ["get", "update", "patch"]
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   # DeviceOperation CRD — read-only async operations. create is required for
-  # the localhost admin /v1/exec wrapper, which synthesizes transient
-  # operations; delete is required only for ttlSecondsAfterFinished cleanup.
-  # The reconciler writes results through the status subresource below and
-  # does not need update/patch on the main object.
+  # the localhost admin /v1/exec wrapper; delete for ttlSecondsAfterFinished.
   - apiGroups: ["ops.cisco.vk"]
     resources: ["deviceoperations"]
     verbs: ["get", "list", "watch", "create", "delete"]
@@ -154,9 +158,6 @@ rules:
     verbs: ["get", "update", "patch"]
   {{- if or (not $strictRBAC) .Values.gnoi.enableSoftwareUpgrade }}
   # IOSXESoftwareUpgrade CRD — multi-phase gNOI OS upgrade reconciler.
-  # update+patch on the main object are required for the finalizer; the
-  # reconciler writes phase progress through the status subresource.
-  # Gated by --enable-iosxesoftwareupgrade on the per-device VK pod.
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades"]
     verbs: ["get", "list", "watch", "update", "patch"]
@@ -168,10 +169,7 @@ rules:
     verbs: ["update"]
   {{- end }}
   {{- if or (not $strictRBAC) .Values.gnoi.enableWriteClass }}
-  # IOSXEOperationalAction CRD — write-class destructive gNOI ops
-  # (Reboot, FactoryReset, FilePut/Remove, KillProcess, CancelReboot).
-  # Separate RBAC boundary from the read-only DeviceOperation; gated by
-  # --enable-write-class-gnoi on the per-device VK pod.
+  # IOSXEOperationalAction CRD — write-class destructive gNOI ops.
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxeoperationalactions"]
     verbs: ["get", "list", "watch", "update", "patch"]
@@ -183,7 +181,7 @@ rules:
     verbs: ["update"]
   {{- end }}
 ---
-# ClusterRoleBinding for the VK service account.
+# ClusterRoleBinding for the cluster-scoped VK role.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -194,6 +192,25 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: {{ include "cisco-virtual-kubelet.vkServiceAccountName" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "cisco-virtual-kubelet.vkServiceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+---
+# Namespaced RoleBinding for the config-management role in the release
+# namespace. Per-device pods in other namespaces receive their own
+# RoleBinding from the controller (ensureVKAccess).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "cisco-virtual-kubelet.vkServiceAccountName" . }}-device
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "cisco-virtual-kubelet.vkServiceAccountName" . }}-device
 subjects:
   - kind: ServiceAccount
     name: {{ include "cisco-virtual-kubelet.vkServiceAccountName" . }}

@@ -43,6 +43,12 @@ type NXOSDriver struct {
 	asyncActions bool
 	actionMu     sync.Mutex
 	appActions   map[string]nxosAppAction
+
+	// convergingPods dedups the detached convergence goroutine that
+	// GetPodStatus kicks: at most one in-flight convergence per pod UID
+	// regardless of poll cadence.
+	convergeMu     sync.Mutex
+	convergingPods map[string]struct{}
 }
 
 type nxosAppAction struct {
@@ -250,6 +256,12 @@ func milliToWholeCores(v int64) int64 {
 
 const nxosAppActionRetryInterval = 30 * time.Second
 
+// nxosAppActionTimeout bounds an async app-hosting action (install /
+// activate / start). The work runs in a goroutine that OUTLIVES the
+// request that scheduled it, so it must NOT inherit the request ctx
+// (which is cancelled the moment DeployPod/GetPodStatus returns).
+const nxosAppActionTimeout = 30 * time.Minute
+
 func (d *NXOSDriver) runAppAction(ctx context.Context, appID, action string, fn func(context.Context) error) error {
 	if !d.markAppAction(appID, action) {
 		return nil
@@ -266,17 +278,22 @@ func (d *NXOSDriver) runAppAction(ctx context.Context, appID, action string, fn 
 		"appid":  appID,
 		"action": action,
 	}).Info("NX-OS app-hosting action scheduled")
+	// Detach from the request ctx: derive a background ctx (preserving
+	// logger fields) with a bounded timeout so the action survives the
+	// return of the call that scheduled it.
+	bgCtx, cancel := context.WithTimeout(log.WithLogger(context.Background(), log.G(ctx)), nxosAppActionTimeout)
 	go func() {
-		if err := fn(ctx); err != nil {
+		defer cancel()
+		if err := fn(bgCtx); err != nil {
 			d.clearAppAction(appID)
-			log.G(ctx).WithError(err).WithFields(log.Fields{
+			log.G(bgCtx).WithError(err).WithFields(log.Fields{
 				"appid":  appID,
 				"action": action,
 			}).Warn("NX-OS app-hosting action failed")
 			return
 		}
 		d.completeAppAction(appID, action)
-		log.G(ctx).WithFields(log.Fields{
+		log.G(bgCtx).WithFields(log.Fields{
 			"appid":  appID,
 			"action": action,
 		}).Info("NX-OS app-hosting action completed")

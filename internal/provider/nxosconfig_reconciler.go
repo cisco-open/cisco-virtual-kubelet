@@ -12,7 +12,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -32,9 +31,18 @@ const nxosConfigFinalizer = "config.cisco.vk/nxos-lease-cleanup"
 
 // NXOSConfigReconciler is the per-device NX-OS facade over the common
 // platform config reconciler.
+//
+// It builds ONE CommonConfigReconciler at first use and registers that
+// same instance with the manager. Earlier this facade rebuilt a fresh
+// CommonConfigReconciler on every call, so SetupWithManager registered a
+// throwaway while deferred-dial SetTransport/SetDeviceVersion mutated only
+// the facade — a device that was down at startup never recovered. All
+// runtime state (transport, version, subscribe clock) now lives on the one
+// registered common instance, and the facade methods forward to it.
 type NXOSConfigReconciler struct {
 	Client                client.Client
 	DeviceName            string
+	DeviceNamespace       string
 	Transport             transport.Interface
 	Lookup                func(family, release string) enginewriters.SectionWriter
 	FamilyOrder           func([]string) []string
@@ -49,9 +57,8 @@ type NXOSConfigReconciler struct {
 	SubscribeNotify <-chan struct{}
 	SubscribeEvents <-chan event.GenericEvent
 
-	transportSlot       atomic.Pointer[transport.Interface]
-	versionMu           sync.RWMutex
-	subscribeNotifyTime atomic.Int64
+	commonOnce       sync.Once
+	commonReconciler *CommonConfigReconciler
 }
 
 func (r *NXOSConfigReconciler) Run(ctx context.Context) error {
@@ -67,55 +74,49 @@ func (r *NXOSConfigReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 }
 
 func (r *NXOSConfigReconciler) NotifySubscribeFired() {
-	r.subscribeNotifyTime.Store(time.Now().UnixNano())
+	r.common().NotifySubscribeFired()
 }
 
 func (r *NXOSConfigReconciler) SetTransport(t transport.Interface) {
-	if t == nil {
-		r.transportSlot.Store(nil)
-		return
-	}
-	r.transportSlot.Store(&t)
+	r.common().SetTransport(t)
 }
 
 func (r *NXOSConfigReconciler) GetTransport() transport.Interface {
-	if p := r.transportSlot.Load(); p != nil {
-		return *p
-	}
-	return r.Transport
+	return r.common().GetTransport()
 }
 
 func (r *NXOSConfigReconciler) SetDeviceVersion(version string) {
-	r.versionMu.Lock()
-	defer r.versionMu.Unlock()
-	r.DeviceVersion = version
+	r.common().SetDeviceVersion(version)
 }
 
-func (r *NXOSConfigReconciler) deviceVersion() string {
-	r.versionMu.RLock()
-	defer r.versionMu.RUnlock()
-	return r.DeviceVersion
+func (r *NXOSConfigReconciler) SetDefaultYANGVersion(version string) {
+	r.common().SetDefaultYANGVersion(version)
 }
 
+// common returns the single CommonConfigReconciler backing this facade,
+// constructing it once from the facade's initial configuration.
 func (r *NXOSConfigReconciler) common() *CommonConfigReconciler {
-	return &CommonConfigReconciler{
-		Client:                r.Client,
-		DeviceName:            r.DeviceName,
-		Transport:             r.GetTransport(),
-		Lookup:                r.Lookup,
-		FamilyOrder:           r.FamilyOrder,
-		DeviceVersion:         r.deviceVersion(),
-		DefaultYANGVersion:    r.DefaultYANGVersion,
-		SupportedYANGVersions: r.SupportedYANGVersions,
-		Leaser:                r.Leaser,
-		Recorder:              r.Recorder,
-		Interval:              r.Interval,
-		RuntimeID:             r.RuntimeID,
-		SubscribeNotify:       r.SubscribeNotify,
-		SubscribeEvents:       r.SubscribeEvents,
-		SubscribeNotifyTime:   &r.subscribeNotifyTime,
-		Platform:              NXOSCommonConfigPlatform(),
-	}
+	r.commonOnce.Do(func() {
+		r.commonReconciler = &CommonConfigReconciler{
+			Client:                r.Client,
+			DeviceName:            r.DeviceName,
+			DeviceNamespace:       r.DeviceNamespace,
+			Transport:             r.Transport,
+			Lookup:                r.Lookup,
+			FamilyOrder:           r.FamilyOrder,
+			DeviceVersion:         r.DeviceVersion,
+			DefaultYANGVersion:    r.DefaultYANGVersion,
+			SupportedYANGVersions: r.SupportedYANGVersions,
+			Leaser:                r.Leaser,
+			Recorder:              r.Recorder,
+			Interval:              r.Interval,
+			RuntimeID:             r.RuntimeID,
+			SubscribeNotify:       r.SubscribeNotify,
+			SubscribeEvents:       r.SubscribeEvents,
+			Platform:              NXOSCommonConfigPlatform(),
+		}
+	})
+	return r.commonReconciler
 }
 
 // NXOSCommonConfigPlatform describes NXOSConfig for the shared common
