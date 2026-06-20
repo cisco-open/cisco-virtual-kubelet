@@ -465,6 +465,17 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, 
 	}
 
 	for _, cr := range forDevice {
+		proceed, _, err := r.prepareConfigForReconcile(ctx, cr)
+		if err != nil {
+			logger.WithError(err).
+				WithField("name", cr.Name).
+				WithField("namespace", cr.Namespace).
+				Warn("IOSXEConfig lifecycle failed")
+			continue
+		}
+		if !proceed {
+			continue
+		}
 		// Polling-path callers don't need the engine.Result; controller-
 		// runtime's Reconcile uses it to derive a phase-aware
 		// RequeueAfter and span attributes. Discarded here.

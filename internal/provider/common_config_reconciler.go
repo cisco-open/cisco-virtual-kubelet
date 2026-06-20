@@ -326,6 +326,25 @@ func (r *CommonConfigReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	if spec == nil || spec.DeviceRef.Name != r.DeviceName || !r.inDeviceNamespace(cr) {
 		return reconcile.Result{}, nil
 	}
+	proceed, result, err := r.prepareForReconcile(ctx, cr)
+	if err != nil || !proceed {
+		return result, err
+	}
+
+	_, conflicts := r.cohort(ctx, logger)
+	trigger := triggerEvent
+	if status := r.Platform.Status(cr); status != nil && r.subscribeFiredSince(status.LastDeviceCheck) {
+		trigger = triggerSubscribe
+	}
+	engineResult, err := r.reconcileOne(ctx, log.G(ctx), cr, conflicts, trigger)
+	if err != nil {
+		logger.Error(err, "reconcile "+r.Platform.Kind)
+		return reconcile.Result{}, err
+	}
+	return reconcile.Result{RequeueAfter: r.requeueInterval(cr, engineResult.Phase)}, nil
+}
+
+func (r *CommonConfigReconciler) prepareForReconcile(ctx context.Context, cr client.Object) (bool, reconcile.Result, error) {
 	if !cr.GetDeletionTimestamp().IsZero() {
 		if containsFinalizer(cr.GetFinalizers(), r.Platform.Finalizer) {
 			// Prune device-side owned keys before lease release +
@@ -351,19 +370,19 @@ func (r *CommonConfigReconciler) Reconcile(ctx context.Context, req reconcile.Re
 									"(set annotation %s=true to give up)",
 								err, ForceRelinquishSkipAnnotation)
 						}
-						return reconcile.Result{}, fmt.Errorf("relinquish: %w", err)
+						return false, reconcile.Result{}, fmt.Errorf("relinquish: %w", err)
 					}
 				}
 			}
 			if err := r.releaseLeasesForObject(ctx, cr); err != nil {
-				return reconcile.Result{}, fmt.Errorf("release %s leases: %w", r.Platform.Kind, err)
+				return false, reconcile.Result{}, fmt.Errorf("release %s leases: %w", r.Platform.Kind, err)
 			}
 			cr.SetFinalizers(removeFinalizer(cr.GetFinalizers(), r.Platform.Finalizer))
 			if err := r.Client.Update(ctx, cr); err != nil && !apierrors.IsConflict(err) && !apierrors.IsNotFound(err) {
-				return reconcile.Result{}, fmt.Errorf("remove %s finalizer: %w", r.Platform.Kind, err)
+				return false, reconcile.Result{}, fmt.Errorf("remove %s finalizer: %w", r.Platform.Kind, err)
 			}
 		}
-		return reconcile.Result{}, nil
+		return false, reconcile.Result{}, nil
 	}
 	if r.Leaser != nil && !containsFinalizer(cr.GetFinalizers(), r.Platform.Finalizer) {
 		updated := cr.DeepCopyObject().(client.Object)
@@ -375,30 +394,30 @@ func (r *CommonConfigReconciler) Reconcile(ctx context.Context, req reconcile.Re
 			// (the object changed under us) — requeue and re-add next tick;
 			// any other error (RBAC regression, API outage) is returned.
 			if apierrors.IsConflict(err) || apierrors.IsNotFound(err) {
-				return reconcile.Result{Requeue: true}, nil
+				return false, reconcile.Result{Requeue: true}, nil
 			}
-			return reconcile.Result{}, fmt.Errorf("add %s finalizer: %w", r.Platform.Kind, err)
+			return false, reconcile.Result{}, fmt.Errorf("add %s finalizer: %w", r.Platform.Kind, err)
 		}
 		cr.SetFinalizers(updated.GetFinalizers())
 		cr.SetResourceVersion(updated.GetResourceVersion())
 	}
-
-	_, conflicts := r.cohort(ctx, logger)
-	trigger := triggerEvent
-	if status := r.Platform.Status(cr); status != nil && r.subscribeFiredSince(status.LastDeviceCheck) {
-		trigger = triggerSubscribe
-	}
-	result, err := r.reconcileOne(ctx, log.G(ctx), cr, conflicts, trigger)
-	if err != nil {
-		logger.Error(err, "reconcile "+r.Platform.Kind)
-		return reconcile.Result{}, err
-	}
-	return reconcile.Result{RequeueAfter: r.requeueInterval(cr, result.Phase)}, nil
+	return true, reconcile.Result{}, nil
 }
 
 func (r *CommonConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, trigger reconcileTrigger) {
 	forDevice, conflicts := r.cohort(ctx, crlog.FromContext(ctx))
 	for _, cr := range forDevice {
+		proceed, _, err := r.prepareForReconcile(ctx, cr)
+		if err != nil {
+			logger.WithError(err).
+				WithField("name", cr.GetName()).
+				WithField("namespace", cr.GetNamespace()).
+				Warn("common config lifecycle failed")
+			continue
+		}
+		if !proceed {
+			continue
+		}
 		if _, err := r.reconcileOne(ctx, logger, cr, conflicts, trigger); err != nil {
 			logger.WithError(err).
 				WithField("name", cr.GetName()).

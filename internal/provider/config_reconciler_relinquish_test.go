@@ -20,12 +20,14 @@ import (
 	"testing"
 	"time"
 
+	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
 	coordv1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
@@ -71,23 +73,48 @@ func (t *reachableTransport) Close() error                                      
 // pruneOnRelinquish path runs to completion. Tracks which families
 // were mutated so tests can assert "blocked family was not touched".
 type noopWriter struct {
-	family   string
-	mutated  *map[string]int
-	pruneOps []transport.Op
+	family     string
+	mutated    *map[string]int
+	pruneCalls *map[string]int
+	pruneOps   []transport.Op
 }
 
 func (w *noopWriter) Family() string                                          { return w.family }
 func (w *noopWriter) YANGPaths() []string                                     { return []string{"/" + w.family} }
 func (w *noopWriter) Fetch(context.Context, transport.Interface) (any, error) { return []any{}, nil }
 func (w *noopWriter) Diff(_, _ any) ([]transport.Op, error)                   { return nil, nil }
-func (w *noopWriter) Apply(_ context.Context, _ transport.Interface, ops []transport.Op) error {
+func (w *noopWriter) Apply(ctx context.Context, tr transport.Interface, ops []transport.Op) error {
 	if w.mutated != nil {
 		(*w.mutated)[w.family] += len(ops)
 	}
-	return nil
+	if len(ops) == 0 {
+		return nil
+	}
+	return tr.Mutate(ctx, "", ops)
 }
-func (w *noopWriter) PruneDiff(_, _ any) ([]transport.Op, error) { return w.pruneOps, nil }
-func (w *noopWriter) KeysOf(any) []string                        { return nil }
+func (w *noopWriter) PruneDiff(_, _ any) ([]transport.Op, error) {
+	if w.pruneCalls != nil {
+		(*w.pruneCalls)[w.family]++
+	}
+	return w.pruneOps, nil
+}
+func (w *noopWriter) KeysOf(any) []string { return nil }
+
+type lifecycleWriter struct {
+	family string
+}
+
+func (w *lifecycleWriter) Family() string      { return w.family }
+func (w *lifecycleWriter) YANGPaths() []string { return []string{"/" + w.family} }
+func (w *lifecycleWriter) Fetch(context.Context, transport.Interface) (any, error) {
+	return []any{}, nil
+}
+func (w *lifecycleWriter) Diff(_, _ any) ([]transport.Op, error) {
+	return []transport.Op{{Verb: transport.VerbReplace, Path: "/" + w.family, Body: []byte(`{}`)}}, nil
+}
+func (w *lifecycleWriter) Apply(ctx context.Context, tr transport.Interface, ops []transport.Op) error {
+	return tr.Mutate(ctx, "", ops)
+}
 
 // lookupFromMap returns a writers.SectionWriter lookup closure
 // backed by the supplied map. Keys are family names; missing
@@ -175,6 +202,92 @@ func seedForeignLease(
 		t.Fatalf("seed lease: %v", err)
 	}
 	return lease
+}
+
+func TestIOSXEPollingPathPersistsFinalizerBeforeMutating(t *testing.T) {
+	scheme := newSchemeWithLeases(t)
+	cr := newCR("poll-finalizer", "edge-01")
+	cr.Spec.Source.Inline = &runtime.RawExtension{Raw: []byte(`{"vlan":{"vlans":[{"id":4001,"name":"test"}]}}`)}
+	key := types.NamespacedName{Namespace: cr.Namespace, Name: cr.Name}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(newDevice("edge-01"), cr).
+		WithStatusSubresource(&configv1alpha1.IOSXEConfig{}).
+		Build()
+	tr := newReachableTransport()
+	writer := &lifecycleWriter{family: "vlan"}
+	r := &ConfigReconciler{
+		Client:     c,
+		DeviceName: "edge-01",
+		Leaser:     &engine.FamilyLeaser{Client: c, Namespace: "leases"},
+		Lookup: func(family, _ string) writers.SectionWriter {
+			if family == "vlan" {
+				return writer
+			}
+			return nil
+		},
+	}
+	r.SetTransport(tr)
+
+	ctx := context.Background()
+	r.reconcileAll(ctx, vklog.G(ctx), triggerPoll)
+
+	var got configv1alpha1.IOSXEConfig
+	if err := c.Get(context.Background(), key, &got); err != nil {
+		t.Fatalf("get IOSXEConfig: %v", err)
+	}
+	if !containsFinalizer(got.Finalizers, iosxeConfigFinalizer) {
+		t.Fatalf("finalizer not persisted: %#v", got.Finalizers)
+	}
+	select {
+	case <-tr.mutateCh:
+	default:
+		t.Fatalf("expected polling reconcile to mutate the device after finalizer persistence; status=%#v", got.Status)
+	}
+}
+
+func TestIOSXEPollingPathRelinquishesOwnedKeysOnDelete(t *testing.T) {
+	scheme := newSchemeWithLeases(t)
+	cr := newCR("poll-delete", "edge-01")
+	cr.Spec.PruneOnRelinquish = true
+	cr.Finalizers = []string{iosxeConfigFinalizer}
+	cr.Status.AtomicReplaceOwnedKeys = map[string][]string{"vlan": {"4001"}}
+	finalizerRemovalUpdated := false
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cr).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Update: func(ctx context.Context, cw client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+				if obj.GetNamespace() == cr.Namespace &&
+					obj.GetName() == cr.Name &&
+					!containsFinalizer(obj.GetFinalizers(), iosxeConfigFinalizer) {
+					finalizerRemovalUpdated = true
+				}
+				return cw.Update(ctx, obj, opts...)
+			},
+		}).
+		Build()
+	if err := c.Delete(context.Background(), cr); err != nil {
+		t.Fatalf("delete IOSXEConfig: %v", err)
+	}
+	pruneCalls := map[string]int{}
+	r, _, _ := makeReachableReconciler(t, c, "edge-01", map[string]*noopWriter{
+		"vlan": {
+			family:     "vlan",
+			pruneCalls: &pruneCalls,
+		},
+	})
+	r.Leaser = nil
+
+	ctx := context.Background()
+	r.reconcileAll(ctx, vklog.G(ctx), triggerPoll)
+
+	if pruneCalls["vlan"] == 0 {
+		t.Fatal("polling reconcile did not run the relinquish prune path for owned VLAN keys")
+	}
+	if !finalizerRemovalUpdated {
+		t.Fatal("polling reconcile did not persist IOSXEConfig finalizer removal")
+	}
 }
 
 // TestRelinquishOnDeleteSkipsLeaseBlockedFamilies pins the corrected

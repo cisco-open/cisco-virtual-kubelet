@@ -40,14 +40,15 @@ type noopErrLogger struct{}
 func (noopErrLogger) Error(error, string, ...any) {}
 
 type fakeNXOSTransport struct {
-	hostname    string
-	mtu         int
-	features    map[string]bool
-	featureSets map[string]bool
-	vlans       map[int]string
-	deleteOps   []string
-	fetches     int
-	saves       int
+	hostname     string
+	mtu          int
+	features     map[string]bool
+	featureSets  map[string]bool
+	vlans        map[int]string
+	deleteOps    []string
+	fetches      int
+	saves        int
+	beforeMutate func() error
 }
 
 func (f *fakeNXOSTransport) Capabilities() transport.Capabilities {
@@ -98,6 +99,11 @@ func (f *fakeNXOSTransport) StartTransaction(context.Context) (transport.TxHandl
 }
 
 func (f *fakeNXOSTransport) Mutate(_ context.Context, _ transport.TxHandle, ops []transport.Op) error {
+	if f.beforeMutate != nil {
+		if err := f.beforeMutate(); err != nil {
+			return err
+		}
+	}
 	for _, op := range ops {
 		if op.Verb == transport.VerbDelete {
 			f.deleteOps = append(f.deleteOps, op.Path)
@@ -879,6 +885,111 @@ func TestNXOSConfigReconcilerFailsClosedWhenFinalizerUpdateFails(t *testing.T) {
 	}
 	if tr.hostname != "untouched" {
 		t.Fatalf("device was mutated without a durable finalizer: hostname=%q", tr.hostname)
+	}
+}
+
+func TestCommonConfigPollingPathPersistsFinalizerBeforeMutating(t *testing.T) {
+	scheme := newSchemeWithLeases(t)
+	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01","mtu":9216}}`)}
+	cr := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: "network", Generation: 1},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies: []string{"system"},
+			ModelSource:     &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+		WithObjects(cr).
+		Build()
+	sawFinalizer := false
+	tr := &fakeNXOSTransport{hostname: "old", mtu: 1500}
+	tr.beforeMutate = func() error {
+		var got configv1alpha1.NXOSConfig
+		if err := c.Get(context.Background(), types.NamespacedName{Namespace: "network", Name: "leaf-config"}, &got); err != nil {
+			t.Errorf("get NXOSConfig during mutate: %v", err)
+			return nil
+		}
+		sawFinalizer = containsFinalizer(got.Finalizers, nxosConfigFinalizer)
+		return nil
+	}
+	r := &NXOSConfigReconciler{
+		Client:     c,
+		DeviceName: "leaf-01",
+		Transport:  tr,
+		Lookup:     nxoswriters.GetForRelease,
+		Leaser:     &engine.FamilyLeaser{Client: c, Namespace: "network"},
+	}
+
+	r.common().reconcileAll(context.Background(), nil, triggerPoll)
+
+	if !sawFinalizer {
+		t.Fatal("NX-OS polling path mutated device before finalizer was persisted")
+	}
+	if tr.hostname != "leaf-01" || tr.mtu != 9216 {
+		t.Fatalf("device was not reconciled after finalizer persistence: hostname=%q mtu=%d", tr.hostname, tr.mtu)
+	}
+	var got configv1alpha1.NXOSConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "network", Name: "leaf-config"}, &got); err != nil {
+		t.Fatalf("get NXOSConfig: %v", err)
+	}
+	if !containsFinalizer(got.Finalizers, nxosConfigFinalizer) {
+		t.Fatalf("finalizer not persisted: %#v", got.Finalizers)
+	}
+}
+
+func TestCommonConfigPollingPathRelinquishesOwnedKeysOnDelete(t *testing.T) {
+	scheme := newSchemeWithLeases(t)
+	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01"},"vlan":{"vlans":[{"id":101,"name":"keep"}]}}`)}
+	cr := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "leaf-config", Namespace: "network", Generation: 3,
+			Finalizers: []string{nxosConfigFinalizer},
+		},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:         configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies:   []string{"system", "vlan"},
+			ModelSource:       &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			Source:            configv1alpha1.ConfigurationSource{Inline: &raw},
+			PruneOnRelinquish: true,
+		},
+		Status: configv1alpha1.NXOSConfigStatus{
+			AtomicReplaceOwnedKeys: map[string][]string{"vlan": {"101", "102"}},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+		WithObjects(cr).
+		Build()
+	if err := c.Delete(context.Background(), cr); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	tr := &fakeNXOSTransport{vlans: map[int]string{101: "keep", 102: "owned-orphan", 200: "baseline"}}
+	r := &NXOSConfigReconciler{
+		Client:      c,
+		DeviceName:  "leaf-01",
+		Transport:   tr,
+		Lookup:      nxoswriters.GetForRelease,
+		FamilyOrder: nxosschema.FamilyOrder,
+		Leaser:      &engine.FamilyLeaser{Client: c, Namespace: "network"},
+	}
+
+	r.common().reconcileAll(context.Background(), nil, triggerPoll)
+
+	if _, ok := tr.vlans[102]; ok {
+		t.Fatalf("owned VLAN 102 was not relinquished on delete: %#v", tr.vlans)
+	}
+	if _, ok := tr.vlans[200]; !ok {
+		t.Fatalf("baseline VLAN 200 must not be pruned on delete: %#v", tr.vlans)
+	}
+	var got configv1alpha1.NXOSConfig
+	err := c.Get(context.Background(), types.NamespacedName{Namespace: "network", Name: "leaf-config"}, &got)
+	if err == nil && containsFinalizer(got.Finalizers, nxosConfigFinalizer) {
+		t.Fatalf("finalizer not removed after polling relinquish: %#v", got.Finalizers)
 	}
 }
 

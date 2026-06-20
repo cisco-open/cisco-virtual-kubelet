@@ -299,6 +299,90 @@ func (r *ConfigReconciler) releaseAcquiredFamilies(ctx context.Context, families
 //     referenced ConfigMap events are mapped via handler.Funcs to the
 //     IOSXEConfigs they influence, so a scope-object mutation triggers
 //     targeted re-reconciles rather than a full resync.
+func (r *ConfigReconciler) prepareConfigForReconcile(ctx context.Context, cr *configv1alpha1.IOSXEConfig) (bool, reconcile.Result, error) {
+	logger := crlog.FromContext(ctx).
+		WithValues("component", "config-reconciler", "device", r.DeviceName)
+	if !cr.GetDeletionTimestamp().IsZero() {
+		if containsFinalizer(cr.Finalizers, iosxeConfigFinalizer) {
+			// F2 fix (2026-05-01): when pruneOnRelinquish is true and
+			// the CR has accumulated ownedKeys in status, run a
+			// relinquish reconcile against the device before lease
+			// release + finalizer removal. Without this the CR's
+			// owned entries stay on the device as orphaned config.
+			//
+			// A2 fix (2026-05-01): relinquish
+			// failure is now retryable. We return the error from
+			// Reconcile so controller-runtime requeues, keeping the
+			// finalizer in place. status.atomicReplaceOwnedKeys
+			// stays available so the next attempt has the same input.
+			// Operators with a permanently failing relinquish (e.g.
+			// device decommissioned mid-cleanup) can patch the
+			// finalizer off explicitly — the standard Kubernetes
+			// escape hatch — once they accept the orphan.
+			if cr.Spec.PruneOnRelinquish && len(cr.Status.AtomicReplaceOwnedKeys) > 0 {
+				// B2 escape hatch (2026-05-02): an operator who has accepted that
+				// relinquish will not succeed — decommissioned device,
+				// permanent auth failure, family that needs a writer
+				// uplift — sets cisco.vk/force-relinquish-skip=true.
+				// We skip the relinquish reconcile, emit a Warning
+				// event recording the orphan list, and proceed to
+				// finalizer removal. Strictly more controlled than
+				// `kubectl patch finalizers: []` because the
+				// orphaned keys land in the audit trail.
+				if cr.Annotations[ForceRelinquishSkipAnnotation] == "true" {
+					if r.Recorder != nil {
+						r.Recorder.Eventf(cr, "Warning", "RelinquishSkipped",
+							"force-relinquish-skip annotation set; orphaning %v on device %q",
+							cr.Status.AtomicReplaceOwnedKeys, r.DeviceName)
+					}
+				} else if err := r.relinquishOwnedKeys(ctx, cr); err != nil {
+					logger.Error(err, "relinquish owned keys; will retry "+
+						"(set annotation "+ForceRelinquishSkipAnnotation+"=true to give up)")
+					if r.Recorder != nil {
+						r.Recorder.Eventf(cr, "Warning", "RelinquishBlocked",
+							"deletion blocked while pruneOnRelinquish cleanup retries: %v "+
+								"(set annotation %s=true to give up)",
+							err, ForceRelinquishSkipAnnotation)
+					}
+					return false, reconcile.Result{}, fmt.Errorf("relinquish: %w", err)
+				}
+			}
+			if err := r.releaseLeasesForCR(ctx, cr); err != nil {
+				return false, reconcile.Result{}, fmt.Errorf("release leases: %w", err)
+			}
+			cr.Finalizers = removeFinalizer(cr.Finalizers, iosxeConfigFinalizer)
+			if err := r.Client.Update(ctx, cr); err != nil {
+				if apierrors.IsConflict(err) || apierrors.IsNotFound(err) {
+					return false, reconcile.Result{}, nil
+				}
+				return false, reconcile.Result{}, fmt.Errorf("remove finalizer: %w", err)
+			}
+		}
+		return false, reconcile.Result{}, nil
+	}
+	// Add the finalizer eagerly when missing so a delete that races
+	// the first reconcile still hits our cleanup path. On success we
+	// continue into the reconcile in the same tick — preserving the
+	// per-tick contract the unit-test fixtures rely on. But we FAIL CLOSED
+	// on a persistence error: mutating the device without a durable
+	// finalizer would let a later delete bypass relinquish/prune cleanup and
+	// orphan owned config. Conflict/NotFound are benign (re-add next tick);
+	// any other error is returned so the device write does not run.
+	if r.Leaser != nil && !containsFinalizer(cr.Finalizers, iosxeConfigFinalizer) {
+		updated := cr.DeepCopy()
+		updated.Finalizers = append(updated.Finalizers, iosxeConfigFinalizer)
+		if err := r.Client.Update(ctx, updated); err != nil {
+			if apierrors.IsConflict(err) || apierrors.IsNotFound(err) {
+				return false, reconcile.Result{Requeue: true}, nil
+			}
+			return false, reconcile.Result{}, fmt.Errorf("add finalizer: %w", err)
+		}
+		cr.Finalizers = updated.Finalizers
+		cr.ResourceVersion = updated.ResourceVersion
+	}
+	return true, reconcile.Result{}, nil
+}
+
 func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	// Per-tick reconcile span. When no OTel TracerProvider is wired
 	// (the unit-test default), this resolves to a no-op tracer and
@@ -351,97 +435,17 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		return reconcile.Result{}, nil
 	}
 
-	// Finalizer + deletion path. On delete, release every family
-	// lease this CR could be holding so the next CR claiming the
-	// same family does not have to wait for lease TTL. On non-delete
-	// reconciles, ensure the finalizer is in place so the deletion
-	// handler will run.
-	if !cr.GetDeletionTimestamp().IsZero() {
-		if containsFinalizer(cr.Finalizers, iosxeConfigFinalizer) {
-			// F2 fix (2026-05-01): when pruneOnRelinquish is true and
-			// the CR has accumulated ownedKeys in status, run a
-			// relinquish reconcile against the device before lease
-			// release + finalizer removal. Without this the CR's
-			// owned entries stay on the device as orphaned config.
-			//
-			// A2 fix (2026-05-01): relinquish
-			// failure is now retryable. We return the error from
-			// Reconcile so controller-runtime requeues, keeping the
-			// finalizer in place. status.atomicReplaceOwnedKeys
-			// stays available so the next attempt has the same input.
-			// Operators with a permanently failing relinquish (e.g.
-			// device decommissioned mid-cleanup) can patch the
-			// finalizer off explicitly — the standard Kubernetes
-			// escape hatch — once they accept the orphan.
-			if cr.Spec.PruneOnRelinquish && len(cr.Status.AtomicReplaceOwnedKeys) > 0 {
-				// B2 escape hatch (2026-05-02): an operator who has accepted that
-				// relinquish will not succeed — decommissioned device,
-				// permanent auth failure, family that needs a writer
-				// uplift — sets cisco.vk/force-relinquish-skip=true.
-				// We skip the relinquish reconcile, emit a Warning
-				// event recording the orphan list, and proceed to
-				// finalizer removal. Strictly more controlled than
-				// `kubectl patch finalizers: []` because the
-				// orphaned keys land in the audit trail.
-				if cr.Annotations[ForceRelinquishSkipAnnotation] == "true" {
-					if r.Recorder != nil {
-						r.Recorder.Eventf(&cr, "Warning", "RelinquishSkipped",
-							"force-relinquish-skip annotation set; orphaning %v on device %q",
-							cr.Status.AtomicReplaceOwnedKeys, r.DeviceName)
-					}
-					span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "relinquish-skipped"))
-				} else if err := r.relinquishOwnedKeys(ctx, &cr); err != nil {
-					logger.Error(err, "relinquish owned keys; will retry "+
-						"(set annotation "+ForceRelinquishSkipAnnotation+"=true to give up)")
-					span.RecordError(err)
-					span.SetStatus(codes.Error, "relinquish")
-					span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "relinquish-blocked"))
-					if r.Recorder != nil {
-						r.Recorder.Eventf(&cr, "Warning", "RelinquishBlocked",
-							"deletion blocked while pruneOnRelinquish cleanup retries: %v "+
-								"(set annotation %s=true to give up)",
-							err, ForceRelinquishSkipAnnotation)
-					}
-					return reconcile.Result{}, fmt.Errorf("relinquish: %w", err)
-				}
-			}
-			if err := r.releaseLeasesForCR(ctx, &cr); err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "release leases")
-				return reconcile.Result{}, fmt.Errorf("release leases: %w", err)
-			}
-			cr.Finalizers = removeFinalizer(cr.Finalizers, iosxeConfigFinalizer)
-			if err := r.Client.Update(ctx, &cr); err != nil {
-				if apierrors.IsConflict(err) || apierrors.IsNotFound(err) {
-					return reconcile.Result{}, nil
-				}
-				return reconcile.Result{}, fmt.Errorf("remove finalizer: %w", err)
-			}
-		}
-		span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "deleted"))
-		return reconcile.Result{}, nil
+	proceed, lifecycleResult, err := r.prepareConfigForReconcile(ctx, &cr)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "lifecycle")
+		return reconcile.Result{}, err
 	}
-	// Add the finalizer eagerly when missing so a delete that races
-	// the first reconcile still hits our cleanup path. On success we
-	// continue into the reconcile in the same tick — preserving the
-	// per-tick contract the unit-test fixtures rely on. But we FAIL CLOSED
-	// on a persistence error: mutating the device without a durable
-	// finalizer would let a later delete bypass relinquish/prune cleanup and
-	// orphan owned config. Conflict/NotFound are benign (re-add next tick);
-	// any other error is returned so the device write does not run.
-	if r.Leaser != nil && !containsFinalizer(cr.Finalizers, iosxeConfigFinalizer) {
-		updated := cr.DeepCopy()
-		updated.Finalizers = append(updated.Finalizers, iosxeConfigFinalizer)
-		if err := r.Client.Update(ctx, updated); err != nil {
-			if apierrors.IsConflict(err) || apierrors.IsNotFound(err) {
-				return reconcile.Result{Requeue: true}, nil
-			}
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "add finalizer")
-			return reconcile.Result{}, fmt.Errorf("add finalizer: %w", err)
+	if !proceed {
+		if !cr.GetDeletionTimestamp().IsZero() {
+			span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "deleted"))
 		}
-		cr.Finalizers = updated.Finalizers
-		cr.ResourceVersion = updated.ResourceVersion
+		return lifecycleResult, nil
 	}
 	r.refreshDeviceVersion(ctx)
 
