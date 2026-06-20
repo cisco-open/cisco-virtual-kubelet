@@ -422,19 +422,26 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		return reconcile.Result{}, nil
 	}
 	// Add the finalizer eagerly when missing so a delete that races
-	// the first reconcile still hits our cleanup path. Update is
-	// best-effort; if the API conflicts we let the next tick re-add
-	// it. Continuing into the reconcile keeps the existing per-tick
-	// contract — the same tick still produces the status update the
-	// caller observes — and matches the unit-test fixtures that run
-	// Reconcile once per scenario.
+	// the first reconcile still hits our cleanup path. On success we
+	// continue into the reconcile in the same tick — preserving the
+	// per-tick contract the unit-test fixtures rely on. But we FAIL CLOSED
+	// on a persistence error: mutating the device without a durable
+	// finalizer would let a later delete bypass relinquish/prune cleanup and
+	// orphan owned config. Conflict/NotFound are benign (re-add next tick);
+	// any other error is returned so the device write does not run.
 	if r.Leaser != nil && !containsFinalizer(cr.Finalizers, iosxeConfigFinalizer) {
 		updated := cr.DeepCopy()
 		updated.Finalizers = append(updated.Finalizers, iosxeConfigFinalizer)
-		if err := r.Client.Update(ctx, updated); err == nil {
-			cr.Finalizers = updated.Finalizers
-			cr.ResourceVersion = updated.ResourceVersion
+		if err := r.Client.Update(ctx, updated); err != nil {
+			if apierrors.IsConflict(err) || apierrors.IsNotFound(err) {
+				return reconcile.Result{Requeue: true}, nil
+			}
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "add finalizer")
+			return reconcile.Result{}, fmt.Errorf("add finalizer: %w", err)
 		}
+		cr.Finalizers = updated.Finalizers
+		cr.ResourceVersion = updated.ResourceVersion
 	}
 	r.refreshDeviceVersion(ctx)
 

@@ -11,6 +11,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
 	"strconv"
@@ -18,17 +19,25 @@ import (
 	"testing"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 	nxoswriters "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/writers"
 )
+
+type noopErrLogger struct{}
+
+func (noopErrLogger) Error(error, string, ...any) {}
 
 type fakeNXOSTransport struct {
 	hostname    string
@@ -826,6 +835,77 @@ func TestNXOSConfigReconcilerRelinquishesOwnedKeysOnDelete(t *testing.T) {
 	err := c.Get(context.Background(), types.NamespacedName{Namespace: "network", Name: "leaf-config"}, &got)
 	if err == nil && containsFinalizer(got.Finalizers, nxosConfigFinalizer) {
 		t.Fatalf("finalizer not removed after relinquish: %#v", got.Finalizers)
+	}
+}
+
+// Codex finding (high): the reconciler must FAIL CLOSED if the finalizer can't
+// be persisted — mutating the device without a durable finalizer lets a later
+// delete bypass relinquish/prune cleanup and orphan owned config.
+func TestNXOSConfigReconcilerFailsClosedWhenFinalizerUpdateFails(t *testing.T) {
+	scheme := newTestScheme(t)
+	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01","mtu":9216}}`)}
+	cr := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: "network", Generation: 1},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies: []string{"system"},
+			ModelSource:     &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+		WithObjects(cr).
+		WithInterceptorFuncs(interceptor.Funcs{
+			// Fail the finalizer-add Update with a non-conflict error
+			// (e.g. an RBAC regression).
+			Update: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.UpdateOption) error {
+				return apierrors.NewInternalError(fmt.Errorf("simulated finalizer persistence failure"))
+			},
+		}).
+		Build()
+	tr := &fakeNXOSTransport{hostname: "untouched", mtu: 1500}
+	r := &NXOSConfigReconciler{
+		Client:     c,
+		DeviceName: "leaf-01",
+		Transport:  tr,
+		Lookup:     nxoswriters.GetForRelease,
+		// A non-nil Leaser is what gates the finalizer-add path.
+		Leaser: &engine.FamilyLeaser{Client: c, Namespace: "network"},
+	}
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}}); err == nil {
+		t.Fatal("expected Reconcile to fail closed when the finalizer update fails")
+	}
+	if tr.hostname != "untouched" {
+		t.Fatalf("device was mutated without a durable finalizer: hostname=%q", tr.hostname)
+	}
+}
+
+// Codex finding (critical): the polling/cohort path (used by the aggregator
+// worker) must scope to the device namespace. A same-named device's config in
+// another namespace must never enter the cohort.
+func TestCommonConfigReconcilerCohortExcludesForeignNamespace(t *testing.T) {
+	scheme := newTestScheme(t)
+	mk := func(ns string) *configv1alpha1.NXOSConfig {
+		return &configv1alpha1.NXOSConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: ns},
+			Spec: configv1alpha1.NXOSConfigSpec{
+				DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
+				ManagedFamilies: []string{"system"},
+			},
+		}
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(mk("tenant-a"), mk("tenant-b")).Build()
+	r := &CommonConfigReconciler{
+		Client:          c,
+		DeviceName:      "leaf-01",
+		DeviceNamespace: "tenant-a",
+		Platform:        NXOSCommonConfigPlatform(),
+	}
+	forDevice, _ := r.cohort(context.Background(), noopErrLogger{})
+	if len(forDevice) != 1 || forDevice[0].GetNamespace() != "tenant-a" {
+		t.Fatalf("cohort returned %d objects (%v); want only the tenant-a CR", len(forDevice), forDevice)
 	}
 }
 

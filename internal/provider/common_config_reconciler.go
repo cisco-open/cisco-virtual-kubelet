@@ -368,10 +368,19 @@ func (r *CommonConfigReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	if r.Leaser != nil && !containsFinalizer(cr.GetFinalizers(), r.Platform.Finalizer) {
 		updated := cr.DeepCopyObject().(client.Object)
 		updated.SetFinalizers(append(updated.GetFinalizers(), r.Platform.Finalizer))
-		if err := r.Client.Update(ctx, updated); err == nil {
-			cr.SetFinalizers(updated.GetFinalizers())
-			cr.SetResourceVersion(updated.GetResourceVersion())
+		if err := r.Client.Update(ctx, updated); err != nil {
+			// Fail closed: never mutate device state without a durable
+			// finalizer, or a later delete bypasses relinquish/prune cleanup
+			// and orphans owned device config. Conflict/NotFound are benign
+			// (the object changed under us) — requeue and re-add next tick;
+			// any other error (RBAC regression, API outage) is returned.
+			if apierrors.IsConflict(err) || apierrors.IsNotFound(err) {
+				return reconcile.Result{Requeue: true}, nil
+			}
+			return reconcile.Result{}, fmt.Errorf("add %s finalizer: %w", r.Platform.Kind, err)
 		}
+		cr.SetFinalizers(updated.GetFinalizers())
+		cr.SetResourceVersion(updated.GetResourceVersion())
 	}
 
 	_, conflicts := r.cohort(ctx, logger)
