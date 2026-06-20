@@ -1,0 +1,169 @@
+# Cat9k lab CI (cisco-open-native) — thin trigger for the
+# cat9k-pr-test Argo WorkflowTemplate.
+#
+# Physical Cat9k test. Scope is primary + restart-resilience +
+# iosxeconfig + tenancy + deviceop; stress scenarios (multi-container,
+# concurrent pods) live on Cat8kv — physical install times are
+# variable and exceed wait windows when 3+ apps stack.
+#
+# cisco-open-native counterpart of the historical fork workflow: runs
+# on this repo, so it posts status + comments back with the built-in
+# GITHUB_TOKEN — no cross-repo PAT.
+#
+# Hardening for a public repo + a self-hosted runner that holds lab
+# kubeconfig + device credentials:
+#   - workflow_dispatch ONLY (no pull_request / merge_group).
+#   - environment: lab-ci — each run pauses for maintainer approval.
+#   - runs-on label lab-cvk-upstream — runner registered to THIS repo.
+#   - tooling checked out from this ref, never from the PR branch.
+#   - status context "lab-ci-next / cat9k" during the canary.
+name: Lab CI (Cat9k)
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_repo:
+        description: "owner/repo whose SHA to test (default: this repo)"
+        required: false
+        default: ""
+      upstream_pr:
+        description: "PR number (for the report comment + target_url)"
+        required: false
+        default: ""
+      upstream_sha:
+        description: "commit SHA to test"
+        required: false
+        default: ""
+
+concurrency:
+  # Serialize globally: one physical Cat9k. At most one run uses the
+  # device at a time; the WorkflowTemplate also holds the
+  # cat9k-lab-switch-1 semaphore internally.
+  group: cat9k-device
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+  statuses: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  cat9k:
+    runs-on: [self-hosted, lab-cvk-upstream]
+    environment: lab-ci
+    timeout-minutes: 40
+    env:
+      SHA: ${{ inputs.upstream_sha || github.sha }}
+      UPSTREAM_REPO: ${{ inputs.upstream_repo || github.repository }}
+      UPSTREAM_PR: ${{ inputs.upstream_pr }}
+      UPSTREAM_SHA: ${{ inputs.upstream_sha }}
+      PATH: /home/cisco/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+    steps:
+      - name: Checkout workflow tree
+        uses: actions/checkout@v4
+
+      - name: Post pending status to PR
+        if: inputs.upstream_sha != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api -X POST "repos/${UPSTREAM_REPO}/statuses/${UPSTREAM_SHA}" \
+            -f state=pending \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            -f description="Lab CI Cat9k running" \
+            -f context="lab-ci-next / cat9k" >/dev/null
+
+      - name: Submit WorkflowTemplate and wait
+        id: argo
+        run: |
+          set -euo pipefail
+          NAME=$(argo submit -n virtual-kubelet-ci \
+            --from WorkflowTemplate/cat9k-pr-test \
+            -p upstream_repo="${UPSTREAM_REPO}" \
+            -p upstream_sha="${SHA}" \
+            -p upstream_pr="${UPSTREAM_PR:-local}" \
+            --generate-name "cat9k-${SHA:0:8}-" \
+            -o name | sed 's|^workflow.argoproj.io/||')
+          echo "workflow=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Submitted: $NAME"
+          argo watch -n virtual-kubelet-ci "$NAME"
+          PHASE=$(argo get -n virtual-kubelet-ci "$NAME" -o json | jq -r '.status.phase')
+          echo "phase=$PHASE" >> "$GITHUB_OUTPUT"
+          [ "$PHASE" = "Succeeded" ]
+
+      - name: Capture Argo evidence
+        if: always() && steps.argo.outputs.workflow != ''
+        continue-on-error: true
+        run: |
+          set +e
+          WORKFLOW="${{ steps.argo.outputs.workflow }}"
+          argo get -n virtual-kubelet-ci "$WORKFLOW" -o json > argo-workflow.json 2>argo-workflow.err
+          argo logs -n virtual-kubelet-ci "$WORKFLOW" > argo-logs.txt 2>&1
+          {
+            echo "## Cat9k Argo workflow"
+            echo ""
+            echo "Workflow: \`$WORKFLOW\`"
+            echo ""
+            echo "| Node | Template | Phase | Duration |"
+            echo "| :--- | :--- | :---: | :---: |"
+            jq -r '
+              def dur:
+                if (.startedAt and .finishedAt) then
+                  ((.finishedAt | fromdateiso8601) - (.startedAt | fromdateiso8601)) as $s
+                  | if $s < 60 then "\($s|floor)s" else "\(($s/60)|floor)m\(($s%60)|floor|tostring|if length == 1 then "0"+. else . end)s" end
+                else " -" end;
+              .status.nodes
+              | to_entries
+              | map(.value)
+              | map(select(.type == "Pod"))
+              | sort_by(.startedAt // "")
+              | .[]
+              | "| \(.displayName // .name) | \(.templateName // "-") | \(.phase // "-") | \(dur) |"
+            ' argo-workflow.json 2>/dev/null
+          } > argo-summary.md
+          cat argo-summary.md >> "$GITHUB_STEP_SUMMARY"
+          head -200 argo-logs.txt
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.argo.outputs.workflow != ''
+        with:
+          name: argo-evidence-cat9k
+          path: |
+            argo-workflow.json
+            argo-workflow.err
+            argo-logs.txt
+            argo-summary.md
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Post final status to PR
+        if: always() && inputs.upstream_sha != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          case "${{ job.status }}" in
+            success)   STATE=success; DESC="Lab CI Cat9k passed" ;;
+            failure)   STATE=failure; DESC="Lab CI Cat9k failed" ;;
+            *)         STATE=error;   DESC="Lab CI Cat9k ${{ job.status }}" ;;
+          esac
+          gh api -X POST "repos/${UPSTREAM_REPO}/statuses/${UPSTREAM_SHA}" \
+            -f state=$STATE \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            -f description="$DESC" \
+            -f context="lab-ci-next / cat9k" >/dev/null
+
+      - name: Upsert Lab CI report comment on PR
+        if: always() && inputs.upstream_sha != '' && inputs.upstream_pr != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORK_READ_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPSTREAM_REPO: ${{ inputs.upstream_repo || github.repository }}
+          UPSTREAM_SHA: ${{ inputs.upstream_sha }}
+          UPSTREAM_PR: ${{ inputs.upstream_pr }}
+          FORK_REPO: ${{ github.repository }}
+        run: python3 .github/scripts/post-pr-report.py

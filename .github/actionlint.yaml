@@ -1,0 +1,7 @@
+# Custom self-hosted runner labels used by the lab-ci-* workflows.
+# lab-cvk          — historical fork-registered runner (being retired)
+# lab-cvk-upstream — runner registered to this repo for cisco-open-native lab CI
+self-hosted-runner:
+  labels:
+    - lab-cvk
+    - lab-cvk-upstream
