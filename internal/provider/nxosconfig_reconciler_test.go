@@ -776,7 +776,11 @@ func TestNXOSConfigReconcilerFacadeIsSingletonAndForwardsTransport(t *testing.T)
 // keys are orphaned on the device.
 func TestNXOSConfigReconcilerRelinquishesOwnedKeysOnDelete(t *testing.T) {
 	scheme := newTestScheme(t)
-	raw := runtime.RawExtension{Raw: []byte(`{"vlan":{"vlans":[{"id":101,"name":"keep"}]}}`)}
+	// Include the map-shaped "system" family (no owned keys) alongside the
+	// list-shaped "vlan" family. Relinquish must prune only vlan; pushing
+	// system an empty-list desired would fail with "want map, got []" (caught
+	// on the live ubuntu17 nexus9300v-01).
+	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01"},"vlan":{"vlans":[{"id":101,"name":"keep"}]}}`)}
 	cr := &configv1alpha1.NXOSConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "leaf-config", Namespace: "network", Generation: 3,
@@ -784,7 +788,7 @@ func TestNXOSConfigReconcilerRelinquishesOwnedKeysOnDelete(t *testing.T) {
 		},
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:         configv1alpha1.DeviceRef{Name: "leaf-01"},
-			ManagedFamilies:   []string{"vlan"},
+			ManagedFamilies:   []string{"system", "vlan"},
 			ModelSource:       &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
 			Source:            configv1alpha1.ConfigurationSource{Inline: &raw},
 			PruneOnRelinquish: true,

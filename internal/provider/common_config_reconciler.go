@@ -717,10 +717,25 @@ func (r *CommonConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr cli
 	if r.RuntimeID != "" {
 		identity += "#" + r.RuntimeID
 	}
-	owned := make([]string, 0, len(spec.ManagedFamilies))
-	leaseBlocked := make([]string, 0, len(spec.ManagedFamilies))
+	// Only families that actually own atomic-replace list-keys can be
+	// relinquished. Map-shaped families (e.g. NX-OS "system") carry no owned
+	// keys; pushing them an empty-list desired makes the writer Diff fail
+	// ("want map, got []"). Restrict the prune set to families present in
+	// status.atomicReplaceOwnedKeys.
+	ownedKeys := status.AtomicReplaceOwnedKeys
+	candidates := make([]string, 0, len(ownedKeys))
+	for _, fam := range spec.ManagedFamilies {
+		if len(ownedKeys[fam]) > 0 {
+			candidates = append(candidates, fam)
+		}
+	}
+	if len(candidates) == 0 {
+		return nil
+	}
+	owned := make([]string, 0, len(candidates))
+	leaseBlocked := make([]string, 0, len(candidates))
 	if r.Leaser != nil {
-		for _, fam := range spec.ManagedFamilies {
+		for _, fam := range candidates {
 			res, err := r.Leaser.AcquireIfFree(ctx, r.DeviceName, fam, identity)
 			if err != nil {
 				r.releaseAcquiredFamilies(ctx, owned, identity)
@@ -733,7 +748,7 @@ func (r *CommonConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr cli
 			owned = append(owned, fam)
 		}
 	} else {
-		owned = append(owned, spec.ManagedFamilies...)
+		owned = append(owned, candidates...)
 	}
 	defer func() {
 		if r.Leaser != nil {
