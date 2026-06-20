@@ -597,6 +597,21 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(ctx context.Context, device *cisk
 			Namespace: device.Namespace,
 		},
 	}
+	// roleRef is immutable. An older release bound this name to the
+	// (cluster-wide) cisco-virtual-kubelet role; the RBAC split rebinds it to
+	// the namespaced cisco-virtual-kubelet-device role. CreateOrUpdate cannot
+	// change roleRef in place, so delete the stale binding first and let it be
+	// recreated with the new ref.
+	existingRB := &rbacv1.RoleBinding{}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(rb), existingRB); err == nil {
+		if existingRB.RoleRef.Name != vkDeviceClusterRole {
+			if err := r.Delete(ctx, existingRB); err != nil && !errors.IsNotFound(err) {
+				return fmt.Errorf("delete stale RoleBinding %s/%s: %w", rb.Namespace, rb.Name, err)
+			}
+		}
+	} else if !errors.IsNotFound(err) {
+		return fmt.Errorf("get RoleBinding %s/%s: %w", rb.Namespace, rb.Name, err)
+	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, rb, func() error {
 		rb.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
