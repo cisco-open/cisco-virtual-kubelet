@@ -277,7 +277,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	opts := []nodeutil.NodeOpt{
 		nodeutil.WithNodeConfig(nodeutil.NodeConfig{
 			Client:         clientset,
-			NodeSpec:       provider.GetInitialNodeSpec(effectiveNodeName, appCfg.Device.Address),
+			NodeSpec:       provider.GetInitialNodeSpec(effectiveNodeName, &appCfg.Device),
 			HTTPListenAddr: ":10250",
 			NumWorkers:     5,
 			TLSConfig:      tlsCfg,

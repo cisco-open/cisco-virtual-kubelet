@@ -19,11 +19,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/validation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/iosxebuilder"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
 	log "github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
@@ -71,6 +72,10 @@ func buildXEConfigDriverContext(
 		log.G(ctx).WithError(validationModeErr).Warn("config driver: disabling YANG validation")
 	}
 	out := &drivers.ConfigDriverContext{
+		PlatformName:          "iosxe",
+		ModelFormat:           configv1alpha1.NetAsCodeModelFormatIOSXE,
+		ConfigObject:          &configv1alpha1.IOSXEConfig{},
+		ConfigList:            &configv1alpha1.IOSXEConfigList{},
 		Transport:             t,
 		KeyRules:              iosxebuilder.KeyRulesForXE(),
 		SupportedYANGVersions: supported,

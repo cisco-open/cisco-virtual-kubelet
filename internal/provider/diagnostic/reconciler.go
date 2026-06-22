@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 )
 
 // Phase constants mirror the kubebuilder enum on
@@ -75,6 +75,12 @@ type Reconciler struct {
 	Recorder   record.EventRecorder
 	Scheme     *runtime.Scheme
 	DeviceName string
+	// DeviceNamespace is the namespace of the CiscoDevice this reconciler
+	// serves. deviceRef is same-namespace by contract, so a CR in another
+	// namespace must never be reconciled here even if the device name
+	// matches. Empty disables the filter (unit tests).
+	DeviceNamespace string
+	Platform        CommandPlatform
 
 	// TP is the per-device-pod's transport source. The diagnostic
 	// reconciler does not dial — it borrows the configdriver's live
@@ -87,10 +93,9 @@ type Reconciler struct {
 }
 
 // SetupWithManager registers the reconciler with controller-runtime.
-// The manager is namespaced to the device pod's namespace, so we
-// don't need a cross-namespace filter — every IOSXEDiagnostic the
-// manager observes is in scope. Targeting filter is on
-// spec.deviceRef.name == r.DeviceName, applied at reconcile time.
+// The per-device manager cache is cluster-wide, so the targeting filter
+// (spec.deviceRef.name == r.DeviceName AND cr.namespace == DeviceNamespace)
+// is applied at reconcile time to keep cross-namespace CRs out.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&configv1alpha1.IOSXEDiagnostic{}).
@@ -122,8 +127,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("get IOSXEDiagnostic: %w", err)
 	}
 
-	// Filter: ignore CRs targeting other devices.
-	if diag.Spec.DeviceRef.Name != r.DeviceName {
+	// Filter: ignore CRs targeting other devices, or living in another
+	// namespace (deviceRef is same-namespace by contract — a same-named
+	// device in a different namespace is a different device).
+	if diag.Spec.DeviceRef.Name != r.DeviceName ||
+		(r.DeviceNamespace != "" && diag.Namespace != r.DeviceNamespace) {
 		return reconcile.Result{}, nil
 	}
 
@@ -277,7 +285,7 @@ func (r *Reconciler) runBatch(
 	// validation; a user with create-IOSXEDiagnostic RBAC could
 	// bypass the kubectl plugin's denylist and submit configure-mode
 	// or destructive CLI through the same device credentials.
-	if err := ValidateCommands(diag.Spec.Commands); err != nil {
+	if err := ValidateCommandsForPlatform(r.Platform, diag.Spec.Commands); err != nil {
 		capture.TransportError = err.Error()
 		return capture
 	}

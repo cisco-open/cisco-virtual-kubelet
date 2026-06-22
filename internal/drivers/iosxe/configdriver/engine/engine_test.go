@@ -179,6 +179,12 @@ func TestReconcileInSyncWhenDiffEmpty(t *testing.T) {
 	if w.applies != 0 {
 		t.Fatalf("Apply called %d times on no-op", w.applies)
 	}
+	if r.PlannedOps != 0 || r.AppliedOps != 0 {
+		t.Fatalf("planned/applied=%d/%d, want 0/0", r.PlannedOps, r.AppliedOps)
+	}
+	if len(r.VerifiedFamilies) != 1 || r.VerifiedFamilies[0] != "vlan" || r.PostApplyObservedHash == "" {
+		t.Fatalf("verification summary missing: families=%v hash=%q", r.VerifiedFamilies, r.PostApplyObservedHash)
+	}
 }
 
 func TestReconcileStrictYANGValidationBlocksApply(t *testing.T) {
@@ -250,6 +256,12 @@ func TestReconcileAppliesAndVerifies(t *testing.T) {
 	if w.diffCalls != 2 {
 		t.Fatalf("Diff called %d times, want 2", w.diffCalls)
 	}
+	if r.PlannedOps != 1 || r.AppliedOps != 1 {
+		t.Fatalf("planned/applied=%d/%d, want 1/1", r.PlannedOps, r.AppliedOps)
+	}
+	if len(r.VerifiedFamilies) != 1 || r.VerifiedFamilies[0] != "vlan" || r.PostApplyObservedHash == "" {
+		t.Fatalf("verification summary missing: families=%v hash=%q", r.VerifiedFamilies, r.PostApplyObservedHash)
+	}
 }
 
 func TestReconcileReportPolicyDoesNotApply(t *testing.T) {
@@ -272,6 +284,12 @@ func TestReconcileReportPolicyDoesNotApply(t *testing.T) {
 	}
 	if w.applies != 0 {
 		t.Fatal("Apply called under report policy")
+	}
+	if r.PlannedOps != 1 || r.AppliedOps != 0 {
+		t.Fatalf("planned/applied=%d/%d, want 1/0", r.PlannedOps, r.AppliedOps)
+	}
+	if len(r.VerifiedFamilies) != 0 {
+		t.Fatalf("report mode should not verify post-apply; got %v", r.VerifiedFamilies)
 	}
 }
 
@@ -506,6 +524,12 @@ func TestReconcileResidualDriftAfterRevertFails(t *testing.T) {
 	}
 	if r.FamilyStatuses[0].State != "Drifted" {
 		t.Fatalf("FamilyStatus=%#v, want Drifted", r.FamilyStatuses[0])
+	}
+	if r.PlannedOps != 1 || r.AppliedOps != 1 {
+		t.Fatalf("planned/applied=%d/%d, want 1/1", r.PlannedOps, r.AppliedOps)
+	}
+	if len(r.VerifiedFamilies) != 1 || r.PostApplyObservedHash == "" {
+		t.Fatalf("verify summary missing after residual drift: families=%v hash=%q", r.VerifiedFamilies, r.PostApplyObservedHash)
 	}
 }
 

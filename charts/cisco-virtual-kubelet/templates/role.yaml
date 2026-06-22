@@ -102,6 +102,7 @@ rules:
   - iosxeconfigbundles/status
   - iosxeconfigrevisions/status
   - iosxeconfigs/status
+  - nxosconfigs/status
   verbs:
   - get
   - patch
@@ -134,6 +135,7 @@ rules:
   - iosxeconfigs
   - iosxetelemetries
   - iosxetelemetries/status
+  - nxosconfigs
   verbs:
   - create
   - delete
@@ -156,8 +158,20 @@ rules:
   - watch
 - apiGroups:
   - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
   resourceNames:
   - cisco-virtual-kubelet
+  - cisco-virtual-kubelet-device
   resources:
   - clusterroles
   verbs:
@@ -168,6 +182,7 @@ rules:
   - rolebindings
   verbs:
   - create
+  - delete
   - get
   - list
   - patch

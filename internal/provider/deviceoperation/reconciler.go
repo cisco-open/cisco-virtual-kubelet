@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
@@ -97,7 +97,11 @@ type Reconciler struct {
 	// execute it with device credentials. Empty disables the check (legacy
 	// single-tenant behaviour for tests that do not plumb the namespace).
 	DeviceNamespace string
-	TP              TransportProvider
+	// Platform selects the read-only command allowlist for CLI-backed
+	// operation kinds. Empty preserves the IOS-XE-compatible allowlist used by
+	// existing deployments.
+	Platform diagnostic.CommandPlatform
+	TP       TransportProvider
 
 	// GNOI is the optional per-device gNOI client provider. When nil,
 	// gNOI operation kinds fail fast with reason GNOIUnsupported.
@@ -203,7 +207,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	commands := plan.commands
 	span.SetAttributes(attribute.Int("cvk.operation.command_count", len(commands)))
 
-	if err := diagnostic.ValidateCommands(commands); err != nil {
+	if err := diagnostic.ValidateCommandsForPlatform(r.Platform, commands); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return reconcile.Result{}, r.finish(ctx, &op, opsv1alpha1.OperationPhaseFailed, err.Error(), nil, now)

@@ -7,10 +7,11 @@ controller boundary, and common operator workflow.
 ## CRDs At A Glance
 
 ```bash
-$ kubectl api-resources | grep -E 'cisco|iosxe|deviceoperations'
+$ kubectl api-resources | grep -E 'cisco|iosxe|nxos|deviceoperations'
 NAME                         SHORTNAMES      APIVERSION                  NAMESPACED   KIND
 ciscodevices                 cvk             cisco.vk/v1alpha1          true         CiscoDevice
 iosxeconfigs                 iosxecfg        config.cisco.vk/v1alpha1   true         IOSXEConfig
+nxosconfigs                  nxoscfg         config.cisco.vk/v1alpha1   true         NXOSConfig
 iosxeconfigdefaults          iosxedefaults   config.cisco.vk/v1alpha1   false        IOSXEConfigDefaults
 iosxedevicegroupconfigs      iosxegroup      config.cisco.vk/v1alpha1   true         IOSXEDeviceGroupConfig
 iosxeinterfacegroupconfigs   iosxeifgroup    config.cisco.vk/v1alpha1   true         IOSXEInterfaceGroupConfig
@@ -41,6 +42,7 @@ iosxesoftwareupgrades        xeupgrade       ops.cisco.vk/v1alpha1      true    
 | `IOSXEInterfaceGroupConfig` | Namespaced | **Beta** | Shared configuration for selected interfaces on selected devices. |
 | `IOSXETemplate` | Namespaced | **Beta** | Reusable parameterized configuration fragments. |
 | `IOSXEConfig` | Namespaced | **Beta** | Per-device Network as Code intent, drift detection, apply, and rollback. |
+| `NXOSConfig` | Namespaced | **Beta** | Per-device NX-OS Network as Code intent over NX-API REST/DME for `system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet`. |
 | `IOSXEConfigBundle` | Namespaced | **Beta** | Fans one config template out across selected devices. |
 | `IOSXEConfigRevision` | Namespaced | **Beta** | Immutable resolved-intent history used for rollback and audit. |
 | `IOSXEConfigApplyLog` | Namespaced | **Beta** | Per-apply audit entries with family and diff metadata. |
@@ -54,7 +56,7 @@ iosxesoftwareupgrades        xeupgrade       ops.cisco.vk/v1alpha1      true    
 
 `CiscoDevice` is the inventory and lifecycle root. The manager watches it,
 creates or updates a per-device VK deployment, and that VK registers a virtual
-node that can host Kubernetes pods through IOS-XE App Hosting.
+node that can host Kubernetes pods through device App-Hosting.
 
 Use it when you want Kubernetes to see a Cisco device as a schedulable node.
 Important fields include `spec.driver`, `spec.address`,
@@ -107,10 +109,12 @@ cat9300-4   Ready    agent   41m   v1.30.0-vk
     families, and drift-detection behaviour are still expanding.
     Evaluate in non-production environments before broader rollout.
 
-The configuration CRDs work together. Defaults, groups, interface groups,
+The IOS-XE configuration CRDs work together. Defaults, groups, interface groups,
 templates, and per-device source are resolved into canonical intent. The config
 driver plans the change, applies managed families, verifies drift, and records
-history.
+history. `NXOSConfig` uses the same common reconciliation contract for
+per-device NX-OS intent, but starts with a narrower family set over NX-API
+REST/DME.
 
 Typical flow:
 
@@ -125,6 +129,12 @@ IOSXEConfigDefaults
   -> RESTCONF, NETCONF, or gNMI transport
   -> IOS-XE running config
   -> status, revision, and apply log
+
+NXOSConfig
+  -> managed family writers
+  -> NX-API transport
+  -> NX-OS running config
+  -> status and verify result
 ```
 
 ### IOSXEConfigDefaults
@@ -322,6 +332,59 @@ Status:
   Result:      Applied
   Revision Ref:
     Name:  cat9300-4-network-v4
+```
+
+### NXOSConfig
+
+`NXOSConfig` is the per-device declarative configuration CRD for NX-OS. It uses
+the common config runtime, fetches observed state through NX-API, applies
+managed families, and verifies the post-apply state before reporting `InSync`.
+The first supported families are `system`, `feature`, `feature_set`, `vlan`,
+and `interface_ethernet`.
+The source can be either a direct resolved family map or a full `nxos:`
+NetAsCode envelope with `global`, `device_groups`, `devices`, model
+`templates`, `variables`, and `interface_groups`. Unsupported fields inside the
+implemented families fail closed at writer diff time.
+
+```yaml
+apiVersion: config.cisco.vk/v1alpha1
+kind: NXOSConfig
+metadata:
+  name: nexus9300v-network
+spec:
+  deviceRef:
+    name: nexus9300v-01
+  managedFamilies:
+    - system
+    - vlan
+  driftPolicy: report
+  modelSource:
+    format: netascode-nxos
+    resolved: true
+  source:
+    inline:
+      nxos:
+        devices:
+          - name: nexus9300v-01
+            configuration:
+              system:
+                hostname: nexus9300v-01
+              vlan:
+                vlans:
+                  - id: 3903
+                    name: CVK_LAB
+              interfaces:
+                ethernets:
+                  - id: 1/1
+                    description: CVK uplink
+                    shutdown: false
+                    mtu: 9216
+```
+
+```bash
+$ kubectl get nxoscfg
+NAME                  DEVICE          PHASE    DRIFT    AGE
+nexus9300v-network    nexus9300v-01   InSync   report   2m
 ```
 
 ### IOSXEConfigBundle, Revision, and ApplyLog

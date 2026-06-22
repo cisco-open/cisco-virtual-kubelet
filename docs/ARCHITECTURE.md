@@ -85,7 +85,12 @@ Implements `node.NodeProvider` for node registration, heartbeat, and status.
 - `NotifyNodeStatus(cb)` — fires the callback whenever node status changes (labels, annotations, capacity, conditions)
 - `ForceStatusUpdate()` — called after every pod lifecycle event so resource accounting stays fresh
 
-The node's `Labels` include standard topology (`topology.kubernetes.io/zone=cisco-iosxe`, `region=cisco-iosxe`) plus `type=virtual-kubelet`. Node **annotations** are populated dynamically on every status sync from the driver's `TopologyProvider` data — see [Observability → Node annotations](observability.md#node-annotations).
+The node's `Labels` include standard topology (`topology.kubernetes.io/zone` and
+`topology.kubernetes.io/region`) plus `type=virtual-kubelet`. The default
+topology label is platform-aware (`cisco-iosxe`, `cisco-nxos`, `cisco-iosxr`,
+or `openconfig`) and can be overridden per `CiscoDevice`. Node **annotations**
+are populated dynamically on every status sync from the driver's
+`TopologyProvider` data — see [Observability → Node annotations](observability.md#node-annotations).
 
 Conditions published:
 
@@ -101,8 +106,11 @@ func NewDriver(ctx, spec) (CiscoKubernetesDeviceDriver, error)
 Selects a driver based on `spec.Driver`:
 
 - `XE` → IOS-XE driver (production)
+- `NXOS` → NX-OS driver (NX-API CLI app-hosting and the initial NX-API
+  REST/DME Network as Code config slice: `system`, `vlan`,
+  `interface_ethernet`)
 - `FAKE` → mock driver for testing
-- `XR`, `NXOS`, `OPENCONFIG` → placeholders, currently unsupported
+- `XR`, `OPENCONFIG` → placeholders, currently unsupported
 
 ### Driver interfaces
 
@@ -188,6 +196,29 @@ controls it:
 This preserves NetAsCode as the stable public model while giving CVK a place to
 use release-specific ygot/ytypes validation as those generated model packages
 are added.
+
+### NX-OS Config Driver
+
+NX-OS uses the same common config runtime and status contract, but the
+device-facing boundary is NX-API REST/DME rather than YANG. The NX-OS adapter
+preserves the full NetAsCode `nxos:` envelope long enough to resolve
+`global`, `device_groups`, `devices`, model `templates`, `variables`, and
+`interface_groups`, then normalizes supported families into the writer contract.
+
+```text
+NXOSConfig source
+  -> NetAsCode envelope resolver
+  -> family writer
+  -> DME object payload
+  -> neutral REST helper
+  -> NX-API REST/DME transport
+  -> NX-OS device
+  -> common status and apply result
+```
+
+The same transport contract also exposes a read-only diagnostic execution path.
+For NX-OS that path intentionally uses NX-API CLI, while declarative
+configuration writes use NX-API REST/DME.
 
 ## Data flow
 

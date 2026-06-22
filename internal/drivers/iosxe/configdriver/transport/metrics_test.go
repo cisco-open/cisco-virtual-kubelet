@@ -27,14 +27,6 @@ import (
 // panic, because the apphosting + config-driver tests touch the
 // transport package without ever wiring a Prometheus registry.
 func TestRecordSubscribeDroppedNoOpWhenUnregistered(t *testing.T) {
-	// Force a fresh metric var by stashing/restoring the package
-	// global. We can't recreate the registration cleanly via
-	// metricsOnce (it's a sync.Once) so we exercise the nil-guard
-	// path explicitly.
-	saved := subscribeEventsDropped
-	subscribeEventsDropped = nil
-	defer func() { subscribeEventsDropped = saved }()
-
 	defer func() {
 		if r := recover(); r != nil {
 			t.Fatalf("recordSubscribeDropped panicked when metric was nil: %v", r)

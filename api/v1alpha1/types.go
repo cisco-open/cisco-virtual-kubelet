@@ -163,21 +163,26 @@ type DeviceSpec struct {
 	// +kubebuilder:default=false
 	AllowUnsignedApps bool `json:"allowUnsignedApps,omitempty" mapstructure:"allowUnsignedApps"`
 
-	// Transport selects the device channel used by the IOSXEConfig config
-	// driver. "restconf" is the default; "netconf" and "gnmi" select the
-	// corresponding transport implementations. Apphosting operations
-	// always use RESTCONF regardless of this field; it only affects
-	// declarative configuration.
+	// Transport selects the device channel used by declarative config
+	// drivers. IOS-XE defaults to RESTCONF and also supports NETCONF/gNMI.
+	// NX-OS declarative config uses NX-API REST/DME, selected with "rest";
+	// because this field has a historical global RESTCONF default, NX-OS treats
+	// an omitted/defaulted "restconf" value as REST/DME too. The legacy "nxapi"
+	// value remains accepted as an alias for existing manifests. Apphosting
+	// operations always use the platform apphosting transport regardless of
+	// this field.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=restconf;netconf;gnmi
+	// +kubebuilder:validation:Enum=rest;restconf;netconf;gnmi;nxapi
 	// +kubebuilder:default=restconf
 	Transport string `json:"transport,omitempty" mapstructure:"transport"`
 
 	// ConfigPrereqs declares the network configuration this device requires
 	// before pods can be hosted on it, for example a VirtualPortGroup
-	// interface, DHCP pool, or app egress ACL. When set, the controller
-	// materializes an owned IOSXEConfig whose managed families are limited to
-	// the apphosting prerequisite set.
+	// interface, DHCP pool, app egress ACL, or NX-OS apphosting prerequisite
+	// family. When set, the controller materializes the platform config CR
+	// described by the platform descriptor: IOS-XE keeps the legacy
+	// IOSXEConfig prereq family set, while NX-OS and future platforms derive
+	// managed families from the source payload unless explicitly supplied.
 	//
 	// The payload carries the same netascode-shaped YAML as
 	// IOSXEConfig.spec.source.inline. Operator-authored IOSXEConfig CRs may
@@ -205,9 +210,9 @@ type DeviceSpec struct {
 	// +kubebuilder:validation:Optional
 	// XR *XRConfig `json:"xr,omitempty" mapstructure:"xr,omitempty"`
 
-	// NXOS holds NX-OS specific networking configuration (future).
+	// NXOS holds NX-OS specific networking configuration.
 	// +kubebuilder:validation:Optional
-	// NXOS *NXOSConfig `json:"nxos,omitempty" mapstructure:"nxos,omitempty"`
+	NXOS *NXOSConfig `json:"nxos,omitempty" mapstructure:"nxos,omitempty"`
 }
 
 // OpsPolicy carries per-device DeviceOperation gates the CiscoDevice
@@ -229,12 +234,18 @@ type OpsPolicy struct {
 }
 
 // ConfigPrereqs is the inline netascode-shaped configuration block the
-// controller uses to auto-create an owned IOSXEConfig for a device. The
-// payload's top-level keys should be families in the apphosting-prerequisite
-// set; the controller-owned IOSXEConfig is scoped to that family set.
+// controller uses to auto-create an owned platform config CR for a device.
 type ConfigPrereqs struct {
+	// ManagedFamilies optionally overrides the platform prereq family policy.
+	// IOS-XE normally uses the legacy fixed apphosting prereq family set.
+	// NX-OS and future platforms derive this list from Configuration's
+	// top-level keys when it is omitted.
+	// +kubebuilder:validation:Optional
+	// +listType=set
+	ManagedFamilies []string `json:"managedFamilies,omitempty" mapstructure:"managedFamilies,omitempty"`
+
 	// Configuration is the netascode-shaped fragment. Same shape as
-	// IOSXEConfig.spec.source.inline.
+	// the target platform config CR's spec.source.inline.
 	//
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Schemaless
@@ -251,6 +262,121 @@ type DeviceStatus struct {
 	// Conditions represent the latest available observations of the device's state.
 	// +kubebuilder:validation:Optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// WorkerTopology records where device-local work is currently executed.
+	// The production default is PerDevice: one horizontally scheduled CVK
+	// worker owns apphosting, config, telemetry, diagnostics, and lifecycle
+	// actions for this device. Aggregated is reserved for opt-in manager-side
+	// config aggregation and must not be assumed by future orchestrators.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=PerDevice;Aggregated;None
+	WorkerTopology WorkerTopology `json:"workerTopology,omitempty"`
+
+	// WorkerCapabilities is a bounded summary of the runtimes the current
+	// topology exposes for this device. It gives later topology-aware
+	// orchestrators a stable read surface without moving execution out of
+	// per-device workers.
+	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
+	WorkerCapabilities []WorkerCapabilityStatus `json:"workerCapabilities,omitempty"`
+
+	// NetAsCode records the Network as Code model stripe this device should
+	// align with. It is descriptive status: the platform-specific config CRDs
+	// remain the source of desired intent.
+	// +kubebuilder:validation:Optional
+	NetAsCode *NetAsCodeModelStatus `json:"netAsCode,omitempty"`
+}
+
+// WorkerTopology identifies the execution placement for per-device work.
+type WorkerTopology string
+
+const (
+	// WorkerTopologyPerDevice means a per-device CVK worker Deployment owns
+	// the device-local execution loops.
+	WorkerTopologyPerDevice WorkerTopology = "PerDevice"
+	// WorkerTopologyAggregated means the manager-side config aggregator owns
+	// config reconciliation for this device.
+	WorkerTopologyAggregated WorkerTopology = "Aggregated"
+	// WorkerTopologyNone means no CVK execution worker is active.
+	WorkerTopologyNone WorkerTopology = "None"
+)
+
+// WorkerCapabilityName is a stable, low-cardinality worker runtime name.
+type WorkerCapabilityName string
+
+const (
+	WorkerCapabilityAppHosting  WorkerCapabilityName = "apphosting"
+	WorkerCapabilityConfig      WorkerCapabilityName = "config"
+	WorkerCapabilityTelemetry   WorkerCapabilityName = "telemetry"
+	WorkerCapabilityDiagnostics WorkerCapabilityName = "diagnostics"
+	WorkerCapabilityOperations  WorkerCapabilityName = "operations"
+	WorkerCapabilityLifecycle   WorkerCapabilityName = "lifecycle"
+)
+
+// WorkerRuntime records the runtime that owns a capability.
+type WorkerRuntime string
+
+const (
+	WorkerRuntimePerDeviceWorker WorkerRuntime = "per-device-worker"
+	WorkerRuntimeAggregator      WorkerRuntime = "manager-aggregator"
+)
+
+// WorkerCapabilityStatus reports whether a device capability is active in
+// the current execution topology.
+type WorkerCapabilityStatus struct {
+	// Name is the stable capability key.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=apphosting;config;telemetry;diagnostics;operations;lifecycle
+	Name WorkerCapabilityName `json:"name"`
+
+	// Enabled is true when the current topology exposes this capability.
+	// +kubebuilder:validation:Required
+	Enabled bool `json:"enabled"`
+
+	// Runtime names the process topology that owns the capability.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=per-device-worker;manager-aggregator
+	Runtime WorkerRuntime `json:"runtime,omitempty"`
+
+	// Message is a short human-readable explanation for disabled or shifted
+	// capabilities.
+	// +kubebuilder:validation:Optional
+	Message string `json:"message,omitempty"`
+}
+
+// NetAsCodeModelType mirrors Network as Code's model categories: controller,
+// device, and solution centric.
+type NetAsCodeModelType string
+
+const (
+	NetAsCodeModelControllerCentric NetAsCodeModelType = "ControllerCentric"
+	NetAsCodeModelDeviceCentric     NetAsCodeModelType = "DeviceCentric"
+	NetAsCodeModelSolutionCentric   NetAsCodeModelType = "SolutionCentric"
+)
+
+// NetAsCodeModelStatus describes the Network as Code stripe aligned with a
+// platform. Keep this summary small; detailed family coverage belongs in the
+// platform config CRD and writer registry.
+type NetAsCodeModelStatus struct {
+	// Type is the Network as Code model category.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=ControllerCentric;DeviceCentric;SolutionCentric
+	Type NetAsCodeModelType `json:"type,omitempty"`
+
+	// Format is the platform model format string used by config CRDs, for
+	// example netascode-iosxe or netascode-nxos.
+	// +kubebuilder:validation:Optional
+	Format string `json:"format,omitempty"`
+
+	// Stripe is the technology stripe, for example iosxe, nxos, ise, or fmc.
+	// +kubebuilder:validation:Optional
+	Stripe string `json:"stripe,omitempty"`
+
+	// Sections names the high-level NetAsCode sections used for this stripe.
+	// +kubebuilder:validation:Optional
+	// +listType=set
+	Sections []string `json:"sections,omitempty"`
 }
 
 // TLSConfig represents TLS configuration for device communication.

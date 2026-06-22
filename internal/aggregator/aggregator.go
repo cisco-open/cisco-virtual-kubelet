@@ -97,6 +97,8 @@ type deviceWorker struct {
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=nxosconfigs,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=nxosconfigs/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigdefaults,verbs=get;list;watch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxedevicegroupconfigs,verbs=get;list;watch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeinterfacegroupconfigs,verbs=get;list;watch
@@ -240,6 +242,9 @@ func aggregatedReconcileResultAttribute(result ctrl.Result) string {
 // spins a `provider.ConfigReconciler.Run` goroutine bound to a
 // per-device context derived from rootCtx.
 func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, hash string) error {
+	if dev.Spec.Driver == ciskov1.DeviceDriverNXOS {
+		return r.startNXOSWorker(dev, password, hash)
+	}
 	dctx, err := drivers.NewConfigDriver(r.rootCtx, &dev.Spec, password, drivers.ConfigDriverOptions{})
 	if err != nil && (dctx == nil || dctx.Transport == nil) {
 		return fmt.Errorf("config driver context: %w", err)
@@ -276,6 +281,11 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 	rec := &provider.ConfigReconciler{
 		Client:                r.Client,
 		DeviceName:            dev.Name,
+		// DeviceNamespace scopes reconciliation to this device's namespace;
+		// deviceRef is same-namespace by contract, so without it the worker
+		// would reconcile IOSXEConfig objects from other namespaces whose
+		// deviceRef.name matches and push their intent to this device.
+		DeviceNamespace:       dev.Namespace,
 		Transport:             dctx.Transport,
 		DeviceVersion:         dctx.DeviceVersion,
 		FetchDeviceVersion:    dctx.FetchDeviceVersion,

@@ -35,11 +35,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/intent"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/validation"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 	"go.opentelemetry.io/otel"
@@ -78,6 +78,14 @@ type ConfigReconciler struct {
 
 	// DeviceName is the CiscoDevice this cisco-vk run owns.
 	DeviceName string
+
+	// DeviceNamespace is the namespace of the CiscoDevice this run owns.
+	// IOSXEConfig.spec.deviceRef is same-namespace by contract, so the
+	// reconciler must only list and act on CRs in this namespace; otherwise
+	// a per-device worker could reconcile another namespace's config for a
+	// same-named device. Empty disables the filter (unit tests / legacy
+	// single-namespace topologies).
+	DeviceNamespace string
 
 	// Transport is the device channel used by the engine. Nil is allowed
 	// in Phase 0/1 scaffolds where no transport has been constructed
@@ -404,7 +412,11 @@ func (r *ConfigReconciler) Run(ctx context.Context) error {
 			return ctx.Err()
 		case <-ticker.C:
 			runTick(triggerPoll)
-		case <-notify:
+		case _, ok := <-notify:
+			if !ok {
+				notify = nil
+				continue
+			}
 			logger.Debug("subscribe-notify fired; running off-cycle reconcile")
 			runTick(triggerSubscribe)
 		}
@@ -453,6 +465,17 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, 
 	}
 
 	for _, cr := range forDevice {
+		proceed, _, err := r.prepareConfigForReconcile(ctx, cr)
+		if err != nil {
+			logger.WithError(err).
+				WithField("name", cr.Name).
+				WithField("namespace", cr.Namespace).
+				Warn("IOSXEConfig lifecycle failed")
+			continue
+		}
+		if !proceed {
+			continue
+		}
 		// Polling-path callers don't need the engine.Result; controller-
 		// runtime's Reconcile uses it to derive a phase-aware
 		// RequeueAfter and span attributes. Discarded here.
@@ -741,7 +764,16 @@ func (r *ConfigReconciler) reconcileOne(
 	}
 	recordErr := r.recordResult(ctx, cr, result, h, conflicts, resolved, rollbackTarget)
 	r.patchTraceAnnotations(ctx, cr, result.Phase, time.Since(tickStart))
-	return result, recordErr
+	if recordErr != nil {
+		return result, recordErr
+	}
+	if result.Phase == engine.PhaseFailed && result.Err != nil {
+		if logger != nil {
+			logger.WithError(result.Err).Warn("IOSXEConfig engine failed")
+		}
+		return result, result.Err
+	}
+	return result, nil
 }
 
 // acquireLeases filters resolved.ManagedFamilies to the ones this CR

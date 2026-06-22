@@ -60,6 +60,18 @@
         "vkName":         { "type": "string", "minLength": 1 }
       }
     },
+    "rbac": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile"],
+      "properties": {
+        "profile": {
+          "type": "string",
+          "enum": ["default", "strict"],
+          "description": "default preserves the historical VK role; strict trims reserved/high-risk permissions unless their runtime gates are enabled."
+        }
+      }
+    },
     "controller": {
       "type": "object",
       "additionalProperties": false,

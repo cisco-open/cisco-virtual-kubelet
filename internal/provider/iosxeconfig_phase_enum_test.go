@@ -32,7 +32,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 )
 
 // statusBoundPhases enumerates the engine phase constants that may

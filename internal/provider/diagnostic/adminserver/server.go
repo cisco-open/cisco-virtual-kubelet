@@ -35,7 +35,7 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,6 +92,10 @@ type ExecResult struct {
 type Server struct {
 	DeviceName string
 	TP         TransportProvider
+	// Platform selects the read-only CLI allowlist for /v1/exec and the
+	// transient DeviceOperation it creates. Empty preserves the existing
+	// IOS-XE-compatible behavior.
+	Platform diagnostic.CommandPlatform
 
 	// OperationClient, when set, makes POST /v1/exec synthesize a transient
 	// DeviceOperation CR and poll its status instead of invoking DiagnosticExec
@@ -232,7 +236,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	// admin port (port-forward, in-cluster operator) would bypass
 	// it. ValidateCommands rejects every non-read-only command
 	// before it reaches the device.
-	if err := diagnostic.ValidateCommands(req.Commands); err != nil {
+	if err := diagnostic.ValidateCommandsForPlatform(s.Platform, req.Commands); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

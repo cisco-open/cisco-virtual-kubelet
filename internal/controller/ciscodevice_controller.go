@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -41,6 +42,8 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/platforms"
+	configprovider "github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
 )
 
@@ -176,17 +179,26 @@ type CiscoDeviceReconciler struct {
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;delete
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs/status,verbs=get
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=nxosconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=nxosconfigs/status,verbs=get
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxetelemetries,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxetelemetries/status,verbs=get;list;watch;create;update;patch;delete
 // The controller spawns per-device cisco-vk Deployments in the device's
 // namespace and references a shared ServiceAccount. The chart only seeds that
 // ServiceAccount in the release namespace, so tenant namespaces need their own
-// local ServiceAccount and RoleBinding to the chart-supplied ClusterRole.
+// local ServiceAccount plus bindings to the chart-supplied ClusterRole.
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
+// The controller manages its own per-device ClusterRoleBindings named by
+// vkAccessClusterRoleBindingName; resourceNames pinning is infeasible because
+// those names are derived dynamically from each device namespace and SA. The
+// manager's cached client reads ClusterRoleBindings (CreateOrUpdate Get), which
+// starts a cluster-wide informer, so list+watch are required; only patch is
+// unused (CreateOrUpdate uses Update, not Patch).
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;update;delete
 // Required by the API server's privilege-escalation check when binding the
 // chart-supplied ClusterRole into a tenant namespace.
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet,verbs=bind
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet;cisco-virtual-kubelet-device,verbs=bind
 
 // Reconcile ensures a ConfigMap and Deployment exist for each CiscoDevice.
 func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, retErr error) {
@@ -230,6 +242,9 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			}
 
 			if err := r.deleteNode(ctx, device.Name); err != nil {
+				return ctrl.Result{}, err
+			}
+			if err := r.cleanupVKClusterAccess(ctx, &device, r.vkServiceAccountName()); err != nil {
 				return ctrl.Result{}, err
 			}
 			controllerutil.RemoveFinalizer(&device, ciscoDeviceFinalizer)
@@ -365,10 +380,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// -- 5b. Ensure VK SA + RoleBinding exist in the device's namespace --
-	serviceAccount := r.ServiceAccount
-	if serviceAccount == "" {
-		serviceAccount = DefaultServiceAccount
-	}
+	serviceAccount := r.vkServiceAccountName()
 	if err := r.ensureVKAccess(ctx, &device, serviceAccount); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure VK access: %w", err)
 	}
@@ -535,14 +547,40 @@ func reconcileResultAttribute(result ctrl.Result) string {
 }
 
 // vkSharedClusterRole is the cluster-scoped Role the chart ships with the VK
-// pod permissions baked in. The controller binds it into the device namespace
-// so per-device cisco-vk pods can run outside the chart release namespace.
+// pod's cluster-wide permissions (node, pod-hosting, leases, CiscoDevice
+// watch). The controller binds it cluster-wide for per-device cisco-vk pods.
 const vkSharedClusterRole = "cisco-virtual-kubelet"
 
-// ensureVKAccess provisions the per-namespace bits the chart cannot: a
-// ServiceAccount and a RoleBinding to the chart-supplied ClusterRole. Both
-// objects are owned by the CiscoDevice so removing the device garbage-collects
-// them.
+// vkDeviceClusterRole holds the config-management CRD permissions
+// (config.cisco.vk / ops.cisco.vk). It is bound with a namespaced
+// RoleBinding ONLY — never cluster-wide — so a per-device pod cannot read or
+// write another tenant namespace's config CRs.
+const vkDeviceClusterRole = vkSharedClusterRole + "-device"
+
+func (r *CiscoDeviceReconciler) vkServiceAccountName() string {
+	if r.ServiceAccount != "" {
+		return r.ServiceAccount
+	}
+	return DefaultServiceAccount
+}
+
+func vkAccessClusterRoleBindingName(namespace, saName string) string {
+	raw := namespace + "-" + saName
+	suffix := "-" + shortHash(raw)
+	const prefix = "cisco-vk-"
+	maxRaw := 253 - len(prefix) - len(suffix)
+	if len(raw) > maxRaw {
+		raw = strings.TrimRight(raw[:maxRaw], "-")
+	}
+	return prefix + raw + suffix
+}
+
+// ensureVKAccess provisions the access bits the chart cannot: a ServiceAccount
+// in the device namespace, a namespaced RoleBinding to the config-management
+// role (vkDeviceClusterRole — so config CRD access is scoped to THIS device's
+// namespace, never cluster-wide), and a ClusterRoleBinding to the
+// cluster-scoped role (vkSharedClusterRole — Nodes, pod hosting, Leases, and
+// the CiscoDevice cluster watch).
 func (r *CiscoDeviceReconciler) ensureVKAccess(ctx context.Context, device *ciskov1.CiscoDevice, saName string) error {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -551,9 +589,6 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(ctx context.Context, device *cisk
 		},
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, sa, func() error {
-		if len(sa.OwnerReferences) == 0 {
-			return controllerutil.SetControllerReference(device, sa, r.Scheme)
-		}
 		return nil
 	}); err != nil {
 		return fmt.Errorf("ServiceAccount %s/%s: %w", sa.Namespace, sa.Name, err)
@@ -565,28 +600,96 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(ctx context.Context, device *cisk
 			Namespace: device.Namespace,
 		},
 	}
+	// roleRef is immutable. An older release bound this name to the
+	// (cluster-wide) cisco-virtual-kubelet role; the RBAC split rebinds it to
+	// the namespaced cisco-virtual-kubelet-device role. CreateOrUpdate cannot
+	// change roleRef in place, so delete the stale binding first and let it be
+	// recreated with the new ref.
+	existingRB := &rbacv1.RoleBinding{}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(rb), existingRB); err == nil {
+		if existingRB.RoleRef.Name != vkDeviceClusterRole {
+			if err := r.Delete(ctx, existingRB); err != nil && !errors.IsNotFound(err) {
+				return fmt.Errorf("delete stale RoleBinding %s/%s: %w", rb.Namespace, rb.Name, err)
+			}
+		}
+	} else if !errors.IsNotFound(err) {
+		return fmt.Errorf("get RoleBinding %s/%s: %w", rb.Namespace, rb.Name, err)
+	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, rb, func() error {
 		rb.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     vkSharedClusterRole,
+			Name:     vkDeviceClusterRole,
 		}
 		rb.Subjects = []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
 			Name:      saName,
 			Namespace: device.Namespace,
 		}}
-		if len(rb.OwnerReferences) == 0 {
-			return controllerutil.SetControllerReference(device, rb, r.Scheme)
-		}
 		return nil
 	}); err != nil {
 		return fmt.Errorf("RoleBinding %s/%s: %w", rb.Namespace, rb.Name, err)
 	}
+
+	crbName := vkAccessClusterRoleBindingName(device.Namespace, saName)
+	crb := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: crbName},
+	}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, crb, func() error {
+		crb.RoleRef = rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     vkSharedClusterRole,
+		}
+		crb.Subjects = []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      saName,
+			Namespace: device.Namespace,
+		}}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("ClusterRoleBinding %s: %w", crbName, err)
+	}
 	return nil
 }
 
-// apphostingPrereqFamilies is the closed set of IOSXEConfig families the
+func (r *CiscoDeviceReconciler) cleanupVKClusterAccess(ctx context.Context, device *ciskov1.CiscoDevice, saName string) error {
+	var devices ciskov1.CiscoDeviceList
+	if err := r.List(ctx, &devices, client.InNamespace(device.Namespace)); err != nil {
+		return fmt.Errorf("list CiscoDevices for VK access cleanup: %w", err)
+	}
+	for i := range devices.Items {
+		other := &devices.Items[i]
+		if other.Name == device.Name || !other.DeletionTimestamp.IsZero() {
+			continue
+		}
+		return nil
+	}
+	crbName := vkAccessClusterRoleBindingName(device.Namespace, saName)
+	crb := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crbName}}
+	if err := r.Delete(ctx, crb); err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("delete ClusterRoleBinding %s: %w", crbName, err)
+	}
+	rb := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      saName,
+			Namespace: device.Namespace,
+		},
+	}
+	if err := r.Delete(ctx, rb); err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("delete RoleBinding %s/%s: %w", rb.Namespace, rb.Name, err)
+	}
+	// The shared ServiceAccount is intentionally NOT deleted. It is the identity
+	// the VK pods mount; deleting and recreating it invalidates the projected
+	// token of any running VK pod (Unauthorized), and the controller is not
+	// granted delete on serviceaccounts. Removing its ownerReferences (in
+	// ensureVKAccess) already prevents it being garbage-collected with a single
+	// device; a permission-less SA left after the last device is harmless and is
+	// re-bound by ensureVKAccess when a new device appears.
+	return nil
+}
+
+// apphostingPrereqFamilies is the legacy closed IOS-XE family set the
 // controller owns for CiscoDevice.spec.configPrereqs.
 var apphostingPrereqFamilies = []string{
 	"interface_virtual_port_group",
@@ -594,12 +697,23 @@ var apphostingPrereqFamilies = []string{
 	"access_list_extended",
 }
 
-func ownedIOSXEConfigName(deviceName string) string {
+func ownedPrereqConfigName(deviceName string) string {
 	return deviceName + "-prereqs"
+}
+
+func ownedIOSXEConfigName(deviceName string) string {
+	return ownedPrereqConfigName(deviceName)
 }
 
 func emptyPrereqInline() runtime.RawExtension {
 	return runtime.RawExtension{Raw: []byte(`{"interface_virtual_port_group":{},"dhcp":{},"access_list_extended":{}}`)}
+}
+
+func emptyPrereqInlineFor(policy platforms.ConfigPrereqPolicy) runtime.RawExtension {
+	if strings.TrimSpace(policy.EmptyIntentJSON) == "" {
+		return runtime.RawExtension{Raw: []byte(`{}`)}
+	}
+	return runtime.RawExtension{Raw: []byte(policy.EmptyIntentJSON)}
 }
 
 func perDeviceDeploymentLabels(deviceName string) map[string]string {
@@ -734,36 +848,36 @@ func matchesPerDeviceLabels(labels map[string]string, deviceName string) bool {
 	return true
 }
 
-func isPrereqTearingDown(cr *configv1alpha1.IOSXEConfig) bool {
-	return cr.Spec.PruneOnRelinquish &&
-		cr.Spec.Source.Inline != nil &&
-		string(cr.Spec.Source.Inline.Raw) == string(emptyPrereqInline().Raw)
+func isPrereqTearingDown(cr client.Object) bool {
+	policy := prereqPolicyForKind(prereqConfigKind(cr))
+	return getPrereqPrune(cr) &&
+		getPrereqSourceInline(cr) != nil &&
+		string(getPrereqSourceInline(cr).Raw) == string(emptyPrereqInlineFor(policy).Raw)
 }
 
-// reconcileConfigPrereqs creates, updates, or tears down the IOSXEConfig CR
+// reconcileConfigPrereqs creates, updates, or tears down the platform config CR
 // owned by CiscoDevice.spec.configPrereqs. Teardown delegates cleanup to the
-// IOSXEConfig controller's own pruneOnRelinquish finalizer: mark the owned CR
-// for relinquish, delete it with foreground propagation, observe it enter
+// platform config controller's own pruneOnRelinquish finalizer: mark the owned
+// CR for relinquish, delete it with foreground propagation, observe it enter
 // deletion, then wait for it to vanish.
 func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, device *ciskov1.CiscoDevice) (bool, error) {
-	name := ownedIOSXEConfigName(device.Name)
+	policy := prereqPolicyForDevice(device)
+	name := ownedPrereqConfigName(device.Name)
 	key := types.NamespacedName{Namespace: device.Namespace, Name: name}
 
-	var existing configv1alpha1.IOSXEConfig
-	getErr := r.Get(ctx, key, &existing)
-	found := getErr == nil
-	if getErr != nil && !errors.IsNotFound(getErr) {
-		return false, fmt.Errorf("get owned IOSXEConfig: %w", getErr)
+	existing, found, err := r.getOwnedPrereqConfig(ctx, key, policy.Kind)
+	if err != nil {
+		return false, err
 	}
 
 	if device.Spec.ConfigPrereqs == nil {
 		if device.Annotations[ForcePrereqsSkipAnnotation] == "true" {
 			if found {
-				if err := r.forceSkipOwnedPrereqs(ctx, &existing); err != nil {
+				if err := r.forceSkipOwnedPrereqs(ctx, existing); err != nil {
 					return false, err
 				}
 			}
-			r.emitPrereqsSkipped(device, prereqOrphanFamilies(&existing, found))
+			r.emitPrereqsSkipped(device, prereqOrphanFamilies(existing, found, policy))
 			return true, nil
 		}
 		if !found {
@@ -773,70 +887,87 @@ func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, devi
 			if prereqTeardownStarted(device) {
 				if r.Recorder != nil {
 					r.Recorder.Eventf(device, corev1.EventTypeWarning, "PrereqTeardownDeletedExternally",
-						"owned IOSXEConfig %s/%s disappeared before deletion was observed; recreating empty intent to drive pruneOnRelinquish cleanup",
-						device.Namespace, name)
+						"owned %s %s/%s disappeared before deletion was observed; evaluating cleanup recovery",
+						policy.Kind, device.Namespace, name)
 				}
-				if err := r.recreatePrereqTeardownIOSXEConfig(ctx, device); err != nil {
+				if !canRecreatePrereqTeardownConfig(policy) {
+					if r.Recorder != nil {
+						r.Recorder.Eventf(device, corev1.EventTypeWarning, "PrereqTeardownSkipped",
+							"owned %s %s/%s disappeared before deletion was observed and cannot be safely recreated without prior ownership status; device-side cleanup may be orphaned",
+							policy.Kind, device.Namespace, name)
+					}
+					if err := r.setCiscoDeviceCondition(ctx, device, metav1.Condition{
+						Type:               ciskov1.CiscoDeviceConditionPrereqTeardownObserved,
+						Status:             metav1.ConditionTrue,
+						Reason:             fmt.Sprintf("%sDeletedExternally", policy.Kind),
+						ObservedGeneration: device.Generation,
+						Message:            fmt.Sprintf("owned prereq %s disappeared before deletion was observed; cleanup skipped because prior ownership status is unavailable", policy.Kind),
+					}); err != nil {
+						return false, err
+					}
+					return true, nil
+				}
+				if err := r.recreatePrereqTeardownConfig(ctx, device, policy); err != nil {
 					return false, err
 				}
 				return false, nil
 			}
 			return true, nil
 		}
-		if !existing.DeletionTimestamp.IsZero() {
+		if deletionTimestamp := existing.GetDeletionTimestamp(); deletionTimestamp != nil && !deletionTimestamp.IsZero() {
 			if err := r.setCiscoDeviceCondition(ctx, device, metav1.Condition{
 				Type:               ciskov1.CiscoDeviceConditionPrereqTeardownObserved,
 				Status:             metav1.ConditionTrue,
-				Reason:             "IOSXEConfigDeleting",
+				Reason:             fmt.Sprintf("%sDeleting", prereqConfigKind(existing)),
 				ObservedGeneration: device.Generation,
-				Message:            "owned prereq IOSXEConfig deletion has been observed",
+				Message:            fmt.Sprintf("owned prereq %s deletion has been observed", prereqConfigKind(existing)),
 			}); err != nil {
 				return false, err
 			}
 			return false, nil
 		}
-		updated, err := r.patchOwnedPrereqsForTeardown(ctx, &existing, false)
+		updated, err := r.patchOwnedPrereqsForTeardown(ctx, existing, false)
 		if err != nil {
 			return false, err
 		}
 		fg := metav1.DeletePropagationForeground
 		if err := r.Delete(ctx, updated, &client.DeleteOptions{PropagationPolicy: &fg}); err != nil && !errors.IsNotFound(err) {
-			return false, fmt.Errorf("delete owned IOSXEConfig for prereq teardown: %w", err)
+			return false, fmt.Errorf("delete owned %s for prereq teardown: %w", prereqConfigKind(updated), err)
 		}
-		log.FromContext(ctx).Info("configPrereqs teardown: delete requested", "iosxeconfig", name)
+		log.FromContext(ctx).Info("configPrereqs teardown: delete requested", "configKind", prereqConfigKind(updated), "config", name)
 		return false, nil
 	}
 
-	desired := &configv1alpha1.IOSXEConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: device.Namespace},
+	families, err := desiredPrereqFamilies(device.Name, device.Spec.ConfigPrereqs, policy)
+	if err != nil {
+		return false, err
+	}
+	if len(families) == 0 {
+		return false, fmt.Errorf("configPrereqs for %s produced no managed families", device.Name)
+	}
+	desired, err := newPrereqConfigObject(policy.Kind, key)
+	if err != nil {
+		return false, err
 	}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, desired, func() error {
-		desired.Spec = configv1alpha1.IOSXEConfigSpec{
-			DeviceRef: configv1alpha1.DeviceRef{Name: device.Name},
-			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
-				ManagedFamilies: append([]string(nil), apphostingPrereqFamilies...),
-				Source: configv1alpha1.ConfigurationSource{
-					Inline: &device.Spec.ConfigPrereqs.Configuration,
-				},
-				DriftPolicy:       configv1alpha1.DriftPolicyRevert,
-				PruneOnRelinquish: false,
-			},
+		if err := setPrereqConfigSpec(desired, device.Name, families, &device.Spec.ConfigPrereqs.Configuration, false); err != nil {
+			return err
 		}
 		return controllerutil.SetControllerReference(device, desired, r.Scheme)
 	})
 	if err != nil {
-		return false, fmt.Errorf("upsert owned IOSXEConfig: %w", err)
+		return false, fmt.Errorf("upsert owned %s: %w", prereqConfigKind(desired), err)
 	}
 	if err := r.setCiscoDeviceCondition(ctx, device, metav1.Condition{
 		Type:               ciskov1.CiscoDeviceConditionPrereqTeardownObserved,
 		Status:             metav1.ConditionFalse,
 		Reason:             "PrereqsActive",
 		ObservedGeneration: device.Generation,
-		Message:            "owned prereq IOSXEConfig is active",
+		Message:            fmt.Sprintf("owned prereq %s is active", prereqConfigKind(desired)),
 	}); err != nil {
 		return false, err
 	}
-	log.FromContext(ctx).Info("configPrereqs reconciled", "iosxeconfig", name, "operation", op)
+	log.FromContext(ctx).Info("configPrereqs reconciled", "configKind", prereqConfigKind(desired), "config", name, "operation", op)
 	return true, nil
 }
 
@@ -847,6 +978,7 @@ func (r *CiscoDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&configv1alpha1.IOSXEConfig{}).
+		Owns(&configv1alpha1.NXOSConfig{}).
 		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.mapSecretToCiscoDevices)).
 		Complete(r)
 }
@@ -1179,81 +1311,349 @@ func prereqTeardownStarted(device *ciskov1.CiscoDevice) bool {
 	return meta.FindStatusCondition(device.Status.Conditions, ciskov1.CiscoDeviceConditionPrereqTeardownObserved) != nil
 }
 
+func prereqPolicyForDevice(device *ciskov1.CiscoDevice) platforms.ConfigPrereqPolicy {
+	if descriptor, ok := platforms.ForDriver(device.Spec.Driver); ok && descriptor.ConfigPrereqs.Kind != "" {
+		return descriptor.ConfigPrereqs
+	}
+	return platforms.ConfigPrereqPolicy{
+		Kind:                 platforms.ConfigKindIOSXE,
+		FixedManagedFamilies: append([]string(nil), apphostingPrereqFamilies...),
+		EmptyIntentJSON:      string(emptyPrereqInline().Raw),
+	}
+}
+
+func prereqPolicyForKind(kind platforms.ConfigKind) platforms.ConfigPrereqPolicy {
+	for _, driver := range platforms.KnownDrivers() {
+		descriptor, ok := platforms.ForDriver(driver)
+		if ok && descriptor.ConfigPrereqs.Kind == kind {
+			return descriptor.ConfigPrereqs
+		}
+	}
+	return platforms.ConfigPrereqPolicy{Kind: kind, EmptyIntentJSON: `{}`}
+}
+
+func desiredPrereqFamilies(deviceName string, prereqs *ciskov1.ConfigPrereqs, policy platforms.ConfigPrereqPolicy) ([]string, error) {
+	var families []string
+	if prereqs == nil {
+		families = dedupeNonEmpty(policy.FixedManagedFamilies)
+		return validatePrereqManagedFamilies(families, policy)
+	}
+	if len(prereqs.ManagedFamilies) > 0 {
+		families = dedupeNonEmpty(prereqs.ManagedFamilies)
+		return validatePrereqManagedFamilies(families, policy)
+	}
+	if len(policy.FixedManagedFamilies) > 0 {
+		families = dedupeNonEmpty(policy.FixedManagedFamilies)
+		return validatePrereqManagedFamilies(families, policy)
+	}
+	if policy.DeriveManagedFamiliesFromSource {
+		var err error
+		families, err = deriveManagedFamiliesFromSource(deviceName, prereqs.Configuration.Raw, policy)
+		if err != nil {
+			return nil, err
+		}
+		return validatePrereqManagedFamilies(families, policy)
+	}
+	return nil, nil
+}
+
+func validatePrereqManagedFamilies(families []string, policy platforms.ConfigPrereqPolicy) ([]string, error) {
+	if len(policy.SupportedManagedFamilies) == 0 {
+		return families, nil
+	}
+	supported := make(map[string]struct{}, len(policy.SupportedManagedFamilies))
+	for _, family := range policy.SupportedManagedFamilies {
+		supported[family] = struct{}{}
+	}
+	unsupported := make([]string, 0)
+	for _, family := range families {
+		if _, ok := supported[family]; !ok {
+			unsupported = append(unsupported, family)
+		}
+	}
+	if len(unsupported) > 0 {
+		sort.Strings(unsupported)
+		return nil, fmt.Errorf("configPrereqs managedFamilies contains unsupported families %q for %s",
+			unsupported, policy.Kind)
+	}
+	return families, nil
+}
+
+func deriveManagedFamiliesFromSource(deviceName string, raw []byte, policy platforms.ConfigPrereqPolicy) ([]string, error) {
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("configPrereqs.configuration is empty; managedFamilies must be supplied")
+	}
+	var payload map[string]any
+	if err := yaml.Unmarshal(raw, &payload); err != nil {
+		return nil, fmt.Errorf("derive configPrereqs managedFamilies: %w", err)
+	}
+	if policy.Kind == platforms.ConfigKindNXOS {
+		normalized, err := configprovider.NormalizeNXOSNetAsCodeSource(payload, deviceName)
+		if err != nil {
+			return nil, fmt.Errorf("derive NX-OS configPrereqs managedFamilies: %w", err)
+		}
+		payload = normalized
+	}
+	out := make([]string, 0, len(payload))
+	for family := range payload {
+		family = strings.TrimSpace(family)
+		if family != "" {
+			out = append(out, family)
+		}
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+func prereqConfigKind(obj client.Object) platforms.ConfigKind {
+	switch obj.(type) {
+	case *configv1alpha1.IOSXEConfig:
+		return platforms.ConfigKindIOSXE
+	case *configv1alpha1.NXOSConfig:
+		return platforms.ConfigKindNXOS
+	default:
+		return platforms.ConfigKind("")
+	}
+}
+
+func newPrereqConfigObject(kind platforms.ConfigKind, key types.NamespacedName) (client.Object, error) {
+	switch kind {
+	case platforms.ConfigKindIOSXE, "":
+		return &configv1alpha1.IOSXEConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: key.Name, Namespace: key.Namespace},
+		}, nil
+	case platforms.ConfigKindNXOS:
+		return &configv1alpha1.NXOSConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: key.Name, Namespace: key.Namespace},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported configPrereqs child kind %q", kind)
+	}
+}
+
+func prereqKindFallbacks(preferred platforms.ConfigKind) []platforms.ConfigKind {
+	out := []platforms.ConfigKind{preferred}
+	for _, kind := range []platforms.ConfigKind{platforms.ConfigKindIOSXE, platforms.ConfigKindNXOS} {
+		if kind != preferred {
+			out = append(out, kind)
+		}
+	}
+	return out
+}
+
+func (r *CiscoDeviceReconciler) getOwnedPrereqConfig(
+	ctx context.Context,
+	key types.NamespacedName,
+	preferred platforms.ConfigKind,
+) (client.Object, bool, error) {
+	for _, kind := range prereqKindFallbacks(preferred) {
+		obj, err := newPrereqConfigObject(kind, key)
+		if err != nil {
+			return nil, false, err
+		}
+		getErr := r.Get(ctx, key, obj)
+		if getErr == nil {
+			return obj, true, nil
+		}
+		if !errors.IsNotFound(getErr) {
+			return nil, false, fmt.Errorf("get owned %s: %w", kind, getErr)
+		}
+	}
+	obj, err := newPrereqConfigObject(preferred, key)
+	if err != nil {
+		return nil, false, err
+	}
+	return obj, false, nil
+}
+
+func setPrereqConfigSpec(
+	obj client.Object,
+	deviceName string,
+	families []string,
+	source *runtime.RawExtension,
+	prune bool,
+) error {
+	if source == nil {
+		return fmt.Errorf("nil configPrereqs source")
+	}
+	sourceCopy := source.DeepCopy()
+	switch typed := obj.(type) {
+	case *configv1alpha1.IOSXEConfig:
+		typed.Spec = configv1alpha1.IOSXEConfigSpec{
+			DeviceRef: configv1alpha1.DeviceRef{Name: deviceName},
+			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
+				ManagedFamilies:   append([]string(nil), families...),
+				Source:            configv1alpha1.ConfigurationSource{Inline: sourceCopy},
+				DriftPolicy:       configv1alpha1.DriftPolicyRevert,
+				PruneOnRelinquish: prune,
+			},
+		}
+	case *configv1alpha1.NXOSConfig:
+		typed.Spec = configv1alpha1.NXOSConfigSpec(configv1alpha1.CommonConfigSpec{
+			DeviceRef:         configv1alpha1.DeviceRef{Name: deviceName},
+			ManagedFamilies:   append([]string(nil), families...),
+			Source:            configv1alpha1.ConfigurationSource{Inline: sourceCopy},
+			DriftPolicy:       configv1alpha1.DriftPolicyRevert,
+			PruneOnRelinquish: prune,
+		})
+	default:
+		return fmt.Errorf("unsupported configPrereqs object %T", obj)
+	}
+	return nil
+}
+
+func getPrereqPrune(obj client.Object) bool {
+	switch typed := obj.(type) {
+	case *configv1alpha1.IOSXEConfig:
+		return typed.Spec.PruneOnRelinquish
+	case *configv1alpha1.NXOSConfig:
+		return (*configv1alpha1.CommonConfigSpec)(&typed.Spec).PruneOnRelinquish
+	default:
+		return false
+	}
+}
+
+func setPrereqPrune(obj client.Object, prune bool) bool {
+	switch typed := obj.(type) {
+	case *configv1alpha1.IOSXEConfig:
+		if typed.Spec.PruneOnRelinquish == prune {
+			return false
+		}
+		typed.Spec.PruneOnRelinquish = prune
+		return true
+	case *configv1alpha1.NXOSConfig:
+		spec := (*configv1alpha1.CommonConfigSpec)(&typed.Spec)
+		if spec.PruneOnRelinquish == prune {
+			return false
+		}
+		spec.PruneOnRelinquish = prune
+		return true
+	default:
+		return false
+	}
+}
+
+func getPrereqSourceInline(obj client.Object) *runtime.RawExtension {
+	switch typed := obj.(type) {
+	case *configv1alpha1.IOSXEConfig:
+		return typed.Spec.Source.Inline
+	case *configv1alpha1.NXOSConfig:
+		return (*configv1alpha1.CommonConfigSpec)(&typed.Spec).Source.Inline
+	default:
+		return nil
+	}
+}
+
+func getPrereqManagedFamilies(obj client.Object) []string {
+	switch typed := obj.(type) {
+	case *configv1alpha1.IOSXEConfig:
+		return append([]string(nil), typed.Spec.ManagedFamilies...)
+	case *configv1alpha1.NXOSConfig:
+		return append([]string(nil), (*configv1alpha1.CommonConfigSpec)(&typed.Spec).ManagedFamilies...)
+	default:
+		return nil
+	}
+}
+
+func getPrereqAtomicKeys(obj client.Object) map[string][]string {
+	switch typed := obj.(type) {
+	case *configv1alpha1.IOSXEConfig:
+		return typed.Status.AtomicReplaceOwnedKeys
+	case *configv1alpha1.NXOSConfig:
+		return (*configv1alpha1.CommonConfigStatus)(&typed.Status).AtomicReplaceOwnedKeys
+	default:
+		return nil
+	}
+}
+
 func (r *CiscoDeviceReconciler) patchOwnedPrereqsForTeardown(
 	ctx context.Context,
-	existing *configv1alpha1.IOSXEConfig,
+	existing client.Object,
 	forceRelinquishSkip bool,
-) (*configv1alpha1.IOSXEConfig, error) {
-	updated := existing.DeepCopy()
-	changed := false
-	if !updated.Spec.PruneOnRelinquish {
-		updated.Spec.PruneOnRelinquish = true
-		changed = true
+) (client.Object, error) {
+	updated, ok := existing.DeepCopyObject().(client.Object)
+	if !ok {
+		return nil, fmt.Errorf("deep-copy owned prereq %T did not return client.Object", existing)
 	}
+	changed := false
+	changed = setPrereqPrune(updated, true) || changed
 	if forceRelinquishSkip {
-		if updated.Annotations == nil {
-			updated.Annotations = map[string]string{}
+		annotations := updated.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
 		}
-		if updated.Annotations[forceRelinquishSkipAnnotation] != "true" {
-			updated.Annotations[forceRelinquishSkipAnnotation] = "true"
+		if annotations[forceRelinquishSkipAnnotation] != "true" {
+			annotations[forceRelinquishSkipAnnotation] = "true"
+			updated.SetAnnotations(annotations)
 			changed = true
 		}
 	}
 	if !changed {
 		return updated, nil
 	}
-	if err := r.Patch(ctx, updated, client.MergeFrom(existing.DeepCopy())); err != nil {
-		return nil, fmt.Errorf("patch owned IOSXEConfig for prereq teardown: %w", err)
+	base, ok := existing.DeepCopyObject().(client.Object)
+	if !ok {
+		return nil, fmt.Errorf("deep-copy owned prereq %T did not return client.Object", existing)
+	}
+	if err := r.Patch(ctx, updated, client.MergeFrom(base)); err != nil {
+		return nil, fmt.Errorf("patch owned %s for prereq teardown: %w", prereqConfigKind(existing), err)
 	}
 	return updated, nil
 }
 
-func (r *CiscoDeviceReconciler) forceSkipOwnedPrereqs(ctx context.Context, existing *configv1alpha1.IOSXEConfig) error {
+func (r *CiscoDeviceReconciler) forceSkipOwnedPrereqs(ctx context.Context, existing client.Object) error {
 	updated, err := r.patchOwnedPrereqsForTeardown(ctx, existing, true)
 	if err != nil {
 		return err
 	}
-	if !updated.DeletionTimestamp.IsZero() {
+	if deletionTimestamp := updated.GetDeletionTimestamp(); deletionTimestamp != nil && !deletionTimestamp.IsZero() {
 		return nil
 	}
 	fg := metav1.DeletePropagationForeground
 	if err := r.Delete(ctx, updated, &client.DeleteOptions{PropagationPolicy: &fg}); err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("delete force-skipped owned IOSXEConfig: %w", err)
+		return fmt.Errorf("delete force-skipped owned %s: %w", prereqConfigKind(updated), err)
 	}
 	return nil
 }
 
-func (r *CiscoDeviceReconciler) recreatePrereqTeardownIOSXEConfig(ctx context.Context, device *ciskov1.CiscoDevice) error {
-	name := ownedIOSXEConfigName(device.Name)
-	emptyInline := emptyPrereqInline()
-	desired := &configv1alpha1.IOSXEConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: device.Namespace},
-		Spec: configv1alpha1.IOSXEConfigSpec{
-			DeviceRef: configv1alpha1.DeviceRef{Name: device.Name},
-			IOSXEConfigTemplateSpec: configv1alpha1.IOSXEConfigTemplateSpec{
-				ManagedFamilies:   append([]string(nil), apphostingPrereqFamilies...),
-				Source:            configv1alpha1.ConfigurationSource{Inline: &emptyInline},
-				DriftPolicy:       configv1alpha1.DriftPolicyRevert,
-				PruneOnRelinquish: true,
-			},
-		},
+func (r *CiscoDeviceReconciler) recreatePrereqTeardownConfig(
+	ctx context.Context,
+	device *ciskov1.CiscoDevice,
+	policy platforms.ConfigPrereqPolicy,
+) error {
+	families := dedupeNonEmpty(policy.FixedManagedFamilies)
+	if !canRecreatePrereqTeardownConfig(policy) {
+		return fmt.Errorf("cannot recreate deleted %s prereq teardown CR without fixed managed families", policy.Kind)
+	}
+	key := types.NamespacedName{Namespace: device.Namespace, Name: ownedPrereqConfigName(device.Name)}
+	desired, err := newPrereqConfigObject(policy.Kind, key)
+	if err != nil {
+		return err
+	}
+	emptyInline := emptyPrereqInlineFor(policy)
+	if err := setPrereqConfigSpec(desired, device.Name, families, &emptyInline, true); err != nil {
+		return err
 	}
 	if err := controllerutil.SetControllerReference(device, desired, r.Scheme); err != nil {
-		return fmt.Errorf("set owner on recreated prereq IOSXEConfig: %w", err)
+		return fmt.Errorf("set owner on recreated prereq %s: %w", prereqConfigKind(desired), err)
 	}
 	if err := r.Create(ctx, desired); err != nil && !errors.IsAlreadyExists(err) {
-		return fmt.Errorf("recreate prereq IOSXEConfig teardown driver: %w", err)
+		return fmt.Errorf("recreate prereq %s teardown driver: %w", prereqConfigKind(desired), err)
 	}
 	return nil
 }
 
-func prereqOrphanFamilies(cr *configv1alpha1.IOSXEConfig, found bool) []string {
+func canRecreatePrereqTeardownConfig(policy platforms.ConfigPrereqPolicy) bool {
+	return len(dedupeNonEmpty(policy.FixedManagedFamilies)) > 0
+}
+
+func prereqOrphanFamilies(cr client.Object, found bool, policy platforms.ConfigPrereqPolicy) []string {
 	if !found {
-		return append([]string(nil), apphostingPrereqFamilies...)
+		return dedupeNonEmpty(policy.FixedManagedFamilies)
 	}
-	if len(cr.Status.AtomicReplaceOwnedKeys) > 0 {
-		out := make([]string, 0, len(cr.Status.AtomicReplaceOwnedKeys))
-		for family, keys := range cr.Status.AtomicReplaceOwnedKeys {
+	if keysByFamily := getPrereqAtomicKeys(cr); len(keysByFamily) > 0 {
+		out := make([]string, 0, len(keysByFamily))
+		for family, keys := range keysByFamily {
 			if len(keys) > 0 {
 				out = append(out, family)
 			}
@@ -1263,12 +1663,12 @@ func prereqOrphanFamilies(cr *configv1alpha1.IOSXEConfig, found bool) []string {
 			return out
 		}
 	}
-	if len(cr.Spec.ManagedFamilies) > 0 {
-		out := append([]string(nil), cr.Spec.ManagedFamilies...)
+	if families := getPrereqManagedFamilies(cr); len(families) > 0 {
+		out := append([]string(nil), families...)
 		sort.Strings(out)
 		return out
 	}
-	return append([]string(nil), apphostingPrereqFamilies...)
+	return dedupeNonEmpty(policy.FixedManagedFamilies)
 }
 
 func (r *CiscoDeviceReconciler) emitPrereqsSkipped(device *ciskov1.CiscoDevice, families []string) {
@@ -1327,8 +1727,14 @@ func (r *CiscoDeviceReconciler) lookupCredentialResourceVersion(ctx context.Cont
 // updateStatus patches the CiscoDevice status based on the Deployment state.
 func (r *CiscoDeviceReconciler) updateStatus(ctx context.Context, device *ciskov1.CiscoDevice, deploy *appsv1.Deployment) error {
 	var phase string
+	topology := ciskov1.WorkerTopologyPerDevice
 	if deploy == nil {
 		phase = "Ready"
+		if r.AggregatorEnabled && drivers.ConfigDriverRegistered(device.Spec.Driver) {
+			topology = ciskov1.WorkerTopologyAggregated
+		} else {
+			topology = ciskov1.WorkerTopologyNone
+		}
 	} else {
 		// Re-fetch deployment to get latest status.
 		var current appsv1.Deployment
@@ -1341,8 +1747,21 @@ func (r *CiscoDeviceReconciler) updateStatus(ctx context.Context, device *ciskov
 		}
 	}
 
-	if device.Status.Phase != phase {
+	capabilities := platforms.WorkerCapabilityStatuses(device.Spec.Driver, topology)
+	var netAsCode *ciskov1.NetAsCodeModelStatus
+	if descriptor, ok := platforms.ForDriver(device.Spec.Driver); ok {
+		model := descriptor.NetAsCode
+		netAsCode = &model
+	}
+
+	if device.Status.Phase != phase ||
+		device.Status.WorkerTopology != topology ||
+		!reflect.DeepEqual(device.Status.WorkerCapabilities, capabilities) ||
+		!reflect.DeepEqual(device.Status.NetAsCode, netAsCode) {
 		device.Status.Phase = phase
+		device.Status.WorkerTopology = topology
+		device.Status.WorkerCapabilities = capabilities
+		device.Status.NetAsCode = netAsCode
 		if err := r.Status().Update(ctx, device); err != nil {
 			return fmt.Errorf("failed to update CiscoDevice status: %w", err)
 		}

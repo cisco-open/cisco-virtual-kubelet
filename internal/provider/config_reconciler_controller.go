@@ -37,9 +37,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/intent"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 )
 
@@ -299,6 +299,90 @@ func (r *ConfigReconciler) releaseAcquiredFamilies(ctx context.Context, families
 //     referenced ConfigMap events are mapped via handler.Funcs to the
 //     IOSXEConfigs they influence, so a scope-object mutation triggers
 //     targeted re-reconciles rather than a full resync.
+func (r *ConfigReconciler) prepareConfigForReconcile(ctx context.Context, cr *configv1alpha1.IOSXEConfig) (bool, reconcile.Result, error) {
+	logger := crlog.FromContext(ctx).
+		WithValues("component", "config-reconciler", "device", r.DeviceName)
+	if !cr.GetDeletionTimestamp().IsZero() {
+		if containsFinalizer(cr.Finalizers, iosxeConfigFinalizer) {
+			// F2 fix (2026-05-01): when pruneOnRelinquish is true and
+			// the CR has accumulated ownedKeys in status, run a
+			// relinquish reconcile against the device before lease
+			// release + finalizer removal. Without this the CR's
+			// owned entries stay on the device as orphaned config.
+			//
+			// A2 fix (2026-05-01): relinquish
+			// failure is now retryable. We return the error from
+			// Reconcile so controller-runtime requeues, keeping the
+			// finalizer in place. status.atomicReplaceOwnedKeys
+			// stays available so the next attempt has the same input.
+			// Operators with a permanently failing relinquish (e.g.
+			// device decommissioned mid-cleanup) can patch the
+			// finalizer off explicitly — the standard Kubernetes
+			// escape hatch — once they accept the orphan.
+			if cr.Spec.PruneOnRelinquish && len(cr.Status.AtomicReplaceOwnedKeys) > 0 {
+				// B2 escape hatch (2026-05-02): an operator who has accepted that
+				// relinquish will not succeed — decommissioned device,
+				// permanent auth failure, family that needs a writer
+				// uplift — sets cisco.vk/force-relinquish-skip=true.
+				// We skip the relinquish reconcile, emit a Warning
+				// event recording the orphan list, and proceed to
+				// finalizer removal. Strictly more controlled than
+				// `kubectl patch finalizers: []` because the
+				// orphaned keys land in the audit trail.
+				if cr.Annotations[ForceRelinquishSkipAnnotation] == "true" {
+					if r.Recorder != nil {
+						r.Recorder.Eventf(cr, "Warning", "RelinquishSkipped",
+							"force-relinquish-skip annotation set; orphaning %v on device %q",
+							cr.Status.AtomicReplaceOwnedKeys, r.DeviceName)
+					}
+				} else if err := r.relinquishOwnedKeys(ctx, cr); err != nil {
+					logger.Error(err, "relinquish owned keys; will retry "+
+						"(set annotation "+ForceRelinquishSkipAnnotation+"=true to give up)")
+					if r.Recorder != nil {
+						r.Recorder.Eventf(cr, "Warning", "RelinquishBlocked",
+							"deletion blocked while pruneOnRelinquish cleanup retries: %v "+
+								"(set annotation %s=true to give up)",
+							err, ForceRelinquishSkipAnnotation)
+					}
+					return false, reconcile.Result{}, fmt.Errorf("relinquish: %w", err)
+				}
+			}
+			if err := r.releaseLeasesForCR(ctx, cr); err != nil {
+				return false, reconcile.Result{}, fmt.Errorf("release leases: %w", err)
+			}
+			cr.Finalizers = removeFinalizer(cr.Finalizers, iosxeConfigFinalizer)
+			if err := r.Client.Update(ctx, cr); err != nil {
+				if apierrors.IsConflict(err) || apierrors.IsNotFound(err) {
+					return false, reconcile.Result{}, nil
+				}
+				return false, reconcile.Result{}, fmt.Errorf("remove finalizer: %w", err)
+			}
+		}
+		return false, reconcile.Result{}, nil
+	}
+	// Add the finalizer eagerly when missing so a delete that races
+	// the first reconcile still hits our cleanup path. On success we
+	// continue into the reconcile in the same tick — preserving the
+	// per-tick contract the unit-test fixtures rely on. But we FAIL CLOSED
+	// on a persistence error: mutating the device without a durable
+	// finalizer would let a later delete bypass relinquish/prune cleanup and
+	// orphan owned config. Conflict/NotFound are benign (re-add next tick);
+	// any other error is returned so the device write does not run.
+	if r.Leaser != nil && !containsFinalizer(cr.Finalizers, iosxeConfigFinalizer) {
+		updated := cr.DeepCopy()
+		updated.Finalizers = append(updated.Finalizers, iosxeConfigFinalizer)
+		if err := r.Client.Update(ctx, updated); err != nil {
+			if apierrors.IsConflict(err) || apierrors.IsNotFound(err) {
+				return false, reconcile.Result{Requeue: true}, nil
+			}
+			return false, reconcile.Result{}, fmt.Errorf("add finalizer: %w", err)
+		}
+		cr.Finalizers = updated.Finalizers
+		cr.ResourceVersion = updated.ResourceVersion
+	}
+	return true, reconcile.Result{}, nil
+}
+
 func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	// Per-tick reconcile span. When no OTel TracerProvider is wired
 	// (the unit-test default), this resolves to a no-op tracer and
@@ -342,98 +426,26 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	span.SetAttributes(attribute.String(semconv.CvkEntityID, configTelemetryEntityID(&cr)))
 
 	// Defence in depth: a CR reaching us that targets a different
-	// device is ignored. In production the predicate filter below
-	// prevents this entirely; the check stays because the polling
-	// Run() path does not install a predicate.
-	if cr.Spec.DeviceRef.Name != r.DeviceName {
+	// device — or that lives in another namespace (deviceRef is
+	// same-namespace by contract) — is ignored. In production the
+	// predicate filter below prevents this entirely; the check stays
+	// because the polling Run() path does not install a predicate.
+	if !crTargetsDevice(&cr, r.DeviceName, r.DeviceNamespace) {
 		span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "wrong-device"))
 		return reconcile.Result{}, nil
 	}
 
-	// Finalizer + deletion path. On delete, release every family
-	// lease this CR could be holding so the next CR claiming the
-	// same family does not have to wait for lease TTL. On non-delete
-	// reconciles, ensure the finalizer is in place so the deletion
-	// handler will run.
-	if !cr.GetDeletionTimestamp().IsZero() {
-		if containsFinalizer(cr.Finalizers, iosxeConfigFinalizer) {
-			// F2 fix (2026-05-01): when pruneOnRelinquish is true and
-			// the CR has accumulated ownedKeys in status, run a
-			// relinquish reconcile against the device before lease
-			// release + finalizer removal. Without this the CR's
-			// owned entries stay on the device as orphaned config.
-			//
-			// A2 fix (2026-05-01): relinquish
-			// failure is now retryable. We return the error from
-			// Reconcile so controller-runtime requeues, keeping the
-			// finalizer in place. status.atomicReplaceOwnedKeys
-			// stays available so the next attempt has the same input.
-			// Operators with a permanently failing relinquish (e.g.
-			// device decommissioned mid-cleanup) can patch the
-			// finalizer off explicitly — the standard Kubernetes
-			// escape hatch — once they accept the orphan.
-			if cr.Spec.PruneOnRelinquish && len(cr.Status.AtomicReplaceOwnedKeys) > 0 {
-				// B2 escape hatch (2026-05-02): an operator who has accepted that
-				// relinquish will not succeed — decommissioned device,
-				// permanent auth failure, family that needs a writer
-				// uplift — sets cisco.vk/force-relinquish-skip=true.
-				// We skip the relinquish reconcile, emit a Warning
-				// event recording the orphan list, and proceed to
-				// finalizer removal. Strictly more controlled than
-				// `kubectl patch finalizers: []` because the
-				// orphaned keys land in the audit trail.
-				if cr.Annotations[ForceRelinquishSkipAnnotation] == "true" {
-					if r.Recorder != nil {
-						r.Recorder.Eventf(&cr, "Warning", "RelinquishSkipped",
-							"force-relinquish-skip annotation set; orphaning %v on device %q",
-							cr.Status.AtomicReplaceOwnedKeys, r.DeviceName)
-					}
-					span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "relinquish-skipped"))
-				} else if err := r.relinquishOwnedKeys(ctx, &cr); err != nil {
-					logger.Error(err, "relinquish owned keys; will retry "+
-						"(set annotation "+ForceRelinquishSkipAnnotation+"=true to give up)")
-					span.RecordError(err)
-					span.SetStatus(codes.Error, "relinquish")
-					span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "relinquish-blocked"))
-					if r.Recorder != nil {
-						r.Recorder.Eventf(&cr, "Warning", "RelinquishBlocked",
-							"deletion blocked while pruneOnRelinquish cleanup retries: %v "+
-								"(set annotation %s=true to give up)",
-							err, ForceRelinquishSkipAnnotation)
-					}
-					return reconcile.Result{}, fmt.Errorf("relinquish: %w", err)
-				}
-			}
-			if err := r.releaseLeasesForCR(ctx, &cr); err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "release leases")
-				return reconcile.Result{}, fmt.Errorf("release leases: %w", err)
-			}
-			cr.Finalizers = removeFinalizer(cr.Finalizers, iosxeConfigFinalizer)
-			if err := r.Client.Update(ctx, &cr); err != nil {
-				if apierrors.IsConflict(err) || apierrors.IsNotFound(err) {
-					return reconcile.Result{}, nil
-				}
-				return reconcile.Result{}, fmt.Errorf("remove finalizer: %w", err)
-			}
-		}
-		span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "deleted"))
-		return reconcile.Result{}, nil
+	proceed, lifecycleResult, err := r.prepareConfigForReconcile(ctx, &cr)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "lifecycle")
+		return reconcile.Result{}, err
 	}
-	// Add the finalizer eagerly when missing so a delete that races
-	// the first reconcile still hits our cleanup path. Update is
-	// best-effort; if the API conflicts we let the next tick re-add
-	// it. Continuing into the reconcile keeps the existing per-tick
-	// contract — the same tick still produces the status update the
-	// caller observes — and matches the unit-test fixtures that run
-	// Reconcile once per scenario.
-	if r.Leaser != nil && !containsFinalizer(cr.Finalizers, iosxeConfigFinalizer) {
-		updated := cr.DeepCopy()
-		updated.Finalizers = append(updated.Finalizers, iosxeConfigFinalizer)
-		if err := r.Client.Update(ctx, updated); err == nil {
-			cr.Finalizers = updated.Finalizers
-			cr.ResourceVersion = updated.ResourceVersion
+	if !proceed {
+		if !cr.GetDeletionTimestamp().IsZero() {
+			span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "deleted"))
 		}
+		return lifecycleResult, nil
 	}
 	r.refreshDeviceVersion(ctx)
 
@@ -468,12 +480,12 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	// Compute conflicts across every CR targeting this device. Listing
 	// is cheap when backed by an informer cache.
 	var all configv1alpha1.IOSXEConfigList
-	if err := r.Client.List(ctx, &all); err != nil {
+	if err := r.Client.List(ctx, &all, client.InNamespace(r.DeviceNamespace)); err != nil {
 		logger.Error(err, "list IOSXEConfig")
 	}
 	forDevice := make([]*configv1alpha1.IOSXEConfig, 0, len(all.Items))
 	for i := range all.Items {
-		if all.Items[i].Spec.DeviceRef.Name == r.DeviceName {
+		if crTargetsDevice(&all.Items[i], r.DeviceName, r.DeviceNamespace) {
 			forDevice = append(forDevice, &all.Items[i])
 		}
 	}
@@ -577,13 +589,13 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Predicate for the primary watch — only IOSXEConfigs targeting
 	// this device ever enter the informer's work queue.
 	devicePredicate := predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool { return crTargetsDevice(e.Object, r.DeviceName) },
+		CreateFunc: func(e event.CreateEvent) bool { return crTargetsDevice(e.Object, r.DeviceName, r.DeviceNamespace) },
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return crTargetsDevice(e.ObjectNew, r.DeviceName) ||
-				crTargetsDevice(e.ObjectOld, r.DeviceName)
+			return crTargetsDevice(e.ObjectNew, r.DeviceName, r.DeviceNamespace) ||
+				crTargetsDevice(e.ObjectOld, r.DeviceName, r.DeviceNamespace)
 		},
-		DeleteFunc:  func(e event.DeleteEvent) bool { return crTargetsDevice(e.Object, r.DeviceName) },
-		GenericFunc: func(e event.GenericEvent) bool { return crTargetsDevice(e.Object, r.DeviceName) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return crTargetsDevice(e.Object, r.DeviceName, r.DeviceNamespace) },
+		GenericFunc: func(e event.GenericEvent) bool { return crTargetsDevice(e.Object, r.DeviceName, r.DeviceNamespace) },
 	}
 
 	// Map scope objects (Defaults, DeviceGroup, Template) and any
@@ -592,13 +604,14 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// cheap thanks to the canonical-hash short-circuit.
 	mapAll := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 		var list configv1alpha1.IOSXEConfigList
-		if err := r.Client.List(ctx, &list); err != nil {
+		if err := r.Client.List(ctx, &list, client.InNamespace(r.DeviceNamespace)); err != nil {
 			crlog.FromContext(ctx).Error(err, "mapAll list IOSXEConfig")
 			return nil
 		}
 		out := make([]reconcile.Request, 0, len(list.Items))
-		for _, cr := range list.Items {
-			if cr.Spec.DeviceRef.Name != r.DeviceName {
+		for i := range list.Items {
+			cr := &list.Items[i]
+			if !crTargetsDevice(cr, r.DeviceName, r.DeviceNamespace) {
 				continue
 			}
 			out = append(out, reconcile.Request{
@@ -647,12 +660,13 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				// behaviour, which also re-enumerates on each
 				// notify rather than carrying a CR-specific signal.
 				var list configv1alpha1.IOSXEConfigList
-				if err := r.Client.List(context.Background(), &list); err != nil {
+				if err := r.Client.List(context.Background(), &list, client.InNamespace(r.DeviceNamespace)); err != nil {
 					return nil
 				}
 				out := make([]reconcile.Request, 0, len(list.Items))
-				for _, cr := range list.Items {
-					if cr.Spec.DeviceRef.Name != r.DeviceName {
+				for i := range list.Items {
+					cr := &list.Items[i]
+					if !crTargetsDevice(cr, r.DeviceName, r.DeviceNamespace) {
 						continue
 					}
 					out = append(out, reconcile.Request{
@@ -671,9 +685,14 @@ func (r *ConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // missing deviceRef are reported as false so the predicate filters
 // them out — scope objects reach the reconciler via the mapAll
 // handler.Funcs, not the primary watch.
-func crTargetsDevice(obj client.Object, name string) bool {
+func crTargetsDevice(obj client.Object, name, namespace string) bool {
 	cr, ok := obj.(*configv1alpha1.IOSXEConfig)
 	if !ok {
+		return false
+	}
+	// deviceRef is same-namespace by contract; a CR in another namespace
+	// never targets this device even if the names match.
+	if namespace != "" && cr.Namespace != namespace {
 		return false
 	}
 	return cr.Spec.DeviceRef.Name == name

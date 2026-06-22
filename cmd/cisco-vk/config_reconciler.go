@@ -43,6 +43,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	crlog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -55,10 +57,11 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	iosxetransport "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/devicegrpc"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry"
@@ -102,6 +105,12 @@ type configReconcilerOptions struct {
 	CorrelationCache *correlation.Cache
 }
 
+func configDriverBuildOptions(opts configReconcilerOptions) drivers.ConfigDriverOptions {
+	return drivers.ConfigDriverOptions{
+		SessionLock: opts.SessionLock,
+	}
+}
+
 // startConfigReconciler builds a controller-runtime client, asks
 // the platform-agnostic registry for a ConfigDriverContext that
 // matches CiscoDevice.spec.driver, and starts the reconciler
@@ -120,12 +129,30 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		return fmt.Errorf("nil DeviceSpec")
 	}
 
-	if !drivers.ConfigDriverRegistered(opts.Spec.Driver) {
+	starter, ok := lookupConfigRuntime(opts.Spec.Driver)
+	if !ok {
 		log.G(ctx).WithField("driver", opts.Spec.Driver).
-			Debug("no config driver registered for this device kind; skipping config reconciler")
+			Debug("no config runtime registered for this device kind; skipping config reconciler")
 		return nil
 	}
+	return starter(ctx, cfg, deviceName, opts)
+}
 
+func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName string, opts configReconcilerOptions) error {
+	if cfg == nil {
+		return fmt.Errorf("nil rest.Config")
+	}
+	if deviceName == "" {
+		return fmt.Errorf("empty device name")
+	}
+	if opts.Spec == nil {
+		return fmt.Errorf("nil DeviceSpec")
+	}
+	if !drivers.ConfigDriverRegistered(opts.Spec.Driver) {
+		log.G(ctx).WithField("driver", opts.Spec.Driver).
+			Debug("no config driver registered for this device kind; skipping IOSXEConfig reconciler")
+		return nil
+	}
 	scheme := k8sruntime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(configv1alpha1.AddToScheme(scheme))
@@ -183,11 +210,41 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	if metricsAddr == "" {
 		metricsAddr = ":8080"
 	}
+	// Lease namespace selection — three-tier precedence:
+	//   1. CONFIG_LEASE_NAMESPACE env (operator opt-in to a shared
+	//      cluster namespace so IOSXEConfig CRs in different
+	//      tenant namespaces actually arbitrate against each other).
+	//   2. POD_NAMESPACE — historical default.
+	//   3. "default" — out-of-cluster dev fallback.
+	leaseNamespace := os.Getenv("CONFIG_LEASE_NAMESPACE")
+	if leaseNamespace == "" {
+		leaseNamespace = os.Getenv("POD_NAMESPACE")
+	}
+	if leaseNamespace == "" {
+		leaseNamespace = "default"
+	}
+	// Scope the per-device manager cache to the device namespace. The
+	// config/ops CRDs (IOSXEConfig, scope objects, diagnostics, operations,
+	// …) are device-namespace-scoped and bound via a namespaced RoleBinding,
+	// so a cluster-wide informer ListWatch would be RBAC-forbidden. Scoping
+	// the cache here makes every config informer namespaced (matching the
+	// RBAC) and is the umbrella enforcement of the same-namespace deviceRef
+	// contract. Leases may live in a shared CONFIG_LEASE_NAMESPACE, so they
+	// get an explicit per-object namespace override.
+	configCache := cache.Options{
+		DefaultNamespaces: map[string]cache.Config{operationNamespace(): {}},
+	}
+	if leaseNamespace != operationNamespace() {
+		configCache.ByObject = map[client.Object]cache.ByObject{
+			&coordv1.Lease{}: {Namespaces: map[string]cache.Config{leaseNamespace: {}}},
+		}
+	}
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: "0",
 		LeaderElection:         false,
+		Cache:                  configCache,
 	})
 	if err != nil {
 		return fmt.Errorf("build manager: %w", err)
@@ -211,9 +268,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	// Spawn an async loop instead and proceed with whatever the
 	// reconciler has now; SetTransport patches it in when the dial
 	// eventually succeeds.
-	dctx, dErr := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, drivers.ConfigDriverOptions{
-		SessionLock: opts.SessionLock,
-	})
+	dctx, dErr := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, configDriverBuildOptions(opts))
 	if dErr != nil {
 		log.G(ctx).WithError(dErr).Warn("config driver dial failed at startup; will retry in background")
 	}
@@ -257,20 +312,6 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		log.G(ctx).Warn("device version not available yet; IOSXEConfig writes remain pending until version is acquired")
 	}
 
-	// Lease namespace selection — three-tier precedence:
-	//   1. CONFIG_LEASE_NAMESPACE env (operator opt-in to a shared
-	//      cluster namespace so IOSXEConfig CRs in different
-	//      tenant namespaces actually arbitrate against each other).
-	//   2. POD_NAMESPACE — historical default.
-	//   3. "default" — out-of-cluster dev fallback.
-	leaseNamespace := os.Getenv("CONFIG_LEASE_NAMESPACE")
-	if leaseNamespace == "" {
-		leaseNamespace = os.Getenv("POD_NAMESPACE")
-	}
-	if leaseNamespace == "" {
-		leaseNamespace = "default"
-	}
-
 	// Subscribe-based drift fast path: gNMI today; per-driver
 	// factory provides the path set so other drivers can attach
 	// their own without changing this code.
@@ -304,6 +345,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	r := &provider.ConfigReconciler{
 		Client:                mgr.GetClient(),
 		DeviceName:            deviceName,
+		DeviceNamespace:       operationNamespace(),
 		Transport:             dctx.Transport,
 		DeviceVersion:         dctx.DeviceVersion,
 		FetchDeviceVersion:    dctx.FetchDeviceVersion,
@@ -375,11 +417,13 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 	// borrows the configdriver's transport via the GetTransport
 	// accessor — no separate dial, no separate auth.
 	diagReconciler := &diagnostic.Reconciler{
-		Client:     mgr.GetClient(),
-		Recorder:   recorder,
-		Scheme:     mgr.GetScheme(),
-		DeviceName: deviceName,
-		TP:         r,
+		Client:          mgr.GetClient(),
+		Recorder:        recorder,
+		Scheme:          mgr.GetScheme(),
+		DeviceName:      deviceName,
+		DeviceNamespace: operationNamespace(),
+		Platform:        diagnostic.CommandPlatformIOSXE,
+		TP:              r,
 	}
 	if err := diagReconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("diagnostic SetupWithManager: %w", err)
@@ -414,6 +458,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 		// uses it to refuse cross-namespace DeviceOperation requests.
 		DeviceName:      deviceName,
 		DeviceNamespace: operationNamespace(),
+		Platform:        diagnostic.CommandPlatformIOSXE,
 		TP:              r,
 		GNOI:            gnoiProv,
 	}
@@ -538,6 +583,7 @@ func startConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName str
 			OperationClient:    mgr.GetClient(),
 			OperationReader:    mgr.GetAPIReader(),
 			OperationNamespace: operationNamespace(),
+			Platform:           diagnostic.CommandPlatformIOSXE,
 			BindAddr:           adminAddr,
 			TelemetrySource:    telemetryReconciler.TelemetryHealthSnapshot,
 		}
@@ -621,7 +667,7 @@ func retryDeviceVersion(ctx context.Context, r *provider.ConfigReconciler, dctx 
 // patches r.SetTransport so the reconciler picks up the live
 // transport on its next tick.
 //
-// IMPORTANT: this calls `transport.For` directly rather than
+// IMPORTANT: this calls `iosxetransport.For` directly rather than
 // drivers.NewConfigDriver. The latter pulls iosxebuilder.LoadYANGReleaseTags
 // on every invocation, which produces a burst of disk I/O + goroutine
 // activity each retry tick — which is exactly the kind of runtime
@@ -642,7 +688,7 @@ func retryConfigDriverDial(ctx context.Context, opts configReconcilerOptions, r 
 			return
 		case <-tick.C:
 		}
-		t, err := transport.For(opts.Spec, opts.Password, transport.FactoryOptions{
+		t, err := iosxetransport.For(opts.Spec, opts.Password, iosxetransport.FactoryOptions{
 			SessionLock: opts.SessionLock,
 		})
 		if err == nil && t != nil {

@@ -9,32 +9,74 @@
 package nxos
 
 import (
-	"errors"
+	"context"
+	"fmt"
+	"strings"
+
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
+	nxoswriters "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/writers"
 )
 
-// ErrNotYetImplemented is the sentinel every NX-OS code path
-// returns until the platform's real implementation lands. Keeping
-// the package importable means structural changes in the
-// foundation (registry signatures, ConfigDriverContext fields)
-// surface here as compilation failures and the placeholder stays
-// honest with the API.
-var ErrNotYetImplemented = errors.New("nxos: driver not yet implemented")
+// init wires NX-OS into both the apphosting and configdriver registries.
+func init() {
+	drivers.Register(v1alpha1.DeviceDriverNXOS,
+		func(ctx context.Context, spec *v1alpha1.DeviceSpec) (drivers.CiscoKubernetesDeviceDriver, error) {
+			return NewAppHostingDriver(ctx, spec)
+		})
 
-// init is intentionally empty — the placeholder MUST NOT register.
-// A binary that blank-imports this package today will see
-// "driver kind \"NXOS\" is not registered" if a CiscoDevice with
-// that kind is created, which is exactly what we want until the
-// real implementation lands.
-//
-// When the real driver lands, replace this comment with:
-//
-//	func init() {
-//	  drivers.Register(v1alpha1.DeviceDriverNXOS,
-//	    func(ctx, spec) (drivers.CiscoKubernetesDeviceDriver, error) {
-//	      return NewAppHostingDriver(ctx, spec)
-//	    })
-//	  drivers.RegisterConfigDriver(v1alpha1.DeviceDriverNXOS,
-//	    buildNXOSConfigDriverContext)
-//	}
-//
-// then drop a blank import in cmd/cisco-vk/drivers_register.go.
+	drivers.RegisterConfigDriver(v1alpha1.DeviceDriverNXOS, buildNXOSConfigDriverContext)
+}
+
+func buildNXOSConfigDriverContext(
+	ctx context.Context,
+	spec *v1alpha1.DeviceSpec,
+	password string,
+	opts drivers.ConfigDriverOptions,
+) (*drivers.ConfigDriverContext, error) {
+	if spec == nil {
+		return nil, fmt.Errorf("nxos configdriver: nil spec")
+	}
+	specCopy := *spec
+	if password != "" {
+		specCopy.Password = password
+	}
+	fetchPaths := append([]string(nil), nxosschema.FetchPaths...)
+	out := &drivers.ConfigDriverContext{
+		PlatformName:       "nxos",
+		ModelFormat:        configv1alpha1.NetAsCodeModelFormatNXOS,
+		ConfigObject:       &configv1alpha1.NXOSConfig{},
+		ConfigList:         &configv1alpha1.NXOSConfigList{},
+		LookupWriter:       nxoswriters.GetForRelease,
+		SubscribePaths:     fetchPaths,
+		FetchDeviceVersion: FetchDeviceVersion,
+		FamilyOrder:        nxosschema.FamilyOrder,
+	}
+	t, err := buildNXOSConfigTransport(&specCopy, opts)
+	if err != nil {
+		return out, err
+	}
+	out.Transport = t
+	if ver := FetchDeviceVersion(ctx, t); ver != "" {
+		out.DeviceVersion = ver
+		out.DefaultYANGVersion = ver
+	}
+	return out, nil
+}
+
+func buildNXOSConfigTransport(spec *v1alpha1.DeviceSpec, opts drivers.ConfigDriverOptions) (transport.Interface, error) {
+	kind := strings.ToLower(strings.TrimSpace(spec.Transport))
+	switch kind {
+	case "", string(transport.KindREST), string(transport.KindRESTCONF), string(transport.KindNXAPI):
+		return newNXAPIConfigTransportWithOptions(spec, NXAPIConfigTransportOptions{
+			SessionLock: opts.SessionLock,
+		})
+	case string(transport.KindNETCONF), string(transport.KindGNMI):
+		return nil, fmt.Errorf("nxos configdriver: transport %q is not implemented yet; supported transport is %q", spec.Transport, transport.KindREST)
+	default:
+		return nil, fmt.Errorf("nxos configdriver: unknown transport %q; supported transport is %q", spec.Transport, transport.KindREST)
+	}
+}

@@ -24,19 +24,17 @@ import (
 	// them — that's the contract. If a future change accidentally
 	// adds a Register call to one of these, this test fires.
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxr"
-	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos"
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/drivers/openconfig"
 )
 
 // TestPlaceholderPackagesDoNotRegister pins the Phase-9 contract:
 // blank-importing a placeholder package compiles but does not put
-// the platform in the registry. A binary built with all four
-// placeholders blank-imported still sees only what was actually
-// implemented (XE + FAKE in the cisco-vk binary today).
+// the platform in the registry. A binary built with placeholder
+// packages blank-imported still sees only what was actually
+// implemented (XE, NXOS, and FAKE in the cisco-vk binary today).
 func TestPlaceholderPackagesDoNotRegister(t *testing.T) {
 	t.Parallel()
 	for _, kind := range []v1alpha1.DeviceDriver{
-		v1alpha1.DeviceDriverNXOS,
 		v1alpha1.DeviceDriverXR,
 		v1alpha1.DeviceDriverOPENCONFIG,
 	} {
@@ -66,8 +64,7 @@ func TestRegistryEnumeratesOnlyRealDrivers(t *testing.T) {
 	got := drivers.RegisteredKinds()
 	for _, k := range got {
 		switch k {
-		case v1alpha1.DeviceDriverNXOS,
-			v1alpha1.DeviceDriverXR,
+		case v1alpha1.DeviceDriverXR,
 			v1alpha1.DeviceDriverOPENCONFIG:
 			t.Errorf("placeholder kind %q appears in RegisteredKinds()=%v", k, got)
 		}

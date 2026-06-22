@@ -35,26 +35,39 @@ import (
 	"sort"
 	"sync"
 
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/intent"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/validation"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // ConfigDriverContext bundles the platform-specific knobs the
 // platform-agnostic `provider.ConfigReconciler` needs to handle one
 // device. Every platform's ConfigDriverFactory returns one of these.
 //
-// The transport package and the intent/writers packages live under
-// `internal/drivers/iosxe/configdriver/` for historical reasons —
-// the actual code is platform-agnostic at the contract level
-// (transport.Interface accepts any RESTCONF/NETCONF/gNMI device;
-// writers.SectionWriter is shape-driven, not platform-driven). A
-// future cleanup may relocate these into `internal/configdriver/`
-// to remove the misleading import path; until then, treat the
-// `iosxe/configdriver/` namespace as the platform-agnostic core.
+// The neutral contracts live under internal/configengine. During
+// the extraction they still alias the mature IOS-XE implementation
+// underneath, but new platform code should depend on the neutral
+// package surface rather than the historical IOS-XE path.
 type ConfigDriverContext struct {
+	// PlatformName is the stable lowercase platform key, for example
+	// "iosxe" or "nxos".
+	PlatformName string
+
+	// ModelFormat is the NetAsCode model format the platform expects when
+	// the CR records spec.modelSource.format.
+	ModelFormat configv1alpha1.NetAsCodeModelFormat
+
+	// ConfigObject and ConfigList identify the platform CRD handled by this
+	// context. They let startup/runtime registries reason about CRD shape
+	// without switch statements. The objects are prototypes and must not be
+	// mutated by callers.
+	ConfigObject runtime.Object
+	ConfigList   runtime.Object
+
 	// Transport is the open device channel. Each platform's
 	// factory builds it per spec.Transport (restconf / netconf /
 	// gnmi) plus any platform-specific RPC names (Cisco-IA for
@@ -87,8 +100,8 @@ type ConfigDriverContext struct {
 	// its periodic ticker.
 	SubscribePaths []string
 
-	// DeviceVersion is the IOS-XE software version string reported
-	// by the device (e.g. "17.16.01a"). When non-empty, the startup
+	// DeviceVersion is the platform software version string reported
+	// by the device (e.g. IOS-XE "17.16.01a"). When non-empty, the startup
 	// code validates this against the version-conditional writer
 	// support table. The factory may leave this empty if the version
 	// isn't known at construction time; retry loops set it lazily on
@@ -111,7 +124,7 @@ type ConfigDriverContext struct {
 	// doesn't declare dependencies.
 	FamilyOrder func([]string) []string
 
-	// YANGValidator validates writer-produced IOS-XE YANG payloads
+	// YANGValidator validates writer-produced device YANG payloads
 	// before mutation. The validation package keeps the canonical
 	// NetAsCode model stable while allowing release-specific YANG
 	// profiles and future ygot/ytypes validators at the device boundary.
@@ -173,8 +186,9 @@ type ConfigDriverFactory func(ctx context.Context, spec *v1alpha1.DeviceSpec, pa
 // the apphosting driver, or factory-level timeouts.
 type ConfigDriverOptions struct {
 	// SessionLock optionally serialises config-driver writes
-	// against apphosting writes on the same device. Mirrors the
-	// *sync.Mutex transport.RESTCONFConfig.SessionLock accepts.
+	// against apphosting writes on the same device. Platform
+	// factories attach it to transports that share a stateful device
+	// session, such as IOS-XE RESTCONF.
 	SessionLock *sync.Mutex
 }
 

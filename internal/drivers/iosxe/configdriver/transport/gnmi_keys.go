@@ -43,26 +43,9 @@ package transport
 // writers, never the reverse).
 
 import (
-	"strings"
-	"sync"
-
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
-)
 
-var (
-	pathKeyRegistryMu sync.RWMutex
-	// pathKeyRegistry maps the LAST segment of a YANG path (with any
-	// "module:" prefix stripped — same normalisation parseGNMIPath
-	// applies) to the first key field for that list. The first field
-	// is sufficient for single-key lists; composite-key lists need
-	// the full list and are looked up via pathKeyRegistryComposite.
-	pathKeyRegistry = map[string]string{}
-	// pathKeyRegistryComposite holds the full key field set for
-	// segments whose lists have more than one key. The current
-	// path syntax `seg=value` only carries one value, so composite
-	// keys are recorded for completeness but parseGNMIPath uses
-	// only the first.
-	pathKeyRegistryComposite = map[string][]string{}
+	configtransport "github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 )
 
 // RegisterPathKey registers the YANG list-key field name(s) for the
@@ -70,24 +53,14 @@ var (
 // values is a no-op. The callsite is the schema layer's startup
 // loop; calling this from anywhere else is allowed but unusual.
 func RegisterPathKey(segment string, keyFields ...string) {
-	if len(keyFields) == 0 || segment == "" {
-		return
-	}
-	pathKeyRegistryMu.Lock()
-	defer pathKeyRegistryMu.Unlock()
-	pathKeyRegistry[segment] = keyFields[0]
-	if len(keyFields) > 1 {
-		pathKeyRegistryComposite[segment] = append([]string(nil), keyFields...)
-	}
+	configtransport.RegisterPathKey(segment, keyFields...)
 }
 
 // pathKeyFor returns the first key field for the given path segment,
 // or empty string when no entry is registered. Callers fall back to
 // the historical name/id heuristic when this returns "".
 func pathKeyFor(segment string) string {
-	pathKeyRegistryMu.RLock()
-	defer pathKeyRegistryMu.RUnlock()
-	return pathKeyRegistry[segment]
+	return configtransport.PathKeyForSegment(segment)
 }
 
 // LastPathSegment is a small helper that extracts the last "/"-
@@ -99,16 +72,7 @@ func pathKeyFor(segment string) string {
 // Example: "/Cisco-IOS-XE-native:native/vlan/Cisco-IOS-XE-vlan:vlan-list"
 // returns "vlan-list".
 func LastPathSegment(p string) string {
-	p = strings.Trim(p, "/")
-	if p == "" {
-		return ""
-	}
-	parts := strings.Split(p, "/")
-	last := parts[len(parts)-1]
-	if i := strings.Index(last, ":"); i > 0 {
-		last = last[i+1:]
-	}
-	return last
+	return configtransport.LastPathSegment(p)
 }
 
 // opToGNMIPath converts a transport.Op to a gNMI Path. Wave 5A-fu:

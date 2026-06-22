@@ -80,3 +80,70 @@ func TestSyncNodeStatusAppliesDeviceLabelsAndTaints(t *testing.T) {
 		t.Fatalf("unexpected taint: %#v", got.Spec.Taints[0])
 	}
 }
+
+func TestSyncNodeStatusUsesDriverPlatformMetadata(t *testing.T) {
+	ctx := context.Background()
+	node := NewAppHostingNode(ctx, "nexus9300v-01", &v1alpha1.DeviceSpec{
+		Driver:  v1alpha1.DeviceDriverNXOS,
+		Address: "192.0.2.64",
+	}, nodeStatusTestDriver{})
+
+	var got *v1.Node
+	node.syncNodeStatus(ctx, func(n *v1.Node) {
+		got = n
+	})
+
+	if got == nil {
+		t.Fatal("expected node status callback")
+	}
+	if got.Labels["platform"] != "cisco-nxos" {
+		t.Fatalf("platform label=%q, want cisco-nxos", got.Labels["platform"])
+	}
+	if got.Labels["topology.kubernetes.io/region"] != "cisco-nxos" || got.Labels["topology.kubernetes.io/zone"] != "cisco-nxos" {
+		t.Fatalf("expected NX-OS topology labels, got labels=%v", got.Labels)
+	}
+	if got.Status.NodeInfo.OSImage != "NX-OS" {
+		t.Fatalf("OSImage=%q, want NX-OS", got.Status.NodeInfo.OSImage)
+	}
+}
+
+func TestInitialNodeSpecUsesDriverPlatformMetadata(t *testing.T) {
+	spec := &v1alpha1.DeviceSpec{
+		Driver:  v1alpha1.DeviceDriverNXOS,
+		Address: "192.0.2.64",
+		Region:  "lab",
+		Zone:    "rack-7",
+		Labels: map[string]string{
+			"workload": "edge",
+		},
+		Taints: []v1.Taint{{
+			Key:    "cisco.vk/device",
+			Value:  "nexus9300v-01",
+			Effect: v1.TaintEffectNoExecute,
+		}},
+	}
+
+	node := GetInitialNodeSpec("nexus9300v-01", spec)
+
+	if node.Name != "nexus9300v-01" {
+		t.Fatalf("node name=%q, want nexus9300v-01", node.Name)
+	}
+	if node.Labels["platform"] != "cisco-nxos" {
+		t.Fatalf("platform label=%q, want cisco-nxos; labels=%v", node.Labels["platform"], node.Labels)
+	}
+	if node.Labels["kubernetes.io/hostname"] != "nexus9300v-01" {
+		t.Fatalf("hostname label=%q, want nexus9300v-01", node.Labels["kubernetes.io/hostname"])
+	}
+	if node.Labels["topology.kubernetes.io/region"] != "lab" || node.Labels["topology.kubernetes.io/zone"] != "rack-7" {
+		t.Fatalf("unexpected topology labels: %v", node.Labels)
+	}
+	if node.Labels["workload"] != "edge" {
+		t.Fatalf("custom label not applied: %v", node.Labels)
+	}
+	if len(node.Spec.Taints) != 1 || node.Spec.Taints[0].Key != "cisco.vk/device" {
+		t.Fatalf("device taints not applied: %#v", node.Spec.Taints)
+	}
+	if node.Status.NodeInfo.OSImage != "NX-OS" {
+		t.Fatalf("OSImage=%q, want NX-OS", node.Status.NodeInfo.OSImage)
+	}
+}

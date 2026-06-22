@@ -21,7 +21,7 @@ import (
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 
-	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 )
 
 // StartSubscribeWatcher opens a transport.Subscribe stream over the

@@ -33,7 +33,7 @@ import (
 type OperationKind string
 
 const (
-	// OperationKindShowCommand runs read-only IOS-XE operational commands.
+	// OperationKindShowCommand runs read-only platform operational commands.
 	OperationKindShowCommand OperationKind = "ShowCommand"
 	// OperationKindConfigDiff is reserved for a read-only diff operation.
 	OperationKindConfigDiff OperationKind = "ConfigDiff"
@@ -198,7 +198,7 @@ type GNOITracerouteArgs struct {
 
 // GNOIFileArgs mirrors the File.Get / File.Stat inputs.
 type GNOIFileArgs struct {
-	// Path is the absolute IOS-XE filesystem path (e.g.
+	// Path is the absolute platform filesystem path (e.g.
 	// "flash:cat9k.bin"). Required; rejected when missing a recognised
 	// filesystem prefix.
 	// +kubebuilder:validation:Required

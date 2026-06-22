@@ -1,28 +1,33 @@
 # Network as Code — Configuration and Drift Detection
 
 !!! warning "Beta"
-    `IOSXEConfig` and the Network as Code feature set are **Beta**
+    `IOSXEConfig`, `NXOSConfig`, and the Network as Code feature set are **Beta**
     (`v1alpha1`). The family API, CRD schema, and drift semantics are
     functional and integration-tested. Schema fields may change between
     releases. Evaluate in non-production environments before broader rollout.
 
-Cisco Virtual Kubelet extends Kubernetes with declarative IOS-XE
-configuration management. You express network intent as plain YAML
-(`IOSXEConfig` CRs), and CVK reconciles the device to match — detecting
-drift, applying changes, and maintaining a revision trail.
+Cisco Virtual Kubelet extends Kubernetes with declarative device configuration
+management. You express network intent as plain YAML (`IOSXEConfig` or
+`NXOSConfig` CRs), and CVK reconciles the device to match — detecting drift,
+applying changes, and verifying observed state after apply. IOS-XE has the
+broadest family coverage and revision/apply-log history; NX-OS starts with a
+per-device NX-API slice for `system`, `feature`, `feature_set`, `vlan`, and
+`interface_ethernet`.
 
 ## Concepts
 
 ### Families
 
-A *family* is one independently managed slice of IOS-XE configuration —
-`vlan`, `bgp`, `ospf`, `aaa`, `prefix_list`, and so on. Each family has
-its own writer that knows how to fetch, diff, and patch the relevant YANG
-paths on the device.
+A *family* is one independently managed slice of device configuration:
+`vlan`, `bgp`, `ospf`, `aaa`, `prefix_list`, and so on for IOS-XE, and
+`system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` for the
+initial NX-OS slice. Each
+family has its own writer that knows how to fetch, diff, and patch the relevant
+device state.
 
-Each `IOSXEConfig` lists the families it owns via `managedFamilies`. CVK
-only touches those families; everything else on the device is left
-untouched.
+Each `IOSXEConfig` or `NXOSConfig` lists the families it owns via
+`managedFamilies`. CVK only touches those families; everything else on the
+device is left untouched.
 
 ### Intent hierarchy
 
@@ -53,7 +58,8 @@ triggers a `Drifted` phase. The `driftPolicy` field controls what happens:
 | `driftPolicy` | Behaviour |
 |---|---|
 | `report` | Log the diff and surface it in `status`; do not patch. |
-| `apply` | Re-apply the intended family config immediately. |
+| `revert` | Re-apply the intended family config immediately. |
+| `pause` | Stop reconciliation until the CR is changed or the pause is removed. |
 
 `driftDetectInterval` sets how frequently CVK polls for drift (default
 `5m`).
@@ -145,11 +151,11 @@ Events:
   Warning  Drifted  30s   family vlan: 1 leaf divergence (driftPolicy=report)
 ```
 
-Switch to `driftPolicy: apply` to have CVK automatically remediate:
+Switch to `driftPolicy: revert` to have CVK automatically remediate:
 
 ```bash
 kubectl patch iosxeconfig access-vlans \
-  --type=merge -p '{"spec":{"driftPolicy":"apply"}}'
+  --type=merge -p '{"spec":{"driftPolicy":"revert"}}'
 ```
 
 ---
@@ -172,7 +178,7 @@ spec:
     - spanning_tree
     - snmp_server
     - logging
-  driftPolicy: apply
+  driftPolicy: revert
   writeStartup: true
   source:
     inline:
@@ -221,7 +227,7 @@ spec:
     spec:
       managedFamilies:
         - vlan
-      driftPolicy: apply
+      driftPolicy: revert
       writeStartup: true
       source:
         inline:
@@ -393,11 +399,150 @@ iterative development to keep changes transient.
 
 ---
 
+## NX-OS quick start
+
+Use `NXOSConfig` for NX-OS devices. It uses the same common status and
+drift-policy fields as `IOSXEConfig`, but the first runtime slice is scoped to
+`system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` over
+NX-API REST/DME.
+
+`NXOSConfig` accepts either a direct resolved family map or a full
+`nxos:` NetAsCode envelope. When a full envelope is supplied, CVK resolves
+`global`, matching `device_groups`, the selected `devices` entry, model
+`templates`, `variables`, and `interface_groups` before normalizing
+`interfaces.ethernets` into the runtime `interface_ethernet` family. Template
+types other than `model` are rejected; render CLI separately and submit only
+resolved model intent.
+
+```yaml
+apiVersion: config.cisco.vk/v1alpha1
+kind: NXOSConfig
+metadata:
+  name: nexus9300v-system
+  namespace: default
+spec:
+  deviceRef:
+    name: nexus9300v-01
+  managedFamilies:
+    - system
+  driftPolicy: report
+  modelSource:
+    format: netascode-nxos
+    resolved: true
+  source:
+    inline:
+      nxos:
+        global:
+          variables:
+            uplink_mtu: 9216
+        interface_groups:
+          - name: routed-uplinks
+            configuration:
+              mtu: ${uplink_mtu}
+              shutdown: false
+        devices:
+          - name: nexus9300v-01
+            configuration:
+              system:
+                hostname: nexus9300v-01
+              interfaces:
+                ethernets:
+                  - id: 1/1
+                    interface_groups:
+                      - routed-uplinks
+                    description: CVK uplink
+```
+
+```bash
+$ kubectl get nxosconfig
+NAME                  DEVICE          PHASE    DRIFT    AGE
+nexus9300v-system     nexus9300v-01   InSync   report   30s
+```
+
+### NX-OS runtime coverage
+
+NX-OS uses the Network as Code `nxos` model shape, but CVK only writes the
+fields listed below today. Unsupported fields fail closed instead of being
+silently ignored. If `spec.managedFamilies` names a family outside this
+supported table, the common runtime marks the CR `Failed` before contacting the
+device; planned families remain documentation until their writer and verify
+fixtures are present. `CiscoDevice.spec.configPrereqs` uses the same NX-OS
+family gate when it creates an owned `NXOSConfig`, so unsupported explicit or
+source-derived families fail at CiscoDevice reconciliation time.
+
+| Family | Supported fields | Not supported in this slice |
+|---|---|---|
+| `system` | `system.hostname`, `system.mtu` | broader Ethernet defaults, boot, clock, NX-API, SSH, and platform subtrees |
+| `feature` | NetAsCode feature booleans: `analytics`, `bash_shell`, `bfd`, `bgp`, `dhcp`, `evpn`, `fabric_forwarding`, `grpc`, `hsrp`, `interface_vlan`, `isis`, `lacp`, `lldp`, `macsec`, `netflow`, `ngmvpn`, `ngoam`, `nv_overlay`, `nxapi`, `ospf`, `ospfv3`, `pim`, `private_vlan`, `ptp`, `scp_server`, `security_group`, `service_acceleration`, `sflow`, `sftp_server`, `ssh`, `tacacs`, `telemetry`, `telnet`, `udld`, `vn_segment_vlan_based`, `vpc` | provider aliases such as `hmm`, `pvlan`, and `vn_segment`; disabling `nxapi`, `ssh`, `scp_server`, `sftp_server`, or `tacacs` through `NXOSConfig` is rejected to avoid management lockout |
+| `feature_set` | `feature_set.fex`, `feature_set.mpls`, `feature_set.virtualization` | none in the NetAsCode boolean slice |
+| `vlan` | `vlan.vlans[].id`, `vlan.vlans[].name` | VNI / VXLAN leaves such as `vni` or `vn_segment`; prune deletes are supported for CR-owned VLANs except VLAN 1 |
+| `interface_ethernet` | `interfaces.ethernets[].id`, `description`, `shutdown`, `mtu` | switchport, IP/IPv6, channel-group, OSPF, PIM, ACL/NAT attachments; physical interface deletion/prune is intentionally unsupported |
+
+Planned NX-OS family waves are tracked in
+[Production Readiness](production-readiness.md). The parity target is the
+current Network as Code NX-OS data-model stripe, which is split into entity,
+device, and interface sections.
+
+Entity/source pattern coverage:
+
+| Pattern | Status |
+|---|---|
+| `devices`, `device_groups`, `global` | Supported for inline/resolved `NXOSConfig` intent. |
+| `variables`, `templates` with `type: model`, `interface_groups` | Supported before family normalization. |
+| `managed_devices`, `managed_device_groups` | Planned for a future source/orchestration layer; one `NXOSConfig` reconciles one selected device today. |
+| `yaml_files`, `yaml_directories`, file templates, `write_model_file` | Deferred; render these outside the controller and submit resolved intent. |
+| ordered `cli_templates` | Deferred for config reconciliation; use `DeviceOperation` for explicit NX-API CLI execution. |
+
+If an owned source-derived `NXOSConfig` prereq CR is externally deleted during
+teardown, the controller cannot reconstruct prior owned keys from the vanished
+status. It records `PrereqTeardownObserved=True` with a warning event instead
+of blocking device deletion indefinitely; operators should inspect the device
+for any orphaned prereq state.
+
+Full family parity is not claimed until each family has DME mapping,
+Fetch -> Diff -> Apply -> Verify behavior, fake transport tests, and an
+optional guarded live write test. The current target set is:
+
+| Wave | Families |
+|---|---|
+| Management/base | `aaa`, `banner`, `cdp`, `clock`, `dns`, `lldp`, `logging`, `ntp`, `nxapi`, `snmp`, `ssh`, `system`, `udld` |
+| L2 and interfaces | `arp`, `interface_ethernet`, `interface_loopback`, `interface_management`, `interface_port_channel`, `interface_subinterface`, `interface_vlan`, `spanning_tree`, `vlan`, `vpc` |
+| L3 and routing | `bfd`, `bgp`, `dhcp`, `hsrp`, `ip_route`, `ipv6_route`, `isis`, `nd`, `ospf`, `ospfv3`, `pim`, `ptp`, `vrf` |
+| Policy/security | `community_list`, `hypershield`, `ip_access_list`, `ip_prefix_list`, `ipv6_access_list`, `ipv6_prefix_list`, `key_chain`, `qos`, `route_map`, `security_group`, `span` |
+| Fabric and telemetry | `analytics`, `evpn`, `fabric_forwarding`, `interface_nve`, `netflow`, `sflow`, `telemetry` |
+
+### NX-OS REST/DME semantics
+
+`NXOSConfig` writes through NX-API REST/DME and reports the shared transport
+kind as `rest`. It does not use NETCONF candidate datastores, gNMI
+transactions, or confirmed commit. That means:
+
+- `spec.transactional` cannot make an NX-OS DME apply atomic.
+- `spec.confirmTimeoutSeconds` cannot provide device-native auto-revert.
+- CVK relies on Fetch -> Diff -> Apply -> Verify for every supported family.
+- `writeStartup: true` is safe only after every managed family verifies.
+- Rollback for NX-OS DME is compensating configuration, not a native protocol
+  transaction.
+
+When a CR requests confirmed-commit behavior that the selected transport cannot
+provide, CVK records a warning event and a stable status entry under
+`status.transportFallbacks`, for example:
+
+```yaml
+status:
+  transportFallbacks:
+    - type: ConfirmedCommit
+      reason: non-transactional reconcile
+      message: spec.confirmTimeoutSeconds set but auto-revert path is unavailable on this transport
+```
+
+---
+
 ## Available configuration families
 
-For a complete reference of all available families and their YAML shapes,
-see the [Family Reference](reference/families/README.md). For YANG version
-compatibility and the version override architecture, see
+For a complete reference of all available IOS-XE families and their YAML
+shapes, see the [Family Reference](reference/families/README.md). For YANG
+version compatibility and the version override architecture, see
 [YANG Version Support](yang-version-support.md).
 
 Key families available today:
