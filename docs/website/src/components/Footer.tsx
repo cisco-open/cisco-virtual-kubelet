@@ -91,7 +91,8 @@ export default function Footer() {
             </a>
             <p className="text-sm text-text-muted leading-relaxed mb-6">
               Deploy container workloads on Cisco Catalyst series switches and
-              IOS-XE devices using standard Kubernetes workflows.
+              IOS-XE devices, with Beta support for Cisco Nexus (NX-OS)
+              switches, using standard Kubernetes workflows.
             </p>
             <a
               href="https://github.com/cisco-open/cisco-virtual-kubelet"

@@ -68,8 +68,8 @@ export default function Hero() {
               Virtual Kubelet provider
             </span>{" "}
             that enables Kubernetes to schedule container workloads on Cisco
-            Catalyst series switches and IOS-XE devices with App-Hosting
-            capabilities.
+            Catalyst series switches and IOS-XE devices — with Beta support for
+            Cisco Nexus (NX-OS) switches — that offer App-Hosting capabilities.
           </motion.p>
 
           {/* CTA Buttons */}

@@ -141,7 +141,7 @@ export default function Architecture() {
               {[
                 { name: "Catalyst 8000V", ip: "192.0.2.24" },
                 { name: "Catalyst 9000", ip: "192.0.2.25" },
-                { name: "IOS-XE Device", ip: "192.0.2.x" },
+                { name: "Nexus NX-OS · Beta", ip: "192.0.2.x" },
               ].map((device, i) => (
                 <motion.div
                   key={device.name}
@@ -201,12 +201,12 @@ export default function Architecture() {
             </div>
             <div className="relative pt-12">
               <h3 className="text-xl font-semibold mb-3 text-foreground">
-                RESTCONF Reconciliation
+                Driver Reconciliation
               </h3>
               <p className="text-text-muted leading-relaxed">
-                The driver translates pod specs into IOS-XE app-hosting config
-                and reconciles state via RESTCONF. A recovery loop reprocesses
-                stuck pods automatically.
+                The driver translates pod specs into device app-hosting config
+                and reconciles state — via RESTCONF on IOS-XE, or NX-API CLI on
+                NX-OS. A recovery loop reprocesses stuck pods automatically.
               </p>
             </div>
           </div>
