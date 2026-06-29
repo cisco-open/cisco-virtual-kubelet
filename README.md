@@ -3,18 +3,19 @@
 [![Go Version](https://img.shields.io/badge/Go-1.25+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-A [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider that enables [Kubernetes](https://kubernetes.io/docs/home/) to schedule container workloads on Cisco Catalyst series switches and other IOS-XE devices with [App-Hosting](https://developer.cisco.com/docs/app-hosting/) capabilities.
+A [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider that enables [Kubernetes](https://kubernetes.io/docs/home/) to schedule container workloads on Cisco Catalyst series switches and other IOS-XE devices — with Beta support for Cisco Nexus (NX-OS) switches — that offer [App-Hosting](https://developer.cisco.com/docs/app-hosting/) capabilities.
 
 ## Overview
 
-This provider allows Kubernetes pods to be deployed as containers directly on Cisco devices, enabling edge computing scenarios where compute workloads run on network infrastructure. The provider communicates with Cisco devices via RESTCONF APIs to manage the full container and device lifecycle.
+This provider allows Kubernetes pods to be deployed as containers directly on Cisco devices, enabling edge computing scenarios where compute workloads run on network infrastructure. The provider communicates with Cisco devices over their native management APIs — RESTCONF on IOS-XE, and NX-API (CLI and REST/DME) on NX-OS — to manage the full container and device lifecycle.
 
 ### Key Features
 
 - **Native Kubernetes Integration** — deploy containers to Cisco devices using standard `kubectl` commands
-- **Driver-Based Architecture** — extensible driver pattern currently supporting IOS-XE devices
-- **Full App-Hosting Lifecycle** — create, monitor, and delete containers via RESTCONF
-- **Network as Code** — declare IOS-XE device configuration in Kubernetes (`IOSXEConfig` CRD) with continuous drift detection and transactional apply
+- **Driver-Based Architecture** — extensible driver pattern supporting IOS-XE devices, with Beta support for NX-OS
+- **Full App-Hosting Lifecycle** — create, monitor, and delete containers via RESTCONF (IOS-XE) or NX-API CLI (NX-OS)
+- **Network as Code** — declare device configuration in Kubernetes (`IOSXEConfig`, plus the `NXOSConfig` CRD *(Beta)*) with continuous drift detection and transactional apply
+- **NX-OS Support** *(Beta)* — app-hosting lifecycle over NX-API CLI and declarative `NXOSConfig` over NX-API REST/DME; an initial runtime slice covering the `system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` families
 - **Software Lifecycle** *(Beta)* — drive IOS-XE software upgrades via the `IOSXESoftwareUpgrade` CRD using gNOI OS install/activate/verify
 - **Device Operations** *(Beta)* — run auditable `show` commands and read-only gNOI probes from Kubernetes via `DeviceOperation` CRD
 - **IOS-XE Telemetry** *(Beta)* — declare MDT-over-gNMI subscriptions and emit OpenTelemetry metrics, logs, and state-transition traces
@@ -27,6 +28,9 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 
 - Cisco Catalyst 8000V virtual routers
 - Cisco Catalyst 9000 switches
+- Cisco Nexus switches (NX-OS) *(Beta)*
+
+See [Production Readiness](docs/production-readiness.md) for the current NX-OS runtime-parity scope and hardening roadmap.
 
 ## Architecture
 
