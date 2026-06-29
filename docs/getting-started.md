@@ -4,6 +4,13 @@ This guide walks you through deploying Cisco Virtual Kubelet against a Kubernete
 
 You'll install the Helm chart, which deploys a Kubernetes controller. The controller watches `CiscoDevice` custom resources and stands up a Virtual Kubelet pod for each one — this is the supported way to run Cisco Virtual Kubelet.
 
+!!! info "NX-OS (Beta)"
+    This walkthrough uses an IOS-XE device, the production-focused path. Cisco
+    Nexus (NX-OS) switches are also supported in Beta — the install and pod
+    steps are identical; only the `CiscoDevice` spec differs (`driver: NXOS`
+    with an `nxos:` block). See [Deploying to NX-OS](#deploying-to-nx-os-beta)
+    below and the [NX-OS Family Reference](reference/families-nxos.md).
+
 ## Prerequisites
 
 | Requirement | Notes |
@@ -167,6 +174,44 @@ cat9000-1    Ready    agent   15s
 ```
 
 If `PHASE` stays on `Provisioning` or shows `Error`, see [Troubleshooting](troubleshooting.md#ciscodevice-stuck-in-provisioning).
+
+### Deploying to NX-OS (Beta)
+
+For a Cisco Nexus (NX-OS) switch, the controller install (step 2), credential
+Secret (step 3), and pod scheduling (step 5) are unchanged. Only the
+`CiscoDevice` spec differs: set `driver: NXOS` and use an `nxos:` block instead
+of `xe:`. App-hosting is driven over NX-API CLI; the only supported host-side
+attachment today is the `Management` interface.
+
+```yaml
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: nexus9300v-01
+  namespace: default
+spec:
+  driver: NXOS
+  address: "192.168.1.120"
+  port: 443
+  username: admin
+  credentialSecretRef:
+    name: nexus9300v-01-creds
+  tls:
+    enabled: true
+    insecureSkipVerify: true    # acceptable for lab; use caFile in production
+  nxos:
+    networking:
+      interface:
+        type: Management
+        management:
+          guestInterface: 0
+```
+
+Declarative NX-OS device configuration (VLANs, interfaces, features, and so on)
+is managed separately through the `NXOSConfig` CRD over NX-API REST/DME — see
+the [NX-OS Family Reference](reference/families-nxos.md) for the supported
+families and an example. NX-OS is a Beta runtime slice; the
+[Production Readiness](production-readiness.md) page tracks its current scope.
 
 ## 5. Deploy a pod
 
