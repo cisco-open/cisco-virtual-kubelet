@@ -80,16 +80,16 @@ The chart and its container image are published to GitHub Container Registry wit
 
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.6.1 \
+  --version 2026.7.0 \
   --namespace cvk-system --create-namespace
 ```
 
-This deploys the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default — no `--set image.*` needed. The chart `--version` is the release normalised to SemVer (e.g. `v2026.06.1` → `2026.6.1`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current version.
+This deploys the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default — no `--set image.*` needed. The chart `--version` is the release normalised to SemVer (e.g. `v2026.07.0` → `2026.7.0`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current version.
 
 Optionally verify the chart signature before installing:
 
 ```bash
-cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.6.1 \
+cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.7.0 \
   --certificate-identity-regexp "https://github.com/cisco-open/cisco-virtual-kubelet/.github/workflows/release.yml@refs/tags/v.*" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
