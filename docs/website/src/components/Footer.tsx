@@ -1,4 +1,4 @@
-// Copyright 2026 Cisco Systems, Inc.
+// Copyright 2026 Cisco Systems Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -91,7 +91,8 @@ export default function Footer() {
             </a>
             <p className="text-sm text-text-muted leading-relaxed mb-6">
               Deploy container workloads on Cisco Catalyst series switches and
-              IOS-XE devices using standard Kubernetes workflows.
+              IOS-XE devices, with Beta support for Cisco Nexus (NX-OS)
+              switches, using standard Kubernetes workflows.
             </p>
             <a
               href="https://github.com/cisco-open/cisco-virtual-kubelet"
@@ -132,7 +133,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-text-muted">
-            © {new Date().getFullYear()} Cisco Systems, Inc. Licensed under{" "}
+            © {new Date().getFullYear()} Cisco Systems Inc. Licensed under{" "}
             <a
               href="https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/LICENSE"
               target="_blank"

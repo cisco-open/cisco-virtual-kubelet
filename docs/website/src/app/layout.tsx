@@ -1,4 +1,4 @@
-// Copyright 2026 Cisco Systems, Inc.
+// Copyright 2026 Cisco Systems Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,15 +29,18 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Cisco Virtual Kubelet — Deploy Containers to Cisco Network Devices",
   description:
-    "A Virtual Kubelet provider that enables Kubernetes to schedule container workloads on Cisco Catalyst series switches and IOS-XE devices with App-Hosting capabilities.",
+    "A Virtual Kubelet provider that enables Kubernetes to schedule container workloads on Cisco Catalyst series switches and IOS-XE devices, with Beta support for Cisco Nexus (NX-OS) switches, that offer App-Hosting capabilities.",
   keywords: [
     "Cisco",
     "Virtual Kubelet",
     "Kubernetes",
     "Edge Computing",
     "IOS-XE",
+    "NX-OS",
+    "Nexus",
     "Catalyst",
     "RESTCONF",
+    "NX-API",
     "Containers",
   ],
   openGraph: {

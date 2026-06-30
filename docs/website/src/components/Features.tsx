@@ -1,4 +1,4 @@
-// Copyright 2026 Cisco Systems, Inc.
+// Copyright 2026 Cisco Systems Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,9 @@ import {
   Activity,
   Layers,
   LineChart,
+  FileCode,
+  ArrowUpCircle,
+  Terminal,
 } from "lucide-react";
 
 const features = [
@@ -37,17 +40,45 @@ const features = [
     icon: Layers,
     title: "Driver-Based Architecture",
     description:
-      "Extensible driver pattern with IOS-XE (Catalyst 8000V, Catalyst 9000) available today. Add new device types through a clean driver interface.",
+      "Extensible driver pattern with IOS-XE (Catalyst 8000V, Catalyst 9000) available today and Beta support for Cisco Nexus (NX-OS). Add new device types through a clean driver interface.",
     color: "from-accent to-accent-light",
     glowColor: "accent",
+    beta: true,
   },
   {
     icon: Activity,
-    title: "Lifecycle & Recovery",
+    title: "Full App-Hosting Lifecycle",
     description:
-      "Full pod lifecycle via RESTCONF with an automatic recovery loop that reprocesses stuck pods using exponential backoff.",
+      "Create, monitor, and delete containers via RESTCONF on IOS-XE or NX-API CLI on NX-OS, with an automatic recovery loop that reprocesses stuck pods using exponential backoff.",
     color: "from-success to-emerald-400",
     glowColor: "success",
+  },
+  {
+    icon: FileCode,
+    title: "Network as Code",
+    description:
+      "Declare device configuration in Kubernetes with the IOSXEConfig and NXOSConfig CRDs — continuous drift detection, revisions, and transactional apply.",
+    color: "from-primary to-accent",
+    glowColor: "primary",
+    beta: true,
+  },
+  {
+    icon: ArrowUpCircle,
+    title: "Software Lifecycle",
+    description:
+      "Drive IOS-XE software upgrades from Kubernetes via the IOSXESoftwareUpgrade CRD, using gNOI OS install, activate, and verify.",
+    color: "from-accent to-accent-light",
+    glowColor: "accent",
+    beta: true,
+  },
+  {
+    icon: Terminal,
+    title: "Device Operations",
+    description:
+      "Run auditable show commands and read-only gNOI probes from Kubernetes via the DeviceOperation CRD — no SSH sessions required.",
+    color: "from-primary-light to-primary",
+    glowColor: "primary",
+    beta: true,
   },
   {
     icon: Network,
@@ -67,9 +98,9 @@ const features = [
   },
   {
     icon: LineChart,
-    title: "Observability & Topology",
+    title: "Telemetry & Observability",
     description:
-      "Prometheus metrics for device and interface health, plus OpenTelemetry topology traces with CDP/OSPF neighbors and hosted apps.",
+      "MDT-over-gNMI subscriptions emit OpenTelemetry metrics, logs, and traces, plus Prometheus device/interface health and CDP/OSPF topology with hosted apps.",
     color: "from-primary-light to-primary",
     glowColor: "primary",
     beta: true,

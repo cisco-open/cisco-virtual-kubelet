@@ -1,4 +1,4 @@
-// Copyright 2026 Cisco Systems, Inc.
+// Copyright 2026 Cisco Systems Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -165,7 +165,7 @@ export default function GetStarted() {
               { label: "Kubernetes 1.28+", desc: "Any distribution" },
               { label: "Helm v3 + Docker", desc: "To install the chart and build the image" },
               { label: "Container Registry", desc: "Reachable from the cluster" },
-              { label: "Cisco IOS-XE Device", desc: "Cat 8000V or Cat 9000" },
+              { label: "Cisco Device", desc: "IOS-XE (Cat 8000V/9000) or Nexus NX-OS (Beta)" },
             ].map((req) => (
               <div
                 key={req.label}

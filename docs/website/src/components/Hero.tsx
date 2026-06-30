@@ -1,4 +1,4 @@
-// Copyright 2026 Cisco Systems, Inc.
+// Copyright 2026 Cisco Systems Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,8 +68,8 @@ export default function Hero() {
               Virtual Kubelet provider
             </span>{" "}
             that enables Kubernetes to schedule container workloads on Cisco
-            Catalyst series switches and IOS-XE devices with App-Hosting
-            capabilities.
+            Catalyst series switches and IOS-XE devices — with Beta support for
+            Cisco Nexus (NX-OS) switches — that offer App-Hosting capabilities.
           </motion.p>
 
           {/* CTA Buttons */}
