@@ -17,7 +17,6 @@ package nxos
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -29,6 +28,7 @@ import (
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/tlsutil"
 )
 
 const (
@@ -63,11 +63,17 @@ func newNXAPIClientWithOptions(spec *v1alpha1.DeviceSpec, opts nxapiClientOption
 	}
 	scheme := "http"
 	defaultPort := 80
-	tlsConfig := &tls.Config{} // #nosec G402 - InsecureSkipVerify is operator-controlled for lab devices.
+	// Shared device-client helper: TLS 1.2 minimum, InsecureSkipVerify
+	// copied verbatim (operator-controlled for lab devices), spec.tls.caFile
+	// loaded into RootCAs so private-CA Nexus front panels verify, and the
+	// certFile/keyFile client pair when both are set.
+	tlsConfig, err := tlsutil.ClientTLSFromDeviceTLS(spec.TLS) // #nosec G402 - InsecureSkipVerify is operator-controlled.
+	if err != nil {
+		return nil, fmt.Errorf("nxos nxapi: TLS from spec: %w", err)
+	}
 	if spec.TLS != nil && spec.TLS.Enabled {
 		scheme = "https"
 		defaultPort = 443
-		tlsConfig.InsecureSkipVerify = spec.TLS.InsecureSkipVerify // #nosec G402
 	}
 	port := spec.Port
 	if port == 0 {

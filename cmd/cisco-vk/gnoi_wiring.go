@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"os"
 	"strconv"
@@ -29,6 +28,7 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/devicegrpc"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
+	"github.com/cisco/virtual-kubelet-cisco/internal/tlsutil"
 )
 
 // gNOIDisabledEnv lets operators force-disable the gNOI pillar even
@@ -82,10 +82,14 @@ func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider
 		Password: opts.Password,
 	}
 	if !forceInsecure && opts.Spec.TLS != nil && opts.Spec.TLS.Enabled {
-		dialCfg.TLSConfig = &tls.Config{
-			MinVersion:         tls.VersionTLS12,
-			InsecureSkipVerify: opts.Spec.TLS.InsecureSkipVerify,
+		// Shared device-client helper: honours spec.tls.caFile (RootCAs)
+		// and the certFile/keyFile client pair in addition to
+		// InsecureSkipVerify, matching the apphosting driver.
+		tlsCfg, err := tlsutil.ClientTLSFromDeviceTLS(opts.Spec.TLS)
+		if err != nil {
+			return nil, fmt.Errorf("gNOI: TLS from spec: %w", err)
 		}
+		dialCfg.TLSConfig = tlsCfg
 	}
 
 	pool := devicegrpc.New(dialCfg, nil)
