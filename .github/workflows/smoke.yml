@@ -48,10 +48,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: '1.25'
           cache: true
@@ -117,7 +117,8 @@ jobs:
               exit 1
             fi
           done
-          echo "CRD/chart sync clean (8 of 8)."
+          count=$(ls config/crd/*.yaml | wc -l)
+          echo "CRD/chart sync clean (${count} of ${count})."
 
       - name: setup-envtest binaries
         # Pinned per pre-pr-test-enrichment-plan §6 — never @latest in
@@ -139,16 +140,26 @@ jobs:
         run: make test-envtest
 
       - name: Install kind
-        uses: helm/kind-action@v1
+        uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
         with:
-          version: v0.24.0
+          # kind v0.32.0 defaults to Kubernetes 1.36; pin the node image by
+          # digest so the smoke cluster's Kubernetes version only moves when
+          # we choose to move it. Keep this within the client-go support
+          # window of the k8s.io/* modules in go.mod.
+          version: v0.32.0
+          node_image: kindest/node:v1.36.1@sha256:3489c7674813ba5d8b1a9977baea8a6e553784dab7b84759d1014dbd78f7ebd5
           cluster_name: smoke
           wait: 60s
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
-          version: v3.15.4
+          # Latest Helm 3 minor. Helm 3 minors out of the current line stop
+          # receiving patches immediately, and the 3.x line as a whole is in
+          # wind-down (final feature release 2026-09, security-only after),
+          # so track the newest 3.x here; the helm4-compat job below covers
+          # the Helm 4 side.
+          version: v3.21.3
 
       - name: helm lint
         # Lint the chart with the regenerated CRDs in place. Runs
@@ -333,16 +344,66 @@ jobs:
           kubectl -n cisco-vk-smoke describe iosxeconfig smoke || true
           kubectl -n cisco-vk-smoke get events --sort-by=.lastTimestamp || true
 
+  helm4-compat:
+    # Helm 4 is the current stable major and what new users install by
+    # default. The chart is a standard apiVersion v2 chart so it is expected
+    # to work unmodified; this job turns that expectation into a gate
+    # (static lint + template render only — the kind install above stays on
+    # the Helm 3 line until the fleet guidance moves).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install Helm 4
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.2.3
+
+      - name: helm lint (Helm 4)
+        run: helm lint charts/cisco-virtual-kubelet
+
+      - name: helm template (Helm 4)
+        run: |
+          helm template cvk charts/cisco-virtual-kubelet \
+            --namespace cisco-vk-system > /dev/null
+          helm template cvk charts/cisco-virtual-kubelet \
+            --namespace cisco-vk-system \
+            --set collector.enabled=true > /dev/null
+          echo "Helm 4 render clean (defaults and collector.enabled=true)."
+
+  govulncheck:
+    # Shift vulnerability scanning left: the release workflow runs Trivy on
+    # the built image, but nothing scans the module graph at PR time.
+    # govulncheck is symbol-aware, so it only fails on vulnerable code that
+    # is actually reachable.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
+        with:
+          go-version-input: '1.25'
+          check-latest: true
+          go-package: ./...
+          repo-checkout: false
+
   ygot-validate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: '1.25'
           cache: true
