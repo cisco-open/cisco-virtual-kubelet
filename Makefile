@@ -118,7 +118,7 @@ test-coverage: ## Run tests with coverage
 # managed apiserver/etcd binary set. CI installs setup-envtest before
 # invocation; locally, run:
 #
-#   go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+#   go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20260305142021-f9589b9f2b9d
 #   make test-envtest
 #
 # The KUBEBUILDER_ASSETS env var points the envtest harness at the
@@ -126,10 +126,10 @@ test-coverage: ## Run tests with coverage
 test-envtest: ## Run envtest real-apiserver smoke tests (requires setup-envtest in PATH)
 	@command -v setup-envtest >/dev/null 2>&1 || { \
 		echo "setup-envtest not found. Install with:"; \
-		echo "  $(GO_BIN) install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest"; \
+		echo "  $(GO_BIN) install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20260305142021-f9589b9f2b9d"; \
 		exit 1; \
 	}
-	@KUBEBUILDER_ASSETS="$$(setup-envtest use 1.30 -p path)" \
+	@KUBEBUILDER_ASSETS="$$(setup-envtest use 1.35.0 -p path)" \
 		$(GO_BIN) test -tags envtest -count=1 -v ./internal/provider/ -run TestEnvtest_
 
 lint: ## Run linter

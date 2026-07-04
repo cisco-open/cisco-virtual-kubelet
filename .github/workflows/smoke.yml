@@ -124,13 +124,14 @@ jobs:
         # Pinned per pre-pr-test-enrichment-plan §6 — never @latest in
         # CI. The setup-envtest sub-module of controller-runtime is
         # not independently tagged; the canonical pin is a Go
-        # pseudo-version anchored on the same commit as the
-        # controller-runtime release used by go.mod (currently
-        # v0.22.4 → 7a1b16d039d2, dated 2025-11-03). Bump together
-        # with the controller-runtime go.mod entry and re-run the
-        # suite before locking in.
+        # pseudo-version from the same release branch as the
+        # controller-runtime release used by go.mod. Bump them together and
+        # re-run the suite before locking in.
         run: |
-          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20251103140007-7a1b16d039d2
+          # The setup-envtest submodule has no tags of its own. Keep this
+          # pseudo-version on controller-runtime's release-0.23 branch so it
+          # stays compatible with the v0.23 controller-runtime dependency.
+          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20260305142021-f9589b9f2b9d
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Real-apiserver smoke (envtest)
