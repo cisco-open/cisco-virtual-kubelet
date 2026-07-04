@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -68,6 +69,11 @@ const (
 	DefaultImage = "ghcr.io/cisco/virtual-kubelet-cisco:latest"
 	// DefaultServiceAccount is the shared service account used by all VK deployments.
 	DefaultServiceAccount = "cisco-virtual-kubelet"
+	// distrolessNonRootUID/GID are the stable numeric identity of the nonroot
+	// account in gcr.io/distroless images. Using numbers is required because
+	// kubelet cannot verify a named OCI image user against runAsNonRoot.
+	distrolessNonRootUID int64 = 65532
+	distrolessNonRootGID int64 = 65532
 	// virtualKubeletNodeLabelKey/Value are applied to nodes registered by the
 	// per-device VK process. The controller-created per-device VK pods must
 	// avoid those nodes or Kubernetes can recursively schedule one device's VK
@@ -466,12 +472,36 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		podEnv = append(podEnv, opsPolicyEnv(device.Spec.OpsPolicy)...)
 
 		deploy.Spec.Template.Spec = corev1.PodSpec{
+			// Pod Security Standards "restricted" profile. Pinning the numeric
+			// distroless identity lets kubelet verify runAsNonRoot and keeps the
+			// process and writable volume ownership consistent.
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsNonRoot: ptr.To(true),
+				RunAsUser:    ptr.To(distrolessNonRootUID),
+				RunAsGroup:   ptr.To(distrolessNonRootGID),
+				FSGroup:      ptr.To(distrolessNonRootGID),
+				SeccompProfile: &corev1.SeccompProfile{
+					Type: corev1.SeccompProfileTypeRuntimeDefault,
+				},
+			},
 			Containers: []corev1.Container{
 				{
 					Name:  "cisco-vk",
 					Image: image,
 					Args:  vkContainerArgs(device.Name, device.Spec.LogLevel),
 					Env:   podEnv,
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{"ALL"},
+						},
+						// The two writable paths the runtime needs — the
+						// generated-TLS dir and /tmp (upgrade image staging,
+						// SFTP known_hosts scratch in imageresolver.go) — are
+						// both backed by emptyDir mounts below, so the root
+						// filesystem itself can be read-only.
+						ReadOnlyRootFilesystem: ptr.To(true),
+					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "device-config",
@@ -482,6 +512,10 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 						{
 							Name:      "tls-gen",
 							MountPath: varLibMountPath,
+						},
+						{
+							Name:      "tmp",
+							MountPath: "/tmp",
 						},
 					},
 				},
@@ -502,6 +536,16 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					// self-signed TLS cert generated at startup. Using an
 					// explicit emptyDir ensures this works on a RORFS.
 					Name: "tls-gen",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
+				{
+					// Writable /tmp for the read-only root filesystem:
+					// software-upgrade image staging and cache
+					// (os.CreateTemp / os.TempDir in imageresolver.go) land
+					// here. Sized by the node's disk like any emptyDir.
+					Name: "tmp",
 					VolumeSource: corev1.VolumeSource{
 						EmptyDir: &corev1.EmptyDirVolumeSource{},
 					},
