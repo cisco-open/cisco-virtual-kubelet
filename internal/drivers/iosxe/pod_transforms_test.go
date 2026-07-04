@@ -1150,10 +1150,10 @@ func TestAllocateIPForContainer_NonPrimary_NoIP(t *testing.T) {
 
 func TestGetPackageDest(t *testing.T) {
 	cases := []struct {
-		name        string
-		annotation  string
-		wantDest    string
-		wantErr     bool
+		name       string
+		annotation string
+		wantDest   string
+		wantErr    bool
 	}{
 		{name: "not set", annotation: "", wantDest: ""},
 		{name: "flash with path", annotation: "flash:/virtual-kubelet/app.tar", wantDest: "flash:/virtual-kubelet/app.tar"},

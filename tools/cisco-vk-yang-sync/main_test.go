@@ -582,9 +582,13 @@ func TestComputeModuleClosureBasic(t *testing.T) {
 	// AllFiles must include root, submod1 (submodule), dep1, dep2, dep3.
 	// TopLevelFiles must include root, dep1, dep2, dep3 but NOT submod1.
 	gotAll := map[string]bool{}
-	for _, f := range got.AllFiles { gotAll[f] = true }
+	for _, f := range got.AllFiles {
+		gotAll[f] = true
+	}
 	gotTop := map[string]bool{}
-	for _, f := range got.TopLevelFiles { gotTop[f] = true }
+	for _, f := range got.TopLevelFiles {
+		gotTop[f] = true
+	}
 
 	for _, want := range []string{
 		"Cisco-IOS-XE-root.yang",
