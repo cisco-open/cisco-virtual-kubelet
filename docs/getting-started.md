@@ -71,11 +71,11 @@ The controller watches `CiscoDevice` custom resources and creates a Virtual Kube
 
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.7.0 \
+  --version 2026.7.1 \
   --namespace cvk-system --create-namespace
 ```
 
-This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` is the release normalised to SemVer (e.g. `v2026.07.0` → `2026.7.0`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
+This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` is the release normalised to SemVer (e.g. `v2026.07.1` → `2026.7.1`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
 
 **From source with a custom image** — to run the build from step 1 instead:
 

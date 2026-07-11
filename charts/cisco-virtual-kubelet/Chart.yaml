@@ -6,7 +6,7 @@ type: application
 # from the git tag by the release workflow; the values below are the
 # source-tree defaults used for local installs.
 version: 0.1.0
-appVersion: "v2026.07.0"
+appVersion: "v2026.07.1"
 keywords:
   - cisco
   - virtual-kubelet
