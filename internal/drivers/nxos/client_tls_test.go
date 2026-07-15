@@ -43,4 +43,13 @@ func TestNXAPIClientTLSFromSpec(t *testing.T) {
 	}); err == nil {
 		t.Fatal("expected error for unreadable caFile, got nil")
 	}
+
+	if c, err := newNXAPIClient(&v1alpha1.DeviceSpec{
+		Address: "192.0.2.9",
+		TLS:     &v1alpha1.TLSConfig{Enabled: false, CAFile: "/nonexistent/cvk-ca.pem"},
+	}); err != nil {
+		t.Fatalf("disabled TLS loaded caFile: %v", err)
+	} else if c.rootURL != "http://192.0.2.9:80" {
+		t.Fatalf("disabled TLS root URL = %q, want HTTP", c.rootURL)
+	}
 }
