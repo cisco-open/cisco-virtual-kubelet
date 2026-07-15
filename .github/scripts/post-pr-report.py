@@ -1,26 +1,32 @@
 #!/usr/bin/env python3
-"""Upsert a markdown Lab CI report on the upstream PR.
+# Copyright 2026 Cisco Systems Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Upsert the cisco-open-native lab CI report on an upstream PR.
 
-Invoked as the final step of each lab-ci workflow when
-upstream_repo / upstream_pr / upstream_sha inputs are present.
+The reporter runs on a GitHub-hosted runner from trusted ``main`` after a lab
+job completes. It rebuilds one canary report from commit statuses and the
+small, sanitized evidence artifacts produced by the native Cat8kv/Cat9k
+wrappers. It deliberately does not consume raw Argo objects or pod logs.
 
-The report is rebuilt from GitHub's state every time (commit
-statuses + workflow run jobs/steps), so it's idempotent and
-race-free: whichever workflow finishes last simply rebuilds with
-complete data. Earlier calls produce partial reports that get
-overwritten as more data arrives.
-
-Environment:
-  UPSTREAM_REPO        owner/repo of the upstream (where statuses + comment live)
-  UPSTREAM_SHA         commit SHA being tested
-  UPSTREAM_PR          PR number (where the comment goes)
-  FORK_REPO            fork repo (where the workflow runs live)
-  GH_TOKEN             PAT with public_repo scope (statuses + comments)
-
-Exits 0 on any expected failure (missing token, API error) so a
-reporting hiccup never fails the main CI check. Writes a one-line
-warning to stderr in those cases.
+Required environment variables:
+  REPOSITORY  Current ``owner/repo`` (status and comment destination)
+  HEAD_SHA    Verified PR head SHA to which statuses were posted
+  PR_NUMBER   Verified open PR number
+  GH_TOKEN    Built-in token for this repository
 """
+
+from __future__ import annotations
 
 import io
 import json
@@ -28,866 +34,505 @@ import os
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 import zipfile
+from datetime import datetime, timezone
 from typing import Any
 
-# Contexts we care about. Order = display order in the report table.
-CONTEXTS = [
-    ("lab-ci / unit-tests", "🧪", "Unit tests"),
-    ("lab-ci / cat8kv",     "🖥️",  "Cat8kv (virtual)"),
-    ("lab-ci / cat9k",      "🛰️",  "Cat9k (physical)"),
-]
+GITHUB_API = "https://api.github.com"
+EVIDENCE_SCHEMA = "cvk-lab-evidence/v1"
+COMMENT_MARKER = "<!-- lab-ci-next-report -->"
 
-LAB_EVIDENCE_ARTIFACTS = {
-    "lab-ci / cat8kv": "argo-evidence-cat8kv",
-    "lab-ci / cat9k": "argo-evidence-cat9k",
-}
-
-CAT8KV_DEVICE_HOSTS = {
-    "15": "192.0.2.55",
-    "16": "192.0.2.56",
-    "17": "192.0.2.57",
-    "18": "192.0.2.58",
-    "19": "192.0.2.59",
-    "20": "192.0.2.60",
-}
-
-# Current Cat8kv sharding in cvk-gitops/cat8kv-pr-test-template.yaml.
-# Used only for report presentation and as a fallback for legacy marker
-# logs that do not carry Argo node input parameters.
-CAT8KV_SCENARIO_DEVICE = {
-    "primary": "17",
-    "restart-resilience": "17",
-    "multi-container": "17",
-    "concurrent-pods": "18",
-    "iosxeconfig-rev": "19",
-    "tenancy": "19",
-    "show-command": "16",
-    "allowlist": "16",
-    "output-spill": "16",
-    "clobber-existing": "16",
-    "subscribe": "20",
-    "concurrent-stress": "20",
-}
-
-CAT8KV_SHARD_LABEL = {
-    "15": "excluded/17.9.8",
-    "16": "device-ops",
-    "17": "primary/restart/multi",
-    "18": "concurrent-pods",
-    "19": "config/tenancy",
-    "20": "telemetry/stress",
-}
-
-ADVISORY_SCENARIOS = {"concurrent-stress"}
+CONTEXTS: tuple[dict[str, str], ...] = (
+    {
+        "context": "lab-ci-next / cat8kv",
+        "emoji": "🖥️",
+        "label": "Cat8kv (virtual)",
+        "artifact": "argo-evidence-cat8kv",
+        "job": "cat8kv",
+    },
+    {
+        "context": "lab-ci-next / cat9k",
+        "emoji": "🛰️",
+        "label": "Cat9k (physical)",
+        "artifact": "argo-evidence-cat9k",
+        "job": "cat9k",
+    },
+)
 
 STATE_EMOJI = {
     "success": "✅",
     "failure": "❌",
-    "error":   "❌",
+    "error": "❌",
     "pending": "⏳",
 }
 
-GITHUB_API = "https://api.github.com"
-
-# Go package path → CRD identifier. Used to bucket gotestsum output
-# into the per-CRD table on the upstream PR comment.
-#
-# Edit this list when a new CRD or a new test package lands; missing
-# packages fall through to the "Other / shared code" bucket so they're
-# still counted but don't pollute the per-CRD breakdown.
-PACKAGE_TO_CRD: dict[str, str] = {
-    # CRDs implemented by their own controller package
-    "github.com/cisco/virtual-kubelet-cisco/internal/controller":                              "CiscoDevice",
-    "github.com/cisco/virtual-kubelet-cisco/internal/aggregator":                              "CiscoDevice",
-    "github.com/cisco/virtual-kubelet-cisco/internal/provider":                                "CiscoDevice",
-    "github.com/cisco/virtual-kubelet-cisco/internal/provider/deviceoperation":                "DeviceOperation",
-    "github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic":                     "IOSXEDiagnostic",
-    "github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver":         "IOSXEDiagnostic",
-    "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade":                "IOSXESoftwareUpgrade",
-    "github.com/cisco/virtual-kubelet-cisco/internal/provider/operationalaction":              "IOSXEOperationalAction",
-    # Driver / transport packages — bucket against the CRD whose
-    # reconciler exercises them most. Operators viewing the report
-    # want CRD-level signal, not "transport-X passes".
-    "github.com/cisco/virtual-kubelet-cisco/internal/drivers":                                  "CiscoDevice",
-    "github.com/cisco/virtual-kubelet-cisco/internal/drivers/common":                          "CiscoDevice",
-    "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe":                           "CiscoDevice",
-    "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver":              "IOSXEConfig",
-    "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine":       "IOSXEConfig",
-    "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent":       "IOSXEConfig",
-    "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/schema":       "IOSXEConfig",
-    "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport":    "IOSXEConfig",
-    "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers":      "IOSXEConfig",
-    "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/telemetry":                 "IOSXETelemetry",
-    "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/devicegrpc":                "(shared) gRPC pool",
-    "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi":                      "(shared) gNOI client",
-    # Telemetry / mapper packages — pre-PR shape.
-    "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/classifier":                    "IOSXETelemetry",
-    "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation":                   "IOSXETelemetry",
-    "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit":                          "IOSXETelemetry",
-    "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper":                        "IOSXETelemetry",
-    "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state":                         "IOSXETelemetry",
-    "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/yang":                          "IOSXETelemetry",
-}
-
-# Stable display order for the per-CRD table.
-CRD_ORDER = [
-    "CiscoDevice",
-    "IOSXEConfig",
-    "IOSXEConfigBundle",
-    "IOSXEConfigDefaults",
-    "IOSXEConfigRevision",
-    "IOSXEConfigApplyLog",
-    "IOSXEDiagnostic",
-    "IOSXETelemetry",
-    "IOSXEDeviceGroupConfig",
-    "IOSXEInterfaceGroupConfig",
-    "IOSXETemplate",
-    "DeviceOperation",
-    "IOSXESoftwareUpgrade",
-    "IOSXEOperationalAction",
-    "(shared) gRPC pool",
-    "(shared) gNOI client",
-    "Other",
-]
-
-# Single-line marker the lab Argo scenarios emit. See
-# cvk-gitops/environments/lab/cvk-cicd/cat{8kv,9k}-pr-test-template.yaml.
-SCENARIO_MARKER_RE = re.compile(
-    r"::cvk-scenario:: crd=(?P<crd>\S+) name=(?P<name>\S+) phase=(?P<phase>\S+)"
-    r"(?:\s+duration=(?P<duration>\d+))?"
-    r"(?P<extra>[^\n]*)"
-)
+REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+PR_RE = re.compile(r"^[1-9][0-9]*$")
 
 
-def warn(msg: str) -> None:
-    sys.stderr.write(f"::warning::post-pr-report: {msg}\n")
+def api(
+    path: str,
+    method: str = "GET",
+    body: dict[str, Any] | None = None,
+    token: str | None = None,
+) -> Any:
+    """Call the GitHub REST API and decode a JSON response."""
+    if not path.startswith("/"):
+        raise ValueError("GitHub API paths must start with '/'")
+    auth_token = token if token is not None else os.environ.get("GH_TOKEN", "")
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "cisco-virtual-kubelet-lab-ci-report",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if auth_token:
+        headers["Authorization"] = f"Bearer {auth_token}"
+    data = None
+    if body is not None:
+        headers["Content-Type"] = "application/json"
+        data = json.dumps(body).encode("utf-8")
+    request = urllib.request.Request(
+        f"{GITHUB_API}{path}",
+        data=data,
+        headers=headers,
+        method=method,
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        payload = response.read()
+    return json.loads(payload) if payload else None
 
 
-def api(path: str, method: str = "GET", body: dict | None = None, token: str | None = None) -> Any:
-    """Minimal GitHub API call. Returns parsed JSON (or None on 204).
-
-    `token` overrides GH_TOKEN for fork-internal reads such as
-    workflow logs and artefacts, which need actions:read permission
-    that the upstream-write PAT may not have.
-    """
-    url = path if path.startswith("http") else f"{GITHUB_API}{path}"
-    data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(url, data=data, method=method)
-    req.add_header("Accept", "application/vnd.github+json")
-    req.add_header("Authorization", f"Bearer {token or os.environ['GH_TOKEN']}")
-    req.add_header("X-GitHub-Api-Version", "2022-11-28")
-    if data:
-        req.add_header("Content-Type", "application/json")
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        raw = resp.read()
-        return json.loads(raw) if raw else None
-
-
-def fmt_duration(started: str | None, completed: str | None) -> str:
-    if not started or not completed:
-        return ""
-    from datetime import datetime
-    s = datetime.fromisoformat(started.replace("Z", "+00:00"))
-    e = datetime.fromisoformat(completed.replace("Z", "+00:00"))
-    secs = int((e - s).total_seconds())
-    if secs < 60:
-        return f"{secs}s"
-    return f"{secs // 60}m{secs % 60:02d}s"
-
-
-def latest_status_per_context(repo: str, sha: str) -> dict[str, dict]:
-    """Return {context: latest_status_json} for our CONTEXTS."""
-    # Statuses API returns most recent first.
-    statuses = api(f"/repos/{repo}/commits/{sha}/statuses?per_page=100") or []
-    out: dict[str, dict] = {}
-    for s in statuses:
-        ctx = s.get("context", "")
-        if ctx not in out and any(ctx == c for c, _, _ in CONTEXTS):
-            out[ctx] = s
-    return out
+def latest_status_per_context(repository: str, sha: str) -> dict[str, dict[str, Any]]:
+    """Return the newest native lab status for each context."""
+    wanted = {entry["context"] for entry in CONTEXTS}
+    latest: dict[str, dict[str, Any]] = {}
+    for page in range(1, 11):
+        statuses = api(
+            f"/repos/{repository}/statuses/{sha}?per_page=100&page={page}"
+        ) or []
+        for status in statuses:
+            context = status.get("context")
+            if context in wanted and context not in latest:
+                latest[context] = status
+        if wanted.issubset(latest) or len(statuses) < 100:
+            break
+    return latest
 
 
 def run_id_from_target_url(url: str) -> int | None:
-    m = re.search(r"/actions/runs/(\d+)", url or "")
-    return int(m.group(1)) if m else None
+    match = re.search(r"/actions/runs/(\d+)(?:/|$)", url or "")
+    return int(match.group(1)) if match else None
 
 
-def fetch_steps(fork_repo: str, run_id: int) -> list[dict]:
-    """Steps from the first (and only) job of a workflow run."""
-    try:
-        data = api(
-            f"/repos/{fork_repo}/actions/runs/{run_id}/jobs",
-            token=_fork_read_token(),
-        ) or {}
-    except urllib.error.HTTPError as e:
-        warn(f"fetch jobs {run_id}: {e}")
-        return []
-    jobs = data.get("jobs", [])
-    if not jobs:
-        return []
-    return jobs[0].get("steps", [])
-
-
-def _fork_read_token() -> str:
-    """Token used for fork-internal read APIs."""
-    return os.environ.get("FORK_READ_TOKEN") or os.environ["GH_TOKEN"]
-
-
-def http_get_bytes(url: str, token: str | None = None) -> bytes | None:
-    """Authenticated GET returning raw response body. None on any error."""
-    try:
-        req = urllib.request.Request(url, method="GET")
-        req.add_header("Accept", "application/vnd.github+json")
-        req.add_header("Authorization", f"Bearer {token or os.environ['GH_TOKEN']}")
-        req.add_header("X-GitHub-Api-Version", "2022-11-28")
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            return resp.read()
-    except (urllib.error.HTTPError, urllib.error.URLError) as e:
-        warn(f"http_get_bytes {url}: {e}")
-        return None
-
-
-def fetch_job_log_text(fork_repo: str, run_id: int) -> str:
-    """Concatenated stdout of every job in the run.
-
-    Used to grep ::cvk-scenario:: markers out of the Argo workflow
-    output without depending on the artefact upload step (which the
-    lab-ci workflows only do on failure today).
-    """
-    token = _fork_read_token()
-    try:
-        data = api(f"/repos/{fork_repo}/actions/runs/{run_id}/jobs", token=token) or {}
-    except urllib.error.HTTPError as e:
-        warn(f"fetch jobs {run_id}: {e}")
-        return ""
-    pieces: list[str] = []
-    for job in data.get("jobs", []):
-        job_id = job.get("id")
-        if not job_id:
-            continue
-        body = http_get_bytes(
-            f"{GITHUB_API}/repos/{fork_repo}/actions/jobs/{job_id}/logs",
-            token=token,
-        )
-        if body:
-            pieces.append(body.decode("utf-8", errors="replace"))
-    return "\n".join(pieces)
-
-
-def fetch_artefact_file(fork_repo: str, run_id: int, artefact_name: str, file_in_zip: str) -> bytes | None:
-    """Download a single file out of a named workflow artefact zip.
-
-    The GitHub artefacts API returns a redirect to a temporary signed
-    URL; urllib follows it automatically when authenticated. Returns
-    None on any failure — the report degrades gracefully.
-    """
-    token = _fork_read_token()
-    try:
-        listing = api(f"/repos/{fork_repo}/actions/runs/{run_id}/artifacts", token=token) or {}
-    except urllib.error.HTTPError as e:
-        warn(f"list artefacts {run_id}: {e}")
-        return None
-    for art in listing.get("artifacts", []):
-        if art.get("name") != artefact_name:
-            continue
-        zip_bytes = http_get_bytes(art.get("archive_download_url", ""), token=token)
-        if not zip_bytes:
-            return None
-        try:
-            with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
-                with z.open(file_in_zip) as f:
-                    return f.read()
-        except (zipfile.BadZipFile, KeyError) as e:
-            warn(f"artefact {artefact_name} missing {file_in_zip}: {e}")
-            return None
-    return None
-
-
-def parse_gotestsum_json(content: bytes) -> dict[str, dict[str, int]]:
-    """Parse gotestsum's JSON event stream into per-package counts.
-
-    Each line is one event with Action ∈ {run,pass,fail,skip,output,...}.
-    We use the package-level summary events (Test field absent / empty)
-    to derive {package: {pass, fail, skip, total}}. Falls back to
-    counting individual test events when no package summary appears.
-    """
-    stats: dict[str, dict[str, int]] = {}
-    by_test: dict[tuple[str, str], str] = {}
-    for line in content.splitlines():
-        line = line.strip()
-        if not line or not line.startswith(b"{"):
-            continue
-        try:
-            ev = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        pkg = ev.get("Package", "")
-        action = ev.get("Action", "")
-        test = ev.get("Test", "")
-        if not pkg:
-            continue
-        if test:
-            if action in ("pass", "fail", "skip"):
-                by_test[(pkg, test)] = action
-        else:
-            # Package summary
-            if action in ("pass", "fail", "skip"):
-                stats.setdefault(pkg, {"pass": 0, "fail": 0, "skip": 0})
-                # Aggregate from individual test events for the count;
-                # the package-summary's Action alone tells us the
-                # pass/fail of the package, not the count of tests.
-    # Roll up per-test outcomes.
-    for (pkg, _test), outcome in by_test.items():
-        s = stats.setdefault(pkg, {"pass": 0, "fail": 0, "skip": 0})
-        s[outcome] = s.get(outcome, 0) + 1
-    return stats
-
-
-def parse_marker_extras(extra: str) -> dict[str, str]:
-    """Parse key=value tokens appended to ::cvk-scenario:: markers."""
-    out: dict[str, str] = {}
-    for token in extra.split():
-        if "=" not in token:
-            continue
-        key, value = token.split("=", 1)
-        if key:
-            out[key] = value
-    return out
-
-
-def _truthy(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    return str(value).lower() in {"1", "true", "yes", "y", "on"}
-
-
-def is_advisory_scenario(row: dict[str, Any]) -> bool:
-    return _truthy(row.get("advisory")) or row.get("name") in ADVISORY_SCENARIOS
-
-
-def parse_scenario_markers(text: str) -> dict[tuple[str, ...], dict[str, Any]]:
-    """Extract the latest phase per (crd, scenario-name) tuple.
-
-    Each Argo scenario emits two markers (running + final). We keep
-    whichever is most recent in the log, so the end-of-run state wins.
-    """
-    out: dict[tuple[str, ...], dict[str, Any]] = {}
-    for m in SCENARIO_MARKER_RE.finditer(text):
-        extras = parse_marker_extras(m.group("extra") or "")
-        key = (m.group("crd"), m.group("name"))
-        out[key] = {
-            "crd": m.group("crd"),
-            "name": m.group("name"),
-            "phase": m.group("phase"),
-            "duration": int(m.group("duration") or 0),
-            "advisory": _truthy(extras.get("advisory", False)),
-            "rc": extras.get("rc", ""),
-            "source": "job-log-marker",
-        }
-    return out
-
-
-def _duration_seconds(started: str | None, completed: str | None) -> int:
-    if not started or not completed:
+def duration_seconds(started: str | None, finished: str | None) -> int:
+    if not started or not finished:
         return 0
-    from datetime import datetime
-    s = datetime.fromisoformat(started.replace("Z", "+00:00"))
-    e = datetime.fromisoformat(completed.replace("Z", "+00:00"))
-    return max(0, int((e - s).total_seconds()))
+    start = datetime.fromisoformat(started.replace("Z", "+00:00"))
+    end = datetime.fromisoformat(finished.replace("Z", "+00:00"))
+    return max(0, int((end - start).total_seconds()))
 
 
-def _node_parameter_map(node: dict[str, Any]) -> dict[str, str]:
-    params = node.get("inputs", {}).get("parameters", []) or []
-    out: dict[str, str] = {}
-    if isinstance(params, dict):
-        for key, value in params.items():
-            out[str(key)] = str(value)
-        return out
-    for p in params:
-        if not isinstance(p, dict):
-            continue
-        name = p.get("name")
-        if not name:
-            continue
-        out[str(name)] = str(p.get("value", ""))
-    return out
-
-
-def _device_id_from_text(*values: str) -> str:
-    for value in values:
-        m = re.search(r"cat8kv-(\d{2})", value or "")
-        if m:
-            return m.group(1)
-    return ""
-
-
-def parse_argo_scenarios(content: bytes) -> dict[tuple[str, ...], dict[str, Any]]:
-    """Extract scenario status directly from an Argo workflow JSON dump."""
-    try:
-        workflow = json.loads(content)
-    except json.JSONDecodeError as e:
-        warn(f"parse argo workflow json: {e}")
-        return {}
-
-    templates = (
-        workflow.get("status", {})
-        .get("storedWorkflowTemplateSpec", {})
-        .get("templates", [])
-    )
-    labels_by_template: dict[str, dict[str, str]] = {}
-    for tmpl in templates:
-        name = tmpl.get("name")
-        if name:
-            labels_by_template[name] = tmpl.get("metadata", {}).get("labels", {}) or {}
-
-    out: dict[tuple[str, ...], dict[str, Any]] = {}
-    nodes = workflow.get("status", {}).get("nodes", {}) or {}
-    for node in nodes.values():
-        if node.get("type") != "Pod":
-            continue
-        template_name = node.get("templateName") or ""
-        labels = labels_by_template.get(template_name, {})
-        scenario_name = labels.get("cvk.cisco.io/scenario-name")
-        crd = labels.get("cvk.cisco.io/crd")
-        if not scenario_name and not template_name.startswith("scenario-"):
-            continue
-
-        display_name = node.get("displayName") or node.get("name") or template_name
-        scenario_name = scenario_name or display_name
-        crd = crd or "Lab"
-        phase = (node.get("phase") or "unknown").lower()
-        params = _node_parameter_map(node)
-        device_id = params.get("device_id") or _device_id_from_text(display_name, node.get("name", ""))
-        device_host = params.get("device_host") or CAT8KV_DEVICE_HOSTS.get(device_id, "")
-        key = (crd, scenario_name, device_id or display_name)
-        candidate = {
-            "crd": crd,
-            "name": scenario_name,
-            "phase": phase,
-            "duration": _duration_seconds(node.get("startedAt"), node.get("finishedAt")),
-            "template": template_name,
-            "displayName": display_name,
-            "device_id": device_id,
-            "device_host": device_host,
-            "message": node.get("message", ""),
-            "startedAt": node.get("startedAt", ""),
-            "advisory": scenario_name in ADVISORY_SCENARIOS,
-            "source": "argo-workflow",
-        }
-
-        previous = out.get(key)
-        if not previous or candidate["startedAt"] >= previous.get("startedAt", ""):
-            out[key] = candidate
-    return out
-
-
-def annotate_lab_scenarios(
-    ctx: str,
-    scenarios: dict[tuple[str, ...], dict[str, Any]],
-) -> dict[tuple[str, ...], dict[str, Any]]:
-    """Attach lab-specific device/shard metadata used by the PR report."""
-    annotated: dict[tuple[str, ...], dict[str, Any]] = {}
-    for row in scenarios.values():
-        row = dict(row)
-        name = row.get("name", "")
-        if ctx == "lab-ci / cat8kv":
-            device_id = row.get("device_id") or CAT8KV_SCENARIO_DEVICE.get(name, "")
-            host = row.get("device_host") or CAT8KV_DEVICE_HOSTS.get(device_id, "")
-            row["device_id"] = device_id
-            row["device_host"] = host
-            row["device"] = f"cat8kv-{device_id}" if device_id else "cat8kv"
-            row["shard"] = CAT8KV_SHARD_LABEL.get(device_id, "")
-        elif ctx == "lab-ci / cat9k":
-            row["device"] = "cat9k"
-            row["device_host"] = "198.51.100.102"
-            row["shard"] = "physical"
-
-        if name in ADVISORY_SCENARIOS:
-            row["advisory"] = True
-
-        key = (row.get("crd", "Lab"), row.get("name", ""), row.get("device", ""))
-        annotated[key] = row
-    return annotated
-
-
-def crd_for_package(pkg: str) -> str:
-    """Bucket a Go package path into a CRD label, with longest-prefix match."""
-    best = ""
-    for candidate in PACKAGE_TO_CRD:
-        if pkg == candidate or pkg.startswith(candidate + "/"):
-            if len(candidate) > len(best):
-                best = candidate
-    return PACKAGE_TO_CRD.get(best, "Other") if best else "Other"
-
-
-def render_crd_coverage(
-    unit_stats: dict[str, dict[str, int]],
-    cat8kv_markers: dict[tuple[str, ...], dict[str, Any]],
-    cat9k_markers: dict[tuple[str, ...], dict[str, Any]],
-) -> list[str]:
-    """Produce the '### Coverage by CRD' section as a list of md lines."""
-    # Unit-test aggregation: package counts → CRD totals.
-    unit: dict[str, dict[str, int]] = {}
-    for pkg, c in unit_stats.items():
-        crd = crd_for_package(pkg)
-        u = unit.setdefault(crd, {"pass": 0, "fail": 0, "skip": 0})
-        u["pass"] += c.get("pass", 0)
-        u["fail"] += c.get("fail", 0)
-        u["skip"] += c.get("skip", 0)
-
-    # Scenario aggregation: count per (crd, source).
-    def bucket_scenarios(markers: dict[tuple[str, ...], dict[str, Any]]) -> dict[str, dict[str, int]]:
-        b: dict[str, dict[str, int]] = {}
-        for v in markers.values():
-            if is_advisory_scenario(v):
-                continue
-            crd = v["crd"]
-            phase = v["phase"]
-            s = b.setdefault(crd, {"pass": 0, "fail": 0})
-            if phase == "succeeded":
-                s["pass"] += 1
-            elif phase == "failed":
-                s["fail"] += 1
-            # phase=running implies the trap didn't fire → treat as failed
-            else:
-                s["fail"] += 1
-        return b
-
-    cat8kv = bucket_scenarios(cat8kv_markers)
-    cat9k = bucket_scenarios(cat9k_markers)
-
-    # Union of CRDs that appear in any bucket, ordered by CRD_ORDER.
-    seen = set(unit) | set(cat8kv) | set(cat9k)
-    ordered = [c for c in CRD_ORDER if c in seen] + sorted(seen - set(CRD_ORDER))
-
-    if not ordered:
-        return []  # nothing to render yet
-
-    lines: list[str] = []
-    lines.append("")
-    lines.append("### Coverage by CRD")
-    lines.append("")
-    lines.append("| CRD | Unit | Cat8kv | Cat9k |")
-    lines.append("| :--- | :---: | :---: | :---: |")
-    for crd in ordered:
-        u = unit.get(crd, {"pass": 0, "fail": 0, "skip": 0})
-        c8 = cat8kv.get(crd, {"pass": 0, "fail": 0})
-        c9 = cat9k.get(crd, {"pass": 0, "fail": 0})
-        def cell(c: dict[str, int]) -> str:
-            p, f = c.get("pass", 0), c.get("fail", 0)
-            tot = p + f
-            if tot == 0:
-                return "—"
-            mark = "✅" if f == 0 else "❌"
-            return f"{p}/{tot} {mark}"
-        lines.append(f"| `{crd}` | {cell(u)} | {cell(c8)} | {cell(c9)} |")
-    lines.append("")
-    return lines
-
-
-def fetch_run_duration(fork_repo: str, run_id: int) -> str:
-    """Format a workflow run's wall-clock duration.
-
-    The commit-status's created_at/updated_at are both stamped at the moment
-    the status is posted (single API call at workflow completion), so they
-    can't be subtracted to get a meaningful duration. The actual run
-    timing lives on the workflow run object as run_started_at → updated_at.
-    """
-    try:
-        run = api(
-            f"/repos/{fork_repo}/actions/runs/{run_id}",
-            token=_fork_read_token(),
-        ) or {}
-    except urllib.error.HTTPError as e:
-        warn(f"fetch run {run_id}: {e}")
+def format_duration(started: str | None, finished: str | None) -> str:
+    seconds = duration_seconds(started, finished)
+    if seconds <= 0:
         return ""
-    return fmt_duration(run.get("run_started_at"), run.get("updated_at"))
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours:
+        return f"{hours}h{minutes:02d}m{seconds:02d}s"
+    if minutes:
+        return f"{minutes}m{seconds:02d}s"
+    return f"{seconds}s"
 
 
-def scenario_results_for(
-    ctx: str,
-    latest: dict[str, dict],
-    fork_repo: str,
-) -> dict[tuple[str, ...], dict[str, Any]]:
-    """Return lab scenario results for a context.
+def fetch_run_duration(repository: str, run_id: int) -> str:
+    run = api(f"/repos/{repository}/actions/runs/{run_id}") or {}
+    return format_duration(run.get("run_started_at"), run.get("updated_at"))
 
-    New lab workflows upload Argo workflow JSON on both success and
-    failure. Prefer that durable source, then fall back to log markers
-    for older runs.
+
+def fetch_job_steps(repository: str, run_id: int, expected_job: str) -> list[dict[str, Any]]:
+    """Return steps from the named lab job, never the first job by accident."""
+    jobs: list[dict[str, Any]] = []
+    for page in range(1, 11):
+        payload = api(
+            f"/repos/{repository}/actions/runs/{run_id}/jobs"
+            f"?filter=all&per_page=100&page={page}"
+        ) or {}
+        page_jobs = payload.get("jobs", [])
+        jobs.extend(page_jobs)
+        if len(page_jobs) < 100:
+            break
+
+    exact = next((job for job in jobs if job.get("name") == expected_job), None)
+    if exact is None:
+        # GitHub appends matrix values to job names. The native wrappers are
+        # not matrices today, but this keeps selection deterministic if that
+        # changes later.
+        prefix = f"{expected_job} ("
+        exact = next(
+            (job for job in jobs if str(job.get("name", "")).startswith(prefix)),
+            None,
+        )
+    return list((exact or {}).get("steps", []))
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Expose GitHub's signed artifact redirect instead of following it."""
+
+    def redirect_request(  # type: ignore[override]
+        self,
+        req: urllib.request.Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> None:
+        return None
+
+
+def http_get_bytes(url: str, token: str | None = None) -> bytes:
+    headers = {
+        "Accept": "application/octet-stream",
+        "User-Agent": "cisco-virtual-kubelet-lab-ci-report",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    request = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return response.read()
+
+
+def download_artifact_archive(archive_url: str, token: str) -> bytes:
+    """Download an artifact without forwarding auth to signed storage.
+
+    GitHub's archive endpoint requires authentication and responds with a 302
+    to a short-lived storage URL. We stop that redirect, validate the target,
+    then make a fresh request without the Authorization header.
     """
-    s = latest.get(ctx)
-    if not s:
-        return {}
-    run_id = run_id_from_target_url(s.get("target_url", ""))
-    if not run_id:
-        return {}
-
-    artifact_name = LAB_EVIDENCE_ARTIFACTS.get(ctx)
-    if artifact_name:
-        content = fetch_artefact_file(fork_repo, run_id, artifact_name, "argo-workflow.json")
-        if content:
-            scenarios = parse_argo_scenarios(content)
-            if scenarios:
-                return annotate_lab_scenarios(ctx, scenarios)
-
-    return annotate_lab_scenarios(ctx, parse_scenario_markers(fetch_job_log_text(fork_repo, run_id)))
-
-
-def render_lab_scenarios(scenarios: dict[tuple[str, ...], dict[str, Any]]) -> list[str]:
-    if not scenarios:
-        return []
-
-    rows = sorted(
-        scenarios.values(),
-        key=lambda s: (
-            s.get("startedAt", ""),
-            s.get("device", ""),
-            s.get("crd", ""),
-            s.get("name", ""),
-        ),
+    request = urllib.request.Request(
+        archive_url,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "User-Agent": "cisco-virtual-kubelet-lab-ci-report",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
     )
-    lines: list[str] = []
-    lines.append("")
-    lines.append("**Argo scenarios**")
-    lines.append("")
-    lines.append("| Device | CRD | Scenario | Shard | Template | Status | Duration |")
-    lines.append("| :--- | :--- | :--- | :--- | :--- | :---: | :---: |")
-    for row in rows:
-        phase = row.get("phase", "unknown")
+    opener = urllib.request.build_opener(_NoRedirect())
+    try:
+        with opener.open(request, timeout=30) as response:
+            # Retain compatibility if GitHub ever serves the ZIP directly.
+            return response.read()
+    except urllib.error.HTTPError as error:
+        if error.code not in {301, 302, 303, 307, 308}:
+            raise
+        location = error.headers.get("Location", "")
+        parsed = urllib.parse.urlparse(location)
+        if parsed.scheme != "https" or not parsed.hostname:
+            raise ValueError("artifact redirect was not a valid HTTPS URL") from error
+        # Intentionally omit the token: the redirect URL is already signed.
+        return http_get_bytes(location)
+
+
+def fetch_artifact_file(
+    repository: str,
+    run_id: int,
+    artifact_name: str,
+    filename: str = "argo-evidence.json",
+) -> bytes | None:
+    payload = api(
+        f"/repos/{repository}/actions/runs/{run_id}/artifacts"
+        f"?name={urllib.parse.quote(artifact_name)}&per_page=100"
+    ) or {}
+    artifacts = [
+        artifact
+        for artifact in payload.get("artifacts", [])
+        if artifact.get("name") == artifact_name and not artifact.get("expired", False)
+    ]
+    if not artifacts:
+        return None
+    artifact = max(artifacts, key=lambda item: int(item.get("id", 0)))
+    archive_url = artifact.get("archive_download_url")
+    if not archive_url:
+        return None
+    archive = download_artifact_archive(archive_url, os.environ["GH_TOKEN"])
+    with zipfile.ZipFile(io.BytesIO(archive)) as zipped:
+        candidates = [
+            name
+            for name in zipped.namelist()
+            if name == filename or name.endswith(f"/{filename}")
+        ]
+        if not candidates:
+            return None
+        return zipped.read(sorted(candidates)[0])
+
+
+def parse_sanitized_evidence(content: bytes) -> dict[str, Any]:
+    """Parse and validate the intentionally small public evidence schema."""
+    document = json.loads(content)
+    if not isinstance(document, dict) or document.get("schema") != EVIDENCE_SCHEMA:
+        raise ValueError("unsupported lab evidence schema")
+    scenarios = document.get("scenarios")
+    if not isinstance(scenarios, list):
+        raise ValueError("lab evidence scenarios must be a list")
+
+    clean: list[dict[str, str]] = []
+    allowed_phases = {
+        "Succeeded",
+        "Failed",
+        "Error",
+        "Running",
+        "Pending",
+        "Skipped",
+        "Omitted",
+        "Unknown",
+    }
+    for row in scenarios:
+        if not isinstance(row, dict):
+            raise ValueError("lab evidence scenario must be an object")
+        phase = str(row.get("phase") or "Unknown")
+        if phase not in allowed_phases:
+            phase = "Unknown"
+        clean.append(
+            {
+                "crd": str(row.get("crd") or "Lab")[:100],
+                "name": str(row.get("name") or "unnamed")[:150],
+                "template": str(row.get("template") or "")[:150],
+                "phase": phase,
+                "started_at": str(row.get("started_at") or "")[:40],
+                "finished_at": str(row.get("finished_at") or "")[:40],
+            }
+        )
+
+    return {
+        "schema": EVIDENCE_SCHEMA,
+        "workflow": str(document.get("workflow") or "")[:253],
+        "phase": str(document.get("phase") or "Unknown")[:30],
+        "started_at": str(document.get("started_at") or "")[:40],
+        "finished_at": str(document.get("finished_at") or "")[:40],
+        "scenarios": clean,
+    }
+
+
+def escape_cell(value: str) -> str:
+    return value.replace("|", "\\|").replace("\n", " ").replace("\r", " ")
+
+
+def render_scenarios(evidence: dict[str, Any]) -> list[str]:
+    scenarios = sorted(
+        evidence.get("scenarios", []),
+        key=lambda row: (row.get("started_at", ""), row.get("crd", ""), row.get("name", "")),
+    )
+    if not scenarios:
+        return ["", "_No scenario-level evidence was emitted by this run._"]
+
+    lines = [
+        "",
+        "**Sanitized Argo scenarios**",
+        "",
+        "| CRD | Scenario | Template | Result | Duration |",
+        "| :--- | :--- | :--- | :---: | :---: |",
+    ]
+    for row in scenarios:
+        phase = row["phase"]
         icon = {
-            "succeeded": "✅",
-            "failed": "❌",
-            "error": "❌",
-            "running": "⏳",
-            "pending": "⏳",
-            "skipped": "⏭️",
+            "Succeeded": "✅",
+            "Failed": "❌",
+            "Error": "❌",
+            "Running": "⏳",
+            "Pending": "⏳",
+            "Skipped": "⏭️",
+            "Omitted": "⏭️",
         }.get(phase, "❔")
-        duration = row.get("duration", 0)
-        msg = (row.get("message") or "").replace("|", "\\|")
-        device = row.get("device") or "—"
-        host = row.get("device_host") or ""
-        device_cell = f"`{device}`"
-        if host:
-            device_cell += f"<br><sub>{host}</sub>"
-        shard = row.get("shard") or "—"
-        status = f"{icon} `{phase}`"
-        if is_advisory_scenario(row):
-            status += "<br><sub>advisory</sub>"
-        if msg:
-            status += f"<br><sub>{msg}</sub>"
+        duration = format_duration(row.get("started_at"), row.get("finished_at")) or "—"
         lines.append(
-            f"| {device_cell} | `{row.get('crd', '-')}` | `{row.get('name', '-')}` | "
-            f"{shard} | `{row.get('template', '-')}` | {status} | {duration}s |"
+            f"| `{escape_cell(row['crd'])}` | `{escape_cell(row['name'])}` | "
+            f"`{escape_cell(row['template']) or '—'}` | {icon} `{phase.lower()}` | {duration} |"
         )
     return lines
 
 
 def render_report(
-    upstream_repo: str,
-    upstream_sha: str,
-    upstream_pr: str,
-    fork_repo: str,
-    latest: dict[str, dict],
+    repository: str,
+    head_sha: str,
+    latest: dict[str, dict[str, Any]],
 ) -> str:
-    sha_short = upstream_sha[:12]
-    lines: list[str] = []
-    lines.append(f"<!-- lab-ci-report:{upstream_sha} -->")
-    lines.append(f"## 🤖 Lab CI Report")
-    lines.append("")
-    lines.append(
-        f"Commit `{sha_short}` · validated on lab hardware via "
-        f"[`{fork_repo}`](https://github.com/{fork_repo})."
-    )
-    lines.append("")
+    """Render the complete native canary report from current GitHub state."""
+    lines = [
+        COMMENT_MARKER,
+        "## 🤖 Native Lab CI canary report",
+        "",
+        f"PR head `{head_sha[:12]}` · lab workflows test its prospective merge with `main`.",
+        "",
+        "| Check | Result | Duration | Details |",
+        "| :--- | :---: | :---: | :--- |",
+    ]
+    pass_count = fail_count = pending_count = 0
+    detail_data: list[tuple[dict[str, str], dict[str, Any], int]] = []
 
-    # Summary table
-    lines.append("| Check | Result | Duration | Details |")
-    lines.append("| :--- | :---: | :---: | :--- |")
-    total_pass = total_fail = total_pending = 0
-    for ctx, emoji, label in CONTEXTS:
-        s = latest.get(ctx)
-        if not s:
-            state = "pending"
-            duration = "—"
-            link = "—"
-            total_pending += 1
+    for entry in CONTEXTS:
+        status = latest.get(entry["context"])
+        if status is None:
+            state, duration, link = "pending", "—", "—"
+            pending_count += 1
         else:
-            state = s.get("state", "pending")
+            state = str(status.get("state") or "pending")
             if state == "success":
-                total_pass += 1
-            elif state in ("failure", "error"):
-                total_fail += 1
+                pass_count += 1
+            elif state in {"failure", "error"}:
+                fail_count += 1
             else:
-                total_pending += 1
-            tgt = s.get("target_url") or ""
-            run_id = run_id_from_target_url(tgt)
-            duration = fetch_run_duration(fork_repo, run_id) if run_id else ""
-            link = f"[logs]({tgt})" if tgt else "—"
-        verdict_emoji = STATE_EMOJI.get(state, "❔")
-        lines.append(f"| {emoji} {label} | {verdict_emoji} `{state}` | {duration or '—'} | {link} |")
+                pending_count += 1
+            target_url = str(status.get("target_url") or "")
+            run_id = run_id_from_target_url(target_url)
+            duration = fetch_run_duration(repository, run_id) if run_id else ""
+            duration = duration or "—"
+            link = f"[run]({target_url})" if target_url else "—"
+            if run_id:
+                detail_data.append((entry, status, run_id))
+        lines.append(
+            f"| {entry['emoji']} {entry['label']} | "
+            f"{STATE_EMOJI.get(state, '❔')} `{state}` | {duration} | {link} |"
+        )
 
     lines.append("")
-    totals = []
-    if total_pass:
-        totals.append(f"**{total_pass} passed** ✅")
-    if total_fail:
-        totals.append(f"**{total_fail} failed** ❌")
-    if total_pending:
-        totals.append(f"**{total_pending} pending** ⏳")
-    lines.append("**Summary:** " + " · ".join(totals) if totals else "**Summary:** no results yet")
+    totals: list[str] = []
+    if pass_count:
+        totals.append(f"**{pass_count} passed** ✅")
+    if fail_count:
+        totals.append(f"**{fail_count} failed** ❌")
+    if pending_count:
+        totals.append(f"**{pending_count} pending** ⏳")
+    lines.append("**Summary:** " + " · ".join(totals))
 
-    # CRD-coverage section. Each block degrades to "—" cells when its
-    # source data isn't available yet (e.g. unit-tests run before
-    # gotestsum artefact uploads, Cat9k run before Argo scenario logs
-    # are emitted).
-    unit_stats: dict[str, dict[str, int]] = {}
-    unit_run_id = None
-    if (s := latest.get("lab-ci / unit-tests")):
-        unit_run_id = run_id_from_target_url(s.get("target_url", ""))
-    if unit_run_id:
-        content = fetch_artefact_file(
-            fork_repo, unit_run_id, "unit-test-results", "test-output.json"
+    for entry, status, run_id in detail_data:
+        steps = fetch_job_steps(repository, run_id, entry["job"])
+        evidence_content = fetch_artifact_file(repository, run_id, entry["artifact"])
+        evidence = parse_sanitized_evidence(evidence_content) if evidence_content else None
+        visible_steps = [step for step in steps if step.get("conclusion") != "skipped"]
+        state = str(status.get("state") or "pending")
+        lines.extend(
+            [
+                "",
+                f"<details><summary>{entry['emoji']} {entry['label']} — "
+                f"{STATE_EMOJI.get(state, '❔')} {len(visible_steps)} lab-wrapper steps</summary>",
+            ]
         )
-        if content:
-            unit_stats = parse_gotestsum_json(content)
+        if evidence:
+            lines.extend(render_scenarios(evidence))
+        else:
+            lines.extend(["", "_No sanitized Argo evidence was available for this run._"])
+        if visible_steps:
+            lines.extend(
+                [
+                    "",
+                    "**Lab-wrapper steps**",
+                    "",
+                    "| # | Step | Result | Duration |",
+                    "| ---: | :--- | :---: | :---: |",
+                ]
+            )
+            for index, step in enumerate(visible_steps, 1):
+                result = str(step.get("conclusion") or step.get("status") or "unknown")
+                icon = {
+                    "success": "✅",
+                    "failure": "❌",
+                    "cancelled": "🚫",
+                    "in_progress": "⏳",
+                }.get(result, "❔")
+                duration = format_duration(step.get("started_at"), step.get("completed_at")) or "—"
+                name = escape_cell(str(step.get("name") or "unnamed"))
+                lines.append(f"| {index} | {name} | {icon} `{result}` | {duration} |")
+        lines.extend(["", "</details>"])
 
-    lab_scenarios = {
-        ctx: scenario_results_for(ctx, latest, fork_repo)
-        for ctx in LAB_EVIDENCE_ARTIFACTS
-    }
-    cat8kv_markers = lab_scenarios.get("lab-ci / cat8kv", {})
-    cat9k_markers = lab_scenarios.get("lab-ci / cat9k", {})
-
-    lines.extend(render_crd_coverage(unit_stats, cat8kv_markers, cat9k_markers))
-
-    # Per-workflow step breakdown
-    for ctx, emoji, label in CONTEXTS:
-        s = latest.get(ctx)
-        if not s:
-            continue
-        run_id = run_id_from_target_url(s.get("target_url", ""))
-        if not run_id:
-            continue
-        steps = fetch_steps(fork_repo, run_id)
-        scenarios = lab_scenarios.get(ctx, {})
-        # Filter out skipped post-action steps to keep the table compact.
-        visible = [st for st in steps if st.get("conclusion") != "skipped" or st.get("status") == "in_progress"]
-        if not visible and not scenarios:
-            continue
-        pass_n = sum(1 for st in visible if st.get("conclusion") == "success")
-        fail_n = sum(1 for st in visible if st.get("conclusion") == "failure")
-        scen_gate = [sc for sc in scenarios.values() if not is_advisory_scenario(sc)]
-        scen_pass_n = sum(1 for sc in scen_gate if sc.get("phase") == "succeeded")
-        scen_fail_n = sum(1 for sc in scen_gate if sc.get("phase") not in ("succeeded", "skipped"))
-        scen_advisory_n = sum(1 for sc in scenarios.values() if is_advisory_scenario(sc))
-        state = s.get("state", "pending")
-        hdr_emoji = STATE_EMOJI.get(state, "❔")
-        scenario_text = ""
-        if scenarios:
-            scenario_text = f", {scen_pass_n} scenarios passed, {scen_fail_n} failed"
-            if scen_advisory_n:
-                scenario_text += f", {scen_advisory_n} advisory"
-        lines.append(
-            f"<details><summary>{emoji} {label} — {hdr_emoji} "
-            f"{pass_n} wrapper steps passed, {fail_n} failed{scenario_text}</summary>\n"
-        )
-        lines.extend(render_lab_scenarios(scenarios))
-        if ctx in LAB_EVIDENCE_ARTIFACTS and not scenarios:
-            lines.append("")
-            lines.append("_No Argo scenario evidence was available for this run._")
-        if visible:
-            lines.append("")
-            lines.append("**GitHub wrapper steps**")
-            lines.append("")
-            lines.append("| # | Step | Status | Duration |")
-            lines.append("| ---: | :--- | :---: | :---: |")
-            for i, st in enumerate(visible, 1):
-                name = st.get("name", "?").replace("|", "\\|")
-                conclusion = st.get("conclusion") or st.get("status") or "?"
-                step_emoji = {
-                    "success": "✅", "failure": "❌", "skipped": "⏭️",
-                    "cancelled": "🚫", "in_progress": "⏳",
-                }.get(conclusion, "❔")
-                dur = fmt_duration(st.get("started_at"), st.get("completed_at"))
-                lines.append(f"| {i} | {name} | {step_emoji} | {dur or '—'} |")
-        lines.append("\n</details>\n")
-
-    lines.append("---")
-    from datetime import datetime, timezone
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    lines.append(
-        f"_Updated {now}. Report rebuilt from commit statuses on each run; "
-        f"see individual workflow logs via the **logs** links above._"
+    updated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    lines.extend(
+        [
+            "",
+            "---",
+            f"_Updated {updated}. Artifacts contain sanitized status metadata only; raw device logs are not published._",
+        ]
     )
     return "\n".join(lines)
 
 
-def upsert_comment(
-    upstream_repo: str,
-    upstream_pr: str,
-    upstream_sha: str,
-    body: str,
-) -> None:
-    marker = f"<!-- lab-ci-report:{upstream_sha} -->"
-    # Find existing comment with our marker. Issue comments are paginated;
-    # we iterate but for practical PRs one page (30) is enough.
+def upsert_comment(repository: str, pr_number: str, body: str) -> None:
     existing_id: int | None = None
-    for page in range(1, 10):
+    for page in range(1, 11):
         comments = api(
-            f"/repos/{upstream_repo}/issues/{upstream_pr}/comments"
-            f"?per_page=100&page={page}"
+            f"/repos/{repository}/issues/{pr_number}/comments?per_page=100&page={page}"
         ) or []
-        if not comments:
-            break
-        for c in comments:
-            if marker in (c.get("body") or ""):
-                existing_id = c["id"]
+        for comment in comments:
+            author = (comment.get("user") or {}).get("login")
+            if (
+                COMMENT_MARKER in str(comment.get("body") or "")
+                and author == "github-actions[bot]"
+            ):
+                existing_id = int(comment["id"])
                 break
-        if existing_id or len(comments) < 100:
+        if existing_id is not None or len(comments) < 100:
             break
 
-    if existing_id:
+    if existing_id is None:
         api(
-            f"/repos/{upstream_repo}/issues/comments/{existing_id}",
-            method="PATCH",
+            f"/repos/{repository}/issues/{pr_number}/comments",
+            method="POST",
             body={"body": body},
         )
     else:
         api(
-            f"/repos/{upstream_repo}/issues/{upstream_pr}/comments",
-            method="POST",
+            f"/repos/{repository}/issues/comments/{existing_id}",
+            method="PATCH",
             body={"body": body},
         )
 
 
+def validate_inputs(repository: str, head_sha: str, pr_number: str) -> None:
+    if not REPOSITORY_RE.fullmatch(repository):
+        raise ValueError("REPOSITORY must be an owner/repo name")
+    if not SHA_RE.fullmatch(head_sha):
+        raise ValueError("HEAD_SHA must be a 40-character lowercase hex SHA")
+    if not PR_RE.fullmatch(pr_number):
+        raise ValueError("PR_NUMBER must be a positive integer")
+
+
+def pr_still_has_head(repository: str, pr_number: str, head_sha: str) -> bool:
+    """Prevent an older run from overwriting the report for a newer PR head."""
+    pull = api(f"/repos/{repository}/pulls/{pr_number}") or {}
+    return pull.get("state") == "open" and pull.get("head", {}).get("sha") == head_sha
+
+
 def main() -> int:
-    required = ["UPSTREAM_REPO", "UPSTREAM_SHA", "UPSTREAM_PR", "FORK_REPO"]
-    missing = [k for k in required if not os.environ.get(k)]
+    required = ("REPOSITORY", "HEAD_SHA", "PR_NUMBER", "GH_TOKEN")
+    missing = [name for name in required if not os.environ.get(name)]
     if missing:
-        warn(f"missing env: {missing}; skipping")
-        return 0
-    if not os.environ.get("GH_TOKEN"):
-        warn("GH_TOKEN not set; skipping report")
-        return 0
+        print(f"error: missing required environment: {', '.join(missing)}", file=sys.stderr)
+        return 2
 
-    upstream_repo = os.environ["UPSTREAM_REPO"]
-    upstream_sha = os.environ["UPSTREAM_SHA"]
-    upstream_pr = os.environ["UPSTREAM_PR"]
-    fork_repo = os.environ["FORK_REPO"]
-
+    repository = os.environ["REPOSITORY"]
+    head_sha = os.environ["HEAD_SHA"]
+    pr_number = os.environ["PR_NUMBER"]
     try:
-        latest = latest_status_per_context(upstream_repo, upstream_sha)
-        body = render_report(upstream_repo, upstream_sha, upstream_pr, fork_repo, latest)
-        upsert_comment(upstream_repo, upstream_pr, upstream_sha, body)
-    except urllib.error.HTTPError as e:
-        warn(f"API error {e.code}: {e.reason}")
-        return 0
-    except Exception as e:  # noqa: BLE001 — never fail the main check for reporting
-        warn(f"{type(e).__name__}: {e}")
-        return 0
-
+        validate_inputs(repository, head_sha, pr_number)
+        if not pr_still_has_head(repository, pr_number, head_sha):
+            print("notice: PR head changed or PR closed; skipping stale report")
+            return 0
+        latest = latest_status_per_context(repository, head_sha)
+        report = render_report(repository, head_sha, latest)
+        upsert_comment(repository, pr_number, report)
+    except (ValueError, json.JSONDecodeError, zipfile.BadZipFile) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+    except urllib.error.HTTPError as error:
+        print(f"error: GitHub API returned HTTP {error.code}", file=sys.stderr)
+        return 1
+    except urllib.error.URLError as error:
+        print(f"error: GitHub API request failed: {error.reason}", file=sys.stderr)
+        return 1
     return 0
 
 

@@ -1,169 +1,267 @@
-# Cat9k lab CI (cisco-open-native) — thin trigger for the
-# cat9k-pr-test Argo WorkflowTemplate.
+# Copyright 2026 Cisco Systems Inc.
 #
-# Physical Cat9k test. Scope is primary + restart-resilience +
-# iosxeconfig + tenancy + deviceop; stress scenarios (multi-container,
-# concurrent pods) live on Cat8kv — physical install times are
-# variable and exceed wait windows when 3+ apps stack.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# cisco-open-native counterpart of the historical fork workflow: runs
-# on this repo, so it posts status + comments back with the built-in
-# GITHUB_TOKEN — no cross-repo PAT.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# Hardening for a public repo + a self-hosted runner that holds lab
-# kubeconfig + device credentials:
-#   - workflow_dispatch ONLY (no pull_request / merge_group).
-#   - environment: lab-ci — each run pauses for maintainer approval.
-#   - runs-on label lab-cvk-upstream — runner registered to THIS repo.
-#   - tooling checked out from this ref, never from the PR branch.
-#   - status context "lab-ci-next / cat9k" during the canary.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Trusted, cisco-open-native wrapper for the physical cat9k-pr-test Argo
+# WorkflowTemplate. The workflow must be dispatched from main. GitHub-hosted
+# jobs validate the PR and own all GitHub writes; the credentialed lab runner
+# receives only the verified prospective merge SHA.
 name: Lab CI (Cat9k)
 
 on:
   workflow_dispatch:
     inputs:
-      upstream_repo:
-        description: "owner/repo whose SHA to test (default: this repo)"
-        required: false
-        default: ""
       upstream_pr:
-        description: "PR number (for the report comment + target_url)"
-        required: false
-        default: ""
-      upstream_sha:
-        description: "commit SHA to test"
-        required: false
-        default: ""
+        description: "Open PR number to validate"
+        required: true
+        type: number
 
 concurrency:
-  # Serialize globally: one physical Cat9k. At most one run uses the
-  # device at a time; the WorkflowTemplate also holds the
-  # cat9k-lab-switch-1 semaphore internally.
-  group: cat9k-device
-  cancel-in-progress: false
+  # The physical switch is singular. The Argo template also holds the device
+  # semaphore, but serializing here avoids unnecessary environment approvals.
+  group: lab-ci-next-cat9k
+  queue: max
 
-permissions:
-  contents: read
-  actions: read
-  statuses: write
-  issues: write
-  pull-requests: write
+permissions: {}
+
+env:
+  STATUS_CONTEXT: lab-ci-next / cat9k
 
 jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    outputs:
+      head_sha: ${{ steps.pr.outputs.head_sha }}
+      merge_sha: ${{ steps.pr.outputs.merge_sha }}
+      pr_number: ${{ steps.pr.outputs.pr_number }}
+    steps:
+      - name: Resolve and verify open PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.upstream_pr }}
+          EXPECTED_REPO: ${{ github.repository }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+
+          PR_JSON=""
+          for attempt in 1 2 3 4 5; do
+            PR_JSON=$(gh api "repos/${EXPECTED_REPO}/pulls/${PR_NUMBER}")
+            if [[ $(jq -r '.mergeable' <<<"$PR_JSON") != "null" ]]; then
+              break
+            fi
+            sleep $((attempt * 2))
+          done
+
+          [[ $(jq -r '.state' <<<"$PR_JSON") == "open" ]]
+          [[ $(jq -r '.draft' <<<"$PR_JSON") == "false" ]]
+          [[ $(jq -r '.base.ref' <<<"$PR_JSON") == "main" ]]
+          [[ $(jq -r '.base.repo.full_name' <<<"$PR_JSON") == "$EXPECTED_REPO" ]]
+          [[ $(jq -r '.mergeable' <<<"$PR_JSON") == "true" ]]
+
+          HEAD_SHA=$(jq -r '.head.sha' <<<"$PR_JSON")
+          MERGE_SHA=$(jq -r '.merge_commit_sha' <<<"$PR_JSON")
+          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$MERGE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$HEAD_SHA" != "$MERGE_SHA" ]]
+
+          {
+            echo "head_sha=$HEAD_SHA"
+            echo "merge_sha=$MERGE_SHA"
+            echo "pr_number=$PR_NUMBER"
+          } >> "$GITHUB_OUTPUT"
+
+          gh api -X POST "repos/${EXPECTED_REPO}/statuses/${HEAD_SHA}" \
+            -f state=pending \
+            -f target_url="$TARGET_URL" \
+            -f description="Cat9k is testing the prospective merge" \
+            -f context="$STATUS_CONTEXT" >/dev/null
+
   cat9k:
+    if: github.ref == 'refs/heads/main' && needs.prepare.result == 'success'
+    needs: prepare
     runs-on: [self-hosted, lab-cvk-upstream]
     environment: lab-ci
-    timeout-minutes: 40
+    # Argo's activeDeadlineSeconds is 3000 (50 minutes). Leave time for
+    # evidence capture and runner-side termination before GitHub stops the job.
+    timeout-minutes: 60
+    permissions: {}
     env:
-      SHA: ${{ inputs.upstream_sha || github.sha }}
-      UPSTREAM_REPO: ${{ inputs.upstream_repo || github.repository }}
-      UPSTREAM_PR: ${{ inputs.upstream_pr }}
-      UPSTREAM_SHA: ${{ inputs.upstream_sha }}
+      UPSTREAM_REPO: ${{ github.repository }}
+      UPSTREAM_PR: ${{ needs.prepare.outputs.pr_number }}
+      TEST_MERGE_SHA: ${{ needs.prepare.outputs.merge_sha }}
       PATH: /home/cisco/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
     steps:
-      - name: Checkout workflow tree
-        uses: actions/checkout@v4
-
-      - name: Post pending status to PR
-        if: inputs.upstream_sha != ''
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify trusted lab inputs and tooling
         run: |
-          gh api -X POST "repos/${UPSTREAM_REPO}/statuses/${UPSTREAM_SHA}" \
-            -f state=pending \
-            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            -f description="Lab CI Cat9k running" \
-            -f context="lab-ci-next / cat9k" >/dev/null
+          set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$UPSTREAM_REPO" == "$GITHUB_REPOSITORY" ]]
+          [[ "$UPSTREAM_PR" =~ ^[1-9][0-9]*$ ]]
+          [[ "$TEST_MERGE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          command -v argo
+          command -v jq
+          argo version --short
 
       - name: Submit WorkflowTemplate and wait
         id: argo
         run: |
           set -euo pipefail
+          NAME=""
+          terminate_on_signal() {
+            trap - INT TERM
+            if [[ -n "$NAME" ]]; then
+              echo "Terminating Argo workflow after runner cancellation: $NAME"
+              argo terminate -n virtual-kubelet-ci "$NAME" || true
+            fi
+            exit 130
+          }
+          trap terminate_on_signal INT TERM
+
           NAME=$(argo submit -n virtual-kubelet-ci \
             --from WorkflowTemplate/cat9k-pr-test \
-            -p upstream_repo="${UPSTREAM_REPO}" \
-            -p upstream_sha="${SHA}" \
-            -p upstream_pr="${UPSTREAM_PR:-local}" \
-            --generate-name "cat9k-${SHA:0:8}-" \
+            -p upstream_repo="$UPSTREAM_REPO" \
+            -p upstream_sha="$TEST_MERGE_SHA" \
+            -p upstream_pr="$UPSTREAM_PR" \
+            --generate-name "cat9k-${TEST_MERGE_SHA:0:8}-" \
             -o name | sed 's|^workflow.argoproj.io/||')
+          [[ "$NAME" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
           echo "workflow=$NAME" >> "$GITHUB_OUTPUT"
           echo "Submitted: $NAME"
-          argo watch -n virtual-kubelet-ci "$NAME"
+
+          # Do not stream template/node messages into this public Actions log.
+          # argo wait returns non-zero for a failed workflow; query the phase
+          # explicitly below so every terminal state is handled uniformly.
+          argo wait -n virtual-kubelet-ci "$NAME" >/dev/null 2>&1 || true
+          trap - INT TERM
           PHASE=$(argo get -n virtual-kubelet-ci "$NAME" -o json | jq -r '.status.phase')
           echo "phase=$PHASE" >> "$GITHUB_OUTPUT"
-          [ "$PHASE" = "Succeeded" ]
+          [[ "$PHASE" == "Succeeded" ]]
 
-      - name: Capture Argo evidence
+      - name: Build sanitized Argo evidence
+        id: evidence
         if: always() && steps.argo.outputs.workflow != ''
-        continue-on-error: true
+        env:
+          WORKFLOW: ${{ steps.argo.outputs.workflow }}
         run: |
-          set +e
-          WORKFLOW="${{ steps.argo.outputs.workflow }}"
-          argo get -n virtual-kubelet-ci "$WORKFLOW" -o json > argo-workflow.json 2>argo-workflow.err
-          argo logs -n virtual-kubelet-ci "$WORKFLOW" > argo-logs.txt 2>&1
-          {
-            echo "## Cat9k Argo workflow"
-            echo ""
-            echo "Workflow: \`$WORKFLOW\`"
-            echo ""
-            echo "| Node | Template | Phase | Duration |"
-            echo "| :--- | :--- | :---: | :---: |"
-            jq -r '
-              def dur:
-                if (.startedAt and .finishedAt) then
-                  ((.finishedAt | fromdateiso8601) - (.startedAt | fromdateiso8601)) as $s
-                  | if $s < 60 then "\($s|floor)s" else "\(($s/60)|floor)m\(($s%60)|floor|tostring|if length == 1 then "0"+. else . end)s" end
-                else " -" end;
-              .status.nodes
-              | to_entries
-              | map(.value)
-              | map(select(.type == "Pod"))
-              | sort_by(.startedAt // "")
-              | .[]
-              | "| \(.displayName // .name) | \(.templateName // "-") | \(.phase // "-") | \(dur) |"
-            ' argo-workflow.json 2>/dev/null
-          } > argo-summary.md
-          cat argo-summary.md >> "$GITHUB_STEP_SUMMARY"
-          head -200 argo-logs.txt
-      - uses: actions/upload-artifact@v4
-        if: always() && steps.argo.outputs.workflow != ''
+          set -euo pipefail
+          rm -f argo-evidence.json
+          # Retain only status/timing and scenario labels. Do not persist raw
+          # Argo JSON, pod logs, inputs, messages, or template source.
+          argo get -n virtual-kubelet-ci "$WORKFLOW" -o json | jq '
+            (.status.storedWorkflowTemplateSpec.templates // []
+              | map({key: .name, value: (.metadata.labels // {})})
+              | from_entries) as $labels
+            | {
+                schema: "cvk-lab-evidence/v1",
+                workflow: .metadata.name,
+                phase: (.status.phase // "Unknown"),
+                started_at: (.status.startedAt // ""),
+                finished_at: (.status.finishedAt // ""),
+                scenarios: [
+                  .status.nodes[]?
+                  | select(.type == "Pod")
+                  | ($labels[.templateName] // {}) as $meta
+                  | select(
+                      ($meta["cvk.cisco.io/scenario-name"] // "") != ""
+                      or ((.templateName // "") | startswith("scenario-"))
+                    )
+                  | {
+                      crd: ($meta["cvk.cisco.io/crd"] // "Lab"),
+                      name: ($meta["cvk.cisco.io/scenario-name"] // .displayName // .templateName),
+                      template: (.templateName // ""),
+                      phase: (.phase // "Unknown"),
+                      started_at: (.startedAt // ""),
+                      finished_at: (.finishedAt // "")
+                    }
+                ]
+              }
+          ' > argo-evidence.json
+          jq -e '.schema == "cvk-lab-evidence/v1" and (.scenarios | type == "array")' \
+            argo-evidence.json >/dev/null
+          jq -r '
+            "## Cat9k Argo summary\n\n" +
+            "Workflow: `" + .workflow + "`\n\n" +
+            "Phase: `" + .phase + "`\n\n" +
+            "Sanitized scenarios captured: " + ((.scenarios | length) | tostring)
+          ' argo-evidence.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload sanitized evidence
+        if: always() && steps.evidence.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: argo-evidence-cat9k
-          path: |
-            argo-workflow.json
-            argo-workflow.err
-            argo-logs.txt
-            argo-summary.md
-          if-no-files-found: warn
-          retention-days: 14
+          path: argo-evidence.json
+          if-no-files-found: error
+          retention-days: 7
 
-      - name: Post final status to PR
-        if: always() && inputs.upstream_sha != ''
-        continue-on-error: true
+  report:
+    if: always() && github.ref == 'refs/heads/main' && needs.prepare.result == 'success'
+    needs: [prepare, cat9k]
+    concurrency:
+      group: lab-ci-next-report-${{ needs.prepare.outputs.pr_number }}
+      queue: max
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      pull-requests: read
+      statuses: write
+    steps:
+      - name: Post final status
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ needs.prepare.outputs.head_sha }}
+          LAB_RESULT: ${{ needs.cat9k.result }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          case "${{ job.status }}" in
-            success)   STATE=success; DESC="Lab CI Cat9k passed" ;;
-            failure)   STATE=failure; DESC="Lab CI Cat9k failed" ;;
-            *)         STATE=error;   DESC="Lab CI Cat9k ${{ job.status }}" ;;
+          set -euo pipefail
+          case "$LAB_RESULT" in
+            success)   STATE=success; DESCRIPTION="Cat9k passed on the prospective merge" ;;
+            failure)   STATE=failure; DESCRIPTION="Cat9k failed on the prospective merge" ;;
+            cancelled) STATE=error;   DESCRIPTION="Cat9k run was cancelled" ;;
+            *)         STATE=error;   DESCRIPTION="Cat9k did not complete ($LAB_RESULT)" ;;
           esac
-          gh api -X POST "repos/${UPSTREAM_REPO}/statuses/${UPSTREAM_SHA}" \
-            -f state=$STATE \
-            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            -f description="$DESC" \
-            -f context="lab-ci-next / cat9k" >/dev/null
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+            -f state="$STATE" \
+            -f target_url="$TARGET_URL" \
+            -f description="$DESCRIPTION" \
+            -f context="$STATUS_CONTEXT" >/dev/null
 
-      - name: Upsert Lab CI report comment on PR
-        if: always() && inputs.upstream_sha != '' && inputs.upstream_pr != ''
-        continue-on-error: true
+      - name: Checkout trusted reporting code
+        if: always()
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Upsert native Lab CI report
+        if: always()
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FORK_READ_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UPSTREAM_REPO: ${{ inputs.upstream_repo || github.repository }}
-          UPSTREAM_SHA: ${{ inputs.upstream_sha }}
-          UPSTREAM_PR: ${{ inputs.upstream_pr }}
-          FORK_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ needs.prepare.outputs.head_sha }}
+          PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
         run: python3 .github/scripts/post-pr-report.py
