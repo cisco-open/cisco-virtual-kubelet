@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import http.client
 import importlib.util
 import io
 import json
@@ -66,6 +67,25 @@ class ReporterTests(unittest.TestCase):
         self.assertNotIn("unexpected_secret", parsed)
         self.assertNotIn("raw_logs", parsed["scenarios"][0])
         self.assertEqual(parsed["scenarios"][0]["name"], "primary")
+
+    def test_malformed_evidence_timestamps_do_not_block_rendering(self) -> None:
+        content = json.dumps(
+            {
+                "schema": "cvk-lab-evidence/v1",
+                "scenarios": [
+                    {
+                        "name": "primary",
+                        "started_at": "not-a-timestamp",
+                        "finished_at": "also-not-a-timestamp",
+                    }
+                ],
+            }
+        ).encode()
+
+        lines = reporter.render_scenarios(reporter.parse_sanitized_evidence(content))
+
+        self.assertTrue(any("primary" in line for line in lines))
+        self.assertTrue(any(line.endswith("| — |") for line in lines))
 
     def test_fetch_job_steps_selects_named_lab_job(self) -> None:
         jobs = {
@@ -135,6 +155,165 @@ class ReporterTests(unittest.TestCase):
                 "argo-evidence-cat8kv",
             )
         self.assertEqual(content, b'{"schema":"cvk-lab-evidence/v1"}')
+
+    def test_fetch_artifact_http_error_is_nonfatal_and_sanitized(self) -> None:
+        metadata = {
+            "artifacts": [
+                {
+                    "id": 8,
+                    "name": "argo-evidence-cat8kv",
+                    "expired": False,
+                    "archive_download_url": "https://api.github.com/artifact",
+                }
+            ]
+        }
+        download_error = urllib.error.HTTPError(
+            "https://signed.invalid/archive.zip?sig=must-not-appear",
+            403,
+            "Forbidden",
+            {},
+            None,
+        )
+        stderr = io.StringIO()
+        with (
+            mock.patch.object(reporter, "api", return_value=metadata),
+            mock.patch.object(
+                reporter,
+                "download_artifact_archive",
+                side_effect=download_error,
+            ),
+            mock.patch.dict(reporter.os.environ, {"GH_TOKEN": "token"}),
+            mock.patch("sys.stderr", stderr),
+        ):
+            content = reporter.fetch_artifact_file(
+                "cisco-open/repo",
+                123,
+                "argo-evidence-cat8kv",
+            )
+
+        self.assertIsNone(content)
+        self.assertIn("artifact storage HTTP 403", stderr.getvalue())
+        self.assertNotIn("must-not-appear", stderr.getvalue())
+        self.assertNotIn("signed.invalid", stderr.getvalue())
+
+    def test_invalid_artifact_redirect_is_nonfatal_and_sanitized(self) -> None:
+        metadata = {
+            "artifacts": [
+                {
+                    "id": 8,
+                    "name": "argo-evidence-cat8kv",
+                    "expired": False,
+                    "archive_download_url": "https://api.github.com/artifact",
+                }
+            ]
+        }
+        stderr = io.StringIO()
+        with (
+            mock.patch.object(reporter, "api", return_value=metadata),
+            mock.patch.object(
+                reporter,
+                "download_artifact_archive",
+                side_effect=ValueError("signed URL secret must-not-appear"),
+            ),
+            mock.patch.dict(reporter.os.environ, {"GH_TOKEN": "token"}),
+            mock.patch("sys.stderr", stderr),
+        ):
+            content = reporter.fetch_artifact_file(
+                "cisco-open/repo",
+                123,
+                "argo-evidence-cat8kv",
+            )
+
+        self.assertIsNone(content)
+        self.assertIn("invalid artifact response", stderr.getvalue())
+        self.assertNotIn("must-not-appear", stderr.getvalue())
+
+    def test_truncated_artifact_download_is_nonfatal_and_sanitized(self) -> None:
+        metadata = {
+            "artifacts": [
+                {
+                    "id": 8,
+                    "name": "argo-evidence-cat8kv",
+                    "expired": False,
+                    "archive_download_url": "https://api.github.com/artifact",
+                }
+            ]
+        }
+        stderr = io.StringIO()
+        with (
+            mock.patch.object(reporter, "api", return_value=metadata),
+            mock.patch.object(
+                reporter,
+                "download_artifact_archive",
+                side_effect=http.client.IncompleteRead(b"partial", 100),
+            ),
+            mock.patch.dict(reporter.os.environ, {"GH_TOKEN": "token"}),
+            mock.patch("sys.stderr", stderr),
+        ):
+            content = reporter.fetch_artifact_file(
+                "cisco-open/repo",
+                123,
+                "argo-evidence-cat8kv",
+            )
+
+        self.assertIsNone(content)
+        self.assertIn("artifact transport failed", stderr.getvalue())
+        self.assertNotIn("partial", stderr.getvalue())
+
+    def test_artifact_api_error_keeps_sanitized_diagnostics(self) -> None:
+        stderr = io.StringIO()
+        error = reporter.GitHubAPIError(
+            403,
+            "GET",
+            "/repos/cisco-open/repo/actions/runs/123/artifacts",
+            "Resource not accessible by integration",
+            "SAFE-REQUEST-ID",
+        )
+        with (
+            mock.patch.object(reporter, "api", side_effect=error),
+            mock.patch("sys.stderr", stderr),
+        ):
+            content = reporter.fetch_artifact_file(
+                "cisco-open/repo",
+                123,
+                "argo-evidence-cat8kv",
+            )
+
+        self.assertIsNone(content)
+        self.assertIn("Resource not accessible by integration", stderr.getvalue())
+        self.assertIn("SAFE-REQUEST-ID", stderr.getvalue())
+        self.assertNotIn("https://", stderr.getvalue())
+
+    def test_api_error_keeps_only_sanitized_diagnostics(self) -> None:
+        response = io.BytesIO(b'{"message":"Resource not accessible by integration"}')
+        error = urllib.error.HTTPError(
+            "https://api.github.com/repos/cisco-open/repo/issues/150/comments",
+            403,
+            "Forbidden",
+            {"X-GitHub-Request-Id": "SAFE-REQUEST-ID"},
+            response,
+        )
+        with mock.patch.object(reporter.urllib.request, "urlopen", side_effect=error):
+            with self.assertRaises(reporter.GitHubAPIError) as raised:
+                reporter.api(
+                    "/repos/cisco-open/repo/issues/150/comments?secret=must-not-appear",
+                    method="POST",
+                    body={"body": "report"},
+                    token="must-not-appear",
+                )
+
+        self.assertEqual(raised.exception.status, 403)
+        self.assertEqual(raised.exception.method, "POST")
+        self.assertEqual(
+            raised.exception.path,
+            "/repos/cisco-open/repo/issues/150/comments",
+        )
+        self.assertEqual(
+            raised.exception.message,
+            "Resource not accessible by integration",
+        )
+        self.assertEqual(raised.exception.request_id, "SAFE-REQUEST-ID")
+        self.assertNotIn("must-not-appear", str(raised.exception))
 
     def test_report_uses_distinct_marker_and_no_unit_row(self) -> None:
         head_sha = "a" * 40
