@@ -42,10 +42,18 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: {{ include "cisco-virtual-kubelet.controllerServiceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: controller
           image: {{ include "cisco-virtual-kubelet.controllerImage" . }}
           imagePullPolicy: {{ include "cisco-virtual-kubelet.controllerImagePullPolicy" . }}
+          {{- with .Values.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           command:
             - cisco-vk
             - manager
@@ -171,19 +179,25 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .Values.telemetry.yangModels.configMapName }}
           volumeMounts:
+            # Writable /tmp for the read-only root filesystem set by the
+            # default containerSecurityContext.
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.telemetry.yangModels.configMapName }}
             - name: yang-models
               mountPath: {{ include "cisco-virtual-kubelet.yangModelsMountPath" . }}
               readOnly: true
-          {{- end }}
-      {{- if .Values.telemetry.yangModels.configMapName }}
+            {{- end }}
       volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.telemetry.yangModels.configMapName }}
         - name: yang-models
           configMap:
             name: {{ .Values.telemetry.yangModels.configMapName }}
             optional: true
-      {{- end }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
