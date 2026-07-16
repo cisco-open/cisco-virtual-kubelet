@@ -43,7 +43,7 @@ func TestBuildEnvironmentOptions_DirectVars(t *testing.T) {
 	container := &v1.Container{
 		Env: []v1.EnvVar{
 			{Name: "SIMPLE_VAR", Value: "simple_value"},
-			{Name: "EMPTY_VAR", Value: ""},           // Should be skipped
+			{Name: "EMPTY_VAR", Value: ""}, // Should be skipped
 			{Name: "QUOTED_VAR", Value: `value with "quotes"`},
 			{Name: "SPECIAL_VAR", Value: "value$with`special\\chars"},
 		},
@@ -316,7 +316,7 @@ func TestBuildEnvironmentOptions_ConfigMapRef(t *testing.T) {
 			Namespace: "default",
 		},
 		Data: map[string]string{
-			"api-url":  "https://api.example.com",
+			"api-url":   "https://api.example.com",
 			"log-level": "debug",
 		},
 	}

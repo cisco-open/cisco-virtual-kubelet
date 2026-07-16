@@ -18,8 +18,9 @@
 // interface counters, and asserts MessagesReceived ticks within 30s.
 //
 // Invoke:
-//   RUN_LIVE_GNMI_SMOKE=1 CAT9K_PASSWORD=... \
-//     go test ./internal/drivers/iosxe/telemetry/ -run TestLiveSubscribeSmoke -v -count=1
+//
+//	RUN_LIVE_GNMI_SMOKE=1 CAT9K_PASSWORD=... \
+//	  go test ./internal/drivers/iosxe/telemetry/ -run TestLiveSubscribeSmoke -v -count=1
 package telemetry
 
 import (

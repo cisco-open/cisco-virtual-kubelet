@@ -279,8 +279,8 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 
 	devCtx, cancel := context.WithCancel(r.rootCtx)
 	rec := &provider.ConfigReconciler{
-		Client:                r.Client,
-		DeviceName:            dev.Name,
+		Client:     r.Client,
+		DeviceName: dev.Name,
 		// DeviceNamespace scopes reconciliation to this device's namespace;
 		// deviceRef is same-namespace by contract, so without it the worker
 		// would reconcile IOSXEConfig objects from other namespaces whose

@@ -335,6 +335,7 @@ type ygotInvocation struct {
 	bin  string
 	args []string
 }
+
 func buildYgotArgs(f flags, _ []string) (ygotInvocation, error) {
 	bin := f.ygotBin
 	realArgs := []string{}

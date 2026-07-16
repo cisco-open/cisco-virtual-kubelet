@@ -40,8 +40,8 @@ func (r *AggregatedReconciler) startNXOSWorker(dev *ciskov1.CiscoDevice, passwor
 	notify := startSubscribeWatcher(r.rootCtx, dctx)
 	devCtx, cancel := context.WithCancel(r.rootCtx)
 	rec := &provider.NXOSConfigReconciler{
-		Client:             r.Client,
-		DeviceName:         dev.Name,
+		Client:     r.Client,
+		DeviceName: dev.Name,
 		// DeviceNamespace scopes reconciliation to this device's namespace.
 		// deviceRef is same-namespace by contract; without this the worker
 		// would reconcile NXOSConfig objects from any namespace whose

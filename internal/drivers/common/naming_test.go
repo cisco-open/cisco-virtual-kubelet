@@ -297,12 +297,12 @@ func TestPodIdentityFromRunOpts(t *testing.T) {
 	)
 
 	tests := []struct {
-		name      string
-		lines     []string
-		wantNS    string
-		wantName  string
-		wantUID   string
-		wantCtr   string
+		name     string
+		lines    []string
+		wantNS   string
+		wantName string
+		wantUID  string
+		wantCtr  string
 	}{
 		{
 			name: "all labels on a single line",
@@ -338,12 +338,12 @@ func TestPodIdentityFromRunOpts(t *testing.T) {
 			wantNS: ns, wantName: name, wantUID: uid, wantCtr: ctr,
 		},
 		{
-			name:    "no labels at all",
-			lines:   []string{"-e FOO=1", "-e BAR=2"},
-			wantNS:  "",
+			name:     "no labels at all",
+			lines:    []string{"-e FOO=1", "-e BAR=2"},
+			wantNS:   "",
 			wantName: "",
-			wantUID: "",
-			wantCtr: "",
+			wantUID:  "",
+			wantCtr:  "",
 		},
 		{
 			name: "first occurrence wins (later duplicate ignored)",

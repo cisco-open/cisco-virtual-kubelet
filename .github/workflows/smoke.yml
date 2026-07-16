@@ -65,6 +65,21 @@ jobs:
         # diagnosed without waiting for the test suite.
         run: go vet ./...
 
+      - name: gofmt check
+        # Formatting gate for first-party sources. Generated trees are
+        # excluded: the ygot per-family schemas under configdriver/generated/
+        # and internal/drivers/iosxe/models.go (ygot output — reformatting it
+        # by hand would drift it from the generator; see the drift check
+        # below, which asserts generated artefacts match their sources).
+        run: |
+          fmt_out="$(gofmt -l . | grep -v '/configdriver/generated/' | grep -v 'internal/drivers/iosxe/models.go' || true)"
+          if [ -n "$fmt_out" ]; then
+            echo "gofmt violations in first-party files:"
+            echo "$fmt_out"
+            exit 1
+          fi
+          echo "gofmt clean."
+
       - name: Unit tests
         run: go test -race -count=1 ./...
 
