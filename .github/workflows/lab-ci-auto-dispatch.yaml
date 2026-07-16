@@ -1,0 +1,68 @@
+# Copyright 2026 Cisco Systems Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Reconcile approved PRs from trusted main. workflow_run handles both event
+# orderings (approval before smoke, or smoke before approval); the schedule is
+# a fail-safe for delayed/missed signals and replaces the external host poller.
+name: Lab CI approved dispatcher
+
+on:
+  workflow_run:
+    workflows: [Lab CI approval signal, smoke]
+    types: [completed]
+  schedule:
+    # Event-driven runs are the normal path; this is only a missed-event
+    # reconciliation fallback.
+    - cron: "17 * * * *"
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: lab-ci-approved-dispatcher
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    # Merge the dispatcher inertly, then enable it only after the native
+    # wrappers are on main and the environment/branch protections are updated.
+    if: >-
+      vars.LAB_CI_AUTO_DISPATCH_ENABLED == 'true' &&
+      (github.event_name != 'workflow_run' ||
+        (github.event.workflow_run.name == 'smoke' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+            startsWith(github.event.workflow_run.display_title, 'Lab CI approval signal [approved] [COLLABORATOR]') ||
+            startsWith(github.event.workflow_run.display_title, 'Lab CI approval signal [approved] [MEMBER]') ||
+            startsWith(github.event.workflow_run.display_title, 'Lab CI approval signal [approved] [OWNER]'))))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      checks: read
+      contents: read
+      pull-requests: read
+      statuses: write
+    steps:
+      - name: Checkout trusted dispatcher from main
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Dispatch missing native tests for eligible PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python3 .github/scripts/dispatch-approved-lab-ci.py reconcile
+          --repository "$GITHUB_REPOSITORY"
