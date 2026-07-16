@@ -171,6 +171,29 @@ config:
   # Leave empty to keep the historical per-pod-namespace behaviour.
   leaseNamespace: ""
 
+# podSecurityContext is applied at the controller pod level. Defaults meet
+# the Pod Security Standards "restricted" profile and match the distroless
+# nonroot UID/GID baked into the image. If you supply a custom controller
+# image with a different nonroot identity, override runAsUser, runAsGroup,
+# and fsGroup together.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+# containerSecurityContext is applied to the controller container. The
+# controller needs no writable root filesystem (a writable /tmp is mounted
+# from an emptyDir), no added capabilities, and no privilege escalation.
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
 resources: {}
 #  limits:
 #    cpu: 200m

@@ -293,8 +293,8 @@ func TestReconcile_CreatesDeployment(t *testing.T) {
 	if !found {
 		t.Errorf("expected --nodename router-b in container args, got %v", args)
 	}
-	if len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts) != 2 {
-		t.Errorf("expected 2 volume mounts (device-config, tls-gen), got %d", len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts))
+	if len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts) != 3 {
+		t.Errorf("expected 3 volume mounts (device-config, tls-gen, tmp), got %d", len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts))
 	}
 
 	var gotDevice ciskov1.CiscoDevice
@@ -1455,5 +1455,58 @@ func TestOpsPolicyEnvRendersConfigDiffAllowlist(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestReconcile_DeploymentSecurityContexts asserts the per-device VK pod is
+// stamped with the Pod Security Standards "restricted" profile, and that the
+// writable emptyDir mounts which make readOnlyRootFilesystem viable
+// (generated-TLS dir and /tmp for upgrade image staging) are present.
+func TestReconcile_DeploymentSecurityContexts(t *testing.T) {
+	device := newDevice("router-sec", "default")
+	r := reconcilerFor(t, device)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", "router-sec")); err != nil {
+		t.Fatalf("Reconcile returned unexpected error: %v", err)
+	}
+
+	var deploy appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-sec" + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("Deployment not found after reconcile: %v", err)
+	}
+
+	pod := deploy.Spec.Template.Spec
+	if pod.SecurityContext == nil ||
+		pod.SecurityContext.RunAsNonRoot == nil || !*pod.SecurityContext.RunAsNonRoot ||
+		pod.SecurityContext.RunAsUser == nil || *pod.SecurityContext.RunAsUser != distrolessNonRootUID ||
+		pod.SecurityContext.RunAsGroup == nil || *pod.SecurityContext.RunAsGroup != distrolessNonRootGID ||
+		pod.SecurityContext.FSGroup == nil || *pod.SecurityContext.FSGroup != distrolessNonRootGID ||
+		pod.SecurityContext.SeccompProfile == nil ||
+		pod.SecurityContext.SeccompProfile.Type != corev1.SeccompProfileTypeRuntimeDefault {
+		t.Fatalf("pod securityContext does not meet the restricted profile: %#v", pod.SecurityContext)
+	}
+
+	sc := pod.Containers[0].SecurityContext
+	if sc == nil ||
+		sc.AllowPrivilegeEscalation == nil || *sc.AllowPrivilegeEscalation ||
+		sc.ReadOnlyRootFilesystem == nil || !*sc.ReadOnlyRootFilesystem ||
+		sc.Capabilities == nil || len(sc.Capabilities.Drop) != 1 || sc.Capabilities.Drop[0] != "ALL" {
+		t.Fatalf("container securityContext does not meet the restricted profile: %#v", sc)
+	}
+
+	var haveTmpMount, haveTmpVolume bool
+	for _, m := range pod.Containers[0].VolumeMounts {
+		if m.Name == "tmp" && m.MountPath == "/tmp" {
+			haveTmpMount = true
+		}
+	}
+	for _, v := range pod.Volumes {
+		if v.Name == "tmp" && v.EmptyDir != nil {
+			haveTmpVolume = true
+		}
+	}
+	if !haveTmpMount || !haveTmpVolume {
+		t.Fatalf("expected a tmp emptyDir mounted at /tmp (mount=%v volume=%v)", haveTmpMount, haveTmpVolume)
 	}
 }

@@ -40,6 +40,8 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags
 
 FROM gcr.io/distroless/static-debian12
 COPY --from=builder /app/cisco-vk /usr/local/bin/cisco-vk
-USER nonroot:nonroot
+# Distroless defines its nonroot user and group as 65532. Keep the OCI image
+# metadata numeric so kubelet can verify runAsNonRoot without resolving names.
+USER 65532:65532
 
 ENTRYPOINT ["/usr/local/bin/cisco-vk"]
