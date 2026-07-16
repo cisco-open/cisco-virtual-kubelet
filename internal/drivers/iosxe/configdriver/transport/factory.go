@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/tlsutil"
 )
 
 // FactoryOptions carries construction-time parameters that are not part
@@ -126,7 +127,11 @@ func buildGNMI(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (Inte
 	// (2026-04-28) where the gNMI client got
 	// `transport: authentication handshake failed` against gnxi:50052.
 	if spec.TLS != nil && spec.TLS.Enabled && port != 50052 {
-		cfg.TLSConfig = buildTLSFromSpec(spec)
+		tlsCfg, err := buildTLSFromSpec(spec)
+		if err != nil {
+			return nil, fmt.Errorf("transport.For: gNMI TLS from spec: %w", err)
+		}
+		cfg.TLSConfig = tlsCfg
 	}
 	return NewGNMI(cfg)
 }
@@ -191,9 +196,13 @@ func buildRESTCONF(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (
 		if timeout == 0 {
 			timeout = 30 * time.Second
 		}
+		tlsCfg, err := buildTLSFromSpec(spec)
+		if err != nil {
+			return nil, fmt.Errorf("transport.For: RESTCONF TLS from spec: %w", err)
+		}
 		httpClient = &http.Client{
 			Timeout:   timeout,
-			Transport: &http.Transport{TLSClientConfig: buildTLSFromSpec(spec)},
+			Transport: &http.Transport{TLSClientConfig: tlsCfg},
 		}
 	}
 
@@ -213,17 +222,11 @@ func buildRESTCONF(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (
 	})
 }
 
-// buildTLSFromSpec mirrors the existing apphosting driver's behaviour:
-// honours InsecureSkipVerify but does not load client certs here (the
-// apphosting driver does, and the intent is for its HTTP client to be
-// passed in via FactoryOptions). This fallback keeps tests and
-// local-dev configurations simple.
-func buildTLSFromSpec(spec *ciskov1.DeviceSpec) *tls.Config {
-	if spec.TLS == nil {
-		return &tls.Config{MinVersion: tls.VersionTLS12}
-	}
-	return &tls.Config{
-		MinVersion:         tls.VersionTLS12,
-		InsecureSkipVerify: spec.TLS.InsecureSkipVerify,
-	}
+// buildTLSFromSpec matches the apphosting driver's behaviour: the shared
+// helper honours InsecureSkipVerify, loads spec.tls.caFile into RootCAs
+// (so private-CA devices get verified TLS on this path too, instead of
+// being forced to skip-verify), and loads the certFile/keyFile client
+// pair when both are set.
+func buildTLSFromSpec(spec *ciskov1.DeviceSpec) (*tls.Config, error) {
+	return tlsutil.ClientTLSFromDeviceTLS(spec.TLS)
 }

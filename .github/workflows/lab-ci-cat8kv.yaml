@@ -15,8 +15,10 @@
 # Trusted, cisco-open-native wrapper for the cat8kv-pr-test Argo
 # WorkflowTemplate. The workflow must be dispatched from main. GitHub-hosted
 # jobs validate the PR and own all GitHub writes; the credentialed lab runner
-# receives only the verified prospective merge SHA.
+# receives the verified prospective merge SHA and a read-only token for its
+# final pre-submission revalidation.
 name: Lab CI (Cat8kv)
+run-name: Lab CI Cat8kv - ${{ inputs.dispatch_id }}
 
 on:
   workflow_dispatch:
@@ -25,6 +27,26 @@ on:
         description: "Open PR number to validate"
         required: true
         type: number
+      expected_head_sha:
+        description: "Approved PR head SHA pinned by the trusted dispatcher"
+        required: true
+        type: string
+      expected_base_sha:
+        description: "Current main SHA pinned by the trusted dispatcher"
+        required: true
+        type: string
+      expected_merge_sha:
+        description: "Prospective merge SHA pinned by the trusted dispatcher"
+        required: true
+        type: string
+      dispatch_attempt:
+        description: "Bounded automatic dispatch attempt"
+        required: true
+        type: number
+      dispatch_id:
+        description: "Deterministic dispatcher correlation ID"
+        required: true
+        type: string
 
 concurrency:
   # Do not auto-cancel a device run: an abandoned Argo workflow could retain
@@ -43,17 +65,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
+      checks: read
       contents: read
       pull-requests: read
       statuses: write
     outputs:
+      base_sha: ${{ steps.pr.outputs.base_sha }}
       head_sha: ${{ steps.pr.outputs.head_sha }}
       merge_sha: ${{ steps.pr.outputs.merge_sha }}
       pr_number: ${{ steps.pr.outputs.pr_number }}
     steps:
+      - name: Checkout trusted gate from main
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
       - name: Resolve and verify open PR
         id: pr
         env:
+          EXPECTED_BASE_SHA: ${{ inputs.expected_base_sha }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          EXPECTED_MERGE_SHA: ${{ inputs.expected_merge_sha }}
+          DISPATCH_ATTEMPT: ${{ inputs.dispatch_attempt }}
+          DISPATCH_ID: ${{ inputs.dispatch_id }}
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ inputs.upstream_pr }}
           EXPECTED_REPO: ${{ github.repository }}
@@ -62,40 +96,41 @@ jobs:
           set -euo pipefail
           [[ "$GITHUB_REF" == "refs/heads/main" ]]
           [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          [[ "$DISPATCH_ATTEMPT" =~ ^[1-3]$ ]]
+          [[ "$DISPATCH_ID" =~ ^cat8kv-pr[1-9][0-9]*-h[0-9a-f]{12}-b[0-9a-f]{12}-m[0-9a-f]{12}-a[1-3]$ ]]
+          [[ "$EXPECTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EXPECTED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EXPECTED_MERGE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$DISPATCH_ID" == "cat8kv-pr${PR_NUMBER}-h${EXPECTED_HEAD_SHA:0:12}-b${EXPECTED_BASE_SHA:0:12}-m${EXPECTED_MERGE_SHA:0:12}-a${DISPATCH_ATTEMPT}" ]]
+          {
+            echo "base_sha=$EXPECTED_BASE_SHA"
+            echo "head_sha=$EXPECTED_HEAD_SHA"
+            echo "pr_number=$PR_NUMBER"
+          } >> "$GITHUB_OUTPUT"
 
-          # GitHub may initially return mergeable=null while it computes the
-          # prospective merge. Retry briefly, then fail closed.
-          PR_JSON=""
-          for attempt in 1 2 3 4 5; do
-            PR_JSON=$(gh api "repos/${EXPECTED_REPO}/pulls/${PR_NUMBER}")
-            if [[ $(jq -r '.mergeable' <<<"$PR_JSON") != "null" ]]; then
-              break
-            fi
-            sleep $((attempt * 2))
-          done
-
-          [[ $(jq -r '.state' <<<"$PR_JSON") == "open" ]]
-          [[ $(jq -r '.draft' <<<"$PR_JSON") == "false" ]]
-          [[ $(jq -r '.base.ref' <<<"$PR_JSON") == "main" ]]
-          [[ $(jq -r '.base.repo.full_name' <<<"$PR_JSON") == "$EXPECTED_REPO" ]]
-          [[ $(jq -r '.mergeable' <<<"$PR_JSON") == "true" ]]
-
-          HEAD_SHA=$(jq -r '.head.sha' <<<"$PR_JSON")
-          MERGE_SHA=$(jq -r '.merge_commit_sha' <<<"$PR_JSON")
-          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$MERGE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$HEAD_SHA" != "$MERGE_SHA" ]]
+          VERIFY_JSON=$(python3 .github/scripts/dispatch-approved-lab-ci.py verify \
+            --repository "$EXPECTED_REPO" \
+            --pr-number "$PR_NUMBER" \
+            --expected-head-sha "$EXPECTED_HEAD_SHA" \
+            --expected-base-sha "$EXPECTED_BASE_SHA" \
+            --expected-merge-sha "$EXPECTED_MERGE_SHA")
+          HEAD_SHA=$(jq -r '.head_sha' <<<"$VERIFY_JSON")
+          BASE_SHA=$(jq -r '.base_sha' <<<"$VERIFY_JSON")
+          MERGE_SHA=$(jq -r '.merge_sha' <<<"$VERIFY_JSON")
+          VERIFIED_PR=$(jq -r '.pr_number' <<<"$VERIFY_JSON")
+          [[ "$GITHUB_SHA" == "$BASE_SHA" ]]
 
           {
+            echo "base_sha=$BASE_SHA"
             echo "head_sha=$HEAD_SHA"
             echo "merge_sha=$MERGE_SHA"
-            echo "pr_number=$PR_NUMBER"
+            echo "pr_number=$VERIFIED_PR"
           } >> "$GITHUB_OUTPUT"
 
           gh api -X POST "repos/${EXPECTED_REPO}/statuses/${HEAD_SHA}" \
             -f state=pending \
             -f target_url="$TARGET_URL" \
-            -f description="Cat8kv is testing the prospective merge" \
+            -f description="Cat8kv testing; try=$DISPATCH_ATTEMPT; base=$BASE_SHA; merge=$MERGE_SHA" \
             -f context="$STATUS_CONTEXT" >/dev/null
 
   cat8kv:
@@ -104,20 +139,50 @@ jobs:
     runs-on: [self-hosted, lab-cvk-upstream]
     environment: lab-ci
     timeout-minutes: 70
-    permissions: {}
+    permissions:
+      checks: read
+      contents: read
+      pull-requests: read
+    outputs:
+      argo_phase: ${{ steps.argo.outputs.phase }}
+      argo_workflow: ${{ steps.argo.outputs.workflow }}
+      gate_outcome: ${{ steps.gate.outcome }}
     env:
+      TEST_BASE_SHA: ${{ needs.prepare.outputs.base_sha }}
+      TEST_HEAD_SHA: ${{ needs.prepare.outputs.head_sha }}
       UPSTREAM_REPO: ${{ github.repository }}
       UPSTREAM_PR: ${{ needs.prepare.outputs.pr_number }}
       TEST_MERGE_SHA: ${{ needs.prepare.outputs.merge_sha }}
       PATH: /home/cisco/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
-      - name: Verify trusted lab inputs and tooling
+      - name: Checkout trusted gate at the verified base
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.prepare.outputs.base_sha }}
+          persist-credentials: false
+
+      - name: Revalidate approval immediately before lab submission
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           [[ "$GITHUB_REF" == "refs/heads/main" ]]
           [[ "$UPSTREAM_REPO" == "$GITHUB_REPOSITORY" ]]
           [[ "$UPSTREAM_PR" =~ ^[1-9][0-9]*$ ]]
+          [[ "$TEST_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$TEST_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$TEST_MERGE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          python3 .github/scripts/dispatch-approved-lab-ci.py verify \
+            --repository "$UPSTREAM_REPO" \
+            --pr-number "$UPSTREAM_PR" \
+            --expected-head-sha "$TEST_HEAD_SHA" \
+            --expected-base-sha "$TEST_BASE_SHA" \
+            --expected-merge-sha "$TEST_MERGE_SHA" >/dev/null
+
+      - name: Verify trusted lab tooling
+        run: |
+          set -euo pipefail
           command -v argo
           command -v jq
           argo version --short
@@ -215,7 +280,7 @@ jobs:
           retention-days: 7
 
   report:
-    if: always() && github.ref == 'refs/heads/main' && needs.prepare.result == 'success'
+    if: always() && github.ref == 'refs/heads/main'
     needs: [prepare, cat8kv]
     concurrency:
       group: lab-ci-next-report-${{ needs.prepare.outputs.pr_number }}
@@ -232,17 +297,38 @@ jobs:
       - name: Post final status
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ needs.prepare.outputs.head_sha }}
+          ARGO_PHASE: ${{ needs.cat8kv.outputs.argo_phase }}
+          ARGO_WORKFLOW: ${{ needs.cat8kv.outputs.argo_workflow }}
+          BASE_SHA: ${{ needs.prepare.outputs.base_sha || inputs.expected_base_sha }}
+          DISPATCH_ATTEMPT: ${{ inputs.dispatch_attempt }}
+          GATE_OUTCOME: ${{ needs.cat8kv.outputs.gate_outcome }}
+          HEAD_SHA: ${{ needs.prepare.outputs.head_sha || inputs.expected_head_sha }}
           LAB_RESULT: ${{ needs.cat8kv.result }}
+          MERGE_SHA: ${{ needs.prepare.outputs.merge_sha || inputs.expected_merge_sha }}
+          PREPARE_RESULT: ${{ needs.prepare.result }}
           TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          case "$LAB_RESULT" in
-            success)   STATE=success; DESCRIPTION="Cat8kv passed on the prospective merge" ;;
-            failure)   STATE=failure; DESCRIPTION="Cat8kv failed on the prospective merge" ;;
-            cancelled) STATE=error;   DESCRIPTION="Cat8kv run was cancelled" ;;
-            *)         STATE=error;   DESCRIPTION="Cat8kv did not complete ($LAB_RESULT)" ;;
-          esac
+          [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$DISPATCH_ATTEMPT" =~ ^[1-3]$ ]]
+          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$MERGE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          if [[ "$PREPARE_RESULT" != "success" || "$GATE_OUTCOME" == "failure" ]]; then
+            STATE=error
+            DESCRIPTION="Cat8kv gate rejected; try=$DISPATCH_ATTEMPT; base=$BASE_SHA; merge=$MERGE_SHA"
+          elif [[ "$LAB_RESULT" == "cancelled" ]]; then
+            STATE=error
+            DESCRIPTION="Cat8kv cancelled; try=$DISPATCH_ATTEMPT; base=$BASE_SHA; merge=$MERGE_SHA"
+          elif [[ -n "$ARGO_WORKFLOW" && "$ARGO_PHASE" == "Failed" ]]; then
+            STATE=failure
+            DESCRIPTION="Cat8kv failed; try=$DISPATCH_ATTEMPT; base=$BASE_SHA; merge=$MERGE_SHA"
+          elif [[ "$LAB_RESULT" == "success" && "$ARGO_PHASE" == "Succeeded" ]]; then
+            STATE=success
+            DESCRIPTION="Cat8kv passed; try=$DISPATCH_ATTEMPT; base=$BASE_SHA; merge=$MERGE_SHA"
+          else
+            STATE=error
+            DESCRIPTION="Cat8kv incomplete; try=$DISPATCH_ATTEMPT; base=$BASE_SHA; merge=$MERGE_SHA"
+          fi
           gh api -X POST "repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
             -f state="$STATE" \
             -f target_url="$TARGET_URL" \
@@ -250,7 +336,7 @@ jobs:
             -f context="$STATUS_CONTEXT" >/dev/null
 
       - name: Checkout trusted reporting code
-        if: always()
+        if: always() && needs.prepare.result == 'success'
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: main
@@ -258,7 +344,7 @@ jobs:
           persist-credentials: false
 
       - name: Upsert native Lab CI report
-        if: always()
+        if: always() && needs.prepare.result == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}

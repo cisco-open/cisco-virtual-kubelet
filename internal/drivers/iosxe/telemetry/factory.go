@@ -33,6 +33,7 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/devicegrpc"
+	"github.com/cisco/virtual-kubelet-cisco/internal/tlsutil"
 )
 
 // SubscribeClientFactory creates the dedicated gRPC client used by the
@@ -115,7 +116,11 @@ func GNMIConfigFromDeviceSpec(spec *ciskov1.DeviceSpec, password string) (transp
 		Password: password,
 	}
 	if tlsEnabled {
-		cfg.TLSConfig = tlsConfigFromDeviceSpec(spec)
+		tlsCfg, err := tlsConfigFromDeviceSpec(spec)
+		if err != nil {
+			return transport.GNMIConfig{}, fmt.Errorf("telemetry: gNMI TLS from spec: %w", err)
+		}
+		cfg.TLSConfig = tlsCfg
 	}
 	return cfg, nil
 }
@@ -206,12 +211,10 @@ func authContextFunc(username, password string) func(context.Context) context.Co
 	}
 }
 
-func tlsConfigFromDeviceSpec(spec *ciskov1.DeviceSpec) *tls.Config {
-	if spec.TLS == nil {
-		return &tls.Config{MinVersion: tls.VersionTLS12}
-	}
-	return &tls.Config{
-		MinVersion:         tls.VersionTLS12,
-		InsecureSkipVerify: spec.TLS.InsecureSkipVerify,
-	}
+// tlsConfigFromDeviceSpec delegates to the shared device-client helper so
+// the MDT-over-gNMI path honours spec.tls.caFile (RootCAs) and the
+// certFile/keyFile client pair, matching the apphosting driver, instead of
+// only supporting skip-verify.
+func tlsConfigFromDeviceSpec(spec *ciskov1.DeviceSpec) (*tls.Config, error) {
+	return tlsutil.ClientTLSFromDeviceTLS(spec.TLS)
 }

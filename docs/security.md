@@ -246,6 +246,23 @@ spec:
 
 The `certFile` / `keyFile` / `caFile` paths refer to files **inside the VK pod**. Mount them with a Secret-backed volume or a configMap-backed volume on the VK Deployment. The controller does not currently auto-mount them — you'll need a post-install patch or a forked chart.
 
+All device-facing clients honour the full `spec.tls` block through one shared
+builder: apphosting RESTCONF, the configdriver RESTCONF fallback, MDT-over-gNMI
+telemetry, gNOI, and the NX-API client on NX-OS. A `caFile` therefore gives you
+verified TLS on every path — `insecureSkipVerify: true` is never required just
+because a device uses a private CA.
+
+### SSH host keys
+
+NETCONF and the CLI side-channel ride SSH, not TLS. Pinning uses a standard
+OpenSSH `known_hosts` file (multi-host files cover a fleet). Ship it into the
+VK pod with a Secret- or ConfigMap-backed volume and point
+`CONFIG_SSH_KNOWN_HOSTS` at the mounted path; the NETCONF diagnostic probe
+(`CONFIG_NETCONF_PROBE`) then pins its dials against it and refuses to dial
+unpinned if the file fails to load. Without the variable the probe keeps the
+historical lab default of accepting any presented key — as with
+`insecureSkipVerify`, do not rely on that in production.
+
 ### Kubelet-side TLS
 
 The VK runs its own HTTPS listener on `:10250` (serving the kubelet API surface). By default it auto-generates a self-signed cert on every start into `/var/lib/virtual-kubelet/`. Override with:

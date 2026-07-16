@@ -30,12 +30,14 @@ package main
 import (
 	"context"
 	"net"
+	"os"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"golang.org/x/crypto/ssh"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 )
 
 // runNETCONFProbe periodically attempts a NETCONF SSH dial against
@@ -93,10 +95,28 @@ func probeOnce(ctx context.Context, addr, user, password string) {
 	}
 
 	// Phase 2: full ssh.Dial — same code path the configdriver uses.
+	//
+	// Host-key policy: the probe authenticates with the real device
+	// credentials, so when the operator ships a known_hosts file
+	// (CONFIG_SSH_KNOWN_HOSTS, see docs/environment-variables.md) the
+	// dial pins against it. Load failures skip the SSH phase entirely —
+	// per known_hosts.go, fail fast rather than silently fall back to
+	// accepting any presented key. Without the env var the historical
+	// lab default (accept-any) is kept.
+	hostKey := ssh.InsecureIgnoreHostKey() // #nosec G106 - lab default, overridden by CONFIG_SSH_KNOWN_HOSTS below.
+	if khPath := os.Getenv("CONFIG_SSH_KNOWN_HOSTS"); khPath != "" {
+		cb, err := transport.LoadKnownHostsCallback(khPath)
+		if err != nil {
+			log.G(ctx).WithError(err).Error("netconf-probe: known_hosts load failed; skipping SSH phase rather than dialling unpinned")
+			log.G(ctx).Infof("netconf-probe: tick raw=%q ssh=SKIPPED(known_hosts)", rawSummary)
+			return
+		}
+		hostKey = cb
+	}
 	conf := &ssh.ClientConfig{
 		User:            user,
 		Auth:            []ssh.AuthMethod{ssh.Password(password)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: hostKey,
 		Timeout:         10 * time.Second,
 	}
 	sshSummary := ""
