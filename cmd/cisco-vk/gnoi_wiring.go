@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"os"
 	"strconv"
@@ -29,6 +28,7 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/devicegrpc"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
+	"github.com/cisco/virtual-kubelet-cisco/internal/tlsutil"
 )
 
 // gNOIDisabledEnv lets operators force-disable the gNOI pillar even
@@ -53,7 +53,7 @@ const gNOIInsecureEnv = "CISCO_VK_GNOI_INSECURE"
 // OS.Install streams. The returned cleanup function releases leases
 // and closes the pool when the surrounding ctx is done.
 //
-// Returns (nil, nil) when:
+// Returns (nil, nil, nil) when:
 //   - The device spec is missing the address (defensive — usually
 //     caught earlier in startup).
 //   - Operators have set CISCO_VK_GNOI_DISABLED=1 to opt out.
@@ -61,13 +61,13 @@ const gNOIInsecureEnv = "CISCO_VK_GNOI_INSECURE"
 // A nil gnoi.Provider signals to the reconcilers that the gNOI
 // dispatch path is unavailable; they fail fast with reason
 // GNOIUnsupported on any CR they receive.
-func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider, func()) {
+func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider, func(), error) {
 	if v := os.Getenv(gNOIDisabledEnv); v == "1" || strings.EqualFold(v, "true") {
 		log.G(ctx).Info("gNOI pillar disabled by CISCO_VK_GNOI_DISABLED")
-		return nil, nil
+		return nil, nil, nil
 	}
 	if opts.Spec == nil || opts.Spec.Address == "" {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	forceInsecure := false
@@ -82,10 +82,14 @@ func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider
 		Password: opts.Password,
 	}
 	if !forceInsecure && opts.Spec.TLS != nil && opts.Spec.TLS.Enabled {
-		dialCfg.TLSConfig = &tls.Config{
-			MinVersion:         tls.VersionTLS12,
-			InsecureSkipVerify: opts.Spec.TLS.InsecureSkipVerify,
+		// Shared device-client helper: honours spec.tls.caFile (RootCAs)
+		// and the certFile/keyFile client pair in addition to
+		// InsecureSkipVerify, matching the apphosting driver.
+		tlsCfg, err := tlsutil.ClientTLSFromDeviceTLS(opts.Spec.TLS)
+		if err != nil {
+			return nil, nil, fmt.Errorf("gNOI: TLS from spec: %w", err)
 		}
+		dialCfg.TLSConfig = tlsCfg
 	}
 
 	pool := devicegrpc.New(dialCfg, nil)
@@ -101,7 +105,7 @@ func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider
 	}
 
 	log.G(ctx).Infof("gNOI: pillar enabled (%s:%d, tls=%v, lazy_bulk=true)", opts.Spec.Address, port, dialCfg.TLSConfig != nil)
-	return provider, provider.Close
+	return provider, provider.Close, nil
 }
 
 type pooledGNOIProvider struct {
