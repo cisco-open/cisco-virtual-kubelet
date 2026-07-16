@@ -19,7 +19,6 @@
 name: Lab CI approval signal
 run-name: >-
   Lab CI approval signal [${{ github.event.review.state }}]
-  [${{ github.event.review.author_association }}]
   for PR #${{ github.event.pull_request.number }}
 
 on:
@@ -43,7 +42,6 @@ jobs:
           PR_DRAFT: ${{ github.event.pull_request.draft }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_STATE: ${{ github.event.pull_request.state }}
-          REVIEW_ASSOCIATION: ${{ github.event.review.author_association }}
           REVIEW_COMMIT_SHA: ${{ github.event.review.commit_id }}
         run: |
           set -euo pipefail
@@ -54,4 +52,3 @@ jobs:
           [[ "$PR_DRAFT" == "false" ]]
           [[ "$BASE_REF" == "main" ]]
           [[ "$BASE_REPOSITORY" == "$GITHUB_REPOSITORY" ]]
-          [[ "$REVIEW_ASSOCIATION" =~ ^(COLLABORATOR|MEMBER|OWNER)$ ]]

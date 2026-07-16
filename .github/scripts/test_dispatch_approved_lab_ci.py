@@ -146,10 +146,9 @@ class DispatcherTests(unittest.TestCase):
             dispatcher.VerifiedPullRequest(7, HEAD, BASE, MERGE),
         )
 
-    def test_stale_or_untrusted_approval_is_rejected(self) -> None:
+    def test_stale_or_dismissed_approval_is_rejected(self) -> None:
         cases = (
             approved_review(commit_id="d" * 40),
-            approved_review(author_association="CONTRIBUTOR"),
             approved_review(state="DISMISSED"),
         )
         for review in cases:
@@ -163,6 +162,17 @@ class DispatcherTests(unittest.TestCase):
                         api_call=VerificationApi(reviews=[review]),
                         sleep=lambda _: None,
                     )
+
+    def test_write_reviewer_is_accepted_despite_unreliable_association(self) -> None:
+        result = dispatcher.verify_pull_request(
+            REPOSITORY,
+            7,
+            api_call=VerificationApi(
+                reviews=[approved_review(author_association="CONTRIBUTOR")]
+            ),
+            sleep=lambda _: None,
+        )
+        self.assertEqual(result.head_sha, HEAD)
 
     def test_non_approved_aggregate_review_decision_is_rejected(self) -> None:
         with self.assertRaisesRegex(dispatcher.GateError, "aggregate review decision"):
@@ -798,12 +808,12 @@ class DispatcherTests(unittest.TestCase):
         self.assertIn("LAB_CI_AUTO_DISPATCH_ENABLED", dispatcher_workflow)
         self.assertIn("ref: main", dispatcher_workflow)
         self.assertIn("workflow_run.conclusion == 'success'", dispatcher_workflow)
-        self.assertIn("[approved] [MEMBER]", dispatcher_workflow)
+        self.assertIn("approval signal [approved] for PR #", dispatcher_workflow)
         self.assertNotIn("self-hosted", dispatcher_workflow)
 
         self.assertIn("pull_request_review:", signal_workflow)
         self.assertIn("github.event.review.state", signal_workflow)
-        self.assertIn("github.event.review.author_association", signal_workflow)
+        self.assertNotIn("github.event.review.author_association", signal_workflow)
         self.assertIn("permissions: {}", signal_workflow)
         self.assertNotIn("actions/checkout", signal_workflow)
 

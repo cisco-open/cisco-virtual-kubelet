@@ -45,7 +45,6 @@ GITHUB_API = "https://api.github.com"
 GITHUB_ACTIONS_APP_ID = 15368
 GITHUB_ACTIONS_BOT_ID = 41898282
 REQUIRED_CHECKS = ("build-and-smoke", "ygot-validate")
-TRUSTED_REVIEW_ASSOCIATIONS = {"COLLABORATOR", "MEMBER", "OWNER"}
 OPINIONATED_REVIEW_STATES = {"APPROVED", "CHANGES_REQUESTED", "DISMISSED"}
 ACTIVE_WORKFLOW_STATES = {"in_progress", "pending", "queued", "requested", "waiting"}
 MAX_API_PAGES = 100
@@ -237,9 +236,7 @@ def _verify_review(
     approval_candidates = [
         review
         for review in latest.values()
-        if review.get("state") == "APPROVED"
-        and review.get("commit_id") == head_sha
-        and review.get("author_association") in TRUSTED_REVIEW_ASSOCIATIONS
+        if review.get("state") == "APPROVED" and review.get("commit_id") == head_sha
     ]
     for review in approval_candidates:
         login = (review.get("user") or {}).get("login", "")
