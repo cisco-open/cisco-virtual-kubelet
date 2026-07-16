@@ -19,14 +19,18 @@ on:
     branches: [main]
     paths:
       - .github/actionlint.yaml
+      - .github/scripts/dispatch-approved-lab-ci.py
       - .github/scripts/post-pr-report.py
+      - .github/scripts/test_dispatch_approved_lab_ci.py
       - .github/scripts/test_post_pr_report.py
       - .github/workflows/lab-ci-*.yaml
   pull_request:
     branches: [main]
     paths:
       - .github/actionlint.yaml
+      - .github/scripts/dispatch-approved-lab-ci.py
       - .github/scripts/post-pr-report.py
+      - .github/scripts/test_dispatch_approved_lab_ci.py
       - .github/scripts/test_post_pr_report.py
       - .github/workflows/lab-ci-*.yaml
   workflow_dispatch: {}
@@ -44,7 +48,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Test Lab CI reporter
+      - name: Test Lab CI scripts
         run: python3 -m unittest discover -s .github/scripts -p 'test_*.py' -v
 
       - name: Install actionlint 1.7.12
