@@ -1,0 +1,267 @@
+# Copyright 2026 Cisco Systems Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Trusted, cisco-open-native wrapper for the cat8kv-pr-test Argo
+# WorkflowTemplate. The workflow must be dispatched from main. GitHub-hosted
+# jobs validate the PR and own all GitHub writes; the credentialed lab runner
+# receives only the verified prospective merge SHA.
+name: Lab CI (Cat8kv)
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_pr:
+        description: "Open PR number to validate"
+        required: true
+        type: number
+
+concurrency:
+  # Do not auto-cancel a device run: an abandoned Argo workflow could retain
+  # the device semaphore and, more importantly, strand a pending PR status.
+  group: lab-ci-next-cat8kv
+  queue: max
+
+permissions: {}
+
+env:
+  STATUS_CONTEXT: lab-ci-next / cat8kv
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    outputs:
+      head_sha: ${{ steps.pr.outputs.head_sha }}
+      merge_sha: ${{ steps.pr.outputs.merge_sha }}
+      pr_number: ${{ steps.pr.outputs.pr_number }}
+    steps:
+      - name: Resolve and verify open PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.upstream_pr }}
+          EXPECTED_REPO: ${{ github.repository }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+
+          # GitHub may initially return mergeable=null while it computes the
+          # prospective merge. Retry briefly, then fail closed.
+          PR_JSON=""
+          for attempt in 1 2 3 4 5; do
+            PR_JSON=$(gh api "repos/${EXPECTED_REPO}/pulls/${PR_NUMBER}")
+            if [[ $(jq -r '.mergeable' <<<"$PR_JSON") != "null" ]]; then
+              break
+            fi
+            sleep $((attempt * 2))
+          done
+
+          [[ $(jq -r '.state' <<<"$PR_JSON") == "open" ]]
+          [[ $(jq -r '.draft' <<<"$PR_JSON") == "false" ]]
+          [[ $(jq -r '.base.ref' <<<"$PR_JSON") == "main" ]]
+          [[ $(jq -r '.base.repo.full_name' <<<"$PR_JSON") == "$EXPECTED_REPO" ]]
+          [[ $(jq -r '.mergeable' <<<"$PR_JSON") == "true" ]]
+
+          HEAD_SHA=$(jq -r '.head.sha' <<<"$PR_JSON")
+          MERGE_SHA=$(jq -r '.merge_commit_sha' <<<"$PR_JSON")
+          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$MERGE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$HEAD_SHA" != "$MERGE_SHA" ]]
+
+          {
+            echo "head_sha=$HEAD_SHA"
+            echo "merge_sha=$MERGE_SHA"
+            echo "pr_number=$PR_NUMBER"
+          } >> "$GITHUB_OUTPUT"
+
+          gh api -X POST "repos/${EXPECTED_REPO}/statuses/${HEAD_SHA}" \
+            -f state=pending \
+            -f target_url="$TARGET_URL" \
+            -f description="Cat8kv is testing the prospective merge" \
+            -f context="$STATUS_CONTEXT" >/dev/null
+
+  cat8kv:
+    if: github.ref == 'refs/heads/main' && needs.prepare.result == 'success'
+    needs: prepare
+    runs-on: [self-hosted, lab-cvk-upstream]
+    environment: lab-ci
+    timeout-minutes: 70
+    permissions: {}
+    env:
+      UPSTREAM_REPO: ${{ github.repository }}
+      UPSTREAM_PR: ${{ needs.prepare.outputs.pr_number }}
+      TEST_MERGE_SHA: ${{ needs.prepare.outputs.merge_sha }}
+      PATH: /home/cisco/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    steps:
+      - name: Verify trusted lab inputs and tooling
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$UPSTREAM_REPO" == "$GITHUB_REPOSITORY" ]]
+          [[ "$UPSTREAM_PR" =~ ^[1-9][0-9]*$ ]]
+          [[ "$TEST_MERGE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          command -v argo
+          command -v jq
+          argo version --short
+
+      - name: Submit WorkflowTemplate and wait
+        id: argo
+        run: |
+          set -euo pipefail
+          NAME=""
+          terminate_on_signal() {
+            trap - INT TERM
+            if [[ -n "$NAME" ]]; then
+              echo "Terminating Argo workflow after runner cancellation: $NAME"
+              argo terminate -n virtual-kubelet-ci "$NAME" || true
+            fi
+            exit 130
+          }
+          trap terminate_on_signal INT TERM
+
+          NAME=$(argo submit -n virtual-kubelet-ci \
+            --from WorkflowTemplate/cat8kv-pr-test \
+            -p upstream_repo="$UPSTREAM_REPO" \
+            -p upstream_sha="$TEST_MERGE_SHA" \
+            -p upstream_pr="$UPSTREAM_PR" \
+            --generate-name "cat8kv-${TEST_MERGE_SHA:0:8}-" \
+            -o name | sed 's|^workflow.argoproj.io/||')
+          [[ "$NAME" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
+          echo "workflow=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Submitted: $NAME"
+
+          # Do not stream template/node messages into this public Actions log.
+          # argo wait returns non-zero for a failed workflow; query the phase
+          # explicitly below so every terminal state is handled uniformly.
+          argo wait -n virtual-kubelet-ci "$NAME" >/dev/null 2>&1 || true
+          trap - INT TERM
+          PHASE=$(argo get -n virtual-kubelet-ci "$NAME" -o json | jq -r '.status.phase')
+          echo "phase=$PHASE" >> "$GITHUB_OUTPUT"
+          [[ "$PHASE" == "Succeeded" ]]
+
+      - name: Build sanitized Argo evidence
+        id: evidence
+        if: always() && steps.argo.outputs.workflow != ''
+        env:
+          WORKFLOW: ${{ steps.argo.outputs.workflow }}
+        run: |
+          set -euo pipefail
+          rm -f argo-evidence.json
+          # Retain only status/timing and scenario labels. Do not persist raw
+          # Argo JSON, pod logs, inputs, messages, or template source.
+          argo get -n virtual-kubelet-ci "$WORKFLOW" -o json | jq '
+            (.status.storedWorkflowTemplateSpec.templates // []
+              | map({key: .name, value: (.metadata.labels // {})})
+              | from_entries) as $labels
+            | {
+                schema: "cvk-lab-evidence/v1",
+                workflow: .metadata.name,
+                phase: (.status.phase // "Unknown"),
+                started_at: (.status.startedAt // ""),
+                finished_at: (.status.finishedAt // ""),
+                scenarios: [
+                  .status.nodes[]?
+                  | select(.type == "Pod")
+                  | ($labels[.templateName] // {}) as $meta
+                  | select(
+                      ($meta["cvk.cisco.io/scenario-name"] // "") != ""
+                      or ((.templateName // "") | startswith("scenario-"))
+                    )
+                  | {
+                      crd: ($meta["cvk.cisco.io/crd"] // "Lab"),
+                      name: ($meta["cvk.cisco.io/scenario-name"] // .displayName // .templateName),
+                      template: (.templateName // ""),
+                      phase: (.phase // "Unknown"),
+                      started_at: (.startedAt // ""),
+                      finished_at: (.finishedAt // "")
+                    }
+                ]
+              }
+          ' > argo-evidence.json
+          jq -e '.schema == "cvk-lab-evidence/v1" and (.scenarios | type == "array")' \
+            argo-evidence.json >/dev/null
+          jq -r '
+            "## Cat8kv Argo summary\n\n" +
+            "Workflow: `" + .workflow + "`\n\n" +
+            "Phase: `" + .phase + "`\n\n" +
+            "Sanitized scenarios captured: " + ((.scenarios | length) | tostring)
+          ' argo-evidence.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload sanitized evidence
+        if: always() && steps.evidence.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: argo-evidence-cat8kv
+          path: argo-evidence.json
+          if-no-files-found: error
+          retention-days: 7
+
+  report:
+    if: always() && github.ref == 'refs/heads/main' && needs.prepare.result == 'success'
+    needs: [prepare, cat8kv]
+    concurrency:
+      group: lab-ci-next-report-${{ needs.prepare.outputs.pr_number }}
+      queue: max
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      pull-requests: read
+      statuses: write
+    steps:
+      - name: Post final status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ needs.prepare.outputs.head_sha }}
+          LAB_RESULT: ${{ needs.cat8kv.result }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          case "$LAB_RESULT" in
+            success)   STATE=success; DESCRIPTION="Cat8kv passed on the prospective merge" ;;
+            failure)   STATE=failure; DESCRIPTION="Cat8kv failed on the prospective merge" ;;
+            cancelled) STATE=error;   DESCRIPTION="Cat8kv run was cancelled" ;;
+            *)         STATE=error;   DESCRIPTION="Cat8kv did not complete ($LAB_RESULT)" ;;
+          esac
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+            -f state="$STATE" \
+            -f target_url="$TARGET_URL" \
+            -f description="$DESCRIPTION" \
+            -f context="$STATUS_CONTEXT" >/dev/null
+
+      - name: Checkout trusted reporting code
+        if: always()
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Upsert native Lab CI report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ needs.prepare.outputs.head_sha }}
+          PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
+        run: python3 .github/scripts/post-pr-report.py

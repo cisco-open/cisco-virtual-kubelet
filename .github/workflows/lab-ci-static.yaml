@@ -1,0 +1,65 @@
+# Copyright 2026 Cisco Systems Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: lab-ci-static
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/actionlint.yaml
+      - .github/scripts/post-pr-report.py
+      - .github/scripts/test_post_pr_report.py
+      - .github/workflows/lab-ci-*.yaml
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/actionlint.yaml
+      - .github/scripts/post-pr-report.py
+      - .github/scripts/test_post_pr_report.py
+      - .github/workflows/lab-ci-*.yaml
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Test Lab CI reporter
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py' -v
+
+      - name: Install actionlint 1.7.12
+        env:
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+          ACTIONLINT_VERSION: 1.7.12
+        run: |
+          set -euo pipefail
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            --output "$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum --check --strict
+          tar -xzf "$archive" actionlint
+          ./actionlint -version
+
+      - name: Validate GitHub Actions workflows
+        run: ./actionlint .github/workflows/lab-ci-*.yaml
