@@ -21,6 +21,7 @@ BUILD_TIME=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 YANG_MODELS_URL=https://github.com/YangModels/yang.git
 YANG_SCHEMA_DIR=internal/drivers/iosxe/configdriver/schema/yang
+YANG_SKIP_BASELINE=internal/drivers/iosxe/configdriver/schema/yang-skip-baseline.yaml
 YANG_RELEASE=$(if $(RELEASE),$(RELEASE),1718)
 # Per-release commit pin: read from .provenance.yaml when not explicitly overridden.
 YANG_MODELS_COMMIT ?= $(shell grep '^commit:' \
@@ -306,6 +307,8 @@ ygot-validate-gen: ## Generate per-family ygot schema packages for CI validation
 		--yang-version=$(RELEASE) \
 		--yang-dir=$(YANG_SCHEMA_DIR)/$(RELEASE) \
 		--per-family \
+		--skip-baseline=$(YANG_SKIP_BASELINE) \
+		--clean-per-family-output \
 		--dry-run=false
 
 ## Utility targets

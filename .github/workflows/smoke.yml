@@ -83,27 +83,22 @@ jobs:
       - name: Unit tests
         run: go test -race -count=1 ./...
 
-      - name: Generated artefact drift check
+      - name: Family parity matrix drift check
+        run: make check-parity-matrix
+
+      - name: Kubernetes generated artefact drift check
         # Regenerate CRDs, DeepCopy, RBAC, and Helm CRDs, then assert no
-        # drift in any generated tree.  A non-empty diff means the committed
-        # artefacts have diverged from their sources.
+        # drift. The ygot-validate job owns YANG schema regeneration because
+        # it first downloads the pinned IOS-XE model releases.
         run: |
           make crd-gen deepcopy-gen rbac-gen helm-sync-crds
-          drift=0
-          if ! git diff --quiet -- internal/drivers/iosxe/configdriver/generated/; then
-            echo "ygot per-family schemas drifted from YANG sources:"
-            git diff --stat -- internal/drivers/iosxe/configdriver/generated/
-            git diff -- internal/drivers/iosxe/configdriver/generated/ | head -200
-            drift=1
-          fi
           if ! git diff --quiet -- api/ config/crd/ charts/cisco-virtual-kubelet/; then
             echo "Generated CRDs / DeepCopy / RBAC drifted from sources:"
             git diff --stat -- api/ config/crd/ charts/cisco-virtual-kubelet/
             git diff -- api/ config/crd/ charts/cisco-virtual-kubelet/ | head -200
-            drift=1
+            exit 1
           fi
-          if [ "$drift" -eq 1 ]; then exit 1; fi
-          echo "All generated artefacts in sync with sources."
+          echo "Kubernetes generated artefacts are in sync with sources."
 
       - name: CRD / Helm chart sync check
         # Belt-and-suspenders for the diff above: explicitly enumerate
@@ -345,6 +340,38 @@ jobs:
           kubectl -n cisco-vk-smoke describe iosxeconfig smoke || true
           kubectl -n cisco-vk-smoke get events --sort-by=.lastTimestamp || true
 
+  terraform-provider:
+    name: terraform-provider
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: tools/terraform-provider-iosxeconfig
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: '1.26'
+          check-latest: true
+          cache: true
+          cache-dependency-path: tools/terraform-provider-iosxeconfig/go.sum
+
+      - name: Module tidy drift check
+        run: go mod tidy -diff
+
+      - name: Build
+        run: go build ./...
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: Unit tests
+        run: go test -race -count=1 ./...
+
   helm4-compat:
     # Helm 4 is the current stable major and what new users install by
     # default. The chart is a standard apiVersion v2 chart so it is expected
@@ -381,17 +408,27 @@ jobs:
     # govulncheck is symbol-aware, so it only fails on vulnerable code that
     # is actually reachable.
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Run govulncheck
+      - name: Run controller govulncheck
         uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
         with:
           go-version-input: '1.25'
           check-latest: true
+          go-package: ./...
+          repo-checkout: false
+
+      - name: Run Terraform provider govulncheck
+        uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
+        with:
+          go-version-input: '1.26'
+          check-latest: true
+          cache-dependency-path: tools/terraform-provider-iosxeconfig/go.sum
+          work-dir: tools/terraform-provider-iosxeconfig
           go-package: ./...
           repo-checkout: false
 
@@ -415,10 +452,37 @@ jobs:
             make vendor-yang RELEASE=$release
           done
 
-      - name: Per-family ygot schema generation
-        # Regenerates per-family schema packages for every supported YANG release.
+      - name: Regenerate per-family YANG schemas
+        # The Make target enforces the committed skip baseline and recreates
+        # each release from a clean output directory, so stale packages and
+        # newly skipped families cannot pass silently.
         run: |
           for release in 1715 1716 1718 1791 2601; do
             echo "--- generating release ${release} ---"
             make ygot-validate-gen RELEASE=${release}
           done
+
+      - name: Compile and test regenerated schemas
+        run: >-
+          go test
+          ./tools/cisco-vk-yang-sync
+          ./internal/drivers/iosxe/configdriver/generated/...
+          ./internal/drivers/iosxe/configdriver/writers/...
+
+      - name: Generated YANG drift check
+        run: |
+          status="$(git status --porcelain=v1 --untracked-files=all -- \
+            internal/drivers/iosxe/configdriver/generated \
+            internal/drivers/iosxe/configdriver/writers)"
+          if [ -n "$status" ]; then
+            echo "Generated YANG schemas or validator registrations are stale:"
+            printf '%s\n' "$status"
+            git diff --stat -- \
+              internal/drivers/iosxe/configdriver/generated \
+              internal/drivers/iosxe/configdriver/writers
+            git diff -- \
+              internal/drivers/iosxe/configdriver/generated \
+              internal/drivers/iosxe/configdriver/writers | sed -n '1,200p'
+            exit 1
+          fi
+          echo "Generated YANG schemas and validator registrations are current."

@@ -1,0 +1,108 @@
+# Reviewed per-family YANG schema-generation limitations.
+#
+# Generation must match this exact release/family/reason-code set. Adding a
+# skip, changing its reason, or resolving one requires an intentional baseline
+# update alongside regenerated artifacts. Parser, builder, and filesystem
+# errors are never eligible for this baseline.
+
+releases:
+  "1715":
+    access_list_extended: path-not-found
+    access_list_standard: path-not-found
+    bgp: path-not-found
+    crypto_ikev2_profile: path-not-found
+    crypto_ipsec_profile: path-not-found
+    crypto_ipsec_transform_set: path-not-found
+    crypto_map: path-not-found
+    crypto_pki_trustpoint: path-not-found
+    event_manager: path-not-found
+    ip_as_path_access_list: path-not-found
+    ip_community_list: path-not-found
+    ip_http: path-not-found
+    ip_nat_inside_source: path-not-found
+    ip_nat_pool: path-not-found
+    isis: path-not-found
+    lldp: path-not-found
+    radius_server: path-not-found
+    system: schema-too-large
+    tacacs_server: path-not-found
+  "1716":
+    access_list_extended: path-not-found
+    access_list_standard: path-not-found
+    bgp: path-not-found
+    crypto_ikev2_profile: path-not-found
+    crypto_ipsec_profile: path-not-found
+    crypto_ipsec_transform_set: path-not-found
+    crypto_map: path-not-found
+    crypto_pki_trustpoint: path-not-found
+    event_manager: path-not-found
+    ip_as_path_access_list: path-not-found
+    ip_community_list: path-not-found
+    ip_http: path-not-found
+    ip_nat_inside_source: path-not-found
+    ip_nat_pool: path-not-found
+    isis: path-not-found
+    lldp: path-not-found
+    radius_server: path-not-found
+    system: schema-too-large
+    tacacs_server: path-not-found
+  "1718":
+    access_list_extended: path-not-found
+    access_list_standard: path-not-found
+    bgp: path-not-found
+    crypto_ikev2_profile: path-not-found
+    crypto_ipsec_profile: path-not-found
+    crypto_ipsec_transform_set: path-not-found
+    crypto_map: path-not-found
+    crypto_pki_trustpoint: path-not-found
+    event_manager: path-not-found
+    ip_as_path_access_list: path-not-found
+    ip_community_list: path-not-found
+    ip_http: path-not-found
+    ip_nat_inside_source: path-not-found
+    ip_nat_pool: path-not-found
+    isis: path-not-found
+    lldp: path-not-found
+    radius_server: path-not-found
+    system: schema-too-large
+    tacacs_server: path-not-found
+  "1791":
+    access_list_extended: path-not-found
+    access_list_standard: path-not-found
+    bgp: path-not-found
+    crypto_ikev2_profile: path-not-found
+    crypto_ipsec_profile: path-not-found
+    crypto_ipsec_transform_set: path-not-found
+    crypto_map: path-not-found
+    crypto_pki_trustpoint: path-not-found
+    event_manager: path-not-found
+    ip_as_path_access_list: path-not-found
+    ip_community_list: path-not-found
+    ip_http: path-not-found
+    ip_nat_inside_source: path-not-found
+    ip_nat_pool: path-not-found
+    isis: path-not-found
+    lldp: path-not-found
+    radius_server: path-not-found
+    system: schema-too-large
+    tacacs_server: path-not-found
+  "2601":
+    access_list_extended: path-not-found
+    access_list_standard: path-not-found
+    bgp: path-not-found
+    crypto_ikev2_profile: path-not-found
+    crypto_ipsec_profile: path-not-found
+    crypto_ipsec_transform_set: path-not-found
+    crypto_map: path-not-found
+    crypto_pki_trustpoint: path-not-found
+    event_manager: path-not-found
+    ip_as_path_access_list: path-not-found
+    ip_community_list: path-not-found
+    ip_http: path-not-found
+    ip_nat_inside_source: path-not-found
+    ip_nat_pool: path-not-found
+    isis: path-not-found
+    lldp: path-not-found
+    radius_server: path-not-found
+    system: schema-too-large
+    tacacs_server: path-not-found
