@@ -828,6 +828,8 @@ class DispatcherTests(unittest.TestCase):
             self.assertIn("dispatch_id:", wrapper)
             self.assertIn("run-name: Lab CI", wrapper)
             self.assertIn("checks: read", wrapper)
+            self.assertIn("pull-requests: write", wrapper)
+            self.assertNotIn("issues: write", wrapper)
             self.assertEqual(wrapper.count("dispatch-approved-lab-ci.py verify"), 2)
             self.assertIn("Checkout trusted gate at the verified base", wrapper)
             self.assertIn("ref: ${{ needs.prepare.outputs.base_sha }}", wrapper)
