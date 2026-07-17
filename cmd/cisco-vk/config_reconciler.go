@@ -438,7 +438,10 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	// If the gNOI server is not reachable at startup the dial is lazy
 	// — the conn materialises on first RPC, so a device that comes up
 	// after the VK pod is fine.
-	gnoiProv, gnoiCleanup := setupGNOI(ctx, opts)
+	gnoiProv, gnoiCleanup, err := setupGNOI(ctx, opts)
+	if err != nil {
+		return err
+	}
 	if gnoiCleanup != nil {
 		go func() {
 			<-ctx.Done()

@@ -1,0 +1,54 @@
+# Copyright 2026 Cisco Systems Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This unprivileged workflow turns an approval event into a workflow_run
+# signal. It deliberately has no token permissions, checkout, artifacts, or
+# secrets. The privileged dispatcher always re-reads and validates server-side
+# PR state from trusted main before it writes anything.
+name: Lab CI approval signal
+run-name: >-
+  Lab CI approval signal [${{ github.event.review.state }}]
+  for PR #${{ github.event.pull_request.number }}
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions: {}
+
+jobs:
+  current-head-approved:
+    if: github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Validate unprivileged approval signal
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          BASE_REPOSITORY: ${{ github.event.pull_request.base.repo.full_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_STATE: ${{ github.event.pull_request.state }}
+          REVIEW_COMMIT_SHA: ${{ github.event.review.commit_id }}
+        run: |
+          set -euo pipefail
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$REVIEW_COMMIT_SHA" == "$HEAD_SHA" ]]
+          [[ "$PR_STATE" == "open" ]]
+          [[ "$PR_DRAFT" == "false" ]]
+          [[ "$BASE_REF" == "main" ]]
+          [[ "$BASE_REPOSITORY" == "$GITHUB_REPOSITORY" ]]

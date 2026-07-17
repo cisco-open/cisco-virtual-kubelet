@@ -251,6 +251,24 @@
         "relabelings":       { "type": "array" },
         "metricRelabelings": { "type": "array" }
       }
+    },
+    "podSecurityContext": {
+      "type": "object",
+      "properties": {
+        "runAsNonRoot": { "type": "boolean" },
+        "runAsUser": { "type": "integer", "minimum": 1 },
+        "runAsGroup": { "type": "integer", "minimum": 1 },
+        "fsGroup": { "type": "integer", "minimum": 1 },
+        "seccompProfile": { "type": "object" }
+      }
+    },
+    "containerSecurityContext": {
+      "type": "object",
+      "properties": {
+        "allowPrivilegeEscalation": { "type": "boolean" },
+        "capabilities": { "type": "object" },
+        "readOnlyRootFilesystem": { "type": "boolean" }
+      }
     }
   }
 }

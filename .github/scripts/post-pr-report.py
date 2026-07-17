@@ -28,6 +28,7 @@ Required environment variables:
 
 from __future__ import annotations
 
+import http.client
 import io
 import json
 import os
@@ -73,6 +74,51 @@ SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 PR_RE = re.compile(r"^[1-9][0-9]*$")
 
 
+class GitHubAPIError(RuntimeError):
+    """A sanitized GitHub API failure safe to include in Actions logs."""
+
+    def __init__(
+        self,
+        status: int,
+        method: str,
+        path: str,
+        message: str = "",
+        request_id: str = "",
+    ) -> None:
+        super().__init__(f"GitHub API returned HTTP {status}")
+        self.status = status
+        self.method = method
+        self.path = path
+        self.message = message
+        self.request_id = request_id
+
+
+def _github_api_error(error: urllib.error.HTTPError, method: str, path: str) -> GitHubAPIError:
+    """Convert an HTTPError into bounded, repository-relative diagnostics."""
+    message = ""
+    try:
+        payload = json.loads(error.read(65_536))
+        if isinstance(payload, dict):
+            message = str(payload.get("message") or "")
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        pass
+    message = " ".join(message.split())[:300]
+    headers = error.headers or {}
+    request_id = str(headers.get("X-GitHub-Request-Id", ""))[:100]
+    safe_path = path.split("?", 1)[0]
+    return GitHubAPIError(error.code, method, safe_path, message, request_id)
+
+
+def github_api_error_detail(error: GitHubAPIError) -> str:
+    """Format bounded GitHub diagnostics without headers, tokens, or absolute URLs."""
+    detail = f"GitHub API {error.method} {error.path} returned HTTP {error.status}"
+    if error.message:
+        detail += f": {error.message}"
+    if error.request_id:
+        detail += f" (request {error.request_id})"
+    return detail
+
+
 def api(
     path: str,
     method: str = "GET",
@@ -100,8 +146,11 @@ def api(
         headers=headers,
         method=method,
     )
-    with urllib.request.urlopen(request, timeout=30) as response:
-        payload = response.read()
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            payload = response.read()
+    except urllib.error.HTTPError as error:
+        raise _github_api_error(error, method, path) from error
     return json.loads(payload) if payload else None
 
 
@@ -130,8 +179,13 @@ def run_id_from_target_url(url: str) -> int | None:
 def duration_seconds(started: str | None, finished: str | None) -> int:
     if not started or not finished:
         return 0
-    start = datetime.fromisoformat(started.replace("Z", "+00:00"))
-    end = datetime.fromisoformat(finished.replace("Z", "+00:00"))
+    try:
+        start = datetime.fromisoformat(started.replace("Z", "+00:00"))
+        end = datetime.fromisoformat(finished.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return 0
+    if (start.tzinfo is None) != (end.tzinfo is None):
+        return 0
     return max(0, int((end - start).total_seconds()))
 
 
@@ -244,31 +298,71 @@ def fetch_artifact_file(
     artifact_name: str,
     filename: str = "argo-evidence.json",
 ) -> bytes | None:
-    payload = api(
-        f"/repos/{repository}/actions/runs/{run_id}/artifacts"
-        f"?name={urllib.parse.quote(artifact_name)}&per_page=100"
-    ) or {}
-    artifacts = [
-        artifact
-        for artifact in payload.get("artifacts", [])
-        if artifact.get("name") == artifact_name and not artifact.get("expired", False)
-    ]
-    if not artifacts:
-        return None
-    artifact = max(artifacts, key=lambda item: int(item.get("id", 0)))
-    archive_url = artifact.get("archive_download_url")
-    if not archive_url:
-        return None
-    archive = download_artifact_archive(archive_url, os.environ["GH_TOKEN"])
-    with zipfile.ZipFile(io.BytesIO(archive)) as zipped:
-        candidates = [
-            name
-            for name in zipped.namelist()
-            if name == filename or name.endswith(f"/{filename}")
+    try:
+        payload = api(
+            f"/repos/{repository}/actions/runs/{run_id}/artifacts"
+            f"?name={urllib.parse.quote(artifact_name)}&per_page=100"
+        ) or {}
+        artifacts = [
+            artifact
+            for artifact in payload.get("artifacts", [])
+            if artifact.get("name") == artifact_name and not artifact.get("expired", False)
         ]
-        if not candidates:
+        if not artifacts:
             return None
-        return zipped.read(sorted(candidates)[0])
+        artifact = max(artifacts, key=lambda item: int(item.get("id", 0)))
+        archive_url = artifact.get("archive_download_url")
+        if not archive_url:
+            return None
+        archive = download_artifact_archive(archive_url, os.environ["GH_TOKEN"])
+        with zipfile.ZipFile(io.BytesIO(archive)) as zipped:
+            candidates = [
+                name
+                for name in zipped.namelist()
+                if name == filename or name.endswith(f"/{filename}")
+            ]
+            if not candidates:
+                return None
+            return zipped.read(sorted(candidates)[0])
+    except GitHubAPIError as error:
+        print(
+            f"warning: optional artifact {artifact_name!r} for run {run_id} "
+            f"was unavailable ({github_api_error_detail(error)})",
+            file=sys.stderr,
+        )
+    except urllib.error.HTTPError as error:
+        host = urllib.parse.urlparse(error.url).hostname
+        target = "GitHub API" if host == "api.github.com" else "artifact storage"
+        print(
+            f"warning: optional artifact {artifact_name!r} for run {run_id} "
+            f"was unavailable ({target} HTTP {error.code})",
+            file=sys.stderr,
+        )
+    except urllib.error.URLError:
+        print(
+            f"warning: optional artifact {artifact_name!r} for run {run_id} "
+            "was unavailable (network request failed)",
+            file=sys.stderr,
+        )
+    except (OSError, http.client.HTTPException):
+        print(
+            f"warning: optional artifact {artifact_name!r} for run {run_id} "
+            "was unavailable (artifact transport failed)",
+            file=sys.stderr,
+        )
+    except zipfile.BadZipFile:
+        print(
+            f"warning: optional artifact {artifact_name!r} for run {run_id} "
+            "was unavailable (invalid ZIP archive)",
+            file=sys.stderr,
+        )
+    except ValueError:
+        print(
+            f"warning: optional artifact {artifact_name!r} for run {run_id} "
+            "was unavailable (invalid artifact response)",
+            file=sys.stderr,
+        )
+    return None
 
 
 def parse_sanitized_evidence(content: bytes) -> dict[str, Any]:
@@ -412,7 +506,15 @@ def render_report(
     for entry, status, run_id in detail_data:
         steps = fetch_job_steps(repository, run_id, entry["job"])
         evidence_content = fetch_artifact_file(repository, run_id, entry["artifact"])
-        evidence = parse_sanitized_evidence(evidence_content) if evidence_content else None
+        try:
+            evidence = parse_sanitized_evidence(evidence_content) if evidence_content else None
+        except (ValueError, json.JSONDecodeError) as error:
+            print(
+                f"warning: optional artifact {entry['artifact']!r} for run {run_id} "
+                f"contained invalid evidence ({error})",
+                file=sys.stderr,
+            )
+            evidence = None
         visible_steps = [step for step in steps if step.get("conclusion") != "skipped"]
         state = str(status.get("state") or "pending")
         lines.extend(
@@ -527,8 +629,11 @@ def main() -> int:
     except (ValueError, json.JSONDecodeError, zipfile.BadZipFile) as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
+    except GitHubAPIError as error:
+        print(f"error: {github_api_error_detail(error)}", file=sys.stderr)
+        return 1
     except urllib.error.HTTPError as error:
-        print(f"error: GitHub API returned HTTP {error.code}", file=sys.stderr)
+        print(f"error: HTTP request returned {error.code}", file=sys.stderr)
         return 1
     except urllib.error.URLError as error:
         print(f"error: GitHub API request failed: {error.reason}", file=sys.stderr)
