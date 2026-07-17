@@ -131,6 +131,10 @@ func (conflictStatusWriter) Patch(context.Context, client.Object, client.Patch, 
 	return telemetryStatusConflict()
 }
 
+func (conflictStatusWriter) Apply(context.Context, runtime.ApplyConfiguration, ...client.SubResourceApplyOption) error {
+	return telemetryStatusConflict()
+}
+
 func telemetryStatusConflict() error {
 	return apierrors.NewConflict(
 		schema.GroupResource{Group: "config.cisco.vk", Resource: "iosxetelemetries"},
