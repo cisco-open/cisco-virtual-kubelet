@@ -37,6 +37,9 @@ We expect new pull requests to include tests for any affected behavior, and, as
 we follow semantic versioning, we may reserve breaking changes until the next
 major version release.
 
+After hosted checks pass, one approval on the current pull request head
+automatically dispatches the Cat8kv and Cat9k integration checks.
+
 ## Other Ways to Contribute
 
 We welcome anyone that wants to contribute to the Cisco Virtual Kubelet Provider to triage and
