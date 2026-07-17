@@ -108,6 +108,11 @@ type ConfigDriverContext struct {
 	// the first successful device query.
 	DeviceVersion string
 
+	// DeviceVersionPolicy owns platform-native release validation and error
+	// classification. A nil Validate callback disables release gating for a
+	// platform that has not published a support matrix yet.
+	DeviceVersionPolicy DeviceVersionPolicy
+
 	// FetchDeviceVersion optionally refreshes DeviceVersion from the
 	// live transport. Aggregator mode uses this to retry startup-time
 	// empty version reads without importing platform-specific packages.
@@ -124,55 +129,59 @@ type ConfigDriverContext struct {
 	// doesn't declare dependencies.
 	FamilyOrder func([]string) []string
 
-	// YANGValidator validates writer-produced device YANG payloads
-	// before mutation. The validation package keeps the canonical
-	// NetAsCode model stable while allowing release-specific YANG
-	// profiles and future ygot/ytypes validators at the device boundary.
-	YANGValidator      validation.Validator
-	YANGValidationMode validation.Mode
+	// OperationValidator validates writer-produced device operations before
+	// mutation. IOS XE decorates the common structural validator with YANG
+	// release profiles; NX-OS validates DME scope and envelope structure.
+	OperationValidator      validation.Validator
+	OperationValidationMode validation.Mode
+}
+
+// DeviceVersionPolicy isolates platform release parsing from common startup
+// and reconciliation code.
+type DeviceVersionPolicy struct {
+	Validate      writers.VersionValidator
+	IsUnsupported writers.VersionErrorClassifier
+	IsMalformed   writers.VersionErrorClassifier
+	ReleaseTag    func(version string) (string, bool)
+	Require       bool
 }
 
 // ValidateDeviceVersion validates DeviceVersion against the version-
 // conditional writer support table. It does not mutate writer state;
 // writer instances bind immutable per-device resolvers at lookup time.
-// No-op when DeviceVersion is empty. Returns the error from
-// writers.SetDeviceVersion (typically an unparseable version string or
-// one outside the supported set) so callers can halt reconciliation
-// before any config write path runs.
+// No-op when DeviceVersion is empty or the platform has not supplied a
+// validator. Callers must propagate a validation error so writes fail closed.
 //
 // Both startup paths (cmd/cisco-vk and the aggregator) call this
 // after constructing the context. The function lives on the context
 // rather than in cisco-vk so the aggregator can stay free of any
-// platform-specific imports — only this drivers package needs to
-// know about writers.SetDeviceVersion.
+// platform-specific imports.
 func (c *ConfigDriverContext) ValidateDeviceVersion() error {
-	if c == nil || c.DeviceVersion == "" {
+	if c == nil || c.DeviceVersion == "" || c.DeviceVersionPolicy.Validate == nil {
 		return nil
 	}
-	return writers.SetDeviceVersion(c.DeviceVersion)
+	return c.DeviceVersionPolicy.Validate(c.DeviceVersion)
 }
 
 // IsUnsupportedDeviceVersionError reports whether err is the
 // "device version is not in the supported release set" sentinel.
-// Re-exported from the writers package so non-platform-specific
-// callers (the aggregator) can branch on the error class without
-// importing writers directly.
-func IsUnsupportedDeviceVersionError(err error) bool {
-	return writers.IsUnsupportedDeviceVersion(err)
+// The classifier is supplied by the platform policy.
+func (c *ConfigDriverContext) IsUnsupportedDeviceVersionError(err error) bool {
+	return c != nil && c.DeviceVersionPolicy.IsUnsupported != nil && c.DeviceVersionPolicy.IsUnsupported(err)
 }
 
 // IsMalformedDeviceVersionError reports whether err means the device
 // version string could not be parsed as major.minor.
-func IsMalformedDeviceVersionError(err error) bool {
-	return writers.IsMalformedDeviceVersion(err)
+func (c *ConfigDriverContext) IsMalformedDeviceVersionError(err error) bool {
+	return c != nil && c.DeviceVersionPolicy.IsMalformed != nil && c.DeviceVersionPolicy.IsMalformed(err)
 }
 
 // IsRetryableDeviceVersionError reports validation failures that can be
 // transient during device boot or image upgrade. Callers should keep
 // retrying version discovery instead of pinning the reconciler until a
 // pod restart.
-func IsRetryableDeviceVersionError(err error) bool {
-	return IsUnsupportedDeviceVersionError(err) || IsMalformedDeviceVersionError(err)
+func (c *ConfigDriverContext) IsRetryableDeviceVersionError(err error) bool {
+	return c.IsUnsupportedDeviceVersionError(err) || c.IsMalformedDeviceVersionError(err)
 }
 
 // ConfigDriverFactory is the per-platform constructor signature.

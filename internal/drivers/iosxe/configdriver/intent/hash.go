@@ -48,13 +48,15 @@ func CanonicalHash(intent *ResolvedIntent) (string, error) {
 		})
 	}
 	payload := map[string]any{
-		"deviceName":      intent.DeviceName,
-		"managedFamilies": append([]string(nil), intent.ManagedFamilies...),
-		"transactional":   intent.Transactional,
-		"writeStartup":    intent.WriteStartup,
-		"driftPolicy":     string(intent.DriftPolicy),
-		"configuration":   intent.Configuration,
-		"cliBlocks":       cliBlocksPayload,
+		"deviceName":        intent.DeviceName,
+		"managedFamilies":   append([]string(nil), intent.ManagedFamilies...),
+		"modelVersion":      intent.ModelVersion,
+		"targetYangVersion": intent.TargetYangVersion,
+		"transactional":     intent.Transactional,
+		"writeStartup":      intent.WriteStartup,
+		"driftPolicy":       string(intent.DriftPolicy),
+		"configuration":     intent.Configuration,
+		"cliBlocks":         cliBlocksPayload,
 	}
 	canonical, err := canonicalJSON(payload)
 	if err != nil {

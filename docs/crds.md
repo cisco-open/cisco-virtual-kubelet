@@ -341,10 +341,10 @@ the common config runtime, fetches observed state through NX-API, applies
 managed families, and verifies the post-apply state before reporting `InSync`.
 The first supported families are `system`, `feature`, `feature_set`, `vlan`,
 and `interface_ethernet`.
-The source can be either a direct resolved family map or a full `nxos:`
-NetAsCode envelope with `global`, `device_groups`, `devices`, model
-`templates`, `variables`, and `interface_groups`. Unsupported fields inside the
-implemented families fail closed at writer diff time.
+The strict imported source is a flattened per-device canonical family map. A
+full `nxos:` envelope is accepted only for native CVK-authored compatibility
+sources that omit `modelSource`; it must not be labelled `resolved: true`.
+Unsupported fields inside implemented families fail closed at writer diff time.
 
 ```yaml
 apiVersion: config.cisco.vk/v1alpha1
@@ -357,28 +357,29 @@ spec:
   managedFamilies:
     - system
     - vlan
+    - interface_ethernet
   driftPolicy: report
   modelSource:
     format: netascode-nxos
+    modelVersion: 0.3.0
+    schemaDigest: sha256:5d5482679fb28e751d34cdc49342f8434914a7714966ba8244923b95d678698d
     resolved: true
+    exporter: example-customer-exporter@0123456789abcdef0123456789abcdef01234567
+    sourceRevision: 0123456789abcdef0123456789abcdef01234567
   source:
     inline:
-      nxos:
-        devices:
-          - name: nexus9300v-01
-            configuration:
-              system:
-                hostname: nexus9300v-01
-              vlan:
-                vlans:
-                  - id: 3903
-                    name: CVK_LAB
-              interfaces:
-                ethernets:
-                  - id: 1/1
-                    description: CVK uplink
-                    shutdown: false
-                    mtu: 9216
+      system:
+        hostname: nexus9300v-01
+      vlan:
+        vlans:
+          - id: 3903
+            name: CVK_LAB
+      interfaces:
+        ethernets:
+          - id: 1/1
+            description: CVK uplink
+            shutdown: false
+            mtu: 9216
 ```
 
 ```bash

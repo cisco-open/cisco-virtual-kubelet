@@ -788,6 +788,7 @@ func TestReconcile_PropagatesTelemetryEnvVars(t *testing.T) {
 	// TestReconcile_PropagatesTelemetryHeadersAsSecretRef below.
 	t.Setenv(envYANGModelsDir, "/opt/yang")
 	t.Setenv(envCVKResourceAttributes, `{"deployment.environment":"lab","site.id":"sjc01"}`)
+	t.Setenv(envCVKNXOSAllowExperimental, "true")
 
 	device := newDevice("router-otel", "default")
 	device.Spec.Password = ""
@@ -810,6 +811,7 @@ func TestReconcile_PropagatesTelemetryEnvVars(t *testing.T) {
 		envOTELExporterOTLPInsecure: "true",
 		envYANGModelsDir:            "/opt/yang",
 		envCVKResourceAttributes:    `{"deployment.environment":"lab","site.id":"sjc01"}`,
+		envCVKNXOSAllowExperimental: "true",
 	}
 	for name, value := range want {
 		got, ok := findEnvVar(env, name)

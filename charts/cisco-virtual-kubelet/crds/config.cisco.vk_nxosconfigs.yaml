@@ -121,8 +121,8 @@ spec:
                 properties:
                   exporter:
                     description: |-
-                      Exporter names the tool that produced the payload, such as
-                      terraform-iosxe-nac-iosxe write_model_file or cvk-netascode-migrate.
+                      Exporter names the tool that produced the payload. Strict platform
+                      contracts may require an immutable name@version or name@digest value.
                     type: string
                   format:
                     description: Format identifies the model dialect.
@@ -143,6 +143,13 @@ spec:
                       Production migrations should import resolved payloads so CVK only owns
                       reconciliation, not Terraform's model-expansion semantics.
                     type: boolean
+                  schemaDigest:
+                    description: |-
+                      SchemaDigest identifies the canonical schema snapshot to which Source
+                      declares conformance. It is a compatibility label, not a digest of Source;
+                      platform runtimes may require an exact value for qualified contracts.
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
                   sourceRevision:
                     description: |-
                       SourceRevision identifies the customer Git commit, Terraform plan ID,

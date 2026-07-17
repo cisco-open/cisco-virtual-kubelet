@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package nxos
 
@@ -26,7 +32,7 @@ import (
 func TestNXAPIConfigTransportCapabilitiesAreRESTDME(t *testing.T) {
 	tr := &nxapiConfigTransport{}
 	caps := tr.Capabilities()
-	if caps.Kind != transport.KindREST {
+	if caps.Kind != transport.KindNXAPI {
 		t.Fatalf("kind=%q, want neutral REST", caps.Kind)
 	}
 	if caps.SupportsTransactions {
@@ -168,7 +174,7 @@ func TestNXAPIConfigTransportFetchesDMEObservedState(t *testing.T) {
 			if r.URL.Query().Get("target-subtree-class") != "l1PhysIf" {
 				t.Fatalf("query=%s", r.URL.RawQuery)
 			}
-			_, _ = w.Write([]byte(`{"totalCount":"1","imdata":[{"l1PhysIf":{"attributes":{"id":"eth1/1","descr":"uplink","adminSt":"up","mtu":"9216"}}}]}`))
+			_, _ = w.Write([]byte(`{"totalCount":"1","imdata":[{"l1PhysIf":{"attributes":{"id":"eth1/1","descr":"uplink","adminSt":"up","layer":"Layer2","mtu":"9216","userCfgdFlags":"admin_layer,admin_mtu,admin_state"}}}]}`))
 		default:
 			t.Fatalf("unexpected path %s", r.URL.Path)
 		}
@@ -218,6 +224,8 @@ func TestNXAPIConfigTransportFetchesDMEObservedState(t *testing.T) {
 	if len(intfs["interfaces"]) != 1 ||
 		intfs["interfaces"][0]["name"] != "1/1" ||
 		intfs["interfaces"][0]["shutdown"] != false ||
+		intfs["interfaces"][0]["layer"] != "Layer2" ||
+		intfs["interfaces"][0]["user_configured_flags"] != "admin_layer,admin_mtu,admin_state" ||
 		intfs["interfaces"][0]["mtu"] != float64(9216) {
 		t.Fatalf("interfaces=%#v", intfs)
 	}
@@ -451,7 +459,7 @@ func TestBuildNXOSConfigTransportSelection(t *testing.T) {
 		if err != nil {
 			t.Fatalf("transport %q: %v", transportName, err)
 		}
-		if tr.Capabilities().Kind != transport.KindREST {
+		if tr.Capabilities().Kind != transport.KindNXAPI {
 			t.Fatalf("transport %q kind=%q", transportName, tr.Capabilities().Kind)
 		}
 		_ = tr.Close()

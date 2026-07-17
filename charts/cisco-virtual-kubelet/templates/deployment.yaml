@@ -122,6 +122,10 @@ spec:
               value: {{ include "cisco-virtual-kubelet.yangModelsMountPath" . | quote }}
             - name: CONFIG_YANG_VALIDATION
               value: {{ .Values.config.yangValidationMode | quote }}
+            {{- if .Values.nxos.allowExperimentalReleases }}
+            - name: CVK_NXOS_ALLOW_EXPERIMENTAL_RELEASES
+              value: "true"
+            {{- end }}
             - name: CVK_RESOURCE_ATTRIBUTES
               value: {{ .Values.telemetry.resourceAttributes | toJson | quote }}
             {{- if .Values.gnoi.insecure }}

@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 )
 
@@ -30,6 +31,13 @@ func init() { register(systemWriter{}) }
 func (systemWriter) Family() string { return nxosschema.FamilySystem }
 
 func (systemWriter) YANGPaths() []string { return []string{nxosschema.PathSystemHostname} }
+
+func (systemWriter) OperationScope() enginewriters.OperationScope {
+	return enginewriters.OperationScope{
+		ReadPaths:     []string{nxosschema.PathSystemHostname},
+		WritePrefixes: []string{nxosschema.DNSystem},
+	}
+}
 
 func (systemWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
 	raw, err := c.Fetch(ctx, nxosschema.PathSystemHostname)

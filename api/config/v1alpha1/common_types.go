@@ -98,6 +98,13 @@ type NetAsCodeModelSource struct {
 	// +optional
 	ModelVersion string `json:"modelVersion,omitempty"`
 
+	// SchemaDigest identifies the canonical schema snapshot to which Source
+	// declares conformance. It is a compatibility label, not a digest of Source;
+	// platform runtimes may require an exact value for qualified contracts.
+	// +kubebuilder:validation:Pattern=`^sha256:[0-9a-f]{64}$`
+	// +optional
+	SchemaDigest string `json:"schemaDigest,omitempty"`
+
 	// Resolved is true when the payload has already had defaults, templates,
 	// device groups, and inheritance expanded by the source NetAsCode toolchain.
 	// Production migrations should import resolved payloads so CVK only owns
@@ -105,8 +112,8 @@ type NetAsCodeModelSource struct {
 	// +kubebuilder:default=true
 	Resolved bool `json:"resolved"`
 
-	// Exporter names the tool that produced the payload, such as
-	// terraform-iosxe-nac-iosxe write_model_file or cvk-netascode-migrate.
+	// Exporter names the tool that produced the payload. Strict platform
+	// contracts may require an immutable name@version or name@digest value.
 	// +optional
 	Exporter string `json:"exporter,omitempty"`
 

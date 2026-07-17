@@ -39,7 +39,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/intent"
-	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
+	iosxewriters "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 )
 
@@ -171,7 +171,7 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 	}
 	lookup := r.Lookup
 	if lookup == nil {
-		lookup = writers.GetForRelease
+		lookup = iosxewriters.GetForRelease
 	}
 
 	// Per-family AcquireIfFree. Only families we successfully claim
@@ -228,6 +228,7 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 
 	deviceVersion, _ := r.deviceVersionState()
 	eng := &engine.Engine{
+		Platform:           "iosxe",
 		Transport:          tr,
 		Lookup:             lookup,
 		DeviceVersion:      deviceVersion,
@@ -466,9 +467,10 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	}
 	lookup := r.Lookup
 	if lookup == nil {
-		lookup = writers.GetForRelease
+		lookup = iosxewriters.GetForRelease
 	}
 	eng := &engine.Engine{
+		Platform:           "iosxe",
 		Transport:          r.GetTransport(),
 		Lookup:             lookup,
 		DeviceVersion:      deviceVersion,

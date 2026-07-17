@@ -47,16 +47,24 @@ func (r *AggregatedReconciler) startNXOSWorker(dev *ciskov1.CiscoDevice, passwor
 		// would reconcile NXOSConfig objects from any namespace whose
 		// deviceRef.name matches, crossing the tenant/device boundary and
 		// pushing another namespace's intent to this physical device.
-		DeviceNamespace:    dev.Namespace,
-		Transport:          dctx.Transport,
-		Lookup:             dctx.LookupWriter,
-		FamilyOrder:        dctx.FamilyOrder,
-		DeviceVersion:      dctx.DeviceVersion,
-		DefaultYANGVersion: dctx.DefaultYANGVersion,
-		Leaser:             &engine.FamilyLeaser{Client: r.Client, Namespace: leaseNs},
-		Recorder:           r.Recorder,
-		SubscribeNotify:    notify,
-		RuntimeID:          newWorkerRuntimeID(),
+		DeviceNamespace:         dev.Namespace,
+		Transport:               dctx.Transport,
+		Lookup:                  dctx.LookupWriter,
+		FamilyOrder:             dctx.FamilyOrder,
+		DeviceVersion:           dctx.DeviceVersion,
+		DefaultYANGVersion:      dctx.DefaultYANGVersion,
+		SupportedYANGVersions:   dctx.SupportedYANGVersions,
+		FetchDeviceVersion:      dctx.FetchDeviceVersion,
+		ValidateDeviceVersion:   dctx.DeviceVersionPolicy.Validate,
+		IsUnsupportedVersion:    dctx.DeviceVersionPolicy.IsUnsupported,
+		ReleaseTagForVersion:    dctx.DeviceVersionPolicy.ReleaseTag,
+		RequireDeviceVersion:    dctx.DeviceVersionPolicy.Require,
+		OperationValidator:      dctx.OperationValidator,
+		OperationValidationMode: dctx.OperationValidationMode,
+		Leaser:                  &engine.FamilyLeaser{Client: r.Client, Namespace: leaseNs},
+		Recorder:                r.Recorder,
+		SubscribeNotify:         notify,
+		RuntimeID:               newWorkerRuntimeID(),
 	}
 
 	r.mu.Lock()

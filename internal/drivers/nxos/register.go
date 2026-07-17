@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package nxos
 
@@ -16,6 +22,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/validation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 	nxoswriters "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/writers"
@@ -46,14 +53,24 @@ func buildNXOSConfigDriverContext(
 	}
 	fetchPaths := append([]string(nil), nxosschema.FetchPaths...)
 	out := &drivers.ConfigDriverContext{
-		PlatformName:       "nxos",
-		ModelFormat:        configv1alpha1.NetAsCodeModelFormatNXOS,
-		ConfigObject:       &configv1alpha1.NXOSConfig{},
-		ConfigList:         &configv1alpha1.NXOSConfigList{},
-		LookupWriter:       nxoswriters.GetForRelease,
-		SubscribePaths:     fetchPaths,
-		FetchDeviceVersion: FetchDeviceVersion,
-		FamilyOrder:        nxosschema.FamilyOrder,
+		PlatformName:          "nxos",
+		ModelFormat:           configv1alpha1.NetAsCodeModelFormatNXOS,
+		ConfigObject:          &configv1alpha1.NXOSConfig{},
+		ConfigList:            &configv1alpha1.NXOSConfigList{},
+		LookupWriter:          nxoswriters.GetForRelease,
+		SubscribePaths:        fetchPaths,
+		FetchDeviceVersion:    FetchDeviceVersion,
+		FamilyOrder:           nxosschema.FamilyOrder,
+		SupportedYANGVersions: nxosschema.SupportedDeviceVersionSet(),
+		DeviceVersionPolicy: drivers.DeviceVersionPolicy{
+			Validate:      nxosschema.ValidateDeviceVersion,
+			IsUnsupported: nxosschema.IsUnsupportedDeviceVersion,
+			IsMalformed:   nxosschema.IsMalformedDeviceVersion,
+			ReleaseTag:    nxosschema.ReleaseTagForDeviceVersionString,
+			Require:       true,
+		},
+		OperationValidator:      validation.NewStructuralValidator(),
+		OperationValidationMode: validation.ModeStrict,
 	}
 	t, err := buildNXOSConfigTransport(&specCopy, opts)
 	if err != nil {
@@ -62,7 +79,9 @@ func buildNXOSConfigDriverContext(
 	out.Transport = t
 	if ver := FetchDeviceVersion(ctx, t); ver != "" {
 		out.DeviceVersion = ver
-		out.DefaultYANGVersion = ver
+		if profile, profileErr := nxosschema.ProfileForDeviceVersion(ver); profileErr == nil {
+			out.DefaultYANGVersion = profile.Release
+		}
 	}
 	return out, nil
 }

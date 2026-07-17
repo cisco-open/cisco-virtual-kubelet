@@ -15,10 +15,13 @@
 package writers
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
+	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 )
 
 var registry = map[string]enginewriters.SectionWriter{}
@@ -41,8 +44,30 @@ func Get(family string) enginewriters.SectionWriter {
 	return registry[family]
 }
 
-func GetForRelease(family, _ string) enginewriters.SectionWriter {
-	return Get(family)
+func GetForRelease(family, release string) enginewriters.SectionWriter {
+	w := Get(family)
+	if w == nil {
+		return nil
+	}
+	if err := nxosschema.ValidateDeviceVersion(release); err != nil {
+		return versionErrorWriter{family: family, err: err}
+	}
+	return w
+}
+
+type versionErrorWriter struct {
+	family string
+	err    error
+}
+
+func (w versionErrorWriter) Family() string      { return w.family }
+func (w versionErrorWriter) YANGPaths() []string { return nil }
+func (w versionErrorWriter) Fetch(context.Context, transport.Interface) (any, error) {
+	return nil, w.err
+}
+func (w versionErrorWriter) Diff(any, any) ([]transport.Op, error) { return nil, w.err }
+func (w versionErrorWriter) Apply(context.Context, transport.Interface, []transport.Op) error {
+	return w.err
 }
 
 func Families() []string {

@@ -70,6 +70,25 @@ func TestCanonicalHashChangesWithConfiguration(t *testing.T) {
 	}
 }
 
+func TestCanonicalHashChangesWithModelOrReleaseContract(t *testing.T) {
+	t.Parallel()
+	base := mkIntent(m("system", m("hostname", "edge-01")), "system")
+	base.ModelVersion = "0.3.0"
+	base.TargetYangVersion = "10.3(9)"
+
+	modelChanged := *base
+	modelChanged.ModelVersion = "0.4.0"
+	releaseChanged := *base
+	releaseChanged.TargetYangVersion = "10.5(4)"
+
+	baseHash, _ := CanonicalHash(base)
+	modelHash, _ := CanonicalHash(&modelChanged)
+	releaseHash, _ := CanonicalHash(&releaseChanged)
+	if baseHash == modelHash || baseHash == releaseHash {
+		t.Fatalf("contract change did not invalidate canonical hash: base=%s model=%s release=%s", baseHash, modelHash, releaseHash)
+	}
+}
+
 // Re-reading the same CR with a bumped resourceVersion/generation must
 // NOT invalidate the hash — the reconciler short-circuit depends on this
 // property.

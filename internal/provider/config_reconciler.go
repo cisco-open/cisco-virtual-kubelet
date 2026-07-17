@@ -40,6 +40,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/validation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
+	iosxewriters "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 	"go.opentelemetry.io/otel"
@@ -293,11 +294,11 @@ func (r *ConfigReconciler) refreshDeviceVersion(ctx context.Context) {
 	if ver == current && currentErr == nil {
 		return
 	}
-	r.SetDeviceVersionState(ver, writers.SetDeviceVersion(ver))
+	r.SetDeviceVersionState(ver, iosxewriters.SetDeviceVersion(ver))
 }
 
 func (r *ConfigReconciler) defaultYANGVersionForDeviceVersion(deviceVersion string) string {
-	if tag, ok := writers.ReleaseTagForDeviceVersionString(deviceVersion); ok {
+	if tag, ok := iosxewriters.ReleaseTagForDeviceVersionString(deviceVersion); ok {
 		if len(r.SupportedYANGVersions) == 0 {
 			return tag
 		}
@@ -453,9 +454,10 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, 
 	}
 	lookup := r.Lookup
 	if lookup == nil {
-		lookup = writers.GetForRelease
+		lookup = iosxewriters.GetForRelease
 	}
 	eng := &engine.Engine{
+		Platform:           "iosxe",
 		Transport:          r.GetTransport(),
 		Lookup:             lookup,
 		DeviceVersion:      deviceVersion,
@@ -833,7 +835,7 @@ func (r *ConfigReconciler) deviceVersionBlocked() (bool, string, string) {
 	version, err := r.deviceVersionState()
 	if err != nil {
 		reason := "MalformedDeviceVersion"
-		if writers.IsUnsupportedDeviceVersion(err) {
+		if iosxewriters.IsUnsupportedDeviceVersion(err) {
 			reason = "UnsupportedDeviceVersion"
 		}
 		return true, reason, fmt.Sprintf("device version %q rejected by writers: %v", version, err)

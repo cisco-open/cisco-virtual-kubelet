@@ -277,7 +277,7 @@ Roll back by patching the `IOSXEConfig` to reference an older revision:
 ```bash
 kubectl patch iosxeconfig cat9300-floor1-network \
   --type=merge \
-  -p '{"spec":{"revisionRef":{"name":"cat9300-floor1-network-v2"}}}'
+  -p '{"spec":{"rollbackTo":"cat9300-floor1-network-v2"}}'
 ```
 
 The reconciler re-applies the snapshotted intent and creates a new
@@ -406,13 +406,14 @@ drift-policy fields as `IOSXEConfig`, but the first runtime slice is scoped to
 `system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` over
 NX-API REST/DME.
 
-`NXOSConfig` accepts either a direct resolved family map or a full
-`nxos:` NetAsCode envelope. When a full envelope is supplied, CVK resolves
-`global`, matching `device_groups`, the selected `devices` entry, model
-`templates`, `variables`, and `interface_groups` before normalizing
-`interfaces.ethernets` into the runtime `interface_ethernet` family. Template
-types other than `model` are rejected; render CLI separately and submit only
-resolved model intent.
+`NXOSConfig` accepts a direct resolved family map. For compatibility, a native
+CVK-authored source that omits `modelSource` may also use a full `nxos:`
+NetAsCode envelope; CVK can resolve `global`, matching `device_groups`, the
+selected `devices` entry, model `templates`, `variables`, and
+`interface_groups`. That compatibility resolver is not the strict import path.
+When `modelSource.resolved: true` is declared, the source must already be
+flattened per-device canonical data and retain `interfaces.ethernets`; CVK only
+normalizes that section to its internal `interface_ethernet` writer family.
 
 ```yaml
 apiVersion: config.cisco.vk/v1alpha1
@@ -425,32 +426,25 @@ spec:
     name: nexus9300v-01
   managedFamilies:
     - system
+    - interface_ethernet
   driftPolicy: report
   modelSource:
     format: netascode-nxos
+    modelVersion: 0.3.0
+    schemaDigest: sha256:5d5482679fb28e751d34cdc49342f8434914a7714966ba8244923b95d678698d
     resolved: true
+    exporter: example-customer-exporter@0123456789abcdef0123456789abcdef01234567
+    sourceRevision: 0123456789abcdef0123456789abcdef01234567
   source:
     inline:
-      nxos:
-        global:
-          variables:
-            uplink_mtu: 9216
-        interface_groups:
-          - name: routed-uplinks
-            configuration:
-              mtu: ${uplink_mtu}
-              shutdown: false
-        devices:
-          - name: nexus9300v-01
-            configuration:
-              system:
-                hostname: nexus9300v-01
-              interfaces:
-                ethernets:
-                  - id: 1/1
-                    interface_groups:
-                      - routed-uplinks
-                    description: CVK uplink
+      system:
+        hostname: nexus9300v-01
+      interfaces:
+        ethernets:
+          - id: 1/1
+            mtu: 9216
+            shutdown: false
+            description: CVK uplink
 ```
 
 ```bash
@@ -458,6 +452,39 @@ $ kubectl get nxosconfig
 NAME                  DEVICE          PHASE    DRIFT    AGE
 nexus9300v-system     nexus9300v-01   InSync   report   30s
 ```
+
+When `modelSource` is present, NX-OS reconciliation fails closed unless the
+payload identifies an exact supported conformance contract. The initial
+contract identifies Network as Code module `0.3.0` at revision
+`706c1b390b7c23f8950714788129b1c51233de6a`, the normalized NX-OS schema
+subtree at qualified schema snapshot
+`9e45ad51227a2e534c5ded8f3258c4feb9a53c5d`, and was qualified with NX-OS
+provider `0.13.1` and utils provider `2.0.0`. These exact provider versions are
+the official tested baseline; the module constraints themselves permit a
+range. `schemaDigest` is the SHA-256 of `jq -cS '.properties.nxos' schema.json`
+including the command's trailing LF. It is a compatibility label, not a
+payload-integrity digest or a substitute for schema validation. `exporter`
+must identify an immutable `name@version` or `name@digest`, and
+`sourceRevision` identifies the immutable customer intent revision. Native
+CVK-authored payloads may omit `modelSource`; declaring it opts the CR into
+strict flattened-source and model/device contract validation before
+configuration fetch or write.
+
+The supported slice is guarded by checked-in golden artifacts generated from
+the pinned Terraform plan and NX-OS provider DME bodies. Conformance compares
+device path, DME class ancestry, object identity, attributes, and values while
+ignoring only empty `attributes` containers and operation batching. In
+particular, VLAN payloads do not add a provider-external `pcTag`, and Ethernet
+payloads retain the provider-derived `adminSt`, `layer`, and
+`userCfgdFlags` values.
+
+CVK adds a fail-closed interface safety boundary around those defaults. A
+strict import cannot implicitly convert an observed Layer-3 interface to
+Layer-2, and it cannot bring up an observed shutdown interface unless
+`shutdown: false` is explicit. Native CVK sources preserve omitted admin/layer
+properties on description or MTU-only updates. These protections deliberately
+narrow the upstream provider behavior to avoid accidental connectivity
+changes.
 
 ### NX-OS runtime coverage
 
@@ -478,6 +505,19 @@ source-derived families fail at CiscoDevice reconciliation time.
 | `vlan` | `vlan.vlans[].id`, `vlan.vlans[].name` | VNI / VXLAN leaves such as `vni` or `vn_segment`; prune deletes are supported for CR-owned VLANs except VLAN 1 |
 | `interface_ethernet` | `interfaces.ethernets[].id`, `description`, `shutdown`, `mtu` | switchport, IP/IPv6, channel-group, OSPF, PIM, ACL/NAT attachments; physical interface deletion/prune is intentionally unsupported |
 
+Strict NetAsCode imports require Boolean values for every `feature.*` and
+`feature_set.*` leaf, matching the pinned schema. Native CVK sources may still
+use the writer's provider-state string compatibility forms. CVK also
+deliberately refuses to disable `nxapi`, `ssh`, `scp_server`, `sftp_server`, or
+`tacacs`; that management-lockout protection is a CVK safety extension to the
+upstream module rather than identical behavior.
+
+Create/update payload parity does not imply Terraform lifecycle parity. An
+omitted CVK field normally means “leave unchanged,” while the Terraform
+provider can emit unset markers or child deletes when an optional field is
+removed from its state. Destructive removal support therefore remains
+family-specific and fail-closed until ownership and live cleanup tests exist.
+
 Planned NX-OS family waves are tracked in
 [Production Readiness](production-readiness.md). The parity target is the
 current Network as Code NX-OS data-model stripe, which is split into entity,
@@ -487,8 +527,9 @@ Entity/source pattern coverage:
 
 | Pattern | Status |
 |---|---|
-| `devices`, `device_groups`, `global` | Supported for inline/resolved `NXOSConfig` intent. |
-| `variables`, `templates` with `type: model`, `interface_groups` | Supported before family normalization. |
+| Direct per-device family data, including canonical `interfaces.ethernets` | Required when `modelSource.resolved: true` declares strict imported provenance. |
+| `devices`, `device_groups`, `global` | Native compatibility only when `modelSource` is omitted; CVK performs expansion. |
+| `variables`, `templates` with `type: model`, `interface_groups` | Native compatibility only when `modelSource` is omitted; rejected in strict resolved imports. |
 | `managed_devices`, `managed_device_groups` | Planned for a future source/orchestration layer; one `NXOSConfig` reconciles one selected device today. |
 | `yaml_files`, `yaml_directories`, file templates, `write_model_file` | Deferred; render these outside the controller and submit resolved intent. |
 | ordered `cli_templates` | Deferred for config reconciliation; use `DeviceOperation` for explicit NX-API CLI execution. |
@@ -513,16 +554,17 @@ optional guarded live write test. The current target set is:
 
 ### NX-OS REST/DME semantics
 
-`NXOSConfig` writes through NX-API REST/DME and reports the shared transport
-kind as `rest`. It does not use NETCONF candidate datastores, gNMI
+`NXOSConfig` writes through NX-API REST/DME and reports transport kind
+`nxapi`. It does not use NETCONF candidate datastores, gNMI
 transactions, or confirmed commit. That means:
 
 - `spec.transactional` cannot make an NX-OS DME apply atomic.
 - `spec.confirmTimeoutSeconds` cannot provide device-native auto-revert.
 - CVK relies on Fetch -> Diff -> Apply -> Verify for every supported family.
 - `writeStartup: true` is safe only after every managed family verifies.
-- Rollback for NX-OS DME is compensating configuration, not a native protocol
-  transaction.
+- `revisionHistoryLimit`, `rollbackTo`, and declarative rollback are rejected
+  for NX-OS today; recovery requires an explicitly reviewed compensating
+  configuration or device-native operational procedure.
 
 When a CR requests confirmed-commit behavior that the selected transport cannot
 provide, CVK records a warning event and a stable status entry under

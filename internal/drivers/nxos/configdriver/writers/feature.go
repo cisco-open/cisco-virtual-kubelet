@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 )
 
@@ -34,6 +35,13 @@ func init() {
 func (featureWriter) Family() string { return nxosschema.FamilyFeature }
 
 func (featureWriter) YANGPaths() []string { return []string{nxosschema.PathFeature} }
+
+func (featureWriter) OperationScope() enginewriters.OperationScope {
+	return enginewriters.OperationScope{
+		ReadPaths:     []string{nxosschema.PathFeature},
+		WritePrefixes: []string{nxosschema.DNSystem},
+	}
+}
 
 func (featureWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
 	raw, err := c.Fetch(ctx, nxosschema.PathFeature)
@@ -99,6 +107,13 @@ func (featureWriter) Apply(ctx context.Context, c transport.Interface, ops []tra
 func (featureSetWriter) Family() string { return nxosschema.FamilyFeatureSet }
 
 func (featureSetWriter) YANGPaths() []string { return []string{nxosschema.PathFeatureSet} }
+
+func (featureSetWriter) OperationScope() enginewriters.OperationScope {
+	return enginewriters.OperationScope{
+		ReadPaths:     []string{nxosschema.PathFeatureSet},
+		WritePrefixes: []string{nxosschema.DNSystem},
+	}
+}
 
 func (featureSetWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
 	raw, err := c.Fetch(ctx, nxosschema.PathFeatureSet)

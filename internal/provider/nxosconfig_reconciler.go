@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package provider
 
@@ -22,6 +28,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/validation"
 	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 	"k8s.io/client-go/tools/record"
@@ -40,19 +47,26 @@ const nxosConfigFinalizer = "config.cisco.vk/nxos-lease-cleanup"
 // runtime state (transport, version, subscribe clock) now lives on the one
 // registered common instance, and the facade methods forward to it.
 type NXOSConfigReconciler struct {
-	Client                client.Client
-	DeviceName            string
-	DeviceNamespace       string
-	Transport             transport.Interface
-	Lookup                func(family, release string) enginewriters.SectionWriter
-	FamilyOrder           func([]string) []string
-	DeviceVersion         string
-	DefaultYANGVersion    string
-	SupportedYANGVersions map[string]struct{}
-	Leaser                *engine.FamilyLeaser
-	Recorder              record.EventRecorder
-	Interval              time.Duration
-	RuntimeID             string
+	Client                  client.Client
+	DeviceName              string
+	DeviceNamespace         string
+	Transport               transport.Interface
+	Lookup                  func(family, release string) enginewriters.SectionWriter
+	FamilyOrder             func([]string) []string
+	DeviceVersion           string
+	DefaultYANGVersion      string
+	SupportedYANGVersions   map[string]struct{}
+	FetchDeviceVersion      func(context.Context, transport.Interface) string
+	ValidateDeviceVersion   enginewriters.VersionValidator
+	IsUnsupportedVersion    enginewriters.VersionErrorClassifier
+	ReleaseTagForVersion    func(string) (string, bool)
+	RequireDeviceVersion    bool
+	OperationValidator      validation.Validator
+	OperationValidationMode validation.Mode
+	Leaser                  *engine.FamilyLeaser
+	Recorder                record.EventRecorder
+	Interval                time.Duration
+	RuntimeID               string
 
 	SubscribeNotify <-chan struct{}
 	SubscribeEvents <-chan event.GenericEvent
@@ -98,22 +112,29 @@ func (r *NXOSConfigReconciler) SetDefaultYANGVersion(version string) {
 func (r *NXOSConfigReconciler) common() *CommonConfigReconciler {
 	r.commonOnce.Do(func() {
 		r.commonReconciler = &CommonConfigReconciler{
-			Client:                r.Client,
-			DeviceName:            r.DeviceName,
-			DeviceNamespace:       r.DeviceNamespace,
-			Transport:             r.Transport,
-			Lookup:                r.Lookup,
-			FamilyOrder:           r.FamilyOrder,
-			DeviceVersion:         r.DeviceVersion,
-			DefaultYANGVersion:    r.DefaultYANGVersion,
-			SupportedYANGVersions: r.SupportedYANGVersions,
-			Leaser:                r.Leaser,
-			Recorder:              r.Recorder,
-			Interval:              r.Interval,
-			RuntimeID:             r.RuntimeID,
-			SubscribeNotify:       r.SubscribeNotify,
-			SubscribeEvents:       r.SubscribeEvents,
-			Platform:              NXOSCommonConfigPlatform(),
+			Client:                  r.Client,
+			DeviceName:              r.DeviceName,
+			DeviceNamespace:         r.DeviceNamespace,
+			Transport:               r.Transport,
+			Lookup:                  r.Lookup,
+			FamilyOrder:             r.FamilyOrder,
+			DeviceVersion:           r.DeviceVersion,
+			DefaultYANGVersion:      r.DefaultYANGVersion,
+			SupportedYANGVersions:   r.SupportedYANGVersions,
+			FetchDeviceVersion:      r.FetchDeviceVersion,
+			ValidateDeviceVersion:   r.ValidateDeviceVersion,
+			IsUnsupportedVersion:    r.IsUnsupportedVersion,
+			ReleaseTagForVersion:    r.ReleaseTagForVersion,
+			RequireDeviceVersion:    r.RequireDeviceVersion,
+			OperationValidator:      r.OperationValidator,
+			OperationValidationMode: r.OperationValidationMode,
+			Leaser:                  r.Leaser,
+			Recorder:                r.Recorder,
+			Interval:                r.Interval,
+			RuntimeID:               r.RuntimeID,
+			SubscribeNotify:         r.SubscribeNotify,
+			SubscribeEvents:         r.SubscribeEvents,
+			Platform:                NXOSCommonConfigPlatform(),
 		}
 	})
 	return r.commonReconciler
@@ -131,9 +152,13 @@ func NXOSCommonConfigPlatform() CommonConfigPlatform {
 		SupportedFamilies: append([]string(nil),
 			nxosschema.Families...,
 		),
-		Finalizer:        nxosConfigFinalizer,
-		PreserveEnvelope: true,
-		NormalizeSource:  normalizeNXOSNetAsCodeSource,
+		Finalizer:               nxosConfigFinalizer,
+		PreserveEnvelope:        true,
+		ValidateModelSource:     validateNXOSNetAsCodeModelSource,
+		ValidateModelDevicePair: validateNXOSModelDevicePair,
+		ValidateTargetVersion:   validateNXOSTargetVersion,
+		ValidateResolvedSource:  validateResolvedNXOSNetAsCodeSource,
+		NormalizeSource:         normalizeNXOSNetAsCodeSource,
 		NewObject: func() client.Object {
 			return &configv1alpha1.NXOSConfig{}
 		},

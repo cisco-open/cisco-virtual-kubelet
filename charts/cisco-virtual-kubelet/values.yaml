@@ -65,6 +65,12 @@ aggregator:
   # has shipped since day one.
   enabled: false
 
+nxos:
+  # allowExperimentalReleases admits NX-OS release profiles backed only by
+  # static upstream conformance evidence. Keep false until the release has
+  # passed CVK live apply, verify, idempotence, removal, and rollback tests.
+  allowExperimentalReleases: false
+
 # telemetry is injected into the controller pod as environment variables.
 # The CiscoDevice controller then propagates the same values to each
 # per-device VK pod it creates, so the process that owns MDT-over-gNMI

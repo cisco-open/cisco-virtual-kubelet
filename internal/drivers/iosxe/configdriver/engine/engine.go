@@ -24,6 +24,7 @@ import (
 	"time"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
@@ -99,6 +100,10 @@ const (
 // outer reconciler in internal/provider, which calls Engine.Reconcile
 // once per tick.
 type Engine struct {
+	// Platform is the stable platform identifier included in operation
+	// validation context. Empty preserves legacy IOS XE behavior.
+	Platform string
+
 	// Transport is the device channel. Lifetime is caller-owned.
 	Transport transport.Interface
 
@@ -776,7 +781,7 @@ func (e *Engine) runningVerify(ctx context.Context, res *intent.ResolvedIntent) 
 			// assert against. Treat as clean.
 			continue
 		}
-		ops, err := w.Diff(desired, observed)
+		ops, err := e.diff(res, w, desired, observed)
 		if err != nil {
 			return false
 		}
@@ -807,6 +812,14 @@ func (e *Engine) validate(res *intent.ResolvedIntent) error {
 		return nil
 	}
 	return nil
+}
+
+func (e *Engine) diff(res *intent.ResolvedIntent, w writers.SectionWriter, desired, observed any) ([]transport.Op, error) {
+	return enginewriters.Diff(enginewriters.DiffContext{
+		Platform:      e.Platform,
+		DeviceVersion: e.DeviceVersion,
+		ModelVersion:  res.ModelVersion,
+	}, w, desired, observed)
 }
 
 // reconcileFamily runs Fetch → Diff → Apply → Verify for a single family.
@@ -884,7 +897,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 	// Pull the family's slice out of the intent. Some families are nested
 	// one level deeper (vlan.vlans, vrf.vrfs); writers accept the whole
 	// family block and descend internally, so we pass the entire entry.
-	ops, err := w.Diff(desired, observed)
+	ops, err := e.diff(res, w, desired, observed)
 	if err != nil {
 		planSpan.SetStatus(err)
 		planSpan.End()
@@ -960,7 +973,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 		familySpan.SetStatus(err)
 		return FamilyStatus{
 			Name: family, State: "ApplyError",
-			Message: safeMsg("YANG validation: %v", err),
+			Message: safeMsg("operation validation: %v", err),
 		}
 	}
 	planSpan.End()
@@ -1081,7 +1094,7 @@ func (e *Engine) reconcileFamily(ctx context.Context, family string, res *intent
 			Message:    safeMsg("Verify: re-fetch failed: %v", err),
 		}
 	}
-	residual, err := w.Diff(desired, verify)
+	residual, err := e.diff(res, w, desired, verify)
 	if err != nil {
 		verifySpan.SetStatus(err)
 		familySpan.SetStatus(err)
@@ -1176,14 +1189,19 @@ func (e *Engine) validateYANGOps(
 		return nil
 	}
 	releaseTag := ""
+	modelVersion := ""
 	if res != nil {
 		releaseTag = res.TargetYangVersion
+		modelVersion = res.ModelVersion
 	}
 	vctx := validation.Context{
-		Family:        family,
-		DeviceVersion: e.DeviceVersion,
-		ReleaseTag:    releaseTag,
-		AllowedPaths:  w.YANGPaths(),
+		Platform:             e.Platform,
+		Family:               family,
+		DeviceVersion:        e.DeviceVersion,
+		ReleaseTag:           releaseTag,
+		ModelVersion:         modelVersion,
+		AllowedPaths:         w.YANGPaths(),
+		AllowedWritePrefixes: enginewriters.ScopeOf(w).WritePrefixes,
 	}
 	for i, op := range ops {
 		if err := e.YANGValidator.ValidateOperation(vctx, op); err != nil {
@@ -1194,7 +1212,7 @@ func (e *Engine) validateYANGOps(
 					WithField("family", family).
 					WithField("deviceVersion", e.DeviceVersion).
 					WithField("yangRelease", releaseTag).
-					Warn("IOS-XE YANG validation warning")
+					Warn("configuration operation validation warning")
 				continue
 			}
 			return err

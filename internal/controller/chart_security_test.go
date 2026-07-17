@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package controller
 
@@ -36,6 +42,46 @@ func TestControllerDeploymentRendersSecurityContexts(t *testing.T) {
 		if !strings.Contains(text, want) {
 			t.Fatalf("deployment template missing security hardening construct %q", want)
 		}
+	}
+}
+
+func TestNXOSExperimentalReleaseGateIsExplicitAndDefaultOff(t *testing.T) {
+	valuesRaw, err := os.ReadFile("../../charts/cisco-virtual-kubelet/values.yaml")
+	if err != nil {
+		t.Fatalf("read chart values: %v", err)
+	}
+	var values struct {
+		NXOS struct {
+			AllowExperimentalReleases bool `yaml:"allowExperimentalReleases"`
+		} `yaml:"nxos"`
+	}
+	if err := yaml.Unmarshal(valuesRaw, &values); err != nil {
+		t.Fatalf("parse chart values: %v", err)
+	}
+	if values.NXOS.AllowExperimentalReleases {
+		t.Fatal("nxos.allowExperimentalReleases must default to false")
+	}
+
+	templateRaw, err := os.ReadFile("../../charts/cisco-virtual-kubelet/templates/deployment.yaml")
+	if err != nil {
+		t.Fatalf("read deployment template: %v", err)
+	}
+	template := string(templateRaw)
+	for _, want := range []string{
+		`{{- if .Values.nxos.allowExperimentalReleases }}`,
+		`- name: CVK_NXOS_ALLOW_EXPERIMENTAL_RELEASES`,
+	} {
+		if !strings.Contains(template, want) {
+			t.Fatalf("deployment template missing NX-OS gate construct %q", want)
+		}
+	}
+
+	schemaRaw, err := os.ReadFile("../../charts/cisco-virtual-kubelet/values.schema.json")
+	if err != nil {
+		t.Fatalf("read values schema: %v", err)
+	}
+	if !strings.Contains(string(schemaRaw), `"allowExperimentalReleases"`) {
+		t.Fatal("values schema does not declare nxos.allowExperimentalReleases")
 	}
 }
 

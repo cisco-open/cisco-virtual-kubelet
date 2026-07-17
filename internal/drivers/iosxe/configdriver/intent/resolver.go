@@ -99,9 +99,13 @@ type ResolvedIntent struct {
 	DeviceName      string
 	ManagedFamilies []string
 	Configuration   map[string]any
-	Transactional   bool
-	DriftPolicy     configv1alpha1.DriftPolicy
-	WriteStartup    bool
+	// ModelVersion identifies the canonical data-model contract used to
+	// resolve Configuration. Platform-neutral validation carries it through
+	// to every generated transport operation.
+	ModelVersion  string
+	Transactional bool
+	DriftPolicy   configv1alpha1.DriftPolicy
+	WriteStartup  bool
 
 	// PruneOnRelinquish, when true, asks the engine to issue DELETE
 	// ops for entries the device has but the resolved intent does
@@ -371,10 +375,16 @@ func (r *Resolver) Resolve(ctx context.Context, cr *configv1alpha1.IOSXEConfig) 
 	// tree once to rename them back to their canonical YANG names.
 	FixYAML11BoolKeys(configuration)
 
+	modelVersion := ""
+	if cr.Spec.ModelSource != nil {
+		modelVersion = cr.Spec.ModelSource.ModelVersion
+	}
+
 	return &ResolvedIntent{
 		DeviceName:             device,
 		ManagedFamilies:        managedFamilies,
 		Configuration:          configuration,
+		ModelVersion:           modelVersion,
 		Transactional:          cr.Spec.Transactional,
 		DriftPolicy:            policy,
 		WriteStartup:           cr.Spec.WriteStartup,
