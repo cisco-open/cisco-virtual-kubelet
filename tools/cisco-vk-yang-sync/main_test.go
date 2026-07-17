@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -1222,6 +1223,330 @@ func TestFamilySchemaValidation(t *testing.T) {
 	}
 	if iface.Key != "name" {
 		t.Errorf("entry Key = %q, want %q", iface.Key, "name")
+	}
+}
+
+func installSuccessfulGenerationStubs(t *testing.T) {
+	t.Helper()
+	oldCompute := computeModuleClosureForGeneration
+	oldExtract := extractFamilyEntriesForGeneration
+	oldBuild := buildFamilySchemaForGeneration
+	oldWriteSchema := writeFamilySchemaForGeneration
+	oldWriteSkip := writeSkipStubForGeneration
+	oldWriteRegister := writeRegisterForGeneration
+	oldWriteValidators := writeValidatorsForGeneration
+	t.Cleanup(func() {
+		computeModuleClosureForGeneration = oldCompute
+		extractFamilyEntriesForGeneration = oldExtract
+		buildFamilySchemaForGeneration = oldBuild
+		writeFamilySchemaForGeneration = oldWriteSchema
+		writeSkipStubForGeneration = oldWriteSkip
+		writeRegisterForGeneration = oldWriteRegister
+		writeValidatorsForGeneration = oldWriteValidators
+	})
+
+	computeModuleClosureForGeneration = func(string, []string, io.Writer, bool) (*ModuleClosure, error) {
+		return &ModuleClosure{AllFiles: []string{"test.yang"}, TopLevelFiles: []string{"test.yang"}}, nil
+	}
+	extractFamilyEntriesForGeneration = func(string, []string, []string, bool) ([]*yang.Entry, error) {
+		return []*yang.Entry{{Name: "test", Kind: yang.DirectoryEntry}}, nil
+	}
+	buildFamilySchemaForGeneration = func([]*yang.Entry) ([]byte, error) {
+		return []byte{0x01}, nil
+	}
+	writeFamilySchemaForGeneration = func(string, string, []byte) error { return nil }
+	writeSkipStubForGeneration = func(string, string, string) error { return nil }
+	writeRegisterForGeneration = func(string, string, string, string) error { return nil }
+	writeValidatorsForGeneration = func(string, string, []string) error { return nil }
+}
+
+func writeTestSkipBaseline(t *testing.T, releaseBody string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "skip-baseline.yaml")
+	body := "releases:\n  \"1718\": " + releaseBody + "\n"
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatalf("write skip baseline: %v", err)
+	}
+	return path
+}
+
+func testGenerationFlags(t *testing.T, baseline string) flags {
+	t.Helper()
+	return flags{
+		yangVersion:  "1718",
+		yangDir:      t.TempDir(),
+		outTypes:     filepath.Join(t.TempDir(), "generated"),
+		skipBaseline: baseline,
+	}
+}
+
+func TestCompareSkipBaselineExactAndMismatches(t *testing.T) {
+	expected := map[string]skipCode{
+		"changed":  skipPathNotFound,
+		"resolved": skipSchemaTooLarge,
+	}
+	actual := map[string]skipRecord{
+		"changed":    {Family: "changed", Code: skipNoModules},
+		"unexpected": {Family: "unexpected", Code: skipPathNotFound},
+	}
+	err := compareSkipBaseline("1718", expected, actual)
+	if err == nil {
+		t.Fatal("expected baseline mismatch")
+	}
+	for _, want := range []string{"unexpected skips", "expected skips no longer present", "skip reason changes"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error missing %q: %v", want, err)
+		}
+	}
+	if err := compareSkipBaseline("1718", map[string]skipCode{
+		"known": skipPathNotFound,
+	}, map[string]skipRecord{
+		"known": {Family: "known", Code: skipPathNotFound},
+	}); err != nil {
+		t.Fatalf("exact baseline unexpectedly failed: %v", err)
+	}
+}
+
+func TestCommittedSkipBaselineIsValid(t *testing.T) {
+	root := "../../internal/drivers/iosxe/configdriver/schema"
+	families, err := loadIndex(filepath.Join(root, "families.yaml"))
+	if err != nil {
+		t.Fatalf("load family index: %v", err)
+	}
+	for _, release := range []string{"1715", "1716", "1718", "1791", "2601"} {
+		expected, err := loadExpectedSkips(filepath.Join(root, "yang-skip-baseline.yaml"), release, families)
+		if err != nil {
+			t.Fatalf("release %s: %v", release, err)
+		}
+		if got, want := len(expected), 19; got != want {
+			t.Errorf("release %s baseline has %d skips, want %d", release, got, want)
+		}
+	}
+}
+
+func TestLoadExpectedSkipsRejectsMalformedBaseline(t *testing.T) {
+	families := map[string]family{"known": {YANGPaths: []string{"/m:x"}, Shape: "singleton"}}
+	tests := []struct {
+		name string
+		yaml string
+		want string
+	}{
+		{name: "unknown field", yaml: "unknown: true\nreleases:\n  \"1718\": {}\n", want: "unknown"},
+		{name: "missing release", yaml: "releases:\n  \"1715\": {}\n", want: "no entry for release"},
+		{name: "unknown family", yaml: "releases:\n  \"1718\":\n    typo: path-not-found\n", want: "unknown family"},
+		{name: "invalid code", yaml: "releases:\n  \"1718\":\n    known: parser-error\n", want: "invalid code"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "baseline.yaml")
+			if err := os.WriteFile(path, []byte(tc.yaml), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			_, err := loadExpectedSkips(path, "1718", families)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error = %v, want substring %q", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestRunYgotPerFamilyAcceptsReviewedDomainSkip(t *testing.T) {
+	installSuccessfulGenerationStubs(t)
+	extractFamilyEntriesForGeneration = func(string, []string, []string, bool) ([]*yang.Entry, error) {
+		return nil, &yangPathNotFoundError{Path: "/m:test"}
+	}
+	baseline := writeTestSkipBaseline(t, "\n    test: path-not-found")
+	f := testGenerationFlags(t, baseline)
+	var stdout, stderr bytes.Buffer
+	err := runYgotPerFamily(&stdout, &stderr, f, map[string]family{
+		"test": {YANGPaths: []string{"/m:test"}, Shape: "singleton"},
+	})
+	if err != nil {
+		t.Fatalf("reviewed domain skip failed: %v", err)
+	}
+	if !strings.Contains(stdout.String(), "skip baseline: 1 expected skips matched") {
+		t.Fatalf("missing baseline success summary:\n%s", stdout.String())
+	}
+}
+
+func TestRunYgotPerFamilyAcceptsEachReviewedDomainSkipCode(t *testing.T) {
+	tests := []struct {
+		name   string
+		code   skipCode
+		mutate func()
+	}{
+		{name: "no modules", code: skipNoModules, mutate: func() {
+			computeModuleClosureForGeneration = func(string, []string, io.Writer, bool) (*ModuleClosure, error) {
+				return &ModuleClosure{}, nil
+			}
+		}},
+		{name: "path not found", code: skipPathNotFound, mutate: func() {
+			extractFamilyEntriesForGeneration = func(string, []string, []string, bool) ([]*yang.Entry, error) {
+				return nil, &yangPathNotFoundError{Path: "/m:test"}
+			}
+		}},
+		{name: "schema too large", code: skipSchemaTooLarge, mutate: func() {
+			buildFamilySchemaForGeneration = func([]*yang.Entry) ([]byte, error) {
+				return make([]byte, 512*1024+1), nil
+			}
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			installSuccessfulGenerationStubs(t)
+			tc.mutate()
+			baseline := writeTestSkipBaseline(t, "\n    test: "+string(tc.code))
+			f := testGenerationFlags(t, baseline)
+			if err := runYgotPerFamily(io.Discard, io.Discard, f, map[string]family{
+				"test": {YANGPaths: []string{"/m:test"}, Shape: "singleton"},
+			}); err != nil {
+				t.Fatalf("reviewed %s skip failed: %v", tc.code, err)
+			}
+		})
+	}
+}
+
+func TestRunYgotPerFamilyPropagatesNonDomainFailures(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func()
+		want   string
+	}{
+		{name: "module parse", mutate: func() {
+			computeModuleClosureForGeneration = func(string, []string, io.Writer, bool) (*ModuleClosure, error) {
+				return nil, errors.New("parse failed")
+			}
+		}, want: "compute module closure"},
+		{name: "schema extract", mutate: func() {
+			extractFamilyEntriesForGeneration = func(string, []string, []string, bool) ([]*yang.Entry, error) {
+				return nil, errors.New("extract failed")
+			}
+		}, want: "extract schema"},
+		{name: "schema build", mutate: func() {
+			buildFamilySchemaForGeneration = func([]*yang.Entry) ([]byte, error) {
+				return nil, errors.New("build failed")
+			}
+		}, want: "build schema"},
+		{name: "schema write", mutate: func() {
+			writeFamilySchemaForGeneration = func(string, string, []byte) error {
+				return errors.New("write failed")
+			}
+		}, want: "write generated schema"},
+		{name: "registration write", mutate: func() {
+			writeRegisterForGeneration = func(string, string, string, string) error {
+				return errors.New("register failed")
+			}
+		}, want: "write generated registration"},
+		{name: "validator index write", mutate: func() {
+			writeValidatorsForGeneration = func(string, string, []string) error {
+				return errors.New("validators failed")
+			}
+		}, want: "write schema validator imports"},
+		{name: "skip stub write", mutate: func() {
+			extractFamilyEntriesForGeneration = func(string, []string, []string, bool) ([]*yang.Entry, error) {
+				return nil, &yangPathNotFoundError{Path: "/m:test"}
+			}
+			writeSkipStubForGeneration = func(string, string, string) error {
+				return errors.New("stub failed")
+			}
+		}, want: "write path-not-found skip stub"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			installSuccessfulGenerationStubs(t)
+			tc.mutate()
+			baseline := writeTestSkipBaseline(t, "{}")
+			f := testGenerationFlags(t, baseline)
+			err := runYgotPerFamily(io.Discard, io.Discard, f, map[string]family{
+				"test": {YANGPaths: []string{"/m:test"}, Shape: "singleton"},
+			})
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error = %v, want substring %q", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestRunYgotPerFamilyCleansOnlySelectedRelease(t *testing.T) {
+	installSuccessfulGenerationStubs(t)
+	outTypes := filepath.Join(t.TempDir(), "generated")
+	stale := filepath.Join(outTypes, "1718", "removed-family", "register.go")
+	keep := filepath.Join(outTypes, "1716", "keep", "schema.go")
+	for _, path := range []string{stale, keep} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("stale"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f := testGenerationFlags(t, writeTestSkipBaseline(t, "{}"))
+	f.outTypes = outTypes
+	f.cleanPerFamilyOutput = true
+	if err := runYgotPerFamily(io.Discard, io.Discard, f, map[string]family{
+		"test": {YANGPaths: []string{"/m:test"}, Shape: "singleton"},
+	}); err != nil {
+		t.Fatalf("runYgotPerFamily: %v", err)
+	}
+	if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		t.Fatalf("stale selected-release output survived cleanup: %v", err)
+	}
+	if _, err := os.Stat(keep); err != nil {
+		t.Fatalf("another release was removed: %v", err)
+	}
+	unsafe := []struct {
+		outTypes string
+		release  string
+	}{
+		{outTypes: outTypes, release: "../escape"},
+		{outTypes: outTypes, release: "/"},
+		{outTypes: outTypes, release: "nested/release"},
+		{outTypes: outTypes, release: `nested\release`},
+		{outTypes: "", release: "1718"},
+		{outTypes: ".", release: "1718"},
+		{outTypes: string(filepath.Separator), release: "home"},
+	}
+	for _, tc := range unsafe {
+		if err := cleanPerFamilyReleaseOutput(tc.outTypes, tc.release); err == nil {
+			t.Errorf("unsafe clean was accepted: outTypes=%q release=%q", tc.outTypes, tc.release)
+		}
+	}
+}
+
+func TestStrictModuleClosureRejectsParseErrors(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "broken.yang"), []byte("not a yang module"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := computeModuleClosureMode(dir, []string{"/broken:root"}, io.Discard, true)
+	if err == nil || !strings.Contains(err.Error(), "goyang parse") {
+		t.Fatalf("strict parse error = %v, want goyang parse failure", err)
+	}
+}
+
+func TestStrictSchemaExtractionRejectsParseErrors(t *testing.T) {
+	dir := t.TempDir()
+	native := `module Cisco-IOS-XE-native {
+  yang-version 1.1;
+  namespace "urn:test:native";
+  prefix native;
+  container native { container test; }
+}
+`
+	if err := os.WriteFile(filepath.Join(dir, "Cisco-IOS-XE-native.yang"), []byte(native), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "broken.yang"), []byte("not a yang module"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := extractFamilySchemaEntriesMode(
+		dir,
+		[]string{"Cisco-IOS-XE-native.yang", "broken.yang"},
+		[]string{"/Cisco-IOS-XE-native:native/test"},
+		true,
+	)
+	if err == nil || !strings.Contains(err.Error(), "goyang read") {
+		t.Fatalf("strict extract error = %v, want goyang read failure", err)
 	}
 }
 

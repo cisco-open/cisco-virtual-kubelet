@@ -59,8 +59,10 @@ CI VALIDATOR (fixture_test.go)
 
 **Generated packages** live under
 `internal/drivers/iosxe/configdriver/generated/`. They are committed to the
-repo so CI can verify drift without re-running the full YANG toolchain on every
-PR. The `make ygot-validate-gen RELEASE=<tag>` target regenerates them.
+repo so runtime builds do not need the YANG source bundle. CI runs the pinned
+generator and verifies that the committed packages have no tracked or
+untracked drift. The `make ygot-validate-gen RELEASE=<tag>` target regenerates
+one release from a clean output directory.
 
 **Schema coverage limitations.** Each family's schema is extracted from a
 module closure computed by tracing import/include graphs outward from the
@@ -71,11 +73,20 @@ are absent the terminal entry's `Dir` is empty and the validator skips that
 container rather than producing false positives.
 
 **Skip policy.** A family is skipped (emits a compilable stub schema.go) when:
+
 - its `yang_paths` resolve to no module prefixes in the YANG directory,
 - the extracted schema blob exceeds 512 KB (e.g. `system` with `/native` as
   its target — the entire native tree), or
 - the path is not present in the YANG model for that release.
-Skipped families are listed in `generated/SKIPLIST.md`.
+
+Those are domain limitations, not general error handling. Parser,
+schema-builder, filesystem, registration, and validator-index errors fail
+generation immediately. The exact expected release/family/reason-code set is
+stored in `schema/yang-skip-baseline.yaml`; an added skip, resolved skip, or
+reason change fails generation until the baseline and regenerated artifacts
+are intentionally updated together. `generated/SKIPLIST.md` is the human
+summary. There are currently 35 usable validators and 19 reviewed skip stubs
+per supported release.
 
 **Validation strictness mode.** By default the validator is lenient: unknown
 fields and structural type mismatches are silently skipped so fixtures that

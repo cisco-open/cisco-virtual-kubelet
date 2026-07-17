@@ -16,8 +16,8 @@
 
 The reconciler runs only from trusted ``main``.  It never checks out pull
 request code.  Before dispatching a credentialed lab wrapper it verifies the
-current PR head and base, an approval for that head, and the two protected
-GitHub-hosted checks.  The same verification is also called by each wrapper's
+current PR head and base, an approval for that head, and every hosted merge
+gate.  The same verification is also called by each wrapper's
 ``prepare`` job and again on the lab runner immediately before submission.
 Those checks close queue-time races and protect manual workflow dispatches.
 
@@ -44,7 +44,16 @@ from typing import Any, Callable
 GITHUB_API = "https://api.github.com"
 GITHUB_ACTIONS_APP_ID = 15368
 GITHUB_ACTIONS_BOT_ID = 41898282
-REQUIRED_CHECKS = ("build-and-smoke", "ygot-validate")
+# Hosted checks that must pass before scarce native lab capacity is consumed.
+# Never include TARGETS' native contexts here: this dispatcher is responsible
+# for creating those statuses, so waiting for them would deadlock the flow.
+REQUIRED_HOSTED_CHECKS = (
+    "build-and-smoke",
+    "ygot-validate",
+    "terraform-provider",
+    "govulncheck",
+    "helm4-compat",
+)
 OPINIONATED_REVIEW_STATES = {"APPROVED", "CHANGES_REQUESTED", "DISMISSED"}
 ACTIVE_WORKFLOW_STATES = {"in_progress", "pending", "queued", "requested", "waiting"}
 MAX_API_PAGES = 100
@@ -259,7 +268,7 @@ def _verify_review(
 def _verify_required_checks(
     check_runs: list[dict[str, Any]], head_sha: str, pr_number: int
 ) -> None:
-    for required_name in REQUIRED_CHECKS:
+    for required_name in REQUIRED_HOSTED_CHECKS:
         candidates = [
             run
             for run in check_runs

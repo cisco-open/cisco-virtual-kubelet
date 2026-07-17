@@ -72,17 +72,19 @@ const (
 const goModulePath = "github.com/cisco/virtual-kubelet-cisco"
 
 type flags struct {
-	yangVersion string
-	yangDir     string
-	familyIndex string
-	outAPI      string
-	outCRD      string
-	outWriters  string
-	outTypes    string
-	ygotBin     string
-	dryRun      bool
-	force       bool
-	perFamily   bool
+	yangVersion          string
+	yangDir              string
+	familyIndex          string
+	outAPI               string
+	outCRD               string
+	outWriters           string
+	outTypes             string
+	ygotBin              string
+	skipBaseline         string
+	dryRun               bool
+	force                bool
+	perFamily            bool
+	cleanPerFamilyOutput bool
 }
 
 func parseFlags(args []string, stderr io.Writer) (flags, error) {
@@ -110,12 +112,16 @@ func parseFlags(args []string, stderr io.Writer) (flags, error) {
 		"destination directory for ygot-generated Go types (used only when --yang-dir is supplied)")
 	fs.StringVar(&f.ygotBin, "ygot-bin", "",
 		"path to the ygot generator binary; when empty, falls back to 'go run github.com/openconfig/ygot/generator@v0.34.0'")
+	fs.StringVar(&f.skipBaseline, "skip-baseline", "",
+		"machine-readable expected per-family skip baseline; when set, any skip-set or reason-code change fails generation")
 	fs.BoolVar(&f.dryRun, "dry-run", true,
 		"print actions rather than writing files")
 	fs.BoolVar(&f.force, "force", false,
 		"overwrite existing writer files (default: preserve hand-edits)")
 	fs.BoolVar(&f.perFamily, "per-family", false,
 		"generate per-family ygot schema packages under out-types/<release>/<family>/schema.go (requires --yang-dir)")
+	fs.BoolVar(&f.cleanPerFamilyOutput, "clean-per-family-output", false,
+		"remove out-types/<release> before real per-family generation so stale generated packages cannot survive")
 
 	if err := fs.Parse(args); err != nil {
 		return f, err
@@ -132,6 +138,47 @@ type family struct {
 	KeyFields []string `json:"key_fields,omitempty"`
 	DependsOn []string `json:"depends_on,omitempty"`
 	Portal    string   `json:"portal,omitempty"`
+}
+
+// skipCode is a stable, machine-readable category for an expected domain
+// limitation. Infrastructure and implementation failures are deliberately not
+// represented here: parse, build, write, registration, and validator-index
+// errors must fail generation rather than being converted into skip stubs.
+type skipCode string
+
+const (
+	skipNoModules      skipCode = "no-modules"
+	skipPathNotFound   skipCode = "path-not-found"
+	skipSchemaTooLarge skipCode = "schema-too-large"
+)
+
+type skipRecord struct {
+	Family string
+	Code   skipCode
+	Detail string
+}
+
+type skipBaseline struct {
+	Releases map[string]map[string]skipCode `json:"releases"`
+}
+
+// yangPathNotFoundError is the only extract error that is eligible for the
+// path-not-found skip category. Keeping it typed prevents an unrelated parser
+// or extraction error from being accidentally blessed by string matching.
+type yangPathNotFoundError struct {
+	Path string
+}
+
+func (e *yangPathNotFoundError) Error() string {
+	return fmt.Sprintf("yang_path %q: not found in native schema", e.Path)
+}
+
+type noYANGModulesError struct {
+	YANGPaths []string
+}
+
+func (e *noYANGModulesError) Error() string {
+	return fmt.Sprintf("no module prefixes found in yang_paths %v", e.YANGPaths)
 }
 
 func run(args []string, stdout, stderr io.Writer) exitCode {
@@ -438,6 +485,10 @@ type ModuleClosure struct {
 // explicit ygot generator arguments (submodules are auto-loaded by ygot via
 // the -path flag; passing them explicitly causes duplicate declarations).
 func computeModuleClosure(yangDir string, yangPaths []string, stderr io.Writer) (*ModuleClosure, error) {
+	return computeModuleClosureMode(yangDir, yangPaths, stderr, false)
+}
+
+func computeModuleClosureMode(yangDir string, yangPaths []string, stderr io.Writer, failOnParse bool) (*ModuleClosure, error) {
 	// Extract unique module names referenced in the YANG paths.
 	seedModules := map[string]struct{}{}
 	for _, yp := range yangPaths {
@@ -448,7 +499,7 @@ func computeModuleClosure(yangDir string, yangPaths []string, stderr io.Writer) 
 		}
 	}
 	if len(seedModules) == 0 {
-		return nil, fmt.Errorf("no module prefixes found in yang_paths %v", yangPaths)
+		return nil, &noYANGModulesError{YANGPaths: append([]string(nil), yangPaths...)}
 	}
 
 	// Build a fast lookup: module-name → filename.
@@ -492,7 +543,11 @@ func computeModuleClosure(yangDir string, yangPaths []string, stderr io.Writer) 
 		}
 
 		if err := ms.Read(modName); err != nil {
-			// Non-fatal: some auxiliary modules have broken includes in IOS-XE bundles.
+			if failOnParse {
+				return nil, fmt.Errorf("goyang parse %q: %w", modName, err)
+			}
+			// Compatibility mode preserves the historical tolerance for auxiliary
+			// modules with broken includes in IOS-XE bundles.
 			fmt.Fprintf(stderr, "  warning: goyang parse %q: %v; skipping\n", modName, err)
 			continue
 		}
@@ -553,6 +608,139 @@ func computeModuleClosure(yangDir string, yangPaths []string, stderr io.Writer) 
 	}, nil
 }
 
+var (
+	computeModuleClosureForGeneration = computeModuleClosureMode
+	extractFamilyEntriesForGeneration = extractFamilySchemaEntriesMode
+	buildFamilySchemaForGeneration    = buildFamilyYSchema
+	writeFamilySchemaForGeneration    = writeFamilySchemaFile
+	writeSkipStubForGeneration        = writeSkipStub
+	writeRegisterForGeneration        = writeRegisterFile
+	writeValidatorsForGeneration      = writeSchemaValidatorsFile
+)
+
+func validSkipCode(code skipCode) bool {
+	switch code {
+	case skipNoModules, skipPathNotFound, skipSchemaTooLarge:
+		return true
+	default:
+		return false
+	}
+}
+
+func loadExpectedSkips(path, release string, families map[string]family) (map[string]skipCode, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read skip baseline %q: %w", path, err)
+	}
+	var baseline skipBaseline
+	if err := yaml.UnmarshalStrict(raw, &baseline); err != nil {
+		return nil, fmt.Errorf("parse skip baseline %q: %w", path, err)
+	}
+	if len(baseline.Releases) == 0 {
+		return nil, fmt.Errorf("skip baseline %q has no releases", path)
+	}
+	expected, ok := baseline.Releases[release]
+	if !ok {
+		return nil, fmt.Errorf("skip baseline %q has no entry for release %q", path, release)
+	}
+	for name, code := range expected {
+		if _, ok := families[name]; !ok {
+			return nil, fmt.Errorf("skip baseline release %q names unknown family %q", release, name)
+		}
+		if !validSkipCode(code) {
+			return nil, fmt.Errorf("skip baseline release %q family %q has invalid code %q", release, name, code)
+		}
+	}
+	return expected, nil
+}
+
+func compareSkipBaseline(release string, expected map[string]skipCode, actual map[string]skipRecord) error {
+	var unexpected, resolved, changed []string
+	for family, got := range actual {
+		want, ok := expected[family]
+		switch {
+		case !ok:
+			unexpected = append(unexpected, fmt.Sprintf("%s (%s)", family, got.Code))
+		case want != got.Code:
+			changed = append(changed, fmt.Sprintf("%s (expected %s, got %s)", family, want, got.Code))
+		}
+	}
+	for family, want := range expected {
+		if _, ok := actual[family]; !ok {
+			resolved = append(resolved, fmt.Sprintf("%s (expected %s)", family, want))
+		}
+	}
+	if len(unexpected) == 0 && len(resolved) == 0 && len(changed) == 0 {
+		return nil
+	}
+	sort.Strings(unexpected)
+	sort.Strings(resolved)
+	sort.Strings(changed)
+	var parts []string
+	if len(unexpected) > 0 {
+		parts = append(parts, "unexpected skips: "+strings.Join(unexpected, ", "))
+	}
+	if len(resolved) > 0 {
+		parts = append(parts, "expected skips no longer present: "+strings.Join(resolved, ", "))
+	}
+	if len(changed) > 0 {
+		parts = append(parts, "skip reason changes: "+strings.Join(changed, ", "))
+	}
+	return fmt.Errorf("YANG skip baseline mismatch for release %s: %s; update the baseline only after reviewing the generated schema change",
+		release, strings.Join(parts, "; "))
+}
+
+func cleanPerFamilyReleaseOutput(outTypes, release string) error {
+	invalidReleaseRune := func(r rune) bool {
+		return !((r >= 'a' && r <= 'z') ||
+			(r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') || r == '.' || r == '_' || r == '-')
+	}
+	if release == "" || release == "." || release == ".." ||
+		filepath.IsAbs(release) || filepath.Base(release) != release ||
+		strings.IndexFunc(release, invalidReleaseRune) >= 0 {
+		return fmt.Errorf("refusing to clean generated output for unsafe release %q", release)
+	}
+	if outTypes == "" || filepath.Clean(outTypes) == "." {
+		return fmt.Errorf("refusing to clean unsafe generated output root %q", outTypes)
+	}
+	outputRoot, err := filepath.Abs(outTypes)
+	if err != nil {
+		return fmt.Errorf("resolve generated output root %q: %w", outTypes, err)
+	}
+	outputRoot = filepath.Clean(outputRoot)
+	volumeRoot := filepath.VolumeName(outputRoot) + string(filepath.Separator)
+	if outputRoot == volumeRoot {
+		return fmt.Errorf("refusing to clean filesystem root %q", outputRoot)
+	}
+	if info, err := os.Lstat(outputRoot); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("refusing to clean symlinked generated output root %q", outputRoot)
+		}
+		resolvedRoot, resolveErr := filepath.EvalSymlinks(outputRoot)
+		if resolveErr != nil {
+			return fmt.Errorf("resolve generated output symlinks %q: %w", outputRoot, resolveErr)
+		}
+		outputRoot = filepath.Clean(resolvedRoot)
+		volumeRoot = filepath.VolumeName(outputRoot) + string(filepath.Separator)
+		if outputRoot == volumeRoot {
+			return fmt.Errorf("refusing to clean filesystem root %q", outputRoot)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("inspect generated output root %q: %w", outputRoot, err)
+	}
+
+	releaseDir := filepath.Join(outputRoot, release)
+	rel, err := filepath.Rel(outputRoot, releaseDir)
+	if err != nil || rel != release || filepath.Dir(releaseDir) != outputRoot {
+		return fmt.Errorf("refusing to clean non-child generated release path %q", releaseDir)
+	}
+	if err := os.RemoveAll(releaseDir); err != nil {
+		return fmt.Errorf("clean generated release directory %s: %w", releaseDir, err)
+	}
+	return nil
+}
+
 // runYgotPerFamily generates per-family schema packages using goyang to
 // extract the terminal YANG entries for each family's yang_paths. Generated
 // packages land under:
@@ -563,8 +751,10 @@ func computeModuleClosure(yangDir string, yangPaths []string, stderr io.Writer) 
 // temporary directory is needed. The resulting schema.go contains a small
 // gzip-JSON blob (kilobytes) with real type information.
 //
-// Failures for individual families are non-fatal: a SKIPPED stub is emitted
-// and generation continues.
+// Known domain limitations (no modules, path absent, or an oversized schema)
+// emit a SKIPPED stub and continue. All parser, builder, filesystem,
+// registration, and validator-index errors fail the run. When skipBaseline is
+// set, the exact family/code set must also match the reviewed baseline.
 func runYgotPerFamily(stdout, stderr io.Writer, f flags, families map[string]family) error {
 	info, err := os.Stat(f.yangDir)
 	if err != nil {
@@ -579,6 +769,19 @@ func runYgotPerFamily(stdout, stderr io.Writer, f flags, families map[string]fam
 		return fmt.Errorf("abs yang-dir: %w", err)
 	}
 
+	var expectedSkips map[string]skipCode
+	if f.skipBaseline != "" {
+		expectedSkips, err = loadExpectedSkips(f.skipBaseline, f.yangVersion, families)
+		if err != nil {
+			return err
+		}
+	}
+	if !f.dryRun && f.cleanPerFamilyOutput {
+		if err := cleanPerFamilyReleaseOutput(f.outTypes, f.yangVersion); err != nil {
+			return err
+		}
+	}
+
 	fmt.Fprintf(stdout, "\nper-family goyang schema extraction (release=%s)\n", f.yangVersion)
 
 	names := make([]string, 0, len(families))
@@ -588,22 +791,37 @@ func runYgotPerFamily(stdout, stderr io.Writer, f flags, families map[string]fam
 	sort.Strings(names)
 
 	var succeeded, skipped int
+	actualSkips := make(map[string]skipRecord)
 	var registeredPackages []string
 	for _, name := range names {
 		fam := families[name]
 		pkgName, outFile := ygotFamilyOutputLayout(f.yangVersion, name, f.outTypes)
 
-		closure, err := computeModuleClosure(f.yangDir, fam.YANGPaths, stderr)
-		if err != nil || len(closure.TopLevelFiles) == 0 {
+		closure, err := computeModuleClosureForGeneration(f.yangDir, fam.YANGPaths, stderr, f.skipBaseline != "")
+		if err != nil {
+			var noModulesErr *noYANGModulesError
+			if !errors.As(err, &noModulesErr) {
+				return fmt.Errorf("compute module closure for %s: %w", name, err)
+			}
+			skipped++
+			reason := err.Error()
+			fmt.Fprintf(stdout, "  SKIP  %s: %s\n", name, reason)
+			actualSkips[name] = skipRecord{Family: name, Code: skipNoModules, Detail: reason}
+			if !f.dryRun {
+				if wErr := writeSkipStubForGeneration(outFile, pkgName, reason); wErr != nil {
+					return fmt.Errorf("write no-modules skip stub %s: %w", outFile, wErr)
+				}
+			}
+			continue
+		}
+		if len(closure.TopLevelFiles) == 0 {
 			skipped++
 			reason := "no YANG modules found"
-			if err != nil {
-				reason = err.Error()
-			}
 			fmt.Fprintf(stdout, "  SKIP  %s: %s\n", name, reason)
+			actualSkips[name] = skipRecord{Family: name, Code: skipNoModules, Detail: reason}
 			if !f.dryRun {
-				if wErr := writeSkipStub(outFile, pkgName, reason); wErr != nil {
-					fmt.Fprintf(stderr, "  warn: write skip stub %s: %v\n", outFile, wErr)
+				if wErr := writeSkipStubForGeneration(outFile, pkgName, reason); wErr != nil {
+					return fmt.Errorf("write no-modules skip stub %s: %w", outFile, wErr)
 				}
 			}
 			continue
@@ -615,26 +833,25 @@ func runYgotPerFamily(stdout, stderr io.Writer, f flags, families map[string]fam
 			continue
 		}
 
-		entries, extractErr := extractFamilySchemaEntries(absYangDir, closure.AllFiles, fam.YANGPaths)
+		entries, extractErr := extractFamilyEntriesForGeneration(absYangDir, closure.AllFiles, fam.YANGPaths, f.skipBaseline != "")
 		if extractErr != nil {
+			var pathErr *yangPathNotFoundError
+			if !errors.As(extractErr, &pathErr) {
+				return fmt.Errorf("extract schema for %s: %w", name, extractErr)
+			}
 			skipped++
 			reason := extractErr.Error()
 			fmt.Fprintf(stdout, "  SKIP  %s: extract schema: %s\n", name, reason)
-			if wErr := writeSkipStub(outFile, pkgName, "extract schema: "+reason); wErr != nil {
-				fmt.Fprintf(stderr, "  warn: write skip stub %s: %v\n", outFile, wErr)
+			actualSkips[name] = skipRecord{Family: name, Code: skipPathNotFound, Detail: reason}
+			if wErr := writeSkipStubForGeneration(outFile, pkgName, "extract schema: "+reason); wErr != nil {
+				return fmt.Errorf("write path-not-found skip stub %s: %w", outFile, wErr)
 			}
 			continue
 		}
 
-		blob, blobErr := buildFamilyYSchema(entries)
+		blob, blobErr := buildFamilySchemaForGeneration(entries)
 		if blobErr != nil {
-			skipped++
-			reason := blobErr.Error()
-			fmt.Fprintf(stdout, "  SKIP  %s: build schema: %s\n", name, reason)
-			if wErr := writeSkipStub(outFile, pkgName, "build schema: "+reason); wErr != nil {
-				fmt.Fprintf(stderr, "  warn: write skip stub %s: %v\n", outFile, wErr)
-			}
-			continue
+			return fmt.Errorf("build schema for %s: %w", name, blobErr)
 		}
 		// Reject pathological cases where the terminal entry is a very large
 		// subtree (e.g. the entire /native container). A blob above 512 KB
@@ -645,40 +862,40 @@ func runYgotPerFamily(stdout, stderr io.Writer, f flags, families map[string]fam
 			skipped++
 			reason := fmt.Sprintf("schema blob too large (%d bytes; limit %d bytes)", len(blob), maxFamilyBlobBytes)
 			fmt.Fprintf(stdout, "  SKIP  %s: %s\n", name, reason)
-			if wErr := writeSkipStub(outFile, pkgName, reason); wErr != nil {
-				fmt.Fprintf(stderr, "  warn: write skip stub %s: %v\n", outFile, wErr)
+			actualSkips[name] = skipRecord{Family: name, Code: skipSchemaTooLarge, Detail: reason}
+			if wErr := writeSkipStubForGeneration(outFile, pkgName, reason); wErr != nil {
+				return fmt.Errorf("write schema-too-large skip stub %s: %w", outFile, wErr)
 			}
 			continue
 		}
 
-		if wErr := writeFamilySchemaFile(outFile, pkgName, blob); wErr != nil {
-			skipped++
-			reason := wErr.Error()
-			fmt.Fprintf(stdout, "  SKIP  %s: write schema: %s\n", name, reason)
-			if wErr2 := writeSkipStub(outFile, pkgName, "write schema: "+reason); wErr2 != nil {
-				fmt.Fprintf(stderr, "  warn: write skip stub %s: %v\n", outFile, wErr2)
-			}
-			continue
+		if wErr := writeFamilySchemaForGeneration(outFile, pkgName, blob); wErr != nil {
+			return fmt.Errorf("write generated schema %s: %w", outFile, wErr)
 		}
 
 		// Emit register.go alongside schema.go so the generated package
 		// self-registers with the cfgvalidation harness on import.
 		registerFile := filepath.Join(filepath.Dir(outFile), "register.go")
-		if wErr := writeRegisterFile(registerFile, pkgName, name, f.yangVersion); wErr != nil {
-			fmt.Fprintf(stderr, "  warn: write register %s: %v\n", registerFile, wErr)
-		} else {
-			registeredPackages = append(registeredPackages,
-				goModulePath+"/"+filepath.ToSlash(f.outTypes)+"/"+f.yangVersion+"/"+name)
+		if wErr := writeRegisterForGeneration(registerFile, pkgName, name, f.yangVersion); wErr != nil {
+			return fmt.Errorf("write generated registration %s: %w", registerFile, wErr)
 		}
+		registeredPackages = append(registeredPackages,
+			goModulePath+"/"+filepath.ToSlash(f.outTypes)+"/"+f.yangVersion+"/"+name)
 
 		succeeded++
 	}
 
 	fmt.Fprintf(stdout, "\nper-family goyang: %d generated, %d skipped\n", succeeded, skipped)
 	if !f.dryRun {
-		if wErr := writeSchemaValidatorsFile(f.outTypes, f.yangVersion, registeredPackages); wErr != nil {
-			fmt.Fprintf(stderr, "  warn: write schema validators: %v\n", wErr)
+		if wErr := writeValidatorsForGeneration(f.outTypes, f.yangVersion, registeredPackages); wErr != nil {
+			return fmt.Errorf("write schema validator imports for release %s: %w", f.yangVersion, wErr)
 		}
+	}
+	if expectedSkips != nil {
+		if err := compareSkipBaseline(f.yangVersion, expectedSkips, actualSkips); err != nil {
+			return err
+		}
+		fmt.Fprintf(stdout, "skip baseline: %d expected skips matched for release %s\n", len(expectedSkips), f.yangVersion)
 	}
 	return nil
 }
@@ -1151,17 +1368,31 @@ func extractFamilySchemaEntries(
 	allFiles []string,
 	yangPaths []string,
 ) ([]*yang.Entry, error) {
+	return extractFamilySchemaEntriesMode(yangDir, allFiles, yangPaths, false)
+}
+
+func extractFamilySchemaEntriesMode(
+	yangDir string,
+	allFiles []string,
+	yangPaths []string,
+	failOnParse bool,
+) ([]*yang.Entry, error) {
 	ms := yang.NewModules()
 	ms.AddPath(yangDir)
 	for _, f := range allFiles {
 		modName := strings.TrimSuffix(f, ".yang")
 		if err := ms.Read(modName); err != nil {
-			// Non-fatal: mirrors computeModuleClosure pattern.
+			if failOnParse {
+				return nil, fmt.Errorf("goyang read %q: %w", modName, err)
+			}
+			// Compatibility mode mirrors the historical best-effort behavior.
 		}
 	}
 	if errs := ms.Process(); len(errs) > 0 {
-		// Process errors are typically warnings; continue with what resolved.
-		_ = errs
+		if failOnParse {
+			return nil, fmt.Errorf("goyang process: %v", errs)
+		}
+		// Compatibility mode preserves the historical partial-tree behavior.
 	}
 
 	nativeMod, ok := ms.Modules["Cisco-IOS-XE-native"]
@@ -1206,7 +1437,7 @@ func extractFamilySchemaEntriesFromNativeEntry(
 			}
 		}
 		if cur == nil || cur == nativeEntry {
-			return nil, fmt.Errorf("yang_path %q: not found in native schema", yp)
+			return nil, &yangPathNotFoundError{Path: yp}
 		}
 		if _, dup := seen[cur.Name]; !dup {
 			seen[cur.Name] = struct{}{}

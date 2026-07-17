@@ -26,18 +26,23 @@ jobs:
     steps:
       - name: Gate model
         run: |
+          # This workflow is a human-readable map. Enforcement lives in the
+          # smoke workflow and main's required status-check configuration.
+          #
           # T0 blocks every merge:
           #   go build ./...
           #   go vet ./...
           #   go test -race -count=1 ./...
           #   make check-parity-matrix
+          #   nested Terraform provider build, vet, race tests, and vuln scan
+          #   deterministic YANG regeneration, compile, and drift checks
           #
-          # T1 blocks release branches and transport/version changes:
-          #   live IOS-XE lab, real RESTCONF/NETCONF/gNMI paths.
+          # T1 blocks every approved PR after T0:
+          #   Cat8kv and Cat9k live IOS-XE lab scenarios.
           #
           # T2 blocks resilience/transactionality claims:
           #   failure injection, reconnects, lock contention, rollback.
           #
           # T3 blocks production enablement of broad new modes:
           #   scale, soak, metric-cardinality, cache pressure.
-          echo "CI tier gate model is documented in this workflow and docs/yang-version-transition.md."
+          echo "CI tier gate model; see smoke and the required native Lab CI statuses for enforcement."

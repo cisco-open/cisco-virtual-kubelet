@@ -76,7 +76,7 @@ def successful_checks() -> list[dict[str, object]]:
             "conclusion": "success",
             "app": {"id": dispatcher.GITHUB_ACTIONS_APP_ID},
         }
-        for index, name in enumerate(dispatcher.REQUIRED_CHECKS, start=20)
+        for index, name in enumerate(dispatcher.REQUIRED_HOSTED_CHECKS, start=20)
     ]
 
 
@@ -131,6 +131,22 @@ class VerificationApi:
 
 
 class DispatcherTests(unittest.TestCase):
+    def test_hosted_prerequisites_do_not_include_native_statuses(self) -> None:
+        native_contexts = {target["context"] for target in dispatcher.TARGETS}
+        self.assertTrue(
+            native_contexts.isdisjoint(dispatcher.REQUIRED_HOSTED_CHECKS)
+        )
+        self.assertEqual(
+            set(dispatcher.REQUIRED_HOSTED_CHECKS),
+            {
+                "build-and-smoke",
+                "ygot-validate",
+                "terraform-provider",
+                "govulncheck",
+                "helm4-compat",
+            },
+        )
+
     def test_current_head_approval_and_protected_checks_are_accepted(self) -> None:
         result = dispatcher.verify_pull_request(
             REPOSITORY,
@@ -247,32 +263,36 @@ class DispatcherTests(unittest.TestCase):
             )
 
     def test_missing_failed_or_spoofed_required_check_is_rejected(self) -> None:
-        cases: list[tuple[str, list[dict[str, object]]]] = []
-        missing = successful_checks()[1:]
-        cases.append(("missing", missing))
+        for required_name in dispatcher.REQUIRED_HOSTED_CHECKS:
+            index = dispatcher.REQUIRED_HOSTED_CHECKS.index(required_name)
+            cases: list[tuple[str, list[dict[str, object]]]] = []
 
-        failed = successful_checks()
-        failed[0]["conclusion"] = "failure"
-        cases.append(("not successful", failed))
+            missing = successful_checks()
+            missing.pop(index)
+            cases.append(("missing", missing))
 
-        pending = successful_checks()
-        pending[0]["status"] = "in_progress"
-        pending[0]["conclusion"] = None
-        cases.append(("not successful", pending))
+            failed = successful_checks()
+            failed[index]["conclusion"] = "failure"
+            cases.append(("not successful", failed))
 
-        spoofed = successful_checks()
-        spoofed[0]["app"] = {"id": 1}
-        cases.append(("missing", spoofed))
+            pending = successful_checks()
+            pending[index]["status"] = "in_progress"
+            pending[index]["conclusion"] = None
+            cases.append(("not successful", pending))
 
-        for message, checks in cases:
-            with self.subTest(message=message):
-                with self.assertRaisesRegex(dispatcher.GateError, message):
-                    dispatcher.verify_pull_request(
-                        REPOSITORY,
-                        7,
-                        api_call=VerificationApi(checks=checks),
-                        sleep=lambda _: None,
-                    )
+            spoofed = successful_checks()
+            spoofed[index]["app"] = {"id": 1}
+            cases.append(("missing", spoofed))
+
+            for message, checks in cases:
+                with self.subTest(required_name=required_name, message=message):
+                    with self.assertRaisesRegex(dispatcher.GateError, message):
+                        dispatcher.verify_pull_request(
+                            REPOSITORY,
+                            7,
+                            api_call=VerificationApi(checks=checks),
+                            sleep=lambda _: None,
+                        )
 
     def test_wrong_pr_shape_or_pinned_sha_is_rejected(self) -> None:
         mutations = (
@@ -394,6 +414,32 @@ class DispatcherTests(unittest.TestCase):
                 api_call=fail_dispatch,
             )
         self.assertEqual(states, ["pending", "error"])
+
+    def test_approved_pr_with_hosted_gates_dispatches_both_native_targets(
+        self,
+    ) -> None:
+        verified = dispatcher.VerifiedPullRequest(7, HEAD, BASE, MERGE)
+        empty_history = {target["context"]: [] for target in dispatcher.TARGETS}
+        with (
+            mock.patch.object(dispatcher, "list_open_pr_numbers", return_value=[7]),
+            mock.patch.object(
+                dispatcher, "verify_pull_request", return_value=verified
+            ),
+            mock.patch.object(
+                dispatcher,
+                "native_status_history",
+                return_value=empty_history,
+            ),
+            mock.patch.object(dispatcher, "dispatch_target") as dispatch,
+        ):
+            with redirect_stdout(io.StringIO()):
+                dispatcher.reconcile(REPOSITORY, api_call=mock.Mock())
+
+        self.assertEqual(dispatch.call_count, 2)
+        self.assertEqual(
+            [call.args[2] for call in dispatch.call_args_list],
+            list(dispatcher.TARGETS),
+        )
 
     def test_reconcile_suppresses_existing_context_independently(self) -> None:
         verified = dispatcher.VerifiedPullRequest(7, HEAD, BASE, MERGE)
@@ -817,10 +863,15 @@ class DispatcherTests(unittest.TestCase):
         self.assertIn("permissions: {}", signal_workflow)
         self.assertNotIn("actions/checkout", signal_workflow)
 
-        for workflow_name in ("lab-ci-cat8kv.yaml", "lab-ci-cat9k.yaml"):
+        expected_contexts = {
+            "lab-ci-cat8kv.yaml": "lab-ci-next / cat8kv",
+            "lab-ci-cat9k.yaml": "lab-ci-next / cat9k",
+        }
+        for workflow_name, expected_context in expected_contexts.items():
             wrapper = (
                 repository_root / ".github/workflows" / workflow_name
             ).read_text()
+            self.assertIn(f"STATUS_CONTEXT: {expected_context}", wrapper)
             self.assertIn("expected_head_sha:", wrapper)
             self.assertIn("expected_base_sha:", wrapper)
             self.assertIn("expected_merge_sha:", wrapper)
