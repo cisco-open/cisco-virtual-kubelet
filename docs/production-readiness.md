@@ -194,6 +194,13 @@ Goal: keep horizontal scaling aligned with Virtual Kubelet instead of forcing a
 single central aggregator.
 
 - Preserve per-device VK workers as the primary runtime unit.
+- Enforce exclusive app-runtime ownership per physical device identity before
+  pod lifecycle and dangling-app cleanup begin. Duplicate or aliased endpoints
+  must fail closed; otherwise a second worker can treat apps owned by the
+  incumbent virtual node as dangling and remove them.
+- Until that guard exists, require a non-overlapping handoff: stop the incumbent
+  completely, retain its node identity when preserving existing Pods, and only
+  then start the replacement.
 - Use topology labels and worker capability status for placement, upgrades, and
   debugging.
 - Add per-device concurrency limits and session locks for device-facing calls.
@@ -225,6 +232,8 @@ NX-OS can be called production-ready only when all of the following are true:
 
 - Branch-image lab deployment is repeatable.
 - App-hosting lifecycle is tested against a real NX-OS target.
+- Exclusive physical-device ownership is enforced before pod lifecycle starts,
+  with duplicate and aliased endpoints covered by fail-closed tests.
 - NX-OS app-hosting slot limits are documented per platform and reflected in
   `resourceLimits.others.maxApps` before enabling higher pod density.
 - At least one DME write family is live-tested with cleanup in CI.
