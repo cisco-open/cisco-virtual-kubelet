@@ -95,6 +95,9 @@ func NewAppHostingProvider(
 			setter.SetEventRecorder(eventRecorder)
 		}
 	}
+	if setter, ok := driver.(drivers.PodResourceListerSetter); ok {
+		setter.SetPodResourceListers(vkCfg.Secrets, vkCfg.ConfigMaps)
+	}
 	return &AppHostingProvider{
 		ctx:                    ctx,
 		deviceSpec:             deviceSpec,

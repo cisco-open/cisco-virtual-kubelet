@@ -134,6 +134,15 @@ type notifierDriver struct {
 	deleteCalls        int32
 	deleteBlock        <-chan struct{}
 	deleteDone         chan<- struct{}
+	resourceSetCalls   int
+	resourceSecrets    corev1listers.SecretLister
+	resourceConfigMaps corev1listers.ConfigMapLister
+}
+
+func (d *notifierDriver) SetPodResourceListers(secrets corev1listers.SecretLister, configMaps corev1listers.ConfigMapLister) {
+	d.resourceSetCalls++
+	d.resourceSecrets = secrets
+	d.resourceConfigMaps = configMaps
 }
 
 func (d *notifierDriver) DeployPod(context.Context, *v1.Pod, corev1listers.SecretNamespaceLister, corev1listers.ConfigMapNamespaceLister) error {
@@ -167,6 +176,28 @@ func (d *notifierDriver) DeletePod(context.Context, *v1.Pod) error {
 		}
 	}
 	return nil
+}
+
+func TestNewAppHostingProviderSuppliesPodResourceListers(t *testing.T) {
+	secretLister := corev1listers.NewSecretLister(cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{}))
+	configMapLister := corev1listers.NewConfigMapLister(cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{}))
+	driver := &notifierDriver{}
+	if _, err := NewAppHostingProvider(
+		context.Background(),
+		&ciskov1.DeviceSpec{},
+		nodeutil.ProviderConfig{Secrets: secretLister, ConfigMaps: configMapLister},
+		driver,
+		nil,
+		nil,
+	); err != nil {
+		t.Fatalf("NewAppHostingProvider: %v", err)
+	}
+	if driver.resourceSetCalls != 1 {
+		t.Fatalf("SetPodResourceListers calls=%d, want 1", driver.resourceSetCalls)
+	}
+	if driver.resourceSecrets != secretLister || driver.resourceConfigMaps != configMapLister {
+		t.Fatal("NewAppHostingProvider did not supply the configured informer listers")
+	}
 }
 
 func TestGetPodUsesProviderListForExistence(t *testing.T) {

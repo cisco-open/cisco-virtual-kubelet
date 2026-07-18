@@ -35,8 +35,7 @@ const defaultNXOSMaxAppSlots = 4
 const nxosMaxAppsResourceKey = "maxApps"
 
 func (d *NXOSDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister corev1listers.SecretNamespaceLister, configMapLister corev1listers.ConfigMapNamespaceLister) error {
-	d.secretLister = secretLister
-	d.configLister = configMapLister
+	d.rememberPodResourceListers(pod.Namespace, secretLister, configMapLister)
 	appConfigs, err := d.convertPodToAppConfigs(pod)
 	if err != nil {
 		return fmt.Errorf("failed to convert pod to NX-OS app configs: %w", err)
@@ -146,7 +145,7 @@ func (d *NXOSDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 func (d *NXOSDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, error) {
 	observed := d.observePodApps(ctx, pod)
 	if len(observed) == 0 {
-		if pod.DeletionTimestamp == nil && d.secretLister != nil && d.configLister != nil {
+		if pod.DeletionTimestamp == nil && d.hasPodResourceListers(pod.Namespace) {
 			d.scheduleConvergence(pod, observed)
 			out := pod.DeepCopy()
 			setPodStatus(d.config.Address, out, observed)
@@ -229,6 +228,15 @@ func (d *NXOSDriver) convergePodApps(ctx context.Context, pod *v1.Pod, observed 
 	for _, app := range observed {
 		cfg, ok := desiredConfigs[app.ContainerName]
 		if !ok {
+			// A DEPLOYED app must be configured before activation. If desired
+			// rendering failed, the fallback below has no authoritative resource
+			// or Docker options; applying it would erase the app's real config.
+			// Leave the app deactivated and retry when the Kubernetes pod can be
+			// rendered safely.
+			if app.State == "DEPLOYED" {
+				log.G(ctx).Warnf("NX-OS app %s is DEPLOYED but desired configuration is unavailable; refusing to activate with empty app config", app.ID)
+				continue
+			}
 			cfg = nxosAppConfig{
 				AppID:     app.ID,
 				Container: app.ContainerName,
@@ -325,6 +333,13 @@ func (d *NXOSDriver) advanceAppState(ctx context.Context, cfg *nxosAppConfig, st
 		return nil
 	case "DEPLOYED":
 		return d.runAppAction(ctx, cfg.AppID, "activate", func(actionCtx context.Context) error {
+			// NX-OS install/uninstall owns the application package lifecycle and
+			// can reset the per-app stanza. Apply vNIC, resource, and Docker
+			// options after install reaches DEPLOYED and immediately before
+			// activation validates those requests.
+			if err := d.ensureAppConfig(actionCtx, cfg); err != nil {
+				return err
+			}
 			if err := d.appCommand(actionCtx, fmt.Sprintf("app-hosting activate appid %s", cfg.AppID)); err != nil {
 				return fmt.Errorf("nxos activate app %s: %w", cfg.AppID, err)
 			}
@@ -342,9 +357,6 @@ func (d *NXOSDriver) advanceAppState(ctx context.Context, cfg *nxosAppConfig, st
 			return fmt.Errorf("nxos app %s has no observed state and no image path for install", cfg.AppID)
 		}
 		return d.runAppAction(ctx, cfg.AppID, "install", func(actionCtx context.Context) error {
-			if err := d.ensureAppConfig(actionCtx, cfg); err != nil {
-				return err
-			}
 			if err := d.appCommand(actionCtx, fmt.Sprintf("app-hosting install appid %s package %s", cfg.AppID, cfg.ImagePath)); err != nil {
 				return fmt.Errorf("nxos install app %s: %w", cfg.AppID, err)
 			}

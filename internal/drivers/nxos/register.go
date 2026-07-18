@@ -28,6 +28,8 @@ import (
 	nxoswriters "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/writers"
 )
 
+var _ drivers.PodResourceListerSetter = (*NXOSDriver)(nil)
+
 // init wires NX-OS into both the apphosting and configdriver registries.
 func init() {
 	drivers.Register(v1alpha1.DeviceDriverNXOS,
