@@ -22,6 +22,8 @@ wrappers. It deliberately does not consume raw Argo objects or pod logs.
 Required environment variables:
   REPOSITORY  Current ``owner/repo`` (status and comment destination)
   HEAD_SHA    Verified PR head SHA to which statuses were posted
+  BASE_SHA    Verified base SHA used by both lab workflows
+  MERGE_SHA   Verified prospective merge SHA tested by both lab workflows
   PR_NUMBER   Verified open PR number
   GH_TOKEN    Built-in token for this repository
 """
@@ -44,6 +46,8 @@ from typing import Any
 GITHUB_API = "https://api.github.com"
 EVIDENCE_SCHEMA = "cvk-lab-evidence/v1"
 COMMENT_MARKER = "<!-- lab-ci-next-report -->"
+GITHUB_ACTIONS_BOT_ID = 41_898_282
+TERMINAL_STATES = frozenset({"success", "failure", "error"})
 
 CONTEXTS: tuple[dict[str, str], ...] = (
     {
@@ -154,9 +158,15 @@ def api(
     return json.loads(payload) if payload else None
 
 
-def latest_status_per_context(repository: str, sha: str) -> dict[str, dict[str, Any]]:
-    """Return the newest native lab status for each context."""
+def latest_status_per_context(
+    repository: str,
+    sha: str,
+    base_sha: str,
+    merge_sha: str,
+) -> dict[str, dict[str, Any]]:
+    """Return each newest trusted status for this exact prospective merge."""
     wanted = {entry["context"] for entry in CONTEXTS}
+    expected_pin = f"base={base_sha}; merge={merge_sha}"
     latest: dict[str, dict[str, Any]] = {}
     for page in range(1, 11):
         statuses = api(
@@ -164,11 +174,27 @@ def latest_status_per_context(repository: str, sha: str) -> dict[str, dict[str, 
         ) or []
         for status in statuses:
             context = status.get("context")
-            if context in wanted and context not in latest:
+            creator = status.get("creator") or {}
+            description = str(status.get("description") or "")
+            if (
+                context in wanted
+                and context not in latest
+                and creator.get("id") == GITHUB_ACTIONS_BOT_ID
+                and expected_pin in description
+            ):
                 latest[context] = status
         if wanted.issubset(latest) or len(statuses) < 100:
             break
     return latest
+
+
+def all_contexts_terminal(latest: dict[str, dict[str, Any]]) -> bool:
+    """Return true only when every expected native lab context has finished."""
+    return all(
+        str((latest.get(entry["context"]) or {}).get("state") or "")
+        in TERMINAL_STATES
+        for entry in CONTEXTS
+    )
 
 
 def run_id_from_target_url(url: str) -> int | None:
@@ -593,11 +619,21 @@ def upsert_comment(repository: str, pr_number: str, body: str) -> None:
         )
 
 
-def validate_inputs(repository: str, head_sha: str, pr_number: str) -> None:
+def validate_inputs(
+    repository: str,
+    head_sha: str,
+    base_sha: str,
+    merge_sha: str,
+    pr_number: str,
+) -> None:
     if not REPOSITORY_RE.fullmatch(repository):
         raise ValueError("REPOSITORY must be an owner/repo name")
     if not SHA_RE.fullmatch(head_sha):
         raise ValueError("HEAD_SHA must be a 40-character lowercase hex SHA")
+    if not SHA_RE.fullmatch(base_sha):
+        raise ValueError("BASE_SHA must be a 40-character lowercase hex SHA")
+    if not SHA_RE.fullmatch(merge_sha):
+        raise ValueError("MERGE_SHA must be a 40-character lowercase hex SHA")
     if not PR_RE.fullmatch(pr_number):
         raise ValueError("PR_NUMBER must be a positive integer")
 
@@ -609,7 +645,14 @@ def pr_still_has_head(repository: str, pr_number: str, head_sha: str) -> bool:
 
 
 def main() -> int:
-    required = ("REPOSITORY", "HEAD_SHA", "PR_NUMBER", "GH_TOKEN")
+    required = (
+        "REPOSITORY",
+        "HEAD_SHA",
+        "BASE_SHA",
+        "MERGE_SHA",
+        "PR_NUMBER",
+        "GH_TOKEN",
+    )
     missing = [name for name in required if not os.environ.get(name)]
     if missing:
         print(f"error: missing required environment: {', '.join(missing)}", file=sys.stderr)
@@ -617,13 +660,28 @@ def main() -> int:
 
     repository = os.environ["REPOSITORY"]
     head_sha = os.environ["HEAD_SHA"]
+    base_sha = os.environ["BASE_SHA"]
+    merge_sha = os.environ["MERGE_SHA"]
     pr_number = os.environ["PR_NUMBER"]
     try:
-        validate_inputs(repository, head_sha, pr_number)
+        validate_inputs(repository, head_sha, base_sha, merge_sha, pr_number)
         if not pr_still_has_head(repository, pr_number, head_sha):
             print("notice: PR head changed or PR closed; skipping stale report")
             return 0
-        latest = latest_status_per_context(repository, head_sha)
+        latest = latest_status_per_context(
+            repository,
+            head_sha,
+            base_sha,
+            merge_sha,
+        )
+        if not all_contexts_terminal(latest):
+            states = ", ".join(
+                f"{entry['context']}="
+                f"{(latest.get(entry['context']) or {}).get('state', 'missing')}"
+                for entry in CONTEXTS
+            )
+            print(f"notice: waiting for terminal native lab statuses ({states})")
+            return 0
         report = render_report(repository, head_sha, latest)
         upsert_comment(repository, pr_number, report)
     except (ValueError, json.JSONDecodeError, zipfile.BadZipFile) as error:
