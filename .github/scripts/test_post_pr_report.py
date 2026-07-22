@@ -33,6 +33,10 @@ SPEC.loader.exec_module(reporter)
 
 
 class ReporterTests(unittest.TestCase):
+    BASE_SHA = "b" * 40
+    HEAD_SHA = "a" * 40
+    MERGE_SHA = "c" * 40
+
     def test_only_native_lab_contexts_are_reported(self) -> None:
         contexts = [entry["context"] for entry in reporter.CONTEXTS]
         self.assertEqual(
@@ -324,6 +328,159 @@ class ReporterTests(unittest.TestCase):
         self.assertNotIn("Unit tests", body)
         self.assertNotIn("<!-- lab-ci-report:", body)
 
+    def test_latest_statuses_require_actions_bot_and_exact_merge_pin(self) -> None:
+        pin = f"base={self.BASE_SHA}; merge={self.MERGE_SHA}"
+        statuses = [
+            {
+                "context": "lab-ci-next / cat8kv",
+                "state": "success",
+                "description": pin,
+                "creator": {"id": 1234},
+            },
+            {
+                "context": "lab-ci-next / cat8kv",
+                "state": "success",
+                "description": f"base={'d' * 40}; merge={'e' * 40}",
+                "creator": {"id": reporter.GITHUB_ACTIONS_BOT_ID},
+            },
+            {
+                "context": "lab-ci-next / cat8kv",
+                "state": "failure",
+                "description": f"Cat8kv failed; {pin}",
+                "creator": {"id": reporter.GITHUB_ACTIONS_BOT_ID},
+            },
+            {
+                "context": "lab-ci-next / cat9k",
+                "state": "success",
+                "description": f"Cat9k passed; {pin}",
+                "creator": {"id": reporter.GITHUB_ACTIONS_BOT_ID},
+            },
+        ]
+
+        with mock.patch.object(reporter, "api", return_value=statuses):
+            latest = reporter.latest_status_per_context(
+                "cisco-open/repo",
+                self.HEAD_SHA,
+                self.BASE_SHA,
+                self.MERGE_SHA,
+            )
+
+        self.assertEqual(latest["lab-ci-next / cat8kv"]["state"], "failure")
+        self.assertEqual(latest["lab-ci-next / cat9k"]["state"], "success")
+
+    def test_latest_statuses_continue_past_untrusted_first_page(self) -> None:
+        pin = f"base={self.BASE_SHA}; merge={self.MERGE_SHA}"
+        untrusted = [
+            {
+                "context": "lab-ci-next / cat8kv",
+                "state": "success",
+                "description": pin,
+                "creator": {"id": 1234},
+            }
+            for _ in range(100)
+        ]
+        trusted = [
+            {
+                "context": entry["context"],
+                "state": "success",
+                "description": pin,
+                "creator": {"id": reporter.GITHUB_ACTIONS_BOT_ID},
+            }
+            for entry in reporter.CONTEXTS
+        ]
+
+        with mock.patch.object(reporter, "api", side_effect=[untrusted, trusted]) as api:
+            latest = reporter.latest_status_per_context(
+                "cisco-open/repo",
+                self.HEAD_SHA,
+                self.BASE_SHA,
+                self.MERGE_SHA,
+            )
+
+        self.assertEqual(len(latest), len(reporter.CONTEXTS))
+        self.assertEqual(api.call_count, 2)
+
+    def test_terminal_barrier_requires_every_context(self) -> None:
+        cat8kv = {"state": "success"}
+        cat9k = {"state": "failure"}
+        self.assertFalse(reporter.all_contexts_terminal({}))
+        self.assertFalse(
+            reporter.all_contexts_terminal({"lab-ci-next / cat8kv": cat8kv})
+        )
+        self.assertFalse(
+            reporter.all_contexts_terminal(
+                {
+                    "lab-ci-next / cat8kv": cat8kv,
+                    "lab-ci-next / cat9k": {"state": "pending"},
+                }
+            )
+        )
+        self.assertTrue(
+            reporter.all_contexts_terminal(
+                {
+                    "lab-ci-next / cat8kv": cat8kv,
+                    "lab-ci-next / cat9k": cat9k,
+                }
+            )
+        )
+
+    def test_main_skips_report_while_any_context_is_not_terminal(self) -> None:
+        environment = {
+            "REPOSITORY": "cisco-open/repo",
+            "HEAD_SHA": self.HEAD_SHA,
+            "BASE_SHA": self.BASE_SHA,
+            "MERGE_SHA": self.MERGE_SHA,
+            "PR_NUMBER": "147",
+            "GH_TOKEN": "token",
+        }
+        latest = {"lab-ci-next / cat8kv": {"state": "success"}}
+        with (
+            mock.patch.dict(reporter.os.environ, environment, clear=True),
+            mock.patch.object(reporter, "pr_still_has_head", return_value=True),
+            mock.patch.object(
+                reporter,
+                "latest_status_per_context",
+                return_value=latest,
+            ),
+            mock.patch.object(reporter, "render_report") as render,
+            mock.patch.object(reporter, "upsert_comment") as upsert,
+        ):
+            result = reporter.main()
+
+        self.assertEqual(result, 0)
+        render.assert_not_called()
+        upsert.assert_not_called()
+
+    def test_main_upserts_once_all_contexts_are_terminal(self) -> None:
+        environment = {
+            "REPOSITORY": "cisco-open/repo",
+            "HEAD_SHA": self.HEAD_SHA,
+            "BASE_SHA": self.BASE_SHA,
+            "MERGE_SHA": self.MERGE_SHA,
+            "PR_NUMBER": "147",
+            "GH_TOKEN": "token",
+        }
+        latest = {
+            "lab-ci-next / cat8kv": {"state": "success"},
+            "lab-ci-next / cat9k": {"state": "error"},
+        }
+        with (
+            mock.patch.dict(reporter.os.environ, environment, clear=True),
+            mock.patch.object(reporter, "pr_still_has_head", return_value=True),
+            mock.patch.object(
+                reporter,
+                "latest_status_per_context",
+                return_value=latest,
+            ),
+            mock.patch.object(reporter, "render_report", return_value="report") as render,
+            mock.patch.object(reporter, "upsert_comment") as upsert,
+        ):
+            result = reporter.main()
+
+        self.assertEqual(result, 0)
+        render.assert_called_once_with("cisco-open/repo", self.HEAD_SHA, latest)
+        upsert.assert_called_once_with("cisco-open/repo", "147", "report")
+
     def test_user_preseeded_marker_is_not_patched(self) -> None:
         user_comment = {
             "id": 41,
@@ -360,7 +517,31 @@ class ReporterTests(unittest.TestCase):
 
     def test_validate_inputs_rejects_non_numeric_pr(self) -> None:
         with self.assertRaises(ValueError):
-            reporter.validate_inputs("cisco-open/repo", "a" * 40, "1; rm -rf")
+            reporter.validate_inputs(
+                "cisco-open/repo",
+                self.HEAD_SHA,
+                self.BASE_SHA,
+                self.MERGE_SHA,
+                "1; rm -rf",
+            )
+
+    def test_validate_inputs_rejects_invalid_base_or_merge_sha(self) -> None:
+        with self.assertRaisesRegex(ValueError, "BASE_SHA"):
+            reporter.validate_inputs(
+                "cisco-open/repo",
+                self.HEAD_SHA,
+                "not-a-sha",
+                self.MERGE_SHA,
+                "147",
+            )
+        with self.assertRaisesRegex(ValueError, "MERGE_SHA"):
+            reporter.validate_inputs(
+                "cisco-open/repo",
+                self.HEAD_SHA,
+                self.BASE_SHA,
+                "not-a-sha",
+                "147",
+            )
 
     def test_stale_pr_head_is_detected(self) -> None:
         with mock.patch.object(
