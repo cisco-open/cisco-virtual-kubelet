@@ -154,6 +154,7 @@ func (c *nxapiClient) conf(ctx context.Context, commands ...string) (string, err
 func (c *nxapiClient) exec(ctx context.Context, typ, input string) (string, error) {
 	unlock := c.lockSession()
 	defer unlock()
+	errorContext := nxapiErrorContext(typ, input)
 	payload := nxapiRequest{InsAPI: nxapiRequestBody{
 		Version:      nxapiVersion,
 		Type:         typ,
@@ -176,24 +177,41 @@ func (c *nxapiClient) exec(ctx context.Context, typ, input string) (string, erro
 
 	resp, err := c.httpClient().Do(req)
 	if err != nil {
-		return "", fmt.Errorf("nxapi %s %q: %w", typ, input, err)
+		return "", fmt.Errorf("%s: %w", errorContext, err)
 	}
 	defer resp.Body.Close()
 	raw, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
-		return "", fmt.Errorf("nxapi %s %q: read response: %w", typ, input, readErr)
+		return "", fmt.Errorf("%s: read response: %w", errorContext, readErr)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("nxapi %s %q: HTTP %d: %s", typ, input, resp.StatusCode, strings.TrimSpace(string(raw)))
+		if isNXAPIConfigType(typ) {
+			// A cli_conf request can contain resolved Kubernetes Secret values
+			// in Docker run options, and an HTTP error body can echo the request.
+			// Keep both out of errors that flow to controller logs and Events.
+			return "", fmt.Errorf("%s: HTTP %d", errorContext, resp.StatusCode)
+		}
+		return "", fmt.Errorf("%s: HTTP %d: %s", errorContext, resp.StatusCode, strings.TrimSpace(string(raw)))
 	}
-	out, err := parseNXAPIResponse(raw)
+	out, err := parseNXAPIResponse(raw, typ)
 	if err != nil {
-		return "", fmt.Errorf("nxapi %s %q: %w", typ, input, err)
+		return "", fmt.Errorf("%s: %w", errorContext, err)
 	}
 	return out, nil
 }
 
-func parseNXAPIResponse(raw []byte) (string, error) {
+func nxapiErrorContext(typ, input string) string {
+	if isNXAPIConfigType(typ) {
+		return fmt.Sprintf("nxapi %s", typ)
+	}
+	return fmt.Sprintf("nxapi %s %q", typ, input)
+}
+
+func isNXAPIConfigType(typ string) bool {
+	return strings.EqualFold(typ, "cli_conf")
+}
+
+func parseNXAPIResponse(raw []byte, typ string) (string, error) {
 	var resp nxapiResponse
 	if err := json.Unmarshal(raw, &resp); err != nil {
 		return "", err
@@ -207,16 +225,54 @@ func parseNXAPIResponse(raw []byte) (string, error) {
 	}
 	var parts []string
 	for _, out := range outputs {
-		if out.Code != "" && out.Code != "200" {
-			return "", fmt.Errorf("command %q failed: code=%s msg=%s body=%s",
-				out.Input, out.Code, out.Msg, bodyToString(out.Body))
-		}
 		body := bodyToString(out.Body)
+		if out.Code != "" && out.Code != "200" {
+			return "", nxapiOutputError(typ, out, body)
+		}
+		// NX-API can return an HTTP 200 and a successful envelope while the
+		// configuration command itself failed. NX-OS reports that semantic
+		// failure in a cli_conf string body beginning with "ERROR:". Keep the
+		// check type-scoped so operational show output containing the same text
+		// remains valid data.
+		if isNXAPIConfigType(typ) && nxapiCLIErrorBody(body) {
+			return "", nxapiOutputError(typ, out, body)
+		}
 		if body != "" {
 			parts = append(parts, body)
 		}
 	}
 	return strings.Join(parts, "\n"), nil
+}
+
+func nxapiOutputError(typ string, out nxapiOutput, body string) error {
+	if isNXAPIConfigType(typ) {
+		// Never include cli_conf input or body: app-hosting configuration can
+		// carry resolved SecretKeyRef values, and NX-API may echo input in any
+		// free-form response field. Only a three-digit protocol status is safe.
+		if code := nxapiNumericCode(out.Code); code != "" {
+			return fmt.Errorf("configuration command failed: code=%s", code)
+		}
+		return fmt.Errorf("configuration command failed")
+	}
+	return fmt.Errorf("command %q failed: code=%s msg=%s body=%s",
+		out.Input, out.Code, out.Msg, body)
+}
+
+func nxapiNumericCode(code string) string {
+	code = strings.TrimSpace(code)
+	if len(code) != 3 {
+		return ""
+	}
+	for _, r := range code {
+		if r < '0' || r > '9' {
+			return ""
+		}
+	}
+	return code
+}
+
+func nxapiCLIErrorBody(body string) bool {
+	return strings.HasPrefix(strings.ToUpper(strings.TrimSpace(body)), "ERROR:")
 }
 
 func (c *nxapiClient) lockSession() func() {

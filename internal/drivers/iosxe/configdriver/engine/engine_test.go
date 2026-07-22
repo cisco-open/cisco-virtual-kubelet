@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
@@ -141,6 +142,16 @@ type fakePruneWriterNoKE struct {
 	pruneCalls int
 }
 
+type fakeContextualWriter struct {
+	*fakeWriter
+	contexts []enginewriters.DiffContext
+}
+
+func (w *fakeContextualWriter) DiffWithContext(ctx enginewriters.DiffContext, desired, observed any) ([]transport.Op, error) {
+	w.contexts = append(w.contexts, ctx)
+	return w.fakeWriter.Diff(desired, observed)
+}
+
 func (w *fakePruneWriterNoKE) PruneDiff(desired, observed any) ([]transport.Op, error) {
 	w.pruneCalls++
 	return nil, nil
@@ -187,6 +198,35 @@ func TestReconcileInSyncWhenDiffEmpty(t *testing.T) {
 	}
 }
 
+func TestReconcilePassesPlatformAndModelContextToWriter(t *testing.T) {
+	w := &fakeContextualWriter{fakeWriter: &fakeWriter{family: "interface_ethernet"}}
+	e := &Engine{
+		Platform:      "nxos",
+		DeviceVersion: "10.3(9)",
+		Transport:     &stubTransport{},
+		Lookup:        func(f, _ string) writers.SectionWriter { return w },
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "leaf-01",
+		ManagedFamilies: []string{"interface_ethernet"},
+		Configuration:   map[string]any{"interface_ethernet": map[string]any{}},
+		ModelVersion:    "0.3.0",
+		DriftPolicy:     configv1alpha1.DriftPolicyRevert,
+	}
+
+	result := e.Reconcile(context.Background(), res)
+	if result.Err != nil || result.Phase != PhaseInSync {
+		t.Fatalf("Reconcile phase=%s err=%v", result.Phase, result.Err)
+	}
+	if len(w.contexts) != 1 {
+		t.Fatalf("contextual Diff calls=%d", len(w.contexts))
+	}
+	got := w.contexts[0]
+	if got.Platform != "nxos" || got.DeviceVersion != "10.3(9)" || got.ModelVersion != "0.3.0" {
+		t.Fatalf("DiffContext=%+v", got)
+	}
+}
+
 func TestReconcileStrictYANGValidationBlocksApply(t *testing.T) {
 	w := &fakeWriter{
 		family: "vlan",
@@ -221,7 +261,7 @@ func TestReconcileStrictYANGValidationBlocksApply(t *testing.T) {
 	if tr.mutated != 0 {
 		t.Fatalf("transport Mutate called %d times; strict validation should block before mutation", tr.mutated)
 	}
-	if len(r.FamilyStatuses) != 1 || !strings.Contains(r.FamilyStatuses[0].Message, "YANG validation") {
+	if len(r.FamilyStatuses) != 1 || !strings.Contains(r.FamilyStatuses[0].Message, "operation validation") {
 		t.Fatalf("family status missing validation message: %#v", r.FamilyStatuses)
 	}
 }

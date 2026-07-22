@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package provider
 
@@ -19,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,6 +38,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 	nxoswriters "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/writers"
 )
@@ -38,6 +46,25 @@ import (
 type noopErrLogger struct{}
 
 func (noopErrLogger) Error(error, string, ...any) {}
+
+func validNXOSModelSource() *configv1alpha1.NetAsCodeModelSource {
+	contract := nxosNetAsCodeContracts["0.3.0"]
+	return &configv1alpha1.NetAsCodeModelSource{
+		Format:         configv1alpha1.NetAsCodeModelFormatNXOS,
+		ModelVersion:   contract.ModelVersion,
+		SchemaDigest:   contract.SchemaDigest,
+		Resolved:       true,
+		Exporter:       "cvk-test@1.0.0",
+		SourceRevision: "0123456789abcdef0123456789abcdef01234567",
+	}
+}
+
+func testedNXOSWriter(family, release string) enginewriters.SectionWriter {
+	if release == "" {
+		release = "10.3(9)"
+	}
+	return nxoswriters.GetForRelease(family, release)
+}
 
 type fakeNXOSTransport struct {
 	hostname     string
@@ -246,7 +273,7 @@ func TestNXOSConfigReconcilerRecordsInSync(t *testing.T) {
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
 			ManagedFamilies: []string{"system"},
-			ModelSource:     &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			ModelSource:     validNXOSModelSource(),
 			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
 		},
 	}
@@ -260,7 +287,7 @@ func TestNXOSConfigReconcilerRecordsInSync(t *testing.T) {
 		Client:     c,
 		DeviceName: "leaf-01",
 		Transport:  tr,
-		Lookup:     nxoswriters.GetForRelease,
+		Lookup:     testedNXOSWriter,
 	}
 	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}})
 	if err != nil {
@@ -284,6 +311,278 @@ func TestNXOSConfigReconcilerRecordsInSync(t *testing.T) {
 	}
 }
 
+func TestNXOSConfigReconcilerBlocksUnvalidatedDeviceVersionsBeforeFetch(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		version string
+		reason  string
+	}{
+		{name: "version pending", reason: "DeviceVersionPending"},
+		{name: "unsupported version", version: "10.6(1)", reason: "UnsupportedDeviceVersion"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			scheme := newTestScheme(t)
+			raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01"}}`)}
+			cr := &configv1alpha1.NXOSConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: "network", Generation: 1},
+				Spec: configv1alpha1.NXOSConfigSpec{
+					DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
+					ManagedFamilies: []string{"system"},
+					ModelSource:     validNXOSModelSource(),
+					Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
+				},
+			}
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+				WithObjects(cr).
+				Build()
+			tr := &fakeNXOSTransport{hostname: "old"}
+			r := &NXOSConfigReconciler{
+				Client:                c,
+				DeviceName:            "leaf-01",
+				Transport:             tr,
+				Lookup:                nxoswriters.GetForRelease,
+				DeviceVersion:         tc.version,
+				ValidateDeviceVersion: nxosschema.ValidateDeviceVersion,
+				IsUnsupportedVersion:  nxosschema.IsUnsupportedDeviceVersion,
+				RequireDeviceVersion:  true,
+			}
+			if _, err := r.Reconcile(context.Background(), ctrl.Request{
+				NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"},
+			}); err != nil {
+				t.Fatalf("Reconcile: %v", err)
+			}
+			if tr.fetches != 0 {
+				t.Fatalf("device configuration fetched %d time(s) while version was blocked", tr.fetches)
+			}
+			var got configv1alpha1.NXOSConfig
+			if err := c.Get(context.Background(), types.NamespacedName{Namespace: "network", Name: "leaf-config"}, &got); err != nil {
+				t.Fatalf("get updated: %v", err)
+			}
+			if got.Status.Phase != engine.PhasePending {
+				t.Fatalf("phase=%q, want %q", got.Status.Phase, engine.PhasePending)
+			}
+			if len(got.Status.Conditions) == 0 || got.Status.Conditions[0].Reason != tc.reason {
+				t.Fatalf("conditions=%#v, want reason %q", got.Status.Conditions, tc.reason)
+			}
+		})
+	}
+}
+
+func TestNXOSConfigReconcilerRefreshRejectsNewUnsupportedVersion(t *testing.T) {
+	scheme := newTestScheme(t)
+	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01"}}`)}
+	cr := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: "network", Generation: 1},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies: []string{"system"},
+			ModelSource:     validNXOSModelSource(),
+			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+		WithObjects(cr).
+		Build()
+	tr := &fakeNXOSTransport{hostname: "old"}
+	r := &NXOSConfigReconciler{
+		Client:                c,
+		DeviceName:            "leaf-01",
+		Transport:             tr,
+		Lookup:                nxoswriters.GetForRelease,
+		DeviceVersion:         "10.3(9)",
+		FetchDeviceVersion:    func(context.Context, transport.Interface) string { return "10.6(1)" },
+		ValidateDeviceVersion: nxosschema.ValidateDeviceVersion,
+		IsUnsupportedVersion:  nxosschema.IsUnsupportedDeviceVersion,
+		ReleaseTagForVersion:  nxosschema.ReleaseTagForDeviceVersionString,
+		RequireDeviceVersion:  true,
+		SupportedYANGVersions: nxosschema.SupportedDeviceVersionSet(),
+		DefaultYANGVersion:    "10.3(9)",
+	}
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{
+		NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"},
+	}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if tr.fetches != 0 || tr.hostname != "old" {
+		t.Fatalf("configuration touched after unsupported refresh: fetches=%d hostname=%q", tr.fetches, tr.hostname)
+	}
+	var got configv1alpha1.NXOSConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "network", Name: "leaf-config"}, &got); err != nil {
+		t.Fatalf("get updated: %v", err)
+	}
+	if got.Status.Phase != engine.PhasePending || len(got.Status.Conditions) == 0 || got.Status.Conditions[0].Reason != "UnsupportedDeviceVersion" {
+		t.Fatalf("status=%#v", got.Status)
+	}
+}
+
+func TestNXOSConfigReconcilerRefreshFailsClosedWhenLiveVersionDisappears(t *testing.T) {
+	scheme := newTestScheme(t)
+	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01"}}`)}
+	cr := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: "network", Generation: 1},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies: []string{"system"},
+			ModelSource:     validNXOSModelSource(),
+			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+		WithObjects(cr).
+		Build()
+	tr := &fakeNXOSTransport{hostname: "old"}
+	r := &NXOSConfigReconciler{
+		Client:                c,
+		DeviceName:            "leaf-01",
+		Transport:             tr,
+		Lookup:                nxoswriters.GetForRelease,
+		DeviceVersion:         "10.3(9)",
+		DefaultYANGVersion:    "10.3(9)",
+		FetchDeviceVersion:    func(context.Context, transport.Interface) string { return "" },
+		ValidateDeviceVersion: nxosschema.ValidateDeviceVersion,
+		IsUnsupportedVersion:  nxosschema.IsUnsupportedDeviceVersion,
+		ReleaseTagForVersion:  nxosschema.ReleaseTagForDeviceVersionString,
+		RequireDeviceVersion:  true,
+		SupportedYANGVersions: nxosschema.SupportedDeviceVersionSet(),
+	}
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{
+		NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"},
+	}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if tr.fetches != 0 || tr.hostname != "old" {
+		t.Fatalf("configuration touched with unavailable live version: fetches=%d hostname=%q", tr.fetches, tr.hostname)
+	}
+	if got := r.common().deviceVersion(); got != "" {
+		t.Fatalf("stale deviceVersion retained: %q", got)
+	}
+	if got := r.common().defaultYANGVersion(); got != "" {
+		t.Fatalf("stale defaultYANGVersion retained: %q", got)
+	}
+	var got configv1alpha1.NXOSConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "network", Name: "leaf-config"}, &got); err != nil {
+		t.Fatalf("get updated: %v", err)
+	}
+	if got.Status.Phase != engine.PhasePending || len(got.Status.Conditions) == 0 || got.Status.Conditions[0].Reason != "DeviceVersionPending" {
+		t.Fatalf("status=%#v", got.Status)
+	}
+}
+
+func TestNXOSConfigReconcilerRefreshRecoversPendingVersion(t *testing.T) {
+	t.Setenv(nxosschema.EnvAllowExperimentalReleases, "true")
+	scheme := newTestScheme(t)
+	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01"}}`)}
+	cr := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: "network", Generation: 1},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies: []string{"system"},
+			ModelSource:     validNXOSModelSource(),
+			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+		WithObjects(cr).
+		Build()
+	tr := &fakeNXOSTransport{hostname: "old"}
+	reportedVersion := "10.3(9)"
+	r := &NXOSConfigReconciler{
+		Client:                c,
+		DeviceName:            "leaf-01",
+		Transport:             tr,
+		Lookup:                nxoswriters.GetForRelease,
+		FetchDeviceVersion:    func(context.Context, transport.Interface) string { return reportedVersion },
+		ValidateDeviceVersion: nxosschema.ValidateDeviceVersion,
+		IsUnsupportedVersion:  nxosschema.IsUnsupportedDeviceVersion,
+		ReleaseTagForVersion:  nxosschema.ReleaseTagForDeviceVersionString,
+		RequireDeviceVersion:  true,
+		SupportedYANGVersions: nxosschema.SupportedDeviceVersionSet(),
+	}
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{
+		NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"},
+	}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if tr.hostname != "leaf-01" {
+		t.Fatalf("hostname=%q, want recovered apply", tr.hostname)
+	}
+	if got := r.common().deviceVersion(); got != "10.3(9)" {
+		t.Fatalf("deviceVersion=%q", got)
+	}
+	if got := r.common().defaultYANGVersion(); got != "10.3(9)" {
+		t.Fatalf("defaultYANGVersion=%q", got)
+	}
+
+	// A supported-to-supported software change must invalidate the intent
+	// hash and force immediate Fetch/Diff/Verify even when the CR generation
+	// and canonical configuration are unchanged.
+	reportedVersion = "10.5(4)"
+	tr.fetches = 0
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{
+		NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"},
+	}); err != nil {
+		t.Fatalf("Reconcile after supported upgrade: %v", err)
+	}
+	if tr.fetches == 0 {
+		t.Fatal("supported release change was hidden by the unchanged-intent short circuit")
+	}
+	var got configv1alpha1.NXOSConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "network", Name: "leaf-config"}, &got); err != nil {
+		t.Fatalf("get upgraded status: %v", err)
+	}
+	if got.Status.SourceYangVersion != "10.5(4)" {
+		t.Fatalf("sourceYangVersion=%q, want 10.5(4)", got.Status.SourceYangVersion)
+	}
+}
+
+func TestNXOSConfigReconcilerRejectsTargetReleaseDifferentFromLiveProfile(t *testing.T) {
+	scheme := newTestScheme(t)
+	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01"}}`)}
+	cr := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: "network", Generation: 1},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:         configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies:   []string{"system"},
+			TargetYangVersion: "10.5(4)",
+			ModelSource:       validNXOSModelSource(),
+			Source:            configv1alpha1.ConfigurationSource{Inline: &raw},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+		WithObjects(cr).
+		Build()
+	tr := &fakeNXOSTransport{hostname: "old"}
+	r := &NXOSConfigReconciler{
+		Client:                c,
+		DeviceName:            "leaf-01",
+		Transport:             tr,
+		Lookup:                nxoswriters.GetForRelease,
+		DeviceVersion:         "10.3(9)",
+		ValidateDeviceVersion: nxosschema.ValidateDeviceVersion,
+		IsUnsupportedVersion:  nxosschema.IsUnsupportedDeviceVersion,
+		RequireDeviceVersion:  true,
+	}
+	_, err := r.Reconcile(context.Background(), ctrl.Request{
+		NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "does not match live NX-OS") {
+		t.Fatalf("Reconcile error=%v, want target/live mismatch", err)
+	}
+	if tr.fetches != 0 || tr.hostname != "old" {
+		t.Fatalf("device touched for target/live mismatch: fetches=%d hostname=%q", tr.fetches, tr.hostname)
+	}
+}
+
 func TestNXOSConfigReconcilerAppliesFeatureFamilies(t *testing.T) {
 	scheme := newTestScheme(t)
 	raw := runtime.RawExtension{Raw: []byte(`{
@@ -302,7 +601,7 @@ func TestNXOSConfigReconcilerAppliesFeatureFamilies(t *testing.T) {
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
 			ManagedFamilies: []string{"feature", "feature_set"},
-			ModelSource:     &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			ModelSource:     validNXOSModelSource(),
 			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
 		},
 	}
@@ -319,7 +618,7 @@ func TestNXOSConfigReconcilerAppliesFeatureFamilies(t *testing.T) {
 		Client:      c,
 		DeviceName:  "leaf-01",
 		Transport:   tr,
-		Lookup:      nxoswriters.GetForRelease,
+		Lookup:      testedNXOSWriter,
 		FamilyOrder: nxosschema.FamilyOrder,
 	}
 	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}})
@@ -364,7 +663,6 @@ func TestNXOSConfigReconcilerRecordsInSyncFromFullNetAsCodeEnvelope(t *testing.T
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
 			ManagedFamilies: []string{"system"},
-			ModelSource:     &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
 			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
 		},
 	}
@@ -378,7 +676,7 @@ func TestNXOSConfigReconcilerRecordsInSyncFromFullNetAsCodeEnvelope(t *testing.T
 		Client:     c,
 		DeviceName: "leaf-01",
 		Transport:  tr,
-		Lookup:     nxoswriters.GetForRelease,
+		Lookup:     testedNXOSWriter,
 	}
 	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}})
 	if err != nil {
@@ -389,6 +687,38 @@ func TestNXOSConfigReconcilerRecordsInSyncFromFullNetAsCodeEnvelope(t *testing.T
 	}
 }
 
+func TestNXOSConfigReconcilerRejectsResolvedHierarchicalEnvelopeBeforeConfigFetch(t *testing.T) {
+	scheme := newTestScheme(t)
+	raw := runtime.RawExtension{Raw: []byte(`{
+		"nxos": {"devices": [{"name": "leaf-01", "configuration": {"system": {"hostname": "leaf-01"}}}]}
+	}`)}
+	cr := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: "network", Generation: 1},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies: []string{"system"},
+			ModelSource:     validNXOSModelSource(),
+			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+		WithObjects(cr).
+		Build()
+	tr := &fakeNXOSTransport{hostname: "old"}
+	r := &NXOSConfigReconciler{Client: c, DeviceName: "leaf-01", Transport: tr, Lookup: testedNXOSWriter}
+	_, err := r.Reconcile(context.Background(), ctrl.Request{
+		NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "payload is not flattened") {
+		t.Fatalf("Reconcile error=%v, want flattened-source rejection", err)
+	}
+	if tr.fetches != 0 || tr.hostname != "old" {
+		t.Fatalf("device touched for unresolved provenance: fetches=%d hostname=%q", tr.fetches, tr.hostname)
+	}
+}
+
 func TestNXOSConfigReconcilerReturnsResolveErrorAfterRecordingFailure(t *testing.T) {
 	scheme := newTestScheme(t)
 	cr := &configv1alpha1.NXOSConfig{
@@ -396,7 +726,7 @@ func TestNXOSConfigReconcilerReturnsResolveErrorAfterRecordingFailure(t *testing
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
 			ManagedFamilies: []string{"system"},
-			ModelSource:     &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			ModelSource:     validNXOSModelSource(),
 			Source: configv1alpha1.ConfigurationSource{
 				ConfigMapRef: &configv1alpha1.ConfigMapKeyRef{Name: "missing", Key: "config.yaml"},
 			},
@@ -430,6 +760,88 @@ func TestNXOSConfigReconcilerReturnsResolveErrorAfterRecordingFailure(t *testing
 	}
 }
 
+func TestNXOSConfigReconcilerRejectsUnpinnedModelContractBeforeDeviceFetch(t *testing.T) {
+	scheme := newTestScheme(t)
+	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01"}}`)}
+	modelSource := validNXOSModelSource()
+	modelSource.SchemaDigest = "sha256:" + strings.Repeat("0", 64)
+	cr := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: "network", Generation: 1},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies: []string{"system"},
+			ModelSource:     modelSource,
+			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
+		},
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithStatusSubresource(&configv1alpha1.NXOSConfig{}).
+		WithObjects(cr).
+		Build()
+	tr := &fakeNXOSTransport{hostname: "old"}
+	r := &NXOSConfigReconciler{
+		Client:     c,
+		DeviceName: "leaf-01",
+		Transport:  tr,
+		Lookup:     testedNXOSWriter,
+	}
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}})
+	if err == nil || !strings.Contains(err.Error(), "does not match modelVersion") {
+		t.Fatalf("Reconcile error=%v, want schema contract rejection", err)
+	}
+	if tr.fetches != 0 {
+		t.Fatalf("device fetched before model contract validation, fetches=%d", tr.fetches)
+	}
+}
+
+func TestNXOSStrictSourceValidatesBeforeRuntimeSecretOverlay(t *testing.T) {
+	scheme := newTestScheme(t)
+	raw := runtime.RawExtension{Raw: []byte(`{
+		"interfaces":{"ethernets":[{"id":"1/1","description":"public"}]}
+	}`)}
+	cr := &configv1alpha1.NXOSConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-config", Namespace: "network", Generation: 1},
+		Spec: configv1alpha1.NXOSConfigSpec{
+			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
+			ManagedFamilies: []string{"interface_ethernet"},
+			ModelSource:     validNXOSModelSource(),
+			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
+			SecretRefs: []configv1alpha1.FamilySecretRef{{
+				Family: "interface_ethernet", Name: "interface-overlay", Key: "config.yaml",
+			}},
+		},
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "interface-overlay", Namespace: "network"},
+		Data: map[string][]byte{
+			"config.yaml": []byte("interfaces:\n  - name: 1/1\n    description: secret-overlay\n"),
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cr, secret).Build()
+	r := &NXOSConfigReconciler{Client: c, DeviceName: "leaf-01"}
+
+	resolved, err := r.common().resolveIntent(context.Background(), cr)
+	if err != nil {
+		t.Fatalf("resolveIntent: %v", err)
+	}
+	if _, present := resolved.Configuration["interfaces"]; present {
+		t.Fatalf("canonical interfaces was not normalized: %#v", resolved.Configuration)
+	}
+	runtimeFamily, ok := resolved.Configuration["interface_ethernet"].(map[string]any)
+	if !ok {
+		t.Fatalf("runtime interface family has type %T", resolved.Configuration["interface_ethernet"])
+	}
+	interfaces, ok := runtimeFamily["interfaces"].([]any)
+	if !ok || len(interfaces) != 1 {
+		t.Fatalf("runtime interfaces=%#v", runtimeFamily["interfaces"])
+	}
+	item, _ := interfaces[0].(map[string]any)
+	if item["description"] != "secret-overlay" {
+		t.Fatalf("secret overlay was not applied after normalization: %#v", item)
+	}
+}
+
 func TestNXOSConfigReconcilerRejectsUnsupportedRollbackTo(t *testing.T) {
 	scheme := newTestScheme(t)
 	raw := runtime.RawExtension{Raw: []byte(`{"system":{"hostname":"leaf-01"}}`)}
@@ -452,7 +864,7 @@ func TestNXOSConfigReconcilerRejectsUnsupportedRollbackTo(t *testing.T) {
 		Client:     c,
 		DeviceName: "leaf-01",
 		Transport:  tr,
-		Lookup:     nxoswriters.GetForRelease,
+		Lookup:     testedNXOSWriter,
 	}
 	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}})
 	if err == nil || !strings.Contains(err.Error(), "spec.rollbackTo is not supported") {
@@ -496,7 +908,7 @@ func TestNXOSConfigReconcilerRejectsExplicitRevisionHistory(t *testing.T) {
 		Client:     c,
 		DeviceName: "leaf-01",
 		Transport:  tr,
-		Lookup:     nxoswriters.GetForRelease,
+		Lookup:     testedNXOSWriter,
 	}
 	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}})
 	if err == nil || !strings.Contains(err.Error(), "spec.revisionHistoryLimit is not supported") {
@@ -528,7 +940,7 @@ func TestNXOSConfigReconcilerRejectsUnsupportedManagedFamily(t *testing.T) {
 		Client:     c,
 		DeviceName: "leaf-01",
 		Transport:  tr,
-		Lookup:     nxoswriters.GetForRelease,
+		Lookup:     testedNXOSWriter,
 	}
 	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}})
 	if err == nil || !strings.Contains(err.Error(), "unsupported families") || !strings.Contains(err.Error(), "banner") {
@@ -588,7 +1000,7 @@ func TestNXOSConfigReconcilerRejectsInvalidManagedFamilies(t *testing.T) {
 				Client:     c,
 				DeviceName: "leaf-01",
 				Transport:  tr,
-				Lookup:     nxoswriters.GetForRelease,
+				Lookup:     testedNXOSWriter,
 			}
 			_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}})
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
@@ -619,7 +1031,7 @@ func TestNXOSConfigReconcilerRuntimeOptions(t *testing.T) {
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
 			ManagedFamilies: []string{"system"},
-			ModelSource:     &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			ModelSource:     validNXOSModelSource(),
 			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
 			WriteStartup:    true,
 		},
@@ -634,7 +1046,7 @@ func TestNXOSConfigReconcilerRuntimeOptions(t *testing.T) {
 		Client:        c,
 		DeviceName:    "leaf-01",
 		Transport:     tr,
-		Lookup:        nxoswriters.GetForRelease,
+		Lookup:        testedNXOSWriter,
 		DeviceVersion: "10.3(9)",
 	}
 	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}})
@@ -670,7 +1082,7 @@ func TestNXOSConfigReconcilerPrunesOwnedVLAN(t *testing.T) {
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:         configv1alpha1.DeviceRef{Name: "leaf-01"},
 			ManagedFamilies:   []string{"vlan"},
-			ModelSource:       &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			ModelSource:       validNXOSModelSource(),
 			Source:            configv1alpha1.ConfigurationSource{Inline: &raw},
 			PruneOnRelinquish: true,
 		},
@@ -688,7 +1100,7 @@ func TestNXOSConfigReconcilerPrunesOwnedVLAN(t *testing.T) {
 		Client:      c,
 		DeviceName:  "leaf-01",
 		Transport:   tr,
-		Lookup:      nxoswriters.GetForRelease,
+		Lookup:      testedNXOSWriter,
 		FamilyOrder: nxosschema.FamilyOrder,
 	}
 	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}})
@@ -730,7 +1142,7 @@ func TestNXOSConfigReconcilerIgnoresForeignNamespace(t *testing.T) {
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
 			ManagedFamilies: []string{"system"},
-			ModelSource:     &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			ModelSource:     validNXOSModelSource(),
 			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
 		},
 	}
@@ -745,7 +1157,7 @@ func TestNXOSConfigReconcilerIgnoresForeignNamespace(t *testing.T) {
 		DeviceName:      "leaf-01",
 		DeviceNamespace: "tenant-a",
 		Transport:       tr,
-		Lookup:          nxoswriters.GetForRelease,
+		Lookup:          testedNXOSWriter,
 	}
 	if _, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "tenant-b", Name: "leaf-config"}}); err != nil {
 		t.Fatalf("Reconcile: %v", err)
@@ -804,7 +1216,7 @@ func TestNXOSConfigReconcilerRelinquishesOwnedKeysOnDelete(t *testing.T) {
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:         configv1alpha1.DeviceRef{Name: "leaf-01"},
 			ManagedFamilies:   []string{"system", "vlan"},
-			ModelSource:       &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			ModelSource:       validNXOSModelSource(),
 			Source:            configv1alpha1.ConfigurationSource{Inline: &raw},
 			PruneOnRelinquish: true,
 		},
@@ -825,7 +1237,7 @@ func TestNXOSConfigReconcilerRelinquishesOwnedKeysOnDelete(t *testing.T) {
 		Client:      c,
 		DeviceName:  "leaf-01",
 		Transport:   tr,
-		Lookup:      nxoswriters.GetForRelease,
+		Lookup:      testedNXOSWriter,
 		FamilyOrder: nxosschema.FamilyOrder,
 	}
 	if _, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}}); err != nil {
@@ -855,7 +1267,7 @@ func TestNXOSConfigReconcilerFailsClosedWhenFinalizerUpdateFails(t *testing.T) {
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
 			ManagedFamilies: []string{"system"},
-			ModelSource:     &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			ModelSource:     validNXOSModelSource(),
 			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
 		},
 	}
@@ -876,7 +1288,7 @@ func TestNXOSConfigReconcilerFailsClosedWhenFinalizerUpdateFails(t *testing.T) {
 		Client:     c,
 		DeviceName: "leaf-01",
 		Transport:  tr,
-		Lookup:     nxoswriters.GetForRelease,
+		Lookup:     testedNXOSWriter,
 		// A non-nil Leaser is what gates the finalizer-add path.
 		Leaser: &engine.FamilyLeaser{Client: c, Namespace: "network"},
 	}
@@ -896,7 +1308,7 @@ func TestCommonConfigPollingPathPersistsFinalizerBeforeMutating(t *testing.T) {
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
 			ManagedFamilies: []string{"system"},
-			ModelSource:     &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			ModelSource:     validNXOSModelSource(),
 			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
 		},
 	}
@@ -920,7 +1332,7 @@ func TestCommonConfigPollingPathPersistsFinalizerBeforeMutating(t *testing.T) {
 		Client:     c,
 		DeviceName: "leaf-01",
 		Transport:  tr,
-		Lookup:     nxoswriters.GetForRelease,
+		Lookup:     testedNXOSWriter,
 		Leaser:     &engine.FamilyLeaser{Client: c, Namespace: "network"},
 	}
 
@@ -952,7 +1364,7 @@ func TestCommonConfigPollingPathRelinquishesOwnedKeysOnDelete(t *testing.T) {
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:         configv1alpha1.DeviceRef{Name: "leaf-01"},
 			ManagedFamilies:   []string{"system", "vlan"},
-			ModelSource:       &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			ModelSource:       validNXOSModelSource(),
 			Source:            configv1alpha1.ConfigurationSource{Inline: &raw},
 			PruneOnRelinquish: true,
 		},
@@ -973,7 +1385,7 @@ func TestCommonConfigPollingPathRelinquishesOwnedKeysOnDelete(t *testing.T) {
 		Client:      c,
 		DeviceName:  "leaf-01",
 		Transport:   tr,
-		Lookup:      nxoswriters.GetForRelease,
+		Lookup:      testedNXOSWriter,
 		FamilyOrder: nxosschema.FamilyOrder,
 		Leaser:      &engine.FamilyLeaser{Client: c, Namespace: "network"},
 	}
@@ -1028,7 +1440,7 @@ func TestNXOSConfigReconcilerRecordsConfirmedCommitFallback(t *testing.T) {
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:             configv1alpha1.DeviceRef{Name: "leaf-01"},
 			ManagedFamilies:       []string{"system"},
-			ModelSource:           &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			ModelSource:           validNXOSModelSource(),
 			Source:                configv1alpha1.ConfigurationSource{Inline: &raw},
 			Transactional:         true,
 			ConfirmTimeoutSeconds: 60,
@@ -1043,7 +1455,7 @@ func TestNXOSConfigReconcilerRecordsConfirmedCommitFallback(t *testing.T) {
 		Client:     c,
 		DeviceName: "leaf-01",
 		Transport:  &fakeNXOSTransport{hostname: "old"},
-		Lookup:     nxoswriters.GetForRelease,
+		Lookup:     testedNXOSWriter,
 	}
 	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}})
 	if err != nil {
@@ -1073,7 +1485,7 @@ func TestNXOSConfigReconcilerSubscribeBypassesHashShortCircuit(t *testing.T) {
 		Spec: configv1alpha1.NXOSConfigSpec{
 			DeviceRef:       configv1alpha1.DeviceRef{Name: "leaf-01"},
 			ManagedFamilies: []string{"system"},
-			ModelSource:     &configv1alpha1.NetAsCodeModelSource{Format: configv1alpha1.NetAsCodeModelFormatNXOS, Resolved: true},
+			ModelSource:     validNXOSModelSource(),
 			Source:          configv1alpha1.ConfigurationSource{Inline: &raw},
 		},
 	}
@@ -1087,7 +1499,7 @@ func TestNXOSConfigReconcilerSubscribeBypassesHashShortCircuit(t *testing.T) {
 		Client:     c,
 		DeviceName: "leaf-01",
 		Transport:  tr,
-		Lookup:     nxoswriters.GetForRelease,
+		Lookup:     testedNXOSWriter,
 	}
 	req := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "leaf-config"}}
 	if _, err := r.Reconcile(context.Background(), req); err != nil {

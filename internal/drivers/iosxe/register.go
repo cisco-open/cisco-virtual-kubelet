@@ -21,10 +21,11 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
-	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/validation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/iosxebuilder"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
+	iosxewriters "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
 	log "github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
@@ -83,9 +84,16 @@ func buildXEConfigDriverContext(
 		LookupWriter:          iosxebuilder.LookupWriter,
 		SubscribePaths:        iosxebuilder.UnionWriterPaths(),
 		FetchDeviceVersion:    FetchDeviceVersion,
-		FamilyOrder:           iosxebuilder.FamilyOrderForXE(),
-		YANGValidator:         validation.NewStructuralValidator(),
-		YANGValidationMode:    validationMode,
+		DeviceVersionPolicy: drivers.DeviceVersionPolicy{
+			Validate:      iosxewriters.SetDeviceVersion,
+			IsUnsupported: iosxewriters.IsUnsupportedDeviceVersion,
+			IsMalformed:   iosxewriters.IsMalformedDeviceVersion,
+			ReleaseTag:    iosxewriters.ReleaseTagForDeviceVersionString,
+			Require:       true,
+		},
+		FamilyOrder:             iosxebuilder.FamilyOrderForXE(),
+		OperationValidator:      validation.NewStructuralValidator(),
+		OperationValidationMode: validationMode,
 	}
 	if err != nil {
 		return out, err

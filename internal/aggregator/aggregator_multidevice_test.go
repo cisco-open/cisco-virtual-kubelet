@@ -63,6 +63,13 @@ func registerVersionedAggDriver(t *testing.T) {
 				return &drivers.ConfigDriverContext{
 					Transport:     &stubTransport{},
 					DeviceVersion: version,
+					DeviceVersionPolicy: drivers.DeviceVersionPolicy{
+						Validate:      writers.SetDeviceVersion,
+						IsUnsupported: writers.IsUnsupportedDeviceVersion,
+						IsMalformed:   writers.IsMalformedDeviceVersion,
+						ReleaseTag:    writers.ReleaseTagForDeviceVersionString,
+						Require:       true,
+					},
 					LookupWriter: func(family, release string) writers.SectionWriter {
 						return &releaseProbeWriter{
 							family:  family,
@@ -227,6 +234,13 @@ func TestAggregatorRetryDeviceVersionContinuesAfterUnsupported(t *testing.T) {
 	rec := &provider.ConfigReconciler{RequireDeviceVersion: true}
 	dctx := &drivers.ConfigDriverContext{
 		Transport: &stubTransport{},
+		DeviceVersionPolicy: drivers.DeviceVersionPolicy{
+			Validate:      writers.SetDeviceVersion,
+			IsUnsupported: writers.IsUnsupportedDeviceVersion,
+			IsMalformed:   writers.IsMalformedDeviceVersion,
+			ReleaseTag:    writers.ReleaseTagForDeviceVersionString,
+			Require:       true,
+		},
 		FetchDeviceVersion: func(context.Context, transport.Interface) string {
 			v := <-versions
 			attempts <- v

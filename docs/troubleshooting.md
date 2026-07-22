@@ -34,6 +34,35 @@ show app-hosting detail appid <app-id>
 
 ---
 
+## Apps are unexpectedly removed when a second VK worker starts
+
+CVK currently requires exactly one active app-hosting worker per physical
+device endpoint. This applies to IOS-XE and NX-OS, including different
+hostnames or addresses that identify the same device.
+
+At startup, a worker compares CVK-managed apps discovered device-wide with
+Pods assigned to its own virtual node. A second worker with a different node
+identity cannot see the incumbent node's Pods, so it can classify their apps as
+dangling and stop, deactivate, or uninstall them. Config-operation leases do
+not serialize this pod-lifecycle cleanup.
+
+Stop the duplicate worker immediately and leave only one device owner running.
+For a controlled handoff, choose one path:
+
+- To retain existing Pods and apps, stop the incumbent worker, wait until its
+  process has terminated, then start the replacement with the same virtual-node
+  identity while preserving the existing Pod objects.
+- To change identity, keep the incumbent running while you drain or delete Pods
+  assigned to the old node and verify their device apps have been removed.
+  Then stop the incumbent, wait until it has terminated, and start the
+  replacement.
+
+Never overlap old and new app-hosting workers against the same physical device.
+For parallel diagnostics, use read-only transport or `DeviceOperation` checks
+that do not start another Virtual Kubelet app runtime.
+
+---
+
 ## CiscoDevice stuck in `Provisioning`
 
 `Provisioning` means the controller has created the ConfigMap and Deployment but no VK pod is Ready yet.

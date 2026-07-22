@@ -38,12 +38,11 @@ export NXOS_LIVE_TLS="${NXOS_LIVE_TLS:-true}"
 export NXOS_LIVE_INSECURE_SKIP_VERIFY="${NXOS_LIVE_INSECURE_SKIP_VERIFY:-true}"
 
 echo "== NX-OS read-only DME/NX-API smoke =="
-(cd "${repo_root}" && go test ./internal/drivers/nxos -run TestLiveNXOSConfigSmoke -count=1 -v)
+(cd "${repo_root}" && RUN_LIVE_NXOS_CONFIG_WRITE=0 go test ./internal/drivers/nxos -run TestLiveNXOSConfigSmoke -count=1 -v)
 
 if [[ "${RUN_LIVE_NXOS_CONFIG_WRITE:-0}" == "1" ]]; then
   echo "== NX-OS disposable VLAN DME write/verify smoke =="
-  export RUN_LIVE_NXOS_CONFIG_WRITE=1
-  (cd "${repo_root}" && go test ./internal/drivers/nxos -run TestLiveNXOSConfigSmoke -count=1 -v)
+  (cd "${repo_root}" && RUN_LIVE_NXOS_CONFIG_WRITE=1 go test ./internal/drivers/nxos -run TestLiveNXOSConfigSmoke -count=1 -v)
 fi
 
 if [[ "${RUN_NXOS_DEVICEOP_SMOKE:-0}" == "1" ]]; then

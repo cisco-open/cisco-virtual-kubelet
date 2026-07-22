@@ -1,0 +1,35 @@
+{
+  "nxos_system": {
+    "name": "leaf-golden",
+    "ethernet_mtu": 9216
+  },
+  "nxos_feature": {
+    "lldp": true,
+    "hmm": true,
+    "pvlan": true,
+    "vn_segment": true,
+    "feature_sets": {
+      "fex": "enabled",
+      "mpls": "disabled",
+      "virtualization": "enabled"
+    }
+  },
+  "nxos_bridge_domain": {
+    "bridge_domains": {
+      "vlan-101": {
+        "name": "cvk-golden"
+      }
+    }
+  },
+  "nxos_physical_interface": {
+    "physical_interfaces": {
+      "eth1/1": {
+        "admin_state": "down",
+        "description": "golden-uplink",
+        "layer": "Layer2",
+        "mtu": 9216,
+        "user_configured_flags": "admin_layer,admin_mtu,admin_state"
+      }
+    }
+  }
+}

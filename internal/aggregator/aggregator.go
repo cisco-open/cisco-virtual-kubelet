@@ -259,7 +259,7 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 	if verr := dctx.ValidateDeviceVersion(); verr != nil {
 		reason := "AggregatorMalformedDeviceVersion"
 		msg := "device version %q failed to parse: %v"
-		if drivers.IsUnsupportedDeviceVersionError(verr) {
+		if dctx.IsUnsupportedDeviceVersionError(verr) {
 			reason = "AggregatorUnsupportedDeviceVersion"
 			msg = "device version %q is not in the supported release set: %v"
 		}
@@ -295,8 +295,8 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 		DefaultYANGVersion:    dctx.DefaultYANGVersion,
 		Lookup:                dctx.LookupWriter,
 		FamilyOrder:           dctx.FamilyOrder,
-		YANGValidator:         dctx.YANGValidator,
-		YANGValidationMode:    dctx.YANGValidationMode,
+		YANGValidator:         dctx.OperationValidator,
+		YANGValidationMode:    dctx.OperationValidationMode,
 		Leaser:                leaser,
 		Recorder:              r.Recorder,
 		SubscribeNotify:       notify,
@@ -358,7 +358,7 @@ func retryDeviceVersion(ctx context.Context, r *provider.ConfigReconciler, dctx 
 			r.SetDeviceVersionState(ver, err)
 			log.G(ctx).WithError(err).WithField("version", ver).
 				Warn("aggregator device version retry produced rejected version; config writes remain blocked")
-			if drivers.IsRetryableDeviceVersionError(err) {
+			if dctx.IsRetryableDeviceVersionError(err) {
 				continue
 			}
 			return

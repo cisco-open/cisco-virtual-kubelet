@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package provider
 
@@ -38,6 +44,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/validation"
 	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 )
 
@@ -55,7 +62,14 @@ type CommonConfigPlatform struct {
 	PreserveEnvelope  bool
 	SupportsRevisions bool
 	SupportsRollback  bool
-	NormalizeSource   func(config map[string]any, deviceName string) (map[string]any, error)
+	// ValidateModelSource performs platform-specific model contract checks
+	// before any source is loaded or device state is fetched. Nil preserves the
+	// legacy metadata-only behavior.
+	ValidateModelSource     func(*configv1alpha1.NetAsCodeModelSource) error
+	ValidateModelDevicePair func(*configv1alpha1.NetAsCodeModelSource, string) error
+	ValidateTargetVersion   func(targetVersion, deviceVersion string) error
+	ValidateResolvedSource  func(config map[string]any, deviceName string) error
+	NormalizeSource         func(config map[string]any, deviceName string) (map[string]any, error)
 
 	NewObject func() client.Object
 	NewList   func() client.ObjectList
@@ -95,18 +109,25 @@ type CommonConfigReconciler struct {
 	// tenant-a/leaf-01 could reconcile tenant-b/leaf-01's config against
 	// tenant-a's device. Empty disables the filter (unit tests / legacy
 	// single-namespace topologies).
-	DeviceNamespace       string
-	Transport             transport.Interface
-	Lookup                func(family, release string) enginewriters.SectionWriter
-	FamilyOrder           func([]string) []string
-	DeviceVersion         string
-	DefaultYANGVersion    string
-	SupportedYANGVersions map[string]struct{}
-	Leaser                *engine.FamilyLeaser
-	Recorder              record.EventRecorder
-	Interval              time.Duration
-	RuntimeID             string
-	Platform              CommonConfigPlatform
+	DeviceNamespace         string
+	Transport               transport.Interface
+	Lookup                  func(family, release string) enginewriters.SectionWriter
+	FamilyOrder             func([]string) []string
+	DeviceVersion           string
+	DefaultYANGVersion      string
+	SupportedYANGVersions   map[string]struct{}
+	FetchDeviceVersion      func(context.Context, transport.Interface) string
+	ValidateDeviceVersion   enginewriters.VersionValidator
+	IsUnsupportedVersion    enginewriters.VersionErrorClassifier
+	ReleaseTagForVersion    func(string) (string, bool)
+	RequireDeviceVersion    bool
+	OperationValidator      validation.Validator
+	OperationValidationMode validation.Mode
+	Leaser                  *engine.FamilyLeaser
+	Recorder                record.EventRecorder
+	Interval                time.Duration
+	RuntimeID               string
+	Platform                CommonConfigPlatform
 
 	// SubscribeNotify is the polling-loop fast path for transports that
 	// support device-side change streams. Nil means polling-only.
@@ -148,6 +169,38 @@ func (r *CommonConfigReconciler) SetDeviceVersion(v string) {
 	r.versionMu.Lock()
 	defer r.versionMu.Unlock()
 	r.DeviceVersion = v
+}
+
+// refreshDeviceVersion mirrors the IOS XE version-aware reconcile boundary:
+// re-read the live version before a device-facing tick and rebind the default
+// release profile when the platform recognizes it. A platform that requires a
+// live version fails closed on an empty/error response instead of continuing
+// to write through a stale binding after an unobserved software upgrade.
+func (r *CommonConfigReconciler) refreshDeviceVersion(ctx context.Context) {
+	if r == nil || r.FetchDeviceVersion == nil || r.GetTransport() == nil {
+		return
+	}
+	version := r.FetchDeviceVersion(ctx, r.GetTransport())
+	if version == "" {
+		if r.RequireDeviceVersion {
+			r.SetDeviceVersion("")
+			r.SetDefaultYANGVersion("")
+		}
+		return
+	}
+	if version == r.deviceVersion() {
+		return
+	}
+	r.SetDeviceVersion(version)
+	if r.ReleaseTagForVersion != nil {
+		if tag, ok := r.ReleaseTagForVersion(version); ok {
+			if len(r.SupportedYANGVersions) == 0 {
+				r.SetDefaultYANGVersion(tag)
+			} else if _, supported := r.SupportedYANGVersions[tag]; supported {
+				r.SetDefaultYANGVersion(tag)
+			}
+		}
+	}
 }
 
 func (r *CommonConfigReconciler) deviceVersion() string {
@@ -330,6 +383,7 @@ func (r *CommonConfigReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	if err != nil || !proceed {
 		return result, err
 	}
+	r.refreshDeviceVersion(ctx)
 
 	_, conflicts := r.cohort(ctx, logger)
 	trigger := triggerEvent
@@ -405,6 +459,7 @@ func (r *CommonConfigReconciler) prepareForReconcile(ctx context.Context, cr cli
 }
 
 func (r *CommonConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, trigger reconcileTrigger) {
+	r.refreshDeviceVersion(ctx)
 	forDevice, conflicts := r.cohort(ctx, crlog.FromContext(ctx))
 	for _, cr := range forDevice {
 		proceed, _, err := r.prepareForReconcile(ctx, cr)
@@ -451,6 +506,10 @@ func (r *CommonConfigReconciler) reconcileOne(
 	conflicts map[string][]string,
 	trigger reconcileTrigger,
 ) (engine.Result, error) {
+	if blocked, reason, msg := r.deviceVersionBlocked(); blocked {
+		recordErr := r.recordDeviceVersionBlocked(ctx, cr, reason, msg)
+		return engine.Result{Phase: engine.PhasePending, Err: recordErr}, recordErr
+	}
 	if err := r.validateFeatureIntent(cr); err != nil {
 		recordErr := r.recordFailure(ctx, cr, err.Error())
 		return engine.Result{Phase: engine.PhaseFailed, Err: err}, errors.Join(err, recordErr)
@@ -485,10 +544,13 @@ func (r *CommonConfigReconciler) reconcileOne(
 		return engine.Result{Phase: engine.PhaseFailed, Err: fmt.Errorf("%s reconciler: nil writer lookup", r.Platform.Kind)}, nil
 	}
 	eng := &engine.Engine{
-		Transport:     t,
-		Lookup:        lookup,
-		DeviceVersion: r.deviceVersion(),
-		FamilyOrder:   r.FamilyOrder,
+		Platform:           r.Platform.Name,
+		Transport:          t,
+		Lookup:             lookup,
+		DeviceVersion:      r.deviceVersion(),
+		FamilyOrder:        r.FamilyOrder,
+		YANGValidator:      r.OperationValidator,
+		YANGValidationMode: r.OperationValidationMode,
 	}
 	var result engine.Result
 	if len(leaseConflicts) > 0 && len(leased.ManagedFamilies) == 0 {
@@ -513,6 +575,27 @@ func (r *CommonConfigReconciler) reconcileOne(
 		return result, result.Err
 	}
 	return result, nil
+}
+
+func (r *CommonConfigReconciler) deviceVersionBlocked() (bool, string, string) {
+	version := r.deviceVersion()
+	if version == "" {
+		if r.RequireDeviceVersion {
+			return true, "DeviceVersionPending", "waiting for device software version before running config writers"
+		}
+		return false, "", ""
+	}
+	if r.ValidateDeviceVersion == nil {
+		return false, "", ""
+	}
+	if err := r.ValidateDeviceVersion(version); err != nil {
+		reason := "MalformedDeviceVersion"
+		if r.IsUnsupportedVersion != nil && r.IsUnsupportedVersion(err) {
+			reason = "UnsupportedDeviceVersion"
+		}
+		return true, reason, fmt.Sprintf("device version %q rejected by writers: %v", version, err)
+	}
+	return false, "", ""
 }
 
 func (r *CommonConfigReconciler) validateFeatureIntent(cr client.Object) error {
@@ -580,6 +663,24 @@ func (r *CommonConfigReconciler) resolveIntent(ctx context.Context, cr client.Ob
 		return nil, fmt.Errorf("modelSource.format %q does not match %s format %q",
 			spec.ModelSource.Format, r.Platform.Kind, r.Platform.ModelFormat)
 	}
+	if r.Platform.ValidateModelSource != nil {
+		if err := r.Platform.ValidateModelSource(spec.ModelSource); err != nil {
+			return nil, fmt.Errorf("%s %s/%s: invalid spec.modelSource: %w",
+				r.Platform.Kind, cr.GetNamespace(), cr.GetName(), err)
+		}
+	}
+	if r.Platform.ValidateModelDevicePair != nil {
+		if err := r.Platform.ValidateModelDevicePair(spec.ModelSource, r.deviceVersion()); err != nil {
+			return nil, fmt.Errorf("%s %s/%s: model/device contract mismatch: %w",
+				r.Platform.Kind, cr.GetNamespace(), cr.GetName(), err)
+		}
+	}
+	if r.Platform.ValidateTargetVersion != nil {
+		if err := r.Platform.ValidateTargetVersion(spec.TargetYangVersion, r.deviceVersion()); err != nil {
+			return nil, fmt.Errorf("%s %s/%s: invalid spec.targetYangVersion: %w",
+				r.Platform.Kind, cr.GetNamespace(), cr.GetName(), err)
+		}
+	}
 	sourceEnvelope := r.Platform.SourceEnvelope
 	if r.Platform.PreserveEnvelope {
 		sourceEnvelope = ""
@@ -587,6 +688,19 @@ func (r *CommonConfigReconciler) resolveIntent(ctx context.Context, cr client.Ob
 	config, err := intent.LoadPlatformSource(ctx, r.Client, cr.GetNamespace(), device, sourceEnvelope, spec.Source)
 	if err != nil {
 		return nil, fmt.Errorf("%s %s/%s: %w", r.Platform.Kind, cr.GetNamespace(), cr.GetName(), err)
+	}
+	if spec.ModelSource != nil && spec.ModelSource.Resolved && r.Platform.ValidateResolvedSource != nil {
+		if err := r.Platform.ValidateResolvedSource(config, device); err != nil {
+			return nil, fmt.Errorf("%s %s/%s: modelSource.resolved payload is not flattened: %w",
+				r.Platform.Kind, cr.GetNamespace(), cr.GetName(), err)
+		}
+	}
+	if r.Platform.NormalizeSource != nil {
+		config, err = r.Platform.NormalizeSource(config, device)
+		if err != nil {
+			return nil, fmt.Errorf("%s %s/%s: normalize source: %w",
+				r.Platform.Kind, cr.GetNamespace(), cr.GetName(), err)
+		}
 	}
 	managedFamilies := append([]string(nil), spec.ManagedFamilies...)
 	managedSet := map[string]struct{}{}
@@ -605,13 +719,6 @@ func (r *CommonConfigReconciler) resolveIntent(ctx context.Context, cr client.Ob
 		}
 		config = commonAsMap(intent.Merge(config, map[string]any{sr.Family: snippet}))
 	}
-	if r.Platform.NormalizeSource != nil {
-		config, err = r.Platform.NormalizeSource(config, device)
-		if err != nil {
-			return nil, fmt.Errorf("%s %s/%s: normalize source: %w",
-				r.Platform.Kind, cr.GetNamespace(), cr.GetName(), err)
-		}
-	}
 	policy := spec.DriftPolicy
 	if policy == "" {
 		policy = configv1alpha1.DriftPolicyRevert
@@ -629,11 +736,16 @@ func (r *CommonConfigReconciler) resolveIntent(ctx context.Context, cr client.Ob
 	if targetVersion == "" {
 		targetVersion = r.deviceVersion()
 	}
+	modelVersion := ""
+	if spec.ModelSource != nil {
+		modelVersion = spec.ModelSource.ModelVersion
+	}
 	intent.FixYAML11BoolKeys(config)
 	return &intent.ResolvedIntent{
 		DeviceName:             device,
 		ManagedFamilies:        managedFamilies,
 		Configuration:          config,
+		ModelVersion:           modelVersion,
 		Transactional:          spec.Transactional,
 		DriftPolicy:            policy,
 		WriteStartup:           spec.WriteStartup,
@@ -737,6 +849,10 @@ func (r *CommonConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr cli
 	if t == nil {
 		return fmt.Errorf("relinquish: transport not yet available")
 	}
+	r.refreshDeviceVersion(ctx)
+	if blocked, reason, msg := r.deviceVersionBlocked(); blocked {
+		return fmt.Errorf("relinquish: %s: %s", reason, msg)
+	}
 	lookup := r.Lookup
 	if lookup == nil {
 		return fmt.Errorf("relinquish: nil writer lookup")
@@ -804,11 +920,17 @@ func (r *CommonConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr cli
 		PruneOnRelinquish:      true,
 		AtomicReplaceOwnedKeys: status.AtomicReplaceOwnedKeys,
 	}
+	if spec.ModelSource != nil {
+		resIntent.ModelVersion = spec.ModelSource.ModelVersion
+	}
 	eng := &engine.Engine{
-		Transport:     t,
-		Lookup:        lookup,
-		DeviceVersion: r.deviceVersion(),
-		FamilyOrder:   r.FamilyOrder,
+		Platform:           r.Platform.Name,
+		Transport:          t,
+		Lookup:             lookup,
+		DeviceVersion:      r.deviceVersion(),
+		FamilyOrder:        r.FamilyOrder,
+		YANGValidator:      r.OperationValidator,
+		YANGValidationMode: r.OperationValidationMode,
 	}
 	out := eng.Reconcile(ctx, resIntent)
 	if out.Phase == engine.PhaseFailed {
@@ -853,6 +975,17 @@ func (r *CommonConfigReconciler) recordPending(ctx context.Context, cr client.Ob
 	if r.Recorder != nil {
 		r.Recorder.Eventf(cr, corev1.EventTypeWarning, "NoTransport", "%s config transport is not available", r.Platform.Kind)
 	}
+	return ignoreConflict(r.Client.Status().Update(ctx, updated))
+}
+
+func (r *CommonConfigReconciler) recordDeviceVersionBlocked(ctx context.Context, cr client.Object, reason, msg string) error {
+	updated := cr.DeepCopyObject().(client.Object)
+	status := r.Platform.Status(updated)
+	status.Phase = engine.PhasePending
+	status.ObservedGeneration = cr.GetGeneration()
+	setCommonCondition(status, metav1.Condition{
+		Type: "Ready", Status: metav1.ConditionFalse, Reason: reason, Message: msg,
+	})
 	return ignoreConflict(r.Client.Status().Update(ctx, updated))
 }
 

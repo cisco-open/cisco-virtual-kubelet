@@ -62,7 +62,7 @@ func newNXAPIConfigTransportWithOptions(spec *ciskov1.DeviceSpec, opts NXAPIConf
 
 func (t *nxapiConfigTransport) Capabilities() transport.Capabilities {
 	return transport.Capabilities{
-		Kind:                    transport.KindREST,
+		Kind:                    transport.KindNXAPI,
 		SupportsWritableRunning: true,
 		SupportsDiagnosticExec:  true,
 		SupportsSaveStartup:     true,
@@ -589,6 +589,12 @@ func parseDMEEthernetInterfaces(raw []byte) []map[string]any {
 			item["shutdown"] = true
 		case "up":
 			item["shutdown"] = false
+		}
+		if layer := stringAttr(attrs, "layer"); layer != "" {
+			item["layer"] = layer
+		}
+		if flags := stringAttr(attrs, "userCfgdFlags"); flags != "" {
+			item["user_configured_flags"] = flags
 		}
 		if mtu, err := strconv.Atoi(stringAttr(attrs, "mtu")); err == nil && mtu > 0 {
 			item["mtu"] = mtu

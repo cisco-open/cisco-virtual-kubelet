@@ -5,6 +5,12 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package writers
 
@@ -15,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 )
 
@@ -128,10 +135,13 @@ func TestVLANDiffEmitsNameDME(t *testing.T) {
 	}
 	body := requireDMEOp(t, ops[0], transport.VerbMerge, nxosschema.DNBridgeDomain)
 	raw := mustJSON(t, body)
-	for _, want := range []string{`"bdEntity"`, `"l2BD"`, `"fabEncap":"vlan-101"`, `"name":"cvk_probe"`, `"pcTag":"1"`} {
+	for _, want := range []string{`"bdEntity"`, `"l2BD"`, `"fabEncap":"vlan-101"`, `"name":"cvk_probe"`} {
 		if !strings.Contains(raw, want) {
 			t.Fatalf("payload %s missing %s", raw, want)
 		}
+	}
+	if strings.Contains(raw, `"pcTag"`) {
+		t.Fatalf("payload %s contains pcTag, which is not emitted by the pinned provider", raw)
 	}
 }
 
@@ -173,6 +183,71 @@ func TestEthernetDiffAcceptsNetAsCodeID(t *testing.T) {
 		if !strings.Contains(raw, want) {
 			t.Fatalf("payload %s missing %s", raw, want)
 		}
+	}
+}
+
+func TestNativeEthernetDescriptionUpdatePreservesOmittedAdminAndLayer(t *testing.T) {
+	ops, err := Get("interface_ethernet").Diff(
+		map[string]any{"interfaces": []any{map[string]any{"id": "1/1", "description": "new"}}},
+		map[string]any{"interfaces": []any{map[string]any{
+			"name": "1/1", "description": "old", "shutdown": true, "layer": "Layer3",
+		}}},
+	)
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if len(ops) != 1 {
+		t.Fatalf("ops=%#v", ops)
+	}
+	raw := mustJSON(t, requireDMEOp(t, ops[0], transport.VerbMerge, nxosschema.DNInterfaceEntity))
+	for _, forbidden := range []string{`"adminSt"`, `"layer"`, `"userCfgdFlags"`} {
+		if strings.Contains(raw, forbidden) {
+			t.Fatalf("native description-only payload %s unexpectedly owns %s", raw, forbidden)
+		}
+	}
+}
+
+func TestStrictNetAsCodeEthernetAppliesProviderDefaults(t *testing.T) {
+	w := Get("interface_ethernet")
+	ops, err := enginewriters.Diff(enginewriters.DiffContext{
+		Platform: "nxos", ModelVersion: "0.3.0", DeviceVersion: "10.3(9)",
+	}, w,
+		map[string]any{"interfaces": []any{map[string]any{"id": "1/1", "description": "new"}}},
+		map[string]any{"interfaces": []any{map[string]any{
+			"name": "1/1", "description": "old", "shutdown": false, "layer": "Layer2",
+			"user_configured_flags": "admin_layer",
+		}}},
+	)
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if len(ops) != 1 {
+		t.Fatalf("ops=%#v", ops)
+	}
+	raw := mustJSON(t, requireDMEOp(t, ops[0], transport.VerbMerge, nxosschema.DNInterfaceEntity))
+	for _, want := range []string{`"adminSt":"up"`, `"layer":"Layer2"`, `"userCfgdFlags":"admin_layer"`} {
+		if !strings.Contains(raw, want) {
+			t.Fatalf("strict provider payload %s missing %s", raw, want)
+		}
+	}
+}
+
+func TestStrictNetAsCodeEthernetRefusesUnsafeImplicitConversion(t *testing.T) {
+	w := Get("interface_ethernet")
+	ctx := enginewriters.DiffContext{Platform: "nxos", ModelVersion: "0.3.0", DeviceVersion: "10.3(9)"}
+	for name, observed := range map[string]map[string]any{
+		"layer3":   {"name": "1/1", "shutdown": false, "layer": "Layer3"},
+		"shutdown": {"name": "1/1", "shutdown": true, "layer": "Layer2"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := enginewriters.Diff(ctx, w,
+				map[string]any{"interfaces": []any{map[string]any{"id": "1/1", "description": "new"}}},
+				map[string]any{"interfaces": []any{observed}},
+			)
+			if err == nil {
+				t.Fatal("strict Diff accepted unsafe implicit interface conversion")
+			}
+		})
 	}
 }
 

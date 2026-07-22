@@ -99,6 +99,17 @@
         }
       }
     },
+    "nxos": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowExperimentalReleases"],
+      "properties": {
+        "allowExperimentalReleases": {
+          "type": "boolean",
+          "description": "Opt in to NX-OS profiles backed by static conformance evidence but not yet qualified by CVK live write testing."
+        }
+      }
+    },
     "telemetry": {
       "type": "object",
       "additionalProperties": false,

@@ -292,7 +292,7 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	if err := dctx.ValidateDeviceVersion(); err != nil {
 		entry := log.G(ctx).WithError(err).WithField("version", dctx.DeviceVersion)
 		reason := "MalformedDeviceVersion"
-		if drivers.IsUnsupportedDeviceVersionError(err) {
+		if dctx.IsUnsupportedDeviceVersionError(err) {
 			reason = "UnsupportedDeviceVersion"
 			entry.Error("device version is not in the supported release set; IOSXEConfig writes disabled")
 		} else {
@@ -355,8 +355,8 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		DefaultYANGVersion:    dctx.DefaultYANGVersion,
 		Lookup:                dctx.LookupWriter,
 		FamilyOrder:           dctx.FamilyOrder,
-		YANGValidator:         dctx.YANGValidator,
-		YANGValidationMode:    dctx.YANGValidationMode,
+		YANGValidator:         dctx.OperationValidator,
+		YANGValidationMode:    dctx.OperationValidationMode,
 		Leaser: &engine.FamilyLeaser{
 			Client:    mgr.GetClient(),
 			Namespace: leaseNamespace,
@@ -653,7 +653,7 @@ func retryDeviceVersion(ctx context.Context, r *provider.ConfigReconciler, dctx 
 			r.SetDeviceVersionState(ver, err)
 			log.G(ctx).WithError(err).WithField("version", ver).
 				Warn("device version retry produced rejected version; config writes remain blocked")
-			if drivers.IsRetryableDeviceVersionError(err) {
+			if dctx.IsRetryableDeviceVersionError(err) {
 				continue
 			}
 			return
@@ -710,7 +710,7 @@ func retryConfigDriverDial(ctx context.Context, opts configReconcilerOptions, r 
 						Warn("post-dial ValidateDeviceVersion rejected version; config writes remain blocked")
 					r.SetDeviceVersionState(ver, verr)
 					_ = t.Close()
-					if drivers.IsRetryableDeviceVersionError(verr) {
+					if dctx.IsRetryableDeviceVersionError(verr) {
 						continue
 					}
 					return

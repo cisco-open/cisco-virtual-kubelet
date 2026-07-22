@@ -33,12 +33,16 @@ import (
 
 // NXOSDriver drives NX-OS app-hosting through NX-API CLI.
 type NXOSDriver struct {
-	config       *v1alpha1.DeviceSpec
-	client       *nxapiClient
-	deviceInfo   *common.DeviceInfo
-	mu           sync.Mutex
-	secretLister corev1listers.SecretNamespaceLister
-	configLister corev1listers.ConfigMapNamespaceLister
+	config     *v1alpha1.DeviceSpec
+	client     *nxapiClient
+	deviceInfo *common.DeviceInfo
+	mu         sync.Mutex
+
+	resourceMu             sync.RWMutex
+	secretLister           corev1listers.SecretLister
+	configLister           corev1listers.ConfigMapLister
+	namespaceSecretListers map[string]corev1listers.SecretNamespaceLister
+	namespaceConfigListers map[string]corev1listers.ConfigMapNamespaceLister
 
 	asyncActions bool
 	actionMu     sync.Mutex
@@ -63,10 +67,12 @@ func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*NXOSD
 		return nil, err
 	}
 	d := &NXOSDriver{
-		config:       spec,
-		client:       client,
-		asyncActions: true,
-		appActions:   make(map[string]nxosAppAction),
+		config:                 spec,
+		client:                 client,
+		asyncActions:           true,
+		appActions:             make(map[string]nxosAppAction),
+		namespaceSecretListers: make(map[string]corev1listers.SecretNamespaceLister),
+		namespaceConfigListers: make(map[string]corev1listers.ConfigMapNamespaceLister),
 	}
 	if err := d.CheckConnection(ctx); err != nil {
 		return nil, err
@@ -77,6 +83,67 @@ func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*NXOSD
 		}
 	}
 	return d, nil
+}
+
+// SetPodResourceListers supplies cluster-wide informer listers for deferred
+// lifecycle convergence. Lookups remain explicitly namespace-scoped in
+// podResourceListers.
+func (d *NXOSDriver) SetPodResourceListers(secrets corev1listers.SecretLister, configMaps corev1listers.ConfigMapLister) {
+	if d == nil {
+		return
+	}
+	d.resourceMu.Lock()
+	d.secretLister = secrets
+	d.configLister = configMaps
+	d.resourceMu.Unlock()
+}
+
+// rememberPodResourceListers preserves the existing driver contract for
+// callers that provide only namespace-scoped listers to DeployPod. The maps
+// are keyed by namespace so concurrent pods cannot overwrite each other's
+// Secret or ConfigMap source.
+func (d *NXOSDriver) rememberPodResourceListers(namespace string, secrets corev1listers.SecretNamespaceLister, configMaps corev1listers.ConfigMapNamespaceLister) {
+	if d == nil || namespace == "" {
+		return
+	}
+	d.resourceMu.Lock()
+	defer d.resourceMu.Unlock()
+	if d.namespaceSecretListers == nil {
+		d.namespaceSecretListers = make(map[string]corev1listers.SecretNamespaceLister)
+	}
+	if d.namespaceConfigListers == nil {
+		d.namespaceConfigListers = make(map[string]corev1listers.ConfigMapNamespaceLister)
+	}
+	if secrets != nil {
+		d.namespaceSecretListers[namespace] = secrets
+	}
+	if configMaps != nil {
+		d.namespaceConfigListers[namespace] = configMaps
+	}
+}
+
+func (d *NXOSDriver) podResourceListers(namespace string) (corev1listers.SecretNamespaceLister, corev1listers.ConfigMapNamespaceLister) {
+	if d == nil || namespace == "" {
+		return nil, nil
+	}
+	d.resourceMu.RLock()
+	secrets := d.secretLister
+	configMaps := d.configLister
+	namespaceSecrets := d.namespaceSecretListers[namespace]
+	namespaceConfigMaps := d.namespaceConfigListers[namespace]
+	d.resourceMu.RUnlock()
+	if secrets != nil {
+		namespaceSecrets = secrets.Secrets(namespace)
+	}
+	if configMaps != nil {
+		namespaceConfigMaps = configMaps.ConfigMaps(namespace)
+	}
+	return namespaceSecrets, namespaceConfigMaps
+}
+
+func (d *NXOSDriver) hasPodResourceListers(namespace string) bool {
+	secrets, configMaps := d.podResourceListers(namespace)
+	return secrets != nil && configMaps != nil
 }
 
 func (d *NXOSDriver) CheckConnection(ctx context.Context) error {

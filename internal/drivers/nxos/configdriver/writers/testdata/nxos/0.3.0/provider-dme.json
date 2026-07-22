@@ -1,0 +1,143 @@
+{
+  "operations": [
+    {
+      "resource": "nxos_system",
+      "path": "sys",
+      "body": {
+        "topSystem": {
+          "attributes": {
+            "name": "leaf-golden"
+          },
+          "children": [
+            {
+              "ethpmEntity": {
+                "attributes": {},
+                "children": [
+                  {
+                    "ethpmInst": {
+                      "attributes": {
+                        "systemJumboMtu": "9216"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": "nxos_feature",
+      "path": "sys",
+      "body": {
+        "topSystem": {
+          "attributes": {},
+          "children": [
+            {
+              "fmEntity": {
+                "attributes": {},
+                "children": [
+                  {
+                    "fmHmm": {
+                      "attributes": {
+                        "adminSt": "enabled"
+                      }
+                    }
+                  },
+                  {
+                    "fmLldp": {
+                      "attributes": {
+                        "adminSt": "enabled"
+                      }
+                    }
+                  },
+                  {
+                    "fmPvlan": {
+                      "attributes": {
+                        "adminSt": "enabled"
+                      }
+                    }
+                  },
+                  {
+                    "fmVnSegment": {
+                      "attributes": {
+                        "adminSt": "enabled"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "fsetFeatureSet": {
+                "attributes": {
+                  "name": "fex",
+                  "adminSt": "enabled"
+                }
+              }
+            },
+            {
+              "fsetFeatureSet": {
+                "attributes": {
+                  "name": "mpls",
+                  "adminSt": "disabled"
+                }
+              }
+            },
+            {
+              "fsetFeatureSet": {
+                "attributes": {
+                  "name": "virtualization",
+                  "adminSt": "enabled"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": "nxos_bridge_domain",
+      "path": "sys/bd",
+      "body": {
+        "bdEntity": {
+          "attributes": {},
+          "children": [
+            {
+              "l2BD": {
+                "attributes": {
+                  "fabEncap": "vlan-101",
+                  "name": "cvk-golden"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": "nxos_physical_interface",
+      "path": "sys/intf",
+      "body": {
+        "interfaceEntity": {
+          "attributes": {},
+          "children": [
+            {
+              "l1PhysIf": {
+                "attributes": {
+                  "id": "eth1/1",
+                  "adminSt": "down",
+                  "descr": "golden-uplink",
+                  "layer": "Layer2",
+                  "mtu": "9216",
+                  "userCfgdFlags": "admin_layer,admin_mtu,admin_state"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

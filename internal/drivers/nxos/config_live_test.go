@@ -93,11 +93,58 @@ func TestLiveNXOSConfigSmoke(t *testing.T) {
 		t.Skipf("VLAN %d already exists; refusing to mutate an existing lab VLAN", vlanID)
 	}
 	name := fmt.Sprintf("cvk_live_%d", time.Now().Unix()%100000)
+	cleanupNeeded := false
 	defer func() {
-		if ntr, ok := tr.(*nxapiConfigTransport); ok {
-			_, _ = ntr.client.conf(context.Background(), "configure terminal", fmt.Sprintf("no vlan %d", vlanID))
+		if !cleanupNeeded {
+			return
 		}
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cleanupCancel()
+		current, fetchErr := w.Fetch(cleanupCtx, tr)
+		if fetchErr != nil {
+			t.Errorf("VLAN %d cleanup precheck: %v", vlanID, fetchErr)
+			return
+		}
+		item, present := vlanByID(current, vlanID)
+		if !present {
+			t.Logf("VLAN %d cleanup: already absent", vlanID)
+			return
+		}
+		if got := fmt.Sprint(item["name"]); got != name {
+			t.Errorf("VLAN %d cleanup refused: marker changed from %q to %q", vlanID, name, got)
+			return
+		}
+		ntr, ok := tr.(*nxapiConfigTransport)
+		if !ok {
+			t.Errorf("VLAN %d cleanup: transport type %T does not support guarded DME cleanup", vlanID, tr)
+			return
+		}
+		path := fmt.Sprintf("%s/bd-[vlan-%d]", nxosschema.DNBridgeDomain, vlanID)
+		if deleteErr := ntr.client.dmeDelete(cleanupCtx, path); deleteErr != nil {
+			if _, fallbackErr := ntr.client.conf(cleanupCtx, "configure terminal", fmt.Sprintf("no vlan %d", vlanID)); fallbackErr != nil {
+				t.Errorf("VLAN %d cleanup: DME delete failed: %v; CLI fallback failed: %v", vlanID, deleteErr, fallbackErr)
+				return
+			}
+			t.Errorf("VLAN %d cleanup: DME delete failed, CLI fallback succeeded: %v", vlanID, deleteErr)
+		}
+		cleaned, fetchErr := w.Fetch(cleanupCtx, tr)
+		if fetchErr != nil {
+			t.Errorf("VLAN %d cleanup verification: %v", vlanID, fetchErr)
+			return
+		}
+		if vlanPresent(cleaned, vlanID) {
+			t.Errorf("VLAN %d cleanup verification: VLAN is still present", vlanID)
+			return
+		}
+		t.Logf("VLAN %d cleanup verified", vlanID)
 	}()
+	observed, err = w.Fetch(ctx, tr)
+	if err != nil {
+		t.Fatalf("vlan mutation precheck Fetch: %v", err)
+	}
+	if vlanPresent(observed, vlanID) {
+		t.Fatalf("VLAN %d appeared after the initial precheck; refusing to mutate it", vlanID)
+	}
 	ops, err := w.Diff(map[string]any{"vlans": []any{map[string]any{"id": vlanID, "name": name}}}, observed)
 	if err != nil {
 		t.Fatalf("vlan Diff: %v", err)
@@ -105,6 +152,7 @@ func TestLiveNXOSConfigSmoke(t *testing.T) {
 	if len(ops) == 0 {
 		t.Fatalf("vlan Diff produced no ops for absent VLAN %d", vlanID)
 	}
+	cleanupNeeded = true
 	if err := w.Apply(ctx, tr, ops); err != nil {
 		t.Fatalf("vlan Apply: %v", err)
 	}
@@ -131,13 +179,18 @@ func liveBoolEnv(t *testing.T, key string) bool {
 }
 
 func vlanPresent(observed any, id int) bool {
+	_, ok := vlanByID(observed, id)
+	return ok
+}
+
+func vlanByID(observed any, id int) (map[string]any, bool) {
 	m, ok := observed.(map[string]any)
 	if !ok {
-		return false
+		return nil, false
 	}
 	list, ok := m["vlans"].([]any)
 	if !ok {
-		return false
+		return nil, false
 	}
 	for _, item := range list {
 		vm, ok := item.(map[string]any)
@@ -147,13 +200,13 @@ func vlanPresent(observed any, id int) bool {
 		switch v := vm["id"].(type) {
 		case int:
 			if v == id {
-				return true
+				return vm, true
 			}
 		case float64:
 			if int(v) == id {
-				return true
+				return vm, true
 			}
 		}
 	}
-	return false
+	return nil, false
 }

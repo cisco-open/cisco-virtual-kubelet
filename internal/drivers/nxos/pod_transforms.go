@@ -175,10 +175,10 @@ func (d *NXOSDriver) resolveEnvironmentValue(namespace string, env v1.EnvVar) (s
 		return "", false, nil
 	}
 	if env.ValueFrom.SecretKeyRef != nil {
-		return d.resolveSecretKeyRef(env.ValueFrom.SecretKeyRef)
+		return d.resolveSecretKeyRef(namespace, env.ValueFrom.SecretKeyRef)
 	}
 	if env.ValueFrom.ConfigMapKeyRef != nil {
-		return d.resolveConfigMapKeyRef(env.ValueFrom.ConfigMapKeyRef)
+		return d.resolveConfigMapKeyRef(namespace, env.ValueFrom.ConfigMapKeyRef)
 	}
 	if env.ValueFrom.FieldRef != nil {
 		return "", false, fmt.Errorf("fieldRef environment variable %s is not supported for NX-OS app-hosting", env.Name)
@@ -189,11 +189,12 @@ func (d *NXOSDriver) resolveEnvironmentValue(namespace string, env v1.EnvVar) (s
 	return "", false, fmt.Errorf("unsupported environment variable source for %s in namespace %s", env.Name, namespace)
 }
 
-func (d *NXOSDriver) resolveSecretKeyRef(ref *v1.SecretKeySelector) (string, bool, error) {
-	if d.secretLister == nil {
+func (d *NXOSDriver) resolveSecretKeyRef(namespace string, ref *v1.SecretKeySelector) (string, bool, error) {
+	secretLister, _ := d.podResourceListers(namespace)
+	if secretLister == nil {
 		return "", false, fmt.Errorf("secret lister not available")
 	}
-	secret, err := d.secretLister.Get(ref.Name)
+	secret, err := secretLister.Get(ref.Name)
 	if err != nil {
 		if ref.Optional != nil && *ref.Optional {
 			return "", false, nil
@@ -210,11 +211,12 @@ func (d *NXOSDriver) resolveSecretKeyRef(ref *v1.SecretKeySelector) (string, boo
 	return string(value), true, nil
 }
 
-func (d *NXOSDriver) resolveConfigMapKeyRef(ref *v1.ConfigMapKeySelector) (string, bool, error) {
-	if d.configLister == nil {
+func (d *NXOSDriver) resolveConfigMapKeyRef(namespace string, ref *v1.ConfigMapKeySelector) (string, bool, error) {
+	_, configLister := d.podResourceListers(namespace)
+	if configLister == nil {
 		return "", false, fmt.Errorf("configmap lister not available")
 	}
-	configMap, err := d.configLister.Get(ref.Name)
+	configMap, err := configLister.Get(ref.Name)
 	if err != nil {
 		if ref.Optional != nil && *ref.Optional {
 			return "", false, nil

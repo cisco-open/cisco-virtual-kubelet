@@ -57,7 +57,7 @@ const features = [
     icon: FileCode,
     title: "Network as Code",
     description:
-      "Declare device configuration in Kubernetes with the IOSXEConfig and NXOSConfig CRDs — continuous drift detection, revisions, and transactional apply.",
+      "Declare device configuration in Kubernetes with IOSXEConfig and NXOSConfig — shared drift detection and verification, with revisions and transactional apply available on IOS XE.",
     color: "from-primary to-accent",
     glowColor: "primary",
     beta: true,

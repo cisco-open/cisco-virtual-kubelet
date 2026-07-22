@@ -17,9 +17,11 @@ package writers
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 )
 
@@ -31,6 +33,13 @@ func (ethernetWriter) Family() string { return nxosschema.FamilyInterfaceEtherne
 
 func (ethernetWriter) YANGPaths() []string { return []string{nxosschema.PathInterfaceEthernet} }
 
+func (ethernetWriter) OperationScope() enginewriters.OperationScope {
+	return enginewriters.OperationScope{
+		ReadPaths:     []string{nxosschema.PathInterfaceEthernet},
+		WritePrefixes: []string{nxosschema.DNInterfaceEntity},
+	}
+}
+
 func (ethernetWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
 	raw, err := c.Fetch(ctx, nxosschema.PathInterfaceEthernet)
 	if err != nil {
@@ -40,6 +49,18 @@ func (ethernetWriter) Fetch(ctx context.Context, c transport.Interface) (any, er
 }
 
 func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
+	return (ethernetWriter{}).diff(desired, observed, false)
+}
+
+func (ethernetWriter) DiffWithContext(ctx enginewriters.DiffContext, desired, observed any) ([]transport.Op, error) {
+	strictModel := ctx.Platform == "nxos" && ctx.ModelVersion != ""
+	if strictModel && ctx.ModelVersion != "0.3.0" {
+		return nil, fmt.Errorf("interface_ethernet: unsupported NetAsCode modelVersion %q", ctx.ModelVersion)
+	}
+	return (ethernetWriter{}).diff(desired, observed, strictModel)
+}
+
+func (ethernetWriter) diff(desired, observed any, strictModel bool) ([]transport.Op, error) {
 	wantList, err := coerceList(desired, "interfaces", "interface_ethernet.desired")
 	if err != nil {
 		return nil, err
@@ -72,7 +93,35 @@ func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		item := desiredByName[full]
 		gotItem := got[full]
 		_, name, _, _ := ethernetName(item)
+		shutdownRaw, shutdownExplicit := item["shutdown"]
+		if strictModel && gotItem != nil {
+			layer := strings.TrimSpace(stringLeaf(gotItem["layer"]))
+			if layer == "" {
+				return nil, fmt.Errorf("%s live layer is unavailable; refusing a strict NetAsCode write", full)
+			}
+			if !strings.EqualFold(layer, "Layer2") {
+				return nil, fmt.Errorf("%s is %s; refusing to convert an existing non-Layer2 interface through the supported NetAsCode slice", full, layer)
+			}
+			if !shutdownExplicit {
+				shutdown, known := boolLeaf(gotItem["shutdown"])
+				if !known {
+					return nil, fmt.Errorf("%s live admin state is unavailable; set shutdown explicitly for a strict NetAsCode write", full)
+				}
+				if shutdown {
+					return nil, fmt.Errorf("%s is shutdown; set shutdown explicitly to authorize an admin-state change", full)
+				}
+			}
+		}
 		attrs := map[string]string{"id": "eth" + name}
+		var flags []string
+		if strictModel {
+			// NetAsCode 0.3.0 derives these values even when shutdown and
+			// switchport are absent. Native CVK sources intentionally do not:
+			// omission there means leave the device property unchanged.
+			attrs["adminSt"] = "up"
+			attrs["layer"] = "Layer2"
+			flags = append(flags, "admin_layer")
+		}
 		changed := gotItem == nil
 		if descRaw, ok := item["description"]; ok {
 			desc := strings.TrimSpace(stringLeaf(descRaw))
@@ -81,8 +130,12 @@ func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 				changed = true
 			}
 		}
-		if shutdownRaw, ok := item["shutdown"]; ok {
-			shutdown, valid := boolLeaf(shutdownRaw)
+		if shutdownExplicit || strictModel {
+			shutdown := false
+			valid := true
+			if shutdownExplicit {
+				shutdown, valid = boolLeaf(shutdownRaw)
+			}
 			if !valid {
 				return nil, fmt.Errorf("%s shutdown must be boolean", full)
 			}
@@ -91,7 +144,13 @@ func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 			} else {
 				attrs["adminSt"] = "up"
 			}
-			attrs["userCfgdFlags"] = "admin_state"
+			if strictModel {
+				if shutdownExplicit {
+					flags = append(flags, "admin_state")
+				}
+			} else {
+				attrs["userCfgdFlags"] = "admin_state"
+			}
 			if gotItem == nil || !scalarEqual(shutdown, gotItem["shutdown"]) {
 				changed = true
 			}
@@ -102,7 +161,18 @@ func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 				return nil, fmt.Errorf("%s mtu must be an integer between 576 and 9216", full)
 			}
 			attrs["mtu"] = fmt.Sprintf("%d", mtu)
+			if strictModel {
+				flags = append(flags, "admin_mtu")
+			}
 			if gotItem == nil || !scalarEqual(mtu, gotItem["mtu"]) {
+				changed = true
+			}
+		}
+		if strictModel {
+			sort.Strings(flags)
+			configuredFlags := strings.Join(flags, ",")
+			attrs["userCfgdFlags"] = configuredFlags
+			if gotItem != nil && !configuredFlagsEqual(configuredFlags, gotItem["user_configured_flags"]) {
 				changed = true
 			}
 		}
@@ -117,6 +187,21 @@ func (ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		}
 	}
 	return ops, nil
+}
+
+func configuredFlagsEqual(desired string, observed any) bool {
+	normalize := func(raw string) string {
+		parts := strings.Split(raw, ",")
+		clean := parts[:0]
+		for _, part := range parts {
+			if part = strings.TrimSpace(part); part != "" {
+				clean = append(clean, part)
+			}
+		}
+		sort.Strings(clean)
+		return strings.Join(clean, ",")
+	}
+	return normalize(desired) == normalize(stringLeaf(observed))
 }
 
 func (ethernetWriter) KeysOf(v any) []string {

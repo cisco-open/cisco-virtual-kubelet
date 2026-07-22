@@ -74,6 +74,14 @@ type CiscoKubernetesDeviceDriver interface {
 	GetGlobalOperationalData(ctx context.Context) (*common.AppHostingOperData, error)
 }
 
+// PodResourceListerSetter is implemented by drivers that must resolve pod
+// Secret or ConfigMap references after the initial DeployPod call. The
+// provider supplies its shared informer listers once at construction time;
+// implementations must still scope every lookup to the pod namespace.
+type PodResourceListerSetter interface {
+	SetPodResourceListers(corev1listers.SecretLister, corev1listers.ConfigMapLister)
+}
+
 // TopologyProvider is an optional interface that drivers may implement to
 // expose network topology and hosted-app data for observability features
 // (OTEL traces, node annotations, metrics). Consumers should use a type

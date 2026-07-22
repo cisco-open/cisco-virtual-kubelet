@@ -68,6 +68,13 @@ func TestDeployPodInitiatesInstallWithoutWaitingForRunning(t *testing.T) {
 	assertNXAPILifecycleCommand(t, requests, "app-hosting install appid "+appID, "cli_conf")
 	assertNXAPILifecycleCommandAbsent(t, requests, "app-hosting activate appid "+appID)
 	assertNXAPILifecycleCommandAbsent(t, requests, "app-hosting start appid "+appID)
+	for _, req := range requests {
+		if strings.Contains(req.InsAPI.Input, "app-vnic ") ||
+			strings.Contains(req.InsAPI.Input, "app-resource profile") ||
+			strings.Contains(req.InsAPI.Input, "run-opts ") {
+			t.Fatalf("app configuration ran before install reached DEPLOYED: %q", req.InsAPI.Input)
+		}
+	}
 	assertNoLifecycleShow(t, requests)
 }
 
@@ -347,11 +354,8 @@ func TestNXOSRunOptionsResolveSecretAndConfigMapRefs(t *testing.T) {
 		}}},
 	}
 	secretLister, configMapLister := nxosEnvListers(t)
-	driver := &NXOSDriver{
-		config:       &v1alpha1.DeviceSpec{},
-		secretLister: secretLister,
-		configLister: configMapLister,
-	}
+	driver := &NXOSDriver{config: &v1alpha1.DeviceSpec{}}
+	driver.rememberPodResourceListers(pod.Namespace, secretLister, configMapLister)
 	opts, err := driver.buildRunOptions(pod, container)
 	if err != nil {
 		t.Fatalf("buildRunOptions: %v", err)
@@ -365,6 +369,110 @@ func TestNXOSRunOptionsResolveSecretAndConfigMapRefs(t *testing.T) {
 			t.Fatalf("run opts missing %q in:\n%s", want, joined)
 		}
 	}
+}
+
+func TestNXOSRunOptionsScopeResourceRefsToPodNamespace(t *testing.T) {
+	secretIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+	configIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+	for _, namespace := range []string{"team-a", "team-b"} {
+		if err := secretIndexer.Add(&v1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "shared-name", Namespace: namespace},
+			Data:       map[string][]byte{"token": []byte(namespace + "-secret")},
+		}); err != nil {
+			t.Fatalf("add %s secret: %v", namespace, err)
+		}
+		if err := configIndexer.Add(&v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "shared-name", Namespace: namespace},
+			Data:       map[string]string{"mode": namespace + "-config"},
+		}); err != nil {
+			t.Fatalf("add %s configmap: %v", namespace, err)
+		}
+	}
+
+	driver := &NXOSDriver{config: &v1alpha1.DeviceSpec{}}
+	driver.SetPodResourceListers(
+		corev1listers.NewSecretLister(secretIndexer),
+		corev1listers.NewConfigMapLister(configIndexer),
+	)
+	for _, namespace := range []string{"team-a", "team-b"} {
+		pod := nxosTestPod()
+		pod.Namespace = namespace
+		container := pod.Spec.Containers[0]
+		container.Env = []v1.EnvVar{
+			{Name: "TOKEN", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{
+				LocalObjectReference: v1.LocalObjectReference{Name: "shared-name"},
+				Key:                  "token",
+			}}},
+			{Name: "MODE", ValueFrom: &v1.EnvVarSource{ConfigMapKeyRef: &v1.ConfigMapKeySelector{
+				LocalObjectReference: v1.LocalObjectReference{Name: "shared-name"},
+				Key:                  "mode",
+			}}},
+		}
+		opts, err := driver.buildRunOptions(pod, container)
+		if err != nil {
+			t.Fatalf("buildRunOptions(%s): %v", namespace, err)
+		}
+		joined := strings.Join(opts, "\n")
+		for _, want := range []string{namespace + "-secret", namespace + "-config"} {
+			if !strings.Contains(joined, want) {
+				t.Fatalf("%s run opts missing %q: %s", namespace, want, joined)
+			}
+		}
+		other := "team-a"
+		if namespace == other {
+			other = "team-b"
+		}
+		if strings.Contains(joined, other+"-secret") || strings.Contains(joined, other+"-config") {
+			t.Fatalf("%s run opts leaked %s namespace data: %s", namespace, other, joined)
+		}
+	}
+}
+
+func TestConvergeDeployedAppAfterRestartUsesClusterResourceListers(t *testing.T) {
+	pod := nxosTestPod()
+	pod.Spec.Containers[0].Env = []v1.EnvVar{{
+		Name: "RESTART_TOKEN",
+		ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{
+			LocalObjectReference: v1.LocalObjectReference{Name: "restart-secret"},
+			Key:                  "token",
+		}},
+	}}
+	secretIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+	if err := secretIndexer.Add(&v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "restart-secret", Namespace: pod.Namespace},
+		Data:       map[string][]byte{"token": []byte("restart-only-value")},
+	}); err != nil {
+		t.Fatalf("add restart secret: %v", err)
+	}
+	configIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+
+	var requests []nxapiRequest
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req nxapiRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		requests = append(requests, req)
+		writeNXAPISuccess(t, w, req.InsAPI.Input, "")
+	}))
+	defer server.Close()
+
+	// This driver has never received DeployPod, matching a worker restart while
+	// the device-side app is already DEPLOYED.
+	driver := nxosTestDriver(server)
+	driver.SetPodResourceListers(
+		corev1listers.NewSecretLister(secretIndexer),
+		corev1listers.NewConfigMapLister(configIndexer),
+	)
+	appID := common.GenerateContainerAppIDs(pod)["app"]
+	driver.convergePodApps(context.Background(), pod, map[string]nxosApp{
+		"app": {ID: appID, ContainerName: "app", State: "DEPLOYED", Image: pod.Spec.Containers[0].Image},
+	})
+	joined := nxapiRequestInputs(requests)
+	if !strings.Contains(joined, "--env RESTART_TOKEN='restart-only-value'") {
+		t.Fatalf("restart convergence did not resolve the pod namespace secret: %s", joined)
+	}
+	assertNXAPILifecycleCommand(t, requests, "app-hosting activate appid "+appID, "cli_conf")
 }
 
 func TestDeployPodRendersResourceProfileAndRunOpts(t *testing.T) {
@@ -409,13 +517,121 @@ func TestDeployPodRendersResourceProfileAndRunOpts(t *testing.T) {
 	if err := driver.DeployPod(context.Background(), pod, nil, nil); err != nil {
 		t.Fatalf("DeployPod: %v", err)
 	}
+	if err := driver.UpdatePod(context.Background(), pod); err != nil {
+		t.Fatalf("UpdatePod from DEPLOYED: %v", err)
+	}
+	if err := driver.UpdatePod(context.Background(), pod); err != nil {
+		t.Fatalf("UpdatePod from ACTIVATED: %v", err)
+	}
 	assertNXAPICommandContains(t, requests, "app-resource profile custom ; cpu 50 ; memory 4")
 	assertNXAPICommandContains(t, requests, "no app-resource docker")
 	assertNXAPICommandContains(t, requests, "--hostname=app")
+	assertNXAPILifecycleCommand(t, requests, "app-hosting activate appid "+appID, "cli_conf")
+	assertNXAPILifecycleCommand(t, requests, "app-hosting start appid "+appID, "cli_conf")
+	installIndex, configIndex, activateIndex, startIndex := -1, -1, -1, -1
+	for i, req := range requests {
+		switch {
+		case strings.HasPrefix(req.InsAPI.Input, "app-hosting install appid "+appID):
+			installIndex = i
+		case strings.Contains(req.InsAPI.Input, "app-resource profile custom ; cpu 50 ; memory 4"):
+			configIndex = i
+		case strings.HasPrefix(req.InsAPI.Input, "app-hosting activate appid "+appID):
+			activateIndex = i
+		case strings.HasPrefix(req.InsAPI.Input, "app-hosting start appid "+appID):
+			startIndex = i
+		}
+	}
+	if installIndex < 0 || configIndex <= installIndex || activateIndex <= configIndex || startIndex <= activateIndex {
+		t.Fatalf("NX-OS lifecycle order install=%d config=%d activate=%d start=%d, want install < config < activate < start; requests=%#v",
+			installIndex, configIndex, activateIndex, startIndex, requests)
+	}
 	for _, req := range requests {
 		if strings.Contains(req.InsAPI.Input, " vcpu ") {
 			t.Fatalf("unexpected unsupported vcpu command: %q", req.InsAPI.Input)
 		}
+	}
+}
+
+func TestDeployedConfigFailurePreventsActivateAndRetriesImmediately(t *testing.T) {
+	pod := nxosTestPod()
+	var requests []nxapiRequest
+	failConfig := true
+	configAttempts := 0
+	activateCalls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req nxapiRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		requests = append(requests, req)
+		body := ""
+		if req.InsAPI.Type == "cli_conf" && strings.Contains(req.InsAPI.Input, "app-resource profile custom") {
+			configAttempts++
+			if failConfig {
+				failConfig = false
+				body = "ERROR: app-vnic configuration rejected for test"
+			}
+		}
+		if req.InsAPI.Type == "cli_conf" && strings.HasPrefix(req.InsAPI.Input, "app-hosting activate ") {
+			activateCalls++
+		}
+		writeNXAPISuccess(t, w, req.InsAPI.Input, body)
+	}))
+	defer server.Close()
+
+	driver := nxosTestDriver(server)
+	configs, err := driver.convertPodToAppConfigs(pod)
+	if err != nil {
+		t.Fatalf("convertPodToAppConfigs: %v", err)
+	}
+	if err := driver.advanceAppState(context.Background(), &configs[0], "DEPLOYED"); err == nil ||
+		!strings.Contains(err.Error(), "configuration command failed") {
+		t.Fatalf("first DEPLOYED advance error=%v, want safe config failure", err)
+	} else if strings.Contains(err.Error(), "app-vnic configuration rejected") {
+		t.Fatalf("configuration response body leaked into lifecycle error: %v", err)
+	}
+	if activateCalls != 0 {
+		t.Fatalf("activate calls=%d after failed config, want 0; requests=%#v", activateCalls, requests)
+	}
+
+	// A failed action clears the dedup marker, so corrected configuration can
+	// retry immediately instead of waiting for the normal 30-second guard.
+	if err := driver.advanceAppState(context.Background(), &configs[0], "DEPLOYED"); err != nil {
+		t.Fatalf("retry DEPLOYED advance: %v", err)
+	}
+	if configAttempts != 2 || activateCalls != 1 {
+		t.Fatalf("config attempts=%d activate calls=%d, want 2 and 1; requests=%#v",
+			configAttempts, activateCalls, requests)
+	}
+}
+
+func TestConvergeDeployedAppSkipsMutationWithoutDesiredConfig(t *testing.T) {
+	pod := nxosTestPod()
+	pod.Spec.Containers[0].Env = []v1.EnvVar{{
+		Name: "REQUIRED_TOKEN",
+		ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{
+			LocalObjectReference: v1.LocalObjectReference{Name: "missing-lister-secret"},
+			Key:                  "token",
+		}},
+	}}
+	var requests []nxapiRequest
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req nxapiRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		requests = append(requests, req)
+		writeNXAPISuccess(t, w, req.InsAPI.Input, "")
+	}))
+	defer server.Close()
+
+	driver := nxosTestDriver(server)
+	appID := common.GenerateContainerAppIDs(pod)["app"]
+	driver.convergePodApps(context.Background(), pod, map[string]nxosApp{
+		"app": {ID: appID, ContainerName: "app", State: "DEPLOYED", Image: pod.Spec.Containers[0].Image},
+	})
+	if len(requests) != 0 {
+		t.Fatalf("mutated a DEPLOYED app without authoritative desired config: %#v", requests)
 	}
 }
 
@@ -474,6 +690,8 @@ func TestDeployPodManyContainersInitiatesAllApps(t *testing.T) {
 			appID := appIDFromCommand(input)
 			installs[appID]++
 			stateByApp[appID] = "DEPLOYED"
+		case req.InsAPI.Type == "cli_conf" && strings.HasPrefix(input, "app-hosting activate "):
+			stateByApp[appIDFromCommand(input)] = "ACTIVATED"
 		case req.InsAPI.Type == "cli_show_ascii" && strings.HasPrefix(input, "show app-hosting detail "):
 			appID := appIDFromCommand(input)
 			if state := stateByApp[appID]; state != "" {
@@ -489,6 +707,9 @@ func TestDeployPodManyContainersInitiatesAllApps(t *testing.T) {
 	driver.config.ResourceLimits.Others = map[string]string{nxosMaxAppsResourceKey: "64"}
 	if err := driver.DeployPod(context.Background(), pod, nil, nil); err != nil {
 		t.Fatalf("DeployPod: %v", err)
+	}
+	if err := driver.UpdatePod(context.Background(), pod); err != nil {
+		t.Fatalf("UpdatePod from DEPLOYED: %v", err)
 	}
 
 	for _, container := range pod.Spec.Containers {
@@ -507,7 +728,7 @@ func TestDeployPodManyContainersInitiatesAllApps(t *testing.T) {
 				t.Fatalf("container %s app %s config missing %q in:\n%s", container.Name, appID, want, cfg)
 			}
 		}
-		assertNXAPILifecycleCommandAbsent(t, requests, "app-hosting activate appid "+appID)
+		assertNXAPILifecycleCommand(t, requests, "app-hosting activate appid "+appID, "cli_conf")
 		assertNXAPILifecycleCommandAbsent(t, requests, "app-hosting start appid "+appID)
 	}
 	assertNoLifecycleShow(t, requests)
@@ -574,6 +795,20 @@ func TestGetPodStatusConvergesMixedStatesAsync(t *testing.T) {
 	waitForNXAPILifecycleCommand(t, &mu, &requests, "app-hosting start appid "+appIDs["activated"], "cli_conf")
 	mu.Lock()
 	defer mu.Unlock()
+	configIndex, activateIndex := -1, -1
+	for i, req := range requests {
+		if strings.Contains(req.InsAPI.Input, "app-hosting appid "+appIDs["deployed"]) &&
+			strings.Contains(req.InsAPI.Input, "app-resource profile custom") {
+			configIndex = i
+		}
+		if strings.HasPrefix(req.InsAPI.Input, "app-hosting activate appid "+appIDs["deployed"]) {
+			activateIndex = i
+		}
+	}
+	if configIndex < 0 || activateIndex <= configIndex {
+		t.Fatalf("deployed app config index=%d activate index=%d, want config before activation; requests=%#v",
+			configIndex, activateIndex, requests)
+	}
 	assertNXAPILifecycleCommandAbsent(t, requests, "app-hosting activate appid "+appIDs["running"])
 	assertNXAPILifecycleCommandAbsent(t, requests, "app-hosting start appid "+appIDs["running"])
 }
@@ -937,6 +1172,14 @@ func optsAt(opts []string, i int) string {
 		return ""
 	}
 	return opts[i]
+}
+
+func nxapiRequestInputs(requests []nxapiRequest) string {
+	inputs := make([]string, 0, len(requests))
+	for _, request := range requests {
+		inputs = append(inputs, request.InsAPI.Input)
+	}
+	return strings.Join(inputs, "\n")
 }
 
 func assertNoLifecycleShow(t *testing.T, requests []nxapiRequest) {

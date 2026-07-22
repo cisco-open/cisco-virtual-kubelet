@@ -29,6 +29,7 @@ These items gate merging a branch that changes runtime behavior:
 | Gate | Required evidence |
 |---|---|
 | Unit and race tests | `go test ./...` and `go test -race ./...` pass. |
+| Pinned NetAsCode oracle | Offline conformance against module `0.3.0` / NX-OS provider `0.13.1` golden plan and DME facts passes for every supported field. |
 | Generated artifacts | `make deepcopy-gen manifests` produces no unexpected drift. |
 | Build and smoke | GitHub `build-and-smoke` passes, including envtest and Helm checks. |
 | Existing IOS-XE labs | Cat8kv and Cat9k lab checks pass so NX-OS work does not regress IOS-XE. |
@@ -70,7 +71,8 @@ scripts/nxos-lab-smoke.sh
 
 Goal: make the non-transactional behavior explicit and operationally safe.
 
-- Keep NX-OS transport kind as neutral `rest`.
+- Report the explicit `nxapi` transport kind so DME behavior is distinguishable
+  from generic REST transports.
 - Never advertise transactions or confirmed-commit for NX-API REST/DME.
 - Report non-transactional fallback clearly in status/events when
   `spec.transactional` or `spec.confirmTimeoutSeconds` is requested.
@@ -113,7 +115,7 @@ The first supported families are:
 | `feature` | NetAsCode feature booleans | Maps to DME `fmEntity` children; disabling `nxapi`, `ssh`, `scp_server`, `sftp_server`, or `tacacs` is rejected to avoid management lockout. |
 | `feature_set` | `fex`, `mpls`, `virtualization` | Maps to DME `fsetFeatureSet` admin state. |
 | `vlan` | `vlans[].id`, `vlans[].name` | VNI/VXLAN leaves are deferred; scoped prune deletes are supported for CR-owned VLANs except VLAN 1. |
-| `interface_ethernet` | `id`, `description`, `shutdown`, `mtu` | Switchport, L3, protocol, and port-channel leaves are planned; physical interface deletion/prune is intentionally unsupported. |
+| `interface_ethernet` | `id`, `description`, `shutdown`, `mtu` | Provider-derived `adminSt`, `Layer2`, and user-configured flags are preserved for strict imports; CVK refuses implicit Layer3-to-Layer2 or shutdown-to-up conversion. Switchport, L3, protocol, and port-channel leaves are planned; physical interface deletion/prune is intentionally unsupported. |
 
 Only the supported families above are accepted in `NXOSConfig.spec.managedFamilies`.
 The runtime rejects planned/deferred families before device I/O, so the coverage
@@ -142,11 +144,13 @@ Recommended next waves:
    `telemetry`. These should be delivered as coordinated fabric/observability
    waves, not isolated one-off writers.
 
-The NetAsCode entity/source layer is also part of parity. Inline `devices`,
-`device_groups`, `global`, `variables`, model `templates`, and
-`interface_groups` are supported today. Terraform-specific filesystem inputs
-such as `yaml_files`, `yaml_directories`, `template_files`, and
-`write_model_file` should stay outside `NXOSConfig`; render them into resolved
+The NetAsCode entity/source layer is also part of parity. Native compatibility
+sources that omit `modelSource` may use inline `devices`, `device_groups`,
+`global`, `variables`, model `templates`, and `interface_groups`. A strict
+import that declares `modelSource.resolved: true` rejects those constructs and
+accepts only flattened per-device canonical data. Terraform-specific
+filesystem inputs such as `yaml_files`, `yaml_directories`, `template_files`,
+and `write_model_file` stay outside `NXOSConfig`; render them into resolved
 intent through GitOps or a future source controller.
 
 Each family requires:
@@ -190,6 +194,13 @@ Goal: keep horizontal scaling aligned with Virtual Kubelet instead of forcing a
 single central aggregator.
 
 - Preserve per-device VK workers as the primary runtime unit.
+- Enforce exclusive app-runtime ownership per physical device identity before
+  pod lifecycle and dangling-app cleanup begin. Duplicate or aliased endpoints
+  must fail closed; otherwise a second worker can treat apps owned by the
+  incumbent virtual node as dangling and remove them.
+- Until that guard exists, require a non-overlapping handoff: stop the incumbent
+  completely, retain its node identity when preserving existing Pods, and only
+  then start the replacement.
 - Use topology labels and worker capability status for placement, upgrades, and
   debugging.
 - Add per-device concurrency limits and session locks for device-facing calls.
@@ -221,6 +232,8 @@ NX-OS can be called production-ready only when all of the following are true:
 
 - Branch-image lab deployment is repeatable.
 - App-hosting lifecycle is tested against a real NX-OS target.
+- Exclusive physical-device ownership is enforced before pod lifecycle starts,
+  with duplicate and aliased endpoints covered by fail-closed tests.
 - NX-OS app-hosting slot limits are documented per platform and reflected in
   `resourceLimits.others.maxApps` before enabling higher pod density.
 - At least one DME write family is live-tested with cleanup in CI.
@@ -231,5 +244,5 @@ NX-OS can be called production-ready only when all of the following are true:
   that can safely delete device objects.
 - Transport and reconcile metrics are available for DME, app-hosting, and
   DeviceOperation.
-- Rollback/compensation behavior is documented for every supported write
-  family.
+- Operator recovery/compensation behavior is documented for every supported
+  write family; CR revision history and declarative rollback remain disabled.

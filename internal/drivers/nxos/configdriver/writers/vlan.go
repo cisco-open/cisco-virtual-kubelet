@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 )
 
@@ -29,6 +30,13 @@ func init() { register(vlanWriter{}) }
 func (vlanWriter) Family() string { return nxosschema.FamilyVLAN }
 
 func (vlanWriter) YANGPaths() []string { return []string{nxosschema.PathVLANBrief} }
+
+func (vlanWriter) OperationScope() enginewriters.OperationScope {
+	return enginewriters.OperationScope{
+		ReadPaths:     []string{nxosschema.PathVLANBrief},
+		WritePrefixes: []string{nxosschema.DNBridgeDomain},
+	}
+}
 
 func (vlanWriter) Fetch(ctx context.Context, c transport.Interface) (any, error) {
 	raw, err := c.Fetch(ctx, nxosschema.PathVLANBrief)
@@ -72,7 +80,6 @@ func (vlanWriter) Diff(desired, observed any) ([]transport.Op, error) {
 		changed := gotItem == nil
 		attrs := map[string]string{
 			"fabEncap": fmt.Sprintf("vlan-%d", id),
-			"pcTag":    "1",
 		}
 		if nameRaw, ok := item["name"]; ok {
 			name := stringLeaf(nameRaw)

@@ -14,6 +14,8 @@
 
 package writers
 
+import enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
+
 // FamilySchema is the reflected metadata every writer exposes so that
 // external tooling (cisco-vk-config-lint, cisco-vk-config-docs) can
 // operate without a cross-package import cycle and without
@@ -30,13 +32,7 @@ package writers
 //
 // KeyField is the list-element identity when the family is a keyed
 // list. Empty for singleton families.
-type FamilySchema struct {
-	Family        string
-	Shape         string // "singleton" | "keyed_list"
-	ManagedLeaves []string
-	InnerKey      string
-	KeyField      string
-}
+type FamilySchema = enginewriters.FamilySchema
 
 // Schema returns the metadata for family, or a zero value + false if
 // the writer is a skeleton (no real implementation registered) or the

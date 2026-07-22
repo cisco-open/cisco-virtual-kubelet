@@ -98,6 +98,7 @@ const (
 	envCVKEnableWriteClassGNOI  = "CISCO_VK_ENABLE_WRITE_CLASS_GNOI"
 	envCVKEnableSoftwareUpgrade = "CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE"
 	envConfigYANGValidation     = "CONFIG_YANG_VALIDATION"
+	envCVKNXOSAllowExperimental = "CVK_NXOS_ALLOW_EXPERIMENTAL_RELEASES"
 )
 
 // telemetryEnvPropagationNames is the legacy name for the set of controller
@@ -127,6 +128,7 @@ var telemetryEnvPropagationNames = []string{
 	envCVKEnableWriteClassGNOI,
 	envCVKEnableSoftwareUpgrade,
 	envConfigYANGValidation,
+	envCVKNXOSAllowExperimental,
 }
 
 const (

@@ -23,12 +23,151 @@ import (
 
 func TestParseNXAPIResponseSingleOutput(t *testing.T) {
 	raw := []byte(`{"ins_api":{"outputs":{"output":{"input":"show version","code":"200","msg":"Success","body":"NXOS: version 10.3(9)\n"}}}}`)
-	got, err := parseNXAPIResponse(raw)
+	got, err := parseNXAPIResponse(raw, "cli_show_ascii")
 	if err != nil {
 		t.Fatalf("parseNXAPIResponse: %v", err)
 	}
 	if got != "NXOS: version 10.3(9)\n" {
 		t.Fatalf("unexpected body %q", got)
+	}
+}
+
+func TestParseNXAPIResponseRejectsCLIConfErrorBody(t *testing.T) {
+	raw := []byte(`{"ins_api":{"outputs":{"output":{"input":"app-hosting activate appid cvk0000_deadbeef","code":"200","msg":"Success","body":"  Error: Activate failed: app needs app-vnic configuration\n"}}}}`)
+	_, err := parseNXAPIResponse(raw, "cli_conf")
+	if err == nil {
+		t.Fatal("parseNXAPIResponse accepted a cli_conf semantic error body")
+	}
+	for _, want := range []string{"configuration command failed", "code=200"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error=%q, want %q", err, want)
+		}
+	}
+	for _, leaked := range []string{"app-hosting activate", "Activate failed", "app-vnic"} {
+		if strings.Contains(err.Error(), leaked) {
+			t.Fatalf("configuration error exposed device input/body %q: %v", leaked, err)
+		}
+	}
+}
+
+func TestNXAPIConfRejectsSuccessEnvelopeWithErrorBody(t *testing.T) {
+	const secret = "never-log-this-secret"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req nxapiRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		if req.InsAPI.Type != "cli_conf" {
+			t.Fatalf("type=%q, want cli_conf", req.InsAPI.Type)
+		}
+		response := map[string]any{"ins_api": map[string]any{"outputs": map[string]any{"output": map[string]any{
+			"input": req.InsAPI.Input,
+			"code":  "200",
+			"msg":   "rejected " + secret,
+			"body":  "ERROR: rejected --env TOKEN='" + secret + "'",
+		}}}}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			t.Fatalf("encode response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	client := &nxapiClient{baseURL: server.URL, client: server.Client()}
+	_, err := client.conf(context.Background(), "configure terminal", `app-hosting appid cvk-test ; app-resource docker ; run-opts 1 "--env TOKEN='`+secret+`'"`)
+	if err == nil {
+		t.Fatal("conf accepted a success envelope carrying a CLI error body")
+	}
+	for _, want := range []string{"nxapi cli_conf", "configuration command failed", "code=200"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error=%q, want %q", err, want)
+		}
+	}
+	for _, leaked := range []string{secret, "--env", "run-opts", "app-hosting appid"} {
+		if strings.Contains(err.Error(), leaked) {
+			t.Fatalf("configuration error leaked %q: %v", leaked, err)
+		}
+	}
+}
+
+func TestNXAPIConfigErrorOnlyReportsNumericCode(t *testing.T) {
+	const secret = "12345678901234567890"
+	raw := []byte(`{"ins_api":{"outputs":{"output":{"input":"configure terminal","code":"` + secret + `","msg":"` + secret + `","body":"ERROR: ` + secret + `"}}}}`)
+	_, err := parseNXAPIResponse(raw, "cli_conf")
+	if err == nil {
+		t.Fatal("parseNXAPIResponse accepted an invalid configuration response")
+	}
+	if err.Error() != "configuration command failed" {
+		t.Fatalf("error=%q, want fixed safe message", err)
+	}
+}
+
+func TestNXAPINumericCodeRequiresThreeASCIIDigits(t *testing.T) {
+	for _, tc := range []struct {
+		in   string
+		want string
+	}{
+		{in: "200", want: "200"},
+		{in: " 400 ", want: "400"},
+		{in: "20a"},
+		{in: "12"},
+		{in: "12345678901234567890"},
+	} {
+		if got := nxapiNumericCode(tc.in); got != tc.want {
+			t.Fatalf("nxapiNumericCode(%q)=%q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestNXAPIConfHTTPErrorDoesNotExposeInputOrResponse(t *testing.T) {
+	const secret = "never-log-http-secret"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`request rejected: run-opts --env TOKEN='` + secret + `'`))
+	}))
+	defer server.Close()
+
+	client := &nxapiClient{baseURL: server.URL, client: server.Client()}
+	_, err := client.conf(context.Background(), `run-opts 1 "--env TOKEN='`+secret+`'"`)
+	if err == nil {
+		t.Fatal("conf accepted HTTP 400")
+	}
+	if !strings.Contains(err.Error(), "nxapi cli_conf: HTTP 400") {
+		t.Fatalf("error=%q, want safe HTTP context", err)
+	}
+	for _, leaked := range []string{secret, "--env", "run-opts"} {
+		if strings.Contains(err.Error(), leaked) {
+			t.Fatalf("HTTP configuration error leaked %q: %v", leaked, err)
+		}
+	}
+}
+
+func TestParseNXAPIResponseAllowsErrorTextInShowOutput(t *testing.T) {
+	raw := []byte(`{"ins_api":{"outputs":{"output":{"input":"show logging","code":"200","msg":"Success","body":"ERROR: this is device log content\n"}}}}`)
+	got, err := parseNXAPIResponse(raw, "cli_show_ascii")
+	if err != nil {
+		t.Fatalf("parseNXAPIResponse: %v", err)
+	}
+	if got != "ERROR: this is device log content\n" {
+		t.Fatalf("body=%q", got)
+	}
+}
+
+func TestNXAPICLIErrorBodyRequiresLeadingErrorPrefix(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		body string
+		want bool
+	}{
+		{name: "exact", body: "ERROR: failed", want: true},
+		{name: "case and whitespace", body: " \n Error: failed", want: true},
+		{name: "embedded", body: "warning: prior ERROR: counter", want: false},
+		{name: "empty", body: "", want: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := nxapiCLIErrorBody(tc.body); got != tc.want {
+				t.Fatalf("nxapiCLIErrorBody(%q)=%v, want %v", tc.body, got, tc.want)
+			}
+		})
 	}
 }
 
