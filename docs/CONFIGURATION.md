@@ -283,7 +283,7 @@ Two optional annotations tune the copy fallback behaviour:
 
 | Annotation | Default | Description |
 |---|---|---|
-| `cisco.io/apphost-package-dest` | `flash:/virtual-kubelet/<app-id>.tar` | On-device flash path where the image is copied. Must use an IOS-XE filesystem prefix (`flash:`, `bootflash:`, `harddisk:`, `usb:`, `nvram:`). |
+| `cisco.io/apphost-package-dest` | `flash:/virtual-kubelet/<app-id>.tar` | On-device flash path where the image is copied. Must use an IOS-XE filesystem prefix (`flash:`, `bootflash:`, `harddisk:`, `usb:`, `nvram:`); each path segment may contain only ASCII letters, digits, `-`, `.`, `_`, or `~`. |
 | `cisco.io/apphost-package-timeout` | `180s` (3 min) | How long to wait for the app to reach `RUNNING`. Accepts Go duration strings (`3m`, `300s`) or bare seconds (`180`). Clamped to [10s, 30m]. |
 
 ```yaml

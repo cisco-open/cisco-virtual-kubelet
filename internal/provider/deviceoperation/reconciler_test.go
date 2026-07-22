@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -37,10 +38,36 @@ type staticTP struct{ tr transport.Interface }
 
 func (s *staticTP) GetTransport() transport.Interface { return s.tr }
 
+// staleDeviceOperationClient models the controller-runtime split between a
+// cached client read and an authoritative status writer. Get deliberately
+// returns an older DeviceOperation snapshot while every other operation,
+// including Status().Update, delegates to the API-backed client.
+type staleDeviceOperationClient struct {
+	client.Client
+	stale *opsv1alpha1.DeviceOperation
+	gets  int
+}
+
+func (c *staleDeviceOperationClient) Get(
+	ctx context.Context,
+	key client.ObjectKey,
+	obj client.Object,
+	opts ...client.GetOption,
+) error {
+	if got, ok := obj.(*opsv1alpha1.DeviceOperation); ok &&
+		c.stale != nil && key == client.ObjectKeyFromObject(c.stale) {
+		c.gets++
+		c.stale.DeepCopyInto(got)
+		return nil
+	}
+	return c.Client.Get(ctx, key, obj, opts...)
+}
+
 type fakeTransport struct {
 	caps    transport.Capabilities
 	results []transport.CommandResult
 	calls   int
+	onExec  func()
 }
 
 func (f *fakeTransport) Capabilities() transport.Capabilities { return f.caps }
@@ -63,6 +90,9 @@ func (f *fakeTransport) SaveStartup(context.Context) error { return transport.Er
 func (f *fakeTransport) Close() error                      { return nil }
 func (f *fakeTransport) DiagnosticExec(ctx context.Context, commands []string) ([]transport.CommandResult, error) {
 	f.calls++
+	if f.onExec != nil {
+		f.onExec()
+	}
 	if len(f.results) != 0 {
 		return f.results, nil
 	}
@@ -119,6 +149,256 @@ func TestReconcileShowCommand(t *testing.T) {
 	}
 	if tr.calls != 1 {
 		t.Fatalf("DiagnosticExec calls=%d want 1", tr.calls)
+	}
+}
+
+func TestReconcileReadsTerminalStatusFromAPIReader(t *testing.T) {
+	ctx := context.Background()
+	scheme := newScheme(t)
+	op := newOperation("terminal-cache-race", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Commands = []string{"show version"}
+	})
+	op.Status = opsv1alpha1.DeviceOperationStatus{
+		Phase:              opsv1alpha1.OperationPhaseSucceeded,
+		ObservedGeneration: op.Generation,
+		CompletionTime:     &metav1.Time{Time: time.Unix(100, 0).UTC()},
+		Message:            "1 command(s) completed",
+		Outputs: []opsv1alpha1.DeviceOperationOutput{{
+			Command: "show version",
+			Output:  "stable terminal output",
+		}},
+	}
+
+	apiClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+	stale := op.DeepCopy()
+	stale.Status.Phase = opsv1alpha1.OperationPhaseRunning
+	stale.Status.CompletionTime = nil
+	stale.Status.Message = "operation is running"
+	stale.Status.Outputs = nil
+	cachedClient := &staleDeviceOperationClient{Client: apiClient, stale: stale}
+	tr := &fakeTransport{
+		caps: transport.Capabilities{
+			Kind:                   transport.KindNETCONF,
+			SupportsDiagnosticExec: true,
+		},
+		results: []transport.CommandResult{{
+			Command: "show version",
+			Output:  "unexpected duplicate execution",
+		}},
+	}
+	r := &Reconciler{
+		Client:     cachedClient,
+		Reader:     apiClient,
+		DeviceName: "dev1",
+		TP:         &staticTP{tr: tr},
+		Now:        func() time.Time { return time.Unix(200, 0).UTC() },
+	}
+
+	if _, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if cachedClient.gets != 0 {
+		t.Fatalf("cached DeviceOperation reads=%d want 0", cachedClient.gets)
+	}
+	if tr.calls != 0 {
+		t.Fatalf("DiagnosticExec calls=%d want 0 for terminal generation", tr.calls)
+	}
+
+	var got opsv1alpha1.DeviceOperation
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(op), &got); err != nil {
+		t.Fatalf("get operation: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhaseSucceeded {
+		t.Fatalf("phase=%q want %q", got.Status.Phase, opsv1alpha1.OperationPhaseSucceeded)
+	}
+	if len(got.Status.Outputs) != 1 || got.Status.Outputs[0].Output != "stable terminal output" {
+		t.Fatalf("terminal outputs changed: %#v", got.Status.Outputs)
+	}
+}
+
+func TestReconcileDoesNotWriteResultAcrossGenerationChange(t *testing.T) {
+	ctx := context.Background()
+	scheme := newScheme(t)
+	op := newOperation("generation-race", func(op *opsv1alpha1.DeviceOperation) {
+		op.Generation = 1
+		op.Spec.Operation.Commands = []string{"show version"}
+	})
+	apiClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+
+	var hookErr error
+	changed := false
+	tr := &fakeTransport{
+		caps: transport.Capabilities{
+			Kind:                   transport.KindNETCONF,
+			SupportsDiagnosticExec: true,
+		},
+	}
+	tr.onExec = func() {
+		if changed {
+			return
+		}
+		changed = true
+		var current opsv1alpha1.DeviceOperation
+		if err := apiClient.Get(ctx, client.ObjectKeyFromObject(op), &current); err != nil {
+			hookErr = err
+			return
+		}
+		current.Generation = 2
+		current.Spec.Operation.Commands = []string{"show clock"}
+		hookErr = apiClient.Update(ctx, &current)
+	}
+	r := &Reconciler{
+		Client:     apiClient,
+		Reader:     apiClient,
+		DeviceName: "dev1",
+		TP:         &staticTP{tr: tr},
+		Now:        func() time.Time { return time.Unix(200, 0).UTC() },
+	}
+	req := reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}}
+
+	if _, err := r.Reconcile(ctx, req); err == nil || !strings.Contains(err.Error(), "generation changed from 1 to 2") {
+		t.Fatalf("first Reconcile error=%v, want generation-change retry", err)
+	}
+	if hookErr != nil {
+		t.Fatalf("update operation during execution: %v", hookErr)
+	}
+	var afterFirst opsv1alpha1.DeviceOperation
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(op), &afterFirst); err != nil {
+		t.Fatalf("get operation after first Reconcile: %v", err)
+	}
+	if afterFirst.Generation != 2 || afterFirst.Status.ObservedGeneration != 1 {
+		t.Fatalf("generation=%d observedGeneration=%d, want 2/1",
+			afterFirst.Generation, afterFirst.Status.ObservedGeneration)
+	}
+	if afterFirst.Status.Phase != opsv1alpha1.OperationPhaseRunning || len(afterFirst.Status.Outputs) != 0 {
+		t.Fatalf("generation 1 result leaked into generation 2 status: %#v", afterFirst.Status)
+	}
+
+	if _, err := r.Reconcile(ctx, req); err != nil {
+		t.Fatalf("second Reconcile: %v", err)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(op), &got); err != nil {
+		t.Fatalf("get operation after retry: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhaseSucceeded || got.Status.ObservedGeneration != 2 {
+		t.Fatalf("retry status phase=%q observedGeneration=%d, want Succeeded/2",
+			got.Status.Phase, got.Status.ObservedGeneration)
+	}
+	if len(got.Status.Outputs) != 1 || got.Status.Outputs[0].Command != "show clock" {
+		t.Fatalf("retry did not execute generation 2 command: %#v", got.Status.Outputs)
+	}
+	if tr.calls != 2 {
+		t.Fatalf("DiagnosticExec calls=%d want 2", tr.calls)
+	}
+}
+
+func TestReconcileDoesNotWriteResultAcrossObjectRecreation(t *testing.T) {
+	ctx := context.Background()
+	scheme := newScheme(t)
+	op := newOperation("identity-race", func(op *opsv1alpha1.DeviceOperation) {
+		op.UID = types.UID("original-uid")
+		op.Generation = 1
+		op.Spec.Operation.Commands = []string{"show version"}
+	})
+	apiClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+
+	var hookErr error
+	recreated := false
+	tr := &fakeTransport{
+		caps: transport.Capabilities{
+			Kind:                   transport.KindNETCONF,
+			SupportsDiagnosticExec: true,
+		},
+	}
+	tr.onExec = func() {
+		if recreated {
+			return
+		}
+		recreated = true
+		var current opsv1alpha1.DeviceOperation
+		if err := apiClient.Get(ctx, client.ObjectKeyFromObject(op), &current); err != nil {
+			hookErr = err
+			return
+		}
+		if err := apiClient.Delete(ctx, &current); err != nil {
+			hookErr = err
+			return
+		}
+		replacement := newOperation(op.Name, func(replacement *opsv1alpha1.DeviceOperation) {
+			replacement.UID = types.UID("replacement-uid")
+			replacement.Generation = 1
+			replacement.Spec.Operation.Commands = []string{"show clock"}
+		})
+		hookErr = apiClient.Create(ctx, replacement)
+	}
+	r := &Reconciler{
+		Client:     apiClient,
+		Reader:     apiClient,
+		DeviceName: "dev1",
+		TP:         &staticTP{tr: tr},
+		Now:        func() time.Time { return time.Unix(200, 0).UTC() },
+	}
+	req := reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}}
+
+	if _, err := r.Reconcile(ctx, req); err == nil ||
+		!strings.Contains(err.Error(), `identity changed from UID "original-uid" to "replacement-uid"`) {
+		t.Fatalf("first Reconcile error=%v, want identity-change retry", err)
+	}
+	if hookErr != nil {
+		t.Fatalf("replace operation during execution: %v", hookErr)
+	}
+	var afterFirst opsv1alpha1.DeviceOperation
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(op), &afterFirst); err != nil {
+		t.Fatalf("get replacement after first Reconcile: %v", err)
+	}
+	if afterFirst.UID != types.UID("replacement-uid") || afterFirst.Generation != 1 {
+		t.Fatalf("replacement identity=%q generation=%d, want replacement-uid/1",
+			afterFirst.UID, afterFirst.Generation)
+	}
+	if afterFirst.Status.Phase != "" || afterFirst.Status.ObservedGeneration != 0 || len(afterFirst.Status.Outputs) != 0 {
+		t.Fatalf("original result leaked into replacement status: %#v", afterFirst.Status)
+	}
+
+	if _, err := r.Reconcile(ctx, req); err != nil {
+		t.Fatalf("replacement Reconcile: %v", err)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(op), &got); err != nil {
+		t.Fatalf("get replacement after retry: %v", err)
+	}
+	if got.UID != types.UID("replacement-uid") ||
+		got.Status.Phase != opsv1alpha1.OperationPhaseSucceeded ||
+		got.Status.ObservedGeneration != 1 {
+		t.Fatalf("replacement identity=%q phase=%q observedGeneration=%d, want replacement-uid/Succeeded/1",
+			got.UID, got.Status.Phase, got.Status.ObservedGeneration)
+	}
+	if len(got.Status.Outputs) != 1 || got.Status.Outputs[0].Command != "show clock" {
+		t.Fatalf("replacement did not execute its command: %#v", got.Status.Outputs)
+	}
+	if tr.calls != 2 {
+		t.Fatalf("DiagnosticExec calls=%d want 2", tr.calls)
 	}
 }
 

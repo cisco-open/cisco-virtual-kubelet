@@ -1161,6 +1161,12 @@ func TestGetPackageDest(t *testing.T) {
 		{name: "bootflash", annotation: "bootflash:/apps/app.tar", wantDest: "bootflash:/apps/app.tar"},
 		{name: "flash empty value", annotation: "flash:", wantErr: true},
 		{name: "http url", annotation: "http://example.com/app.tar", wantErr: true},
+		{name: "parent segment", annotation: "flash:/apps/../app.tar", wantErr: true},
+		{name: "empty segment", annotation: "flash:/apps//app.tar", wantErr: true},
+		{name: "space", annotation: "flash:/apps/my app.tar", wantErr: true},
+		{name: "semicolon", annotation: "flash:/app.tar;show", wantErr: true},
+		{name: "carriage return", annotation: "flash:/app.tar\rFORGED", wantErr: true},
+		{name: "ANSI escape", annotation: "flash:/app.tar\x1b[31m", wantErr: true},
 	}
 
 	for _, tc := range cases {

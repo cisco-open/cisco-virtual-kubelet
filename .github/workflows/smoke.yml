@@ -427,6 +427,12 @@ jobs:
         with:
           go-version-input: '1.26'
           check-latest: true
+          # The controller scan above has already restored and populated the
+          # job-level Go caches. A second setup-go cache restore into those
+          # same paths fails with tar "File exists" errors before the provider
+          # scan can run. Keep this setup cache-free; the module itself is
+          # small and its dedicated build/test job still uses caching.
+          cache: false
           cache-dependency-path: tools/terraform-provider-iosxeconfig/go.sum
           work-dir: tools/terraform-provider-iosxeconfig
           go-package: ./...

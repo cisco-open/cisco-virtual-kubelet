@@ -52,6 +52,9 @@ func (d *NXOSDriver) appState(ctx context.Context, appID string) (string, error)
 }
 
 func (d *NXOSDriver) appDetail(ctx context.Context, appID string) (nxosApp, error) {
+	if err := validateNXOSAppID(appID); err != nil {
+		return nxosApp{}, err
+	}
 	out, err := d.client.show(ctx, fmt.Sprintf("show app-hosting detail appid %s", appID))
 	if err != nil {
 		return nxosApp{}, err
@@ -59,8 +62,17 @@ func (d *NXOSDriver) appDetail(ctx context.Context, appID string) (nxosApp, erro
 	app := parseAppDetail(out)
 	if app.ID == "" {
 		app.ID = appID
+	} else if validateNXOSAppID(app.ID) != nil || app.ID != appID {
+		return nxosApp{}, fmt.Errorf("NX-OS app detail returned an invalid or mismatched CVK app ID")
 	}
 	return app, nil
+}
+
+func validateNXOSAppID(appID string) error {
+	if _, _, ok := common.ParseCVKAppName(appID); !ok {
+		return fmt.Errorf("invalid NX-OS CVK app ID")
+	}
+	return nil
 }
 
 func parseAppList(out string) []nxosApp {

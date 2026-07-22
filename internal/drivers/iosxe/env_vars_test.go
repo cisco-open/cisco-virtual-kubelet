@@ -19,6 +19,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -59,6 +60,44 @@ func TestBuildEnvironmentOptions_DirectVars(t *testing.T) {
 		`-e SPECIAL_VAR='value$with` + "`" + `special\chars'`,
 	}
 	assert.Equal(t, expected, opts)
+}
+
+func TestBuildEnvironmentOptionsRejectsNonPortableNames(t *testing.T) {
+	const unsafeName = "X --privileged --env Y"
+	tests := []struct {
+		name string
+		env  v1.EnvVar
+	}{
+		{
+			name: "direct value",
+			env:  v1.EnvVar{Name: unsafeName, Value: "safe"},
+		},
+		{
+			name: "SecretKeyRef",
+			env: v1.EnvVar{Name: unsafeName, ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{Name: "unused-secret"},
+					Key:                  "token",
+				},
+			}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			driver := &XEDriver{}
+			container := &v1.Container{Env: []v1.EnvVar{tt.env}}
+			options, err := driver.buildEnvironmentOptions(container, &v1.Pod{})
+			if err == nil || !strings.Contains(err.Error(), "name is not portable") {
+				t.Fatalf("buildEnvironmentOptions err=%v, want non-portable name rejection", err)
+			}
+			if options != nil {
+				t.Fatalf("buildEnvironmentOptions returned options for unsafe name: %#v", options)
+			}
+			if strings.Contains(err.Error(), unsafeName) {
+				t.Fatalf("environment-name error exposed untrusted input: %v", err)
+			}
+		})
+	}
 }
 
 func TestEscapeShellValue(t *testing.T) {
@@ -167,13 +206,58 @@ func TestDistributeRunOpts_ExceedsLineLimit(t *testing.T) {
 func TestDistributeRunOpts_SingleOptionTooLong(t *testing.T) {
 	baseOpts := []string{}
 	// Create a single option that exceeds the line limit
-	longValue := strings.Repeat("a", MaxRunOptsLineLength)
+	const sentinel = "IOSXE_SECRET_SENTINEL_DO_NOT_EXPOSE_"
+	longValue := sentinel + strings.Repeat("a", MaxRunOptsLineLength)
 	envOpts := []string{fmt.Sprintf("-e LONG_VAR=%s", longValue)}
 
 	result, err := distributeRunOpts(baseOpts, envOpts)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "single RunOpts option too long")
+	assert.NotContains(t, err.Error(), sentinel)
+	assert.NotContains(t, err.Error(), longValue)
 	assert.Nil(t, result)
+}
+
+func TestIOSXERunOptionLengthErrorDoesNotExposeSecret(t *testing.T) {
+	const sentinel = "IOSXE_SECRET_SENTINEL_DO_NOT_EXPOSE_"
+	secretValue := sentinel + strings.Repeat("x", MaxRunOptsLineLength)
+	driver := &XEDriver{
+		config: &v1alpha1.DeviceSpec{
+			XE: &v1alpha1.XEConfig{Networking: v1alpha1.XENetworkConfig{
+				Interface: &v1alpha1.XEInterfaceConfig{Type: v1alpha1.XEInterfaceTypeManagement},
+			}},
+		},
+		secretLister: &mockSecretLister{secrets: map[string]*v1.Secret{
+			"long-secret": {
+				ObjectMeta: metav1.ObjectMeta{Name: "long-secret", Namespace: "default"},
+				Data:       map[string][]byte{"token": []byte(secretValue)},
+			},
+		}},
+	}
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "secret-overflow",
+			Namespace: "default",
+			UID:       "12345678-1234-1234-1234-123456789abc",
+		},
+		Spec: v1.PodSpec{Containers: []v1.Container{{
+			Name:  "app",
+			Image: "flash:/hello.tar",
+			Env: []v1.EnvVar{{
+				Name: "TOKEN",
+				ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{Name: "long-secret"},
+					Key:                  "token",
+				}},
+			}},
+		}}},
+	}
+
+	_, err := driver.ConvertPodToAppConfigs(pod)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "single RunOpts option too long")
+	assert.NotContains(t, err.Error(), sentinel)
+	assert.NotContains(t, err.Error(), secretValue)
 }
 
 func TestDistributeRunOpts_TooManyLines(t *testing.T) {

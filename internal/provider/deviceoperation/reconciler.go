@@ -126,7 +126,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	now := r.now()
 
 	var op opsv1alpha1.DeviceOperation
-	if err := r.Client.Get(ctx, req.NamespacedName, &op); err != nil {
+	// Status updates enqueue another reconcile before the informer cache is
+	// guaranteed to expose that revision. Read the authoritative object here so
+	// a stale Running snapshot cannot overwrite a terminal status and execute the
+	// device operation again.
+	reader := r.Reader
+	if reader == nil {
+		reader = r.Client
+	}
+	if err := reader.Get(ctx, req.NamespacedName, &op); err != nil {
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
@@ -400,6 +408,8 @@ func (r *Reconciler) updateStatus(
 	mutate func(*opsv1alpha1.DeviceOperation),
 ) error {
 	key := client.ObjectKeyFromObject(op)
+	expectedUID := op.UID
+	expectedGeneration := op.Generation
 	reader := r.Reader
 	if reader == nil {
 		reader = r.Client
@@ -408,6 +418,18 @@ func (r *Reconciler) updateStatus(
 		var current opsv1alpha1.DeviceOperation
 		if err := reader.Get(ctx, key, &current); err != nil {
 			return err
+		}
+		if current.UID != expectedUID {
+			return fmt.Errorf(
+				"DeviceOperation identity changed from UID %q to %q during reconciliation",
+				expectedUID, current.UID,
+			)
+		}
+		if current.Generation != expectedGeneration {
+			return fmt.Errorf(
+				"DeviceOperation generation changed from %d to %d during reconciliation",
+				expectedGeneration, current.Generation,
+			)
 		}
 		mutate(&current)
 		if err := r.Client.Status().Update(ctx, &current); err != nil {

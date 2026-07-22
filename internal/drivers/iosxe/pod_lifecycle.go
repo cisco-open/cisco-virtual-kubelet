@@ -30,7 +30,9 @@ import (
 // DeployPod creates and deploys all containers in a pod to the device
 func (d *XEDriver) DeployPod(ctx context.Context, pod *v1.Pod, secretLister corev1listers.SecretNamespaceLister, configMapLister corev1listers.ConfigMapNamespaceLister) error {
 	log.G(ctx).WithFields(log.Fields{
-		"pod": pod,
+		"pod_namespace": pod.Namespace,
+		"pod_name":      pod.Name,
+		"pod_uid":       pod.UID,
 	}).Debug("Pod DeployContainer request received")
 
 	log.G(ctx).Infof("Deploying pod: %s/%s", pod.Namespace, pod.Name)
@@ -224,7 +226,7 @@ func (d *XEDriver) GetPodContainers(ctx context.Context, pod *v1.Pod) (map[strin
 			if ns == pod.Namespace && name == pod.Name && uid == string(pod.UID) {
 				containerName = ctr
 				if containerName == "" {
-					log.G(ctx).Warnf("App %s has pod labels but no container name label across RunOpts lines: %v", appName, runOptsLines)
+					log.G(ctx).Warnf("App %s has pod labels but no container name label across %d RunOpts lines", appName, len(runOptsLines))
 				}
 			}
 		}
@@ -245,8 +247,8 @@ func (d *XEDriver) GetPodContainers(ctx context.Context, pod *v1.Pod) (map[strin
 			containerToAppID[containerName] = appName
 			log.G(ctx).Infof("Found container %s -> app %s", containerName, appName)
 		} else {
-			log.G(ctx).Warnf("Found app %s with pod UID but couldn't extract container name from labels. RunOpts: %v",
-				appName, runOptsLines)
+			log.G(ctx).Warnf("Found app %s with pod UID but couldn't extract container name from %d RunOpts lines",
+				appName, len(runOptsLines))
 		}
 	}
 
@@ -276,7 +278,9 @@ func (d *XEDriver) GetPodContainers(ctx context.Context, pod *v1.Pod) (map[strin
 // DeletePod removes all containers in a pod from the device
 func (d *XEDriver) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).WithFields(log.Fields{
-		"pod": pod,
+		"pod_namespace": pod.Namespace,
+		"pod_name":      pod.Name,
+		"pod_uid":       pod.UID,
 	}).Debugf("DeletePod request received for pod: %s", pod.Name)
 
 	// Get all containers for this pod

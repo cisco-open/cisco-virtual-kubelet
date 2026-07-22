@@ -11,15 +11,28 @@ package nxos
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
+
+type endlessXReader struct{}
+
+func (endlessXReader) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = 'x'
+	}
+	return len(p), nil
+}
 
 func TestParseNXAPIResponseSingleOutput(t *testing.T) {
 	raw := []byte(`{"ins_api":{"outputs":{"output":{"input":"show version","code":"200","msg":"Success","body":"NXOS: version 10.3(9)\n"}}}}`)
@@ -46,6 +59,36 @@ func TestParseNXAPIResponseRejectsCLIConfErrorBody(t *testing.T) {
 	for _, leaked := range []string{"app-hosting activate", "Activate failed", "app-vnic"} {
 		if strings.Contains(err.Error(), leaked) {
 			t.Fatalf("configuration error exposed device input/body %q: %v", leaked, err)
+		}
+	}
+}
+
+func TestParseNXAPIResponseRequiresExplicitSuccess(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+	}{
+		{name: "empty document", raw: `{}`},
+		{name: "null output", raw: `{"ins_api":{"outputs":{"output":null}}}`},
+		{name: "empty output object", raw: `{"ins_api":{"outputs":{"output":{}}}}`},
+		{name: "missing code with body", raw: `{"ins_api":{"outputs":{"output":{"body":"configured"}}}}`},
+		{name: "empty output array", raw: `{"ins_api":{"outputs":{"output":[]}}}`},
+	}
+	for _, typ := range []string{"cli_conf", "cli_show_ascii"} {
+		for _, tt := range tests {
+			t.Run(typ+"/"+tt.name, func(t *testing.T) {
+				_, err := parseNXAPIResponse([]byte(tt.raw), typ)
+				if err == nil {
+					t.Fatalf("parseNXAPIResponse(%s, %s) succeeded, want fail-closed error", tt.raw, typ)
+				}
+			})
+		}
+	}
+
+	valid := []byte(`{"ins_api":{"outputs":{"output":{"code":"200","msg":"Success","body":""}}}}`)
+	for _, typ := range []string{"cli_conf", "cli_show_ascii"} {
+		if _, err := parseNXAPIResponse(valid, typ); err != nil {
+			t.Fatalf("parseNXAPIResponse rejected explicit 200 success for %s: %v", typ, err)
 		}
 	}
 }
@@ -138,6 +181,114 @@ func TestNXAPIConfHTTPErrorDoesNotExposeInputOrResponse(t *testing.T) {
 		if strings.Contains(err.Error(), leaked) {
 			t.Fatalf("HTTP configuration error leaked %q: %v", leaked, err)
 		}
+	}
+}
+
+func TestNXAPIShowErrorsDoNotExposeInputOrResponse(t *testing.T) {
+	const sentinel = "NXAPI_SHOW_SECRET_SENTINEL_DO_NOT_EXPOSE"
+	tests := []struct {
+		name     string
+		response func(http.ResponseWriter)
+		want     string
+	}{
+		{
+			name: "HTTP error",
+			response: func(w http.ResponseWriter) {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte("echoed run-opts --env TOKEN='" + sentinel + "'"))
+			},
+			want: "HTTP 400",
+		},
+		{
+			name: "NX-API envelope error",
+			response: func(w http.ResponseWriter) {
+				_ = json.NewEncoder(w).Encode(map[string]any{"ins_api": map[string]any{"outputs": map[string]any{"output": map[string]any{
+					"input": "show app-hosting detail " + sentinel,
+					"code":  "400",
+					"msg":   "rejected " + sentinel,
+					"body":  "run-opts --env TOKEN='" + sentinel + "'",
+				}}}})
+			},
+			want: "command failed: code=400",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				tt.response(w)
+			}))
+			defer server.Close()
+
+			client := &nxapiClient{baseURL: server.URL, client: server.Client()}
+			_, err := client.show(context.Background(), "show app-hosting detail appid "+sentinel)
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("show err=%v, want safe context %q", err, tt.want)
+			}
+			for _, leaked := range []string{sentinel, "run-opts", "--env"} {
+				if strings.Contains(err.Error(), leaked) {
+					t.Fatalf("show error exposed %q: %v", leaked, err)
+				}
+			}
+		})
+	}
+}
+
+func TestNewNXAPIClientRejectsRedirects(t *testing.T) {
+	const sentinel = "NXAPI_REDIRECT_SECRET_SENTINEL_DO_NOT_EXPOSE"
+	var redirectedRequests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case nxapiPath:
+			http.Redirect(w, r, "/unexpected-target", http.StatusTemporaryRedirect)
+		case "/unexpected-target":
+			redirectedRequests.Add(1)
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse server URL: %v", err)
+	}
+	port, err := strconv.Atoi(u.Port())
+	if err != nil {
+		t.Fatalf("parse server port: %v", err)
+	}
+	client, err := newNXAPIClient(&ciskov1.DeviceSpec{
+		Address:  u.Hostname(),
+		Port:     port,
+		Username: "admin",
+		Password: "password",
+	})
+	if err != nil {
+		t.Fatalf("newNXAPIClient: %v", err)
+	}
+	_, err = client.conf(context.Background(), "run-opts 1 --env TOKEN='"+sentinel+"'")
+	if err == nil || !strings.Contains(err.Error(), "HTTP 307") {
+		t.Fatalf("conf err=%v, want redirect rejection", err)
+	}
+	if strings.Contains(err.Error(), sentinel) {
+		t.Fatalf("redirect error exposed request body: %v", err)
+	}
+	if got := redirectedRequests.Load(); got != 0 {
+		t.Fatalf("NX-API client followed redirect %d time(s)", got)
+	}
+}
+
+func TestNXAPIRejectsOversizedSuccessResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.CopyN(w, endlessXReader{}, maxNXAPIResponseBytes+1)
+	}))
+	defer server.Close()
+
+	client := &nxapiClient{baseURL: server.URL, client: server.Client()}
+	_, err := client.show(context.Background(), "show app-hosting detail")
+	if err == nil || !strings.Contains(err.Error(), "response exceeds") {
+		t.Fatalf("show err=%v, want response-size rejection", err)
 	}
 }
 

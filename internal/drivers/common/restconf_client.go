@@ -18,9 +18,13 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -55,6 +59,9 @@ func NewClientRestconfClient(baseURL string, auth *ClientAuth, tlsConfig *tls.Co
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
 
 	return &RestconfClient{
@@ -71,6 +78,47 @@ type RestconfClient struct {
 	HTTPClient *http.Client
 	Username   string
 	Password   string
+}
+
+const maxRESTCONFResponseBytes int64 = 8 << 20
+
+// RESTCONFError reports safe response metadata for a failed RESTCONF request.
+// Response bodies are deliberately not retained because devices can echo
+// request payloads containing credentials or app-hosting environment values.
+type RESTCONFError struct {
+	StatusCode int
+	Status     string
+	ErrorTags  []string
+}
+
+func (e *RESTCONFError) Error() string {
+	if e == nil {
+		return "<nil>"
+	}
+	if len(e.ErrorTags) > 0 {
+		return fmt.Sprintf("request failed with status %s (RESTCONF error-tag %s)", e.Status, strings.Join(e.ErrorTags, ","))
+	}
+	return fmt.Sprintf("request failed with status %s", e.Status)
+}
+
+// HasRESTCONFErrorTag reports whether err contains a parsed RESTCONF error-tag.
+func HasRESTCONFErrorTag(err error, tag string) bool {
+	var restErr *RESTCONFError
+	if !errors.As(err, &restErr) || restErr == nil {
+		return false
+	}
+	for _, candidate := range restErr.ErrorTags {
+		if candidate == tag {
+			return true
+		}
+	}
+	return false
+}
+
+// IsRESTCONFStatus reports whether err contains the given HTTP status code.
+func IsRESTCONFStatus(err error, statusCode int) bool {
+	var restErr *RESTCONFError
+	return errors.As(err, &restErr) && restErr != nil && restErr.StatusCode == statusCode
 }
 
 func (c *RestconfClient) Get(ctx context.Context, path string, result any, unmarshal func([]byte, any) error) error {
@@ -103,8 +151,10 @@ func (c *RestconfClient) doRequest(ctx context.Context, method, path string, pay
 		body = bytes.NewBuffer(data)
 
 		log.G(ctx).WithFields(log.Fields{
-			"body": string(data),
-		}).Debug("Sending Body:")
+			"method":     method,
+			"path":       path,
+			"body_bytes": len(data),
+		}).Debug("Sending RESTCONF request")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+path, body)
@@ -122,25 +172,107 @@ func (c *RestconfClient) doRequest(ctx context.Context, method, path string, pay
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode >= 300 {
-		errBody, _ := io.ReadAll(resp.Body)
-		if len(errBody) > 0 {
-			return fmt.Errorf("request failed with status %s: %s", resp.Status, string(errBody))
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		return &RESTCONFError{
+			StatusCode: resp.StatusCode,
+			Status:     canonicalHTTPStatus(resp.StatusCode),
+			ErrorTags:  restconfErrorTags(errBody),
 		}
-		return fmt.Errorf("request failed with status %s", resp.Status)
 	}
 
 	if result != nil && unmarshal != nil {
-		log.G(ctx).Debug("Checking response ...")
-		data, err := io.ReadAll(resp.Body)
+		data, err := readLimitedRESTCONFBody(resp.Body)
 		if err != nil {
-			return err
+			return fmt.Errorf("read RESTCONF response for %s %s failed: %w", method, path, err)
 		}
 		log.G(ctx).WithFields(log.Fields{
-			"raw_json": string(data),
-		}).Debug("Raw JSON response before unmarshal")
-		return unmarshal(data, result)
+			"method":         method,
+			"path":           path,
+			"status_code":    resp.StatusCode,
+			"response_bytes": len(data),
+		}).Debug("Received RESTCONF response")
+		if err := unmarshal(data, result); err != nil {
+			return fmt.Errorf("decode RESTCONF response for %s %s failed; response body omitted", method, path)
+		}
+		return nil
 	}
 
 	return nil
+}
+
+func readLimitedRESTCONFBody(body io.Reader) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(body, maxRESTCONFResponseBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > maxRESTCONFResponseBytes {
+		return nil, fmt.Errorf("response exceeds %d-byte limit", maxRESTCONFResponseBytes)
+	}
+	return data, nil
+}
+
+func restconfErrorTags(body []byte) []string {
+	var document map[string]json.RawMessage
+	if len(body) == 0 || json.Unmarshal(body, &document) != nil {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	tags := make([]string, 0, 1)
+	for _, envelopeName := range []string{"ietf-restconf:errors", "errors"} {
+		rawEnvelope, ok := document[envelopeName]
+		if !ok {
+			continue
+		}
+		var envelope struct {
+			Errors []struct {
+				Tag string `json:"error-tag"`
+			} `json:"error"`
+		}
+		if json.Unmarshal(rawEnvelope, &envelope) != nil {
+			continue
+		}
+		for _, item := range envelope.Errors {
+			if _, allowed := standardRESTCONFErrorTags[item.Tag]; !allowed {
+				continue
+			}
+			if _, exists := seen[item.Tag]; exists {
+				continue
+			}
+			seen[item.Tag] = struct{}{}
+			tags = append(tags, item.Tag)
+		}
+	}
+	sort.Strings(tags)
+	return tags
+}
+
+func canonicalHTTPStatus(statusCode int) string {
+	if statusText := http.StatusText(statusCode); statusText != "" {
+		return fmt.Sprintf("%d %s", statusCode, statusText)
+	}
+	return fmt.Sprintf("%d", statusCode)
+}
+
+var standardRESTCONFErrorTags = map[string]struct{}{
+	"access-denied":           {},
+	"bad-attribute":           {},
+	"bad-element":             {},
+	"data-exists":             {},
+	"data-missing":            {},
+	"in-use":                  {},
+	"invalid-value":           {},
+	"lock-denied":             {},
+	"malformed-message":       {},
+	"missing-attribute":       {},
+	"missing-element":         {},
+	"operation-failed":        {},
+	"operation-not-supported": {},
+	"partial-operation":       {},
+	"resource-denied":         {},
+	"rollback-failed":         {},
+	"too-big":                 {},
+	"unknown-attribute":       {},
+	"unknown-element":         {},
+	"unknown-namespace":       {},
 }
