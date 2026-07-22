@@ -15,18 +15,25 @@
 package iosxe
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/openconfig/ygot/ygot"
+	siruplogrus "github.com/sirupsen/logrus"
+	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
+	vklogrus "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/record"
 )
 
 // ── Test infrastructure ───────────────────────────────────────────────────────
@@ -88,6 +95,141 @@ func (f *fakeNetworkClient) Delete(_ context.Context, path string) error {
 		return h(path)
 	}
 	return nil
+}
+
+func TestImageReferenceForLogRedactsURLCredentials(t *testing.T) {
+	const raw = "https://registry-user:registry-password@registry.example.com/apps/hello.tar?token=signed-secret#fragment"
+	got := imageReferenceForLog(raw)
+	if got != "https://registry.example.com/apps/hello.tar" {
+		t.Fatalf("imageReferenceForLog()=%q", got)
+	}
+	for _, secret := range []string{"registry-user", "registry-password", "signed-secret", "fragment"} {
+		if strings.Contains(got, secret) {
+			t.Fatalf("redacted image reference contains %q: %q", secret, got)
+		}
+	}
+	if got := imageReferenceForLog("flash:/hello.tar"); got != "flash:/hello.tar" {
+		t.Fatalf("local image reference=%q, want unchanged", got)
+	}
+	if got := imageReferenceForLog("FTP://registry-user:registry-password@registry.example.com/apps/hello.tar?token=signed-secret#fragment"); got != "ftp://registry.example.com/apps/hello.tar" {
+		t.Fatalf("non-HTTP URL reference=%q, want credentials and query removed", got)
+	}
+	if got := imageReferenceForLog("ftp:registry-user:registry-password@registry.example.com/apps/hello.tar?token=signed-secret"); got != "<redacted-image-reference>" {
+		t.Fatalf("opaque credentialed URL reference=%q, want placeholder", got)
+	}
+	if got := imageReferenceForLog("flash:/hello.tar?token=signed-secret#fragment"); got != "flash:/hello.tar" {
+		t.Fatalf("local reference query redaction=%q", got)
+	}
+	for _, unsafe := range []string{
+		"flash:/hello.tar\nlevel=error msg=forged",
+		"flash:/hello.tar\rforged",
+		"flash:/hello.tar\x1b[31m",
+	} {
+		if got := imageReferenceForLog(unsafe); got != "<redacted-image-reference>" {
+			t.Fatalf("control-bearing image reference=%q, want placeholder", got)
+		}
+	}
+}
+
+func TestRESTCONFDataExistsRequiresConflictStatus(t *testing.T) {
+	serviceUnavailable := &common.RESTCONFError{
+		StatusCode: 503,
+		Status:     "503 Service Unavailable",
+		ErrorTags:  []string{"data-exists"},
+	}
+	if isRESTCONFDataExists(serviceUnavailable) {
+		t.Fatal("503 data-exists error was treated as an idempotent conflict")
+	}
+	conflict := &common.RESTCONFError{
+		StatusCode: 409,
+		Status:     "409 Conflict",
+		ErrorTags:  []string{"data-exists"},
+	}
+	if !isRESTCONFDataExists(conflict) {
+		t.Fatal("409 data-exists error was not recognized")
+	}
+}
+
+func TestCopyRPCDoesNotExposeImagePullSecretCredentials(t *testing.T) {
+	const (
+		username   = "registry-user-sentinel"
+		password   = "registry-password-sentinel"
+		queryToken = "signed-query-sentinel"
+		destToken  = "destination-log-injection-sentinel"
+	)
+	source := "https://" + username + ":" + password + "@registry.example.com/apps/hello.tar?token=" + queryToken
+	destination := "flash:/hello.tar\r" + destToken
+	payloadObserved := false
+	driver := &XEDriver{client: &fakeNetworkClient{postHook: func(_ string, payload any) error {
+		outer, ok := payload.(map[string]interface{})
+		if !ok {
+			t.Fatalf("copy payload type=%T", payload)
+		}
+		copyInput, ok := outer["Cisco-IOS-XE-rpc:copy"].(map[string]string)
+		if !ok {
+			t.Fatalf("copy payload body=%#v", outer)
+		}
+		payloadObserved = copyInput["source-drop-node-name"] == source &&
+			copyInput["destination-drop-node-name"] == destination
+		return errors.New("device rejected copy")
+	}}}
+
+	var logs bytes.Buffer
+	backend := siruplogrus.New()
+	backend.SetOutput(&logs)
+	backend.SetLevel(siruplogrus.DebugLevel)
+	ctx := vklog.WithLogger(context.Background(), vklogrus.FromLogrus(siruplogrus.NewEntry(backend)))
+	err := driver.copyRPC(ctx, source, destination)
+	if err == nil {
+		t.Fatal("copyRPC succeeded, want error")
+	}
+	if !payloadObserved {
+		t.Fatal("copyRPC test did not observe credentialed source in the device request payload")
+	}
+	combined := err.Error() + "\n" + logs.String()
+	for _, secret := range []string{username, password, queryToken, destToken} {
+		if strings.Contains(combined, secret) {
+			t.Fatalf("copyRPC error/logs exposed %q: %s", secret, combined)
+		}
+	}
+}
+
+func TestCreateAppHostingAppPullingEventRedactsImageCredentials(t *testing.T) {
+	const (
+		username = "event-user-sentinel"
+		password = "event-password-sentinel"
+		token    = "event-query-sentinel"
+	)
+	image := "https://" + username + ":" + password + "@registry.example.com/apps/hello.tar?token=" + token
+	driver := newTestDriver(&fakeNetworkClient{getHook: func(_ string, result any) error {
+		root, ok := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData)
+		if !ok {
+			t.Fatalf("unexpected GET result type %T", result)
+		}
+		*root = *operResponse("test-app", "RUNNING")
+		return nil
+	}})
+	recorder := record.NewFakeRecorder(10)
+	driver.SetEventRecorder(recorder)
+	appConfig := minimalAppConfig(image, v1.PullAlways, time.Second)
+	appConfig.Metadata.Pod = &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "default"}}
+
+	if err := driver.CreateAppHostingApp(context.Background(), appConfig); err != nil {
+		t.Fatalf("CreateAppHostingApp: %v", err)
+	}
+	select {
+	case event := <-recorder.Events:
+		if !strings.Contains(event, "Pulling image https://registry.example.com/apps/hello.tar") {
+			t.Fatalf("unexpected Pulling event: %q", event)
+		}
+		for _, secret := range []string{username, password, token} {
+			if strings.Contains(event, secret) {
+				t.Fatalf("Pulling event exposed %q: %q", secret, event)
+			}
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for Pulling event")
+	}
 }
 
 type fakeSecretNamespaceLister struct {

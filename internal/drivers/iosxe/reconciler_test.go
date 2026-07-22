@@ -15,11 +15,17 @@
 package iosxe
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	siruplogrus "github.com/sirupsen/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	vklogrus "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -185,6 +191,56 @@ func TestReconcileApp_NoOperDataWithImage_AttemptsInstall(t *testing.T) {
 	d.ReconcileApp(testCtx(), appCfg)
 }
 
+func TestReconcileAppDoesNotExposeImageURLCredentials(t *testing.T) {
+	const (
+		username = "reconcile-user-sentinel"
+		password = "reconcile-password-sentinel"
+		token    = "reconcile-query-sentinel"
+	)
+	imagePath := "https://" + username + ":" + password + "@registry.example.com/app.tar?token=" + token
+	payloadObserved := false
+	d := &XEDriver{client: &fakeNetworkClient{
+		getHook: func(_ string, result any) error {
+			root, ok := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData)
+			if !ok {
+				t.Fatalf("unexpected GET result type %T", result)
+			}
+			root.App = nil
+			return nil
+		},
+		postHook: func(_ string, payload any) error {
+			encoded, err := json.Marshal(payload)
+			if err != nil {
+				t.Fatalf("marshal install payload: %v", err)
+			}
+			payloadObserved = strings.Contains(string(encoded), username) &&
+				strings.Contains(string(encoded), password) && strings.Contains(string(encoded), token)
+			return errors.New("device rejected install")
+		},
+	}}
+	appCfg := &AppHostingConfig{
+		Metadata: AppHostingMetadata{AppName: "app1"},
+		Spec:     AppHostingSpec{DesiredState: AppDesiredStateRunning, ImagePath: imagePath},
+		Status:   AppHostingStatus{Phase: AppPhaseConverging},
+	}
+
+	var logs bytes.Buffer
+	backend := siruplogrus.New()
+	backend.SetOutput(&logs)
+	backend.SetLevel(siruplogrus.DebugLevel)
+	ctx := log.WithLogger(context.Background(), vklogrus.FromLogrus(siruplogrus.NewEntry(backend)))
+	d.ReconcileApp(ctx, appCfg)
+	if !payloadObserved {
+		t.Fatal("reconcile test did not observe original image URL in device request payload")
+	}
+	combined := logs.String() + "\n" + appCfg.Status.Message
+	for _, secret := range []string{username, password, token} {
+		if strings.Contains(combined, secret) {
+			t.Fatalf("reconcile logs/status exposed %q: %s", secret, combined)
+		}
+	}
+}
+
 func TestReconcileApp_DeletedDesired_NoOperData_AttemptsConfigDelete(t *testing.T) {
 	// With DesiredState=Deleted and no oper data, ReconcileApp should attempt
 	// to delete the config. Nil client causes a panic, confirming the path.
@@ -220,18 +276,27 @@ func TestReconcileApp_InstallingPkgPolicyInvalidWithoutNotification_Waits(t *tes
 }
 
 func TestReconcileApp_InstallingPkgPolicyInvalidWithNotification_Fails(t *testing.T) {
+	const notificationSentinel = "PACKAGE_POLICY_NOTIFICATION_SECRET_DO_NOT_EXPOSE"
 	d := newReconcilePkgPolicyTestDriver(t, false,
 		makeOperDataWithPkgPolicy("INSTALLING", Cisco_IOS_XEAppHostingOper_IoxPkgPolicy_iox_pkg_policy_invalid),
-		"signature validation failed")
+		"signature validation failed: https://user:password@device.local/?token="+notificationSentinel)
 	appCfg := newRunningAppConfig("app1")
 
-	d.ReconcileApp(testCtx(), appCfg)
+	var logs bytes.Buffer
+	backend := siruplogrus.New()
+	backend.SetOutput(&logs)
+	backend.SetLevel(siruplogrus.DebugLevel)
+	ctx := log.WithLogger(context.Background(), vklogrus.FromLogrus(siruplogrus.NewEntry(backend)))
+	d.ReconcileApp(ctx, appCfg)
 
 	if appCfg.Status.Phase != AppPhaseError {
 		t.Errorf("expected phase Error, got %s", appCfg.Status.Phase)
 	}
-	if appCfg.Status.Message != "install blocked: signature validation failed" {
+	if appCfg.Status.Message != "install blocked by device package policy; inspect the device locally for details" {
 		t.Errorf("expected install-blocked message, got %q", appCfg.Status.Message)
+	}
+	if combined := logs.String() + "\n" + appCfg.Status.Message; strings.Contains(combined, notificationSentinel) || strings.Contains(combined, "user:password") {
+		t.Fatalf("package-policy notification leaked into logs/status: %s", combined)
 	}
 }
 

@@ -269,7 +269,7 @@ func (d *NXOSDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 	}
 	pods := map[string]*v1.Pod{}
 	for _, app := range apps {
-		if !common.IsCVKManagedApp(app.ID) {
+		if !common.IsCVKManagedApp(app.ID) || validateNXOSAppID(app.ID) != nil {
 			continue
 		}
 		detail, err := d.appDetail(ctx, app.ID)
@@ -313,8 +313,14 @@ func (d *NXOSDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 }
 
 func (d *NXOSDriver) createApp(ctx context.Context, cfg *nxosAppConfig) error {
+	if err := validateNXOSAppID(cfg.AppID); err != nil {
+		return err
+	}
+	if err := validateNXOSPackagePath(cfg.ImagePath); err != nil {
+		return fmt.Errorf("app %s: %w", cfg.AppID, err)
+	}
 	if cfg.PullPolicy == v1.PullNever && isHTTPURL(cfg.ImagePath) {
-		return fmt.Errorf("app %s: imagePullPolicy is Never but image is an HTTP URL %q; image must be pre-loaded on bootflash", cfg.AppID, cfg.ImagePath)
+		return fmt.Errorf("app %s: HTTP(S) package URL must not use imagePullPolicy Never; image must be pre-loaded on bootflash", cfg.AppID)
 	}
 	state, _ := d.appState(ctx, cfg.AppID)
 	return d.advanceAppState(ctx, cfg, state)
@@ -325,6 +331,9 @@ func (d *NXOSDriver) convergeAppState(ctx context.Context, cfg *nxosAppConfig, s
 }
 
 func (d *NXOSDriver) advanceAppState(ctx context.Context, cfg *nxosAppConfig, state string) error {
+	if err := validateNXOSAppID(cfg.AppID); err != nil {
+		return err
+	}
 	switch state {
 	case "RUNNING":
 		d.clearAppAction(cfg.AppID)
@@ -353,8 +362,8 @@ func (d *NXOSDriver) advanceAppState(ctx context.Context, cfg *nxosAppConfig, st
 			return nil
 		})
 	case "", "UNINSTALLED":
-		if cfg.ImagePath == "" {
-			return fmt.Errorf("nxos app %s has no observed state and no image path for install", cfg.AppID)
+		if err := validateNXOSPackagePath(cfg.ImagePath); err != nil {
+			return fmt.Errorf("nxos app %s cannot be installed: %w", cfg.AppID, err)
 		}
 		return d.runAppAction(ctx, cfg.AppID, "install", func(actionCtx context.Context) error {
 			if err := d.appCommand(actionCtx, fmt.Sprintf("app-hosting install appid %s package %s", cfg.AppID, cfg.ImagePath)); err != nil {
@@ -368,6 +377,14 @@ func (d *NXOSDriver) advanceAppState(ctx context.Context, cfg *nxosAppConfig, st
 }
 
 func (d *NXOSDriver) ensureAppConfig(ctx context.Context, cfg *nxosAppConfig) error {
+	if err := validateNXOSAppID(cfg.AppID); err != nil {
+		return err
+	}
+	for _, option := range cfg.RunOpts {
+		if err := validateNXOSRunOption(option); err != nil {
+			return err
+		}
+	}
 	if err := d.appCommand(ctx,
 		"configure terminal",
 		fmt.Sprintf("app-hosting appid %s", cfg.AppID),
@@ -432,6 +449,9 @@ func isServiceLinkEnv(name string, prefixes map[string]struct{}) bool {
 }
 
 func (d *NXOSDriver) deleteApp(ctx context.Context, appID string, timeout time.Duration) error {
+	if err := validateNXOSAppID(appID); err != nil {
+		return err
+	}
 	defer d.clearAppAction(appID)
 	if timeout <= 0 {
 		timeout = defaultPackageTimeout
@@ -488,6 +508,9 @@ func (d *NXOSDriver) deleteApp(ctx context.Context, appID string, timeout time.D
 }
 
 func (d *NXOSDriver) removeAppConfig(ctx context.Context, appID string) error {
+	if err := validateNXOSAppID(appID); err != nil {
+		return err
+	}
 	return d.appCommand(ctx, "configure terminal", fmt.Sprintf("no app-hosting appid %s", appID))
 }
 

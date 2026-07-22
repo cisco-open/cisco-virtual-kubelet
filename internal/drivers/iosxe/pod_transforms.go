@@ -17,7 +17,6 @@ package iosxe
 import (
 	"fmt"
 	"net"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -55,14 +54,34 @@ func getPackageDest(pod *v1.Pod) (string, error) {
 	if dest == "" {
 		return "", nil
 	}
-	valid := regexp.MustCompile(`^(bootflash:|harddisk:|flash:|nvram:|usb:)/?(.+)`)
-	if !valid.MatchString(dest) {
-		return "", fmt.Errorf(
-			"invalid %s annotation %q: expected e.g. flash:app.tar or flash:/virtual-kubelet/app.tar",
-			annotationPackageDest, dest,
-		)
+	relative := ""
+	for _, prefix := range []string{"bootflash:", "harddisk:", "flash:", "nvram:", "usb:"} {
+		if strings.HasPrefix(dest, prefix) {
+			relative = strings.TrimPrefix(dest, prefix)
+			break
+		}
+	}
+	relative = strings.TrimPrefix(relative, "/")
+	if relative == "" {
+		return "", fmt.Errorf("invalid %s annotation: expected e.g. flash:app.tar or flash:/virtual-kubelet/app.tar", annotationPackageDest)
+	}
+	for _, segment := range strings.Split(relative, "/") {
+		if segment == "" || segment == "." || segment == ".." || !isSafeIOSXEPackagePathSegment(segment) {
+			return "", fmt.Errorf("invalid %s annotation: expected a simple IOS XE device filesystem path", annotationPackageDest)
+		}
 	}
 	return dest, nil
+}
+
+func isSafeIOSXEPackagePathSegment(segment string) bool {
+	for i := 0; i < len(segment); i++ {
+		c := segment[i]
+		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || strings.IndexByte("-._~", c) >= 0 {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 // getPackageTimeout reads the RUNNING-wait timeout from a pod annotation.
@@ -498,6 +517,9 @@ func (d *XEDriver) buildEnvironmentOptions(container *v1.Container, pod *v1.Pod)
 
 	// Process environment variables from container.Env
 	for _, env := range container.Env {
+		if !common.IsPortableEnvironmentVariableName(env.Name) {
+			return nil, fmt.Errorf("environment variable name is not portable across app-hosting transports")
+		}
 		var value string
 		var err error
 
@@ -655,7 +677,7 @@ func distributeRunOpts(baseOpts []string, envOpts []string) (map[uint16]*Cisco_I
 
 		// If even a single option is too long, that's an error
 		if needed > MaxRunOptsLineLength {
-			return fmt.Errorf("single RunOpts option too long (%d chars, max %d): %s", needed, MaxRunOptsLineLength, opt)
+			return fmt.Errorf("single RunOpts option too long (%d chars, max %d)", needed, MaxRunOptsLineLength)
 		}
 
 		// Add the option to current line

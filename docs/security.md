@@ -223,6 +223,48 @@ The `credentialSecretRef` field takes a reference to any Kubernetes `Secret`, re
 
 All of these produce a normal `Secret` resource with a `password` key, which is what `credentialSecretRef` needs. No change to CiscoDevice is required.
 
+## Hosted-application credentials
+
+Environment values sourced through `SecretKeyRef` are resolved by the VK and
+delivered to the hosted application as Docker run options. They are therefore
+also visible to an administrator with permission to inspect app-hosting
+configuration on the device. Grant pod-creation and device-administration
+rights accordingly.
+
+Environment-variable names must use the portable
+`[A-Za-z_][A-Za-z0-9_]*` form. Although newer Kubernetes API validation admits
+a broader printable character set, CVK rejects those relaxed names before
+device access because IOS XE and NX-OS both render names into Docker run
+options. Rename variables containing dashes, dots, spaces, or other punctuation
+before deploying them through CVK.
+
+CVK does not include resolved run options in controller logs or reconciliation
+errors. The IOS XE app-hosting RESTCONF client and the NX-OS NX-API client also
+reject HTTP redirects and omit free-form device response text from errors where
+it could echo app-hosting data. Length-validation errors report only the
+measured and supported sizes. IOS XE image-copy logging strips URL user
+information, query parameters, and fragments while still sending the original
+authenticated source to the device.
+
+On NX-OS, a pod's `image` value is treated as untrusted CLI input. CVK accepts
+only a single validated `bootflash:` path or HTTP(S) URL token before issuing
+an app-hosting install command; whitespace, control characters, command
+separators, user information, and other unsafe syntax are rejected before any
+NX-API request. Prefer pre-staged `bootflash:` packages for production use.
+
+NX-OS environment values are likewise validated before CLI rendering. The
+current transport accepts printable ASCII values except semicolons, pipes,
+quotes, backslashes, and backticks; it also rejects control characters and
+non-ASCII text. JSON documents, PEM blocks, generated passwords, or other
+values containing those characters must be delivered to the application by a
+different mechanism until an NX-OS-native quoting strategy is validated.
+
+The IOS XE `cisco.io/apphost-package-dest` annotation accepts only
+`bootflash:`, `harddisk:`, `flash:`, `nvram:`, or `usb:` followed by path
+segments using ASCII letters, digits, `-`, `.`, `_`, or `~`. Empty, `.` and
+`..` segments are rejected. Rename existing destination paths containing
+spaces, `+`, control characters, or other punctuation before upgrading.
+
 ## TLS
 
 Device-side TLS is configured under `spec.tls`:

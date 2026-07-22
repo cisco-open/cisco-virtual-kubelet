@@ -17,9 +17,11 @@ package iosxe
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 )
@@ -112,10 +114,9 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 				if d.config.AllowUnsignedApps {
 					log.G(ctx).Debugf("ReconcileApp %s: pkg-policy invalid (transient, allowUnsignedApps=true), waiting", appID)
 				} else if notif := d.getAppInstallNotification(ctx, appID); notif != "" {
-					msg := strings.TrimSpace(notif)
-					log.G(ctx).Errorf("ReconcileApp %s: install blocked: %s", appID, msg)
+					log.G(ctx).Errorf("ReconcileApp %s: install blocked by device package policy", appID)
 					appConfig.Status.Phase = AppPhaseError
-					appConfig.Status.Message = fmt.Sprintf("install blocked: %s", msg)
+					appConfig.Status.Message = "install blocked by device package policy; inspect the device locally for details"
 					return
 				} else {
 					log.G(ctx).Warnf("ReconcileApp %s: pkg-policy invalid but no confirming notification yet, waiting", appID)
@@ -139,7 +140,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 			}
 			appConfig.Status.Phase = AppPhaseConverging
 			appConfig.Status.Message = "Re-issuing install"
-			log.G(ctx).Debugf("ReconcileApp %s: no oper data; re-issuing install (image: %s)", appID, imagePath)
+			log.G(ctx).Debugf("ReconcileApp %s: no oper data; re-issuing install (image: %s)", appID, imageReferenceForLog(imagePath))
 			if err := d.InstallApp(ctx, appID, imagePath); err != nil {
 				log.G(ctx).Warnf("ReconcileApp %s: install failed: %v", appID, err)
 				appConfig.Status.Phase = AppPhaseError
@@ -192,7 +193,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 				// was only visible via oper data and had no config).  Since
 				// the app is already absent from both oper and config, treat
 				// this as a successful deletion.
-				if strings.Contains(err.Error(), "404") {
+				if common.IsRESTCONFStatus(err, http.StatusNotFound) || strings.Contains(err.Error(), "404") {
 					log.G(ctx).Infof("ReconcileApp %s: config already absent (404), treating as deleted", appID)
 					appConfig.Status.Phase = AppPhaseDeleted
 					appConfig.Status.Message = "App fully removed (config was absent)"

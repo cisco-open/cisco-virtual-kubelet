@@ -16,6 +16,7 @@ package common
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -29,6 +30,27 @@ const (
 	LabelContainerName = "io.kubernetes.container.name"
 )
 
+// IsPortableEnvironmentVariableName reports whether name can be rendered as a
+// single Docker environment-variable assignment on every supported device
+// transport. Kubernetes permits a broader set of printable characters, but
+// the app-hosting transports render names into Docker run options and therefore
+// require the traditional shell-compatible form.
+func IsPortableEnvironmentVariableName(name string) bool {
+	if name == "" || !isASCIIAlpha(name[0]) && name[0] != '_' {
+		return false
+	}
+	for i := 1; i < len(name); i++ {
+		if !isASCIIAlpha(name[i]) && (name[i] < '0' || name[i] > '9') && name[i] != '_' {
+			return false
+		}
+	}
+	return true
+}
+
+func isASCIIAlpha(c byte) bool {
+	return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z'
+}
+
 // GetAppHostingName returns the AppHosting name for a pod using its UID.
 // The UID is guaranteed unique and fits within the 40-char YANG constraint (32 chars without hyphens).
 // If the pod already has the label set, returns that value for idempotency.
@@ -36,7 +58,7 @@ func GetAppHostingName(pod *v1.Pod, index int8) string {
 
 	cleanUUID := strings.ReplaceAll(string(pod.UID), "-", "")
 
-	appID := fmt.Sprintf("cvk000%01d_%s", index, cleanUUID)
+	appID := fmt.Sprintf("cvk%04d_%s", index, cleanUUID)
 
 	return appID
 }
@@ -74,12 +96,19 @@ func ParseCVKAppName(appName string) (index int8, uid string, ok bool) {
 	if appName[7] != '_' {
 		return 0, "", false
 	}
-	// Parse the single-digit container index at position 6
-	idx := int8(appName[6] - '0')
-	if idx < 0 || idx > 9 {
+	parsedIndex, err := strconv.ParseUint(appName[3:7], 10, 8)
+	if err != nil || parsedIndex > 127 {
 		return 0, "", false
 	}
+	idx := int8(parsedIndex)
 	uid = appName[8:]
+	for i := 0; i < len(uid); i++ {
+		c := uid[i]
+		if (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') {
+			continue
+		}
+		return 0, "", false
+	}
 	return idx, uid, true
 }
 

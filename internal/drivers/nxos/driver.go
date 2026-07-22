@@ -330,6 +330,9 @@ const nxosAppActionRetryInterval = 30 * time.Second
 const nxosAppActionTimeout = 30 * time.Minute
 
 func (d *NXOSDriver) runAppAction(ctx context.Context, appID, action string, fn func(context.Context) error) error {
+	if err := validateNXOSAppID(appID); err != nil {
+		return err
+	}
 	if !d.markAppAction(appID, action) {
 		return nil
 	}

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -57,8 +58,8 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 
 	// Never + HTTP URL: the image must already be on flash. Fail before touching the device.
 	if policy == v1.PullNever && isHTTPURL(appConfig.ImagePath()) {
-		return fmt.Errorf("app %s: imagePullPolicy is Never but image is an HTTP URL %q — image must be pre-loaded on flash",
-			appConfig.AppName(), appConfig.ImagePath())
+		return fmt.Errorf("app %s: imagePullPolicy is Never but image is an HTTP URL — image must be pre-loaded on flash",
+			appConfig.AppName())
 	}
 
 	cfgPath := "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
@@ -94,7 +95,7 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 		}
 
 		// HTTP image + DockerResource: try device-native pull, fall back to copy.
-		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", appConfig.ImagePath())
+		d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", imageReferenceForLog(appConfig.ImagePath()))
 		deployErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "DEPLOYED", timeout)
 		if deployErr == nil {
 			if err := d.activateAndStart(ctx, appConfig, timeout); err != nil {
@@ -133,7 +134,7 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 
 	// ── PRIMARY PATH (HTTP image, non-DockerResource) ────────────────────────
 	// The device can pull and activate the image itself (Start=true). Wait for RUNNING.
-	d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", appConfig.ImagePath())
+	d.emitEvent(appConfig, v1.EventTypeNormal, "Pulling", "Pulling image %s", imageReferenceForLog(appConfig.ImagePath()))
 	waitErr := d.WaitForAppStatus(ctx, appConfig.AppName(), "RUNNING", timeout)
 	if waitErr == nil {
 		log.G(ctx).Infof("Successfully created and installed app %s", appConfig.AppName())
@@ -206,6 +207,9 @@ func isRESTCONFDataExists(err error) bool {
 	if err == nil {
 		return false
 	}
+	if common.IsRESTCONFStatus(err, http.StatusConflict) && common.HasRESTCONFErrorTag(err, "data-exists") {
+		return true
+	}
 	msg := err.Error()
 	return strings.Contains(msg, "409 Conflict") && strings.Contains(msg, "data-exists")
 }
@@ -270,7 +274,7 @@ func (d *XEDriver) copyFallbackToFlash(ctx context.Context, appConfig *AppHostin
 	}
 
 	if !installedFromCache {
-		d.emitEvent(appConfig, v1.EventTypeNormal, "Copying", "Copying image %s to %s (may take several minutes)", appConfig.ImagePath(), dest)
+		d.emitEvent(appConfig, v1.EventTypeNormal, "Copying", "Copying image %s to %s (may take several minutes)", imageReferenceForLog(appConfig.ImagePath()), dest)
 		if err := d.copyRPC(ctx, src, dest); err != nil {
 			d.clearPodRecovering(appConfig.PodUID())
 			return fmt.Errorf("copy failed for app %s: %w", appConfig.AppName(), err)
@@ -315,7 +319,7 @@ func (d *XEDriver) appHostingRPC(ctx context.Context, operation string, appID st
 
 // InstallApp installs an app package on the device
 func (d *XEDriver) InstallApp(ctx context.Context, appID string, packagePath string) error {
-	log.G(ctx).Infof("Installing app %s from package: %s", appID, packagePath)
+	log.G(ctx).Infof("Installing app %s from package: %s", appID, imageReferenceForLog(packagePath))
 
 	err := d.appHostingRPC(ctx, "install", appID, map[string]string{"package": packagePath})
 	if err != nil {
@@ -523,8 +527,6 @@ func (d *XEDriver) GetAppOperationalData(ctx context.Context) (map[string]*Cisco
 	}
 
 	log.G(ctx).Debugf("Fetched operational data for %d apps", len(root.App))
-	d.debugLogJson(ctx, root)
-
 	return root.App, nil
 }
 
@@ -641,15 +643,18 @@ func (d *XEDriver) GetHostedApps(ctx context.Context) ([]common.HostedApp, error
 	return apps, nil
 }
 
-// isHTTPURL returns true if s begins with http:// or https://.
+// isHTTPURL reports whether s is an absolute HTTP(S) URL with a host.
 func isHTTPURL(s string) bool {
-	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
+	u, err := url.Parse(s)
+	return err == nil && u.Host != "" && (strings.EqualFold(u.Scheme, "http") || strings.EqualFold(u.Scheme, "https"))
 }
 
 // copyRPC downloads a file from source to destination using the IOS-XE copy RESTCONF RPC.
 // The call is synchronous and may block for several minutes while the device fetches the image.
 func (d *XEDriver) copyRPC(ctx context.Context, source, destination string) error {
-	log.G(ctx).Infof("Starting copy operation (may take several minutes): %s -> %s", source, destination)
+	safeSource := imageReferenceForLog(source)
+	safeDestination := imageReferenceForLog(destination)
+	log.G(ctx).Infof("Starting copy operation (may take several minutes): %s -> %s", safeSource, safeDestination)
 
 	payload := map[string]interface{}{
 		"Cisco-IOS-XE-rpc:copy": map[string]string{
@@ -661,15 +666,51 @@ func (d *XEDriver) copyRPC(ctx context.Context, source, destination string) erro
 	path := "/restconf/operations/Cisco-IOS-XE-rpc:copy"
 	jsonMarshaller := func(v any) ([]byte, error) { return json.Marshal(v) }
 
-	log.G(ctx).Debugf("Copy RPC payload: %+v", payload)
-
 	if err := d.client.Post(ctx, path, payload, jsonMarshaller); err != nil {
-		log.G(ctx).Errorf("Copy RPC failed - source: %s, destination: %s, error: %v", source, destination, err)
-		return fmt.Errorf("copy RPC failed (%s -> %s): %w", source, destination, err)
+		log.G(ctx).Errorf("Copy RPC failed - source: %s, destination: %s, error: %v", safeSource, safeDestination, err)
+		return fmt.Errorf("copy RPC failed (%s -> %s): %w", safeSource, safeDestination, err)
 	}
 
-	log.G(ctx).Infof("Copy operation completed successfully: %s -> %s", source, destination)
+	log.G(ctx).Infof("Copy operation completed successfully: %s -> %s", safeSource, safeDestination)
 	return nil
+}
+
+// imageReferenceForLog removes URL credentials, query parameters, and
+// fragments while retaining enough source information for operators. Local
+// device paths are returned unchanged.
+func imageReferenceForLog(raw string) string {
+	for i := 0; i < len(raw); i++ {
+		if raw[i] < 0x20 || raw[i] == 0x7f {
+			return "<redacted-image-reference>"
+		}
+	}
+	trimmed := strings.TrimSpace(raw)
+	u, err := url.Parse(trimmed)
+	if err != nil {
+		return "<redacted-image-reference>"
+	}
+	if u.Host == "" {
+		if strings.EqualFold(u.Scheme, "http") || strings.EqualFold(u.Scheme, "https") {
+			return "<redacted-http-image>"
+		}
+		if u.Scheme != "" && !isIOSXEDeviceFilesystemScheme(u.Scheme) {
+			return "<redacted-image-reference>"
+		}
+	}
+	u.User = nil
+	u.RawQuery = ""
+	u.ForceQuery = false
+	u.Fragment = ""
+	return u.String()
+}
+
+func isIOSXEDeviceFilesystemScheme(scheme string) bool {
+	switch strings.ToLower(scheme) {
+	case "bootflash", "harddisk", "flash", "nvram", "usb":
+		return true
+	default:
+		return false
+	}
 }
 
 // registryAuth holds registry credentials resolved from an imagePullSecret.

@@ -33,8 +33,9 @@ import (
 )
 
 const (
-	nxapiVersion = "1.0"
-	nxapiPath    = "/ins"
+	nxapiVersion          = "1.0"
+	nxapiPath             = "/ins"
+	maxNXAPIResponseBytes = 8 << 20
 )
 
 type nxapiClient struct {
@@ -104,6 +105,14 @@ func newNXAPIClientWithOptions(spec *v1alpha1.DeviceSpec, opts nxapiClientOption
 				TLSClientConfig: tlsConfig,
 			},
 		}
+	} else {
+		// Do not mutate a caller-owned client when applying the NX-API security
+		// policy below.
+		clientCopy := *httpClient
+		httpClient = &clientCopy
+	}
+	httpClient.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
 	}
 	return &nxapiClient{
 		rootURL:     root.String(),
@@ -180,18 +189,16 @@ func (c *nxapiClient) exec(ctx context.Context, typ, input string) (string, erro
 		return "", fmt.Errorf("%s: %w", errorContext, err)
 	}
 	defer resp.Body.Close()
-	raw, readErr := io.ReadAll(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// NX-API HTTP error bodies can echo either a cli_conf request or the
+		// output of an app-hosting detail command, both of which may contain
+		// resolved SecretKeyRef values. Keep all free-form response text out of
+		// errors that flow to controller logs and Events.
+		return "", fmt.Errorf("%s: HTTP %d", errorContext, resp.StatusCode)
+	}
+	raw, readErr := readLimitedNXAPIBody(resp.Body)
 	if readErr != nil {
 		return "", fmt.Errorf("%s: read response: %w", errorContext, readErr)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		if isNXAPIConfigType(typ) {
-			// A cli_conf request can contain resolved Kubernetes Secret values
-			// in Docker run options, and an HTTP error body can echo the request.
-			// Keep both out of errors that flow to controller logs and Events.
-			return "", fmt.Errorf("%s: HTTP %d", errorContext, resp.StatusCode)
-		}
-		return "", fmt.Errorf("%s: HTTP %d: %s", errorContext, resp.StatusCode, strings.TrimSpace(string(raw)))
 	}
 	out, err := parseNXAPIResponse(raw, typ)
 	if err != nil {
@@ -200,11 +207,19 @@ func (c *nxapiClient) exec(ctx context.Context, typ, input string) (string, erro
 	return out, nil
 }
 
-func nxapiErrorContext(typ, input string) string {
-	if isNXAPIConfigType(typ) {
-		return fmt.Sprintf("nxapi %s", typ)
+func readLimitedNXAPIBody(body io.Reader) ([]byte, error) {
+	raw, err := io.ReadAll(io.LimitReader(body, maxNXAPIResponseBytes+1))
+	if err != nil {
+		return nil, err
 	}
-	return fmt.Sprintf("nxapi %s %q", typ, input)
+	if len(raw) > maxNXAPIResponseBytes {
+		return nil, fmt.Errorf("response exceeds %d-byte limit", maxNXAPIResponseBytes)
+	}
+	return raw, nil
+}
+
+func nxapiErrorContext(typ, _ string) string {
+	return fmt.Sprintf("nxapi %s", typ)
 }
 
 func isNXAPIConfigType(typ string) bool {
@@ -217,17 +232,20 @@ func parseNXAPIResponse(raw []byte, typ string) (string, error) {
 		return "", err
 	}
 	if len(resp.InsAPI.Outputs.Output) == 0 {
-		return "", nil
+		return "", nxapiMissingSuccessCodeError(typ)
 	}
 	outputs, err := decodeNXAPIOutputs(resp.InsAPI.Outputs.Output)
 	if err != nil {
 		return "", err
 	}
+	if len(outputs) == 0 {
+		return "", nxapiMissingSuccessCodeError(typ)
+	}
 	var parts []string
 	for _, out := range outputs {
 		body := bodyToString(out.Body)
-		if out.Code != "" && out.Code != "200" {
-			return "", nxapiOutputError(typ, out, body)
+		if out.Code != "200" {
+			return "", nxapiOutputError(typ, out)
 		}
 		// NX-API can return an HTTP 200 and a successful envelope while the
 		// configuration command itself failed. NX-OS reports that semantic
@@ -235,7 +253,7 @@ func parseNXAPIResponse(raw []byte, typ string) (string, error) {
 		// check type-scoped so operational show output containing the same text
 		// remains valid data.
 		if isNXAPIConfigType(typ) && nxapiCLIErrorBody(body) {
-			return "", nxapiOutputError(typ, out, body)
+			return "", nxapiOutputError(typ, out)
 		}
 		if body != "" {
 			parts = append(parts, body)
@@ -244,18 +262,26 @@ func parseNXAPIResponse(raw []byte, typ string) (string, error) {
 	return strings.Join(parts, "\n"), nil
 }
 
-func nxapiOutputError(typ string, out nxapiOutput, body string) error {
+func nxapiMissingSuccessCodeError(typ string) error {
 	if isNXAPIConfigType(typ) {
-		// Never include cli_conf input or body: app-hosting configuration can
-		// carry resolved SecretKeyRef values, and NX-API may echo input in any
-		// free-form response field. Only a three-digit protocol status is safe.
-		if code := nxapiNumericCode(out.Code); code != "" {
-			return fmt.Errorf("configuration command failed: code=%s", code)
-		}
-		return fmt.Errorf("configuration command failed")
+		return fmt.Errorf("configuration response omitted an explicit success code")
 	}
-	return fmt.Errorf("command %q failed: code=%s msg=%s body=%s",
-		out.Input, out.Code, out.Msg, body)
+	return fmt.Errorf("command response omitted an explicit success code")
+}
+
+func nxapiOutputError(typ string, out nxapiOutput) error {
+	// Never include input, msg, or body: configuration requests and
+	// app-hosting detail responses can carry resolved SecretKeyRef values, and
+	// NX-API may echo them in any free-form response field. Only a three-digit
+	// protocol status is safe.
+	message := "command failed"
+	if isNXAPIConfigType(typ) {
+		message = "configuration command failed"
+	}
+	if code := nxapiNumericCode(out.Code); code != "" {
+		return fmt.Errorf("%s: code=%s", message, code)
+	}
+	return fmt.Errorf("%s", message)
 }
 
 func nxapiNumericCode(code string) string {

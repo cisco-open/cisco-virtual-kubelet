@@ -69,6 +69,13 @@ func (d *NXOSDriver) convertPodToAppConfigs(pod *v1.Pod) ([]nxosAppConfig, error
 	timeout := getPackageTimeout(pod)
 	configs := make([]nxosAppConfig, 0, len(pod.Spec.Containers))
 	for _, container := range pod.Spec.Containers {
+		appID := appIDs[container.Name]
+		if err := validateNXOSAppID(appID); err != nil {
+			return nil, fmt.Errorf("container %s generated an invalid NX-OS app ID: %w", container.Name, err)
+		}
+		if err := validateNXOSPackagePath(container.Image); err != nil {
+			return nil, fmt.Errorf("container %s image: %w", container.Name, err)
+		}
 		runOpts, err := d.buildRunOptions(pod, container)
 		if err != nil {
 			return nil, fmt.Errorf("container %s: %w", container.Name, err)
@@ -81,7 +88,7 @@ func (d *NXOSDriver) convertPodToAppConfigs(pod *v1.Pod) ([]nxosAppConfig, error
 			return nil, fmt.Errorf("container %s: NX-OS app-resource profile supports cpu, memory, and vcpu reservations; disk/ephemeral-storage reservation is not supported by NX-OS app-hosting", container.Name)
 		}
 		configs = append(configs, nxosAppConfig{
-			AppID:        appIDs[container.Name],
+			AppID:        appID,
 			Container:    container.Name,
 			PodName:      pod.Name,
 			PodNamespace: pod.Namespace,
@@ -152,6 +159,9 @@ func (d *NXOSDriver) buildEnvironmentOptions(namespace string, container v1.Cont
 	var envOptions []string
 	servicePrefixes := serviceLinkPrefixes(container.Env)
 	for _, env := range container.Env {
+		if !common.IsPortableEnvironmentVariableName(env.Name) {
+			return nil, fmt.Errorf("environment variable name is not portable across app-hosting transports")
+		}
 		if isServiceLinkEnv(env.Name, servicePrefixes) {
 			continue
 		}
@@ -161,6 +171,9 @@ func (d *NXOSDriver) buildEnvironmentOptions(namespace string, container v1.Cont
 		}
 		if !ok || value == "" {
 			continue
+		}
+		if err := validateNXOSEnvironmentValue(value); err != nil {
+			return nil, fmt.Errorf("environment variable %s: %w", env.Name, err)
 		}
 		envOptions = append(envOptions, fmt.Sprintf("--env %s=%s", env.Name, escapeShellValue(value)))
 	}
@@ -236,8 +249,11 @@ func (d *NXOSDriver) resolveConfigMapKeyRef(namespace string, ref *v1.ConfigMapK
 func distributeNXOSRunOpts(baseOpts, envOpts []string) ([]string, error) {
 	lines := make([]string, 0, len(baseOpts)+len(envOpts))
 	for _, opt := range baseOpts {
+		if err := validateNXOSRunOption(opt); err != nil {
+			return nil, err
+		}
 		if len(opt) > maxNXOSRunOptsLineLength {
-			return nil, fmt.Errorf("single run-opts option too long (%d chars, max %d): %s", len(opt), maxNXOSRunOptsLineLength, opt)
+			return nil, fmt.Errorf("single run-opts option too long (%d chars, max %d)", len(opt), maxNXOSRunOptsLineLength)
 		}
 		if len(lines) >= maxNXOSRunOptsLines {
 			return nil, fmt.Errorf("too many run-opts lines needed (max %d)", maxNXOSRunOptsLines)
@@ -257,6 +273,9 @@ func distributeNXOSRunOpts(baseOpts, envOpts []string) ([]string, error) {
 		return nil
 	}
 	addOption := func(opt string) error {
+		if err := validateNXOSRunOption(opt); err != nil {
+			return err
+		}
 		needed := len(opt)
 		if current.Len() > 0 {
 			needed++
@@ -268,7 +287,7 @@ func distributeNXOSRunOpts(baseOpts, envOpts []string) ([]string, error) {
 			needed = len(opt)
 		}
 		if needed > maxNXOSRunOptsLineLength {
-			return fmt.Errorf("single run-opts option too long (%d chars, max %d): %s", needed, maxNXOSRunOptsLineLength, opt)
+			return fmt.Errorf("single run-opts option too long (%d chars, max %d)", needed, maxNXOSRunOptsLineLength)
 		}
 		if current.Len() > 0 {
 			current.WriteString(" ")
@@ -411,10 +430,82 @@ func escapeShellValue(value string) string {
 	return fmt.Sprintf(`'%s'`, value)
 }
 
+func validateNXOSEnvironmentValue(value string) error {
+	for i := 0; i < len(value); i++ {
+		c := value[i]
+		if c < 0x20 || c > 0x7e || strings.IndexByte(";|\"'\\`", c) >= 0 {
+			return fmt.Errorf("value contains characters that are unsafe in NX-API CLI run options")
+		}
+	}
+	return nil
+}
+
+func validateNXOSRunOption(option string) error {
+	if option == "" {
+		return fmt.Errorf("empty NX-OS app-hosting run option")
+	}
+	for i := 0; i < len(option); i++ {
+		c := option[i]
+		if c < 0x20 || c > 0x7e || strings.IndexByte(";|\"\\`", c) >= 0 {
+			return fmt.Errorf("NX-OS app-hosting run option contains unsafe CLI syntax")
+		}
+	}
+	return nil
+}
+
 func isHTTPURL(raw string) bool {
 	u, err := url.Parse(raw)
 	if err != nil {
 		return false
 	}
 	return u.Scheme == "http" || u.Scheme == "https"
+}
+
+// validateNXOSPackagePath ensures a pod-controlled image value is a single,
+// safe NX-API CLI token before it can be interpolated into an app-hosting
+// install command. CVK permits pre-staged bootflash paths and its existing
+// Beta HTTP(S) source behavior. More complex URL characters can be
+// percent-encoded by the caller.
+func validateNXOSPackagePath(raw string) error {
+	if raw == "" {
+		return fmt.Errorf("NX-OS app-hosting package path is required")
+	}
+	if !isSafeNXOSPackageToken(raw) {
+		return fmt.Errorf("NX-OS app-hosting package path contains characters that are unsafe in NX-API CLI")
+	}
+
+	if strings.HasPrefix(raw, "bootflash:") {
+		relative := strings.TrimPrefix(raw, "bootflash:")
+		relative = strings.TrimPrefix(relative, "/")
+		if relative == "" {
+			return fmt.Errorf("NX-OS bootflash package path must name a file")
+		}
+		for _, segment := range strings.Split(relative, "/") {
+			if segment == "" || segment == "." || segment == ".." {
+				return fmt.Errorf("NX-OS bootflash package path contains an invalid path segment")
+			}
+		}
+		return nil
+	}
+
+	u, err := url.ParseRequestURI(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return fmt.Errorf("NX-OS app-hosting package path must be a bootflash path or an HTTP(S) URL")
+	}
+	if u.User != nil || u.Fragment != "" || u.EscapedPath() == "" || u.EscapedPath() == "/" {
+		return fmt.Errorf("NX-OS HTTP(S) package URL must include a host and package path and must not contain userinfo or a fragment")
+	}
+	return nil
+}
+
+func isSafeNXOSPackageToken(raw string) bool {
+	const punctuation = "-._~:/?&=%+@,[]"
+	for i := 0; i < len(raw); i++ {
+		c := raw[i]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || strings.IndexByte(punctuation, c) >= 0 {
+			continue
+		}
+		return false
+	}
+	return true
 }

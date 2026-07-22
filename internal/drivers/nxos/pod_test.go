@@ -153,7 +153,7 @@ func TestDeletePodRemovesConfigWhenAppStateIsUnavailable(t *testing.T) {
 }
 
 func TestDeleteAppFinalTimeoutCheckAcceptsLateRemoval(t *testing.T) {
-	appID := "cvk0000_late"
+	appID := "cvk0000_0123456789abcdef0123456789abcdef"
 	state := "STOPPED"
 	var requests []nxapiRequest
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -920,7 +920,8 @@ func TestUpdatePodRejectsContainerCountAboveNXOSAppSlotsBeforeConfig(t *testing.
 
 func TestDeployPodRejectsPullNeverHTTPBeforeConfig(t *testing.T) {
 	pod := nxosTestPod()
-	pod.Spec.Containers[0].Image = "https://registry.example.com/hello.tar"
+	const sentinel = "NXOS_SIGNED_URL_SECRET_DO_NOT_EXPOSE"
+	pod.Spec.Containers[0].Image = "https://registry.example.com/hello.tar?token=" + sentinel
 	pod.Spec.Containers[0].ImagePullPolicy = v1.PullNever
 	var requests []nxapiRequest
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -935,13 +936,377 @@ func TestDeployPodRejectsPullNeverHTTPBeforeConfig(t *testing.T) {
 
 	driver := nxosTestDriver(server)
 	err := driver.DeployPod(context.Background(), pod, nil, nil)
-	if err == nil || !strings.Contains(err.Error(), "imagePullPolicy is Never") {
+	if err == nil || !strings.Contains(err.Error(), "imagePullPolicy Never") {
 		t.Fatalf("DeployPod err=%v, want PullNever HTTP rejection", err)
+	}
+	if strings.Contains(err.Error(), sentinel) {
+		t.Fatalf("DeployPod error exposed signed URL query: %v", err)
 	}
 	for _, req := range requests {
 		if req.InsAPI.Type == "cli_conf" {
 			t.Fatalf("unexpected config command before PullNever rejection: %q", req.InsAPI.Input)
 		}
+	}
+}
+
+func TestValidateNXOSPackagePath(t *testing.T) {
+	tests := []struct {
+		name    string
+		path    string
+		wantErr bool
+	}{
+		{name: "bootflash root file", path: "bootflash:/hello.tar"},
+		{name: "bootflash nested file", path: "bootflash:virtual-kubelet/hello_v2-1.0.tar"},
+		{name: "https URL", path: "https://registry.example.com/apps/hello.tar"},
+		{name: "signed https URL", path: "https://registry.example.com/hello.tar?token=abc%2Fdef&version=2"},
+		{name: "IPv6 https URL", path: "https://[2001:db8::1]:8443/hello.tar"},
+		{name: "empty", path: "", wantErr: true},
+		{name: "unsupported filesystem", path: "flash:/hello.tar", wantErr: true},
+		{name: "unsupported scheme", path: "ftp://registry.example.com/hello.tar", wantErr: true},
+		{name: "missing URL path", path: "https://registry.example.com/", wantErr: true},
+		{name: "URL userinfo", path: "https://user:password@registry.example.com/hello.tar", wantErr: true},
+		{name: "parent path", path: "bootflash:/apps/../hello.tar", wantErr: true},
+		{name: "empty path segment", path: "bootflash:/apps//hello.tar", wantErr: true},
+		{name: "space", path: "bootflash:/hello world.tar", wantErr: true},
+		{name: "semicolon", path: "bootflash:/hello.tar;show version", wantErr: true},
+		{name: "newline", path: "bootflash:/hello.tar\nshow version", wantErr: true},
+		{name: "carriage return", path: "bootflash:/hello.tar\rshow version", wantErr: true},
+		{name: "tab", path: "bootflash:/hello.tar\tshow version", wantErr: true},
+		{name: "pipe", path: "bootflash:/hello.tar|show version", wantErr: true},
+		{name: "backslash", path: `bootflash:/hello\show.tar`, wantErr: true},
+		{name: "single quote", path: "bootflash:/hello'.tar", wantErr: true},
+		{name: "double quote", path: "bootflash:/hello\".tar", wantErr: true},
+		{name: "backtick", path: "bootflash:/hello`.tar", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateNXOSPackagePath(tt.path)
+			if tt.wantErr && err == nil {
+				t.Fatalf("validateNXOSPackagePath(%q) succeeded, want error", tt.path)
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("validateNXOSPackagePath(%q): %v", tt.path, err)
+			}
+		})
+	}
+}
+
+func TestDeployPodRejectsUnsafePackagePathBeforeNXAPI(t *testing.T) {
+	unsafePaths := []string{
+		"bootflash:/hello.tar;show running-config",
+		"bootflash:/hello.tar\nshow running-config",
+		"bootflash:/hello.tar|show running-config",
+		"bootflash:/hello\".tar",
+	}
+	for _, unsafePath := range unsafePaths {
+		t.Run(strings.ReplaceAll(unsafePath, "/", "_"), func(t *testing.T) {
+			pod := nxosTestPod()
+			pod.Spec.Containers[0].Image = unsafePath
+			requestCount := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requestCount++
+				writeNXAPISuccess(t, w, "", "")
+			}))
+			defer server.Close()
+
+			driver := nxosTestDriver(server)
+			err := driver.DeployPod(context.Background(), pod, nil, nil)
+			if err == nil || !strings.Contains(err.Error(), "unsafe in NX-API CLI") {
+				t.Fatalf("DeployPod err=%v, want unsafe package path rejection", err)
+			}
+			if strings.Contains(err.Error(), unsafePath) {
+				t.Fatalf("DeployPod error echoed rejected package path: %v", err)
+			}
+			if requestCount != 0 {
+				t.Fatalf("NX-API requests=%d, want 0 for rejected package path", requestCount)
+			}
+		})
+	}
+}
+
+func TestDeployPodPreflightsEveryPackagePathBeforeNXAPI(t *testing.T) {
+	pod := nxosTestPod()
+	pod.Spec.Containers = append(pod.Spec.Containers, v1.Container{
+		Name:  "unsafe-sibling",
+		Image: "bootflash:/hello.tar;show running-config",
+	})
+	requestCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		writeNXAPISuccess(t, w, "", "")
+	}))
+	defer server.Close()
+
+	driver := nxosTestDriver(server)
+	err := driver.DeployPod(context.Background(), pod, nil, nil)
+	if err == nil || !strings.Contains(err.Error(), "unsafe in NX-API CLI") {
+		t.Fatalf("DeployPod err=%v, want unsafe sibling rejection", err)
+	}
+	if requestCount != 0 {
+		t.Fatalf("NX-API requests=%d, want 0 before all container package paths pass preflight", requestCount)
+	}
+}
+
+func TestAdvanceAppStateRejectsUnsafePackagePathAtInstallSink(t *testing.T) {
+	requestCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		writeNXAPISuccess(t, w, "", "")
+	}))
+	defer server.Close()
+
+	driver := nxosTestDriver(server)
+	err := driver.advanceAppState(context.Background(), &nxosAppConfig{
+		AppID:     "cvk0000_0123456789abcdef0123456789abcdef",
+		ImagePath: "bootflash:/hello.tar;show running-config",
+	}, "")
+	if err == nil || !strings.Contains(err.Error(), "unsafe in NX-API CLI") {
+		t.Fatalf("advanceAppState err=%v, want unsafe package path rejection", err)
+	}
+	if requestCount != 0 {
+		t.Fatalf("NX-API requests=%d, want 0 for install-sink rejection", requestCount)
+	}
+}
+
+func TestDeployPodRejectsUnsafeEnvironmentInputBeforeNXAPI(t *testing.T) {
+	tests := []struct {
+		name string
+		env  v1.EnvVar
+		data string
+	}{
+		{
+			name: "direct non-portable name",
+			env:  v1.EnvVar{Name: "X --privileged --env Y", Value: "safe"},
+		},
+		{
+			name: "SecretKeyRef non-portable name",
+			env: v1.EnvVar{Name: "X --privileged --env Y", ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{Name: "app-secret"},
+					Key:                  "token",
+				},
+			}},
+			data: "safe",
+		},
+		{name: "semicolon in direct value", env: v1.EnvVar{Name: "TOKEN", Value: "secret;show running-config"}},
+		{name: "pipe in direct value", env: v1.EnvVar{Name: "TOKEN", Value: "secret|show running-config"}},
+		{name: "double quote in direct value", env: v1.EnvVar{Name: "TOKEN", Value: `secret" --privileged`}},
+		{name: "single quote in direct value", env: v1.EnvVar{Name: "TOKEN", Value: "secret' --privileged"}},
+		{name: "backslash in direct value", env: v1.EnvVar{Name: "TOKEN", Value: `secret\value`}},
+		{name: "backtick in direct value", env: v1.EnvVar{Name: "TOKEN", Value: "secret`id`"}},
+		{name: "newline in direct value", env: v1.EnvVar{Name: "TOKEN", Value: "secret\nshow running-config"}},
+		{
+			name: "unsafe SecretKeyRef value",
+			env: v1.EnvVar{Name: "TOKEN", ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{Name: "app-secret"},
+					Key:                  "token",
+				},
+			}},
+			data: "secret;show running-config",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requestCount := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requestCount++
+				writeNXAPISuccess(t, w, "", "")
+			}))
+			defer server.Close()
+
+			var secretLister corev1listers.SecretNamespaceLister
+			if tt.env.ValueFrom != nil {
+				secretIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+				if err := secretIndexer.Add(&v1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "app-secret", Namespace: "default"},
+					Data:       map[string][]byte{"token": []byte(tt.data)},
+				}); err != nil {
+					t.Fatalf("add secret: %v", err)
+				}
+				secretLister = corev1listers.NewSecretLister(secretIndexer).Secrets("default")
+			}
+
+			pod := nxosTestPod()
+			pod.Spec.Containers[0].Env = []v1.EnvVar{tt.env}
+			driver := nxosTestDriver(server)
+			err := driver.DeployPod(context.Background(), pod, secretLister, nil)
+			if err == nil {
+				t.Fatal("DeployPod succeeded, want environment input rejection")
+			}
+			untrustedInput := tt.data
+			if !common.IsPortableEnvironmentVariableName(tt.env.Name) {
+				untrustedInput = tt.env.Name
+			} else if tt.env.Value != "" {
+				untrustedInput = tt.env.Value
+			}
+			if untrustedInput != "" && strings.Contains(err.Error(), untrustedInput) {
+				t.Fatalf("environment rejection exposed untrusted input: %v", err)
+			}
+			if requestCount != 0 {
+				t.Fatalf("NX-API requests=%d, want 0 for rejected environment input", requestCount)
+			}
+		})
+	}
+}
+
+func TestEnsureAppConfigRejectsUnsafeRunOptionBeforeNXAPI(t *testing.T) {
+	requestCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		writeNXAPISuccess(t, w, "", "")
+	}))
+	defer server.Close()
+
+	driver := nxosTestDriver(server)
+	err := driver.ensureAppConfig(context.Background(), &nxosAppConfig{
+		AppID:   "cvk0000_0123456789abcdef0123456789abcdef",
+		RunOpts: []string{"--env SAFE='value' ; show running-config"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "unsafe CLI syntax") {
+		t.Fatalf("ensureAppConfig err=%v, want unsafe run-option rejection", err)
+	}
+	if requestCount != 0 {
+		t.Fatalf("NX-API requests=%d, want 0 for rejected run option", requestCount)
+	}
+}
+
+func TestNXOSCommandSinksRejectInvalidAppIDBeforeNXAPI(t *testing.T) {
+	const invalidAppID = "cvk0000_0123456789abcdef0123456789abcdef;show"
+	requestCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		writeNXAPISuccess(t, w, "", "")
+	}))
+	defer server.Close()
+
+	driver := nxosTestDriver(server)
+	tests := []struct {
+		name string
+		run  func() error
+	}{
+		{name: "detail", run: func() error { _, err := driver.appDetail(context.Background(), invalidAppID); return err }},
+		{name: "create", run: func() error { return driver.createApp(context.Background(), &nxosAppConfig{AppID: invalidAppID}) }},
+		{name: "configure", run: func() error { return driver.ensureAppConfig(context.Background(), &nxosAppConfig{AppID: invalidAppID}) }},
+		{name: "delete", run: func() error { return driver.deleteApp(context.Background(), invalidAppID, time.Second) }},
+		{name: "remove config", run: func() error { return driver.removeAppConfig(context.Background(), invalidAppID) }},
+		{name: "action", run: func() error {
+			return driver.runAppAction(context.Background(), invalidAppID, "start", func(context.Context) error {
+				requestCount++
+				return nil
+			})
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			before := requestCount
+			err := tt.run()
+			if err == nil || !strings.Contains(err.Error(), "invalid NX-OS CVK app ID") {
+				t.Fatalf("sink err=%v, want invalid app ID rejection", err)
+			}
+			if requestCount != before {
+				t.Fatalf("sink issued %d request(s) or callback(s), want 0", requestCount-before)
+			}
+		})
+	}
+}
+
+func TestAppDetailRejectsMismatchedOrMalformedResponseID(t *testing.T) {
+	const requested = "cvk0000_0123456789abcdef0123456789abcdef"
+	tests := []struct {
+		name       string
+		returnedID string
+	}{
+		{name: "different valid ID", returnedID: "cvk0001_0123456789abcdef0123456789abcdef"},
+		{name: "length-preserving malformed ID", returnedID: "cvk;;;0_0123456789abcdef0123456789abcdef"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var req nxapiRequest
+				if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+					t.Fatalf("decode request: %v", err)
+				}
+				writeNXAPISuccess(t, w, req.InsAPI.Input, nxosAppDetailBody(tt.returnedID, "RUNNING"))
+			}))
+			defer server.Close()
+
+			driver := nxosTestDriver(server)
+			_, err := driver.appDetail(context.Background(), requested)
+			if err == nil || !strings.Contains(err.Error(), "invalid or mismatched") {
+				t.Fatalf("appDetail err=%v, want response-ID rejection", err)
+			}
+			if strings.Contains(err.Error(), tt.returnedID) {
+				t.Fatalf("appDetail error echoed untrusted response ID: %v", err)
+			}
+		})
+	}
+}
+
+func TestListPodsSkipsMalformedCVKAppIDWithoutDetailRequest(t *testing.T) {
+	const malformed = "cvk;;;0_0123456789abcdef0123456789abcdef"
+	detailRequests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req nxapiRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		body := ""
+		if req.InsAPI.Input == "show app-hosting list" {
+			body = "App id State\n" + malformed + " RUNNING\n"
+		} else if strings.HasPrefix(req.InsAPI.Input, "show app-hosting detail ") {
+			detailRequests++
+		}
+		writeNXAPISuccess(t, w, req.InsAPI.Input, body)
+	}))
+	defer server.Close()
+
+	driver := nxosTestDriver(server)
+	pods, err := driver.ListPods(context.Background())
+	if err != nil {
+		t.Fatalf("ListPods: %v", err)
+	}
+	if len(pods) != 0 {
+		t.Fatalf("ListPods returned malformed app as %d pod(s)", len(pods))
+	}
+	if detailRequests != 0 {
+		t.Fatalf("ListPods issued %d detail request(s) for malformed app ID", detailRequests)
+	}
+}
+
+func TestNXOSRunOptionLengthErrorDoesNotExposeSecret(t *testing.T) {
+	const sentinel = "NXOS_SECRET_SENTINEL_DO_NOT_EXPOSE_"
+	secretValue := sentinel + strings.Repeat("x", maxNXOSRunOptsLineLength)
+	secretIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+	if err := secretIndexer.Add(&v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "long-secret", Namespace: "default"},
+		Data:       map[string][]byte{"token": []byte(secretValue)},
+	}); err != nil {
+		t.Fatalf("add secret: %v", err)
+	}
+
+	pod := nxosTestPod()
+	pod.Spec.Containers[0].Env = []v1.EnvVar{{
+		Name: "TOKEN",
+		ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{
+			LocalObjectReference: v1.LocalObjectReference{Name: "long-secret"},
+			Key:                  "token",
+		}},
+	}}
+	driver := &NXOSDriver{config: &v1alpha1.DeviceSpec{}}
+	driver.SetPodResourceListers(
+		corev1listers.NewSecretLister(secretIndexer),
+		corev1listers.NewConfigMapLister(cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})),
+	)
+
+	_, err := driver.convertPodToAppConfigs(pod)
+	if err == nil || !strings.Contains(err.Error(), "single run-opts option too long") {
+		t.Fatalf("convertPodToAppConfigs err=%v, want run-opts length rejection", err)
+	}
+	if strings.Contains(err.Error(), sentinel) || strings.Contains(err.Error(), secretValue) {
+		t.Fatalf("length error exposed Secret value: %v", err)
 	}
 }
 

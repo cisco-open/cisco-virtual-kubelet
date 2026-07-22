@@ -50,6 +50,32 @@ func TestGetAppHostingName(t *testing.T) {
 	}
 }
 
+func TestIsPortableEnvironmentVariableName(t *testing.T) {
+	tests := []struct {
+		name string
+		want bool
+	}{
+		{name: "APP_MODE", want: true},
+		{name: "_LEADING_UNDERSCORE", want: true},
+		{name: "lowercase9", want: true},
+		{name: ""},
+		{name: "9LEADING_DIGIT"},
+		{name: "X --privileged --env Y"},
+		{name: "WITH-DASH"},
+		{name: "WITH.DOT"},
+		{name: "WITH=EQUALS"},
+		{name: "WITH\nNEWLINE"},
+		{name: "NON_ASCII_\u00e9"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsPortableEnvironmentVariableName(tt.name); got != tt.want {
+				t.Fatalf("IsPortableEnvironmentVariableName(%q) = %t, want %t", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetAppHostingNameLength(t *testing.T) {
 	// Name format is cvkNNNN_<UID32> where UID is UID36 with _ stripped
 	pod := &v1.Pod{
@@ -63,6 +89,15 @@ func TestGetAppHostingNameLength(t *testing.T) {
 	}
 	if len(got) != 40 {
 		t.Errorf("GetAppHostingName() length = %d, expected 40.  Name should be padded to maxlen", len(got))
+	}
+}
+
+func TestGetAppHostingNameUsesFixedWidthContainerIndex(t *testing.T) {
+	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{
+		UID: types.UID("a24a730b-8b13-4fd0-96ee-900f99d87670"),
+	}}
+	if got := GetAppHostingName(pod, 10); got != "cvk0010_a24a730b8b134fd096ee900f99d87670" {
+		t.Fatalf("GetAppHostingName(index 10)=%q", got)
 	}
 }
 
@@ -228,6 +263,35 @@ func TestParseCVKAppName(t *testing.T) {
 			wantIdx:   1,
 			wantUID:   "a24a730b8b134fd096ee900f99d87670",
 			wantMatch: true,
+		},
+		{
+			name:      "valid CVK app name index 10",
+			appName:   "cvk0010_a24a730b8b134fd096ee900f99d87670",
+			wantIdx:   10,
+			wantUID:   "a24a730b8b134fd096ee900f99d87670",
+			wantMatch: true,
+		},
+		{
+			name:      "valid CVK app name index 127",
+			appName:   "cvk0127_a24a730b8b134fd096ee900f99d87670",
+			wantIdx:   127,
+			wantUID:   "a24a730b8b134fd096ee900f99d87670",
+			wantMatch: true,
+		},
+		{
+			name:      "container index exceeds supported range",
+			appName:   "cvk0128_a24a730b8b134fd096ee900f99d87670",
+			wantMatch: false,
+		},
+		{
+			name:      "non-numeric index",
+			appName:   "cvk;;;0_a24a730b8b134fd096ee900f99d87670",
+			wantMatch: false,
+		},
+		{
+			name:      "non-hex UID",
+			appName:   "cvk0000_a24a730b8b134fd096ee900f99d8767z",
+			wantMatch: false,
 		},
 		{
 			name:      "non-CVK app name",

@@ -206,23 +206,6 @@ func (d *XEDriver) getRestconfUnmarshaller() UnmarshalFunc {
 	}
 }
 
-// debugLogJson logs a ygot struct as formatted JSON for debugging
-func (d *XEDriver) debugLogJson(ctx context.Context, obj ygot.GoStruct) error {
-	jsonStr, err := ygot.EmitJSON(obj, &ygot.EmitJSONConfig{
-		Format: ygot.RFC7951,
-		Indent: "  ",
-		RFC7951Config: &ygot.RFC7951JSONConfig{
-			AppendModuleName: true,
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to serialize ygot object: %w", err)
-	}
-
-	log.G(ctx).Debug(jsonStr)
-	return nil
-}
-
 // markPodRecovering marks a pod as currently in copy-recovery mode.
 func (d *XEDriver) markPodRecovering(podUID string) {
 	d.recoveryMu.Lock()
