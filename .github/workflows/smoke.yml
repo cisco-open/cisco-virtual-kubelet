@@ -13,9 +13,9 @@
 # limitations under the License.
 
 # Smoke pipeline — runs on every push and PR. The point is not to
-# verify the *device* side (which needs a real Cat9K reachable on
-# RESTCONF/NETCONF/gNMI and so cannot live in CI) but to verify the
-# *cluster-side plumbing* of the controller: build, image side-load,
+# verify the *device* side (which needs real IOS-XE and NX-OS devices
+# reachable on their management transports and so cannot live in CI).
+# It verifies the *cluster-side plumbing* of the controller: build, image side-load,
 # Helm install, CRDs, RBAC, and that the cisco-vk pod actually
 # reaches the device-call boundary. The connection-refused beyond
 # that boundary is expected and is treated as a passing condition.
@@ -194,12 +194,15 @@ jobs:
           kubectl -n cisco-vk-system get pods
 
       - name: Apply test CRs
-        # The device address is RFC 5737 documentation space — the
-        # connection-refused we expect is what tells us the cisco-vk
-        # binary reached the transport-build path. We are not asking
-        # CI to talk to a real Cat9K.
+        # The IOS-XE address is RFC 5737 documentation space. The NX-OS
+        # address is the pod's own loopback on a deliberately closed port,
+        # which makes the expected connection refusal deterministic instead
+        # of waiting for the NX-API client's network timeout. In both cases,
+        # reaching that transport error proves the platform-specific binary
+        # path was constructed without asking public CI to reach a device.
         run: |
           kubectl create namespace cisco-vk-smoke
+          kubectl create namespace cisco-vk-nxos-smoke
           cat <<'EOF' | kubectl apply -f -
           apiVersion: v1
           kind: Secret
@@ -259,29 +262,94 @@ jobs:
             driftPolicy: report
             source:
               configMapRef: { name: smoke-data, key: data.nac.yaml }
+          ---
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: smoke-creds
+            namespace: cisco-vk-nxos-smoke
+          type: Opaque
+          stringData:
+            password: nxos-kind-credential-sentinel
+          ---
+          apiVersion: cisco.vk/v1alpha1
+          kind: CiscoDevice
+          metadata:
+            name: nxos-smoke
+            namespace: cisco-vk-nxos-smoke
+          spec:
+            driver: NXOS
+            address: 127.0.0.1
+            port: 1
+            username: smoke
+            credentialSecretRef: { name: smoke-creds }
+            tls: { enabled: true, insecureSkipVerify: true }
+            transport: rest
+            maxPods: 1
+            nxos:
+              networking:
+                interface:
+                  type: Management
+                  management:
+                    guestInterface: 0
+          ---
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: smoke-data
+            namespace: cisco-vk-nxos-smoke
+          data:
+            data.nac.yaml: |
+              system:
+                hostname: nxos-smoke
+          ---
+          apiVersion: config.cisco.vk/v1alpha1
+          kind: NXOSConfig
+          metadata:
+            name: nxos-smoke
+            namespace: cisco-vk-nxos-smoke
+          spec:
+            deviceRef: { name: nxos-smoke }
+            managedFamilies: [system]
+            transactional: false
+            writeStartup: false
+            driftDetectInterval: 5m
+            driftPolicy: report
+            source:
+              configMapRef: { name: smoke-data, key: data.nac.yaml }
           EOF
 
       - name: Verify VK SA and RoleBinding auto-provisioned
         # Assertion of the controller fix: a CiscoDevice in a tenant
         # namespace must cause the VK SA + RoleBinding to appear there.
         run: |
-          for i in $(seq 1 30); do
-            if kubectl -n cisco-vk-smoke get sa cisco-virtual-kubelet >/dev/null 2>&1 \
-               && kubectl -n cisco-vk-smoke get rolebinding cisco-virtual-kubelet >/dev/null 2>&1; then
-              echo "VK access provisioned"
-              break
-            fi
-            sleep 2
+          for target in \
+            cisco-vk-smoke:smoke \
+            cisco-vk-nxos-smoke:nxos-smoke; do
+            namespace="${target%%:*}"
+            device="${target##*:}"
+            for i in $(seq 1 30); do
+              if kubectl -n "$namespace" get sa cisco-virtual-kubelet >/dev/null 2>&1 \
+                 && kubectl -n "$namespace" get rolebinding cisco-virtual-kubelet >/dev/null 2>&1 \
+                 && kubectl -n "$namespace" get cm "${device}-config" >/dev/null 2>&1 \
+                 && kubectl -n "$namespace" get deploy "${device}-vk" >/dev/null 2>&1; then
+                echo "VK access and deployment provisioned for ${namespace}/${device}"
+                break
+              fi
+              sleep 2
+            done
+            kubectl -n "$namespace" get sa cisco-virtual-kubelet
+            kubectl -n "$namespace" get rolebinding cisco-virtual-kubelet
+            kubectl -n "$namespace" get cm "${device}-config"
+            kubectl -n "$namespace" get deploy "${device}-vk"
           done
-          kubectl -n cisco-vk-smoke get sa,rolebinding,deploy
+          kubectl -n cisco-vk-smoke get iosxeconfig smoke
+          kubectl -n cisco-vk-nxos-smoke get nxosconfig nxos-smoke
 
-      - name: Verify cisco-vk pod reaches device-call boundary
-        # The only blocker past this point is an unreachable device,
-        # which CI does not provide. Either:
-        #   - pod is Running (e.g. on a future stub-driver path), OR
-        #   - pod is CrashLoopBackOff/Error with a transport-level
-        #     connection-refused or timeout — proves the binary
-        #     reached the device call.
+      - name: Verify IOS-XE and NX-OS pods reach device-call boundary
+        # The only expected blocker past this point is an unreachable device,
+        # which CI does not provide. A transport-level connection refusal or
+        # timeout proves the binary reached the device call.
         # Any RBAC, schema, or config-shape failure surfaces here as
         # a non-transport error and fails the job.
         run: |
@@ -290,44 +358,56 @@ jobs:
           # chance to attempt the device call. We need to wait until the
           # logs actually surface a device-call boundary marker (success
           # path) or an upstream-defect marker (fail path).
-          ok_re='connect: connection refused|i/o timeout|context deadline exceeded|no route to host|failed to validate device connection'
-          bad_re='requires xe config section|forbidden|cannot list|cannot get'
-          # Concatenate current + previous container logs each cycle. If the
-          # binary crashes within the poll window (observed: pod Restarts=1
-          # with empty current-container logs), --previous keeps the markers
-          # visible. `|| true` swallows the "previous terminated container
-          # not found" message during normal startup.
-          cur=""
-          prev=""
-          logs=""
-          for i in $(seq 1 60); do
-            cur=$(kubectl -n cisco-vk-smoke logs -l app.kubernetes.io/instance=smoke --tail=200 2>&1 || true)
-            prev=$(kubectl -n cisco-vk-smoke logs -l app.kubernetes.io/instance=smoke --previous --tail=200 2>&1 || true)
-            logs="${prev}"$'\n'"${cur}"
-            if echo "$logs" | grep -qE "$ok_re"; then
-              kubectl -n cisco-vk-smoke get pods
-              echo "$logs"
-              echo "Reached device-call boundary as expected"
-              exit 0
+          check_device_boundary() {
+            namespace="$1"
+            device="$2"
+            platform="$3"
+            ok_re='connect: connection refused|i/o timeout|context deadline exceeded|no route to host|failed to validate device connection'
+            bad_re='requires (xe|nxos) config section|forbidden|cannot list|cannot get|driver .* not registered|unsupported device driver'
+            if [ "$platform" = NX-OS ]; then
+              ok_re='nxapi cli_show_ascii.*127\.0\.0\.1:1/ins.*connection refused'
+              bad_re="${bad_re}|nxos-kind-credential-sentinel|nxapi cli_conf"
             fi
-            if echo "$logs" | grep -qE "$bad_re"; then
-              kubectl -n cisco-vk-smoke get pods
-              echo "$logs"
-              echo "Failure was upstream of the device call — surfaces a real defect"
-              exit 1
-            fi
-            sleep 3
-          done
-          # Timeout path: dump everything that helps explain WHY no marker
-          # was seen — pod state, restart reason, and both log streams.
-          kubectl -n cisco-vk-smoke get pods -o wide
-          kubectl -n cisco-vk-smoke describe pods -l app.kubernetes.io/instance=smoke
-          echo "--- current container logs ---"
-          echo "$cur"
-          echo "--- previous container logs (--previous) ---"
-          echo "$prev"
-          echo "cisco-vk did not reach a recognised state in time"
-          exit 1
+            # Concatenate current + previous container logs each cycle. If the
+            # binary crashes within the poll window (observed: pod Restarts=1
+            # with empty current-container logs), --previous keeps the markers
+            # visible. `|| true` swallows the "previous terminated container
+            # not found" message during normal startup.
+            cur=""
+            prev=""
+            logs=""
+            for i in $(seq 1 60); do
+              cur=$(kubectl -n "$namespace" logs -l "app.kubernetes.io/instance=${device}" --tail=200 2>&1 || true)
+              prev=$(kubectl -n "$namespace" logs -l "app.kubernetes.io/instance=${device}" --previous --tail=200 2>&1 || true)
+              logs="${prev}"$'\n'"${cur}"
+              if echo "$logs" | grep -qE "$bad_re"; then
+                kubectl -n "$namespace" get pods
+                echo "$logs"
+                echo "${platform} failed upstream of the device call — surfaces a real defect"
+                return 1
+              fi
+              if echo "$logs" | grep -qE "$ok_re"; then
+                kubectl -n "$namespace" get pods
+                echo "$logs"
+                echo "${platform} reached the device-call boundary as expected"
+                return 0
+              fi
+              sleep 3
+            done
+            # Timeout path: dump everything that helps explain WHY no marker
+            # was seen — pod state, restart reason, and both log streams.
+            kubectl -n "$namespace" get pods -o wide
+            kubectl -n "$namespace" describe pods -l "app.kubernetes.io/instance=${device}"
+            echo "--- current container logs ---"
+            echo "$cur"
+            echo "--- previous container logs (--previous) ---"
+            echo "$prev"
+            echo "${platform} cisco-vk did not reach a recognised state in time"
+            return 1
+          }
+
+          check_device_boundary cisco-vk-smoke smoke IOS-XE
+          check_device_boundary cisco-vk-nxos-smoke nxos-smoke NX-OS
 
       - name: Diagnostics on failure
         if: failure()
@@ -339,6 +419,9 @@ jobs:
           kubectl -n cisco-vk-smoke describe ciscodevice smoke || true
           kubectl -n cisco-vk-smoke describe iosxeconfig smoke || true
           kubectl -n cisco-vk-smoke get events --sort-by=.lastTimestamp || true
+          kubectl -n cisco-vk-nxos-smoke describe ciscodevice nxos-smoke || true
+          kubectl -n cisco-vk-nxos-smoke describe nxosconfig nxos-smoke || true
+          kubectl -n cisco-vk-nxos-smoke get events --sort-by=.lastTimestamp || true
 
   terraform-provider:
     name: terraform-provider
