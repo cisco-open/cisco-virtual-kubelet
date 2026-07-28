@@ -88,14 +88,15 @@ This project is under active development and is published as open source under
 - **Drivers** - `XE` is production-focused; `NXOS` has working NX-API CLI
   app-hosting and an NX-API REST/DME `NXOSConfig` runtime slice; `FAKE` is for
   testing; `XR` and `OPENCONFIG` are reserved driver names in the API surface.
-- **Images** - images are not yet published to a public container registry.
-  Build locally from a release tag or `main`, then push to a registry your
-  cluster can pull from. See [Getting Started](getting-started.md).
+- **Images and chart** - signed monthly images are published at
+  `ghcr.io/cisco-open/cisco-virtual-kubelet`, with the Helm chart at
+  `oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet`. Build locally only
+  when you need a custom image. See [Getting Started](getting-started.md).
 
 ### Feature Maturity
 
 Not all feature areas have the same level of maturity. The table below
-summarises the current state for the June 2026 release.
+summarises the current release state.
 
 | Feature area | Maturity | Notes |
 |---|---|---|

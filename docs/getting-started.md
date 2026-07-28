@@ -17,8 +17,8 @@ You'll install the Helm chart, which deploys a Kubernetes controller. The contro
 |---|---|
 | Kubernetes cluster | v1.28+ recommended |
 | Helm v3 | For installing the chart |
-| Docker (or compatible) | For building the VK image locally |
-| Container registry | Accessible from your cluster (Docker Hub, GHCR, internal, or sideload into KIND/minikube) |
+| Docker (or compatible) | Optional; only needed to build a custom VK image |
+| Container registry | Optional for custom images; the published image is on GHCR |
 | Cisco IOS-XE device | Catalyst 8000V (17.15.4c+), Catalyst 9000 (17.18.2+), IR1100 Series (17.12.4+), or IE3500 Series (17.18.2+) |
 | `kubectl` | Configured to talk to your cluster |
 
@@ -31,12 +31,16 @@ On the device you need:
 
 See the platform-specific install guide for the exact IOS-XE CLI snippets: [Catalyst 8000V](configuration-cat8000v.md), [Catalyst 9000](configuration-cat9000.md), [IR1100 Series](configuration-ir1101.md), or [IE3500 Series](configuration-ie3500.md).
 
-## 1. Build and push the image
+## 1. Use the published image or build a custom image
 
-!!! note
-    The image has not been published to a public container registry yet, so it needs to be built locally and made available to your cluster.
+Monthly releases publish a signed multi-architecture image at
+`ghcr.io/cisco-open/cisco-virtual-kubelet`. The published Helm chart selects
+the matching image tag automatically, so skip to step 2 unless you need a
+custom build.
 
 Official releases are cut monthly. For a stable base, check out the [latest release](https://github.com/cisco-open/cisco-virtual-kubelet/releases/latest) tag rather than `main` — `main` can contain unreleased in-flight changes.
+
+To build and publish a custom image:
 
 ```bash
 git clone https://github.com/cisco-open/cisco-virtual-kubelet.git
@@ -67,7 +71,8 @@ minikube image load <your-registry>/cisco-vk:"$LATEST"
 
 The controller watches `CiscoDevice` custom resources and creates a Virtual Kubelet deployment for each one.
 
-**Published chart (recommended)** — the chart and image are released to GHCR, so steps 1's build/push are optional and you can install directly:
+**Published chart (recommended)** — the chart and image are released to GHCR,
+so step 1's custom build is optional and you can install directly:
 
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \

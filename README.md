@@ -247,8 +247,8 @@ The device config file follows the same schema as the `CiscoDevice` CR `spec`. S
 
 | Flag | Env Var | Default | Description |
 |------|---------|---------|-------------|
-| `--nodename` | `VK_NODE_NAME` | from config | Kubernetes virtual node name |
-| `--config` / `-c` | — | (required) | Path to device config YAML |
+| `--nodename` | `VKUBELET_NODE_NAME` | `cisco-vk-<device-address>` | Kubernetes virtual node name; falls back to `cisco-virtual-kubelet` without an address |
+| `--config` / `-c` | — | `/etc/virtual-kubelet/config.yaml` | Path to device config YAML |
 | `--kubeconfig` | `KUBECONFIG` | in-cluster | Path to kubeconfig file |
 | `--log-level` | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error` |
 
