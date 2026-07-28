@@ -64,21 +64,22 @@ func (e *DMEError) Error() string {
 	if e == nil {
 		return "<nil>"
 	}
-	parts := []string{"nxapi dme request failed", "category=" + string(e.Category)}
-	if e.Method != "" {
-		parts = append(parts, "method="+e.Method)
+	category := safeDMECategory(e.Category)
+	parts := []string{"nxapi dme request failed", "category=" + string(category)}
+	if method := safeDMEMethod(e.Method); method != "" {
+		parts = append(parts, "method="+method)
 	}
-	if e.DN != "" {
-		parts = append(parts, fmt.Sprintf("dn=%q", e.DN))
+	if dn := safeDMEValue(e.DN, maxDMEDNLength); dn != "" {
+		parts = append(parts, fmt.Sprintf("dn=%q", dn))
 	}
-	if e.StatusCode > 0 {
-		parts = append(parts, "status="+strconv.Itoa(e.StatusCode))
+	if status := safeHTTPStatus(e.StatusCode); status > 0 {
+		parts = append(parts, "status="+strconv.Itoa(status))
 	}
-	if e.Code != "" {
-		parts = append(parts, "code="+e.Code)
+	if code := safeDMECode(e.Code); code != "" {
+		parts = append(parts, "code="+code)
 	}
-	if e.Context != "" {
-		parts = append(parts, fmt.Sprintf("context=%q", e.Context))
+	if context := safeDMEValue(e.Context, maxDMEContextLength); context != "" {
+		parts = append(parts, fmt.Sprintf("context=%q", context))
 	}
 	return strings.Join(parts, " ")
 }
@@ -137,6 +138,21 @@ func wrapDMERequestError(method, dn string, cause error) error {
 	if errors.As(cause, &restErr) && restErr != nil {
 		status = restErr.StatusCode
 		details = dmeErrorDetails([]byte(restErr.Body))
+		// RESTError.Body is intentionally exported for protocol adapters, but
+		// a device response can contain reflected credentials. Do not expose
+		// that raw body through the DME error chain: retain the useful typed
+		// REST metadata in a sanitized clone after extracting classifications
+		// from the original response.
+		safeRESTError := *restErr
+		safeRESTError.Method = safeDMEMethod(restErr.Method)
+		safeRESTError.Path = safeDMEValue(restErr.Path, maxDMEDNLength)
+		safeRESTError.Status = safeDMEValue(restErr.Status, maxDMECodeLength)
+		// Do not try to regex-redact the serialized envelope: device text can
+		// contain nested, JSON-escaped credentials that are only visible after
+		// decoding. The outer DMEError.Context already carries the decoded,
+		// bounded, redacted detail.
+		safeRESTError.Body = "[redacted DME response body]"
+		cause = &safeRESTError
 	}
 	return buildDMEError(method, dn, status, details, cause)
 }
@@ -269,6 +285,15 @@ func safeDMEMethod(method string) string {
 		}
 	}
 	return method
+}
+
+func safeDMECategory(category DMEErrorCategory) DMEErrorCategory {
+	switch category {
+	case DMEErrorAuth, DMEErrorRetryable, DMEErrorValidation, DMEErrorPermanent:
+		return category
+	default:
+		return DMEErrorPermanent
+	}
 }
 
 func safeDMECode(code string) string {

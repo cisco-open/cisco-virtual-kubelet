@@ -809,6 +809,15 @@ func (r *CommonConfigReconciler) acquireLeases(
 	}
 	filtered := *resolved
 	filtered.ManagedFamilies = owned
+	// A partial lease result is not a fully clean reconcile even when every
+	// family we did acquire reaches InSync. Keep writes to running
+	// configuration independent, but never persist that subset to startup
+	// configuration while another declared family is still owned elsewhere.
+	// The outer reconciler will surface LeaseBlocked and retry after
+	// contention clears.
+	if len(conflicts) > 0 {
+		filtered.WriteStartup = false
+	}
 	return &filtered, conflicts
 }
 

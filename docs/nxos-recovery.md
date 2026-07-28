@@ -14,27 +14,36 @@ partial change until device state has been inspected.
 
 ## Recovery procedure
 
-1. Pause new writes while preserving the failed object and its status:
+1. Capture the failed object and events before changing its policy. A pause
+   reconcile intentionally replaces the active result with `Paused`, so this
+   evidence must come first:
 
    ```bash
-   kubectl patch nxosconfig <name> -n <namespace> --type merge \
-     -p '{"spec":{"driftPolicy":"pause"}}'
    kubectl get nxosconfig <name> -n <namespace> -o yaml
    kubectl events -n <namespace> --for nxosconfig/<name>
    ```
 
-2. Capture the current device state with read-only `DeviceOperation` commands
+2. Pause new writes, then confirm that the object reached `Paused`:
+
+   ```bash
+   kubectl patch nxosconfig <name> -n <namespace> --type merge \
+     -p '{"spec":{"driftPolicy":"pause"}}'
+   kubectl get nxosconfig <name> -n <namespace> \
+     -o jsonpath='{.status.phase}{"\n"}'
+   ```
+
+3. Capture the current device state with read-only `DeviceOperation` commands
    or an independently approved NX-API session. Check every managed family
    reported before and at the failure; do not infer device state solely from
    the HTTP result.
-3. Compare that state with the resolved source revision. If the intended
+4. Compare that state with the resolved source revision. If the intended
    values are already present, no compensating write is needed. If the device
    is only partly changed, update the source to an explicit, reviewed target
    state. Do not send the failed HTTP request again by hand.
-4. For an unwanted change, prefer a compensating `NXOSConfig` value over an
+5. For an unwanted change, prefer a compensating `NXOSConfig` value over an
    ad-hoc CLI reversal. Use deletion only where the family supports scoped
    prune and status proves that this CR owns the object.
-5. Resume reconciliation:
+6. Resume reconciliation:
 
    ```bash
    kubectl patch nxosconfig <name> -n <namespace> --type merge \
@@ -42,7 +51,7 @@ partial change until device state has been inspected.
    kubectl get nxosconfig <name> -n <namespace> -w
    ```
 
-6. Require `status.phase: InSync`, clean per-family status, and a fresh
+7. Require `status.phase: InSync`, clean per-family status, and a fresh
    observed-state verification before closing the incident. When
    `writeStartup: true`, CVK saves running configuration only after the whole
    reconcile is in sync; confirm that save separately if persistence matters.

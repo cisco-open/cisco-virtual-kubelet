@@ -33,7 +33,13 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-const pinnedNetAsCodeOracleVersion = "0.3.0"
+const (
+	pinnedNetAsCodeOracleVersion = "0.3.0"
+	pinnedSchemaNormalization    = "jq -cS '.properties.nxos' schema.json, including jq's trailing LF"
+	pinnedTerraformVersion       = "1.9.8"
+	pinnedOracleMethod           = "Pinned Terraform plan followed by the pinned NX-OS provider toBody implementations"
+	pinnedOracleNormalization    = "DME fact comparison ignores empty attributes objects and operation batching"
+)
 
 func TestSupportedWriterOperationsPassStrictStructuralConformance(t *testing.T) {
 	tests := []struct {
@@ -79,6 +85,13 @@ func TestSupportedWriterOperationsPassStrictStructuralConformance(t *testing.T) 
 func TestPinnedNetAsCodeOracleArtifactDigests(t *testing.T) {
 	root := filepath.Join("testdata", "nxos", pinnedNetAsCodeOracleVersion)
 	manifestPath := filepath.Join(root, "SHA256SUMS")
+	manifestInfo, err := os.Lstat(manifestPath)
+	if err != nil {
+		t.Fatalf("inspect pinned oracle digest manifest: %v", err)
+	}
+	if !manifestInfo.Mode().IsRegular() {
+		t.Fatalf("pinned oracle digest manifest is not a regular file")
+	}
 	rawManifest, err := os.ReadFile(manifestPath)
 	if err != nil {
 		t.Fatalf("read pinned oracle digest manifest: %v", err)
@@ -112,8 +125,21 @@ func TestPinnedNetAsCodeOracleArtifactDigests(t *testing.T) {
 	}
 	var artifacts []string
 	for _, entry := range directoryEntries {
-		if entry.IsDir() || entry.Name() == filepath.Base(manifestPath) {
+		if entry.Name() == filepath.Base(manifestPath) {
 			continue
+		}
+		if entry.IsDir() {
+			t.Fatalf("pinned oracle directory contains unmanifested nested directory %q", entry.Name())
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			t.Fatalf("pinned oracle artifact %q is a symbolic link", entry.Name())
+		}
+		info, err := entry.Info()
+		if err != nil {
+			t.Fatalf("inspect pinned oracle artifact %q: %v", entry.Name(), err)
+		}
+		if !info.Mode().IsRegular() {
+			t.Fatalf("pinned oracle artifact %q is not a regular file", entry.Name())
 		}
 		artifacts = append(artifacts, entry.Name())
 	}
@@ -154,17 +180,26 @@ type goldenContract struct {
 	ModelVersion string `json:"modelVersion"`
 	Module       struct {
 		Source   string `json:"source"`
+		Version  string `json:"version"`
 		Revision string `json:"revision"`
 	} `json:"module"`
 	Schema struct {
-		Source     string `json:"source"`
-		Revision   string `json:"revision"`
-		NXOSDigest string `json:"nxosDigest"`
+		Source        string `json:"source"`
+		Revision      string `json:"revision"`
+		NXOSDigest    string `json:"nxosDigest"`
+		Normalization string `json:"normalization"`
 	} `json:"schema"`
 	Providers map[string]struct {
 		Version  string `json:"version"`
 		Revision string `json:"revision"`
 	} `json:"providers"`
+	Oracle struct {
+		TerraformVersion string `json:"terraformVersion"`
+		Managed          *bool  `json:"managed"`
+		Refresh          *bool  `json:"refresh"`
+		Method           string `json:"method"`
+		Normalization    string `json:"normalization"`
+	} `json:"oracle"`
 }
 
 // TestNetAsCodeProviderGoldenParity compares semantic DME facts rather than
@@ -200,7 +235,14 @@ func TestNetAsCodeProviderGoldenParity(t *testing.T) {
 		"interface_ethernet": map[string]any{"interfaces": interfaceRoot["ethernets"]},
 	}
 
-	var gotOps []transport.Op
+	gotFacts := map[string][]string{}
+	familyResources := map[string]string{
+		"system":             "nxos_system",
+		"feature":            "nxos_feature",
+		"feature_set":        "nxos_feature",
+		"vlan":               "nxos_bridge_domain",
+		"interface_ethernet": "nxos_physical_interface",
+	}
 	for _, family := range []string{"system", "feature", "feature_set", "vlan", "interface_ethernet"} {
 		writer := GetForRelease(family, "10.3(9)")
 		ops, err := enginewriters.Diff(enginewriters.DiffContext{
@@ -212,14 +254,19 @@ func TestNetAsCodeProviderGoldenParity(t *testing.T) {
 		if len(ops) == 0 {
 			t.Fatalf("%s Diff returned no create operation", family)
 		}
-		gotOps = append(gotOps, ops...)
+		resource := familyResources[family]
+		gotFacts[resource] = append(gotFacts[resource], dmeFactsFromOps(t, ops)...)
 	}
-
-	gotFacts := dmeFactsFromOps(t, gotOps)
-	wantFacts := dmeFactsFromOracle(oracle)
+	for resource := range gotFacts {
+		sort.Strings(gotFacts[resource])
+	}
+	wantFacts := dmeFactsFromOracleByResource(oracle)
 	if !reflect.DeepEqual(gotFacts, wantFacts) {
-		t.Fatalf("CVK DME output differs from pinned provider oracle\nwant:\n%s\ngot:\n%s",
-			strings.Join(wantFacts, "\n"), strings.Join(gotFacts, "\n"))
+		t.Fatalf(
+			"CVK DME output differs from pinned provider oracle by resource ownership\nwant:\n%s\ngot:\n%s",
+			formatDMEFactsByResource(wantFacts),
+			formatDMEFactsByResource(gotFacts),
+		)
 	}
 }
 
@@ -231,22 +278,47 @@ func assertGoldenContract(t *testing.T, path string) {
 	if !ok {
 		t.Fatalf("golden modelVersion %q has no runtime contract", golden.ModelVersion)
 	}
+	if golden.ModelVersion != pinnedNetAsCodeOracleVersion {
+		t.Errorf("model version fixture=%q pinned=%q", golden.ModelVersion, pinnedNetAsCodeOracleVersion)
+	}
 	provider := golden.Providers["CiscoDevNet/nxos"]
 	utils := golden.Providers["netascode/utils"]
 	checks := map[string][2]string{
-		"module source":     {golden.Module.Source, runtimeContract.ModuleSource},
-		"module revision":   {golden.Module.Revision, runtimeContract.ModuleRevision},
-		"schema source":     {golden.Schema.Source, runtimeContract.SchemaSource},
-		"schema revision":   {golden.Schema.Revision, runtimeContract.SchemaRevision},
-		"schema digest":     {golden.Schema.NXOSDigest, runtimeContract.SchemaDigest},
-		"provider version":  {provider.Version, runtimeContract.ProviderVersion},
-		"provider revision": {provider.Revision, runtimeContract.ProviderRevision},
-		"utils version":     {utils.Version, runtimeContract.UtilsProviderVersion},
+		"runtime model version":  {golden.ModelVersion, runtimeContract.ModelVersion},
+		"module source":          {golden.Module.Source, runtimeContract.ModuleSource},
+		"module version":         {golden.Module.Version, pinnedNetAsCodeOracleVersion},
+		"module revision":        {golden.Module.Revision, runtimeContract.ModuleRevision},
+		"schema source":          {golden.Schema.Source, runtimeContract.SchemaSource},
+		"schema revision":        {golden.Schema.Revision, runtimeContract.SchemaRevision},
+		"schema digest":          {golden.Schema.NXOSDigest, runtimeContract.SchemaDigest},
+		"schema normalization":   {golden.Schema.Normalization, pinnedSchemaNormalization},
+		"provider source":        {"registry.terraform.io/CiscoDevNet/nxos", runtimeContract.ProviderSource},
+		"provider version":       {provider.Version, runtimeContract.ProviderVersion},
+		"provider revision":      {provider.Revision, runtimeContract.ProviderRevision},
+		"utils provider source":  {"registry.terraform.io/netascode/utils", runtimeContract.UtilsProviderSource},
+		"utils provider version": {utils.Version, runtimeContract.UtilsProviderVersion},
+		"terraform version":      {golden.Oracle.TerraformVersion, pinnedTerraformVersion},
+		"oracle method":          {golden.Oracle.Method, pinnedOracleMethod},
+		"oracle normalization":   {golden.Oracle.Normalization, pinnedOracleNormalization},
 	}
 	for name, pair := range checks {
 		if pair[0] != pair[1] {
 			t.Errorf("%s fixture=%q runtime=%q", name, pair[0], pair[1])
 		}
+	}
+	providerNames := make([]string, 0, len(golden.Providers))
+	for name := range golden.Providers {
+		providerNames = append(providerNames, name)
+	}
+	sort.Strings(providerNames)
+	if want := []string{"CiscoDevNet/nxos", "netascode/utils"}; !reflect.DeepEqual(providerNames, want) {
+		t.Errorf("provider identities=%v, want %v", providerNames, want)
+	}
+	if golden.Oracle.Managed == nil || *golden.Oracle.Managed {
+		t.Errorf("oracle managed=%v, want explicit false", golden.Oracle.Managed)
+	}
+	if golden.Oracle.Refresh == nil || *golden.Oracle.Refresh {
+		t.Errorf("oracle refresh=%v, want explicit false", golden.Oracle.Refresh)
 	}
 }
 
@@ -322,13 +394,31 @@ func dmeFactsFromOps(t *testing.T, ops []transport.Op) []string {
 	return facts
 }
 
-func dmeFactsFromOracle(oracle providerDMEOracle) []string {
-	var facts []string
+func dmeFactsFromOracleByResource(oracle providerDMEOracle) map[string][]string {
+	facts := map[string][]string{}
 	for _, op := range oracle.Operations {
-		appendDMEFacts(&facts, op.Path, nil, op.Body)
+		resourceFacts := facts[op.Resource]
+		appendDMEFacts(&resourceFacts, op.Path, nil, op.Body)
+		facts[op.Resource] = resourceFacts
 	}
-	sort.Strings(facts)
+	for resource := range facts {
+		sort.Strings(facts[resource])
+	}
 	return facts
+}
+
+func formatDMEFactsByResource(facts map[string][]string) string {
+	resources := make([]string, 0, len(facts))
+	for resource := range facts {
+		resources = append(resources, resource)
+	}
+	sort.Strings(resources)
+	var lines []string
+	for _, resource := range resources {
+		lines = append(lines, "["+resource+"]")
+		lines = append(lines, facts[resource]...)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func appendDMEFacts(facts *[]string, dn string, ancestry []string, node map[string]any) {

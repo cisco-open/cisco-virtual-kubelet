@@ -522,6 +522,70 @@ func TestDMEErrorClassification(t *testing.T) {
 	}
 }
 
+func TestDMEErrorClassificationPrecedence(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		statusCode int
+		body       string
+		want       DMEErrorCategory
+	}{
+		{
+			name:       "auth detail outranks retryable HTTP status",
+			statusCode: http.StatusServiceUnavailable,
+			body: `{"imdata":[
+				{"error":{"attributes":{"code":"503","text":"device busy"}}},
+				{"error":{"attributes":{"code":"401","text":"bad token"}}}
+			]}`,
+			want: DMEErrorAuth,
+		},
+		{
+			name:       "retryable detail outranks validation HTTP status",
+			statusCode: http.StatusBadRequest,
+			body:       `{"imdata":[{"error":{"attributes":{"code":"503","text":"device busy"}}}]}`,
+			want:       DMEErrorRetryable,
+		},
+		{
+			name:       "retryable HTTP status outranks validation detail",
+			statusCode: http.StatusServiceUnavailable,
+			body:       `{"imdata":[{"error":{"attributes":{"code":"400","text":"invalid payload"}}}]}`,
+			want:       DMEErrorRetryable,
+		},
+		{
+			name: "auth detail outranks validation and permanent details",
+			body: `{"imdata":[
+				{"error":{"attributes":{"code":"122","text":"operation rejected"}}},
+				{"error":{"attributes":{"code":"400","text":"invalid payload"}}},
+				{"error":{"attributes":{"code":"403","text":"forbidden"}}}
+			]}`,
+			want: DMEErrorAuth,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var err error
+			if tt.statusCode == 0 {
+				err = dmeResponseErrorFor(http.MethodGet, "sys", []byte(tt.body))
+			} else {
+				err = wrapDMERequestError(http.MethodGet, "sys", &configtransport.RESTError{
+					Method:     http.MethodGet,
+					Path:       "/api/mo/sys.json",
+					Status:     http.StatusText(tt.statusCode),
+					StatusCode: tt.statusCode,
+					Body:       tt.body,
+				})
+			}
+			var dmeErr *DMEError
+			if !errors.As(err, &dmeErr) {
+				t.Fatalf("error=%v does not retain DMEError", err)
+			}
+			if dmeErr.Category != tt.want {
+				t.Fatalf("category=%q, want %q; error=%v", dmeErr.Category, tt.want, err)
+			}
+		})
+	}
+}
+
 func TestDMEErrorRedactsBoundsAndPreservesChain(t *testing.T) {
 	t.Parallel()
 	const secret = "DME_SECRET_SENTINEL"
@@ -541,8 +605,19 @@ func TestDMEErrorRedactsBoundsAndPreservesChain(t *testing.T) {
 		t.Fatalf("error=%v does not retain DMEError", err)
 	}
 	var gotRESTError *configtransport.RESTError
-	if !errors.As(err, &gotRESTError) || gotRESTError != restErr {
-		t.Fatalf("error chain did not retain RESTError")
+	if !errors.As(err, &gotRESTError) {
+		t.Fatalf("error chain did not retain typed RESTError")
+	}
+	if gotRESTError == restErr {
+		t.Fatal("error chain retained the raw RESTError instead of a sanitized clone")
+	}
+	if gotRESTError.StatusCode != restErr.StatusCode ||
+		gotRESTError.Method != restErr.Method ||
+		gotRESTError.Path != restErr.Path {
+		t.Fatalf("sanitized REST metadata=%#v, want method/path/status from %#v", gotRESTError, restErr)
+	}
+	if strings.Contains(gotRESTError.Body, secret) || strings.Contains(gotRESTError.Error(), secret) {
+		t.Fatalf("typed RESTError leaked credential through errors.As: %#v", gotRESTError)
 	}
 	if dmeErr.Category != DMEErrorRetryable || dmeErr.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("DMEError=%#v", dmeErr)

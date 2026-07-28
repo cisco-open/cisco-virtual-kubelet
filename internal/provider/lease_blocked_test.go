@@ -39,6 +39,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 )
@@ -164,6 +165,48 @@ func TestEngineResult_DeviceTouchedSetWhenManagedFamilies(t *testing.T) {
 	r.DeviceTouched = true
 	if !r.DeviceTouched {
 		t.Errorf("DeviceTouched not settable")
+	}
+}
+
+func TestAcquireLeases_PartialOwnershipSuppressesWriteStartup(t *testing.T) {
+	t.Parallel()
+	scheme := leaseBlockedScheme(t)
+	c := fake.NewClientBuilder().WithScheme(scheme).Build()
+	leaser := &engine.FamilyLeaser{
+		Client:    c,
+		Namespace: "lease-ns",
+		TTL:       30 * time.Second,
+	}
+	if _, err := leaser.Acquire(t.Context(), "edge-01", "vlan", "foreign-pod#abc"); err != nil {
+		t.Fatalf("seed foreign lease: %v", err)
+	}
+
+	r := &CommonConfigReconciler{
+		DeviceName: "edge-01",
+		Leaser:     leaser,
+		RuntimeID:  "our-pod",
+	}
+	cr := &configv1alpha1.IOSXEConfig{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "network", Name: "edge-config"},
+	}
+	resolved := &intent.ResolvedIntent{
+		DeviceName:      "edge-01",
+		ManagedFamilies: []string{"system", "vlan"},
+		WriteStartup:    true,
+	}
+
+	filtered, conflicts := r.acquireLeases(t.Context(), resolved, cr)
+	if len(conflicts) != 1 || conflicts["vlan"] == "" {
+		t.Fatalf("lease conflicts=%v, want vlan held by foreign identity", conflicts)
+	}
+	if len(filtered.ManagedFamilies) != 1 || filtered.ManagedFamilies[0] != "system" {
+		t.Fatalf("managed families=%v, want only acquired system family", filtered.ManagedFamilies)
+	}
+	if filtered.WriteStartup {
+		t.Fatal("partial lease ownership must suppress SaveStartup")
+	}
+	if !resolved.WriteStartup {
+		t.Fatal("acquireLeases mutated the caller's resolved intent")
 	}
 }
 

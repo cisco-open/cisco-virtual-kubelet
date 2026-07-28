@@ -68,7 +68,7 @@ func (e *NXAPIMutationError) Error() string {
 		safeDMEValue(string(e.Verb), maxDMEMethodLength),
 	)
 	if e.Path != "" {
-		message += fmt.Sprintf(" path=%q", e.Path)
+		message += fmt.Sprintf(" path=%q", safeDMEValue(e.Path, maxDMEDNLength))
 	}
 	if e.cause != nil {
 		message += ": " + safeDMEValue(e.cause.Error(), maxNXAPIErrorLength)
