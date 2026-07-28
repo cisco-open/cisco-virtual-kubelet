@@ -76,11 +76,11 @@ so step 1's custom build is optional and you can install directly:
 
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.7.1 \
+  --version 2026.8.0 \
   --namespace cvk-system --create-namespace
 ```
 
-This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` is the release normalised to SemVer (e.g. `v2026.07.1` → `2026.7.1`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
+This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` is the release normalised to SemVer (e.g. `v2026.08.0` → `2026.8.0`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
 
 **From source with a custom image** — to run the build from step 1 instead:
 
