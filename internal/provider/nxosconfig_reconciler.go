@@ -152,8 +152,11 @@ func NXOSCommonConfigPlatform() CommonConfigPlatform {
 		SupportedFamilies: append([]string(nil),
 			nxosschema.Families...,
 		),
-		Finalizer:               nxosConfigFinalizer,
-		PreserveEnvelope:        true,
+		Finalizer:        nxosConfigFinalizer,
+		PreserveEnvelope: true,
+		ReconcilePolicy: engine.ReconcilePolicy{
+			StopOnRevertFailure: true,
+		},
 		ValidateModelSource:     validateNXOSNetAsCodeModelSource,
 		ValidateModelDevicePair: validateNXOSModelDevicePair,
 		ValidateTargetVersion:   validateNXOSTargetVersion,

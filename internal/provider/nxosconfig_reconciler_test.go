@@ -1198,6 +1198,13 @@ func TestNXOSConfigReconcilerFacadeIsSingletonAndForwardsTransport(t *testing.T)
 	}
 }
 
+func TestNXOSCommonConfigPlatformStopsOnRevertFailure(t *testing.T) {
+	platform := NXOSCommonConfigPlatform()
+	if !platform.ReconcilePolicy.StopOnRevertFailure {
+		t.Fatal("NX-OS platform must enable fail-fast ordered-family processing under driftPolicy=revert")
+	}
+}
+
 // B3: deleting a CR that owns atomic-replace keys must prune them off the
 // device (relinquish) before the finalizer is removed, otherwise the owned
 // keys are orphaned on the device.

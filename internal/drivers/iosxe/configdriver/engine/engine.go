@@ -94,6 +94,18 @@ const (
 	PhaseLeaseBlocked = "LeaseBlocked"
 )
 
+// ReconcilePolicy controls platform-specific family-loop behavior. Its zero
+// value preserves the IOS XE contract: every managed family gets an
+// independent reconcile attempt even when an earlier family fails.
+type ReconcilePolicy struct {
+	// StopOnRevertFailure stops ordered family processing after the first
+	// ApplyError, Unsupported, or residual Drifted outcome under
+	// driftPolicy=revert. The unattempted tail is returned as Skipped. Report
+	// mode always evaluates every family so it can provide a complete drift
+	// inventory.
+	StopOnRevertFailure bool
+}
+
 // Engine reconciles one ResolvedIntent against one device. It owns the
 // state-machine transitions and the per-family iteration; it does NOT
 // own the informer, queue, or status writes — those belong to the
@@ -103,6 +115,10 @@ type Engine struct {
 	// Platform is the stable platform identifier included in operation
 	// validation context. Empty preserves legacy IOS XE behavior.
 	Platform string
+
+	// Policy selects platform-specific family-loop behavior. The zero value
+	// preserves the legacy IOS XE independent-family semantics.
+	Policy ReconcilePolicy
 
 	// Transport is the device channel. Lifetime is caller-owned.
 	Transport transport.Interface
@@ -504,7 +520,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 		families = reversed
 	}
 	verifiedHashes := map[string]string{}
-	for _, family := range families {
+	for i, family := range families {
 		fs := e.reconcileFamily(ctx, family, res)
 		result.FamilyStatuses = append(result.FamilyStatuses, fs)
 		result.PlannedOps += fs.PlannedOps
@@ -536,6 +552,20 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 				result.AtomicReplaceOwnedKeys = map[string][]string{}
 			}
 			result.AtomicReplaceOwnedKeys[family] = fs.OwnedKeys
+		}
+		if e.shouldStopAfterFamily(res.DriftPolicy, fs.State) {
+			for _, skippedFamily := range families[i+1:] {
+				result.FamilyStatuses = append(result.FamilyStatuses, FamilyStatus{
+					Name:  skippedFamily,
+					State: "Skipped",
+					Message: safeMsg(
+						"not attempted: fail-fast after family %q returned %s under driftPolicy=revert",
+						family,
+						fs.State,
+					),
+				})
+			}
+			break
 		}
 	}
 	if len(verifiedHashes) > 0 {
@@ -684,6 +714,18 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	recordResult(res.DeviceName, result, time.Since(start).Seconds())
 	span.SetStatus(result.Err)
 	return result
+}
+
+func (e *Engine) shouldStopAfterFamily(driftPolicy configv1alpha1.DriftPolicy, state string) bool {
+	if !e.Policy.StopOnRevertFailure || driftPolicy != configv1alpha1.DriftPolicyRevert {
+		return false
+	}
+	switch state {
+	case "ApplyError", "Unsupported", "Drifted":
+		return true
+	default:
+		return false
+	}
 }
 
 func engineConfigEntityID(res *intent.ResolvedIntent) string {
