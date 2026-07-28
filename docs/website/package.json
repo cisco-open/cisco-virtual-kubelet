@@ -29,6 +29,10 @@
     "typescript": "^5"
   },
   "overrides": {
-    "postcss": "$postcss"
+    "postcss": "$postcss",
+    "minimatch": "10.2.4",
+    "next": {
+      "sharp": "0.35.3"
+    }
   }
 }
