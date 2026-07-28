@@ -44,6 +44,64 @@ type NXAPIConfigTransportOptions struct {
 	RetryPolicy    transport.RetryPolicy
 }
 
+// NXAPIMutationError identifies the first failed operation in a
+// non-transactional NX-OS mutation sequence. OperationIndex is zero-based and
+// AppliedOperations counts only operations that completed before the failure.
+// The request body is deliberately never retained.
+type NXAPIMutationError struct {
+	OperationIndex    int
+	AppliedOperations int
+	Verb              transport.Verb
+	Path              string
+
+	cause error
+}
+
+func (e *NXAPIMutationError) Error() string {
+	if e == nil {
+		return "<nil>"
+	}
+	message := fmt.Sprintf(
+		"nxos rest mutate: operation index=%d failed after applied=%d verb=%s",
+		e.OperationIndex,
+		e.AppliedOperations,
+		safeDMEValue(string(e.Verb), maxDMEMethodLength),
+	)
+	if e.Path != "" {
+		message += fmt.Sprintf(" path=%q", e.Path)
+	}
+	if e.cause != nil {
+		message += ": " + safeDMEValue(e.cause.Error(), maxNXAPIErrorLength)
+	}
+	return message
+}
+
+func (e *NXAPIMutationError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.cause
+}
+
+type redactedNXAPIError struct {
+	message string
+	cause   error
+}
+
+func (e *redactedNXAPIError) Error() string {
+	if e == nil {
+		return "<nil>"
+	}
+	return e.message
+}
+
+func (e *redactedNXAPIError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.cause
+}
+
 func newNXAPIConfigTransport(spec *ciskov1.DeviceSpec) (transport.Interface, error) {
 	return newNXAPIConfigTransportWithOptions(spec, NXAPIConfigTransportOptions{})
 }
@@ -123,41 +181,54 @@ func (t *nxapiConfigTransport) Mutate(ctx context.Context, tx transport.TxHandle
 	if tx != "" {
 		return transport.ErrUnsupported
 	}
-	for _, op := range ops {
-		switch op.Verb {
-		case transport.VerbCLI:
-			if strings.TrimSpace(string(op.Body)) == "" {
-				return fmt.Errorf("nxos rest mutate: empty CLI operation")
+	for index, op := range ops {
+		if err := t.mutateOne(ctx, op); err != nil {
+			return &NXAPIMutationError{
+				OperationIndex:    index,
+				AppliedOperations: index,
+				Verb:              op.Verb,
+				Path:              safeDMEValue(op.Path, maxDMEDNLength),
+				cause:             err,
 			}
-			if err := t.mutateCLI(ctx, op.Body); err != nil {
-				return err
-			}
-		case transport.VerbMerge:
-			if strings.TrimSpace(op.Path) == "" {
-				return fmt.Errorf("nxos rest mutate: empty DME DN for %s", op.Verb)
-			}
-			if err := t.client.dmePost(ctx, op.Path, op.Body); err != nil {
-				return redactNXAPIError(err)
-			}
-		case transport.VerbReplace:
-			if strings.TrimSpace(op.Path) == "" {
-				return fmt.Errorf("nxos rest mutate: empty DME DN for %s", op.Verb)
-			}
-			if err := t.client.dmePut(ctx, op.Path, op.Body); err != nil {
-				return redactNXAPIError(err)
-			}
-		case transport.VerbDelete:
-			if strings.TrimSpace(op.Path) == "" {
-				return fmt.Errorf("nxos rest mutate: empty DME DN for %s", op.Verb)
-			}
-			if err := t.client.dmeDelete(ctx, op.Path); err != nil {
-				return redactNXAPIError(err)
-			}
-		default:
-			return fmt.Errorf("nxos rest mutate: unsupported verb %s", op.Verb)
 		}
 	}
 	return nil
+}
+
+func (t *nxapiConfigTransport) mutateOne(ctx context.Context, op transport.Op) error {
+	switch op.Verb {
+	case transport.VerbCLI:
+		if strings.TrimSpace(string(op.Body)) == "" {
+			return fmt.Errorf("nxos rest mutate: empty CLI operation")
+		}
+		return t.mutateCLI(ctx, op.Body)
+	case transport.VerbMerge:
+		if strings.TrimSpace(op.Path) == "" {
+			return fmt.Errorf("nxos rest mutate: empty DME DN for %s", op.Verb)
+		}
+		if err := t.client.dmePost(ctx, op.Path, op.Body); err != nil {
+			return redactNXAPIError(err)
+		}
+		return nil
+	case transport.VerbReplace:
+		if strings.TrimSpace(op.Path) == "" {
+			return fmt.Errorf("nxos rest mutate: empty DME DN for %s", op.Verb)
+		}
+		if err := t.client.dmePut(ctx, op.Path, op.Body); err != nil {
+			return redactNXAPIError(err)
+		}
+		return nil
+	case transport.VerbDelete:
+		if strings.TrimSpace(op.Path) == "" {
+			return fmt.Errorf("nxos rest mutate: empty DME DN for %s", op.Verb)
+		}
+		if err := t.client.dmeDelete(ctx, op.Path); err != nil {
+			return redactNXAPIError(err)
+		}
+		return nil
+	default:
+		return fmt.Errorf("nxos rest mutate: unsupported verb %s", op.Verb)
+	}
 }
 
 func (t *nxapiConfigTransport) Commit(_ context.Context, tx transport.TxHandle) error {
@@ -314,7 +385,10 @@ func redactNXAPIError(err error) error {
 	if err == nil {
 		return nil
 	}
-	return fmt.Errorf("%s", transport.RedactCredentials(err.Error()))
+	return &redactedNXAPIError{
+		message: safeDMEValue(err.Error(), maxNXAPIErrorLength),
+		cause:   err,
+	}
 }
 
 func FetchDeviceVersion(ctx context.Context, t transport.Interface) string {

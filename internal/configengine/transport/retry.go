@@ -62,11 +62,11 @@ func (p RetryPolicy) normalised() RetryPolicy {
 	return out
 }
 
-// IsTransient reports whether err is a transport-level transient
-// failure that retrying might help (TCP-level: connection reset /
-// refused / timeout). Application-level errors (rpc-error,
-// unknown-element, access-denied) are NOT retried — they're
-// permanent until the operator changes intent or device state.
+// IsTransient reports whether err is a transport-level transient failure that
+// retrying might help. Typed protocol errors can opt in via Retryable() bool
+// (for example HTTP 429/5xx); otherwise the fallback covers TCP-level
+// connection reset/refused/timeout failures. Permanent application errors
+// (rpc-error, unknown-element, access-denied) are not retried.
 //
 // The matcher is conservative: anything not in the known-transient
 // set returns false, so unrecognised errors fall through to the
@@ -75,6 +75,14 @@ func (p RetryPolicy) normalised() RetryPolicy {
 func IsTransient(err error) bool {
 	if err == nil {
 		return false
+	}
+	// Typed protocol errors take precedence over string heuristics. In
+	// particular, DME and REST errors can explicitly distinguish retryable
+	// 429/5xx responses from permanent 4xx validation failures while still
+	// being wrapped with safe request context.
+	var classified interface{ Retryable() bool }
+	if errors.As(err, &classified) {
+		return classified.Retryable()
 	}
 	var nerr net.Error
 	if errors.As(err, &nerr) && nerr.Timeout() {

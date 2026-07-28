@@ -76,6 +76,13 @@ func (c *nxapiClient) dmeRequest(ctx context.Context, method, dn string, query u
 	raw, err := c.dmeRequestLocked(ctx, method, dn, query, body)
 	if isDMEAuthError(err) {
 		c.dmeCookies = nil
+		// DME writes are non-transactional. An authentication failure may
+		// arrive after the device accepted some or all of a mutation, so it
+		// is unsafe to replay POST/PUT/DELETE automatically. The next
+		// reconciliation logs in again and verifies observed state first.
+		if method != http.MethodGet {
+			return raw, err
+		}
 		if loginErr := c.dmeLoginLocked(ctx); loginErr != nil {
 			return nil, loginErr
 		}
@@ -114,11 +121,11 @@ func (c *nxapiClient) dmeLoginLocked(ctx context.Context) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("nxapi dme login: %w", err)
+		return wrapDMERequestError(http.MethodPost, "", err)
 	}
 	raw := resp.Body
-	if err := dmeResponseError(raw); err != nil {
-		return fmt.Errorf("nxapi dme login: %w", err)
+	if err := dmeResponseErrorFor(http.MethodPost, "", raw); err != nil {
+		return err
 	}
 	c.dmeCookies = (&http.Response{Header: resp.Header}).Cookies()
 	if len(c.dmeCookies) == 0 {
@@ -156,10 +163,10 @@ func (c *nxapiClient) dmeRequestLocked(ctx context.Context, method, dn string, q
 		Headers: headers,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("nxapi dme %s %s: %w", method, dn, err)
+		return nil, wrapDMERequestError(method, dn, err)
 	}
-	if err := dmeResponseError(raw); err != nil {
-		return nil, fmt.Errorf("nxapi dme %s %s: %w", method, dn, err)
+	if err := dmeResponseErrorFor(method, dn, raw); err != nil {
+		return nil, err
 	}
 	return raw, nil
 }
@@ -214,53 +221,6 @@ func dmeCookieHeader(cookies []*http.Cookie) string {
 	return strings.Join(parts, "; ")
 }
 
-func dmeResponseError(raw []byte) error {
-	errs := dmeErrors(raw)
-	if len(errs) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errs, "; "))
-}
-
-func dmeErrors(raw []byte) []string {
-	var env dmeEnvelope
-	if err := json.Unmarshal(raw, &env); err != nil {
-		return nil
-	}
-	var out []string
-	for _, item := range env.IMData {
-		out = append(out, collectDMEErrors(item)...)
-	}
-	return out
-}
-
-func collectDMEErrors(item map[string]json.RawMessage) []string {
-	var out []string
-	for class, raw := range item {
-		if class == "error" {
-			var errMO dmeErrorMO
-			if err := json.Unmarshal(raw, &errMO); err == nil {
-				msg := strings.TrimSpace(errMO.Attributes.Text)
-				if code := strings.TrimSpace(errMO.Attributes.Code); code != "" {
-					msg = strings.TrimSpace("code=" + code + " " + msg)
-				}
-				if msg != "" {
-					out = append(out, msg)
-				}
-			}
-			continue
-		}
-		var mo dmeMO
-		if err := json.Unmarshal(raw, &mo); err != nil {
-			continue
-		}
-		for _, child := range mo.Children {
-			out = append(out, collectDMEErrors(child)...)
-		}
-	}
-	return out
-}
-
 func dmeLoginToken(raw []byte) string {
 	var top map[string]dmeMO
 	if err := json.Unmarshal(raw, &top); err != nil {
@@ -287,6 +247,10 @@ func dmeLoginToken(raw []byte) string {
 func isDMEAuthError(err error) bool {
 	if err == nil {
 		return false
+	}
+	var classified interface{ AuthFailure() bool }
+	if errors.As(err, &classified) && classified.AuthFailure() {
+		return true
 	}
 	if configtransport.IsAuthRESTError(err) {
 		return true
