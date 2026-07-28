@@ -22,6 +22,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
@@ -393,6 +394,160 @@ func TestNXAPIConfigTransportMutateDMEDelete(t *testing.T) {
 	}
 	if !sawDelete {
 		t.Fatal("DME DELETE was not sent")
+	}
+}
+
+func TestNXAPIConfigTransportRetriesRetryableDMERead(t *testing.T) {
+	var fetches int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/aaaLogin.json":
+			http.SetCookie(w, &http.Cookie{Name: "nxapi_auth", Value: "token"})
+			_, _ = w.Write([]byte(`{"aaaLogin":{"attributes":{"token":"token"}}}`))
+		case "/api/mo/sys.json":
+			fetches++
+			if fetches == 1 {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				_, _ = w.Write([]byte(`{"imdata":[{"error":{"attributes":{"code":"503","text":"device busy"}}}]}`))
+				return
+			}
+			_, _ = w.Write([]byte(`{"imdata":[{"topSystem":{"attributes":{"name":"leaf-01"}}}]}`))
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	tr := &nxapiConfigTransport{
+		client: &nxapiClient{
+			rootURL:  server.URL,
+			baseURL:  server.URL + "/ins",
+			username: "admin",
+			password: "pw",
+			client:   server.Client(),
+		},
+		retry: transport.RetryPolicy{
+			MaxAttempts:    2,
+			Initial:        time.Nanosecond,
+			Cap:            time.Nanosecond,
+			JitterFraction: 0.01,
+		},
+	}
+	raw, err := tr.Fetch(context.Background(), nxosschema.PathSystemHostname)
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	var system map[string]any
+	if err := json.Unmarshal(raw, &system); err != nil {
+		t.Fatalf("decode system: %v", err)
+	}
+	if system["hostname"] != "leaf-01" {
+		t.Fatalf("system=%#v", system)
+	}
+	if fetches != 2 {
+		t.Fatalf("fetches=%d, want 2", fetches)
+	}
+}
+
+func TestNXAPIConfigTransportReportsPartialMutationAndStops(t *testing.T) {
+	const secret = "MUTATION_SECRET_SENTINEL"
+	var firstCalls, failedCalls, afterCalls int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/aaaLogin.json":
+			http.SetCookie(w, &http.Cookie{Name: "nxapi_auth", Value: "token"})
+			_, _ = w.Write([]byte(`{"aaaLogin":{"attributes":{"token":"token"}}}`))
+		case "/api/mo/sys/first.json":
+			firstCalls++
+			_, _ = w.Write([]byte(`{"imdata":[]}`))
+		case "/api/mo/sys/fail.json":
+			failedCalls++
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(`{"imdata":[{"error":{"attributes":{"code":"503","text":"` +
+				`{\"password\":\"` + secret + `\"} device busy"}}}]}`))
+		case "/api/mo/sys/after.json":
+			afterCalls++
+			_, _ = w.Write([]byte(`{"imdata":[]}`))
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	tr := &nxapiConfigTransport{client: &nxapiClient{
+		rootURL:  server.URL,
+		baseURL:  server.URL + "/ins",
+		username: "admin",
+		password: "pw",
+		client:   server.Client(),
+	}}
+	err := tr.Mutate(context.Background(), "", []transport.Op{
+		{Verb: transport.VerbMerge, Path: "sys/first", Body: []byte(`{"first":true}`)},
+		{Verb: transport.VerbMerge, Path: "sys/fail", Body: []byte(`{"password":"` + secret + `"}`)},
+		{Verb: transport.VerbMerge, Path: "sys/after", Body: []byte(`{"after":true}`)},
+	})
+	if err == nil {
+		t.Fatal("Mutate error=nil, want failed second operation")
+	}
+	var mutationErr *NXAPIMutationError
+	if !errors.As(err, &mutationErr) {
+		t.Fatalf("error %T does not retain NXAPIMutationError: %v", err, err)
+	}
+	if mutationErr.OperationIndex != 1 || mutationErr.AppliedOperations != 1 ||
+		mutationErr.Verb != transport.VerbMerge || mutationErr.Path != "sys/fail" {
+		t.Fatalf("mutation error=%#v", mutationErr)
+	}
+	var dmeErr *DMEError
+	if !errors.As(err, &dmeErr) || dmeErr.Category != DMEErrorRetryable {
+		t.Fatalf("error chain does not retain retryable DMEError: %v", err)
+	}
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("mutation error leaked request/response credential: %v", err)
+	}
+	if firstCalls != 1 || failedCalls != 1 || afterCalls != 0 {
+		t.Fatalf("calls first=%d failed=%d after=%d, want 1/1/0", firstCalls, failedCalls, afterCalls)
+	}
+}
+
+func TestNXAPIConfigTransportDoesNotReplayMutationAfterAuthFailure(t *testing.T) {
+	var logins, mutations int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/aaaLogin.json":
+			logins++
+			http.SetCookie(w, &http.Cookie{Name: "nxapi_auth", Value: "expired"})
+			_, _ = w.Write([]byte(`{"aaaLogin":{"attributes":{"token":"expired"}}}`))
+		case "/api/mo/sys.json":
+			mutations++
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"imdata":[{"error":{"attributes":{"code":"401","text":"bad token"}}}]}`))
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	tr := &nxapiConfigTransport{client: &nxapiClient{
+		rootURL:  server.URL,
+		baseURL:  server.URL + "/ins",
+		username: "admin",
+		password: "pw",
+		client:   server.Client(),
+	}}
+	err := tr.Mutate(context.Background(), "", []transport.Op{{
+		Verb: transport.VerbMerge,
+		Path: "sys",
+		Body: []byte(`{"topSystem":{"attributes":{"name":"leaf-01"}}}`),
+	}})
+	if err == nil {
+		t.Fatal("Mutate error=nil, want authentication failure")
+	}
+	var dmeErr *DMEError
+	if !errors.As(err, &dmeErr) || !dmeErr.AuthFailure() {
+		t.Fatalf("error chain does not retain auth DMEError: %v", err)
+	}
+	if logins != 1 || mutations != 1 {
+		t.Fatalf("logins=%d mutations=%d, want 1/1 (no mutation replay)", logins, mutations)
 	}
 }
 

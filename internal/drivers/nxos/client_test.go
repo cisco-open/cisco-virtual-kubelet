@@ -11,6 +11,8 @@ package nxos
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -23,6 +25,7 @@ import (
 	"time"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	configtransport "github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 )
 
 type endlessXReader struct{}
@@ -397,6 +400,52 @@ func TestNXAPIDMELoginTokenFallback(t *testing.T) {
 	}
 }
 
+func TestNXAPIDMEReadReauthenticatesAfterAuthFailure(t *testing.T) {
+	var logins, reads int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/aaaLogin.json":
+			logins++
+			token := "token-" + strconv.Itoa(logins)
+			http.SetCookie(w, &http.Cookie{Name: "nxapi_auth", Value: token})
+			_, _ = w.Write([]byte(`{"aaaLogin":{"attributes":{"token":"` + token + `"}}}`))
+		case "/api/mo/sys.json":
+			reads++
+			if reads == 1 {
+				w.WriteHeader(http.StatusUnauthorized)
+				_, _ = w.Write([]byte(`{"imdata":[{"error":{"attributes":{"code":"401","text":"bad token"}}}]}`))
+				return
+			}
+			cookie, err := r.Cookie("nxapi_auth")
+			if err != nil || cookie.Value != "token-2" {
+				t.Fatalf("reauthenticated cookie=%v err=%v", cookie, err)
+			}
+			_, _ = w.Write([]byte(`{"imdata":[{"topSystem":{"attributes":{"name":"leaf-01"}}}]}`))
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	c := &nxapiClient{
+		rootURL:  server.URL,
+		baseURL:  server.URL + "/ins",
+		username: "admin",
+		password: "pw",
+		client:   server.Client(),
+	}
+	raw, err := c.dmeGet(context.Background(), "sys", nil)
+	if err != nil {
+		t.Fatalf("dmeGet: %v", err)
+	}
+	if got := parseDMESystemHostname(raw); got != "leaf-01" {
+		t.Fatalf("hostname=%q", got)
+	}
+	if logins != 2 || reads != 2 {
+		t.Fatalf("logins=%d reads=%d, want 2/2", logins, reads)
+	}
+}
+
 func TestNXAPIDMEReturnsErrorMO(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -424,6 +473,166 @@ func TestNXAPIDMEReturnsErrorMO(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "bad DME payload") || !strings.Contains(err.Error(), "code=400") {
 		t.Fatalf("error=%q", err)
+	}
+	var dmeErr *DMEError
+	if !errors.As(err, &dmeErr) {
+		t.Fatalf("error %T does not retain DMEError", err)
+	}
+	if dmeErr.Category != DMEErrorValidation || dmeErr.Code != "400" ||
+		dmeErr.Method != http.MethodPost || dmeErr.DN != "sys" {
+		t.Fatalf("DMEError=%#v", dmeErr)
+	}
+}
+
+func TestDMEErrorClassification(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name     string
+		code     string
+		text     string
+		category DMEErrorCategory
+	}{
+		{name: "auth", code: "401", text: "authentication failed", category: DMEErrorAuth},
+		{name: "retryable", code: "503", text: "device busy", category: DMEErrorRetryable},
+		{name: "validation HTTP code", code: "400", text: "bad payload", category: DMEErrorValidation},
+		{name: "validation DME code", code: "17", text: "Unknown class fmMissing", category: DMEErrorValidation},
+		{name: "permanent", code: "122", text: "operation rejected", category: DMEErrorPermanent},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			raw := []byte(fmt.Sprintf(
+				`{"imdata":[{"error":{"attributes":{"code":%q,"text":%q}}}]}`,
+				tt.code,
+				tt.text,
+			))
+			err := dmeResponseErrorFor(http.MethodGet, "sys", raw)
+			var dmeErr *DMEError
+			if !errors.As(err, &dmeErr) {
+				t.Fatalf("error=%v does not retain DMEError", err)
+			}
+			if dmeErr.Category != tt.category {
+				t.Fatalf("category=%q, want %q", dmeErr.Category, tt.category)
+			}
+			if got := dmeErr.Retryable(); got != (tt.category == DMEErrorRetryable) {
+				t.Fatalf("Retryable()=%v", got)
+			}
+			if got := dmeErr.AuthFailure(); got != (tt.category == DMEErrorAuth) {
+				t.Fatalf("AuthFailure()=%v", got)
+			}
+		})
+	}
+}
+
+func TestDMEErrorClassificationPrecedence(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		statusCode int
+		body       string
+		want       DMEErrorCategory
+	}{
+		{
+			name:       "auth detail outranks retryable HTTP status",
+			statusCode: http.StatusServiceUnavailable,
+			body: `{"imdata":[
+				{"error":{"attributes":{"code":"503","text":"device busy"}}},
+				{"error":{"attributes":{"code":"401","text":"bad token"}}}
+			]}`,
+			want: DMEErrorAuth,
+		},
+		{
+			name:       "retryable detail outranks validation HTTP status",
+			statusCode: http.StatusBadRequest,
+			body:       `{"imdata":[{"error":{"attributes":{"code":"503","text":"device busy"}}}]}`,
+			want:       DMEErrorRetryable,
+		},
+		{
+			name:       "retryable HTTP status outranks validation detail",
+			statusCode: http.StatusServiceUnavailable,
+			body:       `{"imdata":[{"error":{"attributes":{"code":"400","text":"invalid payload"}}}]}`,
+			want:       DMEErrorRetryable,
+		},
+		{
+			name: "auth detail outranks validation and permanent details",
+			body: `{"imdata":[
+				{"error":{"attributes":{"code":"122","text":"operation rejected"}}},
+				{"error":{"attributes":{"code":"400","text":"invalid payload"}}},
+				{"error":{"attributes":{"code":"403","text":"forbidden"}}}
+			]}`,
+			want: DMEErrorAuth,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var err error
+			if tt.statusCode == 0 {
+				err = dmeResponseErrorFor(http.MethodGet, "sys", []byte(tt.body))
+			} else {
+				err = wrapDMERequestError(http.MethodGet, "sys", &configtransport.RESTError{
+					Method:     http.MethodGet,
+					Path:       "/api/mo/sys.json",
+					Status:     http.StatusText(tt.statusCode),
+					StatusCode: tt.statusCode,
+					Body:       tt.body,
+				})
+			}
+			var dmeErr *DMEError
+			if !errors.As(err, &dmeErr) {
+				t.Fatalf("error=%v does not retain DMEError", err)
+			}
+			if dmeErr.Category != tt.want {
+				t.Fatalf("category=%q, want %q; error=%v", dmeErr.Category, tt.want, err)
+			}
+		})
+	}
+}
+
+func TestDMEErrorRedactsBoundsAndPreservesChain(t *testing.T) {
+	t.Parallel()
+	const secret = "DME_SECRET_SENTINEL"
+	restErr := &configtransport.RESTError{
+		Method:     http.MethodGet,
+		Path:       "/api/mo/sys.json",
+		Status:     "503 Service Unavailable",
+		StatusCode: http.StatusServiceUnavailable,
+		Body: `{"imdata":[{"error":{"attributes":{"code":"503","text":"` +
+			`{\"password\":\"` + secret + `\"} ` + strings.Repeat("x", maxDMEContextLength+50) +
+			`"}}}]}`,
+	}
+	err := redactNXAPIError(wrapDMERequestError(http.MethodGet, "sys\n\x1bsecret", restErr))
+
+	var dmeErr *DMEError
+	if !errors.As(err, &dmeErr) {
+		t.Fatalf("error=%v does not retain DMEError", err)
+	}
+	var gotRESTError *configtransport.RESTError
+	if !errors.As(err, &gotRESTError) {
+		t.Fatalf("error chain did not retain typed RESTError")
+	}
+	if gotRESTError == restErr {
+		t.Fatal("error chain retained the raw RESTError instead of a sanitized clone")
+	}
+	if gotRESTError.StatusCode != restErr.StatusCode ||
+		gotRESTError.Method != restErr.Method ||
+		gotRESTError.Path != restErr.Path {
+		t.Fatalf("sanitized REST metadata=%#v, want method/path/status from %#v", gotRESTError, restErr)
+	}
+	if strings.Contains(gotRESTError.Body, secret) || strings.Contains(gotRESTError.Error(), secret) {
+		t.Fatalf("typed RESTError leaked credential through errors.As: %#v", gotRESTError)
+	}
+	if dmeErr.Category != DMEErrorRetryable || dmeErr.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("DMEError=%#v", dmeErr)
+	}
+	if strings.Contains(err.Error(), secret) || strings.Contains(dmeErr.Context, secret) {
+		t.Fatalf("DME error leaked credential: %v", err)
+	}
+	if !strings.Contains(err.Error(), "***REDACTED***") {
+		t.Fatalf("DME error omitted redaction marker: %v", err)
+	}
+	if len([]rune(dmeErr.Context)) > maxDMEContextLength {
+		t.Fatalf("context length=%d, max=%d", len([]rune(dmeErr.Context)), maxDMEContextLength)
+	}
+	if strings.ContainsAny(dmeErr.DN, "\n\x1b") {
+		t.Fatalf("DN contains control characters: %q", dmeErr.DN)
 	}
 }
 

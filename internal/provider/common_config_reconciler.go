@@ -62,6 +62,9 @@ type CommonConfigPlatform struct {
 	PreserveEnvelope  bool
 	SupportsRevisions bool
 	SupportsRollback  bool
+	// ReconcilePolicy controls platform-specific family-loop behavior. The
+	// zero value preserves independent-family processing.
+	ReconcilePolicy engine.ReconcilePolicy
 	// ValidateModelSource performs platform-specific model contract checks
 	// before any source is loaded or device state is fetched. Nil preserves the
 	// legacy metadata-only behavior.
@@ -545,6 +548,7 @@ func (r *CommonConfigReconciler) reconcileOne(
 	}
 	eng := &engine.Engine{
 		Platform:           r.Platform.Name,
+		Policy:             r.Platform.ReconcilePolicy,
 		Transport:          t,
 		Lookup:             lookup,
 		DeviceVersion:      r.deviceVersion(),
@@ -805,6 +809,15 @@ func (r *CommonConfigReconciler) acquireLeases(
 	}
 	filtered := *resolved
 	filtered.ManagedFamilies = owned
+	// A partial lease result is not a fully clean reconcile even when every
+	// family we did acquire reaches InSync. Keep writes to running
+	// configuration independent, but never persist that subset to startup
+	// configuration while another declared family is still owned elsewhere.
+	// The outer reconciler will surface LeaseBlocked and retry after
+	// contention clears.
+	if len(conflicts) > 0 {
+		filtered.WriteStartup = false
+	}
 	return &filtered, conflicts
 }
 
@@ -925,6 +938,7 @@ func (r *CommonConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr cli
 	}
 	eng := &engine.Engine{
 		Platform:           r.Platform.Name,
+		Policy:             r.Platform.ReconcilePolicy,
 		Transport:          t,
 		Lookup:             lookup,
 		DeviceVersion:      r.deviceVersion(),

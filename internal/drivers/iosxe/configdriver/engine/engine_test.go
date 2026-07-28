@@ -36,15 +36,18 @@ import (
 // stubTransport is the smallest transport.Interface that satisfies the
 // engine's calls. Counts fetches and mutates for assertions.
 type stubTransport struct {
-	caps     transport.Capabilities
-	fetched  int
-	mutated  int
-	mutateFn func(tx transport.TxHandle, ops []transport.Op) error
+	caps       transport.Capabilities
+	fetched    int
+	fetchPaths []string
+	mutated    int
+	mutatedOps []transport.Op
+	mutateFn   func(tx transport.TxHandle, ops []transport.Op) error
 }
 
 func (s *stubTransport) Capabilities() transport.Capabilities { return s.caps }
-func (s *stubTransport) Fetch(context.Context, string) ([]byte, error) {
+func (s *stubTransport) Fetch(_ context.Context, path string) ([]byte, error) {
 	s.fetched++
+	s.fetchPaths = append(s.fetchPaths, path)
 	return nil, nil
 }
 func (s *stubTransport) StartTransaction(context.Context) (transport.TxHandle, error) {
@@ -52,6 +55,7 @@ func (s *stubTransport) StartTransaction(context.Context) (transport.TxHandle, e
 }
 func (s *stubTransport) Mutate(_ context.Context, tx transport.TxHandle, ops []transport.Op) error {
 	s.mutated++
+	s.mutatedOps = append(s.mutatedOps, ops...)
 	if s.mutateFn != nil {
 		return s.mutateFn(tx, ops)
 	}
@@ -96,6 +100,37 @@ func (w *fakeWriter) Apply(_ context.Context, _ transport.Interface, ops []trans
 	w.applies++
 	w.appliedOps = append(w.appliedOps, ops...)
 	return w.applyErr
+}
+
+// transportBackedWriter exercises the actual transport Fetch and Mutate
+// boundary. It is used by fail-fast tests to prove an unattempted family does
+// not contact the device, rather than only proving its writer was not called.
+type transportBackedWriter struct {
+	family    string
+	ops       []transport.Op
+	residual  []transport.Op
+	fetches   int
+	applies   int
+	diffCalls int
+}
+
+func (w *transportBackedWriter) Family() string      { return w.family }
+func (w *transportBackedWriter) YANGPaths() []string { return []string{"/" + w.family} }
+func (w *transportBackedWriter) Fetch(ctx context.Context, t transport.Interface) (any, error) {
+	w.fetches++
+	_, err := t.Fetch(ctx, "/"+w.family)
+	return nil, err
+}
+func (w *transportBackedWriter) Diff(desired, observed any) ([]transport.Op, error) {
+	w.diffCalls++
+	if w.diffCalls > 1 {
+		return w.residual, nil
+	}
+	return w.ops, nil
+}
+func (w *transportBackedWriter) Apply(ctx context.Context, t transport.Interface, ops []transport.Op) error {
+	w.applies++
+	return t.Mutate(ctx, "", ops)
 }
 
 // fakePruneWriter wraps fakeWriter with PruneCapable behaviour. The
@@ -573,6 +608,287 @@ func TestReconcileResidualDriftAfterRevertFails(t *testing.T) {
 	}
 }
 
+func TestReconcileFailFastStopsOrderedTailWithoutFetchOrMutate(t *testing.T) {
+	first := &transportBackedWriter{
+		family: "first",
+		ops:    []transport.Op{{Verb: transport.VerbMerge, Path: "/first"}},
+	}
+	second := &transportBackedWriter{
+		family: "second",
+		ops:    []transport.Op{{Verb: transport.VerbMerge, Path: "/second"}},
+	}
+	tr := &stubTransport{
+		mutateFn: func(_ transport.TxHandle, ops []transport.Op) error {
+			if len(ops) > 0 && ops[0].Path == "/first" {
+				return errors.New("first family rejected")
+			}
+			return nil
+		},
+	}
+	var lookupCalls []string
+	e := &Engine{
+		Policy:    ReconcilePolicy{StopOnRevertFailure: true},
+		Transport: tr,
+		Lookup: func(family, _ string) writers.SectionWriter {
+			lookupCalls = append(lookupCalls, family)
+			if family == "first" {
+				return first
+			}
+			return second
+		},
+		FamilyOrder: func([]string) []string {
+			return []string{"first", "second"}
+		},
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "leaf-01",
+		ManagedFamilies: []string{"second", "first"},
+		Configuration: map[string]any{
+			"first":  map[string]any{},
+			"second": map[string]any{},
+		},
+		DriftPolicy: configv1alpha1.DriftPolicyRevert,
+	}
+
+	got := e.Reconcile(context.Background(), res)
+
+	if got.Phase != PhaseFailed {
+		t.Fatalf("Phase=%s, want Failed", got.Phase)
+	}
+	if len(got.FamilyStatuses) != 2 {
+		t.Fatalf("FamilyStatuses=%#v, want two ordered entries", got.FamilyStatuses)
+	}
+	if got.FamilyStatuses[0].Name != "first" || got.FamilyStatuses[0].State != "ApplyError" {
+		t.Fatalf("first status=%#v, want first/ApplyError", got.FamilyStatuses[0])
+	}
+	if got.FamilyStatuses[1].Name != "second" || got.FamilyStatuses[1].State != "Skipped" ||
+		!strings.Contains(got.FamilyStatuses[1].Message, "not attempted") {
+		t.Fatalf("second status=%#v, want second/Skipped/not attempted", got.FamilyStatuses[1])
+	}
+	if len(lookupCalls) != 1 || lookupCalls[0] != "first" {
+		t.Fatalf("writer lookups=%v, want [first]", lookupCalls)
+	}
+	if first.fetches != 1 || first.applies != 1 {
+		t.Fatalf("first writer fetch/apply=%d/%d, want 1/1", first.fetches, first.applies)
+	}
+	if second.fetches != 0 || second.applies != 0 {
+		t.Fatalf("second writer fetch/apply=%d/%d, want 0/0", second.fetches, second.applies)
+	}
+	if tr.fetched != 1 || len(tr.fetchPaths) != 1 || tr.fetchPaths[0] != "/first" {
+		t.Fatalf("transport Fetch calls=%d paths=%v, want only /first", tr.fetched, tr.fetchPaths)
+	}
+	if tr.mutated != 1 || len(tr.mutatedOps) != 1 || tr.mutatedOps[0].Path != "/first" {
+		t.Fatalf("transport Mutate calls=%d ops=%v, want only /first", tr.mutated, tr.mutatedOps)
+	}
+}
+
+func TestReconcileFailFastStopsAfterUnsupportedFamily(t *testing.T) {
+	second := &transportBackedWriter{
+		family: "second",
+		ops:    []transport.Op{{Verb: transport.VerbMerge, Path: "/second"}},
+	}
+	tr := &stubTransport{}
+	e := &Engine{
+		Policy:    ReconcilePolicy{StopOnRevertFailure: true},
+		Transport: tr,
+		Lookup: func(family, _ string) writers.SectionWriter {
+			if family == "unsupported" {
+				return nil
+			}
+			return second
+		},
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "leaf-01",
+		ManagedFamilies: []string{"unsupported", "second"},
+		Configuration:   map[string]any{"second": map[string]any{}},
+		DriftPolicy:     configv1alpha1.DriftPolicyRevert,
+	}
+
+	got := e.Reconcile(context.Background(), res)
+
+	if len(got.FamilyStatuses) != 2 ||
+		got.FamilyStatuses[0].State != "Unsupported" ||
+		got.FamilyStatuses[1].State != "Skipped" {
+		t.Fatalf("FamilyStatuses=%#v, want Unsupported then Skipped", got.FamilyStatuses)
+	}
+	if second.fetches != 0 || second.applies != 0 || tr.fetched != 0 || tr.mutated != 0 {
+		t.Fatalf(
+			"family after Unsupported was attempted: writer fetch/apply=%d/%d transport fetch/mutate=%d/%d",
+			second.fetches,
+			second.applies,
+			tr.fetched,
+			tr.mutated,
+		)
+	}
+}
+
+func TestReconcileFailFastStopsAfterResidualDrift(t *testing.T) {
+	first := &transportBackedWriter{
+		family:   "first",
+		ops:      []transport.Op{{Verb: transport.VerbMerge, Path: "/first"}},
+		residual: []transport.Op{{Verb: transport.VerbMerge, Path: "/first"}},
+	}
+	second := &transportBackedWriter{
+		family: "second",
+		ops:    []transport.Op{{Verb: transport.VerbMerge, Path: "/second"}},
+	}
+	tr := &stubTransport{}
+	e := &Engine{
+		Policy:    ReconcilePolicy{StopOnRevertFailure: true},
+		Transport: tr,
+		Lookup: func(family, _ string) writers.SectionWriter {
+			if family == "first" {
+				return first
+			}
+			return second
+		},
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "leaf-01",
+		ManagedFamilies: []string{"first", "second"},
+		Configuration: map[string]any{
+			"first":  map[string]any{},
+			"second": map[string]any{},
+		},
+		DriftPolicy: configv1alpha1.DriftPolicyRevert,
+	}
+
+	got := e.Reconcile(context.Background(), res)
+
+	if got.Phase != PhaseFailed || len(got.FamilyStatuses) != 2 ||
+		got.FamilyStatuses[0].State != "Drifted" ||
+		got.FamilyStatuses[1].State != "Skipped" {
+		t.Fatalf("result=%#v, want Failed with Drifted then Skipped", got)
+	}
+	if first.fetches != 2 || first.applies != 1 {
+		t.Fatalf("first writer fetch/apply=%d/%d, want 2/1", first.fetches, first.applies)
+	}
+	if second.fetches != 0 || second.applies != 0 {
+		t.Fatalf("second writer fetch/apply=%d/%d, want 0/0", second.fetches, second.applies)
+	}
+	for _, path := range tr.fetchPaths {
+		if path == "/second" {
+			t.Fatalf("transport fetched skipped family: paths=%v", tr.fetchPaths)
+		}
+	}
+	for _, op := range tr.mutatedOps {
+		if op.Path == "/second" {
+			t.Fatalf("transport mutated skipped family: ops=%v", tr.mutatedOps)
+		}
+	}
+}
+
+func TestReconcileFailFastPolicyStillEvaluatesAllFamiliesInReportMode(t *testing.T) {
+	first := &transportBackedWriter{
+		family: "first",
+		ops:    []transport.Op{{Verb: transport.VerbMerge, Path: "/first"}},
+	}
+	second := &transportBackedWriter{
+		family: "second",
+		ops:    []transport.Op{{Verb: transport.VerbMerge, Path: "/second"}},
+	}
+	tr := &stubTransport{}
+	e := &Engine{
+		Policy:    ReconcilePolicy{StopOnRevertFailure: true},
+		Transport: tr,
+		Lookup: func(family, _ string) writers.SectionWriter {
+			if family == "first" {
+				return first
+			}
+			return second
+		},
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "leaf-01",
+		ManagedFamilies: []string{"first", "second"},
+		Configuration: map[string]any{
+			"first":  map[string]any{},
+			"second": map[string]any{},
+		},
+		DriftPolicy: configv1alpha1.DriftPolicyReport,
+	}
+
+	got := e.Reconcile(context.Background(), res)
+
+	if got.Phase != PhaseDrifted || len(got.FamilyStatuses) != 2 ||
+		got.FamilyStatuses[0].State != "Drifted" ||
+		got.FamilyStatuses[1].State != "Drifted" {
+		t.Fatalf("result=%#v, want complete report-mode drift", got)
+	}
+	if first.fetches != 1 || second.fetches != 1 {
+		t.Fatalf("report fetches first/second=%d/%d, want 1/1", first.fetches, second.fetches)
+	}
+	if first.applies != 0 || second.applies != 0 || tr.mutated != 0 {
+		t.Fatalf(
+			"report mode mutated: writer applies=%d/%d transport mutates=%d",
+			first.applies,
+			second.applies,
+			tr.mutated,
+		)
+	}
+}
+
+func TestReconcileZeroValuePolicyPreservesIndependentFamilyAttempts(t *testing.T) {
+	first := &transportBackedWriter{
+		family: "first",
+		ops:    []transport.Op{{Verb: transport.VerbMerge, Path: "/first"}},
+	}
+	second := &transportBackedWriter{
+		family: "second",
+		ops:    []transport.Op{{Verb: transport.VerbMerge, Path: "/second"}},
+	}
+	tr := &stubTransport{
+		mutateFn: func(_ transport.TxHandle, ops []transport.Op) error {
+			if len(ops) > 0 && ops[0].Path == "/first" {
+				return errors.New("first family rejected")
+			}
+			return nil
+		},
+	}
+	e := &Engine{
+		// Policy is intentionally its zero value: this is the IOS XE
+		// independent-family compatibility contract.
+		Transport: tr,
+		Lookup: func(family, _ string) writers.SectionWriter {
+			if family == "first" {
+				return first
+			}
+			return second
+		},
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "edge-01",
+		ManagedFamilies: []string{"first", "second"},
+		Configuration: map[string]any{
+			"first":  map[string]any{},
+			"second": map[string]any{},
+		},
+		DriftPolicy: configv1alpha1.DriftPolicyRevert,
+	}
+
+	got := e.Reconcile(context.Background(), res)
+
+	if got.Phase != PhaseFailed || len(got.FamilyStatuses) != 2 ||
+		got.FamilyStatuses[0].State != "ApplyError" ||
+		got.FamilyStatuses[1].State != "InSync" {
+		t.Fatalf("result=%#v, want first failure and independent second attempt", got)
+	}
+	if second.fetches != 2 || second.applies != 1 {
+		t.Fatalf("second writer fetch/apply=%d/%d, want 2/1", second.fetches, second.applies)
+	}
+	var fetchedSecond, mutatedSecond bool
+	for _, path := range tr.fetchPaths {
+		fetchedSecond = fetchedSecond || path == "/second"
+	}
+	for _, op := range tr.mutatedOps {
+		mutatedSecond = mutatedSecond || op.Path == "/second"
+	}
+	if !fetchedSecond || !mutatedSecond {
+		t.Fatalf("second family did not reach both transport boundaries: fetch=%v mutate=%v", tr.fetchPaths, tr.mutatedOps)
+	}
+}
+
 func TestReconcileUnsupportedFamily(t *testing.T) {
 	e := &Engine{
 		Transport: &stubTransport{},
@@ -787,6 +1103,52 @@ func TestCLIBlocksSkippedWhenFamiliesFailed(t *testing.T) {
 	}
 	if cliCount != 0 {
 		t.Errorf("CLI op ran after family-apply failure (cliCount=%d)", cliCount)
+	}
+}
+
+func TestCLIBlocksSkippedAfterFailFastResidualDrift(t *testing.T) {
+	w := &fakeWriter{
+		family:   "vlan",
+		ops:      []transport.Op{{Verb: transport.VerbMerge, Path: "/v"}},
+		residual: []transport.Op{{Verb: transport.VerbMerge, Path: "/v"}},
+	}
+	var cliCount int
+	mock := &stubTransport{
+		mutateFn: func(_ transport.TxHandle, ops []transport.Op) error {
+			for _, op := range ops {
+				if op.Verb == transport.VerbCLI {
+					cliCount++
+				}
+			}
+			return nil
+		},
+	}
+	e := &Engine{
+		Policy:    ReconcilePolicy{StopOnRevertFailure: true},
+		Transport: mock,
+		Lookup:    func(string, string) writers.SectionWriter { return w },
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "leaf-01",
+		ManagedFamilies: []string{"vlan"},
+		Configuration:   map[string]any{"vlan": map[string]any{}},
+		DriftPolicy:     configv1alpha1.DriftPolicyRevert,
+		CLIBlocks:       []intent.CLIBlock{{TemplateName: "hostname", CLI: "hostname leaf-01"}},
+	}
+
+	result := e.Reconcile(context.Background(), res)
+
+	if result.Phase != PhaseFailed {
+		t.Fatalf("phase=%s, want Failed", result.Phase)
+	}
+	if result.Err == nil || result.Err.Error() != "drift persisted after revert" {
+		t.Fatalf("err=%v, want drift persisted after revert", result.Err)
+	}
+	if len(result.FamilyStatuses) != 1 || result.FamilyStatuses[0].State != "Drifted" {
+		t.Fatalf("FamilyStatuses=%#v, want residual Drifted family", result.FamilyStatuses)
+	}
+	if cliCount != 0 {
+		t.Fatalf("CLI op ran after fail-fast residual drift (cliCount=%d)", cliCount)
 	}
 }
 

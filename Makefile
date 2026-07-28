@@ -61,7 +61,7 @@ INSTALL_DIR=$(PREFIX)/bin
 CONFIG_DIR=/etc/cisco-vk
 SYSTEMD_DIR=/etc/systemd/system
 
-.PHONY: all build clean install uninstall test test-envtest lint fmt deps help generate manifests crd-gen deepcopy-gen rbac-gen helm-sync-crds config-lint netascode-migrate config-docs yang-sync migrate-tool parity-matrix check-parity-matrix vendor-yang apphosting-ygot-gen ygot-validate-gen
+.PHONY: all build clean install uninstall test test-envtest lint fmt deps help generate manifests crd-gen deepcopy-gen rbac-gen helm-sync-crds config-lint netascode-migrate config-docs yang-sync migrate-tool parity-matrix check-parity-matrix check-nxos-oracle vendor-yang apphosting-ygot-gen ygot-validate-gen
 
 all: build
 
@@ -179,6 +179,11 @@ check-parity-matrix: ## Fail if docs/family-parity.md is stale
 		exit 1; \
 	fi; \
 	rm -f "$$tmp"
+
+check-nxos-oracle: ## Validate the pinned offline NX-OS NetAsCode oracle and recovery contract
+	$(GO_BIN) test -count=1 \
+		./internal/drivers/nxos/configdriver/schema \
+		./internal/drivers/nxos/configdriver/writers
 
 vendor-yang: ## Vendor Cisco IOS-XE YANG modules for RELEASE (default 1718)
 	@dest="$(YANG_SCHEMA_DIR)/$(YANG_RELEASE)"; \

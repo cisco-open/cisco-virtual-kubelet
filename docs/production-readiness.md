@@ -29,7 +29,7 @@ These items gate merging a branch that changes runtime behavior:
 | Gate | Required evidence |
 |---|---|
 | Unit and race tests | `go test ./...` and `go test -race ./...` pass. |
-| Pinned NetAsCode oracle | Offline conformance against module `0.3.0` / NX-OS provider `0.13.1` golden plan and DME facts passes for every supported field. |
+| Pinned NetAsCode oracle | `make check-nxos-oracle` passes offline conformance against module `0.3.0` / NX-OS provider `0.13.1`, fixture digests, DME facts, and failure-recovery convergence. |
 | Generated artifacts | `make deepcopy-gen manifests` produces no unexpected drift. |
 | Build and smoke | GitHub `build-and-smoke` passes, including envtest and Helm checks. |
 | Existing IOS-XE labs | Cat8kv and Cat9k lab checks pass so NX-OS work does not regress IOS-XE. |
@@ -82,6 +82,8 @@ Goal: make the non-transactional behavior explicit and operationally safe.
 - Add compensating delete/prune support only where Fetch can prove ownership.
 - Classify transport failures as retryable, auth, validation, or permanent
   DME errors so controller-runtime retry behavior is predictable.
+- Follow the [NX-OS Configuration Recovery](nxos-recovery.md) runbook for
+  ambiguous or partial non-transactional outcomes.
 
 ### Phase 2: RBAC hardening
 
@@ -245,4 +247,6 @@ NX-OS can be called production-ready only when all of the following are true:
 - Transport and reconcile metrics are available for DME, app-hosting, and
   DeviceOperation.
 - Operator recovery/compensation behavior is documented for every supported
-  write family; CR revision history and declarative rollback remain disabled.
+  write family in the
+  [NX-OS Configuration Recovery](nxos-recovery.md) runbook; CR revision history
+  and declarative rollback remain disabled.

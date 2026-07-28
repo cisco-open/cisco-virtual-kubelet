@@ -24,12 +24,13 @@ import (
 )
 
 type (
-	Engine       = iosxeengine.Engine
-	Result       = iosxeengine.Result
-	FamilyStatus = iosxeengine.FamilyStatus
-	DriftEntry   = iosxeengine.DriftEntry
-	FamilyLeaser = iosxeengine.FamilyLeaser
-	LeaseResult  = iosxeengine.LeaseResult
+	Engine          = iosxeengine.Engine
+	ReconcilePolicy = iosxeengine.ReconcilePolicy
+	Result          = iosxeengine.Result
+	FamilyStatus    = iosxeengine.FamilyStatus
+	DriftEntry      = iosxeengine.DriftEntry
+	FamilyLeaser    = iosxeengine.FamilyLeaser
+	LeaseResult     = iosxeengine.LeaseResult
 )
 
 const (

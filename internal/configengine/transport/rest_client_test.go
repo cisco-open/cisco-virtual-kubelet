@@ -170,6 +170,9 @@ func TestRESTErrorClassification(t *testing.T) {
 			if got := IsAuthRESTError(err); got != tt.auth {
 				t.Fatalf("auth=%v, want %v", got, tt.auth)
 			}
+			if got := IsTransient(err); got != tt.retryable {
+				t.Fatalf("transient=%v, want %v", got, tt.retryable)
+			}
 		})
 	}
 }

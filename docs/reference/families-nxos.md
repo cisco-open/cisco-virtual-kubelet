@@ -108,4 +108,5 @@ spec:
 
 - [Network as Code](../netascode-config.md) — intent shape, drift detection, and platform capability differences
 - [CRD Reference](../crds.md#nxosconfig) — full `NXOSConfig` schema
+- [NX-OS Configuration Recovery](../nxos-recovery.md) — non-transactional failure handling and compensation by family
 - [Production Readiness](../production-readiness.md) — NX-OS runtime-parity scope
