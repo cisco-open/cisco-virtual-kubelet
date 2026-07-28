@@ -83,6 +83,12 @@ jobs:
       - name: Unit tests
         run: go test -race -count=1 ./...
 
+      - name: NX-OS pinned oracle conformance gate
+        # Keep the offline NetAsCode contract visible inside the required
+        # build-and-smoke check. This verifies fixture digests, semantic DME
+        # parity, and deterministic recovery without network or credentials.
+        run: make check-nxos-oracle
+
       - name: Family parity matrix drift check
         run: make check-parity-matrix
 

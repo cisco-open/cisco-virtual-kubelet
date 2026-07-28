@@ -15,6 +15,8 @@
 package writers
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -30,6 +32,8 @@ import (
 	nxosschema "github.com/cisco/virtual-kubelet-cisco/internal/drivers/nxos/configdriver/schema"
 	"sigs.k8s.io/yaml"
 )
+
+const pinnedNetAsCodeOracleVersion = "0.3.0"
 
 func TestSupportedWriterOperationsPassStrictStructuralConformance(t *testing.T) {
 	tests := []struct {
@@ -68,6 +72,76 @@ func TestSupportedWriterOperationsPassStrictStructuralConformance(t *testing.T) 
 	}
 }
 
+// TestPinnedNetAsCodeOracleArtifactDigests makes accidental fixture drift
+// visible. Deliberate oracle refreshes update both the artifacts and
+// SHA256SUMS in one reviewed change; modifying, adding, or removing any
+// artifact without updating the pin fails this test.
+func TestPinnedNetAsCodeOracleArtifactDigests(t *testing.T) {
+	root := filepath.Join("testdata", "nxos", pinnedNetAsCodeOracleVersion)
+	manifestPath := filepath.Join(root, "SHA256SUMS")
+	rawManifest, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("read pinned oracle digest manifest: %v", err)
+	}
+
+	entries := map[string]string{}
+	previousName := ""
+	for lineNumber, line := range strings.Split(strings.TrimSpace(string(rawManifest)), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			t.Fatalf("SHA256SUMS line %d must contain digest and file name, got %q", lineNumber+1, line)
+		}
+		digest, name := fields[0], fields[1]
+		if filepath.Base(name) != name {
+			t.Fatalf("SHA256SUMS line %d contains non-local artifact name %q", lineNumber+1, name)
+		}
+		if previousName != "" && name <= previousName {
+			t.Fatalf("SHA256SUMS entries must be unique and sorted: %q follows %q", name, previousName)
+		}
+		decoded, err := hex.DecodeString(digest)
+		if err != nil || len(decoded) != sha256.Size {
+			t.Fatalf("SHA256SUMS line %d has invalid SHA-256 %q", lineNumber+1, digest)
+		}
+		entries[name] = digest
+		previousName = name
+	}
+
+	directoryEntries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatalf("read pinned oracle directory: %v", err)
+	}
+	var artifacts []string
+	for _, entry := range directoryEntries {
+		if entry.IsDir() || entry.Name() == filepath.Base(manifestPath) {
+			continue
+		}
+		artifacts = append(artifacts, entry.Name())
+	}
+	sort.Strings(artifacts)
+	if len(artifacts) != len(entries) {
+		t.Fatalf("pinned oracle artifact count=%d, digest entries=%d; artifacts=%v", len(artifacts), len(entries), artifacts)
+	}
+	for _, name := range artifacts {
+		want, ok := entries[name]
+		if !ok {
+			t.Fatalf("pinned oracle artifact %q has no SHA256SUMS entry", name)
+		}
+		raw, err := os.ReadFile(filepath.Join(root, name))
+		if err != nil {
+			t.Fatalf("read pinned oracle artifact %q: %v", name, err)
+		}
+		got := fmt.Sprintf("%x", sha256.Sum256(raw))
+		if got != want {
+			t.Fatalf("pinned oracle artifact %q digest changed\nwant %s\ngot  %s", name, want, got)
+		}
+	}
+	for name := range entries {
+		if _, err := os.Stat(filepath.Join(root, name)); err != nil {
+			t.Fatalf("SHA256SUMS references missing oracle artifact %q: %v", name, err)
+		}
+	}
+}
+
 type providerDMEOracle struct {
 	Operations []struct {
 		Resource string         `json:"resource"`
@@ -99,7 +173,7 @@ type goldenContract struct {
 // objects and applies the two ownership families separately. Paths, class
 // ancestry, object identity, attributes, and values must still be identical.
 func TestNetAsCodeProviderGoldenParity(t *testing.T) {
-	root := filepath.Join("testdata", "nxos", "0.3.0")
+	root := filepath.Join("testdata", "nxos", pinnedNetAsCodeOracleVersion)
 	for _, name := range []string{"contract.json", "canonical.yaml", "resolved.json", "provider-plan.json", "provider-dme.json"} {
 		if _, err := os.Stat(filepath.Join(root, name)); err != nil {
 			t.Fatalf("required pinned oracle artifact %s: %v", name, err)

@@ -126,6 +126,7 @@ summarises the current state for the June 2026 release.
 - [Telemetry](telemetry.md) - gNMI subscriptions and OpenTelemetry output
 - [Observability](observability.md) - metrics catalog and topology traces
 - [Security](security.md) - credential injection, TLS, and RBAC
+- [NX-OS Configuration Recovery](nxos-recovery.md) - non-transactional failure handling and family-specific compensation
 - [Production Readiness](production-readiness.md) - merge gates and NX-OS hardening roadmap
 - [API Reference](API.md) - Kubernetes CRDs, device protocols, and VK-side kubelet endpoints
 - [Troubleshooting](troubleshooting.md) - common issues and how to diagnose them
