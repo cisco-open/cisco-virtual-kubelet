@@ -1106,6 +1106,52 @@ func TestCLIBlocksSkippedWhenFamiliesFailed(t *testing.T) {
 	}
 }
 
+func TestCLIBlocksSkippedAfterFailFastResidualDrift(t *testing.T) {
+	w := &fakeWriter{
+		family:   "vlan",
+		ops:      []transport.Op{{Verb: transport.VerbMerge, Path: "/v"}},
+		residual: []transport.Op{{Verb: transport.VerbMerge, Path: "/v"}},
+	}
+	var cliCount int
+	mock := &stubTransport{
+		mutateFn: func(_ transport.TxHandle, ops []transport.Op) error {
+			for _, op := range ops {
+				if op.Verb == transport.VerbCLI {
+					cliCount++
+				}
+			}
+			return nil
+		},
+	}
+	e := &Engine{
+		Policy:    ReconcilePolicy{StopOnRevertFailure: true},
+		Transport: mock,
+		Lookup:    func(string, string) writers.SectionWriter { return w },
+	}
+	res := &intent.ResolvedIntent{
+		DeviceName:      "leaf-01",
+		ManagedFamilies: []string{"vlan"},
+		Configuration:   map[string]any{"vlan": map[string]any{}},
+		DriftPolicy:     configv1alpha1.DriftPolicyRevert,
+		CLIBlocks:       []intent.CLIBlock{{TemplateName: "hostname", CLI: "hostname leaf-01"}},
+	}
+
+	result := e.Reconcile(context.Background(), res)
+
+	if result.Phase != PhaseFailed {
+		t.Fatalf("phase=%s, want Failed", result.Phase)
+	}
+	if result.Err == nil || result.Err.Error() != "drift persisted after revert" {
+		t.Fatalf("err=%v, want drift persisted after revert", result.Err)
+	}
+	if len(result.FamilyStatuses) != 1 || result.FamilyStatuses[0].State != "Drifted" {
+		t.Fatalf("FamilyStatuses=%#v, want residual Drifted family", result.FamilyStatuses)
+	}
+	if cliCount != 0 {
+		t.Fatalf("CLI op ran after fail-fast residual drift (cliCount=%d)", cliCount)
+	}
+}
+
 // ─── Wave 10.3 — atomic replace ─────────────────────────────────────
 
 // TestReconcileAtomicReplaceImpliesPrune pins the engine-boundary

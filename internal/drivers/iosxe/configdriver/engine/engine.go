@@ -520,6 +520,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 		families = reversed
 	}
 	verifiedHashes := map[string]string{}
+	failFastHalted := false
 	for i, family := range families {
 		fs := e.reconcileFamily(ctx, family, res)
 		result.FamilyStatuses = append(result.FamilyStatuses, fs)
@@ -554,6 +555,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 			result.AtomicReplaceOwnedKeys[family] = fs.OwnedKeys
 		}
 		if e.shouldStopAfterFamily(res.DriftPolicy, fs.State) {
+			failFastHalted = true
 			for _, skippedFamily := range families[i+1:] {
 				result.FamilyStatuses = append(result.FamilyStatuses, FamilyStatus{
 					Name:  skippedFamily,
@@ -581,7 +583,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	// In driftPolicy=report mode CLI blocks are surfaced as drift
 	// entries but not applied, matching the read-only semantics
 	// the whole policy enforces.
-	if !anyFailure && res.DriftPolicy != configv1alpha1.DriftPolicyReport {
+	if !anyFailure && !failFastHalted && res.DriftPolicy != configv1alpha1.DriftPolicyReport {
 		for _, block := range res.CLIBlocks {
 			fs := e.applyCLIBlock(ctx, block, res)
 			result.FamilyStatuses = append(result.FamilyStatuses, fs)
