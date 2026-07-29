@@ -1,63 +1,77 @@
 # CLI and Plugin Reference
 
-Cisco Virtual Kubelet exposes two operator surfaces:
+Cisco Virtual Kubelet exposes two command-line surfaces:
 
-- **`kubectl-ciscovk` plugin** — extends `kubectl` with operational commands:
-  run show commands on devices, query live state, tail logs, and validate
-  configuration. This is the day-2 operator tool.
-- **`cisco-vk` binary** — the backend. Two subcommands start the controller
-  manager (`manager`) and the per-device Virtual Kubelet provider (`run`).
-  These run inside the cluster; most operators never invoke them directly.
+- **`kubectl-ciscovk` plugin** — an operator tool for read-only, ad-hoc IOS-XE
+  commands. The current implementation provides `exec`, `version`, and help.
+- **`cisco-vk` binary** — the backend. Its `manager` subcommand starts the
+  controller, while `run` starts one per-device Virtual Kubelet provider.
+  Helm normally manages both invocations.
 
 ---
 
-## Show commands on Cisco devices
+## kubectl-ciscovk plugin
 
-CVK lets you run any IOS-XE `show` command from Kubernetes using the
-`DeviceOperation` CRD. Results are stored in `.status.output` and are visible
-via `kubectl describe` or `kubectl get -o yaml`.
+### Build and install
 
-### kubectl one-liner
-
-```bash
-kubectl ciscovk show cat9300-1 "show version"
-```
-
-This creates a `DeviceOperation` CR, waits for the result, prints the output,
-and cleans up — all in one step.
-
-### Common show command examples
+Prebuilt plugin binaries are not currently attached to GitHub releases. Build
+the plugin from a release checkout and place it on your `PATH` using the
+standard `kubectl-<name>` filename:
 
 ```bash
-# IOS-XE version and uptime
-kubectl ciscovk show cat9300-1 "show version"
+git clone https://github.com/cisco-open/cisco-virtual-kubelet.git
+cd cisco-virtual-kubelet
+git checkout "$(git describe --tags --abbrev=0)"
 
-# Interface status summary
-kubectl ciscovk show cat9300-1 "show interfaces status"
-
-# IP routing table
-kubectl ciscovk show cat9300-1 "show ip route"
-
-# BGP neighbor summary
-kubectl ciscovk show cat9300-1 "show bgp summary"
-
-# CDP neighbors
-kubectl ciscovk show cat9300-1 "show cdp neighbors detail"
-
-# Running configuration
-kubectl ciscovk show cat9300-1 "show running-config"
-
-# App-hosting installed applications
-kubectl ciscovk show cat9300-1 "show app-hosting list"
-
-# Platform environment (sensors, fans, power)
-kubectl ciscovk show cat9300-1 "show environment all"
+go build -o kubectl-ciscovk ./tools/kubectl-ciscovk
+mkdir -p "$HOME/.local/bin"
+install -m 0755 kubectl-ciscovk "$HOME/.local/bin/kubectl-ciscovk"
 ```
 
-### DeviceOperation CR — direct manifest
+Ensure `$HOME/.local/bin` is on your `PATH`, then verify the plugin:
 
-For automated pipelines or when `kubectl ciscovk show` is not available,
-create the CR directly:
+```bash
+kubectl ciscovk version
+kubectl ciscovk --help
+```
+
+The plugin invokes the `kubectl` binary from `PATH`, so it inherits
+`KUBECONFIG` and the active context. It does not implement its own `--context`
+flag. Select the context with `kubectl config use-context` or `KUBECONFIG`
+before invoking it.
+
+### Execute a read-only IOS-XE command
+
+`exec` locates the per-device VK pod, opens a local `kubectl port-forward` to
+its admin endpoint, submits the command, prints the result, and closes the
+tunnel:
+
+```bash
+kubectl ciscovk exec cat9k-smoke -n cvk-system -- show version
+kubectl ciscovk exec cat9k-smoke -n cvk-system \
+  -- "show running-config | section interface"
+```
+
+The server applies its read-only command allowlist, and the plugin separately
+rejects known destructive command prefixes. `exec` is currently IOS-XE-only.
+It does not provide `show`, `nodes`, `devices`, `logs`, or `config`
+subcommands.
+
+Flags for `exec`:
+
+| Flag | Default | Description |
+|---|---|---|
+| `-n`, `--namespace` | current namespace | Namespace containing the per-device VK pod. |
+| `--allow-secrets` | `false` | Reserved for a future SAR-gated path; currently a no-op on the server. |
+| `--truncate-bytes` | `65536` | Maximum output bytes per command; `0` disables truncation. |
+| `--port` | random free port | Local port used for `kubectl port-forward`. |
+| `--timeout` | `30s` | Overall command timeout. |
+| `--kubectl` | `kubectl` from `PATH` | Alternate path to the `kubectl` executable. |
+
+### DeviceOperation CR — auditable asynchronous path
+
+For automation that needs a durable Kubernetes object and status, create a
+`DeviceOperation` directly:
 
 ```yaml
 apiVersion: ops.cisco.vk/v1alpha1
@@ -68,9 +82,11 @@ metadata:
 spec:
   deviceRef:
     name: cat9300-1
-  kind: ShowCommand
-  showCommand:
-    command: "show version"
+  operation:
+    kind: ShowCommand
+    commands:
+      - show version
+  ttlSecondsAfterFinished: 300
 ```
 
 ```bash
@@ -78,104 +94,14 @@ kubectl apply -f show-version.yaml
 kubectl get deviceoperation show-version-cat9300-1 -w
 
 # Once phase is Succeeded:
-kubectl get deviceoperation show-version-cat9300-1 -o jsonpath='{.status.output}'
+kubectl get deviceoperation show-version-cat9300-1 \
+  -o jsonpath='{.status.outputs[0].output}{"\n"}'
 ```
 
-### Config diff — compare intent vs device
-
-Check whether the device has drifted from its declared `IOSXEConfig` intent:
-
-```yaml
-apiVersion: ops.cisco.vk/v1alpha1
-kind: DeviceOperation
-metadata:
-  name: diff-cat9300-1-network
-  namespace: default
-spec:
-  deviceRef:
-    name: cat9300-1
-  kind: ConfigDiff
-  configDiff:
-    configRef:
-      name: cat9300-1-network
-```
-
-```bash
-kubectl apply -f config-diff.yaml
-kubectl describe deviceoperation diff-cat9300-1-network
-```
-
----
-
-## kubectl-ciscovk plugin
-
-### Installation
-
-Download the `kubectl-ciscovk` binary for your platform and place it anywhere
-in your `$PATH` alongside `kubectl`:
-
-```bash
-# macOS (arm64)
-curl -Lo kubectl-ciscovk https://github.com/cisco-open/cisco-virtual-kubelet/releases/latest/download/kubectl-ciscovk-darwin-arm64
-chmod +x kubectl-ciscovk
-sudo mv kubectl-ciscovk /usr/local/bin/
-
-# macOS (amd64)
-curl -Lo kubectl-ciscovk https://github.com/cisco-open/cisco-virtual-kubelet/releases/latest/download/kubectl-ciscovk-darwin-amd64
-chmod +x kubectl-ciscovk
-sudo mv kubectl-ciscovk /usr/local/bin/
-
-# Linux (amd64)
-curl -Lo kubectl-ciscovk https://github.com/cisco-open/cisco-virtual-kubelet/releases/latest/download/kubectl-ciscovk-linux-amd64
-chmod +x kubectl-ciscovk
-sudo mv kubectl-ciscovk /usr/local/bin/
-```
-
-Verify:
-
-```bash
-kubectl ciscovk --help
-```
-
-!!! note
-    The plugin uses the same `KUBECONFIG` and active context as `kubectl`.
-    Switch clusters or namespaces the same way you would for any `kubectl`
-    command: `--context`, `--namespace`, or by setting `KUBECONFIG`.
-
-### Fleet and node commands
-
-```bash
-# List all virtual (CiscoDevice-backed) nodes with status
-kubectl ciscovk nodes
-
-NAME          STATUS   DRIVER   ADDRESS          AGE
-cat9300-1     Ready    iosxe    198.51.100.101   4d
-cat9300-2     Ready    iosxe    198.51.100.102   4d
-cat9000-4     Ready    iosxe    198.51.100.103   2d
-
-# Live phase for all CiscoDevice CRs
-kubectl ciscovk devices
-
-NAME          PHASE     VK-POD                    AGE
-cat9300-1     Running   cisco-vk-cat9300-1-xyz    4d
-cat9300-2     Running   cisco-vk-cat9300-2-abc    4d
-
-# Tail the VK pod logs for a specific device
-kubectl ciscovk logs cat9300-1
-
-# Follow logs (like kubectl logs -f)
-kubectl ciscovk logs cat9300-1 -f
-```
-
-### Configuration commands
-
-```bash
-# Preview the fully-resolved IOSXEConfig intent before applying
-kubectl ciscovk config preview cat9300-1-network
-
-# Lint a local IOSXEConfig YAML against OPA policies before applying
-kubectl ciscovk config lint ./my-network-config.yaml
-```
+`ConfigDiff`, packet-capture reads, and read-only gNOI operation kinds use the
+same CRD with operation-specific inputs. See the
+[Operations Runbook](operations.md#deviceoperation) for their current schema,
+status, RBAC, and maturity.
 
 ---
 
@@ -183,32 +109,36 @@ kubectl ciscovk config lint ./my-network-config.yaml
 
 `cisco-vk run` starts the Virtual Kubelet provider for a single device. The
 manager creates one pod per `CiscoDevice` CR running this command; direct
-invocation is only needed for local development.
+invocation is only needed for local development. Generic runtime flags support
+both `XE` and `NXOS`, selected by `device.driver`; IOS-XE-only settings are
+called out below. Controller-managed pods pass the `CiscoDevice` name
+explicitly as `--nodename`.
 
 ### Flags
 
 | Flag | Env | Default | Description |
 |---|---|---|---|
-| `-c, --config` | — | (required) | Path to device configuration YAML. |
-| `--nodename` | `VK_NODE_NAME` | from config | Kubernetes virtual node name to register. |
+| `-c, --config` | — | `/etc/virtual-kubelet/config.yaml` | Path to device configuration YAML. |
+| `--nodename` | `VKUBELET_NODE_NAME` | `cisco-vk-<device-address>` | Kubernetes virtual node name; falls back to `cisco-virtual-kubelet` when no address is available. |
 | `--kubeconfig` | `KUBECONFIG` | in-cluster | Path to kubeconfig. Omit inside the cluster. |
-| `--log-level` | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error`. |
-| `--tls-cert-file` | — | auto-generated | TLS certificate for the kubelet HTTPS listener. |
-| `--tls-key-file` | — | auto-generated | TLS private key for the kubelet HTTPS listener. |
-| `--enable-write-class-gnoi` | `CISCO_VK_ENABLE_WRITE_CLASS_GNOI` | `false` | Enable `IOSXEOperationalAction` reconciliation (reboot, file ops, factory reset). |
-| `--enable-iosxesoftwareupgrade` | `CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE` | `false` | Enable `IOSXESoftwareUpgrade` reconciliation. |
+| `--log-level` | `LOG_LEVEL` | `info` | Resolution is flag, environment, `device.logLevel`, then `info`; accepts `debug`, `info`, `warn`/`warning`, or `error`. |
+| `--tls-cert-file` | — | `/etc/virtual-kubelet/tls/tls.crt` | Kubelet HTTPS certificate; when both configured files are absent, a self-signed pair is generated under `/var/lib/virtual-kubelet/tls/`. |
+| `--tls-key-file` | — | `/etc/virtual-kubelet/tls/tls.key` | Kubelet HTTPS private key; exactly one certificate/key file being present is an error. |
+| `--enable-write-class-gnoi` | `CISCO_VK_ENABLE_WRITE_CLASS_GNOI` | `false` | IOS-XE only: enable `IOSXEOperationalAction` reconciliation (reboot, file ops, factory reset). |
+| `--enable-iosxesoftwareupgrade` | `CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE` | `false` | IOS-XE only: enable `IOSXESoftwareUpgrade` reconciliation. |
 
 ### Additional environment variables
 
 | Variable | Purpose |
 |---|---|
-| `VK_DEVICE_PASSWORD` | Device password. Injected from the `credentialSecretRef` Secret; never written to the ConfigMap. |
-| `CISCO_VK_GNOI_INSECURE` | `1` to use the insecure gNxI listener. |
-| `CISCO_VK_GNOI_PORT` | Override gNOI/gNMI port. Inferred as `50052` (insecure) or `9339` (TLS) when unset. |
-| `CISCO_VK_GNOI_DISABLED` | `1` to skip gNOI client construction entirely. |
-| `CONFIG_YANG_VALIDATION` | Config-driver YANG validation: `disabled` (default), `warn`, or `strict`. |
+| `VK_DEVICE_PASSWORD` | Non-empty value overrides the config-file password. With `credentialSecretRef`, the controller injects it through `secretKeyRef` and keeps it out of the ConfigMap. |
+| `CISCO_VK_GNOI_INSECURE` | IOS-XE only: `1` or `true` selects the insecure gNOI listener; it does not change REST/config TLS. |
+| `CISCO_VK_GNOI_PORT` | IOS-XE only: override the gNOI port. Defaults to `50052` (insecure) or `9339` (TLS), unless a nonstandard device port is configured. |
+| `CISCO_VK_GNOI_DISABLED` | IOS-XE only: `1` or `true` skips gNOI client construction entirely. |
+| `CONFIG_YANG_VALIDATION` | IOS-XE config-driver YANG validation: `disabled` (default), `warn`, or `strict`. NX-OS always applies its structural/DME validation. |
 
-Example one-liners (useful for development or a single ad-hoc run):
+IOS-XE example one-liners for development or a single ad-hoc run are shown
+below. Outside a cluster, also pass `--kubeconfig` or set a valid `KUBECONFIG`.
 
 ```bash
 # Use the insecure gNxI listener (lab/dev without TLS):
@@ -242,6 +172,13 @@ resources and creates a ConfigMap + Deployment for each one. Also runs the
 | `--log-level` | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error`. |
 | `--controller-info-log-rate-limit` | — | `100` | Max info log lines/sec from the reconciler. |
 
+The `--vk-image` value above is the binary's direct-invocation fallback. The
+Helm chart always passes an explicit value resolved from `image`/`vkImage`; its
+published default is
+`ghcr.io/cisco-open/cisco-virtual-kubelet:<chart-appVersion>`. When starting
+`cisco-vk manager` outside Helm, set `--vk-image` explicitly to the image tag
+you intend each per-device VK Deployment to run.
+
 ---
 
 ## Helm chart values
@@ -249,29 +186,31 @@ resources and creates a ConfigMap + Deployment for each one. Also runs the
 Install or upgrade with the bundled chart:
 
 ```bash
-helm upgrade --install cisco-vk ./charts/cisco-virtual-kubelet \
-  --namespace cisco-vk \
+helm upgrade --install cvk ./charts/cisco-virtual-kubelet \
+  --namespace cvk-system \
   --create-namespace \
-  --set image.tag=v1.2.0 \
-  --set manager.leaderElect=true \
-  --set gnoi.enableSoftwareUpgrade=false
+  --set controller.leaderElect=true
 ```
+
+The image tag defaults to the chart's `appVersion`. Use `controllerImage` or
+`vkImage` only when the controller and per-device VK pods must run different
+images.
 
 Key values:
 
 ```yaml
 image:
-  repository: ghcr.io/cisco/virtual-kubelet-cisco
-  tag: latest
+  repository: ghcr.io/cisco-open/cisco-virtual-kubelet
+  tag: "" # empty selects the chart appVersion
   pullPolicy: IfNotPresent
 
-manager:
+controller:
   leaderElect: false
   metricsBindAddress: ":8080"
   healthProbeBindAddress: ":8081"
-  enableConfigAggregator: false
-  controllerInfoLogRateLimit: 100
-  logLevel: info
+
+aggregator:
+  enabled: false
 
 gnoi:
   insecure: false
