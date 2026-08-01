@@ -140,10 +140,13 @@ jobs:
           path: sbom.cdx.json
           retention-days: 90
 
+      # action-gh-release publishes an existing draft unless draft is explicit.
+      # Keep publication separate from artifact generation and verification.
       - name: Attach SBOM to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          draft: true
           files: sbom.cdx.json
 
       # Advisory vulnerability scan, runs last and never blocks the signed
