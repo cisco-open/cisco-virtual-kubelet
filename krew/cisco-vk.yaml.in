@@ -1,0 +1,45 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: cisco-vk
+spec:
+  version: "${KREW_VERSION}"
+  homepage: https://github.com/cisco-open/cisco-virtual-kubelet
+  shortDescription: Run read-only IOS-XE commands through CVK
+  description: |
+    Runs read-only IOS-XE commands through a Cisco Virtual Kubelet
+    per-device pod. The plugin discovers the provider pod and uses
+    kubectl port-forward to reach its local administrative endpoint.
+  caveats: |
+    kubectl must be installed and available on PATH. The active Kubernetes
+    identity needs permission to get/list pods and create pods/portforward in
+    the target namespace. exec currently supports per-device IOS-XE deployments.
+  platforms:
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: amd64
+    uri: "${DARWIN_AMD64_URI}"
+    sha256: "${DARWIN_AMD64_SHA256}"
+    bin: kubectl-ciscovk
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: arm64
+    uri: "${DARWIN_ARM64_URI}"
+    sha256: "${DARWIN_ARM64_SHA256}"
+    bin: kubectl-ciscovk
+  - selector:
+      matchLabels:
+        os: linux
+        arch: amd64
+    uri: "${LINUX_AMD64_URI}"
+    sha256: "${LINUX_AMD64_SHA256}"
+    bin: kubectl-ciscovk
+  - selector:
+      matchLabels:
+        os: linux
+        arch: arm64
+    uri: "${LINUX_ARM64_URI}"
+    sha256: "${LINUX_ARM64_SHA256}"
+    bin: kubectl-ciscovk
