@@ -16,7 +16,9 @@
 
 # Build variables
 BINARY_NAME=cisco-vk
+PLUGIN_BINARY_NAME=kubectl-ciscovk
 VERSION?=1.0.0
+PLUGIN_VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "devel")
 BUILD_TIME=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 YANG_MODELS_URL=https://github.com/YangModels/yang.git
@@ -49,11 +51,13 @@ CONTROLLER_GEN?=$(GO_BIN) run sigs.k8s.io/controller-tools/cmd/controller-gen@v0
 
 # Go build flags
 LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT)"
+PLUGIN_LDFLAGS=-ldflags "-s -w -X main.Version=$(PLUGIN_VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT)"
 
 # Directories
 BIN_DIR=bin
 PKG_DIR=pkg
 CMD_DIR=cmd/cisco-vk
+PLUGIN_CMD_DIR=tools/kubectl-ciscovk
 
 # Installation directories
 PREFIX?=/usr/local
@@ -61,7 +65,7 @@ INSTALL_DIR=$(PREFIX)/bin
 CONFIG_DIR=/etc/cisco-vk
 SYSTEMD_DIR=/etc/systemd/system
 
-.PHONY: all build clean install uninstall test test-envtest lint fmt deps help generate manifests crd-gen deepcopy-gen rbac-gen helm-sync-crds config-lint netascode-migrate config-docs yang-sync migrate-tool parity-matrix check-parity-matrix check-nxos-oracle vendor-yang apphosting-ygot-gen ygot-validate-gen
+.PHONY: all build build-plugin clean install uninstall test test-envtest lint fmt deps help generate manifests crd-gen deepcopy-gen rbac-gen helm-sync-crds config-lint netascode-migrate config-docs yang-sync migrate-tool parity-matrix check-parity-matrix check-nxos-oracle vendor-yang apphosting-ygot-gen ygot-validate-gen
 
 all: build
 
@@ -72,6 +76,12 @@ build: deps ## Build the binary
 	@mkdir -p $(BIN_DIR)
 	$(GO_BIN) build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME) ./$(CMD_DIR)
 	@echo "Binary built: $(BIN_DIR)/$(BINARY_NAME)"
+
+build-plugin: ## Build kubectl-ciscovk with version metadata
+	@echo "Building $(PLUGIN_BINARY_NAME)..."
+	@mkdir -p $(BIN_DIR)
+	$(GO_BIN) build $(PLUGIN_LDFLAGS) -o $(BIN_DIR)/$(PLUGIN_BINARY_NAME) ./$(PLUGIN_CMD_DIR)
+	@echo "Plugin built: $(BIN_DIR)/$(PLUGIN_BINARY_NAME)"
 
 build-linux: deps
 	@echo "Building $(BINARY_NAME) for Linux..."

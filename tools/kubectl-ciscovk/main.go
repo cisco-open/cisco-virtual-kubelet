@@ -35,6 +35,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -45,10 +46,25 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
+
+// Version, GitCommit, and BuildTime are populated by release builds with
+// -ldflags. Development builds deliberately identify themselves as such
+// instead of reporting a stale release version.
+var (
+	Version   = "devel"
+	GitCommit = "unknown"
+	BuildTime = "unknown"
+)
+
+var commandContext = exec.CommandContext
+
+const kubectlWaitDelay = 2 * time.Second
 
 func main() {
 	if len(os.Args) < 2 {
@@ -64,7 +80,7 @@ func main() {
 	case "-h", "--help", "help":
 		usage()
 	case "version":
-		fmt.Println("kubectl-ciscovk v0.1.0")
+		printVersion(os.Stdout)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown subcommand %q\n\n", os.Args[1])
 		usage()
@@ -93,7 +109,13 @@ Flags for exec:
   --truncate-bytes N       cap each command's output (default 64 KiB; 0 disables)
   --port N                 local port for port-forward (default: random free)
   --timeout DURATION       overall timeout (default 30s)
+  --context NAME           kubeconfig context to use
+  --kubeconfig PATH        path to the kubeconfig file
   --kubectl PATH           path to kubectl binary (default: from PATH)`)
+}
+
+func printVersion(w io.Writer) {
+	fmt.Fprintf(w, "kubectl-ciscovk %s (commit=%s, built=%s)\n", Version, GitCommit, BuildTime)
 }
 
 // execFlags is the parsed argv for the `exec` subcommand. Hand-
@@ -107,6 +129,8 @@ type execFlags struct {
 	localPort    int
 	timeout      time.Duration
 	kubectlBin   string
+	kubeContext  string
+	kubeconfig   string
 	commands     []string
 }
 
@@ -140,7 +164,7 @@ func parseExecArgs(argv []string) (*execFlags, error) {
 			if i >= len(argv) {
 				return nil, errors.New("--truncate-bytes requires a value")
 			}
-			n, err := parsePositiveInt(argv[i])
+			n, err := parseNonNegativeInt(argv[i])
 			if err != nil {
 				return nil, fmt.Errorf("--truncate-bytes: %w", err)
 			}
@@ -150,7 +174,7 @@ func parseExecArgs(argv []string) (*execFlags, error) {
 			if i >= len(argv) {
 				return nil, errors.New("--port requires a value")
 			}
-			n, err := parsePositiveInt(argv[i])
+			n, err := parseNonNegativeInt(argv[i])
 			if err != nil {
 				return nil, fmt.Errorf("--port: %w", err)
 			}
@@ -164,6 +188,9 @@ func parseExecArgs(argv []string) (*execFlags, error) {
 			if err != nil {
 				return nil, fmt.Errorf("--timeout: %w", err)
 			}
+			if d <= 0 {
+				return nil, errors.New("--timeout must be greater than zero")
+			}
 			f.timeout = d
 		case "--kubectl":
 			i++
@@ -171,6 +198,18 @@ func parseExecArgs(argv []string) (*execFlags, error) {
 				return nil, errors.New("--kubectl requires a path")
 			}
 			f.kubectlBin = argv[i]
+		case "--context":
+			i++
+			if i >= len(argv) {
+				return nil, errors.New("--context requires a name")
+			}
+			f.kubeContext = argv[i]
+		case "--kubeconfig":
+			i++
+			if i >= len(argv) {
+				return nil, errors.New("--kubeconfig requires a path")
+			}
+			f.kubeconfig = argv[i]
 		default:
 			if f.device == "" {
 				f.device = a
@@ -182,18 +221,15 @@ func parseExecArgs(argv []string) (*execFlags, error) {
 	return f, validateExec(f)
 }
 
-func parsePositiveInt(s string) (int, error) {
+func parseNonNegativeInt(s string) (int, error) {
 	if s == "" {
 		return 0, errors.New("empty")
 	}
-	n := 0
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return 0, fmt.Errorf("not a positive integer: %q", s)
-		}
-		n = n*10 + int(c-'0')
+	n, err := strconv.ParseUint(s, 10, 31)
+	if err != nil {
+		return 0, fmt.Errorf("not a non-negative integer: %q", s)
 	}
-	return n, nil
+	return int(n), nil
 }
 
 func validateExec(f *execFlags) error {
@@ -203,6 +239,9 @@ func validateExec(f *execFlags) error {
 	if len(f.commands) == 0 {
 		return errors.New("missing command after `--`; example: kubectl ciscovk exec cat9k-smoke -- show ip route")
 	}
+	if f.localPort > 65535 {
+		return fmt.Errorf("--port must be between 0 and 65535, got %d", f.localPort)
+	}
 	// Defence-in-depth: refuse known-destructive commands explicitly.
 	// The admin server is read-only by design (cli-exec, not
 	// cli-config-data), but a typo on the device side is one fewer
@@ -210,6 +249,9 @@ func validateExec(f *execFlags) error {
 	// RFC's destructive paths land on a different CRD and code path.
 	for _, cmd := range f.commands {
 		head := strings.ToLower(strings.TrimSpace(cmd))
+		if head == "" {
+			return errors.New("command after `--` must not be empty")
+		}
 		for _, banned := range []string{"reload", "write erase", "delete flash:", "format flash:", "clear "} {
 			if strings.HasPrefix(head, banned) {
 				return fmt.Errorf("destructive command %q is not supported by `exec`; see device-operations-rfc.md for IOSXEMaintenance / IOSXEDeviceOp", cmd)
@@ -220,6 +262,10 @@ func validateExec(f *execFlags) error {
 }
 
 func runExec(argv []string) error {
+	return runExecWithIO(argv, os.Stdout, os.Stderr)
+}
+
+func runExecWithIO(argv []string, stdout, stderr io.Writer) error {
 	f, err := parseExecArgs(argv)
 	if err != nil {
 		return err
@@ -229,15 +275,12 @@ func runExec(argv []string) error {
 	ctx, cancelTO := context.WithTimeout(ctx, f.timeout)
 	defer cancelTO()
 
-	pfPort, kubectlCmd, err := startPortForward(ctx, f)
+	pfPort, kubectlCmd, err := startPortForward(ctx, f, stderr)
 	if err != nil {
 		return fmt.Errorf("port-forward: %w", err)
 	}
 	defer func() {
-		if kubectlCmd != nil && kubectlCmd.Process != nil {
-			_ = kubectlCmd.Process.Signal(syscall.SIGTERM)
-			_, _ = kubectlCmd.Process.Wait()
-		}
+		stopProcess(kubectlCmd)
 	}()
 
 	// The /healthz endpoint is the canary for "kubectl port-forward
@@ -291,24 +334,24 @@ func runExec(argv []string) error {
 
 	// Header line for fleet log clarity. Operators piping the output
 	// to grep / less appreciate the device + transport context.
-	fmt.Printf("# device=%s transport=%s captured=%s\n",
+	fmt.Fprintf(stdout, "# device=%s transport=%s captured=%s\n",
 		parsed.Device, parsed.Transport, parsed.CapturedAt)
 
 	if parsed.TransportError != "" {
-		fmt.Fprintf(os.Stderr, "# transport-error: %s\n", parsed.TransportError)
+		fmt.Fprintf(stderr, "# transport-error: %s\n", parsed.TransportError)
 	}
 
 	for i, r := range parsed.Results {
 		if i > 0 || len(parsed.Results) > 1 {
-			fmt.Printf("\n# ─── %s ──────────────────────────────\n", r.Command)
+			fmt.Fprintf(stdout, "\n# ─── %s ──────────────────────────────\n", r.Command)
 		}
 		if r.Err != "" {
-			fmt.Fprintf(os.Stderr, "# error: %s\n", r.Err)
+			fmt.Fprintf(stderr, "# error: %s\n", r.Err)
 			continue
 		}
-		fmt.Println(r.Output)
+		fmt.Fprintln(stdout, r.Output)
 		if r.Truncated {
-			fmt.Fprintln(os.Stderr, "# (output truncated by --truncate-bytes)")
+			fmt.Fprintln(stderr, "# (output truncated by --truncate-bytes)")
 		}
 	}
 	return nil
@@ -321,28 +364,35 @@ func runExec(argv []string) error {
 // We use kubectl's pod-label selector (app.kubernetes.io/instance=
 // <device>) so the plugin doesn't have to know the deployment-
 // generated pod name.
-func startPortForward(ctx context.Context, f *execFlags) (int, *exec.Cmd, error) {
+func startPortForward(ctx context.Context, f *execFlags, liveStderr io.Writer) (int, *exec.Cmd, error) {
+	kubectlPath, err := exec.LookPath(f.kubectlBin)
+	if err != nil {
+		return 0, nil, fmt.Errorf("kubectl executable %q not found: %w", f.kubectlBin, err)
+	}
+
 	port := f.localPort
 	if port == 0 {
-		port = 0 // kubectl picks; we discover by parsing its stderr
+		port = 0 // kubectl picks; we discover by parsing its stdout
 	}
 	// kubectl port-forward takes a concrete pod NAME, not a label
 	// selector. Resolve the pod first via `kubectl get pod -l
 	// app.kubernetes.io/instance=<device> -o name`. The selector
 	// is the canonical label the controller stamps on per-device
-	// pods so this works in both per-pod-kubelet and aggregator
-	// topologies.
-	getArgs := []string{"get", "pod"}
+	// pods in the supported per-device deployment topology.
+	getArgs := kubectlArgs(f, "get", "pod")
 	if f.namespace != "" {
 		getArgs = append(getArgs, "-n", f.namespace)
 	}
 	getArgs = append(getArgs,
 		"-l", "app.kubernetes.io/instance="+f.device,
 		"-o", "jsonpath={.items[0].metadata.name}")
-	getCmd := exec.CommandContext(ctx, f.kubectlBin, getArgs...)
+	getCmd := commandContext(ctx, kubectlPath, getArgs...)
+	getCmd.WaitDelay = kubectlWaitDelay
+	var getStderr bytes.Buffer
+	getCmd.Stderr = &getStderr
 	podOut, err := getCmd.Output()
 	if err != nil {
-		return 0, nil, fmt.Errorf("resolve pod for device %q: %w", f.device, err)
+		return 0, nil, commandError(fmt.Sprintf("resolve pod for device %q", f.device), err, getStderr.String())
 	}
 	podName := strings.TrimSpace(string(podOut))
 	if podName == "" {
@@ -350,7 +400,7 @@ func startPortForward(ctx context.Context, f *execFlags) (int, *exec.Cmd, error)
 			f.device, f.device)
 	}
 
-	args := []string{"port-forward"}
+	args := kubectlArgs(f, "port-forward")
 	if f.namespace != "" {
 		args = append(args, "-n", f.namespace)
 	}
@@ -360,12 +410,15 @@ func startPortForward(ctx context.Context, f *execFlags) (int, *exec.Cmd, error)
 	} else {
 		args = append(args, fmt.Sprintf("%d:8082", port))
 	}
-	cmd := exec.CommandContext(ctx, f.kubectlBin, args...)
+	cmd := commandContext(ctx, kubectlPath, args...)
+	// Bound Cmd.Wait even if a descendant inherits the port-forward pipes.
+	cmd.WaitDelay = kubectlWaitDelay
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return 0, nil, err
 	}
-	cmd.Stderr = os.Stderr
+	diagnostics := newDeferredDiagnostics(liveStderr)
+	cmd.Stderr = diagnostics
 	if err := cmd.Start(); err != nil {
 		return 0, nil, err
 	}
@@ -373,37 +426,114 @@ func startPortForward(ctx context.Context, f *execFlags) (int, *exec.Cmd, error)
 	// on stdout when ready. Parse the local port. Bound the wait
 	// to context — if kubectl never speaks, we surface the issue
 	// rather than hanging.
-	resolved := make(chan int, 1)
-	errCh := make(chan error, 1)
+	type portForwardResult struct {
+		port int
+		err  error
+	}
+	resultCh := make(chan portForwardResult, 1)
 	go func() {
-		defer close(resolved)
-		defer close(errCh)
-		buf := make([]byte, 4096)
-		for {
-			n, err := stdout.Read(buf)
-			if n > 0 {
-				if p := parseForwardingPort(string(buf[:n])); p > 0 {
-					resolved <- p
-					_, _ = io.Copy(io.Discard, stdout) // drain rest
-					return
-				}
-			}
-			if err != nil {
-				errCh <- err
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			if p := parseForwardingPort(scanner.Text()); p > 0 {
+				resultCh <- portForwardResult{port: p}
+				_, _ = io.Copy(io.Discard, stdout) // drain until the process exits
 				return
 			}
 		}
+		if err := scanner.Err(); err != nil {
+			resultCh <- portForwardResult{err: err}
+			return
+		}
+		resultCh <- portForwardResult{err: io.EOF}
 	}()
 	select {
-	case p := <-resolved:
-		return p, cmd, nil
-	case err := <-errCh:
-		_ = cmd.Process.Kill()
-		return 0, nil, fmt.Errorf("kubectl port-forward exited before binding: %v", err)
+	case result := <-resultCh:
+		if result.err == nil {
+			diagnostics.startStreaming()
+			return result.port, cmd, nil
+		}
+		stopProcess(cmd)
+		return 0, nil, commandError("kubectl port-forward exited before binding", result.err, diagnostics.String())
 	case <-ctx.Done():
-		_ = cmd.Process.Kill()
-		return 0, nil, ctx.Err()
+		stopProcess(cmd)
+		return 0, nil, commandError("kubectl port-forward", ctx.Err(), diagnostics.String())
 	}
+}
+
+// deferredDiagnostics keeps startup errors available for the returned error
+// without printing them twice. Once port-forward is ready, buffered warnings
+// are flushed and later diagnostics stream to the caller in real time.
+type deferredDiagnostics struct {
+	mu        sync.Mutex
+	dst       io.Writer
+	buffer    bytes.Buffer
+	streaming bool
+}
+
+func newDeferredDiagnostics(dst io.Writer) *deferredDiagnostics {
+	if dst == nil {
+		dst = io.Discard
+	}
+	return &deferredDiagnostics{dst: dst}
+}
+
+func (d *deferredDiagnostics) Write(p []byte) (int, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.streaming {
+		_, _ = d.dst.Write(p)
+		return len(p), nil
+	}
+	return d.buffer.Write(p)
+}
+
+func (d *deferredDiagnostics) startStreaming() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.streaming {
+		return
+	}
+	d.streaming = true
+	if d.buffer.Len() > 0 {
+		_, _ = d.dst.Write(d.buffer.Bytes())
+		d.buffer.Reset()
+	}
+}
+
+func (d *deferredDiagnostics) String() string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.buffer.String()
+}
+
+func kubectlArgs(f *execFlags, args ...string) []string {
+	global := make([]string, 0, 4+len(args))
+	if f.kubeconfig != "" {
+		global = append(global, "--kubeconfig", f.kubeconfig)
+	}
+	if f.kubeContext != "" {
+		global = append(global, "--context", f.kubeContext)
+	}
+	return append(global, args...)
+}
+
+func commandError(action string, err error, stderr string) error {
+	if detail := strings.TrimSpace(stderr); detail != "" {
+		return fmt.Errorf("%s: %w: %s", action, err, detail)
+	}
+	return fmt.Errorf("%s: %w", action, err)
+}
+
+// stopProcess terminates the disposable kubectl port-forward subprocess and
+// reaps it through exec.Cmd. Process.Kill is portable across supported
+// platforms, unlike sending SIGTERM. startPortForward sets Cmd.WaitDelay so
+// inherited pipes cannot leave this cleanup blocked indefinitely.
+func stopProcess(cmd *exec.Cmd) {
+	if cmd == nil || cmd.Process == nil {
+		return
+	}
+	_ = cmd.Process.Kill()
+	_ = cmd.Wait()
 }
 
 // parseForwardingPort extracts NNNNN from kubectl's "Forwarding
@@ -430,25 +560,31 @@ func parseForwardingPort(s string) int {
 func waitForHealthz(ctx context.Context, port int) error {
 	url := fmt.Sprintf("http://127.0.0.1:%d/healthz", port)
 	deadline := time.Now().Add(5 * time.Second)
+	client := &http.Client{Timeout: 750 * time.Millisecond}
 	var lastErr error
 	for time.Now().Before(deadline) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return err
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			lastErr = err
+		} else {
+			_ = resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				return nil
+			}
+			lastErr = fmt.Errorf("healthz returned %s", resp.Status)
+		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		default:
+		case <-time.After(150 * time.Millisecond):
 		}
-		resp, err := http.Get(url)
-		if err != nil {
-			lastErr = err
-			time.Sleep(150 * time.Millisecond)
-			continue
-		}
-		_ = resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			return nil
-		}
-		lastErr = fmt.Errorf("healthz returned %s", resp.Status)
-		time.Sleep(150 * time.Millisecond)
 	}
 	if lastErr == nil {
 		lastErr = errors.New("timed out")
