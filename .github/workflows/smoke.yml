@@ -49,6 +49,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
@@ -79,6 +81,38 @@ jobs:
             exit 1
           fi
           echo "gofmt clean."
+
+      - name: kubectl-ciscovk release packaging gate
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover \
+            -s .github/scripts \
+            -p 'test_package_kubectl_ciscovk.py' \
+            -v
+          release_commit="$(git rev-parse HEAD)"
+          source_date_epoch="$(git show -s --format=%ct "$release_commit")"
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          for attempt in first second; do
+            python3 .github/scripts/package_kubectl_ciscovk.py package \
+              --version v0.0.0-ci \
+              --commit "$release_commit" \
+              --source-date-epoch "$source_date_epoch" \
+              --dist-dir "$work/$attempt/dist" \
+              --build-dir "$work/$attempt/build"
+            python3 .github/scripts/package_kubectl_ciscovk.py checksums \
+              --version v0.0.0-ci \
+              --dist-dir "$work/$attempt/dist"
+          done
+          diff -r "$work/first/dist" "$work/second/dist"
+          python3 .github/scripts/package_kubectl_ciscovk.py verify \
+            --version v0.0.0-ci \
+            --commit "$release_commit" \
+            --source-date-epoch "$source_date_epoch" \
+            --target-os linux \
+            --target-arch amd64 \
+            --dist-dir "$work/first/dist" \
+            --execute
 
       - name: Unit tests
         run: go test -race -count=1 ./...
