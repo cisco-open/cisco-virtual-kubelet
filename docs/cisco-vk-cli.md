@@ -15,17 +15,16 @@ Cisco Virtual Kubelet exposes two command-line surfaces:
 ### Build and install
 
 Prebuilt plugin binaries are not currently attached to GitHub releases. Build
-the plugin from a release checkout and place it on your `PATH` using the
+the plugin from the current source tree and place it on your `PATH` using the
 standard `kubectl-<name>` filename:
 
 ```bash
 git clone https://github.com/cisco-open/cisco-virtual-kubelet.git
 cd cisco-virtual-kubelet
-git checkout "$(git describe --tags --abbrev=0)"
 
-go build -o kubectl-ciscovk ./tools/kubectl-ciscovk
+make build-plugin
 mkdir -p "$HOME/.local/bin"
-install -m 0755 kubectl-ciscovk "$HOME/.local/bin/kubectl-ciscovk"
+install -m 0755 bin/kubectl-ciscovk "$HOME/.local/bin/kubectl-ciscovk"
 ```
 
 Ensure `$HOME/.local/bin` is on your `PATH`, then verify the plugin:
@@ -35,10 +34,14 @@ kubectl ciscovk version
 kubectl ciscovk --help
 ```
 
-The plugin invokes the `kubectl` binary from `PATH`, so it inherits
-`KUBECONFIG` and the active context. It does not implement its own `--context`
-flag. Select the context with `kubectl config use-context` or `KUBECONFIG`
-before invoking it.
+`make build-plugin` injects the nearest Git tag, commit, and build time into
+the version output. Direct `go build` remains supported and reports a
+`devel` build instead of impersonating a release.
+
+The plugin invokes the `kubectl` binary from `PATH`. By default it inherits
+`KUBECONFIG` and the active context. Pass `--context` and/or `--kubeconfig` to
+select a target explicitly without changing the user's active context; the
+plugin forwards both options to pod discovery and port-forwarding.
 
 ### Execute a read-only IOS-XE command
 
@@ -49,6 +52,7 @@ tunnel:
 ```bash
 kubectl ciscovk exec cat9k-smoke -n cvk-system -- show version
 kubectl ciscovk exec cat9k-smoke -n cvk-system \
+  --context lab --kubeconfig "$HOME/.kube/lab.conf" \
   -- "show running-config | section interface"
 ```
 
@@ -66,7 +70,14 @@ Flags for `exec`:
 | `--truncate-bytes` | `65536` | Maximum output bytes per command; `0` disables truncation. |
 | `--port` | random free port | Local port used for `kubectl port-forward`. |
 | `--timeout` | `30s` | Overall command timeout. |
+| `--context` | active context | Kubeconfig context forwarded to `kubectl`. |
+| `--kubeconfig` | `KUBECONFIG`/kubectl default | Kubeconfig path forwarded to `kubectl`. |
 | `--kubectl` | `kubectl` from `PATH` | Alternate path to the `kubectl` executable. |
+
+The active Kubernetes identity needs permission to get/list pods in the
+selected namespace and create `pods/portforward` connections. `exec` requires
+the per-device deployment mode and its localhost diagnostic admin endpoint; it
+is not available in aggregator mode.
 
 ### DeviceOperation CR — auditable asynchronous path
 
