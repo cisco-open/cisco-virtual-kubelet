@@ -96,6 +96,29 @@ cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.8.0 \
 
 > **Upgrades:** Helm installs CRDs only on first install. When upgrading across releases that change CRD schemas, apply the CRDs once after `helm upgrade` — see the post-install notes (`helm get notes cvk -n cvk-system`).
 
+### Install the optional kubectl plugin
+
+The client-side `kubectl-ciscovk` plugin is not required to run the controller.
+It adds read-only, ad-hoc IOS-XE diagnostics for operators. After the first
+plugin-bearing release following `v2026.08.0` is published and `cisco-vk` is
+accepted into the public Krew index, install and upgrade it without building
+from source:
+
+```bash
+kubectl krew update
+kubectl krew install cisco-vk
+kubectl cisco-vk version
+
+# Later releases
+kubectl krew upgrade cisco-vk
+```
+
+The `v2026.08.0` release predates the plugin assets and public index entry.
+Before the first plugin-bearing release, use the source-build fallback; between
+that release and index acceptance, use its signed archive. See the
+[CLI & Plugin Reference](docs/cisco-vk-cli.md) for both verified installation
+paths and the exact availability gate.
+
 ### Build and push a custom image
 
 ```bash

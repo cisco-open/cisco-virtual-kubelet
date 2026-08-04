@@ -114,25 +114,22 @@ export default function Hero() {
               <pre className="text-left">
                 <code className="font-mono text-sm">
                   <span className="text-text-muted">$</span>{" "}
-                  <span className="text-primary">git clone</span>{" "}
-                  <span className="text-foreground">
-                    https://github.com/cisco-open/cisco-virtual-kubelet.git
-                  </span>
-                  {"\n"}
-                  <span className="text-text-muted">$</span>{" "}
-                  <span className="text-primary">docker build</span>{" "}
-                  <span className="text-accent-light">-t</span>{" "}
-                  <span className="text-foreground">
-                    &lt;registry&gt;/cisco-vk:dev
-                  </span>{" "}
-                  <span className="text-accent-light">.</span>
-                  {"\n"}
-                  <span className="text-text-muted">$</span>{" "}
                   <span className="text-primary">helm install</span>{" "}
                   <span className="text-foreground">cvk</span>{" "}
-                  <span className="text-accent-light">
-                    ./charts/cisco-virtual-kubelet
+                  <span className="text-accent-light">\</span>
+                  {"\n  "}
+                  <span className="text-foreground">
+                    oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet
                   </span>
+                  <span className="text-accent-light"> \</span>
+                  {"\n  "}
+                  <span className="text-accent-light">--version</span>{" "}
+                  <span className="text-foreground">2026.8.0</span>{" "}
+                  <span className="text-accent-light">\</span>
+                  {"\n  "}
+                  <span className="text-accent-light">--namespace</span>{" "}
+                  <span className="text-foreground">cvk-system</span>{" "}
+                  <span className="text-accent-light">--create-namespace</span>
                 </code>
               </pre>
             </div>
