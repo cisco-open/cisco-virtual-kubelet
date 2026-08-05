@@ -166,6 +166,11 @@ jobs:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
           format: cyclonedx-json
           output-file: sbom.cdx.json
+          # This workflow stages the exact SBOM explicitly below. Disable the
+          # action defaults so a tag build cannot mutate the curated draft or
+          # create a second workflow artefact outside the release allowlist.
+          upload-artifact: false
+          upload-release-assets: false
 
       - name: Install cosign
         uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
@@ -610,3 +615,17 @@ jobs:
             --clobber \
             --repo "$GITHUB_REPOSITORY"
           assert_draft
+          expected_metadata="$RUNNER_TEMP/expected-release-assets.tsv"
+          remote_metadata="$RUNNER_TEMP/remote-release-assets.tsv"
+          for asset in "${assets[@]}"; do
+            printf '%s\t%s\tsha256:%s\tuploaded\n' \
+              "$(basename "$asset")" \
+              "$(stat -c %s "$asset")" \
+              "$(sha256sum "$asset" | awk '{print $1}')"
+          done | LC_ALL=C sort > "$expected_metadata"
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_VERSION}" \
+            --jq '.assets[] | [.name, (.size | tostring), .digest, .state] | @tsv' \
+            | LC_ALL=C sort > "$remote_metadata"
+          test "$(wc -l < "$expected_metadata")" -eq 16
+          test "$(wc -l < "$remote_metadata")" -eq 16
+          diff -u "$expected_metadata" "$remote_metadata"

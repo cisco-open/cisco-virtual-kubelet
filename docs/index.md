@@ -93,10 +93,11 @@ This project is under active development and is published as open source under
   `oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet`. Build locally only
   when you need a custom image. See [Getting Started](getting-started.md).
 - **Operator plugin** - the optional `kubectl-ciscovk` plugin provides
-  read-only, ad-hoc IOS-XE diagnostics. Krew installation begins after the
-  first plugin-bearing release following `v2026.08.0` is published and
-  `cisco-vk` is accepted into the public index; signed release archives and a
-  source-build fallback are documented in the [CLI & Plugin Reference](cisco-vk-cli.md).
+  read-only, ad-hoc IOS-XE diagnostics. `v2026.8.1` is the first
+  plugin-bearing release; Krew installation begins only after it is published
+  and `cisco-vk` is accepted into the public index. Signed release archives
+  and a source-build fallback are documented in the
+  [CLI & Plugin Reference](cisco-vk-cli.md).
 
 ### Feature Maturity
 

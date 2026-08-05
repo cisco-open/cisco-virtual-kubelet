@@ -187,6 +187,8 @@ class RenderKrewManifestTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("release:\n    types: [published]", workflow)
         self.assertIn("and .immutable == true", workflow)
+        self.assertIn('test "$total_asset_count" -eq 16', workflow)
+        self.assertIn('select(.name == "sbom.cdx.json")', workflow)
         self.assertIn("contents: read", workflow)
         self.assertNotIn("contents: write", workflow)
         self.assertNotIn("pull_request_target", workflow)

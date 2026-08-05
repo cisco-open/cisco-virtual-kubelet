@@ -132,6 +132,16 @@ class PackageKubectlCiscoVKTests(unittest.TestCase):
                 4,
             )
 
+    def test_release_workflow_disables_implicit_sbom_uploads(self) -> None:
+        workflow = (
+            MODULE_PATH.parents[2] / ".github/workflows/release.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("upload-artifact: false", workflow)
+        self.assertIn("upload-release-assets: false", workflow)
+        self.assertIn("expected-release-assets.tsv", workflow)
+        self.assertIn("remote-release-assets.tsv", workflow)
+        self.assertIn("diff -u \"$expected_metadata\" \"$remote_metadata\"", workflow)
+
     def test_final_release_allowlist_rejects_extra_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             dist = pathlib.Path(temp_dir)

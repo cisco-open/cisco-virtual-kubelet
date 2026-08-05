@@ -36,5 +36,6 @@ execution gate.
    The bot receives no repository token or secret, and the CVK workflow has
    read-only contents permission.
 
-Do not retrofit plugin archives onto `v2026.08.0`; that release predates the
-archive pipeline and is already public.
+`v2026.8.1` is the first plugin-bearing release. Do not retrofit plugin archives
+onto `v2026.08.0`; that release predates the archive pipeline and is already
+public.

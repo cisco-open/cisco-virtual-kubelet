@@ -120,7 +120,16 @@ jobs:
               '[.assets[] | select(.name | startswith($prefix))] | length' \
               "$release_json"
           )"
+          total_asset_count="$(jq '.assets | length' "$release_json")"
+          test "$total_asset_count" -eq 16
           test "$plugin_asset_count" -eq 15
+          jq -e '
+            [.assets[] | select(.name == "sbom.cdx.json")] as $matching
+            | ($matching | length) == 1
+              and $matching[0].state == "uploaded"
+              and $matching[0].size > 0
+              and ($matching[0].digest | test("^sha256:[0-9a-f]{64}$"))
+          ' "$release_json" > /dev/null
           for name in "${expected_plugin_assets[@]}"; do
             jq -e --arg name "$name" '
               [.assets[] | select(.name == $name)] as $matching

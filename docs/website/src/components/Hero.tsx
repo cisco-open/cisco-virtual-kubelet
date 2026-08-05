@@ -124,7 +124,7 @@ export default function Hero() {
                   <span className="text-accent-light"> \</span>
                   {"\n  "}
                   <span className="text-accent-light">--version</span>{" "}
-                  <span className="text-foreground">2026.8.0</span>{" "}
+                  <span className="text-foreground">2026.8.1</span>{" "}
                   <span className="text-accent-light">\</span>
                   {"\n  "}
                   <span className="text-accent-light">--namespace</span>{" "}
