@@ -588,10 +588,32 @@ jobs:
           test "$(
             gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_VERSION}" --jq .sha
           )" = "$RELEASE_COMMIT"
+          resolve_draft_release_id() {
+            local release_pages="$RUNNER_TEMP/releases.json"
+            gh api --paginate --slurp \
+              "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+              > "$release_pages"
+            jq -er --arg tag "$RELEASE_VERSION" '
+              [ .[][] | select(.tag_name == $tag) ] as $matching
+              | select(($matching | length) == 1)
+              | select(
+                  $matching[0].draft == true
+                  and $matching[0].prerelease == false
+                  and $matching[0].published_at == null
+                )
+              | $matching[0].id
+            ' "$release_pages"
+          }
+          release_id="$(resolve_draft_release_id)"
           assert_draft() {
-            gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_VERSION}" \
-              | jq -e --arg tag "$RELEASE_VERSION" \
-                '.tag_name == $tag and .draft == true and .published_at == null' \
+            test "$(resolve_draft_release_id)" = "$release_id"
+            gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+              | jq -e --argjson id "$release_id" --arg tag "$RELEASE_VERSION" \
+                '.id == $id
+                 and .tag_name == $tag
+                 and .draft == true
+                 and .prerelease == false
+                 and .published_at == null' \
                 > /dev/null
           }
           assert_draft
@@ -611,11 +633,8 @@ jobs:
           test "${#plugin_assets[@]}" -eq 15
           assets=("${plugin_assets[@]}" "$image_sbom")
           test "${#assets[@]}" -eq 16
-          gh release upload "$RELEASE_VERSION" "${assets[@]}" \
-            --clobber \
-            --repo "$GITHUB_REPOSITORY"
-          assert_draft
           expected_metadata="$RUNNER_TEMP/expected-release-assets.tsv"
+          before_metadata="$RUNNER_TEMP/before-release-assets.tsv"
           remote_metadata="$RUNNER_TEMP/remote-release-assets.tsv"
           for asset in "${assets[@]}"; do
             printf '%s\t%s\tsha256:%s\tuploaded\n' \
@@ -623,9 +642,57 @@ jobs:
               "$(stat -c %s "$asset")" \
               "$(sha256sum "$asset" | awk '{print $1}')"
           done | LC_ALL=C sort > "$expected_metadata"
-          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_VERSION}" \
+          test "$(wc -l < "$expected_metadata")" -eq 16
+
+          gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+            --jq '.assets[] | [.name, (.size | tostring), .digest, .state] | @tsv' \
+            | LC_ALL=C sort > "$before_metadata"
+          test "$(wc -l < "$before_metadata")" -le 16
+          test -z "$(comm -23 "$before_metadata" "$expected_metadata")"
+
+          upload_url="$(
+            gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+              --jq '.upload_url | sub("\\{.*$"; "")'
+          )"
+          test "$upload_url" = \
+            "https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets"
+          for asset in "${assets[@]}"; do
+            name="$(basename "$asset")"
+            metadata="$(
+              printf '%s\t%s\tsha256:%s\tuploaded' \
+                "$name" \
+                "$(stat -c %s "$asset")" \
+                "$(sha256sum "$asset" | awk '{print $1}')"
+            )"
+            if ! grep -Fqx -- "$metadata" "$before_metadata"; then
+              assert_draft
+              encoded_name="$(jq -nr --arg name "$name" '$name | @uri')"
+              response="$RUNNER_TEMP/upload-${name}.json"
+              curl --fail-with-body --silent --show-error \
+                --request POST \
+                --header 'Accept: application/vnd.github+json' \
+                --header "Authorization: Bearer ${GH_TOKEN}" \
+                --header 'X-GitHub-Api-Version: 2026-03-10' \
+                --header 'Content-Type: application/octet-stream' \
+                --data-binary "@${asset}" \
+                "${upload_url}?name=${encoded_name}" > "$response"
+              jq -e \
+                --arg name "$name" \
+                --arg digest "$(printf '%s' "$metadata" | cut -f3)" \
+                --argjson size "$(stat -c %s "$asset")" '
+                  .name == $name
+                  and .digest == $digest
+                  and .size == $size
+                  and .state == "uploaded"
+                ' "$response" > /dev/null
+              assert_draft
+            fi
+          done
+
+          assert_draft
+          gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
             --jq '.assets[] | [.name, (.size | tostring), .digest, .state] | @tsv' \
             | LC_ALL=C sort > "$remote_metadata"
-          test "$(wc -l < "$expected_metadata")" -eq 16
           test "$(wc -l < "$remote_metadata")" -eq 16
           diff -u "$expected_metadata" "$remote_metadata"
+          assert_draft
