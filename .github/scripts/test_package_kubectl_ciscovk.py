@@ -33,7 +33,7 @@ sys.modules[SPEC.name] = packager
 SPEC.loader.exec_module(packager)
 
 
-VERSION = "v2026.09.0"
+VERSION = "v2026.9.0"
 COMMIT = "a" * 40
 EPOCH = 1_785_542_400
 
@@ -196,10 +196,10 @@ class PackageKubectlCiscoVKTests(unittest.TestCase):
         self.assertEqual(
             names,
             [
-                "kubectl-ciscovk_v2026.09.0_darwin_amd64.tar.gz",
-                "kubectl-ciscovk_v2026.09.0_darwin_arm64.tar.gz",
-                "kubectl-ciscovk_v2026.09.0_linux_amd64.tar.gz",
-                "kubectl-ciscovk_v2026.09.0_linux_arm64.tar.gz",
+                "kubectl-ciscovk_v2026.9.0_darwin_amd64.tar.gz",
+                "kubectl-ciscovk_v2026.9.0_darwin_arm64.tar.gz",
+                "kubectl-ciscovk_v2026.9.0_linux_amd64.tar.gz",
+                "kubectl-ciscovk_v2026.9.0_linux_arm64.tar.gz",
             ],
         )
         self.assertNotIn("windows", " ".join(names))

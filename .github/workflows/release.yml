@@ -73,6 +73,10 @@ jobs:
           RELEASE_VERSION: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          [[ "$RELEASE_VERSION" =~ ^v[1-9][0-9]{3}\.([1-9]|1[0-2])\.(0|[1-9][0-9]{0,8})$ ]] || {
+            echo "::error::Release tag must be strict SemVer-compatible CalVer (for example v2026.9.0)"
+            exit 1
+          }
           remote_commit="$(
             gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_VERSION}" --jq .sha
           )"

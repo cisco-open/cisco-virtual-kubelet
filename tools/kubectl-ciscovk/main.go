@@ -46,6 +46,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -67,29 +68,49 @@ var commandContext = exec.CommandContext
 const kubectlWaitDelay = 2 * time.Second
 
 func main() {
-	if len(os.Args) < 2 {
-		usage()
-		os.Exit(2)
-	}
-	switch os.Args[1] {
-	case "exec":
-		if err := runExec(os.Args[2:]); err != nil {
-			fmt.Fprintln(os.Stderr, "error:", err)
-			os.Exit(1)
-		}
-	case "-h", "--help", "help":
-		usage()
-	case "version":
-		printVersion(os.Stdout)
-	default:
-		fmt.Fprintf(os.Stderr, "unknown subcommand %q\n\n", os.Args[1])
-		usage()
-		os.Exit(2)
+	if code := runCLI(os.Args, os.Stdout, os.Stderr); code != 0 {
+		os.Exit(code)
 	}
 }
 
-func usage() {
-	fmt.Fprintln(os.Stderr, `kubectl ciscovk — operator plugin for cisco-virtual-kubelet
+func runCLI(args []string, stdout, stderr io.Writer) int {
+	invocation := "kubectl ciscovk"
+	if len(args) > 0 {
+		invocation = pluginInvocation(args[0])
+	}
+	if len(args) < 2 {
+		usage(stderr, invocation)
+		return 2
+	}
+	switch args[1] {
+	case "exec":
+		if err := runExecWithIO(args[2:], stdout, stderr); err != nil {
+			fmt.Fprintln(stderr, "error:", err)
+			return 1
+		}
+	case "-h", "--help", "help":
+		usage(stderr, invocation)
+	case "version":
+		printVersion(stdout)
+	default:
+		fmt.Fprintf(stderr, "unknown subcommand %q\n\n", args[1])
+		usage(stderr, invocation)
+		return 2
+	}
+	return 0
+}
+
+func pluginInvocation(argv0 string) string {
+	switch filepath.Base(argv0) {
+	case "kubectl-cisco_vk", "kubectl-cisco-vk":
+		return "kubectl cisco-vk"
+	default:
+		return "kubectl ciscovk"
+	}
+}
+
+func usage(w io.Writer, invocation string) {
+	text := `{{COMMAND}} — operator plugin for cisco-virtual-kubelet
 
 Subcommands:
   exec <device> [-n <ns>] [flags] -- <show-command...>
@@ -99,9 +120,9 @@ Subcommands:
     device-operations RFC for those.
 
 Examples:
-  kubectl ciscovk exec cat9k-smoke -n cisco-vk-smoke -- show ip route
-  kubectl ciscovk exec cat9k-smoke -- "show running-config | section interface"
-  kubectl ciscovk exec cat9k-smoke --allow-secrets -- show running-config
+  {{COMMAND}} exec cat9k-smoke -n cisco-vk-smoke -- show ip route
+  {{COMMAND}} exec cat9k-smoke -- "show running-config | section interface"
+  {{COMMAND}} exec cat9k-smoke --allow-secrets -- show running-config
 
 Flags for exec:
   -n, --namespace <ns>     namespace of the per-device kubelet pod
@@ -111,7 +132,8 @@ Flags for exec:
   --timeout DURATION       overall timeout (default 30s)
   --context NAME           kubeconfig context to use
   --kubeconfig PATH        path to the kubeconfig file
-  --kubectl PATH           path to kubectl binary (default: from PATH)`)
+  --kubectl PATH           path to kubectl binary (default: from PATH)`
+	fmt.Fprintln(w, strings.ReplaceAll(text, "{{COMMAND}}", invocation))
 }
 
 func printVersion(w io.Writer) {
@@ -234,10 +256,10 @@ func parseNonNegativeInt(s string) (int, error) {
 
 func validateExec(f *execFlags) error {
 	if f.device == "" {
-		return errors.New("missing device argument; usage: kubectl ciscovk exec <device> -- <command>")
+		return errors.New("missing device argument; usage: exec <device> -- <command>")
 	}
 	if len(f.commands) == 0 {
-		return errors.New("missing command after `--`; example: kubectl ciscovk exec cat9k-smoke -- show ip route")
+		return errors.New("missing command after `--`; example: exec cat9k-smoke -- show ip route")
 	}
 	if f.localPort > 65535 {
 		return fmt.Errorf("--port must be between 0 and 65535, got %d", f.localPort)

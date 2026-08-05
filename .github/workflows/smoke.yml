@@ -114,6 +114,25 @@ jobs:
             --dist-dir "$work/first/dist" \
             --execute
 
+      - name: Krew manifest generation gate
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover \
+            -s .github/scripts \
+            -p 'test_render_krew_manifest.py' \
+            -v
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          python3 .github/scripts/render_krew_manifest.py \
+            --release-tag v2026.9.0 \
+            --checksums krew/testdata/kubectl-ciscovk_v2026.9.0_checksums.txt \
+            --output "$work/cisco-vk.yaml"
+          env GOBIN="$work/bin" \
+            go install sigs.k8s.io/krew/cmd/validate-krew-manifest@v0.4.5
+          "$work/bin/validate-krew-manifest" \
+            -manifest "$work/cisco-vk.yaml" \
+            -skip-install
+
       - name: Unit tests
         run: go test -race -count=1 ./...
 

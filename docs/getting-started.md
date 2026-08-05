@@ -108,6 +108,29 @@ kubectl get crd ciscodevices.cisco.vk
 
 If the controller pod is not `Running`, see [Troubleshooting → CiscoDevice stuck in Provisioning](troubleshooting.md#ciscodevice-stuck-in-provisioning).
 
+### Optional: install the kubectl plugin with Krew
+
+The client-side `kubectl-ciscovk` plugin is optional; the controller and normal
+Kubernetes workflows do not depend on it. It provides read-only, ad-hoc IOS-XE
+diagnostics. After the first plugin-bearing release following `v2026.08.0` is
+published and `cisco-vk` is accepted into the public Krew index, install and
+upgrade it with:
+
+```bash
+kubectl krew update
+kubectl krew install cisco-vk
+kubectl cisco-vk version
+
+# Later releases
+kubectl krew upgrade cisco-vk
+```
+
+The `v2026.08.0` release predates the plugin assets and public index entry.
+Before the first plugin-bearing release, use the source-build fallback; between
+that release and index acceptance, use its signed archive. The
+[CLI & Plugin Reference](cisco-vk-cli.md) documents both verified installation
+paths, the exact availability gate, and the plugin's current IOS-XE-only scope.
+
 ## 3. Create a credential Secret
 
 Device credentials are injected into the VK pod via a Kubernetes Secret — the controller never stores them in the ConfigMap. The Secret must be in the same namespace as the `CiscoDevice` and have a key named exactly `password`.

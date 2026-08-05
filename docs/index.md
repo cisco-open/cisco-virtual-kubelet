@@ -92,6 +92,11 @@ This project is under active development and is published as open source under
   `ghcr.io/cisco-open/cisco-virtual-kubelet`, with the Helm chart at
   `oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet`. Build locally only
   when you need a custom image. See [Getting Started](getting-started.md).
+- **Operator plugin** - the optional `kubectl-ciscovk` plugin provides
+  read-only, ad-hoc IOS-XE diagnostics. Krew installation begins after the
+  first plugin-bearing release following `v2026.08.0` is published and
+  `cisco-vk` is accepted into the public index; signed release archives and a
+  source-build fallback are documented in the [CLI & Plugin Reference](cisco-vk-cli.md).
 
 ### Feature Maturity
 
@@ -119,6 +124,8 @@ summarises the current release state.
 
 - [Getting Started](getting-started.md) - first deployment path
 - [Architecture](ARCHITECTURE.md) - how the pieces fit together
+- [CLI & Plugin Reference](cisco-vk-cli.md) - install and use the optional
+  `kubectl-ciscovk` operator plugin
 - [Configuration](CONFIGURATION.md) - `CiscoDevice` and VK configuration fields
 - [CRD Reference](crds.md) - every shipped CRD and when to use it
 - [Family Reference](reference/families/README.md) - generated Network as Code config family coverage

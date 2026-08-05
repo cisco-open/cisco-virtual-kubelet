@@ -12,9 +12,98 @@ Cisco Virtual Kubelet exposes two command-line surfaces:
 
 ## kubectl-ciscovk plugin
 
-### Build and install
+### Install with Krew
 
-Prebuilt plugin binaries are not currently attached to GitHub releases. Build
+The plugin is named `cisco-vk` in Krew, following Krew's hyphenated vendor-name
+guidance. Once the initial manifest has been accepted into the public Krew
+index, installation and upgrades are:
+
+```bash
+kubectl krew update
+kubectl krew install cisco-vk
+
+# Later releases:
+kubectl krew upgrade cisco-vk
+
+# Invoke the Krew-installed plugin:
+kubectl cisco-vk version
+```
+
+The archive's executable remains `kubectl-ciscovk`, so existing manual/source
+installs can continue to use `kubectl ciscovk`. Krew exposes the conventional
+`kubectl cisco-vk` alias. The initial index submission is intentionally gated on
+the first public release that contains the signed plugin archives.
+`v2026.08.0` predates those assets, so the Krew command above will not be
+available until that submission is accepted. The project release workflow
+validates Linux and macOS on both amd64 and arm64; Windows is not advertised
+yet.
+
+### Install a signed release archive
+
+Starting with the first plugin-bearing release after `v2026.08.0`, the GitHub
+release includes four deterministic archives, a signed checksum manifest, and
+per-archive signatures. The following example selects the local Linux/macOS
+architecture, verifies the signed checksum authority, and installs the plugin:
+
+```bash
+(
+set -euo pipefail
+
+# Set this to an asset-bearing release shown on the Releases page.
+VERSION=v2026.9.0
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+case "$OS" in
+  darwin|linux) ;;
+  *) echo "unsupported operating system" >&2; exit 1 ;;
+esac
+case "$(uname -m)" in
+  x86_64|amd64) ARCH=amd64 ;;
+  arm64|aarch64) ARCH=arm64 ;;
+  *) echo "unsupported architecture" >&2; exit 1 ;;
+esac
+ASSET="kubectl-ciscovk_${VERSION}_${OS}_${ARCH}.tar.gz"
+CHECKSUMS="kubectl-ciscovk_${VERSION}_checksums.txt"
+BASE="https://github.com/cisco-open/cisco-virtual-kubelet/releases/download/${VERSION}"
+WORK_DIR="$(mktemp -d)"
+trap 'rm -rf "$WORK_DIR"' EXIT
+cd "$WORK_DIR"
+
+curl -fLO "${BASE}/${ASSET}"
+curl -fLO "${BASE}/${CHECKSUMS}"
+curl -fLO "${BASE}/${CHECKSUMS}.sigstore.json"
+cosign verify-blob \
+  --bundle "${CHECKSUMS}.sigstore.json" \
+  --certificate-identity \
+    "https://github.com/cisco-open/cisco-virtual-kubelet/.github/workflows/release.yml@refs/tags/${VERSION}" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  "${CHECKSUMS}"
+
+expected="$(awk -v name="$ASSET" '$2 == name {print $1}' "$CHECKSUMS")"
+if command -v sha256sum >/dev/null 2>&1; then
+  actual="$(sha256sum "$ASSET" | awk '{print $1}')"
+else
+  actual="$(shasum -a 256 "$ASSET" | awk '{print $1}')"
+fi
+test -n "$expected" && test "$actual" = "$expected"
+
+tar -xzf "$ASSET"
+mkdir -p "$HOME/.local/bin"
+install -m 0755 kubectl-ciscovk "$HOME/.local/bin/kubectl-ciscovk"
+ln -sfn kubectl-ciscovk "$HOME/.local/bin/kubectl-cisco_vk"
+)
+```
+
+Ensure `$HOME/.local/bin` is on your `PATH`, then verify the plugin:
+
+```bash
+kubectl ciscovk version
+kubectl cisco-vk version
+kubectl ciscovk --help
+```
+
+### Build from source
+
+For development, or until the first plugin-bearing release is available, build
 the plugin from the current source tree and place it on your `PATH` using the
 standard `kubectl-<name>` filename:
 
@@ -25,18 +114,14 @@ cd cisco-virtual-kubelet
 make build-plugin
 mkdir -p "$HOME/.local/bin"
 install -m 0755 bin/kubectl-ciscovk "$HOME/.local/bin/kubectl-ciscovk"
-```
-
-Ensure `$HOME/.local/bin` is on your `PATH`, then verify the plugin:
-
-```bash
-kubectl ciscovk version
-kubectl ciscovk --help
+ln -sfn kubectl-ciscovk "$HOME/.local/bin/kubectl-cisco_vk"
 ```
 
 `make build-plugin` injects the nearest Git tag, commit, and build time into
 the version output. Direct `go build` remains supported and reports a
-`devel` build instead of impersonating a release.
+`devel` build instead of impersonating a release. The symlink additionally
+supports the same `kubectl cisco-vk` spelling used by Krew; the existing
+`kubectl ciscovk` spelling remains available.
 
 The plugin invokes the `kubectl` binary from `PATH`. By default it inherits
 `KUBECONFIG` and the active context. Pass `--context` and/or `--kubeconfig` to

@@ -1,0 +1,286 @@
+# Copyright 2026 Cisco Systems Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Krew updates happen only after a release is public and immutable. This
+# workflow cannot change the CVK repository or its release assets. The first
+# krew-index submission is intentionally manual; later updates are handed to
+# Krew's recommended release bot without passing it a token or secret.
+
+name: krew-index
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: krew-index-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  validate-and-submit:
+    if: github.event.release.draft == false && github.event.release.prerelease == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pinned Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13.14'
+
+      - name: Set up pinned Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: '1.25.12'
+          cache: true
+
+      - name: Require the exact immutable published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ github.event.release.id }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[1-9][0-9]{3}\.([1-9]|1[0-2])\.(0|[1-9][0-9]{0,8})$ ]]
+          release_json="$RUNNER_TEMP/cvk-krew-release.json"
+          gh api \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" > "$release_json"
+          jq -e \
+            --argjson id "$RELEASE_ID" \
+            --arg tag "$RELEASE_TAG" \
+            '.id == $id
+             and .tag_name == $tag
+             and .draft == false
+             and .prerelease == false
+             and .published_at != null
+             and .immutable == true' \
+            "$release_json" > /dev/null
+          local_commit="$(git rev-parse HEAD)"
+          remote_commit="$(
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_TAG}" --jq .sha
+          )"
+          test "$local_commit" = "$GITHUB_SHA"
+          test "$remote_commit" = "$GITHUB_SHA"
+
+      - name: Download exact plugin assets and verify GitHub digests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          release_json="$RUNNER_TEMP/cvk-krew-release.json"
+          archive_dir="$RUNNER_TEMP/krew-archives"
+          metadata_dir="$RUNNER_TEMP/krew-metadata"
+          mkdir -p "$archive_dir" "$metadata_dir"
+
+          expected_plugin_assets=()
+          required_downloads=()
+          for target in darwin_amd64 darwin_arm64 linux_amd64 linux_arm64; do
+            archive="kubectl-ciscovk_${RELEASE_TAG}_${target}.tar.gz"
+            expected_plugin_assets+=(
+              "$archive"
+              "${archive}.sigstore.json"
+              "kubectl-ciscovk_${RELEASE_TAG}_${target}.sbom.cdx.json"
+            )
+            required_downloads+=("$archive" "${archive}.sigstore.json")
+          done
+          checksums="kubectl-ciscovk_${RELEASE_TAG}_checksums.txt"
+          checksum_bundle="${checksums}.sigstore.json"
+          expected_plugin_assets+=(
+            "$checksums"
+            "$checksum_bundle"
+            "kubectl-ciscovk_${RELEASE_TAG}_provenance.sigstore.json"
+          )
+          required_downloads+=("$checksums" "$checksum_bundle")
+
+          plugin_asset_count="$(
+            jq --arg prefix "kubectl-ciscovk_${RELEASE_TAG}_" \
+              '[.assets[] | select(.name | startswith($prefix))] | length' \
+              "$release_json"
+          )"
+          test "$plugin_asset_count" -eq 15
+          for name in "${expected_plugin_assets[@]}"; do
+            jq -e --arg name "$name" '
+              [.assets[] | select(.name == $name)] as $matching
+              | ($matching | length) == 1
+                and $matching[0].state == "uploaded"
+                and $matching[0].size > 0
+                and ($matching[0].digest | test("^sha256:[0-9a-f]{64}$"))
+            ' "$release_json" > /dev/null
+          done
+
+          for name in "${required_downloads[@]}"; do
+            asset="$(
+              jq -c --arg name "$name" \
+                '[.assets[] | select(.name == $name)][0]' \
+                "$release_json"
+            )"
+            asset_id="$(jq -r .id <<< "$asset")"
+            expected_digest="$(jq -r '.digest // empty' <<< "$asset")"
+            [[ "$asset_id" =~ ^[0-9]+$ ]]
+            [[ "$expected_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+            if [[ "$name" == *.tar.gz ]]; then
+              destination="$archive_dir/$name"
+            else
+              destination="$metadata_dir/$name"
+            fi
+            gh api \
+              -H 'Accept: application/octet-stream' \
+              -H 'X-GitHub-Api-Version: 2026-03-10' \
+              "repos/${GITHUB_REPOSITORY}/releases/assets/${asset_id}" \
+              > "$destination"
+            actual_digest="sha256:$(sha256sum "$destination" | awk '{print $1}')"
+            test "$actual_digest" = "$expected_digest"
+          done
+
+      - name: Install pinned cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.2
+
+      - name: Verify signed checksums and render the manifest
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          archive_dir="$RUNNER_TEMP/krew-archives"
+          metadata_dir="$RUNNER_TEMP/krew-metadata"
+          checksums="$metadata_dir/kubectl-ciscovk_${RELEASE_TAG}_checksums.txt"
+          bundle="${checksums}.sigstore.json"
+          identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/tags/${RELEASE_TAG}"
+          cosign verify-blob \
+            --bundle "$bundle" \
+            --certificate-identity "$identity" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "$checksums"
+          for target in darwin_amd64 darwin_arm64 linux_amd64 linux_arm64; do
+            archive="$archive_dir/kubectl-ciscovk_${RELEASE_TAG}_${target}.tar.gz"
+            cosign verify-blob \
+              --bundle "$metadata_dir/$(basename "$archive").sigstore.json" \
+              --certificate-identity "$identity" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              "$archive"
+          done
+          python3 .github/scripts/render_krew_manifest.py \
+            --release-tag "$RELEASE_TAG" \
+            --checksums "$checksums" \
+            --archives-dir "$archive_dir" \
+            --output dist/krew/cisco-vk.yaml
+
+      - name: Validate every Krew platform and execute the native plugin
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          tool_dir="$RUNNER_TEMP/krew-tools"
+          mkdir -p "$tool_dir"
+          env GOBIN="$tool_dir" \
+            go install sigs.k8s.io/krew/cmd/krew@v0.4.5
+          env GOBIN="$tool_dir" \
+            go install sigs.k8s.io/krew/cmd/validate-krew-manifest@v0.4.5
+          ln -s "$tool_dir/krew" "$tool_dir/kubectl-krew"
+          cat > "$tool_dir/kubectl" <<'EOF'
+          #!/bin/sh
+          set -eu
+          test "$#" -ge 1
+          plugin="$(printf '%s' "$1" | tr '-' '_')"
+          shift
+          exec "kubectl-${plugin}" "$@"
+          EOF
+          chmod 0755 "$tool_dir/kubectl"
+          export PATH="$tool_dir:$PATH"
+
+          validate-krew-manifest -manifest dist/krew/cisco-vk.yaml
+
+          native_root="$RUNNER_TEMP/krew-native"
+          KREW_ROOT="$native_root" KREW_OS=linux KREW_ARCH=amd64 \
+            kubectl krew install --manifest dist/krew/cisco-vk.yaml
+          version_output="$(
+            PATH="$native_root/bin:$PATH" kubectl cisco-vk version
+          )"
+          grep -F "kubectl-ciscovk ${RELEASE_TAG} (" <<< "$version_output"
+
+      - name: Upload validated initial-submission artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cisco-vk-krew-manifest-${{ github.event.release.tag_name }}
+          path: dist/krew/cisco-vk.yaml
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Check whether the initial Krew submission exists
+        id: upstream
+        run: |
+          set -euo pipefail
+          url="https://raw.githubusercontent.com/kubernetes-sigs/krew-index/master/plugins/cisco-vk.yaml"
+          status="$(
+            curl -sS -L -o "$RUNNER_TEMP/upstream-cisco-vk.yaml" \
+              -w '%{http_code}' "$url"
+          )"
+          case "$status" in
+            200)
+              echo 'exists=true' >> "$GITHUB_OUTPUT"
+              ;;
+            404)
+              echo 'exists=false' >> "$GITHUB_OUTPUT"
+              echo 'Initial submission required: download the validated cisco-vk.yaml artifact and open the first krew-index PR.' >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo "Unexpected krew-index response: HTTP ${status}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Verify ownership of the existing upstream entry
+        if: steps.upstream.outputs.exists == 'true'
+        run: >-
+          go run ./tools/krew-manifest-owner-check
+          --file "$RUNNER_TEMP/upstream-cisco-vk.yaml"
+
+      - name: Install checksum-pinned Krew release bot
+        if: steps.upstream.outputs.exists == 'true'
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/krew-release-bot_v0.0.51_linux_amd64.tar.gz"
+          destination="$RUNNER_TEMP/krew-release-bot"
+          curl -fsSL \
+            -o "$archive" \
+            https://github.com/rajatjindal/krew-release-bot/releases/download/v0.0.51/krew-release-bot_v0.0.51_linux_amd64.tar.gz
+          echo '3748407285b4cf866e9d4625e376aca927aa3f0b30f30ede83cc33a11566f28b  '"$archive" \
+            | sha256sum -c -
+          mkdir -p "$destination"
+          tar -xzf "$archive" -C "$destination"
+          test -x "$destination/krew-release-bot"
+
+      - name: Open the subsequent krew-index update PR
+        if: steps.upstream.outputs.exists == 'true'
+        env:
+          # The bot submits the public manifest to its webhook. It receives no
+          # CVK repository credential and this job has read-only permissions.
+          GH_TOKEN: ''
+          GITHUB_TOKEN: ''
+          INPUT_KREW_PLUGIN_RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_KREW_TEMPLATE_FILE: dist/krew/cisco-vk.yaml
+        run: "$RUNNER_TEMP/krew-release-bot/krew-release-bot action"

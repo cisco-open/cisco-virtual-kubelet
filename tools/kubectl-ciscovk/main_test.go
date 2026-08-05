@@ -185,6 +185,31 @@ func TestPrintVersion(t *testing.T) {
 	}
 }
 
+func TestRunCLIUsesInstallSpecificInvocationInHelp(t *testing.T) {
+	tests := []struct {
+		name    string
+		argv0   string
+		command string
+	}{
+		{name: "Krew alias", argv0: "/tmp/kubectl-cisco_vk", command: "kubectl cisco-vk"},
+		{name: "release binary", argv0: "/tmp/kubectl-ciscovk", command: "kubectl ciscovk"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			if code := runCLI([]string{test.argv0, "--help"}, &stdout, &stderr); code != 0 {
+				t.Fatalf("runCLI() code = %d, want 0", code)
+			}
+			if stdout.Len() != 0 {
+				t.Fatalf("stdout = %q, want empty", stdout.String())
+			}
+			if !strings.Contains(stderr.String(), test.command+" exec") {
+				t.Fatalf("help = %q, want invocation %q", stderr.String(), test.command)
+			}
+		})
+	}
+}
+
 func TestKubectlArgs(t *testing.T) {
 	f := &execFlags{kubeconfig: "/tmp/lab.conf", kubeContext: "lab"}
 	got := kubectlArgs(f, "get", "pod")

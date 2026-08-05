@@ -16,12 +16,24 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Terminal, FileCode, Rocket, Copy, Check } from "lucide-react";
+import {
+  Download,
+  Terminal,
+  FileCode,
+  Rocket,
+  Copy,
+  Check,
+} from "lucide-react";
 
 const tabs = [
   {
     id: "install",
     label: "Installation",
+    icon: Download,
+  },
+  {
+    id: "plugin",
+    label: "CLI Plugin",
     icon: Terminal,
   },
   {
@@ -39,22 +51,25 @@ const tabs = [
 const codeBlocks: Record<string, { language: string; code: string }> = {
   install: {
     language: "bash",
-    code: `# The image isn't on a public registry yet — build it locally.
-git clone https://github.com/cisco-open/cisco-virtual-kubelet.git
-cd cisco-virtual-kubelet
-
-docker build -t <your-registry>/cisco-vk:dev .
-docker push <your-registry>/cisco-vk:dev
-
-# Install the controller with Helm (chart lives in-repo)
-helm install cvk ./charts/cisco-virtual-kubelet \\
-  --namespace cvk-system --create-namespace \\
-  --set image.repository=<your-registry>/cisco-vk \\
-  --set image.tag=dev
+    code: `# Install the published Helm chart and signed image from GHCR.
+helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \\
+  --version 2026.8.0 \\
+  --namespace cvk-system --create-namespace
 
 # Verify the CRD and controller are up
 kubectl get crd ciscodevices.cisco.vk
 kubectl -n cvk-system get pods`,
+  },
+  plugin: {
+    language: "bash",
+    code: `# Optional IOS-XE operator plugin. Available after a plugin-bearing
+# release following v2026.08.0 is published and accepted into the Krew index.
+kubectl krew update
+kubectl krew install cisco-vk
+kubectl cisco-vk version
+
+# Later releases
+kubectl krew upgrade cisco-vk`,
   },
   config: {
     language: "yaml",
@@ -144,8 +159,8 @@ export default function GetStarted() {
             Get <span className="gradient-text">Started</span>
           </h2>
           <p className="text-lg text-text-muted max-w-2xl mx-auto">
-            Deploy your first container to a Cisco device in minutes. Follow
-            these steps to set up the Cisco Virtual Kubelet provider.
+            Install the published provider and deploy your first container to
+            a Cisco device. No source build or private registry is required.
           </p>
         </motion.div>
 
@@ -163,8 +178,8 @@ export default function GetStarted() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { label: "Kubernetes 1.28+", desc: "Any distribution" },
-              { label: "Helm v3 + Docker", desc: "To install the chart and build the image" },
-              { label: "Container Registry", desc: "Reachable from the cluster" },
+              { label: "Helm v3", desc: "Installs the published OCI chart" },
+              { label: "kubectl", desc: "Configured for your cluster" },
               { label: "Cisco Device", desc: "IOS-XE (Cat 8000V/9000) or Nexus NX-OS (Beta)" },
             ].map((req) => (
               <div
@@ -248,6 +263,20 @@ export default function GetStarted() {
               </code>
             </pre>
           </div>
+          <p className="mt-5 text-sm text-text-muted text-center">
+            The CLI plugin is optional and currently targets IOS-XE diagnostics.
+            Before its first release use the source build; after release and
+            before public-index acceptance use the signed archive. See the{" "}
+            <a
+              href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/cisco-vk-cli/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              CLI &amp; Plugin Reference
+            </a>
+            .
+          </p>
         </motion.div>
       </div>
     </section>

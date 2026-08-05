@@ -3,6 +3,8 @@ bin
 .stignore
 .env
 .venv/
+__pycache__/
+*.pyc
 .claude/
 site/
 /cisco-vk
