@@ -1,0 +1,415 @@
+# Copyright 2026 Cisco Systems Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# One-time, fail-closed recovery for v2026.8.1. The tag workflow built and
+# verified every artifact, but its final job queried the release-by-tag REST
+# endpoint, which does not expose drafts, and stopped before uploading. This
+# workflow pins the original tag, commit, failed run, successful artifacts, and
+# numeric draft ID. It can only stage the exact recovered assets; it never
+# publishes the release.
+
+name: recover v2026.8.1 release assets
+
+on:
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: recover-v2026.8.1-release-assets
+  cancel-in-progress: false
+
+jobs:
+  stage-exact-assets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: write
+    env:
+      RELEASE_TAG: v2026.8.1
+      TAG_OBJECT: e63f1025ab5a806ab2f83348da47c4be441a444a
+      RELEASE_COMMIT: 9571a4db9fa481a8a0b6f0a60e689d43cdcbb620
+      RELEASE_ID: '365511761'
+      RELEASE_BODY_SHA256: 2b1dd533ba27334524dcbecafd3b46b4b52c8659b9ccc046cdd03a5ccbc42215
+      SOURCE_RUN_ID: '31005884666'
+      PLUGIN_ARTIFACT_ID: '8930317713'
+      PLUGIN_ARTIFACT_NAME: kubectl-ciscovk-release-v2026.8.1
+      PLUGIN_ARTIFACT_SIZE: '9909974'
+      PLUGIN_ARTIFACT_DIGEST: sha256:68740827962756f0acea3b662c6fd733f66b6377ea7f3d9721552987250a83a2
+      SBOM_ARTIFACT_ID: '8930508350'
+      SBOM_ARTIFACT_NAME: sbom-v2026.8.1
+      SBOM_ARTIFACT_SIZE: '94414'
+      SBOM_ARTIFACT_DIGEST: sha256:dd8883d718068ffa306631710534ff644ed44636cd243864dceac40a4a047a43
+      IMAGE_DIGEST: sha256:a9a52a63979674e68c251cc16956edc8e517f1bf4f97e57e2472b57599f32607
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pinned Python verifier
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13.14'
+
+      - name: Require protected main and exact original release state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "cisco-open/cisco-virtual-kubelet"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(
+            gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha
+          )" = "$GITHUB_SHA"
+          test "$(git cat-file -t "$RELEASE_TAG")" = "tag"
+          test "$(git rev-parse "$RELEASE_TAG^{tag}")" = "$TAG_OBJECT"
+          test "$(git rev-list -n 1 "$RELEASE_TAG")" = "$RELEASE_COMMIT"
+          test "$(
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_TAG}" --jq .sha
+          )" = "$RELEASE_COMMIT"
+          gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" \
+            | jq -e \
+              --arg tag_object "$TAG_OBJECT" '
+                .object.type == "tag"
+                and .object.sha == $tag_object
+              ' > /dev/null
+
+          release_pages="$RUNNER_TEMP/releases.json"
+          gh api --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/releases?per_page=100" > "$release_pages"
+          jq -e \
+            --argjson id "$RELEASE_ID" \
+            --arg tag "$RELEASE_TAG" '
+              [ .[][] | select(.tag_name == $tag) ] as $matching
+              | ($matching | length) == 1
+                and $matching[0].id == $id
+            ' "$release_pages" > /dev/null
+
+          release_json="$RUNNER_TEMP/release.json"
+          gh api \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" > "$release_json"
+          jq -e \
+            --argjson id "$RELEASE_ID" \
+            --arg tag "$RELEASE_TAG" '
+              .id == $id
+              and .tag_name == $tag
+              and .name == $tag
+              and .draft == true
+              and .prerelease == false
+              and .published_at == null
+            ' "$release_json" > /dev/null
+          test "$(jq -j .body "$release_json" | sha256sum | awk '{print $1}')" \
+            = "$RELEASE_BODY_SHA256"
+
+      - name: Require exact successful source jobs and failed staging boundary
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source_run="$RUNNER_TEMP/source-run.json"
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" \
+            > "$source_run"
+          jq -e \
+            --argjson id "$SOURCE_RUN_ID" \
+            --arg tag "$RELEASE_TAG" \
+            --arg commit "$RELEASE_COMMIT" '
+              .id == $id
+              and .event == "push"
+              and .head_branch == $tag
+              and .head_sha == $commit
+              and .path == ".github/workflows/release.yml"
+              and .run_attempt == 1
+              and .status == "completed"
+              and .conclusion == "failure"
+            ' "$source_run" > /dev/null
+
+          source_jobs="$RUNNER_TEMP/source-jobs.json"
+          actual_jobs="$RUNNER_TEMP/actual-source-jobs.tsv"
+          expected_jobs="$RUNNER_TEMP/expected-source-jobs.tsv"
+          gh api --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/jobs?per_page=100" \
+            > "$source_jobs"
+          jq -r '.[] | .jobs[] | [.name, .conclusion] | @tsv' "$source_jobs" \
+            | LC_ALL=C sort > "$actual_jobs"
+          cat > "$expected_jobs" <<'EOF'
+          build-and-sign	success
+          package-plugin	success
+          publish-chart	success
+          release-preflight	success
+          sign-plugin	success
+          stage-plugin-release	failure
+          verify-plugin (macos-15, darwin, arm64)	success
+          verify-plugin (macos-15-intel, darwin, amd64)	success
+          verify-plugin (ubuntu-24.04, linux, amd64)	success
+          verify-plugin (ubuntu-24.04-arm, linux, arm64)	success
+          EOF
+          LC_ALL=C sort -o "$expected_jobs" "$expected_jobs"
+          diff -u "$expected_jobs" "$actual_jobs"
+
+      - name: Require exact retained artifact identities
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          assert_artifact() {
+            local id="$1"
+            local name="$2"
+            local size="$3"
+            local digest="$4"
+            gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}" \
+              | jq -e \
+                --argjson id "$id" \
+                --arg name "$name" \
+                --argjson size "$size" \
+                --arg digest "$digest" \
+                --argjson run_id "$SOURCE_RUN_ID" \
+                --arg tag "$RELEASE_TAG" \
+                --arg commit "$RELEASE_COMMIT" '
+                  .id == $id
+                  and .name == $name
+                  and .size_in_bytes == $size
+                  and .digest == $digest
+                  and .expired == false
+                  and .workflow_run.id == $run_id
+                  and .workflow_run.head_branch == $tag
+                  and .workflow_run.head_sha == $commit
+                ' > /dev/null
+          }
+          assert_artifact \
+            "$PLUGIN_ARTIFACT_ID" \
+            "$PLUGIN_ARTIFACT_NAME" \
+            "$PLUGIN_ARTIFACT_SIZE" \
+            "$PLUGIN_ARTIFACT_DIGEST"
+          assert_artifact \
+            "$SBOM_ARTIFACT_ID" \
+            "$SBOM_ARTIFACT_NAME" \
+            "$SBOM_ARTIFACT_SIZE" \
+            "$SBOM_ARTIFACT_DIGEST"
+
+      - name: Download exact signed plugin assets
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ env.PLUGIN_ARTIFACT_ID }}
+          path: dist/kubectl-ciscovk
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.SOURCE_RUN_ID }}
+          merge-multiple: true
+          digest-mismatch: error
+
+      - name: Download exact image SBOM
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ env.SBOM_ARTIFACT_ID }}
+          path: dist/image-sbom
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.SOURCE_RUN_ID }}
+          merge-multiple: true
+          digest-mismatch: error
+
+      - name: Verify exact asset allowlist, checksums, and SBOM
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/package_kubectl_ciscovk.py verify-assets \
+            --version "$RELEASE_TAG" \
+            --dist-dir dist/kubectl-ciscovk
+
+          image_sbom="dist/image-sbom/sbom.cdx.json"
+          mapfile -t image_assets < <(
+            find dist/image-sbom -maxdepth 1 -type f -print | LC_ALL=C sort
+          )
+          test "${#image_assets[@]}" -eq 1
+          test "${image_assets[0]}" = "$image_sbom"
+          jq -e \
+            --arg digest "$IMAGE_DIGEST" '
+              .bomFormat == "CycloneDX"
+              and .specVersion == "1.6"
+              and .metadata.component.type == "container"
+              and .metadata.component.name
+                == "ghcr.io/cisco-open/cisco-virtual-kubelet"
+              and .metadata.component.version == $digest
+              and (.components | length) > 0
+            ' "$image_sbom" > /dev/null
+
+          checksums="kubectl-ciscovk_${RELEASE_TAG}_checksums.txt"
+          (
+            cd dist/kubectl-ciscovk
+            sha256sum -c "$checksums"
+          )
+
+      - name: Install pinned cosign verifier
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.2
+
+      - name: Verify exact release-workflow signatures and provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          dist="dist/kubectl-ciscovk"
+          identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/tags/${RELEASE_TAG}"
+          issuer="https://token.actions.githubusercontent.com"
+          checksums="$dist/kubectl-ciscovk_${RELEASE_TAG}_checksums.txt"
+          cosign verify-blob \
+            --bundle "${checksums}.sigstore.json" \
+            --certificate-identity "$identity" \
+            --certificate-oidc-issuer "$issuer" \
+            "$checksums"
+          subjects=()
+          for target in darwin_amd64 darwin_arm64 linux_amd64 linux_arm64; do
+            archive="$dist/kubectl-ciscovk_${RELEASE_TAG}_${target}.tar.gz"
+            sbom="$dist/kubectl-ciscovk_${RELEASE_TAG}_${target}.sbom.cdx.json"
+            cosign verify-blob \
+              --bundle "${archive}.sigstore.json" \
+              --certificate-identity "$identity" \
+              --certificate-oidc-issuer "$issuer" \
+              "$archive"
+            subjects+=("$archive" "$sbom")
+          done
+
+          provenance="$dist/kubectl-ciscovk_${RELEASE_TAG}_provenance.sigstore.json"
+          for subject in "${subjects[@]}"; do
+            gh attestation verify "$subject" \
+              --bundle "$provenance" \
+              --repo "$GITHUB_REPOSITORY" \
+              --cert-identity "$identity" \
+              --source-ref "refs/tags/${RELEASE_TAG}" \
+              --source-digest "$RELEASE_COMMIT" \
+              --deny-self-hosted-runners
+          done
+
+      - name: Attach only exact assets and keep the release draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          assert_draft() {
+            local release_json="$RUNNER_TEMP/current-release.json"
+            local release_pages="$RUNNER_TEMP/current-releases.json"
+            gh api --paginate --slurp \
+              "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+              > "$release_pages"
+            jq -e \
+              --argjson id "$RELEASE_ID" \
+              --arg tag "$RELEASE_TAG" '
+                [ .[][] | select(.tag_name == $tag) ] as $matching
+                | ($matching | length) == 1
+                  and $matching[0].id == $id
+              ' "$release_pages" > /dev/null
+            gh api \
+              -H 'X-GitHub-Api-Version: 2026-03-10' \
+              "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+              > "$release_json"
+            jq -e \
+              --argjson id "$RELEASE_ID" \
+              --arg tag "$RELEASE_TAG" '
+                .id == $id
+                and .tag_name == $tag
+                and .name == $tag
+                and .draft == true
+                and .prerelease == false
+                and .published_at == null
+              ' "$release_json" > /dev/null
+            test "$(jq -j .body "$release_json" | sha256sum | awk '{print $1}')" \
+              = "$RELEASE_BODY_SHA256"
+          }
+          assert_draft
+
+          image_sbom="dist/image-sbom/sbom.cdx.json"
+          mapfile -t plugin_assets < <(
+            find dist/kubectl-ciscovk -maxdepth 1 -type f -print \
+              | LC_ALL=C sort
+          )
+          test "${#plugin_assets[@]}" -eq 15
+          assets=("${plugin_assets[@]}" "$image_sbom")
+          test "${#assets[@]}" -eq 16
+
+          expected_metadata="$RUNNER_TEMP/expected-release-assets.tsv"
+          before_metadata="$RUNNER_TEMP/before-release-assets.tsv"
+          after_metadata="$RUNNER_TEMP/after-release-assets.tsv"
+          for asset in "${assets[@]}"; do
+            printf '%s\t%s\tsha256:%s\tuploaded\n' \
+              "$(basename "$asset")" \
+              "$(stat -c %s "$asset")" \
+              "$(sha256sum "$asset" | awk '{print $1}')"
+          done | LC_ALL=C sort > "$expected_metadata"
+          test "$(wc -l < "$expected_metadata")" -eq 16
+
+          gh api "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+            --jq '.assets[] | [.name, (.size | tostring), .digest, .state] | @tsv' \
+            | LC_ALL=C sort > "$before_metadata"
+          test "$(wc -l < "$before_metadata")" -le 16
+          test -z "$(comm -23 "$before_metadata" "$expected_metadata")"
+
+          upload_url="$(
+            gh api "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+              --jq '.upload_url | sub("\\{.*$"; "")'
+          )"
+          test "$upload_url" = \
+            "https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets"
+
+          for asset in "${assets[@]}"; do
+            metadata="$(
+              printf '%s\t%s\tsha256:%s\tuploaded' \
+                "$(basename "$asset")" \
+                "$(stat -c %s "$asset")" \
+                "$(sha256sum "$asset" | awk '{print $1}')"
+            )"
+            if ! grep -Fqx -- "$metadata" "$before_metadata"; then
+              assert_draft
+              name="$(basename "$asset")"
+              encoded_name="$(jq -nr --arg name "$name" '$name | @uri')"
+              response="$RUNNER_TEMP/upload-${name}.json"
+              curl --fail-with-body --silent --show-error \
+                --request POST \
+                --header 'Accept: application/vnd.github+json' \
+                --header "Authorization: Bearer ${GH_TOKEN}" \
+                --header 'X-GitHub-Api-Version: 2026-03-10' \
+                --header 'Content-Type: application/octet-stream' \
+                --data-binary "@${asset}" \
+                "${upload_url}?name=${encoded_name}" > "$response"
+              jq -e \
+                --arg name "$name" \
+                --arg digest "$(printf '%s' "$metadata" | cut -f3)" \
+                --argjson size "$(stat -c %s "$asset")" '
+                  .name == $name
+                  and .digest == $digest
+                  and .size == $size
+                  and .state == "uploaded"
+                ' "$response" > /dev/null
+              assert_draft
+            fi
+          done
+
+          assert_draft
+          gh api "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+            --jq '.assets[] | [.name, (.size | tostring), .digest, .state] | @tsv' \
+            | LC_ALL=C sort > "$after_metadata"
+          test "$(wc -l < "$after_metadata")" -eq 16
+          diff -u "$expected_metadata" "$after_metadata"
+          assert_draft
+
+          {
+            echo '### v2026.8.1 draft asset recovery'
+            echo
+            echo "Staged the exact 16 assets recovered from tag run ${SOURCE_RUN_ID}."
+            echo "Release ${RELEASE_ID} remains an unpublished draft."
+          } >> "$GITHUB_STEP_SUMMARY"

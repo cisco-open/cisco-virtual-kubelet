@@ -141,6 +141,43 @@ class PackageKubectlCiscoVKTests(unittest.TestCase):
         self.assertIn("expected-release-assets.tsv", workflow)
         self.assertIn("remote-release-assets.tsv", workflow)
         self.assertIn("diff -u \"$expected_metadata\" \"$remote_metadata\"", workflow)
+        self.assertIn("resolve_draft_release_id", workflow)
+        self.assertIn('releases/${release_id}', workflow)
+        self.assertIn("https://uploads.github.com/repos/", workflow)
+        self.assertNotIn('releases/tags/${RELEASE_VERSION}', workflow)
+        self.assertNotIn("gh release upload", workflow)
+        self.assertNotIn("--clobber", workflow)
+
+    def test_v2026_8_1_recovery_is_exact_and_does_not_publish(self) -> None:
+        workflow = (
+            MODULE_PATH.parents[2]
+            / ".github/workflows/recover-v2026.8.1-release-assets.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "RELEASE_COMMIT: 9571a4db9fa481a8a0b6f0a60e689d43cdcbb620",
+            workflow,
+        )
+        self.assertIn(
+            "TAG_OBJECT: e63f1025ab5a806ab2f83348da47c4be441a444a",
+            workflow,
+        )
+        self.assertIn("RELEASE_ID: '365511761'", workflow)
+        self.assertIn("SOURCE_RUN_ID: '31005884666'", workflow)
+        self.assertIn("PLUGIN_ARTIFACT_ID: '8930317713'", workflow)
+        self.assertIn("SBOM_ARTIFACT_ID: '8930508350'", workflow)
+        self.assertIn("stage-plugin-release\tfailure", workflow)
+        self.assertIn('releases/${RELEASE_ID}', workflow)
+        self.assertIn('test "${#assets[@]}" -eq 16', workflow)
+        self.assertIn('diff -u "$expected_metadata" "$after_metadata"', workflow)
+        self.assertIn("and .draft == true", workflow)
+        self.assertIn("and .published_at == null", workflow)
+        self.assertIn("https://uploads.github.com/repos/", workflow)
+        self.assertIn("artifact-ids: ${{ env.PLUGIN_ARTIFACT_ID }}", workflow)
+        self.assertIn("artifact-ids: ${{ env.SBOM_ARTIFACT_ID }}", workflow)
+        self.assertNotIn("gh release upload", workflow)
+        self.assertNotIn("gh release edit", workflow)
+        self.assertNotIn("draft=false", workflow)
+        self.assertNotIn("draft: false", workflow)
 
     def test_final_release_allowlist_rejects_extra_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
