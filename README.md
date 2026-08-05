@@ -80,16 +80,16 @@ The chart and its container image are published to GitHub Container Registry wit
 
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.8.0 \
+  --version 2026.8.1 \
   --namespace cvk-system --create-namespace
 ```
 
-This deploys the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default — no `--set image.*` needed. The chart `--version` is the release normalised to SemVer (e.g. `v2026.08.0` → `2026.8.0`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current version.
+This deploys the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default — no `--set image.*` needed. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.8.1` → `2026.8.1`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current version.
 
 Optionally verify the chart signature before installing:
 
 ```bash
-cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.8.0 \
+cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.8.1 \
   --certificate-identity-regexp "https://github.com/cisco-open/cisco-virtual-kubelet/.github/workflows/release.yml@refs/tags/v.*" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -99,10 +99,9 @@ cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.8.0 \
 ### Install the optional kubectl plugin
 
 The client-side `kubectl-ciscovk` plugin is not required to run the controller.
-It adds read-only, ad-hoc IOS-XE diagnostics for operators. After the first
-plugin-bearing release following `v2026.08.0` is published and `cisco-vk` is
-accepted into the public Krew index, install and upgrade it without building
-from source:
+It adds read-only, ad-hoc IOS-XE diagnostics for operators. `v2026.8.1` is the
+first plugin-bearing release. After it is published and `cisco-vk` is accepted
+into the public Krew index, install and upgrade it without building from source:
 
 ```bash
 kubectl krew update
@@ -114,8 +113,8 @@ kubectl krew upgrade cisco-vk
 ```
 
 The `v2026.08.0` release predates the plugin assets and public index entry.
-Before the first plugin-bearing release, use the source-build fallback; between
-that release and index acceptance, use its signed archive. See the
+Until `v2026.8.1` is published, use the source-build fallback; between its
+publication and index acceptance, use its signed archive. See the
 [CLI & Plugin Reference](docs/cisco-vk-cli.md) for both verified installation
 paths and the exact availability gate.
 

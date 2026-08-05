@@ -76,11 +76,11 @@ so step 1's custom build is optional and you can install directly:
 
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.8.0 \
+  --version 2026.8.1 \
   --namespace cvk-system --create-namespace
 ```
 
-This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` is the release normalised to SemVer (e.g. `v2026.08.0` → `2026.8.0`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
+This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.8.1` → `2026.8.1`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
 
 **From source with a custom image** — to run the build from step 1 instead:
 
@@ -112,7 +112,7 @@ If the controller pod is not `Running`, see [Troubleshooting → CiscoDevice stu
 
 The client-side `kubectl-ciscovk` plugin is optional; the controller and normal
 Kubernetes workflows do not depend on it. It provides read-only, ad-hoc IOS-XE
-diagnostics. After the first plugin-bearing release following `v2026.08.0` is
+diagnostics. `v2026.8.1` is the first plugin-bearing release. After it is
 published and `cisco-vk` is accepted into the public Krew index, install and
 upgrade it with:
 
@@ -126,8 +126,8 @@ kubectl krew upgrade cisco-vk
 ```
 
 The `v2026.08.0` release predates the plugin assets and public index entry.
-Before the first plugin-bearing release, use the source-build fallback; between
-that release and index acceptance, use its signed archive. The
+Until `v2026.8.1` is published, use the source-build fallback; between its
+publication and index acceptance, use its signed archive. The
 [CLI & Plugin Reference](cisco-vk-cli.md) documents both verified installation
 paths, the exact availability gate, and the plugin's current IOS-XE-only scope.
 

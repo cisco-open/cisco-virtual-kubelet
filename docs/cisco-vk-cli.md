@@ -33,24 +33,24 @@ The archive's executable remains `kubectl-ciscovk`, so existing manual/source
 installs can continue to use `kubectl ciscovk`. Krew exposes the conventional
 `kubectl cisco-vk` alias. The initial index submission is intentionally gated on
 the first public release that contains the signed plugin archives.
-`v2026.08.0` predates those assets, so the Krew command above will not be
-available until that submission is accepted. The project release workflow
-validates Linux and macOS on both amd64 and arm64; Windows is not advertised
-yet.
+`v2026.08.0` predates those assets; `v2026.8.1` is the first plugin-bearing
+release. The Krew command above will not be available until that release's
+initial index submission is accepted. The project release workflow validates
+Linux and macOS on both amd64 and arm64; Windows is not advertised yet.
 
 ### Install a signed release archive
 
-Starting with the first plugin-bearing release after `v2026.08.0`, the GitHub
-release includes four deterministic archives, a signed checksum manifest, and
-per-archive signatures. The following example selects the local Linux/macOS
-architecture, verifies the signed checksum authority, and installs the plugin:
+Starting with `v2026.8.1`, each plugin-bearing GitHub release includes four
+deterministic archives, a signed checksum manifest, and per-archive signatures.
+The following example selects the local Linux/macOS architecture, verifies the
+signed checksum authority, and installs the plugin:
 
 ```bash
 (
 set -euo pipefail
 
 # Set this to an asset-bearing release shown on the Releases page.
-VERSION=v2026.9.0
+VERSION=v2026.8.1
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 case "$OS" in
   darwin|linux) ;;

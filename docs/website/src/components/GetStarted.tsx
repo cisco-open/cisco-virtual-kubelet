@@ -53,7 +53,7 @@ const codeBlocks: Record<string, { language: string; code: string }> = {
     language: "bash",
     code: `# Install the published Helm chart and signed image from GHCR.
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \\
-  --version 2026.8.0 \\
+  --version 2026.8.1 \\
   --namespace cvk-system --create-namespace
 
 # Verify the CRD and controller are up
@@ -62,8 +62,8 @@ kubectl -n cvk-system get pods`,
   },
   plugin: {
     language: "bash",
-    code: `# Optional IOS-XE operator plugin. Available after a plugin-bearing
-# release following v2026.08.0 is published and accepted into the Krew index.
+    code: `# Optional IOS-XE operator plugin. v2026.8.1 is the first
+# plugin-bearing release; Krew install begins after public-index acceptance.
 kubectl krew update
 kubectl krew install cisco-vk
 kubectl cisco-vk version
@@ -265,8 +265,8 @@ export default function GetStarted() {
           </div>
           <p className="mt-5 text-sm text-text-muted text-center">
             The CLI plugin is optional and currently targets IOS-XE diagnostics.
-            Before its first release use the source build; after release and
-            before public-index acceptance use the signed archive. See the{" "}
+            Until v2026.8.1 is published use the source build; after publication
+            and before public-index acceptance use its signed archive. See the{" "}
             <a
               href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/cisco-vk-cli/"
               target="_blank"
