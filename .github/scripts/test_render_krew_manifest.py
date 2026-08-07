@@ -181,6 +181,36 @@ class RenderKrewManifestTests(unittest.TestCase):
             renderer.write_manifest(output, "manifest\n")
             self.assertEqual(output.read_text(encoding="utf-8"), "manifest\n")
 
+    def test_release_workflow_krew_installs_each_native_archive_before_signing(
+        self,
+    ) -> None:
+        workflow = (
+            renderer.REPO_ROOT / ".github" / "workflows" / "release.yml"
+        ).read_text(encoding="utf-8")
+        verify_section = workflow.split("\n  verify-plugin:\n", 1)[1].split(
+            "\n  sign-plugin:\n", 1
+        )[0]
+        self.assertIn("push:\n    tags:\n      - 'v*'", workflow)
+        self.assertIn("if: startsWith(github.ref, 'refs/tags/v')", verify_section)
+        self.assertEqual(verify_section.count("target_os:"), 4)
+        self.assertEqual(verify_section.count("target_arch:"), 4)
+        self.assertIn("Krew-install and execute packaged plugin", verify_section)
+        self.assertIn("sigs.k8s.io/krew/cmd/krew@v0.4.5", verify_section)
+        self.assertIn('KREW_ROOT="$krew_root"', verify_section)
+        self.assertIn('KREW_OS="$TARGET_OS"', verify_section)
+        self.assertIn('KREW_ARCH="$TARGET_ARCH"', verify_section)
+        self.assertIn("KREW_NO_UPGRADE_CHECK=1", verify_section)
+        self.assertIn('--manifest "$manifest"', verify_section)
+        self.assertIn('--archive "$archive"', verify_section)
+        self.assertIn("kubectl-cisco_vk", verify_section)
+        self.assertIn(
+            "kubectl-ciscovk ${RELEASE_VERSION} (commit=${RELEASE_COMMIT},",
+            verify_section,
+        )
+        self.assertIn(
+            "sign-plugin:\n    needs: [package-plugin, verify-plugin]", workflow
+        )
+
     def test_post_publication_workflow_is_read_only_and_fail_closed(self) -> None:
         workflow = (
             renderer.REPO_ROOT / ".github" / "workflows" / "krew-index.yml"
@@ -197,6 +227,28 @@ class RenderKrewManifestTests(unittest.TestCase):
         self.assertNotIn("gh release edit", workflow)
         self.assertNotIn("${{ secrets.", workflow)
         self.assertIn("GITHUB_TOKEN: ''", workflow)
+        self.assertIn("group: krew-index-production", workflow)
+        self.assertIn("steps.upstream.outputs.current != 'true'", workflow)
+        self.assertIn("timeout-minutes: 45", workflow)
+        self.assertIn("deadline=$((SECONDS + 900))", workflow)
+        self.assertIn("while (( SECONDS < deadline ))", workflow)
+        self.assertIn("--connect-timeout 5", workflow)
+        self.assertIn("--max-time 15", workflow)
+        self.assertIn("--expected \"$expected_manifest\"", workflow)
+        self.assertIn("kubectl krew install cisco-vk", workflow)
+        self.assertIn(
+            "https://github.com/kubernetes-sigs/krew-index.git", workflow
+        )
+        self.assertIn('GIT_CONFIG_GLOBAL=/dev/null', workflow)
+        self.assertIn('GH_TOKEN=\'\'', workflow)
+        self.assertIn('GITHUB_TOKEN=\'\'', workflow)
+        self.assertIn(
+            "kubectl-ciscovk ${RELEASE_TAG} (commit=${RELEASE_COMMIT},",
+            workflow,
+        )
+        self.assertNotIn("continue-on-error", workflow)
+        self.assertNotIn("gh release create", workflow)
+        self.assertNotIn("gh release delete", workflow)
         self.assertIn(
             "3748407285b4cf866e9d4625e376aca927aa3f0b30f30ede83cc33a11566f28b",
             workflow,

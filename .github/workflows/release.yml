@@ -314,8 +314,9 @@ jobs:
           retention-days: 90
 
   # Execute the exact downloadable archive on every platform/architecture we
-  # publish. Windows stays intentionally absent until an equivalent native gate
-  # is added.
+  # publish, then install that same archive through Krew and execute the
+  # Krew-created plugin alias. Windows stays intentionally absent until an
+  # equivalent native gate is added.
   verify-plugin:
     needs: package-plugin
     if: startsWith(github.ref, 'refs/tags/v')
@@ -336,7 +337,7 @@ jobs:
             target_os: darwin
             target_arch: arm64
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       actions: read
       contents: read
@@ -349,6 +350,12 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13.14'
+
+      - name: Set up pinned Go for Krew
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: '1.25.12'
+          cache: false
 
       - name: Download exact plugin artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -373,6 +380,43 @@ jobs:
             --dist-dir dist/kubectl-ciscovk \
             --require-sboms \
             --execute
+
+      - name: Krew-install and execute packaged plugin
+        env:
+          RELEASE_COMMIT: ${{ github.sha }}
+          RELEASE_VERSION: ${{ github.ref_name }}
+          TARGET_ARCH: ${{ matrix.target_arch }}
+          TARGET_OS: ${{ matrix.target_os }}
+        run: |
+          set -euo pipefail
+          tool_dir="$RUNNER_TEMP/krew-tools"
+          manifest="$RUNNER_TEMP/krew-manifest/cisco-vk.yaml"
+          krew_root="$RUNNER_TEMP/krew-root"
+          archive="dist/kubectl-ciscovk/kubectl-ciscovk_${RELEASE_VERSION}_${TARGET_OS}_${TARGET_ARCH}.tar.gz"
+          checksums="dist/kubectl-ciscovk/kubectl-ciscovk_${RELEASE_VERSION}_checksums.txt"
+          mkdir -p "$tool_dir" "$(dirname "$manifest")"
+
+          python3 .github/scripts/render_krew_manifest.py \
+            --release-tag "$RELEASE_VERSION" \
+            --checksums "$checksums" \
+            --output "$manifest"
+          env GOBIN="$tool_dir" \
+            go install sigs.k8s.io/krew/cmd/krew@v0.4.5
+
+          KREW_NO_UPGRADE_CHECK=1 \
+            KREW_ROOT="$krew_root" \
+            KREW_OS="$TARGET_OS" \
+            KREW_ARCH="$TARGET_ARCH" \
+            "$tool_dir/krew" install \
+              --manifest "$manifest" \
+              --archive "$archive"
+          alias="$krew_root/bin/kubectl-cisco_vk"
+          test -L "$alias"
+          test -x "$alias"
+          version_output="$("$alias" version)"
+          grep -F \
+            "kubectl-ciscovk ${RELEASE_VERSION} (commit=${RELEASE_COMMIT}," \
+            <<< "$version_output"
 
   # Sign only after all four exact archives execute successfully. This job can
   # mint OIDC identities and attestations, but it cannot mutate a release.

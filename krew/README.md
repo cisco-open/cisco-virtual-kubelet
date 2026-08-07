@@ -22,19 +22,34 @@ execution gate.
    `v2026.9.0` rather than `v2026.09.0`. The release and Krew workflows reject
    padded month or patch components because Krew's new-plugin checklist
    requires the Git release tag itself to be semantic.
-4. Publish the already-verified GitHub draft. The read-only `krew-index`
+4. The tag workflow builds the four release archives and executes each one on
+   its native runner. The same matrix then renders the exact manifest, installs
+   the matching local archive through Krew, checks the `kubectl-cisco_vk`
+   alias, and requires the exact tag and commit before signing or draft staging.
+5. Publish the already-verified GitHub draft. The read-only `krew-index`
    workflow verifies the immutable release, signed checksums, exact archive
-   hashes, all four Krew installs, and the native plugin version. It uploads the
-   concrete `cisco-vk.yaml` as a workflow artifact.
-5. For the first release, submit that artifact manually as
+   hashes, all four public-URL Krew installs, and the native plugin version. It
+   uploads the concrete `cisco-vk.yaml` as a workflow artifact.
+6. For the first release, submit that artifact manually as
    `plugins/cisco-vk.yaml` in
    [kubernetes-sigs/krew-index](https://github.com/kubernetes-sigs/krew-index).
    Krew requires the initial submission and Kubernetes CLA to be handled by the
    plugin author.
-6. After the initial manifest is accepted, subsequent published releases use
+7. After the initial manifest is accepted, subsequent published releases use
    the checksum-pinned `krew-release-bot` binary to open version update PRs.
-   The bot receives no repository token or secret, and the CVK workflow has
-   read-only contents permission.
+   Reruns skip submission when the official entry already matches. The bot
+   receives no repository token or secret, and the CVK workflow has read-only
+   contents permission.
+8. The workflow waits up to 15 minutes for the exact distribution contract to
+   reach the official index, then performs a clean, credential-free
+   `kubectl krew install cisco-vk` and requires the exact tag and commit. A
+   timeout fails the Krew distribution workflow but cannot modify or unpublish
+   the immutable CVK release.
+
+These execution gates are release-lifecycle checks: the local-archive matrix
+runs for version tags, and the public-index check runs after a release is
+published. They do not add a pull-request job or another approval requirement
+to the normal PR flow.
 
 `v2026.8.1` is the first plugin-bearing release. Do not retrofit plugin archives
 onto `v2026.08.0`; that release predates the archive pipeline and is already

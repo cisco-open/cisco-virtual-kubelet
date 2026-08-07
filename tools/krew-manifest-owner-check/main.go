@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
+	"regexp"
 	"strings"
 
 	"sigs.k8s.io/yaml"
@@ -34,11 +36,32 @@ const (
 	expectedURIPath    = "/cisco-open/cisco-virtual-kubelet/releases/download/"
 )
 
+var sha256Pattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+var expectedTargets = map[string]struct{}{
+	"darwin/amd64": {},
+	"darwin/arm64": {},
+	"linux/amd64":  {},
+	"linux/arm64":  {},
+}
+
+type platformContract struct {
+	URI    string
+	SHA256 string
+	Bin    string
+}
+
+type manifestContract struct {
+	Version   string
+	Platforms map[string]platformContract
+}
+
 func main() {
 	manifestPath := flag.String("file", "", "path to the upstream Krew manifest")
+	expectedPath := flag.String("expected", "", "optional path to the expected Krew manifest contract")
 	flag.Parse()
 	if *manifestPath == "" || flag.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "usage: krew-manifest-owner-check --file <manifest.yaml>")
+		fmt.Fprintln(os.Stderr, "usage: krew-manifest-owner-check --file <manifest.yaml> [--expected <manifest.yaml>]")
 		os.Exit(2)
 	}
 	data, err := os.ReadFile(*manifestPath)
@@ -48,6 +71,18 @@ func main() {
 	}
 	if err := validateManifestOwnership(data); err != nil {
 		fmt.Fprintln(os.Stderr, "upstream Krew manifest ownership check failed:", err)
+		os.Exit(1)
+	}
+	if *expectedPath == "" {
+		return
+	}
+	expectedData, err := os.ReadFile(*expectedPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "read expected manifest:", err)
+		os.Exit(1)
+	}
+	if err := compareManifestContracts(data, expectedData); err != nil {
+		fmt.Fprintln(os.Stderr, "upstream Krew manifest contract mismatch:", err)
 		os.Exit(1)
 	}
 }
@@ -92,11 +127,115 @@ func validateManifestOwnership(data []byte) error {
 		}
 		parsed, err := url.Parse(rawURI)
 		if err != nil || parsed.Scheme != "https" || parsed.Host != "github.com" ||
-			!strings.HasPrefix(parsed.EscapedPath(), expectedURIPath) {
+			parsed.EscapedPath() != parsed.Path || path.Clean(parsed.Path) != parsed.Path ||
+			!strings.HasPrefix(parsed.Path, expectedURIPath) {
 			return fmt.Errorf("spec.platforms[%d].uri is not owned by %s", index, expectedHomepage)
 		}
 	}
 	return nil
+}
+
+func compareManifestContracts(actualData, expectedData []byte) error {
+	actual, err := extractManifestContract(actualData)
+	if err != nil {
+		return fmt.Errorf("actual manifest: %w", err)
+	}
+	expected, err := extractManifestContract(expectedData)
+	if err != nil {
+		return fmt.Errorf("expected manifest: %w", err)
+	}
+	if actual.Version != expected.Version {
+		return fmt.Errorf("spec.version is %q, expected %q", actual.Version, expected.Version)
+	}
+	for target := range expectedTargets {
+		actualPlatform := actual.Platforms[target]
+		expectedPlatform := expected.Platforms[target]
+		if actualPlatform.URI != expectedPlatform.URI {
+			return fmt.Errorf("platform %s URI is %q, expected %q", target, actualPlatform.URI, expectedPlatform.URI)
+		}
+		if actualPlatform.SHA256 != expectedPlatform.SHA256 {
+			return fmt.Errorf("platform %s sha256 is %q, expected %q", target, actualPlatform.SHA256, expectedPlatform.SHA256)
+		}
+		if actualPlatform.Bin != expectedPlatform.Bin {
+			return fmt.Errorf("platform %s bin is %q, expected %q", target, actualPlatform.Bin, expectedPlatform.Bin)
+		}
+	}
+	return nil
+}
+
+func extractManifestContract(data []byte) (manifestContract, error) {
+	if err := validateManifestOwnership(data); err != nil {
+		return manifestContract{}, err
+	}
+	var document map[string]any
+	if err := yaml.UnmarshalStrict(data, &document); err != nil {
+		return manifestContract{}, fmt.Errorf("parse strict YAML: %w", err)
+	}
+	spec, err := mapField(document, "spec")
+	if err != nil {
+		return manifestContract{}, err
+	}
+	version, err := stringField(spec, "version")
+	if err != nil {
+		return manifestContract{}, err
+	}
+	platforms, ok := spec["platforms"].([]any)
+	if !ok || len(platforms) != len(expectedTargets) {
+		return manifestContract{}, fmt.Errorf("spec.platforms must contain exactly %d entries", len(expectedTargets))
+	}
+	contract := manifestContract{
+		Version:   version,
+		Platforms: make(map[string]platformContract, len(expectedTargets)),
+	}
+	for index, item := range platforms {
+		platform, ok := item.(map[string]any)
+		if !ok {
+			return manifestContract{}, fmt.Errorf("spec.platforms[%d] must be a mapping", index)
+		}
+		if len(platform) != 4 {
+			return manifestContract{}, fmt.Errorf("spec.platforms[%d] must contain only selector, uri, sha256, and bin", index)
+		}
+		selector, err := mapField(platform, "selector")
+		if err != nil || len(selector) != 1 {
+			return manifestContract{}, fmt.Errorf("spec.platforms[%d].selector must contain only matchLabels", index)
+		}
+		labels, err := mapField(selector, "matchLabels")
+		if err != nil || len(labels) != 2 {
+			return manifestContract{}, fmt.Errorf("spec.platforms[%d].selector.matchLabels must contain only os and arch", index)
+		}
+		platformOS, err := stringField(labels, "os")
+		if err != nil {
+			return manifestContract{}, fmt.Errorf("spec.platforms[%d].selector.matchLabels: %w", index, err)
+		}
+		platformArch, err := stringField(labels, "arch")
+		if err != nil {
+			return manifestContract{}, fmt.Errorf("spec.platforms[%d].selector.matchLabels: %w", index, err)
+		}
+		target := platformOS + "/" + platformArch
+		if _, ok := expectedTargets[target]; !ok {
+			return manifestContract{}, fmt.Errorf("spec.platforms[%d] has unsupported target %q", index, target)
+		}
+		if _, duplicate := contract.Platforms[target]; duplicate {
+			return manifestContract{}, fmt.Errorf("spec.platforms contains duplicate target %q", target)
+		}
+		uri, err := stringField(platform, "uri")
+		if err != nil {
+			return manifestContract{}, fmt.Errorf("spec.platforms[%d]: %w", index, err)
+		}
+		sha256, err := stringField(platform, "sha256")
+		if err != nil || !sha256Pattern.MatchString(sha256) {
+			return manifestContract{}, fmt.Errorf("spec.platforms[%d].sha256 must be 64 lowercase hexadecimal characters", index)
+		}
+		bin, err := stringField(platform, "bin")
+		if err != nil {
+			return manifestContract{}, fmt.Errorf("spec.platforms[%d]: %w", index, err)
+		}
+		contract.Platforms[target] = platformContract{URI: uri, SHA256: sha256, Bin: bin}
+	}
+	if len(contract.Platforms) != len(expectedTargets) {
+		return manifestContract{}, errors.New("spec.platforms does not cover every supported target exactly once")
+	}
+	return contract, nil
 }
 
 func mapField(parent map[string]any, name string) (map[string]any, error) {
