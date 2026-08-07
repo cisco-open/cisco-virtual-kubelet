@@ -15,7 +15,9 @@
 # Krew updates happen only after a release is public and immutable. This
 # workflow cannot change the CVK repository or its release assets. The first
 # krew-index submission is intentionally manual; later updates are handed to
-# Krew's recommended release bot without passing it a token or secret.
+# Krew's recommended release bot without passing it a token or secret. After
+# submission, the workflow waits for the exact manifest to reach the official
+# index and verifies a clean install through that public index.
 
 name: krew-index
 
@@ -27,14 +29,15 @@ permissions:
   contents: read
 
 concurrency:
-  group: krew-index-${{ github.event.release.tag_name }}
+  # Serialize releases so two tags cannot race updates to the one public entry.
+  group: krew-index-production
   cancel-in-progress: false
 
 jobs:
   validate-and-submit:
     if: github.event.release.draft == false && github.event.release.prerelease == false
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -200,6 +203,7 @@ jobs:
 
       - name: Validate every Krew platform and execute the native plugin
         env:
+          RELEASE_COMMIT: ${{ github.sha }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
@@ -229,7 +233,9 @@ jobs:
           version_output="$(
             PATH="$native_root/bin:$PATH" kubectl cisco-vk version
           )"
-          grep -F "kubectl-ciscovk ${RELEASE_TAG} (" <<< "$version_output"
+          grep -F \
+            "kubectl-ciscovk ${RELEASE_TAG} (commit=${RELEASE_COMMIT}," \
+            <<< "$version_output"
 
       - name: Upload validated initial-submission artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -243,17 +249,30 @@ jobs:
         id: upstream
         run: |
           set -euo pipefail
-          url="https://raw.githubusercontent.com/kubernetes-sigs/krew-index/master/plugins/cisco-vk.yaml"
+          url="https://raw.githubusercontent.com/kubernetes-sigs/krew-index/master/plugins/cisco-vk.yaml?run=${GITHUB_RUN_ID}-preflight"
           status="$(
-            curl -sS -L -o "$RUNNER_TEMP/upstream-cisco-vk.yaml" \
+            curl --silent --show-error --location \
+              --connect-timeout 5 \
+              --max-time 15 \
+              --header 'Cache-Control: no-cache' \
+              --output "$RUNNER_TEMP/upstream-cisco-vk.yaml" \
               -w '%{http_code}' "$url"
           )"
           case "$status" in
             200)
               echo 'exists=true' >> "$GITHUB_OUTPUT"
+              if go run ./tools/krew-manifest-owner-check \
+                --file "$RUNNER_TEMP/upstream-cisco-vk.yaml" \
+                --expected dist/krew/cisco-vk.yaml \
+                > /dev/null 2>&1; then
+                echo 'current=true' >> "$GITHUB_OUTPUT"
+              else
+                echo 'current=false' >> "$GITHUB_OUTPUT"
+              fi
               ;;
             404)
               echo 'exists=false' >> "$GITHUB_OUTPUT"
+              echo 'current=false' >> "$GITHUB_OUTPUT"
               echo 'Initial submission required: download the validated cisco-vk.yaml artifact and open the first krew-index PR.' >> "$GITHUB_STEP_SUMMARY"
               ;;
             *)
@@ -269,7 +288,9 @@ jobs:
           --file "$RUNNER_TEMP/upstream-cisco-vk.yaml"
 
       - name: Install checksum-pinned Krew release bot
-        if: steps.upstream.outputs.exists == 'true'
+        if: >-
+          steps.upstream.outputs.exists == 'true' &&
+          steps.upstream.outputs.current != 'true'
         run: |
           set -euo pipefail
           archive="$RUNNER_TEMP/krew-release-bot_v0.0.51_linux_amd64.tar.gz"
@@ -284,7 +305,9 @@ jobs:
           test -x "$destination/krew-release-bot"
 
       - name: Open the subsequent krew-index update PR
-        if: steps.upstream.outputs.exists == 'true'
+        if: >-
+          steps.upstream.outputs.exists == 'true' &&
+          steps.upstream.outputs.current != 'true'
         env:
           # The bot submits the public manifest to its webhook. It receives no
           # CVK repository credential and this job has read-only permissions.
@@ -293,3 +316,113 @@ jobs:
           INPUT_KREW_PLUGIN_RELEASE_TAG: ${{ github.event.release.tag_name }}
           INPUT_KREW_TEMPLATE_FILE: dist/krew/cisco-vk.yaml
         run: "$RUNNER_TEMP/krew-release-bot/krew-release-bot action"
+
+      - name: Wait for the exact official-index manifest
+        if: steps.upstream.outputs.exists == 'true'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          expected_manifest="dist/krew/cisco-vk.yaml"
+          official_manifest="$RUNNER_TEMP/official-cisco-vk.yaml"
+          matched=false
+          deadline=$((SECONDS + 900))
+          attempt=0
+          while (( SECONDS < deadline )); do
+            attempt=$((attempt + 1))
+            remaining=$((deadline - SECONDS))
+            if (( remaining <= 0 )); then
+              break
+            fi
+            curl_budget=15
+            if (( remaining < curl_budget )); then
+              curl_budget=$remaining
+            fi
+            url="https://raw.githubusercontent.com/kubernetes-sigs/krew-index/master/plugins/cisco-vk.yaml?run=${GITHUB_RUN_ID}-${attempt}"
+            if curl --fail --silent --show-error --location \
+              --connect-timeout 5 \
+              --max-time "$curl_budget" \
+              --header 'Cache-Control: no-cache' \
+              --output "$official_manifest" \
+              "$url"; then
+              if go run ./tools/krew-manifest-owner-check \
+                --file "$official_manifest" \
+                --expected "$expected_manifest" \
+                > /dev/null 2>&1; then
+                echo "Official Krew index contains the exact ${RELEASE_TAG} manifest."
+                matched=true
+                break
+              fi
+              current_version="$(
+                sed -n 's/^  version: "\([^"]*\)"$/\1/p' "$official_manifest"
+              )"
+              echo "Waiting for ${RELEASE_TAG}; official index currently reports ${current_version:-unknown} (attempt ${attempt})."
+            fi
+            remaining=$((deadline - SECONDS))
+            if (( remaining > 0 )); then
+              sleep_for=15
+              if (( remaining < sleep_for )); then
+                sleep_for=$remaining
+              fi
+              sleep "$sleep_for"
+            fi
+          done
+          if [[ "$matched" != true ]]; then
+            echo "::error::Official Krew index did not publish the exact ${RELEASE_TAG} manifest within 15 minutes"
+            go run ./tools/krew-manifest-owner-check \
+              --file "$official_manifest" \
+              --expected "$expected_manifest" || true
+            exit 1
+          fi
+
+      - name: Install and execute from the official Krew index
+        if: steps.upstream.outputs.exists == 'true'
+        env:
+          RELEASE_COMMIT: ${{ github.sha }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          tool_dir="$RUNNER_TEMP/krew-tools"
+          public_root="$RUNNER_TEMP/krew-public-index"
+          public_home="$RUNNER_TEMP/krew-public-home"
+          export PATH="$tool_dir:$PATH"
+          test -x "$tool_dir/krew"
+          test -L "$tool_dir/kubectl-krew"
+          mkdir -p "$public_home"
+
+          HOME="$public_home" \
+            KREW_ROOT="$public_root" \
+            KREW_NO_UPGRADE_CHECK=1 \
+            GH_TOKEN='' \
+            GITHUB_TOKEN='' \
+            GIT_TERMINAL_PROMPT=0 \
+            GIT_CONFIG_GLOBAL=/dev/null \
+            kubectl krew install cisco-vk
+          default_index="$public_root/index/default"
+          test "$(
+            GIT_CONFIG_GLOBAL=/dev/null \
+              git -C "$default_index" remote get-url origin
+          )" = "https://github.com/kubernetes-sigs/krew-index.git"
+          go run ./tools/krew-manifest-owner-check \
+            --file "$default_index/plugins/cisco-vk.yaml" \
+            --expected dist/krew/cisco-vk.yaml
+          plugin_alias="$public_root/bin/kubectl-cisco_vk"
+          test -L "$plugin_alias"
+          test -x "$plugin_alias"
+          version_output="$(
+            PATH="$public_root/bin:$PATH" kubectl cisco-vk version
+          )"
+          grep -F \
+            "kubectl-ciscovk ${RELEASE_TAG} (commit=${RELEASE_COMMIT}," \
+            <<< "$version_output"
+
+          HOME="$public_home" \
+            KREW_ROOT="$public_root" \
+            KREW_NO_UPGRADE_CHECK=1 \
+            GH_TOKEN='' \
+            GITHUB_TOKEN='' \
+            GIT_TERMINAL_PROMPT=0 \
+            GIT_CONFIG_GLOBAL=/dev/null \
+            kubectl krew uninstall cisco-vk
+          test ! -e "$plugin_alias"
+          test ! -L "$plugin_alias"
