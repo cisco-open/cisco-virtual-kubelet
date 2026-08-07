@@ -14,6 +14,11 @@ broadest family coverage and revision/apply-log history; NX-OS starts with a
 per-device NX-API slice for `system`, `feature`, `feature_set`, `vlan`, and
 `interface_ethernet`.
 
+Controller-centric Network as Code intent uses the separate
+`NetworkController` and `NetworkControllerConfig` extension boundary. See the
+[Network Controller Extension Guide](controller-extension-guide.md) for its
+resolved-source, model-version, adapter, ownership, and worker contracts.
+
 ## Concepts
 
 ### Families

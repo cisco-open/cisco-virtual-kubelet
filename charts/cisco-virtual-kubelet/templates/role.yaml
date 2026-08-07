@@ -11,6 +11,7 @@ rules:
   - ""
   resources:
   - configmaps
+  - serviceaccounts
   verbs:
   - create
   - delete
@@ -44,17 +45,6 @@ rules:
   - list
   - watch
 - apiGroups:
-  - ""
-  resources:
-  - serviceaccounts
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - apps
   resources:
   - deployments
@@ -70,6 +60,7 @@ rules:
   - cisco.vk
   resources:
   - ciscodevices
+  - networkcontrollers
   verbs:
   - get
   - list
@@ -80,6 +71,7 @@ rules:
   - cisco.vk
   resources:
   - ciscodevices/status
+  - networkcontrollers/status
   verbs:
   - get
   - patch
@@ -124,6 +116,7 @@ rules:
   - iosxedevicegroupconfigs
   - iosxeinterfacegroupconfigs
   - iosxetemplates
+  - networkcontrollerconfigs
   verbs:
   - get
   - list
@@ -172,6 +165,14 @@ rules:
   resourceNames:
   - cisco-virtual-kubelet
   - cisco-virtual-kubelet-device
+  resources:
+  - clusterroles
+  verbs:
+  - bind
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resourceNames:
+  - cisco-virtual-kubelet-controller-worker
   resources:
   - clusterroles
   verbs:

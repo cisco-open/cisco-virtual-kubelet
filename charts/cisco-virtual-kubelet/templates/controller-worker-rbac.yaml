@@ -1,0 +1,53 @@
+{{/*
+Copyright 2026 Cisco Systems Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/}}
+---
+# Namespaced network-controller workers share this permission contract. The
+# manager creates a unique ServiceAccount and a namespaced RoleBinding for each
+# NetworkController; the chart intentionally does not create a
+# ClusterRoleBinding. As a result, these namespaced resources are only visible
+# in the worker's own namespace even though the reusable grant is a ClusterRole.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cisco-virtual-kubelet-controller-worker
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+rules:
+  # Endpoint metadata and adapter-owned connection status.
+  - apiGroups: ["cisco.vk"]
+    resources: ["networkcontrollers"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["cisco.vk"]
+    resources: ["networkcontrollers/status"]
+    verbs: ["get", "update", "patch"]
+  # Declarative controller intent is read-only. Workers report through the
+  # status subresource and cannot modify spec, metadata, or finalizers.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["networkcontrollerconfigs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["networkcontrollerconfigs/status"]
+    verbs: ["get", "update", "patch"]
+  # Network as Code payloads may be supplied by a same-namespace ConfigMap.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  # Emit bounded reconciliation events.
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # Credential Secrets are intentionally absent. The kubelet projects the
+  # administrator-approved Secret keys into the worker pod as read-only files.

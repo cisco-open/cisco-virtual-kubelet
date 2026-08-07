@@ -94,7 +94,12 @@ cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.8.1 \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
-> **Upgrades:** Helm installs CRDs only on first install. When upgrading across releases that change CRD schemas, apply the CRDs once after `helm upgrade` — see the post-install notes (`helm get notes cvk -n cvk-system`).
+> **Upgrades:** Helm installs CRDs only on first install. Apply the CRDs from
+> the new chart **before** `helm upgrade`, then verify they are established;
+> see the [operations runbook](docs/operations.md#upgrading-crds). If the new
+> controller CRDs are absent, CVK preserves existing device reconcilers but
+> leaves the controller scaffold disabled until the CRDs are applied and the
+> manager Deployment is restarted.
 
 ### Install the optional kubectl plugin
 
@@ -196,6 +201,7 @@ The controller creates a VK Deployment and a matching Kubernetes virtual node. P
 
 - [Getting Started](docs/getting-started.md) — Installation, first device, and first pod
 - [Architecture](docs/ARCHITECTURE.md) — Technical architecture and component deep-dive
+- [Network Controller Extensions](docs/controller-extension-guide.md) — Network as Code adapter and isolated-worker contract
 - [Configuration Reference](docs/CONFIGURATION.md) — `CiscoDevice` spec options and device setup
 - [Network as Code](docs/netascode-config.md) — Declarative `IOSXEConfig`, drift detection, and transactional apply
 - [CLI & Plugin Reference](docs/cisco-vk-cli.md) — `cisco-vk` binary and `kubectl-ciscovk` plugin

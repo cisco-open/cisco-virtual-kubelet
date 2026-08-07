@@ -26,12 +26,20 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
 
 var requiredManagerCRDs = []schema.GroupVersionResource{
+	ciskov1.GroupVersion.WithResource("networkcontrollers"),
+	configv1alpha1.GroupVersion.WithResource("networkcontrollerconfigs"),
 	configv1alpha1.GroupVersion.WithResource("iosxetelemetries"),
 	opsv1alpha1.GroupVersion.WithResource("deviceoperations"),
 	configv1alpha1.GroupVersion.WithResource("iosxeconfigrevisions"),
+}
+
+var controllerFoundationCRDNames = map[string]struct{}{
+	crdNameForGVR(ciskov1.GroupVersion.WithResource("networkcontrollers")):              {},
+	crdNameForGVR(configv1alpha1.GroupVersion.WithResource("networkcontrollerconfigs")): {},
 }
 
 func missingRequiredCRDs(cfg *rest.Config) ([]string, error) {
@@ -78,4 +86,20 @@ func missingRequiredCRDs(cfg *rest.Config) ([]string, error) {
 
 func crdNameForGVR(gvr schema.GroupVersionResource) string {
 	return strings.Join([]string{gvr.Resource, gvr.Group}, ".")
+}
+
+// partitionMissingRequiredCRDs keeps missing pre-existing CRDs fatal while
+// allowing an upgrade from a pre-controller-scaffold release to preserve its
+// existing CiscoDevice reconcilers. Network-controller reconciliation remains
+// disabled for that manager process until both additive CRDs are installed and
+// the Deployment is restarted.
+func partitionMissingRequiredCRDs(missing []string) (blocking, controllerFoundation []string) {
+	for _, name := range missing {
+		if _, optionalDuringUpgrade := controllerFoundationCRDNames[name]; optionalDuringUpgrade {
+			controllerFoundation = append(controllerFoundation, name)
+			continue
+		}
+		blocking = append(blocking, name)
+	}
+	return blocking, controllerFoundation
 }

@@ -22,7 +22,10 @@ Four ideas you'll see referenced throughout the docs:
 - **Network as Code CRDs** - Kubernetes resources such as `IOSXEConfig`,
   `NXOSConfig`, `IOSXEConfigBundle`, `IOSXETelemetry`, `DeviceOperation`, and
   `IOSXESoftwareUpgrade` that express device configuration, telemetry,
-  diagnostics, and operations as Kubernetes API objects.
+  diagnostics, and operations as Kubernetes API objects. The generic
+  `NetworkController` and `NetworkControllerConfig` scaffold extends the same
+  approach to controller-centric models, but requires a matching registered
+  adapter before it can reconcile an external controller.
 - **RESTCONF, NETCONF, gNMI, gNOI, and NX-API** - management protocols used by
   the provider. IOS-XE app-hosting lifecycle uses RESTCONF; NX-OS app-hosting
   uses NX-API CLI and NX-OS configuration uses NX-API REST/DME; declarative
@@ -44,6 +47,11 @@ Kubernetes API
   -> config.cisco.vk and ops.cisco.vk CRDs
   -> config, telemetry, operation, and software lifecycle reconcilers
   -> devices through RESTCONF, NETCONF, gNMI, gNOI, or NX-API
+
+Kubernetes API
+  -> NetworkController + NetworkControllerConfig
+  -> isolated worker for a registered adapter type
+  -> external controller native API
 ```
 
 ## What it does
@@ -60,6 +68,9 @@ Kubernetes API
   drift detection and verify-after-apply reconciliation. IOS-XE includes
   defaults, group targeting, templates, bundles, revisions, and apply logs;
   NX-OS starts with per-device `NXOSConfig` over NX-API REST/DME.
+- **Controller extension scaffold** - generic `NetworkController` endpoint and
+  `NetworkControllerConfig` intent APIs with an isolated-worker registry. They
+  remain inactive for a product until its adapter is compiled and registered.
 - **Operations and upgrades** - read-only diagnostics, gNOI probes,
   write-class operational actions, and multi-phase IOS-XE software upgrades
   behind explicit RBAC and runtime gates.
@@ -88,6 +99,9 @@ This project is under active development and is published as open source under
 - **Drivers** - `XE` is production-focused; `NXOS` has working NX-API CLI
   app-hosting and an NX-API REST/DME `NXOSConfig` runtime slice; `FAKE` is for
   testing; `XR` and `OPENCONFIG` are reserved driver names in the API surface.
+- **Controller adapters** - the generic controller CRDs and isolated-worker
+  scaffold are installed, but a controller product is supported only when its
+  adapter is registered in the manager and worker image.
 - **Images and chart** - signed monthly images are published at
   `ghcr.io/cisco-open/cisco-virtual-kubelet`, with the Helm chart at
   `oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet`. Build locally only
@@ -108,6 +122,7 @@ summarises the current release state.
 |---|---|---|
 | Pod lifecycle (App-Hosting create / update / delete) | **Stable** | Supported on Catalyst 8000V 17.15+, Catalyst 9000 17.18+, IR1100 Series 17.12+, and IE3500 Series 17.18+. |
 | `CiscoDevice` and VK deployment lifecycle | **Stable** | Controller-managed per-device VK pods. |
+| **Network controller scaffold** (`NetworkController`, `NetworkControllerConfig`) | **Scaffold** | Generic endpoint, controller-centric Network as Code intent, registry, and isolated-worker contracts. A registered product adapter is required; the APIs alone do not integrate an external controller. |
 | **Network as Code config driver** (`IOSXEConfig`, `NXOSConfig`) | **Beta** | Declarative IOS-XE and NX-OS config CRDs with drift detection and verification. IOS-XE also provides revision/apply-log history and broader family coverage; NX-OS starts with `system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` over NX-API REST/DME, without revision rollback. Schema is `v1alpha1`; family coverage and wire-format behaviour are still expanding. |
 | **Operations** (`DeviceOperation`, `IOSXEOperationalAction`) | **Beta** | Read-only diagnostics and gNOI probes are stable in intent; write-class actions require an explicit runtime gate and carry additional operational risk. |
 | **Software Lifecycle** (`IOSXESoftwareUpgrade`) | **Beta** | Multi-phase gNOI OS install/activate/verify. Disabled by default; requires `--enable-iosxesoftwareupgrade`. Tested on limited platforms. |
@@ -121,10 +136,16 @@ summarises the current release state.
     gates exist for the highest-risk surfaces (write-class gNOI, software
     upgrades) and must be opted into explicitly.
 
+!!! info "Scaffold features"
+    Scaffold APIs establish stable extension and security boundaries but are
+    not usable product integrations by themselves. Check the running image's
+    registered adapter set before creating controller resources.
+
 ## Where to next
 
 - [Getting Started](getting-started.md) - first deployment path
 - [Architecture](ARCHITECTURE.md) - how the pieces fit together
+- [Network Controller Extensions](controller-extension-guide.md) - add controller-centric Network as Code adapters safely
 - [CLI & Plugin Reference](cisco-vk-cli.md) - install and use the optional
   `kubectl-ciscovk` operator plugin
 - [Configuration](CONFIGURATION.md) - `CiscoDevice` and VK configuration fields
@@ -150,7 +171,7 @@ summarises the current release state.
 | **gNMI** | gRPC Network Management Interface, used for model-driven telemetry and optional config transport. |
 | **gNOI** | gRPC Network Operations Interface, used for read-only probes, file operations, reboot, factory reset, and software upgrade flows. |
 | **IOx** | Cisco's on-device application hosting framework, including App-Hosting. |
-| **Network as Code** | Declarative intent shape consumed by `IOSXEConfig`, `NXOSConfig`, and related config CRDs. |
+| **Network as Code** | Declarative intent shape consumed by `IOSXEConfig`, `NXOSConfig`, and, with a registered adapter, controller-centric `NetworkControllerConfig`. |
 | **OTEL / OpenTelemetry** | Vendor-neutral observability framework; this project emits OTEL traces and metrics. |
 | **RESTCONF** | HTTP/JSON management API for network devices, defined by [RFC 8040](https://datatracker.ietf.org/doc/html/rfc8040), modeled by YANG. |
 | **Virtual Kubelet** | [Upstream project](https://virtual-kubelet.io/) letting any system appear as a Kubernetes node. |

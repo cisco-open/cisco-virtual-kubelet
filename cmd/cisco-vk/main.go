@@ -28,11 +28,12 @@ var rootCmd = &cobra.Command{
 	Short: "Cisco Virtual Kubelet",
 	Long: `Cisco Virtual Kubelet provides a Kubelet implementation backed by
 Cisco AppHosting, along with a Kubernetes controller manager for
-CiscoDevice custom resources.
+CiscoDevice and network-controller custom resources.
 
 Available subcommands:
-  run       Start the Virtual Kubelet provider
-  manager   Start the CRD controller manager`,
+	run                Start the Virtual Kubelet provider
+	manager            Start the CRD controller manager
+	controller-worker  Run one isolated network-controller adapter`,
 }
 
 func init() {
@@ -43,6 +44,7 @@ func init() {
 	vktrace.T = vkotel.Adapter{}
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(managerCmd)
+	rootCmd.AddCommand(controllerWorkerCmd)
 }
 
 func main() {

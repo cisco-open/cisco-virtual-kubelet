@@ -6,18 +6,26 @@
   ⚠️  THE CRDs ARE NOT UPGRADED AUTOMATICALLY ON HELM UPGRADE.
 
   Helm only installs files under crds/ on FIRST install; subsequent upgrades
-  leave existing CRDs in place. If this release adds new fields to existing
-  CRDs (e.g. Wave-10 fields like spec.confirmTimeoutSeconds, spec.atomicReplace,
-  status.commandCount on IOSXEDiagnostic) you will see "unknown field" errors
-  on apply until you patch the CRDs manually:
+  leave existing CRDs in place. The required production upgrade order is:
+
+    1. Obtain/unpack the NEW chart version.
+    2. Apply its CRDs BEFORE rolling out the new manager:
 
     kubectl apply -f charts/cisco-virtual-kubelet/crds/
 
-  This is one-time per upgrade and is safe — CRD updates are
-  schema-additive across this branch.
+    3. Verify the additive controller CRDs (and the existing CRDs) are present:
 
-  After helm upgrade, run kubectl apply -f charts/cisco-virtual-kubelet/crds/
-  if upgrading from a version prior to 0.1.0.
+    kubectl get crd networkcontrollers.cisco.vk \
+      networkcontrollerconfigs.config.cisco.vk
+
+    4. Run helm upgrade.
+
+  If helm upgrade was already run first, existing CiscoDevice reconcilers stay
+  available, but NetworkController reconciliation is disabled for that manager
+  process. Apply the CRDs and restart the manager to enable it:
+
+    kubectl rollout restart -n {{ .Release.Namespace }} \
+      deploy/{{ include "cisco-virtual-kubelet.fullname" . }}-controller
 
   ───────────────────────────────────────────────────────────────────────────
 

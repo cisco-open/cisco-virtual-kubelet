@@ -39,3 +39,37 @@ func TestVKRBACStrictProfileGatesHighRiskRules(t *testing.T) {
 		}
 	}
 }
+
+func TestNetworkControllerWorkerRBACStaysSecretlessAndStatusOnly(t *testing.T) {
+	raw, err := os.ReadFile("../../charts/cisco-virtual-kubelet/templates/controller-worker-rbac.yaml")
+	if err != nil {
+		t.Fatalf("read controller-worker RBAC template: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		`resources: ["networkcontrollers"]
+    verbs: ["get", "list", "watch"]`,
+		`resources: ["networkcontrollers/status"]
+    verbs: ["get", "update", "patch"]`,
+		`resources: ["networkcontrollerconfigs"]
+    verbs: ["get", "list", "watch"]`,
+		`resources: ["networkcontrollerconfigs/status"]
+    verbs: ["get", "update", "patch"]`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("controller-worker RBAC missing least-privilege rule %q", want)
+		}
+	}
+	for _, forbidden := range []string{
+		`resources: ["secrets"]`,
+		`resources: ["pods"]`,
+		`resources: ["deployments"]`,
+		`"leases"`,
+		`"coordination.k8s.io"`,
+		`verbs: ["*"]`,
+	} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("controller-worker RBAC contains forbidden grant %q", forbidden)
+		}
+	}
+}

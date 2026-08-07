@@ -5,8 +5,9 @@ Cisco Virtual Kubelet exposes two command-line surfaces:
 - **`kubectl-ciscovk` plugin** — an operator tool for read-only, ad-hoc IOS-XE
   commands. The current implementation provides `exec`, `version`, and help.
 - **`cisco-vk` binary** — the backend. Its `manager` subcommand starts the
-  controller, while `run` starts one per-device Virtual Kubelet provider.
-  Helm normally manages both invocations.
+  controller, `run` starts one per-device Virtual Kubelet provider, and the
+  internal `controller-worker` subcommand starts one registered network-
+  controller adapter. Helm and the manager normally own these invocations.
 
 ---
 
@@ -251,9 +252,16 @@ CISCO_VK_GNOI_DISABLED=1 cisco-vk run --config /etc/cisco-vk/cat9300-1.yaml
 
 ## cisco-vk manager
 
-Starts the Kubernetes controller manager. Watches `CiscoDevice` custom
-resources and creates a ConfigMap + Deployment for each one. Also runs the
-`IOSXEConfigBundle` fan-out controller.
+Starts the Kubernetes controller manager. It watches `CiscoDevice` resources
+and creates their per-device VK ConfigMaps and Deployments, watches
+`NetworkController` resources and creates an isolated, namespace-scoped worker
+for each registered adapter type, and runs the `IOSXEConfigBundle` fan-out
+controller. The manager performs no product-controller API calls. Unknown or
+unregistered types produce no worker Deployment. If a separately supplied
+worker image has a different descriptor, its process exits before adapter
+setup or an external controller request. Worker Pod arguments also bind the
+`NetworkController` generation used to build its credential and CA projections;
+a stale Pod rejects a live generation mismatch before adapter setup.
 
 ### Flags
 
@@ -263,17 +271,30 @@ resources and creates a ConfigMap + Deployment for each one. Also runs the
 | `--health-probe-bind-address` | — | `:8081` | `/healthz` and `/readyz` probes. |
 | `--leader-elect` | — | `false` | Enable leader election for HA deployments. |
 | `--vk-image` | — | `ghcr.io/cisco/virtual-kubelet-cisco:latest` | Container image for per-device VK pods. |
+| `--controller-worker-image` | — | `ghcr.io/cisco/virtual-kubelet-cisco:latest` | Adapter-bearing image for isolated `NetworkController` workers. Its registered descriptor must match the manager's descriptor digest. |
+| `--controller-worker-image-pull-policy` | — | `IfNotPresent` | Worker image pull policy: `Always`, `IfNotPresent`, or `Never`. |
 | `--vk-service-account` | — | `cisco-virtual-kubelet` | Service account injected into VK Deployments. |
 | `--enable-config-aggregator` | — | `false` | Run `IOSXEConfig` reconciliation in-process rather than in each VK pod (experimental). |
 | `--log-level` | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error`. |
 | `--controller-info-log-rate-limit` | — | `100` | Max info log lines/sec from the reconciler. |
 
-The `--vk-image` value above is the binary's direct-invocation fallback. The
-Helm chart always passes an explicit value resolved from `image`/`vkImage`; its
-published default is
-`ghcr.io/cisco-open/cisco-virtual-kubelet:<chart-appVersion>`. When starting
-`cisco-vk manager` outside Helm, set `--vk-image` explicitly to the image tag
-you intend each per-device VK Deployment to run.
+The image values above are binary direct-invocation fallbacks. The Helm chart
+passes explicit values with separate meanings:
+
+- `controllerImage` selects both the manager Deployment and the isolated
+  network-controller worker image. This guarantees the worker contains the
+  same adapter registrations as the manager; the descriptor digest provides a
+  second fail-closed check.
+- `controllerImage.pullPolicy` becomes
+  `--controller-worker-image-pull-policy` as well as the manager Pod's pull
+  policy.
+- `vkImage` selects only per-device VK Deployments created for `CiscoDevice`.
+  It does not select a network-controller worker image.
+- The shared `image` is the fallback for both overrides. Its published default
+  is `ghcr.io/cisco-open/cisco-virtual-kubelet:<chart-appVersion>`.
+
+When starting `cisco-vk manager` outside Helm, set both worker image flags and
+`--vk-image` explicitly for the runtime images and pull behavior you intend.
 
 ---
 
@@ -288,9 +309,10 @@ helm upgrade --install cvk ./charts/cisco-virtual-kubelet \
   --set controller.leaderElect=true
 ```
 
-The image tag defaults to the chart's `appVersion`. Use `controllerImage` or
-`vkImage` only when the controller and per-device VK pods must run different
-images.
+The image tag defaults to the chart's `appVersion`. `controllerImage` always
+applies to both the manager and its network-controller workers; `vkImage`
+applies only to per-device VK pods. Use the overrides when those runtime
+families must run different images.
 
 Key values:
 

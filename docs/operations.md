@@ -19,6 +19,8 @@ deviceoperations.ops.cisco.vk           2026-01-10T09:00:00Z
 iosxeconfigs.config.cisco.vk            2026-01-10T09:00:00Z
 iosxesoftwareupgrades.ops.cisco.vk      2026-01-10T09:00:00Z
 iosxeoperationalactions.ops.cisco.vk    2026-01-10T09:00:00Z
+networkcontrollers.cisco.vk             2026-08-07T09:00:00Z
+networkcontrollerconfigs.config.cisco.vk 2026-08-07T09:00:00Z
 
 # 3. Upgrade the Helm release:
 helm upgrade cisco-vk ./charts/cisco-virtual-kubelet \
@@ -28,6 +30,12 @@ helm upgrade cisco-vk ./charts/cisco-virtual-kubelet \
 # 4. Confirm manager pod is running the new image:
 kubectl rollout status deployment/cisco-vk-manager -n cisco-vk
 ```
+
+If a pre-scaffold release is upgraded before these two controller CRDs are
+applied, the manager deliberately keeps existing CiscoDevice reconcilers
+running and skips NetworkController registration for that process. Apply the
+new CRDs, then restart the manager Deployment; dynamic CRD installation alone
+does not add a controller to an already-running controller-runtime manager.
 
 ### What to expect after a CRD upgrade
 
