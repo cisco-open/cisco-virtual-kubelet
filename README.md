@@ -316,12 +316,6 @@ Third-party code, generated material, fonts, and documentation tooling retain
 their applicable upstream terms; the release artifacts and documentation sites
 carry generated license and notice bundles.
 
-The project, including its longstanding generated IOS-XE schema material
-derived from Cisco YANG models, completed Cisco OSPO review before its first
-public release. Maintainers verify that later changes remain within that
-approved scope; see the
-[release runbook](RELEASE.md#licensing-is-a-hard-gate).
-
 ## Support
 
 - GitHub Issues: For bug reports and feature requests

@@ -632,15 +632,17 @@ go_version_is_supported go1.27.9
             workflow, r"uses:\s+[^\s#]+@(v\d+|main|master|latest)(?:\s|$)"
         )
 
-    def test_runbook_requires_draft_before_tag_and_schema_approval_continuity(
+    def test_runbook_requires_draft_before_tag_and_schema_provenance_checks(
         self,
     ) -> None:
         runbook = (ROOT / "RELEASE.md").read_text(encoding="utf-8")
         draft = runbook.index("## 3. Create the draft before the tag")
         tag = runbook.index("## 4. Push the tag")
         self.assertLess(draft, tag)
-        self.assertIn("Cisco OSPO approval established", runbook)
-        self.assertIn("Re-engage OSPO", runbook)
+        self.assertIn("recorded upstream provenance", runbook)
+        self.assertIn("Cisco API License 1.1", runbook)
+        self.assertIn("applicable license and notice bundles", runbook)
+        self.assertNotIn("OSPO", runbook)
         self.assertIn("networkcontrollers.cisco.vk", runbook)
         self.assertIn("networkcontrollerconfigs.config.cisco.vk", runbook)
         self.assertIn("go1.26.7", runbook)

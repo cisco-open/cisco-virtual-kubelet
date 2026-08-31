@@ -126,16 +126,14 @@ after every verification below passes. Published releases are immutable.
   and `THIRD_PARTY_LICENSES.txt`.
 - [ ] Review the image and plugin SBOMs as inventories; an SBOM is not a
   substitute for redistributing license and NOTICE text.
-- [ ] Confirm that the generated IOS-XE schema and YANG material remain within
-  the Cisco OSPO approval established at day 0 of the project, before its first
-  public release, and record the existing approval reference in the release
-  issue. The current generated files embed data derived from Cisco YANG models
-  at YangModels/yang commit
+- [ ] Confirm that the generated IOS-XE schema and YANG material match their
+  recorded upstream provenance. The current generated files embed data derived
+  from Cisco YANG models at YangModels/yang commit
   `647250f1c8f59aaf1ecdcf1d908fde96c036b1ba`, whose upstream terms are the
   [Cisco API License 1.1](https://github.com/YangModels/yang/blob/647250f1c8f59aaf1ecdcf1d908fde96c036b1ba/vendor/cisco/xe/LICENSE.md)
-  and whose modules carry Cisco copyright notices. Re-engage OSPO before
-  tagging only if the upstream terms, provenance source, model scope, or
-  distributed artifact types have changed beyond that approved scope.
+  and whose modules carry Cisco copyright notices. Before tagging, verify that
+  any changes to upstream terms, provenance source, model scope, or distributed
+  artifact types are reflected in the applicable license and notice bundles.
 
 ## 2. Prepare curated notes
 
