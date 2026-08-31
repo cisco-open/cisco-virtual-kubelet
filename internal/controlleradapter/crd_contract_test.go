@@ -15,14 +15,60 @@
 package controlleradapter
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsvalidation "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 )
+
+func TestControllerCRDsPassAPIServerStaticValidation(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := apiextensions.AddToScheme(scheme); err != nil {
+		t.Fatalf("add internal apiextensions scheme: %v", err)
+	}
+	if err := apiextensionsv1.AddToScheme(scheme); err != nil {
+		t.Fatalf("add v1 apiextensions scheme: %v", err)
+	}
+
+	for _, path := range []string{
+		"../../config/crd/cisco.vk_networkcontrollers.yaml",
+		"../../config/crd/config.cisco.vk_networkcontrollerconfigs.yaml",
+	} {
+		t.Run(path, func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("read CRD: %v", err)
+			}
+			var external apiextensionsv1.CustomResourceDefinition
+			if err := yaml.Unmarshal(raw, &external); err != nil {
+				t.Fatalf("parse CRD: %v", err)
+			}
+			var internal apiextensions.CustomResourceDefinition
+			if err := scheme.Convert(&external, &internal, nil); err != nil {
+				t.Fatalf("convert CRD for API-server validation: %v", err)
+			}
+			if len(external.Spec.Versions) == 0 {
+				t.Fatal("CRD has no served versions")
+			}
+			// Generated CRD create manifests correctly omit status. The API server
+			// populates storedVersions after create; seed that post-strategy state so
+			// this unit test can exercise schema, default, structural, and CEL
+			// validation without a live apiserver.
+			internal.Status.StoredVersions = []string{external.Spec.Versions[0].Name}
+			if errs := apiextensionsvalidation.ValidateCustomResourceDefinition(context.Background(), &internal); len(errs) != 0 {
+				t.Fatalf("API-server static validation failed: %v", errs.ToAggregate())
+			}
+		})
+	}
+}
 
 func TestControllerFormatExtensibilityDoesNotBroadenDeviceCRDs(t *testing.T) {
 	deviceCRDs := []string{

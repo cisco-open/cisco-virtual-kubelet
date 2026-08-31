@@ -98,6 +98,11 @@ func TestValidateNetworkControllerSpecRejectsUnsafeConnectionShapes(t *testing.T
 			wantErr: "HTTPS",
 		},
 		{
+			name:    "endpoint without hostname",
+			mutate:  func(spec *NetworkControllerSpec) { spec.Endpoint = "https://:443" },
+			wantErr: "HTTPS",
+		},
+		{
 			name:    "URL credentials",
 			mutate:  func(spec *NetworkControllerSpec) { spec.Endpoint = "https://admin:secret@controller.example.test" },
 			wantErr: "userinfo",

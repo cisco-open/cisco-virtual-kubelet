@@ -166,6 +166,7 @@ type NetworkControllerConfigurationSource struct {
 	// with their qualified upstream model version.
 	//
 	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:validation:Type=object
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	Inline *runtime.RawExtension `json:"inline,omitempty"`

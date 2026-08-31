@@ -461,9 +461,24 @@ Avoid `kubectl delete ciscodevice --force --grace-period=0` — it skips the fin
 
 ---
 
-## `kubectl rollout restart` did not pick up a new password
+## A Secret update did not roll the VK pod
 
-The controller only rotates the pod when the **ConfigMap** changes (via the `cisco.vk/config-hash` annotation on the pod template). A password change on the referenced Secret alone does not trigger a rollout. Force one manually:
+The controller normally watches referenced credential Secrets and copies their
+`resourceVersion` into the Deployment pod template, which triggers an automatic
+rollout. Compare the source and observed versions and check the manager:
+
+```bash
+kubectl -n <ns> get secret <secret-name> \
+  -o jsonpath='{.metadata.resourceVersion}{"\n"}'
+kubectl -n <ns> get deploy/<device-name>-vk \
+  -o jsonpath='{.spec.template.metadata.annotations.cisco\.vk/credential-resource-version}{"\n"}'
+kubectl -n cisco-vk-system get deploy,pods
+kubectl -n cisco-vk-system logs deploy/cisco-vk-cisco-virtual-kubelet --tail=200
+```
+
+Confirm the `CiscoDevice` references that same-namespace Secret. After fixing
+the manager or reference, the watch-driven reconcile should roll the pod. For
+an immediate troubleshooting fallback, force one manually:
 
 ```bash
 kubectl -n <ns> rollout restart deploy/<device-name>-vk

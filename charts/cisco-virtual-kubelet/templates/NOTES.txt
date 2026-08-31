@@ -11,7 +11,7 @@
     1. Obtain/unpack the NEW chart version.
     2. Apply its CRDs BEFORE rolling out the new manager:
 
-    kubectl apply -f charts/cisco-virtual-kubelet/crds/
+    kubectl apply --server-side -f cisco-virtual-kubelet/crds/
 
     3. Verify the additive controller CRDs (and the existing CRDs) are present:
 
@@ -29,19 +29,18 @@
 
   ───────────────────────────────────────────────────────────────────────────
 
-  RBAC RECONCILE — the chart updates ClusterRole bindings on every helm upgrade,
-  so the iosxediagnostics + configmaps verbs needed by the diagnostics
-  reconciler (Phase B-D) propagate automatically. If you see the
-  per-pod-kubelet log emit:
+  RBAC RECONCILE — the chart updates its ClusterRoles and bindings on every
+  Helm upgrade, and Kubernetes applies those permissions without a pod
+  restart. If a per-device kubelet still reports:
 
     "iosxediagnostics is forbidden: User <ServiceAccount> cannot list
      resource ..."
 
-  it means the ClusterRoleBinding hasn't yet picked up the new role — restart
-  the cisco-vk-system controller deployment to force a re-bind:
+  verify that the installed release owns the expected role and binding:
 
-    kubectl rollout restart -n cisco-vk-system \
-      deploy/cisco-vk-cisco-virtual-kubelet-controller
+    kubectl auth can-i list iosxediagnostics.config.cisco.vk \
+      --as=system:serviceaccount:{{ .Release.Namespace }}:{{ include "cisco-virtual-kubelet.vkServiceAccountName" . }} \
+      --namespace {{ .Release.Namespace }}
 
   ───────────────────────────────────────────────────────────────────────────
 
@@ -59,10 +58,10 @@
   Apply your first CiscoDevice CR (see examples/configs/ciscodevice-crs.yaml).
 
   Documentation:
-    docs/rfcs/final/README.md       — branch implementation reference
-    docs/rfcs/deployment-modes.md   — operator setup per transport
-    docs/rfcs/operator-cli-guide.md — kubectl interaction reference
-    docs/rfcs/diagnostics-guide.md  — show-command capture (IOSXEDiagnostic)
+    https://cisco-open.github.io/cisco-virtual-kubelet/docs/getting-started/
+    https://cisco-open.github.io/cisco-virtual-kubelet/docs/cisco-vk-cli/
+    https://cisco-open.github.io/cisco-virtual-kubelet/docs/operations/
+    https://cisco-open.github.io/cisco-virtual-kubelet/docs/troubleshooting/
 
 {{- end }}
 

@@ -434,8 +434,10 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 		// Build credential env vars. When a Secret reference is provided,
-		// use valueFrom so the kubelet resolves the password at pod startup
-		// (the controller never reads the Secret itself). Otherwise fall back
+		// use valueFrom so the kubelet resolves the password at pod startup.
+		// The reconciler separately fetches the typed Secret to observe its
+		// resourceVersion; it does not inspect Data, but the API object includes it.
+		// Otherwise fall back
 		// to injecting the plaintext password as a direct env var for backward
 		// compatibility with CRDs that set spec.password directly.
 		var credEnv []corev1.EnvVar
@@ -1754,8 +1756,9 @@ func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj
 }
 
 // lookupCredentialResourceVersion returns the referenced Secret's
-// resourceVersion for use as a pod-template rollout annotation. It never reads
-// Secret data.
+// resourceVersion for use as a pod-template rollout annotation. Reconciliation
+// does not inspect Secret data, but the typed object returned by the API/cache
+// contains it; manager Secret RBAC and memory remain in the trust boundary.
 func (r *CiscoDeviceReconciler) lookupCredentialResourceVersion(ctx context.Context, device *ciskov1.CiscoDevice) string {
 	if device.Spec.CredentialSecretRef == nil {
 		return ""

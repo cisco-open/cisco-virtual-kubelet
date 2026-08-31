@@ -56,9 +56,10 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # Fail before pushing mutable image/chart tags when this tag already has a
-  # published release. An absent release is allowed because the curated draft
-  # may be created while the build is running; final staging still requires it.
+  # Fail before pushing mutable image/chart tags unless the curated draft was
+  # created first. This enforces the maintainer runbook's draft-before-tag
+  # sequence and prevents a tag-triggered build from publishing orphaned image
+  # or chart artifacts.
   release-preflight:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
@@ -66,7 +67,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Require release to be absent or draft
+      - name: Require exact curated draft
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_COMMIT: ${{ github.sha }}
@@ -84,25 +85,22 @@ jobs:
           releases="$RUNNER_TEMP/releases.json"
           gh api --paginate --slurp \
             "repos/${GITHUB_REPOSITORY}/releases?per_page=100" > "$releases"
-          jq -e --arg tag "$RELEASE_VERSION" '
+          jq -e --arg tag "$RELEASE_VERSION" --arg commit "$RELEASE_COMMIT" '
             [ .[][] | select(.tag_name == $tag) ] as $matching
-            | (($matching | length) <= 1)
-              and (
-                ($matching | length) == 0
-                or (
-                  $matching[0].draft == true
-                  and $matching[0].published_at == null
-                )
-              )
+            | ($matching | length) == 1
+              and $matching[0].draft == true
+              and $matching[0].prerelease == false
+              and $matching[0].published_at == null
+              and $matching[0].target_commitish == $commit
           ' "$releases" > /dev/null || {
-            echo "::error::Release ${RELEASE_VERSION} is already published or duplicated"
+            echo "::error::Exactly one non-prerelease draft for ${RELEASE_VERSION} must exist before the tag is pushed"
             exit 1
           }
 
   build-and-sign:
     needs: release-preflight
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Native cross-compilation (see Dockerfile) keeps this well under 30m, but
     # leave headroom for the Trivy scan, SBOM generation, and cosign round-trips.
     timeout-minutes: 60
@@ -116,11 +114,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
-
       - name: Set up Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        with:
+          version: v0.36.1
+          driver-opts: |
+            image=moby/buildkit:v0.32.2@sha256:28a898719c18a33f4e8000685287fa36fd0dd9560c6440227d3a732d79bb41d8
 
       - name: Log in to ghcr.io
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
@@ -139,6 +138,18 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
+      - name: Derive reproducible image build metadata
+        id: image-build-metadata
+        env:
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          source_date_epoch="$(git show -s --format=%ct "$RELEASE_COMMIT")"
+          [[ "$source_date_epoch" =~ ^[0-9]+$ ]]
+          build_time="$(date -u --date="@${source_date_epoch}" +'%Y-%m-%dT%H:%M:%SZ')"
+          echo "build_time=${build_time}" >> "$GITHUB_OUTPUT"
+          echo "source_date_epoch=${source_date_epoch}" >> "$GITHUB_OUTPUT"
+
       - name: Build and push image
         id: build
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
@@ -146,10 +157,16 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            GIT_COMMIT=${{ github.sha }}
+            BUILD_TIME=${{ steps.image-build-metadata.outputs.build_time }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
-          sbom: true
+          # The pinned Anchore step below creates the one curated image SBOM.
+          # Do not enable BuildKit's shorthand SBOM generator: its default
+          # scanner image is a mutable tag and would duplicate the attestation.
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -161,7 +178,7 @@ jobs:
       # the cosign steps). Signing first guarantees every published image
       # carries a signature + SBOM attestation regardless of the scanner.
       - name: Generate CycloneDX SBOM
-        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
           format: cyclonedx-json
@@ -173,9 +190,9 @@ jobs:
           upload-release-assets: false
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
-          cosign-release: v2.4.1
+          cosign-release: v3.1.3
 
       - name: Keyless sign image
         env:
@@ -191,6 +208,19 @@ jobs:
             --type cyclonedx \
             --predicate sbom.cdx.json \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+
+      - name: Execute exact signed image and verify provenance
+        env:
+          BUILD_TIME: ${{ steps.image-build-metadata.outputs.build_time }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          RELEASE_COMMIT: ${{ github.sha }}
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          image="${REGISTRY}/${IMAGE_NAME}@${IMAGE_DIGEST}"
+          expected="cisco-vk ${RELEASE_VERSION} (commit=${RELEASE_COMMIT}, built=${BUILD_TIME})"
+          test "$(docker run --rm --platform linux/amd64 "$image" version)" = "$expected"
+          test "$(docker run --rm --platform linux/amd64 "$image" --version)" = "$expected"
 
       - name: Upload SBOM as workflow artefact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -244,12 +274,12 @@ jobs:
       - name: Set up pinned Python archive toolchain
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.13.14'
+          python-version: '3.13.15'
 
       - name: Set up pinned Go toolchain
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.25.12'
+          go-version: '1.26.7'
           cache: true
 
       - name: Derive reproducible build metadata
@@ -270,6 +300,16 @@ jobs:
           SOURCE_DATE_EPOCH: ${{ steps.metadata.outputs.source_date_epoch }}
         run: |
           set -euo pipefail
+          dependency_licenses="$RUNNER_TEMP/plugin-third-party-licenses"
+          go run github.com/google/go-licenses/v2@v2.0.1 \
+            check ./tools/kubectl-ciscovk
+          go run github.com/google/go-licenses/v2@v2.0.1 \
+            save ./tools/kubectl-ciscovk \
+            --ignore github.com/cisco/virtual-kubelet-cisco \
+            --save_path "$dependency_licenses"
+          test -z "$(find "$dependency_licenses" -type f -print -quit)"
+          cmp third_party/go/LICENSE "$(go env GOROOT)/LICENSE"
+          cmp third_party/go/PATENTS "$(go env GOROOT)/PATENTS"
           python3 .github/scripts/package_kubectl_ciscovk.py package \
             --version "$RELEASE_VERSION" \
             --commit "$RELEASE_COMMIT" \
@@ -279,9 +319,9 @@ jobs:
 
       - name: Install pinned Syft
         id: syft
-        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
-          syft-version: v1.50.0
+          syft-version: v1.51.1
 
       - name: Generate per-platform CycloneDX SBOMs
         env:
@@ -349,12 +389,12 @@ jobs:
       - name: Set up pinned Python verifier
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.13.14'
+          python-version: '3.13.15'
 
       - name: Set up pinned Go for Krew
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.25.12'
+          go-version: '1.26.7'
           cache: false
 
       - name: Download exact plugin artifacts
@@ -438,7 +478,7 @@ jobs:
       - name: Set up pinned Python verifier
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.13.14'
+          python-version: '3.13.15'
 
       - name: Download verified plugin artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -449,7 +489,7 @@ jobs:
       - name: Install pinned cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
-          cosign-release: v3.1.2
+          cosign-release: v3.1.3
 
       - name: Keyless sign archives and checksum manifest
         env:
@@ -511,7 +551,7 @@ jobs:
   publish-chart:
     needs: build-and-sign
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -523,9 +563,9 @@ jobs:
           persist-credentials: false
 
       - name: Set up Helm
-        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
-          version: v3.16.2
+          version: v3.21.4
 
       - name: Log in to ghcr.io (Helm OCI registry)
         run: |
@@ -566,9 +606,9 @@ jobs:
           echo "digest=$(awk '/Digest:/ {print $2}' push.log)" >> "$GITHUB_OUTPUT"
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
-          cosign-release: v2.4.1
+          cosign-release: v3.1.3
 
       - name: Keyless sign chart
         env:
@@ -598,7 +638,7 @@ jobs:
       - name: Set up pinned Python verifier
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.13.14'
+          python-version: '3.13.15'
 
       - name: Download signed plugin release assets
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -637,13 +677,14 @@ jobs:
             gh api --paginate --slurp \
               "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
               > "$release_pages"
-            jq -er --arg tag "$RELEASE_VERSION" '
+            jq -er --arg tag "$RELEASE_VERSION" --arg commit "$RELEASE_COMMIT" '
               [ .[][] | select(.tag_name == $tag) ] as $matching
               | select(($matching | length) == 1)
               | select(
                   $matching[0].draft == true
                   and $matching[0].prerelease == false
                   and $matching[0].published_at == null
+                  and $matching[0].target_commitish == $commit
                 )
               | $matching[0].id
             ' "$release_pages"
@@ -653,8 +694,10 @@ jobs:
             test "$(resolve_draft_release_id)" = "$release_id"
             gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
               | jq -e --argjson id "$release_id" --arg tag "$RELEASE_VERSION" \
+                  --arg commit "$RELEASE_COMMIT" \
                 '.id == $id
                  and .tag_name == $tag
+                 and .target_commitish == $commit
                  and .draft == true
                  and .prerelease == false
                  and .published_at == null' \

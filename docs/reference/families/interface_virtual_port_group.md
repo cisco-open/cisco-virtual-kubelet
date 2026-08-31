@@ -22,3 +22,4 @@ set present on the device are preserved (additive merge).
 - `ipv4_address`
 - `ipv4_address_mask`
 - `shutdown`
+- `ip_helper_address`

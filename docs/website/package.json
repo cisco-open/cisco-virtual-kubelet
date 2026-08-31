@@ -4,12 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "prebuild": "npm run licenses:check",
+    "build": "next build && npm run licenses:check-build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "licenses:generate": "node scripts/generate-third-party-licenses.mjs --write",
+    "licenses:check": "node scripts/generate-third-party-licenses.mjs --check",
+    "licenses:check-build": "node scripts/generate-third-party-licenses.mjs --check-build"
   },
   "dependencies": {
-    "@heroicons/react": "^2.2.0",
     "framer-motion": "^12.34.0",
     "lucide-react": "^0.564.0",
     "next": "16.2.11",
@@ -18,19 +21,22 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "postcss": "^8.5.23",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "mermaid": "11.17.2",
+    "postcss": "^8.5.23",
+    "resize-observer-polyfill": "1.5.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
   "overrides": {
     "postcss": "$postcss",
     "minimatch": "10.2.4",
+    "nanoid": "3.3.18",
     "next": {
       "sharp": "0.35.3"
     }

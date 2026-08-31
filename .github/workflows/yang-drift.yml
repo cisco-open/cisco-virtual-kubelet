@@ -24,10 +24,12 @@ permissions:
 
 jobs:
   check-1718:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Vendor latest upstream 1718 YANG
         run: |
@@ -49,7 +51,7 @@ jobs:
 
       - name: Upload drift diff
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: yang-drift-1718
           path: yang-drift.diff

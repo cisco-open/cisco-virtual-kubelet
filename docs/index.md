@@ -68,9 +68,10 @@ Kubernetes API
   drift detection and verify-after-apply reconciliation. IOS-XE includes
   defaults, group targeting, templates, bundles, revisions, and apply logs;
   NX-OS starts with per-device `NXOSConfig` over NX-API REST/DME.
-- **Controller extension scaffold** - generic `NetworkController` endpoint and
-  `NetworkControllerConfig` intent APIs with an isolated-worker registry. They
-  remain inactive for a product until its adapter is compiled and registered.
+- **Controller extension scaffold (Alpha)** - generic `NetworkController`
+  endpoint and `NetworkControllerConfig` intent APIs with an isolated-worker
+  registry. The September image registers zero product adapters and the
+  boundary is report-only; it cannot apply, prune, or remotely delete state.
 - **Operations and upgrades** - read-only diagnostics, gNOI probes,
   write-class operational actions, and multi-phase IOS-XE software upgrades
   behind explicit RBAC and runtime gates.
@@ -99,18 +100,18 @@ This project is under active development and is published as open source under
 - **Drivers** - `XE` is production-focused; `NXOS` has working NX-API CLI
   app-hosting and an NX-API REST/DME `NXOSConfig` runtime slice; `FAKE` is for
   testing; `XR` and `OPENCONFIG` are reserved driver names in the API surface.
-- **Controller adapters** - the generic controller CRDs and isolated-worker
-  scaffold are installed, but a controller product is supported only when its
-  adapter is registered in the manager and worker image.
+- **Controller adapters** - the generic Alpha controller CRDs and
+  isolated-worker scaffold are installed, but the September image contains no
+  product adapter. It does not integrate Catalyst Center or another external
+  controller.
 - **Images and chart** - signed monthly images are published at
   `ghcr.io/cisco-open/cisco-virtual-kubelet`, with the Helm chart at
   `oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet`. Build locally only
   when you need a custom image. See [Getting Started](getting-started.md).
 - **Operator plugin** - the optional `kubectl-ciscovk` plugin provides
-  read-only, ad-hoc IOS-XE diagnostics. `v2026.8.1` is the first
-  plugin-bearing release; Krew installation begins only after it is published
-  and `cisco-vk` is accepted into the public index. Signed release archives
-  and a source-build fallback are documented in the
+  read-only, ad-hoc IOS-XE diagnostics and is available in the public Krew
+  index. `v2026.8.1` was the first plugin-bearing release. Signed release
+  archives and a source-build path are documented in the
   [CLI & Plugin Reference](cisco-vk-cli.md).
 
 ### Feature Maturity
@@ -122,7 +123,7 @@ summarises the current release state.
 |---|---|---|
 | Pod lifecycle (App-Hosting create / update / delete) | **Stable** | Supported on Catalyst 8000V 17.15+, Catalyst 9000 17.18+, IR1100 Series 17.12+, and IE3500 Series 17.18+. |
 | `CiscoDevice` and VK deployment lifecycle | **Stable** | Controller-managed per-device VK pods. |
-| **Network controller scaffold** (`NetworkController`, `NetworkControllerConfig`) | **Scaffold** | Generic endpoint, controller-centric Network as Code intent, registry, and isolated-worker contracts. A registered product adapter is required; the APIs alone do not integrate an external controller. |
+| **Network controller scaffold** (`NetworkController`, `NetworkControllerConfig`) | **Alpha** | Generic endpoint, controller-centric Network as Code intent, registry, and isolated-worker contracts. Zero adapters ship in September; the boundary is report-only and does not integrate an external controller. |
 | **Network as Code config driver** (`IOSXEConfig`, `NXOSConfig`) | **Beta** | Declarative IOS-XE and NX-OS config CRDs with drift detection and verification. IOS-XE also provides revision/apply-log history and broader family coverage; NX-OS starts with `system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` over NX-API REST/DME, without revision rollback. Schema is `v1alpha1`; family coverage and wire-format behaviour are still expanding. |
 | **Operations** (`DeviceOperation`, `IOSXEOperationalAction`) | **Beta** | Read-only diagnostics and gNOI probes are stable in intent; write-class actions require an explicit runtime gate and carry additional operational risk. |
 | **Software Lifecycle** (`IOSXESoftwareUpgrade`) | **Beta** | Multi-phase gNOI OS install/activate/verify. Disabled by default; requires `--enable-iosxesoftwareupgrade`. Tested on limited platforms. |
@@ -136,10 +137,11 @@ summarises the current release state.
     gates exist for the highest-risk surfaces (write-class gNOI, software
     upgrades) and must be opted into explicitly.
 
-!!! info "Scaffold features"
-    Scaffold APIs establish stable extension and security boundaries but are
-    not usable product integrations by themselves. Check the running image's
-    registered adapter set before creating controller resources.
+!!! warning "Alpha scaffold"
+    These APIs are not a usable product integration by themselves. The
+    September image has no adapter and no remote-mutation runtime. Treat the
+    exact endpoint string within one namespace as the duplicate-fencing key;
+    the namespace remains the Kubernetes trust and RBAC boundary.
 
 ## Where to next
 

@@ -62,7 +62,7 @@ env:
 jobs:
   prepare:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       checks: read
@@ -287,7 +287,7 @@ jobs:
     concurrency:
       group: lab-ci-next-report-${{ needs.prepare.outputs.pr_number }}
       queue: max
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       actions: read

@@ -48,11 +48,19 @@ class PackageKubectlCiscoVKTests(unittest.TestCase):
             binary.chmod(0o700)
             license_path = root / "LICENSE"
             license_path.write_bytes(b"Apache License fixture\n")
+            go_license_dir = root / "third_party" / "go"
+            go_license_dir.mkdir(parents=True)
+            (go_license_dir / "LICENSE").write_bytes(b"Go BSD license fixture\n")
+            (go_license_dir / "PATENTS").write_bytes(b"Go patents fixture\n")
             first = root / "first.tar.gz"
             second = root / "other" / "second.tar.gz"
 
-            packager.create_archive(first, binary, license_path, EPOCH)
-            packager.create_archive(second, binary, license_path, EPOCH)
+            packager.create_archive(
+                first, binary, license_path, go_license_dir, EPOCH
+            )
+            packager.create_archive(
+                second, binary, license_path, go_license_dir, EPOCH
+            )
 
             self.assertEqual(first.read_bytes(), second.read_bytes())
             self.assertEqual(struct.unpack("<I", first.read_bytes()[4:8])[0], EPOCH)
@@ -60,16 +68,26 @@ class PackageKubectlCiscoVKTests(unittest.TestCase):
                 members = archive.getmembers()
                 self.assertEqual(
                     [member.name for member in members],
-                    ["LICENSE", "kubectl-ciscovk"],
+                    [
+                        "LICENSE",
+                        "THIRD_PARTY_LICENSES/go/LICENSE",
+                        "THIRD_PARTY_LICENSES/go/PATENTS",
+                        "kubectl-ciscovk",
+                    ],
                 )
-                self.assertEqual([member.mode for member in members], [0o644, 0o755])
-                self.assertEqual([member.uid for member in members], [0, 0])
-                self.assertEqual([member.gid for member in members], [0, 0])
-                self.assertEqual([member.uname for member in members], ["", ""])
-                self.assertEqual([member.gname for member in members], ["", ""])
-                self.assertEqual([member.mtime for member in members], [EPOCH, EPOCH])
+                self.assertEqual(
+                    [member.mode for member in members],
+                    [0o644, 0o644, 0o644, 0o755],
+                )
+                self.assertEqual([member.uid for member in members], [0] * 4)
+                self.assertEqual([member.gid for member in members], [0] * 4)
+                self.assertEqual([member.uname for member in members], [""] * 4)
+                self.assertEqual([member.gname for member in members], [""] * 4)
+                self.assertEqual([member.mtime for member in members], [EPOCH] * 4)
             self.assertEqual(
-                packager.verify_archive(first, license_path, EPOCH),
+                packager.verify_archive(
+                    first, license_path, go_license_dir, EPOCH
+                ),
                 binary.read_bytes(),
             )
 
@@ -78,7 +96,9 @@ class PackageKubectlCiscoVKTests(unittest.TestCase):
             bad_header = root / "bad-header.tar.gz"
             bad_header.write_bytes(tampered)
             with self.assertRaisesRegex(packager.PackagingError, "gzip header"):
-                packager.verify_archive(bad_header, license_path, EPOCH)
+                packager.verify_archive(
+                    bad_header, license_path, go_license_dir, EPOCH
+                )
 
     def test_checksums_cover_exact_sorted_artifact_set(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -28,4 +28,10 @@ set present on the device are preserved (additive merge).
 
 - `description`
 - `shutdown`
+- `vrf`
+- `ipv4_address`
+- `ipv4_address_mask`
 - `mtu`
+- `ip_access_group_in`
+- `ip_access_group_out`
+- `ip_pim_sparse_mode`

@@ -19,5 +19,6 @@ The writer reads and writes the following leaves. Leaves outside this
 set present on the device are preserved (additive merge).
 
 - `description`
+- `prematch`
 - `match`
 - `match-type`

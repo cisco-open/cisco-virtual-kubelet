@@ -254,6 +254,7 @@ spec:
                       Inline is a resolved controller-centric Network as Code document or
                       fragment. The field is schemaless so controller model sections can evolve
                       with their qualified upstream model version.
+                    type: object
                     x-kubernetes-preserve-unknown-fields: true
                 type: object
               taskTimeout:

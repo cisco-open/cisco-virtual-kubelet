@@ -16,12 +16,17 @@ runtime subcommands:
   device or external-controller API calls.
 - **`cisco-vk run`** — the Virtual Kubelet provider. One process per device. Reads its config, registers a virtual node in the cluster, and drives the device via RESTCONF when pods come and go.
 - **`cisco-vk controller-worker`** — the network-controller runtime. One
-  process per `NetworkController`; it starts the product adapter registered for
-  that endpoint and watches only its Kubernetes namespace.
+  process per `NetworkController` whose type has a registered adapter; it
+  starts that adapter and watches only its Kubernetes namespace. The September
+  image registers zero product adapters, so this Alpha path remains inactive.
 
-This split keeps device and controller credentials plus product-specific logic
-out of the manager. Each worker receives only its target's mounted credentials;
-its Kubernetes API RBAC and cache are namespace-scoped.
+This split keeps product-specific logic and direct credential use inside the
+device or controller worker. The manager writes Secret references rather than
+inspecting `.data`, but its cluster-wide Secret watch for device credential
+rotation means typed Secret objects can enter its cache and memory. Treat the
+manager as part of the credential trust boundary described in
+[Security](security.md). Each controller worker receives only its target's
+mounted credentials; its Kubernetes API RBAC and cache are namespace-scoped.
 
 ### Network controller extension boundary
 
@@ -33,6 +38,9 @@ controller-centric Network as Code intent and speaks the controller's native
 API. Endpoint processes, credentials, failure domains, and rate limits are
 separate, but the namespace remains the API trust/RBAC/cache boundary. Use a
 dedicated namespace when endpoints or config authors are not mutually trusted.
+Duplicate fencing compares the exact stored endpoint string within that
+namespace only. The September scaffold is report-only and has no apply, prune,
+remote-delete, or mutation-RBAC implementation.
 See the [Network Controller Extension Guide](controller-extension-guide.md) for
 the registry, worker, model, ownership, and security contracts.
 

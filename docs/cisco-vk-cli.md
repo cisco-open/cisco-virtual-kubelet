@@ -15,9 +15,8 @@ Cisco Virtual Kubelet exposes two command-line surfaces:
 
 ### Install with Krew
 
-The plugin is named `cisco-vk` in Krew, following Krew's hyphenated vendor-name
-guidance. Once the initial manifest has been accepted into the public Krew
-index, installation and upgrades are:
+The plugin is named `cisco-vk` in the public Krew index, following Krew's
+hyphenated vendor-name guidance. Installation and upgrades are:
 
 ```bash
 kubectl krew update
@@ -32,12 +31,10 @@ kubectl cisco-vk version
 
 The archive's executable remains `kubectl-ciscovk`, so existing manual/source
 installs can continue to use `kubectl ciscovk`. Krew exposes the conventional
-`kubectl cisco-vk` alias. The initial index submission is intentionally gated on
-the first public release that contains the signed plugin archives.
-`v2026.08.0` predates those assets; `v2026.8.1` is the first plugin-bearing
-release. The Krew command above will not be available until that release's
-initial index submission is accepted. The project release workflow validates
-Linux and macOS on both amd64 and arm64; Windows is not advertised yet.
+`kubectl cisco-vk` alias. Historical note: `v2026.08.0` predates the signed
+plugin assets, and `v2026.8.1` was the first plugin-bearing release. The
+project release workflow validates Linux and macOS on both amd64 and arm64;
+Windows is not advertised yet.
 
 ### Install a signed release archive
 
@@ -51,7 +48,7 @@ signed checksum authority, and installs the plugin:
 set -euo pipefail
 
 # Set this to an asset-bearing release shown on the Releases page.
-VERSION=v2026.8.1
+VERSION=v2026.9.0
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 case "$OS" in
   darwin|linux) ;;
@@ -104,9 +101,8 @@ kubectl ciscovk --help
 
 ### Build from source
 
-For development, or until the first plugin-bearing release is available, build
-the plugin from the current source tree and place it on your `PATH` using the
-standard `kubectl-<name>` filename:
+For development or a custom build, build the plugin from the current source
+tree and place it on your `PATH` using the standard `kubectl-<name>` filename:
 
 ```bash
 git clone https://github.com/cisco-open/cisco-virtual-kubelet.git
@@ -202,6 +198,24 @@ status, RBAC, and maturity.
 
 ---
 
+## cisco-vk version
+
+Use either form to identify the backend binary before an install, upgrade, or
+support request:
+
+```bash
+cisco-vk version
+cisco-vk --version
+```
+
+Both print the same release provenance:
+
+```text
+cisco-vk v2026.9.0 (commit=<full-git-commit>, built=<RFC3339-time>)
+```
+
+A direct development build reports `devel` and may report `unknown` metadata.
+
 ## cisco-vk run
 
 `cisco-vk run` starts the Virtual Kubelet provider for a single device. The
@@ -263,6 +277,12 @@ setup or an external controller request. Worker Pod arguments also bind the
 `NetworkController` generation used to build its credential and CA projections;
 a stale Pod rejects a live generation mismatch before adapter setup.
 
+!!! warning "Alpha controller extension"
+    The September image registers zero product adapters. The generic API and
+    worker boundary are Alpha and report-only: no Catalyst Center, APIC,
+    Meraki, or other controller is contacted, and there is no apply, prune, or
+    remote-delete runtime or mutation RBAC role in this release.
+
 ### Flags
 
 | Flag | Env | Default | Description |
@@ -295,6 +315,10 @@ passes explicit values with separate meanings:
 
 When starting `cisco-vk manager` outside Helm, set both worker image flags and
 `--vk-image` explicitly for the runtime images and pull behavior you intend.
+The manager-generated network-controller worker does not currently propagate
+`imagePullSecrets`; use a registry the cluster can pull anonymously for this
+Alpha scaffold. Private-registry worker support requires a future explicit
+credential-propagation contract.
 
 ---
 

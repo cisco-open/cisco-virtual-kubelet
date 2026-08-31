@@ -1,4 +1,4 @@
- How to Contribute
+# How to Contribute
 
 Thanks for your interest in contributing to the Cisco Virtual Kubelet Provider! Here are a few
 general guidelines on contributing and reporting bugs that we ask you to review.
@@ -10,7 +10,7 @@ endeavor to review incoming issues and pull requests within 10 days, and will
 close any lingering issues or pull requests after 60 days of inactivity.
 
 Please note that all of your interactions in the project are subject to our
-[Code of Conduct](/CODE_OF_CONDUCT.md). This includes creation of issues or pull
+[Code of Conduct](CODE_OF_CONDUCT.md). This includes creating issues or pull
 requests, commenting on issues or pull requests, and extends to all interactions
 in any real-time space e.g., Slack, Discord, etc.
 
@@ -25,7 +25,7 @@ description**, as much relevant information as possible, and, if possible, a
 test case.
 
 **If you discover a security bug, please do not report it through GitHub.
-Instead, please see security procedures in [SECURITY.md](/SECURITY.md).**
+Instead, please see the security procedures in [SECURITY.md](SECURITY.md).**
 
 ## Sending Pull Requests
 
@@ -40,22 +40,38 @@ major version release.
 After hosted checks pass, one approval on the current pull request head
 automatically dispatches the Cat8kv and Cat9k integration checks.
 
+### Building the documentation locally
+
+The MkDocs site includes hash-pinned local browser assets from the website npm
+lock, so a Python-only MkDocs install is not sufficient. With Python 3.13 and
+Node.js 24 available, create an isolated environment and run the combined gate:
+
+```sh
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install --require-hashes -r requirements.txt
+make mkdocs-build
+```
+
+The target runs `npm ci` from `docs/website`, builds MkDocs in strict mode, and
+verifies the deployed runtime hashes, source maps, and third-party licenses.
+
 ## Other Ways to Contribute
 
-We welcome anyone that wants to contribute to the Cisco Virtual Kubelet Provider to triage and
-reply to open issues to help troubleshoot and fix existing bugs. Here is what
-you can do:
+We welcome anyone who wants to contribute to the Cisco Virtual Kubelet Provider
+to triage and reply to open issues, help troubleshoot, and fix existing bugs.
+Here is what you can do:
 
-- Help ensure that existing issues follows the recommendations from the
+- Help ensure that existing issues follow the recommendations from the
   _[Reporting Issues](#reporting-issues)_ section, providing feedback to the
   issue's author on what might be missing.
 - Review and update the existing content of our
   [Wiki](https://github.com/cisco-open/cisco-virtual-kubelet/wiki) with up-to-date
   instructions and code samples.
-- Review existing pull requests, and testing patches against real existing
+- Review existing pull requests and test patches against real
   applications that use the Cisco Virtual Kubelet Provider.
 - Write a test, or add a missing test case to an existing test.
 
-Thanks again for your interest on contributing to the Cisco Virtual Kubelet Provider!
+Thanks again for your interest in contributing to the Cisco Virtual Kubelet Provider!
 
 :heart:

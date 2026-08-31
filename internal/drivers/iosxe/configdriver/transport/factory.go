@@ -149,8 +149,7 @@ func buildGNMI(spec *ciskov1.DeviceSpec, pass string, opts FactoryOptions) (Inte
 // device's HTTPS listener and produces
 // `ssh: overflow reading version string` while reading TLS bytes as
 // an SSH version banner. Caught against a live Cat9300-24P / IOS-XE
-// 17.18.2 retest (#6(a) in
-// docs/rfcs/final/evidence/2026-04-27-live-c9300-netconf-probe-tier1).
+// 17.18.2 live-device validation on 2026-04-27.
 //
 // To preserve the operator-override pathway without coupling the
 // configdriver port to the apphosting port, treat the well-known

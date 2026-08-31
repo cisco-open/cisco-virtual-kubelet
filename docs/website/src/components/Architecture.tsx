@@ -61,8 +61,8 @@ export default function Architecture() {
             How It <span className="gradient-text">Works</span>
           </h2>
           <p className="text-lg text-text-muted max-w-2xl mx-auto">
-            The provider bridges Kubernetes and Cisco network devices, enabling
-            seamless container deployment via RESTCONF APIs.
+            The provider bridges Kubernetes and Cisco network devices through
+            RESTCONF on IOS-XE and NX-API CLI on NX-OS.
           </p>
         </motion.div>
 
@@ -122,13 +122,13 @@ export default function Architecture() {
               ))}
             </div>
 
-            {/* RESTCONF connectors */}
+            {/* Southbound transport connectors */}
             <div className="grid grid-cols-3 gap-4 mb-2">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="flex flex-col items-center py-1">
+              {["RESTCONF", "RESTCONF", "NX-API CLI"].map((transport, i) => (
+                <div key={`${transport}-${i}`} className="flex flex-col items-center py-1">
                   <div className="w-px h-6 bg-gradient-to-b from-accent to-success" />
                   <div className="px-3 py-1 rounded-full bg-surface border border-border text-xs text-primary font-mono">
-                    RESTCONF
+                    {transport}
                   </div>
                   <div className="w-px h-6 bg-gradient-to-b from-success to-accent" />
                   <ArrowDown className="w-4 h-4 text-success -mt-1" />

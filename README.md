@@ -1,7 +1,7 @@
 # Cisco Virtual Kubelet Provider
 
-[![Go Version](https://img.shields.io/badge/Go-1.25+-blue.svg)](https://golang.org)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Go Version](https://img.shields.io/badge/Go-1.26.7%2B-blue.svg)](https://go.dev/)
+[![Project code license](https://img.shields.io/badge/Project%20code-Apache%202.0-blue.svg)](LICENSE)
 
 A [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider that enables [Kubernetes](https://kubernetes.io/docs/home/) to schedule container workloads on Cisco Catalyst series switches and other IOS-XE devices — with Beta support for Cisco Nexus (NX-OS) switches — that offer [App-Hosting](https://developer.cisco.com/docs/app-hosting/) capabilities.
 
@@ -15,6 +15,7 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 - **Driver-Based Architecture** — extensible driver pattern supporting IOS-XE devices, with Beta support for NX-OS
 - **Full App-Hosting Lifecycle** — create, monitor, and delete containers via RESTCONF (IOS-XE) or NX-API CLI (NX-OS)
 - **Network as Code** — declare device configuration in Kubernetes (`IOSXEConfig`, plus the `NXOSConfig` CRD *(Beta)*) with continuous drift detection and transactional apply
+- **Network Controller Extension API** *(Alpha scaffold)* — generic `NetworkController` and `NetworkControllerConfig` contracts for future controller adapters; the September image ships with zero product adapters and is report-only by design
 - **NX-OS Support** *(Beta)* — app-hosting lifecycle over NX-API CLI and declarative `NXOSConfig` over NX-API REST/DME; an initial runtime slice covering the `system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` families
 - **Software Lifecycle** *(Beta)* — drive IOS-XE software upgrades via the `IOSXESoftwareUpgrade` CRD using gNOI OS install/activate/verify
 - **Device Operations** *(Beta)* — run auditable `show` commands and read-only gNOI probes from Kubernetes via `DeviceOperation` CRD
@@ -63,7 +64,7 @@ See [Production Readiness](docs/production-readiness.md) for the current NX-OS r
 ### Prerequisites
 
 - A Kubernetes cluster
-- `helm` v3
+- Helm 3.21+ or 4.2+
 - Cisco IOS-XE device with:
   - IOx enabled (`iox` configuration)
   - RESTCONF enabled
@@ -80,33 +81,47 @@ The chart and its container image are published to GitHub Container Registry wit
 
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.8.1 \
+  --version 2026.9.0 \
   --namespace cvk-system --create-namespace
 ```
 
-This deploys the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default — no `--set image.*` needed. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.8.1` → `2026.8.1`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current version.
+This deploys the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default — no `--set image.*` needed. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.9.0` → `2026.9.0`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current version.
 
 Optionally verify the chart signature before installing:
 
 ```bash
-cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.8.1 \
+cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.9.0 \
   --certificate-identity-regexp "https://github.com/cisco-open/cisco-virtual-kubelet/.github/workflows/release.yml@refs/tags/v.*" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
-> **Upgrades:** Helm installs CRDs only on first install. Apply the CRDs from
-> the new chart **before** `helm upgrade`, then verify they are established;
-> see the [operations runbook](docs/operations.md#upgrading-crds). If the new
-> controller CRDs are absent, CVK preserves existing device reconcilers but
-> leaves the controller scaffold disabled until the CRDs are applied and the
-> manager Deployment is restarted.
+### Upgrade from an earlier release
+
+Helm does not upgrade files under `crds/`. Pull the new chart and apply its
+CRDs **before** `helm upgrade`:
+
+```bash
+helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
+  --version 2026.9.0 --untar
+kubectl apply --server-side -f cisco-virtual-kubelet/crds/
+kubectl wait --for=condition=Established --timeout=60s \
+  crd/networkcontrollers.cisco.vk \
+  crd/networkcontrollerconfigs.config.cisco.vk
+helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
+  --version 2026.9.0 --namespace cvk-system
+```
+
+See the [operations runbook](docs/operations.md#upgrading-crds). If the two new
+controller CRDs are absent, CVK preserves existing device reconcilers but
+leaves the Alpha controller scaffold disabled until the CRDs are applied and
+the manager Deployment is restarted.
 
 ### Install the optional kubectl plugin
 
 The client-side `kubectl-ciscovk` plugin is not required to run the controller.
-It adds read-only, ad-hoc IOS-XE diagnostics for operators. `v2026.8.1` is the
-first plugin-bearing release. After it is published and `cisco-vk` is accepted
-into the public Krew index, install and upgrade it without building from source:
+It adds read-only, ad-hoc IOS-XE diagnostics for operators. The plugin is
+available from the public Krew index, so install and upgrade it without
+building from source:
 
 ```bash
 kubectl krew update
@@ -117,11 +132,10 @@ kubectl cisco-vk version
 kubectl krew upgrade cisco-vk
 ```
 
-The `v2026.08.0` release predates the plugin assets and public index entry.
-Until `v2026.8.1` is published, use the source-build fallback; between its
-publication and index acceptance, use its signed archive. See the
-[CLI & Plugin Reference](docs/cisco-vk-cli.md) for both verified installation
-paths and the exact availability gate.
+Historical note: `v2026.08.0` predates the plugin assets, and `v2026.8.1` was
+the first plugin-bearing release. See the
+[CLI & Plugin Reference](docs/cisco-vk-cli.md) for Krew, signed-archive, and
+source-build installation paths.
 
 ### Build and push a custom image
 
@@ -220,8 +234,8 @@ The controller creates a VK Deployment and a matching Kubernetes virtual node. P
 ```
 cisco-virtual-kubelet/
 ├── api/
-│   ├── v1alpha1/               # Core CRDs: CiscoDevice, XEConfig
-│   ├── config/v1alpha1/        # Config CRDs: IOSXEConfig, IOSXEConfigBundle, IOSXETelemetry
+│   ├── v1alpha1/               # Core CRDs: CiscoDevice, NetworkController
+│   ├── config/v1alpha1/        # Config CRDs, including IOSXEConfig, NXOSConfig, NetworkControllerConfig
 │   └── ops/v1alpha1/           # Ops CRDs: DeviceOperation, IOSXESoftwareUpgrade, IOSXEOperationalAction
 ├── cmd/
 │   └── cisco-vk/               # Unified binary entry point
@@ -236,8 +250,9 @@ cisco-virtual-kubelet/
 │   └── crd/                    # Generated CRDs (source of truth)
 ├── internal/
 │   ├── aggregator/             # In-process config aggregator (experimental)
-│   ├── controller/             # CiscoDevice and IOSXEConfigBundle reconcilers
-│   ├── drivers/                # Device driver implementations (IOS-XE, fake)
+│   ├── controller/             # Device, config-bundle, and controller-worker orchestration
+│   ├── controlleradapter/      # Alpha controller-adapter contracts and registry (zero adapters shipped)
+│   ├── drivers/                # Device driver implementations (IOS-XE, NX-OS, fake)
 │   │   └── iosxe/
 │   │       └── configdriver/   # Network as Code engine, writers, intent resolver
 │   ├── provider/               # Virtual Kubelet provider, config reconciler, telemetry
@@ -256,7 +271,8 @@ For local development and testing, the VK provider can be run directly against a
 
 ### Prerequisites
 
-- [Go](https://go.dev/doc/devel/release) 1.23 or later
+- [Go](https://go.dev/doc/devel/release) 1.26.7+ on the 1.26 line, or 1.27.0+
+  on the 1.27 line
 
 ### Build and run locally
 
@@ -295,7 +311,16 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+Cisco-authored project code is licensed under the [Apache License 2.0](LICENSE).
+Third-party code, generated material, fonts, and documentation tooling retain
+their applicable upstream terms; the release artifacts and documentation sites
+carry generated license and notice bundles.
+
+The project, including its longstanding generated IOS-XE schema material
+derived from Cisco YANG models, completed Cisco OSPO review before its first
+public release. Maintainers verify that later changes remain within that
+approved scope; see the
+[release runbook](RELEASE.md#licensing-is-a-hard-gate).
 
 ## Support
 

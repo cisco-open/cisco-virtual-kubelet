@@ -17,10 +17,10 @@
 # Build variables
 BINARY_NAME=cisco-vk
 PLUGIN_BINARY_NAME=kubectl-ciscovk
-VERSION?=1.0.0
-PLUGIN_VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "devel")
+VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "devel")
+PLUGIN_VERSION?=$(VERSION)
 BUILD_TIME=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GIT_COMMIT=$(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
 YANG_MODELS_URL=https://github.com/YangModels/yang.git
 YANG_SCHEMA_DIR=internal/drivers/iosxe/configdriver/schema/yang
 YANG_SKIP_BASELINE=internal/drivers/iosxe/configdriver/schema/yang-skip-baseline.yaml
@@ -30,21 +30,13 @@ YANG_MODELS_COMMIT ?= $(shell grep '^commit:' \
   $(YANG_SCHEMA_DIR)/$(YANG_RELEASE)/.provenance.yaml 2>/dev/null \
   | awk '{print $$2}')
 
-# Detect Go installation method and set appropriate paths
-SNAP_GO_PATH=/snap/go/current
-GO_SNAP_DETECTED=$(shell test -d $(SNAP_GO_PATH) && echo yes || echo no)
-
-ifeq ($(GO_SNAP_DETECTED),yes)
-GOROOT=$(SNAP_GO_PATH)
-GO_BIN=$(SNAP_GO_PATH)/bin/go
-GO_INSTALL_TYPE=snap
-else
-GO_BIN=$(shell which go)
-GO_INSTALL_TYPE=apt
-endif
-
-export GOROOT
-export PATH:=$(GOROOT)/bin:$(PATH)
+# Respect the caller's PATH/toolchain selection. In particular, the installer
+# prepends its checksum-verified private Go installation before invoking make.
+# GO_BIN remains overrideable for hermetic developer and CI environments.
+GO_BIN?=go
+PYTHON?=python3
+UV?=uv
+NPM?=npm
 
 GO_VERSION=$(shell $(GO_BIN) version 2>/dev/null | awk '{print $$3}' || echo "unknown")
 CONTROLLER_GEN?=$(GO_BIN) run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.5
@@ -62,10 +54,8 @@ PLUGIN_CMD_DIR=tools/kubectl-ciscovk
 # Installation directories
 PREFIX?=/usr/local
 INSTALL_DIR=$(PREFIX)/bin
-CONFIG_DIR=/etc/cisco-vk
-SYSTEMD_DIR=/etc/systemd/system
 
-.PHONY: all build build-plugin clean install uninstall test test-envtest lint fmt deps help generate manifests crd-gen deepcopy-gen rbac-gen helm-sync-crds config-lint netascode-migrate config-docs yang-sync migrate-tool parity-matrix check-parity-matrix check-nxos-oracle vendor-yang apphosting-ygot-gen ygot-validate-gen
+.PHONY: all build build-plugin clean install uninstall test test-envtest lint fmt deps help generate manifests crd-gen deepcopy-gen rbac-gen helm-sync-crds config-lint netascode-migrate config-docs check-config-docs requirements-lock mkdocs-licenses check-mkdocs-licenses mkdocs-build yang-sync migrate-tool parity-matrix check-parity-matrix check-nxos-oracle vendor-yang apphosting-ygot-gen ygot-validate-gen
 
 all: build
 
@@ -95,21 +85,11 @@ build-all: build-linux
 install: build
 	@echo "Installing $(BINARY_NAME)..."
 	sudo install -m 755 $(BIN_DIR)/$(BINARY_NAME) $(INSTALL_DIR)/$(BINARY_NAME)
-	sudo mkdir -p $(CONFIG_DIR)/certs
-	sudo chmod 700 $(CONFIG_DIR)
 	@echo "Installed to $(INSTALL_DIR)/$(BINARY_NAME)"
-
-install-systemd:
-	@echo "Installing systemd service template..."
-	sudo cp examples/systemd/cisco-vk@.service $(SYSTEMD_DIR)/
-	sudo systemctl daemon-reload
-	@echo "Systemd template installed. Create instances with:"
-	@echo "  sudo systemctl enable cisco-vk@<node-name>"
 
 uninstall:
 	@echo "Uninstalling $(BINARY_NAME)..."
 	sudo rm -f $(INSTALL_DIR)/$(BINARY_NAME)
-	@echo "Note: Configuration files in $(CONFIG_DIR) were preserved"
 
 ## Development targets
 
@@ -169,6 +149,35 @@ netascode-migrate: ## Inspect or emit IOSXEConfig from NetAsCode input (pass arg
 
 config-docs: ## Generate IOS-XE config family reference docs
 	$(GO_BIN) run ./tools/cisco-vk-config-docs $(ARGS)
+
+check-config-docs: ## Fail if generated IOS-XE family reference docs are stale
+	@tmp="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	$(GO_BIN) run ./tools/cisco-vk-config-docs --out "$$tmp" >/dev/null; \
+	if ! diff -ru docs/reference/families "$$tmp"; then \
+		echo "docs/reference/families is stale; run make config-docs"; \
+		exit 1; \
+	fi
+
+requirements-lock: ## Lock the MkDocs production closure with hashes for CI
+	$(UV) pip compile \
+		--python-version 3.13 \
+		--python-platform x86_64-manylinux_2_17 \
+		--generate-hashes \
+		--custom-compile-command 'make requirements-lock' \
+		--output-file requirements.txt \
+		requirements.in
+
+mkdocs-licenses: ## Regenerate MkDocs dependency license texts from the lock
+	$(PYTHON) .github/scripts/generate_mkdocs_licenses.py
+
+check-mkdocs-licenses: ## Fail if the MkDocs license bundle is stale
+	$(PYTHON) .github/scripts/generate_mkdocs_licenses.py --check
+
+mkdocs-build: ## Install browser assets, build MkDocs strictly, and verify deployed licenses
+	cd docs/website && $(NPM) ci --include=dev
+	$(PYTHON) -m mkdocs build --strict
+	$(PYTHON) .github/scripts/generate_mkdocs_licenses.py --check --site site
 
 yang-sync: ## Run the IOS-XE config YANG sync helper
 	$(GO_BIN) run ./tools/cisco-vk-yang-sync $(ARGS)
@@ -337,11 +346,7 @@ version: ## Show version info
 	@echo "Git Commit: $(GIT_COMMIT)"
 	@echo "Build Time: $(BUILD_TIME)"
 	@echo "Go Version: $(GO_VERSION)"
-	@echo "Go Installation: $(GO_INSTALL_TYPE)"
 	@echo "Go Binary: $(GO_BIN)"
-	@if [ "$(GO_INSTALL_TYPE)" = "snap" ]; then \
-		echo "GOROOT: $(GOROOT)"; \
-	fi
 
 ## Docker targets
 

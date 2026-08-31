@@ -1199,7 +1199,7 @@ func dialSSHNetconf(cfg NETCONFConfig) (io.ReadWriteCloser, error) {
 	// callback is unrelated to the SSH version-string read on paper,
 	// but in practice removing it eliminated the from-pod-only race.
 	// Don't add it back without re-running the netconf-probe tier-1
-	// experiment — see docs/rfcs/final/evidence/2026-04-27-live-c9300-netconf-probe-tier1.
+	// live-device validation before changing this compatibility behavior.
 	_ = tls.Config{} // keep crypto/tls imported for the future SSH-over-TLS bridge
 
 	addr := fmt.Sprintf("%s:%d", cfg.Address, port)

@@ -43,8 +43,8 @@ on:
 
 jobs:
   build-and-smoke:
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
     permissions:
       contents: read
     steps:
@@ -55,8 +55,21 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.25'
+          go-version: '1.26.7'
           cache: true
+
+      - name: Setup Python for documentation checks
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13.15'
+          cache: 'pip'
+
+      - name: Setup Node.js for website checks
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.20.0'
+          cache: 'npm'
+          cache-dependency-path: docs/website/package-lock.json
 
       - name: Build
         run: go build ./...
@@ -82,9 +95,65 @@ jobs:
           fi
           echo "gofmt clean."
 
+      - name: Release contract and workflow syntax gate
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover \
+            -s .github/scripts \
+            -p 'test_release_contract.py' \
+            -v
+          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 \
+            -config-file .github/actionlint.yaml \
+            .github/workflows/*.{yml,yaml}
+
+      # Run the recursive Go package pattern before npm ci creates nested
+      # node_modules directories that can themselves contain Go packages.
+      - name: Unit tests
+        run: go test -race -count=1 ./...
+
+      - name: Website lint, audit, build, and license gate
+        working-directory: docs/website
+        run: |
+          set -euo pipefail
+          npm ci --include=dev
+          npm audit --audit-level=high
+          npm run licenses:check
+          npm run lint
+          npm run build
+          test -s out/LICENSE
+          test -s out/NOTICE
+          test -s out/THIRD_PARTY_LICENSES.txt
+
+      # MkDocs vendors exact runtime assets from the npm ci tree above. Keep
+      # both documentation builds after the recursive Go package test.
+      - name: MkDocs strict build and license gate
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check \
+            --require-hashes -r requirements.txt
+          python .github/scripts/generate_mkdocs_licenses.py --check
+          mkdocs build --strict
+          python .github/scripts/generate_mkdocs_licenses.py \
+            --check --site site
+          test -s site/MKDOCS_THIRD_PARTY_LICENSES.txt
+          cmp docs/MKDOCS_THIRD_PARTY_LICENSES.txt \
+            site/MKDOCS_THIRD_PARTY_LICENSES.txt
+          grep -F 'Package: mkdocs-material 9.7.7' \
+            site/MKDOCS_THIRD_PARTY_LICENSES.txt
+
       - name: kubectl-ciscovk release packaging gate
         run: |
           set -euo pipefail
+          dependency_licenses="$(mktemp -d)/plugin-third-party-licenses"
+          go run github.com/google/go-licenses/v2@v2.0.1 \
+            check ./tools/kubectl-ciscovk
+          go run github.com/google/go-licenses/v2@v2.0.1 \
+            save ./tools/kubectl-ciscovk \
+            --ignore github.com/cisco/virtual-kubelet-cisco \
+            --save_path "$dependency_licenses"
+          test -z "$(find "$dependency_licenses" -type f -print -quit)"
+          cmp third_party/go/LICENSE "$(go env GOROOT)/LICENSE"
+          cmp third_party/go/PATENTS "$(go env GOROOT)/PATENTS"
           python3 -m unittest discover \
             -s .github/scripts \
             -p 'test_package_kubectl_ciscovk.py' \
@@ -133,9 +202,6 @@ jobs:
             -manifest "$work/cisco-vk.yaml" \
             -skip-install
 
-      - name: Unit tests
-        run: go test -race -count=1 ./...
-
       - name: NX-OS pinned oracle conformance gate
         # Keep the offline NetAsCode contract visible inside the required
         # build-and-smoke check. This verifies fixture digests, semantic DME
@@ -144,6 +210,9 @@ jobs:
 
       - name: Family parity matrix drift check
         run: make check-parity-matrix
+
+      - name: Generated family reference drift check
+        run: make check-config-docs
 
       - name: Kubernetes generated artefact drift check
         # Regenerate CRDs, DeepCopy, RBAC, and Helm CRDs, then assert no
@@ -214,7 +283,7 @@ jobs:
           # wind-down (final feature release 2026-09, security-only after),
           # so track the newest 3.x here; the helm4-compat job below covers
           # the Helm 4 side.
-          version: v3.21.3
+          version: v3.21.4
 
       - name: helm lint
         # Lint the chart with the regenerated CRDs in place. Runs
@@ -225,6 +294,14 @@ jobs:
 
       - name: Build controller image
         run: docker build -t cisco-vk:smoke .
+
+      - name: Verify controller image provenance command
+        run: |
+          set -euo pipefail
+          test "$(docker run --rm cisco-vk:smoke version)" = \
+            "cisco-vk devel (commit=unknown, built=unknown)"
+          test "$(docker run --rm cisco-vk:smoke --version)" = \
+            "cisco-vk devel (commit=unknown, built=unknown)"
 
       - name: Side-load image into kind
         # Non-destructive — kind copies the image into the node.
@@ -484,7 +561,7 @@ jobs:
 
   terraform-provider:
     name: terraform-provider
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -497,8 +574,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.26'
-          check-latest: true
+          go-version: '1.26.7'
           cache: true
           cache-dependency-path: tools/terraform-provider-iosxeconfig/go.sum
 
@@ -520,7 +596,7 @@ jobs:
     # to work unmodified; this job turns that expectation into a gate
     # (static lint + template render only — the kind install above stays on
     # the Helm 3 line until the fleet guidance moves).
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -530,7 +606,7 @@ jobs:
       - name: Install Helm 4
         uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
-          version: v4.2.3
+          version: v4.2.4
 
       - name: helm lint (Helm 4)
         run: helm lint charts/cisco-virtual-kubelet
@@ -549,39 +625,33 @@ jobs:
     # the built image, but nothing scans the module graph at PR time.
     # govulncheck is symbol-aware, so it only fails on vulnerable code that
     # is actually reachable.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
+    env:
+      GOTOOLCHAIN: local
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Run controller govulncheck
-        uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
+      - name: Set up pinned Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-input: '1.25'
-          check-latest: true
-          go-package: ./...
-          repo-checkout: false
+          go-version: '1.26.7'
+          cache: true
+          cache-dependency-path: |
+            go.sum
+            tools/terraform-provider-iosxeconfig/go.sum
+
+      - name: Run controller govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
 
       - name: Run Terraform provider govulncheck
-        uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
-        with:
-          go-version-input: '1.26'
-          check-latest: true
-          # The controller scan above has already restored and populated the
-          # job-level Go caches. A second setup-go cache restore into those
-          # same paths fails with tar "File exists" errors before the provider
-          # scan can run. Keep this setup cache-free; the module itself is
-          # small and its dedicated build/test job still uses caching.
-          cache: false
-          cache-dependency-path: tools/terraform-provider-iosxeconfig/go.sum
-          work-dir: tools/terraform-provider-iosxeconfig
-          go-package: ./...
-          repo-checkout: false
+        working-directory: tools/terraform-provider-iosxeconfig
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
 
   ygot-validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -591,7 +661,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.25'
+          go-version: '1.26.7'
           cache: true
 
       - name: Download YANG modules

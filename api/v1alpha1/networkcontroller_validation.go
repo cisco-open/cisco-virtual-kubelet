@@ -64,7 +64,7 @@ func ValidateNetworkControllerSpec(spec *NetworkControllerSpec) field.ErrorList 
 	}
 
 	endpoint, err := url.Parse(spec.Endpoint)
-	if err != nil || endpoint.Scheme != "https" || endpoint.Host == "" {
+	if err != nil || endpoint.Scheme != "https" || endpoint.Host == "" || endpoint.Hostname() == "" {
 		errs = append(errs, field.Invalid(root.Child("endpoint"), spec.Endpoint, "must be an absolute HTTPS URL"))
 	} else {
 		if endpoint.User != nil {

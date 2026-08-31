@@ -16,7 +16,7 @@ You'll install the Helm chart, which deploys a Kubernetes controller. The contro
 | Requirement | Notes |
 |---|---|
 | Kubernetes cluster | v1.28+ recommended |
-| Helm v3 | For installing the chart |
+| Helm 3.21+ or 4.2+ | For installing the chart |
 | Docker (or compatible) | Optional; only needed to build a custom VK image |
 | Container registry | Optional for custom images; the published image is on GHCR |
 | Cisco IOS-XE device | Catalyst 8000V (17.15.4c+), Catalyst 9000 (17.18.2+), IR1100 Series (17.12.4+), or IE3500 Series (17.18.2+) |
@@ -76,11 +76,11 @@ so step 1's custom build is optional and you can install directly:
 
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.8.1 \
+  --version 2026.9.0 \
   --namespace cvk-system --create-namespace
 ```
 
-This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.8.1` → `2026.8.1`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
+This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.9.0` → `2026.9.0`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
 
 **From source with a custom image** — to run the build from step 1 instead:
 
@@ -93,9 +93,10 @@ helm install cvk ./charts/cisco-virtual-kubelet \
 
 The chart installs:
 
-- The `CiscoDevice` CRD
+- All shipped `cisco.vk`, `config.cisco.vk`, and `ops.cisco.vk` CRDs
 - The controller `Deployment` (single replica; uses leader election for HA)
-- RBAC: controller service account with permissions on `ciscodevices`, ConfigMaps, Deployments, and Nodes; VK service account with pod/node/events permissions
+- RBAC for the manager, per-device VK pods, and the report-only Alpha
+  network-controller worker boundary
 
 Both the controller pod and each VK pod it spawns use this image. To use different images for the two, set `controllerImage.*` and `vkImage.*` instead.
 
@@ -108,13 +109,39 @@ kubectl get crd ciscodevices.cisco.vk
 
 If the controller pod is not `Running`, see [Troubleshooting → CiscoDevice stuck in Provisioning](troubleshooting.md#ciscodevice-stuck-in-provisioning).
 
+### Upgrading an existing release
+
+Helm installs CRDs during the first install but does not upgrade them. Before
+upgrading to `2026.9.0`, pull the chart and apply its CRDs server-side:
+
+```bash
+helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
+  --version 2026.9.0 --untar
+kubectl apply --server-side -f cisco-virtual-kubelet/crds/
+kubectl wait --for=condition=Established --timeout=60s \
+  crd/networkcontrollers.cisco.vk \
+  crd/networkcontrollerconfigs.config.cisco.vk
+
+helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
+  --version 2026.9.0 \
+  --namespace cvk-system
+kubectl rollout status deployment/cvk-cisco-virtual-kubelet-controller \
+  --namespace cvk-system
+```
+
+The September release adds `NetworkController` and
+`NetworkControllerConfig`. If either CRD is absent, the manager keeps existing
+device reconcilers running but disables the Alpha controller scaffold for that
+process. Apply both CRDs and restart the manager. See
+[Upgrading CRDs](operations.md#upgrading-crds) for verification and rollback
+guidance.
+
 ### Optional: install the kubectl plugin with Krew
 
 The client-side `kubectl-ciscovk` plugin is optional; the controller and normal
 Kubernetes workflows do not depend on it. It provides read-only, ad-hoc IOS-XE
-diagnostics. `v2026.8.1` is the first plugin-bearing release. After it is
-published and `cisco-vk` is accepted into the public Krew index, install and
-upgrade it with:
+diagnostics. It is available in the public Krew index; install and upgrade it
+with:
 
 ```bash
 kubectl krew update
@@ -125,11 +152,10 @@ kubectl cisco-vk version
 kubectl krew upgrade cisco-vk
 ```
 
-The `v2026.08.0` release predates the plugin assets and public index entry.
-Until `v2026.8.1` is published, use the source-build fallback; between its
-publication and index acceptance, use its signed archive. The
-[CLI & Plugin Reference](cisco-vk-cli.md) documents both verified installation
-paths, the exact availability gate, and the plugin's current IOS-XE-only scope.
+Historical note: `v2026.08.0` predates the plugin assets, and `v2026.8.1` was
+the first plugin-bearing release. The
+[CLI & Plugin Reference](cisco-vk-cli.md) documents Krew, signed-archive, and
+source-build paths plus the plugin's current IOS-XE-only scope.
 
 ## 3. Create a credential Secret
 

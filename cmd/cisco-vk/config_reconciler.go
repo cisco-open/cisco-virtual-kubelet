@@ -256,9 +256,8 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	// We log it and proceed in scaffold mode.
 	//
 	// One synchronous dial attempt at startup, then a deferred async
-	// retry loop. The 2026-04-27 NETCONF-probe experiment (recorded in
-	// docs/rfcs/final/evidence/2026-04-27-live-c9300-netconf-probe-tier1)
-	// proved the from-pod NETCONF dial races against the apphosting +
+	// retry loop. Live-device validation on 2026-04-27 showed that the
+	// from-pod NETCONF dial races against the apphosting +
 	// virtual-kubelet startup window: the very first ssh.Dial fires
 	// while the runtime is still initialising HTTP/2 keep-alives, and
 	// the device sends `read-empty: EOF`. The same code path

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "mermaidBundleAudit": {
+    "sourceMap": "docs/website/node_modules/mermaid/dist/mermaid.min.js.map",
+    "sourceMapSha256": "43cd977e8e0f351d6c47d31302c564f1c21fdc1e0be0d9e46370ee5e23cea004",
+    "embeddedParserPackage": "node_modules/@mermaid-js/parser",
+    "embeddedParserVersion": "1.2.1",
+    "embeddedParserIntegrity": "sha512-n12NohV3mrUyUL2o93IgG/ifeW9FTyeJn3zDxkhwa8MJ9Fxg3HQMlA3RiGmD/3UnJvheztkjjQAjA2T4LmUcpw==",
+    "embeddedParserChunkCount": 32,
+    "embeddedParserMapsSha256": "7771ce7eea96545867170963f44c5c59377c5f90c003b097389d6ce5be6d027d",
+    "inventory": "third_party/mkdocs-material/9.7.7/MERMAID_RUNTIME_INVENTORY.json",
+    "inventorySha256": "13ef8b98ac8fc9447a006e1612b481a1caa39aa573263d2ca1daac2ec0c42e34",
+    "licenses": "third_party/mkdocs-material/9.7.7/MERMAID_RUNTIME_LICENSES.txt",
+    "licensesSha256": "4727a71323278d1f50bc9930cdae4bccfb576efe0a09879abb412eda00a08c13"
+  },
+  "assets": [
+    {
+      "name": "mermaid",
+      "version": "11.17.2",
+      "license": "MIT",
+      "packageIntegrity": "sha512-V6K3C8EBdEsPFZXSKMJe6ppQOENxuHARr9GvHX4hh47lAbhMRD9qf4oEK7LoaRQxULMa80/qt5gHO73aCleBBg==",
+      "source": "docs/website/node_modules/mermaid/dist/mermaid.min.js",
+      "deployed": "m.js",
+      "sha256": "581ed7d74bd9048d0e3a91363927d72ef22942d7722546b27f7cc29e35390eb8",
+      "materialRemoteURL": "https://unpkg.com/mermaid@11/dist/mermaid.min.js",
+      "materialLocalURL": "/cisco-virtual-kubelet/docs/m.js?v=581ed7d74bd90"
+    },
+    {
+      "name": "resize-observer-polyfill",
+      "version": "1.5.1",
+      "license": "MIT",
+      "packageIntegrity": "sha512-LwZrotdHOo12nQuZlHEmtuXdqGoOD0OhaxopaNFxWzInpEgaLWoVuAMbTzixuosCx2nEG58ngzW3vxdWoxIgdg==",
+      "source": "docs/website/node_modules/resize-observer-polyfill/dist/ResizeObserver.js",
+      "deployed": "r.js",
+      "sha256": "2290b5c60e0cdc62851fb687800237273ac53797595b1b133860c4f1386de378",
+      "materialRemoteURL": "https://unpkg.com/resize-observer-polyfill",
+      "materialLocalURL": "/cisco-virtual-kubelet/docs/r.js?v=2290b5c"
+    }
+  ]
+}

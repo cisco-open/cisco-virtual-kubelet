@@ -51,6 +51,9 @@ func TestValidateConfigContract(t *testing.T) {
 			c.Spec.ControllerRef.Name = "other"
 		}, want: "references"},
 		{name: "cross namespace", mutate: func(_ *ciskov1.NetworkController, c *configv1alpha1.NetworkControllerConfig) { c.Namespace = "other" }, want: "worker owns"},
+		{name: "paused controller", mutate: func(c *ciskov1.NetworkController, _ *configv1alpha1.NetworkControllerConfig) {
+			c.Spec.Paused = true
+		}, want: "is paused"},
 		{name: "format", mutate: func(_ *ciskov1.NetworkController, c *configv1alpha1.NetworkControllerConfig) {
 			c.Spec.ModelSource.Format = "netascode-other"
 		}, want: "incompatible"},

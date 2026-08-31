@@ -19,5 +19,6 @@ set present on the device are preserved (additive merge).
 - `time-out`
 - `authentication-retries`
 - `source-interface`
+- `bulk-mode`
 - `rsa`
 - `server`

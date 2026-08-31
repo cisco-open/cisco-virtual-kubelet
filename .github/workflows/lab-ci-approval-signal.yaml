@@ -30,7 +30,7 @@ permissions: {}
 jobs:
   current-head-approved:
     if: github.event.review.state == 'approved'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
     permissions: {}
     steps:

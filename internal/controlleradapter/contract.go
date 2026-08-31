@@ -36,6 +36,13 @@ func ValidateConfigContract(controller *ciskov1.NetworkController, config *confi
 	if err := ciskov1.ValidateNetworkController(controller); err != nil {
 		return fmt.Errorf("controller contract: %w", err)
 	}
+	// Scaling the worker Deployment to zero is asynchronous. Keep the common
+	// pre-request gate authoritative during that termination window so a queued
+	// reconcile cannot issue one last controller API call after pause was
+	// requested.
+	if controller.Spec.Paused {
+		return fmt.Errorf("controller contract: NetworkController %s/%s is paused", controller.Namespace, controller.Name)
+	}
 	if err := configv1alpha1.ValidateNetworkControllerConfig(config); err != nil {
 		return fmt.Errorf("controller config contract: %w", err)
 	}

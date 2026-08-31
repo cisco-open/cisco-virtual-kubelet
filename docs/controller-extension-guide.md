@@ -6,10 +6,12 @@ controller type is not usable until a product adapter registers itself, and
 the base scaffold contains no Catalyst Center, APIC, Meraki, or other
 product-specific API behavior.
 
-!!! note "Foundation status"
+!!! warning "Alpha, zero-adapter, report-only foundation"
     `NetworkController` and `NetworkControllerConfig` provide the extension
-    boundary. A registered adapter is still required before CVK creates a
-    usable controller worker or sends requests to an external controller.
+    boundary. The September image registers zero product adapters, so it never
+    creates a usable product worker or sends requests to an external
+    controller. Apply, pruning, remote deletion, and their mutation RBAC role
+    are not implemented; the current contract is report-only.
 
     On upgrade, apply both controller CRDs before rolling out the new manager.
     If either is missing, CVK preserves its existing device reconcilers but
@@ -34,7 +36,7 @@ native adapter as the southbound execution boundary:
 Git / Network as Code toolchain
   -> resolved, versioned controller-centric document
   -> NetworkControllerConfig
-  -> controller adapter plan / apply / observe
+  -> future controller adapter validate / observe / report
   -> the controller's native API and task model
 ```
 
@@ -52,8 +54,9 @@ The following rules are invariants for every adapter:
   adapter may contact the controller.
 - Ownership is explicit per scope and managed section. An adapter must not
   mutate a section that the CR does not own.
-- The non-mutating `report` mode is the default. `apply`, pruning, and remote
-  deletion all require separate, explicit choices.
+- The non-mutating `report` mode is the only permitted behavior in the
+  September scaffold. API vocabulary for `apply`, pruning, and remote deletion
+  is reserved for a future gated implementation.
 - Desired and observed values are not copied into status, events, or logs.
 - Existing per-device transports and driver contracts remain unchanged. A
   controller adapter uses the controller's native API behind its boundary;
@@ -203,7 +206,8 @@ and declares:
 - exactly one `source.inline` or `source.configMapRef`;
 - required `modelSource.format`, `modelSource.modelVersion`, and
   `modelSource.resolved: true`, with optional schema and source provenance;
-- `mode: report|apply`, defaulting to `report`;
+- `mode: report|apply`, defaulting to `report`; `apply` is reserved and cannot
+  be honored by the September report-only runtime;
 - independently safe `prunePolicy` and `deletionPolicy`, both defaulting to
   `Retain`;
 - optional `secretRefs` whose `source` selects an administrator-approved alias
@@ -385,6 +389,12 @@ through those fixed paths. It must never fetch Secrets through a Kubernetes
 client or place tokens in environment variables, arguments, status, events,
 or logs.
 
+The manager-generated worker Pod does not currently propagate
+`imagePullSecrets`. The September Alpha scaffold must therefore use an image
+that cluster nodes can pull without a private-registry Secret. Defining a
+least-privilege propagation and rotation contract is required before private
+worker registries are supported.
+
 Projected credential, CA, and intent-Secret volumes update in place. The
 optional CA is mounted as the live directory
 `/var/run/secrets/cisco-vk/controller-ca`, not as a `subPath` file, so kubelet
@@ -414,8 +424,11 @@ Secret selection is deliberately split across two authorization domains:
    and its destination section/path. The config object cannot name a Secret or
    key.
 3. The manager translates only approved aliases into read-only projected
-   files. It writes references into the Pod specification; it never reads
-   Secret values. The kubelet resolves the projection.
+   files. This path writes references into the Pod specification and does not
+   inspect Secret `.data`; the kubelet resolves the projection. The shared
+   manager's separate cluster-wide Secret watch can still place typed Secret
+   objects in its cache, so its RBAC and memory remain part of the credential
+   trust boundary described in [Security](security.md).
 
 This prevents a configuration reconciler from turning the manager into a
 Secret-read deputy. The boundary is effective only when Kubernetes RBAC

@@ -34,15 +34,15 @@ iosxesoftwareupgrades        xeupgrade       ops.cisco.vk/v1alpha1      true    
     behaviours are still stabilising. Evaluate them in non-production
     environments before broader rollout. CRDs marked **Stable** cover the
     core pod-hosting and device-management surface that has been in service
-    across multiple releases. CRDs marked **Scaffold** define a tested generic
-    extension boundary, but do not provide product support until a matching
-    controller adapter is registered in the running image.
+    across multiple releases. CRDs marked **Alpha** define a tested generic
+    extension boundary, but the September image registers zero product
+    adapters and provides no controller mutation runtime.
 
 | Kind | Scope | Maturity | Primary use |
 |---|---:|---|---|
 | `CiscoDevice` | Namespaced | **Stable** | Declares one managed device and drives the per-device VK deployment. |
-| `NetworkController` | Namespaced | **Scaffold** | Declares one external controller endpoint and its isolated worker contract. A registered adapter for `spec.type` is required. |
-| `NetworkControllerConfig` | Namespaced | **Scaffold** | Carries resolved, versioned controller-centric Network as Code intent for a `NetworkController`. Reconciliation requires that endpoint's registered adapter. |
+| `NetworkController` | Namespaced | **Alpha** | Declares one external controller endpoint and its isolated worker contract. No product adapter ships in September. |
+| `NetworkControllerConfig` | Namespaced | **Alpha** | Carries resolved, versioned controller-centric Network as Code intent. The September boundary is report-only and cannot apply, prune, or remotely delete state. |
 | `IOSXEConfigDefaults` | Cluster | **Beta** | Fleet-wide baseline configuration merged into device intent. |
 | `IOSXEDeviceGroupConfig` | Namespaced | **Beta** | Shared configuration for selected devices. |
 | `IOSXEInterfaceGroupConfig` | Namespaced | **Beta** | Shared configuration for selected interfaces on selected devices. |
@@ -108,7 +108,7 @@ NAME        STATUS   ROLES   AGE   VERSION
 cat9300-4   Ready    agent   41m   v1.30.0-vk
 ```
 
-## Network controller scaffold
+## Network controller scaffold (Alpha)
 
 `NetworkController` (`cisco.vk/v1alpha1`) defines an HTTPS controller endpoint,
 credential and trust references, neutral connection limits, and an open
@@ -122,10 +122,12 @@ asynchronous task and ownership state cannot be replayed against another
 controller.
 
 These CRDs are a generic extension scaffold, not a claim of built-in support
-for Catalyst Center or any other controller. The running manager and worker
-image must contain a registered adapter whose type and model descriptor match
-the resources. With no matching adapter, CVK fails closed and creates no
-controller adapter worker. See the
+for Catalyst Center or any other controller. The September image registers
+zero adapters, so CVK fails closed and creates no controller adapter worker.
+The runtime is report-only: apply, prune, remote deletion, and mutation RBAC
+are not implemented. Duplicate fencing compares the exact stored endpoint
+string only within one namespace, which remains the Kubernetes trust and RBAC
+boundary. See the
 [Network Controller Extension Guide](controller-extension-guide.md) for the
 registration, isolation, lifecycle, and security contracts.
 

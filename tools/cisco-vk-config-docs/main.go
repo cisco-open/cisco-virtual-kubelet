@@ -186,7 +186,7 @@ func renderFamily(name string, f schema.Family, dialect string) string {
 	if err := tpl.Execute(&buf, doc); err != nil {
 		return fmt.Sprintf("template error for %s: %v", name, err)
 	}
-	return buf.String()
+	return normalizeMarkdownEOF(buf.String())
 }
 
 // familyTargetPath chooses the per-family file path. cvk dialect
@@ -232,7 +232,13 @@ func renderIndex(names []string, fams map[string]schema.Family, dialect string) 
 	if err := tpl.Execute(&buf, rows); err != nil {
 		return fmt.Sprintf("index template error: %v", err)
 	}
-	return buf.String()
+	return normalizeMarkdownEOF(buf.String())
+}
+
+// normalizeMarkdownEOF keeps generated pages compatible with Git's
+// whitespace checks: exactly one newline terminates every document.
+func normalizeMarkdownEOF(body string) string {
+	return strings.TrimRight(body, "\n") + "\n"
 }
 
 var familyTemplate = template.Must(template.New("family").Parse(

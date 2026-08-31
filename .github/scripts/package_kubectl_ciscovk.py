@@ -282,12 +282,17 @@ def create_archive(
     output: pathlib.Path,
     binary: pathlib.Path,
     license_path: pathlib.Path,
+    go_license_dir: pathlib.Path,
     epoch: int,
 ) -> None:
     if not binary.is_file():
         raise PackagingError(f"plugin binary is missing: {binary}")
     if not license_path.is_file():
         raise PackagingError(f"LICENSE is missing: {license_path}")
+    go_license = go_license_dir / "LICENSE"
+    go_patents = go_license_dir / "PATENTS"
+    if not go_license.is_file() or not go_patents.is_file():
+        raise PackagingError(f"Go LICENSE/PATENTS are missing: {go_license_dir}")
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("wb") as raw_output:
         with gzip.GzipFile(
@@ -302,6 +307,8 @@ def create_archive(
             ) as archive:
                 for name, path, mode in (
                     ("LICENSE", license_path, 0o644),
+                    ("THIRD_PARTY_LICENSES/go/LICENSE", go_license, 0o644),
+                    ("THIRD_PARTY_LICENSES/go/PATENTS", go_patents, 0o644),
                     ("kubectl-ciscovk", binary, 0o755),
                 ):
                     member, content = _tar_member(name, path.read_bytes(), mode, epoch)
@@ -420,6 +427,7 @@ def verify_release_assets(dist_dir: pathlib.Path, version: str) -> None:
 def verify_archive(
     archive_path: pathlib.Path,
     license_path: pathlib.Path,
+    go_license_dir: pathlib.Path,
     epoch: int,
 ) -> bytes:
     header = archive_path.read_bytes()[:10]
@@ -432,11 +440,17 @@ def verify_archive(
         raise PackagingError(f"gzip header is not normalized: {archive_path.name}")
     with tarfile.open(archive_path, mode="r:gz") as archive:
         members = archive.getmembers()
-        if [member.name for member in members] != ["LICENSE", "kubectl-ciscovk"]:
+        expected_names = [
+            "LICENSE",
+            "THIRD_PARTY_LICENSES/go/LICENSE",
+            "THIRD_PARTY_LICENSES/go/PATENTS",
+            "kubectl-ciscovk",
+        ]
+        if [member.name for member in members] != expected_names:
             raise PackagingError(
-                f"{archive_path.name} must contain only LICENSE and kubectl-ciscovk"
+                f"{archive_path.name} does not match the license/binary allowlist"
             )
-        for member, expected_mode in zip(members, (0o644, 0o755)):
+        for member, expected_mode in zip(members, (0o644, 0o644, 0o644, 0o755)):
             if not member.isfile():
                 raise PackagingError(
                     f"archive member is not a regular file: {member.name}"
@@ -453,11 +467,26 @@ def verify_archive(
             if member.mtime != validate_epoch(epoch):
                 raise PackagingError(f"archive mtime is not normalized: {member.name}")
         archived_license = archive.extractfile(members[0])
-        archived_binary = archive.extractfile(members[1])
-        if archived_license is None or archived_binary is None:
+        archived_go_license = archive.extractfile(members[1])
+        archived_go_patents = archive.extractfile(members[2])
+        archived_binary = archive.extractfile(members[3])
+        if None in (
+            archived_license,
+            archived_go_license,
+            archived_go_patents,
+            archived_binary,
+        ):
             raise PackagingError(f"failed to read archive members from {archive_path}")
+        assert archived_license is not None
+        assert archived_go_license is not None
+        assert archived_go_patents is not None
+        assert archived_binary is not None
         if archived_license.read() != license_path.read_bytes():
             raise PackagingError(f"LICENSE differs in {archive_path.name}")
+        if archived_go_license.read() != (go_license_dir / "LICENSE").read_bytes():
+            raise PackagingError(f"Go LICENSE differs in {archive_path.name}")
+        if archived_go_patents.read() != (go_license_dir / "PATENTS").read_bytes():
+            raise PackagingError(f"Go PATENTS differs in {archive_path.name}")
         return archived_binary.read()
 
 
@@ -478,11 +507,14 @@ def native_target() -> Optional[Target]:
 def execute_archived_binary(
     archive_path: pathlib.Path,
     license_path: pathlib.Path,
+    go_license_dir: pathlib.Path,
     epoch: int,
     version: str,
     commit: str,
 ) -> None:
-    binary_content = verify_archive(archive_path, license_path, epoch)
+    binary_content = verify_archive(
+        archive_path, license_path, go_license_dir, epoch
+    )
     with tempfile.TemporaryDirectory(prefix="kubectl-ciscovk-verify-") as temp_dir:
         binary = pathlib.Path(temp_dir) / "kubectl-ciscovk"
         binary.write_bytes(binary_content)
@@ -516,6 +548,7 @@ def package_release(args: argparse.Namespace) -> None:
     prepare_directory(build_dir)
     timestamp = build_time(epoch)
     license_path = repo_root / "LICENSE"
+    go_license_dir = repo_root / "third_party" / "go"
 
     for target in TARGETS:
         binary = build_target(
@@ -528,14 +561,15 @@ def package_release(args: argparse.Namespace) -> None:
             args.go_binary,
         )
         archive_path = dist_dir / archive_name(version, target)
-        create_archive(archive_path, binary, license_path, epoch)
-        verify_archive(archive_path, license_path, epoch)
+        create_archive(archive_path, binary, license_path, go_license_dir, epoch)
+        verify_archive(archive_path, license_path, go_license_dir, epoch)
 
     host_target = native_target()
     if host_target is not None:
         execute_archived_binary(
             dist_dir / archive_name(version, host_target),
             license_path,
+            go_license_dir,
             epoch,
             version,
             commit,
@@ -569,15 +603,18 @@ def verify_release(args: argparse.Namespace) -> None:
         raise PackagingError(f"unsupported target: {target.key}")
     dist_dir = args.dist_dir.resolve()
     license_path = repo_root / "LICENSE"
+    go_license_dir = repo_root / "third_party" / "go"
     verify_checksums(dist_dir, version, args.require_sboms)
     archive_path = dist_dir / archive_name(version, target)
-    verify_archive(archive_path, license_path, epoch)
+    verify_archive(archive_path, license_path, go_license_dir, epoch)
     if args.execute:
         if native_target() != target:
             raise PackagingError(
                 f"cannot execute {target.key} archive on {native_target() or 'this host'}"
             )
-        execute_archived_binary(archive_path, license_path, epoch, version, commit)
+        execute_archived_binary(
+            archive_path, license_path, go_license_dir, epoch, version, commit
+        )
     print(f"verified {archive_path}")
 
 
