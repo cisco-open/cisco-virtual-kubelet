@@ -143,6 +143,18 @@ class ReleaseContractTests(unittest.TestCase):
             combined.count("go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./..."),
             2,
         )
+        self.assertIn(
+            '"$RUNNER_TEMP/krew-release-bot/krew-release-bot" action',
+            workflows["krew-index.yml"],
+        )
+        self.assertNotIn("count=$(ls config/crd/*.yaml", workflows["smoke.yml"])
+        self.assertNotIn("for i in $(seq", workflows["smoke.yml"])
+        self.assertIn(
+            "for ((attempt = 1; attempt <= 30; attempt++))", workflows["smoke.yml"]
+        )
+        self.assertIn(
+            "for ((attempt = 1; attempt <= 60; attempt++))", workflows["smoke.yml"]
+        )
 
     def test_go_redistribution_files_match_go_1_26_7(self) -> None:
         expected = {

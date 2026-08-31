@@ -232,6 +232,7 @@ jobs:
         # Belt-and-suspenders for the diff above: explicitly enumerate
         # each CRD file and confirm config/crd/ matches charts/.../crds/.
         run: |
+          count=0
           for f in config/crd/*.yaml; do
             base="$(basename "$f")"
             if ! diff -q "$f" "charts/cisco-virtual-kubelet/crds/${base}" > /dev/null; then
@@ -239,8 +240,8 @@ jobs:
               diff -u "$f" "charts/cisco-virtual-kubelet/crds/${base}" | head -100
               exit 1
             fi
+            count=$((count + 1))
           done
-          count=$(ls config/crd/*.yaml | wc -l)
           echo "CRD/chart sync clean (${count} of ${count})."
 
       - name: setup-envtest binaries
@@ -464,7 +465,7 @@ jobs:
             cisco-vk-nxos-smoke:nxos-smoke; do
             namespace="${target%%:*}"
             device="${target##*:}"
-            for i in $(seq 1 30); do
+            for ((attempt = 1; attempt <= 30; attempt++)); do
               if kubectl -n "$namespace" get sa cisco-virtual-kubelet >/dev/null 2>&1 \
                  && kubectl -n "$namespace" get rolebinding cisco-virtual-kubelet >/dev/null 2>&1 \
                  && kubectl -n "$namespace" get cm "${device}-config" >/dev/null 2>&1 \
@@ -512,7 +513,7 @@ jobs:
             cur=""
             prev=""
             logs=""
-            for i in $(seq 1 60); do
+            for ((attempt = 1; attempt <= 60; attempt++)); do
               cur=$(kubectl -n "$namespace" logs -l "app.kubernetes.io/instance=${device}" --tail=200 2>&1 || true)
               prev=$(kubectl -n "$namespace" logs -l "app.kubernetes.io/instance=${device}" --previous --tail=200 2>&1 || true)
               logs="${prev}"$'\n'"${cur}"

@@ -315,7 +315,8 @@ jobs:
           GITHUB_TOKEN: ''
           INPUT_KREW_PLUGIN_RELEASE_TAG: ${{ github.event.release.tag_name }}
           INPUT_KREW_TEMPLATE_FILE: dist/krew/cisco-vk.yaml
-        run: "$RUNNER_TEMP/krew-release-bot/krew-release-bot action"
+        run: |
+          "$RUNNER_TEMP/krew-release-bot/krew-release-bot" action
 
       - name: Wait for the exact official-index manifest
         if: steps.upstream.outputs.exists == 'true'
