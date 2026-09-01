@@ -27,6 +27,7 @@ from generate_mkdocs_licenses import (
     LicenseBundleError,
     verify_mermaid_runtime_notice,
 )
+from render_github_release_notes import ReleaseNotesError, render_release_notes
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -74,13 +75,13 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn("github.com/moby/spdystream/spdy/PATENTS", dockerfile)
         self.assertIn("go-version: '1.26.7'", release)
         self.assertIn("version: v3.21.4", release)
-        self.assertEqual(release.count("version: v0.36.1"), 1)
+        self.assertEqual(release.count("version: v0.36.1"), 2)
         self.assertEqual(
             release.count(
                 "image=moby/buildkit:v0.32.2@sha256:"
                 "28a898719c18a33f4e8000685287fa36fd0dd9560c6440227d3a732d79bb41d8"
             ),
-            1,
+            2,
         )
         self.assertNotIn("moby/buildkit:buildx-stable-1", release)
         self.assertNotIn("buildkit-syft-scanner", release)
@@ -123,6 +124,144 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertNotIn("ubuntu-latest", release)
         self.assertNotIn("1.25", dockerfile + lint_dockerfile + release)
         self.assertEqual((ROOT / "go.mod").read_text().splitlines()[2], "go 1.26.7")
+
+    def test_high_critical_image_scans_are_hard_gates(self) -> None:
+        action = (
+            "aquasecurity/trivy-action@"
+            "ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0"
+        )
+        smoke = (ROOT / ".github/workflows/smoke.yml").read_text(encoding="utf-8")
+        release = (ROOT / ".github/workflows/release.yml").read_text(
+            encoding="utf-8"
+        )
+        tiers = (ROOT / ".github/workflows/tiers.yml").read_text(encoding="utf-8")
+
+        def workflow_step(workflow: str, name: str) -> str:
+            start = workflow.index(f"      - name: {name}")
+            end = workflow.find("\n      - name:", start + 1)
+            return workflow[start:] if end == -1 else workflow[start:end]
+
+        smoke_scans = {
+            platform: workflow_step(
+                smoke,
+                f"Require zero fixed HIGH/CRITICAL image CVEs ({platform})",
+            )
+            for platform in ("linux/amd64", "linux/arm64")
+        }
+        release_scans = {
+            platform: workflow_step(
+                release,
+                f"Scan image for HIGH/CRITICAL CVEs ({platform})",
+            )
+            for platform in ("linux/amd64", "linux/arm64")
+        }
+
+        for platform, scan in [*smoke_scans.items(), *release_scans.items()]:
+            self.assertIn(action, scan)
+            self.assertIn("version: v0.70.0", scan)
+            self.assertIn("exit-code: '1'", scan)
+            self.assertIn("severity: HIGH,CRITICAL", scan)
+            self.assertIn("ignore-unfixed: true", scan)
+            self.assertIn(f"TRIVY_PLATFORM: {platform}", scan)
+            self.assertNotIn("continue-on-error", scan)
+        self.assertEqual((smoke + release).count(action), 4)
+        self.assertNotIn("vulnerability scan is advisory", release)
+        self.assertIn("fixed HIGH/CRITICAL controller-image Trivy scan", tiers)
+        self.assertLess(
+            smoke.index("      - name: Build controller image (linux/arm64)"),
+            smoke.index(
+                "      - name: Require zero fixed HIGH/CRITICAL image CVEs (linux/amd64)"
+            ),
+        )
+        self.assertLess(
+            smoke.index(
+                "      - name: Require zero fixed HIGH/CRITICAL image CVEs (linux/arm64)"
+            ),
+            smoke.index("      - name: Side-load image into kind"),
+        )
+        self.assertLess(
+            release.index("      - name: Build and push image"),
+            release.index(
+                "      - name: Scan image for HIGH/CRITICAL CVEs (linux/amd64)"
+            ),
+        )
+        for platform in ("linux/amd64", "linux/arm64"):
+            upload = workflow_step(
+                release,
+                f"Upload Trivy SARIF to code-scanning ({platform})",
+            )
+            self.assertIn("continue-on-error: true", upload)
+            self.assertIn(f"trivy-{platform.replace('/', '-')}.sarif", upload)
+            self.assertIn(f"category: trivy-release-{platform.replace('/', '-')}", upload)
+        self.assertNotIn("type=semver,pattern={{major}}.{{minor}}", release)
+        self.assertIn("flavor: latest=false", release)
+        metadata = release[
+            release.index("      - name: Derive image metadata") : release.index(
+                "\n      - name: Derive reproducible image build metadata"
+            )
+        ]
+        self.assertEqual(metadata.count("latest"), 1)
+        self.assertIn("flavor: latest=false", metadata)
+        self.assertNotIn("type=raw,value=latest", metadata)
+        promotion_start = release.index("  promote-image-aliases:")
+        promotion = release[promotion_start:]
+        self.assertGreater(promotion_start, release.index("  stage-plugin-release:"))
+        self.assertIn("needs: [build-and-sign, stage-plugin-release]", promotion)
+        self.assertIn("group: release-image-aliases", promotion)
+        self.assertIn("cancel-in-progress: false", promotion)
+        self.assertIn(
+            "IMAGE_DIGEST: ${{ needs.build-and-sign.outputs.image-digest }}",
+            promotion,
+        )
+        self.assertIn('for alias_tag in "$minor" latest; do', promotion)
+        self.assertIn('if [[ "$existing_key" > "$candidate_key" ]]; then', promotion)
+        self.assertIn("--format '{{json .Manifest}}'", promotion)
+        self.assertIn("| jq -er .digest", promotion)
+        self.assertIn("image-digest: ${{ steps.build.outputs.digest }}", release)
+        self.assertEqual(
+            (smoke + release).count('if [ -e "$dependency_licenses" ]; then'),
+            2,
+        )
+        publish_chart_start = release.index("  publish-chart:")
+        publish_chart_end = release.index("\n  stage-plugin-release:")
+        publish_chart = release[publish_chart_start:publish_chart_end]
+        self.assertIn("needs: build-and-sign", publish_chart)
+
+    def test_github_release_notes_are_tag_pinned_without_changing_mkdocs(self) -> None:
+        source_relative = pathlib.PurePosixPath("docs/releases/v2026.9.2.md")
+        source = (ROOT / source_relative).read_text(encoding="utf-8")
+        rendered = render_release_notes(
+            source,
+            source_relative=source_relative,
+            tag="v2026.9.2",
+            repository="cisco-open/cisco-virtual-kubelet",
+        )
+        pinned = (
+            "https://github.com/cisco-open/cisco-virtual-kubelet/"
+            "blob/v2026.9.2/docs/controller-extension-guide.md"
+        )
+        self.assertIn(f"[Network Controller Extension Guide]({pinned})", rendered)
+        self.assertNotIn("](../", rendered)
+        self.assertIn(
+            "https://github.com/cisco-open/cisco-virtual-kubelet/releases",
+            rendered,
+        )
+        self.assertIn("](../controller-extension-guide.md)", source)
+        runbook = (ROOT / "RELEASE.md").read_text(encoding="utf-8")
+        self.assertIn("render_github_release_notes.py", runbook)
+        self.assertIn('--rawfile body "$release_notes"', runbook)
+        self.assertIn(
+            "I approve Cisco Virtual Kubelet v2026.9.2 for release from commit",
+            runbook,
+        )
+        self.assertIn("approved release-signing identity", runbook)
+        with self.assertRaises(ReleaseNotesError):
+            render_release_notes(
+                "[escape](../../../outside.md)",
+                source_relative=source_relative,
+                tag="v2026.9.2",
+                repository="cisco-open/cisco-virtual-kubelet",
+            )
 
     def test_workflow_runtimes_are_current_and_do_not_use_mutable_binfmt(
         self,

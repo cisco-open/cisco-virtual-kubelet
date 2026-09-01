@@ -151,7 +151,10 @@ jobs:
             save ./tools/kubectl-ciscovk \
             --ignore github.com/cisco/virtual-kubelet-cisco \
             --save_path "$dependency_licenses"
-          test -z "$(find "$dependency_licenses" -type f -print -quit)"
+          if [ -e "$dependency_licenses" ]; then
+            test -d "$dependency_licenses"
+            test -z "$(find "$dependency_licenses" -type f -print -quit)"
+          fi
           cmp third_party/go/LICENSE "$(go env GOROOT)/LICENSE"
           cmp third_party/go/PATENTS "$(go env GOROOT)/PATENTS"
           python3 -m unittest discover \
@@ -293,8 +296,38 @@ jobs:
         # the kind cluster — the lint is a static check.
         run: helm lint charts/cisco-virtual-kubelet
 
-      - name: Build controller image
-        run: docker build -t cisco-vk:smoke .
+      - name: Build controller image (linux/amd64)
+        id: build-smoke-amd64
+        run: docker build --platform linux/amd64 -t cisco-vk:smoke .
+
+      - name: Build controller image (linux/arm64)
+        id: build-smoke-arm64
+        run: docker build --platform linux/arm64 -t cisco-vk:smoke-arm64 .
+
+      - name: Require zero fixed HIGH/CRITICAL image CVEs (linux/amd64)
+        env:
+          TRIVY_PLATFORM: linux/amd64
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.70.0
+          image-ref: cisco-vk:smoke
+          format: table
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+
+      - name: Require zero fixed HIGH/CRITICAL image CVEs (linux/arm64)
+        if: always() && steps.build-smoke-arm64.outcome == 'success'
+        env:
+          TRIVY_PLATFORM: linux/arm64
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.70.0
+          image-ref: cisco-vk:smoke-arm64
+          format: table
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
 
       - name: Verify controller image provenance command
         run: |
