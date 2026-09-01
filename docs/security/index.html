@@ -1,0 +1,2791 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A Virtual Kubelet provider for App-Hosting workloads on Cisco IOS-XE devices, with Beta support for Cisco Nexus NX-OS switches.">
+      
+      
+      
+        <link rel="canonical" href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/security/">
+      
+      
+        <link rel="prev" href="../troubleshooting/">
+      
+      
+        <link rel="next" href="../production-readiness/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Security - Cisco Virtual Kubelet</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#security" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-header__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Cisco Virtual Kubelet
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Security
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-nav__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Cisco Virtual Kubelet
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Welcome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.1 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.0 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../controller-extension-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Controller Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cisco-vk-cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONFIGURATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CiscoDevice Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network as Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NetAsCode Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../crds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CRD Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../family-parity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Parity Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families-nxos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nxos-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Configuration Recovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat8000v/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 8000V
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat9000/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 9000
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ir1101/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IR1100 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ie3500/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IE3500 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yang-version-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    YANG Version Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment Variables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Software Lifecycle
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gnoi-software-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Telemetry
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MDT Subscriptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry-cardinality/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cardinality Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle Correlation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Observability
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#credential-injection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credential injection
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Credential injection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#recommended-secret-credentialsecretref" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended: Secret + credentialSecretRef
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#legacy-fallback-inline-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy fallback: inline password
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vk_device_password-precedence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VK_DEVICE_PASSWORD precedence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rotating-a-single-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rotating a single password
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#managing-credentials-across-multiple-devices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managing credentials across multiple devices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Managing credentials across multiple devices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pattern-1-one-secret-per-device-different-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 1 — one Secret per device (different credentials)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-2-shared-secret-across-a-fleet-identical-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 2 — shared Secret across a fleet (identical credentials)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-3-same-password-different-usernames" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 3 — same password, different usernames
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespace-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Namespace boundaries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bulk-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bulk rotation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gitops-and-external-secret-managers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GitOps and external secret managers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hosted-application-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hosted-application credentials
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TLS
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TLS">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ssh-host-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SSH host keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kubelet-side-tls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kubelet-side TLS
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rbac-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RBAC model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RBAC model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#controller-service-account-cisco-virtual-kubelet-controller" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controller service account (cisco-virtual-kubelet-controller)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vk-pod-service-account-cisco-virtual-kubelet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VK pod service account (cisco-virtual-kubelet)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#network-controller-crd-validation-prerequisite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network-controller CRD validation prerequisite
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#network-controller-worker-service-accounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network-controller worker service accounts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#controller-intent-secret-authorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controller intent Secret authorization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#production-rbac-hardening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production RBAC hardening
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#finalizer-and-deletion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Finalizer and deletion
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Principles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related reading
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../production-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Readiness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#credential-injection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credential injection
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Credential injection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#recommended-secret-credentialsecretref" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended: Secret + credentialSecretRef
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#legacy-fallback-inline-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy fallback: inline password
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vk_device_password-precedence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VK_DEVICE_PASSWORD precedence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rotating-a-single-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rotating a single password
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#managing-credentials-across-multiple-devices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managing credentials across multiple devices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Managing credentials across multiple devices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pattern-1-one-secret-per-device-different-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 1 — one Secret per device (different credentials)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-2-shared-secret-across-a-fleet-identical-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 2 — shared Secret across a fleet (identical credentials)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-3-same-password-different-usernames" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 3 — same password, different usernames
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespace-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Namespace boundaries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bulk-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bulk rotation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gitops-and-external-secret-managers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GitOps and external secret managers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hosted-application-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hosted-application credentials
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TLS
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TLS">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ssh-host-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SSH host keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kubelet-side-tls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kubelet-side TLS
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rbac-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RBAC model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RBAC model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#controller-service-account-cisco-virtual-kubelet-controller" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controller service account (cisco-virtual-kubelet-controller)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vk-pod-service-account-cisco-virtual-kubelet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VK pod service account (cisco-virtual-kubelet)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#network-controller-crd-validation-prerequisite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network-controller CRD validation prerequisite
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#network-controller-worker-service-accounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network-controller worker service accounts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#controller-intent-secret-authorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controller intent Secret authorization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#production-rbac-hardening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production RBAC hardening
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#finalizer-and-deletion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Finalizer and deletion
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Principles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related reading
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="security">Security</h1>
+<p>This page covers credential handling, TLS configuration, and the RBAC model.</p>
+<h2 id="credential-injection">Credential injection</h2>
+<p>With <code>credentialSecretRef</code>, the controller keeps device credentials out of the
+<code>CiscoDevice</code>, generated ConfigMap, and literal Deployment environment values:</p>
+<ol>
+<li>Before the <code>DeviceSpec</code> is marshalled into the ConfigMap, both <code>password</code> and <code>credentialSecretRef</code> are stripped.</li>
+<li>The VK pod's Deployment gets <code>VK_DEVICE_PASSWORD</code> as an environment variable sourced from a Secret via <code>valueFrom.secretKeyRef</code>.</li>
+<li>To roll the VK pod when credentials rotate, the manager watches referenced
+   Secrets and reads their <code>resourceVersion</code>. Reconciliation does not inspect
+   <code>.data</code>, but the typed Secret objects entering the manager cache/API client
+   still contain that data. Treat the manager's Secret RBAC and memory as part
+   of the credential trust boundary.</li>
+</ol>
+<p>Kubernetes Secret objects are still stored in etcd. Base64 encoding is not
+encryption; enable Kubernetes
+<a href="https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/">encryption at rest</a>
+and restrict Secret RBAC for production clusters.</p>
+<pre class="mermaid"><code>graph LR
+    CR[CiscoDevice CR&lt;br/&gt;credentialSecretRef: creds] --&gt; Ctrl[Controller]
+    Ctrl --&gt; CM[ConfigMap&lt;br/&gt;password STRIPPED]
+    Ctrl --&gt; Dep[Deployment&lt;br/&gt;env from secretKeyRef]
+    Secret[Secret&lt;br/&gt;key: password] -.-&gt;|metadata event| Ctrl
+    Secret -.-&gt;|host kubelet reads value| Pod[VK Pod]
+    Dep --&gt; Pod
+    Pod --&gt;|VK_DEVICE_PASSWORD| App[cisco-vk run]
+
+    style Ctrl fill:#6b5ce7,stroke:#333,color:#fff
+    style Secret fill:#34d399,stroke:#333,color:#fff</code></pre>
+<h3 id="recommended-secret-credentialsecretref">Recommended: Secret + <code>credentialSecretRef</code></h3>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Secret</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-1-creds</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">default</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Opaque</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nt">stringData</span><span class="p">:</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;device-password&gt;</span>
+</span></code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cisco.vk/v1alpha1</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CiscoDevice</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-1</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">default</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">XE</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">address</span><span class="p">:</span><span class="w"> </span><span class="s">"192.168.1.100"</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">admin</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">credentialSecretRef</span><span class="p">:</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-1-creds</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="c1"># ... remaining spec</span>
+</span></code></pre></div>
+<p><strong>Rules:</strong></p>
+<ul>
+<li>The Secret <strong>must be in the same namespace</strong> as the <code>CiscoDevice</code>.</li>
+<li>The Secret key <strong>must be named <code>password</code></strong> — this is hardcoded in the controller.</li>
+<li>Any Secret type works (<code>Opaque</code>, <code>kubernetes.io/basic-auth</code>, …) as long as it has a <code>password</code> key.</li>
+<li>Multiple <code>CiscoDevice</code>s can point at different Secrets — credentials are per-device.</li>
+</ul>
+<h3 id="legacy-fallback-inline-password">Legacy fallback: inline password</h3>
+<p>If <code>credentialSecretRef</code> is not set <strong>and</strong> <code>password</code> is non-empty, the controller injects it directly as an env var value (still scrubbed from the ConfigMap):</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cisco123</span><span class="w">   </span><span class="c1"># discouraged — only for dev/test</span>
+</span></code></pre></div>
+<p>This remains for backward compatibility. The password is still visible in the <code>Deployment</code> spec (<code>kubectl get deploy -o yaml</code>), so Secret refs are strongly preferred in production.</p>
+<h3 id="vk_device_password-precedence">VK_DEVICE_PASSWORD precedence</h3>
+<p>The VK pod reads the device password from the <code>VK_DEVICE_PASSWORD</code> environment variable, which the controller injects on the Deployment it creates (sourced from the Secret referenced by <code>credentialSecretRef</code>). The password field in the rendered ConfigMap is always empty — the env var is the sole source of truth inside the pod.</p>
+<h3 id="rotating-a-single-password">Rotating a single password</h3>
+<p>To rotate a device password without recreating the <code>CiscoDevice</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># 1. Change the password on the device</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># 2. Update the Secret</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>kubectl<span class="w"> </span>patch<span class="w"> </span>secret<span class="w"> </span>cat9000-1-creds<span class="w"> </span>--type<span class="w"> </span>merge<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>-p<span class="w"> </span><span class="s1">'{"stringData":{"password":"new-password"}}'</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># 3. The Secret watch updates the pod-template annotation and rolls the VK pod</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>default<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/cat9000-1-vk
+</span></code></pre></div>
+<p>The controller maps a referenced Secret event back to every affected
+<code>CiscoDevice</code> and places that Secret's current <code>resourceVersion</code> in the pod
+template's <code>cisco.vk/credential-resource-version</code> annotation. A Secret update
+therefore creates a Deployment rollout automatically; <code>cisco.vk/config-hash</code>
+continues to cover ConfigMap changes. See <a href="#bulk-rotation">Managing credentials across multiple
+devices → Bulk rotation</a> for fleet-wide workflows.</p>
+<h3 id="managing-credentials-across-multiple-devices">Managing credentials across multiple devices</h3>
+<p>Each <code>CiscoDevice</code> is independent: it declares its own <code>username</code> inline in the spec and points at its own Secret for the password. That means any combination of shared or distinct credentials is supported.</p>
+<h4 id="pattern-1-one-secret-per-device-different-credentials">Pattern 1 — one Secret per device (different credentials)</h4>
+<p>The safest default. Every device gets its own Secret, even if the credentials happen to match today. A compromised or rotated password affects only one device.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Secret</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-edge-01-creds</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">edge</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="nt">stringData</span><span class="p">:</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;unique-password-1&gt;</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="nn">---</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Secret</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-edge-02-creds</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">edge</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="nt">stringData</span><span class="p">:</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">  </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;unique-password-2&gt;</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="nn">---</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cisco.vk/v1alpha1</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CiscoDevice</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-edge-01</span>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">edge</span>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">admin-edge-01</span>
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="w">  </span><span class="nt">credentialSecretRef</span><span class="p">:</span>
+</span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-edge-01-creds</span>
+</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="w">  </span><span class="c1"># ...</span>
+</span><span id="__span-4-27"><a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="nn">---</span>
+</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cisco.vk/v1alpha1</span>
+</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CiscoDevice</span>
+</span><span id="__span-4-30"><a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-4-31"><a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-edge-02</span>
+</span><span id="__span-4-32"><a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">edge</span>
+</span><span id="__span-4-33"><a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-4-34"><a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a><span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">admin-edge-02</span>
+</span><span id="__span-4-35"><a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a><span class="w">  </span><span class="nt">credentialSecretRef</span><span class="p">:</span>
+</span><span id="__span-4-36"><a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-edge-02-creds</span>
+</span><span id="__span-4-37"><a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a><span class="w">  </span><span class="c1"># ...</span>
+</span></code></pre></div>
+<p>Rotate one device's password without touching any other.</p>
+<h4 id="pattern-2-shared-secret-across-a-fleet-identical-credentials">Pattern 2 — shared Secret across a fleet (identical credentials)</h4>
+<p>When a group of devices share credentials (for example, lab devices behind the same TACACS/AAA profile), a single Secret can serve all of them. Each <code>CiscoDevice</code> references the same <code>credentialSecretRef</code>.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Secret</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lab-fleet-creds</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lab</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="nt">stringData</span><span class="p">:</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;shared-password&gt;</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="nn">---</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cisco.vk/v1alpha1</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CiscoDevice</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lab-cat8kv-01</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lab</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">admin</span><span class="w">       </span><span class="c1"># same username across the fleet</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">  </span><span class="nt">credentialSecretRef</span><span class="p">:</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lab-fleet-creds</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">  </span><span class="c1"># ...</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="nn">---</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cisco.vk/v1alpha1</span>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CiscoDevice</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lab-cat8kv-02</span>
+</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lab</span>
+</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">admin</span>
+</span><span id="__span-5-27"><a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="w">  </span><span class="nt">credentialSecretRef</span><span class="p">:</span>
+</span><span id="__span-5-28"><a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lab-fleet-creds</span><span class="w">   </span><span class="c1"># same Secret as above</span>
+</span><span id="__span-5-29"><a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a><span class="w">  </span><span class="c1"># ...</span>
+</span></code></pre></div>
+<p>Useful for bulk rotation — one Secret patch propagates to every device that references it. Trade-off: a compromised password affects the whole fleet.</p>
+<h4 id="pattern-3-same-password-different-usernames">Pattern 3 — same password, different usernames</h4>
+<p>Username is in the spec, not the Secret, so devices can share a password Secret while declaring different usernames.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cisco.vk/v1alpha1</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CiscoDevice</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nt">metadata</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">dev-01</span><span class="p p-Indicator">,</span><span class="nt"> namespace</span><span class="p">:</span><span class="w"> </span><span class="nv">dev</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">operator-a</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">credentialSecretRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">shared-creds</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="nn">---</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cisco.vk/v1alpha1</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CiscoDevice</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="nt">metadata</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">dev-02</span><span class="p p-Indicator">,</span><span class="nt"> namespace</span><span class="p">:</span><span class="w"> </span><span class="nv">dev</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">operator-b</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">  </span><span class="nt">credentialSecretRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">shared-creds</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<h4 id="namespace-boundaries">Namespace boundaries</h4>
+<p>The Secret <strong>must be in the same namespace</strong> as the <code>CiscoDevice</code>. Kubernetes' own kubelet (on the real cluster node hosting the VK pod) resolves <code>secretKeyRef</code> at pod-start time; the controller has no mechanism to read cross-namespace Secrets.</p>
+<p>Use this as a security boundary — a team owning <code>namespace=edge-team-a</code> cannot read Secrets in <code>namespace=edge-team-b</code>, so their CiscoDevices cannot reference the other team's credentials even by name.</p>
+<p>If you want the same password in two namespaces, duplicate the Secret (ideally managed by External Secrets Operator, Sealed Secrets, or your GitOps tooling).</p>
+<h4 id="bulk-rotation">Bulk rotation</h4>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rotate one device</td>
+<td>Patch its Secret; the controller automatically rolls the referencing VK Deployment. Verify with <code>kubectl rollout status deploy/&lt;device&gt;-vk</code>.</td>
+</tr>
+<tr>
+<td>Rotate a shared Secret (Pattern 2)</td>
+<td>Patch it once; the Secret watch reconciles and rolls every referencing VK Deployment in that namespace.</td>
+</tr>
+<tr>
+<td>Rotate the whole namespace</td>
+<td>Update each Secret; wait for the affected Deployments to complete their automatic rollouts.</td>
+</tr>
+</tbody>
+</table>
+<p>If the automatic rollout does not begin, confirm that the manager is healthy,
+the <code>CiscoDevice</code> still references the updated same-namespace Secret, and the
+Deployment's <code>cisco.vk/credential-resource-version</code> matches the Secret's
+<code>metadata.resourceVersion</code>. A manual <code>kubectl rollout restart</code> is a
+troubleshooting fallback, not the normal rotation path.</p>
+<h4 id="gitops-and-external-secret-managers">GitOps and external secret managers</h4>
+<p>The <code>credentialSecretRef</code> field takes a reference to any Kubernetes <code>Secret</code>, regardless of how it was created. Common workflows:</p>
+<ul>
+<li><strong>Sealed Secrets</strong> — commit encrypted Secrets to Git; controller in the cluster decrypts them into real Secrets.</li>
+<li><strong>External Secrets Operator</strong> — point at HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, GCP Secret Manager, etc.; ESO syncs them into Kubernetes Secrets.</li>
+<li><strong>SOPS / git-crypt</strong> — encrypted manifests in Git, decrypted on apply.</li>
+</ul>
+<p>All of these produce a normal <code>Secret</code> resource with a <code>password</code> key, which is what <code>credentialSecretRef</code> needs. No change to CiscoDevice is required.</p>
+<h2 id="hosted-application-credentials">Hosted-application credentials</h2>
+<p>Environment values sourced through <code>SecretKeyRef</code> are resolved by the VK and
+delivered to the hosted application as Docker run options. They are therefore
+also visible to an administrator with permission to inspect app-hosting
+configuration on the device. Grant pod-creation and device-administration
+rights accordingly.</p>
+<p>Environment-variable names must use the portable
+<code>[A-Za-z_][A-Za-z0-9_]*</code> form. Although newer Kubernetes API validation admits
+a broader printable character set, CVK rejects those relaxed names before
+device access because IOS XE and NX-OS both render names into Docker run
+options. Rename variables containing dashes, dots, spaces, or other punctuation
+before deploying them through CVK.</p>
+<p>CVK does not include resolved run options in controller logs or reconciliation
+errors. The IOS XE app-hosting RESTCONF client and the NX-OS NX-API client also
+reject HTTP redirects and omit free-form device response text from errors where
+it could echo app-hosting data. Length-validation errors report only the
+measured and supported sizes. IOS XE image-copy logging strips URL user
+information, query parameters, and fragments while still sending the original
+authenticated source to the device.</p>
+<p>On NX-OS, a pod's <code>image</code> value is treated as untrusted CLI input. CVK accepts
+only a single validated <code>bootflash:</code> path or HTTP(S) URL token before issuing
+an app-hosting install command; whitespace, control characters, command
+separators, user information, and other unsafe syntax are rejected before any
+NX-API request. Prefer pre-staged <code>bootflash:</code> packages for production use.</p>
+<p>NX-OS environment values are likewise validated before CLI rendering. The
+current transport accepts printable ASCII values except semicolons, pipes,
+quotes, backslashes, and backticks; it also rejects control characters and
+non-ASCII text. JSON documents, PEM blocks, generated passwords, or other
+values containing those characters must be delivered to the application by a
+different mechanism until an NX-OS-native quoting strategy is validated.</p>
+<p>The IOS XE <code>cisco.io/apphost-package-dest</code> annotation accepts only
+<code>bootflash:</code>, <code>harddisk:</code>, <code>flash:</code>, <code>nvram:</code>, or <code>usb:</code> followed by path
+segments using ASCII letters, digits, <code>-</code>, <code>.</code>, <code>_</code>, or <code>~</code>. Empty, <code>.</code> and
+<code>..</code> segments are rejected. Rename existing destination paths containing
+spaces, <code>+</code>, control characters, or other punctuation before upgrading.</p>
+<h2 id="tls">TLS</h2>
+<p>Device-side TLS is configured under <code>spec.tls</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">tls</span><span class="p">:</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">insecureSkipVerify</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nt">caFile</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/ssl/certs/corp-ca.crt</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">certFile</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/ssl/cvk/client.crt</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="nt">keyFile</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/ssl/cvk/client.key</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>Turn on HTTPS. Required in production.</td>
+</tr>
+<tr>
+<td><code>insecureSkipVerify</code></td>
+<td><code>true</code> disables certificate verification. Acceptable for lab devices with self-signed certs; <strong>do not</strong> use in production.</td>
+</tr>
+<tr>
+<td><code>caFile</code></td>
+<td>Trust anchor for verifying the device certificate.</td>
+</tr>
+<tr>
+<td><code>certFile</code>, <code>keyFile</code></td>
+<td>Optional client certificate — required only if the device enforces mutual TLS.</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>certFile</code> / <code>keyFile</code> / <code>caFile</code> paths refer to files <strong>inside the VK pod</strong>. Mount them with a Secret-backed volume or a configMap-backed volume on the VK Deployment. The controller does not currently auto-mount them — you'll need a post-install patch or a forked chart.</p>
+<p>All device-facing clients honour the full <code>spec.tls</code> block through one shared
+builder: apphosting RESTCONF, the configdriver RESTCONF fallback, MDT-over-gNMI
+telemetry, gNOI, and the NX-API client on NX-OS. A <code>caFile</code> therefore gives you
+verified TLS on every path — <code>insecureSkipVerify: true</code> is never required just
+because a device uses a private CA.</p>
+<h3 id="ssh-host-keys">SSH host keys</h3>
+<p>NETCONF and the CLI side-channel ride SSH, not TLS. Pinning uses a standard
+OpenSSH <code>known_hosts</code> file (multi-host files cover a fleet). Ship it into the
+VK pod with a Secret- or ConfigMap-backed volume and point
+<code>CONFIG_SSH_KNOWN_HOSTS</code> at the mounted path; the NETCONF diagnostic probe
+(<code>CONFIG_NETCONF_PROBE</code>) then pins its dials against it and refuses to dial
+unpinned if the file fails to load. Without the variable the probe keeps the
+historical lab default of accepting any presented key — as with
+<code>insecureSkipVerify</code>, do not rely on that in production.</p>
+<h3 id="kubelet-side-tls">Kubelet-side TLS</h3>
+<p>The VK runs its own HTTPS listener on <code>:10250</code> (serving the kubelet API surface). By default it auto-generates a self-signed cert on every start into <code>/var/lib/virtual-kubelet/</code>. Override with:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>--tls-cert-file /etc/kubelet/tls.crt
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>--tls-key-file  /etc/kubelet/tls.key
+</span></code></pre></div>
+<p>On k3s clusters that reject self-signed kubelet certs, set <code>kubelet-certificate-authority=""</code> in <code>/etc/rancher/k3s/config.yaml</code> to accept them — this is required for <code>kubectl logs</code> / <code>kubectl top</code> against the VK node.</p>
+<h2 id="rbac-model">RBAC model</h2>
+<p>The Helm chart installs the manager and VK service accounts plus the reusable
+ClusterRoles needed by isolated runtimes. The manager creates a unique service
+account for each network-controller worker when that runtime is requested.</p>
+<h3 id="controller-service-account-cisco-virtual-kubelet-controller">Controller service account (<code>cisco-virtual-kubelet-controller</code>)</h3>
+<p>Used by the <code>manager</code> pod. Permissions (from kubebuilder markers):</p>
+<table>
+<thead>
+<tr>
+<th>Resource</th>
+<th>Verbs</th>
+<th>Scope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cisco.vk/ciscodevices</code></td>
+<td>get, list, watch, update, patch</td>
+<td>cluster</td>
+</tr>
+<tr>
+<td><code>cisco.vk/ciscodevices/status</code></td>
+<td>get, update, patch</td>
+<td>cluster</td>
+</tr>
+<tr>
+<td><code>configmaps</code></td>
+<td>get, list, watch, create, update, patch, delete</td>
+<td>cluster</td>
+</tr>
+<tr>
+<td><code>secrets</code></td>
+<td>get, list, watch</td>
+<td>cluster; used for <code>CiscoDevice</code> credential-rotation watches and by the optional in-process config aggregator; installed unconditionally</td>
+</tr>
+<tr>
+<td><code>deployments</code> (<code>apps</code>)</td>
+<td>get, list, watch, create, update, patch, delete</td>
+<td>cluster</td>
+</tr>
+<tr>
+<td><code>nodes</code></td>
+<td>get, list, watch, delete</td>
+<td>cluster</td>
+</tr>
+</tbody>
+</table>
+<p>The network-controller orchestration path does not request Secret values: it
+writes only authorized references into Pod volume sources, and the kubelet
+resolves them. However, the shared manager ServiceAccount has cluster-wide
+read-only Secret permission, the <code>CiscoDevice</code> reconciler watches typed Secret
+objects for credential rotation, and the optional in-process aggregator also
+uses the grant. Consequently Secret data can enter the manager process/cache
+even when network-controller workers consume only projected files. The grant
+is generated and installed even when aggregator mode and the optional
+network-controller scaffold are off.</p>
+<h3 id="vk-pod-service-account-cisco-virtual-kubelet">VK pod service account (<code>cisco-virtual-kubelet</code>)</h3>
+<p>Used by each VK pod. Permissions:</p>
+<table>
+<thead>
+<tr>
+<th>Resource</th>
+<th>Verbs</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pods</code>, <code>pods/status</code>, <code>pods/logs</code>, <code>pods/exec</code></td>
+<td>get, list, watch, create, update, patch, delete</td>
+<td>VK provider API</td>
+</tr>
+<tr>
+<td><code>nodes</code>, <code>nodes/status</code></td>
+<td>get, list, watch, create, update, patch, delete</td>
+<td>Register and update the virtual node</td>
+</tr>
+<tr>
+<td><code>configmaps</code>, <code>secrets</code></td>
+<td>get, list, watch</td>
+<td>Read-only for pod volume mounts</td>
+</tr>
+<tr>
+<td><code>services</code></td>
+<td>get, list, watch</td>
+<td>Service discovery surface for pods</td>
+</tr>
+<tr>
+<td><code>persistentvolumes</code>, <code>persistentvolumeclaims</code></td>
+<td>get, list, watch</td>
+<td>Not used directly today; reserved for future volume support</td>
+</tr>
+<tr>
+<td><code>events</code></td>
+<td>create, patch</td>
+<td>Emit pod lifecycle events</td>
+</tr>
+<tr>
+<td><code>leases</code> (in <code>kube-node-lease</code>)</td>
+<td>get, list, watch, create, update, patch, delete</td>
+<td>Node heartbeat via Lease API</td>
+</tr>
+</tbody>
+</table>
+<h3 id="network-controller-crd-validation-prerequisite">Network-controller CRD validation prerequisite</h3>
+<p>The controller APIs use CEL transition rules (<code>oldSelf</code>) to enforce immutable
+endpoint and intent identity. Kubernetes 1.28 is supported only with the
+<code>CustomResourceValidationExpressions</code> feature gate enabled; that feature is
+beta and enabled by default in 1.28. It is GA in Kubernetes 1.29 and later.
+CVK's runtime validation is defense in depth for the current object shape, but
+it cannot compare the previous object and does not replace CEL immutability.
+Do not operate controller workers on an API server where CEL transition
+validation is disabled.</p>
+<h3 id="network-controller-worker-service-accounts">Network-controller worker service accounts</h3>
+<p>Each <code>NetworkController</code> gets a unique ServiceAccount and a <strong>namespaced</strong>
+RoleBinding to the reusable
+<code>cisco-virtual-kubelet-controller-worker</code> ClusterRole. There is deliberately no
+ClusterRoleBinding. The worker can read controller resources, controller
+intent, and source ConfigMaps across its namespace; update only the two CRDs'
+<code>/status</code> subresources; and emit bounded Events. The base role deliberately has
+no coordination Lease permission. It cannot update or patch either main
+resource, including its spec, metadata, and finalizers. It also cannot read
+Secrets, Nodes, Pods, workloads, or another namespace.</p>
+<p>A unique worker ServiceAccount provides distinct identity and auditing, not
+endpoint-scoped authorization. Its RoleBinding authorizes update/patch of the
+<code>/status</code> subresource for <strong>every</strong> <code>NetworkController</code> and
+<code>NetworkControllerConfig</code> in the namespace, not just the endpoint named in its
+bootstrap. The endpoint object cache is name-filtered and the common contract
+gate constrains a conforming adapter, but neither is an authorization boundary;
+configuration/source caches and the RoleBinding remain namespace-scoped. The
+namespace is therefore the Kubernetes API trust, RBAC, status-write, and cache
+boundary. Per-endpoint workers separately isolate process lifetime, mounted
+credentials, native sessions, failure, and rate limits. Use one
+<code>NetworkController</code> per dedicated namespace whenever endpoints, adapter code,
+or configuration authors are not mutually trusted.</p>
+<p>Within one namespace, the manager fences multiple controller objects whose
+stored <code>spec.endpoint</code> values are exactly equal. The deterministic owner is the
+earliest creation timestamp, then lexicographically smallest name, then UID;
+non-owners remain quiesced and periodically requeue so they can activate after
+owner deletion. The elected owner must actively remove every managed loser
+worker before it can start its own, so delayed peer events cannot permit an
+overlap. This first guard deliberately does not normalize URLs or detect
+equivalent endpoints across namespaces or clusters, so those stronger identity
+policies remain an operational and future-design responsibility.</p>
+<p>A future per-controller cache optimization may use a manager-owned
+key-existence label such as <code>nc.cisco.vk/&lt;uid-hash&gt;: "true"</code> on configs and
+source objects; a shared ConfigMap may carry several controller keys.
+Manager-owned stamping/cleanup and a bounded, collision-tested UID hash are
+prerequisites. This can reduce watch fan-out and memory, but it is non-security
+work: labels and cache filters do not reduce the namespace-wide API authority
+described above.</p>
+<p>The manager associates worker resources with their endpoint by explicit
+controller name/UID annotations, not Kubernetes owner references. Its
+protection finalizer retains those resources while dependent controller configs
+exist and removes them explicitly only after the dependency check succeeds.
+This prevents foreground garbage collection from bypassing the default
+<code>Retain</code> lifecycle. If a generated name is already occupied by an object with
+missing or different identity annotations, the manager refuses adoption,
+leaves the foreign object unchanged, and emits a sanitized Warning Event with
+reason <code>WorkerObjectCollision</code>. Operators can inspect it with:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>kubectl<span class="w"> </span>events<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--for<span class="w"> </span>networkcontroller/&lt;name&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--types<span class="o">=</span>Warning
+</span></code></pre></div>
+<p>The endpoint credential Secret is mounted read-only by the kubelet instead of
+being fetched through the Kubernetes API. Any future adapter-specific
+permission set must be a separate, statically reviewed ClusterRole selected by
+the adapter descriptor and accepted by the registry's closed allow-list. Its
+chart definition and the manager's exact <code>bind</code> grant must land in the same
+reviewed change. See the
+<a href="../controller-extension-guide/#security-boundary">Network Controller Extension Guide</a>
+for the complete worker and credential contract.</p>
+<p>Projected credential, CA, and intent-Secret files can rotate without a Pod
+restart, but a projection update does not inherently enqueue an adapter
+reconcile. A generic worker-owned watcher therefore checks Kubernetes
+AtomicWriter <code>..data</code> symlinks every five seconds without reading or hashing
+projected values. It passes the adapter one coalescing material-change channel
+and a fifteen-minute maximum session lifetime. The adapter must consume and
+internally fan out that signal, discard cached authentication/TLS state,
+re-read mounted files, and requeue affected work before its next external
+request. It must independently rebuild clients and sessions by the maximum
+lifetime even if no signal arrives.</p>
+<p>Remote mutation remains a future gated profile. Before any adapter may honor
+<code>apply</code>, pruning, or remote deletion, CVK must provide a shared
+controller-neutral <code>SectionLeaser</code>, pass ownership/renewal/takeover/API-loss
+conformance tests, and install a <strong>separate</strong>, statically reviewed mutation
+RBAC role containing only the required coordination Lease authority. The
+manager may bind that role only through an explicit audited allow-list, and
+registry validation must reject every other role name. Lease verbs must not be
+added back to the base report-only worker role.</p>
+<h3 id="controller-intent-secret-authorization">Controller intent Secret authorization</h3>
+<p>Controller-intent Secrets use a two-resource authorization boundary.
+Administrators define
+<code>NetworkController.spec.intentSecretSources</code>, an alias-to-same-namespace
+Secret name/key allow-list. Configuration authors may then use
+<code>NetworkControllerConfig.spec.secretRefs[].source</code> to select an alias and
+destination section/path, but cannot submit an arbitrary Secret name or key.</p>
+<p>The manager projects only administrator-approved aliases into the worker Pod.
+This projection path does not inspect Secret <code>.data</code>, and the worker has no
+Secret API permission; the kubelet resolves the read-only volume. The shared
+manager cache caveat described above still applies. This prevents a user who
+can create controller configs from using the projection logic as a confused
+Secret-read deputy.
+Cluster RBAC must therefore reserve <code>NetworkController</code> writes for the
+administrator role and delegate <code>NetworkControllerConfig</code> independently.</p>
+<p>For an unauthorized, invalid, or excess projection, the manager skips that
+projection and emits a sanitized <code>IntentSecretProjectionSkipped</code> warning/event;
+it does not set config status. A missing or unresolved projected file remains
+optional at Pod-mount time. The adapter skips only the affected config and
+reports <code>IntentSecretsReady=False</code> through its status. Neither failure stops
+the endpoint worker or prevents other valid controller configs from
+reconciling.</p>
+<h3 id="production-rbac-hardening">Production RBAC hardening</h3>
+<p>The default chart preserves the broad Virtual Kubelet permissions needed by the
+current per-device runtime, including pod lifecycle, node registration,
+configuration CR access, and operations CR access. Before declaring the NX-OS
+runtime production-grade, split this into explicit profiles:</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Intended scope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Controller</td>
+<td>Watches <code>CiscoDevice</code>, creates Deployments/ConfigMaps, manages finalizers and virtual node cleanup.</td>
+</tr>
+<tr>
+<td>Per-device runtime</td>
+<td>Owns pod lifecycle and node status for one device worker.</td>
+</tr>
+<tr>
+<td>Config writer</td>
+<td>Reads/writes only the config CRDs required by the enabled platform.</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Creates and updates read-only <code>DeviceOperation</code> requests and artifacts.</td>
+</tr>
+<tr>
+<td>Lifecycle operations</td>
+<td>Opt-in profile for software upgrades and other write-class operations.</td>
+</tr>
+</tbody>
+</table>
+<p>Strict production installs should prefer namespaced Roles for pod, config,
+operation, and artifact surfaces, keeping ClusterRoles only where Kubernetes
+requires cluster scope, such as <code>nodes</code> and cluster-scoped CRDs. Additions to
+cluster-wide verbs should carry a rationale in this page and a regression test
+so RBAC broadening is visible during review.</p>
+<p>The chart exposes the first strict-profile control as:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">rbac</span><span class="p">:</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">profile</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">strict</span>
+</span></code></pre></div>
+<p><code>profile: default</code> preserves the historical VK ClusterRole. <code>profile: strict</code>
+removes reserved persistent volume reads and withholds write-class gNOI and
+software-upgrade CRD permissions unless the matching runtime gates are enabled:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">gnoi</span><span class="p">:</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">enableSoftwareUpgrade</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">enableWriteClass</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span></code></pre></div>
+<h3 id="finalizer-and-deletion">Finalizer and deletion</h3>
+<p>The controller adds the finalizer <code>cisco.vk/device-cleanup</code> to every <code>CiscoDevice</code>. On deletion:</p>
+<ol>
+<li>Controller observes <code>DeletionTimestamp</code>.</li>
+<li>Deletes the virtual <code>Node</code> (cluster-scoped — not cascade-deleted with the CR).</li>
+<li>Removes the finalizer.</li>
+<li>Kubernetes cascade-deletes the owned <code>ConfigMap</code> and <code>Deployment</code>.</li>
+</ol>
+<p>This is the only path that removes the virtual node cleanly — do not delete the <code>CiscoDevice</code> by force (<code>--force --grace-period=0</code>) or you will leak the node.</p>
+<h2 id="principles">Principles</h2>
+<ul>
+<li><strong>Credentials stay out of ordinary CRs and ConfigMaps.</strong> They live in
+  Secrets, which are protected at rest only when the cluster enables
+  encryption at rest; Secret RBAC remains part of the security boundary.</li>
+<li><strong>No requested Secret values in the network-controller path.</strong> Controller
+  orchestration writes authorized volume references and workers consume
+  projected files; the kubelet resolves the values. The shared manager still
+  has cluster-wide Secret <code>get</code>, <code>list</code>, and <code>watch</code>, and typed Secret objects
+  can enter its cache through the <code>CiscoDevice</code> credential-rotation watch and
+  optional aggregator. Isolate and protect the manager accordingly.</li>
+<li><strong>Administrator-approved controller intent Secrets.</strong> Config authors select aliases only; administrators own the underlying Secret name/key allow-list.</li>
+<li><strong>Per-device credentials.</strong> Each <code>CiscoDevice</code> can reference a different Secret.</li>
+<li><strong>Finalizer-managed cleanup.</strong> Cluster-scoped resources owned by namespaced CRs are cleaned up explicitly.</li>
+</ul>
+<h2 id="related-reading">Related reading</h2>
+<ul>
+<li><a href="../CONFIGURATION/#core">Configuration → Core</a> — <code>password</code> and <code>credentialSecretRef</code> fields</li>
+<li><a href="../ARCHITECTURE/#controller-reconciliation">Architecture → Controller reconciliation</a> — the flow from CR to deployed pod</li>
+<li><a href="../controller-extension-guide/">Network Controller Extension Guide</a> — adapter isolation, Network as Code ownership, and worker RBAC</li>
+<li><a href="../getting-started/">Getting Started</a> — end-to-end first deployment with a Secret</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../troubleshooting/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Troubleshooting">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Troubleshooting
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../production-readiness/" class="md-footer__link md-footer__link--next" aria-label="Next: Production Readiness">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Production Readiness
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2025-2026 Cisco Systems, Inc. All Rights Reserved. · <a href="/cisco-virtual-kubelet/LICENSE">Project license</a> · <a href="/cisco-virtual-kubelet/docs/MKDOCS_THIRD_PARTY_LICENSES.txt">MkDocs third-party licenses</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "search.share", "navigation.footer", "navigation.instant.progress", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script>if(!window.ResizeObserver){document.write('<script src="../r.js?v=2290b5c60e0cdc62851fb687800237273ac53797595b1b133860c4f1386de378"><\/script>')}</script>
+      <script src="../m.js?v=581ed7d74bd9048d0e3a91363927d72ef22942d7722546b27f7cc29e35390eb8"></script>
+      <script src="../assets/javascripts/bundle.7e847d798e28dffc.min.js"></script>
+      
+    
+  </body>
+</html>

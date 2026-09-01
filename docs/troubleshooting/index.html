@@ -1,0 +1,2662 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A Virtual Kubelet provider for App-Hosting workloads on Cisco IOS-XE devices, with Beta support for Cisco Nexus NX-OS switches.">
+      
+      
+      
+        <link rel="canonical" href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/troubleshooting/">
+      
+      
+        <link rel="prev" href="../observability/">
+      
+      
+        <link rel="next" href="../security/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Troubleshooting - Cisco Virtual Kubelet</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#troubleshooting" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-header__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Cisco Virtual Kubelet
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Troubleshooting
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-nav__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Cisco Virtual Kubelet
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Welcome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.1 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.0 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../controller-extension-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Controller Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cisco-vk-cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONFIGURATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CiscoDevice Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network as Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NetAsCode Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../crds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CRD Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../family-parity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Parity Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families-nxos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nxos-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Configuration Recovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat8000v/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 8000V
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat9000/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 9000
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ir1101/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IR1100 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ie3500/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IE3500 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yang-version-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    YANG Version Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment Variables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Software Lifecycle
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gnoi-software-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Telemetry
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MDT Subscriptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry-cardinality/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cardinality Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle Correlation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Observability
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#first-gather-the-basics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        First — gather the basics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#apps-are-unexpectedly-removed-when-a-second-vk-worker-starts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Apps are unexpectedly removed when a second VK worker starts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ciscodevice-stuck-in-provisioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CiscoDevice stuck in Provisioning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pod-stuck-in-pending" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod stuck in Pending
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#packagepolicyinvalid-false-positives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PackagePolicyInvalid false positives
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PackagePolicyInvalid false positives">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symptom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-it-happens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why it happens
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pod-never-gets-an-ip-shows-0000" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod never gets an IP (shows 0.0.0.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kubectl-top-node-returns-an-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        kubectl top node returns an error
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prometheus-metrics-missing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prometheus metrics missing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gnoi-actions-or-software-upgrades-do-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gNOI actions or software upgrades do nothing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#iosxeoperationalaction-is-rejected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IOSXEOperationalAction is rejected
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#iosxesoftwareupgrade-fails-during-image-resolution-or-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IOSXESoftwareUpgrade fails during image resolution or transfer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#otel-traces-not-appearing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OTEL traces not appearing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pod-stuck-in-pullingimage-waiting-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod stuck in PullingImage waiting state
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pod stuck in PullingImage waiting state">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symptom_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-happening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is happening
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wait-times" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wait times
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#avoiding-the-copy-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Avoiding the copy fallback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#imagepullpolicy-ifnotpresent-still-re-downloads-the-image-every-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        imagePullPolicy: IfNotPresent still re-downloads the image every time
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="imagePullPolicy: IfNotPresent still re-downloads the image every time">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symptom_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workaround" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workaround
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#imagepullpolicy-never-with-http-image-url" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        imagePullPolicy: Never with HTTP image URL
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="imagePullPolicy: Never with HTTP image URL">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symptom_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fix_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pod-stuck-failed-forever" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod stuck Failed forever
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#virtual-node-lingers-after-ciscodevice-deletion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Virtual node lingers after CiscoDevice deletion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-secret-update-did-not-roll-the-vk-pod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A Secret update did not roll the VK pod
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-look-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to look next
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../production-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Readiness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#first-gather-the-basics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        First — gather the basics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#apps-are-unexpectedly-removed-when-a-second-vk-worker-starts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Apps are unexpectedly removed when a second VK worker starts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ciscodevice-stuck-in-provisioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CiscoDevice stuck in Provisioning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pod-stuck-in-pending" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod stuck in Pending
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#packagepolicyinvalid-false-positives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PackagePolicyInvalid false positives
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PackagePolicyInvalid false positives">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symptom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-it-happens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why it happens
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pod-never-gets-an-ip-shows-0000" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod never gets an IP (shows 0.0.0.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kubectl-top-node-returns-an-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        kubectl top node returns an error
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prometheus-metrics-missing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prometheus metrics missing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gnoi-actions-or-software-upgrades-do-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gNOI actions or software upgrades do nothing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#iosxeoperationalaction-is-rejected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IOSXEOperationalAction is rejected
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#iosxesoftwareupgrade-fails-during-image-resolution-or-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IOSXESoftwareUpgrade fails during image resolution or transfer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#otel-traces-not-appearing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OTEL traces not appearing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pod-stuck-in-pullingimage-waiting-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod stuck in PullingImage waiting state
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pod stuck in PullingImage waiting state">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symptom_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-happening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is happening
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wait-times" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wait times
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#avoiding-the-copy-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Avoiding the copy fallback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#imagepullpolicy-ifnotpresent-still-re-downloads-the-image-every-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        imagePullPolicy: IfNotPresent still re-downloads the image every time
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="imagePullPolicy: IfNotPresent still re-downloads the image every time">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symptom_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workaround" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workaround
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#imagepullpolicy-never-with-http-image-url" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        imagePullPolicy: Never with HTTP image URL
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="imagePullPolicy: Never with HTTP image URL">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symptom_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Symptom
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fix_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pod-stuck-failed-forever" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod stuck Failed forever
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#virtual-node-lingers-after-ciscodevice-deletion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Virtual node lingers after CiscoDevice deletion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-secret-update-did-not-roll-the-vk-pod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A Secret update did not roll the VK pod
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-look-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to look next
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="troubleshooting">Troubleshooting</h1>
+<p>Common issues and how to diagnose them.</p>
+<h2 id="first-gather-the-basics">First — gather the basics</h2>
+<p>The Helm release name is <code>cvk</code> throughout this page (matching the <a href="../getting-started/">Getting Started</a> guide). If you installed with a different release name, substitute it wherever <code>cvk</code> appears below.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># CiscoDevice full state — usually the most useful starting point</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>kubectl<span class="w"> </span>describe<span class="w"> </span>ciscodevice<span class="w"> </span>&lt;name&gt;
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>kubectl<span class="w"> </span>get<span class="w"> </span>ciscodevice<span class="w"> </span>&lt;name&gt;<span class="w"> </span>-o<span class="w"> </span>yaml
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Controller logs</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>cvk-system<span class="w"> </span>logs<span class="w"> </span>deploy/cvk-controller<span class="w"> </span>--tail<span class="o">=</span><span class="m">200</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># VK pod logs (one per device)</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;device-namespace&gt;<span class="w"> </span>logs<span class="w"> </span>deploy/&lt;device-name&gt;-vk<span class="w"> </span>--tail<span class="o">=</span><span class="m">200</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1"># Virtual node status</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>kubectl<span class="w"> </span>describe<span class="w"> </span>node<span class="w"> </span>&lt;device-name&gt;
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="c1"># Pods on the virtual node</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>--field-selector<span class="w"> </span>spec.nodeName<span class="o">=</span>&lt;device-name&gt;
+</span></code></pre></div>
+<p>On the device:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>show iox-service
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>show app-hosting list
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>show app-hosting detail appid &lt;app-id&gt;
+</span></code></pre></div>
+<hr />
+<h2 id="apps-are-unexpectedly-removed-when-a-second-vk-worker-starts">Apps are unexpectedly removed when a second VK worker starts</h2>
+<p>CVK currently requires exactly one active app-hosting worker per physical
+device endpoint. This applies to IOS-XE and NX-OS, including different
+hostnames or addresses that identify the same device.</p>
+<p>At startup, a worker compares CVK-managed apps discovered device-wide with
+Pods assigned to its own virtual node. A second worker with a different node
+identity cannot see the incumbent node's Pods, so it can classify their apps as
+dangling and stop, deactivate, or uninstall them. Config-operation leases do
+not serialize this pod-lifecycle cleanup.</p>
+<p>Stop the duplicate worker immediately and leave only one device owner running.
+For a controlled handoff, choose one path:</p>
+<ul>
+<li>To retain existing Pods and apps, stop the incumbent worker, wait until its
+  process has terminated, then start the replacement with the same virtual-node
+  identity while preserving the existing Pod objects.</li>
+<li>To change identity, keep the incumbent running while you drain or delete Pods
+  assigned to the old node and verify their device apps have been removed.
+  Then stop the incumbent, wait until it has terminated, and start the
+  replacement.</li>
+</ul>
+<p>Never overlap old and new app-hosting workers against the same physical device.
+For parallel diagnostics, use read-only transport or <code>DeviceOperation</code> checks
+that do not start another Virtual Kubelet app runtime.</p>
+<hr />
+<h2 id="ciscodevice-stuck-in-provisioning">CiscoDevice stuck in <code>Provisioning</code></h2>
+<p><code>Provisioning</code> means the controller has created the ConfigMap and Deployment but no VK pod is Ready yet.</p>
+<p><strong>Check the VK Deployment:</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>deploy<span class="w"> </span>&lt;device-name&gt;-vk<span class="w"> </span>-o<span class="w"> </span>yaml
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>kubectl<span class="w"> </span>describe<span class="w"> </span>pod<span class="w"> </span>-l<span class="w"> </span>app.kubernetes.io/name<span class="o">=</span>cisco-vk,app.kubernetes.io/instance<span class="o">=</span>&lt;device-name&gt;
+</span></code></pre></div>
+<p><strong>Common causes:</strong></p>
+<ul>
+<li><strong>Image pull error</strong> — make sure <code>image.repository</code>/<code>vkImage.repository</code> points at a registry the cluster can pull from.</li>
+<li><strong>Bad credentials</strong> — look for <code>401 Unauthorized</code> in VK pod logs. Verify the Secret key is spelled <code>password</code> (not <code>PASSWORD</code>, not <code>pass</code>).</li>
+<li><strong>Device unreachable</strong> — look for <code>dial tcp: i/o timeout</code> in VK pod logs. Check routing, firewall, and that RESTCONF is enabled (<code>restconf</code> in device config).</li>
+<li><strong>TLS verification failing</strong> — look for <code>x509: certificate signed by unknown authority</code>. Either supply <code>tls.caFile</code>, or temporarily set <code>tls.insecureSkipVerify: true</code> to confirm.</li>
+</ul>
+<hr />
+<h2 id="pod-stuck-in-pending">Pod stuck in <code>Pending</code></h2>
+<p><code>Pending</code> means the VK has accepted the pod but the device has not yet reached <code>RUNNING</code>.</p>
+<p><strong>Walk the state machine.</strong> Check VK logs for the reconcile line:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ReconcileApp cvk00000_&lt;uid&gt;: observed="INSTALLING" desired=Running phase=Converging
+</span></code></pre></div>
+<p>Known intermediate states that are expected:</p>
+<ul>
+<li><code>INSTALLING</code> — normal during the first 5–30 seconds.</li>
+<li><code>DEPLOYED</code> — very brief; VK will issue <code>activate</code> on the next poll.</li>
+<li><code>ACTIVATED</code> — very brief; VK will issue <code>start</code> on the next poll.</li>
+</ul>
+<p>If the pod stays in the same state for more than a minute, there is something wrong. See specific sections below.</p>
+<hr />
+<h2 id="packagepolicyinvalid-false-positives">PackagePolicyInvalid false positives</h2>
+<h3 id="symptom">Symptom</h3>
+<p>Pod shows <code>Failed</code> with:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>status:
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  phase: Failed
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  reason: PackagePolicyInvalid
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  message: "install blocked: app package policy is invalid ..."
+</span></code></pre></div>
+<h3 id="why-it-happens">Why it happens</h3>
+<p>IOS-XE reports <code>pkg-policy = iox-pkg-policy-invalid</code> as the YANG default during the first 1–3 seconds of every install, before signature verification completes. A confirming install notification only appears when the device actually rejects the package. The reconciler tries to distinguish the two by waiting for the notification, but if the notification ordering is off or the device never emits one, you can get stuck.</p>
+<h3 id="fix">Fix</h3>
+<p>If you're running unsigned packages on purpose — your own custom application builds or test images:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">allowUnsignedApps</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span></code></pre></div>
+<p>This does two things:</p>
+<ol>
+<li><strong>Device-side</strong> — CVK PUTs <code>app-hosting-cfg-data/controls</code> with <code>sign-verification: false</code> on first connect, disabling the IOS-XE package signature check. Equivalent to <code>no app-hosting signed-verification</code>.</li>
+<li><strong>Reconciler-side</strong> — treats <code>iox-pkg-policy-invalid</code> during <code>INSTALLING</code> as a transient (non-fatal) signal.</li>
+</ol>
+<p>If the device-side PUT fails (e.g. platform does not support the YANG leaf, or insufficient privilege), CVK logs a warning and the device policy may still block unsigned installs.</p>
+<p>If you want signing enforced:</p>
+<ol>
+<li>Verify the package is actually signed (<code>show app-hosting detail appid &lt;id&gt;</code> → <code>Signature verified: YES</code>).</li>
+<li>If the package is signed but the check is firing, check logs for the full notification text — the device explains what failed:
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>kubectl logs deploy/&lt;device-name&gt;-vk | grep "install blocked"
+</span></code></pre></div></li>
+</ol>
+<p>The pod recovery loop will automatically retry these failed pods with exponential backoff; you don't need to <code>kubectl delete</code> them.</p>
+<hr />
+<h2 id="pod-never-gets-an-ip-shows-0000">Pod never gets an IP (shows <code>0.0.0.0</code>)</h2>
+<p>IP discovery runs in two stages. If both come up empty the pod stays at <code>0.0.0.0</code>.</p>
+<p><strong>1. Oper-data path</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># On the device</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>show<span class="w"> </span>app-hosting<span class="w"> </span>detail<span class="w"> </span>appid<span class="w"> </span>&lt;app-id&gt;<span class="w"> </span><span class="p">|</span><span class="w"> </span>include<span class="w"> </span>ipv4
+</span></code></pre></div>
+<p>If the oper-data shows a real IP but the pod doesn't, the VK isn't scraping it — check VK logs for errors calling <code>app-hosting-oper-data</code>.</p>
+<p><strong>2. ARP fallback</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>show arp
+</span></code></pre></div>
+<p>If the container's MAC appears but the IP is still <code>0.0.0.0</code> at the pod, the VK's ARP lookup is failing. Most common cause: the MAC in oper-data doesn't match the ARP entry because the container hasn't finished DHCP handshake yet. Give it 30 s; the reconciler will retry.</p>
+<p><strong>If no ARP entry exists at all:</strong></p>
+<ul>
+<li>DHCP pool is misconfigured (wrong network, exhausted pool).</li>
+<li>VirtualPortGroup interface is down or has no IP.</li>
+<li>App-hosting does not have the <code>guest-ipaddress</code> fields populated (check <code>show app-hosting list detailed</code>).</li>
+</ul>
+<hr />
+<h2 id="kubectl-top-node-returns-an-error"><code>kubectl top node</code> returns an error</h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>error: Metrics not available for node &lt;name&gt;
+</span></code></pre></div>
+<p>Verify the stats endpoint is reachable:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>--raw<span class="w"> </span><span class="s2">"/api/v1/nodes/&lt;name&gt;/proxy/stats/summary"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head
+</span></code></pre></div>
+<p>If that works but <code>kubectl top</code> fails, the metrics-server does not trust the kubelet certificate. On k3s:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a># /etc/rancher/k3s/config.yaml
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>kubelet-certificate-authority: ""
+</span></code></pre></div>
+<p>On upstream Kubernetes, either supply a signed kubelet cert via <code>--tls-cert-file</code> / <code>--tls-key-file</code>, or add <code>--kubelet-insecure-tls</code> to the metrics-server deployment.</p>
+<hr />
+<h2 id="prometheus-metrics-missing">Prometheus metrics missing</h2>
+<p><code>cisco_device_*</code> metrics are served from the VK pod's kubelet endpoint (<code>/metrics/resource</code>).</p>
+<p>Expected setup: your Prometheus is already scraping kubelets (<code>kube-prometheus-stack</code> does this by default).</p>
+<p><strong>Check:</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Are the metrics there at all?</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>--raw<span class="w"> </span><span class="s2">"/api/v1/nodes/&lt;name&gt;/proxy/metrics/resource"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>cisco_device
+</span></code></pre></div>
+<hr />
+<h2 id="gnoi-actions-or-software-upgrades-do-nothing">gNOI actions or software upgrades do nothing</h2>
+<p>Both write-class gNOI surfaces are opt-in on the per-device VK pod:</p>
+<ul>
+<li><code>IOSXEOperationalAction</code> requires <code>--enable-write-class-gnoi</code> or
+  <code>CISCO_VK_ENABLE_WRITE_CLASS_GNOI=true</code>.</li>
+<li><code>IOSXESoftwareUpgrade</code> requires <code>--enable-iosxesoftwareupgrade</code> or
+  <code>CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=true</code>.</li>
+</ul>
+<p>Check the VK pod args and logs:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;device-namespace&gt;<span class="w"> </span>get<span class="w"> </span>deploy<span class="w"> </span>&lt;device-name&gt;-vk<span class="w"> </span>-o<span class="w"> </span>yaml<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">"enable-write-class-gnoi|enable-iosxesoftwareupgrade"</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;device-namespace&gt;<span class="w"> </span>logs<span class="w"> </span>deploy/&lt;device-name&gt;-vk<span class="w"> </span>--tail<span class="o">=</span><span class="m">200</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>gnoi
+</span></code></pre></div>
+<p>If the CR remains untouched, verify the <code>spec.deviceRef.name</code> matches the
+device worker's <code>CiscoDevice</code> name and that the VK service account can update
+the CR status and finalizer subresources.</p>
+<hr />
+<h2 id="iosxeoperationalaction-is-rejected">IOSXEOperationalAction is rejected</h2>
+<p>Common rejection reasons:</p>
+<ul>
+<li><code>ConfirmMismatch</code> — <code>spec.confirm</code> must exactly equal
+  <code>spec.deviceRef.name</code>.</li>
+<li><code>InvalidAction</code> — exactly one typed args block must match
+  <code>spec.action.kind</code>.</li>
+<li>Kubernetes admission rejects updates because <code>spec</code> is immutable after
+  creation. Create a new action CR for a changed request.</li>
+</ul>
+<p>For actions that reach <code>Running</code> and then fail, inspect both events and status:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>kubectl<span class="w"> </span>describe<span class="w"> </span>iosxeoperationalaction<span class="w"> </span>&lt;name&gt;
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>events<span class="w"> </span>--field-selector<span class="w"> </span>involvedObject.name<span class="o">=</span>&lt;name&gt;
+</span></code></pre></div>
+<p><code>Running</code> means the controller may already have invoked the device-side RPC.
+The reconciler will not dispatch the same CR again after a restart.</p>
+<hr />
+<h2 id="iosxesoftwareupgrade-fails-during-image-resolution-or-transfer">IOSXESoftwareUpgrade fails during image resolution or transfer</h2>
+<p>For URL sources, <code>imageSource.sha256</code> is required. Credential-bearing URLs are
+redacted before they are written to CR status, events, or logs. For SCP/SFTP,
+host-key verification is required unless the operator explicitly enables the
+lab-only escape hatch:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nv">CISCO_VK_UPGRADE_ALLOW_INSECURE_SSH</span><span class="o">=</span><span class="nb">true</span>
+</span></code></pre></div>
+<p>When using <code>localPath</code>, add <code>localPathSHA256</code> if the device supports gNOI
+File.Get. A mismatch fails before activation with <code>LocalPathHashMismatch</code>.</p>
+<p>Transfer interruptions move to <code>TransferInterrupted</code> and retry according to
+<code>spec.maxRetries</code> unless <code>spec.resumePolicy: Abort</code> is set.</p>
+<p>With <code>rollbackOnFailure: true</code>, a verify mismatch enters <code>RollingBack</code> and
+attempts to re-activate the previously observed running version. If no previous
+version was captured, the CR fails with <code>RollbackVersionMissing</code>.</p>
+<p><strong>If the raw endpoint returns metrics but Prometheus doesn't see them:</strong></p>
+<ul>
+<li>The node ServiceMonitor isn't matching (check labels).</li>
+<li>The scrape job for kubelets doesn't use the <code>/metrics/resource</code> path — some configurations only scrape <code>/metrics/cadvisor</code>.</li>
+</ul>
+<p><strong>If the raw endpoint returns only <code>cisco_device_cpu_*</code>/<code>memory_*</code>/<code>storage_*</code> but no <code>interface_*</code> or <code>cdp_*</code>:</strong></p>
+<ul>
+<li>The driver does not implement <code>TopologyProvider</code>. This is always the case for the FAKE driver and will be the case for future drivers that don't implement topology.</li>
+<li>Or the device has no CDP/OSPF neighbors to report.</li>
+</ul>
+<hr />
+<h2 id="otel-traces-not-appearing">OTEL traces not appearing</h2>
+<p><strong>Check it's enabled:</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>ciscodevice<span class="w"> </span>&lt;name&gt;<span class="w"> </span>-o<span class="w"> </span>yaml<span class="w"> </span><span class="p">|</span><span class="w"> </span>yq<span class="w"> </span>.spec.otel
+</span></code></pre></div>
+<p><strong>Verify VK pod startup:</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>deploy/&lt;device-name&gt;-vk<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>otel
+</span></code></pre></div>
+<p>You should see one of:</p>
+<ul>
+<li><code>OTEL topology exporter started</code> — good, emitting</li>
+<li><code>Failed to initialise OTEL topology exporter</code> — endpoint unreachable or config invalid</li>
+<li><code>driver does not implement TopologyProvider</code> — wrong driver (FAKE doesn't, XE does)</li>
+</ul>
+<p><strong>Common misconfigurations:</strong></p>
+<ul>
+<li><code>endpoint</code> has scheme prefix (wrong): <code>https://otel:4317</code>. Use <code>host:port</code> only.</li>
+<li><code>insecure: false</code> against a plaintext gRPC collector — use <code>insecure: true</code> for typical in-cluster OTLP collectors without TLS.</li>
+<li><code>intervalSecs</code> set below 10 — the minimum is enforced to 10 s; values below will silently use 60 s.</li>
+</ul>
+<p><strong>No traces after 60 s</strong>: check the collector logs — it will receive spans in batches. Splunk Observability Cloud can sometimes take a minute to surface the first trace.</p>
+<hr />
+<h2 id="pod-stuck-in-pullingimage-waiting-state">Pod stuck in <code>PullingImage</code> waiting state</h2>
+<h3 id="symptom_1">Symptom</h3>
+<p><code>kubectl describe pod &lt;name&gt;</code> shows the container in a waiting state:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>State:          Waiting
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>  Reason:       PullingImage
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>  Message:      Copying image to device flash; this may take several minutes
+</span></code></pre></div>
+<h3 id="what-is-happening">What is happening</h3>
+<p>The VK attempted a device-native HTTP pull that timed out (default 3 minutes), and is now running the copy fallback: it downloads the image tar from the HTTP URL and copies it to device flash via RESTCONF, then reinstalls from that local path. The copy RPC is synchronous and can take several minutes depending on image size and network speed.</p>
+<p>You can monitor progress via pod events:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>kubectl<span class="w"> </span>describe<span class="w"> </span>pod<span class="w"> </span>&lt;name&gt;
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="c1"># Look for the Events section at the bottom:</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="c1">#</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1">#   Normal  Pulling          &lt;time&gt;   cisco-virtual-kubelet  Pulling image https://...</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="c1">#   Warning ImagePullFallback &lt;time&gt;  cisco-virtual-kubelet  Device-native pull timed out...</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="c1">#   Normal  Copying          &lt;time&gt;   cisco-virtual-kubelet  Copying image ... to flash:/...</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="c1">#   Normal  Pulled           &lt;time&gt;   cisco-virtual-kubelet  Image successfully copied to ...</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="c1">#   Normal  Started          &lt;time&gt;   cisco-virtual-kubelet  App ... is running</span>
+</span></code></pre></div>
+<h3 id="wait-times">Wait times</h3>
+<ul>
+<li>A 500 MB image over a 100 Mb/s management link takes roughly 40 seconds for the copy alone, plus 30 seconds for app activation. Allow 3–5 minutes total.</li>
+<li>If the pod does not transition to <code>Running</code> after 10 minutes, check VK logs for errors:</li>
+</ul>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;device-namespace&gt;<span class="w"> </span>logs<span class="w"> </span>deploy/&lt;device-name&gt;-vk<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">"copy|fallback|error|Error"</span>
+</span></code></pre></div>
+<h3 id="avoiding-the-copy-fallback">Avoiding the copy fallback</h3>
+<p>To use the copy path intentionally and skip the device-native pull attempt entirely, set <code>imagePullPolicy: Never</code> and pre-copy the tar to flash yourself. Then reference the flash path directly in the pod spec:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">flash:/virtual-kubelet/my-app.tar</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="nt">imagePullPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Never</span>
+</span></code></pre></div>
+<hr />
+<h2 id="imagepullpolicy-ifnotpresent-still-re-downloads-the-image-every-time"><code>imagePullPolicy: IfNotPresent</code> still re-downloads the image every time</h2>
+<h3 id="symptom_2">Symptom</h3>
+<p>You set <code>imagePullPolicy: IfNotPresent</code> expecting the image to be reused from a local cache, but each pod creation issues a fresh download. <code>dir flash:</code> shows no cached tar.</p>
+<h3 id="why">Why</h3>
+<p>IOS-XE App Hosting does not leave a copy of the image on flash when using the device-native install path (<code>app-hosting install appid ... package &lt;url&gt;</code>). The device fetches and loads the image directly into the container runtime without writing it to flash. Since no flash copy is ever created, there is nothing for <code>IfNotPresent</code> to reuse — it behaves identically to <code>Always</code> on the device-native pull path.</p>
+<p>The <code>IfNotPresent</code> flash-cache optimization only activates when the VK's <strong>copy fallback path</strong> has run at least once (i.e., the device-native pull timed out and the VK copied the tar to flash itself). After that first copy, subsequent deploys with <code>IfNotPresent</code> will reuse the cached tar.</p>
+<h3 id="workaround">Workaround</h3>
+<p>To reliably benefit from local caching, force the copy path by one of the following:</p>
+<ul>
+<li>Pre-copy the image to flash manually on the device, then use <code>imagePullPolicy: Never</code> with a flash path (<code>flash:/virtual-kubelet/my-app.tar</code>).</li>
+<li>Accept that on platforms where the device-native pull succeeds quickly, re-downloading from the registry on each deploy is the expected behaviour.</li>
+</ul>
+<hr />
+<h2 id="imagepullpolicy-never-with-http-image-url"><code>imagePullPolicy: Never</code> with HTTP image URL</h2>
+<h3 id="symptom_3">Symptom</h3>
+<p>Pod immediately goes to <code>Failed</code> with:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>status:
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>  phase: Failed
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>  message: "app ...: imagePullPolicy is Never but image is an HTTP URL ..."
+</span></code></pre></div>
+<h3 id="why_1">Why</h3>
+<p><code>imagePullPolicy: Never</code> means the image must already exist on device flash and no download of any kind will be attempted. Using an HTTP or HTTPS URL with this policy is invalid.</p>
+<h3 id="fix_1">Fix</h3>
+<p>Either:</p>
+<ol>
+<li>Change the image reference to a flash path: <code>flash:/virtual-kubelet/my-app.tar</code></li>
+<li>Or change the <code>imagePullPolicy</code> to <code>IfNotPresent</code> or <code>Always</code> to allow the VK to download it.</li>
+</ol>
+<hr />
+<h2 id="pod-stuck-failed-forever">Pod stuck <code>Failed</code> forever</h2>
+<p>Usually one of:</p>
+<ul>
+<li><code>reason: NotFound</code> — VK pod was restarted and lost state. The pod recovery loop handles this automatically.</li>
+<li><code>reason: ProviderFailed</code> — transient device issue. Recovery loop handles this.</li>
+<li><code>reason: PackagePolicyInvalid</code> — see <a href="#packagepolicyinvalid-false-positives">above</a>.</li>
+</ul>
+<p>The pod recovery loop resets matching Failed pods to <code>Pending</code> with exponential backoff (15 s → 5 min). You should see this in VK logs:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>Recovered &lt;n&gt; stale failed pods
+</span></code></pre></div>
+<p>If the loop isn't running, check the VK pod is healthy (not crash-looping). The recovery goroutine starts with the rest of the VK and stops when the VK exits.</p>
+<hr />
+<h2 id="virtual-node-lingers-after-ciscodevice-deletion">Virtual node lingers after <code>CiscoDevice</code> deletion</h2>
+<p>Normally the controller deletes the virtual <code>Node</code> as part of finalizer cleanup. If you see a lingering node:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>node<span class="w"> </span>&lt;device-name&gt;
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="c1"># Status: NotReady</span>
+</span></code></pre></div>
+<p>This usually means the finalizer was skipped (force-delete of the CR, or the controller was down when deletion happened). Clean up by hand:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>node<span class="w"> </span>&lt;device-name&gt;
+</span></code></pre></div>
+<p>Check no orphaned Deployment / ConfigMap remains:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;ns&gt;<span class="w"> </span>get<span class="w"> </span>deploy,cm<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>&lt;device-name&gt;
+</span></code></pre></div>
+<p>Avoid <code>kubectl delete ciscodevice --force --grace-period=0</code> — it skips the finalizer and will cause this.</p>
+<hr />
+<h2 id="a-secret-update-did-not-roll-the-vk-pod">A Secret update did not roll the VK pod</h2>
+<p>The controller normally watches referenced credential Secrets and copies their
+<code>resourceVersion</code> into the Deployment pod template, which triggers an automatic
+rollout. Compare the source and observed versions and check the manager:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;ns&gt;<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>&lt;secret-name&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="w">  </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.metadata.resourceVersion}{"\n"}'</span>
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;ns&gt;<span class="w"> </span>get<span class="w"> </span>deploy/&lt;device-name&gt;-vk<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="w">  </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.spec.template.metadata.annotations.cisco\.vk/credential-resource-version}{"\n"}'</span>
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>cisco-vk-system<span class="w"> </span>get<span class="w"> </span>deploy,pods
+</span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>cisco-vk-system<span class="w"> </span>logs<span class="w"> </span>deploy/cisco-vk-cisco-virtual-kubelet<span class="w"> </span>--tail<span class="o">=</span><span class="m">200</span>
+</span></code></pre></div>
+<p>Confirm the <code>CiscoDevice</code> references that same-namespace Secret. After fixing
+the manager or reference, the watch-driven reconcile should roll the pod. For
+an immediate troubleshooting fallback, force one manually:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>&lt;ns&gt;<span class="w"> </span>rollout<span class="w"> </span>restart<span class="w"> </span>deploy/&lt;device-name&gt;-vk
+</span></code></pre></div>
+<hr />
+<h2 id="where-to-look-next">Where to look next</h2>
+<ul>
+<li><a href="../ARCHITECTURE/">Architecture</a> — internal state machines and data flow</li>
+<li><a href="../CONFIGURATION/">Configuration</a> — every field and its defaults</li>
+<li><a href="../observability/">Observability</a> — metrics and OTEL details</li>
+<li>GitHub issues — if your problem isn't listed here, file an issue with:</li>
+<li>CiscoDevice spec (redact credentials)</li>
+<li><code>kubectl describe ciscodevice</code> output</li>
+<li>VK pod logs (<code>--tail=200</code>)</li>
+<li><code>show app-hosting detail appid &lt;id&gt;</code> from the device</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../observability/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Overview">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Overview
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../security/" class="md-footer__link md-footer__link--next" aria-label="Next: Security">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Security
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2025-2026 Cisco Systems, Inc. All Rights Reserved. · <a href="/cisco-virtual-kubelet/LICENSE">Project license</a> · <a href="/cisco-virtual-kubelet/docs/MKDOCS_THIRD_PARTY_LICENSES.txt">MkDocs third-party licenses</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "search.share", "navigation.footer", "navigation.instant.progress", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script>if(!window.ResizeObserver){document.write('<script src="../r.js?v=2290b5c60e0cdc62851fb687800237273ac53797595b1b133860c4f1386de378"><\/script>')}</script>
+      <script src="../assets/javascripts/bundle.7e847d798e28dffc.min.js"></script>
+      
+    
+  </body>
+</html>

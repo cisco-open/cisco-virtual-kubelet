@@ -1,0 +1,2144 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A Virtual Kubelet provider for App-Hosting workloads on Cisco IOS-XE devices, with Beta support for Cisco Nexus NX-OS switches.">
+      
+      
+      
+        <link rel="canonical" href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/production-readiness/">
+      
+      
+        <link rel="prev" href="../security/">
+      
+      
+        <link rel="next" href="../API/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Production Readiness - Cisco Virtual Kubelet</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#production-readiness-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-header__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Cisco Virtual Kubelet
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Production Readiness
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-nav__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Cisco Virtual Kubelet
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Welcome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.1 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.0 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../controller-extension-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Controller Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cisco-vk-cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONFIGURATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CiscoDevice Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network as Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NetAsCode Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../crds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CRD Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../family-parity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Parity Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families-nxos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nxos-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Configuration Recovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat8000v/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 8000V
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat9000/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 9000
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ir1101/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IR1100 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ie3500/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IE3500 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yang-version-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    YANG Version Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment Variables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Software Lifecycle
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gnoi-software-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Telemetry
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MDT Subscriptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry-cardinality/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cardinality Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle Correlation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Observability
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Readiness
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Readiness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#current-merge-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current merge scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-merge-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pre-merge gates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#production-hardening-phases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production hardening phases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Production hardening phases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-nx-os-restdme-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: NX-OS REST/DME safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-rbac-hardening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: RBAC hardening
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-nx-os-netascode-family-expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: NX-OS NetAsCode family expansion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-neutral-transport-maturity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Neutral transport maturity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-per-device-scale-and-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5: Per-device scale and operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-platform-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future platform sequence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#production-declaration-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production declaration checklist
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#current-merge-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current merge scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-merge-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pre-merge gates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#production-hardening-phases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production hardening phases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Production hardening phases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-nx-os-restdme-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: NX-OS REST/DME safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-rbac-hardening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: RBAC hardening
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-nx-os-netascode-family-expansion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: NX-OS NetAsCode family expansion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-neutral-transport-maturity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Neutral transport maturity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-per-device-scale-and-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5: Per-device scale and operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-platform-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future platform sequence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#production-declaration-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production declaration checklist
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="production-readiness-plan">Production Readiness Plan</h1>
+<p>This page tracks the work required to move the current NX-OS runtime slice from
+beta to production-grade, while keeping Cisco Virtual Kubelet aligned with the
+Network as Code model stripes and the existing per-device Virtual Kubelet
+architecture.</p>
+<h2 id="current-merge-scope">Current merge scope</h2>
+<p>The current NX-OS branch is a runtime parity foundation, not a full parity
+claim. It adds:</p>
+<ul>
+<li>NX-OS app-hosting through NX-API CLI.</li>
+<li><code>NXOSConfig</code> over the common config runtime.</li>
+<li>NX-API REST/DME config transport.</li>
+<li>Initial Fetch -&gt; Diff -&gt; Apply -&gt; Verify writers for <code>system</code>, <code>feature</code>,
+  <code>feature_set</code>, <code>vlan</code>, and <code>interface_ethernet</code>.</li>
+<li>A common REST helper under <code>internal/configengine/transport</code>.</li>
+<li>NetAsCode device-centric envelope resolution for global, device group,
+  device, variable, model-template, and interface-group scopes.</li>
+</ul>
+<p>The branch should be described as beta until the gates below pass repeatedly on
+branch-built images.</p>
+<h2 id="pre-merge-gates">Pre-merge gates</h2>
+<p>These items gate merging a branch that changes runtime behavior:</p>
+<table>
+<thead>
+<tr>
+<th>Gate</th>
+<th>Required evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unit and race tests</td>
+<td><code>go test ./...</code> and <code>go test -race ./...</code> pass.</td>
+</tr>
+<tr>
+<td>Pinned NetAsCode oracle</td>
+<td><code>make check-nxos-oracle</code> passes offline conformance against module <code>0.3.0</code> / NX-OS provider <code>0.13.1</code>, fixture digests, DME facts, and failure-recovery convergence.</td>
+</tr>
+<tr>
+<td>Generated artifacts</td>
+<td><code>make deepcopy-gen manifests</code> produces no unexpected drift.</td>
+</tr>
+<tr>
+<td>Build and smoke</td>
+<td>GitHub <code>build-and-smoke</code> passes, including envtest and Helm checks.</td>
+</tr>
+<tr>
+<td>Existing IOS-XE labs</td>
+<td>Cat8kv and Cat9k lab checks pass so NX-OS work does not regress IOS-XE.</td>
+</tr>
+<tr>
+<td>NX-OS read-only live check</td>
+<td>DME login, DME system fetch, and NX-API CLI endpoint succeed against the virtual NX-OS node.</td>
+</tr>
+<tr>
+<td>NX-OS scale admission</td>
+<td>Multi-container pods are tested against the driver, and live device app-slot limits are enforced before config is sent.</td>
+</tr>
+<tr>
+<td>Branch-image NX-OS deployment</td>
+<td>The exact branch image is deployed to the lab cluster.</td>
+</tr>
+<tr>
+<td>NX-OS app-hosting lifecycle</td>
+<td>A test pod reaches running state through install, activate, start, then is stopped, deactivated, uninstalled, and removed.</td>
+</tr>
+<tr>
+<td>NXOSConfig live write</td>
+<td>A disposable VLAN or equivalent low-risk object is applied through DME, verified by Fetch/Diff, and cleaned up.</td>
+</tr>
+<tr>
+<td>DeviceOperation CLI</td>
+<td>A read-only NX-OS command succeeds through <code>DeviceOperation</code> and records status/output.</td>
+</tr>
+<tr>
+<td>Review state</td>
+<td>Any stale <code>CHANGES_REQUESTED</code> review is cleared or explicitly superseded by reviewer approval.</td>
+</tr>
+</tbody>
+</table>
+<p>The NX-OS lab gates can be run through the shared wrapper:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">NXOS_HOST</span><span class="o">=</span>&lt;device&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">NXOS_USERNAME</span><span class="o">=</span>&lt;user&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nv">NXOS_PASSWORD</span><span class="o">=</span>&lt;password&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>scripts/nxos-lab-smoke.sh
+</span></code></pre></div>
+<p>Optional mutating and Kubernetes checks are opt-in:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">RUN_LIVE_NXOS_CONFIG_WRITE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">RUN_NXOS_DEVICEOP_SMOKE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nv">RUN_NXOS_APPHOSTING_SMOKE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">NXOS_K8S_NAMESPACE</span><span class="o">=</span>&lt;namespace&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nv">NXOS_K8S_DEVICE</span><span class="o">=</span>&lt;ciscodevice-and-node-name&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nv">NXOS_APP_IMAGE</span><span class="o">=</span>&lt;nxos-app-hosting-package&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nv">NXOS_HOST</span><span class="o">=</span>&lt;device&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nv">NXOS_USERNAME</span><span class="o">=</span>&lt;user&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nv">NXOS_PASSWORD</span><span class="o">=</span>&lt;password&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>scripts/nxos-lab-smoke.sh
+</span></code></pre></div>
+<h2 id="production-hardening-phases">Production hardening phases</h2>
+<h3 id="phase-1-nx-os-restdme-safety">Phase 1: NX-OS REST/DME safety</h3>
+<p>Goal: make the non-transactional behavior explicit and operationally safe.</p>
+<ul>
+<li>Report the explicit <code>nxapi</code> transport kind so DME behavior is distinguishable
+  from generic REST transports.</li>
+<li>Never advertise transactions or confirmed-commit for NX-API REST/DME.</li>
+<li>Report non-transactional fallback clearly in status/events when
+  <code>spec.transactional</code> or <code>spec.confirmTimeoutSeconds</code> is requested.</li>
+<li>Apply managed families in deterministic order.</li>
+<li>Verify after each family and stop on the first failed verify.</li>
+<li>Run <code>writeStartup</code> only after every managed family verifies.</li>
+<li>Add compensating delete/prune support only where Fetch can prove ownership.</li>
+<li>Classify transport failures as retryable, auth, validation, or permanent
+  DME errors so controller-runtime retry behavior is predictable.</li>
+<li>Follow the <a href="../nxos-recovery/">NX-OS Configuration Recovery</a> runbook for
+  ambiguous or partial non-transactional outcomes.</li>
+</ul>
+<h3 id="phase-2-rbac-hardening">Phase 2: RBAC hardening</h3>
+<p>Goal: shrink production blast radius without breaking the per-device worker
+model.</p>
+<ul>
+<li>Split Helm RBAC into profiles: controller, per-device runtime,
+  config-writer, diagnostics, and lifecycle operations.</li>
+<li>Prefer namespaced Roles for pod, config, operation, and artifact surfaces.</li>
+<li>Keep ClusterRoles only where Kubernetes requires cluster scope, such as
+  Nodes and cluster-scoped CRDs.</li>
+<li>Feature-gate high-risk verbs for write-class operations and software
+  lifecycle.</li>
+<li>Document the default profile and the strict profile separately. The current
+  chart exposes <code>rbac.profile=default|strict</code>; strict mode withholds reserved
+  volume reads plus write-class gNOI/software-upgrade CRD permissions unless
+  their runtime gates are enabled.</li>
+<li>Add RBAC audit tests that fail when strict-profile gates are removed or
+  wildcard permissions appear.</li>
+</ul>
+<h3 id="phase-3-nx-os-netascode-family-expansion">Phase 3: NX-OS NetAsCode family expansion</h3>
+<p>Goal: expand coverage through small vertical slices, each with real
+Fetch -&gt; Diff -&gt; Apply -&gt; Verify behavior.</p>
+<p>The first supported families are:</p>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Current supported fields</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>system</code></td>
+<td><code>hostname</code>, <code>mtu</code></td>
+<td>Broader Ethernet defaults, boot, clock, NX-API, SSH, and platform subtrees are still planned.</td>
+</tr>
+<tr>
+<td><code>feature</code></td>
+<td>NetAsCode feature booleans</td>
+<td>Maps to DME <code>fmEntity</code> children; disabling <code>nxapi</code>, <code>ssh</code>, <code>scp_server</code>, <code>sftp_server</code>, or <code>tacacs</code> is rejected to avoid management lockout.</td>
+</tr>
+<tr>
+<td><code>feature_set</code></td>
+<td><code>fex</code>, <code>mpls</code>, <code>virtualization</code></td>
+<td>Maps to DME <code>fsetFeatureSet</code> admin state.</td>
+</tr>
+<tr>
+<td><code>vlan</code></td>
+<td><code>vlans[].id</code>, <code>vlans[].name</code></td>
+<td>VNI/VXLAN leaves are deferred; scoped prune deletes are supported for CR-owned VLANs except VLAN 1.</td>
+</tr>
+<tr>
+<td><code>interface_ethernet</code></td>
+<td><code>id</code>, <code>description</code>, <code>shutdown</code>, <code>mtu</code></td>
+<td>Provider-derived <code>adminSt</code>, <code>Layer2</code>, and user-configured flags are preserved for strict imports; CVK refuses implicit Layer3-to-Layer2 or shutdown-to-up conversion. Switchport, L3, protocol, and port-channel leaves are planned; physical interface deletion/prune is intentionally unsupported.</td>
+</tr>
+</tbody>
+</table>
+<p>Only the supported families above are accepted in <code>NXOSConfig.spec.managedFamilies</code>.
+The runtime rejects planned/deferred families before device I/O, so the coverage
+matrix is the production gate rather than a best-effort hint. The same gate is
+applied when <code>CiscoDevice.spec.configPrereqs</code> derives an owned <code>NXOSConfig</code>
+from an inline <code>nxos:</code> envelope.</p>
+<p>Recommended next waves:</p>
+<ol>
+<li>Management/base: <code>banner</code>, <code>clock</code>, <code>dns</code>, <code>logging</code>, <code>ntp</code>, <code>snmp</code>,
+   <code>ssh</code>, <code>nxapi</code>, <code>aaa</code>, <code>cdp</code>, <code>lldp</code>, and <code>udld</code>.
+   These should harden secret/reference handling and avoid disabling active
+   access paths.</li>
+<li>L2 and interface primitives: <code>interface_loopback</code>, <code>interface_vlan</code>,
+   <code>interface_management</code>, <code>interface_port_channel</code>, <code>interface_subinterface</code>,
+   <code>arp</code>, <code>spanning_tree</code>, and <code>vpc</code>. Port-channel and vPC require
+   topology-aware verification.</li>
+<li>L3 and routing: <code>vrf</code>, <code>ip_route</code>, <code>ipv6_route</code>, <code>bfd</code>, <code>ospf</code>, <code>ospfv3</code>,
+   <code>isis</code>, <code>bgp</code>, <code>pim</code>, <code>hsrp</code>, <code>dhcp</code>, <code>nd</code>, and <code>ptp</code>. These must land after
+   the required interface, feature, and policy primitives.</li>
+<li>Policy/security: <code>ip_access_list</code>, <code>ipv6_access_list</code>, <code>ip_prefix_list</code>,
+   <code>ipv6_prefix_list</code>, <code>community_list</code>, <code>route_map</code>, <code>key_chain</code>, <code>qos</code>,
+   <code>security_group</code>, <code>hypershield</code>, and <code>span</code>.</li>
+<li>Fabric and telemetry configuration: <code>fabric_forwarding</code>, <code>interface_nve</code>,
+   VLAN VNI leaves, <code>evpn</code>, BGP EVPN, <code>analytics</code>, <code>netflow</code>, <code>sflow</code>, and
+   <code>telemetry</code>. These should be delivered as coordinated fabric/observability
+   waves, not isolated one-off writers.</li>
+</ol>
+<p>The NetAsCode entity/source layer is also part of parity. Native compatibility
+sources that omit <code>modelSource</code> may use inline <code>devices</code>, <code>device_groups</code>,
+<code>global</code>, <code>variables</code>, model <code>templates</code>, and <code>interface_groups</code>. A strict
+import that declares <code>modelSource.resolved: true</code> rejects those constructs and
+accepts only flattened per-device canonical data. Terraform-specific
+filesystem inputs such as <code>yaml_files</code>, <code>yaml_directories</code>, <code>template_files</code>,
+and <code>write_model_file</code> stay outside <code>NXOSConfig</code>; render them into resolved
+intent through GitOps or a future source controller.</p>
+<p>Each family requires:</p>
+<ul>
+<li>NetAsCode field coverage entry.</li>
+<li>DME DN and payload mapping.</li>
+<li>Fetch parser for observed state.</li>
+<li>Writer diff tests for apply, no-op, invalid input, and unsupported fields.</li>
+<li>Fake DME transport fixtures.</li>
+<li>Optional live read/write test guarded by environment variables.</li>
+<li>Documentation of supported and rejected fields.</li>
+</ul>
+<h3 id="phase-4-neutral-transport-maturity">Phase 4: Neutral transport maturity</h3>
+<p>Goal: keep protocol mechanics shared while platform behavior stays in platform
+adapters.</p>
+<p>The shared layer owns:</p>
+<ul>
+<li>REST request construction.</li>
+<li>TLS defaults.</li>
+<li>Redaction.</li>
+<li>Retry and backoff.</li>
+<li>Rate limiting hooks.</li>
+<li>Pagination and task-polling interfaces.</li>
+<li>OpenTelemetry span/metric hooks.</li>
+</ul>
+<p>Platform adapters own:</p>
+<ul>
+<li>NX-OS DME login/session behavior.</li>
+<li>FMC domain selection and deployment tasks.</li>
+<li>ISE ERS/OpenAPI authentication and pagination choices.</li>
+<li>Catalyst Center task polling and intent APIs.</li>
+<li>Meraki organization/network scoping.</li>
+<li>IOS-XR NETCONF/gNMI candidate and confirmed-commit behavior.</li>
+<li>SONIC/OpenConfig translation if a real NetAsCode SONIC stripe is adopted.</li>
+</ul>
+<h3 id="phase-5-per-device-scale-and-operations">Phase 5: Per-device scale and operations</h3>
+<p>Goal: keep horizontal scaling aligned with Virtual Kubelet instead of forcing a
+single central aggregator.</p>
+<ul>
+<li>Preserve per-device VK workers as the primary runtime unit.</li>
+<li>Enforce exclusive app-runtime ownership per physical device identity before
+  pod lifecycle and dangling-app cleanup begin. Duplicate or aliased endpoints
+  must fail closed; otherwise a second worker can treat apps owned by the
+  incumbent virtual node as dangling and remove them.</li>
+<li>Until that guard exists, require a non-overlapping handoff: stop the incumbent
+  completely, retain its node identity when preserving existing Pods, and only
+  then start the replacement.</li>
+<li>Use topology labels and worker capability status for placement, upgrades, and
+  debugging.</li>
+<li>Add per-device concurrency limits and session locks for device-facing calls.</li>
+<li>Surface metrics for DME request latency, retry count, apply count, verify
+  failures, session login failures, and app-hosting lifecycle duration.</li>
+<li>Emit OpenTelemetry spans around config family apply/verify and pod lifecycle
+  operations.</li>
+<li>Keep any future orchestrator optional: it may plan topology-aware waves, but
+  execution should remain in per-device workers unless a platform requires
+  controller-centric execution.</li>
+</ul>
+<h2 id="future-platform-sequence">Future platform sequence</h2>
+<p>The same runtime structure should be reused, but transport choices differ:</p>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Runtime shape</th>
+<th>First transport</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IOS-XE</td>
+<td>device-centric</td>
+<td>RESTCONF/NETCONF/gNMI</td>
+<td>Existing broadest implementation.</td>
+</tr>
+<tr>
+<td>NX-OS</td>
+<td>device-centric</td>
+<td>REST/DME plus CLI diagnostics/app-hosting</td>
+<td>Current beta slice.</td>
+</tr>
+<tr>
+<td>IOS-XR</td>
+<td>device-centric</td>
+<td>NETCONF/gNMI</td>
+<td>Best candidate for YANG/ygot parity and confirmed commit.</td>
+</tr>
+<tr>
+<td>SONIC</td>
+<td>device-centric</td>
+<td>OpenConfig/gNMI</td>
+<td>Treat as OpenConfig unless a real NetAsCode SONIC stripe exists.</td>
+</tr>
+<tr>
+<td>FMC/FTD</td>
+<td>controller-centric</td>
+<td>REST</td>
+<td>FTD policy/config should be FMC-managed intent.</td>
+</tr>
+<tr>
+<td>ISE</td>
+<td>controller-centric</td>
+<td>REST</td>
+<td>Model ERS/OpenAPI pagination, tasks, and system sections in an adapter.</td>
+</tr>
+<tr>
+<td>APIC/NDO/Catalyst Center/Meraki</td>
+<td>controller-centric or solution-centric</td>
+<td>REST</td>
+<td>Share neutral REST mechanics, keep platform workflows in adapters.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="production-declaration-checklist">Production declaration checklist</h2>
+<p>NX-OS can be called production-ready only when all of the following are true:</p>
+<ul>
+<li>Branch-image lab deployment is repeatable.</li>
+<li>App-hosting lifecycle is tested against a real NX-OS target.</li>
+<li>Exclusive physical-device ownership is enforced before pod lifecycle starts,
+  with duplicate and aliased endpoints covered by fail-closed tests.</li>
+<li>NX-OS app-hosting slot limits are documented per platform and reflected in
+  <code>resourceLimits.others.maxApps</code> before enabling higher pod density.</li>
+<li>At least one DME write family is live-tested with cleanup in CI.</li>
+<li>RBAC strict profile exists and is documented.</li>
+<li>Non-transactional DME behavior is visible in status/events.</li>
+<li>Supported/unsupported NetAsCode fields are documented per family.</li>
+<li>Scoped prune behavior is documented and live-tested for each supported family
+  that can safely delete device objects.</li>
+<li>Transport and reconcile metrics are available for DME, app-hosting, and
+  DeviceOperation.</li>
+<li>Operator recovery/compensation behavior is documented for every supported
+  write family in the
+  <a href="../nxos-recovery/">NX-OS Configuration Recovery</a> runbook; CR revision history
+  and declarative rollback remain disabled.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../security/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Security">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Security
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../API/" class="md-footer__link md-footer__link--next" aria-label="Next: API Reference">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                API Reference
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2025-2026 Cisco Systems, Inc. All Rights Reserved. · <a href="/cisco-virtual-kubelet/LICENSE">Project license</a> · <a href="/cisco-virtual-kubelet/docs/MKDOCS_THIRD_PARTY_LICENSES.txt">MkDocs third-party licenses</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "search.share", "navigation.footer", "navigation.instant.progress", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script>if(!window.ResizeObserver){document.write('<script src="../r.js?v=2290b5c60e0cdc62851fb687800237273ac53797595b1b133860c4f1386de378"><\/script>')}</script>
+      <script src="../assets/javascripts/bundle.7e847d798e28dffc.min.js"></script>
+      
+    
+  </body>
+</html>

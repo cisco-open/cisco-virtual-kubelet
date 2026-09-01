@@ -1,0 +1,2897 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A Virtual Kubelet provider for App-Hosting workloads on Cisco IOS-XE devices, with Beta support for Cisco Nexus NX-OS switches.">
+      
+      
+      
+        <link rel="canonical" href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/observability/">
+      
+      
+        <link rel="prev" href="../lifecycle/">
+      
+      
+        <link rel="next" href="../troubleshooting/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Overview - Cisco Virtual Kubelet</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#observability" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-header__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Cisco Virtual Kubelet
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Overview
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-nav__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Cisco Virtual Kubelet
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Welcome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.1 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.0 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../controller-extension-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Controller Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cisco-vk-cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONFIGURATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CiscoDevice Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network as Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NetAsCode Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../crds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CRD Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../family-parity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Parity Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families-nxos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nxos-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Configuration Recovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat8000v/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 8000V
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat9000/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 9000
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ir1101/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IR1100 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ie3500/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IE3500 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yang-version-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    YANG Version Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment Variables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Software Lifecycle
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gnoi-software-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Telemetry
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MDT Subscriptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry-cardinality/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cardinality Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle Correlation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Observability
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#otel-spine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OTel Spine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OTel Spine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#process-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trace-taxonomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trace taxonomy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#correlation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Correlation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-revision-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config Revision History
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#self-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#current-topology-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current topology boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#existing-surfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Existing Surfaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Metrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Catalog
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Catalog">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#device-resources-always-present" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Device resources (always present)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gnoi-lifecycle-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gNOI lifecycle metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interfaces-topologyprovider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interfaces (TopologyProvider)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#neighbors-topologyprovider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Neighbors (TopologyProvider)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scraping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scraping
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stats-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stats / summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#opentelemetry-topology-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenTelemetry topology export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OpenTelemetry topology export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resource-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resource attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#span-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Span hierarchy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Span hierarchy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#root-span-cvktopologycycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root span (cvk.topology.cycle)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-spans-linklocaliface-peerdeviceid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link spans (link.{localIface}-&gt;{peerDeviceID})
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hosted-app-spans-hostednamespacepodname" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hosted-app spans (hosted.&lt;namespace&gt;/&lt;podName&gt;)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-you-get" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What you get
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#failure-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failure modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#node-annotations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node annotations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#end-to-end-example-splunk-observability-cloud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        End-to-end example: Splunk Observability Cloud
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related reading
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../production-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Readiness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#otel-spine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OTel Spine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OTel Spine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#process-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trace-taxonomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trace taxonomy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#correlation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Correlation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-revision-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config Revision History
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#self-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#current-topology-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current topology boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#existing-surfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Existing Surfaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Metrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Catalog
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Catalog">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#device-resources-always-present" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Device resources (always present)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gnoi-lifecycle-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gNOI lifecycle metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interfaces-topologyprovider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interfaces (TopologyProvider)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#neighbors-topologyprovider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Neighbors (TopologyProvider)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scraping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scraping
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stats-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stats / summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#opentelemetry-topology-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenTelemetry topology export
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OpenTelemetry topology export">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resource-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resource attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#span-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Span hierarchy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Span hierarchy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#root-span-cvktopologycycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root span (cvk.topology.cycle)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-spans-linklocaliface-peerdeviceid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link spans (link.{localIface}-&gt;{peerDeviceID})
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hosted-app-spans-hostednamespacepodname" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hosted-app spans (hosted.&lt;namespace&gt;/&lt;podName&gt;)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-you-get" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What you get
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#failure-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failure modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#node-annotations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node annotations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#end-to-end-example-splunk-observability-cloud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        End-to-end example: Splunk Observability Cloud
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related reading
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="observability">Observability</h1>
+<p>Cisco Virtual Kubelet uses OpenTelemetry as the shared correlation plane for
+controller reconciliation, per-device Virtual Kubelet work, MDT-over-gNMI
+telemetry, configuration, topology, and read-only device operations.</p>
+<p>The important rule is that every signal carries stable resource identity. That
+lets Grafana, Prometheus, Jaeger, Loki, Tempo, Splunk Observability, or another
+OTel backend join traces, metrics, and logs by device, pod, process role, and
+Kubernetes namespace without relying on log text.</p>
+<h2 id="otel-spine">OTel Spine</h2>
+<h3 id="process-identity">Process identity</h3>
+<p>CVK emits from three process roles. They may run in one Kubernetes pod, but they
+are separate OTel resources by design:</p>
+<table>
+<thead>
+<tr>
+<th>Process</th>
+<th><code>service.name</code></th>
+<th><code>cvk.process.role</code></th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>System controller</td>
+<td><code>cisco-vk-controller</code></td>
+<td><code>controller</code></td>
+<td>Watches <code>CiscoDevice</code> and reconciles controller-managed Kubernetes resources.</td>
+</tr>
+<tr>
+<td>Per-device VK provider</td>
+<td><code>cisco-vk-vk</code></td>
+<td><code>vk-provider</code></td>
+<td>Owns the upstream Virtual Kubelet node and Pod lifecycle.</td>
+</tr>
+<tr>
+<td>Per-device telemetry emitter</td>
+<td><code>cisco-vk-telemetry</code></td>
+<td><code>telemetry-emitter</code></td>
+<td>Owns MDT-over-gNMI subscriptions and telemetry mapping.</td>
+</tr>
+</tbody>
+</table>
+<p>Common attributes include <code>service.instance.id</code>, <code>host.name</code>,
+<code>net.peer.name</code>, <code>k8s.pod.name</code>, <code>k8s.namespace.name</code>, <code>k8s.node.name</code>,
+<code>k8s.pod.uid</code>, <code>cisco.device.name</code>, <code>cisco.device.address</code>, and
+<code>cvk.driver.kind</code>.</p>
+<h3 id="trace-taxonomy">Trace taxonomy</h3>
+<p>Span names use one stable shape across surfaces:</p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Span name pattern</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kubernetes reconcile</td>
+<td><code>cvk.&lt;resource&gt;.reconcile</code></td>
+<td><code>cvk.iosxeconfig.reconcile</code></td>
+</tr>
+<tr>
+<td>Device transport</td>
+<td><code>cvk.transport.&lt;protocol&gt;.&lt;verb&gt;</code></td>
+<td><code>cvk.transport.netconf.get</code>, <code>cvk.transport.restconf.post</code></td>
+</tr>
+<tr>
+<td>Config engine</td>
+<td><code>cvk.config.&lt;phase&gt;</code></td>
+<td><code>cvk.config.reconcile</code>, <code>cvk.config.plan</code>, <code>cvk.config.apply</code></td>
+</tr>
+<tr>
+<td>Topology cycle</td>
+<td><code>cvk.topology.cycle</code></td>
+<td>root span per bounded topology emission</td>
+</tr>
+<tr>
+<td>Device operation</td>
+<td><code>cvk.op.&lt;kind&gt;</code></td>
+<td><code>cvk.op.show_command</code>, <code>cvk.op.config_diff</code></td>
+</tr>
+</tbody>
+</table>
+<p>The process installs the upstream Virtual Kubelet OTel adapter at startup, so
+VK spans such as Pod admission, status sync, and lease updates can parent CVK
+driver spans automatically when context is propagated. The repository keeps a
+small <code>scripts/lint-ctx.sh</code> guard to catch new unreviewed
+<code>context.Background()</code> usage in controller or driver paths.</p>
+<h3 id="correlation">Correlation</h3>
+<p>Pod admission stores a bounded <code>(device, app_id) -&gt; SpanContext</code> entry using
+the W3C <code>traceparent</code> format. MDT app-hosting recovery events consult that cache
+so recent device-side state transitions can be emitted under the Pod admission
+trace. The cache is deliberately bounded and short-lived: it is for causality,
+not durable storage.</p>
+<p>Config reconcile writes trace hints back to status annotations:</p>
+<table>
+<thead>
+<tr>
+<th>Annotation</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cisco.vk/traceparent</code></td>
+<td>W3C carrier for the current reconcile window.</td>
+</tr>
+<tr>
+<td><code>cisco.vk/trace-window-end</code></td>
+<td>Expiry for using that trace context.</td>
+</tr>
+<tr>
+<td><code>cisco.vk/last-trace-id</code></td>
+<td>Most recent reconcile trace ID.</td>
+</tr>
+<tr>
+<td><code>cisco.vk/last-trace-duration</code></td>
+<td>Most recent reconcile duration.</td>
+</tr>
+<tr>
+<td><code>cisco.vk/last-error-trace-id</code></td>
+<td>Failed reconcile trace ID, when present.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="config-revision-history">Config Revision History</h3>
+<p><code>IOSXEConfigRevision</code> objects store resolved intent for successful applies so
+<code>spec.rollbackTo</code> can replay a prior revision through the normal reconcile
+path. When an <code>IOSXEConfig</code> uses <code>spec.secretRefs</code>, revisions are still
+created, but secret-backed family blocks are omitted from <code>spec.body</code> and
+<code>spec.secretMaterialOmitted</code> is set. Rollback to those revisions is allowed
+only when the current <code>IOSXEConfig</code> references the same Secret names; otherwise
+status reports <code>RollbackBlocked=True</code> with reason
+<code>RevisionMissingSecretMaterial</code>.</p>
+<h3 id="self-metrics">Self metrics</h3>
+<p>CVK emits self metrics with the <code>cisco_vk_telemetry_*</code> prefix. Important
+pipeline health metrics include:</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cisco_vk_telemetry_active_streams</code></td>
+<td>Active gNMI subscription streams by device and subscription.</td>
+</tr>
+<tr>
+<td><code>cisco_vk_telemetry_stream_reconnects_total</code></td>
+<td>Stream reconnect attempts.</td>
+</tr>
+<tr>
+<td><code>cisco_vk_telemetry_log_records_emitted_total</code></td>
+<td>OTel log records emitted by the MDT mapper.</td>
+</tr>
+<tr>
+<td><code>cisco_vk_telemetry_instrument_cap_drops_total</code></td>
+<td>Metric instruments dropped by cardinality cap.</td>
+</tr>
+<tr>
+<td><code>cisco_vk_telemetry_transitions_dropped_total</code></td>
+<td>State transition events dropped by transition buffering.</td>
+</tr>
+<tr>
+<td><code>cisco_vk_telemetry_notifier_dropped_total</code></td>
+<td>PodNotifier events dropped because the callback queue was full.</td>
+</tr>
+<tr>
+<td><code>cisco_vk_telemetry_exporter_failures_total</code></td>
+<td>OTLP exporter failures by signal and reason.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="current-topology-boundary">Current topology boundary</h3>
+<p>The MDT state cache is currently used for telemetry state, PodNotifier, and
+trace correlation. It is not yet the source of topology. The topology provider
+still reads the device through the existing driver paths. Moving CDP/OSPF
+topology to MDT remains gated on the lab validation of the YANG paths listed in
+the unified architecture plan.</p>
+<h2 id="existing-surfaces">Existing Surfaces</h2>
+<p>Cisco Virtual Kubelet also exposes four Kubernetes-facing observability
+surfaces:</p>
+<ul>
+<li><strong>Prometheus metrics</strong> on the standard kubelet <code>/metrics/resource</code> endpoint.</li>
+<li><strong>Kubernetes stats/summary</strong> on <code>/stats/summary</code> — powers <code>kubectl top node</code>.</li>
+<li><strong>OpenTelemetry topology traces</strong> emitted on a configurable interval. OpenTelemetry (OTEL) is a vendor-neutral observability framework; here we use it to emit a device-centric topology trace that backends like Splunk Observability Cloud can render as a service map.</li>
+<li><strong>Kubernetes node annotations</strong> populated on every status sync, surfacing basic network context like router ID and neighbor counts.</li>
+</ul>
+<p>Three of these surfaces — metrics (topology subset), OTEL traces, and node annotations — depend on the driver implementing the optional <code>TopologyProvider</code> interface. The IOS-XE driver does; other drivers may not, in which case their VKs simply omit the topology-derived data without erroring.</p>
+<p><strong>CDP</strong> (Cisco Discovery Protocol) and <strong>OSPF</strong> (Open Shortest Path First) are referenced throughout this page. Both are neighbor-discovery protocols the device participates in — CDP at Layer 2 for directly-connected Cisco gear, OSPF at Layer 3 for routing peers.</p>
+<h2 id="metrics">Metrics</h2>
+<h3 id="catalog">Catalog</h3>
+<p>All metrics are type <code>gauge</code>. The base set works on any driver; the topology-derived metrics require a driver with <code>TopologyProvider</code>.</p>
+<h4 id="device-resources-always-present">Device resources (always present)</h4>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Labels</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cisco_device_cpu_usage_percent</code></td>
+<td>—</td>
+<td>IOx subsystem CPU usage</td>
+</tr>
+<tr>
+<td><code>cisco_device_memory_used_bytes</code></td>
+<td>—</td>
+<td>IOx subsystem memory in use</td>
+</tr>
+<tr>
+<td><code>cisco_device_memory_total_bytes</code></td>
+<td>—</td>
+<td>IOx subsystem memory quota</td>
+</tr>
+<tr>
+<td><code>cisco_device_storage_used_bytes</code></td>
+<td>—</td>
+<td>IOx subsystem storage in use</td>
+</tr>
+<tr>
+<td><code>cisco_device_storage_total_bytes</code></td>
+<td>—</td>
+<td>IOx subsystem storage quota</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gnoi-lifecycle-metrics">gNOI lifecycle metrics</h4>
+<p>These metrics are registered when the corresponding controllers and gNOI
+client packages are linked into the process. The write-class and software
+upgrade reconcilers still require their enablement flags before they act on
+CRs.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Labels</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cisco_vk_gnoi_rpc_total</code></td>
+<td><code>service</code>, <code>outcome</code></td>
+<td>gNOI RPC outcomes, including <code>ok</code>, <code>unimplemented</code>, <code>unavailable</code>, and other error classes.</td>
+</tr>
+<tr>
+<td><code>cisco_vk_gnoi_capability_cache_total</code></td>
+<td><code>service</code>, <code>result</code></td>
+<td>Capability cache hit, miss, expiration, pin, and fail-fast decisions.</td>
+</tr>
+<tr>
+<td><code>cisco_vk_devicegrpc_lease_events_total</code></td>
+<td><code>class</code>, <code>event</code></td>
+<td>Workload-classed gRPC pool lease and release events.</td>
+</tr>
+<tr>
+<td><code>cisco_vk_devicegrpc_outstanding_leases</code></td>
+<td><code>class</code></td>
+<td>Current outstanding gRPC pool leases.</td>
+</tr>
+<tr>
+<td><code>cisco_vk_devicegrpc_close_leak_detected_total</code></td>
+<td><code>class</code></td>
+<td>Outstanding leases observed when a pool closes.</td>
+</tr>
+<tr>
+<td><code>cisco_vk_iosxe_software_upgrade_phase_transitions_total</code></td>
+<td><code>device</code>, <code>target_version</code>, <code>from</code>, <code>to</code>, <code>reason</code></td>
+<td>Software upgrade state transitions.</td>
+</tr>
+<tr>
+<td><code>cisco_vk_iosxe_operational_action_transitions_total</code></td>
+<td><code>device</code>, <code>kind</code>, <code>phase</code>, <code>reason</code></td>
+<td>Write-class action phase transitions and terminal outcomes.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="interfaces-topologyprovider">Interfaces (TopologyProvider)</h4>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Labels</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cisco_device_interface_rx_bits_per_sec</code></td>
+<td><code>interface</code></td>
+<td>Current receive rate</td>
+</tr>
+<tr>
+<td><code>cisco_device_interface_tx_bits_per_sec</code></td>
+<td><code>interface</code></td>
+<td>Current transmit rate</td>
+</tr>
+<tr>
+<td><code>cisco_device_interface_state</code></td>
+<td><code>interface</code>, <code>state</code></td>
+<td><code>1</code> when <code>state="up"</code>, <code>0</code> otherwise</td>
+</tr>
+</tbody>
+</table>
+<h4 id="neighbors-topologyprovider">Neighbors (TopologyProvider)</h4>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Labels</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cisco_device_cdp_neighbor_count</code></td>
+<td>—</td>
+<td>Number of CDP neighbors</td>
+</tr>
+<tr>
+<td><code>cisco_device_ospf_neighbor_count</code></td>
+<td>—</td>
+<td>Number of OSPF neighbors</td>
+</tr>
+<tr>
+<td><code>cisco_device_neighbor_link</code></td>
+<td><code>target</code>, <code>interface</code>, <code>protocol</code>, <code>platform</code></td>
+<td>Fixed value <code>1</code> per discovered neighbor; drop/cardinality control lives on the collector side</td>
+</tr>
+</tbody>
+</table>
+<h3 id="scraping">Scraping</h3>
+<p>The metrics are served on the node's kubelet HTTPS listener (port 10250) at <code>/metrics/resource</code>. Any workload that already scrapes kubelet metrics picks them up automatically — for example, <code>kube-prometheus-stack</code>'s <code>ServiceMonitor</code> for nodes, or the <a href="https://github.com/prometheus/prometheus/blob/main/documentation/examples/prometheus-kubernetes.yml">Prometheus kubelet scrape config</a>.</p>
+<p>No extra configuration on the VK side is required — the handler is always wired.</p>
+<h2 id="stats-summary">Stats / summary</h2>
+<p><code>GET /stats/summary</code> returns a Kubernetes <code>statsv1alpha1.Summary</code> for this node:</p>
+<ul>
+<li><strong>CPU</strong>: <code>UsageNanoCores</code> derived from IOx CPU percentage</li>
+<li><strong>Memory</strong>: <code>UsageBytes</code>, <code>AvailableBytes</code> (in bytes, converted from MB)</li>
+<li><strong>Filesystem</strong>: <code>CapacityBytes</code>, <code>UsedBytes</code>, <code>AvailableBytes</code> for IOx storage</li>
+<li><strong>Network</strong>: Per-interface <code>RxBytes</code> / <code>TxBytes</code> (when <code>TopologyProvider</code> is implemented)</li>
+</ul>
+<p>This is what <code>kubectl top node cat9000-1</code> reads. It also feeds the Kubernetes Vertical/Horizontal pod autoscalers if you use them against VK nodes.</p>
+<h2 id="opentelemetry-topology-export">OpenTelemetry topology export</h2>
+<p>Enable per-device via the <code>otel:</code> block in the device config / CR:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">otel</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="s">"otel-collector.observability.svc:4317"</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">insecure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">serviceName</span><span class="p">:</span><span class="w"> </span><span class="s">"cisco-network"</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">intervalSecs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">maxLinkSpans</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">256</span>
+</span></code></pre></div>
+<p>The exporter connects to the OTLP gRPC endpoint, emits one trace per interval, and shuts down cleanly on context cancel (5 s grace).</p>
+<h3 id="resource-attributes">Resource attributes</h3>
+<p>Every span carries:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>service.name</code></td>
+<td><code>"{serviceName}.{hostname}"</code> — e.g. <code>cisco-network.cat9000-1</code></td>
+</tr>
+<tr>
+<td><code>service.namespace</code></td>
+<td><code>"network.infrastructure"</code></td>
+</tr>
+<tr>
+<td><code>host.name</code></td>
+<td>VK node name</td>
+</tr>
+<tr>
+<td><code>device.address</code></td>
+<td>Management IP/hostname</td>
+</tr>
+</tbody>
+</table>
+<h3 id="span-hierarchy">Span hierarchy</h3>
+<p>Each emission cycle produces one trace:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>root span: cvk.topology.cycle           [SERVER]
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── link.&lt;localIface&gt;-&gt;&lt;peerDeviceID&gt;   [CLIENT]  (one per CDP/OSPF neighbor)
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── link.&lt;localIface&gt;-&gt;&lt;peerDeviceID&gt;   [CLIENT]
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├── …
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>└── hosted.&lt;podNs&gt;/&lt;podName&gt;            [CLIENT]  (one per hosted container)
+</span></code></pre></div>
+<h4 id="root-span-cvktopologycycle">Root span (<code>cvk.topology.cycle</code>)</h4>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>topology.cycle.id</code></td>
+<td>Unique ID for one bounded topology emission cycle</td>
+</tr>
+<tr>
+<td><code>topology.emitted_link_count</code></td>
+<td>Link spans emitted after applying <code>maxLinkSpans</code></td>
+</tr>
+<tr>
+<td><code>topology.dropped_link_count</code></td>
+<td>Links omitted because the cap was reached</td>
+</tr>
+<tr>
+<td><code>node.name</code></td>
+<td>Device hostname</td>
+</tr>
+<tr>
+<td><code>node.type</code></td>
+<td><code>"network_device"</code></td>
+</tr>
+<tr>
+<td><code>node.role</code></td>
+<td><code>"router"</code></td>
+</tr>
+<tr>
+<td><code>node.neighbor_count</code></td>
+<td>count of observed consolidated neighbors before span capping</td>
+</tr>
+<tr>
+<td><code>node.interface_count</code></td>
+<td>count of interfaces with IPs</td>
+</tr>
+<tr>
+<td><code>router.id</code></td>
+<td><code>DeviceInfo.RouterID</code> (OSPF/BGP)</td>
+</tr>
+<tr>
+<td><code>router.platform</code></td>
+<td><code>DeviceInfo.ProductID</code></td>
+</tr>
+<tr>
+<td><code>router.os.version</code></td>
+<td><code>DeviceInfo.SoftwareVersion</code></td>
+</tr>
+<tr>
+<td><code>router.serial</code></td>
+<td><code>DeviceInfo.SerialNumber</code></td>
+</tr>
+<tr>
+<td><code>router.ip.addresses</code></td>
+<td>comma-joined interface IPs</td>
+</tr>
+<tr>
+<td><code>network.layer</code></td>
+<td><code>"L3"</code></td>
+</tr>
+<tr>
+<td><code>network.type</code></td>
+<td><code>"routed"</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="link-spans-linklocaliface-peerdeviceid">Link spans (<code>link.{localIface}-&gt;{peerDeviceID}</code>)</h4>
+<p>CDP and OSPF neighbors are consolidated per local interface — a single span represents a link even when both protocols are active.</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>topology.cycle.id</code></td>
+<td>Matches the cycle root span</td>
+</tr>
+<tr>
+<td><code>peer.service</code></td>
+<td><code>"{serviceName}.{peerDeviceID}"</code> — matches the root span of the peer if it's also exporting, enabling service-map correlation</td>
+</tr>
+<tr>
+<td><code>net.peer.name</code></td>
+<td><code>peerDeviceID</code></td>
+</tr>
+<tr>
+<td><code>net.peer.ip</code></td>
+<td>Peer management IP</td>
+</tr>
+<tr>
+<td><code>net.host.interface</code></td>
+<td>Local interface (e.g. <code>GigabitEthernet0/0/1</code>)</td>
+</tr>
+<tr>
+<td><code>net.peer.interface</code></td>
+<td>Remote interface</td>
+</tr>
+<tr>
+<td><code>link.type</code></td>
+<td><code>"physical"</code></td>
+</tr>
+<tr>
+<td><code>link.protocols</code></td>
+<td><code>"+"</code>-joined — e.g. <code>"cdp+ospf"</code></td>
+</tr>
+<tr>
+<td><code>link.state</code></td>
+<td><code>"up"</code> normally, <code>"degraded"</code> when OSPF state is not <code>"full"</code> or <code>"2way"</code></td>
+</tr>
+<tr>
+<td><code>link.utilization.in.bps</code></td>
+<td>From interface stats (if available)</td>
+</tr>
+<tr>
+<td><code>link.utilization.out.bps</code></td>
+<td>From interface stats (if available)</td>
+</tr>
+<tr>
+<td><code>link.speed.bps</code></td>
+<td>Interface speed</td>
+</tr>
+<tr>
+<td><code>ospf.neighbor.state</code></td>
+<td>OSPF-only, when OSPF is a protocol on this link</td>
+</tr>
+<tr>
+<td><code>ospf.area</code></td>
+<td>OSPF-only</td>
+</tr>
+<tr>
+<td><code>peer.platform</code>, <code>peer.capabilities</code></td>
+<td>From CDP</td>
+</tr>
+<tr>
+<td><code>topology.link_id</code></td>
+<td><code>"{hostname}:{localIf}-&gt;{peerID}:{remoteIf}"</code> — stable identifier</td>
+</tr>
+</tbody>
+</table>
+<h4 id="hosted-app-spans-hostednamespacepodname">Hosted-app spans (<code>hosted.&lt;namespace&gt;/&lt;podName&gt;</code>)</h4>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>topology.cycle.id</code></td>
+<td>Matches the cycle root span</td>
+</tr>
+<tr>
+<td><code>peer.service</code></td>
+<td><code>"app.{namespace}/{podName}"</code> — distinct namespace from network neighbors</td>
+</tr>
+<tr>
+<td><code>service.type</code></td>
+<td><code>"app-hosting"</code></td>
+</tr>
+<tr>
+<td><code>deployment.environment</code></td>
+<td><code>"edge-compute"</code></td>
+</tr>
+<tr>
+<td><code>app.id</code></td>
+<td>Device app ID (e.g. <code>cvk00000_&lt;uid&gt;</code>)</td>
+</tr>
+<tr>
+<td><code>app.state</code></td>
+<td>Device lifecycle state (RUNNING, DEPLOYED, …)</td>
+</tr>
+<tr>
+<td><code>k8s.pod.name</code>, <code>k8s.pod.namespace</code>, <code>k8s.pod.uid</code>, <code>k8s.container.name</code></td>
+<td>Pod identity</td>
+</tr>
+<tr>
+<td><code>app.ip</code>, <code>app.mac</code></td>
+<td>When oper-data has resolved them</td>
+</tr>
+<tr>
+<td><code>net.host.interface</code></td>
+<td>Attached device interface</td>
+</tr>
+<tr>
+<td><code>topology.link_id</code></td>
+<td><code>"{hostname}-&gt;{peerService}"</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="what-you-get">What you get</h3>
+<ul>
+<li><strong>Service map</strong> — In a backend like Splunk Observability Cloud, devices appear as services and links between them render as edges. Pods hosted on a device appear as downstream services of that device.</li>
+<li><strong>Change detection</strong> — Each interval is a full snapshot. Diffing consecutive traces shows topology changes (new/lost neighbors, state transitions).</li>
+<li><strong>Correlation</strong> — <code>topology.link_id</code> is stable across emissions, so queries that group or filter by link are consistent over time.</li>
+</ul>
+<h3 id="failure-modes">Failure modes</h3>
+<p>OTEL initialisation failure is <strong>non-fatal</strong>. If the OTLP endpoint is unreachable at startup the VK pod logs a warning and continues without OTEL. Intermittent topology-data errors (CDP, OSPF, interfaces) are logged at debug level and the affected attributes are simply omitted from that emission.</p>
+<h2 id="node-annotations">Node annotations</h2>
+<p>On every node status sync the provider populates these annotations from the driver:</p>
+<table>
+<thead>
+<tr>
+<th>Annotation</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cisco.io/router-id</code></td>
+<td><code>DeviceInfo.RouterID</code> (OSPF/BGP)</td>
+</tr>
+<tr>
+<td><code>cisco.io/hostname</code></td>
+<td><code>DeviceInfo.Hostname</code></td>
+</tr>
+<tr>
+<td><code>cisco.io/cdp-neighbor-count</code></td>
+<td>Count from <code>GetCDPNeighbors()</code></td>
+</tr>
+<tr>
+<td><code>cisco.io/ospf-neighbor-count</code></td>
+<td>Count from <code>GetOSPFNeighbors()</code></td>
+</tr>
+<tr>
+<td><code>cisco.io/protocols</code></td>
+<td>Comma-joined list of protocols with at least one neighbor (<code>cdp</code>, <code>ospf</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>Use them for:</p>
+<ul>
+<li><code>kubectl get nodes -L cisco.io/router-id</code></li>
+<li>Dashboards that filter by active protocol</li>
+<li>Basic alerting: <code>cisco.io/cdp-neighbor-count == 0</code> → isolation alarm</li>
+</ul>
+<p>Annotation size is deliberately kept small (scalar counts, not full neighbor lists). For full topology data use OTEL; for interface detail use the Prometheus metrics.</p>
+<h2 id="end-to-end-example-splunk-observability-cloud">End-to-end example: Splunk Observability Cloud</h2>
+<p>Splunk Observability Cloud ingests both Prometheus metrics and OTLP traces through a single OpenTelemetry Collector, so a typical deployment is:</p>
+<ol>
+<li>Install the <a href="https://github.com/signalfx/splunk-otel-collector-chart">Splunk OpenTelemetry Collector for Kubernetes</a>, pointed at your Splunk Observability Cloud realm and access token. It:<ul>
+<li>scrapes kubelet <code>/metrics/resource</code> automatically — the <code>cisco_device_*</code> metrics appear without extra config;</li>
+<li>exposes an OTLP gRPC endpoint (default <code>:4317</code>) for traces.</li>
+</ul>
+</li>
+<li>On each <code>CiscoDevice</code>, point the VK's OTEL exporter at the collector:
+   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">otel</span><span class="p">:</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="s">"splunk-otel-collector-agent.observability.svc:4317"</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">insecure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">intervalSecs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
+</span></code></pre></div></li>
+</ol>
+<p>Splunk Observability Cloud dashboards can then:</p>
+<ul>
+<li>Plot per-interface throughput (<code>cisco_device_interface_*_bits_per_sec</code>)</li>
+<li>Alert on neighbor loss (<code>cisco_device_cdp_neighbor_count &lt; previous</code>)</li>
+<li>Visualise the network as a service map from the OTEL traces</li>
+</ul>
+<h2 id="related-reading">Related reading</h2>
+<ul>
+<li><a href="../CONFIGURATION/#opentelemetry-topology">Configuration → OpenTelemetry topology</a> — config field reference</li>
+<li><a href="../ARCHITECTURE/#observability">Architecture → Observability</a> — how the data flows</li>
+<li><a href="../troubleshooting/">Troubleshooting</a> — what to do when a metric or trace is missing</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../lifecycle/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Lifecycle Correlation">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Lifecycle Correlation
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../troubleshooting/" class="md-footer__link md-footer__link--next" aria-label="Next: Troubleshooting">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Troubleshooting
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2025-2026 Cisco Systems, Inc. All Rights Reserved. · <a href="/cisco-virtual-kubelet/LICENSE">Project license</a> · <a href="/cisco-virtual-kubelet/docs/MKDOCS_THIRD_PARTY_LICENSES.txt">MkDocs third-party licenses</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "search.share", "navigation.footer", "navigation.instant.progress", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script>if(!window.ResizeObserver){document.write('<script src="../r.js?v=2290b5c60e0cdc62851fb687800237273ac53797595b1b133860c4f1386de378"><\/script>')}</script>
+      <script src="../assets/javascripts/bundle.7e847d798e28dffc.min.js"></script>
+      
+    
+  </body>
+</html>

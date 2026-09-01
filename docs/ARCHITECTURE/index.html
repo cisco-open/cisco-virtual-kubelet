@@ -1,0 +1,2918 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A Virtual Kubelet provider for App-Hosting workloads on Cisco IOS-XE devices, with Beta support for Cisco Nexus NX-OS switches.">
+      
+      
+      
+        <link rel="canonical" href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/ARCHITECTURE/">
+      
+      
+        <link rel="prev" href="../getting-started/">
+      
+      
+        <link rel="next" href="../controller-extension-guide/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Architecture - Cisco Virtual Kubelet</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-header__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Cisco Virtual Kubelet
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-nav__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Cisco Virtual Kubelet
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Welcome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.1 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.0 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-runtime-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The runtime split
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#network-controller-extension-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network controller extension boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#component-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Component architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core components
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#apphostingprovider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AppHostingProvider
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apphostingnode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AppHostingNode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#driver-factory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Driver factory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#driver-interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Driver interfaces
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ios-xe-driver-internal-layering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IOS-XE driver — internal layering
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ios-xe-config-driver-and-netascode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IOS-XE Config Driver and NetAsCode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nx-os-config-driver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NX-OS Config Driver
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#controller-reconciliation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controller reconciliation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pod-creation-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod creation flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pod-deletion-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod deletion flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#app-lifecycle-state-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        App lifecycle state machine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="App lifecycle state machine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reverse-path-desired-deleted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reverse path (desired = Deleted)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pod-status-and-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod status and discovery
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pod status and discovery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pod-to-app-naming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod-to-app naming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#container-state-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Container state mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ip-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IP discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pod-recovery-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod recovery loop
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#networking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Networking
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Networking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dhcp-flow-virtualportgroup-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DHCP flow (VirtualPortGroup example)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Observability
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gnoi-and-software-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gNOI and software lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#restconf-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RESTCONF endpoints
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RESTCONF endpoints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#yang-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        YANG models
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../controller-extension-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Controller Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cisco-vk-cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONFIGURATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CiscoDevice Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network as Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NetAsCode Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../crds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CRD Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../family-parity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Parity Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families-nxos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nxos-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Configuration Recovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat8000v/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 8000V
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat9000/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 9000
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ir1101/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IR1100 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ie3500/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IE3500 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yang-version-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    YANG Version Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment Variables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Software Lifecycle
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gnoi-software-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Telemetry
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MDT Subscriptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry-cardinality/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cardinality Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle Correlation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Observability
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../production-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Readiness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-runtime-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The runtime split
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#network-controller-extension-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network controller extension boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#component-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Component architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core components
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#apphostingprovider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AppHostingProvider
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apphostingnode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AppHostingNode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#driver-factory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Driver factory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#driver-interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Driver interfaces
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ios-xe-driver-internal-layering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IOS-XE driver — internal layering
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ios-xe-config-driver-and-netascode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IOS-XE Config Driver and NetAsCode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nx-os-config-driver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NX-OS Config Driver
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#controller-reconciliation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controller reconciliation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pod-creation-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod creation flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pod-deletion-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod deletion flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#app-lifecycle-state-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        App lifecycle state machine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="App lifecycle state machine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reverse-path-desired-deleted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reverse path (desired = Deleted)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pod-status-and-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod status and discovery
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pod status and discovery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pod-to-app-naming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod-to-app naming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#container-state-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Container state mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ip-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IP discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pod-recovery-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod recovery loop
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#networking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Networking
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Networking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dhcp-flow-virtualportgroup-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DHCP flow (VirtualPortGroup example)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Observability
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gnoi-and-software-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gNOI and software lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#restconf-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RESTCONF endpoints
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RESTCONF endpoints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#yang-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        YANG models
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="architecture">Architecture</h1>
+<p>This document describes the technical architecture of Cisco Virtual Kubelet.</p>
+<h2 id="overview">Overview</h2>
+<p>Cisco Virtual Kubelet implements the <a href="https://github.com/virtual-kubelet/virtual-kubelet">Virtual Kubelet</a> provider interface so Kubernetes can treat Cisco IOS-XE devices as compute nodes. Each device appears as a node in the cluster; pods scheduled to that node are deployed as IOx App-Hosting containers on the device over RESTCONF.</p>
+<h3 id="the-runtime-split">The runtime split</h3>
+<p>Everything the project does comes out of a single <code>cisco-vk</code> CLI with isolated
+runtime subcommands:</p>
+<ul>
+<li><strong><code>cisco-vk manager</code></strong> — the Kubernetes controller. Watches infrastructure
+  CRs and reconciles them into Kubernetes worker resources. It performs no
+  device or external-controller API calls.</li>
+<li><strong><code>cisco-vk run</code></strong> — the Virtual Kubelet provider. One process per device. Reads its config, registers a virtual node in the cluster, and drives the device via RESTCONF when pods come and go.</li>
+<li><strong><code>cisco-vk controller-worker</code></strong> — the network-controller runtime. One
+  process per <code>NetworkController</code> whose type has a registered adapter; it
+  starts that adapter and watches only its Kubernetes namespace. The September
+  image registers zero product adapters, so this Alpha path remains inactive.</li>
+</ul>
+<p>This split keeps product-specific logic and direct credential use inside the
+device or controller worker. The manager writes Secret references rather than
+inspecting <code>.data</code>, but its cluster-wide Secret watch for device credential
+rotation means typed Secret objects can enter its cache and memory. Treat the
+manager as part of the credential trust boundary described in
+<a href="../security/">Security</a>. Each controller worker receives only its target's
+mounted credentials; its Kubernetes API RBAC and cache are namespace-scoped.</p>
+<h3 id="network-controller-extension-boundary">Network controller extension boundary</h3>
+<p>External network controllers use the same isolation principle without changing
+the per-device provider or its transports. The manager resolves a registered
+controller type and creates one namespace-scoped worker per endpoint. A
+product adapter inside that worker consumes resolved, versioned
+controller-centric Network as Code intent and speaks the controller's native
+API. Endpoint processes, credentials, failure domains, and rate limits are
+separate, but the namespace remains the API trust/RBAC/cache boundary. Use a
+dedicated namespace when endpoints or config authors are not mutually trusted.
+Duplicate fencing compares the exact stored endpoint string within that
+namespace only. The September scaffold is report-only and has no apply, prune,
+remote-delete, or mutation-RBAC implementation.
+See the <a href="../controller-extension-guide/">Network Controller Extension Guide</a> for
+the registry, worker, model, ownership, and security contracts.</p>
+<h2 id="component-architecture">Component architecture</h2>
+<pre class="mermaid"><code>%%{init: {'theme': 'base', 'themeVariables': {'background': '#ffffff', 'mainBkg': '#f8fafc', 'clusterBkg': '#f1f5f9', 'clusterBorder': '#94a3b8', 'lineColor': '#64748b', 'edgeLabelBackground': '#f8fafc', 'titleColor': '#1e293b'}}}%%
+flowchart TB
+    subgraph Cluster["Kubernetes cluster"]
+        API["API server"]
+        CRD["CiscoDevice CR"]
+        Controller["CiscoDevice controller / cisco-vk manager"]
+        CM["ConfigMap / device config"]
+        Dep["Deployment / device VK"]
+        VK["VK pod / cisco-vk run"]
+        Node["Virtual node"]
+        Pod["User pod"]
+    end
+
+    subgraph IOSXE["Cisco IOS-XE device"]
+        IOx["IOx platform"]
+        Container["App-hosting container"]
+    end
+
+    API --&gt; CRD
+    CRD --&gt; Controller
+    Controller --&gt; CM
+    Controller --&gt; Dep
+    Dep --&gt; VK
+    VK --&gt; Node
+    Pod --&gt;|"scheduled to"| Node
+    VK --&gt;|"RESTCONF over HTTPS"| IOx
+    IOx --&gt; Container
+
+    style Controller fill:#ede9fe,stroke:#7c3aed,color:#3b0764
+    style VK fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    style IOx fill:#dcfce7,stroke:#16a34a,color:#14532d
+    style Container fill:#d1fae5,stroke:#059669,color:#064e3b
+    style API fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style CRD fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style CM fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style Dep fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style Node fill:#f1f5f9,stroke:#64748b,color:#1e293b
+    style Pod fill:#e2e8f0,stroke:#94a3b8,color:#334155</code></pre>
+<h2 id="core-components">Core components</h2>
+<h3 id="apphostingprovider">AppHostingProvider</h3>
+<p>Implements the Virtual Kubelet <code>nodeutil.Provider</code> interface — the main entry point for pod operations.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CreatePod(ctx, pod)</code></td>
+<td>Delegates to <code>driver.DeployPod</code>, then forces a node status update</td>
+</tr>
+<tr>
+<td><code>UpdatePod(ctx, pod)</code></td>
+<td>Oper-state-aware redeploy: skips apps already RUNNING; reinstalls apps that are stuck in unexpected states</td>
+</tr>
+<tr>
+<td><code>DeletePod(ctx, pod)</code></td>
+<td>Delegates to <code>driver.DeletePod</code> then forces a node status update</td>
+</tr>
+<tr>
+<td><code>GetPod(ctx, ns, name)</code></td>
+<td>Fast path: informer cache. Fallback: device query for cleanup</td>
+</tr>
+<tr>
+<td><code>GetPodStatus(ctx, ns, name)</code></td>
+<td>Queries live pod status from the device; returns <code>PullingImage</code> waiting state while a copy-then-install fallback is in progress</td>
+</tr>
+<tr>
+<td><code>GetPods(ctx)</code></td>
+<td>Lists all managed pods discovered on the device</td>
+</tr>
+<tr>
+<td><code>GetStatsSummary(ctx)</code></td>
+<td>Returns Kubernetes stats/summary data (see <a href="../observability/">Observability</a>)</td>
+</tr>
+<tr>
+<td><code>GetMetricsResource(ctx)</code></td>
+<td>Returns Prometheus metrics (see <a href="../observability/">Observability</a>)</td>
+</tr>
+</tbody>
+</table>
+<p>Operations that don't make sense for app-hosting — <code>RunInContainer</code>, <code>AttachToContainer</code>, <code>GetContainerLogs</code>, <code>PortForward</code> — return HTTP 501.</p>
+<h3 id="apphostingnode">AppHostingNode</h3>
+<p>Implements <code>node.NodeProvider</code> for node registration, heartbeat, and status.</p>
+<ul>
+<li><code>Ping()</code> — throttled to a 30-second minimum; triggers <code>syncNodeStatus</code> asynchronously</li>
+<li><code>NotifyNodeStatus(cb)</code> — fires the callback whenever node status changes (labels, annotations, capacity, conditions)</li>
+<li><code>ForceStatusUpdate()</code> — called after every pod lifecycle event so resource accounting stays fresh</li>
+</ul>
+<p>The node's <code>Labels</code> include standard topology (<code>topology.kubernetes.io/zone</code> and
+<code>topology.kubernetes.io/region</code>) plus <code>type=virtual-kubelet</code>. The default
+topology label is platform-aware (<code>cisco-iosxe</code>, <code>cisco-nxos</code>, <code>cisco-iosxr</code>,
+or <code>openconfig</code>) and can be overridden per <code>CiscoDevice</code>. Node <strong>annotations</strong>
+are populated dynamically on every status sync from the driver's
+<code>TopologyProvider</code> data — see <a href="../observability/#node-annotations">Observability → Node annotations</a>.</p>
+<p>Conditions published:</p>
+<ul>
+<li><code>Ready</code> — true when IOx is enabled on the device</li>
+<li><code>DiskPressure</code> — true when device storage &lt; 5% available</li>
+</ul>
+<h3 id="driver-factory">Driver factory</h3>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">NewDriver</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">spec</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nx">CiscoKubernetesDeviceDriver</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Selects a driver based on <code>spec.Driver</code>:</p>
+<ul>
+<li><code>XE</code> → IOS-XE driver (production)</li>
+<li><code>NXOS</code> → NX-OS driver (NX-API CLI app-hosting and the initial NX-API
+  REST/DME Network as Code config slice: <code>system</code>, <code>vlan</code>,
+  <code>interface_ethernet</code>)</li>
+<li><code>FAKE</code> → mock driver for testing</li>
+<li><code>XR</code>, <code>OPENCONFIG</code> → placeholders, currently unsupported</li>
+</ul>
+<h3 id="driver-interfaces">Driver interfaces</h3>
+<p>Every driver must implement <code>CiscoKubernetesDeviceDriver</code>:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">CiscoKubernetesDeviceDriver</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nx">GetDeviceResources</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">v1</span><span class="p">.</span><span class="nx">ResourceList</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">GetDeviceInfo</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">common</span><span class="p">.</span><span class="nx">DeviceInfo</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">DeployPod</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">pod</span><span class="p">)</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">UpdatePod</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">pod</span><span class="p">)</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nx">DeletePod</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">pod</span><span class="p">)</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nx">GetPodStatus</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">pod</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">v1</span><span class="p">.</span><span class="nx">Pod</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nx">ListPods</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">([]</span><span class="o">*</span><span class="nx">v1</span><span class="p">.</span><span class="nx">Pod</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nx">GetGlobalOperationalData</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">common</span><span class="p">.</span><span class="nx">AppHostingOperData</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Drivers may additionally implement the <strong>optional</strong> <code>TopologyProvider</code> interface — this is what enables OTEL topology export, the <code>cisco_device_cdp_*</code>/<code>ospf_*</code>/<code>interface_*</code> metrics, and the <code>cisco.io/*</code> node annotations.</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">TopologyProvider</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nx">GetCDPNeighbors</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">([]</span><span class="nx">common</span><span class="p">.</span><span class="nx">CDPNeighbor</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nx">GetOSPFNeighbors</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">([]</span><span class="nx">common</span><span class="p">.</span><span class="nx">OSPFNeighbor</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nx">GetInterfaceStats</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">([]</span><span class="nx">common</span><span class="p">.</span><span class="nx">InterfaceStats</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nx">GetInterfaceIPs</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">([]</span><span class="nx">common</span><span class="p">.</span><span class="nx">InterfaceIP</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nx">GetHostedApps</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">([]</span><span class="nx">common</span><span class="p">.</span><span class="nx">HostedApp</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>The IOS-XE driver implements it. Drivers without topology support still work — their VKs just skip the optional metrics/traces/annotations.</p>
+<h3 id="ios-xe-driver-internal-layering">IOS-XE driver — internal layering</h3>
+<p><code>internal/drivers/iosxe/</code> is organised by responsibility. Each layer is independently testable.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>driver.go</code></td>
+<td>Driver construction, marshallers, config hooks, recovery state helpers</td>
+</tr>
+<tr>
+<td><code>device.go</code></td>
+<td>Device-level queries (connectivity, resources, device info)</td>
+</tr>
+<tr>
+<td><code>client.go</code></td>
+<td>App-hosting RPCs, image delivery (device-native HTTP pull + copy-then-install fallback), Kubernetes event emission</td>
+</tr>
+<tr>
+<td><code>reconciler.go</code></td>
+<td>App lifecycle state machine (see below)</td>
+</tr>
+<tr>
+<td><code>pod_lifecycle.go</code></td>
+<td><code>DeployPod</code> / <code>DeletePod</code> / <code>GetPodStatus</code> / <code>ListPods</code></td>
+</tr>
+<tr>
+<td><code>pod_transforms.go</code></td>
+<td>Pod.Spec → IOS-XE <code>AppHostingConfig</code></td>
+</tr>
+<tr>
+<td><code>status_transforms.go</code></td>
+<td>Device oper-data → Pod.Status</td>
+</tr>
+<tr>
+<td><code>ip_discovery.go</code></td>
+<td>Pod IP discovery (oper-data first, ARP table fallback)</td>
+</tr>
+<tr>
+<td><code>topology.go</code></td>
+<td><code>TopologyProvider</code> implementation — CDP, OSPF, interfaces</td>
+</tr>
+<tr>
+<td><code>models.go</code></td>
+<td>YANG structs, auto-generated via <a href="https://github.com/openconfig/ygot">ygot</a></td>
+</tr>
+</tbody>
+</table>
+<h3 id="ios-xe-config-driver-and-netascode">IOS-XE Config Driver and NetAsCode</h3>
+<p>The IOS-XE configuration plane is separate from App Hosting. <code>IOSXEConfig</code>
+resources carry NetAsCode-shaped intent, and the configdriver resolves the same
+kind of hierarchy NetAsCode uses: defaults, device groups, interface groups,
+templates, and per-device configuration. The resolved intent remains plain
+YAML/JSON data until a family writer owns it.</p>
+<p>Family writers are the translation boundary. They take canonical NetAsCode
+fields, apply release-aware overrides, and emit <code>transport.Op</code> values addressed
+to IOS-XE YANG paths. The engine then validates and applies those operations
+over RESTCONF, NETCONF, or gNMI.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>IOSXEConfig source
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  -&gt; intent resolver
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  -&gt; family writer
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>  -&gt; version override table
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  -&gt; YANG validation boundary
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>  -&gt; RESTCONF, NETCONF, or gNMI transport
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>  -&gt; IOS-XE device
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>  -&gt; status, revision, and apply log
+</span></code></pre></div>
+<p>The validation boundary is deliberately device-facing. <code>CONFIG_YANG_VALIDATION</code>
+controls it:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>disabled</code></td>
+<td>no validation gate; default for backward compatibility</td>
+</tr>
+<tr>
+<td><code>warn</code></td>
+<td>log validation failures and continue</td>
+</tr>
+<tr>
+<td><code>strict</code></td>
+<td>fail before mutation</td>
+</tr>
+</tbody>
+</table>
+<p>This preserves NetAsCode as the stable public model while giving CVK a place to
+use release-specific ygot/ytypes validation as those generated model packages
+are added.</p>
+<h3 id="nx-os-config-driver">NX-OS Config Driver</h3>
+<p>NX-OS uses the same common config runtime and status contract, but the
+device-facing boundary is NX-API REST/DME rather than YANG. The NX-OS adapter
+preserves the full NetAsCode <code>nxos:</code> envelope long enough to resolve
+<code>global</code>, <code>device_groups</code>, <code>devices</code>, model <code>templates</code>, <code>variables</code>, and
+<code>interface_groups</code>, then normalizes supported families into the writer contract.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>NXOSConfig source
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  -&gt; NetAsCode envelope resolver
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  -&gt; family writer
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  -&gt; DME object payload
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>  -&gt; neutral REST helper
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>  -&gt; NX-API REST/DME transport
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>  -&gt; NX-OS device
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>  -&gt; common status and apply result
+</span></code></pre></div>
+<p>The same transport contract also exposes a read-only diagnostic execution path.
+For NX-OS that path intentionally uses NX-API CLI, while declarative
+configuration writes use NX-API REST/DME.</p>
+<h2 id="data-flow">Data flow</h2>
+<h3 id="controller-reconciliation">Controller reconciliation</h3>
+<pre class="mermaid"><code>sequenceDiagram
+    actor User
+    participant API as K8s API
+    participant Ctrl as CiscoDevice Controller
+    participant CM as ConfigMap
+    participant Dep as Deployment
+    participant VK as VK Pod
+
+    User-&gt;&gt;API: kubectl apply ciscodevice.yaml
+    API-&gt;&gt;Ctrl: Reconcile event
+    Ctrl-&gt;&gt;Ctrl: Render device config (strip password + secretRef)
+    Ctrl-&gt;&gt;CM: Create/Update {name}-config
+    Ctrl-&gt;&gt;Dep: Create or update {name}-vk with VK_DEVICE_PASSWORD from Secret
+    Dep-&gt;&gt;VK: Start pod
+    VK-&gt;&gt;API: Register virtual node</code></pre>
+<p>The controller <strong>never persists credentials</strong>. <code>password</code> and <code>credentialSecretRef</code> are both stripped from the <code>DeviceSpec</code> before it is marshalled into the ConfigMap. Credentials reach the VK pod via a <code>valueFrom.secretKeyRef</code> env var injected into the Deployment spec. See <a href="../security/">Security</a>.</p>
+<h3 id="pod-creation-flow">Pod creation flow</h3>
+<pre class="mermaid"><code>sequenceDiagram
+    actor User
+    participant API as Kubernetes API
+    participant VK as AppHostingProvider
+    participant Drv as IOS-XE driver
+    participant Dev as IOS-XE device
+
+    User-&gt;&gt;API: Create Pod targeting the virtual node
+    API-&gt;&gt;VK: CreatePod
+    VK-&gt;&gt;Drv: DeployPod
+    Drv-&gt;&gt;Dev: POST app-hosting config with RESTCONF
+
+    alt Flash package already on the device
+        Drv-&gt;&gt;Dev: Install from flash path
+        Dev--&gt;&gt;Drv: DEPLOYED or RUNNING
+    else HTTP URL supported by the device
+        Drv-&gt;&gt;Dev: Install from HTTP URL
+        Dev--&gt;&gt;Drv: DEPLOYED
+    else HTTP URL requires copy fallback
+        Drv-&gt;&gt;Dev: Copy image to flash
+        Note over VK,Drv: Pod status reports PullingImage while the copy runs
+        Drv-&gt;&gt;Dev: Install from copied flash path
+        Dev--&gt;&gt;Drv: DEPLOYED
+    end
+
+    opt App is not already running
+        Drv-&gt;&gt;Dev: RPC activate
+        Drv-&gt;&gt;Dev: RPC start
+        Dev--&gt;&gt;Drv: RUNNING
+    end
+
+    Drv-&gt;&gt;Dev: Query oper-data for pod IP
+    alt IP in oper-data
+        Dev--&gt;&gt;Drv: IPv4
+    else fallback
+        Drv-&gt;&gt;Dev: Query ARP for container MAC
+        Dev--&gt;&gt;Drv: IPv4
+    end
+    Drv--&gt;&gt;VK: Pod ready</code></pre>
+<h3 id="pod-deletion-flow">Pod deletion flow</h3>
+<p>Reverse of creation: <code>RUNNING → stop → ACTIVATED → deactivate → DEPLOYED → uninstall → config DELETE</code>. If a state is skipped (e.g. app already stopped), the reconciler picks up from wherever the observed state actually is.</p>
+<h2 id="app-lifecycle-state-machine">App lifecycle state machine</h2>
+<p>The IOS-XE driver's reconciler (<code>reconciler.go</code>) drives each app toward its desired state by observing live state and issuing a single RPC per pass.</p>
+<pre class="mermaid"><code>stateDiagram-v2
+    [*] --&gt; NoConfig
+    NoConfig --&gt; INSTALLING: POST config + install RPC
+    INSTALLING --&gt; DEPLOYED: validation passes
+    INSTALLING --&gt; Error: pkg-policy invalid + notification
+    DEPLOYED --&gt; ACTIVATED: activate RPC
+    ACTIVATED --&gt; RUNNING: start RPC
+    STOPPED --&gt; RUNNING: start RPC
+    RUNNING --&gt; [*]
+    Error --&gt; [*]
+
+    RUNNING --&gt; STOPPED: stop RPC (reverse)
+    STOPPED --&gt; DEPLOYED: deactivate RPC
+    DEPLOYED --&gt; NoConfig: uninstall + DELETE config</code></pre>
+<p><strong>Key behaviours:</strong></p>
+<ul>
+<li><strong><code>INSTALLING</code></strong> — normally transient. The reconciler waits unless <code>pkg-policy = iox-pkg-policy-invalid</code> <strong>and</strong> a confirming install notification has been received from the device. During the first few seconds of every install the device reports <code>pkg-policy = invalid</code> as a YANG default; waiting for the notification prevents this transient value from being treated as a fatal error. If <code>spec.allowUnsignedApps = true</code>, the check is skipped entirely — use this when you're running unsigned packages (e.g. your own custom application builds, or devices not enforcing signed-verification).</li>
+<li><strong><code>STOPPED</code></strong> — restartable directly via <code>start</code> (no re-activate needed).</li>
+<li><strong>No oper data</strong> with config present — reconciler re-issues the install RPC.</li>
+<li><strong>Error</strong> — surfaces as Pod <code>Failed</code> with reason <code>PackagePolicyInvalid</code> and a message from the device's notification.</li>
+</ul>
+<h3 id="reverse-path-desired-deleted">Reverse path (desired = Deleted)</h3>
+<table>
+<thead>
+<tr>
+<th>Observed state</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RUNNING</code></td>
+<td><code>stop</code></td>
+</tr>
+<tr>
+<td><code>ACTIVATED</code> or <code>STOPPED</code></td>
+<td><code>deactivate</code></td>
+</tr>
+<tr>
+<td><code>DEPLOYED</code></td>
+<td><code>uninstall</code></td>
+</tr>
+<tr>
+<td>No oper data</td>
+<td><code>DELETE</code> config</td>
+</tr>
+</tbody>
+</table>
+<h2 id="pod-status-and-discovery">Pod status and discovery</h2>
+<h3 id="pod-to-app-naming">Pod-to-app naming</h3>
+<p>App IDs follow <code>cvk{index}_{podUID}</code> where the UID has hyphens stripped. Up to 10 containers per pod (index <code>0-9</code>). Example: <code>cvk00000_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4</code>.</p>
+<p>This lets the driver rebuild pod identity when listing apps from the device — the UID is embedded in the app ID, and pod metadata (name, namespace, container name) is stored as key-value labels in the app's <code>--run-opts</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>io.kubernetes.pod.name=&lt;name&gt;
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>io.kubernetes.pod.namespace=&lt;namespace&gt;
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>io.kubernetes.pod.uid=&lt;uid&gt;
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>io.kubernetes.container.name=&lt;container&gt;
+</span></code></pre></div>
+<h3 id="container-state-mapping">Container state mapping</h3>
+<table>
+<thead>
+<tr>
+<th>IOS-XE state</th>
+<th>Container state</th>
+<th>Ready</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RUNNING</code></td>
+<td>Running</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>DEPLOYED</code>, <code>ACTIVATED</code>, <code>INSTALLING</code></td>
+<td>Pending</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>STOPPED</code></td>
+<td>Terminated (exit 0)</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td>Error / <code>pkg-policy-invalid</code> confirmed</td>
+<td>Terminated with exit code + reason</td>
+<td><code>false</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="ip-discovery">IP discovery</h3>
+<ol>
+<li>Query app-hosting oper-data for <code>ipv4-addr</code></li>
+<li>Fallback: ARP table lookup by the container's MAC address</li>
+<li>Default: <code>0.0.0.0</code> (no IP yet)</li>
+</ol>
+<h2 id="pod-recovery-loop">Pod recovery loop</h2>
+<p>A background goroutine in <code>cisco-vk run</code> periodically lists all pods on this node in <code>Failed</code> phase and resets them to <code>Pending</code> if their <code>status.Reason</code> is one of:</p>
+<ul>
+<li><code>NotFound</code></li>
+<li><code>ProviderFailed</code></li>
+<li><code>PackagePolicyInvalid</code></li>
+</ul>
+<p>This lets the VK controller reprocess the pod without manual <code>kubectl delete/apply</code>. The recovery loop uses exponential backoff: <strong>15 s → 30 s → 60 s → 120 s → 240 s → 300 s</strong> (5 min cap). On any successful recovery the interval resets to 15 s.</p>
+<p>Pods with a <code>DeletionTimestamp</code> are skipped — the normal deletion path owns those.</p>
+<h2 id="networking">Networking</h2>
+<p>Three interface modes are supported (see <a href="../CONFIGURATION/#xeconfig-ios-xe-networking">Configuration</a> for field reference, and the platform-specific pages <a href="../configuration-cat8000v/">Catalyst 8000V</a> / <a href="../configuration-cat9000/">Catalyst 9000</a> for device-side setup):</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>IP source</th>
+<th>Use case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VirtualPortGroup</strong></td>
+<td>DHCP pool on VPG or static from <code>podCIDR</code></td>
+<td>Catalyst 8000V; containers share a private L3 to the device</td>
+</tr>
+<tr>
+<td><strong>AppGigabitEthernet</strong></td>
+<td>DHCP (access) or DHCP in VLAN (trunk)</td>
+<td>Catalyst 9000; containers on a dedicated front-panel interface with optional VLAN tagging</td>
+</tr>
+<tr>
+<td><strong>Management</strong></td>
+<td>DHCP or static on the management interface</td>
+<td>Containers sharing the device management network</td>
+</tr>
+</tbody>
+</table>
+<h3 id="dhcp-flow-virtualportgroup-example">DHCP flow (VirtualPortGroup example)</h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>┌────────────┐    ┌──────────────────┐    ┌──────────────────┐
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>│ Container  │───▶│ VirtualPortGroup0│───▶│   DHCP Pool      │
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>│ (eth0)     │    │  gateway .254    │    │   /24 subnet     │
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>│            │◀───│                  │◀───│   assigns IP     │
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>└────────────┘    └──────────────────┘    └──────────────────┘
+</span></code></pre></div>
+<p>Provider-side IP discovery always happens <strong>after</strong> deploy completes — it polls oper-data first, then falls back to ARP, then retries on the next reconcile.</p>
+<h2 id="observability">Observability</h2>
+<p>See <a href="../observability/">Observability</a> for the full reference. At a high level:</p>
+<ul>
+<li><strong>Prometheus metrics</strong> are served on the standard kubelet <code>/metrics/resource</code> endpoint and cover device CPU, memory, storage, per-interface rates/state, and CDP/OSPF neighbor counts.</li>
+<li><strong>Kubernetes stats/summary</strong> is served on <code>/stats/summary</code>, enabling <code>kubectl top node</code>.</li>
+<li><strong>OpenTelemetry topology traces</strong> are emitted on a configurable interval (default 60 s) and include a device root span with child link spans (one per CDP/OSPF neighbor) and app spans (one per hosted container).</li>
+<li><strong>Node annotations</strong> (<code>cisco.io/router-id</code>, <code>cisco.io/hostname</code>, <code>cisco.io/cdp-neighbor-count</code>, <code>cisco.io/ospf-neighbor-count</code>, <code>cisco.io/protocols</code>) make topology context queryable via <code>kubectl describe node</code>.</li>
+</ul>
+<h2 id="gnoi-and-software-lifecycle">gNOI and software lifecycle</h2>
+<p>gNOI operations and IOS-XE software lifecycle management have their own
+operator-facing section: <a href="../gnoi-software-lifecycle/">gNOI and Software Lifecycle</a>.
+At the architecture level, the important boundary is that read-only operations,
+write-class actions, and software upgrades use separate CRDs, separate runtime
+gates, and separate RBAC grants. Read-only gNOI access does not implicitly
+enable reboot, file write, factory reset, or OS activation.</p>
+<p>The per-device gNOI client uses a workload-classed gRPC connection pool so
+small control RPCs, gNMI telemetry streams, and bulk OS/file transfers do not
+block each other. The client also caches per-service capability probes: when a
+device returns <code>codes.Unimplemented</code>, later calls to that service fail fast
+with <code>ErrServiceUnsupported</code> instead of repeatedly attempting an unsupported
+RPC.</p>
+<h2 id="restconf-endpoints">RESTCONF endpoints</h2>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Method</th>
+<th>Endpoint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>App config (create/list)</td>
+<td>POST/GET</td>
+<td><code>/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps</code></td>
+</tr>
+<tr>
+<td>App config (delete)</td>
+<td>DELETE</td>
+<td><code>/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app={id}</code></td>
+</tr>
+<tr>
+<td>App oper-data</td>
+<td>GET</td>
+<td><code>/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/app</code></td>
+</tr>
+<tr>
+<td>Lifecycle RPCs (install/activate/start/stop/deactivate/uninstall)</td>
+<td>POST</td>
+<td><code>/restconf/operations/Cisco-IOS-XE-app-hosting-rpcs:app-*</code></td>
+</tr>
+<tr>
+<td>Device version</td>
+<td>GET</td>
+<td><code>/restconf/data/Cisco-IOS-XE-native:native/version</code></td>
+</tr>
+<tr>
+<td>CDP neighbors</td>
+<td>GET</td>
+<td><code>/restconf/data/Cisco-IOS-XE-cdp-oper:cdp-neighbor-details</code></td>
+</tr>
+<tr>
+<td>OSPF neighbors</td>
+<td>GET</td>
+<td><code>/restconf/data/Cisco-IOS-XE-ospf-oper:ospf-oper-data</code></td>
+</tr>
+<tr>
+<td>Interfaces</td>
+<td>GET</td>
+<td><code>/restconf/data/ietf-interfaces:interfaces</code></td>
+</tr>
+<tr>
+<td>ARP table</td>
+<td>GET</td>
+<td><code>/restconf/data/Cisco-IOS-XE-arp-oper:arp-data</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="yang-models">YANG models</h3>
+<ul>
+<li><code>Cisco-IOS-XE-app-hosting-cfg</code> — app config</li>
+<li><code>Cisco-IOS-XE-app-hosting-oper</code> — app runtime state</li>
+<li><code>Cisco-IOS-XE-app-hosting-rpcs</code> — lifecycle RPCs</li>
+<li><code>Cisco-IOS-XE-cdp-oper</code> — CDP neighbor discovery</li>
+<li><code>Cisco-IOS-XE-ospf-oper</code> — OSPF neighbor state</li>
+<li><code>Cisco-IOS-XE-arp-oper</code> — ARP-based IP discovery</li>
+</ul>
+<h2 id="project-layout">Project layout</h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>cisco-virtual-kubelet/
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>├── api/v1alpha1/              # CiscoDevice API types (DeviceSpec, XEConfig, OTELConfig)
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>├── api/config/v1alpha1/       # IOS-XE config, telemetry, diagnostic API types
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>├── api/ops/v1alpha1/          # DeviceOperation, gNOI action, and software-upgrade API types
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>├── cmd/cisco-vk/              # Unified binary
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>│   ├── main.go                # cobra root
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>│   ├── run.go                 # 'run' subcommand — the VK provider
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>│   └── manager.go             # 'manager' subcommand — the controller
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>├── charts/cisco-virtual-kubelet/  # Helm chart (controller + RBAC + CRDs)
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>├── config/crd/                # Generated CRD manifests
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>├── internal/
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>│   ├── config/                # YAML/viper loader
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>│   ├── controller/            # CiscoDevice reconciler
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>│   ├── provider/              # AppHostingProvider, metrics, OTEL topology
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>│   └── drivers/               # Driver implementations
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>│       ├── common/            # Shared types (DeviceInfo, CDPNeighbor, etc.)
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>│       ├── iosxe/             # IOS-XE driver (see layering table above)
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>│       └── fake/              # Mock driver for tests
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>├── examples/                  # Example device configs and pod manifests
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>└── docs/                      # This documentation
+</span></code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../getting-started/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Getting Started">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Getting Started
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../controller-extension-guide/" class="md-footer__link md-footer__link--next" aria-label="Next: Network Controller Extensions">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Network Controller Extensions
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2025-2026 Cisco Systems, Inc. All Rights Reserved. · <a href="/cisco-virtual-kubelet/LICENSE">Project license</a> · <a href="/cisco-virtual-kubelet/docs/MKDOCS_THIRD_PARTY_LICENSES.txt">MkDocs third-party licenses</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "search.share", "navigation.footer", "navigation.instant.progress", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script>if(!window.ResizeObserver){document.write('<script src="../r.js?v=2290b5c60e0cdc62851fb687800237273ac53797595b1b133860c4f1386de378"><\/script>')}</script>
+      <script src="../m.js?v=581ed7d74bd9048d0e3a91363927d72ef22942d7722546b27f7cc29e35390eb8"></script>
+      <script src="../assets/javascripts/bundle.7e847d798e28dffc.min.js"></script>
+      
+    
+  </body>
+</html>

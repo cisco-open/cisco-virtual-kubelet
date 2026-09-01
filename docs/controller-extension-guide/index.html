@@ -1,0 +1,2302 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A Virtual Kubelet provider for App-Hosting workloads on Cisco IOS-XE devices, with Beta support for Cisco Nexus NX-OS switches.">
+      
+      
+      
+        <link rel="canonical" href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/controller-extension-guide/">
+      
+      
+        <link rel="prev" href="../ARCHITECTURE/">
+      
+      
+        <link rel="next" href="../cisco-vk-cli/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Network Controller Extensions - Cisco Virtual Kubelet</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#network-controller-extension-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-header__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Cisco Virtual Kubelet
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Network Controller Extensions
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-nav__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Cisco Virtual Kubelet
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Welcome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.1 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.0 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Controller Extensions
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Controller Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-network-as-code-remains-the-public-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Network as Code remains the public model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-and-responsibility-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture and responsibility boundaries
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture and responsibility boundaries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bootstrap-and-descriptor-binding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bootstrap and descriptor binding
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API contract
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API contract">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#model-compatibility-and-upgrades" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model compatibility and upgrades
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reconciliation-and-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reconciliation and ownership
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security boundary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Security boundary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#intent-secret-authorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Intent Secret authorization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-controller-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a controller adapter
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cisco-vk-cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONFIGURATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CiscoDevice Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network as Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NetAsCode Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../crds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CRD Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../family-parity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Parity Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families-nxos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nxos-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Configuration Recovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat8000v/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 8000V
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat9000/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 9000
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ir1101/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IR1100 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ie3500/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IE3500 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yang-version-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    YANG Version Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment Variables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Software Lifecycle
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gnoi-software-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Telemetry
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MDT Subscriptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry-cardinality/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cardinality Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle Correlation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Observability
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../production-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Readiness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-network-as-code-remains-the-public-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Network as Code remains the public model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-and-responsibility-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture and responsibility boundaries
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture and responsibility boundaries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bootstrap-and-descriptor-binding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bootstrap and descriptor binding
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API contract
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API contract">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#model-compatibility-and-upgrades" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model compatibility and upgrades
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reconciliation-and-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reconciliation and ownership
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security boundary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Security boundary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#intent-secret-authorization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Intent Secret authorization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-controller-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a controller adapter
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="network-controller-extension-guide">Network Controller Extension Guide</h1>
+<p>This guide defines the contract for adding controller integrations to Cisco
+Virtual Kubelet (CVK). The foundation is deliberately controller-neutral: a
+controller type is not usable until a product adapter registers itself, and
+the base scaffold contains no Catalyst Center, APIC, Meraki, or other
+product-specific API behavior.</p>
+<div class="admonition warning">
+<p class="admonition-title">Alpha, zero-adapter, report-only foundation</p>
+<p><code>NetworkController</code> and <code>NetworkControllerConfig</code> provide the extension
+boundary. The September image registers zero product adapters, so it never
+creates a usable product worker or sends requests to an external
+controller. Apply, pruning, remote deletion, and their mutation RBAC role
+are not implemented; the current contract is report-only.</p>
+<p>On upgrade, apply both controller CRDs before rolling out the new manager.
+If either is missing, CVK preserves its existing device reconcilers but
+skips NetworkController registration for that manager process; apply the
+CRDs and restart the manager to enable the scaffold.</p>
+</div>
+<h2 id="why-network-as-code-remains-the-public-model">Why Network as Code remains the public model</h2>
+<p>Cisco's <a href="https://netascode.cisco.com/docs/data_models/">Network as Code data-model catalog</a>
+distinguishes controller-centric, device-centric, and solution-centric models.
+Controller integrations should consume the matching <strong>controller-centric</strong>
+model rather than introduce another CVK-specific desired-state shape. For
+example, the <a href="https://netascode.cisco.com/docs/data_models/catalyst_center/overview/">Catalyst Center model</a>
+is organized into <code>sites</code>, <code>network_settings</code>, <code>network_profiles</code>, <code>fabric</code>,
+<code>templates</code>, <code>inventory</code>, <code>wireless</code>, <code>lan_automation</code>, and
+<code>system_settings</code> sections.</p>
+<p>CVK therefore treats Network as Code as the stable northbound contract and a
+native adapter as the southbound execution boundary:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Git / Network as Code toolchain
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  -&gt; resolved, versioned controller-centric document
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  -&gt; NetworkControllerConfig
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  -&gt; future controller adapter validate / observe / report
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  -&gt; the controller's native API and task model
+</span></code></pre></div>
+<p>CVK does not run Terraform or reimplement its inheritance and template
+expansion. The source toolchain resolves those concerns first; CVK validates,
+reconciles, observes drift, and reports status. This keeps existing Network as
+Code repositories portable while allowing each adapter to handle native API
+authentication, pagination, asynchronous tasks, and version quirks.</p>
+<p>The following rules are invariants for every adapter:</p>
+<ul>
+<li>Network as Code field names and nesting remain authoritative at the API
+  boundary. Product API objects do not leak into generic CRDs.</li>
+<li>The document must be resolved and carry an explicit model version before an
+  adapter may contact the controller.</li>
+<li>Ownership is explicit per scope and managed section. An adapter must not
+  mutate a section that the CR does not own.</li>
+<li>The non-mutating <code>report</code> mode is the only permitted behavior in the
+  September scaffold. API vocabulary for <code>apply</code>, pruning, and remote deletion
+  is reserved for a future gated implementation.</li>
+<li>Desired and observed values are not copied into status, events, or logs.</li>
+<li>Existing per-device transports and driver contracts remain unchanged. A
+  controller adapter uses the controller's native API behind its boundary;
+  shared transport code is appropriate only when its semantics are genuinely
+  controller-neutral.</li>
+</ul>
+<h2 id="architecture-and-responsibility-boundaries">Architecture and responsibility boundaries</h2>
+<pre class="mermaid"><code>flowchart LR
+    User["GitOps / Network as Code pipeline"] --&gt; NC["NetworkController endpoint"]
+    User --&gt; Intent["NetworkControllerConfig intent"]
+    Manager["cisco-vk manager"] --&gt; Registry["controller registry"]
+    NC --&gt; Manager
+    Registry --&gt; Worker["isolated controller worker"]
+    Manager --&gt; Worker
+    Intent --&gt; Worker
+    Worker --&gt; Adapter["registered product adapter"]
+    Adapter --&gt; External["external controller native API"]</code></pre>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Owns</th>
+<th>Must not own</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NetworkController</code></td>
+<td>Endpoint URL, adapter type, credential reference, administrator-approved intent Secret aliases, TLS trust, neutral connection limits, pause state</td>
+<td>Desired network configuration or product-specific API payloads</td>
+</tr>
+<tr>
+<td><code>NetworkControllerConfig</code></td>
+<td>Resolved Network as Code source, model provenance, section ownership, drift/apply/retention policy, and selection of approved Secret aliases</td>
+<td>Endpoint credentials, arbitrary Secret names/keys, or raw observed controller responses</td>
+</tr>
+<tr>
+<td>Manager reconciler</td>
+<td>Registry lookup and the worker's Kubernetes Deployment, ConfigMap, Secret projections, ServiceAccount, and RoleBinding</td>
+<td>Secret values, authentication, product API calls, planning, or remote cleanup</td>
+</tr>
+<tr>
+<td>Controller registry</td>
+<td>Immutable adapter descriptors, factories, capabilities, supported model contract, worker RBAC profile</td>
+<td>Network clients, background goroutines, or imports of concrete adapters</td>
+</tr>
+<tr>
+<td>Isolated worker</td>
+<td>Per-endpoint process, credentials, lifecycle, probes, and adapter setup within a namespace-scoped Kubernetes cache/RBAC boundary</td>
+<td>Other namespaces or virtual-node/device-driver behavior</td>
+</tr>
+<tr>
+<td>Product adapter</td>
+<td>Model validation, native client, observe/plan/apply/verify, task recovery, and sanitized status</td>
+<td>Generic deployment orchestration or unbounded RBAC</td>
+</tr>
+</tbody>
+</table>
+<p>The registry is a dependency-inversion boundary. Generic manager and registry
+packages must never import a concrete product adapter. The binary composition
+root imports enabled adapters, making their descriptors visible to the
+manager; only the <code>controller-worker</code> path may invoke a registered factory or
+set up product reconcilers. An unknown <code>spec.type</code> fails closed: no untrusted
+fallback client is created and no external request is attempted.</p>
+<p>One worker Deployment is created per <code>NetworkController</code>. This preserves the
+existing CVK pattern of isolating each endpoint's process, credential and trust
+mounts, native client sessions, failure domain, and rate limits. It does not
+isolate Kubernetes API permissions or all informer data by endpoint: the
+RoleBinding and configuration/source caches are namespace-scoped.
+Workers use a <code>Recreate</code> rollout strategy so two writers cannot overlap during
+an update. Remote reachability belongs in <code>NetworkController.status</code>; it must
+not be a liveness check that causes a restart loop during a controller outage.</p>
+<p>Use one <code>NetworkController</code> per dedicated namespace when endpoints or their
+configuration authors are not mutually trusted. Multiple endpoints in one
+namespace intentionally share the Kubernetes API trust, RBAC, and cache
+boundary even though their processes and credential mounts remain separate.</p>
+<p>The registry descriptor advertises candidate capabilities and model coverage;
+it is not proof that a particular endpoint exposes them. Endpoint-discovered
+support in <code>status.capabilities</code>, authentication state, product/API versions,
+and compatibility conditions are adapter-owned observations. The manager must
+not infer those values from descriptor metadata.</p>
+<h3 id="bootstrap-and-descriptor-binding">Bootstrap and descriptor binding</h3>
+<p>The manager-to-worker bootstrap is an immutable, non-sensitive ConfigMap. Its
+identity data is limited to the <code>NetworkController</code> namespace, name,
+Kubernetes UID, and registered type (plus the private document's version and
+kind). It contains no endpoint settings, Secret or ConfigMap references,
+credential data, intent, or runtime mount paths. The worker fetches the live
+<code>NetworkController</code> only after validating this bootstrap.</p>
+<p>The Pod arguments independently bind the namespace, name, UID, registered
+type, and expected <code>NetworkController</code> generation. They also carry a digest of
+the manager's registered adapter descriptor. At startup the worker requires
+all three views to agree: Pod identity, immutable bootstrap, and the current
+API object. It also requires the adapter to be registered in the worker image
+with exactly the same descriptor digest. An invalid bootstrap, unknown type,
+or descriptor mismatch fails before product scheme installation. The worker
+then fetches the live <code>NetworkController</code> directly and rejects a UID, type, or
+generation mismatch before adapter factory construction or setup and before
+any external controller request.</p>
+<p>The generation binding couples the live spec to the projected volumes used to
+build that Pod. If credential or CA references change while an older Pod is
+starting, that Pod exits instead of pairing old credential/CA mounts with the
+new spec; the manager-created Pod for the new generation performs setup.</p>
+<p>Runtime mount locations are code-owned constants, not mutable bootstrap input:</p>
+<table>
+<thead>
+<tr>
+<th>Material</th>
+<th>Fixed worker path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Endpoint credentials</td>
+<td><code>/var/run/secrets/cisco-vk/controller/credentials</code></td>
+</tr>
+<tr>
+<td>Optional CA directory</td>
+<td><code>/var/run/secrets/cisco-vk/controller-ca</code></td>
+</tr>
+<tr>
+<td>Optional CA bundle</td>
+<td><code>/var/run/secrets/cisco-vk/controller-ca/ca.crt</code></td>
+</tr>
+<tr>
+<td>Intent Secret projections</td>
+<td><code>/var/run/secrets/cisco-vk/controller-intent</code></td>
+</tr>
+</tbody>
+</table>
+<p>The manager creates the bootstrap ConfigMap with <code>immutable: true</code>, and
+Kubernetes makes a RoleBinding's <code>roleRef</code> immutable. Worker resources carry
+the explicit annotations <code>cisco.vk/network-controller-name</code> and
+<code>cisco.vk/network-controller-uid</code>; they are not Kubernetes owner-reference
+children of the endpoint. If an annotated bootstrap ConfigMap or RoleBinding
+drifts from the registered contract, the manager deletes that narrow object
+and recreates it on the next reconcile. It never adopts or replaces a
+conflicting object whose name/UID annotations do not match.</p>
+<p>An object with the expected generated name but different or missing controller
+identity annotations is treated as a foreign-object collision. The manager
+leaves it untouched, refuses to continue that worker reconciliation, and emits
+a sanitized Warning Event with reason <code>WorkerObjectCollision</code>. Inspect these
+without exposing object contents with:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>events<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--for<span class="w"> </span>networkcontroller/&lt;name&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--types<span class="o">=</span>Warning
+</span></code></pre></div>
+<h2 id="api-contract">API contract</h2>
+<p><code>NetworkController</code> is namespaced and uses <code>cisco.vk/v1alpha1</code>. Its immutable
+<code>spec.type</code> and immutable HTTPS <code>spec.endpoint</code> jointly define the stable
+controller identity. <code>credentialSecretRef</code> and an optional
+<code>tls.caConfigMapRef</code> resolve only within the same namespace and may rotate
+without changing that identity. <code>preferredAPIVersion</code> is a hint or pin; the
+adapter remains responsible for discovery and compatibility checks.
+Connection timeout, health-check interval, concurrency, and rate limits are
+neutral guardrails, not a substitute for adapter-specific retry semantics.</p>
+<p><code>spec.intentSecretSources</code> is an administrator-owned allow-list for sensitive
+values that resolved Network as Code intent may consume. Each stable alias maps
+to exactly one name/key in a same-namespace Secret. A tenant configuration does
+not supply that name or key directly.</p>
+<p>The manager also fences duplicate endpoint declarations within a namespace.
+Endpoint identity for this first guard is the <strong>exact stored
+<code>spec.endpoint</code> string</strong>; it does not normalize URLs and it does not compare
+objects across namespaces or clusters. The deterministic owner is the object
+with the earliest creation timestamp, then the lexicographically smallest
+name, then UID. Any non-owner stays quiesced and is periodically requeued so it
+can become active after the owner is deleted. Before the elected owner may
+start, it also removes every managed loser worker in staged Pod-first order;
+peer event fan-out is therefore an acceleration rather than the safety
+boundary. This prevents two local workers from targeting one exactly declared
+endpoint, including timestamp ties, while leaving normalized and cross-boundary
+endpoint identity as a future production decision.</p>
+<p><code>NetworkControllerConfig</code> is namespaced and uses
+<code>config.cisco.vk/v1alpha1</code>. It references a controller in the same namespace
+and declares:</p>
+<ul>
+<li>an immutable <code>scope</code> (default <code>global</code>) and a closed <code>managedSections</code> set;</li>
+<li>exactly one <code>source.inline</code> or <code>source.configMapRef</code>;</li>
+<li>required <code>modelSource.format</code>, <code>modelSource.modelVersion</code>, and
+  <code>modelSource.resolved: true</code>, with optional schema and source provenance;</li>
+<li><code>mode: report|apply</code>, defaulting to <code>report</code>; <code>apply</code> is reserved and cannot
+  be honored by the September report-only runtime;</li>
+<li>independently safe <code>prunePolicy</code> and <code>deletionPolicy</code>, both defaulting to
+  <code>Retain</code>;</li>
+<li>optional <code>secretRefs</code> whose <code>source</code> selects an administrator-approved alias
+  and places its value at a declared section/path;</li>
+<li>bounded drift and asynchronous-task timing.</li>
+</ul>
+<p>The two resources are separate intentionally. Rotating credentials or TLS
+trust must not rewrite desired network intent, and changing intent must not
+recreate the endpoint identity. Replacing the endpoint URL requires a new
+<code>NetworkController</code> and an explicit retargeting of intent. This prevents
+persisted asynchronous task IDs and section-ownership state from being
+replayed against a different external controller.</p>
+<p>The immutability rules use CRD CEL transition validation (<code>oldSelf</code>). A
+supported Kubernetes 1.28 API server must have the
+<code>CustomResourceValidationExpressions</code> feature gate enabled; it is beta and
+enabled by default in that release. The feature is GA in Kubernetes 1.29 and
+later. CVK's runtime validators check the current object shape, but cannot
+reconstruct the previous object and therefore do not replace these transition
+rules. Do not deploy the controller scaffold on an API server where CEL
+transition validation is disabled.</p>
+<h3 id="model-compatibility-and-upgrades">Model compatibility and upgrades</h3>
+<p>Every adapter must make the shared fail-closed contract gate its first
+per-config reconcile operation, retaining <code>opts.IntentSecretPath</code> from the
+factory options and calling it exactly as follows:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">controlleradapter</span><span class="p">.</span><span class="nx">ValidateConfigContract</span><span class="p">(</span><span class="nx">controller</span><span class="p">,</span><span class="w"> </span><span class="nx">config</span><span class="p">,</span><span class="w"> </span><span class="nx">opts</span><span class="p">.</span><span class="nx">IntentSecretPath</span><span class="p">);</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="c1">// Publish a sanitized failure condition and stop reconciling this config.</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>This call must complete before the adapter loads or parses the source, builds
+a plan, or makes any external request. A missing or non-regular intent Secret
+projection must be mapped to <code>IntentSecretsReady=False</code>; the affected config
+is skipped until the projection is ready. <code>IntentSecretRelativePath</code> and the
+fixed projection root are orchestration-owned contracts. Adapters must not
+reimplement the path algorithm, accept an adapter-configurable replacement,
+or bypass the common gate.</p>
+<p>Before making an external request, an adapter must validate all of the
+following:</p>
+<ol>
+<li><code>modelSource.format</code> exactly matches the format in its registered
+   descriptor, such as <code>netascode-catalyst-center</code>.</li>
+<li><code>modelSource.resolved</code> is true and <code>modelSource.modelVersion</code> is in the
+   adapter's qualified version set.</li>
+<li>Every <code>managedSections</code> entry is advertised by the descriptor and exists in
+   the expected controller-centric model stripe.</li>
+<li>The schemaless source passes the adapter's model-level and semantic
+   validation for the target controller/API version.</li>
+</ol>
+<p>Adapters must not silently reinterpret an unknown version or upgrade a payload
+in memory. Qualifying a new upstream model version requires fixture-based
+tests, adding it to the descriptor, and deploying a compatible adapter build.
+The GitOps change should then update the resolved source and
+<code>modelSource.modelVersion</code> together. <code>schemaDigest</code>, <code>exporter</code>, and
+<code>sourceRevision</code> should be populated when the source pipeline can provide them
+so an applied result is traceable to an immutable schema and Git revision.</p>
+<h2 id="reconciliation-and-ownership">Reconciliation and ownership</h2>
+<p>Controller reconciliation follows an observe-plan-act-verify loop:</p>
+<ol>
+<li>Run <code>controlleradapter.ValidateConfigContract</code> and stop this config reconcile on
+   failure.</li>
+<li>Load and parse the already-resolved inline or ConfigMap-backed source, then
+   run product-specific model and semantic validation.</li>
+<li>Acquire ownership for each
+   <code>(controller, scope, section)</code> tuple.</li>
+<li>Read authoritative state from the controller and build a redacted plan.</li>
+<li>In <code>report</code> mode, publish drift without mutation. In <code>apply</code> mode, execute
+   only the managed sections and persist enough sanitized task identity to
+   resume asynchronous polling after a restart.</li>
+<li>Re-read the controller, verify convergence, and update bounded conditions,
+   section states, hashes, and drift metadata.</li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Hard release gate for remote mutation</p>
+<p>The current zero-adapter scaffold exposes section-ownership vocabulary but
+deliberately grants no Lease permission to the base worker role and does
+not yet provide a generic <code>SectionLeaser</code>. A shared, controller-neutral
+<code>SectionLeaser</code>, its conformance suite, and a separate statically reviewed
+mutation RBAC profile are hard release gates before the first adapter may
+support <code>mode: apply</code>, <code>prunePolicy: Delete</code>, or any remote-deletion path,
+including <code>deletionPolicy: Delete</code>. Tests must prove exclusive acquisition
+for each <code>(controller, scope, section)</code> tuple, renewal, conflict handling,
+expiry and takeover, cancellation/restart behavior, and that no mutation
+occurs without a currently held lease. The manager must bind that future
+role only through an explicit audited allow-list. Registry validation
+currently accepts only the base report-worker role; a new role, its chart
+policy, and the manager's <code>bind</code> marker must land in one reviewed change.
+Until all gates land, adapters must remain report-only regardless of the
+vocabulary exposed by the API.</p>
+</div>
+<p>Adapters must make retries idempotent. An ambiguous timeout is not proof of
+failure: recover by task ID or by observing state before submitting a second
+mutation. Controller request rate limits, backoff, and <code>taskTimeout</code> must be
+honored across reconciles.</p>
+<p>The manager owns the <code>cisco.vk/network-controller-protection</code> finalizer on each
+<code>NetworkController</code>. When endpoint deletion is requested, that finalizer keeps
+the endpoint worker available while any same-namespace
+<code>NetworkControllerConfig</code> still references it. After the dependent configs are
+gone, the manager quiesces the annotated Deployment, RoleBinding,
+ServiceAccount, and bootstrap ConfigMap, then removes the protection finalizer.
+Deleting the endpoint therefore does <strong>not</strong> implicitly delete
+controller-managed network objects.</p>
+<p>Worker resources deliberately have no Kubernetes owner reference to the
+<code>NetworkController</code>. The manager identifies its children by stable name plus
+the controller name/UID annotations and deletes them explicitly only after the
+dependency check passes. Consequently, foreground deletion cannot let garbage
+collection remove the worker early and bypass the default <code>Retain</code> lifecycle.</p>
+<div class="admonition danger">
+<p class="admonition-title">Do not remove the protection finalizer</p>
+<p>Normal deletion must leave <code>cisco.vk/network-controller-protection</code>
+intact. If an administrator forcibly removes it from a live endpoint and
+deletion completes before reconciliation can restore it, the credentialed
+worker Deployment and its annotation-associated ServiceAccount,
+RoleBinding, and bootstrap ConfigMap can be orphaned. Delete dependent
+<code>NetworkControllerConfig</code> resources first, then delete the
+<code>NetworkController</code> normally and let the manager quiesce the worker and
+remove the finalizer.</p>
+</div>
+<p>Remote lifecycle intent belongs to <code>NetworkControllerConfig</code>, and <code>Retain</code> is
+the safe default. Workers cannot add, update, or remove finalizers. If a future
+adapter supports <code>deletionPolicy: Delete</code>, a separate control-plane finalizer
+must retain the config object while the adapter reports cleanup progress
+through status; only the control-plane reconciler completes that handshake and
+removes the finalizer. Product code must not broaden the worker role to take
+control of Kubernetes object lifecycle.</p>
+<p>Pausing a <code>NetworkController</code> stops its worker without discarding status or
+intent. A paused or unavailable endpoint never transfers section ownership to
+another CR implicitly.</p>
+<h2 id="security-boundary">Security boundary</h2>
+<p>The manager creates a unique ServiceAccount and namespaced RoleBinding for each
+worker. The reusable <code>cisco-virtual-kubelet-controller-worker</code> ClusterRole is
+therefore constrained to the worker's namespace and grants only:</p>
+<ul>
+<li>read access to <code>NetworkController</code> and write access to its status;</li>
+<li>read access to <code>NetworkControllerConfig</code> and write access to its status;</li>
+<li>read-only source ConfigMaps;</li>
+<li>Events for bounded, sanitized operational feedback.</li>
+</ul>
+<p>The unique ServiceAccount isolates identity and auditing, but its RoleBinding
+does not create an endpoint-level Kubernetes authorization boundary. In
+particular, Kubernetes authorizes that worker to update or patch the
+<code>/status</code> subresource of <strong>every</strong> <code>NetworkController</code> and
+<code>NetworkControllerConfig</code> in its namespace, not only the endpoint that caused
+its Deployment. The name-filtered endpoint cache and common contract gate
+constrain a conforming adapter's behavior; they do not narrow RBAC. Controller
+configs and source data also remain namespace-scoped. Treat the namespace as
+the API trust, RBAC, status-write, and cache boundary. Use a dedicated
+namespace per controller whenever endpoints, adapter code, or config authors
+are not mutually trusted.</p>
+<p>A future scale optimization may use a manager-owned key-existence label such
+as <code>nc.cisco.vk/&lt;uid-hash&gt;: "true"</code> on each controller's configs and source
+objects. A shared ConfigMap may carry several controller keys. Manager-owned
+stamping and cleanup plus a bounded, collision-tested UID hash are prerequisites
+before a worker selects on that key. This is a performance and memory
+optimization only: labels and cache selectors are not authorization controls
+and must never replace the dedicated-namespace trust boundary.</p>
+<p>Updates and patches apply only to the <code>/status</code> subresources. A worker cannot
+mutate either resource's spec, metadata, or finalizers. The role also has no
+Secret, Node, Pod, workload, or wildcard access. Endpoint
+credentials are mounted read-only from the referenced same-namespace Secret by
+the kubelet. The manager writes only the controller namespace, name, UID, and
+adapter type to the worker bootstrap and binds the expected generation through
+Pod arguments; mount paths come from fixed runtime constants. The worker
+fetches current endpoint metadata through the API and consumes credential files
+through those fixed paths. It must never fetch Secrets through a Kubernetes
+client or place tokens in environment variables, arguments, status, events,
+or logs.</p>
+<p>The manager-generated worker Pod does not currently propagate
+<code>imagePullSecrets</code>. The September Alpha scaffold must therefore use an image
+that cluster nodes can pull without a private-registry Secret. Defining a
+least-privilege propagation and rotation contract is required before private
+worker registries are supported.</p>
+<p>Projected credential, CA, and intent-Secret volumes update in place. The
+optional CA is mounted as the live directory
+<code>/var/run/secrets/cisco-vk/controller-ca</code>, not as a <code>subPath</code> file, so kubelet
+can publish a ConfigMap rotation without restarting the worker. The worker's
+generic projected-material watcher polls Kubernetes AtomicWriter <code>..data</code>
+symlinks every five seconds without reading or hashing values. It passes
+adapters a coalescing
+<code>Options.MaterialRotation.Changes</code> channel and a fifteen-minute
+<code>MaxSessionLifetime</code>.</p>
+<p>An adapter must consume that single channel once and fan it out internally if
+it has multiple reconcilers. On notification it must discard cached
+authentication, TLS, and resolved-intent state, re-read the mounted files, and
+requeue affected work before its next external request. Independently, it must
+rebuild clients and sessions by the maximum lifetime even if no event arrives.
+Caching credential or CA bytes only at process start is non-conforming.</p>
+<h3 id="intent-secret-authorization">Intent Secret authorization</h3>
+<p>Secret selection is deliberately split across two authorization domains:</p>
+<ol>
+<li>An administrator who can modify <code>NetworkController</code> defines
+   <code>spec.intentSecretSources</code>, mapping an alias to one same-namespace Secret
+   name/key.</li>
+<li>A configuration author uses
+   <code>NetworkControllerConfig.spec.secretRefs[].source</code> to select only that alias
+   and its destination section/path. The config object cannot name a Secret or
+   key.</li>
+<li>The manager translates only approved aliases into read-only projected
+   files. This path writes references into the Pod specification and does not
+   inspect Secret <code>.data</code>; the kubelet resolves the projection. The shared
+   manager's separate cluster-wide Secret watch can still place typed Secret
+   objects in its cache, so its RBAC and memory remain part of the credential
+   trust boundary described in <a href="../security/">Security</a>.</li>
+</ol>
+<p>This prevents a configuration reconciler from turning the manager into a
+Secret-read deputy. The boundary is effective only when Kubernetes RBAC
+reserves <code>NetworkController</code> creation and updates for administrators while
+delegating <code>NetworkControllerConfig</code> separately to configuration authors.</p>
+<p>An unknown alias, invalid section/path, or excess projection invalidates only
+that projection. The manager skips it and emits a sanitized
+<code>IntentSecretProjectionSkipped</code> warning/event; it does not write
+<code>NetworkControllerConfig</code> status. A missing or otherwise unresolved projected
+file is optional at Pod-mount time, so the adapter skips the affected config
+and reports <code>IntentSecretsReady=False</code> through that config's status. Neither
+case quiesces the endpoint worker or blocks other valid configs. Status and
+drift reports identify aliases, redacted paths, and change types only—never
+Secret names, keys, or values.</p>
+<p>Server certificate verification is enabled by default. A custom CA is supplied
+through <code>tls.caConfigMapRef</code>; <code>insecureSkipVerify</code> is a lab/migration escape
+hatch and must not be the production default. Future adapter-specific RBAC
+must be a separately reviewed static ClusterRole selected by its descriptor,
+accepted by the registry's closed role allow-list, and added to the manager's
+matching <code>bind</code> policy—not dynamically generated rules or a broadening of the
+base role. Additional
+roles must not grant workers update/patch on the main <code>NetworkController</code> or
+<code>NetworkControllerConfig</code> resources or access to their finalizers.</p>
+<h2 id="adding-a-controller-adapter">Adding a controller adapter</h2>
+<p>Adding a product integration should normally require no generic CRD change:</p>
+<ol>
+<li>Choose the upstream controller-centric Network as Code stripe. Record the
+   exact format, qualified model versions, supported top-level sections, and
+   source fixtures.</li>
+<li>Implement a package below the controller adapter tree. Keep its native API
+   types and client private to that package.</li>
+<li>Implement the generic adapter lifecycle. Construction validates local
+   options only; it must not dial the endpoint or start goroutines. Register
+   reconcilers and manager-owned runnables during adapter setup so cancellation
+   and shutdown follow the worker context.</li>
+<li>Register one immutable descriptor and factory. Descriptors use a stable,
+   DNS-label controller type, a <code>netascode-*</code> model format, bounded unique
+   capabilities/sections, and an audited worker ClusterRole name.</li>
+<li>Import the adapter only from
+   <code>cmd/cisco-vk/controller_adapters_register.go</code>. The manager may read the
+   registered descriptor, but it must never invoke the factory. Do not add
+   product branches to the neutral registry, manager reconciler, per-device
+   driver factory, or existing transport packages.</li>
+<li>Add conformance tests for common contract-gate ordering,
+   <code>IntentSecretsReady</code> failure handling, descriptor validation,
+   model/version rejection, report-before-apply behavior, section ownership,
+   idempotency, async task recovery, redaction, credential rotation, TLS
+   verification, rate limiting, and cancellation.</li>
+<li>If the adapter needs Kubernetes permissions beyond the base worker role,
+   add a static least-privilege ClusterRole and an explicit manager-side
+   allowlist entry. Explain and test every extra resource and verb. Never add
+   Secret reads or mutation of controller/config specs, metadata, or
+   finalizers.</li>
+</ol>
+<p>Registration is a build-time contract, not runtime configuration. Invalid or
+duplicate descriptors stop process initialization; an unregistered
+<code>NetworkController.spec.type</code> produces no worker. The manager passes the
+selected descriptor digest into the Pod, and the worker refuses to start if
+its compiled registration differs. This makes accidentally mixing manager and
+adapter images fail closed instead of silently changing model, capability, or
+RBAC behavior.</p>
+<p>The acceptance bar is that removing the adapter package and its composition-
+root import leaves the generic APIs, registry, manager, worker, existing device
+drivers, and transports building and behaving identically.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../ARCHITECTURE/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Architecture">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Architecture
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../cisco-vk-cli/" class="md-footer__link md-footer__link--next" aria-label="Next: CLI Reference">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                CLI Reference
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2025-2026 Cisco Systems, Inc. All Rights Reserved. · <a href="/cisco-virtual-kubelet/LICENSE">Project license</a> · <a href="/cisco-virtual-kubelet/docs/MKDOCS_THIRD_PARTY_LICENSES.txt">MkDocs third-party licenses</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "search.share", "navigation.footer", "navigation.instant.progress", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script>if(!window.ResizeObserver){document.write('<script src="../r.js?v=2290b5c60e0cdc62851fb687800237273ac53797595b1b133860c4f1386de378"><\/script>')}</script>
+      <script src="../m.js?v=581ed7d74bd9048d0e3a91363927d72ef22942d7722546b27f7cc29e35390eb8"></script>
+      <script src="../assets/javascripts/bundle.7e847d798e28dffc.min.js"></script>
+      
+    
+  </body>
+</html>
