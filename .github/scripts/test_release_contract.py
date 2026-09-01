@@ -104,6 +104,21 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn("Execute exact signed image and verify provenance", release)
         self.assertIn("Exactly one non-prerelease draft", release)
         self.assertIn("name: Require exact curated draft", release)
+        preflight = release[
+            release.index("  release-preflight:") : release.index(
+                "\n  build-and-sign:"
+            )
+        ]
+        self.assertIn("contents: write", preflight)
+        self.assertEqual(release.count("contents: write"), 2)
+        self.assertNotIn("actions/checkout", preflight)
+        self.assertNotIn("--method", preflight)
+        self.assertNotIn(" -f ", preflight)
+        self.assertNotIn(" -F ", preflight)
+        self.assertNotIn("--input", preflight)
+        self.assertNotIn("curl ", preflight)
+        self.assertNotIn("git push", preflight)
+        self.assertNotIn("gh release", preflight)
         self.assertGreaterEqual(release.count(".target_commitish == $commit"), 3)
         self.assertNotIn("ubuntu-latest", release)
         self.assertNotIn("1.25", dockerfile + lint_dockerfile + release)
@@ -639,6 +654,12 @@ go_version_is_supported go1.27.9
         draft = runbook.index("## 3. Create the draft before the tag")
         tag = runbook.index("## 4. Push the tag")
         self.assertLess(draft, tag)
+        self.assertIn('release_inventory="$(mktemp)"', runbook)
+        self.assertIn('"$release_inventory")" -eq 0', runbook)
+        self.assertNotIn(
+            '--slurp "repos/${repo}/releases?per_page=100" \\\n    --jq',
+            runbook,
+        )
         self.assertIn("recorded upstream provenance", runbook)
         self.assertIn("Cisco API License 1.1", runbook)
         self.assertIn("applicable license and notice bundles", runbook)

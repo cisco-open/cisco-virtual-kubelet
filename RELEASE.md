@@ -1,14 +1,20 @@
 # Release runbook
 
 This is the maintainer checklist for a Cisco Virtual Kubelet release. The next
-planned release is `v2026.9.0` on 2026-09-01; its Helm chart version is
-`2026.9.0`. Tags use strict SemVer-compatible CalVer:
+planned release is `v2026.9.1` on 2026-09-01; its Helm chart version is
+`2026.9.1`. Tags use strict SemVer-compatible CalVer:
 `vYYYY.M.PATCH` (no leading zero in the month).
 
 The release workflow deliberately cannot create or publish a GitHub Release.
 A maintainer creates a curated draft **before** pushing the tag, the workflow
 stages the signed assets into that draft, and a maintainer publishes it only
 after every verification below passes. Published releases are immutable.
+
+`v2026.9.0` is an unpublished, immutable recovery marker: its signed tag
+triggered the release workflow, but draft visibility failed in preflight
+before any artifact was built, pushed, signed, or staged. Never move or delete
+that tag and never publish its draft. `v2026.9.1` carries the preflight
+permission correction and is the publishable September candidate.
 
 ## 1. Freeze the release commit
 
@@ -18,8 +24,8 @@ after every verification below passes. Published releases are immutable.
   `git log --oneline v2026.8.1..HEAD` and
   `git diff --stat v2026.8.1..HEAD`.
 - [ ] Confirm the release-facing version and source chart `appVersion` are
-  `v2026.9.0`. The release workflow must stamp the packaged chart version as
-  `2026.9.0`; source `Chart.yaml` intentionally retains its local-development
+  `v2026.9.1`. The release workflow must stamp the packaged chart version as
+  `2026.9.1`; source `Chart.yaml` intentionally retains its local-development
   chart version. Historical examples must retain their original version.
 - [ ] Regenerate committed material and require a clean diff:
 
@@ -138,7 +144,7 @@ after every verification below passes. Published releases are immutable.
 ## 2. Prepare curated notes
 
 - [ ] Review and update the committed
-  `docs/releases/v2026.9.0.md` notes from the final comparison
+  `docs/releases/v2026.9.1.md` notes from the final comparison
   `v2026.8.1...<release_commit>`. Include user-visible features, compatibility
   and security changes, known limitations, upgrade steps, and links to the
   documentation. Use that committed file as the canonical source for the
@@ -153,9 +159,9 @@ after every verification below passes. Published releases are immutable.
 Set these in a clean maintainer shell:
 
 ```sh
-release_version=v2026.9.0
+release_version=v2026.9.1
 release_name="Cisco Virtual Kubelet ${release_version}"
-release_notes="$(git rev-parse --show-toplevel)/docs/releases/v2026.9.0.md"
+release_notes="$(git rev-parse --show-toplevel)/docs/releases/v2026.9.1.md"
 repo=cisco-open/cisco-virtual-kubelet
 test -s "$release_notes"
 test "$(git rev-parse HEAD)" = "$release_commit"
@@ -169,8 +175,13 @@ test -z "$(git status --porcelain=v1 --untracked-files=all)"
 
   ```sh
   test -z "$(git ls-remote --tags origin "refs/tags/${release_version}" "refs/tags/${release_version}^{}")"
-  test "$(gh api --paginate --slurp "repos/${repo}/releases?per_page=100" \
-    --jq "[.[][] | select(.tag_name == \"${release_version}\")] | length")" -eq 0
+  release_inventory="$(mktemp)"
+  gh api --paginate --slurp \
+    "repos/${repo}/releases?per_page=100" > "$release_inventory"
+  test "$(jq --arg tag "$release_version" \
+    '[.[][] | select(.tag_name == $tag)] | length' \
+    "$release_inventory")" -eq 0
+  rm -f "$release_inventory"
   ```
 
 - [ ] Create exactly one non-prerelease draft, targeting the recorded commit.
@@ -229,7 +240,7 @@ git push origin "refs/tags/${release_version}"
   subject. Pin the expected GitHub Actions OIDC issuer and this repository's
   release-workflow certificate identity; do not use unconstrained keyless
   verification.
-- [ ] Pull Helm OCI chart `2026.9.0` by digest, verify its cosign signature,
+- [ ] Pull Helm OCI chart `2026.9.1` by digest, verify its cosign signature,
   inspect `Chart.yaml`, and confirm its package contains `LICENSE` identical to
   the repository root.
 - [ ] Review vulnerability results. HIGH/CRITICAL image scanning is advisory
@@ -243,15 +254,15 @@ abort rules below.
 
 Helm installs files under `crds/` on a fresh installation but intentionally
 does not apply them during `helm upgrade`. Existing installations upgrading to
-`v2026.9.0` must apply both new CRDs to enable the new controller scaffold.
+`v2026.9.1` must apply both new CRDs to enable the new controller scaffold.
 Without them, the manager continues running its existing reconcilers but
 reports the optional scaffold as disabled.
 
 ```sh
 kubectl apply --server-side -f \
-  https://raw.githubusercontent.com/cisco-open/cisco-virtual-kubelet/v2026.9.0/config/crd/cisco.vk_networkcontrollers.yaml
+  https://raw.githubusercontent.com/cisco-open/cisco-virtual-kubelet/v2026.9.1/config/crd/cisco.vk_networkcontrollers.yaml
 kubectl apply --server-side -f \
-  https://raw.githubusercontent.com/cisco-open/cisco-virtual-kubelet/v2026.9.0/config/crd/config.cisco.vk_networkcontrollerconfigs.yaml
+  https://raw.githubusercontent.com/cisco-open/cisco-virtual-kubelet/v2026.9.1/config/crd/config.cisco.vk_networkcontrollerconfigs.yaml
 
 kubectl get crd \
   networkcontrollers.cisco.vk \
@@ -259,7 +270,7 @@ kubectl get crd \
 
 helm upgrade <release> \
   oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.0 \
+  --version 2026.9.1 \
   --namespace <namespace> \
   --reuse-values \
   --wait --timeout 5m
@@ -291,7 +302,7 @@ Replace the angle-bracket placeholders before running the commands. A fresh
   checksums from an unauthenticated session.
 - [ ] The public Krew index already contains `cisco-vk`; do not open an initial
   submission. The `krew-index` workflow should open the normal update-bot pull
-  request for `v2026.9.0`. Wait for it to merge, verify the official index has
+  request for `v2026.9.1`. Wait for it to merge, verify the official index has
   the four expected URLs and SHA-256 values, then run `kubectl krew update`,
   install/update `cisco-vk`, and execute `kubectl cisco-vk version`.
 - [ ] Exercise a fresh Helm install and the upgrade procedure above in a clean
@@ -305,11 +316,11 @@ Replace the angle-bracket placeholders before running the commands. A fresh
   has no assets and is still a draft. Then restart at section 1.
 - **After the tag is pushed:** do not delete, force-push, or move the tag. Image
   and chart tags may already be public and signed. Leave the draft unpublished,
-  diagnose the failed workflow, and use a new patch version (`v2026.9.1`) for
+  diagnose the failed workflow, and use a new patch version (`v2026.9.2`) for
   any source or artifact change.
 - **After publication:** the release and its assets are immutable. Never replace
   an asset or retag a commit; publish corrective notes if documentation alone
-  is wrong, or cut `v2026.9.1` for code/artifact changes.
+  is wrong, or cut `v2026.9.2` for code/artifact changes.
 - **Krew update failure:** an infrastructure-only failure may be rerun. A wrong
   URL, digest, platform, archive layout, or binary requires a new patch release.
 - **Helm rollback:** rolling the Deployment/chart back does not remove CRDs or

@@ -76,11 +76,11 @@ so step 1's custom build is optional and you can install directly:
 
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.0 \
+  --version 2026.9.1 \
   --namespace cvk-system --create-namespace
 ```
 
-This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.9.0` → `2026.9.0`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
+This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.9.1` → `2026.9.1`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
 
 **From source with a custom image** — to run the build from step 1 instead:
 
@@ -112,18 +112,18 @@ If the controller pod is not `Running`, see [Troubleshooting → CiscoDevice stu
 ### Upgrading an existing release
 
 Helm installs CRDs during the first install but does not upgrade them. Before
-upgrading to `2026.9.0`, pull the chart and apply its CRDs server-side:
+upgrading to `2026.9.1`, pull the chart and apply its CRDs server-side:
 
 ```bash
 helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.0 --untar
+  --version 2026.9.1 --untar
 kubectl apply --server-side -f cisco-virtual-kubelet/crds/
 kubectl wait --for=condition=Established --timeout=60s \
   crd/networkcontrollers.cisco.vk \
   crd/networkcontrollerconfigs.config.cisco.vk
 
 helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.0 \
+  --version 2026.9.1 \
   --namespace cvk-system
 kubectl rollout status deployment/cvk-cisco-virtual-kubelet-controller \
   --namespace cvk-system

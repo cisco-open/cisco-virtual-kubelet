@@ -9,7 +9,7 @@ chart — Helm does not manage CRD updates automatically.
 ```bash
 # 1. Pull the exact release chart and apply its CRDs. For the September release:
 helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.0 --untar
+  --version 2026.9.1 --untar
 kubectl apply --server-side -f cisco-virtual-kubelet/crds/
 kubectl wait --for=condition=Established --timeout=60s \
   crd/networkcontrollers.cisco.vk \
@@ -30,7 +30,7 @@ networkcontrollerconfigs.config.cisco.vk 2026-08-07T09:00:00Z
 
 # 3. Upgrade the Helm release from the same immutable chart version:
 helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.0 \
+  --version 2026.9.1 \
   --namespace cvk-system
 
 # 4. Confirm manager pod is running the new image:

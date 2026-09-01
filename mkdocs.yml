@@ -39,7 +39,8 @@ markdown_extensions:
 nav:
 - Welcome: 'index.md'
 - Release Notes:
-  - v2026.9.0: 'releases/v2026.9.0.md'
+  - v2026.9.1: 'releases/v2026.9.1.md'
+  - v2026.9.0 (unpublished): 'releases/v2026.9.0.md'
 - Getting Started: 'getting-started.md'
 - Architecture: 'ARCHITECTURE.md'
 - Network Controller Extensions: 'controller-extension-guide.md'

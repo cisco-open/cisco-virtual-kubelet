@@ -65,7 +65,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
-      contents: read
+      # GitHub's releases API omits draft releases from tokens without push
+      # access. Write permission is required here even though this job only
+      # reads: the draft-before-tag gate cannot otherwise observe the curated
+      # draft it is responsible for validating.
+      contents: write
     steps:
       - name: Require exact curated draft
         env:
