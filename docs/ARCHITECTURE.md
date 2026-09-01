@@ -6,14 +6,43 @@ This document describes the technical architecture of Cisco Virtual Kubelet.
 
 Cisco Virtual Kubelet implements the [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider interface so Kubernetes can treat Cisco IOS-XE devices as compute nodes. Each device appears as a node in the cluster; pods scheduled to that node are deployed as IOx App-Hosting containers on the device over RESTCONF.
 
-### The two-binary split
+### The runtime split
 
-Everything the project does comes out of a single `cisco-vk` CLI with two subcommands:
+Everything the project does comes out of a single `cisco-vk` CLI with isolated
+runtime subcommands:
 
-- **`cisco-vk manager`** — the Kubernetes controller. Watches `CiscoDevice` custom resources and, for each one, creates a ConfigMap + Deployment. It knows nothing about individual devices; it just reconciles CR state into Kubernetes resources.
+- **`cisco-vk manager`** — the Kubernetes controller. Watches infrastructure
+  CRs and reconciles them into Kubernetes worker resources. It performs no
+  device or external-controller API calls.
 - **`cisco-vk run`** — the Virtual Kubelet provider. One process per device. Reads its config, registers a virtual node in the cluster, and drives the device via RESTCONF when pods come and go.
+- **`cisco-vk controller-worker`** — the network-controller runtime. One
+  process per `NetworkController` whose type has a registered adapter; it
+  starts that adapter and watches only its Kubernetes namespace. The September
+  image registers zero product adapters, so this Alpha path remains inactive.
 
-This split keeps device credentials and per-device logic out of the controller. The controller holds minimal cluster-level RBAC; each VK pod holds only the credentials for its one device.
+This split keeps product-specific logic and direct credential use inside the
+device or controller worker. The manager writes Secret references rather than
+inspecting `.data`, but its cluster-wide Secret watch for device credential
+rotation means typed Secret objects can enter its cache and memory. Treat the
+manager as part of the credential trust boundary described in
+[Security](security.md). Each controller worker receives only its target's
+mounted credentials; its Kubernetes API RBAC and cache are namespace-scoped.
+
+### Network controller extension boundary
+
+External network controllers use the same isolation principle without changing
+the per-device provider or its transports. The manager resolves a registered
+controller type and creates one namespace-scoped worker per endpoint. A
+product adapter inside that worker consumes resolved, versioned
+controller-centric Network as Code intent and speaks the controller's native
+API. Endpoint processes, credentials, failure domains, and rate limits are
+separate, but the namespace remains the API trust/RBAC/cache boundary. Use a
+dedicated namespace when endpoints or config authors are not mutually trusted.
+Duplicate fencing compares the exact stored endpoint string within that
+namespace only. The September scaffold is report-only and has no apply, prune,
+remote-delete, or mutation-RBAC implementation.
+See the [Network Controller Extension Guide](controller-extension-guide.md) for
+the registry, worker, model, ownership, and security contracts.
 
 ## Component architecture
 

@@ -18,3 +18,4 @@ The writer reads and writes the following leaves. Leaves outside this
 set present on the device are preserved (additive merge).
 
 - `action-list`
+- `as-path-access-list-entry`

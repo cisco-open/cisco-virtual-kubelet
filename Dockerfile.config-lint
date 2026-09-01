@@ -22,19 +22,41 @@
 #     <repo>/cisco-vk-config-lint:<tag> \
 #     --address=192.0.2.10 --username=cvk --password-env=DEV_PASSWORD \
 #     --device-name=edge-01 --exit-on-drift /manifests
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26.7-alpine@sha256:28d89ee9cc0ff9fec75c82ca201e6bf7fdf9a679d4b7b24dfa04f2bb766bb468 AS builder
 WORKDIR /app
-RUN apk add --no-cache git
 COPY go.mod go.sum ./
 RUN go mod download
+RUN GOBIN=/out/tools GOTOOLCHAIN=local \
+    go install github.com/google/go-licenses/v2@v2.0.1
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-w -s" \
+RUN CGO_ENABLED=0 GOENV=off GOTOOLCHAIN=local GOOS=linux go build \
+    -mod=readonly -trimpath -buildvcs=false \
+    -ldflags="-w -s -buildid=" \
     -o /out/cisco-vk-config-lint \
     ./tools/cisco-vk-config-lint
+RUN mkdir -p /out/licenses/go && \
+    GOOS=linux /out/tools/go-licenses \
+      check ./tools/cisco-vk-config-lint && \
+    GOOS=linux /out/tools/go-licenses \
+      save ./tools/cisco-vk-config-lint --save_path /out/licenses/third-party && \
+    GOOS=linux go list -deps -f '{{with .Module}}{{.Path}} {{.Dir}}{{end}}' \
+      ./tools/cisco-vk-config-lint \
+      | sort -u \
+      | while read -r module module_dir; do \
+          find "$module_dir" -type f -name PATENTS | while read -r patents; do \
+            relative="${patents#${module_dir}/}"; \
+            destination="/out/licenses/third-party/${module}/${relative}"; \
+            mkdir -p "$(dirname "$destination")"; \
+            cp "$patents" "$destination"; \
+          done; \
+        done && \
+    cp "$(go env GOROOT)/LICENSE" /out/licenses/go/LICENSE && \
+    cp "$(go env GOROOT)/PATENTS" /out/licenses/go/PATENTS
 
-FROM gcr.io/distroless/static-debian12
+FROM gcr.io/distroless/static-debian12@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2
 COPY --from=builder /out/cisco-vk-config-lint /usr/local/bin/cisco-vk-config-lint
+COPY --from=builder /out/licenses /licenses
+COPY LICENSE /licenses/cisco-virtual-kubelet/LICENSE
 # Match the numeric nonroot identity used by the main runtime image.
 USER 65532:65532
 ENTRYPOINT ["/usr/local/bin/cisco-vk-config-lint"]

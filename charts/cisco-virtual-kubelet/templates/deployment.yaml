@@ -58,6 +58,8 @@ spec:
             - cisco-vk
             - manager
             - --vk-image={{ include "cisco-virtual-kubelet.vkImage" . }}
+            - --controller-worker-image={{ include "cisco-virtual-kubelet.controllerImage" . }}
+            - --controller-worker-image-pull-policy={{ include "cisco-virtual-kubelet.controllerImagePullPolicy" . }}
             - --vk-service-account={{ include "cisco-virtual-kubelet.vkServiceAccountName" . }}
             - --metrics-bind-address={{ .Values.controller.metricsBindAddress }}
             - --health-probe-bind-address={{ .Values.controller.healthProbeBindAddress }}

@@ -1,0 +1,6 @@
+# Direct documentation dependency. Regenerate requirements.txt for the pinned
+# CI platform with:
+#   uv pip compile --python-version 3.13 --python-platform x86_64-manylinux_2_17 \
+#     --generate-hashes --custom-compile-command 'make requirements-lock' \
+#     --output-file requirements.txt requirements.in
+mkdocs-material==9.7.7

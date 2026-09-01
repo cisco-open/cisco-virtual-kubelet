@@ -13,48 +13,123 @@
 # limitations under the License.
 
 name: CI build and deploy documentation
+
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing published, non-prerelease tag to deploy
+        required: true
+        type: string
+
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: docs-${{ github.event.release.tag_name || inputs.release_tag }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (!github.event.release.draft && !github.event.release.prerelease)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Require an existing published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[1-9][0-9]{3}\.([1-9]|1[0-2])\.(0|[1-9][0-9]{0,8})$ ]]
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" \
+            | jq -e --arg tag "$RELEASE_TAG" '
+                .tag_name == $tag and .draft == false and
+                .prerelease == false and .published_at != null and
+                .immutable == true' > /dev/null
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
           fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact release checkout
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$(git rev-list -n 1 "$RELEASE_TAG")"
+
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.x'
+          python-version: '3.13.15'
           cache: 'pip'
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '20'
+          node-version: '24.20.0'
           cache: 'npm'
           cache-dependency-path: docs/website/package-lock.json
+
       - name: Install MkDocs dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --disable-pip-version-check \
+            --require-hashes -r requirements.txt
+          python .github/scripts/generate_mkdocs_licenses.py --check
+
       - name: Build React website
         working-directory: docs/website
         run: |
-          npm ci
+          set -euo pipefail
+          npm ci --include=dev
+          npm audit --audit-level=high
+          npm run licenses:check
+          npm run lint
           npm run build
+          test -s out/LICENSE
+          test -s out/NOTICE
+          test -s out/THIRD_PARTY_LICENSES.txt
+          grep -F 'SIL OPEN FONT LICENSE Version 1.1' out/THIRD_PARTY_LICENSES.txt
+          grep -F 'Next.js' out/THIRD_PARTY_LICENSES.txt
+          grep -F 'React' out/THIRD_PARTY_LICENSES.txt
+          grep -F 'Framer Motion' out/THIRD_PARTY_LICENSES.txt
+          grep -F 'Lucide' out/THIRD_PARTY_LICENSES.txt
+
       - name: Build MkDocs documentation
-        run: mkdocs build --strict
+        run: |
+          set -euo pipefail
+          mkdocs build --strict
+          python .github/scripts/generate_mkdocs_licenses.py \
+            --check --site site
+          test -s site/MKDOCS_THIRD_PARTY_LICENSES.txt
+          cmp docs/MKDOCS_THIRD_PARTY_LICENSES.txt \
+            site/MKDOCS_THIRD_PARTY_LICENSES.txt
+          grep -F 'Package: mkdocs-material 9.7.7' \
+            site/MKDOCS_THIRD_PARTY_LICENSES.txt
+
       - name: Combine pages
         run: |
+          set -euo pipefail
           mkdir -p deploy
           cp -r docs/website/out/* deploy/
           mkdir -p deploy/docs
           cp -r site/* deploy/docs/
+          cmp docs/website/out/LICENSE deploy/LICENSE
+          cmp docs/website/out/NOTICE deploy/NOTICE
+          cmp docs/website/out/THIRD_PARTY_LICENSES.txt deploy/THIRD_PARTY_LICENSES.txt
+          cmp docs/MKDOCS_THIRD_PARTY_LICENSES.txt \
+            deploy/docs/MKDOCS_THIRD_PARTY_LICENSES.txt
+          test -s deploy/index.html
+          test -s deploy/docs/index.html
+
       - name: Push to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./deploy

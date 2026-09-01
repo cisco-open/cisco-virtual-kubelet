@@ -13,9 +13,9 @@
 # limitations under the License.
 
 # Krew updates happen only after a release is public and immutable. This
-# workflow cannot change the CVK repository or its release assets. The first
-# krew-index submission is intentionally manual; later updates are handed to
-# Krew's recommended release bot without passing it a token or secret. After
+# workflow cannot change the CVK repository or its release assets. The public
+# cisco-vk entry already exists, so every release is handed to Krew's
+# recommended update bot without passing it a token or secret. After
 # submission, the workflow waits for the exact manifest to reach the official
 # index and verifies a clean install through that public index.
 
@@ -50,12 +50,12 @@ jobs:
       - name: Set up pinned Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.13.14'
+          python-version: '3.13.15'
 
       - name: Set up pinned Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.25.12'
+          go-version: '1.26.7'
           cache: true
 
       - name: Require the exact immutable published release
@@ -170,7 +170,7 @@ jobs:
       - name: Install pinned cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
-          cosign-release: v3.1.2
+          cosign-release: v3.1.3
 
       - name: Verify signed checksums and render the manifest
         env:
@@ -315,7 +315,8 @@ jobs:
           GITHUB_TOKEN: ''
           INPUT_KREW_PLUGIN_RELEASE_TAG: ${{ github.event.release.tag_name }}
           INPUT_KREW_TEMPLATE_FILE: dist/krew/cisco-vk.yaml
-        run: "$RUNNER_TEMP/krew-release-bot/krew-release-bot action"
+        run: |
+          "$RUNNER_TEMP/krew-release-bot/krew-release-bot" action
 
       - name: Wait for the exact official-index manifest
         if: steps.upstream.outputs.exists == 'true'

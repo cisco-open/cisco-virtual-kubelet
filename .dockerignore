@@ -1,1 +1,29 @@
+# Version-control and local tooling state.
 .git
+.github/scripts/__pycache__/
+.claude/
+.venv/
+**/.DS_Store
+
+# Local credentials and cluster material must never be sent to BuildKit.
+.env
+.env.*
+**/.env
+**/.env.*
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+**/*.kubeconfig
+
+# Build, test, and documentation output. None is required by the Go builds.
+bin/
+build/
+dist/
+site/
+cisco-vk
+kubectl-ciscovk
+coverage.out
+docs/website/.next/
+docs/website/node_modules/
+docs/website/out/

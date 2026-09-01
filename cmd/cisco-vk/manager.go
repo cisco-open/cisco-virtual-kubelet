@@ -23,6 +23,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -43,20 +44,22 @@ var (
 )
 
 var (
-	metricsAddr                string
-	enableLeaderElect          bool
-	probeAddr                  string
-	vkImage                    string
-	vkServiceAccount           string
-	enableAggregator           bool
-	controllerInfoLogRateLimit int
+	metricsAddr                     string
+	enableLeaderElect               bool
+	probeAddr                       string
+	vkImage                         string
+	controllerWorkerImage           string
+	controllerWorkerImagePullPolicy string
+	vkServiceAccount                string
+	enableAggregator                bool
+	controllerInfoLogRateLimit      int
 )
 
 var managerCmd = &cobra.Command{
 	Use:   "manager",
 	Short: "Start the CRD controller manager",
-	Long: `Start the Kubernetes controller manager that watches CiscoDevice
-custom resources and manages Virtual Kubelet deployments.`,
+	Long: `Start the Kubernetes controller manager that watches CiscoDevice and
+NetworkController custom resources and manages their isolated deployments.`,
 	RunE: runManager,
 }
 
@@ -74,7 +77,11 @@ func init() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	managerCmd.Flags().StringVar(&vkImage, "vk-image", controller.DefaultImage,
-		"Container image to use for Virtual Kubelet deployments.")
+		"Container image to use for per-device Virtual Kubelet deployments.")
+	managerCmd.Flags().StringVar(&controllerWorkerImage, "controller-worker-image", controller.DefaultImage,
+		"Adapter-bearing controller image to use for isolated network-controller workers.")
+	managerCmd.Flags().StringVar(&controllerWorkerImagePullPolicy, "controller-worker-image-pull-policy", string(corev1.PullIfNotPresent),
+		"Image pull policy for isolated network-controller workers (Always, IfNotPresent, or Never).")
 	managerCmd.Flags().StringVar(&vkServiceAccount, "vk-service-account", controller.DefaultServiceAccount,
 		"Service account name for Virtual Kubelet pods.")
 	managerCmd.Flags().BoolVar(&enableAggregator, "enable-config-aggregator", false,
@@ -90,6 +97,11 @@ func init() {
 }
 
 func runManager(cmd *cobra.Command, args []string) error {
+	switch corev1.PullPolicy(controllerWorkerImagePullPolicy) {
+	case corev1.PullAlways, corev1.PullIfNotPresent, corev1.PullNever:
+	default:
+		return fmt.Errorf("invalid --controller-worker-image-pull-policy %q", controllerWorkerImagePullPolicy)
+	}
 	controllerDebug, err := controllerDebugLogging()
 	if err != nil {
 		return err
@@ -115,11 +127,19 @@ func runManager(cmd *cobra.Command, args []string) error {
 		setupLog.Error(crdErr, "required CRD preflight failed")
 		os.Exit(1)
 	}
-	if len(missingCRDs) > 0 {
-		for _, name := range missingCRDs {
+	blockingCRDs, missingControllerCRDs := partitionMissingRequiredCRDs(missingCRDs)
+	if len(blockingCRDs) > 0 {
+		for _, name := range blockingCRDs {
 			setupLog.Error(nil, fmt.Sprintf("required CRD %s not present — apply charts/cisco-virtual-kubelet/crds/ before starting cisco-vk", name))
 		}
 		os.Exit(1)
+	}
+	controllerFoundationAvailable := len(missingControllerCRDs) == 0
+	if !controllerFoundationAvailable {
+		for _, name := range missingControllerCRDs {
+			setupLog.Info("network-controller CRD not present; preserving existing manager reconcilers and disabling the network-controller scaffold for this process", "crd", name)
+		}
+		setupLog.Info("apply charts/cisco-virtual-kubelet/crds/ and restart this Deployment to enable NetworkController reconciliation")
 	}
 
 	if err != nil {
@@ -184,6 +204,18 @@ func runManager(cmd *cobra.Command, args []string) error {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CiscoDevice")
 		os.Exit(1)
+	}
+
+	if controllerFoundationAvailable {
+		if err = (&controller.NetworkControllerReconciler{
+			Client:          mgr.GetClient(),
+			Image:           controllerWorkerImage,
+			ImagePullPolicy: corev1.PullPolicy(controllerWorkerImagePullPolicy),
+			Recorder:        mgr.GetEventRecorderFor("networkcontroller-controller"),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "NetworkController")
+			os.Exit(1)
+		}
 	}
 
 	if err = (&controller.IOSXEConfigBundleReconciler{

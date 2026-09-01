@@ -1,0 +1,462 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: networkcontrollers.cisco.vk
+spec:
+  group: cisco.vk
+  names:
+    kind: NetworkController
+    listKind: NetworkControllerList
+    plural: networkcontrollers
+    shortNames:
+    - netctrl
+    singular: networkcontroller
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.type
+      name: Type
+      type: string
+    - jsonPath: .spec.endpoint
+      name: Endpoint
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.controllerVersion
+      name: Version
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: NetworkController declares a controller endpoint and its connection
+          policy.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              NetworkControllerSpec declares one external network-controller endpoint.
+              Controller type and endpoint are immutable because redirecting either in
+              place would make existing status, task IDs, and ownership claims ambiguous.
+            properties:
+              connection:
+                default: {}
+                description: Connection configures neutral request and health-check
+                  bounds.
+                properties:
+                  healthCheckInterval:
+                    default: 1m
+                    description: |-
+                      HealthCheckInterval is the cadence for controller reachability checks and
+                      must be in [30s, 24h].
+                    type: string
+                    x-kubernetes-validations:
+                    - message: healthCheckInterval must be at least 30s and at most
+                        24h
+                      rule: duration(self) >= duration('30s') && duration(self) <=
+                        duration('24h')
+                  maxConcurrentRequests:
+                    default: 4
+                    description: MaxConcurrentRequests bounds in-flight calls for
+                      this endpoint.
+                    format: int32
+                    maximum: 64
+                    minimum: 1
+                    type: integer
+                  rateLimit:
+                    description: RateLimit optionally overrides the adapter's endpoint
+                      rate policy.
+                    properties:
+                      burst:
+                        description: Burst is the maximum instantaneous request burst.
+                        format: int32
+                        maximum: 10000
+                        minimum: 1
+                        type: integer
+                      requestsPerSecond:
+                        description: RequestsPerSecond is the sustained request rate.
+                        format: int32
+                        maximum: 10000
+                        minimum: 1
+                        type: integer
+                    required:
+                    - burst
+                    - requestsPerSecond
+                    type: object
+                  requestTimeout:
+                    default: 30s
+                    description: RequestTimeout bounds one controller API request
+                      to (0s, 24h].
+                    type: string
+                    x-kubernetes-validations:
+                    - message: requestTimeout must be greater than 0s and at most
+                        24h
+                      rule: duration(self) > duration('0s') && duration(self) <= duration('24h')
+                type: object
+              credentialSecretRef:
+                description: |-
+                  CredentialSecretRef names the controller credential Secret in this
+                  NetworkController's namespace.
+                properties:
+                  name:
+                    description: Name of the Secret.
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                required:
+                - name
+                type: object
+              endpoint:
+                description: |-
+                  Endpoint is the immutable HTTPS base URL for one logical controller.
+                  Credentials in URL userinfo are rejected by runtime validation. Create a
+                  new NetworkController instead of redirecting task and ownership state to a
+                  different endpoint.
+                maxLength: 2048
+                pattern: ^https://[^[:space:]]+$
+                type: string
+                x-kubernetes-validations:
+                - message: endpoint must not contain URL userinfo, query, or fragment
+                    components
+                  rule: '!self.contains(''@'') && !self.contains(''?'') && !self.contains(''#'')'
+              intentSecretSources:
+                description: |-
+                  IntentSecretSources is the controller-owned authorization allow-list for
+                  sensitive values injected into Network as Code intent. Config resources
+                  can reference these entries only by Alias; Secret names and keys remain
+                  centralized on this endpoint object for review and worker-volume wiring.
+                items:
+                  description: |-
+                    NetworkControllerIntentSecretSource authorizes one Secret key for use by
+                    controller-centric Network as Code intent. NetworkControllerConfig objects
+                    refer to Alias only; they can never broaden the worker's Secret access by
+                    naming an arbitrary Secret or key themselves.
+
+                    All references are implicitly in the NetworkController's namespace.
+                  properties:
+                    alias:
+                      description: |-
+                        Alias is the stable, non-sensitive name used by
+                        NetworkControllerConfig.spec.secretRefs[].source.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z]([a-z0-9-]*[a-z0-9])?$
+                      type: string
+                    key:
+                      description: Key selects one entry from Secret.data.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[-._a-zA-Z0-9]+$
+                      type: string
+                    name:
+                      description: Name is the Secret in the same namespace as the
+                        NetworkController.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                  required:
+                  - alias
+                  - key
+                  - name
+                  type: object
+                maxItems: 128
+                type: array
+                x-kubernetes-list-map-keys:
+                - alias
+                x-kubernetes-list-type: map
+              paused:
+                default: false
+                description: Paused stops external reconciliation while retaining
+                  observed status.
+                type: boolean
+              preferredAPIVersion:
+                description: |-
+                  PreferredAPIVersion optionally pins an adapter-supported API version.
+                  Empty requests adapter discovery and negotiation.
+                maxLength: 128
+                type: string
+              tls:
+                description: TLS controls controller server trust.
+                properties:
+                  caConfigMapRef:
+                    description: |-
+                      CAConfigMapRef selects a PEM CA bundle. When omitted, the system trust
+                      store is used.
+                    properties:
+                      key:
+                        description: Key containing the PEM-encoded CA bundle.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[-._a-zA-Z0-9]+$
+                        type: string
+                      name:
+                        description: Name of the ConfigMap.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  insecureSkipVerify:
+                    default: false
+                    description: |-
+                      InsecureSkipVerify disables server certificate verification. It exists
+                      only for controlled lab migrations and defaults to false.
+                    type: boolean
+                type: object
+                x-kubernetes-validations:
+                - message: insecureSkipVerify cannot be combined with caConfigMapRef
+                  rule: '!has(self.caConfigMapRef) || !self.insecureSkipVerify'
+              type:
+                description: |-
+                  Type selects a registered controller adapter, for example
+                  catalyst-center or nso.
+                maxLength: 63
+                minLength: 1
+                pattern: ^[a-z]([a-z0-9-]*[a-z0-9])?$
+                type: string
+            required:
+            - credentialSecretRef
+            - endpoint
+            - type
+            type: object
+            x-kubernetes-validations:
+            - message: type is immutable
+              rule: self.type == oldSelf.type
+            - message: endpoint is immutable; create a new NetworkController for a
+                different endpoint
+              rule: self.endpoint == oldSelf.endpoint
+          status:
+            description: |-
+              NetworkControllerStatus is the bounded observed state of a controller
+              endpoint. It never contains credentials, tokens, or raw API responses.
+            properties:
+              apiVersion:
+                description: APIVersion is the negotiated controller API version.
+                maxLength: 128
+                type: string
+              capabilities:
+                description: Capabilities is the adapter capability summary for this
+                  endpoint.
+                items:
+                  description: NetworkControllerCapabilityStatus reports one optional
+                    adapter capability.
+                  properties:
+                    message:
+                      description: Message is a bounded, sanitized explanation.
+                      maxLength: 512
+                      type: string
+                    name:
+                      description: Name is a stable, low-cardinality capability key.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z]([a-z0-9-]*[a-z0-9])?$
+                      type: string
+                    supported:
+                      description: Supported reports whether this endpoint exposes
+                        the capability.
+                      type: boolean
+                  required:
+                  - name
+                  - supported
+                  type: object
+                maxItems: 32
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              conditions:
+                description: Conditions follows the standard Kubernetes conditions
+                  shape.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                maxItems: 32
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              controllerVersion:
+                description: ControllerVersion is the discovered product version.
+                maxLength: 128
+                type: string
+              lastAttemptTime:
+                description: LastAttemptTime records the most recent connection attempt.
+                format: date-time
+                type: string
+              lastSuccessfulConnectionTime:
+                description: |-
+                  LastSuccessfulConnectionTime records the most recent successful API
+                  exchange.
+                format: date-time
+                type: string
+              netAsCode:
+                description: |-
+                  NetAsCode is the controller-centric model contract advertised by the
+                  adapter.
+                properties:
+                  format:
+                    description: |-
+                      Format is the qualified model format, for example
+                      netascode-catalyst-center.
+                    pattern: ^netascode-[a-z0-9]+(-[a-z0-9]+)*$
+                    type: string
+                  modelVersions:
+                    description: ModelVersions lists versions qualified by this adapter
+                      build.
+                    items:
+                      maxLength: 128
+                      minLength: 1
+                      type: string
+                    maxItems: 16
+                    type: array
+                    x-kubernetes-list-type: set
+                  sections:
+                    description: |-
+                      Sections lists the controller-centric sections understood by the
+                      adapter.
+                    items:
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z][a-z0-9_]*$
+                      type: string
+                    maxItems: 64
+                    type: array
+                    x-kubernetes-list-type: set
+                  stripe:
+                    description: Stripe is the upstream Network as Code technology
+                      stripe.
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-z][a-z0-9_]*$
+                    type: string
+                required:
+                - format
+                - stripe
+                type: object
+              observedGeneration:
+                description: ObservedGeneration is the metadata generation most recently
+                  processed.
+                format: int64
+                type: integer
+              phase:
+                description: Phase is a coarse connection summary.
+                enum:
+                - Pending
+                - Connecting
+                - Ready
+                - Degraded
+                - Error
+                - Paused
+                type: string
+              worker:
+                description: Worker identifies the isolated connector worker for this
+                  endpoint.
+                properties:
+                  deploymentName:
+                    description: |-
+                      DeploymentName is the namespaced Kubernetes Deployment that runs the
+                      connector worker.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  name:
+                    description: Name is the stable logical worker name.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  readyReplicas:
+                    description: ReadyReplicas is copied from the worker Deployment
+                      status.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                required:
+                - deploymentName
+                - name
+                type: object
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

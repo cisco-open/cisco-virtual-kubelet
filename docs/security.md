@@ -4,17 +4,29 @@ This page covers credential handling, TLS configuration, and the RBAC model.
 
 ## Credential injection
 
-Device credentials **never** reach etcd in plaintext. The controller enforces this at two layers:
+With `credentialSecretRef`, the controller keeps device credentials out of the
+`CiscoDevice`, generated ConfigMap, and literal Deployment environment values:
 
 1. Before the `DeviceSpec` is marshalled into the ConfigMap, both `password` and `credentialSecretRef` are stripped.
-2. The VK pod's Deployment gets `VK_DEVICE_PASSWORD` as an environment variable sourced from a Secret via `valueFrom.secretKeyRef`. The controller itself never reads the Secret.
+2. The VK pod's Deployment gets `VK_DEVICE_PASSWORD` as an environment variable sourced from a Secret via `valueFrom.secretKeyRef`.
+3. To roll the VK pod when credentials rotate, the manager watches referenced
+   Secrets and reads their `resourceVersion`. Reconciliation does not inspect
+   `.data`, but the typed Secret objects entering the manager cache/API client
+   still contain that data. Treat the manager's Secret RBAC and memory as part
+   of the credential trust boundary.
+
+Kubernetes Secret objects are still stored in etcd. Base64 encoding is not
+encryption; enable Kubernetes
+[encryption at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/)
+and restrict Secret RBAC for production clusters.
 
 ```mermaid
 graph LR
     CR[CiscoDevice CR<br/>credentialSecretRef: creds] --> Ctrl[Controller]
     Ctrl --> CM[ConfigMap<br/>password STRIPPED]
     Ctrl --> Dep[Deployment<br/>env from secretKeyRef]
-    Secret[Secret<br/>key: password] -.->|host kubelet reads| Pod[VK Pod]
+    Secret[Secret<br/>key: password] -.->|metadata event| Ctrl
+    Secret -.->|host kubelet reads value| Pod[VK Pod]
     Dep --> Pod
     Pod -->|VK_DEVICE_PASSWORD| App[cisco-vk run]
 
@@ -81,11 +93,16 @@ To rotate a device password without recreating the `CiscoDevice`:
 # 2. Update the Secret
 kubectl patch secret cat9000-1-creds --type merge \
   -p '{"stringData":{"password":"new-password"}}'
-# 3. Restart the VK pod so it picks up the new env var
-kubectl -n default rollout restart deploy/cat9000-1-vk
+# 3. The Secret watch updates the pod-template annotation and rolls the VK pod
+kubectl -n default rollout status deploy/cat9000-1-vk
 ```
 
-The controller sets a `cisco.vk/config-hash` annotation on the pod template that only changes when the ConfigMap changes, so Secret-only rotations do not auto-restart the pod. Use an explicit `rollout restart`. See [Managing credentials across multiple devices → Bulk rotation](#bulk-rotation) for fleet-wide workflows.
+The controller maps a referenced Secret event back to every affected
+`CiscoDevice` and places that Secret's current `resourceVersion` in the pod
+template's `cisco.vk/credential-resource-version` annotation. A Secret update
+therefore creates a Deployment rollout automatically; `cisco.vk/config-hash`
+continues to cover ConfigMap changes. See [Managing credentials across multiple
+devices → Bulk rotation](#bulk-rotation) for fleet-wide workflows.
 
 ### Managing credentials across multiple devices
 
@@ -207,11 +224,15 @@ If you want the same password in two namespaces, duplicate the Secret (ideally m
 
 | Scenario | Approach |
 |---|---|
-| Rotate one device | `kubectl patch secret <name> --type merge -p '{"stringData":{"password":"<new>"}}'` → `kubectl rollout restart deploy/<device>-vk` |
-| Rotate a shared Secret (Pattern 2) | Same patch — then `kubectl rollout restart` every Deployment that references it (loop on label selector) |
-| Rotate the whole namespace | Update all Secrets, then `kubectl rollout restart deploy -n <ns> -l app.kubernetes.io/name=cisco-vk` |
+| Rotate one device | Patch its Secret; the controller automatically rolls the referencing VK Deployment. Verify with `kubectl rollout status deploy/<device>-vk`. |
+| Rotate a shared Secret (Pattern 2) | Patch it once; the Secret watch reconciles and rolls every referencing VK Deployment in that namespace. |
+| Rotate the whole namespace | Update each Secret; wait for the affected Deployments to complete their automatic rollouts. |
 
-The controller's `cisco.vk/config-hash` annotation only changes when the **ConfigMap** changes. Secret-only updates never trigger a pod rollout on their own — an explicit rollout restart is required for the env var to be re-read.
+If the automatic rollout does not begin, confirm that the manager is healthy,
+the `CiscoDevice` still references the updated same-namespace Secret, and the
+Deployment's `cisco.vk/credential-resource-version` matches the Secret's
+`metadata.resourceVersion`. A manual `kubectl rollout restart` is a
+troubleshooting fallback, not the normal rotation path.
 
 #### GitOps and external secret managers
 
@@ -318,7 +339,9 @@ On k3s clusters that reject self-signed kubelet certs, set `kubelet-certificate-
 
 ## RBAC model
 
-The Helm chart creates two service accounts with scoped ClusterRoles.
+The Helm chart installs the manager and VK service accounts plus the reusable
+ClusterRoles needed by isolated runtimes. The manager creates a unique service
+account for each network-controller worker when that runtime is requested.
 
 ### Controller service account (`cisco-virtual-kubelet-controller`)
 
@@ -329,10 +352,19 @@ Used by the `manager` pod. Permissions (from kubebuilder markers):
 | `cisco.vk/ciscodevices` | get, list, watch, update, patch | cluster |
 | `cisco.vk/ciscodevices/status` | get, update, patch | cluster |
 | `configmaps` | get, list, watch, create, update, patch, delete | cluster |
+| `secrets` | get, list, watch | cluster; used for `CiscoDevice` credential-rotation watches and by the optional in-process config aggregator; installed unconditionally |
 | `deployments` (`apps`) | get, list, watch, create, update, patch, delete | cluster |
 | `nodes` | get, list, watch, delete | cluster |
 
-The controller **never** needs `secrets` permission — it references Secrets but does not read them. Kubernetes' own kubelet (on the real cluster node where the VK pod runs) resolves the Secret at pod-start time.
+The network-controller orchestration path does not request Secret values: it
+writes only authorized references into Pod volume sources, and the kubelet
+resolves them. However, the shared manager ServiceAccount has cluster-wide
+read-only Secret permission, the `CiscoDevice` reconciler watches typed Secret
+objects for credential rotation, and the optional in-process aggregator also
+uses the grant. Consequently Secret data can enter the manager process/cache
+even when network-controller workers consume only projected files. The grant
+is generated and installed even when aggregator mode and the optional
+network-controller scaffold are off.
 
 ### VK pod service account (`cisco-virtual-kubelet`)
 
@@ -347,6 +379,131 @@ Used by each VK pod. Permissions:
 | `persistentvolumes`, `persistentvolumeclaims` | get, list, watch | Not used directly today; reserved for future volume support |
 | `events` | create, patch | Emit pod lifecycle events |
 | `leases` (in `kube-node-lease`) | get, list, watch, create, update, patch, delete | Node heartbeat via Lease API |
+
+### Network-controller CRD validation prerequisite
+
+The controller APIs use CEL transition rules (`oldSelf`) to enforce immutable
+endpoint and intent identity. Kubernetes 1.28 is supported only with the
+`CustomResourceValidationExpressions` feature gate enabled; that feature is
+beta and enabled by default in 1.28. It is GA in Kubernetes 1.29 and later.
+CVK's runtime validation is defense in depth for the current object shape, but
+it cannot compare the previous object and does not replace CEL immutability.
+Do not operate controller workers on an API server where CEL transition
+validation is disabled.
+
+### Network-controller worker service accounts
+
+Each `NetworkController` gets a unique ServiceAccount and a **namespaced**
+RoleBinding to the reusable
+`cisco-virtual-kubelet-controller-worker` ClusterRole. There is deliberately no
+ClusterRoleBinding. The worker can read controller resources, controller
+intent, and source ConfigMaps across its namespace; update only the two CRDs'
+`/status` subresources; and emit bounded Events. The base role deliberately has
+no coordination Lease permission. It cannot update or patch either main
+resource, including its spec, metadata, and finalizers. It also cannot read
+Secrets, Nodes, Pods, workloads, or another namespace.
+
+A unique worker ServiceAccount provides distinct identity and auditing, not
+endpoint-scoped authorization. Its RoleBinding authorizes update/patch of the
+`/status` subresource for **every** `NetworkController` and
+`NetworkControllerConfig` in the namespace, not just the endpoint named in its
+bootstrap. The endpoint object cache is name-filtered and the common contract
+gate constrains a conforming adapter, but neither is an authorization boundary;
+configuration/source caches and the RoleBinding remain namespace-scoped. The
+namespace is therefore the Kubernetes API trust, RBAC, status-write, and cache
+boundary. Per-endpoint workers separately isolate process lifetime, mounted
+credentials, native sessions, failure, and rate limits. Use one
+`NetworkController` per dedicated namespace whenever endpoints, adapter code,
+or configuration authors are not mutually trusted.
+
+Within one namespace, the manager fences multiple controller objects whose
+stored `spec.endpoint` values are exactly equal. The deterministic owner is the
+earliest creation timestamp, then lexicographically smallest name, then UID;
+non-owners remain quiesced and periodically requeue so they can activate after
+owner deletion. The elected owner must actively remove every managed loser
+worker before it can start its own, so delayed peer events cannot permit an
+overlap. This first guard deliberately does not normalize URLs or detect
+equivalent endpoints across namespaces or clusters, so those stronger identity
+policies remain an operational and future-design responsibility.
+
+A future per-controller cache optimization may use a manager-owned
+key-existence label such as `nc.cisco.vk/<uid-hash>: "true"` on configs and
+source objects; a shared ConfigMap may carry several controller keys.
+Manager-owned stamping/cleanup and a bounded, collision-tested UID hash are
+prerequisites. This can reduce watch fan-out and memory, but it is non-security
+work: labels and cache filters do not reduce the namespace-wide API authority
+described above.
+
+The manager associates worker resources with their endpoint by explicit
+controller name/UID annotations, not Kubernetes owner references. Its
+protection finalizer retains those resources while dependent controller configs
+exist and removes them explicitly only after the dependency check succeeds.
+This prevents foreground garbage collection from bypassing the default
+`Retain` lifecycle. If a generated name is already occupied by an object with
+missing or different identity annotations, the manager refuses adoption,
+leaves the foreign object unchanged, and emits a sanitized Warning Event with
+reason `WorkerObjectCollision`. Operators can inspect it with:
+
+```bash
+kubectl events -n <namespace> \
+  --for networkcontroller/<name> \
+  --types=Warning
+```
+
+The endpoint credential Secret is mounted read-only by the kubelet instead of
+being fetched through the Kubernetes API. Any future adapter-specific
+permission set must be a separate, statically reviewed ClusterRole selected by
+the adapter descriptor and accepted by the registry's closed allow-list. Its
+chart definition and the manager's exact `bind` grant must land in the same
+reviewed change. See the
+[Network Controller Extension Guide](controller-extension-guide.md#security-boundary)
+for the complete worker and credential contract.
+
+Projected credential, CA, and intent-Secret files can rotate without a Pod
+restart, but a projection update does not inherently enqueue an adapter
+reconcile. A generic worker-owned watcher therefore checks Kubernetes
+AtomicWriter `..data` symlinks every five seconds without reading or hashing
+projected values. It passes the adapter one coalescing material-change channel
+and a fifteen-minute maximum session lifetime. The adapter must consume and
+internally fan out that signal, discard cached authentication/TLS state,
+re-read mounted files, and requeue affected work before its next external
+request. It must independently rebuild clients and sessions by the maximum
+lifetime even if no signal arrives.
+
+Remote mutation remains a future gated profile. Before any adapter may honor
+`apply`, pruning, or remote deletion, CVK must provide a shared
+controller-neutral `SectionLeaser`, pass ownership/renewal/takeover/API-loss
+conformance tests, and install a **separate**, statically reviewed mutation
+RBAC role containing only the required coordination Lease authority. The
+manager may bind that role only through an explicit audited allow-list, and
+registry validation must reject every other role name. Lease verbs must not be
+added back to the base report-only worker role.
+
+### Controller intent Secret authorization
+
+Controller-intent Secrets use a two-resource authorization boundary.
+Administrators define
+`NetworkController.spec.intentSecretSources`, an alias-to-same-namespace
+Secret name/key allow-list. Configuration authors may then use
+`NetworkControllerConfig.spec.secretRefs[].source` to select an alias and
+destination section/path, but cannot submit an arbitrary Secret name or key.
+
+The manager projects only administrator-approved aliases into the worker Pod.
+This projection path does not inspect Secret `.data`, and the worker has no
+Secret API permission; the kubelet resolves the read-only volume. The shared
+manager cache caveat described above still applies. This prevents a user who
+can create controller configs from using the projection logic as a confused
+Secret-read deputy.
+Cluster RBAC must therefore reserve `NetworkController` writes for the
+administrator role and delegate `NetworkControllerConfig` independently.
+
+For an unauthorized, invalid, or excess projection, the manager skips that
+projection and emits a sanitized `IntentSecretProjectionSkipped` warning/event;
+it does not set config status. A missing or unresolved projected file remains
+optional at Pod-mount time. The adapter skips only the affected config and
+reports `IntentSecretsReady=False` through its status. Neither failure stops
+the endpoint worker or prevents other valid controller configs from
+reconciling.
 
 ### Production RBAC hardening
 
@@ -399,8 +556,16 @@ This is the only path that removes the virtual node cleanly — do not delete th
 
 ## Principles
 
-- **Credentials never land in etcd in plaintext.** They live in Secrets, which are at rest encrypted when the cluster has encryption-at-rest configured.
-- **Minimum privilege on the controller.** The controller holds no `secrets` permission. Reading them is delegated to the kubelet at pod-start time.
+- **Credentials stay out of ordinary CRs and ConfigMaps.** They live in
+  Secrets, which are protected at rest only when the cluster enables
+  encryption at rest; Secret RBAC remains part of the security boundary.
+- **No requested Secret values in the network-controller path.** Controller
+  orchestration writes authorized volume references and workers consume
+  projected files; the kubelet resolves the values. The shared manager still
+  has cluster-wide Secret `get`, `list`, and `watch`, and typed Secret objects
+  can enter its cache through the `CiscoDevice` credential-rotation watch and
+  optional aggregator. Isolate and protect the manager accordingly.
+- **Administrator-approved controller intent Secrets.** Config authors select aliases only; administrators own the underlying Secret name/key allow-list.
 - **Per-device credentials.** Each `CiscoDevice` can reference a different Secret.
 - **Finalizer-managed cleanup.** Cluster-scoped resources owned by namespaced CRs are cleaned up explicitly.
 
@@ -408,4 +573,5 @@ This is the only path that removes the virtual node cleanly — do not delete th
 
 - [Configuration → Core](CONFIGURATION.md#core) — `password` and `credentialSecretRef` fields
 - [Architecture → Controller reconciliation](ARCHITECTURE.md#controller-reconciliation) — the flow from CR to deployed pod
+- [Network Controller Extension Guide](controller-extension-guide.md) — adapter isolation, Network as Code ownership, and worker RBAC
 - [Getting Started](getting-started.md) — end-to-end first deployment with a Secret

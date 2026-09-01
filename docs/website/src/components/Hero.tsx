@@ -31,7 +31,7 @@ export default function Hero() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
       <div className="absolute bottom-0 right-0 w-[600px] h-[400px] bg-accent/5 rounded-full blur-3xl" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
+      <div className="relative z-10 w-full min-w-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
         <div className="text-center">
           {/* Badge */}
           <motion.div
@@ -41,7 +41,7 @@ export default function Hero() {
             className="inline-flex items-center gap-2 px-4 py-2 mb-8 rounded-full bg-surface/80 backdrop-blur-sm border border-border text-sm text-text-muted"
           >
             <span className="flex h-2 w-2 rounded-full bg-success animate-pulse" />
-            Open Source — Apache 2.0 Licensed
+            Open Source · Apache-2.0 Project Code
           </motion.div>
 
           {/* Title */}
@@ -124,7 +124,7 @@ export default function Hero() {
                   <span className="text-accent-light"> \</span>
                   {"\n  "}
                   <span className="text-accent-light">--version</span>{" "}
-                  <span className="text-foreground">2026.8.1</span>{" "}
+                  <span className="text-foreground">2026.9.0</span>{" "}
                   <span className="text-accent-light">\</span>
                   {"\n  "}
                   <span className="text-accent-light">--namespace</span>{" "}

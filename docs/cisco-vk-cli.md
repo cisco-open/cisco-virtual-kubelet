@@ -5,8 +5,9 @@ Cisco Virtual Kubelet exposes two command-line surfaces:
 - **`kubectl-ciscovk` plugin** — an operator tool for read-only, ad-hoc IOS-XE
   commands. The current implementation provides `exec`, `version`, and help.
 - **`cisco-vk` binary** — the backend. Its `manager` subcommand starts the
-  controller, while `run` starts one per-device Virtual Kubelet provider.
-  Helm normally manages both invocations.
+  controller, `run` starts one per-device Virtual Kubelet provider, and the
+  internal `controller-worker` subcommand starts one registered network-
+  controller adapter. Helm and the manager normally own these invocations.
 
 ---
 
@@ -14,9 +15,8 @@ Cisco Virtual Kubelet exposes two command-line surfaces:
 
 ### Install with Krew
 
-The plugin is named `cisco-vk` in Krew, following Krew's hyphenated vendor-name
-guidance. Once the initial manifest has been accepted into the public Krew
-index, installation and upgrades are:
+The plugin is named `cisco-vk` in the public Krew index, following Krew's
+hyphenated vendor-name guidance. Installation and upgrades are:
 
 ```bash
 kubectl krew update
@@ -31,12 +31,10 @@ kubectl cisco-vk version
 
 The archive's executable remains `kubectl-ciscovk`, so existing manual/source
 installs can continue to use `kubectl ciscovk`. Krew exposes the conventional
-`kubectl cisco-vk` alias. The initial index submission is intentionally gated on
-the first public release that contains the signed plugin archives.
-`v2026.08.0` predates those assets; `v2026.8.1` is the first plugin-bearing
-release. The Krew command above will not be available until that release's
-initial index submission is accepted. The project release workflow validates
-Linux and macOS on both amd64 and arm64; Windows is not advertised yet.
+`kubectl cisco-vk` alias. Historical note: `v2026.08.0` predates the signed
+plugin assets, and `v2026.8.1` was the first plugin-bearing release. The
+project release workflow validates Linux and macOS on both amd64 and arm64;
+Windows is not advertised yet.
 
 ### Install a signed release archive
 
@@ -50,7 +48,7 @@ signed checksum authority, and installs the plugin:
 set -euo pipefail
 
 # Set this to an asset-bearing release shown on the Releases page.
-VERSION=v2026.8.1
+VERSION=v2026.9.0
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 case "$OS" in
   darwin|linux) ;;
@@ -103,9 +101,8 @@ kubectl ciscovk --help
 
 ### Build from source
 
-For development, or until the first plugin-bearing release is available, build
-the plugin from the current source tree and place it on your `PATH` using the
-standard `kubectl-<name>` filename:
+For development or a custom build, build the plugin from the current source
+tree and place it on your `PATH` using the standard `kubectl-<name>` filename:
 
 ```bash
 git clone https://github.com/cisco-open/cisco-virtual-kubelet.git
@@ -201,6 +198,24 @@ status, RBAC, and maturity.
 
 ---
 
+## cisco-vk version
+
+Use either form to identify the backend binary before an install, upgrade, or
+support request:
+
+```bash
+cisco-vk version
+cisco-vk --version
+```
+
+Both print the same release provenance:
+
+```text
+cisco-vk v2026.9.0 (commit=<full-git-commit>, built=<RFC3339-time>)
+```
+
+A direct development build reports `devel` and may report `unknown` metadata.
+
 ## cisco-vk run
 
 `cisco-vk run` starts the Virtual Kubelet provider for a single device. The
@@ -251,9 +266,22 @@ CISCO_VK_GNOI_DISABLED=1 cisco-vk run --config /etc/cisco-vk/cat9300-1.yaml
 
 ## cisco-vk manager
 
-Starts the Kubernetes controller manager. Watches `CiscoDevice` custom
-resources and creates a ConfigMap + Deployment for each one. Also runs the
-`IOSXEConfigBundle` fan-out controller.
+Starts the Kubernetes controller manager. It watches `CiscoDevice` resources
+and creates their per-device VK ConfigMaps and Deployments, watches
+`NetworkController` resources and creates an isolated, namespace-scoped worker
+for each registered adapter type, and runs the `IOSXEConfigBundle` fan-out
+controller. The manager performs no product-controller API calls. Unknown or
+unregistered types produce no worker Deployment. If a separately supplied
+worker image has a different descriptor, its process exits before adapter
+setup or an external controller request. Worker Pod arguments also bind the
+`NetworkController` generation used to build its credential and CA projections;
+a stale Pod rejects a live generation mismatch before adapter setup.
+
+!!! warning "Alpha controller extension"
+    The September image registers zero product adapters. The generic API and
+    worker boundary are Alpha and report-only: no Catalyst Center, APIC,
+    Meraki, or other controller is contacted, and there is no apply, prune, or
+    remote-delete runtime or mutation RBAC role in this release.
 
 ### Flags
 
@@ -263,17 +291,34 @@ resources and creates a ConfigMap + Deployment for each one. Also runs the
 | `--health-probe-bind-address` | — | `:8081` | `/healthz` and `/readyz` probes. |
 | `--leader-elect` | — | `false` | Enable leader election for HA deployments. |
 | `--vk-image` | — | `ghcr.io/cisco/virtual-kubelet-cisco:latest` | Container image for per-device VK pods. |
+| `--controller-worker-image` | — | `ghcr.io/cisco/virtual-kubelet-cisco:latest` | Adapter-bearing image for isolated `NetworkController` workers. Its registered descriptor must match the manager's descriptor digest. |
+| `--controller-worker-image-pull-policy` | — | `IfNotPresent` | Worker image pull policy: `Always`, `IfNotPresent`, or `Never`. |
 | `--vk-service-account` | — | `cisco-virtual-kubelet` | Service account injected into VK Deployments. |
 | `--enable-config-aggregator` | — | `false` | Run `IOSXEConfig` reconciliation in-process rather than in each VK pod (experimental). |
 | `--log-level` | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error`. |
 | `--controller-info-log-rate-limit` | — | `100` | Max info log lines/sec from the reconciler. |
 
-The `--vk-image` value above is the binary's direct-invocation fallback. The
-Helm chart always passes an explicit value resolved from `image`/`vkImage`; its
-published default is
-`ghcr.io/cisco-open/cisco-virtual-kubelet:<chart-appVersion>`. When starting
-`cisco-vk manager` outside Helm, set `--vk-image` explicitly to the image tag
-you intend each per-device VK Deployment to run.
+The image values above are binary direct-invocation fallbacks. The Helm chart
+passes explicit values with separate meanings:
+
+- `controllerImage` selects both the manager Deployment and the isolated
+  network-controller worker image. This guarantees the worker contains the
+  same adapter registrations as the manager; the descriptor digest provides a
+  second fail-closed check.
+- `controllerImage.pullPolicy` becomes
+  `--controller-worker-image-pull-policy` as well as the manager Pod's pull
+  policy.
+- `vkImage` selects only per-device VK Deployments created for `CiscoDevice`.
+  It does not select a network-controller worker image.
+- The shared `image` is the fallback for both overrides. Its published default
+  is `ghcr.io/cisco-open/cisco-virtual-kubelet:<chart-appVersion>`.
+
+When starting `cisco-vk manager` outside Helm, set both worker image flags and
+`--vk-image` explicitly for the runtime images and pull behavior you intend.
+The manager-generated network-controller worker does not currently propagate
+`imagePullSecrets`; use a registry the cluster can pull anonymously for this
+Alpha scaffold. Private-registry worker support requires a future explicit
+credential-propagation contract.
 
 ---
 
@@ -288,9 +333,10 @@ helm upgrade --install cvk ./charts/cisco-virtual-kubelet \
   --set controller.leaderElect=true
 ```
 
-The image tag defaults to the chart's `appVersion`. Use `controllerImage` or
-`vkImage` only when the controller and per-device VK pods must run different
-images.
+The image tag defaults to the chart's `appVersion`. `controllerImage` always
+applies to both the manager and its network-controller workers; `vkImage`
+applies only to per-device VK pods. Use the overrides when those runtime
+families must run different images.
 
 Key values:
 

@@ -53,7 +53,7 @@ const codeBlocks: Record<string, { language: string; code: string }> = {
     language: "bash",
     code: `# Install the published Helm chart and signed image from GHCR.
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \\
-  --version 2026.8.1 \\
+  --version 2026.9.0 \\
   --namespace cvk-system --create-namespace
 
 # Verify the CRD and controller are up
@@ -62,8 +62,7 @@ kubectl -n cvk-system get pods`,
   },
   plugin: {
     language: "bash",
-    code: `# Optional IOS-XE operator plugin. v2026.8.1 is the first
-# plugin-bearing release; Krew install begins after public-index acceptance.
+    code: `# Optional read-only IOS-XE operator plugin from the public Krew index.
 kubectl krew update
 kubectl krew install cisco-vk
 kubectl cisco-vk version
@@ -73,7 +72,8 @@ kubectl krew upgrade cisco-vk`,
   },
   config: {
     language: "yaml",
-    code: `# 1. Secret — device password, never in etcd plaintext
+    code: `# 1. Secret — keeps the password out of the CiscoDevice and ConfigMap.
+# Enable Kubernetes encryption at rest to protect Secret data in etcd.
 apiVersion: v1
 kind: Secret
 metadata:
@@ -143,7 +143,7 @@ export default function GetStarted() {
   };
 
   return (
-    <section id="get-started" className="py-24 relative">
+    <section id="get-started" className="py-24 relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/3 rounded-full blur-3xl" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
@@ -178,7 +178,7 @@ export default function GetStarted() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { label: "Kubernetes 1.28+", desc: "Any distribution" },
-              { label: "Helm v3", desc: "Installs the published OCI chart" },
+              { label: "Helm 3.21+ or 4.2+", desc: "Installs the published OCI chart" },
               { label: "kubectl", desc: "Configured for your cluster" },
               { label: "Cisco Device", desc: "IOS-XE (Cat 8000V/9000) or Nexus NX-OS (Beta)" },
             ].map((req) => (
@@ -264,9 +264,8 @@ export default function GetStarted() {
             </pre>
           </div>
           <p className="mt-5 text-sm text-text-muted text-center">
-            The CLI plugin is optional and currently targets IOS-XE diagnostics.
-            Until v2026.8.1 is published use the source build; after publication
-            and before public-index acceptance use its signed archive. See the{" "}
+            The public Krew plugin is optional and currently targets read-only
+            IOS-XE diagnostics. See the{" "}
             <a
               href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/cisco-vk-cli/"
               target="_blank"

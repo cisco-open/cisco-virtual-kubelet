@@ -179,3 +179,20 @@ func TestNetAsCodeCatalogKeepsSONICOpenConfigUntilNativeStripeExists(t *testing.
 		t.Fatalf("sonic type=%q, want device-centric", model.Type)
 	}
 }
+
+func TestNetAsCodeCatalogCatalystCenterSectionsMatchUpstreamModel(t *testing.T) {
+	want := []string{
+		"sites",
+		"network_settings",
+		"network_profiles",
+		"fabric",
+		"templates",
+		"inventory",
+		"wireless",
+		"lan_automation",
+		"system_settings",
+	}
+	if got := NetAsCodeCatalog["catalyst_center"].Sections; !slices.Equal(got, want) {
+		t.Fatalf("Catalyst Center sections=%v, want %v", got, want)
+	}
+}

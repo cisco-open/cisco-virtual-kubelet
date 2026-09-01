@@ -28,11 +28,13 @@ var rootCmd = &cobra.Command{
 	Short: "Cisco Virtual Kubelet",
 	Long: `Cisco Virtual Kubelet provides a Kubelet implementation backed by
 Cisco AppHosting, along with a Kubernetes controller manager for
-CiscoDevice custom resources.
+CiscoDevice and network-controller custom resources.
 
 Available subcommands:
-  run       Start the Virtual Kubelet provider
-  manager   Start the CRD controller manager`,
+	run                Start the Virtual Kubelet provider
+	manager            Start the CRD controller manager
+	controller-worker  Run one isolated network-controller adapter
+	version            Print build provenance`,
 }
 
 func init() {
@@ -41,8 +43,10 @@ func init() {
 	// OpenTelemetry SDK provider is process-specific and is set later once
 	// command configuration and OTLP env vars have been loaded.
 	vktrace.T = vkotel.Adapter{}
+	configureVersionSurface(rootCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(managerCmd)
+	rootCmd.AddCommand(controllerWorkerCmd)
 }
 
 func main() {

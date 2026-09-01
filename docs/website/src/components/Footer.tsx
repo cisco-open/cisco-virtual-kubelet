@@ -32,7 +32,15 @@ const footerLinks = {
     },
     {
       name: "License",
-      href: "https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/LICENSE",
+      href: "/cisco-virtual-kubelet/LICENSE",
+    },
+    {
+      name: "Notices",
+      href: "/cisco-virtual-kubelet/NOTICE",
+    },
+    {
+      name: "Third-party licenses",
+      href: "/cisco-virtual-kubelet/THIRD_PARTY_LICENSES.txt",
     },
   ],
   "Virtual Kubelet": [
@@ -133,14 +141,23 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-text-muted">
-            © {new Date().getFullYear()} Cisco Systems Inc. Licensed under{" "}
+            © {new Date().getFullYear()} Cisco Systems Inc. Project code under{" "}
             <a
-              href="https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/LICENSE"
+              href="/cisco-virtual-kubelet/LICENSE"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline"
             >
               Apache 2.0
+            </a>{" "}
+            ·{" "}
+            <a
+              href="/cisco-virtual-kubelet/THIRD_PARTY_LICENSES.txt"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              third-party terms apply
             </a>
           </p>
           <div className="flex items-center gap-4 text-sm text-text-muted">

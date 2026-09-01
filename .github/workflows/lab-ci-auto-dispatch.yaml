@@ -43,7 +43,7 @@ jobs:
         (github.event.workflow_run.name == 'smoke' ||
           (github.event.workflow_run.conclusion == 'success' &&
             startsWith(github.event.workflow_run.display_title, 'Lab CI approval signal [approved] for PR #'))))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       actions: write

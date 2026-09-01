@@ -1,0 +1,6 @@
+# These generated redistribution bundles preserve upstream license text,
+# including legally insignificant trailing spaces present in original notices.
+# Keep whitespace checks enabled everywhere else in the repository.
+docs/MKDOCS_THIRD_PARTY_LICENSES.txt -whitespace
+docs/website/public/THIRD_PARTY_LICENSES.txt -whitespace
+third_party/mkdocs-material/*/MERMAID_RUNTIME_LICENSES.txt -whitespace

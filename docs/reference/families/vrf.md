@@ -19,3 +19,5 @@ set present on the device are preserved (additive merge).
 
 - `rd`
 - `description`
+- `address_family_ipv4`
+- `address_family_ipv6`

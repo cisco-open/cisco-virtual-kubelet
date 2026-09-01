@@ -1,6 +1,7 @@
 # Default values for cisco-virtual-kubelet.
 
-# image is the shared default image for both the controller and VK pods.
+# image is the shared default image for the manager, controller-worker, and VK
+# pods.
 # Individual overrides (controllerImage / vkImage) take precedence when set.
 # tag defaults to the chart appVersion (the released image tag) when left empty.
 image:
@@ -8,15 +9,18 @@ image:
   tag: ""
   pullPolicy: IfNotPresent
 
-# controllerImage overrides the image used for the controller Deployment.
+# controllerImage overrides the image used for both the manager Deployment and
+# the isolated network-controller workers it creates. Both runtimes execute
+# subcommands from the same binary, so their image must remain identical.
 # When not set (repository: ""), the shared `image` above is used.
 controllerImage:
   repository: ""
   tag: ""
   pullPolicy: ""
 
-# vkImage overrides the image passed to the controller via --vk-image,
-# used when it spawns VK Deployments for each CiscoDevice.
+# vkImage overrides the image passed to the manager via --vk-image, used only
+# when it spawns per-device VK Deployments for CiscoDevice resources. It does
+# not select the network-controller worker image.
 # When not set (repository: ""), the shared `image` above is used.
 vkImage:
   repository: ""

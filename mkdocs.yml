@@ -1,11 +1,16 @@
 site_name: Cisco Virtual Kubelet
-copyright: Copyright © 2025-2026 Cisco Open. All Rights Reserved.
-site_url: https://cisco-open.github.io/cisco-virtual-kubelet/docs
-site_description: 'A Virtual Kubelet provider that enables Kubernetes to schedule container workloads on Cisco Catalyst series switches and IOS-XE devices with App-Hosting capabilities.'
+copyright: >-
+  Copyright © 2025-2026 Cisco Systems, Inc. All Rights Reserved. ·
+  <a href="/cisco-virtual-kubelet/LICENSE">Project license</a> ·
+  <a href="/cisco-virtual-kubelet/docs/MKDOCS_THIRD_PARTY_LICENSES.txt">MkDocs third-party licenses</a>
+site_url: https://cisco-open.github.io/cisco-virtual-kubelet/docs/
+site_description: 'A Virtual Kubelet provider for App-Hosting workloads on Cisco IOS-XE devices, with Beta support for Cisco Nexus NX-OS switches.'
 
 repo_name: cisco-open/cisco-virtual-kubelet
 repo_url: https://github.com/cisco-open/cisco-virtual-kubelet
 edit_uri: ""
+hooks:
+- .github/scripts/mkdocs_hooks.py
 
 markdown_extensions:
 - admonition
@@ -33,14 +38,19 @@ markdown_extensions:
     emoji_generator: !!python/name:material.extensions.emoji.to_svg ""
 nav:
 - Welcome: 'index.md'
+- Release Notes:
+  - v2026.9.0: 'releases/v2026.9.0.md'
 - Getting Started: 'getting-started.md'
 - Architecture: 'ARCHITECTURE.md'
+- Network Controller Extensions: 'controller-extension-guide.md'
 - CLI Reference: 'cisco-vk-cli.md'
 - Configuration:
   - CiscoDevice Reference: 'CONFIGURATION.md'
   - Network as Code: 'netascode-config.md'
+  - NetAsCode Migration: 'netascode-migration.md'
   - CRD Reference: 'crds.md'
   - Family Reference: 'reference/families/README.md'
+  - Family Parity Matrix: 'family-parity.md'
   - NX-OS Family Reference: 'reference/families-nxos.md'
   - NX-OS Configuration Recovery: 'nxos-recovery.md'
   - Catalyst 8000V: 'configuration-cat8000v.md'
@@ -60,9 +70,11 @@ nav:
   - Overview: 'observability.md'
   - Troubleshooting: 'troubleshooting.md'
 - Security: 'security.md'
+- Production Readiness: 'production-readiness.md'
 - API Reference: 'API.md'
 theme:
   name: material
+  font: false
   features:
   - content.code.copy
   - search.share
@@ -77,4 +89,7 @@ docs_dir: docs
 site_dir: site
 exclude_docs: |
   website/
+# Individual generated family pages are linked from the generated README index.
+not_in_nav: |
+  reference/families/*.md
 use_directory_urls: true

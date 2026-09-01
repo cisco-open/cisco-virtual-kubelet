@@ -1,0 +1,564 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: networkcontrollerconfigs.config.cisco.vk
+spec:
+  group: config.cisco.vk
+  names:
+    kind: NetworkControllerConfig
+    listKind: NetworkControllerConfigList
+    plural: networkcontrollerconfigs
+    shortNames:
+    - nccfg
+    singular: networkcontrollerconfig
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.controllerRef.name
+      name: Controller
+      type: string
+    - jsonPath: .spec.scope
+      name: Scope
+      type: string
+    - jsonPath: .spec.mode
+      name: Mode
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: NetworkControllerConfig declares controller-centric Network as
+          Code intent.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              NetworkControllerConfigSpec declares controller-centric Network as Code
+              intent. ControllerRef and Scope are immutable because together they form the
+              durable per-(controller,scope,section) ownership identity.
+            properties:
+              controllerRef:
+                description: ControllerRef targets a NetworkController in the same
+                  namespace.
+                properties:
+                  name:
+                    description: Name of the NetworkController.
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                required:
+                - name
+                type: object
+              deletionPolicy:
+                default: Retain
+                description: |-
+                  DeletionPolicy controls whether remote resources are retained when this
+                  CR is deleted. Retain is the non-destructive default.
+                enum:
+                - Retain
+                - Delete
+                type: string
+              driftDetectInterval:
+                default: 5m
+                description: |-
+                  DriftDetectInterval is the cadence for authoritative controller reads.
+                  It must be in [30s, 720h].
+                type: string
+                x-kubernetes-validations:
+                - message: driftDetectInterval must be at least 30s and at most 720h
+                  rule: duration(self) >= duration('30s') && duration(self) <= duration('720h')
+              managedSections:
+                description: |-
+                  ManagedSections is the closed list of Network as Code sections this CR
+                  owns within Scope. The selected adapter validates the supported set.
+                items:
+                  maxLength: 63
+                  minLength: 1
+                  pattern: ^[a-z][a-z0-9_]*$
+                  type: string
+                maxItems: 64
+                minItems: 1
+                type: array
+                x-kubernetes-list-type: set
+              mode:
+                default: report
+                description: |-
+                  Mode defaults to report so importing existing Network as Code ownership
+                  cannot mutate a controller before an explicit cutover.
+                enum:
+                - report
+                - apply
+                type: string
+              modelSource:
+                description: |-
+                  ModelSource records the exact Network as Code contract and provenance
+                  used to produce Source. Controller config requires a resolved, versioned
+                  model; the adapter validates its format and compatible versions.
+                properties:
+                  exporter:
+                    description: |-
+                      Exporter identifies the tool and immutable version or digest that
+                      produced Source.
+                    maxLength: 256
+                    type: string
+                  format:
+                    description: Format identifies the controller model dialect.
+                    pattern: ^netascode-[a-z0-9]+(-[a-z0-9]+)*$
+                    type: string
+                  modelVersion:
+                    description: ModelVersion is the qualified upstream data-model
+                      or module version.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  resolved:
+                    default: true
+                    description: |-
+                      Resolved must be true: templates, defaults, groups, and inheritance are
+                      expanded by the upstream Network as Code toolchain before CVK receives
+                      the payload.
+                    type: boolean
+                  schemaDigest:
+                    description: |-
+                      SchemaDigest identifies the canonical schema snapshot to which Source
+                      declares conformance. It is compatibility metadata, not a payload digest.
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  sourceRevision:
+                    description: |-
+                      SourceRevision identifies the customer Git commit, plan, or equivalent
+                      immutable source revision.
+                    maxLength: 256
+                    type: string
+                required:
+                - format
+                - modelVersion
+                - resolved
+                type: object
+              prunePolicy:
+                default: Retain
+                description: |-
+                  PrunePolicy controls resources absent from the current desired source.
+                  Delete is honored only by adapters and sections that advertise safe
+                  pruning support.
+                enum:
+                - Retain
+                - Delete
+                type: string
+              scope:
+                default: global
+                description: |-
+                  Scope is an adapter-normalized ownership scope. "global" owns the
+                  selected sections across the whole controller; adapters may define stable
+                  narrower scopes without changing this API.
+                maxLength: 253
+                minLength: 1
+                pattern: ^[A-Za-z0-9][A-Za-z0-9._:/-]*$
+                type: string
+              secretRefs:
+                description: |-
+                  SecretRefs injects sensitive leaf values after resolving Source. Each
+                  entry selects only an alias from the target NetworkController's
+                  intentSecretSources allow-list; it cannot authorize a new Secret.
+                items:
+                  description: |-
+                    NetworkControllerSecretRef injects one Secret key at an RFC 6901-style path
+                    below a managed Network as Code section. Resolvers must not persist the
+                    injected value in status, revisions, logs, or events.
+                  properties:
+                    path:
+                      description: |-
+                        Path is the JSON pointer within the section at which the Secret value is
+                        injected.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^/.*
+                      type: string
+                    section:
+                      description: Section must name one of spec.managedSections.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z][a-z0-9_]*$
+                      type: string
+                    source:
+                      description: |-
+                        Source names an alias authorized by the target
+                        NetworkController.spec.intentSecretSources allow-list. The config object
+                        cannot name a Secret or key directly.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z]([a-z0-9-]*[a-z0-9])?$
+                      type: string
+                  required:
+                  - path
+                  - section
+                  - source
+                  type: object
+                maxItems: 128
+                type: array
+                x-kubernetes-list-map-keys:
+                - section
+                - path
+                x-kubernetes-list-type: map
+              source:
+                description: |-
+                  Source carries the resolved controller-centric Network as Code document
+                  or fragment.
+                properties:
+                  configMapRef:
+                    description: |-
+                      ConfigMapRef references a ConfigMap in the same namespace whose keyed
+                      entry contains the resolved controller-centric Network as Code document.
+                    properties:
+                      key:
+                        description: Key within the ConfigMap whose value is the netascode
+                          YAML body.
+                        minLength: 1
+                        type: string
+                      name:
+                        description: Name of the ConfigMap (same namespace as the
+                          CR).
+                        minLength: 1
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  inline:
+                    description: |-
+                      Inline is a resolved controller-centric Network as Code document or
+                      fragment. The field is schemaless so controller model sections can evolve
+                      with their qualified upstream model version.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                type: object
+              taskTimeout:
+                default: 30m
+                description: |-
+                  TaskTimeout bounds an asynchronous controller task before the reconciler
+                  reports failure or an ambiguous outcome. It must be in (0s, 720h].
+                type: string
+                x-kubernetes-validations:
+                - message: taskTimeout must be greater than 0s and at most 720h
+                  rule: duration(self) > duration('0s') && duration(self) <= duration('720h')
+            required:
+            - controllerRef
+            - managedSections
+            - modelSource
+            - source
+            type: object
+            x-kubernetes-validations:
+            - message: controllerRef is immutable
+              rule: self.controllerRef == oldSelf.controllerRef
+            - message: scope is immutable
+              rule: self.scope == oldSelf.scope
+            - message: modelSource.resolved must be true
+              rule: self.modelSource.resolved == true
+            - message: modelSource.modelVersion is required
+              rule: has(self.modelSource.modelVersion) && size(self.modelSource.modelVersion)
+                > 0
+            - message: exactly one of source.inline or source.configMapRef must be
+                set
+              rule: has(self.source.inline) != has(self.source.configMapRef)
+          status:
+            description: |-
+              NetworkControllerConfigStatus is the bounded observed state of
+              controller-centric intent. It contains no raw desired or observed values.
+            properties:
+              conditions:
+                description: Conditions follows the standard Kubernetes conditions
+                  shape.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                maxItems: 32
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              controllerAPIVersion:
+                description: ControllerAPIVersion is the API version used by the last
+                  reconcile.
+                maxLength: 128
+                type: string
+              drift:
+                description: Drift is a bounded and redacted divergence summary.
+                items:
+                  description: |-
+                    NetworkControllerDriftEntry records one redacted desired-vs-observed
+                    divergence. Raw values are deliberately excluded because controller models
+                    can contain credentials and security-policy data.
+                  properties:
+                    change:
+                      description: Change describes the reconciliation action implied
+                        by the drift.
+                      enum:
+                      - Add
+                      - Update
+                      - Delete
+                      type: string
+                    detected:
+                      description: Detected records when the drift was first observed.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Message is a bounded, sanitized explanation.
+                      maxLength: 1024
+                      type: string
+                    path:
+                      description: Path identifies the divergent field without recording
+                        its value.
+                      maxLength: 1024
+                      type: string
+                    resource:
+                      description: Resource is an adapter-normalized, non-secret resource
+                        identity.
+                      maxLength: 512
+                      minLength: 1
+                      type: string
+                    section:
+                      description: Section is the managed Network as Code section.
+                      maxLength: 63
+                      minLength: 1
+                      type: string
+                  required:
+                  - change
+                  - resource
+                  - section
+                  type: object
+                maxItems: 50
+                type: array
+              lastAppliedHash:
+                description: |-
+                  LastAppliedHash is a SHA-256 over canonical, secret-redacted intent. It
+                  never incorporates raw Secret values.
+                pattern: ^sha256:[0-9a-f]{64}$
+                type: string
+              lastAppliedSourceRevision:
+                description: |-
+                  LastAppliedSourceRevision records the Network as Code source revision
+                  corresponding to LastAppliedHash.
+                maxLength: 256
+                type: string
+              lastAppliedTime:
+                description: LastAppliedTime records the most recent verified apply.
+                format: date-time
+                type: string
+              lastControllerCheck:
+                description: LastControllerCheck records the most recent authoritative
+                  state read.
+                format: date-time
+                type: string
+              lastObservedHash:
+                description: LastObservedHash is a SHA-256 over canonical, redacted
+                  observed state.
+                pattern: ^sha256:[0-9a-f]{64}$
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the metadata generation most recently
+                  processed.
+                format: int64
+                type: integer
+              phase:
+                description: Phase is the coarse reconciliation state.
+                enum:
+                - Pending
+                - Validating
+                - Planning
+                - Applying
+                - Waiting
+                - Verifying
+                - InSync
+                - Drifted
+                - Failed
+                - Paused
+                - LeaseBlocked
+                type: string
+              sectionStatus:
+                description: SectionStatus reports each managed section's current
+                  state.
+                items:
+                  description: |-
+                    NetworkControllerSectionStatus reports reconciliation state for one managed
+                    Network as Code section.
+                  properties:
+                    message:
+                      description: Message is a bounded, sanitized explanation.
+                      maxLength: 1024
+                      type: string
+                    name:
+                      description: Name is the managed section name.
+                      maxLength: 63
+                      minLength: 1
+                      type: string
+                    resourceCount:
+                      description: |-
+                        ResourceCount is the number of controller resources represented by this
+                        section when the adapter can report it.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    state:
+                      description: State is the section reconciliation state.
+                      enum:
+                      - Pending
+                      - InSync
+                      - Drifted
+                      - Applying
+                      - ApplyError
+                      - Unsupported
+                      - Skipped
+                      type: string
+                  required:
+                  - name
+                  - state
+                  type: object
+                maxItems: 64
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              tasks:
+                description: |-
+                  Tasks contains the bounded set of tasks required to resume the current
+                  reconciliation after restart.
+                items:
+                  description: |-
+                    NetworkControllerTaskStatus stores only the task identity and sanitized
+                    lifecycle metadata needed to resume polling after a controller restart.
+                  properties:
+                    id:
+                      description: ID is the adapter-provided task identifier.
+                      maxLength: 512
+                      minLength: 1
+                      type: string
+                    lastPollTime:
+                      description: LastPollTime records the most recent task status
+                        read.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Message is sanitized and must not contain raw controller
+                        response bodies.
+                      maxLength: 1024
+                      type: string
+                    operation:
+                      description: Operation is a stable adapter operation name.
+                      maxLength: 128
+                      minLength: 1
+                      type: string
+                    phase:
+                      description: Phase is the last observed task phase.
+                      enum:
+                      - Accepted
+                      - Running
+                      - Succeeded
+                      - Failed
+                      - Unknown
+                      type: string
+                    section:
+                      description: Section is the managed section that initiated the
+                        task.
+                      maxLength: 63
+                      minLength: 1
+                      type: string
+                    submittedAt:
+                      description: SubmittedAt records when the task was accepted
+                        by the controller.
+                      format: date-time
+                      type: string
+                  required:
+                  - id
+                  - operation
+                  - phase
+                  - section
+                  type: object
+                maxItems: 32
+                type: array
+                x-kubernetes-list-map-keys:
+                - id
+                x-kubernetes-list-type: map
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -7,27 +7,44 @@ upgrading to a new CVK version, apply the updated CRDs before upgrading the
 chart — Helm does not manage CRD updates automatically.
 
 ```bash
-# 1. Apply updated CRD manifests from the new chart version:
-kubectl apply -f charts/cisco-virtual-kubelet/crds/
+# 1. Pull the exact release chart and apply its CRDs. For the September release:
+helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
+  --version 2026.9.0 --untar
+kubectl apply --server-side -f cisco-virtual-kubelet/crds/
+kubectl wait --for=condition=Established --timeout=60s \
+  crd/networkcontrollers.cisco.vk \
+  crd/networkcontrollerconfigs.config.cisco.vk
 
 # 2. Verify all CRDs registered at the new schema version:
 kubectl get crds | grep cisco
 
+# Example output (abbreviated; the chart currently ships 17 CRDs):
 NAME                                    CREATED AT
 ciscodevices.cisco.vk                   2026-01-10T09:00:00Z
 deviceoperations.ops.cisco.vk           2026-01-10T09:00:00Z
 iosxeconfigs.config.cisco.vk            2026-01-10T09:00:00Z
 iosxesoftwareupgrades.ops.cisco.vk      2026-01-10T09:00:00Z
 iosxeoperationalactions.ops.cisco.vk    2026-01-10T09:00:00Z
+networkcontrollers.cisco.vk             2026-08-07T09:00:00Z
+networkcontrollerconfigs.config.cisco.vk 2026-08-07T09:00:00Z
 
-# 3. Upgrade the Helm release:
-helm upgrade cisco-vk ./charts/cisco-virtual-kubelet \
-  --namespace cisco-vk \
-  --set image.tag=<new-version>
+# 3. Upgrade the Helm release from the same immutable chart version:
+helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
+  --version 2026.9.0 \
+  --namespace cvk-system
 
 # 4. Confirm manager pod is running the new image:
-kubectl rollout status deployment/cisco-vk-manager -n cisco-vk
+kubectl rollout status deployment/cvk-cisco-virtual-kubelet-controller \
+  --namespace cvk-system
 ```
+
+If a pre-September release is upgraded before these two controller CRDs are
+applied, the manager deliberately keeps existing CiscoDevice reconcilers
+running and skips Alpha NetworkController registration for that process. Apply
+the new CRDs, then restart the manager Deployment; dynamic CRD installation
+alone does not add a controller to an already-running controller-runtime
+manager. The September image contains no product adapter and the extension
+boundary remains report-only even after both CRDs are installed.
 
 ### What to expect after a CRD upgrade
 
@@ -64,13 +81,6 @@ helm upgrade cisco-vk ./charts/cisco-virtual-kubelet-<prev-version> \
 ---
 
 ## DeviceOperation
-
-!!! warning "Beta"
-    All CRDs and features documented on this page are **Beta** (`v1alpha1`).
-    Read-only `DeviceOperation` and gNOI probes are the most mature surface;
-    write-class `IOSXEOperationalAction` and `IOSXESoftwareUpgrade` are newer,
-    require explicit runtime gates, and should be tested thoroughly in
-    non-production environments before use in production.
 
 !!! warning "Beta"
     All CRDs and features documented on this page are **Beta** (`v1alpha1`).

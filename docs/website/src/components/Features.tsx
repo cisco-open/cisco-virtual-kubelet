@@ -63,6 +63,16 @@ const features = [
     beta: true,
   },
   {
+    icon: Network,
+    title: "Controller Extension API",
+    description:
+      "Alpha, report-only contracts for future controller adapters. The September image ships with zero product adapters and cannot apply, prune, or remotely delete controller state.",
+    color: "from-primary to-accent",
+    glowColor: "primary",
+    beta: true,
+    maturity: "Alpha",
+  },
+  {
     icon: ArrowUpCircle,
     title: "Software Lifecycle",
     description:
@@ -92,7 +102,7 @@ const features = [
     icon: Shield,
     title: "Secure by Design",
     description:
-      "Device credentials injected from Kubernetes Secrets via secretKeyRef. Passwords never touch ConfigMaps or etcd in plaintext.",
+      "Device credentials are referenced through Kubernetes Secrets and kept out of generated ConfigMaps. Production clusters should enable Secret encryption at rest and least-privilege RBAC.",
     color: "from-success to-teal-400",
     glowColor: "success",
   },
@@ -127,7 +137,7 @@ const itemVariants = {
 
 export default function Features() {
   return (
-    <section id="features" className="py-24 relative">
+    <section id="features" className="py-24 relative overflow-hidden">
       {/* Background effects */}
       <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-primary/3 rounded-full blur-3xl" />
       <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-accent/3 rounded-full blur-3xl" />
@@ -181,7 +191,7 @@ export default function Features() {
                 </h3>
                 {feature.beta && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/25 shrink-0">
-                    Beta
+                    {feature.maturity ?? "Beta"}
                   </span>
                 )}
               </div>

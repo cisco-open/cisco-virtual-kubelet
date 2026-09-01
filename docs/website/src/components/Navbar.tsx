@@ -111,6 +111,9 @@ export default function Navbar() {
           {/* Mobile menu button */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-navigation"
             className="md:hidden p-2 rounded-lg text-text-muted hover:text-foreground hover:bg-surface-light transition-colors"
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -122,6 +125,7 @@ export default function Navbar() {
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
+            id="mobile-navigation"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -140,7 +144,7 @@ export default function Navbar() {
               ))}
               <div className="pt-3 border-t border-border space-y-1">
                 <a
-                  href="https://github.com/cisco-open/cisco-virtual-kubelet/tree/main/docs"
+                  href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-4 py-3 text-text-muted hover:text-foreground hover:bg-surface-light rounded-lg transition-colors"

@@ -48,12 +48,18 @@ func TestRunGeneratesEveryFamily(t *testing.T) {
 		if !strings.Contains(string(body), "## YANG paths") {
 			t.Errorf("%s: missing YANG paths section", p)
 		}
+		if strings.HasSuffix(string(body), "\n\n") {
+			t.Errorf("%s: generated page has a blank line at EOF", p)
+		}
 	}
 
 	// Index page exists and lists the families.
 	idx, err := os.ReadFile(filepath.Join(outDir, "README.md"))
 	if err != nil {
 		t.Fatalf("index: %v", err)
+	}
+	if strings.HasSuffix(string(idx), "\n\n") {
+		t.Errorf("generated index has a blank line at EOF")
 	}
 	for _, fam := range []string{"vlan", "bgp"} {
 		want := "[" + fam + "](" + fam + ".md)"
