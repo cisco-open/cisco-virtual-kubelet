@@ -53,7 +53,7 @@ const codeBlocks: Record<string, { language: string; code: string }> = {
     language: "bash",
     code: `# Install the published Helm chart and signed image from GHCR.
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \\
-  --version 2026.9.1 \\
+  --version 2026.9.2 \\
   --namespace cvk-system --create-namespace
 
 # Verify the CRD and controller are up

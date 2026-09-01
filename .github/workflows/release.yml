@@ -108,6 +108,8 @@ jobs:
     # Native cross-compilation (see Dockerfile) keeps this well under 30m, but
     # leave headroom for the Trivy scan, SBOM generation, and cosign round-trips.
     timeout-minutes: 60
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
     permissions:
       contents: read
       packages: write       # push the multi-arch image
@@ -137,10 +139,10 @@ jobs:
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: latest=false
           tags: |
             type=ref,event=tag
             type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
 
       - name: Derive reproducible image build metadata
         id: image-build-metadata
@@ -175,12 +177,12 @@ jobs:
           cache-to: type=gha,mode=max
 
       # Sign and attest BEFORE scanning. The image is already pushed by the
-      # build step above, so the vulnerability scan is advisory, not a gate.
-      # Running it ahead of signing only means a scanner outage can leave a
-      # published image unsigned — which is exactly what happened on the first
-      # v2026.06.1 build (setup-trivy failed on the binary download and skipped
-      # the cosign steps). Signing first guarantees every published image
-      # carries a signature + SBOM attestation regardless of the scanner.
+      # build step above. Running the hard scan ahead of signing would mean a
+      # scanner outage could leave that pushed image unsigned — which is
+      # exactly what happened on the first v2026.06.1 build (setup-trivy failed
+      # on the binary download and skipped the cosign steps). Signing first
+      # guarantees the pushed image carries a signature + SBOM attestation;
+      # scan failure still blocks the chart and curated release assets.
       - name: Generate CycloneDX SBOM
         uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
@@ -233,30 +235,58 @@ jobs:
           path: sbom.cdx.json
           retention-days: 90
 
-      # Advisory vulnerability scan, runs last and never blocks the signed
-      # release (continue-on-error). trivy-action bundles install + scan +
-      # SARIF output, replacing the setup-trivy@v0.2.6 binary download that
-      # broke the release build. HIGH/CRITICAL findings still surface in the
-      # code-scanning tab; hard gating belongs in pre-merge CI, not after the
-      # image has already been pushed and signed.
-      - name: Scan image for HIGH/CRITICAL CVEs
-        id: trivy
-        continue-on-error: true
+      # Scan both published platforms after signing so a scanner outage cannot
+      # leave the already-pushed image unsigned. These are still hard release
+      # gates: either platform failing stops chart publication and draft-asset
+      # staging. The required pre-merge scans should catch the same condition
+      # before tagging.
+      - name: Scan image for HIGH/CRITICAL CVEs (linux/amd64)
+        id: trivy-amd64
+        if: always() && steps.build.outcome == 'success'
+        env:
+          TRIVY_PLATFORM: linux/amd64
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          version: v0.70.0
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
           format: sarif
-          output: trivy.sarif
+          output: trivy-linux-amd64.sarif
+          exit-code: '1'
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           limit-severities-for-sarif: true
 
-      - name: Upload Trivy SARIF to code-scanning
-        if: always() && hashFiles('trivy.sarif') != ''
+      - name: Upload Trivy SARIF to code-scanning (linux/amd64)
+        if: always() && hashFiles('trivy-linux-amd64.sarif') != ''
         continue-on-error: true
         uses: github/codeql-action/upload-sarif@e60ea984bd3baa95954f2856bcf24f9eaba46637 # v3.37.5
         with:
-          sarif_file: trivy.sarif
+          sarif_file: trivy-linux-amd64.sarif
+          category: trivy-release-linux-amd64
+
+      - name: Scan image for HIGH/CRITICAL CVEs (linux/arm64)
+        id: trivy-arm64
+        if: always() && steps.build.outcome == 'success'
+        env:
+          TRIVY_PLATFORM: linux/arm64
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.70.0
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          format: sarif
+          output: trivy-linux-arm64.sarif
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          limit-severities-for-sarif: true
+
+      - name: Upload Trivy SARIF to code-scanning (linux/arm64)
+        if: always() && hashFiles('trivy-linux-arm64.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@e60ea984bd3baa95954f2856bcf24f9eaba46637 # v3.37.5
+        with:
+          sarif_file: trivy-linux-arm64.sarif
+          category: trivy-release-linux-arm64
 
   # Build release archives in one pinned environment so every platform shares
   # the same source, Go toolchain, commit timestamp, and checksum manifest.
@@ -311,7 +341,10 @@ jobs:
             save ./tools/kubectl-ciscovk \
             --ignore github.com/cisco/virtual-kubelet-cisco \
             --save_path "$dependency_licenses"
-          test -z "$(find "$dependency_licenses" -type f -print -quit)"
+          if [ -e "$dependency_licenses" ]; then
+            test -d "$dependency_licenses"
+            test -z "$(find "$dependency_licenses" -type f -print -quit)"
+          fi
           cmp third_party/go/LICENSE "$(go env GOROOT)/LICENSE"
           cmp third_party/go/PATENTS "$(go env GOROOT)/PATENTS"
           python3 .github/scripts/package_kubectl_ciscovk.py package \
@@ -787,3 +820,114 @@ jobs:
           test "$(wc -l < "$remote_metadata")" -eq 16
           diff -u "$expected_metadata" "$remote_metadata"
           assert_draft
+
+  # Mutable image aliases represent a fully verified and staged candidate, not
+  # merely an image that built. Serialize this final promotion across release
+  # tags and reject version downgrades so an older rerun cannot win a race.
+  promote-image-aliases:
+    needs: [build-and-sign, stage-plugin-release]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    concurrency:
+      group: release-image-aliases
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        with:
+          version: v0.36.1
+          driver-opts: |
+            image=moby/buildkit:v0.32.2@sha256:28a898719c18a33f4e8000685287fa36fd0dd9560c6440227d3a732d79bb41d8
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote verified mutable image aliases
+        env:
+          IMAGE_DIGEST: ${{ needs.build-and-sign.outputs.image-digest }}
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          export LC_ALL=C
+          image="${REGISTRY}/${IMAGE_NAME}"
+
+          version_key() {
+            local raw="${1#v}"
+            local year month patch
+            [[ "$raw" =~ ^[1-9][0-9]{3}\.([1-9]|1[0-2])\.(0|[1-9][0-9]{0,8})$ ]]
+            IFS=. read -r year month patch <<< "$raw"
+            printf '%04d%02d%09d\n' "$year" "$month" "$patch"
+          }
+
+          alias_version() {
+            local reference="$1"
+            local error_file="$RUNNER_TEMP/alias-inspect.err"
+            local manifest platform_digest
+            if ! manifest="$(docker buildx imagetools inspect \
+              --format '{{json .Manifest}}' "$reference" 2> "$error_file")"; then
+              if grep -Fq ': not found' "$error_file"; then
+                return 10
+              fi
+              cat "$error_file" >&2
+              return 1
+            fi
+            platform_digest="$(jq -er '
+              .manifests[]
+              | select(
+                  .platform.os == "linux"
+                  and .platform.architecture == "amd64"
+                )
+              | .digest
+            ' <<< "$manifest")"
+            docker buildx imagetools inspect \
+              --format '{{json .Image}}' "${image}@${platform_digest}" \
+              | jq -er '.config.Labels["org.opencontainers.image.version"]'
+          }
+
+          candidate="${RELEASE_VERSION#v}"
+          candidate_key="$(version_key "$candidate")"
+          candidate_manifest="$(docker buildx imagetools inspect \
+            --format '{{json .Manifest}}' "${image}@${IMAGE_DIGEST}")"
+          test "$(jq -er .digest <<< "$candidate_manifest")" = "$IMAGE_DIGEST"
+          candidate_platform_digest="$(jq -er '
+            .manifests[]
+            | select(
+                .platform.os == "linux"
+                and .platform.architecture == "amd64"
+              )
+            | .digest
+          ' <<< "$candidate_manifest")"
+          candidate_label="$(docker buildx imagetools inspect \
+            --format '{{json .Image}}' \
+            "${image}@${candidate_platform_digest}" \
+            | jq -er '.config.Labels["org.opencontainers.image.version"]')"
+          test "$candidate_label" = "$candidate"
+
+          minor="${candidate%.*}"
+          for alias_tag in "$minor" latest; do
+            alias="${image}:${alias_tag}"
+            if existing_version="$(alias_version "$alias")"; then
+              existing_key="$(version_key "$existing_version")"
+              if [[ "$existing_key" > "$candidate_key" ]]; then
+                echo "::error::Refusing to move ${alias} from newer ${existing_version} to ${candidate}"
+                exit 1
+              fi
+            else
+              status=$?
+              test "$status" -eq 10 || exit "$status"
+            fi
+            docker buildx imagetools create \
+              --tag "$alias" \
+              "${image}@${IMAGE_DIGEST}"
+            actual_digest="$(docker buildx imagetools inspect \
+              --format '{{json .Manifest}}' "$alias" | jq -er .digest)"
+            test "$actual_digest" = "$IMAGE_DIGEST"
+          done

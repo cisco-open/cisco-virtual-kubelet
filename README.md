@@ -81,16 +81,16 @@ The chart and its container image are published to GitHub Container Registry wit
 
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.1 \
+  --version 2026.9.2 \
   --namespace cvk-system --create-namespace
 ```
 
-This deploys the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default — no `--set image.*` needed. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.9.1` → `2026.9.1`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current version.
+This deploys the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default — no `--set image.*` needed. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.9.2` → `2026.9.2`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current version.
 
 Optionally verify the chart signature before installing:
 
 ```bash
-cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.9.1 \
+cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.9.2 \
   --certificate-identity-regexp "https://github.com/cisco-open/cisco-virtual-kubelet/.github/workflows/release.yml@refs/tags/v.*" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -102,13 +102,13 @@ CRDs **before** `helm upgrade`:
 
 ```bash
 helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.1 --untar
+  --version 2026.9.2 --untar
 kubectl apply --server-side -f cisco-virtual-kubelet/crds/
 kubectl wait --for=condition=Established --timeout=60s \
   crd/networkcontrollers.cisco.vk \
   crd/networkcontrollerconfigs.config.cisco.vk
 helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.1 --namespace cvk-system
+  --version 2026.9.2 --namespace cvk-system
 ```
 
 See the [operations runbook](docs/operations.md#upgrading-crds). If the two new
