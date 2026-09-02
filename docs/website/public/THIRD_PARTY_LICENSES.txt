@@ -442,7 +442,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 ================================================================================
-baseline-browser-mapping@2.10.43
+baseline-browser-mapping@2.11.20
 ================================================================================
 License: Apache-2.0
 Project: git+https://github.com/web-platform-dx/baseline-browser-mapping.git
@@ -651,7 +651,7 @@ Project: git+https://github.com/web-platform-dx/baseline-browser-mapping.git
    limitations under the License.
 
 ================================================================================
-caniuse-lite@1.0.30001805
+caniuse-lite@1.0.30001810
 ================================================================================
 License: CC-BY-4.0
 Author: Ben Briggs

@@ -20,6 +20,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/virtual-kubelet/virtual-kubelet/log"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +35,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 )
 
 func newTestScheme(t *testing.T) *runtime.Scheme {
@@ -73,6 +76,45 @@ func newDevice(name string) *ciskov1.CiscoDevice {
 		Spec: ciskov1.DeviceSpec{
 			Driver: ciskov1.DeviceDriverXE, Address: "10.0.0.1", Username: "u",
 		},
+	}
+}
+
+func TestPatchTraceAnnotationsPreservesBoundedIngressCarrier(t *testing.T) {
+	scheme := newTestScheme(t)
+	inbound := "00-11111111111111111111111111111111-2222222222222222-01"
+	window := "2026-09-01T12:15:00Z"
+	cr := newCR("edge-01", "edge-01")
+	cr.Annotations = map[string]string{
+		correlation.TraceparentAnnotation:    inbound,
+		correlation.TraceWindowEndAnnotation: window,
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cr).Build()
+	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
+	traceID, err := oteltrace.TraceIDFromHex("33333333333333333333333333333333")
+	if err != nil {
+		t.Fatal(err)
+	}
+	spanID, err := oteltrace.SpanIDFromHex("4444444444444444")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := oteltrace.ContextWithSpanContext(context.Background(), oteltrace.NewSpanContext(
+		oteltrace.SpanContextConfig{TraceID: traceID, SpanID: spanID, TraceFlags: oteltrace.FlagsSampled},
+	))
+
+	r.patchTraceAnnotations(ctx, cr, engine.PhaseFailed, 2*time.Second)
+	got := &configv1alpha1.IOSXEConfig{}
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: cr.Namespace, Name: cr.Name}, got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Annotations[correlation.TraceparentAnnotation] != inbound ||
+		got.Annotations[correlation.TraceWindowEndAnnotation] != window {
+		t.Fatalf("ingress carrier was rewritten: %#v", got.Annotations)
+	}
+	if got.Annotations[correlation.LastTraceIDAnnotation] != traceID.String() ||
+		got.Annotations[correlation.LastErrorTraceIDAnnotation] != traceID.String() ||
+		got.Annotations[correlation.LastTraceDurationAnnotation] != "2s" {
+		t.Fatalf("runtime trace diagnostics missing: %#v", got.Annotations)
 	}
 }
 
@@ -158,6 +200,48 @@ func TestMatchingCRGetsPendingWhenNoTransport(t *testing.T) {
 	}
 	if otherCR.Status.Phase != "" {
 		t.Fatalf("non-matching CR was touched: phase=%q", otherCR.Status.Phase)
+	}
+}
+
+func TestReconcileAllIgnoresSameNamedDeviceInOtherNamespace(t *testing.T) {
+	scheme := newTestScheme(t)
+	local := newCR("local", "edge-01")
+	foreign := newCR("foreign", "edge-01")
+	foreign.Namespace = "other-network"
+	foreign.Annotations = map[string]string{
+		correlation.TraceparentAnnotation:    "00-11111111111111111111111111111111-2222222222222222-01",
+		correlation.TraceWindowEndAnnotation: time.Now().Add(time.Minute).UTC().Format(time.RFC3339),
+		correlation.LifecycleIDAnnotation:    "foreign-lifecycle",
+	}
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(local, foreign).
+		WithStatusSubresource(&configv1alpha1.IOSXEConfig{}).
+		Build()
+	r := &ConfigReconciler{
+		Client:          c,
+		DeviceName:      "edge-01",
+		DeviceNamespace: "network",
+	}
+
+	r.reconcileAll(context.Background(), log.L, triggerPoll)
+
+	var gotLocal configv1alpha1.IOSXEConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: local.Namespace, Name: local.Name}, &gotLocal); err != nil {
+		t.Fatal(err)
+	}
+	if gotLocal.Status.ObservedGeneration != local.Generation || gotLocal.Status.Phase == "" {
+		t.Fatalf("local IOSXEConfig was not reconciled: %#v", gotLocal.Status)
+	}
+	var gotForeign configv1alpha1.IOSXEConfig
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: foreign.Namespace, Name: foreign.Name}, &gotForeign); err != nil {
+		t.Fatal(err)
+	}
+	if gotForeign.Status.Phase != "" || gotForeign.Status.ObservedGeneration != 0 {
+		t.Fatalf("cross-namespace IOSXEConfig was reconciled: %#v", gotForeign.Status)
+	}
+	if gotForeign.Annotations[correlation.LifecycleIDAnnotation] != "foreign-lifecycle" {
+		t.Fatalf("cross-namespace annotations were mutated: %#v", gotForeign.Annotations)
 	}
 }
 

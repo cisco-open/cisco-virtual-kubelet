@@ -34,6 +34,7 @@ Span names use one stable shape across surfaces:
 | Surface | Span name pattern | Examples |
 |---|---|---|
 | Kubernetes reconcile | `cvk.<resource>.reconcile` | `cvk.iosxeconfig.reconcile` |
+| Pod lifecycle | `cvk.pod.<operation>` | `cvk.pod.create`, `cvk.pod.status-reconcile` |
 | Device transport | `cvk.transport.<protocol>.<verb>` | `cvk.transport.netconf.get`, `cvk.transport.restconf.post` |
 | Config engine | `cvk.config.<phase>` | `cvk.config.reconcile`, `cvk.config.plan`, `cvk.config.apply` |
 | Topology cycle | `cvk.topology.cycle` | root span per bounded topology emission |
@@ -47,21 +48,84 @@ small `scripts/lint-ctx.sh` guard to catch new unreviewed
 
 ### Correlation
 
-Pod admission stores a bounded `(device, app_id) -> SpanContext` entry using
-the W3C `traceparent` format. MDT app-hosting recovery events consult that cache
-so recent device-side state transitions can be emitted under the Pod admission
-trace. The cache is deliberately bounded and short-lived: it is for causality,
-not durable storage.
+Pod admission stores a bounded `(device, app_id)` correlation entry containing
+the W3C span context and validated lifecycle ID. MDT app-hosting recovery events
+consult that cache so recent device-side state transitions retain the correct
+Pod admission link and lifecycle search key. The cache is deliberately bounded
+and short-lived: it is for causality, not durable storage.
 
-Config reconcile writes trace hints back to status annotations:
+Pipeline ingress supplies the carrier annotations in the first five rows below.
+CVK validates and copies only that allowlist to generated child-object metadata;
+it neither mints nor refreshes those ingress values. Configuration reconciliation
+writes only the final three `last-*` diagnostic annotations:
 
 | Annotation | Meaning |
 |---|---|
 | `cisco.vk/traceparent` | W3C carrier for the current reconcile window. |
+| `cisco.vk/tracestate` | W3C vendor state associated with the direct parent. |
+| `cisco.vk/upstream-traceparent` | Asynchronous upstream carrier (for example a GitHub wrapper or parent Argo step), represented as a span link. |
 | `cisco.vk/trace-window-end` | Expiry for using that trace context. |
+| `cisco.vk/lifecycle-id` | Stable lifecycle search key emitted as `cvk.lifecycle.id`. |
 | `cisco.vk/last-trace-id` | Most recent reconcile trace ID. |
 | `cisco.vk/last-trace-duration` | Most recent reconcile duration. |
 | `cisco.vk/last-error-trace-id` | Failed reconcile trace ID, when present. |
+
+### CI/CD lifecycle handoff
+
+The validation pipelines use these annotations to connect the supported
+GitHub → Argo → ubuntu12 → CVK path. GitHub workflow/job/step traces use
+deterministic IDs compatible with OpenTelemetry Collector `githubreceiver`.
+The trusted dispatcher passes its dispatch-step context to the lab wrapper;
+the wrapper then derives the deterministic context of its own exact Argo
+submission step. The Argo lifecycle bridge links its native trace to that
+wrapper step. These dispatch and scheduling boundaries are asynchronous, so
+they use span links rather than invented synchronous parentage.
+
+The trusted GitHub observer also joins release stages that GitHub exposes as
+separate runs: a merged-PR smoke run to the exact `main` smoke run, that run to
+the tag-triggered release workflow for the same commit, the immutable
+`release.published` event to that release workflow, and automatic docs/Krew
+publication runs back to the publication event. A rerun links to its previous
+attempt. Direct pushes and manually dispatched documentation builds are left
+explicitly unlinked when GitHub does not provide enough authoritative metadata
+to prove the relationship. If a required transition is missing, ambiguous, or
+temporarily unreadable, the observer exports the standalone base trace with its
+correlation state and then fails visibly; it never guesses a link or silently
+drops the completed run.
+
+Argo 4.1 injects the current W3C `TRACEPARENT` into every main workflow
+container. The trusted lab SSH bootstrap forwards that value and annotates the
+ephemeral Kubernetes resources it creates on ubuntu12. CVK validates the
+carrier before using it in the following paths:
+
+- `CiscoDevice` reconciliation and its generated ConfigMap, Deployment, and
+  config-prerequisite children;
+- `IOSXEConfigBundle` and generated `IOSXEConfig` children;
+- IOS-XE and NX-OS configuration reconciliation;
+- `DeviceOperation`, including gNOI-backed operations;
+- `IOSXESoftwareUpgrade` phase transitions;
+- `IOSXETelemetry` subscription setup and bounded health reconciliation (the
+  shared long-lived stream remains device/subscription attributed rather than
+  being pinned to one lifecycle); and
+- Pod create, update, delete, get/list, status, and recovery paths, including
+  the device-driver work they invoke.
+
+A fresh primary carrier is a direct remote parent only until
+`cisco.vk/trace-window-end`, with an absolute maximum of 15 minutes from the
+time CVK consumes it. An expired carrier becomes a span link, while a deadline
+farther than 15 minutes in the future is never accepted as a parent. The
+GitHub upstream carrier is always a link. `tracestate` is capped at 512 bytes;
+the lifecycle ID is capped at 128 characters and restricted to a small
+identifier alphabet. Those checks bound format and size, not sensitivity:
+producers must never place credentials or other secrets in correlation fields.
+Malformed values are ignored without echoing them into logs or telemetry.
+
+In Splunk, start with the exact `cvk.lifecycle.id`, for example
+`cvk-pr181-h<full-head-sha>` or `cvk-release-v2026.9.2`. Open a CVK reconcile
+span to see its bounded Argo parent or link, then follow the lifecycle bridge
+and GitHub cross-run links through the hosted workflows. This bounded
+parent/link model keeps long-running controllers from holding a release trace
+open indefinitely.
 
 ### Config Revision History
 

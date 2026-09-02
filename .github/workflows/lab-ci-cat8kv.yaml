@@ -18,7 +18,9 @@
 # receives the verified prospective merge SHA and a read-only token for its
 # final pre-submission revalidation.
 name: Lab CI (Cat8kv)
-run-name: Lab CI Cat8kv - ${{ inputs.dispatch_id }}
+run-name: >-
+  Lab CI Cat8kv - ${{ inputs.cvk_lifecycle_id }} -
+  ${{ inputs.dispatch_id }} - ${{ inputs.cvk_upstream_traceparent }}
 
 on:
   workflow_dispatch:
@@ -45,6 +47,14 @@ on:
         type: number
       dispatch_id:
         description: "Deterministic dispatcher correlation ID"
+        required: true
+        type: string
+      cvk_lifecycle_id:
+        description: "Stable CVK PR lifecycle correlation ID"
+        required: true
+        type: string
+      cvk_upstream_traceparent:
+        description: "W3C parent for the trusted GitHub dispatcher step"
         required: true
         type: string
 
@@ -74,6 +84,8 @@ jobs:
       head_sha: ${{ steps.pr.outputs.head_sha }}
       merge_sha: ${{ steps.pr.outputs.merge_sha }}
       pr_number: ${{ steps.pr.outputs.pr_number }}
+      cvk_lifecycle_id: ${{ steps.pr.outputs.cvk_lifecycle_id }}
+      cvk_upstream_traceparent: ${{ steps.pr.outputs.cvk_upstream_traceparent }}
     steps:
       - name: Checkout trusted gate from main
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -88,6 +100,8 @@ jobs:
           EXPECTED_MERGE_SHA: ${{ inputs.expected_merge_sha }}
           DISPATCH_ATTEMPT: ${{ inputs.dispatch_attempt }}
           DISPATCH_ID: ${{ inputs.dispatch_id }}
+          CVK_LIFECYCLE_ID: ${{ inputs.cvk_lifecycle_id }}
+          CVK_UPSTREAM_TRACEPARENT: ${{ inputs.cvk_upstream_traceparent }}
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ inputs.upstream_pr }}
           EXPECTED_REPO: ${{ github.repository }}
@@ -102,6 +116,10 @@ jobs:
           [[ "$EXPECTED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$EXPECTED_MERGE_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$DISPATCH_ID" == "cat8kv-pr${PR_NUMBER}-h${EXPECTED_HEAD_SHA:0:12}-b${EXPECTED_BASE_SHA:0:12}-m${EXPECTED_MERGE_SHA:0:12}-a${DISPATCH_ATTEMPT}" ]]
+          [[ "$CVK_LIFECYCLE_ID" == "cvk-pr${PR_NUMBER}-h${EXPECTED_HEAD_SHA}" ]]
+          [[ "$CVK_UPSTREAM_TRACEPARENT" =~ ^00-[0-9a-f]{32}-[0-9a-f]{16}-01$ ]]
+          [[ "${CVK_UPSTREAM_TRACEPARENT:3:32}" != "00000000000000000000000000000000" ]]
+          [[ "${CVK_UPSTREAM_TRACEPARENT:36:16}" != "0000000000000000" ]]
           {
             echo "base_sha=$EXPECTED_BASE_SHA"
             echo "head_sha=$EXPECTED_HEAD_SHA"
@@ -125,6 +143,8 @@ jobs:
             echo "head_sha=$HEAD_SHA"
             echo "merge_sha=$MERGE_SHA"
             echo "pr_number=$VERIFIED_PR"
+            echo "cvk_lifecycle_id=$CVK_LIFECYCLE_ID"
+            echo "cvk_upstream_traceparent=$CVK_UPSTREAM_TRACEPARENT"
           } >> "$GITHUB_OUTPUT"
 
           gh api -X POST "repos/${EXPECTED_REPO}/statuses/${HEAD_SHA}" \
@@ -140,6 +160,7 @@ jobs:
     environment: lab-ci
     timeout-minutes: 70
     permissions:
+      actions: read
       checks: read
       contents: read
       pull-requests: read
@@ -153,6 +174,8 @@ jobs:
       UPSTREAM_REPO: ${{ github.repository }}
       UPSTREAM_PR: ${{ needs.prepare.outputs.pr_number }}
       TEST_MERGE_SHA: ${{ needs.prepare.outputs.merge_sha }}
+      CVK_LIFECYCLE_ID: ${{ needs.prepare.outputs.cvk_lifecycle_id }}
+      CVK_UPSTREAM_TRACEPARENT: ${{ needs.prepare.outputs.cvk_upstream_traceparent }}
       PATH: /home/cisco/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     steps:
       - name: Checkout trusted gate at the verified base
@@ -173,6 +196,10 @@ jobs:
           [[ "$TEST_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$TEST_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$TEST_MERGE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$CVK_LIFECYCLE_ID" == "cvk-pr${UPSTREAM_PR}-h${TEST_HEAD_SHA}" ]]
+          [[ "$CVK_UPSTREAM_TRACEPARENT" =~ ^00-[0-9a-f]{32}-[0-9a-f]{16}-01$ ]]
+          [[ "${CVK_UPSTREAM_TRACEPARENT:3:32}" != "00000000000000000000000000000000" ]]
+          [[ "${CVK_UPSTREAM_TRACEPARENT:36:16}" != "0000000000000000" ]]
           python3 .github/scripts/dispatch-approved-lab-ci.py verify \
             --repository "$UPSTREAM_REPO" \
             --pr-number "$UPSTREAM_PR" \
@@ -189,8 +216,31 @@ jobs:
 
       - name: Submit WorkflowTemplate and wait
         id: argo
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WRAPPER_JOB_NAME: cat8kv
         run: |
           set -euo pipefail
+          JOBS=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}/jobs?per_page=100")
+          CHECK_RUN_ID=$(jq -er \
+            --arg job "$WRAPPER_JOB_NAME" \
+            --argjson run "$GITHUB_RUN_ID" '
+              [.jobs[]
+                | select(.name == $job and .run_id == $run)]
+              | if length == 1 then .[0].id
+                else error("current wrapper job is not uniquely identifiable") end
+            ' <<<"$JOBS")
+          [[ "$CHECK_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          ARGO_UPSTREAM_TRACEPARENT=$(PYTHONPATH=.github/scripts python3 -c '
+          import sys
+          from cicd_otel import github_step_traceparent
+          print(github_step_traceparent(*sys.argv[1:]))
+          ' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$CHECK_RUN_ID" \
+            "Submit WorkflowTemplate and wait")
+          [[ "$ARGO_UPSTREAM_TRACEPARENT" =~ ^00-[0-9a-f]{32}-[0-9a-f]{16}-01$ ]]
+          echo "upstream_traceparent=$ARGO_UPSTREAM_TRACEPARENT" >> "$GITHUB_OUTPUT"
+
           NAME=""
           terminate_on_signal() {
             trap - INT TERM
@@ -207,6 +257,8 @@ jobs:
             -p upstream_repo="$UPSTREAM_REPO" \
             -p upstream_sha="$TEST_MERGE_SHA" \
             -p upstream_pr="$UPSTREAM_PR" \
+            -p cvk_lifecycle_id="$CVK_LIFECYCLE_ID" \
+            -p cvk_upstream_traceparent="$ARGO_UPSTREAM_TRACEPARENT" \
             --generate-name "cat8kv-${TEST_MERGE_SHA:0:8}-" \
             -o name | sed 's|^workflow.argoproj.io/||')
           [[ "$NAME" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
@@ -227,17 +279,23 @@ jobs:
         if: always() && steps.argo.outputs.workflow != ''
         env:
           WORKFLOW: ${{ steps.argo.outputs.workflow }}
+          CVK_LIFECYCLE_ID: ${{ needs.prepare.outputs.cvk_lifecycle_id }}
+          CVK_UPSTREAM_TRACEPARENT: ${{ steps.argo.outputs.upstream_traceparent }}
         run: |
           set -euo pipefail
           rm -f argo-evidence.json
           # Retain only status/timing and scenario labels. Do not persist raw
           # Argo JSON, pod logs, inputs, messages, or template source.
-          argo get -n virtual-kubelet-ci "$WORKFLOW" -o json | jq '
+          argo get -n virtual-kubelet-ci "$WORKFLOW" -o json | jq \
+            --arg lifecycle "$CVK_LIFECYCLE_ID" \
+            --arg upstream_traceparent "$CVK_UPSTREAM_TRACEPARENT" '
             (.status.storedWorkflowTemplateSpec.templates // []
               | map({key: .name, value: (.metadata.labels // {})})
               | from_entries) as $labels
             | {
                 schema: "cvk-lab-evidence/v1",
+                cvk_lifecycle_id: $lifecycle,
+                cvk_upstream_traceparent: $upstream_traceparent,
                 workflow: .metadata.name,
                 phase: (.status.phase // "Unknown"),
                 started_at: (.status.startedAt // ""),
@@ -261,10 +319,16 @@ jobs:
                 ]
               }
           ' > argo-evidence.json
-          jq -e '.schema == "cvk-lab-evidence/v1" and (.scenarios | type == "array")' \
+          jq -e '
+            .schema == "cvk-lab-evidence/v1"
+            and (.cvk_lifecycle_id | test("^cvk-pr[1-9][0-9]*-h[0-9a-f]{40}$"))
+            and (.cvk_upstream_traceparent | test("^00-[0-9a-f]{32}-[0-9a-f]{16}-01$"))
+            and (.scenarios | type == "array")
+          ' \
             argo-evidence.json >/dev/null
           jq -r '
             "## Cat8kv Argo summary\n\n" +
+            "Lifecycle: `" + .cvk_lifecycle_id + "`\n\n" +
             "Workflow: `" + .workflow + "`\n\n" +
             "Phase: `" + .phase + "`\n\n" +
             "Sanitized scenarios captured: " + ((.scenarios | length) | tostring)

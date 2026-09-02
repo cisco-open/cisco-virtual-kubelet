@@ -19,7 +19,8 @@
 name: Lab CI approval signal
 run-name: >-
   Lab CI approval signal [${{ github.event.review.state }}]
-  for PR #${{ github.event.pull_request.number }}
+  for PR #${{ github.event.pull_request.number }} -
+  cvk-pr${{ github.event.pull_request.number }}-h${{ github.event.pull_request.head.sha }}
 
 on:
   pull_request_review:

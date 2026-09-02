@@ -18,6 +18,12 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,7 +39,7 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
-	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 )
 
 // IOSXEConfigBundleReconciler fans an IOSXEConfigBundle out into
@@ -56,17 +62,6 @@ type IOSXEConfigBundleReconciler struct {
 // +kubebuilder:rbac:groups=cisco.vk,resources=ciscodevices,verbs=get;list;watch
 
 func (r *IOSXEConfigBundleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, retErr error) {
-	ctx, span := vktrace.StartSpan(ctx, "cvk.iosxeconfigbundle.reconcile")
-	ctx = span.WithField(ctx, "config.cisco.vk.iosxeconfigbundle.name", req.Name)
-	ctx = span.WithField(ctx, "config.cisco.vk.iosxeconfigbundle.namespace", req.Namespace)
-	defer func() {
-		span.WithField(ctx, "cvk.reconcile.result", reconcileResultAttribute(result))
-		if retErr != nil {
-			span.SetStatus(retErr)
-		}
-		span.End()
-	}()
-
 	var bundle configv1alpha1.IOSXEConfigBundle
 	if err := r.Get(ctx, req.NamespacedName, &bundle); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -74,6 +69,27 @@ func (r *IOSXEConfigBundleReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		return ctrl.Result{}, err
 	}
+
+	now := time.Now()
+	ctx, _ = correlation.ApplyAnnotations(ctx, bundle.Annotations, now)
+	ctx, span := correlation.Start(
+		ctx,
+		otel.Tracer("cisco-virtual-kubelet/iosxeconfigbundle-controller"),
+		"cvk.iosxeconfigbundle.reconcile",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.String("config.cisco.vk.iosxeconfigbundle.name", req.Name),
+			attribute.String("config.cisco.vk.iosxeconfigbundle.namespace", req.Namespace),
+		),
+	)
+	defer func() {
+		span.SetAttributes(attribute.String("cvk.reconcile.result", reconcileResultAttribute(result)))
+		if retErr != nil {
+			span.RecordError(retErr)
+			span.SetStatus(codes.Error, "reconcile")
+		}
+		span.End()
+	}()
 
 	devices, err := r.targetDevices(ctx, &bundle)
 	if err != nil {
@@ -199,6 +215,7 @@ func (r *IOSXEConfigBundleReconciler) upsertChild(
 			child.Labels = map[string]string{}
 		}
 		child.Labels["config.cisco.vk/bundle"] = b.Name
+		child.Annotations = propagatedCorrelationAnnotations(child.Annotations, b.Annotations, time.Now())
 		return nil
 	})
 	_ = op

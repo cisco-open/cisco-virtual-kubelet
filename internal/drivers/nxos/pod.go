@@ -16,13 +16,19 @@ package nxos
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -146,7 +152,7 @@ func (d *NXOSDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, er
 	observed := d.observePodApps(ctx, pod)
 	if len(observed) == 0 {
 		if pod.DeletionTimestamp == nil && d.hasPodResourceListers(pod.Namespace) {
-			d.scheduleConvergence(pod, observed)
+			d.scheduleConvergence(ctx, pod, observed)
 			out := pod.DeepCopy()
 			setPodStatus(d.config.Address, out, observed)
 			return out, nil
@@ -154,7 +160,7 @@ func (d *NXOSDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, er
 		return nil, apierrors.NewNotFound(schema.GroupResource{Group: "cisco.vk", Resource: "nxos-app"}, pod.Name)
 	}
 	if pod.DeletionTimestamp == nil {
-		d.scheduleConvergence(pod, observed)
+		d.scheduleConvergence(ctx, pod, observed)
 	}
 	out := pod.DeepCopy()
 	setPodStatus(d.config.Address, out, observed)
@@ -185,7 +191,7 @@ func (d *NXOSDriver) observePodApps(ctx context.Context, pod *v1.Pod) map[string
 // in a goroutine that OUTLIVES the GetPodStatus call. At most one
 // convergence runs per pod UID at a time (convergingPods dedup), so the
 // poll cadence cannot stack goroutines.
-func (d *NXOSDriver) scheduleConvergence(pod *v1.Pod, observed map[string]nxosApp) {
+func (d *NXOSDriver) scheduleConvergence(ctx context.Context, pod *v1.Pod, observed map[string]nxosApp) {
 	uid := string(pod.UID)
 	d.convergeMu.Lock()
 	if d.convergingPods == nil {
@@ -203,28 +209,51 @@ func (d *NXOSDriver) scheduleConvergence(pod *v1.Pod, observed map[string]nxosAp
 	for k, v := range observed {
 		observedCopy[k] = v
 	}
-	go func() {
-		bgCtx, cancel := context.WithTimeout(context.Background(), nxosAppActionTimeout)
+	detachedCtx := correlation.DetachedContext(ctx)
+	go func(parentCtx context.Context) {
+		bgCtx, cancel := context.WithTimeout(parentCtx, nxosAppActionTimeout)
 		defer cancel()
 		defer func() {
 			d.convergeMu.Lock()
 			delete(d.convergingPods, uid)
 			d.convergeMu.Unlock()
 		}()
-		d.convergePodApps(bgCtx, podCopy, observedCopy)
-	}()
+		traceCtx, span := correlation.Start(bgCtx,
+			otel.Tracer("cisco-virtual-kubelet/driver/nxos"),
+			"cvk.nxos.pod.convergence",
+			oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+			oteltrace.WithAttributes(
+				attribute.String("k8s.namespace.name", podCopy.Namespace),
+				attribute.String("k8s.pod.name", podCopy.Name),
+				attribute.String("k8s.pod.uid", string(podCopy.UID)),
+			),
+		)
+		defer span.End()
+		if err := d.convergePodApps(traceCtx, podCopy, observedCopy); err != nil {
+			span.SetAttributes(attribute.String("cisco.vk.convergence.outcome", "error"))
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "converge pod apps")
+			return
+		}
+		span.SetAttributes(attribute.String("cisco.vk.convergence.outcome", "succeeded"))
+		span.SetStatus(codes.Ok, "")
+	}(detachedCtx)
 }
 
 // convergePodApps drives observed apps toward their desired running state
 // and (re)installs any missing containers. Invoked only from the detached
 // scheduleConvergence goroutine — never inline on the status read path.
 // Individual app actions are themselves dedup'd + async via runAppAction.
-func (d *NXOSDriver) convergePodApps(ctx context.Context, pod *v1.Pod, observed map[string]nxosApp) {
+func (d *NXOSDriver) convergePodApps(ctx context.Context, pod *v1.Pod, observed map[string]nxosApp) error {
+	var errs []error
 	desiredConfigs, desiredErr := d.desiredConfigsByContainer(pod)
 	if desiredErr != nil {
 		log.G(ctx).WithError(desiredErr).Debugf("NX-OS converge: failed to render desired config for pod %s/%s", pod.Namespace, pod.Name)
+		errs = append(errs, desiredErr)
 	}
-	d.recoverMissingContainers(ctx, pod, observed)
+	if err := d.recoverMissingContainers(ctx, pod, observed); err != nil {
+		errs = append(errs, err)
+	}
 	for _, app := range observed {
 		cfg, ok := desiredConfigs[app.ContainerName]
 		if !ok {
@@ -234,7 +263,9 @@ func (d *NXOSDriver) convergePodApps(ctx context.Context, pod *v1.Pod, observed 
 			// Leave the app deactivated and retry when the Kubernetes pod can be
 			// rendered safely.
 			if app.State == "DEPLOYED" {
-				log.G(ctx).Warnf("NX-OS app %s is DEPLOYED but desired configuration is unavailable; refusing to activate with empty app config", app.ID)
+				err := fmt.Errorf("NX-OS app %s is DEPLOYED but desired configuration is unavailable", app.ID)
+				log.G(ctx).WithError(err).Warn("refusing to activate with empty app config")
+				errs = append(errs, err)
 				continue
 			}
 			cfg = nxosAppConfig{
@@ -246,8 +277,10 @@ func (d *NXOSDriver) convergePodApps(ctx context.Context, pod *v1.Pod, observed 
 		}
 		if err := d.advanceAppState(ctx, &cfg, app.State); err != nil {
 			log.G(ctx).WithError(err).Warnf("NX-OS app %s convergence failed", app.ID)
+			errs = append(errs, err)
 		}
 	}
+	return errors.Join(errs...)
 }
 
 func (d *NXOSDriver) desiredConfigsByContainer(pod *v1.Pod) (map[string]nxosAppConfig, error) {
@@ -514,14 +547,14 @@ func (d *NXOSDriver) removeAppConfig(ctx context.Context, appID string) error {
 	return d.appCommand(ctx, "configure terminal", fmt.Sprintf("no app-hosting appid %s", appID))
 }
 
-func (d *NXOSDriver) recoverMissingContainers(ctx context.Context, pod *v1.Pod, observed map[string]nxosApp) {
+func (d *NXOSDriver) recoverMissingContainers(ctx context.Context, pod *v1.Pod, observed map[string]nxosApp) error {
 	if pod.DeletionTimestamp != nil {
-		return
+		return nil
 	}
 	appConfigs, err := d.convertPodToAppConfigs(pod)
 	if err != nil {
 		log.G(ctx).WithError(err).Warnf("NX-OS recovery: failed to render pod %s/%s", pod.Namespace, pod.Name)
-		return
+		return err
 	}
 	missingConfigs := make([]nxosAppConfig, 0, len(appConfigs))
 	for _, cfg := range appConfigs {
@@ -530,18 +563,21 @@ func (d *NXOSDriver) recoverMissingContainers(ctx context.Context, pod *v1.Pod, 
 		}
 	}
 	if len(missingConfigs) == 0 {
-		return
+		return nil
 	}
 	if err := d.validateAppSlotCapacity(ctx, missingConfigs); err != nil {
 		log.G(ctx).WithError(err).Warnf("NX-OS recovery: insufficient app-hosting slots for pod %s/%s", pod.Namespace, pod.Name)
-		return
+		return err
 	}
+	var errs []error
 	for i := range missingConfigs {
 		cfg := missingConfigs[i]
 		if err := d.createApp(ctx, &cfg); err != nil {
 			log.G(ctx).WithError(err).Warnf("NX-OS recovery: failed to deploy missing container %s for pod %s/%s", cfg.Container, pod.Namespace, pod.Name)
+			errs = append(errs, err)
 		}
 	}
+	return errors.Join(errs...)
 }
 
 func (d *NXOSDriver) waitForState(ctx context.Context, appID string, timeout time.Duration, states ...string) error {

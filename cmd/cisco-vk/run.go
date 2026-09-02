@@ -179,7 +179,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		appCfg.Device.Password = envPass
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) // ctxlint:allow VK process root
 	defer cancel()
 
 	// Setup logging

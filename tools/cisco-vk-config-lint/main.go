@@ -209,7 +209,7 @@ func run(args []string, stdout, stderr io.Writer) exitCode {
 		return exitBadFlags
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) // ctxlint:allow CLI process root
 	defer cancel()
 
 	// Discover and load CRs. An empty match set is not an error —

@@ -37,6 +37,10 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -52,8 +56,8 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	log "github.com/virtual-kubelet/virtual-kubelet/log"
-	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
 )
 
 var deviceVersionRetryInterval = 30 * time.Second
@@ -160,17 +164,6 @@ func (r *AggregatedReconciler) mapSecretToCiscoDevices(ctx context.Context, obj 
 }
 
 func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, retErr error) {
-	ctx, span := vktrace.StartSpan(ctx, "cvk.aggregated.reconcile")
-	ctx = span.WithField(ctx, "cisco.device.name", req.Name)
-	ctx = span.WithField(ctx, "cisco.device.namespace", req.Namespace)
-	defer func() {
-		span.WithField(ctx, "cvk.reconcile.result", aggregatedReconcileResultAttribute(result))
-		if retErr != nil {
-			span.SetStatus(retErr)
-		}
-		span.End()
-	}()
-
 	var dev ciskov1.CiscoDevice
 	if err := r.Get(ctx, req.NamespacedName, &dev); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -179,7 +172,29 @@ func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		return ctrl.Result{}, err
 	}
-	ctx = span.WithField(ctx, "cvk.driver.kind", string(dev.Spec.Driver))
+
+	// Fetch the trusted object before consuming its bounded carrier. This keeps
+	// NotFound handling cheap and lets the object context become the parent (or
+	// an asynchronous link after its direct-parent window closes).
+	ctx, _ = correlation.ApplyAnnotations(ctx, dev.Annotations, time.Now())
+	ctx, span := correlation.Start(ctx,
+		otel.Tracer("cisco-virtual-kubelet/aggregator"),
+		"cvk.aggregated.reconcile",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.String("cisco.device.name", req.Name),
+			attribute.String("cisco.device.namespace", req.Namespace),
+			attribute.String("cvk.driver.kind", string(dev.Spec.Driver)),
+		),
+	)
+	defer func() {
+		span.SetAttributes(attribute.String("cvk.reconcile.result", aggregatedReconcileResultAttribute(result)))
+		if retErr != nil {
+			span.RecordError(retErr)
+			span.SetStatus(codes.Error, "reconcile")
+		}
+		span.End()
+	}()
 
 	// Platforms without a registered config driver: silent skip.
 	// Operators see the device through the existing per-pod flow
@@ -202,6 +217,8 @@ func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	pwd, err := r.resolvePassword(ctx, &dev)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "resolve credential")
 		if r.Recorder != nil {
 			r.Recorder.Eventf(&dev, corev1.EventTypeWarning, "AggregatorCredentialFailed",
 				"could not resolve credential: %v", err)

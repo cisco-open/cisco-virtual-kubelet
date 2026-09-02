@@ -25,7 +25,12 @@ import (
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -336,8 +341,29 @@ func (d *NXOSDriver) runAppAction(ctx context.Context, appID, action string, fn 
 	if !d.markAppAction(appID, action) {
 		return nil
 	}
+	run := func(actionCtx context.Context) error {
+		traceCtx, span := correlation.Start(actionCtx,
+			otel.Tracer("cisco-virtual-kubelet/driver/nxos"),
+			"cvk.nxos.app.action",
+			oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+			oteltrace.WithAttributes(
+				attribute.String("app.id", appID),
+				attribute.String("cisco.vk.app.action", action),
+			),
+		)
+		defer span.End()
+		if err := fn(traceCtx); err != nil {
+			span.SetAttributes(attribute.String("cisco.vk.app.action.outcome", "error"))
+			span.RecordError(err)
+			span.SetStatus(codes.Error, action)
+			return err
+		}
+		span.SetAttributes(attribute.String("cisco.vk.app.action.outcome", "succeeded"))
+		span.SetStatus(codes.Ok, "")
+		return nil
+	}
 	if !d.asyncActions {
-		if err := fn(ctx); err != nil {
+		if err := run(ctx); err != nil {
 			d.clearAppAction(appID)
 			return err
 		}
@@ -348,13 +374,14 @@ func (d *NXOSDriver) runAppAction(ctx context.Context, appID, action string, fn 
 		"appid":  appID,
 		"action": action,
 	}).Info("NX-OS app-hosting action scheduled")
-	// Detach from the request ctx: derive a background ctx (preserving
-	// logger fields) with a bounded timeout so the action survives the
-	// return of the call that scheduled it.
-	bgCtx, cancel := context.WithTimeout(log.WithLogger(context.Background(), log.G(ctx)), nxosAppActionTimeout)
-	go func() {
+	// Detach from request cancellation while retaining its values and linking
+	// the action span to the span that scheduled it. The finite timeout bounds
+	// both the retained values and the device operation.
+	detachedCtx := correlation.DetachedContext(ctx)
+	go func(parentCtx context.Context) {
+		bgCtx, cancel := context.WithTimeout(parentCtx, nxosAppActionTimeout)
 		defer cancel()
-		if err := fn(bgCtx); err != nil {
+		if err := run(bgCtx); err != nil {
 			d.clearAppAction(appID)
 			log.G(bgCtx).WithError(err).WithFields(log.Fields{
 				"appid":  appID,
@@ -367,7 +394,7 @@ func (d *NXOSDriver) runAppAction(ctx context.Context, appID, action string, fn 
 			"appid":  appID,
 			"action": action,
 		}).Info("NX-OS app-hosting action completed")
-	}()
+	}(detachedCtx)
 	return nil
 }
 

@@ -23,6 +23,10 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -45,7 +49,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/platforms"
 	configprovider "github.com/cisco/virtual-kubelet-cisco/internal/provider"
-	vktrace "github.com/virtual-kubelet/virtual-kubelet/trace"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 )
 
 const (
@@ -210,29 +214,39 @@ type CiscoDeviceReconciler struct {
 
 // Reconcile ensures a ConfigMap and Deployment exist for each CiscoDevice.
 func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, retErr error) {
-	ctx, span := vktrace.StartSpan(ctx, "cvk.ciscodevice.reconcile")
-	ctx = span.WithField(ctx, "cisco.device.name", req.Name)
-	ctx = span.WithField(ctx, "cisco.device.namespace", req.Namespace)
+	// ── 1. Fetch the CiscoDevice ────────────────────────────────────────
+	var device ciskov1.CiscoDevice
+	if err := r.Get(ctx, req.NamespacedName, &device); err != nil {
+		if errors.IsNotFound(err) {
+			log.FromContext(ctx).Info("CiscoDevice not found – already deleted")
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("unable to fetch CiscoDevice: %w", err)
+	}
+
+	// The object must be fetched before the span starts so its bounded CI
+	// carrier can become the parent (or, after the window, a causal link).
+	ctx, _ = correlation.ApplyAnnotations(ctx, device.Annotations, r.now())
+	ctx, span := correlation.Start(ctx,
+		otel.Tracer("cisco-virtual-kubelet/ciscodevice-controller"),
+		"cvk.ciscodevice.reconcile",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.String("cisco.device.name", req.Name),
+			attribute.String("cisco.device.namespace", req.Namespace),
+			attribute.String("cvk.driver.kind", string(device.Spec.Driver)),
+		),
+	)
 	defer func() {
-		span.WithField(ctx, "cvk.reconcile.result", reconcileResultAttribute(result))
+		span.SetAttributes(attribute.String("cvk.reconcile.result", reconcileResultAttribute(result)))
 		if retErr != nil {
-			span.SetStatus(retErr)
+			span.RecordError(retErr)
+			span.SetStatus(codes.Error, "reconcile")
 		}
 		span.End()
 	}()
 
 	logger := log.FromContext(ctx)
-
-	// ── 1. Fetch the CiscoDevice ────────────────────────────────────────
-	var device ciskov1.CiscoDevice
-	if err := r.Get(ctx, req.NamespacedName, &device); err != nil {
-		if errors.IsNotFound(err) {
-			logger.Info("CiscoDevice not found – already deleted")
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("unable to fetch CiscoDevice: %w", err)
-	}
-	ctx = span.WithField(ctx, "cvk.driver.kind", string(device.Spec.Driver))
 
 	// ── 2. Handle deletion (finalizer) ───────────────────────────────────
 	if !device.DeletionTimestamp.IsZero() {
@@ -286,6 +300,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, cm, func() error {
+		cm.Annotations = propagatedCorrelationAnnotations(cm.Annotations, device.Annotations, r.now())
 		cm.Data = map[string]string{
 			configFileName: configData,
 		}
@@ -428,6 +443,11 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if credRV := r.lookupCredentialResourceVersion(ctx, &device); credRV != "" {
 			annos["cisco.vk/credential-resource-version"] = credRV
 		}
+		// Keep lifecycle carriers on the Deployment object for audit/search.
+		// Do not copy them into the PodTemplate: a trace-only annotation change
+		// would otherwise roll the long-lived per-device VK even though the
+		// process does not consume its own Pod annotations.
+		deploy.Annotations = propagatedCorrelationAnnotations(deploy.Annotations, device.Annotations, r.now())
 		deploy.Spec.Template.ObjectMeta = metav1.ObjectMeta{
 			Labels:      labels,
 			Annotations: annos,
@@ -998,6 +1018,7 @@ func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, devi
 		return false, err
 	}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, desired, func() error {
+		desired.SetAnnotations(propagatedCorrelationAnnotations(desired.GetAnnotations(), device.Annotations, r.now()))
 		if err := setPrereqConfigSpec(desired, device.Name, families, &device.Spec.ConfigPrereqs.Configuration, false); err != nil {
 			return err
 		}
@@ -1017,6 +1038,29 @@ func (r *CiscoDeviceReconciler) reconcileConfigPrereqs(ctx context.Context, devi
 	}
 	log.FromContext(ctx).Info("configPrereqs reconciled", "configKind", prereqConfigKind(desired), "config", name, "operation", op)
 	return true, nil
+}
+
+func propagatedCorrelationAnnotations(destination, source map[string]string, now time.Time) map[string]string {
+	out := make(map[string]string, len(destination)+5)
+	for key, value := range destination {
+		out[key] = value
+	}
+	for _, key := range []string{
+		correlation.TraceparentAnnotation,
+		correlation.TracestateAnnotation,
+		correlation.TraceWindowEndAnnotation,
+		correlation.UpstreamTraceparentAnnotation,
+		correlation.LifecycleIDAnnotation,
+	} {
+		delete(out, key)
+	}
+	for key, value := range correlation.SanitizedAnnotationsAt(source, now) {
+		out[key] = value
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // SetupWithManager registers the controller with the manager.

@@ -21,7 +21,12 @@ import (
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -505,20 +510,40 @@ func (d *XEDriver) recoverMissingContainers(ctx context.Context, pod *v1.Pod, di
 		// Copy the config — the slice it points into is local to this
 		// function and the goroutine outlives the call.
 		cfgCopy := *cfg
+		detachedCtx := correlation.DetachedContext(ctx)
+		podNamespace, podName, podUID := pod.Namespace, pod.Name, string(pod.UID)
 		log.G(ctx).Infof("Recovery: spawning install for missing container %s (appID=%s) of pod %s/%s",
 			name, cfgCopy.AppName(), pod.Namespace, pod.Name)
-		go func() {
-			bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		go func(parentCtx context.Context) {
+			bgCtx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 			defer cancel()
 			defer d.clearInstallInFlight(cfgCopy.AppName())
-			if err := d.CreateAppHostingApp(bgCtx, &cfgCopy); err != nil {
-				log.G(bgCtx).Warnf("Recovery: install failed for container %s of pod %s/%s: %v",
-					cfgCopy.ContainerName(), pod.Namespace, pod.Name, err)
+			traceCtx, span := correlation.Start(bgCtx,
+				otel.Tracer("cisco-virtual-kubelet/driver/iosxe"),
+				"cvk.iosxe.pod.missing-container-recovery",
+				oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+				oteltrace.WithAttributes(
+					attribute.String("k8s.namespace.name", podNamespace),
+					attribute.String("k8s.pod.name", podName),
+					attribute.String("k8s.pod.uid", podUID),
+					attribute.String("k8s.container.name", cfgCopy.ContainerName()),
+					attribute.String("app.id", cfgCopy.AppName()),
+				),
+			)
+			defer span.End()
+			if err := d.CreateAppHostingApp(traceCtx, &cfgCopy); err != nil {
+				span.SetAttributes(attribute.String("cisco.vk.recovery.outcome", "error"))
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "install missing container")
+				log.G(traceCtx).Warnf("Recovery: install failed for container %s of pod %s/%s: %v",
+					cfgCopy.ContainerName(), podNamespace, podName, err)
 				return
 			}
-			log.G(bgCtx).Infof("Recovery: install succeeded for container %s of pod %s/%s",
-				cfgCopy.ContainerName(), pod.Namespace, pod.Name)
-		}()
+			span.SetAttributes(attribute.String("cisco.vk.recovery.outcome", "succeeded"))
+			span.SetStatus(codes.Ok, "")
+			log.G(traceCtx).Infof("Recovery: install succeeded for container %s of pod %s/%s",
+				cfgCopy.ContainerName(), podNamespace, podName)
+		}(detachedCtx)
 	}
 }
 

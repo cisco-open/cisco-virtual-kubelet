@@ -1,0 +1,116 @@
+# Copyright 2026 Cisco Systems Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Trusted fallback for the private validation network. GitHub cannot deliver a
+# signed webhook to svr-xl until a public TLS ingress exists, so this workflow
+# observes completed runs from trusted main and sends deterministic OTLP JSON
+# to the node-local Splunk Collector. It never checks out or executes the
+# observed run's branch, commit, artifact, or logs.
+name: CVK CI/CD OpenTelemetry export
+
+on:
+  workflow_run:
+    workflows:
+      - smoke
+      - Lab CI approval signal
+      - Lab CI approved dispatcher
+      - Lab CI (Cat8kv)
+      - Lab CI (Cat9k)
+      - lab-ci-static
+      - release
+      - CI build and deploy documentation
+      - krew-index
+      - ci-tiers
+      - yang-drift
+      - recover v2026.8.1 release assets
+    types: [completed]
+  release:
+    types: [published]
+
+permissions: {}
+
+concurrency:
+  group: >-
+    cicd-otel-${{ github.event_name }}-${{ github.event.workflow_run.id || github.event.release.id }}-${{ github.event.workflow_run.run_attempt || 'published' }}
+  cancel-in-progress: false
+
+jobs:
+  export-workflow:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.status == 'completed' &&
+      github.event.workflow_run.repository.full_name == github.repository
+    runs-on: [self-hosted, lab-cvk-upstream]
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout trusted observer from main
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Export completed workflow spans to the local Collector
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OBSERVED_REPOSITORY: ${{ github.repository }}
+          OBSERVED_RUN_ID: ${{ github.event.workflow_run.id }}
+          OBSERVED_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          [[ "$OBSERVED_REPOSITORY" == "$GITHUB_REPOSITORY" ]]
+          [[ "$OBSERVED_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$OBSERVED_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]
+          python3 .github/scripts/export-cicd-otel.py \
+            --repository "$OBSERVED_REPOSITORY" \
+            --run-id "$OBSERVED_RUN_ID" \
+            --run-attempt "$OBSERVED_RUN_ATTEMPT"
+
+  export-release-publication:
+    if: >-
+      github.event_name == 'release' &&
+      github.event.action == 'published' &&
+      github.event.repository.full_name == github.repository &&
+      github.event.release.draft == false &&
+      github.event.release.prerelease == false
+    runs-on: [self-hosted, lab-cvk-upstream]
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout trusted observer from main
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Export immutable release publication span to the local Collector
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OBSERVED_REPOSITORY: ${{ github.repository }}
+          OBSERVED_RELEASE_ID: ${{ github.event.release.id }}
+          OBSERVED_RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          [[ "$OBSERVED_REPOSITORY" == "$GITHUB_REPOSITORY" ]]
+          [[ "$OBSERVED_RELEASE_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$OBSERVED_RELEASE_TAG" =~ ^v[1-9][0-9]{3}\.([1-9]|1[0-2])\.(0|[1-9][0-9]{0,8})$ ]]
+          python3 .github/scripts/export-cicd-otel.py \
+            --repository "$OBSERVED_REPOSITORY" \
+            --release-id "$OBSERVED_RELEASE_ID" \
+            --release-tag "$OBSERVED_RELEASE_TAG"

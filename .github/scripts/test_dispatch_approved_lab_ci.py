@@ -37,6 +37,7 @@ REPOSITORY = "cisco-open/cisco-virtual-kubelet"
 HEAD = "a" * 40
 BASE = "b" * 40
 MERGE = "c" * 40
+TRACEPARENT = "00-" + "1" * 32 + "-" + "2" * 16 + "-01"
 
 
 def eligible_pull() -> dict[str, object]:
@@ -373,7 +374,14 @@ class DispatcherTests(unittest.TestCase):
 
         target = dispatcher.TARGETS[0]
         verified = dispatcher.VerifiedPullRequest(7, HEAD, BASE, MERGE)
-        dispatcher.dispatch_target(REPOSITORY, verified, target, 1, api_call=record)
+        dispatcher.dispatch_target(
+            REPOSITORY,
+            verified,
+            target,
+            1,
+            TRACEPARENT,
+            api_call=record,
+        )
 
         self.assertEqual(calls[0][1], "POST")
         self.assertEqual(calls[0][2]["state"], "pending")
@@ -388,8 +396,80 @@ class DispatcherTests(unittest.TestCase):
                 "expected_merge_sha": MERGE,
                 "dispatch_attempt": "1",
                 "dispatch_id": dispatcher.dispatch_id(verified, target, 1),
+                "cvk_lifecycle_id": dispatcher.lifecycle_id(verified),
+                "cvk_upstream_traceparent": TRACEPARENT,
             },
         )
+
+    def test_trusted_dispatcher_derives_receiver_compatible_traceparent(self) -> None:
+        def jobs_api(
+            path: str,
+            method: str = "GET",
+            body: dict[str, object] | None = None,
+        ) -> object:
+            del method, body
+            self.assertEqual(
+                path,
+                f"/repos/{REPOSITORY}/actions/runs/123456789/attempts/2/jobs"
+                "?per_page=100&page=1",
+            )
+            return {
+                "jobs": [
+                    {
+                        "id": 987654321,
+                        "name": dispatcher.TRUSTED_DISPATCH_JOB_NAME,
+                        "steps": [
+                            {"name": "Checkout trusted dispatcher from main"},
+                            {"name": dispatcher.TRUSTED_DISPATCH_STEP_NAME},
+                        ],
+                    }
+                ]
+            }
+
+        self.assertEqual(
+            dispatcher.trusted_dispatch_traceparent(
+                REPOSITORY,
+                run_id=123456789,
+                run_attempt=2,
+                job_name=dispatcher.TRUSTED_DISPATCH_JOB_NAME,
+                api_call=jobs_api,
+            ),
+            "00-e91f2b9d927f576c050158b6ebffadd1-a2dd3afe718a91f1-01",
+        )
+
+    def test_correlation_contract_fails_closed(self) -> None:
+        verified = dispatcher.VerifiedPullRequest(7, HEAD, BASE, MERGE)
+        self.assertEqual(
+            dispatcher.lifecycle_id(verified),
+            f"cvk-pr7-h{HEAD}",
+        )
+        for malformed in (
+            "",
+            "00-" + "0" * 32 + "-" + "2" * 16 + "-01",
+            "00-" + "1" * 32 + "-" + "0" * 16 + "-01",
+            "00-" + "1" * 32 + "-" + "2" * 16 + "-00",
+        ):
+            with self.subTest(traceparent=malformed):
+                with self.assertRaises(ValueError):
+                    dispatcher.dispatch_target(
+                        REPOSITORY,
+                        verified,
+                        dispatcher.TARGETS[0],
+                        1,
+                        malformed,
+                        api_call=mock.Mock(),
+                    )
+
+        with self.assertRaisesRegex(
+            dispatcher.GateError, "unexpected trusted dispatcher job"
+        ):
+            dispatcher.trusted_dispatch_traceparent(
+                REPOSITORY,
+                run_id=1,
+                run_attempt=1,
+                job_name="untrusted",
+                api_call=mock.Mock(),
+            )
 
     def test_dispatch_failure_replaces_pending_with_error(self) -> None:
         states: list[str] = []
@@ -411,6 +491,7 @@ class DispatcherTests(unittest.TestCase):
                 dispatcher.VerifiedPullRequest(7, HEAD, BASE, MERGE),
                 dispatcher.TARGETS[0],
                 1,
+                TRACEPARENT,
                 api_call=fail_dispatch,
             )
         self.assertEqual(states, ["pending", "error"])
@@ -433,12 +514,20 @@ class DispatcherTests(unittest.TestCase):
             mock.patch.object(dispatcher, "dispatch_target") as dispatch,
         ):
             with redirect_stdout(io.StringIO()):
-                dispatcher.reconcile(REPOSITORY, api_call=mock.Mock())
+                dispatcher.reconcile(
+                    REPOSITORY,
+                    upstream_traceparent=TRACEPARENT,
+                    api_call=mock.Mock(),
+                )
 
         self.assertEqual(dispatch.call_count, 2)
         self.assertEqual(
             [call.args[2] for call in dispatch.call_args_list],
             list(dispatcher.TARGETS),
+        )
+        self.assertEqual(
+            [call.args[4] for call in dispatch.call_args_list],
+            [TRACEPARENT, TRACEPARENT],
         )
 
     def test_reconcile_suppresses_existing_context_independently(self) -> None:
@@ -453,7 +542,9 @@ class DispatcherTests(unittest.TestCase):
         }
         run = {
             "id": run_id,
-            "display_title": dispatcher.dispatch_run_title(verified, target, 1),
+            "display_title": dispatcher.dispatch_run_title(
+                verified, target, 1, TRACEPARENT
+            ),
             "event": "workflow_dispatch",
             "head_branch": "main",
             "head_sha": BASE,
@@ -473,7 +564,11 @@ class DispatcherTests(unittest.TestCase):
             mock.patch.object(dispatcher, "dispatch_target") as dispatch,
         ):
             with redirect_stdout(io.StringIO()):
-                dispatcher.reconcile(REPOSITORY, api_call=mock.Mock(return_value=run))
+                dispatcher.reconcile(
+                    REPOSITORY,
+                    upstream_traceparent=TRACEPARENT,
+                    api_call=mock.Mock(return_value=run),
+                )
 
         dispatch.assert_called_once()
         self.assertEqual(dispatch.call_args.args[2], dispatcher.TARGETS[1])
@@ -574,7 +669,7 @@ class DispatcherTests(unittest.TestCase):
                 "workflow_runs": [
                     {
                         "display_title": dispatcher.dispatch_run_title(
-                            verified, target, 1
+                            verified, target, 1, TRACEPARENT
                         ),
                         "status": "queued",
                     }
@@ -659,12 +754,17 @@ class DispatcherTests(unittest.TestCase):
             mock.patch.object(dispatcher, "dispatch_target") as dispatch,
         ):
             with redirect_stdout(io.StringIO()):
-                dispatcher.reconcile(REPOSITORY, api_call=api_call)
+                dispatcher.reconcile(
+                    REPOSITORY,
+                    upstream_traceparent=TRACEPARENT,
+                    api_call=api_call,
+                )
         dispatch.assert_called_once_with(
             REPOSITORY,
             verified,
             target,
             2,
+            TRACEPARENT,
             api_call=mock.ANY,
         )
 
@@ -739,7 +839,7 @@ class DispatcherTests(unittest.TestCase):
                 "workflow_runs": [
                     {
                         "display_title": dispatcher.dispatch_run_title(
-                            verified, target, 1
+                            verified, target, 1, TRACEPARENT
                         ),
                         "status": "waiting",
                     }
@@ -779,7 +879,9 @@ class DispatcherTests(unittest.TestCase):
         }
         trusted_run = {
             "id": run_id,
-            "display_title": dispatcher.dispatch_run_title(verified, target, 1),
+            "display_title": dispatcher.dispatch_run_title(
+                verified, target, 1, TRACEPARENT
+            ),
             "event": "workflow_dispatch",
             "head_branch": "main",
             "head_sha": BASE,
@@ -877,7 +979,25 @@ class DispatcherTests(unittest.TestCase):
             self.assertIn("expected_merge_sha:", wrapper)
             self.assertIn("dispatch_attempt:", wrapper)
             self.assertIn("dispatch_id:", wrapper)
-            self.assertIn("run-name: Lab CI", wrapper)
+            self.assertIn("cvk_lifecycle_id:", wrapper)
+            self.assertIn("cvk_upstream_traceparent:", wrapper)
+            self.assertIn("run-name: >-", wrapper)
+            self.assertIn("${{ inputs.cvk_lifecycle_id }}", wrapper)
+            self.assertIn("${{ inputs.cvk_upstream_traceparent }}", wrapper)
+            self.assertIn('-p cvk_lifecycle_id="$CVK_LIFECYCLE_ID"', wrapper)
+            self.assertIn(
+                '-p cvk_upstream_traceparent="$ARGO_UPSTREAM_TRACEPARENT"',
+                wrapper,
+            )
+            self.assertIn("actions: read", wrapper)
+            self.assertIn("github_step_traceparent", wrapper)
+            self.assertIn("Submit WorkflowTemplate and wait", wrapper)
+            self.assertIn("steps.argo.outputs.upstream_traceparent", wrapper)
+            self.assertIn(
+                '[[ "$CVK_UPSTREAM_TRACEPARENT" =~ '
+                "^00-[0-9a-f]{32}-[0-9a-f]{16}-01$ ]]",
+                wrapper,
+            )
             self.assertIn("checks: read", wrapper)
             self.assertIn("pull-requests: write", wrapper)
             self.assertNotIn("issues: write", wrapper)

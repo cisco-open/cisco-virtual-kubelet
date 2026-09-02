@@ -227,10 +227,7 @@ func (e *TracesEmitter) emitRecoverySpan(ctx context.Context, event mapper.Mappe
 		trace.WithTimestamp(start),
 		trace.WithAttributes(attrs...),
 	}
-	if links := correlation.SpanLinksFromContext(ctx); len(links) > 0 {
-		opts = append(opts, trace.WithLinks(links...))
-	}
-	_, span := e.tracer.Start(ctx, transitionSpanName(event), opts...)
+	_, span := correlation.Start(ctx, e.tracer, transitionSpanName(event), opts...)
 	span.End(trace.WithTimestamp(end))
 	if e.stateTransitionsTotal != nil {
 		e.stateTransitionsTotal.Add(ctx, 1, metric.WithAttributes(

@@ -16,10 +16,15 @@ package deviceoperation
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	otelcodes "go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,6 +51,33 @@ type staleDeviceOperationClient struct {
 	client.Client
 	stale *opsv1alpha1.DeviceOperation
 	gets  int
+}
+
+type failingDeviceOperationStatusClient struct {
+	client.Client
+	err error
+}
+
+func (c *failingDeviceOperationStatusClient) Status() client.StatusWriter {
+	return failingDeviceOperationStatusWriter{err: c.err}
+}
+
+type failingDeviceOperationStatusWriter struct{ err error }
+
+func (w failingDeviceOperationStatusWriter) Create(context.Context, client.Object, client.Object, ...client.SubResourceCreateOption) error {
+	return w.err
+}
+
+func (w failingDeviceOperationStatusWriter) Update(context.Context, client.Object, ...client.SubResourceUpdateOption) error {
+	return w.err
+}
+
+func (w failingDeviceOperationStatusWriter) Patch(context.Context, client.Object, client.Patch, ...client.SubResourcePatchOption) error {
+	return w.err
+}
+
+func (w failingDeviceOperationStatusWriter) Apply(context.Context, runtime.ApplyConfiguration, ...client.SubResourceApplyOption) error {
+	return w.err
 }
 
 func (c *staleDeviceOperationClient) Get(
@@ -149,6 +181,60 @@ func TestReconcileShowCommand(t *testing.T) {
 	}
 	if tr.calls != 1 {
 		t.Fatalf("DiagnosticExec calls=%d want 1", tr.calls)
+	}
+}
+
+func TestReconcileStatusWriteFailureMarksRootSpanError(t *testing.T) {
+	scheme := newScheme(t)
+	op := newOperation("status-failure", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Commands = []string{"show version"}
+	})
+	base := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+	forced := errors.New("forced status write failure")
+	c := &failingDeviceOperationStatusClient{Client: base, err: forced}
+	recorder := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	previous := otel.GetTracerProvider()
+	otel.SetTracerProvider(tp)
+	t.Cleanup(func() {
+		otel.SetTracerProvider(previous)
+		_ = tp.Shutdown(context.Background())
+	})
+	r := &Reconciler{
+		Client:     c,
+		DeviceName: "dev1",
+		TP: &staticTP{tr: &fakeTransport{caps: transport.Capabilities{
+			Kind: transport.KindNETCONF, SupportsDiagnosticExec: true,
+		}}},
+	}
+
+	_, err := r.Reconcile(context.Background(), reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}})
+	if !errors.Is(err, forced) {
+		t.Fatalf("Reconcile error=%v, want forced status failure", err)
+	}
+	ended := recorder.Ended()
+	if len(ended) != 1 {
+		t.Fatalf("ended spans=%d, want 1", len(ended))
+	}
+	if ended[0].Status().Code != otelcodes.Error {
+		t.Fatalf("root span status=%#v, want Error", ended[0].Status())
+	}
+	foundException := false
+	for _, event := range ended[0].Events() {
+		if event.Name == "exception" {
+			foundException = true
+			break
+		}
+	}
+	if !foundException {
+		t.Fatalf("root span events=%#v, want recorded status error", ended[0].Events())
 	}
 }
 
@@ -619,6 +705,16 @@ func TestReconcileConfigDiffRejectedNamespaceGate(t *testing.T) {
 	if tr.calls != 0 {
 		t.Fatalf("DiagnosticExec calls=%d want 0", tr.calls)
 	}
+	resourceVersion := got.ResourceVersion
+	if _, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: op.Namespace, Name: op.Name}}); err != nil {
+		t.Fatalf("terminal Reconcile: %v", err)
+	}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
+		t.Fatalf("get terminal operation: %v", err)
+	}
+	if got.ResourceVersion != resourceVersion {
+		t.Fatalf("terminal rejection rewrote status: resourceVersion %q -> %q", resourceVersion, got.ResourceVersion)
+	}
 }
 
 // Reject DeviceOperation CRs whose namespace differs from the owning
@@ -667,6 +763,16 @@ func TestReconcileRejectsCrossNamespaceDeviceOperation(t *testing.T) {
 	}
 	if tr.calls != 0 {
 		t.Fatalf("DiagnosticExec calls=%d want 0 (transport must not be touched)", tr.calls)
+	}
+	resourceVersion := got.ResourceVersion
+	if _, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: op.Namespace, Name: op.Name}}); err != nil {
+		t.Fatalf("terminal Reconcile: %v", err)
+	}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
+		t.Fatalf("get terminal operation: %v", err)
+	}
+	if got.ResourceVersion != resourceVersion {
+		t.Fatalf("terminal rejection rewrote status: resourceVersion %q -> %q", resourceVersion, got.ResourceVersion)
 	}
 }
 

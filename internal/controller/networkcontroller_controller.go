@@ -1107,7 +1107,7 @@ func specOrDeletionChangedPredicate() predicate.Predicate {
 // isolated controller-worker command.
 func (r *NetworkControllerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(
-		context.Background(),
+		context.Background(), // ctxlint:allow manager field-index registration root
 		&ciskov1.NetworkController{},
 		networkControllerEndpointIndex,
 		networkControllerEndpointIndexValues,
@@ -1115,7 +1115,7 @@ func (r *NetworkControllerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("index NetworkController endpoint: %w", err)
 	}
 	if err := mgr.GetFieldIndexer().IndexField(
-		context.Background(),
+		context.Background(), // ctxlint:allow manager field-index registration root
 		&configv1alpha1.NetworkControllerConfig{},
 		networkControllerRefIndex,
 		networkControllerConfigRefIndexValues,

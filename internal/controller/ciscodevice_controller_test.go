@@ -33,12 +33,14 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 )
 
 // newTestScheme builds a runtime.Scheme with all types needed by the reconciler.
@@ -315,6 +317,103 @@ func TestReconcile_CreatesDeployment(t *testing.T) {
 		gotDevice.Status.NetAsCode.Type != ciskov1.NetAsCodeModelDeviceCentric ||
 		gotDevice.Status.NetAsCode.Stripe != "iosxe" {
 		t.Fatalf("NetAsCode status=%+v, want iosxe device-centric", gotDevice.Status.NetAsCode)
+	}
+}
+
+func TestReconcile_PropagatesValidatedCorrelationWithoutPodTemplateRollout(t *testing.T) {
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	device := newDevice("router-traced", "default")
+	device.Annotations = map[string]string{
+		correlation.TraceparentAnnotation:         "00-11111111111111111111111111111111-2222222222222222-01",
+		correlation.TracestateAnnotation:          "vendor=value",
+		correlation.TraceWindowEndAnnotation:      now.Add(time.Minute).Format(time.RFC3339),
+		correlation.UpstreamTraceparentAnnotation: "00-33333333333333333333333333333333-4444444444444444-01",
+		correlation.LifecycleIDAnnotation:         "release-181-validation",
+		"example.com/password":                    "must-not-propagate",
+	}
+	device.Spec.ConfigPrereqs = &ciskov1.ConfigPrereqs{
+		Configuration: runtime.RawExtension{Raw: []byte(
+			`{"interface_virtual_port_group":{"interfaces":[{"id":0,"ipv4_address":"192.168.10.1","ipv4_address_mask":"255.255.255.0"}]}}`,
+		)},
+	}
+	r := reconcilerFor(t, device)
+	r.clock = &fakeClock{now: now}
+	ctx := context.Background()
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", device.Name)); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	objects := []client.Object{
+		&corev1.ConfigMap{},
+		&appsv1.Deployment{},
+		&configv1alpha1.IOSXEConfig{},
+	}
+	keys := []types.NamespacedName{
+		{Namespace: "default", Name: device.Name + configMapSuffix},
+		{Namespace: "default", Name: device.Name + deploymentSuffix},
+		{Namespace: "default", Name: device.Name + "-prereqs"},
+	}
+	for i, obj := range objects {
+		if err := r.Get(ctx, keys[i], obj); err != nil {
+			t.Fatalf("get %T: %v", obj, err)
+		}
+		annotations := obj.GetAnnotations()
+		for _, key := range []string{
+			correlation.TraceparentAnnotation,
+			correlation.TracestateAnnotation,
+			correlation.TraceWindowEndAnnotation,
+			correlation.UpstreamTraceparentAnnotation,
+			correlation.LifecycleIDAnnotation,
+		} {
+			if annotations[key] != device.Annotations[key] {
+				t.Fatalf("%T annotation %s=%q, want %q", obj, key, annotations[key], device.Annotations[key])
+			}
+		}
+		if _, found := annotations["example.com/password"]; found {
+			t.Fatalf("%T propagated non-correlation annotation", obj)
+		}
+	}
+
+	deployment := objects[1].(*appsv1.Deployment)
+	for _, key := range []string{
+		correlation.TraceparentAnnotation,
+		correlation.TracestateAnnotation,
+		correlation.TraceWindowEndAnnotation,
+		correlation.UpstreamTraceparentAnnotation,
+		correlation.LifecycleIDAnnotation,
+	} {
+		if _, found := deployment.Spec.Template.Annotations[key]; found {
+			t.Fatalf("correlation annotation %s leaked into Deployment PodTemplate", key)
+		}
+	}
+}
+
+func TestPropagatedCorrelationAnnotationsPreservesDestinationAndRemovesStaleCarrier(t *testing.T) {
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	destination := map[string]string{
+		"cisco.vk/config-hash":            "keep-me",
+		correlation.TraceparentAnnotation: "stale",
+		correlation.LifecycleIDAnnotation: "stale-lifecycle",
+	}
+	source := map[string]string{
+		correlation.TraceparentAnnotation:    "00-11111111111111111111111111111111-2222222222222222-01",
+		correlation.TraceWindowEndAnnotation: now.Add(time.Minute).Format(time.RFC3339),
+		correlation.LifecycleIDAnnotation:    "release-181",
+		"example.com/password":               "must-not-copy",
+	}
+	got := propagatedCorrelationAnnotations(destination, source, now)
+	if got["cisco.vk/config-hash"] != "keep-me" ||
+		got[correlation.TraceparentAnnotation] != source[correlation.TraceparentAnnotation] ||
+		got[correlation.LifecycleIDAnnotation] != "release-181" {
+		t.Fatalf("propagated annotations=%#v", got)
+	}
+	if _, found := got["example.com/password"]; found {
+		t.Fatalf("non-allowlisted source annotation copied: %#v", got)
+	}
+
+	got = propagatedCorrelationAnnotations(got, nil, now)
+	if len(got) != 1 || got["cisco.vk/config-hash"] != "keep-me" {
+		t.Fatalf("stale correlation annotations not removed: %#v", got)
 	}
 }
 
