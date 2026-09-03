@@ -17,6 +17,7 @@ package controller
 import (
 	"context"
 	"testing"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,6 +28,7 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 )
 
 func bundleScheme(t *testing.T) *runtime.Scheme {
@@ -69,6 +71,12 @@ func TestBundleReconcileFanoutToSelectorMatches(t *testing.T) {
 	d2 := mkLabeledDevice("edge-02", "network", map[string]string{"role": "edge"})
 	other := mkLabeledDevice("core-01", "network", map[string]string{"role": "core"})
 	b := mkBundle("edges", "network", map[string]string{"role": "edge"})
+	b.Annotations = map[string]string{
+		correlation.TraceparentAnnotation:    "00-11111111111111111111111111111111-2222222222222222-01",
+		correlation.TraceWindowEndAnnotation: time.Now().Add(time.Minute).UTC().Format(time.RFC3339),
+		correlation.LifecycleIDAnnotation:    "release-181",
+		"example.com/password":               "must-not-copy",
+	}
 
 	c := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(d1, d2, other, b).
@@ -95,6 +103,18 @@ func TestBundleReconcileFanoutToSelectorMatches(t *testing.T) {
 		}
 		if child.Spec.DeviceRef.Name != "edge-01" && child.Spec.DeviceRef.Name != "edge-02" {
 			t.Errorf("child targets unexpected device %q", child.Spec.DeviceRef.Name)
+		}
+		for _, key := range []string{
+			correlation.TraceparentAnnotation,
+			correlation.TraceWindowEndAnnotation,
+			correlation.LifecycleIDAnnotation,
+		} {
+			if child.Annotations[key] != b.Annotations[key] {
+				t.Errorf("child %s annotation %s=%q, want %q", child.Name, key, child.Annotations[key], b.Annotations[key])
+			}
+		}
+		if _, found := child.Annotations["example.com/password"]; found {
+			t.Errorf("child %s propagated non-correlation annotation", child.Name)
 		}
 	}
 }

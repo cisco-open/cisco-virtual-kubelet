@@ -17,16 +17,24 @@ package aggregator
 import (
 	"context"
 	"testing"
+	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 )
 
 func aggScheme(t *testing.T) *runtime.Scheme {
@@ -101,6 +109,68 @@ func TestResolvePasswordFailsWhenSecretMissing(t *testing.T) {
 	r := &AggregatedReconciler{Client: c, Scheme: scheme}
 	if _, err := r.resolvePassword(context.Background(), dev); err == nil {
 		t.Fatal("expected error for missing Secret")
+	}
+}
+
+func TestReconcileUsesCiscoDeviceCorrelationCarrier(t *testing.T) {
+	recorder := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	previous := otel.GetTracerProvider()
+	otel.SetTracerProvider(tp)
+	t.Cleanup(func() {
+		otel.SetTracerProvider(previous)
+		_ = tp.Shutdown(context.Background())
+	})
+
+	now := time.Now().UTC()
+	dev := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "trace-only",
+			Namespace: "network",
+			Annotations: map[string]string{
+				correlation.TraceparentAnnotation:    "00-11111111111111111111111111111111-2222222222222222-01",
+				correlation.TraceWindowEndAnnotation: now.Add(time.Minute).Format(time.RFC3339),
+				correlation.LifecycleIDAnnotation:    "release-181",
+			},
+		},
+		Spec: ciskov1.DeviceSpec{Driver: ciskov1.DeviceDriver("UNREGISTERED_TRACE_TEST")},
+	}
+	scheme := aggScheme(t)
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(dev).Build()
+	r := &AggregatedReconciler{
+		Client:  c,
+		Scheme:  scheme,
+		managed: map[string]*deviceWorker{},
+		rootCtx: context.Background(),
+	}
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{
+		Namespace: dev.Namespace,
+		Name:      dev.Name,
+	}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	ended := recorder.Ended()
+	if len(ended) != 1 || ended[0].Name() != "cvk.aggregated.reconcile" {
+		t.Fatalf("ended spans=%#v, want one aggregator reconcile", ended)
+	}
+	remote, err := correlation.ParseTraceparent(dev.Annotations[correlation.TraceparentAnnotation])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ended[0].Parent().TraceID() != remote.TraceID() || ended[0].Parent().SpanID() != remote.SpanID() {
+		t.Fatalf("aggregator parent=%v, want object carrier=%v", ended[0].Parent(), remote)
+	}
+	wantLifecycle := attribute.String(correlation.LifecycleIDAttribute, "release-181")
+	found := false
+	for _, attr := range ended[0].Attributes() {
+		if attr == wantLifecycle {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("aggregator attributes=%#v, want lifecycle id", ended[0].Attributes())
 	}
 }
 

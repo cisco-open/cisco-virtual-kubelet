@@ -20,6 +20,7 @@
 # index and verifies a clean install through that public index.
 
 name: krew-index
+run-name: Krew publish - cvk-release-${{ github.event.release.tag_name }}
 
 on:
   release:

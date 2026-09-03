@@ -424,22 +424,26 @@ func (r *ConfigReconciler) Run(ctx context.Context) error {
 	}
 }
 
-// reconcileAll lists every IOSXEConfig in the cluster, filters to this
-// device, reports family-overlap conflicts on status, and dispatches
+// reconcileAll lists IOSXEConfig objects in this worker's device namespace,
+// filters to this device, reports family-overlap conflicts on status, and dispatches
 // each matching CR through the resolver + engine. The trigger is
 // forwarded to reconcileOne so a subscribe-driven tick bypasses the
 // hash short-circuit; a periodic tick respects it.
 func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, trigger reconcileTrigger) {
 	r.refreshDeviceVersion(ctx)
 	var list configv1alpha1.IOSXEConfigList
-	if err := r.Client.List(ctx, &list); err != nil {
+	var listOptions []client.ListOption
+	if r.DeviceNamespace != "" {
+		listOptions = append(listOptions, client.InNamespace(r.DeviceNamespace))
+	}
+	if err := r.Client.List(ctx, &list, listOptions...); err != nil {
 		logger.WithError(err).Warn("list IOSXEConfig failed; skipping tick")
 		return
 	}
 
 	forDevice := make([]*configv1alpha1.IOSXEConfig, 0, len(list.Items))
 	for i := range list.Items {
-		if list.Items[i].Spec.DeviceRef.Name == r.DeviceName {
+		if crTargetsDevice(&list.Items[i], r.DeviceName, r.DeviceNamespace) {
 			forDevice = append(forDevice, &list.Items[i])
 		}
 	}
@@ -467,8 +471,13 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, 
 	}
 
 	for _, cr := range forDevice {
-		proceed, _, err := r.prepareConfigForReconcile(ctx, cr)
+		objectCtx, span := startIOSXEConfigReconcileSpan(ctx, r.DeviceName, cr)
+		span.SetAttributes(attribute.String(semconv.CvkEntityID, configTelemetryEntityID(cr)))
+		proceed, _, err := r.prepareConfigForReconcile(objectCtx, cr)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "lifecycle")
+			span.End()
 			logger.WithError(err).
 				WithField("name", cr.Name).
 				WithField("namespace", cr.Namespace).
@@ -476,17 +485,23 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, 
 			continue
 		}
 		if !proceed {
+			span.End()
 			continue
 		}
 		// Polling-path callers don't need the engine.Result; controller-
 		// runtime's Reconcile uses it to derive a phase-aware
 		// RequeueAfter and span attributes. Discarded here.
-		if _, err := r.reconcileOne(ctx, logger, resolver, eng, cr, conflicts, trigger); err != nil {
+		result, err := r.reconcileOne(objectCtx, logger, resolver, eng, cr, conflicts, trigger)
+		recordIOSXEConfigSpanOutcome(span, result)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "reconcile")
 			logger.WithError(err).
 				WithField("name", cr.Name).
 				WithField("namespace", cr.Namespace).
 				Warn("reconcile IOSXEConfig failed")
 		}
+		span.End()
 	}
 }
 
@@ -1186,8 +1201,10 @@ func (r *ConfigReconciler) patchTraceAnnotations(ctx context.Context, cr *config
 		updated.Annotations = map[string]string{}
 	}
 	traceID := sc.TraceID().String()
-	updated.Annotations[correlation.TraceparentAnnotation] = correlation.FormatTraceparent(sc)
-	updated.Annotations[correlation.TraceWindowEndAnnotation] = time.Now().Add(correlation.DefaultTTL).UTC().Format(time.RFC3339)
+	// Traceparent and trace-window-end are immutable ingress carriers. Rewriting
+	// either from every reconcile would refresh the window indefinitely and make
+	// the next tick a child of the previous tick forever. Runtime diagnostics use
+	// distinct last-* annotations and leave the original bounded cause intact.
 	updated.Annotations[correlation.LastTraceIDAnnotation] = traceID
 	updated.Annotations[correlation.LastTraceDurationAnnotation] = duration.String()
 	if phase == engine.PhaseFailed {

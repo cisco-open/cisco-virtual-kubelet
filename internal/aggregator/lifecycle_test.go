@@ -36,6 +36,10 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	otelcodes "go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -254,10 +258,18 @@ func TestAggregatorSkipsUnregisteredDriver(t *testing.T) {
 
 // TestAggregatorCredentialFallthrough pins the safety net: if a
 // credential cannot be resolved (Secret missing, no inline password),
-// Reconcile must NOT crash, must NOT start a partial worker, and
-// must surface the failure as an Event for the operator.
+// Reconcile keeps its existing soak/no-requeue behavior, must NOT start a
+// partial worker, and must surface the failure in both an Event and tracing.
 func TestAggregatorCredentialFallthrough(t *testing.T) {
 	registerStubFakeDriver(t)
+	spanRecorder := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+	previous := otel.GetTracerProvider()
+	otel.SetTracerProvider(tp)
+	t.Cleanup(func() {
+		otel.SetTracerProvider(previous)
+		_ = tp.Shutdown(context.Background())
+	})
 	scheme := aggScheme(t)
 	dev := &ciskov1.CiscoDevice{
 		ObjectMeta: metav1.ObjectMeta{Name: "no-creds", Namespace: "agg-test"},
@@ -297,6 +309,20 @@ func TestAggregatorCredentialFallthrough(t *testing.T) {
 	r.mu.Unlock()
 	if present {
 		t.Errorf("missing credential should NOT start a partial worker")
+	}
+	ended := spanRecorder.Ended()
+	if len(ended) != 1 || ended[0].Name() != "cvk.aggregated.reconcile" || ended[0].Status().Code != otelcodes.Error {
+		t.Fatalf("credential failure spans=%#v, want one Error aggregator span", ended)
+	}
+	foundException := false
+	for _, event := range ended[0].Events() {
+		if event.Name == "exception" {
+			foundException = true
+			break
+		}
+	}
+	if !foundException {
+		t.Fatalf("credential failure span events=%#v, want exception", ended[0].Events())
 	}
 }
 

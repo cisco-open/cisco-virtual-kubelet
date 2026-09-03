@@ -40,6 +40,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/intent"
 	iosxewriters "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 )
 
@@ -385,30 +386,6 @@ func (r *ConfigReconciler) prepareConfigForReconcile(ctx context.Context, cr *co
 }
 
 func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	// Per-tick reconcile span. When no OTel TracerProvider is wired
-	// (the unit-test default), this resolves to a no-op tracer and
-	// adds zero overhead. When the topology exporter is configured,
-	// the span lands on the same OTLP collector with full apply-time
-	// attribution and per-CR identity attributes — strictly better
-	// than the existing histogram + event pair for tracing single
-	// reconcile attempts end to end.
-	ctx, span := otel.Tracer(reconcileTracerName).Start(
-		ctx,
-		"cvk.iosxeconfig.reconcile",
-		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
-		oteltrace.WithAttributes(
-			attribute.String("cisco.vk.device.name", r.DeviceName),
-			attribute.String("cisco.vk.iosxeconfig.namespace", req.Namespace),
-			attribute.String("cisco.vk.iosxeconfig.name", req.Name),
-			attribute.String(semconv.CvkEntityType, semconv.EntityTypeConfig),
-			attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeConfigChange),
-		),
-	)
-	defer span.End()
-
-	logger := crlog.FromContext(ctx).
-		WithValues("component", "config-reconciler", "device", r.DeviceName)
-
 	var cr configv1alpha1.IOSXEConfig
 	if err := r.Client.Get(ctx, req.NamespacedName, &cr); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -416,25 +393,30 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 			// window; treating NotFound as a no-op is correct because
 			// owner-ref cleanup (if any) is handled elsewhere and our
 			// status writes are unreachable anyway.
-			span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "not-found"))
-			span.SetAttributes(attribute.String(semconv.CvkEntityID, req.Namespace+"/"+req.Name))
 			return reconcile.Result{}, nil
 		}
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "get IOSXEConfig")
 		return reconcile.Result{}, fmt.Errorf("get IOSXEConfig: %w", err)
 	}
-	span.SetAttributes(attribute.String(semconv.CvkEntityID, configTelemetryEntityID(&cr)))
 
 	// Defence in depth: a CR reaching us that targets a different
 	// device — or that lives in another namespace (deviceRef is
 	// same-namespace by contract) — is ignored. In production the
 	// predicate filter below prevents this entirely; the check stays
-	// because the polling Run() path does not install a predicate.
+	// because the polling Run() path does not install a predicate. Perform this
+	// authorization before accepting any object-supplied trace carrier.
 	if !crTargetsDevice(&cr, r.DeviceName, r.DeviceNamespace) {
-		span.SetAttributes(attribute.String("cisco.vk.reconcile.outcome", "wrong-device"))
 		return reconcile.Result{}, nil
 	}
+
+	// Fetch and authorize first so a CI-supplied, bounded trace carrier can be
+	// validated before this reconcile span starts. That context is then passed
+	// unchanged through resolver, engine, driver, and transport calls below.
+	ctx, span := startIOSXEConfigReconcileSpan(ctx, r.DeviceName, &cr)
+	defer span.End()
+
+	logger := crlog.FromContext(ctx).
+		WithValues("component", "config-reconciler", "device", r.DeviceName)
+	span.SetAttributes(attribute.String(semconv.CvkEntityID, configTelemetryEntityID(&cr)))
 
 	proceed, lifecycleResult, err := r.prepareConfigForReconcile(ctx, &cr)
 	if err != nil {
@@ -530,11 +512,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	// see the previous tick's phase and miss e.g. PhaseLeaseBlocked
 	// just written by this tick. Wave 9.2
 	// (external-review-wave8-followup Finding #2).
-	span.SetAttributes(
-		attribute.String("cisco.vk.reconcile.outcome", "ok"),
-		attribute.String("cisco.vk.iosxeconfig.phase", result.Phase),
-		attribute.Int("cisco.vk.drift.count", len(result.Drift)),
-	)
+	recordIOSXEConfigSpanOutcome(span, result)
 	// Steady-state drift detection: requeue at the spec'd interval so
 	// even an InSync CR is re-checked against the device. controller-
 	// runtime's existing on-error backoff still applies on top.
@@ -553,6 +531,39 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	// used the normal drift interval even on a tick that just wrote
 	// LeaseBlocked, defeating Wave 8.2's contention-aware requeue.
 	return reconcile.Result{RequeueAfter: requeueIntervalFor(&cr, result.Phase)}, nil
+}
+
+func recordIOSXEConfigSpanOutcome(span oteltrace.Span, result engine.Result) {
+	outcome := "ok"
+	if result.Phase == engine.PhaseFailed {
+		outcome = "error"
+		if result.Err != nil {
+			span.RecordError(result.Err)
+		}
+		span.SetStatus(codes.Error, "config reconcile failed")
+	}
+	span.SetAttributes(
+		attribute.String("cisco.vk.reconcile.outcome", outcome),
+		attribute.String("cisco.vk.iosxeconfig.phase", result.Phase),
+		attribute.Int("cisco.vk.drift.count", len(result.Drift)),
+	)
+}
+
+func startIOSXEConfigReconcileSpan(ctx context.Context, deviceName string, cr *configv1alpha1.IOSXEConfig) (context.Context, oteltrace.Span) {
+	ctx, _ = correlation.ApplyAnnotations(ctx, cr.Annotations, time.Now())
+	return correlation.Start(
+		ctx,
+		otel.Tracer(reconcileTracerName),
+		"cvk.iosxeconfig.reconcile",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.String("cisco.vk.device.name", deviceName),
+			attribute.String("cisco.vk.iosxeconfig.namespace", cr.Namespace),
+			attribute.String("cisco.vk.iosxeconfig.name", cr.Name),
+			attribute.String(semconv.CvkEntityType, semconv.EntityTypeConfig),
+			attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeConfigChange),
+		),
+	)
 }
 
 // requeueIntervalFor returns the controller-runtime RequeueAfter

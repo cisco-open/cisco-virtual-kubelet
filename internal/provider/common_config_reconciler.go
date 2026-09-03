@@ -25,6 +25,10 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,6 +50,8 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/validation"
 	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 )
 
 // CommonConfigPlatform describes one CRD that uses CommonConfigSpec and
@@ -382,8 +388,14 @@ func (r *CommonConfigReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	if spec == nil || spec.DeviceRef.Name != r.DeviceName || !r.inDeviceNamespace(cr) {
 		return reconcile.Result{}, nil
 	}
+	ctx, span := r.startReconcileSpan(ctx, cr)
+	defer span.End()
 	proceed, result, err := r.prepareForReconcile(ctx, cr)
 	if err != nil || !proceed {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "lifecycle")
+		}
 		return result, err
 	}
 	r.refreshDeviceVersion(ctx)
@@ -394,11 +406,51 @@ func (r *CommonConfigReconciler) Reconcile(ctx context.Context, req reconcile.Re
 		trigger = triggerSubscribe
 	}
 	engineResult, err := r.reconcileOne(ctx, log.G(ctx), cr, conflicts, trigger)
+	recordCommonConfigSpanOutcome(span, engineResult)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "reconcile")
 		logger.Error(err, "reconcile "+r.Platform.Kind)
 		return reconcile.Result{}, err
 	}
 	return reconcile.Result{RequeueAfter: r.requeueInterval(cr, engineResult.Phase)}, nil
+}
+
+func recordCommonConfigSpanOutcome(span oteltrace.Span, result engine.Result) {
+	outcome := "ok"
+	if result.Phase == engine.PhaseFailed {
+		outcome = "error"
+		if result.Err != nil {
+			span.RecordError(result.Err)
+		}
+		span.SetStatus(codes.Error, "config reconcile failed")
+	}
+	span.SetAttributes(
+		attribute.String("cisco.vk.reconcile.outcome", outcome),
+		attribute.String("cisco.vk.config.phase", result.Phase),
+		attribute.Int("cisco.vk.drift.count", len(result.Drift)),
+	)
+}
+
+func (r *CommonConfigReconciler) startReconcileSpan(ctx context.Context, cr client.Object) (context.Context, oteltrace.Span) {
+	ctx, _ = correlation.ApplyAnnotations(ctx, cr.GetAnnotations(), time.Now())
+	entityID := cr.GetNamespace() + "/" + cr.GetName()
+	if cr.GetUID() != "" {
+		entityID = string(cr.GetUID())
+	}
+	return correlation.Start(ctx, otel.Tracer(reconcileTracerName),
+		"cvk."+strings.ToLower(r.Platform.Kind)+".reconcile",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.String("cisco.vk.device.name", r.DeviceName),
+			attribute.String("k8s.namespace.name", cr.GetNamespace()),
+			attribute.String("k8s.resource.name", cr.GetName()),
+			attribute.String("k8s.resource.kind", r.Platform.Kind),
+			attribute.String(semconv.CvkEntityType, semconv.EntityTypeConfig),
+			attribute.String(semconv.CvkEntityID, entityID),
+			attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeConfigChange),
+		),
+	)
 }
 
 func (r *CommonConfigReconciler) prepareForReconcile(ctx context.Context, cr client.Object) (bool, reconcile.Result, error) {
@@ -465,8 +517,12 @@ func (r *CommonConfigReconciler) reconcileAll(ctx context.Context, logger log.Lo
 	r.refreshDeviceVersion(ctx)
 	forDevice, conflicts := r.cohort(ctx, crlog.FromContext(ctx))
 	for _, cr := range forDevice {
-		proceed, _, err := r.prepareForReconcile(ctx, cr)
+		objectCtx, span := r.startReconcileSpan(ctx, cr)
+		proceed, _, err := r.prepareForReconcile(objectCtx, cr)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "lifecycle")
+			span.End()
 			logger.WithError(err).
 				WithField("name", cr.GetName()).
 				WithField("namespace", cr.GetNamespace()).
@@ -474,14 +530,20 @@ func (r *CommonConfigReconciler) reconcileAll(ctx context.Context, logger log.Lo
 			continue
 		}
 		if !proceed {
+			span.End()
 			continue
 		}
-		if _, err := r.reconcileOne(ctx, logger, cr, conflicts, trigger); err != nil {
+		result, err := r.reconcileOne(objectCtx, logger, cr, conflicts, trigger)
+		recordCommonConfigSpanOutcome(span, result)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "reconcile")
 			logger.WithError(err).
 				WithField("name", cr.GetName()).
 				WithField("namespace", cr.GetNamespace()).
 				Warn("reconcile common config failed")
 		}
+		span.End()
 	}
 }
 

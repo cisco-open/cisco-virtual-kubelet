@@ -124,7 +124,7 @@ func TestRecoverySpanUsesContextLink(t *testing.T) {
 	defer func() { _ = tp.Shutdown(context.Background()) }()
 	emitter := NewTracesEmitter(tp, nil, []configv1alpha1.Transition{operStatusTransition()})
 	source := testSpanContext(t)
-	ctx := correlation.WithSpanLink(context.Background(), source)
+	ctx := correlation.WithLifecycleID(correlation.WithSpanLink(context.Background(), source), "release-181")
 
 	t1 := time.Date(2026, 5, 9, 10, 0, 0, 0, time.UTC)
 	emitted := emitter.Emit(ctx, []mapper.MappedEvent{
@@ -144,6 +144,9 @@ func TestRecoverySpanUsesContextLink(t *testing.T) {
 	links := spans[0].Links()
 	if len(links) != 1 || links[0].SpanContext.SpanID() != source.SpanID() {
 		t.Fatalf("links=%+v, want source span link", links)
+	}
+	if got := attrsByKey(spans[0].Attributes())[correlation.LifecycleIDAttribute]; got != "release-181" {
+		t.Fatalf("lifecycle attribute=%q, want release-181", got)
 	}
 	attrs := attrsByKey(links[0].Attributes)
 	if attrs["cvk.correlation.type"] != "span_link" ||

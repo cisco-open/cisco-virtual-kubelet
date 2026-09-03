@@ -26,6 +26,10 @@ import (
 
 	commonpb "github.com/openconfig/gnoi/types"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	otelcodes "go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
@@ -43,6 +47,8 @@ import (
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 )
 
 // SetupWithManager registers the IOSXESoftwareUpgrade controller.
@@ -105,7 +111,7 @@ func (r *Reconciler) now() time.Time {
 
 // Reconcile is the main entry point. Defensive guards run first, then
 // the per-phase dispatcher.
-func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (result reconcile.Result, retErr error) {
 	var up opsv1alpha1.IOSXESoftwareUpgrade
 	reader := r.Reader
 	if reader == nil {
@@ -128,6 +134,32 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	now := r.now()
+	ctx, _ = correlation.ApplyAnnotations(ctx, up.Annotations, now)
+	ctx, span := correlation.Start(
+		ctx,
+		otel.Tracer("cisco-virtual-kubelet/softwareupgrade-reconciler"),
+		"cvk.iosxesoftwareupgrade.reconcile",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.String("cisco.vk.device.name", r.DeviceName),
+			attribute.String("k8s.namespace.name", up.Namespace),
+			attribute.String("k8s.resource.name", up.Name),
+			attribute.String("k8s.resource.kind", "IOSXESoftwareUpgrade"),
+			attribute.String("cvk.softwareupgrade.phase", string(up.Status.Phase)),
+			attribute.String(semconv.CvkEntityType, semconv.EntityTypeOperation),
+			attribute.String(semconv.CvkEntityID, softwareUpgradeEntityID(&up)),
+			attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeOperatorAction),
+			attribute.String(semconv.CvkWorkflowName, "software.lifecycle"),
+		),
+	)
+	setSoftwareUpgradeSpanOutcome(span, up.Status.Phase, up.Status.FailureReason, up.Status.Message)
+	defer func() {
+		if retErr != nil {
+			span.RecordError(retErr)
+			span.SetStatus(otelcodes.Error, "reconcile")
+		}
+		span.End()
+	}()
 
 	// Deletion path.
 	if !up.DeletionTimestamp.IsZero() {
@@ -168,6 +200,41 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	default:
 		// Terminal phases: nothing to do.
 		return reconcile.Result{}, nil
+	}
+}
+
+func softwareUpgradeEntityID(up *opsv1alpha1.IOSXESoftwareUpgrade) string {
+	if up == nil {
+		return ""
+	}
+	if up.UID != "" {
+		return string(up.UID)
+	}
+	if up.Namespace != "" {
+		return up.Namespace + "/" + up.Name
+	}
+	return up.Name
+}
+
+func setSoftwareUpgradeSpanOutcome(span oteltrace.Span, phase opsv1alpha1.UpgradePhase, reason, message string) {
+	if phase == "" {
+		return
+	}
+	span.SetAttributes(
+		attribute.String("cvk.softwareupgrade.phase", string(phase)),
+		attribute.String("cvk.softwareupgrade.reason", reason),
+	)
+	if isTerminalFailurePhase(phase) {
+		description := reason
+		if description == "" {
+			description = message
+		}
+		if description == "" {
+			description = string(phase)
+		}
+		span.SetStatus(otelcodes.Error, description)
+	} else if phase == opsv1alpha1.UpgradePhaseSucceeded {
+		span.SetStatus(otelcodes.Ok, "")
 	}
 }
 
@@ -1068,6 +1135,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, up *opsv1alpha1.IOSXESoft
 	if err != nil {
 		return result, fmt.Errorf("update upgrade status: %w", err)
 	}
+	setSoftwareUpgradeSpanOutcome(oteltrace.SpanFromContext(ctx), afterPhase, afterReason, afterMessage)
 	if afterPhase != "" && afterPhase != beforePhase {
 		eventType := corev1.EventTypeNormal
 		if isTerminalFailurePhase(afterPhase) {

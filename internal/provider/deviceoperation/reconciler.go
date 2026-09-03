@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,6 +42,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 )
 
@@ -122,7 +124,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 // deliberately read-only: ShowCommand runs allowlisted commands, ConfigDiff
 // captures running config and can compare it with an operator-supplied baseline,
 // and PacketCapture reads an existing monitor capture buffer.
-func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (result reconcile.Result, retErr error) {
 	now := r.now()
 
 	var op opsv1alpha1.DeviceOperation
@@ -144,42 +146,68 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if op.Spec.DeviceRef.Name != r.DeviceName {
 		return reconcile.Result{}, nil
 	}
+
 	// DeviceOperation.spec.deviceRef is a same-namespace pointer by convention,
 	// but the watch is cluster-wide so nothing stops a tenant in namespace X
 	// from creating a DeviceOperation that names deviceRef from namespace Y.
 	// Reject those before any device transport is touched.
+	rejectionReason, rejectionMessage := "", ""
 	if r.DeviceNamespace != "" && op.Namespace != r.DeviceNamespace {
-		msg := fmt.Sprintf("DeviceOperation %s/%s targets device %q which lives in namespace %q; refusing to execute cross-namespace request",
+		rejectionReason = "NamespaceMismatch"
+		rejectionMessage = fmt.Sprintf("DeviceOperation %s/%s targets device %q which lives in namespace %q; refusing to execute cross-namespace request",
 			op.Namespace, op.Name, op.Spec.DeviceRef.Name, r.DeviceNamespace)
-		return reconcile.Result{}, r.finishWithReason(ctx, &op, opsv1alpha1.OperationPhaseFailed,
-			"NamespaceMismatch", msg, nil, nil, now)
+	} else if op.Spec.Operation.Kind == opsv1alpha1.OperationKindConfigDiff &&
+		!configDiffNamespaceAllowed(op.Namespace) {
+		rejectionReason = "NamespaceNotAuthorized"
+		rejectionMessage = fmt.Sprintf("ConfigDiff is not authorized in namespace %q", op.Namespace)
 	}
+	if rejectionReason != "" {
+		// Do not consume correlation supplied by an unauthorized request: it
+		// must not be able to inject a carrier into this device's trusted trace.
+		ctx, span := r.startOperationSpan(ctx, &op)
+		defer func() {
+			if retErr != nil {
+				span.RecordError(retErr)
+				span.SetStatus(codes.Error, "reconcile")
+			}
+			span.End()
+		}()
+		span.SetStatus(codes.Error, rejectionReason)
+		if terminal(op.Status.Phase) && op.Status.ObservedGeneration == op.Generation {
+			span.SetAttributes(attribute.String("cvk.operation.reconcile.path", "rejected-terminal-ttl"))
+			result, err := r.handleTTL(ctx, &op, now)
+			if err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "ttl handling")
+			}
+			return result, err
+		}
+		return reconcile.Result{}, r.finishWithReason(ctx, &op, opsv1alpha1.OperationPhaseFailed,
+			rejectionReason, rejectionMessage, nil, nil, now)
+	}
+
+	ctx, _ = correlation.ApplyAnnotations(ctx, op.Annotations, now)
+	ctx, span := r.startOperationSpan(ctx, &op)
+	defer func() {
+		if retErr != nil {
+			span.RecordError(retErr)
+			span.SetStatus(codes.Error, "reconcile")
+		}
+		span.End()
+	}()
 
 	if terminal(op.Status.Phase) && op.Status.ObservedGeneration == op.Generation {
-		return r.handleTTL(ctx, &op, now)
+		span.SetAttributes(attribute.String("cvk.operation.reconcile.path", "terminal-ttl"))
+		if op.Status.Phase == opsv1alpha1.OperationPhaseFailed {
+			span.SetStatus(codes.Error, "operation already failed")
+		}
+		result, err := r.handleTTL(ctx, &op, now)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "ttl handling")
+		}
+		return result, err
 	}
-	if op.Spec.Operation.Kind == opsv1alpha1.OperationKindConfigDiff &&
-		!configDiffNamespaceAllowed(op.Namespace) {
-		msg := fmt.Sprintf("ConfigDiff is not authorized in namespace %q", op.Namespace)
-		return reconcile.Result{}, r.finishWithReason(ctx, &op, opsv1alpha1.OperationPhaseFailed,
-			"NamespaceNotAuthorized", msg, nil, nil, now)
-	}
-
-	spanName := operationSpanName(op.Spec.Operation.Kind)
-	ctx, span := otel.Tracer(tracerName).Start(ctx, spanName)
-	defer span.End()
-	span.SetAttributes(
-		attribute.String("cisco.device.name", r.DeviceName),
-		attribute.String("cvk.operation.kind", string(op.Spec.Operation.Kind)),
-		attribute.String("k8s.namespace.name", op.Namespace),
-		attribute.String("k8s.resource.name", op.Name),
-		attribute.String(semconv.CvkEntityType, semconv.EntityTypeOperation),
-		attribute.String(semconv.CvkEntityID, operationEntityID(&op)),
-		attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeOperatorAction),
-		attribute.String(semconv.CvkWorkflowName, "operator.diagnostic"),
-		attribute.String(semconv.CvkTaskName, "op."+string(op.Spec.Operation.Kind)),
-	)
-
 	// gNOI dispatch path. The gNOI-backed operation kinds produce
 	// structured JSON output directly from the gNOI client; they do
 	// not flow through the CLI/diagnostic transport that the rest of
@@ -307,6 +335,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		span.SetStatus(codes.Ok, "")
 	}
 	return reconcile.Result{}, r.finishWithReason(ctx, &op, terminalPhase, reason, message, outputs, artifactURIs, now)
+}
+
+func (r *Reconciler) startOperationSpan(ctx context.Context, op *opsv1alpha1.DeviceOperation) (context.Context, trace.Span) {
+	ctx, span := correlation.Start(ctx, otel.Tracer(tracerName), operationSpanName(op.Spec.Operation.Kind))
+	span.SetAttributes(
+		attribute.String("cisco.device.name", r.DeviceName),
+		attribute.String("cvk.operation.kind", string(op.Spec.Operation.Kind)),
+		attribute.String("cvk.operation.phase", string(op.Status.Phase)),
+		attribute.String("k8s.namespace.name", op.Namespace),
+		attribute.String("k8s.resource.name", op.Name),
+		attribute.String(semconv.CvkEntityType, semconv.EntityTypeOperation),
+		attribute.String(semconv.CvkEntityID, operationEntityID(op)),
+		attribute.String(semconv.CvkEvidenceType, semconv.EvidenceTypeOperatorAction),
+		attribute.String(semconv.CvkWorkflowName, "operator.diagnostic"),
+		attribute.String(semconv.CvkTaskName, "op."+string(op.Spec.Operation.Kind)),
+	)
+	return ctx, span
 }
 
 func operationEntityID(op *opsv1alpha1.DeviceOperation) string {

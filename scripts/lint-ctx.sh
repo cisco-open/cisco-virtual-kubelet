@@ -33,7 +33,10 @@ rg -n 'context\.Background\(\)' \
   --glob '*.go' \
   --glob '!**/*_test.go' >"$tmp" || true
 
-allowed='(shutdownCtx|context\.WithTimeout\(context\.Background\(\)|context\.WithCancel\(context\.Background\(\)|signal\.NotifyContext\(context\.Background\(\)|runVirtualKubelet|NewOTELTopologyExporter|SetupSignalHandler|manager\.go|providers\.go|providerserver\.Serve|crd_drift_check\.go|config_reconciler_controller\.go|iosxetelemetry_reconciler\.go|subscriber\.go|correlation\.go)'
+# Allow only named bootstrap/shutdown sites or files whose job is to construct
+# root contexts. Do not allowlist generic WithTimeout/WithCancel expressions:
+# doing so masked detached driver goroutines that silently severed tracing.
+allowed='(ctxlint:allow|shutdownCtx|signal\.NotifyContext\(context\.Background\(\)|runVirtualKubelet|NewOTELTopologyExporter|SetupSignalHandler|manager\.go|providers\.go|providerserver\.Serve|crd_drift_check\.go|config_reconciler_controller\.go|iosxetelemetry_reconciler\.go|subscriber\.go|correlation\.go)'
 
 if grep -Ev "$allowed" "$tmp"; then
   echo "context propagation lint failed: derive from the caller ctx or add a narrow allowlist reason" >&2

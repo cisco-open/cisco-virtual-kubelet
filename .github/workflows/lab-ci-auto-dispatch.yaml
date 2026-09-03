@@ -16,6 +16,9 @@
 # orderings (approval before smoke, or smoke before approval); the schedule is
 # a fail-safe for delayed/missed signals and replaces the external host poller.
 name: Lab CI approved dispatcher
+run-name: >-
+  Lab CI approved dispatcher -
+  github-upstream-run${{ github.event.workflow_run.id || 'none' }}-a${{ github.event.workflow_run.run_attempt || 'none' }}
 
 on:
   workflow_run:

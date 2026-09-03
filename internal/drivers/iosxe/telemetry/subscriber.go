@@ -613,51 +613,76 @@ func (s *Subscriber) drainEvents(events <-chan NotificationEvent) {
 				s.selfMetrics.RecordProcessingDuration(emitCtx, time.Since(startProcessing).Seconds(), s.deviceRef, name)
 				continue
 			}
-			var appEvents []state.AppEvent
 			if stateCache != nil {
-				appEvents = stateCache.ApplyMappedEvents(mapped)
-			} else if appConsumer != nil {
-				appEvents = state.ExtractAppEvents(mapped)
+				stateCache.ApplyMappedEvents(mapped)
 			}
-			if appConsumer != nil {
-				for _, appEvent := range appEvents {
-					if ok := appConsumer.ObserveAppEvent(emitCtx, appEvent); !ok && s.selfMetrics != nil {
-						s.selfMetrics.IncNotifierDropped(emitCtx, "consumer_backpressure")
-					}
-				}
+			logsEmitted, metricsEmitted := s.emitMappedEventsWithCorrelation(
+				emitCtx, corr, appConsumer, name, mapped, profile,
+			)
+			if logsEmitted > 0 {
+				s.bumpLogRecords(name, int64(logsEmitted))
 			}
-			eventEmitCtx := emitCtx
-			if corr != nil {
-				for _, appEvent := range appEvents {
-					if sc, age, ok := corr.Get(appEvent.Device, appEvent.AppID); ok {
-						switch corr.RelationshipForAge(age) {
-						case correlation.RelationshipParent:
-							eventEmitCtx = correlation.WithSpanContext(eventEmitCtx, sc)
-						default:
-							eventEmitCtx = correlation.WithSpanLink(eventEmitCtx, sc)
-						}
-						break
-					}
-				}
-			}
-			if s.logsEmitter != nil {
-				policyKey := s.deviceRef + "\x00" + name
-				if emitted := s.logsEmitter.EmitWithPolicy(eventEmitCtx, mapped, profile.Output.Logs, profile.Budgets, policyKey); emitted > 0 {
-					s.bumpLogRecords(name, int64(emitted))
-				}
-			}
-			if s.metricsEmitter != nil {
-				if emitted := s.metricsEmitter.Emit(eventEmitCtx, mapped); emitted > 0 {
-					s.bumpMetricPoints(name, int64(emitted))
-				}
-			}
-			if s.tracesEmitter != nil {
-				s.tracesEmitter.Emit(eventEmitCtx, mapped)
+			if metricsEmitted > 0 {
+				s.bumpMetricPoints(name, int64(metricsEmitted))
 			}
 			s.recordMappedDrops(name, mapped)
-			s.selfMetrics.RecordProcessingDuration(eventEmitCtx, time.Since(startProcessing).Seconds(), s.deviceRef, name)
+			s.selfMetrics.RecordProcessingDuration(emitCtx, time.Since(startProcessing).Seconds(), s.deviceRef, name)
 		}
 	}
+}
+
+func (s *Subscriber) emitMappedEventsWithCorrelation(
+	emitCtx context.Context,
+	cache *correlation.Cache,
+	appConsumer state.AppEventConsumer,
+	subscriptionName string,
+	mapped []mapper.MappedEvent,
+	profile MappingProfile,
+) (logsEmitted, metricsEmitted int) {
+	policyKey := s.deviceRef + "\x00" + subscriptionName
+	for i := range mapped {
+		events := mapped[i : i+1]
+		appEvents := state.ExtractAppEvents(events)
+		eventCtx := cachedEventCorrelationContext(emitCtx, cache, appEvents)
+		if appConsumer != nil {
+			for _, appEvent := range appEvents {
+				if ok := appConsumer.ObserveAppEvent(eventCtx, appEvent); !ok && s.selfMetrics != nil {
+					s.selfMetrics.IncNotifierDropped(eventCtx, "consumer_backpressure")
+				}
+			}
+		}
+		if s.logsEmitter != nil {
+			logsEmitted += s.logsEmitter.EmitWithPolicy(eventCtx, events, profile.Output.Logs, profile.Budgets, policyKey)
+		}
+		if s.metricsEmitter != nil {
+			metricsEmitted += s.metricsEmitter.Emit(eventCtx, events)
+		}
+		if s.tracesEmitter != nil {
+			s.tracesEmitter.Emit(eventCtx, events)
+		}
+	}
+	return logsEmitted, metricsEmitted
+}
+
+func cachedEventCorrelationContext(ctx context.Context, cache *correlation.Cache, appEvents []state.AppEvent) context.Context {
+	if cache == nil {
+		return ctx
+	}
+	for _, appEvent := range appEvents {
+		sc, lifecycleID, age, ok := cache.GetWithLifecycle(appEvent.Device, appEvent.AppID)
+		if !ok {
+			continue
+		}
+		ctx = correlation.WithLifecycleID(ctx, lifecycleID)
+		switch cache.RelationshipForAge(age) {
+		case correlation.RelationshipParent:
+			ctx = correlation.WithSpanContext(ctx, sc)
+		default:
+			ctx = correlation.WithSpanLink(ctx, sc)
+		}
+		break
+	}
+	return ctx
 }
 
 func mappingTransitions(mapping *configv1alpha1.MappingConfig) []configv1alpha1.Transition {

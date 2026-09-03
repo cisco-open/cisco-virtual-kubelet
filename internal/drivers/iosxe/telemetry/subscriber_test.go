@@ -27,6 +27,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
+	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
+	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type fakeSubscribeServer struct {
@@ -164,6 +172,144 @@ func TestSubscriberLifecycle(t *testing.T) {
 	if sub.Conn() != nil {
 		t.Fatal("Conn after Stop is non-nil")
 	}
+}
+
+func TestCachedEventCorrelationRestoresLifecycleForParentAndLink(t *testing.T) {
+	sc, err := correlation.ParseTraceparent("00-11111111111111111111111111111111-2222222222222222-01")
+	if err != nil {
+		t.Fatal(err)
+	}
+	events := []state.AppEvent{{Device: "edge-01", AppID: "app-a"}}
+
+	parentCache := correlation.NewCache(time.Minute, 2, time.Hour)
+	parentCache.Upsert("edge-01", "app-a", sc, "release-181")
+	parentCtx := cachedEventCorrelationContext(context.Background(), parentCache, events)
+	if got := trace.SpanContextFromContext(parentCtx); got.TraceID() != sc.TraceID() || got.SpanID() != sc.SpanID() {
+		t.Fatalf("parent context=%v, want cached span=%v", got, sc)
+	}
+	if got := correlation.LifecycleIDFromContext(parentCtx); got != "release-181" {
+		t.Fatalf("parent lifecycle=%q, want release-181", got)
+	}
+
+	linkCache := correlation.NewCache(time.Minute, 2, time.Nanosecond)
+	linkCache.Upsert("edge-01", "app-a", sc, "release-181")
+	time.Sleep(time.Millisecond)
+	linkCtx := cachedEventCorrelationContext(context.Background(), linkCache, events)
+	if got := trace.SpanContextFromContext(linkCtx); got.IsValid() {
+		t.Fatalf("link context installed direct parent=%v", got)
+	}
+	links := correlation.SpanLinksFromContext(linkCtx)
+	if len(links) != 1 || links[0].SpanContext.TraceID() != sc.TraceID() || links[0].SpanContext.SpanID() != sc.SpanID() {
+		t.Fatalf("link context links=%#v, want cached span=%v", links, sc)
+	}
+	if got := correlation.LifecycleIDFromContext(linkCtx); got != "release-181" {
+		t.Fatalf("link lifecycle=%q, want release-181", got)
+	}
+}
+
+func TestEmitMappedEventsCorrelatesEachAppIndependently(t *testing.T) {
+	recorder := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	defer func() { _ = tp.Shutdown(context.Background()) }()
+	emitter := emit.NewTracesEmitter(tp, nil, []configv1alpha1.Transition{{
+		Path:            "/app-hosting-oper-data/app[name=*]/details/state",
+		HealthyValues:   []string{"RUNNING"},
+		UnhealthyValues: []string{"STOPPED"},
+	}})
+	sub := &Subscriber{deviceRef: "edge-01", tracesEmitter: emitter}
+
+	sourceA, err := correlation.ParseTraceparent("00-11111111111111111111111111111111-aaaaaaaaaaaaaaaa-01")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceB, err := correlation.ParseTraceparent("00-22222222222222222222222222222222-bbbbbbbbbbbbbbbb-01")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cache := correlation.NewCache(time.Minute, 4, time.Nanosecond)
+	cache.Upsert("edge-01", "app-a", sourceA, "release-app-a")
+	cache.Upsert("edge-01", "app-b", sourceB, "release-app-b")
+	// Force both cached contexts through the async-link path. The companion
+	// test above covers direct-parent restoration.
+	time.Sleep(time.Millisecond)
+
+	t0 := time.Date(2026, 9, 1, 10, 0, 0, 0, time.UTC)
+	mapped := []mapper.MappedEvent{
+		appStateTraceEvent("app-a", "STOPPED", t0),
+		appStateTraceEvent("app-b", "STOPPED", t0.Add(time.Second)),
+		appStateTraceEvent("app-a", "RUNNING", t0.Add(2*time.Second)),
+		appStateTraceEvent("app-b", "RUNNING", t0.Add(3*time.Second)),
+	}
+	logs, metrics := sub.emitMappedEventsWithCorrelation(
+		context.Background(), cache, nil, "apps", mapped, MappingProfile{},
+	)
+	if logs != 0 || metrics != 0 {
+		t.Fatalf("emitted logs=%d metrics=%d, want 0/0", logs, metrics)
+	}
+
+	spans := recorder.Ended()
+	if len(spans) != 2 {
+		t.Fatalf("ended spans=%d, want one recovery transition per app", len(spans))
+	}
+	want := map[string]struct {
+		source      trace.SpanContext
+		lifecycleID string
+	}{
+		"app-a": {source: sourceA, lifecycleID: "release-app-a"},
+		"app-b": {source: sourceB, lifecycleID: "release-app-b"},
+	}
+	for _, span := range spans {
+		attrs := subscriberSpanAttrs(span.Attributes())
+		appID := attrs["name"]
+		expected, ok := want[appID]
+		if !ok {
+			t.Fatalf("span attributes=%v contain unexpected app", attrs)
+		}
+		if parent := span.Parent(); parent.IsValid() {
+			t.Fatalf("app %q parent=%v, want linked root", appID, parent)
+		}
+		links := span.Links()
+		if len(links) != 1 ||
+			links[0].SpanContext.TraceID() != expected.source.TraceID() ||
+			links[0].SpanContext.SpanID() != expected.source.SpanID() {
+			t.Fatalf("app %q links=%+v, want source=%v", appID, links, expected.source)
+		}
+		if got := attrs[correlation.LifecycleIDAttribute]; got != expected.lifecycleID {
+			t.Fatalf("app %q lifecycle=%q, want %q", appID, got, expected.lifecycleID)
+		}
+		delete(want, appID)
+	}
+	if len(want) != 0 {
+		t.Fatalf("missing spans for apps: %v", want)
+	}
+}
+
+func appStateTraceEvent(appID, value string, ts time.Time) mapper.MappedEvent {
+	path := "/app-hosting-oper-data/app[name=" + appID + "]/details/state"
+	return mapper.MappedEvent{
+		Signal:        mapper.SignalKindTrace,
+		Name:          "/app-hosting-oper-data/app/details/state",
+		CanonicalPath: path,
+		Body:          value,
+		Timestamp:     ts,
+		SeriesKey:     "apps\x00" + path + "\x00name=" + appID,
+		Resource: []mapper.KeyValue{
+			{Key: "device", Value: "edge-01"},
+			{Key: "subscription", Value: "apps"},
+		},
+		Attributes: []mapper.KeyValue{
+			{Key: "name", Value: appID},
+			{Key: "cisco.gnmi.path", Value: path},
+		},
+	}
+}
+
+func subscriberSpanAttrs(attrs []attribute.KeyValue) map[string]string {
+	out := make(map[string]string, len(attrs))
+	for _, attr := range attrs {
+		out[string(attr.Key)] = attr.Value.AsString()
+	}
+	return out
 }
 
 func waitRequest(t *testing.T, ch <-chan *gpb.SubscribeRequest) *gpb.SubscribeRequest {

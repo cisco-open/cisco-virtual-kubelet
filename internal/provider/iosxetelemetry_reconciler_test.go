@@ -21,6 +21,9 @@ import (
 	"testing"
 	"time"
 
+	otelcodes "go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -304,7 +307,11 @@ func TestIOSXETelemetryValidationFailureUpdatesStatus(t *testing.T) {
 		WithStatusSubresource(&configv1alpha1.IOSXETelemetry{}).
 		Build()
 	_, factory := newProviderTelemetryServer(t)
-	r := &IOSXETelemetryReconciler{Client: c, DeviceName: "edge-01", Factory: factory}
+	recorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	r := &IOSXETelemetryReconciler{
+		Client: c, DeviceName: "edge-01", Factory: factory, TracerProvider: provider,
+	}
 
 	if _, err := r.Reconcile(context.Background(), reconcile.Request{
 		NamespacedName: types.NamespacedName{Namespace: "network", Name: "telemetry"},
@@ -320,6 +327,15 @@ func TestIOSXETelemetryValidationFailureUpdatesStatus(t *testing.T) {
 	}
 	if !conditionIs(got.Status.Conditions, "Ready", metav1.ConditionFalse, "InvalidSpec") {
 		t.Fatalf("Ready/InvalidSpec condition missing: %+v", got.Status.Conditions)
+	}
+	ended := recorder.Ended()
+	if len(ended) != 1 || ended[0].Status().Code != otelcodes.Error {
+		t.Fatalf("validation spans=%d status=%#v, want one Error span", len(ended), func() any {
+			if len(ended) == 0 {
+				return nil
+			}
+			return ended[0].Status()
+		}())
 	}
 }
 

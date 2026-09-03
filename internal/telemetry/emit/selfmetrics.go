@@ -137,7 +137,7 @@ func setBudgetDropCounter(counter metric.Int64Counter) {
 // RecordBudgetDropped increments the unified signal-budget drop counter.
 func RecordBudgetDropped(ctx context.Context, signal, reason, device string) {
 	if ctx == nil {
-		ctx = context.Background()
+		ctx = context.Background() // ctxlint:allow nil-safe metric emission root
 	}
 	if signal == "" {
 		signal = "unknown"

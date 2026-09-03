@@ -20,19 +20,27 @@ on:
     paths:
       - .github/actionlint.yaml
       - .github/scripts/dispatch-approved-lab-ci.py
+      - .github/scripts/cicd_otel.py
+      - .github/scripts/export-cicd-otel.py
       - .github/scripts/post-pr-report.py
       - .github/scripts/test_dispatch_approved_lab_ci.py
+      - .github/scripts/test_export_cicd_otel.py
       - .github/scripts/test_post_pr_report.py
       - .github/workflows/lab-ci-*.yaml
+      - .github/workflows/cicd-otel-export.yaml
   pull_request:
     branches: [main]
     paths:
       - .github/actionlint.yaml
       - .github/scripts/dispatch-approved-lab-ci.py
+      - .github/scripts/cicd_otel.py
+      - .github/scripts/export-cicd-otel.py
       - .github/scripts/post-pr-report.py
       - .github/scripts/test_dispatch_approved_lab_ci.py
+      - .github/scripts/test_export_cicd_otel.py
       - .github/scripts/test_post_pr_report.py
       - .github/workflows/lab-ci-*.yaml
+      - .github/workflows/cicd-otel-export.yaml
   workflow_dispatch: {}
 
 permissions:
@@ -66,4 +74,4 @@ jobs:
           ./actionlint -version
 
       - name: Validate GitHub Actions workflows
-        run: ./actionlint .github/workflows/lab-ci-*.yaml
+        run: ./actionlint .github/workflows/lab-ci-*.yaml .github/workflows/cicd-otel-export.yaml

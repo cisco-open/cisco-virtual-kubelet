@@ -22,6 +22,9 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	otellog "go.opentelemetry.io/otel/log"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -155,7 +158,7 @@ func (r *IOSXETelemetryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return b.Complete(r)
 }
 
-func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.Request) (result reconcile.Result, retErr error) {
 	var cr configv1alpha1.IOSXETelemetry
 	if err := r.Client.Get(ctx, req.NamespacedName, &cr); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -182,6 +185,30 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 		return reconcile.Result{}, nil
 	}
 
+	ctx, _ = correlation.ApplyAnnotations(ctx, cr.Annotations, time.Now())
+	tracerProvider := r.TracerProvider
+	if tracerProvider == nil {
+		tracerProvider = otel.GetTracerProvider()
+	}
+	ctx, span := correlation.Start(ctx,
+		tracerProvider.Tracer("cisco-virtual-kubelet/iosxetelemetry-reconciler"),
+		"cvk.iosxetelemetry.reconcile",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.String("cisco.vk.device.name", r.DeviceName),
+			attribute.String("k8s.namespace.name", cr.Namespace),
+			attribute.String("k8s.resource.name", cr.Name),
+			attribute.String("k8s.resource.kind", "IOSXETelemetry"),
+		),
+	)
+	defer func() {
+		if retErr != nil {
+			span.RecordError(retErr)
+			span.SetStatus(codes.Error, "reconcile")
+		}
+		span.End()
+	}()
+
 	if !cr.GetDeletionTimestamp().IsZero() {
 		r.removeOwned(req.NamespacedName)
 		if containsFinalizer(cr.Finalizers, iosxeTelemetryFinalizer) {
@@ -205,6 +232,9 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 	}
 
 	if err := configv1alpha1.ValidateIOSXETelemetry(&cr); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "InvalidSpec")
+		span.SetAttributes(attribute.String("cvk.iosxetelemetry.phase", string(configv1alpha1.IOSXETelemetryPhaseFailed)))
 		base := cr.DeepCopy()
 		cr.Status.Phase = configv1alpha1.IOSXETelemetryPhaseFailed
 		r.setReady(&cr, metav1.ConditionFalse, "InvalidSpec", err.Error())
@@ -217,6 +247,8 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 
 	sub, err := r.ensureSubscriber()
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "subscriber unavailable")
 		base := cr.DeepCopy()
 		cr.Status.Phase = configv1alpha1.IOSXETelemetryPhaseDegraded
 		r.setReady(&cr, metav1.ConditionFalse, "SubscriberUnavailable", err.Error())
@@ -243,6 +275,8 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 	}
 	activeNames, allNames, err := r.applyDesired(req.NamespacedName, sub, &cr)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "subscription configuration")
 		base := cr.DeepCopy()
 		cr.Status.Phase = configv1alpha1.IOSXETelemetryPhaseFailed
 		r.setReady(&cr, metav1.ConditionFalse, "SubscribeConfigError", err.Error())
@@ -259,13 +293,17 @@ func (r *IOSXETelemetryReconciler) Reconcile(ctx context.Context, req reconcile.
 		phase = configv1alpha1.IOSXETelemetryPhasePending
 	}
 	cr.Status.Phase = phase
+	span.SetAttributes(attribute.String("cvk.iosxetelemetry.phase", string(phase)))
 	cr.Status.ObservedSubscriptionState = states
 	switch phase {
 	case configv1alpha1.IOSXETelemetryPhaseStreaming:
+		span.SetStatus(codes.Ok, "")
 		r.setReady(&cr, metav1.ConditionTrue, "Streaming", "telemetry subscription streams are active")
 	case configv1alpha1.IOSXETelemetryPhaseFailed:
+		span.SetStatus(codes.Error, "telemetry streams failed")
 		r.setReady(&cr, metav1.ConditionFalse, "Failed", "one or more telemetry streams failed")
 	case configv1alpha1.IOSXETelemetryPhaseDegraded:
+		span.SetStatus(codes.Error, "telemetry streams degraded")
 		r.setReady(&cr, metav1.ConditionFalse, "Degraded", "one or more telemetry streams are reconnecting")
 	default:
 		r.setReady(&cr, metav1.ConditionFalse, "Pending", "telemetry subscription streams are not active yet")
@@ -363,6 +401,11 @@ func (r *IOSXETelemetryReconciler) ensureSubscriber() (*telemetry.Subscriber, er
 	if root == nil {
 		root = context.Background()
 	}
+	// The subscriber is shared across IOSXETelemetry objects and outlives every
+	// reconcile. Never pin one object's lifecycle context on this singleton:
+	// later streams may belong to a different run. The bounded setup work is
+	// represented by the reconcile span above; long-lived events retain their
+	// existing per-device/subscription attribution.
 	if r.selfMetrics == nil {
 		r.selfMetrics = emit.NewSelfMetrics(r.MeterProvider)
 	}

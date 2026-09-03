@@ -40,6 +40,14 @@ import urllib.request
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
 
+from cicd_otel import (
+    CorrelationError,
+    github_step_traceparent,
+    positive_integer,
+    pr_lifecycle_id,
+    validate_traceparent,
+)
+
 
 GITHUB_API = "https://api.github.com"
 GITHUB_ACTIONS_APP_ID = 15368
@@ -61,6 +69,8 @@ MAX_AUTOMATIC_DISPATCH_ATTEMPTS = 3
 RETRY_CONFIRMATION_SECONDS = 10 * 60
 STALE_PENDING_SECONDS = 12 * 60 * 60
 STATUS_DESCRIPTION_LIMIT = 140
+TRUSTED_DISPATCH_JOB_NAME = "reconcile"
+TRUSTED_DISPATCH_STEP_NAME = "Dispatch missing native tests for eligible PRs"
 
 TARGETS: tuple[dict[str, str], ...] = (
     {
@@ -428,10 +438,83 @@ def dispatch_id(
     )
 
 
+def lifecycle_id(verified: VerifiedPullRequest) -> str:
+    return pr_lifecycle_id(verified.pr_number, verified.head_sha)
+
+
 def dispatch_run_title(
-    verified: VerifiedPullRequest, target: dict[str, str], attempt: int
+    verified: VerifiedPullRequest,
+    target: dict[str, str],
+    attempt: int,
+    upstream_traceparent: str | None = None,
 ) -> str:
-    return f"{target['run_title']} - {dispatch_id(verified, target, attempt)}"
+    prefix = (
+        f"{target['run_title']} - {lifecycle_id(verified)} - "
+        f"{dispatch_id(verified, target, attempt)}"
+    )
+    if upstream_traceparent is None:
+        return prefix
+    return f"{prefix} - {validate_traceparent(upstream_traceparent)}"
+
+
+def run_title_matches_dispatch(
+    title: str,
+    verified: VerifiedPullRequest,
+    target: dict[str, str],
+    attempt: int,
+) -> bool:
+    prefix = f"{dispatch_run_title(verified, target, attempt)} - "
+    if not title.startswith(prefix):
+        return False
+    try:
+        validate_traceparent(title.removeprefix(prefix))
+    except CorrelationError:
+        return False
+    return True
+
+
+def trusted_dispatch_traceparent(
+    repository: str,
+    *,
+    run_id: str | int,
+    run_attempt: str | int,
+    job_name: str,
+    api_call: ApiCall = api,
+) -> str:
+    """Derive the githubreceiver step context from trusted run metadata."""
+    repository = validate_repository(repository)
+    run = positive_integer("GitHub run ID", run_id)
+    attempt = positive_integer("GitHub run attempt", run_attempt)
+    if job_name != TRUSTED_DISPATCH_JOB_NAME:
+        raise GateError(f"unexpected trusted dispatcher job: {job_name!r}")
+    jobs = _paginated_items(
+        f"/repos/{repository}/actions/runs/{run}/attempts/{attempt}/jobs",
+        api_call=api_call,
+        response_key="jobs",
+    )
+    matches = [job for job in jobs if job.get("name") == job_name]
+    if len(matches) != 1:
+        raise GateError(
+            f"trusted dispatcher job {job_name!r} matched {len(matches)} check runs"
+        )
+    job = matches[0]
+    check_run_id = positive_integer("GitHub check run ID", job.get("id", ""))
+    steps = job.get("steps")
+    if not isinstance(steps, list):
+        raise GateError("trusted dispatcher check run has no step metadata")
+    dispatch_steps = [
+        step for step in steps if step.get("name") == TRUSTED_DISPATCH_STEP_NAME
+    ]
+    if len(dispatch_steps) != 1:
+        raise GateError(
+            "trusted dispatcher correlation step must occur exactly once in the job"
+        )
+    return github_step_traceparent(
+        run,
+        attempt,
+        check_run_id,
+        TRUSTED_DISPATCH_STEP_NAME,
+    )
 
 
 def _status_attempt(status: dict[str, Any]) -> int | None:
@@ -462,7 +545,6 @@ def _has_active_correlated_run(
     *,
     api_call: ApiCall,
 ) -> bool:
-    expected_title = dispatch_run_title(verified, target, attempt)
     workflow = urllib.parse.quote(target["workflow"], safe="")
     runs = _paginated_items(
         f"/repos/{repository}/actions/workflows/{workflow}/runs"
@@ -471,7 +553,9 @@ def _has_active_correlated_run(
         response_key="workflow_runs",
     )
     return any(
-        run.get("display_title") == expected_title
+        run_title_matches_dispatch(
+            str(run.get("display_title") or ""), verified, target, attempt
+        )
         and run.get("status") in ACTIVE_WORKFLOW_STATES
         for run in runs
     )
@@ -498,7 +582,9 @@ def _is_trusted_terminal_status(
         and run.get("head_branch") == "main"
         and run.get("head_sha") == verified.base_sha
         and run_path == f".github/workflows/{target['workflow']}"
-        and run.get("display_title") == dispatch_run_title(verified, target, attempt)
+        and run_title_matches_dispatch(
+            str(run.get("display_title") or ""), verified, target, attempt
+        )
     )
 
 
@@ -638,10 +724,13 @@ def dispatch_target(
     verified: VerifiedPullRequest,
     target: dict[str, str],
     attempt: int,
+    upstream_traceparent: str,
     *,
     api_call: ApiCall = api,
 ) -> None:
     correlation = dispatch_id(verified, target, attempt)
+    cvk_lifecycle_id = lifecycle_id(verified)
+    upstream_traceparent = validate_traceparent(upstream_traceparent)
     workflow = target["workflow"]
     workflow_url = f"https://github.com/{repository}/actions/workflows/{workflow}"
     post_status(
@@ -666,6 +755,8 @@ def dispatch_target(
                     "expected_merge_sha": verified.merge_sha,
                     "dispatch_attempt": str(attempt),
                     "dispatch_id": correlation,
+                    "cvk_lifecycle_id": cvk_lifecycle_id,
+                    "cvk_upstream_traceparent": upstream_traceparent,
                 },
             },
         )
@@ -684,8 +775,14 @@ def dispatch_target(
         raise
 
 
-def reconcile(repository: str, *, api_call: ApiCall = api) -> None:
+def reconcile(
+    repository: str,
+    *,
+    upstream_traceparent: str,
+    api_call: ApiCall = api,
+) -> None:
     repository = validate_repository(repository)
+    upstream_traceparent = validate_traceparent(upstream_traceparent)
     failures: list[str] = []
     for pr_number in list_open_pr_numbers(repository, api_call=api_call):
         try:
@@ -730,6 +827,7 @@ def reconcile(repository: str, *, api_call: ApiCall = api) -> None:
                     verified,
                     target,
                     attempt,
+                    upstream_traceparent,
                     api_call=api_call,
                 )
             except Exception as error:  # report every target before failing the run
@@ -770,8 +868,17 @@ def main() -> int:
             )
             print(json.dumps(asdict(verified), sort_keys=True))
         else:
-            reconcile(args.repository)
-    except (GateError, ValueError) as error:
+            upstream_traceparent = trusted_dispatch_traceparent(
+                args.repository,
+                run_id=os.environ.get("GITHUB_RUN_ID", ""),
+                run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT", ""),
+                job_name=os.environ.get("GITHUB_JOB", ""),
+            )
+            reconcile(
+                args.repository,
+                upstream_traceparent=upstream_traceparent,
+            )
+    except (CorrelationError, GateError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     return 0

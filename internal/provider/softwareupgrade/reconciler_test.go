@@ -23,6 +23,9 @@ import (
 	"testing"
 	"time"
 
+	otelcodes "go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -1036,5 +1039,34 @@ func TestVersionMatches(t *testing.T) {
 		if got != c.want {
 			t.Errorf("versionMatches(%q, %q) = %v, want %v", c.device, c.target, got, c.want)
 		}
+	}
+}
+
+func TestSoftwareUpgradeSpanOutcomeReflectsTerminalBusinessFailure(t *testing.T) {
+	recorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	_, span := provider.Tracer("test").Start(context.Background(), "upgrade")
+	setSoftwareUpgradeSpanOutcome(
+		span,
+		opsv1alpha1.UpgradePhaseValidationFailed,
+		"LocalPathHashMismatch",
+		"hash did not match",
+	)
+	span.End()
+
+	ended := recorder.Ended()
+	if len(ended) != 1 {
+		t.Fatalf("ended spans=%d, want 1", len(ended))
+	}
+	if got := ended[0].Status(); got.Code != otelcodes.Error || got.Description != "LocalPathHashMismatch" {
+		t.Fatalf("status=%#v, want terminal business failure", got)
+	}
+	attrs := map[string]string{}
+	for _, kv := range ended[0].Attributes() {
+		attrs[string(kv.Key)] = kv.Value.AsString()
+	}
+	if attrs["cvk.softwareupgrade.phase"] != string(opsv1alpha1.UpgradePhaseValidationFailed) ||
+		attrs["cvk.softwareupgrade.reason"] != "LocalPathHashMismatch" {
+		t.Fatalf("terminal outcome attributes=%#v", attrs)
 	}
 }

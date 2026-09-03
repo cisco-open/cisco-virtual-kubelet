@@ -16,8 +16,12 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"testing"
 
+	otelcodes "go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -112,5 +116,54 @@ func TestReconcileNoTransportPathMarksPending(t *testing.T) {
 	}
 	if !conditionIs(got.Status.Conditions, "Ready", metav1.ConditionFalse, "NoTransport") {
 		t.Fatalf("Ready/NoTransport condition missing:\n%#v", got.Status.Conditions)
+	}
+}
+
+func TestIOSXEConfigRootSpanReflectsRecordedBusinessFailure(t *testing.T) {
+	recorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	_, span := provider.Tracer("test").Start(context.Background(), "config")
+	recordIOSXEConfigSpanOutcome(span, engine.Result{
+		Phase: engine.PhaseFailed,
+		Err:   errors.New("intent resolution failed"),
+	})
+	span.End()
+
+	ended := recorder.Ended()
+	if len(ended) != 1 {
+		t.Fatalf("ended spans=%d, want 1", len(ended))
+	}
+	if got := ended[0].Status(); got.Code != otelcodes.Error {
+		t.Fatalf("status=%#v, want Error", got)
+	}
+	attrs := map[string]string{}
+	for _, kv := range ended[0].Attributes() {
+		attrs[string(kv.Key)] = kv.Value.AsString()
+	}
+	if attrs["cisco.vk.reconcile.outcome"] != "error" || attrs["cisco.vk.iosxeconfig.phase"] != engine.PhaseFailed {
+		t.Fatalf("business failure attributes=%#v", attrs)
+	}
+}
+
+func TestCommonConfigRootSpanReflectsRecordedBusinessFailure(t *testing.T) {
+	recorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	_, span := provider.Tracer("test").Start(context.Background(), "config")
+	recordCommonConfigSpanOutcome(span, engine.Result{
+		Phase: engine.PhaseFailed,
+		Err:   errors.New("writer lookup failed"),
+	})
+	span.End()
+
+	ended := recorder.Ended()
+	if len(ended) != 1 || ended[0].Status().Code != otelcodes.Error {
+		t.Fatalf("common config spans=%d, want one Error span", len(ended))
+	}
+	attrs := map[string]string{}
+	for _, kv := range ended[0].Attributes() {
+		attrs[string(kv.Key)] = kv.Value.AsString()
+	}
+	if attrs["cisco.vk.reconcile.outcome"] != "error" || attrs["cisco.vk.config.phase"] != engine.PhaseFailed {
+		t.Fatalf("business failure attributes=%#v", attrs)
 	}
 }
