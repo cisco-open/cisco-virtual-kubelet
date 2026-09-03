@@ -67,7 +67,7 @@ MAX_JOBS = 1000
 MAX_STEPS = 5000
 MAX_CORRELATION_PAGES = 5
 MAX_CORRELATION_CANDIDATES = 500
-OBSERVER_WORKFLOW_NAME = "CVK CI/CD OpenTelemetry export"
+OBSERVER_WORKFLOW_PATH = ".github/workflows/cicd-otel-export.yaml"
 OBSERVED_WORKFLOW_PATHS = {
     "smoke": ".github/workflows/smoke.yml",
     "Lab CI approval signal": ".github/workflows/lab-ci-approval-signal.yaml",
@@ -81,6 +81,9 @@ OBSERVED_WORKFLOW_PATHS = {
     "ci-tiers": ".github/workflows/tiers.yml",
     "yang-drift": ".github/workflows/yang-drift.yml",
     "recover v2026.8.1 release assets": ".github/workflows/recover-v2026.8.1-release-assets.yml",
+}
+OBSERVED_WORKFLOW_NAMES = {
+    path: name for name, path in OBSERVED_WORKFLOW_PATHS.items()
 }
 REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -280,15 +283,13 @@ def load_completed_run(
         raise ExportError("GitHub workflow run repository does not match")
     if run.get("status") != "completed":
         raise ExportError("only completed GitHub workflow runs may be exported")
-    workflow_name = str(run.get("name") or "")
-    expected_path = OBSERVED_WORKFLOW_PATHS.get(workflow_name)
-    actual_path = str(run.get("path") or "").split("@", 1)[0]
-    if expected_path is None or actual_path != expected_path:
-        raise ExportError(
-            f"workflow {workflow_name!r} at {actual_path!r} is not observed"
-        )
-    if workflow_name == OBSERVER_WORKFLOW_NAME:
+    actual_path = _workflow_path(run)
+    if actual_path == OBSERVER_WORKFLOW_PATH:
         raise ExportError("the observer must never observe itself")
+    if actual_path not in OBSERVED_WORKFLOW_NAMES:
+        raise ExportError(
+            f"workflow at {actual_path!r} is not observed"
+        )
     actual_attempt = positive_integer(
         "GitHub run attempt", run.get("run_attempt", "")
     )
@@ -359,6 +360,16 @@ def _load_correlation_pages(
 
 def _workflow_path(run: dict[str, Any]) -> str:
     return str(run.get("path") or "").split("@", 1)[0]
+
+
+def _workflow_name(run: dict[str, Any]) -> str:
+    """Return the stable workflow name associated with GitHub's server path.
+
+    Runs that define ``run-name`` can expose that dynamic title through the
+    attempts API's ``name`` field. The repository-owned workflow path remains
+    stable and is already the observer's security allow-list boundary.
+    """
+    return OBSERVED_WORKFLOW_NAMES.get(_workflow_path(run), "")
 
 
 def _validated_sha(value: object, field: str) -> str:
@@ -494,7 +505,7 @@ def lifecycle_for_run(run: dict[str, Any]) -> str:
         except (AttributeError, CorrelationError):
             pass
 
-    workflow_name = str(run.get("name") or "")
+    workflow_name = _workflow_name(run)
     event = str(run.get("event") or "")
     tag = str(run.get("head_branch") or "")
     is_release_build = workflow_name == RELEASE_WORKFLOW_NAME and event == "push"
@@ -521,7 +532,7 @@ def lifecycle_for_run(run: dict[str, Any]) -> str:
 
 def upstream_traceparents_for_run(run: dict[str, Any]) -> list[str]:
     title = str(run.get("display_title") or "")
-    workflow_name = str(run.get("name") or "")
+    workflow_name = _workflow_name(run)
     candidates: list[str] = []
     if workflow_name in {"Lab CI (Cat8kv)", "Lab CI (Cat9k)"}:
         match = TITLE_TRACEPARENT_RE.search(title)
@@ -550,7 +561,7 @@ def base_correlation_for_run(run: dict[str, Any]) -> RunCorrelation:
         warnings.append(f"trusted workflow correlation metadata is invalid: {error}")
         required_transition_failed = True
 
-    workflow_name = str(run.get("name") or "")
+    workflow_name = _workflow_name(run)
     event = str(run.get("event") or "")
     if workflow_name in TITLE_LIFECYCLE_WORKFLOWS and lifecycle.startswith("cvk-run"):
         warnings.append("required PR lifecycle metadata is missing")
@@ -791,7 +802,7 @@ def _find_pull_request_smoke_run(
         except ExportError:
             continue
         if (
-            candidate.get("name") == SMOKE_WORKFLOW_NAME
+            _workflow_name(candidate) == SMOKE_WORKFLOW_NAME
             and _workflow_path(candidate) == SMOKE_WORKFLOW_PATH
             and candidate.get("event") == "pull_request"
             and candidate.get("conclusion") == "success"
@@ -834,7 +845,7 @@ def _find_successful_main_smoke_run(
         except ExportError:
             continue
         if (
-            candidate.get("name") == SMOKE_WORKFLOW_NAME
+            _workflow_name(candidate) == SMOKE_WORKFLOW_NAME
             and _workflow_path(candidate) == SMOKE_WORKFLOW_PATH
             and candidate.get("event") == "push"
             and candidate.get("head_branch") == "main"
@@ -872,7 +883,7 @@ def _find_successful_release_run(
         except ExportError:
             continue
         if (
-            candidate.get("name") == RELEASE_WORKFLOW_NAME
+            _workflow_name(candidate) == RELEASE_WORKFLOW_NAME
             and _workflow_path(candidate) == RELEASE_WORKFLOW_PATH
             and candidate.get("event") == "push"
             and candidate.get("head_branch") == release.tag
@@ -1115,7 +1126,7 @@ def resolve_run_correlation(
     repository = validate_repository(repository)
     base = base_correlation_for_run(run)
     call = api_call or (lambda path: github_api(path, token=token))
-    name = str(run.get("name") or "")
+    name = _workflow_name(run)
     event = str(run.get("event") or "")
     path = _workflow_path(run)
     try:
@@ -1316,7 +1327,7 @@ def build_otlp_payload(
     )
     common = {
         "cvk.lifecycle.id": lifecycle,
-        "cicd.pipeline.name": str(run.get("name") or ""),
+        "cicd.pipeline.name": _workflow_name(run),
         "cicd.pipeline.run.id": str(run_id),
         "cicd.pipeline.run.url.full": str(run.get("html_url") or ""),
         "cicd.pipeline.run.state": str(run.get("conclusion") or "unknown"),
@@ -1336,7 +1347,7 @@ def build_otlp_payload(
             trace_id=trace_id,
             span_id=root_span_id,
             parent_span_id=None,
-            name=str(run.get("name") or "GitHub workflow"),
+            name=_workflow_name(run) or "GitHub workflow",
             start=root_times[0],
             end=root_times[1],
             conclusion=run.get("conclusion"),
