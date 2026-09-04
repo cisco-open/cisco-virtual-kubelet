@@ -115,6 +115,9 @@ type fakeCert struct {
 	installErr      error
 	installFinalErr error
 	installEOFSeen  bool
+	installWaitEOF  bool
+	installCSR      []byte
+	installRequests []*certpb.InstallCertificateRequest
 }
 
 func (f *fakeCert) GetCertificates(context.Context, *certpb.GetCertificatesRequest) (*certpb.GetCertificatesResponse, error) {
@@ -134,8 +137,35 @@ func (f *fakeCert) Install(stream grpc.BidiStreamingServer[certpb.InstallCertifi
 		return err
 	}
 	f.installRequest = request
+	f.installRequests = append(f.installRequests, request)
 	if f.installErr != nil {
 		return f.installErr
+	}
+	if request.GetGenerateCsr() != nil {
+		if err := stream.Send(&certpb.InstallCertificateResponse{
+			InstallResponse: &certpb.InstallCertificateResponse_GeneratedCsr{
+				GeneratedCsr: &certpb.GenerateCSRResponse{
+					Csr: &certpb.CSR{Type: certpb.CertificateType_CT_X509, Csr: f.installCSR},
+				},
+			},
+		}); err != nil {
+			return err
+		}
+		request, err = stream.Recv()
+		if err != nil {
+			return err
+		}
+		f.installRequest = request
+		f.installRequests = append(f.installRequests, request)
+	}
+	if f.installWaitEOF {
+		if _, err := stream.Recv(); err != io.EOF {
+			if err == nil {
+				return status.Error(codes.InvalidArgument, "expected client half-close before response")
+			}
+			return err
+		}
+		f.installEOFSeen = true
 	}
 	response := f.installResponse
 	if response == nil {
@@ -147,6 +177,9 @@ func (f *fakeCert) Install(stream grpc.BidiStreamingServer[certpb.InstallCertifi
 	}
 	if err := stream.Send(response); err != nil {
 		return err
+	}
+	if f.installWaitEOF {
+		return f.installFinalErr
 	}
 	if _, err := stream.Recv(); err != io.EOF {
 		if err == nil {

@@ -122,6 +122,24 @@ func newProvisioningTestPKI(t *testing.T, serverName string) *provisioningTestPK
 	}
 }
 
+func (p *provisioningTestPKI) intermediateKeyPEM(t *testing.T) []byte {
+	t.Helper()
+	return pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(p.intermediateKey)})
+}
+
+func newCertificateRequestPEM(t *testing.T, serverName string) []byte {
+	t.Helper()
+	key := mustRSAKey(t, 2048)
+	csrDER, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
+		Subject:  pkix.Name{CommonName: serverName},
+		DNSNames: []string{serverName},
+	}, key)
+	if err != nil {
+		t.Fatalf("CreateCertificateRequest: %v", err)
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrDER})
+}
+
 func TestNewProvisioningBundleValidatesAndNormalizes(t *testing.T) {
 	pki := newProvisioningTestPKI(t, provisioningTestServerName)
 	bundle, err := NewProvisioningBundle(
@@ -381,6 +399,68 @@ func TestInstallProvisioningCertificateWireShape(t *testing.T) {
 		if ca.Type != certpb.CertificateType_CT_X509 {
 			t.Fatalf("CA %d type=%v, want CT_X509", i, ca.Type)
 		}
+	}
+}
+
+func TestInstallProvisioningCertificateHalfClosesBeforeWaitingForResponse(t *testing.T) {
+	pki := newProvisioningTestPKI(t, provisioningTestServerName)
+	bundle, err := NewProvisioningBundle("cvk-gnoi", provisioningTestServerName, pki.leafPEM, pki.privateKeyPKCS8, pki.caBundlePEM)
+	if err != nil {
+		t.Fatalf("NewProvisioningBundle: %v", err)
+	}
+	ts := newTestServer(t)
+	ts.Cert.installWaitEOF = true
+	if err := ts.client(t).InstallProvisioningCertificate(context.Background(), bundle); err != nil {
+		t.Fatalf("InstallProvisioningCertificate: %v", err)
+	}
+	if ts.Cert.installRequest == nil {
+		t.Fatal("fake server did not receive the LoadCertificate request")
+	}
+	if !ts.Cert.installEOFSeen {
+		t.Fatal("server did not observe client half-close before response")
+	}
+}
+
+func TestInstallProvisioningCertificateUsesCSRFlowWhenSigningKeyPresent(t *testing.T) {
+	pki := newProvisioningTestPKI(t, provisioningTestServerName)
+	bundle, err := NewProvisioningBundleWithSigningKey(
+		"cvk-gnoi", provisioningTestServerName,
+		pki.leafPEM, pki.privateKeyPKCS8, pki.caBundlePEM, pki.intermediateKeyPEM(t),
+	)
+	if err != nil {
+		t.Fatalf("NewProvisioningBundleWithSigningKey: %v", err)
+	}
+	ts := newTestServer(t)
+	ts.Cert.installCSR = newCertificateRequestPEM(t, provisioningTestServerName)
+	if err := ts.client(t).InstallProvisioningCertificate(context.Background(), bundle); err != nil {
+		t.Fatalf("InstallProvisioningCertificate: %v", err)
+	}
+	if len(ts.Cert.installRequests) != 2 {
+		t.Fatalf("Install sent %d requests, want GenerateCSR then LoadCertificate", len(ts.Cert.installRequests))
+	}
+	if ts.Cert.installRequests[0].GetGenerateCsr() == nil {
+		t.Fatalf("first request=%+v, want GenerateCSR", ts.Cert.installRequests[0])
+	}
+	csrParams := ts.Cert.installRequests[0].GetGenerateCsr().GetCsrParams()
+	if csrParams.GetMinKeySize() != 2048 || csrParams.GetKeyType() != certpb.KeyType_KT_RSA {
+		t.Fatalf("CSR params key size/type = %d/%s, want 2048/KT_RSA", csrParams.GetMinKeySize(), csrParams.GetKeyType())
+	}
+	load := ts.Cert.installRequests[1].GetLoadCertificate()
+	if load == nil {
+		t.Fatalf("second request=%+v, want LoadCertificate", ts.Cert.installRequests[1])
+	}
+	if load.KeyPair != nil {
+		t.Fatal("CSR flow must not send an external private key")
+	}
+	cert, _, err := parseSingleCertificatePEM(load.Certificate.Certificate, "signed leaf")
+	if err != nil {
+		t.Fatalf("parse signed leaf: %v", err)
+	}
+	if err := cert.CheckSignatureFrom(pki.intermediate); err != nil {
+		t.Fatalf("signed leaf was not issued by intermediate: %v", err)
+	}
+	if !ts.Cert.installEOFSeen {
+		t.Fatal("server did not observe client half-close")
 	}
 }
 

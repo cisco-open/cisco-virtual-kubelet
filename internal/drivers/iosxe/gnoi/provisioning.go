@@ -17,6 +17,7 @@ package gnoi
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -25,6 +26,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
+	"net"
 	"regexp"
 	"strings"
 	"time"
@@ -48,6 +51,10 @@ type ProvisioningBundle struct {
 	caPEM              [][]byte
 	rootCAPEM          []byte
 	leafFingerprint    [sha256.Size]byte
+	leafTemplate       *x509.Certificate
+	leafKeyBits        int
+	signingCert        *x509.Certificate
+	signingKey         *rsa.PrivateKey
 }
 
 // Format prevents every fmt verb from rendering certificate or private-key
@@ -154,6 +161,23 @@ func NewProvisioningBundle(
 	certificateID, expectedServerName string,
 	leafPEM, privateKeyPEM, caBundlePEM []byte,
 ) (*ProvisioningBundle, error) {
+	return newProvisioningBundle(certificateID, expectedServerName, leafPEM, privateKeyPEM, caBundlePEM, nil)
+}
+
+// NewProvisioningBundleWithSigningKey enables the documented target-generated
+// CSR provisioning flow. The supplied CA key must match one certificate in the
+// CA replacement bundle; CVK signs the device CSR with that issuer.
+func NewProvisioningBundleWithSigningKey(
+	certificateID, expectedServerName string,
+	leafPEM, privateKeyPEM, caBundlePEM, caKeyPEM []byte,
+) (*ProvisioningBundle, error) {
+	return newProvisioningBundle(certificateID, expectedServerName, leafPEM, privateKeyPEM, caBundlePEM, caKeyPEM)
+}
+
+func newProvisioningBundle(
+	certificateID, expectedServerName string,
+	leafPEM, privateKeyPEM, caBundlePEM, caKeyPEM []byte,
+) (*ProvisioningBundle, error) {
 	if !provisioningCertificateIDPattern.MatchString(certificateID) {
 		return nil, fmt.Errorf("gnoi provisioning certificate ID must start with an alphanumeric and contain 1-64 characters from [A-Za-z0-9_.-]")
 	}
@@ -243,6 +267,26 @@ func NewProvisioningBundle(
 	verifiedRoot := verifiedChains[0][len(verifiedChains[0])-1]
 	verifiedRootPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: verifiedRoot.Raw})
 
+	var signingKey *rsa.PrivateKey
+	var signingCert *x509.Certificate
+	if len(bytes.TrimSpace(caKeyPEM)) > 0 {
+		parsedKey, _, err := parseRSAPrivateKeyPEM(caKeyPEM)
+		if err != nil {
+			return nil, fmt.Errorf("gnoi provisioning: parse CA signing key: %w", err)
+		}
+		for _, ca := range caCerts {
+			caPublicKey, ok := ca.PublicKey.(*rsa.PublicKey)
+			if ok && caPublicKey.E == parsedKey.PublicKey.E && caPublicKey.N.Cmp(parsedKey.PublicKey.N) == 0 {
+				signingCert = ca
+				break
+			}
+		}
+		if signingCert == nil {
+			return nil, fmt.Errorf("gnoi provisioning: CA signing key does not match any certificate in ca.crt")
+		}
+		signingKey = parsedKey
+	}
+
 	return &ProvisioningBundle{
 		certificateID:      certificateID,
 		expectedServerName: expectedServerName,
@@ -252,6 +296,10 @@ func NewProvisioningBundle(
 		caPEM:              normalizedCAs,
 		rootCAPEM:          verifiedRootPEM,
 		leafFingerprint:    sha256.Sum256(leaf.Raw),
+		leafTemplate:       leaf,
+		leafKeyBits:        privateKey.N.BitLen(),
+		signingCert:        signingCert,
+		signingKey:         signingKey,
 	}, nil
 }
 
@@ -311,6 +359,9 @@ func (c *Client) InstallProvisioningCertificate(ctx context.Context, bundle *Pro
 	if err := c.cap.ensureSupported(ServiceCert); err != nil {
 		return err
 	}
+	if bundle.signingKey != nil && bundle.signingCert != nil {
+		return c.installProvisioningCertificateFromCSR(ctx, bundle)
+	}
 	stream, err := c.cert.Install(c.authCtx(ctx))
 	if err != nil {
 		c.cap.Observe(ServiceCert, err)
@@ -345,6 +396,13 @@ func (c *Client) InstallProvisioningCertificate(ctx context.Context, bundle *Pro
 		c.cap.Observe(ServiceCert, err)
 		return wrapCertificateInstallError(bundle.certificateID, "send LoadCertificateRequest", err)
 	}
+	if err := stream.CloseSend(); err != nil {
+		c.cap.Observe(ServiceCert, err)
+		return &ErrCertificateInstallIndeterminate{
+			CertificateID: bundle.certificateID,
+			Cause:         fmt.Errorf("close request stream after LoadCertificateRequest: %w", err),
+		}
+	}
 	response, err := stream.Recv()
 	if err != nil {
 		c.cap.Observe(ServiceCert, err)
@@ -354,13 +412,6 @@ func (c *Client) InstallProvisioningCertificate(ctx context.Context, bundle *Pro
 		err := fmt.Errorf("gnoi Cert.Install: expected LoadCertificateResponse")
 		c.cap.Observe(ServiceCert, err)
 		return err
-	}
-	if err := stream.CloseSend(); err != nil {
-		c.cap.Observe(ServiceCert, err)
-		return &ErrCertificateInstallIndeterminate{
-			CertificateID: bundle.certificateID,
-			Cause:         fmt.Errorf("close request stream after LoadCertificateResponse: %w", err),
-		}
 	}
 	// Install has no Finalize message. A clean EOF after the client half-close
 	// is the final successful stream status; any transport loss here may have
@@ -377,6 +428,138 @@ func (c *Client) InstallProvisioningCertificate(ctx context.Context, bundle *Pro
 	err = fmt.Errorf("gnoi Cert.Install: unexpected additional response %T", extra.GetInstallResponse())
 	c.cap.Observe(ServiceCert, err)
 	return err
+}
+
+func (c *Client) installProvisioningCertificateFromCSR(ctx context.Context, bundle *ProvisioningBundle) error {
+	stream, err := c.cert.Install(c.authCtx(ctx))
+	if err != nil {
+		c.cap.Observe(ServiceCert, err)
+		return fmt.Errorf("gnoi Cert.Install open: %w", err)
+	}
+	defer func() { _ = stream.CloseSend() }()
+
+	csrParams := &certpb.CSRParams{
+		Type:       certpb.CertificateType_CT_X509,
+		MinKeySize: uint32(bundle.leafKeyBits),
+		KeyType:    certpb.KeyType_KT_RSA,
+		CommonName: bundle.expectedServerName,
+	}
+	if ip := net.ParseIP(bundle.expectedServerName); ip != nil {
+		csrParams.IpAddress = ip.String()
+	}
+	generateRequest := &certpb.InstallCertificateRequest{
+		InstallRequest: &certpb.InstallCertificateRequest_GenerateCsr{
+			GenerateCsr: &certpb.GenerateCSRRequest{
+				CertificateId: bundle.certificateID,
+				CsrParams:     csrParams,
+			},
+		},
+	}
+	if err := stream.Send(generateRequest); err != nil {
+		c.cap.Observe(ServiceCert, err)
+		return wrapCertificateInstallError(bundle.certificateID, "send GenerateCSRRequest", err)
+	}
+	csrResponse, err := stream.Recv()
+	if err != nil {
+		c.cap.Observe(ServiceCert, err)
+		return wrapCertificateInstallError(bundle.certificateID, "receive GenerateCSRResponse", err)
+	}
+	generatedCSR := csrResponse.GetGeneratedCsr()
+	if generatedCSR == nil || len(generatedCSR.GetCsr().GetCsr()) == 0 {
+		err := fmt.Errorf("gnoi Cert.Install: expected GenerateCSRResponse with CSR")
+		c.cap.Observe(ServiceCert, err)
+		return err
+	}
+	leafPEM, err := bundle.signCSR(generatedCSR.GetCsr().GetCsr())
+	if err != nil {
+		c.cap.Observe(ServiceCert, err)
+		return fmt.Errorf("gnoi Cert.Install sign CSR: %w", err)
+	}
+
+	caCertificates := make([]*certpb.Certificate, 0, len(bundle.caPEM))
+	for _, ca := range bundle.caPEM {
+		caCertificates = append(caCertificates, &certpb.Certificate{
+			Type:        certpb.CertificateType_CT_X509,
+			Certificate: bytes.Clone(ca),
+		})
+	}
+	loadRequest := &certpb.InstallCertificateRequest{
+		InstallRequest: &certpb.InstallCertificateRequest_LoadCertificate{
+			LoadCertificate: &certpb.LoadCertificateRequest{
+				Certificate: &certpb.Certificate{
+					Type:        certpb.CertificateType_CT_X509,
+					Certificate: leafPEM,
+				},
+				CertificateId:  bundle.certificateID,
+				CaCertificates: caCertificates,
+			},
+		},
+	}
+	if err := stream.Send(loadRequest); err != nil {
+		c.cap.Observe(ServiceCert, err)
+		return wrapCertificateInstallError(bundle.certificateID, "send LoadCertificateRequest", err)
+	}
+	if err := stream.CloseSend(); err != nil {
+		c.cap.Observe(ServiceCert, err)
+		return &ErrCertificateInstallIndeterminate{
+			CertificateID: bundle.certificateID,
+			Cause:         fmt.Errorf("close request stream after LoadCertificateRequest: %w", err),
+		}
+	}
+	loadResponse, err := stream.Recv()
+	if err != nil {
+		c.cap.Observe(ServiceCert, err)
+		return wrapCertificateInstallError(bundle.certificateID, "receive LoadCertificateResponse", err)
+	}
+	if loadResponse == nil || loadResponse.GetLoadCertificate() == nil {
+		err := fmt.Errorf("gnoi Cert.Install: expected LoadCertificateResponse")
+		c.cap.Observe(ServiceCert, err)
+		return err
+	}
+	extra, err := stream.Recv()
+	if errors.Is(err, io.EOF) {
+		c.cap.Observe(ServiceCert, nil)
+		return nil
+	}
+	if err != nil {
+		c.cap.Observe(ServiceCert, err)
+		return wrapCertificateInstallError(bundle.certificateID, "complete Install stream", err)
+	}
+	err = fmt.Errorf("gnoi Cert.Install: unexpected additional response %T", extra.GetInstallResponse())
+	c.cap.Observe(ServiceCert, err)
+	return err
+}
+
+func (b *ProvisioningBundle) signCSR(rawCSR []byte) ([]byte, error) {
+	csrBlock, _ := pem.Decode(bytes.TrimSpace(rawCSR))
+	if csrBlock == nil {
+		csrBlock = &pem.Block{Bytes: rawCSR}
+	}
+	csr, err := x509.ParseCertificateRequest(csrBlock.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parse CSR: %w", err)
+	}
+	if err := csr.CheckSignature(); err != nil {
+		return nil, fmt.Errorf("verify CSR signature: %w", err)
+	}
+	template := *b.leafTemplate
+	serialLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serial, err := rand.Int(rand.Reader, serialLimit)
+	if err != nil {
+		return nil, fmt.Errorf("generate serial: %w", err)
+	}
+	template.SerialNumber = serial
+	template.Subject = csr.Subject
+	template.PublicKey = csr.PublicKey
+	template.DNSNames = csr.DNSNames
+	template.IPAddresses = csr.IPAddresses
+	template.EmailAddresses = csr.EmailAddresses
+	template.URIs = csr.URIs
+	der, err := x509.CreateCertificate(rand.Reader, &template, b.signingCert, csr.PublicKey, b.signingKey)
+	if err != nil {
+		return nil, fmt.Errorf("create certificate: %w", err)
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), nil
 }
 
 func (b *ProvisioningBundle) conflictError(detail string, cause error) error {

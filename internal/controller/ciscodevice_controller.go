@@ -561,11 +561,6 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  provisioning.SecretRef.Name,
 						DefaultMode: ptr.To[int32](0o440),
-						Items: []corev1.KeyToPath{
-							{Key: "tls.crt", Path: "tls.crt"},
-							{Key: "tls.key", Path: "tls.key"},
-							{Key: "ca.crt", Path: "ca.crt"},
-						},
 					},
 				},
 			})

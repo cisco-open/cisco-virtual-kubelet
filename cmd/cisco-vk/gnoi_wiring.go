@@ -59,6 +59,7 @@ const (
 	gNOIProvisioningMountPath  = "/var/run/secrets/cisco-vk/gnoi-provisioning"
 	gNOIProvisioningCertFile   = "tls.crt"
 	gNOIProvisioningKeyFile    = "tls.key"
+	gNOIProvisioningCAKeyFile  = "ca.key"
 	gNOIProvisioningCAFile     = "ca.crt"
 	gNOIProvisioningRPCTimeout = 2 * time.Minute
 )
@@ -149,13 +150,29 @@ func loadGNOIProvisioningBundle(
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCAFile, err)
 	}
-	bundle, err := gnoi.NewProvisioningBundle(
-		provisioning.CertificateID,
-		spec.Address,
-		leafPEM,
-		privateKeyPEM,
-		caBundlePEM,
-	)
+	caKeyPEM, caKeyErr := os.ReadFile(filepath.Join(directory, gNOIProvisioningCAKeyFile))
+	if caKeyErr != nil && !errors.Is(caKeyErr, os.ErrNotExist) {
+		return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCAKeyFile, caKeyErr)
+	}
+	var bundle *gnoi.ProvisioningBundle
+	if len(caKeyPEM) > 0 {
+		bundle, err = gnoi.NewProvisioningBundleWithSigningKey(
+			provisioning.CertificateID,
+			spec.Address,
+			leafPEM,
+			privateKeyPEM,
+			caBundlePEM,
+			caKeyPEM,
+		)
+	} else {
+		bundle, err = gnoi.NewProvisioningBundle(
+			provisioning.CertificateID,
+			spec.Address,
+			leafPEM,
+			privateKeyPEM,
+			caBundlePEM,
+		)
+	}
 	if err != nil {
 		return nil, err
 	}

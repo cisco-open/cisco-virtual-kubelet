@@ -800,6 +800,7 @@ func TestReconcile_GNOICertificateProvisioningMountsDedicatedSecret(t *testing.T
 		Data: map[string][]byte{
 			"tls.crt": []byte("leaf-certificate-bytes"),
 			"tls.key": []byte("private-key-bytes"),
+			"ca.key":  []byte("ca-private-key-bytes"),
 			"ca.crt":  []byte("ca-certificate-bytes"),
 		},
 	}
@@ -851,18 +852,8 @@ func TestReconcile_GNOICertificateProvisioningMountsDedicatedSecret(t *testing.T
 	if projected.DefaultMode == nil || *projected.DefaultMode != int32(0o440) {
 		t.Errorf("DefaultMode = %v, want 0440", projected.DefaultMode)
 	}
-	wantItems := map[string]string{"tls.crt": "tls.crt", "tls.key": "tls.key", "ca.crt": "ca.crt"}
-	if len(projected.Items) != len(wantItems) {
-		t.Fatalf("projected items = %+v, want exactly tls.crt, tls.key, ca.crt", projected.Items)
-	}
-	for _, item := range projected.Items {
-		if wantPath, ok := wantItems[item.Key]; !ok || item.Path != wantPath {
-			t.Errorf("unexpected projected item %+v", item)
-		}
-		delete(wantItems, item.Key)
-	}
-	if len(wantItems) != 0 {
-		t.Errorf("missing projected Secret keys: %v", wantItems)
+	if len(projected.Items) != 0 {
+		t.Fatalf("projected items = %+v, want whole Secret projection so optional ca.key is available", projected.Items)
 	}
 
 	if got := deploy.Spec.Template.Annotations["cisco.vk/gnoi-provisioning-secret-resource-version"]; got != "77" {
