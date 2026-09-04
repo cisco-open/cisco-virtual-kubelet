@@ -138,18 +138,16 @@ spec:
                 type: string
               gnoi:
                 description: |-
-                  GNOI optionally overrides the per-device gNOI transport. When omitted,
-                  the historical port and TLS inference from Port and TLS is preserved.
-                  Secure gNOI authentication uses Username and the resolved device password.
+                  GNOI contains opt-in, per-device gNOI settings. Omitting it, or providing
+                  an empty block, preserves historical transport and port inference. Secure
+                  gNOI authentication uses Username and the resolved device password.
                 properties:
                   certificateProvisioning:
                     description: |-
-                      CertificateProvisioning opts this device into gNOI Certificate Install
-                      when OS.Verify reports IOS XE's not-provisioned state. The referenced
-                      Secret is mounted only into this device's VK pod. IOS XE's target-generated
-                      CSR flow uses tls.crt, ca.crt, and ca.key; the external-key compatibility
-                      flow uses tls.crt, tls.key, and ca.crt. Certificate material is never copied
-                      into the rendered device ConfigMap.
+                      CertificateProvisioning supplies the gNOI-only trust and signing material
+                      used by an explicit ProvisionCertificate IOSXEOperationalAction. OS.Verify
+                      remains read-only. The referenced Secret is mounted only into this device's
+                      VK pod; certificate material is never copied into its ConfigMap.
                     properties:
                       certificateID:
                         description: |-
@@ -168,12 +166,11 @@ spec:
                         type: boolean
                       secretRef:
                         description: |-
-                          SecretRef names a Secret in the CiscoDevice namespace. The recommended IOS
-                          XE target-generated CSR flow requires tls.crt, ca.crt, and ca.key. ca.key
-                          must match the verified tls.crt issuer. If ca.key is absent, tls.key is
-                          required for the external-key compatibility flow. ca.crt is the complete
-                          desired target CA replacement bundle, not only the leaf's issuer chain. The
-                          kubelet projects only these recognized keys into the worker read-only.
+                          SecretRef names a Secret in the CiscoDevice namespace. tls.crt and ca.crt
+                          are required. Optional bootstrap.crt pins the current IOS XE TLS leaf;
+                          optional ca.key signs one target-generated CSR and must match tls.crt's
+                          dedicated intermediate issuer. ca.crt is the complete desired target CA
+                          replacement bundle. The worker receives only recognized keys read-only.
                         properties:
                           name:
                             description: Name is the DNS-subdomain name of the provisioning
@@ -196,9 +193,8 @@ spec:
                       rule: self.replaceTargetCABundle == true
                   port:
                     description: |-
-                      Port is the device-side gNOI listener port. When omitted, CVK uses 9339
-                      for TLS and 50052 for plaintext. Unlike the legacy inference path, a
-                      present GNOI block never inherits DeviceSpec.Port.
+                      Port overrides the device-side gNOI listener port. Zero preserves the
+                      legacy port inference.
                     maximum: 65535
                     minimum: 1
                     type: integer
@@ -210,7 +206,6 @@ spec:
                     enum:
                     - auto
                     - tls
-                    - plaintext
                     type: string
                 type: object
                 x-kubernetes-validations:
@@ -567,6 +562,15 @@ spec:
             - driver
             - username
             type: object
+            x-kubernetes-validations:
+            - message: gNOI certificate provisioning is supported only for driver
+                XE
+              rule: '!has(self.gnoi) || !has(self.gnoi.certificateProvisioning) ||
+                self.driver == ''XE'''
+            - message: explicit secure gNOI requires verified TLS
+              rule: '!has(self.gnoi) || !has(self.gnoi.transportSecurity) || self.gnoi.transportSecurity
+                != ''tls'' || !has(self.tls) || !has(self.tls.insecureSkipVerify)
+                || !self.tls.insecureSkipVerify'
           status:
             description: DeviceStatus defines the observed state of a CiscoDevice.
             properties:

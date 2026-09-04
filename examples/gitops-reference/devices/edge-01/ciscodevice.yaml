@@ -16,9 +16,6 @@ spec:
   tls:
     enabled: true
     insecureSkipVerify: false
-  gnoi:
-    transportSecurity: tls
-    port: 9339
   maxPods: 4
   region: lab
   zone: rack-01

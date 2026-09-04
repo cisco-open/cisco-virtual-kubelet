@@ -107,23 +107,19 @@ func (f *fakeFile) Get(_ *filepb.GetRequest, stream grpc.ServerStreamingServer[f
 
 type fakeCert struct {
 	certpb.UnimplementedCertificateManagementServer
-	getResp               *certpb.GetCertificatesResponse
-	getErr                error
-	canGenResponse        *certpb.CanGenerateCSRResponse
-	canGenRequest         *certpb.CanGenerateCSRRequest
-	installRequest        *certpb.InstallCertificateRequest
-	installResponse       *certpb.InstallCertificateResponse
-	installErr            error
-	installFinalErr       error
-	installEOFSeen        bool
-	installRejectEarlyEOF bool
-	installEOFEarly       bool
-	installResponseSent   chan struct{}
-	installRelease        chan struct{}
-	installFinished       chan struct{}
-	installCSR            []byte
-	installCSRType        *certpb.CertificateType
-	installRequests       []*certpb.InstallCertificateRequest
+	getResp             *certpb.GetCertificatesResponse
+	getErr              error
+	canGenResponse      *certpb.CanGenerateCSRResponse
+	canGenRequest       *certpb.CanGenerateCSRRequest
+	installRequest      *certpb.InstallCertificateRequest
+	installResponse     *certpb.InstallCertificateResponse
+	installErr          error
+	installEOFSeen      bool
+	installResponseSent chan struct{}
+	installRelease      chan struct{}
+	installCSR          []byte
+	installCSRType      *certpb.CertificateType
+	installRequests     []*certpb.InstallCertificateRequest
 }
 
 func (f *fakeCert) GetCertificates(context.Context, *certpb.GetCertificatesRequest) (*certpb.GetCertificatesResponse, error) {
@@ -139,9 +135,6 @@ func (f *fakeCert) CanGenerateCSR(_ context.Context, request *certpb.CanGenerate
 }
 
 func (f *fakeCert) Install(stream grpc.BidiStreamingServer[certpb.InstallCertificateRequest, certpb.InstallCertificateResponse]) error {
-	if f.installFinished != nil {
-		defer close(f.installFinished)
-	}
 	request, err := stream.Recv()
 	if err != nil {
 		return err
@@ -172,24 +165,6 @@ func (f *fakeCert) Install(stream grpc.BidiStreamingServer[certpb.InstallCertifi
 		f.installRequest = request
 		f.installRequests = append(f.installRequests, request)
 	}
-	var eofBeforeResponse <-chan error
-	if f.installRejectEarlyEOF {
-		received := make(chan error, 1)
-		go func() {
-			_, recvErr := stream.Recv()
-			received <- recvErr
-		}()
-		eofBeforeResponse = received
-		select {
-		case recvErr := <-received:
-			if errors.Is(recvErr, io.EOF) {
-				f.installEOFEarly = true
-				return status.Error(codes.Aborted, "client half-closed before LoadCertificateResponse")
-			}
-			return recvErr
-		case <-time.After(100 * time.Millisecond):
-		}
-	}
 	response := f.installResponse
 	if response == nil {
 		response = &certpb.InstallCertificateResponse{
@@ -206,14 +181,7 @@ func (f *fakeCert) Install(stream grpc.BidiStreamingServer[certpb.InstallCertifi
 	}
 	if f.installRelease != nil {
 		<-f.installRelease
-		return f.installFinalErr
-	}
-	if eofBeforeResponse != nil {
-		if recvErr := <-eofBeforeResponse; !errors.Is(recvErr, io.EOF) {
-			return recvErr
-		}
-		f.installEOFSeen = true
-		return f.installFinalErr
+		return nil
 	}
 	if _, err := stream.Recv(); err != io.EOF {
 		if err == nil {
@@ -222,7 +190,7 @@ func (f *fakeCert) Install(stream grpc.BidiStreamingServer[certpb.InstallCertifi
 		return err
 	}
 	f.installEOFSeen = true
-	return f.installFinalErr
+	return nil
 }
 
 type fakeOS struct {
@@ -516,75 +484,16 @@ func TestVerify(t *testing.T) {
 	}
 }
 
-func TestVerifyInvokesProvisioningHandlerOnlyForDeviceNotProvisioned(t *testing.T) {
+func TestVerifyDeviceNotProvisionedIsReadOnly(t *testing.T) {
 	ts := newTestServer(t)
 	ts.OS.verifyErr = status.Error(codes.FailedPrecondition, "Device has not been provisioned")
 
-	wantProgress := &ErrProvisioningInProgress{CertificateID: "cvk-gnoi"}
-	called := 0
-	c, err := New(ts.dial(t), Options{
-		OnDeviceNotProvisioned: func(_ context.Context, got *Client) error {
-			called++
-			if got == nil {
-				t.Fatal("provisioning handler received nil client")
-			}
-			return wantProgress
-		},
-	})
-	if err != nil {
-		t.Fatalf("New gNOI client: %v", err)
+	_, err := ts.client(t).Verify(context.Background())
+	if !IsDeviceNotProvisioned(err) {
+		t.Fatalf("Verify error=%T %v, want exact device-not-provisioned classification", err, err)
 	}
-
-	_, err = c.Verify(context.Background())
-	var progress *ErrProvisioningInProgress
-	if !errors.As(err, &progress) {
-		t.Fatalf("Verify error=%T %v, want *ErrProvisioningInProgress", err, err)
-	}
-	if progress != wantProgress {
-		t.Fatalf("Verify returned provisioning error %p, want %p", progress, wantProgress)
-	}
-	if called != 1 {
-		t.Fatalf("provisioning handler calls=%d, want 1", called)
-	}
-}
-
-func TestVerifyDoesNotInvokeProvisioningHandlerForOtherFailedPrecondition(t *testing.T) {
-	ts := newTestServer(t)
-	ts.OS.verifyErr = status.Error(codes.FailedPrecondition, "install operation already in progress")
-
-	called := 0
-	c, err := New(ts.dial(t), Options{
-		OnDeviceNotProvisioned: func(context.Context, *Client) error {
-			called++
-			return &ErrProvisioningInProgress{CertificateID: "cvk-gnoi"}
-		},
-	})
-	if err != nil {
-		t.Fatalf("New gNOI client: %v", err)
-	}
-
-	_, err = c.Verify(context.Background())
-	if status.Code(err) != codes.FailedPrecondition {
-		t.Fatalf("Verify status=%s error=%v, want FailedPrecondition", status.Code(err), err)
-	}
-	if called != 0 {
-		t.Fatalf("provisioning handler calls=%d, want 0", called)
-	}
-}
-
-func TestVerifySuccessObservesProvisioningCompletion(t *testing.T) {
-	ts := newTestServer(t)
-	ts.OS.verifyResp = &ospb.VerifyResponse{Version: "17.18.04"}
-	called := 0
-	c, err := New(ts.dial(t), Options{OnOSVerifySuccess: func() { called++ }})
-	if err != nil {
-		t.Fatalf("New gNOI client: %v", err)
-	}
-	if _, err := c.Verify(context.Background()); err != nil {
-		t.Fatalf("Verify: %v", err)
-	}
-	if called != 1 {
-		t.Fatalf("OnOSVerifySuccess calls=%d, want 1", called)
+	if ts.Cert.canGenRequest != nil || ts.Cert.installRequest != nil {
+		t.Fatal("Verify attempted certificate provisioning")
 	}
 }
 

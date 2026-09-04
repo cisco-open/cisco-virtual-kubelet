@@ -20,6 +20,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -73,6 +74,9 @@ const (
 	// per-device Secret only when the CiscoDevice explicitly opts in.
 	gnoiProvisioningVolumeName = "gnoi-provisioning"
 	gnoiProvisioningMountPath  = "/var/run/secrets/cisco-vk/gnoi-provisioning"
+	// gnoiSignerMountedAnnotation is retained after provisioning is disabled so
+	// future rollouts cannot overlap a pod that may still hold the signer in memory.
+	gnoiSignerMountedAnnotation = "cisco.vk/gnoi-provisioning-signer-mounted"
 	// DefaultImage is the default container image for the VK deployment.
 	DefaultImage = "ghcr.io/cisco/virtual-kubelet-cisco:latest"
 	// DefaultServiceAccount is the shared service account used by all VK deployments.
@@ -428,6 +432,8 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if image == "" {
 		image = DefaultImage
 	}
+	provisioning := gnoiCertificateProvisioning(&device.Spec)
+	provisioningWritesEnabled := provisioning != nil && writeClassGNOIEnabled()
 
 	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, deploy, func() error {
 		// Immutable labels used as selector.
@@ -439,6 +445,12 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		deploy.Spec.Selector = &metav1.LabelSelector{
 			MatchLabels: labels,
 		}
+		signerMayBeResident := provisioningWritesEnabled ||
+			deploy.Annotations[gnoiSignerMountedAnnotation] == "true" ||
+			podTemplateProjectsGNOIPrivateKey(&deploy.Spec.Template.Spec)
+		if signerMayBeResident {
+			deploy.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
+		}
 
 		annos := map[string]string{
 			// Force a rollout whenever the ConfigMap content changes.
@@ -447,14 +459,23 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if credRV := r.lookupCredentialResourceVersion(ctx, &device); credRV != "" {
 			annos["cisco.vk/credential-resource-version"] = credRV
 		}
-		if provisioningRV := r.lookupGNOIProvisioningSecretResourceVersion(ctx, &device); provisioningRV != "" {
-			annos["cisco.vk/gnoi-provisioning-secret-resource-version"] = provisioningRV
+		if provisioning != nil {
+			// Copy only resourceVersion to trigger rotation; key material stays in the Secret volume.
+			if rv := r.lookupSecretResourceVersion(ctx, device.Namespace, provisioning.SecretRef.Name); rv != "" {
+				annos["cisco.vk/gnoi-provisioning-secret-resource-version"] = rv
+			}
 		}
 		// Keep lifecycle carriers on the Deployment object for audit/search.
 		// Do not copy them into the PodTemplate: a trace-only annotation change
 		// would otherwise roll the long-lived per-device VK even though the
 		// process does not consume its own Pod annotations.
 		deploy.Annotations = propagatedCorrelationAnnotations(deploy.Annotations, device.Annotations, r.now())
+		if signerMayBeResident {
+			if deploy.Annotations == nil {
+				deploy.Annotations = make(map[string]string)
+			}
+			deploy.Annotations[gnoiSignerMountedAnnotation] = "true"
+		}
 		deploy.Spec.Template.ObjectMeta = metav1.ObjectMeta{
 			Labels:      labels,
 			Annotations: annos,
@@ -502,93 +523,6 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 		podEnv = append(podEnv, opsPolicyEnv(device.Spec.OpsPolicy)...)
 
-		volumeMounts := []corev1.VolumeMount{
-			{
-				Name:      "device-config",
-				MountPath: configMountPath + "/" + configFileName,
-				SubPath:   configFileName,
-				ReadOnly:  true,
-			},
-			{
-				Name:      "tls-gen",
-				MountPath: varLibMountPath,
-			},
-			{
-				Name:      "tmp",
-				MountPath: "/tmp",
-			},
-		}
-		volumes := []corev1.Volume{
-			{
-				Name: "device-config",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: cm.Name,
-						},
-					},
-				},
-			},
-			{
-				// emptyDir provides a writable scratch space for the
-				// self-signed TLS cert generated at startup. Using an
-				// explicit emptyDir ensures this works on a RORFS.
-				Name: "tls-gen",
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
-			},
-			{
-				// Writable /tmp for the read-only root filesystem:
-				// software-upgrade image staging and cache
-				// (os.CreateTemp / os.TempDir in imageresolver.go) land
-				// here. Sized by the node's disk like any emptyDir.
-				Name: "tmp",
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
-			},
-		}
-		if provisioning := gnoiCertificateProvisioning(&device.Spec); provisioning != nil {
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      gnoiProvisioningVolumeName,
-				MountPath: gnoiProvisioningMountPath,
-				ReadOnly:  true,
-			})
-			volumes = append(volumes, corev1.Volume{
-				Name: gnoiProvisioningVolumeName,
-				VolumeSource: corev1.VolumeSource{
-					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: ptr.To[int32](0o440),
-						Sources: []corev1.VolumeProjection{
-							{
-								Secret: &corev1.SecretProjection{
-									LocalObjectReference: corev1.LocalObjectReference{Name: provisioning.SecretRef.Name},
-									Items: []corev1.KeyToPath{
-										{Key: "tls.crt", Path: "tls.crt"},
-										{Key: "ca.crt", Path: "ca.crt"},
-									},
-								},
-							},
-							{
-								// CSR mode needs ca.key, while the compatibility
-								// external-key mode needs tls.key. Make both optional
-								// here and let the worker validate the selected mode.
-								Secret: &corev1.SecretProjection{
-									LocalObjectReference: corev1.LocalObjectReference{Name: provisioning.SecretRef.Name},
-									Optional:             ptr.To(true),
-									Items: []corev1.KeyToPath{
-										{Key: "ca.key", Path: "ca.key"},
-										{Key: "tls.key", Path: "tls.key"},
-									},
-								},
-							},
-						},
-					},
-				},
-			})
-		}
-
 		deploy.Spec.Template.Spec = corev1.PodSpec{
 			// Pod Security Standards "restricted" profile. Pinning the numeric
 			// distroless identity lets kubelet verify runAsNonRoot and keeps the
@@ -620,13 +554,88 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 						// filesystem itself can be read-only.
 						ReadOnlyRootFilesystem: ptr.To(true),
 					},
-					VolumeMounts: volumeMounts,
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "device-config",
+							MountPath: configMountPath + "/" + configFileName,
+							SubPath:   configFileName,
+							ReadOnly:  true,
+						},
+						{
+							Name:      "tls-gen",
+							MountPath: varLibMountPath,
+						},
+						{
+							Name:      "tmp",
+							MountPath: "/tmp",
+						},
+					},
 				},
 			},
-			Volumes: volumes,
+			Volumes: []corev1.Volume{
+				{
+					Name: "device-config",
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: cm.Name,
+							},
+						},
+					},
+				},
+				{
+					// emptyDir provides a writable scratch space for the
+					// self-signed TLS cert generated at startup. Using an
+					// explicit emptyDir ensures this works on a RORFS.
+					Name: "tls-gen",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
+				{
+					// Writable /tmp for the read-only root filesystem:
+					// software-upgrade image staging and cache
+					// (os.CreateTemp / os.TempDir in imageresolver.go) land
+					// here. Sized by the node's disk like any emptyDir.
+					Name: "tmp",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
+			},
 			// Use shared service account with VK RBAC permissions
 			ServiceAccountName: serviceAccount,
 			Affinity:           perDeviceVKNodeAffinity(),
+		}
+		if provisioning != nil {
+			sources := []corev1.VolumeProjection{{Secret: &corev1.SecretProjection{
+				LocalObjectReference: corev1.LocalObjectReference{Name: provisioning.SecretRef.Name},
+				Items: []corev1.KeyToPath{
+					{Key: "tls.crt", Path: "tls.crt"},
+					{Key: "ca.crt", Path: "ca.crt"},
+				},
+			}}}
+			if provisioningWritesEnabled {
+				sources = append(sources, corev1.VolumeProjection{Secret: &corev1.SecretProjection{
+					LocalObjectReference: corev1.LocalObjectReference{Name: provisioning.SecretRef.Name},
+					Optional:             ptr.To(true),
+					Items: []corev1.KeyToPath{
+						{Key: "bootstrap.crt", Path: "bootstrap.crt"},
+						{Key: "ca.key", Path: "ca.key"},
+					},
+				}})
+			}
+			deploy.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+				deploy.Spec.Template.Spec.Containers[0].VolumeMounts,
+				corev1.VolumeMount{Name: gnoiProvisioningVolumeName, MountPath: gnoiProvisioningMountPath, ReadOnly: true},
+			)
+			deploy.Spec.Template.Spec.Volumes = append(deploy.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: gnoiProvisioningVolumeName,
+				VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{
+					DefaultMode: ptr.To[int32](0o440),
+					Sources:     sources,
+				}},
+			})
 		}
 
 		return controllerutil.SetControllerReference(&device, deploy, r.Scheme)
@@ -1853,10 +1862,38 @@ func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj
 }
 
 func gnoiCertificateProvisioning(spec *ciskov1.DeviceSpec) *ciskov1.GNOICertificateProvisioning {
-	if spec == nil || spec.GNOI == nil {
+	if spec == nil || spec.Driver != ciskov1.DeviceDriverXE || spec.GNOI == nil {
 		return nil
 	}
 	return spec.GNOI.CertificateProvisioning
+}
+
+func writeClassGNOIEnabled() bool {
+	value := strings.TrimSpace(os.Getenv(envCVKEnableWriteClassGNOI))
+	enabled, err := strconv.ParseBool(value)
+	return err == nil && enabled
+}
+
+func podTemplateProjectsGNOIPrivateKey(spec *corev1.PodSpec) bool {
+	if spec == nil {
+		return false
+	}
+	for _, volume := range spec.Volumes {
+		if volume.Name != gnoiProvisioningVolumeName || volume.Projected == nil {
+			continue
+		}
+		for _, source := range volume.Projected.Sources {
+			if source.Secret == nil {
+				continue
+			}
+			for _, item := range source.Secret.Items {
+				if item.Key == "ca.key" || item.Key == "tls.key" {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // lookupCredentialResourceVersion returns the referenced Secret's
@@ -1867,30 +1904,15 @@ func (r *CiscoDeviceReconciler) lookupCredentialResourceVersion(ctx context.Cont
 	if device.Spec.CredentialSecretRef == nil {
 		return ""
 	}
-	var sec corev1.Secret
-	if err := r.Get(ctx, types.NamespacedName{
-		Namespace: device.Namespace,
-		Name:      device.Spec.CredentialSecretRef.Name,
-	}, &sec); err != nil {
-		return ""
-	}
-	return sec.ResourceVersion
+	return r.lookupSecretResourceVersion(ctx, device.Namespace, device.Spec.CredentialSecretRef.Name)
 }
 
-// lookupGNOIProvisioningSecretResourceVersion returns only the referenced
-// Secret's resourceVersion for a pod-template rollout annotation. Certificate
-// bytes remain in the Secret volume projection and are never copied into a
-// ConfigMap, annotation, environment variable, status field, or log message.
-func (r *CiscoDeviceReconciler) lookupGNOIProvisioningSecretResourceVersion(ctx context.Context, device *ciskov1.CiscoDevice) string {
-	provisioning := gnoiCertificateProvisioning(&device.Spec)
-	if provisioning == nil || provisioning.SecretRef.Name == "" {
+func (r *CiscoDeviceReconciler) lookupSecretResourceVersion(ctx context.Context, namespace, name string) string {
+	if name == "" {
 		return ""
 	}
 	var sec corev1.Secret
-	if err := r.Get(ctx, types.NamespacedName{
-		Namespace: device.Namespace,
-		Name:      provisioning.SecretRef.Name,
-	}, &sec); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &sec); err != nil {
 		return ""
 	}
 	return sec.ResourceVersion

@@ -25,8 +25,8 @@ import (
 var gnoiCertificateIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 
 // GNOITransportSecurity selects how the per-device gNOI connection is
-// protected. The empty value has the same behavior as auto.
-// +kubebuilder:validation:Enum=auto;tls;plaintext
+// protected. Empty and auto preserve the legacy transport inference.
+// +kubebuilder:validation:Enum=auto;tls
 type GNOITransportSecurity string
 
 const (
@@ -36,19 +36,16 @@ const (
 	// GNOITransportSecurityTLS forces gNOI to use TLS while reusing the trust
 	// and optional client-certificate material from DeviceSpec.TLS.
 	GNOITransportSecurityTLS GNOITransportSecurity = "tls"
-	// GNOITransportSecurityPlaintext forces gNOI to use plaintext transport.
-	// It exists for compatibility with older IOS-XE lab deployments.
-	GNOITransportSecurityPlaintext GNOITransportSecurity = "plaintext"
 )
 
-// GNOIConfig carries per-device gNOI transport overrides. Credentials are not
-// duplicated here: secure gNOI derives the IOS XE username/password metadata
-// from DeviceSpec.Username and the resolved device password at runtime.
+// GNOIConfig carries opt-in, per-device gNOI settings. A nil or zero-valued
+// config preserves legacy transport and port inference. Credentials are not
+// duplicated here: explicit secure gNOI derives the IOS XE username/password
+// metadata from DeviceSpec.Username and the resolved password at runtime.
 // +kubebuilder:validation:XValidation:rule="!has(self.certificateProvisioning) || (has(self.transportSecurity) && self.transportSecurity == 'tls')",message="certificateProvisioning requires transportSecurity to be tls"
 type GNOIConfig struct {
-	// Port is the device-side gNOI listener port. When omitted, CVK uses 9339
-	// for TLS and 50052 for plaintext. Unlike the legacy inference path, a
-	// present GNOI block never inherits DeviceSpec.Port.
+	// Port overrides the device-side gNOI listener port. Zero preserves the
+	// legacy port inference.
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
@@ -60,12 +57,10 @@ type GNOIConfig struct {
 	// +kubebuilder:default=auto
 	TransportSecurity GNOITransportSecurity `json:"transportSecurity,omitempty" mapstructure:"transportSecurity,omitempty"`
 
-	// CertificateProvisioning opts this device into gNOI Certificate Install
-	// when OS.Verify reports IOS XE's not-provisioned state. The referenced
-	// Secret is mounted only into this device's VK pod. IOS XE's target-generated
-	// CSR flow uses tls.crt, ca.crt, and ca.key; the external-key compatibility
-	// flow uses tls.crt, tls.key, and ca.crt. Certificate material is never copied
-	// into the rendered device ConfigMap.
+	// CertificateProvisioning supplies the gNOI-only trust and signing material
+	// used by an explicit ProvisionCertificate IOSXEOperationalAction. OS.Verify
+	// remains read-only. The referenced Secret is mounted only into this device's
+	// VK pod; certificate material is never copied into its ConfigMap.
 	// +kubebuilder:validation:Optional
 	CertificateProvisioning *GNOICertificateProvisioning `json:"certificateProvisioning,omitempty" mapstructure:"certificateProvisioning,omitempty"`
 }
@@ -83,12 +78,11 @@ type GNOICertificateProvisioning struct {
 	// +kubebuilder:validation:Pattern=^[A-Za-z0-9][A-Za-z0-9_.-]*$
 	CertificateID string `json:"certificateID" mapstructure:"certificateID"`
 
-	// SecretRef names a Secret in the CiscoDevice namespace. The recommended IOS
-	// XE target-generated CSR flow requires tls.crt, ca.crt, and ca.key. ca.key
-	// must match the verified tls.crt issuer. If ca.key is absent, tls.key is
-	// required for the external-key compatibility flow. ca.crt is the complete
-	// desired target CA replacement bundle, not only the leaf's issuer chain. The
-	// kubelet projects only these recognized keys into the worker read-only.
+	// SecretRef names a Secret in the CiscoDevice namespace. tls.crt and ca.crt
+	// are required. Optional bootstrap.crt pins the current IOS XE TLS leaf;
+	// optional ca.key signs one target-generated CSR and must match tls.crt's
+	// dedicated intermediate issuer. ca.crt is the complete desired target CA
+	// replacement bundle. The worker receives only recognized keys read-only.
 	// +kubebuilder:validation:Required
 	SecretRef GNOIProvisioningSecretReference `json:"secretRef" mapstructure:"secretRef"`
 
@@ -122,10 +116,10 @@ func (c *GNOIConfig) Validate() error {
 		return fmt.Errorf("port must be between 1 and 65535 when set")
 	}
 	switch c.TransportSecurity {
-	case "", GNOITransportSecurityAuto, GNOITransportSecurityTLS, GNOITransportSecurityPlaintext:
+	case "", GNOITransportSecurityAuto, GNOITransportSecurityTLS:
 		// Valid; continue with optional certificate-provisioning validation.
 	default:
-		return fmt.Errorf("transportSecurity must be one of auto, tls, or plaintext")
+		return fmt.Errorf("transportSecurity must be auto or tls")
 	}
 	if c.CertificateProvisioning == nil {
 		return nil

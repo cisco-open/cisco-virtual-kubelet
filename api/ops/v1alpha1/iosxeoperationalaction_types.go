@@ -26,16 +26,17 @@ import (
 // operators can grant low-trust automation read access without
 // implicitly granting reboot / factory-reset / file-write.
 //
-// +kubebuilder:validation:Enum=Reboot;CancelReboot;KillProcess;FilePut;FileRemove;FactoryReset
+// +kubebuilder:validation:Enum=Reboot;CancelReboot;KillProcess;FilePut;FileRemove;FactoryReset;ProvisionCertificate
 type ActionKind string
 
 const (
-	ActionKindReboot       ActionKind = "Reboot"
-	ActionKindCancelReboot ActionKind = "CancelReboot"
-	ActionKindKillProcess  ActionKind = "KillProcess"
-	ActionKindFilePut      ActionKind = "FilePut"
-	ActionKindFileRemove   ActionKind = "FileRemove"
-	ActionKindFactoryReset ActionKind = "FactoryReset"
+	ActionKindReboot               ActionKind = "Reboot"
+	ActionKindCancelReboot         ActionKind = "CancelReboot"
+	ActionKindKillProcess          ActionKind = "KillProcess"
+	ActionKindFilePut              ActionKind = "FilePut"
+	ActionKindFileRemove           ActionKind = "FileRemove"
+	ActionKindFactoryReset         ActionKind = "FactoryReset"
+	ActionKindProvisionCertificate ActionKind = "ProvisionCertificate"
 )
 
 // ActionPhase reports the lifecycle state of an action.
@@ -52,10 +53,11 @@ const (
 )
 
 // IOSXEOperationalAction is a one-shot write-class operation against
-// one IOS-XE device. The reconciler executes exactly once: it does
+// one IOS-XE device. The reconciler dispatches at most once: it does
 // not retry on transient failure, because every kind is destructive
 // or near-destructive (Reboot / FactoryReset / FileRemove / etc.).
-// Operators submit a new CR to re-attempt.
+// Failures are terminal; operators inspect device state before deciding
+// whether a new CR is safe.
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced,shortName=xeop

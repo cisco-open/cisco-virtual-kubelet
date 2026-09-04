@@ -15,10 +15,8 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"os"
@@ -26,13 +24,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/devicegrpc"
@@ -49,20 +44,18 @@ const gNOIDisabledEnv = "CISCO_VK_GNOI_DISABLED"
 // follow the same secure/insecure heuristic the gNMI transport uses.
 const gNOIPortEnv = "CISCO_VK_GNOI_PORT"
 
-// gNOIInsecureEnv forces the gNOI dial to the device's insecure gnxi
-// listener (typically port 50052), bypassing the spec.tls.enabled
-// inference. Mirrors CISCO_VK_TELEMETRY_INSECURE — useful when the
-// RESTCONF transport uses TLS (port 443) but gNOI is bound to the
-// `gnxi server` (insecure) line rather than `gnxi secure-server`.
+// gNOIInsecureEnv forces legacy configurations to use the insecure gNXI
+// listener (typically port 50052), bypassing spec.tls.enabled inference. It
+// cannot override an explicit gnoi.transportSecurity=tls contract.
 const gNOIInsecureEnv = "CISCO_VK_GNOI_INSECURE"
 
 const (
-	gNOIProvisioningMountPath  = "/var/run/secrets/cisco-vk/gnoi-provisioning"
-	gNOIProvisioningCertFile   = "tls.crt"
-	gNOIProvisioningKeyFile    = "tls.key"
-	gNOIProvisioningCAKeyFile  = "ca.key"
-	gNOIProvisioningCAFile     = "ca.crt"
-	gNOIProvisioningRPCTimeout = 2 * time.Minute
+	gNOIProvisioningMountPath     = "/var/run/secrets/cisco-vk/gnoi-provisioning"
+	gNOIProvisioningCertFile      = "tls.crt"
+	gNOIProvisioningCAKeyFile     = "ca.key"
+	gNOIProvisioningCAFile        = "ca.crt"
+	gNOIProvisioningBootstrapFile = "bootstrap.crt"
+	gNOIProvisioningRPCTimeout    = 2 * time.Minute
 )
 
 // setupGNOI builds the per-device gRPC pool and returns a lazy,
@@ -102,7 +95,13 @@ func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider
 	if err != nil {
 		return nil, nil, fmt.Errorf("gNOI: TLS from spec: %w", err)
 	}
-	provisioningBundle, err := loadGNOIProvisioningBundle(opts.Spec, tlsEnabled, dialCfg.TLSConfig, gNOIProvisioningMountPath)
+	provisioningBundle, err := loadGNOIProvisioningBundle(
+		opts.Spec,
+		tlsEnabled,
+		dialCfg.TLSConfig,
+		gNOIProvisioningMountPath,
+		opts.EnableWriteClassGNOI,
+	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("gNOI: certificate provisioning: %w", err)
 	}
@@ -110,17 +109,23 @@ func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider
 	pool := devicegrpc.New(dialCfg, nil)
 	key := devicegrpc.DeviceKey{Address: opts.Spec.Address, Port: port}
 
-	provider := &pooledGNOIProvider{
-		pool:               pool,
-		key:                key,
-		address:            opts.Spec.Address,
-		port:               port,
-		tls:                dialCfg.TLSConfig != nil,
-		provisioningBundle: provisioningBundle,
+	pooled := &pooledGNOIProvider{
+		pool:    pool,
+		key:     key,
+		auth:    dialCfg.AuthContext(),
+		address: opts.Spec.Address,
+		port:    port,
+	}
+	var provider gnoi.Provider = pooled
+	if provisioningBundle != nil && opts.EnableWriteClassGNOI {
+		provider = &provisioningGNOIProvider{
+			pooledGNOIProvider: pooled,
+			bundle:             provisioningBundle,
+		}
 	}
 
 	log.G(ctx).Infof("gNOI: pillar enabled (%s:%d, tls=%v, lazy_bulk=true)", opts.Spec.Address, port, dialCfg.TLSConfig != nil)
-	return provider, provider.Close, nil
+	return provider, pooled.Close, nil
 }
 
 func loadGNOIProvisioningBundle(
@@ -128,12 +133,16 @@ func loadGNOIProvisioningBundle(
 	tlsEnabled bool,
 	tlsCfg *tls.Config,
 	directory string,
+	provisioningWritesEnabled bool,
 ) (*gnoi.ProvisioningBundle, error) {
 	if spec == nil || spec.GNOI == nil || spec.GNOI.CertificateProvisioning == nil {
 		return nil, nil
 	}
 	if !tlsEnabled || tlsCfg == nil {
 		return nil, fmt.Errorf("TLS transport is required")
+	}
+	if tlsCfg.InsecureSkipVerify {
+		return nil, fmt.Errorf("verified TLS is required; insecureSkipVerify cannot be used with certificate provisioning")
 	}
 	provisioning := spec.GNOI.CertificateProvisioning
 	if !provisioning.ReplaceTargetCABundle {
@@ -147,60 +156,52 @@ func loadGNOIProvisioningBundle(
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCAFile, err)
 	}
-	caKeyPEM, caKeyErr := os.ReadFile(filepath.Join(directory, gNOIProvisioningCAKeyFile))
-	if caKeyErr != nil && !errors.Is(caKeyErr, os.ErrNotExist) {
-		return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCAKeyFile, caKeyErr)
-	}
-	if caKeyErr == nil && len(bytes.TrimSpace(caKeyPEM)) == 0 {
-		return nil, fmt.Errorf("read %s: file is empty", gNOIProvisioningCAKeyFile)
-	}
-	var bundle *gnoi.ProvisioningBundle
-	if caKeyErr == nil {
-		bundle, err = gnoi.NewProvisioningBundleWithSigningKey(
-			provisioning.CertificateID,
-			spec.Address,
-			leafPEM,
-			caBundlePEM,
-			caKeyPEM,
-		)
-	} else {
-		privateKeyPEM, readErr := os.ReadFile(filepath.Join(directory, gNOIProvisioningKeyFile))
-		if readErr != nil {
-			return nil, fmt.Errorf("read %s: %w", gNOIProvisioningKeyFile, readErr)
+	var bootstrapPEM []byte
+	var caKeyPEM []byte
+	if provisioningWritesEnabled {
+		bootstrapPEM, err = readOptionalFile(filepath.Join(directory, gNOIProvisioningBootstrapFile))
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %w", gNOIProvisioningBootstrapFile, err)
 		}
-		bundle, err = gnoi.NewProvisioningBundle(
-			provisioning.CertificateID,
-			spec.Address,
-			leafPEM,
-			privateKeyPEM,
-			caBundlePEM,
-		)
+		caKeyPEM, err = readOptionalFile(filepath.Join(directory, gNOIProvisioningCAKeyFile))
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCAKeyFile, err)
+		}
+		defer clear(caKeyPEM)
 	}
+	bundle, err := gnoi.NewProvisioningBundle(
+		provisioning.CertificateID,
+		spec.Address,
+		leafPEM,
+		caBundlePEM,
+		caKeyPEM,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	// Add only the requested identity's verified issuer-to-root chain to this
-	// gNOI client's TLS config. Including the issuer lets the client reconnect
-	// even if IOS XE serves only its new leaf certificate; shared RESTCONF,
-	// NETCONF and gNMI TLS settings remain untouched.
-	roots := tlsCfg.RootCAs
-	if roots == nil {
-		roots, err = x509.SystemCertPool()
-		if err != nil || roots == nil {
-			roots = x509.NewCertPool()
-		}
+	if err := bundle.ConfigureClientTLS(tlsCfg, bootstrapPEM); err != nil {
+		return nil, err
 	}
-	if !roots.AppendCertsFromPEM(bundle.ClientTrustCAPEM()) {
-		return nil, fmt.Errorf("parse %s: no CA certificates found", gNOIProvisioningCAFile)
-	}
-	tlsCfg.RootCAs = roots
 	return bundle, nil
 }
 
+func readOptionalFile(path string) ([]byte, error) {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	return data, err
+}
+
 func gnoiDialConfig(spec *ciskov1.DeviceSpec, password string, tlsEnabled bool) (devicegrpc.DialConfig, error) {
+	dialCfg := devicegrpc.DialConfig{}
+	if !explicitSecureGNOI(spec) {
+		dialCfg.Username = spec.Username
+		dialCfg.Password = password
+	}
 	if !tlsEnabled {
-		return devicegrpc.DialConfig{}, nil
+		return dialCfg, nil
 	}
 
 	// Shared device-client helper: honours spec.tls.caFile (RootCAs)
@@ -210,45 +211,58 @@ func gnoiDialConfig(spec *ciskov1.DeviceSpec, password string, tlsEnabled bool) 
 	if err != nil {
 		return devicegrpc.DialConfig{}, err
 	}
-	dialCfg := devicegrpc.DialConfig{TLSConfig: tlsCfg}
-	if spec.Username != "" {
-		dialCfg.RPCCredentials = devicegrpc.NewIOSXEPasswordCredentials(spec.Username, password)
+	dialCfg.TLSConfig = tlsCfg
+	if explicitSecureGNOI(spec) {
+		if tlsCfg.InsecureSkipVerify {
+			return devicegrpc.DialConfig{}, fmt.Errorf("verified TLS is required for explicit secure gNOI; insecureSkipVerify is not permitted")
+		}
+		if spec.Username != "" && password != "" {
+			dialCfg.RPCCredentials = devicegrpc.NewIOSXEPasswordCredentials(spec.Username, password)
+		}
 	}
 	return dialCfg, nil
 }
 
+func explicitSecureGNOI(spec *ciskov1.DeviceSpec) bool {
+	return spec != nil && spec.GNOI != nil && spec.GNOI.TransportSecurity == ciskov1.GNOITransportSecurityTLS
+}
+
+type unavailableGNOIProvider struct {
+	cause error
+}
+
+func (p unavailableGNOIProvider) GNOIClient(context.Context) (*gnoi.Client, error) {
+	return nil, fmt.Errorf("gNOI unavailable: %w", p.cause)
+}
+
 // gnoiTransportForSpec resolves the effective gNOI port and transport security.
-// A missing per-device block intentionally uses the historical resolver without
-// alteration. Once a block is present, gNOI no longer inherits DeviceSpec.Port:
-// an omitted port selects the protocol default for the effective security mode.
+// A missing or zero-valued per-device block uses the historical resolver.
+// Explicit fields affect only the gNOI connection.
 func gnoiTransportForSpec(spec *ciskov1.DeviceSpec, forceInsecure bool) (int, bool, error) {
 	if spec == nil {
 		return 0, false, fmt.Errorf("nil DeviceSpec")
 	}
 
-	tlsEnabled := !forceInsecure && spec.TLS != nil && spec.TLS.Enabled
-	if spec.GNOI == nil {
-		return gnoiPortForSpec(spec, forceInsecure), tlsEnabled, nil
-	}
 	if err := spec.GNOI.Validate(); err != nil {
 		return 0, false, err
 	}
-
-	switch spec.GNOI.TransportSecurity {
-	case "", ciskov1.GNOITransportSecurityAuto:
-		tlsEnabled = spec.TLS != nil && spec.TLS.Enabled
-	case ciskov1.GNOITransportSecurityTLS:
-		tlsEnabled = true
-	case ciskov1.GNOITransportSecurityPlaintext:
-		tlsEnabled = false
+	if forceInsecure && explicitSecureGNOI(spec) {
+		return 0, false, fmt.Errorf("CISCO_VK_GNOI_INSECURE cannot override explicit gnoi.transportSecurity=tls")
+	}
+	sharedTLS := spec.TLS != nil && spec.TLS.Enabled
+	if port, ok := gnoiPortEnvOverride(); ok {
+		return port, !forceInsecure && effectiveGNOITLS(spec.GNOI, sharedTLS), nil
 	}
 	if forceInsecure {
-		tlsEnabled = false
+		// The legacy override selects the legacy listener as well as plaintext.
+		// A custom plaintext port remains available through CISCO_VK_GNOI_PORT.
+		return inferredGNOIPort(spec.Port, false), false, nil
+	}
+	if spec.GNOI == nil || (spec.GNOI.Port == 0 && (spec.GNOI.TransportSecurity == "" || spec.GNOI.TransportSecurity == ciskov1.GNOITransportSecurityAuto)) {
+		return inferredGNOIPort(spec.Port, sharedTLS), sharedTLS, nil
 	}
 
-	if port, ok := gnoiPortEnvOverride(); ok {
-		return port, tlsEnabled, nil
-	}
+	tlsEnabled := effectiveGNOITLS(spec.GNOI, sharedTLS)
 	if spec.GNOI.Port > 0 {
 		return spec.GNOI.Port, tlsEnabled, nil
 	}
@@ -258,27 +272,21 @@ func gnoiTransportForSpec(spec *ciskov1.DeviceSpec, forceInsecure bool) (int, bo
 	return 50052, false, nil
 }
 
+func effectiveGNOITLS(config *ciskov1.GNOIConfig, sharedTLS bool) bool {
+	return sharedTLS || (config != nil && config.TransportSecurity == ciskov1.GNOITransportSecurityTLS)
+}
+
 type pooledGNOIProvider struct {
 	mu      sync.Mutex
 	pool    devicegrpc.Pool
 	key     devicegrpc.DeviceKey
+	auth    gnoi.AuthContext
 	address string
 	port    int
-	tls     bool
 
 	controlLease *devicegrpc.Lease
 	client       *gnoi.Client
 	closed       bool
-
-	provisionMu        sync.Mutex
-	provisioningBundle *gnoi.ProvisioningBundle
-	matchingObserved   bool
-	unlistedExistingID error
-	provisioningActive atomic.Bool
-
-	// Test seams default to the corresponding gnoi.Client methods.
-	provisioningState              func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) (gnoi.ProvisioningCertificateState, error)
-	installProvisioningCertificate func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) error
 }
 
 func (p *pooledGNOIProvider) GNOIClient(ctx context.Context) (*gnoi.Client, error) {
@@ -294,12 +302,7 @@ func (p *pooledGNOIProvider) GNOIClient(ctx context.Context) (*gnoi.Client, erro
 	if err != nil {
 		return nil, fmt.Errorf("gnoi ClassControl lease: %w", err)
 	}
-	clientOpts := gnoi.Options{BulkConnProvider: p.bulkConn}
-	if p.provisioningBundle != nil {
-		clientOpts.OnDeviceNotProvisioned = p.provisionGNOICertificate
-		clientOpts.OnOSVerifySuccess = func() { p.provisioningActive.Store(false) }
-	}
-	client, err := gnoi.New(controlLease.Conn, clientOpts)
+	client, err := gnoi.New(controlLease.Conn, gnoi.Options{Auth: p.auth, BulkConnProvider: p.bulkConn})
 	if err != nil {
 		controlLease.Release()
 		return nil, fmt.Errorf("gnoi client construct: %w", err)
@@ -309,130 +312,70 @@ func (p *pooledGNOIProvider) GNOIClient(ctx context.Context) (*gnoi.Client, erro
 	return client, nil
 }
 
-func (p *pooledGNOIProvider) GNOICertificateProvisioningInProgress() bool {
-	return p.provisioningActive.Load()
+// provisioningGNOIProvider is returned only for an explicit certificate
+// provisioning block. Keeping this capability off the base provider limits
+// certificate installation to the explicit write-class action.
+type provisioningGNOIProvider struct {
+	*pooledGNOIProvider
+
+	provisionMu sync.Mutex
+	bundle      *gnoi.ProvisioningBundle
+
+	// Test seams default to the corresponding gnoi.Client methods.
+	certificateInstalled func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) (bool, error)
+	installCertificate   func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) error
 }
 
-func (p *pooledGNOIProvider) provisionGNOICertificate(ctx context.Context, client *gnoi.Client) error {
+func (p *provisioningGNOIProvider) ProvisionGNOICertificate(ctx context.Context, client *gnoi.Client) (string, error) {
 	p.provisionMu.Lock()
 	defer p.provisionMu.Unlock()
 	provisioningCtx, cancel := context.WithTimeout(ctx, gNOIProvisioningRPCTimeout)
 	defer cancel()
 
-	if p.provisioningBundle == nil {
-		return fmt.Errorf("gnoi certificate provisioning is not configured")
+	if p.bundle == nil {
+		return "", fmt.Errorf("gnoi certificate provisioning is not configured")
 	}
 	if !p.isCurrentClient(client) {
-		// Another caller completed the state transition and reset this client's
-		// connection while this RPC was in flight. Preserve the winner's active
-		// state: a newer client may already have verified successfully while this
-		// callback waited for provisionMu. The next reconcile must use the new
-		// client rather than touching this stale one.
-		return p.provisioningInProgress(nil)
+		return "", fmt.Errorf("gnoi client changed before certificate provisioning could start")
 	}
 
-	stateFn := p.provisioningState
-	if stateFn == nil {
-		stateFn = func(ctx context.Context, client *gnoi.Client, bundle *gnoi.ProvisioningBundle) (gnoi.ProvisioningCertificateState, error) {
-			return client.ProvisioningCertificateState(ctx, bundle)
+	installedFn := p.certificateInstalled
+	if installedFn == nil {
+		installedFn = func(ctx context.Context, client *gnoi.Client, bundle *gnoi.ProvisioningBundle) (bool, error) {
+			return client.ProvisioningCertificateInstalled(ctx, bundle)
 		}
 	}
-	state, err := stateFn(provisioningCtx, client, p.provisioningBundle)
+	installed, err := installedFn(provisioningCtx, client, p.bundle)
 	if err != nil {
-		if isTransientGNOIProvisioningError(err) {
-			p.provisioningActive.Store(true)
-			p.ResetGNOIClient(ctx)
-			return p.provisioningInProgress(err)
-		}
-		p.provisioningActive.Store(false)
-		return fmt.Errorf("inspect IOS XE provisioning certificate: %w", err)
+		return "", fmt.Errorf("inspect IOS XE provisioning certificate: %w", err)
 	}
 
-	switch state {
-	case gnoi.ProvisioningCertificateMissing:
-		if p.unlistedExistingID != nil {
-			p.provisioningActive.Store(false)
-			return fmt.Errorf(
-				"gnoi certificate ID %q was reported as already existing by IOS XE but is not visible through Cert.GetCertificates; remove or rebind the stale trustpoint under change control, or choose a new unused certificateID: %w",
-				p.provisioningBundle.CertificateID(),
-				p.unlistedExistingID,
-			)
-		}
-		installFn := p.installProvisioningCertificate
-		if installFn == nil {
-			installFn = func(ctx context.Context, client *gnoi.Client, bundle *gnoi.ProvisioningBundle) error {
-				return client.InstallProvisioningCertificate(ctx, bundle)
-			}
-		}
-		installErr := installFn(provisioningCtx, client, p.provisioningBundle)
-		if installErr != nil && !gnoi.IsCertificateInstallIndeterminate(installErr) {
-			if isTransientGNOIProvisioningError(installErr) {
-				p.provisioningActive.Store(true)
-				p.ResetGNOIClient(ctx)
-				return p.provisioningInProgress(installErr)
-			}
-			p.provisioningActive.Store(false)
-			return fmt.Errorf("install IOS XE provisioning certificate: %w", installErr)
-		}
-		if status.Code(installErr) == codes.AlreadyExists {
-			// Install is create-only. Reconnect and query once in case the target
-			// committed the certificate before reporting this status, but never
-			// submit the same ID again if it remains hidden/reserved.
-			p.unlistedExistingID = installErr
-		} else {
-			p.unlistedExistingID = nil
-		}
-		p.matchingObserved = false
-		p.provisioningActive.Store(true)
-		p.ResetGNOIClient(ctx)
-		return p.provisioningInProgress(installErr)
-
-	case gnoi.ProvisioningCertificateMatching:
-		p.unlistedExistingID = nil
-		if !p.matchingObserved {
-			// The certificate can become visible before the restarted service has
-			// bound it. Give IOS XE one fresh connection before declaring the
-			// persistent not-provisioned response a binding/configuration error.
-			p.matchingObserved = true
-			p.provisioningActive.Store(true)
-			p.ResetGNOIClient(ctx)
-			return p.provisioningInProgress(nil)
-		}
-		p.provisioningActive.Store(false)
-		return fmt.Errorf(
+	if installed {
+		return "", fmt.Errorf(
 			"gnoi certificate %q is installed but IOS XE still reports that the device is not provisioned; verify the gNXI secure trustpoint binding",
-			p.provisioningBundle.CertificateID(),
+			p.bundle.CertificateID(),
 		)
-
-	default:
-		p.provisioningActive.Store(false)
-		return fmt.Errorf("unexpected gnoi provisioning certificate state %q", state)
 	}
-}
-
-func isTransientGNOIProvisioningError(err error) bool {
-	if errors.Is(err, context.DeadlineExceeded) {
-		return true
+	installFn := p.installCertificate
+	if installFn == nil {
+		installFn = func(ctx context.Context, client *gnoi.Client, bundle *gnoi.ProvisioningBundle) error {
+			return client.InstallProvisioningCertificate(ctx, bundle)
+		}
 	}
-	switch status.Code(err) {
-	case codes.Aborted, codes.Unavailable, codes.DeadlineExceeded:
-		return true
-	default:
-		return false
+	if err := installFn(provisioningCtx, client, p.bundle); err != nil {
+		if gnoi.IsCertificateInstallIndeterminate(err) {
+			p.ResetGNOIClient(ctx)
+		}
+		return "", fmt.Errorf("install IOS XE provisioning certificate: %w", err)
 	}
+	p.ResetGNOIClient(ctx)
+	return p.bundle.CertificateID(), nil
 }
 
 func (p *pooledGNOIProvider) isCurrentClient(client *gnoi.Client) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return !p.closed && p.client == client
-}
-
-func (p *pooledGNOIProvider) provisioningInProgress(cause error) error {
-	return &gnoi.ErrProvisioningInProgress{
-		CertificateID: p.provisioningBundle.CertificateID(),
-		Cause:         cause,
-	}
 }
 
 func (p *pooledGNOIProvider) ResetGNOIClient(ctx context.Context) {
@@ -466,18 +409,7 @@ func (p *pooledGNOIProvider) bulkConn(ctx context.Context) (*grpc.ClientConn, fu
 	return lease.Conn, lease.Release, nil
 }
 
-// gnoiPortForSpec picks the device-side gNOI port. Same heuristic the
-// telemetry factory uses: insecure path → 50052, secure → 9339. The
-// CISCO_VK_GNOI_PORT env var pins an explicit port for operators on
-// non-standard gnxi listeners; forceInsecure overrides spec.tls.enabled
-// inference so operators can target the `gnxi server` (insecure) line
-// even when RESTCONF on the same device uses TLS.
-func gnoiPortForSpec(spec *ciskov1.DeviceSpec, forceInsecure bool) int {
-	if port, ok := gnoiPortEnvOverride(); ok {
-		return port
-	}
-	tlsEnabled := !forceInsecure && spec.TLS != nil && spec.TLS.Enabled
-	port := spec.Port
+func inferredGNOIPort(port int, tlsEnabled bool) int {
 	if port == 0 || port == 80 || port == 443 {
 		if tlsEnabled {
 			return 9339
@@ -493,7 +425,7 @@ func gnoiPortEnvOverride() (int, bool) {
 		return 0, false
 	}
 	port, err := strconv.Atoi(strings.TrimSpace(v))
-	if err != nil || port <= 0 {
+	if err != nil || port <= 0 || port > 65535 {
 		return 0, false
 	}
 	return port, true

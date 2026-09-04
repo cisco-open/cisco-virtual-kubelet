@@ -30,6 +30,7 @@ package devicegrpc
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"sync"
@@ -37,6 +38,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 // WorkloadClass partitions per-device gRPC connections.
@@ -87,6 +89,12 @@ type DialConfig struct {
 	// Nil dials with insecure plaintext credentials.
 	TLSConfig *tls.Config
 
+	// Username, when non-empty, drives AuthContext to preserve the legacy
+	// HTTP Basic metadata contract. New secure IOS XE gNOI uses
+	// RPCCredentials instead.
+	Username string
+	Password string
+
 	// RPCCredentials, when non-nil, are attached to every RPC on the
 	// connection. They may only be used when TLSConfig is also non-nil;
 	// defaultDial rejects credentials on a plaintext connection.
@@ -95,6 +103,18 @@ type DialConfig struct {
 	// Extra dial options. Tests pass grpc.WithContextDialer here to
 	// wire a bufconn listener; production wiring leaves this empty.
 	Extra []grpc.DialOption
+}
+
+// AuthContext returns a context decorator that attaches the legacy HTTP Basic
+// metadata. Empty username yields a passthrough.
+func (c DialConfig) AuthContext() func(context.Context) context.Context {
+	if c.Username == "" {
+		return func(ctx context.Context) context.Context { return ctx }
+	}
+	encoded := base64.StdEncoding.EncodeToString([]byte(c.Username + ":" + c.Password))
+	return func(ctx context.Context) context.Context {
+		return metadata.AppendToOutgoingContext(ctx, "authorization", "Basic "+encoded)
+	}
 }
 
 // Lease is a refcounted hold on a *grpc.ClientConn. Release must be

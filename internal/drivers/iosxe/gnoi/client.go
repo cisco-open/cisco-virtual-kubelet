@@ -57,60 +57,14 @@ func (e *ErrServiceUnsupported) Error() string {
 func (e *ErrServiceUnsupported) Unwrap() error { return e.Cause }
 
 // AuthContext decorates outgoing RPC contexts with optional metadata.
-// Production IOS XE password credentials are normally attached to the
-// pooled connection as TLS-only credentials; this hook remains available
-// for alternate devices and tests.
+// Explicit secure IOS XE password credentials are attached to the pooled
+// connection; this hook also preserves the legacy Basic-metadata contract for
+// configurations that have not opted into secure gNOI.
 type AuthContext func(context.Context) context.Context
-
-// DeviceNotProvisionedHandler is invoked when an RPC reaches IOS XE but the
-// requested service is unavailable until the secure gNXI certificate
-// bootstrap has completed. The handler is deliberately installed on an
-// individual gNOI Client: it cannot affect gNMI or any of the device's other
-// transports.
-type DeviceNotProvisionedHandler func(context.Context, *Client) error
-
-// ErrProvisioningInProgress tells reconcilers that certificate installation
-// was dispatched and IOS XE is restarting its gNXI service. Callers should
-// discard this attempt and retry on a fresh connection after a short delay.
-type ErrProvisioningInProgress struct {
-	CertificateID string
-	Cause         error
-}
-
-func (e *ErrProvisioningInProgress) Error() string {
-	message := "gnoi: certificate provisioning in progress; waiting for IOS XE gNXI restart"
-	if e == nil {
-		return message
-	}
-	if e.CertificateID != "" {
-		message = "gnoi: certificate " + e.CertificateID + " provisioning in progress; waiting for IOS XE gNXI restart"
-	}
-	if e.Cause != nil {
-		message += ": " + e.Cause.Error()
-	}
-	return message
-}
-
-func (e *ErrProvisioningInProgress) Unwrap() error {
-	if e == nil {
-		return nil
-	}
-	return e.Cause
-}
 
 // Provider exposes a per-device gNOI client to reconcilers.
 type Provider interface {
 	GNOIClient(ctx context.Context) (*Client, error)
-}
-
-// CertificateProvisioningProvider identifies a Provider with a certificate
-// bootstrap actively awaiting IOS XE's gNXI restart. Reconcilers use this
-// narrow capability only to keep expected restart transport errors retryable;
-// configured-but-idle providers and providers that do not implement it retain
-// their existing error behavior.
-type CertificateProvisioningProvider interface {
-	Provider
-	GNOICertificateProvisioningInProgress() bool
 }
 
 // ResetProvider is implemented by providers that can drop their
@@ -133,15 +87,6 @@ type Options struct {
 	// metadata is attached.
 	Auth AuthContext
 
-	// OnDeviceNotProvisioned is invoked only when IOS XE returns its explicit
-	// not-provisioned FailedPrecondition response. nil preserves the historical
-	// behavior and returns that response directly.
-	OnDeviceNotProvisioned DeviceNotProvisionedHandler
-
-	// OnOSVerifySuccess observes a successful OS.Verify. Production wiring uses
-	// it to end the short provisioning-restart retry window.
-	OnOSVerifySuccess func()
-
 	// BulkConn, when non-nil, is used for bulk-transfer RPCs
 	// (OS.Install, File.Put, File.Get) instead of the main control
 	// conn. Set this from a separate devicegrpc.Pool lease under
@@ -163,11 +108,9 @@ type Options struct {
 // WorkloadClass ClassControl. The Client never closes the conn —
 // ownership stays with the lease holder.
 type Client struct {
-	conn                   *grpc.ClientConn
-	bulkConn               *grpc.ClientConn
-	auth                   AuthContext
-	onDeviceNotProvisioned DeviceNotProvisionedHandler
-	onOSVerifySuccess      func()
+	conn     *grpc.ClientConn
+	bulkConn *grpc.ClientConn
+	auth     AuthContext
 
 	os     ospb.OSClient
 	system syspb.SystemClient
@@ -197,11 +140,9 @@ func New(conn *grpc.ClientConn, opts Options) (*Client, error) {
 		bulk = conn
 	}
 	c := &Client{
-		conn:                   conn,
-		bulkConn:               bulk,
-		auth:                   opts.Auth,
-		onDeviceNotProvisioned: opts.OnDeviceNotProvisioned,
-		onOSVerifySuccess:      opts.OnOSVerifySuccess,
+		conn:     conn,
+		bulkConn: bulk,
+		auth:     opts.Auth,
 
 		os:     ospb.NewOSClient(conn),
 		system: syspb.NewSystemClient(conn),

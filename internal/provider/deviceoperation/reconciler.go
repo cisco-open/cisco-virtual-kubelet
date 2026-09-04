@@ -17,7 +17,6 @@ package deviceoperation
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -28,8 +27,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
-	grpccodes "google.golang.org/grpc/codes"
-	grpcstatus "google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -220,21 +217,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 			return reconcile.Result{}, err
 		}
 		outputs, successMsg, err := r.dispatchGNOI(ctx, &op)
-		var provisioning *gnoi.ErrProvisioningInProgress
-		if errors.As(err, &provisioning) {
-			message := provisioning.Error()
-			if err := r.markPending(ctx, &op, "GNOIProvisioning", message, now); err != nil {
-				return reconcile.Result{}, err
-			}
-			return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
-		}
-		if gnoiProvisioningRestartPending(r.GNOI, op.Spec.Operation.Kind, err) {
-			message := fmt.Sprintf("waiting for the gNOI endpoint during certificate provisioning: %s", err.Error())
-			if err := r.markPending(ctx, &op, "GNOIProvisioning", message, now); err != nil {
-				return reconcile.Result{}, err
-			}
-			return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
-		}
 		terminalPhase := opsv1alpha1.OperationPhaseSucceeded
 		message := successMsg
 		reason := "Succeeded"
@@ -353,25 +335,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		span.SetStatus(codes.Ok, "")
 	}
 	return reconcile.Result{}, r.finishWithReason(ctx, &op, terminalPhase, reason, message, outputs, artifactURIs, now)
-}
-
-func gnoiProvisioningRestartPending(provider gnoi.Provider, kind opsv1alpha1.OperationKind, err error) bool {
-	if err == nil || kind != opsv1alpha1.OperationKindGNOIOSVerify {
-		return false
-	}
-	provisioningProvider, ok := provider.(gnoi.CertificateProvisioningProvider)
-	if !ok || !provisioningProvider.GNOICertificateProvisioningInProgress() {
-		return false
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return true
-	}
-	switch grpcstatus.Code(err) {
-	case grpccodes.Aborted, grpccodes.Unavailable, grpccodes.DeadlineExceeded:
-		return true
-	default:
-		return false
-	}
 }
 
 func (r *Reconciler) startOperationSpan(ctx context.Context, op *opsv1alpha1.DeviceOperation) (context.Context, trace.Span) {

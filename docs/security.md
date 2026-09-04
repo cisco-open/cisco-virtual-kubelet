@@ -319,99 +319,36 @@ even if the general `tls.enabled` switch is off.
 
 ### Secure IOS-XE gNOI
 
-Use the IOS-XE secure gNXI listener for authenticated gNOI. Its default port is
-`9339`; IOS-XE 17.18.x enables password authentication with
-`gnxi secure-password-auth`:
+With explicit `gnoi.transportSecurity: tls`, CVK sends the device username and
+password as separate per-RPC metadata fields over verified TLS;
+`insecureSkipVerify: true` is rejected. Pre-existing configurations that do not
+opt in retain their legacy HTTP Basic metadata behavior, including on plaintext
+listeners, solely for compatibility. Migrate them to explicit secure gNOI.
+Avoid metadata logging and limit access to the credential Secret.
 
-```text
-gnxi
-gnxi secure-trustpoint <server-trustpoint>
-gnxi secure-server
-gnxi secure-password-auth
-```
+The dedicated provisioning Secret always supplies `tls.crt` and `ca.crt`.
+`bootstrap.crt` is an optional exact pin for the temporary IOS-XE leaf, and
+`ca.key` is used only by the gated `ProvisionCertificate` action. Both are
+projected only while write-class gNOI is enabled. The signing key must belong
+to a dedicated intermediate CA; root keys are rejected. Enable Secret
+encryption at rest, restrict Secret reads and pod exec, and audit both.
+Secret projection is not an authorization boundary: the standard VK
+ClusterRole can read Secrets cluster-wide so VK nodes can serve pod volumes.
+After provisioning is verified, promptly remove `ca.key` and `bootstrap.crt`
+and disable the write-class gate. Keep the public certificate and CA bundle for
+read-only gNOI trust. Deployments that have mounted the signer retain a
+non-overlapping `Recreate` rollout strategy so a signer-bearing process cannot
+overlap its replacement during cleanup.
 
-The explicit `secure-trustpoint` form assumes the device already has a bound
-identity. When using gNOI to bootstrap the first CA-signed identity, configure
-`gnxi secure-init` before Install and confirm the new trustpoint binding after
-the gNXI listener restarts.
+The installed identity and CA bundle are scoped to gNOI in CVK, but IOS-XE
+shares them with gNMI. Installation can restart gNXI, replace peer trust, and
+change the server certificate seen by other clients; schedule it as a device
+change. CVK does not reconfigure RESTCONF, NETCONF, app-hosting, or telemetry
+client settings, so ensure every gNMI client already trusts the new issuer.
 
-Configure the VK side explicitly:
-
-```yaml
-spec:
-  username: admin
-  credentialSecretRef:
-    name: device-creds
-  tls:
-    enabled: true
-    insecureSkipVerify: false
-    caFile: /etc/cisco-vk/device-ca/ca.crt
-  gnoi:
-    transportSecurity: tls
-    port: 9339
-```
-
-The Secret contains a key named exactly `password`; the username remains in
-`spec.username`. CVK supplies those values as the separate gRPC metadata keys
-`username` and `password`. They are per-RPC transport credentials, not an HTTP
-Basic `Authorization` header, and CVK does not attach them to plaintext
-connections. Do not print outgoing metadata or enable interceptors that log
-metadata values.
-
-`gnxi secure-client-auth` has a different purpose: it makes IOS-XE validate a
-client certificate. Enable it only for an intentional mutual-TLS deployment,
-set both `tls.certFile` and `tls.keyFile`, and mount those files into the VK
-pod. Password-only secure gNOI does not require this command. If IOS-XE is
-configured for both password and client-certificate authentication, both sets
-of credentials must be available.
-
-`transportSecurity: plaintext` and `CISCO_VK_GNOI_INSECURE=1` exist for older,
-unauthenticated lab listeners (normally port `50052`). No password metadata is
-sent in that mode. Do not use it as a workaround for certificate or password
-errors on IOS-XE 17.18.x.
-
-IOS-XE can authenticate the metadata successfully while still returning
-`FailedPrecondition: Device has not been provisioned` for OS RPCs. This is a
-device-side gNXI certificate state, not a password failure. The optional
-`gnoi.certificateProvisioning` block addresses it with a dedicated Secret
-containing `tls.crt`, `ca.key`, and `ca.crt` for the recommended target-generated
-CSR flow. Only the recognized `tls.crt`, `ca.crt`, `ca.key`, and `tls.key` keys
-are eligible for read-only projection at
-`/var/run/secrets/cisco-vk/gnoi-provisioning` in that device's worker; unrelated
-Secret data is not mounted. The signing key is never placed in the rendered
-ConfigMap or an environment variable. CVK validates the certificate profile
-and CA chain before transmitting anything and refuses to send provisioning
-material without TLS.
-
-In this flow IOS-XE generates and retains the device identity key. CVK uses
-`tls.crt` as a profile template for the CSR subject and SAN, then uses `ca.key`
-to sign the returned CSR. The template must contain C, ST, O, OU, and an IP SAN
-for the device (or `spec.address` must be an IP). CVK uses its CN when present
-and falls back to `spec.address`; the CA key must match the template's issuer.
-Omitting `ca.key` selects the external-key compatibility flow and requires
-`tls.key` to match `tls.crt`. Use CSR mode on IOS-XE 17.18.04, where the
-external-key variant has been observed to time out.
-
-The gNOI protocol defines a non-empty Install `ca_certificates` field as a
-replacement of the target's CA bundle, and IOS-XE requires the signing CA for
-PKI installation. For that reason `ca.crt` must contain the complete desired
-shared gNXI/gNMI bundle, including unrelated CAs needed by existing mTLS
-clients, and `replaceTargetCABundle: true` is mandatory acknowledgement. CVK
-cannot safely discover and merge the existing target bundle.
-
-The provisioning certificate is the IOS-XE device/server identity. It is kept
-separate from `tls.certFile` and `tls.keyFile`, which are CVK's optional mTLS
-client identity. CVK's other protocol clients are not reconfigured. However,
-IOS-XE shares its gNXI identity and CA trust bundle between gNOI and gNMI, so
-installing the certificate can restart gNXI, replace peer-trust roots, and
-change the certificate seen by other gNMI clients. Treat provisioning as a
-scheduled device change and establish trust in the new CA first. See the
-[gNOI provisioning workflow](gnoi-software-lifecycle.md#provisioning-the-ios-xe-gnoi-os-service).
-
-The device must have `gnxi secure-init` enabled for initial certificate
-bootstrapping. That IOS-XE setting lets the first newly installed certificate
-ID become the secure gNXI service identity; `gnxi secure-server` and password
-authentication by themselves do not complete that binding.
+See the [secure gNOI and CSR provisioning workflow](gnoi-software-lifecycle.md#secure-ios-xe-gnxi)
+for the complete Secret contract, one-shot action, trust-bundle warning, and
+verification sequence.
 
 ### SSH host keys
 

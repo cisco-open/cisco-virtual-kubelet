@@ -78,6 +78,8 @@ type CiscoDeviceList struct {
 // DeviceSpec defines the desired state of a Cisco device.
 // Shared fields are common to all drivers; driver-specific networking
 // configuration lives under the corresponding driver section (XE, XR, etc.).
+// +kubebuilder:validation:XValidation:rule="!has(self.gnoi) || !has(self.gnoi.certificateProvisioning) || self.driver == 'XE'",message="gNOI certificate provisioning is supported only for driver XE"
+// +kubebuilder:validation:XValidation:rule="!has(self.gnoi) || !has(self.gnoi.transportSecurity) || self.gnoi.transportSecurity != 'tls' || !has(self.tls) || !has(self.tls.insecureSkipVerify) || !self.tls.insecureSkipVerify",message="explicit secure gNOI requires verified TLS"
 type DeviceSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE
@@ -111,9 +113,9 @@ type DeviceSpec struct {
 	// +kubebuilder:validation:Optional
 	TLS *TLSConfig `json:"tls,omitempty" mapstructure:"tls,omitempty"`
 
-	// GNOI optionally overrides the per-device gNOI transport. When omitted,
-	// the historical port and TLS inference from Port and TLS is preserved.
-	// Secure gNOI authentication uses Username and the resolved device password.
+	// GNOI contains opt-in, per-device gNOI settings. Omitting it, or providing
+	// an empty block, preserves historical transport and port inference. Secure
+	// gNOI authentication uses Username and the resolved device password.
 	// +kubebuilder:validation:Optional
 	GNOI *GNOIConfig `json:"gnoi,omitempty" mapstructure:"gnoi,omitempty"`
 

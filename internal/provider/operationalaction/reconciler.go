@@ -13,10 +13,8 @@
 // limitations under the License.
 
 // Package operationalaction reconciles IOSXEOperationalAction CRs —
-// the write-class gNOI operations (Reboot, FactoryReset, FilePut,
-// FileRemove, KillProcess, CancelReboot). Distinct from the read-only
-// DeviceOperation reconciler so RBAC can grant the two surfaces
-// independently.
+// the write-class gNOI operations. Distinct from the read-only
+// DeviceOperation reconciler so RBAC can grant the two surfaces independently.
 package operationalaction
 
 import (
@@ -50,10 +48,11 @@ const (
 	finalizerName      = "ops.cisco.vk/iosxeoperationalaction-finalizer"
 )
 
-// Reconciler executes IOSXEOperationalAction CRs exactly once.
+// Reconciler dispatches IOSXEOperationalAction CRs at most once.
 //
 // Each kind is destructive or near-destructive, so we do NOT retry on
-// transient failure. Operators submit a new CR to re-attempt.
+// transient failure. Operators must inspect device state before deciding
+// whether a new CR is safe.
 type Reconciler struct {
 	Client          client.Client
 	Reader          client.Reader
@@ -65,6 +64,10 @@ type Reconciler struct {
 
 	// Now is injected for tests.
 	Now func() time.Time
+}
+
+type certificateProvisioner interface {
+	ProvisionGNOICertificate(context.Context, *gnoi.Client) (certificateID string, err error)
 }
 
 func (r *Reconciler) now() time.Time {
@@ -104,7 +107,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		WithField("kind", act.Spec.Action.Kind).
 		WithField("device", act.Spec.DeviceRef.Name)
 
-	// Terminal phases are no-ops — actions execute exactly once.
+	// Terminal phases are no-ops — actions dispatch at most once.
 	switch act.Status.Phase {
 	case opsv1alpha1.ActionPhaseSucceeded, opsv1alpha1.ActionPhaseFailed, opsv1alpha1.ActionPhaseRejected:
 		if err := r.removeFinalizer(ctx, &act); err != nil {
@@ -156,14 +159,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	// Mark Running before dispatch so the status reflects "device touched".
-	if err := r.markRunning(ctx, &act, now); err != nil {
+	claimed, err := r.markRunning(ctx, &act, now)
+	if err != nil {
 		return reconcile.Result{}, err
+	}
+	if !claimed {
+		logger.Info("IOSXEOperationalAction was claimed by another reconciler; refusing duplicate dispatch")
+		return reconcile.Result{}, nil
 	}
 
 	logger.Warn("dispatching IOSXEOperationalAction gNOI RPC")
 	result, kindErr := r.dispatch(ctx, &act, gnoiClient)
 	if kindErr != nil {
-		return r.terminal(ctx, &act, opsv1alpha1.ActionPhaseFailed, "ActionFailed", kindErr.Error(), result, now)
+		reason := "ActionFailed"
+		message := kindErr.Error()
+		if gnoi.IsCertificateInstallIndeterminate(kindErr) {
+			reason = "CertificateInstallIndeterminate"
+			message += "; do not retry: inspect GNOICertGet and device PKI state first"
+		}
+		return r.terminal(ctx, &act, opsv1alpha1.ActionPhaseFailed, reason, message, result, now)
 	}
 	return r.terminal(ctx, &act, opsv1alpha1.ActionPhaseSucceeded, "Succeeded",
 		"action completed successfully", result, now)
@@ -184,9 +198,36 @@ func (r *Reconciler) dispatch(ctx context.Context, act *opsv1alpha1.IOSXEOperati
 		return r.runFileRemove(ctx, act, gc)
 	case opsv1alpha1.ActionKindFactoryReset:
 		return r.runFactoryReset(ctx, act, gc)
+	case opsv1alpha1.ActionKindProvisionCertificate:
+		return r.runProvisionCertificate(ctx, gc)
 	default:
 		return nil, fmt.Errorf("unsupported action kind %q", kind)
 	}
+}
+
+func (r *Reconciler) runProvisionCertificate(ctx context.Context, gc *gnoi.Client) ([]byte, error) {
+	verified, err := gc.Verify(ctx)
+	if err == nil {
+		return jsonResult(map[string]string{
+			"status":  "alreadyProvisioned",
+			"version": verified.Version,
+		}), nil
+	}
+	if !gnoi.IsDeviceNotProvisioned(err) {
+		return nil, err
+	}
+	provisioner, ok := r.GNOI.(certificateProvisioner)
+	if !ok {
+		return nil, fmt.Errorf("gnoi certificate provisioning is not configured: %w", err)
+	}
+	certificateID, err := provisioner.ProvisionGNOICertificate(ctx, gc)
+	if err != nil {
+		return nil, fmt.Errorf("gnoi certificate provisioning: %w", err)
+	}
+	return jsonResult(map[string]string{
+		"status":        "provisioningSubmitted",
+		"certificateID": certificateID,
+	}), nil
 }
 
 func (r *Reconciler) runReboot(ctx context.Context, act *opsv1alpha1.IOSXEOperationalAction, gc *gnoi.Client) ([]byte, error) {
@@ -271,26 +312,46 @@ func (r *Reconciler) runFactoryReset(ctx context.Context, act *opsv1alpha1.IOSXE
 
 // --- status helpers ---
 
-func (r *Reconciler) markRunning(ctx context.Context, act *opsv1alpha1.IOSXEOperationalAction, now time.Time) error {
-	_, err := r.updateStatus(ctx, act, func(cur *opsv1alpha1.IOSXEOperationalAction) {
+func (r *Reconciler) markRunning(ctx context.Context, act *opsv1alpha1.IOSXEOperationalAction, now time.Time) (bool, error) {
+	claimed := false
+	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		var cur opsv1alpha1.IOSXEOperationalAction
+		reader := r.Reader
+		if reader == nil {
+			reader = r.Client
+		}
+		if err := reader.Get(ctx, client.ObjectKeyFromObject(act), &cur); err != nil {
+			return err
+		}
+		if !cur.DeletionTimestamp.IsZero() {
+			return nil
+		}
+		if (cur.Status.Phase != "" && cur.Status.Phase != opsv1alpha1.ActionPhasePending) || cur.Status.InvocationID != "" {
+			return nil
+		}
 		cur.Status.Phase = opsv1alpha1.ActionPhaseRunning
-		if cur.Status.StartTime == nil {
-			cur.Status.StartTime = &metav1.Time{Time: now}
-		}
-		if cur.Status.InvocationID == "" {
-			cur.Status.InvocationID = invocationID(cur)
-		}
+		cur.Status.StartTime = &metav1.Time{Time: now}
+		cur.Status.InvocationID = invocationID(&cur)
 		cur.Status.Message = "action running"
-		r.setReady(cur, metav1.ConditionFalse, "Running", "action running", now)
-	}, reconcile.Result{})
-	if err == nil {
+		cur.Status.ObservedGeneration = cur.Generation
+		r.setReady(&cur, metav1.ConditionFalse, "Running", "action running", now)
+		if err := r.Client.Status().Update(ctx, &cur); err != nil {
+			return err
+		}
+		claimed = true
+		return nil
+	})
+	if err == nil && claimed {
 		log.G(ctx).WithField("operationalAction", client.ObjectKeyFromObject(act).String()).
 			WithField("kind", act.Spec.Action.Kind).
 			Info("IOSXEOperationalAction phase advanced to Running")
 		recordActionTransition(act.Spec.DeviceRef.Name, string(act.Spec.Action.Kind), string(opsv1alpha1.ActionPhaseRunning), "Running")
 		r.recordEvent(act, corev1.EventTypeNormal, "Running", r.actionSummary(act))
 	}
-	return err
+	if err != nil {
+		return false, fmt.Errorf("claim action: %w", err)
+	}
+	return claimed, nil
 }
 
 func (r *Reconciler) terminal(ctx context.Context, act *opsv1alpha1.IOSXEOperationalAction, phase opsv1alpha1.ActionPhase, reason, message string, result []byte, now time.Time) (reconcile.Result, error) {
@@ -422,6 +483,12 @@ func validateActionRequest(action opsv1alpha1.ActionRequest) error {
 	if action.FactoryReset != nil {
 		argsBlocks++
 	}
+	if action.Kind == opsv1alpha1.ActionKindProvisionCertificate {
+		if argsBlocks != 0 {
+			return fmt.Errorf("action.kind %q requires no args blocks; got %d", action.Kind, argsBlocks)
+		}
+		return nil
+	}
 	if argsBlocks != 1 {
 		return fmt.Errorf("action.kind %q requires exactly one matching args block; got %d", action.Kind, argsBlocks)
 	}
@@ -510,9 +577,7 @@ func (r *Reconciler) actionSummary(act *opsv1alpha1.IOSXEOperationalAction) stri
 	}
 }
 
-// jsonResult is a helper for kinds that want to surface device-side
-// data on Success (currently unused — Reboot/FilePut/etc. don't return
-// a structured payload). Kept for future kinds that do.
+// jsonResult marshals device-side output for status.result.
 func jsonResult(payload any) []byte {
 	b, err := json.Marshal(payload)
 	if err != nil {
@@ -520,5 +585,3 @@ func jsonResult(payload any) []byte {
 	}
 	return b
 }
-
-var _ = jsonResult // referenced by future kinds

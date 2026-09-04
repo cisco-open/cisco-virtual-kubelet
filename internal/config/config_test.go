@@ -17,6 +17,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
@@ -109,9 +110,17 @@ func TestLoad_GNOITransportConfig(t *testing.T) {
 	viper.Reset()
 	t.Cleanup(viper.Reset)
 	viper.Set("device", map[string]interface{}{
-		"driver":   "FAKE",
+		"driver":   "XE",
 		"address":  "192.0.2.10",
 		"username": "admin",
+		"xe": map[string]interface{}{
+			"networking": map[string]interface{}{
+				"interface": map[string]interface{}{
+					"type":             "VirtualPortGroup",
+					"virtualPortGroup": map[string]interface{}{"dhcp": true},
+				},
+			},
+		},
 		"gnoi": map[string]interface{}{
 			"port":              19339,
 			"transportSecurity": "tls",
@@ -143,31 +152,59 @@ func TestLoad_GNOITransportConfig(t *testing.T) {
 	}
 }
 
-func TestLoad_RejectsInvalidGNOITransportConfig(t *testing.T) {
-	tests := []struct {
-		name string
-		gnoi map[string]interface{}
-	}{
-		{name: "unknown transport security", gnoi: map[string]interface{}{"transportSecurity": "secure-ish"}},
-		{name: "negative port", gnoi: map[string]interface{}{"port": -1}},
-		{name: "port above maximum", gnoi: map[string]interface{}{"port": 65536}},
+func TestLoad_RejectsGNOIProvisioningForOtherDrivers(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+	viper.Set("device", map[string]interface{}{
+		"driver":   "FAKE",
+		"address":  "192.0.2.10",
+		"username": "admin",
+		"gnoi": map[string]interface{}{
+			"transportSecurity": "tls",
+			"certificateProvisioning": map[string]interface{}{
+				"certificateID":         "cvk-gnoi-os",
+				"replaceTargetCABundle": true,
+				"secretRef":             map[string]interface{}{"name": "router-gnoi-identity"},
+			},
+		},
+	})
+
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "only for driver XE") {
+		t.Fatalf("Load() error=%v, want IOS XE scope error", err)
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			viper.Reset()
-			t.Cleanup(viper.Reset)
-			viper.Set("device", map[string]interface{}{
-				"driver":   "FAKE",
-				"address":  "192.0.2.10",
-				"username": "admin",
-				"gnoi":     tt.gnoi,
-			})
+func TestValidateDeviceSpecRejectsUnverifiedGNOIProvisioning(t *testing.T) {
+	spec := &v1alpha1.DeviceSpec{
+		Driver: v1alpha1.DeviceDriverXE,
+		XE:     &v1alpha1.XEConfig{},
+		TLS:    &v1alpha1.TLSConfig{InsecureSkipVerify: true},
+		GNOI: &v1alpha1.GNOIConfig{
+			TransportSecurity: v1alpha1.GNOITransportSecurityTLS,
+			CertificateProvisioning: &v1alpha1.GNOICertificateProvisioning{
+				CertificateID:         "cvk-gnoi-os",
+				SecretRef:             v1alpha1.GNOIProvisioningSecretReference{Name: "router-gnoi-identity"},
+				ReplaceTargetCABundle: true,
+			},
+		},
+	}
+	if err := validateDeviceSpec(spec); err == nil || !strings.Contains(err.Error(), "requires verified TLS") {
+		t.Fatalf("validateDeviceSpec() error=%v, want verified TLS error", err)
+	}
+}
 
-			if _, err := Load(); err == nil {
-				t.Fatal("Load() succeeded for invalid device.gnoi config")
-			}
-		})
+func TestLoad_RejectsPlaintextGNOIOverride(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+	viper.Set("device", map[string]interface{}{
+		"driver":   "FAKE",
+		"address":  "192.0.2.10",
+		"username": "admin",
+		"gnoi":     map[string]interface{}{"transportSecurity": "plaintext"},
+	})
+
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() accepted plaintext device.gnoi transport")
 	}
 }
 

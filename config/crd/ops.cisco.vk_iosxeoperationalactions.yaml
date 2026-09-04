@@ -34,10 +34,11 @@ spec:
       openAPIV3Schema:
         description: |-
           IOSXEOperationalAction is a one-shot write-class operation against
-          one IOS-XE device. The reconciler executes exactly once: it does
+          one IOS-XE device. The reconciler dispatches at most once: it does
           not retry on transient failure, because every kind is destructive
           or near-destructive (Reboot / FactoryReset / FileRemove / etc.).
-          Operators submit a new CR to re-attempt.
+          Failures are terminal; operators inspect device state before deciding
+          whether a new CR is safe.
         properties:
           apiVersion:
             description: |-
@@ -137,6 +138,7 @@ spec:
                     - FilePut
                     - FileRemove
                     - FactoryReset
+                    - ProvisionCertificate
                     type: string
                   reboot:
                     description: Reboot is the input for ActionKindReboot.

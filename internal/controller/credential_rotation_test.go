@@ -154,8 +154,8 @@ func TestReconcile_GNOIProvisioningAnnotationRollsOnSecretRotation(t *testing.T)
 		},
 		Data: map[string][]byte{
 			"tls.crt": []byte("leaf-v1"),
-			"tls.key": []byte("key-v1"),
 			"ca.crt":  []byte("ca-v1"),
+			"ca.key":  []byte("key-v1"),
 		},
 	}
 	r := reconcilerFor(t, dev, sec)

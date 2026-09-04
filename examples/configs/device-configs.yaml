@@ -28,11 +28,6 @@ device:
   tls:
     enabled: true
     insecureSkipVerify: true
-  # IOS-XE secure gNXI. Username comes from this device block and password
-  # from VK_DEVICE_PASSWORD; CVK sends both only over TLS.
-  gnoi:
-    transportSecurity: tls
-    port: 9339
   xe:
     networking:
       interface:

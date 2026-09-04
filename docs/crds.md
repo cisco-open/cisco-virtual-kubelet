@@ -85,20 +85,6 @@ spec:
   credentialSecretRef:
     name: cat9300-4-credentials
   transport: restconf
-  gnoi:
-    transportSecurity: tls
-    port: 9339
-    # Optional, explicit bootstrap for IOS-XE OS service provisioning.
-    # For the recommended IOS-XE 17.18.04 target-generated CSR flow, the
-    # same-namespace Secret contains tls.crt, ca.key, and ca.crt. Omitting
-    # ca.key selects the external-key compatibility flow and requires tls.key.
-    certificateProvisioning:
-      certificateID: cvk-gnoi-os
-      # Required acknowledgement: ca.crt is the complete desired replacement
-      # for IOS-XE's shared gNXI/gNMI CA bundle.
-      replaceTargetCABundle: true
-      secretRef:
-        name: cat9300-4-gnoi-identity
   maxPods: 16
   xe:
     networking:
@@ -112,11 +98,9 @@ spec:
             guestInterface: 0
 ```
 
-`spec.gnoi` selects the IOS-XE gNXI listener independently from the main
-device API port. Its optional certificate provisioning block is scoped to the
-per-device gNOI worker and is dormant when omitted. See the
-[configuration reference](CONFIGURATION.md#gnoi) and
-[secure gNOI guidance](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
+For secure gNOI transport and opt-in certificate provisioning, see the
+[configuration reference](CONFIGURATION.md#gnoi) and the
+[secure gNOI workflow](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
 
 ```bash
 $ kubectl get cvk
@@ -495,27 +479,34 @@ Supported kinds are `ShowCommand`, `ConfigDiff`, `PacketCapture`, `GNOIPing`,
 apiVersion: ops.cisco.vk/v1alpha1
 kind: DeviceOperation
 metadata:
-  name: cat9300-4-gnoi-os-verify
+  name: cat9300-4-gnoi-time
 spec:
   deviceRef:
     name: cat9300-4
   operation:
-    kind: GNOIOSVerify
+    kind: GNOITime
   ttlSecondsAfterFinished: 600
 ```
 
-`GNOIOSVerify` is the preferred first secure-gNXI smoke test on IOS-XE 17.18.x.
+Use `GNOICertGet` to test TLS and authentication before provisioning. Run
+`GNOIOSVerify` only after IOS-XE reports its gNXI state as `Provisioned`;
 System RPCs such as `GNOITime` are not implemented on every platform.
 
 ### IOSXEOperationalAction
 
 `IOSXEOperationalAction` is for write-class one-shot gNOI actions. It supports
 `Reboot`, `CancelReboot`, `KillProcess`, `FilePut`, `FileRemove`, and
-`FactoryReset`.
+`FactoryReset`, plus `ProvisionCertificate` for the explicit secure-gNOI
+bootstrap.
 
 Every action requires `spec.confirm` to equal the target device name, the spec
 is immutable after creation, and a `Running` action is not dispatched a second
 time after controller restart.
+
+`ProvisionCertificate` has no args block. It is gated, create-only, and
+separate from the read-only `GNOIOSVerify` operation. See the
+[canonical provisioning workflow](gnoi-software-lifecycle.md#provisioning-the-ios-xe-gnoi-os-service)
+for its prerequisites and cleanup steps.
 
 ```yaml
 apiVersion: ops.cisco.vk/v1alpha1

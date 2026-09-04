@@ -47,7 +47,39 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
+
+func TestEnvtest_CiscoDeviceExplicitGNOIRequiresVerifiedTLS(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-gnoi-tls")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	device := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{Name: "verified", Namespace: "envtest-gnoi-tls"},
+		Spec: ciskov1.DeviceSpec{
+			Driver:   ciskov1.DeviceDriverXE,
+			Address:  "192.0.2.10",
+			Username: "admin",
+			TLS:      &ciskov1.TLSConfig{},
+			GNOI: &ciskov1.GNOIConfig{
+				TransportSecurity: ciskov1.GNOITransportSecurityTLS,
+			},
+		},
+	}
+	if err := c.Create(ctx, device); err != nil {
+		t.Fatalf("explicit secure gNOI with omitted insecureSkipVerify rejected: %v", err)
+	}
+
+	unverified := device.DeepCopy()
+	unverified.ObjectMeta = metav1.ObjectMeta{Name: "unverified", Namespace: device.Namespace}
+	unverified.Spec.TLS.InsecureSkipVerify = true
+	if err := c.Create(ctx, unverified); err == nil || !strings.Contains(err.Error(), "explicit secure gNOI requires verified TLS") {
+		t.Fatalf("explicit secure gNOI with insecureSkipVerify error=%v, want admission rejection", err)
+	}
+}
 
 // --- DeviceOperation ---
 
@@ -380,7 +412,7 @@ func TestEnvtest_IOSXEOperationalActionConfirmRequired(t *testing.T) {
 }
 
 // TestEnvtest_IOSXEOperationalActionKindEnumEnforced pins
-// .spec.action.kind to the six destructive kinds.
+// .spec.action.kind to the supported write-class kinds.
 func TestEnvtest_IOSXEOperationalActionKindEnumEnforced(t *testing.T) {
 	c, stop := startEnvtest(t)
 	defer stop()
@@ -396,6 +428,7 @@ func TestEnvtest_IOSXEOperationalActionKindEnumEnforced(t *testing.T) {
 		opsv1alpha1.ActionKindFilePut,
 		opsv1alpha1.ActionKindFileRemove,
 		opsv1alpha1.ActionKindFactoryReset,
+		opsv1alpha1.ActionKindProvisionCertificate,
 	} {
 		name := "ok-" + strings.ToLower(string(k))
 		act := newOpAction(name, "envtest-opaction-kind", k)

@@ -256,80 +256,25 @@ kubectl -n <device-namespace> get ciscodevice <device-name> \
 kubectl -n <device-namespace> logs deploy/<device-name>-vk --tail=200 | grep -iE 'gnoi|gnxi|grpc|x509'
 ```
 
-For a password-authenticated listener, IOS-XE should have `gnxi`,
-`gnxi secure-server`, a server trustpoint, and `gnxi secure-password-auth`
-configured. The matching CR is:
-
-```yaml
-spec:
-  username: admin
-  credentialSecretRef:
-    name: device-creds
-  tls:
-    enabled: true
-    # Use caFile in production; this is only a transport-isolation example.
-    insecureSkipVerify: true
-  gnoi:
-    transportSecurity: tls
-    port: 9339
-```
-
-CVK sends the resolved credentials as two raw gRPC metadata keys,
-`username` and `password`, on TLS RPCs. It does not send an HTTP Basic
-`Authorization` header and never sends the password in plaintext mode. Do not
-log or manually print the Secret while diagnosing the connection.
-
 | Symptom / gRPC status | Most likely cause | Check |
 |---|---|---|
-| `Unauthenticated` | Missing or rejected username/password metadata | Ensure `spec.username` is non-empty, the referenced Secret contains the exact key `password`, and IOS-XE has `gnxi secure-password-auth`. Recreate accidentally newline-terminated values with `kubectl create secret ... --from-literal=password=... --dry-run=client -o yaml | kubectl apply -f -`. |
+| `Unauthenticated` | Missing or rejected metadata | Check `spec.username`, the referenced Secret's exact `password` key, and `gnxi secure-password-auth`. CVK sends separate lowercase `username` and `password` metadata only over TLS. |
 | `PermissionDenied` | Authentication succeeded but AAA denied the RPC | Check the IOS-XE AAA method list, user privilege, and authorization policy for the requested operation. |
-| `x509: certificate signed by unknown authority` | The device certificate is not trusted | Mount the correct CA and set `tls.caFile`. Use `insecureSkipVerify: true` only briefly to isolate the trust problem. |
-| Certificate hostname/SAN error | `spec.address` does not match the device certificate | Use a hostname present in the certificate or issue a certificate with the required IP/DNS SAN. |
-| TLS handshake error | Plaintext/TLS mode mismatch, or IOS-XE requires a client certificate | Use `transportSecurity: tls` with port `9339`. If and only if `gnxi secure-client-auth` is configured, mount and set `tls.certFile` and `tls.keyFile`. |
-| `Unavailable`, connection refused, or deadline exceeded | Wrong port, listener down, firewall, route, or gNXI VRF restriction | Verify `show gnxi state`, `spec.gnoi.port`, reachability from the VK pod, and the device's gNXI VRF. Setting only port `9339` is insufficient if the client still uses plaintext. |
-| `FailedPrecondition: Device has not been provisioned` from an OS RPC | Password authentication succeeded, but IOS-XE has not provisioned the gNXI identity required by the OS service | Use `GNOICertGet` to confirm the secure connection, then configure the opt-in `gnoi.certificateProvisioning` Secret or provision a CA-signed gNXI trustpoint out of band. |
-| `InvalidArgument: Internal parameters...` while generating the CSR | The `tls.crt` profile lacks an IOS-XE-required CSR field | Reissue the profile template with C, ST, O, OU, and an IP SAN for the management address (or use an IP literal for `spec.address`). Add CN when it should differ from `spec.address`; otherwise CVK uses `spec.address`. Confirm that `ca.key` matches the template issuer. |
-| `Aborted: Timeout waiting for event` while loading the certificate | IOS-XE 17.18.04 was given the external-key Install variant | Add the matching `ca.key` to select target-generated CSR mode. If the failed request left its certificate ID behind, inspect it and use a new unused `certificateID` for the next bootstrap attempt. |
-| Certificate ID conflict / already exists | gNOI Install is create-only, or an earlier attempt left a trustpoint at that ID | Compare `GNOICertGet` with `show crypto pki trustpoints`. Do not blindly retry or overwrite the ID; clean up the stale PKI object out of band under change control, or retry with a new unique `certificateID`. |
-| `Unimplemented` | The IOS-XE release/platform does not implement that gNOI service | This is not an authentication failure. IOS-XE 17.18.x may support OS/Certificate/Factory Reset while omitting System or File. Before provisioning use `GNOICertGet`; after provisioning use `GNOIOSVerify` rather than assuming System is present. |
+| `x509` trust or hostname error | The presented certificate is untrusted or does not match `spec.address` | Use normal CA/hostname validation, or put the exact temporary leaf in `bootstrap.crt`; `insecureSkipVerify: true` is rejected. |
+| `Unavailable`, connection refused, or deadline exceeded | Listener, port, route, firewall, VRF, or expected gNXI restart | Check port `9339`, `show gnxi state detail`, pod reachability, and recent provisioning events. |
+| `FailedPrecondition: Device has not been provisioned` | Authentication works, but the OS service lacks a provisioned identity | Confirm `gnxi secure-init`, configure the provisioning block, enable write-class gNOI, and create a `ProvisionCertificate` action. `GNOIOSVerify` never installs. |
+| Missing `ca.key` | The Secret is in post-provision/read-only form, or the write-class gate is disabled | A new identity requires the dedicated intermediate CA key and the write-class gate. Never supply a root CA key. |
+| CSR `InvalidArgument` | The profile or signer is invalid | Check that `tls.crt` has C, ST, O, OU, and an IP SAN and chains through the intermediate whose key is in `ca.key`. |
+| Certificate ID conflict / already exists | The create-only ID is stale or belongs to another identity | Compare `GNOICertGet` with device trustpoints. Resolve or remove stale state out of band, or choose a new ID; CVK will not overwrite it. |
+| `Unimplemented` | That platform does not implement the requested service | Before provisioning use `GNOICertGet`; use `GNOIOSVerify` only after `State: Provisioned`. |
 
-`gnoi.transportSecurity: auto` follows `tls.enabled`; `tls` forces a TLS gNOI
-connection and reuses the trust/client-certificate fields from `spec.tls`.
-`CISCO_VK_GNOI_INSECURE=1` overrides either setting and forces the legacy
-plaintext listener, so check the rendered Deployment environment when the
-observed mode differs from the CR. `CISCO_VK_GNOI_PORT` similarly overrides
-`spec.gnoi.port`.
-
-Before the first Install, confirm that `show running-config | include ^gnxi`
-contains `gnxi secure-init`. IOS-XE uses that bootstrap setting to bind the
-first newly installed certificate ID to the secure gNXI service. A secure
-listener and `gnxi secure-password-auth` can authenticate CVK while still
-leaving the OS service unprovisioned if `secure-init` is absent.
-
-When certificate provisioning is configured, inspect `show gnxi state detail`.
-The expected result after the listener restarts is `State: Provisioned`, the
-secure trustpoint is the requested `certificateID`, and the OS service is
-operational. Compare that binding with `show crypto pki trustpoints` (and
-`show crypto pki certificates <certificateID>` where supported). CVK installs
-only a missing configured certificate ID; gNOI Install cannot reuse an ID and
-CVK never overwrites a conflicting certificate.
-
-If a prior attempt created the ID but the secure trustpoint still names an old
-or self-signed identity, treat it as stale device state. Do not repeatedly
-submit Install with the same ID. Either remove or rebind the stale PKI state
-manually under the device's change procedure, or restore `gnxi secure-init`
-and retry with a new unique ID such as `cvk-gnoi-os-2`. Changing the ID requires
-only an update to `certificateProvisioning.certificateID`; keep the Secret's
-validated certificate profile and CA material consistent. If the desired
-certificate is installed and bound but IOS-XE remains unprovisioned, inspect
-the platform's gNOI OS-service configuration rather than deleting the
-Kubernetes Secret.
-
-Because Install replaces the shared target CA bundle, ensure `ca.crt` includes
-all gNXI/gNMI peer CAs that must survive the change and set the required
-`replaceTargetCABundle: true` acknowledgement. See
-the [provisioning workflow](gnoi-software-lifecycle.md#provisioning-the-ios-xe-gnoi-os-service)
-for the Secret format and the shared gNXI/gNMI restart caveat.
+Before creating the action, confirm `gnxi secure-server`,
+`gnxi secure-password-auth`, and `gnxi secure-init`. After the expected gNXI
+restart, confirm the requested trustpoint and `State: Provisioned`, then create
+a fresh `GNOIOSVerify` operation. Remove `ca.key` and `bootstrap.crt` and disable
+write-class gNOI after verification. See the
+[canonical secure gNOI workflow](gnoi-software-lifecycle.md#secure-ios-xe-gnxi)
+for configuration, Secret contents, and the shared gNXI/gNMI CA-bundle warning.
 
 ---
 

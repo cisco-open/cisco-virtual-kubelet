@@ -285,3 +285,21 @@ func TestConcurrentLeasesDoNotDoubleDial(t *testing.T) {
 		}
 	}
 }
+
+func TestAuthContextEmptyUsernamePassesThrough(t *testing.T) {
+	cfg := DialConfig{}
+	fn := cfg.AuthContext()
+	ctx := context.Background()
+	if got := fn(ctx); got != ctx {
+		t.Fatalf("expected passthrough for empty username, got decorated context")
+	}
+}
+
+func TestAuthContextAttachesBasicAuth(t *testing.T) {
+	cfg := DialConfig{Username: "admin", Password: "s3cret"}
+	fn := cfg.AuthContext()
+	ctx := context.Background()
+	if got := fn(ctx); got == ctx {
+		t.Fatal("expected AuthContext to decorate the context for non-empty username")
+	}
+}

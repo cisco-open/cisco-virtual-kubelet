@@ -18,12 +18,15 @@ import (
 	"context"
 	"net"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -112,6 +115,24 @@ type fakeReset struct {
 	err         error
 }
 
+type fakeOS struct {
+	ospb.UnimplementedOSServer
+	verifyCalls atomic.Int64
+	verifyResp  *ospb.VerifyResponse
+	verifyErr   error
+}
+
+func (f *fakeOS) Verify(context.Context, *ospb.VerifyRequest) (*ospb.VerifyResponse, error) {
+	f.verifyCalls.Add(1)
+	if f.verifyErr != nil {
+		return nil, f.verifyErr
+	}
+	if f.verifyResp != nil {
+		return f.verifyResp, nil
+	}
+	return &ospb.VerifyResponse{}, nil
+}
+
 func (f *fakeReset) Start(_ context.Context, req *resetpb.StartRequest) (*resetpb.StartResponse, error) {
 	f.calls.Add(1)
 	f.lastFactory = req.FactoryOs
@@ -128,6 +149,7 @@ type rig struct {
 	sys    *fakeSys
 	file   *fakeFile
 	reset  *fakeReset
+	os     *fakeOS
 	client *gnoi.Client
 }
 
@@ -135,12 +157,12 @@ func newRig(t *testing.T) *rig {
 	t.Helper()
 	lis := bufconn.Listen(1 << 20)
 	srv := grpc.NewServer()
-	r := &rig{sys: &fakeSys{}, file: &fakeFile{}, reset: &fakeReset{}}
+	r := &rig{sys: &fakeSys{}, file: &fakeFile{}, reset: &fakeReset{}, os: &fakeOS{}}
 	syspb.RegisterSystemServer(srv, r.sys)
 	filepb.RegisterFileServer(srv, r.file)
 	resetpb.RegisterFactoryResetServer(srv, r.reset)
 	certpb.RegisterCertificateManagementServer(srv, certpb.UnimplementedCertificateManagementServer{})
-	ospb.RegisterOSServer(srv, ospb.UnimplementedOSServer{})
+	ospb.RegisterOSServer(srv, r.os)
 	go func() { _ = srv.Serve(lis) }()
 	t.Cleanup(srv.Stop)
 	conn, err := grpc.NewClient(
@@ -165,6 +187,18 @@ func newRig(t *testing.T) *rig {
 type staticGNOI struct{ c *gnoi.Client }
 
 func (s *staticGNOI) GNOIClient(context.Context) (*gnoi.Client, error) { return s.c, nil }
+
+type provisioningGNOI struct {
+	*staticGNOI
+	provisionCalls atomic.Int64
+	certificateID  string
+	provisionErr   error
+}
+
+func (p *provisioningGNOI) ProvisionGNOICertificate(context.Context, *gnoi.Client) (string, error) {
+	p.provisionCalls.Add(1)
+	return p.certificateID, p.provisionErr
+}
 
 func newScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
@@ -336,6 +370,120 @@ func TestKindArgsMismatchRejected(t *testing.T) {
 	}
 }
 
+func TestProvisionCertificateRequiresNoArgs(t *testing.T) {
+	if err := validateActionRequest(opsv1alpha1.ActionRequest{
+		Kind: opsv1alpha1.ActionKindProvisionCertificate,
+	}); err != nil {
+		t.Fatalf("no-args ProvisionCertificate rejected: %v", err)
+	}
+	err := validateActionRequest(opsv1alpha1.ActionRequest{
+		Kind:   opsv1alpha1.ActionKindProvisionCertificate,
+		Reboot: &opsv1alpha1.RebootActionArgs{},
+	})
+	if err == nil || !strings.Contains(err.Error(), "requires no args blocks") {
+		t.Fatalf("ProvisionCertificate with args error=%v", err)
+	}
+}
+
+func TestProvisionCertificateAlreadyProvisioned(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyResp = &ospb.VerifyResponse{Version: "17.18.04"}
+	a := newAction("provision-existing", func(a *opsv1alpha1.IOSXEOperationalAction) {
+		a.Spec.Action = opsv1alpha1.ActionRequest{Kind: opsv1alpha1.ActionKindProvisionCertificate}
+	})
+	r := newReconciler(t, rig, a)
+	got := runReconcile(t, r, a)
+	if got.Status.Phase != opsv1alpha1.ActionPhaseSucceeded {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if rig.os.verifyCalls.Load() != 1 {
+		t.Fatalf("OS.Verify calls=%d, want 1", rig.os.verifyCalls.Load())
+	}
+	if !strings.Contains(got.Status.Result, `"status":"alreadyProvisioned"`) ||
+		!strings.Contains(got.Status.Result, `"version":"17.18.04"`) {
+		t.Fatalf("result=%q", got.Status.Result)
+	}
+}
+
+func TestProvisionCertificateAcceptedDoesNotRedispatch(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyErr = status.Error(codes.FailedPrecondition, "Device has not been provisioned")
+	a := newAction("provision-new", func(a *opsv1alpha1.IOSXEOperationalAction) {
+		a.Spec.Action = opsv1alpha1.ActionRequest{Kind: opsv1alpha1.ActionKindProvisionCertificate}
+	})
+	r := newReconciler(t, rig, a)
+	provider := &provisioningGNOI{
+		staticGNOI:    &staticGNOI{c: rig.client},
+		certificateID: "cvk-gnoi",
+	}
+	r.GNOI = provider
+
+	got := runReconcile(t, r, a)
+	if got.Status.Phase != opsv1alpha1.ActionPhaseSucceeded {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if !strings.Contains(got.Status.Result, `"status":"provisioningSubmitted"`) ||
+		!strings.Contains(got.Status.Result, `"certificateID":"cvk-gnoi"`) {
+		t.Fatalf("result=%q", got.Status.Result)
+	}
+	_ = runReconcile(t, r, a)
+	if got := provider.provisionCalls.Load(); got != 1 {
+		t.Fatalf("ProvisionGNOICertificate calls=%d, want 1", got)
+	}
+	if got := rig.os.verifyCalls.Load(); got != 1 {
+		t.Fatalf("OS.Verify calls=%d, want 1", got)
+	}
+}
+
+func TestProvisionCertificateFailureIsTerminal(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyErr = status.Error(codes.FailedPrecondition, "Device has not been provisioned")
+	a := newAction("provision-failed", func(a *opsv1alpha1.IOSXEOperationalAction) {
+		a.Spec.Action = opsv1alpha1.ActionRequest{Kind: opsv1alpha1.ActionKindProvisionCertificate}
+	})
+	r := newReconciler(t, rig, a)
+	provider := &provisioningGNOI{
+		staticGNOI:   &staticGNOI{c: rig.client},
+		provisionErr: status.Error(codes.PermissionDenied, "certificate rejected"),
+	}
+	r.GNOI = provider
+
+	got := runReconcile(t, r, a)
+	if got.Status.Phase != opsv1alpha1.ActionPhaseFailed {
+		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
+	}
+	if !strings.Contains(got.Status.Message, "certificate rejected") {
+		t.Fatalf("message=%q", got.Status.Message)
+	}
+	if got := provider.provisionCalls.Load(); got != 1 {
+		t.Fatalf("ProvisionGNOICertificate calls=%d, want 1", got)
+	}
+}
+
+func TestProvisionCertificateIndeterminateFailureWarnsAgainstRetry(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyErr = status.Error(codes.FailedPrecondition, "Device has not been provisioned")
+	a := newAction("provision-indeterminate", func(a *opsv1alpha1.IOSXEOperationalAction) {
+		a.Spec.Action = opsv1alpha1.ActionRequest{Kind: opsv1alpha1.ActionKindProvisionCertificate}
+	})
+	r := newReconciler(t, rig, a)
+	r.GNOI = &provisioningGNOI{
+		staticGNOI: &staticGNOI{c: rig.client},
+		provisionErr: &gnoi.ErrCertificateInstallIndeterminate{
+			CertificateID: "cvk-gnoi-cert",
+			Cause:         status.Error(codes.Unavailable, "gNXI restarted"),
+		},
+	}
+
+	got := runReconcile(t, r, a)
+	if got.Status.Phase != opsv1alpha1.ActionPhaseFailed || got.Status.FailureReason != "CertificateInstallIndeterminate" {
+		t.Fatalf("status=%+v, want failed CertificateInstallIndeterminate", got.Status)
+	}
+	if !strings.Contains(got.Status.Message, "do not retry") || !strings.Contains(got.Status.Message, "GNOICertGet") {
+		t.Fatalf("message=%q, want reconciliation guidance", got.Status.Message)
+	}
+}
+
 func TestUnknownActionKindRejected(t *testing.T) {
 	rig := newRig(t)
 	a := newAction("unknown-kind", func(a *opsv1alpha1.IOSXEOperationalAction) {
@@ -371,6 +519,76 @@ func TestRunningActionDoesNotRedispatch(t *testing.T) {
 	}
 	if rig.sys.rebootCalls.Load() != 0 {
 		t.Fatalf("running action re-dispatched reboot; calls=%d", rig.sys.rebootCalls.Load())
+	}
+}
+
+func TestMarkRunningConcurrentClaimSingleWinner(t *testing.T) {
+	rig := newRig(t)
+	a := newAction("reboot-concurrent-claim", nil)
+	r := newReconciler(t, rig, a)
+
+	const contenders = 8
+	start := make(chan struct{})
+	results := make(chan bool, contenders)
+	errs := make(chan error, contenders)
+	var ready sync.WaitGroup
+	ready.Add(contenders)
+	for range contenders {
+		go func() {
+			ready.Done()
+			<-start
+			claimed, err := r.markRunning(context.Background(), a, time.Unix(1_700_000_000, 0).UTC())
+			results <- claimed
+			errs <- err
+		}()
+	}
+	ready.Wait()
+	close(start)
+
+	claims := 0
+	for range contenders {
+		if err := <-errs; err != nil {
+			t.Fatalf("markRunning: %v", err)
+		}
+		if <-results {
+			claims++
+		}
+	}
+	if claims != 1 {
+		t.Fatalf("successful claims=%d, want 1", claims)
+	}
+
+	var got opsv1alpha1.IOSXEOperationalAction
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(a), &got); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.ActionPhaseRunning || got.Status.InvocationID == "" {
+		t.Fatalf("status=%+v, want Running with invocation ID", got.Status)
+	}
+}
+
+func TestMarkRunningRefusesDeletingAction(t *testing.T) {
+	rig := newRig(t)
+	a := newAction("reboot-delete-race", nil)
+	deletedAt := metav1.NewTime(time.Unix(1_700_000_000, 0).UTC())
+	a.DeletionTimestamp = &deletedAt
+	a.Finalizers = []string{finalizerName}
+	r := newReconciler(t, rig, a)
+
+	claimed, err := r.markRunning(context.Background(), a, deletedAt.Time)
+	if err != nil {
+		t.Fatalf("markRunning: %v", err)
+	}
+	if claimed {
+		t.Fatal("deleting action was claimed for dispatch")
+	}
+
+	var got opsv1alpha1.IOSXEOperationalAction
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(a), &got); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.Status.Phase != "" || got.Status.InvocationID != "" {
+		t.Fatalf("status=%+v, want unclaimed deleting action", got.Status)
 	}
 }
 

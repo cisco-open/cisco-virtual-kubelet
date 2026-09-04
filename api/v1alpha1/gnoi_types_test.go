@@ -108,10 +108,13 @@ func TestGNOIConfigValidateCertificateProvisioning(t *testing.T) {
 	}
 }
 
-func TestGNOIConfigValidateWithoutCertificateProvisioningPreservesLegacyModes(t *testing.T) {
-	for _, mode := range []GNOITransportSecurity{"", GNOITransportSecurityAuto, GNOITransportSecurityTLS, GNOITransportSecurityPlaintext} {
+func TestGNOIConfigValidateTransportSecurity(t *testing.T) {
+	for _, mode := range []GNOITransportSecurity{"", GNOITransportSecurityAuto, GNOITransportSecurityTLS} {
 		if err := (&GNOIConfig{TransportSecurity: mode}).Validate(); err != nil {
-			t.Errorf("Validate() mode %q without certificate provisioning: %v", mode, err)
+			t.Errorf("Validate() mode %q: %v", mode, err)
 		}
+	}
+	if err := (&GNOIConfig{TransportSecurity: "plaintext"}).Validate(); err == nil {
+		t.Fatal("Validate() accepted plaintext gNOI transport")
 	}
 }

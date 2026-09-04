@@ -439,7 +439,8 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	// after the VK pod is fine.
 	gnoiProv, gnoiCleanup, err := setupGNOI(ctx, opts)
 	if err != nil {
-		return err
+		log.G(ctx).WithError(err).Warn("gNOI unavailable; continuing with non-gNOI controllers")
+		gnoiProv = unavailableGNOIProvider{cause: err}
 	}
 	if gnoiCleanup != nil {
 		go func() {

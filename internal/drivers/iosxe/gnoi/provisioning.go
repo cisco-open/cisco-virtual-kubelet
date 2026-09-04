@@ -20,19 +20,21 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/hex"
+	"encoding/asn1"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
 	"math/big"
 	"net"
-	"net/url"
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	certpb "github.com/openconfig/gnoi/cert"
@@ -48,22 +50,44 @@ var provisioningCertificateIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-
 const iosXEProvisioningRSAKeyBits = 2048
 
 // ProvisioningBundle is a locally validated, normalized device identity for
-// gNOI CertificateManagement.Install. It supports IOS XE's target-generated
-// CSR flow and the protocol's external-key compatibility flow. Its formatter
-// redacts all fields so struct formatting cannot expose private-key material.
+// IOS XE's target-generated gNOI CertificateManagement.Install flow. Its
+// formatter redacts all fields so formatting cannot expose signing material.
 type ProvisioningBundle struct {
-	certificateID      string
-	expectedServerName string
-	leafPEM            []byte
-	privateKeyPEM      []byte
-	publicKeyPEM       []byte
-	caPEM              [][]byte
-	clientTrustCAPEM   []byte
-	leafFingerprint    [sha256.Size]byte
-	leafTemplate       *x509.Certificate
-	csrParams          *certpb.CSRParams
-	signingCert        *x509.Certificate
-	signingKey         *rsa.PrivateKey
+	certificateID            string
+	expectedServerName       string
+	caPEM                    [][]byte
+	clientTrustRoot          *x509.Certificate
+	clientTrustIntermediates []*x509.Certificate
+	leafTemplate             *x509.Certificate
+	expectedSubjectDER       []byte
+	csrParams                *certpb.CSRParams
+	signingCert              *x509.Certificate
+	signer                   *provisioningSigner
+}
+
+type provisioningSigner struct {
+	mu  sync.Mutex
+	key *rsa.PrivateKey
+}
+
+func (s *provisioningSigner) available() bool {
+	if s == nil {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.key != nil
+}
+
+func (s *provisioningSigner) take() *rsa.PrivateKey {
+	if s == nil {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	key := s.key
+	s.key = nil
+	return key
 }
 
 // Format prevents every fmt verb from rendering certificate or private-key
@@ -82,53 +106,94 @@ func (b *ProvisioningBundle) CertificateID() string {
 	return b.certificateID
 }
 
-// ClientTrustCAPEM returns the verified issuer-to-root chain for the requested
-// device identity. Adding this chain only to the gNOI client's trust pool lets
-// it reconnect when IOS XE serves either the full chain or only the leaf after
-// provisioning, without trusting unrelated CAs from the replacement bundle.
-func (b *ProvisioningBundle) ClientTrustCAPEM() []byte {
+// ConfigureClientTLS adds the provisioned identity's verified chain to one
+// gNOI-only TLS config. bootstrapPEM may contain the exact certificate served
+// by IOS XE before provisioning; it is accepted only as a leaf pin and never
+// promoted to a CA. Normal CA and hostname verification is always attempted
+// first and permanently disables the pin fallback after its first success.
+func (b *ProvisioningBundle) ConfigureClientTLS(tlsCfg *tls.Config, bootstrapPEM []byte) error {
 	if b == nil {
-		return nil
+		return fmt.Errorf("gnoi provisioning: nil bundle")
 	}
-	return bytes.Clone(b.clientTrustCAPEM)
-}
-
-// ProvisioningCertificateState describes whether the requested certificate
-// identity must be installed. A certificate ID occupied by any other
-// certificate is returned as ErrCertificateIDConflict instead of a state.
-type ProvisioningCertificateState string
-
-const (
-	ProvisioningCertificateMissing  ProvisioningCertificateState = "Missing"
-	ProvisioningCertificateMatching ProvisioningCertificateState = "Matching"
-)
-
-// ErrCertificateIDConflict means IOS XE already has the requested certificate
-// ID, but it cannot be proven to contain the requested leaf certificate.
-// Install must not be retried with that ID because gNOI Install is create-only.
-type ErrCertificateIDConflict struct {
-	CertificateID        string
-	ExpectedFingerprint  string
-	InstalledFingerprint string
-	Cause                error
-}
-
-func (e *ErrCertificateIDConflict) Error() string {
-	if e == nil {
-		return "gnoi Cert.Install certificate ID conflict"
+	if tlsCfg == nil {
+		return fmt.Errorf("gnoi provisioning: nil TLS config")
 	}
-	msg := fmt.Sprintf("gnoi Cert.Install certificate ID %q already contains a different certificate", e.CertificateID)
-	if e.Cause != nil {
-		return msg + ": " + e.Cause.Error()
+	if tlsCfg.InsecureSkipVerify {
+		return fmt.Errorf("gnoi provisioning: verified TLS is required; insecureSkipVerify cannot be used")
 	}
-	return msg
-}
 
-func (e *ErrCertificateIDConflict) Unwrap() error {
-	if e == nil {
-		return nil
+	var bootstrap *x509.Certificate
+	if bootstrapPEM != nil {
+		var err error
+		bootstrap, err = parseSingleCertificatePEM(bootstrapPEM, "bootstrap certificate")
+		if err != nil {
+			return fmt.Errorf("gnoi provisioning: %w", err)
+		}
+		now := time.Now()
+		if now.Before(bootstrap.NotBefore) || now.After(bootstrap.NotAfter) {
+			return fmt.Errorf("gnoi provisioning: bootstrap certificate is not currently valid")
+		}
 	}
-	return e.Cause
+
+	roots := tlsCfg.RootCAs
+	if roots == nil {
+		roots, _ = x509.SystemCertPool()
+		if roots == nil {
+			roots = x509.NewCertPool()
+		}
+	} else {
+		roots = roots.Clone()
+	}
+	roots.AddCert(b.clientTrustRoot)
+	tlsCfg.RootCAs = roots
+	tlsCfg.ServerName = b.expectedServerName
+
+	knownIntermediates := x509.NewCertPool()
+	for _, certificate := range b.clientTrustIntermediates {
+		knownIntermediates.AddCert(certificate)
+	}
+	previousVerifyConnection := tlsCfg.VerifyConnection
+	var caVerified atomic.Bool
+	tlsCfg.VerifyConnection = func(state tls.ConnectionState) error {
+		if len(state.PeerCertificates) == 0 {
+			return fmt.Errorf("gnoi TLS: server presented no certificate")
+		}
+		intermediates := knownIntermediates.Clone()
+		for _, certificate := range state.PeerCertificates[1:] {
+			intermediates.AddCert(certificate)
+		}
+		chains, verifyErr := state.PeerCertificates[0].Verify(x509.VerifyOptions{
+			DNSName:       b.expectedServerName,
+			Roots:         roots,
+			Intermediates: intermediates,
+			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		})
+		if verifyErr == nil {
+			state.VerifiedChains = chains
+			if previousVerifyConnection != nil {
+				if err := previousVerifyConnection(state); err != nil {
+					return err
+				}
+			}
+			caVerified.Store(true)
+			return nil
+		}
+		if bootstrap != nil && !caVerified.Load() && bytes.Equal(state.PeerCertificates[0].Raw, bootstrap.Raw) {
+			now := time.Now()
+			if now.Before(bootstrap.NotBefore) || now.After(bootstrap.NotAfter) {
+				return fmt.Errorf("gnoi TLS: pinned bootstrap certificate is not currently valid")
+			}
+			if previousVerifyConnection != nil {
+				return previousVerifyConnection(state)
+			}
+			return nil
+		}
+		return fmt.Errorf("gnoi TLS: verify server certificate for %q: %w", b.expectedServerName, verifyErr)
+	}
+	// #nosec G402 -- VerifyConnection above performs full CA/hostname checks or
+	// an exact, validity-checked bootstrap leaf pin before accepting a peer.
+	tlsCfg.InsecureSkipVerify = true
+	return nil
 }
 
 // ErrCertificateInstallIndeterminate means the Install result must be reconciled
@@ -143,6 +208,9 @@ type ErrCertificateInstallIndeterminate struct {
 func (e *ErrCertificateInstallIndeterminate) Error() string {
 	if e == nil {
 		return "gnoi Cert.Install outcome is indeterminate"
+	}
+	if e.Cause == nil {
+		return fmt.Sprintf("gnoi Cert.Install certificate ID %q outcome is indeterminate", e.CertificateID)
 	}
 	return fmt.Sprintf("gnoi Cert.Install certificate ID %q outcome is indeterminate: %v", e.CertificateID, e.Cause)
 }
@@ -162,32 +230,14 @@ func IsCertificateInstallIndeterminate(err error) bool {
 }
 
 // NewProvisioningBundle validates and normalizes the certificate material for
-// IOS XE's gNOI provisioning flow. leafPEM must contain one server certificate,
-// privateKeyPEM an unencrypted RSA key, and caBundlePEM the complete replacement
-// target CA bundle. Every bundle certificate must be a CA, and the bundle must
-// contain a valid path from the leaf to a self-signed root. Input order is
-// retained for CertificateManagement.Install.
+// IOS XE's target-generated CSR flow. leafPEM is the desired device certificate
+// profile and caBundlePEM is the complete replacement target CA bundle. A
+// non-nil caKeyPEM must be the unencrypted RSA key for the profile's dedicated
+// intermediate issuer; nil supports post-provisioning verification after the
+// key has been removed. The device identity private key stays on IOS XE.
 func NewProvisioningBundle(
 	certificateID, expectedServerName string,
-	leafPEM, privateKeyPEM, caBundlePEM []byte,
-) (*ProvisioningBundle, error) {
-	return newProvisioningBundle(certificateID, expectedServerName, leafPEM, privateKeyPEM, caBundlePEM, nil)
-}
-
-// NewProvisioningBundleWithSigningKey enables the documented target-generated
-// CSR provisioning flow. leafPEM is the desired certificate template and does
-// not require its private key: IOS XE generates the installed key. The supplied
-// CA key must match the template leaf's issuer in the CA replacement bundle.
-func NewProvisioningBundleWithSigningKey(
-	certificateID, expectedServerName string,
 	leafPEM, caBundlePEM, caKeyPEM []byte,
-) (*ProvisioningBundle, error) {
-	return newProvisioningBundle(certificateID, expectedServerName, leafPEM, nil, caBundlePEM, caKeyPEM)
-}
-
-func newProvisioningBundle(
-	certificateID, expectedServerName string,
-	leafPEM, privateKeyPEM, caBundlePEM, caKeyPEM []byte,
 ) (*ProvisioningBundle, error) {
 	if !provisioningCertificateIDPattern.MatchString(certificateID) {
 		return nil, fmt.Errorf("gnoi provisioning certificate ID must start with an alphanumeric and contain 1-64 characters from [A-Za-z0-9_.-]")
@@ -196,12 +246,7 @@ func newProvisioningBundle(
 	if expectedServerName == "" {
 		return nil, fmt.Errorf("gnoi provisioning expected server name is required")
 	}
-	if caKeyPEM != nil && len(bytes.TrimSpace(caKeyPEM)) == 0 {
-		return nil, fmt.Errorf("gnoi provisioning: ca.key is present but empty")
-	}
-	targetGeneratedKey := len(bytes.TrimSpace(caKeyPEM)) > 0
-
-	leaf, normalizedLeaf, err := parseSingleCertificatePEM(leafPEM, "leaf certificate")
+	leaf, err := parseSingleCertificatePEM(leafPEM, "leaf certificate")
 	if err != nil {
 		return nil, fmt.Errorf("gnoi provisioning: %w", err)
 	}
@@ -214,33 +259,6 @@ func newProvisioningBundle(
 	}
 	if now.After(leaf.NotAfter) {
 		return nil, fmt.Errorf("gnoi provisioning: leaf certificate expired at %s", leaf.NotAfter.UTC().Format(time.RFC3339))
-	}
-
-	var normalizedPrivateKey, normalizedPublicKey []byte
-	if !targetGeneratedKey {
-		leafPublicKey, ok := leaf.PublicKey.(*rsa.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("gnoi provisioning: leaf certificate public key must be RSA")
-		}
-		if leafPublicKey.N.BitLen() < iosXEProvisioningRSAKeyBits {
-			return nil, fmt.Errorf("gnoi provisioning: leaf certificate RSA public key is %d bits; at least %d bits are required", leafPublicKey.N.BitLen(), iosXEProvisioningRSAKeyBits)
-		}
-		privateKey, encodedPrivateKey, err := parseRSAPrivateKeyPEM(privateKeyPEM)
-		if err != nil {
-			return nil, fmt.Errorf("gnoi provisioning: %w", err)
-		}
-		if privateKey.N.BitLen() < iosXEProvisioningRSAKeyBits {
-			return nil, fmt.Errorf("gnoi provisioning: RSA private key is %d bits; at least %d bits are required", privateKey.N.BitLen(), iosXEProvisioningRSAKeyBits)
-		}
-		if leafPublicKey.E != privateKey.PublicKey.E || leafPublicKey.N.Cmp(privateKey.PublicKey.N) != 0 {
-			return nil, fmt.Errorf("gnoi provisioning: leaf certificate and private key do not match")
-		}
-		publicDER, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
-		if err != nil {
-			return nil, fmt.Errorf("gnoi provisioning: encode RSA public key: %w", err)
-		}
-		normalizedPrivateKey = encodedPrivateKey
-		normalizedPublicKey = pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicDER})
 	}
 
 	caCerts, normalizedCAs, err := parseCertificateBundlePEM(caBundlePEM)
@@ -286,27 +304,21 @@ func newProvisioningBundle(
 		return nil, fmt.Errorf("gnoi provisioning: leaf verification returned no certificate chain")
 	}
 	verifiedChain := verifiedChains[0]
-	if len(verifiedChain) < 2 {
-		return nil, fmt.Errorf("gnoi provisioning: leaf verification returned no issuer")
+	if len(verifiedChain) < 3 {
+		return nil, fmt.Errorf("gnoi provisioning: tls.crt must be issued by a dedicated intermediate CA, not directly by a root CA")
 	}
 	verifiedIssuer := verifiedChain[1]
-	var clientTrustPEM []byte
-	for _, ca := range verifiedChain[1:] {
-		clientTrustPEM = append(clientTrustPEM, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca.Raw})...)
+	verifiedRoot := verifiedChain[len(verifiedChain)-1]
+	verifiedIntermediates := slices.Clone(verifiedChain[1 : len(verifiedChain)-1])
+
+	profile := *leaf
+	if strings.TrimSpace(profile.Subject.CommonName) == "" {
+		profile.Subject.CommonName = expectedServerName
 	}
 
-	leafTemplate := *leaf
-	leafTemplate.Subject = leaf.Subject
-	if strings.TrimSpace(leafTemplate.Subject.CommonName) == "" {
-		leafTemplate.Subject.CommonName = expectedServerName
-		leafTemplate.RawSubject = nil
-	}
-
-	var signingKey *rsa.PrivateKey
-	var signingCert *x509.Certificate
-	var csrParams *certpb.CSRParams
-	if targetGeneratedKey {
-		parsedKey, _, err := parseRSAPrivateKeyPEM(caKeyPEM)
+	var signer *provisioningSigner
+	if caKeyPEM != nil {
+		parsedKey, err := parseRSAPrivateKeyPEM(caKeyPEM)
 		if err != nil {
 			return nil, fmt.Errorf("gnoi provisioning: parse CA signing key: %w", err)
 		}
@@ -314,57 +326,56 @@ func newProvisioningBundle(
 			return nil, fmt.Errorf("gnoi provisioning: CA signing key is %d bits; at least %d bits are required", parsedKey.N.BitLen(), iosXEProvisioningRSAKeyBits)
 		}
 		issuerPublicKey, ok := verifiedIssuer.PublicKey.(*rsa.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("gnoi provisioning: tls.crt issuer public key must be RSA when ca.key is used")
+		if !ok || !rsaPublicKeysEqual(issuerPublicKey, &parsedKey.PublicKey) {
+			return nil, fmt.Errorf("gnoi provisioning: ca.key must match tls.crt's verified intermediate issuer in ca.crt")
 		}
-		matchingCAKey := rsaPublicKeysEqual(issuerPublicKey, &parsedKey.PublicKey)
-		matchingOtherCA := false
 		for _, ca := range caCerts {
-			caPublicKey, ok := ca.PublicKey.(*rsa.PublicKey)
-			if ok && rsaPublicKeysEqual(caPublicKey, &parsedKey.PublicKey) && !bytes.Equal(ca.Raw, verifiedIssuer.Raw) {
-				matchingOtherCA = true
-				break
+			rootPublicKey, ok := ca.PublicKey.(*rsa.PublicKey)
+			if bytes.Equal(ca.RawSubject, ca.RawIssuer) && ca.CheckSignatureFrom(ca) == nil && ok && rsaPublicKeysEqual(rootPublicKey, issuerPublicKey) {
+				return nil, fmt.Errorf("gnoi provisioning: ca.key must belong to a dedicated intermediate CA, not a root CA")
 			}
 		}
-		if !matchingCAKey {
-			if matchingOtherCA {
-				return nil, fmt.Errorf("gnoi provisioning: CA signing key must match the ca.crt certificate on tls.crt's verified issuer chain")
-			}
-			return nil, fmt.Errorf("gnoi provisioning: CA signing key does not match tls.crt's verified issuer in ca.crt")
-		}
-		signingCert = verifiedIssuer
-		csrParams, err = iosXECSRParams(expectedServerName, &leafTemplate)
-		if err != nil {
-			return nil, fmt.Errorf("gnoi provisioning: %w", err)
-		}
-		// Match the signed certificate subject to the scalar subject requested
-		// from IOS XE. The template remains authoritative, but extra subject
-		// values that the v0.8 CSR request cannot express must not appear only
-		// in the returned certificate.
-		leafTemplate.Subject = pkix.Name{
+		signer = &provisioningSigner{key: parsedKey}
+	}
+	csrParams, err := iosXECSRParams(expectedServerName, &profile)
+	if err != nil {
+		return nil, fmt.Errorf("gnoi provisioning: %w", err)
+	}
+	// gNOI v0.8 can request only scalar subject fields. Use that same
+	// normalized subject in the signed certificate so reconciliation has one
+	// unambiguous profile to compare after IOS XE restarts.
+	leafTemplate := &x509.Certificate{
+		Subject: pkix.Name{
 			CommonName:         csrParams.CommonName,
 			Country:            []string{csrParams.Country},
 			Province:           []string{csrParams.State},
 			Organization:       []string{csrParams.Organization},
 			OrganizationalUnit: []string{csrParams.OrganizationalUnit},
-		}
-		leafTemplate.RawSubject = nil
-		signingKey = parsedKey
+		},
+		NotBefore:             leaf.NotBefore,
+		NotAfter:              leaf.NotAfter,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		DNSNames:              slices.Clone(leaf.DNSNames),
+		IPAddresses:           slices.Clone(leaf.IPAddresses),
+	}
+	expectedSubjectDER, err := asn1.Marshal(leafTemplate.Subject.ToRDNSequence())
+	if err != nil {
+		return nil, fmt.Errorf("gnoi provisioning: encode certificate subject: %w", err)
 	}
 
 	return &ProvisioningBundle{
-		certificateID:      certificateID,
-		expectedServerName: expectedServerName,
-		leafPEM:            normalizedLeaf,
-		privateKeyPEM:      normalizedPrivateKey,
-		publicKeyPEM:       normalizedPublicKey,
-		caPEM:              normalizedCAs,
-		clientTrustCAPEM:   clientTrustPEM,
-		leafFingerprint:    sha256.Sum256(leaf.Raw),
-		leafTemplate:       &leafTemplate,
-		csrParams:          csrParams,
-		signingCert:        signingCert,
-		signingKey:         signingKey,
+		certificateID:            certificateID,
+		expectedServerName:       expectedServerName,
+		caPEM:                    normalizedCAs,
+		clientTrustRoot:          verifiedRoot,
+		clientTrustIntermediates: verifiedIntermediates,
+		leafTemplate:             leafTemplate,
+		expectedSubjectDER:       expectedSubjectDER,
+		csrParams:                csrParams,
+		signingCert:              verifiedIssuer,
+		signer:                   signer,
 	}, nil
 }
 
@@ -429,18 +440,16 @@ func rsaPublicKeysEqual(left, right *rsa.PublicKey) bool {
 	return left != nil && right != nil && left.E == right.E && left.N.Cmp(right.N) == 0
 }
 
-// ProvisioningCertificateState compares the requested identity with the
-// certificate already occupying its ID on the target. External-key installs
-// use an exact DER fingerprint. A target-generated key necessarily produces a
-// different certificate, so that mode matches the signed certificate profile
-// and issuer instead.
-func (c *Client) ProvisioningCertificateState(ctx context.Context, bundle *ProvisioningBundle) (ProvisioningCertificateState, error) {
+// ProvisioningCertificateInstalled reports whether the target already contains
+// the requested identity. A different certificate at the same create-only ID
+// fails closed because gNOI Install is create-only and must not overwrite it.
+func (c *Client) ProvisioningCertificateInstalled(ctx context.Context, bundle *ProvisioningBundle) (bool, error) {
 	if bundle == nil {
-		return "", fmt.Errorf("gnoi Cert.GetCertificates: nil provisioning bundle")
+		return false, fmt.Errorf("gnoi Cert.GetCertificates: nil provisioning bundle")
 	}
 	certificates, err := c.GetCertificates(ctx)
 	if err != nil {
-		return "", err
+		return false, err
 	}
 
 	var match *CertificateInfo
@@ -449,39 +458,24 @@ func (c *Client) ProvisioningCertificateState(ctx context.Context, bundle *Provi
 			continue
 		}
 		if match != nil {
-			return "", bundle.conflictError("device returned duplicate records for the certificate ID", nil)
+			return false, bundle.conflictError("device returned duplicate records for the certificate ID", nil)
 		}
 		match = &certificates[i]
 	}
 	if match == nil {
-		return ProvisioningCertificateMissing, nil
+		return false, nil
 	}
-	if match.Type != certpb.CertificateType_CT_X509.String() {
-		return "", bundle.conflictError(fmt.Sprintf("installed certificate has type %q", match.Type), nil)
+	if match.Type != "" && match.Type != certpb.CertificateType_CT_UNKNOWN.String() && match.Type != certpb.CertificateType_CT_X509.String() {
+		return false, bundle.conflictError(fmt.Sprintf("installed certificate has type %q", match.Type), nil)
 	}
-	installed, _, err := parseSingleCertificatePEM(match.Certificate, "installed certificate")
+	installed, err := parseSingleCertificatePEM(match.Certificate, "installed certificate")
 	if err != nil {
-		return "", bundle.conflictError("installed certificate cannot be parsed", err)
+		return false, bundle.conflictError("installed certificate cannot be parsed", err)
 	}
-	installedFingerprint := sha256.Sum256(installed.Raw)
-	if bundle.usesTargetGeneratedKey() {
-		if err := bundle.validateTargetGeneratedCertificate(installed); err != nil {
-			return "", bundle.installedConflict(installedFingerprint, err)
-		}
-		return ProvisioningCertificateMatching, nil
+	if err := bundle.validateTargetGeneratedCertificate(installed); err != nil {
+		return false, bundle.conflictError("installed certificate does not match the requested profile", err)
 	}
-	if installedFingerprint != bundle.leafFingerprint {
-		return "", &ErrCertificateIDConflict{
-			CertificateID:        bundle.certificateID,
-			ExpectedFingerprint:  hex.EncodeToString(bundle.leafFingerprint[:]),
-			InstalledFingerprint: hex.EncodeToString(installedFingerprint[:]),
-		}
-	}
-	return ProvisioningCertificateMatching, nil
-}
-
-func (b *ProvisioningBundle) usesTargetGeneratedKey() bool {
-	return b != nil && b.signingCert != nil && b.signingKey != nil && b.csrParams != nil
+	return true, nil
 }
 
 func (b *ProvisioningBundle) validateTargetGeneratedCertificate(installed *x509.Certificate) error {
@@ -491,7 +485,10 @@ func (b *ProvisioningBundle) validateTargetGeneratedCertificate(installed *x509.
 	if err := installed.CheckSignatureFrom(b.signingCert); err != nil {
 		return fmt.Errorf("installed target-generated certificate was not issued by configured tls.crt issuer: %w", err)
 	}
-	if !equalSubjects(installed.Subject, b.leafTemplate.Subject) {
+	if !bytes.Equal(installed.RawIssuer, b.signingCert.RawSubject) {
+		return fmt.Errorf("installed target-generated certificate issuer does not match configured tls.crt issuer")
+	}
+	if !bytes.Equal(installed.RawSubject, b.expectedSubjectDER) {
 		return fmt.Errorf("installed target-generated certificate subject does not match tls.crt template")
 	}
 	if !installed.NotBefore.Equal(b.leafTemplate.NotBefore) || !installed.NotAfter.Equal(b.leafTemplate.NotAfter) {
@@ -502,8 +499,7 @@ func (b *ProvisioningBundle) validateTargetGeneratedCertificate(installed *x509.
 	}
 	if !slices.Equal(installed.DNSNames, b.leafTemplate.DNSNames) ||
 		!equalIPAddresses(installed.IPAddresses, b.leafTemplate.IPAddresses) ||
-		!slices.Equal(installed.EmailAddresses, b.leafTemplate.EmailAddresses) ||
-		!equalURIs(installed.URIs, b.leafTemplate.URIs) {
+		len(installed.EmailAddresses) != 0 || len(installed.URIs) != 0 {
 		return fmt.Errorf("installed target-generated certificate subject alternative names do not match tls.crt template")
 	}
 	if err := installed.VerifyHostname(b.expectedServerName); err != nil {
@@ -532,41 +528,10 @@ func equalIPAddresses(left, right []net.IP) bool {
 	return true
 }
 
-func equalSubjects(left, right pkix.Name) bool {
-	return left.CommonName == right.CommonName &&
-		left.SerialNumber == right.SerialNumber &&
-		slices.Equal(left.Country, right.Country) &&
-		slices.Equal(left.Organization, right.Organization) &&
-		slices.Equal(left.OrganizationalUnit, right.OrganizationalUnit) &&
-		slices.Equal(left.Locality, right.Locality) &&
-		slices.Equal(left.Province, right.Province) &&
-		slices.Equal(left.StreetAddress, right.StreetAddress) &&
-		slices.Equal(left.PostalCode, right.PostalCode)
-}
-
-func equalURIs(left, right []*url.URL) bool {
-	if len(left) != len(right) {
-		return false
-	}
-	for i := range left {
-		if left[i] == nil || right[i] == nil {
-			if left[i] != right[i] {
-				return false
-			}
-			continue
-		}
-		if left[i].String() != right[i].String() {
-			return false
-		}
-	}
-	return true
-}
-
-// InstallProvisioningCertificate installs the configured gNXI identity. IOS XE
-// uses its target-generated CSR workflow when a signing key is configured; the
-// external-key form remains available for targets that support it. A transport
-// loss after LoadCertificate is sent is indeterminate and must be reconciled by
-// certificate ID on a fresh connection.
+// InstallProvisioningCertificate installs the configured gNXI identity with
+// IOS XE's target-generated CSR workflow. A transport loss after either stream
+// request is indeterminate and must be reconciled by certificate ID on a fresh
+// connection.
 func (c *Client) InstallProvisioningCertificate(ctx context.Context, bundle *ProvisioningBundle) error {
 	if bundle == nil {
 		return fmt.Errorf("gnoi Cert.Install: nil provisioning bundle")
@@ -574,61 +539,9 @@ func (c *Client) InstallProvisioningCertificate(ctx context.Context, bundle *Pro
 	if err := c.cap.ensureSupported(ServiceCert); err != nil {
 		return err
 	}
-	if bundle.usesTargetGeneratedKey() {
-		return c.installProvisioningCertificateFromCSR(ctx, bundle)
+	if !bundle.signer.available() {
+		return fmt.Errorf("gnoi Cert.Install: ca.key is required for a new certificate and may be used only once per process")
 	}
-	stream, err := c.cert.Install(c.authCtx(ctx))
-	if err != nil {
-		c.cap.Observe(ServiceCert, err)
-		return fmt.Errorf("gnoi Cert.Install open: %w", err)
-	}
-	defer func() { _ = stream.CloseSend() }()
-
-	caCertificates := make([]*certpb.Certificate, 0, len(bundle.caPEM))
-	for _, ca := range bundle.caPEM {
-		caCertificates = append(caCertificates, &certpb.Certificate{
-			Type:        certpb.CertificateType_CT_X509,
-			Certificate: bytes.Clone(ca),
-		})
-	}
-	request := &certpb.InstallCertificateRequest{
-		InstallRequest: &certpb.InstallCertificateRequest_LoadCertificate{
-			LoadCertificate: &certpb.LoadCertificateRequest{
-				Certificate: &certpb.Certificate{
-					Type:        certpb.CertificateType_CT_X509,
-					Certificate: bytes.Clone(bundle.leafPEM),
-				},
-				KeyPair: &certpb.KeyPair{
-					PrivateKey: bytes.Clone(bundle.privateKeyPEM),
-					PublicKey:  bytes.Clone(bundle.publicKeyPEM),
-				},
-				CertificateId:  bundle.certificateID,
-				CaCertificates: caCertificates,
-			},
-		},
-	}
-	if err := stream.Send(request); err != nil {
-		c.cap.Observe(ServiceCert, err)
-		return wrapCertificateInstallError(bundle.certificateID, "send LoadCertificateRequest", err)
-	}
-	response, err := stream.Recv()
-	if err != nil {
-		c.cap.Observe(ServiceCert, err)
-		return wrapCertificateInstallError(bundle.certificateID, "receive LoadCertificateResponse", err)
-	}
-	if response == nil || response.GetLoadCertificate() == nil {
-		err := fmt.Errorf("gnoi Cert.Install: expected LoadCertificateResponse")
-		c.cap.Observe(ServiceCert, err)
-		return &ErrCertificateInstallIndeterminate{CertificateID: bundle.certificateID, Cause: err}
-	}
-	// LoadCertificateResponse is the protocol acknowledgement. The reference
-	// client returns at this point; requiring EOF first makes IOS XE treat the
-	// bidirectional stream as broken and roll back the install.
-	c.cap.Observe(ServiceCert, nil)
-	return nil
-}
-
-func (c *Client) installProvisioningCertificateFromCSR(ctx context.Context, bundle *ProvisioningBundle) error {
 	// Follow the protocol's Install exchange directly. CanGenerateCSR is a
 	// separate diagnostic RPC and some IOS XE builds reject it even though the
 	// GenerateCSR arm of Install is supported.
@@ -638,6 +551,10 @@ func (c *Client) installProvisioningCertificateFromCSR(ctx context.Context, bund
 		return fmt.Errorf("gnoi Cert.Install open: %w", err)
 	}
 	defer func() { _ = stream.CloseSend() }()
+	signingKey := bundle.signer.take()
+	if signingKey == nil {
+		return fmt.Errorf("gnoi Cert.Install: ca.key is required for a new certificate and may be used only once per process")
+	}
 
 	generateRequest := &certpb.InstallCertificateRequest{
 		InstallRequest: &certpb.InstallCertificateRequest_GenerateCsr{
@@ -662,12 +579,12 @@ func (c *Client) installProvisioningCertificateFromCSR(ctx context.Context, bund
 		c.cap.Observe(ServiceCert, err)
 		return err
 	}
-	if generatedCSR.GetCsr().GetType() != certpb.CertificateType_CT_X509 {
+	if got := generatedCSR.GetCsr().GetType(); got != certpb.CertificateType_CT_UNKNOWN && got != certpb.CertificateType_CT_X509 {
 		err := fmt.Errorf("gnoi Cert.Install: GenerateCSRResponse has certificate type %s; want CT_X509", generatedCSR.GetCsr().GetType())
 		c.cap.Observe(ServiceCert, err)
 		return err
 	}
-	leafPEM, err := bundle.signCSR(generatedCSR.GetCsr().GetCsr())
+	leafPEM, err := bundle.signCSR(generatedCSR.GetCsr().GetCsr(), signingKey)
 	if err != nil {
 		c.cap.Observe(ServiceCert, err)
 		return fmt.Errorf("gnoi Cert.Install sign CSR: %w", err)
@@ -709,7 +626,10 @@ func (c *Client) installProvisioningCertificateFromCSR(ctx context.Context, bund
 	return nil
 }
 
-func (b *ProvisioningBundle) signCSR(rawCSR []byte) ([]byte, error) {
+func (b *ProvisioningBundle) signCSR(rawCSR []byte, signingKey *rsa.PrivateKey) ([]byte, error) {
+	if signingKey == nil {
+		return nil, fmt.Errorf("CA signing key is unavailable")
+	}
 	csrBlock, rest := pem.Decode(bytes.TrimSpace(rawCSR))
 	if csrBlock == nil {
 		return nil, fmt.Errorf("CSR is not PEM encoded")
@@ -740,9 +660,9 @@ func (b *ProvisioningBundle) signCSR(rawCSR []byte) ([]byte, error) {
 	}
 	subjectKeyID := sha256.Sum256(publicDER)
 
-	// The CSR proves possession of IOS XE's private key; the locally validated
-	// tls.crt remains authoritative for the certificate subject, SANs, validity,
-	// and usages. Some conforming targets omit requested subject or IP fields from
+	// The CSR proves possession of IOS XE's private key; the locally normalized
+	// tls.crt profile remains authoritative for the certificate subject, SANs,
+	// validity, and usages. Some conforming targets omit requested fields from
 	// the encoded CSR, so do not require them to be echoed. In particular, gNOI
 	// v0.8 cannot request a DNS SAN, and copying arbitrary CSR identity fields
 	// could make the post-provisioning TLS connection unverifiable.
@@ -754,18 +674,11 @@ func (b *ProvisioningBundle) signCSR(rawCSR []byte) ([]byte, error) {
 	}
 	serial.Add(serial, big.NewInt(1))
 	template.SerialNumber = serial
-	template.Raw = nil
-	template.RawTBSCertificate = nil
-	template.RawSubjectPublicKeyInfo = nil
 	template.RawSubject = nil
-	template.RawIssuer = nil
-	template.Signature = nil
 	template.SignatureAlgorithm = x509.UnknownSignatureAlgorithm
-	template.PublicKeyAlgorithm = x509.RSA
-	template.PublicKey = publicKey
 	template.SubjectKeyId = bytes.Clone(subjectKeyID[:])
 	template.AuthorityKeyId = bytes.Clone(b.signingCert.SubjectKeyId)
-	der, err := x509.CreateCertificate(rand.Reader, &template, b.signingCert, publicKey, b.signingKey)
+	der, err := x509.CreateCertificate(rand.Reader, &template, b.signingCert, publicKey, signingKey)
 	if err != nil {
 		return nil, fmt.Errorf("create certificate: %w", err)
 	}
@@ -780,32 +693,19 @@ func (b *ProvisioningBundle) signCSR(rawCSR []byte) ([]byte, error) {
 }
 
 func (b *ProvisioningBundle) conflictError(detail string, cause error) error {
-	conflictCause := errors.New(detail)
 	if cause != nil {
-		conflictCause = fmt.Errorf("%s: %w", detail, cause)
+		return fmt.Errorf(
+			"gnoi Cert.Install certificate ID %q already contains a different certificate: %s: %w",
+			b.certificateID,
+			detail,
+			cause,
+		)
 	}
-	expectedFingerprint := ""
-	if !b.usesTargetGeneratedKey() {
-		expectedFingerprint = hex.EncodeToString(b.leafFingerprint[:])
-	}
-	return &ErrCertificateIDConflict{
-		CertificateID:       b.certificateID,
-		ExpectedFingerprint: expectedFingerprint,
-		Cause:               conflictCause,
-	}
-}
-
-func (b *ProvisioningBundle) installedConflict(installedFingerprint [sha256.Size]byte, cause error) error {
-	expectedFingerprint := ""
-	if !b.usesTargetGeneratedKey() {
-		expectedFingerprint = hex.EncodeToString(b.leafFingerprint[:])
-	}
-	return &ErrCertificateIDConflict{
-		CertificateID:        b.certificateID,
-		ExpectedFingerprint:  expectedFingerprint,
-		InstalledFingerprint: hex.EncodeToString(installedFingerprint[:]),
-		Cause:                cause,
-	}
+	return fmt.Errorf(
+		"gnoi Cert.Install certificate ID %q already contains a different certificate: %s",
+		b.certificateID,
+		detail,
+	)
 }
 
 func wrapCertificateInstallError(certificateID, operation string, err error) error {
@@ -830,15 +730,15 @@ func certificateInstallRequiresRecheck(err error) bool {
 	}
 }
 
-func parseSingleCertificatePEM(data []byte, label string) (*x509.Certificate, []byte, error) {
-	certificates, normalized, err := parseCertificatePEM(data, label)
+func parseSingleCertificatePEM(data []byte, label string) (*x509.Certificate, error) {
+	certificates, _, err := parseCertificatePEM(data, label)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if len(certificates) != 1 {
-		return nil, nil, fmt.Errorf("%s must contain exactly one PEM certificate", label)
+		return nil, fmt.Errorf("%s must contain exactly one PEM certificate", label)
 	}
-	return certificates[0], normalized[0], nil
+	return certificates[0], nil
 }
 
 func parseCertificateBundlePEM(data []byte) ([]*x509.Certificate, [][]byte, error) {
@@ -871,20 +771,20 @@ func parseCertificatePEM(data []byte, label string) ([]*x509.Certificate, [][]by
 	return certificates, normalized, nil
 }
 
-func parseRSAPrivateKeyPEM(data []byte) (*rsa.PrivateKey, []byte, error) {
+func parseRSAPrivateKeyPEM(data []byte) (*rsa.PrivateKey, error) {
 	trimmed := bytes.TrimSpace(data)
 	if !bytes.HasPrefix(trimmed, []byte("-----BEGIN ")) {
-		return nil, nil, fmt.Errorf("private key is not PEM encoded")
+		return nil, fmt.Errorf("private key is not PEM encoded")
 	}
 	block, rest := pem.Decode(trimmed)
 	if block == nil {
-		return nil, nil, fmt.Errorf("private key contains an invalid PEM block")
+		return nil, fmt.Errorf("private key contains an invalid PEM block")
 	}
 	if len(bytes.TrimSpace(rest)) != 0 {
-		return nil, nil, fmt.Errorf("private key must contain exactly one PEM block")
+		return nil, fmt.Errorf("private key must contain exactly one PEM block")
 	}
 	if x509.IsEncryptedPEMBlock(block) || strings.Contains(block.Type, "ENCRYPTED") {
-		return nil, nil, fmt.Errorf("encrypted private keys are not supported")
+		return nil, fmt.Errorf("encrypted private keys are not supported")
 	}
 
 	var key *rsa.PrivateKey
@@ -892,25 +792,24 @@ func parseRSAPrivateKeyPEM(data []byte) (*rsa.PrivateKey, []byte, error) {
 	case "RSA PRIVATE KEY":
 		parsed, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 		if err != nil {
-			return nil, nil, fmt.Errorf("parse PKCS#1 RSA private key: %w", err)
+			return nil, fmt.Errorf("parse PKCS#1 RSA private key: %w", err)
 		}
 		key = parsed
 	case "PRIVATE KEY":
 		parsed, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
-			return nil, nil, fmt.Errorf("parse PKCS#8 private key: %w", err)
+			return nil, fmt.Errorf("parse PKCS#8 private key: %w", err)
 		}
 		var ok bool
 		key, ok = parsed.(*rsa.PrivateKey)
 		if !ok {
-			return nil, nil, fmt.Errorf("PKCS#8 private key must contain an RSA key")
+			return nil, fmt.Errorf("PKCS#8 private key must contain an RSA key")
 		}
 	default:
-		return nil, nil, fmt.Errorf("private key PEM block type %q is not supported; want RSA PRIVATE KEY or PRIVATE KEY", block.Type)
+		return nil, fmt.Errorf("private key PEM block type %q is not supported; want RSA PRIVATE KEY or PRIVATE KEY", block.Type)
 	}
 	if err := key.Validate(); err != nil {
-		return nil, nil, fmt.Errorf("invalid RSA private key: %w", err)
+		return nil, fmt.Errorf("invalid RSA private key: %w", err)
 	}
-	key.Precompute()
-	return key, pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}), nil
+	return key, nil
 }
