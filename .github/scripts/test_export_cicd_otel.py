@@ -826,12 +826,170 @@ class ExporterTests(unittest.TestCase):
                 api_call=lambda path: observer,
             )
 
-    def test_observer_workflow_passes_the_event_run_attempt(self) -> None:
+    def test_trusted_lab_dispatch_waits_for_completion(self) -> None:
+        lab_path = exporter.OBSERVED_WORKFLOW_PATHS["Lab CI (Cat8kv)"]
+        responses = [
+            completed_run(
+                path=lab_path,
+                event="workflow_dispatch",
+                head_branch="main",
+                status="in_progress",
+                conclusion=None,
+            ),
+            completed_run(
+                path=lab_path,
+                event="workflow_dispatch",
+                head_branch="main",
+            ),
+        ]
+        paths: list[str] = []
+        sleeps: list[float] = []
+
+        def api_call(path: str) -> dict[str, object]:
+            paths.append(path)
+            return responses.pop(0)
+
+        run = exporter.load_completed_run(
+            REPOSITORY,
+            RUN_ID,
+            ATTEMPT,
+            token="not-logged",
+            api_call=api_call,
+            trusted_lab_dispatch=True,
+            sleep=sleeps.append,
+        )
+
+        self.assertEqual(run["status"], "completed")
+        self.assertEqual(len(paths), 2)
+        self.assertEqual(
+            set(paths),
+            {f"/repos/{REPOSITORY}/actions/runs/{RUN_ID}/attempts/{ATTEMPT}"},
+        )
+        self.assertEqual(sleeps, [exporter.COMPLETION_POLL_INTERVAL_SECONDS])
+
+    def test_trusted_lab_dispatch_wait_is_bounded(self) -> None:
+        lab = completed_run(
+            path=exporter.OBSERVED_WORKFLOW_PATHS["Lab CI (Cat9k)"],
+            event="workflow_dispatch",
+            head_branch="main",
+            status="queued",
+            conclusion=None,
+        )
+        api_call = mock.Mock(return_value=lab)
+        sleep = mock.Mock()
+
+        with self.assertRaisesRegex(exporter.ExportError, "did not complete"):
+            exporter.load_completed_run(
+                REPOSITORY,
+                RUN_ID,
+                ATTEMPT,
+                token="not-logged",
+                api_call=api_call,
+                trusted_lab_dispatch=True,
+                sleep=sleep,
+            )
+
+        self.assertEqual(api_call.call_count, exporter.COMPLETION_POLL_ATTEMPTS)
+        self.assertEqual(
+            sleep.call_count,
+            exporter.COMPLETION_POLL_ATTEMPTS - 1,
+        )
+        sleep.assert_called_with(exporter.COMPLETION_POLL_INTERVAL_SECONDS)
+
+    def test_trusted_lab_dispatch_rejects_wrong_provenance_before_wait(self) -> None:
+        lab_path = exporter.OBSERVED_WORKFLOW_PATHS["Lab CI (Cat8kv)"]
+        cases = (
+            (completed_run(id=RUN_ID + 1), "ID does not match"),
+            (
+                completed_run(repository={"full_name": "other/repository"}),
+                "repository does not match",
+            ),
+            (completed_run(run_attempt=ATTEMPT + 1), "attempt does not match"),
+            (
+                completed_run(path=exporter.OBSERVER_WORKFLOW_PATH),
+                "never observe itself",
+            ),
+            (
+                completed_run(path=".github/workflows/untrusted.yml"),
+                "not observed",
+            ),
+            (
+                completed_run(path=exporter.OBSERVED_WORKFLOW_PATHS["smoke"]),
+                "main-branch Cat8/Cat9",
+            ),
+            (
+                completed_run(
+                    path=lab_path,
+                    event="pull_request",
+                    head_branch="main",
+                ),
+                "main-branch Cat8/Cat9",
+            ),
+            (
+                completed_run(
+                    path=lab_path,
+                    event="workflow_dispatch",
+                    head_branch="feature/untrusted",
+                ),
+                "main-branch Cat8/Cat9",
+            ),
+        )
+        for run, message in cases:
+            with self.subTest(message=message):
+                sleep = mock.Mock()
+                with self.assertRaisesRegex(exporter.ExportError, message):
+                    exporter.load_completed_run(
+                        REPOSITORY,
+                        RUN_ID,
+                        ATTEMPT,
+                        token="not-logged",
+                        api_call=lambda path, run=run: run,
+                        trusted_lab_dispatch=True,
+                        sleep=sleep,
+                    )
+                sleep.assert_not_called()
+
+    def test_trusted_lab_dispatch_rejects_unexpected_status_before_wait(self) -> None:
+        lab = completed_run(
+            path=exporter.OBSERVED_WORKFLOW_PATHS["Lab CI (Cat8kv)"],
+            event="workflow_dispatch",
+            head_branch="main",
+            status="stale",
+        )
+        sleep = mock.Mock()
+        with self.assertRaisesRegex(exporter.ExportError, "unexpected.*status"):
+            exporter.load_completed_run(
+                REPOSITORY,
+                RUN_ID,
+                ATTEMPT,
+                token="not-logged",
+                api_call=lambda path: lab,
+                trusted_lab_dispatch=True,
+                sleep=sleep,
+            )
+        sleep.assert_not_called()
+
+    def test_observer_workflow_has_exclusive_explicit_lab_dispatch(self) -> None:
         workflow = (SCRIPT_DIR.parent / "workflows" / "cicd-otel-export.yaml").read_text()
+        workflow_run_trigger = workflow.split("  workflow_dispatch:", 1)[0]
+        self.assertNotIn("- Lab CI (Cat8kv)", workflow_run_trigger)
+        self.assertNotIn("- Lab CI (Cat9k)", workflow_run_trigger)
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("observed_run_id:", workflow)
+        self.assertIn("observed_run_attempt:", workflow)
+        self.assertEqual(workflow.count("required: true"), 2)
+        self.assertIn("github.ref == 'refs/heads/main'", workflow)
+        self.assertIn("github.actor == 'github-actions[bot]'", workflow)
         self.assertIn(
-            "OBSERVED_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}",
+            "OBSERVED_RUN_ID: ${{ github.event.workflow_run.id || inputs.observed_run_id }}",
             workflow,
         )
+        self.assertIn(
+            "OBSERVED_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt || inputs.observed_run_attempt }}",
+            workflow,
+        )
+        self.assertIn('if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]', workflow)
+        self.assertIn("observer_mode+=(--trusted-lab-dispatch)", workflow)
         self.assertIn('--run-attempt "$OBSERVED_RUN_ATTEMPT"', workflow)
 
     def test_release_and_pr_metadata_use_compatible_api_versions(self) -> None:

@@ -973,6 +973,13 @@ class DispatcherTests(unittest.TestCase):
             wrapper = (
                 repository_root / ".github/workflows" / workflow_name
             ).read_text()
+            report_marker = "\n  report:\n"
+            self.assertEqual(wrapper.count(report_marker), 1)
+            report = wrapper.split(report_marker, 1)[1]
+            observer_marker = "      - name: Dispatch trusted OpenTelemetry observer\n"
+            self.assertEqual(report.count(observer_marker), 1)
+            observer = report.split(observer_marker, 1)[1]
+
             self.assertIn(f"STATUS_CONTEXT: {expected_context}", wrapper)
             self.assertIn("expected_head_sha:", wrapper)
             self.assertIn("expected_base_sha:", wrapper)
@@ -1001,6 +1008,44 @@ class DispatcherTests(unittest.TestCase):
             self.assertIn("checks: read", wrapper)
             self.assertIn("pull-requests: write", wrapper)
             self.assertNotIn("issues: write", wrapper)
+            self.assertIn("\npermissions: {}\n", wrapper)
+            self.assertEqual(wrapper.count("actions: write"), 1)
+            self.assertIn(
+                "    permissions:\n      actions: write\n",
+                report,
+            )
+            self.assertTrue(observer.startswith("        if: always()\n"))
+            self.assertNotIn("\n      - ", observer)
+            self.assertIn(
+                '[[ "$GITHUB_REF" == "refs/heads/main" ]]',
+                observer,
+            )
+            self.assertIn(
+                '[[ "$GITHUB_RUN_ID" =~ ^[1-9][0-9]*$ ]]',
+                observer,
+            )
+            self.assertIn(
+                '[[ "$GITHUB_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]',
+                observer,
+            )
+            self.assertIn(
+                '"repos/${GITHUB_REPOSITORY}/actions/workflows/'
+                'cicd-otel-export.yaml/dispatches"',
+                observer,
+            )
+            self.assertIn("gh api -X POST", observer)
+            self.assertIn("            -f ref=main \\", observer)
+            self.assertEqual(observer.count("inputs["), 2)
+            observer_inputs = re.findall(
+                r'-f "inputs\[([^]]+)\]=([^"\n]+)"', observer
+            )
+            self.assertEqual(
+                observer_inputs,
+                [
+                    ("observed_run_id", "$GITHUB_RUN_ID"),
+                    ("observed_run_attempt", "$GITHUB_RUN_ATTEMPT"),
+                ],
+            )
             self.assertEqual(wrapper.count("dispatch-approved-lab-ci.py verify"), 2)
             self.assertIn("Checkout trusted gate at the verified base", wrapper)
             self.assertIn("ref: ${{ needs.prepare.outputs.base_sha }}", wrapper)

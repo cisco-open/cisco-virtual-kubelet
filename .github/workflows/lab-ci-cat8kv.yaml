@@ -352,7 +352,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
-      actions: read
+      actions: write
       contents: read
       pull-requests: write
       statuses: write
@@ -416,3 +416,18 @@ jobs:
           MERGE_SHA: ${{ needs.prepare.outputs.merge_sha }}
           PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
         run: python3 .github/scripts/post-pr-report.py
+
+      - name: Dispatch trusted OpenTelemetry observer
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$GITHUB_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$GITHUB_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]
+          gh api -X POST \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/cicd-otel-export.yaml/dispatches" \
+            -f ref=main \
+            -f "inputs[observed_run_id]=$GITHUB_RUN_ID" \
+            -f "inputs[observed_run_attempt]=$GITHUB_RUN_ATTEMPT"
