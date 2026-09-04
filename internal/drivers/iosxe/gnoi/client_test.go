@@ -107,24 +107,31 @@ func (f *fakeFile) Get(_ *filepb.GetRequest, stream grpc.ServerStreamingServer[f
 
 type fakeCert struct {
 	certpb.UnimplementedCertificateManagementServer
-	getResp         *certpb.GetCertificatesResponse
-	getErr          error
-	canGenResponse  *certpb.CanGenerateCSRResponse
-	installRequest  *certpb.InstallCertificateRequest
-	installResponse *certpb.InstallCertificateResponse
-	installErr      error
-	installFinalErr error
-	installEOFSeen  bool
-	installWaitEOF  bool
-	installCSR      []byte
-	installRequests []*certpb.InstallCertificateRequest
+	getResp               *certpb.GetCertificatesResponse
+	getErr                error
+	canGenResponse        *certpb.CanGenerateCSRResponse
+	canGenRequest         *certpb.CanGenerateCSRRequest
+	installRequest        *certpb.InstallCertificateRequest
+	installResponse       *certpb.InstallCertificateResponse
+	installErr            error
+	installFinalErr       error
+	installEOFSeen        bool
+	installRejectEarlyEOF bool
+	installEOFEarly       bool
+	installResponseSent   chan struct{}
+	installRelease        chan struct{}
+	installFinished       chan struct{}
+	installCSR            []byte
+	installCSRType        *certpb.CertificateType
+	installRequests       []*certpb.InstallCertificateRequest
 }
 
 func (f *fakeCert) GetCertificates(context.Context, *certpb.GetCertificatesRequest) (*certpb.GetCertificatesResponse, error) {
 	return f.getResp, f.getErr
 }
 
-func (f *fakeCert) CanGenerateCSR(context.Context, *certpb.CanGenerateCSRRequest) (*certpb.CanGenerateCSRResponse, error) {
+func (f *fakeCert) CanGenerateCSR(_ context.Context, request *certpb.CanGenerateCSRRequest) (*certpb.CanGenerateCSRResponse, error) {
+	f.canGenRequest = request
 	if f.canGenResponse == nil {
 		return &certpb.CanGenerateCSRResponse{CanGenerate: true}, nil
 	}
@@ -132,6 +139,9 @@ func (f *fakeCert) CanGenerateCSR(context.Context, *certpb.CanGenerateCSRRequest
 }
 
 func (f *fakeCert) Install(stream grpc.BidiStreamingServer[certpb.InstallCertificateRequest, certpb.InstallCertificateResponse]) error {
+	if f.installFinished != nil {
+		defer close(f.installFinished)
+	}
 	request, err := stream.Recv()
 	if err != nil {
 		return err
@@ -142,10 +152,14 @@ func (f *fakeCert) Install(stream grpc.BidiStreamingServer[certpb.InstallCertifi
 		return f.installErr
 	}
 	if request.GetGenerateCsr() != nil {
+		csrType := certpb.CertificateType_CT_X509
+		if f.installCSRType != nil {
+			csrType = *f.installCSRType
+		}
 		if err := stream.Send(&certpb.InstallCertificateResponse{
 			InstallResponse: &certpb.InstallCertificateResponse_GeneratedCsr{
 				GeneratedCsr: &certpb.GenerateCSRResponse{
-					Csr: &certpb.CSR{Type: certpb.CertificateType_CT_X509, Csr: f.installCSR},
+					Csr: &certpb.CSR{Type: csrType, Csr: f.installCSR},
 				},
 			},
 		}); err != nil {
@@ -158,14 +172,23 @@ func (f *fakeCert) Install(stream grpc.BidiStreamingServer[certpb.InstallCertifi
 		f.installRequest = request
 		f.installRequests = append(f.installRequests, request)
 	}
-	if f.installWaitEOF {
-		if _, err := stream.Recv(); err != io.EOF {
-			if err == nil {
-				return status.Error(codes.InvalidArgument, "expected client half-close before response")
+	var eofBeforeResponse <-chan error
+	if f.installRejectEarlyEOF {
+		received := make(chan error, 1)
+		go func() {
+			_, recvErr := stream.Recv()
+			received <- recvErr
+		}()
+		eofBeforeResponse = received
+		select {
+		case recvErr := <-received:
+			if errors.Is(recvErr, io.EOF) {
+				f.installEOFEarly = true
+				return status.Error(codes.Aborted, "client half-closed before LoadCertificateResponse")
 			}
-			return err
+			return recvErr
+		case <-time.After(100 * time.Millisecond):
 		}
-		f.installEOFSeen = true
 	}
 	response := f.installResponse
 	if response == nil {
@@ -178,7 +201,18 @@ func (f *fakeCert) Install(stream grpc.BidiStreamingServer[certpb.InstallCertifi
 	if err := stream.Send(response); err != nil {
 		return err
 	}
-	if f.installWaitEOF {
+	if f.installResponseSent != nil {
+		close(f.installResponseSent)
+	}
+	if f.installRelease != nil {
+		<-f.installRelease
+		return f.installFinalErr
+	}
+	if eofBeforeResponse != nil {
+		if recvErr := <-eofBeforeResponse; !errors.Is(recvErr, io.EOF) {
+			return recvErr
+		}
+		f.installEOFSeen = true
 		return f.installFinalErr
 	}
 	if _, err := stream.Recv(); err != io.EOF {

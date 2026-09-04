@@ -250,7 +250,7 @@ func TestSetupGNOIRejectsInvalidPerDeviceTransport(t *testing.T) {
 }
 
 func TestLoadGNOIProvisioningBundleIsOptInAndScopesTrustToGNOI(t *testing.T) {
-	directory, leaf := writeGNOIProvisioningFiles(t, "router.example.test")
+	directory, leaf, _ := writeGNOIProvisioningFiles(t, "router.example.test")
 	spec := &ciskov1.DeviceSpec{
 		Address: "router.example.test",
 		GNOI: &ciskov1.GNOIConfig{
@@ -296,6 +296,33 @@ func TestLoadGNOIProvisioningBundleIsOptInAndScopesTrustToGNOI(t *testing.T) {
 	}
 	if legacyTLS.RootCAs != nil {
 		t.Fatal("omitted provisioning block mutated the legacy TLS config")
+	}
+}
+
+func TestLoadGNOIProvisioningBundleTargetCSRDoesNotRequireLeafPrivateKey(t *testing.T) {
+	directory, _, caKeyPEM := writeGNOIProvisioningFiles(t, "router.example.test")
+	if err := os.WriteFile(filepath.Join(directory, gNOIProvisioningCAKeyFile), caKeyPEM, 0o600); err != nil {
+		t.Fatalf("write %s: %v", gNOIProvisioningCAKeyFile, err)
+	}
+	if err := os.Remove(filepath.Join(directory, gNOIProvisioningKeyFile)); err != nil {
+		t.Fatalf("remove external leaf key: %v", err)
+	}
+	spec := &ciskov1.DeviceSpec{
+		Address: "router.example.test",
+		GNOI: &ciskov1.GNOIConfig{
+			TransportSecurity: ciskov1.GNOITransportSecurityTLS,
+			CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
+				CertificateID:         "cvk-gnoi",
+				ReplaceTargetCABundle: true,
+			},
+		},
+	}
+	bundle, err := loadGNOIProvisioningBundle(spec, true, &tls.Config{}, directory)
+	if err != nil {
+		t.Fatalf("load target-CSR provisioning bundle without tls.key: %v", err)
+	}
+	if bundle == nil {
+		t.Fatal("target-CSR provisioning bundle is nil")
 	}
 }
 
@@ -471,6 +498,55 @@ func TestPooledGNOIProviderIndeterminateInstallForcesReconnect(t *testing.T) {
 	}
 }
 
+func TestPooledGNOIProviderAlreadyExistingUnlistedIDIsNotResubmitted(t *testing.T) {
+	bundle := testGNOIProvisioningBundle(t)
+	first := &gnoi.Client{}
+	alreadyExists := &gnoi.ErrCertificateInstallIndeterminate{
+		CertificateID: bundle.CertificateID(),
+		Cause:         status.Error(codes.AlreadyExists, "trustpoint already exists"),
+	}
+	installCalls := 0
+	p := &pooledGNOIProvider{
+		client:             first,
+		provisioningBundle: bundle,
+		provisioningState: func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) (gnoi.ProvisioningCertificateState, error) {
+			return gnoi.ProvisioningCertificateMissing, nil
+		},
+		installProvisioningCertificate: func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) error {
+			installCalls++
+			return alreadyExists
+		},
+	}
+
+	err := p.provisionGNOICertificate(context.Background(), first)
+	var progress *gnoi.ErrProvisioningInProgress
+	if !errors.As(err, &progress) {
+		t.Fatalf("first error=%T %v, want ErrProvisioningInProgress", err, err)
+	}
+	if installCalls != 1 || p.client != nil {
+		t.Fatalf("after first attempt installCalls=%d client=%p, want one attempt and reset client", installCalls, p.client)
+	}
+
+	second := &gnoi.Client{}
+	p.client = second
+	err = p.provisionGNOICertificate(context.Background(), second)
+	if err == nil || !strings.Contains(err.Error(), "reported as already existing") || !strings.Contains(err.Error(), "new unused certificateID") {
+		t.Fatalf("second error=%v, want stale/reserved certificate ID guidance", err)
+	}
+	if installCalls != 1 {
+		t.Fatalf("Install was resubmitted %d times after AlreadyExists, want one total attempt", installCalls)
+	}
+	if p.GNOICertificateProvisioningInProgress() {
+		t.Fatal("provider remained transient after the AlreadyExists state recheck")
+	}
+
+	// Keep the condition sticky so another OS.Verify cannot restart the loop.
+	err = p.provisionGNOICertificate(context.Background(), second)
+	if err == nil || installCalls != 1 {
+		t.Fatalf("later retry error=%v installCalls=%d, want no resubmission", err, installCalls)
+	}
+}
+
 func TestTransientGNOIProvisioningErrors(t *testing.T) {
 	for _, tt := range []struct {
 		name string
@@ -478,6 +554,7 @@ func TestTransientGNOIProvisioningErrors(t *testing.T) {
 		want bool
 	}{
 		{name: "unavailable", err: status.Error(codes.Unavailable, "listener restarting"), want: true},
+		{name: "aborted", err: status.Error(codes.Aborted, "IOS XE certificate event busy"), want: true},
 		{name: "deadline", err: context.DeadlineExceeded, want: true},
 		{name: "authentication", err: status.Error(codes.Unauthenticated, "bad credentials")},
 		{name: "plain error", err: errors.New("bad certificate")},
@@ -492,7 +569,7 @@ func TestTransientGNOIProvisioningErrors(t *testing.T) {
 
 func testGNOIProvisioningBundle(t *testing.T) *gnoi.ProvisioningBundle {
 	t.Helper()
-	directory, _ := writeGNOIProvisioningFiles(t, "router.example.test")
+	directory, _, _ := writeGNOIProvisioningFiles(t, "router.example.test")
 	spec := &ciskov1.DeviceSpec{
 		Address: "router.example.test",
 		GNOI: &ciskov1.GNOIConfig{
@@ -510,7 +587,7 @@ func testGNOIProvisioningBundle(t *testing.T) *gnoi.ProvisioningBundle {
 	return bundle
 }
 
-func writeGNOIProvisioningFiles(t *testing.T, serverName string) (string, *x509.Certificate) {
+func writeGNOIProvisioningFiles(t *testing.T, serverName string) (string, *x509.Certificate, []byte) {
 	t.Helper()
 	now := time.Now()
 	caKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -541,16 +618,23 @@ func writeGNOIProvisioningFiles(t *testing.T, serverName string) (string, *x509.
 	}
 	leafTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(2),
-		Subject:      pkix.Name{CommonName: serverName},
-		NotBefore:    now.Add(-time.Hour),
-		NotAfter:     now.Add(24 * time.Hour),
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		Subject: pkix.Name{
+			CommonName:         serverName,
+			Country:            []string{"US"},
+			Province:           []string{"California"},
+			Organization:       []string{"Cisco"},
+			OrganizationalUnit: []string{"gNOI"},
+		},
+		NotBefore:   now.Add(-time.Hour),
+		NotAfter:    now.Add(24 * time.Hour),
+		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}
 	if ip := net.ParseIP(serverName); ip != nil {
 		leafTemplate.IPAddresses = []net.IP{ip}
 	} else {
 		leafTemplate.DNSNames = []string{serverName}
+		leafTemplate.IPAddresses = []net.IP{net.ParseIP("192.0.2.10")}
 	}
 	leafDER, err := x509.CreateCertificate(rand.Reader, leafTemplate, ca, &leafKey.PublicKey, caKey)
 	if err != nil {
@@ -572,5 +656,5 @@ func writeGNOIProvisioningFiles(t *testing.T, serverName string) (string, *x509.
 			t.Fatalf("write %s: %v", name, err)
 		}
 	}
-	return directory, leaf
+	return directory, leaf, pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(caKey)})
 }

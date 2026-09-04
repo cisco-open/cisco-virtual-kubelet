@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -142,10 +143,6 @@ func loadGNOIProvisioningBundle(
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCertFile, err)
 	}
-	privateKeyPEM, err := os.ReadFile(filepath.Join(directory, gNOIProvisioningKeyFile))
-	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", gNOIProvisioningKeyFile, err)
-	}
 	caBundlePEM, err := os.ReadFile(filepath.Join(directory, gNOIProvisioningCAFile))
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCAFile, err)
@@ -154,17 +151,23 @@ func loadGNOIProvisioningBundle(
 	if caKeyErr != nil && !errors.Is(caKeyErr, os.ErrNotExist) {
 		return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCAKeyFile, caKeyErr)
 	}
+	if caKeyErr == nil && len(bytes.TrimSpace(caKeyPEM)) == 0 {
+		return nil, fmt.Errorf("read %s: file is empty", gNOIProvisioningCAKeyFile)
+	}
 	var bundle *gnoi.ProvisioningBundle
-	if len(caKeyPEM) > 0 {
+	if caKeyErr == nil {
 		bundle, err = gnoi.NewProvisioningBundleWithSigningKey(
 			provisioning.CertificateID,
 			spec.Address,
 			leafPEM,
-			privateKeyPEM,
 			caBundlePEM,
 			caKeyPEM,
 		)
 	} else {
+		privateKeyPEM, readErr := os.ReadFile(filepath.Join(directory, gNOIProvisioningKeyFile))
+		if readErr != nil {
+			return nil, fmt.Errorf("read %s: %w", gNOIProvisioningKeyFile, readErr)
+		}
 		bundle, err = gnoi.NewProvisioningBundle(
 			provisioning.CertificateID,
 			spec.Address,
@@ -177,9 +180,10 @@ func loadGNOIProvisioningBundle(
 		return nil, err
 	}
 
-	// The CA installed by Certificate.Install becomes the trust anchor for the
-	// restarted gNXI listener. Add it only to this gNOI client's TLS config;
-	// shared RESTCONF, NETCONF and gNMI TLS settings remain untouched.
+	// Add only the requested identity's verified issuer-to-root chain to this
+	// gNOI client's TLS config. Including the issuer lets the client reconnect
+	// even if IOS XE serves only its new leaf certificate; shared RESTCONF,
+	// NETCONF and gNMI TLS settings remain untouched.
 	roots := tlsCfg.RootCAs
 	if roots == nil {
 		roots, err = x509.SystemCertPool()
@@ -187,7 +191,7 @@ func loadGNOIProvisioningBundle(
 			roots = x509.NewCertPool()
 		}
 	}
-	if !roots.AppendCertsFromPEM(bundle.RootCAPEM()) {
+	if !roots.AppendCertsFromPEM(bundle.ClientTrustCAPEM()) {
 		return nil, fmt.Errorf("parse %s: no CA certificates found", gNOIProvisioningCAFile)
 	}
 	tlsCfg.RootCAs = roots
@@ -269,6 +273,7 @@ type pooledGNOIProvider struct {
 	provisionMu        sync.Mutex
 	provisioningBundle *gnoi.ProvisioningBundle
 	matchingObserved   bool
+	unlistedExistingID error
 	provisioningActive atomic.Bool
 
 	// Test seams default to the corresponding gnoi.Client methods.
@@ -345,6 +350,14 @@ func (p *pooledGNOIProvider) provisionGNOICertificate(ctx context.Context, clien
 
 	switch state {
 	case gnoi.ProvisioningCertificateMissing:
+		if p.unlistedExistingID != nil {
+			p.provisioningActive.Store(false)
+			return fmt.Errorf(
+				"gnoi certificate ID %q was reported as already existing by IOS XE but is not visible through Cert.GetCertificates; remove or rebind the stale trustpoint under change control, or choose a new unused certificateID: %w",
+				p.provisioningBundle.CertificateID(),
+				p.unlistedExistingID,
+			)
+		}
 		installFn := p.installProvisioningCertificate
 		if installFn == nil {
 			installFn = func(ctx context.Context, client *gnoi.Client, bundle *gnoi.ProvisioningBundle) error {
@@ -361,12 +374,21 @@ func (p *pooledGNOIProvider) provisionGNOICertificate(ctx context.Context, clien
 			p.provisioningActive.Store(false)
 			return fmt.Errorf("install IOS XE provisioning certificate: %w", installErr)
 		}
+		if status.Code(installErr) == codes.AlreadyExists {
+			// Install is create-only. Reconnect and query once in case the target
+			// committed the certificate before reporting this status, but never
+			// submit the same ID again if it remains hidden/reserved.
+			p.unlistedExistingID = installErr
+		} else {
+			p.unlistedExistingID = nil
+		}
 		p.matchingObserved = false
 		p.provisioningActive.Store(true)
 		p.ResetGNOIClient(ctx)
 		return p.provisioningInProgress(installErr)
 
 	case gnoi.ProvisioningCertificateMatching:
+		p.unlistedExistingID = nil
 		if !p.matchingObserved {
 			// The certificate can become visible before the restarted service has
 			// bound it. Give IOS XE one fresh connection before declaring the
@@ -393,7 +415,7 @@ func isTransientGNOIProvisioningError(err error) bool {
 		return true
 	}
 	switch status.Code(err) {
-	case codes.Unavailable, codes.DeadlineExceeded:
+	case codes.Aborted, codes.Unavailable, codes.DeadlineExceeded:
 		return true
 	default:
 		return false

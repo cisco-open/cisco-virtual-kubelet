@@ -558,9 +558,32 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			volumes = append(volumes, corev1.Volume{
 				Name: gnoiProvisioningVolumeName,
 				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName:  provisioning.SecretRef.Name,
+					Projected: &corev1.ProjectedVolumeSource{
 						DefaultMode: ptr.To[int32](0o440),
+						Sources: []corev1.VolumeProjection{
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{Name: provisioning.SecretRef.Name},
+									Items: []corev1.KeyToPath{
+										{Key: "tls.crt", Path: "tls.crt"},
+										{Key: "ca.crt", Path: "ca.crt"},
+									},
+								},
+							},
+							{
+								// CSR mode needs ca.key, while the compatibility
+								// external-key mode needs tls.key. Make both optional
+								// here and let the worker validate the selected mode.
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{Name: provisioning.SecretRef.Name},
+									Optional:             ptr.To(true),
+									Items: []corev1.KeyToPath{
+										{Key: "ca.key", Path: "ca.key"},
+										{Key: "tls.key", Path: "tls.key"},
+									},
+								},
+							},
+						},
 					},
 				},
 			})

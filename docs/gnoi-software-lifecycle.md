@@ -59,6 +59,12 @@ gnxi secure-password-auth
 ! The default secure port is 9339.
 ```
 
+That example assumes an identity is already bound to the secure trustpoint. For
+the initial gNOI Certificate-service bootstrap, enable `gnxi secure-init`
+before CVK sends Install. IOS-XE then binds the first newly installed
+certificate ID as the service trustpoint; verify the resulting binding with
+`show gnxi state detail`.
+
 Do not add `gnxi secure-client-auth` for password-only authentication. That
 command asks IOS-XE to authenticate a client certificate and is appropriate
 only when you have deliberately configured mutual TLS and mounted a client
@@ -123,8 +129,10 @@ gNXI service into the `Provisioned` state required by `OS.Verify`,
 `FailedPrecondition: Device has not been provisioned`, CVK can perform an
 explicit, gNOI-scoped certificate bootstrap.
 
-Provisioning is opt-in. Create a dedicated same-namespace Secret containing a
-pre-issued device identity and the complete desired target CA bundle:
+Provisioning is opt-in. On IOS-XE 17.18.04, use the target-generated CSR flow:
+IOS-XE creates the device private key, CVK signs the returned CSR with the
+configured CA, and CVK returns the signed device certificate. A `ca.key` entry
+in the dedicated same-namespace Secret selects this flow:
 
 ```yaml
 apiVersion: v1
@@ -135,12 +143,12 @@ type: Opaque
 stringData:
   tls.crt: |
     -----BEGIN CERTIFICATE-----
-    <CA-signed device leaf certificate>
+    <CA-signed device certificate used as the CSR profile template>
     -----END CERTIFICATE-----
-  tls.key: |
-    -----BEGIN PRIVATE KEY-----
-    <matching unencrypted RSA private key>
-    -----END PRIVATE KEY-----
+  ca.key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    <unencrypted key for the CA that issued tls.crt>
+    -----END RSA PRIVATE KEY-----
   ca.crt: |
     -----BEGIN CERTIFICATE-----
     <any independent gNXI/gNMI peer-trust CA that must be preserved>
@@ -149,6 +157,17 @@ stringData:
     <device leaf issuer chain; intermediate first and root last>
     -----END CERTIFICATE-----
 ```
+
+In CSR mode, `tls.crt` is a validated profile template; its private key and
+public key are not installed on IOS-XE. It must be a currently valid server
+certificate whose SAN matches `spec.address`, and it must contain the CSR values
+IOS-XE 17.18.04 expects: country (`C`), state/province (`ST`), organization
+(`O`), organizational unit (`OU`), and an IP SAN for the device management
+address. CVK uses the template Common Name (`CN`) when present and falls back
+to `spec.address` when it is absent. When `spec.address` is itself an IP address,
+CVK can also use that value for the CSR IP address. The unencrypted RSA `ca.key`
+must match the CA certificate that issued `tls.crt`; that issuer must be present
+in `ca.crt`.
 
 Reference it only from the gNOI block:
 
@@ -165,24 +184,24 @@ spec:
         name: cat9000-1-gnoi-identity
 ```
 
-The leaf certificate must contain a DNS or IP SAN matching `spec.address`, be
-currently valid, and use a matching RSA key of at least 2048 bits. Every
-certificate in `ca.crt` must be a CA, and the bundle must contain a complete
-chain that validates the leaf. It must also be the **complete desired
-replacement** for IOS-XE's target-side gNXI/gNMI CA bundle, including every CA
-needed to authenticate existing mTLS clients. Follow the gNOI ordering rule:
-independent roots first, followed by each certificate chain with its root last.
-The required `replaceTargetCABundle: true` is an explicit acknowledgement of
-this device-side replacement. The controller mounts the Secret read-only only
-in the device's VK pod; certificate and key bytes are not copied into the
+CVK requests and validates a target-generated RSA key of at least 2048 bits.
+Every certificate in `ca.crt` must be a CA, and the bundle must contain a
+complete chain that validates the template. It must also be the **complete
+desired replacement** for IOS-XE's target-side gNXI/gNMI CA bundle, including
+every CA needed to authenticate existing mTLS clients. Follow the gNOI ordering
+rule: independent roots first, followed by each certificate chain with its root
+last. The required `replaceTargetCABundle: true` is an explicit acknowledgement
+of this device-side replacement. The controller mounts the Secret read-only
+only in the device's VK pod; certificate and key bytes are not copied into the
 ConfigMap, environment, status, events, or logs.
 
 CVK activates this path only after the exact IOS-XE not-provisioned response.
 It first queries the Certificate service, installs the identity only when the
 configured certificate ID is absent, discards the pre-provisioning connection,
-and lets reconciliation reconnect before retrying `OS.Verify`. An existing ID
-with the same leaf is treated idempotently. An existing ID with a different
-leaf fails closed: CVK never rotates, revokes, or overwrites a certificate
+and lets reconciliation reconnect before retrying `OS.Verify`. In CSR mode,
+an existing ID is accepted only when its installed certificate matches the
+validated template profile and chains to the configured CA. A conflicting ID
+fails closed: CVK never rotates, revokes, or overwrites a certificate
 implicitly. Automatic certificate rotation is outside this bootstrap flow;
 rotate an already-provisioned gNXI identity out of band (or through a future,
 explicit Rotate workflow) as a separately reviewed operation.
@@ -192,19 +211,21 @@ service is already provisioned. Keep the Secret consistent with the installed
 identity; changing its CA can also make the next gNOI connection reject the
 certificate currently presented by IOS-XE.
 
-Only the verified root of the device leaf's chain is added to the gNOI
-client's trust roots, so the post-install connection can validate the new
-device identity without changing the TLS configuration used by RESTCONF,
-NETCONF, app hosting, or telemetry.
+Only the verified issuer-to-root chain for the device leaf is added to the
+gNOI client's trust pool. This lets the post-install connection validate the
+new identity even when IOS-XE serves only the leaf, without trusting unrelated
+CAs from the replacement bundle or changing the TLS configuration used by
+RESTCONF, NETCONF, app hosting, or telemetry.
 The initial connection must still trust the certificate IOS-XE presents before
 provisioning through `spec.tls.caFile`; `insecureSkipVerify: true` is suitable
 only for a controlled lab bootstrap.
 
-CVK uses the external-key form allowed by gNOI `LoadCertificate` so a
-pre-issued leaf and key can be supplied. Cisco's IOS-XE 17.18 documentation
-demonstrates the target-generated CSR flow, not this external-key variant;
-treat external-key support as requiring a real-device IOS-XE 17.18.04
-acceptance test before production rollout.
+For compatibility, omitting `ca.key` selects the external-key form of gNOI
+`LoadCertificate`; that mode additionally requires `tls.key` to be an
+unencrypted RSA key matching `tls.crt`. IOS-XE 17.18.04 switches have been
+observed timing out while processing that variant. The `ca.key`
+target-generated CSR flow is therefore the recommended path for 17.18.04;
+retain external-key mode only for platforms on which it has been validated.
 
 !!! warning "IOS-XE gNXI service restart"
     CVK confines its configuration and credentials to gNOI, but IOS-XE shares
@@ -217,10 +238,13 @@ acceptance test before production rollout.
 
 Before provisioning, use `GNOICertGet` to verify secure connectivity and
 password metadata because the Certificate service remains available in the
-default state. Use `GNOIOSVerify` only after provisioning is configured or
-`show gnxi state detail` reports `State: Provisioned` and the OS service is
-operational. Controller-managed provisioning requires the per-device worker;
-the aggregated config-only topology does not run gNOI lifecycle reconcilers.
+default state. IOS-XE must also be placed in certificate-bootstrap mode with
+`gnxi secure-init`; secure password authentication alone does not arrange for
+the first installed certificate ID to become the service identity. Use
+`GNOIOSVerify` only after provisioning is configured or `show gnxi state
+detail` reports `State: Provisioned` and the OS service is operational.
+Controller-managed provisioning requires the per-device worker; the aggregated
+config-only topology does not run gNOI lifecycle reconcilers.
 
 ## Connection Model
 

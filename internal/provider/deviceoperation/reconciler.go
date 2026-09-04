@@ -367,7 +367,7 @@ func gnoiProvisioningRestartPending(provider gnoi.Provider, kind opsv1alpha1.Ope
 		return true
 	}
 	switch grpcstatus.Code(err) {
-	case grpccodes.Unavailable, grpccodes.DeadlineExceeded:
+	case grpccodes.Aborted, grpccodes.Unavailable, grpccodes.DeadlineExceeded:
 		return true
 	default:
 		return false

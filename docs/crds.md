@@ -89,7 +89,9 @@ spec:
     transportSecurity: tls
     port: 9339
     # Optional, explicit bootstrap for IOS-XE OS service provisioning.
-    # The same-namespace Secret contains tls.crt, tls.key, and ca.crt.
+    # For the recommended IOS-XE 17.18.04 target-generated CSR flow, the
+    # same-namespace Secret contains tls.crt, ca.key, and ca.crt. Omitting
+    # ca.key selects the external-key compatibility flow and requires tls.key.
     certificateProvisioning:
       certificateID: cvk-gnoi-os
       # Required acknowledgement: ca.crt is the complete desired replacement

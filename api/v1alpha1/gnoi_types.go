@@ -62,9 +62,10 @@ type GNOIConfig struct {
 
 	// CertificateProvisioning opts this device into gNOI Certificate Install
 	// when OS.Verify reports IOS XE's not-provisioned state. The referenced
-	// Secret is mounted only into this device's VK pod and must contain tls.crt,
-	// tls.key, and ca.crt. Certificate material is never copied into the rendered
-	// device ConfigMap.
+	// Secret is mounted only into this device's VK pod. IOS XE's target-generated
+	// CSR flow uses tls.crt, ca.crt, and ca.key; the external-key compatibility
+	// flow uses tls.crt, tls.key, and ca.crt. Certificate material is never copied
+	// into the rendered device ConfigMap.
 	// +kubebuilder:validation:Optional
 	CertificateProvisioning *GNOICertificateProvisioning `json:"certificateProvisioning,omitempty" mapstructure:"certificateProvisioning,omitempty"`
 }
@@ -82,10 +83,12 @@ type GNOICertificateProvisioning struct {
 	// +kubebuilder:validation:Pattern=^[A-Za-z0-9][A-Za-z0-9_.-]*$
 	CertificateID string `json:"certificateID" mapstructure:"certificateID"`
 
-	// SecretRef names a Secret in the CiscoDevice namespace. It must contain
-	// tls.crt, tls.key, and ca.crt keys. ca.crt is the complete desired target
-	// CA replacement bundle, not only the leaf's issuer chain. The kubelet
-	// projects those keys into the per-device worker as read-only files.
+	// SecretRef names a Secret in the CiscoDevice namespace. The recommended IOS
+	// XE target-generated CSR flow requires tls.crt, ca.crt, and ca.key. ca.key
+	// must match the verified tls.crt issuer. If ca.key is absent, tls.key is
+	// required for the external-key compatibility flow. ca.crt is the complete
+	// desired target CA replacement bundle, not only the leaf's issuer chain. The
+	// kubelet projects only these recognized keys into the worker read-only.
 	// +kubebuilder:validation:Required
 	SecretRef GNOIProvisioningSecretReference `json:"secretRef" mapstructure:"secretRef"`
 

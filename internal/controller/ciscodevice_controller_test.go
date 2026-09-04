@@ -798,10 +798,11 @@ func TestReconcile_GNOICertificateProvisioningMountsDedicatedSecret(t *testing.T
 			ResourceVersion: "77",
 		},
 		Data: map[string][]byte{
-			"tls.crt": []byte("leaf-certificate-bytes"),
-			"tls.key": []byte("private-key-bytes"),
-			"ca.key":  []byte("ca-private-key-bytes"),
-			"ca.crt":  []byte("ca-certificate-bytes"),
+			"tls.crt":   []byte("leaf-certificate-bytes"),
+			"tls.key":   []byte("private-key-bytes"),
+			"ca.key":    []byte("ca-private-key-bytes"),
+			"ca.crt":    []byte("ca-certificate-bytes"),
+			"unrelated": []byte("must-not-be-projected"),
 		},
 	}
 	r := reconcilerFor(t, device, secret)
@@ -836,25 +837,43 @@ func TestReconcile_GNOICertificateProvisioningMountsDedicatedSecret(t *testing.T
 	if len(deploy.Spec.Template.Spec.Volumes) != 4 {
 		t.Fatalf("volumes = %d, want 4: %+v", len(deploy.Spec.Template.Spec.Volumes), deploy.Spec.Template.Spec.Volumes)
 	}
-	var projected *corev1.SecretVolumeSource
+	var projected *corev1.ProjectedVolumeSource
 	for _, volume := range deploy.Spec.Template.Spec.Volumes {
 		if volume.Name == gnoiProvisioningVolumeName {
-			projected = volume.Secret
+			projected = volume.Projected
 			break
 		}
 	}
 	if projected == nil {
-		t.Fatalf("missing %q Secret volume", gnoiProvisioningVolumeName)
-	}
-	if projected.SecretName != secret.Name {
-		t.Errorf("SecretName = %q, want %q", projected.SecretName, secret.Name)
+		t.Fatalf("missing %q projected volume", gnoiProvisioningVolumeName)
 	}
 	if projected.DefaultMode == nil || *projected.DefaultMode != int32(0o440) {
 		t.Errorf("DefaultMode = %v, want 0440", projected.DefaultMode)
 	}
-	if len(projected.Items) != 0 {
-		t.Fatalf("projected items = %+v, want whole Secret projection so optional ca.key is available", projected.Items)
+	if len(projected.Sources) != 2 {
+		t.Fatalf("projected sources = %+v, want required and optional Secret projections", projected.Sources)
 	}
+	required := projected.Sources[0].Secret
+	optional := projected.Sources[1].Secret
+	if required == nil || required.Name != secret.Name || required.Optional != nil {
+		t.Fatalf("required Secret projection = %+v, want non-optional %q", required, secret.Name)
+	}
+	if optional == nil || optional.Name != secret.Name || optional.Optional == nil || !*optional.Optional {
+		t.Fatalf("optional Secret projection = %+v, want optional %q", optional, secret.Name)
+	}
+	assertProjectedKeys := func(label string, items []corev1.KeyToPath, want ...string) {
+		t.Helper()
+		if len(items) != len(want) {
+			t.Fatalf("%s items = %+v, want keys %v", label, items, want)
+		}
+		for i, key := range want {
+			if items[i].Key != key || items[i].Path != key {
+				t.Fatalf("%s item %d = %+v, want key/path %q", label, i, items[i], key)
+			}
+		}
+	}
+	assertProjectedKeys("required", required.Items, "tls.crt", "ca.crt")
+	assertProjectedKeys("optional", optional.Items, "ca.key", "tls.key")
 
 	if got := deploy.Spec.Template.Annotations["cisco.vk/gnoi-provisioning-secret-resource-version"]; got != "77" {
 		t.Errorf("gNOI provisioning Secret resourceVersion annotation = %q, want 77", got)

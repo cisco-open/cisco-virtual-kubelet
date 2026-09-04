@@ -106,7 +106,7 @@ gnoi:
 | `gnoi.transportSecurity` | enum | `auto` | `tls` always uses TLS, `plaintext` uses the legacy insecure listener, and `auto` follows `tls.enabled`. |
 | `gnoi.port` | int (1–65535) | `9339` for TLS, `50052` for plaintext | Overrides the gNOI/gNXI endpoint port without changing the RESTCONF port. |
 | `gnoi.certificateProvisioning.certificateID` | string | — | Opt-in IOS-XE gNOI provisioning identity. Required with `certificateProvisioning`; 1–64 letters, digits, `.`, `_`, or `-`. |
-| `gnoi.certificateProvisioning.secretRef.name` | string | — | Same-namespace Secret containing `tls.crt`, `tls.key`, and the complete desired target `ca.crt` replacement bundle. The controller mounts it only into the per-device VK pod. |
+| `gnoi.certificateProvisioning.secretRef.name` | string | — | Same-namespace Secret containing a `tls.crt` profile template, the complete desired target `ca.crt` replacement bundle, and normally `ca.key` for IOS-XE's target-generated CSR flow. The compatibility external-key flow omits `ca.key` and requires `tls.key`. The controller mounts the Secret only into the per-device VK pod. |
 | `gnoi.certificateProvisioning.replaceTargetCABundle` | bool | — | Must explicitly be `true`. Acknowledges that gNOI Install replaces IOS-XE's shared gNXI/gNMI CA bundle; `ca.crt` must retain every peer CA the target must continue to trust. |
 
 When the `gnoi` block is present and `port` is omitted, CVK uses the default
@@ -127,10 +127,17 @@ gNOI connection.
 `certificateProvisioning` is deliberately narrower than the shared `tls`
 block. It requires explicit `transportSecurity: tls` and is consulted only
 when IOS-XE rejects `OS.Verify` because gNXI has not been provisioned. The
-Secret supplies a pre-issued CA-signed *device/server* identity; it is not the
-optional client identity configured by `tls.certFile` and `tls.keyFile`. CVK
-does not overwrite a different certificate that already uses the requested ID.
-The required replacement acknowledgement prevents a leaf-only issuer chain
+Secret supplies the CA and certificate profile for a *device/server* identity;
+it is not the optional client identity configured by `tls.certFile` and
+`tls.keyFile`. When `ca.key` is present, CVK uses IOS-XE's target-generated CSR
+flow and signs the CSR without exporting the device private key. This is the
+recommended mode for IOS-XE 17.18.04. The `tls.crt` template must contain C,
+ST, O, OU, and an IP SAN (unless `spec.address` itself supplies the IP). Its CN
+is used when present; otherwise CVK uses `spec.address`. The `ca.key` must match
+the template issuer. Omitting `ca.key` retains the
+external-key compatibility flow and makes a matching `tls.key` mandatory.
+CVK does not overwrite a different certificate that already uses the requested
+ID. The required replacement acknowledgement prevents a leaf-only issuer chain
 from silently erasing unrelated gNXI/gNMI peer-trust roots.
 See the [provisioning workflow](gnoi-software-lifecycle.md#provisioning-the-ios-xe-gnoi-os-service)
 for the Secret contract, trust requirements, and IOS-XE gNMI restart caveat.

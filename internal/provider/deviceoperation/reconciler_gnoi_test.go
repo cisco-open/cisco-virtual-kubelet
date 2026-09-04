@@ -274,42 +274,52 @@ func TestReconcileGNOIProvisioningInProgressRequeues(t *testing.T) {
 	}
 }
 
-func TestReconcileGNOIProvisioningRestartUnavailableRequeues(t *testing.T) {
-	op := newOperation("verify-provisioning-restart", func(op *opsv1alpha1.DeviceOperation) {
-		op.Spec.Operation.Kind = opsv1alpha1.OperationKindGNOIOSVerify
-	})
-	scheme := newScheme(t)
-	c := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(op).
-		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
-		Build()
-	r := &Reconciler{
-		Client:     c,
-		DeviceName: "dev1",
-		GNOI: failingGNOI{
-			err:                    status.Error(codes.Unavailable, "gNXI restarting"),
-			provisioningInProgress: true,
-		},
-		Now: func() time.Time { return time.Unix(100, 0).UTC() },
-	}
+func TestReconcileGNOIProvisioningRestartErrorsRequeue(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		code codes.Code
+	}{
+		{name: "unavailable", code: codes.Unavailable},
+		{name: "IOS XE event aborted", code: codes.Aborted},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			op := newOperation("verify-provisioning-restart", func(op *opsv1alpha1.DeviceOperation) {
+				op.Spec.Operation.Kind = opsv1alpha1.OperationKindGNOIOSVerify
+			})
+			scheme := newScheme(t)
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(op).
+				WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+				Build()
+			r := &Reconciler{
+				Client:     c,
+				DeviceName: "dev1",
+				GNOI: failingGNOI{
+					err:                    status.Error(tt.code, "gNXI restarting"),
+					provisioningInProgress: true,
+				},
+				Now: func() time.Time { return time.Unix(100, 0).UTC() },
+			}
 
-	result, err := r.Reconcile(context.Background(), reconcile.Request{NamespacedName: types.NamespacedName{
-		Namespace: op.Namespace,
-		Name:      op.Name,
-	}})
-	if err != nil {
-		t.Fatalf("Reconcile: %v", err)
-	}
-	if result.RequeueAfter != 10*time.Second {
-		t.Fatalf("RequeueAfter=%v, want 10s", result.RequeueAfter)
-	}
-	var got opsv1alpha1.DeviceOperation
-	if err := c.Get(context.Background(), types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
-		t.Fatalf("get back: %v", err)
-	}
-	if got.Status.Phase != opsv1alpha1.OperationPhasePending {
-		t.Fatalf("phase=%q, want Pending", got.Status.Phase)
+			result, err := r.Reconcile(context.Background(), reconcile.Request{NamespacedName: types.NamespacedName{
+				Namespace: op.Namespace,
+				Name:      op.Name,
+			}})
+			if err != nil {
+				t.Fatalf("Reconcile: %v", err)
+			}
+			if result.RequeueAfter != 10*time.Second {
+				t.Fatalf("RequeueAfter=%v, want 10s", result.RequeueAfter)
+			}
+			var got opsv1alpha1.DeviceOperation
+			if err := c.Get(context.Background(), types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
+				t.Fatalf("get back: %v", err)
+			}
+			if got.Status.Phase != opsv1alpha1.OperationPhasePending {
+				t.Fatalf("phase=%q, want Pending", got.Status.Phase)
+			}
+		})
 	}
 }
 
