@@ -50,7 +50,10 @@ def completed_run(**overrides: object) -> dict[str, object]:
     run: dict[str, object] = {
         "id": RUN_ID,
         "run_attempt": ATTEMPT,
-        "name": "smoke",
+        # GitHub's attempts API may expose a workflow's dynamic ``run-name``
+        # here instead of the static top-level workflow name. Production code
+        # must derive workflow identity from the trusted path below.
+        "name": "Smoke validation for a dynamic run",
         "path": ".github/workflows/smoke.yml",
         "status": "completed",
         "conclusion": "success",
@@ -224,15 +227,25 @@ class ExporterTests(unittest.TestCase):
 
     def test_wrapper_root_links_to_trusted_dispatch_step(self) -> None:
         upstream = "00-" + "1" * 32 + "-" + "2" * 16 + "-01"
+        title = (
+            f"Lab CI Cat8kv - cvk-pr181-h{HEAD_SHA} - dispatch - {upstream}"
+        )
         run = completed_run(
-            name="Lab CI (Cat8kv)",
+            name=title,
             path=".github/workflows/lab-ci-cat8kv.yaml",
             pull_requests=[],
-            display_title=f"Lab CI Cat8kv - cvk-pr181-h{HEAD_SHA} - dispatch - {upstream}",
+            display_title=title,
         )
         payload, lifecycle = exporter.build_otlp_payload(REPOSITORY, run, [])
         root = payload["resourceSpans"][0]["scopeSpans"][0]["spans"][0]
         self.assertEqual(lifecycle, f"cvk-pr181-h{HEAD_SHA}")
+        self.assertEqual(root["name"], "Lab CI (Cat8kv)")
+        self.assertEqual(
+            span_attributes(root)["cicd.pipeline.name"], "Lab CI (Cat8kv)"
+        )
+        self.assertEqual(
+            span_attributes(root)["github.workflow.run.display_title"], title
+        )
         self.assertEqual(root["links"][0]["traceId"], "1" * 32)
         self.assertEqual(root["links"][0]["spanId"], "2" * 16)
         self.assertNotIn(
@@ -242,17 +255,19 @@ class ExporterTests(unittest.TestCase):
     def test_dispatcher_root_links_to_triggering_workflow_root(self) -> None:
         upstream_run = 4444
         upstream_attempt = 3
+        title = (
+            "Lab CI approved dispatcher - "
+            f"github-upstream-run{upstream_run}-a{upstream_attempt}"
+        )
         run = completed_run(
-            name="Lab CI approved dispatcher",
+            name=title,
             path=".github/workflows/lab-ci-auto-dispatch.yaml",
             pull_requests=[],
-            display_title=(
-                "Lab CI approved dispatcher - "
-                f"github-upstream-run{upstream_run}-a{upstream_attempt}"
-            ),
+            display_title=title,
         )
         payload, _ = exporter.build_otlp_payload(REPOSITORY, run, [])
         root = payload["resourceSpans"][0]["scopeSpans"][0]["spans"][0]
+        self.assertEqual(root["name"], "Lab CI approved dispatcher")
         self.assertEqual(
             root["links"][0]["traceId"],
             cicd_otel.github_trace_id(upstream_run, upstream_attempt),
@@ -287,14 +302,14 @@ class ExporterTests(unittest.TestCase):
 
     def test_release_lifecycle_is_stable_across_downstream_workflows(self) -> None:
         release = completed_run(
-            name="release",
+            name=f"Release {RELEASE_TAG}",
             path=".github/workflows/release.yml",
             pull_requests=[],
             event="push",
             head_branch=RELEASE_TAG,
         )
         docs = completed_run(
-            name="CI build and deploy documentation",
+            name=f"Publish documentation for {RELEASE_TAG}",
             path=".github/workflows/develop.yml",
             pull_requests=[],
             event="release",
@@ -555,7 +570,7 @@ class ExporterTests(unittest.TestCase):
         release_run = completed_run(
             id=release_run_id,
             run_attempt=1,
-            name="release",
+            name=f"Release {RELEASE_TAG}",
             path=".github/workflows/release.yml",
             event="push",
             head_branch=RELEASE_TAG,
@@ -632,7 +647,7 @@ class ExporterTests(unittest.TestCase):
             with self.subTest(workflow=name):
                 run = completed_run(
                     run_attempt=1,
-                    name=name,
+                    name=f"{name} for {RELEASE_TAG}",
                     path=path,
                     event="release",
                     head_branch=RELEASE_TAG,
@@ -790,7 +805,9 @@ class ExporterTests(unittest.TestCase):
                 token="not-logged",
                 api_call=lambda path: completed_run(run_attempt=ATTEMPT + 1),
             )
-        bad = completed_run(path=".github/workflows/untrusted.yml")
+        bad = completed_run(
+            name="smoke", path=".github/workflows/untrusted.yml"
+        )
         with self.assertRaisesRegex(exporter.ExportError, "not observed"):
             exporter.load_completed_run(
                 REPOSITORY,
@@ -798,6 +815,15 @@ class ExporterTests(unittest.TestCase):
                 ATTEMPT,
                 token="not-logged",
                 api_call=lambda path: bad,
+            )
+        observer = completed_run(path=exporter.OBSERVER_WORKFLOW_PATH)
+        with self.assertRaisesRegex(exporter.ExportError, "never observe itself"):
+            exporter.load_completed_run(
+                REPOSITORY,
+                RUN_ID,
+                ATTEMPT,
+                token="not-logged",
+                api_call=lambda path: observer,
             )
 
     def test_observer_workflow_passes_the_event_run_attempt(self) -> None:
