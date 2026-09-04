@@ -285,7 +285,8 @@ log or manually print the Secret while diagnosing the connection.
 | Certificate hostname/SAN error | `spec.address` does not match the device certificate | Use a hostname present in the certificate or issue a certificate with the required IP/DNS SAN. |
 | TLS handshake error | Plaintext/TLS mode mismatch, or IOS-XE requires a client certificate | Use `transportSecurity: tls` with port `9339`. If and only if `gnxi secure-client-auth` is configured, mount and set `tls.certFile` and `tls.keyFile`. |
 | `Unavailable`, connection refused, or deadline exceeded | Wrong port, listener down, firewall, route, or gNXI VRF restriction | Verify `show gnxi state`, `spec.gnoi.port`, reachability from the VK pod, and the device's gNXI VRF. Setting only port `9339` is insufficient if the client still uses plaintext. |
-| `Unimplemented` | The IOS-XE release/platform does not implement that gNOI service | This is not an authentication failure. IOS-XE 17.18.x may support OS/Certificate/Factory Reset while omitting System or File. Use `GNOIOSVerify` as the first read-only smoke test instead of `GNOITime`. |
+| `FailedPrecondition: Device has not been provisioned` from an OS RPC | Password authentication succeeded, but IOS-XE has not provisioned the gNXI identity required by the OS service | Use `GNOICertGet` to confirm the secure connection, then configure the opt-in `gnoi.certificateProvisioning` Secret or provision a CA-signed gNXI trustpoint out of band. |
+| `Unimplemented` | The IOS-XE release/platform does not implement that gNOI service | This is not an authentication failure. IOS-XE 17.18.x may support OS/Certificate/Factory Reset while omitting System or File. Before provisioning use `GNOICertGet`; after provisioning use `GNOIOSVerify` rather than assuming System is present. |
 
 `gnoi.transportSecurity: auto` follows `tls.enabled`; `tls` forces a TLS gNOI
 connection and reuses the trust/client-certificate fields from `spec.tls`.
@@ -293,6 +294,19 @@ connection and reuses the trust/client-certificate fields from `spec.tls`.
 plaintext listener, so check the rendered Deployment environment when the
 observed mode differs from the CR. `CISCO_VK_GNOI_PORT` similarly overrides
 `spec.gnoi.port`.
+
+When certificate provisioning is configured, inspect `show gnxi state detail`.
+The expected result after the listener restarts is `State: Provisioned` with
+the OS service operational. CVK installs only a missing configured certificate
+ID; an ID already bound to a different leaf is reported as a conflict and is
+never overwritten. If the desired leaf is installed but IOS-XE remains
+unprovisioned, inspect its trustpoint and gNOI OS-service configuration rather
+than deleting the Kubernetes Secret or repeatedly retrying the install.
+Because Install replaces the shared target CA bundle, ensure `ca.crt` includes
+all gNXI/gNMI peer CAs that must survive the change and set the required
+`replaceTargetCABundle: true` acknowledgement. See
+the [provisioning workflow](gnoi-software-lifecycle.md#provisioning-the-ios-xe-gnoi-os-service)
+for the Secret format and the shared gNXI/gNMI restart caveat.
 
 ---
 

@@ -17,14 +17,18 @@ package deviceoperation
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"strings"
 	"testing"
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -116,6 +120,17 @@ type staticGNOI struct{ c *gnoi.Client }
 
 func (s *staticGNOI) GNOIClient(context.Context) (*gnoi.Client, error) { return s.c, nil }
 
+type failingGNOI struct {
+	err                    error
+	provisioningInProgress bool
+}
+
+func (f failingGNOI) GNOIClient(context.Context) (*gnoi.Client, error) { return nil, f.err }
+
+func (f failingGNOI) GNOICertificateProvisioningInProgress() bool {
+	return f.provisioningInProgress
+}
+
 func runGNOIOperation(t *testing.T, op *opsv1alpha1.DeviceOperation) opsv1alpha1.DeviceOperation {
 	t.Helper()
 	scheme := newScheme(t)
@@ -205,6 +220,114 @@ func TestReconcileGNOIOSVerify(t *testing.T) {
 	}
 	if !strings.Contains(got.Status.Outputs[0].Output, "17.15.01a") {
 		t.Fatalf("missing version in output: %q", got.Status.Outputs[0].Output)
+	}
+}
+
+func TestReconcileGNOIProvisioningInProgressRequeues(t *testing.T) {
+	op := newOperation("verify-provisioning", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Kind = opsv1alpha1.OperationKindGNOIOSVerify
+	})
+	scheme := newScheme(t)
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+	r := &Reconciler{
+		Client:     c,
+		DeviceName: "dev1",
+		GNOI: failingGNOI{err: &gnoi.ErrProvisioningInProgress{
+			CertificateID: "cvk-gnoi",
+		}},
+		Now: func() time.Time { return time.Unix(100, 0).UTC() },
+	}
+
+	result, err := r.Reconcile(context.Background(), reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if result.RequeueAfter != 10*time.Second {
+		t.Fatalf("RequeueAfter=%v, want 10s", result.RequeueAfter)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
+		t.Fatalf("get back: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhasePending {
+		t.Fatalf("phase=%q, want Pending", got.Status.Phase)
+	}
+	var ready *metav1.Condition
+	for i := range got.Status.Conditions {
+		if got.Status.Conditions[i].Type == "Ready" {
+			ready = &got.Status.Conditions[i]
+			break
+		}
+	}
+	if ready == nil || ready.Reason != "GNOIProvisioning" {
+		t.Fatalf("Ready condition=%+v, want reason GNOIProvisioning", ready)
+	}
+	if got.Status.CompletionTime != nil {
+		t.Fatalf("CompletionTime=%v, want nil", got.Status.CompletionTime)
+	}
+}
+
+func TestReconcileGNOIProvisioningRestartUnavailableRequeues(t *testing.T) {
+	op := newOperation("verify-provisioning-restart", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Kind = opsv1alpha1.OperationKindGNOIOSVerify
+	})
+	scheme := newScheme(t)
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).
+		Build()
+	r := &Reconciler{
+		Client:     c,
+		DeviceName: "dev1",
+		GNOI: failingGNOI{
+			err:                    status.Error(codes.Unavailable, "gNXI restarting"),
+			provisioningInProgress: true,
+		},
+		Now: func() time.Time { return time.Unix(100, 0).UTC() },
+	}
+
+	result, err := r.Reconcile(context.Background(), reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: op.Namespace,
+		Name:      op.Name,
+	}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if result.RequeueAfter != 10*time.Second {
+		t.Fatalf("RequeueAfter=%v, want 10s", result.RequeueAfter)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: op.Namespace, Name: op.Name}, &got); err != nil {
+		t.Fatalf("get back: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhasePending {
+		t.Fatalf("phase=%q, want Pending", got.Status.Phase)
+	}
+}
+
+func TestGNOIProvisioningRestartRetryRequiresActiveBootstrap(t *testing.T) {
+	err := status.Error(codes.Unavailable, "ordinary outage")
+	provider := failingGNOI{err: err, provisioningInProgress: false}
+	if gnoiProvisioningRestartPending(provider, opsv1alpha1.OperationKindGNOIOSVerify, err) {
+		t.Fatal("configured but inactive provisioning changed ordinary OS.Verify outage handling")
+	}
+	provider.provisioningInProgress = true
+	if gnoiProvisioningRestartPending(provider, opsv1alpha1.OperationKindGNOITime, err) {
+		t.Fatal("active OS provisioning changed a non-OS operation's outage handling")
+	}
+
+	provider.provisioningInProgress = true
+	wrappedDeadline := fmt.Errorf("verify after restart: %w", context.DeadlineExceeded)
+	if !gnoiProvisioningRestartPending(provider, opsv1alpha1.OperationKindGNOIOSVerify, wrappedDeadline) {
+		t.Fatal("active provisioning did not classify a wrapped local deadline as restart pending")
 	}
 }
 

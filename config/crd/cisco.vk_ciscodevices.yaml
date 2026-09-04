@@ -142,6 +142,55 @@ spec:
                   the historical port and TLS inference from Port and TLS is preserved.
                   Secure gNOI authentication uses Username and the resolved device password.
                 properties:
+                  certificateProvisioning:
+                    description: |-
+                      CertificateProvisioning opts this device into gNOI Certificate Install
+                      when OS.Verify reports IOS XE's not-provisioned state. The referenced
+                      Secret is mounted only into this device's VK pod and must contain tls.crt,
+                      tls.key, and ca.crt. Certificate material is never copied into the rendered
+                      device ConfigMap.
+                    properties:
+                      certificateID:
+                        description: |-
+                          CertificateID is the IOS XE trustpoint identifier associated with the
+                          certificate installed through gNOI.
+                        maxLength: 64
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]*$
+                        type: string
+                      replaceTargetCABundle:
+                        description: |-
+                          ReplaceTargetCABundle must be true to acknowledge that gNOI
+                          LoadCertificate replaces the target's complete CA bundle. IOS XE shares
+                          that bundle between gNOI and gNMI, so ca.crt must preserve every peer CA
+                          that those services must continue to trust.
+                        type: boolean
+                      secretRef:
+                        description: |-
+                          SecretRef names a Secret in the CiscoDevice namespace. It must contain
+                          tls.crt, tls.key, and ca.crt keys. ca.crt is the complete desired target
+                          CA replacement bundle, not only the leaf's issuer chain. The kubelet
+                          projects those keys into the per-device worker as read-only files.
+                        properties:
+                          name:
+                            description: Name is the DNS-subdomain name of the provisioning
+                              Secret.
+                            maxLength: 253
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                        required:
+                        - name
+                        type: object
+                    required:
+                    - certificateID
+                    - replaceTargetCABundle
+                    - secretRef
+                    type: object
+                    x-kubernetes-validations:
+                    - message: replaceTargetCABundle must be true to acknowledge replacement
+                        of the shared gNXI/gNMI CA bundle
+                      rule: self.replaceTargetCABundle == true
                   port:
                     description: |-
                       Port is the device-side gNOI listener port. When omitted, CVK uses 9339
@@ -161,6 +210,11 @@ spec:
                     - plaintext
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: certificateProvisioning requires transportSecurity to be
+                    tls
+                  rule: '!has(self.certificateProvisioning) || (has(self.transportSecurity)
+                    && self.transportSecurity == ''tls'')'
               labels:
                 additionalProperties:
                   type: string

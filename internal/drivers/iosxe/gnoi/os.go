@@ -21,7 +21,54 @@ import (
 	"io"
 
 	ospb "github.com/openconfig/gnoi/os"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+const iosXEDeviceNotProvisionedMessage = "Device has not been provisioned"
+
+// ErrDeviceNotProvisioned identifies the IOS XE FailedPrecondition response
+// returned while gNXI is in Default/Encrypted state and only the gNOI
+// Certificate service is available.
+type ErrDeviceNotProvisioned struct {
+	Cause error
+}
+
+func (e *ErrDeviceNotProvisioned) Error() string {
+	if e == nil || e.Cause == nil {
+		return "IOS XE gNOI device has not been provisioned"
+	}
+	return "IOS XE gNOI device has not been provisioned: " + e.Cause.Error()
+}
+
+func (e *ErrDeviceNotProvisioned) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Cause
+}
+
+// IsDeviceNotProvisioned reports whether err is the exact IOS XE
+// FailedPrecondition response (or its typed wrapper) indicating that gNXI
+// certificate bootstrap has not completed. Other FailedPrecondition errors are
+// intentionally not classified as provisioning failures.
+func IsDeviceNotProvisioned(err error) bool {
+	var target *ErrDeviceNotProvisioned
+	if errors.As(err, &target) {
+		return true
+	}
+	return isIOSXEDeviceNotProvisioned(err)
+}
+
+func isIOSXEDeviceNotProvisioned(err error) bool {
+	st, ok := status.FromError(err)
+	if !ok || st.Code() != codes.FailedPrecondition {
+		return false
+	}
+	// IOS XE releases have emitted the same sentence both with and without
+	// terminal punctuation. Accept only those two exact spellings.
+	return st.Message() == iosXEDeviceNotProvisionedMessage || st.Message() == iosXEDeviceNotProvisionedMessage+"."
+}
 
 // OSVerifyResult mirrors gNOI OS.Verify.
 type OSVerifyResult struct {
@@ -51,7 +98,18 @@ func (c *Client) Verify(ctx context.Context) (*OSVerifyResult, error) {
 	resp, err := c.os.Verify(c.authCtx(ctx), &ospb.VerifyRequest{})
 	c.cap.Observe(ServiceOS, err)
 	if err != nil {
+		if isIOSXEDeviceNotProvisioned(err) {
+			if c.onDeviceNotProvisioned != nil {
+				if provisioningErr := c.onDeviceNotProvisioned(ctx, c); provisioningErr != nil {
+					return nil, fmt.Errorf("gnoi OS.Verify: %w", provisioningErr)
+				}
+			}
+			return nil, fmt.Errorf("gnoi OS.Verify: %w", &ErrDeviceNotProvisioned{Cause: err})
+		}
 		return nil, fmt.Errorf("gnoi OS.Verify: %w", err)
+	}
+	if c.onOSVerifySuccess != nil {
+		c.onOSVerifySuccess()
 	}
 	return &OSVerifyResult{
 		Version:                     resp.Version,

@@ -16,6 +16,7 @@ package devicegrpc
 
 import (
 	"context"
+	"fmt"
 
 	"google.golang.org/grpc/credentials"
 )
@@ -37,6 +38,12 @@ func NewIOSXEPasswordCredentials(username, password string) credentials.PerRPCCr
 type iosxePasswordCredentials struct {
 	username string
 	password string
+}
+
+// Format prevents every fmt verb from rendering the username or password. Use
+// a value receiver so both values and pointers are redacted.
+func (iosxePasswordCredentials) Format(state fmt.State, _ rune) {
+	_, _ = state.Write([]byte("iosxePasswordCredentials{REDACTED}"))
 }
 
 func (c iosxePasswordCredentials) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {

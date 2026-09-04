@@ -107,9 +107,14 @@ func (f *fakeFile) Get(_ *filepb.GetRequest, stream grpc.ServerStreamingServer[f
 
 type fakeCert struct {
 	certpb.UnimplementedCertificateManagementServer
-	getResp        *certpb.GetCertificatesResponse
-	getErr         error
-	canGenResponse *certpb.CanGenerateCSRResponse
+	getResp         *certpb.GetCertificatesResponse
+	getErr          error
+	canGenResponse  *certpb.CanGenerateCSRResponse
+	installRequest  *certpb.InstallCertificateRequest
+	installResponse *certpb.InstallCertificateResponse
+	installErr      error
+	installFinalErr error
+	installEOFSeen  bool
 }
 
 func (f *fakeCert) GetCertificates(context.Context, *certpb.GetCertificatesRequest) (*certpb.GetCertificatesResponse, error) {
@@ -121,6 +126,36 @@ func (f *fakeCert) CanGenerateCSR(context.Context, *certpb.CanGenerateCSRRequest
 		return &certpb.CanGenerateCSRResponse{CanGenerate: true}, nil
 	}
 	return f.canGenResponse, nil
+}
+
+func (f *fakeCert) Install(stream grpc.BidiStreamingServer[certpb.InstallCertificateRequest, certpb.InstallCertificateResponse]) error {
+	request, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	f.installRequest = request
+	if f.installErr != nil {
+		return f.installErr
+	}
+	response := f.installResponse
+	if response == nil {
+		response = &certpb.InstallCertificateResponse{
+			InstallResponse: &certpb.InstallCertificateResponse_LoadCertificate{
+				LoadCertificate: &certpb.LoadCertificateResponse{},
+			},
+		}
+	}
+	if err := stream.Send(response); err != nil {
+		return err
+	}
+	if _, err := stream.Recv(); err != io.EOF {
+		if err == nil {
+			return status.Error(codes.InvalidArgument, "expected client half-close")
+		}
+		return err
+	}
+	f.installEOFSeen = true
+	return f.installFinalErr
 }
 
 type fakeOS struct {
@@ -411,6 +446,78 @@ func TestVerify(t *testing.T) {
 	}
 	if res.Version != "17.15.01a" {
 		t.Fatalf("Verify version: %q", res.Version)
+	}
+}
+
+func TestVerifyInvokesProvisioningHandlerOnlyForDeviceNotProvisioned(t *testing.T) {
+	ts := newTestServer(t)
+	ts.OS.verifyErr = status.Error(codes.FailedPrecondition, "Device has not been provisioned")
+
+	wantProgress := &ErrProvisioningInProgress{CertificateID: "cvk-gnoi"}
+	called := 0
+	c, err := New(ts.dial(t), Options{
+		OnDeviceNotProvisioned: func(_ context.Context, got *Client) error {
+			called++
+			if got == nil {
+				t.Fatal("provisioning handler received nil client")
+			}
+			return wantProgress
+		},
+	})
+	if err != nil {
+		t.Fatalf("New gNOI client: %v", err)
+	}
+
+	_, err = c.Verify(context.Background())
+	var progress *ErrProvisioningInProgress
+	if !errors.As(err, &progress) {
+		t.Fatalf("Verify error=%T %v, want *ErrProvisioningInProgress", err, err)
+	}
+	if progress != wantProgress {
+		t.Fatalf("Verify returned provisioning error %p, want %p", progress, wantProgress)
+	}
+	if called != 1 {
+		t.Fatalf("provisioning handler calls=%d, want 1", called)
+	}
+}
+
+func TestVerifyDoesNotInvokeProvisioningHandlerForOtherFailedPrecondition(t *testing.T) {
+	ts := newTestServer(t)
+	ts.OS.verifyErr = status.Error(codes.FailedPrecondition, "install operation already in progress")
+
+	called := 0
+	c, err := New(ts.dial(t), Options{
+		OnDeviceNotProvisioned: func(context.Context, *Client) error {
+			called++
+			return &ErrProvisioningInProgress{CertificateID: "cvk-gnoi"}
+		},
+	})
+	if err != nil {
+		t.Fatalf("New gNOI client: %v", err)
+	}
+
+	_, err = c.Verify(context.Background())
+	if status.Code(err) != codes.FailedPrecondition {
+		t.Fatalf("Verify status=%s error=%v, want FailedPrecondition", status.Code(err), err)
+	}
+	if called != 0 {
+		t.Fatalf("provisioning handler calls=%d, want 0", called)
+	}
+}
+
+func TestVerifySuccessObservesProvisioningCompletion(t *testing.T) {
+	ts := newTestServer(t)
+	ts.OS.verifyResp = &ospb.VerifyResponse{Version: "17.18.04"}
+	called := 0
+	c, err := New(ts.dial(t), Options{OnOSVerifySuccess: func() { called++ }})
+	if err != nil {
+		t.Fatalf("New gNOI client: %v", err)
+	}
+	if _, err := c.Verify(context.Background()); err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	if called != 1 {
+		t.Fatalf("OnOSVerifySuccess calls=%d, want 1", called)
 	}
 }
 

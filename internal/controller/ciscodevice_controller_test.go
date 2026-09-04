@@ -298,6 +298,9 @@ func TestReconcile_CreatesDeployment(t *testing.T) {
 	if len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts) != 3 {
 		t.Errorf("expected 3 volume mounts (device-config, tls-gen, tmp), got %d", len(deploy.Spec.Template.Spec.Containers[0].VolumeMounts))
 	}
+	if len(deploy.Spec.Template.Spec.Volumes) != 3 {
+		t.Errorf("expected 3 volumes (device-config, tls-gen, tmp), got %d", len(deploy.Spec.Template.Spec.Volumes))
+	}
 
 	var gotDevice ciskov1.CiscoDevice
 	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-b"}, &gotDevice); err != nil {
@@ -774,6 +777,111 @@ func TestRenderDeviceConfig_ContainsPerDeviceGNOITransport(t *testing.T) {
 	for _, want := range []string{"gnoi:", "port: 19339", "transportSecurity: tls"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("expected output to contain %q; got:\n%s", want, out)
+		}
+	}
+}
+
+func TestReconcile_GNOICertificateProvisioningMountsDedicatedSecret(t *testing.T) {
+	device := newDevice("router-gnoi-provision", "default")
+	device.Spec.GNOI = &ciskov1.GNOIConfig{
+		TransportSecurity: ciskov1.GNOITransportSecurityTLS,
+		CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
+			CertificateID:         "cvk-gnoi-cert",
+			SecretRef:             ciskov1.GNOIProvisioningSecretReference{Name: "router-gnoi-certificates"},
+			ReplaceTargetCABundle: true,
+		},
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "router-gnoi-certificates",
+			Namespace:       "default",
+			ResourceVersion: "77",
+		},
+		Data: map[string][]byte{
+			"tls.crt": []byte("leaf-certificate-bytes"),
+			"tls.key": []byte("private-key-bytes"),
+			"ca.crt":  []byte("ca-certificate-bytes"),
+		},
+	}
+	r := reconcilerFor(t, device, secret)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", device.Name)); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	var deploy appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: device.Name + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("get Deployment: %v", err)
+	}
+	container := deploy.Spec.Template.Spec.Containers[0]
+	if len(container.VolumeMounts) != 4 {
+		t.Fatalf("volume mounts = %d, want 4: %+v", len(container.VolumeMounts), container.VolumeMounts)
+	}
+	foundMount := false
+	for _, mount := range container.VolumeMounts {
+		if mount.Name != gnoiProvisioningVolumeName {
+			continue
+		}
+		foundMount = true
+		if mount.MountPath != gnoiProvisioningMountPath || !mount.ReadOnly {
+			t.Errorf("gNOI provisioning mount = %+v, want path %q read-only", mount, gnoiProvisioningMountPath)
+		}
+	}
+	if !foundMount {
+		t.Fatalf("missing %q volume mount: %+v", gnoiProvisioningVolumeName, container.VolumeMounts)
+	}
+
+	if len(deploy.Spec.Template.Spec.Volumes) != 4 {
+		t.Fatalf("volumes = %d, want 4: %+v", len(deploy.Spec.Template.Spec.Volumes), deploy.Spec.Template.Spec.Volumes)
+	}
+	var projected *corev1.SecretVolumeSource
+	for _, volume := range deploy.Spec.Template.Spec.Volumes {
+		if volume.Name == gnoiProvisioningVolumeName {
+			projected = volume.Secret
+			break
+		}
+	}
+	if projected == nil {
+		t.Fatalf("missing %q Secret volume", gnoiProvisioningVolumeName)
+	}
+	if projected.SecretName != secret.Name {
+		t.Errorf("SecretName = %q, want %q", projected.SecretName, secret.Name)
+	}
+	if projected.DefaultMode == nil || *projected.DefaultMode != int32(0o440) {
+		t.Errorf("DefaultMode = %v, want 0440", projected.DefaultMode)
+	}
+	wantItems := map[string]string{"tls.crt": "tls.crt", "tls.key": "tls.key", "ca.crt": "ca.crt"}
+	if len(projected.Items) != len(wantItems) {
+		t.Fatalf("projected items = %+v, want exactly tls.crt, tls.key, ca.crt", projected.Items)
+	}
+	for _, item := range projected.Items {
+		if wantPath, ok := wantItems[item.Key]; !ok || item.Path != wantPath {
+			t.Errorf("unexpected projected item %+v", item)
+		}
+		delete(wantItems, item.Key)
+	}
+	if len(wantItems) != 0 {
+		t.Errorf("missing projected Secret keys: %v", wantItems)
+	}
+
+	if got := deploy.Spec.Template.Annotations["cisco.vk/gnoi-provisioning-secret-resource-version"]; got != "77" {
+		t.Errorf("gNOI provisioning Secret resourceVersion annotation = %q, want 77", got)
+	}
+
+	var cm corev1.ConfigMap
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: device.Name + configMapSuffix}, &cm); err != nil {
+		t.Fatalf("get ConfigMap: %v", err)
+	}
+	configData := cm.Data[configFileName]
+	for _, want := range []string{"certificateProvisioning:", "certificateID: cvk-gnoi-cert", "replaceTargetCABundle: true", "name: router-gnoi-certificates"} {
+		if !strings.Contains(configData, want) {
+			t.Errorf("rendered config missing %q:\n%s", want, configData)
+		}
+	}
+	for _, secretBytes := range secret.Data {
+		if strings.Contains(configData, string(secretBytes)) {
+			t.Errorf("rendered ConfigMap exposed Secret bytes:\n%s", configData)
 		}
 	}
 }

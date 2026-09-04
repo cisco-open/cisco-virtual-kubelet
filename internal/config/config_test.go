@@ -115,6 +115,13 @@ func TestLoad_GNOITransportConfig(t *testing.T) {
 		"gnoi": map[string]interface{}{
 			"port":              19339,
 			"transportSecurity": "tls",
+			"certificateProvisioning": map[string]interface{}{
+				"certificateID":         "cvk-gnoi-os",
+				"replaceTargetCABundle": true,
+				"secretRef": map[string]interface{}{
+					"name": "router-gnoi-identity",
+				},
+			},
 		},
 	})
 
@@ -130,6 +137,9 @@ func TestLoad_GNOITransportConfig(t *testing.T) {
 	}
 	if got := cfg.Device.GNOI.TransportSecurity; got != v1alpha1.GNOITransportSecurityTLS {
 		t.Fatalf("device.gnoi.transportSecurity=%q, want tls", got)
+	}
+	if got := cfg.Device.GNOI.CertificateProvisioning; got == nil || got.CertificateID != "cvk-gnoi-os" || got.SecretRef.Name != "router-gnoi-identity" || !got.ReplaceTargetCABundle {
+		t.Fatalf("device.gnoi.certificateProvisioning=%+v, want decoded certificate ID and Secret reference", got)
 	}
 }
 

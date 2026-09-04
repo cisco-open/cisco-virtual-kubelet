@@ -88,6 +88,15 @@ spec:
   gnoi:
     transportSecurity: tls
     port: 9339
+    # Optional, explicit bootstrap for IOS-XE OS service provisioning.
+    # The same-namespace Secret contains tls.crt, tls.key, and ca.crt.
+    certificateProvisioning:
+      certificateID: cvk-gnoi-os
+      # Required acknowledgement: ca.crt is the complete desired replacement
+      # for IOS-XE's shared gNXI/gNMI CA bundle.
+      replaceTargetCABundle: true
+      secretRef:
+        name: cat9300-4-gnoi-identity
   maxPods: 16
   xe:
     networking:
@@ -102,7 +111,9 @@ spec:
 ```
 
 `spec.gnoi` selects the IOS-XE gNXI listener independently from the main
-device API port. See the [configuration reference](CONFIGURATION.md#gnoi) and
+device API port. Its optional certificate provisioning block is scoped to the
+per-device gNOI worker and is dormant when omitted. See the
+[configuration reference](CONFIGURATION.md#gnoi) and
 [secure gNOI guidance](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
 
 ```bash

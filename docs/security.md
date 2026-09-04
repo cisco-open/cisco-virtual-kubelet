@@ -365,6 +365,32 @@ unauthenticated lab listeners (normally port `50052`). No password metadata is
 sent in that mode. Do not use it as a workaround for certificate or password
 errors on IOS-XE 17.18.x.
 
+IOS-XE can authenticate the metadata successfully while still returning
+`FailedPrecondition: Device has not been provisioned` for OS RPCs. This is a
+device-side gNXI certificate state, not a password failure. The optional
+`gnoi.certificateProvisioning` block addresses it with a dedicated Secret
+containing `tls.crt`, `tls.key`, and `ca.crt`. The Secret is mounted read-only
+at `/var/run/secrets/cisco-vk/gnoi-provisioning` only in that device's worker;
+the private key is never placed in the rendered ConfigMap or an environment
+variable. CVK validates the key pair and CA chain before transmitting it and
+refuses to send provisioning material without TLS.
+
+The gNOI protocol defines a non-empty Install `ca_certificates` field as a
+replacement of the target's CA bundle, and IOS-XE requires the signing CA for
+PKI installation. For that reason `ca.crt` must contain the complete desired
+shared gNXI/gNMI bundle, including unrelated CAs needed by existing mTLS
+clients, and `replaceTargetCABundle: true` is mandatory acknowledgement. CVK
+cannot safely discover and merge the existing target bundle.
+
+The provisioning certificate is the IOS-XE device/server identity. It is kept
+separate from `tls.certFile` and `tls.keyFile`, which are CVK's optional mTLS
+client identity. CVK's other protocol clients are not reconfigured. However,
+IOS-XE shares its gNXI identity and CA trust bundle between gNOI and gNMI, so
+installing the certificate can restart gNXI, replace peer-trust roots, and
+change the certificate seen by other gNMI clients. Treat provisioning as a
+scheduled device change and establish trust in the new CA first. See the
+[gNOI provisioning workflow](gnoi-software-lifecycle.md#provisioning-the-ios-xe-gnoi-os-service).
+
 ### SSH host keys
 
 NETCONF and the CLI side-channel ride SSH, not TLS. Pinning uses a standard

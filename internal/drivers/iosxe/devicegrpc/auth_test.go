@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"fmt"
 	"math/big"
 	"net"
 	"reflect"
@@ -37,6 +38,11 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
+)
+
+var (
+	_ fmt.Formatter = iosxePasswordCredentials{}
+	_ fmt.Formatter = (*iosxePasswordCredentials)(nil)
 )
 
 func TestIOSXEPasswordCredentialsMetadata(t *testing.T) {
@@ -58,6 +64,23 @@ func TestIOSXEPasswordCredentialsMetadata(t *testing.T) {
 	}
 	if !creds.RequireTransportSecurity() {
 		t.Fatal("IOS XE password credentials must require transport security")
+	}
+}
+
+func TestIOSXEPasswordCredentialsFormattingRedactsSecrets(t *testing.T) {
+	value := iosxePasswordCredentials{username: "sensitive-username", password: "sensitive-password"}
+	const want = "iosxePasswordCredentials{REDACTED}"
+	operands := []any{
+		value,
+		&value,
+		NewIOSXEPasswordCredentials("sensitive-public-username", "sensitive-public-password"),
+	}
+	for _, operand := range operands {
+		for _, format := range []string{"%v", "%+v", "%#v", "%s", "%q", "%x", "%X"} {
+			if got := fmt.Sprintf(format, operand); got != want {
+				t.Errorf("Sprintf(%q, %T)=%q, want %q", format, operand, got, want)
+			}
+		}
 	}
 }
 

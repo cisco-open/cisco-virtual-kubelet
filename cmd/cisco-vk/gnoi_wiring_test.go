@@ -16,10 +16,29 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"errors"
+	"io"
+	"math/big"
+	"net"
+	"os"
 	"path/filepath"
+	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 )
 
 func TestSetupGNOIPropagatesTLSConfigError(t *testing.T) {
@@ -228,4 +247,330 @@ func TestSetupGNOIRejectsInvalidPerDeviceTransport(t *testing.T) {
 	if provider != nil || cleanup != nil {
 		t.Fatalf("setupGNOI returned provider=%T cleanup=%v after validation error", provider, cleanup != nil)
 	}
+}
+
+func TestLoadGNOIProvisioningBundleIsOptInAndScopesTrustToGNOI(t *testing.T) {
+	directory, leaf := writeGNOIProvisioningFiles(t, "router.example.test")
+	spec := &ciskov1.DeviceSpec{
+		Address: "router.example.test",
+		GNOI: &ciskov1.GNOIConfig{
+			TransportSecurity: ciskov1.GNOITransportSecurityTLS,
+			CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
+				CertificateID:         "cvk-gnoi",
+				ReplaceTargetCABundle: true,
+			},
+		},
+	}
+	tlsCfg := &tls.Config{MinVersion: tls.VersionTLS12}
+
+	bundle, err := loadGNOIProvisioningBundle(spec, true, tlsCfg, directory)
+	if err != nil {
+		t.Fatalf("loadGNOIProvisioningBundle: %v", err)
+	}
+	if bundle == nil || bundle.CertificateID() != "cvk-gnoi" {
+		t.Fatalf("bundle=%v certificateID=%q", bundle, bundle.CertificateID())
+	}
+	if tlsCfg.RootCAs == nil {
+		t.Fatal("gNOI TLS config did not receive provisioning CA roots")
+	}
+	if _, err := leaf.Verify(x509.VerifyOptions{
+		DNSName: "router.example.test",
+		Roots:   tlsCfg.RootCAs,
+		KeyUsages: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageServerAuth,
+		},
+	}); err != nil {
+		t.Fatalf("provisioned leaf does not verify against gNOI roots: %v", err)
+	}
+
+	// Absence of the block must neither read files nor mutate TLS roots.
+	legacyTLS := &tls.Config{MinVersion: tls.VersionTLS12}
+	got, err := loadGNOIProvisioningBundle(
+		&ciskov1.DeviceSpec{Address: "router.example.test"},
+		true,
+		legacyTLS,
+		filepath.Join(t.TempDir(), "does-not-exist"),
+	)
+	if err != nil || got != nil {
+		t.Fatalf("omitted provisioning block returned bundle=%v err=%v", got, err)
+	}
+	if legacyTLS.RootCAs != nil {
+		t.Fatal("omitted provisioning block mutated the legacy TLS config")
+	}
+}
+
+func TestLoadGNOIProvisioningBundleRejectsPlaintext(t *testing.T) {
+	spec := &ciskov1.DeviceSpec{
+		Address: "router.example.test",
+		GNOI: &ciskov1.GNOIConfig{
+			CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
+				CertificateID:         "cvk-gnoi",
+				ReplaceTargetCABundle: true,
+			},
+		},
+	}
+	bundle, err := loadGNOIProvisioningBundle(spec, false, nil, t.TempDir())
+	if err == nil || !strings.Contains(err.Error(), "TLS transport is required") {
+		t.Fatalf("bundle=%v err=%v, want TLS-required error", bundle, err)
+	}
+}
+
+func TestLoadGNOIProvisioningBundleRequiresTargetCABundleAcknowledgement(t *testing.T) {
+	spec := &ciskov1.DeviceSpec{
+		Address: "router.example.test",
+		GNOI: &ciskov1.GNOIConfig{
+			TransportSecurity: ciskov1.GNOITransportSecurityTLS,
+			CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
+				CertificateID: "cvk-gnoi",
+			},
+		},
+	}
+	bundle, err := loadGNOIProvisioningBundle(spec, true, &tls.Config{}, t.TempDir())
+	if err == nil || !strings.Contains(err.Error(), "replaceTargetCABundle must be true") {
+		t.Fatalf("bundle=%v err=%v, want CA-bundle acknowledgement error", bundle, err)
+	}
+}
+
+func TestPooledGNOIProviderSerializesCertificateInstallAndResetsClient(t *testing.T) {
+	bundle := testGNOIProvisioningBundle(t)
+	current := &gnoi.Client{}
+	var stateCalls atomic.Int32
+	var installCalls atomic.Int32
+	p := &pooledGNOIProvider{
+		client:             current,
+		provisioningBundle: bundle,
+		provisioningState: func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) (gnoi.ProvisioningCertificateState, error) {
+			stateCalls.Add(1)
+			return gnoi.ProvisioningCertificateMissing, nil
+		},
+		installProvisioningCertificate: func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) error {
+			installCalls.Add(1)
+			return nil
+		},
+	}
+
+	const callers = 8
+	errs := make(chan error, callers)
+	var wg sync.WaitGroup
+	for i := 0; i < callers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs <- p.provisionGNOICertificate(context.Background(), current)
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		var progress *gnoi.ErrProvisioningInProgress
+		if !errors.As(err, &progress) {
+			t.Fatalf("provision error=%T %v, want ErrProvisioningInProgress", err, err)
+		}
+	}
+	if got := stateCalls.Load(); got != 1 {
+		t.Fatalf("certificate state calls=%d, want 1", got)
+	}
+	if got := installCalls.Load(); got != 1 {
+		t.Fatalf("certificate install calls=%d, want 1", got)
+	}
+	if p.client != nil {
+		t.Fatal("provider retained stale client after certificate install")
+	}
+}
+
+func TestPooledGNOIProviderStaleCallbackPreservesProvisioningState(t *testing.T) {
+	bundle := testGNOIProvisioningBundle(t)
+	stale := &gnoi.Client{}
+	current := &gnoi.Client{}
+
+	for _, active := range []bool{false, true} {
+		p := &pooledGNOIProvider{
+			client:             current,
+			provisioningBundle: bundle,
+			provisioningState: func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) (gnoi.ProvisioningCertificateState, error) {
+				t.Fatal("stale callback must not inspect certificate state")
+				return gnoi.ProvisioningCertificateMissing, nil
+			},
+		}
+		p.provisioningActive.Store(active)
+
+		err := p.provisionGNOICertificate(context.Background(), stale)
+		var progress *gnoi.ErrProvisioningInProgress
+		if !errors.As(err, &progress) {
+			t.Fatalf("active=%v: error=%T %v, want ErrProvisioningInProgress", active, err, err)
+		}
+		if got := p.GNOICertificateProvisioningInProgress(); got != active {
+			t.Fatalf("active=%v: stale callback changed provisioning state to %v", active, got)
+		}
+	}
+}
+
+func TestPooledGNOIProviderMatchingCertificateGetsOneRestartGrace(t *testing.T) {
+	bundle := testGNOIProvisioningBundle(t)
+	first := &gnoi.Client{}
+	p := &pooledGNOIProvider{
+		client:             first,
+		provisioningBundle: bundle,
+		provisioningState: func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) (gnoi.ProvisioningCertificateState, error) {
+			return gnoi.ProvisioningCertificateMatching, nil
+		},
+		installProvisioningCertificate: func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) error {
+			t.Fatal("matching certificate must not be reinstalled")
+			return nil
+		},
+	}
+
+	err := p.provisionGNOICertificate(context.Background(), first)
+	var progress *gnoi.ErrProvisioningInProgress
+	if !errors.As(err, &progress) {
+		t.Fatalf("first matching observation error=%T %v, want progress", err, err)
+	}
+	if p.client != nil {
+		t.Fatal("provider retained stale client after first matching observation")
+	}
+
+	second := &gnoi.Client{}
+	p.client = second
+	err = p.provisionGNOICertificate(context.Background(), second)
+	if err == nil || !strings.Contains(err.Error(), "secure trustpoint binding") {
+		t.Fatalf("second matching observation err=%v, want binding error", err)
+	}
+	if errors.As(err, &progress) {
+		t.Fatalf("second matching observation remained transient: %v", err)
+	}
+}
+
+func TestPooledGNOIProviderIndeterminateInstallForcesReconnect(t *testing.T) {
+	bundle := testGNOIProvisioningBundle(t)
+	current := &gnoi.Client{}
+	indeterminate := &gnoi.ErrCertificateInstallIndeterminate{
+		CertificateID: bundle.CertificateID(),
+		Cause:         io.EOF,
+	}
+	p := &pooledGNOIProvider{
+		client:             current,
+		provisioningBundle: bundle,
+		provisioningState: func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) (gnoi.ProvisioningCertificateState, error) {
+			return gnoi.ProvisioningCertificateMissing, nil
+		},
+		installProvisioningCertificate: func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) error {
+			return indeterminate
+		},
+	}
+
+	err := p.provisionGNOICertificate(context.Background(), current)
+	var progress *gnoi.ErrProvisioningInProgress
+	if !errors.As(err, &progress) {
+		t.Fatalf("error=%T %v, want ErrProvisioningInProgress", err, err)
+	}
+	if !errors.Is(err, io.EOF) {
+		t.Fatalf("progress error does not preserve indeterminate cause: %v", err)
+	}
+	if p.client != nil {
+		t.Fatal("provider retained stale client after indeterminate install")
+	}
+}
+
+func TestTransientGNOIProvisioningErrors(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "unavailable", err: status.Error(codes.Unavailable, "listener restarting"), want: true},
+		{name: "deadline", err: context.DeadlineExceeded, want: true},
+		{name: "authentication", err: status.Error(codes.Unauthenticated, "bad credentials")},
+		{name: "plain error", err: errors.New("bad certificate")},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isTransientGNOIProvisioningError(tt.err); got != tt.want {
+				t.Fatalf("isTransientGNOIProvisioningError(%v)=%v, want %v", tt.err, got, tt.want)
+			}
+		})
+	}
+}
+
+func testGNOIProvisioningBundle(t *testing.T) *gnoi.ProvisioningBundle {
+	t.Helper()
+	directory, _ := writeGNOIProvisioningFiles(t, "router.example.test")
+	spec := &ciskov1.DeviceSpec{
+		Address: "router.example.test",
+		GNOI: &ciskov1.GNOIConfig{
+			TransportSecurity: ciskov1.GNOITransportSecurityTLS,
+			CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
+				CertificateID:         "cvk-gnoi",
+				ReplaceTargetCABundle: true,
+			},
+		},
+	}
+	bundle, err := loadGNOIProvisioningBundle(spec, true, &tls.Config{}, directory)
+	if err != nil {
+		t.Fatalf("load test provisioning bundle: %v", err)
+	}
+	return bundle
+}
+
+func writeGNOIProvisioningFiles(t *testing.T, serverName string) (string, *x509.Certificate) {
+	t.Helper()
+	now := time.Now()
+	caKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("generate CA key: %v", err)
+	}
+	caTemplate := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "CVK test CA"},
+		NotBefore:             now.Add(-time.Hour),
+		NotAfter:              now.Add(24 * time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+	}
+	caDER, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, &caKey.PublicKey, caKey)
+	if err != nil {
+		t.Fatalf("create CA certificate: %v", err)
+	}
+	ca, err := x509.ParseCertificate(caDER)
+	if err != nil {
+		t.Fatalf("parse CA certificate: %v", err)
+	}
+
+	leafKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("generate leaf key: %v", err)
+	}
+	leafTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject:      pkix.Name{CommonName: serverName},
+		NotBefore:    now.Add(-time.Hour),
+		NotAfter:     now.Add(24 * time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
+	if ip := net.ParseIP(serverName); ip != nil {
+		leafTemplate.IPAddresses = []net.IP{ip}
+	} else {
+		leafTemplate.DNSNames = []string{serverName}
+	}
+	leafDER, err := x509.CreateCertificate(rand.Reader, leafTemplate, ca, &leafKey.PublicKey, caKey)
+	if err != nil {
+		t.Fatalf("create leaf certificate: %v", err)
+	}
+	leaf, err := x509.ParseCertificate(leafDER)
+	if err != nil {
+		t.Fatalf("parse leaf certificate: %v", err)
+	}
+
+	directory := t.TempDir()
+	files := map[string][]byte{
+		gNOIProvisioningCertFile: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafDER}),
+		gNOIProvisioningKeyFile:  pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(leafKey)}),
+		gNOIProvisioningCAFile:   pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caDER}),
+	}
+	for name, contents := range files {
+		if err := os.WriteFile(filepath.Join(directory, name), contents, 0o600); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+	return directory, leaf
 }
