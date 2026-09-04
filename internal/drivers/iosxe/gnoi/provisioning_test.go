@@ -21,9 +21,11 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -34,7 +36,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -52,6 +53,30 @@ var (
 	_ fmt.Formatter = ProvisioningBundle{}
 	_ fmt.Formatter = (*ProvisioningBundle)(nil)
 )
+
+type certificateSignerFunc func(context.Context, []byte) ([]byte, error)
+
+func (f certificateSignerFunc) SignCSR(ctx context.Context, csr []byte) ([]byte, error) {
+	return f(ctx, csr)
+}
+
+func TestProvisioningBundlePublicMaterialSHA256UsesExactInputBytes(t *testing.T) {
+	pki := newProvisioningTestPKI(t, provisioningTestServerName)
+	leafPEM := append(bytes.Clone(pki.leafPEM), '\n')
+	caPEM := append(bytes.Clone(pki.caBundlePEM), '\n')
+	bundle, err := NewProvisioningBundle("cvk-gnoi", provisioningTestServerName, leafPEM, caPEM)
+	if err != nil {
+		t.Fatalf("NewProvisioningBundle: %v", err)
+	}
+
+	digest := sha256.New()
+	_, _ = digest.Write(leafPEM)
+	_, _ = digest.Write(caPEM)
+	want := fmt.Sprintf("%x", digest.Sum(nil))
+	if got := bundle.PublicMaterialSHA256(); got != want {
+		t.Fatalf("PublicMaterialSHA256()=%q, want %q", got, want)
+	}
+}
 
 type provisioningTestPKI struct {
 	leafPEM         []byte
@@ -133,61 +158,36 @@ func TestProvisioning(t *testing.T) {
 			cert.NotBefore = time.Now().Add(-2 * time.Hour)
 			cert.NotAfter = time.Now().Add(-time.Hour)
 		})
-		weakKey := mustRSAKey(t, 1024)
-		ecKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-		if err != nil {
-			t.Fatalf("ecdsa.GenerateKey: %v", err)
-		}
-		ecDER, err := x509.MarshalPKCS8PrivateKey(ecKey)
-		if err != nil {
-			t.Fatalf("x509.MarshalPKCS8PrivateKey: %v", err)
-		}
-
 		tests := []struct {
 			name          string
 			certificateID string
 			serverName    string
 			leafPEM       []byte
 			caBundlePEM   []byte
-			caKeyPEM      []byte
 			wantErr       string
 		}{
-			{name: "invalid certificate ID", certificateID: "bad id", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: pki.caBundlePEM, caKeyPEM: pki.caKeyPEM, wantErr: "certificate ID"},
-			{name: "missing server name", certificateID: "cvk-gnoi", leafPEM: pki.leafPEM, caBundlePEM: pki.caBundlePEM, caKeyPEM: pki.caKeyPEM, wantErr: "server name is required"},
-			{name: "malformed leaf PEM", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: []byte("not PEM"), caBundlePEM: pki.caBundlePEM, caKeyPEM: pki.caKeyPEM, wantErr: "leaf certificate"},
-			{name: "CA used as leaf", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.intermediatePEM, caBundlePEM: pki.caBundlePEM, caKeyPEM: pki.caKeyPEM, wantErr: "must not be a CA"},
-			{name: "expired leaf", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: certificatePEM(expired), caBundlePEM: pki.caBundlePEM, caKeyPEM: pki.caKeyPEM, wantErr: "expired"},
-			{name: "hostname mismatch", certificateID: "cvk-gnoi", serverName: "other.example.test", leafPEM: pki.leafPEM, caBundlePEM: pki.caBundlePEM, caKeyPEM: pki.caKeyPEM, wantErr: "verify leaf certificate"},
-			{name: "malformed CA PEM", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: []byte("not PEM"), caKeyPEM: pki.caKeyPEM, wantErr: "CA bundle"},
-			{name: "non-CA in bundle", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: pki.leafPEM, caKeyPEM: pki.caKeyPEM, wantErr: "is not a CA"},
-			{name: "missing root", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: pki.intermediatePEM, caKeyPEM: pki.caKeyPEM, wantErr: "self-signed root"},
-			{name: "unrelated CA", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: unrelated.caBundlePEM, caKeyPEM: unrelated.caKeyPEM, wantErr: "verify leaf certificate"},
-			{name: "empty CA key", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: pki.caBundlePEM, caKeyPEM: []byte{}, wantErr: "private key is not PEM encoded"},
-			{name: "malformed CA key", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: pki.caBundlePEM, caKeyPEM: []byte("not PEM"), wantErr: "private key is not PEM encoded"},
-			{name: "encrypted CA key", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: pki.caBundlePEM, caKeyPEM: pem.EncodeToMemory(&pem.Block{Type: "ENCRYPTED PRIVATE KEY", Bytes: []byte{1}}), wantErr: "encrypted private keys"},
-			{name: "non-RSA CA key", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: pki.caBundlePEM, caKeyPEM: pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: ecDER}), wantErr: "must contain an RSA key"},
-			{name: "weak CA key", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: pki.caBundlePEM, caKeyPEM: rsaPrivateKeyPEM(t, weakKey), wantErr: "at least 2048"},
-			{name: "wrong issuer key", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: pki.caBundlePEM, caKeyPEM: unrelated.caKeyPEM, wantErr: "must match tls.crt's verified intermediate issuer"},
+			{name: "invalid certificate ID", certificateID: "bad id", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: pki.caBundlePEM, wantErr: "certificate ID"},
+			{name: "missing server name", certificateID: "cvk-gnoi", leafPEM: pki.leafPEM, caBundlePEM: pki.caBundlePEM, wantErr: "server name is required"},
+			{name: "malformed leaf PEM", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: []byte("not PEM"), caBundlePEM: pki.caBundlePEM, wantErr: "leaf certificate"},
+			{name: "CA used as leaf", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.intermediatePEM, caBundlePEM: pki.caBundlePEM, wantErr: "must not be a CA"},
+			{name: "expired leaf", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: certificatePEM(expired), caBundlePEM: pki.caBundlePEM, wantErr: "expired"},
+			{name: "hostname mismatch", certificateID: "cvk-gnoi", serverName: "other.example.test", leafPEM: pki.leafPEM, caBundlePEM: pki.caBundlePEM, wantErr: "verify leaf certificate"},
+			{name: "malformed CA PEM", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: []byte("not PEM"), wantErr: "CA bundle"},
+			{name: "non-CA in bundle", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: pki.leafPEM, wantErr: "is not a CA"},
+			{name: "missing root", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: pki.intermediatePEM, wantErr: "self-signed root"},
+			{name: "unrelated CA", certificateID: "cvk-gnoi", serverName: provisioningTestServerName, leafPEM: pki.leafPEM, caBundlePEM: unrelated.caBundlePEM, wantErr: "verify leaf certificate"},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				_, err := NewProvisioningBundle(tt.certificateID, tt.serverName, tt.leafPEM, tt.caBundlePEM, tt.caKeyPEM)
+				_, err := NewProvisioningBundle(tt.certificateID, tt.serverName, tt.leafPEM, tt.caBundlePEM)
 				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 					t.Fatalf("NewProvisioningBundle error=%v, want substring %q", err, tt.wantErr)
 				}
 			})
 		}
 
-		withoutSigner, err := NewProvisioningBundle("cvk-gnoi", provisioningTestServerName, pki.leafPEM, pki.caBundlePEM, nil)
-		if err != nil {
-			t.Fatalf("NewProvisioningBundle without ca.key: %v", err)
-		}
-		if withoutSigner.signer.available() {
-			t.Fatal("bundle unexpectedly retained a signer when ca.key was omitted")
-		}
-
 		directRootLeaf := reissueProvisioningCertificate(t, pki.leaf, pki.root, &pki.leafKey.PublicKey, pki.rootKey, func(*x509.Certificate) {})
-		if _, err := NewProvisioningBundle("cvk-gnoi", provisioningTestServerName, certificatePEM(directRootLeaf), pki.rootPEM, rsaPrivateKeyPEM(t, pki.rootKey)); err == nil || !strings.Contains(err.Error(), "dedicated intermediate CA") {
+		if _, err := NewProvisioningBundle("cvk-gnoi", provisioningTestServerName, certificatePEM(directRootLeaf), pki.rootPEM); err == nil || !strings.Contains(err.Error(), "dedicated intermediate CA") {
 			t.Fatalf("direct-root bundle error=%v, want dedicated-intermediate rejection", err)
 		}
 
@@ -201,6 +201,52 @@ func TestProvisioning(t *testing.T) {
 				}
 			}
 		})
+	})
+
+	t.Run("local signer validation", func(t *testing.T) {
+		weakKey := mustRSAKey(t, 1024)
+		ecKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			t.Fatalf("ecdsa.GenerateKey: %v", err)
+		}
+		ecDER, err := x509.MarshalPKCS8PrivateKey(ecKey)
+		if err != nil {
+			t.Fatalf("x509.MarshalPKCS8PrivateKey: %v", err)
+		}
+
+		tests := []struct {
+			name    string
+			bundle  *ProvisioningBundle
+			keyPEM  []byte
+			wantErr string
+		}{
+			{name: "nil bundle", keyPEM: pki.caKeyPEM, wantErr: "nil bundle"},
+			{name: "empty key", bundle: bundle, keyPEM: []byte{}, wantErr: "private key is not PEM encoded"},
+			{name: "malformed key", bundle: bundle, keyPEM: []byte("not PEM"), wantErr: "private key is not PEM encoded"},
+			{name: "encrypted key", bundle: bundle, keyPEM: pem.EncodeToMemory(&pem.Block{Type: "ENCRYPTED PRIVATE KEY", Bytes: []byte{1}}), wantErr: "encrypted private keys"},
+			{name: "non-RSA key", bundle: bundle, keyPEM: pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: ecDER}), wantErr: "must contain an RSA key"},
+			{name: "weak key", bundle: bundle, keyPEM: rsaPrivateKeyPEM(t, weakKey), wantErr: "at least 2048"},
+			{name: "wrong issuer key", bundle: bundle, keyPEM: unrelated.caKeyPEM, wantErr: "must match tls.crt's verified intermediate issuer"},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				signer, err := NewLocalCertificateSigner(tt.bundle, tt.keyPEM)
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("NewLocalCertificateSigner signer=%v error=%v, want substring %q", signer, err, tt.wantErr)
+				}
+			})
+		}
+
+		signer, err := NewLocalCertificateSigner(bundle, pki.caKeyPEM)
+		if err != nil {
+			t.Fatalf("NewLocalCertificateSigner: %v", err)
+		}
+		const want = "CertificateSigner{REDACTED}"
+		for _, format := range []string{"%v", "%+v", "%#v", "%s", "%q", "%x"} {
+			if got := fmt.Sprintf(format, signer); got != want {
+				t.Errorf("Sprintf(%q, %T)=%q, want %q", format, signer, got, want)
+			}
+		}
 	})
 
 	t.Run("CA replacement and client trust", func(t *testing.T) {
@@ -348,6 +394,7 @@ func TestProvisioning(t *testing.T) {
 
 		t.Run("GenerateCSR then Load and return after acknowledgement", func(t *testing.T) {
 			installBundle := mustProvisioningBundle(t, pki, completeBundle)
+			signer := mustLocalCertificateSigner(t, installBundle, pki.caKeyPEM)
 			ts := newTestServer(t)
 			ts.Cert.installCSR = validCSR
 			ts.Cert.installResponseSent = make(chan struct{})
@@ -358,7 +405,7 @@ func TestProvisioning(t *testing.T) {
 			defer cancel()
 			result := make(chan error, 1)
 			go func() {
-				result <- ts.client(t).InstallProvisioningCertificate(ctx, installBundle)
+				result <- ts.client(t).InstallProvisioningCertificate(ctx, installBundle, signer)
 			}()
 
 			select {
@@ -412,12 +459,110 @@ func TestProvisioning(t *testing.T) {
 			}
 		})
 
+		t.Run("external signer implementation", func(t *testing.T) {
+			ts := newTestServer(t)
+			ts.Cert.installCSR = validCSR
+			signer := certificateSignerFunc(func(ctx context.Context, csr []byte) ([]byte, error) {
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
+				if !bytes.Equal(csr, validCSR) {
+					t.Fatal("signer did not receive the target-generated CSR")
+				}
+				return bundle.signCSR(csr, pki.intermediateKey)
+			})
+			if err := ts.client(t).InstallProvisioningCertificate(context.Background(), bundle, signer); err != nil {
+				t.Fatalf("InstallProvisioningCertificate with external signer: %v", err)
+			}
+			if len(ts.Cert.installRequests) != 2 || ts.Cert.installRequests[1].GetLoadCertificate() == nil {
+				t.Fatalf("Install requests=%d, want GenerateCSR then Load", len(ts.Cert.installRequests))
+			}
+		})
+
+		t.Run("invalid target CSR is rejected before signer", func(t *testing.T) {
+			ts := newTestServer(t)
+			ts.Cert.installCSR = []byte("not PEM")
+			called := false
+			signer := certificateSignerFunc(func(context.Context, []byte) ([]byte, error) {
+				called = true
+				return nil, nil
+			})
+			err := ts.client(t).InstallProvisioningCertificate(context.Background(), bundle, signer)
+			if err == nil || !strings.Contains(err.Error(), "validate CSR") {
+				t.Fatalf("error=%v, want local CSR validation failure", err)
+			}
+			if called {
+				t.Fatal("untrusted target CSR was sent to the certificate signer")
+			}
+			if len(ts.Cert.installRequests) != 1 {
+				t.Fatalf("Install sent %d requests after invalid CSR, want 1", len(ts.Cert.installRequests))
+			}
+		})
+
+		t.Run("signer result is validated before Load", func(t *testing.T) {
+			wrongKeyCSR := certificateRequestPEM(t, mustRSAKey(t, iosXEProvisioningRSAKeyBits), &x509.CertificateRequest{})
+			wrongKeyCertificate, err := bundle.signCSR(wrongKeyCSR, pki.intermediateKey)
+			if err != nil {
+				t.Fatalf("sign wrong-key certificate: %v", err)
+			}
+			validCertificate, err := bundle.signCSR(validCSR, pki.intermediateKey)
+			if err != nil {
+				t.Fatalf("sign valid certificate: %v", err)
+			}
+			validParsed, err := parseSingleCertificatePEM(validCertificate, "valid certificate")
+			if err != nil {
+				t.Fatalf("parse valid certificate: %v", err)
+			}
+			unsupportedCritical := reissueProvisioningCertificate(
+				t,
+				validParsed,
+				pki.intermediate,
+				&targetKey.PublicKey,
+				pki.intermediateKey,
+				func(certificate *x509.Certificate) {
+					certificate.ExtraExtensions = append(certificate.ExtraExtensions, pkix.Extension{
+						Id:       asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 9, 999, 1},
+						Critical: true,
+						Value:    []byte{0x05, 0x00},
+					})
+				},
+			)
+
+			tests := []struct {
+				name    string
+				result  []byte
+				wantErr string
+			}{
+				{name: "malformed PEM", result: []byte("not PEM"), wantErr: "signer certificate"},
+				{name: "multiple certificates", result: append(bytes.Clone(validCertificate), validCertificate...), wantErr: "exactly one PEM certificate"},
+				{name: "different CSR key", result: wrongKeyCertificate, wantErr: "does not match the target-generated CSR"},
+				{name: "unsupported critical extension", result: certificatePEM(unsupportedCritical), wantErr: "unhandled critical extension"},
+			}
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					ts := newTestServer(t)
+					ts.Cert.installCSR = validCSR
+					signer := certificateSignerFunc(func(context.Context, []byte) ([]byte, error) {
+						return bytes.Clone(tt.result), nil
+					})
+					err := ts.client(t).InstallProvisioningCertificate(context.Background(), bundle, signer)
+					if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+						t.Fatalf("error=%v, want signer-result rejection containing %q", err, tt.wantErr)
+					}
+					if len(ts.Cert.installRequests) != 1 {
+						t.Fatalf("Install sent %d requests after invalid signer result, want 1", len(ts.Cert.installRequests))
+					}
+				})
+			}
+		})
+
 		t.Run("omitted certificate type is accepted", func(t *testing.T) {
 			ts := newTestServer(t)
 			ts.Cert.installCSR = validCSR
 			unknown := certpb.CertificateType_CT_UNKNOWN
 			ts.Cert.installCSRType = &unknown
-			if err := ts.client(t).InstallProvisioningCertificate(context.Background(), mustProvisioningBundle(t, pki, pki.caBundlePEM)); err != nil {
+			installBundle := mustProvisioningBundle(t, pki, pki.caBundlePEM)
+			if err := installWithLocalSigner(t, ts.client(t), context.Background(), installBundle, pki.caKeyPEM); err != nil {
 				t.Fatalf("InstallProvisioningCertificate with CT_UNKNOWN: %v", err)
 			}
 		})
@@ -427,7 +572,8 @@ func TestProvisioning(t *testing.T) {
 			ts.Cert.installCSR = validCSR
 			unsupported := certpb.CertificateType(99)
 			ts.Cert.installCSRType = &unsupported
-			err := ts.client(t).InstallProvisioningCertificate(context.Background(), mustProvisioningBundle(t, pki, pki.caBundlePEM))
+			installBundle := mustProvisioningBundle(t, pki, pki.caBundlePEM)
+			err := installWithLocalSigner(t, ts.client(t), context.Background(), installBundle, pki.caKeyPEM)
 			if err == nil || !strings.Contains(err.Error(), "want CT_X509") {
 				t.Fatalf("error=%v, want certificate type rejection", err)
 			}
@@ -438,7 +584,8 @@ func TestProvisioning(t *testing.T) {
 
 		t.Run("missing CSR is rejected before Load", func(t *testing.T) {
 			ts := newTestServer(t)
-			err := ts.client(t).InstallProvisioningCertificate(context.Background(), mustProvisioningBundle(t, pki, pki.caBundlePEM))
+			installBundle := mustProvisioningBundle(t, pki, pki.caBundlePEM)
+			err := installWithLocalSigner(t, ts.client(t), context.Background(), installBundle, pki.caKeyPEM)
 			if err == nil || !strings.Contains(err.Error(), "expected GenerateCSRResponse with CSR") {
 				t.Fatalf("error=%v, want missing CSR rejection", err)
 			}
@@ -455,7 +602,8 @@ func TestProvisioning(t *testing.T) {
 					GeneratedCsr: &certpb.GenerateCSRResponse{},
 				},
 			}
-			err := ts.client(t).InstallProvisioningCertificate(context.Background(), mustProvisioningBundle(t, pki, pki.caBundlePEM))
+			installBundle := mustProvisioningBundle(t, pki, pki.caBundlePEM)
+			err := installWithLocalSigner(t, ts.client(t), context.Background(), installBundle, pki.caKeyPEM)
 			if !IsCertificateInstallIndeterminate(err) {
 				t.Fatalf("error=%T %v, want indeterminate outcome", err, err)
 			}
@@ -562,53 +710,50 @@ func TestProvisioningClientTLSRejectsInvalidBootstrap(t *testing.T) {
 func TestProvisioningSignerIsOneShotUnderConcurrency(t *testing.T) {
 	pki := newProvisioningTestPKI(t, provisioningTestServerName)
 	bundle := mustProvisioningBundle(t, pki, pki.caBundlePEM)
+	signer := mustLocalCertificateSigner(t, bundle, pki.caKeyPEM)
 	csr := certificateRequestPEM(t, mustRSAKey(t, iosXEProvisioningRSAKeyBits), &x509.CertificateRequest{})
 
 	const callers = 16
 	start := make(chan struct{})
-	errs := make(chan error, callers)
-	var signed atomic.Int32
+	results := make(chan error, callers)
 	var wg sync.WaitGroup
 	for range callers {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			<-start
-			key := bundle.signer.take()
-			if key == nil {
-				return
-			}
-			if _, err := bundle.signCSR(csr, key); err != nil {
-				errs <- err
-				return
-			}
-			signed.Add(1)
+			_, err := signer.SignCSR(context.Background(), csr)
+			results <- err
 		}()
 	}
 	close(start)
 	wg.Wait()
-	close(errs)
-	for err := range errs {
-		t.Errorf("signCSR: %v", err)
+	close(results)
+	signed := 0
+	for err := range results {
+		if err == nil {
+			signed++
+			continue
+		}
+		if !strings.Contains(err.Error(), "only once") {
+			t.Errorf("SignCSR: %v", err)
+		}
 	}
-	if got := signed.Load(); got != 1 {
-		t.Fatalf("successful signatures=%d, want exactly 1", got)
-	}
-	if bundle.signer.available() {
-		t.Fatal("signer remained available after its one permitted use")
+	if signed != 1 {
+		t.Fatalf("successful signatures=%d, want exactly 1", signed)
 	}
 }
 
-func TestInstallWithoutSigningKeyFailsBeforeRequest(t *testing.T) {
+func TestInstallWithoutSignerFailsBeforeRequest(t *testing.T) {
 	pki := newProvisioningTestPKI(t, provisioningTestServerName)
-	bundle, err := NewProvisioningBundle("cvk-gnoi", provisioningTestServerName, pki.leafPEM, pki.caBundlePEM, nil)
+	bundle, err := NewProvisioningBundle("cvk-gnoi", provisioningTestServerName, pki.leafPEM, pki.caBundlePEM)
 	if err != nil {
 		t.Fatalf("NewProvisioningBundle: %v", err)
 	}
 	ts := newTestServer(t)
-	err = ts.client(t).InstallProvisioningCertificate(context.Background(), bundle)
-	if err == nil || !strings.Contains(err.Error(), "ca.key is required") {
-		t.Fatalf("InstallProvisioningCertificate error=%v, want missing ca.key", err)
+	err = ts.client(t).InstallProvisioningCertificate(context.Background(), bundle, nil)
+	if err == nil || !strings.Contains(err.Error(), "certificate signer is required") {
+		t.Fatalf("InstallProvisioningCertificate error=%v, want missing signer", err)
 	}
 	if len(ts.Cert.installRequests) != 0 {
 		t.Fatalf("Install sent %d requests without a signing key, want 0", len(ts.Cert.installRequests))
@@ -716,11 +861,25 @@ func newProvisioningTestPKI(t *testing.T, serverName string) *provisioningTestPK
 
 func mustProvisioningBundle(t *testing.T, pki *provisioningTestPKI, caBundle []byte) *ProvisioningBundle {
 	t.Helper()
-	bundle, err := NewProvisioningBundle("cvk-gnoi", provisioningTestServerName, pki.leafPEM, caBundle, pki.caKeyPEM)
+	bundle, err := NewProvisioningBundle("cvk-gnoi", provisioningTestServerName, pki.leafPEM, caBundle)
 	if err != nil {
 		t.Fatalf("NewProvisioningBundle: %v", err)
 	}
 	return bundle
+}
+
+func mustLocalCertificateSigner(t *testing.T, bundle *ProvisioningBundle, caKeyPEM []byte) CertificateSigner {
+	t.Helper()
+	signer, err := NewLocalCertificateSigner(bundle, caKeyPEM)
+	if err != nil {
+		t.Fatalf("NewLocalCertificateSigner: %v", err)
+	}
+	return signer
+}
+
+func installWithLocalSigner(t *testing.T, client *Client, ctx context.Context, bundle *ProvisioningBundle, caKeyPEM []byte) error {
+	t.Helper()
+	return client.InstallProvisioningCertificate(ctx, bundle, mustLocalCertificateSigner(t, bundle, caKeyPEM))
 }
 
 func mustSignCSR(t *testing.T, bundle *ProvisioningBundle, signingKey *rsa.PrivateKey, key any, template *x509.CertificateRequest) []byte {

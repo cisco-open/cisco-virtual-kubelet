@@ -102,6 +102,7 @@ type IOSXEOperationalActionSpec struct {
 // +kubebuilder:validation:XValidation:rule="(self.kind == 'FilePut') == has(self.filePut)",message="kind FilePut requires only the filePut args block"
 // +kubebuilder:validation:XValidation:rule="(self.kind == 'FileRemove') == has(self.fileRemove)",message="kind FileRemove requires only the fileRemove args block"
 // +kubebuilder:validation:XValidation:rule="(self.kind == 'FactoryReset') == has(self.factoryReset)",message="kind FactoryReset requires only the factoryReset args block"
+// +kubebuilder:validation:XValidation:rule="(self.kind == 'ProvisionCertificate') == has(self.provisionCertificate)",message="kind ProvisionCertificate requires only the provisionCertificate args block"
 type ActionRequest struct {
 	// Kind names the action variant.
 	// +kubebuilder:validation:Required
@@ -130,6 +131,29 @@ type ActionRequest struct {
 	// FactoryReset is the input for ActionKindFactoryReset.
 	// +optional
 	FactoryReset *FactoryResetArgs `json:"factoryReset,omitempty"`
+
+	// ProvisionCertificate binds the action to the exact public certificate
+	// material configured in the target device worker.
+	// +optional
+	ProvisionCertificate *ProvisionCertificateActionArgs `json:"provisionCertificate,omitempty"`
+}
+
+// ProvisionCertificateActionArgs identifies the immutable public provisioning
+// intent authorized by this action. PublicMaterialSHA256 is SHA-256 over the
+// exact tls.crt bytes followed immediately by the exact ca.crt bytes.
+type ProvisionCertificateActionArgs struct {
+	// CertificateID is the IOS XE trustpoint identifier to provision.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=64
+	// +kubebuilder:validation:Pattern=^[A-Za-z0-9][A-Za-z0-9_.-]*$
+	CertificateID string `json:"certificateID"`
+
+	// PublicMaterialSHA256 binds the action to the exact mounted tls.crt and
+	// ca.crt byte sequence without exposing either file in the action.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^[0-9a-f]{64}$`
+	PublicMaterialSHA256 string `json:"publicMaterialSHA256"`
 }
 
 // RebootActionArgs mirrors gnoi.RebootOpts.

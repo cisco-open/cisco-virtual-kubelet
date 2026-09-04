@@ -193,6 +193,12 @@ rules.
     (certificate provisioning, reboot, file write, factory reset) and may be
     irreversible. Apply strict namespace-scoped RBAC before enabling.
 
+    Kubernetes RBAC cannot distinguish values of `spec.action.kind`. Any
+    principal allowed to create `IOSXEOperationalAction` can also request
+    `ProvisionCertificate` when that device has an enabled signer. Treat this
+    grant as PKI replacement authority as well as reboot/file/factory-reset
+    authority.
+
 `IOSXEOperationalAction` supports:
 
 - `Reboot`
@@ -206,8 +212,11 @@ rules.
 Every action targets exactly one `CiscoDevice` and must set
 `spec.confirm` to the target device name. The spec is immutable after create,
 and the action request must contain exactly the args block matching
-`spec.action.kind`. `ProvisionCertificate` is the exception: it has no args
-block and is the only path that can install the configured gNOI identity.
+`spec.action.kind`. `ProvisionCertificate` requires a `provisionCertificate`
+block containing the configured certificate ID and the lowercase SHA-256 of
+the exact `tls.crt` bytes followed by the exact `ca.crt` bytes. The worker
+rejects a stale ID or digest before connecting to the device. This action is
+the only path that can install the configured gNOI identity.
 `GNOIOSVerify` remains read-only. Follow the
 [secure gNOI provisioning workflow](gnoi-software-lifecycle.md#provisioning-the-ios-xe-gnoi-os-service)
 before creating this action.
@@ -238,8 +247,9 @@ Lifecycle:
 - A `Running` action is never dispatched a second time. If the controller dies
   after the device-side invocation, inspect device state before creating a new
   CR. For `ProvisionCertificate`, a `CertificateInstallIndeterminate` failure
-  means the create-only result is unknown: use `GNOICertGet` and inspect device
-  PKI state; never retry the same certificate ID blindly.
+  means the create-only result remained unknown after bounded, fresh-connection
+  certificate and `OS.Verify` checks: use `GNOICertGet` and inspect device PKI
+  state; never retry the same certificate ID blindly.
 - Terminal phases are `Succeeded`, `Failed`, and `Rejected`.
 - The finalizer is retained while an invocation is in progress so a delete
   request cannot erase the audit trail before completion.

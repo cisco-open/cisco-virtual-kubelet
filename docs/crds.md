@@ -503,8 +503,11 @@ Every action requires `spec.confirm` to equal the target device name, the spec
 is immutable after creation, and a `Running` action is not dispatched a second
 time after controller restart.
 
-`ProvisionCertificate` has no args block. It is gated, create-only, and
-separate from the read-only `GNOIOSVerify` operation. See the
+`ProvisionCertificate` requires a `provisionCertificate` args block with the
+configured certificate ID and the lowercase SHA-256 of the exact `tls.crt`
+bytes followed by the exact `ca.crt` bytes. The worker rejects a stale intent
+before device access. It is gated, create-only, and separate from the read-only
+`GNOIOSVerify` operation. See the
 [canonical provisioning workflow](gnoi-software-lifecycle.md#provisioning-the-ios-xe-gnoi-os-service)
 for its prerequisites and cleanup steps.
 

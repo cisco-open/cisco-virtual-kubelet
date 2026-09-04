@@ -23,15 +23,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"google.golang.org/grpc"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/devicegrpc"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoiruntime"
 	"github.com/cisco/virtual-kubelet-cisco/internal/tlsutil"
 )
 
@@ -55,16 +53,14 @@ const (
 	gNOIProvisioningCAKeyFile     = "ca.key"
 	gNOIProvisioningCAFile        = "ca.crt"
 	gNOIProvisioningBootstrapFile = "bootstrap.crt"
-	gNOIProvisioningRPCTimeout    = 2 * time.Minute
 )
 
-// setupGNOI builds the per-device gRPC pool and returns a lazy,
-// resettable gNOI provider. The provider leases ClassControl on first
-// use and ClassBulkTransfer only for the duration of File.Get/Put or
-// OS.Install streams. The returned cleanup function releases leases
-// and closes the pool when the surrounding ctx is done.
+// setupGNOI builds the per-device gRPC runtime. A successfully configured base
+// provider has no certificate-install authority; that authority is returned
+// separately and only when both the write-class gate and local signer material
+// are present.
 //
-// Returns (nil, nil, nil) when:
+// Returns (nil, nil, nil, nil) when:
 //   - The device spec is missing the address (defensive — usually
 //     caught earlier in startup).
 //   - Operators have set CISCO_VK_GNOI_DISABLED=1 to opt out.
@@ -72,13 +68,24 @@ const (
 // A nil gnoi.Provider signals to the reconcilers that the gNOI
 // dispatch path is unavailable; they fail fast with reason
 // GNOIUnsupported on any CR they receive.
-func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider, func(), error) {
+func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider, *gnoiruntime.Provisioner, func(), error) {
+	return setupGNOIWithProvisioningDirectory(ctx, opts, gNOIProvisioningMountPath)
+}
+
+// setupGNOIWithProvisioningDirectory is the testable composition boundary for
+// the projected provisioning Secret. Production always passes the fixed,
+// read-only mount path above.
+func setupGNOIWithProvisioningDirectory(
+	ctx context.Context,
+	opts configReconcilerOptions,
+	provisioningDirectory string,
+) (gnoi.Provider, *gnoiruntime.Provisioner, func(), error) {
 	if v := os.Getenv(gNOIDisabledEnv); v == "1" || strings.EqualFold(v, "true") {
 		log.G(ctx).Info("gNOI pillar disabled by CISCO_VK_GNOI_DISABLED")
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	if opts.Spec == nil || opts.Spec.Address == "" {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
 	forceInsecure := false
@@ -88,44 +95,54 @@ func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider
 
 	port, tlsEnabled, err := gnoiTransportForSpec(opts.Spec, forceInsecure)
 	if err != nil {
-		return nil, nil, fmt.Errorf("gNOI: invalid transport config: %w", err)
+		return nil, nil, nil, fmt.Errorf("gNOI: invalid transport config: %w", err)
 	}
 
 	dialCfg, err := gnoiDialConfig(opts.Spec, opts.Password, tlsEnabled)
 	if err != nil {
-		return nil, nil, fmt.Errorf("gNOI: TLS from spec: %w", err)
+		return nil, nil, nil, fmt.Errorf("gNOI: TLS from spec: %w", err)
 	}
 	provisioningBundle, err := loadGNOIProvisioningBundle(
 		opts.Spec,
 		tlsEnabled,
 		dialCfg.TLSConfig,
-		gNOIProvisioningMountPath,
+		provisioningDirectory,
 		opts.EnableWriteClassGNOI,
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("gNOI: certificate provisioning: %w", err)
+		return nil, nil, nil, fmt.Errorf("gNOI: certificate provisioning: %w", err)
+	}
+	var signer gnoi.CertificateSigner
+	var signerErr error
+	if provisioningBundle != nil && opts.EnableWriteClassGNOI {
+		signer, signerErr = loadGNOILocalCertificateSigner(provisioningBundle, provisioningDirectory)
 	}
 
 	pool := devicegrpc.New(dialCfg, nil)
 	key := devicegrpc.DeviceKey{Address: opts.Spec.Address, Port: port}
-
-	pooled := &pooledGNOIProvider{
-		pool:    pool,
-		key:     key,
-		auth:    dialCfg.AuthContext(),
-		address: opts.Spec.Address,
-		port:    port,
+	provider, err := gnoiruntime.NewProvider(pool, key, dialCfg.AuthContext())
+	if err != nil {
+		_ = pool.Close()
+		return nil, nil, nil, err
 	}
-	var provider gnoi.Provider = pooled
-	if provisioningBundle != nil && opts.EnableWriteClassGNOI {
-		provider = &provisioningGNOIProvider{
-			pooledGNOIProvider: pooled,
-			bundle:             provisioningBundle,
+
+	var provisioner *gnoiruntime.Provisioner
+	if signerErr != nil {
+		log.G(ctx).WithError(signerErr).Warn(
+			"gNOI ProvisionCertificate is unavailable because the local ca.key signer could not be loaded; base gNOI remains enabled",
+		)
+	} else if provisioningBundle != nil && signer != nil && opts.EnableWriteClassGNOI {
+		provisioner, err = gnoiruntime.NewProvisioner(provider, provisioningBundle, signer)
+		if err != nil {
+			provider.Close()
+			return nil, nil, nil, err
 		}
+	} else if provisioningBundle != nil && opts.EnableWriteClassGNOI {
+		log.G(ctx).Warnf("gNOI certificate provisioning is unavailable: %s is not mounted", gNOIProvisioningCAKeyFile)
 	}
 
 	log.G(ctx).Infof("gNOI: pillar enabled (%s:%d, tls=%v, lazy_bulk=true)", opts.Spec.Address, port, dialCfg.TLSConfig != nil)
-	return provider, pooled.Close, nil
+	return provider, provisioner, provider.Close, nil
 }
 
 func loadGNOIProvisioningBundle(
@@ -157,24 +174,17 @@ func loadGNOIProvisioningBundle(
 		return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCAFile, err)
 	}
 	var bootstrapPEM []byte
-	var caKeyPEM []byte
 	if provisioningWritesEnabled {
 		bootstrapPEM, err = readOptionalFile(filepath.Join(directory, gNOIProvisioningBootstrapFile))
 		if err != nil {
 			return nil, fmt.Errorf("read %s: %w", gNOIProvisioningBootstrapFile, err)
 		}
-		caKeyPEM, err = readOptionalFile(filepath.Join(directory, gNOIProvisioningCAKeyFile))
-		if err != nil {
-			return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCAKeyFile, err)
-		}
-		defer clear(caKeyPEM)
 	}
 	bundle, err := gnoi.NewProvisioningBundle(
 		provisioning.CertificateID,
 		spec.Address,
 		leafPEM,
 		caBundlePEM,
-		caKeyPEM,
 	)
 	if err != nil {
 		return nil, err
@@ -184,6 +194,29 @@ func loadGNOIProvisioningBundle(
 		return nil, err
 	}
 	return bundle, nil
+}
+
+// loadGNOILocalCertificateSigner loads the optional private signing material
+// independently from the public provisioning profile. A caller can therefore
+// retain verified gNOI TLS and read-only operations when local signing is
+// unavailable. The source bytes are cleared after the key has been parsed.
+func loadGNOILocalCertificateSigner(bundle *gnoi.ProvisioningBundle, directory string) (gnoi.CertificateSigner, error) {
+	if bundle == nil {
+		return nil, nil
+	}
+	caKeyPEM, err := readOptionalFile(filepath.Join(directory, gNOIProvisioningCAKeyFile))
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCAKeyFile, err)
+	}
+	defer clear(caKeyPEM)
+	if len(caKeyPEM) == 0 {
+		return nil, nil
+	}
+	signer, err := gnoi.NewLocalCertificateSigner(bundle, caKeyPEM)
+	if err != nil {
+		return nil, fmt.Errorf("load local signer from %s: %w", gNOIProvisioningCAKeyFile, err)
+	}
+	return signer, nil
 }
 
 func readOptionalFile(path string) ([]byte, error) {
@@ -216,7 +249,10 @@ func gnoiDialConfig(spec *ciskov1.DeviceSpec, password string, tlsEnabled bool) 
 		if tlsCfg.InsecureSkipVerify {
 			return devicegrpc.DialConfig{}, fmt.Errorf("verified TLS is required for explicit secure gNOI; insecureSkipVerify is not permitted")
 		}
-		if spec.Username != "" && password != "" {
+		if (spec.Username == "") != (password == "") {
+			return devicegrpc.DialConfig{}, fmt.Errorf("explicit secure gNOI password authentication requires both username and password, or neither when another authentication method is configured")
+		}
+		if spec.Username != "" {
 			dialCfg.RPCCredentials = devicegrpc.NewIOSXEPasswordCredentials(spec.Username, password)
 		}
 	}
@@ -274,139 +310,6 @@ func gnoiTransportForSpec(spec *ciskov1.DeviceSpec, forceInsecure bool) (int, bo
 
 func effectiveGNOITLS(config *ciskov1.GNOIConfig, sharedTLS bool) bool {
 	return sharedTLS || (config != nil && config.TransportSecurity == ciskov1.GNOITransportSecurityTLS)
-}
-
-type pooledGNOIProvider struct {
-	mu      sync.Mutex
-	pool    devicegrpc.Pool
-	key     devicegrpc.DeviceKey
-	auth    gnoi.AuthContext
-	address string
-	port    int
-
-	controlLease *devicegrpc.Lease
-	client       *gnoi.Client
-	closed       bool
-}
-
-func (p *pooledGNOIProvider) GNOIClient(ctx context.Context) (*gnoi.Client, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if p.closed {
-		return nil, fmt.Errorf("gnoi provider closed")
-	}
-	if p.client != nil {
-		return p.client, nil
-	}
-	controlLease, err := p.pool.Lease(ctx, p.key, devicegrpc.ClassControl)
-	if err != nil {
-		return nil, fmt.Errorf("gnoi ClassControl lease: %w", err)
-	}
-	client, err := gnoi.New(controlLease.Conn, gnoi.Options{Auth: p.auth, BulkConnProvider: p.bulkConn})
-	if err != nil {
-		controlLease.Release()
-		return nil, fmt.Errorf("gnoi client construct: %w", err)
-	}
-	p.controlLease = controlLease
-	p.client = client
-	return client, nil
-}
-
-// provisioningGNOIProvider is returned only for an explicit certificate
-// provisioning block. Keeping this capability off the base provider limits
-// certificate installation to the explicit write-class action.
-type provisioningGNOIProvider struct {
-	*pooledGNOIProvider
-
-	provisionMu sync.Mutex
-	bundle      *gnoi.ProvisioningBundle
-
-	// Test seams default to the corresponding gnoi.Client methods.
-	certificateInstalled func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) (bool, error)
-	installCertificate   func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) error
-}
-
-func (p *provisioningGNOIProvider) ProvisionGNOICertificate(ctx context.Context, client *gnoi.Client) (string, error) {
-	p.provisionMu.Lock()
-	defer p.provisionMu.Unlock()
-	provisioningCtx, cancel := context.WithTimeout(ctx, gNOIProvisioningRPCTimeout)
-	defer cancel()
-
-	if p.bundle == nil {
-		return "", fmt.Errorf("gnoi certificate provisioning is not configured")
-	}
-	if !p.isCurrentClient(client) {
-		return "", fmt.Errorf("gnoi client changed before certificate provisioning could start")
-	}
-
-	installedFn := p.certificateInstalled
-	if installedFn == nil {
-		installedFn = func(ctx context.Context, client *gnoi.Client, bundle *gnoi.ProvisioningBundle) (bool, error) {
-			return client.ProvisioningCertificateInstalled(ctx, bundle)
-		}
-	}
-	installed, err := installedFn(provisioningCtx, client, p.bundle)
-	if err != nil {
-		return "", fmt.Errorf("inspect IOS XE provisioning certificate: %w", err)
-	}
-
-	if installed {
-		return "", fmt.Errorf(
-			"gnoi certificate %q is installed but IOS XE still reports that the device is not provisioned; verify the gNXI secure trustpoint binding",
-			p.bundle.CertificateID(),
-		)
-	}
-	installFn := p.installCertificate
-	if installFn == nil {
-		installFn = func(ctx context.Context, client *gnoi.Client, bundle *gnoi.ProvisioningBundle) error {
-			return client.InstallProvisioningCertificate(ctx, bundle)
-		}
-	}
-	if err := installFn(provisioningCtx, client, p.bundle); err != nil {
-		if gnoi.IsCertificateInstallIndeterminate(err) {
-			p.ResetGNOIClient(ctx)
-		}
-		return "", fmt.Errorf("install IOS XE provisioning certificate: %w", err)
-	}
-	p.ResetGNOIClient(ctx)
-	return p.bundle.CertificateID(), nil
-}
-
-func (p *pooledGNOIProvider) isCurrentClient(client *gnoi.Client) bool {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	return !p.closed && p.client == client
-}
-
-func (p *pooledGNOIProvider) ResetGNOIClient(ctx context.Context) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if p.controlLease != nil {
-		p.controlLease.Release()
-		p.controlLease = nil
-	}
-	p.client = nil
-	log.G(ctx).Infof("gNOI: reset client leases for %s:%d", p.address, p.port)
-}
-
-func (p *pooledGNOIProvider) Close() {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.closed = true
-	if p.controlLease != nil {
-		p.controlLease.Release()
-		p.controlLease = nil
-	}
-	p.client = nil
-	_ = p.pool.Close()
-}
-
-func (p *pooledGNOIProvider) bulkConn(ctx context.Context) (*grpc.ClientConn, func(), error) {
-	lease, err := p.pool.Lease(ctx, p.key, devicegrpc.ClassBulkTransfer)
-	if err != nil {
-		return nil, nil, fmt.Errorf("gnoi ClassBulkTransfer lease: %w", err)
-	}
-	return lease.Conn, lease.Release, nil
 }
 
 func inferredGNOIPort(port int, tlsEnabled bool) int {

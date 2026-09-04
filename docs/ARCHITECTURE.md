@@ -447,6 +447,24 @@ device returns `codes.Unimplemented`, later calls to that service fail fast
 with `ErrServiceUnsupported` instead of repeatedly attempting an unsupported
 RPC.
 
+The reusable IOS-XE runtime lives in `internal/drivers/iosxe/gnoiruntime`, not
+in command wiring. Its `Provider` owns the per-device pool leases and client
+reset lifecycle. Certificate installation is a separate `Provisioner`, injected
+into the operational-action reconciler only when certificate provisioning is
+configured and write-class gNOI is explicitly enabled. The base client provider
+therefore does not implicitly grant certificate-install authority.
+
+Certificate policy and protocol validation remain in the `gnoi` package behind
+the `CertificateSigner` interface. The included implementation is only a
+transitional, PEM-backed local signer for `ca.key`; it permits one signing
+attempt per process. This repository does not implement or configure an
+external CA, KMS, or HSM signer backend.
+
+The runtime serializes client resets against the target CSR/Load exchange and
+submits Install at most once. After IOS-XE restarts gNXI, it uses fresh
+connections for bounded, read-only certificate and `OS.Verify` checks; only
+that verified state is reported as a successful provisioning action.
+
 ## RESTCONF endpoints
 
 | Operation | Method | Endpoint |

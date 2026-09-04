@@ -262,17 +262,20 @@ kubectl -n <device-namespace> logs deploy/<device-name>-vk --tail=200 | grep -iE
 | `PermissionDenied` | Authentication succeeded but AAA denied the RPC | Check the IOS-XE AAA method list, user privilege, and authorization policy for the requested operation. |
 | `x509` trust or hostname error | The presented certificate is untrusted or does not match `spec.address` | Use normal CA/hostname validation, or put the exact temporary leaf in `bootstrap.crt`; `insecureSkipVerify: true` is rejected. |
 | `Unavailable`, connection refused, or deadline exceeded | Listener, port, route, firewall, VRF, or expected gNXI restart | Check port `9339`, `show gnxi state detail`, pod reachability, and recent provisioning events. |
-| `FailedPrecondition: Device has not been provisioned` | Authentication works, but the OS service lacks a provisioned identity | Confirm `gnxi secure-init`, configure the provisioning block, enable write-class gNOI, and create a `ProvisionCertificate` action. `GNOIOSVerify` never installs. |
+| `FailedPrecondition: Device has not been provisioned` | Authentication works, but the OS service lacks a provisioned identity | Confirm `gnxi enable-gnoi` and `gnxi secure-init`, configure the provisioning block, enable write-class gNOI, and create a `ProvisionCertificate` action. `GNOIOSVerify` never installs. |
+| `ProvisioningUnavailable` | The worker has no authorized certificate provisioner | Confirm the provisioning block and write-class gate, and ensure the gated Secret projection contains a valid `ca.key`; the action is rejected before device access. |
+| `ProvisioningIntentMismatch` | The action was created for a different certificate ID or public-material digest than the worker loaded | Recompute SHA-256 over the exact `tls.crt` bytes followed by `ca.crt`, wait for the Secret-driven worker rollout, then create a new immutable action. No device RPC was sent for the rejected action. |
 | Missing `ca.key` | The Secret is in post-provision/read-only form, or the write-class gate is disabled | A new identity requires the dedicated intermediate CA key and the write-class gate. Never supply a root CA key. |
 | CSR `InvalidArgument` | The profile or signer is invalid | Check that `tls.crt` has C, ST, O, OU, and an IP SAN and chains through the intermediate whose key is in `ca.key`. |
 | Certificate ID conflict / already exists | The create-only ID is stale or belongs to another identity | Compare `GNOICertGet` with device trustpoints. Resolve or remove stale state out of band, or choose a new ID; CVK will not overwrite it. |
 | `Unimplemented` | That platform does not implement the requested service | Before provisioning use `GNOICertGet`; use `GNOIOSVerify` only after `State: Provisioned`. |
 
-Before creating the action, confirm `gnxi secure-server`,
-`gnxi secure-password-auth`, and `gnxi secure-init`. After the expected gNXI
-restart, confirm the requested trustpoint and `State: Provisioned`, then create
-a fresh `GNOIOSVerify` operation. Remove `ca.key` and `bootstrap.crt` and disable
-write-class gNOI after verification. See the
+Before creating the action, confirm `gnxi enable-gnoi`, `gnxi secure-server`,
+`gnxi secure-password-auth`, and `gnxi secure-init`. The action reconnects after
+the expected gNXI restart and succeeds only when the requested certificate is
+visible and `OS.Verify` works; it never retries Install. Confirm the trustpoint
+and `State: Provisioned` on the device, then remove `ca.key` and `bootstrap.crt`
+and disable write-class gNOI. See the
 [canonical secure gNOI workflow](gnoi-software-lifecycle.md#secure-ios-xe-gnxi)
 for configuration, Secret contents, and the shared gNXI/gNMI CA-bundle warning.
 

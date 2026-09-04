@@ -51,6 +51,11 @@ import (
 
 // --- fixtures ---
 
+const (
+	testProvisioningCertificateID = "cvk-gnoi"
+	testPublicMaterialSHA256      = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+)
+
 type fakeSys struct {
 	syspb.UnimplementedSystemServer
 	rebootCalls       atomic.Int64
@@ -184,20 +189,37 @@ func newRig(t *testing.T) *rig {
 	return r
 }
 
-type staticGNOI struct{ c *gnoi.Client }
+type staticGNOI struct {
+	c           *gnoi.Client
+	clientCalls atomic.Int64
+}
 
-func (s *staticGNOI) GNOIClient(context.Context) (*gnoi.Client, error) { return s.c, nil }
+func (s *staticGNOI) GNOIClient(context.Context) (*gnoi.Client, error) {
+	s.clientCalls.Add(1)
+	return s.c, nil
+}
 
 type provisioningGNOI struct {
 	*staticGNOI
-	provisionCalls atomic.Int64
-	certificateID  string
-	provisionErr   error
+	provisionCalls           atomic.Int64
+	certificateID            string
+	provisionedCertificateID string
+	publicMaterialSHA256     string
+	version                  string
+	provisionErr             error
 }
 
-func (p *provisioningGNOI) ProvisionGNOICertificate(context.Context, *gnoi.Client) (string, error) {
+func (p *provisioningGNOI) ConfiguredIntent() (string, string) {
+	return p.certificateID, p.publicMaterialSHA256
+}
+
+func (p *provisioningGNOI) ProvisionGNOICertificate(context.Context, *gnoi.Client) (string, string, error) {
 	p.provisionCalls.Add(1)
-	return p.certificateID, p.provisionErr
+	certificateID := p.provisionedCertificateID
+	if certificateID == "" {
+		certificateID = p.certificateID
+	}
+	return certificateID, p.version, p.provisionErr
 }
 
 func newScheme(t *testing.T) *runtime.Scheme {
@@ -235,6 +257,16 @@ func newAction(name string, mutate func(*opsv1alpha1.IOSXEOperationalAction)) *o
 		mutate(a)
 	}
 	return a
+}
+
+func provisionCertificateAction() opsv1alpha1.ActionRequest {
+	return opsv1alpha1.ActionRequest{
+		Kind: opsv1alpha1.ActionKindProvisionCertificate,
+		ProvisionCertificate: &opsv1alpha1.ProvisionCertificateActionArgs{
+			CertificateID:        testProvisioningCertificateID,
+			PublicMaterialSHA256: testPublicMaterialSHA256,
+		},
+	}
 }
 
 func runReconcile(t *testing.T, r *Reconciler, a *opsv1alpha1.IOSXEOperationalAction) *opsv1alpha1.IOSXEOperationalAction {
@@ -370,18 +402,91 @@ func TestKindArgsMismatchRejected(t *testing.T) {
 	}
 }
 
-func TestProvisionCertificateRequiresNoArgs(t *testing.T) {
-	if err := validateActionRequest(opsv1alpha1.ActionRequest{
-		Kind: opsv1alpha1.ActionKindProvisionCertificate,
-	}); err != nil {
-		t.Fatalf("no-args ProvisionCertificate rejected: %v", err)
+func TestProvisionCertificateRequiresIntentArgs(t *testing.T) {
+	if err := validateActionRequest(provisionCertificateAction()); err != nil {
+		t.Fatalf("valid ProvisionCertificate rejected: %v", err)
 	}
 	err := validateActionRequest(opsv1alpha1.ActionRequest{
-		Kind:   opsv1alpha1.ActionKindProvisionCertificate,
-		Reboot: &opsv1alpha1.RebootActionArgs{},
+		Kind: opsv1alpha1.ActionKindProvisionCertificate,
 	})
-	if err == nil || !strings.Contains(err.Error(), "requires no args blocks") {
-		t.Fatalf("ProvisionCertificate with args error=%v", err)
+	if err == nil || !strings.Contains(err.Error(), "exactly one matching args block") {
+		t.Fatalf("ProvisionCertificate without args error=%v", err)
+	}
+
+	badDigest := provisionCertificateAction()
+	badDigest.ProvisionCertificate.PublicMaterialSHA256 = strings.ToUpper(testPublicMaterialSHA256)
+	if err := validateActionRequest(badDigest); err == nil || !strings.Contains(err.Error(), "64 lowercase hexadecimal") {
+		t.Fatalf("ProvisionCertificate uppercase digest error=%v", err)
+	}
+}
+
+func TestProvisionCertificateIntentMismatchRejectedBeforeDeviceRPC(t *testing.T) {
+	tests := []struct {
+		name             string
+		configuredID     string
+		configuredDigest string
+	}{
+		{
+			name:             "certificate ID",
+			configuredID:     "different-id",
+			configuredDigest: testPublicMaterialSHA256,
+		},
+		{
+			name:             "public material digest",
+			configuredID:     testProvisioningCertificateID,
+			configuredDigest: strings.Repeat("a", 64),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rig := newRig(t)
+			a := newAction("provision-mismatch", func(a *opsv1alpha1.IOSXEOperationalAction) {
+				a.Spec.Action = provisionCertificateAction()
+			})
+			r := newReconciler(t, rig, a)
+			provider := &provisioningGNOI{
+				staticGNOI:           &staticGNOI{c: rig.client},
+				certificateID:        tt.configuredID,
+				publicMaterialSHA256: tt.configuredDigest,
+			}
+			r.GNOI = provider
+			r.CertificateProvisioner = provider
+
+			got := runReconcile(t, r, a)
+			if got.Status.Phase != opsv1alpha1.ActionPhaseRejected || got.Status.FailureReason != "ProvisioningIntentMismatch" {
+				t.Fatalf("status=%+v, want rejected ProvisioningIntentMismatch", got.Status)
+			}
+			if got.Status.InvocationID != "" {
+				t.Fatalf("invocationID=%q, want empty", got.Status.InvocationID)
+			}
+			if got := rig.os.verifyCalls.Load(); got != 0 {
+				t.Fatalf("OS.Verify calls=%d, want 0", got)
+			}
+			if got := provider.clientCalls.Load(); got != 0 {
+				t.Fatalf("GNOIClient calls=%d, want 0", got)
+			}
+			if got := provider.provisionCalls.Load(); got != 0 {
+				t.Fatalf("ProvisionGNOICertificate calls=%d, want 0", got)
+			}
+		})
+	}
+}
+
+func TestProvisionCertificateUnavailableRejectedBeforeDeviceRPC(t *testing.T) {
+	rig := newRig(t)
+	a := newAction("provision-unavailable", func(a *opsv1alpha1.IOSXEOperationalAction) {
+		a.Spec.Action = provisionCertificateAction()
+	})
+	r := newReconciler(t, rig, a)
+
+	got := runReconcile(t, r, a)
+	if got.Status.Phase != opsv1alpha1.ActionPhaseRejected || got.Status.FailureReason != "ProvisioningUnavailable" {
+		t.Fatalf("status=%+v, want rejected ProvisioningUnavailable", got.Status)
+	}
+	baseProvider := r.GNOI.(*staticGNOI)
+	if got.Status.InvocationID != "" || baseProvider.clientCalls.Load() != 0 || rig.os.verifyCalls.Load() != 0 {
+		t.Fatalf("action touched device: invocationID=%q GNOIClient calls=%d OS.Verify calls=%d",
+			got.Status.InvocationID, baseProvider.clientCalls.Load(), rig.os.verifyCalls.Load())
 	}
 }
 
@@ -389,9 +494,14 @@ func TestProvisionCertificateAlreadyProvisioned(t *testing.T) {
 	rig := newRig(t)
 	rig.os.verifyResp = &ospb.VerifyResponse{Version: "17.18.04"}
 	a := newAction("provision-existing", func(a *opsv1alpha1.IOSXEOperationalAction) {
-		a.Spec.Action = opsv1alpha1.ActionRequest{Kind: opsv1alpha1.ActionKindProvisionCertificate}
+		a.Spec.Action = provisionCertificateAction()
 	})
 	r := newReconciler(t, rig, a)
+	r.CertificateProvisioner = &provisioningGNOI{
+		staticGNOI:           &staticGNOI{c: rig.client},
+		certificateID:        testProvisioningCertificateID,
+		publicMaterialSHA256: testPublicMaterialSHA256,
+	}
 	got := runReconcile(t, r, a)
 	if got.Status.Phase != opsv1alpha1.ActionPhaseSucceeded {
 		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
@@ -400,6 +510,8 @@ func TestProvisionCertificateAlreadyProvisioned(t *testing.T) {
 		t.Fatalf("OS.Verify calls=%d, want 1", rig.os.verifyCalls.Load())
 	}
 	if !strings.Contains(got.Status.Result, `"status":"alreadyProvisioned"`) ||
+		!strings.Contains(got.Status.Result, `"requestedCertificateID":"`+testProvisioningCertificateID+`"`) ||
+		!strings.Contains(got.Status.Result, `"requestedPublicMaterialSHA256":"`+testPublicMaterialSHA256+`"`) ||
 		!strings.Contains(got.Status.Result, `"version":"17.18.04"`) {
 		t.Fatalf("result=%q", got.Status.Result)
 	}
@@ -409,21 +521,25 @@ func TestProvisionCertificateAcceptedDoesNotRedispatch(t *testing.T) {
 	rig := newRig(t)
 	rig.os.verifyErr = status.Error(codes.FailedPrecondition, "Device has not been provisioned")
 	a := newAction("provision-new", func(a *opsv1alpha1.IOSXEOperationalAction) {
-		a.Spec.Action = opsv1alpha1.ActionRequest{Kind: opsv1alpha1.ActionKindProvisionCertificate}
+		a.Spec.Action = provisionCertificateAction()
 	})
 	r := newReconciler(t, rig, a)
 	provider := &provisioningGNOI{
-		staticGNOI:    &staticGNOI{c: rig.client},
-		certificateID: "cvk-gnoi",
+		staticGNOI:           &staticGNOI{c: rig.client},
+		certificateID:        testProvisioningCertificateID,
+		publicMaterialSHA256: testPublicMaterialSHA256,
+		version:              "17.18.04",
 	}
-	r.GNOI = provider
+	r.CertificateProvisioner = provider
 
 	got := runReconcile(t, r, a)
 	if got.Status.Phase != opsv1alpha1.ActionPhaseSucceeded {
 		t.Fatalf("phase=%q msg=%q", got.Status.Phase, got.Status.Message)
 	}
-	if !strings.Contains(got.Status.Result, `"status":"provisioningSubmitted"`) ||
-		!strings.Contains(got.Status.Result, `"certificateID":"cvk-gnoi"`) {
+	if !strings.Contains(got.Status.Result, `"status":"provisioned"`) ||
+		!strings.Contains(got.Status.Result, `"certificateID":"`+testProvisioningCertificateID+`"`) ||
+		!strings.Contains(got.Status.Result, `"publicMaterialSHA256":"`+testPublicMaterialSHA256+`"`) ||
+		!strings.Contains(got.Status.Result, `"version":"17.18.04"`) {
 		t.Fatalf("result=%q", got.Status.Result)
 	}
 	_ = runReconcile(t, r, a)
@@ -439,14 +555,16 @@ func TestProvisionCertificateFailureIsTerminal(t *testing.T) {
 	rig := newRig(t)
 	rig.os.verifyErr = status.Error(codes.FailedPrecondition, "Device has not been provisioned")
 	a := newAction("provision-failed", func(a *opsv1alpha1.IOSXEOperationalAction) {
-		a.Spec.Action = opsv1alpha1.ActionRequest{Kind: opsv1alpha1.ActionKindProvisionCertificate}
+		a.Spec.Action = provisionCertificateAction()
 	})
 	r := newReconciler(t, rig, a)
 	provider := &provisioningGNOI{
-		staticGNOI:   &staticGNOI{c: rig.client},
-		provisionErr: status.Error(codes.PermissionDenied, "certificate rejected"),
+		staticGNOI:           &staticGNOI{c: rig.client},
+		certificateID:        testProvisioningCertificateID,
+		publicMaterialSHA256: testPublicMaterialSHA256,
+		provisionErr:         status.Error(codes.PermissionDenied, "certificate rejected"),
 	}
-	r.GNOI = provider
+	r.CertificateProvisioner = provider
 
 	got := runReconcile(t, r, a)
 	if got.Status.Phase != opsv1alpha1.ActionPhaseFailed {
@@ -464,11 +582,13 @@ func TestProvisionCertificateIndeterminateFailureWarnsAgainstRetry(t *testing.T)
 	rig := newRig(t)
 	rig.os.verifyErr = status.Error(codes.FailedPrecondition, "Device has not been provisioned")
 	a := newAction("provision-indeterminate", func(a *opsv1alpha1.IOSXEOperationalAction) {
-		a.Spec.Action = opsv1alpha1.ActionRequest{Kind: opsv1alpha1.ActionKindProvisionCertificate}
+		a.Spec.Action = provisionCertificateAction()
 	})
 	r := newReconciler(t, rig, a)
-	r.GNOI = &provisioningGNOI{
-		staticGNOI: &staticGNOI{c: rig.client},
+	r.CertificateProvisioner = &provisioningGNOI{
+		staticGNOI:           &staticGNOI{c: rig.client},
+		certificateID:        testProvisioningCertificateID,
+		publicMaterialSHA256: testPublicMaterialSHA256,
 		provisionErr: &gnoi.ErrCertificateInstallIndeterminate{
 			CertificateID: "cvk-gnoi-cert",
 			Cause:         status.Error(codes.Unavailable, "gNXI restarted"),
@@ -481,6 +601,29 @@ func TestProvisionCertificateIndeterminateFailureWarnsAgainstRetry(t *testing.T)
 	}
 	if !strings.Contains(got.Status.Message, "do not retry") || !strings.Contains(got.Status.Message, "GNOICertGet") {
 		t.Fatalf("message=%q, want reconciliation guidance", got.Status.Message)
+	}
+}
+
+func TestProvisionCertificateUnexpectedResultIsIndeterminate(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyErr = status.Error(codes.FailedPrecondition, "Device has not been provisioned")
+	a := newAction("provision-unexpected-id", func(a *opsv1alpha1.IOSXEOperationalAction) {
+		a.Spec.Action = provisionCertificateAction()
+	})
+	r := newReconciler(t, rig, a)
+	r.CertificateProvisioner = &provisioningGNOI{
+		staticGNOI:               &staticGNOI{c: rig.client},
+		certificateID:            testProvisioningCertificateID,
+		provisionedCertificateID: "unexpected-id",
+		publicMaterialSHA256:     testPublicMaterialSHA256,
+	}
+
+	got := runReconcile(t, r, a)
+	if got.Status.Phase != opsv1alpha1.ActionPhaseFailed || got.Status.FailureReason != "CertificateInstallIndeterminate" {
+		t.Fatalf("status=%+v, want failed CertificateInstallIndeterminate", got.Status)
+	}
+	if !strings.Contains(got.Status.Message, "do not retry") || !strings.Contains(got.Status.Message, "unexpected-id") {
+		t.Fatalf("message=%q, want mismatch and reconciliation guidance", got.Status.Message)
 	}
 }
 

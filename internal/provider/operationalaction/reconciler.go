@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -48,6 +49,11 @@ const (
 	finalizerName      = "ops.cisco.vk/iosxeoperationalaction-finalizer"
 )
 
+var (
+	provisioningCertificateIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
+	publicMaterialSHA256Pattern      = regexp.MustCompile(`^[0-9a-f]{64}$`)
+)
+
 // Reconciler dispatches IOSXEOperationalAction CRs at most once.
 //
 // Each kind is destructive or near-destructive, so we do NOT retry on
@@ -61,13 +67,23 @@ type Reconciler struct {
 	DeviceName      string
 	DeviceNamespace string
 	GNOI            gnoi.Provider
+	// CertificateProvisioner is injected separately from GNOI so the base
+	// device client cannot acquire certificate-install authority implicitly.
+	// It is nil unless provisioning is explicitly configured and write-class
+	// gNOI is enabled.
+	CertificateProvisioner CertificateProvisioner
 
 	// Now is injected for tests.
 	Now func() time.Time
 }
 
-type certificateProvisioner interface {
-	ProvisionGNOICertificate(context.Context, *gnoi.Client) (certificateID string, err error)
+// CertificateProvisioner performs the IOS XE-specific, create-only
+// certificate bootstrap after the reconciler has confirmed OS.Verify reports
+// the exact not-provisioned state. The interface is owned by this consumer;
+// implementations live in the per-device IOS XE runtime.
+type CertificateProvisioner interface {
+	ConfiguredIntent() (certificateID, publicMaterialSHA256 string)
+	ProvisionGNOICertificate(context.Context, *gnoi.Client) (certificateID, version string, err error)
 }
 
 func (r *Reconciler) now() time.Time {
@@ -148,6 +164,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if err := validateActionRequest(act.Spec.Action); err != nil {
 		return r.terminal(ctx, &act, opsv1alpha1.ActionPhaseRejected, "InvalidAction", err.Error(), nil, now)
 	}
+	if act.Spec.Action.Kind == opsv1alpha1.ActionKindProvisionCertificate {
+		if r.CertificateProvisioner == nil {
+			return r.terminal(ctx, &act, opsv1alpha1.ActionPhaseRejected, "ProvisioningUnavailable",
+				"gnoi certificate provisioning is not configured; enable certificateProvisioning and write-class gNOI, and mount ca.key for the local signer", nil, now)
+		}
+		if err := validateConfiguredProvisioningIntent(act.Spec.Action.ProvisionCertificate, r.CertificateProvisioner); err != nil {
+			return r.terminal(ctx, &act, opsv1alpha1.ActionPhaseRejected, "ProvisioningIntentMismatch", err.Error(), nil, now)
+		}
+	}
 
 	if r.GNOI == nil {
 		return r.terminal(ctx, &act, opsv1alpha1.ActionPhaseFailed, "NoGNOIProvider",
@@ -199,34 +224,51 @@ func (r *Reconciler) dispatch(ctx context.Context, act *opsv1alpha1.IOSXEOperati
 	case opsv1alpha1.ActionKindFactoryReset:
 		return r.runFactoryReset(ctx, act, gc)
 	case opsv1alpha1.ActionKindProvisionCertificate:
-		return r.runProvisionCertificate(ctx, gc)
+		return r.runProvisionCertificate(ctx, act, gc)
 	default:
 		return nil, fmt.Errorf("unsupported action kind %q", kind)
 	}
 }
 
-func (r *Reconciler) runProvisionCertificate(ctx context.Context, gc *gnoi.Client) ([]byte, error) {
+func (r *Reconciler) runProvisionCertificate(ctx context.Context, act *opsv1alpha1.IOSXEOperationalAction, gc *gnoi.Client) ([]byte, error) {
+	intent := act.Spec.Action.ProvisionCertificate
+	if intent == nil {
+		return nil, fmt.Errorf("action.provisionCertificate is required")
+	}
 	verified, err := gc.Verify(ctx)
 	if err == nil {
 		return jsonResult(map[string]string{
-			"status":  "alreadyProvisioned",
-			"version": verified.Version,
+			"status":                        "alreadyProvisioned",
+			"requestedCertificateID":        intent.CertificateID,
+			"requestedPublicMaterialSHA256": intent.PublicMaterialSHA256,
+			"version":                       verified.Version,
 		}), nil
 	}
 	if !gnoi.IsDeviceNotProvisioned(err) {
 		return nil, err
 	}
-	provisioner, ok := r.GNOI.(certificateProvisioner)
-	if !ok {
-		return nil, fmt.Errorf("gnoi certificate provisioning is not configured: %w", err)
+	if r.CertificateProvisioner == nil {
+		return nil, fmt.Errorf("gnoi certificate provisioning is not configured; enable certificateProvisioning and write-class gNOI, and mount ca.key for the local signer: %w", err)
 	}
-	certificateID, err := provisioner.ProvisionGNOICertificate(ctx, gc)
+	certificateID, version, err := r.CertificateProvisioner.ProvisionGNOICertificate(ctx, gc)
 	if err != nil {
 		return nil, fmt.Errorf("gnoi certificate provisioning: %w", err)
 	}
+	if certificateID != intent.CertificateID {
+		return nil, &gnoi.ErrCertificateInstallIndeterminate{
+			CertificateID: intent.CertificateID,
+			Cause: fmt.Errorf(
+				"gnoi certificate provisioning returned certificate ID %q; expected %q",
+				certificateID,
+				intent.CertificateID,
+			),
+		}
+	}
 	return jsonResult(map[string]string{
-		"status":        "provisioningSubmitted",
-		"certificateID": certificateID,
+		"status":               "provisioned",
+		"certificateID":        certificateID,
+		"publicMaterialSHA256": intent.PublicMaterialSHA256,
+		"version":              version,
 	}), nil
 }
 
@@ -483,11 +525,8 @@ func validateActionRequest(action opsv1alpha1.ActionRequest) error {
 	if action.FactoryReset != nil {
 		argsBlocks++
 	}
-	if action.Kind == opsv1alpha1.ActionKindProvisionCertificate {
-		if argsBlocks != 0 {
-			return fmt.Errorf("action.kind %q requires no args blocks; got %d", action.Kind, argsBlocks)
-		}
-		return nil
+	if action.ProvisionCertificate != nil {
+		argsBlocks++
 	}
 	if argsBlocks != 1 {
 		return fmt.Errorf("action.kind %q requires exactly one matching args block; got %d", action.Kind, argsBlocks)
@@ -517,10 +556,34 @@ func validateActionRequest(action opsv1alpha1.ActionRequest) error {
 		if action.FactoryReset == nil {
 			return errors.New("action.kind FactoryReset requires action.factoryReset")
 		}
+	case opsv1alpha1.ActionKindProvisionCertificate:
+		if action.ProvisionCertificate == nil {
+			return errors.New("action.kind ProvisionCertificate requires action.provisionCertificate")
+		}
+		if id := action.ProvisionCertificate.CertificateID; len(id) > 64 || !provisioningCertificateIDPattern.MatchString(id) {
+			return errors.New("action.provisionCertificate.certificateID must start with an alphanumeric and contain 1-64 characters from [A-Za-z0-9_.-]")
+		}
+		if !publicMaterialSHA256Pattern.MatchString(action.ProvisionCertificate.PublicMaterialSHA256) {
+			return errors.New("action.provisionCertificate.publicMaterialSHA256 must be exactly 64 lowercase hexadecimal characters")
+		}
 	default:
 		return fmt.Errorf("unsupported action kind %q", action.Kind)
 	}
 	return nil
+}
+
+func validateConfiguredProvisioningIntent(intent *opsv1alpha1.ProvisionCertificateActionArgs, provisioner CertificateProvisioner) error {
+	configuredID, configuredDigest := provisioner.ConfiguredIntent()
+	if intent.CertificateID == configuredID && intent.PublicMaterialSHA256 == configuredDigest {
+		return nil
+	}
+	return fmt.Errorf(
+		"requested gNOI provisioning intent certificateID=%q publicMaterialSHA256=%q does not match worker configuration certificateID=%q publicMaterialSHA256=%q",
+		intent.CertificateID,
+		intent.PublicMaterialSHA256,
+		configuredID,
+		configuredDigest,
+	)
 }
 
 func invocationID(act *opsv1alpha1.IOSXEOperationalAction) string {

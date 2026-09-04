@@ -54,6 +54,7 @@ const iosXEProvisioningRSAKeyBits = 2048
 // formatter redacts all fields so formatting cannot expose signing material.
 type ProvisioningBundle struct {
 	certificateID            string
+	publicMaterialSHA256     string
 	expectedServerName       string
 	caPEM                    [][]byte
 	clientTrustRoot          *x509.Certificate
@@ -62,32 +63,46 @@ type ProvisioningBundle struct {
 	expectedSubjectDER       []byte
 	csrParams                *certpb.CSRParams
 	signingCert              *x509.Certificate
-	signer                   *provisioningSigner
 }
 
-type provisioningSigner struct {
-	mu  sync.Mutex
-	key *rsa.PrivateKey
+// CertificateSigner signs one target-generated CSR and returns exactly one
+// PEM-encoded X.509 certificate. Implementations may keep the issuer key in a
+// local Secret, KMS/HSM, or external CA. Because the method receives only the
+// CSR, an external implementation must already be bound to the same issuance
+// profile and issuer as its ProvisioningBundle. InstallProvisioningCertificate
+// treats every implementation as untrusted: it validates the CSR before
+// calling the signer and validates the returned certificate against both that
+// CSR and the configured bundle before sending it to IOS XE.
+type CertificateSigner interface {
+	SignCSR(context.Context, []byte) ([]byte, error)
 }
 
-func (s *provisioningSigner) available() bool {
+type localCertificateSigner struct {
+	bundle *ProvisioningBundle
+	mu     sync.Mutex
+	key    *rsa.PrivateKey
+}
+
+// Format prevents fmt from rendering the locally held private key.
+func (*localCertificateSigner) Format(state fmt.State, _ rune) {
+	_, _ = state.Write([]byte("CertificateSigner{REDACTED}"))
+}
+
+func (s *localCertificateSigner) SignCSR(ctx context.Context, rawCSR []byte) ([]byte, error) {
 	if s == nil {
-		return false
+		return nil, fmt.Errorf("local certificate signer is unavailable")
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.key != nil
-}
-
-func (s *provisioningSigner) take() *rsa.PrivateKey {
-	if s == nil {
-		return nil
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	key := s.key
 	s.key = nil
-	return key
+	s.mu.Unlock()
+	if key == nil {
+		return nil, fmt.Errorf("local certificate signer may be used only once per process")
+	}
+	return s.bundle.signCSR(rawCSR, key)
 }
 
 // Format prevents every fmt verb from rendering certificate or private-key
@@ -104,6 +119,16 @@ func (b *ProvisioningBundle) CertificateID() string {
 		return ""
 	}
 	return b.certificateID
+}
+
+// PublicMaterialSHA256 returns the lowercase SHA-256 digest of the exact
+// tls.crt bytes followed immediately by the exact ca.crt bytes supplied when
+// the bundle was constructed. It is safe to expose in action intent/status.
+func (b *ProvisioningBundle) PublicMaterialSHA256() string {
+	if b == nil {
+		return ""
+	}
+	return b.publicMaterialSHA256
 }
 
 // ConfigureClientTLS adds the provisioned identity's verified chain to one
@@ -229,15 +254,14 @@ func IsCertificateInstallIndeterminate(err error) bool {
 	return errors.As(err, &target)
 }
 
-// NewProvisioningBundle validates and normalizes the certificate material for
-// IOS XE's target-generated CSR flow. leafPEM is the desired device certificate
-// profile and caBundlePEM is the complete replacement target CA bundle. A
-// non-nil caKeyPEM must be the unencrypted RSA key for the profile's dedicated
-// intermediate issuer; nil supports post-provisioning verification after the
-// key has been removed. The device identity private key stays on IOS XE.
+// NewProvisioningBundle validates and normalizes the public certificate
+// material for IOS XE's target-generated CSR flow. leafPEM is the desired
+// device certificate profile and caBundlePEM is the complete replacement
+// target CA bundle. Private signing material is supplied separately through a
+// CertificateSigner. The device identity private key stays on IOS XE.
 func NewProvisioningBundle(
 	certificateID, expectedServerName string,
-	leafPEM, caBundlePEM, caKeyPEM []byte,
+	leafPEM, caBundlePEM []byte,
 ) (*ProvisioningBundle, error) {
 	if !provisioningCertificateIDPattern.MatchString(certificateID) {
 		return nil, fmt.Errorf("gnoi provisioning certificate ID must start with an alphanumeric and contain 1-64 characters from [A-Za-z0-9_.-]")
@@ -316,27 +340,6 @@ func NewProvisioningBundle(
 		profile.Subject.CommonName = expectedServerName
 	}
 
-	var signer *provisioningSigner
-	if caKeyPEM != nil {
-		parsedKey, err := parseRSAPrivateKeyPEM(caKeyPEM)
-		if err != nil {
-			return nil, fmt.Errorf("gnoi provisioning: parse CA signing key: %w", err)
-		}
-		if parsedKey.N.BitLen() < iosXEProvisioningRSAKeyBits {
-			return nil, fmt.Errorf("gnoi provisioning: CA signing key is %d bits; at least %d bits are required", parsedKey.N.BitLen(), iosXEProvisioningRSAKeyBits)
-		}
-		issuerPublicKey, ok := verifiedIssuer.PublicKey.(*rsa.PublicKey)
-		if !ok || !rsaPublicKeysEqual(issuerPublicKey, &parsedKey.PublicKey) {
-			return nil, fmt.Errorf("gnoi provisioning: ca.key must match tls.crt's verified intermediate issuer in ca.crt")
-		}
-		for _, ca := range caCerts {
-			rootPublicKey, ok := ca.PublicKey.(*rsa.PublicKey)
-			if bytes.Equal(ca.RawSubject, ca.RawIssuer) && ca.CheckSignatureFrom(ca) == nil && ok && rsaPublicKeysEqual(rootPublicKey, issuerPublicKey) {
-				return nil, fmt.Errorf("gnoi provisioning: ca.key must belong to a dedicated intermediate CA, not a root CA")
-			}
-		}
-		signer = &provisioningSigner{key: parsedKey}
-	}
 	csrParams, err := iosXECSRParams(expectedServerName, &profile)
 	if err != nil {
 		return nil, fmt.Errorf("gnoi provisioning: %w", err)
@@ -365,8 +368,13 @@ func NewProvisioningBundle(
 		return nil, fmt.Errorf("gnoi provisioning: encode certificate subject: %w", err)
 	}
 
+	publicMaterialDigest := sha256.New()
+	_, _ = publicMaterialDigest.Write(leafPEM)
+	_, _ = publicMaterialDigest.Write(caBundlePEM)
+
 	return &ProvisioningBundle{
 		certificateID:            certificateID,
+		publicMaterialSHA256:     fmt.Sprintf("%x", publicMaterialDigest.Sum(nil)),
 		expectedServerName:       expectedServerName,
 		caPEM:                    normalizedCAs,
 		clientTrustRoot:          verifiedRoot,
@@ -375,8 +383,40 @@ func NewProvisioningBundle(
 		expectedSubjectDER:       expectedSubjectDER,
 		csrParams:                csrParams,
 		signingCert:              verifiedIssuer,
-		signer:                   signer,
 	}, nil
+}
+
+// NewLocalCertificateSigner constructs the transitional PEM-backed signer for
+// a provisioning bundle. The key must belong to the bundle's dedicated
+// intermediate issuer and is consumed after one signing attempt. Keeping this
+// constructor separate from NewProvisioningBundle prevents read-only trust
+// configuration from retaining private signing material.
+func NewLocalCertificateSigner(bundle *ProvisioningBundle, caKeyPEM []byte) (CertificateSigner, error) {
+	if bundle == nil {
+		return nil, fmt.Errorf("gnoi provisioning: nil bundle")
+	}
+	parsedKey, err := parseRSAPrivateKeyPEM(caKeyPEM)
+	if err != nil {
+		return nil, fmt.Errorf("gnoi provisioning: parse CA signing key: %w", err)
+	}
+	if parsedKey.N.BitLen() < iosXEProvisioningRSAKeyBits {
+		return nil, fmt.Errorf("gnoi provisioning: CA signing key is %d bits; at least %d bits are required", parsedKey.N.BitLen(), iosXEProvisioningRSAKeyBits)
+	}
+	issuerPublicKey, ok := bundle.signingCert.PublicKey.(*rsa.PublicKey)
+	if !ok || !rsaPublicKeysEqual(issuerPublicKey, &parsedKey.PublicKey) {
+		return nil, fmt.Errorf("gnoi provisioning: ca.key must match tls.crt's verified intermediate issuer in ca.crt")
+	}
+	for _, caPEM := range bundle.caPEM {
+		ca, err := parseSingleCertificatePEM(caPEM, "CA bundle certificate")
+		if err != nil {
+			return nil, fmt.Errorf("gnoi provisioning: validate CA bundle certificate: %w", err)
+		}
+		rootPublicKey, ok := ca.PublicKey.(*rsa.PublicKey)
+		if bytes.Equal(ca.RawSubject, ca.RawIssuer) && ca.CheckSignatureFrom(ca) == nil && ok && rsaPublicKeysEqual(rootPublicKey, issuerPublicKey) {
+			return nil, fmt.Errorf("gnoi provisioning: ca.key must belong to a dedicated intermediate CA, not a root CA")
+		}
+	}
+	return &localCertificateSigner{bundle: bundle, key: parsedKey}, nil
 }
 
 // iosXECSRParams builds the complete profile used by Google's reference gNXI
@@ -502,16 +542,24 @@ func (b *ProvisioningBundle) validateTargetGeneratedCertificate(installed *x509.
 		len(installed.EmailAddresses) != 0 || len(installed.URIs) != 0 {
 		return fmt.Errorf("installed target-generated certificate subject alternative names do not match tls.crt template")
 	}
-	if err := installed.VerifyHostname(b.expectedServerName); err != nil {
-		return fmt.Errorf("installed target-generated certificate is not valid for %q: %w", b.expectedServerName, err)
-	}
 	publicKey, ok := installed.PublicKey.(*rsa.PublicKey)
 	if !ok || publicKey.N.BitLen() < iosXEProvisioningRSAKeyBits {
 		return fmt.Errorf("installed target-generated certificate does not contain an RSA key of at least %d bits", iosXEProvisioningRSAKeyBits)
 	}
-	now := time.Now()
-	if now.Before(installed.NotBefore) || now.After(installed.NotAfter) {
-		return fmt.Errorf("installed target-generated certificate is not currently valid")
+	roots := x509.NewCertPool()
+	roots.AddCert(b.clientTrustRoot)
+	intermediates := x509.NewCertPool()
+	for _, certificate := range b.clientTrustIntermediates {
+		intermediates.AddCert(certificate)
+	}
+	if _, err := installed.Verify(x509.VerifyOptions{
+		DNSName:       b.expectedServerName,
+		Roots:         roots,
+		Intermediates: intermediates,
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		CurrentTime:   time.Now(),
+	}); err != nil {
+		return fmt.Errorf("installed target-generated certificate does not form a valid server chain for %q: %w", b.expectedServerName, err)
 	}
 	return nil
 }
@@ -532,15 +580,15 @@ func equalIPAddresses(left, right []net.IP) bool {
 // IOS XE's target-generated CSR workflow. A transport loss after either stream
 // request is indeterminate and must be reconciled by certificate ID on a fresh
 // connection.
-func (c *Client) InstallProvisioningCertificate(ctx context.Context, bundle *ProvisioningBundle) error {
+func (c *Client) InstallProvisioningCertificate(ctx context.Context, bundle *ProvisioningBundle, signer CertificateSigner) error {
 	if bundle == nil {
 		return fmt.Errorf("gnoi Cert.Install: nil provisioning bundle")
 	}
 	if err := c.cap.ensureSupported(ServiceCert); err != nil {
 		return err
 	}
-	if !bundle.signer.available() {
-		return fmt.Errorf("gnoi Cert.Install: ca.key is required for a new certificate and may be used only once per process")
+	if signer == nil {
+		return fmt.Errorf("gnoi Cert.Install: certificate signer is required for a new certificate")
 	}
 	// Follow the protocol's Install exchange directly. CanGenerateCSR is a
 	// separate diagnostic RPC and some IOS XE builds reject it even though the
@@ -551,10 +599,6 @@ func (c *Client) InstallProvisioningCertificate(ctx context.Context, bundle *Pro
 		return fmt.Errorf("gnoi Cert.Install open: %w", err)
 	}
 	defer func() { _ = stream.CloseSend() }()
-	signingKey := bundle.signer.take()
-	if signingKey == nil {
-		return fmt.Errorf("gnoi Cert.Install: ca.key is required for a new certificate and may be used only once per process")
-	}
 
 	generateRequest := &certpb.InstallCertificateRequest{
 		InstallRequest: &certpb.InstallCertificateRequest_GenerateCsr{
@@ -584,10 +628,21 @@ func (c *Client) InstallProvisioningCertificate(ctx context.Context, bundle *Pro
 		c.cap.Observe(ServiceCert, err)
 		return err
 	}
-	leafPEM, err := bundle.signCSR(generatedCSR.GetCsr().GetCsr(), signingKey)
+	rawCSR := generatedCSR.GetCsr().GetCsr()
+	csrPublicKey, err := parseProvisioningCSR(rawCSR)
+	if err != nil {
+		c.cap.Observe(ServiceCert, err)
+		return fmt.Errorf("gnoi Cert.Install validate CSR: %w", err)
+	}
+	leafPEM, err := signer.SignCSR(ctx, bytes.Clone(rawCSR))
 	if err != nil {
 		c.cap.Observe(ServiceCert, err)
 		return fmt.Errorf("gnoi Cert.Install sign CSR: %w", err)
+	}
+	leafPEM, err = bundle.validateSignerCertificate(leafPEM, csrPublicKey)
+	if err != nil {
+		c.cap.Observe(ServiceCert, err)
+		return fmt.Errorf("gnoi Cert.Install validate signer certificate: %w", err)
 	}
 
 	caCertificates := make([]*certpb.Certificate, 0, len(bundle.caPEM))
@@ -630,6 +685,14 @@ func (b *ProvisioningBundle) signCSR(rawCSR []byte, signingKey *rsa.PrivateKey) 
 	if signingKey == nil {
 		return nil, fmt.Errorf("CA signing key is unavailable")
 	}
+	publicKey, err := parseProvisioningCSR(rawCSR)
+	if err != nil {
+		return nil, err
+	}
+	return b.issueCertificate(publicKey, signingKey)
+}
+
+func parseProvisioningCSR(rawCSR []byte) (*rsa.PublicKey, error) {
 	csrBlock, rest := pem.Decode(bytes.TrimSpace(rawCSR))
 	if csrBlock == nil {
 		return nil, fmt.Errorf("CSR is not PEM encoded")
@@ -654,6 +717,10 @@ func (b *ProvisioningBundle) signCSR(rawCSR []byte, signingKey *rsa.PrivateKey) 
 	if publicKey.N.BitLen() < iosXEProvisioningRSAKeyBits {
 		return nil, fmt.Errorf("CSR RSA public key is %d bits; at least %d bits are required", publicKey.N.BitLen(), iosXEProvisioningRSAKeyBits)
 	}
+	return publicKey, nil
+}
+
+func (b *ProvisioningBundle) issueCertificate(publicKey *rsa.PublicKey, signingKey *rsa.PrivateKey) ([]byte, error) {
 	publicDER, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("encode CSR public key: %w", err)
@@ -690,6 +757,21 @@ func (b *ProvisioningBundle) signCSR(rawCSR []byte, signingKey *rsa.PrivateKey) 
 		return nil, fmt.Errorf("validate issued certificate: %w", err)
 	}
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), nil
+}
+
+func (b *ProvisioningBundle) validateSignerCertificate(certificatePEM []byte, csrPublicKey *rsa.PublicKey) ([]byte, error) {
+	issued, err := parseSingleCertificatePEM(certificatePEM, "signer certificate")
+	if err != nil {
+		return nil, err
+	}
+	issuedPublicKey, ok := issued.PublicKey.(*rsa.PublicKey)
+	if !ok || !rsaPublicKeysEqual(issuedPublicKey, csrPublicKey) {
+		return nil, fmt.Errorf("signer certificate public key does not match the target-generated CSR")
+	}
+	if err := b.validateTargetGeneratedCertificate(issued); err != nil {
+		return nil, err
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: issued.Raw}), nil
 }
 
 func (b *ProvisioningBundle) conflictError(detail string, cause error) error {

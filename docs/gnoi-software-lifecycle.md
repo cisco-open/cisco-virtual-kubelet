@@ -44,16 +44,19 @@ IOS-XE 17.18.x password authentication uses the secure gNXI listener (port
 
 ```text
 gnxi
+gnxi enable-gnoi
 gnxi secure-trustpoint <server-trustpoint>
 gnxi secure-server
 gnxi secure-password-auth
 ```
 
 That example assumes an identity is already bound to the secure trustpoint. For
-the initial gNOI Certificate-service bootstrap, enable `gnxi secure-init`
-before CVK sends Install. IOS-XE then binds the first newly installed
-certificate ID as the service trustpoint; verify the resulting binding with
-`show gnxi state detail`.
+the initial gNOI Certificate-service bootstrap, enable the services with
+`gnxi enable-gnoi`, then run `gnxi secure-init` before CVK sends Install.
+Without `enable-gnoi`, IOS-XE accepts `secure-init` syntactically but leaves the
+Certificate Management service disabled. IOS-XE binds the first newly
+installed certificate ID as the service trustpoint; verify the resulting
+binding with `show gnxi state detail`.
 
 Do not add `gnxi secure-client-auth` for password-only authentication. That
 command asks IOS-XE to authenticate a client certificate and is appropriate
@@ -150,6 +153,13 @@ present and otherwise uses `spec.address`. It must chain through a dedicated
 intermediate CA rather than directly to a root. When present, the unencrypted
 RSA `ca.key` must match that intermediate; root CA private keys are rejected.
 
+The certificate workflow uses an explicit `CertificateSigner` boundary. CVK
+validates the target-generated CSR before signing and validates the returned
+certificate against the CSR and configured profile before sending it to IOS-XE.
+The only signer included in this repository is the transitional local adapter
+for `ca.key`; it consumes that key after one signing attempt per process. No
+external CA, KMS, or HSM signer backend is implemented or configurable here.
+
 Reference it only from the gNOI block:
 
 ```yaml
@@ -182,15 +192,18 @@ normally.
     Use a dedicated, narrowly scoped intermediate CA. Enable Kubernetes Secret
     encryption at rest, restrict Secret reads and pod exec, and audit both. The
     signing key and bootstrap pin are projected read-only only while
-    write-class gNOI is enabled, but projection is not an authorization
-    boundary: the standard VK
+    write-class gNOI is enabled and a non-empty `ca.key` is present, but
+    projection is not an authorization boundary: the standard VK
     ClusterRole can read Secrets cluster-wide to serve scheduled pod volumes.
     Any principal that can use the VK service account, read the Secret, or enter
-    the signer-bearing pod can use the key. Key bytes are not copied into
-    ConfigMaps, environment, status, events, or logs. Remove `ca.key` promptly
-    after provisioning; the Deployment retains a non-overlapping `Recreate`
-    rollout strategy after the key is unmounted so the old process is stopped
-    before its replacement starts.
+    the signer-bearing pod can use the key. The built-in local signer retains
+    the key only until its first signing attempt in that process. Key bytes are
+    not copied into ConfigMaps, environment, status, events, or logs. Remove
+    `ca.key` promptly after provisioning. The Deployment uses a non-overlapping
+    `Recreate` strategy while a signer can be resident and for the first
+    key-free cleanup rollout. Normal rolling updates resume only after the
+    controller observes that cleanup rollout fully available with no old pod
+    terminating.
 
 !!! warning "IOS-XE gNXI service restart"
     CVK confines its configuration and credentials to gNOI, but IOS-XE shares
@@ -203,14 +216,32 @@ normally.
 
 Use this one-shot workflow:
 
-1. Enable `gnxi secure-init`, configure the Secret and `certificateProvisioning`
-   block, and enable the write-class gNOI runtime gate.
+!!! danger "Complete mixed-version rollouts first"
+    If upgrading from a preview build that accepted `ProvisionCertificate`
+    without an intent block, complete or delete those legacy actions, apply the
+    updated CRD, and fully roll the manager and every per-device worker before
+    creating an intent-bound action. Do not provision during a mixed-version
+    window: an older worker cannot enforce the certificate ID and digest.
+
+1. Enable `gnxi enable-gnoi` and `gnxi secure-init`, configure the Secret and
+   `certificateProvisioning` block, and enable the write-class gNOI runtime
+   gate.
 2. Run `GNOICertGet` to test TLS and password metadata. Run `GNOIOSVerify` if
    desired to confirm the not-provisioned response; it does not mutate IOS-XE.
-3. Create the action below. It has no args block and installs only when
-   `OS.Verify` returns the exact not-provisioned error. An already working OS
-   service succeeds without installation, while a conflicting certificate ID
-   fails closed.
+3. Compute the immutable public-material digest from the exact files used to
+   populate the Secret. The order has no separator: `tls.crt` bytes first,
+   immediately followed by `ca.crt` bytes.
+
+    ```bash
+    (cat tls.crt; cat ca.crt) | sha256sum
+    ```
+
+   Create the action below with that lowercase digest. The worker compares both
+   fields with its loaded bundle before it acquires a gNOI client or marks the
+   action Running, so a Secret/config rollout race is rejected without touching
+   the device. Installation proceeds only when `OS.Verify` returns the exact
+   not-provisioned error. An already working OS service succeeds without
+   installation, while a conflicting certificate ID fails closed.
 
     ```yaml
     apiVersion: ops.cisco.vk/v1alpha1
@@ -223,17 +254,29 @@ Use this one-shot workflow:
       confirm: cat9000-1
       action:
         kind: ProvisionCertificate
+        provisionCertificate:
+          certificateID: cvk-gnoi
+          # Replace with the digest computed above.
+          publicMaterialSHA256: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     ```
 
-4. After the action succeeds and the expected gNXI restart completes, require
-   `show gnxi state detail` to report `State: Provisioned`, then create a fresh
-   `GNOIOSVerify` operation. The action does not automatically retry Verify.
-   If it fails with `CertificateInstallIndeterminate`, do not immediately create
-   another action: use `GNOICertGet` and inspect device PKI state to determine
-   whether the create-only certificate ID was committed.
-5. Remove `ca.key` and `bootstrap.crt` from the Secret and disable the
-   write-class gNOI gate. Keep `tls.crt`, `ca.crt`, and the provisioning block so
-   read-only gNOI can validate the installed identity.
+4. The action reports success only after a fresh connection sees the exact
+   installed certificate and `OS.Verify` succeeds; a newly provisioned result
+   includes the verified certificate ID, public-material digest, and running
+   IOS-XE version. If `OS.Verify` already works, the result labels the action
+   fields as requested intent because it did not prove they identify the active
+   device certificate. CVK retries post-install read-only checks during the
+   expected gNXI restart but never retries the create-only Install.
+   Also require `show gnxi state detail` to report `State: Provisioned`. If the
+   action fails with `CertificateInstallIndeterminate`, do not immediately
+   create another action: use `GNOICertGet` and inspect device PKI state to
+   determine whether the certificate ID was committed.
+5. Remove `ca.key` and `bootstrap.crt` from the Secret. That removal alone
+   triggers one non-overlapping, key-free cleanup rollout and then restores
+   normal rolling updates for this device; unrelated write-class actions may
+   remain enabled. Disable the write-class gNOI gate as well unless those other
+   actions are still needed. Keep `tls.crt`, `ca.crt`, and the provisioning
+   block so read-only gNOI can validate the installed identity.
 
 Install is create-only. CVK does not rotate, revoke, or overwrite an existing
 certificate ID, and changing the Secret does not rotate an installed identity.
@@ -242,8 +285,10 @@ config-only topology does not run gNOI lifecycle reconcilers.
 
 ## Connection Model
 
-The IOS-XE driver uses a workload-classed gRPC connection pool for gNOI and
-gNMI work:
+The reusable `gnoiruntime.Provider` owns the per-device, workload-classed gRPC
+pool for gNOI; command wiring supplies configuration and credentials but does
+not own the runtime workflow. The IOS-XE driver uses these workload classes
+across gNOI and gNMI work:
 
 | Class | Used by | Why it is separate |
 |---|---|---|
@@ -257,6 +302,13 @@ services, so CVK learns support by observing gNOI responses. A
 `codes.Unimplemented` response marks that service unsupported in the in-process
 cache and later calls fail fast with `ErrServiceUnsupported` until the cache
 expires or the process restarts.
+
+Certificate installation is not a capability of that base provider. A separate
+`gnoiruntime.Provisioner` is made available to the operational-action
+reconciler only when the provisioning configuration is present and write-class
+gNOI is enabled. Even then, it runs only for an explicitly confirmed,
+create-only `ProvisionCertificate` action after `OS.Verify` returns the exact
+not-provisioned response.
 
 IOS-XE support varies by release and platform. In particular, System or File
 RPCs can return `Unimplemented` even when TLS and authentication are correct.

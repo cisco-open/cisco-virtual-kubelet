@@ -328,17 +328,28 @@ Avoid metadata logging and limit access to the credential Secret.
 
 The dedicated provisioning Secret always supplies `tls.crt` and `ca.crt`.
 `bootstrap.crt` is an optional exact pin for the temporary IOS-XE leaf, and
-`ca.key` is used only by the gated `ProvisionCertificate` action. Both are
-projected only while write-class gNOI is enabled. The signing key must belong
-to a dedicated intermediate CA; root keys are rejected. Enable Secret
+`ca.key` is used only by the gated `ProvisionCertificate` action. The key is
+kept separate from the read-only trust bundle behind a `CertificateSigner`
+boundary; the included local PEM signer is transitional and permits one
+signing attempt per process. No external CA, KMS, or HSM signer backend is
+included. Each action must bind the configured certificate ID and the lowercase
+SHA-256 of the exact `tls.crt || ca.crt` bytes; a stale or mismatched public
+intent is rejected before the worker acquires a gNOI client or marks the action
+Running. `ca.key` and `bootstrap.crt` are projected only while write-class gNOI
+is enabled and a non-empty `ca.key` is present. The signing key must belong to
+a dedicated intermediate CA; root keys are rejected. Enable Secret
 encryption at rest, restrict Secret reads and pod exec, and audit both.
 Secret projection is not an authorization boundary: the standard VK
 ClusterRole can read Secrets cluster-wide so VK nodes can serve pod volumes.
-After provisioning is verified, promptly remove `ca.key` and `bootstrap.crt`
-and disable the write-class gate. Keep the public certificate and CA bundle for
-read-only gNOI trust. Deployments that have mounted the signer retain a
-non-overlapping `Recreate` rollout strategy so a signer-bearing process cannot
-overlap its replacement during cleanup.
+After provisioning is verified, promptly remove `ca.key` and `bootstrap.crt`;
+disable the write-class gate too unless other write actions are still needed.
+Keep the public certificate and CA bundle for read-only gNOI trust. Deployments
+use a non-overlapping `Recreate` strategy
+while a signer may be resident and for the first key-free cleanup rollout, so a
+signer-bearing process cannot overlap its replacement. The controller restores
+normal rolling updates only after that cleanup generation is fully available
+and no old pod is terminating. Disabling gNOI entirely suppresses the
+provisioning Secret mount and its rollout annotation.
 
 The installed identity and CA bundle are scoped to gNOI in CVK, but IOS-XE
 shares them with gNMI. Installation can restart gNXI, replace peer trust, and

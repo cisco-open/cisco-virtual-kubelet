@@ -140,6 +140,28 @@ spec:
                     - FactoryReset
                     - ProvisionCertificate
                     type: string
+                  provisionCertificate:
+                    description: |-
+                      ProvisionCertificate binds the action to the exact public certificate
+                      material configured in the target device worker.
+                    properties:
+                      certificateID:
+                        description: CertificateID is the IOS XE trustpoint identifier
+                          to provision.
+                        maxLength: 64
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]*$
+                        type: string
+                      publicMaterialSHA256:
+                        description: |-
+                          PublicMaterialSHA256 binds the action to the exact mounted tls.crt and
+                          ca.crt byte sequence without exposing either file in the action.
+                        pattern: ^[0-9a-f]{64}$
+                        type: string
+                    required:
+                    - certificateID
+                    - publicMaterialSHA256
+                    type: object
                   reboot:
                     description: Reboot is the input for ActionKindReboot.
                     properties:
@@ -180,6 +202,9 @@ spec:
                   rule: (self.kind == 'FileRemove') == has(self.fileRemove)
                 - message: kind FactoryReset requires only the factoryReset args block
                   rule: (self.kind == 'FactoryReset') == has(self.factoryReset)
+                - message: kind ProvisionCertificate requires only the provisionCertificate
+                    args block
+                  rule: (self.kind == 'ProvisionCertificate') == has(self.provisionCertificate)
               confirm:
                 description: |-
                   Confirm must equal the target device's metadata.name. This is a

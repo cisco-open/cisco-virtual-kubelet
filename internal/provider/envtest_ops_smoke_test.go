@@ -443,6 +443,32 @@ func TestEnvtest_IOSXEOperationalActionKindEnumEnforced(t *testing.T) {
 	}
 }
 
+func TestEnvtest_IOSXEOperationalActionProvisionCertificateIntentRequired(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-opaction-provision-intent")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	missing := newOpAction("missing-intent", "envtest-opaction-provision-intent", opsv1alpha1.ActionKindProvisionCertificate)
+	missing.Spec.Action.ProvisionCertificate = nil
+	if err := c.Create(ctx, missing); err == nil {
+		t.Fatal("apiserver admitted ProvisionCertificate without its intent args")
+	}
+
+	uppercase := newOpAction("uppercase-digest", "envtest-opaction-provision-intent", opsv1alpha1.ActionKindProvisionCertificate)
+	uppercase.Spec.Action.ProvisionCertificate.PublicMaterialSHA256 = strings.Repeat("A", 64)
+	if err := c.Create(ctx, uppercase); err == nil {
+		t.Fatal("apiserver admitted uppercase publicMaterialSHA256")
+	}
+
+	valid := newOpAction("valid-intent", "envtest-opaction-provision-intent", opsv1alpha1.ActionKindProvisionCertificate)
+	if err := c.Create(ctx, valid); err != nil {
+		t.Fatalf("apiserver rejected valid ProvisionCertificate intent: %v", err)
+	}
+}
+
 // TestEnvtest_IOSXEOperationalActionFilePathPattern pins the IOS-XE
 // filesystem-prefix regex on FilePut.path and FileRemove.path. The
 // pattern in the CRD is slightly different from
@@ -517,10 +543,8 @@ func newOpAction(name, namespace string, kind opsv1alpha1.ActionKind) *opsv1alph
 			Action:    opsv1alpha1.ActionRequest{Kind: kind},
 		},
 	}
-	// Per-kind required sub-blocks. The CRD doesn't enforce
-	// presence (the reconciler does), but populating sensible
-	// defaults here keeps the test focused on the field under
-	// test.
+	// Populate the per-kind sub-block required by the CRD's CEL rules so each
+	// caller can stay focused on the field under test.
 	switch kind {
 	case opsv1alpha1.ActionKindReboot:
 		a.Spec.Action.Reboot = &opsv1alpha1.RebootActionArgs{Method: "COLD"}
@@ -534,6 +558,11 @@ func newOpAction(name, namespace string, kind opsv1alpha1.ActionKind) *opsv1alph
 		a.Spec.Action.FileRemove = &opsv1alpha1.FileRemoveArgs{Path: "flash:f.bin"}
 	case opsv1alpha1.ActionKindFactoryReset:
 		a.Spec.Action.FactoryReset = &opsv1alpha1.FactoryResetArgs{}
+	case opsv1alpha1.ActionKindProvisionCertificate:
+		a.Spec.Action.ProvisionCertificate = &opsv1alpha1.ProvisionCertificateActionArgs{
+			CertificateID:        "cvk-gnoi",
+			PublicMaterialSHA256: strings.Repeat("a", 64),
+		}
 	}
 	return a
 }

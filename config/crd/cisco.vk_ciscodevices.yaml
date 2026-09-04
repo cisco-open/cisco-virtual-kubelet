@@ -193,16 +193,16 @@ spec:
                       rule: self.replaceTargetCABundle == true
                   port:
                     description: |-
-                      Port overrides the device-side gNOI listener port. Zero preserves the
-                      legacy port inference.
+                      Port overrides the device-side gNOI listener port. Omit it to preserve
+                      legacy port inference (local YAML also accepts zero).
                     maximum: 65535
                     minimum: 1
                     type: integer
                   transportSecurity:
                     default: auto
                     description: |-
-                      TransportSecurity controls whether gNOI uses TLS. Empty and auto inherit
-                      the decision from DeviceSpec.TLS.Enabled.
+                      TransportSecurity controls whether gNOI uses TLS. Omitted/auto inherits
+                      the decision from DeviceSpec.TLS.Enabled (local YAML also accepts empty).
                     enum:
                     - auto
                     - tls

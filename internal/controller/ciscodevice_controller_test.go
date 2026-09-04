@@ -115,6 +115,25 @@ func findEnvVar(env []corev1.EnvVar, name string) (corev1.EnvVar, bool) {
 	return corev1.EnvVar{}, false
 }
 
+func assertNoGNOIProvisioningProjection(t *testing.T, deployment *appsv1.Deployment) {
+	t.Helper()
+	for _, volume := range deployment.Spec.Template.Spec.Volumes {
+		if volume.Name == gnoiProvisioningVolumeName {
+			t.Fatalf("gNOI provisioning volume remains while disabled: %+v", volume)
+		}
+	}
+	for _, container := range deployment.Spec.Template.Spec.Containers {
+		for _, mount := range container.VolumeMounts {
+			if mount.Name == gnoiProvisioningVolumeName {
+				t.Fatalf("gNOI provisioning mount remains while disabled: %+v", mount)
+			}
+		}
+	}
+	if value, exists := deployment.Spec.Template.Annotations["cisco.vk/gnoi-provisioning-secret-resource-version"]; exists {
+		t.Fatalf("gNOI provisioning Secret resourceVersion %q remains while disabled", value)
+	}
+}
+
 func findWorkerCapability(items []ciskov1.WorkerCapabilityStatus, name ciskov1.WorkerCapabilityName) (ciskov1.WorkerCapabilityStatus, bool) {
 	for _, item := range items {
 		if item.Name == name {
@@ -783,6 +802,7 @@ func TestRenderDeviceConfig_ContainsPerDeviceGNOITransport(t *testing.T) {
 
 func TestReconcile_GNOICertificateProvisioningMountsDedicatedSecret(t *testing.T) {
 	t.Setenv(envCVKEnableWriteClassGNOI, "true")
+	t.Setenv(envCVKGNOIDisabled, "false")
 	device := newDevice("router-gnoi-provision", "default")
 	device.Spec.GNOI = &ciskov1.GNOIConfig{
 		TransportSecurity: ciskov1.GNOITransportSecurityTLS,
@@ -893,8 +913,8 @@ func TestReconcile_GNOICertificateProvisioningMountsDedicatedSecret(t *testing.T
 	}
 }
 
-func TestReconcile_GNOITrustOnlyDoesNotMountBootstrapMaterial(t *testing.T) {
-	t.Setenv(envCVKEnableWriteClassGNOI, "false")
+func TestReconcile_GNOIWithoutSignerUsesTrustOnlyProjection(t *testing.T) {
+	t.Setenv(envCVKEnableWriteClassGNOI, "true")
 	device := newDevice("router-gnoi-trust", "default")
 	device.Spec.GNOI = &ciskov1.GNOIConfig{
 		TransportSecurity: ciskov1.GNOITransportSecurityTLS,
@@ -906,6 +926,10 @@ func TestReconcile_GNOITrustOnlyDoesNotMountBootstrapMaterial(t *testing.T) {
 	}
 	r := reconcilerFor(t, device, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "router-gnoi-certificates", Namespace: "default"},
+		Data: map[string][]byte{
+			"tls.crt": []byte("public-leaf-profile"),
+			"ca.crt":  []byte("public-ca-bundle"),
+		},
 	})
 	if _, err := r.Reconcile(context.Background(), reconcileRequest("default", device.Name)); err != nil {
 		t.Fatalf("Reconcile: %v", err)
@@ -937,8 +961,42 @@ func TestReconcile_GNOITrustOnlyDoesNotMountBootstrapMaterial(t *testing.T) {
 	t.Fatal("trust-only Deployment did not mount public gNOI trust material")
 }
 
-func TestReconcile_DisablingGNOIWritesRetainsNonOverlappingRollout(t *testing.T) {
+func TestReconcile_DisabledGNOIDoesNotProjectSignerMaterial(t *testing.T) {
 	t.Setenv(envCVKEnableWriteClassGNOI, "true")
+	t.Setenv(envCVKGNOIDisabled, "true")
+	device := newDevice("router-gnoi-disabled", "default")
+	device.Spec.GNOI = &ciskov1.GNOIConfig{
+		TransportSecurity: ciskov1.GNOITransportSecurityTLS,
+		CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
+			CertificateID:         "cvk-gnoi-cert",
+			SecretRef:             ciskov1.GNOIProvisioningSecretReference{Name: "router-gnoi-certificates"},
+			ReplaceTargetCABundle: true,
+		},
+	}
+	r := reconcilerFor(t, device, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "router-gnoi-certificates", Namespace: "default", ResourceVersion: "77"},
+	})
+	ctx := context.Background()
+	if _, err := r.Reconcile(ctx, reconcileRequest("default", device.Name)); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	var deploy appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: device.Name + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("get Deployment: %v", err)
+	}
+	assertNoGNOIProvisioningProjection(t, &deploy)
+	if deploy.Annotations[gnoiSignerMountedAnnotation] != "" {
+		t.Fatalf("signer lifecycle annotation = %q, want absent", deploy.Annotations[gnoiSignerMountedAnnotation])
+	}
+	if deploy.Spec.Strategy.Type == appsv1.RecreateDeploymentStrategyType {
+		t.Fatal("globally disabled gNOI unexpectedly entered the signer rollout lifecycle")
+	}
+}
+
+func TestReconcile_RemovingGNOISignerCompletesNonOverlappingCleanup(t *testing.T) {
+	t.Setenv(envCVKEnableWriteClassGNOI, "true")
+	t.Setenv(envCVKGNOIDisabled, "false")
 	device := newDevice("router-gnoi-cleanup", "default")
 	device.Spec.GNOI = &ciskov1.GNOIConfig{
 		TransportSecurity: ciskov1.GNOITransportSecurityTLS,
@@ -950,6 +1008,7 @@ func TestReconcile_DisablingGNOIWritesRetainsNonOverlappingRollout(t *testing.T)
 	}
 	r := reconcilerFor(t, device, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "router-gnoi-certificates", Namespace: "default"},
+		Data:       map[string][]byte{"ca.key": []byte("dedicated-intermediate-key")},
 	})
 	ctx := context.Background()
 	request := reconcileRequest("default", device.Name)
@@ -957,7 +1016,14 @@ func TestReconcile_DisablingGNOIWritesRetainsNonOverlappingRollout(t *testing.T)
 		t.Fatalf("initial Reconcile: %v", err)
 	}
 
-	t.Setenv(envCVKEnableWriteClassGNOI, "false")
+	var provisioningSecret corev1.Secret
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router-gnoi-certificates"}, &provisioningSecret); err != nil {
+		t.Fatalf("get provisioning Secret: %v", err)
+	}
+	delete(provisioningSecret.Data, "ca.key")
+	if err := r.Update(ctx, &provisioningSecret); err != nil {
+		t.Fatalf("remove ca.key: %v", err)
+	}
 	if _, err := r.Reconcile(ctx, request); err != nil {
 		t.Fatalf("cleanup Reconcile: %v", err)
 	}
@@ -987,10 +1053,74 @@ func TestReconcile_DisablingGNOIWritesRetainsNonOverlappingRollout(t *testing.T)
 			}
 		}
 	}
+
+	// A status observation for an older generation must not clear the marker:
+	// the pod that held the signer may still be the running replica.
+	deploy.Generation = 7
+	if err := r.Update(ctx, &deploy); err != nil {
+		t.Fatalf("set Deployment generation: %v", err)
+	}
+	deploy.Status = appsv1.DeploymentStatus{
+		ObservedGeneration: 6,
+		Replicas:           1,
+		UpdatedReplicas:    1,
+		ReadyReplicas:      1,
+		AvailableReplicas:  1,
+	}
+	if err := r.Status().Update(ctx, &deploy); err != nil {
+		t.Fatalf("set stale Deployment rollout status: %v", err)
+	}
+	if _, err := r.Reconcile(ctx, request); err != nil {
+		t.Fatalf("stale-status Reconcile: %v", err)
+	}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: device.Name + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("get stale-status Deployment: %v", err)
+	}
+	if deploy.Spec.Strategy.Type != appsv1.RecreateDeploymentStrategyType || deploy.Annotations[gnoiSignerMountedAnnotation] != "true" {
+		t.Fatalf("strategy=%q annotations=%v, want retained signer-safe rollout before cleanup completion", deploy.Spec.Strategy.Type, deploy.Annotations)
+	}
+
+	// Even current-generation availability is not complete while an old pod is
+	// still terminating and may retain its in-memory signer.
+	terminating := int32(1)
+	deploy.Status.ObservedGeneration = deploy.Generation
+	deploy.Status.TerminatingReplicas = &terminating
+	if err := r.Status().Update(ctx, &deploy); err != nil {
+		t.Fatalf("set terminating Deployment rollout status: %v", err)
+	}
+	if _, err := r.Reconcile(ctx, request); err != nil {
+		t.Fatalf("terminating-status Reconcile: %v", err)
+	}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: device.Name + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("get terminating-status Deployment: %v", err)
+	}
+	if deploy.Spec.Strategy.Type != appsv1.RecreateDeploymentStrategyType || deploy.Annotations[gnoiSignerMountedAnnotation] != "true" {
+		t.Fatalf("strategy=%q annotations=%v, want retained signer-safe rollout while an old pod terminates", deploy.Spec.Strategy.Type, deploy.Annotations)
+	}
+
+	// Once the key-free template is the sole available replica, return to the
+	// normal strategy and remove the lifecycle marker.
+	deploy.Status.TerminatingReplicas = nil
+	if err := r.Status().Update(ctx, &deploy); err != nil {
+		t.Fatalf("set completed Deployment rollout status: %v", err)
+	}
+	if _, err := r.Reconcile(ctx, request); err != nil {
+		t.Fatalf("completed-cleanup Reconcile: %v", err)
+	}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: device.Name + deploymentSuffix}, &deploy); err != nil {
+		t.Fatalf("get completed-cleanup Deployment: %v", err)
+	}
+	if deploy.Spec.Strategy.Type != appsv1.RollingUpdateDeploymentStrategyType {
+		t.Fatalf("Deployment strategy = %q, want RollingUpdate after cleanup completion (generation=%d status=%+v)", deploy.Spec.Strategy.Type, deploy.Generation, deploy.Status)
+	}
+	if _, exists := deploy.Annotations[gnoiSignerMountedAnnotation]; exists {
+		t.Fatalf("signer lifecycle annotation remains after cleanup completion: %v", deploy.Annotations)
+	}
 }
 
-func TestReconcile_MigratesExistingSignerDeploymentToRecreate(t *testing.T) {
-	t.Setenv(envCVKEnableWriteClassGNOI, "false")
+func TestReconcile_DisabledGNOIMigratesExistingSignerDeploymentToRecreateCleanup(t *testing.T) {
+	t.Setenv(envCVKEnableWriteClassGNOI, "true")
+	t.Setenv(envCVKGNOIDisabled, "true")
 	device := newDevice("router-gnoi-migrate", "default")
 	device.Spec.GNOI = &ciskov1.GNOIConfig{
 		TransportSecurity: ciskov1.GNOITransportSecurityTLS,
@@ -1010,7 +1140,7 @@ func TestReconcile_MigratesExistingSignerDeploymentToRecreate(t *testing.T) {
 		}}}}},
 	}
 	r := reconcilerFor(t, device, existing, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "router-gnoi-certificates", Namespace: "default"},
+		ObjectMeta: metav1.ObjectMeta{Name: "router-gnoi-certificates", Namespace: "default", ResourceVersion: "77"},
 	})
 	if _, err := r.Reconcile(context.Background(), reconcileRequest("default", device.Name)); err != nil {
 		t.Fatalf("Reconcile: %v", err)
@@ -1023,9 +1153,7 @@ func TestReconcile_MigratesExistingSignerDeploymentToRecreate(t *testing.T) {
 	if deploy.Spec.Strategy.Type != appsv1.RecreateDeploymentStrategyType || deploy.Annotations[gnoiSignerMountedAnnotation] != "true" {
 		t.Fatalf("strategy=%q annotations=%v, want persistent signer-safe Recreate", deploy.Spec.Strategy.Type, deploy.Annotations)
 	}
-	if podTemplateProjectsGNOIPrivateKey(&deploy.Spec.Template.Spec) {
-		t.Fatal("migrated trust-only Deployment still projects a private key")
-	}
+	assertNoGNOIProvisioningProjection(t, &deploy)
 }
 
 func TestRenderDeviceConfig_StripsPassword(t *testing.T) {

@@ -25,7 +25,8 @@ import (
 var gnoiCertificateIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 
 // GNOITransportSecurity selects how the per-device gNOI connection is
-// protected. Empty and auto preserve the legacy transport inference.
+// protected. Omitted (or empty in local YAML) and auto preserve legacy
+// transport inference.
 // +kubebuilder:validation:Enum=auto;tls
 type GNOITransportSecurity string
 
@@ -38,21 +39,22 @@ const (
 	GNOITransportSecurityTLS GNOITransportSecurity = "tls"
 )
 
-// GNOIConfig carries opt-in, per-device gNOI settings. A nil or zero-valued
-// config preserves legacy transport and port inference. Credentials are not
+// GNOIConfig carries opt-in, per-device gNOI settings. Omit fields in a
+// Kubernetes object to preserve legacy transport and port inference; local
+// YAML also accepts zero values. Credentials are not
 // duplicated here: explicit secure gNOI derives the IOS XE username/password
 // metadata from DeviceSpec.Username and the resolved password at runtime.
 // +kubebuilder:validation:XValidation:rule="!has(self.certificateProvisioning) || (has(self.transportSecurity) && self.transportSecurity == 'tls')",message="certificateProvisioning requires transportSecurity to be tls"
 type GNOIConfig struct {
-	// Port overrides the device-side gNOI listener port. Zero preserves the
-	// legacy port inference.
+	// Port overrides the device-side gNOI listener port. Omit it to preserve
+	// legacy port inference (local YAML also accepts zero).
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	Port int `json:"port,omitempty" mapstructure:"port,omitempty"`
 
-	// TransportSecurity controls whether gNOI uses TLS. Empty and auto inherit
-	// the decision from DeviceSpec.TLS.Enabled.
+	// TransportSecurity controls whether gNOI uses TLS. Omitted/auto inherits
+	// the decision from DeviceSpec.TLS.Enabled (local YAML also accepts empty).
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=auto
 	TransportSecurity GNOITransportSecurity `json:"transportSecurity,omitempty" mapstructure:"transportSecurity,omitempty"`
