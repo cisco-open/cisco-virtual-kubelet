@@ -243,16 +243,20 @@ explicitly as `--nodename`.
 | Variable | Purpose |
 |---|---|
 | `VK_DEVICE_PASSWORD` | Non-empty value overrides the config-file password. With `credentialSecretRef`, the controller injects it through `secretKeyRef` and keeps it out of the ConfigMap. |
-| `CISCO_VK_GNOI_INSECURE` | IOS-XE only: `1` or `true` selects the insecure gNOI listener; it does not change REST/config TLS. |
-| `CISCO_VK_GNOI_PORT` | IOS-XE only: override the gNOI port. Defaults to `50052` (insecure) or `9339` (TLS), unless a nonstandard device port is configured. |
+| `CISCO_VK_GNOI_INSECURE` | IOS-XE only: `1` or `true` forces the legacy plaintext gNOI listener; it overrides `spec.gnoi.transportSecurity`, does not change REST/config TLS, and no password metadata is sent. |
+| `CISCO_VK_GNOI_PORT` | IOS-XE only: override the gNOI port. It overrides `spec.gnoi.port` but does not by itself select TLS. Defaults are `50052` for plaintext and `9339` for TLS. |
 | `CISCO_VK_GNOI_DISABLED` | IOS-XE only: `1` or `true` skips gNOI client construction entirely. |
 | `CONFIG_YANG_VALIDATION` | IOS-XE config-driver YANG validation: `disabled` (default), `warn`, or `strict`. NX-OS always applies its structural/DME validation. |
 
 IOS-XE example one-liners for development or a single ad-hoc run are shown
 below. Outside a cluster, also pass `--kubeconfig` or set a valid `KUBECONFIG`.
+Prefer `device.gnoi.transportSecurity: tls` and `device.gnoi.port: 9339` in a
+local config (or `spec.gnoi` in a `CiscoDevice`) for IOS-XE 17.18.x. The
+environment variables are retained for deployment-level compatibility and
+take precedence over those fields.
 
 ```bash
-# Use the insecure gNxI listener (lab/dev without TLS):
+# Use the unauthenticated insecure gNXI listener (legacy lab/dev only):
 CISCO_VK_GNOI_INSECURE=1 cisco-vk run --config /etc/cisco-vk/cat9300-1.yaml
 
 # Enable the software upgrade reconciler:

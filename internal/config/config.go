@@ -64,6 +64,10 @@ func Load(filePath ...string) (*Config, error) {
 
 // validateDeviceSpec validates the driver-specific sections of a DeviceSpec.
 func validateDeviceSpec(spec *v1alpha1.DeviceSpec) error {
+	if err := spec.GNOI.Validate(); err != nil {
+		return fmt.Errorf("invalid gNOI config: %w", err)
+	}
+
 	switch spec.Driver {
 	case v1alpha1.DeviceDriverXE:
 		if spec.XE == nil {

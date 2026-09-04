@@ -163,6 +163,10 @@ Read-only gNOI kinds use the same CRD/status machinery:
 | `GNOIRebootStatus` | System | Inspect pending or active reboot state. |
 | `GNOIOSVerify` | OS | Verify the current running version and activation state. |
 
+For a first read-only secure-gNXI check on IOS-XE 17.18.x, use
+`GNOIOSVerify`. A successful TLS and password setup can still return
+`Unimplemented` for System or File RPCs that the platform does not expose.
+
 Write-class gNOI operations are implemented as a separate
 `IOSXEOperationalAction` CRD. They are disabled unless the per-device VK is
 started with `--enable-write-class-gnoi` / `CISCO_VK_ENABLE_WRITE_CLASS_GNOI`.

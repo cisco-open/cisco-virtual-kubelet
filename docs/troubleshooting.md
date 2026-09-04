@@ -237,6 +237,65 @@ the CR status and finalizer subresources.
 
 ---
 
+## Secure gNOI authentication or connection fails
+
+IOS-XE 17.18.x serves password-authenticated gNOI on the secure gNXI listener,
+port `9339` by default. Start by comparing the device and `CiscoDevice`
+settings:
+
+```bash
+# IOS-XE CLI
+show gnxi state
+
+# Kubernetes; this displays references and transport settings, not Secret data
+kubectl -n <device-namespace> get ciscodevice <device-name> \
+  -o jsonpath='{.spec.username}{"\n"}{.spec.gnoi}{"\n"}{.spec.tls}{"\n"}'
+
+kubectl -n <device-namespace> logs deploy/<device-name>-vk --tail=200 | grep -iE 'gnoi|gnxi|grpc|x509'
+```
+
+For a password-authenticated listener, IOS-XE should have `gnxi`,
+`gnxi secure-server`, a server trustpoint, and `gnxi secure-password-auth`
+configured. The matching CR is:
+
+```yaml
+spec:
+  username: admin
+  credentialSecretRef:
+    name: device-creds
+  tls:
+    enabled: true
+    # Use caFile in production; this is only a transport-isolation example.
+    insecureSkipVerify: true
+  gnoi:
+    transportSecurity: tls
+    port: 9339
+```
+
+CVK sends the resolved credentials as two raw gRPC metadata keys,
+`username` and `password`, on TLS RPCs. It does not send an HTTP Basic
+`Authorization` header and never sends the password in plaintext mode. Do not
+log or manually print the Secret while diagnosing the connection.
+
+| Symptom / gRPC status | Most likely cause | Check |
+|---|---|---|
+| `Unauthenticated` | Missing or rejected username/password metadata | Ensure `spec.username` is non-empty, the referenced Secret contains the exact key `password`, and IOS-XE has `gnxi secure-password-auth`. Recreate accidentally newline-terminated values with `kubectl create secret ... --from-literal=password=... --dry-run=client -o yaml | kubectl apply -f -`. |
+| `PermissionDenied` | Authentication succeeded but AAA denied the RPC | Check the IOS-XE AAA method list, user privilege, and authorization policy for the requested operation. |
+| `x509: certificate signed by unknown authority` | The device certificate is not trusted | Mount the correct CA and set `tls.caFile`. Use `insecureSkipVerify: true` only briefly to isolate the trust problem. |
+| Certificate hostname/SAN error | `spec.address` does not match the device certificate | Use a hostname present in the certificate or issue a certificate with the required IP/DNS SAN. |
+| TLS handshake error | Plaintext/TLS mode mismatch, or IOS-XE requires a client certificate | Use `transportSecurity: tls` with port `9339`. If and only if `gnxi secure-client-auth` is configured, mount and set `tls.certFile` and `tls.keyFile`. |
+| `Unavailable`, connection refused, or deadline exceeded | Wrong port, listener down, firewall, route, or gNXI VRF restriction | Verify `show gnxi state`, `spec.gnoi.port`, reachability from the VK pod, and the device's gNXI VRF. Setting only port `9339` is insufficient if the client still uses plaintext. |
+| `Unimplemented` | The IOS-XE release/platform does not implement that gNOI service | This is not an authentication failure. IOS-XE 17.18.x may support OS/Certificate/Factory Reset while omitting System or File. Use `GNOIOSVerify` as the first read-only smoke test instead of `GNOITime`. |
+
+`gnoi.transportSecurity: auto` follows `tls.enabled`; `tls` forces a TLS gNOI
+connection and reuses the trust/client-certificate fields from `spec.tls`.
+`CISCO_VK_GNOI_INSECURE=1` overrides either setting and forces the legacy
+plaintext listener, so check the rendered Deployment environment when the
+observed mode differs from the CR. `CISCO_VK_GNOI_PORT` similarly overrides
+`spec.gnoi.port`.
+
+---
+
 ## IOSXEOperationalAction is rejected
 
 Common rejection reasons:

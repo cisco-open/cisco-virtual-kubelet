@@ -39,11 +39,81 @@ Helm exposes the same controls under the `gnoi` values block:
 
 | Helm value | Environment rendered into VK pods | Effect |
 |---|---|---|
-| `gnoi.insecure` | `CISCO_VK_GNOI_INSECURE=1` | Use the insecure IOS-XE gNxI listener. |
+| `gnoi.insecure` | `CISCO_VK_GNOI_INSECURE=1` | Force the legacy insecure IOS-XE gNXI listener. CVK does not send passwords on this connection. |
 | `gnoi.port` | `CISCO_VK_GNOI_PORT=<port>` | Pin the gNOI listener port. Empty lets CVK infer `50052` for insecure and `9339` for secure gNOI. |
 | `gnoi.disabled` | `CISCO_VK_GNOI_DISABLED=1` | Prevent the per-device gNOI client from being constructed. |
 | `gnoi.enableSoftwareUpgrade` | `CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=1` | Enable `IOSXESoftwareUpgrade` reconciliation. |
 | `gnoi.enableWriteClass` | `CISCO_VK_ENABLE_WRITE_CLASS_GNOI=1` | Enable destructive/write-class `IOSXEOperationalAction` reconciliation. |
+
+## Secure IOS-XE gNXI
+
+IOS-XE 17.18.x deployments that enforce password authentication, including
+observed 17.18.4 systems, accept that traffic on the secure gNXI listener. The
+recommended password-authenticated device configuration is:
+
+```text
+gnxi
+gnxi secure-trustpoint <server-trustpoint>
+gnxi secure-server
+gnxi secure-password-auth
+! The default secure port is 9339.
+```
+
+Do not add `gnxi secure-client-auth` for password-only authentication. That
+command asks IOS-XE to authenticate a client certificate and is appropriate
+only when you have deliberately configured mutual TLS and mounted a client
+certificate and key into the VK pod.
+
+Select the listener independently of the RESTCONF port in the `CiscoDevice`:
+
+```yaml
+spec:
+  username: admin
+  credentialSecretRef:
+    name: cat9000-1-creds       # Secret contains only the key "password"
+  tls:
+    enabled: true
+    insecureSkipVerify: false
+    caFile: /etc/cisco-vk/device-ca/ca.crt
+  gnoi:
+    transportSecurity: tls
+    port: 9339
+```
+
+The CA path is inside the per-device VK pod; see
+[Security](security.md#secure-ios-xe-gnoi) before using file-backed TLS
+settings. For a lab certificate, `insecureSkipVerify: true` can isolate trust
+configuration problems, but it is not a production setting.
+
+IOS-XE password authentication does **not** use an HTTP Basic
+`Authorization` header. CVK derives per-RPC credentials without duplicating
+the password in configuration or logs:
+
+| gRPC metadata key | Value source |
+|---|---|
+| `username` | `CiscoDevice.spec.username` |
+| `password` | The resolved `credentialSecretRef` key named `password` |
+
+Both keys are attached to every unary or streaming gNOI RPC only when the
+connection uses TLS. This matches Cisco's
+[IOS-XE 17.18 username/password metadata format](https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/prog/configuration/1718/b-1718-programmability-cg/gnmi.html)
+and the
+[IOS-XE 17.18 gNOI authentication guidance](https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/prog/configuration/1718/b-1718-programmability-cg/gnoi.html).
+
+For older lab devices with an unauthenticated listener, use an explicit
+compatibility block:
+
+```yaml
+spec:
+  gnoi:
+    transportSecurity: plaintext
+    port: 50052
+```
+
+Plaintext mode never transmits the device password. It requires an IOS-XE
+listener on which authentication is disabled and should not be used on an
+untrusted network. `CISCO_VK_GNOI_INSECURE=1` remains a temporary compatibility
+override and takes precedence over `spec.gnoi.transportSecurity`.
 
 ## Connection Model
 
@@ -62,6 +132,11 @@ services, so CVK learns support by observing gNOI responses. A
 `codes.Unimplemented` response marks that service unsupported in the in-process
 cache and later calls fail fast with `ErrServiceUnsupported` until the cache
 expires or the process restarts.
+
+IOS-XE support varies by release and platform. In particular, System or File
+RPCs can return `Unimplemented` even when TLS and authentication are correct.
+For a read-only secure-listener smoke test on IOS-XE 17.18.x, prefer
+`GNOIOSVerify` over `GNOITime`.
 
 ## Read-Only Operations
 
@@ -350,7 +425,10 @@ spec:
 
 ## Operator Workflow
 
-1. Confirm the device exposes the gNxI listener (`gnxi server` is enabled).
+1. Confirm the device exposes the secure gNXI listener (`gnxi secure-server`
+   and `gnxi secure-password-auth` are enabled) and that `show gnxi state`
+   reports it up. Use the plaintext listener only for explicit legacy lab
+   compatibility.
 2. Enable the software upgrade gate on the per-device VK pod via Helm
    (`gnoi.enableSoftwareUpgrade: true`) or the env var
    `CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=1`.

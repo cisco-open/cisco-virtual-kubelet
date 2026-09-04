@@ -309,11 +309,61 @@ spec:
 
 The `certFile` / `keyFile` / `caFile` paths refer to files **inside the VK pod**. Mount them with a Secret-backed volume or a configMap-backed volume on the VK Deployment. The controller does not currently auto-mount them — you'll need a post-install patch or a forked chart.
 
-All device-facing clients honour the full `spec.tls` block through one shared
-builder: apphosting RESTCONF, the configdriver RESTCONF fallback, MDT-over-gNMI
-telemetry, gNOI, and the NX-API client on NX-OS. A `caFile` therefore gives you
-verified TLS on every path — `insecureSkipVerify: true` is never required just
-because a device uses a private CA.
+All TLS-enabled device-facing clients honour the full `spec.tls` block through
+one shared builder: apphosting RESTCONF, the configdriver RESTCONF fallback,
+MDT-over-gNMI telemetry, gNOI, and the NX-API client on NX-OS. A `caFile`
+therefore gives you verified TLS on every path — `insecureSkipVerify: true` is
+never required just because a device uses a private CA. A gNOI
+`transportSecurity: tls` setting uses these trust and client-certificate fields
+even if the general `tls.enabled` switch is off.
+
+### Secure IOS-XE gNOI
+
+Use the IOS-XE secure gNXI listener for authenticated gNOI. Its default port is
+`9339`; IOS-XE 17.18.x enables password authentication with
+`gnxi secure-password-auth`:
+
+```text
+gnxi
+gnxi secure-trustpoint <server-trustpoint>
+gnxi secure-server
+gnxi secure-password-auth
+```
+
+Configure the VK side explicitly:
+
+```yaml
+spec:
+  username: admin
+  credentialSecretRef:
+    name: device-creds
+  tls:
+    enabled: true
+    insecureSkipVerify: false
+    caFile: /etc/cisco-vk/device-ca/ca.crt
+  gnoi:
+    transportSecurity: tls
+    port: 9339
+```
+
+The Secret contains a key named exactly `password`; the username remains in
+`spec.username`. CVK supplies those values as the separate gRPC metadata keys
+`username` and `password`. They are per-RPC transport credentials, not an HTTP
+Basic `Authorization` header, and CVK does not attach them to plaintext
+connections. Do not print outgoing metadata or enable interceptors that log
+metadata values.
+
+`gnxi secure-client-auth` has a different purpose: it makes IOS-XE validate a
+client certificate. Enable it only for an intentional mutual-TLS deployment,
+set both `tls.certFile` and `tls.keyFile`, and mount those files into the VK
+pod. Password-only secure gNOI does not require this command. If IOS-XE is
+configured for both password and client-certificate authentication, both sets
+of credentials must be available.
+
+`transportSecurity: plaintext` and `CISCO_VK_GNOI_INSECURE=1` exist for older,
+unauthenticated lab listeners (normally port `50052`). No password metadata is
+sent in that mode. Do not use it as a workaround for certificate or password
+errors on IOS-XE 17.18.x.
 
 ### SSH host keys
 

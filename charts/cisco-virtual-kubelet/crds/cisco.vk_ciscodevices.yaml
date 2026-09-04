@@ -136,6 +136,31 @@ spec:
                   - OPENCONFIG
                   - FAKE
                 type: string
+              gnoi:
+                description: |-
+                  GNOI optionally overrides the per-device gNOI transport. When omitted,
+                  the historical port and TLS inference from Port and TLS is preserved.
+                  Secure gNOI authentication uses Username and the resolved device password.
+                properties:
+                  port:
+                    description: |-
+                      Port is the device-side gNOI listener port. When omitted, CVK uses 9339
+                      for TLS and 50052 for plaintext. Unlike the legacy inference path, a
+                      present GNOI block never inherits DeviceSpec.Port.
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                  transportSecurity:
+                    default: auto
+                    description: |-
+                      TransportSecurity controls whether gNOI uses TLS. Empty and auto inherit
+                      the decision from DeviceSpec.TLS.Enabled.
+                    enum:
+                    - auto
+                    - tls
+                    - plaintext
+                    type: string
+                type: object
               labels:
                 additionalProperties:
                   type: string

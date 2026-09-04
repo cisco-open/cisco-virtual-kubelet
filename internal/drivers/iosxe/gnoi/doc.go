@@ -15,9 +15,9 @@
 // Package gnoi is the per-device gRPC Network Operations Interface
 // client. It wraps the upstream openconfig/gnoi service stubs (OS,
 // System, File, Certificate, FactoryReset) with ergonomic Go methods,
-// per-service capability discovery, and HTTP-Basic auth metadata so
-// the same credentials IOS-XE's gnxi-server accepts on the gNMI port
-// are reused here.
+// and per-service capability discovery. Production wiring supplies IOS
+// XE's username/password metadata as TLS-only per-RPC credentials on
+// the pooled connection.
 //
 // Connection ownership lives outside the package: callers Lease a
 // *grpc.ClientConn from a devicegrpc.Pool and pass it to New. The

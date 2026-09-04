@@ -56,10 +56,10 @@ func (e *ErrServiceUnsupported) Error() string {
 
 func (e *ErrServiceUnsupported) Unwrap() error { return e.Cause }
 
-// AuthContext decorates outgoing RPC contexts with the authentication
-// metadata the device requires. For IOS-XE this is HTTP-Basic, the
-// same shape used by gNMI; alternate-shape devices substitute their
-// own at the call site.
+// AuthContext decorates outgoing RPC contexts with optional metadata.
+// Production IOS XE password credentials are normally attached to the
+// pooled connection as TLS-only credentials; this hook remains available
+// for alternate devices and tests.
 type AuthContext func(context.Context) context.Context
 
 // Provider exposes a per-device gNOI client to reconcilers.

@@ -42,6 +42,11 @@ spec:
   tls:
     enabled: true
     insecureSkipVerify: true
+  # IOS-XE secure gNXI. The controller supplies username/password as separate
+  # gRPC metadata keys over TLS; the Secret is never copied into this CR.
+  gnoi:
+    transportSecurity: tls
+    port: 9339
   xe:
     networking:
       interface:

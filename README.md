@@ -176,9 +176,11 @@ Store device credentials in a Kubernetes Secret before creating the `CiscoDevice
 
 ```bash
 kubectl create secret generic cat9000-1-creds \
-  --from-literal=username=admin \
   --from-literal=password=<device-password>
 ```
+
+CVK reads the Secret key `password`; set the device username in
+`CiscoDevice.spec.username` (a Secret `username` key is not used).
 
 ### Create a CiscoDevice CR
 
@@ -194,11 +196,15 @@ spec:
   driver: XE
   address: "192.168.1.100"
   port: 443
+  username: admin
   credentialSecretRef:
     name: cat9000-1-creds
   tls:
     enabled: true
     insecureSkipVerify: true
+  gnoi:
+    transportSecurity: tls
+    port: 9339
   xe:
     networking:
       interface:

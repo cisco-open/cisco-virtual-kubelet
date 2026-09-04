@@ -75,21 +75,14 @@ func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider
 		forceInsecure = true
 	}
 
-	port := gnoiPortForSpec(opts.Spec, forceInsecure)
-
-	dialCfg := devicegrpc.DialConfig{
-		Username: opts.Spec.Username,
-		Password: opts.Password,
+	port, tlsEnabled, err := gnoiTransportForSpec(opts.Spec, forceInsecure)
+	if err != nil {
+		return nil, nil, fmt.Errorf("gNOI: invalid transport config: %w", err)
 	}
-	if !forceInsecure && opts.Spec.TLS != nil && opts.Spec.TLS.Enabled {
-		// Shared device-client helper: honours spec.tls.caFile (RootCAs)
-		// and the certFile/keyFile client pair in addition to
-		// InsecureSkipVerify, matching the apphosting driver.
-		tlsCfg, err := tlsutil.ClientTLSFromDeviceTLS(opts.Spec.TLS)
-		if err != nil {
-			return nil, nil, fmt.Errorf("gNOI: TLS from spec: %w", err)
-		}
-		dialCfg.TLSConfig = tlsCfg
+
+	dialCfg, err := gnoiDialConfig(opts.Spec, opts.Password, tlsEnabled)
+	if err != nil {
+		return nil, nil, fmt.Errorf("gNOI: TLS from spec: %w", err)
 	}
 
 	pool := devicegrpc.New(dialCfg, nil)
@@ -98,7 +91,6 @@ func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider
 	provider := &pooledGNOIProvider{
 		pool:    pool,
 		key:     key,
-		auth:    dialCfg.AuthContext(),
 		address: opts.Spec.Address,
 		port:    port,
 		tls:     dialCfg.TLSConfig != nil,
@@ -108,11 +100,70 @@ func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider
 	return provider, provider.Close, nil
 }
 
+func gnoiDialConfig(spec *ciskov1.DeviceSpec, password string, tlsEnabled bool) (devicegrpc.DialConfig, error) {
+	if !tlsEnabled {
+		return devicegrpc.DialConfig{}, nil
+	}
+
+	// Shared device-client helper: honours spec.tls.caFile (RootCAs)
+	// and the certFile/keyFile client pair in addition to
+	// InsecureSkipVerify, matching the apphosting driver.
+	tlsCfg, err := tlsutil.ClientTLSFromDeviceTLS(spec.TLS)
+	if err != nil {
+		return devicegrpc.DialConfig{}, err
+	}
+	dialCfg := devicegrpc.DialConfig{TLSConfig: tlsCfg}
+	if spec.Username != "" {
+		dialCfg.RPCCredentials = devicegrpc.NewIOSXEPasswordCredentials(spec.Username, password)
+	}
+	return dialCfg, nil
+}
+
+// gnoiTransportForSpec resolves the effective gNOI port and transport security.
+// A missing per-device block intentionally uses the historical resolver without
+// alteration. Once a block is present, gNOI no longer inherits DeviceSpec.Port:
+// an omitted port selects the protocol default for the effective security mode.
+func gnoiTransportForSpec(spec *ciskov1.DeviceSpec, forceInsecure bool) (int, bool, error) {
+	if spec == nil {
+		return 0, false, fmt.Errorf("nil DeviceSpec")
+	}
+
+	tlsEnabled := !forceInsecure && spec.TLS != nil && spec.TLS.Enabled
+	if spec.GNOI == nil {
+		return gnoiPortForSpec(spec, forceInsecure), tlsEnabled, nil
+	}
+	if err := spec.GNOI.Validate(); err != nil {
+		return 0, false, err
+	}
+
+	switch spec.GNOI.TransportSecurity {
+	case "", ciskov1.GNOITransportSecurityAuto:
+		tlsEnabled = spec.TLS != nil && spec.TLS.Enabled
+	case ciskov1.GNOITransportSecurityTLS:
+		tlsEnabled = true
+	case ciskov1.GNOITransportSecurityPlaintext:
+		tlsEnabled = false
+	}
+	if forceInsecure {
+		tlsEnabled = false
+	}
+
+	if port, ok := gnoiPortEnvOverride(); ok {
+		return port, tlsEnabled, nil
+	}
+	if spec.GNOI.Port > 0 {
+		return spec.GNOI.Port, tlsEnabled, nil
+	}
+	if tlsEnabled {
+		return 9339, true, nil
+	}
+	return 50052, false, nil
+}
+
 type pooledGNOIProvider struct {
 	mu      sync.Mutex
 	pool    devicegrpc.Pool
 	key     devicegrpc.DeviceKey
-	auth    gnoi.AuthContext
 	address string
 	port    int
 	tls     bool
@@ -135,10 +186,7 @@ func (p *pooledGNOIProvider) GNOIClient(ctx context.Context) (*gnoi.Client, erro
 	if err != nil {
 		return nil, fmt.Errorf("gnoi ClassControl lease: %w", err)
 	}
-	client, err := gnoi.New(controlLease.Conn, gnoi.Options{
-		Auth:             p.auth,
-		BulkConnProvider: p.bulkConn,
-	})
+	client, err := gnoi.New(controlLease.Conn, gnoi.Options{BulkConnProvider: p.bulkConn})
 	if err != nil {
 		controlLease.Release()
 		return nil, fmt.Errorf("gnoi client construct: %w", err)
@@ -186,10 +234,8 @@ func (p *pooledGNOIProvider) bulkConn(ctx context.Context) (*grpc.ClientConn, fu
 // inference so operators can target the `gnxi server` (insecure) line
 // even when RESTCONF on the same device uses TLS.
 func gnoiPortForSpec(spec *ciskov1.DeviceSpec, forceInsecure bool) int {
-	if v := os.Getenv(gNOIPortEnv); v != "" {
-		if p, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && p > 0 {
-			return p
-		}
+	if port, ok := gnoiPortEnvOverride(); ok {
+		return port
 	}
 	tlsEnabled := !forceInsecure && spec.TLS != nil && spec.TLS.Enabled
 	port := spec.Port
@@ -200,4 +246,16 @@ func gnoiPortForSpec(spec *ciskov1.DeviceSpec, forceInsecure bool) int {
 		return 50052
 	}
 	return port
+}
+
+func gnoiPortEnvOverride() (int, bool) {
+	v := os.Getenv(gNOIPortEnv)
+	if v == "" {
+		return 0, false
+	}
+	port, err := strconv.Atoi(strings.TrimSpace(v))
+	if err != nil || port <= 0 {
+		return 0, false
+	}
+	return port, true
 }

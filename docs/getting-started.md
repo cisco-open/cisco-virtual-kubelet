@@ -198,6 +198,9 @@ spec:
   tls:
     enabled: true
     insecureSkipVerify: true    # acceptable for lab; use caFile in production
+  gnoi:
+    transportSecurity: tls      # IOS-XE secure gNXI; default port is 9339
+    port: 9339
   # allowUnsignedApps: true     # uncomment for unsigned packages (own builds /
                                  # test images). CVK disables device signing via
                                  # RESTCONF and relaxes the reconciler guard.

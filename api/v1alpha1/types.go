@@ -111,6 +111,12 @@ type DeviceSpec struct {
 	// +kubebuilder:validation:Optional
 	TLS *TLSConfig `json:"tls,omitempty" mapstructure:"tls,omitempty"`
 
+	// GNOI optionally overrides the per-device gNOI transport. When omitted,
+	// the historical port and TLS inference from Port and TLS is preserved.
+	// Secure gNOI authentication uses Username and the resolved device password.
+	// +kubebuilder:validation:Optional
+	GNOI *GNOIConfig `json:"gnoi,omitempty" mapstructure:"gnoi,omitempty"`
+
 	// PodCIDR is the CIDR to use for pod network interfaces when using static IP allocation.
 	// +kubebuilder:validation:Optional
 	PodCIDR string `json:"podCIDR,omitempty" mapstructure:"podCIDR"`

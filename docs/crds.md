@@ -66,8 +66,8 @@ node that can host Kubernetes pods through device App-Hosting.
 
 Use it when you want Kubernetes to see a Cisco device as a schedulable node.
 Important fields include `spec.driver`, `spec.address`,
-`spec.credentialSecretRef`, `spec.transport`, `spec.configPrereqs`, and
-`spec.opsPolicy`.
+`spec.credentialSecretRef`, `spec.transport`, `spec.gnoi`,
+`spec.configPrereqs`, and `spec.opsPolicy`.
 
 ```yaml
 apiVersion: cisco.vk/v1alpha1
@@ -85,6 +85,9 @@ spec:
   credentialSecretRef:
     name: cat9300-4-credentials
   transport: restconf
+  gnoi:
+    transportSecurity: tls
+    port: 9339
   maxPods: 16
   xe:
     networking:
@@ -97,6 +100,10 @@ spec:
             vlan: 300
             guestInterface: 0
 ```
+
+`spec.gnoi` selects the IOS-XE gNXI listener independently from the main
+device API port. See the [configuration reference](CONFIGURATION.md#gnoi) and
+[secure gNOI guidance](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
 
 ```bash
 $ kubectl get cvk
@@ -475,14 +482,17 @@ Supported kinds are `ShowCommand`, `ConfigDiff`, `PacketCapture`, `GNOIPing`,
 apiVersion: ops.cisco.vk/v1alpha1
 kind: DeviceOperation
 metadata:
-  name: cat9300-4-gnoi-time
+  name: cat9300-4-gnoi-os-verify
 spec:
   deviceRef:
     name: cat9300-4
   operation:
-    kind: GNOITime
+    kind: GNOIOSVerify
   ttlSecondsAfterFinished: 600
 ```
+
+`GNOIOSVerify` is the preferred first secure-gNXI smoke test on IOS-XE 17.18.x.
+System RPCs such as `GNOITime` are not implemented on every platform.
 
 ### IOSXEOperationalAction
 

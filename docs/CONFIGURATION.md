@@ -27,6 +27,9 @@ spec:
   tls:
     enabled: true
     insecureSkipVerify: true
+  gnoi:
+    transportSecurity: tls
+    port: 9339
   # allowUnsignedApps: true      # enable when running unsigned packages
                                   # (your own builds, or devices without
                                   # signed-verification enforcement)
@@ -85,6 +88,42 @@ tls:
 | `tls.certFile` | string | — | Client certificate path |
 | `tls.keyFile` | string | — | Client key path |
 | `tls.caFile` | string | — | CA bundle path |
+
+### gNOI
+
+IOS-XE 17.18.x secure gNXI listens on TLS port `9339` by default. Select it
+explicitly when the device has `gnxi secure-server` and
+`gnxi secure-password-auth` enabled:
+
+```yaml
+gnoi:
+  transportSecurity: tls
+  port: 9339
+```
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `gnoi.transportSecurity` | enum | `auto` | `tls` always uses TLS, `plaintext` uses the legacy insecure listener, and `auto` follows `tls.enabled`. |
+| `gnoi.port` | int (1–65535) | `9339` for TLS, `50052` for plaintext | Overrides the gNOI/gNXI endpoint port without changing the RESTCONF port. |
+
+When the `gnoi` block is present and `port` is omitted, CVK uses the default
+for the selected transport; it does not inherit a nonstandard top-level
+`spec.port`. Omitting the entire block preserves the legacy inference behavior,
+including reuse of a nonstandard `spec.port`. The compatibility environment
+variables still take precedence: `CISCO_VK_GNOI_INSECURE=1` forces plaintext
+and `CISCO_VK_GNOI_PORT` overrides the port.
+
+In `tls` mode, CVK uses the CA, verification, and optional client certificate
+settings from the top-level `tls` block even if `tls.enabled` is `false`.
+Password authentication comes from `spec.username` and the resolved
+`credentialSecretRef` password. On the wire, IOS-XE receives the exact gRPC
+metadata keys `username` and `password`; this is not an HTTP Basic
+`Authorization` header. CVK never sends password metadata over a plaintext
+gNOI connection.
+
+See [gNOI and Software Lifecycle](gnoi-software-lifecycle.md#secure-ios-xe-gnxi)
+for device configuration and [Security](security.md#secure-ios-xe-gnoi) for
+credential and certificate guidance.
 
 ### Node and pod topology
 

@@ -23,15 +23,13 @@
 // the unary gNMI Set / gNOI unary RPCs on ClassControl. Within a single
 // class on a single device, callers share the same conn and refcount it.
 //
-// DialConfig carries TLS + auth in one place so there is a single source
-// of truth for device credentials across the gNMI config transport, the
-// gNMI telemetry subscriber, and the gNOI client.
+// DialConfig carries transport security and optional per-RPC credentials
+// for pool consumers.
 package devicegrpc
 
 import (
 	"context"
 	"crypto/tls"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"sync"
@@ -39,7 +37,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 )
 
 // WorkloadClass partitions per-device gRPC connections.
@@ -90,27 +87,14 @@ type DialConfig struct {
 	// Nil dials with insecure plaintext credentials.
 	TLSConfig *tls.Config
 
-	// Username, when non-empty, drives the AuthContext helper to attach
-	// HTTP Basic credentials as gRPC metadata (the shape IOS-XE's
-	// gnxi-server accepts).
-	Username string
-	Password string
+	// RPCCredentials, when non-nil, are attached to every RPC on the
+	// connection. They may only be used when TLSConfig is also non-nil;
+	// defaultDial rejects credentials on a plaintext connection.
+	RPCCredentials credentials.PerRPCCredentials
 
 	// Extra dial options. Tests pass grpc.WithContextDialer here to
 	// wire a bufconn listener; production wiring leaves this empty.
 	Extra []grpc.DialOption
-}
-
-// AuthContext returns a context decorator that attaches HTTP Basic
-// credentials. Empty username yields a passthrough.
-func (c DialConfig) AuthContext() func(context.Context) context.Context {
-	if c.Username == "" {
-		return func(ctx context.Context) context.Context { return ctx }
-	}
-	encoded := base64.StdEncoding.EncodeToString([]byte(c.Username + ":" + c.Password))
-	return func(ctx context.Context) context.Context {
-		return metadata.AppendToOutgoingContext(ctx, "authorization", "Basic "+encoded)
-	}
 }
 
 // Lease is a refcounted hold on a *grpc.ClientConn. Release must be
@@ -143,14 +127,20 @@ func (l *Lease) Release() {
 type DialFunc func(ctx context.Context, target string, cfg DialConfig) (*grpc.ClientConn, error)
 
 func defaultDial(_ context.Context, target string, cfg DialConfig) (*grpc.ClientConn, error) {
+	if cfg.RPCCredentials != nil && cfg.TLSConfig == nil {
+		return nil, errors.New("devicegrpc: per-RPC credentials require TLS")
+	}
 	var creds credentials.TransportCredentials
 	if cfg.TLSConfig != nil {
 		creds = credentials.NewTLS(cfg.TLSConfig)
 	} else {
 		creds = insecure.NewCredentials()
 	}
-	opts := make([]grpc.DialOption, 0, 1+len(cfg.Extra))
+	opts := make([]grpc.DialOption, 0, 2+len(cfg.Extra))
 	opts = append(opts, grpc.WithTransportCredentials(creds))
+	if cfg.RPCCredentials != nil {
+		opts = append(opts, grpc.WithPerRPCCredentials(cfg.RPCCredentials))
+	}
 	opts = append(opts, cfg.Extra...)
 	return grpc.NewClient(target, opts...)
 }

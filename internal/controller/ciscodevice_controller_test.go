@@ -757,6 +757,27 @@ func TestRenderDeviceConfig_ContainsExpectedFields(t *testing.T) {
 	}
 }
 
+func TestRenderDeviceConfig_ContainsPerDeviceGNOITransport(t *testing.T) {
+	spec := &ciskov1.DeviceSpec{
+		Driver:   ciskov1.DeviceDriverXE,
+		Address:  "10.0.0.1",
+		Username: "admin",
+		GNOI: &ciskov1.GNOIConfig{
+			Port:              19339,
+			TransportSecurity: ciskov1.GNOITransportSecurityTLS,
+		},
+	}
+	out, err := renderDeviceConfig(spec)
+	if err != nil {
+		t.Fatalf("renderDeviceConfig error: %v", err)
+	}
+	for _, want := range []string{"gnoi:", "port: 19339", "transportSecurity: tls"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected output to contain %q; got:\n%s", want, out)
+		}
+	}
+}
+
 func TestRenderDeviceConfig_StripsPassword(t *testing.T) {
 	spec := &ciskov1.DeviceSpec{
 		Driver:   ciskov1.DeviceDriverXE,

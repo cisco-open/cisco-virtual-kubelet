@@ -105,6 +105,62 @@ func TestLoad_ExplicitPort(t *testing.T) {
 	}
 }
 
+func TestLoad_GNOITransportConfig(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+	viper.Set("device", map[string]interface{}{
+		"driver":   "FAKE",
+		"address":  "192.0.2.10",
+		"username": "admin",
+		"gnoi": map[string]interface{}{
+			"port":              19339,
+			"transportSecurity": "tls",
+		},
+	})
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() failed: %v", err)
+	}
+	if cfg.Device.GNOI == nil {
+		t.Fatal("device.gnoi was not decoded")
+	}
+	if got := cfg.Device.GNOI.Port; got != 19339 {
+		t.Fatalf("device.gnoi.port=%d, want 19339", got)
+	}
+	if got := cfg.Device.GNOI.TransportSecurity; got != v1alpha1.GNOITransportSecurityTLS {
+		t.Fatalf("device.gnoi.transportSecurity=%q, want tls", got)
+	}
+}
+
+func TestLoad_RejectsInvalidGNOITransportConfig(t *testing.T) {
+	tests := []struct {
+		name string
+		gnoi map[string]interface{}
+	}{
+		{name: "unknown transport security", gnoi: map[string]interface{}{"transportSecurity": "secure-ish"}},
+		{name: "negative port", gnoi: map[string]interface{}{"port": -1}},
+		{name: "port above maximum", gnoi: map[string]interface{}{"port": 65536}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			viper.Reset()
+			t.Cleanup(viper.Reset)
+			viper.Set("device", map[string]interface{}{
+				"driver":   "FAKE",
+				"address":  "192.0.2.10",
+				"username": "admin",
+				"gnoi":     tt.gnoi,
+			})
+
+			if _, err := Load(); err == nil {
+				t.Fatal("Load() succeeded for invalid device.gnoi config")
+			}
+		})
+	}
+}
+
 func TestLoad_InterfaceConfigValidation(t *testing.T) {
 	viper.Reset()
 
