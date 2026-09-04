@@ -25,8 +25,6 @@ on:
       - smoke
       - Lab CI approval signal
       - Lab CI approved dispatcher
-      - Lab CI (Cat8kv)
-      - Lab CI (Cat9k)
       - lab-ci-static
       - release
       - CI build and deploy documentation
@@ -35,6 +33,20 @@ on:
       - yang-drift
       - recover v2026.8.1 release assets
     types: [completed]
+  # Auto-dispatched lab wrappers do not reliably emit another workflow_run
+  # event. Their trusted report jobs dispatch this observer explicitly with
+  # only the source run coordinates; the observer refetches and validates all
+  # source metadata before export.
+  workflow_dispatch:
+    inputs:
+      observed_run_id:
+        description: "Cat8/Cat9 workflow run ID to observe"
+        required: true
+        type: string
+      observed_run_attempt:
+        description: "Cat8/Cat9 workflow run attempt to observe"
+        required: true
+        type: string
   release:
     types: [published]
 
@@ -42,15 +54,18 @@ permissions: {}
 
 concurrency:
   group: >-
-    cicd-otel-${{ github.event_name }}-${{ github.event.workflow_run.id || github.event.release.id }}-${{ github.event.workflow_run.run_attempt || 'published' }}
+    cicd-otel-${{ github.event_name }}-${{ github.event.workflow_run.id || inputs.observed_run_id || github.event.release.id }}-${{ github.event.workflow_run.run_attempt || inputs.observed_run_attempt || 'published' }}
   cancel-in-progress: false
 
 jobs:
   export-workflow:
     if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.status == 'completed' &&
-      github.event.workflow_run.repository.full_name == github.repository
+      (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.status == 'completed' &&
+        github.event.workflow_run.repository.full_name == github.repository) ||
+      (github.event_name == 'workflow_dispatch' &&
+        github.ref == 'refs/heads/main' &&
+        github.actor == 'github-actions[bot]')
     runs-on: [self-hosted, lab-cvk-upstream]
     timeout-minutes: 5
     permissions:
@@ -68,17 +83,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           OBSERVED_REPOSITORY: ${{ github.repository }}
-          OBSERVED_RUN_ID: ${{ github.event.workflow_run.id }}
-          OBSERVED_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          OBSERVED_RUN_ID: ${{ github.event.workflow_run.id || inputs.observed_run_id }}
+          OBSERVED_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt || inputs.observed_run_attempt }}
         run: |
           set -euo pipefail
           [[ "$OBSERVED_REPOSITORY" == "$GITHUB_REPOSITORY" ]]
           [[ "$OBSERVED_RUN_ID" =~ ^[1-9][0-9]*$ ]]
           [[ "$OBSERVED_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]
+          observer_mode=()
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            observer_mode+=(--trusted-lab-dispatch)
+          fi
           python3 .github/scripts/export-cicd-otel.py \
             --repository "$OBSERVED_REPOSITORY" \
             --run-id "$OBSERVED_RUN_ID" \
-            --run-attempt "$OBSERVED_RUN_ATTEMPT"
+            --run-attempt "$OBSERVED_RUN_ATTEMPT" \
+            "${observer_mode[@]}"
 
   export-release-publication:
     if: >-

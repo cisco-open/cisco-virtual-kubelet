@@ -27,6 +27,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -67,6 +68,8 @@ MAX_JOBS = 1000
 MAX_STEPS = 5000
 MAX_CORRELATION_PAGES = 5
 MAX_CORRELATION_CANDIDATES = 500
+COMPLETION_POLL_ATTEMPTS = 12
+COMPLETION_POLL_INTERVAL_SECONDS = 5
 OBSERVER_WORKFLOW_PATH = ".github/workflows/cicd-otel-export.yaml"
 OBSERVED_WORKFLOW_PATHS = {
     "smoke": ".github/workflows/smoke.yml",
@@ -84,6 +87,17 @@ OBSERVED_WORKFLOW_PATHS = {
 }
 OBSERVED_WORKFLOW_NAMES = {
     path: name for name, path in OBSERVED_WORKFLOW_PATHS.items()
+}
+TRUSTED_LAB_DISPATCH_PATHS = {
+    OBSERVED_WORKFLOW_PATHS["Lab CI (Cat8kv)"],
+    OBSERVED_WORKFLOW_PATHS["Lab CI (Cat9k)"],
+}
+ACTIVE_WORKFLOW_STATUSES = {
+    "in_progress",
+    "pending",
+    "queued",
+    "requested",
+    "waiting",
 }
 REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -267,35 +281,55 @@ def load_completed_run(
     *,
     token: str,
     api_call: Callable[[str], Any] | None = None,
+    trusted_lab_dispatch: bool = False,
+    sleep: Callable[[float], None] = time.sleep,
 ) -> dict[str, Any]:
     repository = validate_repository(repository)
     expected_id = positive_integer("observed GitHub run ID", run_id)
     expected_attempt = positive_integer("observed GitHub run attempt", run_attempt)
     call = api_call or (lambda path: github_api(path, token=token))
-    run = call(
-        f"/repos/{repository}/actions/runs/{expected_id}/attempts/{expected_attempt}"
-    )
-    if not isinstance(run, dict):
-        raise ExportError("GitHub workflow run response is not an object")
-    if int(run.get("id") or 0) != expected_id:
-        raise ExportError("GitHub workflow run ID does not match the event")
-    if ((run.get("repository") or {}).get("full_name")) != repository:
-        raise ExportError("GitHub workflow run repository does not match")
-    if run.get("status") != "completed":
-        raise ExportError("only completed GitHub workflow runs may be exported")
-    actual_path = _workflow_path(run)
-    if actual_path == OBSERVER_WORKFLOW_PATH:
-        raise ExportError("the observer must never observe itself")
-    if actual_path not in OBSERVED_WORKFLOW_NAMES:
-        raise ExportError(
-            f"workflow at {actual_path!r} is not observed"
+    path = f"/repos/{repository}/actions/runs/{expected_id}/attempts/{expected_attempt}"
+    for poll in range(COMPLETION_POLL_ATTEMPTS):
+        run = call(path)
+        if not isinstance(run, dict):
+            raise ExportError("GitHub workflow run response is not an object")
+        if int(run.get("id") or 0) != expected_id:
+            raise ExportError("GitHub workflow run ID does not match the event")
+        if ((run.get("repository") or {}).get("full_name")) != repository:
+            raise ExportError("GitHub workflow run repository does not match")
+        actual_attempt = positive_integer(
+            "GitHub run attempt", run.get("run_attempt", "")
         )
-    actual_attempt = positive_integer(
-        "GitHub run attempt", run.get("run_attempt", "")
+        if actual_attempt != expected_attempt:
+            raise ExportError("GitHub workflow run attempt does not match the event")
+        actual_path = _workflow_path(run)
+        if actual_path == OBSERVER_WORKFLOW_PATH:
+            raise ExportError("the observer must never observe itself")
+        if actual_path not in OBSERVED_WORKFLOW_NAMES:
+            raise ExportError(f"workflow at {actual_path!r} is not observed")
+        if trusted_lab_dispatch and (
+            actual_path not in TRUSTED_LAB_DISPATCH_PATHS
+            or run.get("event") != "workflow_dispatch"
+            or run.get("head_branch") != "main"
+        ):
+            raise ExportError(
+                "explicit observation requires a main-branch Cat8/Cat9 "
+                "workflow_dispatch run"
+            )
+
+        status = run.get("status")
+        if status == "completed":
+            return run
+        if not trusted_lab_dispatch:
+            raise ExportError("only completed GitHub workflow runs may be exported")
+        if status not in ACTIVE_WORKFLOW_STATUSES:
+            raise ExportError(f"unexpected GitHub workflow run status: {status!r}")
+        if poll + 1 < COMPLETION_POLL_ATTEMPTS:
+            sleep(COMPLETION_POLL_INTERVAL_SECONDS)
+
+    raise ExportError(
+        "GitHub workflow run did not complete within the trusted observer wait"
     )
-    if actual_attempt != expected_attempt:
-        raise ExportError("GitHub workflow run attempt does not match the event")
-    return run
 
 
 def load_jobs(
@@ -1570,6 +1604,11 @@ def build_parser() -> argparse.ArgumentParser:
     source.add_argument("--release-id")
     parser.add_argument("--run-attempt")
     parser.add_argument("--release-tag")
+    parser.add_argument(
+        "--trusted-lab-dispatch",
+        action="store_true",
+        help="wait for and strictly validate an explicitly dispatched Cat8/Cat9 run",
+    )
     return parser
 
 
@@ -1587,6 +1626,7 @@ def main() -> int:
                 args.run_id,
                 args.run_attempt,
                 token=token,
+                trusted_lab_dispatch=args.trusted_lab_dispatch,
             )
             jobs = load_jobs(
                 args.repository,
@@ -1607,6 +1647,10 @@ def main() -> int:
             )
             source = f"GitHub run {run['id']}"
         else:
+            if args.trusted_lab_dispatch:
+                raise ExportError(
+                    "--trusted-lab-dispatch is only valid with --run-id"
+                )
             if args.run_attempt is not None:
                 raise ExportError("--run-attempt is only valid with --run-id")
             if args.release_tag is None:

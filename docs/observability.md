@@ -81,6 +81,14 @@ submission step. The Argo lifecycle bridge links its native trace to that
 wrapper step. These dispatch and scheduling boundaries are asynchronous, so
 they use span links rather than invented synchronous parentage.
 
+GitHub does not emit every chained `workflow_run` event when one workflow was
+started by another workflow. To ensure Cat8 and Cat9 runs are still observed,
+each trusted `main` report job explicitly dispatches the observer with only its
+numeric run ID and attempt. The observer checks out trusted code from `main`,
+refetches the exact server-side run, verifies that it is a `main` Cat8 or Cat9
+`workflow_dispatch`, and waits for completion within a fixed bound. It never
+downloads or executes the observed run's code, logs, or artifacts.
+
 The trusted GitHub observer also joins release stages that GitHub exposes as
 separate runs: a merged-PR smoke run to the exact `main` smoke run, that run to
 the tag-triggered release workflow for the same commit, the immutable
