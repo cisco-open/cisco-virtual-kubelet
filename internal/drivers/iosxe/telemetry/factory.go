@@ -51,10 +51,9 @@ type SubscribeClient struct {
 
 	// Release, when non-nil, is invoked by Subscriber.Stop in place
 	// of Conn.Close(). Pool-backed factories set it to the pool
-	// Lease's Release function so the underlying conn stays alive
-	// for other consumers (gNMI Set, gNOI unary RPCs) until the
-	// last lease is released. Owner-conn factories leave it nil
-	// and the subscriber falls back to Conn.Close() — preserving
+	// Lease's Release function so any other ClassTelemetry lease can
+	// continue using the underlying connection. Owner-conn factories
+	// leave it nil and the subscriber falls back to Conn.Close() — preserving
 	// the long-standing "telemetry owns its dial" contract for
 	// callers that haven't migrated to the pool.
 	Release func()
@@ -153,16 +152,15 @@ func (f *DefaultSubscribeClientFactory) NewClient(_ context.Context) (*Subscribe
 // PooledSubscribeClientFactory dials via a shared devicegrpc.Pool,
 // leasing the gNMI Subscribe stream's conn under ClassTelemetry. The
 // Lease is held for the lifetime of the SubscribeClient and released
-// when Subscriber.Stop is called — the pool refcounts so other
-// consumers (gNMI Set, gNOI unary RPCs) on the same WorkloadClass
-// keep working.
+// when Subscriber.Stop is called; the pool keeps other ClassTelemetry
+// leases alive until their callers release them.
 //
-// Use this factory when you want telemetry and the rest of the gRPC
-// pillars to share TLS material and auth via a single source of
-// truth. The env-var override path (CISCO_VK_TELEMETRY_INSECURE /
-// CISCO_VK_TELEMETRY_PORT) is intentionally NOT honoured here —
-// operators using those escapes should stay on the existing
-// DefaultSubscribeClientFactory, which keeps its dedicated dial.
+// This is an optional integration seam; its Pool must have compatible TLS and
+// per-RPC credentials. Current production wiring uses
+// DefaultSubscribeClientFactory. The env-var override path
+// (CISCO_VK_TELEMETRY_INSECURE / CISCO_VK_TELEMETRY_PORT) is intentionally
+// NOT honoured here — operators using those escapes should stay on the
+// existing DefaultSubscribeClientFactory, which keeps its dedicated dial.
 type PooledSubscribeClientFactory struct {
 	Pool        devicegrpc.Pool
 	Key         devicegrpc.DeviceKey

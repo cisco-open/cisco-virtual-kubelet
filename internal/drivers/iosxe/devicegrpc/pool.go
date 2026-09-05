@@ -17,11 +17,13 @@
 // and call the returned Release() exactly once when done.
 //
 // Conns are partitioned by WorkloadClass so unrelated streams cannot
-// HOL-block each other on shared HTTP/2 flow control: a 500 MB
-// OS.Install bulk transfer on ClassBulkTransfer does not back-pressure
-// a long-lived gNMI Subscribe on ClassTelemetry, and neither stalls
-// the unary gNMI Set / gNOI unary RPCs on ClassControl. Within a single
-// class on a single device, callers share the same conn and refcount it.
+// HOL-block each other on shared HTTP/2 flow control. A bulk transfer on
+// ClassBulkTransfer therefore does not back-pressure unary work on
+// ClassControl. Within a single class on a single device, callers share
+// the same conn and refcount it. A Pool has one dial policy and may be
+// shared only by consumers with identical TLS and per-RPC credential
+// requirements. Current production gNOI wiring uses the control and
+// bulk-transfer classes; gNMI dials independently.
 //
 // DialConfig carries transport security and optional per-RPC credentials
 // for pool consumers.

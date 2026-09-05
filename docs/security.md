@@ -309,13 +309,14 @@ spec:
 
 The `certFile` / `keyFile` / `caFile` paths refer to files **inside the VK pod**. Mount them with a Secret-backed volume or a configMap-backed volume on the VK Deployment. The controller does not currently auto-mount them — you'll need a post-install patch or a forked chart.
 
-All TLS-enabled device-facing clients honour the full `spec.tls` block through
-one shared builder: apphosting RESTCONF, the configdriver RESTCONF fallback,
-MDT-over-gNMI telemetry, gNOI, and the NX-API client on NX-OS. A `caFile`
-therefore gives you verified TLS on every path — `insecureSkipVerify: true` is
-never required just because a device uses a private CA. A gNOI
-`transportSecurity: tls` setting uses these trust and client-certificate fields
-even if the general `tls.enabled` switch is off.
+The configdriver transports, MDT-over-gNMI telemetry, gNOI, and the NX-API
+client on NX-OS honour the full `spec.tls` block through one shared builder.
+IOS-XE app-hosting RESTCONF constructs its TLS client separately. A `caFile`
+provides verified private-CA trust on each of these paths, so
+`insecureSkipVerify: true` is unnecessary. A gNOI `transportSecurity: tls`
+setting uses the trust and client-certificate fields even if the general
+`tls.enabled` switch is off. Shared-builder clients reject a `certFile` or
+`keyFile` configured without its matching pair.
 
 ### Secure IOS-XE gNOI
 
@@ -326,7 +327,9 @@ opt in retain their legacy HTTP Basic metadata behavior, including on plaintext
 listeners, solely for compatibility. Migrate them to explicit secure gNOI.
 Avoid metadata logging and limit access to the credential Secret.
 
-The dedicated provisioning Secret always supplies `tls.crt` and `ca.crt`.
+The dedicated provisioning Secret referenced by
+`spec.xe.gnoi.certificateProvisioning.secretRef` always supplies `tls.crt` and
+`ca.crt`.
 `bootstrap.crt` is an optional exact pin for the temporary IOS-XE leaf, and
 `ca.key` is used only by the gated `ProvisionCertificate` action. The key is
 kept separate from the read-only trust bundle behind a `CertificateSigner`

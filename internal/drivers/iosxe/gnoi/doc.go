@@ -23,11 +23,11 @@
 // *grpc.ClientConn from a devicegrpc.Pool and pass it to New. The
 // client never closes the conn — callers retain the lease and Release
 // it when they tear down the device worker. Unary RPCs and short
-// streams use the same ClassControl-leased conn the gNMI config
-// transport uses; bulk-transfer RPCs (OS.Install, File.Put / File.Get)
-// MUST take a separate ClassBulkTransfer lease and pass the resulting
-// conn via WithBulkConn(...), so a 500 MB image transfer cannot HOL-
-// block the control conn.
+// streams use the provider-held ClassControl connection. Bulk-transfer
+// RPCs (OS.Install, File.Put / File.Get) MUST take a separate
+// ClassBulkTransfer lease and supply the resulting conn through
+// Options.BulkConnProvider (or Options.BulkConn), so a 500 MB image
+// transfer cannot HOL-block the control conn.
 //
 // Capability discovery: gNMI Capabilities does not enumerate gNOI
 // services, so service availability is probed lazily on first use

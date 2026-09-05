@@ -111,10 +111,11 @@ operator creates a write-class `IOSXEOperationalAction` with kind
 `ProvisionCertificate`.
 
 Provisioning uses IOS-XE's target-generated CSR flow, so the device private key
-never leaves IOS-XE. Configure `certificateProvisioning` with a dedicated
-same-namespace Secret. `tls.crt` and `ca.crt` are always required; `ca.key` is
-required only while creating a new identity, and `bootstrap.crt` is needed only
-when the temporary certificate cannot pass normal CA and hostname validation:
+never leaves IOS-XE. Configure `spec.xe.gnoi.certificateProvisioning` with a
+dedicated same-namespace Secret. `tls.crt` and `ca.crt` are always required;
+`ca.key` is required only while creating a new identity, and `bootstrap.crt` is
+needed only when the temporary certificate cannot pass normal CA and hostname
+validation:
 
 ```yaml
 apiVersion: v1
@@ -160,7 +161,8 @@ The only signer included in this repository is the transitional local adapter
 for `ca.key`; it consumes that key after one signing attempt per process. No
 external CA, KMS, or HSM signer backend is implemented or configurable here.
 
-Reference it only from the gNOI block:
+Reference generic transport settings from `spec.gnoi` and IOS-XE provisioning
+policy from `spec.xe.gnoi`:
 
 ```yaml
 spec:
@@ -168,11 +170,13 @@ spec:
   gnoi:
     transportSecurity: tls
     port: 9339
-    certificateProvisioning:
-      certificateID: cvk-gnoi-os
-      replaceTargetCABundle: true
-      secretRef:
-        name: cat9000-1-gnoi-identity
+  xe:
+    gnoi:
+      certificateProvisioning:
+        certificateID: cvk-gnoi-os
+        replaceTargetCABundle: true
+        secretRef:
+          name: cat9000-1-gnoi-identity
 ```
 
 CVK requires a target-generated RSA key of at least 2048 bits. Every certificate
@@ -224,8 +228,8 @@ Use this one-shot workflow:
     window: an older worker cannot enforce the certificate ID and digest.
 
 1. Enable `gnxi enable-gnoi` and `gnxi secure-init`, configure the Secret and
-   `certificateProvisioning` block, and enable the write-class gNOI runtime
-   gate.
+   `spec.xe.gnoi.certificateProvisioning` block, and enable the write-class
+   gNOI runtime gate.
 2. Run `GNOICertGet` to test TLS and password metadata. Run `GNOIOSVerify` if
    desired to confirm the not-provisioned response; it does not mutate IOS-XE.
 3. Compute the immutable public-material digest from the exact files used to
@@ -285,16 +289,20 @@ config-only topology does not run gNOI lifecycle reconcilers.
 
 ## Connection Model
 
-The reusable `gnoiruntime.Provider` owns the per-device, workload-classed gRPC
-pool for gNOI; command wiring supplies configuration and credentials but does
-not own the runtime workflow. The IOS-XE driver uses these workload classes
-across gNOI and gNMI work:
+The IOS-XE `gnoiruntime.Provider` owns a dedicated per-device,
+workload-classed gRPC pool for gNOI; command wiring supplies configuration and
+credentials but does not own the runtime workflow. Current production wiring
+uses these classes:
 
 | Class | Used by | Why it is separate |
 |---|---|---|
-| `ClassControl` | Unary gNOI RPCs such as time, ping, reboot status, cert get, and OS verify | Keeps small control RPCs responsive. |
-| `ClassTelemetry` | gNMI Subscribe streams | Keeps telemetry streams independent from operations. |
-| `ClassBulkTransfer` | OS install and file put/get | Prevents large file transfers from back-pressuring control or telemetry traffic. |
+| `ClassControl` | Unary and short-stream gNOI RPCs such as time, ping, reboot status, cert get, and OS verify | Keeps small control RPCs responsive. |
+| `ClassBulkTransfer` | OS install and file put/get | Prevents large file transfers from back-pressuring control traffic. |
+
+gNMI configuration and telemetry currently dial independently. Although the
+pool defines `ClassTelemetry` and the transports accept injected connections,
+production wiring does not compose them with the gNOI pool and callers must
+not assume shared transport or authentication state.
 
 The gNOI client validates IOS-XE filesystem prefixes for file paths and caches
 per-service capability probes. gNMI capabilities do not enumerate gNOI

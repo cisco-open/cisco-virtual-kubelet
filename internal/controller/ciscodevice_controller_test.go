@@ -134,6 +134,21 @@ func assertNoGNOIProvisioningProjection(t *testing.T, deployment *appsv1.Deploym
 	}
 }
 
+func configureXEGNOICertificateProvisioning(device *ciskov1.CiscoDevice, secretName string) {
+	device.Spec.GNOI = &ciskov1.GNOIConfig{
+		TransportSecurity: ciskov1.GNOITransportSecurityTLS,
+	}
+	device.Spec.XE = &ciskov1.XEConfig{
+		GNOI: &ciskov1.XEGNOIConfig{
+			CertificateProvisioning: &ciskov1.XEGNOICertificateProvisioning{
+				CertificateID:         "cvk-gnoi-cert",
+				SecretRef:             ciskov1.XEGNOIProvisioningSecretReference{Name: secretName},
+				ReplaceTargetCABundle: true,
+			},
+		},
+	}
+}
+
 func findWorkerCapability(items []ciskov1.WorkerCapabilityStatus, name ciskov1.WorkerCapabilityName) (ciskov1.WorkerCapabilityStatus, bool) {
 	for _, item := range items {
 		if item.Name == name {
@@ -804,14 +819,7 @@ func TestReconcile_GNOICertificateProvisioningMountsDedicatedSecret(t *testing.T
 	t.Setenv(envCVKEnableWriteClassGNOI, "true")
 	t.Setenv(envCVKGNOIDisabled, "false")
 	device := newDevice("router-gnoi-provision", "default")
-	device.Spec.GNOI = &ciskov1.GNOIConfig{
-		TransportSecurity: ciskov1.GNOITransportSecurityTLS,
-		CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
-			CertificateID:         "cvk-gnoi-cert",
-			SecretRef:             ciskov1.GNOIProvisioningSecretReference{Name: "router-gnoi-certificates"},
-			ReplaceTargetCABundle: true,
-		},
-	}
+	configureXEGNOICertificateProvisioning(device, "router-gnoi-certificates")
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "router-gnoi-certificates",
@@ -916,14 +924,7 @@ func TestReconcile_GNOICertificateProvisioningMountsDedicatedSecret(t *testing.T
 func TestReconcile_GNOIWithoutSignerUsesTrustOnlyProjection(t *testing.T) {
 	t.Setenv(envCVKEnableWriteClassGNOI, "true")
 	device := newDevice("router-gnoi-trust", "default")
-	device.Spec.GNOI = &ciskov1.GNOIConfig{
-		TransportSecurity: ciskov1.GNOITransportSecurityTLS,
-		CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
-			CertificateID:         "cvk-gnoi-cert",
-			SecretRef:             ciskov1.GNOIProvisioningSecretReference{Name: "router-gnoi-certificates"},
-			ReplaceTargetCABundle: true,
-		},
-	}
+	configureXEGNOICertificateProvisioning(device, "router-gnoi-certificates")
 	r := reconcilerFor(t, device, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "router-gnoi-certificates", Namespace: "default"},
 		Data: map[string][]byte{
@@ -965,14 +966,7 @@ func TestReconcile_DisabledGNOIDoesNotProjectSignerMaterial(t *testing.T) {
 	t.Setenv(envCVKEnableWriteClassGNOI, "true")
 	t.Setenv(envCVKGNOIDisabled, "true")
 	device := newDevice("router-gnoi-disabled", "default")
-	device.Spec.GNOI = &ciskov1.GNOIConfig{
-		TransportSecurity: ciskov1.GNOITransportSecurityTLS,
-		CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
-			CertificateID:         "cvk-gnoi-cert",
-			SecretRef:             ciskov1.GNOIProvisioningSecretReference{Name: "router-gnoi-certificates"},
-			ReplaceTargetCABundle: true,
-		},
-	}
+	configureXEGNOICertificateProvisioning(device, "router-gnoi-certificates")
 	r := reconcilerFor(t, device, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "router-gnoi-certificates", Namespace: "default", ResourceVersion: "77"},
 	})
@@ -998,14 +992,7 @@ func TestReconcile_RemovingGNOISignerCompletesNonOverlappingCleanup(t *testing.T
 	t.Setenv(envCVKEnableWriteClassGNOI, "true")
 	t.Setenv(envCVKGNOIDisabled, "false")
 	device := newDevice("router-gnoi-cleanup", "default")
-	device.Spec.GNOI = &ciskov1.GNOIConfig{
-		TransportSecurity: ciskov1.GNOITransportSecurityTLS,
-		CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
-			CertificateID:         "cvk-gnoi-cert",
-			SecretRef:             ciskov1.GNOIProvisioningSecretReference{Name: "router-gnoi-certificates"},
-			ReplaceTargetCABundle: true,
-		},
-	}
+	configureXEGNOICertificateProvisioning(device, "router-gnoi-certificates")
 	r := reconcilerFor(t, device, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "router-gnoi-certificates", Namespace: "default"},
 		Data:       map[string][]byte{"ca.key": []byte("dedicated-intermediate-key")},
@@ -1122,14 +1109,7 @@ func TestReconcile_DisabledGNOIMigratesExistingSignerDeploymentToRecreateCleanup
 	t.Setenv(envCVKEnableWriteClassGNOI, "true")
 	t.Setenv(envCVKGNOIDisabled, "true")
 	device := newDevice("router-gnoi-migrate", "default")
-	device.Spec.GNOI = &ciskov1.GNOIConfig{
-		TransportSecurity: ciskov1.GNOITransportSecurityTLS,
-		CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
-			CertificateID:         "cvk-gnoi-cert",
-			SecretRef:             ciskov1.GNOIProvisioningSecretReference{Name: "router-gnoi-certificates"},
-			ReplaceTargetCABundle: true,
-		},
-	}
+	configureXEGNOICertificateProvisioning(device, "router-gnoi-certificates")
 	existing := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: device.Name + deploymentSuffix, Namespace: device.Namespace},
 		Spec: appsv1.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{Volumes: []corev1.Volume{{

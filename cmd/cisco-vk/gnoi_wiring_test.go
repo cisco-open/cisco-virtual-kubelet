@@ -208,6 +208,20 @@ func TestGNOITransportForSpec(t *testing.T) {
 			wantErr:     "cannot override explicit",
 		},
 		{
+			name: "XE certificate provisioning requires explicit TLS",
+			spec: func() *ciskov1.DeviceSpec {
+				return &ciskov1.DeviceSpec{
+					Address: "192.0.2.1",
+					TLS:     &ciskov1.TLSConfig{Enabled: true},
+					GNOI:    &ciskov1.GNOIConfig{TransportSecurity: ciskov1.GNOITransportSecurityAuto},
+					XE: &ciskov1.XEConfig{GNOI: &ciskov1.XEGNOIConfig{
+						CertificateProvisioning: &ciskov1.XEGNOICertificateProvisioning{},
+					}},
+				}
+			},
+			wantErr: "requires spec.gnoi.transportSecurity to be tls",
+		},
+		{
 			name: "port environment override wins while insecure",
 			spec: func() *ciskov1.DeviceSpec {
 				return &ciskov1.DeviceSpec{
@@ -271,9 +285,13 @@ func TestLoadGNOIProvisioningBundleIsOptInAndScopesTrustToGNOI(t *testing.T) {
 		Address: "router.example.test",
 		GNOI: &ciskov1.GNOIConfig{
 			TransportSecurity: ciskov1.GNOITransportSecurityTLS,
-			CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
-				CertificateID:         "cvk-gnoi",
-				ReplaceTargetCABundle: true,
+		},
+		XE: &ciskov1.XEConfig{
+			GNOI: &ciskov1.XEGNOIConfig{
+				CertificateProvisioning: &ciskov1.XEGNOICertificateProvisioning{
+					CertificateID:         "cvk-gnoi",
+					ReplaceTargetCABundle: true,
+				},
 			},
 		},
 	}
@@ -326,9 +344,13 @@ func TestLoadGNOIProvisioningBundleBootstrapMaterialIsWriteScoped(t *testing.T) 
 		Address: "router.example.test",
 		GNOI: &ciskov1.GNOIConfig{
 			TransportSecurity: ciskov1.GNOITransportSecurityTLS,
-			CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
-				CertificateID:         "cvk-gnoi",
-				ReplaceTargetCABundle: true,
+		},
+		XE: &ciskov1.XEConfig{
+			GNOI: &ciskov1.XEGNOIConfig{
+				CertificateProvisioning: &ciskov1.XEGNOICertificateProvisioning{
+					CertificateID:         "cvk-gnoi",
+					ReplaceTargetCABundle: true,
+				},
 			},
 		},
 	}
@@ -498,10 +520,14 @@ func provisioningDeviceSpec(address string) *ciskov1.DeviceSpec {
 		TLS:     &ciskov1.TLSConfig{Enabled: true},
 		GNOI: &ciskov1.GNOIConfig{
 			TransportSecurity: ciskov1.GNOITransportSecurityTLS,
-			CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
-				CertificateID:         "cvk-gnoi",
-				SecretRef:             ciskov1.GNOIProvisioningSecretReference{Name: "gnoi-provisioning"},
-				ReplaceTargetCABundle: true,
+		},
+		XE: &ciskov1.XEConfig{
+			GNOI: &ciskov1.XEGNOIConfig{
+				CertificateProvisioning: &ciskov1.XEGNOICertificateProvisioning{
+					CertificateID:         "cvk-gnoi",
+					SecretRef:             ciskov1.XEGNOIProvisioningSecretReference{Name: "gnoi-provisioning"},
+					ReplaceTargetCABundle: true,
+				},
 			},
 		},
 	}
@@ -510,10 +536,12 @@ func provisioningDeviceSpec(address string) *ciskov1.DeviceSpec {
 func TestLoadGNOIProvisioningBundleRejectsPlaintext(t *testing.T) {
 	spec := &ciskov1.DeviceSpec{
 		Address: "router.example.test",
-		GNOI: &ciskov1.GNOIConfig{
-			CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
-				CertificateID:         "cvk-gnoi",
-				ReplaceTargetCABundle: true,
+		XE: &ciskov1.XEConfig{
+			GNOI: &ciskov1.XEGNOIConfig{
+				CertificateProvisioning: &ciskov1.XEGNOICertificateProvisioning{
+					CertificateID:         "cvk-gnoi",
+					ReplaceTargetCABundle: true,
+				},
 			},
 		},
 	}
@@ -526,10 +554,12 @@ func TestLoadGNOIProvisioningBundleRejectsPlaintext(t *testing.T) {
 func TestLoadGNOIProvisioningBundleRejectsUnverifiedTLS(t *testing.T) {
 	spec := &ciskov1.DeviceSpec{
 		Address: "router.example.test",
-		GNOI: &ciskov1.GNOIConfig{
-			CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
-				CertificateID:         "cvk-gnoi",
-				ReplaceTargetCABundle: true,
+		XE: &ciskov1.XEConfig{
+			GNOI: &ciskov1.XEGNOIConfig{
+				CertificateProvisioning: &ciskov1.XEGNOICertificateProvisioning{
+					CertificateID:         "cvk-gnoi",
+					ReplaceTargetCABundle: true,
+				},
 			},
 		},
 	}
@@ -550,8 +580,12 @@ func TestLoadGNOIProvisioningBundleRequiresTargetCABundleAcknowledgement(t *test
 		Address: "router.example.test",
 		GNOI: &ciskov1.GNOIConfig{
 			TransportSecurity: ciskov1.GNOITransportSecurityTLS,
-			CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
-				CertificateID: "cvk-gnoi",
+		},
+		XE: &ciskov1.XEConfig{
+			GNOI: &ciskov1.XEGNOIConfig{
+				CertificateProvisioning: &ciskov1.XEGNOICertificateProvisioning{
+					CertificateID: "cvk-gnoi",
+				},
 			},
 		},
 	}

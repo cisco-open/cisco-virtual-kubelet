@@ -19,69 +19,68 @@ import (
 	"testing"
 )
 
-func TestGNOIConfigValidateCertificateProvisioning(t *testing.T) {
-	valid := func() *GNOIConfig {
-		return &GNOIConfig{
-			TransportSecurity: GNOITransportSecurityTLS,
-			CertificateProvisioning: &GNOICertificateProvisioning{
+func TestXEGNOIConfigValidateCertificateProvisioning(t *testing.T) {
+	valid := func() (*XEGNOIConfig, *GNOIConfig) {
+		return &XEGNOIConfig{
+			CertificateProvisioning: &XEGNOICertificateProvisioning{
 				CertificateID:         "cvk-gnoi_17.18",
-				SecretRef:             GNOIProvisioningSecretReference{Name: "router-gnoi-certificate"},
+				SecretRef:             XEGNOIProvisioningSecretReference{Name: "router-gnoi-certificate"},
 				ReplaceTargetCABundle: true,
 			},
-		}
+		}, &GNOIConfig{TransportSecurity: GNOITransportSecurityTLS}
 	}
 
 	tests := []struct {
 		name    string
-		mutate  func(*GNOIConfig)
+		mutate  func(*XEGNOIConfig, *GNOIConfig)
 		wantErr string
 	}{
 		{name: "valid"},
 		{
 			name: "requires explicit tls",
-			mutate: func(cfg *GNOIConfig) {
-				cfg.TransportSecurity = GNOITransportSecurityAuto
+			mutate: func(_ *XEGNOIConfig, gnoi *GNOIConfig) {
+				gnoi.TransportSecurity = GNOITransportSecurityAuto
 			},
-			wantErr: "requires transportSecurity to be tls",
+			wantErr: "requires spec.gnoi.transportSecurity to be tls",
 		},
 		{
 			name: "certificate id required",
-			mutate: func(cfg *GNOIConfig) {
+			mutate: func(cfg *XEGNOIConfig, _ *GNOIConfig) {
 				cfg.CertificateProvisioning.CertificateID = ""
 			},
 			wantErr: "certificateID is required",
 		},
 		{
 			name: "certificate id pattern",
-			mutate: func(cfg *GNOIConfig) {
+			mutate: func(cfg *XEGNOIConfig, _ *GNOIConfig) {
 				cfg.CertificateProvisioning.CertificateID = "bad/id"
 			},
 			wantErr: "must match",
 		},
 		{
 			name: "certificate id length",
-			mutate: func(cfg *GNOIConfig) {
+			mutate: func(cfg *XEGNOIConfig, _ *GNOIConfig) {
 				cfg.CertificateProvisioning.CertificateID = strings.Repeat("a", 65)
 			},
 			wantErr: "at most 64",
 		},
 		{
 			name: "secret name required",
-			mutate: func(cfg *GNOIConfig) {
+			mutate: func(cfg *XEGNOIConfig, _ *GNOIConfig) {
 				cfg.CertificateProvisioning.SecretRef.Name = ""
 			},
 			wantErr: "secretRef.name is required",
 		},
 		{
 			name: "secret name must be dns subdomain",
-			mutate: func(cfg *GNOIConfig) {
+			mutate: func(cfg *XEGNOIConfig, _ *GNOIConfig) {
 				cfg.CertificateProvisioning.SecretRef.Name = "INVALID_SECRET"
 			},
 			wantErr: "secretRef.name is invalid",
 		},
 		{
 			name: "CA bundle replacement acknowledgement required",
-			mutate: func(cfg *GNOIConfig) {
+			mutate: func(cfg *XEGNOIConfig, _ *GNOIConfig) {
 				cfg.CertificateProvisioning.ReplaceTargetCABundle = false
 			},
 			wantErr: "replaceTargetCABundle must be true",
@@ -90,11 +89,11 @@ func TestGNOIConfigValidateCertificateProvisioning(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := valid()
+			cfg, gnoi := valid()
 			if tt.mutate != nil {
-				tt.mutate(cfg)
+				tt.mutate(cfg, gnoi)
 			}
-			err := cfg.Validate()
+			err := cfg.Validate(gnoi)
 			if tt.wantErr == "" {
 				if err != nil {
 					t.Fatalf("Validate() error = %v", err)

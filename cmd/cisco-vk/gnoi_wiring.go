@@ -152,7 +152,7 @@ func loadGNOIProvisioningBundle(
 	directory string,
 	provisioningWritesEnabled bool,
 ) (*gnoi.ProvisioningBundle, error) {
-	if spec == nil || spec.GNOI == nil || spec.GNOI.CertificateProvisioning == nil {
+	if spec == nil || spec.XE == nil || spec.XE.GNOI == nil || spec.XE.GNOI.CertificateProvisioning == nil {
 		return nil, nil
 	}
 	if !tlsEnabled || tlsCfg == nil {
@@ -161,7 +161,7 @@ func loadGNOIProvisioningBundle(
 	if tlsCfg.InsecureSkipVerify {
 		return nil, fmt.Errorf("verified TLS is required; insecureSkipVerify cannot be used with certificate provisioning")
 	}
-	provisioning := spec.GNOI.CertificateProvisioning
+	provisioning := spec.XE.GNOI.CertificateProvisioning
 	if !provisioning.ReplaceTargetCABundle {
 		return nil, fmt.Errorf("replaceTargetCABundle must be true before replacing the shared gNXI/gNMI CA bundle")
 	}
@@ -281,6 +281,11 @@ func gnoiTransportForSpec(spec *ciskov1.DeviceSpec, forceInsecure bool) (int, bo
 
 	if err := spec.GNOI.Validate(); err != nil {
 		return 0, false, err
+	}
+	if spec.XE != nil {
+		if err := spec.XE.GNOI.Validate(spec.GNOI); err != nil {
+			return 0, false, fmt.Errorf("invalid XE gNOI config: %w", err)
+		}
 	}
 	if forceInsecure && explicitSecureGNOI(spec) {
 		return 0, false, fmt.Errorf("CISCO_VK_GNOI_INSECURE cannot override explicit gnoi.transportSecurity=tls")

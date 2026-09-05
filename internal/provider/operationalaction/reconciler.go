@@ -167,7 +167,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if act.Spec.Action.Kind == opsv1alpha1.ActionKindProvisionCertificate {
 		if r.CertificateProvisioner == nil {
 			return r.terminal(ctx, &act, opsv1alpha1.ActionPhaseRejected, "ProvisioningUnavailable",
-				"gnoi certificate provisioning is not configured; enable certificateProvisioning and write-class gNOI, and mount ca.key for the local signer", nil, now)
+				"gnoi certificate provisioning is not configured; enable spec.xe.gnoi.certificateProvisioning and write-class gNOI, and mount ca.key for the local signer", nil, now)
 		}
 		if err := validateConfiguredProvisioningIntent(act.Spec.Action.ProvisionCertificate, r.CertificateProvisioner); err != nil {
 			return r.terminal(ctx, &act, opsv1alpha1.ActionPhaseRejected, "ProvisioningIntentMismatch", err.Error(), nil, now)
@@ -248,7 +248,7 @@ func (r *Reconciler) runProvisionCertificate(ctx context.Context, act *opsv1alph
 		return nil, err
 	}
 	if r.CertificateProvisioner == nil {
-		return nil, fmt.Errorf("gnoi certificate provisioning is not configured; enable certificateProvisioning and write-class gNOI, and mount ca.key for the local signer: %w", err)
+		return nil, fmt.Errorf("gnoi certificate provisioning is not configured; enable spec.xe.gnoi.certificateProvisioning and write-class gNOI, and mount ca.key for the local signer: %w", err)
 	}
 	certificateID, version, err := r.CertificateProvisioner.ProvisionGNOICertificate(ctx, gc)
 	if err != nil {

@@ -76,9 +76,10 @@ type CiscoDeviceList struct {
 }
 
 // DeviceSpec defines the desired state of a Cisco device.
-// Shared fields are common to all drivers; driver-specific networking
-// configuration lives under the corresponding driver section (XE, XR, etc.).
-// +kubebuilder:validation:XValidation:rule="!has(self.gnoi) || !has(self.gnoi.certificateProvisioning) || self.driver == 'XE'",message="gNOI certificate provisioning is supported only for driver XE"
+// Shared fields are common to all drivers; driver-specific configuration lives
+// under the corresponding driver section (XE, XR, etc.).
+// +kubebuilder:validation:XValidation:rule="!has(self.xe) || !has(self.xe.gnoi) || !has(self.xe.gnoi.certificateProvisioning) || self.driver == 'XE'",message="gNOI certificate provisioning is supported only for driver XE"
+// +kubebuilder:validation:XValidation:rule="!has(self.xe) || !has(self.xe.gnoi) || !has(self.xe.gnoi.certificateProvisioning) || (has(self.gnoi) && has(self.gnoi.transportSecurity) && self.gnoi.transportSecurity == 'tls')",message="spec.xe.gnoi.certificateProvisioning requires spec.gnoi.transportSecurity to be tls"
 // +kubebuilder:validation:XValidation:rule="!has(self.gnoi) || !has(self.gnoi.transportSecurity) || self.gnoi.transportSecurity != 'tls' || !has(self.tls) || !has(self.tls.insecureSkipVerify) || !self.tls.insecureSkipVerify",message="explicit secure gNOI requires verified TLS"
 type DeviceSpec struct {
 	// +kubebuilder:validation:Required
@@ -114,8 +115,9 @@ type DeviceSpec struct {
 	TLS *TLSConfig `json:"tls,omitempty" mapstructure:"tls,omitempty"`
 
 	// GNOI contains opt-in, per-device gNOI settings. Omitting it, or providing
-	// an empty block, preserves historical transport and port inference. Secure
-	// gNOI authentication uses Username and the resolved device password.
+	// an empty block, preserves historical transport and port inference. The
+	// selected driver owns authentication policy; secure IOS-XE gNOI derives it
+	// from Username and the resolved device password.
 	// +kubebuilder:validation:Optional
 	GNOI *GNOIConfig `json:"gnoi,omitempty" mapstructure:"gnoi,omitempty"`
 
@@ -209,7 +211,7 @@ type DeviceSpec struct {
 	// --- Driver-specific networking configuration (union) ---
 	// Only the section matching Driver should be set.
 
-	// XE holds IOS-XE specific networking configuration.
+	// XE holds IOS-XE specific configuration.
 	// Required when driver=XE.
 	// +kubebuilder:validation:Optional
 	XE *XEConfig `json:"xe,omitempty" mapstructure:"xe,omitempty"`

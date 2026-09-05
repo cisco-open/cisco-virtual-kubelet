@@ -433,7 +433,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if image == "" {
 		image = DefaultImage
 	}
-	provisioning := gnoiCertificateProvisioning(&device.Spec)
+	provisioning := xeGNOICertificateProvisioning(&device.Spec)
 	provisioningTrustEnabled := provisioning != nil && !gNOIDisabled()
 	provisioningSecretRV := ""
 	provisioningSignerAvailable := false
@@ -1859,7 +1859,7 @@ func (r *CiscoDeviceReconciler) emitPrereqsSkipped(device *ciskov1.CiscoDevice, 
 
 // mapSecretToCiscoDevices fans a Secret event out to CiscoDevices in the same
 // namespace that reference it through either device credentials or the
-// gNOI-only certificate-provisioning block.
+// IOS-XE-only gNOI certificate-provisioning block.
 func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj client.Object) []ctrl.Request {
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
@@ -1875,7 +1875,7 @@ func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj
 	for i := range devices.Items {
 		dev := &devices.Items[i]
 		credentialMatch := dev.Spec.CredentialSecretRef != nil && dev.Spec.CredentialSecretRef.Name == secret.Name
-		provisioning := gnoiCertificateProvisioning(&dev.Spec)
+		provisioning := xeGNOICertificateProvisioning(&dev.Spec)
 		provisioningMatch := provisioning != nil && provisioning.SecretRef.Name == secret.Name
 		if !credentialMatch && !provisioningMatch {
 			continue
@@ -1888,11 +1888,11 @@ func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj
 	return requests
 }
 
-func gnoiCertificateProvisioning(spec *ciskov1.DeviceSpec) *ciskov1.GNOICertificateProvisioning {
-	if spec == nil || spec.Driver != ciskov1.DeviceDriverXE || spec.GNOI == nil {
+func xeGNOICertificateProvisioning(spec *ciskov1.DeviceSpec) *ciskov1.XEGNOICertificateProvisioning {
+	if spec == nil || spec.Driver != ciskov1.DeviceDriverXE || spec.XE == nil || spec.XE.GNOI == nil {
 		return nil
 	}
-	return spec.GNOI.CertificateProvisioning
+	return spec.XE.GNOI.CertificateProvisioning
 }
 
 func writeClassGNOIEnabled() bool {

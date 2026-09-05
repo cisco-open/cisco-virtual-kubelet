@@ -66,7 +66,7 @@ node that can host Kubernetes pods through device App-Hosting.
 
 Use it when you want Kubernetes to see a Cisco device as a schedulable node.
 Important fields include `spec.driver`, `spec.address`,
-`spec.credentialSecretRef`, `spec.transport`, `spec.gnoi`,
+`spec.credentialSecretRef`, `spec.transport`, `spec.gnoi`, `spec.xe.gnoi`,
 `spec.configPrereqs`, and `spec.opsPolicy`.
 
 ```yaml

@@ -49,14 +49,7 @@ func deviceWithCredSecret(name, ns, secretName string) *ciskov1.CiscoDevice {
 
 func deviceWithGNOIProvisioningSecret(name, ns, secretName string) *ciskov1.CiscoDevice {
 	d := newDevice(name, ns)
-	d.Spec.GNOI = &ciskov1.GNOIConfig{
-		TransportSecurity: ciskov1.GNOITransportSecurityTLS,
-		CertificateProvisioning: &ciskov1.GNOICertificateProvisioning{
-			CertificateID:         "cvk-gnoi-cert",
-			SecretRef:             ciskov1.GNOIProvisioningSecretReference{Name: secretName},
-			ReplaceTargetCABundle: true,
-		},
-	}
+	configureXEGNOICertificateProvisioning(d, secretName)
 	return d
 }
 
