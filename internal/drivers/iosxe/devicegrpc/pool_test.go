@@ -298,12 +298,8 @@ func TestAuthContextEmptyUsernamePassesThrough(t *testing.T) {
 func TestAuthContextAttachesBasicAuth(t *testing.T) {
 	cfg := DialConfig{Username: "admin", Password: "s3cret"}
 	fn := cfg.AuthContext()
-	ctx := fn(context.Background())
-	// We can't easily read outgoing metadata in unit-test form without a
-	// gRPC interceptor; assert that the returned context differs from
-	// the input (i.e., metadata was appended). The deeper assertion is
-	// covered by the integration test that pumps a unary RPC through.
-	if ctx == context.Background() {
-		t.Fatalf("expected AuthContext to decorate the context for non-empty username")
+	ctx := context.Background()
+	if got := fn(ctx); got == ctx {
+		t.Fatal("expected AuthContext to decorate the context for non-empty username")
 	}
 }

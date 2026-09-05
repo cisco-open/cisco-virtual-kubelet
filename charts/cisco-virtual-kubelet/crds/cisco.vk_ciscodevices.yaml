@@ -55,9 +55,8 @@ spec:
             type: object
           spec:
             description: |-
-              DeviceSpec defines the desired state of a Cisco device.
-              Shared fields are common to all drivers; driver-specific networking
-              configuration lives under the corresponding driver section (XE, XR, etc.).
+              Shared fields are common to all drivers; driver-specific configuration lives
+              under the corresponding driver section (XE, XR, etc.).
             properties:
               address:
                 description: Address is the management IP or hostname of the device.
@@ -136,6 +135,56 @@ spec:
                   - OPENCONFIG
                   - FAKE
                 type: string
+              gnoi:
+                description: |-
+                  GNOI contains opt-in, per-device gNOI settings. Omitting it, or providing
+                  an empty block, preserves historical transport and port inference. The
+                  selected driver owns authentication policy; secure IOS-XE gNOI derives it
+                  from Username and the resolved device password.
+                properties:
+                  port:
+                    description: |-
+                      Port overrides the device-side gNOI listener port. Omit it to preserve
+                      legacy port inference (local YAML also accepts zero).
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                  tls:
+                    description: |-
+                      TLS overrides the shared DeviceSpec TLS settings for the gNOI connection
+                      only. Use this when RESTCONF must retain different TLS behavior from
+                      secure gNOI, for example while bootstrapping gNOI with bootstrap.crt and a
+                      dedicated CA bundle.
+                    properties:
+                      caFile:
+                        description: CAFile is the path to the CA certificate file.
+                        type: string
+                      certFile:
+                        description: CertFile is the path to the client certificate
+                          file.
+                        type: string
+                      enabled:
+                        description: Enabled toggles TLS for device communication.
+                        type: boolean
+                      insecureSkipVerify:
+                        description: InsecureSkipVerify disables TLS certificate verification.
+                        type: boolean
+                      keyFile:
+                        description: KeyFile is the path to the client key file.
+                        type: string
+                    required:
+                    - enabled
+                    type: object
+                  transportSecurity:
+                    default: auto
+                    description: |-
+                      TransportSecurity controls whether gNOI uses TLS. Omitted/auto inherits
+                      the decision from DeviceSpec.TLS.Enabled (local YAML also accepts empty).
+                    enum:
+                    - auto
+                    - tls
+                    type: string
+                type: object
               labels:
                 additionalProperties:
                   type: string
@@ -366,11 +415,68 @@ spec:
                 type: string
               xe:
                 description: |-
-                  XE holds IOS-XE specific networking configuration.
+                  XE holds IOS-XE specific configuration.
                   Required when driver=XE.
                 properties:
+                  gnoi:
+                    description: |-
+                      GNOI holds IOS-XE-specific gNOI policy. Generic gNOI transport and port
+                      settings remain in DeviceSpec.GNOI.
+                    properties:
+                      certificateProvisioning:
+                        description: |-
+                          CertificateProvisioning supplies the gNOI-only trust and signing material
+                          used by an explicit ProvisionCertificate IOSXEOperationalAction. OS.Verify
+                          remains read-only. The referenced Secret is mounted only into this device's
+                          VK pod; certificate material is never copied into its ConfigMap.
+                        properties:
+                          certificateID:
+                            description: |-
+                              CertificateID is the IOS-XE trustpoint identifier associated with the
+                              certificate installed through gNOI.
+                            maxLength: 64
+                            minLength: 1
+                            pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]*$
+                            type: string
+                          replaceTargetCABundle:
+                            description: |-
+                              ReplaceTargetCABundle must be true to acknowledge that gNOI
+                              LoadCertificate replaces the target's complete CA bundle. IOS-XE shares
+                              that bundle between gNOI and gNMI, so ca.crt must preserve every peer CA
+                              that those services must continue to trust.
+                            type: boolean
+                          secretRef:
+                            description: |-
+                              SecretRef names a Secret in the CiscoDevice namespace. tls.crt and ca.crt
+                              are required. Optional bootstrap.crt pins the current IOS-XE TLS leaf;
+                              optional ca.key signs one target-generated CSR and must match tls.crt's
+                              dedicated intermediate issuer. ca.crt is the complete desired target CA
+                              replacement bundle. The worker receives only recognized keys read-only.
+                            properties:
+                              name:
+                                description: Name is the DNS-subdomain name of the
+                                  provisioning Secret.
+                                maxLength: 253
+                                minLength: 1
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                type: string
+                            required:
+                            - name
+                            type: object
+                        required:
+                        - certificateID
+                        - replaceTargetCABundle
+                        - secretRef
+                        type: object
+                        x-kubernetes-validations:
+                        - message: replaceTargetCABundle must be true to acknowledge
+                            replacement of the shared gNXI/gNMI CA bundle
+                          rule: self.replaceTargetCABundle == true
+                    type: object
                   networking:
-                    description: Networking holds the IOS-XE networking configuration.
+                    description: |-
+                      Networking holds the optional IOS-XE app-hosting network configuration.
+                      It may be omitted when this section carries only IOS-XE gNOI policy.
                     properties:
                       interface:
                         description: Interface holds the interface-level configuration.
@@ -474,8 +580,6 @@ spec:
                         - type
                         type: object
                     type: object
-                required:
-                - networking
                 type: object
               zone:
                 description: Zone for node topology.
@@ -485,6 +589,21 @@ spec:
             - driver
             - username
             type: object
+            x-kubernetes-validations:
+            - message: gNOI certificate provisioning is supported only for driver
+                XE
+              rule: '!has(self.xe) || !has(self.xe.gnoi) || !has(self.xe.gnoi.certificateProvisioning)
+                || self.driver == ''XE'''
+            - message: spec.xe.gnoi.certificateProvisioning requires spec.gnoi.transportSecurity
+                to be tls
+              rule: '!has(self.xe) || !has(self.xe.gnoi) || !has(self.xe.gnoi.certificateProvisioning)
+                || (has(self.gnoi) && has(self.gnoi.transportSecurity) && self.gnoi.transportSecurity
+                == ''tls'')'
+            - message: explicit secure gNOI requires verified TLS unless gnoi.tls
+                supplies gNOI-specific trust
+              rule: '!has(self.gnoi) || !has(self.gnoi.transportSecurity) || self.gnoi.transportSecurity
+                != ''tls'' || has(self.gnoi.tls) || !has(self.tls) || !has(self.tls.insecureSkipVerify)
+                || !self.tls.insecureSkipVerify'
           status:
             description: DeviceStatus defines the observed state of a CiscoDevice.
             properties:

@@ -17,6 +17,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
@@ -102,6 +103,160 @@ func TestLoad_ExplicitPort(t *testing.T) {
 
 	if cfg.Device.Port != 8080 {
 		t.Errorf("Expected explicit port 8080 to be preserved, got %d", cfg.Device.Port)
+	}
+}
+
+func TestLoad_GNOITransportConfig(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+	viper.Set("device", map[string]interface{}{
+		"driver":   "XE",
+		"address":  "192.0.2.10",
+		"username": "admin",
+		"xe": map[string]interface{}{
+			"networking": map[string]interface{}{
+				"interface": map[string]interface{}{
+					"type":             "VirtualPortGroup",
+					"virtualPortGroup": map[string]interface{}{"dhcp": true},
+				},
+			},
+			"gnoi": map[string]interface{}{
+				"certificateProvisioning": map[string]interface{}{
+					"certificateID":         "cvk-gnoi-os",
+					"replaceTargetCABundle": true,
+					"secretRef": map[string]interface{}{
+						"name": "router-gnoi-identity",
+					},
+				},
+			},
+		},
+		"gnoi": map[string]interface{}{
+			"port":              19339,
+			"transportSecurity": "tls",
+		},
+	})
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() failed: %v", err)
+	}
+	if cfg.Device.GNOI == nil {
+		t.Fatal("device.gnoi was not decoded")
+	}
+	if got := cfg.Device.GNOI.Port; got != 19339 {
+		t.Fatalf("device.gnoi.port=%d, want 19339", got)
+	}
+	if got := cfg.Device.GNOI.TransportSecurity; got != v1alpha1.GNOITransportSecurityTLS {
+		t.Fatalf("device.gnoi.transportSecurity=%q, want tls", got)
+	}
+	if got := cfg.Device.XE.GNOI.CertificateProvisioning; got == nil || got.CertificateID != "cvk-gnoi-os" || got.SecretRef.Name != "router-gnoi-identity" || !got.ReplaceTargetCABundle {
+		t.Fatalf("device.xe.gnoi.certificateProvisioning=%+v, want decoded certificate ID and Secret reference", got)
+	}
+}
+
+func TestLoad_RejectsGNOIProvisioningForOtherDrivers(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+	viper.Set("device", map[string]interface{}{
+		"driver":   "FAKE",
+		"address":  "192.0.2.10",
+		"username": "admin",
+		"gnoi": map[string]interface{}{
+			"transportSecurity": "tls",
+		},
+		"xe": map[string]interface{}{
+			"gnoi": map[string]interface{}{
+				"certificateProvisioning": map[string]interface{}{
+					"certificateID":         "cvk-gnoi-os",
+					"replaceTargetCABundle": true,
+					"secretRef":             map[string]interface{}{"name": "router-gnoi-identity"},
+				},
+			},
+		},
+	})
+
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "only for driver XE") {
+		t.Fatalf("Load() error=%v, want IOS XE scope error", err)
+	}
+}
+
+func TestLoadRejectsCertificateProvisioningAtGenericGNOIPath(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+	viper.Set("device", map[string]interface{}{
+		"driver":   "XE",
+		"address":  "192.0.2.10",
+		"username": "admin",
+		"xe":       map[string]interface{}{"networking": map[string]interface{}{}},
+		"gnoi": map[string]interface{}{
+			"transportSecurity": "tls",
+			"certificateProvisioning": map[string]interface{}{
+				"certificateID":         "cvk-gnoi-os",
+				"replaceTargetCABundle": true,
+				"secretRef":             map[string]interface{}{"name": "router-gnoi-identity"},
+			},
+		},
+	})
+
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() accepted certificateProvisioning under generic device.gnoi")
+	}
+}
+
+func TestValidateDeviceSpecRejectsUnverifiedGNOIProvisioning(t *testing.T) {
+	spec := &v1alpha1.DeviceSpec{
+		Driver: v1alpha1.DeviceDriverXE,
+		XE: &v1alpha1.XEConfig{
+			GNOI: &v1alpha1.XEGNOIConfig{
+				CertificateProvisioning: &v1alpha1.XEGNOICertificateProvisioning{
+					CertificateID:         "cvk-gnoi-os",
+					SecretRef:             v1alpha1.XEGNOIProvisioningSecretReference{Name: "router-gnoi-identity"},
+					ReplaceTargetCABundle: true,
+				},
+			},
+		},
+		TLS: &v1alpha1.TLSConfig{InsecureSkipVerify: true},
+		GNOI: &v1alpha1.GNOIConfig{
+			TransportSecurity: v1alpha1.GNOITransportSecurityTLS,
+		},
+	}
+	if err := validateDeviceSpec(spec); err == nil || !strings.Contains(err.Error(), "requires verified TLS") {
+		t.Fatalf("validateDeviceSpec() error=%v, want verified TLS error", err)
+	}
+	spec.GNOI.TLS = &v1alpha1.TLSConfig{}
+	if err := validateDeviceSpec(spec); err != nil {
+		t.Fatalf("validateDeviceSpec() with gnoi.tls override error=%v", err)
+	}
+}
+
+func TestValidateDeviceSpecRequiresExplicitTLSForXEGNOIProvisioning(t *testing.T) {
+	spec := &v1alpha1.DeviceSpec{
+		Driver: v1alpha1.DeviceDriverXE,
+		XE: &v1alpha1.XEConfig{
+			GNOI: &v1alpha1.XEGNOIConfig{
+				CertificateProvisioning: &v1alpha1.XEGNOICertificateProvisioning{},
+			},
+		},
+		TLS:  &v1alpha1.TLSConfig{Enabled: true},
+		GNOI: &v1alpha1.GNOIConfig{TransportSecurity: v1alpha1.GNOITransportSecurityAuto},
+	}
+	if err := validateDeviceSpec(spec); err == nil || !strings.Contains(err.Error(), "requires spec.gnoi.transportSecurity to be tls") {
+		t.Fatalf("validateDeviceSpec() error=%v, want explicit gNOI TLS error", err)
+	}
+}
+
+func TestLoad_RejectsPlaintextGNOIOverride(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+	viper.Set("device", map[string]interface{}{
+		"driver":   "FAKE",
+		"address":  "192.0.2.10",
+		"username": "admin",
+		"gnoi":     map[string]interface{}{"transportSecurity": "plaintext"},
+	})
+
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() accepted plaintext device.gnoi transport")
 	}
 }
 

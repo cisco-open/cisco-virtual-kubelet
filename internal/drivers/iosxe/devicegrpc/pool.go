@@ -17,15 +17,16 @@
 // and call the returned Release() exactly once when done.
 //
 // Conns are partitioned by WorkloadClass so unrelated streams cannot
-// HOL-block each other on shared HTTP/2 flow control: a 500 MB
-// OS.Install bulk transfer on ClassBulkTransfer does not back-pressure
-// a long-lived gNMI Subscribe on ClassTelemetry, and neither stalls
-// the unary gNMI Set / gNOI unary RPCs on ClassControl. Within a single
-// class on a single device, callers share the same conn and refcount it.
+// HOL-block each other on shared HTTP/2 flow control. A bulk transfer on
+// ClassBulkTransfer therefore does not back-pressure unary work on
+// ClassControl. Within a single class on a single device, callers share
+// the same conn and refcount it. A Pool has one dial policy and may be
+// shared only by consumers with identical TLS and per-RPC credential
+// requirements. Current production gNOI wiring uses the control and
+// bulk-transfer classes; gNMI dials independently.
 //
-// DialConfig carries TLS + auth in one place so there is a single source
-// of truth for device credentials across the gNMI config transport, the
-// gNMI telemetry subscriber, and the gNOI client.
+// DialConfig carries transport security and optional per-RPC credentials
+// for pool consumers.
 package devicegrpc
 
 import (
@@ -90,19 +91,24 @@ type DialConfig struct {
 	// Nil dials with insecure plaintext credentials.
 	TLSConfig *tls.Config
 
-	// Username, when non-empty, drives the AuthContext helper to attach
-	// HTTP Basic credentials as gRPC metadata (the shape IOS-XE's
-	// gnxi-server accepts).
+	// Username, when non-empty, drives AuthContext to preserve the legacy
+	// HTTP Basic metadata contract. New secure IOS XE gNOI uses
+	// RPCCredentials instead.
 	Username string
 	Password string
+
+	// RPCCredentials, when non-nil, are attached to every RPC on the
+	// connection. They may only be used when TLSConfig is also non-nil;
+	// defaultDial rejects credentials on a plaintext connection.
+	RPCCredentials credentials.PerRPCCredentials
 
 	// Extra dial options. Tests pass grpc.WithContextDialer here to
 	// wire a bufconn listener; production wiring leaves this empty.
 	Extra []grpc.DialOption
 }
 
-// AuthContext returns a context decorator that attaches HTTP Basic
-// credentials. Empty username yields a passthrough.
+// AuthContext returns a context decorator that attaches the legacy HTTP Basic
+// metadata. Empty username yields a passthrough.
 func (c DialConfig) AuthContext() func(context.Context) context.Context {
 	if c.Username == "" {
 		return func(ctx context.Context) context.Context { return ctx }
@@ -143,14 +149,20 @@ func (l *Lease) Release() {
 type DialFunc func(ctx context.Context, target string, cfg DialConfig) (*grpc.ClientConn, error)
 
 func defaultDial(_ context.Context, target string, cfg DialConfig) (*grpc.ClientConn, error) {
+	if cfg.RPCCredentials != nil && cfg.TLSConfig == nil {
+		return nil, errors.New("devicegrpc: per-RPC credentials require TLS")
+	}
 	var creds credentials.TransportCredentials
 	if cfg.TLSConfig != nil {
 		creds = credentials.NewTLS(cfg.TLSConfig)
 	} else {
 		creds = insecure.NewCredentials()
 	}
-	opts := make([]grpc.DialOption, 0, 1+len(cfg.Extra))
+	opts := make([]grpc.DialOption, 0, 2+len(cfg.Extra))
 	opts = append(opts, grpc.WithTransportCredentials(creds))
+	if cfg.RPCCredentials != nil {
+		opts = append(opts, grpc.WithPerRPCCredentials(cfg.RPCCredentials))
+	}
 	opts = append(opts, cfg.Extra...)
 	return grpc.NewClient(target, opts...)
 }

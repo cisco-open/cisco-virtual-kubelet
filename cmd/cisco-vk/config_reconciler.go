@@ -437,9 +437,11 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	// If the gNOI server is not reachable at startup the dial is lazy
 	// — the conn materialises on first RPC, so a device that comes up
 	// after the VK pod is fine.
-	gnoiProv, gnoiCleanup, err := setupGNOI(ctx, opts)
+	gnoiProv, gnoiCertificateProvisioner, gnoiCleanup, err := setupGNOI(ctx, opts)
 	if err != nil {
-		return err
+		log.G(ctx).WithError(err).Warn("gNOI unavailable; continuing with non-gNOI controllers")
+		gnoiProv = unavailableGNOIProvider{cause: err}
+		gnoiCertificateProvisioner = nil
 	}
 	if gnoiCleanup != nil {
 		go func() {
@@ -489,13 +491,14 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 
 	if gnoiProv != nil && opts.EnableWriteClassGNOI {
 		actionReconciler := &operationalaction.Reconciler{
-			Client:          mgr.GetClient(),
-			Reader:          mgr.GetAPIReader(),
-			Recorder:        recorder,
-			Scheme:          mgr.GetScheme(),
-			DeviceName:      deviceName,
-			DeviceNamespace: operationNamespace(),
-			GNOI:            gnoiProv,
+			Client:                 mgr.GetClient(),
+			Reader:                 mgr.GetAPIReader(),
+			Recorder:               recorder,
+			Scheme:                 mgr.GetScheme(),
+			DeviceName:             deviceName,
+			DeviceNamespace:        operationNamespace(),
+			GNOI:                   gnoiProv,
+			CertificateProvisioner: gnoiCertificateProvisioner,
 		}
 		if err := actionReconciler.SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("operational action SetupWithManager: %w", err)

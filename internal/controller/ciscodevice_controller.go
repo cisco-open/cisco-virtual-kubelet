@@ -20,6 +20,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -69,6 +70,14 @@ const (
 	// its self-signed TLS certificate when no Secret-provided cert is found.
 	// An emptyDir is mounted here so the path is writable even on a RORFS.
 	varLibMountPath = "/var/lib/virtual-kubelet"
+	// gNOI certificate provisioning material is projected from a dedicated
+	// per-device Secret only when the CiscoDevice explicitly opts in.
+	gnoiProvisioningVolumeName = "gnoi-provisioning"
+	gnoiProvisioningMountPath  = "/var/run/secrets/cisco-vk/gnoi-provisioning"
+	// gnoiSignerMountedAnnotation records that the current signer lifecycle has
+	// not yet completed a private-key-free rollout. It is cleared only after the
+	// Deployment controller reports that the cleanup template is fully available.
+	gnoiSignerMountedAnnotation = "cisco.vk/gnoi-provisioning-signer-mounted"
 	// DefaultImage is the default container image for the VK deployment.
 	DefaultImage = "ghcr.io/cisco/virtual-kubelet-cisco:latest"
 	// DefaultServiceAccount is the shared service account used by all VK deployments.
@@ -424,6 +433,24 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if image == "" {
 		image = DefaultImage
 	}
+	provisioning := xeGNOICertificateProvisioning(&device.Spec)
+	provisioningTrustEnabled := provisioning != nil && !gNOIDisabled()
+	provisioningSecretRV := ""
+	provisioningSignerAvailable := false
+	if provisioningTrustEnabled {
+		var err error
+		provisioningSecretRV, provisioningSignerAvailable, err = r.gnoiProvisioningSecretState(
+			ctx,
+			device.Namespace,
+			provisioning.SecretRef.Name,
+		)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("inspect gNOI provisioning Secret: %w", err)
+		}
+	}
+	provisioningWritesEnabled := provisioningTrustEnabled &&
+		provisioningSignerAvailable &&
+		writeClassGNOIEnabled()
 
 	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, deploy, func() error {
 		// Immutable labels used as selector.
@@ -435,6 +462,20 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		deploy.Spec.Selector = &metav1.LabelSelector{
 			MatchLabels: labels,
 		}
+		signerLifecyclePending := deploy.Annotations[gnoiSignerMountedAnnotation] == "true"
+		templateProjectsSigner := podTemplateProjectsGNOIPrivateKey(&deploy.Spec.Template.Spec)
+		cleanupComplete := signerLifecyclePending &&
+			!provisioningWritesEnabled &&
+			!templateProjectsSigner &&
+			deploymentRolloutComplete(deploy)
+		signerMayBeResident := provisioningWritesEnabled ||
+			templateProjectsSigner ||
+			(signerLifecyclePending && !cleanupComplete)
+		if signerMayBeResident {
+			deploy.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
+		} else if cleanupComplete {
+			deploy.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RollingUpdateDeploymentStrategyType}
+		}
 
 		annos := map[string]string{
 			// Force a rollout whenever the ConfigMap content changes.
@@ -443,11 +484,25 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if credRV := r.lookupCredentialResourceVersion(ctx, &device); credRV != "" {
 			annos["cisco.vk/credential-resource-version"] = credRV
 		}
+		if provisioningTrustEnabled {
+			// Copy only resourceVersion to trigger rotation; key material stays in the Secret volume.
+			if provisioningSecretRV != "" {
+				annos["cisco.vk/gnoi-provisioning-secret-resource-version"] = provisioningSecretRV
+			}
+		}
 		// Keep lifecycle carriers on the Deployment object for audit/search.
 		// Do not copy them into the PodTemplate: a trace-only annotation change
 		// would otherwise roll the long-lived per-device VK even though the
 		// process does not consume its own Pod annotations.
 		deploy.Annotations = propagatedCorrelationAnnotations(deploy.Annotations, device.Annotations, r.now())
+		if signerMayBeResident {
+			if deploy.Annotations == nil {
+				deploy.Annotations = make(map[string]string)
+			}
+			deploy.Annotations[gnoiSignerMountedAnnotation] = "true"
+		} else if cleanupComplete {
+			delete(deploy.Annotations, gnoiSignerMountedAnnotation)
+		}
 		deploy.Spec.Template.ObjectMeta = metav1.ObjectMeta{
 			Labels:      labels,
 			Annotations: annos,
@@ -578,6 +633,36 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			// Use shared service account with VK RBAC permissions
 			ServiceAccountName: serviceAccount,
 			Affinity:           perDeviceVKNodeAffinity(),
+		}
+		if provisioningTrustEnabled {
+			sources := []corev1.VolumeProjection{{Secret: &corev1.SecretProjection{
+				LocalObjectReference: corev1.LocalObjectReference{Name: provisioning.SecretRef.Name},
+				Items: []corev1.KeyToPath{
+					{Key: "tls.crt", Path: "tls.crt"},
+					{Key: "ca.crt", Path: "ca.crt"},
+				},
+			}}}
+			if provisioningWritesEnabled {
+				sources = append(sources, corev1.VolumeProjection{Secret: &corev1.SecretProjection{
+					LocalObjectReference: corev1.LocalObjectReference{Name: provisioning.SecretRef.Name},
+					Optional:             ptr.To(true),
+					Items: []corev1.KeyToPath{
+						{Key: "bootstrap.crt", Path: "bootstrap.crt"},
+						{Key: "ca.key", Path: "ca.key"},
+					},
+				}})
+			}
+			deploy.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+				deploy.Spec.Template.Spec.Containers[0].VolumeMounts,
+				corev1.VolumeMount{Name: gnoiProvisioningVolumeName, MountPath: gnoiProvisioningMountPath, ReadOnly: true},
+			)
+			deploy.Spec.Template.Spec.Volumes = append(deploy.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: gnoiProvisioningVolumeName,
+				VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{
+					DefaultMode: ptr.To[int32](0o440),
+					Sources:     sources,
+				}},
+			})
 		}
 
 		return controllerutil.SetControllerReference(&device, deploy, r.Scheme)
@@ -1773,7 +1858,8 @@ func (r *CiscoDeviceReconciler) emitPrereqsSkipped(device *ciskov1.CiscoDevice, 
 }
 
 // mapSecretToCiscoDevices fans a Secret event out to CiscoDevices in the same
-// namespace that reference it through spec.credentialSecretRef.
+// namespace that reference it through either device credentials or the
+// IOS-XE-only gNOI certificate-provisioning block.
 func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj client.Object) []ctrl.Request {
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
@@ -1781,14 +1867,17 @@ func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj
 	}
 	var devices ciskov1.CiscoDeviceList
 	if err := r.List(ctx, &devices, client.InNamespace(secret.Namespace)); err != nil {
-		log.FromContext(ctx).Error(err, "list CiscoDevices for credential-secret mapping",
+		log.FromContext(ctx).Error(err, "list CiscoDevices for referenced-secret mapping",
 			"secret", secret.Name, "namespace", secret.Namespace)
 		return nil
 	}
 	requests := make([]ctrl.Request, 0, len(devices.Items))
 	for i := range devices.Items {
 		dev := &devices.Items[i]
-		if dev.Spec.CredentialSecretRef == nil || dev.Spec.CredentialSecretRef.Name != secret.Name {
+		credentialMatch := dev.Spec.CredentialSecretRef != nil && dev.Spec.CredentialSecretRef.Name == secret.Name
+		provisioning := xeGNOICertificateProvisioning(&dev.Spec)
+		provisioningMatch := provisioning != nil && provisioning.SecretRef.Name == secret.Name
+		if !credentialMatch && !provisioningMatch {
 			continue
 		}
 		requests = append(requests, ctrl.Request{NamespacedName: types.NamespacedName{
@@ -1799,6 +1888,65 @@ func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj
 	return requests
 }
 
+func xeGNOICertificateProvisioning(spec *ciskov1.DeviceSpec) *ciskov1.XEGNOICertificateProvisioning {
+	if spec == nil || spec.Driver != ciskov1.DeviceDriverXE || spec.XE == nil || spec.XE.GNOI == nil {
+		return nil
+	}
+	return spec.XE.GNOI.CertificateProvisioning
+}
+
+func writeClassGNOIEnabled() bool {
+	value := strings.TrimSpace(os.Getenv(envCVKEnableWriteClassGNOI))
+	enabled, err := strconv.ParseBool(value)
+	return err == nil && enabled
+}
+
+func gNOIDisabled() bool {
+	value := strings.TrimSpace(os.Getenv(envCVKGNOIDisabled))
+	return value == "1" || strings.EqualFold(value, "true")
+}
+
+func deploymentRolloutComplete(deployment *appsv1.Deployment) bool {
+	if deployment == nil || deployment.Generation <= 0 ||
+		deployment.Status.ObservedGeneration < deployment.Generation {
+		return false
+	}
+	desiredReplicas := int32(1)
+	if deployment.Spec.Replicas != nil {
+		desiredReplicas = *deployment.Spec.Replicas
+	}
+	if deployment.Status.TerminatingReplicas != nil && *deployment.Status.TerminatingReplicas > 0 {
+		return false
+	}
+	return deployment.Status.UpdatedReplicas == desiredReplicas &&
+		deployment.Status.Replicas == desiredReplicas &&
+		deployment.Status.ReadyReplicas == desiredReplicas &&
+		deployment.Status.AvailableReplicas == desiredReplicas &&
+		deployment.Status.UnavailableReplicas == 0
+}
+
+func podTemplateProjectsGNOIPrivateKey(spec *corev1.PodSpec) bool {
+	if spec == nil {
+		return false
+	}
+	for _, volume := range spec.Volumes {
+		if volume.Name != gnoiProvisioningVolumeName || volume.Projected == nil {
+			continue
+		}
+		for _, source := range volume.Projected.Sources {
+			if source.Secret == nil {
+				continue
+			}
+			for _, item := range source.Secret.Items {
+				if item.Key == "ca.key" || item.Key == "tls.key" {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 // lookupCredentialResourceVersion returns the referenced Secret's
 // resourceVersion for use as a pod-template rollout annotation. Reconciliation
 // does not inspect Secret data, but the typed object returned by the API/cache
@@ -1807,14 +1955,35 @@ func (r *CiscoDeviceReconciler) lookupCredentialResourceVersion(ctx context.Cont
 	if device.Spec.CredentialSecretRef == nil {
 		return ""
 	}
+	return r.lookupSecretResourceVersion(ctx, device.Namespace, device.Spec.CredentialSecretRef.Name)
+}
+
+func (r *CiscoDeviceReconciler) lookupSecretResourceVersion(ctx context.Context, namespace, name string) string {
+	if name == "" {
+		return ""
+	}
 	var sec corev1.Secret
-	if err := r.Get(ctx, types.NamespacedName{
-		Namespace: device.Namespace,
-		Name:      device.Spec.CredentialSecretRef.Name,
-	}, &sec); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &sec); err != nil {
 		return ""
 	}
 	return sec.ResourceVersion
+}
+
+// gnoiProvisioningSecretState observes only resourceVersion and whether the
+// recognized ca.key entry is non-empty. It never copies key bytes into the
+// Deployment, ConfigMap, annotations, status, events, or logs.
+func (r *CiscoDeviceReconciler) gnoiProvisioningSecretState(ctx context.Context, namespace, name string) (resourceVersion string, signerAvailable bool, err error) {
+	if name == "" {
+		return "", false, nil
+	}
+	var secret corev1.Secret
+	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &secret); err != nil {
+		if errors.IsNotFound(err) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return secret.ResourceVersion, len(secret.Data["ca.key"]) > 0, nil
 }
 
 // updateStatus patches the CiscoDevice status based on the Deployment state.

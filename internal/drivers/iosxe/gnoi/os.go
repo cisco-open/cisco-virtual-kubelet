@@ -21,7 +21,34 @@ import (
 	"io"
 
 	ospb "github.com/openconfig/gnoi/os"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+const iosXEDeviceNotProvisionedMessage = "Device has not been provisioned"
+
+// IsDeviceNotProvisioned reports whether err is the exact IOS XE
+// FailedPrecondition response indicating that gNXI certificate bootstrap has
+// not completed. Other FailedPrecondition errors are intentionally not
+// classified as provisioning failures.
+func IsDeviceNotProvisioned(err error) bool {
+	return isIOSXEDeviceNotProvisioned(err)
+}
+
+func isIOSXEDeviceNotProvisioned(err error) bool {
+	for current := err; current != nil; current = errors.Unwrap(current) {
+		st, ok := status.FromError(current)
+		if !ok || st.Code() != codes.FailedPrecondition {
+			continue
+		}
+		// IOS XE releases have emitted the same sentence both with and without
+		// terminal punctuation. Accept only those two exact spellings.
+		if st.Message() == iosXEDeviceNotProvisionedMessage || st.Message() == iosXEDeviceNotProvisionedMessage+"." {
+			return true
+		}
+	}
+	return false
+}
 
 // OSVerifyResult mirrors gNOI OS.Verify.
 type OSVerifyResult struct {

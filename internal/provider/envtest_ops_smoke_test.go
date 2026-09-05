@@ -44,10 +44,118 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
+
+func TestEnvtest_CiscoDeviceExplicitGNOIRequiresVerifiedTLS(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-gnoi-tls")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	device := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{Name: "verified", Namespace: "envtest-gnoi-tls"},
+		Spec: ciskov1.DeviceSpec{
+			Driver:   ciskov1.DeviceDriverXE,
+			Address:  "192.0.2.10",
+			Username: "admin",
+			TLS:      &ciskov1.TLSConfig{},
+			GNOI: &ciskov1.GNOIConfig{
+				TransportSecurity: ciskov1.GNOITransportSecurityTLS,
+			},
+		},
+	}
+	if err := c.Create(ctx, device); err != nil {
+		t.Fatalf("explicit secure gNOI with omitted insecureSkipVerify rejected: %v", err)
+	}
+
+	unverified := device.DeepCopy()
+	unverified.ObjectMeta = metav1.ObjectMeta{Name: "unverified", Namespace: device.Namespace}
+	unverified.Spec.TLS.InsecureSkipVerify = true
+	if err := c.Create(ctx, unverified); err == nil || !strings.Contains(err.Error(), "explicit secure gNOI requires verified TLS") {
+		t.Fatalf("explicit secure gNOI with insecureSkipVerify error=%v, want admission rejection", err)
+	}
+}
+
+func TestEnvtest_CiscoDeviceXEGNOIProvisioningRequiresExplicitTLS(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-xe-gnoi-provisioning")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	device := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{Name: "valid", Namespace: "envtest-xe-gnoi-provisioning"},
+		Spec: ciskov1.DeviceSpec{
+			Driver:   ciskov1.DeviceDriverXE,
+			Address:  "192.0.2.10",
+			Username: "admin",
+			TLS:      &ciskov1.TLSConfig{},
+			GNOI: &ciskov1.GNOIConfig{
+				TransportSecurity: ciskov1.GNOITransportSecurityTLS,
+			},
+			XE: &ciskov1.XEConfig{
+				GNOI: &ciskov1.XEGNOIConfig{
+					CertificateProvisioning: &ciskov1.XEGNOICertificateProvisioning{
+						CertificateID:         "cvk-gnoi-os",
+						SecretRef:             ciskov1.XEGNOIProvisioningSecretReference{Name: "router-gnoi-identity"},
+						ReplaceTargetCABundle: true,
+					},
+				},
+			},
+		},
+	}
+	if err := c.Create(ctx, device); err != nil {
+		t.Fatalf("XE certificate provisioning with explicit verified TLS rejected: %v", err)
+	}
+
+	withoutNetworking := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "cisco.vk/v1alpha1",
+		"kind":       "CiscoDevice",
+		"metadata": map[string]any{
+			"name":      "without-networking",
+			"namespace": device.Namespace,
+		},
+		"spec": map[string]any{
+			"driver":   "XE",
+			"address":  "192.0.2.11",
+			"username": "admin",
+			"tls":      map[string]any{"enabled": true},
+			"gnoi":     map[string]any{"transportSecurity": "tls"},
+			"xe": map[string]any{
+				"gnoi": map[string]any{
+					"certificateProvisioning": map[string]any{
+						"certificateID":         "cvk-gnoi-no-networking",
+						"replaceTargetCABundle": true,
+						"secretRef":             map[string]any{"name": "router-gnoi-identity"},
+					},
+				},
+			},
+		},
+	}}
+	if err := c.Create(ctx, withoutNetworking); err != nil {
+		t.Fatalf("XE certificate-only config without xe.networking rejected: %v", err)
+	}
+
+	autoTransport := device.DeepCopy()
+	autoTransport.ObjectMeta = metav1.ObjectMeta{Name: "auto", Namespace: device.Namespace}
+	autoTransport.Spec.GNOI.TransportSecurity = ciskov1.GNOITransportSecurityAuto
+	if err := c.Create(ctx, autoTransport); err == nil || !strings.Contains(err.Error(), "spec.xe.gnoi.certificateProvisioning requires spec.gnoi.transportSecurity to be tls") {
+		t.Fatalf("XE provisioning with auto transport error=%v, want admission rejection", err)
+	}
+
+	wrongDriver := device.DeepCopy()
+	wrongDriver.ObjectMeta = metav1.ObjectMeta{Name: "wrong-driver", Namespace: device.Namespace}
+	wrongDriver.Spec.Driver = ciskov1.DeviceDriverNXOS
+	if err := c.Create(ctx, wrongDriver); err == nil || !strings.Contains(err.Error(), "supported only for driver XE") {
+		t.Fatalf("XE provisioning with NXOS driver error=%v, want admission rejection", err)
+	}
+}
 
 // --- DeviceOperation ---
 
@@ -380,7 +488,7 @@ func TestEnvtest_IOSXEOperationalActionConfirmRequired(t *testing.T) {
 }
 
 // TestEnvtest_IOSXEOperationalActionKindEnumEnforced pins
-// .spec.action.kind to the six destructive kinds.
+// .spec.action.kind to the supported write-class kinds.
 func TestEnvtest_IOSXEOperationalActionKindEnumEnforced(t *testing.T) {
 	c, stop := startEnvtest(t)
 	defer stop()
@@ -396,6 +504,7 @@ func TestEnvtest_IOSXEOperationalActionKindEnumEnforced(t *testing.T) {
 		opsv1alpha1.ActionKindFilePut,
 		opsv1alpha1.ActionKindFileRemove,
 		opsv1alpha1.ActionKindFactoryReset,
+		opsv1alpha1.ActionKindProvisionCertificate,
 	} {
 		name := "ok-" + strings.ToLower(string(k))
 		act := newOpAction(name, "envtest-opaction-kind", k)
@@ -407,6 +516,32 @@ func TestEnvtest_IOSXEOperationalActionKindEnumEnforced(t *testing.T) {
 	bogus := newOpAction("bogus", "envtest-opaction-kind", opsv1alpha1.ActionKind("Erase"))
 	if err := c.Create(ctx, bogus); err == nil {
 		t.Fatal("apiserver admitted bogus action kind 'Erase'")
+	}
+}
+
+func TestEnvtest_IOSXEOperationalActionProvisionCertificateIntentRequired(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-opaction-provision-intent")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	missing := newOpAction("missing-intent", "envtest-opaction-provision-intent", opsv1alpha1.ActionKindProvisionCertificate)
+	missing.Spec.Action.ProvisionCertificate = nil
+	if err := c.Create(ctx, missing); err == nil {
+		t.Fatal("apiserver admitted ProvisionCertificate without its intent args")
+	}
+
+	uppercase := newOpAction("uppercase-digest", "envtest-opaction-provision-intent", opsv1alpha1.ActionKindProvisionCertificate)
+	uppercase.Spec.Action.ProvisionCertificate.PublicMaterialSHA256 = strings.Repeat("A", 64)
+	if err := c.Create(ctx, uppercase); err == nil {
+		t.Fatal("apiserver admitted uppercase publicMaterialSHA256")
+	}
+
+	valid := newOpAction("valid-intent", "envtest-opaction-provision-intent", opsv1alpha1.ActionKindProvisionCertificate)
+	if err := c.Create(ctx, valid); err != nil {
+		t.Fatalf("apiserver rejected valid ProvisionCertificate intent: %v", err)
 	}
 }
 
@@ -484,10 +619,8 @@ func newOpAction(name, namespace string, kind opsv1alpha1.ActionKind) *opsv1alph
 			Action:    opsv1alpha1.ActionRequest{Kind: kind},
 		},
 	}
-	// Per-kind required sub-blocks. The CRD doesn't enforce
-	// presence (the reconciler does), but populating sensible
-	// defaults here keeps the test focused on the field under
-	// test.
+	// Populate the per-kind sub-block required by the CRD's CEL rules so each
+	// caller can stay focused on the field under test.
 	switch kind {
 	case opsv1alpha1.ActionKindReboot:
 		a.Spec.Action.Reboot = &opsv1alpha1.RebootActionArgs{Method: "COLD"}
@@ -501,6 +634,11 @@ func newOpAction(name, namespace string, kind opsv1alpha1.ActionKind) *opsv1alph
 		a.Spec.Action.FileRemove = &opsv1alpha1.FileRemoveArgs{Path: "flash:f.bin"}
 	case opsv1alpha1.ActionKindFactoryReset:
 		a.Spec.Action.FactoryReset = &opsv1alpha1.FactoryResetArgs{}
+	case opsv1alpha1.ActionKindProvisionCertificate:
+		a.Spec.Action.ProvisionCertificate = &opsv1alpha1.ProvisionCertificateActionArgs{
+			CertificateID:        "cvk-gnoi",
+			PublicMaterialSHA256: strings.Repeat("a", 64),
+		}
 	}
 	return a
 }

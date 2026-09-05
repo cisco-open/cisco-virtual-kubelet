@@ -14,13 +14,106 @@
 
 package v1alpha1
 
-import "fmt"
+import (
+	"fmt"
+	"regexp"
+	"strings"
+
+	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
+)
+
+var xeGNOICertificateIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 
 // XEConfig holds all IOS-XE driver-specific configuration.
 type XEConfig struct {
-	// Networking holds the IOS-XE networking configuration.
+	// Networking holds the optional IOS-XE app-hosting network configuration.
+	// It may be omitted when this section carries only IOS-XE gNOI policy.
+	// +kubebuilder:validation:Optional
+	Networking XENetworkConfig `json:"networking,omitempty" mapstructure:"networking,omitempty"`
+
+	// GNOI holds IOS-XE-specific gNOI policy. Generic gNOI transport and port
+	// settings remain in DeviceSpec.GNOI.
+	// +kubebuilder:validation:Optional
+	GNOI *XEGNOIConfig `json:"gnoi,omitempty" mapstructure:"gnoi,omitempty"`
+}
+
+// XEGNOIConfig carries IOS-XE-specific gNOI behavior.
+type XEGNOIConfig struct {
+	// CertificateProvisioning supplies the gNOI-only trust and signing material
+	// used by an explicit ProvisionCertificate IOSXEOperationalAction. OS.Verify
+	// remains read-only. The referenced Secret is mounted only into this device's
+	// VK pod; certificate material is never copied into its ConfigMap.
+	// +kubebuilder:validation:Optional
+	CertificateProvisioning *XEGNOICertificateProvisioning `json:"certificateProvisioning,omitempty" mapstructure:"certificateProvisioning,omitempty"`
+}
+
+// XEGNOICertificateProvisioning identifies the IOS-XE certificate that CVK
+// installs through the gNOI Certificate service and the same-namespace Secret
+// carrying its PEM material. Presence of this block is the provisioning opt-in.
+// +kubebuilder:validation:XValidation:rule="self.replaceTargetCABundle == true",message="replaceTargetCABundle must be true to acknowledge replacement of the shared gNXI/gNMI CA bundle"
+type XEGNOICertificateProvisioning struct {
+	// CertificateID is the IOS-XE trustpoint identifier associated with the
+	// certificate installed through gNOI.
 	// +kubebuilder:validation:Required
-	Networking XENetworkConfig `json:"networking" mapstructure:"networking"`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=64
+	// +kubebuilder:validation:Pattern=^[A-Za-z0-9][A-Za-z0-9_.-]*$
+	CertificateID string `json:"certificateID" mapstructure:"certificateID"`
+
+	// SecretRef names a Secret in the CiscoDevice namespace. tls.crt and ca.crt
+	// are required. Optional bootstrap.crt pins the current IOS-XE TLS leaf;
+	// optional ca.key signs one target-generated CSR and must match tls.crt's
+	// dedicated intermediate issuer. ca.crt is the complete desired target CA
+	// replacement bundle. The worker receives only recognized keys read-only.
+	// +kubebuilder:validation:Required
+	SecretRef XEGNOIProvisioningSecretReference `json:"secretRef" mapstructure:"secretRef"`
+
+	// ReplaceTargetCABundle must be true to acknowledge that gNOI
+	// LoadCertificate replaces the target's complete CA bundle. IOS-XE shares
+	// that bundle between gNOI and gNMI, so ca.crt must preserve every peer CA
+	// that those services must continue to trust.
+	// +kubebuilder:validation:Required
+	ReplaceTargetCABundle bool `json:"replaceTargetCABundle" mapstructure:"replaceTargetCABundle"`
+}
+
+// XEGNOIProvisioningSecretReference is a same-namespace, name-only Secret
+// reference. A dedicated type keeps Kubernetes admission validation aligned
+// with the local configuration validator.
+type XEGNOIProvisioningSecretReference struct {
+	// Name is the DNS-subdomain name of the provisioning Secret.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	Name string `json:"name" mapstructure:"name"`
+}
+
+// Validate checks IOS-XE certificate provisioning for local YAML
+// configuration, where Kubernetes CRD admission markers are not available.
+func (c *XEGNOIConfig) Validate(gnoi *GNOIConfig) error {
+	if c == nil || c.CertificateProvisioning == nil {
+		return nil
+	}
+	if gnoi == nil || gnoi.TransportSecurity != GNOITransportSecurityTLS {
+		return fmt.Errorf("certificateProvisioning requires spec.gnoi.transportSecurity to be tls")
+	}
+	provisioning := c.CertificateProvisioning
+	if provisioning.CertificateID == "" {
+		return fmt.Errorf("certificateProvisioning.certificateID is required")
+	}
+	if len(provisioning.CertificateID) > 64 || !xeGNOICertificateIDPattern.MatchString(provisioning.CertificateID) {
+		return fmt.Errorf("certificateProvisioning.certificateID must match %s and contain at most 64 characters", xeGNOICertificateIDPattern.String())
+	}
+	if provisioning.SecretRef.Name == "" {
+		return fmt.Errorf("certificateProvisioning.secretRef.name is required")
+	}
+	if problems := utilvalidation.IsDNS1123Subdomain(provisioning.SecretRef.Name); len(problems) > 0 {
+		return fmt.Errorf("certificateProvisioning.secretRef.name is invalid: %s", strings.Join(problems, "; "))
+	}
+	if !provisioning.ReplaceTargetCABundle {
+		return fmt.Errorf("certificateProvisioning.replaceTargetCABundle must be true to acknowledge replacement of the shared gNXI/gNMI CA bundle")
+	}
+	return nil
 }
 
 // XENetworkConfig represents IOS-XE specific networking configuration.

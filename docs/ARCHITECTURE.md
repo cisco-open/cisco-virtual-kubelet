@@ -441,11 +441,31 @@ gates, and separate RBAC grants. Read-only gNOI access does not implicitly
 enable reboot, file write, factory reset, or OS activation.
 
 The per-device gNOI client uses a workload-classed gRPC connection pool so
-small control RPCs, gNMI telemetry streams, and bulk OS/file transfers do not
-block each other. The client also caches per-service capability probes: when a
-device returns `codes.Unimplemented`, later calls to that service fail fast
-with `ErrServiceUnsupported` instead of repeatedly attempting an unsupported
-RPC.
+small control RPCs and bulk OS/file transfers use separate connections and do
+not block each other. gNMI configuration and telemetry currently maintain
+independent connections. The client also caches per-service capability probes:
+when a device returns `codes.Unimplemented`, later calls to that service fail
+fast with `ErrServiceUnsupported` instead of repeatedly attempting an
+unsupported RPC.
+
+The worker-scoped IOS-XE runtime lives in
+`internal/drivers/iosxe/gnoiruntime`, not in command wiring. Its `Provider`
+owns the per-device pool leases and client reset lifecycle. Certificate
+installation is a separate `Provisioner`, injected into the
+operational-action reconciler only when certificate provisioning is configured
+and write-class gNOI is explicitly enabled. The base client provider therefore
+does not implicitly grant certificate-install authority.
+
+Certificate policy and protocol validation remain in the `gnoi` package behind
+the `CertificateSigner` interface. The included implementation is only a
+transitional, PEM-backed local signer for `ca.key`; it permits one signing
+attempt per process. This repository does not implement or configure an
+external CA, KMS, or HSM signer backend.
+
+The runtime serializes client resets against the target CSR/Load exchange and
+submits Install at most once. After IOS-XE restarts gNXI, it uses fresh
+connections for bounded, read-only certificate and `OS.Verify` checks; only
+that verified state is reported as a successful provisioning action.
 
 ## RESTCONF endpoints
 

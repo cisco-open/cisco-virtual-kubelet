@@ -309,11 +309,60 @@ spec:
 
 The `certFile` / `keyFile` / `caFile` paths refer to files **inside the VK pod**. Mount them with a Secret-backed volume or a configMap-backed volume on the VK Deployment. The controller does not currently auto-mount them — you'll need a post-install patch or a forked chart.
 
-All device-facing clients honour the full `spec.tls` block through one shared
-builder: apphosting RESTCONF, the configdriver RESTCONF fallback, MDT-over-gNMI
-telemetry, gNOI, and the NX-API client on NX-OS. A `caFile` therefore gives you
-verified TLS on every path — `insecureSkipVerify: true` is never required just
-because a device uses a private CA.
+The configdriver transports, MDT-over-gNMI telemetry, gNOI, and the NX-API
+client on NX-OS honour the full `spec.tls` block through one shared builder.
+IOS-XE app-hosting RESTCONF constructs its TLS client separately. A `caFile`
+provides verified private-CA trust on each of these paths, so
+`insecureSkipVerify: true` is unnecessary. A gNOI `transportSecurity: tls`
+setting uses the trust and client-certificate fields even if the general
+`tls.enabled` switch is off. Shared-builder clients reject a `certFile` or
+`keyFile` configured without its matching pair.
+
+### Secure IOS-XE gNOI
+
+With explicit `gnoi.transportSecurity: tls`, CVK sends the device username and
+password as separate per-RPC metadata fields over verified TLS;
+`insecureSkipVerify: true` is rejected. Pre-existing configurations that do not
+opt in retain their legacy HTTP Basic metadata behavior, including on plaintext
+listeners, solely for compatibility. Migrate them to explicit secure gNOI.
+Avoid metadata logging and limit access to the credential Secret.
+
+The dedicated provisioning Secret referenced by
+`spec.xe.gnoi.certificateProvisioning.secretRef` always supplies `tls.crt` and
+`ca.crt`.
+`bootstrap.crt` is an optional exact pin for the temporary IOS-XE leaf, and
+`ca.key` is used only by the gated `ProvisionCertificate` action. The key is
+kept separate from the read-only trust bundle behind a `CertificateSigner`
+boundary; the included local PEM signer is transitional and permits one
+signing attempt per process. No external CA, KMS, or HSM signer backend is
+included. Each action must bind the configured certificate ID and the lowercase
+SHA-256 of the exact `tls.crt || ca.crt` bytes; a stale or mismatched public
+intent is rejected before the worker acquires a gNOI client or marks the action
+Running. `ca.key` and `bootstrap.crt` are projected only while write-class gNOI
+is enabled and a non-empty `ca.key` is present. The signing key must belong to
+a dedicated intermediate CA; root keys are rejected. Enable Secret
+encryption at rest, restrict Secret reads and pod exec, and audit both.
+Secret projection is not an authorization boundary: the standard VK
+ClusterRole can read Secrets cluster-wide so VK nodes can serve pod volumes.
+After provisioning is verified, promptly remove `ca.key` and `bootstrap.crt`;
+disable the write-class gate too unless other write actions are still needed.
+Keep the public certificate and CA bundle for read-only gNOI trust. Deployments
+use a non-overlapping `Recreate` strategy
+while a signer may be resident and for the first key-free cleanup rollout, so a
+signer-bearing process cannot overlap its replacement. The controller restores
+normal rolling updates only after that cleanup generation is fully available
+and no old pod is terminating. Disabling gNOI entirely suppresses the
+provisioning Secret mount and its rollout annotation.
+
+The installed identity and CA bundle are scoped to gNOI in CVK, but IOS-XE
+shares them with gNMI. Installation can restart gNXI, replace peer trust, and
+change the server certificate seen by other clients; schedule it as a device
+change. CVK does not reconfigure RESTCONF, NETCONF, app-hosting, or telemetry
+client settings, so ensure every gNMI client already trusts the new issuer.
+
+See the [secure gNOI and CSR provisioning workflow](gnoi-software-lifecycle.md#secure-ios-xe-gnxi)
+for the complete Secret contract, one-shot action, trust-bundle warning, and
+verification sequence.
 
 ### SSH host keys
 

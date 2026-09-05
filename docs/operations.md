@@ -163,6 +163,11 @@ Read-only gNOI kinds use the same CRD/status machinery:
 | `GNOIRebootStatus` | System | Inspect pending or active reboot state. |
 | `GNOIOSVerify` | OS | Verify the current running version and activation state. |
 
+Use `GNOICertGet` to test secure-gNXI connectivity before provisioning. Run
+`GNOIOSVerify` only after IOS-XE reports `State: Provisioned`. Successful TLS
+and password authentication does not imply that every System or File RPC is
+implemented on that platform.
+
 Write-class gNOI operations are implemented as a separate
 `IOSXEOperationalAction` CRD. They are disabled unless the per-device VK is
 started with `--enable-write-class-gnoi` / `CISCO_VK_ENABLE_WRITE_CLASS_GNOI`.
@@ -185,8 +190,14 @@ rules.
     Write-class actions are **Beta** and **disabled by default**. The per-device
     VK pod must be started with `--enable-write-class-gnoi` or
     `CISCO_VK_ENABLE_WRITE_CLASS_GNOI=1`. These operations mutate device state
-    (reboot, file write, factory reset) and are irreversible. Apply strict
-    namespace-scoped RBAC before enabling.
+    (certificate provisioning, reboot, file write, factory reset) and may be
+    irreversible. Apply strict namespace-scoped RBAC before enabling.
+
+    Kubernetes RBAC cannot distinguish values of `spec.action.kind`. Any
+    principal allowed to create `IOSXEOperationalAction` can also request
+    `ProvisionCertificate` when that device has an enabled signer. Treat this
+    grant as PKI replacement authority as well as reboot/file/factory-reset
+    authority.
 
 `IOSXEOperationalAction` supports:
 
@@ -196,11 +207,19 @@ rules.
 - `FilePut`
 - `FileRemove`
 - `FactoryReset`
+- `ProvisionCertificate`
 
 Every action targets exactly one `CiscoDevice` and must set
 `spec.confirm` to the target device name. The spec is immutable after create,
 and the action request must contain exactly the args block matching
-`spec.action.kind`.
+`spec.action.kind`. `ProvisionCertificate` requires a `provisionCertificate`
+block containing the configured certificate ID and the lowercase SHA-256 of
+the exact `tls.crt` bytes followed by the exact `ca.crt` bytes. The worker
+rejects a stale ID or digest before connecting to the device. This action is
+the only path that can install the configured gNOI identity.
+`GNOIOSVerify` remains read-only. Follow the
+[secure gNOI provisioning workflow](gnoi-software-lifecycle.md#provisioning-the-ios-xe-gnoi-os-service)
+before creating this action.
 
 Example reboot:
 
@@ -226,7 +245,11 @@ Lifecycle:
 - `Pending` action CRs are validated and marked `Running` before the gNOI RPC
   is dispatched.
 - A `Running` action is never dispatched a second time. If the controller dies
-  after the device-side invocation, operators must create a new CR to retry.
+  after the device-side invocation, inspect device state before creating a new
+  CR. For `ProvisionCertificate`, a `CertificateInstallIndeterminate` failure
+  means the create-only result remained unknown after bounded, fresh-connection
+  certificate and `OS.Verify` checks: use `GNOICertGet` and inspect device PKI
+  state; never retry the same certificate ID blindly.
 - Terminal phases are `Succeeded`, `Failed`, and `Rejected`.
 - The finalizer is retained while an invocation is in progress so a delete
   request cannot erase the audit trail before completion.

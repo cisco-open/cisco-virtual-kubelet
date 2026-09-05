@@ -66,8 +66,8 @@ node that can host Kubernetes pods through device App-Hosting.
 
 Use it when you want Kubernetes to see a Cisco device as a schedulable node.
 Important fields include `spec.driver`, `spec.address`,
-`spec.credentialSecretRef`, `spec.transport`, `spec.configPrereqs`, and
-`spec.opsPolicy`.
+`spec.credentialSecretRef`, `spec.transport`, `spec.gnoi`, `spec.xe.gnoi`,
+`spec.configPrereqs`, and `spec.opsPolicy`.
 
 ```yaml
 apiVersion: cisco.vk/v1alpha1
@@ -97,6 +97,10 @@ spec:
             vlan: 300
             guestInterface: 0
 ```
+
+For secure gNOI transport and opt-in certificate provisioning, see the
+[configuration reference](CONFIGURATION.md#gnoi) and the
+[secure gNOI workflow](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
 
 ```bash
 $ kubectl get cvk
@@ -484,15 +488,28 @@ spec:
   ttlSecondsAfterFinished: 600
 ```
 
+Use `GNOICertGet` to test TLS and authentication before provisioning. Run
+`GNOIOSVerify` only after IOS-XE reports its gNXI state as `Provisioned`;
+System RPCs such as `GNOITime` are not implemented on every platform.
+
 ### IOSXEOperationalAction
 
 `IOSXEOperationalAction` is for write-class one-shot gNOI actions. It supports
 `Reboot`, `CancelReboot`, `KillProcess`, `FilePut`, `FileRemove`, and
-`FactoryReset`.
+`FactoryReset`, plus `ProvisionCertificate` for the explicit secure-gNOI
+bootstrap.
 
 Every action requires `spec.confirm` to equal the target device name, the spec
 is immutable after creation, and a `Running` action is not dispatched a second
 time after controller restart.
+
+`ProvisionCertificate` requires a `provisionCertificate` args block with the
+configured certificate ID and the lowercase SHA-256 of the exact `tls.crt`
+bytes followed by the exact `ca.crt` bytes. The worker rejects a stale intent
+before device access. It is gated, create-only, and separate from the read-only
+`GNOIOSVerify` operation. See the
+[canonical provisioning workflow](gnoi-software-lifecycle.md#provisioning-the-ios-xe-gnoi-os-service)
+for its prerequisites and cleanup steps.
 
 ```yaml
 apiVersion: ops.cisco.vk/v1alpha1

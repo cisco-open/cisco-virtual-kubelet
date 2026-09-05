@@ -107,20 +107,90 @@ func (f *fakeFile) Get(_ *filepb.GetRequest, stream grpc.ServerStreamingServer[f
 
 type fakeCert struct {
 	certpb.UnimplementedCertificateManagementServer
-	getResp        *certpb.GetCertificatesResponse
-	getErr         error
-	canGenResponse *certpb.CanGenerateCSRResponse
+	getResp             *certpb.GetCertificatesResponse
+	getErr              error
+	canGenResponse      *certpb.CanGenerateCSRResponse
+	canGenRequest       *certpb.CanGenerateCSRRequest
+	installRequest      *certpb.InstallCertificateRequest
+	installResponse     *certpb.InstallCertificateResponse
+	installErr          error
+	installEOFSeen      bool
+	installResponseSent chan struct{}
+	installRelease      chan struct{}
+	installCSR          []byte
+	installCSRType      *certpb.CertificateType
+	installRequests     []*certpb.InstallCertificateRequest
 }
 
 func (f *fakeCert) GetCertificates(context.Context, *certpb.GetCertificatesRequest) (*certpb.GetCertificatesResponse, error) {
 	return f.getResp, f.getErr
 }
 
-func (f *fakeCert) CanGenerateCSR(context.Context, *certpb.CanGenerateCSRRequest) (*certpb.CanGenerateCSRResponse, error) {
+func (f *fakeCert) CanGenerateCSR(_ context.Context, request *certpb.CanGenerateCSRRequest) (*certpb.CanGenerateCSRResponse, error) {
+	f.canGenRequest = request
 	if f.canGenResponse == nil {
 		return &certpb.CanGenerateCSRResponse{CanGenerate: true}, nil
 	}
 	return f.canGenResponse, nil
+}
+
+func (f *fakeCert) Install(stream grpc.BidiStreamingServer[certpb.InstallCertificateRequest, certpb.InstallCertificateResponse]) error {
+	request, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	f.installRequest = request
+	f.installRequests = append(f.installRequests, request)
+	if f.installErr != nil {
+		return f.installErr
+	}
+	if request.GetGenerateCsr() != nil {
+		csrType := certpb.CertificateType_CT_X509
+		if f.installCSRType != nil {
+			csrType = *f.installCSRType
+		}
+		if err := stream.Send(&certpb.InstallCertificateResponse{
+			InstallResponse: &certpb.InstallCertificateResponse_GeneratedCsr{
+				GeneratedCsr: &certpb.GenerateCSRResponse{
+					Csr: &certpb.CSR{Type: csrType, Csr: f.installCSR},
+				},
+			},
+		}); err != nil {
+			return err
+		}
+		request, err = stream.Recv()
+		if err != nil {
+			return err
+		}
+		f.installRequest = request
+		f.installRequests = append(f.installRequests, request)
+	}
+	response := f.installResponse
+	if response == nil {
+		response = &certpb.InstallCertificateResponse{
+			InstallResponse: &certpb.InstallCertificateResponse_LoadCertificate{
+				LoadCertificate: &certpb.LoadCertificateResponse{},
+			},
+		}
+	}
+	if err := stream.Send(response); err != nil {
+		return err
+	}
+	if f.installResponseSent != nil {
+		close(f.installResponseSent)
+	}
+	if f.installRelease != nil {
+		<-f.installRelease
+		return nil
+	}
+	if _, err := stream.Recv(); err != io.EOF {
+		if err == nil {
+			return status.Error(codes.InvalidArgument, "expected client half-close")
+		}
+		return err
+	}
+	f.installEOFSeen = true
+	return nil
 }
 
 type fakeOS struct {
@@ -411,6 +481,19 @@ func TestVerify(t *testing.T) {
 	}
 	if res.Version != "17.15.01a" {
 		t.Fatalf("Verify version: %q", res.Version)
+	}
+}
+
+func TestVerifyDeviceNotProvisionedIsReadOnly(t *testing.T) {
+	ts := newTestServer(t)
+	ts.OS.verifyErr = status.Error(codes.FailedPrecondition, "Device has not been provisioned")
+
+	_, err := ts.client(t).Verify(context.Background())
+	if !IsDeviceNotProvisioned(err) {
+		t.Fatalf("Verify error=%T %v, want exact device-not-provisioned classification", err, err)
+	}
+	if ts.Cert.canGenRequest != nil || ts.Cert.installRequest != nil {
+		t.Fatal("Verify attempted certificate provisioning")
 	}
 }
 

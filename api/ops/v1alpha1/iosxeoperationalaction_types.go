@@ -26,16 +26,17 @@ import (
 // operators can grant low-trust automation read access without
 // implicitly granting reboot / factory-reset / file-write.
 //
-// +kubebuilder:validation:Enum=Reboot;CancelReboot;KillProcess;FilePut;FileRemove;FactoryReset
+// +kubebuilder:validation:Enum=Reboot;CancelReboot;KillProcess;FilePut;FileRemove;FactoryReset;ProvisionCertificate
 type ActionKind string
 
 const (
-	ActionKindReboot       ActionKind = "Reboot"
-	ActionKindCancelReboot ActionKind = "CancelReboot"
-	ActionKindKillProcess  ActionKind = "KillProcess"
-	ActionKindFilePut      ActionKind = "FilePut"
-	ActionKindFileRemove   ActionKind = "FileRemove"
-	ActionKindFactoryReset ActionKind = "FactoryReset"
+	ActionKindReboot               ActionKind = "Reboot"
+	ActionKindCancelReboot         ActionKind = "CancelReboot"
+	ActionKindKillProcess          ActionKind = "KillProcess"
+	ActionKindFilePut              ActionKind = "FilePut"
+	ActionKindFileRemove           ActionKind = "FileRemove"
+	ActionKindFactoryReset         ActionKind = "FactoryReset"
+	ActionKindProvisionCertificate ActionKind = "ProvisionCertificate"
 )
 
 // ActionPhase reports the lifecycle state of an action.
@@ -52,10 +53,11 @@ const (
 )
 
 // IOSXEOperationalAction is a one-shot write-class operation against
-// one IOS-XE device. The reconciler executes exactly once: it does
+// one IOS-XE device. The reconciler dispatches at most once: it does
 // not retry on transient failure, because every kind is destructive
 // or near-destructive (Reboot / FactoryReset / FileRemove / etc.).
-// Operators submit a new CR to re-attempt.
+// Failures are terminal; operators inspect device state before deciding
+// whether a new CR is safe.
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced,shortName=xeop
@@ -100,6 +102,7 @@ type IOSXEOperationalActionSpec struct {
 // +kubebuilder:validation:XValidation:rule="(self.kind == 'FilePut') == has(self.filePut)",message="kind FilePut requires only the filePut args block"
 // +kubebuilder:validation:XValidation:rule="(self.kind == 'FileRemove') == has(self.fileRemove)",message="kind FileRemove requires only the fileRemove args block"
 // +kubebuilder:validation:XValidation:rule="(self.kind == 'FactoryReset') == has(self.factoryReset)",message="kind FactoryReset requires only the factoryReset args block"
+// +kubebuilder:validation:XValidation:rule="(self.kind == 'ProvisionCertificate') == has(self.provisionCertificate)",message="kind ProvisionCertificate requires only the provisionCertificate args block"
 type ActionRequest struct {
 	// Kind names the action variant.
 	// +kubebuilder:validation:Required
@@ -128,6 +131,29 @@ type ActionRequest struct {
 	// FactoryReset is the input for ActionKindFactoryReset.
 	// +optional
 	FactoryReset *FactoryResetArgs `json:"factoryReset,omitempty"`
+
+	// ProvisionCertificate binds the action to the exact public certificate
+	// material configured in the target device worker.
+	// +optional
+	ProvisionCertificate *ProvisionCertificateActionArgs `json:"provisionCertificate,omitempty"`
+}
+
+// ProvisionCertificateActionArgs identifies the immutable public provisioning
+// intent authorized by this action. PublicMaterialSHA256 is SHA-256 over the
+// exact tls.crt bytes followed immediately by the exact ca.crt bytes.
+type ProvisionCertificateActionArgs struct {
+	// CertificateID is the IOS XE trustpoint identifier to provision.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=64
+	// +kubebuilder:validation:Pattern=^[A-Za-z0-9][A-Za-z0-9_.-]*$
+	CertificateID string `json:"certificateID"`
+
+	// PublicMaterialSHA256 binds the action to the exact mounted tls.crt and
+	// ca.crt byte sequence without exposing either file in the action.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^[0-9a-f]{64}$`
+	PublicMaterialSHA256 string `json:"publicMaterialSHA256"`
 }
 
 // RebootActionArgs mirrors gnoi.RebootOpts.

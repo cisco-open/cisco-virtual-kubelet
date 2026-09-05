@@ -62,12 +62,25 @@ func Load(filePath ...string) (*Config, error) {
 	return &cfg, nil
 }
 
-// validateDeviceSpec validates the driver-specific sections of a DeviceSpec.
+// validateDeviceSpec validates common and driver-specific DeviceSpec fields.
 func validateDeviceSpec(spec *v1alpha1.DeviceSpec) error {
+	if err := spec.GNOI.Validate(); err != nil {
+		return fmt.Errorf("invalid gNOI config: %w", err)
+	}
+	if spec.Driver != v1alpha1.DeviceDriverXE && spec.XE != nil && spec.XE.GNOI != nil && spec.XE.GNOI.CertificateProvisioning != nil {
+		return fmt.Errorf("gNOI certificate provisioning is supported only for driver XE")
+	}
+	if spec.GNOI != nil && spec.GNOI.TransportSecurity == v1alpha1.GNOITransportSecurityTLS && spec.GNOI.TLS == nil && spec.TLS != nil && spec.TLS.InsecureSkipVerify {
+		return fmt.Errorf("explicit secure gNOI requires verified TLS unless gnoi.tls supplies gNOI-specific trust")
+	}
+
 	switch spec.Driver {
 	case v1alpha1.DeviceDriverXE:
 		if spec.XE == nil {
 			return fmt.Errorf("driver XE requires xe config section")
+		}
+		if err := spec.XE.GNOI.Validate(spec.GNOI); err != nil {
+			return fmt.Errorf("invalid XE gNOI config: %w", err)
 		}
 		if spec.XE.Networking.Interface != nil {
 			if err := spec.XE.Networking.Interface.Validate(); err != nil {
