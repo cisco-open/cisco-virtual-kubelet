@@ -50,6 +50,13 @@ type GNOIConfig struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=auto
 	TransportSecurity GNOITransportSecurity `json:"transportSecurity,omitempty" mapstructure:"transportSecurity,omitempty"`
+
+	// TLS overrides the shared DeviceSpec TLS settings for the gNOI connection
+	// only. Use this when RESTCONF must retain different TLS behavior from
+	// secure gNOI, for example while bootstrapping gNOI with bootstrap.crt and a
+	// dedicated CA bundle.
+	// +kubebuilder:validation:Optional
+	TLS *TLSConfig `json:"tls,omitempty" mapstructure:"tls,omitempty"`
 }
 
 // Validate applies the gNOI constraints to local YAML configuration, where

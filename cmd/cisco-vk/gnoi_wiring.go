@@ -237,10 +237,14 @@ func gnoiDialConfig(spec *ciskov1.DeviceSpec, password string, tlsEnabled bool) 
 		return dialCfg, nil
 	}
 
-	// Shared device-client helper: honours spec.tls.caFile (RootCAs)
+	// Shared device-client helper: honours TLS caFile (RootCAs)
 	// and the certFile/keyFile client pair in addition to
 	// InsecureSkipVerify, matching the apphosting driver.
-	tlsCfg, err := tlsutil.ClientTLSFromDeviceTLS(spec.TLS)
+	tlsSpec := spec.TLS
+	if explicitSecureGNOI(spec) && spec.GNOI.TLS != nil {
+		tlsSpec = spec.GNOI.TLS
+	}
+	tlsCfg, err := tlsutil.ClientTLSFromDeviceTLS(tlsSpec)
 	if err != nil {
 		return devicegrpc.DialConfig{}, err
 	}

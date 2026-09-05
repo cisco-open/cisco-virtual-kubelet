@@ -70,8 +70,8 @@ func validateDeviceSpec(spec *v1alpha1.DeviceSpec) error {
 	if spec.Driver != v1alpha1.DeviceDriverXE && spec.XE != nil && spec.XE.GNOI != nil && spec.XE.GNOI.CertificateProvisioning != nil {
 		return fmt.Errorf("gNOI certificate provisioning is supported only for driver XE")
 	}
-	if spec.GNOI != nil && spec.GNOI.TransportSecurity == v1alpha1.GNOITransportSecurityTLS && spec.TLS != nil && spec.TLS.InsecureSkipVerify {
-		return fmt.Errorf("explicit secure gNOI requires verified TLS")
+	if spec.GNOI != nil && spec.GNOI.TransportSecurity == v1alpha1.GNOITransportSecurityTLS && spec.GNOI.TLS == nil && spec.TLS != nil && spec.TLS.InsecureSkipVerify {
+		return fmt.Errorf("explicit secure gNOI requires verified TLS unless gnoi.tls supplies gNOI-specific trust")
 	}
 
 	switch spec.Driver {

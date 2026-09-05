@@ -55,7 +55,6 @@ spec:
             type: object
           spec:
             description: |-
-              DeviceSpec defines the desired state of a Cisco device.
               Shared fields are common to all drivers; driver-specific configuration lives
               under the corresponding driver section (XE, XR, etc.).
             properties:
@@ -150,6 +149,32 @@ spec:
                     maximum: 65535
                     minimum: 1
                     type: integer
+                  tls:
+                    description: |-
+                      TLS overrides the shared DeviceSpec TLS settings for the gNOI connection
+                      only. Use this when RESTCONF must retain different TLS behavior from
+                      secure gNOI, for example while bootstrapping gNOI with bootstrap.crt and a
+                      dedicated CA bundle.
+                    properties:
+                      caFile:
+                        description: CAFile is the path to the CA certificate file.
+                        type: string
+                      certFile:
+                        description: CertFile is the path to the client certificate
+                          file.
+                        type: string
+                      enabled:
+                        description: Enabled toggles TLS for device communication.
+                        type: boolean
+                      insecureSkipVerify:
+                        description: InsecureSkipVerify disables TLS certificate verification.
+                        type: boolean
+                      keyFile:
+                        description: KeyFile is the path to the client key file.
+                        type: string
+                    required:
+                    - enabled
+                    type: object
                   transportSecurity:
                     default: auto
                     description: |-
@@ -574,9 +599,10 @@ spec:
               rule: '!has(self.xe) || !has(self.xe.gnoi) || !has(self.xe.gnoi.certificateProvisioning)
                 || (has(self.gnoi) && has(self.gnoi.transportSecurity) && self.gnoi.transportSecurity
                 == ''tls'')'
-            - message: explicit secure gNOI requires verified TLS
+            - message: explicit secure gNOI requires verified TLS unless gnoi.tls
+                supplies gNOI-specific trust
               rule: '!has(self.gnoi) || !has(self.gnoi.transportSecurity) || self.gnoi.transportSecurity
-                != ''tls'' || !has(self.tls) || !has(self.tls.insecureSkipVerify)
+                != ''tls'' || has(self.gnoi.tls) || !has(self.tls) || !has(self.tls.insecureSkipVerify)
                 || !self.tls.insecureSkipVerify'
           status:
             description: DeviceStatus defines the observed state of a CiscoDevice.

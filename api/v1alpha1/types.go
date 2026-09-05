@@ -75,12 +75,11 @@ type CiscoDeviceList struct {
 	Items           []CiscoDevice `json:"items"`
 }
 
-// DeviceSpec defines the desired state of a Cisco device.
 // Shared fields are common to all drivers; driver-specific configuration lives
 // under the corresponding driver section (XE, XR, etc.).
 // +kubebuilder:validation:XValidation:rule="!has(self.xe) || !has(self.xe.gnoi) || !has(self.xe.gnoi.certificateProvisioning) || self.driver == 'XE'",message="gNOI certificate provisioning is supported only for driver XE"
 // +kubebuilder:validation:XValidation:rule="!has(self.xe) || !has(self.xe.gnoi) || !has(self.xe.gnoi.certificateProvisioning) || (has(self.gnoi) && has(self.gnoi.transportSecurity) && self.gnoi.transportSecurity == 'tls')",message="spec.xe.gnoi.certificateProvisioning requires spec.gnoi.transportSecurity to be tls"
-// +kubebuilder:validation:XValidation:rule="!has(self.gnoi) || !has(self.gnoi.transportSecurity) || self.gnoi.transportSecurity != 'tls' || !has(self.tls) || !has(self.tls.insecureSkipVerify) || !self.tls.insecureSkipVerify",message="explicit secure gNOI requires verified TLS"
+// +kubebuilder:validation:XValidation:rule="!has(self.gnoi) || !has(self.gnoi.transportSecurity) || self.gnoi.transportSecurity != 'tls' || has(self.gnoi.tls) || !has(self.tls) || !has(self.tls.insecureSkipVerify) || !self.tls.insecureSkipVerify",message="explicit secure gNOI requires verified TLS unless gnoi.tls supplies gNOI-specific trust"
 type DeviceSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE

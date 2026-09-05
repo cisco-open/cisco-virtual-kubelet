@@ -69,6 +69,7 @@ func TestGNOIDialConfigAttachesCredentialsOnlyToTLS(t *testing.T) {
 		username    string
 		password    string
 		skipVerify  bool
+		gnoiTLS     *ciskov1.TLSConfig
 		explicitTLS bool
 		wantTLS     bool
 		wantRPCAuth bool
@@ -83,6 +84,7 @@ func TestGNOIDialConfigAttachesCredentialsOnlyToTLS(t *testing.T) {
 		{name: "explicit TLS without password authentication", tlsEnabled: true, explicitTLS: true, wantTLS: true},
 		{name: "unverified explicit TLS with credentials", tlsEnabled: true, explicitTLS: true, username: "admin", password: "s3cret", skipVerify: true, wantErr: "verified TLS is required"},
 		{name: "unverified explicit TLS without credentials", tlsEnabled: true, explicitTLS: true, skipVerify: true, wantErr: "verified TLS is required"},
+		{name: "RESTCONF can be unverified when gNOI TLS override is verified", tlsEnabled: true, explicitTLS: true, username: "admin", password: "s3cret", skipVerify: true, gnoiTLS: &ciskov1.TLSConfig{}, wantTLS: true, wantRPCAuth: true},
 		{name: "plaintext with credentials", username: "admin", password: "s3cret", wantBasic: true},
 	}
 
@@ -93,7 +95,7 @@ func TestGNOIDialConfigAttachesCredentialsOnlyToTLS(t *testing.T) {
 				TLS:      &ciskov1.TLSConfig{InsecureSkipVerify: tt.skipVerify},
 			}
 			if tt.explicitTLS {
-				spec.GNOI = &ciskov1.GNOIConfig{TransportSecurity: ciskov1.GNOITransportSecurityTLS}
+				spec.GNOI = &ciskov1.GNOIConfig{TransportSecurity: ciskov1.GNOITransportSecurityTLS, TLS: tt.gnoiTLS}
 			}
 			cfg, err := gnoiDialConfig(spec, tt.password, tt.tlsEnabled)
 			if tt.wantErr != "" {

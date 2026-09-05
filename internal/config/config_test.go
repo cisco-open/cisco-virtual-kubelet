@@ -223,6 +223,10 @@ func TestValidateDeviceSpecRejectsUnverifiedGNOIProvisioning(t *testing.T) {
 	if err := validateDeviceSpec(spec); err == nil || !strings.Contains(err.Error(), "requires verified TLS") {
 		t.Fatalf("validateDeviceSpec() error=%v, want verified TLS error", err)
 	}
+	spec.GNOI.TLS = &v1alpha1.TLSConfig{}
+	if err := validateDeviceSpec(spec); err != nil {
+		t.Fatalf("validateDeviceSpec() with gnoi.tls override error=%v", err)
+	}
 }
 
 func TestValidateDeviceSpecRequiresExplicitTLSForXEGNOIProvisioning(t *testing.T) {
