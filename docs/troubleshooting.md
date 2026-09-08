@@ -318,6 +318,15 @@ CISCO_VK_UPGRADE_ALLOW_INSECURE_SSH=true
 When using `localPath`, add `localPathSHA256` if the device supports gNOI
 File.Get. A mismatch fails before activation with `LocalPathHashMismatch`.
 
+If a `localPath` operation fails during activation with `Invalid version string`
+or `Version not present on device`, verify the target is in the IOS-XE install
+inventory. A matching image file on flash does not imply IOS-XE can activate it.
+For release toggle testing, keep each target release registered as an inactive
+install version, or use a complete URL/SCP/SFTP/TFTP image source so CVK can run
+the install path before activation. This area still needs production hardening to
+distinguish already-staged inventory activation from new image-file registration
+and installation flows.
+
 Transfer interruptions move to `TransferInterrupted` and retry according to
 `spec.maxRetries` unless `spec.resumePolicy: Abort` is set.
 

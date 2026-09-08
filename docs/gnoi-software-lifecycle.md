@@ -373,11 +373,23 @@ Kubernetes object. Operators provide exactly one image source:
 | URL | `imageSource.url` and `imageSource.sha256` | Fetch an image from `http`, `https`, `tftp`, `ftp`, `scp`, or `sftp` and verify the digest. |
 | URL with credentials | URL fields plus `imageSource.urlSecretRef` | Fetch from authenticated FTP/SCP/SFTP sources. SCP/SFTP can use `knownHosts` unless the URL opts out with `insecureSkipHostKey=true`. |
 | ConfigMap | `imageSource.configMapRef` | Stage small test artifacts from Kubernetes data. This is not for production-sized IOS-XE images. |
-| Local path | `imageSource.localPath` | Activate an image already present on device storage. |
+| Local path | `imageSource.localPath` | Activate an image that is already staged in the IOS-XE install inventory. |
 
 For `localPath`, use `localPathSHA256` when the device can report file hashes
 through gNOI File.Get. Without that hash, CVK can activate a staged image but
 cannot verify the local file before activation.
+
+!!! warning "Production-readiness gap: staged inventory vs. image files"
+    Current `localPath` handling is suitable only when IOS-XE already reports
+    the target as a staged install version. A `.bin`, `.pkg`, or `.conf` file
+    merely existing on flash is not enough: IOS-XE can still reject gNOI
+    `OS.Activate` with `Invalid version string` or `Version not present on
+    device` until the release is present in the install inventory. Production
+    upgrade testing needs first-class handling for both common variations:
+    activating an already-staged inactive install version, and registering or
+    installing a new image file before activation. Keep complete off-device
+    image sources with verified hashes for repeated release toggling; do not
+    treat opportunistic flash copies as the source of truth.
 
 The upgrade strategy controls activation:
 
@@ -556,8 +568,11 @@ Events:
 
 ### Example — local flash path (image already on device)
 
-Use `localPath` when the image has been pre-staged to device storage (e.g.
-via ZTP or a previous TFTP transfer):
+Use `localPath` only after the image has been pre-staged into the IOS-XE install
+inventory (for example, after a previous successful gNOI `OS.Install` or IOS-XE
+`install add`). The target should be visible as an inactive or otherwise
+installed version in IOS-XE install operational state, not just as a file in
+`dir flash:` output:
 
 ```yaml
 spec:
