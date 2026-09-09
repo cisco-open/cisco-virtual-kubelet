@@ -204,11 +204,15 @@ All metrics are type `gauge`. The base set works on any driver; the topology-der
 These metrics are registered when the corresponding controllers and gNOI
 client packages are linked into the process. The write-class and software
 upgrade reconcilers still require their enablement flags before they act on
-CRs.
+CRs. At startup, the per-device worker also logs bounded categorical values:
+`trust_source` is `plaintext`, `legacy-shared`, `system`, `shared`, `gnoi`, or
+`xe-provisioning`; `auth_mode` is `none`, `legacy-basic`, or
+`iosxe-password-metadata`. Certificate and credential contents are never
+included.
 
 | Metric | Labels | Notes |
 |---|---|---|
-| `cisco_vk_gnoi_rpc_total` | `service`, `outcome` | gNOI RPC outcomes, including `ok`, `unimplemented`, `unavailable`, and other error classes. |
+| `cisco_vk_gnoi_rpc_total` | `service`, `outcome` | gNOI RPC outcomes, including `ok`, `unauthenticated`, `permission_denied`, `failed_precondition`, `unimplemented`, `deadline_exceeded`, `canceled`, `unavailable`, and `error`. |
 | `cisco_vk_gnoi_capability_cache_total` | `service`, `result` | Capability cache hit, miss, expiration, pin, and fail-fast decisions. |
 | `cisco_vk_devicegrpc_lease_events_total` | `class`, `event` | Workload-classed gRPC pool lease and release events. |
 | `cisco_vk_devicegrpc_outstanding_leases` | `class` | Current outstanding gRPC pool leases. |

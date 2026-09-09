@@ -244,16 +244,22 @@ explicitly as `--nodename`.
 |---|---|
 | `VK_DEVICE_PASSWORD` | Non-empty value overrides the config-file password. With `credentialSecretRef`, the controller injects it through `secretKeyRef` and keeps it out of the ConfigMap. |
 | `CISCO_VK_GNOI_INSECURE` | IOS-XE only: `1` or `true` forces the legacy plaintext gNOI listener for non-opt-in configurations and does not change REST/config TLS. It is rejected with explicit `gnoi.transportSecurity: tls`; legacy Basic metadata may expose credentials. |
-| `CISCO_VK_GNOI_PORT` | IOS-XE only: override the gNOI port. It overrides `spec.gnoi.port` but does not by itself select TLS. Legacy inference uses `50052` for plaintext, `9339` for TLS, or an existing nonstandard device port. |
+| `CISCO_VK_GNOI_PORT` | IOS-XE only: override the gNOI port. It overrides `spec.gnoi.port` but does not by itself select TLS. Legacy inference uses `50052` for plaintext, `9339` for TLS, or an existing nonstandard device port. Invalid values fail gNOI setup instead of falling back. |
 | `CISCO_VK_GNOI_DISABLED` | IOS-XE only: `1` or `true` skips gNOI client construction entirely. |
+| `CISCO_VK_UPGRADE_MAX_IMAGE_BYTES` | Positive base-10 byte limit for one URL or ConfigMap software-upgrade image. Defaults to 8 GiB. Helm value: `gnoi.softwareUpgrade.maxImageBytes`. Plan pod ephemeral storage for one cached image plus normal overhead before raising it. |
+| `CISCO_VK_UPGRADE_ALLOW_INSECURE_SSH` | Custom/local deployments only: `true`, together with `?insecureSkipHostKey=true` (or `?insecure=true`) on that SCP/SFTP URL, enables the lab-only host-key bypass. The stock Helm chart intentionally does not expose it. |
+| `CONFIG_LEASE_NAMESPACE` | Namespace that stores config-arbitration and shared device-mutation Leases; defaults to the worker namespace. |
 | `CONFIG_YANG_VALIDATION` | IOS-XE config-driver YANG validation: `disabled` (default), `warn`, or `strict`. NX-OS always applies its structural/DME validation. |
 
 IOS-XE example one-liners for development or a single ad-hoc run are shown
 below. Outside a cluster, also pass `--kubeconfig` or set a valid `KUBECONFIG`.
 Prefer `device.gnoi.transportSecurity: tls` and `device.gnoi.port: 9339` in a
-local config (or `spec.gnoi` in a `CiscoDevice`) for IOS-XE 17.18.x. The
-environment variables are retained for deployment-level compatibility. A port
-override takes precedence; the insecure override cannot downgrade explicit
+local config (or `spec.gnoi` in a `CiscoDevice`) for IOS-XE 17.18.x. Explicit
+TLS must use the system root pool, verified shared trust, dedicated
+`device.gnoi.tls.caFile`, or IOS-XE provisioning-derived trust. Kubernetes uses
+`spec.gnoi.tls.secretRef.name` instead of host paths. The environment variables
+are retained for deployment-level compatibility. A valid port override takes
+precedence; the insecure override cannot downgrade explicit
 `transportSecurity: tls`.
 
 ```bash

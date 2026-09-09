@@ -16,10 +16,12 @@ package gnoi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	certpb "github.com/openconfig/gnoi/cert"
+	"google.golang.org/grpc"
 )
 
 // CertificateInfo is the structured form of one gNOI certificate
@@ -35,16 +37,29 @@ type CertificateInfo struct {
 // GetCertificates returns the certificates installed on the device.
 // Read-only — safe to use as a Cert service capability probe.
 func (c *Client) GetCertificates(ctx context.Context) ([]CertificateInfo, error) {
+	return c.getCertificates(ctx)
+}
+
+// getCertificates keeps the public read-only API small while allowing
+// provisioning to capture the authenticated peer from the same RPC that
+// returned the certificate inventory.
+func (c *Client) getCertificates(ctx context.Context, opts ...grpc.CallOption) ([]CertificateInfo, error) {
 	if err := c.cap.ensureSupported(ServiceCert); err != nil {
 		return nil, err
 	}
-	resp, err := c.cert.GetCertificates(c.authCtx(ctx), &certpb.GetCertificatesRequest{})
+	resp, err := c.cert.GetCertificates(c.authCtx(ctx), &certpb.GetCertificatesRequest{}, opts...)
 	c.cap.Observe(ServiceCert, err)
 	if err != nil {
 		return nil, fmt.Errorf("gnoi Cert.GetCertificates: %w", err)
 	}
+	if resp == nil {
+		return nil, errors.New("gnoi Cert.GetCertificates: empty response")
+	}
 	out := make([]CertificateInfo, 0, len(resp.CertificateInfo))
-	for _, ci := range resp.CertificateInfo {
+	for i, ci := range resp.CertificateInfo {
+		if ci == nil {
+			return nil, fmt.Errorf("gnoi Cert.GetCertificates: certificate entry %d is empty", i)
+		}
 		info := CertificateInfo{
 			CertificateID: ci.CertificateId,
 		}

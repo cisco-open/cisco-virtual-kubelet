@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"os"
@@ -80,7 +81,7 @@ func setupGNOIWithProvisioningDirectory(
 	opts configReconcilerOptions,
 	provisioningDirectory string,
 ) (gnoi.Provider, *gnoiruntime.Provisioner, func(), error) {
-	if v := os.Getenv(gNOIDisabledEnv); v == "1" || strings.EqualFold(v, "true") {
+	if envEnabled(gNOIDisabledEnv) {
 		log.G(ctx).Info("gNOI pillar disabled by CISCO_VK_GNOI_DISABLED")
 		return nil, nil, nil, nil
 	}
@@ -88,39 +89,26 @@ func setupGNOIWithProvisioningDirectory(
 		return nil, nil, nil, nil
 	}
 
-	forceInsecure := false
-	if v := os.Getenv(gNOIInsecureEnv); v == "1" || strings.EqualFold(v, "true") {
-		forceInsecure = true
-	}
-
-	port, tlsEnabled, err := gnoiTransportForSpec(opts.Spec, forceInsecure)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("gNOI: invalid transport config: %w", err)
-	}
-
-	dialCfg, err := gnoiDialConfig(opts.Spec, opts.Password, tlsEnabled)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("gNOI: TLS from spec: %w", err)
-	}
-	provisioningBundle, err := loadGNOIProvisioningBundle(
+	forceInsecure := envEnabled(gNOIInsecureEnv)
+	resolved, err := resolveGNOIConfig(
 		opts.Spec,
-		tlsEnabled,
-		dialCfg.TLSConfig,
+		opts.Password,
+		forceInsecure,
 		provisioningDirectory,
 		opts.EnableWriteClassGNOI,
 	)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("gNOI: certificate provisioning: %w", err)
+		return nil, nil, nil, fmt.Errorf("gNOI: resolve configuration: %w", err)
 	}
 	var signer gnoi.CertificateSigner
 	var signerErr error
-	if provisioningBundle != nil && opts.EnableWriteClassGNOI {
-		signer, signerErr = loadGNOILocalCertificateSigner(provisioningBundle, provisioningDirectory)
+	if resolved.provisioningBundle != nil && opts.EnableWriteClassGNOI {
+		signer, signerErr = loadGNOILocalCertificateSigner(resolved.provisioningBundle, provisioningDirectory)
 	}
 
-	pool := devicegrpc.New(dialCfg, nil)
-	key := devicegrpc.DeviceKey{Address: opts.Spec.Address, Port: port}
-	provider, err := gnoiruntime.NewProvider(pool, key, dialCfg.AuthContext())
+	pool := devicegrpc.New(resolved.dialConfig, nil)
+	key := devicegrpc.DeviceKey{Address: opts.Spec.Address, Port: resolved.port}
+	provider, err := gnoiruntime.NewProvider(pool, key, resolved.dialConfig.AuthContext())
 	if err != nil {
 		_ = pool.Close()
 		return nil, nil, nil, err
@@ -131,23 +119,34 @@ func setupGNOIWithProvisioningDirectory(
 		log.G(ctx).WithError(signerErr).Warn(
 			"gNOI ProvisionCertificate is unavailable because the local ca.key signer could not be loaded; base gNOI remains enabled",
 		)
-	} else if provisioningBundle != nil && signer != nil && opts.EnableWriteClassGNOI {
-		provisioner, err = gnoiruntime.NewProvisioner(provider, provisioningBundle, signer)
+	} else if resolved.provisioningBundle != nil && signer != nil && opts.EnableWriteClassGNOI {
+		provisioner, err = gnoiruntime.NewProvisioner(provider, resolved.provisioningBundle, signer)
 		if err != nil {
 			provider.Close()
 			return nil, nil, nil, err
 		}
-	} else if provisioningBundle != nil && opts.EnableWriteClassGNOI {
+	} else if resolved.provisioningBundle != nil && opts.EnableWriteClassGNOI {
 		log.G(ctx).Warnf("gNOI certificate provisioning is unavailable: %s is not mounted", gNOIProvisioningCAKeyFile)
 	}
 
-	log.G(ctx).Infof("gNOI: pillar enabled (%s:%d, tls=%v, lazy_bulk=true)", opts.Spec.Address, port, dialCfg.TLSConfig != nil)
+	log.G(ctx).Infof(
+		"gNOI: pillar enabled (%s:%d, tls=%v, trust_source=%s, auth_mode=%s, lazy_bulk=true)",
+		opts.Spec.Address,
+		resolved.port,
+		resolved.dialConfig.TLSConfig != nil,
+		resolved.trustSource,
+		resolved.authMode(),
+	)
 	return provider, provisioner, provider.Close, nil
+}
+
+func envEnabled(name string) bool {
+	v := os.Getenv(name)
+	return v == "1" || strings.EqualFold(v, "true")
 }
 
 func loadGNOIProvisioningBundle(
 	spec *ciskov1.DeviceSpec,
-	tlsEnabled bool,
 	tlsCfg *tls.Config,
 	directory string,
 	provisioningWritesEnabled bool,
@@ -155,7 +154,7 @@ func loadGNOIProvisioningBundle(
 	if spec == nil || spec.XE == nil || spec.XE.GNOI == nil || spec.XE.GNOI.CertificateProvisioning == nil {
 		return nil, nil
 	}
-	if !tlsEnabled || tlsCfg == nil {
+	if tlsCfg == nil {
 		return nil, fmt.Errorf("TLS transport is required")
 	}
 	if tlsCfg.InsecureSkipVerify {
@@ -227,44 +226,180 @@ func readOptionalFile(path string) ([]byte, error) {
 	return data, err
 }
 
-func gnoiDialConfig(spec *ciskov1.DeviceSpec, password string, tlsEnabled bool) (devicegrpc.DialConfig, error) {
-	dialCfg := devicegrpc.DialConfig{}
-	if !explicitSecureGNOI(spec) {
-		dialCfg.Username = spec.Username
-		dialCfg.Password = password
-	}
-	if !tlsEnabled {
-		return dialCfg, nil
-	}
+type gnoiTrustSource string
 
-	// Shared device-client helper: honours TLS caFile (RootCAs)
-	// and the certFile/keyFile client pair in addition to
-	// InsecureSkipVerify, matching the apphosting driver.
-	tlsSpec := spec.TLS
-	if explicitSecureGNOI(spec) && spec.GNOI.TLS != nil {
-		tlsSpec = spec.GNOI.TLS
-	}
-	tlsCfg, err := tlsutil.ClientTLSFromDeviceTLS(tlsSpec)
-	if err != nil {
-		return devicegrpc.DialConfig{}, err
-	}
-	dialCfg.TLSConfig = tlsCfg
-	if explicitSecureGNOI(spec) {
-		if tlsCfg.InsecureSkipVerify {
-			return devicegrpc.DialConfig{}, fmt.Errorf("verified TLS is required for explicit secure gNOI; insecureSkipVerify is not permitted")
-		}
-		if (spec.Username == "") != (password == "") {
-			return devicegrpc.DialConfig{}, fmt.Errorf("explicit secure gNOI password authentication requires both username and password, or neither when another authentication method is configured")
-		}
-		if spec.Username != "" {
-			dialCfg.RPCCredentials = devicegrpc.NewIOSXEPasswordCredentials(spec.Username, password)
-		}
-	}
-	return dialCfg, nil
+const (
+	gnoiTrustSourcePlaintext    gnoiTrustSource = "plaintext"
+	gnoiTrustSourceLegacyShared gnoiTrustSource = "legacy-shared"
+	gnoiTrustSourceSystem       gnoiTrustSource = "system"
+	gnoiTrustSourceShared       gnoiTrustSource = "shared"
+	gnoiTrustSourceDedicated    gnoiTrustSource = "gnoi"
+	gnoiTrustSourceProvisioning gnoiTrustSource = "xe-provisioning"
+)
+
+// resolvedGNOIConfig is the single output of gNOI transport resolution. Port,
+// TLS policy, authentication policy, and provisioning trust are deliberately
+// resolved together so callers cannot accidentally combine decisions produced
+// by independent helpers.
+type resolvedGNOIConfig struct {
+	port               int
+	dialConfig         devicegrpc.DialConfig
+	provisioningBundle *gnoi.ProvisioningBundle
+	trustSource        gnoiTrustSource
 }
 
-func explicitSecureGNOI(spec *ciskov1.DeviceSpec) bool {
-	return spec != nil && spec.GNOI != nil && spec.GNOI.TransportSecurity == ciskov1.GNOITransportSecurityTLS
+func (c resolvedGNOIConfig) authMode() string {
+	if c.dialConfig.RPCCredentials != nil {
+		return "iosxe-password-metadata"
+	}
+	if c.dialConfig.Username != "" {
+		return "legacy-basic"
+	}
+	return "none"
+}
+
+// resolveGNOIConfig preserves historical inference and Basic metadata only for
+// configurations that have not explicitly selected secure gNOI. Explicit TLS
+// always uses verified transport and IOS XE per-RPC password credentials. A
+// dedicated gNOI TLS block and IOS XE certificate provisioning are alternate,
+// mutually exclusive sources of gNOI-only trust.
+func resolveGNOIConfig(
+	spec *ciskov1.DeviceSpec,
+	password string,
+	forceInsecure bool,
+	provisioningDirectory string,
+	provisioningWritesEnabled bool,
+) (resolvedGNOIConfig, error) {
+	if spec == nil {
+		return resolvedGNOIConfig{}, fmt.Errorf("nil DeviceSpec")
+	}
+	if err := spec.GNOI.Validate(); err != nil {
+		return resolvedGNOIConfig{}, err
+	}
+	provisioning := xeGNOICertificateProvisioning(spec)
+	if provisioning != nil && spec.Driver != ciskov1.DeviceDriverXE {
+		return resolvedGNOIConfig{}, fmt.Errorf("gNOI certificate provisioning is supported only for driver XE; driver %q requires its own provisioning adapter", spec.Driver)
+	}
+	if spec.XE != nil {
+		if err := spec.XE.GNOI.Validate(spec.GNOI); err != nil {
+			return resolvedGNOIConfig{}, fmt.Errorf("invalid XE gNOI config: %w", err)
+		}
+	}
+
+	explicitTLS := spec.GNOI != nil && spec.GNOI.TransportSecurity == ciskov1.GNOITransportSecurityTLS
+	dedicatedTLS := spec.GNOI != nil && spec.GNOI.TLS != nil
+	if dedicatedTLS && provisioning != nil {
+		return resolvedGNOIConfig{}, fmt.Errorf("spec.gnoi.tls and spec.xe.gnoi.certificateProvisioning are mutually exclusive trust sources")
+	}
+	if forceInsecure && explicitTLS {
+		return resolvedGNOIConfig{}, fmt.Errorf("%s cannot override explicit spec.gnoi.transportSecurity=tls", gNOIInsecureEnv)
+	}
+
+	sharedTLS := spec.TLS != nil && spec.TLS.Enabled
+	tlsEnabled := explicitTLS || (!forceInsecure && sharedTLS)
+	port, err := resolveGNOIPort(spec, tlsEnabled, forceInsecure)
+	if err != nil {
+		return resolvedGNOIConfig{}, err
+	}
+	resolved := resolvedGNOIConfig{
+		port:        port,
+		trustSource: gnoiTrustSourcePlaintext,
+	}
+
+	if !explicitTLS {
+		// Legacy gNOI sends Basic authorization through the provider context,
+		// including on plaintext connections. Preserve this compatibility path
+		// only until a device explicitly opts into secure gNOI.
+		resolved.dialConfig.Username = spec.Username
+		resolved.dialConfig.Password = password
+		if !tlsEnabled {
+			return resolved, nil
+		}
+		resolved.dialConfig.TLSConfig, err = tlsutil.ClientTLSFromDeviceTLS(spec.TLS)
+		if err != nil {
+			return resolvedGNOIConfig{}, fmt.Errorf("shared TLS: %w", err)
+		}
+		resolved.trustSource = gnoiTrustSourceLegacyShared
+		return resolved, nil
+	}
+
+	if (spec.Username == "") != (password == "") {
+		return resolvedGNOIConfig{}, fmt.Errorf("explicit secure gNOI password authentication requires both username and password, or neither when another authentication method is configured")
+	}
+	if spec.Username != "" && spec.Driver != ciskov1.DeviceDriverXE {
+		return resolvedGNOIConfig{}, fmt.Errorf("explicit secure gNOI password authentication is supported only for driver XE; driver %q requires its own authentication adapter", spec.Driver)
+	}
+
+	var tlsCfg *tls.Config
+	switch {
+	case provisioning != nil:
+		// Provisioning trust is isolated from DeviceSpec.TLS. The provisioning
+		// bundle adds its validated CA chain and optional bootstrap leaf pin.
+		tlsCfg = &tls.Config{MinVersion: tls.VersionTLS12, RootCAs: x509.NewCertPool()}
+		resolved.trustSource = gnoiTrustSourceProvisioning
+	case dedicatedTLS:
+		tlsCfg, err = clientTLSFromGNOIConfig(spec.GNOI.TLS)
+		if err != nil {
+			return resolvedGNOIConfig{}, fmt.Errorf("spec.gnoi.tls: %w", err)
+		}
+		resolved.trustSource = gnoiTrustSourceDedicated
+	default:
+		tlsCfg, err = tlsutil.ClientTLSFromDeviceTLS(spec.TLS)
+		if err != nil {
+			return resolvedGNOIConfig{}, fmt.Errorf("shared TLS: %w", err)
+		}
+		if tlsCfg.InsecureSkipVerify {
+			return resolvedGNOIConfig{}, fmt.Errorf("verified TLS is required for explicit secure gNOI; shared spec.tls.insecureSkipVerify cannot be inherited")
+		}
+		resolved.trustSource = gnoiTrustSourceSystem
+		if spec.TLS != nil && (spec.TLS.CAFile != "" || spec.TLS.CertFile != "" || spec.TLS.KeyFile != "") {
+			resolved.trustSource = gnoiTrustSourceShared
+		}
+	}
+
+	resolved.dialConfig.TLSConfig = tlsCfg
+	if spec.Username != "" {
+		resolved.dialConfig.RPCCredentials = devicegrpc.NewIOSXEPasswordCredentials(spec.Username, password)
+	}
+	if provisioning != nil {
+		resolved.provisioningBundle, err = loadGNOIProvisioningBundle(
+			spec,
+			tlsCfg,
+			provisioningDirectory,
+			provisioningWritesEnabled,
+		)
+		if err != nil {
+			return resolvedGNOIConfig{}, fmt.Errorf("certificate provisioning: %w", err)
+		}
+	}
+	return resolved, nil
+}
+
+func xeGNOICertificateProvisioning(spec *ciskov1.DeviceSpec) *ciskov1.XEGNOICertificateProvisioning {
+	if spec == nil || spec.XE == nil || spec.XE.GNOI == nil {
+		return nil
+	}
+	return spec.XE.GNOI.CertificateProvisioning
+}
+
+// clientTLSFromGNOIConfig adapts controller-resolved or local gNOI file paths
+// to the shared hardened certificate loader. Secret references are rejected by
+// GNOIConfig.Validate and must never cross the manager/worker boundary.
+func clientTLSFromGNOIConfig(config *ciskov1.GNOITLSConfig) (*tls.Config, error) {
+	if config == nil {
+		return nil, fmt.Errorf("nil config")
+	}
+	if config.SecretRef != nil {
+		return nil, fmt.Errorf("unresolved secretRef is not valid in worker configuration")
+	}
+	if config.CAFile == "" {
+		return nil, fmt.Errorf("caFile is required")
+	}
+	return tlsutil.ClientTLSFromDeviceTLS(&ciskov1.TLSConfig{
+		CAFile:   config.CAFile,
+		CertFile: config.CertFile,
+		KeyFile:  config.KeyFile,
+	})
 }
 
 type unavailableGNOIProvider struct {
@@ -275,50 +410,26 @@ func (p unavailableGNOIProvider) GNOIClient(context.Context) (*gnoi.Client, erro
 	return nil, fmt.Errorf("gNOI unavailable: %w", p.cause)
 }
 
-// gnoiTransportForSpec resolves the effective gNOI port and transport security.
-// A missing or zero-valued per-device block uses the historical resolver.
-// Explicit fields affect only the gNOI connection.
-func gnoiTransportForSpec(spec *ciskov1.DeviceSpec, forceInsecure bool) (int, bool, error) {
-	if spec == nil {
-		return 0, false, fmt.Errorf("nil DeviceSpec")
-	}
-
-	if err := spec.GNOI.Validate(); err != nil {
-		return 0, false, err
-	}
-	if spec.XE != nil {
-		if err := spec.XE.GNOI.Validate(spec.GNOI); err != nil {
-			return 0, false, fmt.Errorf("invalid XE gNOI config: %w", err)
-		}
-	}
-	if forceInsecure && explicitSecureGNOI(spec) {
-		return 0, false, fmt.Errorf("CISCO_VK_GNOI_INSECURE cannot override explicit gnoi.transportSecurity=tls")
-	}
-	sharedTLS := spec.TLS != nil && spec.TLS.Enabled
-	if port, ok := gnoiPortEnvOverride(); ok {
-		return port, !forceInsecure && effectiveGNOITLS(spec.GNOI, sharedTLS), nil
+// resolveGNOIPort is intentionally subordinate to resolveGNOIConfig: no caller
+// can use its port decision without also applying the resolved TLS and auth
+// policy. Invalid environment overrides fail closed instead of being silently
+// ignored.
+func resolveGNOIPort(spec *ciskov1.DeviceSpec, tlsEnabled, forceInsecure bool) (int, error) {
+	if port, set, err := gnoiPortEnvOverride(); err != nil {
+		return 0, err
+	} else if set {
+		return port, nil
 	}
 	if forceInsecure {
-		// The legacy override selects the legacy listener as well as plaintext.
-		// A custom plaintext port remains available through CISCO_VK_GNOI_PORT.
-		return inferredGNOIPort(spec.Port, false), false, nil
+		return inferredGNOIPort(spec.Port, false), nil
 	}
-	if spec.GNOI == nil || (spec.GNOI.Port == 0 && (spec.GNOI.TransportSecurity == "" || spec.GNOI.TransportSecurity == ciskov1.GNOITransportSecurityAuto)) {
-		return inferredGNOIPort(spec.Port, sharedTLS), sharedTLS, nil
+	if spec.GNOI != nil && spec.GNOI.Port > 0 {
+		return spec.GNOI.Port, nil
 	}
-
-	tlsEnabled := effectiveGNOITLS(spec.GNOI, sharedTLS)
-	if spec.GNOI.Port > 0 {
-		return spec.GNOI.Port, tlsEnabled, nil
+	if spec.GNOI != nil && spec.GNOI.TransportSecurity == ciskov1.GNOITransportSecurityTLS {
+		return inferredGNOIPort(0, true), nil
 	}
-	if tlsEnabled {
-		return 9339, true, nil
-	}
-	return 50052, false, nil
-}
-
-func effectiveGNOITLS(config *ciskov1.GNOIConfig, sharedTLS bool) bool {
-	return sharedTLS || (config != nil && config.TransportSecurity == ciskov1.GNOITransportSecurityTLS)
+	return inferredGNOIPort(spec.Port, tlsEnabled), nil
 }
 
 func inferredGNOIPort(port int, tlsEnabled bool) int {
@@ -331,14 +442,14 @@ func inferredGNOIPort(port int, tlsEnabled bool) int {
 	return port
 }
 
-func gnoiPortEnvOverride() (int, bool) {
-	v := os.Getenv(gNOIPortEnv)
-	if v == "" {
-		return 0, false
+func gnoiPortEnvOverride() (int, bool, error) {
+	raw := os.Getenv(gNOIPortEnv)
+	if raw == "" {
+		return 0, false, nil
 	}
-	port, err := strconv.Atoi(strings.TrimSpace(v))
+	port, err := strconv.Atoi(strings.TrimSpace(raw))
 	if err != nil || port <= 0 || port > 65535 {
-		return 0, false
+		return 0, true, fmt.Errorf("%s must be an integer between 1 and 65535", gNOIPortEnv)
 	}
-	return port, true
+	return port, true, nil
 }

@@ -35,6 +35,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net"
+	"strconv"
 	"sync"
 
 	"google.golang.org/grpc"
@@ -82,7 +84,7 @@ type DeviceKey struct {
 
 // Target returns the "addr:port" form used by grpc.NewClient.
 func (k DeviceKey) Target() string {
-	return fmt.Sprintf("%s:%d", k.Address, k.Port)
+	return net.JoinHostPort(k.Address, strconv.Itoa(k.Port))
 }
 
 // DialConfig is the per-pool TLS + auth material.

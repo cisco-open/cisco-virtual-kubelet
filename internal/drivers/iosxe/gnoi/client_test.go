@@ -22,6 +22,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -122,6 +123,19 @@ type fakeCert struct {
 	installRequests     []*certpb.InstallCertificateRequest
 }
 
+type malformedGetCertificatesClient struct {
+	certpb.CertificateManagementClient
+	response *certpb.GetCertificatesResponse
+}
+
+func (c malformedGetCertificatesClient) GetCertificates(
+	context.Context,
+	*certpb.GetCertificatesRequest,
+	...grpc.CallOption,
+) (*certpb.GetCertificatesResponse, error) {
+	return c.response, nil
+}
+
 func (f *fakeCert) GetCertificates(context.Context, *certpb.GetCertificatesRequest) (*certpb.GetCertificatesResponse, error) {
 	return f.getResp, f.getErr
 }
@@ -195,16 +209,25 @@ func (f *fakeCert) Install(stream grpc.BidiStreamingServer[certpb.InstallCertifi
 
 type fakeOS struct {
 	ospb.UnimplementedOSServer
-	verifyResp          *ospb.VerifyResponse
-	verifyErr           error
-	installRequireClose bool
-	installFirstResp    *ospb.InstallResponse
-	installSendSync     bool
-	installEOFSeen      bool
-	installBytes        int
+	verifyResp              *ospb.VerifyResponse
+	verifyErr               error
+	verifyCalls             atomic.Int32
+	installRequireClose     bool
+	installFirstResp        *ospb.InstallResponse
+	installFollowupResponse []*ospb.InstallResponse
+	installFinalResp        *ospb.InstallResponse
+	installAfterReady       *ospb.InstallResponse
+	installAfterReadyGate   <-chan struct{}
+	installSendSync         bool
+	installEOFSeen          bool
+	installBytes            int
+	activateReq             *ospb.ActivateRequest
+	activateResp            *ospb.ActivateResponse
+	activateErr             error
 }
 
 func (f *fakeOS) Verify(context.Context, *ospb.VerifyRequest) (*ospb.VerifyResponse, error) {
+	f.verifyCalls.Add(1)
 	return f.verifyResp, f.verifyErr
 }
 
@@ -227,7 +250,22 @@ func (f *fakeOS) Install(stream grpc.BidiStreamingServer[ospb.InstallRequest, os
 		return err
 	}
 	if _, ok := firstResp.Response.(*ospb.InstallResponse_TransferReady); !ok {
+		for _, response := range f.installFollowupResponse {
+			if err := stream.Send(response); err != nil {
+				return err
+			}
+		}
 		return nil
+	}
+	if f.installAfterReady != nil {
+		if f.installAfterReadyGate != nil {
+			select {
+			case <-f.installAfterReadyGate:
+			case <-stream.Context().Done():
+				return stream.Context().Err()
+			}
+		}
+		return stream.Send(f.installAfterReady)
 	}
 	for {
 		next, err := stream.Recv()
@@ -263,15 +301,53 @@ func (f *fakeOS) Install(stream grpc.BidiStreamingServer[ospb.InstallRequest, os
 				}
 				f.installEOFSeen = true
 			}
-			return stream.Send(&ospb.InstallResponse{
-				Response: &ospb.InstallResponse_Validated{
-					Validated: &ospb.Validated{Version: req.Version, Description: "validated"},
-				},
-			})
+			response := f.installFinalResp
+			if response == nil {
+				response = &ospb.InstallResponse{
+					Response: &ospb.InstallResponse_Validated{
+						Validated: &ospb.Validated{Version: req.Version, Description: "validated"},
+					},
+				}
+			}
+			return stream.Send(response)
 		default:
 			return status.Errorf(codes.InvalidArgument, "unexpected install request %T", r)
 		}
 	}
+}
+
+type blockingInstallReader struct {
+	entered chan struct{}
+	unblock chan struct{}
+	exited  chan struct{}
+}
+
+func newBlockingInstallReader() *blockingInstallReader {
+	return &blockingInstallReader{
+		entered: make(chan struct{}),
+		unblock: make(chan struct{}),
+		exited:  make(chan struct{}),
+	}
+}
+
+func (r *blockingInstallReader) Read([]byte) (int, error) {
+	close(r.entered)
+	<-r.unblock
+	close(r.exited)
+	return 0, errors.New("reader released")
+}
+
+func (f *fakeOS) Activate(_ context.Context, req *ospb.ActivateRequest) (*ospb.ActivateResponse, error) {
+	f.activateReq = req
+	if f.activateErr != nil {
+		return nil, f.activateErr
+	}
+	if f.activateResp != nil {
+		return f.activateResp, nil
+	}
+	return &ospb.ActivateResponse{
+		Response: &ospb.ActivateResponse_ActivateOk{ActivateOk: &ospb.ActivateOK{}},
+	}, nil
 }
 
 type fakeReset struct {
@@ -459,6 +535,32 @@ func TestGetCertificates(t *testing.T) {
 	}
 }
 
+func TestGetCertificatesRejectsMalformedResponses(t *testing.T) {
+	tests := []struct {
+		name string
+		resp *certpb.GetCertificatesResponse
+		want string
+	}{
+		{name: "nil response", want: "empty response"},
+		{
+			name: "nil certificate entry",
+			resp: &certpb.GetCertificatesResponse{CertificateInfo: []*certpb.CertificateInfo{nil}},
+			want: "certificate entry 0 is empty",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := &Client{
+				cert: malformedGetCertificatesClient{response: tt.resp},
+				cap:  NewCapabilityCache(nil),
+			}
+			if _, err := client.GetCertificates(context.Background()); err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("GetCertificates error=%v, want substring %q", err, tt.want)
+			}
+		})
+	}
+}
+
 func TestCanGenerateCSRDefaults(t *testing.T) {
 	ts := newTestServer(t)
 	ok, err := ts.client(t).CanGenerateCSR(context.Background(), CanGenerateCSROpts{})
@@ -482,6 +584,133 @@ func TestVerify(t *testing.T) {
 	if res.Version != "17.15.01a" {
 		t.Fatalf("Verify version: %q", res.Version)
 	}
+	if res.Standby.State != StandbyStateNotReported {
+		t.Fatalf("Verify standby state: got %q, want %q", res.Standby.State, StandbyStateNotReported)
+	}
+}
+
+func TestStandbyVerifyResultFromProto(t *testing.T) {
+	tests := []struct {
+		name string
+		in   *ospb.VerifyStandby
+		want StandbyVerifyResult
+	}{
+		{
+			name: "not reported",
+			want: StandbyVerifyResult{State: StandbyStateNotReported},
+		},
+		{
+			name: "empty choice",
+			in:   &ospb.VerifyStandby{},
+			want: StandbyVerifyResult{State: StandbyStateUnspecified},
+		},
+		{
+			name: "nil state payload",
+			in: &ospb.VerifyStandby{State: &ospb.VerifyStandby_StandbyState{
+				StandbyState: nil,
+			}},
+			want: StandbyVerifyResult{State: StandbyStateUnspecified},
+		},
+		{
+			name: "unspecified",
+			in: &ospb.VerifyStandby{State: &ospb.VerifyStandby_StandbyState{
+				StandbyState: &ospb.StandbyState{State: ospb.StandbyState_UNSPECIFIED},
+			}},
+			want: StandbyVerifyResult{State: StandbyStateUnspecified},
+		},
+		{
+			name: "unsupported",
+			in: &ospb.VerifyStandby{State: &ospb.VerifyStandby_StandbyState{
+				StandbyState: &ospb.StandbyState{State: ospb.StandbyState_UNSUPPORTED},
+			}},
+			want: StandbyVerifyResult{State: StandbyStateUnsupported},
+		},
+		{
+			name: "non existent",
+			in: &ospb.VerifyStandby{State: &ospb.VerifyStandby_StandbyState{
+				StandbyState: &ospb.StandbyState{State: ospb.StandbyState_NON_EXISTENT},
+			}},
+			want: StandbyVerifyResult{State: StandbyStateNonExistent},
+		},
+		{
+			name: "unavailable",
+			in: &ospb.VerifyStandby{State: &ospb.VerifyStandby_StandbyState{
+				StandbyState: &ospb.StandbyState{State: ospb.StandbyState_UNAVAILABLE},
+			}},
+			want: StandbyVerifyResult{State: StandbyStateUnavailable},
+		},
+		{
+			name: "unknown future state",
+			in: &ospb.VerifyStandby{State: &ospb.VerifyStandby_StandbyState{
+				StandbyState: &ospb.StandbyState{State: ospb.StandbyState_State(99)},
+			}},
+			want: StandbyVerifyResult{State: StandbyStateUnknown},
+		},
+		{
+			name: "nil ready payload",
+			in: &ospb.VerifyStandby{State: &ospb.VerifyStandby_VerifyResponse{
+				VerifyResponse: nil,
+			}},
+			want: StandbyVerifyResult{State: StandbyStateUnspecified},
+		},
+		{
+			name: "ready",
+			in: &ospb.VerifyStandby{State: &ospb.VerifyStandby_VerifyResponse{
+				VerifyResponse: &ospb.StandbyResponse{
+					Id:                    "R1",
+					Version:               "17.18.04",
+					ActivationFailMessage: "standby boot failed",
+				},
+			}},
+			want: StandbyVerifyResult{
+				State:                 StandbyStateReady,
+				ID:                    "R1",
+				Version:               "17.18.04",
+				ActivationFailMessage: "standby boot failed",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := standbyVerifyResultFromProto(tt.in)
+			if got != tt.want {
+				t.Fatalf("standbyVerifyResultFromProto()=%+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestVerifyReturnsReadyStandby(t *testing.T) {
+	ts := newTestServer(t)
+	ts.OS.verifyResp = &ospb.VerifyResponse{
+		Version: "17.18.04",
+		VerifyStandby: &ospb.VerifyStandby{State: &ospb.VerifyStandby_VerifyResponse{
+			VerifyResponse: &ospb.StandbyResponse{
+				Id:                    "R1",
+				Version:               "17.18.04",
+				ActivationFailMessage: "previous standby activation failed",
+			},
+		}},
+		IndividualSupervisorInstall: true,
+	}
+
+	res, err := ts.client(t).Verify(context.Background())
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	want := StandbyVerifyResult{
+		State:                 StandbyStateReady,
+		ID:                    "R1",
+		Version:               "17.18.04",
+		ActivationFailMessage: "previous standby activation failed",
+	}
+	if res.Standby != want {
+		t.Fatalf("Verify standby=%+v, want %+v", res.Standby, want)
+	}
+	if !res.IndividualSupervisorInstall {
+		t.Fatal("Verify did not preserve individual_supervisor_install")
+	}
 }
 
 func TestVerifyDeviceNotProvisionedIsReadOnly(t *testing.T) {
@@ -494,6 +723,22 @@ func TestVerifyDeviceNotProvisionedIsReadOnly(t *testing.T) {
 	}
 	if ts.Cert.canGenRequest != nil || ts.Cert.installRequest != nil {
 		t.Fatal("Verify attempted certificate provisioning")
+	}
+}
+
+func TestDeviceNotProvisionedClassificationTraversesJoinedErrors(t *testing.T) {
+	exact := status.Error(codes.FailedPrecondition, iosXEDeviceNotProvisionedMessage)
+	if err := errors.Join(errors.New("parallel cleanup failed"), exact); !IsDeviceNotProvisioned(err) {
+		t.Fatalf("IsDeviceNotProvisioned(%v)=false, want true for joined exact IOS XE status", err)
+	}
+
+	for _, err := range []error{
+		errors.Join(errors.New("parallel cleanup failed"), status.Error(codes.Unavailable, iosXEDeviceNotProvisionedMessage)),
+		errors.Join(errors.New("parallel cleanup failed"), status.Error(codes.FailedPrecondition, iosXEDeviceNotProvisionedMessage+" unexpectedly")),
+	} {
+		if IsDeviceNotProvisioned(err) {
+			t.Fatalf("IsDeviceNotProvisioned(%v)=true, want exact code/message classification", err)
+		}
 	}
 }
 
@@ -561,6 +806,162 @@ func TestInstallSurfacesDeviceInstallError(t *testing.T) {
 	}
 }
 
+func TestInstallJoinsSenderBeforeBulkReleaseOnDeviceError(t *testing.T) {
+	ts := newTestServer(t)
+	reader := newBlockingInstallReader()
+	readerUnblocked := false
+	defer func() {
+		if !readerUnblocked {
+			close(reader.unblock)
+		}
+	}()
+	allowResponse := make(chan struct{})
+	ts.OS.installAfterReadyGate = allowResponse
+	ts.OS.installAfterReady = &ospb.InstallResponse{
+		Response: &ospb.InstallResponse_InstallError{
+			InstallError: &ospb.InstallError{Type: ospb.InstallError_INTEGRITY_FAIL, Detail: "device rejected image"},
+		},
+	}
+
+	released := make(chan struct{})
+	releasedBeforeSenderExit := make(chan struct{}, 1)
+	conn := ts.dial(t)
+	client, err := New(conn, Options{BulkConnProvider: func(context.Context) (*grpc.ClientConn, func(), error) {
+		return conn, func() {
+			select {
+			case <-reader.exited:
+			default:
+				releasedBeforeSenderExit <- struct{}{}
+			}
+			close(released)
+		}, nil
+	}})
+	if err != nil {
+		t.Fatalf("New gNOI client: %v", err)
+	}
+
+	progress, err := client.Install(context.Background(), reader, InstallOpts{Version: "17.18.04"})
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	select {
+	case event := <-progress:
+		if !event.TransferReady {
+			t.Fatalf("first Install event=%+v, want TransferReady", event)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for TransferReady")
+	}
+	select {
+	case <-reader.entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("content sender did not enter reader")
+	}
+	close(allowResponse)
+
+	select {
+	case event := <-progress:
+		var installErr *InstallError
+		if !errors.As(event.Err, &installErr) || installErr.Type != InstallErrorIntegrityFail {
+			t.Fatalf("Install event=%+v, want integrity InstallError", event)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for device error")
+	}
+	select {
+	case <-released:
+		t.Fatal("bulk lease released while content sender was blocked")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	close(reader.unblock)
+	readerUnblocked = true
+	for range progress {
+	}
+	select {
+	case <-released:
+	case <-time.After(2 * time.Second):
+		t.Fatal("bulk lease was not released after content sender exited")
+	}
+	select {
+	case <-releasedBeforeSenderExit:
+		t.Fatal("bulk lease release ran before content sender exited")
+	default:
+	}
+}
+
+func TestInstallJoinsSenderBeforeBulkReleaseOnCancellation(t *testing.T) {
+	ts := newTestServer(t)
+	reader := newBlockingInstallReader()
+	readerUnblocked := false
+	defer func() {
+		if !readerUnblocked {
+			close(reader.unblock)
+		}
+	}()
+
+	released := make(chan struct{})
+	releasedBeforeSenderExit := make(chan struct{}, 1)
+	conn := ts.dial(t)
+	client, err := New(conn, Options{BulkConnProvider: func(context.Context) (*grpc.ClientConn, func(), error) {
+		return conn, func() {
+			select {
+			case <-reader.exited:
+			default:
+				releasedBeforeSenderExit <- struct{}{}
+			}
+			close(released)
+		}, nil
+	}})
+	if err != nil {
+		t.Fatalf("New gNOI client: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	progress, err := client.Install(ctx, reader, InstallOpts{Version: "17.18.04"})
+	if err != nil {
+		cancel()
+		t.Fatalf("Install: %v", err)
+	}
+	select {
+	case event := <-progress:
+		if !event.TransferReady {
+			cancel()
+			t.Fatalf("first Install event=%+v, want TransferReady", event)
+		}
+	case <-time.After(2 * time.Second):
+		cancel()
+		t.Fatal("timed out waiting for TransferReady")
+	}
+	select {
+	case <-reader.entered:
+	case <-time.After(2 * time.Second):
+		cancel()
+		t.Fatal("content sender did not enter reader")
+	}
+	cancel()
+	select {
+	case <-released:
+		t.Fatal("bulk lease released while canceled content sender was blocked")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	close(reader.unblock)
+	readerUnblocked = true
+	for range progress {
+	}
+	select {
+	case <-released:
+	case <-time.After(2 * time.Second):
+		t.Fatal("bulk lease was not released after canceled content sender exited")
+	}
+	select {
+	case <-releasedBeforeSenderExit:
+		t.Fatal("bulk lease release ran before canceled content sender exited")
+	default:
+	}
+}
+
 func TestInstallEmitsSyncProgress(t *testing.T) {
 	ts := newTestServer(t)
 	ts.OS.installSendSync = true
@@ -583,6 +984,165 @@ func TestInstallEmitsSyncProgress(t *testing.T) {
 	}
 	if syncPct != 42 {
 		t.Fatalf("SyncProgress=%d, want 42", syncPct)
+	}
+}
+
+func TestInstallAcceptsInitialSyncProgressWithoutSendingImage(t *testing.T) {
+	ts := newTestServer(t)
+	ts.OS.installFirstResp = &ospb.InstallResponse{
+		Response: &ospb.InstallResponse_SyncProgress{
+			SyncProgress: &ospb.SyncProgress{PercentageTransferred: 25},
+		},
+	}
+	ts.OS.installFollowupResponse = []*ospb.InstallResponse{
+		{
+			Response: &ospb.InstallResponse_SyncProgress{
+				SyncProgress: &ospb.SyncProgress{PercentageTransferred: 100},
+			},
+		},
+		{
+			Response: &ospb.InstallResponse_Validated{
+				Validated: &ospb.Validated{Version: "17.18.04", Description: "synced from active supervisor"},
+			},
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	progress, err := ts.client(t).Install(ctx, bytes.NewReader([]byte("must not be sent")), InstallOpts{
+		Version:     "17.18.04",
+		PackageSize: 16,
+	})
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	var syncProgress []uint32
+	var validated *InstallValidated
+	for event := range progress {
+		if event.Err != nil {
+			t.Fatalf("Install progress error: %v", event.Err)
+		}
+		if event.TransferReady {
+			t.Fatal("Install emitted TransferReady while target was syncing from its peer")
+		}
+		if event.SyncProgress != nil {
+			syncProgress = append(syncProgress, event.SyncProgress.PercentageTransferred)
+		}
+		if event.Validated != nil {
+			validated = event.Validated
+		}
+	}
+	if len(syncProgress) != 2 || syncProgress[0] != 25 || syncProgress[1] != 100 {
+		t.Fatalf("SyncProgress=%v, want [25 100]", syncProgress)
+	}
+	if validated == nil || validated.Version != "17.18.04" {
+		t.Fatalf("Validated=%+v, want version 17.18.04", validated)
+	}
+	if ts.OS.installBytes != 0 {
+		t.Fatalf("Install sent %d bytes while target was syncing from its peer, want 0", ts.OS.installBytes)
+	}
+}
+
+func TestInstallRejectsTransferProgressDuringSupervisorSync(t *testing.T) {
+	ts := newTestServer(t)
+	ts.OS.installFirstResp = &ospb.InstallResponse{
+		Response: &ospb.InstallResponse_SyncProgress{
+			SyncProgress: &ospb.SyncProgress{PercentageTransferred: 25},
+		},
+	}
+	ts.OS.installFollowupResponse = []*ospb.InstallResponse{
+		{
+			Response: &ospb.InstallResponse_TransferProgress{
+				TransferProgress: &ospb.TransferProgress{BytesReceived: 1},
+			},
+		},
+	}
+
+	progress, err := ts.client(t).Install(context.Background(), bytes.NewReader([]byte("must not be sent")), InstallOpts{
+		Version: "17.18.04",
+	})
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	var gotErr error
+	for event := range progress {
+		if event.Err != nil {
+			gotErr = event.Err
+		}
+	}
+	if gotErr == nil || !strings.Contains(gotErr.Error(), "unexpected TransferProgress during supervisor sync") {
+		t.Fatalf("Install error=%v, want invalid sync sequence error", gotErr)
+	}
+	if ts.OS.installBytes != 0 {
+		t.Fatalf("Install sent %d bytes after initial SyncProgress, want 0", ts.OS.installBytes)
+	}
+}
+
+func TestInstallRejectsEmptyValidatedVersion(t *testing.T) {
+	tests := []struct {
+		name      string
+		configure func(*fakeOS)
+	}{
+		{
+			name: "already staged",
+			configure: func(server *fakeOS) {
+				server.installFirstResp = &ospb.InstallResponse{
+					Response: &ospb.InstallResponse_Validated{
+						Validated: &ospb.Validated{Description: "missing version"},
+					},
+				}
+			},
+		},
+		{
+			name: "after transfer",
+			configure: func(server *fakeOS) {
+				server.installFinalResp = &ospb.InstallResponse{
+					Response: &ospb.InstallResponse_Validated{
+						Validated: &ospb.Validated{Version: "  ", Description: "blank version"},
+					},
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := newTestServer(t)
+			tt.configure(ts.OS)
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			progress, err := ts.client(t).Install(ctx, bytes.NewReader([]byte("image")), InstallOpts{
+				Version:     "17.18.04",
+				PackageSize: 5,
+			})
+			if err != nil {
+				t.Fatalf("Install: %v", err)
+			}
+			var gotErr error
+			for event := range progress {
+				if event.Err != nil {
+					gotErr = event.Err
+				}
+				if event.Validated != nil {
+					t.Fatalf("Install emitted invalid Validated event: %+v", event.Validated)
+				}
+			}
+			if gotErr == nil || !strings.Contains(gotErr.Error(), "Validated response has empty version") {
+				t.Fatalf("Install error=%v, want empty Validated version error", gotErr)
+			}
+		})
+	}
+}
+
+func TestInstallRejectsInvalidLocalInputs(t *testing.T) {
+	ts := newTestServer(t)
+	client := ts.client(t)
+	if _, err := client.Install(context.Background(), nil, InstallOpts{}); err == nil || !strings.Contains(err.Error(), "image reader is required") {
+		t.Fatalf("Install nil reader error=%v, want validation error", err)
+	}
+	if _, err := client.Install(context.Background(), bytes.NewReader(nil), InstallOpts{ChunkSize: -1}); err == nil || !strings.Contains(err.Error(), "must be positive") {
+		t.Fatalf("Install negative ChunkSize error=%v, want validation error", err)
 	}
 }
 
@@ -609,6 +1169,85 @@ func TestInstallRejectsUnexpectedFirstResponse(t *testing.T) {
 	}
 	if gotErr == nil || !strings.Contains(gotErr.Error(), "unexpected first response") {
 		t.Fatalf("expected unexpected-first-response error, got %v", gotErr)
+	}
+}
+
+func TestActivateSendsCompleteRequest(t *testing.T) {
+	ts := newTestServer(t)
+	err := ts.client(t).Activate(context.Background(), ActivateOpts{
+		Version:           "17.18.04",
+		StandbySupervisor: true,
+		NoReboot:          true,
+	})
+	if err != nil {
+		t.Fatalf("Activate: %v", err)
+	}
+	if ts.OS.activateReq == nil {
+		t.Fatal("Activate request was not received")
+	}
+	if ts.OS.activateReq.Version != "17.18.04" || !ts.OS.activateReq.StandbySupervisor || !ts.OS.activateReq.NoReboot {
+		t.Fatalf("Activate request=%+v, want all options forwarded", ts.OS.activateReq)
+	}
+}
+
+func TestActivateRejectsEmptyVersionBeforeRPC(t *testing.T) {
+	ts := newTestServer(t)
+	err := ts.client(t).Activate(context.Background(), ActivateOpts{})
+	if err == nil || !strings.Contains(err.Error(), "Version is required") {
+		t.Fatalf("Activate error=%v, want required-version error", err)
+	}
+	if ts.OS.activateReq != nil {
+		t.Fatalf("Activate sent request despite empty version: %+v", ts.OS.activateReq)
+	}
+}
+
+func TestActivateTranslatesDeviceErrors(t *testing.T) {
+	tests := []struct {
+		name string
+		in   ospb.ActivateError_Type
+		want ActivateErrorType
+	}{
+		{name: "unspecified", in: ospb.ActivateError_UNSPECIFIED, want: ActivateErrorUnspecified},
+		{name: "non-existent version", in: ospb.ActivateError_NON_EXISTENT_VERSION, want: ActivateErrorNonExistentVersion},
+		{name: "standby unsupported", in: ospb.ActivateError_NOT_SUPPORTED_ON_BACKUP, want: ActivateErrorNotSupportedOnBackup},
+		{name: "unknown value", in: ospb.ActivateError_Type(99), want: ActivateErrorUnspecified},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := newTestServer(t)
+			ts.OS.activateResp = &ospb.ActivateResponse{
+				Response: &ospb.ActivateResponse_ActivateError{
+					ActivateError: &ospb.ActivateError{Type: tt.in, Detail: "device rejected activation"},
+				},
+			}
+			err := ts.client(t).Activate(context.Background(), ActivateOpts{Version: "17.18.04"})
+			var activateErr *ActivateError
+			if !errors.As(err, &activateErr) {
+				t.Fatalf("Activate error=%T %v, want *ActivateError", err, err)
+			}
+			if activateErr.Type != tt.want || activateErr.Detail != "device rejected activation" {
+				t.Fatalf("ActivateError=%+v, want type %q with device detail", activateErr, tt.want)
+			}
+		})
+	}
+}
+
+func TestActivatePreservesRPCStatus(t *testing.T) {
+	ts := newTestServer(t)
+	ts.OS.activateErr = status.Error(codes.Unavailable, "device rebooting")
+	err := ts.client(t).Activate(context.Background(), ActivateOpts{Version: "17.18.04"})
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("Activate error=%T %v, want Unavailable status", err, err)
+	}
+}
+
+func TestActivateRejectsUnexpectedResponse(t *testing.T) {
+	ts := newTestServer(t)
+	ts.OS.activateResp = &ospb.ActivateResponse{}
+	err := ts.client(t).Activate(context.Background(), ActivateOpts{Version: "17.18.04"})
+	if err == nil || !strings.Contains(err.Error(), "unexpected response") {
+		t.Fatalf("Activate error=%v, want unexpected-response error", err)
 	}
 }
 

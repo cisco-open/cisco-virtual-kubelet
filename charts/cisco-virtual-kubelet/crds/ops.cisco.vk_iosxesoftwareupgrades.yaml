@@ -45,9 +45,8 @@ spec:
       openAPIV3Schema:
         description: |-
           IOSXESoftwareUpgrade drives a multi-phase IOS-XE image upgrade via
-          gNOI OS.Install / Activate / Verify. One CR per upgrade operation;
-          owner-referenced to the target CiscoDevice so a device delete
-          cascades.
+          gNOI OS.Install / Activate / Verify. One CR represents one explicitly
+          authorized upgrade operation against the referenced CiscoDevice.
         properties:
           apiVersion:
             description: |-
@@ -80,8 +79,10 @@ spec:
                 - name
                 type: object
               imageSource:
-                description: ImageSource is where the reconciler obtains the SPA bundle
-                  bytes.
+                description: |-
+                  ImageSource selects how the target image enters the device install
+                  lifecycle: transfer external bytes, use a preinstalled version, or
+                  register a device-resident file.
                 properties:
                   configMapRef:
                     description: |-
@@ -99,21 +100,57 @@ spec:
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic
+                  deviceFile:
+                    description: |-
+                      DeviceFile identifies an image file already resident on the device.
+                      The platform driver verifies its digest, registers it in the native
+                      install inventory, and then hands the resulting exact version to the
+                      generic gNOI activation lifecycle. This intent is supported only by
+                      drivers that implement device-file registration.
+                    properties:
+                      path:
+                        description: Path is an absolute platform filesystem path
+                          to the image artifact.
+                        maxLength: 128
+                        pattern: ^(flash|bootflash|harddisk):.+$
+                        type: string
+                      sha256:
+                        description: |-
+                          SHA256 is the lowercase hex SHA-256 digest that must match the
+                          device-resident file before any platform install operation is invoked.
+                        pattern: ^[a-f0-9]{64}$
+                        type: string
+                    required:
+                    - path
+                    - sha256
+                    type: object
                   localPath:
                     description: |-
-                      LocalPath assumes the image is already on the device flash. The
-                      reconciler skips Resolving + Transferring and jumps to Activating.
-                      Path must be an absolute IOS-XE filesystem path.
+                      LocalPath is the deprecated compatibility form for a preinstalled
+                      image. It may be used only when TargetVersion is already registered in
+                      the device install inventory. The path is never registered or passed to
+                      a platform install command; use DeviceFile for that workflow. Path must
+                      be an absolute IOS-XE filesystem path.
+                      Deprecated: use Preinstalled to activate an installed version, or
+                      DeviceFile to register a file resident on the device.
+                    maxLength: 128
                     pattern: '^(flash|bootflash|harddisk):'
                     type: string
                   localPathSHA256:
                     description: |-
-                      LocalPathSHA256 optionally verifies the staged flash image before
-                      activation by reading it through gNOI File.Get and comparing the
-                      device-supplied SHA256. Strongly recommended for production LocalPath
-                      upgrades.
+                      LocalPathSHA256 optionally verifies the legacy LocalPath file before
+                      activation by reading it through gNOI File.Get. It does not cause the
+                      file to be registered in the install inventory.
+                      Deprecated: use DeviceFile.sha256 for device-file registration.
                     pattern: ^[a-f0-9]{64}$
                     type: string
+                  preinstalled:
+                    description: |-
+                      Preinstalled declares that TargetVersion is already registered in the
+                      device install inventory and should only be activated. The reconciler
+                      fails closed when it cannot confirm one exact activatable inventory
+                      entry; this intent never transfers or registers an image.
+                    type: object
                   sha256:
                     description: |-
                       SHA256 is the lowercase hex SHA-256 digest the reconciler asserts
@@ -131,11 +168,15 @@ spec:
                   urlSecretRef:
                     description: |-
                       URLSecretRef optionally names a Secret in the same namespace with
-                      transfer credentials. FTP may use username/password; SCP and SFTP
-                      may use username/password or username/privateKey/passphrase. SCP
-                      and SFTP host-key verification uses knownHosts or known_hosts from
-                      this Secret unless the URL query includes insecureSkipHostKey=true.
-                      URL-embedded userinfo takes precedence over Secret credentials.
+                      transfer credentials. To prevent credentials from being forwarded to an
+                      endpoint chosen only by the upgrade author, the Secret must carry label
+                      cisco.vk/purpose=software-image-source and data keys allowedScheme,
+                      allowedHost, and allowedPort matching the URL's canonical endpoint. FTP
+                      may use username/password; SCP and SFTP may use username/password or
+                      username/privateKey/passphrase. SCP and SFTP host-key verification uses
+                      knownHosts or known_hosts from this Secret unless the explicitly gated
+                      insecureSkipHostKey option is enabled. URLs containing user information
+                      are rejected; credentials must be supplied by an endpoint-bound Secret.
                     properties:
                       name:
                         default: ""
@@ -149,30 +190,72 @@ spec:
                     type: object
                     x-kubernetes-map-type: atomic
                 type: object
+                x-kubernetes-validations:
+                - message: exactly one of url, configMapRef, preinstalled, deviceFile,
+                    or localPath must be set
+                  rule: '(has(self.url) ? 1 : 0) + (has(self.configMapRef) ? 1 : 0)
+                    + (has(self.preinstalled) ? 1 : 0) + (has(self.deviceFile) ? 1
+                    : 0) + (has(self.localPath) ? 1 : 0) == 1'
+                - message: sha256 must be set if and only if url is set
+                  rule: has(self.url) == has(self.sha256)
+                - message: urlSecretRef may be set only when url is set
+                  rule: '!has(self.urlSecretRef) || has(self.url)'
+                - message: urlSecretRef.name must not be empty
+                  rule: '!has(self.urlSecretRef) || self.urlSecretRef.name.size()
+                    > 0'
+                - message: urlSecretRef is supported only for ftp, scp, or sftp URLs
+                  rule: '!has(self.urlSecretRef) || self.url.matches(''^(ftp|scp|sftp)://'')'
+                - message: url must not contain user information; use an endpoint-bound
+                    urlSecretRef
+                  rule: '!has(self.url) || !self.url.matches(''^(https?|tftp|ftp|scp|sftp)://[^/?#]*@'')'
+                - message: configMapRef.name must not be empty
+                  rule: '!has(self.configMapRef) || self.configMapRef.name.size()
+                    > 0'
+                - message: localPathSHA256 may be set only when localPath is set
+                  rule: '!has(self.localPathSHA256) || has(self.localPath)'
+              installTimeoutSeconds:
+                default: 3600
+                description: |-
+                  InstallTimeoutSeconds bounds two consecutive stages: first pre-install
+                  gNOI readiness, source resolution, and device-file hash verification;
+                  then, from the first OS.Install or native-registration claim, one shared
+                  deadline for every per-supervisor install or registration and inventory
+                  convergence. Default 3600.
+                format: int32
+                maximum: 86400
+                minimum: 60
+                type: integer
               maintenanceWindow:
                 description: |-
-                  MaintenanceWindow bounds when the reconciler will begin the
-                  Transferring phase. Outside the window, the CR sits in Pending
-                  without consuming device cycles.
+                  MaintenanceWindow gates the start of lifecycle work and every device
+                  mutation that has not yet been claimed. It cannot stop a mutation already
+                  submitted or in flight.
                 properties:
                   notAfter:
                     description: |-
-                      NotAfter is the latest time the reconciler may enter Resolving.
-                      Past this, the CR transitions to terminal Failed with reason
-                      MaintenanceWindowExpired.
+                      NotAfter is the latest time the reconciler may claim a new device mutation.
+                      Past this, the CR transitions to a terminal phase with reason
+                      MaintenanceWindowExpired unless a previously claimed mutation still needs
+                      read-only observation.
                     format: date-time
                     type: string
                   notBefore:
                     description: NotBefore is the earliest time the reconciler may
-                      enter Resolving.
+                      begin lifecycle work.
                     format: date-time
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: notBefore must be earlier than or equal to notAfter
+                  rule: '!has(self.notBefore) || !has(self.notAfter) || self.notBefore
+                    <= self.notAfter'
               maxRetries:
                 default: 3
                 description: |-
-                  MaxRetries caps the number of TransferInterrupted → Transferring
-                  retries before terminal Failed. Default 3.
+                  MaxRetries is retained for wire compatibility with earlier manifests.
+                  The current at-most-once reconciler never retries a device mutation based
+                  on this value.
+                  Deprecated: retained for storage compatibility; ignored by the reconciler.
                 format: int32
                 maximum: 10
                 minimum: 0
@@ -180,14 +263,21 @@ spec:
               rebootTimeoutSeconds:
                 default: 1800
                 description: |-
-                  RebootTimeoutSeconds caps how long the reconciler will wait in
-                  AwaitingReachability before declaring RebootTimeout. Default 1800.
+                  RebootTimeoutSeconds starts at the first activation claim and bounds the
+                  complete activation, reachability, and final-verification sequence. A
+                  rollback uses the same duration as an independent convergence deadline.
+                  Default 1800.
                 format: int32
+                maximum: 86400
                 minimum: 60
                 type: integer
               resumePolicy:
                 default: Retry
-                description: ResumePolicy controls how TransferInterrupted is handled.
+                description: |-
+                  ResumePolicy is retained for wire compatibility with earlier manifests.
+                  The current at-most-once reconciler never retries a device mutation based
+                  on this value.
+                  Deprecated: retained for storage compatibility; ignored by the reconciler.
                 enum:
                 - Retry
                 - Abort
@@ -203,7 +293,7 @@ spec:
                 default: Reload
                 description: |-
                   Strategy controls whether Activate performs the reload itself
-                  (default Reload), asserts an ISSU path, or stages without
+                  (default Reload), requests the currently unsupported ISSU strategy, or stages without
                   rebooting (NoReboot).
                 enum:
                 - Reload
@@ -229,6 +319,7 @@ spec:
                   aware comparison (Verify result == TargetVersion, or starts with
                   TargetVersion + "."), so operators may specify the shortest form
                   that's still unambiguous within the device's installed images.
+                maxLength: 128
                 pattern: ^[0-9]+(\.[0-9]+)+([a-z])?$
                 type: string
             required:
@@ -236,9 +327,18 @@ spec:
             - imageSource
             - targetVersion
             type: object
+            x-kubernetes-validations:
+            - message: IOSXESoftwareUpgrade spec is immutable after creation
+              rule: self == oldSelf
           status:
             description: IOSXESoftwareUpgradeStatus carries observed state.
             properties:
+              activationStartTime:
+                description: |-
+                  ActivationStartTime is when the first activation mutation was durably
+                  recorded. RebootTimeoutSeconds is measured from it.
+                format: date-time
+                type: string
               completionTime:
                 description: CompletionTime is when the reconciler entered a terminal
                   phase.
@@ -306,16 +406,57 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              executionModel:
+                description: |-
+                  ExecutionModel is persisted before this reconciler advances a new or
+                  safely adoptable workflow. Its absence on a released in-flight phase is
+                  treated as an unknown device outcome and is never replayed. Unknown
+                  non-empty values are preserved and fenced for controller downgrade safety.
+                type: string
               failureReason:
                 description: |-
                   FailureReason holds a short machine-readable reason on Failed /
                   PreflightFailed / ValidationFailed / RolledBack / RebootTimeout.
+                type: string
+              individualSupervisorInstall:
+                description: |-
+                  IndividualSupervisorInstall reports that gNOI requires the package to
+                  be installed separately on each supervisor.
+                type: boolean
+              installStartTime:
+                description: |-
+                  InstallStartTime is when the first image-install or device-file staging
+                  mutation was durably recorded. InstallTimeoutSeconds is measured from it.
+                format: date-time
+                type: string
+              inventoryState:
+                description: |-
+                  InventoryState is the normalized device install-inventory state most
+                  recently observed for TargetVersion.
+                enum:
+                - Absent
+                - Present
+                - Installed
+                - ProvisionedUncommitted
+                - ProvisionedCommitted
+                - InProgress
+                - Invalid
+                - Unknown
                 type: string
               message:
                 description: |-
                   Message is the human-readable status message. Mirrored on the
                   Ready condition.
                 type: string
+              noRebootActivationAccepted:
+                description: |-
+                  NoRebootActivationAccepted records an affirmative OS.Activate response
+                  for a NoReboot request so follow-up reachability checks can be retried
+                  without replaying the mutation.
+                type: boolean
               observedGeneration:
                 description: ObservedGeneration mirrors spec.generation that produced
                   this status.
@@ -323,23 +464,6 @@ spec:
                 type: integer
               phase:
                 description: Phase is the current state-machine position.
-                enum:
-                - Pending
-                - Resolving
-                - Transferring
-                - TransferInterrupted
-                - Validating
-                - Activating
-                - AwaitingReachability
-                - Verifying
-                - RollingBack
-                - Succeeded
-                - Failed
-                - PreflightFailed
-                - ValidationFailed
-                - RolledBack
-                - RebootTimeout
-                - Cancelled
                 type: string
               previousVersion:
                 description: |-
@@ -347,15 +471,92 @@ spec:
                   image activation. It is used as the rollback target when
                   RollbackOnFailure is enabled.
                 type: string
+              primarySupervisorActivationRequested:
+                description: |-
+                  PrimarySupervisorActivationRequested is a durable at-most-once marker set
+                  before OS.Activate targets the active/primary supervisor. It is also used
+                  for single-supervisor devices.
+                type: boolean
+              primarySupervisorInstallRequested:
+                description: |-
+                  PrimarySupervisorInstallRequested is a durable at-most-once marker set
+                  before opening OS.Install for the active/primary supervisor. It is also
+                  used for single-supervisor devices.
+                type: boolean
+              primarySupervisorInstalled:
+                description: |-
+                  PrimarySupervisorInstalled records successful installation on the
+                  primary supervisor for restart-safe dual-supervisor retries.
+                type: boolean
               retryCount:
-                description: RetryCount tracks TransferInterrupted retries.
+                description: |-
+                  RetryCount is retained for status wire compatibility with earlier
+                  controllers. It is not incremented or used by the current reconciler.
+                  Deprecated: retained for storage compatibility; ignored by the reconciler.
                 format: int32
                 type: integer
+              rollbackActivationRequested:
+                description: |-
+                  RollbackActivationRequested is a durable at-most-once marker set before
+                  OS.Activate targets PreviousVersion.
+                type: boolean
+              rollbackStartTime:
+                description: |-
+                  RollbackStartTime is when rollback recovery began. RebootTimeoutSeconds is
+                  measured independently from it and includes pre-activation reachability.
+                format: date-time
+                type: string
               runningVersion:
                 description: |-
                   RunningVersion is the device-reported running OS version after
                   Verifying.
                 type: string
+              sourceDigest:
+                description: |-
+                  SourceDigest is the algorithm-qualified content address of the image used
+                  by this operation (for example, "sha256:<64 lowercase hex characters>").
+                  It is persisted before a transfer or device-file staging side effect.
+                pattern: ^sha256:[a-f0-9]{64}$
+                type: string
+              sourceSize:
+                description: |-
+                  SourceSize is the verified byte count persisted with SourceDigest for URL
+                  and ConfigMap transfers. It remains zero for device-resident sources.
+                format: int64
+                minimum: 0
+                type: integer
+              stagingOperationID:
+                description: |-
+                  StagingOperationID is the durable correlation key for a platform-native
+                  device-file registration operation. It is persisted before submission;
+                  after an ambiguous response the reconciler observes but never replays it.
+                format: uuid
+                type: string
+              stagingRequested:
+                description: |-
+                  StagingRequested is a durable at-most-once marker set before the native
+                  device-file registration RPC is submitted.
+                type: boolean
+              standbySupervisorActivated:
+                description: |-
+                  StandbySupervisorActivated records that OS.Verify subsequently reported
+                  the standby supervisor ready on TargetVersion.
+                type: boolean
+              standbySupervisorActivationRequested:
+                description: |-
+                  StandbySupervisorActivationRequested is a durable at-most-once marker set
+                  before OS.Activate targets the standby supervisor.
+                type: boolean
+              standbySupervisorInstallRequested:
+                description: |-
+                  StandbySupervisorInstallRequested is a durable at-most-once marker set
+                  before opening OS.Install for the standby supervisor.
+                type: boolean
+              standbySupervisorInstalled:
+                description: |-
+                  StandbySupervisorInstalled records successful installation on the
+                  standby supervisor for restart-safe dual-supervisor retries.
+                type: boolean
               startTime:
                 description: StartTime is when the reconciler first transitioned out
                   of Pending.
@@ -364,7 +565,7 @@ spec:
               transferProgress:
                 description: |-
                   TransferProgress reports cumulative bytes uploaded during the
-                  Transferring phase. Cleared on Validated.
+                  Transferring phase. Preserved and marked complete after validation.
                 properties:
                   bytesTransferred:
                     format: int64
@@ -383,10 +584,10 @@ spec:
                 type: object
               validatedVersion:
                 description: |-
-                  ValidatedVersion is the exact device-reported OS version returned
-                  by gNOI OS.Install Validated. IOS XE may require this exact value
-                  on OS.Activate even when the requested TargetVersion is a shorter
-                  release prefix.
+                  ValidatedVersion is the exact device-reported OS version returned by
+                  gNOI OS.Install Validated or resolved from native install inventory.
+                  IOS XE may require this exact value on OS.Activate even when the
+                  requested TargetVersion is a shorter release prefix.
                 type: string
             type: object
         type: object

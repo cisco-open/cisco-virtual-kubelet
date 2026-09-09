@@ -154,6 +154,81 @@ func TestLoad_GNOITransportConfig(t *testing.T) {
 	}
 }
 
+func TestLoad_GNOIDedicatedTLS(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+	viper.Set("device", map[string]interface{}{
+		"driver":   "FAKE",
+		"address":  "192.0.2.10",
+		"username": "admin",
+		"tls": map[string]interface{}{
+			"enabled":            true,
+			"insecureSkipVerify": true,
+		},
+		"gnoi": map[string]interface{}{
+			"transportSecurity": "tls",
+			"tls": map[string]interface{}{
+				"caFile":   "/run/gnoi/ca.crt",
+				"certFile": "/run/gnoi/tls.crt",
+				"keyFile":  "/run/gnoi/tls.key",
+			},
+		},
+	})
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() failed: %v", err)
+	}
+	if got := cfg.Device.GNOI.TLS; got == nil || got.CAFile != "/run/gnoi/ca.crt" || got.CertFile != "/run/gnoi/tls.crt" || got.KeyFile != "/run/gnoi/tls.key" {
+		t.Fatalf("device.gnoi.tls=%+v, want dedicated verified TLS paths", got)
+	}
+}
+
+func TestLoadRejectsKubernetesGNOITLSSecretRef(t *testing.T) {
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+	viper.Set("device", map[string]interface{}{
+		"driver":   "FAKE",
+		"address":  "192.0.2.10",
+		"username": "admin",
+		"gnoi": map[string]interface{}{
+			"transportSecurity": "tls",
+			"tls": map[string]interface{}{
+				"secretRef": map[string]interface{}{"name": "router-gnoi-tls"},
+			},
+		},
+	})
+
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "secretRef is supported only in Kubernetes objects") {
+		t.Fatalf("Load() error=%v, want local Secret reference error", err)
+	}
+}
+
+func TestLoadRejectsSharedTLSControlsUnderGNOITLS(t *testing.T) {
+	for _, field := range []string{"enabled", "insecureSkipVerify"} {
+		t.Run(field, func(t *testing.T) {
+			viper.Reset()
+			t.Cleanup(viper.Reset)
+			viper.Set("device", map[string]interface{}{
+				"driver":   "FAKE",
+				"address":  "192.0.2.10",
+				"username": "admin",
+				"gnoi": map[string]interface{}{
+					"transportSecurity": "tls",
+					"tls": map[string]interface{}{
+						"caFile": "/run/gnoi/ca.crt",
+						field:    true,
+					},
+				},
+			})
+
+			if _, err := Load(); err == nil {
+				t.Fatalf("Load() accepted superfluous gnoi.tls.%s", field)
+			}
+		})
+	}
+}
+
 func TestLoad_RejectsGNOIProvisioningForOtherDrivers(t *testing.T) {
 	viper.Reset()
 	t.Cleanup(viper.Reset)
@@ -203,29 +278,73 @@ func TestLoadRejectsCertificateProvisioningAtGenericGNOIPath(t *testing.T) {
 	}
 }
 
-func TestValidateDeviceSpecRejectsUnverifiedGNOIProvisioning(t *testing.T) {
-	spec := &v1alpha1.DeviceSpec{
-		Driver: v1alpha1.DeviceDriverXE,
-		XE: &v1alpha1.XEConfig{
-			GNOI: &v1alpha1.XEGNOIConfig{
-				CertificateProvisioning: &v1alpha1.XEGNOICertificateProvisioning{
-					CertificateID:         "cvk-gnoi-os",
-					SecretRef:             v1alpha1.XEGNOIProvisioningSecretReference{Name: "router-gnoi-identity"},
-					ReplaceTargetCABundle: true,
-				},
+func TestValidateDeviceSpecGNOITrustSources(t *testing.T) {
+	provisioning := func() *v1alpha1.XEGNOIConfig {
+		return &v1alpha1.XEGNOIConfig{
+			CertificateProvisioning: &v1alpha1.XEGNOICertificateProvisioning{
+				CertificateID:         "cvk-gnoi-os",
+				SecretRef:             v1alpha1.XEGNOIProvisioningSecretReference{Name: "router-gnoi-identity"},
+				ReplaceTargetCABundle: true,
 			},
+		}
+	}
+	tests := []struct {
+		name             string
+		sharedTLS        *v1alpha1.TLSConfig
+		dedicatedTLS     *v1alpha1.GNOITLSConfig
+		xeGNOI           *v1alpha1.XEGNOIConfig
+		wantErrSubstring string
+	}{
+		{
+			name:      "verified shared TLS",
+			sharedTLS: &v1alpha1.TLSConfig{Enabled: true, CAFile: "/run/shared/ca.crt"},
 		},
-		TLS: &v1alpha1.TLSConfig{InsecureSkipVerify: true},
-		GNOI: &v1alpha1.GNOIConfig{
-			TransportSecurity: v1alpha1.GNOITransportSecurityTLS,
+		{
+			name:             "unverified shared TLS",
+			sharedTLS:        &v1alpha1.TLSConfig{Enabled: true, InsecureSkipVerify: true},
+			wantErrSubstring: "requires system or verified shared TLS",
+		},
+		{
+			name:         "dedicated TLS isolates unverified shared transport",
+			sharedTLS:    &v1alpha1.TLSConfig{Enabled: true, InsecureSkipVerify: true},
+			dedicatedTLS: &v1alpha1.GNOITLSConfig{CAFile: "/run/gnoi/ca.crt"},
+		},
+		{
+			name:      "provisioning derives verified trust",
+			sharedTLS: &v1alpha1.TLSConfig{Enabled: true, InsecureSkipVerify: true},
+			xeGNOI:    provisioning(),
+		},
+		{
+			name:             "dedicated TLS conflicts with provisioning trust",
+			sharedTLS:        &v1alpha1.TLSConfig{Enabled: true, InsecureSkipVerify: true},
+			dedicatedTLS:     &v1alpha1.GNOITLSConfig{CAFile: "/run/gnoi/ca.crt"},
+			xeGNOI:           provisioning(),
+			wantErrSubstring: "cannot both be configured",
 		},
 	}
-	if err := validateDeviceSpec(spec); err == nil || !strings.Contains(err.Error(), "requires verified TLS") {
-		t.Fatalf("validateDeviceSpec() error=%v, want verified TLS error", err)
-	}
-	spec.GNOI.TLS = &v1alpha1.TLSConfig{}
-	if err := validateDeviceSpec(spec); err != nil {
-		t.Fatalf("validateDeviceSpec() with gnoi.tls override error=%v", err)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := &v1alpha1.DeviceSpec{
+				Driver: v1alpha1.DeviceDriverXE,
+				XE:     &v1alpha1.XEConfig{GNOI: tt.xeGNOI},
+				TLS:    tt.sharedTLS,
+				GNOI: &v1alpha1.GNOIConfig{
+					TransportSecurity: v1alpha1.GNOITransportSecurityTLS,
+					TLS:               tt.dedicatedTLS,
+				},
+			}
+			err := validateDeviceSpec(spec)
+			if tt.wantErrSubstring == "" {
+				if err != nil {
+					t.Fatalf("validateDeviceSpec() error=%v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantErrSubstring) {
+				t.Fatalf("validateDeviceSpec() error=%v, want substring %q", err, tt.wantErrSubstring)
+			}
+		})
 	}
 }
 

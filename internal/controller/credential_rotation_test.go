@@ -145,11 +145,7 @@ func TestReconcile_GNOIProvisioningAnnotationRollsOnSecretRotation(t *testing.T)
 			Namespace:       "default",
 			ResourceVersion: "1",
 		},
-		Data: map[string][]byte{
-			"tls.crt": []byte("leaf-v1"),
-			"ca.crt":  []byte("ca-v1"),
-			"ca.key":  []byte("key-v1"),
-		},
+		Data: validGNOIProvisioningSecretData(t, dev.Spec.Address),
 	}
 	r := reconcilerFor(t, dev, sec)
 	ctx := context.Background()
@@ -170,7 +166,7 @@ func TestReconcile_GNOIProvisioningAnnotationRollsOnSecretRotation(t *testing.T)
 	if err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: sec.Name}, &current); err != nil {
 		t.Fatalf("Get Secret: %v", err)
 	}
-	current.Data["tls.crt"] = []byte("leaf-v2-rotated")
+	current.Data = validGNOIProvisioningSecretData(t, dev.Spec.Address)
 	if err := r.Update(ctx, &current); err != nil {
 		t.Fatalf("Update Secret: %v", err)
 	}

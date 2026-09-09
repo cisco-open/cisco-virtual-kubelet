@@ -236,9 +236,10 @@ func (p *Provisioner) ConfiguredIntent() (certificateID, publicMaterialSHA256 st
 }
 
 // ProvisionGNOICertificate checks for a conflicting existing identity, submits
-// at most one create-only certificate installation, and reconnects until both
-// Cert.GetCertificates and OS.Verify prove that IOS XE is provisioned. Install
-// is never retried because a transport error may follow a committed Load.
+// at most one create-only certificate installation, and reconnects until the
+// installed certificate is the fresh connection's TLS peer identity and
+// OS.Verify proves that IOS XE is provisioned. Install is never retried because
+// a transport error may follow a committed Load.
 func (p *Provisioner) ProvisionGNOICertificate(ctx context.Context, client *gnoi.Client) (certificateID, version string, err error) {
 	if p == nil || p.provider == nil || p.bundle == nil || p.signer == nil {
 		return "", "", fmt.Errorf("gnoi certificate provisioning is not configured")
@@ -265,7 +266,7 @@ func (p *Provisioner) ProvisionGNOICertificate(ctx context.Context, client *gnoi
 
 	// Hold a lifecycle read lock for the complete CSR/Load transaction. A
 	// software-operation reset may wait, but it cannot invalidate the stream
-	// after the one-shot signer has consumed its key.
+	// after the target has generated its private key and CSR.
 	provisioningCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	p.provider.lifecycleMu.RLock()
@@ -287,7 +288,7 @@ func (p *Provisioner) ProvisionGNOICertificate(ctx context.Context, client *gnoi
 		return "", "", fmt.Errorf("install IOS XE provisioning certificate: %w", installErr)
 	}
 
-	version, verifyErr := p.waitUntilProvisioned(provisioningCtx, installedFn)
+	version, verifyErr := p.waitUntilProvisioned(provisioningCtx)
 	if verifyErr == nil {
 		return p.bundle.CertificateID(), version, nil
 	}
@@ -311,7 +312,6 @@ func (p *Provisioner) ProvisionGNOICertificate(ctx context.Context, client *gnoi
 
 func (p *Provisioner) waitUntilProvisioned(
 	ctx context.Context,
-	installedFn func(context.Context, *gnoi.Client, *gnoi.ProvisioningBundle) (bool, error),
 ) (string, error) {
 	clientFn := p.clientForVerification
 	if clientFn == nil {
@@ -320,15 +320,7 @@ func (p *Provisioner) waitUntilProvisioned(
 	readyFn := p.provisioningReady
 	if readyFn == nil {
 		readyFn = func(ctx context.Context, client *gnoi.Client, bundle *gnoi.ProvisioningBundle) (string, bool, error) {
-			installed, err := installedFn(ctx, client, bundle)
-			if err != nil || !installed {
-				return "", false, err
-			}
-			verified, err := client.Verify(ctx)
-			if err != nil {
-				return "", false, err
-			}
-			return verified.Version, true, nil
+			return client.VerifyProvisioningReadiness(ctx, bundle)
 		}
 	}
 	interval := p.retryInterval
@@ -348,7 +340,7 @@ func (p *Provisioner) waitUntilProvisioned(
 				return version, nil
 			}
 			if err == nil {
-				lastErr = fmt.Errorf("provisioning certificate %q is not visible on the target", p.bundle.CertificateID())
+				lastErr = fmt.Errorf("provisioning certificate %q is not the active gNXI TLS peer identity", p.bundle.CertificateID())
 			} else {
 				lastErr = err
 			}

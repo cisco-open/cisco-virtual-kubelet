@@ -40,8 +40,12 @@ import (
 	"time"
 
 	certpb "github.com/openconfig/gnoi/cert"
+	ospb "github.com/openconfig/gnoi/os"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 const (
@@ -637,6 +641,103 @@ func TestProvisioning(t *testing.T) {
 	})
 }
 
+func TestProvisioningCertificateActiveRequiresInventoryAndTLSPeerMatch(t *testing.T) {
+	pki := newProvisioningTestPKI(t, provisioningTestServerName)
+	bundle := mustProvisioningBundle(t, pki, pki.caBundlePEM)
+	targetKey := mustRSAKey(t, iosXEProvisioningRSAKeyBits)
+	issuedPEM := mustSignCSR(t, bundle, pki.intermediateKey, targetKey, &x509.CertificateRequest{})
+	issued, err := parseSingleCertificatePEM(issuedPEM, "issued certificate")
+	if err != nil {
+		t.Fatalf("parse issued certificate: %v", err)
+	}
+
+	t.Run("matching installed certificate is active", func(t *testing.T) {
+		client, osServer := newProvisioningTLSClient(t, pki, issued, targetKey, certificateInventory("cvk-gnoi", issuedPEM))
+		version, ready, err := client.VerifyProvisioningReadiness(context.Background(), bundle)
+		if err != nil || !ready || version != "17.18.04" {
+			t.Fatalf("VerifyProvisioningReadiness()=(%q, %v, %v), want 17.18.04, true, nil", version, ready, err)
+		}
+		if calls := osServer.verifyCalls.Load(); calls != 1 {
+			t.Fatalf("OS.Verify calls=%d, want 1 after TLS identity match", calls)
+		}
+	})
+
+	t.Run("different valid TLS identity is not active", func(t *testing.T) {
+		client, osServer := newProvisioningTLSClient(t, pki, pki.leaf, pki.leafKey, certificateInventory("cvk-gnoi", issuedPEM))
+		version, ready, err := client.VerifyProvisioningReadiness(context.Background(), bundle)
+		if err != nil || ready || version != "" {
+			t.Fatalf("VerifyProvisioningReadiness()=(%q, %v, %v), want empty, false, nil", version, ready, err)
+		}
+		if calls := osServer.verifyCalls.Load(); calls != 0 {
+			t.Fatalf("OS.Verify calls=%d, want 0 before TLS identity match", calls)
+		}
+	})
+
+	t.Run("missing inventory remains not active", func(t *testing.T) {
+		client, _ := newProvisioningTLSClient(t, pki, issued, targetKey, &certpb.GetCertificatesResponse{})
+		_, active, err := client.activeProvisioningCertificate(context.Background(), bundle)
+		if err != nil || active {
+			t.Fatalf("activeProvisioningCertificate()=(%v, %v), want false, nil", active, err)
+		}
+	})
+
+	t.Run("missing TLS peer fails closed", func(t *testing.T) {
+		ts := newTestServer(t)
+		ts.Cert.getResp = certificateInventory("cvk-gnoi", issuedPEM)
+		_, active, err := ts.client(t).activeProvisioningCertificate(context.Background(), bundle)
+		if err == nil || active || !strings.Contains(err.Error(), "authenticated TLS peer information is unavailable") {
+			t.Fatalf("activeProvisioningCertificate()=(%v, %v), want unavailable TLS peer error", active, err)
+		}
+	})
+}
+
+func newProvisioningTLSClient(
+	t *testing.T,
+	pki *provisioningTestPKI,
+	serverLeaf *x509.Certificate,
+	serverKey *rsa.PrivateKey,
+	inventory *certpb.GetCertificatesResponse,
+) (*Client, *fakeOS) {
+	t.Helper()
+	lis := bufconn.Listen(1 << 20)
+	serverTLS := &tls.Config{
+		Certificates: []tls.Certificate{{
+			Certificate: [][]byte{serverLeaf.Raw, pki.intermediate.Raw},
+			PrivateKey:  serverKey,
+		}},
+		MinVersion: tls.VersionTLS12,
+	}
+	server := grpc.NewServer(grpc.Creds(credentials.NewTLS(serverTLS)))
+	certpb.RegisterCertificateManagementServer(server, &fakeCert{getResp: inventory})
+	osServer := &fakeOS{verifyResp: &ospb.VerifyResponse{Version: "17.18.04"}}
+	ospb.RegisterOSServer(server, osServer)
+	go func() { _ = server.Serve(lis) }()
+	t.Cleanup(server.Stop)
+
+	roots := x509.NewCertPool()
+	roots.AddCert(pki.root)
+	conn, err := grpc.NewClient(
+		"passthrough:///provisioning-tls-test",
+		grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
+			RootCAs:    roots,
+			ServerName: provisioningTestServerName,
+			MinVersion: tls.VersionTLS12,
+		})),
+		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
+			return lis.DialContext(ctx)
+		}),
+	)
+	if err != nil {
+		t.Fatalf("dial provisioning TLS server: %v", err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	client, err := New(conn, Options{})
+	if err != nil {
+		t.Fatalf("New provisioning TLS client: %v", err)
+	}
+	return client, osServer
+}
+
 func TestProvisioningClientTLSBootstrapTransition(t *testing.T) {
 	pki := newProvisioningTestPKI(t, provisioningTestServerName)
 	bootstrapPKI := newProvisioningTestPKI(t, "bootstrap.invalid")
@@ -707,11 +808,14 @@ func TestProvisioningClientTLSRejectsInvalidBootstrap(t *testing.T) {
 	}
 }
 
-func TestProvisioningSignerIsOneShotUnderConcurrency(t *testing.T) {
+func TestProvisioningSignerCanRetryBeforeLoad(t *testing.T) {
 	pki := newProvisioningTestPKI(t, provisioningTestServerName)
 	bundle := mustProvisioningBundle(t, pki, pki.caBundlePEM)
 	signer := mustLocalCertificateSigner(t, bundle, pki.caKeyPEM)
 	csr := certificateRequestPEM(t, mustRSAKey(t, iosXEProvisioningRSAKeyBits), &x509.CertificateRequest{})
+	if _, err := signer.SignCSR(context.Background(), []byte("malformed CSR")); err == nil {
+		t.Fatal("SignCSR accepted malformed CSR")
+	}
 
 	const callers = 16
 	start := make(chan struct{})
@@ -729,18 +833,10 @@ func TestProvisioningSignerIsOneShotUnderConcurrency(t *testing.T) {
 	close(start)
 	wg.Wait()
 	close(results)
-	signed := 0
 	for err := range results {
-		if err == nil {
-			signed++
-			continue
+		if err != nil {
+			t.Errorf("SignCSR after definitive local failure: %v", err)
 		}
-		if !strings.Contains(err.Error(), "only once") {
-			t.Errorf("SignCSR: %v", err)
-		}
-	}
-	if signed != 1 {
-		t.Fatalf("successful signatures=%d, want exactly 1", signed)
 	}
 }
 

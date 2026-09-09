@@ -145,20 +145,18 @@ spec:
             {{- if .Values.gnoi.enableSoftwareUpgrade }}
             - name: CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE
               value: "1"
+            - name: CISCO_VK_UPGRADE_MAX_IMAGE_BYTES
+              value: {{ .Values.gnoi.softwareUpgrade.maxImageBytes | int64 | quote }}
             {{- end }}
             {{- if .Values.gnoi.enableWriteClass }}
             - name: CISCO_VK_ENABLE_WRITE_CLASS_GNOI
               value: "1"
             {{- end }}
             {{- if .Values.config.leaseNamespace }}
-            # Shared cluster namespace for the per-(device,family)
-            # arbitration leases. When set, every cisco-vk pod the
-            # controller spawns inherits this value via downward
-            # propagation, so IOSXEConfig CRs in different tenant
-            # namespaces actually arbitrate against each other for
-            # the same device+family. Leave unset to keep historical
-            # per-pod-namespace behaviour (no cross-namespace
-            # arbitration).
+            # Shared cluster namespace for per-(device,family) config and
+            # disruptive-mutation arbitration leases. Every spawned cisco-vk
+            # pod inherits it; device identity remains namespaced. Leave unset
+            # to store leases in the worker's pod/device namespace.
             - name: CONFIG_LEASE_NAMESPACE
               value: {{ .Values.config.leaseNamespace | quote }}
             {{- end }}

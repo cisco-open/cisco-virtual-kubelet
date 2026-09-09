@@ -55,6 +55,7 @@ spec:
             type: object
           spec:
             description: |-
+              DeviceSpec defines the desired state of a Cisco device.
               Shared fields are common to all drivers; driver-specific configuration lives
               under the corresponding driver section (XE, XR, etc.).
             properties:
@@ -151,30 +152,53 @@ spec:
                     type: integer
                   tls:
                     description: |-
-                      TLS overrides the shared DeviceSpec TLS settings for the gNOI connection
-                      only. Use this when RESTCONF must retain different TLS behavior from
-                      secure gNOI, for example while bootstrapping gNOI with bootstrap.crt and a
-                      dedicated CA bundle.
+                      TLS supplies verified trust for the gNOI connection independently from
+                      DeviceSpec.TLS. Kubernetes objects use SecretRef; local YAML uses CAFile
+                      and may include a CertFile/KeyFile client pair. It cannot be combined with
+                      driver-specific certificate provisioning, which derives its own trust.
                     properties:
                       caFile:
-                        description: CAFile is the path to the CA certificate file.
+                        description: |-
+                          CAFile is the local path to the PEM CA bundle used to verify the gNOI
+                          server. It is required in local YAML and forbidden in Kubernetes objects.
                         type: string
                       certFile:
-                        description: CertFile is the path to the client certificate
-                          file.
+                        description: |-
+                          CertFile is the optional local path to a PEM client certificate. It must
+                          be configured together with KeyFile and is forbidden in Kubernetes objects.
                         type: string
-                      enabled:
-                        description: Enabled toggles TLS for device communication.
-                        type: boolean
-                      insecureSkipVerify:
-                        description: InsecureSkipVerify disables TLS certificate verification.
-                        type: boolean
                       keyFile:
-                        description: KeyFile is the path to the client key file.
+                        description: |-
+                          KeyFile is the optional local path to the client certificate private key.
+                          It must be configured together with CertFile and is forbidden in
+                          Kubernetes objects.
                         type: string
+                      secretRef:
+                        description: |-
+                          SecretRef names a Secret in the CiscoDevice namespace. ca.crt is required;
+                          tls.crt and tls.key may both be provided for mutual TLS. The controller
+                          projects only these recognized keys and does not copy their contents into
+                          the device ConfigMap. SecretRef is required in Kubernetes objects and is
+                          rejected in local YAML. A valid Secret change rolls the worker so new gNOI
+                          connections load it when gNOI and per-device topology are enabled.
+                        properties:
+                          name:
+                            description: Name is the DNS-subdomain name of the gNOI
+                              TLS Secret.
+                            maxLength: 253
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                        required:
+                        - name
+                        type: object
                     required:
-                    - enabled
+                    - secretRef
                     type: object
+                    x-kubernetes-validations:
+                    - message: caFile, certFile, and keyFile are local-only and cannot
+                        be set in a Kubernetes object
+                      rule: '!has(self.caFile) && !has(self.certFile) && !has(self.keyFile)'
                   transportSecurity:
                     default: auto
                     description: |-
@@ -425,10 +449,12 @@ spec:
                     properties:
                       certificateProvisioning:
                         description: |-
-                          CertificateProvisioning supplies the gNOI-only trust and signing material
-                          used by an explicit ProvisionCertificate IOSXEOperationalAction. OS.Verify
-                          remains read-only. The referenced Secret is mounted only into this device's
-                          VK pod; certificate material is never copied into its ConfigMap.
+                          CertificateProvisioning supplies CVK-side dedicated gNOI trust and the
+                          signing material used by an explicit ProvisionCertificate
+                          IOSXEOperationalAction. OS.Verify remains read-only. The manager reads the
+                          referenced Secret to reconcile a projection only into this device's VK pod;
+                          certificate material is never copied into its ConfigMap. IOS-XE may share
+                          the installed identity and CA bundle with gNMI.
                         properties:
                           certificateID:
                             description: |-
@@ -449,9 +475,13 @@ spec:
                             description: |-
                               SecretRef names a Secret in the CiscoDevice namespace. tls.crt and ca.crt
                               are required. Optional bootstrap.crt pins the current IOS-XE TLS leaf;
-                              optional ca.key signs one target-generated CSR and must match tls.crt's
-                              dedicated intermediate issuer. ca.crt is the complete desired target CA
+                              optional ca.key authorizes the local signer and must match tls.crt's
+                              dedicated intermediate issuer. The signer may handle a corrected immutable
+                              action after a definitive pre-Install failure, while each network Install is
+                              still submitted at most once. ca.crt is the complete desired target CA
                               replacement bundle. The worker receives only recognized keys read-only.
+                              When gNOI and per-device topology are enabled, a Secret change rolls the
+                              worker but never rotates an installed device identity.
                             properties:
                               name:
                                 description: Name is the DNS-subdomain name of the
@@ -599,11 +629,19 @@ spec:
               rule: '!has(self.xe) || !has(self.xe.gnoi) || !has(self.xe.gnoi.certificateProvisioning)
                 || (has(self.gnoi) && has(self.gnoi.transportSecurity) && self.gnoi.transportSecurity
                 == ''tls'')'
-            - message: explicit secure gNOI requires verified TLS unless gnoi.tls
-                supplies gNOI-specific trust
+            - message: spec.gnoi.tls requires spec.gnoi.transportSecurity to be tls
+              rule: '!has(self.gnoi) || !has(self.gnoi.tls) || (has(self.gnoi.transportSecurity)
+                && self.gnoi.transportSecurity == ''tls'')'
+            - message: spec.gnoi.tls and spec.xe.gnoi.certificateProvisioning cannot
+                both be configured
+              rule: '!has(self.gnoi) || !has(self.gnoi.tls) || !has(self.xe) || !has(self.xe.gnoi)
+                || !has(self.xe.gnoi.certificateProvisioning)'
+            - message: explicit secure gNOI requires system or verified shared TLS,
+                spec.gnoi.tls, or IOS XE certificate provisioning trust
               rule: '!has(self.gnoi) || !has(self.gnoi.transportSecurity) || self.gnoi.transportSecurity
-                != ''tls'' || has(self.gnoi.tls) || !has(self.tls) || !has(self.tls.insecureSkipVerify)
-                || !self.tls.insecureSkipVerify'
+                != ''tls'' || has(self.gnoi.tls) || (has(self.xe) && has(self.xe.gnoi)
+                && has(self.xe.gnoi.certificateProvisioning)) || !has(self.tls) ||
+                !has(self.tls.insecureSkipVerify) || !self.tls.insecureSkipVerify'
           status:
             description: DeviceStatus defines the observed state of a CiscoDevice.
             properties:

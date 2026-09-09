@@ -62,61 +62,316 @@ func TestSetupGNOIPropagatesTLSConfigError(t *testing.T) {
 	}
 }
 
-func TestGNOIDialConfigAttachesCredentialsOnlyToTLS(t *testing.T) {
+func TestResolveGNOIConfigTransportTrustAndAuthentication(t *testing.T) {
 	tests := []struct {
-		name        string
-		tlsEnabled  bool
-		username    string
-		password    string
-		skipVerify  bool
-		gnoiTLS     *ciskov1.TLSConfig
-		explicitTLS bool
-		wantTLS     bool
-		wantRPCAuth bool
-		wantBasic   bool
-		wantErr     string
+		name            string
+		spec            *ciskov1.DeviceSpec
+		password        string
+		forceInsecure   bool
+		wantPort        int
+		wantTLS         bool
+		wantRPCAuth     bool
+		wantLegacyBasic bool
+		wantTrust       gnoiTrustSource
+		wantErr         string
 	}{
-		{name: "explicit secure TLS with credentials", tlsEnabled: true, explicitTLS: true, username: "admin", password: "s3cret", wantTLS: true, wantRPCAuth: true},
-		{name: "legacy TLS keeps context auth", tlsEnabled: true, username: "admin", password: "s3cret", wantTLS: true, wantBasic: true},
-		{name: "legacy TLS without username", tlsEnabled: true, password: "s3cret", wantTLS: true},
-		{name: "explicit TLS without username", tlsEnabled: true, explicitTLS: true, password: "s3cret", wantErr: "requires both username and password"},
-		{name: "explicit TLS without password", tlsEnabled: true, explicitTLS: true, username: "admin", wantErr: "requires both username and password"},
-		{name: "explicit TLS without password authentication", tlsEnabled: true, explicitTLS: true, wantTLS: true},
-		{name: "unverified explicit TLS with credentials", tlsEnabled: true, explicitTLS: true, username: "admin", password: "s3cret", skipVerify: true, wantErr: "verified TLS is required"},
-		{name: "unverified explicit TLS without credentials", tlsEnabled: true, explicitTLS: true, skipVerify: true, wantErr: "verified TLS is required"},
-		{name: "RESTCONF can be unverified when gNOI TLS override is verified", tlsEnabled: true, explicitTLS: true, username: "admin", password: "s3cret", skipVerify: true, gnoiTLS: &ciskov1.TLSConfig{}, wantTLS: true, wantRPCAuth: true},
-		{name: "plaintext with credentials", username: "admin", password: "s3cret", wantBasic: true},
+		{
+			name:            "legacy plaintext and Basic metadata remain unchanged",
+			spec:            &ciskov1.DeviceSpec{Address: "192.0.2.1", Port: 443, Username: "admin"},
+			password:        "secret",
+			wantPort:        50052,
+			wantLegacyBasic: true,
+			wantTrust:       gnoiTrustSourcePlaintext,
+		},
+		{
+			name: "legacy shared unverified TLS remains unchanged",
+			spec: &ciskov1.DeviceSpec{
+				Address: "192.0.2.1", Port: 443, Username: "admin",
+				TLS: &ciskov1.TLSConfig{Enabled: true, InsecureSkipVerify: true}, //nolint:gosec // verifies legacy compatibility
+			},
+			password:        "secret",
+			wantPort:        9339,
+			wantTLS:         true,
+			wantLegacyBasic: true,
+			wantTrust:       gnoiTrustSourceLegacyShared,
+		},
+		{
+			name: "explicit TLS uses verified shared trust and per-RPC credentials",
+			spec: &ciskov1.DeviceSpec{
+				Driver: ciskov1.DeviceDriverXE, Address: "192.0.2.1", Port: 10443, Username: "admin",
+				TLS:  &ciskov1.TLSConfig{Enabled: true},
+				GNOI: &ciskov1.GNOIConfig{TransportSecurity: ciskov1.GNOITransportSecurityTLS},
+			},
+			password:    "secret",
+			wantPort:    9339,
+			wantTLS:     true,
+			wantRPCAuth: true,
+			wantTrust:   gnoiTrustSourceSystem,
+		},
+		{
+			name: "non-XE explicit TLS without password authentication remains verified",
+			spec: &ciskov1.DeviceSpec{
+				Driver:  ciskov1.DeviceDriverNXOS,
+				Address: "192.0.2.1",
+				GNOI:    &ciskov1.GNOIConfig{TransportSecurity: ciskov1.GNOITransportSecurityTLS},
+			},
+			wantPort:  9339,
+			wantTLS:   true,
+			wantTrust: gnoiTrustSourceSystem,
+		},
+		{
+			name: "non-XE explicit TLS rejects IOS XE password metadata",
+			spec: &ciskov1.DeviceSpec{
+				Driver: ciskov1.DeviceDriverNXOS, Address: "192.0.2.1", Username: "admin",
+				GNOI: &ciskov1.GNOIConfig{TransportSecurity: ciskov1.GNOITransportSecurityTLS},
+			},
+			password: "secret",
+			wantErr:  "password authentication is supported only for driver XE",
+		},
+		{
+			name: "non-XE explicit TLS rejects IOS XE certificate provisioning",
+			spec: &ciskov1.DeviceSpec{
+				Driver:  ciskov1.DeviceDriverNXOS,
+				Address: "192.0.2.1",
+				GNOI:    &ciskov1.GNOIConfig{TransportSecurity: ciskov1.GNOITransportSecurityTLS},
+				XE: &ciskov1.XEConfig{GNOI: &ciskov1.XEGNOIConfig{
+					CertificateProvisioning: &ciskov1.XEGNOICertificateProvisioning{
+						CertificateID:         "cvk-gnoi",
+						SecretRef:             ciskov1.XEGNOIProvisioningSecretReference{Name: "gnoi-provisioning"},
+						ReplaceTargetCABundle: true,
+					},
+				}},
+			},
+			wantErr: "certificate provisioning is supported only for driver XE",
+		},
+		{
+			name: "explicit TLS rejects inherited unverified shared trust",
+			spec: &ciskov1.DeviceSpec{
+				Driver: ciskov1.DeviceDriverXE, Address: "192.0.2.1", Username: "admin",
+				TLS:  &ciskov1.TLSConfig{InsecureSkipVerify: true}, //nolint:gosec // verifies fail-closed behavior
+				GNOI: &ciskov1.GNOIConfig{TransportSecurity: ciskov1.GNOITransportSecurityTLS},
+			},
+			password: "secret",
+			wantErr:  "cannot be inherited",
+		},
+		{
+			name: "explicit TLS rejects incomplete password authentication",
+			spec: &ciskov1.DeviceSpec{
+				Driver: ciskov1.DeviceDriverXE, Address: "192.0.2.1", Username: "admin",
+				GNOI: &ciskov1.GNOIConfig{TransportSecurity: ciskov1.GNOITransportSecurityTLS},
+			},
+			wantErr: "requires both username and password",
+		},
+		{
+			name: "insecure environment cannot override explicit TLS",
+			spec: &ciskov1.DeviceSpec{
+				Address: "192.0.2.1",
+				GNOI:    &ciskov1.GNOIConfig{TransportSecurity: ciskov1.GNOITransportSecurityTLS},
+			},
+			forceInsecure: true,
+			wantErr:       "cannot override explicit",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			spec := &ciskov1.DeviceSpec{
-				Username: tt.username,
-				TLS:      &ciskov1.TLSConfig{InsecureSkipVerify: tt.skipVerify},
-			}
-			if tt.explicitTLS {
-				spec.GNOI = &ciskov1.GNOIConfig{TransportSecurity: ciskov1.GNOITransportSecurityTLS, TLS: tt.gnoiTLS}
-			}
-			cfg, err := gnoiDialConfig(spec, tt.password, tt.tlsEnabled)
+			t.Setenv(gNOIPortEnv, "")
+			resolved, err := resolveGNOIConfig(tt.spec, tt.password, tt.forceInsecure, t.TempDir(), false)
 			if tt.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
-					t.Fatalf("gnoiDialConfig error=%v, want %q", err, tt.wantErr)
+					t.Fatalf("resolveGNOIConfig error=%v, want %q", err, tt.wantErr)
 				}
 				return
 			}
 			if err != nil {
-				t.Fatalf("gnoiDialConfig: %v", err)
+				t.Fatalf("resolveGNOIConfig: %v", err)
 			}
-			if got := cfg.TLSConfig != nil; got != tt.wantTLS {
+			if resolved.port != tt.wantPort {
+				t.Errorf("port=%d, want %d", resolved.port, tt.wantPort)
+			}
+			if got := resolved.dialConfig.TLSConfig != nil; got != tt.wantTLS {
 				t.Errorf("TLSConfig present=%v, want %v", got, tt.wantTLS)
 			}
-			if got := cfg.RPCCredentials != nil; got != tt.wantRPCAuth {
+			if got := resolved.dialConfig.RPCCredentials != nil; got != tt.wantRPCAuth {
 				t.Errorf("RPCCredentials present=%v, want %v", got, tt.wantRPCAuth)
 			}
-			if got := cfg.Username != ""; got != tt.wantBasic {
-				t.Errorf("legacy Basic credentials present=%v, want %v", got, tt.wantBasic)
+			if got := resolved.dialConfig.Username != ""; got != tt.wantLegacyBasic {
+				t.Errorf("legacy Basic credentials present=%v, want %v", got, tt.wantLegacyBasic)
+			}
+			wantAuthMode := "none"
+			if tt.wantRPCAuth {
+				wantAuthMode = "iosxe-password-metadata"
+			} else if tt.wantLegacyBasic {
+				wantAuthMode = "legacy-basic"
+			}
+			if got := resolved.authMode(); got != wantAuthMode {
+				t.Errorf("authMode=%q, want %q", got, wantAuthMode)
+			}
+			if resolved.trustSource != tt.wantTrust {
+				t.Errorf("trustSource=%q, want %q", resolved.trustSource, tt.wantTrust)
 			}
 		})
+	}
+}
+
+func TestResolveGNOIConfigDedicatedTrustIsIsolatedFromSharedTLS(t *testing.T) {
+	t.Setenv(gNOIPortEnv, "")
+	directory, _ := writeGNOIProvisioningFiles(t, "192.0.2.1")
+	spec := &ciskov1.DeviceSpec{
+		Driver:   ciskov1.DeviceDriverXE,
+		Address:  "192.0.2.1",
+		Username: "admin",
+		TLS: &ciskov1.TLSConfig{
+			Enabled:            true,
+			InsecureSkipVerify: true, //nolint:gosec // verifies isolation from the legacy RESTCONF setting
+		},
+		GNOI: &ciskov1.GNOIConfig{
+			TransportSecurity: ciskov1.GNOITransportSecurityTLS,
+			TLS: &ciskov1.GNOITLSConfig{
+				CAFile: filepath.Join(directory, gNOIProvisioningCAFile),
+			},
+		},
+	}
+
+	resolved, err := resolveGNOIConfig(spec, "secret", false, t.TempDir(), false)
+	if err != nil {
+		t.Fatalf("resolveGNOIConfig: %v", err)
+	}
+	if resolved.trustSource != gnoiTrustSourceDedicated {
+		t.Errorf("trustSource=%q, want %q", resolved.trustSource, gnoiTrustSourceDedicated)
+	}
+	if resolved.dialConfig.TLSConfig == nil || resolved.dialConfig.TLSConfig.RootCAs == nil {
+		t.Fatal("dedicated gNOI CA roots were not loaded")
+	}
+	if resolved.dialConfig.TLSConfig.InsecureSkipVerify {
+		t.Fatal("dedicated gNOI TLS inherited insecureSkipVerify from shared TLS")
+	}
+	if resolved.dialConfig.RPCCredentials == nil || resolved.dialConfig.Username != "" {
+		t.Fatal("explicit secure gNOI did not exclusively use per-RPC credentials")
+	}
+
+	spec.GNOI.TLS = nil
+	spec.TLS.InsecureSkipVerify = false
+	spec.TLS.CAFile = filepath.Join(directory, gNOIProvisioningCAFile)
+	resolved, err = resolveGNOIConfig(spec, "secret", false, t.TempDir(), false)
+	if err != nil {
+		t.Fatalf("resolve shared verified gNOI trust: %v", err)
+	}
+	if resolved.trustSource != gnoiTrustSourceShared {
+		t.Errorf("shared trustSource=%q, want %q", resolved.trustSource, gnoiTrustSourceShared)
+	}
+}
+
+func TestResolveGNOIConfigRejectsInvalidOrConflictingTrust(t *testing.T) {
+	t.Setenv(gNOIPortEnv, "")
+	validDirectory, _ := writeGNOIProvisioningFiles(t, "192.0.2.1")
+	validCA := filepath.Join(validDirectory, gNOIProvisioningCAFile)
+	tests := []struct {
+		name    string
+		config  *ciskov1.GNOITLSConfig
+		mutate  func(*ciskov1.DeviceSpec)
+		wantErr string
+	}{
+		{
+			name:    "auto transport with override",
+			config:  &ciskov1.GNOITLSConfig{CAFile: validCA},
+			wantErr: "requires transportSecurity to be tls",
+		},
+		{
+			name:    "missing CA file",
+			config:  &ciskov1.GNOITLSConfig{CAFile: filepath.Join(t.TempDir(), "missing-ca.pem")},
+			wantErr: "failed to read CA certificate",
+		},
+		{
+			name:    "missing CA setting",
+			config:  &ciskov1.GNOITLSConfig{},
+			wantErr: "caFile is required",
+		},
+		{
+			name:    "client certificate without key",
+			config:  &ciskov1.GNOITLSConfig{CAFile: validCA, CertFile: "client.crt"},
+			wantErr: "certFile and keyFile must be configured together",
+		},
+		{
+			name:    "client key without certificate",
+			config:  &ciskov1.GNOITLSConfig{CAFile: validCA, KeyFile: "client.key"},
+			wantErr: "certFile and keyFile must be configured together",
+		},
+		{
+			name: "missing shared CA file",
+			mutate: func(spec *ciskov1.DeviceSpec) {
+				spec.TLS = &ciskov1.TLSConfig{CAFile: filepath.Join(t.TempDir(), "missing-shared-ca.pem")}
+			},
+			wantErr: "shared TLS: failed to read CA certificate",
+		},
+		{
+			name: "unresolved Kubernetes Secret reference",
+			config: &ciskov1.GNOITLSConfig{
+				SecretRef: &ciskov1.GNOITLSSecretReference{Name: "router-gnoi-tls"},
+			},
+			wantErr: "secretRef is supported only in Kubernetes objects",
+		},
+		{
+			name:   "provisioning and dedicated override",
+			config: &ciskov1.GNOITLSConfig{CAFile: validCA},
+			mutate: func(spec *ciskov1.DeviceSpec) {
+				spec.Driver = ciskov1.DeviceDriverXE
+				spec.XE = provisioningDeviceSpec(spec.Address).XE
+			},
+			wantErr: "mutually exclusive trust sources",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mode := ciskov1.GNOITransportSecurityTLS
+			if tt.name == "auto transport with override" {
+				mode = ciskov1.GNOITransportSecurityAuto
+			}
+			spec := &ciskov1.DeviceSpec{
+				Address: "192.0.2.1",
+				GNOI: &ciskov1.GNOIConfig{
+					TransportSecurity: mode,
+					TLS:               tt.config,
+				},
+			}
+			if tt.mutate != nil {
+				tt.mutate(spec)
+			}
+			_, err := resolveGNOIConfig(spec, "", false, t.TempDir(), false)
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("resolveGNOIConfig error=%v, want %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestResolveGNOIConfigDerivesIsolatedTrustFromProvisioning(t *testing.T) {
+	t.Setenv(gNOIPortEnv, "")
+	const address = "192.0.2.10"
+	provisioningDirectory, leaf := writeGNOIProvisioningFiles(t, address)
+	spec := provisioningDeviceSpec(address)
+	spec.Username = "admin"
+	spec.TLS.InsecureSkipVerify = true //nolint:gosec // verifies provisioning does not inherit RESTCONF policy
+
+	resolved, err := resolveGNOIConfig(spec, "secret", false, provisioningDirectory, false)
+	if err != nil {
+		t.Fatalf("resolveGNOIConfig: %v", err)
+	}
+	if resolved.trustSource != gnoiTrustSourceProvisioning {
+		t.Errorf("trustSource=%q, want %q", resolved.trustSource, gnoiTrustSourceProvisioning)
+	}
+	if resolved.provisioningBundle == nil {
+		t.Fatal("provisioning trust did not produce a validated bundle")
+	}
+	if resolved.dialConfig.RPCCredentials == nil || resolved.dialConfig.Username != "" {
+		t.Fatal("provisioned secure gNOI did not exclusively use per-RPC credentials")
+	}
+	if got := len(resolved.dialConfig.TLSConfig.RootCAs.Subjects()); got != 1 {
+		t.Fatalf("provisioning RootCAs subjects=%d, want exactly the isolated provisioning root", got)
+	}
+	if err := resolved.dialConfig.TLSConfig.VerifyConnection(tls.ConnectionState{PeerCertificates: []*x509.Certificate{leaf}}); err != nil {
+		t.Fatalf("provisioning-derived TLS verification: %v", err)
 	}
 }
 
@@ -127,15 +382,14 @@ func TestUnavailableGNOIProviderPreservesSetupError(t *testing.T) {
 	}
 }
 
-func TestGNOITransportForSpec(t *testing.T) {
+func TestResolveGNOIConfigPortSelection(t *testing.T) {
 	tests := []struct {
-		name        string
-		spec        func() *ciskov1.DeviceSpec
-		insecureEnv string
-		portEnv     string
-		wantPort    int
-		wantTLS     bool
-		wantErr     string
+		name          string
+		spec          func() *ciskov1.DeviceSpec
+		forceInsecure bool
+		portEnv       string
+		wantPort      int
+		wantErr       string
 	}{
 		{
 			name: "legacy plaintext default is unchanged",
@@ -150,7 +404,6 @@ func TestGNOITransportForSpec(t *testing.T) {
 				return &ciskov1.DeviceSpec{Address: "192.0.2.1", Port: 443, TLS: &ciskov1.TLSConfig{Enabled: true}}
 			},
 			wantPort: 9339,
-			wantTLS:  true,
 		},
 		{
 			name: "legacy nonstandard device port is unchanged",
@@ -158,7 +411,6 @@ func TestGNOITransportForSpec(t *testing.T) {
 				return &ciskov1.DeviceSpec{Address: "192.0.2.1", Port: 10443, TLS: &ciskov1.TLSConfig{Enabled: true}}
 			},
 			wantPort: 10443,
-			wantTLS:  true,
 		},
 		{
 			name: "zero-value block preserves legacy nonstandard port",
@@ -170,7 +422,6 @@ func TestGNOITransportForSpec(t *testing.T) {
 				}
 			},
 			wantPort: 10443,
-			wantTLS:  true,
 		},
 		{
 			name: "TLS mode overrides shared TLS disabled",
@@ -181,7 +432,6 @@ func TestGNOITransportForSpec(t *testing.T) {
 				}
 			},
 			wantPort: 9339,
-			wantTLS:  true,
 		},
 		{
 			name: "per-device port is honored",
@@ -194,7 +444,6 @@ func TestGNOITransportForSpec(t *testing.T) {
 				}
 			},
 			wantPort: 19339,
-			wantTLS:  true,
 		},
 		{
 			name: "insecure environment cannot override explicit TLS",
@@ -206,13 +455,14 @@ func TestGNOITransportForSpec(t *testing.T) {
 					},
 				}
 			},
-			insecureEnv: "true",
-			wantErr:     "cannot override explicit",
+			forceInsecure: true,
+			wantErr:       "cannot override explicit",
 		},
 		{
 			name: "XE certificate provisioning requires explicit TLS",
 			spec: func() *ciskov1.DeviceSpec {
 				return &ciskov1.DeviceSpec{
+					Driver:  ciskov1.DeviceDriverXE,
 					Address: "192.0.2.1",
 					TLS:     &ciskov1.TLSConfig{Enabled: true},
 					GNOI:    &ciskov1.GNOIConfig{TransportSecurity: ciskov1.GNOITransportSecurityAuto},
@@ -230,31 +480,35 @@ func TestGNOITransportForSpec(t *testing.T) {
 					Address: "192.0.2.1",
 				}
 			},
-			insecureEnv: "true",
-			portEnv:     "29339",
-			wantPort:    29339,
+			forceInsecure: true,
+			portEnv:       "29339",
+			wantPort:      29339,
+		},
+		{
+			name: "invalid port environment fails closed",
+			spec: func() *ciskov1.DeviceSpec {
+				return &ciskov1.DeviceSpec{Address: "192.0.2.1"}
+			},
+			portEnv: "not-a-port",
+			wantErr: gNOIPortEnv,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(gNOIPortEnv, tt.portEnv)
-			forceInsecure := tt.insecureEnv != ""
-			port, tlsEnabled, err := gnoiTransportForSpec(tt.spec(), forceInsecure)
+			resolved, err := resolveGNOIConfig(tt.spec(), "", tt.forceInsecure, t.TempDir(), false)
 			if tt.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
-					t.Fatalf("gnoiTransportForSpec error=%v, want %q", err, tt.wantErr)
+					t.Fatalf("resolveGNOIConfig error=%v, want %q", err, tt.wantErr)
 				}
 				return
 			}
 			if err != nil {
-				t.Fatalf("gnoiTransportForSpec: %v", err)
+				t.Fatalf("resolveGNOIConfig: %v", err)
 			}
-			if port != tt.wantPort {
-				t.Errorf("port=%d, want %d", port, tt.wantPort)
-			}
-			if tlsEnabled != tt.wantTLS {
-				t.Errorf("tls=%v, want %v", tlsEnabled, tt.wantTLS)
+			if resolved.port != tt.wantPort {
+				t.Errorf("port=%d, want %d", resolved.port, tt.wantPort)
 			}
 		})
 	}
@@ -299,7 +553,7 @@ func TestLoadGNOIProvisioningBundleIsOptInAndScopesTrustToGNOI(t *testing.T) {
 	}
 	tlsCfg := &tls.Config{MinVersion: tls.VersionTLS12}
 
-	bundle, err := loadGNOIProvisioningBundle(spec, true, tlsCfg, directory, true)
+	bundle, err := loadGNOIProvisioningBundle(spec, tlsCfg, directory, true)
 	if err != nil {
 		t.Fatalf("loadGNOIProvisioningBundle: %v", err)
 	}
@@ -324,7 +578,6 @@ func TestLoadGNOIProvisioningBundleIsOptInAndScopesTrustToGNOI(t *testing.T) {
 	legacyTLS := &tls.Config{MinVersion: tls.VersionTLS12}
 	got, err := loadGNOIProvisioningBundle(
 		&ciskov1.DeviceSpec{Address: "router.example.test"},
-		true,
 		legacyTLS,
 		filepath.Join(t.TempDir(), "does-not-exist"),
 		false,
@@ -356,7 +609,7 @@ func TestLoadGNOIProvisioningBundleBootstrapMaterialIsWriteScoped(t *testing.T) 
 			},
 		},
 	}
-	bundle, err := loadGNOIProvisioningBundle(spec, true, &tls.Config{}, directory, true)
+	bundle, err := loadGNOIProvisioningBundle(spec, &tls.Config{}, directory, true)
 	if err != nil || bundle == nil {
 		t.Fatalf("missing optional ca.key returned bundle=%v err=%v", bundle, err)
 	}
@@ -367,7 +620,7 @@ func TestLoadGNOIProvisioningBundleBootstrapMaterialIsWriteScoped(t *testing.T) 
 	if err := os.WriteFile(filepath.Join(directory, gNOIProvisioningCAKeyFile), []byte("not PEM"), 0o600); err != nil {
 		t.Fatalf("write malformed CA key: %v", err)
 	}
-	if bundle, err = loadGNOIProvisioningBundle(spec, true, &tls.Config{}, directory, true); err != nil || bundle == nil {
+	if bundle, err = loadGNOIProvisioningBundle(spec, &tls.Config{}, directory, true); err != nil || bundle == nil {
 		t.Fatalf("malformed private signer affected public bundle: bundle=%v err=%v", bundle, err)
 	}
 	if signer, err = loadGNOILocalCertificateSigner(bundle, directory); err == nil || !strings.Contains(err.Error(), "private key is not PEM encoded") {
@@ -376,7 +629,7 @@ func TestLoadGNOIProvisioningBundleBootstrapMaterialIsWriteScoped(t *testing.T) 
 	if err := os.WriteFile(filepath.Join(directory, gNOIProvisioningBootstrapFile), []byte("not PEM"), 0o600); err != nil {
 		t.Fatalf("write malformed bootstrap certificate: %v", err)
 	}
-	if bundle, err = loadGNOIProvisioningBundle(spec, true, &tls.Config{}, directory, false); err != nil || bundle == nil {
+	if bundle, err = loadGNOIProvisioningBundle(spec, &tls.Config{}, directory, false); err != nil || bundle == nil {
 		t.Fatalf("read-only load touched write-scoped material: bundle=%v err=%v", bundle, err)
 	}
 }
@@ -417,7 +670,7 @@ func TestLocalSignerFailurePreservesPublicProvisioningTrust(t *testing.T) {
 			directory, leaf := writeGNOIProvisioningFiles(t, "router.example.test")
 			spec := provisioningDeviceSpec("router.example.test")
 			tlsCfg := &tls.Config{MinVersion: tls.VersionTLS12}
-			bundle, err := loadGNOIProvisioningBundle(spec, true, tlsCfg, directory, true)
+			bundle, err := loadGNOIProvisioningBundle(spec, tlsCfg, directory, true)
 			if err != nil || bundle == nil {
 				t.Fatalf("load public provisioning bundle: bundle=%v err=%v", bundle, err)
 			}
@@ -518,6 +771,7 @@ func TestSetupGNOISignerFailureKeepsBaseProvider(t *testing.T) {
 
 func provisioningDeviceSpec(address string) *ciskov1.DeviceSpec {
 	return &ciskov1.DeviceSpec{
+		Driver:  ciskov1.DeviceDriverXE,
 		Address: address,
 		TLS:     &ciskov1.TLSConfig{Enabled: true},
 		GNOI: &ciskov1.GNOIConfig{
@@ -547,7 +801,7 @@ func TestLoadGNOIProvisioningBundleRejectsPlaintext(t *testing.T) {
 			},
 		},
 	}
-	bundle, err := loadGNOIProvisioningBundle(spec, false, nil, t.TempDir(), false)
+	bundle, err := loadGNOIProvisioningBundle(spec, nil, t.TempDir(), false)
 	if err == nil || !strings.Contains(err.Error(), "TLS transport is required") {
 		t.Fatalf("bundle=%v err=%v, want TLS-required error", bundle, err)
 	}
@@ -567,7 +821,6 @@ func TestLoadGNOIProvisioningBundleRejectsUnverifiedTLS(t *testing.T) {
 	}
 	bundle, err := loadGNOIProvisioningBundle(
 		spec,
-		true,
 		&tls.Config{InsecureSkipVerify: true}, //nolint:gosec // verifies fail-closed validation
 		t.TempDir(),
 		false,
@@ -591,7 +844,7 @@ func TestLoadGNOIProvisioningBundleRequiresTargetCABundleAcknowledgement(t *test
 			},
 		},
 	}
-	bundle, err := loadGNOIProvisioningBundle(spec, true, &tls.Config{}, t.TempDir(), false)
+	bundle, err := loadGNOIProvisioningBundle(spec, &tls.Config{}, t.TempDir(), false)
 	if err == nil || !strings.Contains(err.Error(), "replaceTargetCABundle must be true") {
 		t.Fatalf("bundle=%v err=%v, want CA-bundle acknowledgement error", bundle, err)
 	}

@@ -26,15 +26,21 @@ CVK separates gNOI workflows by trust level so operators can grant narrow RBAC.
 The write-class and software-upgrade gates are intentionally separate. Enabling
 read-only gNOI does not enable reboot, file writes, factory reset, or OS
 activation.
+Enabling either mutation gate also changes the per-device worker Deployment to
+`Recreate`, preventing overlapping worker generations from acting on one
+durable mutation claim. Expect a brief node-management interruption when that
+worker rolls; `RollingUpdate` is restored after both gates are disabled (or
+gNOI is globally disabled) and any signer-cleanup rollout is complete.
 
 Helm exposes the same controls under the `gnoi` values block:
 
 | Helm value | Environment rendered into VK pods | Effect |
 |---|---|---|
 | `gnoi.insecure` | `CISCO_VK_GNOI_INSECURE=1` | Force the legacy insecure IOS-XE gNXI listener for non-opt-in configurations. It cannot override explicit `transportSecurity: tls`; legacy Basic metadata may expose credentials. |
-| `gnoi.port` | `CISCO_VK_GNOI_PORT=<port>` | Pin the gNOI listener port. Empty preserves legacy inference (`50052` insecure, `9339` secure, or an existing nonstandard device port). |
+| `gnoi.port` | `CISCO_VK_GNOI_PORT=<port>` | Pin the gNOI listener port. Empty preserves legacy inference (`50052` insecure, `9339` secure, or an existing nonstandard device port). The chart accepts only `1`–`65535`; an invalid direct environment override fails gNOI setup. |
 | `gnoi.disabled` | `CISCO_VK_GNOI_DISABLED=1` | Prevent the per-device gNOI client from being constructed. |
 | `gnoi.enableSoftwareUpgrade` | `CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=1` | Enable `IOSXESoftwareUpgrade` reconciliation. |
+| `gnoi.softwareUpgrade.maxImageBytes` | `CISCO_VK_UPGRADE_MAX_IMAGE_BYTES=<bytes>` | Set the hard per-image limit for URL and ConfigMap sources. The default is 8 GiB (`8589934592` bytes); the environment value must be a positive base-10 byte count. |
 | `gnoi.enableWriteClass` | `CISCO_VK_ENABLE_WRITE_CLASS_GNOI=1` | Enable destructive/write-class `IOSXEOperationalAction` reconciliation. |
 
 ## Secure IOS-XE gNXI
@@ -66,23 +72,54 @@ certificate and key into the VK pod.
 Select the listener independently of the RESTCONF port in the `CiscoDevice`:
 
 ```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cat9000-1-gnoi-tls
+  namespace: edge
+type: Opaque
+stringData:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    <CA that issued the certificate presented by secure gNXI>
+    -----END CERTIFICATE-----
+  # For deliberate mutual TLS, add both tls.crt and tls.key.
+---
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: cat9000-1
+  namespace: edge
 spec:
+  driver: XE
+  address: cat9000-1.example.net
   username: admin
   credentialSecretRef:
     name: cat9000-1-creds       # Secret contains only the key "password"
-  tls:
-    enabled: true
-    insecureSkipVerify: false
-    caFile: /etc/cisco-vk/device-ca/ca.crt
   gnoi:
     transportSecurity: tls
     port: 9339
+    tls:
+      secretRef:
+        name: cat9000-1-gnoi-tls
+  xe: {}
 ```
 
-The CA path is inside the per-device VK pod. Password metadata and certificate
-provisioning require verified TLS; CVK rejects `insecureSkipVerify: true` for
-this connection. During initial provisioning, an exact `bootstrap.crt` leaf pin
-can authenticate IOS-XE's temporary self-signed certificate as described below.
+The Secret must be in the `CiscoDevice` namespace. `ca.crt` is required;
+`tls.crt` and `tls.key` are an optional pair. The controller validates those
+fixed keys, projects only them read-only, and restarts the worker after a valid
+Secret change when gNOI is enabled in per-device topology. With global gNOI
+disablement, the existing worker omits this projection and does not roll for
+trust-Secret changes. Aggregated config-only topology has no per-device worker.
+Host paths, `enabled`, and `insecureSkipVerify` are not valid under
+`spec.gnoi.tls`.
+
+A direct local configuration uses `device.gnoi.tls.caFile` and may set both
+`certFile` and `keyFile`; `secretRef` is Kubernetes-only. In either mode the
+TLS block requires `transportSecurity: tls`. Omit the dedicated block to use
+the system root pool or verified shared TLS. If IOS-XE certificate provisioning
+is configured, omit it because the provisioning Secret supplies isolated
+bootstrap and steady-state gNOI trust automatically.
 
 The explicit IOS-XE 17.18 secure-password-auth mode does **not** use an HTTP
 Basic `Authorization` header. CVK derives per-RPC credentials without
@@ -91,7 +128,7 @@ duplicating the password in configuration or logs:
 | gRPC metadata key | Value source |
 |---|---|
 | `username` | `CiscoDevice.spec.username` |
-| `password` | The resolved `credentialSecretRef` key named `password` |
+| `password` | The resolved device password (`credentialSecretRef` in controller mode; legacy inline/local sources remain supported for compatibility) |
 
 Both keys are attached to unary and streaming gNOI RPCs only over TLS, matching
 Cisco's [IOS-XE 17.18 gNOI authentication guidance](https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/prog/configuration/1718/b-1718-programmability-cg/gnoi.html).
@@ -112,16 +149,22 @@ operator creates a write-class `IOSXEOperationalAction` with kind
 
 Provisioning uses IOS-XE's target-generated CSR flow, so the device private key
 never leaves IOS-XE. Configure `spec.xe.gnoi.certificateProvisioning` with a
-dedicated same-namespace Secret. `tls.crt` and `ca.crt` are always required;
-`ca.key` is required only while creating a new identity, and `bootstrap.crt` is
-needed only when the temporary certificate cannot pass normal CA and hostname
-validation:
+dedicated same-namespace Secret. `tls.crt` and `ca.crt` are always required.
+The built-in `ProvisionCertificate` action is registered only while write-class
+gNOI is enabled and a valid `ca.key` is mounted—even when `OS.Verify` would make
+that particular action a no-op. `bootstrap.crt` is needed only when the
+temporary certificate cannot pass normal CA and hostname validation. That
+Secret is also the gNOI client's isolated trust source before and after
+installation; do not also configure `spec.gnoi.tls`. This separation allows
+unrelated shared transports to retain their own TLS policy without weakening
+gNOI verification:
 
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
   name: cat9000-1-gnoi-identity
+  namespace: edge
 type: Opaque
 stringData:
   tls.crt: |
@@ -158,8 +201,10 @@ The certificate workflow uses an explicit `CertificateSigner` boundary. CVK
 validates the target-generated CSR before signing and validates the returned
 certificate against the CSR and configured profile before sending it to IOS-XE.
 The only signer included in this repository is the transitional local adapter
-for `ca.key`; it consumes that key after one signing attempt per process. No
-external CA, KMS, or HSM signer backend is implemented or configurable here.
+for `ca.key`. It can sign a new target CSR for a corrected immutable action
+after a definitive failure before `Cert.Install`; the action controller still
+submits each create-only network Install at most once. No external CA, KMS, or
+HSM signer backend is implemented or configurable here.
 
 Reference generic transport settings from `spec.gnoi` and IOS-XE provisioning
 policy from `spec.xe.gnoi`:
@@ -178,6 +223,10 @@ spec:
         secretRef:
           name: cat9000-1-gnoi-identity
 ```
+
+`spec.gnoi.tls` and `spec.xe.gnoi.certificateProvisioning` are mutually
+exclusive trust sources. Admission and local/runtime validation reject both
+together, or either one without explicit `transportSecurity: tls`.
 
 CVK requires a target-generated RSA key of at least 2048 bits. Every certificate
 in `ca.crt` must be a CA, the bundle must validate the template, and it must be
@@ -201,13 +250,17 @@ normally.
     ClusterRole can read Secrets cluster-wide to serve scheduled pod volumes.
     Any principal that can use the VK service account, read the Secret, or enter
     the signer-bearing pod can use the key. The built-in local signer retains
-    the key only until its first signing attempt in that process. Key bytes are
-    not copied into ConfigMaps, environment, status, events, or logs. Remove
-    `ca.key` promptly after provisioning. The Deployment uses a non-overlapping
-    `Recreate` strategy while a signer can be resident and for the first
-    key-free cleanup rollout. Normal rolling updates resume only after the
-    controller observes that cleanup rollout fully available with no old pod
-    terminating.
+    the parsed key for the lifetime of that process so a definitive pre-Install
+    failure can be corrected with a new immutable action. Key bytes are not
+    copied into ConfigMaps, environment, status, events, or logs. Remove
+    `ca.key` promptly after provisioning; a key-free rollout is required to
+    remove it from process memory. The Deployment uses a non-overlapping
+    `Recreate` strategy while a signer can be resident, for that cleanup
+    rollout, and whenever write-class gNOI actions or IOS-XE software upgrades
+    are enabled. This prevents two worker generations from acting on the same
+    durable mutation claim. Normal rolling updates resume only after signer
+    cleanup is complete and both mutation gates, or gNOI globally, are
+    disabled.
 
 !!! warning "IOS-XE gNXI service restart"
     CVK confines its configuration and credentials to gNOI, but IOS-XE shares
@@ -218,7 +271,7 @@ normally.
     and schedule provisioning as a device-management change. RESTCONF,
     NETCONF, and the VK's other TLS settings are not modified by CVK.
 
-Use this one-shot workflow:
+Use this explicit workflow:
 
 !!! danger "Complete mixed-version rollouts first"
     If upgrading from a preview build that accepted `ProvisionCertificate`
@@ -244,14 +297,18 @@ Use this one-shot workflow:
    fields with its loaded bundle before it acquires a gNOI client or marks the
    action Running, so a Secret/config rollout race is rejected without touching
    the device. Installation proceeds only when `OS.Verify` returns the exact
-   not-provisioned error. An already working OS service succeeds without
-   installation, while a conflicting certificate ID fails closed.
+   not-provisioned error. If `OS.Verify` already succeeds, the action returns
+   `serviceAlreadyProvisioned` with `certificateChanged: false` and performs no
+   certificate inventory or Install call. Its requested ID and digest are only
+   an echo of operator intent, not proof of the active device identity. A
+   conflicting certificate ID observed during an install attempt fails closed.
 
     ```yaml
     apiVersion: ops.cisco.vk/v1alpha1
     kind: IOSXEOperationalAction
     metadata:
       name: provision-cat9000-1-gnoi
+      namespace: edge
     spec:
       deviceRef:
         name: cat9000-1
@@ -259,31 +316,39 @@ Use this one-shot workflow:
       action:
         kind: ProvisionCertificate
         provisionCertificate:
-          certificateID: cvk-gnoi
+          certificateID: cvk-gnoi-os
           # Replace with the digest computed above.
           publicMaterialSHA256: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     ```
 
-4. The action reports success only after a fresh connection sees the exact
-   installed certificate and `OS.Verify` succeeds; a newly provisioned result
-   includes the verified certificate ID, public-material digest, and running
-   IOS-XE version. If `OS.Verify` already works, the result labels the action
-   fields as requested intent because it did not prove they identify the active
-   device certificate. CVK retries post-install read-only checks during the
-   expected gNXI restart but never retries the create-only Install.
+4. A mutating action reports `provisioned` with `certificateChanged: true` only
+   after a fresh connection proves that the exact installed certificate is its
+   active TLS leaf and a subsequent `OS.Verify` succeeds over that same peer;
+   the result includes the certificate ID, public-material digest, and running
+   IOS-XE version. If `OS.Verify` worked before mutation, the no-op result is
+   `serviceAlreadyProvisioned` with `certificateChanged: false`; its requested
+   fields remain intent only. CVK retries post-install read-only checks during
+   the expected gNXI restart but never retries the create-only Install.
    Also require `show gnxi state detail` to report `State: Provisioned`. If the
    action fails with `CertificateInstallIndeterminate`, do not immediately
    create another action: use `GNOICertGet` and inspect device PKI state to
    determine whether the certificate ID was committed.
 5. Remove `ca.key` and `bootstrap.crt` from the Secret. That removal alone
-   triggers one non-overlapping, key-free cleanup rollout and then restores
-   normal rolling updates for this device; unrelated write-class actions may
-   remain enabled. Disable the write-class gNOI gate as well unless those other
-   actions are still needed. Keep `tls.crt`, `ca.crt`, and the provisioning
-   block so read-only gNOI can validate the installed identity.
+   triggers one non-overlapping, key-free cleanup rollout. `Recreate` remains
+   in effect while write-class actions or software upgrades are enabled, so
+   disable each mutation gate when it is no longer needed (or disable gNOI
+   globally) to restore normal rolling updates. Keep `tls.crt`, `ca.crt`, and
+   the provisioning block so read-only gNOI can validate the installed
+   identity.
 
-Install is create-only. CVK does not rotate, revoke, or overwrite an existing
-certificate ID, and changing the Secret does not rotate an installed identity.
+Changing a generic `spec.gnoi.tls` Secret first validates the new material and,
+when gNOI is enabled in per-device topology, rolls the worker so new connections
+use it; it never changes device state. A provisioning Secret update also rolls
+that worker, but it does not rotate an installed IOS-XE identity. With global
+gNOI disablement, the per-device worker remains but ignores both trust Secrets;
+aggregated config-only topology has no per-device worker. Install is
+create-only: CVK does not rotate, revoke, or overwrite an existing certificate
+ID.
 Controller-managed provisioning requires the per-device worker; the aggregated
 config-only topology does not run gNOI lifecycle reconcilers.
 
@@ -363,267 +428,330 @@ from `binaryData["content"]` in a same-namespace ConfigMap. File write/remove
 paths must use IOS-XE filesystem prefixes such as `flash:`, `bootflash:`,
 `harddisk:`, `usbflash0:`, or `usbflash1:`.
 
+### Shared device-mutation coordination
+
+Write-class actions and software upgrades contend for one platform-neutral
+`device-disruptive-mutation` Kubernetes Lease per namespaced `CiscoDevice`.
+This serialization boundary lives above the IOS-XE backend so future NX-OS and
+IOS XR mutation workflows can join it without importing IOS-XE code. The Lease
+is stored in `CONFIG_LEASE_NAMESPACE` when configured, otherwise in the worker
+namespace, and has a fixed 26-hour safety TTL in this release.
+
+Definitively completed mutations release the Lease. Every action that fails
+after invocation retains it until expiry because an error cannot prove that the
+device rejected the request; uncertain upgrade terminals do the same.
+Successful `Reboot` and `FactoryReset` also retain it because their
+acknowledgements do not prove convergence. A delayed reboot extends the hold
+through its delay plus the fixed safety TTL. `CancelReboot` is the only bypass
+and never releases another operation's Lease. Deleting an invoked action
+keeps its finalizer through the bounded RPC-and-persistence window. If the
+outcome remains unknown, CVK records `ActionOutcomeUnknown`, removes the
+finalizer so deletion can complete, and retains the Lease until expiry.
+Deleting an upgrade cannot cancel device work and therefore leaves any
+required quarantine in place. Manual or external device changes are outside
+this Kubernetes fence and must still be coordinated operationally.
+
 ## Software Lifecycle
 
 `IOSXESoftwareUpgrade` manages the device OS lifecycle as an auditable
 Kubernetes object. Operators provide exactly one image source:
 
+!!! warning "Per-device topology required"
+    `IOSXESoftwareUpgrade` and `IOSXEOperationalAction` are reconciled inside
+    the IOS-XE per-device worker. They are unavailable when
+    `aggregator.enabled=true`; set `aggregator.enabled=false` before enabling
+    either mutation gate.
+
 | Source | Required fields | Use case |
 |---|---|---|
-| URL | `imageSource.url` and `imageSource.sha256` | Fetch an image from `http`, `https`, `tftp`, `ftp`, `scp`, or `sftp` and verify the digest. |
-| URL with credentials | URL fields plus `imageSource.urlSecretRef` | Fetch from authenticated FTP/SCP/SFTP sources. SCP/SFTP can use `knownHosts` unless the URL opts out with `insecureSkipHostKey=true`. |
-| ConfigMap | `imageSource.configMapRef` | Stage small test artifacts from Kubernetes data. This is not for production-sized IOS-XE images. |
-| Local path | `imageSource.localPath` | Activate an image that is already staged in the IOS-XE install inventory. |
+| URL | `imageSource.url` and `imageSource.sha256` | CVK fetches and verifies `http`, `https`, `tftp`, `ftp`, `scp`, or `sftp` content, then streams the bytes with gNOI `OS.Install`. |
+| URL with credentials | URL fields plus `imageSource.urlSecretRef` | Same byte-stream flow for authenticated FTP/SCP/SFTP. The explicitly opted-in Secret must authorize the URL's exact scheme, host, and port. SCP/SFTP also require verified host keys unless the separately gated lab bypass is enabled. |
+| ConfigMap | `imageSource.configMapRef` | CVK hashes `binaryData["image"]`, then streams it with gNOI `OS.Install`. Kubernetes size limits make this suitable only for small test artifacts. |
+| Preinstalled | `imageSource.preinstalled: {}` | Activate `targetVersion` only when it resolves to one exact, activatable entry in the native install inventory. No bytes are transferred or registered. |
+| Device file | `imageSource.deviceFile.path` and `.sha256` | Verify a file already on IOS-XE with gNOI `File.Get`, register it through the IOS-XE RESTCONF install RPC, then activate the exact resulting inventory version through gNOI. |
+| Legacy local path | `imageSource.localPath` and optional `localPathSHA256` | Deprecated compatibility form of `preinstalled`. The path is never submitted to an install command; use `deviceFile` to register a file. |
 
-For `localPath`, use `localPathSHA256` when the device can report file hashes
-through gNOI File.Get. Without that hash, CVK can activate a staged image but
-cannot verify the local file before activation.
+URL and ConfigMap content is handled by CVK; IOS-XE is not asked to fetch the
+URL. CVK persists the algorithm-qualified digest, and the resolved size when
+known, before starting `OS.Install`. A later reconciliation fails if resolution
+produces different content rather than silently changing bytes for the same CR.
 
-!!! warning "Production-readiness gap: staged inventory vs. image files"
-    Current `localPath` handling is suitable only when IOS-XE already reports
-    the target as a staged install version. A `.bin`, `.pkg`, or `.conf` file
-    merely existing on flash is not enough: IOS-XE can still reject gNOI
-    `OS.Activate` with `Invalid version string` or `Version not present on
-    device` until the release is present in the install inventory. Production
-    upgrade testing needs first-class handling for both common variations:
-    activating an already-staged inactive install version, and registering or
-    installing a new image file before activation. Keep complete off-device
-    image sources with verified hashes for repeated release toggling; do not
-    treat opportunistic flash copies as the source of truth.
+FTP, SCP, and SFTP transfer credentials are accepted only from an
+endpoint-bound Secret. URL userinfo such as
+`sftp://user:password@host/image.bin` is rejected. Query strings and fragments
+remain part of the immutable URL stored in the upgrade CR, although CVK redacts
+them from its own errors; do not put credentials or bearer tokens there. The
+Secret owner must opt in with
+`cisco.vk/purpose=software-image-source` and provide all three endpoint fields;
+scheme and DNS host comparisons are case-insensitive, a trailing DNS dot is
+ignored, IP addresses and ports are normalized, and an omitted URL port uses
+the protocol default (`21` for FTP and `22` for SCP/SFTP):
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: iosxe-image-source
+  labels:
+    cisco.vk/purpose: software-image-source
+type: Opaque
+stringData:
+  allowedScheme: sftp
+  allowedHost: images.example.net
+  allowedPort: "22"
+  username: image-reader
+  password: replace-me
+  # For key authentication, use privateKey and optional passphrase instead.
+  # SCP/SFTP also require knownHosts (or known_hosts).
+```
+
+An upgrade author cannot use that Secret with a different scheme, host, or
+port. Treat permission to create or modify a purpose-labelled image-source
+Secret as credential-administration authority; keep it separate from ordinary
+upgrade-CR creation RBAC.
+
+`preinstalled` and deprecated `localPath` are inventory-only intents. A file
+merely appearing in `dir flash:` is not an installed version and will not be
+activated. If `localPathSHA256` is supplied, CVK verifies the file before it
+inspects inventory, but the hash does not opt the request into registration.
+
+`deviceFile` registration is currently an IOS-XE-only driver capability and
+requires the RESTCONF transport. Paths are limited to validated `flash:`,
+`bootflash:`, or `harddisk:` locations. CVK verifies the required SHA-256
+digest before invoking IOS-XE's install-by-path RPC with install-only behavior;
+activation remains in the generic gNOI lifecycle. There is no CLI or SSH
+fallback. Unsupported transports, an unavailable lifecycle backend, ambiguous
+version matches, source-path conflicts, and non-activatable inventory states
+fail closed before activation. An activatable or in-progress target that exists
+before this CR records its staging request is also rejected as uncorrelated.
+After the marker is recorded, only the matching operation ID returned by the
+correlated device-file observer can authorize activation; a generic inventory
+match is not sufficient provenance.
+
+### Image resolver storage and transport security
+
+URL and ConfigMap sources have a hard per-image limit of 8 GiB by default.
+Set `gnoi.softwareUpgrade.maxImageBytes` in Helm, or set
+`CISCO_VK_UPGRADE_MAX_IMAGE_BYTES` directly to a positive base-10 byte count,
+to choose a lower or higher limit. Helm puts the value on the manager and the
+controller propagates it to per-device VK pods. The aggregated config-only
+topology does not run the lifecycle resolver. Invalid values fail resolution;
+a declared HTTP size, remote file size, SCP header, or live byte stream that
+exceeds the limit is rejected before the current cache file can grow beyond
+that limit.
+
+URL downloads are streamed and SHA-256 verified into a mode-`0600` temporary
+file inside `/tmp/cvk-upgrade-cache`, then atomically promoted to their
+digest-keyed cache path. The verified file descriptor is reused for gNOI
+transfer, so first resolution does not make a second full-image copy. Before
+resolving a different digest, CVK removes the prior managed cache entry and any
+orphaned CVK temporary files left by a crashed resolver; unrelated directory
+entries are preserved. At most one completed image digest is retained per
+resolver directory. A pod restart clears the `emptyDir`. Budget slightly more
+than the largest permitted image plus normal pod overhead, and size node
+ephemeral storage and any `ephemeral-storage` requests/limits accordingly—a
+kubelet eviction or full filesystem interrupts the transfer even when the image
+itself is below the configured maximum.
+
+The resolver has a four-hour cap per materialization attempt, while the
+lifecycle bounds all attempts by the remaining `installTimeoutSeconds`; with
+defaults, the effective overall limit is therefore one hour. Transient HTTP,
+Kubernetes API, and supported file-transfer connection failures are retried
+only inside that overall pre-install deadline. Invalid credentials, endpoint
+authorization, host-key or TLS verification, source validation, size, digest,
+and unsafe-cache failures remain terminal. HTTP requests inherit the attempt
+deadline; FTP data and control connections receive deadlines and are closed on
+cancellation; SCP and SFTP sessions are closed on cancellation; and TFTP
+additionally retains its bounded transport retry policy. A failed attempt
+removes its partial temporary file and does not create a cache entry.
+
+The cache directory is forced to mode `0700`; cache and temporary image files
+are mode `0600`. Symlinks and other non-regular cache entries are rejected, and
+CVK streams from the same open file descriptor it verified rather than
+reopening the pathname. These controls protect against accidental cross-user
+access and pathname substitution inside the pod; they do not protect against a
+principal with pod exec, node-root, or equivalent access.
+
+Choose the URL transport separately from content integrity. SHA-256 detects
+content changes but does not provide confidentiality, endpoint authentication,
+or credential protection. `http`, `ftp`, and `tftp` are plaintext (`ftp` also
+exposes its password on the network); reserve them for isolated, trusted
+management networks. Prefer `https`, `sftp`, or `scp` in production. SFTP and
+SCP require a trusted `knownHosts` entry unless both the URL carries
+`?insecureSkipHostKey=true` (or `?insecure=true`) and a custom/local deployment
+sets `CISCO_VK_UPGRADE_ALLOW_INSECURE_SSH=true`. The stock Helm chart does not
+expose this lab-only bypass. The default HTTP client follows redirects, so
+control and audit redirect targets as part of repository policy.
 
 The upgrade strategy controls activation:
 
 | Strategy | Behavior |
 |---|---|
 | `Reload` | Default. Calls gNOI `OS.Activate` with reboot allowed, then waits for the device to return and verifies the running version. |
-| `ISSU` | Requests the normal activate path, then asserts after verify that the device selected the ISSU path. IOS-XE still makes the final choice based on platform and version compatibility. |
-| `NoReboot` | Calls gNOI `OS.Activate` with `NoReboot=true`, stages the image for a later reload, and ends as `Succeeded`. Trigger the reload separately through `IOSXEOperationalAction` when ready. |
+| `ISSU` | Currently rejected during preflight. CVK will not advertise a non-disruptive upgrade until the platform backend can verify that IOS-XE actually selected an ISSU path. |
+| `NoReboot` | Calls gNOI `OS.Activate` with `NoReboot=true`, then performs `OS.Verify`. If the old version remains active, the terminal phase is `StagedForNextBoot`; only an independently authorized reboot can complete the transition. It does not prove ISSU, hitless forwarding, or readiness after that reboot. |
 
 The normal lifecycle is:
 
 | Phase | Meaning |
 |---|---|
-| `Pending` | CR accepted; no device operation started yet. Maintenance windows are checked here. |
-| `Resolving` | Image source and target version are resolved. |
-| `Transferring` | Image is copied or staged when needed. |
-| `TransferInterrupted` | Transfer failed with a retryable error and can re-enter `Transferring`. |
-| `Validating` | Staged image and preflight requirements are checked. |
+| `Pending` | CR accepted; no device operation started yet. The maintenance window gates initial work. |
+| `Resolving` | gNOI preflight runs and source intent or exact native inventory is resolved. |
+| `Staging` | An IOS-XE device file is submitted once for native install-inventory registration. |
+| `Transferring` | URL or ConfigMap content is materialized, digest-pinned, and streamed with gNOI `OS.Install`. |
+| `TransferInterrupted` | A dispatched gNOI install has an indeterminate outcome and is observed without replay until its deadline. |
+| `Validating` | gNOI install or native registration is observed until an exact inventory version is activatable. |
 | `Activating` | gNOI OS activation is requested. |
 | `AwaitingReachability` | Device may be rebooting after activation. |
 | `Verifying` | Running version and activation result are verified. |
 | `RollingBack` | Previous version is being re-activated after a verify mismatch. |
-| `Succeeded` | Requested version is active and verified. |
+| `Succeeded` | Final `OS.Verify` proves the requested version is running (including the unusual case where a `NoReboot` request already resulted in the target). |
+| `StagedForNextBoot` | `NoReboot` was accepted, `OS.Verify` still reports the captured previous version, and a separately authorized reboot is required. |
 
 Terminal failure phases include `Failed`, `PreflightFailed`,
-`ValidationFailed`, `RolledBack`, `RebootTimeout`, and `Cancelled`.
+`ValidationFailed`, `RolledBack`, and `RebootTimeout`.
 
 `OS.Activate` reboots the device when the chosen strategy requires it; CVK does
 not issue a separate `System.Reboot` after activation. With rollback enabled,
-CVK re-activates the previously observed running version if post-activation
-verification does not match the requested target.
+CVK re-activates the previously observed running version only after the
+lifecycle backend proves that exact version remains activatable.
+
+When `OS.Verify` requires individual-supervisor handling, byte-stream sources
+install the active supervisor first and the standby second, using the same
+install deadline. The standby must return exactly the same validated version as
+the primary, not merely a value matching the requested prefix. Activation is
+deliberately reversed: standby first, then the active supervisor, with
+verification between steps. `NoReboot` is rejected for this path because CVK
+cannot prove the required boot sequence. Automatic rollback is also refused if
+a safe, separately verified per-supervisor rollback sequence cannot be
+established. The durable per-supervisor request and completion markers prevent
+replay after a controller restart.
+
+The reconciler records staging, activation, and rollback intent before issuing
+each device-mutating RPC and does not replay a recorded request after a restart
+or an ambiguous transport result. This is intentionally at-most-once, not
+exactly-once: a controller failure after the status write but before device
+receipt can leave the outcome unknown and require operator inspection. In
+particular, an ambiguous `NoReboot` response is terminal rather than retried.
+
+The controller persists `status.executionModel: AtMostOnceV1` before a new
+upgrade leaves its safe initial state. During an upgrade from an earlier
+controller, an unmarked `Pending` or `Resolving` object is adopted because no
+device mutation could yet have been submitted. An unmarked `Staging`,
+`Transferring`, `TransferInterrupted`, `Validating`, `Activating`,
+`AwaitingReachability`, `Verifying`, or `RollingBack` object instead terminates
+as `ValidationFailed` with reason `LegacyStateOutcomeUnknown`; CVK retains the
+shared mutation Lease and never guesses whether it should replay the request.
+Inspect IOS XE and wait for the quarantine Lease to expire before authorizing a
+replacement operation. The deprecated `spec.resumePolicy`, `spec.maxRetries`,
+and `status.retryCount` fields remain accepted for stored objects and older
+manifests. Admission still supplies the historical `Retry` and `3` defaults so
+objects remain usable after a controller rollback, but the current reconciler
+ignores all three fields; they do not enable mutation retries. The released
+`Cancelled` phase is retained as a terminal compatibility value.
+An unknown non-empty execution-model value is treated as state from a newer
+controller: CVK preserves its status verbatim, installs the cleanup finalizer,
+holds the shared Lease, and performs no device RPC until a compatible
+controller is restored.
+Future controllers that add a phase capable of device mutation must write a
+new execution-model value with it; this pairing lets an older controller
+recognize and fence the entire newer state without interpreting its phase.
+
+For this one-release migration, every mutation controller scans both
+`IOSXESoftwareUpgrade` and `IOSXEOperationalAction` in the device namespace
+before claiming the shared Lease. All replicas select the same deterministic
+legacy holder, so a released in-flight upgrade or action is fenced even when
+its own controller gate is disabled; an API-list or RBAC error fails closed.
+The guard also recognizes released invoked actions for a bounded 26-hour
+outcome window, extended by any accepted reboot delay. This IOS-XE legacy
+horizon is owned by the compatibility adapter and is not shortened by another
+driver's normal Lease policy.
 
 Important defaults:
 
 | Field | Default | Notes |
 |---|---:|---|
-| `strategy` | `Reload` | Use `NoReboot` when activation should stage only. |
-| `rollbackOnFailure` | `true` | Attempts to restore the previously observed version after verify mismatch. |
-| `resumePolicy` | `Retry` | `Abort` makes transfer interruptions terminal. |
-| `maxRetries` | `3` | Applies to transfer retries. |
-| `rebootTimeoutSeconds` | `1800` | Controls how long `AwaitingReachability` waits. |
+| `strategy` | `Reload` | `NoReboot` requests activation without an immediate reload; it is not a non-disruptive guarantee. |
+| `rollbackOnFailure` | `true` | Attempts to restore the previously observed version after verify mismatch when a safe rollback sequence can be proven. |
+| `installTimeoutSeconds` | `3600` | Bounds two consecutive windows: pre-install gNOI readiness, source resolution, and device-file `File.Get`; then, starting at the first `OS.Install` or native-registration claim, all per-supervisor installs/registration and inventory convergence share a fresh window. Repeated work within either window receives only its remaining time. |
+| `rebootTimeoutSeconds` | `1800` | Starts with the first activation claim and bounds activation, reachability, and final verification. Rollback receives an independent timer when `RollingBack` begins; it includes pre-dispatch reachability. Activation and rollback RPC contexts are capped by their remaining sequence time. |
+
+`ActivationControlTimeout` and `RollbackDidNotConverge` retain the shared Lease
+when a mutation was durably claimed, just like an uncertain install outcome.
+This quarantine prevents a new CVK mutation from overlapping device work whose
+completion cannot be proven.
 
 `targetVersion` accepts IOS-XE version shapes such as `17.15.01a`,
 `26.01.01`, `26.01.01.0.340`, and `17.18.02.0.4112.1766116039`. Verification
 uses a prefix-aware comparison, so operators may use the shortest unambiguous
 form for the staged image.
 
-## Upgrade Manifest Walkthrough
+## Upgrade Examples
 
-Each upgrade is a single Kubernetes CR. Create one manifest per device and
-apply it when ready — the upgrade begins immediately and the CR records the
-full audit trail.
+Each CR is immutable and starts one upgrade after preflight. `notBefore` delays
+initial work; `notAfter` is rechecked before every not-yet-claimed device
+mutation, but cannot cancel a submitted or in-flight RPC. The shared mutation
+Lease allows only one CVK-managed write action or upgrade to own the device at
+a time; a quarantined prior outcome can intentionally block a new request until
+the Lease expires.
 
-### Preparing the image
-
-Before creating the manifest, collect the image hash. Use the sha256 digest
-for `imageSource.sha256`. The MD5 is included as a human-reference annotation
-but CVK uses sha256 exclusively for verification:
-
-```bash
-# On a Linux host that holds the image:
-sha256sum cat9k_iosxe.26.01.01.SPA.bin
-md5sum    cat9k_iosxe.26.01.01.SPA.bin
-stat --format='%s' cat9k_iosxe.26.01.01.SPA.bin
-```
-
-Serve the image from a source the device can reach — TFTP and HTTP are the
-most common options in lab and production environments respectively.
-
-### Example — TFTP upgrade (Catalyst 9300, IOS-XE 26.01.01)
-
-This is a real-world production manifest. The in-cluster TFTP service
-(`rust-tftp-otel-headless`) serves images to devices over the management
-network. Labels and annotations carry out-of-band metadata that is useful
-for audit queries, dashboards, and GitOps tooling — they are not processed
-by CVK.
+Stream verified URL content through gNOI:
 
 ```yaml
-# 9300-4 IOS-XE upgrade manifest for Cisco Virtual Kubelet software lifecycle.
-#
-# Target device:
-#   CiscoDevice: default/cat9000-4
-#   Management IP: 198.51.100.103
-#   Hardware: C9300-24P, serial FOC2416U0MV
-#
-# Image source served by the in-cluster TFTP service:
-#   tftp://rust-tftp-otel-headless.ng-pnp.svc.cluster.local:6969/images/cat9k_iosxe.26.01.01.SPA.bin
-#   size:   1260618344 bytes
-#   md5:    fd4a41c41a7de1a9d907c4f35f46e334
-#   sha256: 7de3c6875e3c1c96d5920e8542c72b1bcb5d913d99645ef5687f44dd4024cdf4
-#
-# Apply when ready to perform the upgrade/reload:
-#   kubectl apply -f 9300-4-upgrade-26.01.01.yaml
-#   kubectl get iosxesoftwareupgrade upgrade-cat9000-4-26-01-01 -n default -o wide -w
 apiVersion: ops.cisco.vk/v1alpha1
 kind: IOSXESoftwareUpgrade
 metadata:
-  name: upgrade-cat9000-4-26-01-01
-  namespace: default
-  labels:
-    app.kubernetes.io/part-of: lifecycle-mgmt
-    lifecycle.cisco.com/device: cat9000-4
-    lifecycle.cisco.com/operation: iosxe-upgrade
-  annotations:
-    lifecycle.cisco.com/source-protocol: tftp
-    lifecycle.cisco.com/tftp-url: tftp://rust-tftp-otel-headless.ng-pnp.svc.cluster.local:6969/images/cat9k_iosxe.26.01.01.SPA.bin
-    lifecycle.cisco.com/image-file: cat9k_iosxe.26.01.01.SPA.bin
-    lifecycle.cisco.com/image-size-bytes: "1260618344"
-    lifecycle.cisco.com/image-md5: fd4a41c41a7de1a9d907c4f35f46e334
-    lifecycle.cisco.com/image-sha256: 7de3c6875e3c1c96d5920e8542c72b1bcb5d913d99645ef5687f44dd4024cdf4
+  name: cat9000-4-to-26-01-01
 spec:
   deviceRef:
     name: cat9000-4
   imageSource:
-    url: tftp://rust-tftp-otel-headless.ng-pnp.svc.cluster.local:6969/images/cat9k_iosxe.26.01.01.SPA.bin
+    url: https://images.example.net/cat9k_iosxe.26.01.01.SPA.bin
     sha256: 7de3c6875e3c1c96d5920e8542c72b1bcb5d913d99645ef5687f44dd4024cdf4
   targetVersion: 26.01.01
   strategy: Reload
-  rollbackOnFailure: false
-  resumePolicy: Retry
-  maxRetries: 3
+  rollbackOnFailure: true
+  installTimeoutSeconds: 3600
   rebootTimeoutSeconds: 3600
 ```
 
-**Field notes:**
-
-- `targetVersion: 26.01.01` — shortest unambiguous prefix. CVK's prefix-aware
-  comparison will match `26.01.01.0.340` or `26.01.01.0.340.1766116039`.
-- `strategy: Reload` — OS.Activate is called with reboot allowed; CVK waits
-  for the device to come back (up to `rebootTimeoutSeconds`) and then verifies
-  the running version.
-- `rollbackOnFailure: false` — the device is left on whatever version it
-  landed on after a verify mismatch. Set to `true` in environments where
-  automatic rollback is preferred.
-- `rebootTimeoutSeconds: 3600` — allow a full hour for the device to reload.
-  This is appropriate for Catalyst 9000; set to 1800 for faster platforms.
-
-### Monitoring the upgrade
-
-```bash
-# Watch the phase progress in real time:
-kubectl get iosxesoftwareupgrade upgrade-cat9000-4-26-01-01 -n default -o wide -w
-
-NAME                          DEVICE      PHASE              TARGET     AGE
-upgrade-cat9000-4-26-01-01    cat9000-4   Pending            26.01.01   0s
-upgrade-cat9000-4-26-01-01    cat9000-4   Resolving          26.01.01   2s
-upgrade-cat9000-4-26-01-01    cat9000-4   Transferring       26.01.01   8s
-upgrade-cat9000-4-26-01-01    cat9000-4   Validating         26.01.01   4m22s
-upgrade-cat9000-4-26-01-01    cat9000-4   Activating         26.01.01   4m35s
-upgrade-cat9000-4-26-01-01    cat9000-4   AwaitingReachability 26.01.01 4m38s
-upgrade-cat9000-4-26-01-01    cat9000-4   Verifying          26.01.01   16m14s
-upgrade-cat9000-4-26-01-01    cat9000-4   Succeeded          26.01.01   16m31s
-```
-
-```bash
-# See full status detail including conditions:
-kubectl describe iosxesoftwareupgrade upgrade-cat9000-4-26-01-01
-
-...
-Status:
-  Phase:           Succeeded
-  Target Version:  26.01.01
-  Running Version: 26.01.01.0.340
-  Conditions:
-    Type                Status  Reason
-    ----                ------  ------
-    TransferComplete    True    ImageTransferred
-    ValidationPassed    True    PrefligthOK
-    ActivationComplete  True    OSActivated
-    VerificationPassed  True    VersionMatch
-Events:
-  Normal  PhaseTransition  16m  Transferring → Validating: image hash verified
-  Normal  PhaseTransition  11m  Activating → AwaitingReachability: OS.Activate sent
-  Normal  PhaseTransition  0s   Verifying → Succeeded: running 26.01.01.0.340
-```
-
-### Example — local flash path (image already on device)
-
-Use `localPath` only after the image has been pre-staged into the IOS-XE install
-inventory (for example, after a previous successful gNOI `OS.Install` or IOS-XE
-`install add`). The target should be visible as an inactive or otherwise
-installed version in IOS-XE install operational state, not just as a file in
-`dir flash:` output:
+Activate an exact version already in install inventory:
 
 ```yaml
 spec:
   deviceRef:
-    name: cat9000-3
+    name: cat9000-4
   imageSource:
-    localPath: flash:cat9k_iosxe.17.18.02.SPA.bin
-    localPathSHA256: a1b2c3d4e5f6...  # optional; from gNOI File.Get
-  targetVersion: 17.18.02
-  strategy: Reload
-  rollbackOnFailure: true
-  rebootTimeoutSeconds: 1800
-```
-
-### Example — stage only, reload later (NoReboot)
-
-`NoReboot` stages the image for activation without triggering an immediate
-reload. Schedule the reload separately through `IOSXEOperationalAction` during
-a maintenance window:
-
-```yaml
-spec:
-  deviceRef:
-    name: cat9000-5
-  imageSource:
-    url: tftp://rust-tftp-otel-headless.ng-pnp.svc.cluster.local:6969/images/cat9k_iosxe.26.01.01.SPA.bin
-    sha256: 7de3c6875e3c1c96d5920e8542c72b1bcb5d913d99645ef5687f44dd4024cdf4
+    preinstalled: {}
   targetVersion: 26.01.01
-  strategy: NoReboot          # stage only; does not reboot
-  rebootTimeoutSeconds: 0     # not applicable for NoReboot
+  strategy: Reload
 ```
 
-The CR ends in `Succeeded` once the image is staged and activated
-(without reload). Trigger the reload during maintenance:
+Register a verified IOS-XE device file, then activate it:
 
 ```yaml
-apiVersion: ops.cisco.vk/v1alpha1
-kind: IOSXEOperationalAction
-metadata:
-  name: reload-cat9000-5-maint-window
-  namespace: default
 spec:
   deviceRef:
-    name: cat9000-5
-  confirm: cat9000-5          # must match deviceRef.name exactly
-  action:
-    kind: Reboot
-    reboot:
-      message: "Scheduled maintenance window reload"
-      delay: 0
+    name: cat9000-4
+  imageSource:
+    deviceFile:
+      path: flash:cat9k_iosxe.26.01.01.SPA.bin
+      sha256: 7de3c6875e3c1c96d5920e8542c72b1bcb5d913d99645ef5687f44dd4024cdf4
+  targetVersion: 26.01.01
+  strategy: Reload
+  installTimeoutSeconds: 3600
 ```
+
+Monitor status and events with:
+
+```bash
+kubectl get iosxesoftwareupgrade -A -w
+kubectl describe iosxesoftwareupgrade <name> -n <namespace>
+```
+
+Before treating `NoReboot` as part of a maintenance procedure, independently
+validate the platform-specific boot state and recovery plan. CVK does not claim
+that this option is a non-disruptive upgrade.
 
 ## Operator Workflow
 
@@ -633,13 +761,17 @@ spec:
    compatibility.
 2. Enable the software upgrade gate on the per-device VK pod via Helm
    (`gnoi.enableSoftwareUpgrade: true`) or the env var
-   `CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=1`.
+   `CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=1`. Confirm that
+   `gnoi.softwareUpgrade.maxImageBytes` and pod/node ephemeral-storage capacity
+   accommodate one cached image plus normal overhead before creating an upgrade.
 3. Grant RBAC: upgrade operators need `create`/`get`/`watch` on
    `IOSXESoftwareUpgrade`. Read-only users get `DeviceOperation` only.
 4. Compute the image sha256 and prepare the manifest (see examples above).
 5. Apply the manifest and monitor with `kubectl get iosxesoftwareupgrade -w`.
-6. After `Succeeded`, delete the CR when the audit record is no longer needed,
-   or retain it as an immutable upgrade record.
+6. After `Succeeded` or `StagedForNextBoot`, retain the CR as an immutable audit
+   record or delete it when it is no longer needed. For `StagedForNextBoot`,
+   authorize and observe the required reboot separately; the upgrade CR does
+   not claim that the target is running.
 
 For `DeviceOperation` show-command and diagnostic examples see the
 [Operations Runbook](operations.md).

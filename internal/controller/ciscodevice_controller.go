@@ -16,6 +16,8 @@ package controller
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"os"
 	"reflect"
@@ -48,6 +50,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+	iosxegnoi "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 	"github.com/cisco/virtual-kubelet-cisco/internal/platforms"
 	configprovider "github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
@@ -74,6 +77,15 @@ const (
 	// per-device Secret only when the CiscoDevice explicitly opts in.
 	gnoiProvisioningVolumeName = "gnoi-provisioning"
 	gnoiProvisioningMountPath  = "/var/run/secrets/cisco-vk/gnoi-provisioning"
+	// The worker only needs a non-empty reference to validate that provisioning
+	// is configured; it reads material from the fixed mount above. Do not copy
+	// the source Secret name into the worker ConfigMap.
+	gnoiProvisioningWorkerSecretRefName = "projected"
+	// Generic gNOI TLS trust is projected separately from IOS-XE certificate
+	// provisioning. The worker config contains only these fixed internal paths;
+	// the user-supplied Secret name and all Secret bytes stay out of ConfigMaps.
+	gnoiTLSVolumeName = "gnoi-tls"
+	gnoiTLSMountPath  = "/var/run/secrets/cisco-vk/gnoi-tls"
 	// gnoiSignerMountedAnnotation records that the current signer lifecycle has
 	// not yet completed a private-key-free rollout. It is cleared only after the
 	// Deployment controller reports that the cleanup template is fully available.
@@ -110,6 +122,7 @@ const (
 	envCVKGNOIDisabled          = "CISCO_VK_GNOI_DISABLED"
 	envCVKEnableWriteClassGNOI  = "CISCO_VK_ENABLE_WRITE_CLASS_GNOI"
 	envCVKEnableSoftwareUpgrade = "CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE"
+	envCVKUpgradeMaxImageBytes  = "CISCO_VK_UPGRADE_MAX_IMAGE_BYTES"
 	envConfigYANGValidation     = "CONFIG_YANG_VALIDATION"
 	envCVKNXOSAllowExperimental = "CVK_NXOS_ALLOW_EXPERIMENTAL_RELEASES"
 )
@@ -140,6 +153,7 @@ var telemetryEnvPropagationNames = []string{
 	envCVKGNOIDisabled,
 	envCVKEnableWriteClassGNOI,
 	envCVKEnableSoftwareUpgrade,
+	envCVKUpgradeMaxImageBytes,
 	envConfigYANGValidation,
 	envCVKNXOSAllowExperimental,
 }
@@ -294,8 +308,25 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
-	// ── 4. Render the device config YAML ────────────────────────────────
-	configData, err := renderDeviceConfig(&device.Spec)
+	// ── 4. Resolve projected gNOI trust and render device config YAML ───
+	// Kubernetes-facing gNOI TLS uses a same-namespace Secret reference.
+	// Validate its fixed keys before creating a pod, then render only stable
+	// internal file paths for the worker. Local-file configuration never
+	// passes through this controller path.
+	configDriverRegistered := drivers.ConfigDriverRegistered(device.Spec.Driver)
+	perDeviceWorkerExpected := !(r.AggregatorEnabled && configDriverRegistered)
+	var gnoiTLSState gnoiTLSProjectionState
+	if perDeviceWorkerExpected && gnoiTLSSecretRef(&device.Spec) != nil && !gNOIDisabled() {
+		var inspectErr error
+		gnoiTLSState, inspectErr = r.inspectGNOITLSSecret(ctx, &device)
+		if inspectErr != nil {
+			if r.Recorder != nil {
+				r.Recorder.Eventf(&device, corev1.EventTypeWarning, "GNOITLSInvalid", "%v", inspectErr)
+			}
+			return ctrl.Result{}, fmt.Errorf("validate gNOI TLS Secret: %w", inspectErr)
+		}
+	}
+	configData, err := renderDeviceConfigForWorker(&device.Spec, gnoiTLSState.clientCertificate)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to render device config: %w", err)
 	}
@@ -325,7 +356,6 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// the aggregator owns config reconciliation for this device. Do not run
 	// a per-device cisco-vk pod that could start a second in-pod
 	// ConfigReconciler for the same lease scope.
-	configDriverRegistered := drivers.ConfigDriverRegistered(device.Spec.Driver)
 	if r.AggregatorEnabled && configDriverRegistered {
 		stale := &appsv1.Deployment{}
 		staleKey := types.NamespacedName{
@@ -443,8 +473,14 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			ctx,
 			device.Namespace,
 			provisioning.SecretRef.Name,
+			provisioning.CertificateID,
+			device.Spec.Address,
+			writeClassGNOIEnabled(),
 		)
 		if err != nil {
+			if r.Recorder != nil {
+				r.Recorder.Eventf(&device, corev1.EventTypeWarning, "GNOIProvisioningSecretInvalid", "%v", err)
+			}
 			return ctrl.Result{}, fmt.Errorf("inspect gNOI provisioning Secret: %w", err)
 		}
 	}
@@ -471,9 +507,15 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		signerMayBeResident := provisioningWritesEnabled ||
 			templateProjectsSigner ||
 			(signerLifecyclePending && !cleanupComplete)
-		if signerMayBeResident {
+		// Write-class gNOI and software lifecycle use durable, CR-scoped
+		// at-most-once markers so a replacement worker can recover an operation.
+		// They cannot safely distinguish an overlapping old worker from a crashed
+		// one, so prevent Deployment rollouts from running both managers at once.
+		gnoiMutationsEnabled := device.Spec.Driver == ciskov1.DeviceDriverXE &&
+			!gNOIDisabled() && (writeClassGNOIEnabled() || softwareUpgradeEnabled())
+		if signerMayBeResident || gnoiMutationsEnabled {
 			deploy.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
-		} else if cleanupComplete {
+		} else {
 			deploy.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RollingUpdateDeploymentStrategyType}
 		}
 
@@ -489,6 +531,9 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			if provisioningSecretRV != "" {
 				annos["cisco.vk/gnoi-provisioning-secret-resource-version"] = provisioningSecretRV
 			}
+		}
+		if gnoiTLSState.enabled && gnoiTLSState.resourceVersion != "" {
+			annos["cisco.vk/gnoi-tls-secret-resource-version"] = gnoiTLSState.resourceVersion
 		}
 		// Keep lifecycle carriers on the Deployment object for audit/search.
 		// Do not copy them into the PodTemplate: a trace-only annotation change
@@ -661,6 +706,29 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{
 					DefaultMode: ptr.To[int32](0o440),
 					Sources:     sources,
+				}},
+			})
+		}
+		if gnoiTLSState.enabled {
+			items := []corev1.KeyToPath{{Key: "ca.crt", Path: "ca.crt"}}
+			if gnoiTLSState.clientCertificate {
+				items = append(items,
+					corev1.KeyToPath{Key: "tls.crt", Path: "tls.crt"},
+					corev1.KeyToPath{Key: "tls.key", Path: "tls.key"},
+				)
+			}
+			deploy.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+				deploy.Spec.Template.Spec.Containers[0].VolumeMounts,
+				corev1.VolumeMount{Name: gnoiTLSVolumeName, MountPath: gnoiTLSMountPath, ReadOnly: true},
+			)
+			deploy.Spec.Template.Spec.Volumes = append(deploy.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: gnoiTLSVolumeName,
+				VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{
+					DefaultMode: ptr.To[int32](0o440),
+					Sources: []corev1.VolumeProjection{{Secret: &corev1.SecretProjection{
+						LocalObjectReference: corev1.LocalObjectReference{Name: gnoiTLSState.secretName},
+						Items:                items,
+					}}},
 				}},
 			})
 		}
@@ -1170,22 +1238,41 @@ func (r *CiscoDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // ConfigMap (and therefore etcd). The controller injects them separately
 // via environment variables on the VK Deployment.
 func renderDeviceConfig(spec *ciskov1.DeviceSpec) (string, error) {
+	return renderDeviceConfigForWorker(spec, false)
+}
+
+func renderDeviceConfigForWorker(spec *ciskov1.DeviceSpec, gnoiTLSClientCertificate bool) (string, error) {
 	// The VK config loader expects:
 	//   device:
 	//     driver: ...
 	//     address: ...
 
-	// Copy the spec so we don't mutate the caller's object, then redact
-	// fields that must not be persisted in a ConfigMap.
-	sanitized := *spec
+	// Deep-copy the spec so nested redaction cannot mutate the API object.
+	sanitized := spec.DeepCopy()
 	sanitized.Password = ""
 	sanitized.CredentialSecretRef = nil
 	sanitized.ConfigPrereqs = nil
+	if sanitized.GNOI != nil && sanitized.GNOI.TLS != nil {
+		gnoiTLS := sanitized.GNOI.TLS
+		if gnoiTLS.SecretRef != nil {
+			gnoiTLS.SecretRef = nil
+			gnoiTLS.CAFile = gnoiTLSMountPath + "/ca.crt"
+			gnoiTLS.CertFile = ""
+			gnoiTLS.KeyFile = ""
+			if gnoiTLSClientCertificate {
+				gnoiTLS.CertFile = gnoiTLSMountPath + "/tls.crt"
+				gnoiTLS.KeyFile = gnoiTLSMountPath + "/tls.key"
+			}
+		}
+	}
+	if provisioning := xeGNOICertificateProvisioning(sanitized); provisioning != nil {
+		provisioning.SecretRef.Name = gnoiProvisioningWorkerSecretRefName
+	}
 
 	wrapper := struct {
 		Device ciskov1.DeviceSpec `json:"device"`
 	}{
-		Device: sanitized,
+		Device: *sanitized,
 	}
 	out, err := yaml.Marshal(wrapper)
 	if err != nil {
@@ -1858,8 +1945,8 @@ func (r *CiscoDeviceReconciler) emitPrereqsSkipped(device *ciskov1.CiscoDevice, 
 }
 
 // mapSecretToCiscoDevices fans a Secret event out to CiscoDevices in the same
-// namespace that reference it through either device credentials or the
-// IOS-XE-only gNOI certificate-provisioning block.
+// namespace that reference it through device credentials, generic gNOI TLS,
+// or the IOS-XE-only gNOI certificate-provisioning block.
 func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj client.Object) []ctrl.Request {
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
@@ -1875,9 +1962,11 @@ func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj
 	for i := range devices.Items {
 		dev := &devices.Items[i]
 		credentialMatch := dev.Spec.CredentialSecretRef != nil && dev.Spec.CredentialSecretRef.Name == secret.Name
+		gnoiTLSRef := gnoiTLSSecretRef(&dev.Spec)
+		gnoiTLSMatch := gnoiTLSRef != nil && gnoiTLSRef.Name == secret.Name
 		provisioning := xeGNOICertificateProvisioning(&dev.Spec)
 		provisioningMatch := provisioning != nil && provisioning.SecretRef.Name == secret.Name
-		if !credentialMatch && !provisioningMatch {
+		if !credentialMatch && !gnoiTLSMatch && !provisioningMatch {
 			continue
 		}
 		requests = append(requests, ctrl.Request{NamespacedName: types.NamespacedName{
@@ -1886,6 +1975,66 @@ func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj
 		}})
 	}
 	return requests
+}
+
+type gnoiTLSProjectionState struct {
+	enabled           bool
+	secretName        string
+	resourceVersion   string
+	clientCertificate bool
+}
+
+func gnoiTLSSecretRef(spec *ciskov1.DeviceSpec) *ciskov1.GNOITLSSecretReference {
+	if spec == nil || spec.GNOI == nil || spec.GNOI.TLS == nil {
+		return nil
+	}
+	return spec.GNOI.TLS.SecretRef
+}
+
+// inspectGNOITLSSecret validates the fixed Secret contract without persisting,
+// copying, or logging its contents outside the Kubernetes client cache. The
+// worker receives only a read-only projection, and Secret resourceVersion
+// drives a controlled restart on rotation because tls.Config is intentionally
+// immutable after startup.
+func (r *CiscoDeviceReconciler) inspectGNOITLSSecret(ctx context.Context, device *ciskov1.CiscoDevice) (gnoiTLSProjectionState, error) {
+	ref := gnoiTLSSecretRef(&device.Spec)
+	if ref == nil || ref.Name == "" {
+		return gnoiTLSProjectionState{}, nil
+	}
+	var secret corev1.Secret
+	key := types.NamespacedName{Namespace: device.Namespace, Name: ref.Name}
+	if err := r.Get(ctx, key, &secret); err != nil {
+		if errors.IsNotFound(err) {
+			return gnoiTLSProjectionState{}, fmt.Errorf("gNOI TLS Secret %s/%s was not found", key.Namespace, key.Name)
+		}
+		return gnoiTLSProjectionState{}, fmt.Errorf("read gNOI TLS Secret %s/%s: %w", key.Namespace, key.Name, err)
+	}
+	caPEM := secret.Data["ca.crt"]
+	if len(caPEM) == 0 {
+		return gnoiTLSProjectionState{}, fmt.Errorf("gNOI TLS Secret %s/%s requires non-empty key ca.crt", key.Namespace, key.Name)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(caPEM) {
+		return gnoiTLSProjectionState{}, fmt.Errorf("gNOI TLS Secret %s/%s key ca.crt contains no parseable certificates", key.Namespace, key.Name)
+	}
+	certPEM := secret.Data["tls.crt"]
+	keyPEM := secret.Data["tls.key"]
+	hasCert := len(certPEM) > 0
+	hasKey := len(keyPEM) > 0
+	if hasCert != hasKey {
+		return gnoiTLSProjectionState{}, fmt.Errorf("gNOI TLS Secret %s/%s keys tls.crt and tls.key must be configured together", key.Namespace, key.Name)
+	}
+	if hasCert {
+		if _, err := tls.X509KeyPair(certPEM, keyPEM); err != nil {
+			return gnoiTLSProjectionState{}, fmt.Errorf("gNOI TLS Secret %s/%s has an invalid client certificate pair: %w", key.Namespace, key.Name, err)
+		}
+	}
+	return gnoiTLSProjectionState{
+		enabled:           true,
+		secretName:        ref.Name,
+		resourceVersion:   secret.ResourceVersion,
+		clientCertificate: hasCert,
+	}, nil
 }
 
 func xeGNOICertificateProvisioning(spec *ciskov1.DeviceSpec) *ciskov1.XEGNOICertificateProvisioning {
@@ -1897,6 +2046,12 @@ func xeGNOICertificateProvisioning(spec *ciskov1.DeviceSpec) *ciskov1.XEGNOICert
 
 func writeClassGNOIEnabled() bool {
 	value := strings.TrimSpace(os.Getenv(envCVKEnableWriteClassGNOI))
+	enabled, err := strconv.ParseBool(value)
+	return err == nil && enabled
+}
+
+func softwareUpgradeEnabled() bool {
+	value := strings.TrimSpace(os.Getenv(envCVKEnableSoftwareUpgrade))
 	enabled, err := strconv.ParseBool(value)
 	return err == nil && enabled
 }
@@ -1930,18 +2085,35 @@ func podTemplateProjectsGNOIPrivateKey(spec *corev1.PodSpec) bool {
 		return false
 	}
 	for _, volume := range spec.Volumes {
-		if volume.Name != gnoiProvisioningVolumeName || volume.Projected == nil {
+		if volume.Name != gnoiProvisioningVolumeName {
+			continue
+		}
+		// Early versions of the provisioning feature used a direct Secret
+		// volume. Preserve migration safety for already-created Deployments:
+		// an empty item list projects every key and must be treated as if signer
+		// material may be resident.
+		if volume.Secret != nil && projectsGNOIPrivateKey(volume.Secret.Items) {
+			return true
+		}
+		if volume.Projected == nil {
 			continue
 		}
 		for _, source := range volume.Projected.Sources {
-			if source.Secret == nil {
-				continue
+			if source.Secret != nil && projectsGNOIPrivateKey(source.Secret.Items) {
+				return true
 			}
-			for _, item := range source.Secret.Items {
-				if item.Key == "ca.key" || item.Key == "tls.key" {
-					return true
-				}
-			}
+		}
+	}
+	return false
+}
+
+func projectsGNOIPrivateKey(items []corev1.KeyToPath) bool {
+	if len(items) == 0 {
+		return true
+	}
+	for _, item := range items {
+		if item.Key == "ca.key" || item.Key == "tls.key" {
+			return true
 		}
 	}
 	return false
@@ -1969,21 +2141,54 @@ func (r *CiscoDeviceReconciler) lookupSecretResourceVersion(ctx context.Context,
 	return sec.ResourceVersion
 }
 
-// gnoiProvisioningSecretState observes only resourceVersion and whether the
-// recognized ca.key entry is non-empty. It never copies key bytes into the
-// Deployment, ConfigMap, annotations, status, events, or logs.
-func (r *CiscoDeviceReconciler) gnoiProvisioningSecretState(ctx context.Context, namespace, name string) (resourceVersion string, signerAvailable bool, err error) {
+// gnoiProvisioningSecretState validates the same public bundle, optional
+// bootstrap pin, and gated signer that the IOS-XE worker will load. Reusing the
+// driver validator prevents a bad Secret rotation from replacing a working pod
+// with one that cannot initialize gNOI. Key bytes never leave the client cache
+// through Deployment, ConfigMap, annotations, status, events, or logs.
+func (r *CiscoDeviceReconciler) gnoiProvisioningSecretState(
+	ctx context.Context,
+	namespace, name, certificateID, expectedServerName string,
+	validateSigner bool,
+) (resourceVersion string, signerAvailable bool, err error) {
 	if name == "" {
-		return "", false, nil
+		return "", false, fmt.Errorf("gNOI provisioning Secret name is empty")
 	}
 	var secret corev1.Secret
 	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &secret); err != nil {
 		if errors.IsNotFound(err) {
-			return "", false, nil
+			return "", false, fmt.Errorf("gNOI provisioning Secret %s/%s was not found", namespace, name)
 		}
-		return "", false, err
+		return "", false, fmt.Errorf("read gNOI provisioning Secret %s/%s: %w", namespace, name, err)
 	}
-	return secret.ResourceVersion, len(secret.Data["ca.key"]) > 0, nil
+	for _, requiredKey := range []string{"tls.crt", "ca.crt"} {
+		if len(secret.Data[requiredKey]) == 0 {
+			return "", false, fmt.Errorf("gNOI provisioning Secret %s/%s requires non-empty key %s", namespace, name, requiredKey)
+		}
+	}
+	bundle, err := iosxegnoi.NewProvisioningBundle(
+		certificateID,
+		expectedServerName,
+		secret.Data["tls.crt"],
+		secret.Data["ca.crt"],
+	)
+	if err != nil {
+		return "", false, fmt.Errorf("gNOI provisioning Secret %s/%s public material is invalid: %w", namespace, name, err)
+	}
+	caKey := secret.Data["ca.key"]
+	if !validateSigner || len(caKey) == 0 {
+		return secret.ResourceVersion, false, nil
+	}
+	if err := bundle.ConfigureClientTLS(
+		&tls.Config{MinVersion: tls.VersionTLS12, RootCAs: x509.NewCertPool()},
+		secret.Data["bootstrap.crt"],
+	); err != nil {
+		return "", false, fmt.Errorf("gNOI provisioning Secret %s/%s bootstrap material is invalid: %w", namespace, name, err)
+	}
+	if _, err := iosxegnoi.NewLocalCertificateSigner(bundle, caKey); err != nil {
+		return "", false, fmt.Errorf("gNOI provisioning Secret %s/%s signer is invalid: %w", namespace, name, err)
+	}
+	return secret.ResourceVersion, true, nil
 }
 
 // updateStatus patches the CiscoDevice status based on the Deployment state.

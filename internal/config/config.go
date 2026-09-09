@@ -67,11 +67,15 @@ func validateDeviceSpec(spec *v1alpha1.DeviceSpec) error {
 	if err := spec.GNOI.Validate(); err != nil {
 		return fmt.Errorf("invalid gNOI config: %w", err)
 	}
-	if spec.Driver != v1alpha1.DeviceDriverXE && spec.XE != nil && spec.XE.GNOI != nil && spec.XE.GNOI.CertificateProvisioning != nil {
+	provisioningConfigured := spec.XE != nil && spec.XE.GNOI != nil && spec.XE.GNOI.CertificateProvisioning != nil
+	if spec.Driver != v1alpha1.DeviceDriverXE && provisioningConfigured {
 		return fmt.Errorf("gNOI certificate provisioning is supported only for driver XE")
 	}
-	if spec.GNOI != nil && spec.GNOI.TransportSecurity == v1alpha1.GNOITransportSecurityTLS && spec.GNOI.TLS == nil && spec.TLS != nil && spec.TLS.InsecureSkipVerify {
-		return fmt.Errorf("explicit secure gNOI requires verified TLS unless gnoi.tls supplies gNOI-specific trust")
+	if spec.GNOI != nil && spec.GNOI.TLS != nil && provisioningConfigured {
+		return fmt.Errorf("spec.gnoi.tls and spec.xe.gnoi.certificateProvisioning cannot both be configured")
+	}
+	if spec.GNOI != nil && spec.GNOI.TransportSecurity == v1alpha1.GNOITransportSecurityTLS && spec.GNOI.TLS == nil && !provisioningConfigured && spec.TLS != nil && spec.TLS.InsecureSkipVerify {
+		return fmt.Errorf("explicit secure gNOI requires system or verified shared TLS, spec.gnoi.tls, or IOS XE certificate provisioning trust")
 	}
 
 	switch spec.Driver {

@@ -72,8 +72,33 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   controller image: {{ include "cisco-virtual-kubelet.controllerImage" . }}
   vk image:         {{ include "cisco-virtual-kubelet.vkImage" . }}
   metrics:          {{ .Values.controller.metricsBindAddress }}
-  gNOI:             {{ if .Values.gnoi.disabled }}disabled{{ else if .Values.gnoi.insecure }}insecure{{ else }}auto{{ end }}{{ if .Values.gnoi.port }} on port {{ .Values.gnoi.port }}{{ end }}
+  gNOI global default/override: {{ if .Values.gnoi.disabled }}disabled{{ else if .Values.gnoi.insecure }}insecure{{ else }}auto{{ end }}{{ if .Values.gnoi.port }} on port {{ .Values.gnoi.port }}{{ end }}
   diag admin:       {{ if .Values.aggregator.enabled }}(disabled in aggregator-mode){{ else }}127.0.0.1:8082 inside each per-device pod{{ end }}
+
+{{- if and .Values.aggregator.enabled (not .Values.gnoi.disabled) (or .Values.gnoi.enableSoftwareUpgrade .Values.gnoi.enableWriteClass) }}
+
+  ⚠️  IOS-XE MUTATION CONTROLLERS ARE INACTIVE IN AGGREGATOR MODE.
+
+  IOSXEOperationalAction and IOSXESoftwareUpgrade run only in per-device
+  workers. Set aggregator.enabled=false before enabling write-class actions or
+  software upgrades; the mutation gate values do not add those controllers to
+  the aggregator process.
+{{- else if and (not .Values.gnoi.disabled) (or .Values.gnoi.enableSoftwareUpgrade .Values.gnoi.enableWriteClass) }}
+Mutation-capable per-device workers use a Recreate Deployment strategy to
+prevent overlapping generations. Expect a brief node-management interruption
+during worker rollouts.
+{{- end }}
+
+{{- if and (not .Values.aggregator.enabled) (not .Values.gnoi.disabled) .Values.gnoi.enableSoftwareUpgrade }}
+IOS-XE software upgrades are enabled. URL/ConfigMap sources stream through
+gNOI; deviceFile registration requires IOS-XE RESTCONF and has no CLI fallback.
+ISSU is rejected until CVK can verify a non-disruptive activation path.
+Maximum URL/ConfigMap image: {{ .Values.gnoi.softwareUpgrade.maxImageBytes | int64 }} bytes.
+URL staging and its verified cache use pod ephemeral storage. The resolver
+verifies a private temporary file in place, atomically promotes it, and retains
+at most one completed managed digest; budget slightly more than the largest
+image plus normal pod overhead.
+{{- end }}
 
 {{- if and .Values.telemetry.otlp.headers (not (eq (.Values.telemetry.otlp.headers | toJson) "{}")) (not .Values.telemetry.otlp.headersSecret.name) }}
 

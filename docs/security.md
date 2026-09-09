@@ -307,35 +307,66 @@ spec:
 | `caFile` | Trust anchor for verifying the device certificate. |
 | `certFile`, `keyFile` | Optional client certificate — required only if the device enforces mutual TLS. |
 
-The `certFile` / `keyFile` / `caFile` paths refer to files **inside the VK pod**. Mount them with a Secret-backed volume or a configMap-backed volume on the VK Deployment. The controller does not currently auto-mount them — you'll need a post-install patch or a forked chart.
+The `certFile` / `keyFile` / `caFile` paths refer to files **inside the VK pod**.
+Mount private certificates and keys from a Secret-backed volume; public CA
+material may come from a Secret or ConfigMap. The controller does not currently
+auto-mount these shared paths—you need a custom Deployment or chart extension.
 
-The configdriver transports, MDT-over-gNMI telemetry, gNOI, and the NX-API
-client on NX-OS honour the full `spec.tls` block through one shared builder.
-IOS-XE app-hosting RESTCONF constructs its TLS client separately. A `caFile`
-provides verified private-CA trust on each of these paths, so
-`insecureSkipVerify: true` is unnecessary. A gNOI `transportSecurity: tls`
-setting uses the trust and client-certificate fields even if the general
-`tls.enabled` switch is off. Shared-builder clients reject a `certFile` or
-`keyFile` configured without its matching pair.
+The configdriver transports, MDT-over-gNMI telemetry, and the NX-API client on
+NX-OS honour the full `spec.tls` block through one shared builder. IOS-XE
+app-hosting RESTCONF constructs its TLS client separately. gNOI resolves port,
+authentication, and exactly one trust source together: the system root pool,
+verified shared `spec.tls`, dedicated `spec.gnoi.tls`, or IOS-XE provisioning
+trust. Shared and gNOI-specific file configurations reject a `certFile` or
+`keyFile` without its matching pair. During migration, remove an obsolete
+orphan path or supply the complete pair: a lone shared `certFile` or `keyFile`
+that an older release silently ignored now fails startup for every consumer of
+the shared TLS builder.
 
 ### Secure IOS-XE gNOI
 
 With explicit `gnoi.transportSecurity: tls`, CVK sends the device username and
-password as separate per-RPC metadata fields over verified TLS;
-`insecureSkipVerify: true` is rejected. Pre-existing configurations that do not
-opt in retain their legacy HTTP Basic metadata behavior, including on plaintext
-listeners, solely for compatibility. Migrate them to explicit secure gNOI.
-Avoid metadata logging and limit access to the credential Secret.
+password as separate per-RPC metadata fields over verified TLS. Pre-existing
+configurations that do not opt in retain their legacy HTTP Basic metadata
+behavior, including on plaintext listeners, solely for compatibility. Migrate
+them to explicit secure gNOI. Avoid metadata logging and limit access to the
+credential Secret.
+
+Kubernetes-specific `spec.gnoi.tls` accepts only a same-namespace `secretRef`.
+Its Secret requires `ca.crt`; optional mutual TLS requires both `tls.crt` and
+`tls.key`. The controller validates the PEM material, projects only those fixed
+keys read-only, and rolls the worker after a valid Secret change when gNOI is
+enabled in per-device topology. With global gNOI disablement, the per-device
+worker remains but omits the trust projection and does not roll for trust-Secret
+changes. Aggregated config-only topology has no per-device worker. Direct local
+configuration uses `caFile` and an optional `certFile`/`keyFile` pair instead;
+paths are rejected by the Kubernetes API. There is intentionally no gNOI
+`enabled` or `insecureSkipVerify` field.
+
+The controller manager watches these Secrets through its cached Kubernetes
+client. Complete Secret objects—including unrecognized keys and provisioning
+`ca.key` material—may therefore remain in the manager cache and process memory
+for its lifetime, even though reconciliation acts only on the documented keys.
+Manager RBAC, logs, debugging access, and pod exec are part of the trust
+boundary. Secret bytes are never copied into the worker ConfigMap, status,
+events, or logs. Restrict Secret reads and access to both the manager and the
+per-device worker, where private keys are mounted only when required.
 
 The dedicated provisioning Secret referenced by
 `spec.xe.gnoi.certificateProvisioning.secretRef` always supplies `tls.crt` and
-`ca.crt`.
-`bootstrap.crt` is an optional exact pin for the temporary IOS-XE leaf, and
+`ca.crt`. It automatically becomes the isolated gNOI bootstrap and
+steady-state trust source, so it cannot be combined with `spec.gnoi.tls`.
+An insecure top-level `spec.tls` may remain for an unrelated legacy transport
+only because gNOI never inherits it in this mode. `bootstrap.crt` is an
+optional exact pin for the temporary IOS-XE leaf, and
 `ca.key` is used only by the gated `ProvisionCertificate` action. The key is
 kept separate from the read-only trust bundle behind a `CertificateSigner`
-boundary; the included local PEM signer is transitional and permits one
-signing attempt per process. No external CA, KMS, or HSM signer backend is
-included. Each action must bind the configured certificate ID and the lowercase
+boundary. The included local PEM signer is transitional and can sign a new CSR
+for a corrected immutable action after a definitive pre-Install failure;
+create-only device Install remains at-most-once per action. The parsed key stays
+in worker process memory until exit or a completed key-free rollout. No
+external CA, KMS, or HSM signer backend is included. Each action must bind the
+configured certificate ID and the lowercase
 SHA-256 of the exact `tls.crt || ca.crt` bytes; a stale or mismatched public
 intent is rejected before the worker acquires a gNOI client or marks the action
 Running. `ca.key` and `bootstrap.crt` are projected only while write-class gNOI
@@ -347,11 +378,12 @@ ClusterRole can read Secrets cluster-wide so VK nodes can serve pod volumes.
 After provisioning is verified, promptly remove `ca.key` and `bootstrap.crt`;
 disable the write-class gate too unless other write actions are still needed.
 Keep the public certificate and CA bundle for read-only gNOI trust. Deployments
-use a non-overlapping `Recreate` strategy
-while a signer may be resident and for the first key-free cleanup rollout, so a
-signer-bearing process cannot overlap its replacement. The controller restores
-normal rolling updates only after that cleanup generation is fully available
-and no old pod is terminating. Disabling gNOI entirely suppresses the
+use a non-overlapping `Recreate` strategy while a signer may be resident, for
+the first key-free cleanup rollout, and whenever write-class gNOI actions or
+IOS-XE software upgrades are enabled. This prevents two worker generations
+from concurrently acting on the same durable mutation claim. Normal rolling
+updates resume only after signer cleanup is complete and both mutation gates,
+or gNOI globally, are disabled. Disabling gNOI entirely suppresses the
 provisioning Secret mount and its rollout annotation.
 
 The installed identity and CA bundle are scoped to gNOI in CVK, but IOS-XE
@@ -363,6 +395,19 @@ client settings, so ensure every gNMI client already trusts the new issuer.
 See the [secure gNOI and CSR provisioning workflow](gnoi-software-lifecycle.md#secure-ios-xe-gnxi)
 for the complete Secret contract, one-shot action, trust-bundle warning, and
 verification sequence.
+
+### Software-upgrade image transport
+
+URL image resolution is capped at 8 GiB by default and uses private-mode files
+inside the worker's `/tmp` `emptyDir`; symlink and non-regular cache entries are
+rejected. Configure the cap with `gnoi.softwareUpgrade.maxImageBytes`, budget
+ephemeral storage for one full image plus normal pod and filesystem overhead,
+and remember that SHA-256 integrity does not make plaintext HTTP, FTP, or TFTP
+confidential or authenticate their servers. CVK verifies a private temporary
+file and atomically promotes that same file to its digest cache, avoiding a
+second full-image copy. Prefer HTTPS or host-key-verified SFTP/SCP for
+production image repositories. Pod exec and node-root access remain inside the
+image-file trust boundary.
 
 ### SSH host keys
 
@@ -427,7 +472,18 @@ Used by each VK pod. Permissions:
 | `services` | get, list, watch | Service discovery surface for pods |
 | `persistentvolumes`, `persistentvolumeclaims` | get, list, watch | Not used directly today; reserved for future volume support |
 | `events` | create, patch | Emit pod lifecycle events |
-| `leases` (in `kube-node-lease`) | get, list, watch, create, update, patch, delete | Node heartbeat via Lease API |
+| `leases` (`kube-node-lease`, the worker namespace, and optional configured lease namespace) | get, list, watch, create, update, patch, delete | Node heartbeat, config arbitration, and the shared disruptive-mutation fence |
+
+Write-class gNOI actions and software upgrades share one
+`device-disruptive-mutation` Lease per namespaced device. Definitive outcomes
+release it. Every post-invocation action failure and any upgrade outcome that
+cannot be safely correlated remains quarantined until the fixed 26-hour TTL
+expires; accepted `Reboot` and `FactoryReset` requests are also retained because
+acknowledgement does not prove convergence.
+`CancelReboot` bypasses the fence so an authorized operator can cancel a
+pending reboot, but it never releases another holder's Lease. This is a CVK
+coordination boundary, not a device lock: external automation and manual CLI
+changes still require operational controls.
 
 ### Network-controller CRD validation prerequisite
 

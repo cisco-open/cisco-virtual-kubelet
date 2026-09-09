@@ -117,3 +117,106 @@ func TestGNOIConfigValidateTransportSecurity(t *testing.T) {
 		t.Fatal("Validate() accepted plaintext gNOI transport")
 	}
 }
+
+func TestGNOIConfigValidateDedicatedTLS(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  *GNOIConfig
+		wantErr string
+	}{
+		{
+			name: "CA only",
+			config: &GNOIConfig{
+				TransportSecurity: GNOITransportSecurityTLS,
+				TLS:               &GNOITLSConfig{CAFile: "/run/gnoi/ca.crt"},
+			},
+		},
+		{
+			name: "CA with client pair",
+			config: &GNOIConfig{
+				TransportSecurity: GNOITransportSecurityTLS,
+				TLS: &GNOITLSConfig{
+					CAFile:   "/run/gnoi/ca.crt",
+					CertFile: "/run/gnoi/tls.crt",
+					KeyFile:  "/run/gnoi/tls.key",
+				},
+			},
+		},
+		{
+			name: "requires explicit TLS transport",
+			config: &GNOIConfig{
+				TransportSecurity: GNOITransportSecurityAuto,
+				TLS:               &GNOITLSConfig{CAFile: "/run/gnoi/ca.crt"},
+			},
+			wantErr: "tls requires transportSecurity to be tls",
+		},
+		{
+			name: "requires CA",
+			config: &GNOIConfig{
+				TransportSecurity: GNOITransportSecurityTLS,
+				TLS:               &GNOITLSConfig{},
+			},
+			wantErr: "caFile is required",
+		},
+		{
+			name: "rejects certificate without key",
+			config: &GNOIConfig{
+				TransportSecurity: GNOITransportSecurityTLS,
+				TLS: &GNOITLSConfig{
+					CAFile:   "/run/gnoi/ca.crt",
+					CertFile: "/run/gnoi/tls.crt",
+				},
+			},
+			wantErr: "certFile and keyFile must be configured together",
+		},
+		{
+			name: "rejects key without certificate",
+			config: &GNOIConfig{
+				TransportSecurity: GNOITransportSecurityTLS,
+				TLS: &GNOITLSConfig{
+					CAFile:  "/run/gnoi/ca.crt",
+					KeyFile: "/run/gnoi/tls.key",
+				},
+			},
+			wantErr: "certFile and keyFile must be configured together",
+		},
+		{
+			name: "rejects Kubernetes Secret reference in local YAML",
+			config: &GNOIConfig{
+				TransportSecurity: GNOITransportSecurityTLS,
+				TLS: &GNOITLSConfig{
+					SecretRef: &GNOITLSSecretReference{Name: "router-gnoi-tls"},
+				},
+			},
+			wantErr: "secretRef is supported only in Kubernetes objects",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.Validate()
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("Validate() error = %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("Validate() error = %v, want substring %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestGNOIConfigValidatePort(t *testing.T) {
+	for _, port := range []int{0, 1, 65535} {
+		if err := (&GNOIConfig{Port: port}).Validate(); err != nil {
+			t.Errorf("Validate() port %d: %v", port, err)
+		}
+	}
+	for _, port := range []int{-1, 65536} {
+		if err := (&GNOIConfig{Port: port}).Validate(); err == nil {
+			t.Errorf("Validate() accepted port %d", port)
+		}
+	}
+}

@@ -101,6 +101,10 @@ spec:
 For secure gNOI transport and opt-in certificate provisioning, see the
 [configuration reference](CONFIGURATION.md#gnoi) and the
 [secure gNOI workflow](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
+Kubernetes-specific gNOI trust uses a same-namespace
+`spec.gnoi.tls.secretRef`; local certificate paths are rejected by admission.
+Choose either that generic trust source or
+`spec.xe.gnoi.certificateProvisioning`, not both.
 
 ```bash
 $ kubectl get cvk
@@ -488,9 +492,11 @@ spec:
   ttlSecondsAfterFinished: 600
 ```
 
-Use `GNOICertGet` to test TLS and authentication before provisioning. Run
-`GNOIOSVerify` only after IOS-XE reports its gNXI state as `Provisioned`;
-System RPCs such as `GNOITime` are not implemented on every platform.
+Use `GNOICertGet` to test TLS and authentication before provisioning.
+`GNOIOSVerify` succeeds only after IOS-XE reports its gNXI state as
+`Provisioned`; before that, the exact not-provisioned response is a safe,
+read-only signal that authentication reached the OS service. System RPCs such
+as `GNOITime` are not implemented on every platform.
 
 ### IOSXEOperationalAction
 
@@ -501,7 +507,9 @@ bootstrap.
 
 Every action requires `spec.confirm` to equal the target device name, the spec
 is immutable after creation, and a `Running` action is not dispatched a second
-time after controller restart.
+time after controller restart. Actions and software upgrades share one
+platform-neutral disruptive-mutation Lease for the target device; ambiguous
+post-invocation outcomes are quarantined rather than overlapped.
 
 `ProvisionCertificate` requires a `provisionCertificate` args block with the
 configured certificate ID and the lowercase SHA-256 of the exact `tls.crt`
@@ -530,10 +538,28 @@ spec:
 
 ### IOSXESoftwareUpgrade
 
-`IOSXESoftwareUpgrade` drives the gNOI software-upgrade lifecycle. Use exactly
-one image source: URL with `sha256`, `configMapRef`, or `localPath`. For a
-staged image on flash, include `localPathSHA256` when the device supports gNOI
-File.Get hash verification.
+`IOSXESoftwareUpgrade` drives the gNOI software-upgrade lifecycle. Select
+exactly one source intent:
+
+- `url` with `sha256`, or `configMapRef`: CVK resolves and hashes the content,
+  then streams its bytes with gNOI `OS.Install`.
+- `preinstalled: {}`: activate one exact, activatable native inventory version
+  without transferring or registering content.
+- `deviceFile` with `path` and `sha256`: verify an IOS-XE-resident file through
+  gNOI `File.Get`, register it with the IOS-XE RESTCONF install RPC, and then
+  activate its exact inventory version.
+- `localPath` with optional `localPathSHA256`: deprecated inventory-only form.
+  It never registers the path; use `deviceFile` for that workflow.
+
+Device-file registration is IOS-XE and RESTCONF only, with no CLI fallback.
+Unsupported capabilities, ambiguous versions, and non-activatable inventory
+states fail closed. `ISSU` is currently rejected because CVK cannot yet verify
+that IOS-XE selected a non-disruptive path. `NoReboot` normally terminates as
+`StagedForNextBoot` while the old version remains active; it does not claim a
+completed upgrade. IOS-XE individual-supervisor upgrades install active then
+standby and activate standby then active, with durable milestones and no
+automatic rollback when a safe per-supervisor rollback sequence cannot be
+proven.
 
 ```yaml
 apiVersion: ops.cisco.vk/v1alpha1
@@ -547,10 +573,36 @@ spec:
   strategy: Reload
   rollbackOnFailure: true
   imageSource:
-    localPath: flash:cat9k_iosxe.17.18.02.SPA.bin
-    localPathSHA256: 8f1b9e2d1d9b6d0e000000000000000000000000000000000000000000000000
+    deviceFile:
+      path: flash:cat9k_iosxe.17.18.02.SPA.bin
+      sha256: 8f1b9e2d1d9b6d0e000000000000000000000000000000000000000000000000
+  installTimeoutSeconds: 3600
   rebootTimeoutSeconds: 1800
 ```
+
+Staging, activation, and rollback requests are recorded before their
+device-mutating RPCs and are not replayed after an ambiguous result. This
+at-most-once policy can require operator inspection when the controller cannot
+determine whether IOS-XE received a recorded request.
+
+`status.executionModel: AtMostOnceV1` identifies objects managed under this
+safety contract. On controller upgrade, unmarked `Pending` and `Resolving`
+objects are adopted; later unmarked phases fail closed with
+`LegacyStateOutcomeUnknown`. Deprecated `resumePolicy`, `maxRetries`, and
+`retryCount` fields remain on the wire for compatibility but are ignored by
+the current reconciler; admission retains the old `Retry` and `3` defaults for
+controller rollback compatibility.
+`Cancelled` remains a recognized terminal phase for stored objects.
+Unknown non-empty execution-model values remain storable for downgrade safety;
+an older controller preserves that status, fences the device, and issues no
+device RPC.
+Any future controller that introduces a mutation-capable phase must also bump
+the execution-model value so older controllers can fence the unfamiliar state.
+For one release, the shared mutation guard lists both upgrade and operational
+action CRDs before either controller claims a device Lease, deterministically
+fencing legacy in-flight or recently invoked work even if its controller is
+disabled. Scan/RBAC failures block mutation, and the fixed IOS-XE compatibility
+window is independent of other drivers' Lease settings.
 
 For the full operational model, see
 [gNOI and Software Lifecycle](gnoi-software-lifecycle.md) and the

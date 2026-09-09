@@ -70,6 +70,12 @@ func rpcOutcome(err error) string {
 		return "ok"
 	}
 	switch status.Code(err) {
+	case codes.Unauthenticated:
+		return "unauthenticated"
+	case codes.PermissionDenied:
+		return "permission_denied"
+	case codes.FailedPrecondition:
+		return "failed_precondition"
 	case codes.Unimplemented:
 		return "unimplemented"
 	case codes.DeadlineExceeded:

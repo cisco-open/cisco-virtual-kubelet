@@ -10,6 +10,8 @@ package controller
 
 import (
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -22,6 +24,8 @@ func TestVKRBACStrictProfileGatesHighRiskRules(t *testing.T) {
 	text := string(raw)
 	for _, want := range []string{
 		`$strictRBAC := eq .Values.rbac.profile "strict"`,
+		`$mutationControllersEnabled := or .Values.gnoi.enableSoftwareUpgrade .Values.gnoi.enableWriteClass`,
+		`if or (not $strictRBAC) $mutationControllersEnabled`,
 		`if or (not $strictRBAC) .Values.gnoi.enableSoftwareUpgrade`,
 		`if or (not $strictRBAC) .Values.gnoi.enableWriteClass`,
 		`if not $strictRBAC`,
@@ -37,6 +41,65 @@ func TestVKRBACStrictProfileGatesHighRiskRules(t *testing.T) {
 		if strings.Contains(text, forbidden) {
 			t.Fatalf("vk-rbac template contains wildcard RBAC %q", forbidden)
 		}
+	}
+}
+
+func TestVKRBACStrictSingleMutationControllerReadsBothKinds(t *testing.T) {
+	if _, err := exec.LookPath("helm"); err != nil {
+		t.Skip("helm is required for rendered chart RBAC regression")
+	}
+	tests := []struct {
+		name            string
+		softwareUpgrade bool
+		writeClass      bool
+		enabledRule     string
+		disabledRule    string
+		enabledStatus   string
+		disabledStatus  string
+	}{
+		{
+			name:            "software-upgrade-only",
+			softwareUpgrade: true,
+			enabledRule:     `resources: ["iosxesoftwareupgrades"]`,
+			disabledRule:    `resources: ["iosxeoperationalactions"]`,
+			enabledStatus:   `resources: ["iosxesoftwareupgrades/status"]`,
+			disabledStatus:  `resources: ["iosxeoperationalactions/status"]`,
+		},
+		{
+			name:           "write-class-only",
+			writeClass:     true,
+			enabledRule:    `resources: ["iosxeoperationalactions"]`,
+			disabledRule:   `resources: ["iosxesoftwareupgrades"]`,
+			enabledStatus:  `resources: ["iosxeoperationalactions/status"]`,
+			disabledStatus: `resources: ["iosxesoftwareupgrades/status"]`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := exec.Command("helm", "template", "cvk", "../../charts/cisco-virtual-kubelet",
+				"--namespace", "default",
+				"--set", "rbac.profile=strict",
+				"--set", "gnoi.enableSoftwareUpgrade="+strconv.FormatBool(tt.softwareUpgrade),
+				"--set", "gnoi.enableWriteClass="+strconv.FormatBool(tt.writeClass))
+			raw, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("helm template: %v\n%s", err, raw)
+			}
+			text := string(raw)
+			sharedRead := `resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
+    verbs: ["list"]`
+			if !strings.Contains(text, sharedRead) {
+				t.Fatalf("strict single-controller RBAC is missing the cross-kind compatibility read:\n%s", text)
+			}
+			if !strings.Contains(text, tt.enabledRule+"\n    verbs: [\"get\", \"watch\", \"update\", \"patch\"]") ||
+				!strings.Contains(text, tt.enabledStatus) {
+				t.Fatalf("strict RBAC is missing enabled-controller write/status rules")
+			}
+			if strings.Contains(text, tt.disabledRule+"\n    verbs: [\"get\", \"watch\", \"update\", \"patch\"]") ||
+				strings.Contains(text, tt.disabledStatus) {
+				t.Fatalf("strict RBAC grants controller writes to disabled peer kind")
+			}
+		})
 	}
 }
 

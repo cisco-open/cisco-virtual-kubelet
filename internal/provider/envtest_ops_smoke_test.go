@@ -43,8 +43,11 @@ import (
 	"testing"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
@@ -77,9 +80,117 @@ func TestEnvtest_CiscoDeviceExplicitGNOIRequiresVerifiedTLS(t *testing.T) {
 	unverified := device.DeepCopy()
 	unverified.ObjectMeta = metav1.ObjectMeta{Name: "unverified", Namespace: device.Namespace}
 	unverified.Spec.TLS.InsecureSkipVerify = true
-	if err := c.Create(ctx, unverified); err == nil || !strings.Contains(err.Error(), "explicit secure gNOI requires verified TLS") {
+	if err := c.Create(ctx, unverified); err == nil || !strings.Contains(err.Error(), "explicit secure gNOI requires system or verified shared TLS, spec.gnoi.tls, or IOS XE certificate provisioning trust") {
 		t.Fatalf("explicit secure gNOI with insecureSkipVerify error=%v, want admission rejection", err)
 	}
+}
+
+func TestEnvtest_CiscoDeviceDedicatedGNOITLSAdmission(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-gnoi-dedicated-tls")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	newDevice := func(name string) *unstructured.Unstructured {
+		return &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": "cisco.vk/v1alpha1",
+			"kind":       "CiscoDevice",
+			"metadata": map[string]any{
+				"name":      name,
+				"namespace": "envtest-gnoi-dedicated-tls",
+			},
+			"spec": map[string]any{
+				"driver":   "XR",
+				"address":  "192.0.2.10",
+				"username": "admin",
+				"tls": map[string]any{
+					"enabled":            true,
+					"insecureSkipVerify": true,
+				},
+				"gnoi": map[string]any{
+					"transportSecurity": "tls",
+					"tls": map[string]any{
+						"secretRef": map[string]any{"name": "router-gnoi-tls"},
+					},
+				},
+			},
+		}}
+	}
+	assertRejected := func(t *testing.T, device *unstructured.Unstructured, want string) {
+		t.Helper()
+		err := c.Create(ctx, device)
+		if err == nil {
+			t.Fatalf("apiserver admitted %s, want validation rejection containing %q", device.GetName(), want)
+		}
+		if !apierrors.IsInvalid(err) {
+			t.Fatalf("create %s error=%v, want Invalid admission response", device.GetName(), err)
+		}
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("create %s error=%v, want substring %q", device.GetName(), err, want)
+		}
+	}
+
+	// Dedicated verified trust is independent from the shared transport. In
+	// particular, an existing RESTCONF insecureSkipVerify escape must not make
+	// this explicitly secured gNOI configuration inadmissible.
+	if err := c.Create(ctx, newDevice("accepted-with-insecure-shared-tls")); err != nil {
+		t.Fatalf("explicit gNOI TLS Secret with insecure shared TLS rejected: %v", err)
+	}
+
+	for _, tc := range []struct {
+		name      string
+		transport string
+		omit      bool
+	}{
+		{name: "auto-transport", transport: "auto"},
+		{name: "omitted-transport", omit: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			device := newDevice(tc.name)
+			gnoi, _, err := unstructured.NestedMap(device.Object, "spec", "gnoi")
+			if err != nil {
+				t.Fatalf("read gNOI fixture: %v", err)
+			}
+			if tc.omit {
+				delete(gnoi, "transportSecurity")
+			} else {
+				gnoi["transportSecurity"] = tc.transport
+			}
+			if err := unstructured.SetNestedMap(device.Object, gnoi, "spec", "gnoi"); err != nil {
+				t.Fatalf("write gNOI fixture: %v", err)
+			}
+			assertRejected(t, device, "spec.gnoi.tls requires spec.gnoi.transportSecurity to be tls")
+		})
+	}
+
+	for _, field := range []string{"caFile", "certFile", "keyFile"} {
+		t.Run("rejects-local-"+field, func(t *testing.T) {
+			device := newDevice("local-" + strings.ToLower(field))
+			if err := unstructured.SetNestedField(device.Object, "/host/secret.pem", "spec", "gnoi", "tls", field); err != nil {
+				t.Fatalf("write %s fixture: %v", field, err)
+			}
+			assertRejected(t, device, "caFile, certFile, and keyFile are local-only and cannot be set in a Kubernetes object")
+		})
+	}
+
+	withProvisioning := newDevice("conflicting-provisioning")
+	if err := unstructured.SetNestedField(withProvisioning.Object, "XE", "spec", "driver"); err != nil {
+		t.Fatalf("write driver fixture: %v", err)
+	}
+	if err := unstructured.SetNestedMap(withProvisioning.Object, map[string]any{
+		"gnoi": map[string]any{
+			"certificateProvisioning": map[string]any{
+				"certificateID":         "cvk-gnoi-os",
+				"replaceTargetCABundle": true,
+				"secretRef":             map[string]any{"name": "router-gnoi-identity"},
+			},
+		},
+	}, "spec", "xe"); err != nil {
+		t.Fatalf("write IOS-XE provisioning fixture: %v", err)
+	}
+	assertRejected(t, withProvisioning, "spec.gnoi.tls and spec.xe.gnoi.certificateProvisioning cannot both be configured")
 }
 
 func TestEnvtest_CiscoDeviceXEGNOIProvisioningRequiresExplicitTLS(t *testing.T) {
@@ -453,6 +564,278 @@ func TestEnvtest_IOSXESoftwareUpgradeImageSourceURLSchemePattern(t *testing.T) {
 		case !tc.wantPass && err == nil:
 			t.Errorf("%s: URL %q admitted but should be rejected", tc.name, tc.url)
 		}
+	}
+}
+
+// TestEnvtest_IOSXESoftwareUpgradeImageSourceUnionEnforced pins the lifecycle
+// intent union at admission. Each accepted source has one unambiguous meaning:
+// transfer bytes, activate a preinstalled version, or register a device file.
+func TestEnvtest_IOSXESoftwareUpgradeImageSourceUnionEnforced(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-upgrade-source-union")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	validSHA := strings.Repeat("a", 64)
+
+	cases := []struct {
+		name     string
+		source   opsv1alpha1.UpgradeImageSource
+		wantPass bool
+	}{
+		{
+			name:     "url",
+			source:   opsv1alpha1.UpgradeImageSource{URL: "https://images.example.com/cat9k.bin", SHA256: validSHA},
+			wantPass: true,
+		},
+		{
+			name:     "config-map",
+			source:   opsv1alpha1.UpgradeImageSource{ConfigMapRef: &corev1.LocalObjectReference{Name: "image"}},
+			wantPass: true,
+		},
+		{
+			name:     "preinstalled",
+			source:   opsv1alpha1.UpgradeImageSource{Preinstalled: &opsv1alpha1.PreinstalledImageSource{}},
+			wantPass: true,
+		},
+		{
+			name: "device-file",
+			source: opsv1alpha1.UpgradeImageSource{DeviceFile: &opsv1alpha1.DeviceFileImageSource{
+				Path: "flash:cat9k.bin", SHA256: validSHA,
+			}},
+			wantPass: true,
+		},
+		{
+			name:     "legacy-local-path",
+			source:   opsv1alpha1.UpgradeImageSource{LocalPath: "flash:cat9k.bin"},
+			wantPass: true,
+		},
+		{name: "missing-source"},
+		{
+			name: "multiple-sources",
+			source: opsv1alpha1.UpgradeImageSource{
+				Preinstalled: &opsv1alpha1.PreinstalledImageSource{},
+				LocalPath:    "flash:cat9k.bin",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		up := newUpgrade(tc.name, "envtest-upgrade-source-union", "26.01.01")
+		up.Spec.ImageSource = tc.source
+		err := c.Create(ctx, up)
+		switch {
+		case tc.wantPass && err != nil:
+			t.Errorf("%s: valid image source rejected: %v", tc.name, err)
+		case !tc.wantPass && err == nil:
+			t.Errorf("%s: invalid image source admitted", tc.name)
+		}
+	}
+}
+
+// TestEnvtest_IOSXESoftwareUpgradeImageSourceDependentFieldsEnforced protects
+// credentials and digests from being accepted without their owning source.
+func TestEnvtest_IOSXESoftwareUpgradeImageSourceDependentFieldsEnforced(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-upgrade-source-dependent")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	validSHA := strings.Repeat("a", 64)
+
+	cases := []struct {
+		name   string
+		source opsv1alpha1.UpgradeImageSource
+	}{
+		{
+			name:   "url-missing-sha",
+			source: opsv1alpha1.UpgradeImageSource{URL: "https://images.example.com/cat9k.bin"},
+		},
+		{
+			name: "orphan-url-sha",
+			source: opsv1alpha1.UpgradeImageSource{
+				Preinstalled: &opsv1alpha1.PreinstalledImageSource{}, SHA256: validSHA,
+			},
+		},
+		{
+			name: "orphan-url-secret",
+			source: opsv1alpha1.UpgradeImageSource{
+				Preinstalled: &opsv1alpha1.PreinstalledImageSource{},
+				URLSecretRef: &corev1.LocalObjectReference{Name: "credentials"},
+			},
+		},
+		{
+			name: "empty-url-secret-name",
+			source: opsv1alpha1.UpgradeImageSource{
+				URL:          "https://images.example.com/cat9k.bin",
+				SHA256:       validSHA,
+				URLSecretRef: &corev1.LocalObjectReference{},
+			},
+		},
+		{
+			name: "url-userinfo",
+			source: opsv1alpha1.UpgradeImageSource{
+				URL: "sftp://image-user:secret@images.example.com/cat9k.bin", SHA256: validSHA,
+			},
+		},
+		{
+			name:   "empty-config-map-name",
+			source: opsv1alpha1.UpgradeImageSource{ConfigMapRef: &corev1.LocalObjectReference{}},
+		},
+		{
+			name: "orphan-local-path-sha",
+			source: opsv1alpha1.UpgradeImageSource{
+				Preinstalled: &opsv1alpha1.PreinstalledImageSource{}, LocalPathSHA256: validSHA,
+			},
+		},
+		{
+			name: "device-file-missing-sha",
+			source: opsv1alpha1.UpgradeImageSource{DeviceFile: &opsv1alpha1.DeviceFileImageSource{
+				Path: "flash:cat9k.bin",
+			}},
+		},
+		{
+			name: "device-file-empty-path",
+			source: opsv1alpha1.UpgradeImageSource{DeviceFile: &opsv1alpha1.DeviceFileImageSource{
+				SHA256: validSHA,
+			}},
+		},
+		{
+			name: "device-file-relative-path",
+			source: opsv1alpha1.UpgradeImageSource{DeviceFile: &opsv1alpha1.DeviceFileImageSource{
+				Path: "cat9k.bin", SHA256: validSHA,
+			}},
+		},
+	}
+
+	for _, tc := range cases {
+		up := newUpgrade(tc.name, "envtest-upgrade-source-dependent", "26.01.01")
+		up.Spec.ImageSource = tc.source
+		if err := c.Create(ctx, up); err == nil {
+			t.Errorf("%s: invalid dependent fields admitted", tc.name)
+		}
+	}
+}
+
+// TestEnvtest_IOSXESoftwareUpgradeSpecImmutable ensures an in-flight upgrade
+// cannot change target, source, or strategy while the state machine is acting.
+func TestEnvtest_IOSXESoftwareUpgradeSpecImmutable(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-upgrade-immutable")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	up := newUpgrade("immutable", "envtest-upgrade-immutable", "26.01.01")
+	up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{
+		Preinstalled: &opsv1alpha1.PreinstalledImageSource{},
+	}
+	if err := c.Create(ctx, up); err != nil {
+		t.Fatalf("create upgrade: %v", err)
+	}
+
+	up.Spec.TargetVersion = "26.01.02"
+	if err := c.Update(ctx, up); err == nil {
+		t.Fatal("apiserver admitted mutation of IOSXESoftwareUpgrade spec")
+	}
+
+	// The transition rule is deliberately scoped to spec; ordinary metadata
+	// maintenance remains allowed.
+	up.Spec.TargetVersion = "26.01.01"
+	up.Labels = map[string]string{"operations.cisco.vk/audit": "retained"}
+	if err := c.Update(ctx, up); err != nil {
+		t.Fatalf("metadata-only update rejected: %v", err)
+	}
+}
+
+func TestEnvtest_IOSXESoftwareUpgradeInstallTimeoutDefaultAndBounds(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-upgrade-install-timeout")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	up := newUpgrade("default", "envtest-upgrade-install-timeout", "26.01.01")
+	if err := c.Create(ctx, up); err != nil {
+		t.Fatalf("create upgrade: %v", err)
+	}
+	if up.Spec.InstallTimeoutSeconds != 3600 {
+		t.Fatalf("installTimeoutSeconds default = %d, want 3600", up.Spec.InstallTimeoutSeconds)
+	}
+
+	for _, tc := range []struct {
+		name  string
+		value int32
+	}{
+		{name: "below-minimum", value: 59},
+		{name: "above-maximum", value: 86401},
+	} {
+		candidate := newUpgrade(tc.name, "envtest-upgrade-install-timeout", "26.01.01")
+		candidate.Spec.InstallTimeoutSeconds = tc.value
+		if err := c.Create(ctx, candidate); err == nil {
+			t.Errorf("apiserver admitted installTimeoutSeconds=%d", tc.value)
+		}
+	}
+}
+
+func TestEnvtest_IOSXESoftwareUpgradeLegacyWireCompatibility(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	envtestNamespace(t, c, "envtest-upgrade-legacy-wire")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	legacy := newUpgrade("legacy", "envtest-upgrade-legacy-wire", "17.15.01a")
+	legacy.Spec.ResumePolicy = "Abort"
+	legacy.Spec.MaxRetries = 7
+	if err := c.Create(ctx, legacy); err != nil {
+		t.Fatalf("create manifest with deprecated retry fields: %v", err)
+	}
+	if legacy.Spec.ResumePolicy != "Abort" || legacy.Spec.MaxRetries != 7 {
+		t.Fatalf("deprecated spec fields were not preserved: %+v", legacy.Spec)
+	}
+	legacy.Status.Phase = opsv1alpha1.UpgradePhaseCancelled
+	legacy.Status.RetryCount = 3
+	if err := c.Status().Update(ctx, legacy); err != nil {
+		t.Fatalf("persist released Cancelled status and retryCount: %v", err)
+	}
+	var storedLegacy opsv1alpha1.IOSXESoftwareUpgrade
+	if err := c.Get(ctx, types.NamespacedName{Namespace: legacy.Namespace, Name: legacy.Name}, &storedLegacy); err != nil {
+		t.Fatalf("get legacy upgrade: %v", err)
+	}
+	if storedLegacy.Status.Phase != opsv1alpha1.UpgradePhaseCancelled || storedLegacy.Status.RetryCount != 3 {
+		t.Fatalf("deprecated status fields were not preserved: %+v", storedLegacy.Status)
+	}
+
+	fresh := newUpgrade("fresh", "envtest-upgrade-legacy-wire", "17.15.01a")
+	if err := c.Create(ctx, fresh); err != nil {
+		t.Fatalf("create manifest without deprecated retry fields: %v", err)
+	}
+	if fresh.Spec.ResumePolicy != "Retry" || fresh.Spec.MaxRetries != 3 {
+		t.Fatalf("deprecated retry defaults were not retained for controller rollback compatibility: %+v", fresh.Spec)
+	}
+	fresh.Status.Phase = opsv1alpha1.UpgradePhasePending
+	fresh.Status.ExecutionModel = opsv1alpha1.UpgradeExecutionModelAtMostOnceV1
+	if err := c.Status().Update(ctx, fresh); err != nil {
+		t.Fatalf("persist AtMostOnceV1 execution marker: %v", err)
+	}
+	fresh.Status.ExecutionModel = opsv1alpha1.UpgradeExecutionModel("unsafe-future-model")
+	fresh.Status.Phase = opsv1alpha1.UpgradePhase("FutureMutating")
+	if err := c.Status().Update(ctx, fresh); err != nil {
+		t.Fatalf("persist future execution marker and phase for controller downgrade safety: %v", err)
+	}
+	var futureStored opsv1alpha1.IOSXESoftwareUpgrade
+	if err := c.Get(ctx, types.NamespacedName{Namespace: fresh.Namespace, Name: fresh.Name}, &futureStored); err != nil {
+		t.Fatalf("get future-marked upgrade: %v", err)
+	}
+	if futureStored.Status.ExecutionModel != opsv1alpha1.UpgradeExecutionModel("unsafe-future-model") {
+		t.Fatalf("future execution marker was not preserved: %q", futureStored.Status.ExecutionModel)
+	}
+	if futureStored.Status.Phase != opsv1alpha1.UpgradePhase("FutureMutating") {
+		t.Fatalf("future upgrade phase was not preserved: %q", futureStored.Status.Phase)
 	}
 }
 

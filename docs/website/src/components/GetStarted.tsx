@@ -98,7 +98,7 @@ spec:
     name: cat9000-1-creds
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true # lab only; configure explicit verified spec.gnoi before use
   xe:
     networking:
       interface:

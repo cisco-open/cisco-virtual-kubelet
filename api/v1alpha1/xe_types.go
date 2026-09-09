@@ -39,10 +39,12 @@ type XEConfig struct {
 
 // XEGNOIConfig carries IOS-XE-specific gNOI behavior.
 type XEGNOIConfig struct {
-	// CertificateProvisioning supplies the gNOI-only trust and signing material
-	// used by an explicit ProvisionCertificate IOSXEOperationalAction. OS.Verify
-	// remains read-only. The referenced Secret is mounted only into this device's
-	// VK pod; certificate material is never copied into its ConfigMap.
+	// CertificateProvisioning supplies CVK-side dedicated gNOI trust and the
+	// signing material used by an explicit ProvisionCertificate
+	// IOSXEOperationalAction. OS.Verify remains read-only. The manager reads the
+	// referenced Secret to reconcile a projection only into this device's VK pod;
+	// certificate material is never copied into its ConfigMap. IOS-XE may share
+	// the installed identity and CA bundle with gNMI.
 	// +kubebuilder:validation:Optional
 	CertificateProvisioning *XEGNOICertificateProvisioning `json:"certificateProvisioning,omitempty" mapstructure:"certificateProvisioning,omitempty"`
 }
@@ -62,9 +64,13 @@ type XEGNOICertificateProvisioning struct {
 
 	// SecretRef names a Secret in the CiscoDevice namespace. tls.crt and ca.crt
 	// are required. Optional bootstrap.crt pins the current IOS-XE TLS leaf;
-	// optional ca.key signs one target-generated CSR and must match tls.crt's
-	// dedicated intermediate issuer. ca.crt is the complete desired target CA
+	// optional ca.key authorizes the local signer and must match tls.crt's
+	// dedicated intermediate issuer. The signer may handle a corrected immutable
+	// action after a definitive pre-Install failure, while each network Install is
+	// still submitted at most once. ca.crt is the complete desired target CA
 	// replacement bundle. The worker receives only recognized keys read-only.
+	// When gNOI and per-device topology are enabled, a Secret change rolls the
+	// worker but never rotates an installed device identity.
 	// +kubebuilder:validation:Required
 	SecretRef XEGNOIProvisioningSecretReference `json:"secretRef" mapstructure:"secretRef"`
 

@@ -65,7 +65,7 @@ spec:
     name: cat8kv-1-creds         # Secret with key: password
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true     # lab only; do not use this transport for gNOI
   # allowUnsignedApps: true      # uncomment when running unsigned packages
                                   # — e.g. your own custom application builds.
                                   # See Troubleshooting → PackagePolicyInvalid.
@@ -79,7 +79,9 @@ spec:
           guestInterface: 0         # container-side eth index (0 = eth0)
 ```
 
-See [Security → Credential injection](security.md#credential-injection) for creating the Secret.
+See [Security → Credential injection](security.md#credential-injection) for
+creating the Secret. Before invoking gNOI, configure
+[explicit verified gNOI TLS](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
 
 ### VirtualPortGroup field reference
 

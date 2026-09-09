@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */}}
 {{- $strictRBAC := eq .Values.rbac.profile "strict" }}
+{{- $mutationControllersEnabled := or .Values.gnoi.enableSoftwareUpgrade .Values.gnoi.enableWriteClass }}
 ---
 # Service account used by all Virtual Kubelet Deployments spawned by the controller.
 apiVersion: v1
@@ -27,7 +28,7 @@ metadata:
 # Cluster-scoped ClusterRole for Virtual Kubelet pods. This carries only the
 # permissions a VK node genuinely needs cluster-wide: it hosts pods scheduled
 # from ANY namespace (so pod/configmap/secret/service access is cluster-wide),
-# registers a Node, holds node-heartbeat + config Leases, and watches
+# registers a Node, holds node-heartbeat + config + device-mutation Leases, and watches
 # CiscoDevice cluster-wide to resolve its device-spec. Tenant config CRDs are
 # NOT here — they live in the namespaced "-device" role below so a per-device
 # pod cannot read another tenant's config/intent.
@@ -79,9 +80,9 @@ rules:
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["create", "patch"]
-  # Node leases (required for node heartbeat in kube-node-lease namespace) and
-  # the FamilyLeaser config leases. Leases span namespaces (kube-node-lease +
-  # the device namespace), so this stays cluster-wide.
+  # Node heartbeat, FamilyLeaser config, and shared device-mutation leases.
+  # Leases span namespaces (kube-node-lease, device namespaces, and an optional
+  # configured shared namespace), so this stays cluster-wide.
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
@@ -181,29 +182,30 @@ rules:
   - apiGroups: ["ops.cisco.vk"]
     resources: ["deviceoperations/status"]
     verbs: ["get", "update", "patch"]
+  {{- if or (not $strictRBAC) $mutationControllersEnabled }}
+  # The one-release compatibility barrier reads both mutation CRDs before
+  # either controller can claim the shared device Lease.
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
+    verbs: ["list"]
+  {{- end }}
   {{- if or (not $strictRBAC) .Values.gnoi.enableSoftwareUpgrade }}
   # IOSXESoftwareUpgrade CRD — multi-phase gNOI OS upgrade reconciler.
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades"]
-    verbs: ["get", "list", "watch", "update", "patch"]
+    verbs: ["get", "watch", "update", "patch"]
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades/status"]
     verbs: ["get", "update", "patch"]
-  - apiGroups: ["ops.cisco.vk"]
-    resources: ["iosxesoftwareupgrades/finalizers"]
-    verbs: ["update"]
   {{- end }}
   {{- if or (not $strictRBAC) .Values.gnoi.enableWriteClass }}
   # IOSXEOperationalAction CRD — write-class destructive gNOI ops.
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxeoperationalactions"]
-    verbs: ["get", "list", "watch", "update", "patch"]
+    verbs: ["get", "watch", "update", "patch"]
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxeoperationalactions/status"]
     verbs: ["get", "update", "patch"]
-  - apiGroups: ["ops.cisco.vk"]
-    resources: ["iosxeoperationalactions/finalizers"]
-    verbs: ["update"]
   {{- end }}
 ---
 # ClusterRoleBinding for the cluster-scoped VK role.

@@ -33,12 +33,14 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
 	certpb "github.com/openconfig/gnoi/cert"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
 
@@ -65,7 +67,7 @@ type ProvisioningBundle struct {
 	signingCert              *x509.Certificate
 }
 
-// CertificateSigner signs one target-generated CSR and returns exactly one
+// CertificateSigner signs a target-generated CSR and returns exactly one
 // PEM-encoded X.509 certificate. Implementations may keep the issuer key in a
 // local Secret, KMS/HSM, or external CA. Because the method receives only the
 // CSR, an external implementation must already be bound to the same issuance
@@ -79,7 +81,6 @@ type CertificateSigner interface {
 
 type localCertificateSigner struct {
 	bundle *ProvisioningBundle
-	mu     sync.Mutex
 	key    *rsa.PrivateKey
 }
 
@@ -95,14 +96,10 @@ func (s *localCertificateSigner) SignCSR(ctx context.Context, rawCSR []byte) ([]
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	s.mu.Lock()
-	key := s.key
-	s.key = nil
-	s.mu.Unlock()
-	if key == nil {
-		return nil, fmt.Errorf("local certificate signer may be used only once per process")
+	if s.bundle == nil || s.key == nil {
+		return nil, fmt.Errorf("local certificate signer is unavailable")
 	}
-	return s.bundle.signCSR(rawCSR, key)
+	return s.bundle.signCSR(rawCSR, s.key)
 }
 
 // Format prevents every fmt verb from rendering certificate or private-key
@@ -388,9 +385,11 @@ func NewProvisioningBundle(
 
 // NewLocalCertificateSigner constructs the transitional PEM-backed signer for
 // a provisioning bundle. The key must belong to the bundle's dedicated
-// intermediate issuer and is consumed after one signing attempt. Keeping this
-// constructor separate from NewProvisioningBundle prevents read-only trust
-// configuration from retaining private signing material.
+// intermediate issuer. Keeping this constructor separate from
+// NewProvisioningBundle prevents read-only trust configuration from retaining
+// private signing material. Network mutation replay protection belongs to the
+// action orchestrator; keeping local signing retryable allows definitive
+// pre-Load failures to be corrected without restarting the process.
 func NewLocalCertificateSigner(bundle *ProvisioningBundle, caKeyPEM []byte) (CertificateSigner, error) {
 	if bundle == nil {
 		return nil, fmt.Errorf("gnoi provisioning: nil bundle")
@@ -491,31 +490,97 @@ func (c *Client) ProvisioningCertificateInstalled(ctx context.Context, bundle *P
 	if err != nil {
 		return false, err
 	}
+	_, installed, err := bundle.installedCertificate(certificates)
+	return installed, err
+}
 
+func (c *Client) activeProvisioningCertificate(ctx context.Context, bundle *ProvisioningBundle) (*x509.Certificate, bool, error) {
+	if bundle == nil {
+		return nil, false, fmt.Errorf("gnoi Cert.GetCertificates: nil provisioning bundle")
+	}
+	var rpcPeer peer.Peer
+	certificates, err := c.getCertificates(ctx, grpc.Peer(&rpcPeer))
+	if err != nil {
+		return nil, false, err
+	}
+	peerLeaf, err := tlsPeerLeaf(rpcPeer.AuthInfo)
+	if err != nil {
+		return nil, false, fmt.Errorf("gnoi provisioning TLS peer: %w", err)
+	}
+	installed, present, err := bundle.installedCertificate(certificates)
+	if err != nil || !present {
+		return nil, false, err
+	}
+	if !bytes.Equal(peerLeaf.Raw, installed.Raw) {
+		return installed, false, nil
+	}
+	return installed, true, nil
+}
+
+// VerifyProvisioningReadiness proves, in order, that the requested identity is
+// both installed and serving the fresh gNXI TLS connection before accepting
+// OS.Verify as evidence that the gNOI OS service is provisioned.
+func (c *Client) VerifyProvisioningReadiness(ctx context.Context, bundle *ProvisioningBundle) (string, bool, error) {
+	installed, active, err := c.activeProvisioningCertificate(ctx, bundle)
+	if err != nil || !active {
+		return "", false, err
+	}
+	var rpcPeer peer.Peer
+	verified, err := c.verify(ctx, grpc.Peer(&rpcPeer))
+	if err != nil {
+		return "", false, err
+	}
+	peerLeaf, err := tlsPeerLeaf(rpcPeer.AuthInfo)
+	if err != nil {
+		return "", false, fmt.Errorf("gnoi provisioning OS.Verify TLS peer: %w", err)
+	}
+	if !bytes.Equal(peerLeaf.Raw, installed.Raw) {
+		return "", false, nil
+	}
+	return verified.Version, true, nil
+}
+
+func (b *ProvisioningBundle) installedCertificate(certificates []CertificateInfo) (*x509.Certificate, bool, error) {
 	var match *CertificateInfo
 	for i := range certificates {
-		if certificates[i].CertificateID != bundle.certificateID {
+		if certificates[i].CertificateID != b.certificateID {
 			continue
 		}
 		if match != nil {
-			return false, bundle.conflictError("device returned duplicate records for the certificate ID", nil)
+			return nil, false, b.conflictError("device returned duplicate records for the certificate ID", nil)
 		}
 		match = &certificates[i]
 	}
 	if match == nil {
-		return false, nil
+		return nil, false, nil
 	}
 	if match.Type != "" && match.Type != certpb.CertificateType_CT_UNKNOWN.String() && match.Type != certpb.CertificateType_CT_X509.String() {
-		return false, bundle.conflictError(fmt.Sprintf("installed certificate has type %q", match.Type), nil)
+		return nil, false, b.conflictError(fmt.Sprintf("installed certificate has type %q", match.Type), nil)
 	}
 	installed, err := parseSingleCertificatePEM(match.Certificate, "installed certificate")
 	if err != nil {
-		return false, bundle.conflictError("installed certificate cannot be parsed", err)
+		return nil, false, b.conflictError("installed certificate cannot be parsed", err)
 	}
-	if err := bundle.validateTargetGeneratedCertificate(installed); err != nil {
-		return false, bundle.conflictError("installed certificate does not match the requested profile", err)
+	if err := b.validateTargetGeneratedCertificate(installed); err != nil {
+		return nil, false, b.conflictError("installed certificate does not match the requested profile", err)
 	}
-	return true, nil
+	return installed, true, nil
+}
+
+func tlsPeerLeaf(authInfo credentials.AuthInfo) (*x509.Certificate, error) {
+	var state tls.ConnectionState
+	switch info := authInfo.(type) {
+	case credentials.TLSInfo:
+		state = info.State
+	case *credentials.TLSInfo:
+		state = info.State
+	default:
+		return nil, fmt.Errorf("authenticated TLS peer information is unavailable")
+	}
+	if len(state.PeerCertificates) == 0 || state.PeerCertificates[0] == nil || len(state.PeerCertificates[0].Raw) == 0 {
+		return nil, fmt.Errorf("server presented no TLS leaf certificate")
+	}
+	return state.PeerCertificates[0], nil
 }
 
 func (b *ProvisioningBundle) validateTargetGeneratedCertificate(installed *x509.Certificate) error {

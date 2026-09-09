@@ -79,7 +79,7 @@ spec:
     name: cat9000-1-creds        # Secret with key: password
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true     # lab only; do not use this transport for gNOI
   # allowUnsignedApps: true      # uncomment when running unsigned packages
                                   # — e.g. your own custom application builds.
                                   # See Troubleshooting → PackagePolicyInvalid.
@@ -94,6 +94,10 @@ spec:
             vlan: 200
             guestInterface: 0       # container-side eth index (0 = eth0)
 ```
+
+The TLS setting above is for an app-hosting lab and leaves gNOI in legacy
+`auto` mode. Before invoking gNOI, configure
+[explicit verified gNOI TLS](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
 
 ### Mode 2 — Access
 

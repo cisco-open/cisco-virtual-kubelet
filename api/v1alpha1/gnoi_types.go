@@ -27,7 +27,8 @@ const (
 	// the device's shared TLS configuration.
 	GNOITransportSecurityAuto GNOITransportSecurity = "auto"
 	// GNOITransportSecurityTLS forces gNOI to use TLS while reusing the trust
-	// and optional client-certificate material from DeviceSpec.TLS.
+	// from DeviceSpec.TLS, a gNOI-only override, or driver-specific
+	// provisioning policy.
 	GNOITransportSecurityTLS GNOITransportSecurity = "tls"
 )
 
@@ -51,12 +52,59 @@ type GNOIConfig struct {
 	// +kubebuilder:default=auto
 	TransportSecurity GNOITransportSecurity `json:"transportSecurity,omitempty" mapstructure:"transportSecurity,omitempty"`
 
-	// TLS overrides the shared DeviceSpec TLS settings for the gNOI connection
-	// only. Use this when RESTCONF must retain different TLS behavior from
-	// secure gNOI, for example while bootstrapping gNOI with bootstrap.crt and a
-	// dedicated CA bundle.
+	// TLS supplies verified trust for the gNOI connection independently from
+	// DeviceSpec.TLS. Kubernetes objects use SecretRef; local YAML uses CAFile
+	// and may include a CertFile/KeyFile client pair. It cannot be combined with
+	// driver-specific certificate provisioning, which derives its own trust.
 	// +kubebuilder:validation:Optional
-	TLS *TLSConfig `json:"tls,omitempty" mapstructure:"tls,omitempty"`
+	TLS *GNOITLSConfig `json:"tls,omitempty" mapstructure:"tls,omitempty"`
+}
+
+// GNOITLSConfig contains verified-only TLS material dedicated to gNOI. It
+// intentionally omits transport and skip-verification switches: presence is
+// valid only with transportSecurity=tls and certificate verification is
+// always required.
+//
+// Kubernetes CiscoDevice objects must use SecretRef so host filesystem paths
+// never cross the API boundary. The controller projects the recognized Secret
+// keys to local files before starting a worker.
+// +kubebuilder:validation:XValidation:rule="!has(self.caFile) && !has(self.certFile) && !has(self.keyFile)",message="caFile, certFile, and keyFile are local-only and cannot be set in a Kubernetes object"
+type GNOITLSConfig struct {
+	// CAFile is the local path to the PEM CA bundle used to verify the gNOI
+	// server. It is required in local YAML and forbidden in Kubernetes objects.
+	// +kubebuilder:validation:Optional
+	CAFile string `json:"caFile,omitempty" mapstructure:"caFile,omitempty"`
+
+	// CertFile is the optional local path to a PEM client certificate. It must
+	// be configured together with KeyFile and is forbidden in Kubernetes objects.
+	// +kubebuilder:validation:Optional
+	CertFile string `json:"certFile,omitempty" mapstructure:"certFile,omitempty"`
+
+	// KeyFile is the optional local path to the client certificate private key.
+	// It must be configured together with CertFile and is forbidden in
+	// Kubernetes objects.
+	// +kubebuilder:validation:Optional
+	KeyFile string `json:"keyFile,omitempty" mapstructure:"keyFile,omitempty"`
+
+	// SecretRef names a Secret in the CiscoDevice namespace. ca.crt is required;
+	// tls.crt and tls.key may both be provided for mutual TLS. The controller
+	// projects only these recognized keys and does not copy their contents into
+	// the device ConfigMap. SecretRef is required in Kubernetes objects and is
+	// rejected in local YAML. A valid Secret change rolls the worker so new gNOI
+	// connections load it when gNOI and per-device topology are enabled.
+	// +kubebuilder:validation:Required
+	SecretRef *GNOITLSSecretReference `json:"secretRef,omitempty" mapstructure:"secretRef,omitempty"`
+}
+
+// GNOITLSSecretReference is a same-namespace, name-only reference to verified
+// gNOI trust material.
+type GNOITLSSecretReference struct {
+	// Name is the DNS-subdomain name of the gNOI TLS Secret.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	Name string `json:"name" mapstructure:"name"`
 }
 
 // Validate applies the gNOI constraints to local YAML configuration, where
@@ -73,6 +121,28 @@ func (c *GNOIConfig) Validate() error {
 		// Valid.
 	default:
 		return fmt.Errorf("transportSecurity must be auto or tls")
+	}
+	if c.TLS == nil {
+		return nil
+	}
+	if c.TransportSecurity != GNOITransportSecurityTLS {
+		return fmt.Errorf("tls requires transportSecurity to be tls")
+	}
+	if err := c.TLS.validateLocal(); err != nil {
+		return fmt.Errorf("tls: %w", err)
+	}
+	return nil
+}
+
+func (c *GNOITLSConfig) validateLocal() error {
+	if c.SecretRef != nil {
+		return fmt.Errorf("secretRef is supported only in Kubernetes objects; local YAML must use caFile")
+	}
+	if c.CAFile == "" {
+		return fmt.Errorf("caFile is required")
+	}
+	if (c.CertFile == "") != (c.KeyFile == "") {
+		return fmt.Errorf("certFile and keyFile must be configured together")
 	}
 	return nil
 }

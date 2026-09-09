@@ -161,6 +161,47 @@ func TestDefaultDialSendsIOSXEPasswordCredentialsOnUnaryAndStream(t *testing.T) 
 	}
 }
 
+func TestDefaultDialDoesNotSendPasswordCredentialsBeforeTLSVerification(t *testing.T) {
+	serverTLS, _ := testTLSConfigs(t)
+	_, wrongClientTLS := testTLSConfigs(t)
+	lis := bufconn.Listen(1 << 20)
+
+	var calls atomic.Int64
+	srv := grpc.NewServer(
+		grpc.Creds(credentials.NewTLS(serverTLS)),
+		grpc.UnaryInterceptor(func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+			calls.Add(1)
+			return handler(ctx, req)
+		}),
+	)
+	healthpb.RegisterHealthServer(srv, health.NewServer())
+	go func() { _ = srv.Serve(lis) }()
+	t.Cleanup(srv.Stop)
+
+	conn, err := defaultDial(context.Background(), "passthrough:///bufconn", DialConfig{
+		TLSConfig:      wrongClientTLS,
+		RPCCredentials: NewIOSXEPasswordCredentials("admin", "secret"),
+		Extra: []grpc.DialOption{
+			grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
+				return lis.DialContext(ctx)
+			}),
+		},
+	})
+	if err != nil {
+		t.Fatalf("defaultDial: %v", err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if _, err := healthpb.NewHealthClient(conn).Check(ctx, &healthpb.HealthCheckRequest{}); err == nil {
+		t.Fatal("health Check unexpectedly succeeded with an untrusted server certificate")
+	}
+	if got := calls.Load(); got != 0 {
+		t.Fatalf("server handled %d RPCs before TLS verification, want 0", got)
+	}
+}
+
 func validateIOSXEPasswordMetadata(ctx context.Context, username, password string) error {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {

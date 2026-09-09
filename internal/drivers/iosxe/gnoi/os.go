@@ -19,8 +19,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	ospb "github.com/openconfig/gnoi/os"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -36,21 +38,65 @@ func IsDeviceNotProvisioned(err error) bool {
 }
 
 func isIOSXEDeviceNotProvisioned(err error) bool {
-	for current := err; current != nil; current = errors.Unwrap(current) {
-		st, ok := status.FromError(current)
-		if !ok || st.Code() != codes.FailedPrecondition {
-			continue
-		}
+	if err == nil {
+		return false
+	}
+	if st, ok := status.FromError(err); ok && st.Code() == codes.FailedPrecondition {
 		// IOS XE releases have emitted the same sentence both with and without
 		// terminal punctuation. Accept only those two exact spellings.
 		if st.Message() == iosXEDeviceNotProvisionedMessage || st.Message() == iosXEDeviceNotProvisionedMessage+"." {
 			return true
 		}
 	}
+	if multi, ok := err.(interface{ Unwrap() []error }); ok {
+		for _, nested := range multi.Unwrap() {
+			if isIOSXEDeviceNotProvisioned(nested) {
+				return true
+			}
+		}
+		return false
+	}
+	if single, ok := err.(interface{ Unwrap() error }); ok {
+		return isIOSXEDeviceNotProvisioned(single.Unwrap())
+	}
 	return false
 }
 
-// OSVerifyResult mirrors gNOI OS.Verify.
+// StandbyState is the normalized availability state of a standby supervisor.
+// It deliberately does not expose the gNOI protobuf enum so callers remain
+// independent of the wire representation.
+type StandbyState string
+
+const (
+	// StandbyStateNotReported means the device omitted standby information.
+	StandbyStateNotReported StandbyState = "NOT_REPORTED"
+	// StandbyStateUnspecified means the device explicitly returned the gNOI
+	// UNSPECIFIED state or a malformed empty standby choice.
+	StandbyStateUnspecified StandbyState = "UNSPECIFIED"
+	// StandbyStateUnsupported means the target does not support dual supervisors.
+	StandbyStateUnsupported StandbyState = "UNSUPPORTED"
+	// StandbyStateNonExistent means dual supervisors are supported but no standby
+	// supervisor is present.
+	StandbyStateNonExistent StandbyState = "NON_EXISTENT"
+	// StandbyStateUnavailable means a standby exists but is temporarily unavailable.
+	StandbyStateUnavailable StandbyState = "UNAVAILABLE"
+	// StandbyStateReady means the standby is present and returned verification data.
+	StandbyStateReady StandbyState = "READY"
+	// StandbyStateUnknown means the device returned a newer state unknown to this client.
+	StandbyStateUnknown StandbyState = "UNKNOWN"
+)
+
+// StandbyVerifyResult is the normalized standby portion of gNOI OS.Verify.
+// ID, Version, and ActivationFailMessage are populated only when State is
+// StandbyStateReady.
+type StandbyVerifyResult struct {
+	State                 StandbyState
+	ID                    string
+	Version               string
+	ActivationFailMessage string
+}
+
+// OSVerifyResult mirrors gNOI OS.Verify without exposing protobuf types.
 type OSVerifyResult struct {
 	// Version is the currently-running OS version reported by the
 	// device. For IOS-XE this is the SPA bundle version (e.g.
@@ -59,32 +105,85 @@ type OSVerifyResult struct {
 
 	// ActivationFailMessage carries the device's explanation when the
 	// last activate did not yield the requested version. IOS-XE has
-	// historically returned this as an empty string even on failure,
-	// so callers cross-check via gNMI Get on
-	// Cisco-IOS-XE-native:native/version.
+	// historically returned this as an empty string even on failure, so
+	// callers must also compare Version with the requested target.
 	ActivationFailMessage string
 
 	// IndividualSupervisorInstall, when true, signals that each
 	// supervisor on a dual-RP device requires its own Install.
 	IndividualSupervisorInstall bool
+
+	// Standby describes standby-supervisor availability and, when ready,
+	// its running version and last activation outcome.
+	Standby StandbyVerifyResult
 }
 
 // Verify returns the running OS version. Read-only — used as the OS
 // service capability probe.
 func (c *Client) Verify(ctx context.Context) (*OSVerifyResult, error) {
+	return c.verify(ctx)
+}
+
+func (c *Client) verify(ctx context.Context, opts ...grpc.CallOption) (*OSVerifyResult, error) {
 	if err := c.cap.ensureSupported(ServiceOS); err != nil {
 		return nil, err
 	}
-	resp, err := c.os.Verify(c.authCtx(ctx), &ospb.VerifyRequest{})
+	resp, err := c.os.Verify(c.authCtx(ctx), &ospb.VerifyRequest{}, opts...)
 	c.cap.Observe(ServiceOS, err)
 	if err != nil {
 		return nil, fmt.Errorf("gnoi OS.Verify: %w", err)
+	}
+	if resp == nil {
+		return nil, errors.New("gnoi OS.Verify: empty response")
 	}
 	return &OSVerifyResult{
 		Version:                     resp.Version,
 		ActivationFailMessage:       resp.ActivationFailMessage,
 		IndividualSupervisorInstall: resp.IndividualSupervisorInstall,
+		Standby:                     standbyVerifyResultFromProto(resp.VerifyStandby),
 	}, nil
+}
+
+func standbyVerifyResultFromProto(standby *ospb.VerifyStandby) StandbyVerifyResult {
+	if standby == nil {
+		return StandbyVerifyResult{State: StandbyStateNotReported}
+	}
+
+	switch state := standby.State.(type) {
+	case *ospb.VerifyStandby_StandbyState:
+		return StandbyVerifyResult{State: standbyStateFromProto(state.StandbyState)}
+	case *ospb.VerifyStandby_VerifyResponse:
+		if state.VerifyResponse == nil {
+			return StandbyVerifyResult{State: StandbyStateUnspecified}
+		}
+		return StandbyVerifyResult{
+			State:                 StandbyStateReady,
+			ID:                    state.VerifyResponse.Id,
+			Version:               state.VerifyResponse.Version,
+			ActivationFailMessage: state.VerifyResponse.ActivationFailMessage,
+		}
+	default:
+		return StandbyVerifyResult{State: StandbyStateUnspecified}
+	}
+}
+
+func standbyStateFromProto(state *ospb.StandbyState) StandbyState {
+	if state == nil {
+		return StandbyStateUnspecified
+	}
+
+	switch state.State {
+	case ospb.StandbyState_UNSPECIFIED:
+		return StandbyStateUnspecified
+	case ospb.StandbyState_UNSUPPORTED:
+		return StandbyStateUnsupported
+	case ospb.StandbyState_NON_EXISTENT:
+		return StandbyStateNonExistent
+	case ospb.StandbyState_UNAVAILABLE:
+		return StandbyStateUnavailable
+	default:
+		return StandbyStateUnknown
+	}
 }
 
 // InstallProgress is one event emitted by the Install stream.
@@ -145,7 +244,7 @@ const (
 
 // InstallError wraps a device-side InstallError so reconcilers can
 // classify failures (e.g. INTEGRITY_FAIL → terminal; INSTALL_IN_PROGRESS
-// → retry after backoff).
+// → observe the existing operation without replaying the request).
 type InstallError struct {
 	Type   InstallErrorType
 	Detail string
@@ -180,9 +279,10 @@ type InstallOpts struct {
 // (success → final InstallProgress carrying Validated, failure →
 // final event carrying Err).
 //
-// The caller is responsible for re-entrant cancellation via ctx; on
-// ctx cancel the stream is closed and any in-flight bytes are
-// discarded by the device.
+// The caller is responsible for re-entrant cancellation via ctx. Cancellation
+// closes the client stream, but the device-side outcome remains indeterminate;
+// callers must inspect/reconcile it without assuming uploaded bytes were
+// discarded or replaying the request.
 //
 // Install runs on the bulk-transfer conn (Options.BulkConn) so it
 // cannot HOL-block control RPCs.
@@ -190,8 +290,14 @@ func (c *Client) Install(ctx context.Context, r io.Reader, opts InstallOpts) (<-
 	if err := c.cap.ensureSupported(ServiceOS); err != nil {
 		return nil, err
 	}
+	if r == nil {
+		return nil, errors.New("gnoi OS.Install: image reader is required")
+	}
 	if opts.ChunkSize == 0 {
 		opts.ChunkSize = 64 * 1024
+	}
+	if opts.ChunkSize < 0 {
+		return nil, fmt.Errorf("gnoi OS.Install: ChunkSize=%d must be positive", opts.ChunkSize)
 	}
 	if opts.ChunkSize > 1024*1024 {
 		return nil, fmt.Errorf("gnoi OS.Install: ChunkSize=%d exceeds 1 MiB cap", opts.ChunkSize)
@@ -201,8 +307,10 @@ func (c *Client) Install(ctx context.Context, r io.Reader, opts InstallOpts) (<-
 		c.cap.Observe(ServiceOS, err)
 		return nil, fmt.Errorf("gnoi OS.Install bulk lease: %w", err)
 	}
-	stream, err := osClient.Install(c.authCtx(ctx))
+	streamCtx, cancelStream := context.WithCancel(c.authCtx(ctx))
+	stream, err := osClient.Install(streamCtx)
 	if err != nil {
+		cancelStream()
 		releaseBulk()
 		c.cap.Observe(ServiceOS, err)
 		return nil, fmt.Errorf("gnoi OS.Install open: %w", err)
@@ -218,6 +326,7 @@ func (c *Client) Install(ctx context.Context, r io.Reader, opts InstallOpts) (<-
 			},
 		},
 	}); err != nil {
+		cancelStream()
 		_ = stream.CloseSend()
 		releaseBulk()
 		c.cap.Observe(ServiceOS, err)
@@ -227,7 +336,8 @@ func (c *Client) Install(ctx context.Context, r io.Reader, opts InstallOpts) (<-
 	out := make(chan InstallProgress, 4)
 	go func() {
 		defer releaseBulk()
-		c.pumpInstall(ctx, stream, r, opts, out)
+		defer cancelStream()
+		c.pumpInstall(ctx, cancelStream, stream, r, opts, out)
 	}()
 	return out, nil
 }
@@ -237,12 +347,36 @@ func (c *Client) Install(ctx context.Context, r io.Reader, opts InstallOpts) (<-
 // and streaming bytes after TransferReady fires.
 func (c *Client) pumpInstall(
 	ctx context.Context,
+	cancelStream context.CancelFunc,
 	stream ospb.OS_InstallClient,
 	r io.Reader,
 	opts InstallOpts,
 	out chan<- InstallProgress,
 ) {
 	defer close(out)
+	var doneSend <-chan error
+	waitSender := func() error {
+		if doneSend == nil {
+			return nil
+		}
+		err := <-doneSend
+		doneSend = nil
+		return err
+	}
+	stopSender := func() error {
+		if doneSend == nil {
+			return nil
+		}
+		cancelStream()
+		return waitSender()
+	}
+	// SendMsg and CloseSend may not run concurrently on a gRPC client stream.
+	// Cancel the RPC first so a blocked SendMsg wakes, join the sole sender,
+	// and only then half-close before the bulk connection lease can unwind.
+	defer func() {
+		_ = stopSender()
+		_ = stream.CloseSend()
+	}()
 	emitInstallErr := func(err error) {
 		c.cap.Observe(ServiceOS, err)
 		emitErr(out, ctx, err)
@@ -256,124 +390,184 @@ func (c *Client) pumpInstall(
 		}
 		return false
 	}
-	emitValidated := func(v *InstallValidated) {
-		if emitInstall(InstallProgress{Validated: v}) {
+	emitValidated := func(v *ospb.Validated) {
+		if v == nil || strings.TrimSpace(v.Version) == "" {
+			emitInstallErr(errors.New("gnoi OS.Install: Validated response has empty version"))
+			return
+		}
+		if emitInstall(InstallProgress{Validated: &InstallValidated{Version: v.Version, Description: v.Description}}) {
 			c.cap.Observe(ServiceOS, nil)
 		}
 	}
 
-	// First device response: TransferReady, or — if the device already
-	// has the version staged — Validated directly.
+	// The first response is one of three successful states: TransferReady
+	// requests bytes, SyncProgress means a peer supervisor is supplying the
+	// image, and Validated means the target already has it.
 	resp, err := stream.Recv()
 	if err != nil {
 		emitInstallErr(fmt.Errorf("gnoi OS.Install recv first: %w", err))
 		return
 	}
-	switch r := resp.Response.(type) {
-	case *ospb.InstallResponse_Validated:
-		emitValidated(&InstallValidated{Version: r.Validated.Version, Description: r.Validated.Description})
-		return
-	case *ospb.InstallResponse_InstallError:
-		emitInstallErr(&InstallError{Type: installErrorTypeFromProto(r.InstallError.Type), Detail: r.InstallError.Detail})
-		return
-	case *ospb.InstallResponse_TransferReady:
-		// proceed to stream bytes
-	default:
-		emitInstallErr(fmt.Errorf("gnoi OS.Install: unexpected first response %T", r))
-		return
-	}
-	if !emitInstall(InstallProgress{TransferReady: true}) {
+	if resp == nil {
+		emitInstallErr(errors.New("gnoi OS.Install: empty first response"))
 		return
 	}
 
-	// Concurrently: pump bytes upstream, recv device events downstream.
-	doneSend := make(chan error, 1)
-	go func() {
-		buf := make([]byte, opts.ChunkSize)
-		for {
-			select {
-			case <-ctx.Done():
-				doneSend <- ctx.Err()
-				return
-			default:
-			}
-			n, rerr := r.Read(buf)
-			if n > 0 {
-				if serr := stream.Send(&ospb.InstallRequest{
-					Request: &ospb.InstallRequest_TransferContent{TransferContent: append([]byte(nil), buf[:n]...)},
-				}); serr != nil {
-					doneSend <- fmt.Errorf("gnoi OS.Install send: %w", serr)
-					return
-				}
-			}
-			if errors.Is(rerr, io.EOF) {
-				// Terminator.
-				if serr := stream.Send(&ospb.InstallRequest{
-					Request: &ospb.InstallRequest_TransferEnd{TransferEnd: &ospb.TransferEnd{}},
-				}); serr != nil {
-					doneSend <- fmt.Errorf("gnoi OS.Install send TransferEnd: %w", serr)
-					return
-				}
-				// IOS XE waits for the client half-close before emitting
-				// the terminal Validated response on some releases.
-				if cerr := stream.CloseSend(); cerr != nil {
-					doneSend <- fmt.Errorf("gnoi OS.Install close send: %w", cerr)
-					return
-				}
-				doneSend <- nil
-				return
-			}
-			if rerr != nil {
-				doneSend <- fmt.Errorf("gnoi OS.Install read: %w", rerr)
-				return
-			}
+	switch response := resp.Response.(type) {
+	case *ospb.InstallResponse_Validated:
+		emitValidated(response.Validated)
+		return
+	case *ospb.InstallResponse_InstallError:
+		if response.InstallError == nil {
+			emitInstallErr(errors.New("gnoi OS.Install: empty InstallError response"))
+			return
 		}
-	}()
+		emitInstallErr(&InstallError{Type: installErrorTypeFromProto(response.InstallError.Type), Detail: response.InstallError.Detail})
+		return
+	case *ospb.InstallResponse_TransferReady:
+		if response.TransferReady == nil {
+			emitInstallErr(errors.New("gnoi OS.Install: empty TransferReady response"))
+			return
+		}
+		if !emitInstall(InstallProgress{TransferReady: true}) {
+			return
+		}
+		doneSend = sendInstallContent(stream.Context(), stream, r, opts.ChunkSize)
+	case *ospb.InstallResponse_SyncProgress:
+		if response.SyncProgress == nil {
+			emitInstallErr(errors.New("gnoi OS.Install: empty SyncProgress response"))
+			return
+		}
+		if !emitInstall(InstallProgress{SyncProgress: &InstallSyncProgress{PercentageTransferred: response.SyncProgress.PercentageTransferred}}) {
+			return
+		}
+		// Scenario 4 in the gNOI OS protocol: the target copies the image
+		// from its peer supervisor, so the client has no content to send.
+		if err := stream.CloseSend(); err != nil {
+			emitInstallErr(fmt.Errorf("gnoi OS.Install close send during supervisor sync: %w", err))
+			return
+		}
+	default:
+		emitInstallErr(fmt.Errorf("gnoi OS.Install: unexpected first response %T", response))
+		return
+	}
 
 	// Recv loop until Validated or InstallError.
 	for {
 		resp, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
-			// Wait for the sender to finish before treating as terminal.
-			if serr := <-doneSend; serr != nil {
+			// EOF is terminal even if the peer closed while content was still
+			// being produced, so stop and join the sender before reporting it.
+			if serr := stopSender(); serr != nil && !errors.Is(serr, context.Canceled) {
 				emitInstallErr(serr)
-			} else {
-				emitInstallErr(errors.New("gnoi OS.Install: stream closed before Validated"))
+				return
 			}
+			emitInstallErr(errors.New("gnoi OS.Install: stream closed before Validated"))
 			return
 		}
 		if err != nil {
-			_ = stream.CloseSend()
 			emitInstallErr(fmt.Errorf("gnoi OS.Install recv: %w", err))
 			return
 		}
-		switch r := resp.Response.(type) {
+		if resp == nil {
+			emitInstallErr(errors.New("gnoi OS.Install: empty response"))
+			return
+		}
+		switch response := resp.Response.(type) {
 		case *ospb.InstallResponse_TransferProgress:
-			if !emitInstall(InstallProgress{TransferProgress: &InstallTransferProgress{BytesReceived: r.TransferProgress.BytesReceived}}) {
+			if doneSend == nil {
+				emitInstallErr(errors.New("gnoi OS.Install: unexpected TransferProgress during supervisor sync"))
+				return
+			}
+			if response.TransferProgress == nil {
+				emitInstallErr(errors.New("gnoi OS.Install: empty TransferProgress response"))
+				return
+			}
+			if !emitInstall(InstallProgress{TransferProgress: &InstallTransferProgress{BytesReceived: response.TransferProgress.BytesReceived}}) {
 				return
 			}
 		case *ospb.InstallResponse_SyncProgress:
-			if !emitInstall(InstallProgress{SyncProgress: &InstallSyncProgress{PercentageTransferred: r.SyncProgress.PercentageTransferred}}) {
+			if response.SyncProgress == nil {
+				emitInstallErr(errors.New("gnoi OS.Install: empty SyncProgress response"))
+				return
+			}
+			if !emitInstall(InstallProgress{SyncProgress: &InstallSyncProgress{PercentageTransferred: response.SyncProgress.PercentageTransferred}}) {
 				return
 			}
 		case *ospb.InstallResponse_Validated:
-			// drain sender before signalling success
-			if serr := <-doneSend; serr != nil {
+			// Drain the sender before signalling transfer success.
+			if serr := waitSender(); serr != nil {
 				emitInstallErr(serr)
 				return
 			}
-			emitValidated(&InstallValidated{Version: r.Validated.Version, Description: r.Validated.Description})
+			emitValidated(response.Validated)
 			return
 		case *ospb.InstallResponse_InstallError:
-			_ = stream.CloseSend()
-			emitInstallErr(&InstallError{Type: installErrorTypeFromProto(r.InstallError.Type), Detail: r.InstallError.Detail})
+			if response.InstallError == nil {
+				emitInstallErr(errors.New("gnoi OS.Install: empty InstallError response"))
+				return
+			}
+			emitInstallErr(&InstallError{Type: installErrorTypeFromProto(response.InstallError.Type), Detail: response.InstallError.Detail})
 			return
 		default:
-			_ = stream.CloseSend()
-			emitInstallErr(fmt.Errorf("gnoi OS.Install: unexpected response %T", r))
+			emitInstallErr(fmt.Errorf("gnoi OS.Install: unexpected response %T", response))
 			return
 		}
 	}
+}
+
+func sendInstallContent(
+	ctx context.Context,
+	stream ospb.OS_InstallClient,
+	r io.Reader,
+	chunkSize int,
+) <-chan error {
+	done := make(chan error, 1)
+	go func() {
+		buf := make([]byte, chunkSize)
+		for {
+			select {
+			case <-ctx.Done():
+				done <- ctx.Err()
+				return
+			default:
+			}
+			n, readErr := r.Read(buf)
+			if err := ctx.Err(); err != nil {
+				done <- err
+				return
+			}
+			if n > 0 {
+				if err := stream.Send(&ospb.InstallRequest{
+					Request: &ospb.InstallRequest_TransferContent{TransferContent: append([]byte(nil), buf[:n]...)},
+				}); err != nil {
+					done <- fmt.Errorf("gnoi OS.Install send: %w", err)
+					return
+				}
+			}
+			if errors.Is(readErr, io.EOF) {
+				if err := stream.Send(&ospb.InstallRequest{
+					Request: &ospb.InstallRequest_TransferEnd{TransferEnd: &ospb.TransferEnd{}},
+				}); err != nil {
+					done <- fmt.Errorf("gnoi OS.Install send TransferEnd: %w", err)
+					return
+				}
+				// IOS XE waits for the client half-close before emitting the
+				// terminal Validated response on some releases.
+				if err := stream.CloseSend(); err != nil {
+					done <- fmt.Errorf("gnoi OS.Install close send: %w", err)
+					return
+				}
+				done <- nil
+				return
+			}
+			if readErr != nil {
+				done <- fmt.Errorf("gnoi OS.Install read: %w", readErr)
+				return
+			}
+		}
+	}()
+	return done
 }
 
 func emit(out chan<- InstallProgress, ctx context.Context, p InstallProgress) bool {
@@ -439,9 +633,8 @@ const (
 	ActivateErrorNotSupportedOnBackup ActivateErrorType = "NOT_SUPPORTED_ON_BACKUP"
 )
 
-// ActivateError wraps a device-side ActivateError so reconcilers can
-// classify failures (NON_EXISTENT_VERSION → retry alternate version
-// spelling; NOT_SUPPORTED_ON_BACKUP → operator config issue).
+// ActivateError wraps a device-side ActivateError so reconcilers can classify
+// failures without depending on protobuf types.
 type ActivateError struct {
 	Type   ActivateErrorType
 	Detail string
@@ -472,10 +665,19 @@ func (c *Client) Activate(ctx context.Context, opts ActivateOpts) error {
 	if err != nil {
 		return fmt.Errorf("gnoi OS.Activate: %w", err)
 	}
+	if resp == nil {
+		return errors.New("gnoi OS.Activate: empty response")
+	}
 	switch r := resp.Response.(type) {
 	case *ospb.ActivateResponse_ActivateOk:
+		if r.ActivateOk == nil {
+			return errors.New("gnoi OS.Activate: empty ActivateOK response")
+		}
 		return nil
 	case *ospb.ActivateResponse_ActivateError:
+		if r.ActivateError == nil {
+			return errors.New("gnoi OS.Activate: empty ActivateError response")
+		}
 		return &ActivateError{Type: activateErrorTypeFromProto(r.ActivateError.Type), Detail: r.ActivateError.Detail}
 	}
 	return fmt.Errorf("gnoi OS.Activate: unexpected response %T", resp.Response)

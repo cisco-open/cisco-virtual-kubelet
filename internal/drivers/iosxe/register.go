@@ -26,6 +26,8 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
 	iosxewriters "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	iosxelifecycle "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/softwarelifecycle"
+	"github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle"
 	log "github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
@@ -44,6 +46,13 @@ func init() {
 		})
 
 	drivers.RegisterConfigDriver(v1alpha1.DeviceDriverXE, buildXEConfigDriverContext)
+	drivers.RegisterSoftwareLifecycle(
+		v1alpha1.DeviceDriverXE,
+		func(t transport.Interface) (softwarelifecycle.Backend, error) {
+			return iosxelifecycle.New(t)
+		},
+		iosxelifecycle.ValidateDevicePath,
+	)
 
 	// Wire the gNMI keyed-list registry through the production
 	// startup path so writers' gNMI paths use the correct list-key
