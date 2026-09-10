@@ -16,6 +16,7 @@ package gnoi
 
 import (
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/codes"
@@ -25,8 +26,13 @@ import (
 var (
 	metricsOnce sync.Once
 
-	rpcTotal         *prometheus.CounterVec
-	capabilityEvents *prometheus.CounterVec
+	rpcTotal                     *prometheus.CounterVec
+	capabilityEvents             *prometheus.CounterVec
+	certificateEarliestExpiry    prometheus.Gauge
+	certificateInventoryObserved prometheus.Gauge
+	certificateInventoryUnparsed prometheus.Gauge
+	certificateInventoryMu       sync.Mutex
+	certificateInventoryTime     time.Time
 )
 
 // RegisterMetrics registers gNOI client metrics. It is safe to call more
@@ -47,8 +53,51 @@ func RegisterMetrics(reg prometheus.Registerer) {
 			},
 			[]string{"service", "result"},
 		)
-		reg.MustRegister(rpcTotal, capabilityEvents)
+		certificateEarliestExpiry = prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "cisco_vk_gnoi_certificate_earliest_expiry_timestamp_seconds",
+			Help: "Earliest expiry of parseable certificates in the last successful gNOI inventory, including inactive identities; zero when none are parseable.",
+		})
+		certificateInventoryObserved = prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "cisco_vk_gnoi_certificate_inventory_observed_timestamp_seconds",
+			Help: "Unix time of the last successful gNOI GetCertificates inventory; zero until observed. Scraping metrics does not refresh inventory.",
+		})
+		certificateInventoryUnparsed = prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "cisco_vk_gnoi_certificate_inventory_unparsed",
+			Help: "Certificates without parseable X.509 validity in the last successful gNOI inventory.",
+		})
+		reg.MustRegister(rpcTotal, capabilityEvents, certificateEarliestExpiry, certificateInventoryObserved, certificateInventoryUnparsed)
 	})
+}
+
+func recordCertificateInventory(certs []CertificateInfo, observed time.Time) {
+	if certificateInventoryObserved == nil {
+		return
+	}
+	var earliest *time.Time
+	unparsed := 0
+	for _, cert := range certs {
+		if cert.NotAfter == nil {
+			unparsed++
+		} else if earliest == nil || cert.NotAfter.Before(*earliest) {
+			earliest = cert.NotAfter
+		}
+	}
+	expiry := float64(0)
+	if earliest != nil {
+		expiry = float64(earliest.Unix())
+	}
+	// Concurrent read-only probes and provisioning share these per-worker
+	// gauges. Keep a completed observation consistent and never regress its
+	// timestamp when an older caller reaches this lock after a newer one.
+	certificateInventoryMu.Lock()
+	defer certificateInventoryMu.Unlock()
+	if observed.Before(certificateInventoryTime) {
+		return
+	}
+	certificateInventoryTime = observed
+	certificateEarliestExpiry.Set(expiry)
+	certificateInventoryUnparsed.Set(float64(unparsed))
+	certificateInventoryObserved.Set(float64(observed.Unix()))
 }
 
 func recordRPC(svc Service, err error) {

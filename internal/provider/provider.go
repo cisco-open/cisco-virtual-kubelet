@@ -27,8 +27,10 @@ import (
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
@@ -70,6 +72,7 @@ type AppHostingProvider struct {
 	secretLister    corev1listers.SecretLister
 	serviceLister   corev1listers.ServiceLister
 	nodeProvider    *AppHostingNode
+	maintenance     *maintenance.Coordinator
 
 	notifyMu        sync.Mutex
 	notifyFn        func(*v1.Pod)
@@ -85,6 +88,22 @@ type AppHostingProvider struct {
 
 	deleteRecoveryMu       sync.Mutex
 	deleteRecoveryInFlight map[types.UID]struct{}
+}
+
+// SetMaintenance connects app mutations and node scheduling to the same
+// per-device barrier used by configuration and gNOI lifecycle operations.
+// Configure it before starting the provider's callbacks.
+func (p *AppHostingProvider) SetMaintenance(coordinator *maintenance.Coordinator) {
+	p.maintenance = coordinator
+	if setter, ok := p.driver.(interface {
+		SetMaintenanceMutationGuard(func(context.Context) (context.Context, func(error), error))
+	}); ok {
+		if coordinator.GuardRecovery(p.ctx) {
+			setter.SetMaintenanceMutationGuard(coordinator.AcquireWrite)
+		} else {
+			setter.SetMaintenanceMutationGuard(nil)
+		}
+	}
 }
 
 func NewAppHostingProvider(
@@ -297,7 +316,7 @@ func (p *AppHostingProvider) recoverDeletingPod(ctx context.Context, pod *v1.Pod
 		traceCtx, span := p.startPodSpan(boundedCtx, podCopy, "delete-recovery")
 		defer span.End()
 		p.rememberPodTrace(traceCtx, podCopy)
-		if err := p.driver.DeletePod(traceCtx, podCopy); err != nil {
+		if err := p.withMutation(traceCtx, func(writeCtx context.Context) error { return p.driver.DeletePod(writeCtx, podCopy) }); err != nil {
 			span.SetAttributes(attribute.String("cisco.vk.delete.outcome", "error"))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "recover deleting pod")
@@ -375,7 +394,9 @@ func (p *AppHostingProvider) statusOrReconcilePod(ctx context.Context, pod *v1.P
 		"pod":       pod.Name,
 		"namespace": pod.Namespace,
 	}).Info("PodNotifier poll: pod missing from provider; reconciling desired state")
-	if deployErr := p.driver.DeployPod(ctx, pod, p.secretNamespaceLister(pod.Namespace), p.configMapNamespaceLister(pod.Namespace)); deployErr != nil {
+	if deployErr := p.withMutation(ctx, func(writeCtx context.Context) error {
+		return p.driver.DeployPod(writeCtx, pod, p.secretNamespaceLister(pod.Namespace), p.configMapNamespaceLister(pod.Namespace))
+	}); deployErr != nil {
 		span.RecordError(deployErr)
 		span.SetStatus(codes.Error, "deploy missing pod")
 		return nil, deployErr
@@ -615,13 +636,19 @@ func (p *AppHostingProvider) findPodByAppID(ctx context.Context, appID string) *
 	return nil
 }
 
-func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
+func (p *AppHostingProvider) CreatePod(ctx context.Context, pod *v1.Pod) (outcome error) {
 	ctx, span := p.startPodSpan(ctx, pod, "create")
 	defer span.End()
 	p.rememberPodTrace(ctx, pod)
 	// Deploy the container. This MUST be idempotent
 	// In future we can range over the pod.spec.containers
-	if err := p.driver.DeployPod(ctx, pod, p.secretNamespaceLister(pod.Namespace), p.configMapNamespaceLister(pod.Namespace)); err != nil {
+	writeCtx, finish, err := p.maintenance.AcquireWrite(ctx)
+	if err != nil {
+		return err
+	}
+	outcome = devicecoordination.ErrMutationIncomplete
+	defer func() { finish(outcome) }()
+	if err := p.driver.DeployPod(writeCtx, pod, p.secretNamespaceLister(pod.Namespace), p.configMapNamespaceLister(pod.Namespace)); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "deploy pod")
 		return errdefs.AsInvalidInput(err)
@@ -662,7 +689,7 @@ func (p *AppHostingProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	defer span.End()
 	p.rememberPodTrace(ctx, pod)
 	// IOS-XE/XR may have limited "Update" support (e.g., changing resources requires a restart)
-	if err := p.driver.UpdatePod(ctx, pod); err != nil {
+	if err := p.withMutation(ctx, func(writeCtx context.Context) error { return p.driver.UpdatePod(writeCtx, pod) }); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "update pod")
 		return err
@@ -676,7 +703,7 @@ func (p *AppHostingProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	defer span.End()
 	p.rememberPodTrace(ctx, pod)
 	deleteOwner := p.beginDelete(pod)
-	err := p.driver.DeletePod(ctx, pod)
+	err := p.withMutation(ctx, func(writeCtx context.Context) error { return p.driver.DeletePod(writeCtx, pod) })
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "delete pod")
@@ -694,6 +721,16 @@ func (p *AppHostingProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	}
 
 	return err
+}
+
+func (p *AppHostingProvider) withMutation(ctx context.Context, mutate func(context.Context) error) (outcome error) {
+	writeCtx, finish, err := p.maintenance.AcquireWrite(ctx)
+	if err != nil {
+		return err
+	}
+	outcome = devicecoordination.ErrMutationIncomplete
+	defer func() { finish(outcome) }()
+	return mutate(writeCtx)
 }
 
 func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {

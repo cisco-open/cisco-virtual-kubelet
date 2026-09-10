@@ -25,6 +25,7 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	enginewriters "github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/intent"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/validation"
@@ -122,6 +123,12 @@ type Engine struct {
 
 	// Transport is the device channel. Lifetime is caller-owned.
 	Transport transport.Interface
+
+	// AcquireMutation optionally coordinates the whole write transaction with
+	// disruptive device maintenance. Report-only reads bypass this barrier.
+	// The returned context must cancel when ownership is lost; finish is called
+	// after commit/discard, CLI blocks, and startup persistence have completed.
+	AcquireMutation func(context.Context) (context.Context, func(error), error)
 
 	// Lookup returns the writer registered for a family, or nil if
 	// none is registered. Injected (rather than calling writers.Get
@@ -350,7 +357,7 @@ type DriftEntry struct {
 // SessionLock handles coexistence with apphosting, but two families in
 // flight at once would complicate rollback semantics with no real gain
 // on a single device.
-func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Result {
+func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) (out Result) {
 	start := time.Now()
 	ctx, span := vktrace.StartSpan(ctx, "cvk.config.reconcile")
 	defer span.End()
@@ -383,7 +390,6 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 		recordResult(res.DeviceName, r, time.Since(start).Seconds())
 		return r
 	}
-
 	result := Result{
 		FamilyStatuses: make([]FamilyStatus, 0, len(res.ManagedFamilies)),
 		YangVersion:    res.TargetYangVersion,
@@ -402,7 +408,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	// was inert because the engine handed writers e.Transport directly
 	// regardless. NETCONF therefore wrote running on every Mutate call.
 	caps := e.Transport.Capabilities()
-	transactional := res.Transactional && caps.SupportsTransactions
+	transactional := res.Transactional && caps.SupportsTransactions && res.DriftPolicy != configv1alpha1.DriftPolicyReport
 
 	// Wave 7A.1 (external-review-next-actions Finding #1): reject
 	// transactional + CLI template combination at the engine level
@@ -428,6 +434,17 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 		span.SetStatus(r.Err)
 		recordResult(res.DeviceName, r, time.Since(start).Seconds())
 		return r
+	}
+	if e.AcquireMutation != nil && res.DriftPolicy != configv1alpha1.DriftPolicyReport {
+		writeCtx, finish, err := e.AcquireMutation(ctx)
+		if err != nil {
+			r := Result{Phase: PhaseLeaseBlocked, Err: err, YangVersion: res.TargetYangVersion}
+			recordResult(res.DeviceName, r, time.Since(start).Seconds())
+			return r
+		}
+		out.Err = devicecoordination.ErrMutationIncomplete
+		defer func() { finish(errors.Join(out.Err, out.SaveStartupErr)) }()
+		ctx = writeCtx
 	}
 
 	var (
@@ -703,7 +720,7 @@ func (e *Engine) Reconcile(ctx context.Context, res *intent.ResolvedIntent) Resu
 	// persisted; the operator gets a Warning event and an explicit
 	// SaveStartupFailed surface, but the apply itself remains green.
 	// External-review Finding #1: previously inert.
-	if result.Phase == PhaseInSync && res.WriteStartup && caps.SupportsSaveStartup {
+	if result.Phase == PhaseInSync && res.WriteStartup && caps.SupportsSaveStartup && res.DriftPolicy != configv1alpha1.DriftPolicyReport {
 		if err := e.Transport.SaveStartup(ctx); err != nil {
 			result.SaveStartupErr = err
 			recordSaveStartup(res.DeviceName, res.TargetYangVersion, transportKindLabel(e.Transport), "failed")

@@ -71,6 +71,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/deviceoperation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/operationalaction"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
 	"github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle"
@@ -105,6 +106,8 @@ type configReconcilerOptions struct {
 	AppEventConsumer telemetrystate.AppEventConsumer
 	// CorrelationCache maps app IDs to the span context that created them.
 	CorrelationCache *correlation.Cache
+	// Maintenance shares the per-device write barrier with app hosting.
+	Maintenance *maintenance.Coordinator
 }
 
 func configDriverBuildOptions(opts configReconcilerOptions) drivers.ConfigDriverOptions {
@@ -374,6 +377,9 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		SubscribeNotify: notify,
 		RuntimeID:       runtimeID,
 	}
+	if opts.Maintenance != nil {
+		r.AcquireMutation = opts.Maintenance.AcquireWrite
+	}
 	if notify != nil {
 		// Buffer of 1 — the watcher coalesces events into "fire
 		// at most once per tick", so a single-slot buffer is
@@ -509,6 +515,9 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 				TTL:       26 * time.Hour,
 			},
 		}
+		if opts.Maintenance != nil {
+			upgradeReconciler.BeforeMutation = opts.Maintenance.BeforeMutation
+		}
 		if err := upgradeReconciler.SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("software upgrade SetupWithManager: %w", err)
 		}
@@ -531,6 +540,9 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 				TTL:       26 * time.Hour,
 			},
 			CertificateProvisioner: gnoiCertificateProvisioner,
+		}
+		if opts.Maintenance != nil {
+			actionReconciler.BeforeMutation = opts.Maintenance.BeforeMutation
 		}
 		if err := actionReconciler.SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("operational action SetupWithManager: %w", err)

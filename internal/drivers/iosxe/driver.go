@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/openconfig/ygot/ygot"
 	"github.com/openconfig/ygot/ytypes"
@@ -56,6 +57,14 @@ type XEDriver struct {
 	installInFlight map[string]bool // keyed by appID; prevents duplicate background recovery installs
 
 	eventRecorder record.EventRecorder
+	// Set before callbacks start. Status-triggered asynchronous recovery owns
+	// this guard for its full lifecycle; ordinary Pod mutations are guarded by
+	// the provider and must not acquire it again inside each device RPC.
+	maintenanceMutationGuard func(context.Context) (context.Context, func(error), error)
+}
+
+func (d *XEDriver) SetMaintenanceMutationGuard(acquire func(context.Context) (context.Context, func(error), error)) {
+	d.maintenanceMutationGuard = acquire
 }
 
 // NewAppHostingDriver creates a new IOS-XE AppHosting driver instance
@@ -112,10 +121,11 @@ func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*XEDri
 	)
 
 	d := &XEDriver{
-		config:          spec,
-		client:          Client,
-		recoveringPods:  make(map[string]bool),
-		installInFlight: make(map[string]bool),
+		config:                   spec,
+		client:                   Client,
+		recoveringPods:           make(map[string]bool),
+		installInFlight:          make(map[string]bool),
+		maintenanceMutationGuard: devicecoordination.MutationGuardFromContext(ctx),
 	}
 
 	protocol := "restconf"
@@ -134,7 +144,7 @@ func NewAppHostingDriver(ctx context.Context, spec *v1alpha1.DeviceSpec) (*XEDri
 	}).Info("Connected to IOSXE device")
 
 	if spec.AllowUnsignedApps {
-		if err := d.ConfigureSignVerification(ctx, false); err != nil {
+		if err := d.withMaintenanceMutation(ctx, func(writeCtx context.Context) error { return d.ConfigureSignVerification(writeCtx, false) }); err != nil {
 			log.G(ctx).WithError(err).Warn("allowUnsignedApps=true but failed to disable sign-verification on device; unsigned installs may be blocked")
 		}
 	}

@@ -215,6 +215,8 @@ Pods scheduled to that node are deployed to the device via App-Hosting. The
 minimal example above leaves gNOI in backward-compatible `auto` mode; before
 using a gNOI operation, configure
 [explicit verified gNOI TLS](docs/gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
+For IOS-XE image changes, follow the complete
+[gNOI upgrade and downgrade runbook](docs/gnoi-iosxe-upgrade-runbook.md).
 
 ## Documentation
 
@@ -224,8 +226,9 @@ using a gNOI operation, configure
 - [Configuration Reference](docs/CONFIGURATION.md) — `CiscoDevice` spec options and device setup
 - [Network as Code](docs/netascode-config.md) — Declarative `IOSXEConfig`, drift detection, and transactional apply
 - [CLI & Plugin Reference](docs/cisco-vk-cli.md) — `cisco-vk` binary and `kubectl-ciscovk` plugin
-- [gNOI & Software Lifecycle](docs/gnoi-software-lifecycle.md) *(Beta)* — secure IOS-XE gNOI, certificate provisioning, operations, and software upgrades
-- [Operations Runbook](docs/operations.md) — `DeviceOperation` show commands, CRD upgrade guide
+- [IOS-XE gNOI Upgrade and Downgrade Runbook](docs/gnoi-iosxe-upgrade-runbook.md) *(Beta)* — required manifests, certificate setup, lifecycle monitoring, and verification
+- [gNOI & Software Lifecycle](docs/gnoi-software-lifecycle.md) *(Beta)* — architecture, security rules, API behavior, and image-source reference
+- [Device Operations Runbook](docs/operations.md) — `DeviceOperation` probes, show commands, and write-class actions
 - [Telemetry](docs/telemetry.md) *(Beta)* — MDT-over-gNMI subscriptions and OpenTelemetry
 - [Observability](docs/observability.md) — Metrics, traces, and Splunk integration
 - [CRD Reference](docs/crds.md) — All custom resource definitions

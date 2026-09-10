@@ -93,6 +93,9 @@ helm upgrade cisco-vk ./charts/cisco-virtual-kubelet-<prev-version> \
 non-Pod operations. For the higher-level gNOI architecture, runtime gates,
 RBAC split, and IOS-XE software lifecycle model, see
 [gNOI and Software Lifecycle](gnoi-software-lifecycle.md).
+For the complete IOS-XE certificate, upgrade, downgrade, log-monitoring, and
+verification sequence, use the
+[IOS-XE Upgrade and Downgrade Runbook](gnoi-iosxe-upgrade-runbook.md).
 
 ```yaml
 apiVersion: ops.cisco.vk/v1alpha1
@@ -292,6 +295,11 @@ They are not registered in aggregator mode, so production use requires
 `aggregator.enabled=false` before either gNOI mutation gate is enabled.
 
 ## Software Upgrades
+
+The concise end-to-end procedure, including separate upgrade and planned
+downgrade manifests, is in the
+[IOS-XE Upgrade and Downgrade Runbook](gnoi-iosxe-upgrade-runbook.md). This
+section retains the broader API and output reference.
 
 !!! danger "Beta — requires runtime gate"
     Software upgrades are **Beta** and **disabled by default**. The per-device
@@ -505,14 +513,13 @@ NAME            PHASE          AGE
 upgrade-cat9k   Pending        0s
 upgrade-cat9k   Resolving      2s
 upgrade-cat9k   Transferring   8s
-upgrade-cat9k   Validating     4m31s
 upgrade-cat9k   Activating     4m45s
 upgrade-cat9k   AwaitingReachability  4m51s
 upgrade-cat9k   Verifying      17m
 upgrade-cat9k   Succeeded      17m
 ```
 
-For `deviceFile`, expect an additional `Staging` phase before `Validating`.
+For `deviceFile`, expect `Staging` and `Validating` phases before `Activating`.
 Use `kubectl describe iosxesoftwareupgrade upgrade-cat9k` to inspect the pinned
 source digest, staging operation ID, inventory state, conditions, and events.
 

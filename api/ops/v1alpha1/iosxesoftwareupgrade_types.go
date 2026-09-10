@@ -496,6 +496,12 @@ type IOSXESoftwareUpgradeStatus struct {
 	// +optional
 	InstallStartTime *metav1.Time `json:"installStartTime,omitempty"`
 
+	// ActivationControlStartTime bounds initial activation-client recovery by
+	// RebootTimeoutSeconds without consuming the subsequent reboot deadline.
+	// It is recorded on the first client-acquisition failure before activation.
+	// +optional
+	ActivationControlStartTime *metav1.Time `json:"activationControlStartTime,omitempty"`
+
 	// ActivationStartTime is when the first activation mutation was durably
 	// recorded. RebootTimeoutSeconds is measured from it.
 	// +optional

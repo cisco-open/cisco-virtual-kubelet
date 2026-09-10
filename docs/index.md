@@ -153,8 +153,9 @@ summarises the current release state.
 - [Configuration](CONFIGURATION.md) - `CiscoDevice` and VK configuration fields
 - [CRD Reference](crds.md) - every shipped CRD and when to use it
 - [Family Reference](reference/families/README.md) - generated Network as Code config family coverage
-- [gNOI and Software Lifecycle](gnoi-software-lifecycle.md) - device operations, write-class actions, and IOS-XE software upgrades
-- [Operations Runbook](operations.md) - DeviceOperation, operational actions, and upgrade examples
+- [IOS-XE gNOI Upgrade and Downgrade Runbook](gnoi-iosxe-upgrade-runbook.md) - required manifests, certificate setup, provider logs, and end-to-end verification
+- [gNOI and Software Lifecycle](gnoi-software-lifecycle.md) - architecture, security rules, and lifecycle API reference
+- [Device Operations Runbook](operations.md) - DeviceOperation probes, show commands, and write-class actions
 - [Telemetry](telemetry.md) - gNMI subscriptions and OpenTelemetry output
 - [Observability](observability.md) - metrics catalog and topology traces
 - [Security](security.md) - credential injection, TLS, and RBAC

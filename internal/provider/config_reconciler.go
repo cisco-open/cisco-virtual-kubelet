@@ -170,6 +170,9 @@ type ConfigReconciler struct {
 	// targeting the same device. Nil means advisory-only conflict
 	// reporting (the Phase-1 default behaviour).
 	Leaser *engine.FamilyLeaser
+	// AcquireMutation holds the per-device maintenance barrier through an
+	// entire config transaction. Nil preserves the non-maintenance runtime.
+	AcquireMutation func(context.Context) (context.Context, func(error), error)
 
 	// Recorder emits Kubernetes events on the reconciled IOSXEConfig.
 	// Nil is allowed — the reconciler silently skips event emission so
@@ -462,6 +465,7 @@ func (r *ConfigReconciler) reconcileAll(ctx context.Context, logger log.Logger, 
 	}
 	eng := &engine.Engine{
 		Platform:           "iosxe",
+		AcquireMutation:    r.AcquireMutation,
 		Transport:          r.GetTransport(),
 		Lookup:             lookup,
 		DeviceVersion:      deviceVersion,

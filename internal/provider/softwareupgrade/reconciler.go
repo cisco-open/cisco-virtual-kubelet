@@ -79,6 +79,7 @@ const (
 	conditionTypeDeviceReachable = "DeviceReachable"
 	conditionTypeVerified        = "Verified"
 	conditionTypeRollback        = "Rollback"
+	conditionTypeMutationSettled = "DeviceMutationSettled"
 )
 
 const (
@@ -102,6 +103,9 @@ type Reconciler struct {
 	Lifecycle       softwarelifecycle.Backend
 	ImageResolver   ImageResolver
 	MutationLeaser  *engine.FamilyLeaser
+	// BeforeMutation prepares device maintenance after the shared Lease is
+	// owned. Errors prevent dispatch; implementations must be idempotent.
+	BeforeMutation func(context.Context) error
 
 	// Now is injected for tests. nil means time.Now.
 	Now func() time.Time
@@ -613,7 +617,7 @@ func (r *Reconciler) runStaging(ctx context.Context, up *opsv1alpha1.IOSXESoftwa
 		if errors.Is(registerErr, softwarelifecycle.ErrUnsupported) ||
 			errors.Is(registerErr, softwarelifecycle.ErrInvalidDevicePath) ||
 			errors.Is(registerErr, softwarelifecycle.ErrInvalidOperationID) {
-			return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "StagingRejected", registerErr.Error(), now)
+			return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "StagingRejected", registerErr.Error(), now)
 		}
 		return r.advanceStagingValidation(ctx, up, "StagingResponseLost",
 			fmt.Sprintf("staging response was indeterminate; observing operation %s without replay: %s", up.Status.StagingOperationID, registerErr), now)
@@ -656,7 +660,7 @@ func (r *Reconciler) runValidating(ctx context.Context, up *opsv1alpha1.IOSXESof
 			fmt.Sprintf("device reported staging operation %q while observing %q", observation.OperationID, up.Status.StagingOperationID), now)
 	}
 	if observation.State == softwarelifecycle.OperationStateFailed {
-		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "StagingFailed",
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "StagingFailed",
 			fmt.Sprintf("device staging operation %s failed", observation.OperationID), now)
 	}
 	if observation.State != softwarelifecycle.OperationStateSucceeded ||
@@ -753,6 +757,7 @@ func (r *Reconciler) targetReadyForActivation(
 		cur.Status.InventoryState = upgradeInventoryState(image.State)
 		cur.Status.Message = message
 		cur.Status.FailureReason = ""
+		r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "InstallCompleted", message, now)
 		r.setCondition(cur, conditionTypeStaged, metav1.ConditionTrue, reason, message, now)
 		r.setCondition(cur, conditionTypeValidated, metav1.ConditionTrue, reason, message, now)
 		r.setCondition(cur, conditionTypeTransferred, metav1.ConditionTrue, "TransferNotRequired",
@@ -1001,6 +1006,7 @@ func (r *Reconciler) claimStaging(
 		cur.Status.Message = message
 		cur.Status.FailureReason = ""
 		cur.Status.ObservedGeneration = cur.Generation
+		r.setCondition(&cur, conditionTypeMutationSettled, metav1.ConditionFalse, "MutationRequested", message, now)
 		r.setCondition(&cur, conditionTypeStaged, metav1.ConditionFalse, "StagingRequested", message, now)
 		r.setReady(&cur, metav1.ConditionFalse, "StagingRequested", message, now)
 		if err := r.Client.Status().Update(ctx, &cur); err != nil {
@@ -1082,6 +1088,7 @@ func (r *Reconciler) claimActivation(
 		cur.Status.Message = message
 		cur.Status.FailureReason = ""
 		cur.Status.ObservedGeneration = cur.Generation
+		r.setCondition(&cur, conditionTypeMutationSettled, metav1.ConditionFalse, "MutationRequested", message, now)
 		r.setCondition(&cur, conditionTypeActivated, metav1.ConditionFalse, reason, message, now)
 		// Activated remains False across the standby and active claims, so the
 		// standard condition helper does not refresh LastTransitionTime when only
@@ -1153,6 +1160,7 @@ func (r *Reconciler) claimInstallAttempt(
 			supervisor = "standby"
 		}
 		message := fmt.Sprintf("gNOI OS.Install request durably recorded for the %s supervisor", supervisor)
+		r.setCondition(&cur, conditionTypeMutationSettled, metav1.ConditionFalse, "MutationRequested", message, now)
 		r.setCondition(&cur, conditionTypeTransferred, metav1.ConditionFalse, "InstallRequested", message, now)
 		r.setReady(&cur, metav1.ConditionFalse, "InstallRequested", message, now)
 		if err := r.Client.Status().Update(ctx, &cur); err != nil {
@@ -1346,7 +1354,7 @@ func (r *Reconciler) ensureMutationLease(
 	now time.Time,
 ) (bool, reconcile.Result, error) {
 	if r.MutationLeaser == nil {
-		return true, reconcile.Result{}, nil
+		return r.prepareMutation(ctx, up, now)
 	}
 	identity := upgradeLeaseIdentity(up)
 	guard, err := r.ensureCanonicalLegacyQuarantine(ctx, up, false, now)
@@ -1363,7 +1371,7 @@ func (r *Reconciler) ensureMutationLease(
 			// The guard already renewed the caller's Lease with the legacy risk's
 			// complete safety horizon, which is deliberately independent of a
 			// future driver's normal operation TTL.
-			return true, reconcile.Result{}, nil
+			return r.prepareMutation(ctx, up, now)
 		}
 		holder := guard.ExistingHolder
 		if guard.LeaseOwned || holder == "" {
@@ -1396,6 +1404,19 @@ func (r *Reconciler) ensureMutationLease(
 			r.setReady(cur, metav1.ConditionFalse, "MutationLeaseBlocked", cur.Status.Message, now)
 		}, reconcile.Result{RequeueAfter: installInventoryPoll})
 		return false, requeue, updateErr
+	}
+	return r.prepareMutation(ctx, up, now)
+}
+
+func (r *Reconciler) prepareMutation(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (bool, reconcile.Result, error) {
+	if r.BeforeMutation != nil {
+		if err := r.BeforeMutation(ctx); err != nil {
+			result, updateErr := r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+				cur.Status.Message = "waiting for device maintenance preparation: " + err.Error()
+				r.setReady(cur, metav1.ConditionFalse, "MutationPreparationBlocked", cur.Status.Message, now)
+			}, reconcile.Result{RequeueAfter: installInventoryPoll})
+			return false, result, updateErr
+		}
 	}
 	return true, reconcile.Result{}, nil
 }
@@ -1792,19 +1813,19 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		return r.handleInstallErr(ctx, up, errors.New("gnoi Install: stream ended without Validated"), now)
 	}
 	if !contentProven {
-		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "ImageContentNotTransferred",
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "ImageContentNotTransferred",
 			"device validated a version without consuming the pinned image content; refusing to activate unproven same-version bytes", now)
 	}
 	if strings.TrimSpace(validated.Version) == "" {
-		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "EmptyValidatedVersion",
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "EmptyValidatedVersion",
 			"device returned an empty version from gNOI OS.Install", now)
 	}
 	if !versionMatches(validated.Version, up.Spec.TargetVersion) {
-		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "VersionMismatch",
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "VersionMismatch",
 			fmt.Sprintf("device validated version %q but spec targets %q", validated.Version, up.Spec.TargetVersion), now)
 	}
 	if standby && up.Status.ValidatedVersion != "" && validated.Version != up.Status.ValidatedVersion {
-		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "SupervisorValidatedVersionMismatch",
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "SupervisorValidatedVersionMismatch",
 			fmt.Sprintf("standby supervisor validated exact version %q, but the primary supervisor validated %q",
 				validated.Version, up.Status.ValidatedVersion), now)
 	}
@@ -1815,6 +1836,7 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 			cur.Status.ValidatedVersion = validated.Version
 			cur.Status.Message = fmt.Sprintf("primary supervisor validated %s; installing standby supervisor", validated.Version)
 			cur.Status.FailureReason = ""
+			r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "InstallCompleted", cur.Status.Message, now)
 			r.setCondition(cur, conditionTypeValidated, metav1.ConditionFalse, "StandbyInstallPending", cur.Status.Message, now)
 			r.setReady(cur, metav1.ConditionFalse, "StandbyInstallPending", cur.Status.Message, now)
 		}, reconcile.Result{RequeueAfter: time.Second})
@@ -1833,6 +1855,7 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		}
 		cur.Status.Message = fmt.Sprintf("device validated %s, activating", validated.Version)
 		cur.Status.FailureReason = ""
+		r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "InstallCompleted", cur.Status.Message, now)
 		markTransferComplete(cur)
 		transferReason := "AlreadyInstalled"
 		transferMessage := "gNOI OS.Install reported that the content was already installed"
@@ -1886,7 +1909,7 @@ func (r *Reconciler) handleInstallErr(ctx context.Context, up *opsv1alpha1.IOSXE
 			gnoi.InstallErrorInstallRunPackage,
 			gnoi.InstallErrorNotSupportedBackup:
 			// Hard failure — no retry.
-			return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, string(iErr.Type), iErr.Error(), now)
+			return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, string(iErr.Type), iErr.Error(), now)
 		case gnoi.InstallErrorUnexpectedSwitchovr,
 			gnoi.InstallErrorSyncFail:
 			// The device explicitly reported a failure after install work may
@@ -1896,7 +1919,7 @@ func (r *Reconciler) handleInstallErr(ctx context.Context, up *opsv1alpha1.IOSXE
 		}
 	}
 	if reason, permanent := permanentGNOIError(err); permanent {
-		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, reason, err.Error(), now)
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, reason, err.Error(), now)
 	}
 	// Once the request marker is durable, an untyped transport, stream, parser,
 	// or local-reader failure cannot prove that IOS XE rejected the request.
@@ -1962,6 +1985,14 @@ func (r *Reconciler) submitActivation(
 	noReboot bool,
 	now time.Time,
 ) (reconcile.Result, error) {
+	if maintenanceWindowExpired(up, now) {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "MaintenanceWindowExpired",
+			"maintenance window closed before gNOI OS.Activate could be submitted", now)
+	}
+	if activationControlTimedOut(up, now) {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivationControlTimeout",
+			fmt.Sprintf("initial activation control did not become ready within %s", rebootTimeout(up)), now)
+	}
 	if upgradeWaitStart(up) != nil && upgradeTimedOut(up, now) {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivationControlTimeout",
 			fmt.Sprintf("activation sequence did not complete within %s; refusing to submit another activation", rebootTimeout(up)), now)
@@ -1979,6 +2010,10 @@ func (r *Reconciler) submitActivation(
 		return r.waitForActivationControl(ctx, up, "waiting for a gNOI client before activation: "+err.Error(), now)
 	}
 	now = r.now()
+	if activationControlTimedOut(up, now) {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivationControlTimeout",
+			fmt.Sprintf("initial activation control did not become ready within %s", rebootTimeout(up)), now)
+	}
 	if upgradeWaitStart(up) != nil && upgradeTimedOut(up, now) {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivationControlTimeout",
 			fmt.Sprintf("activation sequence did not complete within %s; refusing to submit another activation", rebootTimeout(up)), now)
@@ -2044,7 +2079,7 @@ func (r *Reconciler) submitActivation(
 		if standby {
 			reason = "StandbyActivateFailed"
 		}
-		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, reason, activateErr.Error(), now)
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseFailed, reason, activateErr.Error(), now)
 	}
 	if noReboot {
 		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
@@ -2151,10 +2186,13 @@ func (r *Reconciler) waitForActivationControl(
 	message string,
 	now time.Time,
 ) (reconcile.Result, error) {
-	if up.Status.ActivationStartTime != nil && upgradeTimedOut(up, now) {
+	if upgradeTimedOut(up, now) || activationControlTimedOut(up, now) {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivationControlTimeout", message, now)
 	}
 	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		if upgradeWaitStart(cur) == nil && cur.Status.ActivationControlStartTime == nil {
+			cur.Status.ActivationControlStartTime = &metav1.Time{Time: now}
+		}
 		cur.Status.Phase = opsv1alpha1.UpgradePhaseActivating
 		cur.Status.Message = message
 		cur.Status.FailureReason = ""
@@ -2311,6 +2349,7 @@ func (r *Reconciler) verifyStandbyActivation(
 				cur.Status.StandbySupervisorActivated = true
 				cur.Status.Message = message
 				cur.Status.FailureReason = ""
+				r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "StandbyActivationVerified", message, now)
 				r.setCondition(cur, conditionTypeDeviceReachable, metav1.ConditionTrue, "DeviceReachable", reachableMessage, now)
 				r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, "StandbyVerified", message, now)
 				r.setReady(cur, metav1.ConditionFalse, "StandbyVerified", message, now)
@@ -2625,7 +2664,7 @@ func (r *Reconciler) runRollingBack(ctx context.Context, up *opsv1alpha1.IOSXESo
 	now = r.now()
 	if activateErr != nil && !activationMayHaveStarted(activateErr) {
 		r.resetGNOIClientIfTransient(ctx, activateErr)
-		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "RollbackActivateFailed", activateErr.Error(), now)
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseFailed, "RollbackActivateFailed", activateErr.Error(), now)
 	}
 	if activateErr != nil {
 		r.resetGNOIClientIfTransient(ctx, activateErr)
@@ -2664,6 +2703,11 @@ func (r *Reconciler) requeueRollback(ctx context.Context, up *opsv1alpha1.IOSXES
 func upgradeTimedOut(up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) bool {
 	since := upgradeWaitStart(up)
 	return since != nil && now.Sub(*since) >= rebootTimeout(up)
+}
+
+func activationControlTimedOut(up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) bool {
+	return upgradeWaitStart(up) == nil && up.Status.ActivationControlStartTime != nil &&
+		now.Sub(up.Status.ActivationControlStartTime.Time) >= rebootTimeout(up)
 }
 
 func rollbackTimedOut(up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) bool {
@@ -2851,6 +2895,7 @@ func (r *Reconciler) claimRollbackActivation(
 		cur.Status.Message = message
 		cur.Status.FailureReason = ""
 		cur.Status.ObservedGeneration = cur.Generation
+		r.setCondition(&cur, conditionTypeMutationSettled, metav1.ConditionFalse, "MutationRequested", message, now)
 		r.setCondition(&cur, conditionTypeRollback, metav1.ConditionFalse, "RollbackRequested", message, now)
 		r.setReady(&cur, metav1.ConditionFalse, "RollbackRequested", message, now)
 		if err := r.Client.Status().Update(ctx, &cur); err != nil {
@@ -3005,11 +3050,24 @@ func (r *Reconciler) pendingMessage(ctx context.Context, up *opsv1alpha1.IOSXESo
 }
 
 func (r *Reconciler) terminal(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, phase opsv1alpha1.UpgradePhase, reason, message string, now time.Time) (reconcile.Result, error) {
+	return r.terminalWithEvidence(ctx, up, phase, reason, message, now, false)
+}
+
+// terminalAfterMutation is only for a definitive mutation response or a
+// correlated completion observation, never an error from a read-only RPC.
+func (r *Reconciler) terminalAfterMutation(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, phase opsv1alpha1.UpgradePhase, reason, message string, now time.Time) (reconcile.Result, error) {
+	return r.terminalWithEvidence(ctx, up, phase, reason, message, now, true)
+}
+
+func (r *Reconciler) terminalWithEvidence(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, phase opsv1alpha1.UpgradePhase, reason, message string, now time.Time, settled bool) (reconcile.Result, error) {
 	return r.updateTerminalStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 		cur.Status.Phase = phase
 		cur.Status.FailureReason = reason
 		cur.Status.Message = message
 		cur.Status.CompletionTime = &metav1.Time{Time: now}
+		if settled {
+			r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "MutationCompleted", message, now)
+		}
 		condStatus := metav1.ConditionFalse
 		if phase == opsv1alpha1.UpgradePhaseSucceeded {
 			condStatus = metav1.ConditionTrue
@@ -3025,7 +3083,12 @@ func (r *Reconciler) updateTerminalStatus(
 	mutate func(*opsv1alpha1.IOSXESoftwareUpgrade),
 	result reconcile.Result,
 ) (reconcile.Result, error) {
-	updatedResult, err := r.updateStatus(ctx, up, mutate, result)
+	updatedResult, err := r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		mutate(cur)
+		if successfulUpgradeOutcome(cur.Status.Phase) {
+			r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "OutcomeVerified", cur.Status.Message, r.now())
+		}
+	}, result)
 	if err != nil {
 		return updatedResult, err
 	}
@@ -3070,20 +3133,17 @@ func retainMutationLeaseUntilExpiry(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 	if !upgradeMutationSubmitted(up) {
 		return false
 	}
-	switch up.Status.FailureReason {
-	case "InstallOutcomeUnknown",
-		"InstallTimeout",
-		"StagingOperationMismatch",
-		"ActivationOutcomeUnknown",
-		"ActivationControlTimeout",
-		"IndividualSupervisorNoRebootUnsupported",
-		"StandbyVerificationUnavailable",
-		"RebootTimeout",
-		"StandbyActivationDidNotConverge",
-		"RollbackDidNotConverge":
-		return true
-	}
-	return false
+	// Successful legacy terminals predate the explicit evidence condition but
+	// already encode a verified outcome. Otherwise absence of evidence is an
+	// unknown outcome, including permanent failures of observation/control RPCs.
+	return !successfulUpgradeOutcome(up.Status.Phase) &&
+		!apimeta.IsStatusConditionTrue(up.Status.Conditions, conditionTypeMutationSettled)
+}
+
+func successfulUpgradeOutcome(phase opsv1alpha1.UpgradePhase) bool {
+	return phase == opsv1alpha1.UpgradePhaseSucceeded ||
+		phase == opsv1alpha1.UpgradePhaseStagedForNextBoot ||
+		phase == opsv1alpha1.UpgradePhaseRolledBack
 }
 
 func unsupportedExecutionModel(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
@@ -3219,7 +3279,8 @@ func upgradeStatusCASMatches(expected, current *opsv1alpha1.IOSXESoftwareUpgrade
 		e.StandbySupervisorActivated == c.StandbySupervisorActivated &&
 		e.RollbackActivationRequested == c.RollbackActivationRequested &&
 		e.NoRebootActivationAccepted == c.NoRebootActivationAccepted &&
-		(e.InstallStartTime == nil) == (c.InstallStartTime == nil)
+		(e.InstallStartTime == nil) == (c.InstallStartTime == nil) &&
+		(e.ActivationControlStartTime == nil) == (c.ActivationControlStartTime == nil)
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, mutate func(*opsv1alpha1.IOSXESoftwareUpgrade), result reconcile.Result) (reconcile.Result, error) {

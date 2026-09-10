@@ -618,6 +618,10 @@ func (in *IOSXESoftwareUpgradeStatus) DeepCopyInto(out *IOSXESoftwareUpgradeStat
 		in, out := &in.InstallStartTime, &out.InstallStartTime
 		*out = (*in).DeepCopy()
 	}
+	if in.ActivationControlStartTime != nil {
+		in, out := &in.ActivationControlStartTime, &out.ActivationControlStartTime
+		*out = (*in).DeepCopy()
+	}
 	if in.ActivationStartTime != nil {
 		in, out := &in.ActivationStartTime, &out.ActivationStartTime
 		*out = (*in).DeepCopy()

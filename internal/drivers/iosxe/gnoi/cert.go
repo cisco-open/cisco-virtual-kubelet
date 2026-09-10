@@ -16,6 +16,10 @@ package gnoi
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/hex"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"time"
@@ -32,6 +36,11 @@ type CertificateInfo struct {
 	Certificate      []byte
 	Endpoints        []string
 	ModificationTime time.Time
+	// Validity metadata is additive; missing or unsupported certificate bytes
+	// remain available in Certificate without inventing an expiration time.
+	NotBefore         *time.Time `json:"NotBefore,omitempty"`
+	NotAfter          *time.Time `json:"NotAfter,omitempty"`
+	FingerprintSHA256 string     `json:"FingerprintSHA256,omitempty"`
 }
 
 // GetCertificates returns the certificates installed on the device.
@@ -73,9 +82,31 @@ func (c *Client) getCertificates(ctx context.Context, opts ...grpc.CallOption) (
 		for _, ep := range ci.Endpoints {
 			info.Endpoints = append(info.Endpoints, ep.String())
 		}
+		info.parseValidity()
 		out = append(out, info)
 	}
+	recordCertificateInventory(out, time.Now())
 	return out, nil
+}
+
+func (info *CertificateInfo) parseValidity() {
+	if info.Type != certpb.CertificateType_CT_X509.String() {
+		return
+	}
+	der := info.Certificate
+	if block, _ := pem.Decode(der); block != nil {
+		if block.Type != "CERTIFICATE" {
+			return
+		}
+		der = block.Bytes
+	}
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		return
+	}
+	info.NotBefore, info.NotAfter = &cert.NotBefore, &cert.NotAfter
+	digest := sha256.Sum256(cert.Raw)
+	info.FingerprintSHA256 = hex.EncodeToString(digest[:])
 }
 
 // CanGenerateCSROpts mirrors the CanGenerateCSR request shape.

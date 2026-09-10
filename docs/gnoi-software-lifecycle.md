@@ -1,5 +1,12 @@
 # Software Lifecycle Management
 
+!!! tip "Start with the operator runbook"
+    For a linear, copyable procedure that distinguishes required manifests
+    from optional audit probes, configures IOS-XE certificates, performs both
+    upgrade and planned downgrade, and explains the provider logs, use the
+    [IOS-XE gNOI Upgrade and Downgrade Runbook](gnoi-iosxe-upgrade-runbook.md).
+    This page is the detailed design and API reference.
+
 !!! warning "Beta"
     The gNOI operations, write-class actions, and software lifecycle features
     described on this page are **Beta**. They are functional and tested on
@@ -27,10 +34,15 @@ The write-class and software-upgrade gates are intentionally separate. Enabling
 read-only gNOI does not enable reboot, file writes, factory reset, or OS
 activation.
 Enabling either mutation gate also changes the per-device worker Deployment to
-`Recreate`, preventing overlapping worker generations from acting on one
-durable mutation claim. Expect a brief node-management interruption when that
+`Recreate`, preventing overlap during managed Deployment rollouts. This is not
+physical-device fencing: manual Pod deletion, duplicate device registrations,
+or another controller installation still require operational coordination.
+Expect a brief node-management interruption when that
 worker rolls; `RollingUpdate` is restored after both gates are disabled (or
-gNOI is globally disabled) and any signer-cleanup rollout is complete.
+gNOI is globally disabled) and cleanup rollouts have removed both signer-bearing
+and mutation-enabled worker generations. Disabling a gate therefore still uses
+`Recreate` for the disabling rollout; it does not allow the old enabled worker
+to overlap its replacement.
 
 Helm exposes the same controls under the `gnoi` values block:
 
@@ -46,7 +58,7 @@ Helm exposes the same controls under the `gnoi` values block:
 ## Secure IOS-XE gNXI
 
 IOS-XE 17.18.x password authentication uses the secure gNXI listener (port
-`9339` by default):
+`9339` by default). For an identity that is already provisioned, use:
 
 ```text
 gnxi
@@ -56,9 +68,12 @@ gnxi secure-server
 gnxi secure-password-auth
 ```
 
-That example assumes an identity is already bound to the secure trustpoint. For
-the initial gNOI Certificate-service bootstrap, enable the services with
-`gnxi enable-gnoi`, then run `gnxi secure-init` before CVK sends Install.
+That example assumes an identity is already bound to the secure trustpoint. Do
+not also run `secure-init` on that path. For the initial gNOI
+Certificate-service bootstrap, use `gnxi`, `gnxi enable-gnoi`,
+`gnxi secure-init`, and `gnxi secure-password-auth`; `secure-init` supplies the
+temporary secure identity, so `secure-server` and a pre-existing
+`secure-trustpoint` are not additional bootstrap prerequisites.
 Without `enable-gnoi`, IOS-XE accepts `secure-init` syntactically but leaves the
 Certificate Management service disabled. IOS-XE binds the first newly
 installed certificate ID as the service trustpoint; verify the resulting
@@ -190,6 +205,15 @@ stringData:
     -----END CERTIFICATE-----
 ```
 
+!!! danger "Do not copy the signer into a kubectl annotation"
+    Do not use client-side `kubectl apply` for a Secret manifest containing
+    `ca.key`. It stores the submitted manifest in the
+    `kubectl.kubernetes.io/last-applied-configuration` annotation, where the
+    key would survive a later `.data.ca.key` deletion. Use the approved secret
+    manager, direct `kubectl create secret`, or server-side apply. The
+    [key-free cleanup procedure](gnoi-iosxe-upgrade-runbook.md#remove-bootstrap-secrets-immediately)
+    also removes a legacy last-applied annotation without printing its value.
+
 `tls.crt` is a profile template, not the certificate installed on IOS-XE. It
 must be a valid server certificate for `spec.address` and provide the CSR fields
 IOS-XE 17.18.04 requires: C, ST, O, OU, and an IP SAN. CVK uses its CN when
@@ -257,10 +281,11 @@ normally.
     remove it from process memory. The Deployment uses a non-overlapping
     `Recreate` strategy while a signer can be resident, for that cleanup
     rollout, and whenever write-class gNOI actions or IOS-XE software upgrades
-    are enabled. This prevents two worker generations from acting on the same
-    durable mutation claim. Normal rolling updates resume only after signer
-    cleanup is complete and both mutation gates, or gNOI globally, are
-    disabled.
+    are enabled. This prevents overlapping generations during managed
+    Deployment rollouts; it does not fence manual Pod replacement or a second
+    registration of the physical device. Normal rolling updates resume only after signer
+    cleanup is complete, both mutation gates or gNOI globally are disabled,
+    and no old mutation-enabled worker generation remains.
 
 !!! warning "IOS-XE gNXI service restart"
     CVK confines its configuration and credentials to gNOI, but IOS-XE shares
@@ -333,9 +358,12 @@ Use this explicit workflow:
    action fails with `CertificateInstallIndeterminate`, do not immediately
    create another action: use `GNOICertGet` and inspect device PKI state to
    determine whether the certificate ID was committed.
-5. Remove `ca.key` and `bootstrap.crt` from the Secret. That removal alone
-   triggers one non-overlapping, key-free cleanup rollout. `Recreate` remains
-   in effect while write-class actions or software upgrades are enabled, so
+5. Follow the [key-free cleanup
+   procedure](gnoi-iosxe-upgrade-runbook.md#remove-bootstrap-secrets-immediately)
+   to remove `ca.key`, `bootstrap.crt`, and any client-side last-applied copy;
+   wait until the Deployment template records the new Secret resourceVersion
+   before waiting for the non-overlapping rollout. `Recreate` remains in
+   effect while write-class actions or software upgrades are enabled, so
    disable each mutation gate when it is no longer needed (or disable gNOI
    globally) to restore normal rolling updates. Keep `tls.crt`, `ca.crt`, and
    the provisioning block so read-only gNOI can validate the installed
@@ -351,6 +379,31 @@ create-only: CVK does not rotate, revoke, or overwrite an existing certificate
 ID.
 Controller-managed provisioning requires the per-device worker; the aggregated
 config-only topology does not run gNOI lifecycle reconcilers.
+
+### Invalid Secret recovery and certificate lifetime
+
+A missing, malformed, or expired referenced gNOI Secret sets the affected
+`CiscoDevice` condition `GNOIConfigurationReady=False`. The manager reconciles
+that worker with gNOI disabled and removes its trust/signer projections; a
+required key-cleanup rollout still uses `Recreate`. Invalid public certificate
+material therefore cannot prevent removal of a previously loaded signing key.
+Unrelated credential/configuration reconciliation continues. Repairing the
+Secret restores gNOI through a worker rollout. A transient Kubernetes API read
+failure is different: it retries without treating unknown Secret state as a
+confirmed invalid configuration. This condition validates local configuration,
+not the device's gNOI reachability or provisioning state.
+
+Certificate renewal remains an operator-owned PKI operation. `ProvisionCertificate`
+is create-only, not a renewal controller; changing the profile `tls.crt` does
+not rotate the installed device certificate. Assign a renewal owner and a
+maintenance/recovery procedure before production use. `GNOICertGet` exposes
+parseable X.509 `NotBefore`, `NotAfter`, and `FingerprintSHA256` inventory fields
+and updates [certificate freshness/expiry metrics](observability.md#gnoi-lifecycle-metrics).
+Run a fresh inventory probe periodically and before each change. Inventory can
+include inactive certificates; verify which certificate is actually bound to
+the secure gNXI trustpoint before renewal or deletion. An external signing
+service can implement the signer boundary in a future change; there is no
+configured external-signer or automatic rotation implementation today.
 
 ## Connection Model
 
@@ -450,6 +503,35 @@ finalizer so deletion can complete, and retains the Lease until expiry.
 Deleting an upgrade cannot cancel device work and therefore leaves any
 required quarantine in place. Manual or external device changes are outside
 this Kubernetes fence and must still be coordinated operationally.
+
+The identity is the **namespace and CiscoDevice name**, not its IP address.
+Register each physical device once and coordinate ownership across clusters;
+different names or clusters do not share a fence.
+
+Per-device IOS-XE workers also coordinate ordinary configuration writes and
+app-hosting mutations with that Lease. Read-only probes and report-only config
+remain available. Before dispatching disruptive gNOI work, CVK adds the owned
+`cisco.vk/device-maintenance=gnoi:NoSchedule` Node taint. It prevents new
+scheduler placement, does not evict existing Pods, and is removed only after
+the disruptive Lease is released or expires. Direct `nodeName` assignments do
+not bypass the device-write guard. Disabling mutation gates does not discard
+an existing quarantine. Operator-owned taints are preserved.
+Taint removal is observed on a 30-second polling interval; setting it before
+dispatch is synchronous. The compatibility scan lists both mutation kinds in
+the device namespace, so large fleets should measure Kubernetes API cost and
+use appropriately scoped namespaces rather than assuming constant fleet-wide
+overhead.
+
+The safety observer needs namespace-scoped `list` permission on both mutation
+CRDs even when their runtime gates are off; the strict-RBAC chart grants that
+read-only access without enabling their controllers or write/status verbs.
+
+Ordinary write transactions renew a shorter Lease while running, with a
+30-minute execution bound. An error, cancellation, or lost worker retains the
+remaining 31-minute Lease instead of assuming device work stopped. This is a
+bounded recovery assumption, not proof that asynchronous IOS-XE work has
+finished. Investigate device-side install/app-hosting state before resuming
+after expiry. A Kubernetes/API outage fails closed for coordinated writes.
 
 ## Software Lifecycle
 
@@ -674,12 +756,20 @@ Important defaults:
 | `strategy` | `Reload` | `NoReboot` requests activation without an immediate reload; it is not a non-disruptive guarantee. |
 | `rollbackOnFailure` | `true` | Attempts to restore the previously observed version after verify mismatch when a safe rollback sequence can be proven. |
 | `installTimeoutSeconds` | `3600` | Bounds two consecutive windows: pre-install gNOI readiness, source resolution, and device-file `File.Get`; then, starting at the first `OS.Install` or native-registration claim, all per-supervisor installs/registration and inventory convergence share a fresh window. Repeated work within either window receives only its remaining time. |
-| `rebootTimeoutSeconds` | `1800` | Starts with the first activation claim and bounds activation, reachability, and final verification. Rollback receives an independent timer when `RollingBack` begins; it includes pre-dispatch reachability. Activation and rollback RPC contexts are capped by their remaining sequence time. |
+| `rebootTimeoutSeconds` | `1800` | Separately bounds initial activation-control readiness (`activationControlStartTime`), then activation/reachability/final verification from the first actual activation claim. Rollback receives an independent timer when `RollingBack` begins, including pre-dispatch reachability. Each RPC uses only the remaining sequence time. |
 
 `ActivationControlTimeout` and `RollbackDidNotConverge` retain the shared Lease
 when a mutation was durably claimed, just like an uncertain install outcome.
 This quarantine prevents a new CVK mutation from overlapping device work whose
 completion cannot be proven.
+
+After a durable activation claim, even a definitive authentication or
+authorization error from a later `OS.Verify` cannot prove that activation
+stopped. Terminal outcomes release the fence only when device mutation is
+known settled; `DeviceMutationSettled=True` records that evidence. Never infer
+that a terminal `Failed` phase alone means another mutation is safe. Before
+any activation claim, an expired maintenance window is checked even if the
+gNOI control client remains unavailable.
 
 `targetVersion` accepts IOS-XE version shapes such as `17.15.01a`,
 `26.01.01`, `26.01.01.0.340`, and `17.18.02.0.4112.1766116039`. Verification
@@ -687,6 +777,10 @@ uses a prefix-aware comparison, so operators may use the shortest unambiguous
 form for the staged image.
 
 ## Upgrade Examples
+
+For the complete upgrade and planned-downgrade manifests, the certificate
+prerequisites, and commands that correlate CR status with worker logs, follow
+the [IOS-XE upgrade and downgrade runbook](gnoi-iosxe-upgrade-runbook.md).
 
 Each CR is immutable and starts one upgrade after preflight. `notBefore` delays
 initial work; `notAfter` is rechecked before every not-yet-claimed device
@@ -755,10 +849,11 @@ that this option is a non-disruptive upgrade.
 
 ## Operator Workflow
 
-1. Confirm the device exposes the secure gNXI listener (`gnxi secure-server`
-   and `gnxi secure-password-auth` are enabled) and that `show gnxi state`
-   reports it up. Use the plaintext listener only for explicit legacy lab
-   compatibility.
+1. Follow the [IOS-XE upgrade and downgrade
+   runbook](gnoi-iosxe-upgrade-runbook.md) for the device's distinct bootstrap
+   or already-provisioned secure-gNXI path. Require `show gnxi state detail` to
+   report `State: Provisioned` before software lifecycle work. Use the
+   plaintext listener only for explicit legacy lab compatibility.
 2. Enable the software upgrade gate on the per-device VK pod via Helm
    (`gnoi.enableSoftwareUpgrade: true`) or the env var
    `CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=1`. Confirm that

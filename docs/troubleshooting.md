@@ -278,15 +278,19 @@ explicit TLS without logging certificate or credential contents.
 | Certificate ID conflict / already exists | The create-only ID is stale or belongs to another identity | Compare `GNOICertGet` with device trustpoints. Resolve or remove stale state out of band, or choose a new ID; CVK will not overwrite it. |
 | `Unimplemented` | That platform does not implement the requested service | Use `GNOICertGet` as the broad pre-provision connectivity probe. `GNOIOSVerify` is also read-only before provisioning, but only the exact not-provisioned response is expected; success requires `State: Provisioned`. |
 
-Before creating the action, confirm `gnxi enable-gnoi`, `gnxi secure-server`,
-`gnxi secure-password-auth`, and `gnxi secure-init`. After a mutation, the
+Before creating the action, use one of the two starting states documented in
+the [IOS-XE upgrade and downgrade
+runbook](gnoi-iosxe-upgrade-runbook.md#2-configure-secure-gnxi-on-ios-xe):
+`secure-init` for temporary bootstrap, or `secure-trustpoint` plus
+`secure-server` for an already-provisioned identity. Both paths require
+`gnxi enable-gnoi` and `gnxi secure-password-auth`. After a mutation, the
 action reconnects and succeeds only when the exact installed certificate is
 the active TLS leaf and `OS.Verify` works over that same peer; it never retries
 Install. If `OS.Verify` already succeeds, the action is a no-op and its
 requested certificate ID/digest are intent only, not an attestation of the
 active identity. Confirm the trustpoint and `State: Provisioned` on the device,
 then remove `ca.key` and `bootstrap.crt` and disable write-class gNOI. See the
-[canonical secure gNOI workflow](gnoi-software-lifecycle.md#secure-ios-xe-gnxi)
+[canonical secure gNOI workflow](gnoi-iosxe-upgrade-runbook.md)
 for configuration, Secret contents, and the shared gNXI/gNMI CA-bundle warning.
 
 ---

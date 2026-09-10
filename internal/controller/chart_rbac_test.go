@@ -24,8 +24,6 @@ func TestVKRBACStrictProfileGatesHighRiskRules(t *testing.T) {
 	text := string(raw)
 	for _, want := range []string{
 		`$strictRBAC := eq .Values.rbac.profile "strict"`,
-		`$mutationControllersEnabled := or .Values.gnoi.enableSoftwareUpgrade .Values.gnoi.enableWriteClass`,
-		`if or (not $strictRBAC) $mutationControllersEnabled`,
 		`if or (not $strictRBAC) .Values.gnoi.enableSoftwareUpgrade`,
 		`if or (not $strictRBAC) .Values.gnoi.enableWriteClass`,
 		`if not $strictRBAC`,
@@ -44,7 +42,7 @@ func TestVKRBACStrictProfileGatesHighRiskRules(t *testing.T) {
 	}
 }
 
-func TestVKRBACStrictSingleMutationControllerReadsBothKinds(t *testing.T) {
+func TestVKRBACStrictMaintenanceReadsBothKindsWithoutEnablingWrites(t *testing.T) {
 	if _, err := exec.LookPath("helm"); err != nil {
 		t.Skip("helm is required for rendered chart RBAC regression")
 	}
@@ -52,27 +50,17 @@ func TestVKRBACStrictSingleMutationControllerReadsBothKinds(t *testing.T) {
 		name            string
 		softwareUpgrade bool
 		writeClass      bool
-		enabledRule     string
-		disabledRule    string
-		enabledStatus   string
-		disabledStatus  string
 	}{
+		{name: "both-disabled"},
 		{
 			name:            "software-upgrade-only",
 			softwareUpgrade: true,
-			enabledRule:     `resources: ["iosxesoftwareupgrades"]`,
-			disabledRule:    `resources: ["iosxeoperationalactions"]`,
-			enabledStatus:   `resources: ["iosxesoftwareupgrades/status"]`,
-			disabledStatus:  `resources: ["iosxeoperationalactions/status"]`,
 		},
 		{
-			name:           "write-class-only",
-			writeClass:     true,
-			enabledRule:    `resources: ["iosxeoperationalactions"]`,
-			disabledRule:   `resources: ["iosxesoftwareupgrades"]`,
-			enabledStatus:  `resources: ["iosxeoperationalactions/status"]`,
-			disabledStatus: `resources: ["iosxesoftwareupgrades/status"]`,
+			name:       "write-class-only",
+			writeClass: true,
 		},
+		{name: "both-enabled", softwareUpgrade: true, writeClass: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -89,15 +77,17 @@ func TestVKRBACStrictSingleMutationControllerReadsBothKinds(t *testing.T) {
 			sharedRead := `resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
     verbs: ["list"]`
 			if !strings.Contains(text, sharedRead) {
-				t.Fatalf("strict single-controller RBAC is missing the cross-kind compatibility read:\n%s", text)
+				t.Fatalf("strict RBAC is missing the gate-independent maintenance safety read:\n%s", text)
 			}
-			if !strings.Contains(text, tt.enabledRule+"\n    verbs: [\"get\", \"watch\", \"update\", \"patch\"]") ||
-				!strings.Contains(text, tt.enabledStatus) {
-				t.Fatalf("strict RBAC is missing enabled-controller write/status rules")
-			}
-			if strings.Contains(text, tt.disabledRule+"\n    verbs: [\"get\", \"watch\", \"update\", \"patch\"]") ||
-				strings.Contains(text, tt.disabledStatus) {
-				t.Fatalf("strict RBAC grants controller writes to disabled peer kind")
+			for kind, enabled := range map[string]bool{
+				"iosxesoftwareupgrades":   tt.softwareUpgrade,
+				"iosxeoperationalactions": tt.writeClass,
+			} {
+				writeRule := `resources: ["` + kind + `"]` + "\n    verbs: [\"get\", \"watch\", \"update\", \"patch\"]"
+				statusRule := `resources: ["` + kind + `/status"]`
+				if strings.Contains(text, writeRule) != enabled || strings.Contains(text, statusRule) != enabled {
+					t.Fatalf("strict RBAC write/status grant for %s does not match enabled=%v", kind, enabled)
+				}
 			}
 		})
 	}

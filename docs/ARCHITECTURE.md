@@ -463,6 +463,15 @@ ConfigMap. With global gNOI disablement, the per-device worker remains but the
 trust projection and Secret-driven rollout are omitted. Aggregated config-only
 topology does not create a per-device worker.
 
+The manager also validates provisioning Secret contents locally; it is inside
+the Secret trust boundary but does not perform device RPCs. Known-invalid
+optional gNOI material degrades only that worker's gNOI configuration, allowing
+signer removal and unrelated configuration/credential updates to proceed.
+Transient Kubernetes read failures retry without discarding a working
+projection. Resource sizing belongs here too: `spec.worker` controls the real
+worker's requests/limits and `/tmp` cap, is removed from rendered device config,
+and never changes a virtual Node's advertised application capacity.
+
 The per-device gNOI client uses a workload-classed gRPC connection pool so
 small control RPCs and bulk OS/file transfers use separate connections and do
 not block each other. gNMI configuration and telemetry currently maintain
@@ -530,6 +539,24 @@ do not contend and must be prohibited operationally. A future NX-OS or IOS XR
 lifecycle driver should reuse this coordination family and the generic gNOI
 byte-source primitives, add any native inventory/device-file backend, and
 provide its own platform API, controller registration, and runtime wiring.
+
+`internal/provider/maintenance` joins ordinary IOS-XE configuration and
+app-hosting writes to this boundary and owns the maintenance Node taint.
+Injected callbacks cover entire transactions and asynchronous app recovery,
+not individual RESTCONF calls; reads remain available. Startup receives the
+same guard before optional device bootstrap writes. Each routine write uses a
+unique holder, renews while running, and retains its bounded Lease on uncertain
+completion. The IOS-XE observer also checks existing quarantine when mutation
+gates are disabled. This requires list-only access to both mutation CRDs even
+with strict RBAC and disabled mutation gates; it grants no mutation authority.
+
+Portable coordination does not make the current IOS-XE lifecycle controller
+portable. A future driver must supply its own version comparison, supervisor
+and activation semantics, inventory observations, certificate workflow, and
+recovery qualification. Reuse the narrow interfaces after those requirements
+are demonstrated; do not make NX-OS/IOS XR inherit IOS-XE error strings or CSR
+policy. `Recreate` controls Deployment rollouts, not arbitrary Pod deletion,
+out-of-band changes, or ownership across Kubernetes clusters.
 
 ## RESTCONF endpoints
 

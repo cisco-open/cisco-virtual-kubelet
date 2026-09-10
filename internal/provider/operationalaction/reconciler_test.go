@@ -418,6 +418,28 @@ func TestOperationalActionWaitsForSharedDeviceMutationLease(t *testing.T) {
 	}
 }
 
+func TestOperationalActionMaintenancePreparationFailureBlocksDispatch(t *testing.T) {
+	rig := newRig(t)
+	a := newAction("maintenance-blocked", nil)
+	r := newReconciler(t, rig, a)
+	r.DeviceNamespace = "default"
+	r.MutationLeaser = &engine.FamilyLeaser{Client: r.Client, Namespace: "default", TTL: 26 * time.Hour}
+	r.BeforeMutation = func(ctx context.Context) error {
+		var lease coordv1.Lease
+		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: "default", Name: engine.LeaseName(devicecoordination.DeviceKey("default", "dev1"), devicecoordination.MutationLeaseFamily)}, &lease); err != nil {
+			t.Fatalf("maintenance hook ran before Lease: %v", err)
+		}
+		return errors.New("node taint patch denied")
+	}
+	got := runReconcile(t, r, a)
+	if got.Status.InvocationID != "" || rig.sys.rebootCalls.Load() != 0 || got.Status.Phase != opsv1alpha1.ActionPhasePending {
+		t.Fatalf("preparation failure dispatched action: %+v", got.Status)
+	}
+	if !strings.Contains(got.Status.Message, "maintenance") {
+		t.Fatalf("missing maintenance explanation: %s", got.Status.Message)
+	}
+}
+
 func TestOperationalActionQuarantinesLegacyUpgradeBeforeDeviceAccess(t *testing.T) {
 	rig := newRig(t)
 	a := newAction("reboot-blocked-by-legacy-upgrade", func(a *opsv1alpha1.IOSXEOperationalAction) {

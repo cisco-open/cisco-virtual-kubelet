@@ -14,6 +14,20 @@ Other IOS-XE versions with App Hosting may work but are not validated.
 
 Apply the following IOS-XE config on the switch.
 
+### Enable secure gNXI for gNOI software lifecycle
+
+Image upgrade and downgrade additionally require secure gNXI with gNOI and
+password authentication enabled. An unprovisioned device uses
+`gnxi secure-init` as its temporary certificate bootstrap; a device that
+already has the intended identity instead uses `gnxi secure-trustpoint` and
+`gnxi secure-server`. Do not combine those starting-state command sets, and do
+not enable `gnxi secure-client-auth` for a password-only CVK deployment.
+
+Follow the [IOS-XE gNOI Upgrade and Downgrade
+Runbook](gnoi-iosxe-upgrade-runbook.md#2-configure-secure-gnxi-on-ios-xe) for
+the exact device commands, certificate requirements, Kubernetes objects, and
+post-provision checks.
+
 ### Enable IOx, RESTCONF, and App Hosting
 
 ```
@@ -193,5 +207,6 @@ The Management interface mode also works on Catalyst 9000 — containers share t
 ## See also
 
 - [Getting Started](getting-started.md) — end-to-end deployment
+- [IOS-XE gNOI Upgrade and Downgrade Runbook](gnoi-iosxe-upgrade-runbook.md) — secure gNXI, certificates, manifests, logs, and verification
 - [Configuration](CONFIGURATION.md) — full field reference, applies to any platform
 - [Troubleshooting](troubleshooting.md) — VLAN issues, DHCP issues, install failures

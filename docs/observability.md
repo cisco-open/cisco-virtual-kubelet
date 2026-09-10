@@ -208,7 +208,10 @@ CRs. At startup, the per-device worker also logs bounded categorical values:
 `trust_source` is `plaintext`, `legacy-shared`, `system`, `shared`, `gnoi`, or
 `xe-provisioning`; `auth_mode` is `none`, `legacy-basic`, or
 `iosxe-password-metadata`. Certificate and credential contents are never
-included.
+included. The [IOS-XE Upgrade and Downgrade
+Runbook](gnoi-iosxe-upgrade-runbook.md#8-follow-status-events-and-provider-logs)
+shows how to correlate lifecycle CR status, Kubernetes Events, and the exact
+per-device worker log messages during an image change.
 
 | Metric | Labels | Notes |
 |---|---|---|
@@ -219,6 +222,30 @@ included.
 | `cisco_vk_devicegrpc_close_leak_detected_total` | `class` | Outstanding leases observed when a pool closes. |
 | `cisco_vk_iosxe_software_upgrade_phase_transitions_total` | `device`, `target_version`, `from`, `to`, `reason` | Software upgrade state transitions. |
 | `cisco_vk_iosxe_operational_action_transitions_total` | `device`, `kind`, `phase`, `reason` | Write-class action phase transitions and terminal outcomes. |
+| `cisco_vk_gnoi_certificate_earliest_expiry_timestamp_seconds` | — | Earliest expiry in the last successful parseable certificate inventory, including inactive identities; zero when none is parseable. |
+| `cisco_vk_gnoi_certificate_inventory_observed_timestamp_seconds` | — | Time of the last successful `GNOICertGet`/GetCertificates inventory; zero before the first observation. |
+| `cisco_vk_gnoi_certificate_inventory_unparsed` | — | Inventory entries without parseable X.509 expiry. Nonzero means expiry coverage is incomplete. |
+
+Certificate metrics belong to the per-device worker. A scrape does **not**
+contact IOS-XE or refresh inventory. Schedule a uniquely named read-only
+`GNOICertGet` through your operational scheduler (for example every six hours),
+retain its result, and alert on stale/missing inventory as well as expiry.
+Example per-series PromQL warning expressions:
+
+```promql
+(cisco_vk_gnoi_certificate_earliest_expiry_timestamp_seconds > 0)
+and (cisco_vk_gnoi_certificate_earliest_expiry_timestamp_seconds - time() < 30 * 86400)
+```
+
+```promql
+(time() - cisco_vk_gnoi_certificate_inventory_observed_timestamp_seconds > 12 * 3600)
+or (cisco_vk_gnoi_certificate_inventory_unparsed > 0)
+```
+
+Also monitor the expected worker scrape targets for absence/down; an absent
+series cannot satisfy those expressions. A worker restart resets observations
+until the next successful inventory. These are advisory inventory signals,
+not automatic certificate renewal or proof of the active listener identity.
 
 #### Interfaces (TopologyProvider)
 

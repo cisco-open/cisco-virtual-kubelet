@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */}}
 {{- $strictRBAC := eq .Values.rbac.profile "strict" }}
-{{- $mutationControllersEnabled := or .Values.gnoi.enableSoftwareUpgrade .Values.gnoi.enableWriteClass }}
 ---
 # Service account used by all Virtual Kubelet Deployments spawned by the controller.
 apiVersion: v1
@@ -182,13 +181,12 @@ rules:
   - apiGroups: ["ops.cisco.vk"]
     resources: ["deviceoperations/status"]
     verbs: ["get", "update", "patch"]
-  {{- if or (not $strictRBAC) $mutationControllersEnabled }}
-  # The one-release compatibility barrier reads both mutation CRDs before
-  # either controller can claim the shared device Lease.
+  # The per-device maintenance observer reads both mutation CRDs even after
+  # mutation gates are disabled, so a prior operation still fences device
+  # writes and scheduling. This namespaced safety check grants list only.
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
     verbs: ["list"]
-  {{- end }}
   {{- if or (not $strictRBAC) .Values.gnoi.enableSoftwareUpgrade }}
   # IOSXESoftwareUpgrade CRD — multi-phase gNOI OS upgrade reconciler.
   - apiGroups: ["ops.cisco.vk"]

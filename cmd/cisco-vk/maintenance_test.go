@@ -1,0 +1,50 @@
+// Copyright © 2026 Cisco Systems Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package main
+
+import (
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"testing"
+)
+
+func TestMaintenanceRuntimeBoundary(t *testing.T) {
+	for _, tc := range []struct {
+		name                                       string
+		driver                                     ciskov1.DeviceDriver
+		upgrade, action, disabled, aggregate, want bool
+	}{
+		{name: "default-observer", driver: ciskov1.DeviceDriverXE, want: true},
+		{name: "upgrade", driver: ciskov1.DeviceDriverXE, upgrade: true, want: true},
+		{name: "action", driver: ciskov1.DeviceDriverXE, action: true, want: true},
+		{name: "gnoi-disabled-observer", driver: ciskov1.DeviceDriverXE, upgrade: true, disabled: true, want: true},
+		{name: "aggregated", driver: ciskov1.DeviceDriverXE, upgrade: true, aggregate: true},
+		{name: "nxos", driver: ciskov1.DeviceDriverNXOS, upgrade: true},
+		{name: "xr", driver: ciskov1.DeviceDriverXR, action: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(gNOIDisabledEnv, "false")
+			t.Setenv("DISABLE_IN_POD_CONFIG_RECONCILER", "false")
+			if tc.disabled {
+				t.Setenv(gNOIDisabledEnv, "true")
+			}
+			if tc.aggregate {
+				t.Setenv("DISABLE_IN_POD_CONFIG_RECONCILER", "true")
+			}
+			if got := maintenanceEnabled(configReconcilerOptions{Spec: &ciskov1.DeviceSpec{Driver: tc.driver}, EnableIOSXESoftwareUpgrade: tc.upgrade, EnableWriteClassGNOI: tc.action}); got != tc.want {
+				t.Fatalf("enabled=%v want %v", got, tc.want)
+			}
+		})
+	}
+}

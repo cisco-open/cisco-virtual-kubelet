@@ -946,7 +946,7 @@ func TestReconcile_GNOICertificateProvisioningMountsDedicatedSecret(t *testing.T
 	}
 }
 
-func TestReconcile_InvalidGNOIProvisioningSecretLeavesDeploymentUntouched(t *testing.T) {
+func TestReconcile_InvalidGNOIProvisioningSecretDisablesOnlyGNOI(t *testing.T) {
 	t.Setenv(envCVKEnableWriteClassGNOI, "true")
 	t.Setenv(envCVKGNOIDisabled, "false")
 	tests := []struct {
@@ -985,8 +985,8 @@ func TestReconcile_InvalidGNOIProvisioningSecretLeavesDeploymentUntouched(t *tes
 			r := reconcilerFor(t, objects...)
 			r.Recorder = record.NewFakeRecorder(1)
 			_, err := r.Reconcile(context.Background(), reconcileRequest(device.Namespace, device.Name))
-			if err == nil || !strings.Contains(err.Error(), tt.want) {
-				t.Fatalf("Reconcile error=%v, want substring %q", err, tt.want)
+			if err != nil {
+				t.Fatalf("Reconcile: %v", err)
 			}
 			select {
 			case event := <-r.Recorder.(*record.FakeRecorder).Events:
@@ -996,13 +996,7 @@ func TestReconcile_InvalidGNOIProvisioningSecretLeavesDeploymentUntouched(t *tes
 			case <-time.After(time.Second):
 				t.Fatal("expected GNOIProvisioningSecretInvalid event")
 			}
-			var after appsv1.Deployment
-			if err := r.Get(context.Background(), types.NamespacedName{Namespace: existing.Namespace, Name: existing.Name}, &after); err != nil {
-				t.Fatalf("get existing Deployment: %v", err)
-			}
-			if after.Annotations["preserve"] != "true" || len(after.Spec.Template.Spec.Containers) != 0 {
-				t.Fatalf("invalid Secret mutated existing Deployment: %+v", after)
-			}
+			assertInvalidGNOIWorker(t, r, device, tt.want)
 		})
 	}
 }
@@ -1048,7 +1042,7 @@ func TestReconcile_GNOIWithoutSignerUsesTrustOnlyProjectionAndNonOverlappingWrit
 	t.Fatal("trust-only Deployment did not mount public gNOI trust material")
 }
 
-func TestReconcile_SoftwareUpgradeUsesNonOverlappingRolloutAndRestoresRollingUpdate(t *testing.T) {
+func TestReconcile_SoftwareUpgradeUsesNonOverlappingRolloutWhenDisabled(t *testing.T) {
 	t.Setenv(envCVKEnableWriteClassGNOI, "false")
 	t.Setenv(envCVKEnableSoftwareUpgrade, "true")
 	t.Setenv(envCVKGNOIDisabled, "false")
@@ -1073,8 +1067,8 @@ func TestReconcile_SoftwareUpgradeUsesNonOverlappingRolloutAndRestoresRollingUpd
 	if err := r.Get(context.Background(), types.NamespacedName{Namespace: device.Namespace, Name: device.Name + deploymentSuffix}, &deploy); err != nil {
 		t.Fatalf("get Deployment after disabling software upgrades: %v", err)
 	}
-	if deploy.Spec.Strategy.Type != appsv1.RollingUpdateDeploymentStrategyType {
-		t.Fatalf("Deployment strategy = %q, want RollingUpdate after mutation gates are disabled", deploy.Spec.Strategy.Type)
+	if deploy.Spec.Strategy.Type != appsv1.RecreateDeploymentStrategyType || deploy.Annotations[gnoiMutationWorkerAnnotation] != "true" {
+		t.Fatalf("Deployment strategy = %q, want Recreate until the old enabled worker stops", deploy.Spec.Strategy.Type)
 	}
 }
 

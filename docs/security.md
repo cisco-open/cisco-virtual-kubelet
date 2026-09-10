@@ -10,10 +10,12 @@ With `credentialSecretRef`, the controller keeps device credentials out of the
 1. Before the `DeviceSpec` is marshalled into the ConfigMap, both `password` and `credentialSecretRef` are stripped.
 2. The VK pod's Deployment gets `VK_DEVICE_PASSWORD` as an environment variable sourced from a Secret via `valueFrom.secretKeyRef`.
 3. To roll the VK pod when credentials rotate, the manager watches referenced
-   Secrets and reads their `resourceVersion`. Reconciliation does not inspect
-   `.data`, but the typed Secret objects entering the manager cache/API client
-   still contain that data. Treat the manager's Secret RBAC and memory as part
-   of the credential trust boundary.
+   Secrets and reads their `resourceVersion`. The password-injection path does
+   not inspect `.data`; however, the manager validates dedicated gNOI trust and
+   provisioning Secret contents, including the signer when present. Typed
+   Secret objects also enter its cache/API client. Treat the manager's Secret
+   RBAC and memory as part of the credential trust boundary. Device certificate
+   RPCs and signing of device-generated CSRs remain worker-owned.
 
 Kubernetes Secret objects are still stored in etcd. Base64 encoding is not
 encryption; enable Kubernetes
@@ -377,6 +379,12 @@ Secret projection is not an authorization boundary: the standard VK
 ClusterRole can read Secrets cluster-wide so VK nodes can serve pod volumes.
 After provisioning is verified, promptly remove `ca.key` and `bootstrap.crt`;
 disable the write-class gate too unless other write actions are still needed.
+Never create or update a signer-bearing Secret with client-side
+`kubectl apply`: its last-applied annotation retains the submitted key even
+after `.data.ca.key` is removed. Use a secret manager, direct create, or
+server-side apply, and follow the
+[key-free cleanup procedure](gnoi-iosxe-upgrade-runbook.md#remove-bootstrap-secrets-immediately)
+to remove any legacy annotation and prove the replacement worker is key-free.
 Keep the public certificate and CA bundle for read-only gNOI trust. Deployments
 use a non-overlapping `Recreate` strategy while a signer may be resident, for
 the first key-free cleanup rollout, and whenever write-class gNOI actions or

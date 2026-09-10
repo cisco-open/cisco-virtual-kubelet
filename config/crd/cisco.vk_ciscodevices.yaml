@@ -437,6 +437,66 @@ spec:
               username:
                 description: Username for device authentication.
                 type: string
+              worker:
+                description: |-
+                  Worker configures the Kubernetes per-device CVK worker, independently of
+                  ResourceLimits for applications hosted on the Cisco device. Omitted fields
+                  inherit the manager's worker defaults. Ignored in aggregator topology.
+                properties:
+                  resources:
+                    description: |-
+                      Resources replaces the manager's complete worker resource requirements
+                      when present. An explicit empty object clears inherited requirements.
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        maxProperties: 3
+                        type: object
+                        x-kubernetes-validations:
+                        - message: worker limits must be nonnegative CPU, memory,
+                            or ephemeral-storage quantities
+                          rule: self.all(k, k in ['cpu', 'memory', 'ephemeral-storage']
+                            && !quantity(string(self[k])).isLessThan(quantity('0')))
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        maxProperties: 3
+                        type: object
+                        x-kubernetes-validations:
+                        - message: worker requests must be nonnegative CPU, memory,
+                            or ephemeral-storage quantities
+                          rule: self.all(k, k in ['cpu', 'memory', 'ephemeral-storage']
+                            && !quantity(string(self[k])).isLessThan(quantity('0')))
+                    type: object
+                    x-kubernetes-validations:
+                    - message: worker requests must not exceed their corresponding
+                        limits
+                      rule: '!has(self.requests) || !has(self.limits) || self.requests.all(k,
+                        !(k in self.limits) || !quantity(string(self.requests[k])).isGreaterThan(quantity(string(self.limits[k]))))'
+                  tmpSizeLimit:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      TmpSizeLimit caps the worker's disk-backed /tmp emptyDir, including image
+                      staging. Omitted inherits the manager default; no default means unbounded.
+                      This is an eviction limit, not reserved storage. Use ephemeral-storage
+                      requests to account for scheduling and leave headroom for logs and images.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                    x-kubernetes-validations:
+                    - message: tmpSizeLimit must be positive
+                      rule: quantity(string(self)).isGreaterThan(quantity('0'))
+                type: object
               xe:
                 description: |-
                   XE holds IOS-XE specific configuration.

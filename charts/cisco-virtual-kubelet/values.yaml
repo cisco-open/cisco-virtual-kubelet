@@ -211,6 +211,7 @@ containerSecurityContext:
       - ALL
   readOnlyRootFilesystem: true
 
+# Resources for the manager container only.
 resources: {}
 #  limits:
 #    cpu: 200m
@@ -218,6 +219,17 @@ resources: {}
 #  requests:
 #    cpu: 100m
 #    memory: 64Mi
+
+# Defaults for the per-device CVK Kubernetes workers created by the manager.
+# These are distinct from CiscoDevice.spec.resourceLimits for hosted apps.
+# CiscoDevice.spec.worker can override resources (as a complete block) and
+# tmpSizeLimit independently. Empty defaults preserve existing deployments.
+worker:
+  resources: {}
+  # Disk-backed /tmp emptyDir cap; use e.g. "10Gi" for image staging. This is
+  # not a reservation: set worker.resources ephemeral-storage requests/limits and
+  # leave room beyond maxImageBytes for logs, scratch files, and cached images.
+  tmpSizeLimit: ""
 
 nodeSelector: {}
 

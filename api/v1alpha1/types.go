@@ -46,6 +46,9 @@ const (
 	// CiscoDeviceConditionPrereqTeardownObserved records that the controller
 	// has seen the owned prereq IOSXEConfig enter deletion.
 	CiscoDeviceConditionPrereqTeardownObserved = "PrereqTeardownObserved"
+	// CiscoDeviceConditionGNOIConfigurationReady reports local gNOI Secret
+	// validation. It does not assert device reachability or OS service readiness.
+	CiscoDeviceConditionGNOIConfigurationReady = "GNOIConfigurationReady"
 )
 
 // CiscoDevice is the Schema for the ciscodevices API.
@@ -158,6 +161,12 @@ type DeviceSpec struct {
 	// ResourceLimits defines default and maximum resource allocations.
 	// +kubebuilder:validation:Optional
 	ResourceLimits ResourceConfig `json:"resourceLimits,omitempty" mapstructure:"resourceLimits"`
+
+	// Worker configures the Kubernetes per-device CVK worker, independently of
+	// ResourceLimits for applications hosted on the Cisco device. Omitted fields
+	// inherit the manager's worker defaults. Ignored in aggregator topology.
+	// +kubebuilder:validation:Optional
+	Worker *DeviceWorkerConfig `json:"worker,omitempty"`
 
 	// OTEL holds OpenTelemetry topology export configuration.
 	// When enabled, the VK emits OTLP traces representing the device's

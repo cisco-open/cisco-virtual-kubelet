@@ -79,6 +79,9 @@ type Reconciler struct {
 	// the holder's lease. A nil value preserves compatibility for tests and
 	// embedders that do not use Kubernetes Leases.
 	MutationLeaser *engine.FamilyLeaser
+	// BeforeMutation prepares node maintenance after the disruptive Lease is
+	// owned. A failure prevents device dispatch; CancelReboot bypasses it.
+	BeforeMutation func(context.Context) error
 	// CertificateProvisioner is injected separately from GNOI so the base
 	// device client cannot acquire certificate-install authority implicitly.
 	// It is nil unless provisioning is explicitly configured and write-class
@@ -343,8 +346,11 @@ func (r *Reconciler) ensureMutationLease(
 	act *opsv1alpha1.IOSXEOperationalAction,
 	now time.Time,
 ) (bool, reconcile.Result, error) {
-	if r.MutationLeaser == nil || !actionUsesMutationLease(act) {
+	if !actionUsesMutationLease(act) {
 		return true, reconcile.Result{}, nil
+	}
+	if r.MutationLeaser == nil {
+		return r.prepareMutation(ctx, act, now)
 	}
 	guard, err := r.ensureCanonicalLegacyQuarantine(ctx, act, false, now)
 	if err != nil {
@@ -359,7 +365,7 @@ func (r *Reconciler) ensureMutationLease(
 		if guard.CallerOwnsRisk {
 			// The guard already renewed the caller's Lease with the legacy risk's
 			// complete safety horizon, which may exceed its normal operation TTL.
-			return true, reconcile.Result{}, nil
+			return r.prepareMutation(ctx, act, now)
 		}
 		holder := guard.ExistingHolder
 		if guard.LeaseOwned || holder == "" {
@@ -388,6 +394,17 @@ func (r *Reconciler) ensureMutationLease(
 		requeue, updateErr := r.updatePendingStatus(ctx, act, "MutationLeaseBlocked",
 			fmt.Sprintf("waiting for device disruptive-mutation lease held by %s", holder), now)
 		return false, requeue, updateErr
+	}
+	return r.prepareMutation(ctx, act, now)
+}
+
+func (r *Reconciler) prepareMutation(ctx context.Context, act *opsv1alpha1.IOSXEOperationalAction, now time.Time) (bool, reconcile.Result, error) {
+	if r.BeforeMutation != nil {
+		if err := r.BeforeMutation(ctx); err != nil {
+			requeue, updateErr := r.updatePendingStatus(ctx, act, "MutationPreparationBlocked",
+				"waiting for device maintenance preparation: "+err.Error(), now)
+			return false, requeue, updateErr
+		}
 	}
 	return true, reconcile.Result{}, nil
 }

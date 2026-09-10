@@ -31,6 +31,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -155,8 +156,8 @@ func TestReconcile_GNOITLSSecretRejectsInvalidMaterial(t *testing.T) {
 			recorder := record.NewFakeRecorder(2)
 			r.Recorder = recorder
 			_, err := r.Reconcile(context.Background(), reconcileRequest(device.Namespace, device.Name))
-			if err == nil || !strings.Contains(err.Error(), tt.want) {
-				t.Fatalf("Reconcile error=%v, want substring %q", err, tt.want)
+			if err != nil {
+				t.Fatalf("Reconcile: %v", err)
 			}
 			select {
 			case event := <-recorder.Events:
@@ -166,13 +167,35 @@ func TestReconcile_GNOITLSSecretRejectsInvalidMaterial(t *testing.T) {
 			case <-time.After(time.Second):
 				t.Fatal("expected GNOITLSInvalid warning event")
 			}
-			var configMap corev1.ConfigMap
-			err = r.Get(context.Background(), types.NamespacedName{Namespace: device.Namespace, Name: device.Name + configMapSuffix}, &configMap)
-			if err == nil {
-				t.Fatal("invalid gNOI TLS material unexpectedly produced a worker ConfigMap")
-			}
+			assertInvalidGNOIWorker(t, r, device, tt.want)
 		})
 	}
+}
+
+func assertInvalidGNOIWorker(t *testing.T, r *CiscoDeviceReconciler, device *ciskov1.CiscoDevice, message string) appsv1.Deployment {
+	t.Helper()
+	ctx := context.Background()
+	var deployment appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: device.Name + deploymentSuffix}, &deployment); err != nil {
+		t.Fatalf("get degraded worker: %v", err)
+	}
+	if disabled, exists := findEnvVar(deployment.Spec.Template.Spec.Containers[0].Env, envCVKGNOIDisabled); !exists || disabled.Value != "1" {
+		t.Fatal("invalid gNOI configuration did not disable worker gNOI")
+	}
+	for _, volume := range deployment.Spec.Template.Spec.Volumes {
+		if volume.Name == gnoiTLSVolumeName || volume.Name == gnoiProvisioningVolumeName {
+			t.Fatalf("invalid gNOI configuration still projects %s", volume.Name)
+		}
+	}
+	var current ciskov1.CiscoDevice
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: device.Name}, &current); err != nil {
+		t.Fatal(err)
+	}
+	condition := meta.FindStatusCondition(current.Status.Conditions, ciskov1.CiscoDeviceConditionGNOIConfigurationReady)
+	if condition == nil || condition.Status != metav1.ConditionFalse || condition.Reason != "InvalidSecret" || !strings.Contains(condition.Message, message) {
+		t.Fatalf("gNOI condition=%+v, want InvalidSecret with %q", condition, message)
+	}
+	return deployment
 }
 
 func TestReconcile_DisabledGNOIDoesNotReadOrProjectTLSSecret(t *testing.T) {

@@ -333,6 +333,13 @@ spec:
           status:
             description: IOSXESoftwareUpgradeStatus carries observed state.
             properties:
+              activationControlStartTime:
+                description: |-
+                  ActivationControlStartTime bounds initial activation-client recovery by
+                  RebootTimeoutSeconds without consuming the subsequent reboot deadline.
+                  It is recorded on the first client-acquisition failure before activation.
+                format: date-time
+                type: string
               activationStartTime:
                 description: |-
                   ActivationStartTime is when the first activation mutation was durably

@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -406,6 +407,11 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 	// and potentially re-install an app that was just uninstalled.
 	if pod.DeletionTimestamp == nil {
 		for containerName, appID := range discoveredContainers {
+			if d.maintenanceMutationGuard != nil {
+				if observed := appOperDataMap[appID]; observed != nil && observed.Details != nil && observed.Details.State != nil && *observed.Details.State == "RUNNING" {
+					continue
+				}
+			}
 			imagePath := containerImagePath(pod, containerName)
 			appCfg := &AppHostingConfig{
 				Metadata: AppHostingMetadata{
@@ -421,7 +427,7 @@ func (d *XEDriver) GetPodStatus(ctx context.Context, pod *v1.Pod) (*v1.Pod, erro
 				},
 				Status: AppHostingStatus{Phase: AppPhaseConverging},
 			}
-			d.ReconcileApp(ctx, appCfg)
+			d.reconcileStatusApp(ctx, appCfg)
 		}
 
 		// Drive recovery for any spec containers that are missing from the
@@ -531,7 +537,9 @@ func (d *XEDriver) recoverMissingContainers(ctx context.Context, pod *v1.Pod, di
 				),
 			)
 			defer span.End()
-			if err := d.CreateAppHostingApp(traceCtx, &cfgCopy); err != nil {
+			if err := d.withMaintenanceMutation(traceCtx, func(writeCtx context.Context) error {
+				return d.CreateAppHostingApp(writeCtx, &cfgCopy)
+			}); err != nil {
 				span.SetAttributes(attribute.String("cisco.vk.recovery.outcome", "error"))
 				span.RecordError(err)
 				span.SetStatus(codes.Error, "install missing container")
@@ -545,6 +553,65 @@ func (d *XEDriver) recoverMissingContainers(ctx context.Context, pod *v1.Pod, di
 				cfgCopy.ContainerName(), podNamespace, podName)
 		}(detachedCtx)
 	}
+}
+
+// Status observation may request a lifecycle transition, but the mutation
+// must remain fenced until the asynchronous app operation converges. Keep the
+// status call non-blocking and use the same in-flight deduplication as missing
+// container recovery. Without maintenance enabled, preserve existing behavior.
+func (d *XEDriver) reconcileStatusApp(ctx context.Context, cfg *AppHostingConfig) {
+	if d.maintenanceMutationGuard == nil {
+		d.ReconcileApp(ctx, cfg)
+		return
+	}
+	if !d.tryMarkInstallInFlight(cfg.AppName()) {
+		return
+	}
+	copy := *cfg
+	go func() {
+		defer d.clearInstallInFlight(copy.AppName())
+		bgCtx, cancel := context.WithTimeout(correlation.DetachedContext(ctx), 30*time.Minute)
+		defer cancel()
+		err := d.withMaintenanceMutation(bgCtx, func(writeCtx context.Context) error {
+			return d.convergeStatusApp(writeCtx, &copy, 4*time.Second)
+		})
+		if err != nil {
+			log.G(bgCtx).WithError(err).Debug("app status recovery deferred by maintenance or lifecycle failure")
+		}
+	}()
+}
+
+func (d *XEDriver) convergeStatusApp(ctx context.Context, cfg *AppHostingConfig, interval time.Duration) error {
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		d.ReconcileApp(ctx, cfg)
+		switch cfg.Status.Phase {
+		case AppPhaseReady:
+			return nil
+		case AppPhaseError:
+			return fmt.Errorf("app recovery: %s", cfg.Status.Message)
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(interval):
+		}
+	}
+}
+
+func (d *XEDriver) withMaintenanceMutation(ctx context.Context, mutate func(context.Context) error) (outcome error) {
+	if d.maintenanceMutationGuard == nil {
+		return mutate(ctx)
+	}
+	writeCtx, finish, err := d.maintenanceMutationGuard(ctx)
+	if err != nil {
+		return err
+	}
+	outcome = devicecoordination.ErrMutationIncomplete
+	defer func() { finish(outcome) }()
+	return mutate(writeCtx)
 }
 
 func podDeletionTargets(ctx context.Context, pod *v1.Pod, discoveredContainers map[string]string) map[string]string {

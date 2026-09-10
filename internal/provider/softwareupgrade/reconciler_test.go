@@ -4383,7 +4383,7 @@ func TestTerminalStatusReleasesMutationLeaseImmediately(t *testing.T) {
 		t.Fatalf("seed mutation lease: result=%+v err=%v", result, err)
 	}
 
-	if _, err := r.terminal(context.Background(), up, opsv1alpha1.UpgradePhaseFailed, "TestFailure", "done", r.now()); err != nil {
+	if _, err := r.terminalAfterMutation(context.Background(), up, opsv1alpha1.UpgradePhaseFailed, "TestFailure", "done", r.now()); err != nil {
 		t.Fatalf("persist terminal status: %v", err)
 	}
 	leaseName := engine.LeaseName(r.mutationLeaseDeviceKey(), devicecoordination.MutationLeaseFamily)

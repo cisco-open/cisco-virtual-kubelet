@@ -17,9 +17,32 @@
 package devicecoordination
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 )
+
+// MutationGuard protects one complete device write lifecycle. Its completion
+// callback receives the outcome so ambiguous failures retain their fence.
+type MutationGuard = func(context.Context) (context.Context, func(error), error)
+
+// ErrMutationIncomplete is the conservative deferred outcome until a guarded
+// function returns normally. A panic must not release uncertain device work.
+var ErrMutationIncomplete = errors.New("device mutation did not return normally")
+
+type mutationGuardKey struct{}
+
+// WithMutationGuard makes a guard available during driver construction, before
+// optional device bootstrap writes (such as IOx sign-verification settings).
+func WithMutationGuard(ctx context.Context, guard MutationGuard) context.Context {
+	return context.WithValue(ctx, mutationGuardKey{}, guard)
+}
+
+func MutationGuardFromContext(ctx context.Context) MutationGuard {
+	guard, _ := ctx.Value(mutationGuardKey{}).(MutationGuard)
+	return guard
+}
 
 // MutationLeaseFamily serializes disruptive mutations against one device.
 // It is intentionally platform-neutral so future IOS XR and NX-OS workflows
