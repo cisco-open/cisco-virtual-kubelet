@@ -83,6 +83,8 @@ Before changing a switch, also confirm:
 - the existing AAA policy permits the account in `spec.username` to perform the
   required gNOI OS and Certificate RPCs;
 - TCP port `9339` is reachable from the worker to the switch;
+- device, worker-host and Kubernetes control-plane clocks are synchronized
+  for certificate validity, maintenance windows and correlated evidence;
 - the image is correct for the platform and the worker has enough ephemeral
   storage for it;
 - the switch has enough storage and a healthy install state; and

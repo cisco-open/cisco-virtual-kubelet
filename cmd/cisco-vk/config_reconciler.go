@@ -254,6 +254,7 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	}
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                 scheme,
+		BaseContext:            workerManagerBaseContext(ctx),
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: "0",
 		LeaderElection:         false,
@@ -668,6 +669,14 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	}
 
 	return nil
+}
+
+// Manager.Start controls shutdown, but its context values are not inherited by
+// reconciler runnables by default. Preserve the worker's VK logger (and tracing
+// values) without bypassing the manager's graceful cancellation ordering.
+func workerManagerBaseContext(ctx context.Context) func() context.Context {
+	base := context.WithoutCancel(ctx)
+	return func() context.Context { return base }
 }
 
 func operationNamespace() string {
