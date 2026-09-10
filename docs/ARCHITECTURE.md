@@ -20,11 +20,12 @@ runtime subcommands:
   starts that adapter and watches only its Kubernetes namespace. The September
   image registers zero product adapters, so this Alpha path remains inactive.
 
-This split keeps product-specific logic and direct credential use inside the
-device or controller worker. The manager writes Secret references rather than
-inspecting `.data`, but its cluster-wide Secret watch for device credential
-rotation means typed Secret objects can enter its cache and memory. Treat the
-manager as part of the credential trust boundary described in
+This split keeps device/controller API calls and device-side signing workflows
+inside their workers. The manager writes credential Secret references and
+locally validates dedicated gNOI trust and provisioning material, including
+signer keys when present. Its cluster-wide Secret watch also places typed
+Secret objects in its cache and memory. Treat the manager as part of the
+credential trust boundary described in
 [Security](security.md). Each controller worker receives only its target's
 mounted credentials; its Kubernetes API RBAC and cache are namespace-scoped.
 

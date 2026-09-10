@@ -382,8 +382,12 @@ config-only topology does not run gNOI lifecycle reconcilers.
 
 ### Invalid Secret recovery and certificate lifetime
 
-A missing, malformed, or expired referenced gNOI Secret sets the affected
-`CiscoDevice` condition `GNOIConfigurationReady=False`. The manager reconciles
+A missing referenced Secret or locally rejected gNOI material sets the affected
+`CiscoDevice` condition `GNOIConfigurationReady=False`. Provisioning validation
+includes certificate validity dates. Generic `gnoi.tls` validation checks
+parseable CA material and an optional matching client certificate/key pair;
+it does not check validity dates, so this condition is not an expiry monitor.
+TLS handshakes still enforce peer certificate validity. The manager reconciles
 that worker with gNOI disabled and removes its trust/signer projections; a
 required key-cleanup rollout still uses `Recreate`. Invalid public certificate
 material therefore cannot prevent removal of a previously loaded signing key.
