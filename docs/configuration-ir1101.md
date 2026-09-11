@@ -200,7 +200,7 @@ spec:
     name: ir1101-creds           # Secret with key: password
   tls:
     enabled: true
-    insecureSkipVerify: true     # acceptable for lab; use caFile in production
+    insecureSkipVerify: true     # lab only; do not use this transport for gNOI
   # allowUnsignedApps: true      # uncomment when running unsigned packages
   xe:
     networking:
@@ -211,6 +211,10 @@ spec:
           interface: "0"         # VirtualPortGroup0
           guestInterface: 0      # container-side eth index (0 = eth0)
 ```
+
+The TLS setting above is for an app-hosting lab and leaves gNOI in legacy
+`auto` mode. Before invoking gNOI, configure
+[explicit verified gNOI TLS](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
 
 ### Pod manifest
 

@@ -158,7 +158,7 @@ spec:
     name: ie3500-creds           # Secret with key: password
   tls:
     enabled: true
-    insecureSkipVerify: true     # acceptable for lab; use caFile in production
+    insecureSkipVerify: true     # lab only; do not use this transport for gNOI
   allowUnsignedApps: true        # required for unsigned test packages on 17.18
   xe:
     networking:
@@ -172,6 +172,10 @@ spec:
             guestInterface: 0   # container-side eth index (0 = eth0)
 ```
 
+The TLS setting above is for an app-hosting lab and leaves gNOI in legacy
+`auto` mode. Before invoking gNOI, configure
+[explicit verified gNOI TLS](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
+
 ### Credentials Secret
 
 ```yaml
@@ -182,7 +186,6 @@ metadata:
   namespace: cisco-vk
 type: Opaque
 stringData:
-  username: admin
   password: <device-password>
 ```
 

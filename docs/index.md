@@ -126,7 +126,7 @@ summarises the current release state.
 | **Network controller scaffold** (`NetworkController`, `NetworkControllerConfig`) | **Alpha** | Generic endpoint, controller-centric Network as Code intent, registry, and isolated-worker contracts. Zero adapters ship in September; the boundary is report-only and does not integrate an external controller. |
 | **Network as Code config driver** (`IOSXEConfig`, `NXOSConfig`) | **Beta** | Declarative IOS-XE and NX-OS config CRDs with drift detection and verification. IOS-XE also provides revision/apply-log history and broader family coverage; NX-OS starts with `system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` over NX-API REST/DME, without revision rollback. Schema is `v1alpha1`; family coverage and wire-format behaviour are still expanding. |
 | **Operations** (`DeviceOperation`, `IOSXEOperationalAction`) | **Beta** | Read-only diagnostics and gNOI probes are stable in intent; write-class actions require an explicit runtime gate and carry additional operational risk. |
-| **Software Lifecycle** (`IOSXESoftwareUpgrade`) | **Beta** | Multi-phase gNOI OS install/activate/verify. Disabled by default; requires `--enable-iosxesoftwareupgrade`. Tested on limited platforms. |
+| **Software Lifecycle** (`IOSXESoftwareUpgrade`) | **Beta** | Content-addressed gNOI install/activate/verify with optional IOS-XE RESTCONF device-file registration. Disabled by default; unsupported or ambiguous native lifecycle state fails closed. |
 | **Telemetry** (`IOSXETelemetry`) | **Beta** | MDT-over-gNMI subscriptions converted to OpenTelemetry signals. Pipeline architecture is stable; subscription schema is `v1alpha1`. |
 | Observability (Prometheus metrics, OTEL topology traces) | **Beta** | Metrics catalog and trace shapes may change between releases. |
 
@@ -153,8 +153,9 @@ summarises the current release state.
 - [Configuration](CONFIGURATION.md) - `CiscoDevice` and VK configuration fields
 - [CRD Reference](crds.md) - every shipped CRD and when to use it
 - [Family Reference](reference/families/README.md) - generated Network as Code config family coverage
-- [gNOI and Software Lifecycle](gnoi-software-lifecycle.md) - device operations, write-class actions, and IOS-XE software upgrades
-- [Operations Runbook](operations.md) - DeviceOperation, operational actions, and upgrade examples
+- [IOS-XE gNOI Upgrade and Downgrade Runbook](gnoi-iosxe-upgrade-runbook.md) - required manifests, certificate setup, provider logs, and end-to-end verification
+- [gNOI and Software Lifecycle](gnoi-software-lifecycle.md) - architecture, security rules, and lifecycle API reference
+- [Device Operations Runbook](operations.md) - DeviceOperation probes, show commands, and write-class actions
 - [Telemetry](telemetry.md) - gNMI subscriptions and OpenTelemetry output
 - [Observability](observability.md) - metrics catalog and topology traces
 - [Security](security.md) - credential injection, TLS, and RBAC

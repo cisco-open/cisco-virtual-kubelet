@@ -16,6 +16,10 @@
 #   spec.credentialSecretRef on the CiscoDevice CR (see ciscodevice-cr.yaml).
 #
 # Driver-specific networking lives under the driver key (e.g. "xe:").
+#
+# The insecureSkipVerify settings below are for local lab examples. They leave
+# gNOI in legacy auto mode; configure explicit verified device.gnoi before
+# invoking any gNOI operation.
 
 ---
 # Example 1: VirtualPortGroup with DHCP
@@ -27,7 +31,7 @@ device:
   # password: injected via VK_DEVICE_PASSWORD env var
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   xe:
     networking:
       interface:
@@ -46,7 +50,7 @@ device:
   username: admin
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   podCIDR: "10.0.0.0/24"
   xe:
     networking:
@@ -66,7 +70,7 @@ device:
   username: admin
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   xe:
     networking:
       interface:
@@ -85,7 +89,7 @@ device:
   username: admin
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   podCIDR: "10.0.0.0/24"
   xe:
     networking:
@@ -107,7 +111,7 @@ device:
   username: admin
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   xe:
     networking:
       interface:
@@ -128,7 +132,7 @@ device:
   username: admin
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   xe:
     networking:
       interface:
@@ -146,7 +150,7 @@ device:
   username: admin
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   podCIDR: "10.0.0.0/24"
   xe:
     networking:
@@ -167,11 +171,11 @@ device:
   username: admin
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   region: "edge-east"
   zone:   "edge-east-1"
   labels:
-    environment: production
+    environment: lab
     hw.type: catalyst-9000
   taints:
   - key: workload
@@ -207,7 +211,7 @@ device:
   username: admin
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   allowUnsignedApps: true
   otel:
     enabled: true

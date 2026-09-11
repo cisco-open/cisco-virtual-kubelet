@@ -10,6 +10,8 @@ package controller
 
 import (
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -37,6 +39,57 @@ func TestVKRBACStrictProfileGatesHighRiskRules(t *testing.T) {
 		if strings.Contains(text, forbidden) {
 			t.Fatalf("vk-rbac template contains wildcard RBAC %q", forbidden)
 		}
+	}
+}
+
+func TestVKRBACStrictMaintenanceReadsBothKindsWithoutEnablingWrites(t *testing.T) {
+	if _, err := exec.LookPath("helm"); err != nil {
+		t.Skip("helm is required for rendered chart RBAC regression")
+	}
+	tests := []struct {
+		name            string
+		softwareUpgrade bool
+		writeClass      bool
+	}{
+		{name: "both-disabled"},
+		{
+			name:            "software-upgrade-only",
+			softwareUpgrade: true,
+		},
+		{
+			name:       "write-class-only",
+			writeClass: true,
+		},
+		{name: "both-enabled", softwareUpgrade: true, writeClass: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := exec.Command("helm", "template", "cvk", "../../charts/cisco-virtual-kubelet",
+				"--namespace", "default",
+				"--set", "rbac.profile=strict",
+				"--set", "gnoi.enableSoftwareUpgrade="+strconv.FormatBool(tt.softwareUpgrade),
+				"--set", "gnoi.enableWriteClass="+strconv.FormatBool(tt.writeClass))
+			raw, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("helm template: %v\n%s", err, raw)
+			}
+			text := string(raw)
+			sharedRead := `resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
+    verbs: ["list"]`
+			if !strings.Contains(text, sharedRead) {
+				t.Fatalf("strict RBAC is missing the gate-independent maintenance safety read:\n%s", text)
+			}
+			for kind, enabled := range map[string]bool{
+				"iosxesoftwareupgrades":   tt.softwareUpgrade,
+				"iosxeoperationalactions": tt.writeClass,
+			} {
+				writeRule := `resources: ["` + kind + `"]` + "\n    verbs: [\"get\", \"watch\", \"update\", \"patch\"]"
+				statusRule := `resources: ["` + kind + `/status"]`
+				if strings.Contains(text, writeRule) != enabled || strings.Contains(text, statusRule) != enabled {
+					t.Fatalf("strict RBAC write/status grant for %s does not match enabled=%v", kind, enabled)
+				}
+			}
+		})
 	}
 }
 

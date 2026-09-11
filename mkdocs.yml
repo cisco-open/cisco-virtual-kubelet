@@ -62,8 +62,9 @@ nav:
   - YANG Version Support: 'yang-version-support.md'
   - Environment Variables: 'environment-variables.md'
 - 'Software Lifecycle':
-  - Overview: 'gnoi-software-lifecycle.md'
-  - Operations Runbook: 'operations.md'
+  - IOS-XE Upgrade and Downgrade Runbook: 'gnoi-iosxe-upgrade-runbook.md'
+  - Design and Reference: 'gnoi-software-lifecycle.md'
+  - Device Operations Runbook: 'operations.md'
 - Telemetry:
   - MDT Subscriptions: 'telemetry.md'
   - Cardinality Management: 'telemetry-cardinality.md'

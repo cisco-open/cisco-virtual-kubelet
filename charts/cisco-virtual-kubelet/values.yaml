@@ -127,12 +127,12 @@ telemetry:
   resourceAttributes: {}
 
 gnoi:
-  # insecure forces the per-device gNOI client onto the insecure gnxi listener
-  # even when the CiscoDevice RESTCONF transport uses TLS. This is common on
-  # lab IOS-XE systems where RESTCONF runs on 443 and gNOI runs on 50052.
+  # insecure forces legacy, non-opt-in devices onto the insecure gnxi listener
+  # even when their RESTCONF transport uses TLS. Explicit
+  # spec.gnoi.transportSecurity=tls rejects this downgrade.
   insecure: false
   # port pins the device-side gNOI listener. Leave empty to let CVK infer
-  # 50052 for insecure and 9339 for secure gNOI.
+  # 50052 for insecure and 9339 for secure gNOI. Invalid values fail setup.
   port: ""
   # disabled sets CISCO_VK_GNOI_DISABLED and prevents CVK from constructing
   # the per-device gNOI client.
@@ -141,9 +141,16 @@ gnoi:
   # reconciler. Disabled by default so a read-only gNOI deployment does not
   # implicitly gain OS install/activate authority.
   enableSoftwareUpgrade: false
+  softwareUpgrade:
+    # maxImageBytes is a hard per-image limit for URL and ConfigMap sources.
+    # The default is 8 GiB, large enough for current IOS-XE images. URL
+    # downloads are verified and cached in place in pod ephemeral storage under
+    # /tmp; see the software-lifecycle guide before increasing this value.
+    maxImageBytes: 8589934592
   # enableWriteClass opts per-device VK pods into IOSXEOperationalAction
   # destructive/write-class gNOI operations such as Reboot, FactoryReset,
-  # FilePut, and FileRemove. Disabled by default.
+  # FilePut, FileRemove, and ProvisionCertificate. The last operation can
+  # replace IOS-XE's shared gNXI/gNMI identity and CA bundle. Disabled by default.
   enableWriteClass: false
 
 collector:
@@ -171,14 +178,14 @@ config:
   yangValidationMode: disabled
 
   # leaseNamespace is the shared namespace for per-(device, family)
-  # arbitration leases. Set this when IOSXEConfig CRs in different
-  # tenant namespaces target the same device — they will arbitrate
-  # against the same lease and avoid the last-write-wins race the
-  # default per-pod-namespace setup leaves open. The cisco-vk
-  # ServiceAccount already has cluster-scoped lease RBAC (see
-  # vk-rbac.yaml), so no additional bindings are required.
+  # arbitration leases. It covers config writers plus the platform-neutral
+  # disruptive-mutation Lease shared by gNOI actions and software upgrades.
+  # Set it when Lease objects from workers in different tenant namespaces must
+  # be stored centrally. Device identity still includes the CiscoDevice
+  # namespace. The cisco-vk ServiceAccount already has cluster-scoped lease
+  # RBAC (see vk-rbac.yaml), so no additional bindings are required.
   #
-  # Leave empty to keep the historical per-pod-namespace behaviour.
+  # Leave empty to store each worker's leases in its pod/device namespace.
   leaseNamespace: ""
 
 # podSecurityContext is applied at the controller pod level. Defaults meet
@@ -204,6 +211,7 @@ containerSecurityContext:
       - ALL
   readOnlyRootFilesystem: true
 
+# Resources for the manager container only.
 resources: {}
 #  limits:
 #    cpu: 200m
@@ -211,6 +219,17 @@ resources: {}
 #  requests:
 #    cpu: 100m
 #    memory: 64Mi
+
+# Defaults for the per-device CVK Kubernetes workers created by the manager.
+# These are distinct from CiscoDevice.spec.resourceLimits for hosted apps.
+# CiscoDevice.spec.worker can override resources (as a complete block) and
+# tmpSizeLimit independently. Empty defaults preserve existing deployments.
+worker:
+  resources: {}
+  # Disk-backed /tmp emptyDir cap; use e.g. "10Gi" for image staging. This is
+  # not a reservation: set worker.resources ephemeral-storage requests/limits and
+  # leave room beyond maxImageBytes for logs, scratch files, and cached images.
+  tmpSizeLimit: ""
 
 nodeSelector: {}
 
@@ -233,17 +252,15 @@ podDisruptionBudget:
   minAvailable: ""
   maxUnavailable: ""
 
-# networkPolicy adds a default-deny ingress + explicit-allow egress
-# policy for the controller. Disabled by default because
-# `deviceCIDRs` are environment-specific.
-#
-# Production deployments SHOULD enable this and pin the
-# device-management subnets; without it, any pod in the cluster can
-# reach any device on the management network.
+# networkPolicy adds a default-deny ingress + explicit-allow egress policy for
+# the controller pod only. It does not select dynamically created per-device VK
+# pods; apply separate namespace/worker policies for those pods. Disabled by
+# default because deviceCIDRs and API-server routing are environment-specific.
 networkPolicy:
   enabled: false
-  # CIDRs the controller is allowed to reach for device management.
-  # Pin to the operator's management subnet(s).
+  # CIDRs the controller is allowed to reach on the fixed management ports in
+  # templates/networkpolicy.yaml. Add a separate policy for custom device or
+  # gNOI ports and for per-device workers.
   deviceCIDRs: []
   #  - 10.0.10.0/24
   #  - 10.0.20.0/24

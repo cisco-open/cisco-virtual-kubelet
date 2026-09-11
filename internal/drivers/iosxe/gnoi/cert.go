@@ -16,10 +16,16 @@ package gnoi
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/hex"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"time"
 
 	certpb "github.com/openconfig/gnoi/cert"
+	"google.golang.org/grpc"
 )
 
 // CertificateInfo is the structured form of one gNOI certificate
@@ -30,21 +36,39 @@ type CertificateInfo struct {
 	Certificate      []byte
 	Endpoints        []string
 	ModificationTime time.Time
+	// Validity metadata is additive; missing or unsupported certificate bytes
+	// remain available in Certificate without inventing an expiration time.
+	NotBefore         *time.Time `json:"NotBefore,omitempty"`
+	NotAfter          *time.Time `json:"NotAfter,omitempty"`
+	FingerprintSHA256 string     `json:"FingerprintSHA256,omitempty"`
 }
 
 // GetCertificates returns the certificates installed on the device.
 // Read-only — safe to use as a Cert service capability probe.
 func (c *Client) GetCertificates(ctx context.Context) ([]CertificateInfo, error) {
+	return c.getCertificates(ctx)
+}
+
+// getCertificates keeps the public read-only API small while allowing
+// provisioning to capture the authenticated peer from the same RPC that
+// returned the certificate inventory.
+func (c *Client) getCertificates(ctx context.Context, opts ...grpc.CallOption) ([]CertificateInfo, error) {
 	if err := c.cap.ensureSupported(ServiceCert); err != nil {
 		return nil, err
 	}
-	resp, err := c.cert.GetCertificates(c.authCtx(ctx), &certpb.GetCertificatesRequest{})
+	resp, err := c.cert.GetCertificates(c.authCtx(ctx), &certpb.GetCertificatesRequest{}, opts...)
 	c.cap.Observe(ServiceCert, err)
 	if err != nil {
 		return nil, fmt.Errorf("gnoi Cert.GetCertificates: %w", err)
 	}
+	if resp == nil {
+		return nil, errors.New("gnoi Cert.GetCertificates: empty response")
+	}
 	out := make([]CertificateInfo, 0, len(resp.CertificateInfo))
-	for _, ci := range resp.CertificateInfo {
+	for i, ci := range resp.CertificateInfo {
+		if ci == nil {
+			return nil, fmt.Errorf("gnoi Cert.GetCertificates: certificate entry %d is empty", i)
+		}
 		info := CertificateInfo{
 			CertificateID: ci.CertificateId,
 		}
@@ -58,9 +82,31 @@ func (c *Client) GetCertificates(ctx context.Context) ([]CertificateInfo, error)
 		for _, ep := range ci.Endpoints {
 			info.Endpoints = append(info.Endpoints, ep.String())
 		}
+		info.parseValidity()
 		out = append(out, info)
 	}
+	recordCertificateInventory(out, time.Now())
 	return out, nil
+}
+
+func (info *CertificateInfo) parseValidity() {
+	if info.Type != certpb.CertificateType_CT_X509.String() {
+		return
+	}
+	der := info.Certificate
+	if block, _ := pem.Decode(der); block != nil {
+		if block.Type != "CERTIFICATE" {
+			return
+		}
+		der = block.Bytes
+	}
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		return
+	}
+	info.NotBefore, info.NotAfter = &cert.NotBefore, &cert.NotAfter
+	digest := sha256.Sum256(cert.Raw)
+	info.FingerprintSHA256 = hex.EncodeToString(digest[:])
 }
 
 // CanGenerateCSROpts mirrors the CanGenerateCSR request shape.

@@ -349,10 +349,9 @@ func (s *Subscriber) Stop() {
 		manager.Stop()
 	}
 	// Conn ownership: when the factory supplied a Release hook (pool-
-	// backed dial), use it and leave the underlying conn alone — other
-	// consumers (gNMI Set, gNOI unary RPCs) on the same WorkloadClass
-	// share it. Otherwise fall back to Close() so the original
-	// "telemetry owns its dial" contract still holds.
+	// backed dial), use it and leave the underlying conn alone for any
+	// other ClassTelemetry leases. Otherwise fall back to Close() so the
+	// original "telemetry owns its dial" contract still holds.
 	if release != nil {
 		release()
 	} else if conn != nil {

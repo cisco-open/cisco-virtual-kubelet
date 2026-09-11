@@ -20,11 +20,12 @@ runtime subcommands:
   starts that adapter and watches only its Kubernetes namespace. The September
   image registers zero product adapters, so this Alpha path remains inactive.
 
-This split keeps product-specific logic and direct credential use inside the
-device or controller worker. The manager writes Secret references rather than
-inspecting `.data`, but its cluster-wide Secret watch for device credential
-rotation means typed Secret objects can enter its cache and memory. Treat the
-manager as part of the credential trust boundary described in
+This split keeps device/controller API calls and device-side signing workflows
+inside their workers. The manager writes credential Secret references and
+locally validates dedicated gNOI trust and provisioning material, including
+signer keys when present. Its cluster-wide Secret watch also places typed
+Secret objects in its cache and memory. Treat the manager as part of the
+credential trust boundary described in
 [Security](security.md). Each controller worker receives only its target's
 mounted credentials; its Kubernetes API RBAC and cache are namespace-scoped.
 
@@ -440,12 +441,123 @@ write-class actions, and software upgrades use separate CRDs, separate runtime
 gates, and separate RBAC grants. Read-only gNOI access does not implicitly
 enable reboot, file write, factory reset, or OS activation.
 
+The API keeps protocol-level transport and optional gNOI-specific trust under
+`spec.gnoi`; system roots are the implicit default, while reusable custom trust
+remains under `spec.tls`. Platform behavior lives under the driver section,
+currently `spec.xe.gnoi.certificateProvisioning`. A single worker-side resolver
+selects the effective port, authentication adapter, and one trust source.
+The bundled secure-password metadata adapter is IOS-XE-specific: explicit
+username/password authentication fails closed for other drivers until they
+provide their own adapter, while certificate-only generic TLS remains portable.
+Generic gNOI TLS and IOS-XE provisioning are intentionally mutually exclusive:
+provisioning derives its bootstrap and steady-state trust from its own Secret.
+This leaves a stable protocol boundary for future drivers without generalizing
+IOS-XE CSR or certificate-install semantics prematurely.
+
+Generic Kubernetes TLS Secret resolution stays manager-owned. The controller
+validates a same-namespace gNOI TLS Secret, projects only `ca.crt` and the
+optional `tls.crt`/`tls.key` pair read-only, and renders fixed internal paths
+for the worker. A valid Secret resource-version change rolls the worker when
+gNOI is enabled in per-device topology, rebuilding its immutable TLS client
+state; Secret bytes and the generic TLS Secret name are not copied into its
+ConfigMap. With global gNOI disablement, the per-device worker remains but the
+trust projection and Secret-driven rollout are omitted. Aggregated config-only
+topology does not create a per-device worker.
+
+The manager also validates provisioning Secret contents locally; it is inside
+the Secret trust boundary but does not perform device RPCs. Known-invalid
+optional gNOI material degrades only that worker's gNOI configuration, allowing
+signer removal and unrelated configuration/credential updates to proceed.
+Transient Kubernetes read failures retry without discarding a working
+projection. Resource sizing belongs here too: `spec.worker` controls the real
+worker's requests/limits and `/tmp` cap, is removed from rendered device config,
+and never changes a virtual Node's advertised application capacity.
+
 The per-device gNOI client uses a workload-classed gRPC connection pool so
-small control RPCs, gNMI telemetry streams, and bulk OS/file transfers do not
-block each other. The client also caches per-service capability probes: when a
-device returns `codes.Unimplemented`, later calls to that service fail fast
-with `ErrServiceUnsupported` instead of repeatedly attempting an unsupported
-RPC.
+small control RPCs and bulk OS/file transfers use separate connections and do
+not block each other. gNMI configuration and telemetry currently maintain
+independent connections. The client also caches per-service capability probes:
+when a device returns `codes.Unimplemented`, later calls to that service fail
+fast with `ErrServiceUnsupported` instead of repeatedly attempting an
+unsupported RPC.
+
+The worker-scoped IOS-XE runtime lives in
+`internal/drivers/iosxe/gnoiruntime`, not in command wiring. Its `Provider`
+owns the per-device pool leases and client reset lifecycle. Certificate
+installation is a separate `Provisioner`, injected into the
+operational-action reconciler only when certificate provisioning is configured
+and write-class gNOI is explicitly enabled. The base client provider therefore
+does not implicitly grant certificate-install authority.
+
+Certificate policy and protocol validation remain in the `gnoi` package behind
+the `CertificateSigner` interface. The included implementation is only a
+transitional, PEM-backed local signer for `ca.key`. It remains reusable for a
+new immutable action after a definitive pre-Install failure; network Install
+replay protection belongs to the action reconciler. The parsed key remains in
+the worker until process exit or the controller completes a key-free rollout.
+This repository does not implement or configure an external CA, KMS, or HSM
+signer backend.
+
+The runtime serializes client resets against the target CSR/Load exchange and
+submits Install at most once. After IOS-XE restarts gNXI, it uses fresh
+connections for bounded, read-only certificate and `OS.Verify` checks; only
+an exact installed-certificate/TLS-peer match followed by `OS.Verify` on that
+same peer is reported as a successful mutation. A pre-existing successful
+`OS.Verify` is a non-mutating service-ready result and does not attest the
+requested certificate ID or digest.
+
+Software lifecycle separates portable gNOI operations from platform-native
+inventory handling. URL and ConfigMap sources are content-addressed byte
+streams consumed by gNOI `OS.Install`. A small driver-neutral lifecycle
+interface exposes exact inventory inspection and optional device-file
+registration; the IOS-XE implementation uses only its RESTCONF install RPC.
+It has no CLI fallback, and another driver must explicitly register its own
+backend before accepting a device-file source. Preinstalled sources never call
+registration.
+
+The reconciler persists source identity and request markers before side
+effects. Staging, activation, and rollback therefore use at-most-once replay
+policy: after an ambiguous response or restart, CVK observes durable device
+state and does not repeat a recorded mutation. This favors preventing duplicate
+reloads and install operations over claiming exactly-once delivery. Inventory
+matching is exact and unique before activation; unsupported or ambiguous
+platform state fails closed. `ISSU` remains disabled until a driver can verify
+the selected activation path, so `NoReboot` must not be interpreted as a
+non-disruptive-upgrade guarantee.
+
+The driver-neutral `internal/devicecoordination` package supplies one
+`device-disruptive-mutation` Lease family shared by operational actions and
+software upgrades. Namespaced device identity is hashed into the Lease key,
+while workflow and immutable object UID form the holder identity. The
+orchestration layer owns acquisition, durable intent, release, and uncertain-
+outcome quarantine; platform drivers only implement their native observation
+and mutation boundary. Replicas reconciling the same CR intentionally share
+that holder identity, so the Lease cannot distinguish an overlapping old
+worker from its replacement; per-device Deployments therefore use `Recreate`
+while mutation controllers are enabled. Because the key uses CiscoDevice
+namespace and name rather than network address, aliases for one physical device
+do not contend and must be prohibited operationally. A future NX-OS or IOS XR
+lifecycle driver should reuse this coordination family and the generic gNOI
+byte-source primitives, add any native inventory/device-file backend, and
+provide its own platform API, controller registration, and runtime wiring.
+
+`internal/provider/maintenance` joins ordinary IOS-XE configuration and
+app-hosting writes to this boundary and owns the maintenance Node taint.
+Injected callbacks cover entire transactions and asynchronous app recovery,
+not individual RESTCONF calls; reads remain available. Startup receives the
+same guard before optional device bootstrap writes. Each routine write uses a
+unique holder, renews while running, and retains its bounded Lease on uncertain
+completion. The IOS-XE observer also checks existing quarantine when mutation
+gates are disabled. This requires list-only access to both mutation CRDs even
+with strict RBAC and disabled mutation gates; it grants no mutation authority.
+
+Portable coordination does not make the current IOS-XE lifecycle controller
+portable. A future driver must supply its own version comparison, supervisor
+and activation semantics, inventory observations, certificate workflow, and
+recovery qualification. Reuse the narrow interfaces after those requirements
+are demonstrated; do not make NX-OS/IOS XR inherit IOS-XE error strings or CSR
+policy. `Recreate` controls Deployment rollouts, not arbitrary Pod deletion,
+out-of-band changes, or ownership across Kubernetes clusters.
 
 ## RESTCONF endpoints
 

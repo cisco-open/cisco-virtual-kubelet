@@ -46,6 +46,9 @@ const (
 	// CiscoDeviceConditionPrereqTeardownObserved records that the controller
 	// has seen the owned prereq IOSXEConfig enter deletion.
 	CiscoDeviceConditionPrereqTeardownObserved = "PrereqTeardownObserved"
+	// CiscoDeviceConditionGNOIConfigurationReady reports local gNOI Secret
+	// validation. It does not assert device reachability or OS service readiness.
+	CiscoDeviceConditionGNOIConfigurationReady = "GNOIConfigurationReady"
 )
 
 // CiscoDevice is the Schema for the ciscodevices API.
@@ -76,8 +79,13 @@ type CiscoDeviceList struct {
 }
 
 // DeviceSpec defines the desired state of a Cisco device.
-// Shared fields are common to all drivers; driver-specific networking
-// configuration lives under the corresponding driver section (XE, XR, etc.).
+// Shared fields are common to all drivers; driver-specific configuration lives
+// under the corresponding driver section (XE, XR, etc.).
+// +kubebuilder:validation:XValidation:rule="!has(self.xe) || !has(self.xe.gnoi) || !has(self.xe.gnoi.certificateProvisioning) || self.driver == 'XE'",message="gNOI certificate provisioning is supported only for driver XE"
+// +kubebuilder:validation:XValidation:rule="!has(self.xe) || !has(self.xe.gnoi) || !has(self.xe.gnoi.certificateProvisioning) || (has(self.gnoi) && has(self.gnoi.transportSecurity) && self.gnoi.transportSecurity == 'tls')",message="spec.xe.gnoi.certificateProvisioning requires spec.gnoi.transportSecurity to be tls"
+// +kubebuilder:validation:XValidation:rule="!has(self.gnoi) || !has(self.gnoi.tls) || (has(self.gnoi.transportSecurity) && self.gnoi.transportSecurity == 'tls')",message="spec.gnoi.tls requires spec.gnoi.transportSecurity to be tls"
+// +kubebuilder:validation:XValidation:rule="!has(self.gnoi) || !has(self.gnoi.tls) || !has(self.xe) || !has(self.xe.gnoi) || !has(self.xe.gnoi.certificateProvisioning)",message="spec.gnoi.tls and spec.xe.gnoi.certificateProvisioning cannot both be configured"
+// +kubebuilder:validation:XValidation:rule="!has(self.gnoi) || !has(self.gnoi.transportSecurity) || self.gnoi.transportSecurity != 'tls' || has(self.gnoi.tls) || (has(self.xe) && has(self.xe.gnoi) && has(self.xe.gnoi.certificateProvisioning)) || !has(self.tls) || !has(self.tls.insecureSkipVerify) || !self.tls.insecureSkipVerify",message="explicit secure gNOI requires system or verified shared TLS, spec.gnoi.tls, or IOS XE certificate provisioning trust"
 type DeviceSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Enum=XE;XR;NXOS;OPENCONFIG;FAKE
@@ -110,6 +118,13 @@ type DeviceSpec struct {
 	// TLS configuration for device communication.
 	// +kubebuilder:validation:Optional
 	TLS *TLSConfig `json:"tls,omitempty" mapstructure:"tls,omitempty"`
+
+	// GNOI contains opt-in, per-device gNOI settings. Omitting it, or providing
+	// an empty block, preserves historical transport and port inference. The
+	// selected driver owns authentication policy; secure IOS-XE gNOI derives it
+	// from Username and the resolved device password.
+	// +kubebuilder:validation:Optional
+	GNOI *GNOIConfig `json:"gnoi,omitempty" mapstructure:"gnoi,omitempty"`
 
 	// PodCIDR is the CIDR to use for pod network interfaces when using static IP allocation.
 	// +kubebuilder:validation:Optional
@@ -146,6 +161,12 @@ type DeviceSpec struct {
 	// ResourceLimits defines default and maximum resource allocations.
 	// +kubebuilder:validation:Optional
 	ResourceLimits ResourceConfig `json:"resourceLimits,omitempty" mapstructure:"resourceLimits"`
+
+	// Worker configures the Kubernetes per-device CVK worker, independently of
+	// ResourceLimits for applications hosted on the Cisco device. Omitted fields
+	// inherit the manager's worker defaults. Ignored in aggregator topology.
+	// +kubebuilder:validation:Optional
+	Worker *DeviceWorkerConfig `json:"worker,omitempty"`
 
 	// OTEL holds OpenTelemetry topology export configuration.
 	// When enabled, the VK emits OTLP traces representing the device's
@@ -201,7 +222,7 @@ type DeviceSpec struct {
 	// --- Driver-specific networking configuration (union) ---
 	// Only the section matching Driver should be set.
 
-	// XE holds IOS-XE specific networking configuration.
+	// XE holds IOS-XE specific configuration.
 	// Required when driver=XE.
 	// +kubebuilder:validation:Optional
 	XE *XEConfig `json:"xe,omitempty" mapstructure:"xe,omitempty"`

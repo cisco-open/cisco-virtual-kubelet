@@ -15,19 +15,19 @@
 // Package gnoi is the per-device gRPC Network Operations Interface
 // client. It wraps the upstream openconfig/gnoi service stubs (OS,
 // System, File, Certificate, FactoryReset) with ergonomic Go methods,
-// per-service capability discovery, and HTTP-Basic auth metadata so
-// the same credentials IOS-XE's gnxi-server accepts on the gNMI port
-// are reused here.
+// and per-service capability discovery. Explicit secure IOS XE wiring supplies
+// username/password metadata as TLS-only per-RPC credentials; non-opt-in
+// configurations retain their legacy context metadata.
 //
 // Connection ownership lives outside the package: callers Lease a
 // *grpc.ClientConn from a devicegrpc.Pool and pass it to New. The
 // client never closes the conn — callers retain the lease and Release
 // it when they tear down the device worker. Unary RPCs and short
-// streams use the same ClassControl-leased conn the gNMI config
-// transport uses; bulk-transfer RPCs (OS.Install, File.Put / File.Get)
-// MUST take a separate ClassBulkTransfer lease and pass the resulting
-// conn via WithBulkConn(...), so a 500 MB image transfer cannot HOL-
-// block the control conn.
+// streams use the provider-held ClassControl connection. Bulk-transfer
+// RPCs (OS.Install, File.Put / File.Get) MUST take a separate
+// ClassBulkTransfer lease and supply the resulting conn through
+// Options.BulkConnProvider (or Options.BulkConn), so a 500 MB image
+// transfer cannot HOL-block the control conn.
 //
 // Capability discovery: gNMI Capabilities does not enumerate gNOI
 // services, so service availability is probed lazily on first use

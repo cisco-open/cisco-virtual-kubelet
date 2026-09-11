@@ -45,6 +45,24 @@ func TestControllerDeploymentRendersSecurityContexts(t *testing.T) {
 	}
 }
 
+func TestChartNotesWarnWhenMutationGatesAreUsedWithAggregator(t *testing.T) {
+	raw, err := os.ReadFile("../../charts/cisco-virtual-kubelet/templates/NOTES.txt")
+	if err != nil {
+		t.Fatalf("read NOTES template: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		`if and .Values.aggregator.enabled (not .Values.gnoi.disabled) (or .Values.gnoi.enableSoftwareUpgrade .Values.gnoi.enableWriteClass)`,
+		`IOS-XE MUTATION CONTROLLERS ARE INACTIVE IN AGGREGATOR MODE`,
+		`Set aggregator.enabled=false before enabling write-class actions or`,
+		`if and (not .Values.aggregator.enabled) (not .Values.gnoi.disabled) .Values.gnoi.enableSoftwareUpgrade`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("NOTES template missing aggregator/mutation warning construct %q", want)
+		}
+	}
+}
+
 func TestNXOSExperimentalReleaseGateIsExplicitAndDefaultOff(t *testing.T) {
 	valuesRaw, err := os.ReadFile("../../charts/cisco-virtual-kubelet/values.yaml")
 	if err != nil {
@@ -82,6 +100,47 @@ func TestNXOSExperimentalReleaseGateIsExplicitAndDefaultOff(t *testing.T) {
 	}
 	if !strings.Contains(string(schemaRaw), `"allowExperimentalReleases"`) {
 		t.Fatal("values schema does not declare nxos.allowExperimentalReleases")
+	}
+}
+
+func TestSoftwareUpgradeImageLimitIsProductionSafe(t *testing.T) {
+	valuesRaw, err := os.ReadFile("../../charts/cisco-virtual-kubelet/values.yaml")
+	if err != nil {
+		t.Fatalf("read chart values: %v", err)
+	}
+	var values struct {
+		GNOI struct {
+			SoftwareUpgrade struct {
+				MaxImageBytes int64 `yaml:"maxImageBytes"`
+			} `yaml:"softwareUpgrade"`
+		} `yaml:"gnoi"`
+	}
+	if err := yaml.Unmarshal(valuesRaw, &values); err != nil {
+		t.Fatalf("parse chart values: %v", err)
+	}
+	if got, want := values.GNOI.SoftwareUpgrade.MaxImageBytes, int64(8<<30); got != want {
+		t.Fatalf("gnoi.softwareUpgrade.maxImageBytes = %d, want %d", got, want)
+	}
+
+	templateRaw, err := os.ReadFile("../../charts/cisco-virtual-kubelet/templates/deployment.yaml")
+	if err != nil {
+		t.Fatalf("read deployment template: %v", err)
+	}
+	for _, want := range []string{
+		`- name: CISCO_VK_UPGRADE_MAX_IMAGE_BYTES`,
+		`.Values.gnoi.softwareUpgrade.maxImageBytes | int64 | quote`,
+	} {
+		if !strings.Contains(string(templateRaw), want) {
+			t.Fatalf("deployment template missing image-limit construct %q", want)
+		}
+	}
+
+	schemaRaw, err := os.ReadFile("../../charts/cisco-virtual-kubelet/values.schema.json")
+	if err != nil {
+		t.Fatalf("read values schema: %v", err)
+	}
+	if !strings.Contains(string(schemaRaw), `"maxImageBytes"`) {
+		t.Fatal("values schema does not declare gnoi.softwareUpgrade.maxImageBytes")
 	}
 }
 

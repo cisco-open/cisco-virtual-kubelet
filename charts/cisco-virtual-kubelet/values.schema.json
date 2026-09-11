@@ -5,6 +5,23 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["image", "serviceAccount", "controller"],
+  "definitions": {
+    "workerResourceList": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cpu": { "$ref": "#/definitions/workerQuantity" },
+        "memory": { "$ref": "#/definitions/workerQuantity" },
+        "ephemeral-storage": { "$ref": "#/definitions/workerQuantity" }
+      }
+    },
+    "workerQuantity": {
+      "oneOf": [
+        { "type": "number", "minimum": 0 },
+        { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+|[EPTGMK]i|[numkMGTPE])?$" }
+      ]
+    }
+  },
   "properties": {
     "image": {
       "type": "object",
@@ -157,15 +174,18 @@
     "gnoi": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["insecure", "port", "disabled", "enableSoftwareUpgrade", "enableWriteClass"],
+      "required": ["insecure", "port", "disabled", "enableSoftwareUpgrade", "softwareUpgrade", "enableWriteClass"],
       "properties": {
         "insecure": {
           "type": "boolean",
-          "description": "Force CVK to dial the insecure IOS-XE gnxi/gNOI listener instead of inferring TLS from the CiscoDevice transport."
+          "description": "Force legacy, non-opt-in IOS-XE devices onto the insecure gnxi/gNOI listener. Explicit spec.gnoi.transportSecurity=tls rejects this downgrade."
         },
         "port": {
-          "type": ["string", "integer"],
-          "description": "Optional device-side gNOI listener port. Empty lets CVK infer 50052 for insecure or 9339 for secure."
+          "description": "Optional device-side gNOI listener port. Empty lets CVK infer 50052 for insecure or 9339 for secure.",
+          "oneOf": [
+            { "type": "integer", "minimum": 1, "maximum": 65535 },
+            { "type": "string", "pattern": "^(?:|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$" }
+          ]
         },
         "disabled": {
           "type": "boolean",
@@ -175,9 +195,21 @@
           "type": "boolean",
           "description": "Enable the IOSXESoftwareUpgrade gNOI OS install/activate reconciler on per-device VK pods."
         },
+        "softwareUpgrade": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxImageBytes"],
+          "properties": {
+            "maxImageBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Hard per-image byte limit for URL and ConfigMap software-upgrade sources; rendered as CISCO_VK_UPGRADE_MAX_IMAGE_BYTES."
+            }
+          }
+        },
         "enableWriteClass": {
           "type": "boolean",
-          "description": "Enable write-class IOSXEOperationalAction gNOI operations such as Reboot, FactoryReset, FilePut, and FileRemove."
+          "description": "Enable write-class IOSXEOperationalAction gNOI operations such as Reboot, FactoryReset, FilePut, FileRemove, and ProvisionCertificate; certificate provisioning can replace IOS-XE's shared gNXI/gNMI identity and CA bundle."
         }
       }
     },
@@ -211,7 +243,7 @@
       "properties": {
         "leaseNamespace": {
           "type": "string",
-          "description": "Shared namespace for per-(device, family) arbitration leases. Empty falls back to per-pod-namespace behaviour."
+          "description": "Storage namespace for per-(device, family) config and disruptive-mutation arbitration leases. Empty uses each worker's pod/device namespace."
         },
         "yangValidationMode": {
           "type": "string",
@@ -226,6 +258,26 @@
       "properties": {
         "limits":   { "type": "object" },
         "requests": { "type": "object" }
+      }
+    },
+    "worker": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "requests": { "$ref": "#/definitions/workerResourceList" },
+            "limits": { "$ref": "#/definitions/workerResourceList" }
+          }
+        },
+        "tmpSizeLimit": {
+          "type": "string",
+          "pattern": "^$|^[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+|[EPTGMK]i|[numkMGTPE])?$",
+          "not": { "pattern": "^0+(\\.0+)?([eE][+-]?[0-9]+|[EPTGMK]i|[numkMGTPE])?$" },
+          "description": "Positive Kubernetes quantity limiting each worker's disk-backed /tmp; empty preserves the unbounded default."
+        }
       }
     },
     "nodeSelector":   { "type": "object" },
@@ -245,9 +297,10 @@
     "networkPolicy": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Configure a controller-pod NetworkPolicy. This does not select dynamically created per-device VK pods, which require separate policies.",
       "properties": {
         "enabled":      { "type": "boolean" },
-        "deviceCIDRs":  { "type": "array", "items": { "type": "string" } },
+        "deviceCIDRs":  { "type": "array", "description": "Controller egress CIDRs allowed on the chart's fixed management ports; custom ports and per-device workers require separate policy rules.", "items": { "type": "string" } },
         "scraperCIDRs": { "type": "array", "items": { "type": "string" } }
       }
     },

@@ -23,17 +23,15 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
 
-// ClientTLSFromDeviceTLS builds the *tls.Config used by device-facing
-// clients (RESTCONF, gNMI, gNOI, NX-API) from a CiscoDevice spec.tls block.
-//
-// Semantics match the app-hosting driver, which was previously the only
-// consumer that honoured the full block:
+// ClientTLSFromDeviceTLS builds the *tls.Config used by the shared
+// device-facing config, telemetry, gNOI, and NX-API clients from a
+// CiscoDevice spec.tls block:
 //   - MinVersion is always TLS 1.2.
 //   - InsecureSkipVerify is copied verbatim (operator-controlled).
 //   - CAFile, when set, is loaded into RootCAs so devices with private-CA
 //     certificates get verified TLS instead of forcing skip-verify.
-//   - CertFile/KeyFile, when both set, are loaded as the client pair
-//     (device-side mTLS).
+//   - CertFile/KeyFile must either both be set or both be empty. When set,
+//     they are loaded as the client pair (device-side mTLS).
 //
 // A nil block returns the TLS 1.2 default config. Errors are returned for
 // unreadable or unparseable files; callers should fail fast rather than
@@ -46,7 +44,13 @@ func ClientTLSFromDeviceTLS(t *ciskov1.TLSConfig) (*tls.Config, error) {
 
 	cfg.InsecureSkipVerify = t.InsecureSkipVerify
 
-	if t.CertFile != "" && t.KeyFile != "" {
+	hasCertFile := t.CertFile != ""
+	hasKeyFile := t.KeyFile != ""
+	if hasCertFile != hasKeyFile {
+		return nil, fmt.Errorf("client certFile and keyFile must be configured together")
+	}
+
+	if hasCertFile {
 		cert, err := tls.LoadX509KeyPair(t.CertFile, t.KeyFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load client certificate: %w", err)

@@ -16,18 +16,21 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"google.golang.org/grpc"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/devicegrpc"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoiruntime"
 	"github.com/cisco/virtual-kubelet-cisco/internal/tlsutil"
 )
 
@@ -40,20 +43,25 @@ const gNOIDisabledEnv = "CISCO_VK_GNOI_DISABLED"
 // follow the same secure/insecure heuristic the gNMI transport uses.
 const gNOIPortEnv = "CISCO_VK_GNOI_PORT"
 
-// gNOIInsecureEnv forces the gNOI dial to the device's insecure gnxi
-// listener (typically port 50052), bypassing the spec.tls.enabled
-// inference. Mirrors CISCO_VK_TELEMETRY_INSECURE — useful when the
-// RESTCONF transport uses TLS (port 443) but gNOI is bound to the
-// `gnxi server` (insecure) line rather than `gnxi secure-server`.
+// gNOIInsecureEnv forces legacy configurations to use the insecure gNXI
+// listener (typically port 50052), bypassing spec.tls.enabled inference. It
+// cannot override an explicit gnoi.transportSecurity=tls contract.
 const gNOIInsecureEnv = "CISCO_VK_GNOI_INSECURE"
 
-// setupGNOI builds the per-device gRPC pool and returns a lazy,
-// resettable gNOI provider. The provider leases ClassControl on first
-// use and ClassBulkTransfer only for the duration of File.Get/Put or
-// OS.Install streams. The returned cleanup function releases leases
-// and closes the pool when the surrounding ctx is done.
+const (
+	gNOIProvisioningMountPath     = "/var/run/secrets/cisco-vk/gnoi-provisioning"
+	gNOIProvisioningCertFile      = "tls.crt"
+	gNOIProvisioningCAKeyFile     = "ca.key"
+	gNOIProvisioningCAFile        = "ca.crt"
+	gNOIProvisioningBootstrapFile = "bootstrap.crt"
+)
+
+// setupGNOI builds the per-device gRPC runtime. A successfully configured base
+// provider has no certificate-install authority; that authority is returned
+// separately and only when both the write-class gate and local signer material
+// are present.
 //
-// Returns (nil, nil, nil) when:
+// Returns (nil, nil, nil, nil) when:
 //   - The device spec is missing the address (defensive — usually
 //     caught earlier in startup).
 //   - Operators have set CISCO_VK_GNOI_DISABLED=1 to opt out.
@@ -61,138 +69,370 @@ const gNOIInsecureEnv = "CISCO_VK_GNOI_INSECURE"
 // A nil gnoi.Provider signals to the reconcilers that the gNOI
 // dispatch path is unavailable; they fail fast with reason
 // GNOIUnsupported on any CR they receive.
-func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider, func(), error) {
-	if v := os.Getenv(gNOIDisabledEnv); v == "1" || strings.EqualFold(v, "true") {
+func setupGNOI(ctx context.Context, opts configReconcilerOptions) (gnoi.Provider, *gnoiruntime.Provisioner, func(), error) {
+	return setupGNOIWithProvisioningDirectory(ctx, opts, gNOIProvisioningMountPath)
+}
+
+// setupGNOIWithProvisioningDirectory is the testable composition boundary for
+// the projected provisioning Secret. Production always passes the fixed,
+// read-only mount path above.
+func setupGNOIWithProvisioningDirectory(
+	ctx context.Context,
+	opts configReconcilerOptions,
+	provisioningDirectory string,
+) (gnoi.Provider, *gnoiruntime.Provisioner, func(), error) {
+	if envEnabled(gNOIDisabledEnv) {
 		log.G(ctx).Info("gNOI pillar disabled by CISCO_VK_GNOI_DISABLED")
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	if opts.Spec == nil || opts.Spec.Address == "" {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
-	forceInsecure := false
-	if v := os.Getenv(gNOIInsecureEnv); v == "1" || strings.EqualFold(v, "true") {
-		forceInsecure = true
+	forceInsecure := envEnabled(gNOIInsecureEnv)
+	resolved, err := resolveGNOIConfig(
+		opts.Spec,
+		opts.Password,
+		forceInsecure,
+		provisioningDirectory,
+		opts.EnableWriteClassGNOI,
+	)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("gNOI: resolve configuration: %w", err)
+	}
+	var signer gnoi.CertificateSigner
+	var signerErr error
+	if resolved.provisioningBundle != nil && opts.EnableWriteClassGNOI {
+		signer, signerErr = loadGNOILocalCertificateSigner(resolved.provisioningBundle, provisioningDirectory)
 	}
 
-	port := gnoiPortForSpec(opts.Spec, forceInsecure)
-
-	dialCfg := devicegrpc.DialConfig{
-		Username: opts.Spec.Username,
-		Password: opts.Password,
+	pool := devicegrpc.New(resolved.dialConfig, nil)
+	key := devicegrpc.DeviceKey{Address: opts.Spec.Address, Port: resolved.port}
+	provider, err := gnoiruntime.NewProvider(pool, key, resolved.dialConfig.AuthContext())
+	if err != nil {
+		_ = pool.Close()
+		return nil, nil, nil, err
 	}
-	if !forceInsecure && opts.Spec.TLS != nil && opts.Spec.TLS.Enabled {
-		// Shared device-client helper: honours spec.tls.caFile (RootCAs)
-		// and the certFile/keyFile client pair in addition to
-		// InsecureSkipVerify, matching the apphosting driver.
-		tlsCfg, err := tlsutil.ClientTLSFromDeviceTLS(opts.Spec.TLS)
+
+	var provisioner *gnoiruntime.Provisioner
+	if signerErr != nil {
+		log.G(ctx).WithError(signerErr).Warn(
+			"gNOI ProvisionCertificate is unavailable because the local ca.key signer could not be loaded; base gNOI remains enabled",
+		)
+	} else if resolved.provisioningBundle != nil && signer != nil && opts.EnableWriteClassGNOI {
+		provisioner, err = gnoiruntime.NewProvisioner(provider, resolved.provisioningBundle, signer)
 		if err != nil {
-			return nil, nil, fmt.Errorf("gNOI: TLS from spec: %w", err)
+			provider.Close()
+			return nil, nil, nil, err
 		}
-		dialCfg.TLSConfig = tlsCfg
+	} else if resolved.provisioningBundle != nil && opts.EnableWriteClassGNOI {
+		log.G(ctx).Warnf("gNOI certificate provisioning is unavailable: %s is not mounted", gNOIProvisioningCAKeyFile)
 	}
 
-	pool := devicegrpc.New(dialCfg, nil)
-	key := devicegrpc.DeviceKey{Address: opts.Spec.Address, Port: port}
-
-	provider := &pooledGNOIProvider{
-		pool:    pool,
-		key:     key,
-		auth:    dialCfg.AuthContext(),
-		address: opts.Spec.Address,
-		port:    port,
-		tls:     dialCfg.TLSConfig != nil,
-	}
-
-	log.G(ctx).Infof("gNOI: pillar enabled (%s:%d, tls=%v, lazy_bulk=true)", opts.Spec.Address, port, dialCfg.TLSConfig != nil)
-	return provider, provider.Close, nil
+	log.G(ctx).Infof(
+		"gNOI: pillar enabled (%s:%d, tls=%v, trust_source=%s, auth_mode=%s, lazy_bulk=true)",
+		opts.Spec.Address,
+		resolved.port,
+		resolved.dialConfig.TLSConfig != nil,
+		resolved.trustSource,
+		resolved.authMode(),
+	)
+	return provider, provisioner, provider.Close, nil
 }
 
-type pooledGNOIProvider struct {
-	mu      sync.Mutex
-	pool    devicegrpc.Pool
-	key     devicegrpc.DeviceKey
-	auth    gnoi.AuthContext
-	address string
-	port    int
-	tls     bool
-
-	controlLease *devicegrpc.Lease
-	client       *gnoi.Client
-	closed       bool
+func envEnabled(name string) bool {
+	v := os.Getenv(name)
+	return v == "1" || strings.EqualFold(v, "true")
 }
 
-func (p *pooledGNOIProvider) GNOIClient(ctx context.Context) (*gnoi.Client, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if p.closed {
-		return nil, fmt.Errorf("gnoi provider closed")
+func loadGNOIProvisioningBundle(
+	spec *ciskov1.DeviceSpec,
+	tlsCfg *tls.Config,
+	directory string,
+	provisioningWritesEnabled bool,
+) (*gnoi.ProvisioningBundle, error) {
+	if spec == nil || spec.XE == nil || spec.XE.GNOI == nil || spec.XE.GNOI.CertificateProvisioning == nil {
+		return nil, nil
 	}
-	if p.client != nil {
-		return p.client, nil
+	if tlsCfg == nil {
+		return nil, fmt.Errorf("TLS transport is required")
 	}
-	controlLease, err := p.pool.Lease(ctx, p.key, devicegrpc.ClassControl)
+	if tlsCfg.InsecureSkipVerify {
+		return nil, fmt.Errorf("verified TLS is required; insecureSkipVerify cannot be used with certificate provisioning")
+	}
+	provisioning := spec.XE.GNOI.CertificateProvisioning
+	if !provisioning.ReplaceTargetCABundle {
+		return nil, fmt.Errorf("replaceTargetCABundle must be true before replacing the shared gNXI/gNMI CA bundle")
+	}
+	leafPEM, err := os.ReadFile(filepath.Join(directory, gNOIProvisioningCertFile))
 	if err != nil {
-		return nil, fmt.Errorf("gnoi ClassControl lease: %w", err)
+		return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCertFile, err)
 	}
-	client, err := gnoi.New(controlLease.Conn, gnoi.Options{
-		Auth:             p.auth,
-		BulkConnProvider: p.bulkConn,
+	caBundlePEM, err := os.ReadFile(filepath.Join(directory, gNOIProvisioningCAFile))
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCAFile, err)
+	}
+	var bootstrapPEM []byte
+	if provisioningWritesEnabled {
+		bootstrapPEM, err = readOptionalFile(filepath.Join(directory, gNOIProvisioningBootstrapFile))
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %w", gNOIProvisioningBootstrapFile, err)
+		}
+	}
+	bundle, err := gnoi.NewProvisioningBundle(
+		provisioning.CertificateID,
+		spec.Address,
+		leafPEM,
+		caBundlePEM,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := bundle.ConfigureClientTLS(tlsCfg, bootstrapPEM); err != nil {
+		return nil, err
+	}
+	return bundle, nil
+}
+
+// loadGNOILocalCertificateSigner loads the optional private signing material
+// independently from the public provisioning profile. A caller can therefore
+// retain verified gNOI TLS and read-only operations when local signing is
+// unavailable. The source bytes are cleared after the key has been parsed.
+func loadGNOILocalCertificateSigner(bundle *gnoi.ProvisioningBundle, directory string) (gnoi.CertificateSigner, error) {
+	if bundle == nil {
+		return nil, nil
+	}
+	caKeyPEM, err := readOptionalFile(filepath.Join(directory, gNOIProvisioningCAKeyFile))
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", gNOIProvisioningCAKeyFile, err)
+	}
+	defer clear(caKeyPEM)
+	if len(caKeyPEM) == 0 {
+		return nil, nil
+	}
+	signer, err := gnoi.NewLocalCertificateSigner(bundle, caKeyPEM)
+	if err != nil {
+		return nil, fmt.Errorf("load local signer from %s: %w", gNOIProvisioningCAKeyFile, err)
+	}
+	return signer, nil
+}
+
+func readOptionalFile(path string) ([]byte, error) {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	return data, err
+}
+
+type gnoiTrustSource string
+
+const (
+	gnoiTrustSourcePlaintext    gnoiTrustSource = "plaintext"
+	gnoiTrustSourceLegacyShared gnoiTrustSource = "legacy-shared"
+	gnoiTrustSourceSystem       gnoiTrustSource = "system"
+	gnoiTrustSourceShared       gnoiTrustSource = "shared"
+	gnoiTrustSourceDedicated    gnoiTrustSource = "gnoi"
+	gnoiTrustSourceProvisioning gnoiTrustSource = "xe-provisioning"
+)
+
+// resolvedGNOIConfig is the single output of gNOI transport resolution. Port,
+// TLS policy, authentication policy, and provisioning trust are deliberately
+// resolved together so callers cannot accidentally combine decisions produced
+// by independent helpers.
+type resolvedGNOIConfig struct {
+	port               int
+	dialConfig         devicegrpc.DialConfig
+	provisioningBundle *gnoi.ProvisioningBundle
+	trustSource        gnoiTrustSource
+}
+
+func (c resolvedGNOIConfig) authMode() string {
+	if c.dialConfig.RPCCredentials != nil {
+		return "iosxe-password-metadata"
+	}
+	if c.dialConfig.Username != "" {
+		return "legacy-basic"
+	}
+	return "none"
+}
+
+// resolveGNOIConfig preserves historical inference and Basic metadata only for
+// configurations that have not explicitly selected secure gNOI. Explicit TLS
+// always uses verified transport and IOS XE per-RPC password credentials. A
+// dedicated gNOI TLS block and IOS XE certificate provisioning are alternate,
+// mutually exclusive sources of gNOI-only trust.
+func resolveGNOIConfig(
+	spec *ciskov1.DeviceSpec,
+	password string,
+	forceInsecure bool,
+	provisioningDirectory string,
+	provisioningWritesEnabled bool,
+) (resolvedGNOIConfig, error) {
+	if spec == nil {
+		return resolvedGNOIConfig{}, fmt.Errorf("nil DeviceSpec")
+	}
+	if err := spec.GNOI.Validate(); err != nil {
+		return resolvedGNOIConfig{}, err
+	}
+	provisioning := xeGNOICertificateProvisioning(spec)
+	if provisioning != nil && spec.Driver != ciskov1.DeviceDriverXE {
+		return resolvedGNOIConfig{}, fmt.Errorf("gNOI certificate provisioning is supported only for driver XE; driver %q requires its own provisioning adapter", spec.Driver)
+	}
+	if spec.XE != nil {
+		if err := spec.XE.GNOI.Validate(spec.GNOI); err != nil {
+			return resolvedGNOIConfig{}, fmt.Errorf("invalid XE gNOI config: %w", err)
+		}
+	}
+
+	explicitTLS := spec.GNOI != nil && spec.GNOI.TransportSecurity == ciskov1.GNOITransportSecurityTLS
+	dedicatedTLS := spec.GNOI != nil && spec.GNOI.TLS != nil
+	if dedicatedTLS && provisioning != nil {
+		return resolvedGNOIConfig{}, fmt.Errorf("spec.gnoi.tls and spec.xe.gnoi.certificateProvisioning are mutually exclusive trust sources")
+	}
+	if forceInsecure && explicitTLS {
+		return resolvedGNOIConfig{}, fmt.Errorf("%s cannot override explicit spec.gnoi.transportSecurity=tls", gNOIInsecureEnv)
+	}
+
+	sharedTLS := spec.TLS != nil && spec.TLS.Enabled
+	tlsEnabled := explicitTLS || (!forceInsecure && sharedTLS)
+	port, err := resolveGNOIPort(spec, tlsEnabled, forceInsecure)
+	if err != nil {
+		return resolvedGNOIConfig{}, err
+	}
+	resolved := resolvedGNOIConfig{
+		port:        port,
+		trustSource: gnoiTrustSourcePlaintext,
+	}
+
+	if !explicitTLS {
+		// Legacy gNOI sends Basic authorization through the provider context,
+		// including on plaintext connections. Preserve this compatibility path
+		// only until a device explicitly opts into secure gNOI.
+		resolved.dialConfig.Username = spec.Username
+		resolved.dialConfig.Password = password
+		if !tlsEnabled {
+			return resolved, nil
+		}
+		resolved.dialConfig.TLSConfig, err = tlsutil.ClientTLSFromDeviceTLS(spec.TLS)
+		if err != nil {
+			return resolvedGNOIConfig{}, fmt.Errorf("shared TLS: %w", err)
+		}
+		resolved.trustSource = gnoiTrustSourceLegacyShared
+		return resolved, nil
+	}
+
+	if (spec.Username == "") != (password == "") {
+		return resolvedGNOIConfig{}, fmt.Errorf("explicit secure gNOI password authentication requires both username and password, or neither when another authentication method is configured")
+	}
+	if spec.Username != "" && spec.Driver != ciskov1.DeviceDriverXE {
+		return resolvedGNOIConfig{}, fmt.Errorf("explicit secure gNOI password authentication is supported only for driver XE; driver %q requires its own authentication adapter", spec.Driver)
+	}
+
+	var tlsCfg *tls.Config
+	switch {
+	case provisioning != nil:
+		// Provisioning trust is isolated from DeviceSpec.TLS. The provisioning
+		// bundle adds its validated CA chain and optional bootstrap leaf pin.
+		tlsCfg = &tls.Config{MinVersion: tls.VersionTLS12, RootCAs: x509.NewCertPool()}
+		resolved.trustSource = gnoiTrustSourceProvisioning
+	case dedicatedTLS:
+		tlsCfg, err = clientTLSFromGNOIConfig(spec.GNOI.TLS)
+		if err != nil {
+			return resolvedGNOIConfig{}, fmt.Errorf("spec.gnoi.tls: %w", err)
+		}
+		resolved.trustSource = gnoiTrustSourceDedicated
+	default:
+		tlsCfg, err = tlsutil.ClientTLSFromDeviceTLS(spec.TLS)
+		if err != nil {
+			return resolvedGNOIConfig{}, fmt.Errorf("shared TLS: %w", err)
+		}
+		if tlsCfg.InsecureSkipVerify {
+			return resolvedGNOIConfig{}, fmt.Errorf("verified TLS is required for explicit secure gNOI; shared spec.tls.insecureSkipVerify cannot be inherited")
+		}
+		resolved.trustSource = gnoiTrustSourceSystem
+		if spec.TLS != nil && (spec.TLS.CAFile != "" || spec.TLS.CertFile != "" || spec.TLS.KeyFile != "") {
+			resolved.trustSource = gnoiTrustSourceShared
+		}
+	}
+
+	resolved.dialConfig.TLSConfig = tlsCfg
+	if spec.Username != "" {
+		resolved.dialConfig.RPCCredentials = devicegrpc.NewIOSXEPasswordCredentials(spec.Username, password)
+	}
+	if provisioning != nil {
+		resolved.provisioningBundle, err = loadGNOIProvisioningBundle(
+			spec,
+			tlsCfg,
+			provisioningDirectory,
+			provisioningWritesEnabled,
+		)
+		if err != nil {
+			return resolvedGNOIConfig{}, fmt.Errorf("certificate provisioning: %w", err)
+		}
+	}
+	return resolved, nil
+}
+
+func xeGNOICertificateProvisioning(spec *ciskov1.DeviceSpec) *ciskov1.XEGNOICertificateProvisioning {
+	if spec == nil || spec.XE == nil || spec.XE.GNOI == nil {
+		return nil
+	}
+	return spec.XE.GNOI.CertificateProvisioning
+}
+
+// clientTLSFromGNOIConfig adapts controller-resolved or local gNOI file paths
+// to the shared hardened certificate loader. Secret references are rejected by
+// GNOIConfig.Validate and must never cross the manager/worker boundary.
+func clientTLSFromGNOIConfig(config *ciskov1.GNOITLSConfig) (*tls.Config, error) {
+	if config == nil {
+		return nil, fmt.Errorf("nil config")
+	}
+	if config.SecretRef != nil {
+		return nil, fmt.Errorf("unresolved secretRef is not valid in worker configuration")
+	}
+	if config.CAFile == "" {
+		return nil, fmt.Errorf("caFile is required")
+	}
+	return tlsutil.ClientTLSFromDeviceTLS(&ciskov1.TLSConfig{
+		CAFile:   config.CAFile,
+		CertFile: config.CertFile,
+		KeyFile:  config.KeyFile,
 	})
-	if err != nil {
-		controlLease.Release()
-		return nil, fmt.Errorf("gnoi client construct: %w", err)
-	}
-	p.controlLease = controlLease
-	p.client = client
-	return client, nil
 }
 
-func (p *pooledGNOIProvider) ResetGNOIClient(ctx context.Context) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if p.controlLease != nil {
-		p.controlLease.Release()
-		p.controlLease = nil
-	}
-	p.client = nil
-	log.G(ctx).Infof("gNOI: reset client leases for %s:%d", p.address, p.port)
+type unavailableGNOIProvider struct {
+	cause error
 }
 
-func (p *pooledGNOIProvider) Close() {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.closed = true
-	if p.controlLease != nil {
-		p.controlLease.Release()
-		p.controlLease = nil
-	}
-	p.client = nil
-	_ = p.pool.Close()
+func (p unavailableGNOIProvider) GNOIClient(context.Context) (*gnoi.Client, error) {
+	return nil, fmt.Errorf("gNOI unavailable: %w", p.cause)
 }
 
-func (p *pooledGNOIProvider) bulkConn(ctx context.Context) (*grpc.ClientConn, func(), error) {
-	lease, err := p.pool.Lease(ctx, p.key, devicegrpc.ClassBulkTransfer)
-	if err != nil {
-		return nil, nil, fmt.Errorf("gnoi ClassBulkTransfer lease: %w", err)
+// resolveGNOIPort is intentionally subordinate to resolveGNOIConfig: no caller
+// can use its port decision without also applying the resolved TLS and auth
+// policy. Invalid environment overrides fail closed instead of being silently
+// ignored.
+func resolveGNOIPort(spec *ciskov1.DeviceSpec, tlsEnabled, forceInsecure bool) (int, error) {
+	if port, set, err := gnoiPortEnvOverride(); err != nil {
+		return 0, err
+	} else if set {
+		return port, nil
 	}
-	return lease.Conn, lease.Release, nil
+	if forceInsecure {
+		return inferredGNOIPort(spec.Port, false), nil
+	}
+	if spec.GNOI != nil && spec.GNOI.Port > 0 {
+		return spec.GNOI.Port, nil
+	}
+	if spec.GNOI != nil && spec.GNOI.TransportSecurity == ciskov1.GNOITransportSecurityTLS {
+		return inferredGNOIPort(0, true), nil
+	}
+	return inferredGNOIPort(spec.Port, tlsEnabled), nil
 }
 
-// gnoiPortForSpec picks the device-side gNOI port. Same heuristic the
-// telemetry factory uses: insecure path → 50052, secure → 9339. The
-// CISCO_VK_GNOI_PORT env var pins an explicit port for operators on
-// non-standard gnxi listeners; forceInsecure overrides spec.tls.enabled
-// inference so operators can target the `gnxi server` (insecure) line
-// even when RESTCONF on the same device uses TLS.
-func gnoiPortForSpec(spec *ciskov1.DeviceSpec, forceInsecure bool) int {
-	if v := os.Getenv(gNOIPortEnv); v != "" {
-		if p, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && p > 0 {
-			return p
-		}
-	}
-	tlsEnabled := !forceInsecure && spec.TLS != nil && spec.TLS.Enabled
-	port := spec.Port
+func inferredGNOIPort(port int, tlsEnabled bool) int {
 	if port == 0 || port == 80 || port == 443 {
 		if tlsEnabled {
 			return 9339
@@ -200,4 +440,16 @@ func gnoiPortForSpec(spec *ciskov1.DeviceSpec, forceInsecure bool) int {
 		return 50052
 	}
 	return port
+}
+
+func gnoiPortEnvOverride() (int, bool, error) {
+	raw := os.Getenv(gNOIPortEnv)
+	if raw == "" {
+		return 0, false, nil
+	}
+	port, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || port <= 0 || port > 65535 {
+		return 0, true, fmt.Errorf("%s must be an integer between 1 and 65535", gNOIPortEnv)
+	}
+	return port, true, nil
 }

@@ -140,7 +140,9 @@ func (l *FamilyLeaser) AcquireIfFree(ctx context.Context, device, family, identi
 		lease.Spec.LeaseDurationSeconds = &ttlSeconds
 		if err := l.Client.Update(ctx, &lease); err != nil {
 			if apierrors.IsConflict(err) {
-				return LeaseResult{Owned: true, Holder: identity}, nil
+				// The conflicting writer may have taken over this Lease. A stale
+				// same-holder read is not proof that we still own it.
+				return LeaseResult{Owned: false, Holder: holder}, nil
 			}
 			return LeaseResult{}, fmt.Errorf("renew lease: %w", err)
 		}
@@ -237,7 +239,18 @@ func (l *FamilyLeaser) Release(ctx context.Context, device, family, identity str
 	if lease.Spec.HolderIdentity == nil || *lease.Spec.HolderIdentity != identity {
 		return nil
 	}
-	if err := l.Client.Delete(ctx, &lease); err != nil && !apierrors.IsNotFound(err) {
+	uid := lease.UID
+	resourceVersion := lease.ResourceVersion
+	err = l.Client.Delete(ctx, &lease, client.Preconditions{
+		UID:             &uid,
+		ResourceVersion: &resourceVersion,
+	})
+	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
+		// A conflict means the Lease changed after our ownership check. It may
+		// now belong to another operation, so a stale release must be a no-op.
+		return nil
+	}
+	if err != nil {
 		return fmt.Errorf("delete lease: %w", err)
 	}
 	return nil
@@ -265,9 +278,9 @@ func (l *FamilyLeaser) renewOrReport(
 		lease.Spec.LeaseDurationSeconds = &ttlSeconds
 		if err := l.Client.Update(ctx, lease); err != nil {
 			if apierrors.IsConflict(err) {
-				// Another caller renewed concurrently; treat as still
-				// owned by us because the identity matched on the read.
-				return LeaseResult{Owned: true, Holder: identity}, nil
+				// The conflicting writer may be a foreign takeover after
+				// expiry. Never authorize work from the stale holder read.
+				return LeaseResult{Owned: false, Holder: holder}, nil
 			}
 			return LeaseResult{}, fmt.Errorf("renew lease: %w", err)
 		}

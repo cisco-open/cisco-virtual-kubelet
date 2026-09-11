@@ -204,17 +204,48 @@ All metrics are type `gauge`. The base set works on any driver; the topology-der
 These metrics are registered when the corresponding controllers and gNOI
 client packages are linked into the process. The write-class and software
 upgrade reconcilers still require their enablement flags before they act on
-CRs.
+CRs. At startup, the per-device worker also logs bounded categorical values:
+`trust_source` is `plaintext`, `legacy-shared`, `system`, `shared`, `gnoi`, or
+`xe-provisioning`; `auth_mode` is `none`, `legacy-basic`, or
+`iosxe-password-metadata`. Certificate and credential contents are never
+included. The [IOS-XE Upgrade and Downgrade
+Runbook](gnoi-iosxe-upgrade-runbook.md#8-follow-status-events-and-provider-logs)
+shows how to correlate lifecycle CR status, Kubernetes Events, and the exact
+per-device worker log messages during an image change.
 
 | Metric | Labels | Notes |
 |---|---|---|
-| `cisco_vk_gnoi_rpc_total` | `service`, `outcome` | gNOI RPC outcomes, including `ok`, `unimplemented`, `unavailable`, and other error classes. |
+| `cisco_vk_gnoi_rpc_total` | `service`, `outcome` | gNOI RPC outcomes, including `ok`, `unauthenticated`, `permission_denied`, `failed_precondition`, `unimplemented`, `deadline_exceeded`, `canceled`, `unavailable`, and `error`. |
 | `cisco_vk_gnoi_capability_cache_total` | `service`, `result` | Capability cache hit, miss, expiration, pin, and fail-fast decisions. |
 | `cisco_vk_devicegrpc_lease_events_total` | `class`, `event` | Workload-classed gRPC pool lease and release events. |
 | `cisco_vk_devicegrpc_outstanding_leases` | `class` | Current outstanding gRPC pool leases. |
 | `cisco_vk_devicegrpc_close_leak_detected_total` | `class` | Outstanding leases observed when a pool closes. |
 | `cisco_vk_iosxe_software_upgrade_phase_transitions_total` | `device`, `target_version`, `from`, `to`, `reason` | Software upgrade state transitions. |
 | `cisco_vk_iosxe_operational_action_transitions_total` | `device`, `kind`, `phase`, `reason` | Write-class action phase transitions and terminal outcomes. |
+| `cisco_vk_gnoi_certificate_earliest_expiry_timestamp_seconds` | — | Earliest expiry in the last successful parseable certificate inventory, including inactive identities; zero when none is parseable. |
+| `cisco_vk_gnoi_certificate_inventory_observed_timestamp_seconds` | — | Time of the last successful `GNOICertGet`/GetCertificates inventory; zero before the first observation. |
+| `cisco_vk_gnoi_certificate_inventory_unparsed` | — | Inventory entries without parseable X.509 expiry. Nonzero means expiry coverage is incomplete. |
+
+Certificate metrics belong to the per-device worker. A scrape does **not**
+contact IOS-XE or refresh inventory. Schedule a uniquely named read-only
+`GNOICertGet` through your operational scheduler (for example every six hours),
+retain its result, and alert on stale/missing inventory as well as expiry.
+Example per-series PromQL warning expressions:
+
+```promql
+(cisco_vk_gnoi_certificate_earliest_expiry_timestamp_seconds > 0)
+and (cisco_vk_gnoi_certificate_earliest_expiry_timestamp_seconds - time() < 30 * 86400)
+```
+
+```promql
+(time() - cisco_vk_gnoi_certificate_inventory_observed_timestamp_seconds > 12 * 3600)
+or (cisco_vk_gnoi_certificate_inventory_unparsed > 0)
+```
+
+Also monitor the expected worker scrape targets for absence/down; an absent
+series cannot satisfy those expressions. A worker restart resets observations
+until the next successful inventory. These are advisory inventory signals,
+not automatic certificate renewal or proof of the active listener identity.
 
 #### Interfaces (TopologyProvider)
 

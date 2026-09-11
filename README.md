@@ -17,8 +17,9 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 - **Network as Code** — declare device configuration in Kubernetes (`IOSXEConfig`, plus the `NXOSConfig` CRD *(Beta)*) with continuous drift detection and transactional apply
 - **Network Controller Extension API** *(Alpha scaffold)* — generic `NetworkController` and `NetworkControllerConfig` contracts for future controller adapters; the September image ships with zero product adapters and is report-only by design
 - **NX-OS Support** *(Beta)* — app-hosting lifecycle over NX-API CLI and declarative `NXOSConfig` over NX-API REST/DME; an initial runtime slice covering the `system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` families
-- **Software Lifecycle** *(Beta)* — drive IOS-XE software upgrades via the `IOSXESoftwareUpgrade` CRD using gNOI OS install/activate/verify
+- **Software Lifecycle** *(Beta)* — stream verified images with gNOI or register IOS-XE device files through RESTCONF, then activate and verify through the `IOSXESoftwareUpgrade` CRD
 - **Device Operations** *(Beta)* — run auditable `show` commands and read-only gNOI probes from Kubernetes via `DeviceOperation` CRD
+- **Secure IOS-XE gNOI** *(Beta)* — use verified TLS, IOS-XE secure-password metadata, and opt-in CSR-based OS-service certificate provisioning
 - **IOS-XE Telemetry** *(Beta)* — declare MDT-over-gNMI subscriptions and emit OpenTelemetry metrics, logs, and state-transition traces
 - **Topology Observability** *(Beta)* — emit CDP/OSPF topology and hosted-app traces to any OTLP-compatible backend
 - **Health Monitoring** — continuous node health checks, kubelet metrics (`/stats/summary`, `/metrics/resource`), and device annotations
@@ -176,8 +177,7 @@ Store device credentials in a Kubernetes Secret before creating the `CiscoDevice
 
 ```bash
 kubectl create secret generic cat9000-1-creds \
-  --from-literal=username=admin \
-  --from-literal=password=<device-password>
+  --from-literal=password='replace-me'
 ```
 
 ### Create a CiscoDevice CR
@@ -194,11 +194,12 @@ spec:
   driver: XE
   address: "192.168.1.100"
   port: 443
+  username: admin
   credentialSecretRef:
     name: cat9000-1-creds
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   xe:
     networking:
       interface:
@@ -209,7 +210,13 @@ spec:
           guestInterface: 0
 ```
 
-The controller creates a VK Deployment and a matching Kubernetes virtual node. Pods scheduled to that node are deployed to the device via App-Hosting.
+The controller creates a VK Deployment and a matching Kubernetes virtual node.
+Pods scheduled to that node are deployed to the device via App-Hosting. The
+minimal example above leaves gNOI in backward-compatible `auto` mode; before
+using a gNOI operation, configure
+[explicit verified gNOI TLS](docs/gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
+For IOS-XE image changes, follow the complete
+[gNOI upgrade and downgrade runbook](docs/gnoi-iosxe-upgrade-runbook.md).
 
 ## Documentation
 
@@ -219,13 +226,14 @@ The controller creates a VK Deployment and a matching Kubernetes virtual node. P
 - [Configuration Reference](docs/CONFIGURATION.md) — `CiscoDevice` spec options and device setup
 - [Network as Code](docs/netascode-config.md) — Declarative `IOSXEConfig`, drift detection, and transactional apply
 - [CLI & Plugin Reference](docs/cisco-vk-cli.md) — `cisco-vk` binary and `kubectl-ciscovk` plugin
-- [Software Lifecycle](docs/gnoi-software-lifecycle.md) *(Beta)* — IOS-XE upgrades via `IOSXESoftwareUpgrade`
-- [Operations Runbook](docs/operations.md) — `DeviceOperation` show commands, CRD upgrade guide
+- [IOS-XE gNOI Upgrade and Downgrade Runbook](docs/gnoi-iosxe-upgrade-runbook.md) *(Beta)* — required manifests, certificate setup, lifecycle monitoring, and verification
+- [gNOI & Software Lifecycle](docs/gnoi-software-lifecycle.md) *(Beta)* — architecture, security rules, API behavior, and image-source reference
+- [Device Operations Runbook](docs/operations.md) — `DeviceOperation` probes, show commands, and write-class actions
 - [Telemetry](docs/telemetry.md) *(Beta)* — MDT-over-gNMI subscriptions and OpenTelemetry
 - [Observability](docs/observability.md) — Metrics, traces, and Splunk integration
 - [CRD Reference](docs/crds.md) — All custom resource definitions
 - [API Reference](docs/API.md) — RESTCONF and kubelet endpoint reference
-- [Environment Variables](docs/environment-variables.md) — Complete environment variable reference
+- [Workload Environment Variables](docs/environment-variables.md) — Kubernetes environment variables passed to hosted containers; CVK runtime variables are in the [CLI reference](docs/cisco-vk-cli.md#additional-environment-variables)
 - [Security](docs/security.md) — TLS, RBAC, and credential management
 - [Troubleshooting](docs/troubleshooting.md) — Common issues and debug techniques
 

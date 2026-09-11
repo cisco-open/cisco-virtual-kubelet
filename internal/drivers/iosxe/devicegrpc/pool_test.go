@@ -59,6 +59,25 @@ func newBufconnServer(t *testing.T) *bufconn.Listener {
 	return lis
 }
 
+func TestDeviceKeyTargetUsesCanonicalHostPort(t *testing.T) {
+	tests := []struct {
+		name string
+		key  DeviceKey
+		want string
+	}{
+		{name: "IPv4", key: DeviceKey{Address: "192.0.2.1", Port: 9339}, want: "192.0.2.1:9339"},
+		{name: "IPv6", key: DeviceKey{Address: "2001:db8::1", Port: 9339}, want: "[2001:db8::1]:9339"},
+		{name: "DNS", key: DeviceKey{Address: "switch.example.test", Port: 9339}, want: "switch.example.test:9339"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.key.Target(); got != tt.want {
+				t.Fatalf("Target()=%q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestLeaseSameClassSharesConn(t *testing.T) {
 	lis := newBufconnServer(t)
 	dial, dials := bufconnDial(t, lis)
@@ -298,12 +317,8 @@ func TestAuthContextEmptyUsernamePassesThrough(t *testing.T) {
 func TestAuthContextAttachesBasicAuth(t *testing.T) {
 	cfg := DialConfig{Username: "admin", Password: "s3cret"}
 	fn := cfg.AuthContext()
-	ctx := fn(context.Background())
-	// We can't easily read outgoing metadata in unit-test form without a
-	// gRPC interceptor; assert that the returned context differs from
-	// the input (i.e., metadata was appended). The deeper assertion is
-	// covered by the integration test that pumps a unary RPC through.
-	if ctx == context.Background() {
-		t.Fatalf("expected AuthContext to decorate the context for non-empty username")
+	ctx := context.Background()
+	if got := fn(ctx); got == ctx {
+		t.Fatal("expected AuthContext to decorate the context for non-empty username")
 	}
 }

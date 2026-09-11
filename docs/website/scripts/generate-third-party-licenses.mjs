@@ -79,7 +79,7 @@ const vendoredFiles = {
   },
   processSource: {
     path: "node_modules/next/dist/compiled/process/browser.js",
-    sha256: "6521ba86acfd0874df2a9ccd66310029dee09c208da07dd44d293e31a2ce8d46",
+    sha256: "c0288217b1ef8e6fe1b057664a7754227b186d8253634e3ce94506d8fa675224",
   },
   processLicense: {
     path: "node_modules/next/dist/compiled/process/LICENSE",
@@ -101,15 +101,15 @@ const vendoredFiles = {
 const vendoredDirectories = {
   react: {
     path: "node_modules/next/dist/compiled/react",
-    sha256: "1f3c74cfbebf89f3a65c0e45ce5dcb5cab6ed6ec6780de4a151c5030d45d35cf",
+    sha256: "f59170274b4b012be4a1762d922e0bc9ece996df213318e4046b9bf92279b731",
   },
   reactDom: {
     path: "node_modules/next/dist/compiled/react-dom",
-    sha256: "7bd875c2c3d85503047a83675b8fb06469ab06714ba9f4288f768063fc75e8a0",
+    sha256: "82569cda8e4e384e0df064dbdebf76a43e28492b2d897211b49798efd81495df",
   },
   reactServerDomTurbopack: {
     path: "node_modules/next/dist/compiled/react-server-dom-turbopack",
-    sha256: "4237c7369061a463932671a52c76b1d6f575d5cb40bbed58eb5b0ebb1295f0b8",
+    sha256: "4c802530a1c8d5d73bb7595ff379e81ebffa22a3f361133d9a5e0efe93919a66",
   },
   scheduler: {
     path: "node_modules/next/dist/compiled/scheduler",
@@ -124,8 +124,8 @@ for (const audited of Object.values(vendoredDirectories)) {
   verifyDirectoryHash(audited.path, audited.sha256);
 }
 
-const reactCanaryVersion = "19.3.0-canary-3f0b9e61-20260317";
-const schedulerCanaryVersion = "0.28.0-canary-3f0b9e61-20260317";
+const reactCanaryVersion = "19.3.0-canary-cbb046ab-20260731";
+const schedulerCanaryVersion = "0.28.0-canary-cbb046ab-20260731";
 const reactDomManifest = JSON.parse(read(path.join(websiteDir, vendoredDirectories.reactDom.path, "package.json")));
 const reactServerDomManifest = JSON.parse(read(path.join(websiteDir, vendoredDirectories.reactServerDomTurbopack.path, "package.json")));
 if (

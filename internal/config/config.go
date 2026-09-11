@@ -62,12 +62,29 @@ func Load(filePath ...string) (*Config, error) {
 	return &cfg, nil
 }
 
-// validateDeviceSpec validates the driver-specific sections of a DeviceSpec.
+// validateDeviceSpec validates common and driver-specific DeviceSpec fields.
 func validateDeviceSpec(spec *v1alpha1.DeviceSpec) error {
+	if err := spec.GNOI.Validate(); err != nil {
+		return fmt.Errorf("invalid gNOI config: %w", err)
+	}
+	provisioningConfigured := spec.XE != nil && spec.XE.GNOI != nil && spec.XE.GNOI.CertificateProvisioning != nil
+	if spec.Driver != v1alpha1.DeviceDriverXE && provisioningConfigured {
+		return fmt.Errorf("gNOI certificate provisioning is supported only for driver XE")
+	}
+	if spec.GNOI != nil && spec.GNOI.TLS != nil && provisioningConfigured {
+		return fmt.Errorf("spec.gnoi.tls and spec.xe.gnoi.certificateProvisioning cannot both be configured")
+	}
+	if spec.GNOI != nil && spec.GNOI.TransportSecurity == v1alpha1.GNOITransportSecurityTLS && spec.GNOI.TLS == nil && !provisioningConfigured && spec.TLS != nil && spec.TLS.InsecureSkipVerify {
+		return fmt.Errorf("explicit secure gNOI requires system or verified shared TLS, spec.gnoi.tls, or IOS XE certificate provisioning trust")
+	}
+
 	switch spec.Driver {
 	case v1alpha1.DeviceDriverXE:
 		if spec.XE == nil {
 			return fmt.Errorf("driver XE requires xe config section")
+		}
+		if err := spec.XE.GNOI.Validate(spec.GNOI); err != nil {
+			return fmt.Errorf("invalid XE gNOI config: %w", err)
 		}
 		if spec.XE.Networking.Interface != nil {
 			if err := spec.XE.Networking.Interface.Validate(); err != nil {

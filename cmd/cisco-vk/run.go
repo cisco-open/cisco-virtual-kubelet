@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
+	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
@@ -329,9 +330,25 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		}()
 	}
 
+	maintenanceCoordinator, err := newMaintenanceCoordinator(kubeconfigCfg, effectiveNodeName, configReconcilerOptions{
+		Spec:                       &appCfg.Device,
+		EnableWriteClassGNOI:       flagOrEnvBool(enableWriteClassGNOI, envEnableWriteClassGNOI),
+		EnableIOSXESoftwareUpgrade: flagOrEnvBool(enableIOSXESoftwareUpgrade, envEnableIOSXESoftwareUpgrade),
+	})
+	if err != nil {
+		return fmt.Errorf("configure device maintenance: %w", err)
+	}
+	if maintenanceCoordinator != nil {
+		go maintenanceCoordinator.Run(ctx)
+	}
+
 	newProviderFunc := func(vkCfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
 		// Create a single shared driver for both node and pod handlers
-		sharedDriver, err := drivers.NewDriver(ctx, &appCfg.Device)
+		driverCtx := ctx
+		if maintenanceCoordinator != nil {
+			driverCtx = devicecoordination.WithMutationGuard(ctx, maintenanceCoordinator.AcquireWrite)
+		}
+		sharedDriver, err := drivers.NewDriver(driverCtx, &appCfg.Device)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create device driver: %w", err)
 		}
@@ -357,6 +374,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 			return nil, nil, fmt.Errorf("failed to initialise PodHandler: %w", err)
 		}
 		podHandler.SetTraceCorrelation(effectiveNodeName, traceCorrelationCache)
+		podHandler.SetMaintenance(maintenanceCoordinator)
 		appEventConsumer = podHandler
 
 		// Build a custom PodHandlerConfig that only wires supported operations.
@@ -421,6 +439,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		StateCache:                 mdtStateCache,
 		AppEventConsumer:           appEventConsumer,
 		CorrelationCache:           traceCorrelationCache,
+		Maintenance:                maintenanceCoordinator,
 	}); err != nil {
 		log.G(ctx).WithError(err).Warn("IOSXEConfig reconciler not started; continuing without declarative config")
 	}

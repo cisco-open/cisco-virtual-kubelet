@@ -111,6 +111,9 @@ jobs:
       - name: Unit tests
         run: go test -race -count=1 ./...
 
+      - name: gNOI lab runner safety tests (offline)
+        run: python3 -m unittest discover -s scripts/tests -p 'test_iosxe_gnoi_lab_cycle.py' -v
+
       - name: Website lint, audit, build, and license gate
         working-directory: docs/website
         run: |
@@ -295,6 +298,25 @@ jobs:
         # the runner) but before the chart is templated against
         # the kind cluster — the lint is a static check.
         run: helm lint charts/cisco-virtual-kubelet
+
+      - name: Helm image-size limit rendering regression
+        run: |
+          set -euo pipefail
+          rendered="$(mktemp)"
+          trap 'rm -f "$rendered"' EXIT
+
+          helm template cvk charts/cisco-virtual-kubelet \
+            --namespace cisco-vk-system \
+            --set gnoi.enableSoftwareUpgrade=true > "$rendered"
+          grep -A1 -F -- '- name: CISCO_VK_UPGRADE_MAX_IMAGE_BYTES' "$rendered" \
+            | grep -Eq '^[[:space:]]+value: "8589934592"$'
+
+          helm template cvk charts/cisco-virtual-kubelet \
+            --namespace cisco-vk-system \
+            --set gnoi.enableSoftwareUpgrade=true \
+            --set gnoi.softwareUpgrade.maxImageBytes=17179869184 > "$rendered"
+          grep -A1 -F -- '- name: CISCO_VK_UPGRADE_MAX_IMAGE_BYTES' "$rendered" \
+            | grep -Eq '^[[:space:]]+value: "17179869184"$'
 
       - name: Build controller image (linux/amd64)
         id: build-smoke-amd64

@@ -108,7 +108,7 @@ core-js@3.38.1
 License: MIT
 Author: Denis Pushkarev
 Project: https://github.com/zloirock/core-js
-Redistribution context: Browser polyfill vendored by next@16.2.11
+Redistribution context: Browser polyfill vendored by next@16.3.4
 
 --- CORE_JS_3.38.1_LICENSE.txt ---
 Copyright (c) 2014-2024 Denis Pushkarev
@@ -130,7 +130,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 ================================================================================
-process browser shim@vendored by next@16.2.11; upstream version omitted by Next.js
+process browser shim@vendored by next@16.3.4; upstream version omitted by Next.js
 ================================================================================
 License: MIT
 Author: Roman Shtylman
@@ -162,12 +162,12 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ================================================================================
-Next.js vendored React canary family@19.3.0-canary-3f0b9e61-20260317; scheduler 0.28.0-canary-3f0b9e61-20260317
+Next.js vendored React canary family@19.3.0-canary-cbb046ab-20260731; scheduler 0.28.0-canary-cbb046ab-20260731
 ================================================================================
 License: MIT
 Author: Meta Platforms, Inc. and affiliates
 Project: https://react.dev/
-Redistribution context: react, react-dom, react-server-dom-turbopack, and scheduler vendored by next@16.2.11
+Redistribution context: react, react-dom, react-server-dom-turbopack, and scheduler vendored by next@16.3.4
 
 --- LICENSE ---
 MIT License
@@ -224,7 +224,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ================================================================================
-@next/env@16.2.11
+@next/env@16.3.4
 ================================================================================
 License: MIT
 Author: Next.js Team <support@vercel.com>
@@ -232,7 +232,7 @@ Project: https://github.com/vercel/next.js
 License text: supplied by the upstream Next.js/React composite license entry below.
 
 ================================================================================
-@swc/helpers@0.5.15
+@swc/helpers@0.5.23
 ================================================================================
 License: Apache-2.0
 Author: 강동윤 <kdy1997.dev@gmail.com>
@@ -1224,7 +1224,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ================================================================================
-next@16.2.11
+next@16.3.4
 ================================================================================
 License: MIT
 Project: https://nextjs.org

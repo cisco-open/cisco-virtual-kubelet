@@ -79,7 +79,7 @@ kubectl describe pod -l app.kubernetes.io/name=cisco-vk,app.kubernetes.io/instan
 - **Image pull error** — make sure `image.repository`/`vkImage.repository` points at a registry the cluster can pull from.
 - **Bad credentials** — look for `401 Unauthorized` in VK pod logs. Verify the Secret key is spelled `password` (not `PASSWORD`, not `pass`).
 - **Device unreachable** — look for `dial tcp: i/o timeout` in VK pod logs. Check routing, firewall, and that RESTCONF is enabled (`restconf` in device config).
-- **TLS verification failing** — look for `x509: certificate signed by unknown authority`. Either supply `tls.caFile`, or temporarily set `tls.insecureSkipVerify: true` to confirm.
+- **TLS verification failing** — look for `x509: certificate signed by unknown authority`. In local/custom deployments, supply a mounted `tls.caFile`; for controller-managed gNOI, use `spec.gnoi.tls.secretRef`. Use `tls.insecureSkipVerify: true` only as a temporary, non-gNOI lab diagnostic.
 
 ---
 
@@ -237,6 +237,64 @@ the CR status and finalizer subresources.
 
 ---
 
+## Secure gNOI authentication or connection fails
+
+IOS-XE 17.18.x serves password-authenticated gNOI on the secure gNXI listener,
+port `9339` by default. Start by comparing the device and `CiscoDevice`
+settings:
+
+```bash
+# IOS-XE CLI
+show running-config | include ^gnxi
+show gnxi state detail
+show crypto pki trustpoints
+
+# Kubernetes; this displays references and transport settings, not Secret data
+kubectl -n <device-namespace> get ciscodevice <device-name> \
+  -o jsonpath='{.spec.username}{"\n"}{.spec.gnoi}{"\n"}{.spec.xe.gnoi}{"\n"}{.spec.tls}{"\n"}'
+
+kubectl -n <device-namespace> logs deploy/<device-name>-vk --tail=200 | grep -iE 'gnoi|gnxi|grpc|x509'
+```
+
+The worker startup log reports `trust_source=system`, `shared`, `gnoi`, or
+`xe-provisioning` and `auth_mode=iosxe-password-metadata` (or `none`) for
+explicit TLS without logging certificate or credential contents.
+
+| Symptom / gRPC status | Most likely cause | Check |
+|---|---|---|
+| Admission rejects `spec.gnoi.tls` | The transport is not explicitly TLS, file paths were placed in a Kubernetes object, or provisioning is also configured | Set `spec.gnoi.transportSecurity: tls`, use only `gnoi.tls.secretRef` in Kubernetes, and choose either generic gNOI TLS or `spec.xe.gnoi.certificateProvisioning`, not both. |
+| `GNOITLSInvalid` event or reconcile error | The referenced Secret is missing, `ca.crt` is empty/invalid, or only one client-certificate key is present | Keep the Secret in the `CiscoDevice` namespace. Supply a parseable `ca.crt` and either both `tls.crt` and `tls.key` or neither. |
+| `Unauthenticated` | Missing or rejected metadata | Check `spec.username`, the referenced Secret's exact `password` key, and `gnxi secure-password-auth`. CVK sends separate lowercase `username` and `password` metadata only over TLS. |
+| `PermissionDenied` | Authentication succeeded but AAA denied the RPC | Check the IOS-XE AAA method list, user privilege, and authorization policy for the requested operation. |
+| `x509` trust or hostname error | The selected trust source does not validate the certificate or `spec.address` | Check the logged trust source. Update the generic gNOI TLS Secret's `ca.crt`, or, for provisioning only, supply the exact temporary leaf as `bootstrap.crt`. Explicit secure/dedicated gNOI has no skip-verification mode. |
+| Trust Secret changed but failures persist | The enabled per-device worker has not completed its Secret-driven restart | Check the per-device Deployment rollout and controller events. Generic TLS Secret rotation affects new connections only and never rotates the device certificate. There is no worker restart in aggregated config-only topology or while gNOI is globally disabled. |
+| Startup reports `gNOI: resolve configuration` | The selected trust sources conflict, certificate files are invalid, explicit TLS inherited insecure shared TLS, or `CISCO_VK_GNOI_PORT` is invalid | Correct the named validation error. CVK does not silently downgrade transport, ignore an invalid port override, or fall back to another trust source. |
+| `Unavailable`, connection refused, or deadline exceeded | Listener, port, route, firewall, VRF, or expected gNXI restart | Check port `9339`, `show gnxi state detail`, pod reachability, and recent provisioning events. |
+| `FailedPrecondition: Device has not been provisioned` | Authentication works, but the OS service lacks a provisioned identity | Confirm `gnxi enable-gnoi` and `gnxi secure-init`, configure `spec.xe.gnoi.certificateProvisioning`, enable write-class gNOI, and create a `ProvisionCertificate` action. `GNOIOSVerify` never installs. |
+| `ProvisioningUnavailable` | The worker has no authorized certificate provisioner | Confirm `spec.xe.gnoi.certificateProvisioning` and the write-class gate, and ensure the gated Secret projection contains a valid `ca.key`; the action is rejected before device access. |
+| `ProvisioningIntentMismatch` | The action was created for a different certificate ID or public-material digest than the worker loaded | Recompute SHA-256 over the exact `tls.crt` bytes followed by `ca.crt`, wait for the Secret-driven worker rollout, then create a new immutable action. No device RPC was sent for the rejected action. |
+| Missing `ca.key` | The Secret is in post-provision/read-only form, or the write-class gate is disabled | The built-in provisioner/action is available only with the dedicated intermediate CA key and write-class gate, even if `OS.Verify` might make the action a no-op. Never supply a root CA key. |
+| CSR `InvalidArgument` | The profile or signer is invalid | Check that `tls.crt` has C, ST, O, OU, and an IP SAN and chains through the intermediate whose key is in `ca.key`. |
+| Certificate ID conflict / already exists | The create-only ID is stale or belongs to another identity | Compare `GNOICertGet` with device trustpoints. Resolve or remove stale state out of band, or choose a new ID; CVK will not overwrite it. |
+| `Unimplemented` | That platform does not implement the requested service | Use `GNOICertGet` as the broad pre-provision connectivity probe. `GNOIOSVerify` is also read-only before provisioning, but only the exact not-provisioned response is expected; success requires `State: Provisioned`. |
+
+Before creating the action, use one of the two starting states documented in
+the [IOS-XE upgrade and downgrade
+runbook](gnoi-iosxe-upgrade-runbook.md#2-configure-secure-gnxi-on-ios-xe):
+`secure-init` for temporary bootstrap, or `secure-trustpoint` plus
+`secure-server` for an already-provisioned identity. Both paths require
+`gnxi enable-gnoi` and `gnxi secure-password-auth`. After a mutation, the
+action reconnects and succeeds only when the exact installed certificate is
+the active TLS leaf and `OS.Verify` works over that same peer; it never retries
+Install. If `OS.Verify` already succeeds, the action is a no-op and its
+requested certificate ID/digest are intent only, not an attestation of the
+active identity. Confirm the trustpoint and `State: Provisioned` on the device,
+then remove `ca.key` and `bootstrap.crt` and disable write-class gNOI. See the
+[canonical secure gNOI workflow](gnoi-iosxe-upgrade-runbook.md)
+for configuration, Secret contents, and the shared gNXI/gNMI CA-bundle warning.
+
+---
+
 ## IOSXEOperationalAction is rejected
 
 Common rejection reasons:
@@ -256,30 +314,100 @@ kubectl get events --field-selector involvedObject.name=<name>
 ```
 
 `Running` means the controller may already have invoked the device-side RPC.
-The reconciler will not dispatch the same CR again after a restart.
+The reconciler will not dispatch the same CR again after a restart. It waits
+for the bounded RPC-and-persistence window, then records
+`ActionOutcomeUnknown`, removes the finalizer so deletion can complete, and
+retains the shared mutation Lease until its normal expiry. Verify the device's
+actual state before submitting a replacement action.
 
 ---
 
-## IOSXESoftwareUpgrade fails during image resolution or transfer
+## IOSXESoftwareUpgrade fails during resolution, staging, or transfer
 
-For URL sources, `imageSource.sha256` is required. Credential-bearing URLs are
-redacted before they are written to CR status, events, or logs. For SCP/SFTP,
-host-key verification is required unless the operator explicitly enables the
-lab-only escape hatch:
+For URL sources, `imageSource.sha256` is required. URL userinfo is rejected;
+query strings and fragments remain visible in the immutable CR even though CVK
+redacts them from status, events, logs, and errors, so do not put secrets there.
+For SCP/SFTP, host-key verification is required unless a custom/local
+deployment explicitly enables both parts of the lab-only escape hatch (the
+stock Helm chart intentionally does not expose it):
 
-```bash
-CISCO_VK_UPGRADE_ALLOW_INSECURE_SSH=true
+```yaml
+imageSource:
+  url: sftp://images.example.net/image.bin?insecureSkipHostKey=true
 ```
 
-When using `localPath`, add `localPathSHA256` if the device supports gNOI
-File.Get. A mismatch fails before activation with `LocalPathHashMismatch`.
+```bash
+export CISCO_VK_UPGRADE_ALLOW_INSECURE_SSH=true
+```
 
-Transfer interruptions move to `TransferInterrupted` and retry according to
-`spec.maxRetries` unless `spec.resumePolicy: Abort` is set.
+`image exceeds configured size limit` means an HTTP `Content-Length`, remote
+file-size report, SCP header, or the streamed bytes exceeded
+`CISCO_VK_UPGRADE_MAX_IMAGE_BYTES`. The Helm equivalent is
+`gnoi.softwareUpgrade.maxImageBytes`; it defaults to 8 GiB. Do not simply raise
+the limit: URL resolution stores one full image plus small filesystem and pod
+overhead in the pod's `/tmp` `emptyDir`. The resolver hashes into a private
+temporary file, atomically promotes that same file to the cache, retains at
+most one completed managed digest, and removes owned crash residue before the
+next resolution. Check pod eviction events, node ephemeral-storage pressure,
+and storage requests/limits.
+
+Transient network, HTTP `408`/`425`/`429`/`5xx`, and Kubernetes API read
+failures remain in `Transferring` with reason `ImageResolveRetry` and retry only
+until `installTimeoutSeconds` expires. A resolver's shorter per-attempt timeout
+does not end the upgrade while that overall deadline remains. Credential,
+endpoint-binding, host-key or TLS verification, malformed source, size, digest,
+and unsafe-cache errors fail immediately as `ImageResolveFailed`.
+
+An `unsafe image cache entry` error means the digest path is a symlink or is
+not a regular file. CVK will not follow or overwrite it. Treat unexpected cache
+mutation as a security signal. After confirming no upgrade RPC is in flight,
+replace the affected worker pod to clear its ephemeral cache.
+
+`preinstalled: {}` and deprecated `localPath` require `targetVersion` to resolve
+to one exact, activatable install-inventory entry. A matching file on flash is
+not sufficient. `localPathSHA256`, when supplied, verifies the legacy path but
+does not register it.
+
+Use `deviceFile.path` plus required `deviceFile.sha256` when a file already on
+IOS-XE must be registered. CVK reads it through gNOI `File.Get` before the
+IOS-XE RESTCONF install RPC. `DeviceFileHashFailed`,
+`SoftwareLifecycleUnsupported`, `AmbiguousTargetVersion`, or
+`TargetNotActivatable` are fail-closed outcomes; there is no CLI fallback.
+`UncorrelatedDeviceFileInventory` means the target was already installed or in
+progress before this CR recorded its staging request, so CVK cannot prove that
+the verified file produced that inventory entry. If status reports an unknown
+staging or activation outcome, inspect the IOS-XE install inventory and
+operation UUID before creating a new CR. The original CR is not replayed after
+an ambiguous device mutation. `installTimeoutSeconds` first bounds gNOI
+readiness and device-file `File.Get`. The native-registration claim then starts
+a fresh window shared by registration and inventory convergence; retries inside
+either window receive only its remaining time.
+
+`MutationLeaseBlocked` means another CVK-managed write action, upgrade, or
+uncertain prior outcome owns the device's shared disruptive-mutation Lease.
+Inspect that object's status and the Lease holder identity. Do not delete the
+Lease merely to bypass an unknown device result; wait for the safety TTL or
+establish device state before taking an explicitly controlled recovery action.
+
+After gNOI `OS.Install` is dispatched, a transport interruption moves the CR
+to `TransferInterrupted`. CVK retains the durable attempt marker and observes
+without replay until `installTimeoutSeconds` expires, even when native
+inventory reports the target absent. The CR then fails with
+`InstallOutcomeUnknown`; inspect the device before creating a new upgrade CR.
 
 With `rollbackOnFailure: true`, a verify mismatch enters `RollingBack` and
-attempts to re-activate the previously observed running version. If no previous
-version was captured, the CR fails with `RollbackVersionMissing`.
+attempts to re-activate the previously observed running version only when the
+lifecycle backend proves it remains activatable. If no previous version was
+captured, the CR fails with `RollbackVersionMissing`. Rollback receives a new
+`rebootTimeoutSeconds` timer when that phase begins, including any pre-dispatch
+reachability wait; its activation RPC is capped by the remaining time. The
+primary activation sequence follows the same remaining-time cap. After a
+durable mutation claim, `ActivationControlTimeout` or
+`RollbackDidNotConverge` retains the shared Lease until its safety TTL expires.
+
+`strategy: ISSU` fails preflight with `ISSUVerificationUnsupported`. CVK does
+not claim a non-disruptive upgrade until the platform backend can verify that
+IOS-XE selected the ISSU path; `NoReboot` is not that verification.
 
 **If the raw endpoint returns metrics but Prometheus doesn't see them:**
 

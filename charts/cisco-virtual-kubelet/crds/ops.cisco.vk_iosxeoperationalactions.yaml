@@ -34,10 +34,11 @@ spec:
       openAPIV3Schema:
         description: |-
           IOSXEOperationalAction is a one-shot write-class operation against
-          one IOS-XE device. The reconciler executes exactly once: it does
+          one IOS-XE device. The reconciler dispatches at most once: it does
           not retry on transient failure, because every kind is destructive
           or near-destructive (Reboot / FactoryReset / FileRemove / etc.).
-          Operators submit a new CR to re-attempt.
+          Failures are terminal; operators inspect device state before deciding
+          whether a new CR is safe.
         properties:
           apiVersion:
             description: |-
@@ -137,7 +138,30 @@ spec:
                     - FilePut
                     - FileRemove
                     - FactoryReset
+                    - ProvisionCertificate
                     type: string
+                  provisionCertificate:
+                    description: |-
+                      ProvisionCertificate binds the action to the exact public certificate
+                      material configured in the target device worker.
+                    properties:
+                      certificateID:
+                        description: CertificateID is the IOS XE trustpoint identifier
+                          to provision.
+                        maxLength: 64
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]*$
+                        type: string
+                      publicMaterialSHA256:
+                        description: |-
+                          PublicMaterialSHA256 binds the action to the exact mounted tls.crt and
+                          ca.crt byte sequence without exposing either file in the action.
+                        pattern: ^[0-9a-f]{64}$
+                        type: string
+                    required:
+                    - certificateID
+                    - publicMaterialSHA256
+                    type: object
                   reboot:
                     description: Reboot is the input for ActionKindReboot.
                     properties:
@@ -178,6 +202,9 @@ spec:
                   rule: (self.kind == 'FileRemove') == has(self.fileRemove)
                 - message: kind FactoryReset requires only the factoryReset args block
                   rule: (self.kind == 'FactoryReset') == has(self.factoryReset)
+                - message: kind ProvisionCertificate requires only the provisionCertificate
+                    args block
+                  rule: (self.kind == 'ProvisionCertificate') == has(self.provisionCertificate)
               confirm:
                 description: |-
                   Confirm must equal the target device's metadata.name. This is a

@@ -230,6 +230,7 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 	deviceVersion, _ := r.deviceVersionState()
 	eng := &engine.Engine{
 		Platform:           "iosxe",
+		AcquireMutation:    r.AcquireMutation,
 		Transport:          tr,
 		Lookup:             lookup,
 		DeviceVersion:      deviceVersion,
@@ -453,6 +454,7 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	}
 	eng := &engine.Engine{
 		Platform:           "iosxe",
+		AcquireMutation:    r.AcquireMutation,
 		Transport:          r.GetTransport(),
 		Lookup:             lookup,
 		DeviceVersion:      deviceVersion,

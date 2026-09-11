@@ -17,10 +17,8 @@
 // streaming install → device-side validate → activate → wait for
 // reachability → verify → terminal.
 //
-// The reconciler is deliberately one-step-per-call: every Reconcile
-// observes Status.Phase, advances one transition, writes the new
-// status, and requeues. This shape keeps each phase auditable, makes
-// mid-flight delete handling straightforward (each phase declares
-// what to do on deletion), and avoids long-running goroutines that
-// would race the controller-runtime lifecycle.
+// Durable phase and intent markers are written before device mutations. This
+// makes side effects auditable and prevents ambiguous Install, Activate, and
+// native registration responses from being replayed automatically. Deleting a
+// CR stops observation; it cannot cancel device-side work.
 package softwareupgrade

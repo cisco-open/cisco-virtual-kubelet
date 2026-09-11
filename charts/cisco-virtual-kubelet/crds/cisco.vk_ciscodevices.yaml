@@ -56,8 +56,8 @@ spec:
           spec:
             description: |-
               DeviceSpec defines the desired state of a Cisco device.
-              Shared fields are common to all drivers; driver-specific networking
-              configuration lives under the corresponding driver section (XE, XR, etc.).
+              Shared fields are common to all drivers; driver-specific configuration lives
+              under the corresponding driver section (XE, XR, etc.).
             properties:
               address:
                 description: Address is the management IP or hostname of the device.
@@ -136,6 +136,79 @@ spec:
                   - OPENCONFIG
                   - FAKE
                 type: string
+              gnoi:
+                description: |-
+                  GNOI contains opt-in, per-device gNOI settings. Omitting it, or providing
+                  an empty block, preserves historical transport and port inference. The
+                  selected driver owns authentication policy; secure IOS-XE gNOI derives it
+                  from Username and the resolved device password.
+                properties:
+                  port:
+                    description: |-
+                      Port overrides the device-side gNOI listener port. Omit it to preserve
+                      legacy port inference (local YAML also accepts zero).
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                  tls:
+                    description: |-
+                      TLS supplies verified trust for the gNOI connection independently from
+                      DeviceSpec.TLS. Kubernetes objects use SecretRef; local YAML uses CAFile
+                      and may include a CertFile/KeyFile client pair. It cannot be combined with
+                      driver-specific certificate provisioning, which derives its own trust.
+                    properties:
+                      caFile:
+                        description: |-
+                          CAFile is the local path to the PEM CA bundle used to verify the gNOI
+                          server. It is required in local YAML and forbidden in Kubernetes objects.
+                        type: string
+                      certFile:
+                        description: |-
+                          CertFile is the optional local path to a PEM client certificate. It must
+                          be configured together with KeyFile and is forbidden in Kubernetes objects.
+                        type: string
+                      keyFile:
+                        description: |-
+                          KeyFile is the optional local path to the client certificate private key.
+                          It must be configured together with CertFile and is forbidden in
+                          Kubernetes objects.
+                        type: string
+                      secretRef:
+                        description: |-
+                          SecretRef names a Secret in the CiscoDevice namespace. ca.crt is required;
+                          tls.crt and tls.key may both be provided for mutual TLS. The controller
+                          projects only these recognized keys and does not copy their contents into
+                          the device ConfigMap. SecretRef is required in Kubernetes objects and is
+                          rejected in local YAML. A valid Secret change rolls the worker so new gNOI
+                          connections load it when gNOI and per-device topology are enabled.
+                        properties:
+                          name:
+                            description: Name is the DNS-subdomain name of the gNOI
+                              TLS Secret.
+                            maxLength: 253
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                        required:
+                        - name
+                        type: object
+                    required:
+                    - secretRef
+                    type: object
+                    x-kubernetes-validations:
+                    - message: caFile, certFile, and keyFile are local-only and cannot
+                        be set in a Kubernetes object
+                      rule: '!has(self.caFile) && !has(self.certFile) && !has(self.keyFile)'
+                  transportSecurity:
+                    default: auto
+                    description: |-
+                      TransportSecurity controls whether gNOI uses TLS. Omitted/auto inherits
+                      the decision from DeviceSpec.TLS.Enabled (local YAML also accepts empty).
+                    enum:
+                    - auto
+                    - tls
+                    type: string
+                type: object
               labels:
                 additionalProperties:
                   type: string
@@ -364,13 +437,136 @@ spec:
               username:
                 description: Username for device authentication.
                 type: string
+              worker:
+                description: |-
+                  Worker configures the Kubernetes per-device CVK worker, independently of
+                  ResourceLimits for applications hosted on the Cisco device. Omitted fields
+                  inherit the manager's worker defaults. Ignored in aggregator topology.
+                properties:
+                  resources:
+                    description: |-
+                      Resources replaces the manager's complete worker resource requirements
+                      when present. An explicit empty object clears inherited requirements.
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        maxProperties: 3
+                        type: object
+                        x-kubernetes-validations:
+                        - message: worker limits must be nonnegative CPU, memory,
+                            or ephemeral-storage quantities
+                          rule: self.all(k, k in ['cpu', 'memory', 'ephemeral-storage']
+                            && !quantity(string(self[k])).isLessThan(quantity('0')))
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        maxProperties: 3
+                        type: object
+                        x-kubernetes-validations:
+                        - message: worker requests must be nonnegative CPU, memory,
+                            or ephemeral-storage quantities
+                          rule: self.all(k, k in ['cpu', 'memory', 'ephemeral-storage']
+                            && !quantity(string(self[k])).isLessThan(quantity('0')))
+                    type: object
+                    x-kubernetes-validations:
+                    - message: worker requests must not exceed their corresponding
+                        limits
+                      rule: '!has(self.requests) || !has(self.limits) || self.requests.all(k,
+                        !(k in self.limits) || !quantity(string(self.requests[k])).isGreaterThan(quantity(string(self.limits[k]))))'
+                  tmpSizeLimit:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      TmpSizeLimit caps the worker's disk-backed /tmp emptyDir, including image
+                      staging. Omitted inherits the manager default; no default means unbounded.
+                      This is an eviction limit, not reserved storage. Use ephemeral-storage
+                      requests to account for scheduling and leave headroom for logs and images.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                    x-kubernetes-validations:
+                    - message: tmpSizeLimit must be positive
+                      rule: quantity(string(self)).isGreaterThan(quantity('0'))
+                type: object
               xe:
                 description: |-
-                  XE holds IOS-XE specific networking configuration.
+                  XE holds IOS-XE specific configuration.
                   Required when driver=XE.
                 properties:
+                  gnoi:
+                    description: |-
+                      GNOI holds IOS-XE-specific gNOI policy. Generic gNOI transport and port
+                      settings remain in DeviceSpec.GNOI.
+                    properties:
+                      certificateProvisioning:
+                        description: |-
+                          CertificateProvisioning supplies CVK-side dedicated gNOI trust and the
+                          signing material used by an explicit ProvisionCertificate
+                          IOSXEOperationalAction. OS.Verify remains read-only. The manager reads the
+                          referenced Secret to reconcile a projection only into this device's VK pod;
+                          certificate material is never copied into its ConfigMap. IOS-XE may share
+                          the installed identity and CA bundle with gNMI.
+                        properties:
+                          certificateID:
+                            description: |-
+                              CertificateID is the IOS-XE trustpoint identifier associated with the
+                              certificate installed through gNOI.
+                            maxLength: 64
+                            minLength: 1
+                            pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]*$
+                            type: string
+                          replaceTargetCABundle:
+                            description: |-
+                              ReplaceTargetCABundle must be true to acknowledge that gNOI
+                              LoadCertificate replaces the target's complete CA bundle. IOS-XE shares
+                              that bundle between gNOI and gNMI, so ca.crt must preserve every peer CA
+                              that those services must continue to trust.
+                            type: boolean
+                          secretRef:
+                            description: |-
+                              SecretRef names a Secret in the CiscoDevice namespace. tls.crt and ca.crt
+                              are required. Optional bootstrap.crt pins the current IOS-XE TLS leaf;
+                              optional ca.key authorizes the local signer and must match tls.crt's
+                              dedicated intermediate issuer. The signer may handle a corrected immutable
+                              action after a definitive pre-Install failure, while each network Install is
+                              still submitted at most once. ca.crt is the complete desired target CA
+                              replacement bundle. The worker receives only recognized keys read-only.
+                              When gNOI and per-device topology are enabled, a Secret change rolls the
+                              worker but never rotates an installed device identity.
+                            properties:
+                              name:
+                                description: Name is the DNS-subdomain name of the
+                                  provisioning Secret.
+                                maxLength: 253
+                                minLength: 1
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                type: string
+                            required:
+                            - name
+                            type: object
+                        required:
+                        - certificateID
+                        - replaceTargetCABundle
+                        - secretRef
+                        type: object
+                        x-kubernetes-validations:
+                        - message: replaceTargetCABundle must be true to acknowledge
+                            replacement of the shared gNXI/gNMI CA bundle
+                          rule: self.replaceTargetCABundle == true
+                    type: object
                   networking:
-                    description: Networking holds the IOS-XE networking configuration.
+                    description: |-
+                      Networking holds the optional IOS-XE app-hosting network configuration.
+                      It may be omitted when this section carries only IOS-XE gNOI policy.
                     properties:
                       interface:
                         description: Interface holds the interface-level configuration.
@@ -474,8 +670,6 @@ spec:
                         - type
                         type: object
                     type: object
-                required:
-                - networking
                 type: object
               zone:
                 description: Zone for node topology.
@@ -485,6 +679,29 @@ spec:
             - driver
             - username
             type: object
+            x-kubernetes-validations:
+            - message: gNOI certificate provisioning is supported only for driver
+                XE
+              rule: '!has(self.xe) || !has(self.xe.gnoi) || !has(self.xe.gnoi.certificateProvisioning)
+                || self.driver == ''XE'''
+            - message: spec.xe.gnoi.certificateProvisioning requires spec.gnoi.transportSecurity
+                to be tls
+              rule: '!has(self.xe) || !has(self.xe.gnoi) || !has(self.xe.gnoi.certificateProvisioning)
+                || (has(self.gnoi) && has(self.gnoi.transportSecurity) && self.gnoi.transportSecurity
+                == ''tls'')'
+            - message: spec.gnoi.tls requires spec.gnoi.transportSecurity to be tls
+              rule: '!has(self.gnoi) || !has(self.gnoi.tls) || (has(self.gnoi.transportSecurity)
+                && self.gnoi.transportSecurity == ''tls'')'
+            - message: spec.gnoi.tls and spec.xe.gnoi.certificateProvisioning cannot
+                both be configured
+              rule: '!has(self.gnoi) || !has(self.gnoi.tls) || !has(self.xe) || !has(self.xe.gnoi)
+                || !has(self.xe.gnoi.certificateProvisioning)'
+            - message: explicit secure gNOI requires system or verified shared TLS,
+                spec.gnoi.tls, or IOS XE certificate provisioning trust
+              rule: '!has(self.gnoi) || !has(self.gnoi.transportSecurity) || self.gnoi.transportSecurity
+                != ''tls'' || has(self.gnoi.tls) || (has(self.xe) && has(self.xe.gnoi)
+                && has(self.xe.gnoi.certificateProvisioning)) || !has(self.tls) ||
+                !has(self.tls.insecureSkipVerify) || !self.tls.insecureSkipVerify'
           status:
             description: DeviceStatus defines the observed state of a CiscoDevice.
             properties:

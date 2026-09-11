@@ -197,7 +197,7 @@ spec:
     name: cat9000-1-creds      # matches the Secret from step 3
   tls:
     enabled: true
-    insecureSkipVerify: true    # acceptable for lab; use caFile in production
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   # allowUnsignedApps: true     # uncomment for unsigned packages (own builds /
                                  # test images). CVK disables device signing via
                                  # RESTCONF and relaxes the reconciler guard.
@@ -210,6 +210,10 @@ spec:
           interface: "0"
           guestInterface: 0
 ```
+
+This quick-start configuration leaves gNOI in backward-compatible `auto` mode.
+Before invoking a gNOI operation, configure
+[explicit verified gNOI TLS](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
 
 ```bash
 kubectl apply -f ciscodevice.yaml
@@ -252,7 +256,7 @@ spec:
     name: nexus9300v-01-creds
   tls:
     enabled: true
-    insecureSkipVerify: true    # acceptable for lab; use caFile in production
+    insecureSkipVerify: true    # lab only; use a custom verified TLS mount in production
   nxos:
     networking:
       interface:

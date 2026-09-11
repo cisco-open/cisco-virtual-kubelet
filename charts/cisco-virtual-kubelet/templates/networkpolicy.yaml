@@ -14,16 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */}}
 {{- if .Values.networkPolicy.enabled }}
-# NetworkPolicy for the controller manager. Default-deny ingress +
-# explicit-allow egress to:
+# NetworkPolicy for the controller manager only. It does not select dynamic
+# per-device VK pods; operators must apply separate worker policies.
+# Default-deny ingress + explicit-allow egress to:
 #   - Kubernetes API server (kube-apiserver)
 #   - DNS (CoreDNS in kube-system)
 #   - Device-management subnets listed under values.networkPolicy.deviceCIDRs
 #   - Prometheus scraper (if listed under values.networkPolicy.scraperCIDRs)
 #
-# Disabled by default because deviceCIDRs are environment-specific.
-# Enable in production with the operator's network range pinned. See
-# production-deployment-guide.md §8.
+# Disabled by default because deviceCIDRs and API-server routing are
+# environment-specific. The device rule covers only the fixed ports below;
+# custom management or gNOI ports require an additional policy. Review the
+# rendered policy against the cluster CNI and API-server topology.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -91,9 +93,9 @@ spec:
         - protocol: TCP
           port: 830        # NETCONF over SSH
         - protocol: TCP
-          port: 50052      # gNMI insecure (gnxi default)
+          port: 50052      # gNXI gNMI/gNOI insecure default
         - protocol: TCP
-          port: 9339       # gNMI secure (gnxi secure-server)
+          port: 9339       # gNXI gNMI/gNOI secure default
         - protocol: TCP
           port: 22         # CLI side-channel for IOSXEDiagnostic
     {{- end }}

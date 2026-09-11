@@ -1,8 +1,12 @@
 # Configuration Reference
 
-Every field accepted by a `CiscoDevice` custom resource.
-
-All fields documented below live under `spec` on the CR. The controller reads the CR, strips credentials, and materializes the rest into a ConfigMap that the VK pod reads — you do not edit the ConfigMap directly.
+This page documents the `CiscoDevice` custom resource and the explicitly marked
+local-configuration variants. Unless a field is labelled local-only, it lives
+under `spec` on the CR. The controller reads the CR, strips credentials and
+controller-resolved references, and materializes the non-secret runtime
+configuration into a ConfigMap that the VK pod reads — you do not edit the
+ConfigMap directly. Secret data is never copied into that ConfigMap; individual
+reference fields below state how each Secret is projected.
 
 For device-side prerequisites (IOS-XE CLI config, DHCP pools, VLANs, etc.) and per-platform networking examples, see:
 
@@ -26,7 +30,7 @@ spec:
     name: cat9000-1-creds       # Secret with key: password
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   # allowUnsignedApps: true      # enable when running unsigned packages
                                   # (your own builds, or devices without
                                   # signed-verification enforcement)
@@ -39,6 +43,11 @@ spec:
           interface: "0"
           guestInterface: 0
 ```
+
+This minimal app-hosting example uses unverified TLS only for a lab and leaves
+gNOI in backward-compatible `auto` mode. Configure explicit verified
+[`spec.gnoi`](gnoi-software-lifecycle.md#secure-ios-xe-gnxi) before invoking any
+gNOI operation.
 
 ## CLI flags & environment variables
 
@@ -67,12 +76,17 @@ Runtime settings are **not** in the config file — they are passed as flags or 
 | `password` | string | no | — | Device password. **Do not set in controller mode** — use `credentialSecretRef` instead. |
 | `credentialSecretRef` | LocalObjectReference | no | — | Reference to a `Secret` in the same namespace containing key `password`. See [Security](security.md#credential-injection). |
 
-### TLS
+### Shared TLS
+
+The file paths in this block are directly usable in local configuration or a
+custom Deployment that mounts them. The controller and stock chart do not
+automatically mount these shared paths into per-device workers. For
+controller-managed gNOI, use `spec.gnoi.tls.secretRef` instead.
 
 ```yaml
 tls:
   enabled: true
-  insecureSkipVerify: true
+  insecureSkipVerify: false
   certFile: /path/to/client.crt
   keyFile: /path/to/client.key
   caFile:  /path/to/ca.crt
@@ -82,9 +96,71 @@ tls:
 |---|---|---|---|
 | `tls.enabled` | bool | `false` | Enable HTTPS to the device |
 | `tls.insecureSkipVerify` | bool | `false` | Skip certificate verification |
-| `tls.certFile` | string | — | Client certificate path |
-| `tls.keyFile` | string | — | Client key path |
-| `tls.caFile` | string | — | CA bundle path |
+| `tls.certFile` | string | — | Local/custom-Deployment client certificate path; must be configured together with `tls.keyFile`. |
+| `tls.keyFile` | string | — | Local/custom-Deployment client key path; must be configured together with `tls.certFile`. |
+| `tls.caFile` | string | — | Local/custom-Deployment CA bundle path. |
+
+An incomplete shared client-certificate pair now fails startup consistently
+for configdriver, telemetry, gNOI, and NX-API consumers. Before upgrading,
+remove any obsolete lone `certFile` or `keyFile`, or configure both paths.
+
+### gNOI
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `gnoi.transportSecurity` | enum | `auto` | `tls` forces TLS; `auto` follows `tls.enabled` and preserves legacy inference. |
+| `gnoi.port` | int (1–65535) | mode-dependent | Overrides only the gNOI/gNXI endpoint port. Explicit TLS defaults to `9339`. Legacy `auto` inference uses `9339` for TLS, `50052` for plaintext, or preserves an existing nonstandard device port. |
+| `gnoi.tls.secretRef.name` | string | — | Kubernetes only. Same-namespace Secret containing required `ca.crt` and, optionally, both `tls.crt` and `tls.key`. Requires `gnoi.transportSecurity: tls`. |
+| `gnoi.tls.caFile` | string | — | Local config only. Required CA bundle path for dedicated verified gNOI TLS; rejected in a `CiscoDevice`. |
+| `gnoi.tls.certFile`, `gnoi.tls.keyFile` | string | — | Local config only. Optional client certificate pair; configure both or neither. Rejected in a `CiscoDevice`. |
+| `xe.gnoi.certificateProvisioning.certificateID` | string | — | IOS-XE only. Required for opt-in provisioning; 1–64 letters, digits, `.`, `_`, or `-`. |
+| `xe.gnoi.certificateProvisioning.secretRef.name` | string | — | IOS-XE only. Required same-namespace Secret. `tls.crt` and `ca.crt` are required; `ca.key` enables the local `ProvisionCertificate` signer/action and should be removed after provisioning; `bootstrap.crt` is an optional exact leaf pin. |
+| `xe.gnoi.certificateProvisioning.replaceTargetCABundle` | bool | — | IOS-XE only. Must be `true`; confirms that `ca.crt` is the complete desired replacement for IOS-XE's shared gNXI/gNMI CA bundle. |
+
+For IOS-XE, explicit `spec.gnoi.transportSecurity: tls` selects its TLS-only
+username/password metadata adapter. Verified trust comes from exactly one of:
+the system root pool, verified shared `spec.tls`, dedicated `spec.gnoi.tls`, or
+IOS-XE provisioning.
+Dedicated gNOI TLS has no `enabled` or `insecureSkipVerify` controls. In a
+`CiscoDevice`, it must reference a Secret; the controller validates and mounts
+only its fixed keys read-only, then restarts an enabled per-device worker when
+valid material changes. With global gNOI disablement, the existing worker omits
+the trust projection and does not roll for Secret changes. Aggregated
+config-only topology has no per-device worker.
+
+```yaml
+spec:
+  gnoi:
+    transportSecurity: tls
+    port: 9339
+    tls:
+      secretRef:
+        name: cat9000-1-gnoi-tls
+```
+
+For a direct local `cisco-vk run --config` file, use paths instead of a Secret
+reference:
+
+```yaml
+device:
+  gnoi:
+    transportSecurity: tls
+    tls:
+      caFile: /run/cvk/gnoi/ca.crt
+      # certFile and keyFile are an optional pair for mutual TLS.
+```
+
+IOS-XE certificate provisioning is intentionally scoped under `spec.xe.gnoi`.
+Its Secret automatically supplies isolated bootstrap and steady-state gNOI
+trust, so `spec.gnoi.tls` and `spec.xe.gnoi.certificateProvisioning` are
+mutually exclusive. Top-level `spec.tls.insecureSkipVerify: true` is accepted
+for an unrelated transport only when gNOI uses one of those dedicated verified
+trust sources. Provisioning is performed only by the gated
+`ProvisionCertificate` action; read-only `GNOIOSVerify` never installs a
+certificate.
+See the [secure authentication and provisioning workflow](gnoi-software-lifecycle.md#secure-ios-xe-gnxi)
+and its [security guidance](security.md#secure-ios-xe-gnoi). Environment
+overrides remain documented in the [CLI reference](cisco-vk-cli.md#additional-environment-variables).
 
 ### Node and pod topology
 

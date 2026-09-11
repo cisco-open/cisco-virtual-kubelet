@@ -28,6 +28,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -70,8 +71,10 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/deviceoperation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/operationalaction"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
+	"github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	telemetrystate "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
 	telemetryyang "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/yang"
@@ -103,12 +106,22 @@ type configReconcilerOptions struct {
 	AppEventConsumer telemetrystate.AppEventConsumer
 	// CorrelationCache maps app IDs to the span context that created them.
 	CorrelationCache *correlation.Cache
+	// Maintenance shares the per-device write barrier with app hosting.
+	Maintenance *maintenance.Coordinator
 }
 
 func configDriverBuildOptions(opts configReconcilerOptions) drivers.ConfigDriverOptions {
 	return drivers.ConfigDriverOptions{
 		SessionLock: opts.SessionLock,
 	}
+}
+
+// supportsIOSXEMutationControllers is the runtime boundary for the two
+// IOS-XE-specific mutation CRDs. Helm gates are propagated to every per-device
+// worker, so they must not make another platform's worker watch or execute an
+// IOSXESoftwareUpgrade or IOSXEOperationalAction.
+func supportsIOSXEMutationControllers(spec *ciskov1.DeviceSpec) bool {
+	return spec != nil && spec.Driver == ciskov1.DeviceDriverXE
 }
 
 // startConfigReconciler builds a controller-runtime client, asks
@@ -241,6 +254,7 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	}
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                 scheme,
+		BaseContext:            workerManagerBaseContext(ctx),
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: "0",
 		LeaderElection:         false,
@@ -364,6 +378,9 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		SubscribeNotify: notify,
 		RuntimeID:       runtimeID,
 	}
+	if opts.Maintenance != nil {
+		r.AcquireMutation = opts.Maintenance.AcquireWrite
+	}
 	if notify != nil {
 		// Buffer of 1 — the watcher coalesces events into "fire
 		// at most once per tick", so a single-slot buffer is
@@ -437,15 +454,22 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	// If the gNOI server is not reachable at startup the dial is lazy
 	// — the conn materialises on first RPC, so a device that comes up
 	// after the VK pod is fine.
-	gnoiProv, gnoiCleanup, err := setupGNOI(ctx, opts)
+	gnoiProv, gnoiCertificateProvisioner, gnoiCleanup, err := setupGNOI(ctx, opts)
 	if err != nil {
-		return err
+		log.G(ctx).WithError(err).Warn("gNOI unavailable; continuing with non-gNOI controllers")
+		gnoiProv = unavailableGNOIProvider{cause: err}
+		gnoiCertificateProvisioner = nil
 	}
 	if gnoiCleanup != nil {
 		go func() {
 			<-ctx.Done()
 			gnoiCleanup()
 		}()
+	}
+	iosXEMutationRuntime := supportsIOSXEMutationControllers(opts.Spec)
+	if !iosXEMutationRuntime && (opts.EnableIOSXESoftwareUpgrade || opts.EnableWriteClassGNOI) {
+		log.G(ctx).WithField("driver", opts.Spec.Driver).
+			Warn("ignoring IOS-XE mutation gates on a non-IOS-XE worker")
 	}
 
 	operationReconciler := &deviceoperation.Reconciler{
@@ -468,26 +492,41 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		return fmt.Errorf("device operation SetupWithManager: %w", err)
 	}
 
-	if gnoiProv != nil && opts.EnableIOSXESoftwareUpgrade {
+	if gnoiProv != nil && iosXEMutationRuntime && opts.EnableIOSXESoftwareUpgrade {
+		lifecycleBackend, lifecycleErr := drivers.NewSoftwareLifecycle(opts.Spec.Driver, r)
+		if errors.Is(lifecycleErr, softwarelifecycle.ErrUnsupported) {
+			lifecycleBackend = nil
+			log.G(ctx).WithField("driver", opts.Spec.Driver).
+				Info("native software lifecycle backend unavailable; gNOI byte-source upgrades remain enabled")
+		} else if lifecycleErr != nil {
+			return fmt.Errorf("software lifecycle backend: %w", lifecycleErr)
+		}
 		upgradeReconciler := &softwareupgrade.Reconciler{
 			Client:          mgr.GetClient(),
 			Reader:          mgr.GetAPIReader(),
 			Recorder:        recorder,
-			Scheme:          mgr.GetScheme(),
 			DeviceName:      deviceName,
 			DeviceNamespace: operationNamespace(),
 			GNOI:            gnoiProv,
-			TP:              r,
+			Lifecycle:       lifecycleBackend,
 			ImageResolver:   softwareupgrade.NewDefaultImageResolver(mgr.GetClient(), nil),
+			MutationLeaser: &engine.FamilyLeaser{
+				Client:    mgr.GetClient(),
+				Namespace: leaseNamespace,
+				TTL:       26 * time.Hour,
+			},
+		}
+		if opts.Maintenance != nil {
+			upgradeReconciler.BeforeMutation = opts.Maintenance.BeforeMutation
 		}
 		if err := upgradeReconciler.SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("software upgrade SetupWithManager: %w", err)
 		}
-	} else if gnoiProv != nil {
+	} else if gnoiProv != nil && iosXEMutationRuntime {
 		log.G(ctx).Info("IOSXESoftwareUpgrade reconciler not registered; enable with --enable-iosxesoftwareupgrade or CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=true")
 	}
 
-	if gnoiProv != nil && opts.EnableWriteClassGNOI {
+	if gnoiProv != nil && iosXEMutationRuntime && opts.EnableWriteClassGNOI {
 		actionReconciler := &operationalaction.Reconciler{
 			Client:          mgr.GetClient(),
 			Reader:          mgr.GetAPIReader(),
@@ -496,11 +535,20 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 			DeviceName:      deviceName,
 			DeviceNamespace: operationNamespace(),
 			GNOI:            gnoiProv,
+			MutationLeaser: &engine.FamilyLeaser{
+				Client:    mgr.GetClient(),
+				Namespace: leaseNamespace,
+				TTL:       26 * time.Hour,
+			},
+			CertificateProvisioner: gnoiCertificateProvisioner,
+		}
+		if opts.Maintenance != nil {
+			actionReconciler.BeforeMutation = opts.Maintenance.BeforeMutation
 		}
 		if err := actionReconciler.SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("operational action SetupWithManager: %w", err)
 		}
-	} else if gnoiProv != nil {
+	} else if gnoiProv != nil && iosXEMutationRuntime {
 		log.G(ctx).Info("IOSXEOperationalAction reconciler not registered; enable with --enable-write-class-gnoi or CISCO_VK_ENABLE_WRITE_CLASS_GNOI=true")
 	}
 
@@ -621,6 +669,14 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	}
 
 	return nil
+}
+
+// Manager.Start controls shutdown, but its context values are not inherited by
+// reconciler runnables by default. Preserve the worker's VK logger (and tracing
+// values) without bypassing the manager's graceful cancellation ordering.
+func workerManagerBaseContext(ctx context.Context) func() context.Context {
+	base := context.WithoutCancel(ctx)
+	return func() context.Context { return base }
 }
 
 func operationNamespace() string {

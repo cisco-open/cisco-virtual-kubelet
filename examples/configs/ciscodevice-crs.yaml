@@ -10,6 +10,10 @@
 #
 # See examples/configs/device-configs.yaml for the equivalent local / dev
 # config file format.
+#
+# The insecureSkipVerify settings below are for lab app-hosting examples. They
+# leave gNOI in legacy auto mode; configure explicit verified spec.gnoi before
+# invoking any gNOI operation.
 
 ---
 # ─── Secret ──────────────────────────────────────────────────────────────────
@@ -41,7 +45,7 @@ spec:
     name: cat9000-1-creds
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   xe:
     networking:
       interface:
@@ -70,11 +74,11 @@ spec:
     name: cat9000-1-creds   # shared credentials Secret
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   region: edge-east
   zone:   edge-east-1
   labels:
-    environment: production
+    environment: lab
     hw.type: catalyst-8000v
   taints:
   - key: workload
@@ -122,7 +126,7 @@ spec:
     name: cat9000-1-creds
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true    # lab only; do not use this transport for gNOI
   podCIDR: "10.0.0.0/24"
   allowUnsignedApps: true    # skip pkg-policy-invalid guard
   xe:

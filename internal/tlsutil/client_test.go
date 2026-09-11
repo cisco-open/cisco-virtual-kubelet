@@ -19,6 +19,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -65,6 +66,7 @@ func TestClientTLSFromDeviceTLS(t *testing.T) {
 		name        string
 		in          *ciskov1.TLSConfig
 		wantErr     bool
+		wantErrText string
 		wantRootCAs bool
 		wantSkip    bool
 	}{
@@ -97,6 +99,18 @@ func TestClientTLSFromDeviceTLS(t *testing.T) {
 			in:      &ciskov1.TLSConfig{Enabled: true, CertFile: caPath, KeyFile: badPEM},
 			wantErr: true,
 		},
+		{
+			name:        "client certificate without key is an error",
+			in:          &ciskov1.TLSConfig{Enabled: true, CertFile: caPath},
+			wantErr:     true,
+			wantErrText: "client certFile and keyFile must be configured together",
+		},
+		{
+			name:        "client key without certificate is an error",
+			in:          &ciskov1.TLSConfig{Enabled: true, KeyFile: badPEM},
+			wantErr:     true,
+			wantErrText: "client certFile and keyFile must be configured together",
+		},
 	}
 
 	for _, tc := range tests {
@@ -105,6 +119,9 @@ func TestClientTLSFromDeviceTLS(t *testing.T) {
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("expected error, got config %#v", cfg)
+				}
+				if tc.wantErrText != "" && !strings.Contains(err.Error(), tc.wantErrText) {
+					t.Fatalf("error = %q, want it to contain %q", err, tc.wantErrText)
 				}
 				return
 			}

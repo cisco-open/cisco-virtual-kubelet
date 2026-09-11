@@ -14,6 +14,20 @@ Other IOS-XE versions with App Hosting may work but are not validated.
 
 Apply the following IOS-XE config on the switch.
 
+### Enable secure gNXI for gNOI software lifecycle
+
+Image upgrade and downgrade additionally require secure gNXI with gNOI and
+password authentication enabled. An unprovisioned device uses
+`gnxi secure-init` as its temporary certificate bootstrap; a device that
+already has the intended identity instead uses `gnxi secure-trustpoint` and
+`gnxi secure-server`. Do not combine those starting-state command sets, and do
+not enable `gnxi secure-client-auth` for a password-only CVK deployment.
+
+Follow the [IOS-XE gNOI Upgrade and Downgrade
+Runbook](gnoi-iosxe-upgrade-runbook.md#2-configure-secure-gnxi-on-ios-xe) for
+the exact device commands, certificate requirements, Kubernetes objects, and
+post-provision checks.
+
 ### Enable IOx, RESTCONF, and App Hosting
 
 ```
@@ -79,7 +93,7 @@ spec:
     name: cat9000-1-creds        # Secret with key: password
   tls:
     enabled: true
-    insecureSkipVerify: true
+    insecureSkipVerify: true     # lab only; do not use this transport for gNOI
   # allowUnsignedApps: true      # uncomment when running unsigned packages
                                   # — e.g. your own custom application builds.
                                   # See Troubleshooting → PackagePolicyInvalid.
@@ -94,6 +108,10 @@ spec:
             vlan: 200
             guestInterface: 0       # container-side eth index (0 = eth0)
 ```
+
+The TLS setting above is for an app-hosting lab and leaves gNOI in legacy
+`auto` mode. Before invoking gNOI, configure
+[explicit verified gNOI TLS](gnoi-software-lifecycle.md#secure-ios-xe-gnxi).
 
 ### Mode 2 — Access
 
@@ -189,5 +207,6 @@ The Management interface mode also works on Catalyst 9000 — containers share t
 ## See also
 
 - [Getting Started](getting-started.md) — end-to-end deployment
+- [IOS-XE gNOI Upgrade and Downgrade Runbook](gnoi-iosxe-upgrade-runbook.md) — secure gNXI, certificates, manifests, logs, and verification
 - [Configuration](CONFIGURATION.md) — full field reference, applies to any platform
 - [Troubleshooting](troubleshooting.md) — VLAN issues, DHCP issues, install failures

@@ -49,10 +49,11 @@ type FactoryOptions struct {
 	DefaultTimeout time.Duration
 
 	// GRPCConn, when non-nil, is injected into the gNMI transport in
-	// place of a fresh dial. Production callers obtain it from a
+	// place of a fresh dial. Callers may obtain it from a
 	// devicegrpc.Pool lease (WorkloadClass ClassControl) and retain
 	// the lease — the transport does not own the conn and never
-	// closes it. Tests pass a bufconn-backed conn here directly.
+	// closes it. Current production wiring leaves it nil; tests pass a
+	// bufconn-backed conn here directly.
 	//
 	// Ignored by non-gNMI transports.
 	GRPCConn *grpc.ClientConn
