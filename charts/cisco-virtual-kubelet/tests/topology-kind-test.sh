@@ -43,52 +43,129 @@ if [[ "$current_context" != kind-* ]] && \
 fi
 scratch_dir="$(mktemp -d)"
 
+clear_test_device_finalizers() {
+  local as_user="${1:-}"
+  local device
+  local devices
+  local failed=0
+
+  devices="$(kubectl get ciscodevices --namespace "$device_namespace" \
+    -o name 2>/dev/null)" || return 0
+  for device in $devices; do
+    if [ -n "$as_user" ]; then
+      kubectl patch --as="$as_user" "$device" \
+        --namespace "$device_namespace" --type=merge \
+        -p '{"metadata":{"finalizers":[]}}' >/dev/null 2>&1 || failed=1
+    else
+      kubectl patch "$device" --namespace "$device_namespace" --type=merge \
+        -p '{"metadata":{"finalizers":[]}}' >/dev/null 2>&1 || failed=1
+    fi
+  done
+  return "$failed"
+}
+
 cleanup() {
+  local test_status="${1:-0}"
+  local cleanup_status=0
+  local finalizers_cleared=false
+  local retained_objects
+
+  # Remove fixture finalizers through the still-authorized manager identity.
+  # This is the normal cleanup path and avoids an admission-cache race after
+  # the retained policy binding is deleted.
+  clear_test_device_finalizers "$manager_username" || true
+
   # Bindings go first so an interrupted negative test cannot prevent cleanup.
   helm uninstall "$release_name" --namespace "$system_namespace" \
     --no-hooks >/dev/null 2>&1 || true
   kubectl delete validatingadmissionpolicybinding \
     -l "app.kubernetes.io/instance=${release_name}" \
-    --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true
+    --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || cleanup_status=1
   kubectl delete validatingadmissionpolicy \
     -l "app.kubernetes.io/instance=${release_name}" \
-    --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true
-  # The fixture deliberately exercises lifecycle-finalizer protection. Once
-  # admission bindings are gone, clear that test-only finalizer so an aborted
-  # run cannot strand the disposable namespace in Terminating.
-  kubectl patch ciscodevice device-a --namespace "$device_namespace" \
-    --type=merge -p '{"metadata":{"finalizers":[]}}' \
-    >/dev/null 2>&1 || true
+    --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || cleanup_status=1
+  # Recover interrupted runs whose manager identity or RBAC is already gone.
+  # Admission objects are observed asynchronously, so retry until their cache
+  # has converged instead of suppressing a one-shot finalizer-patch failure.
+  for _ in $(seq 1 20); do
+    if clear_test_device_finalizers; then
+      finalizers_cleared=true
+      break
+    fi
+    sleep 1
+  done
+  if [ "$finalizers_cleared" = false ]; then
+    echo "failed to clear topology integration CiscoDevice finalizers" >&2
+    cleanup_status=1
+  fi
   kubectl delete clusterrolebinding \
     -l "app.kubernetes.io/instance=${release_name}" \
-    --ignore-not-found --wait=false >/dev/null 2>&1 || true
+    --ignore-not-found --wait=false >/dev/null 2>&1 || cleanup_status=1
   kubectl delete clusterrolebinding \
     cvk-topology-it-worker cvk-topology-it-legacy-worker \
     cvk-topology-it-retirement-worker \
-    --ignore-not-found --wait=false >/dev/null 2>&1 || true
+    --ignore-not-found --wait=true --timeout=60s \
+    >/dev/null 2>&1 || cleanup_status=1
   kubectl delete clusterrole \
     -l "app.kubernetes.io/instance=${release_name}" \
-    --ignore-not-found --wait=false >/dev/null 2>&1 || true
+    --ignore-not-found --wait=false >/dev/null 2>&1 || cleanup_status=1
+  kubectl delete lease "$managed_node" --namespace kube-node-lease \
+    --ignore-not-found --wait=true --timeout=60s \
+    >/dev/null 2>&1 || cleanup_status=1
   kubectl delete node \
     "$managed_node" "$legacy_node" cvk-topology-unmarked \
     cvk-scheduler-a cvk-scheduler-b cvk-scheduler-missing cvk-scheduler-guarded \
-    --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true
+    --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || cleanup_status=1
   # Test Pods bound to synthetic virtual Nodes have no live kubelet to finish
   # graceful deletion. Force only these disposable-namespace fixtures so a
   # failed probe cannot strand the namespace or contaminate the next run.
   kubectl delete pods --all --namespace "$device_namespace" \
     --force --grace-period=0 --ignore-not-found --wait=false \
     >/dev/null 2>&1 || true
-  kubectl delete namespace "$device_namespace" "$system_namespace" \
-    --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || true
+  if ! kubectl delete namespace "$device_namespace" "$system_namespace" \
+      --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1; then
+    echo "topology integration namespaces did not terminate cleanly" >&2
+    kubectl get namespace "$device_namespace" "$system_namespace" \
+      -o yaml >&2 2>/dev/null || true
+    kubectl get ciscodevices --all-namespaces -o yaml >&2 2>/dev/null || true
+    cleanup_status=1
+  fi
+
+  retained_objects="$(kubectl get \
+    clusterroles,clusterrolebindings,validatingadmissionpolicies,validatingadmissionpolicybindings \
+    -l "app.kubernetes.io/instance=${release_name}" -o name 2>/dev/null)" || \
+    cleanup_status=1
+  if [ -n "$retained_objects" ]; then
+    echo "topology integration retained cluster-scoped objects:" >&2
+    echo "$retained_objects" >&2
+    cleanup_status=1
+  fi
   rm -rf -- "$scratch_dir"
+
+  # Preserve the test's original failure. A cleanup defect must still fail a
+  # successful run so it cannot contaminate the next test in a shared cluster.
+  if [ "$test_status" -ne 0 ]; then
+    return "$test_status"
+  fi
+  return "$cleanup_status"
 }
-trap cleanup EXIT
+
+on_exit() {
+  local test_status=$?
+  local final_status
+
+  trap - EXIT
+  set +e
+  cleanup "$test_status"
+  final_status=$?
+  exit "$final_status"
+}
+trap on_exit EXIT
 
 # A prior interrupted local run may have left retained Helm objects or a
 # cluster-scoped Node. The context guard above guarantees this destructive
 # reset runs only against an explicitly disposable cluster.
-cleanup
+cleanup 0
 scratch_dir="$(mktemp -d)"
 
 kubectl version >/dev/null
