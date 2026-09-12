@@ -85,8 +85,8 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		variables:         []string{"manager", "newProtectedLabels", "oldProtectedLabels", "newProtectedAnnotations", "oldProtectedAnnotations"},
 		validations:       11,
-		requiredFragments: []string{"check('topology')", "nodeIdentity", "topologyProjection", "topologyLock", "maintenanceSession", "request-legacy-handoff", "isolated-legacy-worker", "legacyHandoff", "healthObservation", "workerRevision", "request.subResource", "object.spec == oldObject.spec", "object.spec.labels == oldObject.spec.labels", "object.spec.taints == oldObject.spec.taints", "object.spec.maxPods", "object.spec.maxPods <= 110", "ownerReferences", "finalizers", "oldObject.status.legacyHandoff.phase == 'Complete'"},
-		digest:            "sha256:300d550a4c249960d787d10f7cb947c3d119c4530aa7063b87062251a9a8326d",
+		requiredFragments: []string{"check('topology')", "nodeIdentity", "topologyProjection", "topologyLock", "maintenanceSession", "distribution.cisco.vk/", "request-legacy-handoff", "isolated-legacy-worker", "legacyHandoff", "healthObservation", "workerRevision", "request.subResource", "object.spec == oldObject.spec", "object.spec.labels == oldObject.spec.labels", "object.spec.taints == oldObject.spec.taints", "object.spec.maxPods", "object.spec.maxPods <= 110", "ownerReferences", "finalizers", "oldObject.status.legacyHandoff.phase == 'Complete'"},
+		digest:            "sha256:8918af1b52e891bf67c5d23dd53accbc3e4bf477e29921447c93d227d4a01511",
 	},
 	"managed-rollout": {
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwarerollouts", "iosxesoftwarerollouts/status"},

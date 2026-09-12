@@ -46,8 +46,8 @@
     },
     "topologyKey": {
       "type": "string",
-      "maxLength": 83,
-      "pattern": "^(topology\\.kubernetes\\.io/(region|zone)|(topology|operations)\\.cisco\\.vk/[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?)$"
+      "maxLength": 85,
+      "pattern": "^(topology\\.kubernetes\\.io/(region|zone)|(topology|operations|distribution)\\.cisco\\.vk/[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?)$"
     },
     "projectedTopologyKey": {
       "type": "string",

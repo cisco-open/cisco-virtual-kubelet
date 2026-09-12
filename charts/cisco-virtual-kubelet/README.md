@@ -94,8 +94,10 @@ topology:
 
 Every domain-budget key must also appear in `requiredTopologyKeys`, and every
 projected key must be required. `operations.cisco.vk/*` keys may define
-administrator risk domains, but cannot be projected as scheduler-visible Node
-topology; projection accepts only region, zone, and `topology.cisco.vk/*`.
+administrator risk domains and `distribution.cisco.vk/*` keys may define
+artifact locality/transfer domains, but neither can be projected as
+scheduler-visible Node topology; projection accepts only region, zone, and
+`topology.cisco.vk/*`.
 Campaign limits may tighten the administrator ceilings above; they cannot
 loosen them. The policy selector must be non-empty and every selector key must
 live under `topology.cisco.vk/*`; those are the enrollment labels protected by
@@ -108,6 +110,15 @@ same-named canary cohort with at least one explicit target for every distinct
 value. Cohort membership is frozen and revalidated; one hardware class never
 implicitly qualifies another, and incompatible image sets require separate
 qualified campaigns.
+
+An IOS-XE rollout may provide up to 16 named HTTPS/SFTP sources for one pinned
+image digest and family. Scoped source selectors may use only administrator
+`requiredTopologyKeys`; lowest priority wins, equal-priority matches are
+rejected, and exactly one unscoped catch-all is required. The manager freezes
+the concrete source and endpoint-bound Secret UID independently for every
+target. There is no post-approval mirror failover. Transfer and disruption
+reservations remain conservatively coupled until a durable prefetch and
+cache-loss recovery protocol is qualified.
 
 Every selected CiscoDevice must declare a verified, fleet-unique
 `spec.physicalIdentity` such as a chassis serial or hardware UUID. The field is

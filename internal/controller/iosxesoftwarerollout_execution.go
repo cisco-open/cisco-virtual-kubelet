@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -52,7 +53,7 @@ var errWorkloadsRunning = errors.New("workloads are running on the target Node")
 const (
 	rolloutTargetDeviceNameIndex = "status.frozenPlan.targets.deviceName"
 	rolloutTargetNodeNameIndex   = "status.frozenPlan.targets.nodeName"
-	rolloutSourceSecretNameIndex = "status.frozenPlan.source.secretName"
+	rolloutSourceSecretNameIndex = "status.frozenPlan.targets.source.secretName"
 	rolloutPodNodeNameIndex      = "spec.nodeName"
 )
 
@@ -152,10 +153,24 @@ func rolloutTargetIndexValues(
 
 func rolloutSourceSecretNameIndexValues(object client.Object) []string {
 	rollout, ok := object.(*opsv1alpha1.IOSXESoftwareRollout)
-	if !ok || rollout.Status.FrozenPlan == nil || rollout.Status.FrozenPlan.Source.SecretName == "" {
+	if !ok || rollout.Status.FrozenPlan == nil {
 		return nil
 	}
-	return []string{rollout.Status.FrozenPlan.Source.SecretName}
+	seen := make(map[string]struct{}, len(rollout.Status.FrozenPlan.Targets))
+	values := make([]string, 0, len(rollout.Status.FrozenPlan.Targets))
+	for i := range rollout.Status.FrozenPlan.Targets {
+		name := rollout.Status.FrozenPlan.Targets[i].Source.SecretName
+		if name == "" {
+			continue
+		}
+		if _, duplicate := seen[name]; duplicate {
+			continue
+		}
+		seen[name] = struct{}{}
+		values = append(values, name)
+	}
+	sort.Strings(values)
+	return values
 }
 
 func rolloutPodNodeNameIndexValues(object client.Object) []string {
@@ -498,25 +513,50 @@ func defaultInt32(value, fallback int32) int32 {
 }
 
 func (r *IOSXESoftwareRolloutReconciler) verifyFrozenSource(ctx context.Context, rollout *opsv1alpha1.IOSXESoftwareRollout) error {
-	source := rollout.Status.FrozenPlan.Source
-	if source.SecretName == "" {
-		if source.SecretUID != "" {
-			return fmt.Errorf("frozen source has a Secret identity without a name")
+	if rollout == nil || rollout.Status.FrozenPlan == nil {
+		return fmt.Errorf("frozen image source plan is absent")
+	}
+	verified := make(map[string]struct{}, len(rollout.Status.FrozenPlan.Targets))
+	for i := range rollout.Status.FrozenPlan.Targets {
+		target := &rollout.Status.FrozenPlan.Targets[i]
+		source := target.Source
+		if source.Name == "" || source.URL == "" || source.SHA256 != rollout.Spec.Plan.Image.SHA256 {
+			return fmt.Errorf("target %s has an incomplete or mismatched frozen image source", target.DeviceName)
 		}
-		return nil
-	}
-	if source.SecretUID == "" {
-		return fmt.Errorf("frozen source Secret identity is incomplete")
-	}
-	var secret corev1.Secret
-	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: source.SecretName}, &secret); err != nil {
-		return fmt.Errorf("read frozen source Secret: %w", err)
-	}
-	if string(secret.UID) != source.SecretUID {
-		return fmt.Errorf("source Secret incarnation changed")
-	}
-	if err := softwareupgrade.ValidateURLSecretEndpoint(&secret, source.URL); err != nil {
-		return fmt.Errorf("source Secret endpoint authorization changed: %w", err)
+		parsed, err := parseRolloutSourceURL(source.URL)
+		if err != nil {
+			return fmt.Errorf("target %s has an invalid frozen image source URL", target.DeviceName)
+		}
+		if source.SecretName == "" {
+			if source.SecretUID != "" {
+				return fmt.Errorf("target %s frozen source has a Secret identity without a name", target.DeviceName)
+			}
+			if parsed.Scheme == "sftp" {
+				return fmt.Errorf("target %s frozen SFTP source has no Secret identity", target.DeviceName)
+			}
+			continue
+		}
+		if parsed.Scheme != "sftp" {
+			return fmt.Errorf("target %s frozen HTTPS source unexpectedly has a Secret identity", target.DeviceName)
+		}
+		if source.SecretUID == "" {
+			return fmt.Errorf("target %s frozen source Secret identity is incomplete", target.DeviceName)
+		}
+		key := source.SecretName + "\x00" + source.SecretUID + "\x00" + source.URL
+		if _, ok := verified[key]; ok {
+			continue
+		}
+		var secret corev1.Secret
+		if err := r.reader().Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: source.SecretName}, &secret); err != nil {
+			return fmt.Errorf("read frozen source Secret %q: %w", source.Name, err)
+		}
+		if string(secret.UID) != source.SecretUID {
+			return fmt.Errorf("source %q Secret incarnation changed", source.Name)
+		}
+		if err := softwareupgrade.ValidateURLSecretEndpoint(&secret, source.URL); err != nil {
+			return fmt.Errorf("source %q Secret endpoint authorization changed: %w", source.Name, err)
+		}
+		verified[key] = struct{}{}
 	}
 	return nil
 }
@@ -575,8 +615,8 @@ func expectedLeafAnnotations(
 		managedprotocol.AnnotationWorkerUsername:    workerUsername,
 		managedprotocol.AnnotationWorkerProtocol:    managedprotocol.Version,
 	}
-	if rollout.Status.FrozenPlan.Source.SecretUID != "" {
-		annotations[managedprotocol.AnnotationSourceSecretUID] = rollout.Status.FrozenPlan.Source.SecretUID
+	if target.Source.SecretUID != "" {
+		annotations[managedprotocol.AnnotationSourceSecretUID] = target.Source.SecretUID
 	}
 	return annotations
 }
@@ -620,7 +660,7 @@ func validateManagedLeafBinding(
 }
 
 func expectedLeafSpec(rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget) opsv1alpha1.IOSXESoftwareUpgradeSpec {
-	source := rollout.Status.FrozenPlan.Source
+	source := target.Source
 	imageSource := opsv1alpha1.UpgradeImageSource{URL: source.URL, SHA256: source.SHA256}
 	if source.SecretName != "" {
 		imageSource.URLSecretRef = &corev1.LocalObjectReference{Name: source.SecretName}
@@ -1377,6 +1417,24 @@ func (r *IOSXESoftwareRolloutReconciler) revalidateFrozenTarget(
 	}
 	if device.Labels[managedprotocol.ImageFamilyLabel] != target.ImageFamily {
 		return fmt.Errorf("frozen target image-family capability changed")
+	}
+	candidates, err := compileRolloutSources(rollout.Spec.Plan.Image, currentPolicy.Config.RequiredTopologyKeys)
+	if err != nil {
+		return fmt.Errorf("revalidate image sources: %w", err)
+	}
+	selected, err := selectRolloutSourceIndex(candidates, labels.Set(device.Labels))
+	if err != nil {
+		return fmt.Errorf("revalidate target image source: %w", err)
+	}
+	expectedSource := candidates[selected].spec
+	expectedSecretName := ""
+	if expectedSource.URLSecretRef != nil {
+		expectedSecretName = expectedSource.URLSecretRef.Name
+	}
+	if target.Source.Name != expectedSource.Name || target.Source.Priority != expectedSource.Priority ||
+		target.Source.URL != expectedSource.URL || target.Source.SHA256 != rollout.Spec.Plan.Image.SHA256 ||
+		target.Source.SecretName != expectedSecretName {
+		return fmt.Errorf("frozen target image source selection changed")
 	}
 	if target.QualificationCohort == "" ||
 		device.Labels[managedprotocol.QualificationCohortLabel] != target.QualificationCohort {

@@ -104,8 +104,10 @@ topology:
         topology.cisco.vk/managed: "true"
       matchExpressions: []
 
-    # Required keys must exist on selected CiscoDevice.metadata.labels.
-    # Projected keys are the bounded subset copied to the virtual Node.
+    # Required keys must exist on selected CiscoDevice.metadata.labels and may
+    # include protected operations.cisco.vk/* or distribution.cisco.vk/*
+    # rollout facts. Projected keys are the bounded scheduling subset copied
+    # to the virtual Node; operations/distribution keys cannot be projected.
     requiredTopologyKeys:
       - topology.kubernetes.io/region
       - topology.kubernetes.io/zone

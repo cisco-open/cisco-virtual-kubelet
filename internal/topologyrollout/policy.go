@@ -427,8 +427,9 @@ func validateAdminPolicyConfig(cfg *AdminPolicyConfig) error {
 		return err
 	}
 	for key := range projected {
-		if strings.HasPrefix(key, "operations.cisco.vk/") {
-			return fmt.Errorf("operational key %q cannot be projected to scheduler-visible Node labels", key)
+		if strings.HasPrefix(key, "operations.cisco.vk/") ||
+			strings.HasPrefix(key, "distribution.cisco.vk/") {
+			return fmt.Errorf("non-scheduling key %q cannot be projected to scheduler-visible Node labels", key)
 		}
 		if _, ok := required[key]; !ok {
 			return fmt.Errorf("projected topology key %q must also be required", key)
@@ -475,7 +476,9 @@ func validateTopologyKeys(field string, keys []string) (map[string]struct{}, err
 			return nil, fmt.Errorf("%s contains duplicate %q", field, key)
 		}
 		if key != corev1.LabelTopologyRegion && key != corev1.LabelTopologyZone &&
-			!strings.HasPrefix(key, "topology.cisco.vk/") && !strings.HasPrefix(key, "operations.cisco.vk/") {
+			!strings.HasPrefix(key, "topology.cisco.vk/") &&
+			!strings.HasPrefix(key, "operations.cisco.vk/") &&
+			!strings.HasPrefix(key, "distribution.cisco.vk/") {
 			return nil, fmt.Errorf("%s contains unsupported key %q", field, key)
 		}
 		if problems := validation.IsQualifiedName(key); len(problems) > 0 {
