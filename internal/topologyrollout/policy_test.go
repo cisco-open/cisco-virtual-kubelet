@@ -131,6 +131,10 @@ func TestAdminPolicyValidationFailsClosed(t *testing.T) {
 			cfg.RequiredTopologyKeys = append(cfg.RequiredTopologyKeys, "operations.cisco.vk/upgrade-ring")
 			cfg.ProjectedTopologyKeys = append(cfg.ProjectedTopologyKeys, "operations.cisco.vk/upgrade-ring")
 		},
+		"distribution key projected": func(cfg *AdminPolicyConfig) {
+			cfg.RequiredTopologyKeys = append(cfg.RequiredTopologyKeys, "distribution.cisco.vk/cache-domain")
+			cfg.ProjectedTopologyKeys = append(cfg.ProjectedTopologyKeys, "distribution.cisco.vk/cache-domain")
+		},
 		"oversize fleet selector": func(cfg *AdminPolicyConfig) {
 			cfg.FleetSelector.MatchLabels = map[string]string{}
 			for i := 0; i < 33; i++ {
@@ -146,6 +150,15 @@ func TestAdminPolicyValidationFailsClosed(t *testing.T) {
 				t.Fatal("CanonicalPolicyJSON() accepted invalid policy")
 			}
 		})
+	}
+}
+
+func TestAdminPolicyAllowsRequiredDistributionDomain(t *testing.T) {
+	cfg := validAdminPolicyConfig()
+	cfg.RequiredTopologyKeys = append(cfg.RequiredTopologyKeys, "distribution.cisco.vk/cache-domain")
+	cfg.DomainMaxConcurrentTransfers["distribution.cisco.vk/cache-domain"] = 1
+	if _, err := CanonicalPolicyJSON(cfg); err != nil {
+		t.Fatalf("CanonicalPolicyJSON() rejected protected distribution domain: %v", err)
 	}
 }
 

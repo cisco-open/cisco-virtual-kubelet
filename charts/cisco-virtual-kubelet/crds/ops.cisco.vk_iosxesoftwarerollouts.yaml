@@ -288,6 +288,172 @@ spec:
                         minimum: 0
                         type: integer
                     type: object
+                  image:
+                    description: |-
+                      Image pins one artifact identity and provides a bounded set of named,
+                      topology-selectable endpoints that must all serve those exact bytes.
+                    properties:
+                      imageFamily:
+                        description: |-
+                          ImageFamily is the operator-declared IOS-XE hardware image family. The
+                          planner must still prove every target is compatible before approval.
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9][A-Za-z0-9._-]*$
+                        type: string
+                      sha256:
+                        description: SHA256 pins identical content for every endpoint
+                          and target.
+                        pattern: ^[a-f0-9]{64}$
+                        type: string
+                      sources:
+                        description: |-
+                          Sources is a bounded set of named existing artifact endpoints. Scoped
+                          selectors may use only administrator-required topology keys. Lowest
+                          numeric priority wins; equal-priority matches are rejected by planning.
+                        items:
+                          description: |-
+                            IOSXESoftwareRolloutSourceSpec is one named artifact endpoint. HTTPS relies
+                            on verified TLS. SFTP credentials and verified known-host data come from an
+                            endpoint-bound Secret. Redirects and URL credentials are not represented and
+                            must remain disabled by the resolver.
+                          properties:
+                            deviceSelector:
+                              description: |-
+                                DeviceSelector optionally scopes this endpoint to CiscoDevice labels.
+                                Omitted or empty is the one required catch-all fallback. The manager
+                                rejects selector keys outside administrator requiredTopologyKeys.
+                              properties:
+                                matchExpressions:
+                                  description: MatchExpressions is an AND of bounded
+                                    set-based requirements.
+                                  items:
+                                    description: |-
+                                      IOSXESoftwareRolloutLabelSelectorRequirement is one bounded Kubernetes
+                                      label selector requirement.
+                                    properties:
+                                      key:
+                                        description: Key is a Kubernetes qualified
+                                          label name.
+                                        maxLength: 96
+                                        minLength: 1
+                                        type: string
+                                      operator:
+                                        description: Operator is a Kubernetes set-based
+                                          selector operator.
+                                        enum:
+                                        - In
+                                        - NotIn
+                                        - Exists
+                                        - DoesNotExist
+                                        type: string
+                                      values:
+                                        description: |-
+                                          Values is required and non-empty for In/NotIn and empty for
+                                          Exists/DoesNotExist.
+                                        items:
+                                          maxLength: 63
+                                          pattern: ^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$
+                                          type: string
+                                        maxItems: 32
+                                        type: array
+                                        x-kubernetes-list-type: set
+                                    required:
+                                    - key
+                                    - operator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: In and NotIn require values; Exists
+                                        and DoesNotExist forbid values
+                                      rule: 'self.operator in [''In'', ''NotIn'']
+                                        ? has(self.values) && self.values.size() >
+                                        0 : !has(self.values) || self.values.size()
+                                        == 0'
+                                  maxItems: 32
+                                  type: array
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: MatchLabels is an AND of equality requirements.
+                                  maxProperties: 32
+                                  type: object
+                                  x-kubernetes-validations:
+                                  - message: matchLabels keys and values are bounded
+                                    rule: self.all(k, v, k.size() <= 96 && v.size()
+                                      <= 63)
+                              type: object
+                            name:
+                              description: |-
+                                Name is the stable, low-cardinality endpoint identity reported in the
+                                frozen target status. It must be unique within image.sources.
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                            priority:
+                              description: |-
+                                Priority orders matching scoped endpoints; the lowest value wins. The
+                                catch-all is considered only when no scoped endpoint matches.
+                              format: int32
+                              maximum: 10000
+                              minimum: 0
+                              type: integer
+                            url:
+                              description: |-
+                                URL is one HTTPS or SFTP image URI with no user information, query, or
+                                fragment. Runtime endpoint and resolved-address policy remains mandatory.
+                              maxLength: 2048
+                              pattern: ^(https|sftp)://[^/?#@]+/[^?#]+$
+                              type: string
+                            urlSecretRef:
+                              description: URLSecretRef references an endpoint-bound
+                                Secret in this namespace.
+                              properties:
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          required:
+                          - name
+                          - priority
+                          - url
+                          type: object
+                          x-kubernetes-validations:
+                          - message: urlSecretRef.name must not be empty
+                            rule: '!has(self.urlSecretRef) || self.urlSecretRef.name.size()
+                              > 0'
+                          - message: urlSecretRef.name must contain at most 253 characters
+                            rule: '!has(self.urlSecretRef) || self.urlSecretRef.name.size()
+                              <= 253'
+                          - message: urlSecretRef is supported only for sftp sources
+                              in the managed rollout API
+                            rule: '!has(self.urlSecretRef) || self.url.startsWith(''sftp://'')'
+                          - message: sftp sources require an endpoint-bound urlSecretRef
+                            rule: '!self.url.startsWith(''sftp://'') || has(self.urlSecretRef)'
+                        maxItems: 16
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                    required:
+                    - imageFamily
+                    - sha256
+                    - sources
+                    type: object
+                    x-kubernetes-validations:
+                    - message: exactly one image source must be an unscoped catch-all
+                      rule: self.sources.filter(s, !has(s.deviceSelector) || (!(has(s.deviceSelector.matchLabels)
+                        && s.deviceSelector.matchLabels.size() > 0) && !(has(s.deviceSelector.matchExpressions)
+                        && s.deviceSelector.matchExpressions.size() > 0))).size()
+                        == 1
                   installTimeoutSeconds:
                     default: 3600
                     description: |-
@@ -353,63 +519,6 @@ spec:
                     description: RollbackOnFailure is copied into each immutable leaf.
                       Default true.
                     type: boolean
-                  source:
-                    description: |-
-                      Source is the one artifact source supported by the Phase 2 MVP. Mirror
-                      selection and prefetch are deliberately not represented by this API.
-                    properties:
-                      imageFamily:
-                        description: |-
-                          ImageFamily is the operator-declared IOS-XE hardware image family. The
-                          planner must still prove every target is compatible before approval.
-                        maxLength: 64
-                        minLength: 1
-                        pattern: ^[A-Za-z0-9][A-Za-z0-9._-]*$
-                        type: string
-                      sha256:
-                        description: SHA256 pins identical content throughout the
-                          campaign.
-                        pattern: ^[a-f0-9]{64}$
-                        type: string
-                      url:
-                        description: |-
-                          URL is one HTTPS or SFTP image URI with no user information, query, or
-                          fragment. Runtime endpoint and resolved-address policy remains mandatory.
-                        maxLength: 2048
-                        pattern: ^(https|sftp)://[^/?#@]+/[^?#]+$
-                        type: string
-                      urlSecretRef:
-                        description: URLSecretRef references an endpoint-bound Secret
-                          in this namespace.
-                        properties:
-                          name:
-                            default: ""
-                            description: |-
-                              Name of the referent.
-                              This field is effectively required, but due to backwards compatibility is
-                              allowed to be empty. Instances of this type with an empty value here are
-                              almost certainly wrong.
-                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                            type: string
-                        type: object
-                        x-kubernetes-map-type: atomic
-                    required:
-                    - imageFamily
-                    - sha256
-                    - url
-                    type: object
-                    x-kubernetes-validations:
-                    - message: urlSecretRef.name must not be empty
-                      rule: '!has(self.urlSecretRef) || self.urlSecretRef.name.size()
-                        > 0'
-                    - message: urlSecretRef.name must contain at most 253 characters
-                      rule: '!has(self.urlSecretRef) || self.urlSecretRef.name.size()
-                        <= 253'
-                    - message: urlSecretRef is supported only for sftp sources in
-                        the Phase 2 API
-                      rule: '!has(self.urlSecretRef) || self.url.startsWith(''sftp://'')'
-                    - message: sftp sources require an endpoint-bound urlSecretRef
-                      rule: '!self.url.startsWith(''sftp://'') || has(self.urlSecretRef)'
                   strategy:
                     allOf:
                     - enum:
@@ -535,9 +644,9 @@ spec:
                 - budgets
                 - canaries
                 - health
+                - image
                 - requestedAt
                 - requestedBy
-                - source
                 - targetVersion
                 - targets
                 - workloads
@@ -1117,41 +1226,6 @@ spec:
                     - structuralHash
                     - uid
                     type: object
-                  source:
-                    description: Source is the endpoint- and Secret-identity-bound
-                      source snapshot.
-                    properties:
-                      secretName:
-                        description: SecretName is empty only for an anonymous verified-HTTPS
-                          source.
-                        maxLength: 253
-                        minLength: 1
-                        type: string
-                      secretUID:
-                        description: SecretUID binds credentials to an exact Secret
-                          incarnation.
-                        maxLength: 128
-                        minLength: 1
-                        type: string
-                      sha256:
-                        description: SHA256 is the pinned lowercase digest.
-                        pattern: ^[a-f0-9]{64}$
-                        type: string
-                      url:
-                        description: URL is copied from the immutable plan after canonical
-                          validation.
-                        maxLength: 2048
-                        pattern: ^(https|sftp)://[^/?#@]+/[^?#]+$
-                        type: string
-                    required:
-                    - sha256
-                    - url
-                    type: object
-                    x-kubernetes-validations:
-                    - message: sftp snapshots require an exact Secret incarnation;
-                        HTTPS snapshots must not carry deferred HTTP credentials
-                      rule: 'self.url.startsWith(''sftp://'') ? (has(self.secretName)
-                        && has(self.secretUID)) : (!has(self.secretName) && !has(self.secretUID))'
                   targets:
                     description: Targets contains the complete immutable target/topology
                       snapshot.
@@ -1200,7 +1274,7 @@ spec:
                         imageFamily:
                           description: ImageFamily is the target capability family
                             validated against the source.
-                          maxLength: 64
+                          maxLength: 63
                           minLength: 1
                           type: string
                         nodeName:
@@ -1235,6 +1309,59 @@ spec:
                           minLength: 1
                           pattern: ^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$
                           type: string
+                        source:
+                          description: |-
+                            Source is the exact endpoint and Secret incarnation selected for this
+                            target from the immutable campaign-wide image source set.
+                          properties:
+                            name:
+                              description: Name is the selected source's stable identity.
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                            priority:
+                              description: Priority is the selected endpoint priority
+                                from the immutable plan.
+                              format: int32
+                              maximum: 10000
+                              minimum: 0
+                              type: integer
+                            secretName:
+                              description: SecretName is empty only for an anonymous
+                                verified-HTTPS source.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            secretUID:
+                              description: SecretUID binds credentials to an exact
+                                Secret incarnation.
+                              maxLength: 128
+                              minLength: 1
+                              type: string
+                            sha256:
+                              description: SHA256 is the campaign-wide pinned lowercase
+                                digest.
+                              pattern: ^[a-f0-9]{64}$
+                              type: string
+                            url:
+                              description: URL is copied from the immutable plan after
+                                canonical validation.
+                              maxLength: 2048
+                              pattern: ^(https|sftp)://[^/?#@]+/[^?#]+$
+                              type: string
+                          required:
+                          - name
+                          - priority
+                          - sha256
+                          - url
+                          type: object
+                          x-kubernetes-validations:
+                          - message: sftp snapshots require an exact Secret incarnation;
+                              HTTPS snapshots must not carry deferred HTTP credentials
+                            rule: 'self.url.startsWith(''sftp://'') ? (has(self.secretName)
+                              && has(self.secretUID)) : (!has(self.secretName) &&
+                              !has(self.secretUID))'
                         topology:
                           description: Topology contains the sorted effective topology
                             and risk-domain values.
@@ -1292,6 +1419,7 @@ spec:
                       - physicalIdentity
                       - projectionHash
                       - qualificationCohort
+                      - source
                       - topology
                       - wave
                       - workerProtocolVersion
@@ -1308,7 +1436,6 @@ spec:
                 - encodedSizeBytes
                 - hash
                 - policy
-                - source
                 - targets
                 type: object
                 x-kubernetes-validations:

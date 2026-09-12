@@ -8,15 +8,19 @@ ValidatingAdmissionPolicy, ConfigMaps, Leases, status conditions, Events, and
 the default kube-scheduler. It installs no alternate scheduler, scheduling
 plugin, webhook, or third-party topology controller.
 
-The initial implementation deliberately covers roadmap Phases 0–2:
+The implementation covers roadmap Phases 0–2 and the first evidence-backed
+part of Phase 3:
 
 - correct Node identity, ownership, topology projection, capacity, and
   maintenance fencing;
 - scheduling with ordinary affinity and topology-spread constraints; and
 - a manager-side `IOSXESoftwareRollout` campaign above the existing,
-  per-device `IOSXESoftwareUpgrade` executor.
+  per-device `IOSXESoftwareUpgrade` executor; and
+- deterministic topology-local selection among existing operator-provided
+  artifact endpoints, with a concrete endpoint and Secret UID frozen per
+  target.
 
-Phases 3–5 are not hidden behind incomplete API fields. Mirror selection,
+Later roadmap work is not hidden behind incomplete API fields. Durable
 prefetch/cache optimization, PDB-aware drain, independently durable
 stage/activate, an observed graph API, mandatory native TAS, and a public
 multi-driver rollout API remain separate, evidence-gated work. See
@@ -214,6 +218,7 @@ Use low-cardinality, administrator-declared labels. The policy accepts at most
 | `topology.kubernetes.io/zone` | scheduler availability domain | yes |
 | `topology.cisco.vk/*` | site, building, rack, fabric, flattened domains, and explicit managed-fleet enrollment | only if allowlisted |
 | `operations.cisco.vk/*` | rollout-only risk and qualification facts, including redundancy domain, image family, and `qualification-cohort` | no |
+| `distribution.cisco.vk/*` | artifact endpoint/cache locality used only by rollout planning and transfer budgets | no |
 
 Every budget-domain key must also be required. Every projected key must be
 required. The managed-fleet selector itself may use only
@@ -497,10 +502,31 @@ spec:
 mutual TLS is used. Keep private keys in Secrets, never ConfigMaps or rollout
 specs.
 
-The managed campaign API accepts one digest-pinned source:
+The managed campaign API pins one image digest and family and accepts up to 16
+named existing artifact endpoints. Each endpoint is either:
 
 - anonymous HTTPS with verified TLS and no URL credentials; or
 - SFTP with an endpoint-bound Secret and verified `knownHosts` data.
+
+Scoped endpoints select protected `CiscoDevice.metadata.labels`; every
+selector key must be listed in administrator `requiredTopologyKeys`. A
+`distribution.cisco.vk/cache-domain` label is the recommended source-locality
+key. It is protected by admission and may define a transfer-budget domain, but
+cannot be projected to a Node. The lowest numeric priority among matching
+scoped endpoints wins. Equal-priority matches fail planning. Exactly one unscoped catch-all
+is required and is considered only when no scoped endpoint matches. Every
+endpoint serves the single campaign-wide SHA-256 identity; CVK does not
+silently fail over after approval.
+
+`IOSXESoftwareRollout` is still an alpha, unreleased API. Phase 3A replaces
+the earlier development-preview `plan.source` shape with `plan.image.sources`
+and moves the frozen endpoint snapshot onto each target. There is no conversion
+webhook between those shapes. Do not deploy the Phase 2 controller/CRD by
+itself and later upgrade a cluster containing rollout objects: land the stacked
+changes before the first release. Any cluster that ran the preview must first
+settle and export its rollout evidence, remove those preview objects, and then
+upgrade the CRD and controller together. An older controller cannot safely be
+rolled back over objects written with the Phase 3A schema.
 
 Managed source resolution rejects redirects, environment proxies, URL
 userinfo, queries/fragments, unsafe or mixed DNS answers, loopback,
@@ -533,10 +559,14 @@ stringData:
     images.site-a.example.net ssh-ed25519 REPLACE_ME
 ```
 
-The manager freezes the Secret UID into the plan and managed leaf. In-place
-credential rotation under that UID is allowed, but every use revalidates source
-purpose, endpoint, and trust policy. Delete/recreate changes the UID, fences new
-claims, and requires a newly frozen and approved rollout.
+The manager freezes each target's selected source, priority, URL, digest, and
+Secret UID into the plan and managed leaf. In-place credential rotation under
+that UID is allowed, but every use revalidates source purpose, endpoint, and
+trust policy. Delete/recreate changes the UID, fences new claims, and requires
+a newly frozen and approved rollout. Transient resolution failures retry only
+that frozen endpoint within the install deadline. A permanent failure or
+expired deadline fails the leaf and fences further campaign admission; it
+never falls through to a different mirror under the approved hash.
 
 ### Submit, review, and approve
 
@@ -636,6 +666,8 @@ For each target, the manager checks:
 - same namespace and frozen CiscoDevice UID and generation;
 - driver `XE`, image-family match, unique declared physical identity, exact
   Node UID, projection hash, and worker protocol;
+- deterministic source selection still resolves to the exact frozen endpoint
+  and Secret incarnation;
 - fresh device and Node health, including current producer observations for
   `NodeIdentityReady`, `TopologyReady`, and `GNOIConfigurationReady`;
 - no running workload (`BlockIfRunning` is the only Phase 2 policy), proven
@@ -678,9 +710,10 @@ explicit manual operational evidence until typed, freshness-bound IOS-XE
 producers are implemented; absent evidence never counts as an automatic pass.
 
 The single ConfigMap ledger is updated with resourceVersion compare-and-swap.
-It is bounded to 256 records and 256 KiB by default. The MVP conservatively
-holds both transfer and disruption reservations for the whole leaf. A Lease
-expiry never settles an accepted device mutation.
+It is bounded to 256 records and 256 KiB by default. Phase 3A still
+conservatively holds both transfer and disruption reservations for the whole
+leaf. Source locality reduces WAN path cost but does not claim an independent
+prefetch boundary. A Lease expiry never settles an accepted device mutation.
 
 The final worker-side workload check is fail closed. Terminating Kubernetes
 Pods still block; retained `Succeeded` or `Failed` Pods alone do not. Any live
@@ -947,10 +980,11 @@ switches are not evidence of real multi-site fault tolerance.
 
 ## Deferred roadmap and limitations
 
-The following are intentionally not implemented in Phases 0–2:
+The following are intentionally not implemented in the current phases:
 
-- topology-local mirror selection, durable prefetch, shared cache, or claims
-  that the worker's location represents the device data path (Phase 3);
+- durable prefetch, shared/PVC cache, independent transfer-only admission, or
+  claims that the worker's location represents the device data path (later
+  Phase 3 work, pending measured need and a complete cache-loss protocol);
 - automatic eviction/drain, PDB orchestration, or independently durable
   install/stage/activate reservations (Phase 4);
 - an authoritative discovered graph, graph-cost workload scheduling, a custom

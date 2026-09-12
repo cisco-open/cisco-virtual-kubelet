@@ -25,6 +25,7 @@ topology:
       - topology.kubernetes.io/region
       - topology.kubernetes.io/zone
       - topology.cisco.vk/site
+      - distribution.cisco.vk/cache-domain
       - operations.cisco.vk/redundancy-domain
     projectedTopologyKeys:
       - topology.kubernetes.io/region
@@ -33,7 +34,7 @@ topology:
     globalMaxConcurrentTransfers: 1
     globalMaxUnavailable: 1
     domainMaxConcurrentTransfers:
-      topology.cisco.vk/site: 1
+      distribution.cisco.vk/cache-domain: 1
     domainMaxUnavailable:
       topology.kubernetes.io/zone: 1
       operations.cisco.vk/redundancy-domain: 1

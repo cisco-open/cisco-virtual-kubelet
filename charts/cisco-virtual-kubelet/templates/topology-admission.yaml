@@ -310,8 +310,9 @@ spec:
   validationActions: [Deny]
   matchResources: {}
 ---
-# Reserved source labels control both scheduler placement and rollout risk
-# domains. Their deltas require a separately authorized custom `topology` verb.
+# Reserved source labels control scheduler placement, rollout risk domains, and
+# artifact distribution locality. Their deltas require a separately authorized
+# custom `topology` verb.
 # Before binding, legacy status behavior is unchanged. Once Node identity is
 # present, the manager owns all status so no worker can spoof rollout health.
 apiVersion: admissionregistration.k8s.io/v1
@@ -342,7 +343,8 @@ spec:
           k == 'topology.kubernetes.io/region' ||
           k == 'topology.kubernetes.io/zone' ||
           k.startsWith('topology.cisco.vk/') ||
-          k.startsWith('operations.cisco.vk/'), v) : {}
+          k.startsWith('operations.cisco.vk/') ||
+          k.startsWith('distribution.cisco.vk/'), v) : {}
     - name: oldProtectedLabels
       expression: >-
         oldObject != null && has(oldObject.metadata.labels) ?
@@ -350,7 +352,8 @@ spec:
           k == 'topology.kubernetes.io/region' ||
           k == 'topology.kubernetes.io/zone' ||
           k.startsWith('topology.cisco.vk/') ||
-          k.startsWith('operations.cisco.vk/'), v) : {}
+          k.startsWith('operations.cisco.vk/') ||
+          k.startsWith('distribution.cisco.vk/'), v) : {}
     - name: newProtectedAnnotations
       expression: >-
         object != null && has(object.metadata.annotations) ?

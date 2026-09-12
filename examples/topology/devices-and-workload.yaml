@@ -20,6 +20,9 @@ metadata:
     topology.kubernetes.io/region: eu-central
     topology.kubernetes.io/zone: berlin-1
     topology.cisco.vk/site: berlin-campus
+    # Distribution locality is protected rollout input but is never copied to
+    # the scheduler-visible Node.
+    distribution.cisco.vk/cache-domain: berlin
     operations.cisco.vk/redundancy-domain: stack-a
     operations.cisco.vk/image-family: cat9k
     # Every rollout target needs a qualified hardware/capability cohort. The

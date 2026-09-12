@@ -950,6 +950,17 @@ grep -Eq 'require(s)?( the)? custom topology permission|denied (the )?request|fa
     cat "$scratch_dir/device-negative.txt" >&2
     exit 1
   }
+if kubectl label --as="$device_editor_username" ciscodevice device-a \
+    --namespace "$device_namespace" distribution.cisco.vk/cache-domain=berlin \
+    >"$scratch_dir/device-distribution-negative.txt" 2>&1; then
+  echo "ordinary device editor changed protected distribution topology" >&2
+  exit 1
+fi
+grep -Eq 'require(s)?( the)? custom topology permission|denied (the )?request|failed expression|forbidden' \
+  "$scratch_dir/device-distribution-negative.txt" || {
+    cat "$scratch_dir/device-distribution-negative.txt" >&2
+    exit 1
+  }
 if kubectl patch --as="$device_editor_username" ciscodevice device-a \
     --namespace "$device_namespace" --type=merge --dry-run=server \
     -p '{"metadata":{"finalizers":[]}}' \
@@ -1209,10 +1220,13 @@ spec:
         matchLabels:
           topology.cisco.vk/managed: "true"
       maxTargets: 1
-    source:
-      url: https://images.example.test/cat9k.bin
+    image:
       sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       imageFamily: cat9k
+      sources:
+        - name: global
+          priority: 100
+          url: https://images.example.test/cat9k.bin
     targetVersion: 17.18.4
     strategy: Reload
     rollbackOnFailure: true
@@ -1237,6 +1251,20 @@ spec:
   control:
     revision: 0
 EOF
+if awk '
+    { print }
+    $0 == "          url: https://images.example.test/cat9k.bin" {
+      print "        - name: second-global"
+      print "          priority: 101"
+      print "          url: https://backup-images.example.test/cat9k.bin"
+    }
+  ' "$scratch_dir/rollout.yaml" | kubectl create --as="$planner_username" \
+    --dry-run=server -f - >"$scratch_dir/rollout-catch-all-negative.txt" 2>&1; then
+  echo "API server accepted multiple unscoped rollout image sources" >&2
+  exit 1
+fi
+grep -Eq 'exactly one image source must be an unscoped catch-all|Invalid value|failed rule' \
+  "$scratch_dir/rollout-catch-all-negative.txt"
 kubectl create --as="$planner_username" -f "$scratch_dir/rollout.yaml" >/dev/null
 kubectl patch --as="$planner_username" iosxesoftwarerollout integration-rollout \
   --namespace "$device_namespace" --type=merge \
@@ -1305,10 +1333,6 @@ cat >"$scratch_dir/frozen-plan-status.json" <<EOF
         "maxActiveReservations": 256,
         "maxLedgerSizeBytes": 262144
       },
-      "source": {
-        "url": "https://images.example.test/cat9k.bin",
-        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-      },
       "targets": [{
         "deviceName": "device-a",
         "deviceUID": "${device_uid}",
@@ -1318,6 +1342,12 @@ cat >"$scratch_dir/frozen-plan-status.json" <<EOF
         "nodeUID": "${managed_node_uid}",
         "driver": "XE",
         "imageFamily": "cat9k",
+        "source": {
+          "name": "global",
+          "priority": 100,
+          "url": "https://images.example.test/cat9k.bin",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
         "qualificationCohort": "c9300",
         "workerProtocolVersion": "rollout-v1",
         "projectionHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",

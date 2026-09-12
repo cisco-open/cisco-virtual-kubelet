@@ -44,11 +44,25 @@ func rolloutFixture() *IOSXESoftwareRollout {
 					Selector:   IOSXESoftwareRolloutLabelSelector{MatchLabels: map[string]string{"role": "access"}},
 					MaxTargets: 10,
 				},
-				Source: IOSXESoftwareRolloutSourceSpec{
-					URL:          "sftp://images.example.test/cat9k.bin",
-					SHA256:       strings.Repeat("b", 64),
-					ImageFamily:  "cat9k",
-					URLSecretRef: &corev1.LocalObjectReference{Name: "image-source"},
+				Image: IOSXESoftwareRolloutImageSpec{
+					SHA256:      strings.Repeat("b", 64),
+					ImageFamily: "cat9k",
+					Sources: []IOSXESoftwareRolloutSourceSpec{
+						{
+							Name: "berlin-cache",
+							DeviceSelector: &IOSXESoftwareRolloutLabelSelector{
+								MatchLabels: map[string]string{"topology.cisco.vk/site": "berlin"},
+							},
+							Priority:     10,
+							URL:          "sftp://images.berlin.example.test/cat9k.bin",
+							URLSecretRef: &corev1.LocalObjectReference{Name: "image-source"},
+						},
+						{
+							Name:     "global",
+							Priority: 100,
+							URL:      "https://images.example.test/cat9k.bin",
+						},
+					},
 				},
 				TargetVersion:         "17.18.4",
 				Strategy:              IOSXESoftwareRolloutStrategyReload,
@@ -103,18 +117,23 @@ func rolloutFixture() *IOSXESoftwareRollout {
 					MaxActiveReservations:  256,
 					MaxLedgerSizeBytes:     256 * 1024,
 				},
-				Source: IOSXESoftwareRolloutSourceSnapshot{
-					URL: "sftp://images.example.test/cat9k.bin", SHA256: strings.Repeat("b", 64), SecretName: "image-source", SecretUID: "secret-uid",
-				},
 				Targets: []IOSXESoftwareRolloutPlannedTarget{{
-					DeviceName:            "edge-01",
-					DeviceUID:             "device-uid",
-					DeviceGeneration:      7,
-					PhysicalIdentity:      "FCW00000001",
-					NodeName:              "edge-01",
-					NodeUID:               "node-uid",
-					Driver:                "XE",
-					ImageFamily:           "cat9k",
+					DeviceName:       "edge-01",
+					DeviceUID:        "device-uid",
+					DeviceGeneration: 7,
+					PhysicalIdentity: "FCW00000001",
+					NodeName:         "edge-01",
+					NodeUID:          "node-uid",
+					Driver:           "XE",
+					ImageFamily:      "cat9k",
+					Source: IOSXESoftwareRolloutSourceSnapshot{
+						Name:       "berlin-cache",
+						Priority:   10,
+						URL:        "sftp://images.berlin.example.test/cat9k.bin",
+						SHA256:     strings.Repeat("b", 64),
+						SecretName: "image-source",
+						SecretUID:  "secret-uid",
+					},
 					QualificationCohort:   "c9300",
 					WorkerProtocolVersion: string(ManagedUpgradeProtocolRolloutV1),
 					ProjectionHash:        hash,
@@ -155,7 +174,8 @@ func TestIOSXESoftwareRolloutDeepCopyDoesNotAlias(t *testing.T) {
 	copy.Spec.Plan.Targets.Selector.MatchLabels["role"] = "distribution"
 	copy.Spec.Plan.Canaries[0].Devices[0] = "edge-02"
 	*copy.Spec.Plan.Budgets.Domains[0].MaxUnavailable = 2
-	copy.Spec.Plan.Source.URLSecretRef.Name = "other-source"
+	copy.Spec.Plan.Image.Sources[0].DeviceSelector.MatchLabels["topology.cisco.vk/site"] = "munich"
+	copy.Spec.Plan.Image.Sources[0].URLSecretRef.Name = "other-source"
 	copy.Status.FrozenPlan.Targets[0].Topology[0].Value = "munich"
 	*copy.Status.FrozenPlan.Policy.Domains[0].MaxUnavailable = 2
 	copy.Status.Targets[0].Message = "changed"
@@ -169,7 +189,10 @@ func TestIOSXESoftwareRolloutDeepCopyDoesNotAlias(t *testing.T) {
 	if *original.Spec.Plan.Budgets.Domains[0].MaxUnavailable != 1 {
 		t.Fatal("DeepCopy() aliased domain budget pointer")
 	}
-	if original.Spec.Plan.Source.URLSecretRef.Name != "image-source" {
+	if original.Spec.Plan.Image.Sources[0].DeviceSelector.MatchLabels["topology.cisco.vk/site"] != "berlin" {
+		t.Fatal("DeepCopy() aliased source selector")
+	}
+	if original.Spec.Plan.Image.Sources[0].URLSecretRef.Name != "image-source" {
 		t.Fatal("DeepCopy() aliased source Secret reference")
 	}
 	if original.Status.FrozenPlan.Targets[0].Topology[0].Value != "berlin" {
@@ -196,14 +219,17 @@ func TestIOSXESoftwareRolloutLabelSelectorConversionDoesNotAlias(t *testing.T) {
 	}
 }
 
-func TestIOSXESoftwareRolloutWireContractUsesOneReloadSource(t *testing.T) {
+func TestIOSXESoftwareRolloutWireContractUsesNamedImageSources(t *testing.T) {
 	raw, err := json.Marshal(rolloutFixture())
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
 	text := string(raw)
 	for _, field := range []string{
-		`"source":{"url":"sftp://images.example.test/cat9k.bin"`,
+		`"image":{"sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","imageFamily":"cat9k","sources":[`,
+		`"name":"berlin-cache","deviceSelector":{"matchLabels":{"topology.cisco.vk/site":"berlin"}},"priority":10`,
+		`"name":"global","priority":100,"url":"https://images.example.test/cat9k.bin"`,
+		`"source":{"name":"berlin-cache","priority":10,"url":"sftp://images.berlin.example.test/cat9k.bin"`,
 		`"strategy":"Reload"`,
 		`"installTimeoutSeconds":3600`,
 		`"rebootTimeoutSeconds":1800`,
@@ -220,8 +246,8 @@ func TestIOSXESoftwareRolloutWireContractUsesOneReloadSource(t *testing.T) {
 			t.Fatalf("Marshal() = %s, missing %s", text, field)
 		}
 	}
-	if strings.Contains(text, `"sources"`) || strings.Contains(text, `"mirrors"`) {
-		t.Fatalf("Phase 2 wire contract unexpectedly exposes source lists: %s", text)
+	if strings.Contains(text, `"mirrors"`) {
+		t.Fatalf("wire contract unexpectedly exposes a separate mirror concept: %s", text)
 	}
 }
 
