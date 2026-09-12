@@ -68,22 +68,26 @@ cleanup() {
   local test_status="${1:-0}"
   local cleanup_status=0
   local finalizers_cleared=false
+  local heartbeat_deleted=false
   local retained_objects
 
   # Remove fixture finalizers through the still-authorized manager identity.
   # This is the normal cleanup path and avoids an admission-cache race after
   # the retained policy binding is deleted.
   clear_test_device_finalizers "$manager_username" || true
+  kubectl delete --as="$manager_username" lease "$managed_node" \
+    --namespace kube-node-lease --ignore-not-found --wait=true --timeout=60s \
+    >/dev/null 2>&1 || true
 
   # Bindings go first so an interrupted negative test cannot prevent cleanup.
   helm uninstall "$release_name" --namespace "$system_namespace" \
     --no-hooks >/dev/null 2>&1 || true
   kubectl delete validatingadmissionpolicybinding \
     -l "app.kubernetes.io/instance=${release_name}" \
-    --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || cleanup_status=1
+    --ignore-not-found --wait=true --timeout=60s >/dev/null || cleanup_status=1
   kubectl delete validatingadmissionpolicy \
     -l "app.kubernetes.io/instance=${release_name}" \
-    --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || cleanup_status=1
+    --ignore-not-found --wait=true --timeout=60s >/dev/null || cleanup_status=1
   # Recover interrupted runs whose manager identity or RBAC is already gone.
   # Admission objects are observed asynchronously, so retry until their cache
   # has converged instead of suppressing a one-shot finalizer-patch failure.
@@ -100,28 +104,42 @@ cleanup() {
   fi
   kubectl delete clusterrolebinding \
     -l "app.kubernetes.io/instance=${release_name}" \
-    --ignore-not-found --wait=false >/dev/null 2>&1 || cleanup_status=1
+    --ignore-not-found --wait=false >/dev/null || cleanup_status=1
   kubectl delete clusterrolebinding \
     cvk-topology-it-worker cvk-topology-it-legacy-worker \
     cvk-topology-it-retirement-worker \
     --ignore-not-found --wait=true --timeout=60s \
-    >/dev/null 2>&1 || cleanup_status=1
+    >/dev/null || cleanup_status=1
   kubectl delete clusterrole \
     -l "app.kubernetes.io/instance=${release_name}" \
-    --ignore-not-found --wait=false >/dev/null 2>&1 || cleanup_status=1
-  kubectl delete lease "$managed_node" --namespace kube-node-lease \
-    --ignore-not-found --wait=true --timeout=60s \
-    >/dev/null 2>&1 || cleanup_status=1
+    --ignore-not-found --wait=false >/dev/null || cleanup_status=1
+  # A just-removed admission binding may remain briefly visible to the API
+  # server's admission cache. Retry the admin recovery path for interrupted
+  # runs; the normal manager-authorized deletion above is immediate.
+  for _ in $(seq 1 20); do
+    if kubectl delete lease "$managed_node" --namespace kube-node-lease \
+        --ignore-not-found --wait=true --timeout=5s >/dev/null 2>&1; then
+      heartbeat_deleted=true
+      break
+    fi
+    sleep 1
+  done
+  if [ "$heartbeat_deleted" = false ]; then
+    echo "failed to delete topology integration heartbeat Lease" >&2
+    cleanup_status=1
+  fi
   kubectl delete node \
     "$managed_node" "$legacy_node" cvk-topology-unmarked \
     cvk-scheduler-a cvk-scheduler-b cvk-scheduler-missing cvk-scheduler-guarded \
-    --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1 || cleanup_status=1
-  # Test Pods bound to synthetic virtual Nodes have no live kubelet to finish
-  # graceful deletion. Force only these disposable-namespace fixtures so a
-  # failed probe cannot strand the namespace or contaminate the next run.
-  kubectl delete pods --all --namespace "$device_namespace" \
-    --force --grace-period=0 --ignore-not-found --wait=false \
-    >/dev/null 2>&1 || true
+    --ignore-not-found --wait=true --timeout=60s >/dev/null || cleanup_status=1
+  # Test Pods bound to synthetic virtual Nodes have no live kubelet, and the
+  # manager fixture uses a deliberately unavailable image. Force Pods only in
+  # these disposable namespaces so neither can strand teardown.
+  for namespace in "$device_namespace" "$system_namespace"; do
+    kubectl delete pods --all --namespace "$namespace" \
+      --force --grace-period=0 --ignore-not-found --wait=false \
+      >/dev/null 2>&1 || true
+  done
   if ! kubectl delete namespace "$device_namespace" "$system_namespace" \
       --ignore-not-found --wait=true --timeout=60s >/dev/null 2>&1; then
     echo "topology integration namespaces did not terminate cleanly" >&2
