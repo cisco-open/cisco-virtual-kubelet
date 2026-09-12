@@ -29,6 +29,8 @@
 #   - Controller pod reaches Ready
 #   - Managed admission and default-scheduler topology behavior pass against
 #     the disposable kind API server
+#   - Optional native Workload/PodGroup TAS behavior passes independently on
+#     the pinned Kubernetes 1.37 API and default scheduler
 #   - Per-namespace VK SA + RoleBinding are auto-provisioned
 #   - cisco-vk pod schedules in the device namespace
 #   - The device-call path is reached (the failure mode beyond is
@@ -624,6 +626,41 @@ jobs:
           kubectl -n cisco-vk-nxos-smoke describe ciscodevice nxos-smoke || true
           kubectl -n cisco-vk-nxos-smoke describe nxosconfig nxos-smoke || true
           kubectl -n cisco-vk-nxos-smoke get events --sort-by=.lastTimestamp || true
+
+  native-tas-conformance:
+    # Native TAS remains optional for CVK deployments, but the checked-in
+    # Kubernetes 1.37 example is executable documentation and must not drift.
+    # Keep this cluster separate from the Kubernetes 1.35 support-floor job.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Kubernetes 1.37 kind cluster
+        uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
+        with:
+          version: v0.33.0
+          node_image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+          kubectl_version: v1.37.0
+          config: charts/cisco-virtual-kubelet/tests/native-tas-kind-config-v1.37.yaml
+          cluster_name: cvk-native-tas
+          wait: 60s
+
+      - name: Native Workload and PodGroup TAS conformance
+        run: charts/cisco-virtual-kubelet/tests/native-tas-kind-test.sh
+
+      - name: Native TAS diagnostics on failure
+        if: failure()
+        run: |
+          kubectl api-resources --api-group=scheduling.k8s.io || true
+          kubectl get nodes -o wide || true
+          kubectl get pods -A -o wide || true
+          kubectl -n kube-system logs \
+            kube-scheduler-cvk-native-tas-control-plane --tail=200 || true
 
   terraform-provider:
     name: terraform-provider

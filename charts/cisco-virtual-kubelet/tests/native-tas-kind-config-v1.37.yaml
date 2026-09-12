@@ -1,0 +1,10 @@
+# Kubernetes 1.37 native TAS qualification only. This configuration is not a
+# CVK installation requirement and must not replace the Kubernetes 1.35
+# baseline used by the main smoke job.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+featureGates:
+  GenericWorkload: true
+  TopologyAwareWorkloadScheduling: true
+runtimeConfig:
+  scheduling.k8s.io/v1beta1: "true"

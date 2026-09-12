@@ -94,6 +94,27 @@ helm template cvk "$chart_dir" \
   done
 } >"$strict_render_bundle"
 
+# The v1.37 example is exercised against a real API server in its own CI job.
+# Keep its released schema, kind gates, and executable entry point from
+# silently drifting before that job starts.
+tas_example="$repo_root/examples/topology/experimental-native-tas-v1.37.yaml"
+tas_kind_config="$chart_dir/tests/native-tas-kind-config-v1.37.yaml"
+tas_test="$chart_dir/tests/native-tas-kind-test.sh"
+grep -Fq '  workloadRef:' "$tas_example"
+grep -Fq '    workloadName: edge-gang-policy' "$tas_example"
+grep -Fq '    templateName: edge-workers' "$tas_example"
+if grep -Fq 'podGroupTemplateRef:' "$tas_example"; then
+  echo "native TAS example retained a pre-release PodGroup reference field" >&2
+  exit 1
+fi
+grep -Fq '  GenericWorkload: true' "$tas_kind_config"
+grep -Fq '  TopologyAwareWorkloadScheduling: true' "$tas_kind_config"
+grep -Fq '  scheduling.k8s.io/v1beta1: "true"' "$tas_kind_config"
+test -x "$tas_test"
+bash -n "$tas_test"
+grep -Fq 'kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5' \
+  "$repo_root/.github/workflows/smoke.yml"
+
 # The manager hashes the complete policy Specs, not a handful of CEL
 # substrings. Keep the compiled startup contract and this exact release render
 # synchronized whenever admission changes.
