@@ -30,10 +30,12 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/emit"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -907,6 +909,8 @@ type AppHostingNode struct {
 	nodeName        string
 	deviceSpec      *v1alpha1.DeviceSpec
 	driver          drivers.CiscoKubernetesDeviceDriver
+	topologyMode    topology.ProjectionMode
+	workerRevision  string
 	statusCallback  func(*v1.Node)
 	lastStatusSync  time.Time
 	syncInFlight    bool
@@ -916,6 +920,13 @@ type AppHostingNode struct {
 	prevDiskPressureStatus     v1.ConditionStatus
 	readyTransitionTime        metav1.Time
 	diskPressureTransitionTime metav1.Time
+	managedReadyTransitionTime metav1.Time
+}
+
+// SetManagedWorkerRevision binds the status heartbeat to the exact desired
+// manager-rendered PodTemplate. Call it before the Node provider starts.
+func (a *AppHostingNode) SetManagedWorkerRevision(revision string) {
+	a.workerRevision = revision
 }
 
 // NewAppHostingNode creates a new AppHostingNode.
@@ -926,11 +937,31 @@ func NewAppHostingNode(
 	deviceSpec *v1alpha1.DeviceSpec,
 	driver drivers.CiscoKubernetesDeviceDriver,
 ) *AppHostingNode {
+	return NewAppHostingNodeWithTopologyMode(
+		ctx,
+		nodeName,
+		deviceSpec,
+		driver,
+		topology.ProjectionModeStandaloneCompatibility,
+	)
+}
+
+// NewAppHostingNodeWithTopologyMode creates a Node provider with an explicit
+// topology compatibility mode. Managed workers use ProjectionModeManaged after
+// the manager has taken ownership of stable Node metadata.
+func NewAppHostingNodeWithTopologyMode(
+	ctx context.Context,
+	nodeName string,
+	deviceSpec *v1alpha1.DeviceSpec,
+	driver drivers.CiscoKubernetesDeviceDriver,
+	mode topology.ProjectionMode,
+) *AppHostingNode {
 	return &AppHostingNode{
-		ctx:        ctx,
-		nodeName:   nodeName,
-		deviceSpec: deviceSpec,
-		driver:     driver,
+		ctx:          ctx,
+		nodeName:     nodeName,
+		deviceSpec:   deviceSpec,
+		driver:       driver,
+		topologyMode: mode,
 	}
 }
 
@@ -1030,7 +1061,23 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 	readyReason := "KubeletReady"
 	readyMessage := "Cisco IOx is enabled and reachable"
 
-	if operData != nil && !operData.IoxEnabled {
+	managedMaxPods := rawMaxPods(a.deviceSpec)
+	var managedCapacityErr error
+	if a.topologyMode == topology.ProjectionModeManaged {
+		managedCapacityErr = topology.ValidateManagedMaxPods(managedMaxPods)
+	}
+	if managedCapacityErr != nil {
+		newReadyStatus = v1.ConditionUnknown
+		readyReason = "ManagedCapacityInvalid"
+		readyMessage = managedCapacityErr.Error()
+	} else if operData == nil && a.topologyMode == topology.ProjectionModeManaged {
+		// A managed rollout treats missing health evidence as unknown, never as
+		// healthy. Keep the historical standalone behavior unchanged while making
+		// the topology-aware admission signal fail closed.
+		newReadyStatus = v1.ConditionUnknown
+		readyReason = "OperationalDataUnavailable"
+		readyMessage = "Cisco IOx health could not be verified"
+	} else if operData != nil && !operData.IoxEnabled {
 		newReadyStatus = v1.ConditionFalse
 		readyReason = "IOxDisabled"
 		readyMessage = "IOx hosting is disabled on device"
@@ -1053,6 +1100,30 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 		Reason:             readyReason,
 		Message:            readyMessage,
 	})
+	if a.topologyMode == topology.ProjectionModeManaged {
+		a.statusSyncMutex.Lock()
+		if a.managedReadyTransitionTime.IsZero() {
+			a.managedReadyTransitionTime = now
+		}
+		managedTransitionTime := a.managedReadyTransitionTime
+		a.statusSyncMutex.Unlock()
+		managedStatus := v1.ConditionTrue
+		managedReason := managedprotocol.ManagedWorkerReadyReason
+		managedMessage := "worker is enforcing the rollout-v1 status-only Node writer contract"
+		if a.workerRevision == "" {
+			managedStatus = v1.ConditionUnknown
+			managedReason = "WorkerRevisionMissing"
+			managedMessage = "managed worker configuration revision is unavailable"
+		}
+		conditions = append(conditions, v1.NodeCondition{
+			Type:               v1.NodeConditionType(managedprotocol.ManagedWorkerReadyCondition),
+			Status:             managedStatus,
+			LastHeartbeatTime:  now,
+			LastTransitionTime: managedTransitionTime,
+			Reason:             managedReason,
+			Message:            managedMessage,
+		})
+	}
 
 	// Condition: DiskPressure (IOx Storage)
 	newDiskPressureStatus := v1.ConditionFalse
@@ -1084,111 +1155,83 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 		Message:            diskMessage,
 	})
 
-	// --- Build dynamic Capacity and Allocatable from operational data ---
-	capacity := v1.ResourceList{}
-	if operData != nil {
-		if operData.SystemCPU.Quota > 0 {
-			capacity[v1.ResourceCPU] = *resource.NewQuantity(operData.SystemCPU.Quota, resource.DecimalSI)
-		}
-		if operData.Memory.Quota > 0 {
-			// Memory quota is in MB from the device; convert to bytes for Kubernetes
-			capacity[v1.ResourceMemory] = *resource.NewQuantity(operData.Memory.Quota*1024*1024, resource.BinarySI)
-		}
-		if operData.Storage.Quota > 0 {
-			capacity[v1.ResourceStorage] = *resource.NewQuantity(operData.Storage.Quota*1024*1024, resource.BinarySI)
-		}
-	}
-
-	// Discover deployed pods to calculate available pod slots
-	var maxPods int64 = 16
-	var deployedPodCount int64
-	pods, podErr := a.driver.ListPods(ctx)
-	if podErr != nil {
-		log.G(ctx).WithError(podErr).Warn("Failed to list pods during node status sync, using 0 for deployed count")
-	} else {
-		deployedPodCount = int64(len(pods))
-	}
-	capacity[v1.ResourcePods] = *resource.NewQuantity(maxPods, resource.DecimalSI)
-
-	// Allocatable reflects currently available resources
-	allocatable := v1.ResourceList{}
-	if operData != nil {
-		if operData.SystemCPU.Available > 0 {
-			allocatable[v1.ResourceCPU] = *resource.NewQuantity(operData.SystemCPU.Available, resource.DecimalSI)
-		}
-		if operData.Memory.Available > 0 {
-			allocatable[v1.ResourceMemory] = *resource.NewQuantity(operData.Memory.Available*1024*1024, resource.BinarySI)
-		}
-		if operData.Storage.Available > 0 {
-			allocatable[v1.ResourceStorage] = *resource.NewQuantity(operData.Storage.Available*1024*1024, resource.BinarySI)
+	// Capacity and Allocatable are the total quota offered to Kubernetes. The
+	// scheduler accounts for requests of bound Pods against Allocatable itself;
+	// publishing instantaneous free resources or subtracting ListPods here would
+	// double-account usage. Available remains an operational metric below and in
+	// metrics.go.
+	var driverCapacity *v1.ResourceList
+	allowDriverFallback := a.topologyMode != topology.ProjectionModeManaged
+	if allowDriverFallback {
+		var capacityErr error
+		driverCapacity, capacityErr = a.driver.GetDeviceResources(ctx)
+		if capacityErr != nil {
+			log.G(ctx).WithError(capacityErr).Warn("Failed to read normalized device capacity; using safe operational-data fields")
+			driverCapacity = nil
 		}
 	}
-	availablePods := maxPods - deployedPodCount
-	if availablePods < 0 {
-		availablePods = 0
+	maxPods := effectiveMaxPods(a.deviceSpec)
+	if !allowDriverFallback {
+		maxPods = managedMaxPods
 	}
-	allocatable[v1.ResourcePods] = *resource.NewQuantity(availablePods, resource.DecimalSI)
+	capacity, allocatable := schedulerCapacity(operData, driverCapacity, maxPods, allowDriverFallback)
 
 	// --- Fetch topology data for node annotations ---
 	annotations := map[string]string{}
-
-	if deviceInfo.RouterID != "" {
-		annotations["cisco.io/router-id"] = deviceInfo.RouterID
-	}
-	if deviceInfo.Hostname != "" {
-		annotations["cisco.io/hostname"] = deviceInfo.Hostname
-	}
-
-	// Topology neighbor counts (only if driver supports TopologyProvider)
-	if topo, ok := a.driver.(drivers.TopologyProvider); ok {
-		var activeProtocols []string
-
-		cdpNeighbors, cdpErr := topo.GetCDPNeighbors(ctx)
-		if cdpErr != nil {
-			log.G(ctx).WithError(cdpErr).Debug("Failed to fetch CDP neighbors during node status sync")
-		} else if len(cdpNeighbors) > 0 {
-			activeProtocols = append(activeProtocols, "cdp")
-			annotations["cisco.io/cdp-neighbor-count"] = fmt.Sprintf("%d", len(cdpNeighbors))
-		}
-
-		ospfNeighbors, ospfErr := topo.GetOSPFNeighbors(ctx)
-		if ospfErr != nil {
-			log.G(ctx).WithError(ospfErr).Debug("Failed to fetch OSPF neighbors during node status sync")
-		} else if len(ospfNeighbors) > 0 {
-			activeProtocols = append(activeProtocols, "ospf")
-			annotations["cisco.io/ospf-neighbor-count"] = fmt.Sprintf("%d", len(ospfNeighbors))
-		}
-
-		// Re-read router ID after OSPF query may have populated it
+	if a.topologyMode == topology.ProjectionModeManaged && a.workerRevision != "" {
+		annotations[managedprotocol.AnnotationWorkerObservedRevision] = a.workerRevision
+	} else if a.topologyMode != topology.ProjectionModeManaged {
 		if deviceInfo.RouterID != "" {
 			annotations["cisco.io/router-id"] = deviceInfo.RouterID
 		}
+		if deviceInfo.Hostname != "" {
+			annotations["cisco.io/hostname"] = deviceInfo.Hostname
+		}
 
-		if len(activeProtocols) > 0 {
-			annotations["cisco.io/protocols"] = strings.Join(activeProtocols, ",")
+		// Topology neighbor counts are compatibility observations. In managed
+		// mode the manager owns Node metadata, so the provider emits no
+		// cisco.io/* annotations from its status callback.
+		if topo, ok := a.driver.(drivers.TopologyProvider); ok {
+			var activeProtocols []string
+
+			cdpNeighbors, cdpErr := topo.GetCDPNeighbors(ctx)
+			if cdpErr != nil {
+				log.G(ctx).WithError(cdpErr).Debug("Failed to fetch CDP neighbors during node status sync")
+			} else if len(cdpNeighbors) > 0 {
+				activeProtocols = append(activeProtocols, "cdp")
+				annotations["cisco.io/cdp-neighbor-count"] = fmt.Sprintf("%d", len(cdpNeighbors))
+			}
+
+			ospfNeighbors, ospfErr := topo.GetOSPFNeighbors(ctx)
+			if ospfErr != nil {
+				log.G(ctx).WithError(ospfErr).Debug("Failed to fetch OSPF neighbors during node status sync")
+			} else if len(ospfNeighbors) > 0 {
+				activeProtocols = append(activeProtocols, "ospf")
+				annotations["cisco.io/ospf-neighbor-count"] = fmt.Sprintf("%d", len(ospfNeighbors))
+			}
+
+			// Re-read router ID after OSPF query may have populated it.
+			if deviceInfo.RouterID != "" {
+				annotations["cisco.io/router-id"] = deviceInfo.RouterID
+			}
+
+			if len(activeProtocols) > 0 {
+				annotations["cisco.io/protocols"] = strings.Join(activeProtocols, ",")
+			}
 		}
 	}
 
 	nodePlatform := nodePlatformMetadata(a.deviceSpec.Driver)
-	labels := map[string]string{
-		"kubernetes.io/hostname":        a.nodeName,
-		"platform":                      nodePlatform.Label,
-		"provider":                      "cisco-apphosting",
-		"type":                          "virtual-kubelet",
-		"topology.kubernetes.io/zone":   nodePlatform.Topology,
-		"topology.kubernetes.io/region": nodePlatform.Topology,
+	var labels map[string]string
+	var taints []v1.Taint
+	if a.topologyMode != topology.ProjectionModeManaged {
+		var labelErr error
+		labels, labelErr = normalizedNodeLabels(a.nodeName, a.deviceSpec, a.topologyMode)
+		if labelErr != nil {
+			log.G(ctx).WithError(labelErr).Warn("Invalid standalone Node label projection")
+		}
+		taints = append([]v1.Taint(nil), a.deviceSpec.Taints...)
 	}
-	if a.deviceSpec.Zone != "" {
-		labels["topology.kubernetes.io/zone"] = a.deviceSpec.Zone
-	}
-	if a.deviceSpec.Region != "" {
-		labels["topology.kubernetes.io/region"] = a.deviceSpec.Region
-	}
-	for k, v := range a.deviceSpec.Labels {
-		labels[k] = v
-	}
-
-	taints := append([]v1.Taint(nil), a.deviceSpec.Taints...)
 
 	// Create a node update with device info and addresses
 	nodeUpdate := &v1.Node{
@@ -1196,9 +1239,7 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 			Labels:      labels,
 			Annotations: annotations,
 		},
-		Spec: v1.NodeSpec{
-			Taints: taints,
-		},
+		Spec: v1.NodeSpec{Taints: taints},
 		Status: v1.NodeStatus{
 			NodeInfo: v1.NodeSystemInfo{
 				MachineID:       deviceInfo.SerialNumber,
@@ -1222,4 +1263,48 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 	}
 
 	cb(nodeUpdate)
+}
+
+func schedulerCapacity(
+	operData *common.AppHostingOperData,
+	driverCapacity *v1.ResourceList,
+	maxPods int64,
+	allowDriverFallback bool,
+) (v1.ResourceList, v1.ResourceList) {
+	capacity := v1.ResourceList{}
+	if allowDriverFallback && driverCapacity != nil {
+		capacity = driverCapacity.DeepCopy()
+	}
+	if allowDriverFallback || topology.ValidateManagedMaxPods(maxPods) == nil {
+		capacity[v1.ResourcePods] = *resource.NewQuantity(maxPods, resource.DecimalSI)
+	}
+	if operData != nil {
+		if operData.SystemCPU.Quota > 0 && cpuQuotaIsCores(operData.SystemCPU.Unit) {
+			// Operational CPU is usable only when the driver explicitly reports
+			// cores. IOS XE's numeric quota-unit is not a Kubernetes CPU quantity.
+			// Managed mode omits that unknown resource rather than falling back to
+			// a model placeholder and inventing scheduler capacity.
+			capacity[v1.ResourceCPU] = *resource.NewQuantity(operData.SystemCPU.Quota, resource.DecimalSI)
+		}
+		if operData.Memory.Quota > 0 {
+			// Device app-hosting memory quota is reported in MB.
+			capacity[v1.ResourceMemory] = *resource.NewQuantity(operData.Memory.Quota*1024*1024, resource.BinarySI)
+		}
+		if operData.Storage.Quota > 0 {
+			// Preserve the existing device-storage resource name. It is not assumed
+			// to be Kubernetes-enforceable ephemeral-storage.
+			capacity[v1.ResourceStorage] = *resource.NewQuantity(operData.Storage.Quota*1024*1024, resource.BinarySI)
+		}
+	}
+
+	return capacity, capacity.DeepCopy()
+}
+
+func cpuQuotaIsCores(unit string) bool {
+	switch strings.ToLower(strings.TrimSpace(unit)) {
+	case "core", "cores", "vcpu", "vcpus":
+		return true
+	default:
+		return false
+	}
 }

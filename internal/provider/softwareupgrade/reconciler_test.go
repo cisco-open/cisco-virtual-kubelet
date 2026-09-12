@@ -57,6 +57,7 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
@@ -563,6 +564,9 @@ func newScheme(t *testing.T) *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
 		t.Fatalf("client-go: %v", err)
+	}
+	if err := ciskov1.AddToScheme(scheme); err != nil {
+		t.Fatalf("device: %v", err)
 	}
 	if err := configv1alpha1.AddToScheme(scheme); err != nil {
 		t.Fatalf("config: %v", err)

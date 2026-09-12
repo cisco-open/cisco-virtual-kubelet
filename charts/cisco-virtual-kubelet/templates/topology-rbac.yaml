@@ -1,0 +1,225 @@
+{{/*
+Copyright 2026 Cisco Systems Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/}}
+{{- if .Values.topology.enabled }}
+{{- include "cisco-virtual-kubelet.validateManagedTopology" . }}
+---
+# Every managed CiscoDevice receives a unique ServiceAccount and a dynamic
+# ClusterRoleBinding to this fixed role. Node metadata/spec creation, mutation,
+# and deletion deliberately remain absent. A fail-closed admission policy below
+# additionally confines status writes to the exact Node identity annotation.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cisco-virtual-kubelet-managed-worker
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: managed-worker
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["nodes/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/status"]
+    verbs: ["get", "update", "patch"]
+  # Pods may be scheduled from any namespace, so their volume inputs and
+  # Service discovery remain cluster-readable. ConfigMap writes are confined
+  # to the device namespace by the existing namespaced -device RoleBinding.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigdefaults"]
+    verbs: ["get", "list", "watch"]
+  # Upgrade-leaf permissions deliberately remain out of this cluster-wide
+  # role. The existing per-device namespaced RoleBinding grants them only when
+  # gnoi.enableSoftwareUpgrade is explicitly enabled; native admission then
+  # limits writes to that worker's manager-created leaf.
+{{- end }}
+{{- $managerRoleName := printf "%s-managed-topology-manager" (include "cisco-virtual-kubelet.fullname" .) }}
+{{- $existingManagerRole := lookup "rbac.authorization.k8s.io/v1" "ClusterRole" "" $managerRoleName }}
+{{- $existingManagerBinding := lookup "rbac.authorization.k8s.io/v1" "ClusterRoleBinding" "" $managerRoleName }}
+{{- if or .Values.topology.enabled (not (empty $existingManagerRole)) (not (empty $existingManagerBinding)) }}
+---
+# Conditional manager permissions used only by the managed topology and
+# rollout controllers. A live Helm rollback retains the exact role/binding so
+# the manager can finish an audited reverse writer handoff; a fresh disabled
+# install has no lookup result and receives no supplemental authority.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $managerRoleName }}
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: managed-topology-manager
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  # ReplicaSet authority exists only for the topology migration bridge. The
+  # manager inventories legacy consumers and deletes an exact, owner-verified,
+  # zero-replica ReplicaSet before retiring the former shared worker identity.
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch", "delete"]
+  # Retained leaves remain readable after the mutation gate is disabled so the
+  # CiscoDevice controller can continue fencing an unsettled operation.
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwareupgrades"]
+    verbs: ["get", "list", "watch"]
+  {{- if and .Values.topology.enabled (not .Values.gnoi.disabled) .Values.gnoi.enableSoftwareUpgrade }}
+  # Campaign reconciliation and new leaf/status mutation exist only behind the
+  # same explicit gate that registers the rollout controller.
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwarerollouts"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwarerollouts/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwareupgrades"]
+    verbs: ["create"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwareupgrades/status"]
+    verbs: ["get", "update", "patch"]
+  {{- end }}
+  # The manager pre-creates, safely adopts, and exactly cleans up every retained
+  # heartbeat, config-family, and mutation Lease a generated worker may update.
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources:
+      - validatingadmissionpolicies
+      - validatingadmissionpolicybindings
+    verbs: ["get"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["clusterroles"]
+    resourceNames: ["cisco-virtual-kubelet-managed-worker"]
+    verbs: ["bind"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $managerRoleName }}
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: managed-topology-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $managerRoleName }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "cisco-virtual-kubelet.controllerServiceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- if .Values.topology.enabled }}
+---
+# These authorization roles are intentionally unbound. Operators bind them in
+# only the namespaces and to only the humans/automation identities authorized
+# to author topology, submit campaigns, approve an exact frozen-plan hash, or
+# perform policy recovery. CEL authorizer checks below require the custom verb
+# in addition to the ordinary API update permission.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cisco-virtual-kubelet.fullname" . }}-topology-author
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices"]
+    verbs: ["get", "list", "watch", "update", "patch", "topology"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cisco-virtual-kubelet.fullname" . }}-rollout-planner
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwarerollouts"]
+    verbs: ["create", "delete", "get", "list", "watch", "update", "patch", "control"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cisco-virtual-kubelet.fullname" . }}-rollout-approver
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwarerollouts"]
+    verbs: ["get", "list", "watch", "update", "patch", "approve"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cisco-virtual-kubelet.fullname" . }}-topology-policy-admin
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: [{{ include "cisco-virtual-kubelet.topologyPolicyName" . | quote }}]
+    verbs: ["get", "update", "patch", "topology"]
+---
+# Break-glass ledger mutation is deliberately separate from policy editing.
+# It should normally remain unbound; cluster-admin wildcard authorization also
+# satisfies the admission check during an audited disaster-recovery action.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cisco-virtual-kubelet.fullname" . }}-topology-ledger-breakglass
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: [{{ include "cisco-virtual-kubelet.topologyLedgerName" . | quote }}]
+    verbs: ["get", "update", "patch", "delete", "manage-ledger"]
+{{- end }}

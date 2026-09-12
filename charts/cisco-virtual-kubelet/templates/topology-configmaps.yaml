@@ -1,0 +1,73 @@
+{{/*
+Copyright 2026 Cisco Systems Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/}}
+{{- if .Values.topology.enabled }}
+{{- include "cisco-virtual-kubelet.validateManagedTopology" . }}
+{{- $policyNamespace := include "cisco-virtual-kubelet.topologyPolicyNamespace" . }}
+{{- $policyName := include "cisco-virtual-kubelet.topologyPolicyName" . }}
+{{- $ledgerName := include "cisco-virtual-kubelet.topologyLedgerName" . }}
+{{- $policy := dict
+      "version" "v1"
+      "fleetSelector" .Values.topology.policy.fleetSelector
+      "requiredTopologyKeys" .Values.topology.policy.requiredTopologyKeys
+      "projectedTopologyKeys" .Values.topology.policy.projectedTopologyKeys
+      "globalMaxConcurrentTransfers" .Values.topology.policy.globalMaxConcurrentTransfers
+      "globalMaxUnavailable" .Values.topology.policy.globalMaxUnavailable
+      "domainMaxConcurrentTransfers" .Values.topology.policy.domainMaxConcurrentTransfers
+      "domainMaxUnavailable" .Values.topology.policy.domainMaxUnavailable
+      "healthFreshnessSeconds" .Values.topology.policy.healthFreshnessSeconds
+      "maxCampaignTargets" .Values.topology.policy.maxCampaignTargets
+      "maxActiveReservations" .Values.topology.policy.maxActiveReservations
+      "maxLedgerBytes" .Values.topology.policy.maxLedgerBytes
+      "ledgerName" $ledgerName
+}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $policyName }}
+  namespace: {{ $policyNamespace }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: topology-policy
+  annotations:
+    helm.sh/resource-policy: keep
+    topology.cisco.vk/managed-policy: "true"
+    topology.cisco.vk/admission-policy-prefix: {{ include "cisco-virtual-kubelet.fullname" . | quote }}
+    topology.cisco.vk/admission-contract-version: "v1"
+data:
+  # The manager binds the live ledger ConfigMap UID in the protected
+  # topology.cisco.vk/ledger-uid annotation after initializing the ledger.
+  # Helm must never render a guessed or placeholder UID here.
+  policy.json: |-
+    {{ $policy | toJson }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $ledgerName }}
+  namespace: {{ $policyNamespace }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: topology-ledger
+  annotations:
+    helm.sh/resource-policy: keep
+    topology.cisco.vk/managed-ledger: "true"
+data:
+  # Empty is the only safe Helm bootstrap state. The manager initializes a
+  # v1 ledger containing this object's actual UID before publishing the policy
+  # binding. A bound empty ledger or a recreated UID is a fail-closed error.
+  ledger.json: ""
+{{- end }}

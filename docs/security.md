@@ -482,6 +482,24 @@ Used by each VK pod. Permissions:
 | `events` | create, patch | Emit pod lifecycle events |
 | `leases` (`kube-node-lease`, the worker namespace, and optional configured lease namespace) | get, list, watch, create, update, patch, delete | Node heartbeat, config arbitration, and the shared disruptive-mutation fence |
 
+The table above describes the legacy/shared VK identity. With
+`topology.enabled=true`, selected devices instead receive an incarnation-bound
+ServiceAccount and the fixed managed-worker role. That role removes Pod
+main-resource/log/exec access, Node metadata/spec mutation, and Lease
+create/delete. The manager pre-creates identity- and purpose-bound heartbeat,
+config-family, and mutation Leases; fail-closed admission permits only monotonic
+updates by their exact worker. A separate policy confines `pods/status` writes
+to Pods whose immutable `spec.nodeName` is encoded in that worker identity.
+
+Two native-authorization gaps remain explicit. The ServiceAccount can read
+Secrets cluster-wide for cross-namespace Pod volume resolution; RBAC cannot
+limit that grant to Secrets referenced by Pods on one dynamic virtual Node.
+It can also publish any schema-valid status for Pods on its own virtual Node,
+even though admission blocks peer-Node and metadata/spec writes. Provider cache
+filtering is not an authorization boundary. A future hardening phase should
+qualify `system:node:<virtual-node>` credentials with Kubernetes Node Authorizer
+and NodeRestriction, or mediate Pod status through the manager.
+
 Write-class gNOI actions and software upgrades share one
 `device-disruptive-mutation` Lease per namespaced device. Definitive outcomes
 release it. Every post-invocation action failure and any upgrade outcome that

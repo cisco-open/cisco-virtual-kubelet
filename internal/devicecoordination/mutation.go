@@ -49,6 +49,12 @@ func MutationGuardFromContext(ctx context.Context) MutationGuard {
 // participate in the same safety boundary without importing IOS XE code.
 const MutationLeaseFamily = "device-disruptive-mutation"
 
+// RetainLeaseAnnotation asks FamilyLeaser.Release to clear ownership rather
+// than delete the object. Managed mode uses a pre-created, admission-protected
+// Lease so its identity and per-device authorization boundary cannot vanish
+// between operations.
+const RetainLeaseAnnotation = "topology.cisco.vk/retain-lease"
+
 // DeviceKey returns a short, label-safe key for a namespaced device. The
 // namespace is part of the digest so equal device names in different tenant
 // namespaces never share a lease accidentally.

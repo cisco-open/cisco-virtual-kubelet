@@ -185,7 +185,7 @@ func TestMaintenancePreparationFailurePreventsDispatch(t *testing.T) {
 	})
 	r := newReconciler(t, rig, up)
 	attachMutationLeaser(r, up)
-	r.BeforeMutation = func(context.Context) error {
+	r.BeforeMutation = func(context.Context, *opsv1alpha1.IOSXESoftwareUpgrade) error {
 		assertMutationLease(t, r, true)
 		return errors.New("maintenance taint could not be applied")
 	}

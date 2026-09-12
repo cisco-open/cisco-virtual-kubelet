@@ -1,0 +1,51 @@
+# Managed topology is an opt-in trust-boundary change. Read
+# docs/topology-awareness.md and qualify admission on the target cluster first.
+aggregator:
+  enabled: false
+
+controller:
+  # Reduces overlapping manager reconciliation; durable ledger/CAS and
+  # admission remain the safety boundary across leadership transitions.
+  leaderElect: true
+
+rbac:
+  profile: strict
+
+topology:
+  enabled: true
+  policy:
+    # Empty values select the Helm release namespace and generated names.
+    namespace: ""
+    name: ""
+    fleetSelector:
+      matchLabels:
+        topology.cisco.vk/managed: "true"
+      matchExpressions: []
+    requiredTopologyKeys:
+      - topology.kubernetes.io/region
+      - topology.kubernetes.io/zone
+      - topology.cisco.vk/site
+      - operations.cisco.vk/redundancy-domain
+    projectedTopologyKeys:
+      - topology.kubernetes.io/region
+      - topology.kubernetes.io/zone
+      - topology.cisco.vk/site
+    globalMaxConcurrentTransfers: 1
+    globalMaxUnavailable: 1
+    domainMaxConcurrentTransfers:
+      topology.cisco.vk/site: 1
+    domainMaxUnavailable:
+      topology.kubernetes.io/zone: 1
+      operations.cisco.vk/redundancy-domain: 1
+    healthFreshnessSeconds: 300
+    maxCampaignTargets: 100
+    maxActiveReservations: 256
+    maxLedgerBytes: 262144
+  ledger:
+    name: ""
+
+# Projection is useful without software mutation. Leave this false until the
+# managed rollout path, secure gNOI, and device certificates are qualified.
+gnoi:
+  disabled: false
+  enableSoftwareUpgrade: false

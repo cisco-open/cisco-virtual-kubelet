@@ -54,8 +54,12 @@ type Coordinator struct {
 	Client         client.Client
 	Namespace      string
 	DeviceName     string
+	DeviceUID      string
 	NodeName       string
 	LeaseNamespace string
+	// ManagedTopology replaces direct worker Node-spec writes with the
+	// durable Lease request / manager acknowledgement protocol.
+	ManagedTopology bool
 	// MutationsEnabled enables routine-write acquisition before new gNOI
 	// operations can start. When false, existing leases still fence writes and
 	// retain taints, but an idle legacy worker performs only Kubernetes reads.
@@ -78,8 +82,11 @@ func (c *Coordinator) AcquireWrite(ctx context.Context) (context.Context, func(e
 	if c.Client == nil || c.Namespace == "" || c.DeviceName == "" || c.LeaseNamespace == "" {
 		return ctx, nil, fmt.Errorf("device maintenance coordinator is incomplete")
 	}
+	if err := c.checkManagedWriteSession(ctx); err != nil {
+		return ctx, nil, err
+	}
 	key := devicecoordination.DeviceKey(c.Namespace, c.DeviceName)
-	if !c.MutationsEnabled {
+	if !c.MutationsEnabled && !c.ManagedTopology {
 		readCtx, readCancel := context.WithTimeout(ctx, apiTimeout)
 		var existing coordv1.Lease
 		err := c.Client.Get(readCtx, types.NamespacedName{Namespace: c.LeaseNamespace,
@@ -105,7 +112,7 @@ func (c *Coordinator) AcquireWrite(ctx context.Context) (context.Context, func(e
 	if ttl <= 0 {
 		ttl = writeLeaseTTL
 	}
-	leaser := &engine.FamilyLeaser{Client: c.Client, Namespace: c.LeaseNamespace, TTL: ttl}
+	leaser := &engine.FamilyLeaser{Client: c.Client, Namespace: c.LeaseNamespace, TTL: ttl, RequireExisting: c.ManagedTopology}
 	acquireCtx, acquireCancel := context.WithTimeout(ctx, apiTimeout)
 	defer acquireCancel()
 	guard, err := mutationguard.EnsureCanonicalQuarantine(acquireCtx, c.Client, leaser,
@@ -122,6 +129,12 @@ func (c *Coordinator) AcquireWrite(ctx context.Context) (context.Context, func(e
 	}
 	if !result.Owned {
 		return ctx, nil, fmt.Errorf("device maintenance: mutation lease held by %s", result.Holder)
+	}
+	// The previous operation can release its holder between the first session
+	// read and acquisition. Recheck under our Lease before any device write.
+	if err := c.checkManagedWriteSession(ctx); err != nil {
+		_ = leaser.Release(acquireCtx, key, devicecoordination.MutationLeaseFamily, identity)
+		return ctx, nil, err
 	}
 	writeCtx, cancel := context.WithTimeout(ctx, maxWriteDuration)
 	stop := make(chan struct{})
@@ -181,6 +194,9 @@ func (c *Coordinator) BeforeMutation(ctx context.Context) error {
 	if c == nil {
 		return nil
 	}
+	if c.ManagedTopology {
+		return fmt.Errorf("managed topology permits disruptive mutation only through a campaign-owned software-upgrade maintenance session")
+	}
 	c.nodeMu.Lock()
 	defer c.nodeMu.Unlock()
 	ctx, cancel := context.WithTimeout(ctx, apiTimeout)
@@ -229,6 +245,12 @@ func (c *Coordinator) Run(ctx context.Context) {
 }
 
 func (c *Coordinator) Sync(ctx context.Context) error {
+	if c != nil && c.ManagedTopology {
+		// The manager owns Node spec in managed mode. Lease and leaf watches
+		// drive its durable guard/session reconciliation; the worker must never
+		// race that ownership from this background loop.
+		return nil
+	}
 	c.nodeMu.Lock()
 	defer c.nodeMu.Unlock()
 	ctx, cancel := context.WithTimeout(ctx, apiTimeout)

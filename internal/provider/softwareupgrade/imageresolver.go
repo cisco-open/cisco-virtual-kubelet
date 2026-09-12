@@ -76,7 +76,7 @@ type ImageResolver interface {
 // handled by the reconciler's platform lifecycle backend.
 type DefaultImageResolver struct {
 	HTTPClient    *http.Client
-	K8sClient     client.Client
+	K8sClient     client.Reader
 	TFTPBlockSize int
 	CacheDir      string
 	// MaxImageBytes bounds both downloaded and cached image data. Zero uses the
@@ -146,7 +146,7 @@ func MarkRetryableResolveError(err error) error {
 // NewDefaultImageResolver constructs a resolver with sensible
 // defaults. K8s is mandatory (for ConfigMap reads); httpClient may be
 // nil to use http.DefaultClient.
-func NewDefaultImageResolver(k8s client.Client, httpClient *http.Client) *DefaultImageResolver {
+func NewDefaultImageResolver(k8s client.Reader, httpClient *http.Client) *DefaultImageResolver {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
@@ -181,11 +181,19 @@ func (r *DefaultImageResolver) Resolve(ctx context.Context, namespace string, sr
 		if err != nil {
 			return nil, &redactedURLParseError{endpoint: redactRawURL(src.URL), cause: err}
 		}
+		if _, managed := managedImageSourcePolicyFromContext(resolveCtx); managed {
+			if err := validateManagedImageSource(u, src); err != nil {
+				return nil, err
+			}
+		}
 		if err := r.authorizeURLSecret(resolveCtx, namespace, u, src.URLSecretRef); err != nil {
 			return nil, err
 		}
 		return r.resolveCachedURL(resolveCtx, namespace, src, maxImageBytes)
 	case src.ConfigMapRef != nil:
+		if _, managed := managedImageSourcePolicyFromContext(resolveCtx); managed {
+			return nil, errors.New("managed image source must use an HTTPS or SFTP URL")
+		}
 		return r.resolveConfigMap(resolveCtx, namespace, src.ConfigMapRef.Name, maxImageBytes)
 	default:
 		return nil, errors.New("image source is not a resolvable byte source")
@@ -315,7 +323,14 @@ func (r *DefaultImageResolver) resolveHTTPURL(ctx context.Context, u *url.URL, s
 	if err != nil {
 		return nil, fmt.Errorf("image source HTTP %s: invalid request", redactURL(u))
 	}
-	resp, err := r.HTTPClient.Do(req)
+	httpClient := r.HTTPClient
+	if _, managed := managedImageSourcePolicyFromContext(ctx); managed {
+		httpClient, err = managedHTTPClient(ctx, httpClient, u)
+		if err != nil {
+			return nil, err
+		}
+	}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		cause := unwrapURLError(err)
 		requestErr := &redactedHTTPError{operation: "get", endpoint: redactURL(u), cause: cause}
@@ -969,22 +984,53 @@ func (r *DefaultImageResolver) authorizedURLSecret(ctx context.Context, namespac
 		}
 		return nil, getErr
 	}
-	if secret.Labels[URLSecretPurposeLabel] != URLSecretPurposeValue {
-		return nil, fmt.Errorf("image source URL secretRef must have label %s=%s", URLSecretPurposeLabel, URLSecretPurposeValue)
+	if policy, managed := managedImageSourcePolicyFromContext(ctx); managed {
+		if policy.sourceSecretUID == "" {
+			return nil, errors.New("managed image source Secret identity binding is missing")
+		}
+		if string(secret.UID) != policy.sourceSecretUID {
+			return nil, errors.New("managed image source Secret incarnation changed after admission")
+		}
 	}
-
-	scheme, host, port, err := canonicalImageEndpoint(u)
-	if err != nil {
+	if err := validateURLSecretEndpoint(&secret, u); err != nil {
 		return nil, err
-	}
-	allowedScheme, allowedHost, allowedPort, err := secretEndpointBinding(&secret)
-	if err != nil {
-		return nil, err
-	}
-	if scheme != allowedScheme || host != allowedHost || port != allowedPort {
-		return nil, errors.New("image source URL secretRef does not authorize the requested URL endpoint")
 	}
 	return &secret, nil
+}
+
+// ValidateURLSecretEndpoint verifies that a Secret is explicitly purposed for
+// software-image retrieval and authorizes exactly rawURL's scheme, canonical
+// host, and port. Credentials and known-host material may rotate in place, but
+// changing the endpoint binding or replacing the Secret UID requires a new
+// manager-approved plan. Callers must separately compare the live Secret UID
+// with that frozen identity.
+func ValidateURLSecretEndpoint(secret *corev1.Secret, rawURL string) error {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return errors.New("image source URL is invalid")
+	}
+	return validateURLSecretEndpoint(secret, u)
+}
+
+func validateURLSecretEndpoint(secret *corev1.Secret, u *url.URL) error {
+	if secret == nil {
+		return errors.New("image source URL secretRef is nil")
+	}
+	if secret.Labels[URLSecretPurposeLabel] != URLSecretPurposeValue {
+		return fmt.Errorf("image source URL secretRef must have label %s=%s", URLSecretPurposeLabel, URLSecretPurposeValue)
+	}
+	scheme, host, port, err := canonicalImageEndpoint(u)
+	if err != nil {
+		return err
+	}
+	allowedScheme, allowedHost, allowedPort, err := secretEndpointBinding(secret)
+	if err != nil {
+		return err
+	}
+	if scheme != allowedScheme || host != allowedHost || port != allowedPort {
+		return errors.New("image source URL secretRef does not authorize the requested URL endpoint")
+	}
+	return nil
 }
 
 func canonicalImageEndpoint(u *url.URL) (scheme, host, port string, err error) {
@@ -1066,6 +1112,11 @@ func secretBytes(data map[string][]byte, keys ...string) []byte {
 }
 
 func (r *DefaultImageResolver) sshClient(ctx context.Context, namespace string, u *url.URL, ref *corev1.LocalObjectReference) (*ssh.Client, error) {
+	if _, managed := managedImageSourcePolicyFromContext(ctx); managed {
+		if err := validateManagedSSHURL(u, ref); err != nil {
+			return nil, err
+		}
+	}
 	creds, err := r.urlCredentials(ctx, namespace, u, ref)
 	if err != nil {
 		return nil, err
@@ -1091,8 +1142,17 @@ func (r *DefaultImageResolver) sshClient(ctx context.Context, namespace string, 
 		HostKeyCallback: hostKeyCallback,
 		Timeout:         30 * time.Second,
 	}
-	dialer := net.Dialer{Timeout: 30 * time.Second}
-	conn, err := dialer.DialContext(ctx, "tcp", addr)
+	var conn net.Conn
+	if _, managed := managedImageSourcePolicyFromContext(ctx); managed {
+		dialContext, dialErr := managedEndpointDialer(ctx, u, "22", true)
+		if dialErr != nil {
+			return nil, dialErr
+		}
+		conn, err = dialContext(ctx, "tcp", addr)
+	} else {
+		dialer := net.Dialer{Timeout: 30 * time.Second}
+		conn, err = dialer.DialContext(ctx, "tcp", addr)
+	}
 	if err != nil {
 		return nil, classifyConnectionFailure(fmt.Errorf("image source SSH dial: %w", err))
 	}

@@ -1,0 +1,115 @@
+# Replace addresses, credentials, and inventory labels with authoritative
+# values. Risk labels stay on CiscoDevice; only policy-allowlisted topology
+# labels are projected to Nodes for the default scheduler.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: c9k-a-credentials
+  namespace: network-devices
+type: Opaque
+stringData:
+  password: REPLACE_ME
+---
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: c9k-a
+  namespace: network-devices
+  labels:
+    topology.cisco.vk/managed: "true"
+    topology.kubernetes.io/region: eu-central
+    topology.kubernetes.io/zone: berlin-1
+    topology.cisco.vk/site: berlin-campus
+    operations.cisco.vk/redundancy-domain: stack-a
+    operations.cisco.vk/image-family: cat9k
+    # Every rollout target needs a qualified hardware/capability cohort. The
+    # rollout must name this exact value and at least one explicit canary.
+    operations.cisco.vk/qualification-cohort: c9300
+spec:
+  driver: XE
+  # Immutable, operator-declared chassis serial/UUID used as the rollout
+  # deduplication identity. Replace it with the verified device value.
+  physicalIdentity: REPLACE_WITH_CHASSIS_SERIAL
+  nodeName: c9k-a
+  address: 192.0.2.10
+  port: 443
+  username: cvk
+  credentialSecretRef:
+    name: c9k-a-credentials
+  tls:
+    enabled: true
+    insecureSkipVerify: false
+  gnoi:
+    transportSecurity: tls
+    port: 9339
+    tls:
+      secretRef:
+        name: c9k-a-gnoi-tls
+  maxPods: 8
+  xe:
+    networking:
+      interface:
+        type: Management
+        management:
+          dhcp: true
+---
+# Workload placement stays entirely within the default kube-scheduler. There
+# is no CVK scheduler plugin or alternate scheduler. This two-replica hard
+# spread requires at least two Ready, enrolled CVK Nodes in distinct zones
+# with topology.cisco.vk/site=berlin-campus; the device above is one member.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edge-agent
+  namespace: edge-workloads
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: edge-agent
+  template:
+    metadata:
+      labels:
+        app: edge-agent
+    spec:
+      # No toleration is provided for topology.cisco.vk/uninitialized or
+      # cisco.vk/device-maintenance. Those CVK-owned NoSchedule guards keep
+      # ordinary application Pods away during handoff or device mutation.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.cisco.vk/site
+                    operator: In
+                    values: [berlin-campus]
+      topologySpreadConstraints:
+        - maxSkew: 1
+          minDomains: 2
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: edge-agent
+      containers:
+        - name: edge-agent
+          image: REPLACE_WITH_APP_IMAGE
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+# This PDB documents the workload's availability intent for ordinary voluntary
+# disruption and the deferred Phase 4 drain design. Phase 2 uses
+# BlockIfRunning: it does not evict these Pods or consume this PDB.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: edge-agent
+  namespace: edge-workloads
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: edge-agent

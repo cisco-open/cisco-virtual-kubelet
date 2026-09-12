@@ -231,6 +231,17 @@ spec:
                   host.
                 format: int32
                 type: integer
+              nodeName:
+                description: |-
+                  NodeName reserves the cluster-scoped Kubernetes Node identity for this
+                  namespaced device. It is immutable because renaming would change the
+                  scheduler and worker security boundary. When omitted, the controller
+                  resolves metadata.name for backward compatibility; CRD defaulting cannot
+                  dynamically copy metadata.name. The resolved name and Node UID are
+                  recorded in status.nodeIdentity.
+                maxLength: 63
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                type: string
               nxos:
                 description: NXOS holds NX-OS specific networking configuration.
                 properties:
@@ -332,6 +343,18 @@ spec:
                 description: |-
                   Password for device authentication.
                   In CRD mode the controller should source this from a Secret reference.
+                type: string
+              physicalIdentity:
+                description: |-
+                  PhysicalIdentity is an operator-declared stable chassis serial, UUID, or
+                  equivalent hardware identity. Managed topology requires it and treats its
+                  lowercase canonical form as the rollout admission and deduplication
+                  authority. The authenticated worker's live device inventory must agree,
+                  but cannot replace this immutable declaration. It remains optional outside
+                  managed topology for backward compatibility.
+                maxLength: 128
+                minLength: 1
+                pattern: ^[A-Za-z0-9]([A-Za-z0-9._:/-]{0,126}[A-Za-z0-9])?$
                 type: string
               podCIDR:
                 description: PodCIDR is the CIDR to use for pod network interfaces
@@ -702,6 +725,12 @@ spec:
                 != ''tls'' || has(self.gnoi.tls) || (has(self.xe) && has(self.xe.gnoi)
                 && has(self.xe.gnoi.certificateProvisioning)) || !has(self.tls) ||
                 !has(self.tls.insecureSkipVerify) || !self.tls.insecureSkipVerify'
+            - message: nodeName is immutable
+              rule: has(self.nodeName) == has(oldSelf.nodeName) && (!has(self.nodeName)
+                || self.nodeName == oldSelf.nodeName)
+            - message: physicalIdentity is write-once
+              rule: '!has(oldSelf.physicalIdentity) || (has(self.physicalIdentity)
+                && self.physicalIdentity == oldSelf.physicalIdentity)'
           status:
             description: DeviceStatus defines the observed state of a CiscoDevice.
             properties:
@@ -762,7 +791,304 @@ spec:
                   - status
                   - type
                   type: object
+                maxItems: 64
                 type: array
+              healthObservation:
+                description: |-
+                  HealthObservation is a manager-authenticated snapshot binding the latest
+                  observed Node Ready heartbeat to the current CiscoDevice condition set.
+                  Rollout admission requires both sides of this snapshot to remain current;
+                  a fresh Node heartbeat cannot mask stale or subsequently changed device
+                  health evidence.
+                properties:
+                  conditionObservations:
+                    description: |-
+                      ConditionObservations carries independent producer observation times for
+                      manager-evaluated conditions. A fresh Node heartbeat does not refresh
+                      these entries. Rollout-required conditions without a matching entry are
+                      rejected; LastTransitionTime is not proof that the manager ran a producer.
+                    items:
+                      description: |-
+                        DeviceConditionObservationStatus records when the manager last evaluated
+                        one condition's underlying source rather than merely re-reading its value.
+                      properties:
+                        observedAt:
+                          format: date-time
+                          type: string
+                        observedGeneration:
+                          format: int64
+                          minimum: 0
+                          type: integer
+                        status:
+                          enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                          type: string
+                        type:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[A-Za-z]([A-Za-z0-9_.-]*[A-Za-z0-9])?$
+                          type: string
+                      required:
+                      - observedAt
+                      - observedGeneration
+                      - status
+                      - type
+                      type: object
+                    maxItems: 64
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - type
+                    x-kubernetes-list-type: map
+                  deviceConditionsHash:
+                    description: |-
+                      DeviceConditionsHash covers device phase and all current conditions,
+                      including their status, reason, generation, transition time, and message.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  nodeReadyHeartbeatTime:
+                    description: |-
+                      NodeReadyHeartbeatTime is the bound worker's Ready heartbeat in the
+                      snapshot. The rollout controller compares it with the live Node.
+                    format: date-time
+                    type: string
+                  observedAt:
+                    description: ObservedAt is manager time when this exact source
+                      snapshot was verified.
+                    format: date-time
+                    type: string
+                required:
+                - deviceConditionsHash
+                - nodeReadyHeartbeatTime
+                - observedAt
+                type: object
+              legacyHandoff:
+                description: |-
+                  LegacyHandoff records the explicit, UID-bound reverse writer handoff from
+                  managed topology to an isolated per-device legacy worker. A Complete
+                  record is retained after NodeIdentity is cleared so later reconciles never
+                  fall back to the release-wide shared ServiceAccount.
+                properties:
+                  completedAt:
+                    description: CompletedAt is set only after the legacy writer readiness
+                      proof passes.
+                    format: date-time
+                    type: string
+                  deviceUID:
+                    description: DeviceUID binds the handoff to this CiscoDevice incarnation.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  legacyWorkerUsername:
+                    description: |-
+                      LegacyWorkerUsername is the exact isolated ServiceAccount username that
+                      must prove readiness. It can never name the chart-wide shared identity.
+                    maxLength: 320
+                    minLength: 1
+                    type: string
+                  nodeName:
+                    description: NodeName and NodeUID bind the handoff to the exact
+                      released Node.
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                  nodeReleasedAt:
+                    description: |-
+                      NodeReleasedAt is set immediately before the manager removes managed Node
+                      ownership. The legacy readiness heartbeat must not predate it.
+                    format: date-time
+                    type: string
+                  nodeUID:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  phase:
+                    description: Phase is the current durable reverse handoff phase.
+                    enum:
+                    - Preparing
+                    - LegacyWriterPending
+                    - Complete
+                    type: string
+                  projectionHash:
+                    description: ProjectionHash is the last managed projection released
+                      by this handoff.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  requestedAt:
+                    description: RequestedAt is manager time when the authorized request
+                      was accepted.
+                    format: date-time
+                    type: string
+                required:
+                - deviceUID
+                - legacyWorkerUsername
+                - nodeName
+                - nodeUID
+                - phase
+                - projectionHash
+                - requestedAt
+                type: object
+                x-kubernetes-validations:
+                - message: legacy handoff identity is immutable
+                  rule: self.deviceUID == oldSelf.deviceUID && self.nodeName == oldSelf.nodeName
+                    && self.nodeUID == oldSelf.nodeUID && self.projectionHash == oldSelf.projectionHash
+                    && self.legacyWorkerUsername == oldSelf.legacyWorkerUsername &&
+                    self.requestedAt == oldSelf.requestedAt
+                - message: legacy handoff phase may only advance
+                  rule: 'oldSelf.phase == ''Preparing'' ? self.phase in [''Preparing'',
+                    ''LegacyWriterPending''] : (oldSelf.phase == ''LegacyWriterPending''
+                    ? self.phase in [''LegacyWriterPending'', ''Complete''] : self.phase
+                    == ''Complete'')'
+                - message: legacy handoff timestamps must match phase
+                  rule: 'self.phase == ''Preparing'' ? !has(self.nodeReleasedAt) &&
+                    !has(self.completedAt) : (self.phase == ''LegacyWriterPending''
+                    ? has(self.nodeReleasedAt) && !has(self.completedAt) : has(self.nodeReleasedAt)
+                    && has(self.completedAt))'
+                - message: legacy handoff release cannot precede its request
+                  rule: '!has(self.nodeReleasedAt) || self.nodeReleasedAt >= self.requestedAt'
+                - message: legacy handoff completion cannot precede release
+                  rule: '!has(self.completedAt) || (has(self.nodeReleasedAt) && self.completedAt
+                    >= self.nodeReleasedAt)'
+              maintenanceSession:
+                description: |-
+                  MaintenanceSession is the bounded durable manager-owned acknowledgement
+                  for a worker mutation request. Managed workers must observe a matching
+                  active token, Lease holder, operation, device, and Node incarnation before
+                  dispatching a new mutation.
+                properties:
+                  acknowledgedAt:
+                    description: |-
+                      AcknowledgedAt is set only after the manager applies and verifies the
+                      Node guard for this exact session.
+                    format: date-time
+                    type: string
+                  controlRevision:
+                    description: |-
+                      ControlRevision is the campaign/operation control revision acknowledged
+                      for this managed session. A new operation starts its own revision sequence.
+                    format: int64
+                    minimum: 0
+                    type: integer
+                  deviceUID:
+                    description: DeviceUID binds the session to this CiscoDevice incarnation.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  lease:
+                    description: |-
+                      Lease is the exact current mutation Lease and holder that requested the
+                      session.
+                    properties:
+                      holder:
+                        description: Holder is the exact Lease holderIdentity that
+                          submitted the request.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      name:
+                        description: Name is the object's name.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: Namespace is the object's namespace.
+                        maxLength: 63
+                        minLength: 1
+                        type: string
+                      uid:
+                        description: UID rejects delete/recreate identity substitution.
+                        maxLength: 128
+                        minLength: 1
+                        type: string
+                    required:
+                    - holder
+                    - name
+                    - namespace
+                    - uid
+                    type: object
+                  message:
+                    description: Message is a bounded human-readable blocked or transition
+                      explanation.
+                    maxLength: 256
+                    type: string
+                  nodeName:
+                    description: NodeName is the manager-resolved Node identity.
+                    maxLength: 63
+                    minLength: 1
+                    type: string
+                  nodeUID:
+                    description: NodeUID binds the guard to the exact Node incarnation.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  operation:
+                    description: Operation is the exact namespaced operation object
+                      requesting mutation.
+                    properties:
+                      name:
+                        description: Name is the object's name.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: Namespace is the object's namespace.
+                        maxLength: 63
+                        minLength: 1
+                        type: string
+                      uid:
+                        description: UID rejects delete/recreate identity substitution.
+                        maxLength: 128
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    - namespace
+                    - uid
+                    type: object
+                  phase:
+                    description: Phase is the current durable manager handoff phase.
+                    enum:
+                    - Acknowledged
+                    - Active
+                    - Settled
+                    type: string
+                  requestedAt:
+                    description: RequestedAt is the request timestamp preserved across
+                      renewal and restart.
+                    format: date-time
+                    type: string
+                  sessionToken:
+                    description: |-
+                      SessionToken uniquely binds one request/acknowledgement exchange and must
+                      not be reused for a later Lease holder or operation.
+                    maxLength: 64
+                    minLength: 16
+                    pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+                    type: string
+                required:
+                - controlRevision
+                - deviceUID
+                - lease
+                - nodeName
+                - nodeUID
+                - operation
+                - phase
+                - requestedAt
+                - sessionToken
+                type: object
+                x-kubernetes-validations:
+                - message: acknowledgedAt is required after manager acknowledgement
+                  rule: has(self.acknowledgedAt)
+                - message: active maintenance session identity is immutable
+                  rule: oldSelf.phase == 'Settled' || (self.sessionToken == oldSelf.sessionToken
+                    && self.lease == oldSelf.lease && self.operation == oldSelf.operation
+                    && self.deviceUID == oldSelf.deviceUID && self.nodeName == oldSelf.nodeName
+                    && self.nodeUID == oldSelf.nodeUID && self.requestedAt == oldSelf.requestedAt)
+                - message: maintenance controlRevision cannot decrease within a session
+                  rule: self.sessionToken != oldSelf.sessionToken || self.controlRevision
+                    >= oldSelf.controlRevision
               netAsCode:
                 description: |-
                   NetAsCode records the Network as Code model stripe this device should
@@ -793,6 +1119,49 @@ spec:
                     - SolutionCentric
                     type: string
                 type: object
+              nodeIdentity:
+                description: |-
+                  NodeIdentity is the bounded manager-owned binding between this
+                  namespaced CiscoDevice and its cluster-scoped virtual Node. The Node UID,
+                  not the name alone, must be verified before manager patch or delete.
+                properties:
+                  deviceUID:
+                    description: DeviceUID binds the record to this exact CiscoDevice
+                      incarnation.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  nodeName:
+                    description: NodeName is the immutable resolved Node name.
+                    maxLength: 63
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                  nodeUID:
+                    description: |-
+                      NodeUID is the UID observed when the manager atomically reserved or
+                      explicitly adopted NodeName.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  physicalIdentity:
+                    description: |-
+                      PhysicalIdentity is the lowercase canonical form of the immutable
+                      administrator declaration in spec.physicalIdentity. It is the trusted
+                      rollout/deduplication binding; authenticated worker inventory is only a
+                      live consistency signal and must agree with it.
+                    maxLength: 128
+                    minLength: 1
+                    pattern: ^[a-z0-9]([a-z0-9._:/-]{0,126}[a-z0-9])?$
+                    type: string
+                required:
+                - deviceUID
+                - nodeName
+                - nodeUID
+                - physicalIdentity
+                type: object
+                x-kubernetes-validations:
+                - message: managed Node identity is immutable
+                  rule: self == oldSelf
               phase:
                 description: Phase represents the current lifecycle phase of the device.
                 enum:
@@ -802,6 +1171,135 @@ spec:
                 - Error
                 - Deleting
                 type: string
+              topologyLock:
+                description: |-
+                  TopologyLock is the manager-owned CAS barrier that freezes this device's
+                  risk-domain projection between campaign admission and exact reservation
+                  release. Main-resource admission rejects protected topology changes while
+                  the lock is present.
+                properties:
+                  acquiredAt:
+                    format: date-time
+                    type: string
+                  acquisitionID:
+                    description: |-
+                      AcquisitionID distinguishes separate lock acquisitions for the same
+                      campaign, target, policy epoch, and deterministic reservation ID.
+                    pattern: ^[a-f0-9]{32}$
+                    type: string
+                  campaignName:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  campaignNamespace:
+                    maxLength: 63
+                    minLength: 1
+                    type: string
+                  campaignUID:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  deviceGeneration:
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  deviceUID:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  nodeUID:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  planHash:
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  policyEpoch:
+                    description: |-
+                      PolicyEpoch prevents cleanup from an older administrator-policy epoch from
+                      fencing or clearing a later reservation that reuses the deterministic ID.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  projectionHash:
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  reservationID:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  state:
+                    allOf:
+                    - enum:
+                      - Active
+                      - Releasing
+                    - enum:
+                      - Active
+                      - Releasing
+                    description: |-
+                      State is Active while a reservation may be acquired or retained and
+                      Releasing before ledger cleanup begins. Releasing is itself still a full
+                      topology/reclassification fence.
+                    type: string
+                required:
+                - acquiredAt
+                - acquisitionID
+                - campaignName
+                - campaignNamespace
+                - campaignUID
+                - deviceGeneration
+                - deviceUID
+                - nodeUID
+                - planHash
+                - policyEpoch
+                - projectionHash
+                - reservationID
+                - state
+                type: object
+                x-kubernetes-validations:
+                - message: topology lock transaction identity is immutable
+                  rule: self.campaignNamespace == oldSelf.campaignNamespace && self.campaignName
+                    == oldSelf.campaignName && self.campaignUID == oldSelf.campaignUID
+                    && self.planHash == oldSelf.planHash && self.reservationID ==
+                    oldSelf.reservationID && self.deviceUID == oldSelf.deviceUID &&
+                    self.deviceGeneration == oldSelf.deviceGeneration && self.nodeUID
+                    == oldSelf.nodeUID && self.projectionHash == oldSelf.projectionHash
+                    && self.policyEpoch == oldSelf.policyEpoch && self.acquisitionID
+                    == oldSelf.acquisitionID && self.acquiredAt == oldSelf.acquiredAt
+                - message: topology lock may only advance from Active to Releasing
+                  rule: 'oldSelf.state == ''Active'' ? self.state in [''Active'',
+                    ''Releasing''] : self.state == ''Releasing'''
+              topologyProjection:
+                description: |-
+                  TopologyProjection is an audit summary of the manager-owned label
+                  projection. Desired labels remain in metadata; status intentionally does
+                  not duplicate them.
+                properties:
+                  effectiveLabelHash:
+                    description: |-
+                      EffectiveLabelHash is the content address of the normalized, allowlisted
+                      labels projected to the Node.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  lastSuccessfulTime:
+                    description: |-
+                      LastSuccessfulTime is when the manager established this effective
+                      projection on the bound Node. The managed worker's separate status
+                      heartbeat proves that the writer handoff occurred after this epoch.
+                    format: date-time
+                    type: string
+                  sourceResourceVersion:
+                    description: |-
+                      SourceResourceVersion is the CiscoDevice metadata.resourceVersion whose
+                      labels were projected. Label changes do not advance generation.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                required:
+                - effectiveLabelHash
+                - lastSuccessfulTime
+                - sourceResourceVersion
+                type: object
               workerCapabilities:
                 description: |-
                   WorkerCapabilities is a bounded summary of the runtimes the current
@@ -847,6 +1345,74 @@ spec:
                 x-kubernetes-list-map-keys:
                 - name
                 x-kubernetes-list-type: map
+              workerRevision:
+                description: |-
+                  WorkerRevision binds the desired per-device Deployment PodTemplate to the
+                  exact running Pod and its post-start managed Node heartbeat. A rollout may
+                  use gNOI only when desiredRevision and observedRevision are identical.
+                properties:
+                  deploymentGeneration:
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  deploymentUID:
+                    description: |-
+                      DeploymentUID and DeploymentGeneration identify the exact desired
+                      Deployment incarnation and revision observed by the manager.
+                      They are absent in the durable pre-rollout fence, then populated together
+                      after the manager observes the desired Deployment incarnation.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  desiredRevision:
+                    description: |-
+                      DesiredRevision is computed from the desired PodTemplate after removing
+                      only the revision's own carrier annotation and environment variable.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  observedAt:
+                    description: ObservedAt is manager time for this desired/observed
+                      snapshot.
+                    format: date-time
+                    type: string
+                  observedRevision:
+                    description: |-
+                      ObservedRevision is reported by the running managed worker through its
+                      status-only Node writer. It is optional while a Deployment is converging.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  podStartTime:
+                    format: date-time
+                    type: string
+                  podUID:
+                    description: |-
+                      PodUID and PodStartTime identify the sole ready Pod of a completed
+                      Deployment rollout. They are absent while the rollout is converging.
+                    maxLength: 128
+                    type: string
+                  readyHeartbeatTime:
+                    description: |-
+                      ReadyHeartbeatTime is the matching managed-worker Node heartbeat and must
+                      not predate PodStartTime. It is absent until the new Pod has reported.
+                    format: date-time
+                    type: string
+                required:
+                - desiredRevision
+                - observedAt
+                type: object
+                x-kubernetes-validations:
+                - message: deployment UID and generation must be present together
+                  rule: has(self.deploymentUID) == has(self.deploymentGeneration)
+                - message: an observed worker revision requires Deployment identity
+                  rule: 'has(self.observedRevision) ? has(self.deploymentUID) : true'
+                - message: Pod UID and start time must be present together
+                  rule: has(self.podUID) == has(self.podStartTime)
+                - message: Pod identity requires Deployment identity
+                  rule: 'has(self.podUID) ? has(self.deploymentUID) : true'
+                - message: a ready heartbeat requires matching desired/observed revisions
+                    and Pod identity
+                  rule: 'has(self.readyHeartbeatTime) ? (has(self.podUID) && has(self.observedRevision)
+                    && self.observedRevision == self.desiredRevision) : true'
               workerTopology:
                 description: |-
                   WorkerTopology records where device-local work is currently executed.
@@ -860,9 +1426,28 @@ spec:
                 - None
                 type: string
             type: object
+            x-kubernetes-validations:
+            - message: a legacy handoff may be cleared only by a new managed Node
+                binding
+              rule: '!has(oldSelf.legacyHandoff) || has(self.legacyHandoff) || (oldSelf.legacyHandoff.phase
+                == ''Complete'' && has(self.nodeIdentity))'
+            - message: managed Node identity may be cleared only by a completed legacy
+                handoff
+              rule: '!has(oldSelf.nodeIdentity) || has(self.nodeIdentity) || (has(self.legacyHandoff)
+                && self.legacyHandoff.phase == ''Complete'')'
+            - message: an in-flight legacy handoff retains managed binding state and
+                a completed handoff releases it
+              rule: '!has(self.legacyHandoff) || (self.legacyHandoff.phase == ''Complete''
+                ? (!has(self.nodeIdentity) && !has(self.topologyProjection) && !has(self.healthObservation)
+                && !has(self.workerRevision)) : (has(self.nodeIdentity) && has(self.topologyProjection)))'
         required:
         - spec
         type: object
+        x-kubernetes-validations:
+        - message: status.nodeIdentity.physicalIdentity must equal the canonical declared
+            spec.physicalIdentity
+          rule: '!has(self.status) || !has(self.status.nodeIdentity) || (has(self.spec.physicalIdentity)
+            && self.status.nodeIdentity.physicalIdentity == self.spec.physicalIdentity.lowerAscii())'
     served: true
     storage: true
     subresources:

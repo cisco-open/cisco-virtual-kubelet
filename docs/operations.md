@@ -7,15 +7,29 @@ upgrading to a new CVK version, apply the updated CRDs before upgrading the
 chart — Helm does not manage CRD updates automatically.
 
 ```bash
-# 1. Pull the exact release chart and apply its CRDs. For the September release:
+# 1. Pull the exact release chart. For the September release:
 helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
   --version 2026.9.2 --untar
-kubectl apply --server-side -f cisco-virtual-kubelet/crds/
+
+# 2. Back up the live definitions, then review the exact server-side result.
+# kubectl diff exits 1 when it finds expected differences.
+kubectl get customresourcedefinitions.apiextensions.k8s.io -o yaml \
+  > cvk-crds-before-upgrade.yaml
+kubectl diff --server-side --force-conflicts \
+  --field-manager=cvk-crd-upgrade \
+  -f cisco-virtual-kubelet/crds/
+
+# 3. Apply only this release's reviewed CVK CRD files. Helm created the
+# original fields under its own manager, so the explicit ownership handoff is
+# required on clusters where an ordinary server-side apply reports conflicts.
+kubectl apply --server-side --force-conflicts \
+  --field-manager=cvk-crd-upgrade \
+  -f cisco-virtual-kubelet/crds/
 kubectl wait --for=condition=Established --timeout=60s \
   crd/networkcontrollers.cisco.vk \
   crd/networkcontrollerconfigs.config.cisco.vk
 
-# 2. Verify all CRDs registered at the new schema version:
+# 4. Verify all CRDs registered at the new schema version:
 kubectl get crds | grep cisco
 
 # Example output (abbreviated; the chart currently ships 17 CRDs):
@@ -28,15 +42,20 @@ iosxeoperationalactions.ops.cisco.vk    2026-01-10T09:00:00Z
 networkcontrollers.cisco.vk             2026-08-07T09:00:00Z
 networkcontrollerconfigs.config.cisco.vk 2026-08-07T09:00:00Z
 
-# 3. Upgrade the Helm release from the same immutable chart version:
+# 5. Upgrade the Helm release from the same immutable chart version:
 helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
   --version 2026.9.2 \
   --namespace cvk-system
 
-# 4. Confirm manager pod is running the new image:
+# 6. Confirm manager pod is running the new image:
 kubectl rollout status deployment/cvk-cisco-virtual-kubelet-controller \
   --namespace cvk-system
 ```
+
+`--force-conflicts` does not grant a cluster-wide overwrite: `kubectl` applies
+it only to the CRD objects contained in the exact `-f` directory. Review the
+diff and source/chart signature first, keep the backup until rollback risk has
+passed, and never point this command at an unrelated manifest directory.
 
 If a pre-September release is upgraded before these two controller CRDs are
 applied, the manager deliberately keeps existing CiscoDevice reconcilers

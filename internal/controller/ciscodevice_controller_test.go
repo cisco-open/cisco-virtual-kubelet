@@ -68,6 +68,7 @@ func newDevice(name, namespace string) *ciskov1.CiscoDevice {
 			Address:  "192.0.2.1",
 			Username: "admin",
 			Password: "secret",
+			MaxPods:  16,
 		},
 	}
 }

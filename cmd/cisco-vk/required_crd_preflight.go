@@ -43,12 +43,16 @@ var controllerFoundationCRDNames = map[string]struct{}{
 }
 
 func missingRequiredCRDs(cfg *rest.Config) ([]string, error) {
+	return missingCRDs(cfg, requiredManagerCRDs)
+}
+
+func missingCRDs(cfg *rest.Config, requiredGVRs []schema.GroupVersionResource) ([]string, error) {
 	cli, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("create discovery client: %w", err)
 	}
 	byGV := map[schema.GroupVersion][]schema.GroupVersionResource{}
-	for _, gvr := range requiredManagerCRDs {
+	for _, gvr := range requiredGVRs {
 		byGV[gvr.GroupVersion()] = append(byGV[gvr.GroupVersion()], gvr)
 	}
 	gvs := make([]schema.GroupVersion, 0, len(byGV))
