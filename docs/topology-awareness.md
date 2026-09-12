@@ -414,9 +414,26 @@ as an alpha, disabled-by-default feature. Kubernetes 1.37 exposes the
 [Workload and PodGroup resources](https://kubernetes.io/docs/concepts/workloads/podgroup-api/)
 through `scheduling.k8s.io/v1beta1`, still disabled by default, and requires
 the `GenericWorkload` and `TopologyAwareWorkloadScheduling` feature gates on
-the relevant control-plane components. Its single topology constraint
-co-locates the group in one label domain; this is different from topology
-spread, which distributes replicas across domains.
+the relevant control-plane components. The v1beta1 API must also be enabled in
+the API server runtime configuration. Its single topology constraint co-locates
+the group in one label domain; this is different from topology spread, which
+distributes replicas across domains.
+
+For example, the repository's pinned kind qualification uses:
+
+```yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+featureGates:
+  GenericWorkload: true
+  TopologyAwareWorkloadScheduling: true
+runtimeConfig:
+  scheduling.k8s.io/v1beta1: "true"
+```
+
+`WorkloadWithJob` is unnecessary because the example creates its runtime
+PodGroup explicitly. `CompositePodGroup` is also intentionally disabled; it is
+a separate alpha surface and is not required for single-level CVK topology.
 
 The separately gated
 [`experimental-native-tas-v1.37.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/topology/experimental-native-tas-v1.37.yaml)
@@ -427,6 +444,13 @@ Kubernetes 1.35 qualification test and must not be applied until discovery and
 create or watch these APIs, so its current client-library line is not an
 adapter; Node labels are the compatibility layer. The earlier v1.36 alpha
 versioned schema is not promised by this example.
+
+CI runs the example in a separate, pinned Kubernetes 1.37 kind cluster. The
+test uses two synthetic Ready Nodes with different `topology.cisco.vk/site`
+values, proves that a valid group is co-located, and proves that Pods forced
+into different site domains remain unschedulable. This is API and scheduler
+conformance only: it does not run a CVK worker, contact a device, or change the
+Kubernetes 1.35 production support floor.
 
 This remains experimental rather than a production dependency because the APIs
 are disabled by default, the built-in integration is still limited, and
