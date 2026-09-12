@@ -45,7 +45,7 @@ func init() {
 			return NewAppHostingDriver(ctx, spec)
 		})
 
-	drivers.RegisterConfigDriver(v1alpha1.DeviceDriverXE, buildXEConfigDriverContext)
+	drivers.RegisterConfigDriver(v1alpha1.DeviceDriverXE, buildXEConfigDriverContext, iosxewriters.Families)
 	drivers.RegisterSoftwareLifecycle(
 		v1alpha1.DeviceDriverXE,
 		func(t transport.Interface) (softwarelifecycle.Backend, error) {

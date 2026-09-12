@@ -27,6 +27,8 @@
 #   - Helm chart installs (values.schema.json catches typos)
 #   - CRDs apply without conversion failures
 #   - Controller pod reaches Ready
+#   - Managed admission and default-scheduler topology behavior pass against
+#     the disposable kind API server
 #   - Per-namespace VK SA + RoleBinding are auto-provisioned
 #   - cisco-vk pod schedules in the device namespace
 #   - The device-call path is reached (the failure mode beyond is
@@ -273,12 +275,11 @@ jobs:
       - name: Install kind
         uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
         with:
-          # kind v0.32.0 defaults to Kubernetes 1.36; pin the node image by
-          # digest so the smoke cluster's Kubernetes version only moves when
-          # we choose to move it. Keep this within the client-go support
-          # window of the k8s.io/* modules in go.mod.
+          # Exercise the exact managed-topology Kubernetes 1.35 support floor,
+          # not kind's newer default. Pin by digest so admission/defaulting and
+          # scheduler behavior move only through an explicit review.
           version: v0.32.0
-          node_image: kindest/node:v1.36.1@sha256:3489c7674813ba5d8b1a9977baea8a6e553784dab7b84759d1014dbd78f7ebd5
+          node_image: kindest/node:v1.35.0@sha256:4613778f3cfcd10e615029370f5786704559103cf27bef934597ba562b269661
           cluster_name: smoke
           wait: 60s
 
@@ -317,6 +318,15 @@ jobs:
             --set gnoi.softwareUpgrade.maxImageBytes=17179869184 > "$rendered"
           grep -A1 -F -- '- name: CISCO_VK_UPGRADE_MAX_IMAGE_BYTES' "$rendered" \
             | grep -Eq '^[[:space:]]+value: "17179869184"$'
+
+      - name: Managed topology Helm render contract
+        run: charts/cisco-virtual-kubelet/tests/topology-render-test.sh
+
+      - name: Managed topology native admission and scheduler integration
+        # Run before the main chart install because both installations own
+        # fixed cluster-scoped worker roles. This disposable-cluster test also
+        # exercises the shared-identity-to-per-device Helm upgrade bridge.
+        run: charts/cisco-virtual-kubelet/tests/topology-kind-test.sh
 
       - name: Build controller image (linux/amd64)
         id: build-smoke-amd64

@@ -412,6 +412,7 @@ spec:
                   - status
                   - type
                   type: object
+                maxItems: 64
                 type: array
                 x-kubernetes-list-map-keys:
                 - type
@@ -453,6 +454,311 @@ spec:
                 - Invalid
                 - Unknown
                 type: string
+              managedMutationClaims:
+                description: |-
+                  ManagedMutationClaims binds every durable at-most-once mutation marker to
+                  the reservation/control revision it claimed. The worker adds an entry in
+                  the same resourceVersion update as the corresponding existing marker.
+                items:
+                  description: |-
+                    UpgradeManagedMutationClaimStatus binds a durable worker mutation claim to
+                    the exact reservation and manager-control revision it won against.
+                  properties:
+                    claimedAt:
+                      description: ClaimedAt is persisted before dispatch and never
+                        rewritten on recovery.
+                      format: date-time
+                      type: string
+                    controlRevision:
+                      description: |-
+                        ControlRevision is committed in the same resourceVersion update as the
+                        existing durable stage-request marker.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    policyEpoch:
+                      description: |-
+                        PolicyEpoch must exactly match the granted manager admission won by this
+                        durable claim.
+                      format: int64
+                      minimum: 1
+                      type: integer
+                    reservationID:
+                      description: ReservationID must equal managerAdmission.reservationID.
+                      maxLength: 64
+                      minLength: 1
+                      pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+                      type: string
+                    stage:
+                      description: Stage is the list-map key and claimed device mutation.
+                      enum:
+                      - Staging
+                      - PrimaryInstall
+                      - StandbyInstall
+                      - StandbyActivation
+                      - PrimaryActivation
+                      - RollbackActivation
+                      type: string
+                  required:
+                  - claimedAt
+                  - controlRevision
+                  - policyEpoch
+                  - reservationID
+                  - stage
+                  type: object
+                  x-kubernetes-validations:
+                  - message: managed mutation claim identity is immutable
+                    rule: self.reservationID == oldSelf.reservationID && self.policyEpoch
+                      == oldSelf.policyEpoch && self.controlRevision == oldSelf.controlRevision
+                      && self.claimedAt == oldSelf.claimedAt
+                maxItems: 6
+                type: array
+                x-kubernetes-list-map-keys:
+                - stage
+                x-kubernetes-list-type: map
+              managerAdmission:
+                description: |-
+                  ManagerAdmission is the manager-owned, identity-bound mutation grant for
+                  a campaign-created leaf. On a managed device, absence is denial. Native
+                  admission must prevent workers and ordinary editors from changing it.
+                properties:
+                  campaignUID:
+                    description: CampaignUID identifies the retained IOSXESoftwareRollout
+                      incarnation.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  controlRevision:
+                    description: |-
+                      ControlRevision is the minimum manager control revision a worker must
+                      observe before claiming a new mutation.
+                    format: int64
+                    minimum: 0
+                    type: integer
+                  deviceGeneration:
+                    description: |-
+                      DeviceGeneration is the planned CiscoDevice generation. The worker
+                      re-reads the object immediately before every new mutation claim so an
+                      address, driver, port, trust-reference, or other spec change cannot inherit
+                      an older campaign grant.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  deviceUID:
+                    description: DeviceUID is the planned CiscoDevice incarnation.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  leafUID:
+                    description: LeafUID prevents adoption of a recreated same-name
+                      child.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  ledgerUID:
+                    description: |-
+                      LedgerUID freezes the single authoritative reservation-ledger
+                      incarnation. A missing or recreated ledger freezes, rather than resets,
+                      admission.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  nodeUID:
+                    description: NodeUID is the planned identity-bound Node incarnation.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  physicalIdentity:
+                    description: |-
+                      PhysicalIdentity is the verified stable serial or equivalent identity
+                      deduplicated by the reservation ledger.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  planHash:
+                    description: PlanHash binds this leaf to the approved frozen campaign
+                      plan.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  policyEpoch:
+                    description: |-
+                      PolicyEpoch is the durable rollout safety epoch. A worker acknowledgement
+                      and every mutation claim must match it exactly.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  policyResourceVersion:
+                    description: |-
+                      PolicyResourceVersion is the approved effective policy version. A newer
+                      current policy may only tighten this grant before a claim.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  policyUID:
+                    description: |-
+                      PolicyUID binds the grant to the administrator policy incarnation covered
+                      by PlanHash.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  protocolVersion:
+                    description: ProtocolVersion must match the current manager/worker
+                      handshake.
+                    enum:
+                    - rollout-v1
+                    type: string
+                  reservationID:
+                    description: ReservationID identifies the atomic device and domain
+                      reservation.
+                    maxLength: 64
+                    minLength: 1
+                    pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+                    type: string
+                  revocationReason:
+                    description: |-
+                      RevocationReason determines whether an unclaimed retained leaf may ever be
+                      rearmed. Only PolicyEpochTransition is reversible.
+                    enum:
+                    - PolicyEpochTransition
+                    - AdministratorPolicyChanged
+                    - SourceIdentityChanged
+                    - CampaignCancelled
+                    - TargetIdentityChanged
+                    - CampaignTargetFailed
+                    type: string
+                  state:
+                    description: |-
+                      State is Pending until ledger identity is bound, Granted while new claims
+                      are authorized, Revoked when future claims are fenced, and Settled only
+                      after accepted work and health evidence are resolved.
+                    enum:
+                    - Pending
+                    - Granted
+                    - Revoked
+                    - Settled
+                    type: string
+                  topologyLockID:
+                    description: |-
+                      TopologyLockID is the exact manager acquisition that backs this
+                      reservation. Retaining it after ledger removal makes settlement and
+                      cleanup replayable across a crash without allowing an older cleanup to
+                      target a later acquisition that reuses ReservationID.
+                    pattern: ^[a-f0-9]{32}$
+                    type: string
+                  updatedAt:
+                    description: UpdatedAt is the manager admission transition time.
+                    format: date-time
+                    type: string
+                required:
+                - deviceGeneration
+                - policyEpoch
+                - state
+                - updatedAt
+                type: object
+                x-kubernetes-validations:
+                - message: a granted admission requires the complete protocol, policy
+                    epoch, topology-lock acquisition, and identity binding
+                  rule: self.state != 'Granted' || (has(self.protocolVersion) && has(self.campaignUID)
+                    && has(self.planHash) && has(self.policyUID) && has(self.policyResourceVersion)
+                    && self.policyEpoch >= 1 && has(self.ledgerUID) && has(self.reservationID)
+                    && has(self.topologyLockID) && has(self.leafUID) && has(self.deviceUID)
+                    && has(self.physicalIdentity) && has(self.nodeUID) && has(self.controlRevision))
+                - message: a pending admission requires its topology-lock acquisition
+                    identity
+                  rule: self.state != 'Pending' || has(self.topologyLockID)
+                - message: campaignUID is immutable once set
+                  rule: '!has(oldSelf.campaignUID) || self.campaignUID == oldSelf.campaignUID'
+                - message: planHash is immutable once set
+                  rule: '!has(oldSelf.planHash) || self.planHash == oldSelf.planHash'
+                - message: policyUID is immutable once set
+                  rule: '!has(oldSelf.policyUID) || self.policyUID == oldSelf.policyUID'
+                - message: policyResourceVersion changes only when a policy-epoch
+                    revocation is rearmed
+                  rule: '!has(oldSelf.policyResourceVersion) || self.policyResourceVersion
+                    == oldSelf.policyResourceVersion || (oldSelf.state == ''Revoked''
+                    && has(oldSelf.revocationReason) && oldSelf.revocationReason ==
+                    ''PolicyEpochTransition'' && self.state == ''Pending'' && self.policyEpoch
+                    > oldSelf.policyEpoch)'
+                - message: ledgerUID is immutable once set
+                  rule: '!has(oldSelf.ledgerUID) || self.ledgerUID == oldSelf.ledgerUID'
+                - message: reservationID is immutable once set
+                  rule: '!has(oldSelf.reservationID) || self.reservationID == oldSelf.reservationID'
+                - message: topologyLockID changes only when a policy-epoch revocation
+                    is rearmed
+                  rule: '!has(oldSelf.topologyLockID) || self.topologyLockID == oldSelf.topologyLockID
+                    || (oldSelf.state == ''Revoked'' && has(oldSelf.revocationReason)
+                    && oldSelf.revocationReason == ''PolicyEpochTransition'' && self.state
+                    == ''Pending'' && self.policyEpoch > oldSelf.policyEpoch)'
+                - message: leafUID is immutable once set
+                  rule: '!has(oldSelf.leafUID) || self.leafUID == oldSelf.leafUID'
+                - message: deviceUID is immutable once set
+                  rule: '!has(oldSelf.deviceUID) || self.deviceUID == oldSelf.deviceUID'
+                - message: physicalIdentity is immutable once set
+                  rule: '!has(oldSelf.physicalIdentity) || self.physicalIdentity ==
+                    oldSelf.physicalIdentity'
+                - message: nodeUID is immutable once set
+                  rule: '!has(oldSelf.nodeUID) || self.nodeUID == oldSelf.nodeUID'
+                - message: protocolVersion is immutable once set
+                  rule: '!has(oldSelf.protocolVersion) || self.protocolVersion ==
+                    oldSelf.protocolVersion'
+                - message: admission controlRevision cannot decrease or be removed
+                  rule: '!has(oldSelf.controlRevision) || (has(self.controlRevision)
+                    && self.controlRevision >= oldSelf.controlRevision)'
+                - message: policy epoch cannot decrease
+                  rule: self.policyEpoch >= oldSelf.policyEpoch
+                - message: manager admission state cannot regress except a newer policy
+                    epoch may rearm a policy-transition revocation
+                  rule: 'oldSelf.state == ''Pending'' ? self.state in [''Pending'',
+                    ''Granted'', ''Revoked''] : (oldSelf.state == ''Granted'' ? self.state
+                    in [''Granted'', ''Revoked'', ''Settled''] : (oldSelf.state ==
+                    ''Revoked'' ? (self.state in [''Revoked'', ''Settled''] || (self.state
+                    == ''Pending'' && has(oldSelf.revocationReason) && oldSelf.revocationReason
+                    == ''PolicyEpochTransition'' && self.policyEpoch > oldSelf.policyEpoch))
+                    : self.state == ''Settled''))'
+                - message: revoked admission requires a reason and non-revoked admission
+                    must not retain one
+                  rule: 'self.state == ''Revoked'' ? has(self.revocationReason) :
+                    !has(self.revocationReason)'
+              managerControl:
+                description: |-
+                  ManagerControl is manager-owned pause/cancel intent. A claim and a
+                  revocation compete through resourceVersion on this same leaf object.
+                properties:
+                  cancel:
+                    description: Cancel permanently blocks future claims for this
+                      leaf.
+                    type: boolean
+                  pause:
+                    description: Pause blocks new unclaimed mutations but cannot abort
+                      accepted work.
+                    type: boolean
+                  reason:
+                    description: Reason is a bounded machine-readable control reason.
+                    maxLength: 128
+                    type: string
+                  revision:
+                    description: |-
+                      Revision is copied from the campaign control revision whose effect this
+                      leaf must observe.
+                    format: int64
+                    minimum: 0
+                    type: integer
+                  updatedAt:
+                    description: UpdatedAt is the manager control transition time.
+                    format: date-time
+                    type: string
+                required:
+                - revision
+                - updatedAt
+                type: object
+                x-kubernetes-validations:
+                - message: manager control revision cannot decrease
+                  rule: self.revision >= oldSelf.revision
+                - message: a manager control change requires a larger revision
+                  rule: self == oldSelf || self.revision > oldSelf.revision
+                - message: managed leaf cancellation is terminal
+                  rule: '!has(oldSelf.cancel) || !oldSelf.cancel || (has(self.cancel)
+                    && self.cancel)'
               message:
                 description: |-
                   Message is the human-readable status message. Mirrored on the
@@ -596,6 +902,72 @@ spec:
                   IOS XE may require this exact value on OS.Activate even when the
                   requested TargetVersion is a shorter release prefix.
                 type: string
+              workerControl:
+                description: |-
+                  WorkerControl is the worker-owned effective acknowledgement of manager
+                  admission and control. Native admission must keep its ownership disjoint
+                  from ManagerAdmission and ManagerControl.
+                properties:
+                  effectiveState:
+                    description: |-
+                      EffectiveState exposes whether pause/cancellation is effective or an
+                      earlier claim must still be observed.
+                    enum:
+                    - Denied
+                    - Ready
+                    - Paused
+                    - Cancelled
+                    - Claimed
+                    - Settled
+                    type: string
+                  message:
+                    description: Message is a bounded worker acknowledgement summary.
+                    maxLength: 256
+                    type: string
+                  observedAdmissionState:
+                    description: ObservedAdmissionState is the manager admission state
+                      read by the worker.
+                    enum:
+                    - Pending
+                    - Granted
+                    - Revoked
+                    - Settled
+                    type: string
+                  observedControlRevision:
+                    description: |-
+                      ObservedControlRevision is the manager revision incorporated into the
+                      worker's effective claim fence.
+                    format: int64
+                    minimum: 0
+                    type: integer
+                  observedPolicyEpoch:
+                    description: |-
+                      ObservedPolicyEpoch is the exact manager admission epoch acknowledged by
+                      this worker state.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  observedWorkerConfigRevision:
+                    description: |-
+                      ObservedWorkerConfigRevision is the running worker revision that
+                      acknowledged this admission. The rollout manager compares it with the
+                      CiscoDevice's current live worker proof before granting; it is deliberately
+                      not frozen in managerAdmission so an in-place Secret rotation can converge.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  updatedAt:
+                    description: UpdatedAt is the last effective-state observation
+                      time.
+                    format: date-time
+                    type: string
+                required:
+                - effectiveState
+                - observedAdmissionState
+                - observedControlRevision
+                - observedPolicyEpoch
+                - observedWorkerConfigRevision
+                - updatedAt
+                type: object
             type: object
         type: object
     served: true

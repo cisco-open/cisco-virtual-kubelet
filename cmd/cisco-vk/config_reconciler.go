@@ -60,6 +60,7 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe"
 	iosxetransport "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/transport"
@@ -84,8 +85,16 @@ import (
 // surrounding cisco-vk-run setup: device spec (for transport build) and
 // resolved password.
 type configReconcilerOptions struct {
-	Spec     *ciskov1.DeviceSpec
-	Password string
+	Spec                     *ciskov1.DeviceSpec
+	Password                 string
+	DeviceNamespace          string
+	DeviceUID                string
+	NodeName                 string
+	ManagedTopology          bool
+	WorkerRevision           string
+	CredentialSecretRevision string
+	GNOITLSSecretRevision    string
+	GNOIProvisioningRevision string
 	// EnableWriteClassGNOI opt-ins destructive IOSXEOperationalAction
 	// handling. Default false keeps a gNOI-enabled read-only deployment
 	// from gaining reboot/factory-reset/file-write authority implicitly.
@@ -108,6 +117,9 @@ type configReconcilerOptions struct {
 	CorrelationCache *correlation.Cache
 	// Maintenance shares the per-device write barrier with app hosting.
 	Maintenance *maintenance.Coordinator
+	// DevicePodLister is the app-hosting driver's live device inventory. Managed
+	// BlockIfRunning claims fail closed when this final check is unavailable.
+	DevicePodLister func(context.Context) ([]*corev1.Pod, error)
 }
 
 func configDriverBuildOptions(opts configReconcilerOptions) drivers.ConfigDriverOptions {
@@ -355,6 +367,10 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	// uses to differentiate subscribe-driven ticks (bypass hash
 	// short-circuit) from normal CR/scope-object events.
 	var subscribeEvents chan event.GenericEvent
+	leaseDeviceKey := ""
+	if opts.ManagedTopology {
+		leaseDeviceKey = devicecoordination.DeviceKey(opts.DeviceNamespace, deviceName)
+	}
 	r := &provider.ConfigReconciler{
 		Client:                mgr.GetClient(),
 		DeviceName:            deviceName,
@@ -371,8 +387,10 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		YANGValidator:         dctx.OperationValidator,
 		YANGValidationMode:    dctx.OperationValidationMode,
 		Leaser: &engine.FamilyLeaser{
-			Client:    mgr.GetClient(),
-			Namespace: leaseNamespace,
+			Client:          mgr.GetClient(),
+			Namespace:       leaseNamespace,
+			DeviceKey:       leaseDeviceKey,
+			RequireExisting: opts.ManagedTopology,
 		},
 		Recorder:        recorder,
 		SubscribeNotify: notify,
@@ -501,23 +519,43 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		} else if lifecycleErr != nil {
 			return fmt.Errorf("software lifecycle backend: %w", lifecycleErr)
 		}
+		deviceNamespace := opts.DeviceNamespace
+		if deviceNamespace == "" {
+			// Preserve direct standalone callers while run.go supplies the
+			// explicitly resolved CiscoDevice identity in managed mode.
+			deviceNamespace = operationNamespace()
+		}
 		upgradeReconciler := &softwareupgrade.Reconciler{
-			Client:          mgr.GetClient(),
-			Reader:          mgr.GetAPIReader(),
-			Recorder:        recorder,
-			DeviceName:      deviceName,
-			DeviceNamespace: operationNamespace(),
-			GNOI:            gnoiProv,
-			Lifecycle:       lifecycleBackend,
-			ImageResolver:   softwareupgrade.NewDefaultImageResolver(mgr.GetClient(), nil),
+			Client:                   mgr.GetClient(),
+			Reader:                   mgr.GetAPIReader(),
+			Recorder:                 recorder,
+			DeviceName:               deviceName,
+			DeviceNamespace:          deviceNamespace,
+			DeviceUID:                opts.DeviceUID,
+			NodeName:                 opts.NodeName,
+			ManagedTopology:          opts.ManagedTopology,
+			WorkerRevision:           opts.WorkerRevision,
+			WorkerPodUID:             runtimeID,
+			CredentialSecretRevision: opts.CredentialSecretRevision,
+			GNOITLSSecretRevision:    opts.GNOITLSSecretRevision,
+			GNOIProvisioningRevision: opts.GNOIProvisioningRevision,
+			GNOI:                     gnoiProv,
+			Lifecycle:                lifecycleBackend,
+			// Source credentials and endpoint authorization are a security
+			// boundary. Resolve them through the uncached reader so an in-place
+			// Secret revocation cannot be hidden behind informer lag.
+			ImageResolver:   softwareupgrade.NewDefaultImageResolver(mgr.GetAPIReader(), nil),
+			DevicePodLister: opts.DevicePodLister,
 			MutationLeaser: &engine.FamilyLeaser{
-				Client:    mgr.GetClient(),
-				Namespace: leaseNamespace,
-				TTL:       26 * time.Hour,
+				Client:          mgr.GetClient(),
+				Namespace:       leaseNamespace,
+				DeviceKey:       leaseDeviceKey,
+				TTL:             26 * time.Hour,
+				RequireExisting: opts.ManagedTopology,
 			},
 		}
 		if opts.Maintenance != nil {
-			upgradeReconciler.BeforeMutation = opts.Maintenance.BeforeMutation
+			upgradeReconciler.BeforeMutation = opts.Maintenance.BeforeSoftwareUpgradeMutation
 		}
 		if err := upgradeReconciler.SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("software upgrade SetupWithManager: %w", err)
@@ -536,9 +574,11 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 			DeviceNamespace: operationNamespace(),
 			GNOI:            gnoiProv,
 			MutationLeaser: &engine.FamilyLeaser{
-				Client:    mgr.GetClient(),
-				Namespace: leaseNamespace,
-				TTL:       26 * time.Hour,
+				Client:          mgr.GetClient(),
+				Namespace:       leaseNamespace,
+				DeviceKey:       leaseDeviceKey,
+				TTL:             26 * time.Hour,
+				RequireExisting: opts.ManagedTopology,
 			},
 			CertificateProvisioner: gnoiCertificateProvisioner,
 		}

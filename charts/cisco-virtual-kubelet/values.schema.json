@@ -5,6 +5,29 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["image", "serviceAccount", "controller"],
+  "allOf": [
+    {
+      "if": {
+        "required": ["topology"],
+        "properties": {
+          "topology": {
+            "required": ["enabled"],
+            "properties": { "enabled": { "const": true } }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "controller": {
+            "properties": { "leaderElect": { "const": true } }
+          },
+          "gnoi": {
+            "properties": { "enableWriteClass": { "const": false } }
+          }
+        }
+      }
+    }
+  ],
   "definitions": {
     "workerResourceList": {
       "type": "object",
@@ -20,6 +43,31 @@
         { "type": "number", "minimum": 0 },
         { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+|[EPTGMK]i|[numkMGTPE])?$" }
       ]
+    },
+    "topologyKey": {
+      "type": "string",
+      "maxLength": 83,
+      "pattern": "^(topology\\.kubernetes\\.io/(region|zone)|(topology|operations)\\.cisco\\.vk/[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?)$"
+    },
+    "projectedTopologyKey": {
+      "type": "string",
+      "maxLength": 81,
+      "pattern": "^(topology\\.kubernetes\\.io/(region|zone)|topology\\.cisco\\.vk/[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?)$"
+    },
+    "dnsSubdomainOrEmpty": {
+      "type": "string",
+      "maxLength": 253,
+      "pattern": "^$|^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?)*$"
+    },
+    "dnsLabelOrEmpty": {
+      "type": "string",
+      "maxLength": 63,
+      "pattern": "^$|^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"
+    },
+    "managedFleetSelectorKey": {
+      "type": "string",
+      "maxLength": 81,
+      "pattern": "^topology\\.cisco\\.vk/[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?$"
     }
   },
   "properties": {
@@ -116,6 +164,138 @@
         }
       }
     },
+    "topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "policy", "ledger"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable manager-owned topology and rollout admission. Requires Kubernetes 1.35 or newer, aggregator.enabled=false, controller.leaderElect=true, serviceAccount.vkName=cisco-virtual-kubelet, rbac.profile=strict, and gnoi.enableWriteClass=false. Migrating an existing release requires live Helm lookup; offline GitOps pruning is unsupported for the one-time shared-worker handoff."
+        },
+        "policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "namespace",
+            "name",
+            "fleetSelector",
+            "requiredTopologyKeys",
+            "projectedTopologyKeys",
+            "globalMaxConcurrentTransfers",
+            "globalMaxUnavailable",
+            "domainMaxConcurrentTransfers",
+            "domainMaxUnavailable",
+            "healthFreshnessSeconds",
+            "maxCampaignTargets",
+            "maxActiveReservations",
+            "maxLedgerBytes"
+          ],
+          "properties": {
+            "namespace": { "$ref": "#/definitions/dnsLabelOrEmpty" },
+            "name": { "$ref": "#/definitions/dnsSubdomainOrEmpty" },
+            "fleetSelector": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["matchLabels", "matchExpressions"],
+              "anyOf": [
+                { "properties": { "matchLabels": { "minProperties": 1 } } },
+                { "properties": { "matchExpressions": { "minItems": 1 } } }
+              ],
+              "properties": {
+                "matchLabels": {
+                  "type": "object",
+                  "maxProperties": 32,
+                  "propertyNames": { "$ref": "#/definitions/managedFleetSelectorKey" },
+                  "additionalProperties": {
+                    "type": "string",
+                    "maxLength": 63,
+                    "pattern": "^$|^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$"
+                  }
+                },
+                "matchExpressions": {
+                  "type": "array",
+                  "maxItems": 32,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["key", "operator"],
+                    "allOf": [
+                      {
+                        "if": { "properties": { "operator": { "enum": ["In", "NotIn"] } } },
+                        "then": {
+                          "required": ["values"],
+                          "properties": { "values": { "minItems": 1 } }
+                        }
+                      },
+                      {
+                        "if": { "properties": { "operator": { "enum": ["Exists", "DoesNotExist"] } } },
+                        "then": { "properties": { "values": { "maxItems": 0 } } }
+                      }
+                    ],
+                    "properties": {
+                      "key": { "$ref": "#/definitions/managedFleetSelectorKey" },
+                      "operator": { "type": "string", "enum": ["In", "NotIn", "Exists", "DoesNotExist"] },
+                      "values": {
+                        "type": "array",
+                        "maxItems": 32,
+                        "uniqueItems": true,
+                        "items": {
+                          "type": "string",
+                          "maxLength": 63,
+                          "pattern": "^$|^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "requiredTopologyKeys": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": { "$ref": "#/definitions/topologyKey" }
+            },
+            "projectedTopologyKeys": {
+              "type": "array",
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": { "$ref": "#/definitions/projectedTopologyKey" }
+            },
+            "globalMaxConcurrentTransfers": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "globalMaxUnavailable": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "domainMaxConcurrentTransfers": {
+              "type": "object",
+              "minProperties": 1,
+              "maxProperties": 16,
+              "propertyNames": { "$ref": "#/definitions/topologyKey" },
+              "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 100 }
+            },
+            "domainMaxUnavailable": {
+              "type": "object",
+              "minProperties": 1,
+              "maxProperties": 16,
+              "propertyNames": { "$ref": "#/definitions/topologyKey" },
+              "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 100 }
+            },
+            "healthFreshnessSeconds": { "type": "integer", "minimum": 30, "maximum": 3600 },
+            "maxCampaignTargets": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "maxActiveReservations": { "type": "integer", "minimum": 1, "maximum": 256 },
+            "maxLedgerBytes": { "type": "integer", "minimum": 4096, "maximum": 262144 }
+          }
+        },
+        "ledger": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name"],
+          "properties": {
+            "name": { "$ref": "#/definitions/dnsSubdomainOrEmpty" }
+          }
+        }
+      }
+    },
     "nxos": {
       "type": "object",
       "additionalProperties": false,
@@ -209,7 +389,7 @@
         },
         "enableWriteClass": {
           "type": "boolean",
-          "description": "Enable write-class IOSXEOperationalAction gNOI operations such as Reboot, FactoryReset, FilePut, FileRemove, and ProvisionCertificate; certificate provisioning can replace IOS-XE's shared gNXI/gNMI identity and CA bundle."
+          "description": "Enable write-class IOSXEOperationalAction gNOI operations such as Reboot, FactoryReset, FilePut, FileRemove, and ProvisionCertificate; certificate provisioning can replace IOS-XE's shared gNXI/gNMI identity and CA bundle. Must remain false while managed topology is enabled because Phase 2 admits campaign-owned IOSXESoftwareUpgrade only."
         }
       }
     },

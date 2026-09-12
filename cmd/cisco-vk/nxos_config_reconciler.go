@@ -44,6 +44,7 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	configtransport "github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/deviceoperation"
@@ -142,6 +143,10 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 	}
 
 	var subscribeEvents chan event.GenericEvent
+	leaseDeviceKey := ""
+	if opts.ManagedTopology {
+		leaseDeviceKey = devicecoordination.DeviceKey(opts.DeviceNamespace, deviceName)
+	}
 	r := &provider.NXOSConfigReconciler{
 		Client:                  mgr.GetClient(),
 		DeviceName:              deviceName,
@@ -160,8 +165,10 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 		OperationValidator:      dctx.OperationValidator,
 		OperationValidationMode: dctx.OperationValidationMode,
 		Leaser: &engine.FamilyLeaser{
-			Client:    mgr.GetClient(),
-			Namespace: leaseNamespace,
+			Client:          mgr.GetClient(),
+			Namespace:       leaseNamespace,
+			DeviceKey:       leaseDeviceKey,
+			RequireExisting: opts.ManagedTopology,
 		},
 		Recorder:        recorder,
 		SubscribeNotify: notify,

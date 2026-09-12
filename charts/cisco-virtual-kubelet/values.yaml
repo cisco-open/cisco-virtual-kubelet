@@ -69,6 +69,71 @@ aggregator:
   # has shipped since day one.
   enabled: false
 
+# topology enables the manager-owned CiscoDevice-to-Node identity, topology
+# projection, and IOS-XE rollout-admission contract. It is deliberately off by
+# default: enabling it changes Node writer ownership, creates one ServiceAccount
+# per device (including an isolated legacy identity for unselected devices),
+# and installs fail-closed native admission policies.
+#
+# The initial qualified control-plane floor is Kubernetes 1.35. Helm refuses to
+# render this mode on an older cluster. The manager performs additional API
+# discovery and ValidatingAdmissionPolicy type-check preflight before starting
+# managed workers; a version check alone is not treated as proof of enforcement.
+# Enabling an existing release requires a live Helm upgrade so lookup can
+# preserve the exact shared worker bindings during their one-time retirement;
+# offline GitOps pruning is not a supported migration path.
+# Managed mode also requires the default serviceAccount.vkName because the
+# controller combines the fixed cisco-virtual-kubelet-managed-worker role with
+# a namespaced binding to cisco-virtual-kubelet-device, and rbac.profile=strict
+# so disabled write-class controllers grant no latent RBAC.
+topology:
+  enabled: false
+  policy:
+    # Empty namespace/name values use the release namespace and
+    # <fullname>-topology-policy. The policy and ledger must remain in the same
+    # namespace so one manager can bind their immutable Kubernetes UIDs.
+    namespace: ""
+    name: ""
+
+    # Only CiscoDevices matching this non-empty selector enter managed mode.
+    # Label the intended CiscoDevice objects explicitly before enabling the
+    # feature. Enrollment keys must live under topology.cisco.vk/* so native
+    # admission protects entry to and exit from managed writer ownership.
+    fleetSelector:
+      matchLabels:
+        topology.cisco.vk/managed: "true"
+      matchExpressions: []
+
+    # Required keys must exist on selected CiscoDevice.metadata.labels.
+    # Projected keys are the bounded subset copied to the virtual Node.
+    requiredTopologyKeys:
+      - topology.kubernetes.io/region
+      - topology.kubernetes.io/zone
+    projectedTopologyKeys:
+      - topology.kubernetes.io/region
+      - topology.kubernetes.io/zone
+
+    # Administrator ceilings are the cross-campaign safety authority.
+    # Campaign values may tighten, never loosen, these transfer and
+    # unavailability limits. Every domain key must also be required above.
+    globalMaxConcurrentTransfers: 1
+    globalMaxUnavailable: 1
+    domainMaxConcurrentTransfers:
+      topology.kubernetes.io/region: 1
+    domainMaxUnavailable:
+      topology.kubernetes.io/zone: 1
+
+    healthFreshnessSeconds: 300
+    maxCampaignTargets: 100
+    maxActiveReservations: 256
+    maxLedgerBytes: 262144
+
+  ledger:
+    # Empty uses <fullname>-topology-ledger. Helm creates an empty ledger and
+    # never templates a UID; the manager initializes ledger.json and binds the
+    # live ConfigMap UID into the policy's protected ledger-uid annotation.
+    name: ""
+
 nxos:
   # allowExperimentalReleases admits NX-OS release profiles backed only by
   # static upstream conformance evidence. Keep false until the release has
@@ -150,7 +215,9 @@ gnoi:
   # enableWriteClass opts per-device VK pods into IOSXEOperationalAction
   # destructive/write-class gNOI operations such as Reboot, FactoryReset,
   # FilePut, FileRemove, and ProvisionCertificate. The last operation can
-  # replace IOS-XE's shared gNXI/gNMI identity and CA bundle. Disabled by default.
+  # replace IOS-XE's shared gNXI/gNMI identity and CA bundle. Managed topology
+  # Phase 2 rejects this gate because its maintenance protocol admits only
+  # campaign-owned IOSXESoftwareUpgrade leaves. Disabled by default.
   enableWriteClass: false
 
 collector:

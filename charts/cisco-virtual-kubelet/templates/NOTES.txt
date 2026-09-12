@@ -9,16 +9,31 @@
   leave existing CRDs in place. The required production upgrade order is:
 
     1. Obtain/unpack the NEW chart version.
-    2. Apply its CRDs BEFORE rolling out the new manager:
+    2. Back up live definitions and review the exact CVK CRD diff. A diff exit
+       status of 1 means changes were found:
 
-    kubectl apply --server-side -f cisco-virtual-kubelet/crds/
+    kubectl get customresourcedefinitions.apiextensions.k8s.io -o yaml \
+      > cvk-crds-before-upgrade.yaml
+    kubectl diff --server-side --force-conflicts \
+      --field-manager=cvk-crd-upgrade -f cisco-virtual-kubelet/crds/
 
-    3. Verify the additive controller CRDs (and the existing CRDs) are present:
+    3. Apply only those reviewed files BEFORE rolling out the new manager.
+       Helm owns fields from the initial install, so plain server-side apply
+       may conflict:
+
+    kubectl apply --server-side --force-conflicts \
+      --field-manager=cvk-crd-upgrade -f cisco-virtual-kubelet/crds/
+
+    4. Verify the additive controller CRDs (and the existing CRDs) are present:
 
     kubectl get crd networkcontrollers.cisco.vk \
-      networkcontrollerconfigs.config.cisco.vk
+      networkcontrollerconfigs.config.cisco.vk \
+      iosxesoftwarerollouts.ops.cisco.vk
 
-    4. Run helm upgrade.
+    5. Run helm upgrade.
+
+  The force flag is scoped to the exact CRD objects in the reviewed directory;
+  never point it at unrelated manifests. Keep the backup through qualification.
 
   If helm upgrade was already run first, existing CiscoDevice reconcilers stay
   available, but NetworkController reconciliation is disabled for that manager
@@ -74,6 +89,84 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   metrics:          {{ .Values.controller.metricsBindAddress }}
   gNOI global default/override: {{ if .Values.gnoi.disabled }}disabled{{ else if .Values.gnoi.insecure }}insecure{{ else }}auto{{ end }}{{ if .Values.gnoi.port }} on port {{ .Values.gnoi.port }}{{ end }}
   diag admin:       {{ if .Values.aggregator.enabled }}(disabled in aggregator-mode){{ else }}127.0.0.1:8082 inside each per-device pod{{ end }}
+
+{{- if .Values.topology.enabled }}
+
+  ⚠️  MANAGED TOPOLOGY IS ENABLED (KUBERNETES 1.35+ TRUST BOUNDARY).
+
+  Manager leader election is required and enabled. It reduces overlapping
+  reconciliation; ledger/CAS and admission remain the durable safety fence.
+
+  policy: {{ include "cisco-virtual-kubelet.topologyPolicyNamespace" . }}/{{ include "cisco-virtual-kubelet.topologyPolicyName" . }}
+  ledger: {{ include "cisco-virtual-kubelet.topologyPolicyNamespace" . }}/{{ include "cisco-virtual-kubelet.topologyLedgerName" . }}
+
+  The manager validates the policy selector and all eight versioned admission
+  policy/binding pairs before initializing ledger.json with the ledger
+  ConfigMap's live UID and binding that UID into the policy annotation. It
+  fails closed if admission discovery/type checking, either object identity,
+  or the binding is invalid.
+  Do not use helm upgrade --force and do not recreate the ledger to clear an
+  error. The ledger, policy, admission pairs, and managed-worker role carry
+  Helm keep protection; disabling or uninstalling does not retire them. Verify
+  all policy bindings and that type checking has no warnings:
+
+    kubectl get validatingadmissionpolicies.admissionregistration.k8s.io \
+      -l app.kubernetes.io/instance={{ .Release.Name }}
+    kubectl get validatingadmissionpolicybindings.admissionregistration.k8s.io \
+      -l app.kubernetes.io/instance={{ .Release.Name }}
+    kubectl get validatingadmissionpolicies.admissionregistration.k8s.io \
+      -l app.kubernetes.io/instance={{ .Release.Name }} \
+      -o jsonpath='{range .items[*].status.typeChecking.expressionWarnings[*]}{.fieldRef}{": "}{.warning}{"\n"}{end}'
+
+  Kubernetes does not type-check these expressions against CRD schemas. Empty
+  warnings are necessary but do not replace live API-server denial probes.
+  The manager pre-creates retained Node-heartbeat, config-family, and
+  disruptive-mutation Leases. Generated workers can update only their exact
+  bound objects and cannot create/delete Leases. Do not remove them or recreate
+  a same-name CiscoDevice until reservations and maintenance are settled and
+  the documented retirement is complete.
+
+  Every device now receives a UID-derived ServiceAccount. Selected devices
+  use the narrow managed role; unselected devices keep the legacy runtime under
+  an isolated cisco-vk-legacy-<node>-<uid-hash> identity. Native admission
+  confines both identity families to their embedded Node for Node/Pod status.
+{{- if .Release.IsUpgrade }}
+
+  During migration, exact preexisting shared worker bindings are retained with
+  topology.cisco.vk/retire-shared-worker-access=rollout-v1. Do not delete that
+  bridge manually. The manager removes it only after all shared-identity
+  Deployments, ReplicaSets, and Pods are quiesced and replacements are audited;
+  first managed admission remains deferred until that retirement completes.
+
+  This migration requires a live Helm upgrade because lookup supplies the
+  existing binding identities. Offline helm template / GitOps pruning is not a
+  supported migration path unless existing CVK RBAC is excluded from prune
+  through controller-reported retirement completion.
+{{- end }}
+
+  Planner, approver, topology-author, policy-admin, and ledger-breakglass roles
+  are intentionally unbound. Delegate only the roles required in each target
+  namespace. See charts/cisco-virtual-kubelet/README.md before enrolling a
+  CiscoDevice or changing policy.
+{{- if or .Values.gnoi.disabled (not .Values.gnoi.enableSoftwareUpgrade) }}
+
+  ℹ️  Managed topology projection is active, but rollout-created IOS-XE
+  upgrade leaves will not execute until gnoi.disabled=false and
+  gnoi.enableSoftwareUpgrade=true enable the existing per-worker mutation gate.
+{{- end }}
+
+  Direct/unmanaged IOSXESoftwareUpgrade objects are not executed or modified
+  by a managed worker. Submit an IOSXESoftwareRollout so the manager can create
+  UID-, reservation-, and worker-bound leaves.
+
+  Policy resourceVersion churn alone does not revoke a campaign. Equivalent
+  rewrites update audit status; compatible numeric changes publish a stricter
+  policy epoch after fencing zero-claim leaves. Structural policy or ledger
+  identity changes require a new approved rollout.
+{{- else }}
+
+  managed topology: disabled (legacy Node ownership and worker behavior retained)
+{{- end }}
 
 {{- if and .Values.aggregator.enabled (not .Values.gnoi.disabled) (or .Values.gnoi.enableSoftwareUpgrade .Values.gnoi.enableWriteClass) }}
 

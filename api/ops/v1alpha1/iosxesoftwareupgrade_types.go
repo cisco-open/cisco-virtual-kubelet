@@ -352,6 +352,301 @@ type UpgradeWindow struct {
 	NotAfter *metav1.Time `json:"notAfter,omitempty"`
 }
 
+// ManagedUpgradeProtocolVersion identifies the manager/worker handshake that
+// gates every new device mutation for a campaign-created leaf.
+//
+// +kubebuilder:validation:Enum=rollout-v1
+type ManagedUpgradeProtocolVersion string
+
+const (
+	ManagedUpgradeProtocolRolloutV1 ManagedUpgradeProtocolVersion = "rollout-v1"
+)
+
+// UpgradeManagerAdmissionState is the manager-owned mutation grant state.
+// Missing admission means denied for a managed device. It remains optional on
+// standalone legacy leaves, whose execution mode is selected outside this API.
+//
+// +kubebuilder:validation:Enum=Pending;Granted;Revoked;Settled
+type UpgradeManagerAdmissionState string
+
+const (
+	UpgradeManagerAdmissionPending UpgradeManagerAdmissionState = "Pending"
+	UpgradeManagerAdmissionGranted UpgradeManagerAdmissionState = "Granted"
+	UpgradeManagerAdmissionRevoked UpgradeManagerAdmissionState = "Revoked"
+	UpgradeManagerAdmissionSettled UpgradeManagerAdmissionState = "Settled"
+)
+
+// UpgradeManagerAdmissionStatus is written only by the manager and protected
+// by native admission. A worker may claim a device mutation only from Granted
+// after re-reading this exact leaf and committing its durable claim against the
+// same resourceVersion.
+//
+// +kubebuilder:validation:XValidation:rule="self.state != 'Granted' || (has(self.protocolVersion) && has(self.campaignUID) && has(self.planHash) && has(self.policyUID) && has(self.policyResourceVersion) && self.policyEpoch >= 1 && has(self.ledgerUID) && has(self.reservationID) && has(self.topologyLockID) && has(self.leafUID) && has(self.deviceUID) && has(self.physicalIdentity) && has(self.nodeUID) && has(self.controlRevision))",message="a granted admission requires the complete protocol, policy epoch, topology-lock acquisition, and identity binding"
+// +kubebuilder:validation:XValidation:rule="self.state != 'Pending' || has(self.topologyLockID)",message="a pending admission requires its topology-lock acquisition identity"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.campaignUID) || self.campaignUID == oldSelf.campaignUID",message="campaignUID is immutable once set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.planHash) || self.planHash == oldSelf.planHash",message="planHash is immutable once set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.policyUID) || self.policyUID == oldSelf.policyUID",message="policyUID is immutable once set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.policyResourceVersion) || self.policyResourceVersion == oldSelf.policyResourceVersion || (oldSelf.state == 'Revoked' && has(oldSelf.revocationReason) && oldSelf.revocationReason == 'PolicyEpochTransition' && self.state == 'Pending' && self.policyEpoch > oldSelf.policyEpoch)",message="policyResourceVersion changes only when a policy-epoch revocation is rearmed"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.ledgerUID) || self.ledgerUID == oldSelf.ledgerUID",message="ledgerUID is immutable once set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.reservationID) || self.reservationID == oldSelf.reservationID",message="reservationID is immutable once set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.topologyLockID) || self.topologyLockID == oldSelf.topologyLockID || (oldSelf.state == 'Revoked' && has(oldSelf.revocationReason) && oldSelf.revocationReason == 'PolicyEpochTransition' && self.state == 'Pending' && self.policyEpoch > oldSelf.policyEpoch)",message="topologyLockID changes only when a policy-epoch revocation is rearmed"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.leafUID) || self.leafUID == oldSelf.leafUID",message="leafUID is immutable once set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.deviceUID) || self.deviceUID == oldSelf.deviceUID",message="deviceUID is immutable once set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.physicalIdentity) || self.physicalIdentity == oldSelf.physicalIdentity",message="physicalIdentity is immutable once set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.nodeUID) || self.nodeUID == oldSelf.nodeUID",message="nodeUID is immutable once set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.protocolVersion) || self.protocolVersion == oldSelf.protocolVersion",message="protocolVersion is immutable once set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.controlRevision) || (has(self.controlRevision) && self.controlRevision >= oldSelf.controlRevision)",message="admission controlRevision cannot decrease or be removed"
+// +kubebuilder:validation:XValidation:rule="self.policyEpoch >= oldSelf.policyEpoch",message="policy epoch cannot decrease"
+// +kubebuilder:validation:XValidation:rule="oldSelf.state == 'Pending' ? self.state in ['Pending', 'Granted', 'Revoked'] : (oldSelf.state == 'Granted' ? self.state in ['Granted', 'Revoked', 'Settled'] : (oldSelf.state == 'Revoked' ? (self.state in ['Revoked', 'Settled'] || (self.state == 'Pending' && has(oldSelf.revocationReason) && oldSelf.revocationReason == 'PolicyEpochTransition' && self.policyEpoch > oldSelf.policyEpoch)) : self.state == 'Settled'))",message="manager admission state cannot regress except a newer policy epoch may rearm a policy-transition revocation"
+// +kubebuilder:validation:XValidation:rule="self.state == 'Revoked' ? has(self.revocationReason) : !has(self.revocationReason)",message="revoked admission requires a reason and non-revoked admission must not retain one"
+type UpgradeManagerAdmissionStatus struct {
+	// ProtocolVersion must match the current manager/worker handshake.
+	// +kubebuilder:validation:Optional
+	ProtocolVersion ManagedUpgradeProtocolVersion `json:"protocolVersion,omitempty"`
+
+	// State is Pending until ledger identity is bound, Granted while new claims
+	// are authorized, Revoked when future claims are fenced, and Settled only
+	// after accepted work and health evidence are resolved.
+	// +kubebuilder:validation:Required
+	State UpgradeManagerAdmissionState `json:"state"`
+
+	// CampaignUID identifies the retained IOSXESoftwareRollout incarnation.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	CampaignUID string `json:"campaignUID,omitempty"`
+
+	// PlanHash binds this leaf to the approved frozen campaign plan.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	PlanHash string `json:"planHash,omitempty"`
+
+	// PolicyUID binds the grant to the administrator policy incarnation covered
+	// by PlanHash.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	PolicyUID string `json:"policyUID,omitempty"`
+
+	// PolicyResourceVersion is the approved effective policy version. A newer
+	// current policy may only tighten this grant before a claim.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	PolicyResourceVersion string `json:"policyResourceVersion,omitempty"`
+
+	// PolicyEpoch is the durable rollout safety epoch. A worker acknowledgement
+	// and every mutation claim must match it exactly.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	PolicyEpoch int64 `json:"policyEpoch"`
+
+	// RevocationReason determines whether an unclaimed retained leaf may ever be
+	// rearmed. Only PolicyEpochTransition is reversible.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=PolicyEpochTransition;AdministratorPolicyChanged;SourceIdentityChanged;CampaignCancelled;TargetIdentityChanged;CampaignTargetFailed
+	RevocationReason string `json:"revocationReason,omitempty"`
+
+	// LedgerUID freezes the single authoritative reservation-ledger
+	// incarnation. A missing or recreated ledger freezes, rather than resets,
+	// admission.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	LedgerUID string `json:"ledgerUID,omitempty"`
+
+	// ReservationID identifies the atomic device and domain reservation.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=64
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9][A-Za-z0-9._:-]*$`
+	ReservationID string `json:"reservationID,omitempty"`
+
+	// TopologyLockID is the exact manager acquisition that backs this
+	// reservation. Retaining it after ledger removal makes settlement and
+	// cleanup replayable across a crash without allowing an older cleanup to
+	// target a later acquisition that reuses ReservationID.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^[a-f0-9]{32}$`
+	TopologyLockID string `json:"topologyLockID,omitempty"`
+
+	// LeafUID prevents adoption of a recreated same-name child.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	LeafUID string `json:"leafUID,omitempty"`
+
+	// DeviceUID is the planned CiscoDevice incarnation.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	DeviceUID string `json:"deviceUID,omitempty"`
+
+	// DeviceGeneration is the planned CiscoDevice generation. The worker
+	// re-reads the object immediately before every new mutation claim so an
+	// address, driver, port, trust-reference, or other spec change cannot inherit
+	// an older campaign grant.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	DeviceGeneration int64 `json:"deviceGeneration"`
+
+	// PhysicalIdentity is the verified stable serial or equivalent identity
+	// deduplicated by the reservation ledger.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	PhysicalIdentity string `json:"physicalIdentity,omitempty"`
+
+	// NodeUID is the planned identity-bound Node incarnation.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	NodeUID string `json:"nodeUID,omitempty"`
+
+	// ControlRevision is the minimum manager control revision a worker must
+	// observe before claiming a new mutation.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=0
+	ControlRevision *int64 `json:"controlRevision,omitempty"`
+
+	// UpdatedAt is the manager admission transition time.
+	// +kubebuilder:validation:Required
+	UpdatedAt metav1.Time `json:"updatedAt"`
+}
+
+// UpgradeManagerControlStatus carries manager-owned leaf pause/cancel intent.
+// A larger revision is required for every change and cancellation is terminal.
+//
+// +kubebuilder:validation:XValidation:rule="self.revision >= oldSelf.revision",message="manager control revision cannot decrease"
+// +kubebuilder:validation:XValidation:rule="self == oldSelf || self.revision > oldSelf.revision",message="a manager control change requires a larger revision"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.cancel) || !oldSelf.cancel || (has(self.cancel) && self.cancel)",message="managed leaf cancellation is terminal"
+type UpgradeManagerControlStatus struct {
+	// Revision is copied from the campaign control revision whose effect this
+	// leaf must observe.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=0
+	Revision int64 `json:"revision"`
+
+	// Pause blocks new unclaimed mutations but cannot abort accepted work.
+	Pause bool `json:"pause,omitempty"`
+
+	// Cancel permanently blocks future claims for this leaf.
+	Cancel bool `json:"cancel,omitempty"`
+
+	// UpdatedAt is the manager control transition time.
+	// +kubebuilder:validation:Required
+	UpdatedAt metav1.Time `json:"updatedAt"`
+
+	// Reason is a bounded machine-readable control reason.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	Reason string `json:"reason,omitempty"`
+}
+
+// UpgradeWorkerControlState reports the effective claim fence observed by the
+// worker, separately from manager-requested control.
+//
+// +kubebuilder:validation:Enum=Denied;Ready;Paused;Cancelled;Claimed;Settled
+type UpgradeWorkerControlState string
+
+const (
+	UpgradeWorkerControlDenied    UpgradeWorkerControlState = "Denied"
+	UpgradeWorkerControlReady     UpgradeWorkerControlState = "Ready"
+	UpgradeWorkerControlPaused    UpgradeWorkerControlState = "Paused"
+	UpgradeWorkerControlCancelled UpgradeWorkerControlState = "Cancelled"
+	UpgradeWorkerControlClaimed   UpgradeWorkerControlState = "Claimed"
+	UpgradeWorkerControlSettled   UpgradeWorkerControlState = "Settled"
+)
+
+// UpgradeWorkerControlStatus is the worker-owned acknowledgement of the
+// manager grant and control revision.
+type UpgradeWorkerControlStatus struct {
+	// ObservedAdmissionState is the manager admission state read by the worker.
+	// +kubebuilder:validation:Required
+	ObservedAdmissionState UpgradeManagerAdmissionState `json:"observedAdmissionState"`
+
+	// ObservedPolicyEpoch is the exact manager admission epoch acknowledged by
+	// this worker state.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	ObservedPolicyEpoch int64 `json:"observedPolicyEpoch"`
+
+	// ObservedControlRevision is the manager revision incorporated into the
+	// worker's effective claim fence.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=0
+	ObservedControlRevision int64 `json:"observedControlRevision"`
+
+	// ObservedWorkerConfigRevision is the running worker revision that
+	// acknowledged this admission. The rollout manager compares it with the
+	// CiscoDevice's current live worker proof before granting; it is deliberately
+	// not frozen in managerAdmission so an in-place Secret rotation can converge.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	ObservedWorkerConfigRevision string `json:"observedWorkerConfigRevision"`
+
+	// EffectiveState exposes whether pause/cancellation is effective or an
+	// earlier claim must still be observed.
+	// +kubebuilder:validation:Required
+	EffectiveState UpgradeWorkerControlState `json:"effectiveState"`
+
+	// UpdatedAt is the last effective-state observation time.
+	// +kubebuilder:validation:Required
+	UpdatedAt metav1.Time `json:"updatedAt"`
+
+	// Message is a bounded worker acknowledgement summary.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=256
+	Message string `json:"message,omitempty"`
+}
+
+// UpgradeManagedMutationStage names each durable device-mutating claim.
+//
+// +kubebuilder:validation:Enum=Staging;PrimaryInstall;StandbyInstall;StandbyActivation;PrimaryActivation;RollbackActivation
+type UpgradeManagedMutationStage string
+
+const (
+	UpgradeManagedMutationStaging            UpgradeManagedMutationStage = "Staging"
+	UpgradeManagedMutationPrimaryInstall     UpgradeManagedMutationStage = "PrimaryInstall"
+	UpgradeManagedMutationStandbyInstall     UpgradeManagedMutationStage = "StandbyInstall"
+	UpgradeManagedMutationStandbyActivation  UpgradeManagedMutationStage = "StandbyActivation"
+	UpgradeManagedMutationPrimaryActivation  UpgradeManagedMutationStage = "PrimaryActivation"
+	UpgradeManagedMutationRollbackActivation UpgradeManagedMutationStage = "RollbackActivation"
+)
+
+// UpgradeManagedMutationClaimStatus binds a durable worker mutation claim to
+// the exact reservation and manager-control revision it won against.
+//
+// +kubebuilder:validation:XValidation:rule="self.reservationID == oldSelf.reservationID && self.policyEpoch == oldSelf.policyEpoch && self.controlRevision == oldSelf.controlRevision && self.claimedAt == oldSelf.claimedAt",message="managed mutation claim identity is immutable"
+type UpgradeManagedMutationClaimStatus struct {
+	// Stage is the list-map key and claimed device mutation.
+	// +kubebuilder:validation:Required
+	Stage UpgradeManagedMutationStage `json:"stage"`
+
+	// ReservationID must equal managerAdmission.reservationID.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=64
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9][A-Za-z0-9._:-]*$`
+	ReservationID string `json:"reservationID"`
+
+	// PolicyEpoch must exactly match the granted manager admission won by this
+	// durable claim.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	PolicyEpoch int64 `json:"policyEpoch"`
+
+	// ControlRevision is committed in the same resourceVersion update as the
+	// existing durable stage-request marker.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=0
+	ControlRevision int64 `json:"controlRevision"`
+
+	// ClaimedAt is persisted before dispatch and never rewritten on recovery.
+	// +kubebuilder:validation:Required
+	ClaimedAt metav1.Time `json:"claimedAt"`
+}
+
 // IOSXESoftwareUpgradeStatus carries observed state.
 type IOSXESoftwareUpgradeStatus struct {
 	// Phase is the current state-machine position.
@@ -364,6 +659,32 @@ type IOSXESoftwareUpgradeStatus struct {
 	// non-empty values are preserved and fenced for controller downgrade safety.
 	// +optional
 	ExecutionModel UpgradeExecutionModel `json:"executionModel,omitempty"`
+
+	// ManagerAdmission is the manager-owned, identity-bound mutation grant for
+	// a campaign-created leaf. On a managed device, absence is denial. Native
+	// admission must prevent workers and ordinary editors from changing it.
+	// +kubebuilder:validation:Optional
+	ManagerAdmission *UpgradeManagerAdmissionStatus `json:"managerAdmission,omitempty"`
+
+	// ManagerControl is manager-owned pause/cancel intent. A claim and a
+	// revocation compete through resourceVersion on this same leaf object.
+	// +kubebuilder:validation:Optional
+	ManagerControl *UpgradeManagerControlStatus `json:"managerControl,omitempty"`
+
+	// WorkerControl is the worker-owned effective acknowledgement of manager
+	// admission and control. Native admission must keep its ownership disjoint
+	// from ManagerAdmission and ManagerControl.
+	// +kubebuilder:validation:Optional
+	WorkerControl *UpgradeWorkerControlStatus `json:"workerControl,omitempty"`
+
+	// ManagedMutationClaims binds every durable at-most-once mutation marker to
+	// the reservation/control revision it claimed. The worker adds an entry in
+	// the same resourceVersion update as the corresponding existing marker.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=6
+	// +listType=map
+	// +listMapKey=stage
+	ManagedMutationClaims []UpgradeManagedMutationClaimStatus `json:"managedMutationClaims,omitempty"`
 
 	// ObservedGeneration mirrors spec.generation that produced this status.
 	// +optional
@@ -379,6 +700,7 @@ type IOSXESoftwareUpgradeStatus struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=64
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	// TransferProgress reports cumulative bytes uploaded during the

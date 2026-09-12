@@ -14,6 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */}}
 {{- $strictRBAC := eq .Values.rbac.profile "strict" }}
+{{- $legacyClusterBinding := lookup "rbac.authorization.k8s.io/v1" "ClusterRoleBinding" "" (include "cisco-virtual-kubelet.vkServiceAccountName" .) }}
+{{- $legacyDeviceBinding := lookup "rbac.authorization.k8s.io/v1" "RoleBinding" .Release.Namespace (printf "%s-device" (include "cisco-virtual-kubelet.vkServiceAccountName" .)) }}
+{{- $managerRoleName := printf "%s-managed-topology-manager" (include "cisco-virtual-kubelet.fullname" .) }}
+{{- $retainedManagerRole := lookup "rbac.authorization.k8s.io/v1" "ClusterRole" "" $managerRoleName }}
+{{- $retirementMode := and (not .Values.topology.enabled) (not (empty $retainedManagerRole)) }}
 ---
 # Service account used by all Virtual Kubelet Deployments spawned by the controller.
 apiVersion: v1
@@ -117,6 +122,15 @@ metadata:
   labels:
     {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
 rules:
+  {{- if .Values.topology.enabled }}
+  # Diagnostic captures and DeviceOperation artifacts are always written in
+  # the device namespace. Managed workers receive this ClusterRole only through
+  # the per-device namespaced RoleBinding, avoiding cluster-wide ConfigMap
+  # mutation while retaining the existing sinks.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  {{- end }}
   # Namespaced IOSXEConfig scope objects (device groups, interface groups,
   # templates) the per-device ConfigReconciler reads. iosxeconfigdefaults is
   # CLUSTER-scoped and lives in the cluster role above — it cannot be granted
@@ -205,12 +219,21 @@ rules:
     resources: ["iosxeoperationalactions/status"]
     verbs: ["get", "update", "patch"]
   {{- end }}
+{{- if or (and (not .Values.topology.enabled) (not $retirementMode)) (and .Values.topology.enabled (not (empty $legacyClusterBinding))) }}
 ---
-# ClusterRoleBinding for the cluster-scoped VK role.
+# Legacy installs use one shared VK identity. A topology-enabled upgrade keeps
+# an exact preexisting binding only as a marked migration bridge; the manager
+# removes it after every old shared-identity Deployment, ReplicaSet, and Pod is
+# quiesced. A fresh topology-enabled install omits the binding entirely.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: {{ include "cisco-virtual-kubelet.vkServiceAccountName" . }}
+  {{- if .Values.topology.enabled }}
+  annotations:
+    helm.sh/resource-policy: keep
+    topology.cisco.vk/retire-shared-worker-access: rollout-v1
+  {{- end }}
   labels:
     {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
 roleRef:
@@ -221,15 +244,22 @@ subjects:
   - kind: ServiceAccount
     name: {{ include "cisco-virtual-kubelet.vkServiceAccountName" . }}
     namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- if or (and (not .Values.topology.enabled) (not $retirementMode)) (and .Values.topology.enabled (not (empty $legacyDeviceBinding))) }}
 ---
-# Namespaced RoleBinding for the config-management role in the release
-# namespace. Per-device pods in other namespaces receive their own
-# RoleBinding from the controller (ensureVKAccess).
+# Namespaced config-management binding for the same shared identity. In
+# topology mode it follows the identical lookup/retain/retire transition as
+# the cluster binding; per-device workers receive exact dynamic bindings.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ include "cisco-virtual-kubelet.vkServiceAccountName" . }}-device
   namespace: {{ .Release.Namespace }}
+  {{- if .Values.topology.enabled }}
+  annotations:
+    helm.sh/resource-policy: keep
+    topology.cisco.vk/retire-shared-worker-access: rollout-v1
+  {{- end }}
   labels:
     {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
 roleRef:
@@ -240,3 +270,4 @@ subjects:
   - kind: ServiceAccount
     name: {{ include "cisco-virtual-kubelet.vkServiceAccountName" . }}
     namespace: {{ .Release.Namespace }}
+{{- end }}
