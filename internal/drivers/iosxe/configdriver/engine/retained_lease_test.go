@@ -18,7 +18,10 @@ import (
 )
 
 func retainedLeaseFixture() *coordv1.Lease {
-	now := metav1.NewMicroTime(time.Now())
+	// MicroTime is serialized by the Kubernetes API at microsecond precision.
+	// Keep the fixture on that boundary so the assertion below compares the
+	// persisted Lease identity rather than platform-specific clock precision.
+	now := metav1.NewMicroTime(time.Now().UTC().Truncate(time.Microsecond))
 	return &coordv1.Lease{ObjectMeta: metav1.ObjectMeta{Namespace: "edge", Name: LeaseName("device", devicecoordination.MutationLeaseFamily), UID: "canonical-uid", Annotations: map[string]string{
 		devicecoordination.RetainLeaseAnnotation:             "true",
 		managedprotocol.AnnotationDeviceUID:                  "device-uid",
@@ -98,9 +101,13 @@ func TestRetainedLeaseOnlyClearsExactRequestOnReleaseOrTakeover(t *testing.T) {
 			if operation == "release" && (got.Spec.LeaseTransitions == nil || *got.Spec.LeaseTransitions != 1) {
 				t.Fatal("mutation release changed its durable leaseTransitions counter")
 			}
-			if operation == "renew" && (got.Spec.AcquireTime == nil || !got.Spec.AcquireTime.Equal(seed.Spec.AcquireTime) ||
-				got.Spec.LeaseTransitions == nil || *got.Spec.LeaseTransitions != *seed.Spec.LeaseTransitions) {
-				t.Fatal("same-holder renewal changed acquisition identity")
+			if operation == "renew" {
+				if got.Spec.AcquireTime == nil || !got.Spec.AcquireTime.Equal(seed.Spec.AcquireTime) {
+					t.Fatalf("same-holder renewal changed acquireTime: got=%v want=%v", got.Spec.AcquireTime, seed.Spec.AcquireTime)
+				}
+				if got.Spec.LeaseTransitions == nil || *got.Spec.LeaseTransitions != *seed.Spec.LeaseTransitions {
+					t.Fatalf("same-holder renewal changed leaseTransitions: got=%v want=%v", got.Spec.LeaseTransitions, seed.Spec.LeaseTransitions)
+				}
 			}
 		})
 	}
