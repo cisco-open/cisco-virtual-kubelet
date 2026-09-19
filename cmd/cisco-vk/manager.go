@@ -55,6 +55,7 @@ var (
 	enableLeaderElect               bool
 	probeAddr                       string
 	vkImage                         string
+	vkImagePullPolicy               string
 	controllerWorkerImage           string
 	controllerWorkerImagePullPolicy string
 	vkServiceAccount                string
@@ -88,6 +89,8 @@ func init() {
 			"Enabling this will ensure there is only one active controller manager.")
 	managerCmd.Flags().StringVar(&vkImage, "vk-image", controller.DefaultImage,
 		"Container image to use for per-device Virtual Kubelet deployments.")
+	managerCmd.Flags().StringVar(&vkImagePullPolicy, "vk-image-pull-policy", "",
+		"Image pull policy for per-device Virtual Kubelet deployments (Always, IfNotPresent, or Never; empty uses the image-tag default).")
 	managerCmd.Flags().StringVar(&controllerWorkerImage, "controller-worker-image", controller.DefaultImage,
 		"Adapter-bearing controller image to use for isolated network-controller workers.")
 	managerCmd.Flags().StringVar(&controllerWorkerImagePullPolicy, "controller-worker-image-pull-policy", string(corev1.PullIfNotPresent),
@@ -113,6 +116,13 @@ func init() {
 }
 
 func runManager(cmd *cobra.Command, args []string) error {
+	if vkImagePullPolicy != "" {
+		switch corev1.PullPolicy(vkImagePullPolicy) {
+		case corev1.PullAlways, corev1.PullIfNotPresent, corev1.PullNever:
+		default:
+			return fmt.Errorf("invalid --vk-image-pull-policy %q", vkImagePullPolicy)
+		}
+	}
 	switch corev1.PullPolicy(controllerWorkerImagePullPolicy) {
 	case corev1.PullAlways, corev1.PullIfNotPresent, corev1.PullNever:
 	default:
@@ -295,6 +305,7 @@ func runManager(cmd *cobra.Command, args []string) error {
 		APIReader:               mgr.GetAPIReader(),
 		Scheme:                  mgr.GetScheme(),
 		Image:                   vkImage,
+		ImagePullPolicy:         corev1.PullPolicy(vkImagePullPolicy),
 		ServiceAccount:          vkServiceAccount,
 		AggregatorEnabled:       enableAggregator,
 		ManagedTopology:         enableManagedTopology,

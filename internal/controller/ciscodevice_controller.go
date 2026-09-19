@@ -41,9 +41,11 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -210,6 +212,9 @@ type CiscoDeviceReconciler struct {
 	APIReader client.Reader
 	// Image overrides the VK container image (defaults to DefaultImage).
 	Image string
+	// ImagePullPolicy controls pulls for per-device VK pods. Empty uses the
+	// Kubernetes tag-based default for Image.
+	ImagePullPolicy corev1.PullPolicy
 	// ServiceAccount is the name of the service account for VK pods (defaults to DefaultServiceAccount).
 	ServiceAccount string
 	// AggregatorEnabled mirrors the manager's --enable-config-aggregator
@@ -549,6 +554,10 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if image == "" {
 		image = DefaultImage
 	}
+	imagePullPolicy := r.ImagePullPolicy
+	if imagePullPolicy == "" {
+		imagePullPolicy = defaultImagePullPolicy(image)
+	}
 	worker, err := resolveDeviceWorkerConfig(device.Spec.Worker)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("worker configuration: %w", err)
@@ -624,7 +633,13 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if r.ManagedTopology || managed.Managed || managed.LegacyWorker || signerMayBeResident || mutationWorkerMayBeRunning {
 			deploy.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 		} else {
-			deploy.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RollingUpdateDeploymentStrategyType}
+			deploy.Spec.Strategy = appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxUnavailable: ptr.To(intstr.FromString("25%")),
+					MaxSurge:       ptr.To(intstr.FromString("25%")),
+				},
+			}
 		}
 
 		annos := map[string]string{
@@ -747,11 +762,12 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			},
 			Containers: []corev1.Container{
 				{
-					Name:      "cisco-vk",
-					Image:     image,
-					Args:      vkContainerArgs(managedOrLegacyNodeName(&device, managed), device.Spec.LogLevel),
-					Env:       podEnv,
-					Resources: workerResourceRequirements(worker.Resources),
+					Name:            "cisco-vk",
+					Image:           image,
+					ImagePullPolicy: imagePullPolicy,
+					Args:            vkContainerArgs(managedOrLegacyNodeName(&device, managed), device.Spec.LogLevel),
+					Env:             podEnv,
+					Resources:       workerResourceRequirements(worker.Resources),
 					SecurityContext: &corev1.SecurityContext{
 						AllowPrivilegeEscalation: ptr.To(false),
 						Capabilities: &corev1.Capabilities{
@@ -870,6 +886,12 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				}},
 			})
 		}
+		// Deployment PodTemplates are defaulted by the API server on write. Keep
+		// the desired object in that same explicit form before CreateOrUpdate
+		// compares it and before managed mode content-addresses it. Otherwise the
+		// controller continuously removes API defaults and the live template can
+		// never reproduce its injected worker revision.
+		applyVKPodTemplateDefaults(&deploy.Spec.Template)
 		if managedWorker {
 			deploy.Spec.Template.Spec.Containers[0].Env = append(
 				deploy.Spec.Template.Spec.Containers[0].Env,
@@ -1969,6 +1991,7 @@ func managedWorkerPodTemplateRevision(template *corev1.PodTemplateSpec) (string,
 		return "", fmt.Errorf("managed worker PodTemplate is nil")
 	}
 	canonical := template.DeepCopy()
+	applyVKPodTemplateDefaults(canonical)
 	delete(canonical.Annotations, managedprotocol.AnnotationWorkerConfigRevision)
 	for i := range canonical.Spec.Containers {
 		canonical.Spec.Containers[i].Env = slices.DeleteFunc(
@@ -1982,6 +2005,109 @@ func managedWorkerPodTemplateRevision(template *corev1.PodTemplateSpec) (string,
 	}
 	digest := sha256.Sum256(encoded)
 	return "sha256:" + hex.EncodeToString(digest[:]), nil
+}
+
+// applyVKPodTemplateDefaults mirrors the stable defaults the Kubernetes API
+// applies to Deployment PodTemplates used by per-device workers. The manager
+// both reconciles and hashes this explicit representation, so an admission
+// round trip cannot create perpetual updates or invalidate worker evidence.
+func applyVKPodTemplateDefaults(template *corev1.PodTemplateSpec) {
+	if template == nil {
+		return
+	}
+	spec := &template.Spec
+	if spec.RestartPolicy == "" {
+		spec.RestartPolicy = corev1.RestartPolicyAlways
+	}
+	if spec.DNSPolicy == "" {
+		spec.DNSPolicy = corev1.DNSClusterFirst
+	}
+	if spec.SchedulerName == "" {
+		spec.SchedulerName = corev1.DefaultSchedulerName
+	}
+	if spec.TerminationGracePeriodSeconds == nil {
+		spec.TerminationGracePeriodSeconds = ptr.To[int64](30)
+	}
+	if spec.ServiceAccountName == "" {
+		spec.ServiceAccountName = spec.DeprecatedServiceAccount
+	}
+	spec.DeprecatedServiceAccount = spec.ServiceAccountName
+	if spec.SecurityContext == nil {
+		spec.SecurityContext = &corev1.PodSecurityContext{}
+	}
+
+	defaultContainer := func(container *corev1.Container) {
+		if container.ImagePullPolicy == "" {
+			container.ImagePullPolicy = defaultImagePullPolicy(container.Image)
+		}
+		if container.TerminationMessagePath == "" {
+			container.TerminationMessagePath = corev1.TerminationMessagePathDefault
+		}
+		if container.TerminationMessagePolicy == "" {
+			container.TerminationMessagePolicy = corev1.TerminationMessageReadFile
+		}
+		for i := range container.Env {
+			fieldRef := container.Env[i].ValueFrom
+			if fieldRef != nil && fieldRef.FieldRef != nil && fieldRef.FieldRef.APIVersion == "" {
+				fieldRef.FieldRef.APIVersion = "v1"
+			}
+		}
+		defaultResourceList(container.Resources.Limits)
+		defaultResourceList(container.Resources.Requests)
+	}
+	for i := range spec.InitContainers {
+		defaultContainer(&spec.InitContainers[i])
+	}
+	for i := range spec.Containers {
+		defaultContainer(&spec.Containers[i])
+	}
+	for i := range spec.EphemeralContainers {
+		defaultResourceList(spec.EphemeralContainers[i].Resources.Limits)
+		defaultResourceList(spec.EphemeralContainers[i].Resources.Requests)
+	}
+	defaultResourceList(spec.Overhead)
+
+	for i := range spec.Volumes {
+		volume := &spec.Volumes[i]
+		switch {
+		case volume.ConfigMap != nil && volume.ConfigMap.DefaultMode == nil:
+			volume.ConfigMap.DefaultMode = ptr.To(corev1.ConfigMapVolumeSourceDefaultMode)
+		case volume.Secret != nil && volume.Secret.DefaultMode == nil:
+			volume.Secret.DefaultMode = ptr.To(corev1.SecretVolumeSourceDefaultMode)
+		case volume.Projected != nil && volume.Projected.DefaultMode == nil:
+			volume.Projected.DefaultMode = ptr.To(corev1.ProjectedVolumeSourceDefaultMode)
+		case volume.DownwardAPI != nil && volume.DownwardAPI.DefaultMode == nil:
+			volume.DownwardAPI.DefaultMode = ptr.To(corev1.DownwardAPIVolumeSourceDefaultMode)
+		}
+	}
+}
+
+func defaultResourceList(resources corev1.ResourceList) {
+	for name, quantity := range resources {
+		quantity.RoundUp(resource.Milli)
+		resources[name] = quantity
+	}
+}
+
+func defaultImagePullPolicy(image string) corev1.PullPolicy {
+	name := image
+	hasDigest := false
+	if index := strings.LastIndex(name, "@"); index >= 0 {
+		name = name[:index]
+		hasDigest = true
+	}
+	lastSlash := strings.LastIndex(name, "/")
+	lastColon := strings.LastIndex(name, ":")
+	if lastColon > lastSlash {
+		if name[lastColon+1:] == "latest" {
+			return corev1.PullAlways
+		}
+		return corev1.PullIfNotPresent
+	}
+	if !hasDigest {
+		return corev1.PullAlways
+	}
+	return corev1.PullIfNotPresent
 }
 
 // ensureManagedDeviceDeletionSafe keeps the identity-bound Node and worker

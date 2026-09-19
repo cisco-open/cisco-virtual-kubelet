@@ -8,6 +8,7 @@ scratch_dir="$(mktemp -d)"
 trap 'rm -rf -- "$scratch_dir"' EXIT
 
 default_render="$scratch_dir/default.yaml"
+vk_pull_policy_render="$scratch_dir/vk-pull-policy.yaml"
 managed_render="$scratch_dir/managed.yaml"
 managed_upgrade_render="$scratch_dir/managed-upgrade.yaml"
 managed_drain_render="$scratch_dir/managed-drain.yaml"
@@ -54,6 +55,7 @@ if grep -Eq -- '--enable-managed-topology|kind: ValidatingAdmissionPolicy|name: 
 fi
 grep -Fq -- '- --topology-policy-namespace=cisco-vk-system' "$default_render"
 grep -Fq -- '- --topology-policy-name=cvk-cisco-virtual-kubelet-topology-policy' "$default_render"
+grep -Fq -- '- --vk-image-pull-policy=IfNotPresent' "$default_render"
 grep -Fq 'resources: ["nodes"]' "$default_render"
 grep -Fq 'verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]' "$default_render"
 has_named_binding "$default_render" cisco-virtual-kubelet
@@ -65,6 +67,14 @@ if grep -Fq '  - replicasets' "$default_controller_role"; then
   echo "topology-disabled base manager retained ReplicaSet retirement authority" >&2
   exit 1
 fi
+
+helm template cvk "$chart_dir" \
+  --namespace cisco-vk-system \
+  --kube-version 1.35.0 \
+  --set image.pullPolicy=Always \
+  --set vkImage.pullPolicy=Never >"$vk_pull_policy_render"
+grep -Fq -- '- --vk-image-pull-policy=Never' "$vk_pull_policy_render"
+grep -Fq 'imagePullPolicy: Always' "$vk_pull_policy_render"
 
 helm template cvk "$chart_dir" \
   --namespace cisco-vk-system \

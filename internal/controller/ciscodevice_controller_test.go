@@ -27,12 +27,14 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -293,14 +295,40 @@ func TestReconcile_CreatesDeployment(t *testing.T) {
 	if deploy.Spec.Replicas == nil || *deploy.Spec.Replicas != 1 {
 		t.Errorf("expected 1 replica, got %v", deploy.Spec.Replicas)
 	}
+	if deploy.Spec.Strategy.Type != appsv1.RollingUpdateDeploymentStrategyType ||
+		deploy.Spec.Strategy.RollingUpdate == nil ||
+		deploy.Spec.Strategy.RollingUpdate.MaxSurge == nil ||
+		deploy.Spec.Strategy.RollingUpdate.MaxSurge.String() != "25%" ||
+		deploy.Spec.Strategy.RollingUpdate.MaxUnavailable == nil ||
+		deploy.Spec.Strategy.RollingUpdate.MaxUnavailable.String() != "25%" {
+		t.Errorf("Deployment rolling strategy API defaults are incomplete: %#v", deploy.Spec.Strategy)
+	}
 	if len(deploy.Spec.Template.Spec.Containers) != 1 {
 		t.Fatalf("expected 1 container, got %d", len(deploy.Spec.Template.Spec.Containers))
 	}
 	if got := deploy.Spec.Template.Spec.Containers[0].Image; got != "cisco-vk:test" {
 		t.Errorf("expected image cisco-vk:test, got %q", got)
 	}
+	if got := deploy.Spec.Template.Spec.Containers[0].ImagePullPolicy; got != corev1.PullIfNotPresent {
+		t.Errorf("expected image pull policy IfNotPresent, got %q", got)
+	}
 	if got := deploy.Spec.Template.Spec.ServiceAccountName; got != "test-sa" {
 		t.Errorf("expected service account test-sa, got %q", got)
+	}
+	if got := deploy.Spec.Template.Spec.DeprecatedServiceAccount; got != "test-sa" {
+		t.Errorf("expected API-defaulted service account alias test-sa, got %q", got)
+	}
+	if deploy.Spec.Template.Spec.RestartPolicy != corev1.RestartPolicyAlways ||
+		deploy.Spec.Template.Spec.DNSPolicy != corev1.DNSClusterFirst ||
+		deploy.Spec.Template.Spec.SchedulerName != corev1.DefaultSchedulerName ||
+		deploy.Spec.Template.Spec.TerminationGracePeriodSeconds == nil ||
+		*deploy.Spec.Template.Spec.TerminationGracePeriodSeconds != 30 {
+		t.Errorf("PodTemplate API defaults are incomplete: %#v", deploy.Spec.Template.Spec)
+	}
+	container := deploy.Spec.Template.Spec.Containers[0]
+	if container.TerminationMessagePath != corev1.TerminationMessagePathDefault ||
+		container.TerminationMessagePolicy != corev1.TerminationMessageReadFile {
+		t.Errorf("container API defaults are incomplete: %#v", container)
 	}
 	affinity := deploy.Spec.Template.Spec.Affinity
 	if affinity == nil ||
@@ -356,6 +384,110 @@ func TestReconcile_CreatesDeployment(t *testing.T) {
 		gotDevice.Status.NetAsCode.Type != ciskov1.NetAsCodeModelDeviceCentric ||
 		gotDevice.Status.NetAsCode.Stripe != "iosxe" {
 		t.Fatalf("NetAsCode status=%+v, want iosxe device-centric", gotDevice.Status.NetAsCode)
+	}
+}
+
+func TestReconcile_DeploymentIsNoOpAfterExplicitAPIDefaults(t *testing.T) {
+	device := newDevice("router-default-stability", "default")
+	r := reconcilerFor(t, device)
+	r.ImagePullPolicy = corev1.PullNever
+	ctx := context.Background()
+	request := reconcileRequest(device.Namespace, device.Name)
+
+	if _, err := r.Reconcile(ctx, request); err != nil {
+		t.Fatalf("initial Reconcile returned unexpected error: %v", err)
+	}
+	key := types.NamespacedName{Namespace: device.Namespace, Name: device.Name + deploymentSuffix}
+	var first appsv1.Deployment
+	if err := r.Get(ctx, key, &first); err != nil {
+		t.Fatal(err)
+	}
+	if first.Spec.Template.Spec.Containers[0].ImagePullPolicy != corev1.PullNever {
+		t.Fatalf("image pull policy = %q, want Never", first.Spec.Template.Spec.Containers[0].ImagePullPolicy)
+	}
+
+	if _, err := r.Reconcile(ctx, request); err != nil {
+		t.Fatalf("second Reconcile returned unexpected error: %v", err)
+	}
+	var second appsv1.Deployment
+	if err := r.Get(ctx, key, &second); err != nil {
+		t.Fatal(err)
+	}
+	if second.ResourceVersion != first.ResourceVersion {
+		t.Fatalf("no-op reconcile rewrote Deployment resourceVersion %q -> %q", first.ResourceVersion, second.ResourceVersion)
+	}
+}
+
+func TestManagedWorkerPodTemplateRevisionIsStableAcrossAPIDefaults(t *testing.T) {
+	sparse := &corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"example.com/input": "stable"}},
+		Spec: corev1.PodSpec{
+			ServiceAccountName: "worker",
+			Containers: []corev1.Container{{
+				Name:  "worker",
+				Image: "example.invalid/cisco-vk:test",
+				Resources: corev1.ResourceRequirements{Requests: corev1.ResourceList{
+					corev1.ResourceCPU: resource.MustParse("0.0001"),
+				}},
+				Env: []corev1.EnvVar{{
+					Name: "POD_NAME",
+					ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					}},
+				}},
+			}},
+			Volumes: []corev1.Volume{{
+				Name: "config",
+				VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "worker-config"},
+				}},
+			}},
+		},
+	}
+	before, err := managedWorkerPodTemplateRevision(sparse)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Model the fields observed after a real Kubernetes API-server round trip.
+	defaulted := sparse.DeepCopy()
+	defaulted.Spec.RestartPolicy = corev1.RestartPolicyAlways
+	defaulted.Spec.DNSPolicy = corev1.DNSClusterFirst
+	defaulted.Spec.SchedulerName = corev1.DefaultSchedulerName
+	defaulted.Spec.TerminationGracePeriodSeconds = ptr.To[int64](30)
+	defaulted.Spec.DeprecatedServiceAccount = defaulted.Spec.ServiceAccountName
+	defaulted.Spec.SecurityContext = &corev1.PodSecurityContext{}
+	defaulted.Spec.Containers[0].ImagePullPolicy = corev1.PullIfNotPresent
+	defaulted.Spec.Containers[0].TerminationMessagePath = corev1.TerminationMessagePathDefault
+	defaulted.Spec.Containers[0].TerminationMessagePolicy = corev1.TerminationMessageReadFile
+	defaulted.Spec.Containers[0].Env[0].ValueFrom.FieldRef.APIVersion = "v1"
+	defaulted.Spec.Containers[0].Resources.Requests[corev1.ResourceCPU] = resource.MustParse("1m")
+	defaulted.Spec.Volumes[0].ConfigMap.DefaultMode = ptr.To(corev1.ConfigMapVolumeSourceDefaultMode)
+	after, err := managedWorkerPodTemplateRevision(defaulted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before != after {
+		t.Fatalf("worker revision changed across API defaulting: %s -> %s", before, after)
+	}
+}
+
+func TestDefaultImagePullPolicyMatchesKubernetesSemantics(t *testing.T) {
+	for _, tc := range []struct {
+		image string
+		want  corev1.PullPolicy
+	}{
+		{image: "example.invalid/cisco-vk", want: corev1.PullAlways},
+		{image: "example.invalid/cisco-vk:latest", want: corev1.PullAlways},
+		{image: "example.invalid/cisco-vk:v1", want: corev1.PullIfNotPresent},
+		{image: "registry.example:5000/cisco-vk:v1", want: corev1.PullIfNotPresent},
+		{image: "example.invalid/cisco-vk@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", want: corev1.PullIfNotPresent},
+	} {
+		t.Run(tc.image, func(t *testing.T) {
+			if got := defaultImagePullPolicy(tc.image); got != tc.want {
+				t.Fatalf("defaultImagePullPolicy(%q)=%q, want %q", tc.image, got, tc.want)
+			}
+		})
 	}
 }
 
