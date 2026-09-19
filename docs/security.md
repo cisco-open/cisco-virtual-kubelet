@@ -491,6 +491,47 @@ config-family, and mutation Leases; fail-closed admission permits only monotonic
 updates by their exact worker. A separate policy confines `pods/status` writes
 to Pods whose immutable `spec.nodeName` is encoded in that worker identity.
 
+Managed PDB-aware drain is a second, default-off authority boundary. The chart
+initially binds the manager in an explicitly allowlisted workload namespace
+only when managed topology, software-upgrade gNOI, and
+`topology.policy.workloadDrain.enabled=true` are all active. One retained Role
+permits Pod read/update/patch plus read-only controller/PDB access for exact
+cleanup. A separate non-retained Role grants only `pods/eviction` create while
+every gate remains active. Neither grants Pod delete. Removing administrator
+drain authority makes the manager start no new Eviction, and the corresponding
+live Helm update removes the non-retained execution Role without stranding an
+accepted teardown. Remove the retained cleanup pair explicitly only after every
+associated drain is `Settled`. The top-level topology and gNOI gates must remain
+active until then so their controllers can finish recovery.
+
+Managed topology installs the reserved-field admission policy even while drain
+is disabled, keeping the startup contract feature-independent without granting
+new namespace RBAC. That fail-closed policy permits the manager to add or remove
+only the paired
+`ops.cisco.vk/drain-session` annotation and
+`ops.cisco.vk/iosxe-rollout-drain` finalizer on a Pod. It cannot use that grant
+to change the Pod spec, labels, owners, or unrelated metadata, and every direct
+Pod DELETE by the manager identity is denied. A campaign must separately opt
+into `workloads.policy: Drain`, and the API server's live `policy/v1`
+Eviction/PDB decision remains authoritative. See
+[Opt-in PDB-aware drain](topology-awareness.md#opt-in-pdb-aware-drain-development-preview)
+for the narrow eligible workload subset and recovery contract.
+
+The drain teardown holder uses a fixed 31-minute Lease quarantine, one minute
+longer than the worker's maximum device callback. An expired retained drain
+Lease is not reusable evidence. Across a recovery revision change, CVK can
+retire only an exact expired holder whose Lease UID, session, operation, holder
+identity, and complete strictly older request still match (or whose request
+metadata is wholly absent because publication never occurred). Partial,
+foreign, malformed, or unexpired state stays quarantined, and retirement
+dispatches no device work. Cleanup cannot reacquire the Lease until a later
+reconcile observes a fresh current-revision CiscoDevice maintenance-session
+acknowledgement.
+Before device dispatch and every Lease renewal, the worker reauthorizes the
+exact Pod, leaf, Node, maintenance session, and Lease binding. A cache-lagged
+delete callback is resolved against the uncached live Pod, and a changed UID
+fails closed rather than falling through to ordinary teardown.
+
 Two native-authorization gaps remain explicit. The ServiceAccount can read
 Secrets cluster-wide for cross-namespace Pod volume resolution; RBAC cannot
 limit that grant to Secrets referenced by Pods on one dynamic virtual Node.

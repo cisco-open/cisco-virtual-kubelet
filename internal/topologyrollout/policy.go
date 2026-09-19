@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,25 +45,44 @@ const (
 	AdmissionPrefixAnnotation = "topology.cisco.vk/admission-policy-prefix"
 	DefaultMaxCampaignTargets = 100
 	MaxProjectedTopologyKeys  = 16
+	minDrainTimeoutSeconds    = 300
+	maxDrainTimeoutSeconds    = 7200
+	minDrainPods              = 1
+	maxDrainPods              = 32
+	minDrainGraceSeconds      = 30
+	maxDrainGraceSeconds      = 600
+	drainCompletionBuffer     = 120
 )
 
 // AdminPolicyConfig is intentionally stored as one JSON value so readers see
 // one coherent ConfigMap resourceVersion. The ConfigMap UID/resourceVersion,
 // not user-provided identity fields, become the effective policy identity.
 type AdminPolicyConfig struct {
-	Version                      string               `json:"version"`
-	FleetSelector                metav1.LabelSelector `json:"fleetSelector"`
-	RequiredTopologyKeys         []string             `json:"requiredTopologyKeys"`
-	ProjectedTopologyKeys        []string             `json:"projectedTopologyKeys"`
-	GlobalMaxConcurrentTransfers int                  `json:"globalMaxConcurrentTransfers"`
-	GlobalMaxUnavailable         int                  `json:"globalMaxUnavailable"`
-	DomainMaxConcurrentTransfers map[string]int       `json:"domainMaxConcurrentTransfers"`
-	DomainMaxUnavailable         map[string]int       `json:"domainMaxUnavailable"`
-	HealthFreshnessSeconds       int                  `json:"healthFreshnessSeconds"`
-	MaxCampaignTargets           int                  `json:"maxCampaignTargets"`
-	MaxActiveReservations        int                  `json:"maxActiveReservations"`
-	MaxLedgerBytes               int                  `json:"maxLedgerBytes"`
-	LedgerName                   string               `json:"ledgerName"`
+	Version                      string                    `json:"version"`
+	FleetSelector                metav1.LabelSelector      `json:"fleetSelector"`
+	RequiredTopologyKeys         []string                  `json:"requiredTopologyKeys"`
+	ProjectedTopologyKeys        []string                  `json:"projectedTopologyKeys"`
+	GlobalMaxConcurrentTransfers int                       `json:"globalMaxConcurrentTransfers"`
+	GlobalMaxUnavailable         int                       `json:"globalMaxUnavailable"`
+	DomainMaxConcurrentTransfers map[string]int            `json:"domainMaxConcurrentTransfers"`
+	DomainMaxUnavailable         map[string]int            `json:"domainMaxUnavailable"`
+	HealthFreshnessSeconds       int                       `json:"healthFreshnessSeconds"`
+	MaxCampaignTargets           int                       `json:"maxCampaignTargets"`
+	MaxActiveReservations        int                       `json:"maxActiveReservations"`
+	MaxLedgerBytes               int                       `json:"maxLedgerBytes"`
+	WorkloadDrain                *AdminWorkloadDrainPolicy `json:"workloadDrain,omitempty"`
+	LedgerName                   string                    `json:"ledgerName"`
+}
+
+// AdminWorkloadDrainPolicy is an explicit administrator feature gate and set
+// of upper bounds. A nil policy, or a policy with Enabled=false, is
+// canonicalized to nil and preserves the pre-drain v1 policy semantics.
+type AdminWorkloadDrainPolicy struct {
+	Enabled                    bool     `json:"enabled"`
+	AllowedNamespaces          []string `json:"allowedNamespaces"`
+	MaxTimeoutSeconds          int      `json:"maxTimeoutSeconds"`
+	MaxPods                    int      `json:"maxPods"`
+	MaxTerminationGraceSeconds int      `json:"maxTerminationGraceSeconds"`
 }
 
 type ParsedAdminPolicy struct {
@@ -285,6 +305,85 @@ func (p *ParsedAdminPolicy) AdmissionPolicy(now time.Time) Policy {
 	}
 }
 
+// ValidateWorkloadPolicy applies the administrator's fail-closed drain gate
+// to one campaign request. BlockIfRunning remains valid independently of the
+// drain feature. A Drain request must select only explicitly allowed
+// namespaces and use limits no larger than every administrator cap.
+func (p *ParsedAdminPolicy) ValidateWorkloadPolicy(workloads opsv1alpha1.IOSXESoftwareRolloutWorkloadSpec) error {
+	if p == nil {
+		return fmt.Errorf("administrator topology policy is required")
+	}
+	cfg := p.Config
+	if err := validateAdminPolicyConfig(&cfg); err != nil {
+		return err
+	}
+
+	policy := workloads.Policy
+	if policy == "" {
+		policy = opsv1alpha1.IOSXESoftwareRolloutWorkloadBlockIfRunning
+	}
+	switch policy {
+	case opsv1alpha1.IOSXESoftwareRolloutWorkloadBlockIfRunning:
+		if workloads.Drain != nil {
+			return fmt.Errorf("drain configuration is forbidden when workload policy is BlockIfRunning")
+		}
+		return nil
+	case opsv1alpha1.IOSXESoftwareRolloutWorkloadDrain:
+		if workloads.Drain == nil {
+			return fmt.Errorf("drain configuration is required when workload policy is Drain")
+		}
+	default:
+		return fmt.Errorf("unsupported workload policy %q", policy)
+	}
+
+	if cfg.WorkloadDrain == nil {
+		return fmt.Errorf("administrator topology policy does not enable workload drain")
+	}
+	drain := workloads.Drain
+	if len(drain.Namespaces) < 1 || len(drain.Namespaces) > 16 {
+		return fmt.Errorf("drain namespaces must contain between 1 and 16 entries")
+	}
+	allowed := make(map[string]struct{}, len(cfg.WorkloadDrain.AllowedNamespaces))
+	for _, namespace := range cfg.WorkloadDrain.AllowedNamespaces {
+		allowed[namespace] = struct{}{}
+	}
+	seen := make(map[string]struct{}, len(drain.Namespaces))
+	for _, namespace := range drain.Namespaces {
+		if problems := validation.IsDNS1123Label(namespace); len(problems) > 0 {
+			return fmt.Errorf("drain namespace %q is invalid: %s", namespace, strings.Join(problems, "; "))
+		}
+		if _, duplicate := seen[namespace]; duplicate {
+			return fmt.Errorf("drain namespaces contains duplicate %q", namespace)
+		}
+		seen[namespace] = struct{}{}
+		if _, ok := allowed[namespace]; !ok {
+			return fmt.Errorf("drain namespace %q is not allowed by administrator policy", namespace)
+		}
+	}
+	if drain.TimeoutSeconds < minDrainTimeoutSeconds || drain.TimeoutSeconds > maxDrainTimeoutSeconds {
+		return fmt.Errorf("drain timeoutSeconds must be between %d and %d", minDrainTimeoutSeconds, maxDrainTimeoutSeconds)
+	}
+	if int(drain.TimeoutSeconds) > cfg.WorkloadDrain.MaxTimeoutSeconds {
+		return fmt.Errorf("drain timeoutSeconds %d exceeds administrator cap %d", drain.TimeoutSeconds, cfg.WorkloadDrain.MaxTimeoutSeconds)
+	}
+	if drain.MaxPods < minDrainPods || drain.MaxPods > maxDrainPods {
+		return fmt.Errorf("drain maxPods must be between %d and %d", minDrainPods, maxDrainPods)
+	}
+	if int(drain.MaxPods) > cfg.WorkloadDrain.MaxPods {
+		return fmt.Errorf("drain maxPods %d exceeds administrator cap %d", drain.MaxPods, cfg.WorkloadDrain.MaxPods)
+	}
+	if drain.MaxTerminationGraceSeconds < minDrainGraceSeconds || drain.MaxTerminationGraceSeconds > maxDrainGraceSeconds {
+		return fmt.Errorf("drain maxTerminationGraceSeconds must be between %d and %d", minDrainGraceSeconds, maxDrainGraceSeconds)
+	}
+	if int(drain.MaxTerminationGraceSeconds) > cfg.WorkloadDrain.MaxTerminationGraceSeconds {
+		return fmt.Errorf("drain maxTerminationGraceSeconds %d exceeds administrator cap %d", drain.MaxTerminationGraceSeconds, cfg.WorkloadDrain.MaxTerminationGraceSeconds)
+	}
+	if drain.TimeoutSeconds < drain.MaxTerminationGraceSeconds+drainCompletionBuffer {
+		return fmt.Errorf("drain timeoutSeconds must be at least maxTerminationGraceSeconds plus %d seconds", drainCompletionBuffer)
+	}
+	return nil
+}
+
 // AdminPolicyHashes returns stable hashes for the complete policy semantics
 // and for the subset whose alteration invalidates an already-frozen target
 // plan. Kubernetes metadata, including resourceVersion, is deliberately not
@@ -320,6 +419,9 @@ func AdminPolicyHashes(cfg AdminPolicyConfig) (semantic, structural string, err 
 func canonicalizePolicyCollections(cfg *AdminPolicyConfig) {
 	sort.Strings(cfg.RequiredTopologyKeys)
 	sort.Strings(cfg.ProjectedTopologyKeys)
+	if cfg.WorkloadDrain != nil {
+		sort.Strings(cfg.WorkloadDrain.AllowedNamespaces)
+	}
 	for i := range cfg.FleetSelector.MatchExpressions {
 		sort.Strings(cfg.FleetSelector.MatchExpressions[i].Values)
 	}
@@ -408,6 +510,40 @@ func validateAdminPolicyConfig(cfg *AdminPolicyConfig) error {
 	}
 	if cfg.HealthFreshnessSeconds < 30 || cfg.HealthFreshnessSeconds > 3600 {
 		return fmt.Errorf("healthFreshnessSeconds must be between 30 and 3600")
+	}
+	// An absent or explicitly disabled drain policy is the same semantic value
+	// as the original v1 contract. Canonicalizing it to nil prevents a manager
+	// upgrade from fencing active BlockIfRunning campaigns solely because the
+	// optional feature was introduced.
+	if cfg.WorkloadDrain != nil && !cfg.WorkloadDrain.Enabled {
+		cfg.WorkloadDrain = nil
+	}
+	if drain := cfg.WorkloadDrain; drain != nil {
+		if len(drain.AllowedNamespaces) < 1 || len(drain.AllowedNamespaces) > 16 {
+			return fmt.Errorf("workloadDrain.allowedNamespaces must contain between 1 and 16 entries")
+		}
+		seenDrainNamespaces := make(map[string]struct{}, len(drain.AllowedNamespaces))
+		for _, namespace := range drain.AllowedNamespaces {
+			if problems := validation.IsDNS1123Label(namespace); len(problems) > 0 {
+				return fmt.Errorf("workloadDrain.allowedNamespaces contains invalid namespace %q: %s", namespace, strings.Join(problems, "; "))
+			}
+			if _, duplicate := seenDrainNamespaces[namespace]; duplicate {
+				return fmt.Errorf("workloadDrain.allowedNamespaces contains duplicate %q", namespace)
+			}
+			seenDrainNamespaces[namespace] = struct{}{}
+		}
+		if drain.MaxTimeoutSeconds < minDrainTimeoutSeconds || drain.MaxTimeoutSeconds > maxDrainTimeoutSeconds {
+			return fmt.Errorf("workloadDrain.maxTimeoutSeconds must be between %d and %d", minDrainTimeoutSeconds, maxDrainTimeoutSeconds)
+		}
+		if drain.MaxPods < minDrainPods || drain.MaxPods > maxDrainPods {
+			return fmt.Errorf("workloadDrain.maxPods must be between %d and %d", minDrainPods, maxDrainPods)
+		}
+		if drain.MaxTerminationGraceSeconds < minDrainGraceSeconds || drain.MaxTerminationGraceSeconds > maxDrainGraceSeconds {
+			return fmt.Errorf("workloadDrain.maxTerminationGraceSeconds must be between %d and %d", minDrainGraceSeconds, maxDrainGraceSeconds)
+		}
+		if drain.MaxTimeoutSeconds < drain.MaxTerminationGraceSeconds+drainCompletionBuffer {
+			return fmt.Errorf("workloadDrain.maxTimeoutSeconds must be at least maxTerminationGraceSeconds plus %d seconds", drainCompletionBuffer)
+		}
 	}
 	if problems := validation.IsDNS1123Subdomain(cfg.LedgerName); len(problems) > 0 {
 		return fmt.Errorf("ledgerName is invalid: %s", strings.Join(problems, "; "))

@@ -109,7 +109,7 @@ func TestManagedMaintenancePersistsGuardAcknowledgementOnUnchangedTopology(t *te
 	if decision.err != nil || !decision.guard || decision.session == nil {
 		t.Fatalf("request not acknowledged: %+v", decision)
 	}
-	if err := r.reconcileManagedNodeMetadata(ctx, device, node, nil, &topologyrollout.ParsedAdminPolicy{}, "projection", decision.guard); err != nil {
+	if err := r.reconcileManagedNodeMetadata(ctx, device, node, nil, &topologyrollout.ParsedAdminPolicy{}, "projection", decision); err != nil {
 		t.Fatal(err)
 	}
 	if err := r.patchManagedTopologyStatus(ctx, device, node, "projection", decision); err != nil {

@@ -102,7 +102,9 @@ spec:
          'topology.cisco.vk/worker-observed-revision',
          'topology.cisco.vk/projected-keys',
          'topology.cisco.vk/projection-hash',
-         'topology.cisco.vk/managed-taints'].all(k,
+         'topology.cisco.vk/managed-taints',
+         'ops.cisco.vk/drain-cordon-owner',
+         'ops.cisco.vk/drain-taint-owner'].all(k,
            !(k in object.metadata.annotations))
     - name: legacyHandoffMarkerPreserved
       expression: >-
@@ -310,6 +312,114 @@ spec:
   validationActions: [Deny]
   matchResources: {}
 ---
+# The drain marker/finalizer are deletion authority. Reserve their mutation to
+# the manager and constrain that manager to those exact metadata fields. Only
+# policy/v1 Eviction may initiate deletion while protected; removing the exact
+# pair lets an admitted eviction complete through normal deletion machinery.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-managed-drain-pod
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["pods"]
+        scope: Namespaced
+  matchConditions:
+    - name: drain-metadata
+      expression: >-
+        request.userInfo.username == {{ $manager | quote }} ||
+        (object != null &&
+         ((has(object.metadata.annotations) &&
+           'ops.cisco.vk/drain-session' in object.metadata.annotations) ||
+          (has(object.metadata.finalizers) &&
+           object.metadata.finalizers.exists(f, f == 'ops.cisco.vk/iosxe-rollout-drain')))) ||
+        (oldObject != null &&
+         ((has(oldObject.metadata.annotations) &&
+           'ops.cisco.vk/drain-session' in oldObject.metadata.annotations) ||
+          (has(oldObject.metadata.finalizers) &&
+           oldObject.metadata.finalizers.exists(f, f == 'ops.cisco.vk/iosxe-rollout-drain'))))
+  variables:
+    - name: manager
+      expression: request.userInfo.username == {{ $manager | quote }}
+    - name: oldSession
+      expression: >-
+        oldObject != null && has(oldObject.metadata.annotations) &&
+        'ops.cisco.vk/drain-session' in oldObject.metadata.annotations ?
+        oldObject.metadata.annotations['ops.cisco.vk/drain-session'] : ''
+    - name: newSession
+      expression: >-
+        object != null && has(object.metadata.annotations) &&
+        'ops.cisco.vk/drain-session' in object.metadata.annotations ?
+        object.metadata.annotations['ops.cisco.vk/drain-session'] : ''
+    - name: oldFinalizers
+      expression: >-
+        oldObject != null && has(oldObject.metadata.finalizers) ?
+        oldObject.metadata.finalizers.filter(f, f == 'ops.cisco.vk/iosxe-rollout-drain').size() : 0
+    - name: newFinalizers
+      expression: >-
+        object != null && has(object.metadata.finalizers) ?
+        object.metadata.finalizers.filter(f, f == 'ops.cisco.vk/iosxe-rollout-drain').size() : 0
+  validations:
+    - expression: >-
+        request.operation != 'DELETE' &&
+        (variables.manager ||
+         (variables.oldSession == variables.newSession &&
+          variables.oldFinalizers == variables.newFinalizers))
+      message: direct deletion of a protected Pod is forbidden; only the topology manager may change reserved drain metadata
+    - expression: >-
+        object == null ||
+        ((variables.newSession == '' && variables.newFinalizers == 0) ||
+         (variables.newSession.matches(
+            '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$') &&
+          variables.newFinalizers == 1)) &&
+        (request.operation != 'CREATE' ||
+         (variables.newSession == '' && variables.newFinalizers == 0)) &&
+        (variables.oldSession == '' || variables.newSession == '' ||
+         variables.oldSession == variables.newSession)
+      message: the drain marker and one exact finalizer must be added and removed together, and a live session cannot be replaced
+    - expression: >-
+        !variables.manager || request.operation != 'UPDATE' ||
+        (object.metadata.name == oldObject.metadata.name &&
+         object.metadata.namespace == oldObject.metadata.namespace &&
+         object.metadata.uid == oldObject.metadata.uid &&
+         has(object.metadata.labels) == has(oldObject.metadata.labels) &&
+         (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+         has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences) &&
+         (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences) &&
+         object.spec == oldObject.spec &&
+         (has(object.metadata.annotations) ? object.metadata.annotations.transformMap(k, v,
+            k != 'ops.cisco.vk/drain-session', v) : {}) ==
+         (has(oldObject.metadata.annotations) ? oldObject.metadata.annotations.transformMap(k, v,
+            k != 'ops.cisco.vk/drain-session', v) : {}) &&
+         (has(object.metadata.finalizers) ? object.metadata.finalizers.filter(f,
+            f != 'ops.cisco.vk/iosxe-rollout-drain') : []) ==
+         (has(oldObject.metadata.finalizers) ? oldObject.metadata.finalizers.filter(f,
+            f != 'ops.cisco.vk/iosxe-rollout-drain') : []))
+      message: the topology manager may change only its exact drain marker and finalizer on a Pod
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-managed-drain-pod
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-managed-drain-pod
+  validationActions: [Deny]
+  matchResources: {}
+---
 # Reserved source labels control scheduler placement, rollout risk domains, and
 # artifact distribution locality. Their deltas require a separately authorized
 # custom `topology` verb.
@@ -368,7 +478,26 @@ spec:
           k == 'topology.cisco.vk/adopt-node-uid' ||
           k == 'topology.cisco.vk/approve-reclassification-from' ||
           k == 'topology.cisco.vk/request-legacy-handoff', v) : {}
+    # This is operator intent, not manager ownership. It remains mutable
+    # during a topology lock so recovery can conservatively retain a cordon.
+    - name: newDrainCordonHold
+      expression: >-
+        object != null && has(object.metadata.annotations) &&
+        'ops.cisco.vk/drain-cordon-hold' in object.metadata.annotations ?
+        object.metadata.annotations['ops.cisco.vk/drain-cordon-hold'] : ''
+    - name: oldDrainCordonHold
+      expression: >-
+        oldObject != null && has(oldObject.metadata.annotations) &&
+        'ops.cisco.vk/drain-cordon-hold' in oldObject.metadata.annotations ?
+        oldObject.metadata.annotations['ops.cisco.vk/drain-cordon-hold'] : ''
   validations:
+    - expression: >-
+        request.operation == 'DELETE' ||
+        (has(request.subResource) && request.subResource == 'status') ||
+        (variables.newDrainCordonHold in ['', 'true'] &&
+         (variables.newDrainCordonHold == variables.oldDrainCordonHold ||
+          authorizer.group('cisco.vk').resource('ciscodevices').namespace(request.namespace).name(request.name).check('topology').allowed()))
+      message: the drain cordon hold accepts only true and changes require the custom topology permission
     - expression: >-
         request.operation == 'DELETE' ||
         (has(request.subResource) && request.subResource == 'status') ||
@@ -772,12 +901,35 @@ spec:
              '^sha256:[a-f0-9]{64}$') &&
            object.status.workerControl.observedPolicyEpoch ==
              object.status.managerAdmission.policyEpoch)) &&
+        (!has(object.status.managerDrain) ||
+          (has(object.status.managerAdmission) && has(object.status.managerControl) &&
+           object.status.managerDrain.protocolVersion == 'pdb-drain-v1' &&
+           object.status.managerDrain.reservationID == object.status.managerAdmission.reservationID &&
+           object.status.managerDrain.policyEpoch == object.status.managerAdmission.policyEpoch &&
+           object.status.managerDrain.controlRevision == object.status.managerControl.revision &&
+           object.status.managerDrain.nodeUID == object.status.managerAdmission.nodeUID)) &&
+        (!has(object.status.workerDrain) ||
+          (has(object.status.managerDrain) && has(object.status.workerControl) &&
+           object.status.workerDrain.protocolVersion == object.status.managerDrain.protocolVersion &&
+           object.status.workerDrain.observedSessionToken == object.status.managerDrain.sessionToken &&
+           object.status.workerDrain.observedPolicyEpoch == object.status.managerDrain.policyEpoch &&
+           object.status.workerDrain.observedControlRevision <= object.status.managerDrain.controlRevision &&
+           ((has(oldObject.status) && has(oldObject.status.workerDrain) &&
+             object.status.workerDrain == oldObject.status.workerDrain) ||
+            object.status.workerDrain.observedWorkerConfigRevision ==
+              object.status.workerControl.observedWorkerConfigRevision) &&
+           (!has(object.status.workerDrain.remainingAuthorizedPodUIDs) ||
+            (has(object.status.managerDrain.pods) &&
+             object.status.workerDrain.remainingAuthorizedPodUIDs.all(uid,
+               object.status.managerDrain.pods.exists(p, p.uid == uid)))))) &&
         (variables.manager ||
         ((has(object.status.managerAdmission) == has(oldObject.status.managerAdmission)) &&
         (!has(object.status.managerAdmission) || object.status.managerAdmission == oldObject.status.managerAdmission) &&
         (has(object.status.managerControl) == has(oldObject.status.managerControl)) &&
-        (!has(object.status.managerControl) || object.status.managerControl == oldObject.status.managerControl))))
-      message: managed upgrade managerAdmission and managerControl status are manager-owned
+        (!has(object.status.managerControl) || object.status.managerControl == oldObject.status.managerControl) &&
+        (has(object.status.managerDrain) == has(oldObject.status.managerDrain)) &&
+        (!has(object.status.managerDrain) || object.status.managerDrain == oldObject.status.managerDrain))))
+      message: managed upgrade managerAdmission, managerControl, and managerDrain status are manager-owned
     - expression: >-
         !has(request.subResource) || request.subResource != 'status' || !variables.manager ||
         (has(object.status) &&
@@ -815,7 +967,8 @@ spec:
            !has(object.status.startTime) &&
            !has(object.status.transferProgress) &&
            !has(object.status.validatedVersion) &&
-           !has(object.status.workerControl)) :
+           !has(object.status.workerControl) &&
+           !has(object.status.workerDrain)) :
           ((has(object.status.activationControlStartTime) == has(oldObject.status.activationControlStartTime)) &&
            (!has(object.status.activationControlStartTime) || object.status.activationControlStartTime == oldObject.status.activationControlStartTime) &&
            (has(object.status.activationStartTime) == has(oldObject.status.activationStartTime)) &&
@@ -883,8 +1036,10 @@ spec:
            (has(object.status.validatedVersion) == has(oldObject.status.validatedVersion)) &&
            (!has(object.status.validatedVersion) || object.status.validatedVersion == oldObject.status.validatedVersion) &&
            (has(object.status.workerControl) == has(oldObject.status.workerControl)) &&
-           (!has(object.status.workerControl) || object.status.workerControl == oldObject.status.workerControl))))
-      message: managed upgrade worker status, mutation claims, and durable markers are worker-owned
+           (!has(object.status.workerControl) || object.status.workerControl == oldObject.status.workerControl) &&
+           (has(object.status.workerDrain) == has(oldObject.status.workerDrain)) &&
+           (!has(object.status.workerDrain) || object.status.workerDrain == oldObject.status.workerDrain))))
+      message: managed upgrade worker status, workerDrain, mutation claims, and durable markers are worker-owned
     # Claims are append-only evidence. Historical claims remain valid across a
     # later control-revision increase; only a newly appended stage must win the
     # current granted/unpaused revision in this exact status CAS.
@@ -1080,7 +1235,8 @@ spec:
           'topology.cisco.vk/maintenance-operation-namespace',
           'topology.cisco.vk/maintenance-operation-name',
           'topology.cisco.vk/maintenance-operation-uid',
-          'topology.cisco.vk/maintenance-control-revision'].all(k,
+          'topology.cisco.vk/maintenance-control-revision',
+          'topology.cisco.vk/maintenance-purpose'].all(k,
             !(k in oldObject.metadata.annotations))) &&
         (object.metadata.annotations['topology.cisco.vk/lease-purpose'] == 'node-heartbeat' ?
           (!has(oldObject.spec.acquireTime) && !has(oldObject.spec.leaseTransitions) &&
@@ -1231,7 +1387,7 @@ spec:
           object.metadata.annotations['topology.cisco.vk/lease-purpose'] == 'device-mutation' ?
            (variables.newHeld ?
              ((object.spec.holderIdentity.matches(
-                '^(software-upgrade|operational-action)/[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') ||
+                '^(software-upgrade|software-drain|operational-action)/[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') ||
                object.spec.holderIdentity.matches(
                 '^device-write/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')) &&
               has(object.spec.leaseDurationSeconds) && object.spec.leaseDurationSeconds > 0 &&
@@ -1300,7 +1456,8 @@ spec:
            'topology.cisco.vk/maintenance-operation-namespace',
            'topology.cisco.vk/maintenance-operation-name',
            'topology.cisco.vk/maintenance-operation-uid',
-           'topology.cisco.vk/maintenance-control-revision'].all(k,
+           'topology.cisco.vk/maintenance-control-revision',
+           'topology.cisco.vk/maintenance-purpose'].all(k,
              !(k in object.metadata.annotations)) :
          variables.newRequest ?
           (has(object.spec.holderIdentity) && object.spec.holderIdentity != '' &&
@@ -1312,17 +1469,30 @@ spec:
              'topology.cisco.vk/maintenance-operation-uid',
              'topology.cisco.vk/maintenance-control-revision'].all(k,
                k in object.metadata.annotations && object.metadata.annotations[k] != '') &&
-            object.metadata.annotations['topology.cisco.vk/maintenance-request-version'] == 'rollout-v1' &&
+            (object.metadata.annotations['topology.cisco.vk/maintenance-request-version'] == 'rollout-v1' ?
+              (!('topology.cisco.vk/maintenance-purpose' in object.metadata.annotations) ||
+               object.metadata.annotations['topology.cisco.vk/maintenance-purpose'] == 'SoftwareMutation') :
+              (object.metadata.annotations['topology.cisco.vk/maintenance-request-version'] == 'pdb-drain-v1' &&
+               'topology.cisco.vk/maintenance-purpose' in object.metadata.annotations &&
+               object.metadata.annotations['topology.cisco.vk/maintenance-purpose'] in
+                 ['WorkloadDrain', 'SoftwareMutation'])) &&
             object.metadata.annotations['topology.cisco.vk/maintenance-session-token'].matches(
               '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$') &&
+            (object.metadata.annotations['topology.cisco.vk/maintenance-request-version'] != 'pdb-drain-v1' ||
+             object.metadata.annotations['topology.cisco.vk/maintenance-session-token'].matches(
+               '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')) &&
             object.metadata.annotations['topology.cisco.vk/maintenance-requested-at'].matches(
               '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,9})?Z$') &&
             object.metadata.annotations['topology.cisco.vk/maintenance-control-revision'].matches(
               '^(0|[1-9][0-9]{0,18})$') &&
             object.metadata.annotations['topology.cisco.vk/maintenance-operation-namespace'] ==
               object.metadata.annotations['topology.cisco.vk/device-namespace'] &&
-            object.spec.holderIdentity == 'software-upgrade/' +
-              object.metadata.annotations['topology.cisco.vk/maintenance-operation-uid'] &&
+            (('topology.cisco.vk/maintenance-purpose' in object.metadata.annotations &&
+              object.metadata.annotations['topology.cisco.vk/maintenance-purpose'] == 'WorkloadDrain') ?
+              object.spec.holderIdentity == 'software-drain/' +
+                object.metadata.annotations['topology.cisco.vk/maintenance-operation-uid'] :
+              object.spec.holderIdentity == 'software-upgrade/' +
+                object.metadata.annotations['topology.cisco.vk/maintenance-operation-uid']) &&
             object.metadata.annotations['topology.cisco.vk/worker-username'].startsWith(
               'system:serviceaccount:' + object.metadata.annotations['topology.cisco.vk/device-namespace'] + ':cisco-vk-managed-')) :
           ['topology.cisco.vk/maintenance-request-version',
@@ -1331,9 +1501,10 @@ spec:
             'topology.cisco.vk/maintenance-operation-namespace',
             'topology.cisco.vk/maintenance-operation-name',
             'topology.cisco.vk/maintenance-operation-uid',
-            'topology.cisco.vk/maintenance-control-revision'].all(k,
+            'topology.cisco.vk/maintenance-control-revision',
+            'topology.cisco.vk/maintenance-purpose'].all(k,
               !(k in object.metadata.annotations)))
-      message: only a mutation Lease may carry a complete request bound to its current software-upgrade holder
+      message: only a mutation Lease may carry a complete protocol/purpose request bound to its current holder
     - expression: >-
         variables.manager || request.operation != 'UPDATE' ||
         (object.metadata.annotations.transformMap(k, v,
@@ -1343,7 +1514,8 @@ spec:
                     'topology.cisco.vk/maintenance-operation-namespace',
                     'topology.cisco.vk/maintenance-operation-name',
                     'topology.cisco.vk/maintenance-operation-uid',
-                    'topology.cisco.vk/maintenance-control-revision']), v) ==
+                    'topology.cisco.vk/maintenance-control-revision',
+                    'topology.cisco.vk/maintenance-purpose']), v) ==
          oldObject.metadata.annotations.transformMap(k, v,
            !(k in ['topology.cisco.vk/maintenance-request-version',
                     'topology.cisco.vk/maintenance-session-token',
@@ -1351,7 +1523,8 @@ spec:
                     'topology.cisco.vk/maintenance-operation-namespace',
                     'topology.cisco.vk/maintenance-operation-name',
                     'topology.cisco.vk/maintenance-operation-uid',
-                    'topology.cisco.vk/maintenance-control-revision']), v))
+                    'topology.cisco.vk/maintenance-control-revision',
+                    'topology.cisco.vk/maintenance-purpose']), v))
       message: managed Lease purpose, device, Node, worker, and all non-request annotations are immutable
     - expression: >-
         request.operation != 'UPDATE' ||
@@ -1368,6 +1541,11 @@ spec:
             k in oldObject.metadata.annotations &&
             k in object.metadata.annotations &&
             object.metadata.annotations[k] == oldObject.metadata.annotations[k]) &&
+         (('topology.cisco.vk/maintenance-purpose' in object.metadata.annotations) ==
+          ('topology.cisco.vk/maintenance-purpose' in oldObject.metadata.annotations)) &&
+         (!('topology.cisco.vk/maintenance-purpose' in object.metadata.annotations) ||
+          object.metadata.annotations['topology.cisco.vk/maintenance-purpose'] ==
+            oldObject.metadata.annotations['topology.cisco.vk/maintenance-purpose']) &&
          'topology.cisco.vk/maintenance-control-revision' in oldObject.metadata.annotations &&
          int(object.metadata.annotations['topology.cisco.vk/maintenance-control-revision']) >=
            int(oldObject.metadata.annotations['topology.cisco.vk/maintenance-control-revision']))

@@ -106,6 +106,11 @@ func (r *IOSXESoftwareRolloutReconciler) SetupWithManager(mgr ctrl.Manager) erro
 				return r.rolloutRequestsByField(ctx, "", rolloutTargetNodeNameIndex, object.GetName())
 			},
 		)).
+		Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(
+			func(ctx context.Context, object client.Object) []reconcile.Request {
+				return r.rolloutRequestsForDrainPod(ctx, object)
+			},
+		)).
 		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(
 			func(ctx context.Context, object client.Object) []reconcile.Request {
 				return r.rolloutRequestsByField(ctx, object.GetNamespace(), rolloutSourceSecretNameIndex, object.GetName())
@@ -179,6 +184,21 @@ func rolloutPodNodeNameIndexValues(object client.Object) []string {
 		return nil
 	}
 	return []string{pod.Spec.NodeName}
+}
+
+func (r *IOSXESoftwareRolloutReconciler) rolloutRequestsForDrainPod(
+	ctx context.Context,
+	object client.Object,
+) []reconcile.Request {
+	pod, ok := object.(*corev1.Pod)
+	if !ok || pod.Spec.NodeName == "" {
+		return nil
+	}
+	if pod.Annotations[managedprotocol.AnnotationDrainSession] == "" &&
+		!hasExactString(pod.Finalizers, managedprotocol.DrainPodFinalizer) {
+		return nil
+	}
+	return r.rolloutRequestsByField(ctx, "", rolloutTargetNodeNameIndex, pod.Spec.NodeName)
 }
 
 func (r *IOSXESoftwareRolloutReconciler) rolloutRequestsByField(
@@ -403,7 +423,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcilePolicyEpoch(
 		if err != nil || !reflect.DeepEqual(strictest, transition.Policy) {
 			return ctrl.Result{}, true, fmt.Errorf("persisted policy transition weakens an effective ceiling")
 		}
-		if err := r.ensurePolicyEpochFences(ctx, rollout, now); err != nil {
+		if err := r.ensurePolicyEpochFencesWithPolicy(ctx, rollout, current, now); err != nil {
 			return ctrl.Result{RequeueAfter: rolloutPollInterval}, true, err
 		}
 		before := rollout.DeepCopy()
@@ -743,7 +763,11 @@ func (r *IOSXESoftwareRolloutReconciler) admitTarget(
 	if err != nil {
 		return err
 	}
-	if err := r.ensureNoRunningWorkloads(ctx, target.NodeName); err != nil {
+	if rolloutUsesWorkloadDrain(rollout) {
+		if err := r.validateDrainAdmission(ctx, rollout, target); err != nil {
+			return err
+		}
+	} else if err := r.ensureNoRunningWorkloads(ctx, target.NodeName); err != nil {
 		return err
 	}
 	if err := r.revalidateCampaignExecution(ctx, rollout); err != nil {
@@ -770,7 +794,11 @@ func (r *IOSXESoftwareRolloutReconciler) admitTarget(
 		if currentWorker != workerUsername {
 			return fmt.Errorf("target worker identity changed during reservation")
 		}
-		if err := r.ensureNoRunningWorkloads(ctx, target.NodeName); err != nil {
+		if rolloutUsesWorkloadDrain(rollout) {
+			if err := r.validateDrainAdmission(ctx, rollout, target); err != nil {
+				return err
+			}
+		} else if err := r.ensureNoRunningWorkloads(ctx, target.NodeName); err != nil {
 			return err
 		}
 		if err := r.revalidateCampaignExecution(ctx, rollout); err != nil {
@@ -882,6 +910,17 @@ func (r *IOSXESoftwareRolloutReconciler) rearmPolicyEpochLeaf(
 	if err := validateManagerAdmission(rollout, target, leaf); err != nil {
 		return err
 	}
+	// A drain session has durable workload side effects and cannot be rebound to
+	// a later policy epoch. It must recover and settle under its frozen identity;
+	// a replacement campaign can then acquire new authority.
+	if leaf.Status.ManagerDrain != nil {
+		if leaf.Status.ManagerDrain.State != opsv1alpha1.UpgradeManagerDrainSettled {
+			if err := r.enterDrainRecovery(ctx, leaf, rollout.Spec.Control.Revision, now); err != nil {
+				return err
+			}
+		}
+		return fmt.Errorf("%w: a retained drain session cannot be rearmed across policy epochs", errDrainSafetyBlocked)
+	}
 	members, workerUsername, err := r.revalidateAdmission(ctx, rollout, currentPolicy, effectivePolicy, target)
 	if err != nil {
 		return err
@@ -889,7 +928,11 @@ func (r *IOSXESoftwareRolloutReconciler) rearmPolicyEpochLeaf(
 	if leaf.Annotations[managedprotocol.AnnotationWorkerUsername] != workerUsername {
 		return fmt.Errorf("retained leaf worker identity changed before policy-epoch rearm")
 	}
-	if err := r.ensureNoRunningWorkloads(ctx, target.NodeName); err != nil {
+	if rolloutUsesWorkloadDrain(rollout) {
+		if err := r.validateDrainAdmission(ctx, rollout, target); err != nil {
+			return err
+		}
+	} else if err := r.ensureNoRunningWorkloads(ctx, target.NodeName); err != nil {
 		return err
 	}
 	if err := r.revalidateCampaignExecution(ctx, rollout); err != nil {
@@ -923,6 +966,13 @@ func (r *IOSXESoftwareRolloutReconciler) rearmPolicyEpochLeaf(
 		}
 		if currentWorker != workerUsername {
 			return fmt.Errorf("worker identity changed during policy-epoch reservation")
+		}
+		if rolloutUsesWorkloadDrain(rollout) {
+			if err := r.validateDrainAdmission(ctx, rollout, target); err != nil {
+				return err
+			}
+		} else if err := r.ensureNoRunningWorkloads(ctx, target.NodeName); err != nil {
+			return err
 		}
 		if err := r.revalidateDeviceTopologyLock(ctx, rollout, target, effectivePolicy.Epoch, lockID); err != nil {
 			return err
@@ -1089,7 +1139,8 @@ func (r *IOSXESoftwareRolloutReconciler) patchLeafManagerFields(
 			return err
 		}
 		if reflect.DeepEqual(before.Status.ManagerAdmission, current.Status.ManagerAdmission) &&
-			reflect.DeepEqual(before.Status.ManagerControl, current.Status.ManagerControl) {
+			reflect.DeepEqual(before.Status.ManagerControl, current.Status.ManagerControl) &&
+			reflect.DeepEqual(before.Status.ManagerDrain, current.Status.ManagerDrain) {
 			return nil
 		}
 		if err := r.Status().Patch(ctx, &current,
@@ -1114,6 +1165,9 @@ func (r *IOSXESoftwareRolloutReconciler) tryGrantLeaf(
 ) (bool, error) {
 	if err := validateManagerAdmission(rollout, target, leaf); err != nil {
 		return false, err
+	}
+	if rolloutUsesWorkloadDrain(rollout) {
+		return r.reconcileDrainGrant(ctx, rollout, currentPolicy, effectivePolicy, target, leaf, now)
 	}
 	if leaf.Status.ManagerAdmission.PolicyEpoch != effectivePolicy.Epoch ||
 		leaf.Status.ManagerAdmission.RevocationReason != "" {
@@ -1326,6 +1380,9 @@ func (r *IOSXESoftwareRolloutReconciler) revalidatePolicyIdentity(
 	parsed, err := topologyrollout.ParseAdminPolicy(&policy)
 	if err != nil {
 		return fmt.Errorf("re-parse administrator policy before admission: %w", err)
+	}
+	if err := parsed.ValidateWorkloadPolicy(rollout.Spec.Plan.Workloads); err != nil {
+		return fmt.Errorf("revalidate workload policy before admission: %w", err)
 	}
 	snapshot, err := freezePolicy(parsed)
 	if err != nil {
@@ -1796,6 +1853,9 @@ func (r *IOSXESoftwareRolloutReconciler) trySettleLeaf(
 	summary opsv1alpha1.IOSXESoftwareRolloutTargetStatus,
 	now time.Time,
 ) (bool, string, string, error) {
+	if leaf.Status.ManagerDrain != nil {
+		return r.trySettleDrainedLeaf(ctx, rollout, currentPolicy, target, leaf, summary, now)
+	}
 	if leaf.Status.ManagerAdmission != nil &&
 		leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled {
 		return true, "HealthGatePassed", "reservation and post-mutation health gate were already settled", nil
@@ -1957,6 +2017,16 @@ func (r *IOSXESoftwareRolloutReconciler) propagateLeafControl(
 			if current.UID != leaf.UID {
 				return fmt.Errorf("leaf incarnation changed while applying campaign control")
 			}
+			// A settled drain has no remaining Eviction or mutation authority to
+			// fence. Preserve its terminal session revision so cancellation or the
+			// synthetic deletion revision cannot break the exact CiscoDevice
+			// acknowledgement that still gates topology-lock release.
+			if current.Status.ManagerDrain != nil &&
+				current.Status.ManagerDrain.State == opsv1alpha1.UpgradeManagerDrainSettled &&
+				current.Status.ManagerAdmission != nil &&
+				current.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled {
+				return nil
+			}
 			if current.Status.ManagerControl != nil && current.Status.ManagerControl.Revision > revision {
 				return fmt.Errorf("leaf has newer manager control revision %d", current.Status.ManagerControl.Revision)
 			}
@@ -1979,9 +2049,22 @@ func (r *IOSXESoftwareRolloutReconciler) propagateLeafControl(
 				}
 				current.Status.ManagerAdmission.UpdatedAt = metav1.NewTime(now)
 			}
+			if requiresDrainRecovery(current) {
+				applyManagerDrainFence(current, pause, cancel, false, revision, now)
+			}
 			return nil
 		}); err != nil {
 			controlErrors = append(controlErrors, err)
+			continue
+		}
+		if pause || cancel {
+			if err := r.reader().Get(ctx, client.ObjectKeyFromObject(&leaf), &leaf); err != nil {
+				controlErrors = append(controlErrors, err)
+				continue
+			}
+			if err := r.reconcileDrainRecoveryCleanup(ctx, rollout, target, &leaf, now); err != nil {
+				controlErrors = append(controlErrors, err)
+			}
 		}
 	}
 	return errors.Join(controlErrors...)
@@ -1997,12 +2080,21 @@ func (r *IOSXESoftwareRolloutReconciler) ensurePolicyEpochFences(
 	rollout *opsv1alpha1.IOSXESoftwareRollout,
 	now time.Time,
 ) error {
+	return r.ensurePolicyEpochFencesWithPolicy(ctx, rollout, nil, now)
+}
+
+func (r *IOSXESoftwareRolloutReconciler) ensurePolicyEpochFencesWithPolicy(
+	ctx context.Context,
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	currentPolicy *topologyrollout.ParsedAdminPolicy,
+	now time.Time,
+) error {
 	if rollout == nil || rollout.Status.FrozenPlan == nil || rollout.Status.EffectivePolicy == nil || rollout.Status.PolicyTransition == nil {
 		return fmt.Errorf("policy epoch transition is incomplete")
 	}
 	var fenceErrors []error
 	for _, target := range rollout.Status.FrozenPlan.Targets {
-		if err := r.ensurePolicyEpochFenceForTarget(ctx, rollout, target, now); err != nil {
+		if err := r.ensurePolicyEpochFenceForTarget(ctx, rollout, currentPolicy, target, now); err != nil {
 			fenceErrors = append(fenceErrors, fmt.Errorf("fence target %s: %w", target.DeviceName, err))
 		}
 	}
@@ -2012,6 +2104,7 @@ func (r *IOSXESoftwareRolloutReconciler) ensurePolicyEpochFences(
 func (r *IOSXESoftwareRolloutReconciler) ensurePolicyEpochFenceForTarget(
 	ctx context.Context,
 	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	currentPolicy *topologyrollout.ParsedAdminPolicy,
 	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
 	now time.Time,
 ) error {
@@ -2052,6 +2145,15 @@ func (r *IOSXESoftwareRolloutReconciler) ensurePolicyEpochFenceForTarget(
 		if current.UID != leaf.UID {
 			return fmt.Errorf("policy-transition tombstone incarnation changed")
 		}
+		// A terminal drain remains bound to the exact revision acknowledged by
+		// the CiscoDevice controller until its topology lock is released. It has
+		// no live authority for this policy transition to revoke.
+		if current.Status.ManagerDrain != nil &&
+			current.Status.ManagerDrain.State == opsv1alpha1.UpgradeManagerDrainSettled &&
+			current.Status.ManagerAdmission != nil &&
+			current.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled {
+			return nil
+		}
 		if current.Status.ManagerAdmission == nil {
 			revision := rollout.Spec.Control.Revision
 			current.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
@@ -2078,7 +2180,26 @@ func (r *IOSXESoftwareRolloutReconciler) ensurePolicyEpochFenceForTarget(
 		if current.Status.ManagerAdmission.PolicyEpoch != effective.Epoch {
 			return fmt.Errorf("leaf policy epoch changed while the preceding epoch was being fenced")
 		}
-		if len(current.Status.ManagedMutationClaims) != 0 || current.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled {
+		revision := rollout.Spec.Control.Revision
+		if current.Status.ManagerAdmission.ControlRevision == nil ||
+			*current.Status.ManagerAdmission.ControlRevision < revision {
+			current.Status.ManagerAdmission.ControlRevision = &revision
+			current.Status.ManagerAdmission.UpdatedAt = metav1.NewTime(now)
+		}
+		if current.Status.ManagerControl == nil || current.Status.ManagerControl.Revision < revision {
+			cancelled := current.Status.ManagerControl != nil && current.Status.ManagerControl.Cancel
+			current.Status.ManagerControl = &opsv1alpha1.UpgradeManagerControlStatus{
+				Revision: revision, Pause: rollout.Spec.Control.Pause && !cancelled, Cancel: cancelled,
+				UpdatedAt: metav1.NewTime(now), Reason: "PolicyEpochTransition",
+			}
+		} else if current.Status.ManagerControl.Revision > revision {
+			return fmt.Errorf("policy-transition leaf has newer control revision %d", current.Status.ManagerControl.Revision)
+		}
+		if requiresDrainRecovery(current) {
+			applyManagerDrainFence(current, rollout.Spec.Control.Pause, false, true, revision, now)
+		}
+		if (len(current.Status.ManagedMutationClaims) != 0 && !leafMutationOutcomeResolved(current)) ||
+			current.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled {
 			return nil
 		}
 		if current.Status.ManagerAdmission.State != opsv1alpha1.UpgradeManagerAdmissionRevoked {
@@ -2092,6 +2213,36 @@ func (r *IOSXESoftwareRolloutReconciler) ensurePolicyEpochFenceForTarget(
 	}
 	if err := r.reader().Get(ctx, key, leaf); err != nil {
 		return err
+	}
+	if len(leaf.Status.ManagedMutationClaims) != 0 && !leafMutationOutcomeResolved(leaf) {
+		return r.verifyClaimedReservation(ctx, rollout, target, leaf)
+	}
+	if requiresDrainRecovery(leaf) {
+		if currentPolicy == nil {
+			if err := r.reconcileDrainRecoveryCleanup(ctx, rollout, target, leaf, now); err != nil {
+				_ = r.persistDrainRecoveryGate(ctx, rollout, target, leaf, "DrainCleanupBlocked", err.Error(), now)
+				return err
+			}
+			if err := r.persistDrainRecoveryGate(ctx, rollout, target, leaf,
+				"PolicyUnavailable", "administrator policy is unavailable during recovery", now); err != nil {
+				return err
+			}
+			return fmt.Errorf("%w: policy epoch waits for drain recovery", errDrainSafetyBlocked)
+		}
+		summary := indexTargetSummaries(rollout.Status.Targets)[target.DeviceUID]
+		settled, gateReason, detail, err := r.trySettleDrainedLeaf(ctx, rollout, currentPolicy, target, leaf, summary, now)
+		if err != nil {
+			persistErr := r.persistDrainRecoveryGate(ctx, rollout, target, leaf,
+				"DrainSettlementError", err.Error(), now)
+			return errors.Join(err, persistErr)
+		}
+		if !settled {
+			if err := r.persistDrainRecoveryGate(ctx, rollout, target, leaf, gateReason, detail, now); err != nil {
+				return err
+			}
+			return fmt.Errorf("%w: policy epoch waits for drain recovery: %s", errDrainSafetyBlocked, detail)
+		}
+		return nil
 	}
 	if len(leaf.Status.ManagedMutationClaims) != 0 {
 		return r.verifyClaimedReservation(ctx, rollout, target, leaf)
@@ -2122,6 +2273,7 @@ func (r *IOSXESoftwareRolloutReconciler) ensurePolicyEpochFenceForTarget(
 func (r *IOSXESoftwareRolloutReconciler) ensureFailureFences(
 	ctx context.Context,
 	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	currentPolicy *topologyrollout.ParsedAdminPolicy,
 	children map[string]opsv1alpha1.IOSXESoftwareUpgrade,
 	now time.Time,
 ) error {
@@ -2149,8 +2301,8 @@ func (r *IOSXESoftwareRolloutReconciler) ensureFailureFences(
 			if current.UID != leaf.UID {
 				return fmt.Errorf("failure-fenced leaf incarnation changed")
 			}
-			if len(current.Status.ManagedMutationClaims) != 0 ||
-				(current.Status.ManagerAdmission != nil && current.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled) {
+			if current.Status.ManagerAdmission != nil &&
+				current.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled {
 				return nil
 			}
 			if current.Status.ManagerAdmission == nil {
@@ -2176,6 +2328,27 @@ func (r *IOSXESoftwareRolloutReconciler) ensureFailureFences(
 			if err := validateManagerAdmission(rollout, target, current); err != nil {
 				return err
 			}
+			revision := rollout.Spec.Control.Revision
+			if current.Status.ManagerAdmission.ControlRevision == nil ||
+				*current.Status.ManagerAdmission.ControlRevision < revision {
+				current.Status.ManagerAdmission.ControlRevision = &revision
+				current.Status.ManagerAdmission.UpdatedAt = metav1.NewTime(now)
+			}
+			if current.Status.ManagerControl == nil || current.Status.ManagerControl.Revision < revision {
+				cancelled := current.Status.ManagerControl != nil && current.Status.ManagerControl.Cancel
+				current.Status.ManagerControl = &opsv1alpha1.UpgradeManagerControlStatus{
+					Revision: revision, Pause: rollout.Spec.Control.Pause && !cancelled, Cancel: cancelled,
+					UpdatedAt: metav1.NewTime(now), Reason: "CampaignTargetFailed",
+				}
+			} else if current.Status.ManagerControl.Revision > revision {
+				return fmt.Errorf("failure-fenced leaf has newer control revision %d", current.Status.ManagerControl.Revision)
+			}
+			if requiresDrainRecovery(current) {
+				applyManagerDrainFence(current, rollout.Spec.Control.Pause, rollout.Spec.Control.Cancel, true, revision, now)
+			}
+			if len(current.Status.ManagedMutationClaims) != 0 && !leafMutationOutcomeResolved(current) {
+				return nil
+			}
 			if current.Status.ManagerAdmission.State != opsv1alpha1.UpgradeManagerAdmissionRevoked {
 				current.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionRevoked
 			}
@@ -2188,6 +2361,43 @@ func (r *IOSXESoftwareRolloutReconciler) ensureFailureFences(
 		}
 		if err := r.reader().Get(ctx, key, &leaf); err != nil {
 			fenceErrors = append(fenceErrors, err)
+			continue
+		}
+		if len(leaf.Status.ManagedMutationClaims) != 0 && !leafMutationOutcomeResolved(&leaf) {
+			if err := r.verifyClaimedReservation(ctx, rollout, target, &leaf); err != nil {
+				fenceErrors = append(fenceErrors, err)
+			}
+			continue
+		}
+		if leaf.Status.ManagerDrain != nil {
+			// Failure fencing must drive the complete drain settlement protocol,
+			// not stop after Pod cleanup. The latter would retain the reservation,
+			// topology lock, and maintenance session forever. An unresolved accepted
+			// mutation was handled above and deliberately keeps its guard.
+			summary := indexTargetSummaries(rollout.Status.Targets)[target.DeviceUID]
+			settled, gateReason, detail, settleErr := r.trySettleDrainedLeaf(
+				ctx, rollout, currentPolicy, target, &leaf, summary, now,
+			)
+			if settleErr != nil {
+				if persistErr := r.persistDrainRecoveryGate(ctx, rollout, target, &leaf,
+					"DrainSettlementError", settleErr.Error(), now); persistErr != nil {
+					fenceErrors = append(fenceErrors,
+						fmt.Errorf("reset failed-campaign drain soak %s: %w", target.DeviceName, persistErr))
+				}
+				fenceErrors = append(fenceErrors,
+					fmt.Errorf("settle failed-campaign drain %s: %w", target.DeviceName, settleErr))
+			} else if !settled {
+				if persistErr := r.persistDrainRecoveryGate(
+					ctx, rollout, target, &leaf, gateReason, detail, now,
+				); persistErr != nil {
+					fenceErrors = append(fenceErrors,
+						fmt.Errorf("persist failed-campaign drain gate %s: %w", target.DeviceName, persistErr))
+				}
+				fenceErrors = append(fenceErrors, fmt.Errorf(
+					"%w: failed-campaign drain %s is recovering: %s",
+					errDrainSafetyBlocked, target.DeviceName, detail,
+				))
+			}
 			continue
 		}
 		if len(leaf.Status.ManagedMutationClaims) != 0 {
@@ -2267,6 +2477,15 @@ func (r *IOSXESoftwareRolloutReconciler) ensureRetainedFenceForTarget(
 		if current.UID != leaf.UID {
 			return fmt.Errorf("cancellation tombstone incarnation changed")
 		}
+		// Terminal drain identity remains authoritative until the CiscoDevice
+		// controller acknowledges the same session and the exact topology lock
+		// is released. There is no live authority left to revoke here.
+		if current.Status.ManagerDrain != nil &&
+			current.Status.ManagerDrain.State == opsv1alpha1.UpgradeManagerDrainSettled &&
+			current.Status.ManagerAdmission != nil &&
+			current.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled {
+			return nil
+		}
 		if current.Status.ManagerAdmission == nil {
 			controlRevision := revision
 			current.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
@@ -2313,18 +2532,26 @@ func (r *IOSXESoftwareRolloutReconciler) ensureRetainedFenceForTarget(
 				Revision: revision, Pause: rollout.Spec.Control.Pause, Cancel: cancel,
 				UpdatedAt: metav1.NewTime(now), Reason: fenceReason,
 			}
-		} else if cancel {
+		} else {
 			switch {
 			case current.Status.ManagerControl.Revision < revision:
+				cancelled := current.Status.ManagerControl.Cancel || cancel || rollout.Spec.Control.Cancel
 				current.Status.ManagerControl = &opsv1alpha1.UpgradeManagerControlStatus{
-					Revision: revision, Cancel: true, UpdatedAt: metav1.NewTime(now), Reason: fenceReason,
+					Revision: revision, Pause: rollout.Spec.Control.Pause && !cancelled, Cancel: cancelled,
+					UpdatedAt: metav1.NewTime(now), Reason: fenceReason,
 				}
-			case current.Status.ManagerControl.Revision == revision &&
+			case cancel && current.Status.ManagerControl.Revision == revision &&
 				(!current.Status.ManagerControl.Cancel || current.Status.ManagerControl.Pause):
 				return fmt.Errorf("cancellation tombstone has conflicting control at revision %d", revision)
-			case current.Status.ManagerControl.Revision > revision:
+			case cancel && current.Status.ManagerControl.Revision > revision:
 				return fmt.Errorf("cancellation tombstone has newer control revision %d", current.Status.ManagerControl.Revision)
 			}
+		}
+		// Fencing a drain closes new Evictions in the same leaf-status CAS as
+		// admission/control. Recovery may still finish an Eviction already
+		// accepted and may release protection from a never-evicted Pod.
+		if requiresDrainRecovery(current) {
+			applyManagerDrainFence(current, rollout.Spec.Control.Pause, cancel, true, revision, now)
 		}
 		return nil
 	}); err != nil {
@@ -2332,6 +2559,15 @@ func (r *IOSXESoftwareRolloutReconciler) ensureRetainedFenceForTarget(
 	}
 	if err := r.reader().Get(ctx, key, leaf); err != nil {
 		return nil, err
+	}
+	if requiresDrainRecovery(leaf) {
+		if err := r.reconcileDrainRecoveryCleanup(ctx, rollout, target, leaf, now); err != nil {
+			return nil, err
+		}
+		if err := r.reader().Get(ctx, key, leaf); err != nil {
+			return nil, err
+		}
+		return leaf, nil
 	}
 	if leaf.Status.ManagerAdmission == nil ||
 		leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled ||
@@ -2404,6 +2640,16 @@ func (r *IOSXESoftwareRolloutReconciler) ensureReplanFences(
 	fenceReason string,
 	now time.Time,
 ) error {
+	return r.ensureReplanFencesWithPolicy(ctx, rollout, nil, fenceReason, now)
+}
+
+func (r *IOSXESoftwareRolloutReconciler) ensureReplanFencesWithPolicy(
+	ctx context.Context,
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	currentPolicy *topologyrollout.ParsedAdminPolicy,
+	fenceReason string,
+	now time.Time,
+) error {
 	var fenceErrors []error
 	for _, target := range rollout.Status.FrozenPlan.Targets {
 		leaf, err := r.ensureRetainedFenceForTarget(ctx, rollout, target,
@@ -2414,6 +2660,70 @@ func (r *IOSXESoftwareRolloutReconciler) ensureReplanFences(
 		}
 		if leaf.Status.ManagerAdmission != nil &&
 			leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled {
+			if leaf.Status.ManagerDrain != nil && currentPolicy != nil {
+				summary := indexTargetSummaries(rollout.Status.Targets)[target.DeviceUID]
+				settled, gateReason, detail, settleErr := r.trySettleDrainedLeaf(ctx, rollout, currentPolicy, target, leaf, summary, now)
+				if settleErr != nil {
+					if persistErr := r.persistDrainRecoveryGate(ctx, rollout, target, leaf,
+						"DrainSettlementError", settleErr.Error(), now); persistErr != nil {
+						fenceErrors = append(fenceErrors,
+							fmt.Errorf("reset fenced drain soak %s: %w", target.DeviceName, persistErr))
+					}
+					fenceErrors = append(fenceErrors, fmt.Errorf("finish settled drain %s: %w", target.DeviceName, settleErr))
+				} else if !settled {
+					if persistErr := r.persistDrainRecoveryGate(
+						ctx, rollout, target, leaf, gateReason, detail, now,
+					); persistErr != nil {
+						fenceErrors = append(fenceErrors,
+							fmt.Errorf("persist fenced drain gate %s: %w", target.DeviceName, persistErr))
+					}
+					fenceErrors = append(fenceErrors, fmt.Errorf("%w: drain settlement acknowledgement for %s: %s",
+						errDrainSafetyBlocked, target.DeviceName, detail))
+				}
+			} else if leaf.Status.ManagerDrain != nil {
+				if persistErr := r.persistDrainRecoveryGate(ctx, rollout, target, leaf,
+					"PolicyUnavailable", "administrator policy is unavailable during recovery", now); persistErr != nil {
+					fenceErrors = append(fenceErrors, persistErr)
+				}
+			}
+			continue
+		}
+		if leaf.Status.ManagerDrain != nil {
+			if len(leaf.Status.ManagedMutationClaims) != 0 && !leafMutationOutcomeResolved(leaf) {
+				if err := r.verifyClaimedReservation(ctx, rollout, target, leaf); err != nil {
+					fenceErrors = append(fenceErrors, fmt.Errorf("retain claimed drained target %s: %w", target.DeviceName, err))
+				}
+				continue
+			}
+			// A missing administrator policy may fence immediately but cannot
+			// authorize the health calculation that releases an old ledger
+			// acquisition. Retain it until an exact recovery proof is available.
+			if currentPolicy == nil {
+				if persistErr := r.persistDrainRecoveryGate(ctx, rollout, target, leaf,
+					"PolicyUnavailable", "administrator policy is unavailable during recovery", now); persistErr != nil {
+					fenceErrors = append(fenceErrors, persistErr)
+				}
+				continue
+			}
+			summary := indexTargetSummaries(rollout.Status.Targets)[target.DeviceUID]
+			settled, gateReason, detail, settleErr := r.trySettleDrainedLeaf(ctx, rollout, currentPolicy, target, leaf, summary, now)
+			if settleErr != nil {
+				if persistErr := r.persistDrainRecoveryGate(ctx, rollout, target, leaf,
+					"DrainSettlementError", settleErr.Error(), now); persistErr != nil {
+					fenceErrors = append(fenceErrors,
+						fmt.Errorf("reset fenced drain soak %s: %w", target.DeviceName, persistErr))
+				}
+				fenceErrors = append(fenceErrors, fmt.Errorf("settle fenced drain %s: %w", target.DeviceName, settleErr))
+			} else if !settled {
+				if persistErr := r.persistDrainRecoveryGate(
+					ctx, rollout, target, leaf, gateReason, detail, now,
+				); persistErr != nil {
+					fenceErrors = append(fenceErrors,
+						fmt.Errorf("persist fenced drain gate %s: %w", target.DeviceName, persistErr))
+				}
+				fenceErrors = append(fenceErrors, fmt.Errorf("%w: fenced drain %s is recovering: %s",
+					errDrainSafetyBlocked, target.DeviceName, detail))
+			}
 			continue
 		}
 		if len(leaf.Status.ManagedMutationClaims) == 0 {
@@ -2424,6 +2734,46 @@ func (r *IOSXESoftwareRolloutReconciler) ensureReplanFences(
 		}
 	}
 	return errors.Join(fenceErrors...)
+}
+
+// persistDrainRecoveryGate stores the start of the continuous health interval
+// for fence paths that return before the normal execution-summary loop, and
+// clears it on every later non-healthy or unobservable gate. This makes the
+// interval both durable across retries and genuinely continuous.
+func (r *IOSXESoftwareRolloutReconciler) persistDrainRecoveryGate(
+	ctx context.Context,
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+	leaf *opsv1alpha1.IOSXESoftwareUpgrade,
+	gateReason, detail string,
+	now time.Time,
+) error {
+	summaries := indexTargetSummaries(rollout.Status.Targets)
+	summary := summaries[target.DeviceUID]
+	wasHealthySoak := summary.Phase == opsv1alpha1.IOSXESoftwareRolloutTargetSoaking &&
+		summary.Reason == "HealthyPostMutationSoak" && !summary.LastTransitionTime.IsZero()
+	if gateReason == "HealthyPostMutationSoak" {
+		if wasHealthySoak {
+			return nil
+		}
+	} else if !wasHealthySoak {
+		return nil
+	} else if gateReason == "" {
+		gateReason = "DrainRecoveryUnobservable"
+	}
+	summary.DeviceName, summary.DeviceUID = target.DeviceName, target.DeviceUID
+	summary.LeafName = target.ChildName
+	if leaf != nil {
+		summary.LeafUID, summary.LeafName = string(leaf.UID), leaf.Name
+	}
+	phase := opsv1alpha1.IOSXESoftwareRolloutTargetBlocked
+	if gateReason == "HealthyPostMutationSoak" {
+		phase = opsv1alpha1.IOSXESoftwareRolloutTargetSoaking
+	}
+	transitionTarget(&summary, phase, gateReason, detail, now)
+	summaries[target.DeviceUID] = summary
+	_, err := r.patchExecutionStatus(ctx, rollout, summaries, rollout.Status.Phase, rollout.Status.Message, now)
+	return err
 }
 
 func (r *IOSXESoftwareRolloutReconciler) verifyClaimedReservation(
@@ -2468,7 +2818,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcilePolicyChanged(
 		"administrator policy changed from UID/resourceVersion %s/%s to %s/%s; all new mutation claims are fenced and a new rollout plan must be approved",
 		frozen.UID, frozen.ResourceVersion, current.PolicyUID, current.ResourceVersion,
 	)
-	return r.reconcilePolicyFence(ctx, rollout, "PolicyChanged", message, now)
+	return r.reconcilePolicyFence(ctx, rollout, current, "PolicyChanged", message, now)
 }
 
 func (r *IOSXESoftwareRolloutReconciler) reconcilePolicyUnavailable(
@@ -2478,35 +2828,38 @@ func (r *IOSXESoftwareRolloutReconciler) reconcilePolicyUnavailable(
 	now time.Time,
 ) (ctrl.Result, error) {
 	message = truncateRolloutText(message+"; all new mutation claims are fenced and a new rollout plan must be approved", 512)
-	return r.reconcilePolicyFence(ctx, rollout, "PolicyUnavailable", message, now)
+	return r.reconcilePolicyFence(ctx, rollout, nil, "PolicyUnavailable", message, now)
 }
 
 func (r *IOSXESoftwareRolloutReconciler) reconcilePolicyFence(
 	ctx context.Context,
 	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	currentPolicy *topologyrollout.ParsedAdminPolicy,
 	reason, message string,
 	now time.Time,
 ) (ctrl.Result, error) {
-	return r.reconcileReplanFence(ctx, rollout, "PolicyChanged", reason, "AdministratorPolicyChanged", message, now)
+	return r.reconcileReplanFence(ctx, rollout, currentPolicy, "PolicyChanged", reason, "AdministratorPolicyChanged", message, now)
 }
 
 func (r *IOSXESoftwareRolloutReconciler) reconcileSourceChanged(
 	ctx context.Context,
 	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	currentPolicy *topologyrollout.ParsedAdminPolicy,
 	detail string,
 	now time.Time,
 ) (ctrl.Result, error) {
 	message := truncateRolloutText(detail+"; all new mutation claims are fenced and a new rollout plan must be approved", 512)
-	return r.reconcileReplanFence(ctx, rollout, "SourceChanged", "SourceIdentityChanged", "SourceIdentityChanged", message, now)
+	return r.reconcileReplanFence(ctx, rollout, currentPolicy, "SourceChanged", "SourceIdentityChanged", "SourceIdentityChanged", message, now)
 }
 
 func (r *IOSXESoftwareRolloutReconciler) reconcileReplanFence(
 	ctx context.Context,
 	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	currentPolicy *topologyrollout.ParsedAdminPolicy,
 	conditionType, reason, fenceReason, message string,
 	now time.Time,
 ) (ctrl.Result, error) {
-	fenceErr := r.ensureReplanFences(ctx, rollout, fenceReason, now)
+	fenceErr := r.ensureReplanFencesWithPolicy(ctx, rollout, currentPolicy, fenceReason, now)
 	if fenceErr != nil {
 		message += "; one or more safety reservations still require reconciliation"
 	}
@@ -2566,6 +2919,26 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileCancellation(
 		// used to decide whether a worker won a concurrent mutation claim.
 		if err := r.reader().Get(ctx, client.ObjectKeyFromObject(&leaf), &leaf); err != nil {
 			return ctrl.Result{}, err
+		}
+		if leaf.Status.ManagerDrain != nil {
+			settled, gateReason, detail, settleErr := r.trySettleDrainedLeaf(
+				ctx, rollout, currentPolicy, target, &leaf, summary, now,
+			)
+			if settleErr != nil {
+				return ctrl.Result{}, settleErr
+			}
+			if settled {
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetCancelled,
+					"CancelledAfterDrainRecovery", "drain side effects and any accepted mutation reached a healthy recovered outcome", now)
+			} else if gateReason == "HealthyPostMutationSoak" {
+				allSettled = false
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetSoaking, gateReason, detail, now)
+			} else {
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetCancelling, gateReason, detail, now)
+				allSettled = false
+			}
+			summaries[target.DeviceUID] = summary
+			continue
 		}
 		if leaf.Status.ManagerAdmission != nil && leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled {
 			reason := "CancelledAfterOutcome"
@@ -2645,6 +3018,9 @@ func (r *IOSXESoftwareRolloutReconciler) releaseUnclaimedReservation(
 	revision uint64,
 	expectedLockID ...string,
 ) error {
+	if err := r.rejectGenericDrainRelease(ctx, rollout, target, childUID); err != nil {
+		return err
+	}
 	policyEpoch, lockID, err := r.topologyLockAcquisitionForRelease(ctx, rollout, target, 0, expectedLockID...)
 	if err != nil {
 		return fmt.Errorf("resolve topology lock before reservation release: %w", err)
@@ -2680,6 +3056,9 @@ func (r *IOSXESoftwareRolloutReconciler) releaseUnclaimedReservationAtEpoch(
 	policyEpoch int64,
 	expectedLockID ...string,
 ) error {
+	if err := r.rejectGenericDrainRelease(ctx, rollout, target, childUID); err != nil {
+		return err
+	}
 	lockID := ""
 	if len(expectedLockID) > 0 {
 		lockID = expectedLockID[0]
@@ -2843,10 +3222,10 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileDeletion(
 	if rollout.Status.FrozenPlan == nil {
 		return r.removeRolloutFinalizer(ctx, rollout)
 	}
-	if rollout.Spec.Control.Revision == int64(1<<63-1) {
-		return ctrl.Result{RequeueAfter: rolloutPollInterval}, fmt.Errorf("cannot fence deletion after maximum campaign control revision")
+	revision, err := r.deletionFenceRevision(ctx, rollout, now)
+	if err != nil {
+		return ctrl.Result{RequeueAfter: rolloutPollInterval}, err
 	}
-	revision := rollout.Spec.Control.Revision + 1
 	// Deletion is an implicit terminal cancellation. Fence every existing leaf
 	// before reading policy or ledger state so an unavailable safety dependency
 	// cannot leave a previously granted worker free to claim another mutation.
@@ -2878,6 +3257,25 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileDeletion(
 		}
 		if err := r.reader().Get(ctx, client.ObjectKeyFromObject(&leaf), &leaf); err != nil {
 			return ctrl.Result{}, err
+		}
+		if leaf.Status.ManagerDrain != nil {
+			summaries := indexTargetSummaries(rollout.Status.Targets)
+			summary := summaries[target.DeviceUID]
+			settled, gateReason, detail, err := r.trySettleDrainedLeaf(ctx, rollout, policy, target, &leaf, summary, now)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			if !settled {
+				phase := opsv1alpha1.IOSXESoftwareRolloutTargetCancelling
+				if gateReason == "HealthyPostMutationSoak" {
+					phase = opsv1alpha1.IOSXESoftwareRolloutTargetSoaking
+				}
+				transitionTarget(&summary, phase, gateReason, detail, now)
+				summaries[target.DeviceUID] = summary
+				return r.patchExecutionStatus(ctx, rollout, summaries, opsv1alpha1.IOSXESoftwareRolloutPhaseCancelling,
+					"deletion is fenced; workload-drain recovery is still converging", now)
+			}
+			continue
 		}
 		if leaf.Status.ManagerAdmission != nil &&
 			leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled {
@@ -2915,6 +3313,52 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileDeletion(
 		}
 	}
 	return r.removeRolloutFinalizer(ctx, rollout)
+}
+
+// deletionFenceRevision derives the terminal manager revision used after the
+// campaign itself is immutable-by-deletion. Ordinarily this is spec revision
+// plus one. If an exact Recovering drain exhausts its cleanup window, the
+// finalizer owner advances the synthetic deletion revision once so recovery
+// can receive another bounded window without reviving Eviction or mutation
+// authority. ManagerControl/ManagerDrain timestamps retain the audit trail.
+func (r *IOSXESoftwareRolloutReconciler) deletionFenceRevision(
+	ctx context.Context,
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	now time.Time,
+) (int64, error) {
+	if rollout.Spec.Control.Revision == int64(1<<63-1) {
+		return 0, fmt.Errorf("cannot fence deletion after maximum campaign control revision")
+	}
+	revision := rollout.Spec.Control.Revision + 1
+	children, err := r.rolloutChildren(ctx, rollout)
+	if err != nil {
+		return 0, err
+	}
+	overdue := false
+	for _, target := range rollout.Status.FrozenPlan.Targets {
+		leaf, exists := children[target.ChildName]
+		if !exists {
+			continue
+		}
+		if leaf.Status.ManagerControl != nil && leaf.Status.ManagerControl.Revision > revision {
+			revision = leaf.Status.ManagerControl.Revision
+		}
+		drain := leaf.Status.ManagerDrain
+		if drain != nil && drain.ControlRevision > revision {
+			revision = drain.ControlRevision
+		}
+		if drain != nil && drain.State == opsv1alpha1.UpgradeManagerDrainRecovering &&
+			drain.RecoveryDeadline != nil && !now.Before(drain.RecoveryDeadline.Time) {
+			overdue = true
+		}
+	}
+	if overdue {
+		if revision == int64(1<<63-1) {
+			return 0, fmt.Errorf("cannot renew deleting campaign drain recovery after maximum control revision")
+		}
+		revision++
+	}
+	return revision, nil
 }
 
 func (r *IOSXESoftwareRolloutReconciler) removeRolloutFinalizer(ctx context.Context, rollout *opsv1alpha1.IOSXESoftwareRollout) (ctrl.Result, error) {

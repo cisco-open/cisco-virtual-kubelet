@@ -1091,6 +1091,80 @@ func TestManagedClaimRequiresEmptyDeviceWorkloadInventory(t *testing.T) {
 	}
 }
 
+func TestManagedDrainClaimRequiresStrictDeviceInventoryCapability(t *testing.T) {
+	up := managedTestLeaf("drain-without-strict-inventory")
+	up.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+	up.Status.ManagerDrain = promotedManagedDrain(up)
+	r := newManagedTestReconciler(t, up, nil)
+
+	var snapshot opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &snapshot); err != nil {
+		t.Fatal(err)
+	}
+	*up = *snapshot.DeepCopy()
+	claimed, _, err := r.claimActivation(
+		context.Background(), up, false, "ActivationRequested", "activate", managedTestTime,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if claimed {
+		t.Fatal("managed drain mutation used compatibility inventory without strict driver capability")
+	}
+	var got opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &got); err != nil {
+		t.Fatal(err)
+	}
+	if readyReason(got.Status.Conditions) != "WorkloadGateUnavailable" ||
+		got.Status.WorkerControl == nil || got.Status.WorkerControl.EffectiveState != opsv1alpha1.UpgradeWorkerControlDenied {
+		t.Fatalf("strict inventory denial was not durable: %+v", got.Status)
+	}
+}
+
+func TestManagedDrainClaimUsesStrictInventoryAfterPromotion(t *testing.T) {
+	up := managedTestLeaf("drain-strict-inventory")
+	up.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+	up.Status.ManagerDrain = promotedManagedDrain(up)
+	r := newManagedTestReconciler(t, up, nil)
+	compatibilityCalled := false
+	strictCalled := false
+	r.DevicePodLister = func(context.Context) ([]*corev1.Pod, error) {
+		compatibilityCalled = true
+		return []*corev1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: "would-block"}}}, nil
+	}
+	r.DrainDevicePodLister = func(context.Context) ([]*corev1.Pod, error) {
+		strictCalled = true
+		return nil, nil
+	}
+
+	var snapshot opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &snapshot); err != nil {
+		t.Fatal(err)
+	}
+	*up = *snapshot.DeepCopy()
+	claimed, _, err := r.claimActivation(
+		context.Background(), up, false, "ActivationRequested", "activate", managedTestTime,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !claimed || !strictCalled || compatibilityCalled {
+		t.Fatalf("claim=%t strictCalled=%t compatibilityCalled=%t", claimed, strictCalled, compatibilityCalled)
+	}
+}
+
+func promotedManagedDrain(up *opsv1alpha1.IOSXESoftwareUpgrade) *opsv1alpha1.UpgradeManagerDrainStatus {
+	return &opsv1alpha1.UpgradeManagerDrainStatus{
+		ProtocolVersion: opsv1alpha1.ManagedDrainProtocolPDBV1,
+		State:           opsv1alpha1.UpgradeManagerDrainPromoted,
+		SessionToken:    "00000000-0000-4000-8000-000000000001",
+		ReservationID:   up.Status.ManagerAdmission.ReservationID,
+		PolicyEpoch:     up.Status.ManagerAdmission.PolicyEpoch,
+		ControlRevision: up.Status.ManagerControl.Revision,
+		NodeUID:         up.Status.ManagerAdmission.NodeUID,
+	}
+}
+
 func TestManagedClaimFailsClosedWhenWorkloadsCannotBeListed(t *testing.T) {
 	up := managedTestLeaf("workload-list-error")
 	up.Status.Phase = opsv1alpha1.UpgradePhaseActivating

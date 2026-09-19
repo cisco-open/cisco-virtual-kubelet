@@ -343,7 +343,7 @@ func TestManagedPhysicalIdentityControlsTopologyReadinessAndGuard(t *testing.T) 
 	r := &CiscoDeviceReconciler{Client: kubeClient, APIReader: kubeClient, Scheme: scheme, clock: &fakeClock{now: now.Add(2 * time.Second)}}
 	policy := &topologyrollout.ParsedAdminPolicy{}
 
-	if err := r.reconcileManagedNodeMetadata(ctx, device, node, map[string]string{}, policy, hash, false); err != nil {
+	if err := r.reconcileManagedNodeMetadata(ctx, device, node, map[string]string{}, policy, hash, managedMaintenanceDecision{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := r.patchManagedTopologyStatus(ctx, device, node, hash,
@@ -378,7 +378,7 @@ func TestManagedPhysicalIdentityControlsTopologyReadinessAndGuard(t *testing.T) 
 	if err := kubeClient.Get(ctx, client.ObjectKeyFromObject(node), &guarded); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.reconcileManagedNodeMetadata(ctx, &current, &guarded, map[string]string{}, policy, hash, false); err != nil {
+	if err := r.reconcileManagedNodeMetadata(ctx, &current, &guarded, map[string]string{}, policy, hash, managedMaintenanceDecision{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := r.patchManagedTopologyStatus(ctx, &current, &guarded, hash,

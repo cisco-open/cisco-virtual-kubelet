@@ -124,6 +124,10 @@ type Reconciler struct {
 	// before a managed mutation claim. Kubernetes Pod state alone cannot prove
 	// that terminal or deleted workloads have finished device-side cleanup.
 	DevicePodLister func(context.Context) ([]*corev1.Pod, error)
+	// DrainDevicePodLister is the stricter, explicitly advertised platform
+	// capability used by a promoted managed drain. It must fail on a partial
+	// device inventory; nil means the driver is not drain-capable.
+	DrainDevicePodLister func(context.Context) ([]*corev1.Pod, error)
 	// BeforeMutation prepares device maintenance after the shared Lease is
 	// owned. Errors prevent dispatch; implementations must be idempotent.
 	BeforeMutation func(context.Context, *opsv1alpha1.IOSXESoftwareUpgrade) error

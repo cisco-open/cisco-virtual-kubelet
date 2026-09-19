@@ -10,6 +10,7 @@ trap 'rm -rf -- "$scratch_dir"' EXIT
 default_render="$scratch_dir/default.yaml"
 managed_render="$scratch_dir/managed.yaml"
 managed_upgrade_render="$scratch_dir/managed-upgrade.yaml"
+managed_drain_render="$scratch_dir/managed-drain.yaml"
 strict_render_bundle="$scratch_dir/managed-and-examples.yaml"
 error_output="$scratch_dir/error.txt"
 
@@ -80,6 +81,19 @@ helm template cvk "$chart_dir" \
   --set rbac.profile=strict \
   --set gnoi.enableSoftwareUpgrade=true >"$managed_upgrade_render"
 
+helm template cvk "$chart_dir" \
+  --namespace cisco-vk-system \
+  --kube-version 1.35.0 \
+  --set topology.enabled=true \
+  --set controller.leaderElect=true \
+  --set rbac.profile=strict \
+  --set gnoi.enableSoftwareUpgrade=true \
+  --set topology.policy.workloadDrain.enabled=true \
+  --set-json 'topology.policy.workloadDrain.allowedNamespaces=["apps","edge-services"]' \
+  --set topology.policy.workloadDrain.maxTimeoutSeconds=900 \
+  --set topology.policy.workloadDrain.maxPods=8 \
+  --set topology.policy.workloadDrain.maxTerminationGraceSeconds=180 >"$managed_drain_render"
+
 # The Go contract reader uses a duplicate-key-aware YAML decoder. Include the
 # user-facing Kubernetes examples in the same strict pass; non-policy objects
 # are intentionally ignored after syntax validation.
@@ -112,18 +126,28 @@ grep -Fq -- '- --topology-policy-name=cvk-cisco-virtual-kubelet-topology-policy'
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-policy' "$managed_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-ledger' "$managed_render"
 grep -Fq 'topology.cisco.vk/admission-policy-prefix: "cvk-cisco-virtual-kubelet"' "$managed_render"
-test "$(grep -c '^    topology.cisco.vk/admission-contract-version: "v1"$' "$managed_render")" -eq 17
-test "$(grep -c '^    helm.sh/resource-policy: keep$' "$managed_render")" -eq 21
+test "$(grep -c '^    topology.cisco.vk/admission-contract-version: "v1"$' "$managed_render")" -eq 19
+test "$(grep -c '^    helm.sh/resource-policy: keep$' "$managed_render")" -eq 23
 grep -Fq '"globalMaxConcurrentTransfers":1' "$managed_render"
 grep -Fq '"domainMaxConcurrentTransfers":{"topology.kubernetes.io/region":1}' "$managed_render"
+if grep -Fq '"workloadDrain"' "$managed_render"; then
+  echo "disabled workload drain changed the v1 administrator policy" >&2
+  exit 1
+fi
+grep -Fq '"workloadDrain":{' "$managed_drain_render"
+grep -Fq '"allowedNamespaces":["apps","edge-services"]' "$managed_drain_render"
+grep -Fq '"enabled":true' "$managed_drain_render"
+grep -Fq '"maxTimeoutSeconds":900' "$managed_drain_render"
+grep -Fq '"maxPods":8' "$managed_drain_render"
+grep -Fq '"maxTerminationGraceSeconds":180' "$managed_drain_render"
 grep -Fq 'ledger.json: ""' "$managed_render"
 if grep -Eq '^[[:space:]]+topology\.cisco\.vk/ledger-uid:' "$managed_render"; then
   echo "render contains a fake ledger UID annotation" >&2
   exit 1
 fi
 
-test "$(grep -c '^kind: ValidatingAdmissionPolicy$' "$managed_render")" -eq 8
-test "$(grep -c '^kind: ValidatingAdmissionPolicyBinding$' "$managed_render")" -eq 8
+test "$(grep -c '^kind: ValidatingAdmissionPolicy$' "$managed_render")" -eq 9
+test "$(grep -c '^kind: ValidatingAdmissionPolicyBinding$' "$managed_render")" -eq 9
 
 policy_section_count() {
   local manifest="$1"
@@ -158,7 +182,8 @@ assert_policy_shape() {
 # an explicit contract-version decision in both places.
 assert_policy_shape managed-node 1 4 3
 assert_policy_shape managed-pod-status 1 2 3
-assert_policy_shape managed-device 0 5 11
+assert_policy_shape managed-drain-pod 1 5 3
+assert_policy_shape managed-device 0 7 12
 assert_policy_shape managed-rollout 0 1 6
 assert_policy_shape managed-upgrade-leaf 1 3 7
 assert_policy_shape managed-maintenance-lease 1 10 8
@@ -166,6 +191,9 @@ assert_policy_shape topology-policy 1 2 3
 assert_policy_shape topology-ledger 1 2 3
 
 grep -Fq 'name: cvk-cisco-virtual-kubelet-managed-maintenance-lease' "$managed_render"
+grep -Fq 'name: cvk-cisco-virtual-kubelet-managed-drain-pod' "$managed_render"
+sed -n '/name: cvk-cisco-virtual-kubelet-managed-drain-pod/,/^---$/p' \
+  "$managed_render" | grep -Fq 'operations: ["CREATE", "UPDATE", "DELETE"]'
 grep -Fq 'validationActions: [Deny]' "$managed_render"
 grep -Fq "request.userInfo.username == \"system:serviceaccount:cisco-vk-system:cisco-virtual-kubelet-controller\"" "$managed_render"
 grep -Fq "variables.managerCreate || variables.managerAdopt ||" "$managed_render"
@@ -185,6 +213,48 @@ grep -Fq "c.stage == 'RollbackActivation'" "$managed_render"
 grep -Fq "c.reservationID == object.status.managerAdmission.reservationID" "$managed_render"
 grep -Fq "c.policyEpoch == object.status.managerAdmission.policyEpoch" "$managed_render"
 grep -Fq "object.status.workerControl.observedPolicyEpoch == object.status.managerAdmission.policyEpoch" "$managed_render"
+grep -Fq "object.status.workerDrain.observedSessionToken == object.status.managerDrain.sessionToken" "$managed_render"
+grep -Fq "object.status.workerDrain.observedControlRevision <= object.status.managerDrain.controlRevision" "$managed_render"
+grep -Fq "object.status.managerDrain.pods.exists(p, p.uid == uid)" "$managed_render"
+grep -Fq "f == 'ops.cisco.vk/iosxe-rollout-drain'" "$managed_render"
+grep -Fq "variables.oldSession == '' || variables.newSession == ''" "$managed_render"
+grep -Fq "variables.oldSession == variables.newSession" "$managed_render"
+grep -Fq "'^(software-upgrade|software-drain|operational-action)/" "$managed_render"
+grep -Fq "maintenance-session-token'].matches(" "$managed_render"
+grep -Fq -- "-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-" "$managed_render"
+
+# Drain mutation authority is created only for the administrator allowlist and
+# never adds direct Pod delete privileges.
+if grep -Fq 'app.kubernetes.io/component: workload-drain' "$managed_render"; then
+  echo "disabled workload drain rendered namespace mutation RBAC" >&2
+  exit 1
+fi
+test "$(grep -c 'app.kubernetes.io/component: workload-drain' "$managed_drain_render")" -eq 8
+test "$(grep -c 'operations.cisco.vk/drain-authority: cleanup' "$managed_drain_render")" -eq 4
+test "$(grep -c 'operations.cisco.vk/drain-authority: eviction' "$managed_drain_render")" -eq 4
+test "$(grep -c 'helm.sh/resource-policy: keep' "$managed_drain_render")" -ge 8
+grep -Fq 'namespace: "apps"' "$managed_drain_render"
+grep -Fq 'namespace: "edge-services"' "$managed_drain_render"
+grep -Fq 'resources: ["pods/eviction"]' "$managed_drain_render"
+workload_drain_rbac="$scratch_dir/workload-drain-rbac.yaml"
+sed -n '/app.kubernetes.io\/component: workload-drain/,/^---$/p' \
+  "$managed_drain_render" >"$workload_drain_rbac"
+if grep -A1 -F 'resources: ["pods"]' "$workload_drain_rbac" | grep -Eq 'delete'; then
+  echo "workload drain RBAC grants direct delete" >&2
+  exit 1
+fi
+grep -A1 -F 'resources: ["pods"]' "$workload_drain_rbac" | \
+  grep -Fq 'verbs: ["get", "list", "watch", "update", "patch"]'
+grep -A1 -F 'resources: ["pods/eviction"]' "$workload_drain_rbac" | \
+  grep -Fq 'verbs: ["create"]'
+grep -Fq 'lookup "rbac.authorization.k8s.io/v1" "Role" $namespace $cleanupRoleName' \
+  charts/cisco-virtual-kubelet/templates/topology-rbac.yaml
+grep -Fq 'lookup "rbac.authorization.k8s.io/v1" "RoleBinding" $namespace $cleanupRoleName' \
+  charts/cisco-virtual-kubelet/templates/topology-rbac.yaml
+if grep -Fqi 'statefulset' "$workload_drain_rbac"; then
+  echo "workload drain RBAC implies unsupported StatefulSet eligibility" >&2
+  exit 1
+fi
 grep -Fq "object.status.workerControl.observedWorkerConfigRevision.matches(" "$managed_render"
 grep -Fq "has(object.status.managerAdmission.topologyLockID)" "$managed_render"
 grep -Fq "object.status.managerAdmission.topologyLockID.matches('^[a-f0-9]{32}\$')" "$managed_render"
@@ -485,7 +555,7 @@ grep -Fq 'distribution.cisco.vk/cache-domain: berlin' \
   "$repo_root/examples/topology/devices-and-workload.yaml"
 grep -Fq 'kind: PodDisruptionBudget' \
   "$repo_root/examples/topology/devices-and-workload.yaml"
-grep -Fq 'Phase 2 uses' \
+grep -Fq 'opt-in managed drain uses only policy/v1 Eviction' \
   "$repo_root/examples/topology/devices-and-workload.yaml"
 grep -Fq 'preferredDuringSchedulingIgnoredDuringExecution' \
   "$repo_root/docs/topology-awareness.md"
@@ -569,6 +639,79 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   exit 1
 fi
 grep -Fq 'globalMaxUnavailable' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set gnoi.enableSoftwareUpgrade=true \
+    --set topology.policy.workloadDrain.enabled=true >"$error_output" 2>&1; then
+  echo "workload drain without an explicit namespace allowlist passed values schema" >&2
+  exit 1
+fi
+grep -Fq 'allowedNamespaces' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=false \
+    --set gnoi.enableSoftwareUpgrade=true \
+    --set topology.policy.workloadDrain.enabled=true \
+    --set-json 'topology.policy.workloadDrain.allowedNamespaces=["apps"]' \
+    >"$error_output" 2>&1; then
+  echo "workload drain rendered while managed topology was disabled" >&2
+  exit 1
+fi
+grep -Fq '/topology/enabled' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set gnoi.enableSoftwareUpgrade=false \
+    --set topology.policy.workloadDrain.enabled=true \
+    --set-json 'topology.policy.workloadDrain.allowedNamespaces=["apps"]' \
+    >"$error_output" 2>&1; then
+  echo "workload drain rendered while gNOI software upgrade was disabled" >&2
+  exit 1
+fi
+grep -Fq '/gnoi/enableSoftwareUpgrade' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set gnoi.enableSoftwareUpgrade=true \
+    --set gnoi.disabled=true \
+    --set topology.policy.workloadDrain.enabled=true \
+    --set-json 'topology.policy.workloadDrain.allowedNamespaces=["apps"]' \
+    >"$error_output" 2>&1; then
+  echo "workload drain rendered while the global gNOI kill switch was active" >&2
+  exit 1
+fi
+grep -Fq '/gnoi/disabled' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set topology.policy.workloadDrain.maxPods=33 >"$error_output" 2>&1; then
+  echo "workload drain pod cap above the controller bound passed values schema" >&2
+  exit 1
+fi
+grep -Fq 'maxPods' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set gnoi.enableSoftwareUpgrade=true \
+    --set topology.policy.workloadDrain.enabled=true \
+    --set-json 'topology.policy.workloadDrain.allowedNamespaces=["apps"]' \
+    --set topology.policy.workloadDrain.maxTimeoutSeconds=300 \
+    --set topology.policy.workloadDrain.maxTerminationGraceSeconds=181 >"$error_output" 2>&1; then
+  echo "workload drain caps without the completion buffer rendered" >&2
+  exit 1
+fi
+grep -Fq 'maxTerminationGraceSeconds plus 120' "$error_output"
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true \

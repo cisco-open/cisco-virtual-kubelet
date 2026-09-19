@@ -193,6 +193,16 @@ func TestLegacyHandoffFullReconcileUsesIsolatedWorkerAndCompletes(t *testing.T) 
 	if err := fixture.client.Create(ctx, oldPod); err != nil {
 		t.Fatal(err)
 	}
+	// An exact but unowned maintenance taint is operator state. Releasing the
+	// managed writer must not infer ownership merely from the shared taint key.
+	var operatorGuardedNode corev1.Node
+	if err := fixture.client.Get(ctx, types.NamespacedName{Name: device.Status.NodeIdentity.NodeName}, &operatorGuardedNode); err != nil {
+		t.Fatal(err)
+	}
+	operatorGuardedNode.Spec.Taints = upsertTaint(operatorGuardedNode.Spec.Taints, maintenanceGuardTaint())
+	if err := fixture.client.Update(ctx, &operatorGuardedNode); err != nil {
+		t.Fatal(err)
+	}
 
 	fixture.clock.Advance(time.Minute)
 	if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: fixture.key}); err != nil {
@@ -215,7 +225,9 @@ func TestLegacyHandoffFullReconcileUsesIsolatedWorkerAndCompletes(t *testing.T) 
 	if err := fixture.client.Get(ctx, types.NamespacedName{Name: handoff.NodeName}, &releasedNode); err != nil {
 		t.Fatal(err)
 	}
-	if !legacyHandoffNodeMatches(&releasedNode, handoff) || !hasTaint(releasedNode.Spec.Taints, topologyInitializationTaint()) {
+	if !legacyHandoffNodeMatches(&releasedNode, handoff) ||
+		!hasTaint(releasedNode.Spec.Taints, topologyInitializationTaint()) ||
+		!hasTaint(releasedNode.Spec.Taints, maintenanceGuardTaint()) {
 		t.Fatalf("released Node metadata/guard = annotations=%v taints=%v", releasedNode.Annotations, releasedNode.Spec.Taints)
 	}
 

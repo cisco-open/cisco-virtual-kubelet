@@ -4,6 +4,8 @@ The chart installs the CVK manager, its CRDs, and the RBAC used by legacy and
 per-device workers. `topology.enabled` adds an opt-in, manager-owned topology
 and IOS-XE rollout safety boundary. It is disabled by default and does not
 change standalone or existing secure-gNOI behavior until explicitly enabled.
+The workload-drain extension has a second default-off administrator gate and
+does not change the existing `BlockIfRunning` rollout default.
 
 ## Managed topology prerequisites
 
@@ -88,6 +90,12 @@ topology:
     maxCampaignTargets: 100
     maxActiveReservations: 256
     maxLedgerBytes: 262144
+    workloadDrain:
+      enabled: false
+      allowedNamespaces: []
+      maxTimeoutSeconds: 7200
+      maxPods: 32
+      maxTerminationGraceSeconds: 600
   ledger:
     name: ""      # <fullname>-topology-ledger
 ```
@@ -135,9 +143,11 @@ all agree.
 
 The production scheduling baseline is ordinary Node affinity and topology
 spread. The example includes a `policy/v1` PodDisruptionBudget for availability
-intent, but Phase 2 uses `BlockIfRunning` and neither evicts Pods nor consumes
-the PDB; eviction-aware drain is deferred to Phase 4. A separate Kubernetes
-1.37-only experimental Workload/PodGroup/TAS example lives under
+intent. `BlockIfRunning` neither evicts Pods nor consumes the PDB. A narrow
+Phase 4 drain for explicitly marked, ReplicaSet-backed workloads is available
+only when both administrator policy and a new campaign opt in; it is still a
+development preview without physical-switch qualification. A separate
+Kubernetes 1.37-only experimental Workload/PodGroup/TAS example lives under
 `examples/topology/`; it requires disabled-by-default in-tree feature gates and
 is not installed or enabled by this chart.
 
@@ -147,7 +157,7 @@ renders `ledger.json` empty and never invents a UID. On startup, the manager:
 1. reads the live policy ConfigMap and validates its complete schema and
    non-empty fleet selector before any ledger write;
 2. uses its protected `topology.cisco.vk/admission-policy-prefix` annotation to
-   verify the chart's exact eight admission policies and bindings;
+   verify the chart's exact nine admission policies and bindings;
 3. reads and initializes the ledger with the ledger ConfigMap's real
    Kubernetes UID; and
 4. adds that UID to the policy's protected
@@ -155,8 +165,9 @@ renders `ledger.json` empty and never invents a UID. On startup, the manager:
 
 Once bound, a missing, empty, or recreated ledger is an identity failure. CVK
 does not silently initialize new admission authority over in-flight work.
-The policy, ledger, eight admission policy/binding pairs, and fixed managed
-worker role carry `helm.sh/resource-policy: keep`. A values rollback,
+The policy, ledger, nine admission policy/binding pairs, and fixed managed
+worker role carry `helm.sh/resource-policy: keep`. Any namespace cleanup
+Role/RoleBinding created by workload drain is also retained. A values rollback,
 `topology.enabled=false`, or `helm uninstall` therefore cannot silently erase
 that safety state; retained objects require a separate audited retirement.
 
@@ -194,7 +205,7 @@ matching Node heartbeat occurred after that Pod started. Credential or gNOI
 trust rotation therefore gates new gNOI work until the `Recreate` replacement
 proves it loaded the desired inputs.
 
-Phase 2 health does not claim end-to-end forwarding validation. It gates on a
+Campaign health does not claim end-to-end forwarding validation. It gates on a
 fresh bound Node heartbeat, manager-owned identity/topology/gNOI configuration
 evidence, and the leaf lifecycle result; packet forwarding, expected
 interfaces/routing adjacencies, and complete stack/supervisor role health still
@@ -221,6 +232,94 @@ On a selected managed device, only manager-created upgrade leaves bearing the
 complete managed identity and reservation bindings are supported. Direct or
 unmanaged `IOSXESoftwareUpgrade` objects are not executed or modified by its
 managed worker; submit an `IOSXESoftwareRollout` instead.
+
+### PDB-aware workload drain
+
+Drain is disabled by default. To render its namespace-scoped RBAC and include
+its policy in `policy.json`, enable the managed topology and software-upgrade
+gNOI gates, then set an explicit allowlist and administrator caps:
+
+```yaml
+topology:
+  enabled: true
+  policy:
+    workloadDrain:
+      enabled: true
+      allowedNamespaces:
+        - edge-workloads
+      maxTimeoutSeconds: 900
+      maxPods: 8
+      maxTerminationGraceSeconds: 120
+
+gnoi:
+  disabled: false
+  enableSoftwareUpgrade: true
+```
+
+The chart requires 1–16 unique namespace DNS labels when drain is enabled.
+Valid ranges are 300–7200 seconds for the timeout, 1–32 Pods per target, and
+30–600 seconds for termination grace; `maxTimeoutSeconds` must be at least 120
+seconds longer than the grace cap.
+Campaigns must separately set `workloads.policy: Drain`, provide a non-empty
+subset of the allowed namespaces, and choose equal or stricter limits.
+Omitting that campaign opt-in preserves `BlockIfRunning`.
+Changing the administrator drain gate, namespace set, or caps is a semantic
+policy edit and follows the normal policy-epoch fence. It never converts an
+existing campaign to `Drain`; an already-started drain enters recovery.
+Applying a live Helm upgrade that disables drain or removes a namespace revokes
+its separate Eviction grant; a Helm-retained cleanup/read Role and RoleBinding
+remain for exact recovery.
+Keep managed topology and both gNOI gates active until every drain is `Settled`
+so the manager and worker controllers can perform that cleanup. Generic GitOps
+pruning must exclude the retained cleanup pair until settlement; Helm's keep
+annotation is not a portable pruning policy.
+
+For every allowed namespace, the chart creates a retained cleanup/read Role and
+RoleBinding granting the manager Pod get/list/watch/update/patch plus read-only
+PDB/Deployment/ReplicaSet access. A separate, non-retained execution Role and
+RoleBinding grants only `pods/eviction` create while every gate is active.
+Neither grants Pod delete. The ninth native admission policy reserves the exact
+`ops.cisco.vk/drain-session` annotation and
+`ops.cisco.vk/iosxe-rollout-drain` finalizer pair to the manager and prevents
+that identity from changing unrelated Pod fields. It also rejects direct Pod
+DELETE globally for the manager identity. CVK uses the Eviction API; it has no
+force-delete or PDB-bypass path.
+
+The ninth policy is present whenever managed topology is enabled, including
+when drain is off, so manager startup always verifies one fixed admission
+contract. Without the administrator gate and gNOI software-upgrade gate, the
+chart creates no new namespace drain RBAC and CVK starts no new drain session
+or marker. On a clean, default-off deployment, the compatibility effects are
+limited to reserving those two metadata fields and confining any manager
+main-resource Pod update to that pair while denying its direct DELETE. The
+manager has no such Pod-write RBAC on a clean default deployment. Cleanup
+Role/RoleBinding pairs from an earlier enablement remain until explicit
+post-settlement removal.
+
+After applying that live Helm policy removal and after all drains in the
+namespace are `Settled`, verify that no Pod retains the reserved
+marker/finalizer and delete the retained cleanup pair if it is no longer needed:
+
+```bash
+kubectl get role,rolebinding \
+  RELEASE_FULLNAME-workload-drain -n edge-workloads -o yaml
+kubectl delete role,rolebinding \
+  RELEASE_FULLNAME-workload-drain -n edge-workloads
+```
+
+This pre-release capability accepts only explicitly
+`operations.cisco.vk/drain-safe=true`, default-scheduled Pods controlled by a
+ReplicaSet (directly or under a Deployment), with exactly one current healthy
+PDB and only portable Secret/ConfigMap/Projected/DownwardAPI volumes.
+StatefulSets, PVCs, DaemonSets, Jobs, bare Pods, custom controllers, a template
+that pins `nodeName`, hard placement, and maintenance or wildcard `NoSchedule`
+tolerations fail closed. See
+[`docs/topology-awareness.md`](../../docs/topology-awareness.md#opt-in-pdb-aware-drain-development-preview)
+for the complete eligibility, recovery, and observation contract and
+`examples/topology/iosxe-software-rollout-drain.yaml` for a campaign example.
+The code has not yet been qualified with physical IOS-XE workload migration;
+combined install/activate remains unchanged and independent stage/activate is
+not part of this feature.
 
 ## Install or upgrade
 
@@ -471,13 +570,17 @@ through `/status` as that worker and confirm the admission policy denies it.
 
 ## Admission coverage
 
-When enabled, eight `admissionregistration.k8s.io/v1` policy/binding pairs deny:
+When enabled, nine `admissionregistration.k8s.io/v1` policy/binding pairs deny:
 
 - managed Node metadata/spec writes by anyone except the exact manager, and
   Node-status writes by anyone except the bound worker; a generated legacy
   identity may mutate only its exact unmarked Node;
 - Pod-status writes unless either generated worker identity encodes the exact
   immutable `Pod.spec.nodeName`, plus any Pod metadata/spec change via status;
+- changes to the reserved drain session/finalizer pair by anyone except the
+  manager, manager Pod updates that alter anything outside that exact pair, and
+  direct DELETE of any protected Pod by any identity, plus every direct Pod
+  DELETE by the manager identity;
 - protected CiscoDevice topology/risk/adoption/reclassification changes
   without the delegated `topology` authorization, including legacy
   spec.labels/spec.taints/spec.region/spec.zone projection inputs once the
@@ -520,7 +623,10 @@ controller's reverse writer handoff for every managed device.
 
 Helm keep protection deliberately leaves the policy, ledger, admission
 policies/bindings, managed-worker role, and supplemental manager role/binding
-behind. Complete the UID-bound reverse handoff documented in
+behind. It also leaves any workload-drain cleanup Role/RoleBinding until an
+operator verifies all associated drains are `Settled`, confirms that no Pod
+retains the reserved marker/finalizer, and deletes that exact namespaced pair.
+Complete the UID-bound reverse handoff documented in
 `docs/topology-awareness.md` before a live Helm upgrade disables the feature.
 The chart rejects that live downgrade while any Node identity or incomplete
 handoff remains, or when retained policy/ledger identity and manager authority

@@ -120,6 +120,9 @@ type configReconcilerOptions struct {
 	// DevicePodLister is the app-hosting driver's live device inventory. Managed
 	// BlockIfRunning claims fail closed when this final check is unavailable.
 	DevicePodLister func(context.Context) ([]*corev1.Pod, error)
+	// DrainDevicePodLister is present only when the platform driver can prove a
+	// complete inventory for destructive drain. It must fail on partial reads.
+	DrainDevicePodLister func(context.Context) ([]*corev1.Pod, error)
 }
 
 func configDriverBuildOptions(opts configReconcilerOptions) drivers.ConfigDriverOptions {
@@ -544,8 +547,9 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 			// Source credentials and endpoint authorization are a security
 			// boundary. Resolve them through the uncached reader so an in-place
 			// Secret revocation cannot be hidden behind informer lag.
-			ImageResolver:   softwareupgrade.NewDefaultImageResolver(mgr.GetAPIReader(), nil),
-			DevicePodLister: opts.DevicePodLister,
+			ImageResolver:        softwareupgrade.NewDefaultImageResolver(mgr.GetAPIReader(), nil),
+			DevicePodLister:      opts.DevicePodLister,
+			DrainDevicePodLister: opts.DrainDevicePodLister,
 			MutationLeaser: &engine.FamilyLeaser{
 				Client:          mgr.GetClient(),
 				Namespace:       leaseNamespace,

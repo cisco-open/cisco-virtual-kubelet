@@ -42,6 +42,20 @@ topology:
     maxCampaignTargets: 100
     maxActiveReservations: 256
     maxLedgerBytes: 262144
+
+    # PDB-aware workload drain is a separate pre-release opt-in. Keep this
+    # disabled to preserve BlockIfRunning. Before enabling it, read the exact
+    # eligibility and physical-lab qualification limits in
+    # docs/topology-awareness.md, add explicit namespaces, and set
+    # gnoi.enableSoftwareUpgrade=true below. Keep the top-level topology/gNOI
+    # gates enabled until all associated drains report Settled; the chart
+    # retains narrow cleanup/read RBAC without an Eviction grant.
+    workloadDrain:
+      enabled: false
+      allowedNamespaces: []
+      maxTimeoutSeconds: 900
+      maxPods: 8
+      maxTerminationGraceSeconds: 120
   ledger:
     name: ""
 

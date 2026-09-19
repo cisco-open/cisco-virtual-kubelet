@@ -18,7 +18,11 @@
 package managedprotocol
 
 const (
-	Version                            = "rollout-v1"
+	Version = "rollout-v1"
+	// DrainProtocolVersion is deliberately distinct from the mutation grant
+	// protocol. Its presence opts an operation into the PDB-aware drain
+	// handshake; omission continues to mean the legacy rollout-v1 behavior.
+	DrainProtocolVersion               = "pdb-drain-v1"
 	AdmissionContractVersion           = "v1"
 	AnnotationAdmissionContractVersion = "topology.cisco.vk/admission-contract-version"
 
@@ -63,6 +67,15 @@ const (
 	AnnotationMaintenanceOperationName   = "topology.cisco.vk/maintenance-operation-name"
 	AnnotationMaintenanceOperationUID    = "topology.cisco.vk/maintenance-operation-uid"
 	AnnotationMaintenanceControlRevision = "topology.cisco.vk/maintenance-control-revision"
+	AnnotationMaintenancePurpose         = "topology.cisco.vk/maintenance-purpose"
+	AnnotationDrainSession               = "ops.cisco.vk/drain-session"
+	AnnotationDrainCordonOwner           = "ops.cisco.vk/drain-cordon-owner"
+	AnnotationDrainTaintOwner            = "ops.cisco.vk/drain-taint-owner"
+	AnnotationDrainCordonHold            = "ops.cisco.vk/drain-cordon-hold"
+	DrainSafeLabel                       = "operations.cisco.vk/drain-safe"
+	DrainPodFinalizer                    = "ops.cisco.vk/iosxe-rollout-drain"
+	MaintenancePurposeWorkloadDrain      = "WorkloadDrain"
+	MaintenancePurposeSoftwareMutation   = "SoftwareMutation"
 	AnnotationLeasePurpose               = "topology.cisco.vk/lease-purpose"
 	LeasePurposeNodeHeartbeat            = "node-heartbeat"
 	LeasePurposeConfigFamily             = "config-family"

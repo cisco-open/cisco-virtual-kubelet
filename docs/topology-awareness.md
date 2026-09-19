@@ -4,12 +4,12 @@ Managed topology is an opt-in CVK operating mode that gives the default
 Kubernetes scheduler reliable device topology and gives the CVK manager a
 bounded, topology-aware admission path for IOS-XE gNOI software campaigns. It
 uses only Kubernetes-native API machinery: Nodes, labels, taints, RBAC,
-ValidatingAdmissionPolicy, ConfigMaps, Leases, status conditions, Events, and
-the default kube-scheduler. It installs no alternate scheduler, scheduling
-plugin, webhook, or third-party topology controller.
+ValidatingAdmissionPolicy, ConfigMaps, Leases, the Eviction/PDB APIs, status
+conditions, Events, and the default kube-scheduler. It installs no alternate
+scheduler, scheduling plugin, webhook, or third-party topology controller.
 
-The implementation covers roadmap Phases 0–2 and the first evidence-backed
-part of Phase 3:
+The implementation covers roadmap Phases 0–2, the first evidence-backed part
+of Phase 3, and one deliberately narrow Phase 4 slice:
 
 - correct Node identity, ownership, topology projection, capacity, and
   maintenance fencing;
@@ -18,12 +18,14 @@ part of Phase 3:
   per-device `IOSXESoftwareUpgrade` executor; and
 - deterministic topology-local selection among existing operator-provided
   artifact endpoints, with a concrete endpoint and Secret UID frozen per
-  target.
+  target; and
+- a disabled-by-default, native Eviction/PDB-aware drain for an explicitly
+  marked subset of ReplicaSet-backed workloads.
 
 Later roadmap work is not hidden behind incomplete API fields. Durable
-prefetch/cache optimization, PDB-aware drain, independently durable
-stage/activate, an observed graph API, mandatory native TAS, and a public
-multi-driver rollout API remain separate, evidence-gated work. See
+prefetch/cache optimization, broader workload drain support, independently
+durable stage/activate, an observed graph API, mandatory native TAS, and a
+public multi-driver rollout API remain separate, evidence-gated work. See
 [Deferred roadmap](#deferred-roadmap-and-limitations).
 
 !!! warning
@@ -31,7 +33,9 @@ multi-driver rollout API remain separate, evidence-gated work. See
     Managed topology changes a cluster security and Node-writer boundary. It
     is disabled by default. Do not enable it on a production fleet until the
     admission probes, migration checks, secure gNOI path, and rollback
-    procedure in this guide have passed on that cluster.
+    procedure in this guide have passed on that cluster. Workload drain is an
+    additional pre-release capability and has not been qualified on physical
+    IOS-XE hardware by this change.
 
 ## Architecture and ownership
 
@@ -114,7 +118,7 @@ Managed topology currently requires:
 - `gnoi.enableWriteClass=false`; Phase 2 admits only campaign-owned
   `IOSXESoftwareUpgrade`, not generic `IOSXEOperationalAction` mutations;
 - CRDs applied before the manager Deployment is upgraded;
-- all eight native admission policies and bindings installed with
+- all nine native admission policies and bindings installed with
   `failurePolicy: Fail` and `validationActions: [Deny]`;
 - an administrator-owned, non-empty managed-fleet selector;
 - complete, valid values for every required topology key on each enrolled
@@ -330,13 +334,13 @@ handoff completion restores mutation and deletion.
 Use the default scheduler. Do not set `schedulerName`, and avoid direct
 `spec.nodeName` assignments. The
 [`devices-and-workload.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/topology/devices-and-workload.yaml)
-example shows one fleet member plus a two-replica hard spread; apply the
-workload only after at least two Ready enrolled CVK Nodes expose the selected
-site in distinct zones. It also includes a matching `policy/v1`
-`PodDisruptionBudget` so availability intent is ready for ordinary voluntary
-disruption and the deferred Phase 4 drain work. Phase 2 does not evict Pods or
-consult the PDB: `BlockIfRunning` fails closed while either Kubernetes or the
-device reports a live workload.
+example shows one fleet member plus drain-qualified soft site preference and
+spread. It also includes a matching `policy/v1`
+`PodDisruptionBudget` and the opt-in `operations.cisco.vk/drain-safe=true`
+template label. The label alone grants no eviction authority. With the
+default `BlockIfRunning` campaign policy, CVK does not evict Pods or consume
+the PDB and fails closed while either Kubernetes or the device reports a live
+workload.
 
 Hard placement uses node affinity:
 
@@ -389,7 +393,17 @@ topologySpreadConstraints:
 
 Use `DoNotSchedule` for a hard failure-domain requirement and
 `ScheduleAnyway` for a preference. Add a PodDisruptionBudget for replicated
-applications, but remember that the Phase 2 rollout does not evict Pods.
+applications. It affects CVK only when both administrator policy and an exact
+campaign opt into the drain described below.
+
+Hard affinity, selectors, and spread remain valid with `BlockIfRunning`, but
+the preview `Drain` contract rejects them because CVK cannot prove spare
+scheduler capacity outside the maintained Node. A drain-qualified template
+must use preferences and `ScheduleAnyway`; its PDB and the bounded recovery
+timeout remain the fail-safe if no replacement can become Ready. Before opting
+in, prove that the default scheduler has qualified alternative capacity and
+that the application can actually run there; CVK neither reserves replacement
+capacity nor treats a soft preference as a placement guarantee.
 
 Important native scheduler behavior:
 
@@ -408,8 +422,9 @@ the effective state with `kubectl get node <name> -o jsonpath='{.spec.taints}'`
 when diagnosing a Pending Pod.
 
 The rollout leaf therefore repeats its workload check after it obtains the
-device fence. This post-fence check is required even when scheduling policy is
-correct.
+device fence. A drain campaign additionally rechecks for newly bound Pods and
+in-flight writes before promoting to gNOI mutation. These post-fence checks are
+required even when scheduling policy is correct.
 
 ### Experimental in-tree Workload/PodGroup/TAS
 
@@ -568,6 +583,299 @@ that frozen endpoint within the install deadline. A permanent failure or
 expired deadline fails the leaf and fences further campaign admission; it
 never falls through to a different mirror under the approved hash.
 
+### Opt-in PDB-aware drain (development preview)
+
+The Phase 4 drain slice is intentionally narrower than a general-purpose
+`kubectl drain`. It exists only for manager-created IOS-XE software-rollout
+leaves, is disabled at both administrator and campaign layers, and fails
+closed when workload portability cannot be proven. Its repository
+qualification scope is unit and disposable API-server coverage; it does not
+claim physical-switch workload, upgrade, or downgrade qualification. Keep
+`BlockIfRunning` in production until the complete combination has passed the
+site's IOS-XE and application tests.
+
+First give the administrator policy an explicit namespace allowlist and
+ceilings. With the gNOI gates shown below, this also creates the split
+namespace-scoped cleanup/read and Eviction Role/RoleBinding pairs in each
+listed namespace:
+
+```yaml
+topology:
+  enabled: true
+  policy:
+    # ...the normal managed-topology policy...
+    workloadDrain:
+      enabled: true
+      allowedNamespaces: [edge-workloads]
+      maxTimeoutSeconds: 900
+      maxPods: 8
+      maxTerminationGraceSeconds: 120
+
+gnoi:
+  disabled: false
+  enableSoftwareUpgrade: true
+```
+
+When `workloadDrain.enabled` is false, the drain policy is omitted from the
+canonical administrator policy. Keeping it false across an upgrade therefore
+preserves existing `BlockIfRunning` policy semantics and hashes. Enabling the
+administrator gate does not convert a campaign automatically: that campaign
+must also select `Drain` and may only tighten the allowlist and bounds:
+
+```yaml
+spec:
+  plan:
+    # ...targets, image, strategy, budgets, health, and canaries...
+    workloads:
+      policy: Drain
+      drain:
+        namespaces: [edge-workloads]
+        timeoutSeconds: 900
+        maxPods: 8
+        maxTerminationGraceSeconds: 120
+```
+
+Each allowlist contains 1–16 unique namespace DNS labels. `timeoutSeconds` must
+be 300–7200 and at least 120 seconds greater than
+`maxTerminationGraceSeconds`; `maxPods` is 1–32; and termination grace is
+30–600 seconds. Each value must also be no greater than its administrator cap.
+Start from
+[`examples/topology/iosxe-software-rollout-drain.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/topology/iosxe-software-rollout-drain.yaml)
+rather than converting an already planned campaign. Executable intent is
+immutable, so changing workload policy requires a new frozen plan and
+approval.
+
+Enabling or disabling drain, or changing its allowlist or caps, is still a
+semantic administrator-policy edit. Active campaigns follow the normal
+policy-epoch fencing protocol, but their immutable `workloads.policy` never
+changes from `BlockIfRunning` to `Drain`. Any leaf whose drain session has
+already started enters `Recovering` rather than inheriting changed authority.
+Plan such policy changes outside an active drain; create and approve a new
+campaign when executable drain intent must change.
+
+Disabling the administrator drain gate or removing a namespace makes the
+manager start no new Eviction. Applying the same change with a live Helm
+upgrade also removes that namespace's separate, non-retained Eviction grant.
+A narrow Pod-cleanup/read Role and RoleBinding
+carry Helm keep protection and remain available for exact marker/finalizer
+cleanup plus controller/PDB reads during workload recovery. They never grant
+Eviction, direct Pod deletion, or device access. Keep `topology.enabled=true`,
+`gnoi.disabled=false`, and `gnoi.enableSoftwareUpgrade=true` until every drain
+is `Settled`; those top-level gates run the manager and worker controllers that
+may continue already accepted teardown/inventory and perform cleanup. Never
+remove a protected finalizer manually as a substitute for device-clean evidence.
+Helm keep and live lookup protect Helm transitions; a GitOps pruner must
+explicitly exclude the cleanup pair until settlement.
+
+Every active Pod bound to the target Node must meet all of these conditions
+when the manager freezes drain evidence and again before eviction:
+
+- its namespace is in the campaign and administrator allowlists, the total
+  candidate count does not exceed `maxPods`, and it is not already
+  terminating;
+- both the Pod and its controlling Pod template carry
+  `operations.cisco.vk/drain-safe=true`;
+- the bound Pod names the default scheduler, every controlling template leaves
+  `nodeName` unset, and neither Pod nor template tolerates
+  `cisco.vk/device-maintenance=gnoi:NoSchedule` or all `NoSchedule` taints;
+- it has no `nodeSelector`, required node/Pod affinity or anti-affinity, or
+  `DoNotSchedule` topology spread. Preferred affinity and `ScheduleAnyway`
+  spread are supported; hard placement remains supported only with
+  `BlockIfRunning` in this preview;
+- the Pod is controlled by an exact `apps/v1` ReplicaSet incarnation, either
+  directly or through an exact Deployment incarnation; bare Pods, Jobs,
+  CronJobs, DaemonSets, StatefulSets, and custom controllers are unsupported;
+- every volume is from the portable Secret, ConfigMap, Projected, or
+  DownwardAPI subset; PVCs, host paths, `emptyDir`, and all other volume
+  sources block drain; and
+- exactly one `policy/v1` PodDisruptionBudget selects the Pod. It must have
+  observed its current generation, report at least one allowed disruption,
+  and report a consistent healthy replica set. The Kubernetes 1.35
+  [Eviction API rejects overlapping PDBs for one Pod](https://github.com/kubernetes/kubernetes/blob/release-1.35/pkg/registry/core/pod/storage/eviction.go#L1580-L1593),
+  so CVK rejects that shape before drain.
+
+The `drain-safe` label is an explicit portability assertion, not a safety
+override. It must appear on the ReplicaSet template and, for a
+Deployment-owned ReplicaSet, on the Deployment template as well. The current
+[`devices-and-workload.yaml`](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/topology/devices-and-workload.yaml)
+shows the label, soft default-scheduler affinity/spread, and a matching PDB. CVK
+still submits every termination through `policy/v1` Eviction. The API server's
+live PDB decision is authoritative even when the frozen status showed
+`disruptionsAllowed: 1`.
+
+The durable flow is deliberately serial and revalidates identity at every
+boundary:
+
+1. The manager freezes exact Pod, ReplicaSet/Deployment, PDB, Node, policy,
+   reservation, and worker identities under a new UUIDv4 drain session.
+2. The manager snapshots pre-existing scheduling state, applies a
+   session-owned cordon plus
+   `cisco.vk/device-maintenance=gnoi:NoSchedule`, activates the existing
+   maintenance session, and blocks ordinary device writes.
+3. The manager atomically adds its drain-session marker and one protected
+   finalizer to one exact Pod UID, revalidates its evidence, and asks the
+   Eviction subresource to terminate it. No second selected Pod is evicted
+   until the first controller has observed its current generation and returned
+   to exactly its desired total replicas. A Deployment must report every desired
+   replica updated, Ready, and available with zero unavailable; a direct
+   ReplicaSet must report every desired replica Ready and available.
+4. Only the selected Pod's provider teardown may acquire the ordinary
+   device-mutation Lease as `software-drain/<leaf UID>`. After teardown, the
+   worker performs a fresh, complete device workload inventory. On IOS-XE,
+   both the app-hosting configuration and operational inventories must be
+   readable and every app must have a consistent CVK workload identity; a
+   partial, malformed, or unattributed result fails closed. During active drain
+   the manager requires no foreign or unknown device workload. During terminal
+   recovery, an attributable replacement may already have returned to the
+   restored Node; a complete scan may therefore contain non-selected UIDs but
+   must still prove the exact selected UID absent and report zero unknowns.
+   A cache-lagged provider callback is resolved against the uncached live Pod;
+   an exact-UID mismatch fails closed. The worker reauthorizes the session
+   immediately before device dispatch and before every Lease renewal.
+5. After every selected Pod is complete, the manager proves that no new Pod is
+   bound to the guarded Node, the mutation Lease is idle and request-free, and
+   all frozen campaign/source/target/control facts still match. Only then does
+   it promote the reservation and maintenance session to disruptive gNOI
+   software mutation.
+6. Once the device outcome is conclusive, recovery restores only the cordon
+   and taint owned by this session, permits normal workload writes, and waits
+   for the exact controller and PDB UIDs, their current drain-safe templates,
+   selectors and healthy observed generations, post-mutation device/Node health,
+   and continuous soak. The topology reservation remains held through this
+   recovery and is settled last.
+
+The leaf's durable manager states are `Preparing`, `Guarded`, `Evicting`,
+`Drained`, `Promoting`, `Promoted`, `Recovering`, and `Settled`. Each selected
+Pod advances through `Selected`, `Protected`, `EvictionRequested`,
+`TerminationObserved`, `DeviceClean`, `Released`, and `Complete`. Treat these
+as current evidence, not commands to patch manually. Manager and worker status
+ownership, immutable identity fields, Pod marker/finalizer pairing, Lease
+purpose, and monotonic transitions are protected by CRD validation and native
+admission.
+
+A PDB denial, changed controller/PDB incarnation, unsafe current controller or
+PDB semantics, new or foreign Pod during active drain, partial
+device inventory, busy mutation Lease, elapsed drain deadline, policy drift,
+pause, or cancellation prevents promotion. Recovery starts no new eviction;
+it completes teardown already accepted by Kubernetes, removes protection from
+Pods not evicted, and restores only restrictions whose session ownership is
+still exact. A pre-existing cordon or taint is preserved. If an operator
+cordons the Node during the session or ownership is ambiguous, CVK leaves the
+cordon in place. Expiry is not evidence that device mutation or teardown is
+safe, and unresolved cleanup/recovery retains the reservation for operator
+investigation. A routine Deployment, ReplicaSet, HPA, or PDB generation change
+does not by itself strand recovery: CVK revalidates the exact object UID against
+its current template, selector, observed generation, and replica health without
+granting new eviction authority.
+
+`status.managerDrain.recoveryDeadline` bounds accepted-teardown and inventory
+authority; passing it never means cleanup succeeded. If recovery is still
+legitimately required after that deadline, increment `spec.control.revision`
+to a value strictly greater than the campaign revision and every retained
+leaf's manager-control and drain revisions,
+preserving existing `pause` and terminal `cancel` flags. The manager records
+the new revision in `status.managerControl` and
+`status.managerDrain.controlRevision`, advances `updatedAt`, and issues one new
+window equal to the immutable drain timeout plus 120 seconds. The session
+token, start time, selected UIDs, and state remain unchanged. State stays
+`Recovering`: renewal may resume only device teardown already accepted through
+Kubernetes Eviction and the fresh inventory needed to prove that teardown; it
+cannot start another Eviction or a disruptive gNOI software mutation. A
+deleting campaign cannot be edited reliably, so its safety finalizer performs
+the same bounded, synthetic revision advance when an exact recovery window
+expires. Repeated renewal is an explicit audited indication of an unhealthy
+worker/device path and should trigger operator investigation.
+
+For example, after confirming that `8` is greater than the campaign and every
+leaf's `status.managerControl.revision` and
+`status.managerDrain.controlRevision`, the same or another authorized operator
+can renew a cancelled campaign without clearing cancellation while recording
+the authenticated requester and time:
+
+```bash
+REQUESTER="$(kubectl auth whoami -o jsonpath='{.status.userInfo.username}')"
+REQUESTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+kubectl patch iosxesoftwarerollout CAMPAIGN -n network-devices --type=merge \
+  -p "{\"spec\":{\"control\":{\"revision\":8,\"cancel\":true,\"requestedBy\":\"${REQUESTER}\",\"requestedAt\":\"${REQUESTED_AT}\",\"reason\":\"renew bounded drain recovery\"}}}"
+```
+
+Do not copy that revision blindly or omit an already true `pause` or `cancel`
+flag. The caller needs the delegated `control` verb. Export the pre/post rollout
+and leaf status for the change record.
+
+A control renewal also cannot silently carry an old Lease request into its new
+window. If the canonical Lease is still held under the preceding recovery
+revision, the provider returns a mutation-incomplete result, neither renews the
+old revision nor dispatches another device call, and leaves the hold quarantined
+through the exact `renewTime + leaseDurationSeconds` boundary. Only then may it
+retire the exact same Lease UID, session, operation, and holder when the request
+metadata is either complete and bound to that strictly older revision or wholly
+absent from a crash before publication. Partial, malformed, foreign, or
+unexpired state remains blocked for investigation. Retirement preserves the
+transition counter and performs no device call. On a later reconcile, cleanup
+must first obtain a fresh current-revision CiscoDevice maintenance-session
+acknowledgement before the provider can reacquire the Lease and resume
+already-accepted teardown. The 31-minute Lease TTL can outlast a recovery
+window, so an operator may need another explicit bounded renewal while waiting.
+Neither Lease expiry nor safe retirement is device-clean evidence.
+
+Worker replacement never makes old device-clean evidence current by itself.
+The provider binds drain authorization to the immutable configuration revision
+of its own running process, `status.workerControl`, and the protected Node
+`topology.cisco.vk/worker-config-revision` and
+`topology.cisco.vk/worker-observed-revision` annotations. If device-clean
+evidence is still needed after a credential, trust, or PodTemplate rotation,
+the replacement worker must perform and publish a strictly newer device
+inventory. The worker-drain inventory
+revision and both observation timestamps advance together with
+`observedWorkerConfigRevision`. Admission permits that rollover but rejects a
+stale process, a rewritten same-revision observation, and any manager attempt
+to consume inventory whose worker revision does not match the current control
+acknowledgement.
+
+The manager's drain RBAC starts only in administrator-allowlisted namespaces.
+A retained cleanup/read Role permits Pod read/update/patch and read-only
+PDB/ReplicaSet/Deployment access. A separate non-retained execution Role grants
+only `pods/eviction` create while every feature gate remains active. Neither
+contains a Pod `delete` verb. A fail-closed admission policy confines Pod
+updates to the exact drain-session annotation/finalizer pair and globally
+rejects direct Pod DELETE by the manager identity; it is not permission to
+alter Pod spec, labels, owners, or unrelated metadata. CVK has no force-delete
+path and never bypasses a PDB.
+
+After applying the live Helm change that removes a namespace from drain policy
+(or disables drain), and after every drain that used it is `Settled`, verify
+that no Pod there retains
+`ops.cisco.vk/drain-session` or
+`ops.cisco.vk/iosxe-rollout-drain`, then explicitly remove the retained cleanup
+pair if drain will not be re-enabled. Replace `RELEASE_FULLNAME` with the Helm
+generated full name (for example, `cvk-cisco-virtual-kubelet`). Review the
+objects first and confirm their `operations.cisco.vk/drain-authority=cleanup`
+label, Role rules, RoleBinding subject, and release ownership:
+
+```bash
+kubectl get role,rolebinding \
+  RELEASE_FULLNAME-workload-drain -n edge-workloads -o yaml
+kubectl delete role,rolebinding \
+  RELEASE_FULLNAME-workload-drain -n edge-workloads
+```
+
+PDBs govern voluntary Kubernetes eviction; they do not prove network
+redundancy, forwarding health, storage portability, or that a switch outage is
+safe. Qualify the application's behavior and every target IOS-XE
+release/platform combination independently. This phase continues to use the
+existing combined IOS-XE install/activate leaf. A separately durable
+stage/approve/activate protocol is not implemented or implied.
+
+The manager-side Eviction/PDB, identity, reservation, and recovery mechanics
+are deliberately above the IOS-XE driver. A future NX-OS or IOS XR adapter can
+reuse them only after it implements exact session-authorized device teardown,
+complete post-teardown device workload inventory, and a lifecycle with equally
+strong mutation/outcome guarantees. No current non-IOS-XE driver gains drain
+or software-rollout support from this gate, and the public API remains IOS-XE
+specific until a second qualified driver proves the common contract.
+
 ### Submit, review, and approve
 
 Start from
@@ -670,8 +978,9 @@ For each target, the manager checks:
   and Secret incarnation;
 - fresh device and Node health, including current producer observations for
   `NodeIdentityReady`, `TopologyReady`, and `GNOIConfigurationReady`;
-- no running workload (`BlockIfRunning` is the only Phase 2 policy), proven
-  both from Kubernetes Pods and a live driver `ListPods` device inventory;
+- the selected workload policy: `BlockIfRunning` requires no live Kubernetes
+  or device workload, while `Drain` requires the exact bounded eligibility,
+  PDB, session, teardown, replacement-readiness, and inventory proofs above;
 - global and every independent domain transfer/unavailability ceiling;
 - existing unhealthy or maintained fleet members, including non-targets; and
 - no conflicting device mutation.
@@ -700,7 +1009,7 @@ revision proof above. Deployment availability alone is insufficient: during a
 Secret-driven `Recreate`, an old Pod or a heartbeat that predates the new Pod
 cannot authorize gNOI work.
 
-Phase 2 health is intentionally narrower than end-to-end network assurance.
+Campaign health is intentionally narrower than end-to-end network assurance.
 Automated campaign gates prove a fresh bound Node `Ready` heartbeat,
 manager-owned identity/topology/gNOI configuration observations, and the
 upgrade leaf's lifecycle result. They do not yet prove production packet
@@ -715,12 +1024,15 @@ conservatively holds both transfer and disruption reservations for the whole
 leaf. Source locality reduces WAN path cost but does not claim an independent
 prefetch boundary. A Lease expiry never settles an accepted device mutation.
 
-The final worker-side workload check is fail closed. Terminating Kubernetes
-Pods still block; retained `Succeeded` or `Failed` Pods alone do not. Any live
-app or orphan returned by the device driver blocks, and a missing callback or
-inventory error blocks rather than assuming the device is empty. The callback
-contract is driver-neutral for future platforms, although Phase 2 campaign
-registration remains explicitly IOS XE only.
+The final worker-side workload check is fail closed. Under `BlockIfRunning`,
+terminating Kubernetes Pods still block; retained `Succeeded` or `Failed` Pods
+alone do not. Any live app or orphan returned by the device driver blocks, and
+a missing callback or inventory error blocks rather than assuming the device
+is empty. Under `Drain`, only an exact selected teardown in the active session
+may run, and its complete post-delete device inventory becomes durable worker
+evidence before promotion. The provider coordination contract is
+driver-neutral for future platforms, although campaign registration and the
+software lifecycle remain explicitly IOS XE only.
 
 Campaign phases are `AwaitingApproval`, `Paused`, `Executing`, `Soaking`,
 `Cancelling`, `Succeeded`, `Failed`, and `Cancelled`. The explicitly frozen
@@ -797,6 +1109,32 @@ Useful campaign fields are:
 - `status.counts` and each bounded `status.targets[]` reason; and
 - requested versus effective control revisions.
 
+For a drain target, the retained leaf is the durable, detailed record:
+
+```bash
+kubectl get iosxesoftwareupgrade LEAF_NAME -n network-devices \
+  -o jsonpath='{.status.managerDrain.state}{"\n"}{range .status.managerDrain.pods[*]}{.namespace}{"/"}{.name}{"\t"}{.uid}{"\t"}{.phase}{"\t"}{.deviceCleanInventoryRevision}{"\n"}{end}'
+
+kubectl get iosxesoftwareupgrade LEAF_NAME -n network-devices \
+  -o jsonpath='{.status.workerDrain}{"\n"}'
+
+kubectl get ciscodevice DEVICE_NAME -n network-devices \
+  -o jsonpath='{.status.maintenanceSession}{"\n"}'
+
+kubectl get node NODE_NAME \
+  -o jsonpath='{.spec.unschedulable}{"\n"}{.spec.taints}{"\n"}'
+```
+
+`status.managerDrain` records the immutable session and per-Pod progress;
+`status.workerDrain` records the fresh device inventory revision, completeness,
+remaining selected UIDs, and bounded foreign/unknown counts. The manager
+Deployment log explains campaign/reconciliation failures, while the exact
+per-device worker log contains provider teardown, Lease-renewal, inventory,
+and gNOI execution failures. Status is the durable source of truth: a missing
+log line, process restart, or expired log retention is not proof that a step
+did or did not occur. Export leaf status, Events, both log intervals, the Node,
+the CiscoDevice, the mutation Lease, and relevant PDBs for a change record.
+
 The manager exports bounded Prometheus series without campaign, device,
 domain, image, or policy values as labels:
 
@@ -820,6 +1158,10 @@ Common fail-closed states include:
 | `WorkerProtocolPending` | UID-derived worker has not completed admission/writer handoff |
 | `WorkerRolloutPending` | desired PodTemplate/Secret revision has not been reported by the exact new Ready worker Pod |
 | `AdmissionBlocked` | workload, health, mutation, global, or domain budget gate is closed |
+| `DrainRecovering` | normal drain progress stopped or device work concluded; no new eviction starts while exact cleanup and owned-guard restoration continue |
+| `DrainCleanupBlocked` / `DrainGuardRecovery` | accepted teardown lacks device-clean proof, or exact scheduling/session state has not been safely restored |
+| `WorkloadRecovery` | the exact ReplicaSet/Deployment or PDB UID, its current drain-safe template/selector, or current replica health is not recovery-safe |
+| `HealthyPostMutationSoak` | device and replacement workload health currently pass; the reservation remains held for the configured continuous soak |
 | `PolicyChanged` / policy identity failure | structural policy/ledger identity or incompatible target-cap change; stop new claims and create a new plan |
 | `PolicyTransition` | a compatible numeric policy edit is fencing zero-claim leaves before publishing a stricter monotonic safety epoch |
 | target identity/generation change | CiscoDevice was replaced or its executable spec changed; stop new claims and create a new approved plan |
@@ -900,6 +1242,11 @@ For managed-topology feature retirement:
 7. verify every device still uses its UID-derived isolated legacy identity and
    that the old shared ServiceAccount remains unbound.
 
+If workload drain was ever enabled, include each retained cleanup Role/Binding
+in the evidence export. After step 2, verify that its namespace has no reserved
+drain marker/finalizer, then remove the exact pair with the command above before
+disabling managed topology.
+
 For example, repeat this for each managed device and do not remove the request
 while topology remains enabled—the selected device would otherwise begin a new
 forward enrollment:
@@ -934,12 +1281,14 @@ Node audit marker remain identity state.
 
 The live downgrade check rejects missing or UID-mismatched policy/ledger
 objects, incomplete manager RBAC, any remaining `status.nodeIdentity`, and any
-handoff phase other than `Complete`. The policy, ledger, eight policy/binding
+handoff phase other than `Complete`. The policy, ledger, nine policy/binding
 pairs, fixed managed-worker role, and supplemental manager role/binding carry
-`helm.sh/resource-policy: keep`. Setting `topology.enabled=false` or
-uninstalling Helm does not remove them. Completed isolated workers still rely
-on Node/Pod admission, so these retained objects are an active safety boundary,
-not stale installation debris. Remove them only after deleting every dependent
+`helm.sh/resource-policy: keep`; so does every workload-drain cleanup
+Role/Binding until its explicit post-settlement removal. Setting
+`topology.enabled=false` or uninstalling Helm does not remove them. Completed
+isolated workers still rely on Node/Pod admission, so these retained objects
+are an active safety boundary, not stale installation debris. Remove them only
+after deleting every dependent
 isolated worker, ServiceAccount/binding, Node marker, and durable device state.
 Never delete/recreate only the ledger or a same-name CiscoDevice to clear a
 failure; both changes produce new UIDs and invalidate durable authority.
@@ -971,7 +1320,24 @@ Spec digest, positive/negative worker Node and Pod status admission, unmarked
 peer denial, purpose-specific Lease update and create/delete fencing, complete
 CiscoDevice status/finalizer protection, campaign control separation, ledger
 protection, native affinity/spread binding, initialization-taint exclusion, and
-the known direct-`nodeName` bypass. It does not contact a network device.
+the known direct-`nodeName` bypass. With drain enabled in its disposable
+values, it also proves the drain Pod marker/finalizer ownership boundary,
+manager/worker status separation, immutable snapshot transitions, worker
+configuration rollover only with fresh inventory, and purpose-bound Lease updates.
+It grants adversarial direct-delete RBAC to prove that protected Pods still
+reject DELETE, then proves a manager
+`policy/v1` Eviction succeeds when the PDB permits it, a PDB denial returns 429
+without marking the Pod for deletion, and exact finalizer cleanup completes an
+accepted eviction. It does not run a device worker or contact a network device,
+so provider teardown, device-clean promotion, IOS-XE behavior, and end-to-end
+workload recovery remain physical-lab acceptance tests.
+
+Before enabling drain outside a disposable cluster, an acceptance test must
+separately prove that a PDB denial causes no eviction or gNOI promotion, an
+accepted Eviction reaches device-clean evidence, replacement readiness is
+required between selected Pods, worker configuration rotation during pending
+teardown requires new device inventory, and manager/worker restarts at every
+durable state preserve both workload and device fences.
 
 Before a production device test, also verify secure gNOI certificates/auth,
 gNOI OS provisioning, image digest/compatibility, configuration persistence,
@@ -985,8 +1351,9 @@ The following are intentionally not implemented in the current phases:
 - durable prefetch, shared/PVC cache, independent transfer-only admission, or
   claims that the worker's location represents the device data path (later
   Phase 3 work, pending measured need and a complete cache-loss protocol);
-- automatic eviction/drain, PDB orchestration, or independently durable
-  install/stage/activate reservations (Phase 4);
+- general-purpose drain, StatefulSet/PVC/DaemonSet/Job/custom-controller
+  evacuation, forced deletion or PDB bypass, and independently durable
+  install/stage/activate reservations (later Phase 4 work);
 - an authoritative discovered graph, graph-cost workload scheduling, a custom
   scheduler, or automatic declared-topology mutation;
 - a mandatory dependency on alpha native Workload/PodGroup/TAS APIs; and

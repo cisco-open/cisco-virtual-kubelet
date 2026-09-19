@@ -29,10 +29,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
+	// LedgerVersion intentionally remains v1. Drain provenance is an additive,
+	// omitempty extension and old v1 records require no migration. Once a drain
+	// record is written, older binaries fail closed on its unknown fields/state
+	// rather than silently releasing it; drain must therefore be activated only
+	// after all ledger writers have been upgraded.
 	LedgerVersion             = "v1"
 	DefaultMaxActiveRecords   = 256
 	DefaultMaxSerializedBytes = 256 * 1024
@@ -53,6 +59,7 @@ type ReservationState string
 const (
 	ReservationReserved ReservationState = "Reserved"
 	ReservationBound    ReservationState = "Bound"
+	ReservationDraining ReservationState = "Draining"
 	ReservationGranted  ReservationState = "Granted"
 	ReservationRevoked  ReservationState = "Revoked"
 )
@@ -115,15 +122,25 @@ type Reservation struct {
 	ReservationRequest
 	ChildUID string           `json:"childUID,omitempty"`
 	State    ReservationState `json:"state"`
+	// DrainSessionToken is immutable provenance for a reservation that has
+	// authorized workload side effects. Its presence permanently excludes the
+	// record from generic unclaimed/settlement cleanup.
+	DrainSessionToken string `json:"drainSessionToken,omitempty"`
+	// DrainStartedAt and DrainCompletedAt are canonical UTC RFC3339Nano strings
+	// so omitted legacy records retain their exact v1 JSON shape.
+	DrainStartedAt   string `json:"drainStartedAt,omitempty"`
+	DrainCompletedAt string `json:"drainCompletedAt,omitempty"`
 }
 
 // ReleaseFence records the last exact topology-lock acquisition whose cleanup
 // won the ConfigMap CAS. It makes otherwise no-op cleanup conflict with an
 // in-flight Reserve that read the pre-fence ledger.
 type ReleaseFence struct {
-	ReservationID  string `json:"reservationID"`
-	PolicyEpoch    int64  `json:"policyEpoch"`
-	TopologyLockID string `json:"topologyLockID"`
+	ReservationID     string `json:"reservationID"`
+	PolicyEpoch       int64  `json:"policyEpoch"`
+	TopologyLockID    string `json:"topologyLockID"`
+	DrainSessionToken string `json:"drainSessionToken,omitempty"`
+	DrainChildUID     string `json:"drainChildUID,omitempty"`
 }
 
 type Ledger struct {
@@ -189,6 +206,10 @@ func validatePersistedLedger(ledger *Ledger) error {
 		if !validBoundedIdentity(fence.ReservationID, 64) || fence.PolicyEpoch < 1 ||
 			!validTopologyLockID(fence.TopologyLockID) {
 			return fmt.Errorf("%w: last release fence is invalid", ErrLedgerIdentity)
+		}
+		if (fence.DrainSessionToken == "") != (fence.DrainChildUID == "") ||
+			(fence.DrainSessionToken != "" && (!validDrainSessionToken(fence.DrainSessionToken) || !validBoundedIdentity(fence.DrainChildUID, 128))) {
+			return fmt.Errorf("%w: last release fence has invalid drain provenance", ErrLedgerIdentity)
 		}
 	}
 
@@ -289,12 +310,49 @@ func validatePersistedReservation(reservation Reservation) error {
 			return fmt.Errorf("domain value for %q is invalid: %s", key, strings.Join(problems, "; "))
 		}
 	}
+	hasDrainProvenance := reservation.DrainSessionToken != "" || reservation.DrainStartedAt != "" || reservation.DrainCompletedAt != ""
+	if hasDrainProvenance {
+		if !validDrainSessionToken(reservation.DrainSessionToken) {
+			return fmt.Errorf("drain session token must be a canonical UUIDv4")
+		}
+		startedAt, err := parseCanonicalLedgerTime(reservation.DrainStartedAt)
+		if err != nil {
+			return fmt.Errorf("drain start time is invalid: %v", err)
+		}
+		if reservation.DrainCompletedAt != "" {
+			completedAt, err := parseCanonicalLedgerTime(reservation.DrainCompletedAt)
+			if err != nil {
+				return fmt.Errorf("drain completion time is invalid: %v", err)
+			}
+			if completedAt.Before(startedAt) {
+				return fmt.Errorf("drain completion time precedes its start")
+			}
+		}
+	}
 	switch reservation.State {
 	case ReservationReserved:
-		if reservation.ChildUID != "" {
-			return fmt.Errorf("Reserved state must not have a child UID")
+		if reservation.ChildUID != "" || hasDrainProvenance {
+			return fmt.Errorf("Reserved state must not have a child UID or drain provenance")
 		}
-	case ReservationBound, ReservationGranted, ReservationRevoked:
+	case ReservationBound:
+		if !validBoundedIdentity(reservation.ChildUID, 128) {
+			return fmt.Errorf("%s state requires a bounded child UID", reservation.State)
+		}
+		if hasDrainProvenance {
+			return fmt.Errorf("Bound state must not have drain provenance")
+		}
+	case ReservationDraining:
+		if !validBoundedIdentity(reservation.ChildUID, 128) || !hasDrainProvenance || reservation.DrainCompletedAt != "" {
+			return fmt.Errorf("Draining state requires a child UID and incomplete drain provenance")
+		}
+	case ReservationGranted:
+		if !validBoundedIdentity(reservation.ChildUID, 128) {
+			return fmt.Errorf("%s state requires a bounded child UID", reservation.State)
+		}
+		if hasDrainProvenance && reservation.DrainCompletedAt == "" {
+			return fmt.Errorf("drain-provenance Granted state requires completion evidence")
+		}
+	case ReservationRevoked:
 		if !validBoundedIdentity(reservation.ChildUID, 128) {
 			return fmt.Errorf("%s state requires a bounded child UID", reservation.State)
 		}
@@ -337,6 +395,29 @@ func validTopologyLockID(value string) bool {
 	}
 	decoded, err := hex.DecodeString(value)
 	return err == nil && len(decoded) == 16
+}
+
+func validDrainSessionToken(value string) bool {
+	parsed, err := uuid.Parse(value)
+	return err == nil && parsed.Version() == 4 && parsed.String() == value
+}
+
+func canonicalLedgerTime(value time.Time) (string, error) {
+	if value.IsZero() {
+		return "", fmt.Errorf("time is zero")
+	}
+	return value.UTC().Format(time.RFC3339Nano), nil
+}
+
+func parseCanonicalLedgerTime(value string) (time.Time, error) {
+	parsed, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if canonical, _ := canonicalLedgerTime(parsed); value != canonical {
+		return time.Time{}, fmt.Errorf("time is not canonical UTC RFC3339Nano")
+	}
+	return parsed, nil
 }
 
 func Encode(ledger *Ledger, maxBytes int) ([]byte, error) {
@@ -516,7 +597,7 @@ func BindChild(ledger *Ledger, reservationID, childUID string) error {
 	if !ok || strings.TrimSpace(childUID) == "" {
 		return fmt.Errorf("%w: reservation or child UID missing", ErrInvalidTransition)
 	}
-	if reservation.ChildUID == childUID && (reservation.State == ReservationBound || reservation.State == ReservationGranted || reservation.State == ReservationRevoked) {
+	if reservation.ChildUID == childUID && (reservation.State == ReservationBound || reservation.State == ReservationDraining || reservation.State == ReservationGranted || reservation.State == ReservationRevoked) {
 		return nil
 	}
 	if reservation.State != ReservationReserved || reservation.ChildUID != "" {
@@ -528,11 +609,114 @@ func BindChild(ledger *Ledger, reservationID, childUID string) error {
 	return nil
 }
 
+// BeginDrain is the sole Bound -> Draining transition. It durably records the
+// exact session before any Pod finalizer or Eviction side effect is authorized.
+func BeginDrain(
+	ledger *Ledger,
+	reservationID, ledgerUID, childUID, sessionToken string,
+	controlRevision uint64,
+	startedAt time.Time,
+) error {
+	if ledger == nil || ledger.UID != ledgerUID {
+		return ErrLedgerIdentity
+	}
+	if !validDrainSessionToken(sessionToken) {
+		return fmt.Errorf("%w: drain session token is not a canonical UUIDv4", ErrInvalidTransition)
+	}
+	canonicalStart, err := canonicalLedgerTime(startedAt)
+	if err != nil {
+		return fmt.Errorf("%w: drain start time is invalid", ErrInvalidTransition)
+	}
+	reservation, ok := ledger.Reservations[reservationID]
+	if !ok || reservation.ChildUID == "" || reservation.ChildUID != childUID {
+		return fmt.Errorf("%w: reservation is not bound to child", ErrInvalidTransition)
+	}
+	if reservation.State == ReservationDraining && reservation.DrainSessionToken == sessionToken &&
+		reservation.DrainStartedAt == canonicalStart && reservation.DrainCompletedAt == "" {
+		if controlRevision < reservation.ControlRevision {
+			return ErrStaleControlRevision
+		}
+		reservation.ControlRevision = controlRevision
+		ledger.Reservations[reservationID] = reservation
+		return nil
+	}
+	if reservation.State != ReservationBound || reservation.DrainSessionToken != "" ||
+		reservation.DrainStartedAt != "" || reservation.DrainCompletedAt != "" {
+		return fmt.Errorf("%w: reservation is not an unclaimed bound drain candidate", ErrInvalidTransition)
+	}
+	// Revision zero is the neutral initial campaign control and is a valid
+	// first drain, just as it is for a direct grant. Idempotent replays are
+	// handled above; only an older revision is stale here.
+	if controlRevision < reservation.ControlRevision {
+		return ErrStaleControlRevision
+	}
+	reservation.ControlRevision = controlRevision
+	reservation.State = ReservationDraining
+	reservation.DrainSessionToken = sessionToken
+	reservation.DrainStartedAt = canonicalStart
+	ledger.Reservations[reservationID] = reservation
+	return nil
+}
+
+// PromoteDrain is the sole Draining -> Granted transition. The caller must
+// first durably prove the selected workload set and device inventory clean;
+// the completion timestamp then remains attached to the reservation through
+// revocation and settlement.
+func PromoteDrain(
+	ledger *Ledger,
+	reservationID, ledgerUID, childUID, sessionToken string,
+	controlRevision uint64,
+	completedAt time.Time,
+) error {
+	if ledger == nil || ledger.UID != ledgerUID {
+		return ErrLedgerIdentity
+	}
+	if !validDrainSessionToken(sessionToken) {
+		return fmt.Errorf("%w: drain session token is not a canonical UUIDv4", ErrInvalidTransition)
+	}
+	canonicalCompletion, err := canonicalLedgerTime(completedAt)
+	if err != nil {
+		return fmt.Errorf("%w: drain completion time is invalid", ErrInvalidTransition)
+	}
+	reservation, ok := ledger.Reservations[reservationID]
+	if !ok || reservation.ChildUID == "" || reservation.ChildUID != childUID ||
+		reservation.DrainSessionToken != sessionToken {
+		return fmt.Errorf("%w: reservation is not bound to the drain session", ErrInvalidTransition)
+	}
+	if reservation.State == ReservationGranted && reservation.DrainCompletedAt == canonicalCompletion {
+		if controlRevision < reservation.ControlRevision {
+			return ErrStaleControlRevision
+		}
+		reservation.ControlRevision = controlRevision
+		ledger.Reservations[reservationID] = reservation
+		return nil
+	}
+	if reservation.State != ReservationDraining || reservation.DrainCompletedAt != "" {
+		return fmt.Errorf("%w: reservation is not draining", ErrInvalidTransition)
+	}
+	startedAt, err := parseCanonicalLedgerTime(reservation.DrainStartedAt)
+	if err != nil || completedAt.UTC().Before(startedAt) {
+		return fmt.Errorf("%w: drain completion precedes its start", ErrInvalidTransition)
+	}
+	if controlRevision < reservation.ControlRevision {
+		return ErrStaleControlRevision
+	}
+	reservation.ControlRevision = controlRevision
+	reservation.State = ReservationGranted
+	reservation.DrainCompletedAt = canonicalCompletion
+	ledger.Reservations[reservationID] = reservation
+	return nil
+}
+
 func Grant(ledger *Ledger, reservationID, ledgerUID, childUID string, controlRevision uint64) error {
 	if ledger == nil || ledger.UID != ledgerUID {
 		return ErrLedgerIdentity
 	}
 	reservation, ok := ledger.Reservations[reservationID]
+	if ok && (reservation.DrainSessionToken != "" || reservation.DrainStartedAt != "" ||
+		reservation.DrainCompletedAt != "" || reservation.State == ReservationDraining) {
+		return fmt.Errorf("%w: drain reservation requires session-bound promotion", ErrInvalidTransition)
+	}
 	if ok && reservation.State == ReservationGranted && reservation.ChildUID == childUID {
 		if controlRevision < reservation.ControlRevision {
 			return ErrStaleControlRevision
@@ -564,6 +748,10 @@ func Revoke(ledger *Ledger, reservationID string, controlRevision uint64) error 
 	if !ok {
 		return fmt.Errorf("%w: reservation missing", ErrInvalidTransition)
 	}
+	if reservation.DrainSessionToken != "" || reservation.DrainStartedAt != "" ||
+		reservation.DrainCompletedAt != "" || reservation.State == ReservationDraining {
+		return fmt.Errorf("%w: drain reservation requires session-bound revocation", ErrInvalidTransition)
+	}
 	if reservation.State == ReservationRevoked && controlRevision == reservation.ControlRevision {
 		return nil
 	}
@@ -574,6 +762,43 @@ func Revoke(ledger *Ledger, reservationID string, controlRevision uint64) error 
 	case ReservationReserved, ReservationBound, ReservationGranted, ReservationRevoked:
 	default:
 		return fmt.Errorf("%w: cannot revoke state %s", ErrInvalidTransition, reservation.State)
+	}
+	reservation.ControlRevision = controlRevision
+	reservation.State = ReservationRevoked
+	ledger.Reservations[reservationID] = reservation
+	return nil
+}
+
+// RevokeDrain is the sole transition that can revoke a reservation carrying
+// workload-drain provenance. The immutable ledger, child, and session
+// identities prevent generic cancellation or policy cleanup from laundering a
+// partially completed drain into an ordinary unclaimed reservation.
+func RevokeDrain(
+	ledger *Ledger,
+	reservationID, ledgerUID, childUID, sessionToken string,
+	controlRevision uint64,
+) error {
+	if ledger == nil || ledger.UID != ledgerUID {
+		return ErrLedgerIdentity
+	}
+	if !validDrainSessionToken(sessionToken) {
+		return fmt.Errorf("%w: drain session token is not a canonical UUIDv4", ErrInvalidTransition)
+	}
+	reservation, ok := ledger.Reservations[reservationID]
+	if !ok || reservation.ChildUID != childUID || reservation.DrainSessionToken != sessionToken ||
+		reservation.DrainStartedAt == "" {
+		return fmt.Errorf("%w: reservation is not bound to the drain session", ErrInvalidTransition)
+	}
+	if reservation.State == ReservationRevoked && controlRevision == reservation.ControlRevision {
+		return nil
+	}
+	if controlRevision < reservation.ControlRevision {
+		return ErrStaleControlRevision
+	}
+	switch reservation.State {
+	case ReservationDraining, ReservationGranted, ReservationRevoked:
+	default:
+		return fmt.Errorf("%w: cannot revoke drain state %s", ErrInvalidTransition, reservation.State)
 	}
 	reservation.ControlRevision = controlRevision
 	reservation.State = ReservationRevoked
@@ -593,12 +818,19 @@ func Settle(
 ) error {
 	reservation, ok := ledger.Reservations[reservationID]
 	if !ok {
+		if releaseFenceMatches(ledger.LastReleaseFence, reservationID, policyEpoch, topologyLockID) &&
+			ledger.LastReleaseFence.DrainSessionToken != "" {
+			return fmt.Errorf("%w: drain reservation requires session-bound settlement", ErrInvalidTransition)
+		}
 		// Settlement is idempotent across a successful ledger CAS followed by a
 		// manager crash before the leaf status acknowledgement is persisted.
 		return recordReleaseFence(ledger, reservationID, policyEpoch, topologyLockID)
 	}
 	if reservation.PolicyEpoch != policyEpoch || reservation.TopologyLockID != topologyLockID {
 		return ErrStaleControlRevision
+	}
+	if reservation.DrainSessionToken != "" {
+		return fmt.Errorf("%w: drain reservation requires session-bound settlement", ErrInvalidTransition)
 	}
 	if reservation.ChildUID != childUID || !outcomeResolved || !healthGatePassed {
 		return fmt.Errorf("%w: settlement evidence incomplete", ErrInvalidTransition)
@@ -607,6 +839,65 @@ func Settle(
 		return fmt.Errorf("%w: cannot settle state %s", ErrInvalidTransition, reservation.State)
 	}
 	if err := recordReleaseFence(ledger, reservationID, policyEpoch, topologyLockID); err != nil {
+		return err
+	}
+	delete(ledger.Reservations, reservationID)
+	return nil
+}
+
+// SettleDrainedReservation releases a reservation with workload side effects
+// only after exact session binding plus physical, health, and workload-recovery
+// evidence. Unlike Settle, it also accepts Draining so a pre-promotion abort can
+// recover protected/evicted workloads without inventing a mutation grant.
+func SettleDrainedReservation(
+	ledger *Ledger,
+	reservationID, ledgerUID, topologyLockID, childUID, sessionToken string,
+	policyEpoch int64,
+	outcomeResolved, healthGatePassed, workloadRecoveryPassed bool,
+) error {
+	if ledger == nil || ledger.UID != ledgerUID {
+		return ErrLedgerIdentity
+	}
+	if !validDrainSessionToken(sessionToken) {
+		return fmt.Errorf("%w: drain session token is not a canonical UUIDv4", ErrInvalidTransition)
+	}
+	if !validBoundedIdentity(childUID, 128) || !outcomeResolved || !healthGatePassed || !workloadRecoveryPassed {
+		return fmt.Errorf("%w: drain settlement evidence incomplete", ErrInvalidTransition)
+	}
+	reservation, ok := ledger.Reservations[reservationID]
+	if !ok {
+		return recordDrainReleaseFence(ledger, reservationID, policyEpoch, topologyLockID, childUID, sessionToken)
+	}
+	if reservation.PolicyEpoch != policyEpoch || reservation.TopologyLockID != topologyLockID {
+		return ErrStaleControlRevision
+	}
+	if reservation.ChildUID != childUID {
+		return fmt.Errorf("%w: drain settlement evidence incomplete", ErrInvalidTransition)
+	}
+	if reservation.State == ReservationBound {
+		// The manager may publish an immutable drain intent before the device
+		// controller can prove an idle Lease and apply the scheduling guard. An
+		// abort in that pre-authority window still settles through the token-bound
+		// recovery path, but must not fabricate a BeginDrain transition.
+		if reservation.DrainSessionToken != "" || reservation.DrainStartedAt != "" ||
+			reservation.DrainCompletedAt != "" {
+			return fmt.Errorf("%w: bound drain intent carries partial ledger provenance", ErrInvalidTransition)
+		}
+		if err := recordDrainReleaseFence(ledger, reservationID, policyEpoch, topologyLockID, childUID, sessionToken); err != nil {
+			return err
+		}
+		delete(ledger.Reservations, reservationID)
+		return nil
+	}
+	if reservation.DrainSessionToken != sessionToken {
+		return fmt.Errorf("%w: drain settlement evidence incomplete", ErrInvalidTransition)
+	}
+	switch reservation.State {
+	case ReservationDraining, ReservationGranted, ReservationRevoked:
+	default:
+		return fmt.Errorf("%w: cannot settle drain state %s", ErrInvalidTransition, reservation.State)
+	}
+	if err := recordDrainReleaseFence(ledger, reservationID, policyEpoch, topologyLockID, childUID, sessionToken); err != nil {
 		return err
 	}
 	delete(ledger.Reservations, reservationID)
@@ -689,6 +980,9 @@ func RevokeUnclaimedAtEpoch(
 	if reservation.PolicyEpoch != policyEpoch || reservation.TopologyLockID != topologyLockID {
 		return ErrStaleControlRevision
 	}
+	if reservation.DrainSessionToken != "" {
+		return fmt.Errorf("%w: drain reservation cannot use unclaimed revocation", ErrInvalidTransition)
+	}
 	if strings.TrimSpace(childUID) == "" || reservation.ChildUID != childUID {
 		return fmt.Errorf("%w: reservation is not bound to the proven child", ErrInvalidTransition)
 	}
@@ -714,6 +1008,10 @@ func releaseUnclaimed(
 ) error {
 	reservation, ok := ledger.Reservations[reservationID]
 	if !ok {
+		if releaseFenceMatches(ledger.LastReleaseFence, reservationID, policyEpoch, topologyLockID) &&
+			ledger.LastReleaseFence.DrainSessionToken != "" {
+			return fmt.Errorf("%w: drain reservation cannot use unclaimed release", ErrInvalidTransition)
+		}
 		return recordReleaseFence(ledger, reservationID, policyEpoch, topologyLockID)
 	}
 	if reservation.PolicyEpoch != policyEpoch || reservation.TopologyLockID != topologyLockID {
@@ -721,6 +1019,9 @@ func releaseUnclaimed(
 	}
 	if controlRevision < reservation.ControlRevision {
 		return ErrStaleControlRevision
+	}
+	if reservation.DrainSessionToken != "" {
+		return fmt.Errorf("%w: drain reservation cannot use unclaimed release", ErrInvalidTransition)
 	}
 	switch reservation.State {
 	case ReservationReserved:
@@ -782,10 +1083,40 @@ func recordReleaseFence(ledger *Ledger, reservationID string, policyEpoch int64,
 		!validTopologyLockID(topologyLockID) {
 		return fmt.Errorf("%w: release-fence identity is invalid", ErrLedgerIdentity)
 	}
+	if releaseFenceMatches(ledger.LastReleaseFence, reservationID, policyEpoch, topologyLockID) &&
+		ledger.LastReleaseFence.DrainSessionToken != "" {
+		return fmt.Errorf("%w: drain release fence cannot be replaced by generic cleanup", ErrInvalidTransition)
+	}
 	ledger.LastReleaseFence = &ReleaseFence{
 		ReservationID:  reservationID,
 		PolicyEpoch:    policyEpoch,
 		TopologyLockID: topologyLockID,
+	}
+	return nil
+}
+
+func recordDrainReleaseFence(
+	ledger *Ledger,
+	reservationID string,
+	policyEpoch int64,
+	topologyLockID, childUID, sessionToken string,
+) error {
+	if ledger == nil || !validBoundedIdentity(reservationID, 64) || policyEpoch < 1 ||
+		!validTopologyLockID(topologyLockID) || !validBoundedIdentity(childUID, 128) || !validDrainSessionToken(sessionToken) {
+		return fmt.Errorf("%w: drain release-fence identity is invalid", ErrLedgerIdentity)
+	}
+	if releaseFenceMatches(ledger.LastReleaseFence, reservationID, policyEpoch, topologyLockID) {
+		if ledger.LastReleaseFence.DrainSessionToken == sessionToken && ledger.LastReleaseFence.DrainChildUID == childUID {
+			return nil
+		}
+		return fmt.Errorf("%w: release fence belongs to a different settlement protocol", ErrInvalidTransition)
+	}
+	ledger.LastReleaseFence = &ReleaseFence{
+		ReservationID:     reservationID,
+		PolicyEpoch:       policyEpoch,
+		TopologyLockID:    topologyLockID,
+		DrainSessionToken: sessionToken,
+		DrainChildUID:     childUID,
 	}
 	return nil
 }

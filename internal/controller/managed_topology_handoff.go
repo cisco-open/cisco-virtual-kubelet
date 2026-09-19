@@ -552,7 +552,6 @@ func (r *CiscoDeviceReconciler) releaseManagedNodeToLegacy(
 		node.Spec.Taints = deleteTaint(node.Spec.Taints, identity)
 	}
 	node.Spec.Taints = deleteTaint(node.Spec.Taints, taintIdentity(topologyInitializationTaint()))
-	node.Spec.Taints = deleteTaint(node.Spec.Taints, taintIdentity(maintenanceGuardTaint()))
 	for _, taint := range device.Spec.Taints {
 		node.Spec.Taints = upsertTaint(node.Spec.Taints, taint)
 	}
@@ -586,7 +585,9 @@ func managedNodeMatchesLegacyReleaseBinding(
 		node.Annotations[managedprotocol.AnnotationWorkerUsername] !=
 			"system:serviceaccount:"+device.Namespace+":"+managedWorkerServiceAccountName(device) ||
 		node.Annotations[managedprotocol.AnnotationWorkerProtocol] != managedprotocol.Version ||
-		node.Annotations[managedprotocol.AnnotationProjectionHash] != handoff.ProjectionHash {
+		node.Annotations[managedprotocol.AnnotationProjectionHash] != handoff.ProjectionHash ||
+		node.Annotations[managedprotocol.AnnotationDrainCordonOwner] != "" ||
+		node.Annotations[managedprotocol.AnnotationDrainTaintOwner] != "" {
 		return false
 	}
 	_, hasProjectedKeys := node.Annotations[managedprotocol.AnnotationProjectedKeys]
@@ -606,6 +607,8 @@ var managedNodeBindingAnnotationKeys = []string{
 	managedprotocol.AnnotationProjectedKeys,
 	managedprotocol.AnnotationProjectionHash,
 	managedprotocol.AnnotationManagedTaints,
+	managedprotocol.AnnotationDrainCordonOwner,
+	managedprotocol.AnnotationDrainTaintOwner,
 }
 
 func legacyHandoffNodeMatches(node *corev1.Node, handoff *ciskov1.DeviceLegacyHandoffStatus) bool {

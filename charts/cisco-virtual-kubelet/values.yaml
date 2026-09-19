@@ -130,6 +130,22 @@ topology:
     maxActiveReservations: 256
     maxLedgerBytes: 262144
 
+    # Drain is an opt-in administrator capability. When disabled, the manager
+    # omits it from the v1 policy entirely, preserving BlockIfRunning behavior
+    # and policy hashes. Enabling it requires an explicit namespace allowlist;
+    # campaigns may select a subset and lower, never raise, these caps. Managed
+    # topology still reserves the drain annotation/finalizer through admission.
+    # A clean disabled install adds no namespace drain RBAC. If previously
+    # enabled, its narrow cleanup/read Role and RoleBinding are retained without
+    # Eviction authority until explicit post-settlement removal.
+    # Keep the top-level topology/gNOI gates active until all drains are Settled.
+    workloadDrain:
+      enabled: false
+      allowedNamespaces: []
+      maxTimeoutSeconds: 7200
+      maxPods: 32
+      maxTerminationGraceSeconds: 600
+
   ledger:
     # Empty uses <fullname>-topology-ledger. Helm creates an empty ledger and
     # never templates a UID; the manager initializes ledger.json and binds the

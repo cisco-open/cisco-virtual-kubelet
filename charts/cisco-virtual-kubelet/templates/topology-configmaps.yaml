@@ -33,6 +33,18 @@ limitations under the License.
       "maxLedgerBytes" .Values.topology.policy.maxLedgerBytes
       "ledgerName" $ledgerName
 }}
+{{- if .Values.topology.policy.workloadDrain.enabled }}
+{{- if lt (int .Values.topology.policy.workloadDrain.maxTimeoutSeconds) (add (int .Values.topology.policy.workloadDrain.maxTerminationGraceSeconds) 120) }}
+{{- fail "topology.policy.workloadDrain.maxTimeoutSeconds must be at least maxTerminationGraceSeconds plus 120" }}
+{{- end }}
+{{- $_ := set $policy "workloadDrain" (dict
+      "enabled" true
+      "allowedNamespaces" .Values.topology.policy.workloadDrain.allowedNamespaces
+      "maxTimeoutSeconds" .Values.topology.policy.workloadDrain.maxTimeoutSeconds
+      "maxPods" .Values.topology.policy.workloadDrain.maxPods
+      "maxTerminationGraceSeconds" .Values.topology.policy.workloadDrain.maxTerminationGraceSeconds
+) }}
+{{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap

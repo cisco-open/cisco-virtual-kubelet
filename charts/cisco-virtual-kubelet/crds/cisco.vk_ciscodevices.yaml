@@ -1052,7 +1052,26 @@ spec:
                     enum:
                     - Acknowledged
                     - Active
+                    - Recovering
                     - Settled
+                    type: string
+                  protocolVersion:
+                    description: |-
+                      ProtocolVersion and Purpose are optional only for backward compatibility.
+                      Their joint omission has the historical rollout-v1 SoftwareMutation
+                      meaning; new drain-aware writers always set both explicitly.
+                    enum:
+                    - rollout-v1
+                    - pdb-drain-v1
+                    type: string
+                  purpose:
+                    description: |-
+                      DeviceMaintenancePurpose limits the side effects authorized by a session.
+                      WorkloadDrain authorizes only exact drain cleanup; SoftwareMutation is the
+                      existing gNOI/device-mutation authority.
+                    enum:
+                    - WorkloadDrain
+                    - SoftwareMutation
                     type: string
                   requestedAt:
                     description: RequestedAt is the request timestamp preserved across
@@ -1081,14 +1100,83 @@ spec:
                 x-kubernetes-validations:
                 - message: acknowledgedAt is required after manager acknowledgement
                   rule: has(self.acknowledgedAt)
-                - message: active maintenance session identity is immutable
+                - message: maintenance protocolVersion and purpose must be set together
+                  rule: has(self.protocolVersion) == has(self.purpose)
+                - message: maintenance protocolVersion and purpose combination is
+                    invalid
+                  rule: '!has(self.protocolVersion) || (self.protocolVersion == ''rollout-v1''
+                    ? self.purpose == ''SoftwareMutation'' : self.protocolVersion
+                    == ''pdb-drain-v1'' && self.purpose in [''WorkloadDrain'', ''SoftwareMutation''])'
+                - message: a recovering session requires an explicit protocolVersion
+                    and purpose
+                  rule: self.phase != 'Recovering' || has(self.protocolVersion)
+                - message: pdb-drain-v1 requires a canonical UUIDv4 sessionToken
+                  rule: '!has(self.protocolVersion) || self.protocolVersion != ''pdb-drain-v1''
+                    || self.sessionToken.matches(''^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'')'
+                - message: WorkloadDrain requires its exact UID-bound Lease holder
+                  rule: '!has(self.purpose) || self.purpose != ''WorkloadDrain'' ||
+                    self.lease.holder == ''software-drain/'' + self.operation.uid'
+                - message: promoted drain requires its exact UID-bound software-mutation
+                    holder
+                  rule: '!has(self.protocolVersion) || self.protocolVersion != ''pdb-drain-v1''
+                    || self.purpose != ''SoftwareMutation'' || self.lease.holder ==
+                    ''software-upgrade/'' + self.operation.uid'
+                - message: active maintenance session and UID-bound operation identity
+                    are immutable
                   rule: oldSelf.phase == 'Settled' || (self.sessionToken == oldSelf.sessionToken
-                    && self.lease == oldSelf.lease && self.operation == oldSelf.operation
-                    && self.deviceUID == oldSelf.deviceUID && self.nodeName == oldSelf.nodeName
-                    && self.nodeUID == oldSelf.nodeUID && self.requestedAt == oldSelf.requestedAt)
+                    && self.operation.uid == oldSelf.operation.uid && self.deviceUID
+                    == oldSelf.deviceUID && self.nodeName == oldSelf.nodeName && self.nodeUID
+                    == oldSelf.nodeUID && self.requestedAt == oldSelf.requestedAt)
+                - message: active maintenance operation namespace is immutable
+                  rule: oldSelf.phase == 'Settled' || self.operation.__namespace__
+                    == oldSelf.operation.__namespace__
+                - message: active maintenance operation name is immutable
+                  rule: oldSelf.phase == 'Settled' || self.operation.name == oldSelf.operation.name
+                - message: active maintenance protocolVersion is immutable
+                  rule: oldSelf.phase == 'Settled' || (has(oldSelf.protocolVersion)
+                    == has(self.protocolVersion) && (!has(oldSelf.protocolVersion)
+                    || self.protocolVersion == oldSelf.protocolVersion))
+                - message: active maintenance purpose cannot be added or removed
+                  rule: oldSelf.phase == 'Settled' || has(oldSelf.purpose) == has(self.purpose)
+                - message: active maintenance purpose permits only drain-to-mutation
+                    promotion
+                  rule: oldSelf.phase == 'Settled' || !has(oldSelf.purpose) || self.purpose
+                    == oldSelf.purpose || (oldSelf.protocolVersion == 'pdb-drain-v1'
+                    && oldSelf.purpose == 'WorkloadDrain' && self.purpose == 'SoftwareMutation')
+                - message: active maintenance Lease namespace is immutable
+                  rule: oldSelf.phase == 'Settled' || self.lease.__namespace__ ==
+                    oldSelf.lease.__namespace__
+                - message: active maintenance Lease name is immutable
+                  rule: oldSelf.phase == 'Settled' || self.lease.name == oldSelf.lease.name
+                - message: active maintenance Lease UID is immutable
+                  rule: oldSelf.phase == 'Settled' || self.lease.uid == oldSelf.lease.uid
+                - message: active maintenance Lease holder permits only the exact
+                    drain-to-mutation promotion
+                  rule: oldSelf.phase == 'Settled' || self.lease.holder == oldSelf.lease.holder
+                    || (oldSelf.protocolVersion == 'pdb-drain-v1' && oldSelf.purpose
+                    == 'WorkloadDrain' && self.purpose == 'SoftwareMutation' && oldSelf.lease.holder
+                    == 'software-drain/' + oldSelf.operation.uid && self.lease.holder
+                    == 'software-upgrade/' + self.operation.uid)
+                - message: maintenance acknowledgedAt is append-only and immutable
+                    within a session
+                  rule: oldSelf.phase == 'Settled' || !has(oldSelf.acknowledgedAt)
+                    || (has(self.acknowledgedAt) && self.acknowledgedAt == oldSelf.acknowledgedAt)
+                - message: maintenance acknowledgement cannot precede its request
+                  rule: self.acknowledgedAt >= self.requestedAt
                 - message: maintenance controlRevision cannot decrease within a session
                   rule: self.sessionToken != oldSelf.sessionToken || self.controlRevision
                     >= oldSelf.controlRevision
+                - message: maintenance session phase cannot regress or bypass drain
+                    recovery
+                  rule: 'oldSelf.phase == ''Settled'' || (oldSelf.phase == ''Acknowledged''
+                    ? (self.phase in [''Acknowledged'', ''Active'', ''Recovering'']
+                    || (self.phase == ''Settled'' && (!has(oldSelf.protocolVersion)
+                    || oldSelf.protocolVersion != ''pdb-drain-v1''))) : (oldSelf.phase
+                    == ''Active'' ? (self.phase in [''Active'', ''Recovering''] ||
+                    (self.phase == ''Settled'' && (!has(oldSelf.protocolVersion) ||
+                    oldSelf.protocolVersion != ''pdb-drain-v1''))) : (oldSelf.phase
+                    == ''Recovering'' ? self.phase in [''Recovering'', ''Settled'']
+                    : self.phase == ''Settled'')))'
               netAsCode:
                 description: |-
                   NetAsCode records the Network as Code model stripe this device should

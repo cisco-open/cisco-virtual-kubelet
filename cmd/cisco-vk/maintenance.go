@@ -65,7 +65,8 @@ func newMaintenanceCoordinator(cfg *rest.Config, identity workerRuntimeIdentity,
 	}
 	return &maintenance.Coordinator{
 		Client: c, Namespace: identity.DeviceNamespace, DeviceName: identity.DeviceName,
-		DeviceUID: identity.DeviceUID, NodeName: identity.NodeName, LeaseNamespace: leaseNamespace,
+		DeviceUID: identity.DeviceUID, NodeName: identity.NodeName, WorkerRevision: identity.WorkerRevision,
+		LeaseNamespace:   leaseNamespace,
 		ManagedTopology:  identity.ManagedTopology,
 		MutationsEnabled: (opts.EnableIOSXESoftwareUpgrade || opts.EnableWriteClassGNOI) && !envEnabled(gNOIDisabledEnv),
 	}, nil

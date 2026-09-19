@@ -1,12 +1,12 @@
-# This example must be submitted as the identity in requestedBy, or edited so
-# requestedBy exactly matches the authenticated API user. Replace the sources,
-# digest, image family, version, and canary names with qualified values. Every
-# target must carry operations.cisco.vk/qualification-cohort, and each distinct
-# cohort value must have a same-named entry with at least one explicit canary.
+# Development-preview example. Do not apply it until managed topology, secure
+# IOS-XE gNOI, the workload, its PDB, and the target image have been qualified
+# in the intended lab. Administrator policy must separately enable workload
+# drain for edge-workloads. requestedBy must exactly match the authenticated
+# API user; replace every image, digest, version, and canary placeholder.
 apiVersion: ops.cisco.vk/v1alpha1
 kind: IOSXESoftwareRollout
 metadata:
-  name: cat9k-17-18-4
+  name: cat9k-17-18-4-drain
   namespace: network-devices
 spec:
   plan:
@@ -20,20 +20,16 @@ spec:
       allowAll: false
       maxTargets: 20
     image:
-      # Lowercase SHA-256 of the exact image bytes; never reuse this placeholder.
+      # Lowercase SHA-256 of the exact image bytes.
       sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       imageFamily: cat9k
       sources:
-        # Scoped mirrors are matched against protected CiscoDevice labels.
-        # Lowest priority wins. Equal-priority matches fail planning.
         - name: berlin-mirror
           deviceSelector:
             matchLabels:
               distribution.cisco.vk/cache-domain: berlin
           priority: 10
           url: https://software.berlin.example.com/cat9k_iosxe.17.18.04.SPA.bin
-        # Exactly one unscoped catch-all is required and is used only when no
-        # scoped source matches. Every endpoint must serve the pinned digest.
         - name: global
           priority: 100
           url: https://software.example.com/cat9k_iosxe.17.18.04.SPA.bin
@@ -43,8 +39,8 @@ spec:
     installTimeoutSeconds: 7200
     rebootTimeoutSeconds: 3600
     canaries:
-      # c9k-a carries operations.cisco.vk/qualification-cohort=c9300 in
-      # devices-and-workload.yaml. Add one entry per distinct target cohort.
+      # Add one same-named entry with an explicit target for every distinct
+      # operations.cisco.vk/qualification-cohort value in the frozen plan.
       - name: c9300
         devices: [c9k-a]
     pauseAfterCanary: true
@@ -57,10 +53,17 @@ spec:
         - topologyKey: operations.cisco.vk/redundancy-domain
           maxUnavailable: 1
     workloads:
-      # Default non-destructive policy. For the separately gated development
-      # drain path, start from iosxe-software-rollout-drain.yaml instead of
-      # editing an already planned campaign.
-      policy: BlockIfRunning
+      # Drain is not a general kubectl drain. Every active target Pod must be
+      # drain-safe, ReplicaSet-backed, portable, and protected by exactly one
+      # current healthy PDB. Any ineligible, foreign, or new Pod blocks
+      # promotion.
+      policy: Drain
+      drain:
+        # Must be a subset of topology.policy.workloadDrain.allowedNamespaces.
+        namespaces: [edge-workloads]
+        timeoutSeconds: 900
+        maxPods: 8
+        maxTerminationGraceSeconds: 120
     health:
       maxObservationAgeSeconds: 300
       canarySoakSeconds: 600

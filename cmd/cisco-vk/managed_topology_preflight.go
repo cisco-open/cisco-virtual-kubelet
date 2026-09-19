@@ -43,6 +43,7 @@ var managedTopologyCRDs = []schema.GroupVersionResource{
 var managedAdmissionPolicySuffixes = []string{
 	"managed-node",
 	"managed-pod-status",
+	"managed-drain-pod",
 	"managed-device",
 	"managed-rollout",
 	"managed-upgrade-leaf",
@@ -71,7 +72,7 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.ClusterScope,
 		matchConditions: []string{"managed-node"}, variables: []string{"manager", "oldManaged", "managerLegacyHandoff", "legacyHandoffMarkerPreserved"}, validations: 3, coreTyped: true,
 		requiredFragments: []string{"worker-username", "request.subResource == 'status'", "object.spec == oldObject.spec", "node-uid", "device-uid", "worker-protocol", "worker-observed-revision", "last-applied-node-status", "managerLegacyHandoff", "legacy-handoff", "projected-keys", "managed-taints"},
-		digest:            "sha256:8e24dbd6f8dc833eba95e87096cf1daee03b41ff6180d591eaca526236ec7a19",
+		digest:            "sha256:6ca7f1c9f16822cf017c06945f019646386b7ed123a0084acdeda0d5ea3732af",
 	},
 	"managed-pod-status": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods/status"},
@@ -80,13 +81,22 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		requiredFragments: []string{"cisco-vk-managed-", "cisco-vk-legacy-", "oldObject.spec.nodeName", "object.spec == oldObject.spec", "workerServiceAccount", "request.userInfo.username"},
 		digest:            "sha256:0a2d27b4e3eb3c6051b1068173448a1b81920b97fc8a4f723b4d0ec01af9bea9",
 	},
+	"managed-drain-pod": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"drain-metadata"},
+		variables:       []string{"manager", "oldSession", "newSession", "oldFinalizers", "newFinalizers"},
+		validations:     3, coreTyped: true,
+		requiredFragments: []string{"drain-session", "iosxe-rollout-drain", "request.userInfo.username", "object.spec == oldObject.spec", "metadata.finalizers"},
+		digest:            "sha256:76b6e047b26a575baa59f94a3b28098d9778b1be1a27816116f0d8c0fa3d0bc1",
+	},
 	"managed-device": {
 		apiGroups: []string{"cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"ciscodevices", "ciscodevices/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
-		variables:         []string{"manager", "newProtectedLabels", "oldProtectedLabels", "newProtectedAnnotations", "oldProtectedAnnotations"},
-		validations:       11,
-		requiredFragments: []string{"check('topology')", "nodeIdentity", "topologyProjection", "topologyLock", "maintenanceSession", "distribution.cisco.vk/", "request-legacy-handoff", "isolated-legacy-worker", "legacyHandoff", "healthObservation", "workerRevision", "request.subResource", "object.spec == oldObject.spec", "object.spec.labels == oldObject.spec.labels", "object.spec.taints == oldObject.spec.taints", "object.spec.maxPods", "object.spec.maxPods <= 110", "ownerReferences", "finalizers", "oldObject.status.legacyHandoff.phase == 'Complete'"},
-		digest:            "sha256:8918af1b52e891bf67c5d23dd53accbc3e4bf477e29921447c93d227d4a01511",
+		variables:         []string{"manager", "newProtectedLabels", "oldProtectedLabels", "newProtectedAnnotations", "oldProtectedAnnotations", "newDrainCordonHold", "oldDrainCordonHold"},
+		validations:       12,
+		requiredFragments: []string{"check('topology')", "nodeIdentity", "topologyProjection", "topologyLock", "maintenanceSession", "distribution.cisco.vk/", "request-legacy-handoff", "isolated-legacy-worker", "legacyHandoff", "healthObservation", "workerRevision", "request.subResource", "object.spec == oldObject.spec", "object.spec.labels == oldObject.spec.labels", "object.spec.taints == oldObject.spec.taints", "object.spec.maxPods", "object.spec.maxPods <= 110", "ownerReferences", "finalizers", "oldObject.status.legacyHandoff.phase == 'Complete'", "drain-cordon-hold"},
+		digest:            "sha256:6025de3d6467d8186f4821a362e474076514c3604ace7f36a1c0573a4275938c",
 	},
 	"managed-rollout": {
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwarerollouts", "iosxesoftwarerollouts/status"},
@@ -102,8 +112,8 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		matchConditions:   []string{"managed-leaf"},
 		variables:         []string{"manager", "oldClaims", "newClaims"},
 		validations:       7,
-		requiredFragments: []string{"worker-username", "iosxesoftwareupgrade-cleanup", "managerAdmission", "managerControl", "managedMutationClaims", "primarySupervisorInstallRequested", "reservationID", "policyEpoch", "topologyLockID", "observedWorkerConfigRevision"},
-		digest:            "sha256:3339c1f7cf33800047dcfe1d759cae5c99ea8b152f69466aae36c72af8254b6d",
+		requiredFragments: []string{"worker-username", "iosxesoftwareupgrade-cleanup", "managerAdmission", "managerControl", "managerDrain", "workerDrain", "managedMutationClaims", "primarySupervisorInstallRequested", "reservationID", "policyEpoch", "topologyLockID", "observedWorkerConfigRevision"},
+		digest:            "sha256:19a56430ce82e2a71121d3818aaea274dc750dfcb47fcd639f787253fd191196",
 	},
 	"topology-policy": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},
@@ -125,8 +135,8 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		matchConditions: []string{"managed-maintenance-request"},
 		variables:       []string{"manager", "oldRequest", "newRequest", "oldHeld", "newHeld", "oldTransitions", "managerCreate", "managerAdopt", "boundWorker", "holderChanged"},
 		validations:     8, coreTyped: true,
-		requiredFragments: []string{"maintenance-request-version", "maintenance-session-token", "maintenance-operation-uid", "maintenance-control-revision", "worker-username", "holderIdentity", "device-uid"},
-		digest:            "sha256:3a33ace5e0020e020d28947d70b0221e95459aa286f72110675e4406cd99f864",
+		requiredFragments: []string{"maintenance-request-version", "maintenance-session-token", "maintenance-operation-uid", "maintenance-control-revision", "maintenance-purpose", "software-drain", "worker-username", "holderIdentity", "device-uid"},
+		digest:            "sha256:b41035ad3ab1c49d0930238582c5e7e223c9c2d993ffaf7eaee44950c787b870",
 	},
 }
 

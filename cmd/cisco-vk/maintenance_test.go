@@ -75,8 +75,10 @@ func TestNewMaintenanceCoordinatorUsesDistinctRuntimeIdentity(t *testing.T) {
 	if coordinator == nil {
 		t.Fatal("newMaintenanceCoordinator() = nil")
 	}
-	if coordinator.Namespace != identity.DeviceNamespace || coordinator.DeviceName != identity.DeviceName || coordinator.NodeName != identity.NodeName {
-		t.Fatalf("coordinator identity = namespace=%q device=%q node=%q", coordinator.Namespace, coordinator.DeviceName, coordinator.NodeName)
+	if coordinator.Namespace != identity.DeviceNamespace || coordinator.DeviceName != identity.DeviceName ||
+		coordinator.NodeName != identity.NodeName || coordinator.WorkerRevision != identity.WorkerRevision {
+		t.Fatalf("coordinator identity = namespace=%q device=%q node=%q revision=%q",
+			coordinator.Namespace, coordinator.DeviceName, coordinator.NodeName, coordinator.WorkerRevision)
 	}
 	if coordinator.LeaseNamespace != "fleet-leases" {
 		t.Fatalf("LeaseNamespace = %q", coordinator.LeaseNamespace)

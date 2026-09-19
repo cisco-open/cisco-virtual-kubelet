@@ -219,7 +219,10 @@ helm upgrade "$release_name" "$chart_dir" \
   --set topology.enabled=true \
   --set controller.leaderElect=true \
   --set rbac.profile=strict \
-  --set gnoi.enableSoftwareUpgrade=true >/dev/null
+  --set gnoi.enableSoftwareUpgrade=true \
+  --set topology.policy.workloadDrain.enabled=true \
+  --set-json "topology.policy.workloadDrain.allowedNamespaces=[\"${device_namespace}\"]" \
+  >/dev/null
 if kubectl get clusterrole cisco-virtual-kubelet-controller -o yaml | \
    grep -Fq '  - replicasets'; then
   echo "base manager role retained topology-only ReplicaSet authority" >&2
@@ -252,7 +255,7 @@ kubectl delete rolebinding cisco-virtual-kubelet-device \
 policy_count="$(kubectl get validatingadmissionpolicy \
   -l "app.kubernetes.io/instance=${release_name}" \
   -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' ')"
-test "$policy_count" -eq 8
+test "$policy_count" -eq 9
 for policy in $(kubectl get validatingadmissionpolicy \
   -l "app.kubernetes.io/instance=${release_name}" \
   -o jsonpath='{.items[*].metadata.name}'); do
@@ -283,7 +286,7 @@ done
 live_admission_manifest="$scratch_dir/live-admission.yaml"
 first_policy=true
 for suffix in \
-  managed-node managed-pod-status managed-device managed-rollout managed-upgrade-leaf \
+  managed-node managed-pod-status managed-drain-pod managed-device managed-rollout managed-upgrade-leaf \
   topology-policy topology-ledger managed-maintenance-lease; do
   if [ "$first_policy" = false ]; then
     printf '%s\n' '---' >>"$live_admission_manifest"
@@ -376,6 +379,8 @@ worker_uid_hash="$(printf '%s' "$device_uid" | sha256_stdin | cut -c1-8)"
 worker_service_account="cisco-vk-managed-${managed_node}-${worker_uid_hash}"
 worker_username="system:serviceaccount:${device_namespace}:${worker_service_account}"
 worker_revision="sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+worker_revision_rotated="sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+worker_revision_recovery="sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 legacy_device_uid="$(kubectl get ciscodevice device-legacy --namespace "$device_namespace" \
   -o jsonpath='{.metadata.uid}')"
 legacy_uid_hash="$(printf '%s' "$legacy_device_uid" | sha256_stdin | cut -c1-8)"
@@ -417,6 +422,19 @@ test "$(kubectl auth can-i patch iosxesoftwareupgrades.ops.cisco.vk \
   --namespace "$device_namespace" --as="$worker_username")" = "yes"
 test "$(kubectl auth can-i patch iosxesoftwareupgrades.ops.cisco.vk \
   --namespace "$system_namespace" --as="$worker_username")" = "no"
+# Workload drain is namespace-allowlisted and uses the Eviction subresource;
+# neither the topology manager nor the generated worker may directly delete a
+# Pod. The worker also receives none of the manager's drain-metadata authority.
+test "$(kubectl auth can-i patch pods --namespace "$device_namespace" \
+  --as="$manager_username")" = "yes"
+test "$(kubectl auth can-i create pods --subresource=eviction \
+  --namespace "$device_namespace" --as="$manager_username")" = "yes"
+test "$(kubectl auth can-i delete pods --namespace "$device_namespace" \
+  --as="$manager_username")" = "no"
+test "$(kubectl auth can-i create pods --namespace "$device_namespace" \
+  --as="$manager_username")" = "no"
+test "$(kubectl auth can-i patch pods --namespace "$device_namespace" \
+  --as="$worker_username")" = "no"
 
 cat >"$scratch_dir/managed-node.yaml" <<EOF
 apiVersion: v1
@@ -579,6 +597,495 @@ fi
 grep -Eq 'exact bound virtual Node|generated worker identity|denied the request|failed expression' \
   "$scratch_dir/legacy-pod-peer-negative.txt"
 
+# Grant a generated worker main-resource Pod patch only as an adversarial test.
+# Admission must reserve the exact drain marker/finalizer to the manager, must
+# reject live session replacement, and must not let the manager smuggle any
+# unrelated Pod mutation through its narrowly scoped allowlist Role.
+kubectl create role drain-pod-adversary --namespace "$device_namespace" \
+  --verb=get,update,patch,delete --resource=pods >/dev/null
+kubectl create rolebinding drain-pod-adversary --namespace "$device_namespace" \
+  --role=drain-pod-adversary \
+  --serviceaccount="${device_namespace}:${worker_service_account}" >/dev/null
+# Prove admission still rejects the manager if a future RBAC expansion were to
+# accidentally grant direct deletion; policy/v1 Eviction remains the only path.
+kubectl create rolebinding drain-pod-manager-adversary --namespace "$device_namespace" \
+  --role=drain-pod-adversary \
+  --serviceaccount="${system_namespace}:cisco-virtual-kubelet-controller" >/dev/null
+test "$(kubectl auth can-i delete pods --namespace "$device_namespace" \
+  --as="$worker_username")" = "yes"
+test "$(kubectl auth can-i delete pods --namespace "$device_namespace" \
+  --as="$manager_username")" = "yes"
+drain_session_a="55555555-5555-4555-8555-555555555555"
+drain_session_b="66666666-6666-4666-8666-666666666666"
+kubectl patch --as="$manager_username" pod cvk-worker-own \
+  --namespace "$device_namespace" --type=merge \
+  -p "{\"metadata\":{\"annotations\":{\"ops.cisco.vk/drain-session\":\"${drain_session_a}\"},\"finalizers\":[\"ops.cisco.vk/iosxe-rollout-drain\"]}}" \
+  >/dev/null
+if kubectl patch --as="$worker_username" pod cvk-worker-own \
+    --namespace "$device_namespace" --type=merge --dry-run=server \
+    -p '{"metadata":{"annotations":{"ops.cisco.vk/drain-session":null},"finalizers":[]}}' \
+    >"$scratch_dir/drain-pod-worker-negative.txt" 2>&1; then
+  echo "managed worker removed the manager-owned drain protection" >&2
+  exit 1
+fi
+grep -Eq 'only the topology manager|denied the request|failed expression' \
+  "$scratch_dir/drain-pod-worker-negative.txt"
+if kubectl patch --as="$manager_username" pod cvk-worker-own \
+    --namespace "$device_namespace" --type=merge --dry-run=server \
+    -p "{\"metadata\":{\"annotations\":{\"ops.cisco.vk/drain-session\":\"${drain_session_b}\"}}}" \
+    >"$scratch_dir/drain-pod-session-replace-negative.txt" 2>&1; then
+  echo "topology manager replaced a live Pod drain session" >&2
+  exit 1
+fi
+grep -Eq 'live session cannot be replaced|denied the request|failed expression' \
+  "$scratch_dir/drain-pod-session-replace-negative.txt"
+if kubectl patch --as="$manager_username" pod cvk-worker-own \
+    --namespace "$device_namespace" --type=merge --dry-run=server \
+    -p '{"metadata":{"labels":{"manager-smuggled":"true"}}}' \
+    >"$scratch_dir/drain-pod-manager-scope-negative.txt" 2>&1; then
+  echo "topology manager changed unrelated protected Pod metadata" >&2
+  exit 1
+fi
+grep -Eq 'may change only its exact drain marker|denied the request|failed expression' \
+  "$scratch_dir/drain-pod-manager-scope-negative.txt"
+# A caller with otherwise-valid direct Pod delete authority must not bypass a
+# PDB once the manager has installed the exact drain protection. This is an
+# actual DELETE request, not a dry run, so also prove it left no deletion mark.
+if kubectl delete --as="$worker_username" pod cvk-worker-own \
+    --namespace "$device_namespace" --wait=false \
+    >"$scratch_dir/drain-pod-direct-delete-negative.txt" 2>&1; then
+  echo "non-manager directly deleted a drain-protected Pod" >&2
+  exit 1
+fi
+grep -Eq 'direct deletion of a protected Pod|denied the request|failed expression' \
+  "$scratch_dir/drain-pod-direct-delete-negative.txt"
+test -z "$(kubectl get pod cvk-worker-own --namespace "$device_namespace" \
+  -o jsonpath='{.metadata.deletionTimestamp}')"
+if kubectl delete --as="$manager_username" pod cvk-worker-own \
+    --namespace "$device_namespace" --wait=false \
+    >"$scratch_dir/drain-pod-manager-delete-negative.txt" 2>&1; then
+  echo "topology manager directly deleted a drain-protected Pod" >&2
+  exit 1
+fi
+grep -Eq 'direct deletion of a protected Pod|denied the request|failed expression' \
+  "$scratch_dir/drain-pod-manager-delete-negative.txt"
+test -z "$(kubectl get pod cvk-worker-own --namespace "$device_namespace" \
+  -o jsonpath='{.metadata.deletionTimestamp}')"
+kubectl patch --as="$manager_username" pod cvk-worker-own \
+  --namespace "$device_namespace" --type=merge \
+  -p '{"metadata":{"annotations":{"ops.cisco.vk/drain-session":null},"finalizers":[]}}' \
+  >/dev/null
+
+# Exercise the only supported disruptive path through the real policy/v1
+# Eviction endpoint. One healthy Pod is PDB-permitted; a second is protected
+# by minAvailable. Successful eviction leaves the manager finalizer in place
+# until exact cleanup, while a 429 must leave the blocked Pod untouched.
+for drain_case in permitted blocked; do
+  cat <<EOF | kubectl create -f - >/dev/null
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cvk-drain-${drain_case}
+  namespace: ${device_namespace}
+  labels:
+    cvk-topology-test/drain-case: ${drain_case}
+spec:
+  nodeName: ${managed_node}
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.10
+EOF
+  kubectl patch pod "cvk-drain-${drain_case}" \
+    --namespace "$device_namespace" --subresource=status --type=merge \
+    -p '{"status":{"phase":"Running","conditions":[{"type":"Ready","status":"True","lastTransitionTime":"2026-01-01T00:00:00Z"}]}}' \
+    >/dev/null
+done
+cat <<EOF | kubectl create -f - >/dev/null
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cvk-drain-permitted
+  namespace: ${device_namespace}
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      cvk-topology-test/drain-case: permitted
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cvk-drain-blocked
+  namespace: ${device_namespace}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      cvk-topology-test/drain-case: blocked
+EOF
+for _ in $(seq 1 40); do
+  permitted_disruptions="$(kubectl get pdb cvk-drain-permitted \
+    --namespace "$device_namespace" -o jsonpath='{.status.disruptionsAllowed}')"
+  blocked_disruptions="$(kubectl get pdb cvk-drain-blocked \
+    --namespace "$device_namespace" -o jsonpath='{.status.disruptionsAllowed}')"
+  if [ "$permitted_disruptions" = "1" ] && [ "$blocked_disruptions" = "0" ]; then
+    break
+  fi
+  sleep 0.25
+done
+test "$permitted_disruptions" = "1"
+test "$blocked_disruptions" = "0"
+for drain_case in permitted blocked; do
+  kubectl patch --as="$manager_username" pod "cvk-drain-${drain_case}" \
+    --namespace "$device_namespace" --type=merge \
+    -p "{\"metadata\":{\"annotations\":{\"ops.cisco.vk/drain-session\":\"${drain_session_a}\"},\"finalizers\":[\"ops.cisco.vk/iosxe-rollout-drain\"]}}" \
+    >/dev/null
+done
+cat >"$scratch_dir/drain-eviction-permitted.yaml" <<EOF
+{"apiVersion":"policy/v1","kind":"Eviction","metadata":{
+  "name":"cvk-drain-permitted","namespace":"${device_namespace}"},
+  "deleteOptions":{"gracePeriodSeconds":0}}
+EOF
+kubectl create --as="$manager_username" \
+  --raw="/api/v1/namespaces/${device_namespace}/pods/cvk-drain-permitted/eviction" \
+  -f "$scratch_dir/drain-eviction-permitted.yaml" >/dev/null
+test -n "$(kubectl get pod cvk-drain-permitted --namespace "$device_namespace" \
+  -o jsonpath='{.metadata.deletionTimestamp}')"
+test "$(kubectl get pod cvk-drain-permitted --namespace "$device_namespace" \
+  -o jsonpath='{.metadata.annotations.ops\.cisco\.vk/drain-session}')" = "$drain_session_a"
+kubectl patch --as="$manager_username" pod cvk-drain-permitted \
+  --namespace "$device_namespace" --type=merge \
+  -p '{"metadata":{"annotations":{"ops.cisco.vk/drain-session":null},"finalizers":[]}}' \
+  >/dev/null
+kubectl wait --for=delete pod/cvk-drain-permitted \
+  --namespace "$device_namespace" --timeout=30s >/dev/null
+
+cat >"$scratch_dir/drain-eviction-blocked.yaml" <<EOF
+{"apiVersion":"policy/v1","kind":"Eviction","metadata":{
+  "name":"cvk-drain-blocked","namespace":"${device_namespace}"}}
+EOF
+if kubectl create --as="$manager_username" \
+    --raw="/api/v1/namespaces/${device_namespace}/pods/cvk-drain-blocked/eviction" \
+    -f "$scratch_dir/drain-eviction-blocked.yaml" \
+    >"$scratch_dir/drain-eviction-blocked.txt" 2>&1; then
+  echo "PDB-blocked Pod eviction unexpectedly succeeded" >&2
+  exit 1
+fi
+grep -Eq 'Cannot evict pod|disruption budget|Too Many Requests|429' \
+  "$scratch_dir/drain-eviction-blocked.txt"
+test -z "$(kubectl get pod cvk-drain-blocked --namespace "$device_namespace" \
+  -o jsonpath='{.metadata.deletionTimestamp}')"
+test "$(kubectl get pod cvk-drain-blocked --namespace "$device_namespace" \
+  -o jsonpath='{.metadata.annotations.ops\.cisco\.vk/drain-session}')" = "$drain_session_a"
+test "$(kubectl get pod cvk-drain-blocked --namespace "$device_namespace" \
+  -o jsonpath='{.metadata.finalizers[0]}')" = "ops.cisco.vk/iosxe-rollout-drain"
+kubectl patch --as="$manager_username" pod cvk-drain-blocked \
+  --namespace "$device_namespace" --type=merge \
+  -p '{"metadata":{"annotations":{"ops.cisco.vk/drain-session":null},"finalizers":[]}}' \
+  >/dev/null
+
+# Exercise manager/worker ownership and the immutable drain ledger on an exact
+# manager-created leaf. The complete candidate/PDB snapshot is published once;
+# only progress may change afterward, and worker inventory may lag a newer
+# recovery control revision while remaining bound to the exact session.
+device_generation="$(kubectl get ciscodevice device-a --namespace "$device_namespace" \
+  -o jsonpath='{.metadata.generation}')"
+policy_uid_now="$(kubectl get configmap "${admission_prefix}-topology-policy" \
+  --namespace "$system_namespace" -o jsonpath='{.metadata.uid}')"
+policy_resource_version_now="$(kubectl get configmap "${admission_prefix}-topology-policy" \
+  --namespace "$system_namespace" -o jsonpath='{.metadata.resourceVersion}')"
+ledger_uid_now="$(kubectl get configmap "${admission_prefix}-topology-ledger" \
+  --namespace "$system_namespace" -o jsonpath='{.metadata.uid}')"
+drain_pod_uid="$(kubectl get pod cvk-worker-own --namespace "$device_namespace" \
+  -o jsonpath='{.metadata.uid}')"
+cat >"$scratch_dir/managed-drain-leaf.yaml" <<EOF
+apiVersion: ops.cisco.vk/v1alpha1
+kind: IOSXESoftwareUpgrade
+metadata:
+  name: managed-drain-probe
+  namespace: ${device_namespace}
+  annotations:
+    topology.cisco.vk/managed: "true"
+    topology.cisco.vk/device-namespace: ${device_namespace}
+    topology.cisco.vk/device-name: device-a
+    topology.cisco.vk/device-uid: ${device_uid}
+    topology.cisco.vk/device-generation: "${device_generation}"
+    topology.cisco.vk/node-name: ${managed_node}
+    topology.cisco.vk/node-uid: ${managed_node_uid}
+    topology.cisco.vk/worker-username: ${worker_username}
+    topology.cisco.vk/worker-protocol: rollout-v1
+    topology.cisco.vk/campaign-namespace: ${device_namespace}
+    topology.cisco.vk/campaign-name: integration-rollout
+    topology.cisco.vk/campaign-uid: 88888888-8888-4888-8888-888888888888
+    topology.cisco.vk/plan-hash: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    topology.cisco.vk/ledger-uid: ${ledger_uid_now}
+    topology.cisco.vk/reservation-id: reservation-drain-probe
+spec:
+  deviceRef:
+    name: device-a
+  imageSource:
+    url: https://images.example.test/cat9k.bin
+    sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  targetVersion: 17.18.4
+EOF
+kubectl create --as="$manager_username" -f "$scratch_dir/managed-drain-leaf.yaml" >/dev/null
+drain_leaf_uid="$(kubectl get iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" -o jsonpath='{.metadata.uid}')"
+cat >"$scratch_dir/manager-drain-status.json" <<EOF
+{
+  "status": {
+    "managerAdmission": {
+      "state": "Pending",
+      "protocolVersion": "rollout-v1",
+      "campaignUID": "88888888-8888-4888-8888-888888888888",
+      "planHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "policyUID": "${policy_uid_now}",
+      "policyResourceVersion": "${policy_resource_version_now}",
+      "policyEpoch": 1,
+      "ledgerUID": "${ledger_uid_now}",
+      "reservationID": "reservation-drain-probe",
+      "topologyLockID": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "leafUID": "${drain_leaf_uid}",
+      "deviceUID": "${device_uid}",
+      "deviceGeneration": ${device_generation},
+      "physicalIdentity": "integration-serial-managed",
+      "nodeUID": "${managed_node_uid}",
+      "controlRevision": 0,
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    "managerControl": {
+      "revision": 0,
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    "managerDrain": {
+      "protocolVersion": "pdb-drain-v1",
+      "state": "Preparing",
+      "sessionToken": "${drain_session_a}",
+      "reservationID": "reservation-drain-probe",
+      "policyEpoch": 1,
+      "controlRevision": 0,
+      "nodeUID": "${managed_node_uid}",
+      "nodeUnschedulableBefore": false,
+      "maintenanceTaintPresentBefore": false,
+      "startedAt": "2026-01-01T00:00:00Z",
+      "drainDeadline": "2026-01-01T00:10:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z",
+      "pods": [{
+        "namespace": "${device_namespace}",
+        "name": "cvk-worker-own",
+        "uid": "${drain_pod_uid}",
+        "eligibilityHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "controller": {
+          "apiVersion": "apps/v1",
+          "kind": "ReplicaSet",
+          "namespace": "${device_namespace}",
+          "name": "integration-rs",
+          "uid": "99999999-9999-4999-8999-999999999999",
+          "generation": 1
+        },
+        "workloadController": {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "namespace": "${device_namespace}",
+          "name": "integration-deployment",
+          "uid": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "generation": 1
+        },
+        "pdbs": [{
+          "apiVersion": "policy/v1",
+          "kind": "PodDisruptionBudget",
+          "namespace": "${device_namespace}",
+          "name": "integration-pdb",
+          "uid": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          "generation": 1,
+          "observedGeneration": 1,
+          "disruptionsAllowed": 1,
+          "currentHealthy": 1,
+          "desiredHealthy": 0,
+          "expectedPods": 1
+        }],
+        "terminationGracePeriodSeconds": 30,
+        "phase": "Selected"
+      }]
+    }
+  }
+}
+EOF
+sed "s/${drain_session_a}/55555555-5555-1555-8555-555555555555/" \
+  "$scratch_dir/manager-drain-status.json" >"$scratch_dir/manager-drain-v1-token.json"
+if kubectl patch --as="$manager_username" iosxesoftwareupgrade managed-drain-probe \
+    --namespace "$device_namespace" --subresource=status --type=merge \
+    --patch-file "$scratch_dir/manager-drain-v1-token.json" --dry-run=server \
+    >"$scratch_dir/manager-drain-v1-token-negative.txt" 2>&1; then
+  echo "manager drain accepted a non-v4 session token" >&2
+  exit 1
+fi
+grep -Eq 'sessionToken|Invalid value|denied (the )?request|failed rule' \
+  "$scratch_dir/manager-drain-v1-token-negative.txt"
+kubectl patch --as="$manager_username" iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" --subresource=status --type=merge \
+  --patch-file "$scratch_dir/manager-drain-status.json" >/dev/null
+if kubectl patch --as="$worker_username" iosxesoftwareupgrade managed-drain-probe \
+    --namespace "$device_namespace" --subresource=status --type=merge --dry-run=server \
+    -p '{"status":{"managerDrain":{"state":"Guarded"}}}' \
+    >"$scratch_dir/worker-manager-drain-negative.txt" 2>&1; then
+  echo "managed worker changed managerDrain" >&2
+  exit 1
+fi
+grep -Eq 'managerDrain status are manager-owned|denied the request|failed expression' \
+  "$scratch_dir/worker-manager-drain-negative.txt"
+if kubectl patch --as="$manager_username" iosxesoftwareupgrade managed-drain-probe \
+    --namespace "$device_namespace" --subresource=status --type=json --dry-run=server \
+    -p '[{"op":"replace","path":"/status/managerDrain/pods/0/eligibilityHash","value":"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"}]' \
+    >"$scratch_dir/manager-drain-snapshot-negative.txt" 2>&1; then
+  echo "manager changed the frozen drain eligibility digest" >&2
+  exit 1
+fi
+grep -Eq 'eligibility snapshot is immutable|denied (the )?request|failed rule' \
+  "$scratch_dir/manager-drain-snapshot-negative.txt"
+if kubectl patch --as="$manager_username" iosxesoftwareupgrade managed-drain-probe \
+    --namespace "$device_namespace" --subresource=status --type=merge --dry-run=server \
+    -p '{"status":{"managerDrain":{"pods":[]}}}' \
+    >"$scratch_dir/manager-drain-selection-negative.txt" 2>&1; then
+  echo "manager removed the immutable drain Pod selection" >&2
+  exit 1
+fi
+grep -Eq 'Pod entries cannot be removed|denied (the )?request|failed rule' \
+  "$scratch_dir/manager-drain-selection-negative.txt"
+kubectl patch --as="$worker_username" iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" --subresource=status --type=merge -p "{
+    \"status\":{\"workerControl\":{
+      \"observedAdmissionState\":\"Pending\",
+      \"observedPolicyEpoch\":1,
+      \"observedControlRevision\":0,
+      \"observedWorkerConfigRevision\":\"${worker_revision}\",
+      \"effectiveState\":\"Denied\",
+      \"updatedAt\":\"2026-01-01T00:01:00Z\"}}}" >/dev/null
+kubectl patch --as="$worker_username" iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" --subresource=status --type=merge -p "{
+    \"status\":{\"workerDrain\":{
+      \"protocolVersion\":\"pdb-drain-v1\",
+      \"observedSessionToken\":\"${drain_session_a}\",
+      \"observedPolicyEpoch\":1,
+      \"observedControlRevision\":0,
+      \"observedWorkerConfigRevision\":\"${worker_revision}\",
+      \"inventoryRevision\":1,
+      \"inventoryObservedAt\":\"2026-01-01T00:02:00Z\",
+      \"inventoryComplete\":true,
+      \"remainingAuthorizedPodUIDs\":[\"${drain_pod_uid}\"],
+      \"updatedAt\":\"2026-01-01T00:02:00Z\"}}}" >/dev/null
+if kubectl patch --as="$worker_username" iosxesoftwareupgrade managed-drain-probe \
+    --namespace "$device_namespace" --subresource=status --type=merge --dry-run=server \
+    -p '{"status":{"workerDrain":{"inventoryComplete":false,"unknownDeviceWorkloadCount":1}}}' \
+    >"$scratch_dir/worker-drain-same-revision-evidence-negative.txt" 2>&1; then
+  echo "workerDrain changed inventory evidence without advancing inventoryRevision" >&2
+  exit 1
+fi
+grep -Eq 'strictly newer inventory revision|denied (the )?request|failed rule' \
+  "$scratch_dir/worker-drain-same-revision-evidence-negative.txt"
+if kubectl patch --as="$worker_username" iosxesoftwareupgrade managed-drain-probe \
+    --namespace "$device_namespace" --subresource=status --type=merge --dry-run=server \
+    -p '{"status":{"workerDrain":{"remainingAuthorizedPodUIDs":["foreign-pod-uid"]}}}' \
+    >"$scratch_dir/worker-drain-subset-negative.txt" 2>&1; then
+  echo "workerDrain claimed a Pod outside the immutable manager snapshot" >&2
+  exit 1
+fi
+grep -Eq 'subset of the frozen manager snapshot|managerDrain Pod|denied the request|failed expression' \
+  "$scratch_dir/worker-drain-subset-negative.txt"
+# A live worker revision can rotate while the previous inventory remains
+# durable but stale. It is no longer proof until a fresh inventory observation
+# advances both its revision and timestamps under the new WorkerControl.
+kubectl patch --as="$worker_username" iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" --subresource=status --type=merge -p "{
+    \"status\":{\"workerControl\":{
+      \"observedAdmissionState\":\"Pending\",
+      \"observedPolicyEpoch\":1,
+      \"observedControlRevision\":0,
+      \"observedWorkerConfigRevision\":\"${worker_revision_rotated}\",
+      \"effectiveState\":\"Denied\",
+      \"updatedAt\":\"2026-01-01T00:02:30Z\"}}}" >/dev/null
+test "$(kubectl get iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" \
+  -o jsonpath='{.status.workerDrain.observedWorkerConfigRevision}')" = "$worker_revision"
+if kubectl patch --as="$worker_username" iosxesoftwareupgrade managed-drain-probe \
+    --namespace "$device_namespace" --subresource=status --type=merge --dry-run=server \
+    -p "{\"status\":{\"workerDrain\":{
+      \"observedWorkerConfigRevision\":\"${worker_revision_rotated}\"}}}" \
+    >"$scratch_dir/worker-drain-rotation-without-inventory-negative.txt" 2>&1; then
+  echo "workerDrain changed configuration revision without a fresh inventory" >&2
+  exit 1
+fi
+grep -Eq 'strictly newer inventory observation|denied (the )?request|failed rule' \
+  "$scratch_dir/worker-drain-rotation-without-inventory-negative.txt"
+if kubectl patch --as="$worker_username" iosxesoftwareupgrade managed-drain-probe \
+    --namespace "$device_namespace" --subresource=status --type=merge --dry-run=server \
+    -p "{\"status\":{\"workerDrain\":{
+      \"observedWorkerConfigRevision\":\"${worker_revision_rotated}\",
+      \"inventoryRevision\":2}}}" \
+    >"$scratch_dir/worker-drain-rotation-without-time-negative.txt" 2>&1; then
+  echo "workerDrain changed configuration revision without newer observation times" >&2
+  exit 1
+fi
+grep -Eq 'newer observation timestamps|strictly newer inventory observation|denied (the )?request|failed rule' \
+  "$scratch_dir/worker-drain-rotation-without-time-negative.txt"
+kubectl patch --as="$worker_username" iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" --subresource=status --type=merge -p "{
+    \"status\":{\"workerDrain\":{
+      \"observedWorkerConfigRevision\":\"${worker_revision_rotated}\",
+      \"inventoryRevision\":2,
+      \"inventoryObservedAt\":\"2026-01-01T00:03:00Z\",
+      \"updatedAt\":\"2026-01-01T00:03:00Z\"}}}" >/dev/null
+test "$(kubectl get iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" -o jsonpath='{.status.workerDrain.inventoryRevision}')" = "2"
+test "$(kubectl get iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" \
+  -o jsonpath='{.status.workerDrain.observedWorkerConfigRevision}')" = "$worker_revision_rotated"
+# A manager cancellation advances control and enters bounded recovery while the
+# last worker inventory observation legitimately remains at the older revision.
+kubectl patch --as="$manager_username" iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" --subresource=status --type=merge -p '{
+    "status":{
+      "managerControl":{"revision":1,"cancel":true,"updatedAt":"2026-01-01T00:05:00Z"},
+      "managerDrain":{"state":"Recovering","controlRevision":1,
+        "recoveryDeadline":"2026-01-01T00:20:00Z","updatedAt":"2026-01-01T00:05:00Z"}
+    }}' >/dev/null
+kubectl patch --as="$worker_username" iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" --subresource=status --type=merge -p "{
+    \"status\":{\"workerControl\":{
+      \"observedAdmissionState\":\"Pending\",
+      \"observedPolicyEpoch\":1,
+      \"observedControlRevision\":1,
+      \"observedWorkerConfigRevision\":\"${worker_revision_recovery}\",
+      \"effectiveState\":\"Cancelled\",
+      \"updatedAt\":\"2026-01-01T00:06:00Z\"}}}" >/dev/null
+test "$(kubectl get iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" \
+  -o jsonpath='{.status.workerDrain.observedWorkerConfigRevision}')" = "$worker_revision_rotated"
+kubectl patch --as="$worker_username" iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" --subresource=status --type=merge -p "{
+    \"status\":{\"workerDrain\":{
+      \"observedControlRevision\":1,
+      \"observedWorkerConfigRevision\":\"${worker_revision_recovery}\",
+      \"inventoryRevision\":3,
+      \"inventoryObservedAt\":\"2026-01-01T00:07:00Z\",
+      \"updatedAt\":\"2026-01-01T00:07:00Z\"}}}" >/dev/null
+test "$(kubectl get iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" -o jsonpath='{.status.workerDrain.inventoryRevision}')" = "3"
+test "$(kubectl get iosxesoftwareupgrade managed-drain-probe \
+  --namespace "$device_namespace" \
+  -o jsonpath='{.status.workerDrain.observedWorkerConfigRevision}')" = "$worker_revision_recovery"
+if kubectl patch --as="$manager_username" iosxesoftwareupgrade managed-drain-probe \
+    --namespace "$device_namespace" --subresource=status --type=merge --dry-run=server \
+    -p '{"status":{"workerDrain":{"inventoryRevision":4,
+      "inventoryObservedAt":"2026-01-01T00:08:00Z","updatedAt":"2026-01-01T00:08:00Z"}}}' \
+    >"$scratch_dir/manager-worker-drain-negative.txt" 2>&1; then
+  echo "topology manager changed workerDrain" >&2
+  exit 1
+fi
+grep -Eq 'workerDrain.*worker-owned|denied the request|failed expression' \
+  "$scratch_dir/manager-worker-drain-negative.txt"
+
 # Every generated-worker Lease request is fenced even before annotations exist,
 # so a worker cannot create or squat an arbitrary coordination object.
 test "$(kubectl auth can-i create leases.coordination.k8s.io \
@@ -642,12 +1149,137 @@ sed -e "s/name: ${config_lease}/name: ${mutation_lease}/" \
   -e "s/cisco.vk\/family: ${config_family}/cisco.vk\/family: ${mutation_family}/" \
   -e 's/lease-purpose: config-family/lease-purpose: device-mutation/' \
   "$scratch_dir/config-lease.yaml" >"$scratch_dir/mutation-lease.yaml"
+# A preexisting unowned object carrying any maintenance protocol field is not a
+# wholly idle legacy Lease and cannot be adopted into the managed trust domain.
+cat <<EOF | kubectl create -f - >/dev/null
+apiVersion: coordination.k8s.io/v1
+kind: Lease
+metadata:
+  name: ${mutation_lease}
+  namespace: ${device_namespace}
+  annotations:
+    topology.cisco.vk/maintenance-purpose: WorkloadDrain
+spec: {}
+EOF
+if kubectl apply --server-side --force-conflicts \
+    --field-manager=cvk-topology-adoption-negative --as="$manager_username" \
+    --dry-run=server -f "$scratch_dir/mutation-lease.yaml" \
+    >"$scratch_dir/lease-adopt-maintenance-negative.txt" 2>&1; then
+  echo "topology manager adopted a Lease carrying stale maintenance purpose" >&2
+  exit 1
+fi
+grep -Eq 'safely adopt|complete protocol/purpose|denied the request|failed expression' \
+  "$scratch_dir/lease-adopt-maintenance-negative.txt"
+kubectl delete lease "$mutation_lease" --namespace "$device_namespace" >/dev/null
 kubectl create --as="$manager_username" -f "$scratch_dir/mutation-lease.yaml" >/dev/null
 kubectl patch --as="$worker_username" lease "$mutation_lease" \
   --namespace "$device_namespace" --type=merge -p '{"spec":{
     "holderIdentity":"software-upgrade/44444444-4444-4444-8444-444444444444",
     "leaseDurationSeconds":3600,"acquireTime":"2026-01-01T00:00:00.000000Z",
     "renewTime":"2026-01-01T00:00:00.000000Z","leaseTransitions":1}}' >/dev/null
+# Existing rollout-v1 requests remain backward-compatible without a purpose.
+kubectl patch --as="$worker_username" lease "$mutation_lease" \
+  --namespace "$device_namespace" --type=merge -p '{"metadata":{"annotations":{
+    "topology.cisco.vk/maintenance-request-version":"rollout-v1",
+    "topology.cisco.vk/maintenance-session-token":"77777777-7777-4777-8777-777777777777",
+    "topology.cisco.vk/maintenance-requested-at":"2026-01-01T00:00:01Z",
+    "topology.cisco.vk/maintenance-operation-namespace":"cvk-topology-test",
+    "topology.cisco.vk/maintenance-operation-name":"integration-upgrade",
+    "topology.cisco.vk/maintenance-operation-uid":"44444444-4444-4444-8444-444444444444",
+    "topology.cisco.vk/maintenance-control-revision":"0"}}}' >/dev/null
+# Clear the legacy request and release before acquiring the same canonical
+# fence for a drain session. No conflicting Lease family is introduced.
+kubectl patch --as="$worker_username" lease "$mutation_lease" \
+  --namespace "$device_namespace" --type=merge -p '{"metadata":{"annotations":{
+    "topology.cisco.vk/maintenance-request-version":null,
+    "topology.cisco.vk/maintenance-session-token":null,
+    "topology.cisco.vk/maintenance-requested-at":null,
+    "topology.cisco.vk/maintenance-operation-namespace":null,
+    "topology.cisco.vk/maintenance-operation-name":null,
+    "topology.cisco.vk/maintenance-operation-uid":null,
+    "topology.cisco.vk/maintenance-control-revision":null,
+    "topology.cisco.vk/maintenance-purpose":null}},"spec":{
+    "holderIdentity":null,"leaseDurationSeconds":null,"acquireTime":null,
+    "renewTime":null}}' >/dev/null
+kubectl patch --as="$worker_username" lease "$mutation_lease" \
+  --namespace "$device_namespace" --type=merge -p '{"spec":{
+    "holderIdentity":"software-drain/44444444-4444-4444-8444-444444444444",
+    "leaseDurationSeconds":3600,"acquireTime":"2026-01-01T00:00:02.000000Z",
+    "renewTime":"2026-01-01T00:00:02.000000Z","leaseTransitions":2}}' >/dev/null
+if kubectl patch --as="$worker_username" lease "$mutation_lease" \
+    --namespace "$device_namespace" --type=merge --dry-run=server -p '{"metadata":{"annotations":{
+      "topology.cisco.vk/maintenance-request-version":"pdb-drain-v1",
+      "topology.cisco.vk/maintenance-session-token":"55555555-5555-1555-8555-555555555555",
+      "topology.cisco.vk/maintenance-requested-at":"2026-01-01T00:00:03Z",
+      "topology.cisco.vk/maintenance-operation-namespace":"cvk-topology-test",
+      "topology.cisco.vk/maintenance-operation-name":"integration-upgrade",
+      "topology.cisco.vk/maintenance-operation-uid":"44444444-4444-4444-8444-444444444444",
+      "topology.cisco.vk/maintenance-control-revision":"0",
+      "topology.cisco.vk/maintenance-purpose":"WorkloadDrain"}}}' \
+    >"$scratch_dir/lease-drain-uuid-negative.txt" 2>&1; then
+  echo "managed mutation Lease accepted a non-v4 drain session token" >&2
+  exit 1
+fi
+grep -Eq 'complete protocol/purpose|denied the request|failed expression' \
+  "$scratch_dir/lease-drain-uuid-negative.txt"
+kubectl patch --as="$worker_username" lease "$mutation_lease" \
+  --namespace "$device_namespace" --type=merge -p "{\"metadata\":{\"annotations\":{
+    \"topology.cisco.vk/maintenance-request-version\":\"pdb-drain-v1\",
+    \"topology.cisco.vk/maintenance-session-token\":\"${drain_session_a}\",
+    \"topology.cisco.vk/maintenance-requested-at\":\"2026-01-01T00:00:03Z\",
+    \"topology.cisco.vk/maintenance-operation-namespace\":\"${device_namespace}\",
+    \"topology.cisco.vk/maintenance-operation-name\":\"integration-upgrade\",
+    \"topology.cisco.vk/maintenance-operation-uid\":\"44444444-4444-4444-8444-444444444444\",
+    \"topology.cisco.vk/maintenance-control-revision\":\"0\",
+    \"topology.cisco.vk/maintenance-purpose\":\"WorkloadDrain\"}}}" >/dev/null
+if kubectl patch --as="$worker_username" lease "$mutation_lease" \
+    --namespace "$device_namespace" --type=merge --dry-run=server \
+    -p '{"metadata":{"annotations":{"topology.cisco.vk/maintenance-purpose":"SoftwareMutation"}}}' \
+    >"$scratch_dir/lease-drain-purpose-negative.txt" 2>&1; then
+  echo "software-drain Lease accepted SoftwareMutation purpose" >&2
+  exit 1
+fi
+grep -Eq 'complete protocol/purpose|identity is immutable|denied the request|failed expression' \
+  "$scratch_dir/lease-drain-purpose-negative.txt"
+if kubectl patch --as="$worker_username" lease "$mutation_lease" \
+    --namespace "$device_namespace" --type=merge --dry-run=server -p '{
+      "metadata":{"annotations":{"topology.cisco.vk/maintenance-purpose":"SoftwareMutation"}},
+      "spec":{"holderIdentity":"software-upgrade/44444444-4444-4444-8444-444444444444"}}' \
+    >"$scratch_dir/lease-direct-promotion-negative.txt" 2>&1; then
+  echo "mutation Lease allowed direct held drain-to-software promotion" >&2
+  exit 1
+fi
+grep -Eq 'bound worker may only|identity is immutable|denied the request|failed expression' \
+  "$scratch_dir/lease-direct-promotion-negative.txt"
+# Promotion releases then re-acquires the same mutation fence for the same
+# operation/session before publishing SoftwareMutation purpose.
+kubectl patch --as="$worker_username" lease "$mutation_lease" \
+  --namespace "$device_namespace" --type=merge -p '{"metadata":{"annotations":{
+    "topology.cisco.vk/maintenance-request-version":null,
+    "topology.cisco.vk/maintenance-session-token":null,
+    "topology.cisco.vk/maintenance-requested-at":null,
+    "topology.cisco.vk/maintenance-operation-namespace":null,
+    "topology.cisco.vk/maintenance-operation-name":null,
+    "topology.cisco.vk/maintenance-operation-uid":null,
+    "topology.cisco.vk/maintenance-control-revision":null,
+    "topology.cisco.vk/maintenance-purpose":null}},"spec":{
+    "holderIdentity":null,"leaseDurationSeconds":null,"acquireTime":null,
+    "renewTime":null}}' >/dev/null
+kubectl patch --as="$worker_username" lease "$mutation_lease" \
+  --namespace "$device_namespace" --type=merge -p '{"spec":{
+    "holderIdentity":"software-upgrade/44444444-4444-4444-8444-444444444444",
+    "leaseDurationSeconds":3600,"acquireTime":"2026-01-01T00:00:04.000000Z",
+    "renewTime":"2026-01-01T00:00:04.000000Z","leaseTransitions":3}}' >/dev/null
+kubectl patch --as="$worker_username" lease "$mutation_lease" \
+  --namespace "$device_namespace" --type=merge -p "{\"metadata\":{\"annotations\":{
+    \"topology.cisco.vk/maintenance-request-version\":\"pdb-drain-v1\",
+    \"topology.cisco.vk/maintenance-session-token\":\"${drain_session_a}\",
+    \"topology.cisco.vk/maintenance-requested-at\":\"2026-01-01T00:00:05Z\",
+    \"topology.cisco.vk/maintenance-operation-namespace\":\"${device_namespace}\",
+    \"topology.cisco.vk/maintenance-operation-name\":\"integration-upgrade\",
+    \"topology.cisco.vk/maintenance-operation-uid\":\"44444444-4444-4444-8444-444444444444\",
+    \"topology.cisco.vk/maintenance-control-revision\":\"1\",
+    \"topology.cisco.vk/maintenance-purpose\":\"SoftwareMutation\"}}}" >/dev/null
 
 cat >"$scratch_dir/heartbeat-lease.yaml" <<EOF
 apiVersion: coordination.k8s.io/v1
@@ -1725,7 +2357,7 @@ if kubectl get clusterrole cisco-virtual-kubelet-controller -o yaml | \
 fi
 test "$(kubectl get validatingadmissionpolicy \
   -l "app.kubernetes.io/instance=${release_name}" \
-  -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' ')" -eq 8
+  -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' ')" -eq 9
 test -z "$(kubectl get deployment "${release_name}-cisco-virtual-kubelet-controller" \
   --namespace "$system_namespace" \
   -o jsonpath='{.spec.template.spec.containers[0].command}' | grep -o -- '--enable-managed-topology' || true)"

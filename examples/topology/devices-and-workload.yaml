@@ -57,9 +57,11 @@ spec:
           dhcp: true
 ---
 # Workload placement stays entirely within the default kube-scheduler. There
-# is no CVK scheduler plugin or alternate scheduler. This two-replica hard
-# spread requires at least two Ready, enrolled CVK Nodes in distinct zones
-# with topology.cisco.vk/site=berlin-campus; the device above is one member.
+# is no CVK scheduler plugin or alternate scheduler. This drain-qualified
+# example uses soft site preference and spreading so replacement replicas can
+# escape a maintained Node. It does not reserve capacity: qualify at least one
+# alternative Node on which this application becomes Ready before enabling
+# Drain. BlockIfRunning workloads may use hard placement.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -74,23 +76,27 @@ spec:
     metadata:
       labels:
         app: edge-agent
+        # This is only a portability assertion. It grants no authority unless
+        # administrator policy and a newly approved campaign both select
+        # Drain; the default BlockIfRunning behavior remains unchanged.
+        operations.cisco.vk/drain-safe: "true"
     spec:
       # No toleration is provided for topology.cisco.vk/uninitialized or
       # cisco.vk/device-maintenance. Those CVK-owned NoSchedule guards keep
       # ordinary application Pods away during handoff or device mutation.
       affinity:
         nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
                   - key: topology.cisco.vk/site
                     operator: In
                     values: [berlin-campus]
       topologySpreadConstraints:
         - maxSkew: 1
-          minDomains: 2
           topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: DoNotSchedule
+          whenUnsatisfiable: ScheduleAnyway
           nodeTaintsPolicy: Honor
           labelSelector:
             matchLabels:
@@ -104,8 +110,9 @@ spec:
               memory: 128Mi
 ---
 # This PDB documents the workload's availability intent for ordinary voluntary
-# disruption and the deferred Phase 4 drain design. Phase 2 uses
-# BlockIfRunning: it does not evict these Pods or consume this PDB.
+# disruption. The opt-in managed drain uses only policy/v1 Eviction and will
+# wait if this budget denies disruption. BlockIfRunning does not evict these
+# Pods or consume this PDB.
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:

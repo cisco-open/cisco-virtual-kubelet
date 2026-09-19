@@ -26,6 +26,43 @@
           }
         }
       }
+    },
+    {
+      "if": {
+        "required": ["topology"],
+        "properties": {
+          "topology": {
+            "required": ["policy"],
+            "properties": {
+              "policy": {
+                "required": ["workloadDrain"],
+                "properties": {
+                  "workloadDrain": {
+                    "required": ["enabled"],
+                    "properties": { "enabled": { "const": true } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["topology", "gnoi"],
+        "properties": {
+          "topology": {
+            "required": ["enabled"],
+            "properties": { "enabled": { "const": true } }
+          },
+          "gnoi": {
+            "required": ["disabled", "enableSoftwareUpgrade"],
+            "properties": {
+              "disabled": { "const": false },
+              "enableSoftwareUpgrade": { "const": true }
+            }
+          }
+        }
+      }
     }
   ],
   "definitions": {
@@ -189,7 +226,8 @@
             "healthFreshnessSeconds",
             "maxCampaignTargets",
             "maxActiveReservations",
-            "maxLedgerBytes"
+            "maxLedgerBytes",
+            "workloadDrain"
           ],
           "properties": {
             "namespace": { "$ref": "#/definitions/dnsLabelOrEmpty" },
@@ -283,7 +321,35 @@
             "healthFreshnessSeconds": { "type": "integer", "minimum": 30, "maximum": 3600 },
             "maxCampaignTargets": { "type": "integer", "minimum": 1, "maximum": 100 },
             "maxActiveReservations": { "type": "integer", "minimum": 1, "maximum": 256 },
-            "maxLedgerBytes": { "type": "integer", "minimum": 4096, "maximum": 262144 }
+            "maxLedgerBytes": { "type": "integer", "minimum": 4096, "maximum": 262144 },
+            "workloadDrain": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["enabled", "allowedNamespaces", "maxTimeoutSeconds", "maxPods", "maxTerminationGraceSeconds"],
+              "allOf": [
+                {
+                  "if": { "properties": { "enabled": { "const": true } } },
+                  "then": { "properties": { "allowedNamespaces": { "minItems": 1 } } }
+                }
+              ],
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "allowedNamespaces": {
+                  "type": "array",
+                  "maxItems": 16,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 63,
+                    "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"
+                  }
+                },
+                "maxTimeoutSeconds": { "type": "integer", "minimum": 300, "maximum": 7200 },
+                "maxPods": { "type": "integer", "minimum": 1, "maximum": 32 },
+                "maxTerminationGraceSeconds": { "type": "integer", "minimum": 30, "maximum": 600 }
+              }
+            }
           }
         },
         "ledger": {

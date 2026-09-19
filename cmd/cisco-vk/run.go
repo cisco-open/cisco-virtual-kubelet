@@ -473,6 +473,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	traceCorrelationCache := correlation.NewCache(0, 0, 0)
 	var appEventConsumer telemetrystate.AppEventConsumer
 	var devicePodLister func(context.Context) ([]*v1.Pod, error)
+	var drainDevicePodLister func(context.Context) ([]*v1.Pod, error)
 
 	handlerWrapper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if innerHandler != nil {
@@ -560,6 +561,9 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 			return nil, nil, fmt.Errorf("failed to create device driver: %w", err)
 		}
 		devicePodLister = sharedDriver.ListPods
+		if strictInventory, ok := sharedDriver.(drivers.DrainPodInventoryProvider); ok {
+			drainDevicePodLister = strictInventory.ListPodsForDrain
+		}
 
 		nodeHandler := provider.NewAppHostingNodeWithTopologyMode(ctx, identity.NodeName, &appCfg.Device, sharedDriver, projectionMode)
 		if identity.ManagedTopology {
@@ -660,6 +664,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		CorrelationCache:           traceCorrelationCache,
 		Maintenance:                maintenanceCoordinator,
 		DevicePodLister:            devicePodLister,
+		DrainDevicePodLister:       drainDevicePodLister,
 	}); err != nil {
 		log.G(ctx).WithError(err).Warn("IOSXEConfig reconciler not started; continuing without declarative config")
 	}

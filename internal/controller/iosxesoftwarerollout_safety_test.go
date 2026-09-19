@@ -1351,7 +1351,7 @@ func TestSourceIdentityChangeFencesUnclaimedGrant(t *testing.T) {
 		WithStatusSubresource(&opsv1alpha1.IOSXESoftwareRollout{}, &opsv1alpha1.IOSXESoftwareUpgrade{}).
 		WithObjects(rollout, leaf, ledgerCM).Build()
 	reconciler := &IOSXESoftwareRolloutReconciler{Client: apiClient, APIReader: apiClient}
-	result, err := reconciler.reconcileSourceChanged(context.Background(), rollout,
+	result, err := reconciler.reconcileSourceChanged(context.Background(), rollout, nil,
 		"source Secret incarnation changed", time.Now().UTC())
 	if err != nil {
 		t.Fatalf("reconcileSourceChanged() error = %v", err)

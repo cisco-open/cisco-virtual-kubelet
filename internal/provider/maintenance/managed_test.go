@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -249,7 +250,7 @@ func TestManagedMaintenancePublishConflictRechecksHolder(t *testing.T) {
 }
 
 func TestManagedOrdinaryWritesWaitForManagerSettlement(t *testing.T) {
-	for _, phase := range []ciskov1.DeviceMaintenanceSessionPhase{"", ciskov1.DeviceMaintenanceSessionAcknowledged, ciskov1.DeviceMaintenanceSessionActive, "Unknown", ciskov1.DeviceMaintenanceSessionSettled} {
+	for _, phase := range []ciskov1.DeviceMaintenanceSessionPhase{"", ciskov1.DeviceMaintenanceSessionAcknowledged, ciskov1.DeviceMaintenanceSessionActive, ciskov1.DeviceMaintenanceSessionRecovering, "Unknown", ciskov1.DeviceMaintenanceSessionSettled} {
 		t.Run(string(phase), func(t *testing.T) {
 			c, device, node, up, lease := managedCoordinatorFixture(t)
 			ctx := context.Background()
@@ -286,6 +287,137 @@ func TestManagedOrdinaryWritesWaitForManagerSettlement(t *testing.T) {
 				if strings.HasPrefix(key, "topology.cisco.vk/maintenance-") {
 					t.Fatal("released Lease retained old maintenance request")
 				}
+			}
+		})
+	}
+}
+
+func prepareManagedDrainRecovery(t *testing.T) (*Coordinator, *drainFixtureObjects) {
+	t.Helper()
+	c, objects := drainCoordinatorFixture(t, nil)
+	ctx := context.Background()
+	deadline := metav1.NewTime(time.Now().UTC().Add(time.Hour))
+	objects.leaf.Status.ManagerDrain.State = ops.UpgradeManagerDrainRecovering
+	objects.leaf.Status.ManagerDrain.RecoveryDeadline = &deadline
+	objects.leaf.Status.ManagerDrain.UpdatedAt = metav1.Now()
+	if err := c.Client.Status().Update(ctx, objects.leaf); err != nil {
+		t.Fatal(err)
+	}
+	objects.device.Status.MaintenanceSession.Phase = ciskov1.DeviceMaintenanceSessionRecovering
+	if err := c.Client.Status().Update(ctx, objects.device); err != nil {
+		t.Fatal(err)
+	}
+	objects.node.Spec.Taints = nil
+	objects.node.Spec.Unschedulable = false
+	delete(objects.node.Annotations, managedprotocol.AnnotationDrainCordonOwner)
+	delete(objects.node.Annotations, managedprotocol.AnnotationDrainTaintOwner)
+	if err := c.Client.Update(ctx, objects.node); err != nil {
+		t.Fatal(err)
+	}
+	return c, objects
+}
+
+func TestManagedDrainRecoveryPermitsReplacementWriteAfterOwnedGuardRestored(t *testing.T) {
+	c, objects := prepareManagedDrainRecovery(t)
+	ctx := context.Background()
+	_, finish, err := c.AcquireWrite(ctx)
+	if err != nil {
+		t.Fatalf("AcquireWrite() during exact recovery = %v", err)
+	}
+	finish(nil)
+	var lease coordv1.Lease
+	if err := c.Client.Get(ctx, client.ObjectKeyFromObject(objects.lease), &lease); err != nil {
+		t.Fatal(err)
+	}
+	if lease.Spec.HolderIdentity != nil {
+		t.Fatalf("completed recovery write retained canonical Lease holder %q", *lease.Spec.HolderIdentity)
+	}
+}
+
+func TestManagedRecoveryWriteAuthorizationLossDoesNotRenewLease(t *testing.T) {
+	c, objects := prepareManagedDrainRecovery(t)
+	c.renewInterval = 100 * time.Millisecond
+	ctx := context.Background()
+	writeCtx, finish, err := c.AcquireWrite(ctx)
+	if err != nil {
+		t.Fatalf("AcquireWrite() during exact recovery = %v", err)
+	}
+
+	var before coordv1.Lease
+	if err := c.Client.Get(ctx, client.ObjectKeyFromObject(objects.lease), &before); err != nil {
+		t.Fatal(err)
+	}
+	var node corev1.Node
+	if err := c.Client.Get(ctx, client.ObjectKeyFromObject(objects.node), &node); err != nil {
+		t.Fatal(err)
+	}
+	node.Annotations[managedprotocol.AnnotationProjectionHash] = "authorization-lost-before-renewal"
+	if err := c.Client.Update(ctx, &node); err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case <-writeCtx.Done():
+	case <-time.After(2 * time.Second):
+		finish(errors.New("test timeout"))
+		t.Fatal("managed recovery write was not cancelled after renewal authorization was lost")
+	}
+	finish(errors.New("authorization lost before renewal"))
+
+	var after coordv1.Lease
+	if err := c.Client.Get(ctx, client.ObjectKeyFromObject(objects.lease), &after); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(before, after) {
+		t.Fatalf("authorization loss mutated the retained Lease\nbefore: %#v\nafter:  %#v", before, after)
+	}
+}
+
+func TestManagedDrainRecoveryWriteFailsClosedUntilExactRestoration(t *testing.T) {
+	for name, mutate := range map[string]func(*drainFixtureObjects){
+		"expired deadline": func(o *drainFixtureObjects) {
+			deadline := metav1.NewTime(time.Now().UTC().Add(-time.Second))
+			o.leaf.Status.ManagerDrain.RecoveryDeadline = &deadline
+		},
+		"session-owned cordon": func(o *drainFixtureObjects) {
+			o.node.Annotations[managedprotocol.AnnotationDrainCordonOwner] = drainSessionToken
+			o.node.Spec.Unschedulable = true
+		},
+		"session-owned taint": func(o *drainFixtureObjects) {
+			o.node.Spec.Taints = []corev1.Taint{{Key: TaintKey, Value: TaintValue, Effect: corev1.TaintEffectNoSchedule}}
+		},
+		"session-owned taint marker": func(o *drainFixtureObjects) {
+			o.node.Annotations[managedprotocol.AnnotationDrainTaintOwner] = drainSessionToken
+		},
+		"foreign topology lock": func(o *drainFixtureObjects) {
+			o.device.Status.TopologyLock.AcquisitionID = strings.Repeat("d", 32)
+		},
+		"wrong session purpose": func(o *drainFixtureObjects) {
+			o.device.Status.MaintenanceSession.Purpose = "Other"
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			c, objects := prepareManagedDrainRecovery(t)
+			mutate(objects)
+			if err := c.Client.Status().Update(context.Background(), objects.leaf); err != nil {
+				t.Fatal(err)
+			}
+			if err := c.Client.Status().Update(context.Background(), objects.device); err != nil {
+				t.Fatal(err)
+			}
+			if err := c.Client.Update(context.Background(), objects.node); err != nil {
+				t.Fatal(err)
+			}
+			if _, finish, err := c.AcquireWrite(context.Background()); err == nil {
+				finish(nil)
+				t.Fatal("incomplete or foreign recovery state authorized an ordinary write")
+			}
+			var lease coordv1.Lease
+			if err := c.Client.Get(context.Background(), client.ObjectKeyFromObject(objects.lease), &lease); err != nil {
+				t.Fatal(err)
+			}
+			if lease.Spec.HolderIdentity != nil {
+				t.Fatal("rejected recovery write acquired the canonical Lease")
 			}
 		})
 	}

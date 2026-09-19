@@ -241,7 +241,7 @@ func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 		)
 	}
 	maintenanceDecision := r.resolveManagedMaintenance(ctx, device, node)
-	if err := r.reconcileManagedNodeMetadata(ctx, device, node, desired.Labels, policy, projectionHash, maintenanceDecision.guard); err != nil {
+	if err := r.reconcileManagedNodeMetadata(ctx, device, node, desired.Labels, policy, projectionHash, maintenanceDecision); err != nil {
 		return r.failManagedTopology(ctx, device, result,
 			ciskov1.CiscoDeviceConditionTopologyConflict, "NodeProjectionFailed", err.Error())
 	}
@@ -454,7 +454,7 @@ func (r *CiscoDeviceReconciler) reconcileManagedNodeMetadata(
 	desiredLabels map[string]string,
 	policy *topologyrollout.ParsedAdminPolicy,
 	projectionHash string,
-	maintenanceGuard bool,
+	maintenance managedMaintenanceDecision,
 ) error {
 	before := node.DeepCopy()
 	if node.Labels == nil {
@@ -478,6 +478,13 @@ func (r *CiscoDeviceReconciler) reconcileManagedNodeMetadata(
 
 	priorManagedTaints := decodeManagedTaints(node.Annotations[managedprotocol.AnnotationManagedTaints])
 	for identity := range priorManagedTaints {
+		// A PDB-drain maintenance taint has its own session-bound ownership
+		// marker. Defer that identity to reconcileManagedDrainTaint so a lost
+		// marker or a late operator taint can never be adopted and removed via
+		// the broader projection-owned set.
+		if maintenance.drain != nil && identity == taintIdentity(maintenanceGuardTaint()) {
+			continue
+		}
 		node.Spec.Taints = deleteTaint(node.Spec.Taints, identity)
 	}
 	managedTaints := append([]corev1.Taint(nil), device.Spec.Taints...)
@@ -486,7 +493,15 @@ func (r *CiscoDeviceReconciler) reconcileManagedNodeMetadata(
 	if projectionChanged || !managedWorkerReadyForProjection(node, device.Status.TopologyProjection) || !physicalIdentity.ready {
 		managedTaints = upsertTaint(managedTaints, topologyInitializationTaint())
 	}
-	if maintenanceGuard {
+	if maintenance.drain != nil {
+		var err error
+		managedTaints, err = reconcileManagedDrainTaint(node, priorManagedTaints, managedTaints, maintenance)
+		if err != nil {
+			return err
+		}
+	} else if maintenance.guard {
+		// The legacy software-mutation path retains its established projection
+		// ownership behavior.
 		managedTaints = upsertTaint(managedTaints, maintenanceGuardTaint())
 	}
 	for _, taint := range managedTaints {
@@ -509,6 +524,9 @@ func (r *CiscoDeviceReconciler) reconcileManagedNodeMetadata(
 	node.Annotations[managedprotocol.AnnotationProjectedKeys] = encodeStringSet(mapKeys(desiredLabels))
 	node.Annotations[managedprotocol.AnnotationProjectionHash] = projectionHash
 	node.Annotations[managedprotocol.AnnotationManagedTaints] = encodeManagedTaints(managedTaints)
+	if err := reconcileManagedDrainCordon(node, maintenance); err != nil {
+		return err
+	}
 	if equalitySemanticNodeMetadata(before, node) {
 		return nil
 	}
@@ -546,7 +564,7 @@ func sanitizeVirtualKubeletLastAppliedMetadata(node *corev1.Node) error {
 
 func equalitySemanticNodeMetadata(a, b *corev1.Node) bool {
 	return mapsEqual(a.Labels, b.Labels) && mapsEqual(a.Annotations, b.Annotations) &&
-		taintsEqual(a.Spec.Taints, b.Spec.Taints)
+		taintsEqual(a.Spec.Taints, b.Spec.Taints) && a.Spec.Unschedulable == b.Spec.Unschedulable
 }
 
 func (r *CiscoDeviceReconciler) patchManagedTopologyStatus(

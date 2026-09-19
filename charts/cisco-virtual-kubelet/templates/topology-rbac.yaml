@@ -156,6 +156,98 @@ subjects:
     name: {{ include "cisco-virtual-kubelet.controllerServiceAccountName" . }}
     namespace: {{ .Release.Namespace }}
 {{- end }}
+{{- $workloadDrainEnabled := and .Values.topology.enabled (not .Values.gnoi.disabled) .Values.gnoi.enableSoftwareUpgrade .Values.topology.policy.workloadDrain.enabled }}
+{{- range $namespace := .Values.topology.policy.workloadDrain.allowedNamespaces }}
+{{- $cleanupRoleName := printf "%s-workload-drain" (include "cisco-virtual-kubelet.fullname" $) }}
+{{- $existingCleanupRole := lookup "rbac.authorization.k8s.io/v1" "Role" $namespace $cleanupRoleName }}
+{{- $existingCleanupBinding := lookup "rbac.authorization.k8s.io/v1" "RoleBinding" $namespace $cleanupRoleName }}
+{{- if or $workloadDrainEnabled (not (empty $existingCleanupRole)) (not (empty $existingCleanupBinding)) }}
+---
+# Cleanup authority remains namespace-scoped and deliberately excludes the
+# Eviction subresource. Helm retains this narrow Role/Binding if a drain gate
+# or allowlist changes, so an accepted eviction cannot strand the manager's
+# exact Pod marker/finalizer. Operators remove the retained pair only after all
+# drains in the namespace are Settled.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $cleanupRoleName }}
+  namespace: {{ $namespace | quote }}
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: workload-drain
+    operations.cisco.vk/drain-authority: cleanup
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $cleanupRoleName }}
+  namespace: {{ $namespace | quote }}
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: workload-drain
+    operations.cisco.vk/drain-authority: cleanup
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $cleanupRoleName }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "cisco-virtual-kubelet.controllerServiceAccountName" $ }}
+    namespace: {{ $.Release.Namespace }}
+{{- end }}
+{{- if $workloadDrainEnabled }}
+---
+# New voluntary disruptions have a separate, non-retained authority. Removing
+# any drain gate removes this binding while leaving cleanup possible. The
+# manager never receives Pod delete or PDB-bypass authority.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ printf "%s-workload-drain-eviction" (include "cisco-virtual-kubelet.fullname" $) }}
+  namespace: {{ $namespace | quote }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: workload-drain
+    operations.cisco.vk/drain-authority: eviction
+rules:
+  - apiGroups: [""]
+    resources: ["pods/eviction"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ printf "%s-workload-drain-eviction" (include "cisco-virtual-kubelet.fullname" $) }}
+  namespace: {{ $namespace | quote }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: workload-drain
+    operations.cisco.vk/drain-authority: eviction
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ printf "%s-workload-drain-eviction" (include "cisco-virtual-kubelet.fullname" $) }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "cisco-virtual-kubelet.controllerServiceAccountName" $ }}
+    namespace: {{ $.Release.Namespace }}
+{{- end }}
+{{- end }}
 {{- if .Values.topology.enabled }}
 ---
 # These authorization roles are intentionally unbound. Operators bind them in

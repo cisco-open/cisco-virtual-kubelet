@@ -172,7 +172,8 @@ type IOSXESoftwareRolloutPlan struct {
 	// +kubebuilder:validation:Required
 	Budgets IOSXESoftwareRolloutBudgetSpec `json:"budgets"`
 
-	// Workloads defines the safe Phase 2 behavior for device-hosted workloads.
+	// Workloads defines the campaign's administrator-gated handling of
+	// device-hosted workloads before disruptive maintenance.
 	// +kubebuilder:validation:Required
 	Workloads IOSXESoftwareRolloutWorkloadSpec `json:"workloads"`
 
@@ -427,24 +428,72 @@ type IOSXESoftwareRolloutDomainBudget struct {
 	MaxUnavailable *int32 `json:"maxUnavailable,omitempty"`
 }
 
-// IOSXESoftwareRolloutWorkloadPolicy is intentionally restricted to the safe
-// non-destructive Phase 2 behavior.
+// IOSXESoftwareRolloutWorkloadPolicy selects the workload gate applied before
+// a target may enter device-disruptive maintenance.
 //
-// +kubebuilder:validation:Enum=BlockIfRunning
+// +kubebuilder:validation:Enum=BlockIfRunning;Drain
 type IOSXESoftwareRolloutWorkloadPolicy string
 
 const (
 	IOSXESoftwareRolloutWorkloadBlockIfRunning IOSXESoftwareRolloutWorkloadPolicy = "BlockIfRunning"
+	IOSXESoftwareRolloutWorkloadDrain          IOSXESoftwareRolloutWorkloadPolicy = "Drain"
 )
 
 // IOSXESoftwareRolloutWorkloadSpec controls workload handling before a leaf
-// mutation. Phase 2 never evicts workloads.
+// mutation. Drain is an explicitly configured, administrator-gated mode;
+// omitting Policy preserves the non-destructive BlockIfRunning default.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.drain) == (has(self.policy) && self.policy == 'Drain')",message="drain must be set if and only if policy is Drain"
 type IOSXESoftwareRolloutWorkloadSpec struct {
-	// Policy blocks admission when any workload is running on the bound Node.
+	// Policy either blocks admission while a workload is running or requests a
+	// bounded, PDB-aware drain. Drain remains subject to administrator policy.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=BlockIfRunning
+	// +kubebuilder:validation:Enum=BlockIfRunning;Drain
 	// +kubebuilder:default=BlockIfRunning
 	Policy IOSXESoftwareRolloutWorkloadPolicy `json:"policy,omitempty"`
+
+	// Drain bounds an opt-in workload evacuation. It is forbidden for the
+	// default BlockIfRunning policy.
+	// +kubebuilder:validation:Optional
+	Drain *IOSXESoftwareRolloutDrainSpec `json:"drain,omitempty"`
+}
+
+// IOSXESoftwareRolloutDrainSpec bounds a PDB-aware workload evacuation. The
+// administrator policy must enable drain, allow every namespace, and impose
+// caps at least as strict as these campaign values.
+//
+// +kubebuilder:validation:XValidation:rule="self.timeoutSeconds >= self.maxTerminationGraceSeconds + 120",message="timeoutSeconds must be at least maxTerminationGraceSeconds plus 120 seconds"
+type IOSXESoftwareRolloutDrainSpec struct {
+	// Namespaces is the explicit set from which this campaign may evict
+	// controller-owned, drain-safe workloads. Other bound workloads block it.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:items:MaxLength=63
+	// +kubebuilder:validation:items:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// +listType=set
+	Namespaces []string `json:"namespaces"`
+
+	// TimeoutSeconds is the total deadline for eviction, device-side teardown,
+	// and confirmation that all in-scope workloads have stopped.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=300
+	// +kubebuilder:validation:Maximum=7200
+	TimeoutSeconds int32 `json:"timeoutSeconds"`
+
+	// MaxPods is the maximum number of bound workload Pods the campaign may
+	// attempt to drain from one target.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=32
+	MaxPods int32 `json:"maxPods"`
+
+	// MaxTerminationGraceSeconds caps the grace period used for each eviction.
+	// A Pod requesting a longer grace period receives this stricter cap.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=30
+	// +kubebuilder:validation:Maximum=600
+	MaxTerminationGraceSeconds int32 `json:"maxTerminationGraceSeconds"`
 }
 
 // IOSXESoftwareRolloutHealthSpec defines freshness and soak gates. Missing,
