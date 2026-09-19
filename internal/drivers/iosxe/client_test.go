@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"strings"
 	"sync"
 	"testing"
@@ -39,12 +40,13 @@ import (
 // ── Test infrastructure ───────────────────────────────────────────────────────
 
 type fakeNetworkClient struct {
-	mu         sync.Mutex
-	postHook   func(path string, payload any) error
-	getHook    func(path string, result any) error
-	patchHook  func(path string, payload any) error
-	putHook    func(path string, payload any) error
-	deleteHook func(path string) error
+	mu                 sync.Mutex
+	postHook           func(path string, payload any) error
+	postWithResultHook func(path string, payload, result any) error
+	getHook            func(path string, result any) error
+	patchHook          func(path string, payload any) error
+	putHook            func(path string, payload any) error
+	deleteHook         func(path string) error
 }
 
 func (f *fakeNetworkClient) Post(_ context.Context, path string, payload any, _ func(any) ([]byte, error)) error {
@@ -53,6 +55,29 @@ func (f *fakeNetworkClient) Post(_ context.Context, path string, payload any, _ 
 	f.mu.Unlock()
 	if h != nil {
 		return h(path, payload)
+	}
+	return nil
+}
+
+func (f *fakeNetworkClient) PostWithResult(_ context.Context, path string, payload, result any,
+	_ func(any) ([]byte, error), _ func([]byte, any) error,
+) error {
+	f.mu.Lock()
+	resultHook := f.postWithResultHook
+	postHook := f.postHook
+	f.mu.Unlock()
+	if resultHook != nil {
+		return resultHook(path, payload, result)
+	}
+	// Existing lifecycle tests reason about the RPC input choice. Keep that
+	// convenience while dedicated wire-contract tests inspect the outer root.
+	if outer, ok := payload.(map[string]any); ok {
+		if inner, exists := outer["Cisco-IOS-XE-rpc:app-hosting"]; exists {
+			payload = inner
+		}
+	}
+	if postHook != nil {
+		return postHook(path, payload)
 	}
 	return nil
 }
@@ -302,6 +327,116 @@ func newTestDriver(fc *fakeNetworkClient) *XEDriver {
 	return &XEDriver{
 		client:         fc,
 		recoveringPods: make(map[string]bool),
+	}
+}
+
+func TestAppHostingRPCWireContractAndResult(t *testing.T) {
+	fc := &fakeNetworkClient{postWithResultHook: func(path string, payload, result any) error {
+		if path != appHostingRPCPath {
+			t.Fatalf("path=%q, want %q", path, appHostingRPCPath)
+		}
+		outer, ok := payload.(map[string]any)
+		if !ok || len(outer) != 1 {
+			t.Fatalf("payload=%#v, want one namespaced RPC root", payload)
+		}
+		input, ok := outer["Cisco-IOS-XE-rpc:app-hosting"].(map[string]any)
+		if !ok {
+			t.Fatalf("payload=%#v, missing app-hosting RPC root", payload)
+		}
+		activate, ok := input["activate"].(map[string]string)
+		if !ok || activate["appid"] != "test-app" {
+			t.Fatalf("activate input=%#v", input["activate"])
+		}
+		response := result.(*appHostingRPCOutput)
+		response.Result = "test-app activated successfullyCurrent state is: ACTIVATED"
+		response.Present = true
+		return nil
+	}}
+
+	if err := newTestDriver(fc).ActivateApp(context.Background(), "test-app"); err != nil {
+		t.Fatalf("ActivateApp: %v", err)
+	}
+}
+
+func TestAppHostingRPCExplicitRejectionOmitsDeviceResult(t *testing.T) {
+	const sentinel = "rpc-result-secret-sentinel"
+	fc := &fakeNetworkClient{postWithResultHook: func(_ string, _, result any) error {
+		response := result.(*appHostingRPCOutput)
+		response.Result = "% Error: rejected " + sentinel
+		response.Present = true
+		return nil
+	}}
+	err := newTestDriver(fc).ActivateApp(context.Background(), "test-app")
+	if err == nil {
+		t.Fatal("ActivateApp succeeded after explicit device rejection")
+	}
+	if strings.Contains(err.Error(), sentinel) {
+		t.Fatalf("error exposed device result: %v", err)
+	}
+}
+
+func TestAppHostingRPCDoesNotClassifyEchoedPathAsFailure(t *testing.T) {
+	fc := &fakeNetworkClient{postWithResultHook: func(_ string, _, result any) error {
+		response := result.(*appHostingRPCOutput)
+		response.Result = "flash:/failure-analysis.tar installed successfully"
+		response.Present = true
+		return nil
+	}}
+	if err := newTestDriver(fc).InstallApp(context.Background(), "test-app", "flash:/failure-analysis.tar"); err != nil {
+		t.Fatalf("InstallApp rejected a successful result containing an operator-controlled path: %v", err)
+	}
+}
+
+func TestAppHostingRPCRejectedUsesTokenBoundaries(t *testing.T) {
+	tests := []struct {
+		result string
+		want   bool
+	}{
+		{result: "% Error: rejected", want: true},
+		{result: "error: rejected", want: true},
+		{result: "error rejected", want: true},
+		{result: "failed: rejected", want: true},
+		{result: "failed rejected", want: true},
+		{result: "errorless completion", want: false},
+		{result: "failed-over application started", want: false},
+		{result: "flash:/failure-analysis.tar installed successfully", want: false},
+	}
+	for _, tc := range tests {
+		if got := appHostingRPCRejected(tc.result); got != tc.want {
+			t.Errorf("appHostingRPCRejected(%q)=%v, want %v", tc.result, got, tc.want)
+		}
+	}
+}
+
+func TestDecodeAppHostingRPCOutput(t *testing.T) {
+	tests := []struct {
+		name    string
+		body    string
+		want    string
+		present bool
+		wantErr bool
+	}{
+		{name: "no content", body: "", present: false},
+		{name: "canonical", body: `{"Cisco-IOS-XE-rpc:output":{"result":" accepted ","future":"value"}}`, want: "accepted", present: true},
+		{name: "unexpected sibling", body: `{"Cisco-IOS-XE-rpc:output":{"result":"accepted"},"unexpected":{}}`, wantErr: true},
+		{name: "malformed", body: `{`, wantErr: true},
+		{name: "wrong envelope", body: `{"output":{"result":"accepted"}}`, wantErr: true},
+		{name: "missing result", body: `{"Cisco-IOS-XE-rpc:output":{}}`, wantErr: true},
+		{name: "null result", body: `{"Cisco-IOS-XE-rpc:output":{"result":null}}`, wantErr: true},
+		{name: "numeric result", body: `{"Cisco-IOS-XE-rpc:output":{"result":3}}`, wantErr: true},
+		{name: "blank result", body: `{"Cisco-IOS-XE-rpc:output":{"result":"  "}}`, wantErr: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var got appHostingRPCOutput
+			err := decodeAppHostingRPCOutput([]byte(tc.body), &got)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("error=%v, wantErr=%v", err, tc.wantErr)
+			}
+			if got.Result != tc.want || got.Present != tc.present {
+				t.Fatalf("output=%#v, want result=%q present=%v", got, tc.want, tc.present)
+			}
+		})
 	}
 }
 
@@ -620,6 +755,45 @@ func TestCreateAppHostingApp_FallbackCopyAfterPrimaryTimeout(t *testing.T) {
 	}
 }
 
+func TestCopyFallbackDoesNotDisruptAcceptedCachedInstall(t *testing.T) {
+	const cfgPath = "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
+	cacheSubmitted := false
+	installs, copies, deletes := 0, 0, 0
+	fc := &fakeNetworkClient{
+		getHook: func(_ string, result any) error {
+			root := result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData)
+			if cacheSubmitted {
+				*root = *operResponse("test-app", "INSTALLING")
+			}
+			return nil
+		},
+		postHook: func(path string, payload any) error {
+			switch path {
+			case appHostingRPCPath:
+				if payload.(map[string]interface{})["install"] != nil {
+					installs++
+					cacheSubmitted = true
+				}
+			case "/restconf/operations/Cisco-IOS-XE-rpc:copy":
+				copies++
+			}
+			return nil
+		},
+		deleteHook: func(string) error { deletes++; return nil },
+	}
+	d := newTestDriver(fc)
+	cfg := minimalDockerResourceConfig("https://registry.example/app.tar", v1.PullIfNotPresent, time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	err := d.copyFallbackToFlash(ctx, cfg, cfgPath, v1.PullIfNotPresent, time.Minute)
+	if err == nil || !strings.Contains(err.Error(), "refusing destructive fallback") {
+		t.Fatalf("error=%v, want accepted-install convergence failure", err)
+	}
+	if installs != 1 || copies != 0 || deletes != 1 {
+		t.Fatalf("installs=%d copies=%d deletes=%d, want 1/0/1 (initial cleanup only)", installs, copies, deletes)
+	}
+}
+
 // ── DockerResource (two-phase) tests ─────────────────────────────────────────
 
 func minimalDockerResourceConfig(imagePath string, policy v1.PullPolicy, timeout time.Duration) *AppHostingConfig {
@@ -743,6 +917,50 @@ func TestCreateAppHostingApp_ConfigAlreadyExistsActivatedStartsAndWaits(t *testi
 	defer mu.Unlock()
 	if !started {
 		t.Fatal("expected existing ACTIVATED app to be started")
+	}
+}
+
+func TestCreateAppHostingApp_ConfigAlreadyExistsFailsClosedWithoutValidState(t *testing.T) {
+	tests := []struct {
+		name    string
+		getHook func(string, any) error
+	}{
+		{
+			name:    "observation error",
+			getHook: func(string, any) error { return errors.New("temporary oper-data failure") },
+		},
+		{
+			name: "unsupported present state",
+			getHook: func(_ string, result any) error {
+				result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData).App = map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App{
+					"test-app": makeOperData("UNKNOWN"),
+				}
+				return nil
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			lifecyclePosts := 0
+			fc := &fakeNetworkClient{
+				getHook: tc.getHook,
+				postHook: func(path string, _ any) error {
+					if path == "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps" {
+						return &common.RESTCONFError{StatusCode: http.StatusConflict, Status: "409 Conflict", ErrorTags: []string{"data-exists"}}
+					}
+					lifecyclePosts++
+					return nil
+				},
+			}
+			d := newTestDriver(fc)
+			cfg := minimalDockerResourceConfig("flash:app.tar", v1.PullIfNotPresent, 200*time.Millisecond)
+			if err := d.CreateAppHostingApp(context.Background(), cfg); err == nil {
+				t.Fatal("CreateAppHostingApp succeeded without a safe existing-app observation")
+			}
+			if lifecyclePosts != 0 {
+				t.Fatalf("lifecycle POST count=%d, want 0", lifecyclePosts)
+			}
+		})
 	}
 }
 

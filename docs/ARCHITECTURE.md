@@ -356,6 +356,11 @@ stateDiagram-v2
 - **`STOPPED`** — restartable directly via `start` (no re-activate needed).
 - **No oper data** with config present — reconciler re-issues the install RPC.
 - **Error** — surfaces as Pod `Failed` with reason `PackagePolicyInvalid` and a message from the device's notification.
+- **RPC acceptance is not lifecycle completion** — IOS-XE can return HTTP 2xx
+  while placing a command error in `Cisco-IOS-XE-rpc:output/result`. The
+  driver decodes that bounded response and rejects explicit errors without
+  logging the device text. A successful result means only that the request was
+  accepted; the next transition is determined exclusively from oper-data.
 
 ### Reverse path (desired = Deleted)
 
@@ -573,7 +578,7 @@ out-of-band changes, or ownership across Kubernetes clusters.
 | App config (create/list) | POST/GET | `/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps` |
 | App config (delete) | DELETE | `/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app={id}` |
 | App oper-data | GET | `/restconf/data/Cisco-IOS-XE-app-hosting-oper:app-hosting-oper-data/app` |
-| Lifecycle RPCs (install/activate/start/stop/deactivate/uninstall) | POST | `/restconf/operations/Cisco-IOS-XE-app-hosting-rpcs:app-*` |
+| App-hosting lifecycle and verification RPCs | POST | `/restconf/operations/Cisco-IOS-XE-rpc:app-hosting` |
 | Device version | GET | `/restconf/data/Cisco-IOS-XE-native:native/version` |
 | CDP neighbors | GET | `/restconf/data/Cisco-IOS-XE-cdp-oper:cdp-neighbor-details` |
 | OSPF neighbors | GET | `/restconf/data/Cisco-IOS-XE-ospf-oper:ospf-oper-data` |
@@ -584,7 +589,7 @@ out-of-band changes, or ownership across Kubernetes clusters.
 
 - `Cisco-IOS-XE-app-hosting-cfg` — app config
 - `Cisco-IOS-XE-app-hosting-oper` — app runtime state
-- `Cisco-IOS-XE-app-hosting-rpcs` — lifecycle RPCs
+- `Cisco-IOS-XE-rpc` — app-hosting lifecycle and verification RPCs
 - `Cisco-IOS-XE-cdp-oper` — CDP neighbor discovery
 - `Cisco-IOS-XE-ospf-oper` — OSPF neighbor state
 - `Cisco-IOS-XE-arp-oper` — ARP-based IP discovery

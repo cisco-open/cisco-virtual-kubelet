@@ -225,7 +225,7 @@ The `logLevel` field is passed to the VK pod as the `--log-level` flag on the co
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `allowUnsignedApps` | bool | `false` | When `true`, CVK performs two actions: **(1)** on first connect it PUTs `Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/controls` with `sign-verification: false`, disabling the device-level package signature check; **(2)** the reconciler treats `iox-pkg-policy-invalid` during `INSTALLING` as a transient signal rather than a fatal error. Enable for unsigned packages (custom builds or test images). If the device-side PUT fails, a warning is logged and installs may still be blocked by device policy. See [Troubleshooting → PackagePolicyInvalid](troubleshooting.md#packagepolicyinvalid-false-positives). |
+| `allowUnsignedApps` | bool | `false` | When `true`, CVK performs two actions: **(1)** on connect it writes the persistent IOS-XE `sign-verification: false` control and invokes the app-hosting runtime verification-disable RPC; **(2)** the reconciler treats `iox-pkg-policy-invalid` during `INSTALLING` as a transient signal rather than a fatal error. Both device operations must be accepted before unsigned installs can work. Enable only for unsigned custom or test packages; production packages should remain signed. If the platform refuses the runtime change, CVK logs a warning and unsigned installs remain blocked even when the configuration datastore reads `false`. See [Troubleshooting → PackagePolicyInvalid](troubleshooting.md#packagepolicyinvalid-false-positives). |
 
 ### OpenTelemetry topology
 

@@ -38,7 +38,8 @@ iox
 restconf
 
 ! Only required if NOT using spec.allowUnsignedApps: true in the CiscoDevice spec.
-! When allowUnsignedApps: true, CVK applies this automatically via RESTCONF.
+! When allowUnsignedApps: true, CVK requests both persistent and runtime changes
+! via RESTCONF. Confirm the effective state with `show app-hosting infra`.
 app-hosting verification disable
 no app-hosting signed-verification
 ```

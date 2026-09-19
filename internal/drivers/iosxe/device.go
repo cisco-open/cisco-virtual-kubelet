@@ -132,13 +132,18 @@ func jsonMarshal(v any) ([]byte, error) {
 //
 // IOS-XE stores this in a presence container
 // (app-hosting-cfg-data/controls); PUT is used so the container is created
-// if it does not yet exist, and re-applied idempotently if it does.
+// if it does not yet exist, and re-applied idempotently if it does. Some IOS-XE
+// releases separate that persistent setting from the effective runtime state,
+// so the corresponding app-hosting verification RPC must also succeed.
 func (d *XEDriver) ConfigureSignVerification(ctx context.Context, enabled bool) error {
 	payload := appHostingControls{}
 	payload.Controls.SignVerification = enabled
 
 	if err := d.client.Put(ctx, signVerificationPath, payload, jsonMarshal); err != nil {
 		return fmt.Errorf("failed to configure app-hosting sign-verification=%v: %w", enabled, err)
+	}
+	if err := d.configureRuntimeSignVerification(ctx, enabled); err != nil {
+		return fmt.Errorf("configured persistent app-hosting sign-verification=%v but runtime verification update failed: %w", enabled, err)
 	}
 	log.G(ctx).Infof("app-hosting sign-verification set to %v", enabled)
 	return nil

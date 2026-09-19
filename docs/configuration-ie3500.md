@@ -65,14 +65,16 @@ spec:
 
 When this flag is set CVK performs two actions:
 
-1. **Device-side** — on first connect it applies a RESTCONF PUT to disable
-   the global signature check on the device:
+1. **Device-side** — on connect it applies a RESTCONF PUT for the persistent
+   signing control:
    ```
    PUT /restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/controls
    {"Cisco-IOS-XE-app-hosting-cfg:controls": {"sign-verification": false}}
    ```
-   This is equivalent to the CLI `no app-hosting signed-verification` and is
-   reflected in `show app-hosting infra` as `App signature verification: disabled`.
+   It then invokes the IOS-XE app-hosting runtime verification-disable RPC.
+   Both operations must succeed. Confirm the effective result in
+   `show app-hosting infra` as `App signature verification: disabled`; a
+   configuration-datastore value of `false` by itself is not sufficient.
 
 2. **Controller-side** — the reconciler treats a transient `iox-pkg-policy-invalid`
    state as non-fatal while the device completes the install.

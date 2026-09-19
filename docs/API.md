@@ -147,7 +147,7 @@ The reconciler treats `iox-pkg-policy-invalid` as a fatal install blocker only w
 1. `spec.allowUnsignedApps = false` (the default), **and**
 2. A confirming install notification has been received from the device.
 
-When `spec.allowUnsignedApps = true`, CVK also disables device-level signing via RESTCONF on first connect (see [Configuration → App packaging](CONFIGURATION.md#app-packaging)).
+When `spec.allowUnsignedApps = true`, CVK writes the persistent signing control and requests the matching IOS-XE runtime change through RESTCONF on connect. A warning means unsigned packages are still expected to fail; confirm the effective state with `show app-hosting infra` rather than relying only on the configuration datastore (see [Configuration → App packaging](CONFIGURATION.md#app-packaging)).
 
 The kubelet-exposed pod `status.reason` for this case is **`PackagePolicyInvalid`**.
 

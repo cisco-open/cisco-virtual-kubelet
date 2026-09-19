@@ -57,6 +57,29 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 
 	log.G(ctx).Debugf("ReconcileApp %s: observed=%q desired=%s phase=%s",
 		appID, state, desired, appConfig.Status.Phase)
+	if !obs.Valid {
+		if appConfig.Status.PendingOperation != "" {
+			appConfig.Status.Message = "Waiting for a valid device-state observation"
+			return
+		}
+		appConfig.Status.Phase = AppPhaseError
+		appConfig.Status.Message = "unable to observe app state"
+		return
+	}
+
+	// App-hosting lifecycle RPCs are asynchronous. Once IOS-XE accepts an RPC,
+	// keep observing until oper-data leaves the state from which it was sent.
+	// Replaying the same mutation every reconciliation tick can restart work or
+	// turn a slow success into a device-side conflict.
+	if operation := appConfig.Status.PendingOperation; operation != "" {
+		if state == appConfig.Status.PendingState && obs.Present == appConfig.Status.PendingPresent {
+			appConfig.Status.Message = fmt.Sprintf("Waiting for accepted %s operation", operation)
+			return
+		}
+		appConfig.Status.PendingOperation = ""
+		appConfig.Status.PendingState = ""
+		appConfig.Status.PendingPresent = false
+	}
 
 	// ── Forward path: drive toward RUNNING ────────────────────────────
 	if desired == AppDesiredStateRunning {
@@ -70,7 +93,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 			// ACTIVATED → start
 			appConfig.Status.Phase = AppPhaseConverging
 			appConfig.Status.Message = "Starting app"
-			if err := d.StartApp(ctx, appID); err != nil {
+			if err := d.StartApp(ctx, appID); !recordPendingAppOperation(ctx, appConfig, "start", obs, err) {
 				log.G(ctx).Warnf("ReconcileApp %s: start failed: %v", appID, err)
 				appConfig.Status.Phase = AppPhaseError
 				appConfig.Status.Message = fmt.Sprintf("start failed: %v", err)
@@ -81,7 +104,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 			// STOPPED → start (can restart directly without re-activate)
 			appConfig.Status.Phase = AppPhaseConverging
 			appConfig.Status.Message = "Restarting stopped app"
-			if err := d.StartApp(ctx, appID); err != nil {
+			if err := d.StartApp(ctx, appID); !recordPendingAppOperation(ctx, appConfig, "start", obs, err) {
 				log.G(ctx).Warnf("ReconcileApp %s: start failed: %v", appID, err)
 				appConfig.Status.Phase = AppPhaseError
 				appConfig.Status.Message = fmt.Sprintf("start failed: %v", err)
@@ -92,7 +115,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 			// DEPLOYED → activate
 			appConfig.Status.Phase = AppPhaseConverging
 			appConfig.Status.Message = "Activating app"
-			if err := d.ActivateApp(ctx, appID); err != nil {
+			if err := d.ActivateApp(ctx, appID); !recordPendingAppOperation(ctx, appConfig, "activate", obs, err) {
 				log.G(ctx).Warnf("ReconcileApp %s: activate failed: %v", appID, err)
 				appConfig.Status.Phase = AppPhaseError
 				appConfig.Status.Message = fmt.Sprintf("activate failed: %v", err)
@@ -131,6 +154,11 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 		default:
 			// No oper data (or unexpected state) — the install likely hasn't
 			// happened or failed silently. Re-issue install if we have an image.
+			if obs.Present {
+				appConfig.Status.Phase = AppPhaseError
+				appConfig.Status.Message = "device reported an unsupported app state"
+				return
+			}
 			imagePath := appConfig.ImagePath()
 			if imagePath == "" {
 				log.G(ctx).Warnf("ReconcileApp %s: no oper data and no image path; cannot install", appID)
@@ -141,7 +169,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 			appConfig.Status.Phase = AppPhaseConverging
 			appConfig.Status.Message = "Re-issuing install"
 			log.G(ctx).Debugf("ReconcileApp %s: no oper data; re-issuing install (image: %s)", appID, imageReferenceForLog(imagePath))
-			if err := d.InstallApp(ctx, appID, imagePath); err != nil {
+			if err := d.InstallApp(ctx, appID, imagePath); !recordPendingAppOperation(ctx, appConfig, "install", obs, err) {
 				log.G(ctx).Warnf("ReconcileApp %s: install failed: %v", appID, err)
 				appConfig.Status.Phase = AppPhaseError
 				appConfig.Status.Message = fmt.Sprintf("install failed: %v", err)
@@ -156,7 +184,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 		case "RUNNING":
 			appConfig.Status.Phase = AppPhaseDeleting
 			appConfig.Status.Message = "Stopping app"
-			if err := d.StopApp(ctx, appID); err != nil {
+			if err := d.StopApp(ctx, appID); !recordPendingAppOperation(ctx, appConfig, "stop", obs, err) {
 				log.G(ctx).Warnf("ReconcileApp %s: stop failed: %v", appID, err)
 				appConfig.Status.Phase = AppPhaseError
 				appConfig.Status.Message = fmt.Sprintf("stop failed: %v", err)
@@ -166,7 +194,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 		case "ACTIVATED", "STOPPED":
 			appConfig.Status.Phase = AppPhaseDeleting
 			appConfig.Status.Message = "Deactivating app"
-			if err := d.DeactivateApp(ctx, appID); err != nil {
+			if err := d.DeactivateApp(ctx, appID); !recordPendingAppOperation(ctx, appConfig, "deactivate", obs, err) {
 				log.G(ctx).Warnf("ReconcileApp %s: deactivate failed: %v", appID, err)
 				appConfig.Status.Phase = AppPhaseError
 				appConfig.Status.Message = fmt.Sprintf("deactivate failed: %v", err)
@@ -176,7 +204,7 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 		case "DEPLOYED":
 			appConfig.Status.Phase = AppPhaseDeleting
 			appConfig.Status.Message = "Uninstalling app"
-			if err := d.UninstallApp(ctx, appID); err != nil {
+			if err := d.UninstallApp(ctx, appID); !recordPendingAppOperation(ctx, appConfig, "uninstall", obs, err) {
 				log.G(ctx).Warnf("ReconcileApp %s: uninstall failed: %v", appID, err)
 				appConfig.Status.Phase = AppPhaseError
 				appConfig.Status.Message = fmt.Sprintf("uninstall failed: %v", err)
@@ -185,6 +213,11 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 
 		default:
 			// No operational data — safe to remove config.
+			if obs.Present {
+				appConfig.Status.Phase = AppPhaseError
+				appConfig.Status.Message = "device reported an unsupported app state during deletion"
+				return
+			}
 			appConfig.Status.Phase = AppPhaseDeleting
 			appConfig.Status.Message = "Removing config"
 			path := fmt.Sprintf("/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps/app=%s", appID)
@@ -217,6 +250,8 @@ func (d *XEDriver) ReconcileApp(ctx context.Context, appConfig *AppHostingConfig
 type appObservation struct {
 	State     string
 	PkgPolicy E_Cisco_IOS_XEAppHostingOper_IoxPkgPolicy
+	Valid     bool
+	Present   bool
 }
 
 // getAppObservation returns the current operational state and package policy
@@ -232,13 +267,27 @@ func (d *XEDriver) getAppObservation(ctx context.Context, appID string) appObser
 	}
 	operData, ok := allOper[appID]
 	if !ok || operData == nil {
-		return appObservation{}
+		return appObservation{Valid: true}
 	}
-	obs := appObservation{PkgPolicy: operData.PkgPolicy}
+	obs := appObservation{PkgPolicy: operData.PkgPolicy, Valid: true, Present: true}
 	if operData.Details != nil && operData.Details.State != nil {
 		obs.State = *operData.Details.State
 	}
 	return obs
+}
+
+func recordPendingAppOperation(ctx context.Context, appConfig *AppHostingConfig, operation string, obs appObservation, err error) bool {
+	if err != nil && !common.IsRESTCONFMutationAmbiguous(err) {
+		return false
+	}
+	appConfig.Status.PendingOperation = operation
+	appConfig.Status.PendingState = obs.State
+	appConfig.Status.PendingPresent = obs.Present
+	if err != nil {
+		appConfig.Status.Message = fmt.Sprintf("%s completion uncertain; observing device state", operation)
+		log.G(ctx).Warnf("ReconcileApp %s: %s RPC completion uncertain; observing before replay", appConfig.AppName(), operation)
+	}
+	return true
 }
 
 // getAppInstallNotification returns the most recent install notification

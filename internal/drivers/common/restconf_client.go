@@ -91,6 +91,34 @@ type RESTCONFError struct {
 	ErrorTags  []string
 }
 
+// RESTCONFMutationAmbiguousError marks a mutation for which the client could
+// not determine whether the device applied the request. It deliberately
+// carries no response body.
+type RESTCONFMutationAmbiguousError struct {
+	cause error
+}
+
+func (e *RESTCONFMutationAmbiguousError) Error() string {
+	if e == nil || e.cause == nil {
+		return "RESTCONF mutation result is unknown"
+	}
+	return e.cause.Error()
+}
+
+func (e *RESTCONFMutationAmbiguousError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.cause
+}
+
+// IsRESTCONFMutationAmbiguous reports that a mutation may have reached the
+// device and must be reconciled from operational state before any replay.
+func IsRESTCONFMutationAmbiguous(err error) bool {
+	var ambiguous *RESTCONFMutationAmbiguousError
+	return errors.As(err, &ambiguous)
+}
+
 func (e *RESTCONFError) Error() string {
 	if e == nil {
 		return "<nil>"
@@ -127,6 +155,16 @@ func (c *RestconfClient) Get(ctx context.Context, path string, result any, unmar
 
 func (c *RestconfClient) Post(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error {
 	return c.doRequest(ctx, "POST", path, payload, nil, marshal, nil)
+}
+
+// PostWithResult executes a RESTCONF POST and decodes a successful response.
+// It is intentionally separate from NetworkClient.Post: most data-resource
+// POSTs have no response contract, while IOS-XE RPCs can return a YANG output
+// body whose result must be inspected even when the HTTP status is 2xx.
+func (c *RestconfClient) PostWithResult(ctx context.Context, path string, payload, result any,
+	marshal func(any) ([]byte, error), unmarshal func([]byte, any) error,
+) error {
+	return c.doRequest(ctx, "POST", path, payload, result, marshal, unmarshal)
 }
 
 func (c *RestconfClient) Patch(ctx context.Context, path string, payload any, marshal func(any) ([]byte, error)) error {
@@ -168,7 +206,7 @@ func (c *RestconfClient) doRequest(ctx context.Context, method, path string, pay
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return err
+		return markRESTCONFMutationAmbiguous(method, err)
 	}
 	defer resp.Body.Close()
 
@@ -184,7 +222,8 @@ func (c *RestconfClient) doRequest(ctx context.Context, method, path string, pay
 	if result != nil && unmarshal != nil {
 		data, err := readLimitedRESTCONFBody(resp.Body)
 		if err != nil {
-			return fmt.Errorf("read RESTCONF response for %s %s failed: %w", method, path, err)
+			return markRESTCONFMutationAmbiguous(method,
+				fmt.Errorf("read RESTCONF response for %s %s failed: %w", method, path, err))
 		}
 		log.G(ctx).WithFields(log.Fields{
 			"method":         method,
@@ -193,12 +232,22 @@ func (c *RestconfClient) doRequest(ctx context.Context, method, path string, pay
 			"response_bytes": len(data),
 		}).Debug("Received RESTCONF response")
 		if err := unmarshal(data, result); err != nil {
-			return fmt.Errorf("decode RESTCONF response for %s %s failed; response body omitted", method, path)
+			return markRESTCONFMutationAmbiguous(method,
+				fmt.Errorf("decode RESTCONF response for %s %s failed; response body omitted", method, path))
 		}
 		return nil
 	}
 
 	return nil
+}
+
+func markRESTCONFMutationAmbiguous(method string, err error) error {
+	switch method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+		return &RESTCONFMutationAmbiguousError{cause: err}
+	default:
+		return err
+	}
 }
 
 func readLimitedRESTCONFBody(body io.Reader) ([]byte, error) {

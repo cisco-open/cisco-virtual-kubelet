@@ -123,10 +123,21 @@ func TestGetDeviceInfo_Populated(t *testing.T) {
 func TestConfigureSignVerification_Disabled(t *testing.T) {
 	var capturedPath string
 	var capturedPayload any
+	var capturedRPC any
 	fc := &fakeNetworkClient{
 		putHook: func(path string, payload any) error {
 			capturedPath = path
 			capturedPayload = payload
+			return nil
+		},
+		postWithResultHook: func(path string, payload, result any) error {
+			if path != appHostingRPCPath {
+				t.Fatalf("RPC path=%q, want %q", path, appHostingRPCPath)
+			}
+			capturedRPC = payload
+			response := result.(*appHostingRPCOutput)
+			response.Result = "Application signature verification disabled"
+			response.Present = true
 			return nil
 		},
 	}
@@ -145,6 +156,16 @@ func TestConfigureSignVerification_Disabled(t *testing.T) {
 	if ctrl.Controls.SignVerification != false {
 		t.Error("expected sign-verification=false for allowUnsignedApps path")
 	}
+	outer, ok := capturedRPC.(map[string]any)
+	if !ok {
+		t.Fatalf("RPC payload type=%T", capturedRPC)
+	}
+	input := outer["Cisco-IOS-XE-rpc:app-hosting"].(map[string]any)
+	verification := input["verification"].(map[string]any)
+	disable, ok := verification["disable"].([]any)
+	if !ok || len(disable) != 1 || disable[0] != nil {
+		t.Fatalf("verification disable encoding=%#v, want [null]", verification["disable"])
+	}
 }
 
 func TestConfigureSignVerification_Enabled(t *testing.T) {
@@ -152,6 +173,12 @@ func TestConfigureSignVerification_Enabled(t *testing.T) {
 	fc := &fakeNetworkClient{
 		putHook: func(_ string, payload any) error {
 			capturedPayload = payload
+			return nil
+		},
+		postWithResultHook: func(_ string, _, result any) error {
+			response := result.(*appHostingRPCOutput)
+			response.Result = "Application signature verification enabled"
+			response.Present = true
 			return nil
 		},
 	}
@@ -183,6 +210,56 @@ func TestConfigureSignVerification_PutError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "sign-verification") {
 		t.Errorf("error %q does not mention sign-verification", err.Error())
+	}
+}
+
+func TestConfigureSignVerification_RuntimeMismatch(t *testing.T) {
+	const sentinel = "runtime-result-secret-sentinel"
+	fc := &fakeNetworkClient{
+		putHook: func(_ string, _ any) error { return nil },
+		postWithResultHook: func(_ string, _, result any) error {
+			response := result.(*appHostingRPCOutput)
+			response.Result = "Application signature verification is enabled while using bootflash " + sentinel
+			response.Present = true
+			return nil
+		},
+	}
+	err := (&XEDriver{config: &v1alpha1.DeviceSpec{}, client: fc}).ConfigureSignVerification(testCtx(), false)
+	if err == nil {
+		t.Fatal("ConfigureSignVerification succeeded despite runtime mismatch")
+	}
+	if strings.Contains(err.Error(), sentinel) {
+		t.Fatalf("error exposed device result: %v", err)
+	}
+}
+
+func TestConfigureSignVerification_UnknownRuntimeResultFailsClosed(t *testing.T) {
+	fc := &fakeNetworkClient{
+		putHook: func(_ string, _ any) error { return nil },
+		postWithResultHook: func(_ string, _, result any) error {
+			response := result.(*appHostingRPCOutput)
+			response.Result = "Unable to disable application signature verification"
+			response.Present = true
+			return nil
+		},
+	}
+	if err := (&XEDriver{config: &v1alpha1.DeviceSpec{}, client: fc}).ConfigureSignVerification(testCtx(), false); err == nil {
+		t.Fatal("ConfigureSignVerification accepted an unknown runtime result")
+	}
+}
+
+func TestConfigureSignVerification_SuccessPrefixWithFailureSuffixFailsClosed(t *testing.T) {
+	fc := &fakeNetworkClient{
+		putHook: func(_ string, _ any) error { return nil },
+		postWithResultHook: func(_ string, _, result any) error {
+			response := result.(*appHostingRPCOutput)
+			response.Result = "Application signature verification disabled failed to apply"
+			response.Present = true
+			return nil
+		},
+	}
+	if err := (&XEDriver{config: &v1alpha1.DeviceSpec{}, client: fc}).ConfigureSignVerification(testCtx(), false); err == nil {
+		t.Fatal("ConfigureSignVerification accepted a success prefix with a failure suffix")
 	}
 }
 
