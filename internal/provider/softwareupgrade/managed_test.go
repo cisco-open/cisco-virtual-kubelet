@@ -190,6 +190,56 @@ func managedCancellationQueueTombstone(name string) *opsv1alpha1.IOSXESoftwareUp
 	return up
 }
 
+func managedCancellationAuditRecord(name string, withDrain bool) *opsv1alpha1.IOSXESoftwareUpgrade {
+	up := managedCancellationQueueTombstone(name)
+	up.Status.ExecutionModel = opsv1alpha1.UpgradeExecutionModelAtMostOnceV1
+	up.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+	up.Status.WorkerControl = &opsv1alpha1.UpgradeWorkerControlStatus{
+		ObservedAdmissionState:       opsv1alpha1.UpgradeManagerAdmissionSettled,
+		ObservedPolicyEpoch:          up.Status.ManagerAdmission.PolicyEpoch,
+		ObservedControlRevision:      up.Status.ManagerControl.Revision,
+		ObservedWorkerConfigRevision: managedTestWorkerRevision,
+		EffectiveState:               opsv1alpha1.UpgradeWorkerControlSettled,
+		UpdatedAt:                    metav1.NewTime(managedTestTime),
+	}
+	if !withDrain {
+		return up
+	}
+
+	up.Status.ManagerAdmission.TopologyLockID = strings.Repeat("1", 32)
+	started := metav1.NewTime(managedTestTime.Add(-time.Hour))
+	recoveryDeadline := metav1.NewTime(managedTestTime.Add(time.Hour))
+	up.Status.ManagerDrain = &opsv1alpha1.UpgradeManagerDrainStatus{
+		ProtocolVersion:  opsv1alpha1.ManagedDrainProtocolPDBV1,
+		State:            opsv1alpha1.UpgradeManagerDrainSettled,
+		SessionToken:     "00000000-0000-4000-8000-000000000001",
+		ReservationID:    up.Status.ManagerAdmission.ReservationID,
+		PolicyEpoch:      up.Status.ManagerAdmission.PolicyEpoch,
+		ControlRevision:  up.Status.ManagerControl.Revision,
+		NodeUID:          up.Status.ManagerAdmission.NodeUID,
+		StartedAt:        started,
+		DrainDeadline:    metav1.NewTime(managedTestTime.Add(-30 * time.Minute)),
+		RecoveryDeadline: &recoveryDeadline,
+		UpdatedAt:        metav1.NewTime(managedTestTime),
+		Pods: []opsv1alpha1.UpgradeDrainPodStatus{{
+			Namespace: "workloads", Name: "app-1", UID: "pod-uid-1",
+			Phase: opsv1alpha1.UpgradeDrainPodComplete,
+		}},
+	}
+	up.Status.WorkerDrain = &opsv1alpha1.UpgradeWorkerDrainStatus{
+		ProtocolVersion:              opsv1alpha1.ManagedDrainProtocolPDBV1,
+		ObservedSessionToken:         up.Status.ManagerDrain.SessionToken,
+		ObservedPolicyEpoch:          up.Status.ManagerDrain.PolicyEpoch,
+		ObservedControlRevision:      up.Status.ManagerDrain.ControlRevision,
+		ObservedWorkerConfigRevision: managedTestWorkerRevision,
+		InventoryRevision:            9,
+		InventoryObservedAt:          metav1.NewTime(managedTestTime.Add(-time.Minute)),
+		InventoryComplete:            true,
+		UpdatedAt:                    metav1.NewTime(managedTestTime.Add(-time.Minute)),
+	}
+	return up
+}
+
 func newManagedTestReconciler(
 	t *testing.T,
 	up *opsv1alpha1.IOSXESoftwareUpgrade,
@@ -1349,6 +1399,304 @@ func TestInertManagedCancellationTombstoneFailsClosed(t *testing.T) {
 			}
 			if got := inertManagedCancellationTombstone(up); got != test.want {
 				t.Fatalf("inertManagedCancellationTombstone() = %t, want %t; status=%+v", got, test.want, up.Status)
+			}
+		})
+	}
+}
+
+func TestSettledManagedCancellationAuditRecordFailsClosed(t *testing.T) {
+	safePhases := []opsv1alpha1.UpgradePhase{
+		opsv1alpha1.UpgradePhasePending,
+		opsv1alpha1.UpgradePhaseResolving,
+		opsv1alpha1.UpgradePhaseStaging,
+		opsv1alpha1.UpgradePhaseTransferring,
+		opsv1alpha1.UpgradePhaseActivating,
+	}
+	for _, workerState := range []opsv1alpha1.UpgradeWorkerControlState{
+		opsv1alpha1.UpgradeWorkerControlSettled,
+		opsv1alpha1.UpgradeWorkerControlDenied,
+	} {
+		for _, phase := range safePhases {
+			t.Run("safe "+string(phase)+" "+string(workerState), func(t *testing.T) {
+				up := managedCancellationAuditRecord("settled-audit", false)
+				up.Status.Phase = phase
+				up.Status.WorkerControl.EffectiveState = workerState
+				if !settledManagedCancellationAuditRecord(up) {
+					t.Fatalf("exact settled %s record with worker state %s retained the queue lock", phase, workerState)
+				}
+			})
+		}
+	}
+
+	t.Run("fully bound settled drain", func(t *testing.T) {
+		up := managedCancellationAuditRecord("settled-drain-audit", true)
+		if !settledManagedCancellationAuditRecord(up) {
+			t.Fatalf("fully settled drain audit record retained the queue lock: status=%+v", up.Status)
+		}
+	})
+	t.Run("settled zero-Pod drain without worker inventory", func(t *testing.T) {
+		up := managedCancellationAuditRecord("settled-empty-drain-audit", true)
+		up.Status.ManagerDrain.Pods = nil
+		up.Status.WorkerDrain = nil
+		if !settledManagedCancellationAuditRecord(up) {
+			t.Fatalf("settled zero-Pod drain audit record retained the queue lock: status=%+v", up.Status)
+		}
+	})
+	t.Run("settled drain accepts lagging pre-rotation inventory", func(t *testing.T) {
+		up := managedCancellationAuditRecord("settled-lagging-drain-audit", true)
+		up.Status.WorkerDrain.ObservedControlRevision = 0
+		up.Status.WorkerDrain.ObservedWorkerConfigRevision = "sha256:" + strings.Repeat("b", 64)
+		if !settledManagedCancellationAuditRecord(up) {
+			t.Fatalf("settled drain with prior bound inventory retained the queue lock: status=%+v", up.Status)
+		}
+	})
+
+	unsafePhases := []opsv1alpha1.UpgradePhase{
+		opsv1alpha1.UpgradePhaseTransferInterrupted,
+		opsv1alpha1.UpgradePhaseValidating,
+		opsv1alpha1.UpgradePhaseAwaitingReachability,
+		opsv1alpha1.UpgradePhaseVerifying,
+		opsv1alpha1.UpgradePhaseRollingBack,
+		opsv1alpha1.UpgradePhaseSucceeded,
+		opsv1alpha1.UpgradePhaseStagedForNextBoot,
+		opsv1alpha1.UpgradePhaseFailed,
+		opsv1alpha1.UpgradePhasePreflightFailed,
+		opsv1alpha1.UpgradePhaseValidationFailed,
+		opsv1alpha1.UpgradePhaseRolledBack,
+		opsv1alpha1.UpgradePhaseRebootTimeout,
+		opsv1alpha1.UpgradePhaseCancelled,
+		opsv1alpha1.UpgradePhase("FuturePhase"),
+	}
+	tests := []struct {
+		name   string
+		mutate func(*opsv1alpha1.IOSXESoftwareUpgrade)
+	}{
+		{name: "empty phase belongs to tombstone predicate", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Phase = ""
+		}},
+		{name: "missing execution model", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ExecutionModel = ""
+		}},
+		{name: "unknown execution model", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ExecutionModel = "FutureModel"
+		}},
+		{name: "managed claim", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+				Stage: opsv1alpha1.UpgradeManagedMutationPrimaryInstall,
+			}}
+		}},
+		{name: "durable install marker", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.PrimarySupervisorInstallRequested = true
+		}},
+		{name: "durable mutation timestamp", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.InstallStartTime = ptr.To(metav1.NewTime(managedTestTime))
+		}},
+		{name: "durable transfer progress", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.TransferProgress = &opsv1alpha1.UpgradeTransferProgress{}
+		}},
+		{name: "durable mutation condition", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Conditions = []metav1.Condition{{Type: "Activated", Reason: "ActivationRequested"}}
+		}},
+		{name: "durable mutation-requested condition", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Conditions = []metav1.Condition{{Type: "DeviceMutationSettled", Reason: "MutationRequested"}}
+		}},
+		{name: "durable install condition", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Conditions = []metav1.Condition{{Type: "Transferred", Reason: "InstallRequested"}}
+		}},
+		{name: "durable standby activation condition", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Conditions = []metav1.Condition{{Type: "Activated", Reason: "StandbyActivationRequested"}}
+		}},
+		{name: "durable uncertainty reason", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.FailureReason = "InstallAttemptMarkerMissing"
+		}},
+		{name: "manager identity mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Revision++
+		}},
+		{name: "worker acknowledgement missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl = nil
+		}},
+		{name: "worker admission stale", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.ObservedAdmissionState = opsv1alpha1.UpgradeManagerAdmissionRevoked
+		}},
+		{name: "worker policy epoch stale", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.ObservedPolicyEpoch++
+		}},
+		{name: "worker control revision stale", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.ObservedControlRevision--
+		}},
+		{name: "worker revision invalid", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.ObservedWorkerConfigRevision = "sha256:invalid"
+		}},
+		{name: "worker timestamp missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.UpdatedAt = metav1.Time{}
+		}},
+		{name: "drain not settled", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.State = opsv1alpha1.UpgradeManagerDrainRecovering
+		}},
+		{name: "drain protocol mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.ProtocolVersion = "future"
+		}},
+		{name: "drain session invalid", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.SessionToken = "not-a-session"
+		}},
+		{name: "drain reservation mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.ReservationID = "another-reservation"
+		}},
+		{name: "drain policy epoch mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.PolicyEpoch++
+		}},
+		{name: "drain control revision mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.ControlRevision--
+		}},
+		{name: "drain node mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.NodeUID = "another-node"
+		}},
+		{name: "drain start missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.StartedAt = metav1.Time{}
+		}},
+		{name: "drain deadline invalid", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.DrainDeadline = up.Status.ManagerDrain.StartedAt
+		}},
+		{name: "drain update precedes start", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.UpdatedAt = metav1.NewTime(up.Status.ManagerDrain.StartedAt.Add(-time.Second))
+		}},
+		{name: "drain recovery deadline missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.RecoveryDeadline = nil
+		}},
+		{name: "drain Pod incomplete", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.Pods[0].Phase = opsv1alpha1.UpgradeDrainPodReleased
+		}},
+		{name: "settled drain inventory missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain = nil
+		}},
+		{name: "worker drain without manager drain", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain = nil
+		}},
+		{name: "worker drain protocol mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.ProtocolVersion = "future"
+		}},
+		{name: "worker drain session mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.ObservedSessionToken = "00000000-0000-4000-8000-000000000002"
+		}},
+		{name: "worker drain policy mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.ObservedPolicyEpoch++
+		}},
+		{name: "worker drain control ahead", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.ObservedControlRevision++
+		}},
+		{name: "worker drain revision invalid", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.ObservedWorkerConfigRevision = "invalid"
+		}},
+		{name: "worker drain inventory revision missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.InventoryRevision = 0
+		}},
+		{name: "worker drain inventory timestamp missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.InventoryObservedAt = metav1.Time{}
+		}},
+		{name: "worker drain update timestamp missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.UpdatedAt = metav1.Time{}
+		}},
+		{name: "worker drain inventory incomplete", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.InventoryComplete = false
+		}},
+		{name: "worker drain unknown workload", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.UnknownDeviceWorkloadCount = 1
+		}},
+		{name: "worker drain invalid foreign count", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.ForeignDeviceWorkloadCount = -1
+		}},
+		{name: "worker drain selected workload remains", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.RemainingAuthorizedPodUIDs = []string{"pod-uid-1"}
+		}},
+	}
+	for _, workerState := range []opsv1alpha1.UpgradeWorkerControlState{
+		"",
+		opsv1alpha1.UpgradeWorkerControlReady,
+		opsv1alpha1.UpgradeWorkerControlPaused,
+		opsv1alpha1.UpgradeWorkerControlCancelled,
+		opsv1alpha1.UpgradeWorkerControlClaimed,
+	} {
+		workerState := workerState
+		tests = append(tests, struct {
+			name   string
+			mutate func(*opsv1alpha1.IOSXESoftwareUpgrade)
+		}{
+			name: "unsafe worker state " + string(workerState),
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.WorkerControl.EffectiveState = workerState
+			},
+		})
+	}
+	for _, phase := range unsafePhases {
+		phase := phase
+		tests = append(tests, struct {
+			name   string
+			mutate func(*opsv1alpha1.IOSXESoftwareUpgrade)
+		}{
+			name: "unsafe phase " + string(phase),
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.Phase = phase
+			},
+		})
+	}
+
+	if settledManagedCancellationAuditRecord(nil) {
+		t.Fatal("nil upgrade was treated as a settled audit record")
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			up := managedCancellationAuditRecord("settled-audit", true)
+			test.mutate(up)
+			if settledManagedCancellationAuditRecord(up) {
+				t.Fatalf("ambiguous settled audit record released the queue lock: status=%+v", up.Status)
+			}
+		})
+	}
+}
+
+func TestDeviceUpgradeOwnerSkipsSettledManagedCancellationAuditRecord(t *testing.T) {
+	tests := []struct {
+		name      string
+		withDrain bool
+		mutateOld func(*opsv1alpha1.IOSXESoftwareUpgrade)
+		wantNext  bool
+	}{
+		{name: "settled pre-dispatch record", wantNext: true},
+		{name: "settled denied worker record", wantNext: true, mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.EffectiveState = opsv1alpha1.UpgradeWorkerControlDenied
+		}},
+		{name: "fully settled drain record", withDrain: true, wantNext: true},
+		{name: "legacy execution model", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ExecutionModel = ""
+		}},
+		{name: "unsettled drain", withDrain: true, mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.State = opsv1alpha1.UpgradeManagerDrainRecovering
+		}},
+		{name: "stale worker acknowledgement", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.ObservedAdmissionState = opsv1alpha1.UpgradeManagerAdmissionRevoked
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			old := managedCancellationAuditRecord("a-retained-audit", test.withDrain)
+			old.CreationTimestamp = metav1.NewTime(managedTestTime.Add(-time.Hour))
+			if test.mutateOld != nil {
+				test.mutateOld(old)
+			}
+			next := managedTestLeaf("z-next-upgrade")
+			next.CreationTimestamp = metav1.NewTime(managedTestTime)
+			r := newManagedTestReconciler(t, next, nil, old)
+
+			owner, err := r.deviceUpgradeOwner(context.Background(), next, managedTestTime)
+			if err != nil {
+				t.Fatalf("deviceUpgradeOwner() error = %v", err)
+			}
+			want := old.Name
+			if test.wantNext {
+				want = next.Name
+			}
+			if owner != want {
+				t.Fatalf("deviceUpgradeOwner() = %q, want %q", owner, want)
 			}
 		})
 	}

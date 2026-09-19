@@ -1399,7 +1399,8 @@ func (r *Reconciler) deviceUpgradeOwner(ctx context.Context, up *opsv1alpha1.IOS
 	for i := range upgrades.Items {
 		item := &upgrades.Items[i]
 		if item.Spec.DeviceRef.Name != up.Spec.DeviceRef.Name || !item.DeletionTimestamp.IsZero() ||
-			terminalUpgradePhase(item.Status.Phase) || inertManagedCancellationTombstone(item) {
+			terminalUpgradePhase(item.Status.Phase) || inertManagedCancellationTombstone(item) ||
+			settledManagedCancellationAuditRecord(item) {
 			continue
 		}
 		if item.Status.Phase == "" || item.Status.Phase == opsv1alpha1.UpgradePhasePending {
@@ -1446,10 +1447,98 @@ func (r *Reconciler) deviceUpgradeOwner(ctx context.Context, up *opsv1alpha1.IOS
 // remains a queue contender until its physical outcome is unambiguous.
 func inertManagedCancellationTombstone(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 	if up == nil || up.UID == "" || up.Status.Phase != "" ||
-		up.Annotations[managedprotocol.AnnotationManaged] != "true" ||
 		up.Status.ManagerDrain != nil || up.Status.WorkerDrain != nil ||
 		len(up.Status.ManagedMutationClaims) != 0 ||
 		mutationguard.UpgradeMutationSubmitted(up) {
+		return false
+	}
+	return settledManagedCancellationBinding(up)
+}
+
+// settledManagedCancellationAuditRecord recognizes a manager-settled retained
+// leaf whose current at-most-once state proves that it never submitted a device
+// mutation. A non-empty phase alone is not dispatch evidence under AtMostOnceV1:
+// Pending, Resolving, Staging, Transferring, and Activating are all persisted
+// before their corresponding durable claim/marker. Every identity, claim,
+// marker, acknowledgement, and drain check remains fail-closed so an ambiguous
+// retained leaf continues to own the legacy per-device queue.
+func settledManagedCancellationAuditRecord(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	if up == nil || up.Status.Phase == "" ||
+		up.Status.ExecutionModel != opsv1alpha1.UpgradeExecutionModelAtMostOnceV1 ||
+		!managedCancellationPreDispatchPhase(up.Status.Phase) ||
+		len(up.Status.ManagedMutationClaims) != 0 ||
+		mutationguard.UpgradeMutationSubmitted(up) ||
+		!settledManagedCancellationBinding(up) {
+		return false
+	}
+
+	admission := up.Status.ManagerAdmission
+	control := up.Status.ManagerControl
+	worker := up.Status.WorkerControl
+	if worker == nil || worker.ObservedAdmissionState != opsv1alpha1.UpgradeManagerAdmissionSettled ||
+		worker.ObservedPolicyEpoch != admission.PolicyEpoch ||
+		worker.ObservedControlRevision != control.Revision ||
+		!validContentDigest(worker.ObservedWorkerConfigRevision) || worker.UpdatedAt.IsZero() ||
+		(worker.EffectiveState != opsv1alpha1.UpgradeWorkerControlSettled &&
+			worker.EffectiveState != opsv1alpha1.UpgradeWorkerControlDenied) {
+		return false
+	}
+	return settledManagedDrainAuditBinding(up)
+}
+
+func managedCancellationPreDispatchPhase(phase opsv1alpha1.UpgradePhase) bool {
+	switch phase {
+	case opsv1alpha1.UpgradePhasePending,
+		opsv1alpha1.UpgradePhaseResolving,
+		opsv1alpha1.UpgradePhaseStaging,
+		opsv1alpha1.UpgradePhaseTransferring,
+		opsv1alpha1.UpgradePhaseActivating:
+		return true
+	default:
+		return false
+	}
+}
+
+func settledManagedDrainAuditBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	drain := up.Status.ManagerDrain
+	worker := up.Status.WorkerDrain
+	if drain == nil {
+		return worker == nil
+	}
+	admission := up.Status.ManagerAdmission
+	control := up.Status.ManagerControl
+	parsedSession, err := uuid.Parse(drain.SessionToken)
+	if err != nil || parsedSession.String() != drain.SessionToken || parsedSession.Version() != 4 ||
+		parsedSession.Variant() != uuid.RFC4122 ||
+		drain.ProtocolVersion != opsv1alpha1.ManagedDrainProtocolPDBV1 ||
+		drain.State != opsv1alpha1.UpgradeManagerDrainSettled ||
+		drain.ReservationID != admission.ReservationID || drain.PolicyEpoch != admission.PolicyEpoch ||
+		drain.ControlRevision != control.Revision || drain.NodeUID != admission.NodeUID ||
+		drain.StartedAt.IsZero() || drain.DrainDeadline.IsZero() || drain.UpdatedAt.IsZero() ||
+		!drain.DrainDeadline.After(drain.StartedAt.Time) || drain.UpdatedAt.Before(&drain.StartedAt) ||
+		drain.RecoveryDeadline == nil || !drain.RecoveryDeadline.After(drain.StartedAt.Time) {
+		return false
+	}
+	for i := range drain.Pods {
+		if drain.Pods[i].Phase != opsv1alpha1.UpgradeDrainPodComplete {
+			return false
+		}
+	}
+	if worker == nil {
+		return len(drain.Pods) == 0
+	}
+	return worker.ProtocolVersion == drain.ProtocolVersion &&
+		worker.ObservedSessionToken == drain.SessionToken &&
+		worker.ObservedPolicyEpoch == drain.PolicyEpoch &&
+		worker.ObservedControlRevision >= 0 && worker.ObservedControlRevision <= drain.ControlRevision &&
+		validContentDigest(worker.ObservedWorkerConfigRevision) && worker.InventoryRevision > 0 &&
+		!worker.InventoryObservedAt.IsZero() && !worker.UpdatedAt.IsZero() && worker.InventoryComplete &&
+		worker.ForeignDeviceWorkloadCount >= 0 && worker.UnknownDeviceWorkloadCount == 0 &&
+		len(worker.RemainingAuthorizedPodUIDs) == 0
+}
+
+func settledManagedCancellationBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	if up == nil || up.UID == "" || up.Annotations[managedprotocol.AnnotationManaged] != "true" {
 		return false
 	}
 	admission := up.Status.ManagerAdmission

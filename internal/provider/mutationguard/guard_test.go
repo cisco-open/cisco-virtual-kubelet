@@ -114,11 +114,35 @@ func TestUpgradeMutationSubmittedRecognizesEveryDurableEvidenceClass(t *testing.
 		{name: "primary activation requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.PrimarySupervisorActivationRequested = true }},
 		{name: "no-reboot activation accepted", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.NoRebootActivationAccepted = true }},
 		{name: "rollback requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.RollbackActivationRequested = true }},
+		{name: "transfer progress", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.TransferProgress = &opsv1alpha1.UpgradeTransferProgress{}
+		}},
 		{name: "legacy staging condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
 			s.Conditions = []metav1.Condition{{Type: "Staged", Reason: "StagingRequested"}}
 		}},
+		{name: "mutation requested condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "DeviceMutationSettled", Reason: "MutationRequested"}}
+		}},
+		{name: "install requested condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Transferred", Reason: "InstallRequested"}}
+		}},
+		{name: "install observation condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Transferred", Reason: "InstallObservationPending"}}
+		}},
+		{name: "install in progress condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Transferred", Reason: "InstallInProgress"}}
+		}},
+		{name: "supervisor sync condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Transferred", Reason: "SupervisorSync"}}
+		}},
+		{name: "transferred condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Transferred", Reason: "Transferred"}}
+		}},
 		{name: "legacy activation condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
 			s.Conditions = []metav1.Condition{{Type: "Activated", Reason: "ActivationRequested"}}
+		}},
+		{name: "standby activation condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Activated", Reason: "StandbyActivationRequested"}}
 		}},
 		{name: "legacy rollback condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
 			s.Conditions = []metav1.Condition{{Type: "Rollback", Reason: "RollbackDispatched"}}
@@ -148,6 +172,13 @@ func TestUpgradeMutationSubmittedRecognizesEveryDurableEvidenceClass(t *testing.
 		},
 		"activation control timer": func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
 			s.ActivationControlStartTime = markTime.DeepCopy()
+		},
+		"preinstalled activation conditions": func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{
+				{Type: "DeviceMutationSettled", Status: metav1.ConditionTrue, Reason: "InstallCompleted"},
+				{Type: "Transferred", Status: metav1.ConditionTrue, Reason: "TransferNotRequired"},
+				{Type: "Activated", Status: metav1.ConditionFalse, Reason: "ActivationPending"},
+			}
 		},
 	} {
 		t.Run(name+" is pre-dispatch", func(t *testing.T) {

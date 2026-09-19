@@ -249,6 +249,7 @@ func UpgradeMutationSubmitted(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 	}
 	if status.StagingRequested || status.InstallStartTime != nil ||
 		status.ActivationStartTime != nil || status.RollbackStartTime != nil ||
+		status.TransferProgress != nil ||
 		status.PrimarySupervisorInstallRequested || status.PrimarySupervisorInstalled ||
 		status.StandbySupervisorInstallRequested || status.StandbySupervisorInstalled ||
 		status.StandbySupervisorActivationRequested || status.StandbySupervisorActivated ||
@@ -260,7 +261,13 @@ func UpgradeMutationSubmitted(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 		condition := &status.Conditions[i]
 		switch {
 		case condition.Type == "Staged" && condition.Reason == "StagingRequested",
+			condition.Type == "DeviceMutationSettled" && condition.Reason == "MutationRequested",
+			condition.Type == "Transferred" &&
+				(condition.Reason == "InstallRequested" || condition.Reason == "InstallObservationPending" ||
+					condition.Reason == "InstallInProgress" || condition.Reason == "SupervisorSync" ||
+					condition.Reason == "Transferred"),
 			condition.Type == "Activated" && condition.Reason == "ActivationRequested",
+			condition.Type == "Activated" && condition.Reason == "StandbyActivationRequested",
 			condition.Type == "Rollback" &&
 				(condition.Reason == "RollbackRequested" || condition.Reason == "RollbackDispatched"):
 			return true
