@@ -335,41 +335,62 @@ func TestManagedDrainRecoveryPermitsReplacementWriteAfterOwnedGuardRestored(t *t
 }
 
 func TestManagedRecoveryWriteAuthorizationLossDoesNotRenewLease(t *testing.T) {
-	c, objects := prepareManagedDrainRecovery(t)
-	c.renewInterval = 100 * time.Millisecond
-	ctx := context.Background()
-	writeCtx, finish, err := c.AcquireWrite(ctx)
-	if err != nil {
-		t.Fatalf("AcquireWrite() during exact recovery = %v", err)
-	}
+	for name, loseAuthorization := range map[string]func(*ciskov1.CiscoDevice, *corev1.Node){
+		"topology projection": func(_ *ciskov1.CiscoDevice, node *corev1.Node) {
+			node.Annotations[managedprotocol.AnnotationProjectionHash] = "authorization-lost-before-renewal"
+		},
+		"worker revision pre-fence": func(device *ciskov1.CiscoDevice, _ *corev1.Node) {
+			device.Status.WorkerRevision = &ciskov1.DeviceWorkerRevisionStatus{
+				DesiredRevision: "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+				ObservedAt:      metav1.Now(),
+			}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			c, objects := prepareManagedDrainRecovery(t)
+			c.renewInterval = 100 * time.Millisecond
+			ctx := context.Background()
+			writeCtx, finish, err := c.AcquireWrite(ctx)
+			if err != nil {
+				t.Fatalf("AcquireWrite() during exact recovery = %v", err)
+			}
 
-	var before coordv1.Lease
-	if err := c.Client.Get(ctx, client.ObjectKeyFromObject(objects.lease), &before); err != nil {
-		t.Fatal(err)
-	}
-	var node corev1.Node
-	if err := c.Client.Get(ctx, client.ObjectKeyFromObject(objects.node), &node); err != nil {
-		t.Fatal(err)
-	}
-	node.Annotations[managedprotocol.AnnotationProjectionHash] = "authorization-lost-before-renewal"
-	if err := c.Client.Update(ctx, &node); err != nil {
-		t.Fatal(err)
-	}
+			var before coordv1.Lease
+			if err := c.Client.Get(ctx, client.ObjectKeyFromObject(objects.lease), &before); err != nil {
+				t.Fatal(err)
+			}
+			var device ciskov1.CiscoDevice
+			if err := c.Client.Get(ctx, client.ObjectKeyFromObject(objects.device), &device); err != nil {
+				t.Fatal(err)
+			}
+			var node corev1.Node
+			if err := c.Client.Get(ctx, client.ObjectKeyFromObject(objects.node), &node); err != nil {
+				t.Fatal(err)
+			}
+			loseAuthorization(&device, &node)
+			if err := c.Client.Status().Update(ctx, &device); err != nil {
+				t.Fatal(err)
+			}
+			if err := c.Client.Update(ctx, &node); err != nil {
+				t.Fatal(err)
+			}
 
-	select {
-	case <-writeCtx.Done():
-	case <-time.After(2 * time.Second):
-		finish(errors.New("test timeout"))
-		t.Fatal("managed recovery write was not cancelled after renewal authorization was lost")
-	}
-	finish(errors.New("authorization lost before renewal"))
+			select {
+			case <-writeCtx.Done():
+			case <-time.After(2 * time.Second):
+				finish(errors.New("test timeout"))
+				t.Fatal("managed recovery write was not cancelled after renewal authorization was lost")
+			}
+			finish(errors.New("authorization lost before renewal"))
 
-	var after coordv1.Lease
-	if err := c.Client.Get(ctx, client.ObjectKeyFromObject(objects.lease), &after); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(before, after) {
-		t.Fatalf("authorization loss mutated the retained Lease\nbefore: %#v\nafter:  %#v", before, after)
+			var after coordv1.Lease
+			if err := c.Client.Get(ctx, client.ObjectKeyFromObject(objects.lease), &after); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(before, after) {
+				t.Fatalf("authorization loss mutated the retained Lease\nbefore: %#v\nafter:  %#v", before, after)
+			}
+		})
 	}
 }
 
@@ -391,6 +412,17 @@ func TestManagedDrainRecoveryWriteFailsClosedUntilExactRestoration(t *testing.T)
 		},
 		"foreign topology lock": func(o *drainFixtureObjects) {
 			o.device.Status.TopologyLock.AcquisitionID = strings.Repeat("d", 32)
+		},
+		"worker desired revision pre-fenced": func(o *drainFixtureObjects) {
+			o.device.Status.WorkerRevision = &ciskov1.DeviceWorkerRevisionStatus{
+				DesiredRevision: "sha256:" + strings.Repeat("c", 64), ObservedAt: metav1.Now(),
+			}
+		},
+		"worker observed revision stale": func(o *drainFixtureObjects) {
+			o.device.Status.WorkerRevision.ObservedRevision = "sha256:" + strings.Repeat("c", 64)
+		},
+		"replacement worker Pod": func(o *drainFixtureObjects) {
+			o.device.Status.WorkerRevision.PodUID = "replacement-worker-pod-uid"
 		},
 		"wrong session purpose": func(o *drainFixtureObjects) {
 			o.device.Status.MaintenanceSession.Purpose = "Other"

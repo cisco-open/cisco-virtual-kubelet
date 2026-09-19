@@ -358,7 +358,6 @@ func staleDrainRecoveryManagerFixture(
 				managedprotocol.AnnotationProjectionHash:         projectionHash,
 				managedprotocol.AnnotationProjectedKeys:          "",
 				managedprotocol.AnnotationManagedTaints:          "",
-				managedprotocol.AnnotationWorkerConfigRevision:   workerRevision,
 				managedprotocol.AnnotationWorkerObservedRevision: workerRevision,
 			},
 		},
@@ -389,6 +388,14 @@ func staleDrainRecoveryManagerFixture(
 		Type: ciskov1.CiscoDeviceConditionTopologyReady, Status: metav1.ConditionTrue,
 		ObservedGeneration: device.Generation, Reason: "ProjectionComplete", LastTransitionTime: metav1.NewTime(now),
 	}}
+	workerPodStart := metav1.NewTime(now.Add(-time.Minute))
+	workerHeartbeat := metav1.NewTime(now)
+	device.Status.WorkerRevision = &ciskov1.DeviceWorkerRevisionStatus{
+		DesiredRevision: workerRevision, ObservedRevision: workerRevision,
+		DeploymentUID: "worker-deployment-uid", DeploymentGeneration: 1,
+		PodUID: "worker-pod-uid", PodStartTime: &workerPodStart, ReadyHeartbeatTime: &workerHeartbeat,
+		ObservedAt: metav1.NewTime(now),
+	}
 
 	leaf := &opsv1alpha1.IOSXESoftwareUpgrade{
 		ObjectMeta: metav1.ObjectMeta{
@@ -595,7 +602,8 @@ func TestStaleDrainRecoveryPreservesNodeThenRetiresExactLease(t *testing.T) {
 			coordinator := &providermaintenance.Coordinator{
 				Client: r.Client, Namespace: device.Namespace, DeviceName: device.Name,
 				DeviceUID: string(device.UID), NodeName: restored.Name,
-				WorkerRevision: objects.workerRevision, LeaseNamespace: objects.lease.Namespace,
+				WorkerRevision: objects.workerRevision, WorkerPodUID: "worker-pod-uid",
+				LeaseNamespace:  objects.lease.Namespace,
 				ManagedTopology: true, MutationsEnabled: true,
 			}
 			if _, finish, err := coordinator.AcquireDrainDelete(ctx, objects.pod.DeepCopy()); finish != nil || !errors.Is(err, devicecoordination.ErrMutationIncomplete) ||

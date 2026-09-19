@@ -18,14 +18,17 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,6 +70,26 @@ type drainReleaseFailureClient struct {
 }
 
 type drainPodReadFailureClient struct{ client.Client }
+
+type drainPodSecondReadNotFoundClient struct {
+	client.Client
+	podReads int
+}
+
+func (c *drainPodSecondReadNotFoundClient) Get(
+	ctx context.Context,
+	key client.ObjectKey,
+	obj client.Object,
+	opts ...client.GetOption,
+) error {
+	if _, ok := obj.(*corev1.Pod); ok {
+		c.podReads++
+		if c.podReads == 2 {
+			return apierrors.NewNotFound(schema.GroupResource{Resource: "pods"}, key.Name)
+		}
+	}
+	return c.Client.Get(ctx, key, obj, opts...)
+}
 
 func (c drainPodReadFailureClient) Get(
 	ctx context.Context,
@@ -160,7 +183,6 @@ func drainCoordinatorFixture(
 				managedprotocol.AnnotationWorkerUsername:         "system:serviceaccount:edge:worker",
 				managedprotocol.AnnotationWorkerProtocol:         managedprotocol.Version,
 				managedprotocol.AnnotationProjectionHash:         "projection-hash",
-				managedprotocol.AnnotationWorkerConfigRevision:   drainWorkerHash,
 				managedprotocol.AnnotationWorkerObservedRevision: drainWorkerHash,
 				managedprotocol.AnnotationDrainCordonOwner:       drainSessionToken,
 				managedprotocol.AnnotationDrainTaintOwner:        drainSessionToken,
@@ -186,6 +208,14 @@ func drainCoordinatorFixture(
 		Type: ciskov1.CiscoDeviceConditionTopologyReady, Status: metav1.ConditionTrue,
 		ObservedGeneration: device.Generation, Reason: "Ready", LastTransitionTime: metav1.NewTime(now),
 	}}
+	podStart := metav1.NewTime(now.Add(-time.Minute))
+	readyHeartbeat := metav1.NewTime(now)
+	device.Status.WorkerRevision = &ciskov1.DeviceWorkerRevisionStatus{
+		DesiredRevision: drainWorkerHash, ObservedRevision: drainWorkerHash,
+		DeploymentUID: "worker-deployment-uid", DeploymentGeneration: 1,
+		PodUID: "worker-pod-uid", PodStartTime: &podStart, ReadyHeartbeatTime: &readyHeartbeat,
+		ObservedAt: metav1.NewTime(now),
+	}
 
 	leaf := &opsv1alpha1.IOSXESoftwareUpgrade{
 		ObjectMeta: metav1.ObjectMeta{
@@ -320,10 +350,45 @@ func drainCoordinatorFixture(
 		WithStatusSubresource(device, leaf).WithObjects(device, node, leaf, lease, pod).Build()
 	coordinator := &Coordinator{
 		Client: kubeClient, Namespace: device.Namespace, DeviceName: device.Name, DeviceUID: string(device.UID),
-		NodeName: node.Name, WorkerRevision: drainWorkerHash, LeaseNamespace: lease.Namespace,
+		NodeName: node.Name, WorkerRevision: drainWorkerHash, WorkerPodUID: "worker-pod-uid", LeaseNamespace: lease.Namespace,
 		ManagedTopology: true, MutationsEnabled: true,
 	}
 	return coordinator, objects
+}
+
+func releasedDrainCompletionFixture(
+	t *testing.T,
+	phase opsv1alpha1.UpgradeDrainPodPhase,
+	mutate func(*drainFixtureObjects),
+) (*Coordinator, *drainFixtureObjects) {
+	t.Helper()
+	return drainCoordinatorFixture(t, func(o *drainFixtureObjects) {
+		base := o.leaf.Status.ManagerDrain.StartedAt.Time
+		protected := metav1.NewTime(base)
+		evicted := metav1.NewTime(base.Add(time.Second))
+		observed := metav1.NewTime(base.Add(2 * time.Second))
+		clean := metav1.NewTime(base.Add(3 * time.Second))
+		released := metav1.NewTime(base.Add(4 * time.Second))
+		selected := &o.leaf.Status.ManagerDrain.Pods[0]
+		selected.Phase = phase
+		selected.ProtectedAt = &protected
+		selected.EvictionRequestedAt = &evicted
+		selected.DeletionObservedAt = &observed
+		selected.DeletionObservedInventoryRevision = 3
+		selected.DeviceCleanAt = &clean
+		selected.DeviceCleanInventoryRevision = 4
+		if phase == opsv1alpha1.UpgradeDrainPodReleased {
+			selected.ReleasedAt = &released
+		}
+		o.pod.DeletionTimestamp = &observed
+		delete(o.pod.Annotations, managedprotocol.AnnotationDrainSession)
+		// The fake client rejects seeding a deleting object without any
+		// finalizer. This unrelated finalizer is not part of the drain protocol.
+		o.pod.Finalizers = []string{"example.com/fake-retain"}
+		if mutate != nil {
+			mutate(o)
+		}
+	})
 }
 
 func TestAcquireDrainDeleteOwnsAndReleasesExactLease(t *testing.T) {
@@ -671,10 +736,43 @@ func TestAcquireDrainDeleteRequiresEveryAuthorityBinding(t *testing.T) {
 		"worker acknowledgement": func(o *drainFixtureObjects) {
 			o.leaf.Status.WorkerControl.ObservedPolicyEpoch++
 		},
+		"worker revision status": func(o *drainFixtureObjects) {
+			o.device.Status.WorkerRevision = nil
+		},
+		"worker desired revision": func(o *drainFixtureObjects) {
+			o.device.Status.WorkerRevision.DesiredRevision =
+				"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+		},
+		"worker observed revision": func(o *drainFixtureObjects) {
+			o.device.Status.WorkerRevision.ObservedRevision =
+				"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+		},
+		"worker Deployment identity": func(o *drainFixtureObjects) {
+			o.device.Status.WorkerRevision.DeploymentUID = ""
+		},
+		"worker Pod identity": func(o *drainFixtureObjects) {
+			o.device.Status.WorkerRevision.PodUID = ""
+		},
+		"worker Pod incarnation": func(o *drainFixtureObjects) {
+			o.device.Status.WorkerRevision.PodUID = "replacement-worker-pod-uid"
+		},
+		"worker Pod start": func(o *drainFixtureObjects) {
+			o.device.Status.WorkerRevision.PodStartTime = nil
+		},
+		"worker ready heartbeat": func(o *drainFixtureObjects) {
+			o.device.Status.WorkerRevision.ReadyHeartbeatTime = nil
+		},
+		"worker heartbeat ordering": func(o *drainFixtureObjects) {
+			o.device.Status.WorkerRevision.ReadyHeartbeatTime =
+				ptr.To(metav1.NewTime(o.device.Status.WorkerRevision.PodStartTime.Add(-time.Second)))
+		},
+		"worker Node observation": func(o *drainFixtureObjects) {
+			o.node.Annotations[managedprotocol.AnnotationWorkerObservedRevision] =
+				"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+		},
 		"foreign runtime worker revision": func(o *drainFixtureObjects) {
 			revision := "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 			o.leaf.Status.WorkerControl.ObservedWorkerConfigRevision = revision
-			o.node.Annotations[managedprotocol.AnnotationWorkerConfigRevision] = revision
 			o.node.Annotations[managedprotocol.AnnotationWorkerObservedRevision] = revision
 		},
 		"campaign annotation": func(o *drainFixtureObjects) {
@@ -1035,13 +1133,13 @@ func TestResolveDrainDeletePodUsesLiveRecoveryProtection(t *testing.T) {
 	stale.Annotations = nil
 	stale.Finalizers = nil
 
-	resolved, strict, err := c.ResolveDrainDeletePod(context.Background(), stale)
+	resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), stale)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strict || resolved == stale || resolved.UID != objects.pod.UID ||
+	if disposition != PodDeleteDrainTeardown || resolved == stale || resolved.UID != objects.pod.UID ||
 		resolved.Annotations[managedprotocol.AnnotationDrainSession] != drainSessionToken {
-		t.Fatalf("live exact-UID protection did not select the strict path: strict=%t pod=%#v", strict, resolved)
+		t.Fatalf("live exact-UID protection disposition=%v pod=%#v", disposition, resolved)
 	}
 }
 
@@ -1052,9 +1150,31 @@ func TestResolveDrainDeletePodRejectsProtectedReplacementUID(t *testing.T) {
 	stale.Annotations = nil
 	stale.Finalizers = nil
 
-	if resolved, strict, err := c.ResolveDrainDeletePod(context.Background(), stale); err == nil ||
-		strict || resolved != nil || !strings.Contains(err.Error(), "not callback UID") {
-		t.Fatalf("protected replacement resolution = (pod=%#v, strict=%t, err=%v), want fail closed", resolved, strict, err)
+	if resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), stale); err == nil ||
+		disposition != PodDeleteOrdinary || resolved != nil || !strings.Contains(err.Error(), "not callback UID") {
+		t.Fatalf("protected replacement resolution = (pod=%#v, disposition=%v, err=%v), want fail closed", resolved, disposition, err)
+	}
+}
+
+func TestResolveDrainDeletePodRejectsUnprotectedReplacementUID(t *testing.T) {
+	c, objects := releasedDrainCompletionFixture(t, opsv1alpha1.UpgradeDrainPodReleased, nil)
+	stale := objects.pod.DeepCopy()
+	stale.UID = "previous-pod-uid"
+
+	if resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), stale); err == nil ||
+		disposition != PodDeleteOrdinary || resolved != nil || !strings.Contains(err.Error(), "not callback UID") {
+		t.Fatalf("unprotected replacement resolution = (pod=%#v, disposition=%v, err=%v), want fail closed", resolved, disposition, err)
+	}
+}
+
+func TestResolveDrainDeletePodRejectsForeignLiveNode(t *testing.T) {
+	c, objects := releasedDrainCompletionFixture(t, opsv1alpha1.UpgradeDrainPodReleased, func(o *drainFixtureObjects) {
+		o.pod.Spec.NodeName = "other-node"
+	})
+
+	if resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy()); err == nil ||
+		disposition != PodDeleteOrdinary || resolved != nil || !strings.Contains(err.Error(), "not runtime Node") {
+		t.Fatalf("foreign-Node resolution = (pod=%#v, disposition=%v, err=%v), want fail closed", resolved, disposition, err)
 	}
 }
 
@@ -1065,9 +1185,9 @@ func TestResolveDrainDeletePodFailsClosedOnLiveReadError(t *testing.T) {
 	stale.Annotations = nil
 	stale.Finalizers = nil
 
-	if resolved, strict, err := c.ResolveDrainDeletePod(context.Background(), stale); err == nil ||
-		strict || resolved != nil || !strings.Contains(err.Error(), "injected live Pod read failure") {
-		t.Fatalf("failed live read resolution = (pod=%#v, strict=%t, err=%v), want fail closed", resolved, strict, err)
+	if resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), stale); err == nil ||
+		disposition != PodDeleteOrdinary || resolved != nil || !strings.Contains(err.Error(), "injected live Pod read failure") {
+		t.Fatalf("failed live read resolution = (pod=%#v, disposition=%v, err=%v), want fail closed", resolved, disposition, err)
 	}
 }
 
@@ -1111,9 +1231,9 @@ func TestResolveDrainDeletePodPreservesOrdinaryCompatibility(t *testing.T) {
 			if err := tc.change(context.Background(), c, objects); err != nil {
 				t.Fatal(err)
 			}
-			resolved, strict, err := c.ResolveDrainDeletePod(context.Background(), stale)
-			if err != nil || strict || resolved != stale {
-				t.Fatalf("ordinary resolution = (pod=%#v, strict=%t, err=%v)", resolved, strict, err)
+			resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), stale)
+			if err != nil || disposition != PodDeleteOrdinary || resolved != stale {
+				t.Fatalf("ordinary resolution = (pod=%#v, disposition=%v, err=%v)", resolved, disposition, err)
 			}
 		})
 	}
@@ -1121,12 +1241,298 @@ func TestResolveDrainDeletePodPreservesOrdinaryCompatibility(t *testing.T) {
 
 func TestResolveDrainDeletePodCallerMarkerForcesStrictWhenLiveMissing(t *testing.T) {
 	c, objects := prepareManagedDrainRecovery(t)
-	c.Client = drainPodReadFailureClient{Client: c.Client}
 	marked := objects.pod.DeepCopy()
+	marked.Finalizers = nil
+	if err := c.Client.Update(context.Background(), marked); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Client.Delete(context.Background(), marked); err != nil {
+		t.Fatal(err)
+	}
 
-	resolved, strict, err := c.ResolveDrainDeletePod(context.Background(), marked)
-	if err != nil || !strict || resolved != marked {
-		t.Fatalf("caller-marked resolution = (pod=%#v, strict=%t, err=%v), want strict without live read", resolved, strict, err)
+	marked.Finalizers = []string{managedprotocol.DrainPodFinalizer}
+	resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), marked)
+	if err != nil || disposition != PodDeleteDrainTeardown || resolved != marked {
+		t.Fatalf("caller-marked resolution = (pod=%#v, disposition=%v, err=%v), want strict when live Pod is absent", resolved, disposition, err)
+	}
+}
+
+func TestResolveDrainDeletePodRoutesDeviceCleanCompletion(t *testing.T) {
+	for _, phase := range []opsv1alpha1.UpgradeDrainPodPhase{
+		opsv1alpha1.UpgradeDrainPodDeviceClean,
+		opsv1alpha1.UpgradeDrainPodReleased,
+	} {
+		for _, staleMarkedCallback := range []bool{false, true} {
+			t.Run(string(phase)+"/stale-marked="+strconv.FormatBool(staleMarkedCallback), func(t *testing.T) {
+				c, objects := releasedDrainCompletionFixture(t, phase, nil)
+				callback := objects.pod.DeepCopy()
+				if staleMarkedCallback {
+					callback.Annotations[managedprotocol.AnnotationDrainSession] = drainSessionToken
+					callback.Finalizers = []string{managedprotocol.DrainPodFinalizer}
+				}
+
+				resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), callback)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if disposition != PodDeleteReleasedCompletion || resolved == callback ||
+					resolved.UID != objects.pod.UID || hasDrainPodMarker(resolved) {
+					t.Fatalf("completion resolution = (pod=%#v, disposition=%v)", resolved, disposition)
+				}
+			})
+		}
+	}
+}
+
+func TestResolveDrainDeletePodSecondReadDisappearanceStillRequiresDeviceCleanProof(t *testing.T) {
+	for _, tc := range []struct {
+		name            string
+		phase           opsv1alpha1.UpgradeDrainPodPhase
+		mutate          func(*drainFixtureObjects)
+		wantDisposition PodDeleteDisposition
+		wantError       bool
+	}{
+		{
+			name: "valid device-clean proof", phase: opsv1alpha1.UpgradeDrainPodDeviceClean,
+			wantDisposition: PodDeleteReleasedCompletion,
+		},
+		{
+			name: "termination only", phase: opsv1alpha1.UpgradeDrainPodTerminationObserved,
+			wantDisposition: PodDeleteOrdinary, wantError: true,
+		},
+		{
+			name: "held Lease", phase: opsv1alpha1.UpgradeDrainPodDeviceClean,
+			wantDisposition: PodDeleteOrdinary, wantError: true,
+			mutate: func(o *drainFixtureObjects) {
+				now := metav1.NowMicro()
+				o.lease.Spec.HolderIdentity = ptr.To("software-drain/" + string(o.leaf.UID))
+				o.lease.Spec.AcquireTime = &now
+				o.lease.Spec.RenewTime = &now
+				o.lease.Spec.LeaseDurationSeconds = ptr.To[int32](1800)
+				o.lease.Spec.LeaseTransitions = ptr.To[int32](1)
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, objects := releasedDrainCompletionFixture(t, tc.phase, tc.mutate)
+			c.Client = &drainPodSecondReadNotFoundClient{Client: c.Client}
+			resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy())
+			if (err != nil) != tc.wantError || disposition != tc.wantDisposition ||
+				(!tc.wantError && resolved == nil) || (tc.wantError && resolved != nil) {
+				t.Fatalf("second-read disappearance = (pod=%#v, disposition=%v, err=%v), want disposition=%v error=%t",
+					resolved, disposition, err, tc.wantDisposition, tc.wantError)
+			}
+		})
+	}
+}
+
+func TestResolveDrainDeletePodCompletionRequiresAcceptedDeviceCleanEvidence(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		phase  opsv1alpha1.UpgradeDrainPodPhase
+		mutate func(*opsv1alpha1.UpgradeDrainPodStatus)
+	}{
+		{name: "termination observed", phase: opsv1alpha1.UpgradeDrainPodTerminationObserved},
+		{name: "complete", phase: opsv1alpha1.UpgradeDrainPodComplete},
+		{name: "missing protected time", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) { p.ProtectedAt = nil }},
+		{name: "missing eviction time", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) { p.EvictionRequestedAt = nil }},
+		{name: "missing deletion time", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) { p.DeletionObservedAt = nil }},
+		{name: "missing clean time", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) { p.DeviceCleanAt = nil }},
+		{name: "missing released time", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) { p.ReleasedAt = nil }},
+		{name: "eviction before protection", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) {
+			p.EvictionRequestedAt = ptr.To(metav1.NewTime(p.ProtectedAt.Add(-time.Second)))
+		}},
+		{name: "deletion before eviction", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) {
+			p.DeletionObservedAt = ptr.To(metav1.NewTime(p.EvictionRequestedAt.Add(-time.Second)))
+		}},
+		{name: "clean before deletion", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) {
+			p.DeviceCleanAt = ptr.To(metav1.NewTime(p.DeletionObservedAt.Add(-time.Second)))
+		}},
+		{name: "release before clean", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) {
+			p.ReleasedAt = ptr.To(metav1.NewTime(p.DeviceCleanAt.Add(-time.Second)))
+		}},
+		{name: "zero clean revision", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) { p.DeviceCleanInventoryRevision = 0 }},
+		{name: "clean revision not newer", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) {
+			p.DeviceCleanInventoryRevision = p.DeletionObservedInventoryRevision
+		}},
+		{name: "unaccepted recovery release", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) {
+			p.EvictionRequestedAt = nil
+			p.DeletionObservedAt = nil
+			p.DeviceCleanAt = nil
+			p.DeviceCleanInventoryRevision = 0
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, objects := releasedDrainCompletionFixture(t, tc.phase, func(o *drainFixtureObjects) {
+				if tc.mutate != nil {
+					tc.mutate(&o.leaf.Status.ManagerDrain.Pods[0])
+				}
+			})
+			if resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy()); err == nil || resolved != nil || disposition != PodDeleteOrdinary {
+				t.Fatalf("invalid completion evidence = (pod=%#v, disposition=%v, err=%v)", resolved, disposition, err)
+			}
+		})
+	}
+}
+
+func TestResolveDrainDeletePodCompletionSurvivesMutationAuthorityTurnover(t *testing.T) {
+	c, objects := releasedDrainCompletionFixture(t, opsv1alpha1.UpgradeDrainPodReleased, func(o *drainFixtureObjects) {
+		o.device.Status.WorkerRevision = nil
+		o.device.Status.TopologyProjection = nil
+		o.device.Status.TopologyLock = nil
+		o.device.Status.Conditions = nil
+		o.leaf.Status.WorkerControl = nil
+		o.node.Spec.Unschedulable = false
+		o.node.Spec.Taints = nil
+		delete(o.node.Annotations, managedprotocol.AnnotationDrainCordonOwner)
+		delete(o.node.Annotations, managedprotocol.AnnotationDrainTaintOwner)
+		o.node.Annotations[managedprotocol.AnnotationWorkerObservedRevision] = "sha256:" + strings.Repeat("f", 64)
+		o.leaf.Status.ManagerDrain.StartedAt = metav1.NewTime(time.Now().Add(-3 * time.Hour))
+		o.leaf.Status.ManagerDrain.DrainDeadline = metav1.NewTime(time.Now().Add(-2 * time.Hour))
+	})
+
+	resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy())
+	if err != nil || disposition != PodDeleteReleasedCompletion || resolved == nil {
+		t.Fatalf("durable completion after authority turnover = (pod=%#v, disposition=%v, err=%v)", resolved, disposition, err)
+	}
+}
+
+func TestResolveDrainDeletePodCompletionSurvivesStaleRecoveryAcknowledgement(t *testing.T) {
+	c, objects := releasedDrainCompletionFixture(t, opsv1alpha1.UpgradeDrainPodReleased, func(o *drainFixtureObjects) {
+		now := metav1.Now()
+		deadline := metav1.NewTime(now.Add(time.Hour))
+		setDrainFixtureRecovering(o, deadline)
+		currentRevision := o.device.Status.MaintenanceSession.ControlRevision + 1
+		o.leaf.Status.ManagerAdmission.ControlRevision = ptr.To(currentRevision)
+		o.leaf.Status.ManagerControl.Revision = currentRevision
+		o.leaf.Status.ManagerDrain.ControlRevision = currentRevision
+		o.leaf.Status.ManagerDrain.UpdatedAt = now
+	})
+
+	resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy())
+	if err != nil || disposition != PodDeleteReleasedCompletion || resolved == nil {
+		t.Fatalf("completion with stale recovery acknowledgement = (pod=%#v, disposition=%v, err=%v)", resolved, disposition, err)
+	}
+}
+
+func TestResolveDrainDeletePodCompletionRequiresIdleRequestFreeLease(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		mutate func(*drainFixtureObjects)
+	}{
+		{name: "held", mutate: func(o *drainFixtureObjects) {
+			now := metav1.NowMicro()
+			o.lease.Spec.HolderIdentity = ptr.To("software-drain/" + string(o.leaf.UID))
+			o.lease.Spec.AcquireTime = &now
+			o.lease.Spec.RenewTime = &now
+			o.lease.Spec.LeaseDurationSeconds = ptr.To[int32](1800)
+			o.lease.Spec.LeaseTransitions = ptr.To[int32](1)
+		}},
+		{name: "timing residue", mutate: func(o *drainFixtureObjects) { o.lease.Spec.LeaseDurationSeconds = ptr.To[int32](1800) }},
+		{name: "whitespace holder", mutate: func(o *drainFixtureObjects) { o.lease.Spec.HolderIdentity = ptr.To(" ") }},
+		{name: "request metadata", mutate: func(o *drainFixtureObjects) {
+			o.lease.Annotations[managedprotocol.AnnotationMaintenanceSessionToken] = drainSessionToken
+		}},
+		{name: "wrong lease UID", mutate: func(o *drainFixtureObjects) { o.lease.UID = "replacement-lease" }},
+		{name: "wrong binding", mutate: func(o *drainFixtureObjects) {
+			o.lease.Annotations[managedprotocol.AnnotationDeviceUID] = "other-device"
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, objects := releasedDrainCompletionFixture(t, opsv1alpha1.UpgradeDrainPodReleased, tc.mutate)
+			if resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy()); err == nil || resolved != nil || disposition != PodDeleteOrdinary {
+				t.Fatalf("unsafe Lease completion = (pod=%#v, disposition=%v, err=%v)", resolved, disposition, err)
+			}
+		})
+	}
+}
+
+func TestResolveDrainDeletePodCompletionAcceptsExplicitEmptyLeaseHolder(t *testing.T) {
+	c, objects := releasedDrainCompletionFixture(t, opsv1alpha1.UpgradeDrainPodReleased, func(o *drainFixtureObjects) {
+		o.lease.Spec.HolderIdentity = ptr.To("")
+	})
+
+	resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy())
+	if err != nil || disposition != PodDeleteReleasedCompletion || resolved == nil {
+		t.Fatalf("explicit-empty-holder completion = (pod=%#v, disposition=%v, err=%v)", resolved, disposition, err)
+	}
+}
+
+func TestResolveDrainDeletePodCompletionRequiresExactManagerIdentity(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		mutate func(*drainFixtureObjects)
+	}{
+		{name: "foreign device", mutate: func(o *drainFixtureObjects) { o.device.UID = "replacement-device" }},
+		{name: "wrong Node identity", mutate: func(o *drainFixtureObjects) { o.device.Status.NodeIdentity.NodeUID = "replacement-node" }},
+		{name: "wrong session token", mutate: func(o *drainFixtureObjects) {
+			o.leaf.Status.ManagerDrain.SessionToken = "00000000-0000-4000-8000-000000000002"
+		}},
+		{name: "wrong operation UID", mutate: func(o *drainFixtureObjects) { o.device.Status.MaintenanceSession.Operation.UID = "replacement-leaf" }},
+		{name: "invalid selection hash", mutate: func(o *drainFixtureObjects) { o.leaf.Status.ManagerDrain.Pods[0].EligibilityHash = drainPlanHash }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, objects := releasedDrainCompletionFixture(t, opsv1alpha1.UpgradeDrainPodReleased, tc.mutate)
+			if resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy()); err == nil || resolved != nil || disposition != PodDeleteOrdinary {
+				t.Fatalf("foreign completion identity = (pod=%#v, disposition=%v, err=%v)", resolved, disposition, err)
+			}
+		})
+	}
+}
+
+func TestResolveDrainDeletePodCompletionSurvivesBoundObjectDeletion(t *testing.T) {
+	c, objects := releasedDrainCompletionFixture(t, opsv1alpha1.UpgradeDrainPodReleased, func(o *drainFixtureObjects) {
+		now := metav1.Now()
+		o.device.DeletionTimestamp = &now
+		o.device.Finalizers = []string{"example.com/fake-retain"}
+		o.leaf.DeletionTimestamp = &now
+		o.leaf.Finalizers = []string{"example.com/fake-retain"}
+	})
+
+	resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy())
+	if err != nil || disposition != PodDeleteReleasedCompletion || resolved == nil {
+		t.Fatalf("completion during bound-object deletion = (pod=%#v, disposition=%v, err=%v)", resolved, disposition, err)
+	}
+}
+
+func TestResolveDrainDeletePodCompletionProtectionAndOrdinaryBoundaries(t *testing.T) {
+	for _, tc := range []struct {
+		name            string
+		mutate          func(*drainFixtureObjects)
+		wantDisposition PodDeleteDisposition
+	}{
+		{name: "annotation remains", wantDisposition: PodDeleteDrainTeardown, mutate: func(o *drainFixtureObjects) {
+			o.pod.Annotations[managedprotocol.AnnotationDrainSession] = drainSessionToken
+		}},
+		{name: "finalizer remains", wantDisposition: PodDeleteDrainTeardown, mutate: func(o *drainFixtureObjects) {
+			o.pod.Finalizers = []string{managedprotocol.DrainPodFinalizer}
+		}},
+		{name: "not terminating", wantDisposition: PodDeleteOrdinary, mutate: func(o *drainFixtureObjects) {
+			o.pod.DeletionTimestamp = nil
+		}},
+		{name: "unselected exact Pod", wantDisposition: PodDeleteOrdinary, mutate: func(o *drainFixtureObjects) {
+			deadline := metav1.NewTime(time.Now().Add(time.Hour))
+			setDrainFixtureRecovering(o, deadline)
+			selected := &o.leaf.Status.ManagerDrain.Pods[0]
+			selected.Name = "other-app"
+			selected.UID = "other-pod-uid"
+			hash, err := workloaddrain.EligibilityHash(selected)
+			if err != nil {
+				t.Fatal(err)
+			}
+			selected.EligibilityHash = hash
+		}},
+		{name: "no active session", wantDisposition: PodDeleteOrdinary, mutate: func(o *drainFixtureObjects) {
+			o.device.Status.MaintenanceSession = nil
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, objects := releasedDrainCompletionFixture(t, opsv1alpha1.UpgradeDrainPodReleased, tc.mutate)
+			resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy())
+			if err != nil || resolved == nil || disposition != tc.wantDisposition {
+				t.Fatalf("boundary resolution = (pod=%#v, disposition=%v, err=%v), want %v", resolved, disposition, err, tc.wantDisposition)
+			}
+		})
 	}
 }
 

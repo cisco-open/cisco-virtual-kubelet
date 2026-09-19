@@ -751,7 +751,19 @@ boundary:
    must still prove the exact selected UID absent and report zero unknowns.
    A cache-lagged provider callback is resolved against the uncached live Pod;
    an exact-UID mismatch fails closed. The worker reauthorizes the session
-   immediately before device dispatch and before every Lease renewal.
+   immediately before device dispatch and before every Lease renewal. Once the
+   manager has durably accepted `DeviceClean`, verified the canonical Lease is
+   idle, and removed its exact marker/finalizer, a later provider callback is a
+   completion acknowledgement only: it performs no driver call, inventory,
+   Lease operation, or Kubernetes write. Upstream Virtual Kubelet then performs
+   its existing exact-UID, zero-grace API deletion. The provider accepts this
+   narrow path from `DeviceClean` (the crash boundary before the manager records
+   `Released`) or `Released`, only with ordered accepted-Eviction, termination,
+   and positive newer inventory evidence plus a still-idle, request-free exact
+   Lease. A recovery-only `Protected` to `Released` transition without device-
+   clean evidence never qualifies. The worker logs
+   `managed drain device-clean completion acknowledged without device mutation`
+   at this boundary before upstream Virtual Kubelet completes the API deletion.
 5. After every selected Pod is complete, the manager proves that no new Pod is
    bound to the guarded Node, the mutation Lease is idle and request-free, and
    all frozen campaign/source/target/control facts still match. Only then does
@@ -842,10 +854,11 @@ Neither Lease expiry nor safe retirement is device-clean evidence.
 
 Worker replacement never makes old device-clean evidence current by itself.
 The provider binds drain authorization to the immutable configuration revision
-of its own running process, `status.workerControl`, and the protected Node
-`topology.cisco.vk/worker-config-revision` and
-`topology.cisco.vk/worker-observed-revision` annotations. If device-clean
-evidence is still needed after a credential, trust, or PodTemplate rotation,
+of its own running process, `status.workerControl`, the protected Node's
+`topology.cisco.vk/worker-observed-revision`, and the manager-authenticated
+Deployment/revision/exact-Pod readiness proof in
+`CiscoDevice.status.workerRevision`. If device-clean evidence is still needed
+after a credential, trust, or PodTemplate rotation,
 the replacement worker must perform and publish a strictly newer device
 inventory. The worker-drain inventory
 revision and both observation timestamps advance together with
@@ -853,6 +866,16 @@ revision and both observation timestamps advance together with
 stale process, a rewritten same-revision observation, and any manager attempt
 to consume inventory whose worker revision does not match the current control
 acknowledgement.
+
+After the manager has already persisted `DeviceClean`, that manager-owned
+record is the durable acceptance fence. Finishing deletion of the same
+terminating Pod UID does not require the worker that produced the inventory to
+remain alive, the drain deadline to remain open, or mutation-only scheduling
+guards to remain applied. This exception grants no device access: it requires
+the exact session/leaf/Pod identities, absent manager protection, ordered
+device-clean evidence, and a wholly idle request-free canonical Lease. It is
+what makes the final Kubernetes deletion restart-safe during worker rollout and
+drain recovery.
 
 The manager's drain RBAC starts only in administrator-allowlisted namespaces.
 A retained cleanup/read Role permits Pod read/update/patch and read-only

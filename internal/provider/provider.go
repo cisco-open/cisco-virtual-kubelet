@@ -760,12 +760,41 @@ func (p *AppHostingProvider) withDeleteMutation(
 	pod *v1.Pod,
 	mutate func(context.Context) error,
 ) (outcome error) {
-	authorizationPod, marked, err := p.maintenance.ResolveDrainDeletePod(ctx, pod)
+	authorizationPod, disposition, err := p.maintenance.ResolveDrainDeletePod(ctx, pod)
 	if err != nil {
 		return err
 	}
-	if !marked {
+	return p.withResolvedDeleteMutation(ctx, authorizationPod, disposition, mutate)
+}
+
+func (p *AppHostingProvider) withResolvedDeleteMutation(
+	ctx context.Context,
+	authorizationPod *v1.Pod,
+	disposition maintenance.PodDeleteDisposition,
+	mutate func(context.Context) error,
+) (outcome error) {
+	switch disposition {
+	case maintenance.PodDeleteOrdinary:
 		return p.withMutation(ctx, mutate)
+	case maintenance.PodDeleteReleasedCompletion:
+		// Device teardown and complete inventory were already durably accepted
+		// by the manager. Returning success lets upstream Virtual Kubelet perform
+		// its own exact-UID, zero-grace Kubernetes deletion; do not touch the
+		// device, Lease, inventory, or API objects from this acknowledgement.
+		oteltrace.SpanFromContext(ctx).SetAttributes(
+			attribute.String("cisco.vk.delete.disposition", "device-clean-completion"),
+		)
+		if authorizationPod != nil {
+			log.G(ctx).WithFields(log.Fields{
+				"pod": authorizationPod.Name, "namespace": authorizationPod.Namespace,
+				"uid": authorizationPod.UID,
+			}).Info("managed drain device-clean completion acknowledged without device mutation")
+		}
+		return nil
+	case maintenance.PodDeleteDrainTeardown:
+		// Continue through the strict device teardown path below.
+	default:
+		return fmt.Errorf("unknown Pod delete disposition %d", disposition)
 	}
 	strictInventory, ok := p.driver.(drivers.DrainPodInventoryProvider)
 	if !ok {

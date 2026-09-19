@@ -43,6 +43,7 @@ func clearWorkerIdentityEnv(t *testing.T) {
 		envNodeName,
 		envManagedTopology,
 		envWorkerRevision,
+		envWorkerPodUID,
 		legacyEnvNodeName,
 		"POD_NAMESPACE",
 	} {
@@ -278,6 +279,7 @@ func TestResolveWorkerRuntimeIdentityManaged(t *testing.T) {
 		t.Setenv(envDeviceUID, "22c81400-85ea-4ca8-91ee-07a7c7bd531c")
 		t.Setenv(envNodeName, "cvk-edge-node-01")
 		t.Setenv(envWorkerRevision, "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+		t.Setenv(envWorkerPodUID, "worker-pod-uid")
 		t.Setenv("POD_NAMESPACE", "edge")
 	}
 
@@ -293,7 +295,7 @@ func TestResolveWorkerRuntimeIdentityManaged(t *testing.T) {
 		}
 	})
 
-	for _, missing := range []string{envDeviceNamespace, envDeviceName, envDeviceUID, envNodeName, envWorkerRevision} {
+	for _, missing := range []string{envDeviceNamespace, envDeviceName, envDeviceUID, envNodeName, envWorkerRevision, envWorkerPodUID} {
 		t.Run("missing "+missing, func(t *testing.T) {
 			setComplete(t)
 			t.Setenv(missing, "")

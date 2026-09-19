@@ -195,7 +195,8 @@ func (r *IOSXESoftwareRolloutReconciler) rolloutRequestsForDrainPod(
 		return nil
 	}
 	if pod.Annotations[managedprotocol.AnnotationDrainSession] == "" &&
-		!hasExactString(pod.Finalizers, managedprotocol.DrainPodFinalizer) {
+		!hasExactString(pod.Finalizers, managedprotocol.DrainPodFinalizer) &&
+		pod.DeletionTimestamp == nil {
 		return nil
 	}
 	return r.rolloutRequestsByField(ctx, "", rolloutTargetNodeNameIndex, pod.Spec.NodeName)

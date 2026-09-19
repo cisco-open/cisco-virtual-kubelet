@@ -155,6 +155,7 @@ func TestVerifyAndPublishDrainInventoryUsesExactUIDAcrossIOSXESyntheticNames(t *
 
 func TestVerifyAndPublishDrainInventoryRefreshesProofAfterWorkerRotation(t *testing.T) {
 	const rotatedWorkerRevision = "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+	const rotatedWorkerPodUID = "replacement-worker-pod-uid"
 	tests := map[string]bool{
 		"active":     false,
 		"recovering": true,
@@ -185,10 +186,18 @@ func TestVerifyAndPublishDrainInventoryRefreshesProofAfterWorkerRotation(t *test
 					UpdatedAt:                    previousUpdatedAt,
 				}
 				o.leaf.Status.WorkerControl.ObservedWorkerConfigRevision = rotatedWorkerRevision
-				o.node.Annotations[managedprotocol.AnnotationWorkerConfigRevision] = rotatedWorkerRevision
 				o.node.Annotations[managedprotocol.AnnotationWorkerObservedRevision] = rotatedWorkerRevision
+				o.device.Status.WorkerRevision.DesiredRevision = rotatedWorkerRevision
+				o.device.Status.WorkerRevision.ObservedRevision = rotatedWorkerRevision
+				o.device.Status.WorkerRevision.DeploymentGeneration++
+				o.device.Status.WorkerRevision.PodUID = rotatedWorkerPodUID
+				rotatedPodStart := metav1.NewTime(time.Now().UTC().Add(-time.Minute))
+				rotatedHeartbeat := metav1.Now()
+				o.device.Status.WorkerRevision.PodStartTime = &rotatedPodStart
+				o.device.Status.WorkerRevision.ReadyHeartbeatTime = &rotatedHeartbeat
 			})
 			c.WorkerRevision = rotatedWorkerRevision
+			c.WorkerPodUID = rotatedWorkerPodUID
 
 			deleteCtx, finish, err := c.AcquireDrainDelete(context.Background(), objects.pod.DeepCopy())
 			if err != nil {

@@ -572,3 +572,23 @@ func TestManagedMutationLeaseAdoptionPreservesActiveOrForeignObjects(t *testing.
 		})
 	}
 }
+
+func TestValidateManagedMutationLeaseSpecIdleHolderEncoding(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		holder *string
+		wantOK bool
+	}{
+		{name: "omitted", wantOK: true},
+		{name: "explicit empty", holder: ptr.To(""), wantOK: true},
+		{name: "whitespace", holder: ptr.To(" ")},
+		{name: "nonempty", holder: ptr.To("foreign")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateManagedMutationLeaseSpec(&coordv1.LeaseSpec{HolderIdentity: tc.holder}, "")
+			if (err == nil) != tc.wantOK {
+				t.Fatalf("idle holder validation error=%v, want success=%t", err, tc.wantOK)
+			}
+		})
+	}
+}

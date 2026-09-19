@@ -47,24 +47,38 @@ const (
 	drainRecoveryExtraLimit = 2 * time.Minute
 )
 
+// PodDeleteDisposition identifies the only three provider-side outcomes for a
+// Kubernetes Pod deletion callback. Released completion is deliberately not a
+// device mutation: it acknowledges an already-proven teardown so upstream
+// Virtual Kubelet can complete its exact-UID Kubernetes deletion.
+type PodDeleteDisposition uint8
+
+const (
+	PodDeleteOrdinary PodDeleteDisposition = iota
+	PodDeleteDrainTeardown
+	PodDeleteReleasedCompletion
+)
+
 // ResolveDrainDeletePod selects the strict teardown path from both the callback
 // and the uncached live Pod. Informer delivery can lag the manager's protection
 // patch, so an unmarked callback must not bypass a live exact-UID drain marker
-// while ordinary writes are open during recovery. A caller marker always fails
-// closed into the strict path; unmanaged and absent/unprotected live Pods retain
-// the established ordinary-delete behavior.
+// while ordinary writes are open during recovery. A stale caller marker may be
+// superseded only by a fresh, exact DeviceClean/Released completion proof;
+// otherwise it still fails closed into the strict path. Unmanaged and
+// absent/unprotected live Pods retain the established ordinary-delete behavior.
 func (c *Coordinator) ResolveDrainDeletePod(
 	ctx context.Context,
 	requested *corev1.Pod,
-) (*corev1.Pod, bool, error) {
-	if hasDrainPodMarker(requested) {
-		return requested, true, nil
-	}
+) (*corev1.Pod, PodDeleteDisposition, error) {
+	callerMarked := hasDrainPodMarker(requested)
 	if c == nil || !c.ManagedTopology {
-		return requested, false, nil
+		if callerMarked {
+			return requested, PodDeleteDrainTeardown, nil
+		}
+		return requested, PodDeleteOrdinary, nil
 	}
 	if c.Client == nil || requested == nil || requested.Namespace == "" || requested.Name == "" || requested.UID == "" {
-		return nil, false, fmt.Errorf("resolve managed drain Pod: callback identity or API client is incomplete")
+		return nil, PodDeleteOrdinary, fmt.Errorf("resolve managed drain Pod: callback identity or API client is incomplete")
 	}
 
 	readCtx, cancel := context.WithTimeout(ctx, apiTimeout)
@@ -75,20 +89,51 @@ func (c *Coordinator) ResolveDrainDeletePod(
 		Name:      requested.Name,
 	}, &live); err != nil {
 		if apierrors.IsNotFound(err) {
-			return requested, false, nil
+			if callerMarked {
+				return requested, PodDeleteDrainTeardown, nil
+			}
+			return requested, PodDeleteOrdinary, nil
 		}
-		return nil, false, fmt.Errorf("read live Pod before managed delete routing: %w", err)
+		return nil, PodDeleteOrdinary, fmt.Errorf("read live Pod before managed delete routing: %w", err)
 	}
-	if !hasDrainPodMarker(&live) {
-		return requested, false, nil
+	if hasDrainPodMarker(&live) {
+		if live.UID == "" || live.UID != requested.UID {
+			return nil, PodDeleteOrdinary, fmt.Errorf(
+				"live protected Pod %s/%s has UID %q, not callback UID %q",
+				live.Namespace, live.Name, live.UID, requested.UID,
+			)
+		}
+		return &live, PodDeleteDrainTeardown, nil
 	}
-	if live.UID == "" || live.UID != requested.UID {
-		return nil, false, fmt.Errorf(
-			"live protected Pod %s/%s has UID %q, not callback UID %q",
+	if live.UID != requested.UID {
+		return nil, PodDeleteOrdinary, fmt.Errorf(
+			"live Pod %s/%s has UID %q, not callback UID %q",
 			live.Namespace, live.Name, live.UID, requested.UID,
 		)
 	}
-	return &live, true, nil
+	if live.Spec.NodeName != c.NodeName {
+		return nil, PodDeleteOrdinary, fmt.Errorf(
+			"live Pod %s/%s binds Node %q, not runtime Node %q",
+			live.Namespace, live.Name, live.Spec.NodeName, c.NodeName,
+		)
+	}
+	if live.DeletionTimestamp == nil || live.DeletionTimestamp.IsZero() {
+		if callerMarked {
+			return requested, PodDeleteDrainTeardown, nil
+		}
+		return requested, PodDeleteOrdinary, nil
+	}
+	released, err := c.authorizeReleasedDrainCompletion(readCtx, &live, time.Now())
+	if err != nil {
+		return nil, PodDeleteOrdinary, err
+	}
+	if released {
+		return &live, PodDeleteReleasedCompletion, nil
+	}
+	if callerMarked {
+		return requested, PodDeleteDrainTeardown, nil
+	}
+	return requested, PodDeleteOrdinary, nil
 }
 
 func hasDrainPodMarker(pod *corev1.Pod) bool {
@@ -301,13 +346,76 @@ type drainDeleteAuthority struct {
 	workerConfigRevision string
 }
 
+type drainDeleteAuthorizationMode uint8
+
+const (
+	drainDeleteDeviceTeardown drainDeleteAuthorizationMode = iota
+	drainDeleteReleasedCompletion
+)
+
 func (c *Coordinator) authorizeDrainDelete(
 	ctx context.Context,
 	requested *corev1.Pod,
 	now time.Time,
 	requireHeldLease bool,
 ) (drainDeleteAuthority, error) {
-	return c.authorizeDrainDeleteWithRevisionRollover(ctx, requested, now, requireHeldLease, false)
+	return c.authorizeDrainDeleteWithRevisionRollover(
+		ctx, requested, now, requireHeldLease, false, drainDeleteDeviceTeardown,
+	)
+}
+
+// authorizeReleasedDrainCompletion recognizes only the narrow post-clean
+// callback boundary where the manager removed its protection from an exact,
+// terminating Pod but upstream Virtual Kubelet still needs a successful
+// provider acknowledgement before it deletes the Kubernetes object. A false
+// result means this is not an active PDB-drain completion candidate. A true
+// result never grants device access and never writes Kubernetes state.
+func (c *Coordinator) authorizeReleasedDrainCompletion(
+	ctx context.Context,
+	pod *corev1.Pod,
+	now time.Time,
+) (bool, error) {
+	var device ciskov1.CiscoDevice
+	if err := c.Client.Get(ctx, types.NamespacedName{Namespace: c.Namespace, Name: c.DeviceName}, &device); err != nil {
+		return false, fmt.Errorf("read managed drain CiscoDevice for released completion: %w", err)
+	}
+	session := device.Status.MaintenanceSession
+	if session == nil || session.ProtocolVersion != ciskov1.DeviceMaintenanceProtocolPDBDrainV1 ||
+		session.Purpose != ciskov1.DeviceMaintenancePurposeWorkloadDrain ||
+		(session.Phase != ciskov1.DeviceMaintenanceSessionActive &&
+			session.Phase != ciskov1.DeviceMaintenanceSessionRecovering) ||
+		pod.Spec.NodeName != c.NodeName {
+		return false, nil
+	}
+	if session.Operation.Namespace == "" || session.Operation.Name == "" {
+		return false, fmt.Errorf("released managed drain session has no operation identity")
+	}
+	var leaf opsv1alpha1.IOSXESoftwareUpgrade
+	if err := c.Client.Get(ctx, types.NamespacedName{
+		Namespace: session.Operation.Namespace, Name: session.Operation.Name,
+	}, &leaf); err != nil {
+		return false, fmt.Errorf("read managed drain leaf for released completion: %w", err)
+	}
+	selected := false
+	if leaf.Status.ManagerDrain != nil {
+		for i := range leaf.Status.ManagerDrain.Pods {
+			candidate := &leaf.Status.ManagerDrain.Pods[i]
+			if candidate.Namespace == pod.Namespace && candidate.Name == pod.Name &&
+				candidate.UID == string(pod.UID) {
+				selected = true
+				break
+			}
+		}
+	}
+	if !selected {
+		return false, nil
+	}
+	if _, err := c.authorizeDrainDeleteWithRevisionRollover(
+		ctx, pod, now, false, false, drainDeleteReleasedCompletion,
+	); err != nil {
+		return false, fmt.Errorf("authorize released managed drain completion: %w", err)
+	}
+	return true, nil
 }
 
 func (c *Coordinator) authorizeDrainDeleteWithRevisionRollover(
@@ -316,10 +424,19 @@ func (c *Coordinator) authorizeDrainDeleteWithRevisionRollover(
 	now time.Time,
 	requireHeldLease bool,
 	allowStaleRecoveryRevision bool,
+	mode drainDeleteAuthorizationMode,
 ) (drainDeleteAuthority, error) {
 	var pod corev1.Pod
 	if err := c.Client.Get(ctx, types.NamespacedName{Namespace: requested.Namespace, Name: requested.Name}, &pod); err != nil {
-		return drainDeleteAuthority{}, fmt.Errorf("read managed drain Pod: %w", err)
+		if mode == drainDeleteReleasedCompletion && apierrors.IsNotFound(err) {
+			// ResolveDrainDeletePod already read this exact live UID uncached. If
+			// it disappears between reads, retain that snapshot but still require
+			// every durable DeviceClean and idle-Lease proof below. Disappearance
+			// alone must never turn an incomplete teardown into completion.
+			pod = *requested.DeepCopy()
+		} else {
+			return drainDeleteAuthority{}, fmt.Errorf("read managed drain Pod: %w", err)
+		}
 	}
 	if pod.UID == "" || pod.UID != requested.UID || pod.Spec.NodeName != c.NodeName {
 		return drainDeleteAuthority{}, fmt.Errorf("managed drain Pod does not bind the exact requested UID and Node")
@@ -329,7 +446,8 @@ func (c *Coordinator) authorizeDrainDeleteWithRevisionRollover(
 	if err := c.Client.Get(ctx, types.NamespacedName{Namespace: c.Namespace, Name: c.DeviceName}, &device); err != nil {
 		return drainDeleteAuthority{}, fmt.Errorf("read managed drain CiscoDevice: %w", err)
 	}
-	if device.UID == "" || string(device.UID) != c.DeviceUID || !device.DeletionTimestamp.IsZero() {
+	if device.UID == "" || string(device.UID) != c.DeviceUID ||
+		(mode == drainDeleteDeviceTeardown && !device.DeletionTimestamp.IsZero()) {
 		return drainDeleteAuthority{}, fmt.Errorf("managed drain CiscoDevice incarnation is missing, foreign, or terminating")
 	}
 
@@ -340,7 +458,11 @@ func (c *Coordinator) authorizeDrainDeleteWithRevisionRollover(
 	if err := c.validateManagedNode(&node); err != nil {
 		return drainDeleteAuthority{}, err
 	}
-	if err := validateDrainRuntimeBinding(&device, &node, c); err != nil {
+	if mode == drainDeleteDeviceTeardown {
+		if err := validateDrainRuntimeBinding(&device, &node, c); err != nil {
+			return drainDeleteAuthority{}, err
+		}
+	} else if err := validateDrainNodeIdentityBinding(&device, &node, c); err != nil {
 		return drainDeleteAuthority{}, err
 	}
 
@@ -368,33 +490,53 @@ func (c *Coordinator) authorizeDrainDeleteWithRevisionRollover(
 	if err := c.Client.Get(ctx, leafKey, &leaf); err != nil {
 		return drainDeleteAuthority{}, fmt.Errorf("read managed drain software-upgrade leaf: %w", err)
 	}
-	if string(leaf.UID) != session.Operation.UID || !leaf.DeletionTimestamp.IsZero() ||
+	if string(leaf.UID) != session.Operation.UID ||
+		(mode == drainDeleteDeviceTeardown && !leaf.DeletionTimestamp.IsZero()) ||
 		leaf.Spec.DeviceRef.Name != c.DeviceName {
 		return drainDeleteAuthority{}, fmt.Errorf("managed drain leaf does not bind the active operation and device")
 	}
 	drain, err := validateDrainLeafBindingWithRevisionRollover(
-		&leaf, &device, &node, session, c.WorkerRevision, allowStaleRecoveryRevision,
+		&leaf, &device, &node, session, c.WorkerRevision,
+		allowStaleRecoveryRevision || mode == drainDeleteReleasedCompletion,
+		mode == drainDeleteDeviceTeardown,
 	)
 	if err != nil {
 		return drainDeleteAuthority{}, err
 	}
-	if session.Phase == ciskov1.DeviceMaintenanceSessionActive {
-		if err := validateActiveDrainGuard(&node, drain); err != nil {
+	if mode == drainDeleteDeviceTeardown {
+		if session.Phase == ciskov1.DeviceMaintenanceSessionActive {
+			if err := validateActiveDrainGuard(&node, drain); err != nil {
+				return drainDeleteAuthority{}, err
+			}
+		} else if err := validateRestoredDrainGuard(&device, &node, drain); err != nil {
 			return drainDeleteAuthority{}, err
 		}
-	} else if err := validateRestoredDrainGuard(&device, &node, drain); err != nil {
-		return drainDeleteAuthority{}, err
+		if err := validateDrainTopologyLock(&device, &node, &leaf, drain); err != nil {
+			return drainDeleteAuthority{}, err
+		}
 	}
-	if err := validateDrainTopologyLock(&device, &node, &leaf, drain); err != nil {
-		return drainDeleteAuthority{}, err
-	}
-	selected, err := authorizedDrainPod(drain.Pods, &pod, session.SessionToken)
+	selected, err := drainPodSnapshot(drain.Pods, &pod)
 	if err != nil {
 		return drainDeleteAuthority{}, err
 	}
-	if selected.Phase == opsv1alpha1.UpgradeDrainPodProtected &&
-		(pod.DeletionTimestamp == nil || pod.DeletionTimestamp.IsZero()) {
-		return drainDeleteAuthority{}, fmt.Errorf("managed drain Pod has neither deletionTimestamp nor an accepted Eviction")
+	switch mode {
+	case drainDeleteDeviceTeardown:
+		if err := validateLiveDrainPodEligibility(&pod, selected); err != nil {
+			return drainDeleteAuthority{}, err
+		}
+		if err := validateDrainPodProtection(&pod, session.SessionToken); err != nil {
+			return drainDeleteAuthority{}, err
+		}
+		if selected.Phase == opsv1alpha1.UpgradeDrainPodProtected &&
+			(pod.DeletionTimestamp == nil || pod.DeletionTimestamp.IsZero()) {
+			return drainDeleteAuthority{}, fmt.Errorf("managed drain Pod has neither deletionTimestamp nor an accepted Eviction")
+		}
+	case drainDeleteReleasedCompletion:
+		if err := validateReleasedDrainPodCompletion(&pod, selected); err != nil {
+			return drainDeleteAuthority{}, err
+		}
+	default:
+		return drainDeleteAuthority{}, fmt.Errorf("unknown managed drain delete authorization mode %d", mode)
 	}
 	leaseKey := types.NamespacedName{
 		Namespace: c.LeaseNamespace,
@@ -415,25 +557,34 @@ func (c *Coordinator) authorizeDrainDeleteWithRevisionRollover(
 	if err := c.validateManagedLeaseBinding(&lease, &node); err != nil {
 		return drainDeleteAuthority{}, err
 	}
-	switch selected.Phase {
-	case opsv1alpha1.UpgradeDrainPodProtected,
-		opsv1alpha1.UpgradeDrainPodEvictionRequested,
-		opsv1alpha1.UpgradeDrainPodTerminationObserved:
-	case opsv1alpha1.UpgradeDrainPodDeviceClean:
-		// DeviceClean is the manager's durable acquisition fence. A callback
-		// already holding this exact session Lease may finish or retry the same
-		// idempotent teardown, but an idle or foreign Lease cannot be acquired
-		// for new device work after final proof has started.
-		if err := validateActiveManagedMutationLease(&lease, holder); err != nil {
-			return drainDeleteAuthority{}, fmt.Errorf("DeviceClean fences new managed drain deletion: %w", err)
+	if mode == drainDeleteReleasedCompletion {
+		if requireHeldLease {
+			return drainDeleteAuthority{}, fmt.Errorf("released managed drain completion cannot require a held Lease")
 		}
-		if hasManagedMaintenanceRequestAnnotations(lease.Annotations) {
-			if err := validateDrainLeaseAnnotations(&lease, session, drain); err != nil {
-				return drainDeleteAuthority{}, err
+		if err := validateIdleManagedMutationLease(&lease); err != nil {
+			return drainDeleteAuthority{}, err
+		}
+	} else {
+		switch selected.Phase {
+		case opsv1alpha1.UpgradeDrainPodProtected,
+			opsv1alpha1.UpgradeDrainPodEvictionRequested,
+			opsv1alpha1.UpgradeDrainPodTerminationObserved:
+		case opsv1alpha1.UpgradeDrainPodDeviceClean:
+			// DeviceClean is the manager's durable acquisition fence. A callback
+			// already holding this exact session Lease may finish or retry the same
+			// idempotent teardown, but an idle or foreign Lease cannot be acquired
+			// for new device work after final proof has started.
+			if err := validateActiveManagedMutationLease(&lease, holder); err != nil {
+				return drainDeleteAuthority{}, fmt.Errorf("DeviceClean fences new managed drain deletion: %w", err)
 			}
+			if hasManagedMaintenanceRequestAnnotations(lease.Annotations) {
+				if err := validateDrainLeaseAnnotations(&lease, session, drain); err != nil {
+					return drainDeleteAuthority{}, err
+				}
+			}
+		default:
+			return drainDeleteAuthority{}, fmt.Errorf("managed drain Pod phase %q does not authorize device teardown", selected.Phase)
 		}
-	default:
-		return drainDeleteAuthority{}, fmt.Errorf("managed drain Pod phase %q does not authorize device teardown", selected.Phase)
 	}
 
 	authorityDeadline := drain.DrainDeadline.Time
@@ -443,7 +594,7 @@ func (c *Coordinator) authorizeDrainDeleteWithRevisionRollover(
 		}
 		authorityDeadline = drain.RecoveryDeadline.Time
 	}
-	if !now.Before(authorityDeadline) {
+	if mode == drainDeleteDeviceTeardown && !now.Before(authorityDeadline) {
 		return drainDeleteAuthority{}, fmt.Errorf("managed drain delete authority has expired")
 	}
 	if requireHeldLease {
@@ -461,6 +612,10 @@ func (c *Coordinator) authorizeDrainDeleteWithRevisionRollover(
 			authorityDeadline = leaseDeadline
 		}
 	}
+	workerConfigRevision := ""
+	if leaf.Status.WorkerControl != nil {
+		workerConfigRevision = leaf.Status.WorkerControl.ObservedWorkerConfigRevision
+	}
 	return drainDeleteAuthority{
 		deadline:             authorityDeadline,
 		holder:               holder,
@@ -468,7 +623,7 @@ func (c *Coordinator) authorizeDrainDeleteWithRevisionRollover(
 		lease:                lease,
 		session:              *session,
 		drain:                *drain,
-		workerConfigRevision: leaf.Status.WorkerControl.ObservedWorkerConfigRevision,
+		workerConfigRevision: workerConfigRevision,
 	}, nil
 }
 
@@ -523,7 +678,9 @@ func (c *Coordinator) retireExpiredStaleDrainRecoveryLease(
 		retired = false
 		leaseDeadline = time.Time{}
 
-		authority, err := c.authorizeDrainDeleteWithRevisionRollover(ctx, requested, now, false, true)
+		authority, err := c.authorizeDrainDeleteWithRevisionRollover(
+			ctx, requested, now, false, true, drainDeleteDeviceTeardown,
+		)
 		if err != nil {
 			return err
 		}
@@ -640,10 +797,8 @@ func validateDrainTopologyLock(
 }
 
 func validateDrainRuntimeBinding(device *ciskov1.CiscoDevice, node *corev1.Node, c *Coordinator) error {
-	identity := device.Status.NodeIdentity
-	if identity == nil || identity.DeviceUID != c.DeviceUID || identity.NodeName != node.Name ||
-		identity.NodeUID != string(node.UID) || identity.PhysicalIdentity == "" {
-		return fmt.Errorf("managed drain CiscoDevice/Node identity is not manager-bound")
+	if err := validateDrainNodeIdentityBinding(device, node, c); err != nil {
+		return err
 	}
 	ready := meta.FindStatusCondition(device.Status.Conditions, ciskov1.CiscoDeviceConditionTopologyReady)
 	if ready == nil || ready.Status != metav1.ConditionTrue || ready.ObservedGeneration < device.Generation ||
@@ -651,10 +806,41 @@ func validateDrainRuntimeBinding(device *ciskov1.CiscoDevice, node *corev1.Node,
 		device.Status.TopologyProjection.EffectiveLabelHash != node.Annotations[managedprotocol.AnnotationProjectionHash] {
 		return fmt.Errorf("managed drain topology is not ready or its projection is not bound to the Node")
 	}
+	if err := validateManagedWorkerRuntimeBinding(device, c); err != nil {
+		return err
+	}
 	for _, taint := range node.Spec.Taints {
 		if taint.Key == managedprotocol.TopologyInitializingTaint && taint.Effect == corev1.TaintEffectNoSchedule {
 			return fmt.Errorf("managed drain topology initialization guard remains active")
 		}
+	}
+	return nil
+}
+
+func validateDrainNodeIdentityBinding(device *ciskov1.CiscoDevice, node *corev1.Node, c *Coordinator) error {
+	if device == nil || node == nil || c == nil {
+		return fmt.Errorf("managed drain CiscoDevice/Node identity is incomplete")
+	}
+	identity := device.Status.NodeIdentity
+	if identity == nil || identity.DeviceUID != c.DeviceUID || identity.NodeName != node.Name ||
+		identity.NodeUID != string(node.UID) || identity.PhysicalIdentity == "" {
+		return fmt.Errorf("managed drain CiscoDevice/Node identity is not manager-bound")
+	}
+	return nil
+}
+
+func validateManagedWorkerRuntimeBinding(device *ciskov1.CiscoDevice, c *Coordinator) error {
+	if device == nil || c == nil {
+		return fmt.Errorf("managed worker runtime binding is incomplete")
+	}
+	worker := device.Status.WorkerRevision
+	if worker == nil || c.WorkerRevision == "" || c.WorkerPodUID == "" ||
+		worker.DesiredRevision != c.WorkerRevision || worker.ObservedRevision != c.WorkerRevision ||
+		worker.DeploymentUID == "" || worker.DeploymentGeneration < 1 || worker.PodUID != c.WorkerPodUID ||
+		worker.PodStartTime == nil || worker.PodStartTime.IsZero() ||
+		worker.ReadyHeartbeatTime == nil || worker.ReadyHeartbeatTime.IsZero() ||
+		worker.ReadyHeartbeatTime.Before(worker.PodStartTime) {
+		return fmt.Errorf("managed worker revision and Pod incarnation are not manager-authenticated and ready")
 	}
 	return nil
 }
@@ -709,7 +895,7 @@ func validateDrainLeafBinding(
 	session *ciskov1.DeviceMaintenanceSessionStatus,
 	workerRevision string,
 ) (*opsv1alpha1.UpgradeManagerDrainStatus, error) {
-	return validateDrainLeafBindingWithRevisionRollover(leaf, device, node, session, workerRevision, false)
+	return validateDrainLeafBindingWithRevisionRollover(leaf, device, node, session, workerRevision, false, true)
 }
 
 func validateDrainLeafBindingWithRevisionRollover(
@@ -719,12 +905,13 @@ func validateDrainLeafBindingWithRevisionRollover(
 	session *ciskov1.DeviceMaintenanceSessionStatus,
 	workerRevision string,
 	allowStaleRecoveryRevision bool,
+	requireCurrentWorker bool,
 ) (*opsv1alpha1.UpgradeManagerDrainStatus, error) {
 	admission := leaf.Status.ManagerAdmission
 	control := leaf.Status.ManagerControl
 	worker := leaf.Status.WorkerControl
 	drain := leaf.Status.ManagerDrain
-	if admission == nil || control == nil || worker == nil || drain == nil {
+	if admission == nil || control == nil || drain == nil || (requireCurrentWorker && worker == nil) {
 		return nil, fmt.Errorf("managed drain leaf authority is incomplete")
 	}
 	if drain.ProtocolVersion != opsv1alpha1.ManagedDrainProtocolPDBV1 ||
@@ -756,14 +943,16 @@ func validateDrainLeafBindingWithRevisionRollover(
 		return nil, fmt.Errorf("managed drain admission identity and policy binding is incomplete or stale")
 	}
 	if control.Revision != *admission.ControlRevision ||
-		(session.ControlRevision != control.Revision && !staleRecoveryRevision) ||
-		worker.ObservedPolicyEpoch != admission.PolicyEpoch || worker.ObservedControlRevision > control.Revision ||
-		workerRevision == "" || worker.ObservedWorkerConfigRevision != workerRevision ||
-		worker.ObservedWorkerConfigRevision != node.Annotations[managedprotocol.AnnotationWorkerObservedRevision] ||
-		worker.ObservedWorkerConfigRevision != node.Annotations[managedprotocol.AnnotationWorkerConfigRevision] {
+		(session.ControlRevision != control.Revision && !staleRecoveryRevision) {
 		return nil, fmt.Errorf("managed drain leaf control or worker acknowledgement is incomplete or stale")
 	}
-	if !recovering {
+	if requireCurrentWorker && (worker.ObservedPolicyEpoch != admission.PolicyEpoch ||
+		worker.ObservedControlRevision > control.Revision || workerRevision == "" ||
+		worker.ObservedWorkerConfigRevision != workerRevision ||
+		worker.ObservedWorkerConfigRevision != node.Annotations[managedprotocol.AnnotationWorkerObservedRevision]) {
+		return nil, fmt.Errorf("managed drain leaf control or worker acknowledgement is incomplete or stale")
+	}
+	if requireCurrentWorker && !recovering {
 		if control.Pause || control.Cancel || worker.ObservedAdmissionState != admission.State ||
 			worker.ObservedControlRevision != control.Revision ||
 			(worker.EffectiveState != opsv1alpha1.UpgradeWorkerControlReady &&
@@ -824,6 +1013,26 @@ func authorizedDrainPod(
 	pod *corev1.Pod,
 	sessionToken string,
 ) (*opsv1alpha1.UpgradeDrainPodStatus, error) {
+	selected, err := drainPodSnapshot(pods, pod)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateLiveDrainPodEligibility(pod, selected); err != nil {
+		return nil, err
+	}
+	if err := validateDrainPodProtection(pod, sessionToken); err != nil {
+		return nil, err
+	}
+	return selected, nil
+}
+
+// drainPodSnapshot validates the immutable, exact-UID manager snapshot. The
+// completion acknowledgement deliberately does not reapply mutable live
+// eligibility after device-clean evidence has been durably accepted.
+func drainPodSnapshot(
+	pods []opsv1alpha1.UpgradeDrainPodStatus,
+	pod *corev1.Pod,
+) (*opsv1alpha1.UpgradeDrainPodStatus, error) {
 	seenUIDs := make(map[string]struct{}, len(pods))
 	seenNames := make(map[string]struct{}, len(pods))
 	var selected *opsv1alpha1.UpgradeDrainPodStatus
@@ -851,8 +1060,30 @@ func authorizedDrainPod(
 	if err := workloaddrain.VerifyEligibilityHash(selected); err != nil {
 		return nil, fmt.Errorf("managed drain Pod eligibility evidence is invalid: %w", err)
 	}
-	if pod.Annotations[managedprotocol.AnnotationDrainSession] != sessionToken {
-		return nil, fmt.Errorf("managed drain Pod session annotation does not match")
+	return selected, nil
+}
+
+func validateLiveDrainPodEligibility(
+	pod *corev1.Pod,
+	selected *opsv1alpha1.UpgradeDrainPodStatus,
+) error {
+	if pod == nil || selected == nil || pod.Labels["operations.cisco.vk/drain-safe"] != "true" {
+		return fmt.Errorf("managed drain Pod is not explicitly marked drain-safe")
+	}
+	controller := metav1.GetControllerOf(pod)
+	if controller == nil || selected.Controller.Namespace != pod.Namespace ||
+		selected.Controller.APIVersion != controller.APIVersion || selected.Controller.Kind != controller.Kind ||
+		selected.Controller.Name != controller.Name || selected.Controller.UID != string(controller.UID) ||
+		selected.Controller.Generation < 1 || len(selected.PDBs) == 0 ||
+		selected.TerminationGracePeriodSeconds < 1 {
+		return fmt.Errorf("managed drain Pod eligibility snapshot no longer matches its controlling owner")
+	}
+	return nil
+}
+
+func validateDrainPodProtection(pod *corev1.Pod, sessionToken string) error {
+	if pod == nil || pod.Annotations[managedprotocol.AnnotationDrainSession] != sessionToken {
+		return fmt.Errorf("managed drain Pod session annotation does not match")
 	}
 	finalizers := 0
 	for _, finalizer := range pod.Finalizers {
@@ -861,20 +1092,64 @@ func authorizedDrainPod(
 		}
 	}
 	if finalizers != 1 {
-		return nil, fmt.Errorf("managed drain Pod does not have one exact manager finalizer")
+		return fmt.Errorf("managed drain Pod does not have one exact manager finalizer")
 	}
-	if pod.Labels["operations.cisco.vk/drain-safe"] != "true" {
-		return nil, fmt.Errorf("managed drain Pod is not explicitly marked drain-safe")
+	return nil
+}
+
+func validateReleasedDrainPodCompletion(
+	pod *corev1.Pod,
+	selected *opsv1alpha1.UpgradeDrainPodStatus,
+) error {
+	if pod == nil || selected == nil {
+		return fmt.Errorf("released managed drain completion evidence is incomplete")
 	}
-	controller := metav1.GetControllerOf(pod)
-	if controller == nil || selected.Controller.Namespace != pod.Namespace ||
-		selected.Controller.APIVersion != controller.APIVersion || selected.Controller.Kind != controller.Kind ||
-		selected.Controller.Name != controller.Name || selected.Controller.UID != string(controller.UID) ||
-		selected.Controller.Generation < 1 || len(selected.PDBs) == 0 ||
-		selected.TerminationGracePeriodSeconds < 1 {
-		return nil, fmt.Errorf("managed drain Pod eligibility snapshot no longer matches its controlling owner")
+	if pod.DeletionTimestamp == nil || pod.DeletionTimestamp.IsZero() {
+		return fmt.Errorf("released managed drain Pod is not terminating")
 	}
-	return selected, nil
+	if _, present := pod.Annotations[managedprotocol.AnnotationDrainSession]; present {
+		return fmt.Errorf("released managed drain Pod retains its session annotation")
+	}
+	for _, finalizer := range pod.Finalizers {
+		if finalizer == managedprotocol.DrainPodFinalizer {
+			return fmt.Errorf("released managed drain Pod retains its manager finalizer")
+		}
+	}
+	if selected.Phase != opsv1alpha1.UpgradeDrainPodDeviceClean &&
+		selected.Phase != opsv1alpha1.UpgradeDrainPodReleased {
+		return fmt.Errorf("managed drain Pod phase %q is not device-clean completion", selected.Phase)
+	}
+	if selected.ProtectedAt == nil || selected.ProtectedAt.IsZero() ||
+		selected.EvictionRequestedAt == nil || selected.EvictionRequestedAt.IsZero() ||
+		selected.DeletionObservedAt == nil || selected.DeletionObservedAt.IsZero() ||
+		selected.DeviceCleanAt == nil || selected.DeviceCleanAt.IsZero() ||
+		selected.EvictionRequestedAt.Before(selected.ProtectedAt) ||
+		selected.DeletionObservedAt.Before(selected.EvictionRequestedAt) ||
+		selected.DeviceCleanAt.Before(selected.DeletionObservedAt) ||
+		selected.DeviceCleanInventoryRevision < 1 ||
+		selected.DeviceCleanInventoryRevision <= selected.DeletionObservedInventoryRevision {
+		return fmt.Errorf("released managed drain Pod lacks ordered accepted-eviction and device-clean evidence")
+	}
+	if selected.Phase == opsv1alpha1.UpgradeDrainPodReleased &&
+		(selected.ReleasedAt == nil || selected.ReleasedAt.IsZero() ||
+			selected.ReleasedAt.Before(selected.DeviceCleanAt)) {
+		return fmt.Errorf("released managed drain Pod lacks ordered release evidence")
+	}
+	return nil
+}
+
+func validateIdleManagedMutationLease(lease *coordv1.Lease) error {
+	if lease == nil || (lease.Spec.HolderIdentity != nil && *lease.Spec.HolderIdentity != "") ||
+		lease.Spec.AcquireTime != nil ||
+		lease.Spec.RenewTime != nil || lease.Spec.LeaseDurationSeconds != nil ||
+		lease.Spec.Strategy != nil || lease.Spec.PreferredHolder != nil ||
+		(lease.Spec.LeaseTransitions != nil && *lease.Spec.LeaseTransitions < 0) {
+		return fmt.Errorf("released managed drain completion requires a wholly idle canonical Lease")
+	}
+	if hasManagedMaintenanceRequestAnnotations(lease.Annotations) {
+		return fmt.Errorf("released managed drain completion Lease retains maintenance request metadata")
+	}
+	return nil
 }
 
 func (c *Coordinator) publishDrainLeaseRequest(ctx context.Context, authority drainDeleteAuthority) error {

@@ -644,8 +644,8 @@ func validateManagedMutationLeaseSpec(spec *coordv1.LeaseSpec, holder string) er
 		return fmt.Errorf("unsupported Lease strategy metadata is present")
 	}
 	if holder == "" {
-		if spec.HolderIdentity != nil && strings.TrimSpace(*spec.HolderIdentity) != "" {
-			return fmt.Errorf("holderIdentity contains only whitespace")
+		if spec.HolderIdentity != nil && *spec.HolderIdentity != "" {
+			return fmt.Errorf("idle Lease has a nonempty holderIdentity")
 		}
 		if spec.LeaseDurationSeconds != nil || spec.AcquireTime != nil || spec.RenewTime != nil {
 			return fmt.Errorf("idle Lease retains holder timing metadata")

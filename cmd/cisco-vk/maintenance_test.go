@@ -62,6 +62,7 @@ func TestNewMaintenanceCoordinatorUsesDistinctRuntimeIdentity(t *testing.T) {
 		NodeName:        "cvk-edge-node-01",
 		ManagedTopology: true,
 		WorkerRevision:  "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		WorkerPodUID:    "worker-pod-uid",
 	}
 
 	coordinator, err := newMaintenanceCoordinator(
@@ -76,9 +77,11 @@ func TestNewMaintenanceCoordinatorUsesDistinctRuntimeIdentity(t *testing.T) {
 		t.Fatal("newMaintenanceCoordinator() = nil")
 	}
 	if coordinator.Namespace != identity.DeviceNamespace || coordinator.DeviceName != identity.DeviceName ||
-		coordinator.NodeName != identity.NodeName || coordinator.WorkerRevision != identity.WorkerRevision {
-		t.Fatalf("coordinator identity = namespace=%q device=%q node=%q revision=%q",
-			coordinator.Namespace, coordinator.DeviceName, coordinator.NodeName, coordinator.WorkerRevision)
+		coordinator.NodeName != identity.NodeName || coordinator.WorkerRevision != identity.WorkerRevision ||
+		coordinator.WorkerPodUID != identity.WorkerPodUID {
+		t.Fatalf("coordinator identity = namespace=%q device=%q node=%q revision=%q podUID=%q",
+			coordinator.Namespace, coordinator.DeviceName, coordinator.NodeName, coordinator.WorkerRevision,
+			coordinator.WorkerPodUID)
 	}
 	if coordinator.LeaseNamespace != "fleet-leases" {
 		t.Fatalf("LeaseNamespace = %q", coordinator.LeaseNamespace)
@@ -106,6 +109,7 @@ func TestNewMaintenanceCoordinatorManagedRequiresDeviceUID(t *testing.T) {
 		NodeName:        "cvk-edge-node-01",
 		ManagedTopology: true,
 		WorkerRevision:  "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		WorkerPodUID:    "worker-pod-uid",
 	}
 
 	_, err := newMaintenanceCoordinator(
@@ -124,6 +128,7 @@ func TestNewMaintenanceCoordinatorManagedProtectsNonIOSXEAppWrites(t *testing.T)
 		DeviceNamespace: "edge", DeviceName: "router-01", DeviceUID: "device-uid",
 		NodeName: "cvk-router-01", ManagedTopology: true,
 		WorkerRevision: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		WorkerPodUID:   "worker-pod-uid",
 	}
 	coordinator, err := newMaintenanceCoordinator(
 		&rest.Config{Host: "https://127.0.0.1"}, identity,

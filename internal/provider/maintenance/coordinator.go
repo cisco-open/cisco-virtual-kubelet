@@ -58,9 +58,13 @@ type Coordinator struct {
 	DeviceUID  string
 	NodeName   string
 	// WorkerRevision is this process's immutable managed worker configuration
-	// revision. Drain authorization binds it to both manager status and the live
-	// Node so an overlapping stale process cannot impersonate its replacement.
+	// revision. Drain authorization binds it to the manager-authenticated ready
+	// worker proof and the live Node observation so a stale process cannot
+	// impersonate its replacement.
 	WorkerRevision string
+	// WorkerPodUID is this process's immutable downward-API Pod UID. It
+	// distinguishes overlapping or replacement Pods running the same revision.
+	WorkerPodUID   string
 	LeaseNamespace string
 	// ManagedTopology replaces direct worker Node-spec writes with the
 	// durable Lease request / manager acknowledgement protocol.

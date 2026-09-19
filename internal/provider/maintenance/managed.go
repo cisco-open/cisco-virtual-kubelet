@@ -450,6 +450,9 @@ func (c *Coordinator) validateManagedRecoveryWriteSession(
 	if session.Lease.Holder != expectedSessionHolder {
 		return fmt.Errorf("managed recovery session has an invalid purpose-bound Lease holder")
 	}
+	if err := validateManagedWorkerRuntimeBinding(device, c); err != nil {
+		return fmt.Errorf("validate managed recovery worker: %w", err)
+	}
 
 	var leaf opsv1alpha1.IOSXESoftwareUpgrade
 	if err := c.Client.Get(ctx, types.NamespacedName{

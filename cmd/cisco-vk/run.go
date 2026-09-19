@@ -88,6 +88,7 @@ const (
 	envNodeName        = managedprotocol.EnvNodeName
 	envManagedTopology = managedprotocol.EnvManagedTopology
 	envWorkerRevision  = managedprotocol.EnvWorkerRevision
+	envWorkerPodUID    = "POD_UID"
 	legacyEnvNodeName  = "VKUBELET_NODE_NAME"
 )
 
@@ -102,6 +103,7 @@ type workerRuntimeIdentity struct {
 	NodeName        string
 	ManagedTopology bool
 	WorkerRevision  string
+	WorkerPodUID    string
 }
 
 var runCmd = &cobra.Command{
@@ -178,6 +180,7 @@ func resolveWorkerRuntimeIdentity(flagNodeName string, spec *ciskov1.DeviceSpec)
 			NodeName:        os.Getenv(envNodeName),
 			ManagedTopology: true,
 			WorkerRevision:  os.Getenv(envWorkerRevision),
+			WorkerPodUID:    os.Getenv(envWorkerPodUID),
 		}
 		for _, required := range []struct {
 			name  string
@@ -188,6 +191,7 @@ func resolveWorkerRuntimeIdentity(flagNodeName string, spec *ciskov1.DeviceSpec)
 			{name: envDeviceUID, value: identity.DeviceUID},
 			{name: envNodeName, value: identity.NodeName},
 			{name: envWorkerRevision, value: identity.WorkerRevision},
+			{name: envWorkerPodUID, value: identity.WorkerPodUID},
 		} {
 			if strings.TrimSpace(required.value) == "" {
 				return workerRuntimeIdentity{}, fmt.Errorf("managed topology identity requires non-empty %s", required.name)
@@ -257,6 +261,7 @@ func resolveWorkerRuntimeIdentity(flagNodeName string, spec *ciskov1.DeviceSpec)
 		DeviceName:      deviceName,
 		DeviceUID:       os.Getenv(envDeviceUID),
 		NodeName:        resolvedNodeName,
+		WorkerPodUID:    os.Getenv(envWorkerPodUID),
 	}
 	if err := identity.validate(); err != nil {
 		return workerRuntimeIdentity{}, err
@@ -653,6 +658,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		NodeName:                   identity.NodeName,
 		ManagedTopology:            identity.ManagedTopology,
 		WorkerRevision:             identity.WorkerRevision,
+		WorkerPodUID:               identity.WorkerPodUID,
 		CredentialSecretRevision:   os.Getenv(managedprotocol.EnvCredentialSecretRevision),
 		GNOITLSSecretRevision:      os.Getenv(managedprotocol.EnvGNOITLSSecretRevision),
 		GNOIProvisioningRevision:   os.Getenv(managedprotocol.EnvGNOIProvisioningRevision),

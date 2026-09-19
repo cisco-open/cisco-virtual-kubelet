@@ -178,6 +178,42 @@ func TestDrainMarkersSelectStrictDeleteAuthorization(t *testing.T) {
 	}
 }
 
+func TestReleasedDrainCompletionAcknowledgesWithoutDeviceMutation(t *testing.T) {
+	p := &AppHostingProvider{}
+	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "edge", Name: "app", UID: "pod-uid"}}
+	mutations := 0
+	for i := 0; i < 2; i++ {
+		err := p.withResolvedDeleteMutation(
+			context.Background(), pod, maintenance.PodDeleteReleasedCompletion,
+			func(context.Context) error {
+				mutations++
+				return nil
+			},
+		)
+		if err != nil {
+			t.Fatalf("released completion acknowledgement: %v", err)
+		}
+	}
+	if mutations != 0 {
+		t.Fatalf("released completion invoked %d device mutations", mutations)
+	}
+}
+
+func TestUnknownDeleteDispositionFailsClosed(t *testing.T) {
+	p := &AppHostingProvider{}
+	called := false
+	err := p.withResolvedDeleteMutation(
+		context.Background(), &v1.Pod{}, maintenance.PodDeleteDisposition(255),
+		func(context.Context) error {
+			called = true
+			return nil
+		},
+	)
+	if err == nil || called {
+		t.Fatalf("unknown delete disposition = (called=%t, err=%v), want fail closed", called, err)
+	}
+}
+
 func TestDeletingDrainPodUpdateUsesStrictDeleteAuthorization(t *testing.T) {
 	ctx := context.Background()
 	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{

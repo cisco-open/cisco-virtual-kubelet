@@ -92,6 +92,7 @@ type configReconcilerOptions struct {
 	NodeName                 string
 	ManagedTopology          bool
 	WorkerRevision           string
+	WorkerPodUID             string
 	CredentialSecretRevision string
 	GNOITLSSecretRevision    string
 	GNOIProvisioningRevision string
@@ -360,7 +361,12 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	// then have distinct lease holders and cannot both renew the
 	// same lease. Empty POD_UID falls back to the CR-only identity
 	// (preserves test/local-run behaviour).
-	runtimeID := os.Getenv("POD_UID")
+	runtimeID := opts.WorkerPodUID
+	if runtimeID == "" {
+		// Preserve direct standalone callers; managed startup validates and
+		// passes the downward-API Pod UID explicitly.
+		runtimeID = os.Getenv(envWorkerPodUID)
+	}
 
 	// Wave 6A — bridge the notify channel into a controller-runtime
 	// event stream. The Reconciler's SetupWithManager registers a
