@@ -1667,34 +1667,8 @@ func (r *Reconciler) ensureCanonicalLegacyQuarantine(
 		up.Namespace, r.DeviceName, r.mutationLeaseDeviceKey(), upgradeLeaseIdentity(up), now)
 }
 
-func upgradePhaseMayHaveDispatchedMutation(phase opsv1alpha1.UpgradePhase) bool {
-	switch phase {
-	case "", opsv1alpha1.UpgradePhasePending,
-		opsv1alpha1.UpgradePhaseResolving,
-		opsv1alpha1.UpgradePhaseSucceeded,
-		opsv1alpha1.UpgradePhaseStagedForNextBoot,
-		opsv1alpha1.UpgradePhasePreflightFailed,
-		opsv1alpha1.UpgradePhaseRolledBack,
-		opsv1alpha1.UpgradePhaseCancelled:
-		return false
-	default:
-		// Unknown markerless states are mutation-capable by default. The
-		// execution model must be bumped before a future controller introduces
-		// a new phase that can safely be interpreted more narrowly.
-		return true
-	}
-}
-
 func upgradeMutationSubmitted(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
-	return up != nil && (up.Status.FailureReason == "LegacyStateOutcomeUnknown" ||
-		unsupportedExecutionModel(up) ||
-		(up.Status.ExecutionModel == "" && upgradePhaseMayHaveDispatchedMutation(up.Status.Phase)) ||
-		stagingRequestSubmitted(up) ||
-		up.Status.PrimarySupervisorInstallRequested ||
-		up.Status.StandbySupervisorInstallRequested ||
-		up.Status.StandbySupervisorActivationRequested ||
-		primaryActivationRequestSubmitted(up) ||
-		rollbackRequestSubmitted(up))
+	return mutationguard.UpgradeMutationSubmitted(up)
 }
 
 func upgradeStateRequiresQuarantine(up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) bool {

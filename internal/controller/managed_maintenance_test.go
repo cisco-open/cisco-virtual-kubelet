@@ -91,6 +91,175 @@ func managerMaintenanceFixture(t *testing.T) (*CiscoDeviceReconciler, *ciskov1.C
 	return r, device, node, leaf, lease
 }
 
+func cancelledMaintenanceRecoveryFixture(t *testing.T) (*CiscoDeviceReconciler, *ciskov1.CiscoDevice, *corev1.Node, *ops.IOSXESoftwareUpgrade, *coordv1.Lease) {
+	t.Helper()
+	r, device, node, leaf, lease := managerMaintenanceFixture(t)
+	ctx := context.Background()
+	if err := r.Get(ctx, client.ObjectKeyFromObject(device), device); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(leaf), leaf); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(lease), lease); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().UTC().Truncate(time.Second)
+	startedAt := metav1.NewTime(now.Add(-5 * time.Minute))
+	token := "00000000-0000-4000-8000-000000000001"
+	lockID := strings.Repeat("b", 32)
+	leaf.Status.Phase = ops.UpgradePhaseTransferring
+	leaf.Status.ExecutionModel = ops.UpgradeExecutionModelAtMostOnceV1
+	leaf.Status.ManagerAdmission.State = ops.UpgradeManagerAdmissionRevoked
+	leaf.Status.ManagerAdmission.RevocationReason = "CampaignCancelled"
+	leaf.Status.ManagerAdmission.PolicyEpoch = 1
+	leaf.Status.ManagerAdmission.TopologyLockID = lockID
+	leaf.Status.ManagerAdmission.ControlRevision = ptr.To[int64](8)
+	leaf.Status.ManagerAdmission.UpdatedAt = metav1.NewTime(now)
+	leaf.Status.ManagerControl = &ops.UpgradeManagerControlStatus{
+		Revision: 8, Cancel: true, UpdatedAt: metav1.NewTime(now), Reason: "CampaignCancelled",
+	}
+	leaf.Status.WorkerControl = &ops.UpgradeWorkerControlStatus{
+		ObservedAdmissionState: ops.UpgradeManagerAdmissionRevoked, ObservedPolicyEpoch: 1,
+		ObservedControlRevision: 8, ObservedWorkerConfigRevision: "sha256:" + strings.Repeat("c", 64),
+		EffectiveState: ops.UpgradeWorkerControlDenied, UpdatedAt: metav1.NewTime(now),
+	}
+	leaf.Status.ManagerDrain = &ops.UpgradeManagerDrainStatus{
+		ProtocolVersion: ops.ManagedDrainProtocolPDBV1, State: ops.UpgradeManagerDrainRecovering,
+		SessionToken: token, ReservationID: leaf.Status.ManagerAdmission.ReservationID,
+		PolicyEpoch: 1, ControlRevision: 8, NodeUID: string(node.UID), StartedAt: startedAt,
+		DrainDeadline:    metav1.NewTime(now.Add(30 * time.Minute)),
+		RecoveryDeadline: ptr.To(metav1.NewTime(now.Add(time.Hour))), UpdatedAt: metav1.NewTime(now),
+	}
+	leaf.Status.ManagedMutationClaims = nil
+	if err := r.Status().Update(ctx, leaf); err != nil {
+		t.Fatal(err)
+	}
+
+	holder := mutationguard.UpgradeHolderIdentity(leaf)
+	lease.Spec.HolderIdentity = ptr.To(holder)
+	lease.Spec.AcquireTime = ptr.To(metav1.NewMicroTime(now.Add(-time.Minute)))
+	lease.Spec.RenewTime = ptr.To(metav1.NewMicroTime(now))
+	lease.Spec.LeaseDurationSeconds = ptr.To[int32](3600)
+	lease.Spec.LeaseTransitions = ptr.To[int32](1)
+	for key, value := range map[string]string{
+		managedprotocol.AnnotationMaintenanceRequestVersion:  managedprotocol.DrainProtocolVersion,
+		managedprotocol.AnnotationMaintenanceSessionToken:    token,
+		managedprotocol.AnnotationMaintenanceRequestedAt:     startedAt.Format(time.RFC3339Nano),
+		managedprotocol.AnnotationMaintenanceOperationNS:     leaf.Namespace,
+		managedprotocol.AnnotationMaintenanceOperationName:   leaf.Name,
+		managedprotocol.AnnotationMaintenanceOperationUID:    string(leaf.UID),
+		managedprotocol.AnnotationMaintenanceControlRevision: "7",
+		managedprotocol.AnnotationMaintenancePurpose:         managedprotocol.MaintenancePurposeSoftwareMutation,
+	} {
+		lease.Annotations[key] = value
+	}
+	if err := r.Update(ctx, lease); err != nil {
+		t.Fatal(err)
+	}
+
+	device.Status.TopologyLock = &ciskov1.DeviceTopologyLockStatus{
+		State: ciskov1.DeviceTopologyLockActive, PolicyEpoch: 1, AcquisitionID: lockID,
+		CampaignNamespace: leaf.Namespace, CampaignName: "campaign",
+		CampaignUID: leaf.Status.ManagerAdmission.CampaignUID,
+		PlanHash:    leaf.Status.ManagerAdmission.PlanHash, ReservationID: leaf.Status.ManagerAdmission.ReservationID,
+		DeviceUID: string(device.UID), DeviceGeneration: device.Generation, NodeUID: string(node.UID),
+		ProjectionHash: "sha256:" + strings.Repeat("d", 64), AcquiredAt: metav1.NewTime(now.Add(-time.Hour)),
+	}
+	acknowledgedAt := metav1.NewTime(now.Add(-4 * time.Minute))
+	device.Status.MaintenanceSession = &ciskov1.DeviceMaintenanceSessionStatus{
+		Phase:           ciskov1.DeviceMaintenanceSessionActive,
+		ProtocolVersion: ciskov1.DeviceMaintenanceProtocolPDBDrainV1,
+		Purpose:         ciskov1.DeviceMaintenancePurposeSoftwareMutation, SessionToken: token,
+		Lease: ciskov1.DeviceMaintenanceLeaseReference{
+			DeviceMaintenanceObjectReference: ciskov1.DeviceMaintenanceObjectReference{
+				Namespace: lease.Namespace, Name: lease.Name, UID: string(lease.UID),
+			}, Holder: holder,
+		},
+		Operation: ciskov1.DeviceMaintenanceObjectReference{
+			Namespace: leaf.Namespace, Name: leaf.Name, UID: string(leaf.UID),
+		},
+		DeviceUID: string(device.UID), NodeName: node.Name, NodeUID: string(node.UID),
+		RequestedAt: startedAt, AcknowledgedAt: &acknowledgedAt, ControlRevision: 7,
+	}
+	if err := r.Status().Update(ctx, device); err != nil {
+		t.Fatal(err)
+	}
+	r.clock = &fakeClock{now: now}
+	return r, device, node, leaf, lease
+}
+
+func TestManagedCancellationWorkerRecoveryRequiresExactPreMutationState(t *testing.T) {
+	r, device, node, _, _ := cancelledMaintenanceRecoveryFixture(t)
+	allowed, err := r.managedCancellationWorkerRecoveryReady(context.Background(), device, node)
+	if err != nil || !allowed {
+		t.Fatalf("exact cancellation recovery = %t, %v; want true", allowed, err)
+	}
+	r.AggregatorEnabled = true
+	registerExclusivityStubFakeCD(t)
+	device.Spec.Driver = ciskov1.DeviceDriverFAKE
+	allowed, err = r.managedCancellationWorkerRecoveryReady(context.Background(), device, node)
+	if err != nil || allowed {
+		t.Fatalf("aggregator-owned driver recovery = %t, %v; want false", allowed, err)
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*ciskov1.CiscoDevice, *ops.IOSXESoftwareUpgrade)
+	}{
+		{name: "durable claim", mutate: func(_ *ciskov1.CiscoDevice, leaf *ops.IOSXESoftwareUpgrade) {
+			leaf.Status.ManagedMutationClaims = []ops.UpgradeManagedMutationClaimStatus{{Stage: ops.UpgradeManagedMutationPrimaryInstall}}
+		}},
+		{name: "durable marker", mutate: func(_ *ciskov1.CiscoDevice, leaf *ops.IOSXESoftwareUpgrade) {
+			leaf.Status.PrimarySupervisorInstallRequested = true
+		}},
+		{name: "ambiguous failure", mutate: func(_ *ciskov1.CiscoDevice, leaf *ops.IOSXESoftwareUpgrade) {
+			leaf.Status.FailureReason = "InstallAttemptMarkerMissing"
+		}},
+		{name: "grant remains active", mutate: func(_ *ciskov1.CiscoDevice, leaf *ops.IOSXESoftwareUpgrade) {
+			leaf.Status.ManagerAdmission.State = ops.UpgradeManagerAdmissionGranted
+			leaf.Status.ManagerAdmission.RevocationReason = ""
+			leaf.Status.ManagerControl.Cancel = false
+		}},
+		{name: "replaced Lease identity", mutate: func(device *ciskov1.CiscoDevice, _ *ops.IOSXESoftwareUpgrade) {
+			device.Status.MaintenanceSession.Lease.UID = "replacement-lease"
+		}},
+		{name: "topology lock releasing", mutate: func(device *ciskov1.CiscoDevice, _ *ops.IOSXESoftwareUpgrade) {
+			device.Status.TopologyLock.State = ciskov1.DeviceTopologyLockReleasing
+		}},
+		{name: "topology lock acquisition changed", mutate: func(device *ciskov1.CiscoDevice, _ *ops.IOSXESoftwareUpgrade) {
+			device.Status.TopologyLock.AcquisitionID = strings.Repeat("e", 32)
+		}},
+		{name: "acknowledgement predates request", mutate: func(device *ciskov1.CiscoDevice, _ *ops.IOSXESoftwareUpgrade) {
+			device.Status.MaintenanceSession.AcknowledgedAt = ptr.To(metav1.NewTime(device.Status.MaintenanceSession.RequestedAt.Add(-time.Second)))
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r, device, node, leaf, _ := cancelledMaintenanceRecoveryFixture(t)
+			test.mutate(device, leaf)
+			ctx := context.Background()
+			if err := r.Status().Update(ctx, device); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Status().Update(ctx, leaf); err != nil {
+				t.Fatal(err)
+			}
+			allowed, err := r.managedCancellationWorkerRecoveryReady(ctx, device, node)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if allowed {
+				t.Fatal("unsafe cancellation recovery state was accepted")
+			}
+		})
+	}
+}
+
 func TestManagedMaintenancePersistsGuardAcknowledgementOnUnchangedTopology(t *testing.T) {
 	r, device, node, leaf, _ := managerMaintenanceFixture(t)
 	ctx := context.Background()

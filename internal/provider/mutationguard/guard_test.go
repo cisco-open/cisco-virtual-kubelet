@@ -90,6 +90,76 @@ func legacyAction(name, namespace, device string, phase opsv1alpha1.ActionPhase,
 	return act
 }
 
+func TestUpgradeMutationSubmittedRecognizesEveryDurableEvidenceClass(t *testing.T) {
+	markTime := metav1.NewTime(time.Unix(1_800_000_000, 0).UTC())
+	tests := []struct {
+		name   string
+		mutate func(*opsv1alpha1.IOSXESoftwareUpgradeStatus)
+	}{
+		{name: "unknown execution model", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.ExecutionModel = "FutureModel" }},
+		{name: "legacy in-flight phase", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.ExecutionModel = "" }},
+		{name: "legacy outcome unknown", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.FailureReason = "LegacyStateOutcomeUnknown" }},
+		{name: "install marker missing", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.FailureReason = "InstallAttemptMarkerMissing" }},
+		{name: "staging operation missing", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.FailureReason = "StagingOperationMissing" }},
+		{name: "staging requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StagingRequested = true }},
+		{name: "install started", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.InstallStartTime = markTime.DeepCopy() }},
+		{name: "activation started", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.ActivationStartTime = markTime.DeepCopy() }},
+		{name: "rollback started", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.RollbackStartTime = markTime.DeepCopy() }},
+		{name: "primary install requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.PrimarySupervisorInstallRequested = true }},
+		{name: "primary installed", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.PrimarySupervisorInstalled = true }},
+		{name: "standby install requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StandbySupervisorInstallRequested = true }},
+		{name: "standby installed", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StandbySupervisorInstalled = true }},
+		{name: "standby activation requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StandbySupervisorActivationRequested = true }},
+		{name: "standby activated", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StandbySupervisorActivated = true }},
+		{name: "primary activation requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.PrimarySupervisorActivationRequested = true }},
+		{name: "no-reboot activation accepted", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.NoRebootActivationAccepted = true }},
+		{name: "rollback requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.RollbackActivationRequested = true }},
+		{name: "legacy staging condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Staged", Reason: "StagingRequested"}}
+		}},
+		{name: "legacy activation condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Activated", Reason: "ActivationRequested"}}
+		}},
+		{name: "legacy rollback condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Rollback", Reason: "RollbackDispatched"}}
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			upgrade := &opsv1alpha1.IOSXESoftwareUpgrade{Status: opsv1alpha1.IOSXESoftwareUpgradeStatus{
+				Phase: opsv1alpha1.UpgradePhaseTransferring, ExecutionModel: opsv1alpha1.UpgradeExecutionModelAtMostOnceV1,
+			}}
+			test.mutate(&upgrade.Status)
+			if !UpgradeMutationSubmitted(upgrade) {
+				t.Fatal("durable or ambiguous mutation evidence was treated as pre-dispatch")
+			}
+		})
+	}
+
+	markerless := &opsv1alpha1.IOSXESoftwareUpgrade{Status: opsv1alpha1.IOSXESoftwareUpgradeStatus{
+		Phase: opsv1alpha1.UpgradePhaseTransferring, ExecutionModel: opsv1alpha1.UpgradeExecutionModelAtMostOnceV1,
+	}}
+	if UpgradeMutationSubmitted(markerless) {
+		t.Fatal("current markerless execution was treated as a dispatched mutation")
+	}
+	for name, mutate := range map[string]func(*opsv1alpha1.IOSXESoftwareUpgradeStatus){
+		"staging correlation ID": func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.StagingOperationID = "00000000-0000-4000-8000-000000000001"
+		},
+		"activation control timer": func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.ActivationControlStartTime = markTime.DeepCopy()
+		},
+	} {
+		t.Run(name+" is pre-dispatch", func(t *testing.T) {
+			upgrade := markerless.DeepCopy()
+			mutate(&upgrade.Status)
+			if UpgradeMutationSubmitted(upgrade) {
+				t.Fatal("pre-dispatch bookkeeping was treated as physical mutation evidence")
+			}
+		})
+	}
+}
+
 func TestFindCanonicalRiskIsCrossKindDeterministicAndScoped(t *testing.T) {
 	now := time.Unix(1_800_000_000, 0).UTC()
 	upgrade := legacyUpgrade("a-upgrade", "default", "dev1")

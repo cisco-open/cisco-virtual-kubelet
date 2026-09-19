@@ -228,6 +228,62 @@ func UpgradeHolderIdentity(up *opsv1alpha1.IOSXESoftwareUpgrade) string {
 	return devicecoordination.HolderIdentity("software-upgrade", up.Namespace, up.Name, string(up.UID))
 }
 
+// UpgradeMutationSubmitted reports whether durable status proves or may imply
+// that physical device work was dispatched. Both manager-side recovery and the
+// worker's Lease cleanup use this single conservative predicate so a newly
+// added marker cannot be interpreted differently across the trust boundary.
+func UpgradeMutationSubmitted(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	if up == nil {
+		return false
+	}
+	status := &up.Status
+	if status.ExecutionModel != "" && status.ExecutionModel != opsv1alpha1.UpgradeExecutionModelAtMostOnceV1 {
+		return true
+	}
+	if status.ExecutionModel == "" && upgradePhaseMayHaveDispatchedMutation(status.Phase) {
+		return true
+	}
+	switch status.FailureReason {
+	case "LegacyStateOutcomeUnknown", "InstallAttemptMarkerMissing", "StagingOperationMissing":
+		return true
+	}
+	if status.StagingRequested || status.InstallStartTime != nil ||
+		status.ActivationStartTime != nil || status.RollbackStartTime != nil ||
+		status.PrimarySupervisorInstallRequested || status.PrimarySupervisorInstalled ||
+		status.StandbySupervisorInstallRequested || status.StandbySupervisorInstalled ||
+		status.StandbySupervisorActivationRequested || status.StandbySupervisorActivated ||
+		status.PrimarySupervisorActivationRequested || status.NoRebootActivationAccepted ||
+		status.RollbackActivationRequested {
+		return true
+	}
+	for i := range status.Conditions {
+		condition := &status.Conditions[i]
+		switch {
+		case condition.Type == "Staged" && condition.Reason == "StagingRequested",
+			condition.Type == "Activated" && condition.Reason == "ActivationRequested",
+			condition.Type == "Rollback" &&
+				(condition.Reason == "RollbackRequested" || condition.Reason == "RollbackDispatched"):
+			return true
+		}
+	}
+	return false
+}
+
+func upgradePhaseMayHaveDispatchedMutation(phase opsv1alpha1.UpgradePhase) bool {
+	switch phase {
+	case "", opsv1alpha1.UpgradePhasePending,
+		opsv1alpha1.UpgradePhaseResolving,
+		opsv1alpha1.UpgradePhaseSucceeded,
+		opsv1alpha1.UpgradePhaseStagedForNextBoot,
+		opsv1alpha1.UpgradePhasePreflightFailed,
+		opsv1alpha1.UpgradePhaseRolledBack,
+		opsv1alpha1.UpgradePhaseCancelled:
+		return false
+	default:
+		return true
+	}
+}
+
 // ActionHolderIdentity is shared with the operational-action reconciler so a
 // guard acting on its behalf uses exactly the same Lease owner.
 func ActionHolderIdentity(act *opsv1alpha1.IOSXEOperationalAction) string {

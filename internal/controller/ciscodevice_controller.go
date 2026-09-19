@@ -383,11 +383,15 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	managed, err := r.reconcileManagedTopology(ctx, &device)
-	if err != nil {
+	var maintenanceFenceErr *managedMaintenanceFenceError
+	maintenanceRecovery := stderrors.As(err, &maintenanceFenceErr)
+	if err != nil && !maintenanceRecovery {
 		topology.RecordProjectionReconcile("error")
 		return ctrl.Result{RequeueAfter: topologyRequeueInterval}, err
 	}
-	if managed.Managed {
+	if maintenanceRecovery {
+		topology.RecordProjectionReconcile("maintenance-fenced")
+	} else if managed.Managed {
 		topology.RecordProjectionReconcile("projected")
 	} else if r.ManagedTopology {
 		topology.RecordProjectionReconcile("skipped")
@@ -539,8 +543,10 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// ── 6. Reconcile the Deployment ─────────────────────────────────────
-	if err := r.clearAggregatorHandoverConditions(ctx, &device); err != nil {
-		return ctrl.Result{}, err
+	if !maintenanceRecovery {
+		if err := r.clearAggregatorHandoverConditions(ctx, &device); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	deploy := &appsv1.Deployment{
@@ -938,6 +944,12 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	logger.Info("Deployment reconciled", "name", deploy.Name, "operation", op)
 	if err := r.updateGNOIConfigurationCondition(ctx, &device, deploy, desiredWorkerRevision, gnoiConfigurationErr); err != nil {
 		return ctrl.Result{}, err
+	}
+	if maintenanceRecovery {
+		// The guarded recovery lane ends here. In particular, do not reconcile
+		// device-side config prerequisites, retire any worker authority, or report
+		// normal readiness while the maintenance request remains invalid.
+		return ctrl.Result{RequeueAfter: topologyRequeueInterval}, nil
 	}
 
 	// ── 6b. Reconcile the owned IOSXEConfig (configPrereqs) ─────────────

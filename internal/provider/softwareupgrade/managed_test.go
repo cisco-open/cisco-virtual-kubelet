@@ -872,6 +872,49 @@ func TestManagedCancellationReleasesUnusedDrainMutationLeaseAfterDurableAcknowle
 	}
 }
 
+func TestManagedCancellationReleasesLeaseWithPreDispatchBookkeeping(t *testing.T) {
+	markTime := metav1.NewTime(managedTestTime)
+	for i, tt := range []struct {
+		name   string
+		mutate func(*opsv1alpha1.IOSXESoftwareUpgrade)
+	}{
+		{
+			name: "staging correlation ID",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.StagingOperationID = "00000000-0000-4000-8000-000000000001"
+			},
+		},
+		{
+			name: "activation control timer",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.ActivationControlStartTime = markTime.DeepCopy()
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			up := managedCancelledDrainLeaf("cancel-predispatch-" + strconv.Itoa(i))
+			tt.mutate(up)
+			if upgradeMutationSubmitted(up) {
+				t.Fatal("pre-dispatch bookkeeping was treated as submitted mutation evidence")
+			}
+			lease := managedCancelledDrainLease(up)
+			r := newManagedTestReconciler(t, up, nil, lease)
+			attachManagedMutationLeaser(r, lease)
+			req := reconcile.Request{NamespacedName: client.ObjectKeyFromObject(up)}
+			for pass := 0; pass < 2; pass++ {
+				if _, err := r.Reconcile(context.Background(), req); err != nil {
+					t.Fatalf("reconcile pass %d: %v", pass+1, err)
+				}
+			}
+			released := getManagedMutationLease(t, r, lease)
+			if released.Spec.HolderIdentity != nil || released.Spec.LeaseDurationSeconds != nil ||
+				released.Spec.AcquireTime != nil || released.Spec.RenewTime != nil {
+				t.Fatalf("pre-dispatch cancellation retained Lease authority: %#v", released.Spec)
+			}
+		})
+	}
+}
+
 func TestManagedCancellationRetainsMutationLeaseForClaimsAndDispatchEvidence(t *testing.T) {
 	tests := []struct {
 		name          string

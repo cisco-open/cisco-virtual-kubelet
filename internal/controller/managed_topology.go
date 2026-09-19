@@ -51,6 +51,23 @@ type managedTopologyResult struct {
 	RequeueAfter time.Duration
 }
 
+// managedMaintenanceFenceError reports a rejected maintenance request after
+// the manager has durably retained the Node guard and surfaced the topology
+// failure. The CiscoDevice reconciler may use this narrow state to repair only
+// its manager-authored worker substrate; device-side prerequisites and normal
+// topology completion remain blocked until maintenance converges.
+type managedMaintenanceFenceError struct {
+	cause error
+}
+
+func (e *managedMaintenanceFenceError) Error() string {
+	return fmt.Sprintf("managed maintenance fence: %v", e.cause)
+}
+
+func (e *managedMaintenanceFenceError) Unwrap() error {
+	return e.cause
+}
+
 func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 	ctx context.Context,
 	device *ciskov1.CiscoDevice,
@@ -250,8 +267,28 @@ func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 			ciskov1.CiscoDeviceConditionTopologyConflict, "TopologyStatusFailed", err.Error())
 	}
 	if maintenanceDecision.err != nil {
-		return r.failManagedTopology(ctx, device, result,
+		recoveryAllowed, recoveryErr := r.managedCancellationWorkerRecoveryReady(ctx, device, node)
+		if recoveryErr != nil || !recoveryAllowed {
+			message := maintenanceDecision.err.Error()
+			if recoveryErr != nil {
+				message = errors.Join(maintenanceDecision.err, recoveryErr).Error()
+			}
+			return r.failManagedTopology(ctx, device, result,
+				ciskov1.CiscoDeviceConditionTopologyConflict, "MaintenanceFenceFailed", message)
+		}
+		// A replacement worker may be the only actor able to acknowledge a
+		// cancellation and retire an unused mutation Lease. Keep every scheduling
+		// and maintenance fence fail-closed. This path is reachable only for an
+		// exact, manager-cancelled, pre-mutation drain recovery; distinguish the
+		// successfully persisted failure so Reconcile can repair only the
+		// manager-authored worker substrate and its exact revision proof.
+		guardErr := r.guardBoundNode(ctx, device)
+		statusErr := r.recordTopologyFailure(ctx, device,
 			ciskov1.CiscoDeviceConditionTopologyConflict, "MaintenanceFenceFailed", maintenanceDecision.err.Error())
+		if writeErr := errors.Join(guardErr, statusErr); writeErr != nil {
+			return result, errors.Join(maintenanceDecision.err, writeErr)
+		}
+		return result, &managedMaintenanceFenceError{cause: maintenanceDecision.err}
 	}
 	return result, nil
 }
@@ -814,6 +851,17 @@ func (r *CiscoDeviceReconciler) patchTopologyFailure(
 	device *ciskov1.CiscoDevice,
 	conditionType, reason, message string,
 ) error {
+	if err := r.recordTopologyFailure(ctx, device, conditionType, reason, message); err != nil {
+		return err
+	}
+	return fmt.Errorf("%s: %s", reason, message)
+}
+
+func (r *CiscoDeviceReconciler) recordTopologyFailure(
+	ctx context.Context,
+	device *ciskov1.CiscoDevice,
+	conditionType, reason, message string,
+) error {
 	before := device.DeepCopy()
 	meta.SetStatusCondition(&device.Status.Conditions, metav1.Condition{
 		Type: conditionType, Status: metav1.ConditionTrue, Reason: reason,
@@ -824,13 +872,13 @@ func (r *CiscoDeviceReconciler) patchTopologyFailure(
 		Reason: reason, Message: truncateTopologyMessage(message), ObservedGeneration: device.Generation,
 	})
 	if statusesEqual(before.Status, device.Status) {
-		return fmt.Errorf("%s: %s", reason, message)
+		return nil
 	}
 	if err := r.Status().Patch(ctx, device,
 		client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{})); err != nil {
 		return fmt.Errorf("record managed topology failure: %w", err)
 	}
-	return fmt.Errorf("%s: %s", reason, message)
+	return nil
 }
 
 func (r *CiscoDeviceReconciler) guardBoundNode(ctx context.Context, device *ciskov1.CiscoDevice) error {
