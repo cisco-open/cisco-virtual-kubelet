@@ -686,6 +686,8 @@ func expectedLeafSpec(rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alp
 		imageSource.URLSecretRef = &corev1.LocalObjectReference{Name: source.SecretName}
 	}
 	rollback := rollout.Spec.Plan.RollbackOnFailure == nil || *rollout.Spec.Plan.RollbackOnFailure
+	// Materialize deprecated compatibility defaults so the generated spec
+	// remains exactly equal after an API-server round trip.
 	return opsv1alpha1.IOSXESoftwareUpgradeSpec{
 		DeviceRef:             configv1alpha1.DeviceRef{Name: target.DeviceName},
 		ImageSource:           imageSource,
@@ -693,6 +695,8 @@ func expectedLeafSpec(rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alp
 		Strategy:              opsv1alpha1.UpgradeStrategyReload,
 		RollbackOnFailure:     &rollback,
 		MaintenanceWindow:     rollout.Spec.Plan.MaintenanceWindow.DeepCopy(),
+		ResumePolicy:          "Retry",
+		MaxRetries:            3,
 		InstallTimeoutSeconds: defaultInt32(rollout.Spec.Plan.InstallTimeoutSeconds, 3600),
 		RebootTimeoutSeconds:  defaultInt32(rollout.Spec.Plan.RebootTimeoutSeconds, 1800),
 	}

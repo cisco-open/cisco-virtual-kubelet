@@ -83,6 +83,16 @@ func TestRolloutLeafAnnotationsPropagateOnlyValidatedCorrelation(t *testing.T) {
 	}
 }
 
+func TestExpectedLeafSpecIncludesAPIServerDefaults(t *testing.T) {
+	target := policyFenceTarget("edge-a", "device-uid", "campaign-edge-a")
+	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
+
+	got := expectedLeafSpec(rollout, target)
+	if got.ResumePolicy != "Retry" || got.MaxRetries != 3 {
+		t.Fatalf("expected leaf retry defaults = (%q, %d), want (Retry, 3)", got.ResumePolicy, got.MaxRetries)
+	}
+}
+
 func TestCampaignStatusPatchRejectsStaleResourceVersion(t *testing.T) {
 	scheme := runtime.NewScheme()
 	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
