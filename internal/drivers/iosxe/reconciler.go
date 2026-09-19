@@ -334,6 +334,9 @@ func (d *XEDriver) DeleteApp(ctx context.Context, appID string) error {
 			log.G(ctx).Infof("Successfully deleted app %s after %d reconcile pass(es)", appID, attempt)
 			return nil
 		}
+		if appConfig.Status.Phase == AppPhaseError {
+			return fmt.Errorf("app %s deletion failed: %s", appID, appConfig.Status.Message)
+		}
 
 		log.G(ctx).Debugf("DeleteApp %s: attempt %d/%d, phase=%s observed=%q msg=%s",
 			appID, attempt, maxAttempts, appConfig.Status.Phase, appConfig.Status.ObservedState, appConfig.Status.Message)

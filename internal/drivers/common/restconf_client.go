@@ -98,6 +98,13 @@ type RESTCONFMutationAmbiguousError struct {
 	cause error
 }
 
+// NewRESTCONFMutationAmbiguousError marks a mutation whose successful HTTP
+// response did not provide enough information to prove whether the device
+// accepted it. Callers must reconcile from operational state before replay.
+func NewRESTCONFMutationAmbiguousError(cause error) error {
+	return &RESTCONFMutationAmbiguousError{cause: cause}
+}
+
 func (e *RESTCONFMutationAmbiguousError) Error() string {
 	if e == nil || e.cause == nil {
 		return "RESTCONF mutation result is unknown"

@@ -132,6 +132,12 @@ Live oper-data can report the following values in `application-state`:
 
 The reconciler drives transitions via the lifecycle RPCs. See [Architecture → App lifecycle state machine](ARCHITECTURE.md#app-lifecycle-state-machine) for the full state diagram.
 
+IOS-XE lifecycle RPCs return free-form text even with HTTP 2xx. CVK accepts
+only the complete success form for the requested operation, app ID, package,
+and target state. Explicit rejection fails closed. Unrecognized or empty text
+is treated as mutation-ambiguous and reconciled from oper-data before replay;
+device response text is not copied into logs or status.
+
 ### Package policy
 
 The oper-data also exposes `pkg-policy`. Values:

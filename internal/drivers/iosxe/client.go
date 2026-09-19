@@ -165,8 +165,8 @@ func (d *XEDriver) activateAndStart(ctx context.Context, appConfig *AppHostingCo
 	if err := d.ActivateApp(ctx, appConfig.AppName()); !acceptedOrAmbiguousAppHostingRPC(ctx, appConfig.AppName(), "activate", err) {
 		return fmt.Errorf("failed to activate app %s: %w", appConfig.AppName(), err)
 	}
-	if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "ACTIVATED", timeout); err != nil {
-		return fmt.Errorf("app %s did not reach ACTIVATED after activate: %w", appConfig.AppName(), err)
+	if err := d.waitForAppStatuses(ctx, appConfig.AppName(), timeout, "ACTIVATED", "STOPPED"); err != nil {
+		return fmt.Errorf("app %s did not reach ACTIVATED or STOPPED after activate: %w", appConfig.AppName(), err)
 	}
 	if err := d.StartApp(ctx, appConfig.AppName()); !acceptedOrAmbiguousAppHostingRPC(ctx, appConfig.AppName(), "start", err) {
 		return fmt.Errorf("failed to start app %s: %w", appConfig.AppName(), err)
@@ -389,11 +389,64 @@ func (d *XEDriver) postAppHostingRPC(ctx context.Context, input map[string]any) 
 	return response.Result, nil
 }
 
-func appHostingRPCRejected(result string) bool {
+func canonicalAppHostingRPCResult(result string) string {
+	normalized := strings.Join(strings.Fields(result), " ")
+	return strings.ReplaceAll(normalized, "successfullyCurrent state is:", "successfully Current state is:")
+}
+
+func appHostingPackagePathVariants(packagePath string) []string {
+	variants := []string{packagePath}
+	for _, prefix := range []string{"flash:", "bootflash:", "harddisk:", "usb:", "usbflash0:", "usbflash1:", "nvram:"} {
+		if strings.HasPrefix(packagePath, prefix+"/") {
+			variants = append(variants, prefix+strings.TrimPrefix(packagePath[len(prefix):], "/"))
+			break
+		}
+		if strings.HasPrefix(packagePath, prefix) && len(packagePath) > len(prefix) {
+			variants = append(variants, prefix+"/"+packagePath[len(prefix):])
+			break
+		}
+	}
+	return variants
+}
+
+// appHostingLifecycleResultMatches accepts only complete, operation-specific
+// IOS-XE success responses. The YANG result is arbitrary text, so treating
+// every response except a short error blacklist as success is unsafe.
+func appHostingLifecycleResultMatches(operation, appID, packagePath, result string) bool {
+	result = canonicalAppHostingRPCResult(result)
+	switch operation {
+	case "install":
+		if result == fmt.Sprintf("%s installed successfully Current state is: DEPLOYED", appID) {
+			return true
+		}
+		for _, candidate := range appHostingPackagePathVariants(packagePath) {
+			if result == fmt.Sprintf("Installing package '%s' for '%s'. Use 'show app-hosting list' for progress.", candidate, appID) {
+				return true
+			}
+		}
+		return false
+	case "activate":
+		return result == fmt.Sprintf("%s activated successfully Current state is: ACTIVATED", appID) ||
+			result == fmt.Sprintf("%s activated successfully Current state is: STOPPED", appID)
+	case "start":
+		return result == fmt.Sprintf("%s started successfully Current state is: RUNNING", appID)
+	case "stop":
+		return result == fmt.Sprintf("%s stopped successfully Current state is: STOPPED", appID)
+	case "deactivate":
+		return result == fmt.Sprintf("%s deactivated successfully Current state is: DEPLOYED", appID)
+	case "uninstall":
+		return result == fmt.Sprintf("Uninstalling '%s'. Use 'show app-hosting list' for progress.", appID)
+	default:
+		return false
+	}
+}
+
+func appHostingRPCResultIsDefinitiveRejection(result string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(result))
 	return strings.HasPrefix(normalized, "%") ||
 		normalized == "error" || strings.HasPrefix(normalized, "error:") || strings.HasPrefix(normalized, "error ") ||
-		normalized == "failed" || strings.HasPrefix(normalized, "failed:") || strings.HasPrefix(normalized, "failed ")
+		normalized == "failed" || strings.HasPrefix(normalized, "failed:") || strings.HasPrefix(normalized, "failed ") ||
+		normalized == "no action is taken" || normalized == "no action is taken."
 }
 
 func appHostingVerificationResultMatches(result string, enabled bool) bool {
@@ -414,11 +467,20 @@ func (d *XEDriver) appHostingRPC(ctx context.Context, operation string, appID st
 	if err != nil {
 		return fmt.Errorf("%s operation failed for app %s: %w", operation, appID, err)
 	}
-	if appHostingRPCRejected(result) {
-		return fmt.Errorf("%s operation rejected by device for app %s; response omitted", operation, appID)
+	if strings.TrimSpace(result) == "" {
+		return common.NewRESTCONFMutationAmbiguousError(
+			fmt.Errorf("%s operation returned no result for app %s", operation, appID),
+		)
 	}
-
-	return nil
+	if appHostingLifecycleResultMatches(operation, appID, params["package"], result) {
+		return nil
+	}
+	if appHostingRPCResultIsDefinitiveRejection(result) {
+		return fmt.Errorf("%s operation result was not recognized as success for app %s; response omitted", operation, appID)
+	}
+	return common.NewRESTCONFMutationAmbiguousError(
+		fmt.Errorf("%s operation returned an unrecognized result for app %s; response omitted", operation, appID),
+	)
 }
 
 func (d *XEDriver) configureRuntimeSignVerification(ctx context.Context, enabled bool) error {
@@ -432,7 +494,7 @@ func (d *XEDriver) configureRuntimeSignVerification(ctx context.Context, enabled
 	if err != nil {
 		return fmt.Errorf("verification %s RPC failed: %w", action, err)
 	}
-	if appHostingRPCRejected(result) || !appHostingVerificationResultMatches(result, enabled) {
+	if !appHostingVerificationResultMatches(result, enabled) {
 		return fmt.Errorf("verification %s RPC was not accepted by device; response omitted", action)
 	}
 	return nil
@@ -516,9 +578,14 @@ func (d *XEDriver) UninstallApp(ctx context.Context, appID string) error {
 	return nil
 }
 
-// WaitForAppStatus polls the device until the app reaches the expected status or times out
+// WaitForAppStatus polls the device until the app reaches the expected status or times out.
 func (d *XEDriver) WaitForAppStatus(ctx context.Context, appID string, expectedStatus string, maxWaitTime time.Duration) error {
-	log.G(ctx).Debugf("Waiting for app %s to reach status: %s", appID, expectedStatus)
+	return d.waitForAppStatuses(ctx, appID, maxWaitTime, expectedStatus)
+}
+
+func (d *XEDriver) waitForAppStatuses(ctx context.Context, appID string, maxWaitTime time.Duration, expectedStatuses ...string) error {
+	expected := strings.Join(expectedStatuses, " or ")
+	log.G(ctx).Debugf("Waiting for app %s to reach status: %s", appID, expected)
 
 	pollInterval := 2 * time.Second
 	deadline := time.Now().Add(maxWaitTime)
@@ -541,11 +608,13 @@ func (d *XEDriver) WaitForAppStatus(ctx context.Context, appID string, expectedS
 
 			if app.Details != nil && app.Details.State != nil {
 				currentState := *app.Details.State
-				log.G(ctx).Debugf("App %s current state: %s (waiting for: %s)", appID, currentState, expectedStatus)
+				log.G(ctx).Debugf("App %s current state: %s (waiting for: %s)", appID, currentState, expected)
 
-				if currentState == expectedStatus {
-					log.G(ctx).Infof("App %s reached expected status: %s", appID, expectedStatus)
-					return nil
+				for _, expectedStatus := range expectedStatuses {
+					if currentState == expectedStatus {
+						log.G(ctx).Infof("App %s reached expected status: %s", appID, currentState)
+						return nil
+					}
 				}
 			}
 			break
@@ -558,7 +627,7 @@ func (d *XEDriver) WaitForAppStatus(ctx context.Context, appID string, expectedS
 		}
 	}
 
-	return fmt.Errorf("timeout waiting for app %s to reach status %s after %v", appID, expectedStatus, maxWaitTime)
+	return fmt.Errorf("timeout waiting for app %s to reach status %s after %v", appID, expected, maxWaitTime)
 }
 
 // WaitForAppNotPresent polls the device until the app is no longer in operational data

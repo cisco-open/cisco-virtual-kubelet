@@ -370,6 +370,9 @@ func TestAppHostingRPCExplicitRejectionOmitsDeviceResult(t *testing.T) {
 	if err == nil {
 		t.Fatal("ActivateApp succeeded after explicit device rejection")
 	}
+	if common.IsRESTCONFMutationAmbiguous(err) {
+		t.Fatalf("explicit device rejection was classified as ambiguous: %v", err)
+	}
 	if strings.Contains(err.Error(), sentinel) {
 		t.Fatalf("error exposed device result: %v", err)
 	}
@@ -378,7 +381,7 @@ func TestAppHostingRPCExplicitRejectionOmitsDeviceResult(t *testing.T) {
 func TestAppHostingRPCDoesNotClassifyEchoedPathAsFailure(t *testing.T) {
 	fc := &fakeNetworkClient{postWithResultHook: func(_ string, _, result any) error {
 		response := result.(*appHostingRPCOutput)
-		response.Result = "flash:/failure-analysis.tar installed successfully"
+		response.Result = "Installing package 'flash:/failure-analysis.tar' for 'test-app'. Use 'show app-hosting list' for progress."
 		response.Present = true
 		return nil
 	}}
@@ -387,24 +390,64 @@ func TestAppHostingRPCDoesNotClassifyEchoedPathAsFailure(t *testing.T) {
 	}
 }
 
-func TestAppHostingRPCRejectedUsesTokenBoundaries(t *testing.T) {
+func TestAppHostingLifecycleResultMatches(t *testing.T) {
 	tests := []struct {
-		result string
-		want   bool
+		name        string
+		operation   string
+		appID       string
+		packagePath string
+		result      string
+		want        bool
 	}{
-		{result: "% Error: rejected", want: true},
-		{result: "error: rejected", want: true},
-		{result: "error rejected", want: true},
-		{result: "failed: rejected", want: true},
-		{result: "failed rejected", want: true},
-		{result: "errorless completion", want: false},
-		{result: "failed-over application started", want: false},
-		{result: "flash:/failure-analysis.tar installed successfully", want: false},
+		{name: "install queued", operation: "install", appID: "app1", packagePath: "flash:/app.tar", result: "Installing package 'flash:/app.tar' for 'app1'. Use 'show app-hosting list' for progress.", want: true},
+		{name: "install queued normalizes slash", operation: "install", appID: "app1", packagePath: "flash:app.tar", result: "Installing package 'flash:/app.tar' for 'app1'. Use 'show app-hosting list' for progress.", want: true},
+		{name: "install completed", operation: "install", appID: "app1", packagePath: "flash:/app.tar", result: "app1 installed successfullyCurrent state is: DEPLOYED", want: true},
+		{name: "activate concatenated", operation: "activate", appID: "app1", result: "app1 activated successfullyCurrent state is: ACTIVATED", want: true},
+		{name: "activate newline", operation: "activate", appID: "app1", result: "app1 activated successfully\nCurrent state is: ACTIVATED", want: true},
+		{name: "activate stopped", operation: "activate", appID: "app1", result: "app1 activated successfullyCurrent state is: STOPPED", want: true},
+		{name: "start", operation: "start", appID: "app1", result: "app1 started successfullyCurrent state is: RUNNING", want: true},
+		{name: "stop", operation: "stop", appID: "app1", result: "app1 stopped successfullyCurrent state is: STOPPED", want: true},
+		{name: "deactivate", operation: "deactivate", appID: "app1", result: "app1 deactivated successfullyCurrent state is: DEPLOYED", want: true},
+		{name: "uninstall", operation: "uninstall", appID: "app1", result: "Uninstalling 'app1'. Use 'show app-hosting list' for progress.", want: true},
+		{name: "wrong app", operation: "activate", appID: "app1", result: "app2 activated successfullyCurrent state is: ACTIVATED"},
+		{name: "wrong package", operation: "install", appID: "app1", packagePath: "flash:/app.tar", result: "Installing package 'flash:/other.tar' for 'app1'. Use 'show app-hosting list' for progress."},
+		{name: "wrong state", operation: "activate", appID: "app1", result: "app1 activated successfullyCurrent state is: RUNNING"},
+		{name: "generic success", operation: "activate", appID: "app1", result: "RPC request successful"},
+		{name: "non action", operation: "activate", appID: "app1", result: "No action is taken"},
+		{name: "error", operation: "activate", appID: "app1", result: "% Error: rejected"},
+		{name: "success with suffix", operation: "activate", appID: "app1", result: "app1 activated successfullyCurrent state is: ACTIVATED error follows"},
 	}
 	for _, tc := range tests {
-		if got := appHostingRPCRejected(tc.result); got != tc.want {
-			t.Errorf("appHostingRPCRejected(%q)=%v, want %v", tc.result, got, tc.want)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			if got := appHostingLifecycleResultMatches(tc.operation, tc.appID, tc.packagePath, tc.result); got != tc.want {
+				t.Errorf("appHostingLifecycleResultMatches(%q, %q, %q, %q)=%v, want %v", tc.operation, tc.appID, tc.packagePath, tc.result, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestAppHostingRPCEmptySuccessResponseIsAmbiguous(t *testing.T) {
+	fc := &fakeNetworkClient{postWithResultHook: func(_ string, _, _ any) error { return nil }}
+	err := newTestDriver(fc).ActivateApp(context.Background(), "test-app")
+	if !common.IsRESTCONFMutationAmbiguous(err) {
+		t.Fatalf("ActivateApp error=%v, want mutation ambiguity", err)
+	}
+}
+
+func TestAppHostingRPCUnrecognizedSuccessResponseIsAmbiguous(t *testing.T) {
+	const sentinel = "unrecognized-result-sentinel"
+	fc := &fakeNetworkClient{postWithResultHook: func(_ string, _, result any) error {
+		response := result.(*appHostingRPCOutput)
+		response.Result = "RPC request successful " + sentinel
+		response.Present = true
+		return nil
+	}}
+	err := newTestDriver(fc).ActivateApp(context.Background(), "test-app")
+	if !common.IsRESTCONFMutationAmbiguous(err) {
+		t.Fatalf("ActivateApp error=%v, want mutation ambiguity", err)
+	}
+	if strings.Contains(err.Error(), sentinel) {
+		t.Fatalf("error exposed device result: %v", err)
 	}
 }
 
@@ -479,6 +522,38 @@ func TestActivateAndStartWaitsForActivatedBeforeStart(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got, want := strings.Join(order, ","), "activate,observe:ACTIVATED,start,observe:RUNNING"; got != want {
+		t.Fatalf("lifecycle order = %q, want %q", got, want)
+	}
+}
+
+func TestActivateAndStartAcceptsObservedStoppedBeforeStart(t *testing.T) {
+	state := "DEPLOYED"
+	var order []string
+
+	fc := &fakeNetworkClient{}
+	fc.postHook = func(_ string, payload any) error {
+		request := payload.(map[string]interface{})
+		switch {
+		case request["activate"] != nil:
+			order = append(order, "activate")
+			state = "STOPPED"
+		case request["start"] != nil:
+			order = append(order, "start")
+			state = "RUNNING"
+		}
+		return nil
+	}
+	fc.getHook = func(_ string, result any) error {
+		order = append(order, "observe:"+state)
+		*result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData) = *operResponse("test-app", state)
+		return nil
+	}
+
+	d := newTestDriver(fc)
+	if err := d.activateAndStart(context.Background(), minimalAppConfig("flash:app.tar", v1.PullIfNotPresent, time.Second), time.Second); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := strings.Join(order, ","), "activate,observe:STOPPED,start,observe:RUNNING"; got != want {
 		t.Fatalf("lifecycle order = %q, want %q", got, want)
 	}
 }
@@ -788,6 +863,45 @@ func TestCopyFallbackDoesNotDisruptAcceptedCachedInstall(t *testing.T) {
 	err := d.copyFallbackToFlash(ctx, cfg, cfgPath, v1.PullIfNotPresent, time.Minute)
 	if err == nil || !strings.Contains(err.Error(), "refusing destructive fallback") {
 		t.Fatalf("error=%v, want accepted-install convergence failure", err)
+	}
+	if installs != 1 || copies != 0 || deletes != 1 {
+		t.Fatalf("installs=%d copies=%d deletes=%d, want 1/0/1 (initial cleanup only)", installs, copies, deletes)
+	}
+}
+
+func TestCopyFallbackDoesNotDisruptAmbiguousCachedInstall(t *testing.T) {
+	const cfgPath = "/restconf/data/Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/apps"
+	installs, copies, deletes := 0, 0, 0
+	fc := &fakeNetworkClient{
+		getHook: func(_ string, _ any) error { return nil },
+		postWithResultHook: func(path string, payload, result any) error {
+			if path != appHostingRPCPath {
+				return nil
+			}
+			input := payload.(map[string]any)["Cisco-IOS-XE-rpc:app-hosting"].(map[string]any)
+			if input["install"] != nil {
+				installs++
+				response := result.(*appHostingRPCOutput)
+				response.Result = "RPC request successful"
+				response.Present = true
+			}
+			return nil
+		},
+		postHook: func(path string, _ any) error {
+			if path == "/restconf/operations/Cisco-IOS-XE-rpc:copy" {
+				copies++
+			}
+			return nil
+		},
+		deleteHook: func(string) error { deletes++; return nil },
+	}
+	d := newTestDriver(fc)
+	cfg := minimalDockerResourceConfig("https://registry.example/app.tar", v1.PullIfNotPresent, time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	err := d.copyFallbackToFlash(ctx, cfg, cfgPath, v1.PullIfNotPresent, time.Minute)
+	if err == nil || !strings.Contains(err.Error(), "refusing destructive fallback") {
+		t.Fatalf("error=%v, want ambiguous-install convergence failure", err)
 	}
 	if installs != 1 || copies != 0 || deletes != 1 {
 		t.Fatalf("installs=%d copies=%d deletes=%d, want 1/0/1 (initial cleanup only)", installs, copies, deletes)

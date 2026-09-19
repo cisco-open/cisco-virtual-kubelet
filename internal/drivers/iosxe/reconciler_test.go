@@ -488,6 +488,46 @@ func TestReconcileAppPendingUninstallRequiresObservedAbsenceBeforeConfigDelete(t
 	}
 }
 
+func TestDeleteAppStopsAfterExplicitLifecycleResultFailure(t *testing.T) {
+	tests := []struct {
+		name      string
+		state     string
+		operation string
+	}{
+		{name: "stop", state: "RUNNING", operation: "stop"},
+		{name: "deactivate", state: "STOPPED", operation: "deactivate"},
+		{name: "uninstall", state: "DEPLOYED", operation: "uninstall"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			posts, deletes := 0, 0
+			d := &XEDriver{client: &fakeNetworkClient{
+				getHook: func(_ string, result any) error {
+					result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData).App = map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App{"app1": makeOperData(tc.state)}
+					return nil
+				},
+				postWithResultHook: func(_ string, payload, result any) error {
+					input := payload.(map[string]any)["Cisco-IOS-XE-rpc:app-hosting"].(map[string]any)
+					if input[tc.operation] == nil {
+						t.Fatalf("request=%#v, want %s", input, tc.operation)
+					}
+					posts++
+					response := result.(*appHostingRPCOutput)
+					response.Result = "No action is taken"
+					response.Present = true
+					return nil
+				},
+				deleteHook: func(string) error { deletes++; return nil },
+			}}
+
+			err := d.DeleteApp(testCtx(), "app1")
+			if err == nil || posts != 1 || deletes != 0 {
+				t.Fatalf("DeleteApp error=%v posts=%d deletes=%d, want error/1/0", err, posts, deletes)
+			}
+		})
+	}
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // getAppObservation
 // ─────────────────────────────────────────────────────────────────────────────

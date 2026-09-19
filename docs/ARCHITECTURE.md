@@ -358,9 +358,13 @@ stateDiagram-v2
 - **Error** — surfaces as Pod `Failed` with reason `PackagePolicyInvalid` and a message from the device's notification.
 - **RPC acceptance is not lifecycle completion** — IOS-XE can return HTTP 2xx
   while placing a command error in `Cisco-IOS-XE-rpc:output/result`. The
-  driver decodes that bounded response and rejects explicit errors without
-  logging the device text. A successful result means only that the request was
-  accepted; the next transition is determined exclusively from oper-data.
+  driver decodes that bounded response and accepts only a complete,
+  operation-specific success result bound to the expected app ID, package, and
+  target state. Explicit rejection fails closed; an unrecognized or empty 2xx
+  result is mutation-ambiguous and is reconciled from oper-data before any
+  replay. Device text is never copied into errors or logs. Even a matched result
+  means only that the request was accepted; lifecycle completion is determined
+  exclusively from oper-data.
 
 ### Reverse path (desired = Deleted)
 
