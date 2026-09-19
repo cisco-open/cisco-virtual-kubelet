@@ -156,7 +156,8 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 	// image Secret). Settlement can wait for those dependencies; revocation of
 	// future device mutations cannot.
 	if rollout.Status.FrozenPlan != nil && (rollout.Spec.Control.Pause || rollout.Spec.Control.Cancel) {
-		if err := r.propagateControl(ctx, &rollout, rollout.Spec.Control.Pause, rollout.Spec.Control.Cancel, now); err != nil {
+		if err := r.propagateControl(ctx, &rollout,
+			rollout.Spec.Control.Pause && !rollout.Spec.Control.Cancel, rollout.Spec.Control.Cancel, now); err != nil {
 			return ctrl.Result{}, err
 		}
 		if rollout.Spec.Control.Cancel {
@@ -226,6 +227,13 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 		return result, err
 	}
 
+	// Cancellation is terminal and does not require approval of executable
+	// intent. The pre-dependency fence above has already denied every future
+	// claim; finish reservation and retained-leaf settlement before the ordinary
+	// approval gate can return the campaign to AwaitingApproval.
+	if rollout.Spec.Control.Cancel {
+		return r.reconcileCancellation(ctx, &rollout, policy, now)
+	}
 	if rollout.Spec.Approval == nil {
 		return r.updateRolloutSummary(ctx, &rollout, opsv1alpha1.IOSXESoftwareRolloutPhaseAwaitingApproval,
 			"waiting for approval of "+rollout.Status.FrozenPlan.Hash, now)
@@ -242,9 +250,6 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, err
 	}
 
-	if rollout.Spec.Control.Cancel {
-		return r.reconcileCancellation(ctx, &rollout, policy, now)
-	}
 	if rollout.Spec.Control.Pause {
 		if err := r.propagateControl(ctx, &rollout, true, false, now); err != nil {
 			return ctrl.Result{}, err

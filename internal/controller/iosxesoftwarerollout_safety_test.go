@@ -1760,6 +1760,147 @@ func TestRolloutControlStatusTreatsSettledCancellationTombstoneAsEffective(t *te
 	}
 }
 
+func TestReconcileCancelsFrozenPlanWithoutApproval(t *testing.T) {
+	now := time.Date(2026, 9, 19, 18, 0, 0, 0, time.UTC)
+	target := policyFenceTarget("device-a", "device-uid-a", "leaf-a")
+	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
+	rollout.Finalizers = []string{rolloutSafetyFinalizer}
+	rollout.Spec.Approval = nil
+	requestedAt := metav1.NewTime(now.Add(-time.Minute))
+	rollout.Spec.Control = opsv1alpha1.IOSXESoftwareRolloutControl{
+		Revision: 1, Pause: true, Cancel: true, RequestedBy: "operator", RequestedAt: &requestedAt,
+	}
+	rollout.Status.Phase = opsv1alpha1.IOSXESoftwareRolloutPhaseAwaitingApproval
+	rollout.Status.Targets = []opsv1alpha1.IOSXESoftwareRolloutTargetStatus{{
+		DeviceName: target.DeviceName, DeviceUID: target.DeviceUID, LeafName: target.ChildName,
+		Phase: opsv1alpha1.IOSXESoftwareRolloutTargetPlanned, LastTransitionTime: metav1.NewTime(now.Add(-2 * time.Minute)),
+	}}
+
+	policyConfig := topologyrollout.AdminPolicyConfig{
+		Version: topologyrollout.PolicyVersion,
+		FleetSelector: metav1.LabelSelector{MatchLabels: map[string]string{
+			"topology.cisco.vk/managed": "true",
+		}},
+		RequiredTopologyKeys:         []string{"topology.cisco.vk/site"},
+		GlobalMaxConcurrentTransfers: 1,
+		GlobalMaxUnavailable:         1,
+		DomainMaxConcurrentTransfers: map[string]int{"topology.cisco.vk/site": 1},
+		DomainMaxUnavailable:         map[string]int{"topology.cisco.vk/site": 1},
+		HealthFreshnessSeconds:       300,
+		MaxCampaignTargets:           100,
+		MaxActiveReservations:        256,
+		MaxLedgerBytes:               topologyrollout.DefaultMaxSerializedBytes,
+		LedgerName:                   rollout.Status.FrozenPlan.Policy.LedgerName,
+	}
+	policyJSON, err := topologyrollout.CanonicalPolicyJSON(policyConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	policyCM := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+		Namespace: rollout.Status.FrozenPlan.Policy.Namespace,
+		Name:      rollout.Status.FrozenPlan.Policy.Name,
+		UID:       types.UID(rollout.Status.FrozenPlan.Policy.UID), ResourceVersion: "10",
+		Annotations: map[string]string{
+			topologyrollout.PolicyManagedAnnotation:   "true",
+			topologyrollout.AdmissionPrefixAnnotation: "cvk-topology",
+			topologyrollout.LedgerUIDAnnotation:       rollout.Status.FrozenPlan.Policy.LedgerUID,
+		},
+	}, Data: map[string]string{topologyrollout.PolicyDataKey: policyJSON}}
+	parsedPolicy, err := topologyrollout.ParseAdminPolicy(policyCM)
+	if err != nil {
+		t.Fatal(err)
+	}
+	policySnapshot, err := freezePolicy(parsedPolicy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rollout.Status.FrozenPlan.Policy = policySnapshot
+	rollout.Status.EffectivePolicy = &opsv1alpha1.IOSXESoftwareRolloutEffectivePolicyStatus{
+		Epoch: 1, Policy: policySnapshot, UpdatedAt: metav1.NewTime(now.Add(-2 * time.Minute)),
+	}
+	ledgerCM := policyFenceLedger(t, rollout, nil, nil, topologyrollout.ReservationReserved)
+	device := &ciskov1.CiscoDevice{ObjectMeta: metav1.ObjectMeta{
+		Namespace: rollout.Namespace, Name: target.DeviceName, UID: types.UID(target.DeviceUID), Generation: target.DeviceGeneration,
+	}}
+
+	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	if err := ciskov1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	apiClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(&opsv1alpha1.IOSXESoftwareRollout{}, &opsv1alpha1.IOSXESoftwareUpgrade{}, &ciskov1.CiscoDevice{}).
+		WithObjects(rollout, policyCM, ledgerCM, device).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(ctx context.Context, inner client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+				if leaf, ok := obj.(*opsv1alpha1.IOSXESoftwareUpgrade); ok && leaf.UID == "" {
+					leaf.UID = types.UID("pre-approval-cancellation-tombstone")
+				}
+				return inner.Create(ctx, obj, opts...)
+			},
+		}).Build()
+	reconciler := &IOSXESoftwareRolloutReconciler{
+		Client: apiClient, APIReader: apiClient, Now: func() time.Time { return now },
+		TopologyPolicyNamespace: policyCM.Namespace, TopologyPolicyName: policyCM.Name,
+	}
+
+	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(rollout)})
+	if err != nil {
+		t.Fatalf("Reconcile() error = %v", err)
+	}
+	if result.Requeue || result.RequeueAfter != 0 {
+		t.Fatalf("Reconcile() result = %#v, want terminal cancellation", result)
+	}
+
+	var gotRollout opsv1alpha1.IOSXESoftwareRollout
+	if err := apiClient.Get(context.Background(), client.ObjectKeyFromObject(rollout), &gotRollout); err != nil {
+		t.Fatal(err)
+	}
+	if gotRollout.Status.Phase != opsv1alpha1.IOSXESoftwareRolloutPhaseCancelled ||
+		gotRollout.Status.Counts.Cancelled != 1 || gotRollout.Status.Counts.Total != 1 ||
+		gotRollout.Status.Control == nil || !gotRollout.Status.Control.Cancelled ||
+		gotRollout.Status.Control.CancellationPending {
+		t.Fatalf("pre-approval cancellation did not converge: status=%#v", gotRollout.Status)
+	}
+	if gotRollout.Status.Approval != nil {
+		t.Fatalf("cancellation invented approval status: %#v", gotRollout.Status.Approval)
+	}
+
+	var leaf opsv1alpha1.IOSXESoftwareUpgrade
+	if err := apiClient.Get(context.Background(), types.NamespacedName{Namespace: rollout.Namespace, Name: target.ChildName}, &leaf); err != nil {
+		t.Fatal(err)
+	}
+	if leaf.Status.ManagerAdmission == nil ||
+		leaf.Status.ManagerAdmission.State != opsv1alpha1.UpgradeManagerAdmissionSettled ||
+		leaf.Status.ManagerControl == nil || !leaf.Status.ManagerControl.Cancel ||
+		leaf.Status.ManagerControl.Pause ||
+		leaf.Status.ManagerControl.Revision != rollout.Spec.Control.Revision ||
+		len(leaf.Status.ManagedMutationClaims) != 0 || leaf.Status.ManagerDrain != nil {
+		t.Fatalf("pre-approval cancellation tombstone is not safely settled: %#v", leaf.Status)
+	}
+	store := topologyrollout.Store{Client: apiClient, APIReader: apiClient,
+		Key: types.NamespacedName{Namespace: ledgerCM.Namespace, Name: ledgerCM.Name}, ExpectedUID: ledgerCM.UID}
+	_, ledger, err := store.Read(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ledger.Reservations) != 0 {
+		t.Fatalf("pre-approval cancellation retained reservations: %#v", ledger.Reservations)
+	}
+	var gotDevice ciskov1.CiscoDevice
+	if err := apiClient.Get(context.Background(), client.ObjectKeyFromObject(device), &gotDevice); err != nil {
+		t.Fatal(err)
+	}
+	if gotDevice.Status.TopologyLock != nil {
+		t.Fatalf("pre-approval cancellation created a topology lock: %#v", gotDevice.Status.TopologyLock)
+	}
+}
+
 func TestCancellationDoesNotRevokeAnAlreadySettledClaim(t *testing.T) {
 	target := policyFenceTarget("device-a", "device-uid-a", "leaf-a")
 	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})

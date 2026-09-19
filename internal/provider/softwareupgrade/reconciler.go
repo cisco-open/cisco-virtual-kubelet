@@ -1398,7 +1398,8 @@ func (r *Reconciler) deviceUpgradeOwner(ctx context.Context, up *opsv1alpha1.IOS
 	var candidates []candidate
 	for i := range upgrades.Items {
 		item := &upgrades.Items[i]
-		if item.Spec.DeviceRef.Name != up.Spec.DeviceRef.Name || !item.DeletionTimestamp.IsZero() || terminalUpgradePhase(item.Status.Phase) {
+		if item.Spec.DeviceRef.Name != up.Spec.DeviceRef.Name || !item.DeletionTimestamp.IsZero() ||
+			terminalUpgradePhase(item.Status.Phase) || inertManagedCancellationTombstone(item) {
 			continue
 		}
 		if item.Status.Phase == "" || item.Status.Phase == opsv1alpha1.UpgradePhasePending {
@@ -1434,6 +1435,38 @@ func (r *Reconciler) deviceUpgradeOwner(ctx context.Context, up *opsv1alpha1.IOS
 		return candidates[i].name < candidates[j].name
 	})
 	return candidates[0].name, nil
+}
+
+// inertManagedCancellationTombstone recognizes the one non-terminal API shape
+// that can no longer own the legacy per-device upgrade queue. Managed rollout
+// cancellation retains an empty-phase leaf as a delayed-Create tombstone, but
+// Settled admission proves that the manager released its reservation and will
+// never grant this leaf. Keep every other shape fail-closed: a started phase,
+// drain session, claim, mutation marker, protocol mismatch, or control mismatch
+// remains a queue contender until its physical outcome is unambiguous.
+func inertManagedCancellationTombstone(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	if up == nil || up.UID == "" || up.Status.Phase != "" ||
+		up.Annotations[managedprotocol.AnnotationManaged] != "true" ||
+		up.Status.ManagerDrain != nil || up.Status.WorkerDrain != nil ||
+		len(up.Status.ManagedMutationClaims) != 0 ||
+		mutationguard.UpgradeMutationSubmitted(up) {
+		return false
+	}
+	admission := up.Status.ManagerAdmission
+	control := up.Status.ManagerControl
+	return admission != nil && admission.ProtocolVersion == opsv1alpha1.ManagedUpgradeProtocolRolloutV1 &&
+		admission.State == opsv1alpha1.UpgradeManagerAdmissionSettled &&
+		admission.RevocationReason == "" && admission.LeafUID == string(up.UID) &&
+		admission.CampaignUID != "" && admission.CampaignUID == up.Annotations[managedprotocol.AnnotationCampaignUID] &&
+		admission.PlanHash != "" && admission.PlanHash == up.Annotations[managedprotocol.AnnotationPlanHash] &&
+		admission.LedgerUID != "" && admission.LedgerUID == up.Annotations[managedprotocol.AnnotationLedgerUID] &&
+		admission.ReservationID != "" && admission.ReservationID == up.Annotations[managedprotocol.AnnotationReservationID] &&
+		admission.DeviceUID != "" && admission.DeviceUID == up.Annotations[managedprotocol.AnnotationDeviceUID] &&
+		admission.NodeUID != "" && admission.NodeUID == up.Annotations[managedprotocol.AnnotationNodeUID] &&
+		admission.PolicyUID != "" && admission.PolicyResourceVersion != "" && admission.PolicyEpoch > 0 &&
+		admission.PhysicalIdentity != "" &&
+		admission.ControlRevision != nil && control != nil && control.Cancel &&
+		!control.Pause && control.Revision > 0 && control.Revision == *admission.ControlRevision
 }
 
 func (r *Reconciler) ensureMutationLease(

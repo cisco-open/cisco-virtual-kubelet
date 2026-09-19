@@ -2548,7 +2548,7 @@ func (r *IOSXESoftwareRolloutReconciler) ensureRetainedFenceForTarget(
 		}
 		if current.Status.ManagerControl == nil {
 			current.Status.ManagerControl = &opsv1alpha1.UpgradeManagerControlStatus{
-				Revision: revision, Pause: rollout.Spec.Control.Pause, Cancel: cancel,
+				Revision: revision, Pause: rollout.Spec.Control.Pause && !cancel, Cancel: cancel,
 				UpdatedAt: metav1.NewTime(now), Reason: fenceReason,
 			}
 		} else {

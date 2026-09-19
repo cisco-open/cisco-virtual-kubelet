@@ -181,6 +181,15 @@ func managedTestLeaf(name string) *opsv1alpha1.IOSXESoftwareUpgrade {
 	return up
 }
 
+func managedCancellationQueueTombstone(name string) *opsv1alpha1.IOSXESoftwareUpgrade {
+	up := managedTestLeaf(name)
+	up.Status.ExecutionModel = ""
+	up.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionSettled
+	up.Status.ManagerAdmission.TopologyLockID = ""
+	up.Status.ManagerControl.Cancel = true
+	return up
+}
+
 func newManagedTestReconciler(
 	t *testing.T,
 	up *opsv1alpha1.IOSXESoftwareUpgrade,
@@ -1173,6 +1182,224 @@ func TestManagedPendingAdmissionAcknowledgesIdentityWithoutAdvancing(t *testing.
 		up.Status.WorkerControl.ObservedAdmissionState != opsv1alpha1.UpgradeManagerAdmissionPending ||
 		up.Status.WorkerControl.EffectiveState != opsv1alpha1.UpgradeWorkerControlReady {
 		t.Fatalf("pending admission acknowledgement = %#v", up.Status.WorkerControl)
+	}
+}
+
+func TestInertManagedCancellationTombstoneFailsClosed(t *testing.T) {
+	markTime := metav1.NewTime(managedTestTime)
+	tests := []struct {
+		name   string
+		mutate func(*opsv1alpha1.IOSXESoftwareUpgrade)
+		want   bool
+	}{
+		{name: "exact empty-phase cancellation tombstone", want: true},
+		{name: "current execution model remains pre-dispatch", want: true, mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ExecutionModel = opsv1alpha1.UpgradeExecutionModelAtMostOnceV1
+		}},
+		{name: "ordinary empty-phase leaf", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			delete(up.Annotations, managedprotocol.AnnotationManaged)
+		}},
+		{name: "missing UID", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) { up.UID = "" }},
+		{name: "pending phase", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Phase = opsv1alpha1.UpgradePhasePending
+		}},
+		{name: "resolving phase", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Phase = opsv1alpha1.UpgradePhaseResolving
+		}},
+		{name: "missing admission", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission = nil
+		}},
+		{name: "unknown protocol", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.ProtocolVersion = "future"
+		}},
+		{name: "pending admission", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionPending
+		}},
+		{name: "granted admission", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionGranted
+		}},
+		{name: "revoked admission", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionRevoked
+			up.Status.ManagerAdmission.RevocationReason = "CampaignCancelled"
+		}},
+		{name: "settled admission retains revocation reason", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.RevocationReason = "CampaignCancelled"
+		}},
+		{name: "leaf UID mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.LeafUID = "another-leaf"
+		}},
+		{name: "campaign binding mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.CampaignUID = "another-campaign"
+		}},
+		{name: "plan binding mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.PlanHash = "sha256:" + strings.Repeat("b", 64)
+		}},
+		{name: "ledger binding mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.LedgerUID = "another-ledger"
+		}},
+		{name: "reservation binding mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.ReservationID = "another-reservation"
+		}},
+		{name: "device binding mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.DeviceUID = "another-device"
+		}},
+		{name: "node binding mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.NodeUID = "another-node"
+		}},
+		{name: "missing policy UID", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.PolicyUID = ""
+		}},
+		{name: "missing policy resource version", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.PolicyResourceVersion = ""
+		}},
+		{name: "invalid policy epoch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.PolicyEpoch = 0
+		}},
+		{name: "missing physical identity", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.PhysicalIdentity = ""
+		}},
+		{name: "missing admission revision", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.ControlRevision = nil
+		}},
+		{name: "missing manager control", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl = nil
+		}},
+		{name: "control is not cancellation", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Cancel = false
+		}},
+		{name: "control also pauses", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Pause = true
+		}},
+		{name: "neutral cancellation revision", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Revision = 0
+			*up.Status.ManagerAdmission.ControlRevision = 0
+		}},
+		{name: "control revision mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Revision++
+		}},
+		{name: "manager drain retained", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain = &opsv1alpha1.UpgradeManagerDrainStatus{}
+		}},
+		{name: "worker drain retained", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain = &opsv1alpha1.UpgradeWorkerDrainStatus{}
+		}},
+		{name: "durable managed claim", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+				Stage: opsv1alpha1.UpgradeManagedMutationPrimaryInstall, ReservationID: managedTestReservationID,
+				PolicyEpoch: 1, ControlRevision: 7, ClaimedAt: metav1.Time{Time: managedTestTime},
+			}}
+		}},
+	}
+	evidence := []struct {
+		name   string
+		mutate func(*opsv1alpha1.IOSXESoftwareUpgradeStatus)
+	}{
+		{name: "unknown execution model", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.ExecutionModel = "FutureModel" }},
+		{name: "legacy in-flight phase", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Phase = opsv1alpha1.UpgradePhaseTransferring
+		}},
+		{name: "legacy outcome unknown", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.FailureReason = "LegacyStateOutcomeUnknown" }},
+		{name: "install marker missing", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.FailureReason = "InstallAttemptMarkerMissing" }},
+		{name: "staging operation missing", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.FailureReason = "StagingOperationMissing" }},
+		{name: "staging requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StagingRequested = true }},
+		{name: "install started", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.InstallStartTime = markTime.DeepCopy() }},
+		{name: "activation started", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.ActivationStartTime = markTime.DeepCopy() }},
+		{name: "rollback started", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.RollbackStartTime = markTime.DeepCopy() }},
+		{name: "primary install requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.PrimarySupervisorInstallRequested = true }},
+		{name: "primary installed", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.PrimarySupervisorInstalled = true }},
+		{name: "standby install requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StandbySupervisorInstallRequested = true }},
+		{name: "standby installed", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StandbySupervisorInstalled = true }},
+		{name: "standby activation requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StandbySupervisorActivationRequested = true }},
+		{name: "standby activated", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StandbySupervisorActivated = true }},
+		{name: "primary activation requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.PrimarySupervisorActivationRequested = true }},
+		{name: "no-reboot activation accepted", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.NoRebootActivationAccepted = true }},
+		{name: "rollback requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.RollbackActivationRequested = true }},
+		{name: "legacy staging condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Staged", Reason: "StagingRequested"}}
+		}},
+		{name: "legacy activation condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Activated", Reason: "ActivationRequested"}}
+		}},
+		{name: "legacy rollback condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Rollback", Reason: "RollbackDispatched"}}
+		}},
+	}
+	for _, marker := range evidence {
+		marker := marker
+		tests = append(tests, struct {
+			name   string
+			mutate func(*opsv1alpha1.IOSXESoftwareUpgrade)
+			want   bool
+		}{
+			name: "mutation evidence: " + marker.name,
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				marker.mutate(&up.Status)
+			},
+		})
+	}
+
+	if inertManagedCancellationTombstone(nil) {
+		t.Fatal("nil upgrade was treated as an inert cancellation tombstone")
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			up := managedCancellationQueueTombstone("queue-tombstone")
+			if test.mutate != nil {
+				test.mutate(up)
+			}
+			if got := inertManagedCancellationTombstone(up); got != test.want {
+				t.Fatalf("inertManagedCancellationTombstone() = %t, want %t; status=%+v", got, test.want, up.Status)
+			}
+		})
+	}
+}
+
+func TestDeviceUpgradeOwnerSkipsOnlyInertManagedCancellationTombstone(t *testing.T) {
+	tests := []struct {
+		name      string
+		mutateOld func(*opsv1alpha1.IOSXESoftwareUpgrade)
+		wantNext  bool
+	}{
+		{name: "settled cancellation tombstone", wantNext: true},
+		{name: "ordinary empty-phase leaf", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			delete(up.Annotations, managedprotocol.AnnotationManaged)
+		}},
+		{name: "claimed cancellation leaf", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+				Stage: opsv1alpha1.UpgradeManagedMutationPrimaryInstall, ReservationID: managedTestReservationID,
+				PolicyEpoch: 1, ControlRevision: 7, ClaimedAt: metav1.Time{Time: managedTestTime},
+			}}
+		}},
+		{name: "cancellation leaf with mutation marker", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.PrimarySupervisorInstallRequested = true
+		}},
+		{name: "cancellation leaf with mismatched control", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Revision++
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			old := managedCancellationQueueTombstone("a-retained-tombstone")
+			old.CreationTimestamp = metav1.NewTime(managedTestTime.Add(-time.Hour))
+			if test.mutateOld != nil {
+				test.mutateOld(old)
+			}
+			next := managedTestLeaf("z-next-upgrade")
+			next.CreationTimestamp = metav1.NewTime(managedTestTime)
+			r := newManagedTestReconciler(t, next, nil, old)
+
+			owner, err := r.deviceUpgradeOwner(context.Background(), next, managedTestTime)
+			if err != nil {
+				t.Fatalf("deviceUpgradeOwner() error = %v", err)
+			}
+			want := old.Name
+			if test.wantNext {
+				want = next.Name
+			}
+			if owner != want {
+				t.Fatalf("deviceUpgradeOwner() = %q, want %q", owner, want)
+			}
+		})
 	}
 }
 
