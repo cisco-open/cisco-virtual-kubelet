@@ -159,11 +159,14 @@ func (d *XEDriver) CreateAppHostingApp(ctx context.Context, appConfig *AppHostin
 	return nil
 }
 
-// activateAndStart performs the activate → start → wait RUNNING sequence
+// activateAndStart performs the activate → wait ACTIVATED → start → wait RUNNING sequence
 // required for all DockerResource (two-phase) apps and copy-fallback paths.
 func (d *XEDriver) activateAndStart(ctx context.Context, appConfig *AppHostingConfig, timeout time.Duration) error {
 	if err := d.ActivateApp(ctx, appConfig.AppName()); err != nil {
 		return fmt.Errorf("failed to activate app %s: %w", appConfig.AppName(), err)
+	}
+	if err := d.WaitForAppStatus(ctx, appConfig.AppName(), "ACTIVATED", timeout); err != nil {
+		return fmt.Errorf("app %s did not reach ACTIVATED after activate: %w", appConfig.AppName(), err)
 	}
 	if err := d.StartApp(ctx, appConfig.AppName()); err != nil {
 		return fmt.Errorf("failed to start app %s: %w", appConfig.AppName(), err)

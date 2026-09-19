@@ -53,6 +53,15 @@ func TestManagedTopologyStatePresentDetectsEveryRetainedIdentity(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "damaged managed Pod-delete completion authority",
+			objects: []runtime.Object{&rbacv1.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{Name: "managed-delete"},
+				RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: managedprotocol.ManagedWorkerPodDeleteClusterRole},
+				Subjects:   []rbacv1.Subject{{Kind: rbacv1.ServiceAccountKind, Namespace: "edge", Name: "cisco-vk-managed-node-12345678"}},
+			}},
+			want: true,
+		},
+		{
 			name: "isolated legacy cluster authority",
 			objects: []runtime.Object{&rbacv1.ClusterRoleBinding{
 				ObjectMeta: metav1.ObjectMeta{Name: "legacy", Annotations: map[string]string{

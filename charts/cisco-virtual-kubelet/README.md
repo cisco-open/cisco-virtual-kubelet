@@ -47,7 +47,9 @@ values fall back to 16 and other existing `int32` values remain accepted.
 
 Helm rejects an enabled render for an older Kubernetes version or aggregator
 mode. The manager performs discovery and admission preflight again at startup;
-the version gate alone is not considered proof that enforcement is active.
+it also exact-compares both fixed managed-worker ClusterRole rule sets and
+rejects aggregation or added authority. The version gate alone is not
+considered proof that enforcement is active.
 
 ## Configuration
 
@@ -158,7 +160,7 @@ invents a UID. On startup, the manager:
 1. reads the live policy ConfigMap and validates its complete schema and
    non-empty fleet selector before any ledger write;
 2. uses its protected `topology.cisco.vk/admission-policy-prefix` annotation to
-   verify the chart's exact nine admission policies and bindings;
+   verify the chart's exact ten admission policies and bindings;
 3. reads and initializes the ledger with the ledger ConfigMap's real
    Kubernetes UID; and
 4. adds that UID to the policy's protected
@@ -178,8 +180,9 @@ retirement before establishing new coordinates.
 
 Once bound, a missing, empty, or recreated ledger is an identity failure. CVK
 does not silently initialize new admission authority over in-flight work.
-The policy, ledger, nine admission policy/binding pairs, and fixed managed
-worker role carry `helm.sh/resource-policy: keep`. Any namespace cleanup
+The policy, ledger, ten admission policy/binding pairs, fixed managed-worker
+baseline role, and fixed Pod-delete completion role carry
+`helm.sh/resource-policy: keep`. Any namespace cleanup
 Role/RoleBinding created by workload drain is also retained. A values rollback,
 `topology.enabled=false`, or `helm uninstall` therefore cannot silently erase
 that safety state; retained objects require a separate audited retirement.
@@ -291,21 +294,21 @@ For every allowed namespace, the chart creates a retained cleanup/read Role and
 RoleBinding granting the manager Pod get/list/watch/update/patch plus read-only
 PDB/Deployment/ReplicaSet access. A separate, non-retained execution Role and
 RoleBinding grants only `pods/eviction` create while every gate is active.
-Neither grants Pod delete. The ninth native admission policy reserves the exact
-`ops.cisco.vk/drain-session` annotation and
+Neither grants Pod delete. The managed-drain native admission policy reserves
+the exact `ops.cisco.vk/drain-session` annotation and
 `ops.cisco.vk/iosxe-rollout-drain` finalizer pair to the manager and prevents
 that identity from changing unrelated Pod fields. It also rejects direct Pod
 DELETE globally for the manager identity. CVK uses the Eviction API; it has no
 force-delete or PDB-bypass path.
 
-The ninth policy is present whenever managed topology is enabled, including
-when drain is off, so manager startup always verifies one fixed admission
-contract. Without the administrator gate and gNOI software-upgrade gate, the
-chart creates no new namespace drain RBAC and CVK starts no new drain session
-or marker. On a clean, default-off deployment, the compatibility effects are
-limited to reserving those two metadata fields and confining any manager
-main-resource Pod update to that pair while denying its direct DELETE. The
-manager has no such Pod-write RBAC on a clean default deployment. Cleanup
+The managed-drain policy is present whenever managed topology is enabled,
+including when drain is off, so manager startup always verifies one fixed
+admission contract. Without the administrator gate and gNOI software-upgrade
+gate, the chart creates no new namespace drain RBAC and CVK starts no new drain
+session or marker. On a clean, default-off deployment, the compatibility
+effects are limited to reserving those two metadata fields and confining any
+manager main-resource Pod update to that pair while denying its direct DELETE.
+The manager has no such Pod-write RBAC on a clean default deployment. Cleanup
 Role/RoleBinding pairs from an earlier enablement remain until explicit
 post-settlement removal.
 
@@ -408,9 +411,13 @@ update or delete any retained managed Lease, that the bound worker cannot
 change its device/Node/worker bindings, and that an approver without the
 planner role cannot change campaign control. Prove Pod-status writes succeed
 only for Pods bound to the virtual Node encoded in either generated worker
-identity. Finally, prove a managed worker cannot write an unmarked Node or
-unmanaged/peer leaf, a generated legacy worker cannot write a peer or managed
-Node, and the retired shared ServiceAccount has no binding.
+identity. Prove that either generated worker identity can complete deletion
+only for an already-terminating Pod bound to its encoded Node, cannot initiate
+deletion of a live or peer Pod, and has no `deletecollection` grant. The
+managed-drain policy must independently continue to reject direct deletion of
+a protected Pod. Finally, prove a managed worker cannot write an unmarked Node
+or unmanaged/peer leaf, a generated legacy worker cannot write a peer or
+managed Node, and the retired shared ServiceAccount has no binding.
 
 Verify the live UID binding and the initialized ledger without rewriting them:
 
@@ -431,13 +438,23 @@ The two printed UIDs must match. Names change when the Helm release name,
 
 The manager pre-creates and binds managed Nodes. Each selected CiscoDevice gets
 a device-incarnation-bound worker ServiceAccount whose name embeds the exact
-virtual Node, plus a dynamic binding to the fixed
-`cisco-virtual-kubelet-managed-worker` ClusterRole. That role retains the
-cluster-wide runtime reads, Pod status, Events, and Lease read/update operations
-a virtual kubelet needs, but its Node authority is only:
+virtual Node, plus a dynamic binding to the fixed baseline
+`cisco-virtual-kubelet-managed-worker` ClusterRole. Only after manager startup
+has verified the complete native admission contract does it add a second exact
+per-device binding to
+`cisco-virtual-kubelet-managed-worker-pod-delete`. The baseline role retains
+the cluster-wide runtime reads, Pod status, Events, and Lease read/update
+operations a virtual kubelet needs, but its Node authority is only:
 
 - `get` on `nodes`; and
 - `get`, `update`, and `patch` on `nodes/status`.
+
+Helm never renders a worker binding to the completion role. Because Kubernetes
+does not transactionally order Helm's RBAC and admission writes, the manager's
+exact `get`/`bind` grant may land before the policy. Startup blocks binding
+until admission and both fixed role contracts pass, but the Helm actor and
+controller ServiceAccount remain trusted computing-base identities during that
+window and must be protected as cluster-privileged principals.
 
 Upgrade-leaf permissions are not cluster-wide. The existing namespaced
 `cisco-virtual-kubelet-device` RoleBinding grants them only when
@@ -518,12 +535,19 @@ unmarked Node and prevents it from entering a manager-bound Node. This retains
 the compatibility path without retaining a fleet-wide shared credential.
 
 The fixed role can read Pods, ConfigMaps, Secrets, and Services cluster-wide
-because Pods assigned to a virtual Node may originate in any namespace. Its
-only Pod mutation is the `pods/status` subresource; native admission permits it
-only when `Pod.spec.nodeName` equals the virtual Node embedded in the generated
-managed or legacy worker identity and preserves Pod metadata/spec. The managed
-role has no Pod main-resource,
-log, or exec permission. Diagnostic and DeviceOperation ConfigMap writes come
+because Pods assigned to a virtual Node may originate in any namespace. It can
+write `pods/status` only when `Pod.spec.nodeName` equals the virtual Node
+embedded in the generated managed or legacy worker identity, preserving Pod
+metadata/spec. The baseline role has no Pod main-resource verb, log, or exec
+permission. The separate retained completion role contains only `pods/delete`;
+it exists so Virtual Kubelet can send its final UID-preconditioned, zero-grace
+DELETE after provider teardown or once it observes the terminating Pod as
+non-running. A fail-closed policy permits that DELETE only when the Pod is
+already terminating, the request precondition equals its current UID, and it
+is bound to the exact encoded Node. Neither managed role grants Pod create,
+update, patch, or `deletecollection`. The independent managed-drain policy
+still denies direct DELETE while its protected marker or finalizer remains.
+Diagnostic and DeviceOperation ConfigMap writes come
 from the existing `-device` ClusterRole through a namespaced RoleBinding and
 are therefore confined to the CiscoDevice namespace. Events remain
 cluster-wide because assigned Pods may be in any namespace.
@@ -584,21 +608,35 @@ kubectl auth can-i patch nodes \
   --as=system:serviceaccount:network-devices:WORKER_SERVICE_ACCOUNT
 kubectl auth can-i patch nodes --subresource=status \
   --as=system:serviceaccount:network-devices:WORKER_SERVICE_ACCOUNT
+kubectl auth can-i delete pods --all-namespaces \
+  --as=system:serviceaccount:network-devices:WORKER_SERVICE_ACCOUNT
+kubectl auth can-i deletecollection pods --all-namespaces \
+  --as=system:serviceaccount:network-devices:WORKER_SERVICE_ACCOUNT
 ```
 
-The expected answers are `yes`, `no`, and `yes`. RBAC alone is insufficient;
-also execute a server-side dry-run that attempts to change a managed Node label
-through `/status` as that worker and confirm the admission policy denies it.
+The expected answers are `yes`, `no`, `yes`, `yes`, and `no`. The Pod `delete`
+grant exists only so Virtual Kubelet can finish API-server deletion after
+provider teardown or a non-running observation; fail-closed admission still
+rejects a live Pod, a Pod bound to another Node, or a protected drain Pod. RBAC
+alone is insufficient; also execute real API-server probes for those cases and
+a server-side dry-run that attempts to change a managed Node label through
+`/status` as that worker.
 
 ## Admission coverage
 
-When enabled, nine `admissionregistration.k8s.io/v1` policy/binding pairs deny:
+When enabled, ten `admissionregistration.k8s.io/v1` policy/binding pairs deny:
 
 - managed Node metadata/spec writes by anyone except the exact manager, and
   Node-status writes by anyone except the bound worker; a generated legacy
   identity may mutate only its exact unmarked Node;
 - Pod-status writes unless either generated worker identity encodes the exact
   immutable `Pod.spec.nodeName`, plus any Pod metadata/spec change via status;
+- Pod DELETE by either generated worker identity unless the existing Pod is
+  already terminating, DeleteOptions carries its current UID precondition and
+  zero grace, and immutable `spec.nodeName` is the exact Node encoded in that
+  worker identity; RBAC grants no `deletecollection`, and the independent
+  managed-drain policy still denies DELETE while its protected marker or
+  finalizer remains;
 - changes to the reserved drain session/finalizer pair by anyone except the
   manager, manager Pod updates that alter anything outside that exact pair, and
   direct DELETE of any protected Pod by any identity, plus every direct Pod
@@ -625,7 +663,7 @@ When enabled, nine `admissionregistration.k8s.io/v1` policy/binding pairs deny:
   status (the worker may only add/remove its exact cleanup finalizer on the
   main resource), including an older worker's unclaimed durable mutation
   marker;
-- create/delete by generated workers, arbitrary/unbound Lease writes, or a
+- generated-worker Lease create/delete, arbitrary/unbound Lease writes, or a
   heartbeat, config-family, or mutation update outside its bounded protocol;
   mutation requests additionally bind the current `software-upgrade/<leaf UID>`
   holder while every Lease purpose/device/Node/worker binding stays immutable;
@@ -645,8 +683,9 @@ sessions to settle, export campaign/leaf/ledger evidence, and complete the
 controller's reverse writer handoff for every managed device.
 
 Helm keep protection deliberately leaves the policy, ledger, admission
-policies/bindings, managed-worker role, and supplemental manager role/binding
-behind. It also leaves any workload-drain cleanup Role/RoleBinding until an
+policies/bindings, managed-worker baseline and Pod-delete completion roles, and
+supplemental manager role/binding behind. It also leaves any workload-drain
+cleanup Role/RoleBinding until an
 operator verifies all associated drains are `Settled`, confirms that no Pod
 retains the reserved marker/finalizer, and deletes that exact namespaced pair.
 Complete the UID-bound reverse handoff documented in

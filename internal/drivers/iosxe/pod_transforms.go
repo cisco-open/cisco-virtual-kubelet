@@ -84,7 +84,7 @@ func isSafeIOSXEPackagePathSegment(segment string) bool {
 	return true
 }
 
-// getPackageTimeout reads the RUNNING-wait timeout from a pod annotation.
+// getPackageTimeout reads the per-status lifecycle wait timeout from a pod annotation.
 // Accepts Go duration strings (e.g. "3m", "180s") and bare integer seconds (e.g. "180").
 // Returns defaultPackageTimeout on any parse failure; clamps to [min, max].
 func getPackageTimeout(pod *v1.Pod) time.Duration {

@@ -312,6 +312,84 @@ spec:
   validationActions: [Deny]
   matchResources: {}
 ---
+# Virtual Kubelet performs one final UID-preconditioned, zero-grace DELETE after
+# provider teardown or after provider status has observed the Pod non-running.
+# RBAC cannot distinguish that completion from starting a new deletion, so
+# admit only that exact request for an already-terminating Pod bound to the
+# virtual Node encoded in the generated worker identity. The drain policy below
+# independently denies this request while its reserved marker/finalizer remain.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-managed-pod-delete
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["DELETE"]
+        resources: ["pods"]
+        scope: Namespaced
+  matchConditions:
+    - name: generated-worker
+      expression: >-
+        request.userInfo.username.matches(
+          '^system:serviceaccount:[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?:cisco-vk-managed-[a-z0-9]([-a-z0-9.]{0,61}[a-z0-9])?-[0-9a-f]{8}$') ||
+        request.userInfo.username.matches(
+          '^system:serviceaccount:[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?:cisco-vk-legacy-[a-z0-9]([-a-z0-9.]{0,61}[a-z0-9])?-[0-9a-f]{8}$')
+  variables:
+    - name: usernameParts
+      expression: request.userInfo.username.split(':')
+    - name: workerServiceAccount
+      expression: >-
+        variables.usernameParts.size() == 4 ? variables.usernameParts[3] : ''
+  validations:
+    - expression: >-
+        oldObject != null && request.options != null &&
+        has(request.options.preconditions) &&
+        has(request.options.preconditions.uid) &&
+        string(request.options.preconditions.uid) == string(oldObject.metadata.uid) &&
+        has(request.options.gracePeriodSeconds) &&
+        request.options.gracePeriodSeconds == 0
+      message: a managed worker Pod deletion must use the current UID precondition and zero grace period
+    - expression: >-
+        oldObject != null && has(oldObject.metadata.deletionTimestamp)
+      message: a managed worker may complete only a Pod deletion already initiated through Kubernetes
+    - expression: >-
+        oldObject != null && has(oldObject.spec.nodeName) &&
+        oldObject.spec.nodeName != ''
+      message: a managed worker may delete only a Pod bound to one virtual Node
+    - expression: >-
+        variables.usernameParts.size() == 4 &&
+        ((variables.workerServiceAccount.startsWith(
+            'cisco-vk-managed-' + oldObject.spec.nodeName + '-') &&
+          variables.workerServiceAccount.size() ==
+            ('cisco-vk-managed-' + oldObject.spec.nodeName + '-').size() + 8) ||
+         (variables.workerServiceAccount.startsWith(
+            'cisco-vk-legacy-' + oldObject.spec.nodeName + '-') &&
+          variables.workerServiceAccount.size() ==
+            ('cisco-vk-legacy-' + oldObject.spec.nodeName + '-').size() + 8))
+      message: the generated worker identity must encode the terminating Pod's exact bound virtual Node
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-managed-pod-delete
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-managed-pod-delete
+  validationActions: [Deny]
+  matchResources: {}
+---
 # The drain marker/finalizer are deletion authority. Reserve their mutation to
 # the manager and constrain that manager to those exact metadata fields. Only
 # policy/v1 Eviction may initiate deletion while protected; removing the exact

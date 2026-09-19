@@ -290,7 +290,7 @@ func (r *CiscoDeviceReconciler) recoverIsolatedLegacyWorker(
 		!workerAnnotationsMatch(serviceAccount.Annotations, workerServiceAccountAnnotations(device, false)) {
 		return false, fmt.Errorf("existing isolated legacy ServiceAccount is not exactly bound to this CiscoDevice incarnation")
 	}
-	if err := r.auditGeneratedWorkerBindings(ctx, device, legacySA, vkSharedClusterRole); err != nil {
+	if err := r.auditGeneratedWorkerBindings(ctx, device, legacySA, false); err != nil {
 		return false, fmt.Errorf("audit recovered isolated legacy worker: %w", err)
 	}
 	if err := r.ensureIsolatedLegacyWorkerMarker(ctx, device); err != nil {

@@ -310,6 +310,7 @@ sequenceDiagram
 
     opt App is not already running
         Drv->>Dev: RPC activate
+        Dev-->>Drv: ACTIVATED
         Drv->>Dev: RPC start
         Dev-->>Drv: RUNNING
     end

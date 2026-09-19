@@ -84,9 +84,10 @@ aggregator:
 # ledger binding. After bootstrap the chart stops submitting the mutable ledger
 # ConfigMap; offline GitOps pruning is not a supported migration path.
 # Managed mode also requires the default serviceAccount.vkName because the
-# controller combines the fixed cisco-virtual-kubelet-managed-worker role with
-# a namespaced binding to cisco-virtual-kubelet-device, and rbac.profile=strict
-# so disabled write-class controllers grant no latent RBAC.
+# controller combines the fixed cisco-virtual-kubelet-managed-worker baseline
+# role, a post-preflight Pod-delete completion role, and a namespaced binding to
+# cisco-virtual-kubelet-device. rbac.profile=strict ensures disabled write-class
+# controllers grant no latent RBAC.
 topology:
   enabled: false
   policy:

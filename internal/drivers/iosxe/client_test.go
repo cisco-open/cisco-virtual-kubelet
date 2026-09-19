@@ -305,6 +305,76 @@ func newTestDriver(fc *fakeNetworkClient) *XEDriver {
 	}
 }
 
+func TestActivateAndStartWaitsForActivatedBeforeStart(t *testing.T) {
+	state := "DEPLOYED"
+	activateRequested := false
+	activatedObserved := false
+	var order []string
+
+	fc := &fakeNetworkClient{}
+	fc.postHook = func(_ string, payload any) error {
+		request := payload.(map[string]interface{})
+		switch {
+		case request["activate"] != nil:
+			order = append(order, "activate")
+			activateRequested = true
+		case request["start"] != nil:
+			if !activatedObserved {
+				return errors.New("start sent before ACTIVATED was observed")
+			}
+			order = append(order, "start")
+			state = "RUNNING"
+		}
+		return nil
+	}
+	fc.getHook = func(_ string, result any) error {
+		if activateRequested && state == "DEPLOYED" {
+			state = "ACTIVATED"
+		}
+		if state == "ACTIVATED" {
+			activatedObserved = true
+		}
+		order = append(order, "observe:"+state)
+		*result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData) = *operResponse("test-app", state)
+		return nil
+	}
+
+	d := newTestDriver(fc)
+	if err := d.activateAndStart(context.Background(), minimalAppConfig("flash:app.tar", v1.PullIfNotPresent, time.Second), time.Second); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := strings.Join(order, ","), "activate,observe:ACTIVATED,start,observe:RUNNING"; got != want {
+		t.Fatalf("lifecycle order = %q, want %q", got, want)
+	}
+}
+
+func TestActivateAndStartDoesNotStartBeforeActivated(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	startCalls := 0
+	fc := &fakeNetworkClient{
+		postHook: func(_ string, payload any) error {
+			if request := payload.(map[string]interface{}); request["start"] != nil {
+				startCalls++
+			}
+			return nil
+		},
+		getHook: func(_ string, result any) error {
+			*result.(*Cisco_IOS_XEAppHostingOper_AppHostingOperData) = *operResponse("test-app", "DEPLOYED")
+			cancel()
+			return nil
+		},
+	}
+
+	d := newTestDriver(fc)
+	err := d.activateAndStart(ctx, minimalAppConfig("flash:app.tar", v1.PullIfNotPresent, time.Second), time.Second)
+	if err == nil || !strings.Contains(err.Error(), "did not reach ACTIVATED") {
+		t.Fatalf("activateAndStart error = %v, want ACTIVATED wait failure", err)
+	}
+	if startCalls != 0 {
+		t.Fatalf("start calls = %d, want 0", startCalls)
+	}
+}
+
 // ── Auth unit tests ───────────────────────────────────────────────────────────
 
 func TestAuthFromSecret_Token(t *testing.T) {
@@ -481,7 +551,8 @@ func TestCreateAppHostingApp_FallbackCopyFailure(t *testing.T) {
 func TestCreateAppHostingApp_FallbackCopyAfterPrimaryTimeout(t *testing.T) {
 	// stage 0 → empty oper data (primary RUNNING wait times out)
 	// stage 1 → DEPLOYED (after copy RPC + install; during DEPLOYED wait in copyFallbackToFlash)
-	// stage 2 → RUNNING (after ActivateApp/StartApp RPCs)
+	// stage 2 → ACTIVATED (after ActivateApp)
+	// stage 3 → RUNNING (after StartApp)
 	var (
 		mu    sync.Mutex
 		stage int
@@ -498,14 +569,14 @@ func TestCreateAppHostingApp_FallbackCopyAfterPrimaryTimeout(t *testing.T) {
 		if path == copyPath {
 			stage = 1
 		} else if path == rpcPath && stage >= 1 {
-			// Distinguish install RPC (stays stage 1) from activate/start (stage 2).
+			// Distinguish install RPC (stays stage 1) from activate/start.
 			m, ok := payload.(map[string]interface{})
 			if ok {
 				if _, isActivate := m["activate"]; isActivate {
 					stage = 2
 				}
 				if _, isStart := m["start"]; isStart {
-					stage = 2
+					stage = 3
 				}
 			}
 		}
@@ -524,6 +595,8 @@ func TestCreateAppHostingApp_FallbackCopyAfterPrimaryTimeout(t *testing.T) {
 		case 1:
 			*root = *operResponse("test-app", "DEPLOYED")
 		case 2:
+			*root = *operResponse("test-app", "ACTIVATED")
+		case 3:
 			*root = *operResponse("test-app", "RUNNING")
 		}
 		return nil
@@ -539,8 +612,8 @@ func TestCreateAppHostingApp_FallbackCopyAfterPrimaryTimeout(t *testing.T) {
 	mu.Lock()
 	finalStage := stage
 	mu.Unlock()
-	if finalStage < 2 {
-		t.Errorf("expected to reach stage 2 (copy + activate/start), got stage %d", finalStage)
+	if finalStage < 3 {
+		t.Errorf("expected to reach stage 3 (copy + activate/start), got stage %d", finalStage)
 	}
 	if d.isPodRecovering("test-uid") {
 		t.Error("recovering flag should be cleared after successful fallback")
@@ -559,11 +632,12 @@ func minimalDockerResourceConfig(imagePath string, policy v1.PullPolicy, timeout
 }
 
 func TestCreateAppHostingApp_DockerResource_FlashImage(t *testing.T) {
-	// DockerResource + flash path: wait DEPLOYED → ActivateApp → StartApp → RUNNING
+	// DockerResource + flash path: wait DEPLOYED → ActivateApp → wait ACTIVATED → StartApp → RUNNING
 	var (
 		mu        sync.Mutex
 		rpcOrder  []string
 		activated bool
+		started   bool
 	)
 	rpcPath := "/restconf/operations/Cisco-IOS-XE-rpc:app-hosting"
 
@@ -580,6 +654,7 @@ func TestCreateAppHostingApp_DockerResource_FlashImage(t *testing.T) {
 				}
 				if _, isStart := m["start"]; isStart {
 					rpcOrder = append(rpcOrder, "start")
+					started = true
 				}
 			}
 		}
@@ -591,10 +666,12 @@ func TestCreateAppHostingApp_DockerResource_FlashImage(t *testing.T) {
 			return nil
 		}
 		mu.Lock()
-		a := activated
+		a, s := activated, started
 		mu.Unlock()
 		if !a {
 			*root = *operResponse("test-app", "DEPLOYED")
+		} else if !s {
+			*root = *operResponse("test-app", "ACTIVATED")
 		} else {
 			*root = *operResponse("test-app", "RUNNING")
 		}
@@ -670,11 +747,12 @@ func TestCreateAppHostingApp_ConfigAlreadyExistsActivatedStartsAndWaits(t *testi
 }
 
 func TestCreateAppHostingApp_DockerResource_HTTPPrimarySuccess(t *testing.T) {
-	// DockerResource + HTTP: device pull succeeds → DEPLOYED → ActivateApp → StartApp → RUNNING
+	// DockerResource + HTTP: device pull succeeds → DEPLOYED → ActivateApp → wait ACTIVATED → StartApp → RUNNING
 	var (
 		mu        sync.Mutex
 		rpcOrder  []string
 		activated bool
+		started   bool
 	)
 	rpcPath := "/restconf/operations/Cisco-IOS-XE-rpc:app-hosting"
 
@@ -691,6 +769,7 @@ func TestCreateAppHostingApp_DockerResource_HTTPPrimarySuccess(t *testing.T) {
 				}
 				if _, isStart := m["start"]; isStart {
 					rpcOrder = append(rpcOrder, "start")
+					started = true
 				}
 			}
 		}
@@ -702,10 +781,12 @@ func TestCreateAppHostingApp_DockerResource_HTTPPrimarySuccess(t *testing.T) {
 			return nil
 		}
 		mu.Lock()
-		a := activated
+		a, s := activated, started
 		mu.Unlock()
 		if !a {
 			*root = *operResponse("test-app", "DEPLOYED")
+		} else if !s {
+			*root = *operResponse("test-app", "ACTIVATED")
 		} else {
 			*root = *operResponse("test-app", "RUNNING")
 		}
@@ -728,10 +809,10 @@ func TestCreateAppHostingApp_DockerResource_HTTPPrimarySuccess(t *testing.T) {
 }
 
 func TestCreateAppHostingApp_DockerResource_HTTPFallbackCopy(t *testing.T) {
-	// DockerResource + HTTP: device pull times out → copy fallback → ActivateApp + StartApp → RUNNING
+	// DockerResource + HTTP: device pull times out → copy fallback → ActivateApp → ACTIVATED → StartApp → RUNNING
 	var (
 		mu    sync.Mutex
-		stage int // 0=empty, 1=DEPLOYED (after copy), 2=RUNNING (after activate/start)
+		stage int // 0=empty, 1=DEPLOYED (after copy), 2=ACTIVATED, 3=RUNNING
 	)
 
 	copyPath := "/restconf/operations/Cisco-IOS-XE-rpc:copy"
@@ -750,7 +831,7 @@ func TestCreateAppHostingApp_DockerResource_HTTPFallbackCopy(t *testing.T) {
 					stage = 2
 				}
 				if _, isStart := m["start"]; isStart {
-					stage = 2
+					stage = 3
 				}
 			}
 		}
@@ -768,6 +849,8 @@ func TestCreateAppHostingApp_DockerResource_HTTPFallbackCopy(t *testing.T) {
 		case 1:
 			*root = *operResponse("test-app", "DEPLOYED")
 		case 2:
+			*root = *operResponse("test-app", "ACTIVATED")
+		case 3:
 			*root = *operResponse("test-app", "RUNNING")
 		}
 		return nil
@@ -783,8 +866,8 @@ func TestCreateAppHostingApp_DockerResource_HTTPFallbackCopy(t *testing.T) {
 	mu.Lock()
 	finalStage := stage
 	mu.Unlock()
-	if finalStage < 2 {
-		t.Errorf("expected stage 2, got %d", finalStage)
+	if finalStage < 3 {
+		t.Errorf("expected stage 3, got %d", finalStage)
 	}
 	if d.isPodRecovering("test-uid") {
 		t.Error("recovering flag should be cleared")
@@ -822,15 +905,19 @@ func TestCreateAppHostingApp_DockerResource_MultiContainer(t *testing.T) {
 			return nil
 		}
 		mu.Lock()
-		activateCount := 0
+		activateCount, startCount := 0, 0
 		for _, op := range rpcOrder {
 			if op == "activate" {
 				activateCount++
+			} else if op == "start" {
+				startCount++
 			}
 		}
 		mu.Unlock()
 		if activateCount == 0 {
 			*root = *operResponse("test-app", "DEPLOYED")
+		} else if startCount == 0 {
+			*root = *operResponse("test-app", "ACTIVATED")
 		} else {
 			*root = *operResponse("test-app", "RUNNING")
 		}

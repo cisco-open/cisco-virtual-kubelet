@@ -43,6 +43,7 @@ var managedTopologyCRDs = []schema.GroupVersionResource{
 var managedAdmissionPolicySuffixes = []string{
 	"managed-node",
 	"managed-pod-status",
+	"managed-pod-delete",
 	"managed-drain-pod",
 	"managed-device",
 	"managed-rollout",
@@ -80,6 +81,13 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		matchConditions: []string{"generated-worker"}, variables: []string{"usernameParts", "workerServiceAccount"}, validations: 3, coreTyped: true,
 		requiredFragments: []string{"cisco-vk-managed-", "cisco-vk-legacy-", "oldObject.spec.nodeName", "object.spec == oldObject.spec", "workerServiceAccount", "request.userInfo.username"},
 		digest:            "sha256:0a2d27b4e3eb3c6051b1068173448a1b81920b97fc8a4f723b4d0ec01af9bea9",
+	},
+	"managed-pod-delete": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods"},
+		operations: []admissionv1.OperationType{admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"generated-worker"}, variables: []string{"usernameParts", "workerServiceAccount"}, validations: 4, coreTyped: true,
+		requiredFragments: []string{"cisco-vk-managed-", "cisco-vk-legacy-", "oldObject.metadata.deletionTimestamp", "oldObject.spec.nodeName", "workerServiceAccount", "request.userInfo.username", "request.options.preconditions.uid", "request.options.gracePeriodSeconds"},
+		digest:            "sha256:f8fee4c9b2d450fc105adb62b955d555ed98c52d036966a0015384e628a3a01f",
 	},
 	"managed-drain-pod": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods"},

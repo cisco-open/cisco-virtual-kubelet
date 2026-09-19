@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -66,6 +67,42 @@ func TestManagedWorkerUsesOwnedIncarnationServiceAccount(t *testing.T) {
 	if got := r.serviceAccountForDevice(device); got != saName {
 		t.Fatalf("durable managed ServiceAccount=%q, want %q", got, saName)
 	}
+	for _, expected := range generatedWorkerClusterRoleBindings(device.Namespace, saName, true) {
+		var binding rbacv1.ClusterRoleBinding
+		if err := r.Get(context.Background(), types.NamespacedName{Name: expected.name}, &binding); err != nil {
+			t.Fatalf("managed ClusterRoleBinding %s: %v", expected.name, err)
+		}
+		if binding.RoleRef.Name != expected.role || !reflect.DeepEqual(binding.Subjects, exactWorkerSubject(device.Namespace, saName)) {
+			t.Fatalf("managed ClusterRoleBinding %s = role %q subjects %+v", expected.name, binding.RoleRef.Name, binding.Subjects)
+		}
+	}
+}
+
+func TestManagedWorkerPodDeleteBindingRequiresAdmissionPreflight(t *testing.T) {
+	device := newDevice("switch-preflight-gate", "edge")
+	device.UID = "device-uid"
+	device.Status.NodeIdentity = &ciskov1.DeviceNodeIdentityStatus{
+		DeviceUID: string(device.UID), NodeName: device.Name, NodeUID: "node-uid",
+	}
+	r := reconcilerFor(t, device)
+	r.ManagedAdmissionVerified = false
+	saName := managedWorkerServiceAccountName(device)
+	err := r.ensureVKAccess(context.Background(), device, saName, true)
+	if err == nil || !strings.Contains(err.Error(), "verified native admission contract") {
+		t.Fatalf("unverified managed access error = %v", err)
+	}
+	var binding rbacv1.ClusterRoleBinding
+	key := types.NamespacedName{Name: vkPodDeleteClusterRoleBindingName(device.Namespace, saName)}
+	if err := r.Get(context.Background(), key, &binding); !apierrors.IsNotFound(err) {
+		t.Fatalf("unverified preflight created Pod-delete binding: %v", err)
+	}
+	r.ManagedAdmissionVerified = true
+	if err := r.ensureVKAccess(context.Background(), device, saName, true); err != nil {
+		t.Fatalf("verified ensureVKAccess: %v", err)
+	}
+	if err := r.Get(context.Background(), key, &binding); err != nil {
+		t.Fatalf("verified preflight did not create Pod-delete binding: %v", err)
+	}
 }
 
 func TestTopologyLegacyWorkerUsesOwnedIncarnationServiceAccount(t *testing.T) {
@@ -100,6 +137,9 @@ func TestTopologyLegacyWorkerUsesOwnedIncarnationServiceAccount(t *testing.T) {
 	}
 	if crb.RoleRef.Name != vkSharedClusterRole {
 		t.Fatalf("legacy worker role=%q, want %q", crb.RoleRef.Name, vkSharedClusterRole)
+	}
+	if err := r.Get(context.Background(), types.NamespacedName{Name: vkPodDeleteClusterRoleBindingName(device.Namespace, saName)}, &rbacv1.ClusterRoleBinding{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("legacy worker unexpectedly received managed Pod-delete binding: %v", err)
 	}
 }
 
@@ -144,7 +184,52 @@ func TestGeneratedWorkerRejectsEveryAdditiveBinding(t *testing.T) {
 }
 
 func TestGeneratedWorkerCleanupPreservesForeignBindingCollision(t *testing.T) {
-	device := newDevice("switch-binding-collision", "edge")
+	for _, target := range []string{"baseline", "pod-delete"} {
+		t.Run(target, func(t *testing.T) {
+			device := newDevice("switch-binding-collision-"+target, "edge")
+			device.UID = types.UID("device-uid-" + target)
+			device.Status.NodeIdentity = &ciskov1.DeviceNodeIdentityStatus{
+				DeviceUID: string(device.UID), NodeName: device.Name, NodeUID: "node-uid",
+			}
+			r := reconcilerFor(t, device)
+			r.ManagedTopology = true
+			saName := managedWorkerServiceAccountName(device)
+			ctx := context.Background()
+			if err := r.ensureVKAccess(ctx, device, saName, true); err != nil {
+				t.Fatal(err)
+			}
+			expected := generatedWorkerClusterRoleBindings(device.Namespace, saName, true)[0]
+			if target == "pod-delete" {
+				expected = generatedWorkerClusterRoleBindings(device.Namespace, saName, true)[1]
+			}
+			key := types.NamespacedName{Name: expected.name}
+			var binding rbacv1.ClusterRoleBinding
+			if err := r.Get(ctx, key, &binding); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Delete(ctx, &binding); err != nil {
+				t.Fatal(err)
+			}
+			foreign := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: key.Name, UID: "foreign-binding-uid"},
+				RoleRef:  rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: expected.role},
+				Subjects: exactWorkerSubject(device.Namespace, saName)}
+			if err := r.Create(ctx, foreign); err != nil {
+				t.Fatal(err)
+			}
+			err := r.cleanupVKClusterAccess(ctx, device, saName)
+			if err == nil || !strings.Contains(err.Error(), "refusing to delete") {
+				t.Fatalf("cleanup collision error=%v", err)
+			}
+			var remaining rbacv1.ClusterRoleBinding
+			if err := r.Get(ctx, key, &remaining); err != nil {
+				t.Fatalf("foreign binding was deleted: %v", err)
+			}
+		})
+	}
+}
+
+func TestGeneratedWorkerCleanupRejectsTamperedCanonicalPodDeleteSubject(t *testing.T) {
+	device := newDevice("switch-tampered-delete-subject", "edge")
 	device.UID = "device-uid"
 	device.Status.NodeIdentity = &ciskov1.DeviceNodeIdentityStatus{
 		DeviceUID: string(device.UID), NodeName: device.Name, NodeUID: "node-uid",
@@ -156,27 +241,38 @@ func TestGeneratedWorkerCleanupPreservesForeignBindingCollision(t *testing.T) {
 	if err := r.ensureVKAccess(ctx, device, saName, true); err != nil {
 		t.Fatal(err)
 	}
-	key := types.NamespacedName{Name: vkAccessClusterRoleBindingName(device.Namespace, saName)}
-	var binding rbacv1.ClusterRoleBinding
-	if err := r.Get(ctx, key, &binding); err != nil {
+
+	expectedBindings := generatedWorkerClusterRoleBindings(device.Namespace, saName, true)
+	completer := expectedBindings[1]
+	completerKey := types.NamespacedName{Name: completer.name}
+	var tampered rbacv1.ClusterRoleBinding
+	if err := r.Get(ctx, completerKey, &tampered); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.Delete(ctx, &binding); err != nil {
+	foreignSubject := exactWorkerSubject(device.Namespace, "cisco-vk-managed-foreign-node-deadbeef")
+	tampered.Subjects = foreignSubject
+	if err := r.Update(ctx, &tampered); err != nil {
 		t.Fatal(err)
 	}
-	foreign := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: key.Name, UID: "foreign-binding-uid"},
-		RoleRef:  rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: vkSharedClusterRole},
-		Subjects: exactWorkerSubject(device.Namespace, saName)}
-	if err := r.Create(ctx, foreign); err != nil {
-		t.Fatal(err)
-	}
+
 	err := r.cleanupVKClusterAccess(ctx, device, saName)
-	if err == nil || !strings.Contains(err.Error(), "refusing to delete") {
-		t.Fatalf("cleanup collision error=%v", err)
+	if err == nil || !strings.Contains(err.Error(), "unexpected subjects") {
+		t.Fatalf("tampered canonical cleanup error=%v", err)
 	}
-	var remaining rbacv1.ClusterRoleBinding
-	if err := r.Get(ctx, key, &remaining); err != nil {
-		t.Fatalf("foreign binding was deleted: %v", err)
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: saName}, &corev1.ServiceAccount{}); err != nil {
+		t.Fatalf("cleanup deleted ServiceAccount before rejecting tampered canonical binding: %v", err)
+	}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: saName}, &rbacv1.RoleBinding{}); err != nil {
+		t.Fatalf("cleanup deleted RoleBinding before rejecting tampered canonical binding: %v", err)
+	}
+	for _, expected := range expectedBindings {
+		var binding rbacv1.ClusterRoleBinding
+		if err := r.Get(ctx, types.NamespacedName{Name: expected.name}, &binding); err != nil {
+			t.Fatalf("cleanup deleted canonical ClusterRoleBinding %s before rejecting tamper: %v", expected.name, err)
+		}
+		if expected.name == completer.name && !reflect.DeepEqual(binding.Subjects, foreignSubject) {
+			t.Fatalf("tampered completer subjects changed during rejected cleanup: %+v", binding.Subjects)
+		}
 	}
 }
 
@@ -250,6 +346,14 @@ func TestManagedWorkerServiceAccountCleanupIsUIDAndOwnerBound(t *testing.T) {
 			if !foreign && !apierrors.IsNotFound(getErr) {
 				t.Fatalf("owned ServiceAccount remains or lookup failed: %v", getErr)
 			}
+			if !foreign {
+				for _, binding := range generatedWorkerClusterRoleBindings(device.Namespace, saName, true) {
+					getErr := r.Get(ctx, types.NamespacedName{Name: binding.name}, &rbacv1.ClusterRoleBinding{})
+					if !apierrors.IsNotFound(getErr) {
+						t.Fatalf("owned ClusterRoleBinding %s remains or lookup failed: %v", binding.name, getErr)
+					}
+				}
+			}
 		})
 	}
 }
@@ -288,7 +392,8 @@ func TestManagedReconcileAlwaysUsesRecreateStrategy(t *testing.T) {
 		WithObjects(device, node, policy, ledger).Build()
 	r := &CiscoDeviceReconciler{
 		Client: leaseUIDAssigningClient{Client: apiClient}, APIReader: apiClient, Scheme: scheme, Image: "cisco-vk:test",
-		ManagedTopology: true, TopologyPolicyNamespace: policy.Namespace, TopologyPolicyName: policy.Name,
+		ManagedTopology: true, ManagedAdmissionVerified: true,
+		TopologyPolicyNamespace: policy.Namespace, TopologyPolicyName: policy.Name,
 		LeaseNamespace: device.Namespace,
 	}
 	if _, err := r.Reconcile(context.Background(), reconcileRequest(device.Namespace, device.Name)); err != nil {
@@ -352,7 +457,7 @@ func TestMaintenanceFenceRepairsOnlyManagedWorkerSubstrate(t *testing.T) {
 		WithObjects(device, node, policy, ledger).Build()
 	r := &CiscoDeviceReconciler{
 		Client: leaseUIDAssigningClient{Client: apiClient}, APIReader: apiClient, Scheme: scheme,
-		Image: "cisco-vk:old", ManagedTopology: true,
+		Image: "cisco-vk:old", ManagedTopology: true, ManagedAdmissionVerified: true,
 		TopologyPolicyNamespace: policy.Namespace, TopologyPolicyName: policy.Name,
 		LeaseNamespace: device.Namespace,
 	}

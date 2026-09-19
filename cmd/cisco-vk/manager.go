@@ -236,6 +236,7 @@ func runManager(cmd *cobra.Command, args []string) error {
 		os.Exit(1)
 	}
 	retirementMode := false
+	managedAdmissionVerified := false
 	if !enableManagedTopology {
 		retirementMode, err = managedTopologyStatePresent(signalCtx, mgr.GetAPIReader())
 		if err != nil {
@@ -269,6 +270,10 @@ func runManager(cmd *cobra.Command, args []string) error {
 		); err != nil {
 			return fmt.Errorf("managed topology native admission preflight: %w", err)
 		}
+		if err := verifyManagedWorkerClusterRoles(signalCtx, mgr.GetAPIReader()); err != nil {
+			return fmt.Errorf("managed topology worker RBAC preflight: %w", err)
+		}
+		managedAdmissionVerified = true
 		if enableManagedTopology {
 			if _, err := topologyrollout.BootstrapAdminPolicy(
 				signalCtx,
@@ -301,18 +306,19 @@ func runManager(cmd *cobra.Command, args []string) error {
 	}
 
 	if err = (&controller.CiscoDeviceReconciler{
-		Client:                  mgr.GetClient(),
-		APIReader:               mgr.GetAPIReader(),
-		Scheme:                  mgr.GetScheme(),
-		Image:                   vkImage,
-		ImagePullPolicy:         corev1.PullPolicy(vkImagePullPolicy),
-		ServiceAccount:          vkServiceAccount,
-		AggregatorEnabled:       enableAggregator,
-		ManagedTopology:         enableManagedTopology,
-		TopologyPolicyNamespace: topologyPolicyNamespace,
-		TopologyPolicyName:      topologyPolicyName,
-		LeaseNamespace:          os.Getenv("CONFIG_LEASE_NAMESPACE"),
-		Recorder:                mgr.GetEventRecorderFor("ciscodevice-controller"),
+		Client:                   mgr.GetClient(),
+		APIReader:                mgr.GetAPIReader(),
+		Scheme:                   mgr.GetScheme(),
+		Image:                    vkImage,
+		ImagePullPolicy:          corev1.PullPolicy(vkImagePullPolicy),
+		ServiceAccount:           vkServiceAccount,
+		AggregatorEnabled:        enableAggregator,
+		ManagedTopology:          enableManagedTopology,
+		ManagedAdmissionVerified: enableManagedTopology && managedAdmissionVerified,
+		TopologyPolicyNamespace:  topologyPolicyNamespace,
+		TopologyPolicyName:       topologyPolicyName,
+		LeaseNamespace:           os.Getenv("CONFIG_LEASE_NAMESPACE"),
+		Recorder:                 mgr.GetEventRecorderFor("ciscodevice-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CiscoDevice")
 		os.Exit(1)
@@ -441,6 +447,13 @@ func managedTopologyStatePresent(ctx context.Context, reader client.Reader) (boo
 	}
 	for i := range clusterRoleBindings.Items {
 		binding := &clusterRoleBindings.Items[i]
+		if binding.RoleRef.APIGroup == rbacv1.GroupName && binding.RoleRef.Kind == "ClusterRole" &&
+			binding.RoleRef.Name == managedprotocol.ManagedWorkerPodDeleteClusterRole {
+			// This retained role is safe only while managed-pod-delete admission is
+			// enforcing. Treat every binding to it as live topology authority, even
+			// if its generated annotations are damaged, so downgrade fails closed.
+			return true, nil
+		}
 		annotations := binding.Annotations
 		managed := annotations[managedprotocol.AnnotationManaged] == "true" &&
 			binding.RoleRef.Name == managedprotocol.ManagedWorkerClusterRole

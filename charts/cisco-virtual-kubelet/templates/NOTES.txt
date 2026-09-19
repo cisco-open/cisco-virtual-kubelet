@@ -100,7 +100,7 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   policy: {{ include "cisco-virtual-kubelet.topologyPolicyNamespace" . }}/{{ include "cisco-virtual-kubelet.topologyPolicyName" . }}
   ledger: {{ include "cisco-virtual-kubelet.topologyPolicyNamespace" . }}/{{ include "cisco-virtual-kubelet.topologyLedgerName" . }}
 
-  The manager validates the policy selector and all nine versioned admission
+  The manager validates the policy selector and all ten versioned admission
   policy/binding pairs before initializing ledger.json with the ledger
   ConfigMap's live UID and binding that UID into the policy annotation. It
   fails closed if admission discovery/type checking, either object identity,
@@ -109,9 +109,10 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   the kept, manager-owned ledger from its update set. It refuses partial or
   UID-mismatched retained state rather than creating replacement authority.
   Do not use helm upgrade --force and do not recreate the ledger to clear an
-  error. The ledger, policy, admission pairs, and managed-worker role carry
-  Helm keep protection; disabling or uninstalling does not retire them. Verify
-  all policy bindings and that type checking has no warnings:
+  error. The ledger, policy, admission pairs, managed-worker baseline role, and
+  Pod-delete completion role carry Helm keep protection; disabling or
+  uninstalling does not retire them. Verify all policy bindings and that type
+  checking has no warnings:
 
     kubectl get validatingadmissionpolicies.admissionregistration.k8s.io \
       -l app.kubernetes.io/instance={{ .Release.Name }}
@@ -130,9 +131,18 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   the documented retirement is complete.
 
   Every device now receives a UID-derived ServiceAccount. Selected devices
-  use the narrow managed role; unselected devices keep the legacy runtime under
-  an isolated cisco-vk-legacy-<node>-<uid-hash> identity. Native admission
-  confines both identity families to their embedded Node for Node/Pod status.
+  use a narrow baseline role with no Pod main-resource mutation. Only after
+  startup admission preflight and exact verification of both fixed ClusterRole
+  rule sets does the manager bind their exact identity to a retained role
+  containing only pods/delete. Unselected devices keep the
+  legacy runtime under an isolated cisco-vk-legacy-<node>-<uid-hash> identity.
+  Native admission confines both identity families to their embedded Node for
+  Node/Pod status. Their Pod delete verb cannot initiate deletion: it requires
+  a current-UID precondition and zero grace to complete an already-terminating
+  Pod bound to that exact Node, never deletecollection.
+  The topology manager has no workload Pod delete grant; it starts drain only
+  through policy/v1 Eviction. The independent managed-drain policy still
+  blocks direct deletion of protected Pods.
 {{- if .Release.IsUpgrade }}
 
   During migration, exact preexisting shared worker bindings are retained with

@@ -81,10 +81,13 @@ freshness and consistency signal, not as the root identity assertion.
 Enabling topology also removes the release-wide worker credential as a trust
 boundary. Every CiscoDevice gets one controller-owned, device-UID-derived
 ServiceAccount whose name embeds its resolved virtual Node. Selected devices
-use `cisco-vk-managed-<node>-<uid-hash>` with the managed status-only role. Devices
-outside the managed selector keep the legacy runtime and permissions under
-`cisco-vk-legacy-<node>-<uid-hash>`, but native admission confines their Node
-and Pod-status writes to that exact unmarked Node. The default,
+use `cisco-vk-managed-<node>-<uid-hash>` with the managed least-privilege role.
+Devices outside the managed selector keep the legacy runtime and permissions
+under `cisco-vk-legacy-<node>-<uid-hash>`, but native admission confines their
+Node and Pod-status writes to that exact unmarked Node. For both generated
+identity families, Pod DELETE can only complete an already-terminating Pod
+bound to the Node encoded in the identity; it cannot initiate deletion or
+delete a peer Pod, and RBAC grants no `deletecollection`. The default,
 topology-disabled mode retains the historical shared ServiceAccount unchanged.
 The manager records `topology.cisco.vk/isolated-legacy-worker=<device UID>` on
 each device assigned an isolated legacy identity. Admission forbids users from
@@ -118,7 +121,7 @@ Managed topology currently requires:
 - `gnoi.enableWriteClass=false`; Phase 2 admits only campaign-owned
   `IOSXESoftwareUpgrade`, not generic `IOSXEOperationalAction` mutations;
 - CRDs applied before the manager Deployment is upgraded;
-- all nine native admission policies and bindings installed with
+- all ten native admission policies and bindings installed with
   `failurePolicy: Fail` and `validationActions: [Deny]`;
 - an administrator-owned, non-empty managed-fleet selector;
 - complete, valid values for every required topology key on each enrolled
@@ -137,11 +140,20 @@ validation without changing and testing that controller/chart contract for
 both managed and unselected legacy devices.
 
 The manager checks API discovery, policy generation, binding shape, contract
-version, and built-in-resource expression warnings before enabling managed
-workers. Each worker then performs positive and negative server-side dry runs
-with its own credentials: a harmless Node-status write must succeed, while a
-label write smuggled through `/status` must be denied. A version check or an
-empty warning list alone is not proof that admission works.
+version, built-in-resource expression warnings, and the exact live rule sets
+of both fixed managed-worker ClusterRoles before enabling managed workers. It
+rejects role aggregation or any additional resource or verb. Each worker then
+performs positive and negative server-side dry runs with its own credentials: a
+harmless Node-status write must succeed, while a label write smuggled through
+`/status` must be denied. A version check or an empty warning list alone is not
+proof that admission works.
+
+Helm may apply the manager's narrowly scoped `get`/`bind` grant before admission
+because those are independent Kubernetes objects. No worker completion binding
+is rendered by Helm, and controller startup remains blocked until both policy
+and role attestations pass. The Helm actor and controller ServiceAccount are
+therefore trusted computing-base identities during this reconciliation window;
+protect them from compromise and concurrent out-of-band RBAC mutation.
 
 ## Configure and enable
 
@@ -1207,9 +1219,18 @@ same-namespace rule, explicit `allowAll`, target cap, frozen target UIDs, and
 exact-hash approval as additional authority boundaries.
 
 Managed worker RBAC removes Node metadata/spec writes, Pod main-resource
-mutation, Pod logs, Pod exec, and Lease create/delete. It retains cluster-wide
-Pod, ConfigMap, Secret, and Service reads because a virtual Node can receive
-Pods from any namespace. The manager pre-creates purpose-bound heartbeat,
+mutation, Pod logs, Pod exec, and Lease create/delete. Its baseline role retains
+cluster-wide Pod, ConfigMap, Secret, and Service reads because a virtual Node
+can receive Pods from any namespace. A separate retained role containing only
+`pods/delete` is bound to an exact managed worker only after manager startup
+verifies the complete native admission contract. Neither role grants Pod
+`deletecollection`. Fail-closed admission permits the final Virtual Kubelet
+DELETE for either generated worker family only when the Pod is already
+terminating, the request uses its current UID precondition with zero grace, and
+its bound Node exactly matches the Node encoded in the worker identity; live
+and peer Pod deletes are denied.
+The separate drain guard still denies direct deletion while its protected
+marker or finalizer remains. The manager pre-creates purpose-bound heartbeat,
 config-family, and mutation Leases; admission permits only the bound worker's
 protocol-valid update. An unselected `cisco-vk-legacy-*` identity retains
 legacy Node and Lease verbs for runtime compatibility, but Node and Pod
@@ -1299,9 +1320,10 @@ Node audit marker remain identity state.
 
 The live downgrade check rejects missing or UID-mismatched policy/ledger
 objects, incomplete manager RBAC, any remaining `status.nodeIdentity`, and any
-handoff phase other than `Complete`. The policy, ledger, nine policy/binding
-pairs, fixed managed-worker role, and supplemental manager role/binding carry
-`helm.sh/resource-policy: keep`; so does every workload-drain cleanup
+handoff phase other than `Complete`. The policy, ledger, ten policy/binding
+pairs, fixed managed-worker baseline and Pod-delete completion roles, and
+supplemental manager role/binding carry `helm.sh/resource-policy: keep`; so
+does every workload-drain cleanup
 Role/Binding until its explicit post-settlement removal. Setting
 `topology.enabled=false` or uninstalling Helm does not remove them. Completed
 isolated workers still rely on Node/Pod admission, so these retained objects
@@ -1334,8 +1356,10 @@ charts/cisco-virtual-kubelet/tests/topology-kind-test.sh
 ```
 
 The real-cluster test proves policy compilation plus the live API-server-stored
-Spec digest, positive/negative worker Node and Pod status admission, unmarked
-peer denial, purpose-specific Lease update and create/delete fencing, complete
+Spec digest, positive/negative worker Node and Pod status admission, generated
+worker completion of an already-terminating own-Pod deletion, live/peer Pod
+deletion denial, absence of `deletecollection`, unmarked peer denial,
+purpose-specific Lease update and create/delete fencing, complete
 CiscoDevice status/finalizer protection, campaign control separation, ledger
 protection, native affinity/spread binding, initialization-taint exclusion, and
 the known direct-`nodeName` bypass. With drain enabled in its disposable

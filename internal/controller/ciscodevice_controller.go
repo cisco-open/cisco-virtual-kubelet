@@ -226,12 +226,16 @@ type CiscoDeviceReconciler struct {
 	AggregatorEnabled bool
 	// ManagedTopology enables the opt-in manager-owned Node identity,
 	// projection, and per-device worker authorization contract.
-	ManagedTopology         bool
-	TopologyPolicyNamespace string
-	TopologyPolicyName      string
-	LeaseNamespace          string
-	Recorder                record.EventRecorder
-	clock                   clock
+	ManagedTopology bool
+	// ManagedAdmissionVerified is set only after manager startup proves the
+	// complete native admission contract. Managed worker Pod-delete authority
+	// must never be bound before that proof succeeds.
+	ManagedAdmissionVerified bool
+	TopologyPolicyNamespace  string
+	TopologyPolicyName       string
+	LeaseNamespace           string
+	Recorder                 record.EventRecorder
+	clock                    clock
 }
 
 // +kubebuilder:rbac:groups=cisco.vk,resources=ciscodevices,verbs=get;list;watch;update;patch
@@ -1065,6 +1069,42 @@ func vkAccessClusterRoleBindingName(namespace, saName string) string {
 	return prefix + raw + suffix
 }
 
+// vkPodDeleteClusterRoleBindingName is a separate, stable identity from the
+// worker's baseline binding. Keeping the role purpose in both the readable
+// prefix and hash domain prevents a truncated name from colliding with the
+// baseline binding while preserving the namespace/ServiceAccount identity.
+func vkPodDeleteClusterRoleBindingName(namespace, saName string) string {
+	raw := namespace + "-" + saName
+	digest := sha256.Sum256([]byte(managedprotocol.ManagedWorkerPodDeleteClusterRole + "\x00" + raw))
+	suffix := "-" + hex.EncodeToString(digest[:])
+	const prefix = "cisco-vk-pod-delete-"
+	maxRaw := 253 - len(prefix) - len(suffix)
+	if len(raw) > maxRaw {
+		raw = strings.TrimRight(raw[:maxRaw], "-")
+	}
+	return prefix + raw + suffix
+}
+
+type generatedWorkerClusterRoleBinding struct {
+	name string
+	role string
+}
+
+func generatedWorkerClusterRoleBindings(namespace, saName string, managed bool) []generatedWorkerClusterRoleBinding {
+	bindings := []generatedWorkerClusterRoleBinding{{
+		name: vkAccessClusterRoleBindingName(namespace, saName),
+		role: vkSharedClusterRole,
+	}}
+	if managed {
+		bindings[0].role = managedprotocol.ManagedWorkerClusterRole
+		bindings = append(bindings, generatedWorkerClusterRoleBinding{
+			name: vkPodDeleteClusterRoleBindingName(namespace, saName),
+			role: managedprotocol.ManagedWorkerPodDeleteClusterRole,
+		})
+	}
+	return bindings
+}
+
 // ensureVKAccess provisions the access bits the chart cannot: a ServiceAccount
 // in the device namespace, a namespaced RoleBinding to the config-management
 // role (vkDeviceClusterRole — so config CRD access is scoped to THIS device's
@@ -1169,39 +1209,34 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 		return fmt.Errorf("RoleBinding %s/%s: %w", rb.Namespace, rb.Name, err)
 	}
 
-	workerClusterRole := vkSharedClusterRole
-	if managed {
-		workerClusterRole = managedprotocol.ManagedWorkerClusterRole
+	if managed && !r.ManagedAdmissionVerified {
+		return fmt.Errorf("managed worker Pod-delete access requires a verified native admission contract")
 	}
-	crbName := vkAccessClusterRoleBindingName(device.Namespace, saName)
-	crb := &rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{Name: crbName},
-	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, crb, func() error {
-		if generated && objectMetaHasIdentity(&crb.ObjectMeta) {
-			if err := validateGeneratedClusterRoleBinding(crb, device, saName, workerClusterRole); err != nil {
-				return err
+	clusterBindings := generatedWorkerClusterRoleBindings(device.Namespace, saName, managed)
+	for _, expected := range clusterBindings {
+		crb := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: expected.name}}
+		if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, crb, func() error {
+			if generated && objectMetaHasIdentity(&crb.ObjectMeta) {
+				if err := validateGeneratedClusterRoleBinding(crb, device, saName, expected.role, managed); err != nil {
+					return err
+				}
 			}
+			crb.RoleRef = rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     expected.role,
+			}
+			crb.Subjects = exactWorkerSubject(device.Namespace, saName)
+			if generated {
+				applyWorkerBindingAnnotations(&crb.ObjectMeta, device, managed)
+			}
+			return nil
+		}); err != nil {
+			return fmt.Errorf("ClusterRoleBinding %s: %w", expected.name, err)
 		}
-		crb.RoleRef = rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     workerClusterRole,
-		}
-		crb.Subjects = []rbacv1.Subject{{
-			Kind:      rbacv1.ServiceAccountKind,
-			Name:      saName,
-			Namespace: device.Namespace,
-		}}
-		if generated {
-			applyWorkerBindingAnnotations(&crb.ObjectMeta, device, managed)
-		}
-		return nil
-	}); err != nil {
-		return fmt.Errorf("ClusterRoleBinding %s: %w", crbName, err)
 	}
 	if generated {
-		if err := r.auditGeneratedWorkerBindings(ctx, device, saName, workerClusterRole); err != nil {
+		if err := r.auditGeneratedWorkerBindings(ctx, device, saName, managed); err != nil {
 			return err
 		}
 	}
@@ -1320,6 +1355,7 @@ func validateGeneratedClusterRoleBinding(
 	binding *rbacv1.ClusterRoleBinding,
 	device *ciskov1.CiscoDevice,
 	saName, roleName string,
+	managed bool,
 ) error {
 	if binding.RoleRef != (rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: roleName}) {
 		return fmt.Errorf("generated worker ClusterRoleBinding %s has unexpected roleRef", binding.Name)
@@ -1330,7 +1366,7 @@ func validateGeneratedClusterRoleBinding(
 	if len(binding.OwnerReferences) != 0 {
 		return fmt.Errorf("generated worker ClusterRoleBinding %s has unexpected ownerReferences", binding.Name)
 	}
-	return validateReservedWorkerAnnotations(binding.Annotations, workerServiceAccountAnnotations(device, binding.Annotations[managedprotocol.AnnotationManaged] == "true"))
+	return validateReservedWorkerAnnotations(binding.Annotations, workerServiceAccountAnnotations(device, managed))
 }
 
 // auditGeneratedWorkerBindings rejects every additive grant to the generated
@@ -1340,9 +1376,10 @@ func validateGeneratedClusterRoleBinding(
 func (r *CiscoDeviceReconciler) auditGeneratedWorkerBindings(
 	ctx context.Context,
 	device *ciskov1.CiscoDevice,
-	saName, workerClusterRole string,
+	saName string,
+	managed bool,
 ) error {
-	expectedAnnotations := workerServiceAccountAnnotations(device, workerClusterRole == managedprotocol.ManagedWorkerClusterRole)
+	expectedAnnotations := workerServiceAccountAnnotations(device, managed)
 	expectedRB := types.NamespacedName{Namespace: device.Namespace, Name: saName}
 	seenRB := false
 	var roleBindings rbacv1.RoleBindingList
@@ -1369,8 +1406,11 @@ func (r *CiscoDeviceReconciler) auditGeneratedWorkerBindings(
 		return fmt.Errorf("generated worker RoleBinding %s is missing during access audit", expectedRB)
 	}
 
-	expectedCRB := vkAccessClusterRoleBindingName(device.Namespace, saName)
-	seenCRB := false
+	expectedCRBs := make(map[string]string)
+	for _, binding := range generatedWorkerClusterRoleBindings(device.Namespace, saName, managed) {
+		expectedCRBs[binding.name] = binding.role
+	}
+	seenCRBs := make(map[string]bool, len(expectedCRBs))
 	var clusterRoleBindings rbacv1.ClusterRoleBindingList
 	if err := r.reader().List(ctx, &clusterRoleBindings); err != nil {
 		return fmt.Errorf("audit generated worker ClusterRoleBindings: %w", err)
@@ -1380,19 +1420,22 @@ func (r *CiscoDeviceReconciler) auditGeneratedWorkerBindings(
 		if !hasWorkerSubject(binding.Subjects, device.Namespace, saName) {
 			continue
 		}
-		if binding.Name != expectedCRB {
+		expectedRole, expected := expectedCRBs[binding.Name]
+		if !expected {
 			return fmt.Errorf("generated worker ServiceAccount %s/%s has unexpected additive ClusterRoleBinding %s", device.Namespace, saName, binding.Name)
 		}
-		if err := validateGeneratedClusterRoleBinding(binding, device, saName, workerClusterRole); err != nil {
+		if err := validateGeneratedClusterRoleBinding(binding, device, saName, expectedRole, managed); err != nil {
 			return err
 		}
 		if !workerAnnotationsMatch(binding.Annotations, expectedAnnotations) {
 			return fmt.Errorf("generated worker ClusterRoleBinding %s is not exactly incarnation-bound", binding.Name)
 		}
-		seenCRB = true
+		seenCRBs[binding.Name] = true
 	}
-	if !seenCRB {
-		return fmt.Errorf("generated worker ClusterRoleBinding %s is missing during access audit", expectedCRB)
+	for expectedCRB := range expectedCRBs {
+		if !seenCRBs[expectedCRB] {
+			return fmt.Errorf("generated worker ClusterRoleBinding %s is missing during access audit", expectedCRB)
+		}
 	}
 	return nil
 }
@@ -1444,10 +1487,6 @@ func (r *CiscoDeviceReconciler) cleanupGeneratedWorkerAccess(
 	managed bool,
 ) error {
 	expectedAnnotations := workerServiceAccountAnnotations(device, managed)
-	workerRole := vkSharedClusterRole
-	if managed {
-		workerRole = managedprotocol.ManagedWorkerClusterRole
-	}
 
 	var sa corev1.ServiceAccount
 	saKey := types.NamespacedName{Namespace: device.Namespace, Name: saName}
@@ -1473,27 +1512,60 @@ func (r *CiscoDeviceReconciler) cleanupGeneratedWorkerAccess(
 			}
 			return fmt.Errorf("refusing to delete generated worker RoleBinding %s: %w", rbKey, err)
 		}
-		if err := deleteWithUIDPrecondition(ctx, r.Client, &rb); err != nil && !errors.IsNotFound(err) {
-			return fmt.Errorf("delete generated worker RoleBinding %s: %w", rbKey, err)
-		}
 	}
 
-	crbKey := types.NamespacedName{Name: vkAccessClusterRoleBindingName(device.Namespace, saName)}
-	var crb rbacv1.ClusterRoleBinding
-	if err := r.reader().Get(ctx, crbKey, &crb); err != nil {
-		if !errors.IsNotFound(err) {
-			return fmt.Errorf("read generated worker ClusterRoleBinding %s: %w", crbKey, err)
+	expectedBindings := generatedWorkerClusterRoleBindings(device.Namespace, saName, managed)
+	expectedCRBs := make(map[string]string, len(expectedBindings))
+	ownedCRBs := make([]*rbacv1.ClusterRoleBinding, 0, len(expectedBindings))
+	for _, binding := range expectedBindings {
+		expectedCRBs[binding.name] = binding.role
+		var crb rbacv1.ClusterRoleBinding
+		key := types.NamespacedName{Name: binding.name}
+		if err := r.reader().Get(ctx, key, &crb); err != nil {
+			if errors.IsNotFound(err) {
+				continue
+			}
+			return fmt.Errorf("read generated worker ClusterRoleBinding %s: %w", key, err)
 		}
-	} else {
-		if err := validateGeneratedClusterRoleBinding(&crb, device, saName, workerRole); err != nil ||
+		if err := validateGeneratedClusterRoleBinding(&crb, device, saName, binding.role, managed); err != nil ||
 			!workerAnnotationsMatch(crb.Annotations, expectedAnnotations) {
 			if err == nil {
 				err = fmt.Errorf("binding metadata is not exactly incarnation-bound")
 			}
-			return fmt.Errorf("refusing to delete generated worker ClusterRoleBinding %s: %w", crbKey, err)
+			return fmt.Errorf("refusing to delete generated worker ClusterRoleBinding %s: %w", binding.name, err)
 		}
-		if err := deleteWithUIDPrecondition(ctx, r.Client, &crb); err != nil && !errors.IsNotFound(err) {
-			return fmt.Errorf("delete generated worker ClusterRoleBinding %s: %w", crbKey, err)
+		ownedCRBs = append(ownedCRBs, &crb)
+	}
+
+	// Canonical names are validated directly above because a tampered subject
+	// could otherwise evade this subject-based additive-authority inventory.
+	// After that proof, reject every additional ClusterRoleBinding that still
+	// names the worker before mutating any part of its access substrate.
+	var clusterRoleBindings rbacv1.ClusterRoleBindingList
+	if err := r.reader().List(ctx, &clusterRoleBindings); err != nil {
+		return fmt.Errorf("list generated worker ClusterRoleBindings before cleanup: %w", err)
+	}
+	for i := range clusterRoleBindings.Items {
+		binding := &clusterRoleBindings.Items[i]
+		if !hasWorkerSubject(binding.Subjects, device.Namespace, saName) {
+			continue
+		}
+		if _, expected := expectedCRBs[binding.Name]; !expected {
+			return fmt.Errorf("refusing to clean generated worker access: unexpected additive ClusterRoleBinding %s", binding.Name)
+		}
+	}
+
+	// Validate the complete authority set before deleting any binding. A
+	// collision or additive grant therefore fails closed without leaving a
+	// partially revoked identity that is difficult to audit or retry.
+	if rb.Name != "" {
+		if err := deleteWithUIDPrecondition(ctx, r.Client, &rb); err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("delete generated worker RoleBinding %s: %w", rbKey, err)
+		}
+	}
+	for _, crb := range ownedCRBs {
+		if err := deleteWithUIDPrecondition(ctx, r.Client, crb); err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("delete generated worker ClusterRoleBinding %s: %w", crb.Name, err)
 		}
 	}
 
@@ -2254,8 +2326,8 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettled(ctx contex
 	return nil
 }
 
-// managedWorkerAccessRevoked verifies the two controller-generated bindings
-// which grant a per-device worker API authority are absent. It intentionally
+// managedWorkerAccessRevoked verifies all controller-generated bindings which
+// grant a per-device worker API authority are absent. It intentionally
 // uses the uncached reader: this check is the sole proof that a retry after
 // canonical Lease cleanup cannot be driven by the former worker identity.
 func (r *CiscoDeviceReconciler) managedWorkerAccessRevoked(ctx context.Context, device *ciskov1.CiscoDevice) (bool, error) {
@@ -2268,12 +2340,14 @@ func (r *CiscoDeviceReconciler) managedWorkerAccessRevoked(ctx context.Context, 
 		return false, fmt.Errorf("verify managed worker RoleBinding revocation %s: %w", roleBindingKey, err)
 	}
 
-	var clusterRoleBinding rbacv1.ClusterRoleBinding
-	clusterRoleBindingKey := types.NamespacedName{Name: vkAccessClusterRoleBindingName(device.Namespace, saName)}
-	if err := r.reader().Get(ctx, clusterRoleBindingKey, &clusterRoleBinding); err == nil {
-		return false, nil
-	} else if !errors.IsNotFound(err) {
-		return false, fmt.Errorf("verify managed worker ClusterRoleBinding revocation %s: %w", clusterRoleBindingKey, err)
+	for _, binding := range generatedWorkerClusterRoleBindings(device.Namespace, saName, true) {
+		var clusterRoleBinding rbacv1.ClusterRoleBinding
+		clusterRoleBindingKey := types.NamespacedName{Name: binding.name}
+		if err := r.reader().Get(ctx, clusterRoleBindingKey, &clusterRoleBinding); err == nil {
+			return false, nil
+		} else if !errors.IsNotFound(err) {
+			return false, fmt.Errorf("verify managed worker ClusterRoleBinding revocation %s: %w", clusterRoleBindingKey, err)
+		}
 	}
 	return true, nil
 }

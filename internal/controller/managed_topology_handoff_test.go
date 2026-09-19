@@ -122,7 +122,8 @@ func newLegacyHandoffFixture(t *testing.T) legacyHandoffFixture {
 	writeClient := leaseUIDAssigningClient{Client: baseClient}
 	r := &CiscoDeviceReconciler{
 		Client: writeClient, APIReader: baseClient, Scheme: scheme, Image: "cisco-vk:test",
-		TopologyPolicyNamespace: policy.Namespace, TopologyPolicyName: policy.Name,
+		ManagedAdmissionVerified: true,
+		TopologyPolicyNamespace:  policy.Namespace, TopologyPolicyName: policy.Name,
 		LeaseNamespace: device.Namespace, clock: clock,
 	}
 	if err := r.ensureVKAccess(context.Background(), device, managedSA, true); err != nil {

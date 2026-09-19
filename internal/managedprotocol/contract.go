@@ -86,6 +86,7 @@ const (
 	ManagedWorkerReadyCondition          = "CiscoVirtualKubeletManagedReady"
 	ManagedWorkerReadyReason             = "StatusOnlyRolloutV1"
 	ManagedWorkerClusterRole             = "cisco-virtual-kubelet-managed-worker"
+	ManagedWorkerPodDeleteClusterRole    = "cisco-virtual-kubelet-managed-worker-pod-delete"
 	WorkerModeLegacy                     = "legacy"
 	ImageFamilyLabel                     = "operations.cisco.vk/image-family"
 	QualificationCohortLabel             = "operations.cisco.vk/qualification-cohort"

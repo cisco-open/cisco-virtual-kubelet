@@ -126,7 +126,7 @@ helm template cvk "$chart_dir" \
   CVK_ADMISSION_MANIFEST="$strict_render_bundle" \
     GOCACHE="${GOCACHE:-/tmp/cvk-topology-gocache}" \
     go test ./cmd/cisco-vk \
-      -run '^TestRenderedManagedAdmissionContract$' -count=1
+      -run '^TestRenderedManaged(AdmissionContract|WorkerClusterRoleContracts)$' -count=1
 )
 
 grep -Fq -- '- --enable-managed-topology' "$managed_render"
@@ -136,8 +136,8 @@ grep -Fq -- '- --topology-policy-name=cvk-cisco-virtual-kubelet-topology-policy'
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-policy' "$managed_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-ledger' "$managed_render"
 grep -Fq 'topology.cisco.vk/admission-policy-prefix: "cvk-cisco-virtual-kubelet"' "$managed_render"
-test "$(grep -c '^    topology.cisco.vk/admission-contract-version: "v1"$' "$managed_render")" -eq 19
-test "$(grep -c '^    helm.sh/resource-policy: keep$' "$managed_render")" -eq 23
+test "$(grep -c '^    topology.cisco.vk/admission-contract-version: "v1"$' "$managed_render")" -eq 21
+test "$(grep -c '^    helm.sh/resource-policy: keep$' "$managed_render")" -eq 26
 grep -Fq '"globalMaxConcurrentTransfers":1' "$managed_render"
 grep -Fq '"domainMaxConcurrentTransfers":{"topology.kubernetes.io/region":1}' "$managed_render"
 if grep -Fq '"workloadDrain"' "$managed_render"; then
@@ -156,8 +156,8 @@ if grep -Eq '^[[:space:]]+topology\.cisco\.vk/ledger-uid:' "$managed_render"; th
   exit 1
 fi
 
-test "$(grep -c '^kind: ValidatingAdmissionPolicy$' "$managed_render")" -eq 9
-test "$(grep -c '^kind: ValidatingAdmissionPolicyBinding$' "$managed_render")" -eq 9
+test "$(grep -c '^kind: ValidatingAdmissionPolicy$' "$managed_render")" -eq 10
+test "$(grep -c '^kind: ValidatingAdmissionPolicyBinding$' "$managed_render")" -eq 10
 
 policy_section_count() {
   local manifest="$1"
@@ -192,6 +192,7 @@ assert_policy_shape() {
 # an explicit contract-version decision in both places.
 assert_policy_shape managed-node 1 4 3
 assert_policy_shape managed-pod-status 1 2 3
+assert_policy_shape managed-pod-delete 1 2 4
 assert_policy_shape managed-drain-pod 1 5 3
 assert_policy_shape managed-device 0 7 12
 assert_policy_shape managed-rollout 0 1 6
@@ -201,6 +202,16 @@ assert_policy_shape topology-policy 1 2 3
 assert_policy_shape topology-ledger 1 2 4
 
 grep -Fq 'name: cvk-cisco-virtual-kubelet-managed-maintenance-lease' "$managed_render"
+grep -Fq 'name: cvk-cisco-virtual-kubelet-managed-pod-delete' "$managed_render"
+sed -n '/name: cvk-cisco-virtual-kubelet-managed-pod-delete/,/^---$/p' \
+  "$managed_render" >"$scratch_dir/managed-pod-delete-policy.yaml"
+grep -Fq 'operations: ["DELETE"]' "$scratch_dir/managed-pod-delete-policy.yaml"
+grep -Fq 'resources: ["pods"]' "$scratch_dir/managed-pod-delete-policy.yaml"
+grep -Fq 'has(oldObject.metadata.deletionTimestamp)' "$scratch_dir/managed-pod-delete-policy.yaml"
+grep -Fq 'request.options.preconditions.uid' "$scratch_dir/managed-pod-delete-policy.yaml"
+grep -Fq 'request.options.gracePeriodSeconds == 0' "$scratch_dir/managed-pod-delete-policy.yaml"
+grep -Fq 'cisco-vk-managed-' "$scratch_dir/managed-pod-delete-policy.yaml"
+grep -Fq 'cisco-vk-legacy-' "$scratch_dir/managed-pod-delete-policy.yaml"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-managed-drain-pod' "$managed_render"
 sed -n '/name: cvk-cisco-virtual-kubelet-managed-drain-pod/,/^---$/p' \
   "$managed_render" | grep -Fq 'operations: ["CREATE", "UPDATE", "DELETE"]'
@@ -330,7 +341,8 @@ grep -Fq 'cisco-virtual-kubelet-controller' "$leaf_match"
 grep -Fq "object.metadata.annotations['topology.cisco.vk/managed'] == 'true'" "$leaf_policy"
 
 managed_role="$scratch_dir/managed-role.yaml"
-sed -n '/name: cisco-virtual-kubelet-managed-worker/,/^---$/p' "$managed_render" >"$managed_role"
+sed -n '/^  name: cisco-virtual-kubelet-managed-worker$/,/^---$/p' \
+  "$managed_render" >"$managed_role"
 grep -Fq 'resources: ["nodes"]' "$managed_role"
 grep -Fq 'verbs: ["get"]' "$managed_role"
 grep -Fq 'resources: ["nodes/status"]' "$managed_role"
@@ -346,7 +358,19 @@ if grep -Eq 'resources: \["pods/(log|exec)"\]' "$managed_role"; then
   exit 1
 fi
 if grep -A1 -F 'resources: ["pods"]' "$managed_role" | grep -Eq 'create|update|patch|delete'; then
-  echo "managed worker retained Pod main-resource mutation" >&2
+  echo "managed worker retained unsupported Pod main-resource mutation" >&2
+  exit 1
+fi
+managed_delete_role="$scratch_dir/managed-delete-role.yaml"
+sed -n '/^  name: cisco-virtual-kubelet-managed-worker-pod-delete$/,/^---$/p' \
+  "$managed_render" >"$managed_delete_role"
+grep -Fq 'helm.sh/resource-policy: keep' "$managed_delete_role"
+grep -Fq 'resources: ["pods"]' "$managed_delete_role"
+grep -A1 -F 'resources: ["pods"]' "$managed_delete_role" | \
+  grep -Fq 'verbs: ["delete"]'
+if grep -Eq 'resources: \["(nodes|pods/status|secrets|configmaps|services|events|leases)' \
+    "$managed_delete_role"; then
+  echo "managed Pod-delete role contains unrelated authority" >&2
   exit 1
 fi
 grep -Fq 'resources: ["secrets"]' "$managed_role"
@@ -418,6 +442,10 @@ grep -A1 -F 'resources: ["leases"]' "$manager_role" | \
   grep -Fq 'verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]'
 grep -A1 -F 'resources: ["replicasets"]' "$manager_role" | \
   grep -Fq 'verbs: ["get", "list", "watch", "delete"]'
+grep -Fq '      - cisco-virtual-kubelet-managed-worker' "$manager_role"
+grep -Fq '      - cisco-virtual-kubelet-managed-worker-pod-delete' "$manager_role"
+grep -A4 -F 'resources: ["clusterroles"]' "$manager_role" | \
+  grep -Fq 'verbs: ["get", "bind"]'
 test "$(grep -c '^    helm.sh/resource-policy: keep$' "$manager_role")" -eq 2
 
 # Safe retirement of the pre-topology shared identity is a manager operation.

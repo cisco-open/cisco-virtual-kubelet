@@ -485,11 +485,37 @@ Used by each VK pod. Permissions:
 The table above describes the legacy/shared VK identity. With
 `topology.enabled=true`, selected devices instead receive an incarnation-bound
 ServiceAccount and the fixed managed-worker role. That role removes Pod
-main-resource/log/exec access, Node metadata/spec mutation, and Lease
-create/delete. The manager pre-creates identity- and purpose-bound heartbeat,
-config-family, and mutation Leases; fail-closed admission permits only monotonic
-updates by their exact worker. A separate policy confines `pods/status` writes
-to Pods whose immutable `spec.nodeName` is encoded in that worker identity.
+main-resource mutation, Pod log/exec, Node metadata/spec mutation, and Lease
+create/delete. A separate retained role contains only `pods/delete` and is
+bound to each exact managed identity only after manager startup verifies the
+native admission contract. It grants no Pod `deletecollection`. A fail-closed
+policy permits that DELETE for either generated managed or legacy worker
+identity only when the Pod is already terminating, the request supplies its
+current UID as a precondition with zero grace, and immutable `spec.nodeName` is
+the exact Node encoded in the identity; live and peer Pod deletes are denied.
+The independent managed-drain policy still blocks direct deletion while its
+protected marker or finalizer remains. The manager
+pre-creates identity- and purpose-bound heartbeat, config-family, and mutation
+Leases; fail-closed admission permits only monotonic updates by their exact
+worker. A separate policy confines `pods/status` writes to Pods whose immutable
+`spec.nodeName` is encoded in that worker identity.
+Both fixed managed-worker roles are Helm-retained. Downgrade-state discovery
+treats any remaining binding to the completion role as active authority—even
+if its generated annotations are damaged—so native admission cannot disappear
+while `pods/delete` remains granted.
+
+Helm does not transactionally order independent RBAC and admission objects. On
+install or upgrade, the topology manager's resource-name-scoped `get`/`bind`
+grant may therefore become effective before the Pod-delete policy is observed.
+Helm never binds the completion role to a worker: manager startup first verifies
+the complete admission contract and exact-compares both retained ClusterRole
+rule sets, rejecting aggregation or any added resource/verb, before the
+CiscoDevice controller can create that second binding. The controller
+ServiceAccount and the principals allowed to perform the Helm release are part
+of the trusted computing base for this interval; compromise of either can
+bypass application-level sequencing because the manager also creates dynamic
+ClusterRoleBindings. Protect them as cluster-privileged identities and do not
+allow concurrent out-of-band mutation of these retained objects.
 
 Managed PDB-aware drain is a second, default-off authority boundary. The chart
 initially binds the manager in an explicitly allowlisted workload namespace
@@ -500,9 +526,11 @@ cleanup. A separate non-retained Role grants only `pods/eviction` create while
 every gate remains active. Neither grants Pod delete. Removing administrator
 drain authority makes the manager start no new Eviction, and the corresponding
 live Helm update removes the non-retained execution Role without stranding an
-accepted teardown. Remove the retained cleanup pair explicitly only after every
-associated drain is `Settled`. The top-level topology and gNOI gates must remain
-active until then so their controllers can finish recovery.
+accepted teardown. The worker completion grant above does not add any workload
+Pod deletion authority to the manager. Remove the retained cleanup pair
+explicitly only after every associated drain is `Settled`. The top-level
+topology and gNOI gates must remain active until then so their controllers can
+finish recovery.
 
 Managed topology installs the reserved-field admission policy even while drain
 is disabled, keeping the startup contract feature-independent without granting

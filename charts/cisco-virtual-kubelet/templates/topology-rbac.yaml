@@ -70,6 +70,27 @@ rules:
   # role. The existing per-device namespaced RoleBinding grants them only when
   # gnoi.enableSoftwareUpgrade is explicitly enabled; native admission then
   # limits writes to that worker's manager-created leaf.
+---
+# Pod deletion is deliberately bootstrapped through a separate retained role.
+# The manager creates a per-device binding only after its startup preflight has
+# proved the managed-pod-delete admission policy is present, bound, type-safe,
+# and byte-for-byte compatible and exact-compared both fixed role rule sets.
+# Helm never binds this role directly to a worker. The manager identity remains
+# part of the trusted computing base because its narrow bind grant can land
+# before admission while Helm reconciles these independent API objects.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cisco-virtual-kubelet-managed-worker-pod-delete
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: managed-worker
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["delete"]
 {{- end }}
 {{- $managerRoleName := printf "%s-managed-topology-manager" (include "cisco-virtual-kubelet.fullname" .) }}
 {{- $existingManagerRole := lookup "rbac.authorization.k8s.io/v1" "ClusterRole" "" $managerRoleName }}
@@ -135,8 +156,10 @@ rules:
     verbs: ["get"]
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["clusterroles"]
-    resourceNames: ["cisco-virtual-kubelet-managed-worker"]
-    verbs: ["bind"]
+    resourceNames:
+      - cisco-virtual-kubelet-managed-worker
+      - cisco-virtual-kubelet-managed-worker-pod-delete
+    verbs: ["get", "bind"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

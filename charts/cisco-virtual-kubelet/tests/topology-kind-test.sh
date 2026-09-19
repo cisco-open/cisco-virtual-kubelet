@@ -21,6 +21,8 @@ approver_username="system:serviceaccount:${device_namespace}:${approver_service_
 # only the simpler DNS-label subset.
 managed_node="cvk-topology.managed"
 legacy_node="cvk-topology.legacy"
+api_proxy_pid=""
+api_proxy_url=""
 
 sha256_stdin() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -71,6 +73,13 @@ cleanup() {
   local heartbeat_deleted=false
   local retained_objects
 
+  if [ -n "$api_proxy_pid" ] && kill -0 "$api_proxy_pid" >/dev/null 2>&1; then
+    kill "$api_proxy_pid" >/dev/null 2>&1 || true
+    wait "$api_proxy_pid" 2>/dev/null || true
+  fi
+  api_proxy_pid=""
+  api_proxy_url=""
+
   # Remove fixture finalizers through the still-authorized manager identity.
   # This is the normal cleanup path and avoids an admission-cache race after
   # the retained policy binding is deleted.
@@ -106,7 +115,8 @@ cleanup() {
     -l "app.kubernetes.io/instance=${release_name}" \
     --ignore-not-found --wait=false >/dev/null || cleanup_status=1
   kubectl delete clusterrolebinding \
-    cvk-topology-it-worker cvk-topology-it-legacy-worker \
+    cvk-topology-it-worker cvk-topology-it-worker-pod-delete \
+    cvk-topology-it-legacy-worker \
     cvk-topology-it-retirement-worker \
     --ignore-not-found --wait=true --timeout=60s \
     >/dev/null || cleanup_status=1
@@ -259,7 +269,7 @@ kubectl delete rolebinding cisco-virtual-kubelet-device \
 policy_count="$(kubectl get validatingadmissionpolicy \
   -l "app.kubernetes.io/instance=${release_name}" \
   -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' ')"
-test "$policy_count" -eq 9
+test "$policy_count" -eq 10
 for policy in $(kubectl get validatingadmissionpolicy \
   -l "app.kubernetes.io/instance=${release_name}" \
   -o jsonpath='{.items[*].metadata.name}'); do
@@ -284,13 +294,14 @@ for policy in $(kubectl get validatingadmissionpolicy \
   fi
 done
 
-# Re-read the server-stored Specs and prove API defaulting/canonicalization has
-# not changed the complete contract the manager hashes at startup. Custom
-# release names are included in this normalization check.
+# Re-read the server-stored policy Specs and retained ClusterRole rules and
+# prove API defaulting/canonicalization has not changed the complete contracts
+# the manager verifies at startup. Custom release names are included in this
+# normalization check.
 live_admission_manifest="$scratch_dir/live-admission.yaml"
 first_policy=true
 for suffix in \
-  managed-node managed-pod-status managed-drain-pod managed-device managed-rollout managed-upgrade-leaf \
+  managed-node managed-pod-status managed-pod-delete managed-drain-pod managed-device managed-rollout managed-upgrade-leaf \
   topology-policy topology-ledger managed-maintenance-lease; do
   if [ "$first_policy" = false ]; then
     printf '%s\n' '---' >>"$live_admission_manifest"
@@ -298,6 +309,12 @@ for suffix in \
   kubectl get validatingadmissionpolicy \
     "${admission_prefix}-${suffix}" -o yaml >>"$live_admission_manifest"
   first_policy=false
+done
+for role in \
+  cisco-virtual-kubelet-managed-worker \
+  cisco-virtual-kubelet-managed-worker-pod-delete; do
+  printf '%s\n' '---' >>"$live_admission_manifest"
+  kubectl get clusterrole "$role" -o yaml >>"$live_admission_manifest"
 done
 (
   cd "$repo_root"
@@ -309,7 +326,7 @@ done
     CVK_ADMISSION_LEDGER_NAME="${admission_prefix}-topology-ledger" \
     GOCACHE="${GOCACHE:-/tmp/cvk-topology-gocache}" \
     go test ./cmd/cisco-vk \
-      -run '^TestRenderedManagedAdmissionContract$' -count=1
+      -run '^TestRenderedManaged(AdmissionContract|WorkerClusterRoleContracts)$' -count=1
 )
 
 # Persist the CiscoDevice before deriving its incarnation-bound worker name.
@@ -399,6 +416,9 @@ kubectl create serviceaccount "$worker_service_account" \
 kubectl create clusterrolebinding cvk-topology-it-worker \
   --clusterrole=cisco-virtual-kubelet-managed-worker \
   --serviceaccount="${device_namespace}:${worker_service_account}" >/dev/null
+kubectl create clusterrolebinding cvk-topology-it-worker-pod-delete \
+  --clusterrole=cisco-virtual-kubelet-managed-worker-pod-delete \
+  --serviceaccount="${device_namespace}:${worker_service_account}" >/dev/null
 kubectl create rolebinding cvk-topology-it-worker-device \
   --namespace "$device_namespace" \
   --clusterrole=cisco-virtual-kubelet-device \
@@ -426,9 +446,10 @@ test "$(kubectl auth can-i patch iosxesoftwareupgrades.ops.cisco.vk \
   --namespace "$device_namespace" --as="$worker_username")" = "yes"
 test "$(kubectl auth can-i patch iosxesoftwareupgrades.ops.cisco.vk \
   --namespace "$system_namespace" --as="$worker_username")" = "no"
-# Workload drain is namespace-allowlisted and uses the Eviction subresource;
-# neither the topology manager nor the generated worker may directly delete a
-# Pod. The worker also receives none of the manager's drain-metadata authority.
+# Workload drain is namespace-allowlisted and uses the Eviction subresource.
+# The manager cannot delete Pods. A generated worker may only finish deletion
+# of its own already-terminating Pod through admission and receives none of the
+# manager's drain-metadata authority.
 test "$(kubectl auth can-i patch pods --namespace "$device_namespace" \
   --as="$manager_username")" = "yes"
 test "$(kubectl auth can-i create pods --subresource=eviction \
@@ -437,6 +458,10 @@ test "$(kubectl auth can-i delete pods --namespace "$device_namespace" \
   --as="$manager_username")" = "no"
 test "$(kubectl auth can-i create pods --namespace "$device_namespace" \
   --as="$manager_username")" = "no"
+test "$(kubectl auth can-i delete pods --all-namespaces \
+  --as="$worker_username")" = "yes"
+test "$(kubectl auth can-i deletecollection pods --all-namespaces \
+  --as="$worker_username")" = "no"
 test "$(kubectl auth can-i patch pods --namespace "$device_namespace" \
   --as="$worker_username")" = "no"
 
@@ -601,6 +626,171 @@ fi
 grep -Eq 'exact bound virtual Node|generated worker identity|denied the request|failed expression' \
   "$scratch_dir/legacy-pod-peer-negative.txt"
 
+# Virtual Kubelet completes Pod removal with a final UID-preconditioned,
+# zero-grace API DELETE after provider teardown or after provider status has
+# observed the Pod non-running. Exercise that exact request for both generated
+# identity formats: neither worker may start deletion, each may complete its
+# own already-started deletion, and neither may complete a terminating peer
+# Pod. A neutral test finalizer holds terminating fixtures in the API long
+# enough for the second DELETE; it is unrelated to the drain finalizer below.
+for pod_and_node in \
+  "cvk-delete-managed-live:${managed_node}" \
+  "cvk-delete-managed-own:${managed_node}" \
+  "cvk-delete-managed-peer:${legacy_node}" \
+  "cvk-delete-legacy-live:${legacy_node}" \
+  "cvk-delete-legacy-own:${legacy_node}" \
+  "cvk-delete-legacy-peer:${managed_node}"; do
+  pod="${pod_and_node%%:*}"
+  node="${pod_and_node#*:}"
+  cat <<EOF | kubectl create -f - >/dev/null
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ${pod}
+  namespace: ${device_namespace}
+  finalizers:
+    - cvk-topology-test/hold
+spec:
+  nodeName: ${node}
+  terminationGracePeriodSeconds: 0
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.10
+EOF
+done
+test "$(kubectl auth can-i delete pods --all-namespaces \
+  --as="$legacy_username")" = "yes"
+test "$(kubectl auth can-i deletecollection pods --all-namespaces \
+  --as="$legacy_username")" = "no"
+
+# kubectl's named delete command intentionally omits UID preconditions. Use its
+# authenticated local proxy so these probes can send the exact DeleteOptions
+# body while still exercising API-server impersonation and native admission.
+command -v curl >/dev/null
+api_proxy_log="$scratch_dir/kubectl-proxy.log"
+kubectl proxy --port=0 >"$api_proxy_log" 2>&1 &
+api_proxy_pid=$!
+for _ in $(seq 1 100); do
+  api_proxy_url="$(sed -n 's/^Starting to serve on \(.*\)$/http:\/\/\1/p' \
+    "$api_proxy_log" | tail -1)"
+  if [ -n "$api_proxy_url" ] && curl -fsS "$api_proxy_url/version" >/dev/null; then
+    break
+  fi
+  if ! kill -0 "$api_proxy_pid" >/dev/null 2>&1; then
+    cat "$api_proxy_log" >&2
+    echo "kubectl proxy exited before becoming ready" >&2
+    exit 1
+  fi
+  sleep 0.1
+done
+if [ -z "$api_proxy_url" ] || ! curl -fsS "$api_proxy_url/version" >/dev/null; then
+  cat "$api_proxy_log" >&2
+  echo "kubectl proxy did not become ready" >&2
+  exit 1
+fi
+
+raw_pod_delete() {
+  local username="$1"
+  local pod="$2"
+  local options="$3"
+  curl --fail-with-body -sS -X DELETE \
+    -H 'Content-Type: application/json' \
+    -H "Impersonate-User: ${username}" \
+    -H 'Impersonate-Group: system:serviceaccounts' \
+    -H "Impersonate-Group: system:serviceaccounts:${device_namespace}" \
+    -H 'Impersonate-Group: system:authenticated' \
+    --data-binary "$options" \
+    "${api_proxy_url}/api/v1/namespaces/${device_namespace}/pods/${pod}"
+}
+
+for identity_case in managed legacy; do
+  case "$identity_case" in
+    managed)
+      delete_username="$worker_username"
+      delete_live_pod="cvk-delete-managed-live"
+      delete_own_pod="cvk-delete-managed-own"
+      delete_peer_pod="cvk-delete-managed-peer"
+      ;;
+    legacy)
+      delete_username="$legacy_username"
+      delete_live_pod="cvk-delete-legacy-live"
+      delete_own_pod="cvk-delete-legacy-own"
+      delete_peer_pod="cvk-delete-legacy-peer"
+      ;;
+  esac
+
+  delete_live_uid="$(kubectl get pod "$delete_live_pod" \
+    --namespace "$device_namespace" -o jsonpath='{.metadata.uid}')"
+  delete_live_options="{\"apiVersion\":\"v1\",\"kind\":\"DeleteOptions\",\"gracePeriodSeconds\":0,\"preconditions\":{\"uid\":\"${delete_live_uid}\"}}"
+  if raw_pod_delete "$delete_username" "$delete_live_pod" "$delete_live_options" \
+      >"$scratch_dir/pod-delete-${identity_case}-live-negative.txt" 2>&1; then
+    echo "${identity_case} worker initiated deletion of a live Pod" >&2
+    exit 1
+  fi
+  grep -Eq 'already initiated through Kubernetes|denied the request|failed expression' \
+    "$scratch_dir/pod-delete-${identity_case}-live-negative.txt"
+  test -z "$(kubectl get pod "$delete_live_pod" \
+    --namespace "$device_namespace" -o jsonpath='{.metadata.deletionTimestamp}')"
+
+  kubectl delete pod "$delete_own_pod" "$delete_peer_pod" \
+    --namespace "$device_namespace" --wait=false >/dev/null
+  test -n "$(kubectl get pod "$delete_own_pod" \
+    --namespace "$device_namespace" -o jsonpath='{.metadata.deletionTimestamp}')"
+  test -n "$(kubectl get pod "$delete_peer_pod" \
+    --namespace "$device_namespace" -o jsonpath='{.metadata.deletionTimestamp}')"
+
+  delete_own_uid="$(kubectl get pod "$delete_own_pod" \
+    --namespace "$device_namespace" -o jsonpath='{.metadata.uid}')"
+  delete_peer_uid="$(kubectl get pod "$delete_peer_pod" \
+    --namespace "$device_namespace" -o jsonpath='{.metadata.uid}')"
+  delete_missing_uid_options='{"apiVersion":"v1","kind":"DeleteOptions","gracePeriodSeconds":0}'
+  delete_wrong_uid_options='{"apiVersion":"v1","kind":"DeleteOptions","gracePeriodSeconds":0,"preconditions":{"uid":"00000000-0000-0000-0000-000000000000"}}'
+  delete_own_options="{\"apiVersion\":\"v1\",\"kind\":\"DeleteOptions\",\"gracePeriodSeconds\":0,\"preconditions\":{\"uid\":\"${delete_own_uid}\"}}"
+  delete_peer_options="{\"apiVersion\":\"v1\",\"kind\":\"DeleteOptions\",\"gracePeriodSeconds\":0,\"preconditions\":{\"uid\":\"${delete_peer_uid}\"}}"
+
+  if raw_pod_delete "$delete_username" "$delete_own_pod" "$delete_missing_uid_options" \
+      >"$scratch_dir/pod-delete-${identity_case}-missing-uid-negative.txt" 2>&1; then
+    echo "${identity_case} worker completed deletion without a UID precondition" >&2
+    exit 1
+  fi
+  grep -Eq 'current UID precondition and zero grace period|denied the request|failed expression' \
+    "$scratch_dir/pod-delete-${identity_case}-missing-uid-negative.txt"
+  if raw_pod_delete "$delete_username" "$delete_own_pod" "$delete_wrong_uid_options" \
+      >"$scratch_dir/pod-delete-${identity_case}-wrong-uid-negative.txt" 2>&1; then
+    echo "${identity_case} worker completed deletion with a stale UID precondition" >&2
+    exit 1
+  fi
+  # Storage CAS may reject a stale UID before DELETE admission is invoked;
+  # either path proves that a recreated Pod cannot be removed by this request.
+  grep -Eq 'UID in the precondition.*does not match|Precondition failed|Conflict|current UID precondition and zero grace period|denied the request|failed expression' \
+    "$scratch_dir/pod-delete-${identity_case}-wrong-uid-negative.txt"
+
+  raw_pod_delete "$delete_username" "$delete_own_pod" "$delete_own_options" >/dev/null
+  test -n "$(kubectl get pod "$delete_own_pod" \
+    --namespace "$device_namespace" -o jsonpath='{.metadata.deletionTimestamp}')"
+  if raw_pod_delete "$delete_username" "$delete_peer_pod" "$delete_peer_options" \
+      >"$scratch_dir/pod-delete-${identity_case}-peer-negative.txt" 2>&1; then
+    echo "${identity_case} worker completed deletion of a terminating peer Pod" >&2
+    exit 1
+  fi
+  grep -Eq 'exact bound virtual Node|denied the request|failed expression' \
+    "$scratch_dir/pod-delete-${identity_case}-peer-negative.txt"
+  test -n "$(kubectl get pod "$delete_peer_pod" \
+    --namespace "$device_namespace" -o jsonpath='{.metadata.deletionTimestamp}')"
+done
+
+for delete_pod in \
+  cvk-delete-managed-live cvk-delete-managed-own cvk-delete-managed-peer \
+  cvk-delete-legacy-live cvk-delete-legacy-own cvk-delete-legacy-peer; do
+  kubectl patch pod "$delete_pod" --namespace "$device_namespace" \
+    --type=merge -p '{"metadata":{"finalizers":[]}}' >/dev/null
+done
+kubectl delete pod \
+  cvk-delete-managed-live cvk-delete-managed-own cvk-delete-managed-peer \
+  cvk-delete-legacy-live cvk-delete-legacy-own cvk-delete-legacy-peer \
+  --namespace "$device_namespace" --ignore-not-found --wait=true --timeout=30s \
+  >/dev/null
+
 # Grant a generated worker main-resource Pod patch only as an adversarial test.
 # Admission must reserve the exact drain marker/finalizer to the manager, must
 # reject live session replacement, and must not let the manager smuggle any
@@ -652,33 +842,67 @@ if kubectl patch --as="$manager_username" pod cvk-worker-own \
 fi
 grep -Eq 'may change only its exact drain marker|denied the request|failed expression' \
   "$scratch_dir/drain-pod-manager-scope-negative.txt"
-# A caller with otherwise-valid direct Pod delete authority must not bypass a
-# PDB once the manager has installed the exact drain protection. This is an
-# actual DELETE request, not a dry run, so also prove it left no deletion mark.
-if kubectl delete --as="$worker_username" pod cvk-worker-own \
-    --namespace "$device_namespace" --wait=false \
-    >"$scratch_dir/drain-pod-direct-delete-negative.txt" 2>&1; then
-  echo "non-manager directly deleted a drain-protected Pod" >&2
-  exit 1
-fi
-grep -Eq 'direct deletion of a protected Pod|denied the request|failed expression' \
-  "$scratch_dir/drain-pod-direct-delete-negative.txt"
-test -z "$(kubectl get pod cvk-worker-own --namespace "$device_namespace" \
-  -o jsonpath='{.metadata.deletionTimestamp}')"
-if kubectl delete --as="$manager_username" pod cvk-worker-own \
-    --namespace "$device_namespace" --wait=false \
-    >"$scratch_dir/drain-pod-manager-delete-negative.txt" 2>&1; then
-  echo "topology manager directly deleted a drain-protected Pod" >&2
-  exit 1
-fi
-grep -Eq 'direct deletion of a protected Pod|denied the request|failed expression' \
-  "$scratch_dir/drain-pod-manager-delete-negative.txt"
-test -z "$(kubectl get pod cvk-worker-own --namespace "$device_namespace" \
-  -o jsonpath='{.metadata.deletionTimestamp}')"
 kubectl patch --as="$manager_username" pod cvk-worker-own \
   --namespace "$device_namespace" --type=merge \
   -p '{"metadata":{"annotations":{"ops.cisco.vk/drain-session":null},"finalizers":[]}}' \
   >/dev/null
+
+# Prove drain protection is an independent denial after the completion policy
+# would otherwise allow the generated worker's final DELETE. A real Eviction
+# starts deletion, while the reserved drain finalizer keeps the Pod observable.
+cat <<EOF | kubectl create -f - >/dev/null
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cvk-drain-direct-delete
+  namespace: ${device_namespace}
+spec:
+  nodeName: ${managed_node}
+  terminationGracePeriodSeconds: 0
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.10
+EOF
+kubectl patch --as="$manager_username" pod cvk-drain-direct-delete \
+  --namespace "$device_namespace" --type=merge \
+  -p "{\"metadata\":{\"annotations\":{\"ops.cisco.vk/drain-session\":\"${drain_session_a}\"},\"finalizers\":[\"ops.cisco.vk/iosxe-rollout-drain\"]}}" \
+  >/dev/null
+cat >"$scratch_dir/drain-direct-delete-eviction.yaml" <<EOF
+{"apiVersion":"policy/v1","kind":"Eviction","metadata":{
+  "name":"cvk-drain-direct-delete","namespace":"${device_namespace}"},
+  "deleteOptions":{"gracePeriodSeconds":0}}
+EOF
+kubectl create --as="$manager_username" \
+  --raw="/api/v1/namespaces/${device_namespace}/pods/cvk-drain-direct-delete/eviction" \
+  -f "$scratch_dir/drain-direct-delete-eviction.yaml" >/dev/null
+test -n "$(kubectl get pod cvk-drain-direct-delete \
+  --namespace "$device_namespace" -o jsonpath='{.metadata.deletionTimestamp}')"
+drain_direct_delete_uid="$(kubectl get pod cvk-drain-direct-delete \
+  --namespace "$device_namespace" -o jsonpath='{.metadata.uid}')"
+drain_direct_delete_options="{\"apiVersion\":\"v1\",\"kind\":\"DeleteOptions\",\"gracePeriodSeconds\":0,\"preconditions\":{\"uid\":\"${drain_direct_delete_uid}\"}}"
+
+if raw_pod_delete "$worker_username" cvk-drain-direct-delete "$drain_direct_delete_options" \
+    >"$scratch_dir/drain-pod-direct-delete-negative.txt" 2>&1; then
+  echo "non-manager directly deleted a terminating drain-protected Pod" >&2
+  exit 1
+fi
+grep -Eq 'direct deletion of a protected Pod|denied the request|failed expression' \
+  "$scratch_dir/drain-pod-direct-delete-negative.txt"
+if raw_pod_delete "$manager_username" cvk-drain-direct-delete "$drain_direct_delete_options" \
+    >"$scratch_dir/drain-pod-manager-delete-negative.txt" 2>&1; then
+  echo "topology manager directly deleted a terminating drain-protected Pod" >&2
+  exit 1
+fi
+grep -Eq 'direct deletion of a protected Pod|denied the request|failed expression' \
+  "$scratch_dir/drain-pod-manager-delete-negative.txt"
+test -n "$(kubectl get pod cvk-drain-direct-delete \
+  --namespace "$device_namespace" -o jsonpath='{.metadata.deletionTimestamp}')"
+kubectl patch --as="$manager_username" pod cvk-drain-direct-delete \
+  --namespace "$device_namespace" --type=merge \
+  -p '{"metadata":{"annotations":{"ops.cisco.vk/drain-session":null},"finalizers":[]}}' \
+  >/dev/null
+kubectl wait --for=delete pod/cvk-drain-direct-delete \
+  --namespace "$device_namespace" --timeout=30s >/dev/null
 
 # Exercise the only supported disruptive path through the real policy/v1
 # Eviction endpoint. One healthy Pod is PDB-permitted; a second is protected
@@ -2476,7 +2700,7 @@ if kubectl get clusterrole cisco-virtual-kubelet-controller -o yaml | \
 fi
 test "$(kubectl get validatingadmissionpolicy \
   -l "app.kubernetes.io/instance=${release_name}" \
-  -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' ')" -eq 9
+  -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' ')" -eq 10
 test -z "$(kubectl get deployment "${release_name}-cisco-virtual-kubelet-controller" \
   --namespace "$system_namespace" \
   -o jsonpath='{.spec.template.spec.containers[0].command}' | grep -o -- '--enable-managed-topology' || true)"

@@ -86,10 +86,11 @@ func reconcilerFor(t *testing.T, objs ...runtime.Object) *CiscoDeviceReconciler 
 		WithRuntimeObjects(objs...).
 		Build()
 	return &CiscoDeviceReconciler{
-		Client:         fakeClient,
-		Scheme:         s,
-		Image:          "cisco-vk:test",
-		ServiceAccount: "test-sa",
+		Client:                   fakeClient,
+		Scheme:                   s,
+		Image:                    "cisco-vk:test",
+		ServiceAccount:           "test-sa",
+		ManagedAdmissionVerified: true,
 	}
 }
 
