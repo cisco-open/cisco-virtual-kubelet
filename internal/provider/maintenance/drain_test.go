@@ -724,6 +724,11 @@ func TestAcquireDrainDeleteRequiresEveryAuthorityBinding(t *testing.T) {
 		"session purpose": func(o *drainFixtureObjects) {
 			o.device.Status.MaintenanceSession.Purpose = ciskov1.DeviceMaintenancePurposeSoftwareMutation
 		},
+		"session requested-at": func(o *drainFixtureObjects) {
+			o.device.Status.MaintenanceSession.RequestedAt = metav1.NewTime(
+				o.leaf.Status.ManagerDrain.StartedAt.Add(time.Second),
+			)
+		},
 		"reservation": func(o *drainFixtureObjects) {
 			o.leaf.Status.ManagerDrain.ReservationID = "other"
 		},
@@ -1388,6 +1393,7 @@ func TestResolveDrainDeletePodCompletionSurvivesMutationAuthorityTurnover(t *tes
 		delete(o.node.Annotations, managedprotocol.AnnotationDrainTaintOwner)
 		o.node.Annotations[managedprotocol.AnnotationWorkerObservedRevision] = "sha256:" + strings.Repeat("f", 64)
 		o.leaf.Status.ManagerDrain.StartedAt = metav1.NewTime(time.Now().Add(-3 * time.Hour))
+		o.device.Status.MaintenanceSession.RequestedAt = o.leaf.Status.ManagerDrain.StartedAt
 		o.leaf.Status.ManagerDrain.DrainDeadline = metav1.NewTime(time.Now().Add(-2 * time.Hour))
 	})
 
@@ -1467,6 +1473,11 @@ func TestResolveDrainDeletePodCompletionRequiresExactManagerIdentity(t *testing.
 		{name: "wrong Node identity", mutate: func(o *drainFixtureObjects) { o.device.Status.NodeIdentity.NodeUID = "replacement-node" }},
 		{name: "wrong session token", mutate: func(o *drainFixtureObjects) {
 			o.leaf.Status.ManagerDrain.SessionToken = "00000000-0000-4000-8000-000000000002"
+		}},
+		{name: "wrong session requested-at", mutate: func(o *drainFixtureObjects) {
+			o.device.Status.MaintenanceSession.RequestedAt = metav1.NewTime(
+				o.leaf.Status.ManagerDrain.StartedAt.Add(time.Second),
+			)
 		}},
 		{name: "wrong operation UID", mutate: func(o *drainFixtureObjects) { o.device.Status.MaintenanceSession.Operation.UID = "replacement-leaf" }},
 		{name: "invalid selection hash", mutate: func(o *drainFixtureObjects) { o.leaf.Status.ManagerDrain.Pods[0].EligibilityHash = drainPlanHash }},

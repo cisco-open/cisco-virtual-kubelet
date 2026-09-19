@@ -962,7 +962,8 @@ func validateDrainLeafBindingWithRevisionRollover(
 	}
 	if drain.SessionToken != session.SessionToken || drain.ReservationID != admission.ReservationID ||
 		drain.PolicyEpoch != admission.PolicyEpoch || drain.ControlRevision != control.Revision ||
-		drain.NodeUID != string(node.UID) || drain.StartedAt.IsZero() || drain.DrainDeadline.IsZero() ||
+		drain.NodeUID != string(node.UID) || drain.StartedAt.IsZero() ||
+		!session.RequestedAt.Equal(&drain.StartedAt) || drain.DrainDeadline.IsZero() ||
 		drain.UpdatedAt.IsZero() || !drain.DrainDeadline.After(drain.StartedAt.Time) ||
 		drain.UpdatedAt.Before(&drain.StartedAt) {
 		return nil, fmt.Errorf("managed drain authority does not match the maintenance session and leaf grant")
