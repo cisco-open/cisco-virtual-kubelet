@@ -125,9 +125,9 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 	"topology-ledger": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
-		matchConditions: []string{"chart-ledger"}, variables: []string{"manager", "breakglass"}, validations: 3, coreTyped: true,
-		requiredFragments: []string{"managed-ledger", "ledger.json", "check('manage-ledger')", "request.namespace", "request.name"},
-		digest:            "sha256:3f585012df3c122804d1f300f242eaa365073d30fb7cbd0c5444474ba59faaaf",
+		matchConditions: []string{"chart-ledger"}, variables: []string{"manager", "breakglass"}, validations: 4, coreTyped: true,
+		requiredFragments: []string{"managed-ledger", "ledger.json", "check('manage-ledger')", "request.operation != 'UPDATE'", "request.namespace", "request.name"},
+		digest:            "sha256:8f060e392980a2eeb4ebd7636318d9cf939fabf212ba98a01eea313eb4cd5d99",
 	},
 	"managed-maintenance-lease": {
 		apiGroups: []string{"coordination.k8s.io"}, apiVersions: []string{"v1"}, resources: []string{"leases"},

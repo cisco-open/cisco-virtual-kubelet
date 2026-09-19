@@ -477,6 +477,11 @@ func (r *CiscoDeviceReconciler) reconcileManagedNodeMetadata(
 	}
 
 	priorManagedTaints := decodeManagedTaints(node.Annotations[managedprotocol.AnnotationManagedTaints])
+	// The initialization guard is manager-reserved. Older failure handling
+	// could add it without recording the ownership marker, so consume that
+	// exact legacy state before rebuilding the desired managed taints. Never
+	// remove an unrelated operator taint.
+	node.Spec.Taints = deleteTaint(node.Spec.Taints, taintIdentity(topologyInitializationTaint()))
 	for identity := range priorManagedTaints {
 		// A PDB-drain maintenance taint has its own session-bound ownership
 		// marker. Defer that identity to reconcileManagedDrainTaint so a lost
@@ -615,7 +620,8 @@ func (r *CiscoDeviceReconciler) patchManagedTopologyStatus(
 	projectionCurrent := before.Status.TopologyProjection != nil &&
 		before.Status.TopologyProjection.EffectiveLabelHash == hash
 	workerReady := projectionCurrent && managedWorkerReadyForProjection(node, before.Status.TopologyProjection)
-	topologyReady := workerReady && physicalObservation.ready
+	initializationGuardActive := hasTaintIdentity(node.Spec.Taints, taintIdentity(topologyInitializationTaint()))
+	topologyReady := workerReady && physicalObservation.ready && !initializationGuardActive
 	topologyReadyStatus := metav1.ConditionFalse
 	topologyReadyReason := "ManagedWriterHandoffPending"
 	topologyReadyMessage := "managed worker has not acknowledged the current topology projection"
@@ -623,6 +629,9 @@ func (r *CiscoDeviceReconciler) patchManagedTopologyStatus(
 		topologyReadyStatus = metav1.ConditionTrue
 		topologyReadyReason = "ProjectionComplete"
 		topologyReadyMessage = "required topology is projected and the live physical identity is verified"
+	} else if workerReady && physicalObservation.ready && initializationGuardActive {
+		topologyReadyReason = "InitializationGuardActive"
+		topologyReadyMessage = "the manager-reserved initialization guard still prevents scheduling"
 	} else if workerReady {
 		topologyReadyReason = physicalObservation.reason
 		topologyReadyMessage = physicalObservation.message
@@ -836,8 +845,20 @@ func (r *CiscoDeviceReconciler) guardBoundNode(ctx context.Context, device *cisk
 		return fmt.Errorf("cannot guard Node %q: its current UID or managed device binding differs from status", node.Name)
 	}
 	before := node.DeepCopy()
-	node.Spec.Taints = upsertTaint(node.Spec.Taints, topologyInitializationTaint())
-	if taintsEqual(before.Spec.Taints, node.Spec.Taints) {
+	guard := topologyInitializationTaint()
+	node.Spec.Taints = upsertTaint(node.Spec.Taints, guard)
+	if node.Annotations == nil {
+		node.Annotations = map[string]string{}
+	}
+	managedTaints := decodeManagedTaints(node.Annotations[managedprotocol.AnnotationManagedTaints])
+	managedTaints[taintIdentity(guard)] = struct{}{}
+	managedTaintIDs := make([]string, 0, len(managedTaints))
+	for identity := range managedTaints {
+		managedTaintIDs = append(managedTaintIDs, identity)
+	}
+	sort.Strings(managedTaintIDs)
+	node.Annotations[managedprotocol.AnnotationManagedTaints] = strings.Join(managedTaintIDs, ",")
+	if equalitySemanticNodeMetadata(before, &node) {
 		return nil
 	}
 	return r.Patch(ctx, &node, client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{}))
@@ -967,6 +988,15 @@ func deleteTaint(taints []corev1.Taint, identity string) []corev1.Taint {
 		}
 	}
 	return out
+}
+
+func hasTaintIdentity(taints []corev1.Taint, identity string) bool {
+	for _, taint := range taints {
+		if taintIdentity(taint) == identity {
+			return true
+		}
+	}
+	return false
 }
 
 func taintsEqual(a, b []corev1.Taint) bool {

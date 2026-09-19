@@ -35,7 +35,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
 )
 
 // TestEnvtest_WorkerTemplateDefaultsAreAPIRoundTripStable guards the real
@@ -139,5 +141,126 @@ func TestEnvtest_WorkerTemplateDefaultsAreAPIRoundTripStable(t *testing.T) {
 		t.Fatal(err)
 	} else if op != controllerutil.OperationResultNone {
 		t.Fatalf("API-round-tripped Deployment operation=%q, want unchanged", op)
+	}
+}
+
+// TestEnvtest_ManagedTopologyRepairsUntrackedInitializationGuard proves that
+// removing the last manager-reserved guard survives a real API-server patch.
+// Older managers could write this taint without its ownership annotation;
+// unrelated operator taints must remain untouched during recovery.
+func TestEnvtest_ManagedTopologyRepairsUntrackedInitializationGuard(t *testing.T) {
+	testEnv := &envtest.Environment{}
+	cfg, err := testEnv.Start()
+	if err != nil {
+		t.Fatalf("envtest start: %v (is KUBEBUILDER_ASSETS set?)", err)
+	}
+	defer func() {
+		if err := testEnv.Stop(); err != nil {
+			t.Errorf("envtest stop: %v", err)
+		}
+	}()
+
+	scheme := runtime.NewScheme()
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	apiClient, err := client.New(cfg, client.Options{Scheme: scheme})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	const (
+		deviceNamespace = "edge"
+		deviceName      = "switch-guard-recovery"
+		deviceUID       = "device-uid"
+		physicalID      = "serial-switch-guard"
+		projectionHash  = "projection-hash"
+	)
+	operatorTaint := corev1.Taint{Key: "example.test/operator", Value: "keep", Effect: corev1.TaintEffectNoExecute}
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: deviceName,
+			Annotations: map[string]string{
+				managedprotocol.AnnotationManaged:         "true",
+				managedprotocol.AnnotationDeviceNamespace: deviceNamespace,
+				managedprotocol.AnnotationDeviceName:      deviceName,
+				managedprotocol.AnnotationDeviceUID:       deviceUID,
+				managedprotocol.AnnotationManagedTaints:   "",
+			},
+		},
+		Spec: corev1.NodeSpec{Taints: []corev1.Taint{topologyInitializationTaint(), operatorTaint}},
+	}
+	if err := apiClient.Create(ctx, node); err != nil {
+		t.Fatal(err)
+	}
+	projectionTime := metav1.NewTime(time.Now().Add(-time.Minute))
+	node.Status = corev1.NodeStatus{
+		NodeInfo: corev1.NodeSystemInfo{MachineID: physicalID, SystemUUID: physicalID},
+		Conditions: []corev1.NodeCondition{
+			{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+			{
+				Type:   corev1.NodeConditionType(managedprotocol.ManagedWorkerReadyCondition),
+				Status: corev1.ConditionTrue, Reason: managedprotocol.ManagedWorkerReadyReason,
+				LastHeartbeatTime: metav1.NewTime(projectionTime.Add(time.Second)),
+			},
+		},
+	}
+	if err := apiClient.Status().Update(ctx, node); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.Get(ctx, types.NamespacedName{Name: node.Name}, node); err != nil {
+		t.Fatal(err)
+	}
+
+	device := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{Namespace: deviceNamespace, Name: deviceName, UID: types.UID(deviceUID)},
+		Spec:       ciskov1.DeviceSpec{PhysicalIdentity: physicalID},
+		Status: ciskov1.DeviceStatus{
+			NodeIdentity: &ciskov1.DeviceNodeIdentityStatus{
+				DeviceUID: deviceUID, NodeName: node.Name, NodeUID: string(node.UID), PhysicalIdentity: physicalID,
+			},
+			TopologyProjection: &ciskov1.DeviceTopologyProjectionStatus{
+				EffectiveLabelHash: projectionHash, LastSuccessfulTime: projectionTime,
+			},
+		},
+	}
+	reconciler := &CiscoDeviceReconciler{Client: apiClient, APIReader: apiClient, Scheme: scheme}
+	if err := reconciler.reconcileManagedNodeMetadata(ctx, device, node, map[string]string{},
+		&topologyrollout.ParsedAdminPolicy{}, projectionHash, managedMaintenanceDecision{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.Get(ctx, types.NamespacedName{Name: node.Name}, node); err != nil {
+		t.Fatal(err)
+	}
+	if hasTaintIdentity(node.Spec.Taints, taintIdentity(topologyInitializationTaint())) {
+		t.Fatalf("API-round-tripped Node retained stale initialization guard: %+v", node.Spec.Taints)
+	}
+	if !hasTaintIdentity(node.Spec.Taints, taintIdentity(operatorTaint)) {
+		t.Fatalf("API-round-tripped Node lost unrelated operator taint: %+v", node.Spec.Taints)
+	}
+	if got := node.Annotations[managedprotocol.AnnotationManagedTaints]; got != "" {
+		t.Fatalf("managed taint ownership after recovery = %q, want empty", got)
+	}
+
+	// Exercise the physical-lab shape as a separate real API round trip: the
+	// stale initialization guard is the Node's only taint. The merge patch must
+	// persist an empty taint list rather than losing the final-element removal.
+	node.Spec.Taints = []corev1.Taint{topologyInitializationTaint()}
+	node.Annotations[managedprotocol.AnnotationManagedTaints] = ""
+	if err := apiClient.Update(ctx, node); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.Get(ctx, types.NamespacedName{Name: node.Name}, node); err != nil {
+		t.Fatal(err)
+	}
+	if err := reconciler.reconcileManagedNodeMetadata(ctx, device, node, map[string]string{},
+		&topologyrollout.ParsedAdminPolicy{}, projectionHash, managedMaintenanceDecision{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.Get(ctx, types.NamespacedName{Name: node.Name}, node); err != nil {
+		t.Fatal(err)
+	}
+	if len(node.Spec.Taints) != 0 {
+		t.Fatalf("API-round-tripped Node retained taints after final guard removal: %+v", node.Spec.Taints)
 	}
 }

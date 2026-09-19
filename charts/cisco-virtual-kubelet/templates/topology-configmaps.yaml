@@ -18,6 +18,48 @@ limitations under the License.
 {{- $policyNamespace := include "cisco-virtual-kubelet.topologyPolicyNamespace" . }}
 {{- $policyName := include "cisco-virtual-kubelet.topologyPolicyName" . }}
 {{- $ledgerName := include "cisco-virtual-kubelet.topologyLedgerName" . }}
+{{- $livePolicy := lookup "v1" "ConfigMap" $policyNamespace $policyName }}
+{{- $liveLedger := lookup "v1" "ConfigMap" $policyNamespace $ledgerName }}
+{{- $retainedTopologyAuthority := false }}
+{{- $liveAdmissionPolicies := lookup "admissionregistration.k8s.io/v1" "ValidatingAdmissionPolicy" "" "" }}
+{{- range $candidate := (get $liveAdmissionPolicies "items" | default (list)) }}
+{{- $annotations := dig "metadata" "annotations" (dict) $candidate }}
+{{- if and
+      (eq (get $annotations "meta.helm.sh/release-name") $.Release.Name)
+      (eq (get $annotations "meta.helm.sh/release-namespace") $.Release.Namespace)
+      (eq (get $annotations "topology.cisco.vk/admission-contract-version") "v1") }}
+{{- $retainedTopologyAuthority = true }}
+{{- end }}
+{{- end }}
+{{- if ne (empty $livePolicy) (empty $liveLedger) }}
+{{- fail (printf "managed topology requires policy %s/%s and ledger %s/%s to be either both absent for bootstrap or both present; restore the retained identity before upgrading" $policyNamespace $policyName $policyNamespace $ledgerName) }}
+{{- end }}
+{{- if and (empty $livePolicy) (empty $liveLedger) $retainedTopologyAuthority }}
+{{- fail (printf "refusing to bootstrap new topology policy %s/%s and ledger %s/%s while this Helm release retains managed-topology admission authority; restore the original coordinates or complete audited retirement first" $policyNamespace $policyName $policyNamespace $ledgerName) }}
+{{- end }}
+{{- $boundLedgerUID := "" }}
+{{- if not (empty $livePolicy) }}
+{{- if ne (dig "metadata" "annotations" "topology.cisco.vk/managed-policy" "" $livePolicy) "true" }}
+{{- fail (printf "refusing to adopt topology policy %s/%s without topology.cisco.vk/managed-policy=true" $policyNamespace $policyName) }}
+{{- end }}
+{{- if ne (dig "metadata" "annotations" "topology.cisco.vk/admission-policy-prefix" "" $livePolicy) (include "cisco-virtual-kubelet.fullname" .) }}
+{{- fail (printf "refusing to adopt topology policy %s/%s with a different admission-policy prefix" $policyNamespace $policyName) }}
+{{- end }}
+{{- if ne (dig "metadata" "annotations" "topology.cisco.vk/managed-ledger" "" $liveLedger) "true" }}
+{{- fail (printf "refusing to adopt topology ledger %s/%s without topology.cisco.vk/managed-ledger=true" $policyNamespace $ledgerName) }}
+{{- end }}
+{{- $boundLedgerUID = dig "metadata" "annotations" "topology.cisco.vk/ledger-uid" "" $livePolicy }}
+{{- $liveLedgerUID := dig "metadata" "uid" "" $liveLedger }}
+{{- if eq $liveLedgerUID "" }}
+{{- fail (printf "topology ledger %s/%s has no Kubernetes UID" $policyNamespace $ledgerName) }}
+{{- end }}
+{{- if and (ne $boundLedgerUID "") (ne $boundLedgerUID $liveLedgerUID) }}
+{{- fail (printf "topology policy %s/%s binds ledger UID %s, but live ledger %s/%s has UID %s" $policyNamespace $policyName $boundLedgerUID $policyNamespace $ledgerName $liveLedgerUID) }}
+{{- end }}
+{{- if and (ne $boundLedgerUID "") (eq (trim (dig "data" "ledger.json" "" $liveLedger)) "") }}
+{{- fail (printf "topology policy %s/%s is bound to an empty ledger; recover the retained ledger through the audited break-glass procedure before upgrading" $policyNamespace $policyName) }}
+{{- end }}
+{{- end }}
 {{- $policy := dict
       "version" "v1"
       "fleetSelector" .Values.topology.policy.fleetSelector
@@ -59,12 +101,17 @@ metadata:
     topology.cisco.vk/managed-policy: "true"
     topology.cisco.vk/admission-policy-prefix: {{ include "cisco-virtual-kubelet.fullname" . | quote }}
     topology.cisco.vk/admission-contract-version: "v1"
+    {{- if ne $boundLedgerUID "" }}
+    topology.cisco.vk/ledger-uid: {{ $boundLedgerUID | quote }}
+    {{- end }}
 data:
-  # The manager binds the live ledger ConfigMap UID in the protected
-  # topology.cisco.vk/ledger-uid annotation after initializing the ledger.
-  # Helm must never render a guessed or placeholder UID here.
+  # On bootstrap the manager binds the live ledger ConfigMap UID in the
+  # protected topology.cisco.vk/ledger-uid annotation after initializing the
+  # ledger. Live upgrades preserve that immutable binding through lookup;
+  # Helm never renders a guessed or placeholder UID.
   policy.json: |-
     {{ $policy | toJson }}
+{{- if empty $liveLedger }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -78,8 +125,10 @@ metadata:
     helm.sh/resource-policy: keep
     topology.cisco.vk/managed-ledger: "true"
 data:
-  # Empty is the only safe Helm bootstrap state. The manager initializes a
-  # v1 ledger containing this object's actual UID before publishing the policy
-  # binding. A bound empty ledger or a recreated UID is a fail-closed error.
+  # Empty is the only safe first-install state. Once this object exists, Helm
+  # omits it from upgrades so a stale render cannot overwrite manager-owned
+  # reservations. The keep annotation preserves it when it leaves the release
+  # manifest. A bound empty ledger or a recreated UID is a fail-closed error.
   ledger.json: ""
+{{- end }}
 {{- end }}

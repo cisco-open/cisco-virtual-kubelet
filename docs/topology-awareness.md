@@ -182,24 +182,32 @@ helm upgrade --install cvk charts/cisco-virtual-kubelet \
 apply can conflict with Helm's initial CRD field ownership; the explicit force
 is limited to the exact reviewed CVK CRD files passed through `-f`.
 
-The first shared-to-isolated worker migration must be a live `helm upgrade`.
-The chart uses Kubernetes `lookup` to preserve only the exact existing shared
-RoleBinding and ClusterRoleBinding while the manager replaces their users.
-Offline `helm template` output and GitOps pruning cannot discover those live,
-cross-namespace identities. They are not a supported source of truth for this
-one-time handoff unless pruning explicitly excludes existing CVK RBAC until
-the manager reports retirement complete. Normal offline review of rendered
-manifests remains useful; applying that output as a pruning migration is the
-unsafe operation.
+The first shared-to-isolated worker migration and every later managed-topology
+upgrade must be a live `helm upgrade`. The chart uses Kubernetes `lookup` to
+preserve only the exact existing shared RoleBinding and ClusterRoleBinding
+while the manager replaces their users. It also verifies the retained topology
+policy/ledger pair, carries the immutable ledger UID binding into the policy,
+and omits the mutable ledger from Helm's update set after bootstrap. Offline
+`helm template` output and GitOps pruning cannot discover those live identities.
+They are not a supported source of truth unless pruning explicitly excludes
+existing CVK RBAC and the topology ledger until the manager reports retirement
+complete. Normal offline review remains useful; applying that output as a
+pruning migration is the unsafe operation.
 
 Do not use `helm upgrade --force`. The policy and ledger are identity-bound by
 their Kubernetes UIDs. Replacement is intentionally treated as a safety
 failure, not as an empty new fleet.
 
-The chart creates the administrator policy and an empty ledger. The manager
-validates the whole `policy.json`, initializes `ledger.json` with the live
-ledger UID, and adds that UID to the protected policy annotation. Confirm that
-the UIDs match:
+On the first managed-topology bootstrap the chart creates the administrator
+policy and an empty kept ledger. The manager validates the whole `policy.json`,
+initializes `ledger.json` with the live ledger UID, and adds that UID to the
+protected policy annotation. Subsequent live upgrades preserve that annotation
+but do not submit a ledger update, avoiding a lookup/apply race with live
+reservations. They fail on a partial pair, a bound empty ledger, or a UID
+mismatch. Policy/ledger coordinates and `fullnameOverride` cannot move while
+release-owned managed-topology admission authority remains; retire that
+authority explicitly before establishing new coordinates. Confirm that the
+UIDs match:
 
 ```bash
 kubectl get configmap cvk-cisco-virtual-kubelet-topology-policy \
@@ -1167,7 +1175,7 @@ Common fail-closed states include:
 | target identity/generation change | CiscoDevice was replaced or its executable spec changed; stop new claims and create a new approved plan |
 | `SourceIdentityChanged` | source Secret UID or frozen endpoint changed |
 | `MutationOutcomeUnresolved` | switch may have accepted a mutation; do not retry or release from a timer |
-| ledger UID/decoding error | retain all guards; reconcile ledger and physical state through audited break-glass |
+| ledger UID/decoding error | retain all guards; reconcile ledger and physical state through audited break-glass; admission rejects empty updates, the manager validates replacement format/UID, and delete/recreate is unsupported |
 
 ## Delegated authorization
 

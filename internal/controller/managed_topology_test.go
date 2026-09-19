@@ -399,6 +399,22 @@ func TestManagedPhysicalIdentityControlsTopologyReadinessAndGuard(t *testing.T) 
 	if ready == nil || ready.Status != metav1.ConditionTrue || conflict == nil || conflict.Status != metav1.ConditionFalse {
 		t.Fatalf("recovered conditions: ready=%#v conflict=%#v", ready, conflict)
 	}
+
+	// Defense in depth: readiness must never be published while the canonical
+	// initialization guard is present, even if every status observation is
+	// otherwise current and healthy.
+	guarded.Spec.Taints = upsertTaint(guarded.Spec.Taints, topologyInitializationTaint())
+	if err := r.patchManagedTopologyStatus(ctx, &current, &guarded, hash,
+		managedMaintenanceDecision{status: metav1.ConditionTrue, reason: "Idle", message: "idle"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := kubeClient.Get(ctx, client.ObjectKeyFromObject(device), &current); err != nil {
+		t.Fatal(err)
+	}
+	ready = findCondition(current.Status.Conditions, ciskov1.CiscoDeviceConditionTopologyReady)
+	if ready == nil || ready.Status != metav1.ConditionFalse || ready.Reason != "InitializationGuardActive" {
+		t.Fatalf("guarded Node reported topology ready: %#v", ready)
+	}
 }
 
 func TestManagedHealthObservationRefreshesOnlyExplicitlyEvaluatedCondition(t *testing.T) {
@@ -584,6 +600,60 @@ func TestManagedPolicyUnavailableReappliesBoundNodeGuard(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("managed Node remained schedulable after policy loss")
+	}
+	if got, want := guarded.Annotations[managedprotocol.AnnotationManagedTaints],
+		taintIdentity(topologyInitializationTaint()); got != want {
+		t.Fatalf("managed guard ownership = %q, want %q", got, want)
+	}
+
+	// Model a guard written by an older manager that did not record ownership.
+	// The initialization key is manager-reserved, so policy recovery must heal
+	// that exact stale state without disturbing an unrelated operator taint.
+	operatorTaint := corev1.Taint{Key: "example.test/operator", Value: "keep", Effect: corev1.TaintEffectNoExecute}
+	guarded.Annotations[managedprotocol.AnnotationManagedTaints] = ""
+	guarded.Spec.Taints = append(guarded.Spec.Taints, operatorTaint)
+	if err := c.Update(context.Background(), &guarded); err != nil {
+		t.Fatal(err)
+	}
+	projectionTime := metav1.NewTime(time.Now().Add(-time.Minute))
+	device.Status.TopologyProjection = &ciskov1.DeviceTopologyProjectionStatus{
+		EffectiveLabelHash: "projection-hash",
+		LastSuccessfulTime: projectionTime,
+	}
+	guarded.Status.Conditions = []corev1.NodeCondition{
+		{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+		{
+			Type:   corev1.NodeConditionType(managedprotocol.ManagedWorkerReadyCondition),
+			Status: corev1.ConditionTrue, Reason: managedprotocol.ManagedWorkerReadyReason,
+			LastHeartbeatTime: metav1.NewTime(projectionTime.Add(time.Second)),
+		},
+	}
+	guarded.Status.NodeInfo.MachineID = "serial-policy-loss"
+	guarded.Status.NodeInfo.SystemUUID = "serial-policy-loss"
+	if err := c.Status().Update(context.Background(), &guarded); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: node.Name}, &guarded); err != nil {
+		t.Fatal(err)
+	}
+	policy := &topologyrollout.ParsedAdminPolicy{Config: topologyrollout.AdminPolicyConfig{}}
+	if err := r.reconcileManagedNodeMetadata(context.Background(), device, &guarded,
+		map[string]string{}, policy, "projection-hash", managedMaintenanceDecision{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: node.Name}, &guarded); err != nil {
+		t.Fatal(err)
+	}
+	for _, taint := range guarded.Spec.Taints {
+		if taintIdentity(taint) == taintIdentity(topologyInitializationTaint()) {
+			t.Fatal("managed Node remained guarded after policy recovery")
+		}
+	}
+	if !hasTaintIdentity(guarded.Spec.Taints, taintIdentity(operatorTaint)) {
+		t.Fatal("policy recovery removed an unrelated operator taint")
+	}
+	if got := guarded.Annotations[managedprotocol.AnnotationManagedTaints]; got != "" {
+		t.Fatalf("managed taint ownership after recovery = %q, want empty", got)
 	}
 }
 

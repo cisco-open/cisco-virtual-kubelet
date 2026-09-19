@@ -100,11 +100,14 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   policy: {{ include "cisco-virtual-kubelet.topologyPolicyNamespace" . }}/{{ include "cisco-virtual-kubelet.topologyPolicyName" . }}
   ledger: {{ include "cisco-virtual-kubelet.topologyPolicyNamespace" . }}/{{ include "cisco-virtual-kubelet.topologyLedgerName" . }}
 
-  The manager validates the policy selector and all eight versioned admission
+  The manager validates the policy selector and all nine versioned admission
   policy/binding pairs before initializing ledger.json with the ledger
   ConfigMap's live UID and binding that UID into the policy annotation. It
   fails closed if admission discovery/type checking, either object identity,
   or the binding is invalid.
+  A later live Helm upgrade preserves the immutable policy binding and omits
+  the kept, manager-owned ledger from its update set. It refuses partial or
+  UID-mismatched retained state rather than creating replacement authority.
   Do not use helm upgrade --force and do not recreate the ledger to clear an
   error. The ledger, policy, admission pairs, and managed-worker role carry
   Helm keep protection; disabling or uninstalling does not retire them. Verify

@@ -151,8 +151,9 @@ Kubernetes 1.37-only experimental Workload/PodGroup/TAS example lives under
 `examples/topology/`; it requires disabled-by-default in-tree feature gates and
 is not installed or enabled by this chart.
 
-The chart renders the complete policy as one coherent `policy.json` value. It
-renders `ledger.json` empty and never invents a UID. On startup, the manager:
+The chart renders the complete policy as one coherent `policy.json` value. On
+the first managed-topology bootstrap it renders `ledger.json` empty and never
+invents a UID. On startup, the manager:
 
 1. reads the live policy ConfigMap and validates its complete schema and
    non-empty fleet selector before any ledger write;
@@ -162,6 +163,18 @@ renders `ledger.json` empty and never invents a UID. On startup, the manager:
    Kubernetes UID; and
 4. adds that UID to the policy's protected
    `topology.cisco.vk/ledger-uid` annotation.
+
+On later live upgrades, Helm `lookup` verifies that the retained policy and
+ledger both exist, preserves the immutable UID annotation, and omits the
+manager-owned ledger ConfigMap from the upgraded release manifest. The
+`helm.sh/resource-policy: keep` annotation leaves that object in place. This is
+deliberately stronger than copying its current value into the new manifest:
+copying has a read/apply race that could overwrite a reservation created after
+rendering. Partial objects, a bound empty ledger, or a UID mismatch stop the
+upgrade instead of creating replacement rollout authority.
+Policy/ledger coordinates and `fullnameOverride` therefore cannot move while
+the release retains managed-topology admission authority; complete audited
+retirement before establishing new coordinates.
 
 Once bound, a missing, empty, or recreated ledger is an identity failure. CVK
 does not silently initialize new admission authority over in-flight work.
@@ -349,18 +362,21 @@ the initial CRD install, so plain server-side apply can report a managed-fields
 conflict. The reviewed force flag is scoped to the exact `-f` objects; never
 point it at an unrelated manifest directory.
 
-Enabling topology on an existing release must use a live `helm upgrade` so
-`lookup` can retain the exact shared worker bindings until their users are
-quiescent. Offline `helm template` output and GitOps pruning cannot enumerate
-that live, cross-namespace authority and are unsupported for the migration
-unless existing CVK RBAC is excluded from prune through controller-reported
-retirement completion.
+Enabling or upgrading topology on an existing release must use a live
+`helm upgrade` so `lookup` can retain the exact shared worker bindings until
+their users are quiescent and preserve the policy/ledger identity without
+submitting a ledger update. Offline `helm template` output and GitOps pruning
+cannot enumerate that live authority and are unsupported for the migration
+unless existing CVK RBAC and the topology ledger are excluded from prune
+through controller-reported retirement completion.
 
 Do not use `helm upgrade --force` for a managed-topology release. Replacing the
 policy or ledger changes Kubernetes object identity and intentionally freezes
-new admission. A normal three-way Helm upgrade leaves the manager-populated
-ledger data and live UID annotation alone because the chart's desired bootstrap
-fields remain empty/absent.
+new admission. A normal live upgrade carries the manager-populated UID binding
+into the policy manifest and removes the kept ledger from Helm's update set;
+it never reapplies an empty or lookup-copied ledger value. Do not roll back to
+a historical chart revision that still managed `ledger.json`; upgrade the
+desired values with this chart version instead.
 
 Before enabling workers, inspect admission type checking and bindings:
 
@@ -607,7 +623,8 @@ When enabled, nine `admissionregistration.k8s.io/v1` policy/binding pairs deny:
   heartbeat, config-family, or mutation update outside its bounded protocol;
   mutation requests additionally bind the current `software-upgrade/<leaf UID>`
   holder while every Lease purpose/device/Node/worker binding stays immutable;
-- policy ledger-UID replacement or unauthorized policy/ledger mutations.
+- policy ledger-UID replacement, unauthorized policy/ledger mutations, or any
+  update that empties an existing ledger—even by a break-glass identity.
 
 All bindings use `validationActions: [Deny]` and all policies use
 `failurePolicy: Fail`.
@@ -644,9 +661,10 @@ and ledger break-glass permissions remain separate.
 Never delete and recreate only the ledger to clear a failure. If the ledger or
 policy identity is damaged, keep admission paused and use the separately
 authorized break-glass procedure to reconcile physical device state and
-durable claims. Recreating empty authority over unresolved work is not a
-supported recovery path. The keep annotation is a deletion safeguard, not
-proof that retirement preconditions have been met.
+durable claims with a valid non-empty ledger. Admission does not allow
+break-glass to empty an existing ledger. Recreating empty authority over
+unresolved work is not a supported recovery path. The keep annotation is a
+deletion safeguard, not proof that retirement preconditions have been met.
 
 A deleted and recreated CiscoDevice with the same namespace/name has a new UID
 and intentionally cannot inherit the old retained heartbeat, config-family, or

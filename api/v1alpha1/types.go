@@ -182,6 +182,7 @@ type DeviceSpec struct {
 
 	// Taints to apply to the virtual kubelet node.
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:XValidation:rule="self.all(t, t.key != 'topology.cisco.vk/uninitialized')",message="topology.cisco.vk/uninitialized is manager-reserved"
 	Taints []v1.Taint `json:"taints,omitempty" mapstructure:"taints,omitempty"`
 
 	// MaxPods is the maximum number of pods the device can host.

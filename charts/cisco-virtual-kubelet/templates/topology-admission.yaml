@@ -1711,6 +1711,10 @@ spec:
       message: ledger writes are manager-only; break-glass mutation requires manage-ledger permission
     - expression: request.operation != 'CREATE' || object.data['ledger.json'] == ''
       message: a newly created ledger must be empty so the manager can bind its live UID
+    - expression: >-
+        request.operation != 'UPDATE' ||
+        !object.data['ledger.json'].matches('^\\s*$')
+      message: an existing topology ledger cannot be emptied, including through break-glass
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding

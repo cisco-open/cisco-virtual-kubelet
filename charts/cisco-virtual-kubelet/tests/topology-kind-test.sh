@@ -223,6 +223,10 @@ helm upgrade "$release_name" "$chart_dir" \
   --set topology.policy.workloadDrain.enabled=true \
   --set-json "topology.policy.workloadDrain.allowedNamespaces=[\"${device_namespace}\"]" \
   >/dev/null
+bootstrap_topology_revision="$(helm status "$release_name" \
+  --namespace "$system_namespace" -o json | \
+  sed -n 's/.*"version":[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)"
+test -n "$bootstrap_topology_revision"
 if kubectl get clusterrole cisco-virtual-kubelet-controller -o yaml | \
    grep -Fq '  - replicasets'; then
   echo "base manager role retained topology-only ReplicaSet authority" >&2
@@ -2188,6 +2192,121 @@ kubectl patch --as="$manager_username" configmap "$ledger_name" \
 kubectl annotate --as="$manager_username" configmap "$policy_name" \
   --namespace "$system_namespace" \
   "topology.cisco.vk/ledger-uid=${ledger_uid}" --overwrite >/dev/null
+
+# Break-glass may repair a valid ledger but cannot erase established authority.
+# The cluster-admin test identity has the wildcard permission that satisfies
+# manage-ledger, so this specifically proves the unconditional non-empty fence.
+if kubectl patch configmap "$ledger_name" --namespace "$system_namespace" \
+    --type=merge --dry-run=server -p '{"data":{"ledger.json":""}}' \
+    >"$scratch_dir/ledger-empty-breakglass-negative.txt" 2>&1; then
+  echo "break-glass identity emptied an existing topology ledger" >&2
+  exit 1
+fi
+grep -Fq 'an existing topology ledger cannot be emptied, including through break-glass' \
+  "$scratch_dir/ledger-empty-breakglass-negative.txt"
+
+# A normal live upgrade must carry the manager-owned immutable binding forward
+# without submitting any write to the mutable reservation ledger. Copying the
+# lookup value into an update would still have a read/apply race with a new
+# reservation; dropping the kept ledger from the upgraded release manifest is
+# the required ownership boundary.
+ledger_json_before="$(kubectl get configmap "$ledger_name" \
+  --namespace "$system_namespace" -o jsonpath='{.data.ledger\.json}')"
+ledger_resource_version_before="$(kubectl get configmap "$ledger_name" \
+  --namespace "$system_namespace" -o jsonpath='{.metadata.resourceVersion}')"
+helm upgrade "$release_name" "$chart_dir" \
+  --namespace "$system_namespace" \
+  "${image_values[@]}" \
+  --set topology.enabled=true \
+  --set controller.leaderElect=true \
+  --set rbac.profile=strict \
+  --set gnoi.enableSoftwareUpgrade=true \
+  --set topology.policy.workloadDrain.enabled=true \
+  --set-json "topology.policy.workloadDrain.allowedNamespaces=[\"${device_namespace}\"]" \
+  >/dev/null
+test "$(kubectl get configmap "$policy_name" --namespace "$system_namespace" \
+  -o jsonpath='{.metadata.annotations.topology\.cisco\.vk/ledger-uid}')" = "$ledger_uid"
+test "$(kubectl get configmap "$ledger_name" --namespace "$system_namespace" \
+  -o jsonpath='{.metadata.uid}')" = "$ledger_uid"
+test "$(kubectl get configmap "$ledger_name" --namespace "$system_namespace" \
+  -o jsonpath='{.data.ledger\.json}')" = "$ledger_json_before"
+test "$(kubectl get configmap "$ledger_name" --namespace "$system_namespace" \
+  -o jsonpath='{.metadata.resourceVersion}')" = "$ledger_resource_version_before"
+helm get manifest "$release_name" --namespace "$system_namespace" \
+  >"$scratch_dir/managed-upgrade-manifest.yaml"
+if awk -v ledger_name="$ledger_name" '
+    /^---$/ { kind=""; metadata=0; next }
+    /^kind: / { kind=$2; metadata=0; next }
+    /^metadata:$/ { metadata=1; next }
+    metadata && /^[^ ]/ { metadata=0 }
+    kind == "ConfigMap" && metadata && $1 == "name:" && $2 == ledger_name { found=1 }
+    END { exit(found ? 0 : 1) }
+  ' "$scratch_dir/managed-upgrade-manifest.yaml"; then
+  echo "live Helm upgrade retained mutable ledger ownership" >&2
+  exit 1
+fi
+
+# Changing both retained coordinates must not be mistaken for a fresh
+# bootstrap. The release-owned admission contract is a cluster-scoped
+# sentinel even if the operator also changes fullnameOverride.
+renamed_policy="${policy_name}-renamed"
+renamed_ledger="${ledger_name}-renamed"
+if helm upgrade "$release_name" "$chart_dir" \
+    --namespace "$system_namespace" \
+    "${image_values[@]}" \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set gnoi.enableSoftwareUpgrade=true \
+    --set "fullnameOverride=${release_name}-renamed" \
+    --set topology.policy.workloadDrain.enabled=true \
+    --set-json "topology.policy.workloadDrain.allowedNamespaces=[\"${device_namespace}\"]" \
+    --set "topology.policy.name=${renamed_policy}" \
+    --set "topology.ledger.name=${renamed_ledger}" \
+    >"$scratch_dir/topology-coordinate-change-negative.txt" 2>&1; then
+  echo "Helm accepted replacement topology policy/ledger coordinates" >&2
+  exit 1
+fi
+grep -Fq 'refusing to bootstrap new topology policy' \
+  "$scratch_dir/topology-coordinate-change-negative.txt"
+if kubectl get configmap "$renamed_policy" "$renamed_ledger" \
+    --namespace "$system_namespace" >/dev/null 2>&1; then
+  echo "rejected coordinate change created replacement topology state" >&2
+  exit 1
+fi
+test "$(kubectl get configmap "$policy_name" --namespace "$system_namespace" \
+  -o jsonpath='{.metadata.annotations.topology\.cisco\.vk/ledger-uid}')" = "$ledger_uid"
+test "$(kubectl get configmap "$ledger_name" --namespace "$system_namespace" \
+  -o jsonpath='{.metadata.uid}')" = "$ledger_uid"
+test "$(kubectl get configmap "$ledger_name" --namespace "$system_namespace" \
+  -o jsonpath='{.data.ledger\.json}')" = "$ledger_json_before"
+
+# A historical bootstrap revision contains the intentionally empty CREATE
+# manifest. Once the manager has bound authority, an actual rollback must fail
+# rather than replay that value. Helm normally refuses first because the kept
+# ledger is no longer in its current release manifest; if it does submit an
+# update, admission independently rejects emptying the live ledger.
+if helm rollback "$release_name" "$bootstrap_topology_revision" \
+    --namespace "$system_namespace" --server-side=false \
+    >"$scratch_dir/bootstrap-rollback-negative.txt" 2>&1; then
+  echo "Helm accepted rollback to an empty-ledger bootstrap revision" >&2
+  exit 1
+fi
+if ! grep -Eq 'original object ConfigMap.*topology-ledger.*not found|ledger-uid must be absent at creation|existing topology ledger cannot be emptied|denied the request|failed expression' \
+    "$scratch_dir/bootstrap-rollback-negative.txt"; then
+  echo "Helm rollback failed for an unexpected reason:" >&2
+  sed -n '1,120p' "$scratch_dir/bootstrap-rollback-negative.txt" >&2
+  exit 1
+fi
+if [ "$(kubectl get configmap "$policy_name" --namespace "$system_namespace" \
+    -o jsonpath='{.metadata.annotations.topology\.cisco\.vk/ledger-uid}')" != "$ledger_uid" ] || \
+   [ "$(kubectl get configmap "$ledger_name" --namespace "$system_namespace" \
+    -o jsonpath='{.metadata.uid}')" != "$ledger_uid" ] || \
+   [ "$(kubectl get configmap "$ledger_name" --namespace "$system_namespace" \
+    -o jsonpath='{.data.ledger\.json}')" != "$ledger_json_before" ]; then
+  echo "rejected Helm rollback changed the retained topology identity or ledger" >&2
+  exit 1
+fi
 
 # A live downgrade must reject a still-managed Node even though all retained
 # policy/RBAC coordinates are present and valid.

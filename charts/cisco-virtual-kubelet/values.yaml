@@ -79,9 +79,10 @@ aggregator:
 # render this mode on an older cluster. The manager performs additional API
 # discovery and ValidatingAdmissionPolicy type-check preflight before starting
 # managed workers; a version check alone is not treated as proof of enforcement.
-# Enabling an existing release requires a live Helm upgrade so lookup can
-# preserve the exact shared worker bindings during their one-time retirement;
-# offline GitOps pruning is not a supported migration path.
+# Enabling or upgrading an existing release requires a live Helm upgrade so
+# lookup can preserve the exact shared worker bindings and immutable topology
+# ledger binding. After bootstrap the chart stops submitting the mutable ledger
+# ConfigMap; offline GitOps pruning is not a supported migration path.
 # Managed mode also requires the default serviceAccount.vkName because the
 # controller combines the fixed cisco-virtual-kubelet-managed-worker role with
 # a namespaced binding to cisco-virtual-kubelet-device, and rbac.profile=strict
@@ -147,9 +148,12 @@ topology:
       maxTerminationGraceSeconds: 600
 
   ledger:
-    # Empty uses <fullname>-topology-ledger. Helm creates an empty ledger and
-    # never templates a UID; the manager initializes ledger.json and binds the
-    # live ConfigMap UID into the policy's protected ledger-uid annotation.
+    # Empty uses <fullname>-topology-ledger. On the first managed-topology
+    # bootstrap Helm creates an empty kept ledger and never invents a UID. The
+    # manager initializes ledger.json and binds its live UID into the policy's
+    # protected ledger-uid annotation. Live upgrades preserve the binding but
+    # omit the ledger object itself, so Helm cannot race or overwrite
+    # manager-owned reservations.
     name: ""
 
 nxos:

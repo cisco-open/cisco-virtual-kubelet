@@ -198,7 +198,7 @@ assert_policy_shape managed-rollout 0 1 6
 assert_policy_shape managed-upgrade-leaf 1 3 7
 assert_policy_shape managed-maintenance-lease 1 10 8
 assert_policy_shape topology-policy 1 2 3
-assert_policy_shape topology-ledger 1 2 3
+assert_policy_shape topology-ledger 1 2 4
 
 grep -Fq 'name: cvk-cisco-virtual-kubelet-managed-maintenance-lease' "$managed_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-managed-drain-pod' "$managed_render"
@@ -309,6 +309,8 @@ grep -Fq "all CiscoDevice status is manager-owned once managed Node identity or 
 grep -Fq "the generated worker identity must encode the Pod's exact bound virtual Node" "$managed_render"
 grep -Fq ':cisco-vk-legacy-[a-z0-9]([-a-z0-9.]{0,61}[a-z0-9])?-[a-f0-9]{8}$' "$managed_render"
 grep -Fq "check('manage-ledger').allowed()" "$managed_render"
+grep -Fq "!object.data['ledger.json'].matches('^\\\\s*\$')" "$managed_render"
+grep -Fq 'an existing topology ledger cannot be emptied, including through break-glass' "$managed_render"
 
 node_policy="$scratch_dir/managed-node-policy.yaml"
 node_match="$scratch_dir/managed-node-match.txt"
