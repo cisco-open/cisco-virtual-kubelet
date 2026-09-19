@@ -527,6 +527,11 @@ foreign, malformed, or unexpired state stays quarantined, and retirement
 dispatches no device work. Cleanup cannot reacquire the Lease until a later
 reconcile observes a fresh current-revision CiscoDevice maintenance-session
 acknowledgement.
+If cancellation reaches a promoted software-upgrade holder before any durable
+mutation claim or dispatch marker exists, the worker first persists the exact
+`Cancelled` control acknowledgement. Only a later fresh reconciliation may
+release that leaf-UID-bound holder and its request metadata; any claim or
+marker keeps the 26-hour mutation quarantine intact.
 Before device dispatch and every Lease renewal, the worker reauthorizes the
 exact Pod, leaf, Node, maintenance session, and Lease binding. A cache-lagged
 delete callback is resolved against the uncached live Pod, and a changed UID

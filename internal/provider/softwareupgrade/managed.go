@@ -235,6 +235,35 @@ func managedTerminalMutationSettled(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 			meta.IsStatusConditionTrue(up.Status.Conditions, conditionTypeMutationSettled))
 }
 
+// managedCancellationCanReleaseMutationLease recognizes the narrow
+// pre-dispatch cancellation boundary. The worker acknowledgement must already
+// reflect the exact manager revision and admission epoch; the caller invokes
+// this only after syncManagedLeafGate found that acknowledgement durable. A
+// durable claim or any at-most-once mutation marker makes the outcome
+// potentially physical and therefore keeps the Lease quarantined.
+func managedCancellationCanReleaseMutationLease(
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	decision managedLeafDecision,
+) bool {
+	if up == nil || !decision.applies || decision.allowProgress ||
+		decision.effectiveState != opsv1alpha1.UpgradeWorkerControlCancelled ||
+		len(up.Status.ManagedMutationClaims) != 0 || upgradeMutationSubmitted(up) {
+		return false
+	}
+	admission := up.Status.ManagerAdmission
+	control := up.Status.ManagerControl
+	worker := up.Status.WorkerControl
+	return admission != nil && control != nil && worker != nil && control.Cancel &&
+		decision.admissionState == admission.State &&
+		decision.policyEpoch == admission.PolicyEpoch &&
+		decision.controlRevision == control.Revision &&
+		worker.ObservedAdmissionState == admission.State &&
+		worker.ObservedPolicyEpoch == admission.PolicyEpoch &&
+		worker.ObservedControlRevision == control.Revision &&
+		worker.ObservedWorkerConfigRevision == decision.workerRevision &&
+		worker.EffectiveState == opsv1alpha1.UpgradeWorkerControlCancelled
+}
+
 func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade) error {
 	if r.Reader == nil {
 		return fmt.Errorf("managed topology requires an uncached Kubernetes API reader")

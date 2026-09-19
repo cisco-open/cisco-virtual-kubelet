@@ -17,6 +17,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -39,7 +40,10 @@ import (
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/mutationguard"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
 	"github.com/cisco/virtual-kubelet-cisco/internal/workloaddrain"
 )
@@ -1386,6 +1390,233 @@ func TestCancellationWaitsForSettledDrainAcknowledgementBeforeBecomingTerminal(t
 	assertDrainTopologyLock(t, r, device, false)
 }
 
+func TestPromotedZeroPodCancellationConvergesAfterWorkerLeaseBecomesIdle(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	cancelledAt := time.Date(2026, 9, 12, 12, 0, 0, 0, time.UTC)
+	fixture := promotedZeroPodCancellationFixture(t, cancelledAt)
+	fixture.rolloutReconciler.Now = func() time.Time { return cancelledAt }
+	fixture.clock.now = cancelledAt
+
+	var rollout opsv1alpha1.IOSXESoftwareRollout
+	if err := fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.rollout), &rollout); err != nil {
+		t.Fatal(err)
+	}
+	rollout.Spec.Control.Cancel = true
+	rollout.Spec.Control.Revision++
+	if err := fixture.rolloutReconciler.Update(ctx, &rollout); err != nil {
+		t.Fatal(err)
+	}
+	result, err := fixture.rolloutReconciler.reconcileCancellation(
+		ctx, &rollout, fixture.policy, cancelledAt,
+	)
+	if err != nil {
+		t.Fatalf("initial reconcileCancellation(): %v", err)
+	}
+	if result.RequeueAfter == 0 {
+		t.Fatal("promoted cancellation became terminal before recovery acknowledgement")
+	}
+
+	var leaf opsv1alpha1.IOSXESoftwareUpgrade
+	if err := fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.leaf), &leaf); err != nil {
+		t.Fatal(err)
+	}
+	drain := leaf.Status.ManagerDrain
+	if drain == nil || drain.State != opsv1alpha1.UpgradeManagerDrainRecovering ||
+		drain.ControlRevision != rollout.Spec.Control.Revision || drain.SessionToken != fixture.sessionToken ||
+		!drain.StartedAt.Equal(&fixture.startedAt) || len(drain.Pods) != 0 ||
+		len(leaf.Status.ManagedMutationClaims) != 0 {
+		t.Fatalf("cancellation recovery fence = %#v", leaf.Status)
+	}
+	var device ciskov1.CiscoDevice
+	if err := fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.device), &device); err != nil {
+		t.Fatal(err)
+	}
+	if device.Status.MaintenanceSession == nil ||
+		device.Status.MaintenanceSession.ControlRevision != rollout.Spec.Control.Revision-1 {
+		t.Fatalf("device unexpectedly acknowledged recovery before Lease retirement: %#v", device.Status.MaintenanceSession)
+	}
+	assertDrainTopologyLock(t, fixture.rolloutReconciler, fixture.device, true)
+
+	// Model the worker's ordered cancellation barrier: first publish the exact
+	// Cancelled acknowledgement, then retire its unsubmitted software-mutation
+	// request and leave the canonical Lease wholly idle and request-free.
+	leaf.Status.WorkerControl = &opsv1alpha1.UpgradeWorkerControlStatus{
+		ObservedAdmissionState:  opsv1alpha1.UpgradeManagerAdmissionRevoked,
+		ObservedPolicyEpoch:     leaf.Status.ManagerAdmission.PolicyEpoch,
+		ObservedControlRevision: rollout.Spec.Control.Revision,
+		EffectiveState:          opsv1alpha1.UpgradeWorkerControlCancelled,
+		UpdatedAt:               metav1.NewTime(cancelledAt.Add(time.Second)),
+	}
+	if err := fixture.rolloutReconciler.Status().Update(ctx, &leaf); err != nil {
+		t.Fatal(err)
+	}
+	var lease coordv1.Lease
+	if err := fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.lease), &lease); err != nil {
+		t.Fatal(err)
+	}
+	lease.Annotations, lease.Labels = managedMutationLeaseMetadata(
+		&device, fixture.target.NodeName, fixture.target.NodeUID,
+		leaf.Annotations[managedprotocol.AnnotationWorkerUsername],
+	)
+	lease.Spec = coordv1.LeaseSpec{LeaseTransitions: lease.Spec.LeaseTransitions}
+	if err := fixture.rolloutReconciler.Update(ctx, &lease); err != nil {
+		t.Fatal(err)
+	}
+
+	recoveryAt := cancelledAt.Add(2 * time.Second)
+	fixture.clock.now = recoveryAt
+	var node corev1.Node
+	if err := fixture.deviceReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.device), &device); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.deviceReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.node), &node); err != nil {
+		t.Fatal(err)
+	}
+	decision := fixture.deviceReconciler.resolveManagedMaintenance(ctx, &device, &node)
+	if decision.err != nil || decision.session == nil || decision.guard ||
+		decision.session.Phase != ciskov1.DeviceMaintenanceSessionRecovering ||
+		decision.session.Purpose != ciskov1.DeviceMaintenancePurposeSoftwareMutation ||
+		decision.session.ControlRevision != rollout.Spec.Control.Revision ||
+		decision.session.SessionToken != fixture.sessionToken ||
+		!decision.session.RequestedAt.Equal(&fixture.startedAt) {
+		t.Fatalf("idle-Lease recovery acknowledgement = %#v", decision)
+	}
+	if err := fixture.deviceReconciler.reconcileManagedNodeMetadata(
+		ctx, &device, &node, map[string]string{"topology.cisco.vk/site": "site-a"},
+		fixture.policy, fixture.target.ProjectionHash, decision,
+	); err != nil {
+		t.Fatalf("restore drain-owned Node guard: %v", err)
+	}
+	if err := fixture.deviceReconciler.patchManagedTopologyStatus(
+		ctx, &device, &node, fixture.target.ProjectionHash, decision,
+	); err != nil {
+		t.Fatalf("persist exact recovery acknowledgement: %v", err)
+	}
+
+	if err := fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.node), &node); err != nil {
+		t.Fatal(err)
+	}
+	if node.Spec.Unschedulable || hasDrainMaintenanceTaint(node.Spec.Taints) ||
+		node.Annotations[managedprotocol.AnnotationDrainCordonOwner] != "" ||
+		node.Annotations[managedprotocol.AnnotationDrainTaintOwner] != "" {
+		t.Fatalf("recovery acknowledgement retained a drain-owned scheduling guard: %#v", node)
+	}
+	if err := fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.device), &device); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateDrainSessionIdentity(device.Status.MaintenanceSession, fixture.target, &leaf, drain); err != nil {
+		t.Fatalf("persisted recovery acknowledgement lost exact session identity: %v", err)
+	}
+
+	healthyAt := recoveryAt.Add(time.Second)
+	ready := nodeReadyCondition(&node)
+	if ready == nil {
+		t.Fatal("fixture lost Node Ready condition")
+	}
+	ready.Status = corev1.ConditionTrue
+	ready.LastHeartbeatTime = metav1.NewTime(healthyAt)
+	ready.LastTransitionTime = metav1.NewTime(fixture.startedAt.Add(-time.Minute))
+	if err := fixture.rolloutReconciler.Status().Update(ctx, &node); err != nil {
+		t.Fatal(err)
+	}
+	if err := refreshManagedHealthObservation(&device, &node, healthyAt,
+		ciskov1.CiscoDeviceConditionNodeIdentityReady,
+		ciskov1.CiscoDeviceConditionTopologyReady,
+		ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.rolloutReconciler.Status().Update(ctx, &device); err != nil {
+		t.Fatal(err)
+	}
+
+	fixture.rolloutReconciler.Now = func() time.Time { return healthyAt }
+	if err := fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.rollout), &rollout); err != nil {
+		t.Fatal(err)
+	}
+	result, err = fixture.rolloutReconciler.reconcileCancellation(ctx, &rollout, fixture.policy, healthyAt)
+	if err != nil {
+		t.Fatalf("start recovered health soak: %v", err)
+	}
+	if result.RequeueAfter == 0 {
+		t.Fatal("cancellation skipped the recovered health soak")
+	}
+
+	settledAt := healthyAt.Add(2 * time.Second)
+	fixture.rolloutReconciler.Now = func() time.Time { return settledAt }
+	if err := fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.rollout), &rollout); err != nil {
+		t.Fatal(err)
+	}
+	result, err = fixture.rolloutReconciler.reconcileCancellation(ctx, &rollout, fixture.policy, settledAt)
+	if err != nil {
+		t.Fatalf("settle recovered drain: %v", err)
+	}
+	if result.RequeueAfter == 0 {
+		t.Fatal("cancellation became terminal before the Settled session acknowledgement")
+	}
+	if err := fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.leaf), &leaf); err != nil {
+		t.Fatal(err)
+	}
+	if leaf.Status.ManagerDrain == nil || leaf.Status.ManagerDrain.State != opsv1alpha1.UpgradeManagerDrainSettled ||
+		leaf.Status.ManagerAdmission == nil || leaf.Status.ManagerAdmission.State != opsv1alpha1.UpgradeManagerAdmissionSettled {
+		var currentRollout opsv1alpha1.IOSXESoftwareRollout
+		_ = fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.rollout), &currentRollout)
+		t.Fatalf("recovered leaf did not settle: admission=%#v drain=%#v targets=%#v",
+			leaf.Status.ManagerAdmission, leaf.Status.ManagerDrain, currentRollout.Status.Targets)
+	}
+	_, ledger, err := fixture.rolloutReconciler.ledgerStore(&rollout).Read(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, retained := ledger.Reservations[leaf.Status.ManagerAdmission.ReservationID]; retained ||
+		ledger.LastReleaseFence == nil || ledger.LastReleaseFence.DrainSessionToken != fixture.sessionToken ||
+		ledger.LastReleaseFence.DrainChildUID != string(leaf.UID) {
+		t.Fatalf("drain ledger did not settle with exact provenance: %#v", ledger)
+	}
+	assertDrainTopologyLock(t, fixture.rolloutReconciler, fixture.device, true)
+
+	fixture.clock.now = settledAt.Add(time.Second)
+	if err := fixture.deviceReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.device), &device); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.deviceReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.node), &node); err != nil {
+		t.Fatal(err)
+	}
+	decision = fixture.deviceReconciler.resolveManagedMaintenance(ctx, &device, &node)
+	if decision.err != nil || decision.session == nil ||
+		decision.session.Phase != ciskov1.DeviceMaintenanceSessionSettled ||
+		decision.session.ControlRevision != rollout.Spec.Control.Revision ||
+		decision.session.SessionToken != fixture.sessionToken {
+		t.Fatalf("settled maintenance acknowledgement = %#v", decision)
+	}
+	if err := fixture.deviceReconciler.patchManagedTopologyStatus(
+		ctx, &device, &node, fixture.target.ProjectionHash, decision,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	finishedAt := settledAt.Add(2 * time.Second)
+	fixture.rolloutReconciler.Now = func() time.Time { return finishedAt }
+	if err := fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.rollout), &rollout); err != nil {
+		t.Fatal(err)
+	}
+	result, err = fixture.rolloutReconciler.reconcileCancellation(ctx, &rollout, fixture.policy, finishedAt)
+	if err != nil {
+		t.Fatalf("finish acknowledged cancellation: %v", err)
+	}
+	if result.RequeueAfter != 0 {
+		t.Fatalf("finished cancellation result = %#v, want terminal result", result)
+	}
+	if err := fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.rollout), &rollout); err != nil {
+		t.Fatal(err)
+	}
+	if rollout.Status.Phase != opsv1alpha1.IOSXESoftwareRolloutPhaseCancelled {
+		t.Fatalf("campaign phase = %s, want Cancelled", rollout.Status.Phase)
+	}
+	assertDrainTopologyLock(t, fixture.rolloutReconciler, fixture.device, false)
+}
+
 func TestDeletionRetainsFinalizerUntilSettledDrainAcknowledgement(t *testing.T) {
 	t.Parallel()
 	r, rollout, leaf, device := settledDrainAcknowledgementFixture(t)
@@ -1447,6 +1678,250 @@ func TestPolicyAndControlTransitionPreservesSettledDrainAcknowledgementBinding(t
 		t.Fatalf("ensurePolicyEpochFenceForTarget() with a settled drain: %v", err)
 	}
 	assertSettledDrainBindingPreserved(t, r, leaf)
+}
+
+type promotedZeroPodCancellationTestFixture struct {
+	rolloutReconciler *IOSXESoftwareRolloutReconciler
+	deviceReconciler  *CiscoDeviceReconciler
+	rollout           *opsv1alpha1.IOSXESoftwareRollout
+	target            opsv1alpha1.IOSXESoftwareRolloutPlannedTarget
+	leaf              *opsv1alpha1.IOSXESoftwareUpgrade
+	device            *ciskov1.CiscoDevice
+	node              *corev1.Node
+	lease             *coordv1.Lease
+	policy            *topologyrollout.ParsedAdminPolicy
+	clock             *fakeClock
+	sessionToken      string
+	startedAt         metav1.Time
+}
+
+func promotedZeroPodCancellationFixture(
+	t *testing.T,
+	now time.Time,
+) *promotedZeroPodCancellationTestFixture {
+	t.Helper()
+	rollout, target, leaf, baseObjects := drainEvictionAuthorityFixture(t, now)
+	rollout.Spec.Plan.Health.WaveSoakSeconds = 1
+
+	var device *ciskov1.CiscoDevice
+	var node *corev1.Node
+	var policyConfigMap *corev1.ConfigMap
+	workerObjects := make([]client.Object, 0, 3)
+	for _, object := range baseObjects {
+		switch current := object.(type) {
+		case *ciskov1.CiscoDevice:
+			device = current
+		case *corev1.Node:
+			node = current
+		case *corev1.ConfigMap:
+			policyConfigMap = current
+		case *appsv1.Deployment:
+			if current.Namespace == rollout.Namespace {
+				workerObjects = append(workerObjects, current)
+			}
+		case *appsv1.ReplicaSet:
+			if current.Namespace == rollout.Namespace {
+				workerObjects = append(workerObjects, current)
+			}
+		case *corev1.Pod:
+			if current.Namespace == rollout.Namespace {
+				workerObjects = append(workerObjects, current)
+			}
+		}
+	}
+	if device == nil || node == nil || policyConfigMap == nil || len(workerObjects) != 3 {
+		t.Fatal("drain fixture is missing managed device, Node, policy, or worker proof")
+	}
+	policyConfigMap.ResourceVersion = rollout.Status.FrozenPlan.Policy.ResourceVersion
+	policy, err := topologyrollout.ParseAdminPolicy(policyConfigMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	policySnapshot, err := freezePolicy(policy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rollout.Status.FrozenPlan.Policy = policySnapshot
+	rollout.Status.EffectivePolicy.Policy = policySnapshot
+	rollout.Status.Targets = []opsv1alpha1.IOSXESoftwareRolloutTargetStatus{{
+		DeviceName: target.DeviceName, DeviceUID: target.DeviceUID,
+		LeafName: target.ChildName, LeafUID: string(leaf.UID),
+	}}
+
+	leaf.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionGranted
+	leaf.Status.ManagerAdmission.PolicyUID = policySnapshot.UID
+	leaf.Status.ManagerAdmission.PolicyResourceVersion = policySnapshot.ResourceVersion
+	leaf.Status.ManagerAdmission.LedgerUID = policySnapshot.LedgerUID
+	leaf.Status.WorkerControl.ObservedAdmissionState = opsv1alpha1.UpgradeManagerAdmissionGranted
+	leaf.Status.WorkerControl.EffectiveState = opsv1alpha1.UpgradeWorkerControlReady
+	leaf.Status.ManagerDrain.State = opsv1alpha1.UpgradeManagerDrainPromoted
+	leaf.Status.ManagerDrain.Pods = nil
+	leaf.Status.ManagerDrain.UpdatedAt = metav1.NewTime(now.Add(-30 * time.Second))
+	sessionToken := leaf.Status.ManagerDrain.SessionToken
+	startedAt := leaf.Status.ManagerDrain.StartedAt
+
+	device.Labels = map[string]string{
+		managedprotocol.AnnotationManaged:        "true",
+		"topology.cisco.vk/site":                 "site-a",
+		managedprotocol.ImageFamilyLabel:         target.ImageFamily,
+		managedprotocol.QualificationCohortLabel: target.QualificationCohort,
+	}
+	device.Spec.Driver = ciskov1.DeviceDriverXE
+	device.Spec.NodeName = target.NodeName
+	device.Spec.PhysicalIdentity = target.PhysicalIdentity
+	device.Status.Phase = "Ready"
+	device.Status.NodeIdentity = &ciskov1.DeviceNodeIdentityStatus{
+		NodeName: target.NodeName, NodeUID: target.NodeUID, DeviceUID: target.DeviceUID,
+		PhysicalIdentity: target.PhysicalIdentity,
+	}
+	device.Status.TopologyProjection = &ciskov1.DeviceTopologyProjectionStatus{
+		EffectiveLabelHash: target.ProjectionHash, LastSuccessfulTime: metav1.NewTime(now.Add(-time.Minute)),
+	}
+	device.Status.TopologyLock = expectedDeviceTopologyLock(
+		rollout, target, leaf.Status.ManagerAdmission.PolicyEpoch,
+		leaf.Status.ManagerAdmission.TopologyLockID, now.Add(-time.Minute),
+	)
+	conditionTime := metav1.NewTime(now.Add(-time.Minute))
+	device.Status.Conditions = []metav1.Condition{
+		{Type: ciskov1.CiscoDeviceConditionNodeIdentityReady, Status: metav1.ConditionTrue,
+			ObservedGeneration: device.Generation, LastTransitionTime: conditionTime},
+		{Type: ciskov1.CiscoDeviceConditionTopologyReady, Status: metav1.ConditionTrue,
+			ObservedGeneration: device.Generation, LastTransitionTime: conditionTime},
+		{Type: ciskov1.CiscoDeviceConditionGNOIConfigurationReady, Status: metav1.ConditionTrue,
+			ObservedGeneration: device.Generation, LastTransitionTime: conditionTime},
+	}
+
+	if node.Annotations == nil {
+		node.Annotations = map[string]string{}
+	}
+	worker := "system:serviceaccount:" + device.Namespace + ":" + managedWorkerServiceAccountName(device)
+	leaf.Annotations[managedprotocol.AnnotationWorkerUsername] = worker
+	for key, value := range map[string]string{
+		managedprotocol.AnnotationManaged:          "true",
+		managedprotocol.AnnotationDeviceNamespace:  device.Namespace,
+		managedprotocol.AnnotationDeviceName:       device.Name,
+		managedprotocol.AnnotationDeviceUID:        string(device.UID),
+		managedprotocol.AnnotationNodeUID:          target.NodeUID,
+		managedprotocol.AnnotationWorkerUsername:   worker,
+		managedprotocol.AnnotationWorkerProtocol:   managedprotocol.Version,
+		managedprotocol.AnnotationProjectionHash:   target.ProjectionHash,
+		managedprotocol.AnnotationDrainCordonOwner: sessionToken,
+		managedprotocol.AnnotationDrainTaintOwner:  sessionToken,
+		managedprotocol.AnnotationManagedTaints:    encodeManagedTaints([]corev1.Taint{maintenanceGuardTaint()}),
+	} {
+		node.Annotations[key] = value
+	}
+	node.Labels = map[string]string{"topology.cisco.vk/site": "site-a"}
+	node.Spec.Unschedulable = true
+	node.Spec.Taints = []corev1.Taint{maintenanceGuardTaint()}
+	node.Status.NodeInfo = corev1.NodeSystemInfo{
+		MachineID: target.PhysicalIdentity, SystemUUID: target.PhysicalIdentity,
+	}
+	node.Status.Conditions = append(node.Status.Conditions, corev1.NodeCondition{
+		Type: corev1.NodeReady, Status: corev1.ConditionTrue,
+		LastHeartbeatTime: conditionTime, LastTransitionTime: metav1.NewTime(now.Add(-2 * time.Minute)),
+	})
+
+	leaseAnnotations, leaseLabels := managedMutationLeaseMetadata(device, target.NodeName, target.NodeUID, worker)
+	for key, value := range map[string]string{
+		managedprotocol.AnnotationMaintenanceRequestVersion:  managedprotocol.DrainProtocolVersion,
+		managedprotocol.AnnotationMaintenanceSessionToken:    sessionToken,
+		managedprotocol.AnnotationMaintenanceRequestedAt:     startedAt.Time.UTC().Format(time.RFC3339Nano),
+		managedprotocol.AnnotationMaintenanceOperationNS:     leaf.Namespace,
+		managedprotocol.AnnotationMaintenanceOperationName:   leaf.Name,
+		managedprotocol.AnnotationMaintenanceOperationUID:    string(leaf.UID),
+		managedprotocol.AnnotationMaintenanceControlRevision: strconv.FormatInt(rollout.Spec.Control.Revision, 10),
+		managedprotocol.AnnotationMaintenancePurpose:         managedprotocol.MaintenancePurposeSoftwareMutation,
+	} {
+		leaseAnnotations[key] = value
+	}
+	holder := mutationguard.UpgradeHolderIdentity(leaf)
+	heldAt := metav1.NewMicroTime(now.Add(-30 * time.Second))
+	lease := &coordv1.Lease{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: rollout.Namespace,
+			Name: engine.LeaseName(
+				devicecoordination.DeviceKey(device.Namespace, device.Name), devicecoordination.MutationLeaseFamily,
+			),
+			UID: "lease-uid", Annotations: leaseAnnotations, Labels: leaseLabels,
+		},
+		Spec: coordv1.LeaseSpec{
+			HolderIdentity: &holder, LeaseDurationSeconds: ptr.To[int32](3600),
+			AcquireTime: &heldAt, RenewTime: &heldAt, LeaseTransitions: ptr.To[int32](1),
+		},
+	}
+	acknowledgedAt := metav1.NewTime(startedAt.Add(time.Second))
+	device.Status.MaintenanceSession = &ciskov1.DeviceMaintenanceSessionStatus{
+		Phase: ciskov1.DeviceMaintenanceSessionActive, ProtocolVersion: ciskov1.DeviceMaintenanceProtocolPDBDrainV1,
+		Purpose: ciskov1.DeviceMaintenancePurposeSoftwareMutation, SessionToken: sessionToken,
+		Lease: ciskov1.DeviceMaintenanceLeaseReference{
+			DeviceMaintenanceObjectReference: ciskov1.DeviceMaintenanceObjectReference{
+				Namespace: lease.Namespace, Name: lease.Name, UID: string(lease.UID),
+			},
+			Holder: holder,
+		},
+		Operation: ciskov1.DeviceMaintenanceObjectReference{
+			Namespace: leaf.Namespace, Name: leaf.Name, UID: string(leaf.UID),
+		},
+		DeviceUID: target.DeviceUID, NodeName: target.NodeName, NodeUID: target.NodeUID,
+		RequestedAt: startedAt, AcknowledgedAt: &acknowledgedAt,
+		ControlRevision: rollout.Spec.Control.Revision,
+	}
+
+	ledgerConfigMap := policyFenceLedger(
+		t, rollout, []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target},
+		map[string]types.UID{target.DeviceUID: leaf.UID}, topologyrollout.ReservationBound,
+	)
+	ledger, err := topologyrollout.Decode(
+		[]byte(ledgerConfigMap.Data[topologyrollout.LedgerDataKey]), string(ledgerConfigMap.UID),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := topologyrollout.BeginDrain(
+		ledger, leaf.Status.ManagerAdmission.ReservationID, policySnapshot.LedgerUID,
+		string(leaf.UID), sessionToken, uint64(rollout.Spec.Control.Revision), startedAt.Time,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := topologyrollout.PromoteDrain(
+		ledger, leaf.Status.ManagerAdmission.ReservationID, policySnapshot.LedgerUID,
+		string(leaf.UID), sessionToken, uint64(rollout.Spec.Control.Revision), startedAt.Add(time.Second),
+	); err != nil {
+		t.Fatal(err)
+	}
+	encodedLedger, err := topologyrollout.Encode(ledger, topologyrollout.DefaultMaxSerializedBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ledgerConfigMap.Data[topologyrollout.LedgerDataKey] = string(encodedLedger)
+
+	objects := []client.Object{rollout, leaf, device, node, lease, policyConfigMap, ledgerConfigMap}
+	objects = append(objects, workerObjects...)
+	scheme := drainTestScheme(t)
+	apiClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(
+			&opsv1alpha1.IOSXESoftwareRollout{}, &opsv1alpha1.IOSXESoftwareUpgrade{},
+			&ciskov1.CiscoDevice{}, &corev1.Node{},
+		).
+		WithIndex(&corev1.Pod{}, rolloutPodNodeNameIndex, rolloutPodNodeNameIndexValues).
+		WithObjects(objects...).Build()
+	rolloutReconciler := &IOSXESoftwareRolloutReconciler{
+		Client: apiClient, APIReader: apiClient,
+		TopologyPolicyNamespace: policy.Namespace, TopologyPolicyName: policy.Name,
+	}
+	testClock := &fakeClock{now: now}
+	deviceReconciler := &CiscoDeviceReconciler{
+		Client: apiClient, APIReader: apiClient, Scheme: scheme,
+		LeaseNamespace:          lease.Namespace,
+		TopologyPolicyNamespace: policy.Namespace, TopologyPolicyName: policy.Name,
+		clock: testClock,
+	}
+	return &promotedZeroPodCancellationTestFixture{
+		rolloutReconciler: rolloutReconciler, deviceReconciler: deviceReconciler,
+		rollout: rollout, target: target, leaf: leaf, device: device, node: node, lease: lease,
+		policy: policy, clock: testClock, sessionToken: sessionToken, startedAt: startedAt,
+	}
 }
 
 func settledDrainAcknowledgementFixture(

@@ -225,6 +225,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		return reconcile.Result{RequeueAfter: time.Second}, nil
 	}
 	if managedDecision.applies && !managedDecision.allowProgress {
+		// A managed worker can acquire and publish its maintenance request
+		// before the final device-inventory gate creates a durable mutation
+		// claim. If the manager subsequently cancels that unclaimed operation,
+		// retaining the exact software-upgrade Lease would strand drain recovery
+		// behind the normal long-running mutation TTL. Release only after the
+		// worker acknowledgement above is durable and the persisted state proves
+		// that no device mutation was claimed or submitted. Any uncertainty keeps
+		// the existing quarantine intact.
+		if managedCancellationCanReleaseMutationLease(&up, managedDecision) {
+			if err := r.releaseMutationLease(ctx, &up); err != nil {
+				return reconcile.Result{}, fmt.Errorf("release unused mutation lease after managed cancellation: %w", err)
+			}
+		}
 		return reconcile.Result{RequeueAfter: managedAdmissionPoll}, nil
 	}
 	unsupportedModel := unsupportedExecutionModel(&up)
