@@ -478,15 +478,21 @@ the manager cannot remove/re-add or replace `status.frozenPlan` to evade its
 nested immutability contract.
 
 Rollout health uses the manager-owned
-`CiscoDevice.status.healthObservation`, which binds an observation time to the
-live Node `Ready` heartbeat and a hash of the current device phase/conditions.
-The controller rejects a changed heartbeat or condition hash and calculates
-freshness from the older source time. Post-operation health must be a newly
-authenticated observation strictly after leaf completion. Initial Node binding
-does not synthesize health: the observation remains absent until the manager
-verifies a real heartbeat, and each fixed identity/topology/gNOI readiness
-condition needs an explicit producer observation rather than a
-`lastTransitionTime` fallback.
+`CiscoDevice.status.healthObservation`, which binds an observation time to a
+snapshotted Node `Ready` heartbeat and a hash of the current device
+phase/conditions. The live Node must remain `Ready=True`, its heartbeat cannot
+regress, and its nonzero Ready transition time cannot be later than the
+snapshot. A later compatible heartbeat is treated only as informer/API read
+skew: freshness remains the oldest of manager observation, snapshotted
+heartbeat, required CiscoDevice-condition producer observations, and current
+time. A condition/hash change or incompatible Ready state invalidates the
+proof. Post-operation health must be a newly authenticated observation strictly
+after leaf completion; a newer live heartbeat alone is insufficient. Initial
+Node binding does not synthesize health: the observation remains absent until
+the manager verifies a real heartbeat. Each fixed identity/topology/gNOI
+readiness condition needs an explicit producer observation rather than its
+`lastTransitionTime`; Node Ready transition time proves continuity only and is
+never a producer or freshness timestamp.
 
 The manager pre-creates every Lease a generated worker may write: the exact
 `kube-node-lease/<virtual-node>` heartbeat, every driver-declared config-family

@@ -350,15 +350,18 @@ type DeviceStatus struct {
 
 	// HealthObservation is a manager-authenticated snapshot binding the latest
 	// observed Node Ready heartbeat to the current CiscoDevice condition set.
-	// Rollout admission requires both sides of this snapshot to remain current;
-	// a fresh Node heartbeat cannot mask stale or subsequently changed device
-	// health evidence.
+	// Rollout admission requires the device evidence to remain unchanged and
+	// the live Node Ready heartbeat to be no older than the snapshot. A later
+	// compatible heartbeat proves continuity but does not advance authenticated
+	// health freshness.
 	// +kubebuilder:validation:Optional
 	HealthObservation *DeviceHealthObservationStatus `json:"healthObservation,omitempty"`
 
 	// WorkerRevision binds the desired per-device Deployment PodTemplate to the
-	// exact running Pod and its post-start managed Node heartbeat. A rollout may
-	// use gNOI only when desiredRevision and observedRevision are identical.
+	// exact running Pod and a post-start managed Node heartbeat lower bound. A
+	// rollout may use gNOI only when desiredRevision and observedRevision are
+	// identical and live identity, revision, readiness, and heartbeat evidence
+	// has not regressed.
 	// +kubebuilder:validation:Optional
 	WorkerRevision *DeviceWorkerRevisionStatus `json:"workerRevision,omitempty"`
 
@@ -544,15 +547,18 @@ type DeviceTopologyProjectionStatus struct {
 
 // DeviceHealthObservationStatus binds independently changing Node and
 // CiscoDevice health evidence at one manager observation boundary. It is not a
-// desired-state source and is refreshed only when the source heartbeat or the
-// normalized condition snapshot changes.
+// desired-state source. Its source snapshot refreshes when the heartbeat or
+// normalized condition set changes, while condition observation times advance
+// only when their owning manager producer is explicitly revalidated.
 type DeviceHealthObservationStatus struct {
 	// ObservedAt is manager time when this exact source snapshot was verified.
 	// +kubebuilder:validation:Required
 	ObservedAt metav1.Time `json:"observedAt"`
 
 	// NodeReadyHeartbeatTime is the bound worker's Ready heartbeat in the
-	// snapshot. The rollout controller compares it with the live Node.
+	// snapshot. The rollout controller validates it monotonically against the
+	// live Node without treating a later heartbeat as fresher authenticated
+	// evidence.
 	// +kubebuilder:validation:Required
 	NodeReadyHeartbeatTime metav1.Time `json:"nodeReadyHeartbeatTime"`
 
@@ -565,7 +571,9 @@ type DeviceHealthObservationStatus struct {
 	// ConditionObservations carries independent producer observation times for
 	// manager-evaluated conditions. A fresh Node heartbeat does not refresh
 	// these entries. Rollout-required conditions without a matching entry are
-	// rejected; LastTransitionTime is not proof that the manager ran a producer.
+	// rejected; a CiscoDevice condition's LastTransitionTime is not proof that
+	// the manager ran its producer. Node Ready transition time is used only to
+	// prove continuity across heartbeat skew, never as a freshness source.
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MaxItems=64
 	// +listType=map
@@ -617,8 +625,11 @@ type DeviceWorkerRevisionStatus struct {
 	// +kubebuilder:validation:Optional
 	PodStartTime *metav1.Time `json:"podStartTime,omitempty"`
 
-	// ReadyHeartbeatTime is the matching managed-worker Node heartbeat and must
-	// not predate PodStartTime. It is absent until the new Pod has reported.
+	// ReadyHeartbeatTime is a manager-observed lower bound for the exact ready
+	// Pod and revision and must not predate PodStartTime. Revalidation accepts an
+	// equal or later live heartbeat only while all identity, revision, and
+	// readiness facts still match; regression fails. It is absent until the new
+	// Pod has reported and is not a rollout-health freshness source.
 	// +kubebuilder:validation:Optional
 	ReadyHeartbeatTime *metav1.Time `json:"readyHeartbeatTime,omitempty"`
 

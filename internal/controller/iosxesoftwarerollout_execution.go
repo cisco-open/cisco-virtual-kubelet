@@ -1545,9 +1545,13 @@ func (r *IOSXESoftwareRolloutReconciler) currentReadyWorkerRevision(
 		fresh.DeploymentGeneration != status.DeploymentGeneration ||
 		fresh.PodUID != status.PodUID || fresh.PodStartTime == nil || fresh.ReadyHeartbeatTime == nil ||
 		!fresh.PodStartTime.Equal(status.PodStartTime) ||
-		!fresh.ReadyHeartbeatTime.Equal(status.ReadyHeartbeatTime) {
+		fresh.ReadyHeartbeatTime.Before(status.ReadyHeartbeatTime) {
 		return "", fmt.Errorf("live Deployment, Pod, or worker heartbeat no longer matches CiscoDevice status")
 	}
+	// The live managed-ready heartbeat may advance before the CiscoDevice status
+	// cache catches up. All immutable worker identity and readiness evidence above
+	// must still match, and the newer heartbeat is not persisted or used as a
+	// freshness source here.
 	return status.DesiredRevision, nil
 }
 
@@ -1728,8 +1732,19 @@ func managedDeviceHealthObservedAt(
 	if observation.ObservedAt.IsZero() || observation.NodeReadyHeartbeatTime.IsZero() {
 		return time.Time{}, fmt.Errorf("manager health snapshot timestamps are incomplete")
 	}
-	if !observation.NodeReadyHeartbeatTime.Time.Equal(ready.LastHeartbeatTime.Time) {
-		return time.Time{}, fmt.Errorf("live Node Ready heartbeat is newer or different from the manager snapshot")
+	if ready.Status != corev1.ConditionTrue {
+		return time.Time{}, fmt.Errorf("live Node Ready condition is not True")
+	}
+	snapshotHeartbeat := observation.NodeReadyHeartbeatTime.Time
+	liveHeartbeat := ready.LastHeartbeatTime.Time
+	if liveHeartbeat.Before(snapshotHeartbeat) {
+		return time.Time{}, fmt.Errorf("live Node Ready heartbeat regressed behind the manager snapshot")
+	}
+	if ready.LastTransitionTime.IsZero() {
+		return time.Time{}, fmt.Errorf("live Node Ready condition has no transition proof")
+	}
+	if ready.LastTransitionTime.Time.After(snapshotHeartbeat) {
+		return time.Time{}, fmt.Errorf("live Node Ready condition transitioned after the manager snapshot")
 	}
 	conditionsHash, err := deviceConditionsHash(device)
 	if err != nil {
@@ -1738,12 +1753,12 @@ func managedDeviceHealthObservedAt(
 	if observation.DeviceConditionsHash != conditionsHash {
 		return time.Time{}, fmt.Errorf("CiscoDevice phase or conditions changed after the manager snapshot")
 	}
-	// Use the older source time. This prevents a condition-only reconciliation
-	// from refreshing an old Node heartbeat and prevents a future-dated worker
-	// heartbeat from extending manager-authenticated freshness.
+	// Use the older authenticated source time. A live Ready heartbeat may advance
+	// independently after the manager snapshot, but that heartbeat-only skew must
+	// never refresh manager-authenticated freshness.
 	observed := observation.ObservedAt.Time
-	if ready.LastHeartbeatTime.Time.Before(observed) {
-		observed = ready.LastHeartbeatTime.Time
+	if snapshotHeartbeat.Before(observed) {
+		observed = snapshotHeartbeat
 	}
 	for _, conditionType := range conditionTypes {
 		condition := meta.FindStatusCondition(device.Status.Conditions, conditionType)

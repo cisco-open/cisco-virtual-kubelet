@@ -998,20 +998,28 @@ status field changed most recently. The manager writes
 `CiscoDevice.status.healthObservation` with its observation time, the exact
 bound Node `Ready` heartbeat time, and a SHA-256 hash of the current device
 phase and complete condition set. Planning, admission, and post-operation
-settlement re-read both live objects: the Node heartbeat must still equal the
-snapshot and the device-condition hash must still match. The effective health
-time is the older of the manager observation and Node heartbeat (and is capped
-at current time), so refreshing device conditions cannot make an old worker
-heartbeat fresh and a future-dated heartbeat cannot extend authority. A source
-change invalidates the snapshot until the manager observes the new pair; the
+settlement re-read both live objects. The device-condition hash must still
+match. The live Node must remain `Ready=True`, its heartbeat cannot regress,
+and its nonzero Ready transition time cannot be later than the snapshotted
+heartbeat. A later live heartbeat with that unchanged transition proof is
+treated only as informer/API read skew: the authenticated snapshot heartbeat,
+not the newer live value, remains the freshness bound. The effective health
+time is the oldest of the manager observation, snapshotted Node heartbeat, and
+required condition-producer observations (and is capped at current time), so
+refreshing one source cannot make older evidence fresh and a future-dated
+heartbeat cannot extend authority. A device phase/condition hash change,
+non-True Node Ready state, heartbeat regression, or Ready transition after the
+snapshot invalidates the proof until the manager records a new snapshot; the
 post-operation gate additionally requires that authenticated time to be
 strictly later than leaf completion.
 
 The first Node binding deliberately leaves `healthObservation` absent; identity
 creation is not health evidence. Each fixed readiness condition also requires
-an explicit, current manager producer observation. The controller does not
-fall back to a condition's `lastTransitionTime`, because an old transition can
-remain unchanged while its external evidence becomes stale or unavailable.
+an explicit, current manager producer observation. For those CiscoDevice
+conditions, the controller does not fall back to `lastTransitionTime`, because
+an old transition can remain unchanged while its external evidence becomes
+stale or unavailable. Node Ready `lastTransitionTime` is used only to prove
+state continuity across heartbeat skew, never as producer or freshness time.
 `GNOIConfigurationReady=True` additionally requires the manager-owned worker
 revision proof above. Deployment availability alone is insufficient: during a
 Secret-driven `Recreate`, an old Pod or a heartbeat that predates the new Pod
@@ -1047,12 +1055,14 @@ Campaign phases are `AwaitingApproval`, `Paused`, `Executing`, `Soaking`,
 canary from every qualification cohort is wave zero; non-canaries are wave one
 and remain ineligible until every cohort's canary has settled its
 post-operation checks. Budgets still serialize admission within a wave. A
-completed leaf is not settled immediately: its bound Node must report
-`Ready=True` with a `lastHeartbeatTime` strictly later than the leaf completion,
-and the device and Node must then remain continuously healthy for the configured
-canary or wave soak interval. A stale or unhealthy observation resets progress
-rather than consuming an elapsed timer. `status.counts.cancelled` distinguishes
-targets fenced by cancellation from failed targets.
+completed leaf is not settled immediately: its effective manager-authenticated
+health time, including the snapshotted Node heartbeat and required producer
+observations, must be strictly later than leaf completion. A newer live
+heartbeat alone cannot satisfy this gate. The device and Node must then remain
+continuously healthy for the configured canary or wave soak interval. A stale
+or unhealthy observation resets progress rather than consuming an elapsed
+timer. `status.counts.cancelled` distinguishes targets fenced by cancellation
+from failed targets.
 
 Before a new device RPC, the worker commits an append-only, stage-specific
 mutation claim bound to the current reservation, policy epoch, and control

@@ -2420,20 +2420,49 @@ func TestPersistDrainRecoverySoakSurvivesFailureAndReplanRetries(t *testing.T) {
 		t.Fatalf("persisted fence-path soak = %#v", summary)
 	}
 
-	rollout = current.DeepCopy()
-	if err := r.persistDrainRecoveryGate(context.Background(), rollout, target, leaf,
-		"HealthyPostMutationSoak", "still healthy", started.Add(2*time.Minute)); err != nil {
+	device := &ciskov1.CiscoDevice{Status: ciskov1.DeviceStatus{Phase: "Ready"}}
+	node := nodeWithConditions(corev1.NodeCondition{
+		Type: corev1.NodeReady, Status: corev1.ConditionTrue,
+		LastHeartbeatTime: metav1.NewTime(started), LastTransitionTime: metav1.NewTime(started.Add(-time.Minute)),
+	})
+	if err := refreshManagedHealthObservation(device, node, started); err != nil {
 		t.Fatal(err)
 	}
+	rollout = current.DeepCopy()
+	for _, advance := range []time.Duration{30 * time.Second, 61 * time.Second, 2 * time.Minute} {
+		node.Status.Conditions[0].LastHeartbeatTime = metav1.NewTime(started.Add(advance))
+		observed, err := managedDeviceHealthObservedAt(device, node, started.Add(advance))
+		if err != nil || !observed.Equal(started) {
+			t.Fatalf("heartbeat-only skew at %s = %s, %v; want authenticated %s", advance, observed, err, started)
+		}
+		if err := r.persistDrainRecoveryGate(context.Background(), rollout, target, leaf,
+			"HealthyPostMutationSoak", "still healthy", started.Add(advance)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := kubeClient.Get(context.Background(), client.ObjectKeyFromObject(rollout), &current); err != nil {
+		t.Fatal(err)
+	}
+	summary = indexTargetSummaries(current.Status.Targets)[target.DeviceUID]
+	if !summary.LastTransitionTime.Time.Equal(started) {
+		t.Fatalf("heartbeat-only skew moved persisted soak start to %s, want %s", summary.LastTransitionTime, started)
+	}
 	deadline, ok := continuousHealthySoakDeadline(
-		indexTargetSummaries(rollout.Status.Targets)[target.DeviceUID], started.Add(-time.Minute), 5*time.Minute,
+		summary, started.Add(-time.Minute), 5*time.Minute,
 	)
 	if !ok || !deadline.Equal(started.Add(5*time.Minute)) {
 		t.Fatalf("retry soak deadline = (%s, %v), want %s", deadline, ok, started.Add(5*time.Minute))
 	}
 
+	node.Status.Conditions[0].LastHeartbeatTime = metav1.NewTime(started.Add(3 * time.Minute))
+	node.Status.Conditions[0].LastTransitionTime = metav1.NewTime(started.Add(3 * time.Minute))
+	_, healthErr := managedDeviceHealthObservedAt(device, node, started.Add(3*time.Minute))
+	if healthErr == nil || !strings.Contains(healthErr.Error(), "transitioned after") {
+		t.Fatalf("real Ready transition health error = %v, want post-snapshot transition rejection", healthErr)
+	}
+	rollout = current.DeepCopy()
 	if err := r.persistDrainRecoveryGate(context.Background(), rollout, target, leaf,
-		"PostMutationHealthGate", "unhealthy", started.Add(3*time.Minute)); err != nil {
+		"PostMutationHealthGate", healthErr.Error(), started.Add(3*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 	if err := kubeClient.Get(context.Background(), client.ObjectKeyFromObject(rollout), &current); err != nil {
@@ -2445,6 +2474,12 @@ func TestPersistDrainRecoverySoakSurvivesFailureAndReplanRetries(t *testing.T) {
 		t.Fatalf("unhealthy interval did not reset persisted soak: %#v", summary)
 	}
 
+	if err := refreshManagedHealthObservation(device, node, started.Add(4*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := managedDeviceHealthObservedAt(device, node, started.Add(4*time.Minute)); err != nil {
+		t.Fatalf("refreshed Ready transition observation rejected: %v", err)
+	}
 	rollout = current.DeepCopy()
 	if err := r.persistDrainRecoveryGate(context.Background(), rollout, target, leaf,
 		"HealthyPostMutationSoak", "healthy again", started.Add(4*time.Minute)); err != nil {
@@ -2535,7 +2570,8 @@ func TestFrozenDrainRecoveryHealthUsesOnlyExactApprovedTarget(t *testing.T) {
 		Status: corev1.NodeStatus{
 			NodeInfo: corev1.NodeSystemInfo{MachineID: target.PhysicalIdentity, SystemUUID: target.PhysicalIdentity},
 			Conditions: []corev1.NodeCondition{{
-				Type: corev1.NodeReady, Status: corev1.ConditionTrue, LastHeartbeatTime: metav1.NewTime(now),
+				Type: corev1.NodeReady, Status: corev1.ConditionTrue,
+				LastHeartbeatTime: metav1.NewTime(now), LastTransitionTime: metav1.NewTime(now.Add(-time.Minute)),
 			}},
 		},
 	}

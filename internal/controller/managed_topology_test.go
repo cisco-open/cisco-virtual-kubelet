@@ -127,7 +127,8 @@ func TestManagedHealthObservationBindsNodeAndDeviceEvidence(t *testing.T) {
 		}},
 	}}
 	node := nodeWithConditions(corev1.NodeCondition{
-		Type: corev1.NodeReady, Status: corev1.ConditionTrue, LastHeartbeatTime: metav1.NewTime(heartbeatAt),
+		Type: corev1.NodeReady, Status: corev1.ConditionTrue,
+		LastHeartbeatTime: metav1.NewTime(heartbeatAt), LastTransitionTime: metav1.NewTime(heartbeatAt.Add(-time.Minute)),
 	})
 	if err := refreshManagedHealthObservation(device, node, observedAt); err != nil {
 		t.Fatal(err)
@@ -150,9 +151,9 @@ func TestManagedHealthObservationBindsNodeAndDeviceEvidence(t *testing.T) {
 	}
 
 	node.Status.Conditions[0].LastHeartbeatTime = metav1.NewTime(heartbeatAt.Add(time.Minute))
-	if _, err := managedDeviceHealthObservedAt(device, node, observedAt.Add(time.Minute)); err == nil ||
-		!strings.Contains(err.Error(), "heartbeat is newer") {
-		t.Fatalf("unobserved Node heartbeat error = %v", err)
+	got, err = managedDeviceHealthObservedAt(device, node, observedAt.Add(time.Minute))
+	if err != nil || !got.Equal(heartbeatAt) {
+		t.Fatalf("heartbeat-only skew observation = %s, %v; want authenticated %s", got, err, heartbeatAt)
 	}
 	if err := refreshManagedHealthObservation(device, node, observedAt.Add(time.Minute)); err != nil {
 		t.Fatal(err)
@@ -160,6 +161,109 @@ func TestManagedHealthObservationBindsNodeAndDeviceEvidence(t *testing.T) {
 	got, err = managedDeviceHealthObservedAt(device, node, observedAt.Add(time.Minute))
 	if err != nil || !got.Equal(heartbeatAt.Add(time.Minute)) {
 		t.Fatalf("refreshed combined observation = %s, %v", got, err)
+	}
+}
+
+func TestManagedHealthObservationHeartbeatSkewFailsClosed(t *testing.T) {
+	snapshotHeartbeat := time.Date(2026, time.September, 12, 12, 0, 0, 0, time.UTC)
+	observedAt := snapshotHeartbeat.Add(time.Second)
+	device := &ciskov1.CiscoDevice{Status: ciskov1.DeviceStatus{Phase: "Ready"}}
+	node := nodeWithConditions(corev1.NodeCondition{
+		Type: corev1.NodeReady, Status: corev1.ConditionTrue,
+		LastHeartbeatTime: metav1.NewTime(snapshotHeartbeat), LastTransitionTime: metav1.NewTime(snapshotHeartbeat.Add(-time.Minute)),
+	})
+	if err := refreshManagedHealthObservation(device, node, observedAt); err != nil {
+		t.Fatal(err)
+	}
+	ready := &node.Status.Conditions[0]
+	ready.LastHeartbeatTime = metav1.NewTime(snapshotHeartbeat.Add(time.Second))
+	ready.LastTransitionTime = metav1.NewTime(snapshotHeartbeat)
+	if got, err := managedDeviceHealthObservedAt(device, node, observedAt.Add(time.Second)); err != nil ||
+		!got.Equal(snapshotHeartbeat) {
+		t.Fatalf("boundary transition observation = %s, %v; want authenticated %s", got, err, snapshotHeartbeat)
+	}
+
+	tests := []struct {
+		name       string
+		heartbeat  time.Time
+		transition time.Time
+		status     corev1.ConditionStatus
+		wantError  string
+	}{
+		{
+			name: "regressed heartbeat", heartbeat: snapshotHeartbeat.Add(-time.Second),
+			transition: snapshotHeartbeat.Add(-time.Minute), status: corev1.ConditionTrue,
+			wantError: "regressed",
+		},
+		{
+			name: "non-true Ready", heartbeat: snapshotHeartbeat.Add(time.Second),
+			transition: snapshotHeartbeat.Add(-time.Minute), status: corev1.ConditionFalse,
+			wantError: "not True",
+		},
+		{
+			name: "unknown Ready", heartbeat: snapshotHeartbeat.Add(time.Second),
+			transition: snapshotHeartbeat.Add(-time.Minute), status: corev1.ConditionUnknown,
+			wantError: "not True",
+		},
+		{
+			name: "missing transition proof at snapshot", heartbeat: snapshotHeartbeat,
+			status: corev1.ConditionTrue, wantError: "no transition proof",
+		},
+		{
+			name: "missing transition proof after snapshot", heartbeat: snapshotHeartbeat.Add(time.Second),
+			status: corev1.ConditionTrue, wantError: "no transition proof",
+		},
+		{
+			name: "transition after snapshot", heartbeat: snapshotHeartbeat.Add(time.Second),
+			transition: snapshotHeartbeat.Add(time.Millisecond), status: corev1.ConditionTrue,
+			wantError: "transitioned after",
+		},
+		{
+			name: "transition after live heartbeat", heartbeat: snapshotHeartbeat.Add(time.Second),
+			transition: snapshotHeartbeat.Add(2 * time.Second), status: corev1.ConditionTrue,
+			wantError: "transitioned after",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ready := &node.Status.Conditions[0]
+			ready.Status = tc.status
+			ready.LastHeartbeatTime = metav1.NewTime(tc.heartbeat)
+			ready.LastTransitionTime = metav1.NewTime(tc.transition)
+			if _, err := managedDeviceHealthObservedAt(device, node, observedAt.Add(time.Minute)); err == nil ||
+				!strings.Contains(err.Error(), tc.wantError) {
+				t.Fatalf("managedDeviceHealthObservedAt() error = %v, want %q", err, tc.wantError)
+			}
+		})
+	}
+}
+
+func TestManagedHealthObservationRepeatedHeartbeatSkewDoesNotRefreshFreshness(t *testing.T) {
+	snapshotHeartbeat := time.Date(2026, time.September, 12, 12, 0, 0, 0, time.UTC)
+	device := &ciskov1.CiscoDevice{Status: ciskov1.DeviceStatus{Phase: "Ready"}}
+	node := nodeWithConditions(corev1.NodeCondition{
+		Type: corev1.NodeReady, Status: corev1.ConditionTrue,
+		LastHeartbeatTime: metav1.NewTime(snapshotHeartbeat), LastTransitionTime: metav1.NewTime(snapshotHeartbeat.Add(-time.Hour)),
+	})
+	if err := refreshManagedHealthObservation(device, node, snapshotHeartbeat); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, advance := range []time.Duration{20 * time.Second, 40 * time.Second, 61 * time.Second, 2 * time.Minute} {
+		node.Status.Conditions[0].LastHeartbeatTime = metav1.NewTime(snapshotHeartbeat.Add(advance))
+		observed, err := managedDeviceHealthObservedAt(device, node, snapshotHeartbeat.Add(advance))
+		if err != nil || !observed.Equal(snapshotHeartbeat) {
+			t.Fatalf("heartbeat advance %s observation = %s, %v; want authenticated %s",
+				advance, observed, err, snapshotHeartbeat)
+		}
+	}
+
+	observed, err := managedDeviceHealthObservedAt(device, node, snapshotHeartbeat.Add(2*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !observed.Before(snapshotHeartbeat.Add(2*time.Minute - time.Minute)) {
+		t.Fatalf("heartbeat-only skew refreshed a >60s-old snapshot: observed %s", observed)
 	}
 }
 
@@ -173,7 +277,8 @@ func TestManagedHealthObservationRequiresExplicitBuiltInProducer(t *testing.T) {
 		}},
 	}}
 	node := nodeWithConditions(corev1.NodeCondition{
-		Type: corev1.NodeReady, Status: corev1.ConditionTrue, LastHeartbeatTime: metav1.NewTime(now),
+		Type: corev1.NodeReady, Status: corev1.ConditionTrue,
+		LastHeartbeatTime: metav1.NewTime(now), LastTransitionTime: metav1.NewTime(now.Add(-time.Hour)),
 	})
 	// The manager observed a new Node heartbeat but did not run the gNOI
 	// condition producer. LastTransitionTime is not producer evidence.
@@ -205,7 +310,7 @@ func TestManagedTopologyFirstBindingRejectsPrebindingHealthForgery(t *testing.T)
 	}
 	node := nodeWithConditions(corev1.NodeCondition{
 		Type: corev1.NodeReady, Status: corev1.ConditionTrue,
-		LastHeartbeatTime: metav1.NewTime(now.Add(-time.Second)),
+		LastHeartbeatTime: metav1.NewTime(now.Add(-time.Second)), LastTransitionTime: metav1.NewTime(now.Add(-time.Hour)),
 	}, corev1.NodeCondition{
 		Type: corev1.NodeConditionType(managedprotocol.ManagedWorkerReadyCondition), Status: corev1.ConditionTrue,
 		Reason: managedprotocol.ManagedWorkerReadyReason, LastHeartbeatTime: metav1.NewTime(now),

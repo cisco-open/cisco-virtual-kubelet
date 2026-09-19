@@ -122,6 +122,67 @@ func TestObserveManagedWorkerRevisionRejectsTerminatingPredecessor(t *testing.T)
 	}
 }
 
+func TestCurrentReadyWorkerRevisionToleratesOnlyMonotonicHeartbeatSkew(t *testing.T) {
+	now := time.Date(2026, time.September, 12, 14, 45, 0, 0, time.UTC)
+	tests := []struct {
+		name      string
+		mutate    func(*ciskov1.CiscoDevice, *corev1.Node, []client.Object)
+		wantError bool
+	}{
+		{name: "exact heartbeat"},
+		{name: "newer heartbeat", mutate: func(_ *ciskov1.CiscoDevice, node *corev1.Node, _ []client.Object) {
+			node.Status.Conditions[0].LastHeartbeatTime = metav1.NewTime(now.Add(2 * time.Minute))
+		}},
+		{name: "regressed heartbeat", wantError: true, mutate: func(_ *ciskov1.CiscoDevice, node *corev1.Node, _ []client.Object) {
+			node.Status.Conditions[0].LastHeartbeatTime = metav1.NewTime(now.Add(-time.Second))
+		}},
+		{name: "ready status drift", wantError: true, mutate: func(_ *ciskov1.CiscoDevice, node *corev1.Node, _ []client.Object) {
+			node.Status.Conditions[0].Status = corev1.ConditionFalse
+		}},
+		{name: "ready reason drift", wantError: true, mutate: func(_ *ciskov1.CiscoDevice, node *corev1.Node, _ []client.Object) {
+			node.Status.Conditions[0].Reason = "DifferentWorker"
+		}},
+		{name: "Pod identity drift", wantError: true, mutate: func(device *ciskov1.CiscoDevice, _ *corev1.Node, _ []client.Object) {
+			device.Status.WorkerRevision.PodUID = "superseded-worker-pod"
+		}},
+		{name: "observed revision drift", wantError: true, mutate: func(_ *ciskov1.CiscoDevice, node *corev1.Node, _ []client.Object) {
+			node.Annotations[managedprotocol.AnnotationWorkerObservedRevision] = "sha256:" + strings.Repeat("f", 64)
+		}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			device := &ciskov1.CiscoDevice{ObjectMeta: metav1.ObjectMeta{
+				Namespace: "lab", Name: "device-a", UID: "device-uid", Generation: 7,
+			}}
+			node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "device-a", UID: "node-uid"}}
+			device.Status.NodeIdentity = &ciskov1.DeviceNodeIdentityStatus{
+				NodeName: node.Name, NodeUID: string(node.UID), DeviceUID: string(device.UID),
+				PhysicalIdentity: "serial-a",
+			}
+			workerObjects := attachReadyManagedWorkerProof(t, device, node, now)
+			if tc.mutate != nil {
+				tc.mutate(device, node, workerObjects)
+			}
+			objects := append([]client.Object{node}, workerObjects...)
+			apiClient := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(objects...).Build()
+			reconciler := &IOSXESoftwareRolloutReconciler{
+				Client: apiClient, APIReader: apiClient, Now: func() time.Time { return now.Add(3 * time.Minute) },
+			}
+			got, err := reconciler.currentReadyWorkerRevision(context.Background(), device)
+			if tc.wantError {
+				if err == nil || !strings.Contains(err.Error(), "no longer matches") {
+					t.Fatalf("currentReadyWorkerRevision() = %q, %v; want evidence mismatch", got, err)
+				}
+				return
+			}
+			if err != nil || got != device.Status.WorkerRevision.DesiredRevision {
+				t.Fatalf("currentReadyWorkerRevision() = %q, %v; want %q",
+					got, err, device.Status.WorkerRevision.DesiredRevision)
+			}
+		})
+	}
+}
 func TestManagedWorkerRevisionObservationIsIdempotent(t *testing.T) {
 	baseTime := time.Date(2026, time.September, 12, 15, 0, 0, 0, time.UTC)
 	device := &ciskov1.CiscoDevice{

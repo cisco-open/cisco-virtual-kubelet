@@ -715,7 +715,10 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 		Status: corev1.NodeStatus{
 			NodeInfo: corev1.NodeSystemInfo{MachineID: "serial-a", SystemUUID: "serial-a"},
 			Conditions: []corev1.NodeCondition{
-				{Type: corev1.NodeReady, Status: corev1.ConditionTrue, LastHeartbeatTime: metav1.NewTime(now)},
+				{
+					Type: corev1.NodeReady, Status: corev1.ConditionTrue,
+					LastHeartbeatTime: metav1.NewTime(now), LastTransitionTime: metav1.NewTime(now.Add(-time.Minute)),
+				},
 				{
 					Type: corev1.NodeConditionType(managedprotocol.ManagedWorkerReadyCondition), Status: corev1.ConditionTrue,
 					Reason: managedprotocol.ManagedWorkerReadyReason, LastHeartbeatTime: metav1.NewTime(now),
@@ -825,6 +828,7 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	}
 
 	current.Status.Conditions[0].LastHeartbeatTime = metav1.NewTime(now.Add(-10 * time.Minute))
+	current.Status.Conditions[0].LastTransitionTime = metav1.NewTime(now.Add(-11 * time.Minute))
 	if err := apiClient.Status().Update(context.Background(), &current); err != nil {
 		t.Fatal(err)
 	}
@@ -1014,6 +1018,159 @@ func TestContinuousHealthySoakStartsFromObservedHealthyTransition(t *testing.T) 
 	summary.Reason = "PostMutationHealthGate"
 	if _, started := continuousHealthySoakDeadline(summary, completion, 10*time.Minute); started {
 		t.Fatal("unhealthy gate incorrectly retained the earlier healthy soak interval")
+	}
+}
+
+func TestCurrentFleetMembersHeartbeatSkewPreservesPersistedSoak(t *testing.T) {
+	const siteKey = "topology.cisco.vk/site"
+	ctx := context.Background()
+	snapshotHeartbeat := time.Date(2026, time.September, 12, 12, 0, 0, 0, time.UTC)
+	liveHeartbeat := snapshotHeartbeat.Add(2 * time.Minute)
+	target := policyFenceTarget("device-a", "device-uid", "leaf-a")
+	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
+	rollout.Status.Targets = []opsv1alpha1.IOSXESoftwareRolloutTargetStatus{{
+		DeviceName: target.DeviceName, DeviceUID: target.DeviceUID, LeafName: target.ChildName,
+		Phase: opsv1alpha1.IOSXESoftwareRolloutTargetSoaking, Reason: "HealthyPostMutationSoak",
+		LastTransitionTime: metav1.NewTime(snapshotHeartbeat),
+	}}
+	leaf := policyFenceLeaf(rollout, target, "leaf-uid")
+
+	device := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: rollout.Namespace, Name: target.DeviceName, UID: types.UID(target.DeviceUID), Generation: 1,
+			Labels: map[string]string{siteKey: "site-a"},
+		},
+		Spec: ciskov1.DeviceSpec{PhysicalIdentity: target.PhysicalIdentity},
+		Status: ciskov1.DeviceStatus{
+			Phase: "Ready",
+			NodeIdentity: &ciskov1.DeviceNodeIdentityStatus{
+				NodeName: target.NodeName, NodeUID: target.NodeUID, DeviceUID: target.DeviceUID,
+				PhysicalIdentity: target.PhysicalIdentity,
+			},
+			TopologyProjection: &ciskov1.DeviceTopologyProjectionStatus{
+				EffectiveLabelHash: "sha256:" + strings.Repeat("a", 64), SourceResourceVersion: "1",
+				LastSuccessfulTime: metav1.NewTime(snapshotHeartbeat.Add(-time.Minute)),
+			},
+		},
+	}
+	conditionTypes := []string{
+		ciskov1.CiscoDeviceConditionNodeIdentityReady,
+		ciskov1.CiscoDeviceConditionTopologyReady,
+		ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
+	}
+	for _, conditionType := range conditionTypes {
+		device.Status.Conditions = append(device.Status.Conditions, metav1.Condition{
+			Type: conditionType, Status: metav1.ConditionTrue, ObservedGeneration: device.Generation,
+			Reason: "Verified", LastTransitionTime: metav1.NewTime(snapshotHeartbeat.Add(-time.Minute)),
+		})
+	}
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: target.NodeName, UID: types.UID(target.NodeUID), Labels: map[string]string{siteKey: "site-a"},
+			Annotations: map[string]string{
+				managedprotocol.AnnotationManaged:         "true",
+				managedprotocol.AnnotationDeviceNamespace: device.Namespace,
+				managedprotocol.AnnotationDeviceName:      device.Name,
+				managedprotocol.AnnotationDeviceUID:       string(device.UID),
+				managedprotocol.AnnotationNodeUID:         target.NodeUID,
+				managedprotocol.AnnotationWorkerProtocol:  managedprotocol.Version,
+				managedprotocol.AnnotationWorkerUsername:  "system:serviceaccount:lab:cvk-device-a",
+			},
+		},
+		Status: corev1.NodeStatus{
+			NodeInfo: corev1.NodeSystemInfo{MachineID: target.PhysicalIdentity, SystemUUID: target.PhysicalIdentity},
+			Conditions: []corev1.NodeCondition{
+				{
+					Type: corev1.NodeReady, Status: corev1.ConditionTrue,
+					LastHeartbeatTime:  metav1.NewTime(snapshotHeartbeat),
+					LastTransitionTime: metav1.NewTime(snapshotHeartbeat.Add(-time.Minute)),
+				},
+				{
+					Type:   corev1.NodeConditionType(managedprotocol.ManagedWorkerReadyCondition),
+					Status: corev1.ConditionTrue, Reason: managedprotocol.ManagedWorkerReadyReason,
+					LastHeartbeatTime:  metav1.NewTime(snapshotHeartbeat),
+					LastTransitionTime: metav1.NewTime(snapshotHeartbeat.Add(-time.Minute)),
+				},
+			},
+		},
+	}
+	if err := refreshManagedHealthObservation(device, node, snapshotHeartbeat, conditionTypes...); err != nil {
+		t.Fatal(err)
+	}
+	node.Status.Conditions[0].LastHeartbeatTime = metav1.NewTime(liveHeartbeat)
+
+	scheme := drainTestScheme(t)
+	apiClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(&corev1.Node{}, &opsv1alpha1.IOSXESoftwareRollout{}).
+		WithObjects(device, node, rollout).Build()
+	now := liveHeartbeat
+	reconciler := &IOSXESoftwareRolloutReconciler{
+		Client: apiClient, APIReader: apiClient, Now: func() time.Time { return now },
+	}
+	policy := &topologyrollout.ParsedAdminPolicy{
+		Selector: labels.Everything(),
+		Config: topologyrollout.AdminPolicyConfig{
+			RequiredTopologyKeys: []string{siteKey}, ProjectedTopologyKeys: []string{siteKey},
+		},
+	}
+	effectivePolicy := topologyrollout.Policy{
+		DomainBudgets: map[string]int{siteKey: 1}, DomainTransferBudgets: map[string]int{siteKey: 1},
+		RequiredHealthFreshBy: snapshotHeartbeat.Add(-time.Second),
+	}
+	members, _, err := reconciler.currentFleetMembers(ctx, rollout, policy, effectivePolicy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(members) != 1 || !members[0].HealthKnown || !members[0].Healthy ||
+		!members[0].HealthObserved.Equal(snapshotHeartbeat) {
+		t.Fatalf("heartbeat-only skew fleet member = %#v, want healthy observation at %s", members, snapshotHeartbeat)
+	}
+
+	var persisted opsv1alpha1.IOSXESoftwareRollout
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(rollout), &persisted); err != nil {
+		t.Fatal(err)
+	}
+	if err := reconciler.persistDrainRecoveryGate(ctx, &persisted, target, leaf,
+		"HealthyPostMutationSoak", "still healthy", now); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(rollout), &persisted); err != nil {
+		t.Fatal(err)
+	}
+	summary := indexTargetSummaries(persisted.Status.Targets)[target.DeviceUID]
+	if !summary.LastTransitionTime.Time.Equal(snapshotHeartbeat) {
+		t.Fatalf("heartbeat-only skew moved persisted soak start to %s", summary.LastTransitionTime)
+	}
+
+	var liveNode corev1.Node
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(node), &liveNode); err != nil {
+		t.Fatal(err)
+	}
+	now = snapshotHeartbeat.Add(3 * time.Minute)
+	ready := nodeReadyCondition(&liveNode)
+	ready.LastHeartbeatTime = metav1.NewTime(now)
+	ready.LastTransitionTime = metav1.NewTime(now)
+	if err := apiClient.Status().Update(ctx, &liveNode); err != nil {
+		t.Fatal(err)
+	}
+	members, _, err = reconciler.currentFleetMembers(ctx, &persisted, policy, effectivePolicy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(members) != 1 || members[0].HealthKnown || members[0].Healthy || !members[0].HealthObserved.IsZero() {
+		t.Fatalf("post-snapshot Ready transition fleet member = %#v, want unknown and unhealthy", members)
+	}
+	if err := reconciler.persistDrainRecoveryGate(ctx, &persisted, target, leaf,
+		"PostMutationHealthGate", "Ready transitioned after the authenticated snapshot", now); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(rollout), &persisted); err != nil {
+		t.Fatal(err)
+	}
+	summary = indexTargetSummaries(persisted.Status.Targets)[target.DeviceUID]
+	if summary.Phase != opsv1alpha1.IOSXESoftwareRolloutTargetBlocked ||
+		summary.Reason != "PostMutationHealthGate" || !summary.LastTransitionTime.Time.Equal(now) {
+		t.Fatalf("real Ready transition did not reset persisted soak: %#v", summary)
 	}
 }
 
