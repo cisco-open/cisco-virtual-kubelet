@@ -1969,15 +1969,28 @@ func (r *IOSXESoftwareRolloutReconciler) ensureDrainLeaseIdle(
 	if err := validateDrainSessionIdentity(session, target, leaf, leaf.Status.ManagerDrain); err != nil {
 		return fmt.Errorf("%w: drain maintenance session identity is invalid: %v", errDrainSafetyBlocked, err)
 	}
+	return r.ensureMaintenanceLeaseIdle(ctx, &device, &node, session.Lease)
+}
+
+func (r *IOSXESoftwareRolloutReconciler) ensureMaintenanceLeaseIdle(
+	ctx context.Context,
+	device *ciskov1.CiscoDevice,
+	node *corev1.Node,
+	leaseRef ciskov1.DeviceMaintenanceLeaseReference,
+) error {
+	if device == nil || node == nil || string(device.UID) == "" || string(node.UID) == "" ||
+		leaseRef.Namespace == "" || leaseRef.Name == "" || leaseRef.UID == "" {
+		return fmt.Errorf("%w: maintenance Lease identity is incomplete", errDrainSafetyBlocked)
+	}
 	var lease coordv1.Lease
-	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: session.Lease.Namespace, Name: session.Lease.Name}, &lease); err != nil {
+	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: leaseRef.Namespace, Name: leaseRef.Name}, &lease); err != nil {
 		return err
 	}
-	if string(lease.UID) != session.Lease.UID {
+	if string(lease.UID) != leaseRef.UID {
 		return fmt.Errorf("drain mutation Lease incarnation changed")
 	}
 	expectedAnnotations, expectedLabels := managedMutationLeaseMetadata(
-		&device, target.NodeName, target.NodeUID, node.Annotations[managedprotocol.AnnotationWorkerUsername],
+		device, node.Name, string(node.UID), node.Annotations[managedprotocol.AnnotationWorkerUsername],
 	)
 	if err := validateManagedMutationLeaseMetadata(&lease, expectedAnnotations, expectedLabels); err != nil {
 		return fmt.Errorf("%w: mutation Lease binding is no longer canonical: %v", errDrainSafetyBlocked, err)
@@ -1987,6 +2000,207 @@ func (r *IOSXESoftwareRolloutReconciler) ensureDrainLeaseIdle(
 	}
 	if hasMaintenanceRequestAnnotations(lease.Annotations) {
 		return fmt.Errorf("%w: mutation Lease retains maintenance request annotations", errDrainSafetyBlocked)
+	}
+	return nil
+}
+
+// deletionDrainSettlementSuperseded recognizes recovery evidence for a
+// campaign that had already settled, released its topology acquisition, and
+// was then deleted after a later campaign replaced the CiscoDevice's
+// single-slot Settled maintenance acknowledgement. It grants no authority and
+// never rewrites the ledger. A non-exact current session is treated as
+// observed so deletion does not replay an obsolete release fence while the
+// successor is active or malformed.
+func (r *IOSXESoftwareRolloutReconciler) deletionDrainSettlementSuperseded(
+	ctx context.Context,
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+	leaf *opsv1alpha1.IOSXESoftwareUpgrade,
+) (bool, bool, string, error) {
+	if err := validateManagerDrainBinding(rollout, target, leaf); err != nil {
+		return false, false, "", err
+	}
+	drain := leaf.Status.ManagerDrain
+	admission := leaf.Status.ManagerAdmission
+	if drain.State != opsv1alpha1.UpgradeManagerDrainSettled ||
+		admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled {
+		return false, false, "", nil
+	}
+
+	var device ciskov1.CiscoDevice
+	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: target.DeviceName}, &device); err != nil {
+		return false, false, "", err
+	}
+	blocked := func(message string) (bool, bool, string, error) {
+		return false, true, message, nil
+	}
+	if string(device.UID) != target.DeviceUID {
+		return blocked("device incarnation changed before successor settlement could be proved")
+	}
+	session := device.Status.MaintenanceSession
+	if session == nil {
+		return blocked("the maintenance session disappeared before successor settlement could be proved")
+	}
+	if validateDrainSessionIdentity(session, target, leaf, drain) == nil {
+		return false, false, "", nil
+	}
+	session = session.DeepCopy()
+	// A partial rewrite or identity reuse is not successor evidence. Block it
+	// without replaying the old release fence into the successor's ledger state.
+	if session.SessionToken == drain.SessionToken || session.Operation.UID == string(leaf.UID) {
+		return blocked("the maintenance session partially reuses the old drain identity")
+	}
+	if err := validateSettledSuccessorSession(session, rollout.Namespace, target); err != nil {
+		return blocked(err.Error())
+	}
+
+	if err := validateDrainPodsComplete(drain); err != nil {
+		return false, true, "", err
+	}
+	for i := range drain.Pods {
+		if err := r.ensureCompletedDrainPodUnprotected(ctx, &drain.Pods[i], drain.SessionToken); err != nil {
+			return blocked("old drain Pod protection is not fully released")
+		}
+	}
+	_, ledger, err := r.ledgerStore(rollout).Read(ctx)
+	if err != nil {
+		return false, true, "", err
+	}
+	if _, exists := ledger.Reservations[drain.ReservationID]; exists {
+		return blocked("old drain reservation is still present")
+	}
+
+	// Re-read every mutable authority after the Pod and ledger proofs. A device
+	// delete/recreate or a newly published maintenance session must win this
+	// race and keep the old campaign finalizer fail-closed.
+	var freshDevice ciskov1.CiscoDevice
+	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: target.DeviceName}, &freshDevice); err != nil {
+		return false, true, "", err
+	}
+	var freshNode corev1.Node
+	if err := r.reader().Get(ctx, types.NamespacedName{Name: target.NodeName}, &freshNode); err != nil {
+		return false, true, "", err
+	}
+	if string(freshDevice.UID) != target.DeviceUID || string(freshNode.UID) != target.NodeUID {
+		return blocked("device or Node incarnation changed while proving successor settlement")
+	}
+	if !reflect.DeepEqual(freshDevice.Status.MaintenanceSession, session) {
+		return blocked("newer settled maintenance session changed while proving successor settlement")
+	}
+	if err := validateDrainSchedulingRestored(&freshDevice, &freshNode, target, leaf); err != nil {
+		return blocked(err.Error())
+	}
+	if freshDevice.Status.TopologyLock != nil &&
+		(freshDevice.Status.TopologyLock.CampaignUID == string(rollout.UID) ||
+			freshDevice.Status.TopologyLock.ReservationID == drain.ReservationID ||
+			freshDevice.Status.TopologyLock.AcquisitionID == admission.TopologyLockID) {
+		return blocked("old drain topology lock is still present")
+	}
+	if err := r.ensureMaintenanceLeaseIdle(ctx, &freshDevice, &freshNode,
+		freshDevice.Status.MaintenanceSession.Lease); err != nil {
+		return blocked(err.Error())
+	}
+	// Read the successor operation only after all replaceable device, Node,
+	// Lease, Pod, and ledger evidence. Its UID and terminal settled status are
+	// immutable, so this final binding cannot be satisfied by a same-name
+	// delete/recreate observed earlier in the proof.
+	var successor opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.reader().Get(ctx, types.NamespacedName{
+		Namespace: session.Operation.Namespace, Name: session.Operation.Name,
+	}, &successor); err != nil {
+		return blocked("newer settled maintenance operation is unavailable")
+	}
+	if err := validateSettledSuccessorBinding(session, target, &successor); err != nil {
+		return blocked(err.Error())
+	}
+	return true, true, "newer settled maintenance session proves the old drain acknowledgement was consumed", nil
+}
+
+func validateSettledSuccessorSession(
+	session *ciskov1.DeviceMaintenanceSessionStatus,
+	namespace string,
+	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+) error {
+	if session == nil || session.Phase != ciskov1.DeviceMaintenanceSessionSettled {
+		return fmt.Errorf("a newer maintenance session is not yet settled")
+	}
+	if session.DeviceUID != target.DeviceUID || session.NodeName != target.NodeName ||
+		session.NodeUID != target.NodeUID || session.Operation.Namespace != namespace ||
+		session.Operation.Name == "" || session.Operation.UID == "" || session.SessionToken == "" ||
+		session.Lease.Namespace == "" || session.Lease.Name == "" || session.Lease.UID == "" ||
+		session.ControlRevision < 0 || session.RequestedAt.IsZero() || session.AcknowledgedAt == nil ||
+		session.AcknowledgedAt.IsZero() || session.AcknowledgedAt.Before(&session.RequestedAt) {
+		return fmt.Errorf("newer settled maintenance-session identity is incomplete or belongs to another device or Node incarnation")
+	}
+	expectedHolder := "software-upgrade/" + session.Operation.UID
+	switch session.ProtocolVersion {
+	case "":
+		if session.Purpose != "" || session.Lease.Holder != expectedHolder {
+			return fmt.Errorf("newer settled legacy maintenance-session protocol or holder is invalid")
+		}
+	case ciskov1.DeviceMaintenanceProtocolRolloutV1:
+		if session.Purpose != ciskov1.DeviceMaintenancePurposeSoftwareMutation ||
+			session.Lease.Holder != expectedHolder {
+			return fmt.Errorf("newer settled rollout maintenance-session purpose or holder is invalid")
+		}
+	case ciskov1.DeviceMaintenanceProtocolPDBDrainV1:
+		parsed, err := uuid.Parse(session.SessionToken)
+		if err != nil || parsed.String() != session.SessionToken || parsed.Version() != 4 || parsed.Variant() != uuid.RFC4122 {
+			return fmt.Errorf("newer settled drain maintenance-session token is invalid")
+		}
+		switch session.Purpose {
+		case ciskov1.DeviceMaintenancePurposeWorkloadDrain:
+			expectedHolder = "software-drain/" + session.Operation.UID
+		case ciskov1.DeviceMaintenancePurposeSoftwareMutation:
+		default:
+			return fmt.Errorf("newer settled drain maintenance-session purpose is invalid")
+		}
+		if session.Lease.Holder != expectedHolder {
+			return fmt.Errorf("newer settled drain maintenance-session holder is invalid")
+		}
+	default:
+		return fmt.Errorf("newer settled maintenance-session protocol is unsupported")
+	}
+	return nil
+}
+
+func validateSettledSuccessorBinding(
+	session *ciskov1.DeviceMaintenanceSessionStatus,
+	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+	successor *opsv1alpha1.IOSXESoftwareUpgrade,
+) error {
+	if session == nil || successor == nil || string(successor.UID) != session.Operation.UID ||
+		successor.Namespace != session.Operation.Namespace || successor.Name != session.Operation.Name ||
+		successor.Spec.DeviceRef.Name != target.DeviceName || !terminalManagedLeaf(successor.Status.Phase) {
+		return fmt.Errorf("newer settled maintenance operation identity or terminal outcome is invalid")
+	}
+	admission := successor.Status.ManagerAdmission
+	// A non-drain operation may receive a later cancellation/control fence
+	// before its original maintenance session settles, so its retained
+	// admission revision is monotonic rather than identical. The PDB protocol
+	// binds all three revisions exactly below.
+	if admission == nil || admission.ProtocolVersion != opsv1alpha1.ManagedUpgradeProtocolRolloutV1 ||
+		admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled ||
+		admission.LeafUID != string(successor.UID) || admission.DeviceUID != target.DeviceUID ||
+		admission.NodeUID != target.NodeUID || session.Operation.UID != admission.LeafUID ||
+		session.DeviceUID != admission.DeviceUID || session.NodeUID != admission.NodeUID ||
+		admission.ControlRevision == nil || *admission.ControlRevision < session.ControlRevision {
+		return fmt.Errorf("newer settled maintenance operation does not retain an exact settled admission binding")
+	}
+	if session.ProtocolVersion != ciskov1.DeviceMaintenanceProtocolPDBDrainV1 {
+		if successor.Status.ManagerDrain != nil {
+			return fmt.Errorf("newer non-drain maintenance session unexpectedly retains manager drain state")
+		}
+		return nil
+	}
+	drain := successor.Status.ManagerDrain
+	if drain == nil || drain.ProtocolVersion != opsv1alpha1.ManagedDrainProtocolPDBV1 ||
+		drain.State != opsv1alpha1.UpgradeManagerDrainSettled || drain.SessionToken != session.SessionToken ||
+		drain.ControlRevision != session.ControlRevision || !drain.StartedAt.Equal(&session.RequestedAt) ||
+		drain.ReservationID == "" || drain.ReservationID != admission.ReservationID ||
+		drain.PolicyEpoch != admission.PolicyEpoch || drain.NodeUID != target.NodeUID ||
+		drain.NodeUID != session.NodeUID || *admission.ControlRevision != drain.ControlRevision {
+		return fmt.Errorf("newer settled drain session does not match its exact manager drain and admission binding")
 	}
 	return nil
 }
@@ -2416,18 +2630,39 @@ func (r *IOSXESoftwareRolloutReconciler) ensureDrainGuardRestored(
 	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
 	leaf *opsv1alpha1.IOSXESoftwareUpgrade,
 ) error {
-	drain := leaf.Status.ManagerDrain
 	var node corev1.Node
 	if err := r.reader().Get(ctx, types.NamespacedName{Name: target.NodeName}, &node); err != nil {
 		return err
 	}
-	if string(node.UID) != drain.NodeUID ||
-		hasDrainMaintenanceTaint(node.Spec.Taints) != drain.MaintenanceTaintPresentBefore {
-		return fmt.Errorf("waiting for exact pre-drain scheduling state to be restored")
-	}
 	var device ciskov1.CiscoDevice
 	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: target.DeviceName}, &device); err != nil {
 		return err
+	}
+	if err := validateDrainSchedulingRestored(&device, &node, target, leaf); err != nil {
+		return err
+	}
+	session := device.Status.MaintenanceSession
+	if err := validateDrainSessionIdentity(session, target, leaf, leaf.Status.ManagerDrain); err != nil ||
+		(session.Phase != ciskov1.DeviceMaintenanceSessionRecovering && session.Phase != ciskov1.DeviceMaintenanceSessionSettled) {
+		return fmt.Errorf("waiting for exact maintenance session recovery acknowledgement")
+	}
+	return nil
+}
+
+func validateDrainSchedulingRestored(
+	device *ciskov1.CiscoDevice,
+	node *corev1.Node,
+	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+	leaf *opsv1alpha1.IOSXESoftwareUpgrade,
+) error {
+	if device == nil || node == nil || leaf == nil || leaf.Status.ManagerDrain == nil ||
+		string(device.UID) != target.DeviceUID || string(node.UID) != target.NodeUID {
+		return fmt.Errorf("waiting for exact device and Node scheduling identity to be restored")
+	}
+	drain := leaf.Status.ManagerDrain
+	if string(node.UID) != drain.NodeUID ||
+		hasDrainMaintenanceTaint(node.Spec.Taints) != drain.MaintenanceTaintPresentBefore {
+		return fmt.Errorf("waiting for exact pre-drain scheduling state to be restored")
 	}
 	wantUnschedulable := drain.NodeUnschedulableBefore ||
 		device.Annotations[managedprotocol.AnnotationDrainCordonHold] == "true"
@@ -2435,11 +2670,6 @@ func (r *IOSXESoftwareRolloutReconciler) ensureDrainGuardRestored(
 		node.Annotations[managedprotocol.AnnotationDrainCordonOwner] != "" ||
 		node.Annotations[managedprotocol.AnnotationDrainTaintOwner] != "" {
 		return fmt.Errorf("waiting for the drain-owned cordon to restore pre-drain or explicit operator-held state")
-	}
-	session := device.Status.MaintenanceSession
-	if err := validateDrainSessionIdentity(session, target, leaf, drain); err != nil ||
-		(session.Phase != ciskov1.DeviceMaintenanceSessionRecovering && session.Phase != ciskov1.DeviceMaintenanceSessionSettled) {
-		return fmt.Errorf("waiting for exact maintenance session recovery acknowledgement")
 	}
 	return nil
 }

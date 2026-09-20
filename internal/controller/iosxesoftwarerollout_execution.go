@@ -3242,6 +3242,19 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileDeletion(
 	if rollout.Status.FrozenPlan == nil {
 		return r.removeRolloutFinalizer(ctx, rollout)
 	}
+	// A terminal campaign has already completed the exact reservation, drain,
+	// maintenance-session, and topology-lock settlement protocol. Do not replay
+	// those single-slot acknowledgements during a later deletion: a subsequent
+	// campaign is allowed to replace a Settled CiscoDevice maintenance session.
+	// Retain only the narrow terminal Pod-protection repair before releasing the
+	// campaign finalizer.
+	if rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded ||
+		rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseCancelled {
+		if err := r.reconcileTerminalDrainProtection(ctx, rollout); err != nil {
+			return ctrl.Result{}, err
+		}
+		return r.removeRolloutFinalizer(ctx, rollout)
+	}
 	revision, err := r.deletionFenceRevision(ctx, rollout, now)
 	if err != nil {
 		return ctrl.Result{RequeueAfter: rolloutPollInterval}, err
@@ -3281,6 +3294,26 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileDeletion(
 		if leaf.Status.ManagerDrain != nil {
 			summaries := indexTargetSummaries(rollout.Status.Targets)
 			summary := summaries[target.DeviceUID]
+			if leaf.Status.ManagerAdmission != nil &&
+				leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled &&
+				leaf.Status.ManagerDrain.State == opsv1alpha1.UpgradeManagerDrainSettled {
+				superseded, observed, detail, supersessionErr := r.deletionDrainSettlementSuperseded(
+					ctx, rollout, target, &leaf,
+				)
+				if supersessionErr != nil {
+					return ctrl.Result{}, supersessionErr
+				}
+				if observed {
+					if superseded {
+						continue
+					}
+					transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetCancelling,
+						"DrainSettlementAcknowledgement", detail, now)
+					summaries[target.DeviceUID] = summary
+					return r.patchExecutionStatus(ctx, rollout, summaries, opsv1alpha1.IOSXESoftwareRolloutPhaseCancelling,
+						"deletion is fenced; workload-drain recovery is still converging", now)
+				}
+			}
 			settled, gateReason, detail, err := r.trySettleDrainedLeaf(ctx, rollout, policy, target, &leaf, summary, now)
 			if err != nil {
 				return ctrl.Result{}, err

@@ -1663,6 +1663,724 @@ func TestDeletionRetainsFinalizerUntilSettledDrainAcknowledgement(t *testing.T) 
 	assertDrainTopologyLock(t, r, device, false)
 }
 
+func TestTerminalDrainDeletionDoesNotReplayReplaceableSettlement(t *testing.T) {
+	t.Parallel()
+	for _, phase := range []opsv1alpha1.IOSXESoftwareRolloutPhase{
+		opsv1alpha1.IOSXESoftwareRolloutPhaseCancelled,
+		opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded,
+	} {
+		t.Run(string(phase), func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			r, rollout, _, _, leaseName := settledDrainSuccessorFixture(t)
+			target := rollout.Status.FrozenPlan.Targets[0]
+
+			// A later active session and held Lease must not make a terminal old
+			// campaign replay successor-owned settlement state.
+			var device ciskov1.CiscoDevice
+			if err := r.Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: target.DeviceName}, &device); err != nil {
+				t.Fatal(err)
+			}
+			device.Status.MaintenanceSession.Phase = ciskov1.DeviceMaintenanceSessionActive
+			if err := r.Status().Update(ctx, &device); err != nil {
+				t.Fatal(err)
+			}
+			var lease coordv1.Lease
+			if err := r.Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: leaseName}, &lease); err != nil {
+				t.Fatal(err)
+			}
+			setTestLeaseHeld(&lease)
+			if err := r.Update(ctx, &lease); err != nil {
+				t.Fatal(err)
+			}
+
+			var current opsv1alpha1.IOSXESoftwareRollout
+			if err := r.Get(ctx, client.ObjectKeyFromObject(rollout), &current); err != nil {
+				t.Fatal(err)
+			}
+			current.Finalizers = []string{rolloutSafetyFinalizer}
+			if err := r.Update(ctx, &current); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Get(ctx, client.ObjectKeyFromObject(rollout), &current); err != nil {
+				t.Fatal(err)
+			}
+			current.Status.Phase = phase
+			if err := r.Status().Update(ctx, &current); err != nil {
+				t.Fatal(err)
+			}
+
+			// Terminal deletion must not depend on policy/ledger bootstrap.
+			var policy corev1.ConfigMap
+			policyKey := types.NamespacedName{
+				Namespace: rollout.Status.FrozenPlan.Policy.Namespace,
+				Name:      rollout.Status.FrozenPlan.Policy.Name,
+			}
+			if err := r.Get(ctx, policyKey, &policy); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Delete(ctx, &policy); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Get(ctx, client.ObjectKeyFromObject(rollout), &current); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := r.reconcileDeletion(ctx, &current, time.Date(2026, 9, 12, 12, 10, 0, 0, time.UTC)); err != nil {
+				t.Fatalf("terminal deletion: %v", err)
+			}
+			if err := r.Get(ctx, client.ObjectKeyFromObject(rollout), &current); err != nil {
+				t.Fatal(err)
+			}
+			if controllerutil.ContainsFinalizer(&current, rolloutSafetyFinalizer) {
+				t.Fatal("terminal rollout replayed obsolete settlement instead of releasing its finalizer")
+			}
+		})
+	}
+}
+
+func TestDeletingSettledDrainAcceptsBoundSettledSuccessorAcrossClockSkew(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                   string
+		protocol               ciskov1.DeviceMaintenanceProtocolVersion
+		requestedSkew          time.Duration
+		admissionRevisionDelta int64
+	}{
+		{name: "legacy successor with earlier clock and newer admission revision", requestedSkew: -time.Minute, admissionRevisionDelta: 2},
+		{name: "rollout-v1 successor with equal clock and newer admission revision", protocol: ciskov1.DeviceMaintenanceProtocolRolloutV1, admissionRevisionDelta: 1},
+		{name: "PDB successor with equal clock", protocol: ciskov1.DeviceMaintenanceProtocolPDBDrainV1},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			r, rollout, _, successorName, _ := settledDrainSuccessorFixtureForProtocol(t, test.protocol, test.requestedSkew)
+			if test.admissionRevisionDelta > 0 {
+				var successor opsv1alpha1.IOSXESoftwareUpgrade
+				if err := r.Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: successorName}, &successor); err != nil {
+					t.Fatal(err)
+				}
+				*successor.Status.ManagerAdmission.ControlRevision += test.admissionRevisionDelta
+				if err := r.Status().Update(ctx, &successor); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			var current opsv1alpha1.IOSXESoftwareRollout
+			if err := r.Get(ctx, client.ObjectKeyFromObject(rollout), &current); err != nil {
+				t.Fatal(err)
+			}
+			current.Finalizers = []string{rolloutSafetyFinalizer}
+			if err := r.Update(ctx, &current); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Get(ctx, client.ObjectKeyFromObject(rollout), &current); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := r.reconcileDeletion(ctx, &current, time.Date(2026, 9, 12, 12, 10, 0, 0, time.UTC)); err != nil {
+				t.Fatalf("superseded deletion: %v", err)
+			}
+			if err := r.Get(ctx, client.ObjectKeyFromObject(rollout), &current); err != nil {
+				t.Fatal(err)
+			}
+			if controllerutil.ContainsFinalizer(&current, rolloutSafetyFinalizer) {
+				t.Fatalf("settled maintenance proof did not release the stale rollout finalizer: phase=%s targets=%#v", current.Status.Phase, current.Status.Targets)
+			}
+		})
+	}
+}
+
+func TestDeletingSettledDrainRejectsUnprovenSuccessor(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		protocol ciskov1.DeviceMaintenanceProtocolVersion
+		mutate   func(*ciskov1.CiscoDevice, *opsv1alpha1.IOSXESoftwareUpgrade, *coordv1.Lease)
+	}{
+		{
+			name: "active successor",
+			mutate: func(device *ciskov1.CiscoDevice, _ *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				device.Status.MaintenanceSession.Phase = ciskov1.DeviceMaintenanceSessionActive
+			},
+		},
+		{
+			name: "wrong Node incarnation",
+			mutate: func(device *ciskov1.CiscoDevice, _ *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				device.Status.MaintenanceSession.NodeUID = "replacement-node"
+			},
+		},
+		{
+			name: "missing acknowledgement",
+			mutate: func(device *ciskov1.CiscoDevice, _ *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				device.Status.MaintenanceSession.AcknowledgedAt = nil
+			},
+		},
+		{
+			name: "acknowledgement precedes request",
+			mutate: func(device *ciskov1.CiscoDevice, _ *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				acknowledgedAt := metav1.NewTime(device.Status.MaintenanceSession.RequestedAt.Add(-time.Second))
+				device.Status.MaintenanceSession.AcknowledgedAt = &acknowledgedAt
+			},
+		},
+		{
+			name: "successor outcome is not settled",
+			mutate: func(_ *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				successor.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionGranted
+			},
+		},
+		{
+			name: "successor leaf is nonterminal",
+			mutate: func(_ *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				successor.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+			},
+		},
+		{
+			name: "admission leaf UID mismatch",
+			mutate: func(_ *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				successor.Status.ManagerAdmission.LeafUID = "replacement-leaf"
+			},
+		},
+		{
+			name: "admission device UID mismatch",
+			mutate: func(_ *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				successor.Status.ManagerAdmission.DeviceUID = "replacement-device"
+			},
+		},
+		{
+			name: "admission Node UID mismatch",
+			mutate: func(_ *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				successor.Status.ManagerAdmission.NodeUID = "replacement-node"
+			},
+		},
+		{
+			name: "admission revision precedes session",
+			mutate: func(device *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				*successor.Status.ManagerAdmission.ControlRevision = device.Status.MaintenanceSession.ControlRevision - 1
+			},
+		},
+		{
+			name: "partial old session identity reuse",
+			mutate: func(device *ciskov1.CiscoDevice, _ *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				device.Status.MaintenanceSession.SessionToken = "11111111-1111-4111-8111-111111111111"
+			},
+		},
+		{
+			name:     "PDB token mismatch",
+			protocol: ciskov1.DeviceMaintenanceProtocolPDBDrainV1,
+			mutate: func(_ *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				successor.Status.ManagerDrain.SessionToken = "33333333-3333-4333-8333-333333333333"
+			},
+		},
+		{
+			name:     "PDB drain is not settled",
+			protocol: ciskov1.DeviceMaintenanceProtocolPDBDrainV1,
+			mutate: func(_ *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				successor.Status.ManagerDrain.State = opsv1alpha1.UpgradeManagerDrainRecovering
+			},
+		},
+		{
+			name:     "PDB revision mismatch",
+			protocol: ciskov1.DeviceMaintenanceProtocolPDBDrainV1,
+			mutate: func(_ *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				successor.Status.ManagerDrain.ControlRevision++
+			},
+		},
+		{
+			name:     "PDB admission revision mismatch",
+			protocol: ciskov1.DeviceMaintenanceProtocolPDBDrainV1,
+			mutate: func(_ *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				(*successor.Status.ManagerAdmission.ControlRevision)++
+			},
+		},
+		{
+			name:     "PDB request time mismatch",
+			protocol: ciskov1.DeviceMaintenanceProtocolPDBDrainV1,
+			mutate: func(_ *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				successor.Status.ManagerDrain.StartedAt = metav1.NewTime(successor.Status.ManagerDrain.StartedAt.Add(time.Second))
+			},
+		},
+		{
+			name:     "PDB reservation mismatch",
+			protocol: ciskov1.DeviceMaintenanceProtocolPDBDrainV1,
+			mutate: func(_ *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				successor.Status.ManagerDrain.ReservationID = "replacement-reservation"
+			},
+		},
+		{
+			name:     "PDB policy epoch mismatch",
+			protocol: ciskov1.DeviceMaintenanceProtocolPDBDrainV1,
+			mutate: func(_ *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				successor.Status.ManagerDrain.PolicyEpoch++
+			},
+		},
+		{
+			name:     "PDB drain Node mismatch",
+			protocol: ciskov1.DeviceMaintenanceProtocolPDBDrainV1,
+			mutate: func(_ *ciskov1.CiscoDevice, successor *opsv1alpha1.IOSXESoftwareUpgrade, _ *coordv1.Lease) {
+				successor.Status.ManagerDrain.NodeUID = "replacement-node"
+			},
+		},
+		{
+			name: "canonical Lease is held",
+			mutate: func(_ *ciskov1.CiscoDevice, _ *opsv1alpha1.IOSXESoftwareUpgrade, lease *coordv1.Lease) {
+				setTestLeaseHeld(lease)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			r, rollout, oldLeaf, successorName, leaseName := settledDrainSuccessorFixtureForProtocol(t, test.protocol, 0)
+			target := rollout.Status.FrozenPlan.Targets[0]
+
+			var device ciskov1.CiscoDevice
+			if err := r.Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: target.DeviceName}, &device); err != nil {
+				t.Fatal(err)
+			}
+			var successor opsv1alpha1.IOSXESoftwareUpgrade
+			if err := r.Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: successorName}, &successor); err != nil {
+				t.Fatal(err)
+			}
+			var lease coordv1.Lease
+			if err := r.Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: leaseName}, &lease); err != nil {
+				t.Fatal(err)
+			}
+			test.mutate(&device, &successor, &lease)
+			if err := r.Status().Update(ctx, &device); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Status().Update(ctx, &successor); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Update(ctx, &lease); err != nil {
+				t.Fatal(err)
+			}
+
+			superseded, observed, detail, err := r.deletionDrainSettlementSuperseded(
+				ctx, rollout, target, oldLeaf,
+			)
+			if err != nil {
+				t.Fatalf("deletionDrainSettlementSuperseded(): %v", err)
+			}
+			if superseded || !observed || detail == "" {
+				t.Fatalf("unproven successor = superseded %v, observed %v, detail %q", superseded, observed, detail)
+			}
+		})
+	}
+}
+
+func TestDeletingSettledDrainDoesNotReplaySettlementWhileSuccessorIsUnproven(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		mutate func(*ciskov1.CiscoDevice, *coordv1.Lease)
+	}{
+		{
+			name: "active successor",
+			mutate: func(device *ciskov1.CiscoDevice, _ *coordv1.Lease) {
+				device.Status.MaintenanceSession.Phase = ciskov1.DeviceMaintenanceSessionActive
+			},
+		},
+		{
+			name: "held successor Lease",
+			mutate: func(_ *ciskov1.CiscoDevice, lease *coordv1.Lease) {
+				setTestLeaseHeld(lease)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			r, rollout, _, _, leaseName := settledDrainSuccessorFixture(t)
+			target := rollout.Status.FrozenPlan.Targets[0]
+
+			if err := r.ledgerStore(rollout).Mutate(ctx, func(ledger *topologyrollout.Ledger) error {
+				return topologyrollout.FenceUnboundAcquisition(
+					ledger, "successor-release-fence", 2, strings.Repeat("e", 32),
+				)
+			}); err != nil {
+				t.Fatalf("seed successor release fence: %v", err)
+			}
+			ledgerKey := types.NamespacedName{
+				Namespace: rollout.Status.FrozenPlan.Policy.LedgerNamespace,
+				Name:      rollout.Status.FrozenPlan.Policy.LedgerName,
+			}
+			var ledgerBefore corev1.ConfigMap
+			if err := r.Get(ctx, ledgerKey, &ledgerBefore); err != nil {
+				t.Fatal(err)
+			}
+
+			var device ciskov1.CiscoDevice
+			if err := r.Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: target.DeviceName}, &device); err != nil {
+				t.Fatal(err)
+			}
+			var lease coordv1.Lease
+			if err := r.Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: leaseName}, &lease); err != nil {
+				t.Fatal(err)
+			}
+			test.mutate(&device, &lease)
+			if err := r.Status().Update(ctx, &device); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Update(ctx, &lease); err != nil {
+				t.Fatal(err)
+			}
+
+			var current opsv1alpha1.IOSXESoftwareRollout
+			if err := r.Get(ctx, client.ObjectKeyFromObject(rollout), &current); err != nil {
+				t.Fatal(err)
+			}
+			current.Finalizers = []string{rolloutSafetyFinalizer}
+			if err := r.Update(ctx, &current); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Get(ctx, client.ObjectKeyFromObject(rollout), &current); err != nil {
+				t.Fatal(err)
+			}
+			result, err := r.reconcileDeletion(ctx, &current, time.Date(2026, 9, 12, 12, 10, 0, 0, time.UTC))
+			if err != nil {
+				t.Fatalf("reconcileDeletion(): %v", err)
+			}
+			if result.RequeueAfter == 0 {
+				t.Fatal("unproven successor did not keep deletion converging")
+			}
+			if err := r.Get(ctx, client.ObjectKeyFromObject(rollout), &current); err != nil {
+				t.Fatal(err)
+			}
+			if !controllerutil.ContainsFinalizer(&current, rolloutSafetyFinalizer) {
+				t.Fatal("unproven successor allowed deletion to release its finalizer")
+			}
+			var ledgerAfter corev1.ConfigMap
+			if err := r.Get(ctx, ledgerKey, &ledgerAfter); err != nil {
+				t.Fatal(err)
+			}
+			if got, want := ledgerAfter.Data[topologyrollout.LedgerDataKey], ledgerBefore.Data[topologyrollout.LedgerDataKey]; got != want {
+				t.Fatalf("unproven successor replayed old settlement:\n got %s\nwant %s", got, want)
+			}
+		})
+	}
+}
+
+func TestDeletingSettledDrainRejectsUnreleasedOldCampaignState(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		prepare func(*testing.T, context.Context, *IOSXESoftwareRolloutReconciler, *opsv1alpha1.IOSXESoftwareRollout, opsv1alpha1.IOSXESoftwareRolloutPlannedTarget, *opsv1alpha1.IOSXESoftwareUpgrade)
+	}{
+		{
+			name: "old reservation remains",
+			prepare: func(t *testing.T, ctx context.Context, r *IOSXESoftwareRolloutReconciler,
+				rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+				leaf *opsv1alpha1.IOSXESoftwareUpgrade,
+			) {
+				seed := policyFenceLedger(t, rollout, []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target},
+					map[string]types.UID{target.DeviceUID: leaf.UID}, topologyrollout.ReservationBound)
+				seedLedger, err := topologyrollout.Decode(
+					[]byte(seed.Data[topologyrollout.LedgerDataKey]), string(seed.UID),
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				reservation := seedLedger.Reservations[leaf.Status.ManagerDrain.ReservationID]
+				if err := r.ledgerStore(rollout).Mutate(ctx, func(ledger *topologyrollout.Ledger) error {
+					ledger.Reservations[reservation.ID] = reservation
+					return nil
+				}); err != nil {
+					t.Fatalf("restore old reservation: %v", err)
+				}
+			},
+		},
+		{
+			name: "old topology lock remains",
+			prepare: func(t *testing.T, ctx context.Context, r *IOSXESoftwareRolloutReconciler,
+				rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+				leaf *opsv1alpha1.IOSXESoftwareUpgrade,
+			) {
+				var device ciskov1.CiscoDevice
+				if err := r.Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: target.DeviceName}, &device); err != nil {
+					t.Fatal(err)
+				}
+				device.Status.TopologyLock = expectedDeviceTopologyLock(
+					rollout, target, leaf.Status.ManagerAdmission.PolicyEpoch,
+					leaf.Status.ManagerAdmission.TopologyLockID, time.Date(2026, 9, 12, 12, 5, 0, 0, time.UTC),
+				)
+				if err := r.Status().Update(ctx, &device); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "stale Pod protection remains",
+			prepare: func(t *testing.T, ctx context.Context, r *IOSXESoftwareRolloutReconciler,
+				_ *opsv1alpha1.IOSXESoftwareRollout, _ opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+				leaf *opsv1alpha1.IOSXESoftwareUpgrade,
+			) {
+				frozen := opsv1alpha1.UpgradeDrainPodStatus{
+					Namespace: "apps", Name: "stale-protected", UID: "stale-protected-uid",
+					Phase: opsv1alpha1.UpgradeDrainPodComplete,
+					PDBs: []opsv1alpha1.UpgradeDrainPDBStatus{{
+						UpgradeDrainObjectReference: opsv1alpha1.UpgradeDrainObjectReference{
+							APIVersion: "policy/v1", Kind: "PodDisruptionBudget", Namespace: "apps",
+							Name: "stale-protected", UID: "stale-pdb-uid", Generation: 1,
+						},
+						ObservedGeneration: 1, DisruptionsAllowed: 1, CurrentHealthy: 1,
+						DesiredHealthy: 1, ExpectedPods: 1,
+					}},
+				}
+				setDrainEligibilityHash(t, &frozen)
+				leaf.Status.ManagerDrain.Pods = []opsv1alpha1.UpgradeDrainPodStatus{frozen}
+				pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+					Namespace: frozen.Namespace, Name: frozen.Name, UID: types.UID(frozen.UID),
+					// A marker without its paired finalizer is partial protection and
+					// cannot be interpreted or repaired as an exact old-session write.
+					Annotations: map[string]string{
+						managedprotocol.AnnotationDrainSession: leaf.Status.ManagerDrain.SessionToken,
+					},
+				}}
+				if err := r.Create(ctx, pod); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			r, rollout, oldLeaf, _, _ := settledDrainSuccessorFixture(t)
+			target := rollout.Status.FrozenPlan.Targets[0]
+			test.prepare(t, ctx, r, rollout, target, oldLeaf)
+
+			superseded, observed, detail, err := r.deletionDrainSettlementSuperseded(
+				ctx, rollout, target, oldLeaf,
+			)
+			if err != nil {
+				t.Fatalf("deletionDrainSettlementSuperseded(): %v", err)
+			}
+			if superseded || !observed || detail == "" {
+				t.Fatalf("unreleased old state = superseded %v, observed %v, detail %q", superseded, observed, detail)
+			}
+		})
+	}
+}
+
+func TestDeletingSettledDrainRejectsFreshIncarnationOrSuccessorSessionSwap(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name               string
+		wantSuccessorReads int
+		mutateRead         func(client.Object)
+	}{
+		{
+			name: "device delete and recreate",
+			mutateRead: func(object client.Object) {
+				device, ok := object.(*ciskov1.CiscoDevice)
+				if !ok {
+					return
+				}
+				device.UID = "replacement-device-uid"
+				device.Status.MaintenanceSession = nil
+			},
+		},
+		{
+			name: "Node delete and recreate",
+			mutateRead: func(object client.Object) {
+				node, ok := object.(*corev1.Node)
+				if ok {
+					node.UID = "replacement-node-uid"
+				}
+			},
+		},
+		{
+			name: "successor session swaps between proofs",
+			mutateRead: func(object client.Object) {
+				device, ok := object.(*ciskov1.CiscoDevice)
+				if ok && device.Status.MaintenanceSession != nil {
+					device.Status.MaintenanceSession.SessionToken = "replacement-successor-session"
+				}
+			},
+		},
+		{
+			name:               "successor leaf delete and recreate",
+			wantSuccessorReads: 1,
+			mutateRead: func(object client.Object) {
+				successor, ok := object.(*opsv1alpha1.IOSXESoftwareUpgrade)
+				if ok {
+					successor.UID = "replacement-successor-uid"
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			r, rollout, oldLeaf, _, _ := settledDrainSuccessorFixture(t)
+			target := rollout.Status.FrozenPlan.Targets[0]
+			base, ok := r.Client.(client.WithWatch)
+			if !ok {
+				t.Fatal("fixture client does not implement client.WithWatch")
+			}
+			deviceReads := 0
+			nodeReads := 0
+			successorReads := 0
+			r.APIReader = interceptor.NewClient(base, interceptor.Funcs{
+				Get: func(ctx context.Context, underlying client.WithWatch, key client.ObjectKey, object client.Object, opts ...client.GetOption) error {
+					if err := underlying.Get(ctx, key, object, opts...); err != nil {
+						return err
+					}
+					switch object.(type) {
+					case *ciskov1.CiscoDevice:
+						deviceReads++
+						if deviceReads == 2 {
+							test.mutateRead(object)
+						}
+					case *corev1.Node:
+						nodeReads++
+						if nodeReads == 1 {
+							test.mutateRead(object)
+						}
+					case *opsv1alpha1.IOSXESoftwareUpgrade:
+						successorReads++
+						if successorReads == 1 {
+							test.mutateRead(object)
+						}
+					}
+					return nil
+				},
+			})
+
+			superseded, observed, detail, err := r.deletionDrainSettlementSuperseded(
+				ctx, rollout, target, oldLeaf,
+			)
+			if err != nil {
+				t.Fatalf("deletionDrainSettlementSuperseded(): %v", err)
+			}
+			if superseded || !observed || detail == "" {
+				t.Fatalf("racing successor proof = superseded %v, observed %v, detail %q", superseded, observed, detail)
+			}
+			if deviceReads != 2 || nodeReads != 1 || successorReads != test.wantSuccessorReads {
+				t.Fatalf("fresh authority reads = device %d, Node %d, successor %d, want 2, 1, and %d",
+					deviceReads, nodeReads, successorReads, test.wantSuccessorReads)
+			}
+		})
+	}
+}
+
+func settledDrainSuccessorFixture(
+	t *testing.T,
+) (*IOSXESoftwareRolloutReconciler, *opsv1alpha1.IOSXESoftwareRollout, *opsv1alpha1.IOSXESoftwareUpgrade, string, string) {
+	t.Helper()
+	return settledDrainSuccessorFixtureForProtocol(t, ciskov1.DeviceMaintenanceProtocolRolloutV1, 0)
+}
+
+func settledDrainSuccessorFixtureForProtocol(
+	t *testing.T,
+	protocol ciskov1.DeviceMaintenanceProtocolVersion,
+	requestedSkew time.Duration,
+) (*IOSXESoftwareRolloutReconciler, *opsv1alpha1.IOSXESoftwareRollout, *opsv1alpha1.IOSXESoftwareUpgrade, string, string) {
+	t.Helper()
+	ctx := context.Background()
+	r, rollout, leaf, device := settledDrainAcknowledgementFixture(t)
+	target := rollout.Status.FrozenPlan.Targets[0]
+	acknowledgeSettledDrain(t, r, device)
+	if err := r.finishSettledDrain(ctx, rollout, target, leaf); err != nil {
+		t.Fatalf("finish old settled drain: %v", err)
+	}
+
+	const successorName = "successor-upgrade"
+	const successorUID = "successor-upgrade-uid"
+	const successorReservationID = "successor-reservation"
+	const successorPolicyEpoch = int64(2)
+	const successorControlRevision = int64(11)
+	successorAdmission := &opsv1alpha1.UpgradeManagerAdmissionStatus{
+		ProtocolVersion: opsv1alpha1.ManagedUpgradeProtocolRolloutV1,
+		State:           opsv1alpha1.UpgradeManagerAdmissionSettled,
+		PolicyEpoch:     successorPolicyEpoch,
+		ReservationID:   successorReservationID,
+		LeafUID:         successorUID,
+		DeviceUID:       target.DeviceUID,
+		NodeUID:         target.NodeUID,
+		ControlRevision: ptr.To(successorControlRevision),
+	}
+	successor := &opsv1alpha1.IOSXESoftwareUpgrade{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: rollout.Namespace, Name: successorName, UID: successorUID,
+		},
+		Spec: opsv1alpha1.IOSXESoftwareUpgradeSpec{
+			DeviceRef: leaf.Spec.DeviceRef,
+		},
+		Status: opsv1alpha1.IOSXESoftwareUpgradeStatus{
+			Phase:            opsv1alpha1.UpgradePhaseFailed,
+			ManagerAdmission: successorAdmission,
+		},
+	}
+	var currentDevice ciskov1.CiscoDevice
+	if err := r.Get(ctx, client.ObjectKeyFromObject(device), &currentDevice); err != nil {
+		t.Fatal(err)
+	}
+	leaseRef := currentDevice.Status.MaintenanceSession.Lease
+	requestedAt := metav1.NewTime(leaf.Status.ManagerDrain.UpdatedAt.Add(requestedSkew))
+	acknowledgedAt := metav1.NewTime(requestedAt.Add(time.Second))
+	sessionToken := "successor-session-0001"
+	purpose := ciskov1.DeviceMaintenancePurpose("")
+	holder := "software-upgrade/" + successorUID
+	if protocol == ciskov1.DeviceMaintenanceProtocolPDBDrainV1 {
+		sessionToken = "22222222-2222-4222-8222-222222222222"
+		purpose = ciskov1.DeviceMaintenancePurposeSoftwareMutation
+		recoveryDeadline := metav1.NewTime(requestedAt.Add(20 * time.Minute))
+		successor.Status.ManagerDrain = &opsv1alpha1.UpgradeManagerDrainStatus{
+			ProtocolVersion:  opsv1alpha1.ManagedDrainProtocolPDBV1,
+			State:            opsv1alpha1.UpgradeManagerDrainSettled,
+			SessionToken:     sessionToken,
+			ReservationID:    successorReservationID,
+			PolicyEpoch:      successorPolicyEpoch,
+			ControlRevision:  successorControlRevision,
+			NodeUID:          target.NodeUID,
+			StartedAt:        requestedAt,
+			DrainDeadline:    metav1.NewTime(requestedAt.Add(10 * time.Minute)),
+			RecoveryDeadline: &recoveryDeadline,
+			UpdatedAt:        acknowledgedAt,
+		}
+	} else if protocol == ciskov1.DeviceMaintenanceProtocolRolloutV1 {
+		purpose = ciskov1.DeviceMaintenancePurposeSoftwareMutation
+	}
+	if err := r.Create(ctx, successor); err != nil {
+		t.Fatal(err)
+	}
+	currentDevice.Status.MaintenanceSession = &ciskov1.DeviceMaintenanceSessionStatus{
+		Phase:           ciskov1.DeviceMaintenanceSessionSettled,
+		ProtocolVersion: protocol,
+		Purpose:         purpose,
+		SessionToken:    sessionToken,
+		Lease: ciskov1.DeviceMaintenanceLeaseReference{
+			DeviceMaintenanceObjectReference: leaseRef.DeviceMaintenanceObjectReference,
+			Holder:                           holder,
+		},
+		Operation: ciskov1.DeviceMaintenanceObjectReference{
+			Namespace: rollout.Namespace, Name: successorName, UID: successorUID,
+		},
+		DeviceUID: target.DeviceUID, NodeName: target.NodeName, NodeUID: target.NodeUID,
+		RequestedAt: requestedAt, AcknowledgedAt: &acknowledgedAt, ControlRevision: successorControlRevision,
+	}
+	if err := r.Status().Update(ctx, &currentDevice); err != nil {
+		t.Fatal(err)
+	}
+	return r, rollout, leaf, successorName, leaseRef.Name
+}
+
+func setTestLeaseHeld(lease *coordv1.Lease) {
+	holder := "software-upgrade/active-successor"
+	heldAt := metav1.NewMicroTime(time.Date(2026, 9, 12, 12, 5, 0, 0, time.UTC))
+	lease.Spec.HolderIdentity = &holder
+	lease.Spec.LeaseDurationSeconds = ptr.To[int32](3600)
+	lease.Spec.AcquireTime = &heldAt
+	lease.Spec.RenewTime = &heldAt
+	lease.Spec.LeaseTransitions = ptr.To[int32](1)
+}
+
 func TestPolicyAndControlTransitionPreservesSettledDrainAcknowledgementBinding(t *testing.T) {
 	t.Parallel()
 	r, rollout, leaf, _ := settledDrainAcknowledgementFixture(t)
