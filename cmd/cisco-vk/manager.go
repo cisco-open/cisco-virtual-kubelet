@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -28,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -63,6 +65,10 @@ var (
 	enableManagedTopology           bool
 	topologyPolicyNamespace         string
 	topologyPolicyName              string
+	appHostingServiceAccount        string
+	appHostingAccessMode            string
+	networkManagementServiceAccount string
+	networkManagementAccessMode     string
 )
 
 var managerCmd = &cobra.Command{
@@ -106,6 +112,14 @@ func init() {
 		"Namespace containing the administrator topology policy ConfigMap (required with --enable-managed-topology).")
 	managerCmd.Flags().StringVar(&topologyPolicyName, "topology-policy-name", "",
 		"Name of the administrator topology policy ConfigMap (required with --enable-managed-topology).")
+	managerCmd.Flags().StringVar(&appHostingServiceAccount, "app-hosting-service-account", managedprotocol.AppHostingServiceAccount,
+		"Namespace-shared ServiceAccount name for managed app-hosting workers.")
+	managerCmd.Flags().StringVar(&appHostingAccessMode, "app-hosting-access-mode", managedprotocol.WorkerAccessReadWrite,
+		"Managed app-hosting access mode: disabled, readOnly, or readWrite.")
+	managerCmd.Flags().StringVar(&networkManagementServiceAccount, "network-management-service-account", managedprotocol.NetworkManagementServiceAccount,
+		"Namespace-shared ServiceAccount name for managed network-management workers.")
+	managerCmd.Flags().StringVar(&networkManagementAccessMode, "network-management-access-mode", managedprotocol.WorkerAccessReadOnly,
+		"Managed network-management access mode: disabled, readOnly, or readWrite.")
 	managerCmd.Flags().StringVar(&logLevel, "log-level", "",
 		"log level: debug, info, warn, error (default: $LOG_LEVEL or info)")
 	managerCmd.Flags().IntVar(&controllerInfoLogRateLimit, "controller-info-log-rate-limit", 100,
@@ -123,6 +137,12 @@ func runManager(cmd *cobra.Command, args []string) error {
 		enableLeaderElect,
 		topologyPolicyNamespace,
 		topologyPolicyName,
+	); err != nil {
+		return err
+	}
+	if err := validateManagedWorkerAccountOptions(
+		appHostingServiceAccount, appHostingAccessMode,
+		networkManagementServiceAccount, networkManagementAccessMode,
 	); err != nil {
 		return err
 	}
@@ -247,6 +267,14 @@ func runManager(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("managed topology policy read-only preflight: %w", err)
 		}
+		if err := validateManagedWorkerPolicyIdentity(
+			policyInput.Config,
+			appHostingServiceAccount,
+			networkManagementServiceAccount,
+			os.Getenv("CONFIG_LEASE_NAMESPACE"),
+		); err != nil {
+			return fmt.Errorf("managed topology functional worker identity preflight: %w", err)
+		}
 		// Admission is the ownership boundary for the policy and ledger. Prove
 		// that boundary before BootstrapAdminPolicy is allowed to initialize or
 		// bind either ConfigMap.
@@ -256,6 +284,8 @@ func runManager(cmd *cobra.Command, args []string) error {
 			policyInput.AdmissionPrefix,
 			policyKey,
 			policyInput.Config.LedgerName,
+			appHostingServiceAccount,
+			networkManagementServiceAccount,
 		); err != nil {
 			return fmt.Errorf("managed topology native admission preflight: %w", err)
 		}
@@ -291,17 +321,21 @@ func runManager(cmd *cobra.Command, args []string) error {
 	}
 
 	if err = (&controller.CiscoDeviceReconciler{
-		Client:                  mgr.GetClient(),
-		APIReader:               mgr.GetAPIReader(),
-		Scheme:                  mgr.GetScheme(),
-		Image:                   vkImage,
-		ServiceAccount:          vkServiceAccount,
-		AggregatorEnabled:       enableAggregator,
-		ManagedTopology:         enableManagedTopology,
-		TopologyPolicyNamespace: topologyPolicyNamespace,
-		TopologyPolicyName:      topologyPolicyName,
-		LeaseNamespace:          os.Getenv("CONFIG_LEASE_NAMESPACE"),
-		Recorder:                mgr.GetEventRecorderFor("ciscodevice-controller"),
+		Client:                          mgr.GetClient(),
+		APIReader:                       mgr.GetAPIReader(),
+		Scheme:                          mgr.GetScheme(),
+		Image:                           vkImage,
+		ServiceAccount:                  vkServiceAccount,
+		AppHostingServiceAccount:        appHostingServiceAccount,
+		NetworkManagementServiceAccount: networkManagementServiceAccount,
+		AppHostingAccessMode:            appHostingAccessMode,
+		NetworkManagementAccessMode:     networkManagementAccessMode,
+		AggregatorEnabled:               enableAggregator,
+		ManagedTopology:                 enableManagedTopology,
+		TopologyPolicyNamespace:         topologyPolicyNamespace,
+		TopologyPolicyName:              topologyPolicyName,
+		LeaseNamespace:                  os.Getenv("CONFIG_LEASE_NAMESPACE"),
+		Recorder:                        mgr.GetEventRecorderFor("ciscodevice-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CiscoDevice")
 		os.Exit(1)
@@ -376,6 +410,51 @@ func runManager(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func validateManagedWorkerAccountOptions(appAccount, appAccess, networkAccount, networkAccess string) error {
+	for label, account := range map[string]string{
+		"app-hosting": appAccount, "network-management": networkAccount,
+	} {
+		if account != strings.TrimSpace(account) || account == "" {
+			return fmt.Errorf("%s ServiceAccount name must be non-empty and contain no surrounding whitespace", label)
+		}
+		if problems := utilvalidation.IsDNS1123Label(account); len(problems) != 0 {
+			return fmt.Errorf("invalid %s ServiceAccount name %q: %s", label, account, strings.Join(problems, "; "))
+		}
+	}
+	if appAccount == networkAccount {
+		return fmt.Errorf("app-hosting and network-management ServiceAccount names must be different")
+	}
+	for label, access := range map[string]string{
+		"app-hosting": appAccess, "network-management": networkAccess,
+	} {
+		switch access {
+		case managedprotocol.WorkerAccessDisabled, managedprotocol.WorkerAccessReadOnly, managedprotocol.WorkerAccessReadWrite:
+		default:
+			return fmt.Errorf("invalid %s access mode %q: expected disabled, readOnly, or readWrite", label, access)
+		}
+	}
+	return nil
+}
+
+func validateManagedWorkerPolicyIdentity(
+	policy topologyrollout.AdminPolicyConfig,
+	appAccount, networkAccount, configLeaseNamespace string,
+) error {
+	if policy.AppHostingServiceAccountName != appAccount {
+		return fmt.Errorf("app-hosting ServiceAccount is %q in the retained topology policy, not %q; account names are immutable until managed topology is fully retired",
+			policy.AppHostingServiceAccountName, appAccount)
+	}
+	if policy.NetworkManagementServiceAccountName != networkAccount {
+		return fmt.Errorf("network-management ServiceAccount is %q in the retained topology policy, not %q; account names are immutable until managed topology is fully retired",
+			policy.NetworkManagementServiceAccountName, networkAccount)
+	}
+	if policy.ConfigLeaseNamespace != configLeaseNamespace {
+		return fmt.Errorf("CONFIG_LEASE_NAMESPACE is %q in the retained topology policy, not %q; the lease authority location is immutable until managed topology is fully retired",
+			policy.ConfigLeaseNamespace, configLeaseNamespace)
+	}
+	return nil
+}
+
 // managedRolloutControllerEnabled keeps topology projection useful for ordinary
 // scheduling without granting rollout mutation authority unless the existing
 // IOS XE software-upgrade gate is also explicitly enabled. The global gNOI
@@ -398,9 +477,10 @@ func validateManagedTopologyManagerOptions(managedTopology, leaderElection bool,
 }
 
 // managedTopologyStatePresent detects every durable or API-authority remnant
-// that still depends on the retained native admission contract. In particular,
-// completed isolated legacy workers continue to need Node/Pod admission because
-// Kubernetes RBAC cannot scope their cluster role to one Node by resourceName.
+// that still depends on the retained native admission contract. In-flight
+// reverse handoffs temporarily use a UID-scoped worker; completed records keep
+// manager-owned audit state even though steady compatibility mode has already
+// returned to the configured namespace-shared legacy identity.
 func managedTopologyStatePresent(ctx context.Context, reader client.Reader) (bool, error) {
 	if reader == nil {
 		return false, fmt.Errorf("API reader is nil")

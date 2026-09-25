@@ -101,18 +101,20 @@ func (r *CiscoDeviceReconciler) ensureManagedNodeHeartbeatLease(
 	device *ciskov1.CiscoDevice,
 	node *corev1.Node,
 ) error {
-	worker := node.Annotations[managedprotocol.AnnotationWorkerUsername]
+	worker := managedAppWorkerUsername(node)
 	if device.UID == "" || node.UID == "" || worker == "" {
 		return fmt.Errorf("managed Node identity/worker binding is incomplete before heartbeat Lease creation")
 	}
+	desiredAnnotations := managedLeaseBindingAnnotations(
+		device, node.Name, string(node.UID), worker, managedprotocol.LeasePurposeNodeHeartbeat,
+	)
+	copyManagedWorkerBindingAnnotations(desiredAnnotations, node.Annotations)
 	desired := &coordv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: corev1.NamespaceNodeLease,
-			Name:      node.Name,
-			Annotations: managedLeaseBindingAnnotations(
-				device, node.Name, string(node.UID), worker, managedprotocol.LeasePurposeNodeHeartbeat,
-			),
-			Labels: managedLeaseLabels(devicecoordination.DeviceKey(device.Namespace, device.Name), managedNodeHeartbeatFamily),
+			Namespace:   corev1.NamespaceNodeLease,
+			Name:        node.Name,
+			Annotations: desiredAnnotations,
+			Labels:      managedLeaseLabels(devicecoordination.DeviceKey(device.Namespace, device.Name), managedNodeHeartbeatFamily),
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion: corev1.SchemeGroupVersion.String(), Kind: "Node", Name: node.Name, UID: node.UID,
 			}},
@@ -139,14 +141,16 @@ func (r *CiscoDeviceReconciler) ensureManagedConfigLease(
 		namespace = device.Namespace
 	}
 	deviceKey := devicecoordination.DeviceKey(device.Namespace, device.Name)
-	worker := node.Annotations[managedprotocol.AnnotationWorkerUsername]
+	worker := managedNetworkWorkerUsername(node)
+	desiredAnnotations := managedLeaseBindingAnnotations(
+		device, node.Name, string(node.UID), worker, managedprotocol.LeasePurposeConfigFamily,
+	)
+	copyManagedWorkerBindingAnnotations(desiredAnnotations, node.Annotations)
 	desired := &coordv1.Lease{ObjectMeta: metav1.ObjectMeta{
-		Namespace: namespace,
-		Name:      configengine.LeaseName(deviceKey, family),
-		Annotations: managedLeaseBindingAnnotations(
-			device, node.Name, string(node.UID), worker, managedprotocol.LeasePurposeConfigFamily,
-		),
-		Labels: managedLeaseLabels(deviceKey, family),
+		Namespace:   namespace,
+		Name:        configengine.LeaseName(deviceKey, family),
+		Annotations: desiredAnnotations,
+		Labels:      managedLeaseLabels(deviceKey, family),
 	}}
 	if device.UID == "" || node.UID == "" || worker == "" {
 		return fmt.Errorf("managed Node identity/worker binding is incomplete before config Lease creation")
@@ -355,7 +359,6 @@ func (r *CiscoDeviceReconciler) cleanupManagedWorkerLeases(
 		return fmt.Errorf("bound Node identity changed before managed Lease cleanup")
 	}
 	deviceKey := devicecoordination.DeviceKey(device.Namespace, device.Name)
-	worker := "system:serviceaccount:" + device.Namespace + ":" + managedWorkerServiceAccountName(device)
 	var leases coordv1.LeaseList
 	if err := r.reader().List(ctx, &leases, client.MatchingLabels{"cisco.vk/device": deviceKey}); err != nil {
 		return fmt.Errorf("list managed worker Leases before cleanup: %w", err)
@@ -369,6 +372,16 @@ func (r *CiscoDeviceReconciler) cleanupManagedWorkerLeases(
 		}
 		family := lease.Labels["cisco.vk/family"]
 		purpose := lease.Annotations[managedprotocol.AnnotationLeasePurpose]
+		worker := managedNetworkWorkerUsername(&node)
+		if purpose == managedprotocol.LeasePurposeNodeHeartbeat {
+			worker = managedAppWorkerUsername(&node)
+		}
+		if worker == "" {
+			// The Node may already be gone on an idempotent cleanup retry. The
+			// Lease is still accepted only after every other UID-bound annotation,
+			// label, owner, and canonical name is checked below.
+			worker = lease.Annotations[managedprotocol.AnnotationWorkerUsername]
+		}
 		expectedAnnotations := managedLeaseBindingAnnotations(device, node.Name, string(node.UID), worker, purpose)
 		expectedLabels := managedLeaseLabels(deviceKey, family)
 		var expectedOwners []metav1.OwnerReference

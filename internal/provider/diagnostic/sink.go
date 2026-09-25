@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
 
 // uidPrefix returns the leading 8 chars of a UID for use as a
@@ -120,6 +121,11 @@ func (r *Reconciler) writeToConfigMap(
 		sink.NamePrefix,
 		capture.CapturedAt.Format("20060102-150405"),
 		uidShort)
+	if diag.Annotations[managedprotocol.AnnotationManaged] == "true" {
+		name = managedprotocol.NetworkResultNamePrefix(
+			diag.Annotations[managedprotocol.AnnotationDeviceUID]) +
+			"u" + string(diag.UID) + "-" + capture.CapturedAt.Format("20060102-150405")
+	}
 
 	// Build data map: key = sanitised command, value = full output.
 	// Empty outputs and per-command errors land as data entries too
@@ -148,8 +154,9 @@ func (r *Reconciler) writeToConfigMap(
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
+			Name:        name,
+			Namespace:   ns,
+			Annotations: managedprotocol.CopyNetworkObjectBinding(diag.Annotations),
 			Labels: map[string]string{
 				configMapDiagnosticLabel:    diag.Name,
 				configMapDiagnosticUIDLabel: string(diag.UID),
@@ -199,11 +206,22 @@ func (r *Reconciler) writeToConfigMap(
 		}
 		existing.Data = data
 		existing.Labels = cm.Labels
+		existing.Annotations = mergeNetworkObjectBinding(existing.Annotations, diag.Annotations)
 		if err := r.Client.Update(ctx, &existing); err != nil {
 			return fmt.Errorf("update ConfigMap %s/%s: %w", ns, name, err)
 		}
 	}
 	return nil
+}
+
+func mergeNetworkObjectBinding(destination, source map[string]string) map[string]string {
+	if destination == nil {
+		destination = map[string]string{}
+	}
+	for key, value := range managedprotocol.CopyNetworkObjectBinding(source) {
+		destination[key] = value
+	}
+	return destination
 }
 
 // pruneOldConfigMaps deletes oldest ConfigMaps for this CR when their

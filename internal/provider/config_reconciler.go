@@ -41,6 +41,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/validation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	iosxewriters "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 	"go.opentelemetry.io/otel"
@@ -1648,8 +1649,9 @@ func (r *ConfigReconciler) appendConfigRevision(
 	now := metav1.Now()
 	rev := &configv1alpha1.IOSXEConfigRevision{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: cr.Namespace,
-			Name:      revisionName(cr, hash),
+			Namespace:   cr.Namespace,
+			Name:        revisionName(cr, hash),
+			Annotations: managedprotocol.CopyNetworkObjectBinding(cr.Annotations),
 			Labels: map[string]string{
 				revisionSourceNameLabel: cr.Name,
 				revisionSourceUIDLabel:  string(cr.UID),

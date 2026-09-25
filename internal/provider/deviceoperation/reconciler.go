@@ -41,6 +41,7 @@ import (
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
@@ -545,6 +546,7 @@ func (r *Reconciler) backPacketCaptureArtifacts(
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, cm, func() error {
 		cm.Data = data
+		cm.Annotations = mergeNetworkObjectBinding(cm.Annotations, op.Annotations)
 		return controllerutil.SetControllerReference(op, cm, r.Scheme)
 	}); err != nil {
 		return outputs, nil, &operationArtifactError{
@@ -714,6 +716,7 @@ func (r *Reconciler) enforceTotalInlineBudget(
 		for k, v := range data {
 			cm.Data[k] = v
 		}
+		cm.Annotations = mergeNetworkObjectBinding(cm.Annotations, op.Annotations)
 		return controllerutil.SetControllerReference(op, cm, r.Scheme)
 	}); err != nil {
 		return nil, &operationArtifactError{
@@ -722,6 +725,16 @@ func (r *Reconciler) enforceTotalInlineBudget(
 		}
 	}
 	return uris, nil
+}
+
+func mergeNetworkObjectBinding(destination, source map[string]string) map[string]string {
+	if destination == nil {
+		destination = map[string]string{}
+	}
+	for key, value := range managedprotocol.CopyNetworkObjectBinding(source) {
+		destination[key] = value
+	}
+	return destination
 }
 
 func totalInline(outputs []opsv1alpha1.DeviceOperationOutput) int {
@@ -733,7 +746,12 @@ func totalInline(outputs []opsv1alpha1.DeviceOperationOutput) int {
 }
 
 func artifactConfigMapName(op *opsv1alpha1.DeviceOperation) string {
-	return op.Name + "-output"
+	name := op.Name + "-output"
+	if op.Annotations[managedprotocol.AnnotationManaged] == "true" {
+		return managedprotocol.NetworkResultNamePrefix(
+			op.Annotations[managedprotocol.AnnotationDeviceUID]) + "u" + string(op.UID) + "-output"
+	}
+	return name
 }
 
 func truncatePreviewWithFooter(s string, maxBytes int, footer string) string {

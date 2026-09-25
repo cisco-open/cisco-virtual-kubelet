@@ -90,6 +90,26 @@ VK ServiceAccount name.
 {{- .Values.serviceAccount.vkName }}
 {{- end }}
 
+{{/* Shared managed app-hosting ServiceAccount name. */}}
+{{- define "cisco-virtual-kubelet.appHostingServiceAccountName" -}}
+{{- if .Values.topology.workerAccounts.appHosting.serviceAccountName -}}
+{{- .Values.topology.workerAccounts.appHosting.serviceAccountName -}}
+{{- else -}}
+{{- $prefix := include "cisco-virtual-kubelet.fullname" . | trunc 51 | trimSuffix "-" -}}
+{{- printf "%s-app-hosting" $prefix -}}
+{{- end -}}
+{{- end }}
+
+{{/* Shared managed network-management ServiceAccount name. */}}
+{{- define "cisco-virtual-kubelet.networkManagementServiceAccountName" -}}
+{{- if .Values.topology.workerAccounts.networkManagement.serviceAccountName -}}
+{{- .Values.topology.workerAccounts.networkManagement.serviceAccountName -}}
+{{- else -}}
+{{- $prefix := include "cisco-virtual-kubelet.fullname" . | trunc 44 | trimSuffix "-" -}}
+{{- printf "%s-network-management" $prefix -}}
+{{- end -}}
+{{- end }}
+
 {{/*
 Resolve the telemetry OTLP endpoint injected into the controller pod.
 The controller copies this value into per-device VK pods when it creates
@@ -114,6 +134,7 @@ this one-time transition.
 */}}
 {{- define "cisco-virtual-kubelet.validateTopologyRetirement" -}}
 {{- if not .Values.topology.enabled -}}
+{{- include "cisco-virtual-kubelet.validateWorkerAccountIdentityLock" . -}}
 {{- $fullname := include "cisco-virtual-kubelet.fullname" . -}}
 {{- $managerRoleName := printf "%s-managed-topology-manager" $fullname -}}
 {{- $managerRole := lookup "rbac.authorization.k8s.io/v1" "ClusterRole" "" $managerRoleName -}}
@@ -242,8 +263,89 @@ trusted as proof that the policy expressions are intact.
 */}}
 {{- define "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" -}}
 helm.sh/resource-policy: keep
-topology.cisco.vk/admission-contract-version: "v1"
+topology.cisco.vk/admission-contract-version: "v2"
 {{- end }}
+
+{{/*
+Lock the two cluster-reserved functional worker names and Lease authority
+namespace to the retained policy. Missing JSON keys are accepted only for the
+one-time migration from the earlier policy schema; protected annotations and
+the manager preflight keep the effective identity fail closed.
+*/}}
+{{- define "cisco-virtual-kubelet.validateWorkerAccountIdentityLock" -}}
+{{- $root := . -}}
+{{- $appAccount := include "cisco-virtual-kubelet.appHostingServiceAccountName" . -}}
+{{- $networkAccount := include "cisco-virtual-kubelet.networkManagementServiceAccountName" . -}}
+{{- $configLeaseNamespace := .Values.config.leaseNamespace | default "" -}}
+{{- $policyNamespace := include "cisco-virtual-kubelet.topologyPolicyNamespace" . -}}
+{{- $policyName := include "cisco-virtual-kubelet.topologyPolicyName" . -}}
+{{- $fullname := include "cisco-virtual-kubelet.fullname" . -}}
+{{- $ownedPolicies := list -}}
+{{- $configMaps := lookup "v1" "ConfigMap" "" "" -}}
+{{- range $candidate := (get $configMaps "items" | default (list)) -}}
+{{- $annotations := dig "metadata" "annotations" (dict) $candidate -}}
+{{- if and
+      (eq (get $annotations "meta.helm.sh/release-name" | default "") $root.Release.Name)
+      (eq (get $annotations "meta.helm.sh/release-namespace" | default "") $root.Release.Namespace)
+      (eq (get $annotations "topology.cisco.vk/managed-policy" | default "") "true") -}}
+{{- $ownedPolicies = append $ownedPolicies $candidate -}}
+{{- end -}}
+{{- end -}}
+{{- if gt (len $ownedPolicies) 1 -}}
+{{- fail (printf "Helm release %s/%s owns more than one retained managed topology policy; restore a single authoritative policy before upgrading" .Release.Namespace .Release.Name) -}}
+{{- end -}}
+{{- if eq (len $ownedPolicies) 1 -}}
+{{- $existingPolicy := first $ownedPolicies -}}
+{{- $existingPolicyNamespace := dig "metadata" "namespace" "" $existingPolicy -}}
+{{- $existingPolicyName := dig "metadata" "name" "" $existingPolicy -}}
+{{- if or (ne $existingPolicyNamespace $policyNamespace) (ne $existingPolicyName $policyName) -}}
+{{- fail (printf "managed topology policy coordinates are immutable after bootstrap: Helm release %s/%s owns retained policy %s/%s, not resolved policy %s/%s; retire managed topology and re-enroll before changing them" .Release.Namespace .Release.Name $existingPolicyNamespace $existingPolicyName $policyNamespace $policyName) -}}
+{{- end -}}
+{{- $existingAnnotations := dig "metadata" "annotations" (dict) $existingPolicy -}}
+{{- $existingPrefix := get $existingAnnotations "topology.cisco.vk/admission-policy-prefix" | default "" -}}
+{{- if ne $existingPrefix $fullname -}}
+{{- fail (printf "managed topology admission prefix is immutable after bootstrap: retained policy %s/%s records %q, not resolved prefix %q; retire managed topology and re-enroll before changing fullnameOverride or nameOverride" $policyNamespace $policyName $existingPrefix $fullname) -}}
+{{- end -}}
+{{- $existingLeaseNamespace := get $existingAnnotations "topology.cisco.vk/config-lease-namespace" | default "" -}}
+{{- if ne $existingLeaseNamespace $configLeaseNamespace -}}
+{{- fail (printf "CONFIG_LEASE_NAMESPACE is immutable after topology bootstrap: retained policy %s/%s records %q, not %q; retire managed topology and re-enroll before moving lease authority" $policyNamespace $policyName $existingLeaseNamespace $configLeaseNamespace) -}}
+{{- end -}}
+{{- $existingPolicyJSON := dig "data" "policy.json" "" $existingPolicy -}}
+{{- if eq $existingPolicyJSON "" -}}
+{{- fail (printf "existing topology policy %s/%s has no policy.json; restore the retained policy before changing worker accounts" $policyNamespace $policyName) -}}
+{{- end -}}
+{{- $recordedPolicy := mustFromJson $existingPolicyJSON -}}
+{{- if not (kindIs "map" $recordedPolicy) -}}
+{{- fail (printf "existing topology policy %s/%s policy.json must be a JSON object" $policyNamespace $policyName) -}}
+{{- end -}}
+{{- range $accountLock := list
+      (dict "key" "appHostingServiceAccountName" "resolved" $appAccount)
+      (dict "key" "networkManagementServiceAccountName" "resolved" $networkAccount) -}}
+{{- $key := get $accountLock "key" -}}
+{{- if hasKey $recordedPolicy $key -}}
+{{- $recordedName := get $recordedPolicy $key -}}
+{{- if not (kindIs "string" $recordedName) -}}
+{{- fail (printf "existing topology policy %s/%s has an invalid %s identity lock" $policyNamespace $policyName $key) -}}
+{{- end -}}
+{{- if eq $recordedName "" -}}
+{{- fail (printf "existing topology policy %s/%s has an empty %s identity lock" $policyNamespace $policyName $key) -}}
+{{- end -}}
+{{- if ne $recordedName (get $accountLock "resolved") -}}
+{{- fail (printf "topology worker account names are immutable after policy bootstrap: %s is recorded as %q in %s/%s; retire managed topology and re-enroll before renaming it" $key $recordedName $policyNamespace $policyName) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- if hasKey $recordedPolicy "configLeaseNamespace" -}}
+{{- $recordedLeaseNamespace := get $recordedPolicy "configLeaseNamespace" -}}
+{{- if not (kindIs "string" $recordedLeaseNamespace) -}}
+{{- fail (printf "existing topology policy %s/%s has an invalid configLeaseNamespace identity lock" $policyNamespace $policyName) -}}
+{{- end -}}
+{{- if ne $recordedLeaseNamespace $configLeaseNamespace -}}
+{{- fail (printf "CONFIG_LEASE_NAMESPACE is immutable after topology bootstrap: configLeaseNamespace is recorded as %q in %s/%s, not %q; retire managed topology and re-enroll before moving lease authority" $recordedLeaseNamespace $policyNamespace $policyName $configLeaseNamespace) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 
 {{/*
 Managed topology is a production trust-boundary change, not a soft feature
@@ -257,16 +359,44 @@ Cross-field checks below mirror invariants that JSON Schema cannot express.
 {{- fail (printf "topology.enabled=true requires Kubernetes >=1.35.0 (render target is %s); no admission-policy fallback is supported" .Capabilities.KubeVersion.Version) -}}
 {{- end -}}
 {{- if .Values.aggregator.enabled -}}
-{{- fail "topology.enabled=true requires aggregator.enabled=false; managed topology uses one identity-bound worker per CiscoDevice" -}}
+{{- fail "topology.enabled=true requires aggregator.enabled=false; managed topology uses separate app-hosting and network-management worker planes" -}}
 {{- end -}}
 {{- if not .Values.controller.leaderElect -}}
 {{- fail "topology.enabled=true requires controller.leaderElect=true; only the elected manager may reconcile topology and rollout authority" -}}
 {{- end -}}
 {{- if ne .Values.serviceAccount.vkName "cisco-virtual-kubelet" -}}
-{{- fail "topology.enabled=true requires serviceAccount.vkName=cisco-virtual-kubelet; managed workers combine the fixed cisco-virtual-kubelet-managed-worker role with the namespaced cisco-virtual-kubelet-device role" -}}
+{{- fail "topology.enabled=true requires serviceAccount.vkName=cisco-virtual-kubelet so an existing topology-disabled worker can be identified and retired safely" -}}
 {{- end -}}
 {{- if ne .Values.rbac.profile "strict" -}}
 {{- fail "topology.enabled=true requires rbac.profile=strict; managed workers must not inherit disabled write-class operation permissions" -}}
+{{- end -}}
+{{- $appAccount := include "cisco-virtual-kubelet.appHostingServiceAccountName" . -}}
+{{- $networkAccount := include "cisco-virtual-kubelet.networkManagementServiceAccountName" . -}}
+{{- range $account := list $appAccount $networkAccount -}}
+{{- if not (regexMatch `^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$` $account) -}}
+{{- fail (printf "topology worker account name %q must be a non-empty DNS label of at most 63 characters" $account) -}}
+{{- end -}}
+{{- end -}}
+{{- range $mode := list .Values.topology.workerAccounts.appHosting.accessMode .Values.topology.workerAccounts.networkManagement.accessMode -}}
+{{- if not (has $mode (list "disabled" "readOnly" "readWrite")) -}}
+{{- fail (printf "topology worker access mode %q must be one of disabled, readOnly, or readWrite" $mode) -}}
+{{- end -}}
+{{- end -}}
+{{- if eq $appAccount $networkAccount -}}
+{{- fail "topology worker account names must be distinct" -}}
+{{- end -}}
+{{- range $identity := list .Values.serviceAccount.controllerName .Values.serviceAccount.vkName -}}
+{{- if or (eq $appAccount $identity) (eq $networkAccount $identity) -}}
+{{- fail (printf "topology worker account names must be distinct from controller and legacy VK identity %q" $identity) -}}
+{{- end -}}
+{{- end -}}
+{{- include "cisco-virtual-kubelet.validateWorkerAccountIdentityLock" . -}}
+{{- $policyName := include "cisco-virtual-kubelet.topologyPolicyName" . -}}
+{{- if and (eq .Values.topology.workerAccounts.appHosting.accessMode "disabled") (eq .Values.topology.workerAccounts.networkManagement.accessMode "disabled") -}}
+{{- fail "topology workerAccounts cannot both be disabled" -}}
+{{- end -}}
+{{- if and .Values.gnoi.enableSoftwareUpgrade (ne .Values.topology.workerAccounts.networkManagement.accessMode "readWrite") -}}
+{{- fail "gnoi.enableSoftwareUpgrade=true requires topology.workerAccounts.networkManagement.accessMode=readWrite" -}}
 {{- end -}}
 {{- if .Values.gnoi.enableWriteClass -}}
 {{- fail "managed topology Phase 2 supports campaign-owned IOSXESoftwareUpgrade only; set gnoi.enableWriteClass=false" -}}
@@ -281,7 +411,6 @@ Cross-field checks below mirror invariants that JSON Schema cannot express.
 {{- fail (printf "topology.policy.fleetSelector matchExpressions key %q is outside the protected topology.cisco.vk/* enrollment namespace" $expression.key) -}}
 {{- end -}}
 {{- end -}}
-{{- $policyName := include "cisco-virtual-kubelet.topologyPolicyName" . -}}
 {{- $ledgerName := include "cisco-virtual-kubelet.topologyLedgerName" . -}}
 {{- if eq $policyName $ledgerName -}}
 {{- fail "topology policy and ledger ConfigMaps must have different names" -}}

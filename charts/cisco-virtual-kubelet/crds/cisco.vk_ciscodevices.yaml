@@ -865,20 +865,28 @@ spec:
                 type: object
               legacyHandoff:
                 description: |-
-                  LegacyHandoff records the explicit, UID-bound reverse writer handoff from
-                  managed topology to an isolated per-device legacy worker. A Complete
-                  record is retained after NodeIdentity is cleared so later reconciles never
-                  fall back to the release-wide shared ServiceAccount.
+                  LegacyHandoff records the explicit reverse writer handoff from managed
+                  topology through a temporary UID-bound proof worker to the configured
+                  namespace-shared compatibility worker. A Complete record is retained after
+                  NodeIdentity is cleared as release and credential-retirement audit state.
                 properties:
                   completedAt:
-                    description: CompletedAt is set only after the legacy writer readiness
-                      proof passes.
+                    description: |-
+                      CompletedAt is set only after the namespace-shared compatibility worker
+                      proves post-transition readiness and the isolated identity is retired.
                     format: date-time
                     type: string
                   deviceUID:
                     description: DeviceUID binds the handoff to this CiscoDevice incarnation.
                     maxLength: 128
                     minLength: 1
+                    type: string
+                  isolatedReadyAt:
+                    description: |-
+                      IsolatedReadyAt is set after the UID-scoped handoff worker proves a
+                      post-release Node Ready heartbeat. The shared compatibility replacement
+                      must prove a newer heartbeat before the isolated identity is retired.
+                    format: date-time
                     type: string
                   legacyWorkerUsername:
                     description: |-
@@ -909,6 +917,7 @@ spec:
                     enum:
                     - Preparing
                     - LegacyWriterPending
+                    - SharedWriterPending
                     - Complete
                     type: string
                   projectionHash:
@@ -939,18 +948,24 @@ spec:
                 - message: legacy handoff phase may only advance
                   rule: 'oldSelf.phase == ''Preparing'' ? self.phase in [''Preparing'',
                     ''LegacyWriterPending''] : (oldSelf.phase == ''LegacyWriterPending''
-                    ? self.phase in [''LegacyWriterPending'', ''Complete''] : self.phase
-                    == ''Complete'')'
+                    ? self.phase in [''LegacyWriterPending'', ''SharedWriterPending'']
+                    : (oldSelf.phase == ''SharedWriterPending'' ? self.phase in [''SharedWriterPending'',
+                    ''Complete''] : self.phase == ''Complete''))'
                 - message: legacy handoff timestamps must match phase
                   rule: 'self.phase == ''Preparing'' ? !has(self.nodeReleasedAt) &&
-                    !has(self.completedAt) : (self.phase == ''LegacyWriterPending''
-                    ? has(self.nodeReleasedAt) && !has(self.completedAt) : has(self.nodeReleasedAt)
-                    && has(self.completedAt))'
+                    !has(self.isolatedReadyAt) && !has(self.completedAt) : (self.phase
+                    == ''LegacyWriterPending'' ? has(self.nodeReleasedAt) && !has(self.isolatedReadyAt)
+                    && !has(self.completedAt) : (self.phase == ''SharedWriterPending''
+                    ? has(self.nodeReleasedAt) && has(self.isolatedReadyAt) && !has(self.completedAt)
+                    : has(self.nodeReleasedAt) && has(self.isolatedReadyAt) && has(self.completedAt)))'
                 - message: legacy handoff release cannot precede its request
                   rule: '!has(self.nodeReleasedAt) || self.nodeReleasedAt >= self.requestedAt'
-                - message: legacy handoff completion cannot precede release
-                  rule: '!has(self.completedAt) || (has(self.nodeReleasedAt) && self.completedAt
-                    >= self.nodeReleasedAt)'
+                - message: isolated legacy readiness cannot precede release
+                  rule: '!has(self.isolatedReadyAt) || (has(self.nodeReleasedAt) &&
+                    self.isolatedReadyAt >= self.nodeReleasedAt)'
+                - message: legacy handoff completion cannot precede isolated readiness
+                  rule: '!has(self.completedAt) || (has(self.isolatedReadyAt) && self.completedAt
+                    >= self.isolatedReadyAt)'
               maintenanceSession:
                 description: |-
                   MaintenanceSession is the bounded durable manager-owned acknowledgement
@@ -1119,6 +1134,58 @@ spec:
                     - SolutionCentric
                     type: string
                 type: object
+              networkWorkerRevision:
+                description: |-
+                  NetworkWorkerRevision binds the desired network-management PodTemplate to
+                  the sole ready Pod of the exact Deployment incarnation. Software lifecycle
+                  admission uses this proof, rather than the app-hosting worker heartbeat,
+                  because only the network-management plane may execute device mutations.
+                properties:
+                  deploymentGeneration:
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  deploymentUID:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  desiredRevision:
+                    description: DesiredRevision is the content address of the desired
+                      PodTemplate.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  observedAt:
+                    format: date-time
+                    type: string
+                  observedRevision:
+                    description: ObservedRevision is copied from the sole ready Pod's
+                      immutable template.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  podReadyTime:
+                    description: PodReadyTime is the Ready=True transition of the
+                      sole non-terminating Pod.
+                    format: date-time
+                    type: string
+                  podStartTime:
+                    format: date-time
+                    type: string
+                  podUID:
+                    maxLength: 128
+                    type: string
+                required:
+                - desiredRevision
+                - observedAt
+                type: object
+                x-kubernetes-validations:
+                - message: deployment UID and generation must be present together
+                  rule: has(self.deploymentUID) == has(self.deploymentGeneration)
+                - message: Pod UID and start time must be present together
+                  rule: has(self.podUID) == has(self.podStartTime)
+                - message: Pod readiness requires matching desired/observed revisions
+                    and Pod identity
+                  rule: 'has(self.podReadyTime) ? (has(self.podUID) && self.observedRevision
+                    == self.desiredRevision) : true'
               nodeIdentity:
                 description: |-
                   NodeIdentity is the bounded manager-owned binding between this

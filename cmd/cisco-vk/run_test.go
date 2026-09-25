@@ -25,6 +25,8 @@ import (
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -104,6 +106,63 @@ func TestValidateManagedTopologyManagerOptions(t *testing.T) {
 	}
 }
 
+func TestValidateManagedWorkerAccountOptions(t *testing.T) {
+	tests := []struct {
+		name                          string
+		appAccount, appAccess         string
+		networkAccount, networkAccess string
+		wantError                     string
+	}{
+		{name: "defaults", appAccount: "cvk-app", appAccess: managedprotocol.WorkerAccessReadWrite,
+			networkAccount: "cvk-network", networkAccess: managedprotocol.WorkerAccessReadOnly},
+		{name: "disabled profiles", appAccount: "cvk-app", appAccess: managedprotocol.WorkerAccessDisabled,
+			networkAccount: "cvk-network", networkAccess: managedprotocol.WorkerAccessDisabled},
+		{name: "same account", appAccount: "shared", appAccess: managedprotocol.WorkerAccessReadWrite,
+			networkAccount: "shared", networkAccess: managedprotocol.WorkerAccessReadOnly, wantError: "must be different"},
+		{name: "invalid name", appAccount: "Not DNS", appAccess: managedprotocol.WorkerAccessReadWrite,
+			networkAccount: "cvk-network", networkAccess: managedprotocol.WorkerAccessReadOnly, wantError: "invalid app-hosting"},
+		{name: "invalid access", appAccount: "cvk-app", appAccess: "write",
+			networkAccount: "cvk-network", networkAccess: managedprotocol.WorkerAccessReadOnly, wantError: "invalid app-hosting access"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateManagedWorkerAccountOptions(tc.appAccount, tc.appAccess, tc.networkAccount, tc.networkAccess)
+			if tc.wantError == "" {
+				if err != nil {
+					t.Fatalf("validateManagedWorkerAccountOptions() error = %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.wantError) {
+				t.Fatalf("error = %v, want substring %q", err, tc.wantError)
+			}
+		})
+	}
+}
+
+func TestValidateManagedWorkerPolicyIdentity(t *testing.T) {
+	policy := topologyrollout.AdminPolicyConfig{
+		AppHostingServiceAccountName:        "cvk-app",
+		NetworkManagementServiceAccountName: "cvk-network",
+		ConfigLeaseNamespace:                "cvk-leases",
+	}
+	if err := validateManagedWorkerPolicyIdentity(policy, "cvk-app", "cvk-network", "cvk-leases"); err != nil {
+		t.Fatalf("matching identity: %v", err)
+	}
+	if err := validateManagedWorkerPolicyIdentity(policy, "renamed-app", "cvk-network", "cvk-leases"); err == nil ||
+		!strings.Contains(err.Error(), "immutable") {
+		t.Fatalf("app rename error = %v, want immutable rejection", err)
+	}
+	if err := validateManagedWorkerPolicyIdentity(policy, "cvk-app", "renamed-network", "cvk-leases"); err == nil ||
+		!strings.Contains(err.Error(), "immutable") {
+		t.Fatalf("network rename error = %v, want immutable rejection", err)
+	}
+	if err := validateManagedWorkerPolicyIdentity(policy, "cvk-app", "cvk-network", "other-leases"); err == nil ||
+		!strings.Contains(err.Error(), "immutable") {
+		t.Fatalf("lease namespace change error = %v, want immutable rejection", err)
+	}
+}
+
 func TestVerifyManagedWorkerAdmissionRequiresPositiveAndNegativeDryRuns(t *testing.T) {
 	const nodeName = "managed-edge-01"
 	newClient := func(positiveErr, negativeErr error) *clientfake.Clientset {
@@ -161,6 +220,69 @@ func TestVerifyManagedWorkerAdmissionRequiresPositiveAndNegativeDryRuns(t *testi
 			t.Fatalf("error = %v, want unexpected-failure classification", err)
 		}
 	})
+}
+
+func TestVerifyManagedWorkerPodIdentity(t *testing.T) {
+	const (
+		username = "system:serviceaccount:edge:cisco-vk-app-hosting"
+		podName  = "switch-vk-5f769c99bd-g9n5m"
+		podUID   = "df596294-85fc-470d-9312-e4a875f30539"
+	)
+	newClient := func(review *authenticationv1.SelfSubjectReview) *clientfake.Clientset {
+		clientset := clientfake.NewSimpleClientset()
+		clientset.PrependReactor("create", "selfsubjectreviews", func(clienttesting.Action) (bool, runtime.Object, error) {
+			return true, review, nil
+		})
+		return clientset
+	}
+	valid := func() *authenticationv1.SelfSubjectReview {
+		return &authenticationv1.SelfSubjectReview{Status: authenticationv1.SelfSubjectReviewStatus{
+			UserInfo: authenticationv1.UserInfo{
+				Username: username,
+				Extra: map[string]authenticationv1.ExtraValue{
+					boundTokenPodNameClaim: {podName},
+					boundTokenPodUIDClaim:  {podUID},
+				},
+			},
+		}}
+	}
+
+	if err := verifyManagedWorkerPodIdentity(context.Background(), newClient(valid()), username, podName, podUID); err != nil {
+		t.Fatalf("verifyManagedWorkerPodIdentity() error = %v", err)
+	}
+
+	for _, tc := range []struct {
+		name    string
+		mutate  func(*authenticationv1.SelfSubjectReview)
+		wantErr string
+	}{
+		{name: "wrong username", mutate: func(r *authenticationv1.SelfSubjectReview) {
+			r.Status.UserInfo.Username = "system:serviceaccount:edge:other"
+		}, wantErr: "does not match expected"},
+		{name: "empty username", mutate: func(r *authenticationv1.SelfSubjectReview) {
+			r.Status.UserInfo.Username = ""
+		}, wantErr: "empty authenticated username"},
+		{name: "missing pod UID claim", mutate: func(r *authenticationv1.SelfSubjectReview) { delete(r.Status.UserInfo.Extra, boundTokenPodUIDClaim) }, wantErr: "exactly one value"},
+		{name: "multiple pod names", mutate: func(r *authenticationv1.SelfSubjectReview) {
+			r.Status.UserInfo.Extra[boundTokenPodNameClaim] = authenticationv1.ExtraValue{podName, "other"}
+		}, wantErr: "exactly one value"},
+		{name: "wrong pod UID", mutate: func(r *authenticationv1.SelfSubjectReview) {
+			r.Status.UserInfo.Extra[boundTokenPodUIDClaim] = authenticationv1.ExtraValue{"other"}
+		}, wantErr: "does not match downward-API"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			review := valid()
+			tc.mutate(review)
+			err := verifyManagedWorkerPodIdentity(context.Background(), newClient(review), username, podName, podUID)
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("verifyManagedWorkerPodIdentity() error = %v, want text %q", err, tc.wantErr)
+			}
+		})
+	}
+
+	if err := verifyManagedWorkerPodIdentity(context.Background(), newClient(valid()), username, "", podUID); err == nil || !strings.Contains(err.Error(), "POD_NAME") {
+		t.Fatalf("missing downward identity error = %v", err)
+	}
 }
 
 func TestResolveWorkerRuntimeIdentityStandaloneCompatibility(t *testing.T) {

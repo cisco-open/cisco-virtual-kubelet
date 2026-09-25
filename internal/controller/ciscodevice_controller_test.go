@@ -41,6 +41,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 )
 
@@ -78,9 +79,22 @@ func newDevice(name, namespace string) *ciskov1.CiscoDevice {
 func reconcilerFor(t *testing.T, objs ...runtime.Object) *CiscoDeviceReconciler {
 	t.Helper()
 	s := newTestScheme(t)
+	for name, rules := range managedprotocol.WorkerClusterRoleContracts() {
+		objs = append(objs, &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Rules:      rules,
+		})
+	}
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(s).
 		WithStatusSubresource(&ciskov1.CiscoDevice{}).
+		WithIndex(&corev1.Pod{}, podNodeNameIndex, func(object client.Object) []string {
+			pod := object.(*corev1.Pod)
+			if pod.Spec.NodeName == "" {
+				return nil
+			}
+			return []string{pod.Spec.NodeName}
+		}).
 		WithRuntimeObjects(objs...).
 		Build()
 	return &CiscoDeviceReconciler{

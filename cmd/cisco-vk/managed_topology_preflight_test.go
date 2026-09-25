@@ -29,11 +29,13 @@ func TestRenderedManagedAdmissionContract(t *testing.T) {
 
 	prefix := envOrDefault("CVK_ADMISSION_PREFIX", "cvk-cisco-virtual-kubelet")
 	bindings := admissionContractBindings{
-		AdmissionPrefix: prefix,
-		ManagerUsername: envOrDefault("CVK_ADMISSION_MANAGER_USERNAME", "system:serviceaccount:cisco-vk-system:cisco-virtual-kubelet-controller"),
-		PolicyNamespace: envOrDefault("CVK_ADMISSION_POLICY_NAMESPACE", "cisco-vk-system"),
-		PolicyName:      envOrDefault("CVK_ADMISSION_POLICY_NAME", prefix+"-topology-policy"),
-		LedgerName:      envOrDefault("CVK_ADMISSION_LEDGER_NAME", prefix+"-topology-ledger"),
+		AdmissionPrefix:                 prefix,
+		ManagerUsername:                 envOrDefault("CVK_ADMISSION_MANAGER_USERNAME", "system:serviceaccount:cisco-vk-system:cisco-virtual-kubelet-controller"),
+		PolicyNamespace:                 envOrDefault("CVK_ADMISSION_POLICY_NAMESPACE", "cisco-vk-system"),
+		PolicyName:                      envOrDefault("CVK_ADMISSION_POLICY_NAME", prefix+"-topology-policy"),
+		LedgerName:                      envOrDefault("CVK_ADMISSION_LEDGER_NAME", prefix+"-topology-ledger"),
+		AppHostingServiceAccount:        envOrDefault("CVK_ADMISSION_APP_SERVICE_ACCOUNT", prefix+"-app-hosting"),
+		NetworkManagementServiceAccount: envOrDefault("CVK_ADMISSION_NETWORK_SERVICE_ACCOUNT", prefix+"-network-management"),
 	}
 	assertStrictYAMLDocuments(t, manifestPath)
 
@@ -137,11 +139,13 @@ func TestManagedAdmissionPolicyDigestDetectsExpressionChange(t *testing.T) {
 	expected := managedAdmissionExpectations["managed-node"]
 	policy := validManagedAdmissionPolicy(expected)
 	bindings := admissionContractBindings{
-		AdmissionPrefix: "prefix",
-		ManagerUsername: "system:serviceaccount:system:manager",
-		PolicyNamespace: "system",
-		PolicyName:      "policy",
-		LedgerName:      "ledger",
+		AdmissionPrefix:                 "prefix",
+		ManagerUsername:                 "system:serviceaccount:system:manager",
+		PolicyNamespace:                 "system",
+		PolicyName:                      "policy",
+		LedgerName:                      "ledger",
+		AppHostingServiceAccount:        "app-worker",
+		NetworkManagementServiceAccount: "network-worker",
 	}
 	digest, err := managedAdmissionPolicyDigest(policy, bindings)
 	if err != nil {
@@ -162,11 +166,13 @@ func TestManagedAdmissionPolicyDigestNormalizesAPIServerEmptySelectors(t *testin
 	expected := managedAdmissionExpectations["managed-node"]
 	policy := validManagedAdmissionPolicy(expected)
 	bindings := admissionContractBindings{
-		AdmissionPrefix: "prefix",
-		ManagerUsername: "system:serviceaccount:system:manager",
-		PolicyNamespace: "system",
-		PolicyName:      "policy",
-		LedgerName:      "ledger",
+		AdmissionPrefix:                 "prefix",
+		ManagerUsername:                 "system:serviceaccount:system:manager",
+		PolicyNamespace:                 "system",
+		PolicyName:                      "policy",
+		LedgerName:                      "ledger",
+		AppHostingServiceAccount:        "app-worker",
+		NetworkManagementServiceAccount: "network-worker",
 	}
 	before, err := managedAdmissionPolicyDigest(policy, bindings)
 	if err != nil {
@@ -193,6 +199,7 @@ func TestManagedAdmissionPolicyDigestNormalizesAdmissionPrefix(t *testing.T) {
 	bindingsA := admissionContractBindings{
 		AdmissionPrefix: "prefix-a", ManagerUsername: "manager",
 		PolicyNamespace: "namespace", PolicyName: "policy", LedgerName: "ledger",
+		AppHostingServiceAccount: "app-worker", NetworkManagementServiceAccount: "network-worker",
 	}
 	digestA, err := managedAdmissionPolicyDigest(policyA, bindingsA)
 	if err != nil {
@@ -213,16 +220,18 @@ func TestManagedAdmissionPolicyDigestNormalizesAdmissionPrefix(t *testing.T) {
 
 func TestAdmissionContractBindingsRequireEveryIdentity(t *testing.T) {
 	valid := admissionContractBindings{
-		AdmissionPrefix: "prefix",
-		ManagerUsername: "manager",
-		PolicyNamespace: "namespace",
-		PolicyName:      "policy",
-		LedgerName:      "ledger",
+		AdmissionPrefix:                 "prefix",
+		ManagerUsername:                 "manager",
+		PolicyNamespace:                 "namespace",
+		PolicyName:                      "policy",
+		LedgerName:                      "ledger",
+		AppHostingServiceAccount:        "app-worker",
+		NetworkManagementServiceAccount: "network-worker",
 	}
 	if err := valid.validate(); err != nil {
 		t.Fatalf("valid bindings rejected: %v", err)
 	}
-	for _, field := range []string{"prefix", "manager", "namespace", "policy", "ledger"} {
+	for _, field := range []string{"prefix", "manager", "namespace", "policy", "ledger", "app", "network"} {
 		t.Run(field, func(t *testing.T) {
 			candidate := valid
 			switch field {
@@ -236,6 +245,10 @@ func TestAdmissionContractBindingsRequireEveryIdentity(t *testing.T) {
 				candidate.PolicyName = ""
 			case "ledger":
 				candidate.LedgerName = ""
+			case "app":
+				candidate.AppHostingServiceAccount = ""
+			case "network":
+				candidate.NetworkManagementServiceAccount = ""
 			}
 			if err := candidate.validate(); err == nil {
 				t.Fatal("incomplete bindings were accepted")

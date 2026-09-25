@@ -40,28 +40,32 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
 )
 
-func TestManagedWorkerUsesOwnedIncarnationServiceAccount(t *testing.T) {
+func TestManagedWorkersUseSharedFunctionalServiceAccounts(t *testing.T) {
 	device := newDevice("switch-owned-worker", "edge")
 	device.UID = "device-uid"
 	device.Status.NodeIdentity = &ciskov1.DeviceNodeIdentityStatus{
 		DeviceUID: string(device.UID), NodeName: device.Name, NodeUID: "node-uid",
 	}
 	r := reconcilerFor(t, device)
-	saName := managedWorkerServiceAccountName(device)
-	if err := r.ensureVKAccess(context.Background(), device, saName, true); err != nil {
-		t.Fatalf("ensureVKAccess: %v", err)
+	r.ManagedTopology = true
+	if err := r.ensureManagedSharedWorkerAccess(context.Background(), device); err != nil {
+		t.Fatalf("ensureManagedSharedWorkerAccess: %v", err)
 	}
-
-	var sa corev1.ServiceAccount
-	key := types.NamespacedName{Namespace: device.Namespace, Name: saName}
-	if err := r.Get(context.Background(), key, &sa); err != nil {
-		t.Fatal(err)
+	for _, identity := range []struct{ name, account string }{
+		{r.appHostingServiceAccountName(), managedprotocol.WorkerModeAppHosting},
+		{r.networkManagementServiceAccountName(), managedprotocol.WorkerModeNetworkManagement},
+	} {
+		var sa corev1.ServiceAccount
+		key := types.NamespacedName{Namespace: device.Namespace, Name: identity.name}
+		if err := r.Get(context.Background(), key, &sa); err != nil {
+			t.Fatal(err)
+		}
+		if len(sa.OwnerReferences) != 0 || sa.Annotations[annotationSharedWorkerAccount] != identity.account {
+			t.Fatalf("shared functional ServiceAccount is device-owned or incorrectly classified: %#v", sa.ObjectMeta)
+		}
 	}
-	if !managedServiceAccountOwnedByDevice(&sa, device) || !managedServiceAccountAnnotationsMatch(&sa, device) {
-		t.Fatalf("managed ServiceAccount is not exactly device-bound: %#v", sa.ObjectMeta)
-	}
-	if got := r.serviceAccountForDevice(device); got != saName {
-		t.Fatalf("durable managed ServiceAccount=%q, want %q", got, saName)
+	if got := r.serviceAccountForDevice(device); got != r.appHostingServiceAccountName() {
+		t.Fatalf("durable managed app ServiceAccount=%q, want %q", got, r.appHostingServiceAccountName())
 	}
 }
 
@@ -280,13 +284,25 @@ func TestManagedReconcileAlwaysUsesRecreateStrategy(t *testing.T) {
 	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
 		t.Fatal(err)
 	}
+	objects := []client.Object{device, node, policy, ledger}
+	for name, rules := range managedprotocol.WorkerClusterRoleContracts() {
+		objects = append(objects, &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: name}, Rules: rules,
+		})
+	}
 	apiClient := fake.NewClientBuilder().WithScheme(scheme).
 		WithStatusSubresource(&ciskov1.CiscoDevice{}, &corev1.Node{}).
-		WithObjects(device, node, policy, ledger).Build()
+		WithIndex(&corev1.Pod{}, podNodeNameIndex, func(object client.Object) []string {
+			pod := object.(*corev1.Pod)
+			if pod.Spec.NodeName == "" {
+				return nil
+			}
+			return []string{pod.Spec.NodeName}
+		}).
+		WithObjects(objects...).Build()
 	r := &CiscoDeviceReconciler{
 		Client: leaseUIDAssigningClient{Client: apiClient}, APIReader: apiClient, Scheme: scheme, Image: "cisco-vk:test",
 		ManagedTopology: true, TopologyPolicyNamespace: policy.Namespace, TopologyPolicyName: policy.Name,
-		LeaseNamespace: device.Namespace,
 	}
 	if _, err := r.Reconcile(context.Background(), reconcileRequest(device.Namespace, device.Name)); err != nil {
 		t.Fatalf("Reconcile: %v", err)
@@ -298,16 +314,26 @@ func TestManagedReconcileAlwaysUsesRecreateStrategy(t *testing.T) {
 	if deployment.Spec.Strategy.Type != appsv1.RecreateDeploymentStrategyType {
 		t.Fatalf("managed Deployment strategy=%q, want Recreate", deployment.Spec.Strategy.Type)
 	}
-	var current ciskov1.CiscoDevice
-	if err := apiClient.Get(context.Background(), client.ObjectKeyFromObject(device), &current); err != nil {
-		t.Fatal(err)
-	}
 	var sa corev1.ServiceAccount
-	if err := apiClient.Get(context.Background(), types.NamespacedName{Namespace: device.Namespace, Name: managedWorkerServiceAccountName(&current)}, &sa); err != nil {
+	if err := apiClient.Get(context.Background(), types.NamespacedName{Namespace: device.Namespace, Name: r.appHostingServiceAccountName()}, &sa); err != nil {
 		t.Fatal(err)
 	}
-	if !managedServiceAccountOwnedByDevice(&sa, &current) {
-		t.Fatal("managed reconcile did not bind the worker ServiceAccount to the CiscoDevice incarnation")
+	if len(sa.OwnerReferences) != 0 || sa.Annotations[annotationSharedWorkerAccount] != managedprotocol.WorkerModeAppHosting {
+		t.Fatal("managed reconcile did not provision the shared app-hosting ServiceAccount")
+	}
+	var networkDeployment appsv1.Deployment
+	if err := apiClient.Get(context.Background(), types.NamespacedName{Namespace: device.Namespace, Name: networkDeploymentName(device.Name, string(device.UID))}, &networkDeployment); err != nil {
+		t.Fatal(err)
+	}
+	if networkDeployment.Spec.Strategy.Type != appsv1.RecreateDeploymentStrategyType {
+		t.Fatalf("network Deployment strategy=%q, want Recreate", networkDeployment.Spec.Strategy.Type)
+	}
+	container := networkDeployment.Spec.Template.Spec.Containers[0]
+	if container.ReadinessProbe == nil || container.ReadinessProbe.HTTPGet == nil ||
+		container.ReadinessProbe.HTTPGet.Path != "/readyz" || container.LivenessProbe == nil ||
+		container.LivenessProbe.HTTPGet == nil || container.LivenessProbe.HTTPGet.Path != "/healthz" {
+		t.Fatalf("network worker health probes are incomplete: readiness=%#v liveness=%#v",
+			container.ReadinessProbe, container.LivenessProbe)
 	}
 }
 
@@ -506,6 +532,161 @@ func TestManagedDeletionMissingMutationLeaseRequiresRevokedWorkerAccess(t *testi
 	}
 }
 
+func TestTopologyDisabledManagedDeletionPreservesSharedWorkerAccessForPeers(t *testing.T) {
+	for _, peerDeleting := range []bool{false, true} {
+		name := "active-peer"
+		if peerDeleting {
+			name = "deleting-peer-with-live-workers"
+		}
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			r, device := managedDeletionFixture(t, func(*ciskov1.CiscoDevice, *coordv1.Lease,
+				*opsv1alpha1.IOSXESoftwareUpgrade, *topologyrollout.Ledger) {
+			})
+			for role, rules := range managedprotocol.WorkerClusterRoleContracts() {
+				if err := r.Create(ctx, &rbacv1.ClusterRole{
+					ObjectMeta: metav1.ObjectMeta{Name: role}, Rules: rules,
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			peer := managedAccessDevice("switch-delete-peer")
+			if peerDeleting {
+				peer.Finalizers = []string{ciscoDeviceFinalizer}
+			}
+			if err := r.Create(ctx, peer); err != nil {
+				t.Fatal(err)
+			}
+			r.ManagedTopology = true
+			if err := r.ensureManagedSharedWorkerAccess(ctx, device); err != nil {
+				t.Fatalf("provision shared functional access: %v", err)
+			}
+
+			appUsername := "system:serviceaccount:" + device.Namespace + ":" + r.appHostingServiceAccountName()
+			networkUsername := "system:serviceaccount:" + device.Namespace + ":" + r.networkManagementServiceAccountName()
+			node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+				Name: device.Status.NodeIdentity.NodeName, UID: types.UID(device.Status.NodeIdentity.NodeUID),
+				Annotations: map[string]string{
+					managedprotocol.AnnotationManaged:               "true",
+					managedprotocol.AnnotationDeviceNamespace:       device.Namespace,
+					managedprotocol.AnnotationDeviceName:            device.Name,
+					managedprotocol.AnnotationDeviceUID:             string(device.UID),
+					managedprotocol.AnnotationNodeUID:               device.Status.NodeIdentity.NodeUID,
+					managedprotocol.AnnotationWorkerUsername:        appUsername,
+					managedprotocol.AnnotationAppWorkerUsername:     appUsername,
+					managedprotocol.AnnotationNetworkWorkerUsername: networkUsername,
+					managedprotocol.AnnotationWorkerProtocol:        managedprotocol.Version,
+				},
+			}}
+			if err := r.Create(ctx, node); err != nil {
+				t.Fatal(err)
+			}
+			deviceKey := devicecoordination.DeviceKey(device.Namespace, device.Name)
+			var mutationLease coordv1.Lease
+			if err := r.Get(ctx, types.NamespacedName{
+				Namespace: device.Namespace,
+				Name:      configengine.LeaseName(deviceKey, devicecoordination.MutationLeaseFamily),
+			}, &mutationLease); err != nil {
+				t.Fatal(err)
+			}
+			mutationLease.Annotations[managedprotocol.AnnotationWorkerUsername] = networkUsername
+			mutationLease.Annotations[managedprotocol.AnnotationNetworkWorkerUsername] = networkUsername
+			if err := r.Update(ctx, &mutationLease); err != nil {
+				t.Fatal(err)
+			}
+
+			workerDeployment := func(owner *ciskov1.CiscoDevice, name, account string) *appsv1.Deployment {
+				return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+					Namespace: owner.Namespace, Name: name,
+					OwnerReferences: []metav1.OwnerReference{
+						*metav1.NewControllerRef(owner, ciskov1.GroupVersion.WithKind("CiscoDevice")),
+					},
+				}, Spec: appsv1.DeploymentSpec{Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{ServiceAccountName: account},
+				}}}
+			}
+			for _, owner := range []*ciskov1.CiscoDevice{device, peer} {
+				for _, worker := range []struct{ name, account string }{
+					{owner.Name + deploymentSuffix, r.appHostingServiceAccountName()},
+					{networkDeploymentName(owner.Name, string(owner.UID)), r.networkManagementServiceAccountName()},
+				} {
+					if err := r.Create(ctx, workerDeployment(owner, worker.name, worker.account)); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			if peerDeleting {
+				var currentPeer ciskov1.CiscoDevice
+				if err := r.Get(ctx, client.ObjectKeyFromObject(peer), &currentPeer); err != nil {
+					t.Fatal(err)
+				}
+				if err := r.Delete(ctx, &currentPeer); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			var current ciskov1.CiscoDevice
+			if err := r.Get(ctx, client.ObjectKeyFromObject(device), &current); err != nil {
+				t.Fatal(err)
+			}
+			current.Finalizers = append(current.Finalizers, ciscoDeviceFinalizer)
+			if err := r.Update(ctx, &current); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Delete(ctx, &current); err != nil {
+				t.Fatal(err)
+			}
+
+			// Simulate a restart with managed topology disabled. Durable status,
+			// rather than the current flag, must select the shared cleanup path.
+			r.ManagedTopology = false
+			deleted := false
+			for attempt := 0; attempt < 4; attempt++ {
+				_, err := r.Reconcile(ctx, reconcileRequest(device.Namespace, device.Name))
+				if err != nil {
+					t.Fatalf("topology-disabled deletion reconcile %d: %v", attempt+1, err)
+				}
+				if err := r.Get(ctx, client.ObjectKeyFromObject(device), &current); apierrors.IsNotFound(err) {
+					deleted = true
+					break
+				} else if err != nil {
+					t.Fatal(err)
+				}
+			}
+			if !deleted {
+				t.Fatal("topology-disabled managed deletion did not complete")
+			}
+
+			for _, identity := range []struct{ account, binding string }{
+				{r.appHostingServiceAccountName(), vkAccessClusterRoleBindingName(device.Namespace, r.appHostingServiceAccountName())},
+				{r.networkManagementServiceAccountName(), vkAccessClusterRoleBindingName(device.Namespace, r.networkManagementServiceAccountName()+"-global-read")},
+			} {
+				if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: identity.account}, &corev1.ServiceAccount{}); err != nil {
+					t.Fatalf("shared ServiceAccount %s was disrupted: %v", identity.account, err)
+				}
+				if err := r.Get(ctx, types.NamespacedName{Name: identity.binding}, &rbacv1.ClusterRoleBinding{}); err != nil {
+					t.Fatalf("shared ClusterRoleBinding %s was disrupted: %v", identity.binding, err)
+				}
+				if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: identity.account}, &rbacv1.RoleBinding{}); err != nil {
+					t.Fatalf("shared RoleBinding %s was disrupted: %v", identity.account, err)
+				}
+			}
+			for _, names := range [][2]string{
+				{device.Name + deploymentSuffix, peer.Name + deploymentSuffix},
+				{networkDeploymentName(device.Name, string(device.UID)), networkDeploymentName(peer.Name, string(peer.UID))},
+			} {
+				if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: names[0]}, &appsv1.Deployment{}); !apierrors.IsNotFound(err) {
+					t.Fatalf("deleted device worker %s remains: %v", names[0], err)
+				}
+				if err := r.Get(ctx, types.NamespacedName{Namespace: peer.Namespace, Name: names[1]}, &appsv1.Deployment{}); err != nil {
+					t.Fatalf("peer worker %s was disrupted: %v", names[1], err)
+				}
+			}
+		})
+	}
+}
+
 func TestManagedLeaseCleanupValidatesCompleteSetBeforeDeleting(t *testing.T) {
 	device := newDevice("switch-cleanup-leases", "edge")
 	device.UID = "device-uid"
@@ -651,6 +832,13 @@ func managedDeletionFixture(
 	}
 	apiClient := fake.NewClientBuilder().WithScheme(scheme).
 		WithStatusSubresource(&ciskov1.CiscoDevice{}, &opsv1alpha1.IOSXESoftwareUpgrade{}).
+		WithIndex(&corev1.Pod{}, podNodeNameIndex, func(object client.Object) []string {
+			pod := object.(*corev1.Pod)
+			if pod.Spec.NodeName == "" {
+				return nil
+			}
+			return []string{pod.Spec.NodeName}
+		}).
 		WithObjects(device, lease, leaf, policy, ledgerCM).Build()
 	r := &CiscoDeviceReconciler{
 		Client: apiClient, APIReader: apiClient, Scheme: scheme,
@@ -668,19 +856,21 @@ func managedPolicyAndLedger(t *testing.T, reservations map[string]topologyrollou
 		ledgerUID  = "ledger-uid"
 	)
 	cfg := topologyrollout.AdminPolicyConfig{
-		Version:                      topologyrollout.PolicyVersion,
-		FleetSelector:                metav1.LabelSelector{MatchLabels: map[string]string{managedprotocol.AnnotationManaged: "true"}},
-		RequiredTopologyKeys:         []string{topology.CiscoTopologyLabelPrefix + "site"},
-		ProjectedTopologyKeys:        []string{topology.CiscoTopologyLabelPrefix + "site"},
-		GlobalMaxConcurrentTransfers: 1,
-		GlobalMaxUnavailable:         1,
-		DomainMaxConcurrentTransfers: map[string]int{topology.CiscoTopologyLabelPrefix + "site": 1},
-		DomainMaxUnavailable:         map[string]int{topology.CiscoTopologyLabelPrefix + "site": 1},
-		HealthFreshnessSeconds:       120,
-		MaxCampaignTargets:           10,
-		MaxActiveReservations:        32,
-		MaxLedgerBytes:               64 * 1024,
-		LedgerName:                   ledgerName,
+		Version:                             topologyrollout.PolicyVersion,
+		AppHostingServiceAccountName:        managedprotocol.AppHostingServiceAccount,
+		NetworkManagementServiceAccountName: managedprotocol.NetworkManagementServiceAccount,
+		FleetSelector:                       metav1.LabelSelector{MatchLabels: map[string]string{managedprotocol.AnnotationManaged: "true"}},
+		RequiredTopologyKeys:                []string{topology.CiscoTopologyLabelPrefix + "site"},
+		ProjectedTopologyKeys:               []string{topology.CiscoTopologyLabelPrefix + "site"},
+		GlobalMaxConcurrentTransfers:        1,
+		GlobalMaxUnavailable:                1,
+		DomainMaxConcurrentTransfers:        map[string]int{topology.CiscoTopologyLabelPrefix + "site": 1},
+		DomainMaxUnavailable:                map[string]int{topology.CiscoTopologyLabelPrefix + "site": 1},
+		HealthFreshnessSeconds:              120,
+		MaxCampaignTargets:                  10,
+		MaxActiveReservations:               32,
+		MaxLedgerBytes:                      64 * 1024,
+		LedgerName:                          ledgerName,
 	}
 	data, err := topologyrollout.CanonicalPolicyJSON(cfg)
 	if err != nil {
@@ -689,9 +879,10 @@ func managedPolicyAndLedger(t *testing.T, reservations map[string]topologyrollou
 	policy := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
 		Namespace: namespace, Name: "topology-policy", UID: "policy-uid", ResourceVersion: "1",
 		Annotations: map[string]string{
-			topologyrollout.PolicyManagedAnnotation:   "true",
-			topologyrollout.LedgerUIDAnnotation:       ledgerUID,
-			topologyrollout.AdmissionPrefixAnnotation: "cvk-topology",
+			topologyrollout.PolicyManagedAnnotation:        "true",
+			topologyrollout.LedgerUIDAnnotation:            ledgerUID,
+			topologyrollout.AdmissionPrefixAnnotation:      "cvk-topology",
+			topologyrollout.ConfigLeaseNamespaceAnnotation: cfg.ConfigLeaseNamespace,
 		},
 	}, Data: map[string]string{topologyrollout.PolicyDataKey: data}}
 	ledger, err := topologyrollout.NewLedger(ledgerUID)

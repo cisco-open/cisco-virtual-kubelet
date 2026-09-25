@@ -31,6 +31,7 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
 
 const (
@@ -76,10 +77,28 @@ func (r *CiscoDeviceReconciler) retirePriorTopologyWorkerAccessIfSafe(
 	device *ciskov1.CiscoDevice,
 	currentSA string,
 ) (bool, error) {
-	if !r.ManagedTopology || device.Status.NodeIdentity == nil || currentSA != managedWorkerServiceAccountName(device) {
+	sharedReplacement := currentSA == r.appHostingServiceAccountName()
+	durableManagedDeletion := device.Status.NodeIdentity != nil && !device.DeletionTimestamp.IsZero()
+	if (!r.ManagedTopology && !durableManagedDeletion) || device.Status.NodeIdentity == nil ||
+		(!sharedReplacement && currentSA != managedWorkerServiceAccountName(device)) {
 		return true, nil
 	}
-	legacySA := topologyLegacyWorkerServiceAccountName(device)
+	_, appAccess, _, networkAccess, _, err := r.managedWorkerProfiles()
+	if err != nil {
+		return false, err
+	}
+	if sharedReplacement && device.DeletionTimestamp.IsZero() {
+		if appAccess == managedprotocol.WorkerAccessReadWrite && !managedAppWorkerRevisionReady(device.Status.WorkerRevision) {
+			return false, nil
+		}
+		if networkAccess != managedprotocol.WorkerAccessDisabled && !managedNetworkWorkerRevisionReady(device.Status.NetworkWorkerRevision) {
+			return false, nil
+		}
+	}
+	legacySAs := []string{topologyLegacyWorkerServiceAccountName(device)}
+	if sharedReplacement {
+		legacySAs = append(legacySAs, managedWorkerServiceAccountName(device))
+	}
 	var deployments appsv1.DeploymentList
 	if err := r.reader().List(ctx, &deployments, client.InNamespace(device.Namespace)); err != nil {
 		return false, fmt.Errorf("list Deployments before topology-legacy identity retirement: %w", err)
@@ -90,8 +109,10 @@ func (r *CiscoDeviceReconciler) retirePriorTopologyWorkerAccessIfSafe(
 		if deployment.UID != "" {
 			deploymentsByUID[deployment.UID] = deployment
 		}
-		if deployment.Spec.Template.Spec.ServiceAccountName == legacySA {
-			return false, nil
+		for _, legacySA := range legacySAs {
+			if deployment.Spec.Template.Spec.ServiceAccountName == legacySA {
+				return false, nil
+			}
 		}
 	}
 	var pods corev1.PodList
@@ -99,8 +120,10 @@ func (r *CiscoDeviceReconciler) retirePriorTopologyWorkerAccessIfSafe(
 		return false, fmt.Errorf("list Pods before topology-legacy identity retirement: %w", err)
 	}
 	for i := range pods.Items {
-		if pods.Items[i].Spec.ServiceAccountName == legacySA {
-			return false, nil
+		for _, legacySA := range legacySAs {
+			if pods.Items[i].Spec.ServiceAccountName == legacySA {
+				return false, nil
+			}
 		}
 	}
 	var replicaSets appsv1.ReplicaSetList
@@ -109,7 +132,11 @@ func (r *CiscoDeviceReconciler) retirePriorTopologyWorkerAccessIfSafe(
 	}
 	for i := range replicaSets.Items {
 		replicaSet := &replicaSets.Items[i]
-		if replicaSet.Spec.Template.Spec.ServiceAccountName != legacySA {
+		legacy := false
+		for _, legacySA := range legacySAs {
+			legacy = legacy || replicaSet.Spec.Template.Spec.ServiceAccountName == legacySA
+		}
+		if !legacy {
 			continue
 		}
 		if replicaSet.Spec.Replicas == nil || *replicaSet.Spec.Replicas != 0 || replicaSet.Status.Replicas != 0 {
@@ -125,10 +152,27 @@ func (r *CiscoDeviceReconciler) retirePriorTopologyWorkerAccessIfSafe(
 		}
 		return false, nil
 	}
-	if err := r.cleanupGeneratedWorkerAccess(ctx, device, legacySA, false); err != nil {
+	if err := r.cleanupGeneratedWorkerAccess(ctx, device, topologyLegacyWorkerServiceAccountName(device), false); err != nil {
 		return false, fmt.Errorf("retire topology-legacy worker identity: %w", err)
 	}
+	if sharedReplacement {
+		if err := r.cleanupGeneratedWorkerAccess(ctx, device, managedWorkerServiceAccountName(device), true); err != nil {
+			return false, fmt.Errorf("retire per-device managed worker identity: %w", err)
+		}
+	}
 	return true, nil
+}
+
+func managedAppWorkerRevisionReady(status *ciskov1.DeviceWorkerRevisionStatus) bool {
+	return status != nil && status.DesiredRevision != "" && status.DesiredRevision == status.ObservedRevision &&
+		status.DeploymentUID != "" && status.PodUID != "" && status.PodStartTime != nil &&
+		status.ReadyHeartbeatTime != nil && !status.ReadyHeartbeatTime.Before(status.PodStartTime)
+}
+
+func managedNetworkWorkerRevisionReady(status *ciskov1.DeviceNetworkWorkerRevisionStatus) bool {
+	return status != nil && status.DesiredRevision != "" && status.DesiredRevision == status.ObservedRevision &&
+		status.DeploymentUID != "" && status.PodUID != "" && status.PodStartTime != nil &&
+		status.PodReadyTime != nil && !status.PodReadyTime.Before(status.PodStartTime)
 }
 
 // sharedWorkerAuthorityPresent reports whether the former shared worker can

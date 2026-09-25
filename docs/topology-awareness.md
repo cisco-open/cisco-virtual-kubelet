@@ -36,13 +36,14 @@ flowchart LR
     I[Administrator inventory labels] --> D[CiscoDevice]
     P[Administrator policy ConfigMap] --> M[CVK manager]
     D --> M
-    M --> N[Identity-bound Kubernetes Node]
+    M --> N[Manager-bound Kubernetes Node]
     N --> S[Default kube-scheduler]
     S --> W[Device-hosted workload]
+    W --> A[Shared app-hosting identity<br/>per managed-device namespace]
     R[IOSXESoftwareRollout] --> M
     M --> L[CAS reservation ledger]
     M --> U[Immutable IOSXESoftwareUpgrade leaf]
-    U --> K[Identity-bound per-device worker]
+    U --> K[Shared network-management identity<br/>per managed-device namespace]
     K --> G[Secure IOS-XE gNOI service]
 ```
 
@@ -53,10 +54,10 @@ The ownership split is strict:
 | Desired stable topology and operational risk domains | protected `CiscoDevice.metadata.labels` |
 | Stable physical chassis identity used for deduplication | write-once operator-declared `CiscoDevice.spec.physicalIdentity` |
 | Node name, UID binding, projected labels, static/maintenance taints | manager |
-| Node status and device execution | that Node's generated per-device worker identity |
+| Node and Pod status, app execution | app-hosting read-write identity; native admission binds each write to a manager-owned Node/Pod relationship |
 | Pod placement | default kube-scheduler |
 | Fleet plan, policy evaluation, reservations, child admission | manager |
-| Image transfer, install, activation, verify, limited rollback | existing IOS-XE leaf executor in the device worker |
+| Configuration, image transfer/install/activate/verify, limited rollback | network-management identity selected as read-write |
 
 The manager never opens a device session. The worker never chooses fleet
 policy. A rollout is not represented as a Pod or Job because scheduler retries
@@ -70,18 +71,28 @@ falsify those observations. It cannot rewrite the declared physical identity,
 protected topology, policy, or ledger authority. Treat worker evidence as a
 freshness and consistency signal, not as the root identity assertion.
 
-Enabling topology also removes the release-wide worker credential as a trust
-boundary. Every CiscoDevice gets one controller-owned, device-UID-derived
-ServiceAccount whose name embeds its resolved virtual Node. Selected devices
-use `cisco-vk-managed-<node>-<uid-hash>` with the managed status-only role. Devices
-outside the managed selector keep the legacy runtime and permissions under
-`cisco-vk-legacy-<node>-<uid-hash>`, but native admission confines their Node
-and Pod-status writes to that exact unmarked Node. The default,
-topology-disabled mode retains the historical shared ServiceAccount unchanged.
-The manager records `topology.cisco.vk/isolated-legacy-worker=<device UID>` on
-each device assigned an isolated legacy identity. Admission forbids users from
-creating, changing, or removing that authority marker; the manager may create
-it only with the live CiscoDevice UID, and it is immutable thereafter.
+Managed topology defines exactly two reusable functional ServiceAccount
+identities in each namespace that contains managed CiscoDevices, regardless of
+device count: one for app hosting and one for network management. These are not
+cluster-global accounts because Kubernetes ServiceAccounts are namespaced, and
+they are never multiplied per device. Each identity selects exactly one of
+`disabled`, `readOnly`, or `readWrite`; `disabled` removes that account, its
+bindings, and its worker plane, so a namespace with a disabled plane
+materializes fewer than two accounts. App-hosting read-only is a
+delegated Kubernetes observation identity only—the manager does not create an
+app worker, the Node remains guarded from scheduling, and app hosting is
+unavailable. App-hosting read-write runs the virtual-kubelet path. Network
+read-only runs telemetry, diagnostics, and read-only operations; network
+read-write additionally permits configuration and explicitly enabled gNOI
+mutation reconcilers. Runtime gates mirror RBAC so read-only never means
+"mutate the device and then fail to report status."
+
+Topology-disabled mode retains the historical combined
+`cisco-virtual-kubelet` ServiceAccount. During upgrade, an existing combined
+or per-device identity is a keep-protected migration bridge only. A fresh
+managed install does not create that third account, and the manager retires
+old identities after their workloads are quiesced and both replacement planes
+have passed their profile audit.
 
 For a selected managed device, the manager also content-addresses the complete
 desired worker PodTemplate, excluding only the revision's own annotation and
@@ -100,33 +111,50 @@ time. A Secret rotation therefore blocks new gNOI campaign admission until the
 Managed topology currently requires:
 
 - Kubernetes 1.35 or newer;
+- API-server kubelet authentication using `system:node:<nodeName>`, the Node
+  and RBAC authorizers, and the `NodeRestriction` admission plugin; the
+  projected-token policy relies on a genuine kubelet identity;
 - one authoritative managed-topology CVK release per cluster;
-- per-device workers (`aggregator.enabled=false`);
+- split per-device worker processes (`aggregator.enabled=false`) using two
+  namespace-shared functional identities;
 - manager leader election (`controller.leaderElect=true`), which reduces
   overlapping reconciliation while ledger/CAS and admission remain the
   durable safety fence across failover;
 - the fixed default VK role name (`serviceAccount.vkName` remains
   `cisco-virtual-kubelet`) and `rbac.profile=strict`;
+- distinct app-hosting and network-management account names, each also
+  distinct from the controller and legacy VK identity;
 - `gnoi.enableWriteClass=false`; Phase 2 admits only campaign-owned
   `IOSXESoftwareUpgrade`, not generic `IOSXEOperationalAction` mutations;
 - CRDs applied before the manager Deployment is upgraded;
-- all eight native admission policies and bindings installed with
+- the complete versioned set of native admission policies and bindings installed with
   `failurePolicy: Fail` and `validationActions: [Deny]`;
 - an administrator-owned, non-empty managed-fleet selector;
 - complete, valid values for every required topology key on each enrolled
   `CiscoDevice`; and
 - an explicit `spec.maxPods` from 1 through 110 on every selected device.
 
+Every namespace containing a managed CiscoDevice must be a dedicated,
+administrator-controlled namespace. Do not give tenant principals `edit`,
+`admin`, ServiceAccount impersonation, access to the shared accounts, worker
+Pod `exec`/`attach`/`portforward`/`proxy` or logs, workload `scale`, or delete
+authority there. These permissions can reuse a shared identity, extract its
+bound token or device credentials, bypass a safe drain, or remove an
+enforcement object. The manager audits namespaced grants and fails closed, but
+cluster-admin and principals that can create or change ClusterRoleBindings
+remain part of the cluster trust boundary and must be controlled separately.
+
 The `maxPods` bound is a managed-topology scheduling invariant. Standalone
 mode deliberately keeps its historical compatibility behavior: values at or
 below zero fall back to 16, and otherwise the existing `int32` value is used.
 
-The default VK role name is currently an implementation invariant, not a
-cosmetic restriction: dynamic per-device bindings still reference the fixed
-`cisco-virtual-kubelet` and `cisco-virtual-kubelet-device` roles. Generated
-ServiceAccount names are independent of this value. Do not remove the chart
-validation without changing and testing that controller/chart contract for
-both managed and unselected legacy devices.
+The default VK role name remains a migration invariant for retiring the
+topology-disabled combined identity. Steady-state managed workers instead use
+the account names under `topology.workerAccounts`; the manager may bind only
+the four fixed functional profiles and the fixed, non-selectable app-read,
+network-global-read, and Lease-only support roles. A distinct
+`CONFIG_LEASE_NAMESPACE` receives only the matching Lease support role, never
+the tenant network profile.
 
 The manager checks API discovery, policy generation, binding shape, contract
 version, and built-in-resource expression warnings before enabling managed
@@ -135,6 +163,13 @@ with its own credentials: a harmless Node-status write must succeed, while a
 label write smuggled through `/status` must be denied. A version check or an
 empty warning list alone is not proof that admission works.
 
+Node authorization is necessary but does not turn the functional worker token
+into a `system:node:*` credential. App read-write still has the documented
+cluster-wide workload-input reads required by upstream virtual-kubelet. Treat
+the native Node authorizer and NodeRestriction as prerequisites for the real
+kubelet that requests projected tokens, not as a substitute for the shared
+worker admission policies or the locked namespace boundary.
+
 ## Configure and enable
 
 Start from
@@ -142,6 +177,62 @@ Start from
 The conservative defaults enroll only devices explicitly labeled
 `topology.cisco.vk/managed=true`, require region and zone, and admit one
 transfer and one unavailable member.
+
+Choose worker authority explicitly. This network-observer baseline supports
+scheduling and app hosting but cannot apply device configuration or run an
+upgrade:
+
+```yaml
+topology:
+  enabled: true
+  workerAccounts:
+    appHosting:
+      serviceAccountName: "" # <release-fullname>-app-hosting
+      accessMode: readWrite
+    networkManagement:
+      serviceAccountName: "" # <release-fullname>-network-management
+      accessMode: readOnly
+```
+
+Set network management to `readWrite` before enabling configuration apply or
+software lifecycle. Helm rejects `gnoi.enableSoftwareUpgrade=true` unless that
+profile is selected. Set either access mode to `disabled` to omit that worker
+plane. `appHosting: readOnly` is not a reduced-function Virtual Kubelet: it is
+a non-running observation identity, no app worker is launched, and the device
+cannot accept scheduled Pods.
+
+The reusable accounts remove per-device RBAC-object growth, not per-device
+runtime isolation. With both planes active, each device has one app worker and
+one network worker, so host-cluster CPU, memory, and Pod capacity must still be
+sized for two worker Pods per device. Disabled planes and app read-only mode do
+not launch their corresponding worker.
+
+Leave account names empty unless an external naming convention requires an
+override. Admission treats resolved worker names as cluster-reserved
+identities, even though ServiceAccounts are namespaced. An explicit override
+must therefore be unique across every CVK release in the cluster; reuse fails
+closed rather than sharing authority. Bootstrap persists both resolved names
+in retained `policy.json` and protected policy annotations. Helm and manager
+preflight reject a later rename; retire managed topology and re-enroll to
+change either identity. The owning release, retained policy coordinates, and
+admission-policy prefix are locked with them. Changing a policy name/namespace,
+`fullnameOverride`, or `nameOverride` likewise requires retirement followed by
+clean re-enrollment.
+
+`CONFIG_LEASE_NAMESPACE` is also an identity-bound bootstrap choice. Its
+resolved value (empty means each CiscoDevice namespace) is stored in the
+retained policy and protected annotation. Helm and manager preflight reject an
+in-place change because the former namespace could otherwise retain writable
+Lease authority. Complete the documented retirement, change the value, and
+re-enroll the fleet instead.
+
+Access-profile changes are fail-closed transitions, not live RBAC swaps. Before
+removing read-write authority, the manager verifies that topology locks,
+maintenance, reservations, and device mutation are settled, and that app
+workloads do not depend on the app plane. It then drains the applicable worker
+Deployments, ReplicaSets, and Pods before replacing or removing the binding.
+Escalation likewise waits for prior worker incarnations to disappear. Do not
+edit the generated bindings or ServiceAccounts to bypass this transition.
 
 Before selecting an existing CiscoDevice, populate its previously absent
 `spec.physicalIdentity` from authoritative inventory and confirm the value is
@@ -174,7 +265,7 @@ helm upgrade --install cvk charts/cisco-virtual-kubelet \
 apply can conflict with Helm's initial CRD field ownership; the explicit force
 is limited to the exact reviewed CVK CRD files passed through `-f`.
 
-The first shared-to-isolated worker migration must be a live `helm upgrade`.
+The first combined-to-split worker migration must be a live `helm upgrade`.
 The chart uses Kubernetes `lookup` to preserve only the exact existing shared
 RoleBinding and ClusterRoleBinding while the manager replaces their users.
 Offline `helm template` output and GitOps pruning cannot discover those live,
@@ -183,6 +274,11 @@ one-time handoff unless pruning explicitly excludes existing CVK RBAC until
 the manager reports retirement complete. Normal offline review of rendered
 manifests remains useful; applying that output as a pruning migration is the
 unsafe operation.
+The live Helm upgrade identity needs cluster-wide ConfigMap `list` permission
+to locate the one retained managed-policy object carrying this release's Helm
+ownership annotations. The chart fails closed if that lookup is denied, if
+more than one owned policy is found, or if its coordinates or admission prefix
+do not match the current release.
 
 Do not use `helm upgrade --force`. The policy and ledger are identity-bound by
 their Kubernetes UIDs. Replacement is intentionally treated as a safety
@@ -250,9 +346,9 @@ Before enrollment:
 2. Resolve every Node-name collision. `spec.nodeName` is immutable; when it is
    omitted, the compatibility name is `metadata.name`. Managed topology
    accepts the existing DNS-subdomain grammar, including dotted names, but the
-   resolved name must be at most 63 bytes so it can remain exact in each
-   generated worker identity. Set an explicit short `spec.nodeName` before
-   enrollment when a legacy object name is longer.
+   resolved name must be at most 63 bytes for the managed Node and admission
+   binding contract. Set an explicit short `spec.nodeName` before enrollment
+   when a legacy object name is longer.
 3. Add the required metadata labels, the
    `operations.cisco.vk/image-family` needed by campaigns, and a qualified,
    low-cardinality `operations.cisco.vk/qualification-cohort` representing the
@@ -264,27 +360,19 @@ Before enrollment:
 5. Add the fleet-enrollment label only after admission policies are active.
 
 On an upgrade from shared worker credentials, Helm retains the exact old
-shared bindings as a marked migration bridge while the controller replaces
-each old Deployment using `Recreate`. The controller removes the bridge only
-after no Deployment, ReplicaSet, or Pod still uses the shared ServiceAccount
-and every replacement identity has passed its binding audit. New managed
-admission remains globally deferred while either shared binding still exists;
-the interim workers use isolated per-device legacy identities, so a shared
-token cannot enter the managed protocol. Do not manually delete the shared
-bindings during this handoff. Fresh topology-enabled installs never create
-them. ReplicaSet read/delete permission exists only in the retained
+shared account and bindings as a marked migration bridge while the controller
+replaces each old Deployment using `Recreate`. The controller removes the
+bridge only after no Deployment, ReplicaSet, or Pod still uses it and the app
+and network replacement profiles have passed their binding audit. New managed
+admission remains globally deferred while the legacy bridge exists. Do not
+manually delete it during this handoff. Fresh topology-enabled installs never
+create the legacy account. ReplicaSet read/delete permission exists only in the retained
 managed-topology manager role and is used solely to remove an exact,
 owner-verified, zero-replica legacy ReplicaSet during that retirement; it is
 absent from the default controller role.
 
-For every unselected device, the manager also persists the exact UID-bound
-isolated-worker marker before allowing its generated legacy worker. A stale or
-forged marker is a fail-closed error; it is never sufficient by itself to
-recover authority without the exact CiscoDevice-owned ServiceAccount and
-canonical RoleBinding/ClusterRoleBinding pair.
-
 The manager pre-creates or explicitly adopts the Node, records the Node UID in
-`status.nodeIdentity`, creates a UID-derived worker ServiceAccount, and holds
+`status.nodeIdentity`, reconciles the two namespace-shared profile bindings, and holds
 `topology.cisco.vk/uninitialized=true:NoSchedule` through the writer handoff.
 It removes the guard only after the complete projection is present, the worker
 protocol is bound, and the live authenticated worker observation of physical
@@ -784,7 +872,7 @@ Common fail-closed states include:
 | --- | --- |
 | `TopologyIncomplete` | required metadata label absent/invalid; repair inventory before re-enrollment |
 | `TopologyConflict` | legacy and authoritative values differ, reclassification is unapproved, or Node identity is foreign |
-| `WorkerProtocolPending` | UID-derived worker has not completed admission/writer handoff |
+| `WorkerProtocolPending` | split worker planes have not completed profile/admission handoff |
 | `WorkerRolloutPending` | desired PodTemplate/Secret revision has not been reported by the exact new Ready worker Pod |
 | `AdmissionBlocked` | workload, health, mutation, global, or domain budget gate is closed |
 | `PolicyChanged` / policy identity failure | structural policy/ledger identity or incompatible target-cap change; stop new claims and create a new plan |
@@ -813,30 +901,49 @@ result; the manager therefore applies the administrator fleet selector,
 same-namespace rule, explicit `allowAll`, target cap, frozen target UIDs, and
 exact-hash approval as additional authority boundaries.
 
-Managed worker RBAC removes Node metadata/spec writes, Pod main-resource
-mutation, Pod logs, Pod exec, and Lease create/delete. It retains cluster-wide
-Pod, ConfigMap, Secret, and Service reads because a virtual Node can receive
-Pods from any namespace. The manager pre-creates purpose-bound heartbeat,
-config-family, and mutation Leases; admission permits only the bound worker's
-protocol-valid update. An unselected `cisco-vk-legacy-*` identity retains
-legacy Node and Lease verbs for runtime compatibility, but Node and Pod
-admission prevents it from crossing into a peer or managed Node. It does not
-match the managed Lease protocol. Upgrade-leaf writes come only from the
-per-device namespaced RoleBinding and are absent while the software-upgrade
-gate is inactive.
+Managed worker RBAC exposes four selectable roles. The manager binds the app
+account to exactly one app role and the network account to exactly one network
+role; it never stacks read-only and read-write. The app read-write role has no
+Node metadata/spec, generic Pod update/create, Pod log/exec, Lease create/delete,
+RBAC, token, or Secret write authority. Its CiscoDevice and operation-risk
+reads come from an implementation-only namespaced support role, never its
+cluster-bound profile. Both running planes may create a
+`SelfSubjectReview` to verify their Pod-bound token identity. The network roles
+are namespaced; only the non-selectable global-read support role supplies
+cluster-scoped reads. Network read-write has no Node/Pod mutation, RBAC, token,
+or cluster-wide Secret grant.
+Its bounded upgrade/action main/status verbs are stable so two Helm releases
+cannot race to redefine a cluster-shared profile. The explicit runtime gate
+still decides whether each mutation controller is registered, and native
+admission independently enforces operation ownership and protocol.
 
-`pods/status` remains a cluster-scoped RBAC grant, but native admission now
-requires the immutable `Pod.spec.nodeName` to equal the virtual Node embedded
-in either generated ServiceAccount family and rejects metadata/spec smuggling.
-The Node policy similarly lets a legacy identity mutate only its exact
-unmarked Node; managed Nodes remain manager/bound-managed-worker only. This is
-still not equivalent to Node Authorizer/NodeRestriction: the worker can write
-any schema-valid status for Pods on that Node, and cluster-wide Secret reads
-cannot be limited to only Secrets referenced by those Pods. Provider-side Node
-filtering is a correctness mechanism, not an authorization boundary. A future
-hardening phase should qualify `system:node:<virtual-node>` authentication with
-Node Authorizer/NodeRestriction, or move Pod-status mutation behind the manager.
-Until then, treat workers as cluster-trusted workloads and audit every binding.
+Admission also reserves the two functional ServiceAccount objects to the
+manager, permits their TokenRequest subresource only to a kubelet for an exact
+Pod-bound token, and denies legacy ServiceAccount-token Secrets. This closes
+the otherwise-valid path where another token-issuing principal could reuse the
+shared username without the manager-bound worker Pod incarnation.
+
+The manager pre-creates purpose-bound heartbeat, config-family, and mutation
+Leases. App read-write and network read-write may update only the Lease scopes
+they need; read-only network management can observe but not mutate them.
+Admission checks the manager-owned device/Node/Pod bindings on each write,
+rather than deriving authority from a per-device username.
+
+Shared identities deliberately move the residual blast radius from one device
+to one tenant namespace. The app read-write account still needs cluster-wide
+Pod and workload-input reads because a virtual Node can receive Pods from any
+namespace; Kubernetes RBAC cannot limit Secret reads to dynamically referenced
+Pod inputs. A compromised worker can also attempt peer writes under the same
+account, so fail-closed admission—not process filtering—must enforce object
+binding. This is not equivalent to Node Authorizer/NodeRestriction. Use
+separate namespaces for mutually untrusted fleets, audit every profile binding,
+and treat app-hosting workers as cluster-trusted workloads until node-scoped
+credentials or manager-mediated status are qualified. Because upstream
+`nodeutil` constructs cluster-wide Pod, Secret, ConfigMap, and Service
+informers, functional app hosting should run only in a dedicated trusted
+workload cluster, or where every workload namespace accepts the same
+Secret-read trust boundary. A compromised app read-write worker exposes those
+cluster-wide reads; namespace separation cannot contain them.
 
 ## Rollback and retirement
 
@@ -859,13 +966,16 @@ For managed-topology feature retirement:
    the delegated `topology` verb;
 5. wait for `status.legacyHandoff.phase=Complete` on every requested device and
    verify `status.nodeIdentity` is absent, the Node carries the matching
-   `topology.cisco.vk/legacy-handoff=<node UID>` audit marker, and the isolated
-   legacy worker is Ready with a heartbeat later than `nodeReleasedAt`;
+   `topology.cisco.vk/legacy-handoff=<node UID>` audit marker, the configured
+   namespace-shared legacy worker is Ready with a heartbeat later than
+   `isolatedReadyAt`, and the temporary UID-scoped ServiceAccount and bindings
+   are absent;
 6. run a live Helm upgrade with the same release, policy namespace/name, and
    ledger name, keeping `controller.leaderElect=true` and
    `aggregator.enabled=false`, then set `topology.enabled=false`; and
-7. verify every device still uses its UID-derived isolated legacy identity and
-   that the old shared ServiceAccount remains unbound.
+7. verify the two functional accounts and all managed profile bindings are
+   removed. The controller has already restored the configured legacy account
+   for topology-disabled compatibility; it is not a managed-topology identity.
 
 For example, repeat this for each managed device and do not remove the request
 while topology remains enabled—the selected device would otherwise begin a new
@@ -886,28 +996,38 @@ kubectl wait ciscodevice "$DEVICE_NAME" \
 ```
 
 The reverse handoff is durable and fail closed: `Preparing` records the
-authorized immutable identity, `LegacyWriterPending` records Node release, and
-`Complete` is published only after the generated legacy writer proves Ready.
+authorized immutable identity, `LegacyWriterPending` records Node release,
+`SharedWriterPending` records that the temporary UID-scoped worker proved a
+post-release heartbeat and is being replaced under `Recreate`, and `Complete`
+is published only after the configured namespace-shared compatibility worker
+proves a newer Ready heartbeat and the temporary ServiceAccount and bindings
+are deleted. The per-device identity is therefore transition-only; in managed
+steady state the app-hosting and network-management accounts remain the only
+worker identities. The legacy shared account exists only for devices returned
+to topology-disabled compatibility mode.
 Once `Preparing` exists, admission freezes the consumed
 `topology.cisco.vk/request-legacy-handoff` value against change or removal
 until the handoff reaches `Complete`; the controller does not re-read mutable
 authorization midway through the protocol. Device deletion is likewise denied
 until `Complete`, preventing lifecycle cleanup from interrupting the
 single-writer transfer.
-The manager atomically clears its Node identity/projection/health status only
-at completion. The request annotation can be removed by a topology-author
-after topology is disabled; the Complete status, isolated-worker marker, and
-Node audit marker remain identity state.
+The manager clears its Node identity/projection/health status after isolated
+readiness, before the Recreate replacement, while the durable phase prevents
+forward enrollment until the shared readiness proof and credential retirement
+finish. The request annotation can be removed by a topology-author
+after topology is disabled; the Complete status and Node audit marker remain
+identity state.
 
 The live downgrade check rejects missing or UID-mismatched policy/ledger
 objects, incomplete manager RBAC, any remaining `status.nodeIdentity`, and any
-handoff phase other than `Complete`. The policy, ledger, eight policy/binding
-pairs, fixed managed-worker role, and supplemental manager role/binding carry
+handoff phase other than `Complete`. The policy, ledger, versioned policy/binding
+pairs, fixed functional profile roles, and supplemental manager role/binding carry
 `helm.sh/resource-policy: keep`. Setting `topology.enabled=false` or
-uninstalling Helm does not remove them. Completed isolated workers still rely
-on Node/Pod admission, so these retained objects are an active safety boundary,
-not stale installation debris. Remove them only after deleting every dependent
-isolated worker, ServiceAccount/binding, Node marker, and durable device state.
+uninstalling Helm does not remove them. In-flight handoff workers and retained
+manager-owned audit state still rely on native admission, so these objects are
+an active safety boundary, not stale installation debris. Remove them only
+after deleting every dependent split worker, functional ServiceAccount/binding,
+Node marker, and durable device state.
 Never delete/recreate only the ledger or a same-name CiscoDevice to clear a
 failure; both changes produce new UIDs and invalidate durable authority.
 

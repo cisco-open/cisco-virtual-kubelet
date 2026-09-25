@@ -49,6 +49,21 @@ var managedAdmissionPolicySuffixes = []string{
 	"topology-policy",
 	"topology-ledger",
 	"managed-maintenance-lease",
+	"shared-pod-status",
+	"shared-pod-binding",
+	"shared-pod-delete",
+	"shared-node-status",
+	"shared-upgrade-leaf",
+	"shared-network-object",
+	"shared-network-result",
+	"shared-maintenance-lease",
+	"shared-worker-serviceaccount",
+	"shared-worker-token",
+	"shared-worker-token-secret",
+	"shared-worker-deployment",
+	"shared-worker-replicaset",
+	"shared-worker-pod",
+	"shared-worker-pod-update",
 }
 
 type admissionContractExpectation struct {
@@ -69,9 +84,9 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 	"managed-node": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"nodes", "nodes/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.ClusterScope,
-		matchConditions: []string{"managed-node"}, variables: []string{"manager", "oldManaged", "managerLegacyHandoff", "legacyHandoffMarkerPreserved"}, validations: 3, coreTyped: true,
-		requiredFragments: []string{"worker-username", "request.subResource == 'status'", "object.spec == oldObject.spec", "node-uid", "device-uid", "worker-protocol", "worker-observed-revision", "last-applied-node-status", "managerLegacyHandoff", "legacy-handoff", "projected-keys", "managed-taints"},
-		digest:            "sha256:8e24dbd6f8dc833eba95e87096cf1daee03b41ff6180d591eaca526236ec7a19",
+		matchConditions: []string{"managed-node"}, variables: []string{"manager", "oldManaged", "managerLegacyHandoff", "legacyHandoffMarkerPreserved", "managerFunctionalWorkerBinding"}, validations: 4, coreTyped: true,
+		requiredFragments: []string{"worker-username", "app-worker-username", "network-worker-username", "request.subResource == 'status'", "object.spec == oldObject.spec", "node-uid", "device-uid", "worker-protocol", "worker-observed-revision", "last-applied-node-status", "managerLegacyHandoff", "legacy-handoff", "projected-keys", "managed-taints"},
+		digest:            "sha256:c80fbc04ffb8ffe5d3a7d826259c0fc2fe3df054a825267a4d765733f9a5b5b1",
 	},
 	"managed-pod-status": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods/status"},
@@ -100,24 +115,24 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwareupgrades", "iosxesoftwareupgrades/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		matchConditions:   []string{"managed-leaf"},
-		variables:         []string{"manager", "oldClaims", "newClaims"},
+		variables:         []string{"manager", "oldClaims", "newClaims", "managerFunctionalWorkerBinding"},
 		validations:       7,
-		requiredFragments: []string{"worker-username", "iosxesoftwareupgrade-cleanup", "managerAdmission", "managerControl", "managedMutationClaims", "primarySupervisorInstallRequested", "reservationID", "policyEpoch", "topologyLockID", "observedWorkerConfigRevision"},
-		digest:            "sha256:3339c1f7cf33800047dcfe1d759cae5c99ea8b152f69466aae36c72af8254b6d",
+		requiredFragments: []string{"worker-username", "network-worker-username", "iosxesoftwareupgrade-cleanup", "managerAdmission", "managerControl", "managedMutationClaims", "primarySupervisorInstallRequested", "reservationID", "policyEpoch", "topologyLockID", "observedWorkerConfigRevision"},
+		digest:            "sha256:bd275cc5a2485cfe806fba124186634189601904cbe69bc11cc541c1d64b51a1",
 	},
 	"topology-policy": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
-		matchConditions: []string{"chart-policy"}, variables: []string{"manager", "policyEditor"}, validations: 3, coreTyped: true,
-		requiredFragments: []string{"managed-policy", "admission-policy-prefix", "check('topology')", "ledger-uid", "request.namespace", "request.name"},
-		digest:            "sha256:c457d5c27b8839b1636a545b5348488eada7316bc1c95d0f2479101f91354c1e",
+		matchConditions: []string{"chart-policy"}, variables: []string{"manager", "policyEditor"}, validations: 5, coreTyped: true,
+		requiredFragments: []string{"managed-policy", "admission-policy-prefix", "check('topology')", "ledger-uid", "request.namespace", "request.name", "app-hosting-service-account", "network-management-service-account", "config-lease-namespace"},
+		digest:            "sha256:a79bed70b835b3a6b4b91ce695b4841afd89dd0425b708e09d14c6a32b0aac96",
 	},
 	"topology-ledger": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		matchConditions: []string{"chart-ledger"}, variables: []string{"manager", "breakglass"}, validations: 3, coreTyped: true,
 		requiredFragments: []string{"managed-ledger", "ledger.json", "check('manage-ledger')", "request.namespace", "request.name"},
-		digest:            "sha256:3f585012df3c122804d1f300f242eaa365073d30fb7cbd0c5444474ba59faaaf",
+		digest:            "sha256:461d644eda8bd2816ef5faa9effb890080412295e1d05992344e3a22007d1fe9",
 	},
 	"managed-maintenance-lease": {
 		apiGroups: []string{"coordination.k8s.io"}, apiVersions: []string{"v1"}, resources: []string{"leases"},
@@ -125,8 +140,114 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		matchConditions: []string{"managed-maintenance-request"},
 		variables:       []string{"manager", "oldRequest", "newRequest", "oldHeld", "newHeld", "oldTransitions", "managerCreate", "managerAdopt", "boundWorker", "holderChanged"},
 		validations:     8, coreTyped: true,
-		requiredFragments: []string{"maintenance-request-version", "maintenance-session-token", "maintenance-operation-uid", "maintenance-control-revision", "worker-username", "holderIdentity", "device-uid"},
-		digest:            "sha256:3a33ace5e0020e020d28947d70b0221e95459aa286f72110675e4406cd99f864",
+		requiredFragments: []string{"maintenance-request-version", "maintenance-session-token", "maintenance-operation-uid", "maintenance-control-revision", "worker-username", "app-worker-username", "network-worker-username", "holderIdentity", "device-uid"},
+		digest:            "sha256:2090af88ef9d276c25bedc9e4402dd06defd9419f7a99d1651441fbe54d75a8b",
+	},
+	"shared-pod-status": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods/status"},
+		operations: []admissionv1.OperationType{admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"shared-app-worker"}, variables: []string{"podUIDs", "podNames"}, validations: 2, coreTyped: true,
+		requiredFragments: []string{"app-worker-username", "app-worker-pod-name", "app-worker-pod-uid", "authentication.kubernetes.io/pod-uid", "object.spec == oldObject.spec"},
+		digest:            "sha256:024f68f192cad0323977779a564ce4267b3eba7f291a895980333d5ff2f24c77",
+	},
+	"shared-pod-binding": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods", "pods/status"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"shared-binding"}, variables: []string{"manager", "oldBindings", "newBindings"}, validations: 3, coreTyped: true,
+		requiredFragments: []string{"app-worker-username", "app-worker-pod-name", "app-worker-pod-uid", "object.status == oldObject.status"},
+		digest:            "sha256:1432c323adbe9c3468a5ea3f2a8070394f25e7d3441f7806687f05437bf64122",
+	},
+	"shared-pod-delete": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods"},
+		operations: []admissionv1.OperationType{admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"shared-app-worker"}, variables: []string{"podUIDs", "podNames"}, validations: 2, coreTyped: true,
+		requiredFragments: []string{"preconditions.uid", "gracePeriodSeconds", "deletionTimestamp", "app-worker-pod-uid", "authentication.kubernetes.io/pod-name"},
+		digest:            "sha256:5f04c0132efb534843ef60505a6d66cd35b64c79ad00ccabc7a07bcffff84c45",
+	},
+	"shared-node-status": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"nodes/status"},
+		operations: []admissionv1.OperationType{admissionv1.Update}, scope: admissionv1.ClusterScope,
+		matchConditions: []string{"shared-app-worker"}, variables: []string{"podUIDs", "podNames"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"app-worker-username", "app-worker-pod-name", "app-worker-pod-uid", "authentication.kubernetes.io/pod-uid"},
+		digest:            "sha256:fec50e3f2c0c6c8c8b80c2d2c44acfce3fb76a897856f71492437222dac2ce3a",
+	},
+	"shared-upgrade-leaf": {
+		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwareupgrades", "iosxesoftwareupgrades/status"},
+		operations: []admissionv1.OperationType{admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"shared-network-worker"}, variables: []string{"podUIDs", "podNames"}, validations: 1,
+		requiredFragments: []string{"network-worker-username", "network-worker-pod-name", "network-worker-pod-uid", "authentication.kubernetes.io/pod-uid"},
+		digest:            "sha256:9a7c87659af5873d78564e36727415fcecc0eb661c6d4f005b5146e6db72b226",
+	},
+	"shared-network-object": {
+		apiGroups: []string{"config.cisco.vk", "ops.cisco.vk"}, apiVersions: []string{"v1alpha1"},
+		resources:  []string{"iosxeconfigs", "iosxeconfigs/status", "nxosconfigs", "nxosconfigs/status", "iosxetelemetries", "iosxetelemetries/status", "iosxediagnostics", "iosxediagnostics/status", "iosxeconfigapplylogs", "iosxeconfigapplylogs/status", "iosxeconfigrevisions", "iosxeconfigrevisions/status", "deviceoperations", "deviceoperations/status", "iosxeoperationalactions", "iosxeoperationalactions/status"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"protected-network-object"}, variables: []string{"manager", "sharedWorker", "podUIDs", "podNames", "oldBindings", "newBindings", "boundObject"}, validations: 5,
+		requiredFragments: []string{"deviceRef.name", "device-uid", "network-worker-pod-name", "authentication.kubernetes.io/pod-uid", "-network-", "object.spec == oldObject.spec", "object.status == oldObject.status", "config.cisco.vk/lease-cleanup", "config.cisco.vk/telemetry-cleanup", "ops.cisco.vk/iosxeoperationalaction-finalizer"},
+		digest:            "sha256:54a7cea35ce366a085fc8c88921d23a8e3622dc82e585ff378aa300e5dd55974",
+	},
+	"shared-network-result": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"protected-network-result"}, variables: []string{"manager", "sharedWorker", "podUIDs", "podNames", "oldBindings", "newBindings", "boundObject"}, validations: 6, coreTyped: true,
+		requiredFragments: []string{"device-uid", "network-worker-pod-name", "authentication.kubernetes.io/pod-name", "IOSXEDiagnostic", "DeviceOperation", "cisco.vk/diagnostic-uid", "object.data == oldObject.data", "result-u"},
+		digest:            "sha256:75735b341508f3edb739adb8cfd62b3c852c9e309fc67f30385619c35df6ed3a",
+	},
+	"shared-maintenance-lease": {
+		apiGroups: []string{"coordination.k8s.io"}, apiVersions: []string{"v1"}, resources: []string{"leases"},
+		operations: []admissionv1.OperationType{admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"shared-functional-worker"}, variables: []string{"podUIDs", "podNames", "appWorker", "networkWorker"}, validations: 2, coreTyped: true,
+		requiredFragments: []string{"node-heartbeat", "config-family", "device-mutation", "app-worker-pod-uid", "network-worker-pod-uid", "authentication.kubernetes.io/pod-name"},
+		digest:            "sha256:39bfaca691b5d90bcc743b1a522db3fcb69982b725f6f25911f2592714b06dd4",
+	},
+	"shared-worker-serviceaccount": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"serviceaccounts"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-account"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"request.name", "request.userInfo.username"},
+		digest:            "sha256:14cd0ba4d05a2c257b2fdd23e622011e1eb570a427f7ba5c71af851eebf6166f",
+	},
+	"shared-worker-token": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"serviceaccounts/token"},
+		operations: []admissionv1.OperationType{admissionv1.Create}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-account"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"request.name", "system:node:", "boundObjectRef", "Pod"},
+		digest:            "sha256:16b9aae76eed02c2198f97e1ea05c1c17a46ab99b2ed499c08142af5ae51c351",
+	},
+	"shared-worker-token-secret": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"secrets"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-token-secret"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"kubernetes.io/service-account-token", "kubernetes.io/service-account.name", "request.operation == 'DELETE'"},
+		digest:            "sha256:f9fd58231c040f1eac7e3dcf1f773bd732e7644f968a60526533f0cf4748de76",
+	},
+	"shared-worker-deployment": {
+		apiGroups: []string{"apps"}, apiVersions: []string{"v1"}, resources: []string{"deployments"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-account"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"serviceAccountName", "request.userInfo.username"},
+		digest:            "sha256:ec9138e8b639571052f71091a44511fe5005607502bd918277dc6ce4f043652d",
+	},
+	"shared-worker-replicaset": {
+		apiGroups: []string{"apps"}, apiVersions: []string{"v1"}, resources: []string{"replicasets"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-account"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"deployment-controller", "ownerReferences", "serviceAccountName"},
+		digest:            "sha256:00dac8672bfac26bdf141b80052f6071a910800f0534622a3292988d7de31eed",
+	},
+	"shared-worker-pod": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods"},
+		operations: []admissionv1.OperationType{admissionv1.Create}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-account"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"replicaset-controller", "ownerReferences", "serviceAccountName"},
+		digest:            "sha256:c0e9226e6f6bfb472a5f2672e050b7c83ab816f1e78df06b8690c588c749ebbf",
+	},
+	"shared-worker-pod-update": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods", "pods/ephemeralcontainers", "pods/resize"},
+		operations: []admissionv1.OperationType{admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-account"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"serviceAccountName", "request.userInfo.username"},
+		digest:            "sha256:a0769d67d0f0db72edd501c29c952475016fa874386855834e1142b510eda7f6",
 	},
 }
 
@@ -140,6 +261,8 @@ func verifyManagedAdmissionContract(
 	prefix string,
 	policyKey types.NamespacedName,
 	ledgerName string,
+	appHostingServiceAccount string,
+	networkManagementServiceAccount string,
 ) error {
 	if prefix == "" {
 		return fmt.Errorf("managed admission policy prefix is empty")
@@ -160,11 +283,13 @@ func verifyManagedAdmissionContract(
 		return fmt.Errorf("resolve authenticated manager identity: %w", err)
 	}
 	contractBindings := admissionContractBindings{
-		AdmissionPrefix: prefix,
-		ManagerUsername: self.Status.UserInfo.Username,
-		PolicyNamespace: policyKey.Namespace,
-		PolicyName:      policyKey.Name,
-		LedgerName:      ledgerName,
+		AdmissionPrefix:                 prefix,
+		ManagerUsername:                 self.Status.UserInfo.Username,
+		PolicyNamespace:                 policyKey.Namespace,
+		PolicyName:                      policyKey.Name,
+		LedgerName:                      ledgerName,
+		AppHostingServiceAccount:        appHostingServiceAccount,
+		NetworkManagementServiceAccount: networkManagementServiceAccount,
 	}
 	if err := contractBindings.validate(); err != nil {
 		return err
@@ -200,20 +325,24 @@ func verifyManagedAdmissionContract(
 }
 
 type admissionContractBindings struct {
-	AdmissionPrefix string
-	ManagerUsername string
-	PolicyNamespace string
-	PolicyName      string
-	LedgerName      string
+	AdmissionPrefix                 string
+	ManagerUsername                 string
+	PolicyNamespace                 string
+	PolicyName                      string
+	LedgerName                      string
+	AppHostingServiceAccount        string
+	NetworkManagementServiceAccount string
 }
 
 func (b admissionContractBindings) validate() error {
 	for name, value := range map[string]string{
-		"admission policy prefix":        b.AdmissionPrefix,
-		"authenticated manager username": b.ManagerUsername,
-		"policy namespace":               b.PolicyNamespace,
-		"policy name":                    b.PolicyName,
-		"ledger name":                    b.LedgerName,
+		"admission policy prefix":           b.AdmissionPrefix,
+		"authenticated manager username":    b.ManagerUsername,
+		"policy namespace":                  b.PolicyNamespace,
+		"policy name":                       b.PolicyName,
+		"ledger name":                       b.LedgerName,
+		"app-hosting ServiceAccount":        b.AppHostingServiceAccount,
+		"network-management ServiceAccount": b.NetworkManagementServiceAccount,
 	} {
 		if strings.TrimSpace(value) == "" {
 			return fmt.Errorf("managed admission %s is empty", name)
@@ -223,11 +352,13 @@ func (b admissionContractBindings) validate() error {
 }
 
 const (
-	contractAdmissionPrefixToken = "${CVK_ADMISSION_PREFIX}"
-	contractManagerToken         = "${CVK_MANAGER_USERNAME}"
-	contractPolicyNamespaceToken = "${CVK_POLICY_NAMESPACE}"
-	contractPolicyNameToken      = "${CVK_POLICY_NAME}"
-	contractLedgerNameToken      = "${CVK_LEDGER_NAME}"
+	contractAdmissionPrefixToken       = "${CVK_ADMISSION_PREFIX}"
+	contractManagerToken               = "${CVK_MANAGER_USERNAME}"
+	contractPolicyNamespaceToken       = "${CVK_POLICY_NAMESPACE}"
+	contractPolicyNameToken            = "${CVK_POLICY_NAME}"
+	contractLedgerNameToken            = "${CVK_LEDGER_NAME}"
+	contractAppServiceAccountToken     = "${CVK_APP_SERVICE_ACCOUNT}"
+	contractNetworkServiceAccountToken = "${CVK_NETWORK_SERVICE_ACCOUNT}"
 )
 
 func validateManagedAdmissionPolicyDigest(
@@ -283,6 +414,8 @@ func managedAdmissionPolicyDigest(
 		{bindings.PolicyNamespace, contractPolicyNamespaceToken},
 		{bindings.PolicyName, contractPolicyNameToken},
 		{bindings.LedgerName, contractLedgerNameToken},
+		{bindings.AppHostingServiceAccount, contractAppServiceAccountToken},
+		{bindings.NetworkManagementServiceAccount, contractNetworkServiceAccountToken},
 	}
 	sort.SliceStable(replacements, func(i, j int) bool {
 		return len(replacements[i].from) > len(replacements[j].from)

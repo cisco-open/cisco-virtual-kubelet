@@ -123,7 +123,7 @@ func newLegacyHandoffFixture(t *testing.T) legacyHandoffFixture {
 	r := &CiscoDeviceReconciler{
 		Client: writeClient, APIReader: baseClient, Scheme: scheme, Image: "cisco-vk:test",
 		TopologyPolicyNamespace: policy.Namespace, TopologyPolicyName: policy.Name,
-		LeaseNamespace: device.Namespace, clock: clock,
+		clock: clock,
 	}
 	if err := r.ensureVKAccess(context.Background(), device, managedSA, true); err != nil {
 		t.Fatalf("seed managed worker access: %v", err)
@@ -155,6 +155,7 @@ func TestLegacyHandoffFullReconcileUsesIsolatedWorkerAndCompletes(t *testing.T) 
 	ctx := context.Background()
 	fixture := newLegacyHandoffFixture(t)
 	r := fixture.r
+	r.ServiceAccount = "cvk-compatibility"
 
 	if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: fixture.key}); err != nil {
 		t.Fatalf("start handoff reconcile: %v", err)
@@ -249,22 +250,82 @@ func TestLegacyHandoffFullReconcileUsesIsolatedWorkerAndCompletes(t *testing.T) 
 	}
 	fixture.clock.Advance(time.Minute)
 	if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: fixture.key}); err != nil {
-		t.Fatalf("complete handoff reconcile: %v", err)
+		t.Fatalf("begin shared compatibility transition: %v", err)
 	}
 	device = fixture.device(t)
-	if device.Status.LegacyHandoff == nil || device.Status.LegacyHandoff.Phase != ciskov1.DeviceLegacyHandoffComplete ||
+	if device.Status.LegacyHandoff == nil || device.Status.LegacyHandoff.Phase != ciskov1.DeviceLegacyHandoffSharedWriterPending ||
 		device.Status.NodeIdentity != nil || device.Status.TopologyProjection != nil || device.Status.HealthObservation != nil ||
 		device.Status.WorkerRevision != nil {
-		t.Fatalf("completed status = handoff=%#v identity=%#v projection=%#v health=%#v workerRevision=%#v",
+		t.Fatalf("shared-pending status = handoff=%#v identity=%#v projection=%#v health=%#v workerRevision=%#v",
 			device.Status.LegacyHandoff, device.Status.NodeIdentity, device.Status.TopologyProjection,
 			device.Status.HealthObservation, device.Status.WorkerRevision)
 	}
-	if got := r.serviceAccountForDevice(device); got != legacySA {
-		t.Fatalf("completed handoff ServiceAccount = %q, want %q", got, legacySA)
+	if err := fixture.client.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: device.Name + deploymentSuffix}, &appsv1.Deployment{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("isolated Deployment was not removed by Recreate barrier: %v", err)
 	}
+	for _, object := range []client.Object{oldPod, newPod, oldReplicaSet, newReplicaSet} {
+		if err := fixture.client.Delete(ctx, object); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: fixture.key}); err != nil {
+		t.Fatalf("create shared compatibility worker: %v", err)
+	}
+	device = fixture.device(t)
+	sharedSA := r.vkServiceAccountName()
 	deployment = fixture.deployment(t)
-	if deployment.Spec.Template.Spec.ServiceAccountName != legacySA || deployment.Spec.Strategy.Type != appsv1.RecreateDeploymentStrategyType {
-		t.Fatalf("completed Deployment SA/strategy = %q/%q", deployment.Spec.Template.Spec.ServiceAccountName, deployment.Spec.Strategy.Type)
+	if deployment.Spec.Template.Spec.ServiceAccountName != sharedSA || deployment.Spec.Strategy.Type != appsv1.RecreateDeploymentStrategyType {
+		t.Fatalf("shared compatibility Deployment SA/strategy = %q/%q", deployment.Spec.Template.Spec.ServiceAccountName, deployment.Spec.Strategy.Type)
+	}
+	// fake.Client does not assign the API-server generation used by the
+	// readiness proof.
+	deployment.Generation = 1
+	if err := fixture.client.Update(ctx, deployment); err != nil {
+		t.Fatal(err)
+	}
+	markLegacyDeploymentRolledOut(t, fixture.client, deployment)
+	sharedReplicaSet := &appsv1.ReplicaSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: device.Namespace, Name: "shared-legacy", UID: "shared-rs-uid", Labels: deployment.Spec.Template.Labels,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(deployment, appsv1.SchemeGroupVersion.WithKind("Deployment"))},
+		},
+		Spec: appsv1.ReplicaSetSpec{Template: *deployment.Spec.Template.DeepCopy()},
+	}
+	if err := fixture.client.Create(ctx, sharedReplicaSet); err != nil {
+		t.Fatal(err)
+	}
+	sharedReadyAt := device.Status.LegacyHandoff.IsolatedReadyAt.Add(30 * time.Second)
+	sharedPod := readyLegacyPod(device.Namespace, "shared-legacy-pod", "shared-pod-uid", sharedSA, sharedReplicaSet, metav1.NewTime(sharedReadyAt))
+	sharedPod.Labels = deployment.Spec.Template.Labels
+	if err := fixture.client.Create(ctx, sharedPod); err != nil {
+		t.Fatal(err)
+	}
+	if err := publishLegacyNodeHeartbeat(t, fixture.client, device, device.Status.LegacyHandoff, sharedReadyAt); err != nil {
+		t.Fatal(err)
+	}
+	fixture.clock.Advance(time.Minute)
+	var debugNode corev1.Node
+	if err := fixture.client.Get(ctx, types.NamespacedName{Name: device.Status.LegacyHandoff.NodeName}, &debugNode); err != nil {
+		t.Fatal(err)
+	}
+	debugDeployment := fixture.deployment(t)
+	if ready, err := r.legacyWriterReadyForServiceAccount(ctx, device, &debugNode, sharedSA, device.Status.LegacyHandoff.IsolatedReadyAt.Time); err != nil || !ready {
+		t.Fatalf("shared readiness proof before completion = %v, %v; deployment=%#v template=%#v node=%#v", ready, err, debugDeployment.Status, debugDeployment.Spec.Template, debugNode.Status.Conditions)
+	}
+	if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: fixture.key}); err != nil {
+		t.Fatalf("complete shared compatibility transition: %v", err)
+	}
+	device = fixture.device(t)
+	if device.Status.LegacyHandoff == nil || device.Status.LegacyHandoff.Phase != ciskov1.DeviceLegacyHandoffComplete ||
+		device.Status.LegacyHandoff.CompletedAt == nil {
+		t.Fatalf("completed shared handoff status = %#v", device.Status.LegacyHandoff)
+	}
+	if got := r.serviceAccountForDevice(device); got != sharedSA {
+		t.Fatalf("completed handoff ServiceAccount = %q, want shared %q", got, sharedSA)
+	}
+	assertWorkerAccessAbsent(t, fixture.client, device, legacySA)
+	if err := r.verifySharedLegacyAccess(ctx, device); err != nil {
+		t.Fatalf("shared compatibility access: %v", err)
 	}
 	if err := fixture.client.Get(ctx, types.NamespacedName{Name: handoff.NodeName}, &releasedNode); err != nil {
 		t.Fatal(err)
@@ -273,19 +334,19 @@ func TestLegacyHandoffFullReconcileUsesIsolatedWorkerAndCompletes(t *testing.T) 
 		t.Fatal("completed legacy Node retained topology initialization guard")
 	}
 
-	// A manager restart with the global feature flag off must retain the exact
-	// UID-bound worker, not fall back to the historical release-wide identity.
+	// A manager restart with the global feature flag off must recover the
+	// namespace-shared compatibility identity, never the temporary UID account.
 	restarted := &CiscoDeviceReconciler{
 		Client: fixture.r.Client, APIReader: fixture.client, Scheme: fixture.r.Scheme,
 		TopologyPolicyNamespace: fixture.r.TopologyPolicyNamespace, TopologyPolicyName: fixture.r.TopologyPolicyName,
-		LeaseNamespace: fixture.r.LeaseNamespace, clock: fixture.clock,
+		LeaseNamespace: fixture.r.LeaseNamespace, ServiceAccount: r.ServiceAccount, clock: fixture.clock,
 	}
 	restartedDevice := fixture.device(t)
 	result, err := restarted.reconcileManagedTopology(ctx, restartedDevice)
 	if err != nil {
 		t.Fatalf("restart completed-state recovery: %v", err)
 	}
-	if result.Managed || !result.LegacyWorker || restarted.serviceAccountForDevice(restartedDevice, result) != legacySA {
+	if result.Managed || !result.LegacyWorker || restarted.serviceAccountForDevice(restartedDevice, result) != sharedSA {
 		t.Fatalf("restart topology result = %+v, SA=%q", result, restarted.serviceAccountForDevice(restartedDevice, result))
 	}
 }
@@ -315,16 +376,27 @@ func TestLegacyHandoffSelectorExitAndSecondCycle(t *testing.T) {
 	if err := fixture.client.Update(ctx, device); err != nil {
 		t.Fatal(err)
 	}
-	device = fixture.device(t)
-	result, err = fixture.r.reconcileManagedTopology(ctx, device)
-	if err != nil {
-		t.Fatalf("managed re-enrollment: %v", err)
+	for attempt := 0; attempt < 5; attempt++ {
+		device = fixture.device(t)
+		result, err = fixture.r.reconcileManagedTopology(ctx, device)
+		if err != nil {
+			t.Fatalf("managed re-enrollment attempt %d: %v", attempt, err)
+		}
+		if result.Managed {
+			break
+		}
+		if !result.HoldWorker {
+			t.Fatalf("re-enrollment did not hold the worker while shared authority drained: %+v", result)
+		}
 	}
 	if !result.Managed || device.Status.NodeIdentity == nil || device.Status.LegacyHandoff != nil {
 		t.Fatalf("re-enrollment result/status = %+v / identity=%#v handoff=%#v", result, device.Status.NodeIdentity, device.Status.LegacyHandoff)
 	}
 	if err := fixture.r.ensureVKAccess(ctx, device, managedWorkerServiceAccountName(device), true); err != nil {
 		t.Fatal(err)
+	}
+	if device.Annotations == nil {
+		device.Annotations = map[string]string{}
 	}
 	device.Annotations[managedprotocol.AnnotationRequestLegacyHandoff] = device.Status.NodeIdentity.NodeUID
 	delete(device.Labels, managedprotocol.AnnotationManaged)
@@ -338,6 +410,118 @@ func TestLegacyHandoffSelectorExitAndSecondCycle(t *testing.T) {
 	}
 	if !result.LegacyWorker || device.Status.LegacyHandoff == nil || device.Status.LegacyHandoff.Phase != ciskov1.DeviceLegacyHandoffPreparing {
 		t.Fatalf("second-cycle result/status = %+v / %#v", result, device.Status.LegacyHandoff)
+	}
+}
+
+func TestLegacyHandoffReleasePreservesOnlyOperatorCordon(t *testing.T) {
+	for _, test := range []struct {
+		name              string
+		managedCordon     bool
+		wantUnschedulable bool
+	}{
+		{name: "CVK cordon is released", managedCordon: true, wantUnschedulable: false},
+		{name: "operator cordon is preserved", managedCordon: false, wantUnschedulable: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			fixture := newLegacyHandoffFixture(t)
+			device := fixture.device(t)
+			if _, err := fixture.r.reconcileManagedTopology(ctx, device); err != nil {
+				t.Fatal(err)
+			}
+			var node corev1.Node
+			if err := fixture.client.Get(ctx, types.NamespacedName{Name: device.Status.NodeIdentity.NodeName}, &node); err != nil {
+				t.Fatal(err)
+			}
+			node.Spec.Unschedulable = true
+			if test.managedCordon {
+				node.Annotations[managedprotocol.AnnotationAppHostingCordonDeviceUID] = string(device.UID)
+			}
+			if err := fixture.client.Update(ctx, &node); err != nil {
+				t.Fatal(err)
+			}
+			handoff := copyLegacyHandoff(device.Status.LegacyHandoff)
+			handoff.Phase = ciskov1.DeviceLegacyHandoffLegacyWriterPending
+			releasedAt := metav1.NewTime(fixture.clock.now.Add(time.Minute))
+			handoff.NodeReleasedAt = &releasedAt
+			released, _, err := fixture.r.releaseManagedNodeToLegacy(ctx, device, handoff)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if released.Spec.Unschedulable != test.wantUnschedulable {
+				t.Fatalf("released Node unschedulable=%v, want %v", released.Spec.Unschedulable, test.wantUnschedulable)
+			}
+			if _, present := released.Annotations[managedprotocol.AnnotationAppHostingCordonDeviceUID]; present {
+				t.Fatal("released Node retained CVK app-hosting cordon ownership marker")
+			}
+		})
+	}
+}
+
+func TestManagedWriterStopCheckScopesSharedAccountsToDevice(t *testing.T) {
+	ctx := context.Background()
+	device := managedAccessDevice("switch-a")
+	other := managedAccessDevice("switch-b")
+	sharedAccount := managedprotocol.AppHostingServiceAccount
+
+	otherDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+		Namespace: other.Namespace, Name: other.Name + deploymentSuffix, UID: "other-deployment-uid",
+		OwnerReferences: []metav1.OwnerReference{
+			*metav1.NewControllerRef(other, ciskov1.GroupVersion.WithKind("CiscoDevice")),
+		},
+	}, Spec: appsv1.DeploymentSpec{Template: corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{Labels: perDeviceDeploymentLabels(other.Name)},
+		Spec:       corev1.PodSpec{ServiceAccountName: sharedAccount},
+	}}}
+	otherReplicaSet := &appsv1.ReplicaSet{ObjectMeta: metav1.ObjectMeta{
+		Namespace: other.Namespace, Name: "switch-b-rs", UID: "other-rs-uid",
+		OwnerReferences: []metav1.OwnerReference{
+			*metav1.NewControllerRef(otherDeployment, appsv1.SchemeGroupVersion.WithKind("Deployment")),
+		},
+	}}
+	otherPod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Namespace: other.Namespace, Name: "switch-b-pod", UID: "other-pod-uid",
+		Labels: perDeviceDeploymentLabels(other.Name), OwnerReferences: []metav1.OwnerReference{
+			*metav1.NewControllerRef(otherReplicaSet, appsv1.SchemeGroupVersion.WithKind("ReplicaSet")),
+		},
+	}, Spec: corev1.PodSpec{ServiceAccountName: sharedAccount}}
+	r := reconcilerFor(t, device, other, otherDeployment, otherReplicaSet, otherPod)
+
+	stopped, err := r.managedWriterWorkloadsStopped(ctx, device)
+	if err != nil || !stopped {
+		t.Fatalf("other device shared worker blocked handoff: stopped=%v err=%v", stopped, err)
+	}
+
+	// Once an exact Pod for this device is present, it must block even after
+	// its Deployment template has already switched to the isolated legacy SA.
+	localDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: device.Name + deploymentSuffix, UID: "local-deployment-uid",
+		OwnerReferences: []metav1.OwnerReference{
+			*metav1.NewControllerRef(device, ciskov1.GroupVersion.WithKind("CiscoDevice")),
+		},
+	}, Spec: appsv1.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{
+		ServiceAccountName: topologyLegacyWorkerServiceAccountName(device),
+	}}}}
+	localReplicaSet := &appsv1.ReplicaSet{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "switch-a-old-rs", UID: "local-rs-uid",
+		OwnerReferences: []metav1.OwnerReference{
+			*metav1.NewControllerRef(localDeployment, appsv1.SchemeGroupVersion.WithKind("Deployment")),
+		},
+	}}
+	localPod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "switch-a-old-pod", UID: "local-pod-uid",
+		Labels: perDeviceDeploymentLabels(device.Name), OwnerReferences: []metav1.OwnerReference{
+			*metav1.NewControllerRef(localReplicaSet, appsv1.SchemeGroupVersion.WithKind("ReplicaSet")),
+		},
+	}, Spec: corev1.PodSpec{ServiceAccountName: sharedAccount}}
+	for _, object := range []client.Object{localDeployment, localReplicaSet, localPod} {
+		if err := r.Create(ctx, object); err != nil {
+			t.Fatal(err)
+		}
+	}
+	stopped, err = r.managedWriterWorkloadsStopped(ctx, device)
+	if err != nil || stopped {
+		t.Fatalf("exact old shared worker did not block handoff: stopped=%v err=%v", stopped, err)
 	}
 }
 
@@ -421,12 +605,13 @@ func TestLegacyHandoffRejectsForgedRecoveryState(t *testing.T) {
 		device.UID = "forged-complete-uid"
 		legacySA := topologyLegacyWorkerServiceAccountName(device)
 		releasedAt := metav1.NewTime(base.Add(time.Minute))
-		completedAt := metav1.NewTime(base.Add(2 * time.Minute))
+		isolatedReadyAt := metav1.NewTime(base.Add(2 * time.Minute))
+		completedAt := metav1.NewTime(base.Add(3 * time.Minute))
 		device.Status.LegacyHandoff = &ciskov1.DeviceLegacyHandoffStatus{
 			Phase: ciskov1.DeviceLegacyHandoffComplete, DeviceUID: string(device.UID), NodeName: device.Name, NodeUID: "node-uid",
 			ProjectionHash:       "sha256:" + strings.Repeat("a", 64),
 			LegacyWorkerUsername: "system:serviceaccount:" + device.Namespace + ":" + legacySA,
-			RequestedAt:          base, NodeReleasedAt: &releasedAt, CompletedAt: &completedAt,
+			RequestedAt:          base, NodeReleasedAt: &releasedAt, IsolatedReadyAt: &isolatedReadyAt, CompletedAt: &completedAt,
 		}
 		node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
 			Name: device.Name, UID: "node-uid", Annotations: map[string]string{managedprotocol.AnnotationLegacyHandoff: "node-uid"},
@@ -436,7 +621,7 @@ func TestLegacyHandoffRejectsForgedRecoveryState(t *testing.T) {
 		if err := r.Get(ctx, client.ObjectKeyFromObject(device), &current); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := r.reconcileManagedTopology(ctx, &current); err == nil || !strings.Contains(err.Error(), "isolated worker access evidence") {
+		if _, err := r.reconcileManagedTopology(ctx, &current); err == nil || !strings.Contains(err.Error(), "shared compatibility access evidence") {
 			t.Fatalf("forged completed status error = %v", err)
 		}
 		assertWorkerAccessAbsent(t, r.Client, device, legacySA)
@@ -457,7 +642,7 @@ func TestLegacyHandoffRejectsForgedRecoveryState(t *testing.T) {
 		if err := r.Get(ctx, client.ObjectKeyFromObject(device), &current); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := r.reconcileManagedTopology(ctx, &current); err == nil || !strings.Contains(err.Error(), "completed legacy handoff") {
+		if _, err := r.reconcileManagedTopology(ctx, &current); err == nil || !strings.Contains(err.Error(), "shared-writer transition or complete phase") {
 			t.Fatalf("inconsistent pending restart error = %v", err)
 		}
 		assertWorkerAccessAbsent(t, r.Client, device, topologyLegacyWorkerServiceAccountName(device))
@@ -541,7 +726,8 @@ func TestCompletedLegacyDeviceDeletionRevokesWorkerBeforeNode(t *testing.T) {
 	ctx := context.Background()
 	now := metav1.NewTime(time.Date(2026, time.September, 12, 12, 0, 0, 0, time.UTC))
 	releasedAt := metav1.NewTime(now.Add(-2 * time.Minute))
-	completedAt := metav1.NewTime(now.Add(-time.Minute))
+	isolatedReadyAt := metav1.NewTime(now.Add(-time.Minute))
+	completedAt := now
 	device := newDevice("delete-isolated", "edge")
 	device.UID = "delete-device-uid"
 	device.Finalizers = []string{ciscoDeviceFinalizer}
@@ -552,7 +738,8 @@ func TestCompletedLegacyDeviceDeletionRevokesWorkerBeforeNode(t *testing.T) {
 		Phase: ciskov1.DeviceLegacyHandoffComplete, DeviceUID: string(device.UID), NodeName: device.Name, NodeUID: "node-uid",
 		ProjectionHash:       "sha256:" + strings.Repeat("a", 64),
 		LegacyWorkerUsername: "system:serviceaccount:" + device.Namespace + ":" + legacySA,
-		RequestedAt:          metav1.NewTime(now.Add(-3 * time.Minute)), NodeReleasedAt: &releasedAt, CompletedAt: &completedAt,
+		RequestedAt:          metav1.NewTime(now.Add(-3 * time.Minute)), NodeReleasedAt: &releasedAt,
+		IsolatedReadyAt: &isolatedReadyAt, CompletedAt: &completedAt,
 	}
 	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
 		Name: device.Name, UID: "node-uid", Annotations: map[string]string{managedprotocol.AnnotationLegacyHandoff: "node-uid"},
@@ -666,9 +853,11 @@ func completeLegacyHandoffFixture(t *testing.T, fixture legacyHandoffFixture) {
 		t.Fatal("missing Preparing handoff")
 	}
 	releasedAt := metav1.NewTime(fixture.clock.now.Add(time.Minute))
-	completedAt := metav1.NewTime(fixture.clock.now.Add(2 * time.Minute))
+	isolatedReadyAt := metav1.NewTime(fixture.clock.now.Add(2 * time.Minute))
+	completedAt := metav1.NewTime(fixture.clock.now.Add(3 * time.Minute))
 	handoff.Phase = ciskov1.DeviceLegacyHandoffComplete
 	handoff.NodeReleasedAt = &releasedAt
+	handoff.IsolatedReadyAt = &isolatedReadyAt
 	handoff.CompletedAt = &completedAt
 	if err := fixture.r.cleanupGeneratedWorkerAccess(ctx, device, managedWorkerServiceAccountName(device), true); err != nil {
 		t.Fatal(err)
@@ -693,6 +882,22 @@ func completeLegacyHandoffFixture(t *testing.T, fixture legacyHandoffFixture) {
 		t.Fatal(err)
 	}
 	if err := fixture.r.completeLegacyHandoffStatus(ctx, device, handoff, "TestComplete"); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.r.ensureVKAccess(ctx, device, fixture.r.vkServiceAccountName(), false); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.r.cleanupGeneratedWorkerAccess(ctx, device, topologyLegacyWorkerServiceAccountName(device), false); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.r.removeIsolatedLegacyWorkerMarker(ctx, device); err != nil {
+		t.Fatal(err)
+	}
+	deployment := fixture.deployment(t)
+	deployment.Spec.Template.Spec.ServiceAccountName = fixture.r.vkServiceAccountName()
+	deployment.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
+	deployment.Spec.Template.Labels = perDeviceDeploymentLabels(device.Name)
+	if err := fixture.client.Update(ctx, deployment); err != nil {
 		t.Fatal(err)
 	}
 }
