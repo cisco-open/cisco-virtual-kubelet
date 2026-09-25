@@ -160,6 +160,17 @@ func (r *CiscoDeviceReconciler) retirePriorTopologyWorkerAccessIfSafe(
 			return false, fmt.Errorf("retire per-device managed worker identity: %w", err)
 		}
 	}
+	// Older topology releases recorded this marker for the phase-zero
+	// per-device compatibility identity. Once a managed shared worker is ready
+	// and every generated predecessor grant is gone, the marker no longer
+	// represents live authority and must not survive as stale retirement state.
+	if sharedReplacement && device.DeletionTimestamp.IsZero() &&
+		device.Status.NodeIdentity != nil && device.Status.LegacyHandoff == nil &&
+		device.Annotations[managedprotocol.AnnotationIsolatedLegacyWorker] != "" {
+		if err := r.removeIsolatedLegacyWorkerMarker(ctx, device); err != nil {
+			return false, fmt.Errorf("retire phase-zero isolated worker marker: %w", err)
+		}
+	}
 	return true, nil
 }
 

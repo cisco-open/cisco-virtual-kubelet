@@ -122,8 +122,11 @@ cluster-reserves the resolved names, even though ServiceAccounts themselves
 are namespaced, so any explicit override must be unique across all CVK
 releases in the cluster. The resolved names are stored in retained
 `policy.json` and protected policy annotations, then become immutable at
-bootstrap. The owning release, policy coordinates, and admission-policy prefix
-are locked at the same time. Changing a name, policy name/namespace,
+bootstrap. The admission-policy prefix, manager username, policy namespace and
+name, ledger name, and both functional account names must resolve to pairwise
+distinct strings; Helm and manager preflight reject an ambiguous collision.
+The owning release, policy coordinates, and admission-policy prefix are locked
+at the same time. Changing a name, policy name/namespace,
 `fullnameOverride`, or `nameOverride` requires managed-topology retirement and
 clean re-enrollment so no stale binding can escape the admission identity
 predicates.
@@ -369,7 +372,11 @@ app device/risk reads in that namespace, network cluster observations with no
 persisted-object write, and Lease-only access in a different configured
 `CONFIG_LEASE_NAMESPACE`. The alternate-namespace binding never reuses the
 tenant profile, so it cannot expose config, operation, or Secret access there.
-It cannot bind arbitrary ClusterRoles. Running workers
+It cannot bind arbitrary ClusterRoles. The manager audits that namespace as
+well as the CiscoDevice namespace: only the exact controller-created Lease
+binding may name a reserved account, and Role/RoleBinding/ClusterRole events
+are mapped back through the ServiceAccount subject to the affected devices.
+Running workers
 may create `SelfSubjectReview` objects to verify their own projected token;
 workers cannot create tokens, ServiceAccounts, or RBAC objects.
 Native admission reserves the two ServiceAccount objects to the manager,
@@ -377,6 +384,36 @@ accepts `serviceaccounts/token` only from a kubelet for an exact Pod-bound
 `TokenRequest`, and forbids legacy `kubernetes.io/service-account-token`
 Secrets for either account. A principal with generic token-create permission
 therefore cannot mint an unbound shared-worker credential.
+The manager also binds both shared and UID-derived generated worker accounts to
+the verified worker-credential admission generation. That epoch covers the
+policy and binding UIDs, generations, and compiled Specs for ServiceAccount
+ownership, bound-token issuance, legacy token-Secret prevention, and reserved
+Deployment/ReplicaSet/Pod use; metadata-only chart updates do not rotate it.
+An older or unstamped account is revoked, UID-rotated, and workload-drained
+before access is granted again, invalidating even a pre-upgrade token whose
+immutable-type ServiceAccount-token Secret had its mutable name and UID
+annotations changed to a different existing, non-reserved account.
+Planned policy-epoch rotation of the network account waits for all mutation
+Leases, maintenance sessions, admitted upgrades, and rollout reservations in
+the namespace to settle; the independent app account and its Deployment finish
+UID rotation and recreation while that network fence is waiting, and the old
+network identity and workload remain untouched. A generated per-device account follows the same
+per-device mutation fence. A phase-zero legacy worker has no durable managed
+Node identity from which to prove full settlement, so its old-epoch workload is
+left running and the transition tells the operator to verify operations are
+idle and remove that workload before UID rotation. Concrete unsafe-RBAC,
+malformed workload, or attributable legacy-token findings quarantine
+immediately.
+That quarantine removes all exact-subject RoleBindings in both the device and
+configured Lease namespaces, the known cluster-wide grants, each exact-proven
+shared ServiceAccount UID, and every workload using it. It retains and reports
+a genuinely foreign name collision. The manager repeats the binding audit
+through direct API reads after granting access and synchronously applies the
+same quarantine if a binding raced the pre-audit.
+For a compromised generated identity, every exact-subject RoleBinding in the
+device namespace is likewise removed regardless of name or role before the
+owned account UID is deleted; foreign cluster-wide bindings remain a
+cluster-admin incident and keep reconciliation failed closed.
 
 The app read-write profile has `get/list/watch` on Nodes and Pods, status-only
 writes, exact terminating-Pod delete, read-only workload inputs, Events, and
@@ -479,9 +516,10 @@ and audit every additive binding. Namespace separation alone does not isolate
 these app read permissions.
 
 The managed CiscoDevice namespace itself must be locked. Do not grant tenant
-principals `edit`/`admin`, ServiceAccount impersonation, use of either shared
+principals `edit`/`admin`, RBAC `bind`/`escalate`, ServiceAccount impersonation, use of either shared
 account, worker Pod logs or `exec`/`attach`/`portforward`/`proxy`, workload
-`scale`, or delete authority over the worker/RBAC/Lease/Secret enforcement
+`scale` or controller-status mutation, Pod binding through `pods/binding` or
+legacy `bindings`, or delete authority over the worker/RBAC/Lease/Secret enforcement
 surface. Any of these can expose credentials or bypass the safe transition.
 The controller rejects unsafe namespaced grants, but ClusterRoleBinding
 mutation and cluster-admin remain the root trust boundary. Node and RBAC
@@ -607,6 +645,9 @@ Helm keep protection deliberately leaves the policy, ledger, admission
 policies/bindings, functional profile roles, and supplemental manager role/binding
 behind. Complete the UID-bound reverse handoff documented in
 `docs/topology-awareness.md` before a live Helm upgrade disables the feature.
+An exact ServiceAccount-only or ServiceAccount-plus-RoleBinding crash remnant
+created before the cluster-wide grant/marker is cleaned with UID preconditions
+on a disabled-manager restart; drift or additive grants remain fail closed.
 The chart rejects that live downgrade while any Node identity or incomplete
 handoff remains, or when retained policy/ledger identity and manager authority
 are incomplete. Keep `controller.leaderElect=true` and

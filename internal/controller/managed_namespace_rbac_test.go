@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
@@ -149,7 +150,7 @@ func TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation(t *testing.
 		{
 			name: "wildcard",
 			rule: rbacv1.PolicyRule{APIGroups: []string{"*"}, Resources: []string{"*"}, Verbs: []string{"*"}},
-			want: "read access to Secrets",
+			want: "RBAC bind or escalate authority",
 		},
 		{
 			name: "reserved service account impersonation",
@@ -168,11 +169,57 @@ func TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation(t *testing.
 			want: "managed worker deployments/scale",
 		},
 		{
+			name: "deployment status with resource name",
+			rule: rbacv1.PolicyRule{
+				APIGroups: []string{"apps"}, Resources: []string{"deployments/status"}, Verbs: []string{"patch"},
+				ResourceNames: []string{"switch-risk-vk"},
+			},
+			want: "managed worker deployments/status",
+		},
+		{
+			name: "replicaset status wildcard",
+			rule: rbacv1.PolicyRule{
+				APIGroups: []string{"*"}, Resources: []string{"replicasets/status"}, Verbs: []string{"update"},
+			},
+			want: "managed worker replicasets/status",
+		},
+		{
 			name: "worker eviction",
 			rule: rbacv1.PolicyRule{
 				APIGroups: []string{""}, Resources: []string{"pods/eviction"}, Verbs: []string{"create"},
 			},
 			want: "eviction of managed worker Pods",
+		},
+		{
+			name: "pod binding subresource",
+			rule: rbacv1.PolicyRule{
+				APIGroups: []string{""}, Resources: []string{"pods/binding"}, Verbs: []string{"create"},
+			},
+			want: "binding of managed worker Pods through pods/binding",
+		},
+		{
+			name: "legacy binding resource with managed name",
+			rule: rbacv1.PolicyRule{
+				APIGroups: []string{""}, Resources: []string{"bindings"}, Verbs: []string{"create"},
+				ResourceNames: []string{"switch-risk-vk-generated"},
+			},
+			want: "binding of managed worker Pods through bindings",
+		},
+		{
+			name: "constrained service account impersonation",
+			rule: rbacv1.PolicyRule{
+				APIGroups: []string{"authentication.k8s.io"}, Resources: []string{"serviceaccounts"},
+				Verbs: []string{"impersonate:serviceaccount"},
+			},
+			want: "constrained impersonation of ServiceAccounts",
+		},
+		{
+			name: "constrained service account impersonation-on",
+			rule: rbacv1.PolicyRule{
+				APIGroups: []string{"apps"}, Resources: []string{"deployments"},
+				Verbs: []string{"impersonate-on:serviceaccount:update"},
+			},
+			want: "constrained ServiceAccount impersonation action",
 		},
 	}
 	for _, tt := range tests {
@@ -189,6 +236,76 @@ func TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation(t *testing.
 			}
 			assertNoSharedWorkerAuthority(t, r, device.Namespace)
 		})
+	}
+}
+
+func TestManagedNamespaceRBACRejectsDelegationSpecialVerbs(t *testing.T) {
+	tests := []struct {
+		name string
+		rule rbacv1.PolicyRule
+	}{
+		{
+			name: "bind named ClusterRole",
+			rule: rbacv1.PolicyRule{
+				APIGroups: []string{rbacv1.GroupName}, Resources: []string{"clusterroles"},
+				Verbs: []string{"bind"}, ResourceNames: []string{"edit"},
+			},
+		},
+		{
+			name: "escalate any Role",
+			rule: rbacv1.PolicyRule{
+				APIGroups: []string{rbacv1.GroupName}, Resources: []string{"roles"}, Verbs: []string{"escalate"},
+			},
+		},
+		{
+			name: "wildcard resource and verb",
+			rule: rbacv1.PolicyRule{
+				APIGroups: []string{rbacv1.GroupName}, Resources: []string{"*"}, Verbs: []string{"*"},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			device := managedAccessDevice("switch-delegation")
+			role := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{
+				Namespace: device.Namespace, Name: "delegation-authority",
+			}, Rules: []rbacv1.PolicyRule{test.rule}}
+			binding := namespacedRBACBinding(device.Namespace, "delegation-authority", "Role", role.Name)
+			r := reconcilerFor(t, device, role, binding)
+			r.ManagedTopology = true
+
+			err := r.ensureManagedSharedWorkerAccess(context.Background(), device)
+			if err == nil || !strings.Contains(err.Error(), "RBAC bind or escalate authority") {
+				t.Fatalf("delegation special-verb error=%v", err)
+			}
+			assertNoSharedWorkerAuthority(t, r, device.Namespace)
+		})
+	}
+}
+
+func TestManagedNamespaceRBACAuditUsesAPIReader(t *testing.T) {
+	ctx := context.Background()
+	device := managedAccessDevice("switch-api-reader")
+	r := reconcilerFor(t, device)
+	r.ManagedTopology = true
+	riskyRole := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "just-created-worker-shell",
+	}, Rules: []rbacv1.PolicyRule{{
+		APIGroups: []string{""}, Resources: []string{"pods/exec"}, Verbs: []string{"create"},
+	}}}
+	riskyBinding := namespacedRBACBinding(device.Namespace, "just-created-worker-shell", "Role", riskyRole.Name)
+	r.APIReader = fake.NewClientBuilder().WithScheme(r.Scheme).
+		WithObjects(device.DeepCopy(), riskyRole, riskyBinding).Build()
+
+	// The cached writer deliberately has neither just-created RBAC object. The
+	// security audit must nevertheless observe both through the direct reader.
+	if err := r.Get(ctx, client.ObjectKeyFromObject(riskyBinding), &rbacv1.RoleBinding{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("cached writer unexpectedly contains risk fixture: %v", err)
+	}
+	err := r.inspectManagedWorkerNamespaceRBAC(ctx, device,
+		r.appHostingServiceAccountName(), r.networkManagementServiceAccountName())
+	if err == nil || !strings.Contains(err.Error(), "worker pods/exec access") {
+		t.Fatalf("APIReader namespace audit error=%v", err)
 	}
 }
 
@@ -240,7 +357,7 @@ func TestManagedNamespaceRBACRiskQuarantinesExistingSharedBindings(t *testing.T)
 	}
 
 	err := r.ensureManagedSharedWorkerAccess(ctx, device)
-	if err == nil || !strings.Contains(err.Error(), "worker processes are draining") {
+	if err == nil || !strings.Contains(err.Error(), "worker processes were quiesced") {
 		t.Fatalf("quarantine error = %v", err)
 	}
 	assertNoSharedWorkerAuthority(t, r, device.Namespace)
@@ -257,8 +374,8 @@ func TestManagedNamespaceRBACRiskQuarantinesExistingSharedBindings(t *testing.T)
 		t.Fatalf("audit deleted operator-owned unsafe RoleBinding: %v", err)
 	}
 	for _, account := range []string{r.appHostingServiceAccountName(), r.networkManagementServiceAccountName()} {
-		if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: account}, &corev1.ServiceAccount{}); err != nil {
-			t.Fatalf("quarantine should retain reserved ServiceAccount %s for diagnosis/recovery: %v", account, err)
+		if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: account}, &corev1.ServiceAccount{}); !apierrors.IsNotFound(err) {
+			t.Fatalf("quarantine did not rotate reserved ServiceAccount %s: %v", account, err)
 		}
 	}
 }
@@ -297,12 +414,23 @@ func TestManagedNamespaceRBACEventMappings(t *testing.T) {
 	other.Namespace = "other"
 	matching := namespacedRBACBinding("edge", "editors", "ClusterRole", "edit")
 	unrelated := namespacedRBACBinding("other", "viewers", "ClusterRole", "view")
+	leaseRole := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: "cvk-leases", Name: "lease-local"}}
+	leaseRoleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "cvk-leases", Name: "lease-local"},
+		RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "Role", Name: leaseRole.Name},
+		Subjects:   sharedWorkerSubject("edge", managedprotocol.NetworkManagementServiceAccount),
+	}
+	leaseClusterBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "cvk-leases", Name: "lease-shared-addon"},
+		RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "lease-shared-addon"},
+		Subjects:   sharedWorkerSubject("edge", managedprotocol.NetworkManagementServiceAccount),
+	}
 	sharedBinding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{Name: "shared-addon"},
 		RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "shared-addon"},
 		Subjects:   sharedWorkerSubject("edge", managedprotocol.AppHostingServiceAccount),
 	}
-	r := reconcilerFor(t, edgeA, edgeB, other, matching, unrelated, sharedBinding)
+	r := reconcilerFor(t, edgeA, edgeB, other, matching, unrelated, leaseRole, leaseRoleBinding, leaseClusterBinding, sharedBinding)
 	r.ManagedTopology = true
 
 	wantEdge := []ctrl.Request{
@@ -312,6 +440,8 @@ func TestManagedNamespaceRBACEventMappings(t *testing.T) {
 	for _, object := range []client.Object{
 		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: "edge", Name: "local-role"}},
 		matching,
+		leaseRole,
+		leaseRoleBinding,
 	} {
 		if got := r.mapNamespacedRBACToCiscoDevices(context.Background(), object); !requestsEqual(got, wantEdge) {
 			t.Fatalf("namespaced mapping for %T = %#v, want %#v", object, got, wantEdge)
@@ -322,6 +452,9 @@ func TestManagedNamespaceRBACEventMappings(t *testing.T) {
 	}
 	if got := r.mapClusterRoleToCiscoDevices(context.Background(), &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "shared-addon"}}); !requestsEqual(got, wantEdge) {
 		t.Fatalf("shared ClusterRole mapping = %#v, want %#v", got, wantEdge)
+	}
+	if got := r.mapClusterRoleToCiscoDevices(context.Background(), &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "lease-shared-addon"}}); !requestsEqual(got, wantEdge) {
+		t.Fatalf("lease-namespace ClusterRole mapping = %#v, want %#v", got, wantEdge)
 	}
 	if got := r.mapClusterRoleBindingToCiscoDevices(context.Background(), sharedBinding); !requestsEqual(got, wantEdge) {
 		t.Fatalf("ClusterRoleBinding mapping = %#v, want %#v", got, wantEdge)
@@ -356,20 +489,44 @@ func TestManagedSharedBindingAuditScopesRoleBindingsToDeviceAndLeaseNamespaces(t
 	if err := r.ensureManagedSharedWorkerAccess(ctx, device); err != nil {
 		t.Fatalf("irrelevant namespace RoleBinding was scanned: %v", err)
 	}
+	if err := r.Delete(ctx, foreign); err != nil {
+		t.Fatal(err)
+	}
+
+	networkAccount := r.networkManagementServiceAccountName()
+	workload := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "lease-scope-network-worker", UID: "lease-scope-network-worker-uid",
+	}, Spec: corev1.PodSpec{ServiceAccountName: networkAccount}}
+	if err := r.Create(ctx, workload); err != nil {
+		t.Fatal(err)
+	}
 
 	leaseAdditive := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{Namespace: r.LeaseNamespace, Name: "unexpected-lease-grant"},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: managedprotocol.NetworkManagementLeaseReadWriteClusterRole,
 		},
-		Subjects: sharedWorkerSubject(device.Namespace, r.networkManagementServiceAccountName()),
+		Subjects: sharedWorkerSubject(device.Namespace, networkAccount),
 	}
 	if err := r.Create(ctx, leaseAdditive); err != nil {
 		t.Fatal(err)
 	}
 	err := r.ensureManagedSharedWorkerAccess(ctx, device)
-	if err == nil || !strings.Contains(err.Error(), "unexpected additive RoleBinding") {
+	if err == nil || !strings.Contains(err.Error(), "unexpected RoleBinding") ||
+		!strings.Contains(err.Error(), "worker processes were quiesced") {
 		t.Fatalf("lease-namespace additive binding error = %v", err)
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(leaseAdditive), &rbacv1.RoleBinding{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("lease-namespace additive binding survived quarantine: %v", err)
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(workload), &corev1.Pod{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("network workload survived lease-namespace quarantine: %v", err)
+	}
+	assertNoSharedWorkerAuthority(t, r, device.Namespace)
+	for _, account := range []string{r.appHostingServiceAccountName(), networkAccount} {
+		if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: account}, &corev1.ServiceAccount{}); !apierrors.IsNotFound(err) {
+			t.Fatalf("shared ServiceAccount %s survived lease-namespace quarantine: %v", account, err)
+		}
 	}
 }
 

@@ -123,7 +123,9 @@ Managed topology currently requires:
 - the fixed default VK role name (`serviceAccount.vkName` remains
   `cisco-virtual-kubelet`) and `rbac.profile=strict`;
 - distinct app-hosting and network-management account names, each also
-  distinct from the controller and legacy VK identity;
+  distinct from the controller and legacy VK identity; the admission-policy
+  prefix, manager username, policy namespace/name, ledger name, and both
+  functional account names must all resolve to pairwise distinct strings;
 - `gnoi.enableWriteClass=false`; Phase 2 admits only campaign-owned
   `IOSXESoftwareUpgrade`, not generic `IOSXEOperationalAction` mutations;
 - CRDs applied before the manager Deployment is upgraded;
@@ -136,11 +138,30 @@ Managed topology currently requires:
 
 Every namespace containing a managed CiscoDevice must be a dedicated,
 administrator-controlled namespace. Do not give tenant principals `edit`,
-`admin`, ServiceAccount impersonation, access to the shared accounts, worker
+`admin`, RBAC `bind`/`escalate`, ServiceAccount impersonation, access to the shared accounts, worker
 Pod `exec`/`attach`/`portforward`/`proxy` or logs, workload `scale`, or delete
-authority there. These permissions can reuse a shared identity, extract its
+authority there. The same boundary rejects `create` on both `pods/binding` and
+the legacy `bindings` resource, which could otherwise race the scheduler and
+redirect a reserved worker Pod, and update/patch on reserved Deployment or
+ReplicaSet status. These permissions can reuse a shared identity, extract its
 bound token or device credentials, bypass a safe drain, or remove an
-enforcement object. The manager audits namespaced grants and fails closed, but
+enforcement object. The manager resolves every namespaced RoleBinding through
+its Role or ClusterRole using direct API reads and rejects these capabilities,
+including wildcard rules and ServiceAccount collection deletion. `bind` and
+`escalate` are rejected even when resource-named because Kubernetes permits
+those special verbs to delegate authority the subject does not otherwise hold;
+ordinary RBAC mutation remains subject to Kubernetes escalation prevention.
+The audit also rejects Kubernetes 1.36 constrained-ServiceAccount
+`impersonate:serviceaccount` and `impersonate-on:serviceaccount:*` authority, so
+enabling that beta capability does not weaken the v1.35 deployment boundary.
+It audits both the CiscoDevice namespace and a distinct
+`CONFIG_LEASE_NAMESPACE`. In the latter, the only accepted reusable-account
+grant is the exact manager-created network Lease binding; an arbitrary binding
+to either reserved account is rejected even while its referenced Role is
+absent. Role, RoleBinding, and ClusterRole watch mapping follows the reserved
+ServiceAccount subject back to its CiscoDevice namespace, so changes in the
+coordination namespace requeue the affected devices.
+The manager fails closed, but
 cluster-admin and principals that can create or change ClusterRoleBindings
 remain part of the cluster trust boundary and must be controlled separately.
 
@@ -923,6 +944,56 @@ Pod-bound token, and denies legacy ServiceAccount-token Secrets. This closes
 the otherwise-valid path where another token-issuing principal could reuse the
 shared username without the manager-bound worker Pod incarnation.
 
+At startup, the manager derives one worker-account policy epoch from every
+verified admission contract that protects reusable worker credentials: shared
+and generated ServiceAccount ownership, bound TokenRequest issuance, legacy
+ServiceAccount-token Secret prevention, and reserved Deployment, ReplicaSet,
+Pod, and Pod-update behavior. The epoch hashes each policy and binding UID,
+generation, and compiled Spec digest; `resourceVersion`, labels, and annotations
+are intentionally excluded. Every shared and generated worker ServiceAccount
+is stamped with that epoch. An account created before this boundary—or under an
+older contract—is never adopted: the manager revokes its exact bindings first,
+deletes the old ServiceAccount to invalidate every token tied to its UID,
+foreground-drains workloads using it, and only then creates the replacement.
+This one-time guarded migration also invalidates a legacy JWT whose
+immutable-type ServiceAccount-token Secret had its mutable ServiceAccount name
+and UID annotations changed to a different existing, non-reserved account.
+Legacy authentication uses the signed claims and token bytes rather than those
+mutable annotations; UID rotation invalidates the claimed old ServiceAccount
+directly.
+For a normal chart-policy epoch change, the network-management account is not
+rotated until every device in the namespace has settled its mutation Lease,
+maintenance session, admitted software-upgrade leaf, and rollout reservation.
+The independent app-hosting account completes UID rotation, RBAC regrant, and
+Deployment recreation without waiting on an unrelated network mutation; the
+blocked network account and workload remain unchanged. Generated per-device identities use the same per-device
+authority-settlement proof before an epoch-only rotation. A phase-zero legacy
+worker has no durable managed Node identity for the complete proof, so the
+manager preserves its old UID and running workload and reports a blocker; after
+the operator verifies device operations are idle and removes that workload, the
+manager performs the UID rotation. The transition reports the blocking object
+and retries, so an upgrade does not silently interrupt an active gNOI or
+configuration mutation. A concrete compromise signal—unsafe namespace RBAC,
+malformed generated workload/access, or an explicitly attributable legacy
+token Secret—takes the fail-closed quarantine path immediately instead of
+waiting.
+
+Shared-account quarantine is authority-first and does not trust deterministic
+RoleBinding names. It removes every namespaced RoleBinding whose exact subject
+is the reserved account in both the device and configured Lease namespaces,
+removes the known cluster-wide grants, deletes each exact-proven shared
+ServiceAccount with a UID precondition to invalidate minted tokens, and then
+terminates every workload using that account. Foreign objects that merely
+collide with a reserved name are retained and reported. Direct API reads
+repeat the binding audit after access is installed; a grant racing the initial
+audit triggers the same synchronous quarantine before reconcile returns.
+Generated-account compromise uses the same authority-first rule inside the
+device namespace: every RoleBinding with the exact UID-derived account subject
+is removed regardless of its name, role, or mutable metadata before the owned
+ServiceAccount UID is deleted. Foreign or arbitrary cluster-wide bindings stay
+inside the explicit cluster-admin trust boundary and keep reconciliation
+failed closed for operator review.
+
 The manager pre-creates purpose-bound heartbeat, config-family, and mutation
 Leases. App read-write and network read-write may update only the Lease scopes
 they need; read-only network management can observe but not mutate them.
@@ -955,6 +1026,33 @@ digest describe the qualified downgrade. Do not mutate or replay an old
 campaign.
 
 For managed-topology feature retirement:
+
+An installation that was retired with an older chart must first be upgraded
+once with the current chart and `topology.enabled=true`. Older instructions
+allowed the completed `topology.cisco.vk/request-legacy-handoff` annotation to
+be removed, and admission intentionally does not allow that authorization to
+be recreated after `status.nodeIdentity` is gone. If every selected retired
+device still has its completed request, leave those annotations in place. If
+any selected retired device does not, use a temporary non-empty fleet selector
+that matches none of the retired devices for this topology-enabled upgrade
+(for example, require an absent
+`topology.cisco.vk/retirement-migration-hold=selected` label), and verify the
+selector result is empty before upgrading. This hold prevents an unintended
+forward enrollment; without it, the device will be deliberately re-enrolled
+and must complete another legacy handoff before topology can be disabled.
+
+Wait for the controller rollout and its managed-admission preflight to
+succeed; this installs and verifies the retained
+`<release>-cisco-virtual-kubelet-legacy-node-marker` policy and binding that
+protect released Nodes after the controller is disabled. Only then perform a
+second Helm upgrade with `topology.enabled=false`, retaining the same policy
+identity and temporary selector values. A direct transition from an older
+retired release to the current disabled chart is rejected when retained
+topology state exists but that guard is absent or stale. An installation that
+has never created retained topology state does not require this migration.
+The guard's digest annotation is an installation/version stamp used by Helm;
+Helm does not recompute the live policy Spec. The exact server-stored Spec was
+already hashed and checked by the topology-enabled manager preflight.
 
 1. stop creating campaigns and request an effective pause;
 2. resolve every claimed mutation and wait for all reservations, leaves, and
@@ -996,7 +1094,8 @@ kubectl wait ciscodevice "$DEVICE_NAME" \
 ```
 
 The reverse handoff is durable and fail closed: `Preparing` records the
-authorized immutable identity, `LegacyWriterPending` records Node release,
+authorized immutable identity, `LegacyWriterPending` records that managed API
+authority is revoked and Node release is durably authorized,
 `SharedWriterPending` records that the temporary UID-scoped worker proved a
 post-release heartbeat and is being replaced under `Recreate`, and `Complete`
 is published only after the configured namespace-shared compatibility worker
@@ -1005,6 +1104,13 @@ are deleted. The per-device identity is therefore transition-only; in managed
 steady state the app-hosting and network-management accounts remain the only
 worker identities. The legacy shared account exists only for devices returned
 to topology-disabled compatibility mode.
+If a crash occurs while creating the temporary identity before its
+cluster-wide binding and marker exist, a topology-disabled restart validates
+the partial ServiceAccount/RoleBinding as exact and device-owned, deletes it
+with UID preconditions, proves absence, and continues through the ordinary
+compatibility path. Drift or an additive binding remains fail closed for
+operator review; partial namespaced metadata is deliberately not used to
+force global retirement preflight because it is not cluster-admin evidence.
 Once `Preparing` exists, admission freezes the consumed
 `topology.cisco.vk/request-legacy-handoff` value against change or removal
 until the handoff reaches `Complete`; the controller does not re-read mutable
@@ -1017,6 +1123,18 @@ forward enrollment until the shared readiness proof and credential retirement
 finish. The request annotation can be removed by a topology-author
 after topology is disabled; the Complete status and Node audit marker remain
 identity state.
+
+An interrupted upgrade from the earlier per-device model has one additional
+recovery state: exact generated legacy RBAC can exist before its UID marker.
+If topology is disabled in that window, the retained boundary detects the
+cluster binding; the disabled manager audits the complete ServiceAccount and
+bindings, writes the exact CiscoDevice-UID marker, and keeps that isolated
+worker rather than guessing that the namespace-shared legacy identity is safe.
+This is a supported fail-closed recovery state, not a completed retirement. To
+remove it, re-enable topology, let forward enrollment prove the shared managed
+worker and retire the generated identity/marker, then perform the normal
+reverse handoff above before disabling topology again. Do not delete the marker
+or any one binding by hand.
 
 The live downgrade check rejects missing or UID-mismatched policy/ledger
 objects, incomplete manager RBAC, any remaining `status.nodeIdentity`, and any
@@ -1047,18 +1165,32 @@ helm lint charts/cisco-virtual-kubelet
 charts/cisco-virtual-kubelet/tests/topology-render-test.sh
 ```
 
-On a disposable Kubernetes 1.35+ cluster with the default scheduler, run:
+On a caller-selected disposable Kubernetes 1.35+ cluster with the default
+scheduler, run:
 
 ```bash
 charts/cisco-virtual-kubelet/tests/topology-kind-test.sh
 ```
 
-The real-cluster test proves policy compilation plus the live API-server-stored
+With Docker and kind available, run the isolated shared-worker qualification;
+it refuses to reuse an existing cluster and owns and removes the exact named
+Kubernetes 1.35 cluster:
+
+```bash
+charts/cisco-virtual-kubelet/tests/managed-shared-worker-kind-test.sh \
+  --cluster-name cvk-shared-worker-qualification
+```
+
+The first real-cluster test proves policy compilation plus the live API-server-stored
 Spec digest, positive/negative worker Node and Pod status admission, unmarked
 peer denial, purpose-specific Lease update and create/delete fencing, complete
 CiscoDevice status/finalizer protection, campaign control separation, ledger
 protection, native affinity/spread binding, initialization-taint exclusion, and
-the known direct-`nodeName` bypass. It does not contact a network device.
+the known direct-`nodeName` bypass. The second owns and removes its named kind
+cluster and qualifies the two namespace-shared functional accounts, reserved
+ServiceAccount and TokenRequest fencing, a positive API request authenticated
+with an API-server-issued Pod-bound token, result binding scope, and the
+locked-namespace trust boundary. Neither test contacts a network device.
 
 Before a production device test, also verify secure gNOI certificates/auth,
 gNOI OS provisioning, image digest/compatibility, configuration persistence,

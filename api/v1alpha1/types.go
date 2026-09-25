@@ -82,6 +82,7 @@ const (
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.nodeIdentity) || (has(self.spec.physicalIdentity) && self.status.nodeIdentity.physicalIdentity == self.spec.physicalIdentity.lowerAscii())",message="status.nodeIdentity.physicalIdentity must equal the canonical declared spec.physicalIdentity"
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.status) && has(oldSelf.status.legacyHandoff)) || !has(self.status) || !has(self.status.legacyHandoff) || self.status.legacyHandoff.phase == 'Preparing'",message="a legacy handoff must begin in Preparing phase"
 type CiscoDevice struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -323,8 +324,8 @@ type ConfigPrereqs struct {
 // DeviceStatus defines the observed state of a CiscoDevice.
 //
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.legacyHandoff) || has(self.legacyHandoff) || (oldSelf.legacyHandoff.phase == 'Complete' && has(self.nodeIdentity))",message="a legacy handoff may be cleared only by a new managed Node binding"
-// +kubebuilder:validation:XValidation:rule="!has(oldSelf.nodeIdentity) || has(self.nodeIdentity) || (has(self.legacyHandoff) && self.legacyHandoff.phase == 'Complete')",message="managed Node identity may be cleared only by a completed legacy handoff"
-// +kubebuilder:validation:XValidation:rule="!has(self.legacyHandoff) || (self.legacyHandoff.phase == 'Complete' ? (!has(self.nodeIdentity) && !has(self.topologyProjection) && !has(self.healthObservation) && !has(self.workerRevision)) : (has(self.nodeIdentity) && has(self.topologyProjection)))",message="an in-flight legacy handoff retains managed binding state and a completed handoff releases it"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.nodeIdentity) || has(self.nodeIdentity) || (has(self.legacyHandoff) && self.legacyHandoff.phase in ['SharedWriterPending', 'Complete'])",message="managed Node identity may be cleared only after isolated legacy writer readiness"
+// +kubebuilder:validation:XValidation:rule="!has(self.legacyHandoff) || (self.legacyHandoff.phase in ['SharedWriterPending', 'Complete'] ? (!has(self.nodeIdentity) && !has(self.topologyProjection) && !has(self.healthObservation) && !has(self.workerRevision) && !has(self.networkWorkerRevision)) : (has(self.nodeIdentity) && has(self.topologyProjection)))",message="legacy handoff retains managed binding state until shared-writer transition and releases it thereafter"
 type DeviceStatus struct {
 	// Phase represents the current lifecycle phase of the device.
 	// +kubebuilder:validation:Enum=Pending;Provisioning;Ready;Error;Deleting
@@ -456,10 +457,14 @@ type DeviceLegacyHandoffPhase string
 
 const (
 	// DeviceLegacyHandoffPreparing means the managed mutation boundary was
-	// proven idle and the isolated legacy identity is being rolled out.
+	// proven idle and the isolated legacy identity is being rolled out. The
+	// status record is deliberately persisted before its UID marker, so a retry
+	// can finish that metadata write without losing the accepted request.
 	DeviceLegacyHandoffPreparing DeviceLegacyHandoffPhase = "Preparing"
 	// DeviceLegacyHandoffLegacyWriterPending means managed API authority and
-	// Leases were revoked and the guarded Node was released to the legacy writer.
+	// Leases were revoked and release of the guarded Node is durably authorized.
+	// The Node may still carry its managed binding until the next idempotent
+	// reconcile completes the metadata transaction.
 	DeviceLegacyHandoffLegacyWriterPending DeviceLegacyHandoffPhase = "LegacyWriterPending"
 	// DeviceLegacyHandoffSharedWriterPending means the isolated handoff worker
 	// proved post-release readiness and is being replaced by the namespace-shared
@@ -520,8 +525,11 @@ type DeviceLegacyHandoffStatus struct {
 	// +kubebuilder:validation:Required
 	RequestedAt metav1.Time `json:"requestedAt"`
 
-	// NodeReleasedAt is set immediately before the manager removes managed Node
-	// ownership. The legacy readiness heartbeat must not predate it.
+	// NodeReleasedAt is the durable release epoch recorded after managed API
+	// authority is revoked and before the manager removes managed Node ownership.
+	// A crash may therefore leave the Node managed while this timestamp is
+	// present; the next reconcile completes the idempotent release. The legacy
+	// readiness heartbeat must not predate it.
 	// +kubebuilder:validation:Optional
 	NodeReleasedAt *metav1.Time `json:"nodeReleasedAt,omitempty"`
 

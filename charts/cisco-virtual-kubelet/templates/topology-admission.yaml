@@ -62,7 +62,15 @@ spec:
         object.metadata.annotations['topology.cisco.vk/managed'] == 'true') ||
         (oldObject != null && has(oldObject.metadata.annotations) &&
         'topology.cisco.vk/managed' in oldObject.metadata.annotations &&
-        oldObject.metadata.annotations['topology.cisco.vk/managed'] == 'true')
+        oldObject.metadata.annotations['topology.cisco.vk/managed'] == 'true') ||
+        (oldObject != null && has(oldObject.metadata.annotations) &&
+        'topology.cisco.vk/legacy-handoff' in oldObject.metadata.annotations &&
+        oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff'] ==
+          oldObject.metadata.uid &&
+        has(oldObject.spec.taints) &&
+        oldObject.spec.taints.exists(t,
+          t.key == 'topology.cisco.vk/uninitialized' &&
+          t.effect == 'NoSchedule'))
   variables:
     - name: manager
       expression: request.userInfo.username == {{ $manager | quote }}
@@ -112,7 +120,23 @@ spec:
          'topology.cisco.vk/projection-hash',
          'topology.cisco.vk/managed-taints',
          'topology.cisco.vk/app-hosting-cordon-device-uid'].all(k,
-           !(k in object.metadata.annotations))
+         !(k in object.metadata.annotations))
+    - name: managerReleasedLegacyNodeUpdate
+      expression: >-
+        variables.manager && request.operation == 'UPDATE' &&
+        (!has(request.subResource) || request.subResource == '') &&
+        !variables.oldManaged && object != null &&
+        object.metadata.name == oldObject.metadata.name &&
+        object.metadata.uid == oldObject.metadata.uid &&
+        has(oldObject.metadata.annotations) &&
+        'topology.cisco.vk/legacy-handoff' in oldObject.metadata.annotations &&
+        oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff'] ==
+          oldObject.metadata.uid &&
+        has(object.metadata.annotations) &&
+        'topology.cisco.vk/legacy-handoff' in object.metadata.annotations &&
+        object.metadata.annotations['topology.cisco.vk/legacy-handoff'] ==
+          oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff'] &&
+        !('topology.cisco.vk/managed' in object.metadata.annotations)
     - name: legacyHandoffMarkerPreserved
       expression: >-
         request.operation == 'CREATE' ?
@@ -198,6 +222,7 @@ spec:
       message: managed Nodes are manager/bound-worker owned; a legacy worker may mutate only its exact unmarked Node and must preserve its handoff marker
     - expression: >-
         variables.managerLegacyHandoff ||
+        variables.managerReleasedLegacyNodeUpdate ||
         (request.userInfo.username.matches(
           '^system:serviceaccount:[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?:cisco-vk-legacy-[a-z0-9]([-a-z0-9.]{0,61}[a-z0-9])?-[a-f0-9]{8}$') ?
         ((oldObject == null || !has(oldObject.metadata.annotations) ||
@@ -265,6 +290,23 @@ spec:
         object.metadata.annotations['topology.cisco.vk/worker-protocol'] == oldObject.metadata.annotations['topology.cisco.vk/worker-protocol'])
       message: an established managed Node identity and worker binding are immutable outside the exact manager legacy handoff
     - expression: >-
+        request.operation != 'UPDATE' || oldObject == null || object == null ||
+        !has(oldObject.metadata.annotations) ||
+        !('topology.cisco.vk/legacy-handoff' in oldObject.metadata.annotations) ||
+        oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff'] !=
+          oldObject.metadata.uid ||
+        !has(oldObject.spec.taints) ||
+        !oldObject.spec.taints.exists(t,
+          t.key == 'topology.cisco.vk/uninitialized' &&
+          t.effect == 'NoSchedule') ||
+        (has(object.spec.taints) &&
+         oldObject.spec.taints.filter(t,
+           t.key == 'topology.cisco.vk/uninitialized') ==
+         object.spec.taints.filter(t,
+           t.key == 'topology.cisco.vk/uninitialized')) ||
+        variables.managerReleasedLegacyNodeUpdate
+      message: only the manager may remove or change a released Node initialization fence while preserving the exact UID-bound handoff marker
+    - expression: >-
         object == null ||
         !has(object.metadata.annotations) ||
         !('topology.cisco.vk/app-hosting-cordon-device-uid' in object.metadata.annotations) ||
@@ -284,6 +326,63 @@ metadata:
     {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
 spec:
   policyName: {{ $fullname }}-managed-node
+  validationActions: [Deny]
+  matchResources: {}
+---
+# The released Node marker is the cluster-scoped half of the durable reverse
+# handoff record. The namespace-shared compatibility worker intentionally keeps
+# broad legacy Node authority, so protect this one audit coordinate for every
+# non-manager identity even after the managed annotations have been removed.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-legacy-node-marker
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+    topology.cisco.vk/admission-contract-digest: {{ include "cisco-virtual-kubelet.legacyNodeMarkerAdmissionDigest" . | quote }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["UPDATE", "DELETE"]
+        resources: ["nodes", "nodes/status"]
+        scope: Cluster
+  matchConditions:
+    - name: released-node
+      expression: >-
+        oldObject != null && has(oldObject.metadata.annotations) &&
+        'topology.cisco.vk/legacy-handoff' in oldObject.metadata.annotations
+  variables:
+    - name: manager
+      expression: request.userInfo.username == {{ $manager | quote }}
+  validations:
+    - expression: >-
+        variables.manager ||
+        (request.operation == 'UPDATE' && object != null &&
+         oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff'] ==
+           oldObject.metadata.uid &&
+         has(object.metadata.annotations) &&
+         'topology.cisco.vk/legacy-handoff' in object.metadata.annotations &&
+         object.metadata.annotations['topology.cisco.vk/legacy-handoff'] ==
+           oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff'])
+      message: only the manager may remove or change a released Node handoff marker
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-legacy-node-marker
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+    topology.cisco.vk/admission-contract-digest: {{ include "cisco-virtual-kubelet.legacyNodeMarkerAdmissionDigest" . | quote }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-legacy-node-marker
   validationActions: [Deny]
   matchResources: {}
 ---
@@ -472,16 +571,75 @@ spec:
             (!has(object.metadata.annotations) ||
              !('topology.cisco.vk/isolated-legacy-worker' in object.metadata.annotations) ||
              (variables.manager &&
-              (!has(oldObject.status) || !has(oldObject.status.topologyLock)) &&
+              has(object.metadata.annotations) &&
               object.metadata.annotations['topology.cisco.vk/isolated-legacy-worker'] ==
-                object.metadata.uid)) :
-            (has(object.metadata.annotations) &&
-             'topology.cisco.vk/isolated-legacy-worker' in object.metadata.annotations &&
-             oldObject.metadata.annotations['topology.cisco.vk/isolated-legacy-worker'] ==
+                object.metadata.uid &&
+              (!has(oldObject.status) || !has(oldObject.status.topologyLock)) &&
+              (!has(oldObject.status) || !has(oldObject.status.maintenanceSession) ||
+               (has(oldObject.status.maintenanceSession.phase) &&
+                oldObject.status.maintenanceSession.phase == 'Settled')) &&
+              ((has(oldObject.status) && has(oldObject.status.nodeIdentity) &&
+                has(oldObject.status.topologyProjection) &&
+                has(oldObject.status.legacyHandoff) &&
+                oldObject.status.legacyHandoff.phase == 'Preparing' &&
+                oldObject.status.nodeIdentity.deviceUID == oldObject.metadata.uid &&
+                oldObject.status.legacyHandoff.deviceUID == oldObject.metadata.uid &&
+                oldObject.status.legacyHandoff.nodeName == oldObject.status.nodeIdentity.nodeName &&
+                oldObject.status.legacyHandoff.nodeUID == oldObject.status.nodeIdentity.nodeUID &&
+                oldObject.status.legacyHandoff.projectionHash ==
+                  oldObject.status.topologyProjection.effectiveLabelHash &&
+                'topology.cisco.vk/request-legacy-handoff' in object.metadata.annotations &&
+                object.metadata.annotations['topology.cisco.vk/request-legacy-handoff'] ==
+                  oldObject.status.nodeIdentity.nodeUID) ||
+               ((!has(oldObject.status) ||
+                 (!has(oldObject.status.nodeIdentity) &&
+                  !has(oldObject.status.topologyProjection) &&
+                  !has(oldObject.status.legacyHandoff))) &&
+                (!has(oldObject.metadata.annotations) ||
+                 !('topology.cisco.vk/request-legacy-handoff' in oldObject.metadata.annotations)))))) :
+            (oldObject.metadata.annotations['topology.cisco.vk/isolated-legacy-worker'] ==
                oldObject.metadata.uid &&
-             object.metadata.annotations['topology.cisco.vk/isolated-legacy-worker'] ==
-               oldObject.metadata.annotations['topology.cisco.vk/isolated-legacy-worker'])))
-      message: the UID-bound isolated legacy worker marker is manager-created and immutable
+             ((has(object.metadata.annotations) &&
+               'topology.cisco.vk/isolated-legacy-worker' in object.metadata.annotations &&
+               object.metadata.annotations['topology.cisco.vk/isolated-legacy-worker'] ==
+                 oldObject.metadata.annotations['topology.cisco.vk/isolated-legacy-worker']) ||
+              (variables.manager &&
+               (!has(object.metadata.annotations) ||
+                !('topology.cisco.vk/isolated-legacy-worker' in object.metadata.annotations)) &&
+               has(oldObject.status) && has(oldObject.status.legacyHandoff) &&
+               oldObject.status.legacyHandoff.phase == 'SharedWriterPending' &&
+               !has(oldObject.status.nodeIdentity) &&
+               !has(oldObject.status.topologyProjection) &&
+               !has(oldObject.status.healthObservation) &&
+               !has(oldObject.status.workerRevision) &&
+               !has(oldObject.status.networkWorkerRevision)) ||
+              (variables.manager && has(oldObject.status) &&
+               has(oldObject.status.nodeIdentity) &&
+               has(oldObject.status.topologyProjection) &&
+               !has(oldObject.status.legacyHandoff) &&
+               oldObject.status.nodeIdentity.deviceUID == oldObject.metadata.uid &&
+               !has(oldObject.status.topologyLock) &&
+               (!has(oldObject.status.maintenanceSession) ||
+                (has(oldObject.status.maintenanceSession.phase) &&
+                 oldObject.status.maintenanceSession.phase == 'Settled')))))))
+      message: the UID-bound isolated legacy worker marker is manager-created and removable only after an exact worker transition
+    - expression: >-
+        request.operation == 'DELETE' ||
+        !has(request.subResource) || request.subResource != 'status' ||
+        !has(object.status) || !has(object.status.legacyHandoff) ||
+        (object.status.legacyHandoff.phase == 'Complete' ?
+          (!has(object.metadata.annotations) ||
+           !('topology.cisco.vk/isolated-legacy-worker' in object.metadata.annotations)) :
+         (object.status.legacyHandoff.phase == 'LegacyWriterPending' ?
+          (has(object.metadata.annotations) &&
+           'topology.cisco.vk/isolated-legacy-worker' in object.metadata.annotations &&
+           object.metadata.annotations['topology.cisco.vk/isolated-legacy-worker'] ==
+             object.metadata.uid) :
+          (!has(object.metadata.annotations) ||
+           !('topology.cisco.vk/isolated-legacy-worker' in object.metadata.annotations) ||
+           object.metadata.annotations['topology.cisco.vk/isolated-legacy-worker'] ==
+             object.metadata.uid)))
+      message: the isolated legacy worker marker must match the durable handoff phase and CiscoDevice UID
     - expression: >-
         request.operation != 'UPDATE' || oldObject == null ||
         !has(oldObject.status) || !has(oldObject.status.topologyLock) ||
@@ -538,6 +696,10 @@ spec:
           (has(oldObject.status) && has(oldObject.status.workerRevision))) &&
          (!has(object.status) || !has(object.status.workerRevision) ||
           object.status.workerRevision == oldObject.status.workerRevision) &&
+         ((has(object.status) && has(object.status.networkWorkerRevision)) ==
+          (has(oldObject.status) && has(oldObject.status.networkWorkerRevision))) &&
+         (!has(object.status) || !has(object.status.networkWorkerRevision) ||
+          object.status.networkWorkerRevision == oldObject.status.networkWorkerRevision) &&
          ((has(object.status) && has(object.status.legacyHandoff)) ==
           (has(oldObject.status) && has(oldObject.status.legacyHandoff))) &&
          (!has(object.status) || !has(object.status.legacyHandoff) ||
@@ -550,7 +712,7 @@ spec:
           (has(oldObject.status) && has(oldObject.status.maintenanceSession))) &&
          (!has(object.status) || !has(object.status.maintenanceSession) ||
           object.status.maintenanceSession == oldObject.status.maintenanceSession))
-      message: manager-owned CiscoDevice identity, topology, health, worker revision, handoff, lock, and maintenance status cannot be forged
+      message: manager-owned CiscoDevice identity, topology, health, app/network worker revisions, handoff, lock, and maintenance status cannot be forged
     - expression: >-
         !has(request.subResource) || request.subResource != 'status' ||
         ((!has(oldObject.status) ||
@@ -560,9 +722,19 @@ spec:
         variables.manager
       message: all CiscoDevice status is manager-owned once managed Node identity or legacy handoff state exists
     - expression: >-
+        request.operation != 'UPDATE' || variables.manager ||
+        !has(oldObject.metadata.finalizers) ||
+        !oldObject.metadata.finalizers.exists(f, f == 'cisco.vk/device-cleanup') ||
+        (has(object.metadata.finalizers) &&
+         object.metadata.finalizers.exists(f, f == 'cisco.vk/device-cleanup'))
+      message: only the manager may remove the CiscoDevice cleanup finalizer
+    - expression: >-
         (has(request.subResource) && request.subResource != '') || variables.manager ||
-        request.operation != 'UPDATE' || !has(oldObject.status) ||
-        (!has(oldObject.status.nodeIdentity) && !has(oldObject.status.legacyHandoff)) ||
+        request.operation != 'UPDATE' ||
+        (((!has(oldObject.status) ||
+           (!has(oldObject.status.nodeIdentity) && !has(oldObject.status.legacyHandoff))) &&
+          (!has(oldObject.metadata.annotations) ||
+           !('topology.cisco.vk/isolated-legacy-worker' in oldObject.metadata.annotations)))) ||
         (object.metadata.name == oldObject.metadata.name &&
         object.metadata.namespace == oldObject.metadata.namespace &&
         object.metadata.uid == oldObject.metadata.uid &&
@@ -570,7 +742,7 @@ spec:
         (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers) &&
         has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences) &&
         (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences))
-      message: CiscoDevice finalizers and owner references are manager-owned after managed Node identity or legacy handoff state is established
+      message: CiscoDevice finalizers and owner references are manager-owned after managed Node identity, legacy handoff, or isolated worker state is established
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -1520,13 +1692,29 @@ spec:
     - name: chart-policy
       expression: >-
         request.namespace == {{ $policyNamespace | quote }} &&
-        has(request.name) && request.name == {{ $policyName | quote }}
+        ((object != null && object.metadata.name == {{ $policyName | quote }}) ||
+         (oldObject != null && oldObject.metadata.name == {{ $policyName | quote }}) ||
+         (has(request.name) && request.name == {{ $policyName | quote }}))
   variables:
     - name: manager
       expression: request.userInfo.username == {{ $manager | quote }}
+    - name: objectName
+      expression: >-
+        object != null ? object.metadata.name :
+          (oldObject != null ? oldObject.metadata.name :
+            (has(request.name) ? request.name : ''))
+    - name: namespaceCleanup
+      expression: >-
+        request.operation == 'DELETE' && !has(request.name) &&
+        request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+        ((request.userInfo.username ==
+            'system:serviceaccount:kube-system:namespace-controller' &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+         request.userInfo.username == 'system:kube-controller-manager')
     - name: policyEditor
       expression: >-
-        authorizer.group('').resource('configmaps').namespace(request.namespace).name(request.name).check('topology').allowed()
+        authorizer.group('').resource('configmaps').namespace(request.namespace).name(variables.objectName).check('topology').allowed()
   validations:
     - expression: >-
         request.operation == 'DELETE' ||
@@ -1546,7 +1734,7 @@ spec:
         'topology.cisco.vk/config-lease-namespace' in object.metadata.annotations)
       message: the topology policy keep/managed markers, admission-policy prefix, v2 contract, functional worker identities, and config Lease namespace are required
     - expression: >-
-        variables.policyEditor ||
+        variables.namespaceCleanup || variables.policyEditor ||
         (variables.manager && request.operation == 'UPDATE' &&
         has(object.data) == has(oldObject.data) &&
         (!has(object.data) || object.data == oldObject.data) &&
@@ -1635,13 +1823,29 @@ spec:
     - name: chart-ledger
       expression: >-
         request.namespace == {{ $policyNamespace | quote }} &&
-        has(request.name) && request.name == {{ $ledgerName | quote }}
+        ((object != null && object.metadata.name == {{ $ledgerName | quote }}) ||
+         (oldObject != null && oldObject.metadata.name == {{ $ledgerName | quote }}) ||
+         (has(request.name) && request.name == {{ $ledgerName | quote }}))
   variables:
     - name: manager
       expression: request.userInfo.username == {{ $manager | quote }}
+    - name: objectName
+      expression: >-
+        object != null ? object.metadata.name :
+          (oldObject != null ? oldObject.metadata.name :
+            (has(request.name) ? request.name : ''))
+    - name: namespaceCleanup
+      expression: >-
+        request.operation == 'DELETE' && !has(request.name) &&
+        request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+        ((request.userInfo.username ==
+            'system:serviceaccount:kube-system:namespace-controller' &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+         request.userInfo.username == 'system:kube-controller-manager')
     - name: breakglass
       expression: >-
-        authorizer.group('').resource('configmaps').namespace(request.namespace).name(request.name).check('manage-ledger').allowed()
+        authorizer.group('').resource('configmaps').namespace(request.namespace).name(variables.objectName).check('manage-ledger').allowed()
   validations:
     - expression: >-
         request.operation == 'DELETE' ||
@@ -1653,7 +1857,7 @@ spec:
         has(object.data) && object.data.size() == 1 && 'ledger.json' in object.data)
       message: the managed ledger keep/identity markers and sole ledger.json key are required
     - expression: >-
-        variables.breakglass ||
+        variables.namespaceCleanup || variables.breakglass ||
         (variables.manager && request.operation == 'UPDATE' &&
         object.metadata.name == oldObject.metadata.name &&
         object.metadata.namespace == oldObject.metadata.namespace &&

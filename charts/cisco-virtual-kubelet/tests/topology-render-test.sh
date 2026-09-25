@@ -9,6 +9,7 @@ trap 'rm -rf -- "$scratch_dir"' EXIT
 
 default_render="$scratch_dir/default.yaml"
 managed_render="$scratch_dir/managed.yaml"
+managed_short_account_render="$scratch_dir/managed-short-accounts.yaml"
 managed_upgrade_render="$scratch_dir/managed-upgrade.yaml"
 managed_lease_namespace_render="$scratch_dir/managed-lease-namespace.yaml"
 strict_render_bundle="$scratch_dir/managed-and-examples.yaml"
@@ -94,6 +95,19 @@ helm template cvk "$chart_dir" \
   --set controller.leaderElect=true \
   --set rbac.profile=strict >"$managed_render"
 
+# Valid short account names can overlap fixed CEL vocabulary. The manager must
+# canonicalize only the exact chart-bound literals, not matching substrings in
+# annotation keys or other compiled policy text.
+helm template cvk "$chart_dir" \
+  --namespace cisco-vk-system \
+  --kube-version 1.35.0 \
+  --set topology.enabled=true \
+  --set controller.leaderElect=true \
+  --set rbac.profile=strict \
+  --set topology.workerAccounts.appHosting.serviceAccountName=managed \
+  --set topology.workerAccounts.networkManagement.serviceAccountName=network \
+  >"$managed_short_account_render"
+
 helm template cvk "$chart_dir" \
   --namespace cisco-vk-system \
   --kube-version 1.35.0 \
@@ -131,6 +145,16 @@ helm template cvk "$chart_dir" \
 (
   cd "$repo_root"
   CVK_ADMISSION_MANIFEST="$strict_render_bundle" \
+    GOCACHE="${GOCACHE:-/tmp/cvk-topology-gocache}" \
+    go test ./cmd/cisco-vk \
+      -run '^TestRenderedManagedAdmissionContract$' -count=1
+)
+
+(
+  cd "$repo_root"
+  CVK_ADMISSION_MANIFEST="$managed_short_account_render" \
+    CVK_ADMISSION_APP_SERVICE_ACCOUNT=managed \
+    CVK_ADMISSION_NETWORK_SERVICE_ACCOUNT=network \
     GOCACHE="${GOCACHE:-/tmp/cvk-topology-gocache}" \
     go test ./cmd/cisco-vk \
       -run '^TestRenderedManagedAdmissionContract$' -count=1
@@ -176,8 +200,8 @@ grep -Fq -- '- --network-management-service-account=cvk-peer-cisco-virtual-kubel
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-policy' "$managed_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-ledger' "$managed_render"
 grep -Fq 'topology.cisco.vk/admission-policy-prefix: "cvk-cisco-virtual-kubelet"' "$managed_render"
-test "$(grep -c '^    topology.cisco.vk/admission-contract-version: "v2"$' "$managed_render")" -eq 47
-test "$(grep -c '^    helm.sh/resource-policy: keep$' "$managed_render")" -eq 58
+test "$(grep -c '^    topology.cisco.vk/admission-contract-version: "v2"$' "$managed_render")" -eq 51
+test "$(grep -c '^    helm.sh/resource-policy: keep$' "$managed_render")" -eq 62
 grep -Fq '"globalMaxConcurrentTransfers":1' "$managed_render"
 grep -Fq '"domainMaxConcurrentTransfers":{"topology.kubernetes.io/region":1}' "$managed_render"
 grep -Fq '"appHostingServiceAccountName":"cvk-cisco-virtual-kubelet-app-hosting"' "$managed_render"
@@ -196,8 +220,15 @@ if grep -Eq '^[[:space:]]+topology\.cisco\.vk/ledger-uid:' "$managed_render"; th
   exit 1
 fi
 
-test "$(grep -c '^kind: ValidatingAdmissionPolicy$' "$managed_render")" -eq 23
-test "$(grep -c '^kind: ValidatingAdmissionPolicyBinding$' "$managed_render")" -eq 23
+test "$(grep -c '^kind: ValidatingAdmissionPolicy$' "$managed_render")" -eq 25
+test "$(grep -c '^kind: ValidatingAdmissionPolicyBinding$' "$managed_render")" -eq 25
+test "$(grep -c '^    topology.cisco.vk/admission-contract-digest: "sha256:02c0e65602ac0ebcc3d19b15bd7cbcd7c3840c081d72f7541efbafc394f2ee76"$' "$managed_render")" -eq 2
+grep -Fq 'upgrade this release once with topology.enabled=true before disabling topology' \
+  "$chart_dir/templates/_helpers.tpl"
+grep -Fq 'prior topology-enabled manager preflight' \
+  "$chart_dir/templates/_helpers.tpl"
+grep -Fq '(not (empty (get $legacyNodeMarkerMatchResources "excludeResourceRules")))' \
+  "$chart_dir/templates/_helpers.tpl"
 
 policy_section_count() {
   local manifest="$1"
@@ -230,14 +261,15 @@ assert_policy_shape() {
 # Keep Helm's exact CEL contract shape synchronized with the manager startup
 # preflight. Any new, removed, or reordered trust-boundary expression requires
 # an explicit contract-version decision in both places.
-assert_policy_shape managed-node 1 5 4
+assert_policy_shape managed-node 1 6 5
+assert_policy_shape legacy-node-marker 1 1 1
 assert_policy_shape managed-pod-status 1 2 3
-assert_policy_shape managed-device 0 5 11
+assert_policy_shape managed-device 0 5 13
 assert_policy_shape managed-rollout 0 1 6
 assert_policy_shape managed-upgrade-leaf 1 4 7
 assert_policy_shape managed-maintenance-lease 1 10 8
-assert_policy_shape topology-policy 1 2 5
-assert_policy_shape topology-ledger 1 2 3
+assert_policy_shape topology-policy 1 4 5
+assert_policy_shape topology-ledger 1 4 3
 
 grep -Fq 'name: cvk-cisco-virtual-kubelet-managed-maintenance-lease' "$managed_render"
 grep -Fq 'validationActions: [Deny]' "$managed_render"
@@ -284,9 +316,12 @@ grep -Fq "changing the projection labels, taints, region, or zone of an establis
 grep -Fq "CiscoDevice topology/risk labels and adoption/reclassification/handoff annotations are frozen by an active topology lock" "$managed_render"
 grep -Fq "legacy handoff requests must bind the current managed Node UID" "$managed_render"
 grep -Fq "an accepted legacy handoff request is immutable until the handoff is Complete" "$managed_render"
-grep -Fq "the UID-bound isolated legacy worker marker is manager-created and immutable" "$managed_render"
-grep -Fq "manager-owned CiscoDevice identity, topology, health, worker revision, handoff, lock, and maintenance status cannot be forged" "$managed_render"
+grep -Fq "the UID-bound isolated legacy worker marker is manager-created and removable only after an exact worker transition" "$managed_render"
+grep -Fq "the isolated legacy worker marker must match the durable handoff phase and CiscoDevice UID" "$managed_render"
+grep -Fq "only the manager may remove or change a released Node handoff marker" "$managed_render"
+grep -Fq "manager-owned CiscoDevice identity, topology, health, app/network worker revisions, handoff, lock, and maintenance status cannot be forged" "$managed_render"
 grep -Fq "object.status.workerRevision == oldObject.status.workerRevision" "$managed_render"
+grep -Fq "object.status.networkWorkerRevision == oldObject.status.networkWorkerRevision" "$managed_render"
 grep -Fq "variables.managerLegacyHandoff" "$managed_render"
 grep -Fq "topology.cisco.vk/legacy-handoff" "$managed_render"
 grep -Fq "topology.cisco.vk/projected-keys" "$managed_render"
@@ -298,12 +333,15 @@ grep -Fq "CiscoDevice deletion requires no topology lock, no in-progress legacy 
 grep -Fq "object.spec == oldObject.spec" "$managed_render"
 grep -Fq "oldObject.status.legacyHandoff.phase == 'Complete'" "$managed_render"
 grep -Fq "oldObject.status.maintenanceSession.phase == 'Settled'" "$managed_render"
-grep -Fq "CiscoDevice finalizers and owner references are manager-owned after managed Node identity or legacy handoff state is established" "$managed_render"
+grep -Fq "only the manager may remove the CiscoDevice cleanup finalizer" "$managed_render"
+grep -Fq "oldObject.metadata.finalizers.exists(f, f == 'cisco.vk/device-cleanup')" "$managed_render"
+grep -Fq "CiscoDevice finalizers and owner references are manager-owned after managed Node identity, legacy handoff, or isolated worker state is established" "$managed_render"
 grep -Fq "all CiscoDevice status is manager-owned once managed Node identity or legacy handoff state exists" "$managed_render"
 grep -Fq "the generated worker identity must encode the Pod's exact bound virtual Node" "$managed_render"
 grep -Fq ':cisco-vk-legacy-[a-z0-9]([-a-z0-9.]{0,61}[a-z0-9])?-[a-f0-9]{8}$' "$managed_render"
 grep -Fq "check('manage-ledger').allowed()" "$managed_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-shared-worker-serviceaccount' "$managed_render"
+grep -Fq 'name: cvk-cisco-virtual-kubelet-generated-worker-serviceaccount' "$managed_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-shared-worker-token' "$managed_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-shared-worker-token-secret' "$managed_render"
 grep -Fq 'resources: ["serviceaccounts/token"]' "$managed_render"
@@ -316,7 +354,51 @@ grep -Fq 'legacy token Secrets are forbidden for reserved worker ServiceAccounts
 test "$(grep -Fc 'has(object.spec.template.spec.serviceAccountName)' "$managed_render")" -eq 2
 test "$(grep -Fc 'has(oldObject.spec.template.spec.serviceAccountName)' "$managed_render")" -eq 2
 test "$(grep -Fc 'has(object.spec.serviceAccountName)' "$managed_render")" -eq 2
-test "$(grep -Fc 'has(oldObject.spec.serviceAccountName)' "$managed_render")" -eq 1
+test "$(grep -Fc 'has(oldObject.spec.serviceAccountName)' "$managed_render")" -eq 2
+
+worker_deployment_policy="$scratch_dir/shared-worker-deployment.yaml"
+sed -n '/name: cvk-cisco-virtual-kubelet-shared-worker-deployment/,/^---$/p' \
+  "$managed_render" >"$worker_deployment_policy"
+grep -Fq 'resources: ["deployments", "deployments/status"]' \
+  "$worker_deployment_policy"
+grep -Fq "'system:serviceaccount:kube-system:deployment-controller'" \
+  "$worker_deployment_policy"
+grep -Fq "request.subResource == 'status'" "$worker_deployment_policy"
+grep -Fq 'object.metadata.uid == oldObject.metadata.uid' \
+  "$worker_deployment_policy"
+grep -Fq "'deployment.kubernetes.io/revision' in object.metadata.annotations" \
+  "$worker_deployment_policy"
+grep -Fq 'object.spec == oldObject.spec' "$worker_deployment_policy"
+
+worker_replicaset_policy="$scratch_dir/shared-worker-replicaset.yaml"
+sed -n '/name: cvk-cisco-virtual-kubelet-shared-worker-replicaset/,/^---$/p' \
+  "$managed_render" >"$worker_replicaset_policy"
+grep -Fq 'resources: ["replicasets", "replicasets/status"]' \
+  "$worker_replicaset_policy"
+grep -Fq "'system:serviceaccount:kube-system:replicaset-controller'" \
+  "$worker_replicaset_policy"
+grep -Fq "request.subResource == 'status'" "$worker_replicaset_policy"
+grep -Fq 'object.metadata.uid == oldObject.metadata.uid' \
+  "$worker_replicaset_policy"
+grep -Fq 'object.spec == oldObject.spec' "$worker_replicaset_policy"
+
+worker_pod_update_policy="$scratch_dir/shared-worker-pod-update.yaml"
+sed -n '/name: cvk-cisco-virtual-kubelet-shared-worker-pod-update/,/^---$/p' \
+  "$managed_render" >"$worker_pod_update_policy"
+grep -Fq 'resources: ["pods", "pods/status", "pods/ephemeralcontainers", "pods/resize"]' \
+  "$worker_pod_update_policy"
+grep -Fq "request.subResource == 'status'" "$worker_pod_update_policy"
+grep -Fq "request.userInfo.username == 'system:node:' + oldObject.spec.nodeName" \
+  "$worker_pod_update_policy"
+grep -Fq "request.userInfo.groups.exists(g, g == 'system:nodes')" \
+  "$worker_pod_update_policy"
+grep -Fq "request.userInfo.groups.exists(g, g == 'system:authenticated')" \
+  "$worker_pod_update_policy"
+grep -Fq 'object.metadata.annotations == oldObject.metadata.annotations' \
+  "$worker_pod_update_policy"
+grep -Fq 'object.spec == oldObject.spec' "$worker_pod_update_policy"
+grep -Fq 'a reserved worker Pod is immutable except for status written by its exact authenticated node' \
+  "$worker_pod_update_policy"
 
 node_policy="$scratch_dir/managed-node-policy.yaml"
 node_match="$scratch_dir/managed-node-match.txt"
@@ -552,6 +634,8 @@ grep -A1 -F 'resources: ["leases"]' "$manager_role" | \
   grep -Fq 'verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]'
 grep -A1 -F 'resources: ["replicasets"]' "$manager_role" | \
   grep -Fq 'verbs: ["get", "list", "watch", "delete"]'
+grep -A1 -F 'resources: ["iosxediagnostics"]' "$manager_role" | \
+  grep -Fq 'verbs: ["get", "list", "watch", "update", "patch"]'
 grep -A3 -F 'resources: ["pods"]' "$manager_role" | \
   grep -Fq 'verbs: ["get", "list", "watch", "patch"]'
 if grep -A3 -F 'resources: ["pods"]' "$manager_role" | \
@@ -712,6 +796,50 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   exit 1
 fi
 grep -Fq 'topology worker account names must be distinct' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --namespace cisco-vk-system \
+    --set topology.enabled=true --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set topology.workerAccounts.appHosting.serviceAccountName=cisco-vk-system \
+    >"$error_output" 2>&1; then
+  echo "managed topology accepted an app worker identity equal to the policy namespace" >&2
+  exit 1
+fi
+grep -Fq 'managed admission contract bindings must be pairwise distinct' "$error_output"
+grep -Fq 'policy namespace and app-hosting ServiceAccount' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --namespace cisco-vk-system \
+    --set topology.enabled=true --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set topology.workerAccounts.networkManagement.serviceAccountName=cvk-cisco-virtual-kubelet \
+    >"$error_output" 2>&1; then
+  echo "managed topology accepted a network worker identity equal to the admission prefix" >&2
+  exit 1
+fi
+grep -Fq 'managed admission contract bindings must be pairwise distinct' "$error_output"
+grep -Fq 'admission policy prefix and network-management ServiceAccount' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set topology.workerAccounts.appHosting.serviceAccountName=cisco-vk-managed-lab-01234567 \
+    >"$error_output" 2>&1; then
+  echo "managed topology accepted an app-hosting identity from the generated worker namespace" >&2
+  exit 1
+fi
+grep -Fq 'overlaps the reserved generated worker identity namespace' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set topology.workerAccounts.networkManagement.serviceAccountName=cisco-vk-legacy-lab-abcdef12 \
+    >"$error_output" 2>&1; then
+  echo "managed topology accepted a network-management identity from the generated worker namespace" >&2
+  exit 1
+fi
+grep -Fq 'overlaps the reserved generated worker identity namespace' "$error_output"
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true --set controller.leaderElect=true \

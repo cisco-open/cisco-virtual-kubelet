@@ -17,6 +17,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"strings"
 	"time"
@@ -109,12 +110,11 @@ func (r *CiscoDeviceReconciler) reconcileLegacyWriterHandoff(
 				ciskov1.CiscoDeviceConditionTopologyConflict,
 				"LegacyHandoffAccessFailed", err.Error())
 		}
-		// Record the durable marker only after the complete isolated identity is
-		// auditable. A crash can therefore leave recoverable access-without-marker,
-		// never a marker that recovery would have to trust without RBAC evidence.
-		if err := r.ensureIsolatedLegacyWorkerMarker(ctx, device); err != nil {
-			return result, err
-		}
+		// Persist the accepted request before its metadata marker. This makes the
+		// request immutable and forces retries to continue the handoff even if the
+		// selector or feature flag changes between the two API transactions. The
+		// complete generated identity remains independently auditable across the
+		// small status-before-marker crash window.
 		now := metav1.NewTime(r.now())
 		if err := r.patchLegacyHandoffStatus(ctx, device, &ciskov1.DeviceLegacyHandoffStatus{
 			Phase:                ciskov1.DeviceLegacyHandoffPreparing,
@@ -125,6 +125,9 @@ func (r *CiscoDeviceReconciler) reconcileLegacyWriterHandoff(
 			LegacyWorkerUsername: legacyUsername,
 			RequestedAt:          now,
 		}, reason, "isolated legacy worker identity is provisioned; waiting for the managed worker to stop"); err != nil {
+			return result, err
+		}
+		if err := r.ensureIsolatedLegacyWorkerMarker(ctx, device); err != nil {
 			return result, err
 		}
 		result.LegacyWorker = true
@@ -138,6 +141,11 @@ func (r *CiscoDeviceReconciler) reconcileLegacyWriterHandoff(
 		}
 		if err := r.ensureVKAccess(ctx, device, legacySA, false, true); err != nil {
 			return result, fmt.Errorf("reconcile isolated legacy worker access: %w", err)
+		}
+		// Preparing is the durable recovery point for a crash after status was
+		// accepted but before the UID marker patch completed.
+		if err := r.ensureIsolatedLegacyWorkerMarker(ctx, device); err != nil {
+			return result, err
 		}
 		result.LegacyWorker = true
 		stopped, err := r.managedWriterWorkloadsStopped(ctx, device)
@@ -283,8 +291,9 @@ func (r *CiscoDeviceReconciler) ensureIsolatedLegacyWorkerMarker(
 
 // recoverIsolatedLegacyWorker recognizes a UID-bound legacy identity created
 // by an earlier topology-enabled manager even if global topology was disabled
-// before the durable marker could be written. It never adopts an unowned or
-// incompletely bound ServiceAccount.
+// before the durable marker could be written. Exact partial access from a
+// crash before the cluster-wide grant is authority-first revoked; it is never
+// adopted or allowed to pin the standalone compatibility path.
 func (r *CiscoDeviceReconciler) recoverIsolatedLegacyWorker(
 	ctx context.Context,
 	device *ciskov1.CiscoDevice,
@@ -296,15 +305,40 @@ func (r *CiscoDeviceReconciler) recoverIsolatedLegacyWorker(
 	if marker != "" && marker != string(device.UID) {
 		return false, fmt.Errorf("isolated legacy worker marker belongs to a different CiscoDevice incarnation")
 	}
-	present, err := r.isolatedLegacyWorkerAccessPresent(ctx, device)
+	inventory, err := r.isolatedLegacyWorkerAccessInventory(ctx, device)
 	if err != nil {
 		return false, err
 	}
-	if !present {
+	if inventory.count() == 0 {
 		if marker != "" {
 			return false, fmt.Errorf("isolated legacy worker marker has no exact owned ServiceAccount evidence")
 		}
 		return false, nil
+	}
+	if inventory.count() != 3 {
+		if marker != "" {
+			return false, fmt.Errorf("isolated legacy worker marker has only partially present access evidence")
+		}
+		// This branch deliberately does not require the current admission-policy
+		// epoch. No cluster-wide grant exists, every present object was validated
+		// above as exact and device-owned, and recovery only revokes authority.
+		// Expanding startup detection to tenant-forgeable namespaced objects would
+		// let a forged annotation force every default-off manager into retirement.
+		cleanupErr := r.quarantineGeneratedWorkerAccess(ctx, device,
+			topologyLegacyWorkerServiceAccountName(device), false, false)
+		remaining, verifyErr := r.isolatedLegacyWorkerAccessInventory(ctx, device)
+		if verifyErr != nil {
+			verifyErr = fmt.Errorf("verify partial isolated legacy worker cleanup: %w", verifyErr)
+			return false, stderrors.Join(cleanupErr, verifyErr)
+		}
+		if remaining.count() != 0 {
+			verifyErr = fmt.Errorf("partial isolated legacy worker access remains after revocation")
+			return false, stderrors.Join(cleanupErr, verifyErr)
+		}
+		return false, cleanupErr
+	}
+	if inventory.deleting() {
+		return false, fmt.Errorf("isolated legacy worker access is already deleting")
 	}
 	if err := r.ensureIsolatedLegacyWorkerMarker(ctx, device); err != nil {
 		return false, err
@@ -319,49 +353,207 @@ func (r *CiscoDeviceReconciler) isolatedLegacyWorkerAccessPresent(
 	ctx context.Context,
 	device *ciskov1.CiscoDevice,
 ) (bool, error) {
-	if device == nil || device.UID == "" || r.reader() == nil {
-		return false, fmt.Errorf("cannot verify isolated legacy worker without an API reader and CiscoDevice UID")
+	inventory, err := r.isolatedLegacyWorkerAccessInventory(ctx, device)
+	if err != nil {
+		return false, err
 	}
-	legacySA := topologyLegacyWorkerServiceAccountName(device)
-	present := 0
-	var serviceAccount corev1.ServiceAccount
-	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: legacySA}, &serviceAccount); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return false, fmt.Errorf("inspect isolated legacy ServiceAccount: %w", err)
-		}
-	} else {
-		present++
-		if !managedServiceAccountOwnedByDevice(&serviceAccount, device) ||
-			!workerAnnotationsMatch(serviceAccount.Annotations, workerServiceAccountAnnotations(device, false)) {
-			return false, fmt.Errorf("existing isolated legacy ServiceAccount is not exactly bound to this CiscoDevice incarnation")
-		}
-	}
-	var roleBinding rbacv1.RoleBinding
-	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: legacySA}, &roleBinding); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return false, fmt.Errorf("inspect isolated legacy RoleBinding: %w", err)
-		}
-	} else {
-		present++
-	}
-	var clusterRoleBinding rbacv1.ClusterRoleBinding
-	if err := r.reader().Get(ctx, types.NamespacedName{Name: vkAccessClusterRoleBindingName(device.Namespace, legacySA)}, &clusterRoleBinding); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return false, fmt.Errorf("inspect isolated legacy ClusterRoleBinding: %w", err)
-		}
-	} else {
-		present++
-	}
-	if present == 0 {
+	if inventory.count() == 0 {
 		return false, nil
 	}
-	if present != 3 {
+	if inventory.count() != 3 {
 		return false, fmt.Errorf("isolated legacy worker access is only partially present")
 	}
-	if err := r.auditGeneratedWorkerBindings(ctx, device, legacySA, vkSharedClusterRole); err != nil {
-		return false, fmt.Errorf("audit recovered isolated legacy worker: %w", err)
+	if inventory.deleting() {
+		return false, fmt.Errorf("isolated legacy worker access is already deleting")
 	}
 	return true, nil
+}
+
+type generatedWorkerAccessInventory struct {
+	serviceAccount     *corev1.ServiceAccount
+	roleBinding        *rbacv1.RoleBinding
+	clusterRoleBinding *rbacv1.ClusterRoleBinding
+}
+
+func (inventory generatedWorkerAccessInventory) count() int {
+	count := 0
+	if inventory.serviceAccount != nil {
+		count++
+	}
+	if inventory.roleBinding != nil {
+		count++
+	}
+	if inventory.clusterRoleBinding != nil {
+		count++
+	}
+	return count
+}
+
+func (inventory generatedWorkerAccessInventory) deleting() bool {
+	return (inventory.serviceAccount != nil && !inventory.serviceAccount.DeletionTimestamp.IsZero()) ||
+		(inventory.roleBinding != nil && !inventory.roleBinding.DeletionTimestamp.IsZero()) ||
+		(inventory.clusterRoleBinding != nil && !inventory.clusterRoleBinding.DeletionTimestamp.IsZero())
+}
+
+func (r *CiscoDeviceReconciler) isolatedLegacyWorkerAccessInventory(
+	ctx context.Context,
+	device *ciskov1.CiscoDevice,
+) (generatedWorkerAccessInventory, error) {
+	return r.generatedWorkerAccessInventory(ctx, device, topologyLegacyWorkerServiceAccountName(device), false)
+}
+
+// generatedWorkerAccessInventory validates every present object and every
+// reference to the deterministic ServiceAccount before a caller mutates any
+// of them. Partial but exact state is safe to revoke; drift and additive grants
+// fail closed because RBAC is additive and the account name can be recreated.
+func (r *CiscoDeviceReconciler) generatedWorkerAccessInventory(
+	ctx context.Context,
+	device *ciskov1.CiscoDevice,
+	serviceAccountName string,
+	managed bool,
+) (generatedWorkerAccessInventory, error) {
+	var inventory generatedWorkerAccessInventory
+	if device == nil || device.UID == "" || r.reader() == nil {
+		return inventory, fmt.Errorf("cannot verify generated worker without an API reader and CiscoDevice UID")
+	}
+	expectedName := topologyLegacyWorkerServiceAccountName(device)
+	workerRole := vkSharedClusterRole
+	if managed {
+		expectedName = managedWorkerServiceAccountName(device)
+		workerRole = managedprotocol.ManagedWorkerClusterRole
+	}
+	if serviceAccountName != expectedName {
+		return inventory, fmt.Errorf("generated worker ServiceAccount name %q does not match bound identity %q", serviceAccountName, expectedName)
+	}
+	expectedAnnotations := workerServiceAccountAnnotations(device, managed)
+	identity := types.NamespacedName{Namespace: device.Namespace, Name: serviceAccountName}
+
+	var serviceAccount corev1.ServiceAccount
+	if err := r.reader().Get(ctx, identity, &serviceAccount); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return inventory, fmt.Errorf("inspect generated worker ServiceAccount: %w", err)
+		}
+	} else {
+		if !managedServiceAccountOwnedByDevice(&serviceAccount, device) ||
+			!workerAnnotationsMatch(serviceAccount.Annotations, expectedAnnotations) {
+			return inventory, fmt.Errorf("existing generated worker ServiceAccount is not exactly bound to this CiscoDevice incarnation")
+		}
+		inventory.serviceAccount = serviceAccount.DeepCopy()
+	}
+
+	var roleBinding rbacv1.RoleBinding
+	if err := r.reader().Get(ctx, identity, &roleBinding); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return inventory, fmt.Errorf("inspect generated worker RoleBinding: %w", err)
+		}
+	} else {
+		if err := validateGeneratedRoleBinding(&roleBinding, device, serviceAccountName); err != nil ||
+			!workerAnnotationsMatch(roleBinding.Annotations, expectedAnnotations) ||
+			!managedServiceAccountOwnedByDeviceMeta(&roleBinding.ObjectMeta, device) {
+			if err == nil {
+				err = fmt.Errorf("binding metadata is not exactly incarnation-bound")
+			}
+			return inventory, fmt.Errorf("existing generated worker RoleBinding is invalid: %w", err)
+		}
+		inventory.roleBinding = roleBinding.DeepCopy()
+	}
+
+	clusterBindingKey := types.NamespacedName{Name: vkAccessClusterRoleBindingName(device.Namespace, serviceAccountName)}
+	var clusterRoleBinding rbacv1.ClusterRoleBinding
+	if err := r.reader().Get(ctx, clusterBindingKey, &clusterRoleBinding); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return inventory, fmt.Errorf("inspect generated worker ClusterRoleBinding: %w", err)
+		}
+	} else {
+		if err := validateGeneratedClusterRoleBinding(&clusterRoleBinding, device, serviceAccountName, workerRole); err != nil ||
+			!workerAnnotationsMatch(clusterRoleBinding.Annotations, expectedAnnotations) {
+			if err == nil {
+				err = fmt.Errorf("binding metadata is not exactly incarnation-bound")
+			}
+			return inventory, fmt.Errorf("existing generated worker ClusterRoleBinding is invalid: %w", err)
+		}
+		inventory.clusterRoleBinding = clusterRoleBinding.DeepCopy()
+	}
+
+	var roleBindings rbacv1.RoleBindingList
+	if err := r.reader().List(ctx, &roleBindings); err != nil {
+		return inventory, fmt.Errorf("inspect generated worker RoleBinding references: %w", err)
+	}
+	for i := range roleBindings.Items {
+		binding := &roleBindings.Items[i]
+		if hasWorkerSubject(binding.Subjects, device.Namespace, serviceAccountName) &&
+			client.ObjectKeyFromObject(binding) != identity {
+			return inventory, fmt.Errorf("generated worker ServiceAccount %s has unexpected additive RoleBinding %s/%s", identity, binding.Namespace, binding.Name)
+		}
+	}
+
+	var clusterRoleBindings rbacv1.ClusterRoleBindingList
+	if err := r.reader().List(ctx, &clusterRoleBindings); err != nil {
+		return inventory, fmt.Errorf("inspect generated worker ClusterRoleBinding references: %w", err)
+	}
+	for i := range clusterRoleBindings.Items {
+		binding := &clusterRoleBindings.Items[i]
+		if hasWorkerSubject(binding.Subjects, device.Namespace, serviceAccountName) &&
+			binding.Name != clusterBindingKey.Name {
+			return inventory, fmt.Errorf("generated worker ServiceAccount %s has unexpected additive ClusterRoleBinding %s", identity, binding.Name)
+		}
+	}
+	return inventory, nil
+}
+
+func (r *CiscoDeviceReconciler) generatedWorkerCanonicalAccessPresent(ctx context.Context,
+	device *ciskov1.CiscoDevice, serviceAccountName string) (bool, error) {
+	if device == nil || device.UID == "" || r.reader() == nil {
+		return false, fmt.Errorf("cannot inspect generated worker without an API reader and CiscoDevice UID")
+	}
+	objects := []client.Object{
+		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: device.Namespace, Name: serviceAccountName}},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: device.Namespace, Name: serviceAccountName}},
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{
+			Name: vkAccessClusterRoleBindingName(device.Namespace, serviceAccountName),
+		}},
+	}
+	for _, object := range objects {
+		if err := r.reader().Get(ctx, client.ObjectKeyFromObject(object), object); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return false, fmt.Errorf("inspect canonical generated worker %T: %w", object, err)
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
+// cleanupPhaseZeroGeneratedWorkerAccessIfPresent is the deletion-only recovery
+// for a crash between exact access creation and the durable device marker. It
+// validates the complete present set first, revokes cluster-wide authority
+// first, then proves no canonical or additive grant remains before allowing
+// the CiscoDevice finalizer to be removed.
+func (r *CiscoDeviceReconciler) cleanupPhaseZeroGeneratedWorkerAccessIfPresent(
+	ctx context.Context,
+	device *ciskov1.CiscoDevice,
+) (bool, error) {
+	serviceAccount := topologyLegacyWorkerServiceAccountName(device)
+	present, err := r.generatedWorkerCanonicalAccessPresent(ctx, device, serviceAccount)
+	if err != nil {
+		return false, err
+	}
+	// Cleanup is authority-first and independent: an attacker-added binding or
+	// drift in one canonical object must not keep another exact broad grant
+	// alive. Foreign/additive objects are retained and reported below, keeping
+	// the CiscoDevice finalizer until an operator resolves them.
+	cleanupErr := r.quarantineGeneratedWorkerAccess(ctx, device, serviceAccount, false, false)
+	remaining, err := r.isolatedLegacyWorkerAccessInventory(ctx, device)
+	if err != nil {
+		err = fmt.Errorf("verify phase-zero generated worker access revocation: %w", err)
+		return present, stderrors.Join(cleanupErr, err)
+	}
+	if remaining.count() != 0 {
+		err = fmt.Errorf("phase-zero generated worker access remains after revocation")
+		return present, stderrors.Join(cleanupErr, err)
+	}
+	return present, cleanupErr
 }
 
 func (r *CiscoDeviceReconciler) verifySharedLegacyAccess(
@@ -426,8 +618,7 @@ func (r *CiscoDeviceReconciler) drainIsolatedLegacyWorker(
 		if deployment.Name != expectedName || !metav1.IsControlledBy(deployment, device) {
 			return false, fmt.Errorf("isolated legacy ServiceAccount is used by unproven Deployment %s/%s", deployment.Namespace, deployment.Name)
 		}
-		foreground := metav1.DeletePropagationForeground
-		if err := r.Delete(ctx, deployment, &client.DeleteOptions{PropagationPolicy: &foreground}); err != nil && !apierrors.IsNotFound(err) {
+		if err := deleteForegroundWithUIDPrecondition(ctx, r.Client, deployment); err != nil && !apierrors.IsNotFound(err) {
 			return false, fmt.Errorf("delete isolated legacy Deployment %s/%s: %w", deployment.Namespace, deployment.Name, err)
 		}
 		return false, nil
@@ -556,8 +747,7 @@ func (r *CiscoDeviceReconciler) drainSharedLegacyWorker(
 			deployment.Spec.Template.Spec.ServiceAccountName != sharedServiceAccount {
 			return false, fmt.Errorf("shared compatibility Deployment %s is not exactly controlled by this CiscoDevice", key)
 		}
-		foreground := metav1.DeletePropagationForeground
-		if err := r.Delete(ctx, &deployment, &client.DeleteOptions{PropagationPolicy: &foreground}); err != nil && !apierrors.IsNotFound(err) {
+		if err := deleteForegroundWithUIDPrecondition(ctx, r.Client, &deployment); err != nil && !apierrors.IsNotFound(err) {
 			return false, fmt.Errorf("delete shared compatibility Deployment %s: %w", key, err)
 		}
 		return false, nil
@@ -613,8 +803,7 @@ func (r *CiscoDeviceReconciler) drainLegacyDeviceWorkerForDeletion(
 		if _, ok := allowed[deployment.Spec.Template.Spec.ServiceAccountName]; !ok {
 			return false, fmt.Errorf("refusing legacy device deletion: Deployment %s uses unexpected ServiceAccount %q", key, deployment.Spec.Template.Spec.ServiceAccountName)
 		}
-		foreground := metav1.DeletePropagationForeground
-		if err := r.Delete(ctx, &deployment, &client.DeleteOptions{PropagationPolicy: &foreground}); err != nil && !apierrors.IsNotFound(err) {
+		if err := deleteForegroundWithUIDPrecondition(ctx, r.Client, &deployment); err != nil && !apierrors.IsNotFound(err) {
 			return false, fmt.Errorf("delete legacy worker Deployment %s: %w", key, err)
 		}
 		return false, nil
@@ -992,8 +1181,7 @@ func (r *CiscoDeviceReconciler) quiesceManagedDeviceWorkersForDeletion(ctx conte
 		if !metav1.IsControlledBy(&deployment, device) {
 			return false, fmt.Errorf("refusing device deletion: managed worker Deployment %s is not controlled by CiscoDevice UID %s", key, device.UID)
 		}
-		foreground := metav1.DeletePropagationForeground
-		if err := r.Delete(ctx, &deployment, &client.DeleteOptions{PropagationPolicy: &foreground}); err != nil && !apierrors.IsNotFound(err) {
+		if err := deleteForegroundWithUIDPrecondition(ctx, r.Client, &deployment); err != nil && !apierrors.IsNotFound(err) {
 			return false, fmt.Errorf("delete managed worker Deployment %s: %w", key, err)
 		}
 		deleting = true

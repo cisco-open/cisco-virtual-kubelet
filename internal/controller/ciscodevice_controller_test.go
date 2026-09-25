@@ -74,6 +74,8 @@ func newDevice(name, namespace string) *ciskov1.CiscoDevice {
 	}
 }
 
+const testWorkerServiceAccountPolicyEpoch = "sha256:test-worker-serviceaccount-policy-epoch"
+
 // reconcilerFor builds a CiscoDeviceReconciler backed by a fake client that
 // already contains the provided objects.
 func reconcilerFor(t *testing.T, objs ...runtime.Object) *CiscoDeviceReconciler {
@@ -88,6 +90,7 @@ func reconcilerFor(t *testing.T, objs ...runtime.Object) *CiscoDeviceReconciler 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(s).
 		WithStatusSubresource(&ciskov1.CiscoDevice{}).
+		WithIndex(&ciskov1.CiscoDevice{}, ciscoDevicePhysicalIdentityIndex, physicalIdentityIndexValues).
 		WithIndex(&corev1.Pod{}, podNodeNameIndex, func(object client.Object) []string {
 			pod := object.(*corev1.Pod)
 			if pod.Spec.NodeName == "" {
@@ -98,10 +101,11 @@ func reconcilerFor(t *testing.T, objs ...runtime.Object) *CiscoDeviceReconciler 
 		WithRuntimeObjects(objs...).
 		Build()
 	return &CiscoDeviceReconciler{
-		Client:         fakeClient,
-		Scheme:         s,
-		Image:          "cisco-vk:test",
-		ServiceAccount: "test-sa",
+		Client:                          fakeClient,
+		Scheme:                          s,
+		Image:                           "cisco-vk:test",
+		ServiceAccount:                  "test-sa",
+		WorkerServiceAccountPolicyEpoch: testWorkerServiceAccountPolicyEpoch,
 	}
 }
 
@@ -1965,6 +1969,7 @@ func TestNXOSPrereqsTeardownExternalDeleteSkipsWhenOwnershipStateGone(t *testing
 func TestPrereqsTeardownLeaseBlockedHonoursForceAnnotation(t *testing.T) {
 	now := metav1.NewTime(time.Now())
 	device := newDevice("router-force", "default")
+	device.UID = "router-force-uid"
 	device.Finalizers = []string{ciscoDeviceFinalizer}
 	device.DeletionTimestamp = &now
 	device.Status.Conditions = []metav1.Condition{{

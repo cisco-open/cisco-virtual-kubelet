@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -42,6 +43,11 @@ const (
 type sharedWorkerAccessTransition struct {
 	planes   []string
 	blockers []string
+}
+
+type sharedServiceAccountEpochTarget struct {
+	plane          string
+	serviceAccount string
 }
 
 func (e *sharedWorkerAccessTransition) Error() string {
@@ -229,26 +235,32 @@ func (r *CiscoDeviceReconciler) ensureManagedSharedWorkerAccess(ctx context.Cont
 	if err := r.enforceManagedWorkerNamespaceRBAC(ctx, device, appSA, networkSA); err != nil {
 		return err
 	}
-	activeAccounts := []string{}
-	if appAccess != managedprotocol.WorkerAccessDisabled {
-		activeAccounts = append(activeAccounts, appSA)
-	}
-	if networkAccess != managedprotocol.WorkerAccessDisabled {
-		activeAccounts = append(activeAccounts, networkSA)
-	}
-	if err := r.rejectLegacySharedServiceAccountTokens(ctx, device.Namespace, activeAccounts...); err != nil {
+	epochPending, epochBlockers, err := r.prepareSharedServiceAccountPolicyEpoch(ctx, device, []sharedServiceAccountEpochTarget{
+		{plane: managedprotocol.WorkerModeAppHosting, serviceAccount: appSA},
+		{plane: managedprotocol.WorkerModeNetworkManagement, serviceAccount: networkSA},
+	})
+	if err != nil {
 		return err
+	}
+	// App-hosting and network-management use independent identities. An active
+	// network mutation may fence only the network epoch rotation; it must not
+	// keep an already-retired app identity unavailable for the lifetime of that
+	// mutation. Wait here only while the app plane itself is still draining.
+	if sharedWorkerPlanePending(epochPending, managedprotocol.WorkerModeAppHosting) {
+		return &sharedWorkerAccessTransition{planes: epochPending, blockers: epochBlockers}
 	}
 	if err := r.validateManagedWorkerClusterRoles(ctx, device.Namespace, appRole, appAccess,
 		appDeviceRole, networkRole, networkLeaseRole, networkAccess, globalReadRole); err != nil {
 		return err
 	}
-	pendingPlanes, blockers, err := r.prepareSharedWorkerAccessTransitions(ctx, device, appRole, appAccess,
+	profilePending, profileBlockers, err := r.prepareSharedWorkerAccessTransitions(ctx, device, appRole, appAccess,
 		appDeviceRole, networkRole, networkLeaseRole, networkAccess)
 	if err != nil {
 		return err
 	}
-	if len(pendingPlanes) != 0 || len(blockers) != 0 {
+	pendingPlanes := appendUniqueStrings(epochPending, profilePending...)
+	blockers := append(epochBlockers, profileBlockers...)
+	if sharedWorkerPlanePending(pendingPlanes, managedprotocol.WorkerModeAppHosting) {
 		return &sharedWorkerAccessTransition{planes: pendingPlanes, blockers: blockers}
 	}
 	appCRB := vkAccessClusterRoleBindingName(device.Namespace, appSA)
@@ -279,6 +291,23 @@ func (r *CiscoDeviceReconciler) ensureManagedSharedWorkerAccess(ctx context.Cont
 			managedprotocol.WorkerModeAppHosting); err != nil {
 			return err
 		}
+	}
+	if sharedWorkerPlanePending(pendingPlanes, managedprotocol.WorkerModeNetworkManagement) || len(blockers) != 0 {
+		// Close the same direct-reader race as the full post-bind audit before
+		// exposing the restored app account while the network plane remains
+		// fenced. A concrete RBAC finding still quarantines both identities.
+		if err := r.inspectManagedWorkerNamespaceRBAC(ctx, device, appSA, networkSA); err != nil {
+			return r.quarantineManagedSharedWorkersForRisk(ctx, device, err)
+		}
+		leaseNamespace := r.LeaseNamespace
+		if leaseNamespace == "" {
+			leaseNamespace = device.Namespace
+		}
+		if err := r.auditManagedSharedAppWorkerBindings(ctx, device.Namespace, leaseNamespace,
+			appSA, appCRB, appRole, appDeviceRole, appAccess); err != nil {
+			return r.quarantineManagedSharedWorkersForRisk(ctx, device, err)
+		}
+		return &sharedWorkerAccessTransition{planes: pendingPlanes, blockers: blockers}
 	}
 	if networkAccess != managedprotocol.WorkerAccessDisabled {
 		if err := r.ensureSharedServiceAccount(ctx, device.Namespace, networkSA, managedprotocol.WorkerModeNetworkManagement, networkRole); err != nil {
@@ -331,9 +360,15 @@ func (r *CiscoDeviceReconciler) ensureManagedSharedWorkerAccess(ctx context.Cont
 	if networkAccess == managedprotocol.WorkerAccessDisabled {
 		networkCRB, leaseRB = "", ""
 	}
-	return r.auditManagedSharedWorkerBindings(ctx, device.Namespace, leaseNamespace, appSA, networkSA,
+	if err := r.auditManagedSharedWorkerBindings(ctx, device.Namespace, leaseNamespace, appSA, networkSA,
 		appCRB, networkCRB, leaseRB, appRole, appDeviceRole, networkRole, networkLeaseRole,
-		globalReadRole, appAccess, networkAccess)
+		globalReadRole, appAccess, networkAccess); err != nil {
+		// Close the pre-audit/create race synchronously. A watch is useful for
+		// convergence, but it cannot prevent a newly bound projected token from
+		// being used before the next reconcile.
+		return r.quarantineManagedSharedWorkersForRisk(ctx, device, err)
+	}
+	return nil
 }
 
 func (r *CiscoDeviceReconciler) exactSharedRoleBindingRole(ctx context.Context, key types.NamespacedName,
@@ -821,9 +856,8 @@ func (r *CiscoDeviceReconciler) drainSharedWorkerPlane(ctx context.Context, name
 	}
 
 	if len(matchedDeployments) != 0 {
-		foreground := metav1.DeletePropagationForeground
 		for _, deployment := range matchedDeployments {
-			if err := r.Delete(ctx, deployment, &client.DeleteOptions{PropagationPolicy: &foreground}); err != nil &&
+			if err := deleteForegroundWithUIDPrecondition(ctx, r.Client, deployment); err != nil &&
 				!apierrors.IsNotFound(err) {
 				return false, fmt.Errorf("drain %s/%s before shared %s access transition: %w",
 					deployment.Namespace, deployment.Name, plane, err)
@@ -841,15 +875,29 @@ func ownerName(owner *metav1.OwnerReference) string {
 	return owner.Name
 }
 
-func (r *CiscoDeviceReconciler) rejectLegacySharedServiceAccountTokens(ctx context.Context, namespace string,
-	serviceAccounts ...string) error {
-	reserved := make(map[string]struct{}, len(serviceAccounts))
-	for _, name := range serviceAccounts {
-		reserved[name] = struct{}{}
+// prepareSharedServiceAccountPolicyEpoch provides the one-time migration
+// boundary for reusable functional identities created before the reserved
+// ServiceAccount admission contract was installed. A signed legacy token may
+// remain valid after its mutable ServiceAccount-name annotation is removed, so an
+// unstamped account cannot be safely adopted. Revoke its exact bindings,
+// rotate the ServiceAccount UID, and quiesce every workload using the old UID
+// before allowing the account to be recreated with the verified policy epoch.
+func (r *CiscoDeviceReconciler) prepareSharedServiceAccountPolicyEpoch(ctx context.Context,
+	device *ciskov1.CiscoDevice, targets []sharedServiceAccountEpochTarget) ([]string, []string, error) {
+	epoch := strings.TrimSpace(r.WorkerServiceAccountPolicyEpoch)
+	if epoch == "" {
+		return nil, nil, fmt.Errorf("shared worker ServiceAccount policy epoch is empty")
 	}
+
+	reserved := make(map[string]struct{}, len(targets))
+	for _, target := range targets {
+		reserved[target.serviceAccount] = struct{}{}
+	}
+	legacyTokens := make(map[string][]string, len(targets))
 	var secrets corev1.SecretList
-	if err := r.reader().List(ctx, &secrets, client.InNamespace(namespace)); err != nil {
-		return fmt.Errorf("audit legacy shared worker ServiceAccount tokens in namespace %q: %w", namespace, err)
+	if err := r.reader().List(ctx, &secrets, client.InNamespace(device.Namespace)); err != nil {
+		return nil, nil, fmt.Errorf("audit legacy shared worker ServiceAccount tokens in namespace %q: %w",
+			device.Namespace, err)
 	}
 	for i := range secrets.Items {
 		secret := &secrets.Items[i]
@@ -858,54 +906,343 @@ func (r *CiscoDeviceReconciler) rejectLegacySharedServiceAccountTokens(ctx conte
 		}
 		serviceAccount := strings.TrimSpace(secret.Annotations[corev1.ServiceAccountNameKey])
 		if _, found := reserved[serviceAccount]; found {
-			if err := r.revokeSharedWorkerForLegacyToken(ctx, namespace, serviceAccount); err != nil {
-				return fmt.Errorf("quarantine legacy ServiceAccount token Secret %s/%s: %w", secret.Namespace, secret.Name, err)
-			}
-			return fmt.Errorf("refusing shared worker access while legacy ServiceAccount token Secret %s/%s references reserved account %q; delete the long-lived token first",
-				secret.Namespace, secret.Name, serviceAccount)
+			legacyTokens[serviceAccount] = append(legacyTokens[serviceAccount], secret.Name)
 		}
 	}
-	return nil
+
+	type targetState struct {
+		target        sharedServiceAccountEpochTarget
+		account       *corev1.ServiceAccount
+		rotate        bool
+		validationErr error
+	}
+	states := make([]targetState, 0, len(targets))
+	// Validate every reserved-name occupant before mutating any of them. A
+	// foreign collision must never be adopted or deleted as part of migration.
+	for _, target := range targets {
+		key := types.NamespacedName{Namespace: device.Namespace, Name: target.serviceAccount}
+		var account corev1.ServiceAccount
+		err := r.reader().Get(ctx, key, &account)
+		if err != nil && !apierrors.IsNotFound(err) {
+			states = append(states, targetState{
+				target: target, validationErr: fmt.Errorf(
+					"read shared worker ServiceAccount %s before policy-epoch migration: %w", key, err),
+			})
+			continue
+		}
+		state := targetState{target: target, rotate: len(legacyTokens[target.serviceAccount]) != 0}
+		if err == nil {
+			role := account.Annotations[annotationSharedWorkerRole]
+			if !sharedWorkerRoleAllowed(target.plane, role) ||
+				!sharedWorkerMetadataMatches(&account, device.Namespace, target.plane, role) {
+				state.validationErr = fmt.Errorf(
+					"shared worker ServiceAccount %s already exists without exact controller provenance", key)
+				states = append(states, state)
+				continue
+			}
+			state.account = &account
+			state.rotate = state.rotate || account.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy] != epoch
+		}
+		states = append(states, state)
+	}
+	pending := []string{}
+	blockers := []string{}
+	var migrationErrors []error
+	processed := make([]bool, len(states))
+	quarantine := func(state targetState) {
+		target := state.target
+		if err := r.revokeSharedWorkerForLegacyToken(ctx, device.Namespace, target.serviceAccount); err != nil {
+			migrationErrors = append(migrationErrors, fmt.Errorf(
+				"revoke shared worker %s authority before policy-epoch migration: %w", target.plane, err))
+		}
+		if state.validationErr == nil && state.account != nil {
+			if err := deleteWithUIDPrecondition(ctx, r.Client, state.account); err != nil && !apierrors.IsNotFound(err) {
+				migrationErrors = append(migrationErrors, fmt.Errorf(
+					"rotate shared worker ServiceAccount %s/%s for verified admission generation: %w",
+					device.Namespace, target.serviceAccount, err))
+			}
+			pending = appendUniqueString(pending, target.plane)
+		}
+		drained, err := r.quarantineWorkerServiceAccountWorkloads(ctx, device.Namespace, target.serviceAccount)
+		if err != nil {
+			migrationErrors = append(migrationErrors, err)
+		}
+		if !drained {
+			pending = appendUniqueString(pending, target.plane)
+		}
+		for _, secretName := range legacyTokens[target.serviceAccount] {
+			pending = appendUniqueString(pending, target.plane)
+			blockers = append(blockers, fmt.Sprintf(
+				"legacy ServiceAccount token Secret %s/%s references reserved account %q; delete the long-lived token first",
+				device.Namespace, secretName, target.serviceAccount))
+		}
+		if state.validationErr != nil {
+			migrationErrors = append(migrationErrors, state.validationErr)
+		}
+	}
+
+	// A malformed/foreign reserved-name occupant or attributable legacy token
+	// is concrete compromise evidence. Quarantine every such target before an
+	// unrelated planned network epoch rotation is allowed to wait on active
+	// mutations; otherwise a blocker could pin already-compromised authority.
+	for i, state := range states {
+		if state.validationErr == nil && len(legacyTokens[state.target.serviceAccount]) == 0 {
+			continue
+		}
+		quarantine(state)
+		processed[i] = true
+	}
+	// Planned app-hosting rotation is independent of network mutation
+	// settlement. Retire that old UID now rather than allowing an unrelated
+	// active gNOI/config operation to pin it until the network plane is idle.
+	for i, state := range states {
+		if processed[i] || state.target.plane == managedprotocol.WorkerModeNetworkManagement ||
+			state.account != nil && !state.rotate {
+			continue
+		}
+		quarantine(state)
+		processed[i] = true
+	}
+
+	// An epoch change by itself is a planned credential rotation, not evidence
+	// of compromise. Before touching the network identity, fence that plane at
+	// the same durable boundary as a write-profile downgrade: every mutation
+	// Lease, maintenance session, upgrade admission, and rollout reservation
+	// must be settled. Concrete-compromise targets were already quarantined.
+	for i, state := range states {
+		if processed[i] || state.target.plane != managedprotocol.WorkerModeNetworkManagement || state.account == nil ||
+			state.account.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy] == epoch {
+			continue
+		}
+		mutationBlockers, err := r.networkManagementDowngradeBlockers(ctx, device.Namespace)
+		if err != nil {
+			migrationErrors = append(migrationErrors, err)
+			return pending, blockers, stderrors.Join(migrationErrors...)
+		}
+		if len(mutationBlockers) != 0 {
+			pending = appendUniqueString(pending, managedprotocol.WorkerModeNetworkManagement)
+			for _, blocker := range mutationBlockers {
+				blockers = append(blockers, "planned network worker policy-epoch rotation is waiting: "+blocker)
+			}
+			return pending, blockers, stderrors.Join(migrationErrors...)
+		}
+	}
+
+	for i, state := range states {
+		if processed[i] || state.account != nil && !state.rotate {
+			continue
+		}
+		// An absent account may still have canonical bindings left by a crash,
+		// or old Pods using the deterministic name. Revoke/drain before the name
+		// becomes authorized again.
+		quarantine(state)
+	}
+	return pending, blockers, stderrors.Join(migrationErrors...)
+}
+
+func appendUniqueString(values []string, value string) []string {
+	for _, existing := range values {
+		if existing == value {
+			return values
+		}
+	}
+	return append(values, value)
+}
+
+func appendUniqueStrings(values []string, additions ...string) []string {
+	for _, value := range additions {
+		values = appendUniqueString(values, value)
+	}
+	return values
+}
+
+func sharedWorkerPlanePending(values []string, value string) bool {
+	for _, existing := range values {
+		if existing == value {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *CiscoDeviceReconciler) revokeSharedWorkerForLegacyToken(ctx context.Context, namespace, serviceAccount string) error {
+	var errs []error
 	switch serviceAccount {
 	case r.appHostingServiceAccountName():
-		if err := r.revokeSharedClusterRoleBinding(ctx,
+		if err := r.quarantineSharedClusterRoleBinding(ctx,
 			vkAccessClusterRoleBindingName(namespace, serviceAccount), namespace, serviceAccount,
-			managedprotocol.WorkerModeAppHosting); err != nil {
-			return err
+			managedprotocol.AppHostingReadOnlyClusterRole, managedprotocol.AppHostingReadWriteClusterRole); err != nil {
+			errs = append(errs, err)
 		}
-		return r.revokeSharedRoleBinding(ctx,
-			types.NamespacedName{Namespace: namespace, Name: serviceAccount}, namespace, serviceAccount,
-			managedprotocol.WorkerModeAppHosting)
+		if err := r.quarantineSharedRoleBinding(ctx,
+			types.NamespacedName{Namespace: namespace, Name: serviceAccount}, namespace, serviceAccount); err != nil {
+			errs = append(errs, err)
+		}
 	case r.networkManagementServiceAccountName():
-		if err := r.revokeSharedRoleBinding(ctx,
-			types.NamespacedName{Namespace: namespace, Name: serviceAccount}, namespace, serviceAccount,
-			managedprotocol.WorkerModeNetworkManagement); err != nil {
-			return err
+		// Revoke the cluster-wide inventory grant before any namespaced grant.
+		// Each canonical object is evaluated independently so a foreign RB cannot
+		// pin an exact CRB during compromise quarantine.
+		if err := r.quarantineSharedClusterRoleBinding(ctx,
+			vkAccessClusterRoleBindingName(namespace, serviceAccount+"-global-read"), namespace, serviceAccount,
+			managedprotocol.NetworkManagementGlobalReadClusterRole); err != nil {
+			errs = append(errs, err)
+		}
+		if err := r.quarantineSharedRoleBinding(ctx,
+			types.NamespacedName{Namespace: namespace, Name: serviceAccount}, namespace, serviceAccount); err != nil {
+			errs = append(errs, err)
 		}
 		leaseNamespace := r.LeaseNamespace
 		if leaseNamespace == "" {
 			leaseNamespace = namespace
 		}
 		if leaseNamespace != namespace {
-			if err := r.revokeSharedRoleBinding(ctx, types.NamespacedName{
+			if err := r.quarantineSharedRoleBinding(ctx, types.NamespacedName{
 				Namespace: leaseNamespace,
 				Name:      networkLeaseRoleBindingName(namespace, serviceAccount),
-			}, namespace, serviceAccount, managedprotocol.WorkerModeNetworkManagement); err != nil {
-				return err
+			}, namespace, serviceAccount); err != nil {
+				errs = append(errs, err)
 			}
 		}
-		return r.revokeSharedClusterRoleBinding(ctx,
-			vkAccessClusterRoleBindingName(namespace, serviceAccount+"-global-read"), namespace, serviceAccount,
-			managedprotocol.WorkerModeNetworkManagement)
 	default:
 		return fmt.Errorf("unknown reserved shared ServiceAccount %s/%s", namespace, serviceAccount)
 	}
+	// Canonical names are not a sufficient quarantine boundary: a namespace
+	// actor may bind the reusable identity from any RoleBinding name. Remove
+	// every exact-subject grant in the device and explicit lease namespaces, and
+	// prove absence through the direct reader before this account can reappear.
+	if err := r.quarantineSharedWorkerRoleBindings(ctx, namespace, serviceAccount); err != nil {
+		errs = append(errs, err)
+	}
+	return stderrors.Join(errs...)
+}
+
+func (r *CiscoDeviceReconciler) quarantineSharedWorkerRoleBindings(ctx context.Context,
+	accountNamespace, serviceAccount string) error {
+	namespaces := []string{accountNamespace}
+	leaseNamespace := strings.TrimSpace(r.LeaseNamespace)
+	if leaseNamespace != "" && leaseNamespace != accountNamespace {
+		namespaces = append(namespaces, leaseNamespace)
+	}
+	var errs []error
+	for _, namespace := range namespaces {
+		var bindings rbacv1.RoleBindingList
+		if err := r.reader().List(ctx, &bindings, client.InNamespace(namespace)); err != nil {
+			errs = append(errs, fmt.Errorf("list shared worker RoleBindings in namespace %q during quarantine: %w", namespace, err))
+			continue
+		}
+		for i := range bindings.Items {
+			binding := &bindings.Items[i]
+			if !hasWorkerSubject(binding.Subjects, accountNamespace, serviceAccount) {
+				continue
+			}
+			if err := deleteWithUIDPrecondition(ctx, r.Client, binding); err != nil && !apierrors.IsNotFound(err) {
+				errs = append(errs, fmt.Errorf("quarantine shared worker RoleBinding %s: %w",
+					client.ObjectKeyFromObject(binding), err))
+			}
+		}
+	}
+	// Close the list/delete race through the uncached reader. Any surviving or
+	// concurrently-created exact-subject grant keeps quarantine fail closed.
+	for _, namespace := range namespaces {
+		var remaining rbacv1.RoleBindingList
+		if err := r.reader().List(ctx, &remaining, client.InNamespace(namespace)); err != nil {
+			errs = append(errs, fmt.Errorf("verify shared worker RoleBindings in namespace %q after quarantine: %w", namespace, err))
+			continue
+		}
+		for i := range remaining.Items {
+			binding := &remaining.Items[i]
+			if hasWorkerSubject(binding.Subjects, accountNamespace, serviceAccount) {
+				errs = append(errs, fmt.Errorf("shared worker RoleBinding %s remains after quarantine",
+					client.ObjectKeyFromObject(binding)))
+			}
+		}
+	}
+	return stderrors.Join(errs...)
+}
+
+func (r *CiscoDeviceReconciler) quarantineExactSharedServiceAccount(ctx context.Context,
+	namespace, serviceAccount, account string) error {
+	key := types.NamespacedName{Namespace: namespace, Name: serviceAccount}
+	var existing corev1.ServiceAccount
+	if err := r.reader().Get(ctx, key, &existing); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("read shared worker ServiceAccount %s during quarantine: %w", key, err)
+	}
+	role := existing.Annotations[annotationSharedWorkerRole]
+	if !sharedWorkerRoleAllowed(account, role) ||
+		!sharedWorkerMetadataMatches(&existing, namespace, account, role) {
+		return fmt.Errorf("retain foreign shared worker ServiceAccount %s during quarantine", key)
+	}
+	if err := deleteWithUIDPrecondition(ctx, r.Client, &existing); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("rotate shared worker ServiceAccount %s during quarantine: %w", key, err)
+	}
+	var remaining corev1.ServiceAccount
+	if err := r.reader().Get(ctx, key, &remaining); err == nil {
+		return fmt.Errorf("shared worker ServiceAccount %s remains after quarantine", key)
+	} else if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("verify shared worker ServiceAccount %s after quarantine: %w", key, err)
+	}
+	return nil
+}
+
+// quarantineSharedRoleBinding removes a canonical reserved-account grant when
+// its expected ServiceAccount subject is present. The namespaced roleRef,
+// additive subjects, and mutable metadata are attacker-controlled after a
+// delete/recreate; none may pin compromised authority. A genuinely foreign
+// binding with no reserved subject is retained.
+func (r *CiscoDeviceReconciler) quarantineSharedRoleBinding(ctx context.Context, key types.NamespacedName,
+	accountNamespace, serviceAccount string) error {
+	var binding rbacv1.RoleBinding
+	if err := r.reader().Get(ctx, key, &binding); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("read shared worker RoleBinding %s during quarantine: %w", key, err)
+	}
+	if !hasWorkerSubject(binding.Subjects, accountNamespace, serviceAccount) {
+		return fmt.Errorf("retain foreign shared worker RoleBinding %s during quarantine", key)
+	}
+	if err := deleteWithUIDPrecondition(ctx, r.Client, &binding); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("quarantine shared worker RoleBinding %s: %w", key, err)
+	}
+	return nil
+}
+
+func (r *CiscoDeviceReconciler) quarantineSharedClusterRoleBinding(ctx context.Context, name, namespace,
+	serviceAccount string, allowedRoles ...string) error {
+	var binding rbacv1.ClusterRoleBinding
+	if err := r.reader().Get(ctx, types.NamespacedName{Name: name}, &binding); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("read shared worker ClusterRoleBinding %s during quarantine: %w", name, err)
+	}
+	if binding.RoleRef.APIGroup != rbacv1.GroupName || binding.RoleRef.Kind != "ClusterRole" ||
+		!stringInSlice(binding.RoleRef.Name, allowedRoles) ||
+		!hasWorkerSubject(binding.Subjects, namespace, serviceAccount) {
+		return fmt.Errorf("retain foreign shared worker ClusterRoleBinding %s during quarantine", name)
+	}
+	if err := deleteWithUIDPrecondition(ctx, r.Client, &binding); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("quarantine shared worker ClusterRoleBinding %s: %w", name, err)
+	}
+	return nil
+}
+
+func stringInSlice(value string, candidates []string) bool {
+	for _, candidate := range candidates {
+		if value == candidate {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *CiscoDeviceReconciler) ensureSharedServiceAccount(ctx context.Context, namespace, name, account, role string) error {
+	if strings.TrimSpace(r.WorkerServiceAccountPolicyEpoch) == "" {
+		return fmt.Errorf("shared worker ServiceAccount policy epoch is empty")
+	}
 	key := types.NamespacedName{Namespace: namespace, Name: name}
 	var existing corev1.ServiceAccount
 	if err := r.reader().Get(ctx, key, &existing); err == nil {
@@ -913,6 +1250,9 @@ func (r *CiscoDeviceReconciler) ensureSharedServiceAccount(ctx context.Context, 
 		if !sharedWorkerRoleAllowed(account, existingRole) ||
 			!sharedWorkerMetadataMatches(&existing, namespace, account, existingRole) {
 			return fmt.Errorf("shared worker ServiceAccount %s already exists without exact controller provenance", key)
+		}
+		if existing.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy] != r.WorkerServiceAccountPolicyEpoch {
+			return fmt.Errorf("shared worker ServiceAccount %s predates the verified reserved-account admission generation", key)
 		}
 	} else if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("read shared worker ServiceAccount %s: %w", key, err)
@@ -925,8 +1265,12 @@ func (r *CiscoDeviceReconciler) ensureSharedServiceAccount(ctx context.Context, 
 				!sharedWorkerMetadataMatches(sa, namespace, account, existingRole) {
 				return fmt.Errorf("shared worker ServiceAccount %s is not an exact reusable account", key)
 			}
+			if sa.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy] != r.WorkerServiceAccountPolicyEpoch {
+				return fmt.Errorf("shared worker ServiceAccount %s requires UID rotation", key)
+			}
 		}
 		applySharedWorkerAnnotations(sa, namespace, account, role)
+		sa.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy] = r.WorkerServiceAccountPolicyEpoch
 		return nil
 	})
 	if err != nil {
@@ -1063,27 +1407,55 @@ func (r *CiscoDeviceReconciler) auditManagedSharedWorkerBindings(ctx context.Con
 	if networkAccess != managedprotocol.WorkerAccessDisabled {
 		allowedCRB[networkCRB] = globalReadRole
 	}
-	roleBindings := make([]rbacv1.RoleBinding, 0, len(allowedRB))
 	bindingNamespaces := []string{accountNamespace}
 	if leaseNamespace != accountNamespace {
 		bindingNamespaces = append(bindingNamespaces, leaseNamespace)
 	}
+	return r.auditSharedWorkerBindingSet(ctx, accountNamespace, bindingNamespaces,
+		map[string]string{
+			appSA:     managedprotocol.WorkerModeAppHosting,
+			networkSA: managedprotocol.WorkerModeNetworkManagement,
+		}, allowedRB, allowedCRB)
+}
+
+// auditManagedSharedAppWorkerBindings closes the app-plane post-bind race when
+// a planned network transition remains fenced. The network identity is
+// intentionally outside this expected set because it may still carry the
+// prior, mutation-protected profile until its own transition can proceed.
+func (r *CiscoDeviceReconciler) auditManagedSharedAppWorkerBindings(ctx context.Context,
+	accountNamespace, leaseNamespace, appSA, appCRB, appRole, appDeviceRole, appAccess string) error {
+	allowedRB := map[types.NamespacedName]string{}
+	if appAccess == managedprotocol.WorkerAccessReadWrite {
+		allowedRB[types.NamespacedName{Namespace: accountNamespace, Name: appSA}] = appDeviceRole
+	}
+	allowedCRB := map[string]string{}
+	if appAccess != managedprotocol.WorkerAccessDisabled {
+		allowedCRB[appCRB] = appRole
+	}
+	bindingNamespaces := []string{accountNamespace}
+	if leaseNamespace != accountNamespace {
+		bindingNamespaces = append(bindingNamespaces, leaseNamespace)
+	}
+	return r.auditSharedWorkerBindingSet(ctx, accountNamespace, bindingNamespaces,
+		map[string]string{appSA: managedprotocol.WorkerModeAppHosting}, allowedRB, allowedCRB)
+}
+
+func (r *CiscoDeviceReconciler) auditSharedWorkerBindingSet(ctx context.Context, accountNamespace string,
+	bindingNamespaces []string, accounts map[string]string, allowedRB map[types.NamespacedName]string,
+	allowedCRB map[string]string) error {
+	roleBindings := make([]rbacv1.RoleBinding, 0, len(allowedRB))
 	for _, namespace := range bindingNamespaces {
 		var namespaced rbacv1.RoleBindingList
-		if err := r.Client.List(ctx, &namespaced, client.InNamespace(namespace)); err != nil {
+		if err := r.reader().List(ctx, &namespaced, client.InNamespace(namespace)); err != nil {
 			return fmt.Errorf("audit shared worker RoleBindings in namespace %q: %w", namespace, err)
 		}
 		roleBindings = append(roleBindings, namespaced.Items...)
 	}
 	for i := range roleBindings {
 		binding := &roleBindings[i]
-		for _, sa := range []string{appSA, networkSA} {
+		for sa, account := range accounts {
 			if !hasWorkerSubject(binding.Subjects, accountNamespace, sa) {
 				continue
-			}
-			account := managedprotocol.WorkerModeNetworkManagement
-			if sa == appSA {
-				account = managedprotocol.WorkerModeAppHosting
 			}
 			key := client.ObjectKeyFromObject(binding)
 			role, ok := allowedRB[key]
@@ -1095,21 +1467,17 @@ func (r *CiscoDeviceReconciler) auditManagedSharedWorkerBindings(ctx context.Con
 		}
 	}
 	var clusterRoleBindings rbacv1.ClusterRoleBindingList
-	// ClusterRoleBinding events enqueue the affected device namespace, so the
-	// synchronized manager cache avoids one uncached cluster-wide API scan per
-	// device reconciliation without weakening prompt additive-grant detection.
-	if err := r.Client.List(ctx, &clusterRoleBindings); err != nil {
+	// This is the post-bind race-closure read. It must bypass the informer cache
+	// so an additive grant created concurrently with this reconcile cannot be
+	// hidden until a later watch event.
+	if err := r.reader().List(ctx, &clusterRoleBindings); err != nil {
 		return fmt.Errorf("audit shared worker ClusterRoleBindings: %w", err)
 	}
 	for i := range clusterRoleBindings.Items {
 		binding := &clusterRoleBindings.Items[i]
-		for _, sa := range []string{appSA, networkSA} {
+		for sa, account := range accounts {
 			if !hasWorkerSubject(binding.Subjects, accountNamespace, sa) {
 				continue
-			}
-			account := managedprotocol.WorkerModeNetworkManagement
-			if sa == appSA {
-				account = managedprotocol.WorkerModeAppHosting
 			}
 			role, ok := allowedCRB[binding.Name]
 			if !ok || binding.RoleRef != (rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: role}) ||

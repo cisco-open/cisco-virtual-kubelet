@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -48,8 +49,11 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme                                   = runtime.NewScheme()
+	setupLog                                 = ctrl.Log.WithName("setup")
+	generatedWorkerServiceAccountNamePattern = regexp.MustCompile(
+		`^cisco-vk-(managed|legacy)-[a-z0-9]([-a-z0-9.]{0,61}[a-z0-9])?-[a-f0-9]{8}$`,
+	)
 )
 
 var (
@@ -246,6 +250,7 @@ func runManager(cmd *cobra.Command, args []string) error {
 		os.Exit(1)
 	}
 	retirementMode := false
+	workerServiceAccountPolicyEpoch := ""
 	if !enableManagedTopology {
 		retirementMode, err = managedTopologyStatePresent(signalCtx, mgr.GetAPIReader())
 		if err != nil {
@@ -278,7 +283,7 @@ func runManager(cmd *cobra.Command, args []string) error {
 		// Admission is the ownership boundary for the policy and ledger. Prove
 		// that boundary before BootstrapAdminPolicy is allowed to initialize or
 		// bind either ConfigMap.
-		if err := verifyManagedAdmissionContract(
+		admissionVerification, err := verifyManagedAdmissionContract(
 			signalCtx,
 			cfg,
 			policyInput.AdmissionPrefix,
@@ -286,9 +291,14 @@ func runManager(cmd *cobra.Command, args []string) error {
 			policyInput.Config.LedgerName,
 			appHostingServiceAccount,
 			networkManagementServiceAccount,
-		); err != nil {
+		)
+		if err != nil {
 			return fmt.Errorf("managed topology native admission preflight: %w", err)
 		}
+		// The preflight derives this from the same verified reads of both shared
+		// and generated account policy/binding UIDs, generations, and compiled
+		// Specs. Metadata-only updates therefore do not rotate worker identities.
+		workerServiceAccountPolicyEpoch = admissionVerification.WorkerServiceAccountPolicyEpoch
 		if enableManagedTopology {
 			if _, err := topologyrollout.BootstrapAdminPolicy(
 				signalCtx,
@@ -330,6 +340,7 @@ func runManager(cmd *cobra.Command, args []string) error {
 		NetworkManagementServiceAccount: networkManagementServiceAccount,
 		AppHostingAccessMode:            appHostingAccessMode,
 		NetworkManagementAccessMode:     networkManagementAccessMode,
+		WorkerServiceAccountPolicyEpoch: workerServiceAccountPolicyEpoch,
 		AggregatorEnabled:               enableAggregator,
 		ManagedTopology:                 enableManagedTopology,
 		TopologyPolicyNamespace:         topologyPolicyNamespace,
@@ -419,6 +430,9 @@ func validateManagedWorkerAccountOptions(appAccount, appAccess, networkAccount, 
 		}
 		if problems := utilvalidation.IsDNS1123Label(account); len(problems) != 0 {
 			return fmt.Errorf("invalid %s ServiceAccount name %q: %s", label, account, strings.Join(problems, "; "))
+		}
+		if generatedWorkerServiceAccountNamePattern.MatchString(account) {
+			return fmt.Errorf("invalid %s ServiceAccount name %q: name overlaps the reserved per-device generated-worker identity pattern", label, account)
 		}
 	}
 	if appAccount == networkAccount {

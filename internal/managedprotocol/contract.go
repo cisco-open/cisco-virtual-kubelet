@@ -43,6 +43,38 @@ func CopyNetworkObjectBinding(source map[string]string) map[string]string {
 	return out
 }
 
+// NetworkObjectBindingComplete reports whether annotations contain the exact
+// non-empty managed identity envelope that admission requires on a
+// device-scoped network object. Callers use this at result producer boundaries
+// so an incomplete owner cannot emit a partially bound child during rollout.
+func NetworkObjectBindingComplete(annotations map[string]string) bool {
+	if annotations[AnnotationManaged] != "true" {
+		return false
+	}
+	for _, key := range NetworkObjectBindingAnnotationKeys {
+		if annotations[key] == "" {
+			return false
+		}
+	}
+	return true
+}
+
+// NetworkObjectBindingMatches reports whether a child carries the complete
+// protected identity envelope of its managed owner. Admission cannot
+// dereference owner references, so result producers and consumers perform the
+// cross-object comparison where both objects are available.
+func NetworkObjectBindingMatches(owner, child map[string]string) bool {
+	if !NetworkObjectBindingComplete(owner) {
+		return false
+	}
+	for _, key := range NetworkObjectBindingAnnotationKeys {
+		if child[key] != owner[key] {
+			return false
+		}
+	}
+	return true
+}
+
 // NetworkResultNamePrefix uses the immutable device UID rather than mutable,
 // potentially 253-byte object names. Admission bounds UIDs to 64 DNS-safe
 // bytes, leaving ample room for the owner UID and result discriminator.
@@ -54,6 +86,12 @@ const (
 	Version                            = "rollout-v1"
 	AdmissionContractVersion           = "v2"
 	AnnotationAdmissionContractVersion = "topology.cisco.vk/admission-contract-version"
+	AnnotationAdmissionContractDigest  = "topology.cisco.vk/admission-contract-digest"
+	// AnnotationWorkerServiceAccountPolicy binds a shared or generated worker
+	// ServiceAccount incarnation to the already-preflighted reserved-account
+	// admission policy and binding. A contract upgrade therefore forces one UID
+	// rotation instead of trusting legacy token Secret metadata.
+	AnnotationWorkerServiceAccountPolicy = "topology.cisco.vk/service-account-policy"
 
 	AnnotationManaged          = "topology.cisco.vk/managed"
 	AnnotationDeviceNamespace  = "topology.cisco.vk/device-namespace"

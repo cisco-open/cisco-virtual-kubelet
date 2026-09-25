@@ -17,6 +17,8 @@ package controller
 import (
 	"context"
 	stderrors "errors"
+	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -27,10 +29,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 )
 
 func managedAccessDevice(name string) *ciskov1.CiscoDevice {
@@ -253,6 +257,107 @@ func TestManagedFunctionalAccountRejectsReservedNameCollision(t *testing.T) {
 	}
 }
 
+func TestManagedSharedBindingPostAuditUsesAPIReader(t *testing.T) {
+	ctx := context.Background()
+	device := managedAccessDevice("switch-binding-api-reader")
+	r := reconcilerFor(t, device)
+	r.ManagedTopology = true
+	additive := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "just-created-additive-network-grant",
+	}, RoleRef: rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: managedprotocol.NetworkManagementReadOnlyClusterRole,
+	}, Subjects: sharedWorkerSubject(device.Namespace, r.networkManagementServiceAccountName())}
+	r.APIReader = fake.NewClientBuilder().WithScheme(r.Scheme).WithObjects(device.DeepCopy(), additive).Build()
+
+	// The cached writer deliberately does not contain the just-created grant.
+	// The post-bind audit must still observe it through the direct reader.
+	if err := r.Get(ctx, client.ObjectKeyFromObject(additive), &rbacv1.RoleBinding{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("cached writer unexpectedly contains additive grant: %v", err)
+	}
+	appRole, appAccess, networkRole, networkAccess, globalReadRole, err := r.managedWorkerProfiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = r.auditManagedSharedWorkerBindings(ctx, device.Namespace, device.Namespace,
+		r.appHostingServiceAccountName(), r.networkManagementServiceAccountName(),
+		vkAccessClusterRoleBindingName(device.Namespace, r.appHostingServiceAccountName()),
+		vkAccessClusterRoleBindingName(device.Namespace, r.networkManagementServiceAccountName()+"-global-read"), "",
+		appRole, r.appHostingDeviceReadRoleName(), networkRole, networkManagementLeaseRole(networkAccess),
+		globalReadRole, appAccess, networkAccess)
+	if err == nil || !strings.Contains(err.Error(), "unexpected additive RoleBinding") {
+		t.Fatalf("APIReader post-bind audit error=%v", err)
+	}
+}
+
+type postBindRoleBindingInjector struct {
+	client.Reader
+	writer     client.Client
+	triggerCRB string
+	additive   *rbacv1.RoleBinding
+	injected   bool
+}
+
+func (r *postBindRoleBindingInjector) List(ctx context.Context, list client.ObjectList,
+	opts ...client.ListOption) error {
+	if _, ok := list.(*rbacv1.RoleBindingList); ok && !r.injected {
+		var trigger rbacv1.ClusterRoleBinding
+		if err := r.Reader.Get(ctx, types.NamespacedName{Name: r.triggerCRB}, &trigger); err == nil {
+			if err := r.writer.Create(ctx, r.additive.DeepCopy()); err != nil {
+				return err
+			}
+			r.injected = true
+		}
+	}
+	return r.Reader.List(ctx, list, opts...)
+}
+
+func TestManagedSharedBindingPostAuditQuarantinesConcurrentGrant(t *testing.T) {
+	ctx := context.Background()
+	device := managedAccessDevice("switch-binding-race-closure")
+	r := reconcilerFor(t, device)
+	r.ManagedTopology = true
+	networkAccount := r.networkManagementServiceAccountName()
+	additive := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "concurrent-additive-network-grant",
+	}, RoleRef: rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: managedprotocol.NetworkManagementReadOnlyClusterRole,
+	}, Subjects: sharedWorkerSubject(device.Namespace, networkAccount)}
+	workload := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "concurrent-grant-network-process", UID: "concurrent-grant-network-process-uid",
+	}, Spec: corev1.PodSpec{ServiceAccountName: networkAccount}}
+	if err := r.Create(ctx, workload); err != nil {
+		t.Fatal(err)
+	}
+	injector := &postBindRoleBindingInjector{
+		Reader: r.Client, writer: r.Client, additive: additive,
+		triggerCRB: vkAccessClusterRoleBindingName(device.Namespace, r.appHostingServiceAccountName()),
+	}
+	r.APIReader = injector
+
+	err := r.ensureManagedSharedWorkerAccess(ctx, device)
+	if err == nil || !strings.Contains(err.Error(), "unexpected additive RoleBinding") ||
+		!strings.Contains(err.Error(), "worker processes were quiesced") {
+		t.Fatalf("post-bind race quarantine error=%v", err)
+	}
+	if !injector.injected {
+		t.Fatal("test did not inject the additive RoleBinding after canonical access was bound")
+	}
+	for _, object := range []client.Object{
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: additive.Namespace, Name: additive.Name}},
+		&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: workload.Namespace, Name: workload.Name}},
+	} {
+		if err := r.Get(ctx, client.ObjectKeyFromObject(object), object); !apierrors.IsNotFound(err) {
+			t.Fatalf("post-bind race object survived quarantine: %T %v", object, err)
+		}
+	}
+	assertNoSharedWorkerAuthority(t, r, device.Namespace)
+	for _, account := range []string{r.appHostingServiceAccountName(), networkAccount} {
+		if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: account}, &corev1.ServiceAccount{}); !apierrors.IsNotFound(err) {
+			t.Fatalf("post-bind race left shared ServiceAccount %s authorized: %v", account, err)
+		}
+	}
+}
+
 func TestManagedFunctionalAccountRejectsLegacyTokenSecret(t *testing.T) {
 	ctx := context.Background()
 	device := managedAccessDevice("switch-legacy-token")
@@ -277,6 +382,687 @@ func TestManagedFunctionalAccountRejectsLegacyTokenSecret(t *testing.T) {
 	if len(accounts.Items) != 0 {
 		t.Fatalf("legacy token audit still provisioned shared accounts: %#v", accounts.Items)
 	}
+}
+
+func TestManagedFunctionalAccountsRotateAtReservedPolicyEpoch(t *testing.T) {
+	ctx := context.Background()
+	device := managedAccessDevice("switch-shared-epoch")
+	r := reconcilerFor(t, device)
+	r.ManagedTopology = true
+	r.WorkerServiceAccountPolicyEpoch = "sha256:old-policy-and-binding-generation"
+	if err := r.ensureManagedSharedWorkerAccess(ctx, device); err != nil {
+		t.Fatalf("seed pre-upgrade shared worker access: %v", err)
+	}
+	prepareManagedAccessSettlement(t, r)
+	decoy := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "token-audit-decoy", UID: "token-audit-decoy-uid",
+	}}
+	if err := r.Create(ctx, decoy); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, worker := range []struct {
+		plane   string
+		account string
+	}{
+		{managedprotocol.WorkerModeAppHosting, r.appHostingServiceAccountName()},
+		{managedprotocol.WorkerModeNetworkManagement, r.networkManagementServiceAccountName()},
+	} {
+		deployment, _, _ := managedWorkerObjects(device, worker.plane, worker.account)
+		if err := r.Create(ctx, deployment); err != nil {
+			t.Fatal(err)
+		}
+		// A token signed before admission protection may remain valid after its
+		// mutable annotation is changed to a different live, non-reserved account.
+		// Epoch rotation—not metadata inspection—invalidates the claimed old UID.
+		hidden := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+			Namespace: device.Namespace, Name: "annotation-disguised-token-" + worker.plane,
+			Annotations: map[string]string{
+				corev1.ServiceAccountNameKey: decoy.Name,
+				corev1.ServiceAccountUIDKey:  string(decoy.UID),
+			},
+		}, Type: corev1.SecretTypeServiceAccountToken, Data: map[string][]byte{"token": []byte("previously-signed-jwt")}}
+		if err := r.Create(ctx, hidden); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rogueSharedPod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "pre-policy-network-process", UID: "pre-policy-network-process-uid",
+	}, Spec: corev1.PodSpec{ServiceAccountName: r.networkManagementServiceAccountName()}}
+	if err := r.Create(ctx, rogueSharedPod); err != nil {
+		t.Fatal(err)
+	}
+
+	tracker := &generatedAccessDeleteOrderClient{Client: r.Client}
+	r.Client = tracker
+	r.WorkerServiceAccountPolicyEpoch = "sha256:new-policy-and-binding-generation"
+	err := r.ensureManagedSharedWorkerAccess(ctx, device)
+	var transition *sharedWorkerAccessTransition
+	if !stderrors.As(err, &transition) ||
+		!sharedTransitionContains(transition.planes, managedprotocol.WorkerModeAppHosting) ||
+		!sharedTransitionContains(transition.planes, managedprotocol.WorkerModeNetworkManagement) {
+		t.Fatalf("shared policy-epoch rotation error=%v, transition=%#v", err, transition)
+	}
+	assertNoSharedWorkerAuthority(t, r, device.Namespace)
+	for _, account := range []string{r.appHostingServiceAccountName(), r.networkManagementServiceAccountName()} {
+		if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: account}, &corev1.ServiceAccount{}); !apierrors.IsNotFound(err) {
+			t.Fatalf("old shared ServiceAccount %s survived epoch rotation: %v", account, err)
+		}
+	}
+	for _, name := range []string{
+		device.Name + deploymentSuffix,
+		networkDeploymentName(device.Name, string(device.UID)),
+	} {
+		if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: name}, &appsv1.Deployment{}); !apierrors.IsNotFound(err) {
+			t.Fatalf("old shared worker Deployment %s survived epoch rotation: %v", name, err)
+		}
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(rogueSharedPod), &corev1.Pod{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("unproven process using old shared account survived epoch quarantine: %v", err)
+	}
+
+	// Once both old planes are observed gone, each functional account is
+	// recreated with the same verified policy+binding epoch and a fresh UID on
+	// a real API server. The annotation-disguised Secrets are never trusted or
+	// mutated.
+	if err := r.ensureManagedSharedWorkerAccess(ctx, device); err != nil {
+		t.Fatalf("recreate shared worker access after epoch rotation: %v", err)
+	}
+	for _, account := range []string{r.appHostingServiceAccountName(), r.networkManagementServiceAccountName()} {
+		var rotated corev1.ServiceAccount
+		if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: account}, &rotated); err != nil {
+			t.Fatal(err)
+		}
+		if got := rotated.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy]; got != r.WorkerServiceAccountPolicyEpoch {
+			t.Fatalf("rotated shared ServiceAccount %s policy epoch=%q, want %q", account, got, r.WorkerServiceAccountPolicyEpoch)
+		}
+	}
+}
+
+func TestManagedFunctionalAccountPolicyEpochWaitsForNetworkMutations(t *testing.T) {
+	ctx := context.Background()
+	device := managedAccessDevice("switch-shared-epoch-active")
+	device.Status.MaintenanceSession = &ciskov1.DeviceMaintenanceSessionStatus{
+		Phase: ciskov1.DeviceMaintenanceSessionActive, SessionToken: "active-gnoi-session",
+	}
+	r := reconcilerFor(t, device)
+	uidClient := &serviceAccountUIDAssigningClient{Client: r.Client}
+	r.Client = uidClient
+	r.ManagedTopology = true
+	r.WorkerServiceAccountPolicyEpoch = "sha256:old-policy-and-binding-generation"
+	if err := r.ensureManagedSharedWorkerAccess(ctx, device); err != nil {
+		t.Fatalf("seed pre-upgrade shared worker access: %v", err)
+	}
+	appAccount := r.appHostingServiceAccountName()
+	networkAccount := r.networkManagementServiceAccountName()
+	var oldApp, oldNetwork corev1.ServiceAccount
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: appAccount}, &oldApp); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: networkAccount}, &oldNetwork); err != nil {
+		t.Fatal(err)
+	}
+	networkDeployment, _, _ := managedWorkerObjects(device, managedprotocol.WorkerModeNetworkManagement, networkAccount)
+	if err := r.Create(ctx, networkDeployment); err != nil {
+		t.Fatal(err)
+	}
+
+	r.WorkerServiceAccountPolicyEpoch = "sha256:new-policy-and-binding-generation"
+	err := r.ensureManagedSharedWorkerAccess(ctx, device)
+	var transition *sharedWorkerAccessTransition
+	if !stderrors.As(err, &transition) ||
+		!strings.Contains(err.Error(), "planned network worker policy-epoch rotation is waiting") ||
+		!strings.Contains(err.Error(), "unresolved maintenance session") {
+		t.Fatalf("active network mutation epoch transition error=%v", err)
+	}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: appAccount},
+		&corev1.ServiceAccount{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("first rotation pass did not retire old app account: %v", err)
+	}
+
+	// A second reconcile observes the retired app UID and regrants that plane
+	// independently. Only the network identity remains fenced by its active
+	// mutation, so app hosting is not unavailable for the mutation's lifetime.
+	err = r.ensureManagedSharedWorkerAccess(ctx, device)
+	if !stderrors.As(err, &transition) ||
+		sharedTransitionContains(transition.planes, managedprotocol.WorkerModeAppHosting) ||
+		!sharedTransitionContains(transition.planes, managedprotocol.WorkerModeNetworkManagement) {
+		t.Fatalf("second epoch transition error=%v, transition=%#v", err, transition)
+	}
+	var rotatedApp corev1.ServiceAccount
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: appAccount}, &rotatedApp); err != nil {
+		t.Fatalf("app account was not restored while network rotation remained blocked: %v", err)
+	}
+	if rotatedApp.UID == "" || rotatedApp.UID == oldApp.UID {
+		t.Fatalf("app account UID was not rotated: old=%q current=%q", oldApp.UID, rotatedApp.UID)
+	}
+	if got := rotatedApp.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy]; got != r.WorkerServiceAccountPolicyEpoch {
+		t.Fatalf("restored app account epoch=%q, want %q", got, r.WorkerServiceAccountPolicyEpoch)
+	}
+	var currentNetwork corev1.ServiceAccount
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: networkAccount}, &currentNetwork); err != nil {
+		t.Fatalf("planned migration revoked network account before mutation settled: %v", err)
+	}
+	if currentNetwork.UID != oldNetwork.UID {
+		t.Fatalf("planned migration rotated network UID while mutation active: old=%q current=%q", oldNetwork.UID, currentNetwork.UID)
+	}
+	if got := currentNetwork.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy]; got != "sha256:old-policy-and-binding-generation" {
+		t.Fatalf("planned migration changed network epoch while mutation active: %q", got)
+	}
+	assertClusterBindingRole(t, r,
+		vkAccessClusterRoleBindingName(device.Namespace, appAccount), managedprotocol.AppHostingReadWriteClusterRole)
+	assertRoleBindingRole(t, r,
+		types.NamespacedName{Namespace: device.Namespace, Name: appAccount}, managedprotocol.AppHostingDeviceReadClusterRole)
+	assertRoleBindingRole(t, r,
+		types.NamespacedName{Namespace: device.Namespace, Name: networkAccount},
+		managedprotocol.NetworkManagementReadWriteClusterRole)
+	if err := r.Get(ctx, client.ObjectKeyFromObject(networkDeployment), &appsv1.Deployment{}); err != nil {
+		t.Fatalf("planned network rotation drained the old worker while mutation active: %v", err)
+	}
+}
+
+func TestManagedReconcileRestoresAppWorkerWhileNetworkEpochRotationIsBlocked(t *testing.T) {
+	t.Setenv(envCVKGNOIDisabled, "true")
+	ctx := context.Background()
+	device := newDevice("switch-shared-epoch-controller", "edge")
+	device.UID = "switch-shared-epoch-controller-uid"
+	device.Spec.PhysicalIdentity = "serial-switch-shared-epoch-controller"
+	device.Labels = map[string]string{
+		managedprotocol.AnnotationManaged:          "true",
+		topology.CiscoTopologyLabelPrefix + "site": "site-a",
+	}
+	appUsername := "system:serviceaccount:" + device.Namespace + ":" + managedprotocol.AppHostingServiceAccount
+	networkUsername := "system:serviceaccount:" + device.Namespace + ":" + managedprotocol.NetworkManagementServiceAccount
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+		Name: device.Name, UID: "switch-shared-epoch-controller-node-uid",
+		Labels: map[string]string{topology.LabelType: topology.TypeVirtualKubelet},
+		Annotations: map[string]string{
+			managedprotocol.AnnotationManaged:               "true",
+			managedprotocol.AnnotationDeviceNamespace:       device.Namespace,
+			managedprotocol.AnnotationDeviceName:            device.Name,
+			managedprotocol.AnnotationDeviceUID:             string(device.UID),
+			managedprotocol.AnnotationNodeName:              device.Name,
+			managedprotocol.AnnotationNodeUID:               "switch-shared-epoch-controller-node-uid",
+			managedprotocol.AnnotationWorkerUsername:        appUsername,
+			managedprotocol.AnnotationAppWorkerUsername:     appUsername,
+			managedprotocol.AnnotationNetworkWorkerUsername: networkUsername,
+			managedprotocol.AnnotationWorkerProtocol:        managedprotocol.Version,
+		},
+	}, Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{{
+		Type: corev1.NodeReady, Status: corev1.ConditionTrue,
+	}}}}
+	policy, ledger := managedPolicyAndLedger(t, nil)
+	r := reconcilerFor(t, device, node, policy, ledger)
+	if err := opsv1alpha1.AddToScheme(r.Scheme); err != nil {
+		t.Fatal(err)
+	}
+	uidClient := &serviceAccountUIDAssigningClient{Client: r.Client}
+	r.Client = leaseUIDAssigningClient{Client: uidClient}
+	r.APIReader = r.Client
+	r.ManagedTopology = true
+	r.TopologyPolicyNamespace = policy.Namespace
+	r.TopologyPolicyName = policy.Name
+	r.WorkerServiceAccountPolicyEpoch = "sha256:old-policy-and-binding-generation"
+	request := reconcileRequest(device.Namespace, device.Name)
+	if _, err := r.Reconcile(ctx, request); err != nil {
+		t.Fatalf("seed managed worker planes: %v", err)
+	}
+
+	appAccount := r.appHostingServiceAccountName()
+	networkAccount := r.networkManagementServiceAccountName()
+	var oldApp, oldNetwork corev1.ServiceAccount
+	for key, target := range map[types.NamespacedName]*corev1.ServiceAccount{
+		{Namespace: device.Namespace, Name: appAccount}:     &oldApp,
+		{Namespace: device.Namespace, Name: networkAccount}: &oldNetwork,
+	} {
+		if err := r.Get(ctx, key, target); err != nil {
+			t.Fatal(err)
+		}
+	}
+	networkKey := types.NamespacedName{
+		Namespace: device.Namespace, Name: networkDeploymentName(device.Name, string(device.UID)),
+	}
+	var networkBefore appsv1.Deployment
+	if err := r.Get(ctx, networkKey, &networkBefore); err != nil {
+		t.Fatal(err)
+	}
+
+	var liveDevice ciskov1.CiscoDevice
+	if err := r.Get(ctx, client.ObjectKeyFromObject(device), &liveDevice); err != nil {
+		t.Fatal(err)
+	}
+	liveDevice.Status.TopologyLock = &ciskov1.DeviceTopologyLockStatus{
+		State: ciskov1.DeviceTopologyLockActive, ReservationID: "active-network-rollout",
+	}
+	if err := r.Status().Update(ctx, &liveDevice); err != nil {
+		t.Fatal(err)
+	}
+	r.WorkerServiceAccountPolicyEpoch = "sha256:new-policy-and-binding-generation"
+
+	// The first pass revokes the old app identity and worker. The second pass
+	// must restore the app plane while continuing to fence the network plane.
+	if _, err := r.Reconcile(ctx, request); err != nil {
+		t.Fatalf("retire old app epoch: %v", err)
+	}
+	result, err := r.Reconcile(ctx, request)
+	if err != nil {
+		t.Fatalf("restore app plane under network-only blocker: %v", err)
+	}
+	if result.RequeueAfter == 0 {
+		t.Fatal("network-only epoch blocker did not request a retry")
+	}
+
+	var rotatedApp, retainedNetwork corev1.ServiceAccount
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: appAccount}, &rotatedApp); err != nil {
+		t.Fatalf("rotated app ServiceAccount was not restored: %v", err)
+	}
+	if rotatedApp.UID == "" || rotatedApp.UID == oldApp.UID {
+		t.Fatalf("app ServiceAccount UID was not rotated: old=%q current=%q", oldApp.UID, rotatedApp.UID)
+	}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: networkAccount}, &retainedNetwork); err != nil {
+		t.Fatalf("network ServiceAccount was removed during an active mutation: %v", err)
+	}
+	if retainedNetwork.UID != oldNetwork.UID {
+		t.Fatalf("network ServiceAccount UID changed during an active mutation: old=%q current=%q",
+			oldNetwork.UID, retainedNetwork.UID)
+	}
+	var appDeployment appsv1.Deployment
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: device.Name + deploymentSuffix},
+		&appDeployment); err != nil {
+		t.Fatalf("app Deployment was not restored under network-only blocker: %v", err)
+	}
+	if appDeployment.Spec.Template.Spec.ServiceAccountName != appAccount {
+		t.Fatalf("restored app Deployment uses ServiceAccount %q, want %q",
+			appDeployment.Spec.Template.Spec.ServiceAccountName, appAccount)
+	}
+	var networkAfter appsv1.Deployment
+	if err := r.Get(ctx, networkKey, &networkAfter); err != nil {
+		t.Fatalf("network Deployment was removed during an active mutation: %v", err)
+	}
+	if networkAfter.UID != networkBefore.UID || networkAfter.ResourceVersion != networkBefore.ResourceVersion ||
+		!reflect.DeepEqual(networkAfter.Spec, networkBefore.Spec) {
+		t.Fatalf("network Deployment changed during its epoch blocker: before=%#v after=%#v",
+			networkBefore, networkAfter)
+	}
+}
+
+type serviceAccountUIDAssigningClient struct {
+	client.Client
+	next int
+}
+
+func (c *serviceAccountUIDAssigningClient) Create(ctx context.Context, object client.Object,
+	opts ...client.CreateOption) error {
+	switch typed := object.(type) {
+	case *corev1.ServiceAccount:
+		if typed.UID != "" {
+			break
+		}
+		c.next++
+		typed.UID = types.UID(fmt.Sprintf("server-assigned-service-account-uid-%d", c.next))
+	case *appsv1.Deployment:
+		if typed.UID != "" {
+			break
+		}
+		c.next++
+		typed.UID = types.UID(fmt.Sprintf("server-assigned-deployment-uid-%d", c.next))
+	}
+	return c.Client.Create(ctx, object, opts...)
+}
+
+func TestSharedPolicyEpochQuarantinesForeignAppBeforeNetworkMutationWait(t *testing.T) {
+	ctx := context.Background()
+	device := managedAccessDevice("switch-shared-epoch-mixed")
+	device.Status.MaintenanceSession = &ciskov1.DeviceMaintenanceSessionStatus{
+		Phase: ciskov1.DeviceMaintenanceSessionActive, SessionToken: "active-gnoi-session",
+	}
+	r := reconcilerFor(t, device)
+	r.ManagedTopology = true
+	r.WorkerServiceAccountPolicyEpoch = "sha256:old-policy-and-binding-generation"
+	if err := r.ensureManagedSharedWorkerAccess(ctx, device); err != nil {
+		t.Fatalf("seed pre-upgrade shared worker access: %v", err)
+	}
+
+	appAccount := r.appHostingServiceAccountName()
+	appKey := types.NamespacedName{Namespace: device.Namespace, Name: appAccount}
+	var oldApp corev1.ServiceAccount
+	if err := r.Get(ctx, appKey, &oldApp); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Delete(ctx, &oldApp); err != nil {
+		t.Fatal(err)
+	}
+	foreignApp := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+		Namespace: appKey.Namespace, Name: appKey.Name, UID: "foreign-app-account-uid",
+	}}
+	appPod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "foreign-app-process", UID: "foreign-app-process-uid",
+	}, Spec: corev1.PodSpec{ServiceAccountName: appAccount}}
+	for _, object := range []client.Object{foreignApp, appPod} {
+		if err := r.Create(ctx, object); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	r.WorkerServiceAccountPolicyEpoch = "sha256:new-policy-and-binding-generation"
+	err := r.ensureManagedSharedWorkerAccess(ctx, device)
+	if err == nil || !strings.Contains(err.Error(), "without exact controller provenance") {
+		t.Fatalf("mixed foreign-app/network-mutation error=%v", err)
+	}
+	var retainedApp corev1.ServiceAccount
+	if err := r.Get(ctx, appKey, &retainedApp); err != nil || retainedApp.UID != foreignApp.UID {
+		t.Fatalf("foreign app ServiceAccount was not retained: account=%#v err=%v", retainedApp, err)
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(appPod), &corev1.Pod{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("foreign app process survived concrete-compromise quarantine: %v", err)
+	}
+	for _, object := range []client.Object{
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: vkAccessClusterRoleBindingName(device.Namespace, appAccount)}},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: device.Namespace, Name: appAccount}},
+	} {
+		if err := r.Get(ctx, client.ObjectKeyFromObject(object), object); !apierrors.IsNotFound(err) {
+			t.Fatalf("exact app grant survived foreign-name quarantine: %T %v", object, err)
+		}
+	}
+
+	// The unrelated network account is an epoch-only planned migration. Its
+	// active mutation keeps the old UID and grants intact until settlement.
+	networkAccount := r.networkManagementServiceAccountName()
+	var retainedNetwork corev1.ServiceAccount
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: networkAccount}, &retainedNetwork); err != nil {
+		t.Fatalf("planned network rotation ignored active mutation: %v", err)
+	}
+	if got := retainedNetwork.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy]; got != "sha256:old-policy-and-binding-generation" {
+		t.Fatalf("planned network rotation changed epoch while mutation active: %q", got)
+	}
+	assertRoleBindingRole(t, r, types.NamespacedName{Namespace: device.Namespace, Name: networkAccount},
+		managedprotocol.NetworkManagementReadWriteClusterRole)
+}
+
+func TestManagedFunctionalAccountLegacyTokenQuarantinesDespiteNetworkMutation(t *testing.T) {
+	ctx := context.Background()
+	device := managedAccessDevice("switch-shared-epoch-compromised")
+	device.Status.MaintenanceSession = &ciskov1.DeviceMaintenanceSessionStatus{
+		Phase: ciskov1.DeviceMaintenanceSessionActive, SessionToken: "active-gnoi-session",
+	}
+	r := reconcilerFor(t, device)
+	r.ManagedTopology = true
+	r.WorkerServiceAccountPolicyEpoch = "sha256:old-policy-and-binding-generation"
+	if err := r.ensureManagedSharedWorkerAccess(ctx, device); err != nil {
+		t.Fatalf("seed pre-upgrade shared worker access: %v", err)
+	}
+	networkAccount := r.networkManagementServiceAccountName()
+	legacyToken := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "attributable-network-token",
+		Annotations: map[string]string{corev1.ServiceAccountNameKey: networkAccount},
+	}, Type: corev1.SecretTypeServiceAccountToken, Data: map[string][]byte{"token": []byte("signed-network-token")}}
+	if err := r.Create(ctx, legacyToken); err != nil {
+		t.Fatal(err)
+	}
+
+	r.WorkerServiceAccountPolicyEpoch = "sha256:new-policy-and-binding-generation"
+	err := r.ensureManagedSharedWorkerAccess(ctx, device)
+	var transition *sharedWorkerAccessTransition
+	if !stderrors.As(err, &transition) || !strings.Contains(err.Error(), "legacy ServiceAccount token Secret") ||
+		strings.Contains(err.Error(), "planned network worker policy-epoch rotation is waiting") {
+		t.Fatalf("compromise quarantine error=%v", err)
+	}
+	assertNoSharedWorkerAuthority(t, r, device.Namespace)
+	for _, account := range []string{r.appHostingServiceAccountName(), networkAccount} {
+		if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: account}, &corev1.ServiceAccount{}); !apierrors.IsNotFound(err) {
+			t.Fatalf("compromise quarantine retained shared account %s: %v", account, err)
+		}
+	}
+}
+
+func TestSharedPolicyEpochQuarantinesNetworkDespiteForeignAppCollision(t *testing.T) {
+	ctx := context.Background()
+	device := managedAccessDevice("switch-shared-epoch-collision")
+	r := reconcilerFor(t, device)
+	r.ManagedTopology = true
+	r.WorkerServiceAccountPolicyEpoch = "sha256:old-policy-and-binding-generation"
+	if err := r.ensureManagedSharedWorkerAccess(ctx, device); err != nil {
+		t.Fatalf("seed pre-upgrade shared worker access: %v", err)
+	}
+
+	appKey := types.NamespacedName{Namespace: device.Namespace, Name: r.appHostingServiceAccountName()}
+	var oldApp corev1.ServiceAccount
+	if err := r.Get(ctx, appKey, &oldApp); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Delete(ctx, &oldApp); err != nil {
+		t.Fatal(err)
+	}
+	foreignApp := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+		Namespace: appKey.Namespace, Name: appKey.Name, UID: "foreign-app-account-uid",
+	}}
+	if err := r.Create(ctx, foreignApp); err != nil {
+		t.Fatal(err)
+	}
+
+	networkAccount := r.networkManagementServiceAccountName()
+	legacyToken := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "attributable-network-token-with-app-collision",
+		Annotations: map[string]string{corev1.ServiceAccountNameKey: networkAccount},
+	}, Type: corev1.SecretTypeServiceAccountToken, Data: map[string][]byte{"token": []byte("signed-network-token")}}
+	networkPod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "network-process-with-app-collision", UID: "network-process-with-app-collision-uid",
+	}, Spec: corev1.PodSpec{ServiceAccountName: networkAccount}}
+	for _, object := range []client.Object{legacyToken, networkPod} {
+		if err := r.Create(ctx, object); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	r.WorkerServiceAccountPolicyEpoch = "sha256:new-policy-and-binding-generation"
+	err := r.ensureManagedSharedWorkerAccess(ctx, device)
+	if err == nil || !strings.Contains(err.Error(), "without exact controller provenance") {
+		t.Fatalf("foreign app collision error=%v", err)
+	}
+	var retainedApp corev1.ServiceAccount
+	if err := r.Get(ctx, appKey, &retainedApp); err != nil || retainedApp.UID != foreignApp.UID {
+		t.Fatalf("foreign app ServiceAccount was not retained: account=%#v err=%v", retainedApp, err)
+	}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: networkAccount},
+		&corev1.ServiceAccount{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("compromised network ServiceAccount survived unrelated app collision: %v", err)
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(networkPod), &corev1.Pod{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("network process survived unrelated app collision: %v", err)
+	}
+	assertNoSharedWorkerAuthority(t, r, device.Namespace)
+}
+
+func TestSharedLegacyTokenRevocationContinuesPastForeignBinding(t *testing.T) {
+	ctx := context.Background()
+	device := managedAccessDevice("switch-shared-mixed-revocation")
+	r := reconcilerFor(t, device)
+	r.ManagedTopology = true
+	if err := r.ensureManagedSharedWorkerAccess(ctx, device); err != nil {
+		t.Fatalf("seed shared worker access: %v", err)
+	}
+
+	networkAccount := r.networkManagementServiceAccountName()
+	roleBindingKey := types.NamespacedName{Namespace: device.Namespace, Name: networkAccount}
+	var drifted rbacv1.RoleBinding
+	if err := r.Get(ctx, roleBindingKey, &drifted); err != nil {
+		t.Fatal(err)
+	}
+	drifted.Subjects = []rbacv1.Subject{{Kind: "User", Name: "foreign-operator"}}
+	if err := r.Update(ctx, &drifted); err != nil {
+		t.Fatal(err)
+	}
+
+	err := r.revokeSharedWorkerForLegacyToken(ctx, device.Namespace, networkAccount)
+	if err == nil || !strings.Contains(err.Error(), "retain foreign shared worker RoleBinding") {
+		t.Fatalf("mixed exact/drifted revocation error=%v", err)
+	}
+	if err := r.Get(ctx, roleBindingKey, &rbacv1.RoleBinding{}); err != nil {
+		t.Fatalf("drifted RoleBinding should be retained for operator review: %v", err)
+	}
+	clusterBindingKey := types.NamespacedName{Name: vkAccessClusterRoleBindingName(
+		device.Namespace, networkAccount+"-global-read")}
+	if err := r.Get(ctx, clusterBindingKey, &rbacv1.ClusterRoleBinding{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("exact global ClusterRoleBinding survived independent revocation: %v", err)
+	}
+}
+
+func TestSharedLegacyTokenQuarantineDeletesAdditivelyDriftedCanonicalGrants(t *testing.T) {
+	ctx := context.Background()
+	device := managedAccessDevice("switch-shared-additive-quarantine")
+	r := reconcilerFor(t, device)
+	r.ManagedTopology = true
+	if err := r.ensureManagedSharedWorkerAccess(ctx, device); err != nil {
+		t.Fatalf("seed shared worker access: %v", err)
+	}
+
+	networkAccount := r.networkManagementServiceAccountName()
+	rbKey := types.NamespacedName{Namespace: device.Namespace, Name: networkAccount}
+	crbKey := types.NamespacedName{Name: vkAccessClusterRoleBindingName(device.Namespace, networkAccount+"-global-read")}
+	var rb rbacv1.RoleBinding
+	if err := r.Get(ctx, rbKey, &rb); err != nil {
+		t.Fatal(err)
+	}
+	rb.Subjects = append(rb.Subjects, rbacv1.Subject{Kind: "User", Name: "attacker"})
+	rb.Annotations["attacker.example/drift"] = "true"
+	if err := r.Update(ctx, &rb); err != nil {
+		t.Fatal(err)
+	}
+	var crb rbacv1.ClusterRoleBinding
+	if err := r.Get(ctx, crbKey, &crb); err != nil {
+		t.Fatal(err)
+	}
+	crb.Subjects = append(crb.Subjects, rbacv1.Subject{Kind: "User", Name: "attacker"})
+	crb.Annotations["attacker.example/drift"] = "true"
+	if err := r.Update(ctx, &crb); err != nil {
+		t.Fatal(err)
+	}
+	legacyToken := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "network-token-with-additive-grants",
+		Annotations: map[string]string{corev1.ServiceAccountNameKey: networkAccount},
+	}, Type: corev1.SecretTypeServiceAccountToken, Data: map[string][]byte{"token": []byte("signed-network-token")}}
+	if err := r.Create(ctx, legacyToken); err != nil {
+		t.Fatal(err)
+	}
+
+	err := r.ensureManagedSharedWorkerAccess(ctx, device)
+	if err == nil || !strings.Contains(err.Error(), "unexpected RoleBinding") ||
+		!strings.Contains(err.Error(), "worker processes were quiesced") {
+		t.Fatalf("concrete-risk additive-grant quarantine error=%v", err)
+	}
+	for _, object := range []client.Object{
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crbKey.Name}},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: rbKey.Namespace, Name: rbKey.Name}},
+	} {
+		if err := r.Get(ctx, client.ObjectKeyFromObject(object), object); !apierrors.IsNotFound(err) {
+			t.Fatalf("additively drifted canonical grant survived compromise quarantine: %T %v", object, err)
+		}
+	}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: networkAccount},
+		&corev1.ServiceAccount{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("compromised network ServiceAccount survived additive-grant quarantine: %v", err)
+	}
+}
+
+func TestSharedUnsafeRBACQuarantineDeletesCanonicalBindingWithUnexpectedRole(t *testing.T) {
+	ctx := context.Background()
+	device := managedAccessDevice("switch-shared-role-recreate")
+	r := reconcilerFor(t, device)
+	r.ManagedTopology = true
+	if err := r.ensureManagedSharedWorkerAccess(ctx, device); err != nil {
+		t.Fatalf("seed shared worker access: %v", err)
+	}
+
+	unsafeRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "attacker-worker-shell"}, Rules: []rbacv1.PolicyRule{{
+		APIGroups: []string{""}, Resources: []string{"pods/exec"}, Verbs: []string{"create"},
+	}}}
+	if err := r.Create(ctx, unsafeRole); err != nil {
+		t.Fatal(err)
+	}
+	networkAccount := r.networkManagementServiceAccountName()
+	rbKey := types.NamespacedName{Namespace: device.Namespace, Name: networkAccount}
+	var recreated rbacv1.RoleBinding
+	if err := r.Get(ctx, rbKey, &recreated); err != nil {
+		t.Fatal(err)
+	}
+	// Model an attacker deleting and recreating the deterministic canonical
+	// name: the immutable roleRef changes, but the reserved SA subject remains.
+	recreated.RoleRef.Name = unsafeRole.Name
+	if err := r.Update(ctx, &recreated); err != nil {
+		t.Fatal(err)
+	}
+
+	err := r.ensureManagedSharedWorkerAccess(ctx, device)
+	if err == nil || !strings.Contains(err.Error(), "unexpected RoleBinding") ||
+		!strings.Contains(err.Error(), "worker processes were quiesced") {
+		t.Fatalf("unexpected-role canonical binding quarantine error=%v", err)
+	}
+	if err := r.Get(ctx, rbKey, &rbacv1.RoleBinding{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("canonical binding with attacker-selected role survived quarantine: %v", err)
+	}
+	crbKey := types.NamespacedName{Name: vkAccessClusterRoleBindingName(device.Namespace, networkAccount+"-global-read")}
+	if err := r.Get(ctx, crbKey, &rbacv1.ClusterRoleBinding{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("exact global network grant survived mixed quarantine: %v", err)
+	}
+}
+
+func TestSharedCompromiseQuarantineDeletesArbitraryReservedSubjectBindingAndAccount(t *testing.T) {
+	ctx := context.Background()
+	device := managedAccessDevice("switch-shared-arbitrary-binding")
+	r := reconcilerFor(t, device)
+	r.ManagedTopology = true
+	if err := r.ensureManagedSharedWorkerAccess(ctx, device); err != nil {
+		t.Fatalf("seed shared worker access: %v", err)
+	}
+
+	networkAccount := r.networkManagementServiceAccountName()
+	additive := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Namespace: device.Namespace, Name: "attacker-network-secret-reader"},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: managedprotocol.NetworkManagementReadWriteClusterRole,
+		},
+		Subjects: sharedWorkerSubject(device.Namespace, networkAccount),
+	}
+	legacyToken := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "network-token-with-arbitrary-binding",
+		Annotations: map[string]string{corev1.ServiceAccountNameKey: networkAccount},
+	}, Type: corev1.SecretTypeServiceAccountToken, Data: map[string][]byte{"token": []byte("signed-network-token")}}
+	workload := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "network-process-with-arbitrary-binding", UID: "network-process-with-arbitrary-binding-uid",
+	}, Spec: corev1.PodSpec{ServiceAccountName: networkAccount}}
+	for _, object := range []client.Object{additive, legacyToken, workload} {
+		if err := r.Create(ctx, object); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	err := r.ensureManagedSharedWorkerAccess(ctx, device)
+	if err == nil || !strings.Contains(err.Error(), "unexpected RoleBinding") ||
+		!strings.Contains(err.Error(), "worker processes were quiesced") {
+		t.Fatalf("arbitrary-binding compromise quarantine error=%v", err)
+	}
+	for _, object := range []client.Object{
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: additive.Namespace, Name: additive.Name}},
+		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: device.Namespace, Name: networkAccount}},
+		&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: workload.Namespace, Name: workload.Name}},
+	} {
+		if err := r.Get(ctx, client.ObjectKeyFromObject(object), object); !apierrors.IsNotFound(err) {
+			t.Fatalf("compromised shared-account object survived quarantine: %T %v", object, err)
+		}
+	}
+	crbKey := types.NamespacedName{Name: vkAccessClusterRoleBindingName(device.Namespace, networkAccount+"-global-read")}
+	if err := r.Get(ctx, crbKey, &rbacv1.ClusterRoleBinding{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("canonical network ClusterRoleBinding survived arbitrary-binding quarantine: %v", err)
+	}
+}
+
+func sharedTransitionContains(values []string, value string) bool {
+	for _, candidate := range values {
+		if candidate == value {
+			return true
+		}
+	}
+	return false
 }
 
 func TestManagedFunctionalAccountRejectsBroadenedFixedRole(t *testing.T) {
@@ -350,6 +1136,8 @@ func TestManagedFunctionalAccountEscalationDrainsOldBoundTokens(t *testing.T) {
 		}
 	}
 
+	tracker := &generatedAccessDeleteOrderClient{Client: r.Client}
+	r.Client = tracker
 	r.NetworkManagementAccessMode = managedprotocol.WorkerAccessReadWrite
 	err := r.ensureManagedSharedWorkerAccess(ctx, device)
 	var transition *sharedWorkerAccessTransition
@@ -361,6 +1149,14 @@ func TestManagedFunctionalAccountEscalationDrainsOldBoundTokens(t *testing.T) {
 		managedprotocol.NetworkManagementReadOnlyClusterRole)
 	if err := r.Get(ctx, client.ObjectKeyFromObject(deployment), &appsv1.Deployment{}); !apierrors.IsNotFound(err) {
 		t.Fatalf("old network Deployment remains during escalation: %v", err)
+	}
+	if len(tracker.workloadDeletesWithoutUIDPrecondition) != 0 {
+		t.Fatalf("lifecycle drain deleted a workload without observed UID precondition: %v",
+			tracker.workloadDeletesWithoutUIDPrecondition)
+	}
+	if len(tracker.controllerDeletesWithoutForeground) != 0 {
+		t.Fatalf("lifecycle drain deleted a controller without foreground propagation: %v",
+			tracker.controllerDeletesWithoutForeground)
 	}
 
 	// Even after the Deployment is gone, its bound Pod and ReplicaSet keep the

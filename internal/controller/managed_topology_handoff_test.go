@@ -100,6 +100,7 @@ func newLegacyHandoffFixture(t *testing.T) legacyHandoffFixture {
 		Annotations: leaseAnnotations, Labels: leaseLabels,
 	}}
 	policy, ledger := managedPolicyAndLedger(t, nil)
+	labels := perDeviceDeploymentLabels(device.Name)
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: device.Namespace, Name: device.Name + deploymentSuffix,
@@ -107,8 +108,11 @@ func newLegacyHandoffFixture(t *testing.T) legacyHandoffFixture {
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(device, ciskov1.GroupVersion.WithKind("CiscoDevice"))},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: ptr.To[int32](1),
-			Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{ServiceAccountName: managedSA}},
+			Replicas: ptr.To[int32](1), Selector: &metav1.LabelSelector{MatchLabels: labels},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: labels},
+				Spec:       corev1.PodSpec{ServiceAccountName: managedSA},
+			},
 		},
 	}
 
@@ -118,15 +122,19 @@ func newLegacyHandoffFixture(t *testing.T) legacyHandoffFixture {
 	}
 	baseClient := fake.NewClientBuilder().WithScheme(scheme).
 		WithStatusSubresource(&ciskov1.CiscoDevice{}, &appsv1.Deployment{}, &corev1.Node{}, &corev1.Pod{}).
-		WithObjects(device, node, mutationLease, policy, ledger, deployment).Build()
+		WithObjects(device, node, mutationLease, policy, ledger).Build()
 	writeClient := leaseUIDAssigningClient{Client: baseClient}
 	r := &CiscoDeviceReconciler{
 		Client: writeClient, APIReader: baseClient, Scheme: scheme, Image: "cisco-vk:test",
 		TopologyPolicyNamespace: policy.Namespace, TopologyPolicyName: policy.Name,
-		clock: clock,
+		WorkerServiceAccountPolicyEpoch: testWorkerServiceAccountPolicyEpoch, clock: clock,
 	}
 	if err := r.ensureVKAccess(context.Background(), device, managedSA, true); err != nil {
 		t.Fatalf("seed managed worker access: %v", err)
+	}
+	deployment.ResourceVersion = ""
+	if err := r.Create(context.Background(), deployment); err != nil {
+		t.Fatalf("seed managed worker Deployment: %v", err)
 	}
 	return legacyHandoffFixture{
 		r: r, client: baseClient, key: types.NamespacedName{Namespace: device.Namespace, Name: device.Name}, clock: clock,
@@ -164,6 +172,9 @@ func TestLegacyHandoffFullReconcileUsesIsolatedWorkerAndCompletes(t *testing.T) 
 	if device.Status.LegacyHandoff == nil || device.Status.LegacyHandoff.Phase != ciskov1.DeviceLegacyHandoffPreparing || device.Status.NodeIdentity == nil {
 		t.Fatalf("initial handoff status = %#v, nodeIdentity=%#v", device.Status.LegacyHandoff, device.Status.NodeIdentity)
 	}
+	if got := device.Annotations[managedprotocol.AnnotationIsolatedLegacyWorker]; got != string(device.UID) {
+		t.Fatalf("initial handoff marker = %q, want device UID %q", got, device.UID)
+	}
 	legacySA := topologyLegacyWorkerServiceAccountName(device)
 	deployment := fixture.deployment(t)
 	if deployment.Spec.Template.Spec.ServiceAccountName != legacySA || deployment.Spec.Strategy.Type != appsv1.RecreateDeploymentStrategyType {
@@ -181,7 +192,7 @@ func TestLegacyHandoffFullReconcileUsesIsolatedWorkerAndCompletes(t *testing.T) 
 	// does not carry the manager-issued release epoch.
 	oldReplicaSet := &appsv1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: device.Namespace, Name: "old-legacy", UID: "old-rs-uid",
+			Namespace: device.Namespace, Name: "old-legacy", UID: "old-rs-uid", Labels: deployment.Spec.Template.Labels,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(deployment, appsv1.SchemeGroupVersion.WithKind("Deployment"))},
 		},
 		Spec: appsv1.ReplicaSetSpec{Template: *deployment.Spec.Template.DeepCopy()},
@@ -235,7 +246,7 @@ func TestLegacyHandoffFullReconcileUsesIsolatedWorkerAndCompletes(t *testing.T) 
 	deployment = fixture.deployment(t)
 	newReplicaSet := &appsv1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: device.Namespace, Name: "released-legacy", UID: "released-rs-uid",
+			Namespace: device.Namespace, Name: "released-legacy", UID: "released-rs-uid", Labels: deployment.Spec.Template.Labels,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(deployment, appsv1.SchemeGroupVersion.WithKind("Deployment"))},
 		},
 		Spec: appsv1.ReplicaSetSpec{Template: *deployment.Spec.Template.DeepCopy()},
@@ -339,7 +350,8 @@ func TestLegacyHandoffFullReconcileUsesIsolatedWorkerAndCompletes(t *testing.T) 
 	restarted := &CiscoDeviceReconciler{
 		Client: fixture.r.Client, APIReader: fixture.client, Scheme: fixture.r.Scheme,
 		TopologyPolicyNamespace: fixture.r.TopologyPolicyNamespace, TopologyPolicyName: fixture.r.TopologyPolicyName,
-		LeaseNamespace: fixture.r.LeaseNamespace, ServiceAccount: r.ServiceAccount, clock: fixture.clock,
+		LeaseNamespace: fixture.r.LeaseNamespace, ServiceAccount: r.ServiceAccount,
+		WorkerServiceAccountPolicyEpoch: testWorkerServiceAccountPolicyEpoch, clock: fixture.clock,
 	}
 	restartedDevice := fixture.device(t)
 	result, err := restarted.reconcileManagedTopology(ctx, restartedDevice)
@@ -582,6 +594,169 @@ func TestIsolatedLegacyRecoveryUsesAccessEvidenceBeforeMarker(t *testing.T) {
 	}
 }
 
+func TestIsolatedLegacyRecoveryRevokesExactPartialAccessBeforeMarker(t *testing.T) {
+	tests := []struct {
+		name           string
+		removeRoleBind bool
+	}{
+		{name: "service account only", removeRoleBind: true},
+		{name: "service account and RoleBinding"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			device := newDevice("interrupted-partial-isolation", "edge")
+			device.UID = "interrupted-partial-device-uid"
+			r := reconcilerFor(t, device)
+			r.ManagedTopology = true
+			legacySA := topologyLegacyWorkerServiceAccountName(device)
+			if err := r.ensureVKAccess(ctx, device, legacySA, false, true); err != nil {
+				t.Fatalf("seed generated access: %v", err)
+			}
+			crb := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{
+				Name: vkAccessClusterRoleBindingName(device.Namespace, legacySA),
+			}}
+			if err := r.Delete(ctx, crb); err != nil {
+				t.Fatal(err)
+			}
+			if test.removeRoleBind {
+				rb := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: device.Namespace, Name: legacySA}}
+				if err := r.Delete(ctx, rb); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			// Model a default-off manager restart: the partial namespaced state did
+			// not enter retirement preflight, so no policy epoch was derived.
+			r.ManagedTopology = false
+			r.WorkerServiceAccountPolicyEpoch = ""
+			var current ciskov1.CiscoDevice
+			if err := r.Get(ctx, client.ObjectKeyFromObject(device), &current); err != nil {
+				t.Fatal(err)
+			}
+			result, err := r.reconcileManagedTopology(ctx, &current)
+			if err != nil {
+				t.Fatalf("recover exact partial access: %v", err)
+			}
+			if result.LegacyWorker || result.Managed {
+				t.Fatalf("partial generated access was adopted: %+v", result)
+			}
+			if marker := current.Annotations[managedprotocol.AnnotationIsolatedLegacyWorker]; marker != "" {
+				t.Fatalf("partial access created isolated-worker marker %q", marker)
+			}
+			assertWorkerAccessAbsent(t, r.Client, device, legacySA)
+		})
+	}
+}
+
+func TestIsolatedLegacyRecoveryRetainsDriftedOrAdditivePartialAccess(t *testing.T) {
+	tests := []struct {
+		name            string
+		mutate          func(context.Context, *CiscoDeviceReconciler, *ciskov1.CiscoDevice, string) error
+		wantErrContains string
+	}{
+		{
+			name: "drifted canonical RoleBinding",
+			mutate: func(ctx context.Context, r *CiscoDeviceReconciler, device *ciskov1.CiscoDevice, serviceAccount string) error {
+				var binding rbacv1.RoleBinding
+				if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: serviceAccount}, &binding); err != nil {
+					return err
+				}
+				binding.Annotations[managedprotocol.AnnotationDeviceUID] = "foreign-device-uid"
+				return r.Update(ctx, &binding)
+			},
+			wantErrContains: "existing generated worker RoleBinding is invalid",
+		},
+		{
+			name: "additive RoleBinding",
+			mutate: func(ctx context.Context, r *CiscoDeviceReconciler, device *ciskov1.CiscoDevice, serviceAccount string) error {
+				return r.Create(ctx, &rbacv1.RoleBinding{
+					ObjectMeta: metav1.ObjectMeta{Namespace: device.Namespace, Name: "partial-additive-binding"},
+					RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "view"},
+					Subjects:   exactWorkerSubject(device.Namespace, serviceAccount),
+				})
+			},
+			wantErrContains: "unexpected additive RoleBinding",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			device := newDevice("interrupted-untrusted-partial", "edge")
+			device.UID = "interrupted-untrusted-partial-device-uid"
+			r := reconcilerFor(t, device)
+			r.ManagedTopology = true
+			legacySA := topologyLegacyWorkerServiceAccountName(device)
+			if err := r.ensureVKAccess(ctx, device, legacySA, false, true); err != nil {
+				t.Fatalf("seed generated access: %v", err)
+			}
+			if err := r.Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{
+				Name: vkAccessClusterRoleBindingName(device.Namespace, legacySA),
+			}}); err != nil {
+				t.Fatal(err)
+			}
+			if err := test.mutate(ctx, r, device, legacySA); err != nil {
+				t.Fatal(err)
+			}
+			r.ManagedTopology = false
+			r.WorkerServiceAccountPolicyEpoch = ""
+			var current ciskov1.CiscoDevice
+			if err := r.Get(ctx, client.ObjectKeyFromObject(device), &current); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := r.reconcileManagedTopology(ctx, &current); err == nil ||
+				!strings.Contains(err.Error(), test.wantErrContains) {
+				t.Fatalf("untrusted partial recovery error=%v", err)
+			}
+			for _, object := range []client.Object{
+				&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: device.Namespace, Name: legacySA}},
+				&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: device.Namespace, Name: legacySA}},
+			} {
+				if err := r.Get(ctx, client.ObjectKeyFromObject(object), object); err != nil {
+					t.Fatalf("fail-closed recovery mutated %T: %v", object, err)
+				}
+			}
+		})
+	}
+}
+
+func TestLegacyHandoffPreparingRecoversStatusBeforeMarkerCrash(t *testing.T) {
+	ctx := context.Background()
+	fixture := newLegacyHandoffFixture(t)
+	device := fixture.device(t)
+	legacySA := topologyLegacyWorkerServiceAccountName(device)
+	if err := fixture.r.ensureVKAccess(ctx, device, legacySA, false, true); err != nil {
+		t.Fatalf("seed isolated access: %v", err)
+	}
+	handoff := &ciskov1.DeviceLegacyHandoffStatus{
+		Phase:                ciskov1.DeviceLegacyHandoffPreparing,
+		DeviceUID:            string(device.UID),
+		NodeName:             device.Status.NodeIdentity.NodeName,
+		NodeUID:              device.Status.NodeIdentity.NodeUID,
+		ProjectionHash:       device.Status.TopologyProjection.EffectiveLabelHash,
+		LegacyWorkerUsername: "system:serviceaccount:" + device.Namespace + ":" + legacySA,
+		RequestedAt:          metav1.NewTime(fixture.clock.now),
+	}
+	if err := fixture.r.patchLegacyHandoffStatus(ctx, device, handoff, "TestCrashWindow", "status persisted before marker"); err != nil {
+		t.Fatal(err)
+	}
+	device = fixture.device(t)
+	if got := device.Annotations[managedprotocol.AnnotationIsolatedLegacyWorker]; got != "" {
+		t.Fatalf("crash fixture unexpectedly has marker %q", got)
+	}
+	result, err := fixture.r.reconcileManagedTopology(ctx, device)
+	if err != nil {
+		t.Fatalf("recover status-before-marker interruption: %v", err)
+	}
+	if !result.Managed || !result.LegacyWorker {
+		t.Fatalf("recovery result = %+v, want managed isolated worker", result)
+	}
+	device = fixture.device(t)
+	if got := device.Annotations[managedprotocol.AnnotationIsolatedLegacyWorker]; got != string(device.UID) {
+		t.Fatalf("recovered marker = %q, want %q", got, device.UID)
+	}
+}
+
 func TestLegacyHandoffRejectsForgedRecoveryState(t *testing.T) {
 	ctx := context.Background()
 	t.Run("isolated marker without access evidence", func(t *testing.T) {
@@ -764,7 +939,7 @@ func TestCompletedLegacyDeviceDeletionRevokesWorkerBeforeNode(t *testing.T) {
 func readyLegacyPod(namespace, name string, uid types.UID, serviceAccount string, rs *appsv1.ReplicaSet, start metav1.Time) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace, Name: name, UID: uid,
+			Namespace: namespace, Name: name, UID: uid, Labels: rs.Spec.Template.Labels,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(rs, appsv1.SchemeGroupVersion.WithKind("ReplicaSet"))},
 		},
 		Spec: corev1.PodSpec{ServiceAccountName: serviceAccount},

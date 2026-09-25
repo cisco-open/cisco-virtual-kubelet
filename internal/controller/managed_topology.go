@@ -685,11 +685,13 @@ func (r *CiscoDeviceReconciler) patchManagedTopologyStatus(
 		before.Status.NodeIdentity.NodeUID != string(node.UID)
 	if newBinding {
 		// Status is not manager-only until NodeIdentity is established. Never
-		// adopt a pre-binding health snapshot supplied through that compatibility
-		// window, even if its source fields happen to match. The binding write
-		// intentionally leaves health absent: a later reconciliation must observe
-		// the now manager-owned sources before rollout admission can use them.
+		// adopt pre-binding health or worker-revision evidence supplied through
+		// that compatibility window, even if its source fields happen to match.
+		// A later reconciliation must observe the now manager-owned sources before
+		// rollout admission can use them.
 		device.Status.HealthObservation = nil
+		device.Status.WorkerRevision = nil
+		device.Status.NetworkWorkerRevision = nil
 	} else {
 		if err := refreshManagedHealthObservation(device, node, r.now(),
 			ciskov1.CiscoDeviceConditionNodeIdentityReady,

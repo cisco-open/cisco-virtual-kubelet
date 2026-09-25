@@ -247,6 +247,12 @@ func TestManagedTopologyFirstBindingRejectsPrebindingHealthForgery(t *testing.T)
 		Spec: ciskov1.DeviceSpec{PhysicalIdentity: "SERIAL-SWITCH-01"},
 		Status: ciskov1.DeviceStatus{
 			Phase: "Ready",
+			WorkerRevision: &ciskov1.DeviceWorkerRevisionStatus{
+				DesiredRevision: "sha256:" + strings.Repeat("b", 64),
+			},
+			NetworkWorkerRevision: &ciskov1.DeviceNetworkWorkerRevisionStatus{
+				DesiredRevision: "sha256:" + strings.Repeat("c", 64),
+			},
 			Conditions: []metav1.Condition{{
 				Type: ciskov1.CiscoDeviceConditionGNOIConfigurationReady, Status: metav1.ConditionTrue,
 				ObservedGeneration: 7, Reason: "ForgedBeforeBinding", LastTransitionTime: metav1.NewTime(now),
@@ -297,6 +303,10 @@ func TestManagedTopologyFirstBindingRejectsPrebindingHealthForgery(t *testing.T)
 	}
 	if current.Status.HealthObservation != nil {
 		t.Fatalf("first binding retained or manufactured health trust: %#v", current.Status.HealthObservation)
+	}
+	if current.Status.WorkerRevision != nil || current.Status.NetworkWorkerRevision != nil {
+		t.Fatalf("first binding retained pre-binding worker trust: app=%#v network=%#v",
+			current.Status.WorkerRevision, current.Status.NetworkWorkerRevision)
 	}
 	if _, err := managedDeviceHealthObservedAt(&current, node, now,
 		ciskov1.CiscoDeviceConditionNodeIdentityReady,

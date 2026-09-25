@@ -904,8 +904,11 @@ spec:
                     type: string
                   nodeReleasedAt:
                     description: |-
-                      NodeReleasedAt is set immediately before the manager removes managed Node
-                      ownership. The legacy readiness heartbeat must not predate it.
+                      NodeReleasedAt is the durable release epoch recorded after managed API
+                      authority is revoked and before the manager removes managed Node ownership.
+                      A crash may therefore leave the Node managed while this timestamp is
+                      present; the next reconcile completes the idempotent release. The legacy
+                      readiness heartbeat must not predate it.
                     format: date-time
                     type: string
                   nodeUID:
@@ -1498,15 +1501,16 @@ spec:
                 binding
               rule: '!has(oldSelf.legacyHandoff) || has(self.legacyHandoff) || (oldSelf.legacyHandoff.phase
                 == ''Complete'' && has(self.nodeIdentity))'
-            - message: managed Node identity may be cleared only by a completed legacy
-                handoff
+            - message: managed Node identity may be cleared only after isolated legacy
+                writer readiness
               rule: '!has(oldSelf.nodeIdentity) || has(self.nodeIdentity) || (has(self.legacyHandoff)
-                && self.legacyHandoff.phase == ''Complete'')'
-            - message: an in-flight legacy handoff retains managed binding state and
-                a completed handoff releases it
-              rule: '!has(self.legacyHandoff) || (self.legacyHandoff.phase == ''Complete''
-                ? (!has(self.nodeIdentity) && !has(self.topologyProjection) && !has(self.healthObservation)
-                && !has(self.workerRevision)) : (has(self.nodeIdentity) && has(self.topologyProjection)))'
+                && self.legacyHandoff.phase in [''SharedWriterPending'', ''Complete''])'
+            - message: legacy handoff retains managed binding state until shared-writer
+                transition and releases it thereafter
+              rule: '!has(self.legacyHandoff) || (self.legacyHandoff.phase in [''SharedWriterPending'',
+                ''Complete''] ? (!has(self.nodeIdentity) && !has(self.topologyProjection)
+                && !has(self.healthObservation) && !has(self.workerRevision) && !has(self.networkWorkerRevision))
+                : (has(self.nodeIdentity) && has(self.topologyProjection)))'
         required:
         - spec
         type: object
@@ -1515,6 +1519,10 @@ spec:
             spec.physicalIdentity
           rule: '!has(self.status) || !has(self.status.nodeIdentity) || (has(self.spec.physicalIdentity)
             && self.status.nodeIdentity.physicalIdentity == self.spec.physicalIdentity.lowerAscii())'
+        - message: a legacy handoff must begin in Preparing phase
+          rule: (has(oldSelf.status) && has(oldSelf.status.legacyHandoff)) || !has(self.status)
+            || !has(self.status.legacyHandoff) || self.status.legacyHandoff.phase
+            == 'Preparing'
     served: true
     storage: true
     subresources:

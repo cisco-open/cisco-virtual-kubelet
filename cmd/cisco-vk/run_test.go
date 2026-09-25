@@ -121,6 +121,10 @@ func TestValidateManagedWorkerAccountOptions(t *testing.T) {
 			networkAccount: "shared", networkAccess: managedprotocol.WorkerAccessReadOnly, wantError: "must be different"},
 		{name: "invalid name", appAccount: "Not DNS", appAccess: managedprotocol.WorkerAccessReadWrite,
 			networkAccount: "cvk-network", networkAccess: managedprotocol.WorkerAccessReadOnly, wantError: "invalid app-hosting"},
+		{name: "app overlaps generated reservation", appAccount: "cisco-vk-managed-edge-1234abcd", appAccess: managedprotocol.WorkerAccessReadWrite,
+			networkAccount: "cvk-network", networkAccess: managedprotocol.WorkerAccessReadOnly, wantError: "reserved per-device generated-worker"},
+		{name: "network overlaps generated reservation", appAccount: "cvk-app", appAccess: managedprotocol.WorkerAccessReadWrite,
+			networkAccount: "cisco-vk-legacy-edge-deadbeef", networkAccess: managedprotocol.WorkerAccessReadOnly, wantError: "reserved per-device generated-worker"},
 		{name: "invalid access", appAccount: "cvk-app", appAccess: "write",
 			networkAccount: "cvk-network", networkAccess: managedprotocol.WorkerAccessReadOnly, wantError: "invalid app-hosting access"},
 	}

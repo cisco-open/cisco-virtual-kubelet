@@ -1777,7 +1777,10 @@ func (r *ConfigReconciler) gcConfigRevisions(ctx context.Context, cr *configv1al
 	})
 	for i := 0; i < len(list.Items)-limit; i++ {
 		item := list.Items[i]
-		if err := r.Client.Delete(ctx, &item); err != nil && !apierrors.IsNotFound(err) {
+		uid := item.UID
+		if err := r.Client.Delete(ctx, &item, &client.DeleteOptions{
+			Preconditions: &metav1.Preconditions{UID: &uid},
+		}); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("delete old revision %s/%s: %w", item.Namespace, item.Name, err)
 		}
 	}

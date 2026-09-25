@@ -147,8 +147,45 @@ this one-time transition.
 {{- $ledgerName := include "cisco-virtual-kubelet.topologyLedgerName" . -}}
 {{- $policy := lookup "v1" "ConfigMap" $policyNamespace $policyName -}}
 {{- $ledger := lookup "v1" "ConfigMap" $policyNamespace $ledgerName -}}
+{{- $legacyNodeMarkerPolicyName := printf "%s-legacy-node-marker" $fullname -}}
+{{- $legacyNodeMarkerPolicy := lookup "admissionregistration.k8s.io/v1" "ValidatingAdmissionPolicy" "" $legacyNodeMarkerPolicyName -}}
+{{- $legacyNodeMarkerBinding := lookup "admissionregistration.k8s.io/v1" "ValidatingAdmissionPolicyBinding" "" $legacyNodeMarkerPolicyName -}}
 {{- $devices := lookup "cisco.vk/v1alpha1" "CiscoDevice" "" "" -}}
-{{- $statePresent := false -}}
+{{- $generatedWorkerState := false -}}
+{{- /* A namespaced object is tenant-forgeable. Only a cluster-admin-owned
+      binding with the generated authority shape may retain the global
+      admission boundary during the access-before-marker crash window. */ -}}
+{{- $clusterBindings := lookup "rbac.authorization.k8s.io/v1" "ClusterRoleBinding" "" "" -}}
+{{- range $binding := (get $clusterBindings "items" | default (list)) -}}
+{{- $annotations := dig "metadata" "annotations" (dict) $binding -}}
+{{- $roleRef := get $binding "roleRef" | default (dict) -}}
+{{- $subjects := get $binding "subjects" | default (list) -}}
+{{- $deviceNamespace := get $annotations "topology.cisco.vk/device-namespace" | default "" -}}
+{{- $deviceName := get $annotations "topology.cisco.vk/device-name" | default "" -}}
+{{- $deviceUID := get $annotations "topology.cisco.vk/device-uid" | default "" -}}
+{{- $managedBinding := and
+      (eq (get $annotations "topology.cisco.vk/managed" | default "") "true")
+      (eq (get $roleRef "name" | default "") "cisco-virtual-kubelet-managed-worker") -}}
+{{- $legacyBinding := and
+      (eq (get $annotations "topology.cisco.vk/worker-mode" | default "") "legacy")
+      (eq (get $roleRef "name" | default "") "cisco-virtual-kubelet") -}}
+{{- if and (or $managedBinding $legacyBinding)
+      (eq (get $annotations "topology.cisco.vk/worker-protocol" | default "") "rollout-v1")
+      (ne $deviceNamespace "") (ne $deviceName "") (ne $deviceUID "")
+      (eq (get $roleRef "apiGroup" | default "") "rbac.authorization.k8s.io")
+      (eq (get $roleRef "kind" | default "") "ClusterRole")
+      (eq (len $subjects) 1) -}}
+{{- $subject := first $subjects -}}
+{{- if and
+      (eq (get $subject "kind" | default "") "ServiceAccount")
+      (eq (get $subject "apiGroup" | default "") "")
+      (eq (get $subject "namespace" | default "") $deviceNamespace)
+      (ne (get $subject "name" | default "") "") -}}
+{{- $generatedWorkerState = true -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- $statePresent := $generatedWorkerState -}}
 {{- range $device := (get $devices "items" | default (list)) -}}
 {{- $status := get $device "status" | default (dict) -}}
 {{- $annotations := dig "metadata" "annotations" (dict) $device -}}
@@ -160,6 +197,48 @@ this one-time transition.
 {{- if $retainedTopology -}}
 {{- if or (empty $managerRole) (empty $managerBinding) (empty $policy) (empty $ledger) -}}
 {{- fail (printf "topology.enabled=false found an incomplete retained topology boundary; restore the exact %s policy/ledger and %s role/binding before retirement" $policyName $managerRoleName) -}}
+{{- end -}}
+{{- if or (empty $legacyNodeMarkerPolicy) (empty $legacyNodeMarkerBinding) -}}
+{{- fail (printf "topology.enabled=false requires retained %s admission policy and binding to protect released Node handoff markers; upgrade this release once with topology.enabled=true before disabling topology" $legacyNodeMarkerPolicyName) -}}
+{{- end -}}
+{{- $legacyNodeMarkerDigest := include "cisco-virtual-kubelet.legacyNodeMarkerAdmissionDigest" . -}}
+{{- if or
+      (ne (dig "metadata" "annotations" "topology.cisco.vk/admission-contract-version" "" $legacyNodeMarkerPolicy) "v2")
+      (ne (dig "metadata" "annotations" "topology.cisco.vk/admission-contract-digest" "" $legacyNodeMarkerPolicy) $legacyNodeMarkerDigest)
+      (ne (dig "metadata" "annotations" "helm.sh/resource-policy" "" $legacyNodeMarkerPolicy) "keep")
+      (ne (dig "spec" "failurePolicy" "" $legacyNodeMarkerPolicy) "Fail") -}}
+{{- fail (printf "topology.enabled=false requires retained %s policy contract v2 digest %s with failurePolicy=Fail; re-enable topology with this chart before retirement" $legacyNodeMarkerPolicyName $legacyNodeMarkerDigest) -}}
+{{- end -}}
+{{- $legacyNodeMarkerGeneration := dig "metadata" "generation" 0 $legacyNodeMarkerPolicy -}}
+{{- $legacyNodeMarkerObservedGeneration := dig "status" "observedGeneration" 0 $legacyNodeMarkerPolicy -}}
+{{- $legacyNodeMarkerStatus := get $legacyNodeMarkerPolicy "status" | default (dict) -}}
+{{- $legacyNodeMarkerWarnings := dig "status" "typeChecking" "expressionWarnings" (list) $legacyNodeMarkerPolicy -}}
+{{- if or
+      (eq (toString $legacyNodeMarkerGeneration) "0")
+      (ne (toString $legacyNodeMarkerGeneration) (toString $legacyNodeMarkerObservedGeneration))
+      (not (hasKey $legacyNodeMarkerStatus "typeChecking"))
+      (ne (len $legacyNodeMarkerWarnings) 0) -}}
+{{- fail (printf "topology.enabled=false requires retained %s policy generation to be observed and warning-free; wait for API-server compilation or re-enable topology before retirement" $legacyNodeMarkerPolicyName) -}}
+{{- end -}}
+{{- $legacyNodeMarkerActions := dig "spec" "validationActions" (list) $legacyNodeMarkerBinding -}}
+{{- $legacyNodeMarkerBindingSpec := get $legacyNodeMarkerBinding "spec" | default (dict) -}}
+{{- $legacyNodeMarkerMatchResources := get $legacyNodeMarkerBindingSpec "matchResources" | default (dict) -}}
+{{- if or
+      (ne (dig "metadata" "annotations" "topology.cisco.vk/admission-contract-version" "" $legacyNodeMarkerBinding) "v2")
+      (ne (dig "metadata" "annotations" "topology.cisco.vk/admission-contract-digest" "" $legacyNodeMarkerBinding) $legacyNodeMarkerDigest)
+      (ne (dig "metadata" "annotations" "helm.sh/resource-policy" "" $legacyNodeMarkerBinding) "keep")
+      (ne (dig "spec" "policyName" "" $legacyNodeMarkerBinding) $legacyNodeMarkerPolicyName)
+      (not (empty (get $legacyNodeMarkerBindingSpec "paramRef")))
+      (ne (get $legacyNodeMarkerMatchResources "matchPolicy" | default "Equivalent") "Equivalent")
+      (not (empty (get $legacyNodeMarkerMatchResources "namespaceSelector")))
+      (not (empty (get $legacyNodeMarkerMatchResources "objectSelector")))
+      (not (empty (get $legacyNodeMarkerMatchResources "resourceRules")))
+      (not (empty (get $legacyNodeMarkerMatchResources "excludeResourceRules")))
+      (ne (len $legacyNodeMarkerActions) 1) -}}
+{{- fail (printf "topology.enabled=false requires retained %s binding to enforce only Deny for the exact unparameterized global policy; re-enable topology before retirement" $legacyNodeMarkerPolicyName) -}}
+{{- end -}}
+{{- if ne (first $legacyNodeMarkerActions) "Deny" -}}
+{{- fail (printf "topology.enabled=false requires retained %s binding to enforce only Deny for the exact unparameterized global policy; re-enable topology before retirement" $legacyNodeMarkerPolicyName) -}}
 {{- end -}}
 {{- if or (not (empty $sharedClusterBinding)) (not (empty $sharedDeviceBinding)) -}}
 {{- fail "topology.enabled=false is blocked until the manager has retired both release-wide shared worker bindings" -}}
@@ -264,6 +343,14 @@ trusted as proof that the policy expressions are intact.
 {{- define "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" -}}
 helm.sh/resource-policy: keep
 topology.cisco.vk/admission-contract-version: "v2"
+{{- end }}
+
+{{/* Compiled digest of the legacy Node audit-marker policy Spec.
+     The prior topology-enabled manager preflight verifies the live Spec before
+     retirement; Helm later uses this stamp only to prove that the required
+     retained generation was installed. */}}
+{{- define "cisco-virtual-kubelet.legacyNodeMarkerAdmissionDigest" -}}
+sha256:02c0e65602ac0ebcc3d19b15bd7cbcd7c3840c081d72f7541efbafc394f2ee76
 {{- end }}
 
 {{/*
@@ -376,6 +463,9 @@ Cross-field checks below mirror invariants that JSON Schema cannot express.
 {{- if not (regexMatch `^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$` $account) -}}
 {{- fail (printf "topology worker account name %q must be a non-empty DNS label of at most 63 characters" $account) -}}
 {{- end -}}
+{{- if regexMatch `^cisco-vk-(managed|legacy)-[a-z0-9]([-a-z0-9.]{0,61}[a-z0-9])?-[a-f0-9]{8}$` $account -}}
+{{- fail (printf "topology worker account name %q overlaps the reserved generated worker identity namespace" $account) -}}
+{{- end -}}
 {{- end -}}
 {{- range $mode := list .Values.topology.workerAccounts.appHosting.accessMode .Values.topology.workerAccounts.networkManagement.accessMode -}}
 {{- if not (has $mode (list "disabled" "readOnly" "readWrite")) -}}
@@ -390,8 +480,27 @@ Cross-field checks below mirror invariants that JSON Schema cannot express.
 {{- fail (printf "topology worker account names must be distinct from controller and legacy VK identity %q" $identity) -}}
 {{- end -}}
 {{- end -}}
-{{- include "cisco-virtual-kubelet.validateWorkerAccountIdentityLock" . -}}
+{{- $fullname := include "cisco-virtual-kubelet.fullname" . -}}
+{{- $managerUsername := include "cisco-virtual-kubelet.managerUsername" . -}}
+{{- $policyNamespace := include "cisco-virtual-kubelet.topologyPolicyNamespace" . -}}
 {{- $policyName := include "cisco-virtual-kubelet.topologyPolicyName" . -}}
+{{- $ledgerName := include "cisco-virtual-kubelet.topologyLedgerName" . -}}
+{{- $seenAdmissionBindings := dict -}}
+{{- range $binding := list
+      (dict "name" "admission policy prefix" "value" $fullname)
+      (dict "name" "authenticated manager username" "value" $managerUsername)
+      (dict "name" "policy namespace" "value" $policyNamespace)
+      (dict "name" "policy name" "value" $policyName)
+      (dict "name" "ledger name" "value" $ledgerName)
+      (dict "name" "app-hosting ServiceAccount" "value" $appAccount)
+      (dict "name" "network-management ServiceAccount" "value" $networkAccount) -}}
+{{- $value := get $binding "value" -}}
+{{- if hasKey $seenAdmissionBindings $value -}}
+{{- fail (printf "managed admission contract bindings must be pairwise distinct: %s and %s both resolve to %q" (get $seenAdmissionBindings $value) (get $binding "name") $value) -}}
+{{- end -}}
+{{- $_ := set $seenAdmissionBindings $value (get $binding "name") -}}
+{{- end -}}
+{{- include "cisco-virtual-kubelet.validateWorkerAccountIdentityLock" . -}}
 {{- if and (eq .Values.topology.workerAccounts.appHosting.accessMode "disabled") (eq .Values.topology.workerAccounts.networkManagement.accessMode "disabled") -}}
 {{- fail "topology workerAccounts cannot both be disabled" -}}
 {{- end -}}
@@ -411,7 +520,6 @@ Cross-field checks below mirror invariants that JSON Schema cannot express.
 {{- fail (printf "topology.policy.fleetSelector matchExpressions key %q is outside the protected topology.cisco.vk/* enrollment namespace" $expression.key) -}}
 {{- end -}}
 {{- end -}}
-{{- $ledgerName := include "cisco-virtual-kubelet.topologyLedgerName" . -}}
 {{- if eq $policyName $ledgerName -}}
 {{- fail "topology policy and ledger ConfigMaps must have different names" -}}
 {{- end -}}
