@@ -892,6 +892,23 @@ boundary:
    and continuous soak. The topology reservation remains held through this
    recovery and is settled last.
 
+Replacement health uses the provider's Pod status and native controller/PDB
+observations. On IOS-XE, a running application can become Pod Ready before
+DHCP or an application endpoint is usable; this is not an HTTP readiness
+guarantee. Validate the service independently during qualification. A PDB
+shared by separate single-replica Deployments protects their aggregate
+availability, not the availability of each application.
+
+Include failed-write quarantine and native Virtual Kubelet queue backoff in
+the maintenance window. An uncertain app lifecycle operation can retain the
+canonical mutation Lease for 31 minutes after its last renewal; expiry does
+not immediately schedule another attempt. A replacement that cannot become
+healthy prevents the next eviction and gNOI promotion. Do not clear the Lease
+or change Pod metadata merely to force a retry. The IOS-XE lifecycle wait
+defaults to 180 seconds per state; a shorter
+`cisco.io/apphost-package-timeout` override can turn a slow transition into a
+failed write and a much longer recovery wait.
+
 The leaf's durable manager states are `Preparing`, `Guarded`, `Evicting`,
 `Drained`, `Promoting`, `Promoted`, `Recovering`, and `Settled`. Each selected
 Pod advances through `Selected`, `Protected`, `EvictionRequested`,
