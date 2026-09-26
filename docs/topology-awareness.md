@@ -320,6 +320,16 @@ do not match the current release.
 
 Live upgrades also preserve the bound policy and ledger UIDs. The chart does not resubmit initialized ledger data; restoring retained authority is required if either object is missing.
 
+Treat controller/chart changes to fixed RBAC or admission contracts as a
+maintenance window: settle all campaigns, maintenance sessions and mutation
+Leases first. An older manager cannot recognize a newly changed fixed-role
+contract and intentionally quarantines mismatched authority. Worker accounts
+and Pods can therefore rotate, with temporary virtual-Node `NotReady` status;
+this is not a zero-downtime control-plane upgrade guarantee. Keep admission
+enabled and wait for native garbage collection and exact worker rebinding.
+Previously denied garbage-collection requests may take several minutes to
+retry; do not remove finalizers or replace retained Leases to accelerate them.
+
 Do not use `helm upgrade --force`. The policy and ledger are identity-bound by
 their Kubernetes UIDs. Replacement is intentionally treated as a safety
 failure, not as an empty new fleet.
