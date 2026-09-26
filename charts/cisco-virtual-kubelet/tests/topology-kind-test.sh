@@ -1202,8 +1202,11 @@ if raw_pod_delete "$manager_username" cvk-drain-direct-delete "$drain_direct_del
   echo "topology manager directly deleted a terminating drain-protected Pod" >&2
   exit 1
 fi
-grep -Eq 'direct deletion of a protected Pod|denied the request|failed expression' \
-  "$scratch_dir/drain-pod-manager-delete-negative.txt"
+grep -Eq 'direct deletion of a protected Pod|only the topology manager or exact native|denied the request|failed expression' \
+  "$scratch_dir/drain-pod-manager-delete-negative.txt" || {
+  cat "$scratch_dir/drain-pod-manager-delete-negative.txt" >&2
+  exit 1
+}
 test -n "$(kubectl get pod cvk-drain-direct-delete \
   --namespace "$device_namespace" -o jsonpath='{.metadata.deletionTimestamp}')"
 kubectl patch --as="$manager_username" pod cvk-drain-direct-delete \
