@@ -69,7 +69,10 @@ func newManagedWorkerNameScope(devices []ciskov1.CiscoDevice, current *ciskov1.C
 			return
 		}
 		names[device.Name+deploymentSuffix] = struct{}{}
-		names[networkDeploymentName(device.Name, string(device.UID))] = struct{}{}
+		names[networkDeploymentName(string(device.UID))] = struct{}{}
+		// Keep exact-name delegation checks covering the previous naming
+		// contract until policy-epoch rotation has retired its workers.
+		names[fmt.Sprintf("n%d-%s-u%s%s", len(device.Name), device.Name, device.UID, networkDeploymentSuffix)] = struct{}{}
 		if device.UID != "" {
 			serviceAccounts[managedWorkerServiceAccountName(device)] = struct{}{}
 			serviceAccounts[topologyLegacyWorkerServiceAccountName(device)] = struct{}{}
@@ -90,6 +93,11 @@ func newManagedWorkerNameScope(devices []ciskov1.CiscoDevice, current *ciskov1.C
 	prefixes := make([]string, 0, len(names))
 	for name := range names {
 		prefixes = append(prefixes, name+"-")
+		// Native generated Pod names keep at most 58 prefix bytes. Auditing
+		// only the untruncated Deployment name misses exact-name grants.
+		if len(name)+1 > 58 {
+			prefixes = append(prefixes, (name+"-")[:58])
+		}
 	}
 	sort.Strings(prefixes)
 	return managedWorkerNameScope{

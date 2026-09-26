@@ -987,6 +987,13 @@ Pod-bound token, and denies legacy ServiceAccount-token Secrets. This closes
 the otherwise-valid path where another token-issuing principal could reuse the
 shared username without the manager-bound worker Pod incarnation.
 
+Network worker names use the full immutable CiscoDevice UID before the
+generated suffix (`u<device-uid>-network-...`), independently of the device
+name length. This keeps the identity intact when Kubernetes truncates
+generated Pod names. The UID-first naming transition rotates prior worker
+accounts through the existing policy-epoch settlement and cleanup sequence;
+it does not run old and replacement network workers concurrently.
+
 At startup, the manager derives one worker-account policy epoch from every
 verified admission contract that protects reusable worker credentials: shared
 and generated ServiceAccount ownership, bound TokenRequest issuance, legacy

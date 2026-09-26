@@ -762,7 +762,7 @@ func (r *CiscoDeviceReconciler) sharedWorkerDeploymentExpectations(ctx context.C
 		name := consumer.Name + deploymentSuffix
 		labels := perDeviceDeploymentLabels(consumer.Name)
 		if plane == managedprotocol.WorkerModeNetworkManagement {
-			name = networkDeploymentName(consumer.Name, string(consumer.UID))
+			name = networkDeploymentName(string(consumer.UID))
 			labels = perDeviceNetworkDeploymentLabels(consumer.Name)
 		}
 		expected[name] = sharedWorkerDeploymentExpectation{device: consumer, labels: labels}

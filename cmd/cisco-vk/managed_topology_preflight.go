@@ -196,14 +196,14 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		matchConditions: []string{"protected-network-object"}, variables: []string{"manager", "sharedWorker", "nativeGarbageCollector", "nativeNamespaceCleanup", "podUIDs", "podNames", "oldBindings", "newBindings", "boundObject", "oldBindingComplete"}, validations: 6,
 		requiredFragments: []string{"deviceRef.name", "device-uid", "network-worker-pod-name", "authentication.kubernetes.io/pod-uid", "-network-", "object.spec == oldObject.spec", "object.status == oldObject.status", "config.cisco.vk/lease-cleanup", "config.cisco.vk/telemetry-cleanup", "ops.cisco.vk/iosxeoperationalaction-finalizer", "iosxeconfigrevisions", "IOSXEConfigBundle", "blockOwnerDeletion", "system:serviceaccount:kube-system:generic-garbage-collector", "namespace-controller", "system:kube-controller-manager", "request.userInfo.groups", "request.options.preconditions.uid"},
-		digest:            "sha256:c6b349cbd00575e63d258635b6a118e8a042854e974dfaf9d3508e47dfd764b2",
+		digest:            "sha256:593f4d8e2a1b46fb12055bd4b4a079671b03b068ece8ec7e74e87a1d6ddcad58",
 	},
 	"shared-network-result": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		matchConditions: []string{"protected-network-result"}, variables: []string{"manager", "sharedWorker", "nativeGarbageCollector", "nativeNamespaceCleanup", "podUIDs", "podNames", "oldBindings", "newBindings", "boundObject"}, validations: 9, coreTyped: true,
 		requiredFragments: []string{"device-uid", "network-worker-pod-name", "authentication.kubernetes.io/pod-name", "IOSXEDiagnostic", "DeviceOperation", "cisco.vk/diagnostic-uid", "object.data == oldObject.data", "result-u", "system:serviceaccount:kube-system:generic-garbage-collector", "namespace-controller", "system:kube-controller-manager", "request.userInfo.groups", "request.options.preconditions.uid"},
-		digest:            "sha256:3d52cef8e9700f0ce5551cc07d5df8435555688185a607582594d6c77755c986",
+		digest:            "sha256:8b50fd531c0519d75a0e6bba3785ce9240ae39e3d5d42717fed35cb41611467d",
 	},
 	"shared-maintenance-lease": {
 		apiGroups: []string{"coordination.k8s.io"}, apiVersions: []string{"v1"}, resources: []string{"leases"},
@@ -310,7 +310,10 @@ func deriveWorkerServiceAccountPolicyEpoch(generations []workerServiceAccountAdm
 	}
 	generations = append([]workerServiceAccountAdmissionGeneration(nil), generations...)
 	sort.Slice(generations, func(i, j int) bool { return generations[i].suffix < generations[j].suffix })
-	fields := []string{"worker-serviceaccount-policy-epoch-v1"}
+	// Rotate prior accounts/workloads before adopting the UID-first network
+	// Pod naming contract. Planned network rotation still waits for durable
+	// mutation settlement; old and replacement workers must never overlap.
+	fields := []string{"worker-serviceaccount-policy-epoch-v2-uid-first-network"}
 	for _, generation := range generations {
 		if _, ok := want[generation.suffix]; !ok {
 			return "", fmt.Errorf("unexpected worker ServiceAccount admission policy suffix %q", generation.suffix)
