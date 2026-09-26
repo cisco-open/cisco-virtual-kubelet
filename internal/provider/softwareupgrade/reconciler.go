@@ -50,6 +50,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/mutationguard"
 	"github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
@@ -99,13 +100,33 @@ type Reconciler struct {
 	Recorder        record.EventRecorder
 	DeviceName      string
 	DeviceNamespace string
-	GNOI            gnoi.Provider
-	Lifecycle       softwarelifecycle.Backend
-	ImageResolver   ImageResolver
-	MutationLeaser  *engine.FamilyLeaser
+	DeviceUID       string
+	NodeName        string
+	ManagedTopology bool
+	// WorkerRevision is the manager-rendered PodTemplate content address loaded
+	// by this process. Managed admission and every new claim bind to it.
+	WorkerRevision string
+	// WorkerPodUID is this process's downward-API Pod UID. Managed admission
+	// requires it to match the exact Pod authenticated in CiscoDevice status so
+	// an overlapping predecessor cannot reuse a replacement Pod's proof.
+	WorkerPodUID string
+	// Secret revisions prove that this process loaded the exact credential and
+	// trust objects currently referenced by its CiscoDevice. They are injected
+	// into the immutable PodTemplate alongside WorkerRevision.
+	CredentialSecretRevision string
+	GNOITLSSecretRevision    string
+	GNOIProvisioningRevision string
+	GNOI                     gnoi.Provider
+	Lifecycle                softwarelifecycle.Backend
+	ImageResolver            ImageResolver
+	MutationLeaser           *engine.FamilyLeaser
+	// DevicePodLister reads the device's app-hosting inventory immediately
+	// before a managed mutation claim. Kubernetes Pod state alone cannot prove
+	// that terminal or deleted workloads have finished device-side cleanup.
+	DevicePodLister func(context.Context) ([]*corev1.Pod, error)
 	// BeforeMutation prepares device maintenance after the shared Lease is
 	// owned. Errors prevent dispatch; implementations must be idempotent.
-	BeforeMutation func(context.Context) error
+	BeforeMutation func(context.Context, *opsv1alpha1.IOSXESoftwareUpgrade) error
 
 	// Now is injected for tests. nil means time.Now.
 	Now func() time.Time
@@ -141,9 +162,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	if r.DeviceNamespace != "" && up.Namespace != r.DeviceNamespace {
 		return reconcile.Result{}, nil
 	}
+	// A managed worker may execute only manager-created, identity-bound leaves.
+	// Ignore ordinary leaves entirely, including deletion, so the worker never
+	// writes an object that the native ownership policy correctly reserves to
+	// some other controller or operator.
+	if r.ManagedTopology && up.Annotations[managedprotocol.AnnotationManaged] != "true" {
+		return reconcile.Result{}, nil
+	}
 
 	now := r.now()
 	ctx, _ = correlation.ApplyAnnotations(ctx, up.Annotations, now)
+	policyEpoch := int64(0)
+	if up.Status.ManagerAdmission != nil {
+		policyEpoch = up.Status.ManagerAdmission.PolicyEpoch
+	}
 	ctx, span := correlation.Start(
 		ctx,
 		otel.Tracer("cisco-virtual-kubelet/softwareupgrade-reconciler"),
@@ -153,7 +185,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 			attribute.String("cisco.vk.device.name", r.DeviceName),
 			attribute.String("k8s.namespace.name", up.Namespace),
 			attribute.String("k8s.resource.name", up.Name),
+			attribute.String("k8s.resource.uid", string(up.UID)),
 			attribute.String("k8s.resource.kind", "IOSXESoftwareUpgrade"),
+			attribute.String("cvk.rollout.campaign_uid", up.Annotations[managedprotocol.AnnotationCampaignUID]),
+			attribute.String("cvk.rollout.plan_hash", up.Annotations[managedprotocol.AnnotationPlanHash]),
+			attribute.String("cvk.rollout.reservation_id", up.Annotations[managedprotocol.AnnotationReservationID]),
+			attribute.Int64("cvk.rollout.policy_epoch", policyEpoch),
 			attribute.String("cvk.softwareupgrade.phase", string(up.Status.Phase)),
 			attribute.String(semconv.CvkEntityType, semconv.EntityTypeOperation),
 			attribute.String(semconv.CvkEntityID, softwareUpgradeEntityID(&up)),
@@ -173,6 +210,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	// Deletion path.
 	if !up.DeletionTimestamp.IsZero() {
 		return r.handleDelete(ctx, &up, now)
+	}
+	managedDecision, controlAcknowledged, err := r.syncManagedLeafGate(ctx, &up, now)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if controlAcknowledged {
+		// Acknowledge the exact admission/control revision durably before any
+		// phase transition or device-mutation claim can follow.
+		return reconcile.Result{RequeueAfter: time.Second}, nil
+	}
+	if managedDecision.applies && !managedDecision.allowProgress {
+		return reconcile.Result{RequeueAfter: managedAdmissionPoll}, nil
 	}
 	unsupportedModel := unsupportedExecutionModel(&up)
 	terminalLegacyRisk := !unsupportedModel && terminalUpgradePhase(up.Status.Phase) &&
@@ -998,6 +1047,12 @@ func (r *Reconciler) claimStaging(
 		if stagingRequestSubmitted(&cur) || terminalUpgradePhase(cur.Status.Phase) {
 			return nil
 		}
+		ready, err := r.prepareManagedMutationClaim(
+			ctx, up, &cur, opsv1alpha1.UpgradeManagedMutationStaging, now,
+		)
+		if err != nil || !ready {
+			return err
+		}
 		if cur.Status.InstallStartTime == nil {
 			cur.Status.InstallStartTime = &metav1.Time{Time: now}
 		}
@@ -1076,6 +1131,14 @@ func (r *Reconciler) claimActivation(
 		if alreadyRequested || terminalUpgradePhase(cur.Status.Phase) {
 			return nil
 		}
+		stage := opsv1alpha1.UpgradeManagedMutationPrimaryActivation
+		if standby {
+			stage = opsv1alpha1.UpgradeManagedMutationStandbyActivation
+		}
+		ready, err := r.prepareManagedMutationClaim(ctx, up, &cur, stage, now)
+		if err != nil || !ready {
+			return err
+		}
 		if cur.Status.ActivationStartTime == nil {
 			cur.Status.ActivationStartTime = &metav1.Time{Time: now}
 		}
@@ -1145,6 +1208,14 @@ func (r *Reconciler) claimInstallAttempt(
 		}
 		if installAttemptRequested(&cur, standby) || terminalUpgradePhase(cur.Status.Phase) {
 			return nil
+		}
+		stage := opsv1alpha1.UpgradeManagedMutationPrimaryInstall
+		if standby {
+			stage = opsv1alpha1.UpgradeManagedMutationStandbyInstall
+		}
+		ready, err := r.prepareManagedMutationClaim(ctx, up, &cur, stage, now)
+		if err != nil || !ready {
+			return err
 		}
 		if standby {
 			cur.Status.StandbySupervisorInstallRequested = true
@@ -1410,7 +1481,7 @@ func (r *Reconciler) ensureMutationLease(
 
 func (r *Reconciler) prepareMutation(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (bool, reconcile.Result, error) {
 	if r.BeforeMutation != nil {
-		if err := r.BeforeMutation(ctx); err != nil {
+		if err := r.BeforeMutation(ctx, up); err != nil {
 			result, updateErr := r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 				cur.Status.Message = "waiting for device maintenance preparation: " + err.Error()
 				r.setReady(cur, metav1.ConditionFalse, "MutationPreparationBlocked", cur.Status.Message, now)
@@ -1672,6 +1743,15 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 			fmt.Sprintf("image resolution did not complete within %s", installTimeout(up)), now)
 	}
 	resolveCtx, cancelResolve := context.WithTimeout(ctx, remainingInstallTime(up, now))
+	if r.ManagedTopology || up.Annotations[managedprotocol.AnnotationManaged] == "true" {
+		resolveCtx = WithManagedImageSourcePolicy(resolveCtx)
+		if up.Spec.ImageSource.URLSecretRef != nil {
+			resolveCtx = withManagedImageSourceSecretIdentity(
+				resolveCtx,
+				up.Annotations[managedprotocol.AnnotationSourceSecretUID],
+			)
+		}
+	}
 	resolved, err := r.ImageResolver.Resolve(resolveCtx, up.Namespace, up.Spec.ImageSource)
 	resolveDeadlineExceeded := errors.Is(resolveCtx.Err(), context.DeadlineExceeded)
 	cancelResolve()
@@ -2886,6 +2966,12 @@ func (r *Reconciler) claimRollbackActivation(
 		if rollbackRequestSubmitted(&cur) || terminalUpgradePhase(cur.Status.Phase) {
 			return nil
 		}
+		ready, err := r.prepareManagedMutationClaim(
+			ctx, up, &cur, opsv1alpha1.UpgradeManagedMutationRollbackActivation, now,
+		)
+		if err != nil || !ready {
+			return err
+		}
 		if cur.Status.RollbackStartTime == nil {
 			cur.Status.RollbackStartTime = &metav1.Time{Time: now}
 		}
@@ -3259,7 +3345,8 @@ func (r *Reconciler) setCondition(up *opsv1alpha1.IOSXESoftwareUpgrade, condType
 func upgradeStatusCASMatches(expected, current *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 	if expected == nil || current == nil || expected.Generation != current.Generation ||
 		expected.Status.Phase != current.Status.Phase ||
-		expected.Status.ExecutionModel != current.Status.ExecutionModel {
+		expected.Status.ExecutionModel != current.Status.ExecutionModel ||
+		!managedStatusCASMatches(expected, current) {
 		return false
 	}
 	e, c := expected.Status, current.Status

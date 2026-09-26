@@ -44,6 +44,7 @@ nav:
   - v2026.9.0 (unpublished): 'releases/v2026.9.0.md'
 - Getting Started: 'getting-started.md'
 - Architecture: 'ARCHITECTURE.md'
+- Managed Topology and Rollouts: 'topology-awareness.md'
 - Network Controller Extensions: 'controller-extension-guide.md'
 - CLI Reference: 'cisco-vk-cli.md'
 - Configuration:

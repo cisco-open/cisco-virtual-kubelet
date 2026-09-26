@@ -112,12 +112,19 @@ If the controller pod is not `Running`, see [Troubleshooting → CiscoDevice stu
 ### Upgrading an existing release
 
 Helm installs CRDs during the first install but does not upgrade them. Before
-upgrading to `2026.9.2`, pull the chart and apply its CRDs server-side:
+upgrading to `2026.9.2`, pull the chart, back up the live definitions, inspect
+the server-side diff, and apply the reviewed schemas with an explicit Helm
+field-ownership handoff:
 
 ```bash
 helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
   --version 2026.9.2 --untar
-kubectl apply --server-side -f cisco-virtual-kubelet/crds/
+kubectl get customresourcedefinitions.apiextensions.k8s.io -o yaml \
+  > cvk-crds-before-upgrade.yaml
+kubectl diff --server-side --force-conflicts \
+  --field-manager=cvk-crd-upgrade -f cisco-virtual-kubelet/crds/
+kubectl apply --server-side --force-conflicts \
+  --field-manager=cvk-crd-upgrade -f cisco-virtual-kubelet/crds/
 kubectl wait --for=condition=Established --timeout=60s \
   crd/networkcontrollers.cisco.vk \
   crd/networkcontrollerconfigs.config.cisco.vk
@@ -128,6 +135,10 @@ helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
 kubectl rollout status deployment/cvk-cisco-virtual-kubelet-controller \
   --namespace cvk-system
 ```
+
+`kubectl diff` returns status 1 for expected differences. The force flag is
+limited to the exact CVK CRD files passed with `-f`; review the diff and keep
+the backup before continuing.
 
 The September release adds `NetworkController` and
 `NetworkControllerConfig`. If either CRD is absent, the manager keeps existing

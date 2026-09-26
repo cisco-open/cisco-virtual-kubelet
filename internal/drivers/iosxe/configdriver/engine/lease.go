@@ -26,7 +26,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
 
 // FamilyLeaser claims coordination.k8s.io/v1 Leases to serialise
@@ -43,6 +47,14 @@ import (
 type FamilyLeaser struct {
 	Client    client.Client
 	Namespace string
+	// DeviceKey overrides the caller's display name in the Lease name and
+	// cisco.vk/device label. Managed workers use the manager-derived,
+	// namespace-aware DeviceKey so admission can bind every family Lease to the
+	// authenticated per-device ServiceAccount. Empty preserves legacy naming.
+	DeviceKey string
+	// RequireExisting rejects missing Leases instead of creating them. Managed
+	// workers may only acquire the manager's pre-created canonical object.
+	RequireExisting bool
 	// TTL controls spec.leaseDurationSeconds. Zero means 30s.
 	TTL time.Duration
 }
@@ -80,6 +92,7 @@ func (l *FamilyLeaser) AcquireIfFree(ctx context.Context, device, family, identi
 	if l.Namespace == "" {
 		return LeaseResult{}, fmt.Errorf("FamilyLeaser: empty Namespace")
 	}
+	device = l.leaseDeviceKey(device)
 	ttl := l.TTL
 	if ttl <= 0 {
 		ttl = 30 * time.Second
@@ -95,6 +108,9 @@ func (l *FamilyLeaser) AcquireIfFree(ctx context.Context, device, family, identi
 	err := l.Client.Get(ctx, types.NamespacedName{Namespace: l.Namespace, Name: name}, &lease)
 	switch {
 	case apierrors.IsNotFound(err):
+		if l.RequireExisting {
+			return LeaseResult{}, fmt.Errorf("required pre-created lease %s is missing", name)
+		}
 		// Free → create + own.
 		lease = coordv1.Lease{
 			ObjectMeta: metav1.ObjectMeta{
@@ -134,7 +150,16 @@ func (l *FamilyLeaser) AcquireIfFree(ctx context.Context, device, family, identi
 		holder = *lease.Spec.HolderIdentity
 	}
 	if holder == "" || holder == identity {
-		// Empty holder is treated as free; renew with our identity.
+		if holder != identity {
+			clearMaintenanceRequest(&lease)
+			lease.Spec.AcquireTime = &now
+			transitions := int32(1)
+			if lease.Spec.LeaseTransitions != nil {
+				transitions = *lease.Spec.LeaseTransitions + 1
+			}
+			lease.Spec.LeaseTransitions = &transitions
+		}
+		// Empty holder is a new acquisition; same holder is only a renewal.
 		lease.Spec.HolderIdentity = strPtr(identity)
 		lease.Spec.RenewTime = &now
 		lease.Spec.LeaseDurationSeconds = &ttlSeconds
@@ -169,6 +194,7 @@ func (l *FamilyLeaser) Acquire(ctx context.Context, device, family, identity str
 	if l.Namespace == "" {
 		return LeaseResult{}, fmt.Errorf("FamilyLeaser: empty Namespace")
 	}
+	device = l.leaseDeviceKey(device)
 
 	ttl := l.TTL
 	if ttl <= 0 {
@@ -186,6 +212,9 @@ func (l *FamilyLeaser) Acquire(ctx context.Context, device, family, identity str
 	err := l.Client.Get(ctx, types.NamespacedName{Namespace: l.Namespace, Name: name}, &lease)
 	switch {
 	case apierrors.IsNotFound(err):
+		if l.RequireExisting {
+			return LeaseResult{}, fmt.Errorf("required pre-created lease %s is missing", name)
+		}
 		lease = coordv1.Lease{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -227,33 +256,76 @@ func (l *FamilyLeaser) Acquire(ctx context.Context, device, family, identity str
 // Release by a non-owner is a no-op (not an error) so a stale CR that
 // lost the lease to another can still call Release on delete.
 func (l *FamilyLeaser) Release(ctx context.Context, device, family, identity string) error {
+	if l == nil || l.Client == nil {
+		return fmt.Errorf("FamilyLeaser: nil Client")
+	}
+	if l.Namespace == "" {
+		return fmt.Errorf("FamilyLeaser: empty Namespace")
+	}
+	device = l.leaseDeviceKey(device)
 	name := leaseName(device, family)
-	var lease coordv1.Lease
-	err := l.Client.Get(ctx, types.NamespacedName{Namespace: l.Namespace, Name: name}, &lease)
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("get lease: %w", err)
-	}
-	if lease.Spec.HolderIdentity == nil || *lease.Spec.HolderIdentity != identity {
-		return nil
-	}
-	uid := lease.UID
-	resourceVersion := lease.ResourceVersion
-	err = l.Client.Delete(ctx, &lease, client.Preconditions{
-		UID:             &uid,
-		ResourceVersion: &resourceVersion,
+	key := types.NamespacedName{Namespace: l.Namespace, Name: name}
+
+	// Retained managed Leases are durable security objects. A stale update may
+	// not be reported as a successful release: retry from a fresh read until we
+	// either clear our still-current ownership or observe a different holder.
+	// Missing is also an error in RequireExisting mode so callers retain their
+	// guard instead of treating a deleted canonical Lease as settled.
+	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		var lease coordv1.Lease
+		if err := l.Client.Get(ctx, key, &lease); err != nil {
+			if apierrors.IsNotFound(err) && !l.RequireExisting {
+				return nil
+			}
+			return err
+		}
+		if lease.Spec.HolderIdentity == nil || *lease.Spec.HolderIdentity != identity {
+			return nil
+		}
+		if lease.Annotations[devicecoordination.RetainLeaseAnnotation] == "true" {
+			lease.Spec.HolderIdentity = nil
+			lease.Spec.AcquireTime = nil
+			lease.Spec.RenewTime = nil
+			lease.Spec.LeaseDurationSeconds = nil
+			// Mutation Leases retain their transition counter across holders so
+			// the manager can observe an unbroken disruptive-session history.
+			// Routine config-family Leases return to the wholly empty canonical
+			// form accepted by their manager/admission contract.
+			if family != devicecoordination.MutationLeaseFamily {
+				lease.Spec.LeaseTransitions = nil
+			}
+			clearMaintenanceRequest(&lease)
+			return l.Client.Update(ctx, &lease)
+		}
+
+		uid := lease.UID
+		resourceVersion := lease.ResourceVersion
+		err := l.Client.Delete(ctx, &lease, client.Preconditions{
+			UID:             &uid,
+			ResourceVersion: &resourceVersion,
+		})
+		if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
+			// Non-retained legacy Leases are deleted rather than reset. A
+			// concurrent takeover changes the resourceVersion and makes this
+			// release a safe no-op.
+			return nil
+		}
+		return err
 	})
-	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
-		// A conflict means the Lease changed after our ownership check. It may
-		// now belong to another operation, so a stale release must be a no-op.
-		return nil
-	}
 	if err != nil {
-		return fmt.Errorf("delete lease: %w", err)
+		if apierrors.IsNotFound(err) && l.RequireExisting {
+			return fmt.Errorf("required pre-created lease %s is missing during release", name)
+		}
+		return fmt.Errorf("release lease %s: %w", name, err)
 	}
 	return nil
+}
+
+func (l *FamilyLeaser) leaseDeviceKey(device string) string {
+	if l != nil && l.DeviceKey != "" {
+		return l.DeviceKey
+	}
+	return device
 }
 
 // renewOrReport is the shared path for an existing lease: if we
@@ -288,6 +360,7 @@ func (l *FamilyLeaser) renewOrReport(
 	}
 	if expired {
 		// Previous holder timed out — take over.
+		clearMaintenanceRequest(lease)
 		lease.Spec.HolderIdentity = strPtr(identity)
 		lease.Spec.AcquireTime = &now
 		lease.Spec.RenewTime = &now
@@ -310,6 +383,26 @@ func (l *FamilyLeaser) renewOrReport(
 	}
 	// Someone else owns it and it is still valid.
 	return LeaseResult{Owned: false, Holder: holder}, nil
+}
+
+// Request annotations belong to one holder only. Clear them in the same
+// resourceVersion-checked update as release/takeover, preserving manager-owned
+// binding annotations and the retained canonical Lease identity.
+func clearMaintenanceRequest(lease *coordv1.Lease) {
+	if lease.Annotations[devicecoordination.RetainLeaseAnnotation] != "true" {
+		return
+	}
+	for _, key := range []string{
+		managedprotocol.AnnotationMaintenanceRequestVersion,
+		managedprotocol.AnnotationMaintenanceSessionToken,
+		managedprotocol.AnnotationMaintenanceRequestedAt,
+		managedprotocol.AnnotationMaintenanceOperationNS,
+		managedprotocol.AnnotationMaintenanceOperationName,
+		managedprotocol.AnnotationMaintenanceOperationUID,
+		managedprotocol.AnnotationMaintenanceControlRevision,
+	} {
+		delete(lease.Annotations, key)
+	}
 }
 
 // leaseExpired checks whether the lease's renew+duration window has

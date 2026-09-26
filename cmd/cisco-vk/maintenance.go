@@ -15,9 +15,13 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -30,9 +34,35 @@ func maintenanceEnabled(opts configReconcilerOptions) bool {
 		!envEnabled("DISABLE_IN_POD_CONFIG_RECONCILER")
 }
 
-func newMaintenanceCoordinator(cfg *rest.Config, nodeName string, opts configReconcilerOptions) (*maintenance.Coordinator, error) {
-	if !maintenanceEnabled(opts) {
+// newMaintenanceCoordinator is the worker-side identity seam for maintenance.
+// ManagedTopology and DeviceUID are validated and deliberately remain distinct
+// here so the manager-owned request/acknowledgement protocol can consume them
+// without once again deriving CiscoDevice identity from NodeName.
+func newMaintenanceCoordinator(cfg *rest.Config, identity workerRuntimeIdentity, opts configReconcilerOptions) (*maintenance.Coordinator, error) {
+	// Every managed worker needs the Kubernetes-side write fence, including
+	// drivers without gNOI lifecycle controllers. Standalone workers retain the
+	// historical opt-in construction tied to IOS-XE mutation support.
+	if !identity.ManagedTopology && !maintenanceEnabled(opts) {
 		return nil, nil
+	}
+	if err := identity.validate(); err != nil {
+		return nil, err
+	}
+	if identity.ManagedTopology {
+		switch identity.WorkerMode {
+		case workerModeAppHosting, workerModeNetworkManagement:
+		default:
+			return nil, fmt.Errorf("managed maintenance requires an app-hosting or network-management worker mode, got %q", identity.WorkerMode)
+		}
+		for _, required := range []struct{ name, value string }{
+			{name: managedprotocol.EnvExpectedWorkerUsername, value: identity.WorkerUsername},
+			{name: "POD_NAME", value: identity.WorkerPodName},
+			{name: "POD_UID", value: identity.WorkerPodUID},
+		} {
+			if strings.TrimSpace(required.value) == "" {
+				return nil, fmt.Errorf("managed maintenance requires non-empty %s", required.name)
+			}
+		}
 	}
 	scheme := runtime.NewScheme()
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
@@ -41,17 +71,25 @@ func newMaintenanceCoordinator(cfg *rest.Config, nodeName string, opts configRec
 	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
+	if err := ciskov1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
 	c, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
 		return nil, err
 	}
 	leaseNamespace := os.Getenv("CONFIG_LEASE_NAMESPACE")
 	if leaseNamespace == "" {
-		leaseNamespace = operationNamespace()
+		leaseNamespace = identity.DeviceNamespace
 	}
 	return &maintenance.Coordinator{
-		Client: c, Namespace: operationNamespace(), DeviceName: nodeName,
-		NodeName: nodeName, LeaseNamespace: leaseNamespace,
-		MutationsEnabled: (opts.EnableIOSXESoftwareUpgrade || opts.EnableWriteClassGNOI) && !envEnabled(gNOIDisabledEnv),
+		Client: c, Namespace: identity.DeviceNamespace, DeviceName: identity.DeviceName,
+		DeviceUID: identity.DeviceUID, NodeName: identity.NodeName, LeaseNamespace: leaseNamespace,
+		ManagedTopology:        identity.ManagedTopology,
+		WorkerMode:             string(identity.WorkerMode),
+		ExpectedWorkerUsername: identity.WorkerUsername,
+		WorkerPodName:          identity.WorkerPodName,
+		WorkerPodUID:           identity.WorkerPodUID,
+		MutationsEnabled:       (opts.softwareUpgradeEnabled() || opts.writeClassGNOIEnabled()) && !envEnabled(gNOIDisabledEnv),
 	}, nil
 }

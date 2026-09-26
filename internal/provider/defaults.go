@@ -15,11 +15,15 @@
 package provider
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"runtime/debug"
 	"strings"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,7 +56,27 @@ func sanitizeNodeName(value string) string {
 }
 
 // GetInitialNodeSpec builds the initial v1.Node using runtime parameters.
+// Standalone registration intentionally retains the legacy platform-as-topology
+// fallback for this compatibility entry point.
 func GetInitialNodeSpec(nodeName string, deviceSpec *ciskov1.DeviceSpec) v1.Node {
+	node, err := GetInitialNodeSpecWithTopologyMode(nodeName, deviceSpec, topology.ProjectionModeStandaloneCompatibility)
+	if err != nil {
+		// Keep this long-standing, no-error API for standalone callers. Managed
+		// callers use the error-returning mode-aware entry point below and fail
+		// closed; the compatibility path preserves its original merge semantics.
+		log.G(context.Background()).WithError(err).Warn("Invalid standalone Node label projection")
+	}
+	return node
+}
+
+// GetInitialNodeSpecWithTopologyMode builds an initial Node using an explicit
+// topology compatibility mode. Callers must not publish the returned Node when
+// err is non-nil.
+func GetInitialNodeSpecWithTopologyMode(
+	nodeName string,
+	deviceSpec *ciskov1.DeviceSpec,
+	mode topology.ProjectionMode,
+) (v1.Node, error) {
 	deviceAddress := ""
 	driver := ciskov1.DeviceDriver("")
 	var taints []v1.Taint
@@ -66,20 +90,38 @@ func GetInitialNodeSpec(nodeName string, deviceSpec *ciskov1.DeviceSpec) v1.Node
 	nodePlatform := nodePlatformMetadata(driver)
 	nodeInfo.OSImage = nodePlatform.OSImage
 	nodeInfo.OperatingSystem = "Cisco"
+	conditions := InitNodeConditions()
+	maxPods := effectiveMaxPods(deviceSpec)
+	capacity := initNodeCapacity(maxPods)
+	var capacityErr error
+	if mode == topology.ProjectionModeManaged {
+		maxPods = rawMaxPods(deviceSpec)
+		capacityErr = topology.ValidateManagedMaxPods(maxPods)
+		capacity = initManagedNodeCapacity(maxPods, capacityErr == nil)
+		for i := range conditions {
+			if conditions[i].Type != v1.NodeReady {
+				continue
+			}
+			conditions[i].Status = v1.ConditionUnknown
+			conditions[i].Reason = "ManagedHealthUnobserved"
+			conditions[i].Message = "managed device health has not yet been observed"
+		}
+	}
+	labels, labelErr := normalizedNodeLabels(resolvedNodeName, deviceSpec, mode)
 
 	return v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   resolvedNodeName,
-			Labels: initialNodeLabels(resolvedNodeName, deviceSpec),
+			Labels: labels,
 		},
 		Spec: v1.NodeSpec{
 			Taints: taints,
 		},
 		Status: v1.NodeStatus{
 			Phase:      v1.NodeRunning,
-			Conditions: InitNodeConditions(),
+			Conditions: conditions,
 			NodeInfo:   nodeInfo,
-			Capacity:   initNodeCapacity(),
+			Capacity:   capacity,
 			Addresses: []v1.NodeAddress{
 				{
 					Type:    v1.NodeInternalIP,
@@ -92,36 +134,34 @@ func GetInitialNodeSpec(nodeName string, deviceSpec *ciskov1.DeviceSpec) v1.Node
 				},
 			},
 		},
-	}
+	}, errors.Join(labelErr, capacityErr)
 }
 
-func initialNodeLabels(nodeName string, deviceSpec *ciskov1.DeviceSpec) map[string]string {
+func normalizedNodeLabels(
+	nodeName string,
+	deviceSpec *ciskov1.DeviceSpec,
+	mode topology.ProjectionMode,
+) (map[string]string, error) {
 	driver := ciskov1.DeviceDriver("")
+	region := ""
+	zone := ""
+	var sourceLabels map[string]string
 	if deviceSpec != nil {
 		driver = deviceSpec.Driver
+		region = deviceSpec.Region
+		zone = deviceSpec.Zone
+		sourceLabels = deviceSpec.Labels
 	}
 	nodePlatform := nodePlatformMetadata(driver)
-	labels := map[string]string{
-		"kubernetes.io/hostname":        nodeName,
-		"platform":                      nodePlatform.Label,
-		"provider":                      "cisco-apphosting",
-		"type":                          "virtual-kubelet",
-		"topology.kubernetes.io/zone":   nodePlatform.Topology,
-		"topology.kubernetes.io/region": nodePlatform.Topology,
-	}
-	if deviceSpec == nil {
-		return labels
-	}
-	if deviceSpec.Zone != "" {
-		labels["topology.kubernetes.io/zone"] = deviceSpec.Zone
-	}
-	if deviceSpec.Region != "" {
-		labels["topology.kubernetes.io/region"] = deviceSpec.Region
-	}
-	for k, v := range deviceSpec.Labels {
-		labels[k] = v
-	}
-	return labels
+	return topology.NodeLabels(topology.NodeLabelsOptions{
+		Mode:                   mode,
+		NodeName:               nodeName,
+		Platform:               nodePlatform.Label,
+		Region:                 region,
+		Zone:                   zone,
+		LegacyPlatformTopology: nodePlatform.LegacyTopology,
+		SourceLabels:           sourceLabels,
+	})
 }
 
 func InitNodeConditions() []v1.NodeCondition {
@@ -189,21 +229,21 @@ func InitNodeSystemInfo() v1.NodeSystemInfo {
 }
 
 type nodePlatformInfo struct {
-	Label    string
-	Topology string
-	OSImage  string
+	Label          string
+	LegacyTopology string
+	OSImage        string
 }
 
 func nodePlatformMetadata(driver ciskov1.DeviceDriver) nodePlatformInfo {
 	switch driver {
 	case ciskov1.DeviceDriverNXOS:
-		return nodePlatformInfo{Label: "cisco-nxos", Topology: "cisco-nxos", OSImage: "NX-OS"}
+		return nodePlatformInfo{Label: "cisco-nxos", LegacyTopology: "cisco-nxos", OSImage: "NX-OS"}
 	case ciskov1.DeviceDriverXR:
-		return nodePlatformInfo{Label: "cisco-iosxr", Topology: "cisco-iosxr", OSImage: "IOS-XR"}
+		return nodePlatformInfo{Label: "cisco-iosxr", LegacyTopology: "cisco-iosxr", OSImage: "IOS-XR"}
 	case ciskov1.DeviceDriverOPENCONFIG:
-		return nodePlatformInfo{Label: "openconfig", Topology: "openconfig", OSImage: "OpenConfig"}
+		return nodePlatformInfo{Label: "openconfig", LegacyTopology: "openconfig", OSImage: "OpenConfig"}
 	default:
-		return nodePlatformInfo{Label: "cisco-ios-xe", Topology: "cisco-iosxe", OSImage: "IOS-XE"}
+		return nodePlatformInfo{Label: "cisco-ios-xe", LegacyTopology: "cisco-iosxe", OSImage: "IOS-XE"}
 	}
 }
 
@@ -220,13 +260,39 @@ func getVirtualKubeletVersion() string {
 	return "unknown"
 }
 
-func initNodeCapacity() v1.ResourceList {
+func initNodeCapacity(maxPods int64) v1.ResourceList {
 	defaultCapacity := v1.ResourceList{
 		v1.ResourceCPU:    resource.MustParse("8"),
 		v1.ResourceMemory: resource.MustParse("8Gi"),
 		"storage":         resource.MustParse("100Gi"),
-		v1.ResourcePods:   resource.MustParse("16"),
+		v1.ResourcePods:   *resource.NewQuantity(maxPods, resource.DecimalSI),
 	}
 
 	return defaultCapacity
+}
+
+func initManagedNodeCapacity(maxPods int64, valid bool) v1.ResourceList {
+	// maxPods is explicit scheduler configuration with a compatibility default.
+	// CPU, memory, and device storage remain absent until live app-hosting quota
+	// proves them; model placeholders must never become schedulable capacity.
+	if !valid {
+		return v1.ResourceList{}
+	}
+	return v1.ResourceList{
+		v1.ResourcePods: *resource.NewQuantity(maxPods, resource.DecimalSI),
+	}
+}
+
+func effectiveMaxPods(deviceSpec *ciskov1.DeviceSpec) int64 {
+	if deviceSpec != nil && deviceSpec.MaxPods > 0 {
+		return int64(deviceSpec.MaxPods)
+	}
+	return 16
+}
+
+func rawMaxPods(deviceSpec *ciskov1.DeviceSpec) int64 {
+	if deviceSpec == nil {
+		return 0
+	}
+	return int64(deviceSpec.MaxPods)
 }

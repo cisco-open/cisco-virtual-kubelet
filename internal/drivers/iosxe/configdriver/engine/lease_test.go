@@ -39,6 +39,24 @@ type takeoverOnLeaseUpdateClient struct {
 	takeoverTTLSeconds int32
 }
 
+type conflictOnceOnLeaseUpdateClient struct {
+	client.Client
+	once sync.Once
+}
+
+func (c *conflictOnceOnLeaseUpdateClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+	injected := false
+	c.once.Do(func() { injected = true })
+	if injected {
+		return apierrors.NewConflict(
+			schema.GroupResource{Group: "coordination.k8s.io", Resource: "leases"},
+			obj.GetName(),
+			errors.New("injected transient conflict"),
+		)
+	}
+	return c.Client.Update(ctx, obj, opts...)
+}
+
 func (c *takeoverOnLeaseUpdateClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 	lease, ok := obj.(*coordv1.Lease)
 	if !ok {

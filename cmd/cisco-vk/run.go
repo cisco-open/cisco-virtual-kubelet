@@ -16,6 +16,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -23,16 +26,21 @@ import (
 	"path"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/config"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
+	"github.com/cisco/virtual-kubelet-cisco/internal/otelproviders"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	telemetrystate "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
 	"github.com/cisco/virtual-kubelet-cisco/internal/tlsutil"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 	logruslib "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -41,10 +49,13 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	"go.opentelemetry.io/otel"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -67,12 +78,39 @@ var (
 
 	enableWriteClassGNOI       bool
 	enableIOSXESoftwareUpgrade bool
+	workerModeFlag             string
+	workerAccessFlag           string
 )
 
 const (
 	envEnableWriteClassGNOI       = "CISCO_VK_ENABLE_WRITE_CLASS_GNOI"
 	envEnableIOSXESoftwareUpgrade = "CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE"
+
+	envDeviceNamespace = managedprotocol.EnvDeviceNamespace
+	envDeviceName      = managedprotocol.EnvDeviceName
+	envDeviceUID       = managedprotocol.EnvDeviceUID
+	envNodeName        = managedprotocol.EnvNodeName
+	envManagedTopology = managedprotocol.EnvManagedTopology
+	envWorkerRevision  = managedprotocol.EnvWorkerRevision
+	legacyEnvNodeName  = "VKUBELET_NODE_NAME"
 )
+
+// workerRuntimeIdentity keeps namespaced CiscoDevice identity separate from
+// the cluster-scoped Kubernetes Node represented by this worker. DeviceUID and
+// ManagedTopology are intentionally carried to the maintenance construction
+// seam for the later manager request/acknowledgement protocol.
+type workerRuntimeIdentity struct {
+	DeviceNamespace string
+	DeviceName      string
+	DeviceUID       string
+	NodeName        string
+	ManagedTopology bool
+	WorkerRevision  string
+	WorkerMode      workerMode
+	WorkerUsername  string
+	WorkerPodName   string
+	WorkerPodUID    string
+}
 
 var runCmd = &cobra.Command{
 	Use:   "run",
@@ -90,7 +128,7 @@ func init() {
 	runCmd.Flags().StringVar(&logLevel, "log-level", "",
 		"log level: debug, info, warn, error (default: $LOG_LEVEL or info)")
 	runCmd.Flags().StringVar(&nodeName, "nodename", "",
-		"kubernetes node name (default: $VKUBELET_NODE_NAME or 'cisco-virtual-kubelet')")
+		"kubernetes node name (default: $CISCO_VK_NODE_NAME, $VKUBELET_NODE_NAME, device.nodeName, device address, or 'cisco-virtual-kubelet')")
 	runCmd.Flags().StringVar(&tlsCertFile, "tls-cert-file", "",
 		fmt.Sprintf("path to TLS certificate for the kubelet HTTPS listener (default: %s)", tlsutil.DefaultCertFile))
 	runCmd.Flags().StringVar(&tlsKeyFile, "tls-key-file", "",
@@ -99,6 +137,10 @@ func init() {
 		"enable write-class gNOI reconcilers such as IOSXEOperationalAction (default: false)")
 	runCmd.Flags().BoolVar(&enableIOSXESoftwareUpgrade, "enable-iosxesoftwareupgrade", false,
 		"enable IOSXESoftwareUpgrade gNOI OS upgrade reconciler (default: false)")
+	runCmd.Flags().StringVar(&workerModeFlag, "worker-mode", "",
+		"runtime plane: combined, app-hosting, or network-management (default: $CISCO_VK_WORKER_MODE or combined)")
+	runCmd.Flags().StringVar(&workerAccessFlag, "worker-access", "",
+		"runtime access: readOnly or readWrite (default: $CISCO_VK_WORKER_ACCESS or readWrite)")
 }
 
 // validateConfig checks if the config file exists at the given path
@@ -129,6 +171,160 @@ func flagOrEnvBool(flagValue bool, envName string) bool {
 	}
 	parsed, err := strconv.ParseBool(raw)
 	return err == nil && parsed
+}
+
+func resolveWorkerRuntimeIdentity(flagNodeName string, spec *ciskov1.DeviceSpec) (workerRuntimeIdentity, error) {
+	if spec == nil {
+		return workerRuntimeIdentity{}, fmt.Errorf("resolve worker identity: nil DeviceSpec")
+	}
+
+	managed, err := strictOptionalBoolEnv(envManagedTopology)
+	if err != nil {
+		return workerRuntimeIdentity{}, err
+	}
+	if managed {
+		identity := workerRuntimeIdentity{
+			DeviceNamespace: os.Getenv(envDeviceNamespace),
+			DeviceName:      os.Getenv(envDeviceName),
+			DeviceUID:       os.Getenv(envDeviceUID),
+			NodeName:        os.Getenv(envNodeName),
+			ManagedTopology: true,
+			WorkerRevision:  os.Getenv(envWorkerRevision),
+		}
+		for _, required := range []struct {
+			name  string
+			value string
+		}{
+			{name: envDeviceNamespace, value: identity.DeviceNamespace},
+			{name: envDeviceName, value: identity.DeviceName},
+			{name: envDeviceUID, value: identity.DeviceUID},
+			{name: envNodeName, value: identity.NodeName},
+			{name: envWorkerRevision, value: identity.WorkerRevision},
+		} {
+			if strings.TrimSpace(required.value) == "" {
+				return workerRuntimeIdentity{}, fmt.Errorf("managed topology identity requires non-empty %s", required.name)
+			}
+		}
+
+		// During the compatibility handoff the old flag/env/config inputs may
+		// still be present. Accept duplicates only when they prove the same Node
+		// binding; never let one silently redirect a managed worker.
+		for _, legacy := range []struct {
+			name  string
+			value string
+		}{
+			{name: "--nodename", value: flagNodeName},
+			{name: legacyEnvNodeName, value: os.Getenv(legacyEnvNodeName)},
+			{name: "device.nodeName", value: spec.NodeName},
+		} {
+			if legacy.value != "" && legacy.value != identity.NodeName {
+				return workerRuntimeIdentity{}, fmt.Errorf("managed topology Node identity conflict: %s=%q, %s=%q", legacy.name, legacy.value, envNodeName, identity.NodeName)
+			}
+		}
+
+		// Existing reconcilers scope their caches through POD_NAMESPACE. Until
+		// their options carry DeviceNamespace directly, require the downward-API
+		// value to prove that they will watch the bound CiscoDevice namespace.
+		podNamespace := os.Getenv("POD_NAMESPACE")
+		if podNamespace == "" {
+			return workerRuntimeIdentity{}, fmt.Errorf("managed topology identity requires POD_NAMESPACE to match %s", envDeviceNamespace)
+		}
+		if podNamespace != identity.DeviceNamespace {
+			return workerRuntimeIdentity{}, fmt.Errorf("managed topology namespace conflict: POD_NAMESPACE=%q, %s=%q", podNamespace, envDeviceNamespace, identity.DeviceNamespace)
+		}
+
+		if err := identity.validate(); err != nil {
+			return workerRuntimeIdentity{}, err
+		}
+		return identity, nil
+	}
+
+	resolvedNodeName := flagNodeName
+	if resolvedNodeName == "" {
+		resolvedNodeName = os.Getenv(envNodeName)
+	}
+	if resolvedNodeName == "" {
+		resolvedNodeName = os.Getenv(legacyEnvNodeName)
+	}
+	if resolvedNodeName == "" {
+		resolvedNodeName = spec.NodeName
+	}
+	resolvedNodeName = provider.GetNodeName(resolvedNodeName, spec.Address)
+
+	deviceNamespace := os.Getenv(envDeviceNamespace)
+	if deviceNamespace == "" {
+		deviceNamespace = operationNamespace()
+	}
+	// startConfigReconciler's namespace is still sourced through
+	// operationNamespace. Refuse an explicit split it cannot honor yet.
+	if deviceNamespace != operationNamespace() {
+		return workerRuntimeIdentity{}, fmt.Errorf("%s=%q does not match the config reconciler namespace %q", envDeviceNamespace, deviceNamespace, operationNamespace())
+	}
+	deviceName := os.Getenv(envDeviceName)
+	if deviceName == "" {
+		deviceName = resolvedNodeName
+	}
+	identity := workerRuntimeIdentity{
+		DeviceNamespace: deviceNamespace,
+		DeviceName:      deviceName,
+		DeviceUID:       os.Getenv(envDeviceUID),
+		NodeName:        resolvedNodeName,
+	}
+	if err := identity.validate(); err != nil {
+		return workerRuntimeIdentity{}, err
+	}
+	return identity, nil
+}
+
+func strictOptionalBoolEnv(name string) (bool, error) {
+	raw, ok := os.LookupEnv(name)
+	if !ok || strings.TrimSpace(raw) == "" {
+		return false, nil
+	}
+	value, err := strconv.ParseBool(strings.TrimSpace(raw))
+	if err != nil {
+		return false, fmt.Errorf("%s must be a boolean: %w", name, err)
+	}
+	return value, nil
+}
+
+func (identity workerRuntimeIdentity) validate() error {
+	if identity.ManagedTopology && identity.DeviceUID == "" {
+		return fmt.Errorf("managed topology identity requires non-empty %s", envDeviceUID)
+	}
+	if identity.ManagedTopology {
+		if !validWorkerRevision(identity.WorkerRevision) {
+			return fmt.Errorf("managed topology identity requires %s to be a sha256 revision", envWorkerRevision)
+		}
+	}
+	if problems := utilvalidation.IsDNS1123Label(identity.DeviceNamespace); len(problems) > 0 {
+		return fmt.Errorf("invalid CiscoDevice namespace %q: %s", identity.DeviceNamespace, strings.Join(problems, "; "))
+	}
+	if problems := utilvalidation.IsDNS1123Subdomain(identity.DeviceName); len(problems) > 0 {
+		return fmt.Errorf("invalid CiscoDevice name %q: %s", identity.DeviceName, strings.Join(problems, "; "))
+	}
+	if problems := utilvalidation.IsDNS1123Subdomain(identity.NodeName); len(problems) > 0 {
+		return fmt.Errorf("invalid Kubernetes Node name %q: %s", identity.NodeName, strings.Join(problems, "; "))
+	}
+	if identity.ManagedTopology {
+		if problems := utilvalidation.IsValidLabelValue(identity.NodeName); len(problems) > 0 {
+			return fmt.Errorf("managed Kubernetes Node name %q cannot be used as its hostname label: %s", identity.NodeName, strings.Join(problems, "; "))
+		}
+	}
+	if identity.DeviceUID != "" {
+		if len(identity.DeviceUID) > 128 || strings.TrimSpace(identity.DeviceUID) != identity.DeviceUID || strings.ContainsAny(identity.DeviceUID, " \t\r\n") {
+			return fmt.Errorf("invalid CiscoDevice UID %q: must be 1-128 non-whitespace characters", identity.DeviceUID)
+		}
+	}
+	return nil
+}
+
+func validWorkerRevision(value string) bool {
+	if !strings.HasPrefix(value, "sha256:") || len(value) != len("sha256:")+64 {
+		return false
+	}
+	decoded, err := hex.DecodeString(strings.TrimPrefix(value, "sha256:"))
+	return err == nil && len(decoded) == sha256.Size
 }
 
 func GetKubeConfig(kubeconfigFlag string) (*rest.Config, error) {
@@ -178,6 +374,39 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	// credentials out of the ConfigMap.
 	if envPass := os.Getenv("VK_DEVICE_PASSWORD"); envPass != "" {
 		appCfg.Device.Password = envPass
+	}
+
+	// Resolve and validate the complete manager/worker binding before opening
+	// Kubernetes clients or starting any background work. A managed worker must
+	// never begin operating with a partial or ambiguous identity.
+	identity, err := resolveWorkerRuntimeIdentity(nodeName, &appCfg.Device)
+	if err != nil {
+		return fmt.Errorf("resolve worker runtime identity: %w", err)
+	}
+	runtimeProfile, err := resolveWorkerRuntimeProfile(workerModeFlag, workerAccessFlag, identity.ManagedTopology)
+	if err != nil {
+		return fmt.Errorf("resolve worker runtime profile: %w", err)
+	}
+	identity.WorkerMode = runtimeProfile.Mode
+	identity.WorkerUsername = os.Getenv(managedprotocol.EnvExpectedWorkerUsername)
+	identity.WorkerPodName = os.Getenv("POD_NAME")
+	identity.WorkerPodUID = os.Getenv("POD_UID")
+	projectionMode := topology.ProjectionModeStandaloneCompatibility
+	var initialNodeSpec v1.Node
+	if runtimeProfile.runsAppHosting() {
+		initialNodeSpec = provider.GetInitialNodeSpec(identity.NodeName, &appCfg.Device)
+	}
+	if identity.ManagedTopology && runtimeProfile.runsAppHosting() {
+		projectionMode = topology.ProjectionModeManaged
+		initialNodeSpec, err = provider.GetInitialNodeSpecWithTopologyMode(identity.NodeName, &appCfg.Device, projectionMode)
+		if err != nil {
+			return fmt.Errorf("build managed Node projection: %w", err)
+		}
+		// The manager has already reserved and projected this Node. Upstream
+		// Virtual Kubelet still needs the resolved name and initial status seed,
+		// but passing stable metadata or spec here would make its status patch
+		// compete with the manager's ownership contract.
+		initialNodeSpec = managedWorkerInitialNode(initialNodeSpec)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background()) // ctxlint:allow VK process root
@@ -233,17 +462,35 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load kubeconfig: %w", err)
 	}
 
-	clientset, err := kubernetes.NewForConfig(kubeconfigCfg)
-	if err != nil {
-		return fmt.Errorf("failed to create Kubernetes client: %w", err)
+	var clientset kubernetes.Interface
+	if runtimeProfile.runsAppHosting() || identity.ManagedTopology {
+		clientset, err = kubernetes.NewForConfig(kubeconfigCfg)
+		if err != nil {
+			return fmt.Errorf("failed to create Kubernetes client: %w", err)
+		}
+	}
+	if identity.ManagedTopology {
+		preflightCtx, preflightCancel := context.WithTimeout(ctx, 30*time.Second)
+		defer preflightCancel()
+		if err := verifyManagedWorkerPodIdentity(
+			preflightCtx,
+			clientset,
+			identity.WorkerUsername,
+			identity.WorkerPodName,
+			identity.WorkerPodUID,
+		); err != nil {
+			return fmt.Errorf("managed worker bound-token preflight: %w", err)
+		}
+		if runtimeProfile.runsAppHosting() {
+			if err := verifyManagedWorkerAdmission(preflightCtx, clientset, identity.NodeName); err != nil {
+				return fmt.Errorf("managed worker native admission preflight: %w", err)
+			}
+		}
 	}
 
-	// Resolve runtime flags: flag > env > default
-	effectiveNodeName := nodeName
-	if effectiveNodeName == "" {
-		effectiveNodeName = os.Getenv("VKUBELET_NODE_NAME")
+	if runtimeProfile.Mode == workerModeNetworkManagement {
+		return runNetworkManagementRuntime(ctx, kubeconfigCfg, identity, &appCfg.Device, runtimeProfile)
 	}
-	effectiveNodeName = provider.GetNodeName(effectiveNodeName, appCfg.Device.Address)
 
 	certFile := tlsCertFile
 	if certFile == "" {
@@ -266,6 +513,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	mdtStateCache := telemetrystate.NewCache()
 	traceCorrelationCache := correlation.NewCache(0, 0, 0)
 	var appEventConsumer telemetrystate.AppEventConsumer
+	var devicePodLister func(context.Context) ([]*v1.Pod, error)
 
 	handlerWrapper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if innerHandler != nil {
@@ -278,7 +526,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	opts := []nodeutil.NodeOpt{
 		nodeutil.WithNodeConfig(nodeutil.NodeConfig{
 			Client:         clientset,
-			NodeSpec:       provider.GetInitialNodeSpec(effectiveNodeName, &appCfg.Device),
+			NodeSpec:       initialNodeSpec,
 			HTTPListenAddr: ":10250",
 			NumWorkers:     5,
 			TLSConfig:      tlsCfg,
@@ -290,7 +538,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	eventBroadcaster.StartRecordingToSink(&typedv1.EventSinkImpl{Interface: clientset.CoreV1().Events("")})
 	eventRecorder := eventBroadcaster.NewRecorder(clientgoscheme.Scheme, v1.EventSource{Component: "cisco-virtual-kubelet"})
 
-	vkProviders, vkShutdown, err := buildVKProviders(ctx, effectiveNodeName, &appCfg.Device)
+	vkProviders, vkShutdown, err := buildVKProviders(ctx, identity.NodeName, &appCfg.Device)
 	if err != nil {
 		log.G(ctx).WithError(err).Warn("Virtual Kubelet OTel providers unavailable; continuing with global no-op provider")
 	}
@@ -313,24 +561,28 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		}()
 	}
 
-	telemetryProviders, telemetryShutdown, err := buildTelemetryProviders(ctx, effectiveNodeName, configReconcilerOptions{
-		Spec: &appCfg.Device,
-	})
-	if err != nil {
-		log.G(ctx).WithError(err).Warn("telemetry OTel providers unavailable; continuing with signal-specific fallbacks")
-	}
-	if telemetryShutdown != nil {
-		go func() {
-			<-ctx.Done()
-			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if err := telemetryShutdown(shutdownCtx); err != nil {
-				log.G(ctx).WithError(err).Warn("telemetry OTel providers shutdown error")
-			}
-		}()
+	var telemetryProviders *otelproviders.Providers
+	if runtimeProfile.runsNetworkManagement() {
+		var telemetryShutdown func(context.Context) error
+		telemetryProviders, telemetryShutdown, err = buildTelemetryProviders(ctx, identity.DeviceName, configReconcilerOptions{
+			Spec: &appCfg.Device,
+		})
+		if err != nil {
+			log.G(ctx).WithError(err).Warn("telemetry OTel providers unavailable; continuing with signal-specific fallbacks")
+		}
+		if telemetryShutdown != nil {
+			go func() {
+				<-ctx.Done()
+				shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				if err := telemetryShutdown(shutdownCtx); err != nil {
+					log.G(ctx).WithError(err).Warn("telemetry OTel providers shutdown error")
+				}
+			}()
+		}
 	}
 
-	maintenanceCoordinator, err := newMaintenanceCoordinator(kubeconfigCfg, effectiveNodeName, configReconcilerOptions{
+	maintenanceCoordinator, err := newMaintenanceCoordinator(kubeconfigCfg, identity, configReconcilerOptions{
 		Spec:                       &appCfg.Device,
 		EnableWriteClassGNOI:       flagOrEnvBool(enableWriteClassGNOI, envEnableWriteClassGNOI),
 		EnableIOSXESoftwareUpgrade: flagOrEnvBool(enableIOSXESoftwareUpgrade, envEnableIOSXESoftwareUpgrade),
@@ -352,13 +604,17 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create device driver: %w", err)
 		}
+		devicePodLister = sharedDriver.ListPods
 
-		nodeHandler := provider.NewAppHostingNode(ctx, effectiveNodeName, &appCfg.Device, sharedDriver)
+		nodeHandler := provider.NewAppHostingNodeWithTopologyMode(ctx, identity.NodeName, &appCfg.Device, sharedDriver, projectionMode)
+		if identity.ManagedTopology {
+			nodeHandler.SetManagedWorkerRevision(identity.WorkerRevision)
+		}
 
 		// Start OTEL topology exporter if configured and the driver supports topology
 		if appCfg.Device.OTEL != nil && appCfg.Device.OTEL.Enabled && appCfg.Device.OTEL.Endpoint != "" {
 			if topo, ok := sharedDriver.(drivers.TopologyProvider); ok {
-				otelExporter, otelErr := provider.NewOTELTopologyExporter(ctx, sharedDriver, topo, appCfg.Device.OTEL, effectiveNodeName, appCfg.Device.Address, telemetryTracerProvider(telemetryProviders))
+				otelExporter, otelErr := provider.NewOTELTopologyExporter(ctx, sharedDriver, topo, appCfg.Device.OTEL, identity.DeviceName, appCfg.Device.Address, telemetryTracerProvider(telemetryProviders))
 				if otelErr != nil {
 					log.G(ctx).WithError(otelErr).Warn("Failed to initialise OTEL topology exporter, continuing without it")
 				} else {
@@ -373,7 +629,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialise PodHandler: %w", err)
 		}
-		podHandler.SetTraceCorrelation(effectiveNodeName, traceCorrelationCache)
+		podHandler.SetTraceCorrelation(identity.DeviceName, traceCorrelationCache)
 		podHandler.SetMaintenance(maintenanceCoordinator)
 		appEventConsumer = podHandler
 
@@ -404,9 +660,9 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	// Recover pods that were marked Failed/NotFound during a previous VK restart.
 	// The upstream VK pod controller permanently ignores pods in Failed phase, so
 	// we must reset them to Pending before the pod controller starts syncing.
-	recoverStaleFailedPods(ctx, clientset, effectiveNodeName)
+	recoverStaleFailedPods(ctx, clientset, identity.NodeName)
 
-	n, err := nodeutil.NewNode(effectiveNodeName, newProviderFunc, opts...)
+	n, err := nodeutil.NewNode(identity.NodeName, newProviderFunc, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to create node: %w", err)
 	}
@@ -414,7 +670,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	// Run a background recovery loop that resets Failed/NotFound pods.
 	// Uses exponential backoff: 15s → 30s → 60s → 5min cap. Resets to 15s
 	// when a recovery actually occurs.
-	go runPodRecoveryLoop(ctx, clientset, effectiveNodeName)
+	go runPodRecoveryLoop(ctx, clientset, identity.NodeName)
 
 	// Start the Phase-0 IOS-XE config reconciler. It watches IOSXEConfig CRs
 	// that target this device and drives the (stub) configdriver.Driver.
@@ -428,11 +684,21 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	// and the in-pod reconciler both write the same (device, family)
 	// concurrently, defeating the whole point of single-manager
 	// topology and producing a duplicate-writer hazard.
-	if v := os.Getenv("DISABLE_IN_POD_CONFIG_RECONCILER"); v == "true" || v == "1" {
+	if !runtimeProfile.runsNetworkManagement() {
+		log.G(ctx).Info("app-hosting worker mode; skipping config, telemetry, and gNOI reconcilers")
+	} else if v := os.Getenv("DISABLE_IN_POD_CONFIG_RECONCILER"); v == "true" || v == "1" {
 		log.G(ctx).Info("DISABLE_IN_POD_CONFIG_RECONCILER set; skipping in-pod ConfigReconciler (aggregator-mode topology)")
-	} else if err := startConfigReconciler(ctx, kubeconfigCfg, effectiveNodeName, configReconcilerOptions{
+	} else if err := startConfigReconciler(ctx, kubeconfigCfg, identity.DeviceName, runtimeProfile.constrainNetworkOptions(configReconcilerOptions{
 		Spec:                       &appCfg.Device,
 		Password:                   appCfg.Device.Password,
+		DeviceNamespace:            identity.DeviceNamespace,
+		DeviceUID:                  identity.DeviceUID,
+		NodeName:                   identity.NodeName,
+		ManagedTopology:            identity.ManagedTopology,
+		WorkerRevision:             identity.WorkerRevision,
+		CredentialSecretRevision:   os.Getenv(managedprotocol.EnvCredentialSecretRevision),
+		GNOITLSSecretRevision:      os.Getenv(managedprotocol.EnvGNOITLSSecretRevision),
+		GNOIProvisioningRevision:   os.Getenv(managedprotocol.EnvGNOIProvisioningRevision),
 		EnableWriteClassGNOI:       flagOrEnvBool(enableWriteClassGNOI, envEnableWriteClassGNOI),
 		EnableIOSXESoftwareUpgrade: flagOrEnvBool(enableIOSXESoftwareUpgrade, envEnableIOSXESoftwareUpgrade),
 		TelemetryProviders:         telemetryProviders,
@@ -440,7 +706,8 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		AppEventConsumer:           appEventConsumer,
 		CorrelationCache:           traceCorrelationCache,
 		Maintenance:                maintenanceCoordinator,
-	}); err != nil {
+		DevicePodLister:            devicePodLister,
+	})); err != nil {
 		log.G(ctx).WithError(err).Warn("IOSXEConfig reconciler not started; continuing without declarative config")
 	}
 
@@ -461,6 +728,190 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	}
 
 	log.G(ctx).Info("Cisco Virtual Kubelet stopped")
+	return nil
+}
+
+func runNetworkManagementRuntime(
+	ctx context.Context,
+	kubeconfigCfg *rest.Config,
+	identity workerRuntimeIdentity,
+	spec *ciskov1.DeviceSpec,
+	profile workerRuntimeProfile,
+) error {
+	telemetryProviders, telemetryShutdown, err := buildTelemetryProviders(ctx, identity.DeviceName, configReconcilerOptions{Spec: spec})
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("telemetry OTel providers unavailable; continuing with signal-specific fallbacks")
+	}
+	if telemetryShutdown != nil {
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := telemetryShutdown(shutdownCtx); err != nil {
+				log.G(ctx).WithError(err).Warn("telemetry OTel providers shutdown error")
+			}
+		}()
+	}
+
+	opts := profile.constrainNetworkOptions(configReconcilerOptions{
+		Spec:                       spec,
+		Password:                   spec.Password,
+		DeviceNamespace:            identity.DeviceNamespace,
+		DeviceUID:                  identity.DeviceUID,
+		NodeName:                   identity.NodeName,
+		ManagedTopology:            identity.ManagedTopology,
+		WorkerRevision:             identity.WorkerRevision,
+		CredentialSecretRevision:   os.Getenv(managedprotocol.EnvCredentialSecretRevision),
+		GNOITLSSecretRevision:      os.Getenv(managedprotocol.EnvGNOITLSSecretRevision),
+		GNOIProvisioningRevision:   os.Getenv(managedprotocol.EnvGNOIProvisioningRevision),
+		EnableWriteClassGNOI:       flagOrEnvBool(enableWriteClassGNOI, envEnableWriteClassGNOI),
+		EnableIOSXESoftwareUpgrade: flagOrEnvBool(enableIOSXESoftwareUpgrade, envEnableIOSXESoftwareUpgrade),
+		TelemetryProviders:         telemetryProviders,
+		StateCache:                 telemetrystate.NewCache(),
+		CorrelationCache:           correlation.NewCache(0, 0, 0),
+	})
+	maintenanceCoordinator, err := newMaintenanceCoordinator(kubeconfigCfg, identity, opts)
+	if err != nil {
+		return fmt.Errorf("configure device maintenance: %w", err)
+	}
+	opts.Maintenance = maintenanceCoordinator
+	if maintenanceCoordinator != nil {
+		go maintenanceCoordinator.Run(ctx)
+	}
+	inventorySpec := spec.DeepCopy()
+	// Building the inventory-only driver must never inherit the app-hosting
+	// startup side effect that disables package signature verification.
+	inventorySpec.AllowUnsignedApps = false
+	inventoryCtx := ctx
+	if maintenanceCoordinator != nil {
+		inventoryCtx = devicecoordination.WithMutationGuard(ctx, maintenanceCoordinator.AcquireWrite)
+	}
+	inventoryDriver, err := drivers.NewDriver(inventoryCtx, inventorySpec)
+	if err != nil {
+		return fmt.Errorf("configure device app inventory for network-management safety checks: %w", err)
+	}
+	opts.DevicePodLister = inventoryDriver.ListPods
+	managerLifecycle := newConfigManagerLifecycle()
+	opts.ManagerLifecycle = managerLifecycle
+
+	if err := startConfigReconciler(ctx, kubeconfigCfg, identity.DeviceName, opts); err != nil {
+		return fmt.Errorf("start network-management runtime: %w", err)
+	}
+	if os.Getenv("CONFIG_NETCONF_PROBE") != "" {
+		go runNETCONFProbe(ctx, spec, spec.Password)
+	}
+	log.G(ctx).WithFields(log.Fields{"workerMode": profile.Mode, "workerAccess": profile.Access}).
+		Info("network-management runtime started without Virtual Kubelet Node or Pod controllers")
+	if err := waitForNetworkManager(ctx, managerLifecycle); err != nil {
+		return err
+	}
+	log.G(ctx).Info("Cisco Virtual Kubelet network-management runtime stopped")
+	return nil
+}
+
+func managedWorkerInitialNode(node v1.Node) v1.Node {
+	node.Labels = nil
+	node.Annotations = nil
+	node.Spec = v1.NodeSpec{}
+	return node
+}
+
+const (
+	boundTokenPodNameClaim = "authentication.kubernetes.io/pod-name"
+	boundTokenPodUIDClaim  = "authentication.kubernetes.io/pod-uid"
+)
+
+// verifyManagedWorkerPodIdentity proves that a managed shared-ServiceAccount
+// credential is a bound Pod token for this exact runtime. Shared identities no
+// longer encode a device in the username, so admission must be able to bind
+// requests to immutable Pod name/UID claims instead of trusting an unbound or
+// manually copied bearer token.
+func verifyManagedWorkerPodIdentity(
+	ctx context.Context,
+	clientset kubernetes.Interface,
+	expectedUsername, podName, podUID string,
+) error {
+	if clientset == nil {
+		return fmt.Errorf("missing Kubernetes client")
+	}
+	if strings.TrimSpace(podName) == "" || strings.TrimSpace(podUID) == "" {
+		return fmt.Errorf("managed shared worker requires non-empty POD_NAME and POD_UID downward-API bindings")
+	}
+	review, err := clientset.AuthenticationV1().SelfSubjectReviews().Create(
+		ctx,
+		&authenticationv1.SelfSubjectReview{},
+		metav1.CreateOptions{},
+	)
+	if err != nil {
+		return fmt.Errorf("create SelfSubjectReview: %w", err)
+	}
+	if review == nil {
+		return fmt.Errorf("SelfSubjectReview returned no identity")
+	}
+	if strings.TrimSpace(review.Status.UserInfo.Username) == "" {
+		return fmt.Errorf("SelfSubjectReview returned an empty authenticated username")
+	}
+	if expectedUsername != "" && review.Status.UserInfo.Username != expectedUsername {
+		return fmt.Errorf("authenticated username %q does not match expected worker username %q",
+			review.Status.UserInfo.Username, expectedUsername)
+	}
+	for _, claim := range []struct {
+		name string
+		want string
+	}{
+		{name: boundTokenPodNameClaim, want: podName},
+		{name: boundTokenPodUIDClaim, want: podUID},
+	} {
+		values, ok := review.Status.UserInfo.Extra[claim.name]
+		if !ok || len(values) != 1 {
+			return fmt.Errorf("SelfSubjectReview claim %q must contain exactly one value", claim.name)
+		}
+		if values[0] != claim.want {
+			return fmt.Errorf("SelfSubjectReview claim %q=%q does not match downward-API value %q",
+				claim.name, values[0], claim.want)
+		}
+	}
+	return nil
+}
+
+// verifyManagedWorkerAdmission proves the native ownership boundary using the
+// worker's own credentials. The positive dry run distinguishes a working
+// status-only permission from a blanket RBAC denial and covers the two
+// bookkeeping annotations upstream Virtual Kubelet writes with Node status.
+// The negative dry run must then be rejected specifically when it tries to
+// smuggle a manager-owned label through the Node status subresource. Neither
+// probe persists data.
+func verifyManagedWorkerAdmission(ctx context.Context, clientset kubernetes.Interface, nodeName string) error {
+	if clientset == nil || strings.TrimSpace(nodeName) == "" {
+		return fmt.Errorf("worker admission probe is missing its client or Node identity")
+	}
+	nodes := clientset.CoreV1().Nodes()
+	positive, err := json.Marshal(map[string]any{
+		"metadata": map[string]any{"annotations": map[string]string{
+			managedprotocol.VirtualKubeletLastAppliedObjectMeta: "{}",
+			managedprotocol.VirtualKubeletLastAppliedNodeStatus: "{}",
+		}},
+		"status": map[string]any{},
+	})
+	if err != nil {
+		return fmt.Errorf("encode positive status probe: %w", err)
+	}
+	if _, err := nodes.Patch(ctx, nodeName, types.MergePatchType, positive,
+		metav1.PatchOptions{DryRun: []string{metav1.DryRunAll}}, "status"); err != nil {
+		return fmt.Errorf("legitimate Node status dry run was rejected: %w", err)
+	}
+
+	negative, err := json.Marshal(map[string]any{"metadata": map[string]any{"labels": map[string]string{
+		topology.CiscoTopologyLabelPrefix + "admission-probe": "must-be-denied",
+	}}})
+	if err != nil {
+		return fmt.Errorf("encode negative ownership probe: %w", err)
+	}
+	if _, err := nodes.Patch(ctx, nodeName, types.MergePatchType, negative,
+		metav1.PatchOptions{DryRun: []string{metav1.DryRunAll}}, "status"); err == nil {
+		return fmt.Errorf("unsafe Node label write through the status subresource was accepted")
+	} else if !apierrors.IsForbidden(err) && !apierrors.IsInvalid(err) {
+		return fmt.Errorf("negative Node ownership dry run failed for an unexpected reason: %w", err)
+	}
 	return nil
 }
 

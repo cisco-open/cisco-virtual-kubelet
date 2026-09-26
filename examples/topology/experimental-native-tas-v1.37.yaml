@@ -1,0 +1,89 @@
+# EXPERIMENTAL: this is not part of the Kubernetes 1.35 CVK baseline.
+#
+# It uses only the in-tree Kubernetes Workload/PodGroup APIs and the default
+# kube-scheduler, but Kubernetes 1.37 ships them disabled by default. Enable
+# GenericWorkload and TopologyAwareWorkloadScheduling consistently on the API
+# server and scheduler, then verify the v1beta1 resources and Pod field exist:
+#
+#   kubectl api-resources --api-group=scheduling.k8s.io
+#   kubectl explain podgroups.scheduling.k8s.io.spec.schedulingConstraints
+#   kubectl explain pod.spec.schedulingGroup
+#
+# Do not apply this manifest to the normal 1.35 deployment or assume that the
+# earlier 1.36 alpha API has the same versioned schema. CVK creates only the
+# Node labels consumed here; it does not create these objects or add a second
+# scheduler/controller.
+apiVersion: scheduling.k8s.io/v1beta1
+kind: Workload
+metadata:
+  name: edge-gang-policy
+  namespace: edge-workloads
+spec:
+  podGroupTemplates:
+    - name: edge-workers
+      schedulingPolicy:
+        gang:
+          minCount: 2
+      schedulingConstraints:
+        topology:
+          - key: topology.cisco.vk/site
+---
+# This standalone runtime PodGroup repeats the selected Workload template.
+# A future supported workload controller could construct it from the template;
+# CVK does not own that lifecycle.
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PodGroup
+metadata:
+  name: edge-workers-0
+  namespace: edge-workloads
+spec:
+  podGroupTemplateRef:
+    workload:
+      workloadName: edge-gang-policy
+      podGroupTemplateName: edge-workers
+  schedulingPolicy:
+    gang:
+      minCount: 2
+  schedulingConstraints:
+    topology:
+      - key: topology.cisco.vk/site
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: edge-worker-0
+  namespace: edge-workloads
+  labels:
+    app: edge-gang
+spec:
+  schedulingGroup:
+    podGroupName: edge-workers-0
+  nodeSelector:
+    type: virtual-kubelet
+  containers:
+    - name: edge-worker
+      image: REPLACE_WITH_APP_IMAGE
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: edge-worker-1
+  namespace: edge-workloads
+  labels:
+    app: edge-gang
+spec:
+  schedulingGroup:
+    podGroupName: edge-workers-0
+  nodeSelector:
+    type: virtual-kubelet
+  containers:
+    - name: edge-worker
+      image: REPLACE_WITH_APP_IMAGE
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi

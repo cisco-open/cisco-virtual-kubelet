@@ -669,6 +669,16 @@ sets `CISCO_VK_UPGRADE_ALLOW_INSECURE_SSH=true`. The stock Helm chart does not
 expose this lab-only bypass. The default HTTP client follows redirects, so
 control and audit redirect targets as part of repository policy.
 
+Manager-created leaves from an opt-in `IOSXESoftwareRollout` use the stricter
+managed-source policy documented in
+[Managed topology and topology-aware IOS-XE rollouts](topology-awareness.md#secure-gnoi-and-image-source-prerequisites).
+That path accepts only anonymous, verified HTTPS or endpoint-bound SFTP;
+rejects query strings, fragments, redirects, environment proxies, and custom
+HTTP transports; resolves DNS once and dials the validated address; rejects
+unsafe or mixed DNS results; rejects private HTTPS; and permits private SFTP
+only with the bound Secret. These restrictions do not silently change direct
+standalone `IOSXESoftwareUpgrade` compatibility.
+
 The upgrade strategy controls activation:
 
 | Strategy | Behavior |
