@@ -742,6 +742,28 @@ kubectl --kubeconfig "$bound_kubeconfig" patch pod "$ordinary_pod" \
   --subresource=status --type=merge --dry-run=server \
   -p '{"status":{"reason":"BoundTokenAdmissionQualified"}}' >/dev/null
 
+# A worker rollout must remove the whole workload identity, not leave a
+# username-only Node-style bootstrap binding. Status stays fail closed until
+# the manager publishes a complete replacement binding.
+expect_denied "partial workload binding cannot fence a rollout" \
+  "a workload worker binding must be absent or contain one complete" \
+  kubectl --context "$context" --as="$manager_username" patch pod "$ordinary_pod" \
+  --namespace "$worker_namespace" --type=merge --dry-run=server \
+  -p '{"metadata":{"annotations":{"topology.cisco.vk/app-worker-pod-name":null,"topology.cisco.vk/app-worker-pod-uid":null}}}'
+kubectl --context "$context" --as="$manager_username" annotate pod "$ordinary_pod" \
+  --namespace "$worker_namespace" topology.cisco.vk/app-worker-username- \
+  topology.cisco.vk/app-worker-pod-name- topology.cisco.vk/app-worker-pod-uid- >/dev/null
+expect_denied "cleared workload binding rejects old bound token" \
+  "shared app-hosting status requires the exact manager-bound worker" \
+  kubectl --kubeconfig "$bound_kubeconfig" patch pod "$ordinary_pod" \
+  --subresource=status --type=merge --dry-run=server \
+  -p '{"status":{"reason":"OldBindingMustFail"}}'
+kubectl --context "$context" --as="$manager_username" annotate pod "$ordinary_pod" \
+  --namespace "$worker_namespace" \
+  "topology.cisco.vk/app-worker-username=${app_username}" \
+  "topology.cisco.vk/app-worker-pod-name=${reserved_pod}" \
+  "topology.cisco.vk/app-worker-pod-uid=${reserved_pod_uid}" >/dev/null
+
 # UID-derived phase-zero and managed identities retain broad name-based RBAC
 # while their generated bindings exist. Create one through the real manager
 # path, prove tenant operations cannot seize or use it, and prove the native

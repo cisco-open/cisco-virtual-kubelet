@@ -16,16 +16,55 @@ package controller
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
+
+func TestWorkloadBindingClearRemovesEntireIdentityAndCanRebind(t *testing.T) {
+	ctx := context.Background()
+	device := newDevice("switch-live-workload", "edge")
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: device.Name}}
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Namespace: "apps", Name: "live-app", UID: "workload-uid",
+		Annotations: map[string]string{"user.example/note": "preserve"},
+	}, Spec: corev1.PodSpec{NodeName: node.Name}}
+	r := reconcilerFor(t, device, node, pod)
+	old := &managedWorkerPodIdentity{username: "system:serviceaccount:edge:app", name: "old-worker", uid: "old-uid"}
+	if err := r.stampManagedWorkloadPods(ctx, device, node, old, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.stampManagedWorkloadPods(ctx, device, node, nil, true); err != nil {
+		t.Fatal(err)
+	}
+	var current corev1.Pod
+	if err := r.Get(ctx, client.ObjectKeyFromObject(pod), &current); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(current.Annotations, pod.Annotations) {
+		t.Fatalf("clear left a partial identity or changed unrelated metadata: %#v", current.Annotations)
+	}
+	next := &managedWorkerPodIdentity{username: old.username, name: "new-worker", uid: "new-uid"}
+	if err := r.stampManagedWorkloadPods(ctx, device, node, next, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(pod), &current); err != nil {
+		t.Fatal(err)
+	}
+	if current.Annotations[managedprotocol.AnnotationAppWorkerPodUID] != next.uid ||
+		current.Annotations[managedprotocol.AnnotationAppWorkerPodName] != next.name ||
+		current.Annotations[managedprotocol.AnnotationAppWorkerUsername] != next.username {
+		t.Fatalf("replacement binding is incomplete: %#v", current.Annotations)
+	}
+}
 
 func TestCurrentWorkerPodIdentityDoesNotWaitForReadinessPreflight(t *testing.T) {
 	ctx := context.Background()
