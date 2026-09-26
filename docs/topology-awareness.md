@@ -898,6 +898,9 @@ DHCP or an application endpoint is usable; this is not an HTTP readiness
 guarantee. Validate the service independently during qualification. A PDB
 shared by separate single-replica Deployments protects their aggregate
 availability, not the availability of each application.
+Deployment `minReadySeconds` can require sustained provider readiness before
+the controller becomes available and CVK permits the next eviction. It is a
+useful settling delay, not a substitute for application-level health checks.
 
 Include failed-write quarantine and native Virtual Kubelet queue backoff in
 the maintenance window. An uncertain app lifecycle operation can retain the
